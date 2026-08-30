@@ -110,6 +110,19 @@ def test_estimator_calibration_api():
     f = est.poly_features(0.3, -0.2)
     assert abs(float(est._calib_coef_x @ f) - 0.3) < 1e-9
     assert abs(float(est._calib_coef_y @ f) + 0.2) < 1e-9
+
+    # v3.7：隐式重拟合路径 reset_filters=False 不得清滤波状态
+    # （reset 会让注视信号瞬断跳变，每 3 次抓卡闪一次）
+    est._filter_x.filter(0.1, 0.0)
+    assert est._filter_x.initialized
+    est.set_calibration(np.array([0, 1, 0, 0, 0, 0], dtype=float),
+                        np.array([0, 0, 1, 0, 0, 0], dtype=float),
+                        reset_filters=False)
+    assert est._filter_x.initialized, "隐式重拟合不得 reset 滤波器"
+    est.set_calibration(np.array([0, 1, 0, 0, 0, 0], dtype=float),
+                        np.array([0, 0, 1, 0, 0, 0], dtype=float))
+    assert not est._filter_x.initialized, "显式校准默认应 reset 滤波器"
+
     est.clear_calibration()
     assert not est.is_calibrated
 

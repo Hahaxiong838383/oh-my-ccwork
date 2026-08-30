@@ -113,7 +113,8 @@ def test_arrival_gate_accepts_migrated_gaze():
 
 
 def test_arrival_gate_rejects_wrong_direction():
-    """迁移到期望反方向（看去别处并盯稳）→ 不到位、不计样本。"""
+    """迁移到期望反方向（看去别处并盯稳）→ 超时自愈前不到位、不计样本。
+    （v3.7 起超时后会弃方向自愈，此测试的 timeout=99 覆盖超时前语义。）"""
     gate = FixationGate(window=10, std_threshold=0.05, target=20,
                         ref_point=(0.0, 0.0), expected_dir=(0.5, 0.0),
                         arrival_timeout=99, arrival_giveup=99)
@@ -122,6 +123,56 @@ def test_arrival_gate_rejects_wrong_direction():
                  rng.normal(0, 0.01, 60))
     assert not gate.arrived
     assert len(gate.qualified) == 0
+
+
+# ── v3.7 到位门解耦 + 方向自愈（修点2卡死回归）──────────────
+
+def test_noisy_on_target_arrives_and_degrades():
+    """v3.7 核心回归（2026-08-30 中上点卡死）：位置正确但噪声超 std
+    阈值（看上排虹膜信号饱和抖动）→ 到位必须锁存（位置判据与噪声
+    解耦），随后放宽/降级机制接管，最终出结果而非被剔除。
+    v3.6 曾把 arrived 与 std 耦合：此流三 seed 全卡死 given_up。"""
+    for seed in (1, 2, 3):
+        gate = FixationGate(ref_point=(-0.30, -0.25),
+                            expected_dir=(0.5, 0.0),
+                            stage_timeout=0.5)  # 加速放宽以缩短测试
+        rng = np.random.default_rng(seed)
+        t = 0.0
+        for _ in range(450):  # 15s @30fps，中心在点2、y噪声0.12
+            t += 1 / 30
+            gate.feed(0.0 + float(rng.normal(0, 0.03)),
+                      -0.25 + float(rng.normal(0, 0.12)), t)
+        assert gate.arrived, f"seed{seed}: 位置正确必须到位（与噪声无关）"
+        assert not gate.given_up, f"seed{seed}: 到位后不得被放弃"
+        assert gate.result() is not None, f"seed{seed}: 放宽/降级后必须出结果"
+
+
+def test_direction_selfheal_when_magnitude_persists():
+    """v3.7 方向自愈：位移幅度持续显著、方向与期望不符（用户 raw 几何
+    与期望方向不一致）→ 超时后弃方向判据，凭幅度到位。"""
+    gate = FixationGate(window=10, std_threshold=0.05, target=20,
+                        ref_point=(0.0, 0.0), expected_dir=(0.5, 0.0),
+                        arrival_timeout=0.5, arrival_giveup=10.0)
+    rng = np.random.default_rng(11)
+    # 稳定注视在反方向位置（幅度 0.4 显著）
+    _feed_stream(gate, -0.4 + rng.normal(0, 0.01, 90),
+                 rng.normal(0, 0.01, 90))
+    assert gate.arrived, "幅度持续显著应触发方向自愈并到位"
+    assert not gate.given_up
+    assert gate.complete
+
+
+def test_static_gaze_never_selfheals():
+    """自愈不放行真不看的人：静止注视位移幅度不显著，mag_ok 不涨，
+    自愈永不触发 → 依然 given_up（拦截力不因自愈损失）。"""
+    gate = FixationGate(window=10, std_threshold=0.05, target=20,
+                        ref_point=(0.0, 0.0), expected_dir=(0.5, 0.0),
+                        arrival_timeout=0.3, arrival_giveup=1.0)
+    rng = np.random.default_rng(12)
+    _feed_stream(gate, rng.normal(0, 0.01, 60), rng.normal(0, 0.01, 60))
+    assert not gate.arrived
+    assert gate.given_up
+    assert gate.result() is None
 
 
 def test_arrival_magnitude_only_when_no_dir():

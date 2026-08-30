@@ -135,13 +135,20 @@ class GazeEstimator:
         """二阶多项式特征向量 [1, x, y, x², xy, y²]（校准拟合与应用共用）"""
         return np.array([1.0, x, y, x * x, x * y, y * y])
 
-    def set_calibration(self, coef_x: np.ndarray, coef_y: np.ndarray):
-        """设置 2D 多项式校准系数（各 6 维，对应 [1,x,y,x²,xy,y²]）"""
+    def set_calibration(self, coef_x: np.ndarray, coef_y: np.ndarray,
+                        reset_filters: bool = True):
+        """设置 2D 多项式校准系数（各 6 维，对应 [1,x,y,x²,xy,y²]）。
+
+        reset_filters：显式校准（系数大变）保持 True 清旧平滑值；
+        隐式在线重拟合（v3.7）传 False——参数只微调，reset 反而让
+        OneEuro 瞬断跳变，每 3 次抓卡闪一次。
+        """
         self._calib_coef_x = np.asarray(coef_x, dtype=float)
         self._calib_coef_y = np.asarray(coef_y, dtype=float)
         self._calibrated = True
-        self._filter_x.reset()  # 重置平滑，避免旧值残留
-        self._filter_y.reset()
+        if reset_filters:
+            self._filter_x.reset()  # 重置平滑，避免旧值残留
+            self._filter_y.reset()
         print(f"[Gaze] 2D 多项式校准已应用: "
               f"coef_x={np.round(self._calib_coef_x, 3).tolist()}, "
               f"coef_y={np.round(self._calib_coef_y, 3).tolist()}")

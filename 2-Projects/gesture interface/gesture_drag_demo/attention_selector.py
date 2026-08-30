@@ -17,6 +17,7 @@ from typing import Optional, Any
 
 from config import (
     CANDIDATE_LOCK_FRAMES, CANDIDATE_RELEASE_FRAMES,
+    CANDIDATE_PROGRESS_DECAY,
     CARD_GAZE_Y_MIN, BUBBLE_GAZE_Y_MAX,
     CANDIDATE_MIN_CONFIDENCE, ATTENTION_SWITCH_MARGIN,
     ATTENTION_SCORE_SIGMA,
@@ -161,7 +162,10 @@ class AttentionSelector:
         if best_card is None or best_score < CANDIDATE_MIN_CONFIDENCE:
             # 无有效候选
             self._release_count += 1
-            self._lock_count = 0
+            # v3.7：进度衰减而非清零（视线微抖/分数瞬跌不再把 8 帧
+            # 进度打回原点——「进度一直跳」主因之一；气泡 v3.4 已用此范式）
+            self._lock_count = max(
+                0, self._lock_count - CANDIDATE_PROGRESS_DECAY)
             if self._release_count >= CANDIDATE_RELEASE_FRAMES:
                 self._candidate = None
                 self._locked = False

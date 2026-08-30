@@ -33,6 +33,7 @@ from config import (
     MAX_NUM_HANDS, PINCH_ON_THRESHOLD, PINCH_OFF_THRESHOLD,
     CONFIRM_FRAMES, LOST_FRAMES_RELEASE, SMOOTHING_ALPHA,
     WINDOW_NAME, VERSION, IMPLICIT_CALIB_ENABLED,
+    BLINK_FREEZE_ENABLED, BLINK_FREEZE_MAX_FRAMES,
 )
 from implicit_calib import ImplicitCalibrator, card_expected_gaze
 
@@ -106,6 +107,11 @@ def main():
     implicit_cal = _build_implicit(
         run_calibration(tracker, gaze_est, WINDOW_NAME))
 
+    # v3.7 眨眼冻结状态（人均 3-4s 眨一次、每次 3-9 帧虹膜乱值——
+    # 8 帧锁定几乎必然被打断；眨眼帧沿用上帧候选快照）
+    last_attn_state = None
+    blink_freeze_count = 0
+
     try:
         while True:
             # 读取一帧
@@ -139,29 +145,43 @@ def main():
 
             # --- 注视候选更新 ---
             attn_sel.set_dragging(drag_mgr.is_dragging)
-            attn_state = attn_sel.update(
-                gaze_x=gaze_result.gaze_x,
-                confidence=gaze_result.confidence,
-                cards=cards,
-                direction_label=gaze_result.direction_label,
-                gaze_y=gaze_result.gaze_y,
-            )
 
-            # --- 气泡更新 ---
+            # --- 气泡更新（生命周期不冻结，眨眼时气泡照常生灭）---
             bubble_mgr.update()
 
-            # --- 气泡注视候选更新 ---
-            attn_sel.update_bubbles(
-                gaze_x=gaze_result.gaze_x,
-                confidence=gaze_result.confidence,
-                bubbles=bubble_mgr.bubbles,
-                gaze_y=gaze_result.gaze_y,
-            )
-            # 同步气泡候选到 attn_state（update_bubbles 直接修改内部状态，
-            # 但 attn_state 快照在 update() 时已生成，需要补刷）
-            attn_state.candidate_bubble = attn_sel._bubble_candidate
-            attn_state.candidate_bubble_locked = attn_sel._bubble_locked
-            attn_state.bubble_lock_progress = attn_sel.bubble_lock_progress
+            # v3.7 眨眼冻结：眨眼帧虹膜乱值会打断锁定，冻结候选状态机
+            # 沿用上帧快照；连续冻结超上限强制恢复（防 EAR 异常卡死）
+            blink_now = (BLINK_FREEZE_ENABLED
+                         and face_features is not None
+                         and face_features.face_detected
+                         and face_features.is_blinking)
+            if (blink_now and last_attn_state is not None
+                    and blink_freeze_count < BLINK_FREEZE_MAX_FRAMES):
+                blink_freeze_count += 1
+                attn_state = last_attn_state
+            else:
+                blink_freeze_count = 0
+                attn_state = attn_sel.update(
+                    gaze_x=gaze_result.gaze_x,
+                    confidence=gaze_result.confidence,
+                    cards=cards,
+                    direction_label=gaze_result.direction_label,
+                    gaze_y=gaze_result.gaze_y,
+                )
+
+                # --- 气泡注视候选更新 ---
+                attn_sel.update_bubbles(
+                    gaze_x=gaze_result.gaze_x,
+                    confidence=gaze_result.confidence,
+                    bubbles=bubble_mgr.bubbles,
+                    gaze_y=gaze_result.gaze_y,
+                )
+                # 同步气泡候选到 attn_state（update_bubbles 直接修改内部
+                # 状态，但 attn_state 快照在 update() 时已生成，需要补刷）
+                attn_state.candidate_bubble = attn_sel._bubble_candidate
+                attn_state.candidate_bubble_locked = attn_sel._bubble_locked
+                attn_state.bubble_lock_progress = attn_sel.bubble_lock_progress
+                last_attn_state = attn_state
 
             # --- 拖拽逻辑 ---
             smooth = gesture.smooth_center
@@ -209,7 +229,9 @@ def main():
                             (gaze_result.uncal_gaze_x, gaze_result.uncal_gaze_y),
                             _exp)
                         if _new is not None:
-                            gaze_est.set_calibration(*_new)
+                            # v3.7：隐式重拟合只微调系数，不 reset OneEuro
+                            # （reset 会让注视信号瞬断跳变，每 3 次抓卡闪一次）
+                            gaze_est.set_calibration(*_new, reset_filters=False)
                 else:
                     # 更新拖拽位置
                     drag_mgr.update_drag(px, py)

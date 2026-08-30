@@ -113,6 +113,10 @@ class FixationGate:
         self.arrival_overdue = False           # 超 timeout 未到位（UI 强提示用）
         self.given_up = False                  # 超 giveup 未到位（调用方剔除该点）
         self._t0: Optional[float] = None       # 本点首帧时刻（到位计时基准）
+        # ── 诊断快照（v3.7：远程排障全靠它，别删）──
+        self._last_disp: Optional[Tuple[float, float]] = None   # 最近位移向量
+        self._last_std: Optional[Tuple[float, float]] = None    # 最近滑窗 std
+        self._mag_ok_frames = 0                # 位移幅度达标的累计帧数
 
     @property
     def progress(self) -> float:
@@ -141,8 +145,10 @@ class FixationGate:
         cx = float(np.mean([p[0] for p in self._recent]))
         cy = float(np.mean([p[1] for p in self._recent]))
         vx, vy = cx - self._ref[0], cy - self._ref[1]
+        self._last_disp = (vx, vy)
         if math.hypot(vx, vy) < self._arrival_min_shift:
             return False
+        self._mag_ok_frames += 1
         if self._expected_dir is not None:
             dx, dy = self._expected_dir
             if vx * dx + vy * dy <= 0:  # 与期望方向不同向（cos ≤ 0）
@@ -160,15 +166,21 @@ class FixationGate:
         self.is_stable = False
         window_full = len(self._recent) == self._window
         displacement_ok = window_full and self._displacement_ok()
+        # v3.7 解耦：到位只看位置（滑窗中心均值天然抗噪），不再要求 std 稳。
+        # v3.6 曾把两者耦合——高噪声点位（如中上：虹膜贴上睑+IRIS_SCALE_Y
+        # 放大后在钳位边界削顶）std 永不达标，arrived 锁不上，而放宽机制
+        # 只在到位后生效 → 死锁 12s 被剔除（模拟三 seed 复现，v3.5 同流能过）
+        if displacement_ok and not self.arrived:
+            self.arrived = True
+            self._stage_start = now_s  # 稳定超时（放宽计时）从到位起算
         if window_full:
             xs = np.array([p[0] for p in self._recent])
             ys = np.array([p[1] for p in self._recent])
-            std_ok = (float(np.std(xs)) < self.std_threshold
-                      and float(np.std(ys)) < self.std_threshold)
+            std_x, std_y = float(np.std(xs)), float(np.std(ys))
+            self._last_std = (std_x, std_y)
+            std_ok = (std_x < self.std_threshold
+                      and std_y < self.std_threshold)
             if std_ok and displacement_ok:
-                if not self.arrived:
-                    self.arrived = True
-                    self._stage_start = now_s  # 稳定超时从到位起算
                 self.is_stable = True
                 self.qualified.append((x, y))
 
@@ -181,6 +193,14 @@ class FixationGate:
         if not self.arrived:
             elapsed = now_s - self._t0
             self.arrival_overdue = elapsed > self._arrival_timeout
+            # v3.7 方向自愈：位移幅度持续显著、只是方向与期望不符 →
+            # 用户在看某个明确的新位置（大概率就是点位，只是该用户的
+            # raw 几何与期望方向不一致），弃方向只留幅度。真不看的人
+            # 位移幅度不显著，_mag_ok_frames 涨不起来，拦截力不损失。
+            if (self.arrival_overdue and self._expected_dir is not None
+                    and self._mag_ok_frames >= self._window):
+                print("[Calibration] 位移显著但方向持续不符——弃方向判据自愈")
+                self._expected_dir = None
             if elapsed > self._arrival_giveup:
                 self.given_up = True
             return self.is_stable
@@ -195,6 +215,19 @@ class FixationGate:
             print(f"[Calibration] 阶段超时，放宽稳定阈值至 "
                   f"{self.std_threshold:.3f}（第 {self.relax_count} 次）")
         return self.is_stable
+
+    def diag(self) -> str:
+        """判据快照一行（v3.7：每点结束落盘，远程排障的眼睛）。"""
+        disp = (f"({self._last_disp[0]:+.3f},{self._last_disp[1]:+.3f})"
+                if self._last_disp else "n/a")
+        std = (f"({self._last_std[0]:.3f},{self._last_std[1]:.3f})"
+               if self._last_std else "n/a")
+        exp = (f"({self._expected_dir[0]:+.2f},{self._expected_dir[1]:+.2f})"
+               if self._expected_dir else "None")
+        return (f"arrived={self.arrived} disp={disp} exp_dir={exp} "
+                f"std={std} thr={self.std_threshold:.3f} "
+                f"mag_ok={self._mag_ok_frames} q={len(self.qualified)} "
+                f"pool={len(self.all_samples)} relax={self.relax_count}")
 
     def result(self) -> Optional[Tuple[float, float]]:
         """最终点位值：合格样本中位数；降级时用全量样本中位数兜底。
@@ -286,6 +319,22 @@ def fit_calib_points(
         "measured": measured,
         "expected": [(calib_points[i][2], calib_points[i][3]) for i in kept_idx],
     }
+
+
+# ── 诊断日志（v3.7）──────────────────────────────────────
+import os
+
+_DIAG_LOG = os.path.expanduser("~/Library/Logs/GestureDemo-calib.log")
+
+
+def _append_diag(line: str):
+    """诊断行落盘（.app 双击启动时 stdout 不可见，文件是唯一取证出口）。"""
+    try:
+        os.makedirs(os.path.dirname(_DIAG_LOG), exist_ok=True)
+        with open(_DIAG_LOG, "a") as f:
+            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {line}\n")
+    except OSError:
+        pass  # 日志写不进不影响校准本身
 
 
 # ── 辅助绘制 ──────────────────────────────────────────────
@@ -564,6 +613,13 @@ def run_calibration(tracker, gaze_est, window_name: str) -> Optional[dict]:
                 print("[Calibration] 用户中途取消")
                 return None
 
+        # 每点诊断快照（print + 落盘，下轮排障不再盲猜）
+        outcome = "SKIP" if skipped else ("DEGRADED" if degraded else "OK")
+        diag_line = (f"pt{pt_idx + 1}/{total_points} {label} {outcome} "
+                     f"{now - start_time:.1f}s {gate.diag()}")
+        print(f"  [diag] {diag_line}")
+        _append_diag(diag_line)
+
         # 计算本点值（合格样本中位数；降级时到位后全量兜底）
         med = None if skipped else gate.result()
         if med is None:
@@ -598,6 +654,10 @@ def run_calibration(tracker, gaze_est, window_name: str) -> Optional[dict]:
              if fit["dropped_idx"] else "") + "):")
     print(f"  MAE: X={mae_x:.3f}, Y={mae_y:.3f}"
           + ("" if fit["quality_ok"] else "  ⚠️ 质量差，建议按 C 重做"))
+    _append_diag(f"FIT model={model} kept={len(fit['kept_idx'])}"
+                 f" dropped={[i + 1 for i in fit['dropped_idx']]}"
+                 f" MAE=({mae_x:.3f},{mae_y:.3f})"
+                 f" quality={'ok' if fit['quality_ok'] else 'LOW'}")
 
     # 应用校准
     gaze_est.set_calibration(coef_x, coef_y)
