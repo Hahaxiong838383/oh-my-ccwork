@@ -1,0 +1,9 @@
+全程只读。先用 rg 在 /home/hahaxiong83/mycc/0-System/memory-items.md 与 /home/hahaxiong83/mycc/0-System/RECENT_EVENTS.md 中定位下列稳定记忆键，只读取命中段，不扫描无关项目：project_feishu_grok_h_byos、feedback_tenant_capability_drift_mechanism、feedback_identifier_shape_is_not_identity、feedback_concurrent_sessions_shared_checkout。若任一键未命中，必须明确报告“未命中”，禁止脑补。
+
+然后只运行 /home/hahaxiong83/.local/bin/daily-readonly-check 一次。结合它输出的单行 JSON 与上述项目记忆，用简洁中文汇报：总体状态、问题/漂移、是否属于已知或允许差异、实际影响、建议动作，并列出本次实际采用的记忆锚点。
+
+异常主路由：control_release_drift → project_feishu_grok_h_byos；tenant_parity_lag → feedback_tenant_capability_drift_mechanism；涉及写入目标或 Bot 身份 → feedback_identifier_shape_is_not_identity；涉及共享 checkout 的写入安全背景 → feedback_concurrent_sessions_shared_checkout。其他 issue code 才可再用该 code 在上述两个文件中做定向 rg，只读命中段。
+
+租户 Skills 差异必须区分：合法 L2 个人增量、同名遮蔽、附件缺失；平台版只约束公司共用基线，部门版和个人版允许增量分叉，不能把所有差异都当故障，也不能把 Skills 差异误报成飞书 Bot 权限差异。判断 Bot 身份必须同时核对真实 botName、executionSite 与稳定标识/文件哈希，禁止凭相近名称、可读 uid 或角色印象映射。
+
+禁止修改任何文件、数据库或任务；禁止部署、提交、推送、重启、补签、覆盖租户内容或发送外部消息。即使命令非零也只汇报，不执行修复。

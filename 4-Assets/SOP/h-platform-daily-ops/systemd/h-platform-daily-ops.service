@@ -1,0 +1,11 @@
+[Unit]
+Description=H 平台每日运维巡检（home-studio 只读外部观察）
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/flock -n %t/h-platform-daily-ops.lock /usr/bin/python3 %h/.local/libexec/h-platform-daily-ops.py --systemd
+TimeoutStartSec=5min
+Nice=10
+IOSchedulingClass=idle

@@ -1,0 +1,14 @@
+# 不得 enable：Codeg automation ID 4 是唯一每日调度源。
+# 本文件只保留灾备时钟模板；只有在明确停用 ID 4 后才允许人工启用。
+
+[Unit]
+Description=H 平台每日运维巡检灾备时钟（默认禁用）
+
+[Timer]
+OnCalendar=*-*-* 09:10:00 Asia/Shanghai
+Persistent=true
+RandomizedDelaySec=5min
+AccuracySec=1min
+Unit=h-platform-daily-ops.service
+
+# 有意不提供安装段与 WantedBy，使模板保持 static，避免与 Codeg ID 4 双跑。
