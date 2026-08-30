@@ -24,7 +24,7 @@ SMOOTHING_ALPHA = 0.6        # EMA 平滑系数（越大越跟手，越小越平
 # ============================================================
 # 版本（单一真源：app.py 横幅与 UI 水印都读这里）
 # ============================================================
-VERSION = "v3.8"
+VERSION = "v3.8.1"
 
 # ============================================================
 # 注视信号源后端（2026-08 路线B·v3.8）
@@ -36,6 +36,9 @@ GAZE_BACKEND = "ptgaze"
 # ptgaze pitch/yaw(度) → raw gaze [-1,1] 的除数。按川哥探针实测定标:
 # 屏幕25%-75%对应 yaw位移~11°/pitch~6.7°,取15避免边缘削顶(教训:IRIS_SCALE_Y)
 GAZE_PT_DEG_SCALE = 15.0
+# v3.8.1 推理设备："mps"=Apple GPU(实测CPU 19.5ms致帧率腰斩13-15fps),
+# 不可用时自动回退 cpu 并打警告
+GAZE_PT_DEVICE = "mps"
 FACE_CONF_THRESHOLD = 0.5    # FaceMesh 检测置信度
 FACE_TRACK_THRESHOLD = 0.5   # FaceMesh 追踪置信度
 HEAD_WEIGHT = 0.35            # 头部朝向权重（0~1，剩余给虹膜）
@@ -72,8 +75,14 @@ BLINK_FREEZE_MAX_FRAMES = 15    # 连续冻结上限（保险丝：EAR 异常卡
 # 注视候选卡片选择
 # ============================================================
 CANDIDATE_LOCK_FRAMES = 8     # 连续多少帧锁定候选
-CARD_GAZE_Y_MIN = 0.15        # v3.5 垂直门控：gaze_y 低于此值(视线在上方)卡片不参与评分
-BUBBLE_GAZE_Y_MAX = 0.25      # v3.5 垂直门控：gaze_y 高于此值(视线在下方)气泡进度衰减
+# ── v3.8.1 垂直门控改布局几何推导 ──
+# v3.5 拍的常数(0.15/0.25)是 legacy 垂直信号坏死年代的产物:换 ptgaze 真
+# 信号后,屏高62.5%~75%生成的低位气泡被门控稳定封锁(注视它 gaze_y>0.25)。
+# 现以「桌面顶线的期望 gaze_y ± 余量」运行时推导(AttentionSelector.set_layout),
+# 布局变阈值自动跟。以下常数仅作无布局信息时的兜底(测试/旧调用)。
+CARD_GAZE_Y_MIN = 0.15        # 兜底：gaze_y 低于此值(视线在上方)卡片不参与评分
+BUBBLE_GAZE_Y_MAX = 0.25      # 兜底：gaze_y 高于此值(视线在下方)气泡进度衰减
+GAZE_Y_GATE_MARGIN = 0.10     # 分界线(桌面顶)两侧的余量带,吸收校准误差与噪声
 CANDIDATE_RELEASE_FRAMES = 12 # 连续多少帧释放候选
 CANDIDATE_MIN_CONFIDENCE = 0.25  # 最低候选评分阈值
 ATTENTION_SWITCH_MARGIN = 0.15   # 候选切换迟滞余量（防抖动）
@@ -82,7 +91,10 @@ ATTENTION_SCORE_SIGMA = 0.12     # 高斯评分标准差
 # ============================================================
 # 注视候选气泡选择（气泡短命，锁定更快）
 # ============================================================
-BUBBLE_LOCK_FRAMES = 30           # 凝视驻留帧数（v3.4：3→30，~0.5s 环形进度可视）
+# v3.8.1 dwell 改时间制：帧率波动不再改变交互手感（15fps 时 30 帧曾变 2 秒）。
+# BUBBLE_LOCK_FRAMES/DECAY 保留原值——标称 30fps 下时间制与帧数制数学等价，
+# 由 attention_selector 按 dt 换算（LOCK_SECONDS = FRAMES/30）。
+BUBBLE_LOCK_FRAMES = 30           # 凝视驻留标称帧数（30fps 基准 → 1.0s）
 BUBBLE_PROGRESS_DECAY = 2         # 非候选帧的进度衰减量（衰减而非清零，防抖动挫败）
 BUBBLE_RELEASE_FRAMES = 6         # 连续多少帧释放气泡候选
 BUBBLE_SCORE_SIGMA = 0.30         # 气泡高斯评分标准差（宽容识别，降低精度要求）

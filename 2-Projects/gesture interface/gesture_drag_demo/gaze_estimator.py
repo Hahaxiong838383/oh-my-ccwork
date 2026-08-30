@@ -26,7 +26,7 @@ from config import (
     HEAD_SCALE_Y, IRIS_SCALE_Y,
     GAZE_MIN_CUTOFF, GAZE_BETA, GAZE_MIN_CUTOFF_Y, GAZE_BETA_Y,
     GAZE_D_CUTOFF,
-    GAZE_BACKEND, GAZE_PT_DEG_SCALE,
+    GAZE_BACKEND, GAZE_PT_DEG_SCALE, GAZE_PT_DEVICE,
     CAMERA_WIDTH, CAMERA_HEIGHT,
 )
 from one_euro import OneEuroFilter
@@ -74,6 +74,16 @@ def build_ptgaze_backend(cam_w: int = CAMERA_WIDTH, cam_h: int = CAMERA_HEIGHT):
 
     config.gaze_estimator.use_dummy_camera_params = True
     config.gaze_estimator.dummy_camera_size = [cam_w, cam_h]
+
+    # v3.8.1：MPS 推理（CPU 19.5ms 致帧率腰斩）；不可用回退 cpu
+    device = GAZE_PT_DEVICE
+    if device == "mps":
+        import torch
+        if not torch.backends.mps.is_available():
+            print("[Gaze] ⚠️ MPS 不可用，回退 CPU 推理")
+            device = "cpu"
+    config.device = device
+    print(f"[Gaze] ptgaze 推理设备: {device}")
     return PtGazeEstimator(config)
 
 

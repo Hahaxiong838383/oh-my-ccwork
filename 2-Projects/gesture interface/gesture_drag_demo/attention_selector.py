@@ -18,12 +18,17 @@ from typing import Optional, Any
 from config import (
     CANDIDATE_LOCK_FRAMES, CANDIDATE_RELEASE_FRAMES,
     CANDIDATE_PROGRESS_DECAY,
-    CARD_GAZE_Y_MIN, BUBBLE_GAZE_Y_MAX,
+    CARD_GAZE_Y_MIN, BUBBLE_GAZE_Y_MAX, GAZE_Y_GATE_MARGIN,
     CANDIDATE_MIN_CONFIDENCE, ATTENTION_SWITCH_MARGIN,
     ATTENTION_SCORE_SIGMA,
     BUBBLE_LOCK_FRAMES, BUBBLE_RELEASE_FRAMES, BUBBLE_PROGRESS_DECAY,
     BUBBLE_SCORE_SIGMA, BUBBLE_SWITCH_MARGIN,
 )
+
+# v3.8.1 dwell 时间制：帧率波动不再改变手感。标称 30fps 下与旧帧数制
+# 数学精确等价（LOCK=30帧→1.0s；不传 dt 的调用按标称 dt 走，旧测试语义不变）
+_NOMINAL_DT = 1.0 / 30.0
+_BUBBLE_LOCK_SECONDS = BUBBLE_LOCK_FRAMES * _NOMINAL_DT
 
 
 @dataclass
@@ -56,8 +61,26 @@ class AttentionSelector:
         # --- 气泡候选 ---
         self._bubble_candidate: Optional[Any] = None
         self._bubble_locked: bool = False
-        self._bubble_lock_count: int = 0
+        self._bubble_lock_t: float = 0.0         # dwell 累积秒数（v3.8.1 时间制）
         self._bubble_release_count: int = 0
+        # --- 垂直门控阈值（v3.8.1 布局几何推导；未 set_layout 用 config 兜底）---
+        self._card_gaze_y_min: float = CARD_GAZE_Y_MIN
+        self._bubble_gaze_y_max: float = BUBBLE_GAZE_Y_MAX
+
+    def set_layout(self, frame_h: int, desktop_top_y: int):
+        """按布局推导垂直门控分界（v3.8.1）。
+
+        v3.5 拍死的常数是 legacy 垂直信号坏死年代标定的——换真信号后，
+        低位气泡（屏高 62.5%~75%）被 0.25 阈值稳定封锁。改为以桌面顶线
+        的期望 gaze_y 为分界 ± 余量带：布局变阈值自动跟，此病根治。
+        映射与 CALIB_POINTS_2D/card_expected_gaze 同款：(ratio-0.5)/0.5。
+        """
+        boundary = (desktop_top_y / frame_h - 0.5) / 0.5
+        self._card_gaze_y_min = boundary - GAZE_Y_GATE_MARGIN
+        self._bubble_gaze_y_max = boundary + GAZE_Y_GATE_MARGIN
+        print(f"[Attention] 垂直门控分界={boundary:+.3f} "
+              f"(卡片下限 {self._card_gaze_y_min:+.3f} / "
+              f"气泡上限 {self._bubble_gaze_y_max:+.3f})")
 
     def set_dragging(self, dragging: bool):
         """进入/退出拖拽状态（仅在状态转换沿动作）。
@@ -81,7 +104,7 @@ class AttentionSelector:
             self._release_count = 0
             self._bubble_candidate = None
             self._bubble_locked = False
-            self._bubble_lock_count = 0
+            self._bubble_lock_t = 0.0
             self._bubble_release_count = 0
 
     def update(self, gaze_x: float, confidence: float,
@@ -121,7 +144,7 @@ class AttentionSelector:
                 confidence=confidence,
                 candidate_bubble=self._bubble_candidate,
                 candidate_bubble_locked=self._bubble_locked,
-                bubble_lock_progress=self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES),
+                bubble_lock_progress=self.bubble_lock_progress,
             )
 
         # ============================================================
@@ -152,7 +175,8 @@ class AttentionSelector:
 
         # v3.5 垂直门控：视线在上方（如看气泡）时，底部卡片不得成为
         # 候选——修"盯气泡时底部卡片躺枪跳选中"（评分是 1D 水平的历史设计）
-        if gaze_y is not None and gaze_y < CARD_GAZE_Y_MIN:
+        # v3.8.1：阈值改布局几何推导（set_layout），常数仅兜底
+        if gaze_y is not None and gaze_y < self._card_gaze_y_min:
             best_card = None
             best_score = -1.0
 
@@ -181,7 +205,7 @@ class AttentionSelector:
                 lock_progress=self._lock_count / max(1, CANDIDATE_LOCK_FRAMES),
                 candidate_bubble=self._bubble_candidate,
                 candidate_bubble_locked=self._bubble_locked,
-                bubble_lock_progress=self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES),
+                bubble_lock_progress=self.bubble_lock_progress,
             )
 
         # 有有效候选
@@ -224,16 +248,17 @@ class AttentionSelector:
             lock_progress=min(1.0, self._lock_count / max(1, CANDIDATE_LOCK_FRAMES)),
             candidate_bubble=self._bubble_candidate,
             candidate_bubble_locked=self._bubble_locked,
-            bubble_lock_progress=min(1.0, self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES)),
+            bubble_lock_progress=self.bubble_lock_progress,
         )
 
     @property
     def bubble_lock_progress(self) -> float:
-        """气泡凝视驻留进度 [0,1]（v3.4 进度环 UI 用）"""
-        return min(1.0, self._bubble_lock_count / max(1, BUBBLE_LOCK_FRAMES))
+        """气泡凝视驻留进度 [0,1]（v3.4 进度环 UI 用；v3.8.1 时间制）"""
+        return min(1.0, self._bubble_lock_t / _BUBBLE_LOCK_SECONDS)
 
     def update_bubbles(self, gaze_x: float, confidence: float,
-                       bubbles: list, gaze_y: float = None) -> None:
+                       bubbles: list, gaze_y: float = None,
+                       dt: float = _NOMINAL_DT) -> None:
         """
         每帧调用（在 update() 之后），根据 gaze_x 更新候选气泡。
 
@@ -244,20 +269,22 @@ class AttentionSelector:
             gaze_x: 平滑后的水平注视方向 [-1, 1]
             confidence: 注视估计可信度 [0, 1]
             bubbles: 当前存活的气泡列表（需要 .cx, .title 属性）
+            dt: 距上帧秒数（v3.8.1 时间制 dwell；不传按标称 30fps）
         """
         # 拖拽期间冻结
         if self._dragging:
             return
 
-        # v3.5 垂直门控：视线在下方（如看卡片区）时气泡进度衰减
-        _y_gated = gaze_y is not None and gaze_y > BUBBLE_GAZE_Y_MAX
+        # v3.5 垂直门控：视线在下方（真看卡片区）时气泡进度衰减
+        # v3.8.1：阈值改布局几何推导（set_layout），常数仅兜底
+        _y_gated = gaze_y is not None and gaze_y > self._bubble_gaze_y_max
 
         # 没有气泡 → 清除候选
         if not bubbles or confidence < 0.15 or _y_gated:
             self._bubble_release_count += 1
             # v3.4：进度衰减而非清零（短暂低置信不打回原点）
-            self._bubble_lock_count = max(
-                0, self._bubble_lock_count - BUBBLE_PROGRESS_DECAY)
+            self._bubble_lock_t = max(
+                0.0, self._bubble_lock_t - BUBBLE_PROGRESS_DECAY * dt)
             if self._bubble_release_count >= BUBBLE_RELEASE_FRAMES:
                 self._bubble_candidate = None
                 self._bubble_locked = False
@@ -269,7 +296,7 @@ class AttentionSelector:
                 and self._bubble_candidate not in bubbles):
             self._bubble_candidate = None
             self._bubble_locked = False
-            self._bubble_lock_count = 0
+            self._bubble_lock_t = 0.0
             self._bubble_release_count = 0
 
         # 对所有气泡评分
@@ -290,8 +317,8 @@ class AttentionSelector:
         if best_bubble is None or best_score < CANDIDATE_MIN_CONFIDENCE:
             self._bubble_release_count += 1
             # v3.4：进度衰减而非清零（视线短暂飘走回来接着涨）
-            self._bubble_lock_count = max(
-                0, self._bubble_lock_count - BUBBLE_PROGRESS_DECAY)
+            self._bubble_lock_t = max(
+                0.0, self._bubble_lock_t - BUBBLE_PROGRESS_DECAY * dt)
             if self._bubble_release_count >= BUBBLE_RELEASE_FRAMES:
                 self._bubble_candidate = None
                 self._bubble_locked = False
@@ -300,10 +327,10 @@ class AttentionSelector:
 
         if self._bubble_candidate is None:
             self._bubble_candidate = best_bubble
-            self._bubble_lock_count = 1
+            self._bubble_lock_t = dt
             self._bubble_release_count = 0
         elif best_bubble is self._bubble_candidate:
-            self._bubble_lock_count += 1
+            self._bubble_lock_t += dt
             self._bubble_release_count = 0
         else:
             # 迟滞切换：需要比当前候选明显更好
@@ -314,14 +341,14 @@ class AttentionSelector:
             ) * confidence
             if best_score > current_score + BUBBLE_SWITCH_MARGIN:
                 self._bubble_candidate = best_bubble
-                self._bubble_lock_count = 1
+                self._bubble_lock_t = dt
                 self._bubble_release_count = 0
                 self._bubble_locked = False
             else:
-                self._bubble_lock_count += 1
+                self._bubble_lock_t += dt
                 self._bubble_release_count = 0
 
-        if self._bubble_lock_count >= BUBBLE_LOCK_FRAMES and not self._bubble_locked:
+        if self._bubble_lock_t >= _BUBBLE_LOCK_SECONDS and not self._bubble_locked:
             self._bubble_locked = True
 
     def reset(self):
@@ -333,5 +360,5 @@ class AttentionSelector:
         self._dragging = False
         self._bubble_candidate = None
         self._bubble_locked = False
-        self._bubble_lock_count = 0
+        self._bubble_lock_t = 0.0
         self._bubble_release_count = 0

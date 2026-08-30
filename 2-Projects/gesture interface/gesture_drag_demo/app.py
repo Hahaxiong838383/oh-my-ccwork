@@ -98,7 +98,8 @@ def main():
     attn_sel = AttentionSelector(tracker.frame_w)
     face_trk = FaceTracker()
     show_gaze_debug = True   # 'G' 键切换注视调试可视化
-    show_face_debug = True   # 'F' 键切换面部特征可视化
+    # v3.8.1 默认关：468 点绘制吃 5-8ms/帧，是帧率腰斩的帮凶（按 F 可开）
+    show_face_debug = False  # 'F' 键切换面部特征可视化
     print("注视估计器 + 面部特征追踪器已初始化")
 
     # 初始化桌面和卡片
@@ -109,6 +110,8 @@ def main():
     # 初始化气泡管理器
     desktop_top_y = desktops[0].y  # 桌面顶部 y 坐标
     bubble_mgr = BubbleManager(tracker.frame_w, tracker.frame_h, desktop_top_y)
+    # v3.8.1 垂直门控按布局推导（v3.5 常数在真垂直信号下封锁低位气泡）
+    attn_sel.set_layout(tracker.frame_h, desktop_top_y)
 
     print(f"已创建 {len(desktops)} 个桌面, {len(cards)} 张卡片")
     print(f"气泡区域: y=[80, {desktop_top_y - 30}]")
@@ -140,6 +143,8 @@ def main():
     # 8 帧锁定几乎必然被打断；眨眼帧沿用上帧候选快照）
     last_attn_state = None
     blink_freeze_count = 0
+    # v3.8.1 dwell 时间制：真实帧间隔（钳 0.2s 防暂停后巨跳）
+    prev_attn_t = time.monotonic()
 
     try:
         while True:
@@ -188,6 +193,7 @@ def main():
                     and blink_freeze_count < BLINK_FREEZE_MAX_FRAMES):
                 blink_freeze_count += 1
                 attn_state = last_attn_state
+                prev_attn_t = time.monotonic()  # 眨眼时段不计入 dwell
             else:
                 blink_freeze_count = 0
                 attn_state = attn_sel.update(
@@ -198,12 +204,16 @@ def main():
                     gaze_y=gaze_result.gaze_y,
                 )
 
-                # --- 气泡注视候选更新 ---
+                # --- 气泡注视候选更新（v3.8.1 dwell 按真实帧间隔计时）---
+                _now_attn = time.monotonic()
+                _attn_dt = min(0.2, _now_attn - prev_attn_t)
+                prev_attn_t = _now_attn
                 attn_sel.update_bubbles(
                     gaze_x=gaze_result.gaze_x,
                     confidence=gaze_result.confidence,
                     bubbles=bubble_mgr.bubbles,
                     gaze_y=gaze_result.gaze_y,
+                    dt=_attn_dt,
                 )
                 # 同步气泡候选到 attn_state（update_bubbles 直接修改内部
                 # 状态，但 attn_state 快照在 update() 时已生成，需要补刷）

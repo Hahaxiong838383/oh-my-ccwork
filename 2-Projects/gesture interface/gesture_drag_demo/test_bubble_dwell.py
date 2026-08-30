@@ -209,6 +209,49 @@ def test_gaze_y_gates_bubbles():
     assert sel._bubble_locked
 
 
+# ── v3.8.1：门控几何推导 + dwell 时间制 ──────────────────
+
+def test_layout_gate_unblocks_low_bubbles():
+    """v3.8.1 回归（2026-08-30 川哥实测：中下气泡识别不准）：
+    低位气泡（注视 gaze_y≈0.45，屏高约 72%）在 v3.5 常数阈值 0.25 下被
+    门控封锁永不锁定；set_layout 按桌面顶线(y=569/720)推导后应正常锁定。"""
+    b = _bubble_at_gaze(0.3)
+
+    # 旧常数阈值：gaze_y=0.45 > 0.25 → 封锁（进度恒 0）
+    sel_old = AttentionSelector(W)
+    for _ in range(BUBBLE_LOCK_FRAMES + 10):
+        sel_old.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b],
+                               gaze_y=0.45)
+    assert not sel_old._bubble_locked, "对照：旧阈值下低位气泡确实被封"
+
+    # 几何推导阈值：boundary≈0.58, bubble_max≈0.68 → 0.45 放行
+    sel_new = AttentionSelector(W)
+    sel_new.set_layout(frame_h=720, desktop_top_y=569)
+    assert 0.55 < sel_new._bubble_gaze_y_max < 0.75
+    for _ in range(BUBBLE_LOCK_FRAMES + 2):
+        sel_new.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b],
+                               gaze_y=0.45)
+    assert sel_new._bubble_locked, "布局推导阈值应放行低位气泡"
+
+    # 视线真到桌面区（gaze_y=0.75 > bubble_max）→ 仍然衰减（拦截力保留）
+    for _ in range(BUBBLE_LOCK_FRAMES * 2):
+        sel_new.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b],
+                               gaze_y=0.75)
+    assert sel_new.bubble_lock_progress == 0.0
+
+
+def test_dwell_is_time_based_not_frame_based():
+    """v3.8.1：15fps（dt=1/15）下锁定用时仍 ≈1s——帧数减半即锁，
+    帧率波动不再拉长 dwell（30 帧 @15fps 曾变 2 秒）。"""
+    sel = AttentionSelector(W)
+    b = _bubble_at_gaze(0.3)
+    half_frames = BUBBLE_LOCK_FRAMES // 2 + 1   # 16 帧 × (1/15)s > 1.0s
+    for _ in range(half_frames):
+        sel.update_bubbles(gaze_x=0.3, confidence=0.9, bubbles=[b],
+                           dt=1.0 / 15.0)
+    assert sel._bubble_locked, "15fps 下约一半帧数即应锁定（时长恒定）"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_"):
