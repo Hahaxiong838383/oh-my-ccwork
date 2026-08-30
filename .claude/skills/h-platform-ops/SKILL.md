@@ -6605,3 +6605,70 @@ ssh dev198 'journalctl --user -u feishu-grok-runner-worker --since "7 days ago" 
 **归属靠时间戳对撞，不靠推测**：配置 mtime `14:17:58.121367588` 与写入日志同秒，
 最近的租户配置在 14 秒之后——据此排除了「跨租户串写」这个严重得多的假设。
 日志里 uid 一律显示 `[redacted]`，**认不出是谁**，所以别指望从日志判归属。
+
+## 🔴 grok 自动更新删旧版 → bwrap 死路径，全租户瘫痪（2026-08-30 事故）
+
+### 症状与分布
+
+全部租户任务 `grok exit 1: bwrap: Can't find source path /home/chuan/.grok/downloads/grok-<旧版本>: No such file or directory`；
+**owner 完好**（不进沙箱）——「owner 好、租户全坏」这个分布本身就指向沙箱层。
+
+### 根因（三级联动）
+
+1. grok CLI 自动更新按「保留最近两版」清理 `~/.grok/downloads/`；
+2. bridge 在 **startApp 时**把 `~/.grok/bin/grok` symlink realpath 成真实路径并缓存
+   （防任务中途 symlink 翻转——设计动机正当），进程活得比版本久，缓存变死路径，
+   **不重启不自愈**；
+3. 用户点「新会话」按钮 → 任务链 rejection 逃逸 → 当时的 unhandledRejection
+   handler `log + exit(1)` → **17 个 Bot 投递面整个崩掉**，且崩溃不走 ExecStop
+   drain → 顺手制造孤儿。
+
+修复（`e2e65fd`）：`liveBindSource`——bind 前校验缓存路径，死了沿保留的
+`grokBinHostSource` 重解析，再失败 fail-open 让 bwrap 大声报错；四个 resolve 键
+（grok/kimi/omp/node）全覆盖。unhandledRejection 改默认 log 不退出
+（`UNHANDLED_REJECTION` 巡检标记 + 脱敏 stack），`exitOnUnhandledRejection: true`
+保留旧语义，uncaughtException 维持 exit(1)。
+
+### 排障判据（时间线对撞三件套）
+
+- **报错首现**判据词必须钉报错原文 `"bwrap: Can't find"`——宽泛 grep "bwrap" 会
+  命中正常任务参数 `sandbox=bwrap`，时间线直接错 24h。
+- 对撞：`~/.grok/downloads/` 文件 mtime + `version.json` checked_at + 进程
+  `ActiveEnterTimestamp`（谁活得比版本久谁有雷）。
+- `NRestarts` 只计**自动**拉起：`NRestarts=1` + 新 MainPID = 崩溃后 systemd 拉的，
+  不是人手 restart（手动 restart 会清零它）。
+
+### 临时止血 vs 根治
+
+重启 bridge（或等它崩了被拉起）即重新 resolve——**止血有效但下次发版再瘫**；
+根治是 `liveBindSource`（已在 `e2e65fd`）。
+**Mini 无此雷**：VM 禁直连 GitHub，grok 二进制由 macOS 侧灌入、无 auto-update
+路径（downloads 里单文件、无 version.json 即为证据）。防御性升级随下次发版走。
+
+### 验收（真机四锚）
+
+①受控探针：生产代码 `resolveSandboxSpec + buildBwrapArgs` 真跑 bwrap 全挂载矩阵
+执行 `grok --version`；②重启后 `grok start` 计数>0 且 `"bwrap: Can't find"` 计数=0
+（对照：重启前 30 连败）；③真实用户任务走到 `rpc_result`；④负向注入：stash 掉
+修复，事故回归测试变红。
+
+## 孤儿 cancel 实操（2026-08-30 走通，补 8-14 章节）
+
+- **无终态对账脚本**直接查 sqlite（只读）：db 真值路径
+  `~/feishu-grok-bridge/workspace/.state/h-state.v1.sqlite`（不在仓根——
+  `sqlite event store ready h-state.v1.sqlite` 日志里的相对路径会骗人）。
+  判据=runner-rpc namespace 里 `rpc_requested` 无 `rpc_result/rpc_error/rpc_cancelled`。
+- **cancel 走生产代码**：脚本 import `createRunnerRpc`（假 worker——`resolve()`
+  只 append 不碰 worker）+ `createSqliteEventStore` 同一 db，调
+  `rpc.resolve(scope, rid, 'cancelled')`。**绝不手拼 SQL**——事件形状/seq/
+  双载体（sqlite + scope 文件）都由生产代码维护。
+- **scope 是 `${appId}:${uid}`**（bridge.mjs `deliveryScope`），db 里只有 sha256。
+  从 users.json 全组合 + owner + **已迁移站点的历史组合**（Mini 的
+  `/srv/h-platform/config/users.json`，注意不在 `/srv/h-platform/users.json`）
+  构造候选对撞 hash，**全等才动手，撞不上就停**。
+- **cancel 后 healthz 的 orphaned 不立即归零**：那是 bridge 内存 states 的投影，
+  外部 append 它不知道，等该 scope 下次活动时重放刷新。验收认 durable 对账，
+  别对着 healthz 等归零。
+- **活任务在无终态列表里长得和孤儿一模一样**：判年龄——`rpc_requested` 在
+  budget 窗口内（如 15min）的先放着；本轮 13:55 的活任务差 3 分钟就被误 cancel，
+  13:58 它自己出了 `rpc_result`。
