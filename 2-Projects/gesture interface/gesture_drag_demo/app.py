@@ -35,7 +35,7 @@ from config import (
     CONFIRM_FRAMES, LOST_FRAMES_RELEASE, SMOOTHING_ALPHA,
     WINDOW_NAME, VERSION, IMPLICIT_CALIB_ENABLED,
     BLINK_FREEZE_ENABLED, BLINK_FREEZE_MAX_FRAMES,
-    IMPLICIT_REJECT_ALERT,
+    IMPLICIT_REJECT_ALERT, SHOW_CAMERA_BG,
 )
 from implicit_calib import ImplicitCalibrator, card_expected_gaze
 
@@ -102,6 +102,7 @@ def main():
     show_gaze_debug = True   # 'G' 键切换注视调试可视化
     # v3.8.1 默认关：468 点绘制吃 5-8ms/帧，是帧率腰斩的帮凶（按 F 可开）
     show_face_debug = False  # 'F' 键切换面部特征可视化
+    show_camera_bg = SHOW_CAMERA_BG  # 'B' 键切换摄像头背景（v3.9.1 默认纯黑）
     print("注视估计器 + 面部特征追踪器已初始化")
 
     # 初始化桌面和卡片
@@ -320,6 +321,11 @@ def main():
 
             # --- 绘制 ---
 
+            # v3.9.1 纯黑背景：感知已全部完成（推理吃的是上面的原始帧），
+            # 此处起 frame 只作显示画布——清黑不影响任何识别
+            if not show_camera_bg:
+                frame[:] = 0
+
             # 1. 绘制桌面背景（黑色区域）
             #    拖拽卡片或气泡时，高亮目标桌面
             highlight_idx = -1
@@ -382,7 +388,7 @@ def main():
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (130, 130, 130), 1)
             # v3.9 按键说明常驻（左下角，防遗忘；.app 无终端横幅）
             cv2.putText(frame,
-                        "C:recalibrate  R:reset  G:gaze  F:face  ESC:quit",
+                        "C:recalibrate  B:background  R:reset  G:gaze  F:face  ESC:quit",
                         (10, frame.shape[0] - 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.42, (130, 130, 130), 1)
             # v3.9 失配哨兵：连续离群拒绝 → 提示重标（换环境忘按 C 的保护）
@@ -415,6 +421,9 @@ def main():
             elif key == ord('g') or key == ord('G'):
                 show_gaze_debug = not show_gaze_debug
                 print(f"注视调试: {'ON' if show_gaze_debug else 'OFF'}")
+            elif key == ord('b') or key == ord('B'):
+                show_camera_bg = not show_camera_bg
+                print(f"摄像头背景: {'ON' if show_camera_bg else 'OFF(纯黑)'}")
             elif key == ord('f') or key == ord('F'):
                 show_face_debug = not show_face_debug
                 print(f"面部特征: {'ON' if show_face_debug else 'OFF'}")
