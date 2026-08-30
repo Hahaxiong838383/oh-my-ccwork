@@ -20,7 +20,8 @@ from gesture_state import GestureStateMachine, GesturePhase
 from gaze_estimator import GazeEstimator
 from attention_selector import AttentionSelector
 from face_tracker import FaceTracker
-from calibration import run_calibration
+from calibration import run_calibration, run_quick_verify, CALIB_POINTS_LAYOUT
+import calib_store
 from ui import (
     create_desktops, create_desktop_cards, draw_desktops,
     draw_cards, draw_debug_overlay, handle_card_swap,
@@ -34,6 +35,7 @@ from config import (
     CONFIRM_FRAMES, LOST_FRAMES_RELEASE, SMOOTHING_ALPHA,
     WINDOW_NAME, VERSION, IMPLICIT_CALIB_ENABLED,
     BLINK_FREEZE_ENABLED, BLINK_FREEZE_MAX_FRAMES,
+    IMPLICIT_REJECT_ALERT,
 )
 from implicit_calib import ImplicitCalibrator, card_expected_gaze
 
@@ -136,8 +138,23 @@ def main():
         print(f"[implicit_calib] 已启用（锚点 {len(anchors['measured'])} 点）")
         return cal
 
-    implicit_cal = _build_implicit(
-        run_calibration(tracker, gaze_est, WINDOW_NAME))
+    def _startup_calibration():
+        """v3.9 增量标定：有档 → 3 点快验微调；无档/快验失败/环境剧变
+        （元数据不匹配/残差超限）→ 全量 9 点。返回 (anchors, 历史隐式样本)。"""
+        stored = calib_store.load(CALIB_POINTS_LAYOUT)
+        if stored is not None:
+            anchors = run_quick_verify(tracker, gaze_est, WINDOW_NAME, stored)
+            if anchors is not None:
+                return anchors, stored.get("implicit_samples") or []
+            print("[Calibration] 快验未通过 → 全量标定")
+        return run_calibration(tracker, gaze_est, WINDOW_NAME), []
+
+    _anchors, _hist_samples = _startup_calibration()
+    implicit_cal = _build_implicit(_anchors)
+    if implicit_cal is not None and _hist_samples:
+        # 回灌历史捏取样本（保鲜期内）：跨会话「越用越准」；只进滑窗，
+        # 映射不立刻变（下一次捏取自然触发重拟合）
+        implicit_cal.restore_samples(_hist_samples)
 
     # v3.7 眨眼冻结状态（人均 3-4s 眨一次、每次 3-9 帧虹膜乱值——
     # 8 帧锁定几乎必然被打断；眨眼帧沿用上帧候选快照）
@@ -363,6 +380,18 @@ def main():
             cv2.putText(frame, VERSION,
                         (frame.shape[1] - 58, frame.shape[0] - 15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (130, 130, 130), 1)
+            # v3.9 按键说明常驻（左下角，防遗忘；.app 无终端横幅）
+            cv2.putText(frame,
+                        "C:recalibrate  R:reset  G:gaze  F:face  ESC:quit",
+                        (10, frame.shape[0] - 15),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.42, (130, 130, 130), 1)
+            # v3.9 失配哨兵：连续离群拒绝 → 提示重标（换环境忘按 C 的保护）
+            if (implicit_cal is not None
+                    and implicit_cal.consecutive_rejects >= IMPLICIT_REJECT_ALERT):
+                cv2.putText(frame,
+                            "Calibration drift detected - press C to recalibrate",
+                            (10, frame.shape[0] - 40),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 200, 255), 2)
 
             # 显示画面
             cv2.imshow(WINDOW_NAME, frame)
@@ -390,11 +419,24 @@ def main():
                 show_face_debug = not show_face_debug
                 print(f"面部特征: {'ON' if show_face_debug else 'OFF'}")
             elif key == ord('c') or key == ord('C'):
-                # 重新校准（隐式校准器随新锚点重建）
-                implicit_cal = _build_implicit(
-                    run_calibration(tracker, gaze_est, WINDOW_NAME))
+                # 重新校准 = 一键重置+重建（v3.9：完成即覆盖校准档，
+                # 应对换摄像头/换房间；历史隐式样本一并作废）
+                _anchors = run_calibration(tracker, gaze_est, WINDOW_NAME)
+                implicit_cal = _build_implicit(_anchors)
 
     finally:
+        # v3.9 退出落盘：当前系数+锚点+滑窗隐式样本（跨会话越用越准）
+        try:
+            coefs = gaze_est.calib_coefs
+            if coefs is not None and _anchors:
+                calib_store.save(
+                    coefs[0], coefs[1],
+                    _anchors["measured"], _anchors["expected"],
+                    CALIB_POINTS_LAYOUT,
+                    implicit_samples=(implicit_cal.export_samples()
+                                      if implicit_cal else None))
+        except Exception as e:
+            print(f"[CalibStore] 退出保存失败（不影响下次启动）: {e}")
         tracker.release()
         gaze_est.close()
         cv2.destroyAllWindows()

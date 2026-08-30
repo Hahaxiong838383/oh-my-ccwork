@@ -20,7 +20,7 @@
 - 项目仅含一个子目录 `gesture_drag_demo/`，是一个可运行的 Python Demo（无独立 GitHub repo，mycc 单仓子目录）。
 - 技术栈：OpenCV + MediaPipe（Hands + FaceMesh/Iris），依赖见 `requirements.txt`（opencv-python>=4.8、mediapipe 0.10.9~0.10.15、numpy>=1.24）。
 - 能力（基于源码）：手部 21 关键点检测 + Pinch/Release 状态机；粗粒度注视方向估计（头部 + 虹膜加权融合）；注视候选卡片预选与锁定；面部特征追踪（EAR/眨眼/朝向/表情线索）；校准流程；4 桌面 × 12 卡片的拖拽交互 + 气泡系统。
-- 版本：v3.8（单一真源 `config.py` VERSION，主界面+校准屏右下角水印同步显示）。注视信号源：ptgaze ETH-XGaze 外观法模型（`GAZE_BACKEND` 一行可回退 legacy 手工管线）。
+- 版本：v3.9（单一真源 `config.py` VERSION，主界面+校准屏右下角水印同步显示）。注视信号源：ptgaze ETH-XGaze 外观法模型（`GAZE_BACKEND` 一行可回退 legacy 手工管线）。校准档：`~/Library/Application Support/GestureDemo/calibration.json`（删档=物理重置）。
 - 运行入口为 `python app.py`，需 USB 摄像头；快捷键 ESC 退出 / R 重置 / G 注视调试 / F 面部特征 / C 重新校准。
 - 文件修改时间：核心源码（app/config/ui/hand_tracker/gesture_state/gaze_estimator/face_tracker）均为 2026-03-27；较早文件（calibration/attention_selector/requirements/内层 README）为 2026-03-23。
 
@@ -68,3 +68,4 @@
 - 2026-08-30：v3.8 路线B落地（回滚锚点=commit dd06afeaa + 运行时闸门 GAZE_BACKEND="legacy" 一行回退）：gaze_estimator 内嵌 ptgaze ETH-XGaze 信号源（归一化 -yaw/15、-pitch/15 按探针实测定标防削顶），FaceMesh 照跑供眨眼/EAR/UI，模型丢脸自动回退 legacy 顶帧，交互层（校准链/OneEuro/状态机/到位门）零改动；模型收 `models/`（git 不入库缺失自愈）；6 套测试全绿（+test_ptgaze_backend 5 测）；待打包部署+川哥真机验收（cc）。
 - 2026-08-30：v3.8 川哥真机验收：标定过程有提高✅；两问题：帧率 13-15（处理超 33ms 摄像头节拍锁定）+ 中下气泡识别不准（几何算账实锤：v3.5 门控常数 0.25 在真垂直信号下封锁屏高 62.5%~75% 的低位气泡——靠坏死信号标定的阈值，信号修好后反成封锁器）（cc）。
 - 2026-08-30：v3.8.1（锚点=commit fbaf62c63）三修：①垂直门控改布局几何推导（桌面顶线 ±0.10，set_layout）②ptgaze CPU→MPS（全链 55→17.5ms 实测）③face_debug 默认关+气泡 dwell 时间制（帧率波动不改手感，眨眼时段不计入）；6 套测试全绿（+2 测）。川哥验收：**气泡全部正常✅**；帧率仍 15 ⚠️（MPS 已生效但节拍锁定未解——瓶颈不在推理侧，候选：Hands 推理/imshow 渲染/摄像头曝光帧率，下轮用分段计时定位）（cc）。
+- 2026-08-30：v3.9 标定点外扩+增量标定（川哥拍板，锚点=commit 90c1f0657 v3.8.1）：①9 点外扩 10-90%/12-88%（外推区变插值区，GAZE_PT_DEG_SCALE 15→25 防边缘削顶）②校准档持久化 calib_store.py（元数据毒药防御：backend/scale/点表布局任一变更自动弃档）③启动 3 点快验微调（残差≤0.28 合并重拟合，超限自动转全量——环境剧变检测器）④隐式样本跨会话（7 天保鲜回灌）⑤失配哨兵（连续 5 拒→橙字提示按 C）⑥按 C=一键重置+重标+覆盖落盘，删 JSON=逃生门 ⑦主界面常驻按键说明；7 套测试全绿（+test_calib_store 7 测）；待打包部署+真机验收（cc）。

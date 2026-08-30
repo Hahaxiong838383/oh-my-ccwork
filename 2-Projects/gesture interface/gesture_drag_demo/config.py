@@ -24,7 +24,7 @@ SMOOTHING_ALPHA = 0.6        # EMA 平滑系数（越大越跟手，越小越平
 # ============================================================
 # 版本（单一真源：app.py 横幅与 UI 水印都读这里）
 # ============================================================
-VERSION = "v3.8.1"
+VERSION = "v3.9"
 
 # ============================================================
 # 注视信号源后端（2026-08 路线B·v3.8）
@@ -34,8 +34,9 @@ VERSION = "v3.8.1"
 # "legacy"=原手工几何融合（head/iris 加权）——回滚闸门：改这一行即回退
 GAZE_BACKEND = "ptgaze"
 # ptgaze pitch/yaw(度) → raw gaze [-1,1] 的除数。按川哥探针实测定标:
-# 屏幕25%-75%对应 yaw位移~11°/pitch~6.7°,取15避免边缘削顶(教训:IRIS_SCALE_Y)
-GAZE_PT_DEG_SCALE = 15.0
+# 屏幕25%-75%对应 yaw位移~11°/pitch~6.7°。v3.9 标定点外扩到 10%-90% 后
+# 边缘 yaw 到 18°+,15 会削顶污染标定 → 提到 25(教训:IRIS_SCALE_Y 削顶)
+GAZE_PT_DEG_SCALE = 25.0
 # v3.8.1 推理设备："mps"=Apple GPU(实测CPU 19.5ms致帧率腰斩13-15fps),
 # 不可用时自动回退 cpu 并打警告
 GAZE_PT_DEVICE = "mps"
@@ -53,6 +54,18 @@ GAZE_BETA = 0.6               # 水平速度自适应敏感度
 GAZE_MIN_CUTOFF_Y = 0.6       # 垂直更稳（信号噪声更大）
 GAZE_BETA_Y = 0.5             # 垂直速度自适应敏感度
 GAZE_D_CUTOFF = 1.0           # 速度估计 cutoff（默认）
+
+# ── 校准持久化 + 启动快验（2026-08 v3.9：增量标定）──
+CALIB_STORE_ENABLED = True        # 校准档持久化总开关
+QUICK_VERIFY_POINTS = 3           # 启动快验点数（中心+左上+右下，覆盖两轴）
+QUICK_VERIFY_TARGET = 12          # 快验每点合格样本数（短平快）
+QUICK_VERIFY_TIMEOUT = 5.0        # 快验单点超时（秒）→ 视为快验失败转全量
+QUICK_OK_MAE = 0.12               # 快验残差 ≤ 此值：旧档直接可用（仍做微调）
+QUICK_FIX_MAE = 0.28              # 快验残差 ≤ 此值：合并快验点重拟合微调
+                                  # 超过：环境剧变（换摄像头/房间）→ 引导全量重标
+QUICK_VERIFY_WEIGHT = 2.0         # 快验点在合并重拟合中的权重（旧锚点=1.0）
+IMPLICIT_PERSIST_DAYS = 7.0       # 隐式样本持久化保鲜期（超期不回灌）
+IMPLICIT_REJECT_ALERT = 5         # 连续离群拒绝达此数 → UI 提示按 C 重标（失配哨兵）
 
 # ── 隐式在线校准（2026-07 路线C：捏取即校准）──
 IMPLICIT_CALIB_ENABLED = True   # 总开关

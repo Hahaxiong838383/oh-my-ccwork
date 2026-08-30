@@ -17,23 +17,36 @@ import numpy as np
 from typing import List, Tuple, Optional
 
 from implicit_calib import fit_poly_with_affine_fallback, poly_features
-from config import VERSION
+from config import (
+    VERSION,
+    QUICK_VERIFY_TARGET, QUICK_VERIFY_TIMEOUT,
+    QUICK_OK_MAE, QUICK_FIX_MAE, QUICK_VERIFY_WEIGHT,
+)
+import calib_store
 
 # ── 校准配置 ──────────────────────────────────────────────
 # 9 个校准点：(screen_x_ratio, screen_y_ratio, expected_gaze_x, expected_gaze_y)
+# expected 用统一映射 x=(r-0.5)/0.6、y=(r-0.5)/0.5（与 card_expected_gaze/
+# 垂直门控 boundary 同一套约定，勿单独改任何一处）。
+# v3.9 外扩 20-80%/25-75% → 10-90%/12-88%：气泡可到画面边缘，旧覆盖下
+# 边缘全靠二阶多项式外推（误差放大区）；外扩把外推区变插值区，且边缘
+# 非线性只有被标定点"见过"才能被拟合（2026-07 调研：非线性集中在顶部
+# 行与左右边缘）。不贴 0/100%——贴边注视不适+头姿介入+模型极端角误差。
+# ⚠️ 外扩前提：GAZE_PT_DEG_SCALE 已同步 15→25，防边缘 yaw 18°+ 削顶。
+CALIB_POINTS_LAYOUT = "v3.9-wide"   # 布局版本（校准档兼容性校验用）
+
+
+def _pt(rx: float, ry: float) -> Tuple[float, float, float, float]:
+    return (rx, ry, (rx - 0.5) / 0.6, (ry - 0.5) / 0.5)
+
+
 CALIB_POINTS_2D: List[Tuple[float, float, float, float]] = [
     # 第一行（上）
-    (0.20, 0.25, -0.50, -0.50),  # 左上
-    (0.50, 0.25,  0.00, -0.50),  # 中上
-    (0.80, 0.25,  0.50, -0.50),  # 右上
+    _pt(0.10, 0.12), _pt(0.50, 0.12), _pt(0.90, 0.12),
     # 第二行（中）
-    (0.20, 0.50, -0.50,  0.00),  # 左中
-    (0.50, 0.50,  0.00,  0.00),  # 中中
-    (0.80, 0.50,  0.50,  0.00),  # 右中
+    _pt(0.10, 0.50), _pt(0.50, 0.50), _pt(0.90, 0.50),
     # 第三行（下）
-    (0.20, 0.75, -0.50,  0.50),  # 左下
-    (0.50, 0.75,  0.00,  0.50),  # 中下
-    (0.80, 0.75,  0.50,  0.50),  # 右下
+    _pt(0.10, 0.88), _pt(0.50, 0.88), _pt(0.90, 0.88),
 ]
 CALIB_DOT_RADIUS = 18      # 校准圆点半径
 CALIB_SCALE_CLAMP = (0.3, 5.0)  # scale 钳位范围
@@ -735,9 +748,142 @@ def run_calibration(tracker, gaze_est, window_name: str) -> Optional[dict]:
 
     print("[Calibration] 9 点校准完成，进入主界面\n")
     # 锚点只含保留点（剔除的污染点不得进隐式校准锚点集）
-    return {
+    anchors = {
         "measured": fit["measured"],
         "expected": fit["expected"],
+        "coef_x": coef_x,
+        "coef_y": coef_y,
+    }
+    # v3.9：全量标定即落盘（覆盖旧档——按 C 重标 = 一键重置+重建）
+    calib_store.save(coef_x, coef_y, anchors["measured"], anchors["expected"],
+                     CALIB_POINTS_LAYOUT)
+    return anchors
+
+
+# ── v3.9 启动快验（3 点微调，免全量重标）────────────────────
+
+QUICK_POINTS = [CALIB_POINTS_2D[4], CALIB_POINTS_2D[0], CALIB_POINTS_2D[8]]
+# 中心 / 左上 / 右下：对角覆盖两轴
+
+
+def run_quick_verify(tracker, gaze_est, window_name: str,
+                     stored: dict) -> Optional[dict]:
+    """启动快验：3 点各约 1 秒 → 测旧校准残差 → 微调或判失效。
+
+    残差 ≤ QUICK_FIX_MAE：快验点(高权重)与旧锚点合并重拟合——非线性
+    形状由旧 9 锚点保持，坐姿/距离级低阶漂移被快验点拉回；新 coef 落盘。
+    残差超限（换摄像头/房间）或采样超时/用户 ESC → None（调用方转全量）。
+    锚点池恒为全量标定的 9 点：快验只滚动更新 coef，不稀释锚点。
+    """
+    print("\n[QuickVerify] 启动快验（3 点，随时按 C 转全量重标）...")
+    gaze_est.clear_calibration()  # 采 uncal 原始值
+
+    medians: List[Tuple[float, float]] = []
+    w = h = None
+    for qi, (rx, ry, exp_x, exp_y) in enumerate(QUICK_POINTS):
+        gate = FixationGate(target=QUICK_VERIFY_TARGET,
+                            stage_timeout=QUICK_VERIFY_TIMEOUT,
+                            max_relax=1)
+        t0 = time.time()
+        while True:
+            now = time.time()
+            frame = tracker.read_frame()
+            if frame is None:
+                return None
+            h, w = frame.shape[:2]
+            gaze_result = gaze_est.update(frame)
+            if gaze_result.face_detected and gaze_result.confidence > 0:
+                gate.feed(gaze_result.uncal_gaze_x,
+                          gaze_result.uncal_gaze_y, now)
+            else:
+                gate.interrupt()
+
+            if gate.complete or gate.exhausted:
+                break
+            if now - t0 > QUICK_VERIFY_TIMEOUT * 2:
+                print("[QuickVerify] 采样超时，转全量标定")
+                return None
+
+            # ── UI ──
+            overlay = frame.copy()
+            cv2.rectangle(overlay, (0, 0), (w, h), (30, 30, 30), -1)
+            cv2.addWeighted(overlay, 0.65, frame, 0.35, 0, frame)
+            dx, dy = int(w * rx), int(h * ry)
+            pulse = 0.5 + 0.5 * math.sin(time.time() * 4.0)
+            cv2.circle(frame, (dx, dy), CALIB_DOT_RADIUS + int(pulse * 6),
+                       (0, 200, 255), -1)
+            cv2.circle(frame, (dx, dy), 4, (255, 255, 255), -1)
+            ring_r = CALIB_DOT_RADIUS + 20
+            cv2.circle(frame, (dx, dy), ring_r, (70, 70, 70), 3)
+            arc = int(360 * gate.progress)
+            if arc > 0:
+                cv2.ellipse(frame, (dx, dy), (ring_r, ring_r), -90, 0, arc,
+                            (0, 220, 255), 4)
+            _draw_text_centered(frame,
+                                f"Quick check ({qi + 1}/3) - look at the dot",
+                                40, scale=0.7, color=(0, 200, 255))
+            _draw_text_centered(frame, "C: full recalibration   ESC: skip",
+                                h - 30, scale=0.5, color=(150, 150, 150))
+            _draw_version(frame)
+            cv2.imshow(window_name, frame)
+            key = cv2.waitKey(1) & 0xFF
+            if key == 27 or key == ord('c') or key == ord('C'):
+                print("[QuickVerify] 用户选择转全量标定")
+                return None
+
+        med = gate.result()
+        if med is None:
+            print("[QuickVerify] 样本不足，转全量标定")
+            return None
+        medians.append(med)
+
+    # ── 残差评估（旧 coef 映射快验点 → 距 expected 多远）──
+    old_cx = np.asarray(stored["coef_x"], dtype=float)
+    old_cy = np.asarray(stored["coef_y"], dtype=float)
+    residuals = []
+    for (mx, my), (_, _, ex, ey) in zip(medians, QUICK_POINTS):
+        f = poly_features(mx, my)
+        residuals.append(math.hypot(float(old_cx @ f) - ex,
+                                    float(old_cy @ f) - ey))
+    mae = float(np.mean(residuals))
+    diag = (f"快验残差 mean={mae:.3f} per-point="
+            f"{[round(r, 3) for r in residuals]}")
+    print(f"[QuickVerify] {diag}")
+    _append_diag(f"QUICKVERIFY {diag}")
+
+    if mae > QUICK_FIX_MAE:
+        print(f"[QuickVerify] 残差超限（>{QUICK_FIX_MAE}）——环境可能已变"
+              "（换摄像头/房间/坐姿剧变），转全量标定")
+        return None
+
+    # ── 合并重拟合：旧锚点(权重1) + 快验点(高权重) ──
+    measured = list(stored["anchors_measured"]) + medians
+    expected = list(stored["anchors_expected"]) + \
+        [(p[2], p[3]) for p in QUICK_POINTS]
+    weights = np.array([1.0] * len(stored["anchors_measured"])
+                       + [QUICK_VERIFY_WEIGHT] * len(medians))
+    exp_x = np.array([e[0] for e in expected])
+    exp_y = np.array([e[1] for e in expected])
+    try:
+        coef_x, coef_y, model, (fx, fy) = fit_poly_with_affine_fallback(
+            measured, exp_x, exp_y, weights)
+    except (np.linalg.LinAlgError, ValueError):
+        print("[QuickVerify] 微调拟合失败，转全量标定")
+        return None
+
+    level = "旧档吻合" if mae <= QUICK_OK_MAE else "低阶漂移已微调"
+    print(f"[QuickVerify] {level} (model={model}, 微调后训练 MAE="
+          f"{fx:.3f}/{fy:.3f})，进入主界面\n")
+    gaze_est.set_calibration(coef_x, coef_y)
+
+    # 落盘：锚点保持全量标定的原 9 点，coef 滚动更新，隐式样本保留
+    calib_store.save(coef_x, coef_y,
+                     stored["anchors_measured"], stored["anchors_expected"],
+                     CALIB_POINTS_LAYOUT,
+                     implicit_samples=stored.get("implicit_samples"))
+    return {
+        "measured": stored["anchors_measured"],
+        "expected": stored["anchors_expected"],
         "coef_x": coef_x,
         "coef_y": coef_y,
     }

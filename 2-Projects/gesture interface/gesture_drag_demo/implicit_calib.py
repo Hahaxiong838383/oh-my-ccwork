@@ -102,6 +102,27 @@ class ImplicitCalibrator:
         self._coef_y: Optional[np.ndarray] = None
         self.total_accepted = 0
         self.total_rejected = 0
+        # v3.9 失配哨兵：连续离群拒绝数（环境剧变后新样本会连续被拒——
+        # 这本身是「旧校准已失配」的信号，app 层超阈提示按 C 重标）
+        self.consecutive_rejects = 0
+
+    # ── v3.9 持久化接口（跨会话「越用越准」）──
+    def export_samples(self) -> list:
+        """导出滑窗隐式样本（供 calib_store 落盘；ts 由调用方已存于样本）"""
+        return [{"raw": [s[0][0], s[0][1]],
+                 "expected": [s[1][0], s[1][1]],
+                 "ts": s[2]} for s in self._implicit]
+
+    def restore_samples(self, samples: Sequence[dict]):
+        """回灌历史样本（已过保鲜过滤）。不走离群拒绝——它们入库时已过
+        当时的拒绝判定；只进滑窗不触发逐条重拟合，末尾一次 refit。"""
+        for s in samples:
+            self._implicit.append(((float(s["raw"][0]), float(s["raw"][1])),
+                                   (float(s["expected"][0]),
+                                    float(s["expected"][1])),
+                                   float(s.get("ts", 0))))
+        if self._implicit:
+            print(f"[implicit_calib] 回灌 {len(samples)} 条历史样本")
 
     def set_current_coefs(self, coef_x: np.ndarray, coef_y: np.ndarray):
         """同步当前生效的校准系数（用于离群判定）"""
@@ -112,6 +133,7 @@ class ImplicitCalibrator:
                    expected: Tuple[float, float]
                    ) -> Optional[Tuple[np.ndarray, np.ndarray]]:
         """喂一个捏取样本。触发重拟合时返回新 (coef_x, coef_y)，否则 None。"""
+        import time as _time
         # 离群拒绝：按当前校准映射后距标签太远 = 用户大概率没看目标
         if self._coef_x is not None:
             f = poly_features(*raw)
@@ -120,11 +142,13 @@ class ImplicitCalibrator:
             dist = ((cal_x - expected[0]) ** 2 + (cal_y - expected[1]) ** 2) ** 0.5
             if dist > IMPLICIT_OUTLIER_DIST:
                 self.total_rejected += 1
+                self.consecutive_rejects += 1  # v3.9 失配哨兵
                 print(f"[implicit_calib] 样本拒绝 (映射偏差 {dist:.2f} > "
-                      f"{IMPLICIT_OUTLIER_DIST})")
+                      f"{IMPLICIT_OUTLIER_DIST}, 连续 {self.consecutive_rejects})")
                 return None
 
-        self._implicit.append((raw, expected))
+        self.consecutive_rejects = 0
+        self._implicit.append((raw, expected, _time.time()))
         self.total_accepted += 1
         self._since_refit += 1
         if self._since_refit < IMPLICIT_REFIT_EVERY:

@@ -199,6 +199,13 @@ class GazeEstimator:
     def is_calibrated(self) -> bool:
         return self._calibrated
 
+    @property
+    def calib_coefs(self) -> Optional[tuple]:
+        """当前生效的 (coef_x, coef_y)，未校准 → None（v3.9 退出落盘用）"""
+        if not self._calibrated:
+            return None
+        return self._calib_coef_x, self._calib_coef_y
+
     @staticmethod
     def poly_features(x: float, y: float) -> np.ndarray:
         """二阶多项式特征向量 [1, x, y, x², xy, y²]（校准拟合与应用共用）"""
