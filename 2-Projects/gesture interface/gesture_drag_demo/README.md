@@ -11,7 +11,7 @@
 ## v3.8 新特性：ETH-XGaze 外观法信号源（路线B落地）
 
 - **信号源换代**：raw gaze 从「手工几何融合（head/iris 加权）」切换为 **ptgaze ETH-XGaze resnet18** 外观法模型。AB 探针真人实测（`probe_ab_result.txt`）：垂直 SNR **0.52（手工，信号<噪声=坏死）→ 11.43（21.9 倍）**；同一静态图上手工管线帧间自抖 std 0.2、模型输出恒定——抖动根源实锤
-- **回滚闸门**：`config.GAZE_BACKEND = "legacy"` 一行回退旧管线（双信号源并存）；git 锚点 `de53f5e56`
+- **回滚闸门**：`config.GAZE_BACKEND = "legacy"` 一行回退旧管线（双信号源并存）；git 锚点 `dd06afeaa`
 - **交互层零改动**：9 点校准/隐式捏取校准/OneEuro/候选状态机/到位门全保留，只换信号源；FaceMesh 照跑（眨眼冻结/EAR/UI/confidence 不受影响）；模型侧偶发丢脸自动回退 legacy 顶帧
 - 归一化定标：`x=-yaw/15, y=-pitch/15`（符号与量纲按川哥探针实测；scale 取 15 防边缘削顶）
 - 模型文件收在 `models/`（face_landmarker.task + eth-xgaze_resnet18.safetensors，git 不入库、缺失自动下载自愈）
