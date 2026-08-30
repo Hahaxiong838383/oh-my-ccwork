@@ -38,11 +38,14 @@ def fit_poly_with_affine_fallback(
     expected_x: np.ndarray,
     expected_y: np.ndarray,
     weights: Optional[np.ndarray] = None,
+    allow_poly: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, str, Tuple[float, float]]:
     """加权拟合二阶多项式，退化时回退仿射（MAE 择优）。
 
     返回 (coef_x, coef_y, model_name, (mae_x, mae_y))；coef 均为 6 维。
     显式校准（calibration.py）与隐式校准共用，保证行为一致。
+    allow_poly=False 时只拟合仿射——点数少时 6 参数 poly2 会在训练点上
+    过拟合（训练 MAE 趋 0，择优必选它），调用方按点数关闭。
     """
     measured = list(measured)
     n = len(measured)
@@ -69,17 +72,18 @@ def fit_poly_with_affine_fallback(
     affine_cy = np.array([b_y, 0.0, a_y, 0.0, 0.0, 0.0])
 
     coef_x, coef_y, model = affine_cx, affine_cy, "affine"
-    try:
-        wmat = feats.T * weights  # (6, n)
-        gram = wmat @ feats + RIDGE_LAMBDA * np.eye(feats.shape[1])
-        poly_cx = np.linalg.solve(gram, wmat @ expected_x)
-        poly_cy = np.linalg.solve(gram, wmat @ expected_y)
-        pmx, pmy = _mae(poly_cx, poly_cy)
-        amx, amy = _mae(affine_cx, affine_cy)
-        if pmx + pmy < amx + amy:
-            coef_x, coef_y, model = poly_cx, poly_cy, "poly2"
-    except np.linalg.LinAlgError:
-        pass
+    if allow_poly:
+        try:
+            wmat = feats.T * weights  # (6, n)
+            gram = wmat @ feats + RIDGE_LAMBDA * np.eye(feats.shape[1])
+            poly_cx = np.linalg.solve(gram, wmat @ expected_x)
+            poly_cy = np.linalg.solve(gram, wmat @ expected_y)
+            pmx, pmy = _mae(poly_cx, poly_cy)
+            amx, amy = _mae(affine_cx, affine_cy)
+            if pmx + pmy < amx + amy:
+                coef_x, coef_y, model = poly_cx, poly_cy, "poly2"
+        except np.linalg.LinAlgError:
+            pass
 
     return coef_x, coef_y, model, _mae(coef_x, coef_y)
 

@@ -16,7 +16,8 @@ import math
 import numpy as np
 from typing import List, Tuple, Optional
 
-from implicit_calib import fit_poly_with_affine_fallback
+from implicit_calib import fit_poly_with_affine_fallback, poly_features
+from config import VERSION
 
 # ── 校准配置 ──────────────────────────────────────────────
 # 9 个校准点：(screen_x_ratio, screen_y_ratio, expected_gaze_x, expected_gaze_y)
@@ -48,15 +49,33 @@ CALIB_STAGE_TIMEOUT = 6.0     # 单阶段超时（秒）→ 放宽阈值重试
 CALIB_RELAX_FACTOR = 1.25     # 每次超时放宽阈值的倍数
 CALIB_MAX_RELAX = 2           # 最多放宽次数；之后降级通过（防转圈卡死）
 
+# ── 到位门（2026-08 v3.6：修「没看点也能完成标定」）──
+# std 门控只测「稳」不测「在看点」：稳定看错地方 std 一样低。
+# 到位门要求视线相对上一点参照位发生「方向一致的显著迁移」才开始计样本；
+# 迁移检测基于滑窗中心位置（不是运动），用户提前看过去也能判对。
+CALIB_ARRIVAL_MIN_SHIFT = 0.04   # 滑窗中心相对参照的最小位移（raw 单位）
+CALIB_ARRIVAL_TIMEOUT = 6.0      # 超此秒数未到位 → UI 强提示
+CALIB_ARRIVAL_GIVEUP = 12.0      # 超此秒数仍未到位 → 放弃该点（剔除不兜底）
+CALIB_MIN_POINTS = 5             # 拟合最少有效点数（不足 → 校准失败）
+CALIB_POLY_MIN_POINTS = 7        # 启用 poly2 的最少点数（防 6 参数过拟合）
+CALIB_RESIDUAL_OUTLIER = 0.25    # 拟合后单点残差超此值 → 剔除重拟合一轮
+CALIB_MAE_WARN = 0.15            # 最终 MAE 超此值 → 校准质量差警告
+
 
 class FixationGate:
     """单点注视质量门控状态机（纯逻辑，无 UI/摄像头依赖，可单测）。
 
     feed() 每帧喂 raw gaze，内部维护：
+    - 到位门（v3.6，ref_point 非 None 时启用）：滑窗中心相对参照位置的
+      位移 ≥ arrival_min_shift 且与 expected_dir 同向（cos>0）才算"在看点"。
+      std 门控只测「稳」，测不出「稳定地看错地方」——到位门补上这一维。
+      判据基于位置而非运动：用户在上一点绿圈期间提前扫过去也判对。
     - 稳定性滑窗：最近 N 帧 std 低于阈值才算"盯稳"
-    - 合格样本池：仅稳定帧计入，攒满 target → complete
-    - 超时降级：每 CALIB_STAGE_TIMEOUT 秒没攒满 → 放宽阈值重试，
-      放宽 CALIB_MAX_RELAX 次后 exhausted=True（调用方降级通过）
+    - 合格样本池：仅"到位 + 盯稳"的帧计入，攒满 target → complete
+    - 到位超时：arrival_giveup 秒仍未到位 → given_up=True（调用方剔除
+      该点，绝不拿没看点的数据兜底）
+    - 稳定超时（到位后起算）：每 CALIB_STAGE_TIMEOUT 秒没攒满 → 放宽
+      阈值重试，放宽 CALIB_MAX_RELAX 次后 exhausted=True（调用方降级）
     """
 
     def __init__(self,
@@ -65,7 +84,12 @@ class FixationGate:
                  target: int = CALIB_TARGET_SAMPLES,
                  stage_timeout: float = CALIB_STAGE_TIMEOUT,
                  relax_factor: float = CALIB_RELAX_FACTOR,
-                 max_relax: int = CALIB_MAX_RELAX):
+                 max_relax: int = CALIB_MAX_RELAX,
+                 ref_point: Optional[Tuple[float, float]] = None,
+                 expected_dir: Optional[Tuple[float, float]] = None,
+                 arrival_min_shift: float = CALIB_ARRIVAL_MIN_SHIFT,
+                 arrival_timeout: float = CALIB_ARRIVAL_TIMEOUT,
+                 arrival_giveup: float = CALIB_ARRIVAL_GIVEUP):
         from collections import deque
         self._recent = deque(maxlen=window)
         self._window = window
@@ -79,6 +103,16 @@ class FixationGate:
         self.relax_count = 0
         self.is_stable = False
         self._stage_start: Optional[float] = None
+        # ── 到位门状态 ──
+        self._ref = ref_point                  # 参照位置（raw 空间）；None=不启用
+        self._expected_dir = expected_dir      # 期望位移方向；None=只查幅度
+        self._arrival_min_shift = arrival_min_shift
+        self._arrival_timeout = arrival_timeout
+        self._arrival_giveup = arrival_giveup
+        self.arrived = ref_point is None       # 无参照 = 视为已到位（旧行为）
+        self.arrival_overdue = False           # 超 timeout 未到位（UI 强提示用）
+        self.given_up = False                  # 超 giveup 未到位（调用方剔除该点）
+        self._t0: Optional[float] = None       # 本点首帧时刻（到位计时基准）
 
     @property
     def progress(self) -> float:
@@ -100,21 +134,56 @@ class FixationGate:
         self._recent.clear()
         self.is_stable = False
 
+    def _displacement_ok(self) -> bool:
+        """到位判据：滑窗中心相对参照的位移幅度 + 方向（滑窗满时调用）。"""
+        if self._ref is None:
+            return True
+        cx = float(np.mean([p[0] for p in self._recent]))
+        cy = float(np.mean([p[1] for p in self._recent]))
+        vx, vy = cx - self._ref[0], cy - self._ref[1]
+        if math.hypot(vx, vy) < self._arrival_min_shift:
+            return False
+        if self._expected_dir is not None:
+            dx, dy = self._expected_dir
+            if vx * dx + vy * dy <= 0:  # 与期望方向不同向（cos ≤ 0）
+                return False
+        return True
+
     def feed(self, x: float, y: float, now_s: float):
         """喂一帧 raw gaze。返回当前是否稳定。"""
+        if self._t0 is None:
+            self._t0 = now_s
         if self._stage_start is None:
             self._stage_start = now_s
         self._recent.append((x, y))
-        self.all_samples.append((x, y))
 
         self.is_stable = False
-        if len(self._recent) == self._window:
+        window_full = len(self._recent) == self._window
+        displacement_ok = window_full and self._displacement_ok()
+        if window_full:
             xs = np.array([p[0] for p in self._recent])
             ys = np.array([p[1] for p in self._recent])
-            if (float(np.std(xs)) < self.std_threshold
-                    and float(np.std(ys)) < self.std_threshold):
+            std_ok = (float(np.std(xs)) < self.std_threshold
+                      and float(np.std(ys)) < self.std_threshold)
+            if std_ok and displacement_ok:
+                if not self.arrived:
+                    self.arrived = True
+                    self._stage_start = now_s  # 稳定超时从到位起算
                 self.is_stable = True
                 self.qualified.append((x, y))
+
+        # 降级兜底样本池：到位门启用时只收「位移判据通过」的帧，
+        # 保证兜底中位数至少是看着点方向的数据（旧行为：无门时全收）
+        if self._ref is None or displacement_ok:
+            self.all_samples.append((x, y))
+
+        # ── 到位超时（未到位期间不走稳定放宽——放宽救不了没看点的人）──
+        if not self.arrived:
+            elapsed = now_s - self._t0
+            self.arrival_overdue = elapsed > self._arrival_timeout
+            if elapsed > self._arrival_giveup:
+                self.given_up = True
+            return self.is_stable
 
         # 阶段超时 → 放宽阈值（防"永远转不满"）
         if (not self.complete
@@ -128,7 +197,11 @@ class FixationGate:
         return self.is_stable
 
     def result(self) -> Optional[Tuple[float, float]]:
-        """最终点位值：合格样本中位数；降级时用全量样本中位数兜底。"""
+        """最终点位值：合格样本中位数；降级时用全量样本中位数兜底。
+
+        到位门启用时 all_samples 只含位移判据通过的帧，兜底不吃
+        「没看点」的数据；从未到位 → 两池皆空 → None（调用方剔除该点）。
+        """
         pool = self.qualified if len(self.qualified) >= CALIB_MIN_SAMPLES \
             else self.all_samples
         if len(pool) < CALIB_MIN_SAMPLES:
@@ -138,7 +211,92 @@ class FixationGate:
         return float(np.median(xs)), float(np.median(ys))
 
 
+# ── 拟合与质量评估（v3.6：纯函数，可单测）─────────────────
+
+def fit_calib_points(
+    point_medians: List[Optional[Tuple[float, float]]],
+    calib_points: Optional[List[Tuple[float, float, float, float]]] = None,
+) -> Optional[dict]:
+    """校准点位中值（None=该点被剔除）→ 校准系数 + 质量评估。
+
+    - 有效点 < CALIB_MIN_POINTS → None（校准失败，调用方要求重做）
+    - 有效点 < CALIB_POLY_MIN_POINTS → 禁用 poly2（6 参数过拟合，
+      训练 MAE 趋 0 会骗过择优）
+    - 拟合后最差单点残差 > CALIB_RESIDUAL_OUTLIER → 剔除重拟合一轮
+      （抓「某个点走神被污染」——到位门之外的最后防线）
+    - MAE 超 CALIB_MAE_WARN → quality_ok=False（UI 警告建议重做）
+    """
+    if calib_points is None:
+        calib_points = CALIB_POINTS_2D
+
+    kept_idx = [i for i, m in enumerate(point_medians) if m is not None]
+    if len(kept_idx) < CALIB_MIN_POINTS:
+        return None
+
+    dropped_idx = [i for i in range(len(point_medians)) if i not in kept_idx]
+
+    def _fit(indices):
+        measured = [point_medians[i] for i in indices]
+        exp_x = np.array([calib_points[i][2] for i in indices])
+        exp_y = np.array([calib_points[i][3] for i in indices])
+        allow_poly = len(indices) >= CALIB_POLY_MIN_POINTS
+        coef_x, coef_y, model, mae = fit_poly_with_affine_fallback(
+            measured, exp_x, exp_y, allow_poly=allow_poly)
+        feats = np.stack([poly_features(mx, my) for mx, my in measured])
+        residuals = np.hypot(feats @ coef_x - exp_x, feats @ coef_y - exp_y)
+        return measured, exp_x, exp_y, coef_x, coef_y, model, mae, residuals
+
+    measured, exp_x, exp_y, coef_x, coef_y, model, mae, residuals = _fit(kept_idx)
+
+    # 残差离群剔除（一轮，leave-one-out）。不能用训练残差：污染点与
+    # 某好点在 measured 空间相邻时（走神看向别的校准点位——现实主形态），
+    # 两个矛盾标签让拟合折中，残差被"传染"给无辜邻居，argmax 指错人。
+    # LOO 下污染点由"其余好点的一致模型"评判，误差必然巨大且指向真凶。
+    if len(kept_idx) - 1 >= CALIB_MIN_POINTS:
+        loo_errors = []
+        for i in kept_idx:
+            others = [j for j in kept_idx if j != i]
+            _, _, _, cx_i, cy_i, _, _, _ = _fit(others)
+            f = poly_features(*point_medians[i])
+            loo_errors.append(math.hypot(
+                float(cx_i @ f) - calib_points[i][2],
+                float(cy_i @ f) - calib_points[i][3]))
+        worst_pos = int(np.argmax(loo_errors))
+        if loo_errors[worst_pos] > CALIB_RESIDUAL_OUTLIER:
+            outlier = kept_idx[worst_pos]
+            print(f"[Calibration] 点 {outlier + 1} LOO 残差离群 "
+                  f"({loo_errors[worst_pos]:.3f} > {CALIB_RESIDUAL_OUTLIER})，"
+                  f"剔除重拟合")
+            kept_idx = [i for i in kept_idx if i != outlier]
+            dropped_idx.append(outlier)
+            measured, exp_x, exp_y, coef_x, coef_y, model, mae, residuals = \
+                _fit(kept_idx)
+
+    mae_x, mae_y = mae
+    quality_ok = max(mae_x, mae_y) <= CALIB_MAE_WARN
+    return {
+        "coef_x": coef_x,
+        "coef_y": coef_y,
+        "model": model,
+        "mae_x": mae_x,
+        "mae_y": mae_y,
+        "kept_idx": kept_idx,
+        "dropped_idx": sorted(dropped_idx),
+        "quality_ok": quality_ok,
+        "measured": measured,
+        "expected": [(calib_points[i][2], calib_points[i][3]) for i in kept_idx],
+    }
+
+
 # ── 辅助绘制 ──────────────────────────────────────────────
+
+def _draw_version(frame: np.ndarray):
+    """右下角版本水印（校准屏独立绘制循环，主界面水印覆盖不到这里；
+    验收时用户全程在校准屏，须能就地核对版本）"""
+    cv2.putText(frame, VERSION,
+                (frame.shape[1] - 58, frame.shape[0] - 15),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (130, 130, 130), 1)
+
 
 def _draw_text_centered(frame: np.ndarray, text: str, cy: int,
                         scale: float = 0.8, color=(255, 255, 255),
@@ -187,7 +345,7 @@ def _draw_dot_grid(frame: np.ndarray, current_idx: int,
 
 # ── 主校准函数 ────────────────────────────────────────────
 
-def run_calibration(tracker, gaze_est, window_name: str) -> bool:
+def run_calibration(tracker, gaze_est, window_name: str) -> Optional[dict]:
     """
     运行 9 点 2D 校准流程。
 
@@ -203,6 +361,10 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
     print("\n[Calibration] 进入 9 点 2D 校准模式...")
 
     # ── Phase 0: 欢迎 / 等待人脸 ─────────────────────────
+    # 顺便采集用户当前注视参照（uncal 空间，供第一个点的到位判定；
+    # uncal 字段与旧校准是否残留无关，跨 Phase 比较恒安全）
+    from collections import deque
+    ref_window: deque = deque(maxlen=CALIB_STABILITY_WINDOW)
     face_ok = False
     while True:
         frame = tracker.read_frame()
@@ -213,7 +375,11 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
 
         # 检测人脸（复用 gaze_est）
         gaze_result = gaze_est.update(frame)
-        face_ok = gaze_result.face_detected
+        # confidence=0 的帧（脸太小提前返回）uncal 是未赋值的默认 0，不可用
+        face_ok = gaze_result.face_detected and gaze_result.confidence > 0
+        if face_ok:
+            ref_window.append((gaze_result.uncal_gaze_x,
+                               gaze_result.uncal_gaze_y))
 
         # 半透明遮罩
         overlay = frame.copy()
@@ -236,21 +402,29 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
         # 显示 9 点网格预览
         _draw_dot_grid(frame, -1, w, h)
 
+        _draw_version(frame)
         cv2.imshow(window_name, frame)
         key = cv2.waitKey(30) & 0xFF
 
         if key == 27 or key == ord('s') or key == ord('S'):
             print("[Calibration] 用户跳过校准")
             return None
-        if key == 32 and face_ok:  # SPACE
+        if key == 32 and face_ok and len(ref_window) >= 5:  # SPACE
             break
 
     # ── Phase 1: 逐点采集 ─────────────────────────────────
     gaze_est.clear_calibration()  # 清除旧校准，确保采集的是原始值
 
-    # 每个点的采集结果：(median_gaze_x, median_gaze_y)
-    medians_x: List[float] = []
-    medians_y: List[float] = []
+    # 到位门参照链：上一个成功点的 (raw median, expected)；
+    # 首点参照 = Phase 0 用户注视中位数（expected 未知 → 只查位移幅度）
+    prev_ref: Optional[Tuple[float, float]] = (
+        float(np.median([p[0] for p in ref_window])),
+        float(np.median([p[1] for p in ref_window])),
+    )
+    prev_expected: Optional[Tuple[float, float]] = None
+
+    # 每个点的采集结果：(median_x, median_y)；None = 该点被剔除
+    point_medians: List[Optional[Tuple[float, float]]] = []
 
     total_points = len(CALIB_POINTS_2D)
 
@@ -262,10 +436,17 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
     ]
 
     for pt_idx, (screen_rx, screen_ry, exp_gx, exp_gy) in enumerate(CALIB_POINTS_2D):
-        gate = FixationGate()
+        # 到位门：参照 = 上一成功点；期望方向 = expected 空间位移
+        # （raw 与 expected 空间正相关映射，方向符号一致，cos 判据可跨空间）
+        expected_dir = None
+        if prev_expected is not None:
+            expected_dir = (exp_gx - prev_expected[0],
+                            exp_gy - prev_expected[1])
+        gate = FixationGate(ref_point=prev_ref, expected_dir=expected_dir)
         start_time = time.time()
         done_flash_until = None   # 完成后绿圈定格时刻
         degraded = False
+        skipped = False
         dot_x = int(w * screen_rx)
         dot_y = int(h * screen_ry)
 
@@ -282,11 +463,13 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
 
             gaze_result = gaze_est.update(frame)
 
-            # ── 质量门控：只有盯稳的帧才算数 ──
+            # ── 质量门控：只有「到位 + 盯稳」的帧才算数 ──
             if done_flash_until is None:
-                if gaze_result.face_detected:
-                    gate.feed(gaze_result.raw_gaze_x,
-                              gaze_result.raw_gaze_y, now)
+                if gaze_result.face_detected and gaze_result.confidence > 0:
+                    # 喂 uncal（Phase 1 已清校准，与 raw 等价；uncal 语义
+                    # 不依赖清除动作，防未来流程改动引入跨空间混用）
+                    gate.feed(gaze_result.uncal_gaze_x,
+                              gaze_result.uncal_gaze_y, now)
                 else:
                     gate.interrupt()
 
@@ -296,11 +479,16 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
                           f"用时 {now - start_time:.1f}s"
                           + (f"（放宽 {gate.relax_count} 次）"
                              if gate.relax_count else ""))
+                elif gate.given_up:
+                    skipped = True
+                    done_flash_until = now + 0.45
+                    print(f"  ⚠️ 未检测到注视到位（{CALIB_ARRIVAL_GIVEUP:.0f}s），"
+                          f"该点剔除（不吃没看点的数据）")
                 elif gate.exhausted:
                     degraded = True
                     done_flash_until = now + 0.45
                     print(f"  ⚠️ 降级通过：合格 {len(gate.qualified)}/"
-                          f"{CALIB_TARGET_SAMPLES}，用全量样本兜底")
+                          f"{CALIB_TARGET_SAMPLES}，用到位后全量样本兜底")
 
             if done_flash_until is not None and now >= done_flash_until:
                 break
@@ -321,7 +509,12 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
             cv2.circle(frame, (dot_x, dot_y), dot_r + 8, (0, 100, 200), -1)
             cv2.addWeighted(frame, 0.85, frame, 0.15, 0, frame)
             done = done_flash_until is not None
-            dot_color = (80, 220, 80) if done else (0, 200, 255)
+            if done and skipped:
+                dot_color = (90, 90, 90)      # 剔除点：灰（不给假绿）
+            elif done:
+                dot_color = (80, 220, 80)
+            else:
+                dot_color = (0, 200, 255)
             cv2.circle(frame, (dot_x, dot_y), dot_r, dot_color, -1)
             cv2.circle(frame, (dot_x, dot_y), 4, (255, 255, 255), -1)
 
@@ -329,22 +522,31 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
             ring_r = CALIB_DOT_RADIUS + 20
             # 底环（暗灰）
             cv2.circle(frame, (dot_x, dot_y), ring_r, (70, 70, 70), 3)
-            # 进度弧：完成=绿 / 盯稳采集中=亮青 / 未稳=灰
+            # 进度弧：完成=绿（剔除=灰） / 盯稳采集中=亮青 / 未稳=灰
             if done:
-                arc_color = (80, 220, 80)
+                arc_color = (90, 90, 90) if skipped else (80, 220, 80)
             elif gate.is_stable:
                 arc_color = (0, 220, 255)
             else:
                 arc_color = (120, 120, 120)
-            arc_end = int(360 * (1.0 if done else gate.progress))
+            arc_end = int(360 * (1.0 if done and not skipped else gate.progress))
             if arc_end > 0:
                 cv2.ellipse(frame, (dot_x, dot_y), (ring_r, ring_r),
                             -90, 0, arc_end, arc_color, 4)
 
-            # 状态提示
+            # 状态提示（v3.6：未到位时明确喊话，不再默默转圈骗人）
             if done:
-                status, s_color = ("DEGRADED - moving on" if degraded
-                                   else "OK!"), (80, 220, 80)
+                if skipped:
+                    status, s_color = "Point skipped - not fixated", (100, 100, 230)
+                elif degraded:
+                    status, s_color = "DEGRADED - moving on", (80, 220, 80)
+                else:
+                    status, s_color = "OK!", (80, 220, 80)
+            elif not gate.arrived:
+                if gate.arrival_overdue:
+                    status, s_color = ">>> LOOK AT THE DOT <<<", (0, 120, 255)
+                else:
+                    status, s_color = "Look at the dot", (0, 180, 255)
             elif gate.is_stable:
                 status, s_color = "Collecting... hold your gaze", (0, 220, 255)
             else:
@@ -355,37 +557,47 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
                                 f"/{CALIB_TARGET_SAMPLES}",
                                 h - 30, scale=0.4, color=(150, 150, 150))
 
+            _draw_version(frame)
             cv2.imshow(window_name, frame)
             key = cv2.waitKey(1) & 0xFF
             if key == 27:  # ESC 中途退出
                 print("[Calibration] 用户中途取消")
                 return None
 
-        # 计算本点值（合格样本中位数；降级时全量兜底）
-        med = gate.result()
+        # 计算本点值（合格样本中位数；降级时到位后全量兜底）
+        med = None if skipped else gate.result()
         if med is None:
-            print(f"[Calibration] 点 {pt_idx + 1} 样本不足，校准失败")
-            return None
-        medians_x.append(med[0])
-        medians_y.append(med[1])
-        print(f"  → median=({med[0]:.3f}, {med[1]:.3f})")
+            if not skipped:
+                print(f"[Calibration] 点 {pt_idx + 1} 样本不足，剔除该点")
+            point_medians.append(None)
+        else:
+            point_medians.append(med)
+            # 成功点成为下一点的到位参照
+            prev_ref = med
+            prev_expected = (exp_gx, exp_gy)
+            print(f"  → median=({med[0]:.3f}, {med[1]:.3f})")
 
-    # ── Phase 2: 最小二乘回归计算校准参数 ─────────────────
-    # 2026-07 路线A：含 xy 交叉项的二阶多项式 + 仿射兜底择优
-    # （拟合器与路线C 隐式校准共用，见 implicit_calib.py）
-    expected_x = np.array([pt[2] for pt in CALIB_POINTS_2D])  # [-0.5, 0, 0.5, ...]
-    expected_y = np.array([pt[3] for pt in CALIB_POINTS_2D])  # [-0.5, ..., 0.5]
-    measured = list(zip(medians_x, medians_y))
-
+    # ── Phase 2: 拟合 + 质量评估（v3.6：剔除点过滤 + 残差
+    # 离群剔除 + MAE 质量门，见 fit_calib_points）──────────
     try:
-        coef_x, coef_y, model, (mae_x, mae_y) = fit_poly_with_affine_fallback(
-            measured, expected_x, expected_y)
+        fit = fit_calib_points(point_medians)
     except (np.linalg.LinAlgError, ValueError):
         print("[Calibration] 回归失败")
         return None
+    if fit is None:
+        n_valid = sum(1 for m in point_medians if m is not None)
+        print(f"[Calibration] 有效点不足（{n_valid}/{total_points} < "
+              f"{CALIB_MIN_POINTS}），校准失败——请重新校准并注视每个点")
+        return None
 
-    print(f"[Calibration] 2D 回归结果 (model={model}):")
-    print(f"  MAE: X={mae_x:.3f}, Y={mae_y:.3f}")
+    coef_x, coef_y = fit["coef_x"], fit["coef_y"]
+    model, mae_x, mae_y = fit["model"], fit["mae_x"], fit["mae_y"]
+    print(f"[Calibration] 2D 回归结果 (model={model}, "
+          f"有效点 {len(fit['kept_idx'])}/{total_points}"
+          + (f", 剔除 {[i + 1 for i in fit['dropped_idx']]}"
+             if fit["dropped_idx"] else "") + "):")
+    print(f"  MAE: X={mae_x:.3f}, Y={mae_y:.3f}"
+          + ("" if fit["quality_ok"] else "  ⚠️ 质量差，建议按 C 重做"))
 
     # 应用校准
     gaze_est.set_calibration(coef_x, coef_y)
@@ -420,6 +632,9 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
         _draw_text_centered(frame,
                             f"model={model}  MAE: {mae_x:.2f}/{mae_y:.2f}",
                             65, scale=0.4, color=(160, 160, 160))
+        if not fit["quality_ok"]:
+            _draw_text_centered(frame, "LOW QUALITY - press C to redo",
+                                95, scale=0.55, color=(80, 80, 255))
         _draw_text_centered(frame, f"{remaining:.1f}s",
                             h - 25, scale=0.5, color=(150, 150, 150))
 
@@ -452,15 +667,17 @@ def run_calibration(tracker, gaze_est, window_name: str) -> bool:
                                 f"Gaze: ({gaze_result.gaze_x:+.2f}, {gaze_result.gaze_y:+.2f})",
                                 h - 55, scale=0.45, color=(0, 200, 200))
 
+        _draw_version(frame)
         cv2.imshow(window_name, frame)
         key = cv2.waitKey(1) & 0xFF
         if key == 27 or key == 32:  # ESC 或 SPACE 跳过验证
             break
 
     print("[Calibration] 9 点校准完成，进入主界面\n")
+    # 锚点只含保留点（剔除的污染点不得进隐式校准锚点集）
     return {
-        "measured": measured,
-        "expected": [(pt[2], pt[3]) for pt in CALIB_POINTS_2D],
+        "measured": fit["measured"],
+        "expected": fit["expected"],
         "coef_x": coef_x,
         "coef_y": coef_y,
     }
