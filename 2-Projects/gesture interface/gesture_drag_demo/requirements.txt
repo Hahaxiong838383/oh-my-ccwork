@@ -1,3 +1,9 @@
 opencv-python>=4.8.0
-mediapipe>=0.10.9,<0.10.15
+# 0.10.15 实测有 legacy solutions API；0.10.35 起被移除（2026-08-30 实测），
+# 且 1.x 彻底删除——上限是硬边界不是保守写法
+mediapipe>=0.10.9,<=0.10.15
 numpy>=1.24.0
+# v3.8 路线B：ETH-XGaze 外观法信号源（拖 torch/timm/omegaconf）
+ptgaze>=0.2.8
+# HF 权重下载走 SOCKS 代理所需（本机 xray 环境）
+socksio>=1.0.0

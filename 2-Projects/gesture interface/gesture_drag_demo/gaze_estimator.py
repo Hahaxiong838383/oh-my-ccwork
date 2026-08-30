@@ -26,8 +26,55 @@ from config import (
     HEAD_SCALE_Y, IRIS_SCALE_Y,
     GAZE_MIN_CUTOFF, GAZE_BETA, GAZE_MIN_CUTOFF_Y, GAZE_BETA_Y,
     GAZE_D_CUTOFF,
+    GAZE_BACKEND, GAZE_PT_DEG_SCALE,
+    CAMERA_WIDTH, CAMERA_HEIGHT,
 )
 from one_euro import OneEuroFilter
+
+
+def build_ptgaze_backend(cam_w: int = CAMERA_WIDTH, cam_h: int = CAMERA_HEIGHT):
+    """构造 ptgaze ETH-XGaze 估计器（v3.8 路线B 信号源；probe_ab_gaze 共用）。
+
+    lazy import：legacy 后端不碰 torch/ptgaze，零额外开销。
+    模型文件优先用项目 models/（离线可用+可打包）；缺失时下载并自愈补齐，
+    face_landmarker 决不落 ~/.ptgaze（HOME 顶层白名单）。
+    """
+    import os
+    import shutil
+    import pathlib
+    import ptgaze
+    from omegaconf import OmegaConf
+    from ptgaze.gaze_estimator import GazeEstimator as PtGazeEstimator
+    from ptgaze.config_schema import AppConfig
+    from ptgaze.utils import (download_ethxgaze_model,
+                              download_mediapipe_face_landmarker)
+
+    pkg_root = pathlib.Path(ptgaze.__file__).parent.resolve()
+    loaded = OmegaConf.load(pkg_root / "data/configs/eth-xgaze.yaml")
+    config = OmegaConf.merge(OmegaConf.structured(AppConfig), loaded)
+    config.PACKAGE_ROOT = pkg_root.as_posix()
+
+    models_dir = pathlib.Path(__file__).parent / "models"
+    local_task = models_dir / "face_landmarker.task"
+    if not local_task.exists():
+        download_mediapipe_face_landmarker()
+        models_dir.mkdir(exist_ok=True)
+        legacy_task = pathlib.Path(
+            "~/.ptgaze/mediapipe/face_landmarker.task").expanduser()
+        shutil.move(legacy_task, local_task)
+        shutil.rmtree(pathlib.Path("~/.ptgaze").expanduser(),
+                      ignore_errors=True)
+    config.face_detector.mediapipe_model_path = local_task.as_posix()
+
+    local_ckpt = models_dir / "eth-xgaze_resnet18.safetensors"
+    if not local_ckpt.exists():
+        models_dir.mkdir(exist_ok=True)
+        shutil.copy(download_ethxgaze_model(), local_ckpt)
+    config.gaze_estimator.checkpoint = local_ckpt.as_posix()
+
+    config.gaze_estimator.use_dummy_camera_params = True
+    config.gaze_estimator.dummy_camera_size = [cam_w, cam_h]
+    return PtGazeEstimator(config)
 
 
 # MediaPipe FaceMesh 关键点索引
@@ -61,6 +108,7 @@ class GazeResult:
     head_direction_y: float = 0.0 # 垂直头部朝向分量
     iris_direction_y: float = 0.0 # 垂直虹膜朝向分量
     confidence: float = 0.0       # 估计可信度 [0, 1]
+    backend: str = "legacy"       # 本帧 gaze 信号源（"ptgaze"/"legacy"）
     face_center: Optional[tuple] = None   # 面部中心像素坐标 (x, y)
     nose_tip: Optional[tuple] = None      # 鼻尖像素坐标
     left_iris: Optional[tuple] = None     # 左虹膜中心
@@ -125,6 +173,17 @@ class GazeEstimator:
         self._calib_coef_y: Optional[np.ndarray] = None
         self._calibrated: bool = False
 
+        # ── v3.8 路线B：ptgaze ETH-XGaze 信号源 ──
+        # FaceMesh 仍每帧照跑（face_tracker 眨眼/EAR、UI、confidence 全靠
+        # 它），ptgaze 只接管 raw gaze；模型侧偶发丢脸自动回退 legacy 顶帧
+        self._backend = GAZE_BACKEND
+        self._ptgaze = None
+        self.ptgaze_miss_count = 0     # 模型侧丢脸帧计数（诊断）
+        if self._backend == "ptgaze":
+            print("[Gaze] 初始化 ptgaze ETH-XGaze 后端...")
+            self._ptgaze = build_ptgaze_backend()
+            print("[Gaze] ptgaze 后端就绪（回滚：config.GAZE_BACKEND='legacy'）")
+
     # ---------- 校准接口 ----------
     @property
     def is_calibrated(self) -> bool:
@@ -162,6 +221,25 @@ class GazeEstimator:
         self._filter_y.reset()
         self._lost_count = 0
         print("[Gaze] 校准已清除，回到原始状态")
+
+    def _ptgaze_infer(self, frame: np.ndarray) -> Optional[tuple]:
+        """ptgaze 推理一帧 → 归一化 (x, y)；模型侧无脸 → None。
+
+        符号按 2026-08-30 川哥真人探针实测定标（镜像帧坐标系）：
+        看右 yaw 变负 → x=-yaw/scale；看下 pitch 变负 → y=-pitch/scale。
+        摄像头俯仰导致的整体偏置由校准 bias 项吸收。
+        """
+        faces = self._ptgaze.detect_faces(frame)
+        if not faces:
+            return None
+        self._ptgaze.estimate_gaze(frame, faces[0])
+        gv = faces[0].gaze_vector
+        if gv is None:
+            return None
+        pitch, yaw = np.rad2deg(faces[0].vector_to_angle(gv))
+        x = max(-1.0, min(1.0, -float(yaw) / GAZE_PT_DEG_SCALE))
+        y = max(-1.0, min(1.0, -float(pitch) / GAZE_PT_DEG_SCALE))
+        return x, y
 
     def update(self, frame: np.ndarray) -> GazeResult:
         """
@@ -293,6 +371,20 @@ class GazeEstimator:
         raw_gaze_y = max(-1.0, min(1.0, raw_gaze_y))
 
         # ============================================================
+        # 4d. v3.8 信号源分叉：ptgaze 后端覆盖 raw gaze
+        # （AB 探针实测：垂直 SNR 11.43 vs 手工 0.52，probe_ab_result.txt）
+        # 模型侧偶发丢脸 → 保留上面算好的 legacy 值顶一帧（自动降级）
+        # ============================================================
+        frame_backend = "legacy"
+        if self._ptgaze is not None:
+            pg = self._ptgaze_infer(frame)
+            if pg is not None:
+                raw_gaze_x, raw_gaze_y = pg
+                frame_backend = "ptgaze"
+            else:
+                self.ptgaze_miss_count += 1
+
+        # ============================================================
         # 5. 应用 2D 校准（在平滑之前）
         # 二阶多项式联合映射：cal = coef · [1, x, y, x², xy, y²]
         # （x/y 联合输入 → 能拟合"看角落时两轴耦合"的非线性）
@@ -317,6 +409,7 @@ class GazeEstimator:
 
         return GazeResult(
             face_detected=True,
+            backend=frame_backend,
             gaze_x=self._smooth_gaze_x,
             raw_gaze_x=raw_gaze_x,
             uncal_gaze_x=uncal_gaze_x,
@@ -342,5 +435,10 @@ class GazeEstimator:
         self._lost_count = 0
 
     def close(self):
-        """释放 FaceMesh 资源"""
+        """释放 FaceMesh / ptgaze 资源"""
         self._face_mesh.close()
+        if self._ptgaze is not None:
+            try:
+                self._ptgaze.close()
+            except Exception:
+                pass  # 退出清理，尽力而为

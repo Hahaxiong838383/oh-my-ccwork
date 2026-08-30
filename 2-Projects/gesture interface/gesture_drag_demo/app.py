@@ -38,7 +38,36 @@ from config import (
 from implicit_calib import ImplicitCalibrator, card_expected_gaze
 
 
+def verify_backend():
+    """--verify-backend：打包产物离线自检（不开摄像头）。
+
+    ptgaze 是 lazy import，打包缺数据/动态库会炸在构造时——那在摄像头
+    之后，无摄像头授权的进程够不到；此入口用打包内置的测试人脸图把
+    「模型加载 + 真推理」完整走一遍，CI/部署后可直接验证。
+    """
+    import os
+    print(f"[verify] Gesture Drag Demo {VERSION}")
+    est = GazeEstimator()
+    img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "assets", "test_face.jpg")
+    img = cv2.imread(img_path)
+    if img is None:
+        print(f"[verify] FAIL 测试图缺失: {img_path}")
+        return 1
+    r = est.update(cv2.resize(img, (1280, 720)))
+    est.close()
+    ok = r.face_detected and r.backend == "ptgaze"
+    print(f"[verify] backend={r.backend} face={r.face_detected} "
+          f"raw=({r.raw_gaze_x:+.3f},{r.raw_gaze_y:+.3f})")
+    print("BACKEND-VERIFY OK" if ok else "BACKEND-VERIFY FAIL")
+    return 0 if ok else 1
+
+
 def main():
+    import sys
+    if "--verify-backend" in sys.argv:
+        raise SystemExit(verify_backend())
+
     print("=" * 50)
     print(f"  Gesture Drag Demo {VERSION}")
     print("  4 Desktops x 3 Cards = 12 Cards")

@@ -1,4 +1,14 @@
-# Gesture Drag Demo v3.7
+# Gesture Drag Demo v3.8
+
+## v3.8 新特性：ETH-XGaze 外观法信号源（路线B落地）
+
+- **信号源换代**：raw gaze 从「手工几何融合（head/iris 加权）」切换为 **ptgaze ETH-XGaze resnet18** 外观法模型。AB 探针真人实测（`probe_ab_result.txt`）：垂直 SNR **0.52（手工，信号<噪声=坏死）→ 11.43（21.9 倍）**；同一静态图上手工管线帧间自抖 std 0.2、模型输出恒定——抖动根源实锤
+- **回滚闸门**：`config.GAZE_BACKEND = "legacy"` 一行回退旧管线（双信号源并存）；git 锚点 `de53f5e56`
+- **交互层零改动**：9 点校准/隐式捏取校准/OneEuro/候选状态机/到位门全保留，只换信号源；FaceMesh 照跑（眨眼冻结/EAR/UI/confidence 不受影响）；模型侧偶发丢脸自动回退 legacy 顶帧
+- 归一化定标：`x=-yaw/15, y=-pitch/15`（符号与量纲按川哥探针实测；scale 取 15 防边缘削顶）
+- 模型文件收在 `models/`（face_landmarker.task + eth-xgaze_resnet18.safetensors，git 不入库、缺失自动下载自愈）
+- 新增 `test_ptgaze_backend.py`（5 测：符号量纲/clamp/接管/丢脸回退/闸门）+ `assets/test_face.jpg` 测试资产
+- 新依赖：ptgaze（拖 torch/timm）；**mediapipe 必须 ≤0.10.15**（0.10.35 起 legacy solutions API 被移除，1.x 彻底删除——装依赖时严禁自动升级）
 
 ## v3.7 新特性：到位门解耦（修中上点卡死）+ 注视稳定性三连
 
@@ -200,6 +210,7 @@ gesture_drag_demo/
 
 ## 版本历史
 
+- **v3.8**：ETH-XGaze外观法信号源(路线B)——AB探针实测垂直SNR 0.52→11.43(21.9x);GAZE_BACKEND一行回滚;交互层零改动;5新测
 - **v3.7**：到位门解耦(修中上点卡死:arrived曾耦合std,高噪声点死锁)+方向自愈+诊断日志落盘+卡片进度衰减不清零+眨眼冻结+隐式重拟合不reset滤波+5新测
 - **v3.6**：校准到位门——修「没看点也能完成标定」(std门只测稳不测位置);到位判据(参照位移+方向cos)+未到位UI喊话+超时剔除不兜底+LOO残差剔污染点+MAE质量门(<5点失败/<7点禁poly2)+10新测
 - **v3.5**：垂直注视门控——卡片仅视线下方参与评分/气泡仅上方累积,修「盯气泡底部卡片躺枪」(1D评分历史设计)+2门控测

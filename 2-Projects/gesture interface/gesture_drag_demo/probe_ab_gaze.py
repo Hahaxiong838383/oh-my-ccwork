@@ -20,15 +20,10 @@ import cv2
 import numpy as np
 
 # ── A 管线：现有手工管线（生产同款，uncal 裸输出）──
-from gaze_estimator import GazeEstimator as OursEstimator
-
-# ── B 管线：ptgaze ETH-XGaze resnet18 ──
-import os
-import pathlib
-from omegaconf import OmegaConf
-from ptgaze.gaze_estimator import GazeEstimator as PtGazeEstimator
-from ptgaze.utils import download_ethxgaze_model, download_mediapipe_face_landmarker
-from ptgaze.config_schema import AppConfig
+# 注意：v3.8 起 GazeEstimator 默认 backend=ptgaze，探针的 A 管线必须
+# 是纯手工信号——构造后强制拆掉 ptgaze，让 4d 分叉走 legacy。
+# ── B 管线：ptgaze ETH-XGaze resnet18（与生产共用同一构造）──
+from gaze_estimator import GazeEstimator as OursEstimator, build_ptgaze_backend
 
 CAM_W, CAM_H = 1280, 720
 PHASE_SECS = 10.0       # 每阶段时长
@@ -43,32 +38,9 @@ PHASES = [
 ]
 
 
-def build_ptgaze() -> PtGazeEstimator:
-    """按 ptgaze main.py 的组装方式构造 ETH-XGaze 估计器（dummy 相机参数）。
-
-    须 merge 结构化 schema——yaml 不含带默认值的键（如
-    face_detector.mediapipe_model_path），裸 load 会缺键。
-    """
-    import ptgaze
-    import shutil
-    pkg_root = pathlib.Path(ptgaze.__file__).parent.resolve()
-    loaded = OmegaConf.load(pkg_root / "data/configs/eth-xgaze.yaml")
-    config = OmegaConf.merge(OmegaConf.structured(AppConfig), loaded)
-    config.PACKAGE_ROOT = pkg_root.as_posix()
-    # face_landmarker 收进项目 models/（ptgaze 默认下到 ~/.ptgaze，
-    # 违反 HOME 顶层白名单；下载后搬进来并清掉顶层目录）
-    local_task = pathlib.Path(__file__).parent / "models/face_landmarker.task"
-    if not local_task.exists():
-        download_mediapipe_face_landmarker()
-        local_task.parent.mkdir(exist_ok=True)
-        legacy = pathlib.Path("~/.ptgaze/mediapipe/face_landmarker.task").expanduser()
-        shutil.move(legacy, local_task)
-        shutil.rmtree(pathlib.Path("~/.ptgaze").expanduser(), ignore_errors=True)
-    config.face_detector.mediapipe_model_path = local_task.as_posix()
-    config.gaze_estimator.checkpoint = download_ethxgaze_model().as_posix()
-    config.gaze_estimator.use_dummy_camera_params = True
-    config.gaze_estimator.dummy_camera_size = [CAM_W, CAM_H]
-    return PtGazeEstimator(config)
+def build_ptgaze():
+    """v3.8 起构造逻辑下沉 gaze_estimator.build_ptgaze_backend（生产共用）。"""
+    return build_ptgaze_backend(CAM_W, CAM_H)
 
 
 def main():
@@ -77,6 +49,7 @@ def main():
 
     print("[probe] 初始化 A 管线（现有手工）...")
     ours = OursEstimator()
+    ours._ptgaze = None  # 强制 A 管线走纯手工信号（v3.8 默认后端是 ptgaze）
     print("[probe] 初始化 B 管线（ptgaze ETH-XGaze，首次运行会下载模型）...")
     ptg = build_ptgaze()
 

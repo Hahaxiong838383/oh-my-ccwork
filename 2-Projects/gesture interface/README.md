@@ -8,7 +8,7 @@
 - [ ] MyJavis 结合（2026-07-14 川哥拍板 V0 开工）：本项目面部算法（FaceMesh/EAR/头姿/防抖范式）改造为 MyJavis vision-probe 联调探针（契约 v0.2），评估与方案存档见 `~/mycc/2-Projects/MyJavis/docs/VISION-评估与V0方案.md`
 - [x] 川哥真机验收 v3.1 注视精度：通过（2026-07-10）
 - [x] 路线 C（捏取即校准）已落地 v3.2：隐式在线校准，越用越准（2026-07-10）
-- [ ] 路线 B（PureGaze/ETH-XGaze 外观法模型）触发条件：换环境明显退化 或 卡片网格加密需求，见 `research-gaze-accuracy-2026-07.md`
+- [x] 路线 B（ETH-XGaze 外观法模型）已落地 v3.8：AB 探针实测垂直 SNR 0.52→11.43 后拍板接入 ptgaze，见 `research-gaze-model-2026-08.md`（2026-08-30）
 - [x] 实机跑通验证 v3.0 注视 + 面部特征 + 校准链路：已打包 `/Applications/GestureDemo.app`，川哥真机测试通过（2026-07-10）
 - [x] 整理版本号不一致：内层 README 已补 v3.0 条目（面部特征 + 9 点校准 + 2D 注视），标题/结构/快捷键同步更新（2026-07-10）
 
@@ -20,7 +20,7 @@
 - 项目仅含一个子目录 `gesture_drag_demo/`，是一个可运行的 Python Demo（无独立 GitHub repo，mycc 单仓子目录）。
 - 技术栈：OpenCV + MediaPipe（Hands + FaceMesh/Iris），依赖见 `requirements.txt`（opencv-python>=4.8、mediapipe 0.10.9~0.10.15、numpy>=1.24）。
 - 能力（基于源码）：手部 21 关键点检测 + Pinch/Release 状态机；粗粒度注视方向估计（头部 + 虹膜加权融合）；注视候选卡片预选与锁定；面部特征追踪（EAR/眨眼/朝向/表情线索）；校准流程；4 桌面 × 12 卡片的拖拽交互 + 气泡系统。
-- 版本：v3.7（单一真源 `config.py` VERSION，主界面+校准屏右下角水印同步显示）。
+- 版本：v3.8（单一真源 `config.py` VERSION，主界面+校准屏右下角水印同步显示）。注视信号源：ptgaze ETH-XGaze 外观法模型（`GAZE_BACKEND` 一行可回退 legacy 手工管线）。
 - 运行入口为 `python app.py`，需 USB 摄像头；快捷键 ESC 退出 / R 重置 / G 注视调试 / F 面部特征 / C 重新校准。
 - 文件修改时间：核心源码（app/config/ui/hand_tracker/gesture_state/gaze_estimator/face_tracker）均为 2026-03-27；较早文件（calibration/attention_selector/requirements/内层 README）为 2026-03-23。
 
@@ -63,3 +63,6 @@
 - 2026-08-30：v3.6 校准到位门（川哥报告：不看校准点也自动完成标定）：根因=FixationGate 只测稳不测位置（稳定看错地方 std 一样低，且不看点的人完成得更快）；修复=到位门（参照位移+方向 cos 判据，位置驱动提前扫视也判对）+ 未到位 UI 喊话 + 12s 未到位剔除该点不兜底 + LOO 残差剔污染点（训练残差会传染邻居指错人）+ MAE 质量门（<5 点失败/<7 点禁 poly2/超 0.15 红字建议重做）；5 套测试全绿（新增 10 测含事故负向复现）（cc）。
 - 2026-08-30：v3.6 川哥真机验收：负向拦截通过（不看点不再假完成）；暴露两回归/新问题：①中上点卡死（arrived 耦合 std，高噪声点位死锁——模拟三 seed 实锤）②主界面候选/进度跳动（卡片进度硬清零+眨眼零防护+隐式重拟合 reset 滤波闪断，均源码实锤）。
 - 2026-08-30：v3.7 批次1（川哥拍板，回滚锚点=commit 0960aeb5b v3.6）：①到位门解耦（到位只看位置，std 只管质量，放宽全程有效）②方向自愈（幅度显著仅方向不符→弃方向，拦截力不损失）③校准诊断日志落盘 ~/Library/Logs/GestureDemo-calib.log ④卡片进度衰减不清零 ⑤眨眼冻结候选状态机（15 帧保险丝）⑥隐式重拟合不 reset OneEuro；5 套测试全绿（+5 测），App 重打包部署，待真机验收（重标定看中上点+盯卡片 30s 看进度稳定）；批次2（σ/margin 调参、EAR 眼睑补偿）等批次1验收后按剩余症状动（cc）。
+- 2026-08-30：v3.7 川哥真机验收通过（标定通过、中上点恢复；残留正常使用抖动）→ 触发路线B调研：GitHub+Web 增量调研沉淀 `research-gaze-model-2026-08.md`（关键变化：WebEyeTrack 已开源 MIT / PureGaze 无 license 出局 / Gaze360 系确认排除），推荐两步走（AB 探针 → 按数据接入）（cc）。
+- 2026-08-30：AB 探针落地（`probe_ab_gaze.py`，ptgaze 装入 venv 时踩 mediapipe 被 uv 自动升 1.0.1 删 legacy API 的坑——pin 回 0.10.15，requirements 上限修正为 ≤0.10.15 硬边界）。川哥真人跑探针：**垂直 SNR 手工 0.52（信号坏死）vs ptgaze 11.43（21.9 倍）**，水平 13.42 vs 5.35（B 够用且被单段异常拖累）；静态图对照：手工管线零输入自抖 std 0.2、模型恒定——抖动根源实锤。拍板接入（cc）。
+- 2026-08-30：v3.8 路线B落地（回滚锚点=commit de53f5e56 + 运行时闸门 GAZE_BACKEND="legacy" 一行回退）：gaze_estimator 内嵌 ptgaze ETH-XGaze 信号源（归一化 -yaw/15、-pitch/15 按探针实测定标防削顶），FaceMesh 照跑供眨眼/EAR/UI，模型丢脸自动回退 legacy 顶帧，交互层（校准链/OneEuro/状态机/到位门）零改动；模型收 `models/`（git 不入库缺失自愈）；6 套测试全绿（+test_ptgaze_backend 5 测）；待打包部署+川哥真机验收（cc）。
