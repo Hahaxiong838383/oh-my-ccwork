@@ -26,7 +26,7 @@ from config import (
     HEAD_SCALE_Y, IRIS_SCALE_Y,
     GAZE_MIN_CUTOFF, GAZE_BETA, GAZE_MIN_CUTOFF_Y, GAZE_BETA_Y,
     GAZE_D_CUTOFF,
-    GAZE_BACKEND, GAZE_PT_DEG_SCALE, GAZE_PT_DEVICE,
+    GAZE_BACKEND, GAZE_PT_DEG_SCALE, GAZE_PT_DEVICE, GAZE_INFER_EVERY,
     CAMERA_WIDTH, CAMERA_HEIGHT,
 )
 from one_euro import OneEuroFilter
@@ -189,6 +189,9 @@ class GazeEstimator:
         self._backend = GAZE_BACKEND
         self._ptgaze = None
         self.ptgaze_miss_count = 0     # 模型侧丢脸帧计数（诊断）
+        # v3.9.2 隔帧推理状态
+        self._pt_frame_count = 0
+        self._last_pt = None           # 上次推理成功的归一化 (x, y)
         if self._backend == "ptgaze":
             print("[Gaze] 初始化 ptgaze ETH-XGaze 后端...")
             self._ptgaze = build_ptgaze_backend()
@@ -394,12 +397,22 @@ class GazeEstimator:
         # ============================================================
         frame_backend = "legacy"
         if self._ptgaze is not None:
-            pg = self._ptgaze_infer(frame)
-            if pg is not None:
-                raw_gaze_x, raw_gaze_y = pg
+            # v3.9.2 隔帧推理：仅第 1,1+N,1+2N... 帧真推理，其余帧沿用
+            # 上次值（OneEuro 视作静止）。推理帧 miss 即清缓存防陈旧，
+            # 沿用帧无缓存时自动落回 legacy 顶帧。
+            self._pt_frame_count += 1
+            if (self._pt_frame_count - 1) % GAZE_INFER_EVERY == 0:
+                pg = self._ptgaze_infer(frame)
+                if pg is not None:
+                    self._last_pt = pg
+                    raw_gaze_x, raw_gaze_y = pg
+                    frame_backend = "ptgaze"
+                else:
+                    self.ptgaze_miss_count += 1
+                    self._last_pt = None
+            elif self._last_pt is not None:
+                raw_gaze_x, raw_gaze_y = self._last_pt
                 frame_backend = "ptgaze"
-            else:
-                self.ptgaze_miss_count += 1
 
         # ============================================================
         # 5. 应用 2D 校准（在平滑之前）
@@ -450,6 +463,8 @@ class GazeEstimator:
         self._filter_x.reset()
         self._filter_y.reset()
         self._lost_count = 0
+        self._pt_frame_count = 0
+        self._last_pt = None
 
     def close(self):
         """释放 FaceMesh / ptgaze 资源"""

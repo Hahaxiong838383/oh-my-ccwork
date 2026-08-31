@@ -59,6 +59,8 @@ def _bare_estimator(ptgaze) -> GazeEstimator:
     est._backend = "ptgaze"
     est._ptgaze = ptgaze
     est.ptgaze_miss_count = 0
+    est._pt_frame_count = 0
+    est._last_pt = None
     return est
 
 
@@ -106,6 +108,50 @@ def test_miss_falls_back_to_legacy():
     assert est.ptgaze_miss_count == 1
     # legacy 顶帧值来自手工融合（非 0 占位）
     assert (r.uncal_gaze_x, r.uncal_gaze_y) != (0.0, 0.0)
+    est._face_mesh.close()
+
+
+class CountingPtgaze(FakePtgaze):
+    """记录 detect_faces 调用次数（验证隔帧真的没推理）。"""
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.calls = 0
+
+    def detect_faces(self, frame):
+        self.calls += 1
+        return super().detect_faces(frame)
+
+
+def test_infer_every_skips_frames():
+    """v3.9.2 隔帧推理：EVERY=2 时奇数帧真推理、偶数帧沿用缓存值
+    （backend 仍标 ptgaze、数值与推理帧一致、模型零调用）。"""
+    from config import GAZE_INFER_EVERY
+    assert GAZE_INFER_EVERY == 2, "本测试按 EVERY=2 写"
+    pt = CountingPtgaze(pitch_deg=-6.0, yaw_deg=-3.0)
+    est = _bare_estimator(pt)
+    frame = _load_face_frame()
+
+    r1 = est.update(frame)     # 第 1 帧：推理
+    assert r1.backend == "ptgaze" and pt.calls == 1
+    r2 = est.update(frame)     # 第 2 帧：沿用（模型不被调用）
+    assert r2.backend == "ptgaze" and pt.calls == 1
+    assert (r2.uncal_gaze_x, r2.uncal_gaze_y) == (r1.uncal_gaze_x, r1.uncal_gaze_y)
+    est.update(frame)          # 第 3 帧：再推理
+    assert pt.calls == 2
+    est._face_mesh.close()
+
+
+def test_infer_every_miss_clears_cache():
+    """推理帧 miss → 缓存作废，随后的沿用帧落回 legacy（不吃陈旧值）。"""
+    pt = CountingPtgaze(miss=True)
+    est = _bare_estimator(pt)
+    est._last_pt = (0.5, 0.5)  # 预置一个旧缓存
+    frame = _load_face_frame()
+    r1 = est.update(frame)     # 推理帧 miss → 清缓存 → legacy 顶帧
+    assert r1.backend == "legacy" and est._last_pt is None
+    r2 = est.update(frame)     # 沿用帧无缓存 → legacy
+    assert r2.backend == "legacy"
     est._face_mesh.close()
 
 
