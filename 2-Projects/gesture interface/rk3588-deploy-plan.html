@@ -1,0 +1,463 @@
+<title>GestureDemo × RK3588</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root {
+  --paper: #F7F8F6;
+  --ink: #1C2321;
+  --ink-soft: #4A554F;
+  --line: #D4DAD5;
+  --line-soft: #E4E8E4;
+  --pcb: #0F6B4F;          /* 主 accent：阻焊绿 */
+  --pcb-wash: #E7F0EB;
+  --copper: #B0742C;       /* 数据强调：铜箔 */
+  --risk: #A63A2B;
+  --risk-wash: #F5E9E6;
+  --card: #FFFFFF;
+  --mono-bg: #EEF1EE;
+}
+:root:not([data-theme="light"]) { }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #151A17;
+    --ink: #E5EAE6;
+    --ink-soft: #9DA8A1;
+    --line: #33403A;
+    --line-soft: #26302B;
+    --pcb: #3FA47E;
+    --pcb-wash: #1C2A24;
+    --copper: #D19750;
+    --risk: #D96A56;
+    --risk-wash: #33211D;
+    --card: #1B211E;
+    --mono-bg: #202723;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #151A17;
+  --ink: #E5EAE6;
+  --ink-soft: #9DA8A1;
+  --line: #33403A;
+  --line-soft: #26302B;
+  --pcb: #3FA47E;
+  --pcb-wash: #1C2A24;
+  --copper: #D19750;
+  --risk: #D96A56;
+  --risk-wash: #33211D;
+  --card: #1B211E;
+  --mono-bg: #202723;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 15.5px;
+  line-height: 1.75;
+}
+.wrap { max-width: 880px; margin: 0 auto; padding: 48px 28px 96px; }
+.mono { font-family: "IBM Plex Mono", "SF Mono", Menlo, monospace; }
+.disp { font-family: "Chakra Petch", "Noto Sans SC", sans-serif; }
+
+/* ── 规格牌 header ── */
+header {
+  border: 1.5px solid var(--ink);
+  margin-bottom: 52px;
+}
+.hd-top {
+  display: flex; justify-content: space-between; align-items: stretch;
+  border-bottom: 1.5px solid var(--ink);
+}
+.hd-name { padding: 22px 24px 18px; }
+.hd-name .eyebrow {
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--pcb);
+  margin-bottom: 6px;
+}
+.hd-name h1 {
+  font-family: "Chakra Petch", sans-serif; font-weight: 700;
+  font-size: clamp(26px, 4.6vw, 38px); line-height: 1.15; margin: 0;
+  text-wrap: balance;
+}
+.hd-chip {
+  display: flex; flex-direction: column; justify-content: center;
+  border-left: 1.5px solid var(--ink); padding: 18px 24px;
+  background: var(--pcb-wash); min-width: 190px;
+}
+.hd-chip .mono { font-size: 12.5px; line-height: 1.9; color: var(--ink-soft); }
+.hd-chip .mono b { color: var(--ink); font-weight: 600; }
+.hd-meta {
+  display: flex; flex-wrap: wrap; font-family: "IBM Plex Mono", monospace;
+  font-size: 12px; color: var(--ink-soft);
+}
+.hd-meta > div { padding: 10px 24px; border-right: 1px solid var(--line); }
+.hd-meta > div:last-child { border-right: none; }
+
+/* ── 章节 ── */
+section { margin: 56px 0; }
+.sec-head {
+  display: flex; align-items: baseline; gap: 14px;
+  border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 24px;
+}
+.sec-head .no {
+  font-family: "Chakra Petch", sans-serif; font-weight: 700;
+  font-size: 15px; color: var(--pcb); letter-spacing: .06em;
+}
+.sec-head h2 {
+  font-family: "Chakra Petch", "Noto Sans SC", sans-serif; font-weight: 600;
+  font-size: 21px; margin: 0; letter-spacing: .01em;
+}
+h3 {
+  font-family: "Chakra Petch", "Noto Sans SC", sans-serif; font-weight: 600;
+  font-size: 16.5px; margin: 28px 0 10px;
+}
+p { margin: 12px 0; max-width: 72ch; }
+strong { font-weight: 700; }
+em { font-style: normal; color: var(--pcb); font-weight: 600; }
+ul, ol { margin: 12px 0; padding-left: 24px; }
+li { margin: 6px 0; max-width: 70ch; }
+a { color: var(--pcb); }
+
+/* ── 表格 ── */
+.tbl-wrap { overflow-x: auto; margin: 16px 0; }
+table {
+  border-collapse: collapse; width: 100%; font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+th {
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+  letter-spacing: .08em; text-transform: uppercase; text-align: left;
+  color: var(--ink-soft); font-weight: 600;
+  border-bottom: 1.5px solid var(--ink); padding: 8px 14px 8px 0;
+}
+td { border-bottom: 1px solid var(--line-soft); padding: 9px 14px 9px 0; vertical-align: top; }
+td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 13.5px; }
+tr.hl td { background: var(--pcb-wash); }
+
+/* ── 代码/命令 ── */
+pre {
+  background: var(--mono-bg); border-left: 3px solid var(--pcb);
+  padding: 14px 18px; overflow-x: auto; margin: 14px 0;
+  font-family: "IBM Plex Mono", monospace; font-size: 13px; line-height: 1.7;
+}
+code {
+  font-family: "IBM Plex Mono", monospace; font-size: .88em;
+  background: var(--mono-bg); padding: 1.5px 6px; border-radius: 3px;
+}
+pre code { background: none; padding: 0; }
+
+/* ── 组件映射图 ── */
+.arch {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  margin: 20px 0;
+}
+.arch-col {
+  border: 1.5px solid var(--line); background: var(--card);
+}
+.arch-col h4 {
+  margin: 0; padding: 10px 14px;
+  font-family: "Chakra Petch", sans-serif; font-size: 13.5px; font-weight: 600;
+  border-bottom: 1.5px solid var(--line);
+}
+.arch-col .fps {
+  font-family: "IBM Plex Mono", monospace; font-size: 11.5px;
+  color: var(--ink-soft); font-weight: 400; float: right;
+}
+.arch-col ul { list-style: none; margin: 0; padding: 10px 12px; }
+.arch-col li {
+  font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.5;
+  padding: 7px 10px; margin: 6px 0; border: 1px solid var(--line);
+}
+.on-npu { background: var(--pcb-wash); border-color: var(--pcb) !important; }
+.on-npu::after { content: "NPU"; float: right; color: var(--pcb); font-weight: 600; font-size: 10.5px; letter-spacing: .08em; }
+.on-gpu::after { content: "MPS"; float: right; color: var(--copper); font-weight: 600; font-size: 10.5px; letter-spacing: .08em; }
+.on-cpu::after { content: "CPU"; float: right; color: var(--ink-soft); font-size: 10.5px; letter-spacing: .08em; }
+@media (max-width: 700px) { .arch { grid-template-columns: 1fr; } }
+
+/* ── 验证门卡片 ── */
+.gate {
+  display: grid; grid-template-columns: 56px 1fr; gap: 0;
+  border: 1.5px solid var(--line); margin: 14px 0; background: var(--card);
+}
+.gate-no {
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Chakra Petch", sans-serif; font-weight: 700; font-size: 18px;
+  background: var(--pcb); color: var(--paper);
+}
+.gate-body { padding: 14px 18px; }
+.gate-body h4 { margin: 0 0 6px; font-size: 15px; font-family: "Chakra Petch","Noto Sans SC",sans-serif; }
+.gate-body p { margin: 4px 0; font-size: 14px; max-width: none; }
+.gate-pass {
+  font-family: "IBM Plex Mono", monospace; font-size: 12.5px;
+  color: var(--pcb); font-weight: 600; margin-top: 8px;
+}
+.gate-pass::before { content: "PASS ≙ "; color: var(--ink-soft); font-weight: 400; }
+
+/* ── 提示块 ── */
+.callout {
+  border: 1.5px solid var(--pcb); background: var(--pcb-wash);
+  padding: 14px 18px; margin: 18px 0; font-size: 14.5px;
+}
+.callout.warn { border-color: var(--risk); background: var(--risk-wash); }
+.callout .tag {
+  font-family: "IBM Plex Mono", monospace; font-size: 11px; font-weight: 600;
+  letter-spacing: .1em; text-transform: uppercase; display: block; margin-bottom: 4px;
+}
+.callout .tag { color: var(--pcb); }
+.callout.warn .tag { color: var(--risk); }
+
+/* ── 里程碑 ── */
+.mile { display: flex; gap: 0; margin: 20px 0; border: 1.5px solid var(--line); }
+.mile > div { flex: 1; padding: 14px 16px; border-right: 1px solid var(--line); background: var(--card); }
+.mile > div:last-child { border-right: none; }
+.mile .m-t { font-family: "Chakra Petch", sans-serif; font-weight: 600; font-size: 14px; }
+.mile .m-d { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--copper); margin: 2px 0 6px; }
+.mile .m-x { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+@media (max-width: 700px) { .mile { flex-direction: column; } .mile > div { border-right: none; border-bottom: 1px solid var(--line); } }
+
+footer {
+  margin-top: 72px; padding-top: 16px; border-top: 1.5px solid var(--ink);
+  font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--ink-soft);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="hd-top">
+    <div class="hd-name">
+      <div class="eyebrow">Deployment &amp; Verification Plan</div>
+      <h1>GestureDemo × RK3588<br>部署与验证方案</h1>
+    </div>
+    <div class="hd-chip">
+      <div class="mono">
+        基线 <b>v3.9.2</b><br>
+        目标板 <b>RK3588</b><br>
+        NPU <b>6 TOPS INT8</b><br>
+        状态 <b>待采购开工</b>
+      </div>
+    </div>
+  </div>
+  <div class="hd-meta">
+    <div>2026-08-31</div>
+    <div>作者 cc（Claude）</div>
+    <div>依据 research-embedded-deploy-2026-08</div>
+    <div>仓库 oh-my-ccwork · 2-Projects/gesture interface</div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head"><span class="no">§0</span><h2>一句话方案</h2></div>
+  <p><strong>RK3588 单板（不加算力卡）分两阶段落地</strong>：阶段 A 直接移植（2–3 天，gaze 模型上 NPU、mediapipe 留 CPU），用于验证精度与全链可行；达标后视需要进阶段 B（NPU 原生管线，1–2 周），预期 30fps+ 反超 MacBook Air 现状。每一阶段都有量化验收门，任一门不过按预案回退，不带病前进。</p>
+  <div class="callout">
+    <span class="tag">先决结论（已调研实锤）</span>
+    ① resnet18 在 RK3588 NPU 实测 <b>4.09ms/244FPS</b>，反超 M5 MPS；② mediapipe 0.10.15 的 aarch64 Linux wheel <b>已在 PyPI 验证存在</b>（cp39–cp312）；③ RK1828 对本方案过配，定位为将来 MyJavis 融合时的 LLM 协处理器；④ Hailo-8 路线有实测反证（MediaPipe 模型 multi-context 仅 12fps），不采用。
+  </div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§1</span><h2>基线：v3.9.2 在 M5 Air 上的实测账目</h2></div>
+  <p>以下为 <code>--profile</code> 300 帧分段计时实测（2026-08-31），是所有对比的锚点。迁移后用<strong>同一把尺子</strong>（同一 profile 工具、同一判读方法）对撞。</p>
+  <div class="tbl-wrap"><table>
+    <tr><th>段</th><th class="num">ms/帧</th><th>说明</th></tr>
+    <tr><td class="mono">cap.read</td><td class="num">14.63</td><td>摄像头等待（非耗时，节拍空等）</td></tr>
+    <tr><td class="mono">hands+gesture</td><td class="num">10.69</td><td>MediaPipe Hands + pinch 状态机</td></tr>
+    <tr class="hl"><td class="mono">gaze(fm+ptgaze)</td><td class="num">11.47</td><td>FaceMesh + ETH-XGaze resnet18@MPS，隔帧推理均摊</td></tr>
+    <tr><td class="mono">imshow+key</td><td class="num">13.98</td><td>macOS highgui 渲染 1280×720</td></tr>
+    <tr><td class="mono">其余</td><td class="num">1.81</td><td>face_trk / attention / logic / draw</td></tr>
+    <tr><td><b>真实处理量</b></td><td class="num"><b>37.9</b></td><td>SUM − cap.read；<b>帧率 19.0fps</b>（相机自报 30）</td></tr>
+  </table></div>
+  <p>关键交互指标基线（真人 AB 探针，2026-08-30）：<em>垂直 SNR 11.43 / 水平 SNR 5.35</em>；ptgaze 丢脸率 0；这两组数字是迁移后精度不塌的硬门槛来源。</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§2</span><h2>硬件清单</h2></div>
+  <div class="tbl-wrap"><table>
+    <tr><th>件</th><th>选型</th><th class="num">预算</th><th>备注</th></tr>
+    <tr class="hl"><td>主板</td><td>Orange Pi 5 Plus（16GB）或 Radxa ROCK 5B</td><td class="num">¥600–1000</td><td>RK3588，16GB 内存优先（torch/rknn 工具链吃内存）</td></tr>
+    <tr><td>摄像头</td><td>UVC USB 摄像头 1080p@30fps</td><td class="num">¥100–200</td><td>选定后先跑 <code>v4l2-ctl --list-formats-ext</code> 确认 MJPG 720p@30 真实交付</td></tr>
+    <tr><td>散热</td><td>官配散热片+风扇</td><td class="num">¥30–50</td><td>NPU+CPU 持续负载必配，防降频（长稳门的前提）</td></tr>
+    <tr><td>存储</td><td>NVMe 128GB（或高速 TF 起步）</td><td class="num">¥60–100</td><td>系统+模型+torch 工具链约 15GB</td></tr>
+    <tr><td>显示</td><td>HDMI 屏（手头任意）</td><td class="num">—</td><td>验收需要看 UI；纯黑背景模式已适配</td></tr>
+    <tr><td>暂不买</td><td>RK1828 模组</td><td class="num">—</td><td>等 MyJavis 融合规划明确（LLM/VLM 协处理器定位）</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§3</span><h2>目标架构：组件去哪里跑</h2></div>
+  <div class="arch">
+    <div class="arch-col">
+      <h4>现状 M5 Air <span class="fps">19 fps</span></h4>
+      <ul>
+        <li class="on-cpu">FaceMesh 眨眼/EAR</li>
+        <li class="on-cpu">MediaPipe Hands</li>
+        <li class="on-cpu">face_landmarker</li>
+        <li class="on-gpu">gaze resnet18</li>
+        <li class="on-cpu">校准链 + 状态机</li>
+      </ul>
+    </div>
+    <div class="arch-col">
+      <h4>阶段 A 直接移植 <span class="fps">≥12 fps</span></h4>
+      <ul>
+        <li class="on-cpu">FaceMesh 眨眼/EAR</li>
+        <li class="on-cpu">MediaPipe Hands</li>
+        <li class="on-cpu">face_landmarker</li>
+        <li class="on-npu">gaze resnet18 INT8</li>
+        <li class="on-cpu">校准链 + 状态机</li>
+      </ul>
+    </div>
+    <div class="arch-col">
+      <h4>阶段 B 原生管线 <span class="fps">≥25 fps</span></h4>
+      <ul>
+        <li class="on-npu">RetinaFace + 关键点</li>
+        <li class="on-npu">手部检测 + 21 点</li>
+        <li class="on-npu">gaze resnet18 INT8</li>
+        <li class="on-cpu">校准链 + 状态机</li>
+        <li class="on-cpu">（FaceMesh 退役）</li>
+      </ul>
+    </div>
+  </div>
+  <p>校准链、OneEuro、候选状态机、到位门、增量标定这一整层<strong>交互资产两阶段都原样保留</strong>——它们只消费归一化 gaze 信号，与信号源解耦（v3.8 换 ptgaze 时已验证过这条解耦线）。RK3588 的 NPU 是 3 核，阶段 B 三个模型可各占一核并行。</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§4</span><h2>阶段 A：直接移植 POC（2–3 天）</h2></div>
+
+  <h3>A1 · 系统与环境（0.5 天）</h3>
+  <pre><code># Ubuntu 22.04/24.04 aarch64（Joshua Riek 镜像或官方）
+sudo apt install python3.12-venv v4l-utils cmake
+python3.12 -m venv .venv
+# mediapipe 版本是硬边界：0.10.35 起 legacy solutions 被删，1.x 彻底移除
+.venv/bin/pip install "mediapipe==0.10.15" "opencv-python>=4.8" numpy
+# RKNN 板端运行时（版本必须与转换端 toolkit2 配对）
+.venv/bin/pip install rknn-toolkit-lite2</code></pre>
+  <div class="callout warn">
+    <span class="tag">毒药防御 · 铁律</span>
+    任何后续 <code>pip/uv install</code> 都可能静默升级 mediapipe 导致全链炸（Mac 上已实踩：测试全绿也测不出，因为单测不碰 FaceMesh 构造）。装完立刻 <code>pip freeze | grep mediapipe</code> 钉死，每次装新包后复查。
+  </div>
+
+  <h3>A2 · gaze 模型转换（0.5 天，可在 Mac 上先做）</h3>
+  <ol>
+    <li>导出：ptgaze 的 <code>model.safetensors</code>（resnet18）→ ONNX（输入 1×3×224×224，输出 pitch/yaw）。</li>
+    <li>转换：<code>rknn-toolkit2</code>（x86 Linux 容器里跑）ONNX → RKNN，<strong>INT8 量化校准集用探针采的真实注视帧</strong>（probe_ab_samples 对应的画面截帧，覆盖四方位注视姿态），不用随机图。</li>
+    <li>若 INT8 精度塌（见门 1），回退混合量化或 FP16——RKNN 支持逐层配置。</li>
+  </ol>
+
+  <h3>A3 · 代码改造（1 天）</h3>
+  <p>架构上是<strong>现成的插槽</strong>：<code>gaze_estimator.py</code> 加 <code>GAZE_BACKEND="rknn"</code> 分支——构造时加载 .rknn 模型，<code>_ptgaze_infer</code> 对应实现换成 rknnlite 调用，归一化/符号约定/隔帧推理（<code>GAZE_INFER_EVERY</code>）/丢脸回退全部复用。其余改动：</p>
+  <ul>
+    <li><code>hand_tracker.py</code> 摄像头打开逻辑加 V4L2 设备号探测（Linux 分支已有 <code>CAP_DSHOW</code> 的 Windows 分支先例）。</li>
+    <li>MPS 检测代码在无 torch 环境下短路（rknn 分支 lazy import，不装 torch 也能跑）。</li>
+    <li>校准档元数据里 <code>backend="rknn"</code> 自动与 Mac 档案隔离——<strong>无需新代码</strong>，v3.9 的毒药防御设计天然覆盖跨设备场景。</li>
+  </ul>
+
+  <h3>A4 · 交互层阈值复查（0.5 天）</h3>
+  <p>教训条款（threshold_dead_signal）：换信号源必须 grep 全部消费 gaze 绝对值的阈值。本架构已免疫大半——垂直门控是布局几何推导、校准档按元数据隔离；仍需人工复查的只有 <code>GAZE_PT_DEG_SCALE</code>（INT8 输出分布若有系统偏移，由 9 点标定吸收，预期不用动）与到位门 <code>CALIB_ARRIVAL_MIN_SHIFT</code>。</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§5</span><h2>阶段 B：NPU 原生管线（1–2 周，达标后再投）</h2></div>
+  <p><strong>触发条件</strong>：阶段 A 六道门全过，且确认要把帧率从 ~12–15 提到 25+（例如产品化演示需要）。改造：</p>
+  <ul>
+    <li>人脸：RetinaFace + 106/468 关键点 rknn 模型替代 FaceMesh（rknn_model_zoo 生态现成），EAR/眨眼公式按新关键点索引重写。</li>
+    <li>手部：rknn 生态手部检测+21 关键点替代 MediaPipe Hands，pinch 比例公式复用，<strong>PINCH_ON/OFF 阈值按新模型重标</strong>（同一教训条款，手部信号也换源了）。</li>
+    <li>三模型绑 NPU 三核并行；主循环改流水线（读帧与推理重叠）。</li>
+  </ul>
+  <p>阶段 B 的验收 = 六道门整套重跑 + 手势专项（pinch 准确率与 Mac 版对拍视频逐帧比对）。</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§6</span><h2>验证方案：六道门，逐门有数字</h2></div>
+  <p>沿用本项目两天迭代沉淀的验收铁律：<strong>判据先于执行写死、同一把尺子前后对撞、负向验证配对照锚、验收随重新部署过期</strong>。</p>
+
+  <div class="gate"><div class="gate-no">0</div><div class="gate-body">
+    <h4>环境冒烟</h4>
+    <p>mediapipe 0.10.15 aarch64 import + FaceMesh 真构造 + 真处理一帧测试图；7 套既有测试全绿（纯逻辑测试平台无关，40+ 测原样跑）。</p>
+    <div class="gate-pass">FaceMesh 构造无异常 · 7/7 套 ALL PASS</div>
+  </div></div>
+
+  <div class="gate"><div class="gate-no">1</div><div class="gate-body">
+    <h4>模型数值对撞（INT8 vs MPS float）</h4>
+    <p>同一张 <code>assets/test_face.jpg</code> + 探针留存的真实注视帧集，RKNN 输出与 Mac MPS 输出逐帧对比 pitch/yaw。</p>
+    <div class="gate-pass">平均偏差 &lt; 1.0°，最大偏差 &lt; 2.5°；超限 → 回退 FP16/混合量化重转</div>
+  </div></div>
+
+  <div class="gate"><div class="gate-no">2</div><div class="gate-body">
+    <h4>全链离线自检</h4>
+    <p><code>--verify-backend</code> 在板上跑通（该入口 v3.8 起内置，验模型加载+推理全链，不需要摄像头）。</p>
+    <div class="gate-pass">BACKEND-VERIFY OK · backend=rknn</div>
+  </div></div>
+
+  <div class="gate"><div class="gate-no">3</div><div class="gate-body">
+    <h4>真人 AB 探针（精度不塌门）</h4>
+    <p><code>probe_ab_gaze.py</code> 在板上跑（B 管线换 rknn），与 Mac 基线对撞。这是<strong>迁移成败的核心门</strong>。</p>
+    <div class="gate-pass">垂直 SNR ≥ 9.1（基线 11.43 × 0.8） · 水平 SNR ≥ 4.3 · 丢脸率 &lt; 2%</div>
+  </div></div>
+
+  <div class="gate"><div class="gate-no">4</div><div class="gate-body">
+    <h4>校准与交互全链真机</h4>
+    <p>全量 9 点标定（外扩点表）→ 重启走 3 点快验 → 拖卡/气泡 dwell/垂直门控逐项过；校准档确认落在板上且 backend 元数据隔离生效。</p>
+    <div class="gate-pass">标定 MAE ≤ 0.15 · 快验 3 点通过 · 低位气泡可锁定</div>
+  </div></div>
+
+  <div class="gate"><div class="gate-no">5</div><div class="gate-body">
+    <h4>分段计时对撞</h4>
+    <p><code>--profile</code> 300 帧，与 §1 基线表逐段对比，确认瓶颈分布符合预测（gaze 段应显著小于 Mac CPU 版）。</p>
+    <div class="gate-pass">阶段 A ≥ 12fps · 阶段 B ≥ 25fps · gaze 段 ≤ 6ms</div>
+  </div></div>
+
+  <div class="gate"><div class="gate-no">6</div><div class="gate-body">
+    <h4>长稳与热</h4>
+    <p>连续运行 30 分钟：内存曲线平（无泄漏）、NPU 无超时错误、CPU 温度 &lt; 80°C 无降频（<code>vcgencmd</code> 等价物 + <code>--profile</code> 首尾各跑一次对比）。</p>
+    <div class="gate-pass">首尾两次 profile 帧率差 &lt; 10% · dmesg 无 rknn 错误</div>
+  </div></div>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§7</span><h2>风险登记与回退</h2></div>
+  <div class="tbl-wrap"><table>
+    <tr><th>风险</th><th>概率</th><th>对策 / 回退</th></tr>
+    <tr><td>INT8 量化后 gaze 精度塌（门 1/3 不过）</td><td>中</td><td>逐层混合量化 → FP16 → 最坏 CPU float 跑 onnxruntime（帧率降但可用）</td></tr>
+    <tr><td>rknn-toolkit2 与板端 librknnrt 版本不配对</td><td>中</td><td>转换端与板端版本号写进环境文档钉死；报错特征是加载期 version mismatch</td></tr>
+    <tr><td>mediapipe 被后续安装静默升级</td><td>中</td><td>§4 毒药防御；requirements 上限硬边界 + 每次装包后 freeze 复查</td></tr>
+    <tr><td>UVC 摄像头实际交付帧率/曝光不达标</td><td>低</td><td>选购时验 <code>v4l2-ctl</code> 真实模式表；备选 MIPI-CSI 摄像头</td></tr>
+    <tr><td>散热降频（门 6 不过）</td><td>低</td><td>加强散热；NPU 三核只用一核（阶段 A 本来只需一核）</td></tr>
+    <tr><td>阶段 B 手部模型精度不及 MediaPipe</td><td>中</td><td>pinch 对拍视频逐帧比对不过 → 手部保留 CPU MediaPipe（混合架构，帧率介于 A/B 之间）</td></tr>
+  </table></div>
+  <p>总回退原则与 Mac 侧一致：<strong>每阶段开工前 git 锚点；配置级开关优先于代码回滚</strong>（<code>GAZE_BACKEND</code> 三态：ptgaze / rknn / legacy）；板上任何阶段失败不影响 Mac 版——两平台代码同仓同源，校准档天然隔离。</p>
+</section>
+
+<section>
+  <div class="sec-head"><span class="no">§8</span><h2>里程碑</h2></div>
+  <div class="mile">
+    <div>
+      <div class="m-t">M0 · 备料</div>
+      <div class="m-d">下单后 ~1 周</div>
+      <div class="m-x">板卡/摄像头/散热到手；期间可在 Mac 上先完成 A2 模型转换与门 1 数值对撞（x86 容器跑 toolkit2）</div>
+    </div>
+    <div>
+      <div class="m-t">M1 · 阶段 A POC</div>
+      <div class="m-d">2–3 天</div>
+      <div class="m-x">门 0–6 全过 → 出对撞报告，拍板是否投阶段 B</div>
+    </div>
+    <div>
+      <div class="m-t">M2 · 阶段 B（可选）</div>
+      <div class="m-d">1–2 周</div>
+      <div class="m-x">NPU 原生管线 + 手势专项验收 → 30fps 独立盒子</div>
+    </div>
+    <div>
+      <div class="m-t">M3 · 融合（远期）</div>
+      <div class="m-d">待规划</div>
+      <div class="m-x">+RK1828：MyJavis LLM/VLM 本地化，感知+语义完整离线交互终端</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>GestureDemo v3.9.2 → RK3588 · 方案 v1</div>
+  <div>署名：cc（Claude）· 2026-08-31</div>
+</footer>
+
+</div>
