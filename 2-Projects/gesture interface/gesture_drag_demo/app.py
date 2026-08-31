@@ -40,6 +40,47 @@ from config import (
 from implicit_calib import ImplicitCalibrator, card_expected_gaze
 
 
+class _SectionProfiler:
+    """--profile 分段计时（v3.9.2 排查帧率 15）。未启用时 mark 零开销。"""
+
+    def __init__(self, enabled: bool):
+        self.enabled = enabled
+        self.acc = {}       # name -> [total_s, count]
+        self.order = []
+        self._t = None
+
+    def frame_start(self):
+        if self.enabled:
+            self._t = time.perf_counter()
+
+    def mark(self, name: str):
+        if not self.enabled:
+            return
+        now = time.perf_counter()
+        dt = now - self._t
+        self._t = now
+        if name not in self.acc:
+            self.acc[name] = [0.0, 0]
+            self.order.append(name)
+        self.acc[name][0] += dt
+        self.acc[name][1] += 1
+
+    def report(self, n_frames: int, wall_s: float, cam_fps_prop: float) -> str:
+        lines = ["=" * 46,
+                 f"[profile] {n_frames} 帧 / {wall_s:.1f}s = "
+                 f"{n_frames / wall_s:.1f} fps  (相机自报 {cam_fps_prop:.0f}fps)",
+                 "-" * 46]
+        total = 0.0
+        for name in self.order:
+            t, c = self.acc[name]
+            ms = t / c * 1000 if c else 0.0
+            total += ms
+            lines.append(f"  {name:<16} {ms:7.2f} ms/帧")
+        lines.append(f"  {'SUM':<16} {total:7.2f} ms/帧")
+        lines.append("=" * 46)
+        return "\n".join(lines)
+
+
 def verify_backend():
     """--verify-backend：打包产物离线自检（不开摄像头）。
 
@@ -69,6 +110,10 @@ def main():
     import sys
     if "--verify-backend" in sys.argv:
         raise SystemExit(verify_backend())
+    # --profile：跳过标定直接跑 300 帧主循环，分段计时落盘后自动退出
+    profiling = "--profile" in sys.argv
+    prof = _SectionProfiler(profiling)
+    _PROFILE_FRAMES = 300
 
     print("=" * 50)
     print(f"  Gesture Drag Demo {VERSION}")
@@ -150,12 +195,19 @@ def main():
             print("[Calibration] 快验未通过 → 全量标定")
         return run_calibration(tracker, gaze_est, WINDOW_NAME), []
 
-    _anchors, _hist_samples = _startup_calibration()
+    if profiling:
+        print("[profile] 跳过标定，直接进入计时循环（300 帧后自动退出）")
+        _anchors, _hist_samples = None, []
+    else:
+        _anchors, _hist_samples = _startup_calibration()
     implicit_cal = _build_implicit(_anchors)
     if implicit_cal is not None and _hist_samples:
         # 回灌历史捏取样本（保鲜期内）：跨会话「越用越准」；只进滑窗，
         # 映射不立刻变（下一次捏取自然触发重拟合）
         implicit_cal.restore_samples(_hist_samples)
+
+    _profile_n = 0
+    _profile_t0 = time.monotonic()
 
     # v3.7 眨眼冻结状态（人均 3-4s 眨一次、每次 3-9 帧虹膜乱值——
     # 8 帧锁定几乎必然被打断；眨眼帧沿用上帧候选快照）
@@ -166,11 +218,13 @@ def main():
 
     try:
         while True:
+            prof.frame_start()
             # 读取一帧
             frame = tracker.read_frame()
             if frame is None:
                 print("摄像头读取失败")
                 break
+            prof.mark("cap.read")
 
             # 手部检测
             hand_data = tracker.detect(frame)
@@ -185,15 +239,18 @@ def main():
                 )
             else:
                 gesture.update(hand_detected=False)
+            prof.mark("hands+gesture")
 
             # --- 注视估计 ---
             gaze_result = gaze_est.update(frame)
+            prof.mark("gaze(fm+ptgaze)")
 
             # --- 面部特征追踪（复用 gaze_est 的 FaceMesh 结果）---
             face_features = face_trk.update(
                 gaze_result.face_landmarks,
                 tracker.frame_w, tracker.frame_h,
             )
+            prof.mark("face_trk")
 
             # --- 注视候选更新 ---
             attn_sel.set_dragging(drag_mgr.is_dragging)
@@ -239,6 +296,7 @@ def main():
                 attn_state.candidate_bubble_locked = attn_sel._bubble_locked
                 attn_state.bubble_lock_progress = attn_sel.bubble_lock_progress
                 last_attn_state = attn_state
+            prof.mark("attention")
 
             # --- 拖拽逻辑 ---
             smooth = gesture.smooth_center
@@ -318,6 +376,7 @@ def main():
 
             # --- 气泡放置目标检测 ---
             drag_mgr.update_drop_target(cards, desktops)
+            prof.mark("logic")
 
             # --- 绘制 ---
 
@@ -398,12 +457,37 @@ def main():
                             "Calibration drift detected - press C to recalibrate",
                             (10, frame.shape[0] - 40),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 200, 255), 2)
+            prof.mark("draw")
 
             # 显示画面
             cv2.imshow(WINDOW_NAME, frame)
 
             # 按键处理
             key = cv2.waitKey(1) & 0xFF
+            prof.mark("imshow+key")
+
+            # --- profile 模式：300 帧自动收官 ---
+            if profiling:
+                _profile_n += 1
+                if _profile_n >= _PROFILE_FRAMES:
+                    wall = time.monotonic() - _profile_t0
+                    try:
+                        cam_fps = tracker.cap.get(cv2.CAP_PROP_FPS)
+                    except Exception:
+                        cam_fps = 0.0
+                    report = prof.report(_profile_n, wall, cam_fps)
+                    print(report)
+                    import os as _os
+                    _plog = _os.path.expanduser(
+                        "~/Library/Logs/GestureDemo-profile.log")
+                    try:
+                        with open(_plog, "a") as _f:
+                            _f.write(time.strftime("%Y-%m-%d %H:%M:%S\n")
+                                     + report + "\n")
+                        print(f"[profile] 已落盘 {_plog}")
+                    except OSError:
+                        pass
+                    break
             if key == 27:  # ESC
                 print("用户按下 ESC，退出")
                 break
