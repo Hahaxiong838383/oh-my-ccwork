@@ -12,11 +12,13 @@ import { visionRoute } from './routes/vision.js';
 import { profileRoute } from './routes/profile.js';
 import { memoryRoute } from './routes/memory.js';
 import { adminDataRoute } from './routes/admin-data.js';
+import { startPersonaDailyTimer } from './insight-runner.js';
 import { customLlmRoute } from './routes/custom-llm.js';
 import { rtcRoute } from './routes/rtc.js';
 import { deviceSessionRoute } from './routes/device-session.js';
 import { otaDeviceRoute } from './routes/ota.js';
 import { deviceConfigRoute } from './routes/device-config.js';
+import { localAudioDeviceRoute } from './routes/local-audio.js';
 import { parentPairingRoute, devicePairingRoute } from './routes/pairing.js';
 import { deviceTelemetryRoute, parentTelemetryRoute } from './routes/telemetry.js';
 import { devItemsRoute } from './routes/dev-items.js';
@@ -44,6 +46,8 @@ app.route('/api/feedback-themes', themesRoute);
 app.route('/v1/device', deviceSessionRoute);
 app.route('/v1/device/ota', otaDeviceRoute);
 app.route('/v1/device/config', deviceConfigRoute);
+// 本地人格音频（合同 CODEX_P003_LOCAL_AUDIO_CONTRACT_v1.1）：manifest + 音频文件分发
+app.route('/v1/device/local-audio', localAudioDeviceRoute);
 app.route('/v1/device/pairing', devicePairingRoute);
 // 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824）
 app.route('/v1/device/telemetry', deviceTelemetryRoute);
@@ -68,6 +72,7 @@ const server = serve(
   (info) => {
     console.log(`[server] listening on http://${info.address}:${info.port}`);
     logProviderStatus();
+    startPersonaDailyTimer(); // M3/M6 每日批(沪时 3 点档,人格成长方案)
   },
 );
 

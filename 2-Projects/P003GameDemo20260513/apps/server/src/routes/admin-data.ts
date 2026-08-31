@@ -24,6 +24,17 @@ import {
 } from '../hotword-store.js';
 import { callHotwordChannel } from '../hotword-channel.js';
 import { extractLlmStore, EXTRACT_PROVIDERS, type ExtractProvider } from '../extract-llm-store.js';
+import {
+  relationStateStore, personaTrackEnabled, personaInjectEnabled, personaStyleEnabled,
+  personaInsightEnabled, personaNarrativeEnabled, personaTraitEnabled, personaLocalAudioEnabled,
+} from '../relation-state-store.js';
+import { localAudioStore } from '../local-audio-store.js';
+import { runLocalAudioForAccount } from '../local-audio-generator.js';
+import { stylePoolStore } from '../style-pool-store.js';
+import { childInsightStore } from '../child-insight-store.js';
+import { runInsightForAccount, runNarrativeForAccount } from '../insight-runner.js';
+import { traitStore, TRAIT_BASELINE, TRAIT_LABELS, TRAIT_DIMS } from '../trait-store.js';
+import { growthLedgerStore } from '../growth-ledger-store.js';
 import { resolveExtractLlm, callExtractionLlm } from '../llm-extract.js';
 
 // hub 看板数据端点：admin 看所有账号的孩子档案 + 设备（admin token 鉴权，区别于 parent 自己的 /api/profile 邀请码 JWT）。
@@ -160,9 +171,10 @@ adminDataRoute.get('/devices', (c) => {
 
 adminDataRoute.post('/devices', async (c) => {
   try {
-    const body = (await c.req.json().catch(() => ({}))) as { sn?: unknown; note?: unknown };
+    const body = (await c.req.json().catch(() => ({}))) as { sn?: unknown; note?: unknown; parent_phone?: unknown };
     const sn = typeof body.sn === 'string' ? body.sn.trim().toUpperCase() : '';
     const note = typeof body.note === 'string' ? body.note.trim() : '';
+    const parentPhone = typeof body.parent_phone === 'string' ? body.parent_phone.trim() : '';
     const check = validateDeviceSn(sn);
     if (!check.ok) {
       return c.json({ ok: false, error: 'reason' in check ? check.reason : 'SN 不合法' }, 400);
@@ -170,8 +182,27 @@ adminDataRoute.post('/devices', async (c) => {
     if (deviceRegistryStore.get(sn)) {
       return c.json({ ok: false, error: '该 SN 已在台账中' }, 409);
     }
-    const device = deviceRegistryStore.add(sn, note);
-    return c.json({ ok: true, device });
+    // 家长手机号预绑（2026-08-31）：已注册即添加时绑定；未注册照样添加但返回体明确提示，
+    // 绝不静默丢弃（此前 UI 筛选框被误当添加字段、后端不收 phone，填了也无痕）。
+    let parentAccount = parentPhone ? accountStore.findByPhone(parentPhone) : null;
+    if (parentAccount && parentAccount.role === 'device') {
+      return c.json({ ok: false, error: '该手机号对应设备账号，不能绑定为家长' }, 400);
+    }
+    deviceRegistryStore.add(sn, note);
+    let parentBound = false;
+    if (parentAccount) {
+      deviceRegistryStore.setParentAccountId(sn, parentAccount.id);
+      parentBound = true;
+      console.log(`[admin-brain] parent bound=${parentAccount.id} sn=${sn} via=add-device`);
+    }
+    return c.json({
+      ok: true,
+      device: deviceRegistryStore.get(sn),
+      parent_bound: parentBound,
+      ...(parentPhone && !parentBound
+        ? { parent_bind_warning: `手机号 ${parentPhone} 尚未注册家长账号——设备已添加但未绑定；家长在 p003.hahaxiong.cc 用该号登录注册后，可在本页重新绑定` }
+        : {}),
+    });
   } catch (error) {
     return c.json({ ok: false, error: '添加设备失败，请稍后重试' }, 500);
   }
@@ -329,6 +360,18 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
     const recentConversation = conversationStore
       .list({ accountId, limit: 50 })
       .map((r) => ({ id: r.id, session_id: r.session_id, role: r.role, text: r.text, ts: r.ts }));
+    // P0 人格成长（契约+codex 3.3 可观测）：关系状态 + 注入视图 + promise 兑现率（trust 只读代理，查询时算不落库）。
+    const relationState = relationStateStore.getState(accountId);
+    const relationView = relationState ? relationStateStore.getInjectionView(accountId, Date.now()) : null;
+    const promiseStats = (() => {
+      try {
+        const promises = items.filter((i) => i.type === 'promise');
+        const resolved = promises.filter((i) => i.status === 'resolved').length;
+        return { total: promises.length, resolved };
+      } catch {
+        return { total: 0, resolved: 0 };
+      }
+    })();
     // 分层组装（device-brain-prompt，与 custom-llm 热路径同源）：世界观/安全基座/记忆区块/附加规则 + 最终成品。
     // 课程/启蒙/召回护栏是逐轮按孩子发言动态叠加的，不在稳态分层内。
     const { layers, final } = buildDeviceLayers({ accountId, role: 'device' });
@@ -353,6 +396,22 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
       parent_account_id: device.parent_account_id ?? null,
       parent_nickname: parentAccount?.nickname ?? '',
       recent_conversation: recentConversation,
+      relation_state: relationState
+        ? {
+            days_known: relationView?.daysKnown ?? 0,
+            tier: relationView?.tier ?? '新朋友',
+            session_count: relationState.session_count,
+            miss: relationView?.miss ?? 0,
+            mood: relationView?.mood ?? null,
+            valence_ema: relationState.valence_ema,
+            engagement_ema: relationState.engagement_ema,
+            valence_sample_count: relationState.valence_sample_count,
+            engagement_sample_count: relationState.engagement_sample_count,
+            last_seen_at: relationState.last_seen_at,
+            promise_total: promiseStats.total,
+            promise_resolved: promiseStats.resolved,
+          }
+        : null,
       prompt_config: {
         worldview_override: device.worldview_override ?? '',
         prompt_addendum: device.prompt_addendum ?? '',
@@ -690,6 +749,19 @@ adminDataRoute.patch('/devices/:sn/parent', async (c) => {
       return c.json({ ok: false, error: 'parent_account_id 须为字符串或 null' }, 400);
     }
     const parentId = typeof raw === 'string' ? raw.trim() : null;
+    // P0 人格成长生命周期（codex 3.2）：换绑到不同家长≈换孩子场景，清设备账号的关系状态
+    // （新孩子不继承上一名孩子的关系温度）。纯解绑(→null)不清——可能是误操作/迁移中间态，
+    // 显式重建走 DELETE /devices/:sn/relation-state。
+    if (
+      device.parent_account_id && parentId && parentId !== device.parent_account_id && device.account_id
+    ) {
+      const cleared = relationStateStore.clear(device.account_id);
+      stylePoolStore.clear(device.account_id);
+      childInsightStore.clear(device.account_id);
+      traitStore.clear(device.account_id);
+      growthLedgerStore.clear(device.account_id);
+      if (cleared) console.log(`[persona] 换绑清人格状态(relation/style/insight/trait/ledger) sn=${sn} account=${device.account_id}`);
+    }
     let syncedProfile = false;
     if (parentId) {
       const parent = accountStore.findAccount(parentId);
@@ -707,6 +779,190 @@ adminDataRoute.patch('/devices/:sn/parent', async (c) => {
     return c.json({ ok: true, parent_account_id: parentId, synced_profile: syncedProfile });
   } catch (error) {
     return c.json({ ok: false, error: '家长绑定失败，请稍后重试' }, 500);
+  }
+});
+
+// ── 人格成长一站式探针（M1-M6 全链观测，川哥快速定位用）──
+// 一次请求看全：开关/allowlist 命中、关系状态、注入实况（从真实 prompt 链产物抓段落，零逻辑复制）、
+// 风格池、行为画像、自我叙事、值得关心的事。
+adminDataRoute.get('/devices/:sn/persona-probe', (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    if (!device.account_id) return c.json({ ok: false, error: '设备未开通 brain（无设备账号）' }, 400);
+    const acct = device.account_id;
+    const t0 = Date.now();
+
+    // 注入实况：走真实 prompt 链（buildDeviceLayers 与 custom-llm 热路径同源），抓 persona 相关段
+    const { final } = buildDeviceLayers({ accountId: acct, role: 'device' });
+    const grabLine = (marker: string) => {
+      const idx = final.indexOf(marker);
+      if (idx === -1) return null;
+      const end = final.indexOf('\n', idx);
+      return final.slice(idx, end === -1 ? undefined : end);
+    };
+    const injection_live = {
+      relation_line: grabLine('【和这个孩子的关系·数据】'),
+      state_line: grabLine('【小可当下状态·数据】'),
+      narrative_line: grabLine('【小可心里的小笔记·数据】'),
+      insight_line: grabLine('【对这个孩子的观察·数据】'),
+      trait_line: grabLine('【小可对这个孩子的相处倾向·数据】'),
+      style_line: grabLine('【过去有效的相处方式·参考】'),
+      concern_line: grabLine('值得关心 "'),
+    };
+
+    const rel = relationStateStore.getState(acct);
+    const view = rel ? relationStateStore.getInjectionView(acct, Date.now()) : null;
+    // promise 兑现率（trust 只读代理）：probe 里并进 relation_state 供 UI 卡 1 展示
+    const relWithPromise = rel
+      ? (() => {
+          try {
+            const { items } = memoryItemStore.listByAccount(acct);
+            const promises = items.filter((i) => i.type === 'promise');
+            return {
+              ...rel,
+              promise_total: promises.length,
+              promise_resolved: promises.filter((i) => i.status === 'resolved').length,
+            };
+          } catch {
+            return { ...rel, promise_total: 0, promise_resolved: 0 };
+          }
+        })()
+      : null;
+    const styleTop = stylePoolStore.retrieve(acct, [0.5, 0.5, 0.5, 0.5], 3).map((s) => ({
+      child_said: s.child_said, xiaoke_did: s.xiaoke_did,
+      mass: s.mass, mass_eff: Number(s.mass_eff.toFixed(2)),
+    }));
+    const concerns = memoryItemStore
+      .selectForInjection(acct)
+      .concerns.map((cn) => ({ content: cn.content, due_text: cn.due_text, due_at: cn.due_at, created_at: cn.created_at }));
+
+    return c.json({
+      ok: true,
+      account_id: acct,
+      probe_ms: Date.now() - t0,
+      switches: {
+        track: personaTrackEnabled(acct),
+        inject: personaInjectEnabled(acct),
+        style: personaStyleEnabled(acct),
+        insight: personaInsightEnabled(acct),
+        narrative: personaNarrativeEnabled(acct),
+        trait: personaTraitEnabled(acct),
+        local_audio: personaLocalAudioEnabled(acct),
+        allowlist_raw: process.env.PERSONA_STATE_ACCOUNT_ALLOWLIST ?? '(未设=放开)',
+      },
+      local_audio: (() => {
+        const laState = localAudioStore.getState(acct);
+        const bySlot: Record<string, Array<{ id: string; text: string; duration_ms: number; bytes: number }>> = {};
+        for (const item of localAudioStore.listActive(acct)) {
+          (bySlot[item.slot] ??= []).push({ id: item.id, text: item.text, duration_ms: item.duration_ms, bytes: item.bytes });
+        }
+        return {
+          revision: laState.revision,
+          last_generated_at: laState.last_generated_at,
+          gen_tier: laState.gen_tier,
+          last_applied_revision: laState.last_applied_revision,
+          last_applied_at: laState.last_applied_at,
+          last_fetch_at: laState.last_fetch_at,
+          slots: bySlot,
+        };
+      })(),
+      trait: {
+        current: traitStore.get(acct),
+        baseline: TRAIT_BASELINE,
+        labels: TRAIT_LABELS,
+        dims: TRAIT_DIMS,
+      },
+      ledger_count: growthLedgerStore.count(acct),
+      relation_state: relWithPromise,
+      injection_view: view,
+      injection_live,
+      style_pool: { count: stylePoolStore.count(acct), top: styleTop },
+      insight: childInsightStore.get(acct),
+      narrative: relationStateStore.getNarrative(acct),
+      concerns,
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: `probe 失败: ${String((error as Error)?.message ?? error)}` }, 500);
+  }
+});
+
+// 成长时间线（因果链方案 §3.4 视图一）：growth_ledger 倒序流，支持 module/dimension 筛选。
+adminDataRoute.get('/devices/:sn/growth-events', (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device?.account_id) return c.json({ ok: false, error: '设备不在台账或未开通 brain' }, 404);
+    const module = c.req.query('module')?.trim() || undefined;
+    const dimension = c.req.query('dimension')?.trim() || undefined;
+    const limit = Number(c.req.query('limit')) || 50;
+    const events = growthLedgerStore.list(device.account_id, { module, dimension, limit });
+    return c.json({ ok: true, total: growthLedgerStore.count(device.account_id), events });
+  } catch (error) {
+    return c.json({ ok: false, error: `growth-events 失败: ${String((error as Error)?.message ?? error)}` }, 500);
+  }
+});
+
+// 手动触发 M3/M6 批任务（调试即时出结果，不等每日 3 点档）。同步跑完返回。
+adminDataRoute.post('/devices/:sn/persona-insight-run', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device?.account_id) return c.json({ ok: false, error: '设备不在台账或未开通 brain' }, 404);
+    const acct = device.account_id;
+    const insightDims = await runInsightForAccount(acct);
+    const narrativeOk = await runNarrativeForAccount(acct);
+    return c.json({
+      ok: true,
+      insight_dims: insightDims,
+      narrative_updated: narrativeOk,
+      insight: childInsightStore.get(acct),
+      narrative: relationStateStore.getNarrative(acct),
+    });
+  } catch (error) {
+    return c.json({ ok: false, error: `insight-run 失败: ${String((error as Error)?.message ?? error)}` }, 500);
+  }
+});
+
+// 手动触发本地人格音频生成（force 跳过触发条件；联调/Canary 用，不等每日批）。同步跑完返回。
+adminDataRoute.post('/devices/:sn/persona-local-audio-run', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device?.account_id) return c.json({ ok: false, error: '设备不在台账或未开通 brain' }, 404);
+    const acct = device.account_id;
+    if (!personaLocalAudioEnabled(acct)) {
+      return c.json({ ok: false, error: '开关未开或不在 allowlist（PERSONA_LOCAL_AUDIO_ENABLED + allowlist）' }, 400);
+    }
+    const force = c.req.query('force') !== '0'; // 默认 force（手动就是要立即出结果）
+    const result = await runLocalAudioForAccount(acct, { force });
+    return c.json({ ok: true, result, state: localAudioStore.getState(acct) });
+  } catch (error) {
+    return c.json({ ok: false, error: `local-audio-run 失败: ${String((error as Error)?.message ?? error)}` }, 500);
+  }
+});
+
+// P0 人格成长（codex 3.2 生命周期兜底）：admin 显式重置设备账号的关系状态。
+// 用途：换孩子、测试数据清理、家长要求重置。物理删除（同儿童数据删除权模式）。
+adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    if (!device.account_id) return c.json({ ok: false, error: '设备未开通 brain（无设备账号）' }, 400);
+    const cleared = relationStateStore.clear(device.account_id);
+    const styleCleared = stylePoolStore.clear(device.account_id);
+    const insightCleared = childInsightStore.clear(device.account_id);
+    const traitCleared = traitStore.clear(device.account_id);
+    const ledgerCleared = growthLedgerStore.clear(device.account_id);
+    localAudioStore.clearAccount(device.account_id); // 第六样：本地音频条目+文件+revision 归零
+    console.log(
+      `[persona] admin 重置 sn=${sn} account=${device.account_id} relation=${cleared} style=${styleCleared} insight=${insightCleared} trait=${traitCleared} ledger=${ledgerCleared} local_audio=cleared`,
+    );
+    return c.json({ ok: true, cleared, style_cleared: styleCleared, insight_cleared: insightCleared, trait_cleared: traitCleared, ledger_cleared: ledgerCleared, local_audio_cleared: true });
+  } catch (error) {
+    return c.json({ ok: false, error: '重置失败，请稍后重试' }, 500);
   }
 });
 
@@ -827,14 +1083,22 @@ adminDataRoute.post('/memory/:accountId', async (c) => {
 // 两路各自 try-catch 降级为 null，绝不因监控拖垮管理页。
 const pexecFile = promisify(execFile);
 
+// 30s 共享缓存(2026-08-27):admin 资源卡改 60s 自动轮询后,多标签页各自轮询会成倍打 ssh——
+// 缓存让并发消费方共享一次采集;失败不缓存(下个请求重试)。
+let workerStatsCache: { data: Record<string, unknown>; ts: number } | null = null;
+const WORKER_STATS_TTL_MS = 30_000;
+
 async function fetchWorkerMachineStats(): Promise<Record<string, unknown> | null> {
+  if (workerStatsCache && Date.now() - workerStatsCache.ts < WORKER_STATS_TTL_MS) return workerStatsCache.data;
   try {
     const { stdout } = await pexecFile(
       'ssh',
       ['-i', '/root/.ssh/worker-stats-key', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 'root@64.90.13.117', 'stats'],
       { timeout: 8000 },
     );
-    return JSON.parse(stdout.trim()) as Record<string, unknown>;
+    const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
+    workerStatsCache = { data: parsed, ts: Date.now() };
+    return parsed;
   } catch {
     return null;
   }

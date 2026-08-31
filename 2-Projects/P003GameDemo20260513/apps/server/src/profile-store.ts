@@ -57,6 +57,7 @@ export type DeviceInput = {
 // P1 语音抽取写入的画像增量（部分更新，只覆盖提供的字段）。
 export type MemoryPatch = Partial<{
   nickname: string;
+  nickname_evidence: string; // 改名证据原句，仅供账本记账——updateMemoryFields 白名单合并不落库
   preferred_address: string;
   personality_notes: string;
   recent_emotion: string;

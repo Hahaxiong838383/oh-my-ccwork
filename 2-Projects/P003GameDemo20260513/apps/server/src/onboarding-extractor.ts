@@ -124,6 +124,8 @@ function isValidNickname(name: string): boolean {
   if (name.length < 1 || name.length > 12) return false;
   if (/[<>{}[\]/\\|@#$%^&*=+`~]/.test(name)) return false;
   if (/忽略|指令|system|prompt|ignore|assistant|叫我$/i.test(name)) return false;
+  // 代词/AI 自己的名字不是称呼（2026-08-26：004 曾被 onboarding 抽成「你」、0010 曾被抽成「小可」）
+  if (/^(你|我|他|她|它|咱|你们|我们|他们|大家|小可)$/.test(name)) return false;
   return true;
 }
 

@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { isCrisisContent } from './memory-safety-filter.js';
+import { growthLedgerStore } from './growth-ledger-store.js';
 
 // Phase 1 typed 情景记忆(docs/43 §8 定稿):promise/event/emotion/relation/preference。
 // 与 family_member 同库(profile.db)不同表——profile.db 仍是孩子记忆的唯一物理真相源;
@@ -10,7 +11,9 @@ import { isCrisisContent } from './memory-safety-filter.js';
 // 并发安全同 profile-store 范式:DatabaseSync 全同步方法(无 await 间隙=原子),
 // 双链路(WS pipeline / RTC custom-llm)回调在事件循环里串行执行,不会 lost update。
 
-export type MemoryType = 'promise' | 'event' | 'emotion' | 'relation' | 'preference';
+// concern：P0 人格成长 M5 foresight（方案 §M5）——「值得关心的事」（明天考试/换牙/和同学闹别扭），
+// 带 due 复用 promise 的解析链；due 过后 7 天惰性归档（不像 promise 永不淘汰——关心过期就翻篇）。
+export type MemoryType = 'promise' | 'event' | 'emotion' | 'relation' | 'preference' | 'concern';
 
 export type MemoryItem = {
   id: string;
@@ -51,9 +54,11 @@ const TYPE_CAP: Record<Exclude<MemoryType, 'promise'>, number> = {
   emotion: 60,
   relation: 8,
   preference: 10,
+  concern: 8,
 };
 const PROMISE_ACTIVE_WARN = 8; // active promise 超过则 log 警告(不淘汰,人工看)
 const EMOTION_ARCHIVE_MS = 30 * 24 * 3600 * 1000; // emotion 30 天归档(评审 C4)
+const CONCERN_ARCHIVE_AFTER_DUE_MS = 7 * 24 * 3600 * 1000; // concern due 过后 7 天归档(无 due 按 created_at)
 
 const DEFAULT_DB_PATH = './data/profile.db';
 
@@ -147,7 +152,10 @@ class MemoryItemStore {
     `);
     let added = 0;
     for (const it of items) {
-      const due = it.type === 'promise' ? parseDue(it.due_text ?? '', now) : { due_at: null, due_granularity: '' };
+      const due =
+        it.type === 'promise' || it.type === 'concern'
+          ? parseDue(it.due_text ?? '', now)
+          : { due_at: null, due_granularity: '' };
       const r = ins.run(
         randomUUID(), accountId, it.type, it.content, it.subject ?? '',
         it.confidence ?? 0.7, it.source ?? 'voice',
@@ -155,6 +163,14 @@ class MemoryItemStore {
         it.due_text ?? '', due.due_at, due.due_granularity, now,
       );
       added += Number(r.changes);
+      // 成长账本：concern 真实入库时记（changes>0 才记——UNIQUE 去重命中的不算新事件）
+      if (it.type === 'concern' && Number(r.changes) > 0) {
+        growthLedgerStore.record(accountId, {
+          module: 'concern', dimension: '值得关心', from: '—', to: it.content,
+          triggerQuote: it.content, rule: 'concern_extracted', theory: 'attachment',
+          note: `记下值得关心的事：「${it.content}」${it.due_text ? `（${it.due_text}）` : ''}`,
+        });
+      }
     }
     // 写后治理:非 promise 超限淘汰(retracted 化,非物理删,审计保留)
     for (const [type, cap] of Object.entries(TYPE_CAP)) {
@@ -223,7 +239,7 @@ class MemoryItemStore {
    */
   selectForInjection(accountId: string): {
     promises: MemoryItem[]; events: MemoryItem[]; emotions: MemoryItem[];
-    relations: MemoryItem[]; preferences: MemoryItem[];
+    relations: MemoryItem[]; preferences: MemoryItem[]; concerns: MemoryItem[];
   } {
     const now = Date.now();
     // emotion 惰性归档(30 天,评审 C4):选取前顺带执行,同步毫秒级
@@ -231,6 +247,24 @@ class MemoryItemStore {
       UPDATE memory_item SET status = 'archived'
       WHERE account_id = ? AND type = 'emotion' AND status = 'active' AND created_at < ?
     `).run(accountId, now - EMOTION_ARCHIVE_MS);
+    // concern 惰性归档(M5)：due 过后 7 天(无 due 按 created_at 起算)——关心过期就翻篇
+    // 归档前取待翻篇条目做成长账本记录（低频路径）
+    const expiring = this.db.prepare(`
+      SELECT content FROM memory_item
+      WHERE account_id = ? AND type = 'concern' AND status = 'active' AND COALESCE(due_at, created_at) < ?
+    `).all(accountId, now - CONCERN_ARCHIVE_AFTER_DUE_MS) as { content: string }[];
+    this.db.prepare(`
+      UPDATE memory_item SET status = 'archived'
+      WHERE account_id = ? AND type = 'concern' AND status = 'active'
+        AND COALESCE(due_at, created_at) < ?
+    `).run(accountId, now - CONCERN_ARCHIVE_AFTER_DUE_MS);
+    for (const e of expiring) {
+      growthLedgerStore.record(accountId, {
+        module: 'concern', dimension: '值得关心', from: e.content, to: '已翻篇',
+        rule: 'concern_expire_7d', theory: 'setpoint',
+        note: `「${e.content}」到期一周，自然翻篇`,
+      });
+    }
 
     const q = (sql: string, ...args: unknown[]) =>
       this.db.prepare(sql).all(...(args as never[])) as unknown as MemoryItem[];
@@ -254,7 +288,11 @@ class MemoryItemStore {
       SELECT * FROM memory_item WHERE account_id = ? AND type = 'event' AND status = 'active' AND created_at > ?
       ORDER BY created_at DESC LIMIT 5
     `, accountId, now - EMOTION_ARCHIVE_MS);
-    return { promises, events, emotions, relations, preferences };
+    const concerns = q(`
+      SELECT * FROM memory_item WHERE account_id = ? AND type = 'concern' AND status = 'active'
+      ORDER BY (due_at IS NULL) ASC, due_at ASC, created_at DESC LIMIT 3
+    `, accountId);
+    return { promises, events, emotions, relations, preferences, concerns };
   }
 
   /** 注入回执:只在 fire-and-forget 异步路径调用(评审 X3:读路径绝不同步写)。 */
