@@ -328,6 +328,9 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   cancel-only 无 ack);sent→ack 往返 76ms;重试真机零触发=健康态正常。**验证 tail 路径的标准话术=连贯不停顿
   「不想聊了退出吧」或带前缀「啊不想聊了退出吧」**——逗号停顿>600ms 被 EOU 切半后前半若=词表原子会走 exact 桶
   (体感照样退出,但拿不到 tail 样本);吞句判定全量生效,只有信令发送被 canary 门控(非 canary 设备=吞句无信令)。
+  **排障:「说再见没反应/沉默不退」**(2026-08-31 003 实锤)——三查:①journal 吞句行 path 分桶(有吞句=worker 正常)
+  ②该 SN 在不在 SESSION_EXIT_SIGNAL_CANARY_SN ③端侧版本有没有 v140 消费端;非 canary+老端侧=「吞句面>端侧判定面」
+  差集必沉默卡死(带尾词告别端侧不认),解法=装消费端+加 canary,别动 worker 吞句面。
 - **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
 ### EOT 判停快照采集口(2026-08-16 上线,smart-turn 迁移前置 D1;任务 tasks/voice-eot-上线前置.md)
