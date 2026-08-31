@@ -6672,3 +6672,27 @@ ssh dev198 'journalctl --user -u feishu-grok-runner-worker --since "7 days ago" 
 - **活任务在无终态列表里长得和孤儿一模一样**：判年龄——`rpc_requested` 在
   budget 窗口内（如 15min）的先放着；本轮 13:55 的活任务差 3 分钟就被误 cancel，
   13:58 它自己出了 `rpc_result`。
+
+## 端点绑定灰度扩员实操（2026-08-31 南鸽 走通）
+
+四步 + 三锚，全程 ~3 分钟：
+
+1. **备份**：`cp -a /srv/h-control/.env /srv/h-control/.env.bak-<ts>-pre-<who>-endpoint`
+2. **追加**：`H_GROK_ENDPOINT_BINDING_UIDS` 行尾加 `,<uid>`（sed 锚整行旧值防错改），回读确认
+3. **重启**：`systemctl restart h-control`——`ENDPOINT_GATE` 是 server.mjs 启动时
+   `resolveEndpointGate()` 一次性快照，**只改 .env 不重启完全无效**（同 DEFAULT_GROK_MODEL 型）
+4. **三锚验收**：
+   - 日志锚：`grok endpoint binding 灰度=list(allowlist) 名单 N 人`，N 必须 +1
+   - 正负锚：aliyun-hk 上 `set -a; . /srv/h-control/.env; set +a; node --input-type=module`
+     import 生产 `grok-endpoint.mjs` 跑 `endpointBindingAllowed(gate, uid)`，
+     目标 uid=true + 名单外 uid=false 双断言
+   - healthz：18790 有响应
+
+⚠️ 两个找日志的坑（本轮各空找一轮）：
+- **h-control 日志不走 journal**：unit 是 `StandardOutput=append:/srv/h-control/logs/h-control.log`，
+  `journalctl -u h-control` 里 grep 什么都是 0——那是通道错了不是没打。
+- **skill 里记的「日志行」是运行时输出形态**，源码里是 `log('grok endpoint binding', \`灰度=...\`)`
+  分参数拼接——拿日志措辞 rg 源码会零命中，别据此判「skill 编词」；验措辞去 grep 日志文件。
+
+灰度名单语义：功能入口对该 uid 可见（用户控制台出现绑定入口），**不改变现有引擎/线路**
+——绑定与切换由用户（或川哥代操作）在其控制台完成。402 额度耗尽的用户开这个=给回归路径。
