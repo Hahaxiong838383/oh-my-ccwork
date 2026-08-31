@@ -275,6 +275,12 @@ node ops/sync-company-directory.mjs
 - Air 登录链路的最终验收不能只看单测、CDP 端口、handoff `200` 或账号状态；至少使用一个真实 `login_required` 账号，由真人完成“页面复制命令 → Air Chrome 打开 → 平台登录 → helper 自动退出 → company-vm 账号 active”。川哥已于 2026-08-28 完成首轮真人验收。
 - `/distribution/login/session` 必须留在管理员认证后；公网仅开放随机 token 路径。Token 使用 `secrets.token_urlsafe(32)`，服务端只存 SHA-256 摘要，每账号仅保留最新会话，登录成功立即禁止动作并在 60 秒后清理。Handoff token 必须绑定账号与平台；桥端对 Cookie/Storage 数量、长度、HTTPS origin 和平台域名做白名单校验，非法输入返回 `400`，桥故障才返回 `502`。
 - Nginx `/connect/` 必须 `auth_basic off + access_log off + client_max_body_size 512k`，不注入 `X-Geo-Token`；应用响应必须 `no-store/no-referrer/noindex`、严格 nonce CSP、禁 CORS，并分别限制状态刷新与操作频率。验收至少覆盖合法链接 `200`、无效链接 `404`、完成后动作 `410`、跨域 Cookie `400`、账号自动 `active`、Nginx access log 零 token、应用日志 token 脱敏或不记录。
+- Air Chrome 启动后必须先在 **Air 本机**轮询 `http://127.0.0.1:<port>/json/version`，再建立/复用 Studio 反向隧道。Studio 端 LISTEN 但访问 `connection reset by peer` 表示 Air 同端口没有 Chrome；页面打开不能替代 CDP 预检。`open -na` 被旧 Profile 吞参数时，只清理目标独立 Profile 进程并直接调用 Chrome 可执行文件，禁止全量关闭用户 Chrome。
+- 终端命令中的平台 URL 必须是裸 URL 或 shell 引号字符串，禁止从富文本带入 `[URL](URL)`。排障必须分清四段：Air 浏览器/CDP、SSH 反向隧道、Studio relay、company-vm 会话接收；每段都要有独立证据。
+- Chrome/Playwright 兼容降级必须精确 fail-closed：仅当 `connect_over_cdp()` 明确报 `Browser context management is not supported` 时切换原生 WebSocket/CDP，继续只读取目标平台域 Cookie/localStorage/sessionStorage；其他错误不得自动吞掉。
+- Studio relay 的 HTTPS 验收必须使用 helper 实际 Python venv。Python.org macOS Python 可能没有默认 CA 且 venv 未安装 `certifi`；优先尊重 `SSL_CERT_FILE`，否则使用 `/etc/ssl/cert.pem` 等系统 CA，禁止 unverified context、`-k` 或关闭 TLS 校验。
+- Handoff 完成后必须验证 Profile 内 `.geo-login-state/<platform>.json` 为 `0600`，再重启 `media-bridge.service` 并确认账号仍为 `active`。数据库状态不得人工伪造；只有桥端真实登录检测可以把账号置为可分发。
+- Relay-only 修复使用 Studio 不可变 Release、原子 wrapper 和回滚备份；如果 GEO Server/Bridge 代码未变化，不为 Commit 对齐做无关生产重启。完整经验与故障树见 `2-Projects/company-ai-ontology/docs/geo-external-login-handoff-lessons-2026-08-31.md`。
 - GEO 内容状态必须区分 `draft`、`reviewed`、`exported`、`published`。审核通过不等于已发布，静态 HTML/Markdown 导出不等于公网可访问；只有发布目录真实受公网路由提供、canonical/OG/JSON-LD/数据库交付 URL 一致并逐条返回 `200`，才能写为 `published`。
 - 发布效果只在存在公开 URL 且完成发布后同口径可见性检测后判断；至少比较可见性分数、品牌提及、品牌域名引用与竞品信号。单篇文章不能直接归因品牌整体变化，没有发布后观测时必须明确显示“不能判断”。
 - Dashboard 必须是 API 动态加载而不是服务端嵌入快照；Tab active 同时核对导航类名与当前页面。长耗时 `/visibility`、`/audit` 使用 `ThreadingHTTPServer` 保持健康接口可用，并按操作类型使用单并发信号量防止重复提交。
