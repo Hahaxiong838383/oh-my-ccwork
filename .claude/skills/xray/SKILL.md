@@ -134,6 +134,8 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 > 实例：配置里规则 #18 明写 `x.com → HK-HKT-A`，而实测 `x.com` 走的是 DMIT-Gemini（被前序规则截胡）。
 > ⇒ **判断"某域名走哪个节点"唯一可信的方法**：
 > `grep -F "<域名>:" ~/xray/access.log | tail -1` 看 `[socks -> <出站tag>]`。
+> ⚠️ access.log **两种行格式并存**：SOCKS 入站记 `tcp:host:port`、HTTP 代理入站（浏览器系统代理）记
+> `//host:port`——grep 模式别只写一种，否则对另一形态的流量全体假阴性（2026-08-31 差点漏判）。
 
 | 分组 | 实测出站（2026-08-21） |
 |------|------|
@@ -142,6 +144,12 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 | `registry.npmjs.org` | 新美宅-Claude-GPT |
 | 大陆域名（`geosite:cn`） | direct |
 | **其他（兜底）** | **DMIT-Gemini-vps-chenchuan** ← 见下方"改默认节点" |
+
+### 🔴 domain+ip 写进同一条规则 = AND = 整条静默失效（2026-08-31 事故）
+
+- xray 语义：**同条规则内 domain 与 ip 是 AND**（需同时满足）；且 `domainStrategy: AsIs` 下域名流量不解析 IP → 含 ip 条件的规则**对域名流量永不命中**。想要「域名或 IP 任一命中就走 X」必须写两条规则。
+- 事故：47 域名的 direct 规则被 Web UI 编辑时补了 `ip: 8.218.26.17/32`（aliyun-hk，意图是给它直连）→ 整条失效一个月。隐蔽在于：列表里国内大厂/.cn 域名被后面的 `geosite:cn` 兜住，只有非 .cn 自有域名（hahaxiong.cc 全系/chenchuan.cc/hf-mirror.com）漏进兜底绕道境外——fn2 NAS 访问 3.9s，拆分后 0.03s。同一坑 7-29（H平台DNS抢修）、8-16（cli4）两次写入，根因是 **UI「域名/IP」两框并列直觉是 OR，引擎语义是 AND**。
+- **守护已机械化（2026-08-31）**：manager `POST/PUT /api/route` 遇 domains+ips 并存自动拆两条独立规则；rule-updater 每日 03:00 lint 全配置混写，结果写 `rule-updater.status` 的 `config_lint` 字段 + log 行 `CONFIG-LINT`（status=`lint_warning`）。手改 config 后想主动查：`python3 -c` 扫 rules 里同时含非空 domain+ip 的条目即可。
 
 ### 🔴 改默认节点：开关是**兜底规则**，不是 `outbounds[0]`
 
