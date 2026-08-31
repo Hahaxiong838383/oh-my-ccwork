@@ -31,7 +31,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 **Step 0 备份(必做,high blast)**:`ssh aliyun-hk 'ts=$(date +%Y%m%d-%H%M%S); bk=/opt/p003/_backup/$ts; mkdir -p $bk; cp -r 生产相关目录 $bk/'`
 
-1. **server 改**(src/*.ts):`rsync -az apps/server/src/ aliyun-hk:/opt/p003/server/src/`(增量,不 --delete)→ `ssh aliyun-hk 'pm2 restart p003-voice'`(tsx 直跑,重启即加载新代码)。新增依赖先 `ssh ... 'cd /opt/p003/server && npm i <pkg>'`。新增 scripts/ 要一起 rsync(seed 脚本在 scripts 非 src)。验证 LLM ready 看 `pm2 logs p003-voice | grep LLM:`。
+1. **server 改**(src/*.ts):**⚠️ 推送前必先 md5 对撞本地↔生产 src 定方向**(2026-08-31 实证:生产直改的人格成长/本地音频/退出90三线 18 文件未回流,本地仓=旧副本,盲推=抹掉生产;倒挂时先拉回流 `rsync --exclude 自己刚改的文件` 生产→本地并 commit,复检「仍不同」只剩自己的改动才推)。然后 `rsync -az apps/server/src/ aliyun-hk:/opt/p003/server/src/`(增量,不 --delete;单文件改动优先只推单文件缩小操作面)→ `ssh aliyun-hk 'pm2 restart p003-voice'`(tsx 直跑,重启即加载新代码)。新增依赖先 `ssh ... 'cd /opt/p003/server && npm i <pkg>'`。新增 scripts/ 要一起 rsync(seed 脚本在 scripts 非 src)。验证 LLM ready 看 `pm2 logs p003-voice | grep LLM:`。
 1b. **个人站 server 同步**(功能要两端时,如 AI 启蒙):个人站 `/opt/kidshub-personal` 是早期精简版(5 文件 / DeepSeek / 无 orchestrator·curriculum·account)→**不同源,绝不能盲 rsync 公司侧 13 文件**(会塞它没有的依赖崩)。做法:① `ssh aliyun-hk` diff 比对 src 同源程度(`grep -c` 关键标志) ② 新文件(纯函数无依赖)直接 `scp` ③ 改 pipeline 等共享文件**手动适配个人站简化版**(`scp` 下来本地 Edit 改回,绕生产直改)+ `_backup/` 备份 ④ `pm2 restart kidshub-voice` + 公网 E2E(`wss://my.chenchuan.cc/ws/voice`)。
 2. **admin 改**(public/admin/index.html):**`git show HEAD:<path>/admin/index.html > /tmp/admin.html` 导出正确版 → `scp /tmp/admin.html aliyun-hk:/opt/p003/web/dist/admin/index.html`**。绕工作区污染(见坑#4),不用 full build(admin 是静态 HTML)。
 3. **parent 改**(⚠️ 规矩 2026-08-23 改,事故见坑#10):`cd apps/parent && npx vite build`(base='/' 已固化)→ 部署三步走:
@@ -46,6 +46,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **端点**:`POST /v1/device/session` + `/session/prefetch`(Base=kidshub-ai.hahaxiong.cc;nginx `/v1/` 反代本就存在零改动)。
 - **文件**:`src/device-sn.ts`(SN 纯函数)/`src/routes/device-session.ts`/`scripts/device-session.test.ts`(16 项,`npx tsx` 直跑)/`scripts/sign-device-credential.ts`。
 - **env 键**(.env.local 尾部):`LIVEKIT_API_KEY=voicekey`/`LIVEKIT_API_SECRET`(源=47.239 /etc/livekit/config.yaml,管道直传别落盘)/`LIVEKIT_URL`/`DEVICE_SN_ALLOW`(白名单 fail-closed,逗号分隔)/`DEVICE_SESSION_TTL_S=3600`/`DEVICE_SESSION_RPM=10`。
+- **添加设备手机号预绑(2026-08-31)**:admin 添加表单「家长手机号(选填)」——已注册即绑/未注册设备照加+8s warning(响应 parent_bound/parent_bind_warning);未注册号预建走 `upsertPhoneAccount`(幂等,家长短信登录命中同一账号),绑定必须走 `PATCH /api/admin/devices/:sn/parent`(吃建档同步副作用,别直写 DB);**筛选框≠表单字段**(旧根因)。E2E 测试 SN 形态=`BJP003+YYMMDD(真实日期)+8位`,断 400 必须连 error 文本(同码不同因,只查 status 假绿)。
 - **加新设备**:SN 追加进 `DEVICE_SN_ALLOW` → `pm2 restart p003-voice` → 服务器上签凭据:`set -a; . ./.env.local; set +a; npx tsx scripts/sign-device-credential.ts <SN> 30`(输出即凭据,管道接走禁回显/进 git)。
 - **新设备接 brain(2026-08-20 起零配置)**:admin 台账加 SN → 点「开通 brain」即完成——身份由房名 SN 自动路由,**无 token 要配**(brain_token 分发已取消,commit af8d3cf0d;开通响应只回 account_id)。设备命令 canary 已全量(env 列表空=sn- 房全开),新设备开箱即用;**二遍 ASR 仍名单制**(火山账单口径观察中):`VOLC_ASR_NONSTREAM_CANARY_SN` 追加 SN 小写+64.90 纪律重启,不加=一遍链路(热词只 100 tokens)。
 - **⏰ worker 通行证 2027-08-17 前后过期(定时炸弹)**:过期后 worker 调大脑**静默降级匿名——记忆全失不报错**。提前续:aliyun-hk `cd /opt/p003/server && set -a; . ./.env.local; set +a; npx tsx scripts/sign-worker-token.ts`(唯一签发口)→ 换 64.90 rust-worker.env 的 LLM_URL_QUERY → 纪律重启。role=device token 仅设备房有效(非 sn- 房匿名,probe 污染洞已堵)。
@@ -213,7 +214,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   证据采集脚本 `scripts/w4-evidence.mjs`(公网全链+五字段断言+file 抽检)。
 - 单测 `npm run test:local-audio`(127,含姿态组+G1 组);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
   (**admin 登录要 username+password 双字段**,只发 password 恒 401);WAV 链离线实证 `scripts/wav-offline-proof.ts`。
-  ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。
+  ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。**第二形态(2026-08-31):.ts 落在 /root 等 package.json 作用域外,tsx 照样按 CJS 转(顶层 await 同错)——文件必须落 /opt/p003/server/scripts/ 内**(吃到 type:module),用完删。
 - **🔴 探针纪律(D2 起铁律)**:任何 cc 侧探针/curl **禁止带 `applied_revision` 参数**——`last_applied_*`
   是「Android 真机原子应用」的**独占证据位**,己方写入(含写 0)即污染 A3/J2 触达锚(D1 犯过,codex 抓的,已清零)。
 - **源码审计锚**:server 无 git,每轮变更出只读 tar+SHA 落 `_backup/`(排除 .env——secret 不入档);
