@@ -324,6 +324,10 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   fail-closed,003 扩面=列表加 SN)。日志锚:`session_exit signal sent|retry|ack received|terminated by cancel|gave up`;
   吞句锚 `session_exit utterance swallowed path=exact|tail|fragment`。回滚=ENABLED 置 0+restart(零二进制)。
   ⚠️ refspec 推 home-studio 用 `${SHA}:refs/heads/...` 花括号(zsh 把 `$SHA:r` 当 modifier 展开)。
+  **Q3 真机闭环(2026-08-31)**:三终态真机全覆盖(ack matched=true 清 pending / cancel+ack 后到 matched=false 仅记账 /
+  cancel-only 无 ack);sent→ack 往返 76ms;重试真机零触发=健康态正常。**验证 tail 路径的标准话术=连贯不停顿
+  「不想聊了退出吧」或带前缀「啊不想聊了退出吧」**——逗号停顿>600ms 被 EOU 切半后前半若=词表原子会走 exact 桶
+  (体感照样退出,但拿不到 tail 样本);吞句判定全量生效,只有信令发送被 canary 门控(非 canary 设备=吞句无信令)。
 - **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
 ### EOT 判停快照采集口(2026-08-16 上线,smart-turn 迁移前置 D1;任务 tasks/voice-eot-上线前置.md)
