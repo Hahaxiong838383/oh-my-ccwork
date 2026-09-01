@@ -664,6 +664,44 @@ pub async fn prewarm(cfg: LlmConfig, client: reqwest::Client) {
     }
 }
 
+/// 本地音频回声对撞库拉取(2026-09-01):按会话向大脑侧拉该设备本地音频文案。
+/// 端点=/internal/local-audio-texts,鉴权与 chat 同款(url_query 的 brain 通行证+room 路由),
+/// server 返回该 SN 全部历史文案(revision 交界缝已在 server 侧焊住)。
+/// fail-open:任何失败返回 None(没有对撞库=回到现状,绝不影响主链路)。3s 超时。
+pub async fn fetch_local_audio_texts(cfg: &LlmConfig, room: &str) -> Option<Vec<(String, String)>> {
+    let base = cfg.base_url.trim_end_matches('/');
+    let mut url = format!("{base}/internal/local-audio-texts");
+    let mut parts: Vec<String> = Vec::new();
+    if !cfg.url_query.trim().is_empty() {
+        parts.push(cfg.url_query.trim().to_string());
+    }
+    parts.push(format!("room={room}"));
+    url.push('?');
+    url.push_str(&parts.join("&"));
+    let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .ok()?;
+    let resp = client.get(&url).send().await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    let v: Value = resp.json().await.ok()?;
+    let texts = v.get("texts")?.as_array()?;
+    Some(
+        texts
+            .iter()
+            .filter_map(|t| {
+                Some((
+                    t.get("slot")?.as_str()?.to_string(),
+                    t.get("text")?.as_str()?.to_string(),
+                ))
+            })
+            .collect(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

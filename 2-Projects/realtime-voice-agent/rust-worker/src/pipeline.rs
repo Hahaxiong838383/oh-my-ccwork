@@ -59,6 +59,12 @@ pub struct PipelineConfig {
     /// 默认 800ms:回声 commit 机理上限≈0.8s(EOU 0.6+ASR 尾 0.2,实测迟到仅 48ms);真人
     /// 「选择题复述应答」(答案恰是刚播文本子串)的 commit 下沿≈1.45s——800 落两分布空隙。
     pub echo_suppress_window: Duration,
+    /// 本地音频回声对撞窗(2026-09-01「刚打了个盹儿」幽灵轮实证):设备本地招呼语 WAV
+    /// 不进 WebRTC render reference(端侧 AEC 消不掉)、文案也不是 worker 播的(上面的
+    /// TTS 对撞库对不上)。会话开始此窗内的 commit 若模糊命中该设备本地音频文案
+    /// (LCS≥0.8,回声只掉字不加字)→判回声丢弃。招呼语只在开场播,窗外零对撞零误伤面。
+    /// 0 = 关闭该门(零二进制回滚)。
+    pub local_audio_echo_window: Duration,
     pub tts_min_sentence_len: usize,
     pub greeting_text: String,
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
@@ -129,6 +135,12 @@ impl PipelineConfig {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(800),
+            ),
+            local_audio_echo_window: Duration::from_millis(
+                std::env::var("LOCAL_AUDIO_ECHO_WINDOW_MS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(15_000),
             ),
             tts_min_sentence_len: std::env::var("TTS_MIN_SENTENCE_LEN")
                 .ok()
@@ -285,6 +297,12 @@ struct Orchestrator {
     exit_seq: i64,
     /// 在途退出信令:等 ACK/cancel/room close 任一终态;800ms 无终态同 seq 重发,至多 3 发
     exit_pending: Option<ExitSignalPending>,
+    /// 本地音频回声对撞库(2026-09-01):(slot, normalize 后文案)。job 开始异步拉取填充,
+    /// 拉不到=空(fail-open)。只装 greeting.*(farewell 播于关房时刻不需要;且退出词
+    /// 与 farewell 文案对撞会误吞真退出意图——greeting 生成门本就禁退出/命令词,双保险)。
+    echo_local_texts: Arc<StdMutex<Vec<(String, String)>>>,
+    /// 会话起点(本地音频回声窗基准;招呼语只在开场播)
+    session_started_at: Instant,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -445,6 +463,29 @@ pub async fn run_pipeline(
     // per-device 身份路由:room(sn-<SN>-<ts>)随 query 传大脑,由大脑按 SN 反查该设备 brain 账号
     // (多设备防串号;非 sn- 房间大脑忽略 room 走 token 兜底语义)。
     llm_cfg.room = room_name.to_string();
+    // 本地音频回声对撞库(2026-09-01):异步拉该设备文案,拉不到=空库 fail-open。
+    // 只对 sn- 设备房拉(web/probe 房没有本地音频,省一次空转)。
+    let echo_local_texts: Arc<StdMutex<Vec<(String, String)>>> = Arc::new(StdMutex::new(Vec::new()));
+    if !cfg.local_audio_echo_window.is_zero() && room_name.starts_with("sn-") {
+        let ecfg = llm_cfg.clone();
+        let etexts = echo_local_texts.clone();
+        let rn = room_name.to_string();
+        tokio::spawn(async move {
+            match llm::fetch_local_audio_texts(&ecfg, &ecfg.room).await {
+                Some(list) => {
+                    let greetings: Vec<(String, String)> = list
+                        .into_iter()
+                        .filter(|(slot, _)| slot.starts_with("greeting."))
+                        .map(|(slot, text)| (slot, normalize_echo(&text)))
+                        .collect();
+                    let n = greetings.len();
+                    *etexts.lock().unwrap() = greetings;
+                    info!(room = %rn, texts = n, "local-audio echo bank loaded");
+                }
+                None => info!(room = %rn, "local-audio echo bank unavailable (fail-open)"),
+            }
+        });
+    }
     let mut llm_inner = Llm::new(llm_cfg);
     // 预热(藏进「用户说首句+判停」窗口):LLM TLS 建连 + TTS 池首连
     {
@@ -534,6 +575,8 @@ pub async fn run_pipeline(
         exit_signal_on,
         exit_seq: 0,
         exit_pending: None,
+        echo_local_texts,
+        session_started_at: Instant::now(),
         pending_cmd: None,
         cmd_dedup: FirstWins::new(),
         device_trace: ready.trace_id.clone(),
@@ -1528,6 +1571,36 @@ impl Orchestrator {
         // 判停提交
         if let Some(commit) = self.turn_gate.poll_commit(now) {
             let user_text = commit.text;
+            // 本地音频回声对撞(2026-09-01「刚打了个盹儿」幽灵轮,招呼语回声第三次实证):
+            // 开场窗内 commit 若模糊命中该设备本地招呼语文案(LCS≥0.8,回声只掉字不加字:
+            // 「刚打了个盹儿」掉头、「我在这等你呢」掉中间,严格子串只兜得住前者)→判回声
+            // 丢弃,不成 turn。位置在全部吞句/退出判定之前——「这句不是用户说的」优先于
+            // 一切语义判定。len≥4 门:急停/短应答交给原有链路,不进对撞(greeting 生成门
+            // 本就禁急停/命令/退出词,双保险)。误伤代价=该轮沉默,不误退出不误命令。
+            if !self.cfg.local_audio_echo_window.is_zero()
+                && self.session_started_at.elapsed() <= self.cfg.local_audio_echo_window
+            {
+                let nu = normalize_echo(&user_text);
+                if nu.chars().count() >= 4 {
+                    let hit = self
+                        .echo_local_texts
+                        .lock()
+                        .unwrap()
+                        .iter()
+                        .find(|(_, t)| crate::textproc::lcs_char_ratio(&nu, t) >= 0.8)
+                        .map(|(slot, _)| slot.clone());
+                    if let Some(slot) = hit {
+                        info!(room = %self.room_name, slot = %slot,
+                            "local-audio echo suppressed (opening window): '{user_text}'");
+                        self.latest_interim.clear();
+                        self.tele_text.clear();
+                        if let Some(s) = &mut self.snap {
+                            s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
+                        }
+                        return;
+                    }
+                }
+            }
             // stop_only 吞句(2026-08-17 生命周期统一):整句=急停词 → 不成 turn,静默。
             // 否则「停」硬停旧回答后 ~43ms 又被 commit 给 LLM,起了带 barge filler 的
             // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;

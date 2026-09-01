@@ -230,9 +230,52 @@ pub fn strip_stage_directions(text: &str) -> String {
     out.trim_start().to_string()
 }
 
+/// 本地音频回声对撞的模糊命中率(2026-09-01「刚打了个盹儿」幽灵轮实证):
+/// LCS(needle, hay) / len(needle)。回声经声学路径只会**掉字**不会加字,故三次实证形态
+/// 全是「文案的子序列」——掉头(「来啦来啦，」)、掉中间(「这儿」→「这」)都被 LCS 兜住,
+/// 严格子串匹配兜不住第二种。char 级 DP,needle=ASR commit(≤~30字)、hay=文案(≤80字),
+/// 计算量 ~2400 cell 可忽略。
+pub fn lcs_char_ratio(needle: &str, hay: &str) -> f32 {
+    let a: Vec<char> = needle.chars().collect();
+    let b: Vec<char> = hay.chars().collect();
+    if a.is_empty() || b.is_empty() {
+        return 0.0;
+    }
+    let mut prev = vec![0u16; b.len() + 1];
+    let mut cur = vec![0u16; b.len() + 1];
+    for &ca in &a {
+        for (j, &cb) in b.iter().enumerate() {
+            cur[j + 1] = if ca == cb {
+                prev[j] + 1
+            } else {
+                prev[j + 1].max(cur[j])
+            };
+        }
+        std::mem::swap(&mut prev, &mut cur);
+    }
+    f32::from(prev[b.len()]) / a.len() as f32
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// 本地音频回声对撞正负锚(2026-09-01)。正锚=三次真机实证的实际掉字形态;
+    /// 负锚=正常话/退出词不被误吞(退出词误吞=吞掉真实退出意图,代价最高的误伤)。
+    #[test]
+    fn lcs_local_audio_echo_anchors() {
+        // 正锚 1(2026-09-01 实证):掉头形态——「来啦来啦，」整段丢
+        assert!(lcs_char_ratio("刚打了个盹儿", "来啦来啦刚打了个盹儿") >= 0.8);
+        // 正锚 2(2026-08-28 实证):掉头+掉中间(「嘿」「儿」丢)——严格子串兜不住这形态
+        assert!(lcs_char_ratio("我在这等你呢", "嘿我在这儿等你呢") >= 0.8);
+        // 负锚:正常问句/退出词/告别词对招呼语文案全部低于阈值
+        assert!(lcs_char_ratio("今天天气怎么样", "来啦来啦刚打了个盹儿") < 0.8);
+        assert!(lcs_char_ratio("不想聊了", "来啦来啦刚打了个盹儿") < 0.8);
+        assert!(lcs_char_ratio("拜拜了", "嘿我在这儿等你呢") < 0.8);
+        // 边界:空串
+        assert_eq!(lcs_char_ratio("", "来啦"), 0.0);
+        assert_eq!(lcs_char_ratio("来啦", ""), 0.0);
+    }
 
     #[test]
     fn stage_directions_stripped() {
