@@ -872,7 +872,9 @@ adminDataRoute.get('/devices/:sn/persona-probe', (c) => {
       })(),
       trait: {
         current: traitStore.get(acct),
-        baseline: TRAIT_BASELINE,
+        // P0 风格模板后基线随档走：有模板=模板五维（回拉/漂移界的真实锚点），无=出厂
+        baseline: traitStore.baselineFor(acct),
+        style_template: traitStore.getTemplate(acct) ?? 'default',
         labels: TRAIT_LABELS,
         dims: TRAIT_DIMS,
       },
