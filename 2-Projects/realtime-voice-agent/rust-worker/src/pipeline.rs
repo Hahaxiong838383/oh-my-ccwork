@@ -303,6 +303,8 @@ struct Orchestrator {
     echo_local_texts: Arc<StdMutex<Vec<(String, String)>>>,
     /// 会话起点(本地音频回声窗基准;招呼语只在开场播)
     session_started_at: Instant,
+    /// 开场窗内对撞 miss 的短 commit(≤3字)时刻——错转碎片追杀标(01:00「那」实证)
+    echo_short_turn_at: Option<Instant>,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -577,6 +579,7 @@ pub async fn run_pipeline(
         exit_pending: None,
         echo_local_texts,
         session_started_at: Instant::now(),
+        echo_short_turn_at: None,
         pending_cmd: None,
         cmd_dedup: FirstWins::new(),
         device_trace: ready.trace_id.clone(),
@@ -1581,22 +1584,43 @@ impl Orchestrator {
                 && self.session_started_at.elapsed() <= self.cfg.local_audio_echo_window
             {
                 let nu = normalize_echo(&user_text);
-                // 分层判定(≥4字 LCS / 2-3字精确子串 / 1字放行)抽在 textproc,锚测试全覆盖。
+                let n_chars = nu.chars().count();
+                // 分层判定(≥4字 LCS / 2-3字精确子串)抽在 textproc,锚测试全覆盖。
                 // 2026-09-01 00:53 实证:EOU 把回声切成「来啦」(2字)+「刚打了个盹儿」,
                 // 后者被拦、前者穿过旧 len≥4 下限起了幽灵轮——短碎片层由此补上。
-                let hit = {
+                // 01:00 实证第二形态:「来啦」被 ASR 错转成「那」(la→na)——子串判定对
+                // 错转结构性无效,故开场窗内**单字 commit 一律吞**:EOU+错转可产出任意单字,
+                // 开场窗内单字成句语义≈0(急停单字在此被吞与 stop_only 效果等价:都不成 turn)。
+                let hit = if n_chars == 1 {
+                    Some("single-char".to_string())
+                } else {
                     let bank = self.echo_local_texts.lock().unwrap();
                     crate::textproc::local_audio_echo_hit(&nu, &bank).map(str::to_string)
                 };
                 if let Some(slot) = hit {
                     info!(room = %self.room_name, slot = %slot,
                         "local-audio echo suppressed (opening window): '{user_text}'");
+                    // 追杀(01:00 实证):错转碎片(「那」)若已在本门上一轮穿门起了幽灵轮,
+                    // 此刻后续碎片被确认为回声=前 2s 内那个短 commit 也是回声,撤销在途轮止损。
+                    if let Some(t0) = self.echo_short_turn_at
+                        && t0.elapsed() < Duration::from_secs(2)
+                        && self.agent_turn.is_some()
+                    {
+                        self.hard_abort_current();
+                        info!(room = %self.room_name, "local-audio echo chase-abort: ghost turn from short fragment");
+                    }
+                    self.echo_short_turn_at = None;
                     self.latest_interim.clear();
                     self.tele_text.clear();
                     if let Some(s) = &mut self.snap {
                         s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
                     }
                     return;
+                }
+                // 对撞 miss 的短 commit(≤3字)打标:若它其实是错转回声碎片并起了幽灵轮,
+                // 紧随的后续碎片命中时按上方追杀逻辑撤销。真人短句不受影响(无后续命中=标过期)。
+                if n_chars <= 3 {
+                    self.echo_short_turn_at = Some(Instant::now());
                 }
             }
             // stop_only 吞句(2026-08-17 生命周期统一):整句=急停词 → 不成 turn,静默。
