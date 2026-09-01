@@ -491,7 +491,13 @@ pub async fn run_pipeline(
     let mut llm_inner = Llm::new(llm_cfg);
     // 预热(藏进「用户说首句+判停」窗口):LLM TLS 建连 + TTS 池首连
     {
-        let (client, pcfg) = llm_inner.prewarm_parts();
+        let (client, mut pcfg) = llm_inner.prewarm_parts();
+        // 预热剥身份(2026-09-01「hi」假对话实证):预热唯一目的=建 TLS 连接,带身份 query
+        // 会被大脑当真对话走全链路(注 prompt+Gemini+**写对话历史**)——每次开机落一对
+        // 「hi/开场白」进聊天记录,并虚增人格 session 记账。匿名预热(与灾备路同款语义)
+        // =authContext null=大脑不注个性化不落历史;TLS/连接池按 host 复用,预热价值不变。
+        pcfg.url_query = String::new();
+        pcfg.room = String::new();
         tokio::spawn(llm::prewarm(pcfg, client));
         // 赛马兜底路同 prewarm(Python 同款:兜底冷连接会吃掉它的竞速价值)
         if let Some((fc, fcfg)) = llm_inner.fallback_prewarm_parts() {
