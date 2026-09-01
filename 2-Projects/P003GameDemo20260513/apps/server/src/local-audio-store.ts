@@ -352,6 +352,21 @@ class LocalAudioStore {
       generated_at: new Date(state.last_generated_at || Date.now()).toISOString(),
     };
   }
+
+  /**
+   * worker 回声对撞库（2026-09-01 招呼语回声第三次实证）：该设备全部历史文案去重
+   * （含 active=0——设备夜间换新存在「server 已翻新、设备还播上一版」的交界缝，
+   * 历史文案一并返回把缝焊住）。worker 侧只取 greeting.* 进对撞库，此处不过滤留扩展位。
+   */
+  listTextsForEcho(accountId: string): Array<{ slot: string; text: string }> {
+    // 2026-09-01 收窄:只返回 active 套(003 实测 36 条历史 vs 13 条 active——历史全量把
+    // 对撞面放大近 3 倍,而人格化文案与用户日常语言分布天然重叠(「有啥好玩的事儿说说」
+    // 既是招呼语也是用户真话),误伤面随对撞面同步放大。revision 交界缝(设备夜间换新前
+    // 播上一版)的窗口只有几小时且低频,取舍上放弃焊缝换全天误伤面收窄。
+    return this.db
+      .prepare(`SELECT DISTINCT slot, text FROM local_audio_item WHERE account_id = ? AND active = 1 ORDER BY slot`)
+      .all(accountId) as Array<{ slot: string; text: string }>;
+  }
 }
 
 export const localAudioStore = new LocalAudioStore();

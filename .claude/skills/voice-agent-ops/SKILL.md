@@ -331,6 +331,13 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   **排障:「说再见没反应/沉默不退」**(2026-08-31 003 实锤)——三查:①journal 吞句行 path 分桶(有吞句=worker 正常)
   ②该 SN 在不在 SESSION_EXIT_SIGNAL_CANARY_SN ③端侧版本有没有 v140 消费端;非 canary+老端侧=「吞句面>端侧判定面」
   差集必沉默卡死(带尾词告别端侧不认),解法=装消费端+加 canary,别动 worker 吞句面。
+- **回声对撞门(2026-09-01,招呼语回声幽灵轮止血)**:worker 每会话向 server 拉该设备 active 招呼语文案
+  (`/v1/internal/local-audio-texts`,brain 通行证鉴权,fail-open),开场窗内 commit 三层判定
+  (≥4字 LCS≥0.8/2-3字精确子串/1字一律吞)+追杀(suppressed 命中撤销 2s 内短碎片幽灵轮)。
+  env `LOCAL_AUDIO_ECHO_WINDOW_MS`(默认 15000,**置 0=整门关**);日志锚 `echo bank loaded texts=N`/
+  `echo suppressed (opening window)`/`echo chase-abort`。**排障:「开场说话没反应」先查是不是被本门吞了**
+  (suppressed 行带原句),真误伤=开场 15s 内说了与 active 招呼语高相似句;库只装 greeting 不装 farewell
+  (防真退出意图被误吞)。详情 rg 'echo-gate' 记忆。
 - **代码**:worktree `~/mycc/.claude/worktrees/rust-worker`,分支 `feat/rust-worker`(已 push origin)。
 
 ### EOT 判停快照采集口(2026-08-16 上线,smart-turn 迁移前置 D1;任务 tasks/voice-eot-上线前置.md)

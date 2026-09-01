@@ -11,6 +11,7 @@ import { createDeepseekLlmClient } from '../providers/deepseek-llm.js';
 import { createMinimaxLlmClient } from '../providers/minimax-llm.js';
 import { createRaceLlmClient } from '../providers/race-llm.js';
 import { verifyAuthToken } from '../auth-jwt.js';
+import { localAudioStore } from '../local-audio-store.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
 import { extractAndPersist } from '../memory-extractor.js';
@@ -249,6 +250,24 @@ customLlmRoute.post('/chat/completions', async (c) => {
     enqueue('[DONE]'); // 火山要求的终止符
     await chain;
   });
+});
+
+// worker 回声对撞库拉取（2026-09-01 招呼语回声第三次实证「刚打了个盹儿」幽灵轮后）：
+// 设备本地招呼语 WAV 不进 WebRTC render reference（端侧 AEC 消不掉）、文案也不在 worker
+// 自身 TTS 对撞库里——worker 每通会话开始经本端点拉该设备文案，开场窗内对撞 ASR commit。
+// 鉴权与 /chat/completions 同款：brain 通行证 ?token= + sn- 房名路由（非设备房天然拒）。
+customLlmRoute.get('/internal/local-audio-texts', async (c) => {
+  const authContext = resolveDeviceIdentity(
+    await verifyAuthToken(c.req.query('token')),
+    c.req.query('room'),
+  );
+  if (!authContext) return c.json({ error: 'unauthorized' }, 401);
+  try {
+    const texts = localAudioStore.listTextsForEcho(authContext.accountId);
+    return c.json({ ok: true, texts });
+  } catch {
+    return c.json({ ok: true, texts: [] });
+  }
 });
 
 export { customLlmRoute };
