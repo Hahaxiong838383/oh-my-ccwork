@@ -184,6 +184,12 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   **对撞原始备份看差异**(基线自带 4 个 parser 假报,绝对数没意义)②部署后开登录页——**渲染成功=Vue
   运行时整树一次编译全模板通过**(新 subTab 模板语法错会全页白屏,不用登录即可验);el-input 必须显式闭合。
 - 单测 `npm run test:persona`(115 项);测试选句先对照规则分支(7 字句会触发短句镜像——中性输入要验证过)。
+- **说话风格模板(9-1 P0 在产)**:家长选档=trait per-account 基线(`trait_template` 表只存 key,五维/文案在
+  `style-template.ts` 随代码走)。四档 default/chatty/quiet/funny;选档特质值**立即置位**+回拉/漂移界锚模板;
+  styleRule 进 policy 指令区,**不吃 persona allowlist 门**(家长设置直接生效)。端点 `GET/PUT .../style-template`;
+  admin 成长 tab「🗣 说话风格」卡;观测 probe `injection_live.style_template_line` + `trait.baseline`(随档走,9-1 修)
+  + 日志锚 `style-template set`/`tpl=1`。重置:all 清模板/persona 保留(家长设置≠成长记账)。
+  **E2E/实验用 0002 不用真机**——PUT 覆盖已积累漂移,default 恢复出厂值非原值。现状:003=funny(川哥拍板)/0002=quiet。
 
 ## 本地人格音频运维（2026-08-26 D1 全绿,机制/联调详情见记忆 p003_local_audio）
 
