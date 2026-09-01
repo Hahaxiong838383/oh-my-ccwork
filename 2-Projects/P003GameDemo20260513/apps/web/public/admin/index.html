@@ -2548,15 +2548,34 @@
                                 <el-radio-group v-model="growth.stylePicked" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
                                   <el-radio v-for="t in growth.styleAvailable" :key="t.key" :value="t.key" style="height:auto;margin-right:0">
                                     <span style="font-weight:600">{{ t.name }}</span>
-                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效</span>
+                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效<template v-if="growth.styleSetAt">（{{ hwFmtTime(growth.styleSetAt) }} 设定）</template></span>
                                     <div style="font-size:12px;color:#909399;line-height:1.5">{{ t.desc }}</div>
                                   </el-radio>
                                 </el-radio-group>
                                 <div style="font-size:11px;color:#B0B8C1;margin-top:8px">切档后特质五维立即置为模板值并记入成长账本；人格成长继续在模板附近漂移（每日向模板回落）。温柔度地板 0.5 恒成立。</div>
+                                <!-- P2 风格白盒：偏移摘要（相对当前档基线）+ 变化归因时间线 -->
+                                <div style="border-top:1px solid #F0F2F5;margin-top:10px;padding-top:10px">
+                                  <div style="font-weight:600;font-size:12.5px;margin-bottom:6px">📈 风格成长白盒 <span style="color:#B0B8C1;font-weight:400;font-size:11px">当前档为锚：偏了多少 / 为什么变 / 什么时候变</span></div>
+                                  <div v-if="growth.probe && growth.probe.trait" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-bottom:8px">
+                                    <span v-for="dim in growth.probe.trait.dims" :key="'drift-'+dim">
+                                      {{ growth.probe.trait.labels[dim] }}
+                                      <b :style="{color: styleDrift(dim) && styleDrift(dim).delta >= 0.05 ? '#2E7D4F' : styleDrift(dim) && styleDrift(dim).delta <= -0.05 ? '#3A6EA5' : '#909399'}">{{ styleDrift(dim) ? styleDrift(dim).mark + styleDrift(dim).text : '—' }}</b>
+                                    </span>
+                                    <span style="color:#B0B8C1;font-size:11px">（明细条形图见下方特质卡）</span>
+                                  </div>
+                                  <div v-if="!growth.styleEvents.length" style="font-size:12px;color:#909399">暂无风格变化记录（选档或孩子互动后出现）</div>
+                                  <div v-for="ev in growth.styleEvents" :key="'sev-'+ev.id" style="font-size:12px;padding:3px 0;border-bottom:1px dashed #F0F2F5">
+                                    <span :title="styleAttribution(ev).label">{{ styleAttribution(ev).icon }}</span>
+                                    <span style="color:#B0B8C1;margin:0 6px">{{ hwFmtTime(ev.ts) }}</span>
+                                    <span style="color:#3A6EA5">{{ ev.dimension }}</span>
+                                    <span v-if="ev.from_val !== null && ev.from_val !== undefined" style="font-family:monospace;margin:0 4px">{{ ev.from_val }}→{{ ev.to_val }}</span>
+                                    <span style="color:#6B7785">{{ styleAttribution(ev).label }}<template v-if="ev.note">：{{ ev.note }}</template></span>
+                                  </div>
+                                </div>
                               </div>
                               <!-- 卡2 特质五维 -->
                               <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
-                                <div style="font-weight:700;margin-bottom:10px">🎭 相处倾向（特质向量 · 基线±0.35）</div>
+                                <div style="font-weight:700;margin-bottom:10px">🎭 相处倾向（特质向量 · 基线±0.35）<span v-if="growth.probe.trait.style_template && growth.probe.trait.style_template !== 'default'" style="font-size:11px;color:#E6A23C;font-weight:400;margin-left:8px">基线=「{{ styleTplName(growth.probe.trait.style_template) }}」档</span></div>
                                 <div v-for="dim in growth.probe.trait.dims" :key="dim" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px">
                                   <span style="width:110px;color:#6B7785">{{ growth.probe.trait.labels[dim] || dim }}</span>
                                   <div style="flex:1;max-width:280px;height:8px;background:#F0F2F5;border-radius:4px;position:relative">
@@ -4463,7 +4482,7 @@
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false });
+        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleEvents: [] });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -4498,9 +4517,30 @@
           if (!sn) return;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template')
             .then(function (data) {
-              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; }
+              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; growth.styleSetAt = data.set_at || null; }
             })
             .catch(function () {});
+          // 风格白盒（P2）：特质变化时间线独立拉取（不受卡6模块过滤影响）
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/growth-events?module=trait&limit=8')
+            .then(function (data) { if (data && data.ok) growth.styleEvents = data.events || []; })
+            .catch(function () {});
+        }
+        function styleTplName(key) {
+          var hit = growth.styleAvailable.filter(function (t) { return t.key === key; })[0];
+          return (hit && hit.name) || key;
+        }
+        // 风格变化归因（P2 白盒三色）：家长设定 / 互动成长 / 自然回落
+        function styleAttribution(ev) {
+          if (ev.rule === 'parent_style_template') return { icon: '🟠', label: '家长设定' };
+          if (ev.rule === 'daily_setpoint_decay') return { icon: '⚪', label: '自然回落' };
+          return { icon: '🟢', label: '互动成长' };
+        }
+        // 五维偏移（current - 模板基线）：≥+0.05 偏高 / ≤-0.05 偏低
+        function styleDrift(dim) {
+          var t = growth.probe && growth.probe.trait;
+          if (!t || !t.current || !t.baseline) return null;
+          var d = (t.current[dim] || 0) - (t.baseline[dim] || 0);
+          return { delta: d, text: (d >= 0 ? '+' : '') + d.toFixed(2), mark: d >= 0.05 ? '↑' : d <= -0.05 ? '↓' : '·' };
         }
         function saveStyleTemplate(sn) {
           if (!sn || growth.stylePicked === growth.styleTemplate) return;
@@ -6260,7 +6300,7 @@
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
           snInRegistry: snInRegistry, loadDevices: loadDevices, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
-          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate,
+          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,

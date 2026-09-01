@@ -991,7 +991,13 @@ adminDataRoute.get('/devices/:sn/style-template', (c) => {
     if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
     if (!device.account_id) return c.json({ ok: false, error: '设备未开通 brain（无设备账号）' }, 400);
     const current = traitStore.getTemplate(device.account_id);
-    return c.json({ ok: true, template: current ?? 'default', available: listStyleTemplates() });
+    return c.json({
+      ok: true,
+      template: current ?? 'default',
+      // P2 白盒：设定时刻（四问之「什么时候变的」）；无模板行=null
+      set_at: traitStore.getTemplateSetAt(device.account_id),
+      available: listStyleTemplates(),
+    });
   } catch (error) {
     return c.json({ ok: false, error: '读取风格模板失败' }, 500);
   }

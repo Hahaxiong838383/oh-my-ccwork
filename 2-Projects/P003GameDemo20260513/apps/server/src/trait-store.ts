@@ -177,6 +177,14 @@ class TraitStore {
     return row && getStyleTemplate(row.template) ? row.template : null;
   }
 
+  /** 模板设定时刻（毫秒时间戳；无模板=null）。P2 白盒可视化用。 */
+  getTemplateSetAt(accountId: string): number | null {
+    const row = this.db.prepare(`SELECT template, updated_at FROM trait_template WHERE account_id = ?`).get(accountId) as
+      | { template: string; updated_at: number }
+      | undefined;
+    return row && getStyleTemplate(row.template) ? row.updated_at : null;
+  }
+
   /** 该账号的有效基线：模板五维 ?? 出厂 TRAIT_BASELINE。回拉与漂移界都锚定它。 */
   baselineFor(accountId: string): Record<TraitDim, number> {
     const tpl = getStyleTemplate(this.getTemplate(accountId));

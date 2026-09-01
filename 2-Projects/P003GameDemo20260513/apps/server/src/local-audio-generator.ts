@@ -3,6 +3,7 @@ import { callExtractionLlm } from './llm-extract.js';
 import { isCrisisContent } from './memory-safety-filter.js';
 import { relationStateStore, familiarityTier } from './relation-state-store.js';
 import { traitStore, TRAIT_DIMS, TRAIT_LABELS, TRAIT_BASELINE, type TraitDim } from './trait-store.js';
+import { getStyleTemplate } from './style-template.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
 import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot } from './local-audio-store.js';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
@@ -264,11 +265,12 @@ export function gateClipText(raw: string, slot: LocalAudioSlot): GateResult {
   return { ok: true, text };
 }
 
-/** 特质快照 → prompt 里的性格描述行（只描述小可自己，绝不含孩子字段，合同 §5.3）。 */
-export function traitPromptLines(traits: Record<TraitDim, number>): string[] {
+/** 特质快照 → prompt 里的性格描述行（只描述小可自己，绝不含孩子字段，合同 §5.3）。
+ *  baseline 可传家长风格模板的 per-account 基线（P2 2026-09-01）；缺省=出厂，向后兼容。 */
+export function traitPromptLines(traits: Record<TraitDim, number>, baseline?: Record<TraitDim, number>): string[] {
   return TRAIT_DIMS.map((dim) => {
     const v = traits[dim];
-    const base = TRAIT_BASELINE[dim];
+    const base = (baseline ?? TRAIT_BASELINE)[dim];
     const diff = v - base;
     const trend = diff >= 0.05 ? '（最近偏高）' : diff <= -0.05 ? '（最近偏低）' : '';
     return `- ${TRAIT_LABELS[dim]}：${v.toFixed(2)}，人设基线 ${base.toFixed(2)}${trend}`;
@@ -333,12 +335,16 @@ export function buildSystemPrompt(accountId: string): string {
   const daysKnown = rel ? Math.max(0, Math.floor((Date.now() - rel.first_seen_at) / 86_400_000)) : 0;
   const tier = rel ? familiarityTier(rel.session_count, daysKnown) : '新朋友';
 
+  // P2 风格档联动（2026-09-01）：基线对照锚定家长模板；styleRule 并入性格快照——
+  // 招呼语/告别语/filler（本函数是单一真源，filler-generator 复用）随风格档走。
+  const styleTpl = getStyleTemplate(traitStore.getTemplate(accountId));
   const lines = [
     '你是儿童陪伴 AI「小可」的台词创作助手。小可是台灯上的 AI 伙伴，陪 6-10 岁的孩子聊天学习。',
     '下面是小可当前的性格快照（会随着和孩子相处慢慢变化，文案要体现这个性格）：',
-    ...traitPromptLines(traits),
+    ...traitPromptLines(traits, traitStore.baselineFor(accountId)),
     `- 和孩子的关系：${tier}${rel ? `（认识 ${daysKnown} 天，聊过 ${rel.session_count} 次）` : ''}`,
   ];
+  if (styleTpl) lines.push(`- ${styleTpl.styleRule}（这是家长为小可设定的说话风格，文案的语气节奏要体现它）`);
   if (narrative?.text) lines.push(`- 小可心里的小笔记：「${narrative.text.slice(0, 60)}」（只用来体会语气，内容绝不照搬进文案）`);
   lines.push(
     '',
