@@ -55,39 +55,13 @@ lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（�
 
 ---
 
-## 三·补、AI Ops 运维服务器 SSH 接入（cc / codex / grok 三方共用 · 2026-07-25 加固后实测）
+## 三·补、AI Ops 运维服务器 SSH 接入（cc / codex / grok 共用）
 
-> 川哥要求：**cc、codex、grok 三个引擎都要能顺利连上这台机器维护 aiops**。三者在本机同以 `Rayman.Chen` 用户运行，**共享同一份 `~/.ssh/config` 与 `~/.ssh/id_ed25519`**，因此下面的连法对三方完全一致，不需要各自配密钥。
+三引擎都必须能维护 aiops。完整接入真值在仓库文件 `~/mycc/docs/AI-OPS-SSH-ACCESS.md`，不要只指向 cc 私有 skill。
 
-**密钥可用性已实测（2026-07-25）**：私钥 `~/.ssh/id_ed25519` **无 passphrase**（`ssh-keygen -y` 免交互通过）→ **不依赖 ssh-agent**，任何同用户进程直接可用；权限 `600`、属主 `Rayman.Chen`。最严苛验证：`env -i HOME=$HOME PATH=/usr/bin:/bin ssh racknerd` **裸环境连接成功**，证明不依赖 zshrc / 环境变量 / agent socket。
+**正文锚点**：`racknerd` = `23.226.135.149`；默认 `ssh racknerd`，兜底 `ssh -o ProxyJump=none -i ~/.ssh/id_ed25519 root@23.226.135.149`；本机用户 `Rayman.Chen` 共享 `~/.ssh/config` + `~/.ssh/id_ed25519`（无 passphrase，600）；服务根目录 `/opt/ai-ops-cockpit`；容器组 `ops-*`；连不上先查 fail2ban；禁用 `pkill -f <pattern>`。
 
-⚠️ **codex 有一个额外前提（给调用方看，不是给 codex 自己看的）**：codex 执行 shell 命令受沙箱约束，默认 `workspace-write` 在 macOS 上**禁止网络出站**，ssh 会被直接拦掉。让 codex 做 aiops 运维时**启动就要带**：
-
-```bash
-codex exec --sandbox danger-full-access --skip-git-repo-check "<任务>"
-```
-
-沙箱在进程启动时即固定，codex 读到本文件时已经关在里面了，**它自己改不了**——所以这条约束由调用方（川哥 / cc）在启动命令上落实。
-grok 无沙箱概念（`~/.grok/config.toml` 的 `permission_mode = "always-approve"`），**直接 `grok -p "ssh racknerd ..."` 即可**，无需额外参数。
-
-**机器**：`racknerd` = `23.226.135.149`（RackNerd 美西 1C/2G/39G，Ubuntu 24.04）
-**跑什么**：AI Ops 驾驶舱 9 个 docker 容器（ops-caddy / ops-inspector / ops-terminal(ttyd) / ops-n8n / ops-auth / ops-netdata / ops-uptime-kuma / ops-dockge / ops-homepage），根目录 `/opt/ai-ops-cockpit`。配套 skill：`ai-ops-cockpit`。
-
-**连法（两条路径，都已实测通）**：
-
-```bash
-ssh racknerd                                              # 默认，经 mini-pub 跳板（更稳）
-ssh -o ProxyJump=none -i ~/.ssh/id_ed25519 root@23.226.135.149   # 兜底直连
-```
-
-- 默认路径走 `ProxyJump mini-pub`（`cli4.hahaxiong.cc:22022` → aliyun-hk frps → Mac Mini）。
-  ⚠️ **这条链路依赖 aliyun-hk 的 frps + Mac Mini 开机**；任一不可用就改走上面的直连兜底（直连偶发 banner 超时，重试即可）。
-- **认证只有公钥一条路**：2026-07-25 已关闭密码登录与 root 密码登录（改前取证：近 60 天 1444 次成功登录 **100% publickey、密码 0 次**）。`/root/.ssh/authorized_keys` 只有一把 `id_ed25519`（`Rayman.Chen@RaymanMacBook-Air.local`）。
-- **装了 fail2ban**（sshd jail，5 次失败封 2 小时）。连不上先想「是不是自己被 ban 了」：
-  `fail2ban-client status sshd` 看封禁列表，`fail2ban-client set sshd unbanip <IP>` 解封。
-- ⚠️ **别在这台机器上跑 `pkill -f <pattern>`**：pattern 会匹配到自己那条 ssh 命令行导致自杀，改用 `pgrep` + `kill` 或 `fuser -k <PORT>/tcp`。
-
-**磁盘**：2026-07-25 清理后 49%（曾 71%）。两个会自己长的地方已设防——journald 已限 `SystemMaxUse=500M`；docker build cache 需**定期手动清**（`docker builder prune -af`，上次积了 5.59GB）。⚠️ 容器日志尚未设 `max-size` 上限（改 `daemon.json` 要重启全部容器，待川哥给时间窗）。
+**codex 前提**：调用方启动时必须给 `--sandbox danger-full-access --skip-git-repo-check`，进程内无法自改沙箱。grok 可直接 `grok -p "ssh racknerd ..."`。
 
 ---
 

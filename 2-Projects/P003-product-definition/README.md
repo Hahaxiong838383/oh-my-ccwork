@@ -36,6 +36,7 @@
 | Web 后台原型图 | `web后台-原型图/` | Web 后台界面原型 |
 | 多引擎评审归档 | `web后台-team三发归档/` | grok/codex/gemini 三发评审产出 |
 | 激活闭环评审图 | `docs/激活闭环评审/` | 激活/留存闭环图 A-E |
+| RK3562↔MCU 通讯协议 | `hardware-protocol/` | 硬件串口协议 AI 可读转写件（正文 + `protocol.yaml` 机器可读 + `crc_reference.py`），源自飞书 V2.1，含 13 条待澄清矛盾 |
 
 ## 外部信息
 | 类型 | 值 |

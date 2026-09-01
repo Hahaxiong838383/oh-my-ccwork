@@ -1,0 +1,850 @@
+# RK3562 <-> MCU 通讯协议 — 机器可读单一真源
+# 由飞书原文档结构化转写而成，供 codex / cc 等 AI 直接解析。
+# 阅读规则：见本文件末尾 reading_rules。任何标 status: unresolved 的条目禁止自行推断。
+
+meta:
+  doc_title: "RK3562 - MCU 通讯协议"
+  doc_version: "V2.1"
+  doc_version_date: "2026-07-26"
+  source_url: "https://futurus.feishu.cn/wiki/U711w0lPoiqGeekUenac6I0tnWg"
+  source_doc_token: "TNoyd4l9zojUadxzeHmcWIGGnmc"
+  source_last_edit: "2026-08-12"   # obj_edit_time=1786519540
+  transcribed_at: "2026-08-18"
+  transcribed_by: "cc(Claude)"
+  scope: "P003 项目 MAX / Ultra 版本；沿用 Pro 版本 RK3562S3<->MCU 协议并做删改扩展"
+  fidelity: |-
+    命令表 77x9 含合并单元格，已按 merge_info 完整还原（覆盖校验 693/693 格）。
+    正文、嵌套列表、内嵌电子表格均已提取。文档中的 2 张图片与 2 个画板无法转为文本，
+    其信息未包含在本文件中，见 non_textual_assets。
+
+transport:
+  bus: UART
+  baudrate: 115200
+  data_bits: 8
+  stop_bits: 1
+  parity: none
+  flow_control: none          # 文档未提及，按 8N1 常规无流控
+  traffic_types: [cycle, event]
+
+frame:
+  # 完整帧（非 ACK）
+  layout:
+    - {name: Header,       bytes: 1, value: "0x5A", note: "固定"}
+    - {name: FrameType,    bytes: 1, enum_ref: frame_type}
+    - {name: SerialCount,  bytes: 2, range: "0-65535", note: "从0递增，溢出回0；ACK 须回填原请求的 SerialCount"}
+    - {name: CMD,          bytes: 2, note: "命令字，见 commands"}
+    - {name: Length,       bytes: 2, note: "仅 Payload 段长度，不含帧头帧尾"}
+    - {name: Payload,      bytes: "n", range: "0-1024", note: "最大长度暂定 1024"}
+    - {name: CRC8,         bytes: 1, note: "又名 Checksum，同一字段两种叫法"}
+    - {name: End,          bytes: 1, value: "0xA5", note: "固定"}
+  overhead_bytes: 10          # 推断：除 Payload 外各字段之和
+  crc8:
+    coverage: "Header + FrameType + SerialCount + CMD + Length + Payload"
+    excludes: [CRC8, End]
+    algorithm: "CRC-8/SAE-J1850"
+    poly: "0x1D"
+    init: "0xFF"
+    xor_out: "0xFF"
+    reflected: false
+    test_vector:
+      input_hex: "5A 01 00 A1 00 01 00 00"
+      length: 8
+      expected: "0x08"
+      status: verified        # cc 已用文档自带查表实现与位运算实现双向复算，均得 0x08
+  ack_frame:
+    applies_to: ["0x03 ACK OK", "0x04 ACK Error"]
+    rule: "ACK OK / ACK Error 帧无 Length 与 Payload 字段"
+    derived_layout: "Header(1) + FrameType(1) + SerialCount(2) + CMD(2) + CRC8(1) + End(1) = 8 字节"
+    derived_crc_coverage: "前 6 字节（Header..CMD）"
+    layout_status: inferred   # 文档只说“无 Length 和 payload 字段”，未给 ACK 帧图；实现前需硬件确认
+    validity_rule: "ACK 帧的 SerialCount 必须等于对应请求帧的 SerialCount，CMD 必须等于对应请求的 CMD，否则视为无效 ACK"
+
+frame_type:
+  "0x01": "No ACK（不需要应答）"
+  "0x02": "Need ACK（需要应答）"
+  "0x03": "ACK OK"
+  "0x04": "ACK Error"
+  other: "invalid value"
+  usage_note: "针对事件类型报文，重要消息可用 Need ACK，接收方收到后回复 ACK"
+
+byte_order:
+  multi_byte_fields: big_endian
+  status: inferred
+  evidence: |-
+    1) 文档明文：OTA 文件头各多字节字段“16进制格式表示，MSB在前，LSB在后”。
+    2) 0x0100 使用时长 Byte6=高位H / Byte7=低位L；平面镜距离 Byte11=高8位 / Byte12=低8位。
+    3) CRC8 测试向量 5A 01 00A1 0001 0000 按大端解读 = CMD 0x0001(查询配置参数, Payload
+       Length=0, No ACK, RK3562->MCU)，与命令表完全自洽；按小端解读 CMD=0x0100(MCU 上报状态)
+       则 Length 应为 14 而非 0，自相矛盾。
+    文档正文未对帧头 SerialCount / CMD / Length 三个字段明文规定字节序，故标 inferred。
+
+parser_requirements:
+  - "UART 通讯为不定长数据传输"
+  - "按帧格式进行数据解析与处理"
+  - "能正确识别粘包（多个包头包尾完整的数据无间隔连续接收）"
+  - id: fragmented_frame
+    text: "能正确处理断包（一个完整数据帧分两次到达，组合后 CRC 正确）"
+    reassembly_timeout_ms: 200
+    rule: "识别到包头后计时 200ms，未完成组包则丢弃数据"
+  - "充分考虑异常情况，避免解析异常导致死机（例如 Length 字段异常大导致越界访问）"
+
+heartbeat:
+  rk3562_to_mcu: {cmd: "0x0002", period: "1s", timeout: "5s(TBD)", on_timeout: "MCU 判定 RK3562 异常"}
+  mcu_to_rk3562: {cmd: "0x0003", period: "1s", timeout: "5s(TBD)", on_timeout: "RK3562 判定 MCU 异常"}
+  note: "5s 超时门限文档标注 TBD，未定稿"
+
+# ---------------------------------------------------------------------------
+# 命令表（原文 3.3 通讯矩阵，77 行 x 9 列，含合并单元格；此处按命令逐条展开）
+# dir 取值：rk->mcu | mcu->rk
+# cmd_id 一律写成 4 位十六进制。原文 OTA 段写成 3 位（0x200 等），语义相同，
+# 因为 CMD 字段固定 2 字节 —— 见 raw_cmd_id 字段保留原文写法。
+# ---------------------------------------------------------------------------
+commands:
+
+  - cmd_id: "0x0000"
+    name: "RK3562 查询外设状态"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 0
+    cycle: Event
+    payload: []
+    description: "RK3562 主动向 MCU 查询外设状态，会收到 0x0100 的回复"
+
+  - cmd_id: "0x0001"
+    name: "RK3562 查询配置参数"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 0
+    cycle: Event
+    payload: []
+    description: |-
+      （用于配置管理，回复的都是 EOL 写入的参数）RK3562 主动向 MCU 查询配置状态，
+      会收到 0x0101 到 0x0106 的回复。
+    note: "0x0112 外接屏幕版本号的说明中亦写明由 0x0001 触发回复，故实际回复范围为 0x0101-0x0106 与 0x0112"
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0002"
+    name: "RK3562 心跳"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 0
+    cycle: "1s"
+    payload: []
+    description: "MCU 监控 RK3562 运行正常，5s(TBD) 未收到则判定 RK3562 异常"
+
+  - cmd_id: "0x0003"
+    name: "MCU 心跳"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 0
+    cycle: "1s"
+    payload: []
+    description: "RK3562 监控 MCU 运行状态，5s(TBD) 未收到则判定 MCU 异常"
+
+  - cmd_id: "0x0100"
+    name: "MCU 上报状态"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 14
+    cycle: "EVENT + 250ms"
+    description: "整机状态周期上报；亦作为 0x0000 查询的回复"
+    payload:
+      - {byte: 0, field: 整机工作状态, enum: {"0x01": "(待机) 上电 + 前盖关闭", "0x02": "(待机) 上电 + 前盖开启 + 平面镜关闭", "0x03": "(待机) 上电 + 前盖开启 + 平面镜开启", "0x04": "(工作) 上电 + 前盖开启 + 平面镜开启"}}
+      - {byte: 1, field: LED开关状态, enum: {"0x00": 关, "0x01": 开}}
+      - {byte: 2, field: LED亮度, enum: {"0x01": 低亮度, "0x02": 中亮度, "0x03": 高亮度}}
+      - {byte: 3, field: LED色温, enum: {"0x01": "冷光（对应 UI 设计的绘画）", "0x02": 常规, "0x03": "暖光（对应 UI 设计的夜读）"}}
+      - {byte: 4, field: 电机状态, enum: {}, status: unresolved, issue: "原文该格枚举为空，取值未定义"}
+      - {byte: 5, field: 像距, unit: 分米, enum: {}, status: unresolved, issue: "原文该格枚举为空，仅在描述列写明单位为分米"}
+      - byte: 6
+        field: "使用时长高字节 + 人在状态"
+        bitfield:
+          bit7: {name: 人在状态, enum: {0: 人不在, 1: 人在}}
+          bit6_bit0: {name: 使用时长 bit14-bit8}
+        note: "原文示例：使用时长高位 H = 0x11"
+      - byte: 7
+        field: "使用时长低字节"
+        bitfield:
+          bit7_bit0: {name: 使用时长 bit7-bit0}
+        note: |-
+          使用时长 = Byte6.bit6-bit0 与 Byte7 拼成的 15 位值（bit14-bit0），单位分钟；
+          原文示例 0x1122 分钟。暂定由 RK3562 端计时，MCU 端先将该处使用时长置 0。
+      - {byte: 8, field: 霍尔1状态, purpose: 控制LED, enum: {"0x00": "无磁场，开盖，开灯", "0x01": "有磁场，合盖，关灯"}}
+      - {byte: 9, field: 霍尔2状态, purpose: 遮光板识别, enum: {"0x00": 无磁场, "0x01": 有磁场}}
+      - {byte: 10, field: 护眼屏状态, enum: {"0x00": 未接入, "0x01": 接入}, note: "原文写作 0x0 / 0x1"}
+      - {byte: 11, field: 平面镜到桌面实际距离 高8位, unit: "mm*10", note: 整数值传递}
+      - {byte: 12, field: 平面镜到桌面实际距离 低8位, unit: "mm*10", note: 整数值传递}
+      - byte: 13
+        field: 磁栅或马达是否在最低点状态反馈
+        enum_by_device:
+          MAX: {"0x00": "未脱磁（不在最低点）", "0xFF": "脱磁（最低点）", "0xEE": "不支持脱磁状态查询（0xEE 只有 MAX 才可能返回）"}
+          Ultra: {"0x00": 电机不在最低点, "0xFF": 电机在最低点}
+        added_in: "V2.0"
+        note: "V2.0 将磁栅状态反馈并入本报文，同时声称删除 0x0110/0x0111 —— 但两命令仍留在矩阵中，见 open_issues.ISSUE-01"
+
+  - cmd_id: "0x0101"
+    name: "设备类型"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 2
+    cycle: event
+    description: |-
+      MCU 在 EOL 时收到写入设备类型、写入成功后，向 RK3562 通知设备型号；
+      RK3562 发送查询命令 0x0000 时，回复 0x0101。
+    payload:
+      - {byte: 0, field: 设备类型, enum: {"0x00": Air, "0x01": Pro, "0x02": Max, "0x03": Ultra, "0x04": "LE Display", "0x05": "Max 基础版", "0xFF": 无效}}
+      - {byte: 1, field: 代际编码, enum: {"0x00": invalid, "0xFF": invalid, "0x01-0xFE": 设备硬件更新换代版本}}
+    changelog_ref: "V2.1 新增 0x05 Max 基础版"
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0102"
+    name: "磁栅类型"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 1
+    cycle: null
+    description: |-
+      MCU 在 EOL 时收到写入磁栅类型、写入成功后，向 RK3562 通知磁栅型号；
+      RK3562 发送查询命令 0x0000 时，回复 0x0102。
+    payload:
+      - {byte: 0, field: 磁栅类型, enum: {"0x00": 对向反射膜, "0x01": 外采磁栅, "0x02": 自研磁栅}}
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0103"
+    name: "人在传感器参数"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 20
+    cycle: null
+    description: |-
+      MCU 在 EOL 时收到写入人在传感器配置参数、写入成功后，向 RK3562 通知；
+      RK3562 发送查询命令 0x0000 时，回复 0x0103。
+    payload:
+      - {byte: 0, field: 人在传感器门数}
+      - {byte: 1, field: 无人延时时间, unit: s}
+      - bytes: "2-19"
+        field: 各门灵敏度配置
+        layout: |-
+          每两个字节依次表示门0-门8的运动和静止灵敏度配置参数。
+          即 Byte2=门0运动灵敏度，Byte3=门0静止灵敏度，Byte4=门1运动灵敏度，Byte5=门1静止灵敏度，依此类推。
+          未启用的门，运动和静止灵敏度参数为 0xFF。
+        arithmetic_check: "门0-门8 共 9 门 x 2 字节 = 18 字节 = Byte2..Byte19，与 payload_length 20 自洽"
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0104"
+    name: "霍尔传感器1配置参数"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 2
+    cycle: null
+    description: |-
+      MCU 在 EOL 时收到写入霍尔传感器 ADC 值、写入成功后，向 RK3562 通知霍尔传感器 ADC 值；
+      RK3562 发送查询命令 0x0000 时，回复 0x0104。
+    payload:
+      - {bytes: "0-1", field: 霍尔传感器1 ADC值, status: unresolved, issue: "原文 Data Define 格为空，未给出编码方式与量纲"}
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0105"
+    name: "霍尔传感器2配置参数"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 2
+    cycle: null
+    description: |-
+      MCU 在 EOL 时收到写入霍尔传感器 ADC 值、写入成功后，向 RK3562 通知霍尔传感器 ADC 值；
+      RK3562 发送查询命令 0x0000 时，回复 0x0105。
+    payload:
+      - {bytes: "0-1", field: 霍尔传感器2 ADC值, status: unresolved, issue: "原文 Data Define 格为空，未给出编码方式与量纲"}
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0106"
+    name: "设备SN"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 20
+    cycle: event
+    description: "MCU 在 EOL 时收到写入设备 SN、写入成功后，向 RK3562 通知；RK3562 发送查询命令时回复 0x0106"
+    payload:
+      - bytes: "0-19"
+        field: 设备SN
+        encoding: ASCII
+        example: "BJP250711XXXXXXX0125"
+        invalid_value: "BJ000000000000000000"
+        note: "示例与无效值均为 20 字符，与 payload_length 自洽"
+    issue_ref: ISSUE-02   # 该命令的触发关系存在文档矛盾，实现前必读 open_issues
+
+  - cmd_id: "0x0107"
+    name: "清除使用时长"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: cycle
+    description: |-
+      产品需求：移除设备（未激活）时清除当前使用时长。设备被移除后，RK3562 会周期查询激活状态，
+      如果一直未激活，会周期发送清除使用时长（10s）。
+    payload:
+      - {byte: 0, field: 清除指令, enum: {"0xAA": 清除当前使用时长, other: 无效}}
+
+  - cmd_id: "0x0108"
+    name: "RK3562版本号"
+    dir: rk->mcu
+    frame_type: ACK
+    payload_length: 3
+    cycle: event
+    description: "RK3562 版本更新后，向 MCU 发送版本号"
+    payload:
+      - {byte: 0, field: 主版本号}
+      - {byte: 1, field: 次版本号}
+      - {byte: 2, field: 补丁版本号}
+
+  - cmd_id: "0x0109"
+    name: "强制升级"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 1
+    cycle: event
+    description: "RK3562 接收到有效值后，进入升级流程"
+    payload:
+      - {byte: 0, field: 强制升级指令, enum: {"0xAA": 进入强制升级, other: 无效}}
+
+  - cmd_id: "0x010A"
+    name: "LED与护眼屏控制"
+    dir: rk->mcu
+    frame_type: ACK
+    payload_length: 3
+    cycle: event
+    description: "LED 与护眼屏控制"
+    payload:
+      - {byte: 0, field: 开关, enum: {"0x00": 关, "0x01": 开}}
+      - {byte: 1, field: 亮度, enum: {"0x01": 低亮度, "0x02": 中亮度, "0x03": 高亮度}}
+      - {byte: 2, field: 色温, enum: {"0x01": "冷光（对应 UI 设计的绘画）", "0x02": 常规, "0x03": "暖光（对应 UI 设计的夜读）"}}
+    changelog_ref: "V1.2 修改 LED 指令控制与状态回读值定义一致（0:关 1:开），与 0x0100 Byte1-Byte3 对应"
+
+  - cmd_id: "0x010B"
+    name: "系统重启"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 1
+    cycle: event
+    description: "表示用户长按了控制按键，重启 RK3562 端"
+    payload:
+      - {byte: 0, field: 重启指令, enum: {"0xAA": 有效}, note: "原文：只有 0xAA 有效"}
+
+  - cmd_id: "0x010C"
+    name: "Ultra电机控制方式1（步进调节）"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 2
+    cycle: event
+    applies_to: [Ultra]
+    payload:
+      - {byte: 0, field: 调节方向, enum: {"0x01": 向上, "0x02": 向下}}
+      - {byte: 1, field: 移动距离, unit: 分米}
+
+  - cmd_id: "0x010D"
+    name: "Ultra电机控制方式2（目标值调节）"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: event
+    applies_to: [Ultra]
+    payload:
+      - {byte: 0, field: 目标像距, unit: 分米}
+
+  - cmd_id: "0x010E"
+    name: "Ultra电机调节结果"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 2
+    cycle: event
+    applies_to: [Ultra]
+    payload:
+      - {byte: 0, field: 调节结果, enum: {"0x00": 调节失败, "0x01": 调节成功}}
+      - {byte: 1, field: 当前像距, unit: 分米}
+
+  - cmd_id: "0x010F"
+    name: "MCU主板按键状态"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: event
+    purpose: "支持 PCBA 测试（V1.2 新增主板 5 个键位状态，V1.3 调整 bit 对应键位）"
+    payload:
+      - byte: 0
+        field: 按键状态位图
+        bit_semantics: "0 = 按下，1 = 释放"
+        bitfield:
+          bit0: 上升键
+          bit1: 下降键
+          bit2: 亮度键
+          bit3: 控制键
+          bit4: 色温键
+          bit5_bit7: invalid
+
+  - cmd_id: "0x0110"
+    name: "查询高度状态（MAX 是磁栅传感器，Ultra 是电机）"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: event
+    applies_to: [MAX, Ultra]
+    description: "MAX 和 Ultra 都可以使用该命令"
+    payload:
+      - {byte: 0, field: 查询指令, enum: {"0xAA": 有效, other: 无效}}
+    status: contradicted
+    issue_ref: ISSUE-01
+
+  - cmd_id: "0x0111"
+    name: "回复高度状态"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 2
+    cycle: event
+    payload:
+      - {byte: 0, field: 设备类型, enum: {"0x02": "TYPE_MAX", "0x03": "TYPE_ULTRA"}}
+      - byte: 1
+        field: 最低点状态
+        enum_by_device:
+          MAX: {"0x00": "未脱磁（不在最低点）", "0xFF": "脱磁（最低点）", "0xEE": "不支持脱磁状态查询（0xEE 只有 MAX 才可能返回）"}
+          Ultra: {"0x00": 电机不在最低点, "0xFF": 电机在最低点}
+    status: contradicted
+    issue_ref: ISSUE-01
+
+  - cmd_id: "0x0112"
+    name: "外接屏幕版本号"
+    dir: mcu->rk
+    frame_type: ACK
+    payload_length: 6
+    cycle: event
+    description: "RK3562 发送配置查询命令 0x0001 时，回复 0x0112"
+    payload:
+      - {byte: 0, field: 硬件版本号 备用, value: "0x00", note: 固定}
+      - {bytes: "1-2", field: 硬件主版本号与次版本号}
+      - {byte: 3, field: 屏幕供应商, enum: {"0x01": 友达屏幕, "0x02": 勋瑞屏幕}, note: 固定值标识供应商}
+      - {bytes: "4-5", field: 软件主版本号与次版本号}
+    raw_text: "前三字节为硬件版本号，Byte0固定为00（备用），Byte1-2表示硬件主版本号和次版本号；后三字节为软件版本号，Byte3固定为01（友达屏幕）或02（勋瑞屏幕），Byte4-5表示软件主版本号和次版本号"
+    changelog_ref: "V1.5 新增外接屏幕版本号信息交互"
+
+  - cmd_id: "0x0120"
+    name: "MCU log 上传"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 5
+    cycle: event
+    payload:
+      - {byte: 0, field: Log级别, enum: {"0x00": Info, "0x01": Error}}
+      - {byte: 1, field: 模块tag, enum: {"0x00": Boot, "0x01": APP}}
+      - {bytes: "2-4", field: "Log data"}
+    changelog_ref: "V1.6 新增 MCU log 设计；V1.7 调整 Log cmd 报文长度为 5"
+    doc_typo: "原文 CMD Dir 列写作 MCU->RK562（缺一位 3），实为 MCU->RK3562"
+
+  # --- OTA 相关（原文矩阵中以 "OTA 相关" 分组行分隔，CMD ID 原文写作 3 位） ---
+
+  - cmd_id: "0x0200"
+    raw_cmd_id: "0x200"
+    name: "Query Version"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 0
+    cycle: event
+    payload: []
+    description: "RK3562 查询 MCU 软件版本号"
+    timing: {timeout_ms: 100, on_timeout: 重发报文, max_attempts: 3, on_exhausted: "流程结束，OTA 失败"}
+
+  - cmd_id: "0x0201"
+    raw_cmd_id: "0x201"
+    name: "Query Version Response"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 6
+    cycle: event
+    description: "如果请求数据有问题，不用回复"
+    payload:
+      - {bytes: "0-2", field: "MCU APP Version", format: "主.次.补丁 各占 1 字节", example: "01 00 01 = 1.0.1"}
+      - {bytes: "3-5", field: "MCU BOOT Version", format: "主.次.补丁 各占 1 字节", example: "01 00 00 -> 原文示例文字写作 0.0.9，见 ISSUE-04"}
+    changelog_ref: "V1.9 将备用字节 Byte3-Byte5 用作 Boot 版本号（原文写作 ByteE5，笔误）"
+
+  - cmd_id: "0x0202"
+    raw_cmd_id: "0x202"
+    name: "Request OTA"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 5
+    cycle: event
+    description: "RK3562 指示更新 app 应用程序控制固件，MCU 根据指令决定固件刷新地址"
+    payload:
+      - {byte: 0, field: 固件类型, enum: {"0x01": 更新app固件}}
+      - {bytes: "1-5", field: "MCU 固件大小", unit: Byte, status: unresolved}
+    status: contradicted
+    issue_ref: [ISSUE-02, ISSUE-03]
+    timing: {wait_s: 3, retries: 3, source: "§4.2 Step4/Step5", note: "等待 3s 无 0x203 回复则重发，共 3 次未回复则升级失败"}
+
+  - cmd_id: "0x0203"
+    raw_cmd_id: "0x203"
+    name: "Request OTA Response"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: event
+    description: "MCU 收到请求下载命令后执行擦除操作并返回结果；如果用户取消 OTA，返回 0x06"
+    payload:
+      - byte: 0
+        field: 结果码
+        enum:
+          "0x01": success
+          "0x02": erase error
+          "0x03": start address error
+          "0x04": length error
+          "0x05": pending
+          "0x06": Cancel OTA
+          "0x07": CRC error
+
+  - cmd_id: "0x0204"
+    raw_cmd_id: "0x204"
+    name: "Transmit Data"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: n
+    cycle: event
+    description: "传输 MCU image file 数据"
+    payload:
+      - {byte: 0, field: "Package serial Counter", range: "1-255", note: "原文：updata package number, form 1 to 255"}
+      - bytes: "1-n"
+        field: "MCU image Data"
+        note: "MCU 根据自身 Flash Page 或 Sector 大小决定一包数据多长（Pro 版本一包 512 字节）"
+    timing:
+      timeout_ms: 100
+      retry: false
+      rationale: "超时无重试，OTA 失败。数据传输涉及 FLASH 写入，下位机是否已写入未知，重试会触发异常"
+
+  - cmd_id: "0x0205"
+    raw_cmd_id: "0x205"
+    name: "Transmit Data Response"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 2
+    cycle: event
+    payload:
+      - {byte: 0, field: "Received package serial counter", note: "返回 0x0204 的 Byte0"}
+      - byte: 1
+        field: 结果码
+        enum:
+          "0x01": success
+          "0x02": "package number error — 0x0204 的 Byte0 不连续"
+          "0x03": "Flash Programe error — MCU Flash 编程出错"
+          "0x04": "Cmd Not Support — 处于 OTA 流程中，接收到不支持的指令"
+          "0x05": "workflow error — 流程有误，比如没有执行擦除动作"
+          "0x06": "CRC error — 请求帧 CRC 错误"
+          "0x07": "transmit len too long — 传输的数据长度已经大于 0x0202 发送的长度"
+
+  - cmd_id: "0x0206"
+    raw_cmd_id: "0x206"
+    name: "Request Verify"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 4
+    cycle: null
+    payload:
+      - {bytes: "0-3", field: "MCU image CRC32"}
+    description: "MCU image CRC32（原文标注：待定，CRC32 写在 MCU image 文件里）"
+    status: tbd
+    timing: {wait_s: 2, source: "§4.2 Step8", note: "等待 0x207 回复超时 2s"}
+
+  - cmd_id: "0x0207"
+    raw_cmd_id: "0x207"
+    name: "Request Verify Response"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: null
+    payload:
+      - byte: 0
+        field: 结果码
+        enum:
+          "0x01": success
+          "0x02": error
+          "0x03": "pending — CRC 计算中"
+          "0x04": "Cmd Not Support — 处于 OTA 流程中，接收到不支持的指令"
+          "0x06": "CRC error"
+        note: "原文枚举中不含 0x05，非遗漏标注，照录"
+
+  - cmd_id: "0x0208"
+    raw_cmd_id: "0x208"
+    name: "Request Reset"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: null
+    description: "请求复位"
+    payload:
+      - {byte: 0, field: 复位指令, value: "0xF0"}
+
+  - cmd_id: "0x0209"
+    raw_cmd_id: "0x209"
+    name: "Request Reset Response"
+    dir: mcu->rk
+    frame_type: "No ACK"
+    payload_length: 1
+    cycle: null
+    payload:
+      - {byte: 0, field: 结果码, enum: {"0x01": "goto reset", "0x02": "CRC error"}}
+
+  - cmd_id: "0x020A"
+    raw_cmd_id: "0x20A"
+    name: "升级进度"
+    dir: rk->mcu
+    frame_type: "No ACK"
+    payload_length: 2
+    cycle: null
+    description: "RK3562 向 MCU 下发升级进度，供 MCU 在屏幕显示"
+    payload:
+      - {byte: 0, field: 升级状态, enum: {"0": 升级正常进行, "1": 升级失败}, note: "原文用十进制 0/1 书写"}
+      - {byte: 1, field: 升级进度百分比, range: "0-100", note: "升级进度 >99% 且 CRC 校验通过，即可判定升级成功"}
+
+# ---------------------------------------------------------------------------
+ota:
+  basic_requirements:
+    - "升级过程中 MCU 控制屏幕显示升级进度百分比，数值由 RK3562 通过 UART CMD 0x020A 发送"
+    - "MCU 接收到复位指令后，屏幕显示复位相关文字后进入复位流程"
+    - "升级过程中 MCU 的屏幕、LED、电机控制应做好处理，暂时没有详细需求"
+  failure_handling:
+    - "升级 RK3562 失败：RK3562 采用 AB 分区升级，失败后仍使用当前版本软件运行"
+    - "升级 MCU 失败：APP valid 标志有效则继续运行 APP，无效则停留在 boot 中"
+    - "升级失败后需向后台上报，通知到手机端或小程序"
+    - "由于使用网络升级，为避免网络异常，应设计升级超时时间"
+    - {text: "升级重试涉及网络数据重新获取，实现方案未定", status: tbd}
+  steps:
+    - {step: 0,  actor: RK3562, text: "每次开机向后台查询最新版本（MCU、UI 和 RK3562 打包为一个软件包），如果有新版本，云端分片下载到 RK3562 内部 Flash"}
+    - {step: 1,  actor: RK3562, text: "从软件包中读取 MCU 的 image 版本，同时请求 MCU 当前运行软件版本", cmd: "0x0200"}
+    - {step: 2,  actor: RK3562, text: "版本号相同无需升级，RK3562 退出 OTA，MCU 无影响"}
+    - {step: 3,  actor: RK3562, text: "版本号大于 MCU 版本则需要升级，继续 OTA 流程"}
+    - {step: 4,  actor: RK3562, text: "发送 0x0202 请求升级，等待 3s；确认后 MCU 执行 boot 跳转及擦除", cmd: "0x0202", open_question: "是否需要用户确认 —— 原文标 ???，暂不开发，放在以后 OTA 增加该功能"}
+    - {step: 5,  actor: RK3562, text: "等待 0x0203 回复；3s 未收到则重发 0x0202，共 3 次未回复则升级失败", cmd: "0x0203"}
+    - {step: 6,  actor: both,   text: "RK3562 发送 0x0204 升级数据，MCU Boot 执行数据写入并回复 0x0205", cmd: ["0x0204", "0x0205"]}
+    - {step: 7,  actor: RK3562, text: "发送剩余数据"}
+    - {step: 8,  actor: RK3562, text: "数据发送完成，发送 0x0206 请求校验，等待 0x0207 回复（超时 2s）", cmd: ["0x0206", "0x0207"]}
+    - {step: 9,  actor: RK3562, text: "校验通过后判断是否还有 block 数据要发送；没有则进入 Step10 复位，有则回到 Step4 传输下一 Block"}
+    - {step: 10, actor: RK3562, text: "发送复位指令 0x0208，复位 MCU", cmd: "0x0208"}
+    - {step: 11, actor: RK3562, text: "读取 MCU 版本号，确认升级成功", cmd: "0x0200"}
+    - {step: 12, actor: both,   text: "进入正常工作"}
+  diagram_note: "原文两处流程图为飞书画板，无法转为文本；原文声明「该图仅为交互示意图，MCU 内部处理可不按照图中流程设计，能够稳定完成升级流程即可」"
+
+  mcu_image_file:
+    format: HEX
+    fill_rule: "不连续的数据段填充 0xFF"
+    header_bytes: 16
+    header_fields:
+      - {field: 文件起始地址, maps_to: "0x0202 服务的 start address 字段", note: "MCU Image 在 MCU 芯片 flash 分区的起始地址", status: unresolved, issue_ref: ISSUE-03}
+      - {field: 文件类型, enum: {"0": RK3562, "1": MCU, other: 其他}}
+      - {field: 文件长度, maps_to: "0x0202 服务的 length 字段", note: "MCU image 文件长度"}
+      - {field: CRC, algorithm: CRC32, valid_bits: "0x11223344 为有效位", scope: "仅 MCU Image 数据内容", maps_to: "0x0206 服务的 CRC 字段"}
+      - {field: Version, format: 十六进制, valid_bits: "9/10/11 为有效位", example: "0x010001 = 1.0.1", compare_with: "0x0200 服务获取的版本号"}
+    transmitted_by: "0x0204 服务传输的数据即为 MCU Image file"
+    note: "此 16 字节头属于 MCU image 文件自身，与下方 OTA 打包 BIN 的 128 字节头是两个不同层级，勿混淆"
+
+  packaged_bin:
+    name: "RK3562、MCU 资源打包 OTA 文件格式"
+    header_size: 128           # 0x80
+    layout:
+      - {offset: 0,   field: BIN文件头长度,     size: 1,  note: "固定为 128 (0x80)"}
+      - {offset: 1,   field: BIN文件的校验,     size: 4,  note: "MSB 在前，LSB 在后；包含 bin 文件从供应商代码开始到 Block 数据结束的 CRC32 值，用于升级前校验", extra: "保留，功能无法在端设备实现，需在云端（上传升级文件时）进行校验"}
+      - {offset: 5,   field: 项目代码,          size: 8,  note: "ASCII 码格式，例如 Fu_P003 表示为 0x46,0x75,0x5f,0x50,0x30,0x30,0x33", extra: "Bin 文件校验计算范围起点"}
+      - {offset: 13,  field: 项目编号,          size: 8,  note: 保留}
+      - {offset: 21,  field: 支持的硬件版本,     size: 10, note: 保留}
+      - {offset: 31,  field: BIN文件长度,       size: 4,  note: "不包含头 128 个字节"}
+      - {offset: 35,  field: Block数量,         size: 1,  note: "Bin 文件内包含多少个升级包（RK3562/MCU/其他）"}
+      - {offset: 36,  field: 第1个Block类型,     size: 1,  enum: {"0": RK3562, "1": MCU, "2": "……"}}
+      - {offset: 37,  field: 第1个Block起始地址, size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 41,  field: 第1个Block长度,     size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 45,  field: 第1个Block CRC,     size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 49,  field: 第1个Block Ver,     size: 4}
+      - {offset: 53,  field: 第2个Block类型,     size: 1,  enum: {"0": RK3562, "1": MCU, "2": "……"}}
+      - {offset: 54,  field: 第2个Block起始地址, size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 58,  field: 第2个Block长度,     size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 62,  field: 第2个Block CRC,     size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 66,  field: 第2个Block Ver,     size: 4}
+      - {offset: 70,  field: 第3个Block类型,     size: 1,  enum: {"0": RK3562, "1": MCU, "2": "……"}}
+      - {offset: 71,  field: 第3个Block起始地址, size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 75,  field: 第3个Block长度,     size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 79,  field: 第3个Block CRC,     size: 4,  note: "MSB 在前，LSB 在后"}
+      - {offset: 83,  field: 第3个Block Ver,     size: 4}
+      - {offset: 87,  field: 资源打包时间戳,     size: 4,  note: "UNIX 时间戳"}
+      - {offset: 91,  field: Header Reserved,   size: 33, note: "Reserved data fill 0xFF"}
+      - {offset: 124, field: Header CRC,        size: 4,  note: "bin header from byte 0-123, CRC32"}
+    body:
+      - {offset: 128, field: "Block1 data"}
+      - {offset: "128 + block1_length", field: "Block2 data"}
+      - {offset: "128 + block1_length + block2_length", field: "Block3 data"}
+    offset_check: "124 + 4 = 128，头部字段偏移连续无空洞，与 header_size 自洽（cc 复算）"
+    packaging_constraints:
+      - "支持只有单独文件升级（只有 RK3562 文件，或者只有 MCU 文件及其他文件）"
+      - "如果存在多个文件，按照顺序生成 OTA 文件包（RK3562 -> MCU -> 其他，按顺序填充 Block 数据）"
+      - "不能将 RK3562 文件插入到 MCU 和其他文件之间制作 OTA 文件包"
+
+crc32:
+  algorithm: "CRC-32 反射式（poly 0xEDB88320）"
+  poly: "0xEDB88320"
+  final_xor: "0xFFFFFFFF"
+  note: "原文注明：CRC32 的最终结果需要做异或 0xFFFFFFFF；初值由调用方通过 cal_crc 入参传入"
+  reference_impl: "crc_reference.py"
+
+# ---------------------------------------------------------------------------
+# 原文档中的矛盾、缺口与待定项。
+# 这些是「照抄原文就会写出 bug」的地方 —— 实现前必须找硬件确认，禁止自行推断补全。
+# ---------------------------------------------------------------------------
+open_issues:
+
+  - id: ISSUE-01
+    severity: high
+    title: "0x0110 / 0x0111 是否已废弃，与 V2.0 变更记录直接冲突"
+    affected: ["0x0110", "0x0111", "0x0100"]
+    conflict:
+      a: "变更记录 V2.0（2026/7/9）：去掉原磁栅状态查询 0x110 和状态反馈 0x111 报文，将磁栅状态反馈增加到状态反馈 0x100 报文里"
+      b: "通讯矩阵中 0x0110 / 0x0111 仍然存在，且内容比 V2.0 之前更完整（新增 Ultra 电机语义、0xEE 不支持查询），描述写明「MAX 和 Ultra 都可以使用该命令」"
+      c: "0x0100 Byte13 与 0x0111 Byte1 的枚举定义完全相同，功能重复"
+    risk: "实现方若照矩阵实现 0x0110/0x0111，可能实现了已废弃命令；若照变更记录删除，可能删掉了 Ultra 需要的主动查询能力"
+    action_required: "向文档作者确认：0x0110/0x0111 在 MAX/Ultra 上是保留还是废弃"
+
+  - id: ISSUE-02
+    severity: high
+    title: "配置参数 0x0101-0x0106 由 0x0000 还是 0x0001 触发，文档自相矛盾"
+    affected: ["0x0000", "0x0001", "0x0101", "0x0102", "0x0103", "0x0104", "0x0105", "0x0106", "0x0112"]
+    conflict:
+      a: "0x0000「查询外设状态」描述：会收到 0x0100 的回复"
+      b: "0x0001「查询配置参数」描述：会收到 0x0101 到 0x0106 的回复"
+      c: "但 0x0101 / 0x0102 / 0x0103 / 0x0104 / 0x0105 各自的描述列均写：RK3562 在发送查询命令（0x0000）时，回复 0x010X"
+      d: "0x0106 描述只写「RK3562 在发送查询命令时」，未给 CMD；0x0112 描述写「RK3562 在发送配置查询命令 0x0001 时」"
+    reading: "按命令语义，配置类回复应由 0x0001 触发，(c) 中的 0x0000 疑似沿用旧版本的笔误 —— 但这是推断，未经确认不得作为实现依据"
+    action_required: "确认 0x0001 与 0x0000 各自触发哪些回复报文"
+
+  - id: ISSUE-03
+    severity: high
+    title: "0x0202 Request OTA 的 Payload Length 与字节定义算术不一致"
+    affected: ["0x0202"]
+    detail: "Payload Length 列写 5，但字节定义为 byte0（固件类型，1 字节）+ byte1-byte5（固件大小，5 字节）= 6 字节"
+    possible_readings:
+      - "字段名笔误，应为 byte1-byte4（固件大小 4 字节），总长 5 —— 与其余 4 字节长度字段（Block 长度等）一致"
+      - "Payload Length 笔误，应为 6"
+    action_required: "确认 0x0202 的实际 payload 长度与固件大小字段宽度"
+
+  - id: ISSUE-04
+    severity: high
+    title: "0x0202 缺少 start address 字段定义，但下游依赖它"
+    affected: ["0x0202", "0x0203"]
+    detail: |-
+      §6 正文写明「文件起始地址…（0x202 服务的 start address 字段）」，0x0203 的错误码中也有
+      0x03 start address error —— 二者都预设 0x0202 携带 start address；
+      但 0x0202 在通讯矩阵中只定义了「固件类型」与「固件大小」两个字段，没有 start address。
+    action_required: "确认 0x0202 完整字段构成（这与 ISSUE-03 的长度问题很可能是同一处缺失）"
+
+  - id: ISSUE-05
+    severity: medium
+    title: "0x0201 BOOT 版本示例与字节值对不上"
+    affected: ["0x0201"]
+    detail: "byte3-byte5 的 Data Define 写 0x01 / 0x00 / 0x00，而同行描述写「MCU BOOT Version:0.0.9」。按 APP 版本的编码规则（0x01,0x00,0x01 = 1.0.1），0x01,0x00,0x00 应为 1.0.0 而非 0.0.9"
+    action_required: "确认 BOOT 版本号编码规则与示例值"
+
+  - id: ISSUE-06
+    severity: medium
+    title: "多处字段无取值定义（原文 Data Define 格为空）"
+    affected: ["0x0100", "0x0104", "0x0105", "0x0206"]
+    items:
+      - "0x0100 Byte4 电机状态：无枚举"
+      - "0x0100 Byte5 像距：仅说明单位为分米，无范围与无效值"
+      - "0x0104 / 0x0105 霍尔传感器 ADC 值：2 字节，无编码方式与量纲"
+      - "0x0206 MCU image CRC32：原文标注「待定」"
+    action_required: "补齐取值定义后方可实现，勿用默认值填充"
+
+  - id: ISSUE-07
+    severity: medium
+    title: "帧头多字节字段（SerialCount / CMD / Length）字节序无明文规定"
+    affected: [frame]
+    resolution_used: "本文件按大端（MSB 在前）处理，依据见 byte_order.evidence（CRC8 测试向量反解自洽 + payload 内多字节字段一律高位在前 + OTA 头明文 MSB 在前）"
+    action_required: "让硬件在文档中补一句明文规定；实现时以真机抓包复核"
+
+  - id: ISSUE-08
+    severity: medium
+    title: "ACK OK / ACK Error 帧的完整布局未给出"
+    affected: [frame]
+    detail: "原文只说明「ACK ok 和 ACK Error 帧无 Length 和 payload 字段」，未给出帧图，也未说明此时 CRC8 的覆盖范围"
+    resolution_used: "本文件推导为 8 字节帧、CRC 覆盖前 6 字节，标 frame.ack_frame.layout_status = inferred"
+    action_required: "确认 ACK 帧字节布局与 CRC 覆盖范围"
+
+  - id: ISSUE-09
+    severity: low
+    title: "同一字段两种叫法 + 枚举跳号"
+    items:
+      - "帧格式表列名为 CRC8，而下方说明第 7 条称其为 Checksum —— 同一字段"
+      - "0x0207 结果码枚举为 0x01/0x02/0x03/0x04/0x06，无 0x05（原文如此，非转写遗漏）"
+
+  - id: ISSUE-10
+    severity: low
+    title: "标注为 TBD / 待定 / 问号的未定项汇总"
+    items:
+      - {where: "0x0002 / 0x0003", text: "心跳超时门限 5s 标注 TBD"}
+      - {where: "0x0100 Byte6-Byte7", text: "使用时长暂定由 RK3562 端计时，MCU 端先置 0"}
+      - {where: "frame.Payload", text: "最大长度 1024 为「暂定」"}
+      - {where: "§4.2 Step4", text: "升级是否需要用户确认，原文标 ???，暂不开发"}
+      - {where: "ota.failure_handling", text: "升级重试涉及网络数据重新获取，实现方案未定"}
+      - {where: "0x0206", text: "MCU image CRC32 待定"}
+
+  - id: ISSUE-11
+    severity: low
+    title: "原文笔误汇总（本文件已按正确写法转写，此处备查）"
+    items:
+      - "「Serila Count」→ Serial Count"
+      - "0x0120 CMD Dir 写作「MCU->RK562」→ MCU->RK3562"
+      - "变更记录 V1.9「Byte3-ByteE5」→ Byte3-Byte5"
+      - "0x0205 错误码「Flash Programe error」→ Programme/Program"
+      - "0x0204 描述「updata package number, form 1 to 255」→ update / from"
+      - "描述列中 0x112 / 0x106 等 3 位写法 → 0x0112 / 0x0106（CMD 字段固定 2 字节）"
+
+  - id: ISSUE-12
+    severity: medium
+    title: "两层文件头容易混淆：MCU image 16 字节头 vs OTA 打包 BIN 128 字节头"
+    affected: [ota]
+    detail: |-
+      §6 正文：「在 MCU 升级文件的文件头添加 16 字节数据信息」——指 MCU image 文件自身的头。
+      §6.1 表格：「BIN 文件头长度固定为 128(0x80)」——指 RK3562+MCU 资源打包后的 OTA 包头。
+      两者层级不同、字段不同，但正文相邻，极易被读成同一个头。
+    note: "另：16 字节头中列出的字段（起始地址/类型/长度/CRC/Version）若按 4+1+4+4+4 计为 17 字节，与 16 字节不自洽，原文未给逐字节偏移表"
+    action_required: "索取 MCU image 16 字节头的逐字节偏移定义"
+
+  - id: ISSUE-13
+    severity: low
+    title: "0x0204 变长 payload 与 1024 上限的关系未说明"
+    affected: ["0x0204"]
+    detail: "0x0204 Payload Length 为 n，一包长度由 MCU Flash Page/Sector 决定（Pro 版本 512 字节），而帧定义 Payload 上限「暂定 1024」；两者约束关系与 MAX/Ultra 实际包长未明确"
+    action_required: "确认 MAX/Ultra 的单包数据长度"
+
+# ---------------------------------------------------------------------------
+non_textual_assets:
+  note: "以下内容在原文档中以图片/画板/表格形式存在。图片与画板无法转为文本，其承载的信息不在本文件中。"
+  items:
+    - {type: image, where: "§3.2 通讯帧格式（表格上方）", token: "CooUb3VzDot6lwxyRVMcoaEYnXc", likely_content: "帧格式示意图", text_equivalent: "已由 frame.layout 覆盖（推断）"}
+    - {type: image, where: "§3.2 通讯帧格式（说明下方）", token: "Bwkib7WPOo3bJsx8E7GcM2WNnH8", likely_content: "ACK 交互示意图", text_equivalent: "未覆盖 —— 与 ISSUE-08 相关，建议查看原图"}
+    - {type: board, where: "§4.1 升级过程中基本要求 之后", token: "Dml9wgSLah8OXEb4rUfcnCCrn3b", likely_content: "升级失败处理流程图", text_equivalent: "部分覆盖（ota.failure_handling）"}
+    - {type: board, where: "§4.2 MCU升级步骤 之后", token: "HQNSwJERzh06wSb5g8ZcVS2enRf", likely_content: "OTA 升级时序图", text_equivalent: "部分覆盖（ota.steps）；原文声明该图仅为示意"}
+    - {type: sheet, where: "§6.1 OTA 文件格式", token: "CCAnsHw0qh0ciFt6Uu2cy4zinzf_L4tafQ", text_equivalent: "已完整提取为 ota.packaged_bin"}
+
+changelog:
+  - {version: "V1.0", date: "2026-04-15", author: 吴子寰, change: "Original"}
+  - {version: "V1.1", date: "2026-04-16", author: 王俊晓, change: "0x0100 MCU 上传状态中增加护眼屏接入状态"}
+  - {version: "V1.2", date: "2026-05-09", author: 王俊晓, change: "增加主板 5 个键位状态，支持 PCBA 测试；修改 LED 指令控制和状态回读值定义一致（0:关 1:开）"}
+  - {version: "V1.3", date: "2026-05-15", author: 王俊晓, change: "调整 0x010F 上报按键状态 bit 对应的键位"}
+  - {version: "V1.4", date: "2026-05-20", author: 吴子寰, change: "新增磁栅脱磁状态的查询"}
+  - {version: "V1.5", date: "2026-05-21", author: 吴子寰, change: "新增外接屏幕版本号信息交互"}
+  - {version: "V1.6", date: "2026-05-28", author: 王俊晓, change: "新增 MCU log 设计"}
+  - {version: "V1.7", date: "2026-06-09", author: 王俊晓, change: "调整 Log cmd 报文长度为 5"}
+  - {version: "V1.8", date: "2026-06-22", author: 王俊晓, change: "0x0100 MCU 上传报文中增加平面镜到桌面实际距离值"}
+  - {version: "V1.9", date: "2026-07-07", author: 王俊晓, change: "0x0201 MCU 上传 version 报文将备用字节 Byte3-Byte5 用作 Boot 版本号"}
+  - {version: "V2.0", date: "2026-07-09", author: 王俊晓, change: "去掉原磁栅状态查询 0x0110 和状态反馈 0x0111 报文，将磁栅状态反馈增加到状态反馈 0x0100 报文里", conflict_ref: ISSUE-01}
+  - {version: "V2.1", date: "2026-07-26", author: 王俊晓, change: "设备型号新增 MAX 基础版枚举值（0x0101 Byte0 = 0x05）"}
+
+reading_rules:
+  - "本文件是转写件，不是权威源。权威源是 meta.source_url 的飞书文档；两者冲突时以飞书为准，并回来修本文件。"
+  - "解析任何 command 之前，先检查它是否出现在 open_issues 的 affected 列表中。凡 status 为 unresolved / tbd / contradicted 的字段，禁止用默认值、经验值或「合理推断」补全 —— 停下来问人。"
+  - "标 status: inferred 的条目是 cc 的推断而非文档明文（目前有 byte_order、frame.ack_frame.layout）。用于实现前需真机复核。"
+  - "cmd_id 一律 4 位十六进制。原文 OTA 段的 3 位写法保留在 raw_cmd_id 字段，检索时两种都要试。"
+  - "payload_length 指 Payload 段长度，不含 10 字节帧开销；ACK OK / ACK Error 帧没有 Payload 与 Length 字段。"
+  - "文档中的图片与画板内容不在本文件内，见 non_textual_assets —— 不要因为本文件没写就断定原文档没有该信息。"
+  - "CRC8 已用文档自带测试向量复算通过（0x08）；实现后应先跑 crc_reference.py 的向量再上板。"
