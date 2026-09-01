@@ -1581,24 +1581,22 @@ impl Orchestrator {
                 && self.session_started_at.elapsed() <= self.cfg.local_audio_echo_window
             {
                 let nu = normalize_echo(&user_text);
-                if nu.chars().count() >= 4 {
-                    let hit = self
-                        .echo_local_texts
-                        .lock()
-                        .unwrap()
-                        .iter()
-                        .find(|(_, t)| crate::textproc::lcs_char_ratio(&nu, t) >= 0.8)
-                        .map(|(slot, _)| slot.clone());
-                    if let Some(slot) = hit {
-                        info!(room = %self.room_name, slot = %slot,
-                            "local-audio echo suppressed (opening window): '{user_text}'");
-                        self.latest_interim.clear();
-                        self.tele_text.clear();
-                        if let Some(s) = &mut self.snap {
-                            s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
-                        }
-                        return;
+                // 分层判定(≥4字 LCS / 2-3字精确子串 / 1字放行)抽在 textproc,锚测试全覆盖。
+                // 2026-09-01 00:53 实证:EOU 把回声切成「来啦」(2字)+「刚打了个盹儿」,
+                // 后者被拦、前者穿过旧 len≥4 下限起了幽灵轮——短碎片层由此补上。
+                let hit = {
+                    let bank = self.echo_local_texts.lock().unwrap();
+                    crate::textproc::local_audio_echo_hit(&nu, &bank).map(str::to_string)
+                };
+                if let Some(slot) = hit {
+                    info!(room = %self.room_name, slot = %slot,
+                        "local-audio echo suppressed (opening window): '{user_text}'");
+                    self.latest_interim.clear();
+                    self.tele_text.clear();
+                    if let Some(s) = &mut self.snap {
+                        s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
                     }
+                    return;
                 }
             }
             // stop_only 吞句(2026-08-17 生命周期统一):整句=急停词 → 不成 turn,静默。

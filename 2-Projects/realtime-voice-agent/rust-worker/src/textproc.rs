@@ -235,6 +235,29 @@ pub fn strip_stage_directions(text: &str) -> String {
 /// 全是「文案的子序列」——掉头(「来啦来啦，」)、掉中间(「这儿」→「这」)都被 LCS 兜住,
 /// 严格子串匹配兜不住第二种。char 级 DP,needle=ASR commit(≤~30字)、hay=文案(≤80字),
 /// 计算量 ~2400 cell 可忽略。
+/// 本地音频回声对撞分层判定(2026-09-01 00:53 实证补层):EOU 会把回声切成任意短碎片
+/// ——「来啦来啦，刚打了个盹儿」被切成「来啦」(2字)+「刚打了个盹儿」(6字)两个 commit,
+/// 后者被 LCS 门拦住、前者穿过 len≥4 下限起了幽灵轮。分层:
+/// - ≥4 字:LCS≥0.8(容识别掉字——「我在这等你呢」掉中间「儿」形态);
+/// - 2..3 字:**精确连续子串**(短串上模糊匹配误伤面大;切分碎片必是文案连续段,
+///   识别掉字在 2-3 字窗里罕见,精确判定够用且零误伤——「你好」不是任何招呼语子串);
+/// - 1 字:不对撞(语气单字太泛,交给急停/打断原有链路)。
+/// 返回命中条目的 slot。
+pub fn local_audio_echo_hit<'a>(commit_norm: &str, bank: &'a [(String, String)]) -> Option<&'a str> {
+    let n = commit_norm.chars().count();
+    if n >= 4 {
+        bank.iter()
+            .find(|(_, t)| lcs_char_ratio(commit_norm, t) >= 0.8)
+            .map(|(slot, _)| slot.as_str())
+    } else if n >= 2 {
+        bank.iter()
+            .find(|(_, t)| t.contains(commit_norm))
+            .map(|(slot, _)| slot.as_str())
+    } else {
+        None
+    }
+}
+
 pub fn lcs_char_ratio(needle: &str, hay: &str) -> f32 {
     let a: Vec<char> = needle.chars().collect();
     let b: Vec<char> = hay.chars().collect();
@@ -275,6 +298,31 @@ mod tests {
         // 边界:空串
         assert_eq!(lcs_char_ratio("", "来啦"), 0.0);
         assert_eq!(lcs_char_ratio("来啦", ""), 0.0);
+    }
+
+    /// 分层判定锚(2026-09-01 00:53 实证「来啦」穿门后补):短碎片精确子串层。
+    #[test]
+    fn local_audio_echo_hit_layers() {
+        let bank = vec![
+            ("greeting.normal".to_string(), "来啦来啦刚打了个盹儿".to_string()),
+            ("greeting.presence_return".to_string(), "嘿我在这儿等你呢".to_string()),
+        ];
+        // ≥4 字层:LCS(掉字容错)
+        assert_eq!(local_audio_echo_hit("刚打了个盹儿", &bank), Some("greeting.normal"));
+        assert_eq!(local_audio_echo_hit("我在这等你呢", &bank), Some("greeting.presence_return"));
+        // 2-3 字层:精确连续子串(00:53 实证碎片)
+        assert_eq!(local_audio_echo_hit("来啦", &bank), Some("greeting.normal"));
+        assert_eq!(local_audio_echo_hit("盹儿", &bank), Some("greeting.normal"));
+        // 2-3 字负锚:非子串短句放行(真人短句不误吞)
+        assert_eq!(local_audio_echo_hit("你好", &bank), None);
+        assert_eq!(local_audio_echo_hit("讲故事", &bank), None);
+        // 1 字放行(语气单字)
+        assert_eq!(local_audio_echo_hit("嗯", &bank), None);
+        assert_eq!(local_audio_echo_hit("啦", &bank), None);
+        // ≥4 字负锚:退出词不误吞
+        assert_eq!(local_audio_echo_hit("不想聊了", &bank), None);
+        // 空库(fail-open 拉取失败态)恒放行
+        assert_eq!(local_audio_echo_hit("来啦", &[]), None);
     }
 
     #[test]
