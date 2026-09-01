@@ -804,6 +804,7 @@ adminDataRoute.get('/devices/:sn/persona-probe', (c) => {
       return final.slice(idx, end === -1 ? undefined : end);
     };
     const injection_live = {
+      style_template_line: grabLine('【说话风格·家长设定'), // P0 风格模板（2026-09-01）
       relation_line: grabLine('【和这个孩子的关系·数据】'),
       state_line: grabLine('【小可当下状态·数据】'),
       narrative_line: grabLine('【小可心里的小笔记·数据】'),
