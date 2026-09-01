@@ -140,7 +140,8 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 | 分组 | 实测出站（2026-08-21） |
 |------|------|
 | `api.anthropic.com` | **新美宅-Claude-GPT**（64.186.235.107:7443 → 落地 lisa 154.44.3.170） |
-| `chatgpt.com` / `github.com` / `youtube.com` / `x.com` | DMIT-Gemini-vps-chenchuan |
+| `github.com` 系 27 域 | **balancer `github-us2`**（两个 Gemini专用-US2 leastPing 优选，fallbackTag=DMIT-Gemini；JP-Linode-V1 手动兜底预案）—— 2026-09-01 因 DMIT 流量限速切换，**五台全同步**：Air / Mini / home-studio / linux-lan(sudo 密码在 hs Vaultwarden 条目 `linux-lan`) / **公司 Studio(fu-121 用户 ~/xray，2026-08-13 起有本机 xray，旧记载「Studio 无 xray」作废)** |
+| `chatgpt.com` / `youtube.com` / `x.com` | DMIT-Gemini-vps-chenchuan |
 | `registry.npmjs.org` | 新美宅-Claude-GPT |
 | 大陆域名（`geosite:cn`） | direct |
 | **其他（兜底）** | **DMIT-Gemini-vps-chenchuan** ← 见下方"改默认节点" |
@@ -265,8 +266,9 @@ team 的 gemini lane（omp `google-antigravity/*`）和 antigravity 调用走 **
 - **fail-closed**：xray 不可用或代理请求失败时立即停止，禁止去掉代理参数改成直连重试。
 - Git 命令统一加：`-c http.proxy=socks5h://127.0.0.1:10808 -c http.version=HTTP/1.1`。
 - push 使用本机凭据时，可额外加：`-c credential.helper='!gh auth git-credential'`，但 token 不得出现在命令行或日志。
-- 验收不能只看 Git 返回成功，还必须检查 `~/xray/access.log` 新增的 `github.com:443 [socks -> <节点>]`；当前开发者下载固定节点为 `JP-Linode-V1`。
-- **Studio 例外不是直连**：Studio 无 GitHub 凭据/本机 xray 时，不在 Studio 上连 GitHub；由 Air 经 xray push 后，用 Git bundle/局域网同步 Studio。
+- 验收不能只看 Git 返回成功，还必须检查 `~/xray/access.log` 新增的 `github.com:443 [socks -> <节点>]`；**2026-09-01 起 github 系走 balancer `github-us2`**（正常应见 `Gemini专用-US2-*`，DMIT-Gemini 为自动降级），旧记载「固定 JP-Linode-V1」已过时（JP 降为手动预案）。
+- ⚠️ balancer 依赖 `burstObservatory` 探测（2026-09-01 重建，probeURL=cp.cloudflare.com，10m 间隔）；若 access.log 里 github 长期只走 fallback 的 DMIT-Gemini，先查探测是否全挂（历史坑：探测 URL 不可达→全 fallback）。
+- **Studio 已有本机 xray**（2026-09-01 实测纠正：fu-121 用户 `~/xray/`，launchd `com.xray.proxy`，2026-08-13 部署，mixed 10808，github 同走 `github-us2` balancer）。旧记载「Studio 无本机 xray、走 Git bundle 同步」作废；GitHub 凭据是否在 Studio 配置仍需按当时实况验证。
 
 标准探测：
 
@@ -299,6 +301,10 @@ rule[5] 是「开发者下载」大组（github + githubusercontent + codeload +
 4. **Chrome 有代理扩展吗？** → 用 Safari 对比验证
 5. **v2rayN 残留进程？** → 多个 xray 抢端口会异常
 6. **终端环境变量？** → `echo $ALL_PROXY` 应为 `socks5://127.0.0.1:10808`
+
+### 节点连得上但整体慢 → 先问「流量配额限速」再谈线路劣化（2026-09-01）
+
+同节点全站慢（TLS 1s+/吞吐被压/入口 RTT 高抖）时，**配额限速与线路劣化症状完全同形**，链路层测不出区别；真值在服务商面板的流量余额，cc 够不到 → **直接问川哥该节点流量是否用完**，别急着给「切节点/等自愈」建议（限速不会自愈，等的是账期重置或补流量）。实例：DMIT 流量用尽限速，github 组 total 3.3s/吞吐 1.6MB/s，全套观测像极了「早高峰拥塞」。
 
 ### 节点连得上但目标站 403/连不上 → 查出口IP信誉（非配置问题）
 
