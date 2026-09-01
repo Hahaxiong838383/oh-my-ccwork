@@ -2121,6 +2121,7 @@
                             <el-button size="small" :type="brainState.subTab==='memory' ? 'primary' : ''" @click="brainState.subTab='memory'">🧠 小可的记忆</el-button>
                             <el-button size="small" :type="brainState.subTab==='chat' ? 'primary' : ''" @click="brainState.subTab='chat'">💬 聊天记录</el-button>
                             <el-button size="small" :type="brainState.subTab==='isolation' ? 'primary' : ''" @click="brainState.subTab='isolation'; loadIsolation(brainState.selectedSn)">🔒 租户隔离</el-button>
+                            <el-button size="small" :type="brainState.subTab==='growth' ? 'primary' : ''" @click="brainState.subTab='growth'; loadGrowth(brainState.selectedSn)">🌱 人格成长</el-button>
                           </div>
 
                           <!-- ═══ 编辑 tab ═══ -->
@@ -2503,6 +2504,110 @@
                                     </tr>
                                   </tbody>
                                 </table>
+                              </div>
+                            </template>
+                          </template>
+
+                          <!-- ═══ 人格成长 tab（2026-09-01 重建：8-26 原版直改生产 dist 未回流仓、被后续 build 覆盖丢失；本次按 server API 功能等价重建并入仓）═══ -->
+                          <template v-if="brainState.subTab==='growth'">
+                            <div v-if="growth.loading" style="padding:40px;text-align:center;color:#909399;font-size:13px">正在拉取人格成长实况…</div>
+                            <div v-if="!growth.loading && growth.error" style="padding:20px;color:#C0392B;font-size:13px">{{ growth.error }}</div>
+                            <template v-if="!growth.loading && growth.probe">
+                              <!-- 卡1 开关 + 关系状态 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                  <span style="font-weight:700">🌱 人格成长实况</span>
+                                  <div style="display:flex;gap:8px;align-items:center">
+                                    <span style="font-size:11px;color:#B0B8C1">probe {{ growth.probe.probe_ms }}ms</span>
+                                    <el-button size="small" @click="loadGrowth(brainState.selectedSn)">🔄 刷新</el-button>
+                                  </div>
+                                </div>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;margin-bottom:10px">
+                                  <span v-for="(v,k) in growthSwitches()" :key="k" :style="{color: v ? '#2E7D4F' : '#B0B8C1'}">{{ v ? '●' : '○' }} {{ k }}</span>
+                                  <span style="color:#909399">allowlist: {{ growth.probe.switches.allowlist_raw }}</span>
+                                </div>
+                                <template v-if="growth.probe.relation_state">
+                                  <div style="display:flex;gap:18px;flex-wrap:wrap;font-size:13px">
+                                    <span>相识 <b>{{ growth.probe.injection_view ? growth.probe.injection_view.daysKnown : '—' }}</b> 天</span>
+                                    <span>关系档 <b>{{ growth.probe.injection_view ? growth.probe.injection_view.tier : '—' }}</b></span>
+                                    <span>会话数 <b>{{ growth.probe.relation_state.session_count }}</b></span>
+                                    <span>情绪 EMA <b>{{ Number(growth.probe.relation_state.valence_ema).toFixed(2) }}</b>（样本 {{ growth.probe.relation_state.valence_sample_count }}）</span>
+                                    <span>投入 EMA <b>{{ Number(growth.probe.relation_state.engagement_ema).toFixed(2) }}</b>（样本 {{ growth.probe.relation_state.engagement_sample_count }}）</span>
+                                    <span>约定兑现 <b>{{ growth.probe.relation_state.promise_resolved }}/{{ growth.probe.relation_state.promise_total }}</b></span>
+                                    <span style="color:#909399">最近见 {{ hwFmtTime(growth.probe.relation_state.last_seen_at) }}</span>
+                                  </div>
+                                </template>
+                                <div v-if="!growth.probe.relation_state" style="font-size:13px;color:#909399">暂无关系状态（未开始积累或已重置）</div>
+                              </div>
+                              <!-- 卡2 特质五维 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="font-weight:700;margin-bottom:10px">🎭 相处倾向（特质向量 · 基线±0.35）</div>
+                                <div v-for="dim in growth.probe.trait.dims" :key="dim" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;font-size:12px">
+                                  <span style="width:110px;color:#6B7785">{{ growth.probe.trait.labels[dim] || dim }}</span>
+                                  <div style="flex:1;max-width:280px;height:8px;background:#F0F2F5;border-radius:4px;position:relative">
+                                    <div :style="{position:'absolute',left:0,top:0,height:'8px',borderRadius:'4px',background:'#67C23A',width:(traitVal(dim)*100)+'%'}"></div>
+                                    <div :style="{position:'absolute',top:'-2px',width:'2px',height:'12px',background:'#909399',left:(growth.probe.trait.baseline[dim]*100)+'%'}"></div>
+                                  </div>
+                                  <span style="width:90px;font-family:monospace">{{ traitVal(dim).toFixed(2) }} <span style="color:#B0B8C1">/基线 {{ growth.probe.trait.baseline[dim] }}</span></span>
+                                </div>
+                              </div>
+                              <!-- 卡3 画像 / 叙事 / 风格池 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="font-weight:700;margin-bottom:8px">🔍 观察画像 &amp; 心里小笔记</div>
+                                <div v-if="growth.probe.insight" style="font-size:12.5px;color:#4A5460;margin-bottom:8px;white-space:pre-wrap">{{ growthInsightText() }}</div>
+                                <div v-if="!growth.probe.insight" style="font-size:12px;color:#909399;margin-bottom:8px">暂无画像（M3 未跑或已重置）</div>
+                                <div style="font-size:12.5px;color:#4A5460;padding:8px 10px;background:#F7F8FA;border-radius:6px;margin-bottom:10px">📓 {{ growth.probe.narrative || '（暂无叙事）' }}</div>
+                                <div style="font-size:12px;color:#6B7785;margin-bottom:4px">风格池 {{ growth.probe.style_pool.count }} 条，有效质量 top：</div>
+                                <div v-for="(st,i) in growth.probe.style_pool.top" :key="i" style="font-size:12px;color:#6B7785;padding:2px 0">· 孩子「{{ st.child_said }}」→ 小可「{{ st.xiaoke_did }}」<span style="color:#B0B8C1">(mass {{ st.mass_eff }})</span></div>
+                              </div>
+                              <!-- 卡4 注入实况 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="font-weight:700;margin-bottom:8px">💉 注入实况（真实 prompt 链现场抓取）</div>
+                                <div v-for="(line,key) in growth.probe.injection_live" :key="key" style="font-size:12px;padding:2px 0">
+                                  <span :style="{color: line ? '#2E7D4F' : '#C0392B'}">{{ line ? '●' : '○' }}</span>
+                                  <span style="color:#909399;margin:0 6px">{{ key }}</span>
+                                  <span style="color:#4A5460">{{ line || '未注入' }}</span>
+                                </div>
+                              </div>
+                              <!-- 卡5 本地音频（只读） -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="font-weight:700;margin-bottom:8px">🔊 本地人格音频（详情在 persona-local-audio 线）</div>
+                                <div style="font-size:12.5px;display:flex;gap:16px;flex-wrap:wrap">
+                                  <span>revision <b>{{ growth.probe.local_audio.revision }}</b></span>
+                                  <span>设备已应用 <b>{{ growth.probe.local_audio.last_applied_revision }}</b><span style="color:#909399">（{{ hwFmtTime(growth.probe.local_audio.last_applied_at) }}）</span></span>
+                                  <span>slot 数 <b>{{ Object.keys(growth.probe.local_audio.slots).length }}</b></span>
+                                  <span>成长账本 <b>{{ growth.probe.ledger_count }}</b> 条</span>
+                                </div>
+                              </div>
+                              <!-- 卡6 成长时间线 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                                  <span style="font-weight:700">📜 成长时间线（{{ growth.eventsTotal }} 条）</span>
+                                  <div style="display:flex;gap:6px;align-items:center">
+                                    <el-select v-model="growth.evModule" size="small" style="width:130px" clearable placeholder="全部模块" @change="loadGrowthEvents(brainState.selectedSn)">
+                                      <el-option v-for="m in ['relation','style','trait','insight','narrative','concern','local_audio','profile','filler']" :key="m" :label="m" :value="m"></el-option>
+                                    </el-select>
+                                    <el-button size="small" @click="loadGrowthEvents(brainState.selectedSn)">🔄</el-button>
+                                  </div>
+                                </div>
+                                <div v-if="!growth.events.length" style="font-size:12px;color:#909399;padding:8px 0">暂无事件</div>
+                                <div v-for="ev in growth.events" :key="ev.id" style="font-size:12px;padding:5px 0;border-bottom:1px solid #F0F2F5">
+                                  <span style="color:#B0B8C1">{{ hwFmtTime(ev.ts) }}</span>
+                                  <span style="color:#3A6EA5;margin:0 6px">[{{ ev.module }}·{{ ev.dimension }}]</span>
+                                  <span v-if="ev.from_val !== null && ev.from_val !== undefined" style="font-family:monospace">{{ ev.from_val }} → {{ ev.to_val }}</span>
+                                  <span v-if="ev.trigger_quote" style="color:#6B7785">「{{ ev.trigger_quote }}」</span>
+                                  <span style="color:#B0B8C1;margin-left:6px">{{ ev.rule }}</span>
+                                </div>
+                              </div>
+                              <!-- 卡7 操作区 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="font-weight:700;margin-bottom:10px">🛠 操作</div>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                                  <el-button size="small" :loading="growth.running" @click="runInsightNow(brainState.selectedSn)">🧪 立即跑画像+叙事（M3/M6）</el-button>
+                                  <el-button size="small" type="warning" :loading="growth.resetting" @click="resetPersona(brainState.selectedSn, 'persona')">♻️ 重置人格状态（保留本地音频）</el-button>
+                                  <el-button size="small" type="danger" :loading="growth.resetting" @click="resetPersona(brainState.selectedSn, 'all')">🗑 全清（含本地音频 revision 归零）</el-button>
+                                </div>
+                                <div style="font-size:11px;color:#909399;margin-top:8px">安全档清 relation/style/insight/trait/ledger 五样；全清额外把本地音频条目+文件+revision 归零（已发布 revision 是与 Android 的冻结物，日常勿用全清）。</div>
                               </div>
                             </template>
                           </template>
@@ -4342,6 +4447,70 @@
         }
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
+        // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
+        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false });
+        function traitVal(dim) {
+          var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
+          if (cur && typeof cur[dim] === 'number') return cur[dim];
+          return (growth.probe && growth.probe.trait.baseline[dim]) || 0;
+        }
+        function growthSwitches() {
+          var sw = (growth.probe && growth.probe.switches) || {};
+          var out = {};
+          Object.keys(sw).forEach(function (k) { if (k !== 'allowlist_raw') out[k] = sw[k]; });
+          return out;
+        }
+        function growthInsightText() {
+          var ins = growth.probe && growth.probe.insight;
+          if (!ins) return '';
+          if (typeof ins === 'string') return ins;
+          return Object.keys(ins).map(function (k) { return k + '：' + (typeof ins[k] === 'string' ? ins[k] : JSON.stringify(ins[k])); }).join('\n');
+        }
+        function loadGrowth(sn) {
+          if (!sn) return;
+          growth.loading = true; growth.error = '';
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/persona-probe')
+            .then(function (data) {
+              if (data && data.ok) { growth.probe = data; loadGrowthEvents(sn); }
+              else { growth.error = (data && data.error) || 'probe 失败'; growth.probe = null; }
+            })
+            .catch(function () { growth.error = '无法连接设备服务'; })
+            .finally(function () { growth.loading = false; });
+        }
+        function loadGrowthEvents(sn) {
+          if (!sn) return;
+          var q = '?limit=50' + (growth.evModule ? '&module=' + encodeURIComponent(growth.evModule) : '');
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/growth-events' + q)
+            .then(function (data) { if (data && data.ok) { growth.events = data.events || []; growth.eventsTotal = data.total || 0; } })
+            .catch(function () {});
+        }
+        function runInsightNow(sn) {
+          growth.running = true;
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/persona-insight-run', { method: 'POST' })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('画像+叙事已更新'); loadGrowth(sn); }
+              else ElementPlus.ElMessage.warning((data && data.error) || 'insight-run 失败');
+            })
+            .catch(function () { ElementPlus.ElMessage.error('无法连接设备服务'); })
+            .finally(function () { growth.running = false; });
+        }
+        function resetPersona(sn, scope) {
+          var msg = scope === 'persona'
+            ? '将清空该设备的 relation/style/insight/trait/ledger 五样人格状态，本地音频与 revision 保留。确认重置？'
+            : '⚠️ 全清：五样人格状态 + 本地音频条目/文件/revision 全部归零（已发布 revision 是与 Android 的冻结物，设备将回退内置音）。确认全清？';
+          ElementPlus.ElMessageBox.confirm(msg, scope === 'persona' ? '重置人格状态' : '全清（高危）', { type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消' })
+            .then(function () {
+              growth.resetting = true;
+              deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/relation-state?scope=' + scope, { method: 'DELETE' })
+                .then(function (data) {
+                  if (data && data.ok) { ElementPlus.ElMessage.success('已重置（scope=' + data.scope + '，本地音频' + (data.local_audio_cleared ? '已清' : '保留') + '）'); loadGrowth(sn); }
+                  else ElementPlus.ElMessage.warning((data && data.error) || '重置失败');
+                })
+                .catch(function () { ElementPlus.ElMessage.error('无法连接设备服务'); })
+                .finally(function () { growth.resetting = false; });
+            })
+            .catch(function () {});
+        }
         // 孩子档案草稿（2026-08-19）：昵称/生日/性别——记忆抽取与 onboarding 的地基；dirty 时刷新不覆盖（与 brainCfg 同策略）
         var brainProfileDraft = reactive({ nickname: '', birthday: '', gender: '', dirty: false });
         var parentBind = reactive({ input: '' });
@@ -6055,6 +6224,7 @@
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
           snInRegistry: snInRegistry, loadDevices: loadDevices, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
+          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,

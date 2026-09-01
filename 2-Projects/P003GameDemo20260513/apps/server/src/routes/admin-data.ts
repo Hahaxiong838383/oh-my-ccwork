@@ -951,16 +951,23 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
     const device = deviceRegistryStore.get(sn);
     if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
     if (!device.account_id) return c.json({ ok: false, error: '设备未开通 brain（无设备账号）' }, 400);
+    // scope=persona（2026-09-01）：只清五样人格状态，不动本地音频——已发布 revision 是与
+    // Android 的合同冻结物（0010 G1 rev5 不可变），「重置人格记账」场景清音频=过度执行。
+    // 默认(all)保留原六样语义（换孩子/儿童数据删除权场景仍需全清）。
+    const scope = c.req.query('scope')?.trim() || 'all';
     const cleared = relationStateStore.clear(device.account_id);
     const styleCleared = stylePoolStore.clear(device.account_id);
     const insightCleared = childInsightStore.clear(device.account_id);
     const traitCleared = traitStore.clear(device.account_id);
     const ledgerCleared = growthLedgerStore.clear(device.account_id);
-    localAudioStore.clearAccount(device.account_id); // 第六样：本地音频条目+文件+revision 归零
+    const localAudioCleared = scope !== 'persona';
+    if (localAudioCleared) {
+      localAudioStore.clearAccount(device.account_id); // 第六样：本地音频条目+文件+revision 归零
+    }
     console.log(
-      `[persona] admin 重置 sn=${sn} account=${device.account_id} relation=${cleared} style=${styleCleared} insight=${insightCleared} trait=${traitCleared} ledger=${ledgerCleared} local_audio=cleared`,
+      `[persona] admin 重置 sn=${sn} account=${device.account_id} scope=${scope} relation=${cleared} style=${styleCleared} insight=${insightCleared} trait=${traitCleared} ledger=${ledgerCleared} local_audio=${localAudioCleared ? 'cleared' : 'kept'}`,
     );
-    return c.json({ ok: true, cleared, style_cleared: styleCleared, insight_cleared: insightCleared, trait_cleared: traitCleared, ledger_cleared: ledgerCleared, local_audio_cleared: true });
+    return c.json({ ok: true, scope, cleared, style_cleared: styleCleared, insight_cleared: insightCleared, trait_cleared: traitCleared, ledger_cleared: ledgerCleared, local_audio_cleared: localAudioCleared });
   } catch (error) {
     return c.json({ ok: false, error: '重置失败，请稍后重试' }, 500);
   }
