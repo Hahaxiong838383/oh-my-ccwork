@@ -2539,6 +2539,21 @@
                                 </template>
                                 <div v-if="!growth.probe.relation_state" style="font-size:13px;color:#909399">暂无关系状态（未开始积累或已重置）</div>
                               </div>
+                              <!-- 卡1.5 说话风格模板（P0 2026-09-01）：选档=特质值立即置为模板五维，成长在模板附近继续 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                                  <span style="font-weight:700">🗣 说话风格（家长设定档）</span>
+                                  <el-button size="small" type="primary" :loading="growth.styleSaving" :disabled="growth.stylePicked === growth.styleTemplate" @click="saveStyleTemplate(brainState.selectedSn)">保存并生效</el-button>
+                                </div>
+                                <el-radio-group v-model="growth.stylePicked" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+                                  <el-radio v-for="t in growth.styleAvailable" :key="t.key" :value="t.key" style="height:auto;margin-right:0">
+                                    <span style="font-weight:600">{{ t.name }}</span>
+                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效</span>
+                                    <div style="font-size:12px;color:#909399;line-height:1.5">{{ t.desc }}</div>
+                                  </el-radio>
+                                </el-radio-group>
+                                <div style="font-size:11px;color:#B0B8C1;margin-top:8px">切档后特质五维立即置为模板值并记入成长账本；人格成长继续在模板附近漂移（每日向模板回落）。温柔度地板 0.5 恒成立。</div>
+                              </div>
                               <!-- 卡2 特质五维 -->
                               <div class="kh-card" style="padding:14px 16px;margin-bottom:12px">
                                 <div style="font-weight:700;margin-bottom:10px">🎭 相处倾向（特质向量 · 基线±0.35）</div>
@@ -4448,7 +4463,7 @@
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false });
+        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -4476,6 +4491,27 @@
             })
             .catch(function () { growth.error = '无法连接设备服务'; })
             .finally(function () { growth.loading = false; });
+          loadStyleTemplate(sn);
+        }
+        // 说话风格模板（P0 2026-09-01）：家长/运营选风格档——特质值立即置为模板五维，成长在模板附近继续。
+        function loadStyleTemplate(sn) {
+          if (!sn) return;
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template')
+            .then(function (data) {
+              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; }
+            })
+            .catch(function () {});
+        }
+        function saveStyleTemplate(sn) {
+          if (!sn || growth.stylePicked === growth.styleTemplate) return;
+          growth.styleSaving = true;
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template', { method: 'PUT', body: JSON.stringify({ template: growth.stylePicked }) })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('风格已切换为「' + (growth.styleAvailable.filter(function (t) { return t.key === data.template; })[0] || {}).name + '」，语音下一轮生效'); loadGrowth(sn); }
+              else ElementPlus.ElMessage.warning((data && data.error) || '设置失败');
+            })
+            .catch(function () { ElementPlus.ElMessage.error('无法连接设备服务'); })
+            .finally(function () { growth.styleSaving = false; });
         }
         function loadGrowthEvents(sn) {
           if (!sn) return;
@@ -6224,7 +6260,7 @@
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
           snInRegistry: snInRegistry, loadDevices: loadDevices, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
-          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText,
+          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,

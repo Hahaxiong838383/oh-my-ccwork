@@ -34,6 +34,7 @@ import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
 import { runInsightForAccount, runNarrativeForAccount } from '../insight-runner.js';
 import { traitStore, TRAIT_BASELINE, TRAIT_LABELS, TRAIT_DIMS } from '../trait-store.js';
+import { listStyleTemplates, getStyleTemplate, type StyleTemplateKey } from '../style-template.js';
 import { growthLedgerStore } from '../growth-ledger-store.js';
 import { resolveExtractLlm, callExtractionLlm } from '../llm-extract.js';
 
@@ -964,12 +965,51 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
     if (localAudioCleared) {
       localAudioStore.clearAccount(device.account_id); // 第六样：本地音频条目+文件+revision 归零
     }
+    // 风格模板（P0 2026-09-01）：all=换孩子场景连家长设定一起清；persona=只清成长记账，
+    // 家长显式选的风格保留（家长设置≠成长数据）。
+    if (scope !== 'persona') traitStore.clearTemplate(device.account_id);
     console.log(
       `[persona] admin 重置 sn=${sn} account=${device.account_id} scope=${scope} relation=${cleared} style=${styleCleared} insight=${insightCleared} trait=${traitCleared} ledger=${ledgerCleared} local_audio=${localAudioCleared ? 'cleared' : 'kept'}`,
     );
     return c.json({ ok: true, scope, cleared, style_cleared: styleCleared, insight_cleared: insightCleared, trait_cleared: traitCleared, ledger_cleared: ledgerCleared, local_audio_cleared: localAudioCleared });
   } catch (error) {
     return c.json({ ok: false, error: '重置失败，请稍后重试' }, 500);
+  }
+});
+
+// ── 说话风格模板（P0 2026-09-01 风格系统方案 §四）──
+// 家长/运营为设备选风格档：写 trait_template + 特质值立即置为模板五维（记账 parent_style_template），
+// 弹簧回拉与漂移界随之锚定模板——成长继续在模板附近工作。default=恢复出厂。
+
+adminDataRoute.get('/devices/:sn/style-template', (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    if (!device.account_id) return c.json({ ok: false, error: '设备未开通 brain（无设备账号）' }, 400);
+    const current = traitStore.getTemplate(device.account_id);
+    return c.json({ ok: true, template: current ?? 'default', available: listStyleTemplates() });
+  } catch (error) {
+    return c.json({ ok: false, error: '读取风格模板失败' }, 500);
+  }
+});
+
+adminDataRoute.put('/devices/:sn/style-template', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim();
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+    if (!device.account_id) return c.json({ ok: false, error: '设备未开通 brain（无设备账号）' }, 400);
+    const body = (await c.req.json().catch(() => ({}))) as { template?: string };
+    const key = String(body.template ?? '').trim();
+    if (key !== 'default' && !getStyleTemplate(key)) {
+      return c.json({ ok: false, error: `未知风格模板: ${key || '(空)'}` }, 400);
+    }
+    const result = traitStore.setTemplate(device.account_id, key as StyleTemplateKey | 'default');
+    console.log(`[persona] style-template set sn=${sn} account=${device.account_id} template=${result.template ?? 'default'}`);
+    return c.json({ ok: true, template: result.template ?? 'default', trait: traitStore.get(device.account_id) });
+  } catch (error) {
+    return c.json({ ok: false, error: `设置风格模板失败: ${String((error as Error)?.message ?? error)}` }, 500);
   }
 });
 

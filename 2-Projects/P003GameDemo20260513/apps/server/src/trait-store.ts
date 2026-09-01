@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { growthLedgerStore, type GrowthTheory } from './growth-ledger-store.js';
+import { getStyleTemplate, type StyleTemplateKey } from './style-template.js';
 
 // 小可特质向量（因果链方案 V1.1 §3.2）：真正会「长」的人格层。per-child 五维显式特质，
 // 人设默认值=先天基线（荣格律），变化=慢 δ（|δ|≤0.02）+ 每日弹簧拉回（set-point 律，人设漂移防线）。
@@ -39,8 +40,9 @@ function resolveDbPath(): string {
   return resolve(process.cwd(), raw);
 }
 
-export function clampTrait(dim: TraitDim, value: number): number {
-  const base = TRAIT_BASELINE[dim];
+export function clampTrait(dim: TraitDim, value: number, baseOverride?: number): number {
+  // baseOverride：家长风格模板设定的 per-account 基线（P0 风格系统）；缺省=出厂基线，纯函数向后兼容。
+  const base = baseOverride ?? TRAIT_BASELINE[dim];
   let v = Math.max(base - MAX_DEVIATION, Math.min(base + MAX_DEVIATION, value));
   v = Math.max(0, Math.min(1, v));
   if (dim === 'gentleness') v = Math.max(GENTLENESS_FLOOR, v);
@@ -155,6 +157,69 @@ class TraitStore {
         last_decay_day TEXT NOT NULL DEFAULT ''
       );
     `);
+    // P0 风格模板（2026-09-01）：家长为设备选定的说话风格档。只存 key——五维/文案在
+    // style-template.ts 随代码迭代；有行=该账号基线被模板覆盖（弹簧回拉/漂移界锚点随之切换）。
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS trait_template (
+        account_id TEXT PRIMARY KEY,
+        template   TEXT NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+    `);
+  }
+
+  /** 当前生效模板 key（无设置=null=出厂默认）。 */
+  getTemplate(accountId: string): string | null {
+    const row = this.db.prepare(`SELECT template FROM trait_template WHERE account_id = ?`).get(accountId) as
+      | { template: string }
+      | undefined;
+    // 库里 key 对不上代码模板（模板下线/改名）→ 视为默认，fail-open
+    return row && getStyleTemplate(row.template) ? row.template : null;
+  }
+
+  /** 该账号的有效基线：模板五维 ?? 出厂 TRAIT_BASELINE。回拉与漂移界都锚定它。 */
+  baselineFor(accountId: string): Record<TraitDim, number> {
+    const tpl = getStyleTemplate(this.getTemplate(accountId));
+    return tpl ? tpl.dims : TRAIT_BASELINE;
+  }
+
+  /**
+   * 家长选定风格模板：写模板行 + 当前特质值直接置为模板五维（立即可感知，不等 EMA 慢漂）+ 记账。
+   * key='default' / clearTemplate = 恢复出厂：删模板行 + 特质值回出厂基线。
+   */
+  setTemplate(accountId: string, key: StyleTemplateKey | 'default'): { template: string | null } {
+    const prev = this.getTemplate(accountId);
+    if (key === 'default') {
+      this.db.prepare(`DELETE FROM trait_template WHERE account_id = ?`).run(accountId);
+      this.resetDimsTo(accountId, TRAIT_BASELINE, prev ? `家长把风格从「${prev}」恢复为默认` : '家长选择默认风格');
+      return { template: null };
+    }
+    const tpl = getStyleTemplate(key);
+    if (!tpl) throw new Error(`未知风格模板: ${key}`);
+    this.db
+      .prepare(
+        `INSERT INTO trait_template (account_id, template, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(account_id) DO UPDATE SET template = excluded.template, updated_at = excluded.updated_at`,
+      )
+      .run(accountId, key, Date.now());
+    this.resetDimsTo(accountId, tpl.dims, `家长把说话风格设为「${tpl.name}」`);
+    return { template: key };
+  }
+
+  /** 特质值整组置位（模板切换用）：逐维记账（from→to），温柔地板仍强制。 */
+  private resetDimsTo(accountId: string, target: Record<TraitDim, number>, note: string): void {
+    this.ensureRow(accountId);
+    const cur = this.get(accountId);
+    for (const dim of TRAIT_DIMS) {
+      const from = cur[dim];
+      const to = clampTrait(dim, target[dim], target[dim]);
+      if (Math.abs(to - from) < 1e-9) continue;
+      this.db.prepare(`UPDATE trait_state SET ${dim} = ?, updated_at = ? WHERE account_id = ?`).run(to, Date.now(), accountId);
+      growthLedgerStore.record(accountId, {
+        module: 'trait', dimension: TRAIT_LABELS[dim], from, to,
+        rule: 'parent_style_template', theory: 'setpoint', note,
+      });
+    }
   }
 
   /** 读特质（无行=返回基线，不建行——特质行由第一次 adjust 创建）。 */
@@ -180,11 +245,12 @@ class TraitStore {
     if (!deltas.length) return 0;
     this.ensureRow(accountId);
     const cur = this.get(accountId);
+    const base = this.baselineFor(accountId); // 漂移界锚定家长模板基线（无模板=出厂）
     let applied = 0;
     for (const d of deltas) {
       const delta = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, d.delta));
       const from = cur[d.dim];
-      const to = clampTrait(d.dim, from + delta);
+      const to = clampTrait(d.dim, from + delta, base[d.dim]);
       if (Math.abs(to - from) < 1e-9) continue; // 到界/地板，无实际移动不记
       this.db
         .prepare(`UPDATE trait_state SET ${d.dim} = ?, updated_at = ? WHERE account_id = ?`)
@@ -206,13 +272,14 @@ class TraitStore {
       | TraitState
       | undefined;
     if (!row || row.last_decay_day === today) return 0;
+    const baselines = this.baselineFor(accountId); // 回拉目标=家长模板基线（无模板=出厂）
     let moved = 0;
     for (const dim of TRAIT_DIMS) {
       const from = row[dim];
-      const base = TRAIT_BASELINE[dim];
+      const base = baselines[dim];
       if (Math.abs(from - base) < 1e-9) continue;
       const step = Math.sign(base - from) * Math.min(DAILY_DECAY, Math.abs(base - from));
-      const to = clampTrait(dim, from + step);
+      const to = clampTrait(dim, from + step, base);
       if (Math.abs(to - from) < 1e-9) continue;
       this.db.prepare(`UPDATE trait_state SET ${dim} = ?, updated_at = ? WHERE account_id = ?`).run(to, Date.now(), accountId);
       moved += 1;
@@ -228,6 +295,11 @@ class TraitStore {
 
   clear(accountId: string): boolean {
     return Number(this.db.prepare(`DELETE FROM trait_state WHERE account_id = ?`).run(accountId).changes) > 0;
+  }
+
+  /** 仅删模板行（admin 重置 scope=all「换孩子」场景；不记账——账本同轮已整体清空）。 */
+  clearTemplate(accountId: string): boolean {
+    return Number(this.db.prepare(`DELETE FROM trait_template WHERE account_id = ?`).run(accountId).changes) > 0;
   }
 }
 

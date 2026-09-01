@@ -5,6 +5,7 @@ import {
   personaNarrativeEnabled, personaTraitEnabled, energyOfHour, shanghaiHour,
 } from './relation-state-store.js';
 import { traitStore, TRAIT_BASELINE } from './trait-store.js';
+import { getStyleTemplate } from './style-template.js';
 import { stylePoolStore } from './style-pool-store.js';
 import { childInsightStore } from './child-insight-store.js';
 import type { AuthContext } from './auth-jwt.js';
@@ -151,11 +152,15 @@ function buildChildMemoryBlock(
   let insightHint: string | null = null; //                       M3 行为画像观察
   let narrative: string | null = null; //                         M6 自我叙事
   let traitLine: string | null = null; //                         特质向量（因果链 V1.1）
+  let styleTemplateRule: string | null = null; //                 P0 风格模板（家长设定，不吃成长 allowlist 门）
   if (auth?.accountId) {
     const acct = auth.accountId;
     const t0 = Date.now();
     const now = Date.now();
     try {
+      // 家长风格模板（2026-09-01 P0）：显式设置=直接生效，独立于 persona 各开关；
+      // 规则文本是代码内常量（style-template.ts），进 policy 指令区。fail-open 同外层。
+      styleTemplateRule = getStyleTemplate(traitStore.getTemplate(acct))?.styleRule ?? null;
       if (personaInjectEnabled(acct)) {
         const view = relationStateStore.getInjectionView(acct, now);
         if (view) {
@@ -206,14 +211,14 @@ function buildChildMemoryBlock(
           `温柔: ${tr.gentleness.toFixed(2)} 悬念引导: ${tr.curiosity_feed.toFixed(2)}`;
       }
       console.log(
-        `[persona] inject read=${Date.now() - t0}ms rel=${persona ? 1 : 0} style=${styleShot ? 1 : 0} insight=${insightHint ? 1 : 0} narrative=${narrative ? 1 : 0} trait=${traitLine ? 1 : 0}`,
+        `[persona] inject read=${Date.now() - t0}ms rel=${persona ? 1 : 0} style=${styleShot ? 1 : 0} insight=${insightHint ? 1 : 0} narrative=${narrative ? 1 : 0} trait=${traitLine ? 1 : 0} tpl=${styleTemplateRule ? 1 : 0}`,
       );
     } catch (err) {
       console.log('[persona] inject 读取失败(fail-open 无注入):', String((err as Error)?.message ?? err));
     }
   }
 
-  if (parts.length === 0 && !episodic && !persona && !styleShot && !narrative && !traitLine) return null;
+  if (parts.length === 0 && !episodic && !persona && !styleShot && !narrative && !traitLine && !styleTemplateRule) return null;
 
   // 结构:画像行 + 情景数据段(data,带引号非祈使) + 记忆使用规则(policy,固定文本紧随其后——
   // 近因压制 data 里可能的自然语言注入;评审 X4:instruction 与可污染 content 物理分离)。
@@ -259,6 +264,8 @@ function buildChildMemoryBlock(
       : '') +
     (styleShot ? '过去有效的方式只作参考,结合当下自然发挥,绝不照搬原话。' : '') +
     (traitLine ? '相处倾向只影响表达方式的自然选择(多讲点还是简洁点/要不要用故事),不复述数值,不刻意表演。' : '') +
+    // P0 风格模板：家长显式设定，优先级高于相处倾向的自然选择；固定常量文本（无用户输入）。
+    (styleTemplateRule ? styleTemplateRule + '风格是表达习惯不是台本:自然体现,不复述这段设定,安全与事实准确永远优先。' : '') +
     (narrative ? '心里的小笔记是你的内心背景,自然流露,不逐条复述。' : '') +
     (episodic && episodic.hasConcerns
       ? '值得关心的事:仅当时机相关(时间就是今天/已过去,或孩子主动提起)才像朋友一样自然问起,不查岗式追问,同一件事问过就好。'
