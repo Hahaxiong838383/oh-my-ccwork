@@ -172,8 +172,12 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   M3 画像+M6 叙事立即出结果,不等每日沪时 3 点批);时间线 `GET .../growth-events?module=&dimension=&limit=`。
 - **日志锚**:`pm2 logs p003-voice | grep -E "\[persona\]|\[trait\]|\[style\]|\[insight\]|\[narrative\]|\[ledger\]"`;
   [persona] recordTurn 的 applied/stale(乱序拒)/注入位图,[persona-daily] 定时批。
-- **重置**:`DELETE .../relation-state` 清五样(relation/style/insight/trait/ledger);换绑不同家长自动全清;
-  admin「🌱 人格成长」tab 有确认框按钮。
+- **重置(9-1 起两档,执行前必读端点当前实现——行为清单会膨胀,曾从五样静默长到六样差点清掉 G1 rev5 合同冻结物)**:
+  `DELETE .../relation-state?scope=persona`=安全档五清一留(relation/style/insight/trait/ledger,**本地音频与 revision 保留**);
+  默认(无 scope)=全清六样(+local_audio 条目/文件/revision 归零,设备回内置音)——仅换孩子/儿童数据删除权用。
+  admin「🌱 人格成长」tab 两档按钮各带确认框。换绑不同家长自动清五样(不动音频)。
+- **admin 人格成长 tab 已重建入仓(9-1,commit 7668e887)**:8-26 原版直改生产 dist 未回流,被后续 web build 覆盖**永久丢失**
+  (git+备份全零命中)——**admin 直改生产=孤本引信,一切改动必须过仓再 git show 部署**;重建版七区块(概览/特质/画像叙事/注入实况/音频只读/时间线/操作)。
 - **回填**:`scripts/backfill-relation-state.ts --account <id> [--apply]`(dry-run 默认;
   **直查 conversation.db SQL**——conversationStore.list 内部 clamp 1000 条,老账号 first_seen 会算晚)。
 - **admin 单文件(in-DOM Vue)改动流程**:dist/admin/index.html 无构建直接改;验证=①标签配平 python 检查
@@ -214,6 +218,7 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
   证据采集脚本 `scripts/w4-evidence.mjs`(公网全链+五字段断言+file 抽检)。
 - 单测 `npm run test:local-audio`(127,含姿态组+G1 组);E2E `scripts/local-audio-e2e.mjs off|on` + `scripts/la-admin-e2e.py <SN>`
   (**admin 登录要 username+password 双字段**,只发 password 恒 401);WAV 链离线实证 `scripts/wav-offline-proof.ts`。
+  ⚠️ 服务器内联 node -e 多层转义会弄坏剥引号正则(STUDIO_PASS 带引号→login 假败报 unauthorized,误导向鉴权排查)——复杂脚本落文件 scp 跑,别 heredoc 内联双层转义。
   ⚠️ 探针必须落 .ts 文件用 tsx 跑——`tsx -e` 走 CJS 不支持顶层 await。**第二形态(2026-08-31):.ts 落在 /root 等 package.json 作用域外,tsx 照样按 CJS 转(顶层 await 同错)——文件必须落 /opt/p003/server/scripts/ 内**(吃到 type:module),用完删。
 - **🔴 探针纪律(D2 起铁律)**:任何 cc 侧探针/curl **禁止带 `applied_revision` 参数**——`last_applied_*`
   是「Android 真机原子应用」的**独占证据位**,己方写入(含写 0)即污染 A3/J2 触达锚(D1 犯过,codex 抓的,已清零)。
