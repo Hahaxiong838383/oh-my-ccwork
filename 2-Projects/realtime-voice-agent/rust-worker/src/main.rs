@@ -5,6 +5,7 @@
 
 mod config;
 mod contract;
+mod candidate;
 mod control;
 mod device_intent;
 mod eot;

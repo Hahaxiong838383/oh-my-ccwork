@@ -30,6 +30,7 @@ use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::contract::Contract;
+use crate::candidate::{CandidateSlot, is_silent_result};
 use crate::control;
 use crate::eot::{EOT_MAX_SAMPLES, EotClient, UNLIKELY_THRESHOLD_ZH};
 use crate::filler::FillerBank;
@@ -200,19 +201,6 @@ struct PendingCmd {
     accepted_acked: bool,
 }
 
-/// 2b 合同 v2(codex 终值①):本 turn 的 Android 硬件候选(随 command_word 到达,先于 commit)。
-/// 关联=「同 trace + 候选后的第一个 commit 所在 turn」,**不设 commit 等待上限**(长句 ASR final 可晚);
-/// 任何 lane 的 proposal 发出即清(L2 消费 / L1 同句已用掉);新候选覆盖旧候选;job 结束自然清。
-/// STALE 只清「候选后根本没有 commit」的残留(否则下轮慢路句会带上旧 ID→Android 回 already_applied 错话术)。
-struct PendingCandidate {
-    trace_id: String,
-    id: String,
-    /// 候选到达时 next_turn_id+1 = 它所属的(下一个)turn
-    for_turn: u64,
-    at: Instant,
-}
-const L2_CANDIDATE_STALE: Duration = Duration::from_secs(10);
-
 /// Worker 等 result 的兜底超时(合同缺口,守恒默认 8s——交接文档待 codex 确认;
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
 const DEVICE_RESULT_DEADLINE: Duration = Duration::from_secs(8);
@@ -316,8 +304,8 @@ struct Orchestrator {
     l2_execute_on: bool,
     /// 2b:Android 能力声明(wake 包 contract_version>=2 才允许发 L2;room 级,job 结束即弃)
     l2_capable: bool,
-    /// 2b:本 turn 硬件候选(command_word 带 vad_candidate_id)
-    pending_candidate: Option<PendingCandidate>,
+    /// 2b:硬件候选槽(turn-scoped,消费即清;见 candidate.rs)
+    pending_candidate: CandidateSlot,
     /// 本地音频回声对撞库(2026-09-01):(slot, normalize 后文案)。job 开始异步拉取填充,
     /// 拉不到=空(fail-open)。只装 greeting.*(farewell 播于关房时刻不需要;且退出词
     /// 与 farewell 文案对撞会误吞真退出意图——greeting 生成门本就禁退出/命令词,双保险)。
@@ -610,7 +598,7 @@ pub async fn run_pipeline(
         exit_pending: None,
         l2_execute_on,
         l2_capable: false,
-        pending_candidate: None,
+        pending_candidate: CandidateSlot::default(),
         echo_local_texts,
         session_started_at: Instant::now(),
         echo_short_turn_at: None,
@@ -1145,7 +1133,7 @@ impl Orchestrator {
         );
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
         // 2b:同一句话的硬件候选随本 proposal 用掉(L1 快路命中=该候选已被快路消费,L2 已 take)
-        self.pending_candidate = None;
+        self.pending_candidate.clear();
         // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
         info!(
             room = %self.room_name,
@@ -1197,15 +1185,10 @@ impl Orchestrator {
         };
         cmd.match_type = "llm";
         cmd.normalized_text = crate::device_intent::normalize(user_text);
-        // 候选关联(纯函数判定,单测在 device_intent):同 trace + 属于本 turn + 非残留;否则 None 交 Android 裁决
-        let cur_turn = self.next_turn_id;
+        // 候选关联(candidate.rs 单测覆盖 turn-scoped/长 turn/消费即清/覆盖/job 隔离):不匹配=None 交 Android 裁决
         let candidate = self
             .pending_candidate
-            .take()
-            .filter(|c| crate::device_intent::candidate_matches(
-                Some(&c.trace_id) == self.device_trace.as_ref(), c.for_turn, cur_turn, c.at.elapsed() < L2_CANDIDATE_STALE,
-            ))
-            .map(|c| c.id);
+            .take_for(self.device_trace.as_deref(), self.next_turn_id, Instant::now());
         info!(
             room = %self.room_name,
             label,
@@ -1236,7 +1219,7 @@ impl Orchestrator {
             "device command result"
         );
         // 2b 合同 v2 §2.5:Android 候选冲突裁决=静默(不播失败句,只记 suppress),清槽回听
-        if r.status == "rejected" && r.reason == "candidate_conflict" {
+        if is_silent_result(&r.status, &r.reason) {
             info!(room = %self.room_name, key = %r.idempotency_key, lane = %r.lane,
                   reason = "rejected:candidate_conflict", "llm device intent suppressed");
             self.pending_cmd = None;
@@ -1298,9 +1281,7 @@ impl Orchestrator {
                 // 2b:候选 ID 先于 commit 到达,记为本 turn 候选(L2 proposal 发出时消费)
                 let has_candidate = candidate_id.is_some();
                 if let Some(id) = candidate_id {
-                    self.pending_candidate = Some(PendingCandidate {
-                        trace_id: ev.trace_id.clone(), id, for_turn: self.next_turn_id + 1, at: Instant::now(),
-                    });
+                    self.pending_candidate.record(&ev.trace_id, &id, self.next_turn_id, Instant::now());
                 }
                 let decision;
                 let mut reason = "";
@@ -2380,6 +2361,8 @@ mod device_turn_tests {
             "好的，已为你调整"
         );
         assert_eq!(device_reply("already_applied", false, "", "led_on"), "现在已经是这个状态了");
+        // M4(2b):fallback 已执行后迟到同 ID L2 → already_applied/vad_fallback_already_applied,播同一句(非失败句)
+        assert_eq!(device_reply("already_applied", true, "vad_fallback_already_applied", "brightness_down"), "现在已经是这个状态了");
         assert_eq!(device_reply("rejected", false, "whitelist", "led_on"), "现在暂时不能这样调");
         assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_up_step"), "已经到最高了");
         assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_down_step"), "已经到最低了");

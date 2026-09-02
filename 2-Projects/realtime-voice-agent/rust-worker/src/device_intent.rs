@@ -259,12 +259,6 @@ pub fn l2_gate(
     Ok(())
 }
 
-/// 2b 候选关联判定(纯函数):同 trace && 候选属于本 turn(到达时标记 next_turn_id+1 == 本轮 id) && 非残留。
-/// 不设 commit 等待上限(codex 终值①);fresh=false 仅代表「候选后长时间没有任何 commit」的残留。
-pub fn candidate_matches(same_trace: bool, for_turn: u64, cur_turn: u64, fresh: bool) -> bool {
-    same_trace && for_turn == cur_turn && fresh
-}
-
 pub fn known_label(label: u32) -> bool {
     table().map.values().any(|(l, _, _)| *l == label)
 }
@@ -713,14 +707,5 @@ mod tests {
         assert_eq!(l2_gate(true, true, 6, false, false), Err("no_trace"));
         assert_eq!(l2_gate(true, true, 6, false, true), Ok(()), "全门通过");
         assert_eq!(l2_gate(true, true, 24, false, true), Ok(()), "中性光在第一批");
-    }
-
-    #[test]
-    fn candidate_matches_requires_trace_turn_and_freshness() {
-        assert!(candidate_matches(true, 4, 4, true), "同 trace+本 turn+新鲜=关联");
-        assert!(!candidate_matches(false, 4, 4, true), "异 trace 不关联(M10 旧 trace ID)");
-        assert!(!candidate_matches(true, 4, 5, true), "候选属于上一 turn 不关联(残留防 already_applied 错话术)");
-        assert!(!candidate_matches(true, 4, 4, false), "候选后长时间无 commit 的残留不关联");
-        assert!(candidate_matches(true, 7, 7, true), "长句:只要 commit 落在同一 turn 就关联,无固定等待上限");
     }
 }
