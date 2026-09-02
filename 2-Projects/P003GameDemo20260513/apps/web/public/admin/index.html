@@ -1569,11 +1569,13 @@
                           <td style="padding:6px 8px">{{ r.version_name }}</td>
                           <td style="padding:6px 8px">{{ (r.size_bytes / 1048576).toFixed(1) }} MB</td>
                           <td style="padding:6px 8px;font-family:monospace">{{ r.sha256.slice(0, 12) }}…</td>
-                          <td style="padding:6px 8px"><span :style="{ color: r.enabled ? '#3A8A3A' : '#999' }">{{ r.enabled ? ('发布中' + (r.force_install ? '·force' : '')) : '草稿/暂停' }}</span></td>
+                          <td style="padding:6px 8px"><span :style="{ color: r.enabled ? '#3A8A3A' : '#999' }">{{ r.enabled ? ('发布中' + (r.force_install ? '·⚡强制' : '') + (r.install_hint && r.install_hint !== 'idle_only' ? '·' + r.install_hint : '')) : '草稿/暂停' }}</span></td>
                           <td style="padding:6px 8px;max-width:220px;word-break:break-all">{{ r.enabled ? (r.rollout_sns || '全量') : '—' }}</td>
                           <td style="padding:6px 8px;white-space:nowrap">
                             <el-button size="small" @click="otaPublish(r, 'sns')">灰度发布</el-button>
                             <el-button size="small" type="warning" @click="otaPublish(r, 'all')">全量发布</el-button>
+                            <el-button v-if="r.enabled && !r.force_install" size="small" type="danger" plain @click="otaForce(r, true)">⚡ 强制更新</el-button>
+                            <el-button v-if="r.enabled && r.force_install" size="small" plain @click="otaForce(r, false)">取消强制</el-button>
                             <el-button v-if="r.enabled" size="small" type="danger" @click="otaPause(r)">暂停</el-button>
                             <el-button v-if="!r.enabled" size="small" type="danger" @click="otaDelete(r)">删除</el-button>
                           </td>
@@ -1581,7 +1583,7 @@
                         <tr v-if="!ota.releases.length"><td colspan="7" style="padding:14px 8px;color:#999">暂无版本，先上传 APK</td></tr>
                       </tbody>
                     </table>
-                    <div style="margin-top:8px;font-size:12px;color:#888">force 语义：跳过闲时等待尽快装，但<b>不打断进行中的语音会话</b>（会话结束立即装）。回滚提示：APK 层无真回滚，「暂停」只救未升级设备。</div>
+                    <div style="margin-top:8px;font-size:12px;color:#888">⚡ 强制更新 = force + immediate：跳过闲时等待尽快装，但<b>不打断进行中的语音会话</b>（会话结束立即装）；「取消强制」回到闲时安装。回滚提示：APK 层无真回滚，「暂停」只救未升级设备。</div>
                   </div>
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
                     <div style="font-weight:700;margin-bottom:10px">设备版本分布<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">设备每次 check 自动上报</span></div>
@@ -4016,6 +4018,23 @@
             });
           }).catch(function () {});
         }
+        // 强制更新（2026-09-02 川哥要手动按钮）：复用 publish 端点，保留该版本现有灰度范围，只切 force/install_hint。
+        // force 语义（合同冻结）：跳过闲时等待、会话结束立即装、不打断进行中通话；immediate 是端上时机提示的最强档。
+        function otaForce(rel, on) {
+          var rollout = rel.rollout_sns ? 'sns' : 'all';
+          var sns = rel.rollout_sns ? String(rel.rollout_sns).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : [];
+          var scope = rollout === 'all' ? '全量（所有台账设备）' : ('灰度名单 ' + sns.length + ' 台：' + sns.join('、'));
+          var msg = on
+            ? ('对 v' + rel.version_code + ' 开启强制更新？范围：' + scope + '。\n语义：设备下次 check 起跳过闲时等待，当前语音会话一结束立即下载安装（不打断进行中的通话）。已升级设备无法撤回。')
+            : ('取消 v' + rel.version_code + ' 的强制更新？回到闲时安装（idle_only），范围不变：' + scope + '。');
+          ElementPlus.ElMessageBox.confirm(msg, on ? '⚡ 强制更新' : '取消强制', { type: 'warning', confirmButtonText: on ? '确认强制' : '确认取消', cancelButtonText: '取消' }).then(function () {
+            var body = { rollout: rollout, sns: sns, force: !!on, install_hint: on ? 'immediate' : 'idle_only' };
+            deviceApi('/api/admin/ota/releases/' + rel.version_code + '/publish', { method: 'POST', body: JSON.stringify(body) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success(on ? ('v' + rel.version_code + ' 已开启强制更新') : '已取消强制'); loadOta(); }
+              else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
         function otaPause(rel) {
           ElementPlus.ElMessageBox.confirm('暂停 v' + rel.version_code + '？之后设备 check 不再下发该版本（已升级设备不受影响）。', '暂停发布', { type: 'warning' }).then(function () {
             deviceApi('/api/admin/ota/releases/' + rel.version_code + '/pause', { method: 'POST' }).then(function (j) {
@@ -6289,7 +6308,7 @@
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
-          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaPause: otaPause, otaDelete: otaDelete,
+          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
           devcfg: devcfg, devcfgKey0: devcfgKey0, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
