@@ -27,18 +27,20 @@ import (
 )
 
 type Config struct {
-	Listen           string           `json:"listen"`
-	ClientAPIKeyEnv  string           `json:"client_api_key_env"`
-	ClientAPIKeyEnvs []string         `json:"client_api_key_envs"`
-	ClientAPIKeys    []string         `json:"client_api_keys"`
-	BodyLimitBytes   int64            `json:"body_limit_bytes"`
-	MaxRetries       int              `json:"max_retries"`
-	MetricsPath      string           `json:"metrics_path"`
-	SQLitePath       string           `json:"sqlite_path"`
-	DashboardEnabled bool             `json:"dashboard_enabled"`
-	BlockedModels    []string         `json:"blocked_models"`
-	DefaultBackend   Candidate        `json:"default_backend"`
-	Routes           map[string]Route `json:"routes"`
+	Listen                      string           `json:"listen"`
+	ClientAPIKeyEnv             string           `json:"client_api_key_env"`
+	ClientAPIKeyEnvs            []string         `json:"client_api_key_envs"`
+	ClientAPIKeys               []string         `json:"client_api_keys"`
+	BodyLimitBytes              int64            `json:"body_limit_bytes"`
+	MaxRetries                  int              `json:"max_retries"`
+	AuthUnavailableRetries      int              `json:"auth_unavailable_retries"`
+	AuthUnavailableRetryDelayMS int              `json:"auth_unavailable_retry_delay_ms"`
+	MetricsPath                 string           `json:"metrics_path"`
+	SQLitePath                  string           `json:"sqlite_path"`
+	DashboardEnabled            bool             `json:"dashboard_enabled"`
+	BlockedModels               []string         `json:"blocked_models"`
+	DefaultBackend              Candidate        `json:"default_backend"`
+	Routes                      map[string]Route `json:"routes"`
 }
 
 type Route struct {
@@ -661,11 +663,24 @@ func (s *Server) tryCandidate(w http.ResponseWriter, r *http.Request, body []byt
 }
 
 func (s *Server) forwardWithCandidate(w http.ResponseWriter, r *http.Request, body []byte, payload map[string]any, routeModel string, candidate Candidate, stream bool) {
-	status, retryable, metric := s.tryCandidate(w, r, body, payload, routeModel, candidate, stream)
-	metric.Path = r.URL.Path
-	s.record(metric)
-	if !retryable {
-		return
+	var status int
+	var retryable bool
+	var metric MetricEvent
+	retries := max(0, s.cfg.AuthUnavailableRetries)
+	for attempt := 0; attempt <= retries; attempt++ {
+		status, retryable, metric = s.tryCandidate(w, r, body, payload, routeModel, candidate, stream)
+		metric.Path = r.URL.Path
+		s.record(metric)
+		if !retryable {
+			return
+		}
+		if attempt >= retries || !isAuthUnavailableFailure(status, metric.Error) {
+			break
+		}
+		if !waitForRetry(r.Context(), time.Duration(max(0, s.cfg.AuthUnavailableRetryDelayMS))*time.Millisecond) {
+			http.Error(w, "request canceled while waiting for CPA authorization recovery", 499)
+			return
+		}
 	}
 	if status == 0 {
 		status = http.StatusBadGateway
@@ -675,6 +690,28 @@ func (s *Server) forwardWithCandidate(w http.ResponseWriter, r *http.Request, bo
 		message = http.StatusText(status)
 	}
 	http.Error(w, message, status)
+}
+
+func isAuthUnavailableFailure(status int, message string) bool {
+	if status != http.StatusServiceUnavailable {
+		return false
+	}
+	message = strings.ToLower(strings.TrimSpace(message))
+	return strings.Contains(message, "auth_unavailable") || strings.Contains(message, "no auth available")
+}
+
+func waitForRetry(ctx context.Context, delay time.Duration) bool {
+	if delay <= 0 {
+		return true
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }
 
 func rewriteModel(body []byte, payload map[string]any, model string, includeStreamUsage bool) ([]byte, error) {

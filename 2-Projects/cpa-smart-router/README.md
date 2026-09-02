@@ -33,6 +33,7 @@ go run ./cmd/router -config config/router.example.json
 - 流式响应开始输出后不做 failover。
 - `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。
+- Default backend 若明确返回 `503 auth_unavailable` / `no auth available`，可通过 `auth_unavailable_retries` 与 `auth_unavailable_retry_delay_ms` 做同后端有界重试；生产使用 2 次、每次等待 6 秒，与 CLIProxyAPI 12 秒 transient cooling 对齐。普通 503 不重试，避免放大真实上游故障。
 - `/v1/responses` 当前先启用 state probe 观测，不改变路由；M1 门控看 `previous_response_id` 占比和 response id 捕获率。
 - 图片生成与编辑端点透明转发到默认 CPA 后端，保留 JSON 或 multipart 请求体、查询参数与响应类型；图片模型不进入文本模型调度、sticky 或 token 用量统计。
 - Codex 网站验收可能携带 32 MiB 以上的图片、截图或上下文；Nginx `client_max_body_size` 与 Router `body_limit_bytes` 必须统一为 64 MiB。只提高一层会在下一层继续返回 413；验证使用大体积无效模型请求，预期应穿透到模型路由错误而不是产生付费推理。
@@ -91,4 +92,4 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - 受 Git 管理的刷新器维护源是 `scripts/refresh-cc-switch-model-catalog.mjs`；本机 `~/.codex/refresh-cc-switch-model-catalog.mjs` 应指向该文件，由 LaunchAgent 每小时刷新。
 - Codex App 只读取 `~/.codex/cc-switch-model-catalog.json`，不会主动选择 `.bak-*`。若主文件曾被缩水目录覆盖，App 会在启动时缓存缺少模型、推理档位和速度元数据的状态；恢复完整文件后还必须重启 App。刷新器必须先做模型数量防缩水校验，再通过临时文件原子 rename，异常时保留上一份完整目录；少于 12 个模型的旧备份不得保留。
 - 验收必须分开记录：客户端请求是否携带 `priority`、CPA 是否返回 HTTP 200、上游响应回报的 service tier。当前真实请求已携带 `priority`，但上游流式响应仍回 `auto/default`，不得把“请求已发出”写成“后台加速已确认”。
-- 现网 CLIProxyAPI 继续使用 `7.2.58`；Fast 链路不需要为了本次修复直接跨版本升级，升级应另做回归和时间窗。
+- 生产 CLIProxyAPI 已于 2026-09-02 通过隔离 Canary、插件兼容、Responses/流式真实请求和 watchdog 回滚门升级到 `7.2.147`。当前 transient error cooling 显式为 12 秒，credential retry 为 3 轮、单轮全部凭据、最大等待 12 秒；升级新版本仍须独立回归，不能直接覆盖生产。

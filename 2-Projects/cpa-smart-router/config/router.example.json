@@ -6,6 +6,8 @@
   ],
   "body_limit_bytes": 67108864,
   "max_retries": 1,
+  "auth_unavailable_retries": 2,
+  "auth_unavailable_retry_delay_ms": 6000,
   "metrics_path": "router-metrics.jsonl",
   "sqlite_path": "router.sqlite",
   "dashboard_enabled": true,

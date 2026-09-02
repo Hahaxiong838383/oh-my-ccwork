@@ -67,6 +67,90 @@ func TestDefaultBackendReturnsRetryableUpstreamError(t *testing.T) {
 	}
 }
 
+func TestDefaultBackendRetriesAuthUnavailable(t *testing.T) {
+	requests := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.Header().Set("Content-Type", "application/json")
+		if requests <= 2 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			io.WriteString(w, `{"error":{"type":"auth_unavailable","message":"no auth available"}}`)
+			return
+		}
+		io.WriteString(w, `{"id":"resp-ok","model":"gpt-5.6-sol","output":[{"content":[{"type":"output_text","text":"OK"}]}]}`)
+	}))
+	defer upstream.Close()
+
+	server := &Server{
+		cfg: Config{
+			BodyLimitBytes:              1 << 20,
+			AuthUnavailableRetries:      2,
+			AuthUnavailableRetryDelayMS: 1,
+			DefaultBackend: Candidate{
+				ID:      "cpa-mixed",
+				BaseURL: upstream.URL + "/v1",
+				APIKey:  "upstream-key",
+			},
+			Routes: map[string]Route{},
+		},
+		clientKeys: map[string]struct{}{"client-key": {}},
+		states:     map[string]*ProviderState{"cpa-mixed": {}},
+		bindings:   map[string]SessionBinding{},
+		httpClient: upstream.Client(),
+		metricCh:   make(chan MetricEvent, 3),
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"gpt-5.6-sol","input":"ping"}`))
+	req.Header.Set("Authorization", "Bearer client-key")
+	recorder := httptest.NewRecorder()
+
+	server.handleLLM(recorder, req)
+
+	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"resp-ok"`) {
+		t.Fatalf("response = %d %q, want recovered 200", recorder.Code, recorder.Body.String())
+	}
+	if requests != 3 {
+		t.Fatalf("upstream requests = %d, want 3", requests)
+	}
+	if len(server.metricCh) != 3 {
+		t.Fatalf("metrics = %d, want one per attempt", len(server.metricCh))
+	}
+}
+
+func TestDefaultBackendDoesNotRetryGeneric503(t *testing.T) {
+	requests := 0
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		w.WriteHeader(http.StatusServiceUnavailable)
+		io.WriteString(w, `{"error":{"message":"upstream overloaded"}}`)
+	}))
+	defer upstream.Close()
+
+	server := &Server{
+		cfg: Config{
+			BodyLimitBytes:              1 << 20,
+			AuthUnavailableRetries:      2,
+			AuthUnavailableRetryDelayMS: 1,
+			DefaultBackend:              Candidate{ID: "cpa-mixed", BaseURL: upstream.URL + "/v1", APIKey: "upstream-key"},
+			Routes:                      map[string]Route{},
+		},
+		clientKeys: map[string]struct{}{"client-key": {}},
+		states:     map[string]*ProviderState{"cpa-mixed": {}},
+		bindings:   map[string]SessionBinding{},
+		httpClient: upstream.Client(),
+		metricCh:   make(chan MetricEvent, 3),
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader(`{"model":"gpt-5.6-sol","input":"ping"}`))
+	req.Header.Set("Authorization", "Bearer client-key")
+	recorder := httptest.NewRecorder()
+	server.handleLLM(recorder, req)
+
+	if recorder.Code != http.StatusServiceUnavailable || requests != 1 {
+		t.Fatalf("response = %d requests=%d, want one 503", recorder.Code, requests)
+	}
+}
+
 func TestModelsForwardsClientVersionQuery(t *testing.T) {
 	queryCh := make(chan string, 1)
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
