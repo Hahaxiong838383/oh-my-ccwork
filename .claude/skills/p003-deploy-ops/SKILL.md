@@ -285,3 +285,9 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - 设备房名 `sn-<SN>-<秒>` 的秒由 server `device-session.ts` `nextRoomSecond()` 生成（`floor(Date.now()/1000)`，同秒碰撞 +1）→ **第三方钟锚**：Android `session_bound` 必在造房之后，它记录的时间早于造房秒 = 设备钟慢（003 实测 ≥1.3s）。跨端对撞主键用 trace_id（server `[device-session] ok … trace=` ↔ worker `trace_id=` 同值），时间只做辅。
 - pm2 `p003-voice-out.log` 的行**没有时间戳前缀**（实测），对时间只能靠 worker journal 或 server 行内自带的 ts 字段；别拿 pm2 行做时序证据。
 - 2b 联调状态与 worker 侧真值以 memory `project_p003_device_command_evolution` 为准（rg `2b|EXECUTE|candidate`）。
+
+## 灰度/白名单全覆盖现状（2026-09-02 晚，4 台=内部测试样机）
+- 接入：DB `device_registry.status=active` 为准（4 台），env `DEVICE_SN_ALLOW` 只是 DB 无记录时兜底。
+- 遥测：`TELEMETRY_SN_ALLOWLIST=`（空=放开，`telemetryAllowed` 先 DB status 再 env）；备份 `.env.local.bak-20260902-telemetry-fullopen`。server 开了≠端侧在发：看 `[telemetry] batch sn=****XXXX` 行；端侧开关归 codex。
+- 人格成长：`PERSONA_STATE_ACCOUNT_ALLOWLIST`=0010/003/0002，004 未进（川哥 9-02 定性 004 为测试机，「先不管」）。本地音频包只有 0010/003 有（rev5）。
+- 改 `.env.local` 后 `pm2 restart p003-voice`（`--env-file` 是 node 参数，重启即重读；pm2 自身 env 快照坑不适用于此键）。验：`pm2 describe` restarts +1、`curl 127.0.0.1:3001/health`=200、启动日志 ASR/LLM/TTS ready。
