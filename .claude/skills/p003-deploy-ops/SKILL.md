@@ -280,3 +280,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - 位置 `src/xiaoke-kb.ts`（13 条 `KB_ENTRIES`，关键词子串召回 <1ms，`MAX_RECALL=3`，命中附真实性红线）；测试 `npx tsx scripts/xiaoke-kb.test.ts`（12 项）。加条目=改代码+加正负锚+server rsync 单文件+restart。
 - **时效纪律**：数据源手册 docs/12 停在 6-11；每次 Godot 玩法发版（OTA 发布文档）必附「小可需知」段并同步 KB——**反查法**：拿新功能独有词 `grep -c` 手册/xiaoke-kb.ts/prompts.ts，0 即缺口（9-2 实证「金币」0/0/0，G1 上线三个月小可不知金币）。
 - 实时数字：KB 明文「不知道实时数量」；接入路线=遥测 SnapshotSchema 加 `game` 子对象（telemetry.ts）+ EVENT_TYPES 加 g1 六事件，KB 命中游戏话题时附一行实时状态（方案文档 2026-09-02-小可游戏玩法知识接入方案）。
+
+## 跨端日志对撞真值（2026-09-02 2b M0 实证）
+- 设备房名 `sn-<SN>-<秒>` 的秒由 server `device-session.ts` `nextRoomSecond()` 生成（`floor(Date.now()/1000)`，同秒碰撞 +1）→ **第三方钟锚**：Android `session_bound` 必在造房之后，它记录的时间早于造房秒 = 设备钟慢（003 实测 ≥1.3s）。跨端对撞主键用 trace_id（server `[device-session] ok … trace=` ↔ worker `trace_id=` 同值），时间只做辅。
+- pm2 `p003-voice-out.log` 的行**没有时间戳前缀**（实测），对时间只能靠 worker journal 或 server 行内自带的 ts 字段；别拿 pm2 行做时序证据。
+- 2b 联调状态与 worker 侧真值以 memory `project_p003_device_command_evolution` 为准（rg `2b|EXECUTE|candidate`）。
