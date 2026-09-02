@@ -749,3 +749,9 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **rust tracing 日志带 ANSI 色码**：`journalctl -o cat` 直接 grep `label=`/`known=` 全空（`\x1b[3mlabel\x1b[0m=…`）。先 `sed "s/\x1b\[[0-9;]*m//g"` 剥色再 grep；`-o short-iso` 拿时间戳。
 - 观察模式统计模板：`llm device intent observed`(慢路)/`start_device_command`(快路)/`device.command.result` status 分布；**每条 observed 要回溯前一行 `turn committed` 用户原话逐条判读**——标签合法≠意图正确（2b 合同实证 4/11 误触发）。
 - 登录：`ssh root@64.90.13.117`（BatchMode 可用，config 无别名）。
+
+## 2b LLM 慢路执行灰度（2026-09-02 上产，默认关；合同 `CC_P003_DEVICE_INTENT_2B_EXECUTE_CONTRACT_V2`）
+- 键（rust-worker.env）：`P003_DEVICE_INTENT_EXECUTE=0|1` + `P003_DEVICE_INTENT_EXECUTE_CANARY_SN_HASHES=`（sha256(SN) 小写逗号分隔；空=设备房全开）。**独立于 `P003_DEVICE_COMMANDS_CANARY_SN_HASHES`**（那个管 L1 快路，现为空=全开，别混用）。
+- 开闸前提（缺一不开）：Android v186 已装目标机 + wake 包 `device_command_contract_version=2`（worker 日志锚 `l2 capability contract_version=2`）+ 首轮只填 003 hash。步骤：改 env → 纪律重启 → 看 `llm device intent executed lane=L2` / `suppressed reason=`。
+- 回滚：`EXECUTE=0` + 纪律重启（零二进制）；二进制回滚 deploy 脚本自动备份的上一版（2b 前 md5 `13137847…`，2b 版 `d337df9c…`）。
+- 观察锚**文案已改**：`llm device intent observed`（不再带「observe-only」括号），grep 锚不变；统计仍须剥 ANSI。
