@@ -29,4 +29,13 @@ process.env.DEVICE_INTENT_OBSERVE = '0';
 assert.strictEqual(deviceIntentProtocol(), '', 'T3 显式 0 不注入');
 pass++;
 
-console.log(`device-intent-protocol: ${pass}/3 全过`);
+// T4 2b 加固（2026-09-02）：反例 few-shot / 幅度默认一级 / 数值不出标记 三条在场
+process.env.DEVICE_INTENT_OBSERVE = '1';
+const p4 = deviceIntentProtocol();
+assert.ok(p4.includes('哦也对'), 'T4 反例 few-shot 必须在场');
+assert.ok(p4.includes('幅度默认一级'), 'T4 幅度规则必须在场');
+assert.ok(p4.includes('不输出标记——本协议没有精确数值标签'), 'T4 数值规则必须在场');
+assert.ok(p4.includes('色温调暖」→ [[DEV:12]]'), 'T4 一级示例必须在场');
+pass++;
+
+console.log(`device-intent-protocol: ${pass}/4 全过`);
