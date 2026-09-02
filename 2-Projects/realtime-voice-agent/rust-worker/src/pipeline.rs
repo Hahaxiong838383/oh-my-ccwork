@@ -200,14 +200,18 @@ struct PendingCmd {
     accepted_acked: bool,
 }
 
-/// 2b 合同 v2:本 turn 的 Android 硬件候选(随 command_word 到达,先于 commit)。
-/// 只在 L2 proposal 发出时消费;同 trace 且 5s 内才关联(否则 ID=null 交 Android 裁决)。
+/// 2b 合同 v2(codex 终值①):本 turn 的 Android 硬件候选(随 command_word 到达,先于 commit)。
+/// 关联=「同 trace + 候选后的第一个 commit 所在 turn」,**不设 commit 等待上限**(长句 ASR final 可晚);
+/// 任何 lane 的 proposal 发出即清(L2 消费 / L1 同句已用掉);新候选覆盖旧候选;job 结束自然清。
+/// STALE 只清「候选后根本没有 commit」的残留(否则下轮慢路句会带上旧 ID→Android 回 already_applied 错话术)。
 struct PendingCandidate {
     trace_id: String,
     id: String,
+    /// 候选到达时 next_turn_id+1 = 它所属的(下一个)turn
+    for_turn: u64,
     at: Instant,
 }
-const L2_CANDIDATE_TTL: Duration = Duration::from_secs(5);
+const L2_CANDIDATE_STALE: Duration = Duration::from_secs(10);
 
 /// Worker 等 result 的兜底超时(合同缺口,守恒默认 8s——交接文档待 codex 确认;
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
@@ -1140,6 +1144,8 @@ impl Orchestrator {
             candidate.as_deref(),
         );
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
+        // 2b:同一句话的硬件候选随本 proposal 用掉(L1 快路命中=该候选已被快路消费,L2 已 take)
+        self.pending_candidate = None;
         // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
         info!(
             room = %self.room_name,
@@ -1191,11 +1197,14 @@ impl Orchestrator {
         };
         cmd.match_type = "llm";
         cmd.normalized_text = crate::device_intent::normalize(user_text);
-        // 候选关联:同 trace 且 TTL 内;否则 None 交 Android 按合同 §2.4 裁决
+        // 候选关联(纯函数判定,单测在 device_intent):同 trace + 属于本 turn + 非残留;否则 None 交 Android 裁决
+        let cur_turn = self.next_turn_id;
         let candidate = self
             .pending_candidate
             .take()
-            .filter(|c| Some(&c.trace_id) == self.device_trace.as_ref() && c.at.elapsed() < L2_CANDIDATE_TTL)
+            .filter(|c| crate::device_intent::candidate_matches(
+                Some(&c.trace_id) == self.device_trace.as_ref(), c.for_turn, cur_turn, c.at.elapsed() < L2_CANDIDATE_STALE,
+            ))
             .map(|c| c.id);
         info!(
             room = %self.room_name,
@@ -1289,7 +1298,9 @@ impl Orchestrator {
                 // 2b:候选 ID 先于 commit 到达,记为本 turn 候选(L2 proposal 发出时消费)
                 let has_candidate = candidate_id.is_some();
                 if let Some(id) = candidate_id {
-                    self.pending_candidate = Some(PendingCandidate { trace_id: ev.trace_id.clone(), id, at: Instant::now() });
+                    self.pending_candidate = Some(PendingCandidate {
+                        trace_id: ev.trace_id.clone(), id, for_turn: self.next_turn_id + 1, at: Instant::now(),
+                    });
                 }
                 let decision;
                 let mut reason = "";
