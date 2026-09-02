@@ -291,3 +291,9 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - 遥测：`TELEMETRY_SN_ALLOWLIST=`（空=放开，`telemetryAllowed` 先 DB status 再 env）；备份 `.env.local.bak-20260902-telemetry-fullopen`。server 开了≠端侧在发：看 `[telemetry] batch sn=****XXXX` 行；端侧开关归 codex。
 - 人格成长：`PERSONA_STATE_ACCOUNT_ALLOWLIST`=0010/003/0002，004 未进（川哥 9-02 定性 004 为测试机，「先不管」）。本地音频包只有 0010/003 有（rev5）。
 - 改 `.env.local` 后 `pm2 restart p003-voice`（`--env-file` 是 node 参数，重启即重读；pm2 自身 env 快照坑不适用于此键）。验：`pm2 describe` restarts +1、`curl 127.0.0.1:3001/health`=200、启动日志 ASR/LLM/TTS ready。
+
+## 灰度盘点 SOP（2026-09-02 定型，问「还有哪些没覆盖全部设备」时用）
+1. **源码枚举开关**：worker `git grep -oE 'env::var\("[A-Z0-9_]+"\)' feat/rust-worker -- rust-worker/src`；server `grep -rhoE 'process\.env\.[A-Z0-9_]+' src`，过滤 `CANARY|ALLOW|ENABLED|_SN|PAUSED|OVERRIDE`。别从记忆列——记忆里没有的门每次都有。
+2. **活体值**：worker `/proc/$(systemctl show -p MainPID --value voice-worker-rust)/environ`；server `.env.local`（node `--env-file` 不落 environ，看文件+pm2 args）。
+3. **库表级范围**（`/opt/p003/server/data/*.db`，无 sqlite3 CLI，用 `node -e` + `node:sqlite` readOnly）：`devices.device_registry`（绑定真值，status=active）/ `ota.ota_release.rollout_sns`（空=全量）+ `ota.ota_device_status`（设备自报版本）/ `profile.trait_template|trait_state|relation_state|local_audio_state`（人格线谁有状态）/ `telemetry.*` group by sn / `config.device_config`（scope）。**时间列单位先 `select min,max` 探**：`device_session_log.created_at` 是毫秒，registry `created_at` 是秒。
+4. **逐台填格子**：每项「覆盖 x/N + 开全动作」；空值语义逐门读消费者（`commands_gate` 空=设备房全开；`CANARY_SAY_IDENTITY_ALLOW` 空=全拒；`TELEMETRY_SN_ALLOWLIST` 空=放开但先看 DB status）；名单里不在 registry 的 SN 报「脏」。异常（版本/定性冲突）交川哥定性，不自行处置。
