@@ -1133,7 +1133,7 @@ impl Orchestrator {
         );
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
         // 2b:同一句话的硬件候选随本 proposal 用掉(L1 快路命中=该候选已被快路消费,L2 已 take)
-        self.pending_candidate.clear();
+        self.pending_candidate.clear(Instant::now());
         // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
         info!(
             room = %self.room_name,
