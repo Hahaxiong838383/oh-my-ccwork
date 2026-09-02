@@ -754,4 +754,5 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - 键（rust-worker.env）：`P003_DEVICE_INTENT_EXECUTE=0|1` + `P003_DEVICE_INTENT_EXECUTE_CANARY_SN_HASHES=`（sha256(SN) 小写逗号分隔；空=设备房全开）。**独立于 `P003_DEVICE_COMMANDS_CANARY_SN_HASHES`**（那个管 L1 快路，现为空=全开，别混用）。
 - 开闸前提（缺一不开）：Android v186 已装目标机 + wake 包 `device_command_contract_version=2`（worker 日志锚 `l2 capability contract_version=2`）+ 首轮只填 003 hash。步骤：改 env → 纪律重启 → 看 `llm device intent executed lane=L2` / `suppressed reason=`。
 - 回滚：`EXECUTE=0` + 纪律重启（零二进制）；二进制回滚 deploy 脚本自动备份的上一版（2b 前 md5 `13137847…`，2b 版 `d337df9c…`）。
+- 候选槽（2026-09-02 晚 codex 裁定）：**无任何按时间清状态路径**（固定 TTL 会把 M4 already_applied 退化成 null-ID 二次执行）；`candidate_orphan_watchdog` 行（trace/candidate/event=consume|override|clear|job_end/age_ms）**只是观测不是故障**，job_end 大 age=用户唤醒后没说慢路句。补发 wake 版本上线后每 job `l2 capability` 行数 1 或 2 都正常，0 才是丢包。新二进制暂存 `.new` 不等于生效：`deploy-worker-bin.sh` 跑过、md5 回显变了才算。
 - 观察锚**文案已改**：`llm device intent observed`（不再带「observe-only」括号），grep 锚不变；统计仍须剥 ANSI。
