@@ -743,3 +743,9 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **E2E 验收**:`/root/rust-worker/canary_say_e2e_probe.py`(八判据:幂等 ack/振幅≥5s/metrics 零欠载/disabled/cancel 中止/伪造丢弃)。跑法:`set -a; . /root/realtime-voice-agent/.env; . /root/rust-worker/rust-worker.env; set +a; /root/voice-venv/bin/python canary_say_e2e_probe.py canary-e2e-$(date +%s)`。
 - **三个坑**:①control 消费在 **both directions ready 之后**才启动——设备只 connect 不发麦克风轨,canary.say 无人消费无 ack;②**一人一房**:任何 participant 断开=关整个 job(探针第二连接要用独立房间);③stale_trace 判定用 epoch 时钟(别拿 now_ms 单调毫秒比设备 ts,踩过恒 stale)。
 - **tts synth 日志已全局截 24 字**:验"没落全文"时 grep 短语必须取第 25 字以后的内容(保留区命中≠泄露),正锚=`(N字)` 截断标记。
+
+## 64.90 rust worker 日志统计纪律（2026-09-02 踩坑固化）
+- **三个 unit 同时 active**：`voice-worker`(py 旧) / `voice-worker-colleague`(py,json 日志) / `voice-worker-rust`(生产 rust)。统计前 `systemctl list-units --state=active | grep voice-worker` 看全，**别 `head -1` 取名**（曾抓到 colleague 得全零误判「观察期零样本」）。
+- **rust tracing 日志带 ANSI 色码**：`journalctl -o cat` 直接 grep `label=`/`known=` 全空（`\x1b[3mlabel\x1b[0m=…`）。先 `sed "s/\x1b\[[0-9;]*m//g"` 剥色再 grep；`-o short-iso` 拿时间戳。
+- 观察模式统计模板：`llm device intent observed`(慢路)/`start_device_command`(快路)/`device.command.result` status 分布；**每条 observed 要回溯前一行 `turn committed` 用户原话逐条判读**——标签合法≠意图正确（2b 合同实证 4/11 误触发）。
+- 登录：`ssh root@64.90.13.117`（BatchMode 可用，config 无别名）。
