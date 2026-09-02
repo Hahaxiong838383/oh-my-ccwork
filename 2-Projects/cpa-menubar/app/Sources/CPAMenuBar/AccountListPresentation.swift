@@ -46,6 +46,19 @@ enum AccountListPresentation {
             (account.usageSnapshot.weeklyRemainingPercent ?? 100) <= 10
     }
 
+    static func removalReasonText(_ reason: String?) -> String? {
+        switch reason {
+        case "disabled":
+            "账号已停用"
+        case "expired_without_refresh":
+            "授权已过期且无法刷新"
+        case "authorization_rejected":
+            "授权已被上游拒绝"
+        default:
+            nil
+        }
+    }
+
     static func sorted(_ accounts: [Account]) -> [Account] {
         accounts.sorted { left, right in
             let leftRank = attentionRank(left)

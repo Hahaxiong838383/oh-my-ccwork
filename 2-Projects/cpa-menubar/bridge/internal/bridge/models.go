@@ -20,6 +20,8 @@ type Account struct {
 	UsageError        string          `json:"usage_error,omitempty"`
 	RuntimeUsage      *RuntimeUsage   `json:"runtime_usage,omitempty"`
 	SubscriptionUntil string          `json:"subscription_until,omitempty"`
+	RemovalEligible   bool            `json:"removal_eligible"`
+	RemovalReason     string          `json:"removal_reason,omitempty"`
 }
 
 type Summary struct {
@@ -150,6 +152,15 @@ type ResetCreditRequest struct {
 }
 
 type ResetCreditResponse struct {
+	AccountID string `json:"account_id"`
+	Status    string `json:"status"`
+}
+
+type RemoveAccountRequest struct {
+	Confirm string `json:"confirm"`
+}
+
+type RemoveAccountResponse struct {
 	AccountID string `json:"account_id"`
 	Status    string `json:"status"`
 }

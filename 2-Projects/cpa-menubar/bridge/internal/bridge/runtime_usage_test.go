@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -105,6 +106,8 @@ func TestUsageStoreAggregatesTodayByAccount(t *testing.T) {
 }
 
 func TestUsageCollectorReadsManagementQueue(t *testing.T) {
+	now := time.Now()
+	recordTimestamp := now.Add(-time.Minute).UTC().Format(time.RFC3339)
 	requests := 0
 	upstream := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		requests++
@@ -113,7 +116,7 @@ func TestUsageCollectorReadsManagementQueue(t *testing.T) {
 		}
 		response.Header().Set("Content-Type", "application/json")
 		if requests == 1 {
-			_, _ = response.Write([]byte(`[{"timestamp":"2026-08-04T03:00:00Z","provider":"codex","auth_index":"account-a","model":"gpt-5.5","latency_ms":600,"ttft_ms":200,"tokens":{"input_tokens":10,"output_tokens":5,"total_tokens":15},"fail":{"status_code":200}}]`))
+			_, _ = response.Write([]byte(fmt.Sprintf(`[{"timestamp":%q,"provider":"codex","auth_index":"account-a","model":"gpt-5.5","latency_ms":600,"ttft_ms":200,"tokens":{"input_tokens":10,"output_tokens":5,"total_tokens":15},"fail":{"status_code":200}}]`, recordTimestamp)))
 			return
 		}
 		_, _ = response.Write([]byte(`[]`))
@@ -138,7 +141,7 @@ func TestUsageCollectorReadsManagementQueue(t *testing.T) {
 	if requests != 1 {
 		t.Fatalf("request count = %d, want 1", requests)
 	}
-	total, _ := store.snapshot(time.Date(2026, 8, 4, 12, 0, 0, 0, time.FixedZone("CST", 8*60*60)))
+	total, _ := store.snapshot(now)
 	if total.Requests != 1 || total.TotalTokens != 15 {
 		t.Fatalf("unexpected collected usage: %+v", total)
 	}

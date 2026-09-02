@@ -14,6 +14,7 @@ ssh "$REMOTE" 'bash -s' <<'REMOTE_SCRIPT'
 set -euo pipefail
 install -d -m 0755 /opt/cpa-desktop-bridge /etc/nginx/snippets
 install -d -m 0700 /var/lib/cpa-desktop-bridge
+install -d -m 0700 /root/.cli-proxy-api-removed
 install -m 0755 /tmp/cpa-desktop-bridge /opt/cpa-desktop-bridge/cpa-desktop-bridge
 install -m 0644 /tmp/cpa-desktop-bridge.service /etc/systemd/system/cpa-desktop-bridge.service
 install -m 0644 /tmp/nginx-location.conf /etc/nginx/snippets/cpa-desktop-bridge.conf

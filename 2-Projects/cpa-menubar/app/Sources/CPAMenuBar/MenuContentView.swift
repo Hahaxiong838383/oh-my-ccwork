@@ -32,6 +32,7 @@ struct MenuContentView: View {
     @State private var showTokenClearConfirmation = false
     @State private var showSubscriptionPicker = false
     @State private var resetAccount: Account?
+    @State private var removalAccount: Account?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -98,6 +99,25 @@ struct MenuContentView: View {
             Button("取消", role: .cancel) {}
         } message: {
             Text("选择要添加到 CPA 的 OAuth 订阅账号。")
+        }
+        .confirmationDialog(
+            "移除这个 CPA 账号？",
+            isPresented: Binding(
+                get: { removalAccount != nil },
+                set: { if !$0 { removalAccount = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("取消", role: .cancel) { removalAccount = nil }
+            Button("确认移除", role: .destructive) {
+                guard let account = removalAccount else { return }
+                removalAccount = nil
+                Task { await model.removeInvalidAccount(account) }
+            }
+        } message: {
+            if let account = removalAccount {
+                Text("将移除 \(account.emailMasked)（\(account.provider.uppercased())）。账号会立即停止参与 CPA 调度，凭据文件将进入可恢复隔离区。")
+            }
         }
         .sheet(
             isPresented: Binding(
@@ -413,8 +433,10 @@ struct MenuContentView: View {
                                 account: account,
                                 isExpanded: expandedAccountIDs.contains(account.id),
                                 isResetting: model.resettingAccountID == account.id,
+                                isRemoving: model.removingAccountID == account.id,
                                 onToggleExpanded: { toggleExpanded(account.id) },
-                                onRequestReset: { resetAccount = account }
+                                onRequestReset: { resetAccount = account },
+                                onRequestRemoval: { removalAccount = account }
                             )
                         }
                     }
@@ -451,7 +473,11 @@ struct MenuContentView: View {
                     }
 
                     ForEach(xaiAccounts) { account in
-                        XAIAccountUsageCard(account: account)
+                        XAIAccountUsageCard(
+                            account: account,
+                            isRemoving: model.removingAccountID == account.id,
+                            onRequestRemoval: { removalAccount = account }
+                        )
                     }
                 }
                 errorBanner
@@ -826,6 +852,8 @@ private struct XAIUsageCard: View {
 
 private struct XAIAccountUsageCard: View {
     let account: Account
+    let isRemoving: Bool
+    let onRequestRemoval: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -883,12 +911,33 @@ private struct XAIAccountUsageCard: View {
             }
             .font(.caption2)
             .foregroundStyle(.secondary)
+
+            removalAction
         }
         .padding(10)
         .background(Color.cyan.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(account.disabled || !account.hasRefreshToken ? Color.orange.opacity(0.45) : Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var removalAction: some View {
+        if account.removalEligible {
+            Divider()
+            HStack(spacing: 8) {
+                if let reason = AccountListPresentation.removalReasonText(account.removalReason) {
+                    Label(reason, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+                Spacer()
+                Button(isRemoving ? "移除中…" : "移除无效账号", role: .destructive, action: onRequestRemoval)
+                    .font(.caption2)
+                    .buttonStyle(.borderless)
+                    .disabled(isRemoving)
+            }
         }
     }
 
@@ -926,8 +975,10 @@ private struct AccountRow: View {
     let account: Account
     let isExpanded: Bool
     let isResetting: Bool
+    let isRemoving: Bool
     let onToggleExpanded: () -> Void
     let onRequestReset: () -> Void
+    let onRequestRemoval: () -> Void
 
     var body: some View {
         let usage = account.usageSnapshot
@@ -985,6 +1036,8 @@ private struct AccountRow: View {
                 runtimeUsageDetails
 
                 creditsRow
+
+                removalAction
             }
         }
         .padding(10)
@@ -992,6 +1045,26 @@ private struct AccountRow: View {
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(AccountListPresentation.needsAttention(account) ? Color.orange.opacity(0.45) : Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var removalAction: some View {
+        if account.removalEligible {
+            HStack(spacing: 8) {
+                if let reason = AccountListPresentation.removalReasonText(account.removalReason) {
+                    Label(reason, systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.red)
+                }
+                Spacer()
+                Button(isRemoving ? "移除中…" : "移除无效账号", role: .destructive, action: onRequestRemoval)
+                    .font(.caption2)
+                    .buttonStyle(.borderless)
+                    .disabled(isRemoving)
+            }
+            .padding(8)
+            .background(Color.red.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
         }
     }
 

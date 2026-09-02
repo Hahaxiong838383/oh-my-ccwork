@@ -10,6 +10,7 @@ import (
 type Config struct {
 	Listen                    string
 	AuthDir                   string
+	RemovedAuthDir            string
 	DesktopToken              string
 	DesktopTokenFile          string
 	CLIProxyURL               string
@@ -32,6 +33,7 @@ func LoadConfig() (Config, error) {
 	cfg := Config{
 		Listen:                    envOr("CPA_DESKTOP_LISTEN", "127.0.0.1:8330"),
 		AuthDir:                   envOr("CPA_AUTH_DIR", "/root/.cli-proxy-api"),
+		RemovedAuthDir:            envOr("CPA_REMOVED_AUTH_DIR", "/root/.cli-proxy-api-removed"),
 		DesktopToken:              strings.TrimSpace(os.Getenv("CPA_DESKTOP_TOKEN")),
 		DesktopTokenFile:          envOr("CPA_DESKTOP_TOKEN_FILE", "/etc/cpa-desktop-bridge.token"),
 		CLIProxyURL:               envOr("CPA_CLIPROXY_URL", "http://127.0.0.1:8317"),

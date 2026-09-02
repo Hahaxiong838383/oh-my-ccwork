@@ -3,6 +3,13 @@ import Foundation
 struct BridgeClient: Sendable {
     let baseURL: URL
     let token: String
+    let session: URLSession
+
+    init(baseURL: URL, token: String, session: URLSession = .shared) {
+        self.baseURL = baseURL
+        self.token = token
+        self.session = session
+    }
 
     func summary() async throws -> Summary {
         try await request(path: "summary")
@@ -50,6 +57,14 @@ struct BridgeClient: Sendable {
         )
     }
 
+    func removeInvalidAccount(accountID: String) async throws -> RemoveAccountResponse {
+        try await request(
+            path: "accounts/\(accountID)/remove",
+            method: "POST",
+            body: RemoveAccountRequest()
+        )
+    }
+
     private func request<Response: Decodable, Body: Encodable>(
         path: String,
         method: String = "GET",
@@ -72,7 +87,7 @@ struct BridgeClient: Sendable {
             request.httpBody = try JSONEncoder().encode(body)
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw BridgeClientError.invalidResponse
         }

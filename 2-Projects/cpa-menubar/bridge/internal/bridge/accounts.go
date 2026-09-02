@@ -132,6 +132,7 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 					account.UsageError = publicUsageError(usageErr)
 				}
 			}
+			account.RemovalEligible, account.RemovalReason = accountRemovalEligibility(file, account.UsageStatus, time.Now())
 			accounts[index] = account
 		}()
 	}

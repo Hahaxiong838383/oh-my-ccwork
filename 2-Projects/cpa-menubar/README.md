@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.3.3`。
+当前版本：`0.3.4`。
 
 ## 当前能力
 
@@ -20,6 +20,7 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - 显示充值余额与重置卡数量；仅当官方接口返回可用且适用的重置卡时，才允许经过二次确认消耗 1 张。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
 - “添加订阅”统一提供 Codex 与 xAI Grok 两种 OAuth 登录；Codex 保留 PKCE 回调，xAI 使用官方设备码流程并自动轮询完成状态。
+- 对已停用、无刷新能力且已过期、或上游明确返回 401/403 的账号显示“移除无效账号”；App 经过 destructive 二次确认，Bridge 再实时校验后把 auth JSON 原子移动到 `/root/.cli-proxy-api-removed/<UTC时间>/`，不会永久删除凭据。
 - xAI 设备码只在当前授权弹层短时显示，可复制或重新打开 `accounts.x.ai`，不会写入 Keychain、UserDefaults、磁盘或普通日志。
 - 最终授权结果仍由 CLIProxyAPI 官方流程写入生产 auth-dir，CPA Menu 和 Bridge 不自行保存 xAI OAuth 凭据。
 - Desktop Token 只保存在远端 `0600` 文件和本机 macOS Keychain。
@@ -101,4 +102,5 @@ ssh aliyun-jp 'systemctl disable --now cpa-desktop-bridge; rm -f /etc/systemd/sy
 - OAuth state 与 PKCE verifier 只存在于 Bridge 内存，5 分钟过期。
 - xAI 授权 URL 必须是 `https://accounts.x.ai`，设备码和临时 state 不持久化；Bridge 不透传上游错误正文。
 - 重置卡属于不可逆消耗操作：App 二次确认，Bridge 再校验固定确认词与 `applicable_available_count > 0`。
+- 无效账号移除必须使用固定确认词 `REMOVE_INVALID_ACCOUNT`；低额度、429、网络错误和健康账号不得移除。隔离目录权限为 `0700`、文件为 `0600`，Bridge 不返回真实文件名或路径。
 - auth 文件通过同目录临时文件、`0600` 权限和原子 rename 更新，并保留账号原有 `priority`、`excluded-models`、`prefix`、`proxy_url` 字段。

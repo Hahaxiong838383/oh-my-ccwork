@@ -225,6 +225,8 @@ struct Account: Decodable, Identifiable {
     let usageError: String?
     let runtimeUsage: RuntimeUsage?
     let subscriptionUntil: String?
+    let removalEligible: Bool
+    let removalReason: String?
 
     enum CodingKeys: String, CodingKey {
         case id, provider, plan, disabled, usage
@@ -237,6 +239,28 @@ struct Account: Decodable, Identifiable {
         case usageError = "usage_error"
         case runtimeUsage = "runtime_usage"
         case subscriptionUntil = "subscription_until"
+        case removalEligible = "removal_eligible"
+        case removalReason = "removal_reason"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        provider = try container.decode(String.self, forKey: .provider)
+        emailMasked = try container.decode(String.self, forKey: .emailMasked)
+        plan = try container.decodeIfPresent(String.self, forKey: .plan)
+        disabled = try container.decode(Bool.self, forKey: .disabled)
+        expiredAt = try container.decodeIfPresent(String.self, forKey: .expiredAt)
+        lastRefreshAt = try container.decodeIfPresent(String.self, forKey: .lastRefreshAt)
+        hasRefreshToken = try container.decode(Bool.self, forKey: .hasRefreshToken)
+        isK12 = try container.decode(Bool.self, forKey: .isK12)
+        usage = try container.decodeIfPresent(UsagePayload.self, forKey: .usage)
+        usageStatus = try container.decode(String.self, forKey: .usageStatus)
+        usageError = try container.decodeIfPresent(String.self, forKey: .usageError)
+        runtimeUsage = try container.decodeIfPresent(RuntimeUsage.self, forKey: .runtimeUsage)
+        subscriptionUntil = try container.decodeIfPresent(String.self, forKey: .subscriptionUntil)
+        removalEligible = try container.decodeIfPresent(Bool.self, forKey: .removalEligible) ?? false
+        removalReason = try container.decodeIfPresent(String.self, forKey: .removalReason)
     }
 
     var usageSnapshot: UsageSnapshot {
@@ -432,6 +456,20 @@ struct ResetCreditRequest: Encodable {
 }
 
 struct ResetCreditResponse: Decodable {
+    let accountID: String
+    let status: String
+
+    enum CodingKeys: String, CodingKey {
+        case accountID = "account_id"
+        case status
+    }
+}
+
+struct RemoveAccountRequest: Encodable {
+    let confirm = "REMOVE_INVALID_ACCOUNT"
+}
+
+struct RemoveAccountResponse: Decodable {
     let accountID: String
     let status: String
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -105,6 +106,41 @@ func TestReadEnvFileValue(t *testing.T) {
 	}
 	if value != "router-secret" {
 		t.Fatalf("router key = %q", value)
+	}
+}
+
+func TestAccountRemovalEligibility(t *testing.T) {
+	now := time.Date(2026, time.September, 2, 10, 0, 0, 0, time.UTC)
+	expiredClaims := jwtClaims{}
+	expiredClaims.Exp = now.Add(-time.Minute).Unix()
+	activeClaims := jwtClaims{}
+	activeClaims.Exp = now.Add(time.Hour).Unix()
+
+	tests := []struct {
+		name     string
+		file     authFile
+		status   string
+		eligible bool
+		reason   string
+	}{
+		{name: "disabled", file: authFile{Disabled: true}, status: "ok", eligible: true, reason: "disabled"},
+		{name: "expired without refresh", file: authFile{Claims: expiredClaims}, status: "not_applicable", eligible: true, reason: "expired_without_refresh"},
+		{name: "expired with refresh", file: authFile{Claims: expiredClaims, RefreshToken: "refresh"}, status: "http_401"},
+		{name: "codex unauthorized", file: authFile{Provider: "codex", Claims: activeClaims, RefreshToken: "refresh"}, status: "http_401", eligible: true, reason: "authorization_rejected"},
+		{name: "codex forbidden", file: authFile{Provider: "codex", Claims: activeClaims, RefreshToken: "refresh"}, status: "http_403", eligible: true, reason: "authorization_rejected"},
+		{name: "xai usage error is not authority", file: authFile{Provider: "xai", Claims: activeClaims, RefreshToken: "refresh"}, status: "http_401"},
+		{name: "rate limited", file: authFile{Provider: "codex", Claims: activeClaims, RefreshToken: "refresh"}, status: "http_429"},
+		{name: "upstream error", file: authFile{Provider: "codex", Claims: activeClaims, RefreshToken: "refresh"}, status: "error"},
+		{name: "healthy", file: authFile{Provider: "codex", Claims: activeClaims, RefreshToken: "refresh"}, status: "ok"},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			eligible, reason := accountRemovalEligibility(testCase.file, testCase.status, now)
+			if eligible != testCase.eligible || reason != testCase.reason {
+				t.Fatalf("eligibility = %t/%q, want %t/%q", eligible, reason, testCase.eligible, testCase.reason)
+			}
+		})
 	}
 }
 
@@ -632,15 +668,168 @@ func TestResetCreditConsumesOneApplicableCredit(t *testing.T) {
 	}
 }
 
+func TestRemoveInvalidAccountRequiresConfirmation(t *testing.T) {
+	authDir := t.TempDir()
+	path := filepath.Join(authDir, "disabled.json")
+	writeFixture(t, path, map[string]any{"type": "codex", "disabled": true})
+	server := newTestServer(t, authDir)
+
+	response := performRemoveRequest(server, accountPublicID("disabled.json"), "WRONG")
+	if response.Code != http.StatusBadRequest {
+		t.Fatalf("wrong confirmation returned %d: %s", response.Code, response.Body.String())
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("source changed without confirmation: %v", err)
+	}
+}
+
+func TestRemoveInvalidAccountRejectsHealthyAccount(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "healthy.json"), map[string]any{
+		"type":          "codex",
+		"access_token":  "access",
+		"refresh_token": "refresh",
+	})
+	server := newTestServer(t, authDir)
+	server.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusOK, `{"plan_type":"plus"}`), nil
+	})}
+
+	response := performRemoveRequest(server, accountPublicID("healthy.json"), removeInvalidAccountConfirmation)
+	if response.Code != http.StatusConflict {
+		t.Fatalf("healthy removal returned %d: %s", response.Code, response.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(authDir, "healthy.json")); err != nil {
+		t.Fatalf("healthy source changed: %v", err)
+	}
+}
+
+func TestRemoveInvalidAccountMovesDisabledFile(t *testing.T) {
+	authDir := t.TempDir()
+	removedDir := t.TempDir()
+	path := filepath.Join(authDir, "disabled.json")
+	writeFixture(t, path, map[string]any{
+		"type":          "codex",
+		"email":         "person@example.com",
+		"account_id":    "private-account-id",
+		"access_token":  "private-access-token",
+		"refresh_token": "private-refresh-token",
+		"disabled":      true,
+	})
+	server := newTestServer(t, authDir)
+	server.cfg.RemovedAuthDir = removedDir
+
+	response := performRemoveRequest(server, accountPublicID("disabled.json"), removeInvalidAccountConfirmation)
+	if response.Code != http.StatusOK {
+		t.Fatalf("disabled removal returned %d: %s", response.Code, response.Body.String())
+	}
+	for _, forbidden := range []string{"disabled.json", "person@example.com", "private-account-id", "private-access-token", "private-refresh-token", removedDir} {
+		if strings.Contains(response.Body.String(), forbidden) {
+			t.Fatalf("response leaked %q: %s", forbidden, response.Body.String())
+		}
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("source still exists or unexpected error: %v", err)
+	}
+	matches, err := filepath.Glob(filepath.Join(removedDir, "*", "disabled.json"))
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("quarantine matches = %v, err = %v", matches, err)
+	}
+	info, err := os.Stat(matches[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("quarantine mode = %o, want 600", info.Mode().Perm())
+	}
+}
+
+func TestRemoveInvalidAccountRejectsSymlink(t *testing.T) {
+	authDir := t.TempDir()
+	target := filepath.Join(t.TempDir(), "target.json")
+	writeFixture(t, target, map[string]any{"type": "codex", "disabled": true})
+	link := filepath.Join(authDir, "linked.json")
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatal(err)
+	}
+	server := newTestServer(t, authDir)
+
+	response := performRemoveRequest(server, accountPublicID("linked.json"), removeInvalidAccountConfirmation)
+	if response.Code != http.StatusConflict {
+		t.Fatalf("symlink removal returned %d: %s", response.Code, response.Body.String())
+	}
+	if _, err := os.Lstat(link); err != nil {
+		t.Fatalf("symlink changed: %v", err)
+	}
+	if _, err := os.Stat(target); err != nil {
+		t.Fatalf("target changed: %v", err)
+	}
+}
+
+func TestRemoveInvalidAccountReturnsNotFound(t *testing.T) {
+	server := newTestServer(t, t.TempDir())
+	response := performRemoveRequest(server, "000000000000", removeInvalidAccountConfirmation)
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("unknown account returned %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestRemoveInvalidAccountAcceptsRealtimeAuthorizationRejection(t *testing.T) {
+	authDir := t.TempDir()
+	path := filepath.Join(authDir, "rejected.json")
+	writeFixture(t, path, map[string]any{
+		"type":          "codex",
+		"access_token":  "rejected-access",
+		"refresh_token": "refresh",
+	})
+	server := newTestServer(t, authDir)
+	server.client = &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return jsonResponse(http.StatusUnauthorized, `{}`), nil
+	})}
+
+	response := performRemoveRequest(server, accountPublicID("rejected.json"), removeInvalidAccountConfirmation)
+	if response.Code != http.StatusOK {
+		t.Fatalf("authorization rejection removal returned %d: %s", response.Code, response.Body.String())
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("rejected source still exists or unexpected error: %v", err)
+	}
+}
+
+func TestQuarantineAuthFileRejectsDestinationConflict(t *testing.T) {
+	authDir := t.TempDir()
+	removedDir := t.TempDir()
+	fileName := "disabled.json"
+	writeFixture(t, filepath.Join(authDir, fileName), map[string]any{"type": "codex", "disabled": true})
+	now := time.Date(2026, time.September, 2, 10, 30, 0, 123, time.UTC)
+	accountID := accountPublicID(fileName)
+	batchDir := filepath.Join(removedDir, now.UTC().Format("20060102T150405.000000000Z")+"-"+accountID)
+	if err := os.Mkdir(batchDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeFixture(t, filepath.Join(batchDir, fileName), map[string]any{"existing": true})
+	server := newTestServer(t, authDir)
+	server.cfg.RemovedAuthDir = removedDir
+
+	err := server.quarantineAuthFile(authFile{FileName: fileName}, accountID, now)
+	if !errors.Is(err, errUnsafeAuthFile) {
+		t.Fatalf("conflict error = %v, want unsafe auth file", err)
+	}
+	if _, err = os.Stat(filepath.Join(authDir, fileName)); err != nil {
+		t.Fatalf("source changed on conflict: %v", err)
+	}
+}
+
 func newTestServer(t *testing.T, authDir string) *Server {
 	t.Helper()
 	server, err := NewServer(Config{
-		AuthDir:      authDir,
-		DesktopToken: testDesktopToken,
-		CLIProxyURL:  "http://127.0.0.1:1",
-		RouterURL:    "http://127.0.0.1:1",
-		UsageTimeout: time.Second,
-		OAuthTimeout: time.Minute,
+		AuthDir:        authDir,
+		RemovedAuthDir: filepath.Join(t.TempDir(), "removed"),
+		DesktopToken:   testDesktopToken,
+		CLIProxyURL:    "http://127.0.0.1:1",
+		RouterURL:      "http://127.0.0.1:1",
+		UsageTimeout:   time.Second,
+		OAuthTimeout:   time.Minute,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -664,6 +853,20 @@ func performResetRequest(server *Server, accountID string) *httptest.ResponseRec
 		http.MethodPost,
 		"/desktop/v1/accounts/"+accountID+"/reset-credit",
 		strings.NewReader(`{"confirm":"CONSUME_RESET_CREDIT"}`),
+	)
+	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
+	request.Header.Set("Content-Type", "application/json")
+	response := httptest.NewRecorder()
+	server.ServeHTTP(response, request)
+	return response
+}
+
+func performRemoveRequest(server *Server, accountID, confirmation string) *httptest.ResponseRecorder {
+	body, _ := json.Marshal(RemoveAccountRequest{Confirm: confirmation})
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/desktop/v1/accounts/"+accountID+"/remove",
+		strings.NewReader(string(body)),
 	)
 	request.Header.Set("Authorization", "Bearer "+testDesktopToken)
 	request.Header.Set("Content-Type", "application/json")

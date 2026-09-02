@@ -80,6 +80,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		s.handleXAIOAuthStart(w, r)
 	case r.Method == http.MethodGet && r.URL.Path == "/desktop/v1/oauth/xai/status":
 		s.handleXAIOAuthStatus(w, r)
+	case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/desktop/v1/accounts/") && strings.HasSuffix(r.URL.Path, "/remove"):
+		s.handleRemoveInvalidAccount(w, r)
 	case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/desktop/v1/accounts/") && strings.HasSuffix(r.URL.Path, "/reset-credit"):
 		s.handleResetCredit(w, r)
 	default:

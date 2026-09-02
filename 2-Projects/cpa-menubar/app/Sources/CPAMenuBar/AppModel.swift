@@ -11,6 +11,7 @@ final class AppModel: ObservableObject {
     @Published var isStartingXAIAuthorization = false
     @Published var xaiAuthorizationSession: XAIOAuthSession?
     @Published var resettingAccountID: String?
+    @Published var removingAccountID: String?
     @Published var errorMessage: String?
     @Published var statusMessage: String?
     @Published var showSettings = false
@@ -297,6 +298,28 @@ final class AppModel: ObservableObject {
         do {
             _ = try await client.consumeResetCredit(accountID: account.id)
             statusMessage = "已使用 1 张重置卡：\(account.emailMasked)"
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func removeInvalidAccount(_ account: Account) async {
+        guard removingAccountID == nil else { return }
+        guard account.removalEligible else {
+            errorMessage = "账号当前不符合移除条件"
+            return
+        }
+        guard let client = makeClient() else {
+            showSettings = true
+            return
+        }
+        removingAccountID = account.id
+        errorMessage = nil
+        defer { removingAccountID = nil }
+        do {
+            _ = try await client.removeInvalidAccount(accountID: account.id)
+            statusMessage = "已移除账号：\(account.emailMasked)"
             await refresh()
         } catch {
             errorMessage = error.localizedDescription

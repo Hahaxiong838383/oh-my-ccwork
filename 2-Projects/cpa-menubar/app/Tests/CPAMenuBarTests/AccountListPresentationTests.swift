@@ -23,6 +23,26 @@ final class AccountListPresentationTests: XCTestCase {
         XCTAssertFalse(AccountListPresentation.needsAttention(accounts.first { $0.id == "healthy" }!))
     }
 
+    func testRemovalFieldsAreBackwardCompatible() throws {
+        let account = try JSONDecoder().decode(
+            Account.self,
+            from: Data(
+                #"{"id":"legacy","provider":"codex","email_masked":"l***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"ok"}"#.utf8
+            )
+        )
+
+        XCTAssertFalse(account.removalEligible)
+        XCTAssertNil(account.removalReason)
+    }
+
+    func testRemovalReasonTextUsesFixedCopy() {
+        XCTAssertEqual(AccountListPresentation.removalReasonText("disabled"), "账号已停用")
+        XCTAssertEqual(AccountListPresentation.removalReasonText("expired_without_refresh"), "授权已过期且无法刷新")
+        XCTAssertEqual(AccountListPresentation.removalReasonText("authorization_rejected"), "授权已被上游拒绝")
+        XCTAssertNil(AccountListPresentation.removalReasonText("other"))
+        XCTAssertNil(AccountListPresentation.removalReasonText(nil))
+    }
+
     private func makeAccounts() throws -> [Account] {
         try JSONDecoder().decode(
             [Account].self,
@@ -33,7 +53,7 @@ final class AccountListPresentationTests: XCTestCase {
                   {"id":"k12","provider":"codex","email_masked":"k***@example.com","disabled":false,"has_refresh_token":false,"is_k12":true,"usage_status":"ok","usage":{"rate_limit":{"primary_window":{"used_percent":50,"limit_window_seconds":604800}}}},
                   {"id":"low","provider":"codex","email_masked":"l***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"ok","usage":{"rate_limit":{"primary_window":{"used_percent":95,"limit_window_seconds":604800}}}},
                   {"id":"error","provider":"codex","email_masked":"e***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"error","usage_error":"暂时无法读取用量"},
-                  {"id":"disabled","provider":"codex","email_masked":"d***@example.com","disabled":true,"has_refresh_token":false,"is_k12":false,"usage_status":"ok"},
+                  {"id":"disabled","provider":"codex","email_masked":"d***@example.com","disabled":true,"has_refresh_token":false,"is_k12":false,"usage_status":"ok","removal_eligible":true,"removal_reason":"disabled"},
                   {"id":"xai","provider":"xai","email_masked":"x***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"ok"}
                 ]
                 """#.utf8
