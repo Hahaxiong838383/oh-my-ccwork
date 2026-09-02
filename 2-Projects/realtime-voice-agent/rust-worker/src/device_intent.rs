@@ -221,6 +221,44 @@ fn lookup(s: &str) -> Option<DeviceMatch> {
 /// 端侧信令合同)由 worker 通知 Android 走既有退出流程,worker 永不自行关房。
 pub const SESSION_EXIT_LABEL: u32 = 90;
 
+/// 2b 合同 v2 第一批低风险可逆集合(codex 终值):亮暗一级/暖冷一级/三光模式/音量 ±5。
+/// 画面远近 33/34 归实体电机域,开关灯/最值/静音/高度全在第二批(观察一周后议)。
+pub const L2_FIRST_BATCH: [u32; 9] = [4, 6, 12, 13, 22, 23, 24, 37, 38];
+
+pub fn l2_first_batch(label: u32) -> bool {
+    L2_FIRST_BATCH.contains(&label)
+}
+
+/// LLM 慢路执行门序(纯函数,单测载体)。Err=suppress 原因(日志 reason 枚举);顺序即优先级:
+/// execute_off → android_capability_missing → unknown_label → not_in_batch → fast_path_hit → no_trace。
+pub fn l2_gate(
+    execute_on: bool,
+    capable: bool,
+    label: u32,
+    fast_path_pending: bool,
+    has_trace: bool,
+) -> Result<(), &'static str> {
+    if !execute_on {
+        return Err("execute_off");
+    }
+    if !capable {
+        return Err("android_capability_missing");
+    }
+    if !known_label(label) {
+        return Err("unknown_label");
+    }
+    if !l2_first_batch(label) {
+        return Err("not_in_batch");
+    }
+    if fast_path_pending {
+        return Err("fast_path_hit");
+    }
+    if !has_trace {
+        return Err("no_trace");
+    }
+    Ok(())
+}
+
 pub fn known_label(label: u32) -> bool {
     table().map.values().any(|(l, _, _)| *l == label)
 }
@@ -325,6 +363,18 @@ pub fn exit_signal_enabled_for(room_name: &str) -> bool {
     commands_gate(
         std::env::var("SESSION_EXIT_SIGNAL_ENABLED").unwrap_or_default() == "1",
         &std::env::var("SESSION_EXIT_SIGNAL_CANARY_SN").unwrap_or_default(),
+        room_name,
+    )
+}
+
+/// LLM 慢路执行灰度门(2b 合同 v2):P003_DEVICE_INTENT_EXECUTE=1 且 SN 命中
+/// P003_DEVICE_INTENT_EXECUTE_CANARY_SN_HASHES(空=设备房全开;首轮只填 003 hash)。
+/// **独立于 P003_DEVICE_COMMANDS_CANARY_SN_HASHES**——复用会把 L1 快路也收窄到 003。
+/// fail-closed:env 未配=不执行(2a 观察打点照常)。
+pub fn l2_execute_enabled_for(room_name: &str) -> bool {
+    commands_gate(
+        std::env::var("P003_DEVICE_INTENT_EXECUTE").unwrap_or_default() == "1",
+        &std::env::var("P003_DEVICE_INTENT_EXECUTE_CANARY_SN_HASHES").unwrap_or_default(),
         room_name,
     )
 }
@@ -634,5 +684,28 @@ mod tests {
         assert_eq!(normalize("音量调到５０％"), "音量调到50");
         assert_eq!(normalize("音量百分之五十五"), "音量55");
         assert_eq!(normalize("百分之百"), "100");
+    }
+
+    #[test]
+    fn l2_first_batch_is_exactly_nine_low_risk_labels() {
+        for l in [4, 6, 12, 13, 22, 23, 24, 37, 38] {
+            assert!(l2_first_batch(l), "{l} 应在第一批");
+        }
+        for l in [2, 3, 5, 7, 25, 26, 33, 34, 42, 43, 44, 45, 90] {
+            assert!(!l2_first_batch(l), "{l} 不得在第一批");
+        }
+    }
+
+    #[test]
+    fn l2_gate_order_and_reasons() {
+        assert_eq!(l2_gate(false, true, 6, false, true), Err("execute_off"));
+        assert_eq!(l2_gate(true, false, 6, false, true), Err("android_capability_missing"));
+        assert_eq!(l2_gate(true, true, 999, false, true), Err("unknown_label"));
+        assert_eq!(l2_gate(true, true, 3, false, true), Err("not_in_batch"), "关灯在第二批");
+        assert_eq!(l2_gate(true, true, 33, false, true), Err("not_in_batch"), "画面远近实体电机域");
+        assert_eq!(l2_gate(true, true, 6, true, true), Err("fast_path_hit"));
+        assert_eq!(l2_gate(true, true, 6, false, false), Err("no_trace"));
+        assert_eq!(l2_gate(true, true, 6, false, true), Ok(()), "全门通过");
+        assert_eq!(l2_gate(true, true, 24, false, true), Ok(()), "中性光在第一批");
     }
 }

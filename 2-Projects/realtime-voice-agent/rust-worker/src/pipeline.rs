@@ -184,6 +184,8 @@ enum AgentState {
 enum TurnEvent {
     AudioStarted(u64),
     PlayedOut(u64),
+    /// 2b:LLM task 剥出的 [[DEV:N]] 意图回主循环(执行需 &mut self:pending_cmd/trace/publish)
+    DevIntent { label: u32, text: String },
 }
 
 /// S2-B2 命令轮槽(合同 §4.3/4.4):发布 proposed 后等 result,终态播固定短句。
@@ -197,6 +199,15 @@ struct PendingCmd {
     /// accepted 已播「好的，正在调整」(只播一次,终态还会再播终句)
     accepted_acked: bool,
 }
+
+/// 2b 合同 v2:本 turn 的 Android 硬件候选(随 command_word 到达,先于 commit)。
+/// 只在 L2 proposal 发出时消费;同 trace 且 5s 内才关联(否则 ID=null 交 Android 裁决)。
+struct PendingCandidate {
+    trace_id: String,
+    id: String,
+    at: Instant,
+}
+const L2_CANDIDATE_TTL: Duration = Duration::from_secs(5);
 
 /// Worker 等 result 的兜底超时(合同缺口,守恒默认 8s——交接文档待 codex 确认;
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
@@ -297,6 +308,12 @@ struct Orchestrator {
     exit_seq: i64,
     /// 在途退出信令:等 ACK/cancel/room close 任一终态;800ms 无终态同 seq 重发,至多 3 发
     exit_pending: Option<ExitSignalPending>,
+    /// 2b:本房 LLM 慢路执行开关(启动时按 room+env 定一次,默认关=2a 观察)
+    l2_execute_on: bool,
+    /// 2b:Android 能力声明(wake 包 contract_version>=2 才允许发 L2;room 级,job 结束即弃)
+    l2_capable: bool,
+    /// 2b:本 turn 硬件候选(command_word 带 vad_candidate_id)
+    pending_candidate: Option<PendingCandidate>,
     /// 本地音频回声对撞库(2026-09-01):(slot, normalize 后文案)。job 开始异步拉取填充,
     /// 拉不到=空(fail-open)。只装 greeting.*(farewell 播于关房时刻不需要;且退出词
     /// 与 farewell 文案对撞会误吞真退出意图——greeting 生成门本就禁退出/命令词,双保险)。
@@ -576,6 +593,10 @@ pub async fn run_pipeline(
     if exit_signal_on {
         info!(room = %room_name, "session_exit 信令已启用(v140 canary 命中)");
     }
+    let l2_execute_on = crate::device_intent::l2_execute_enabled_for(&room_name);
+    if l2_execute_on {
+        info!(room = %room_name, "LLM 慢路执行已启用(2b canary 命中;仍需 Android capability>=2)");
+    }
     let mut orch = Orchestrator {
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
@@ -583,6 +604,9 @@ pub async fn run_pipeline(
         exit_signal_on,
         exit_seq: 0,
         exit_pending: None,
+        l2_execute_on,
+        l2_capable: false,
+        pending_candidate: None,
         echo_local_texts,
         session_started_at: Instant::now(),
         echo_short_turn_at: None,
@@ -1081,7 +1105,14 @@ impl Orchestrator {
     // ── S2-B2 设备命令轮(合同 §4.3–4.5) ──
 
     /// 发布 device.command.proposed 并进入等待槽。合同要求:早于任何 filler/LLM/TTS。
-    fn start_device_command(&mut self, cmd: crate::device_intent::DeviceCommand, user_text: &str) {
+    /// lane:L1=快路(词表/command_word) / L2=LLM 慢路(2b);candidate=L2 关联的硬件候选 ID(原样透传)。
+    fn start_device_command(
+        &mut self,
+        cmd: crate::device_intent::DeviceCommand,
+        user_text: &str,
+        lane: &'static str,
+        candidate: Option<String>,
+    ) {
         let Some(trace) = self.device_trace.clone() else {
             // 无受信 trace(老 token/调试房)不发命令——与 input_ready 同纪律,fail-visible
             warn!(room = %self.room_name, "device command skipped: 无 trace,落回闲聊");
@@ -1105,6 +1136,8 @@ impl Orchestrator {
             cmd.canonical_phrase,
             &cmd.normalized_text,
             cmd.match_type,
+            lane,
+            candidate.as_deref(),
         );
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
         // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
@@ -1118,6 +1151,8 @@ impl Orchestrator {
             semantic_label = cmd.semantic_label,
             action = %cmd.action,
             match_type = %cmd.match_type,
+            lane,
+            candidate = %candidate.as_deref().unwrap_or("none"),
             command_publish_ts_ms = unix_ms_now(),
             llm_started = false,
             filler_started = false,
@@ -1136,6 +1171,42 @@ impl Orchestrator {
         self.set_state(AgentState::Thinking);
     }
 
+    /// 2b:LLM 慢路意图落主循环。门序在 device_intent::l2_gate(纯函数);通过则以 L2 lane
+    /// 复用快路的 proposal/result/短句链路。EXECUTE=0 时静默(task 内 observed 打点已代表)。
+    fn on_l2_intent(&mut self, label: u32, user_text: &str) {
+        if !self.l2_execute_on {
+            return;
+        }
+        let fast_path_pending = self.pending_cmd.is_some();
+        let has_trace = self.device_trace.is_some();
+        if let Err(reason) = crate::device_intent::l2_gate(
+            self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace,
+        ) {
+            info!(room = %self.room_name, label, reason, "llm device intent suppressed");
+            return;
+        }
+        let Some(mut cmd) = crate::device_intent::command_by_label(label) else {
+            info!(room = %self.room_name, label, reason = "unknown_label", "llm device intent suppressed");
+            return;
+        };
+        cmd.match_type = "llm";
+        cmd.normalized_text = crate::device_intent::normalize(user_text);
+        // 候选关联:同 trace 且 TTL 内;否则 None 交 Android 按合同 §2.4 裁决
+        let candidate = self
+            .pending_candidate
+            .take()
+            .filter(|c| Some(&c.trace_id) == self.device_trace.as_ref() && c.at.elapsed() < L2_CANDIDATE_TTL)
+            .map(|c| c.id);
+        info!(
+            room = %self.room_name,
+            label,
+            lane = "L2",
+            candidate = %candidate.as_deref().unwrap_or("none"),
+            "llm device intent executed"
+        );
+        self.start_device_command(cmd, user_text, "L2", candidate);
+    }
+
     /// Android result 到达:key 对撞 → 终态播固定短句清槽;accepted 播「正在调整」延时限。
     fn on_device_result(&mut self, r: control::DeviceResult) {
         let Some(p) = &mut self.pending_cmd else {
@@ -1151,9 +1222,18 @@ impl Orchestrator {
             semantic_label = r.semantic_label,
             status = %r.status,
             reason = %r.reason,
+            lane = %r.lane,
             result_received_ts_ms = unix_ms_now(),
             "device command result"
         );
+        // 2b 合同 v2 §2.5:Android 候选冲突裁决=静默(不播失败句,只记 suppress),清槽回听
+        if r.status == "rejected" && r.reason == "candidate_conflict" {
+            info!(room = %self.room_name, key = %r.idempotency_key, lane = %r.lane,
+                  reason = "rejected:candidate_conflict", "llm device intent suppressed");
+            self.pending_cmd = None;
+            self.set_state(AgentState::Listening);
+            return;
+        }
         if r.status == "accepted" {
             // 已提交未回读(电机类):播一次「正在调整」,重置计时窗等终态
             let first = !p.accepted_acked;
@@ -1205,7 +1285,12 @@ impl Orchestrator {
             // 补早说空窗——事件可先于 input_ready 到达(control 通道在 job 层缓冲,
             // pipeline 起后消费,天然满足)。决策日志四态:accepted/duplicate/rejected。
             // (expired=会话已关,包无处投递,由 job 生命周期结构保证)
-            control::Inbound::CommandWord { label, before_ready } => {
+            control::Inbound::CommandWord { label, before_ready, candidate_id } => {
+                // 2b:候选 ID 先于 commit 到达,记为本 turn 候选(L2 proposal 发出时消费)
+                let has_candidate = candidate_id.is_some();
+                if let Some(id) = candidate_id {
+                    self.pending_candidate = Some(PendingCandidate { trace_id: ev.trace_id.clone(), id, at: Instant::now() });
+                }
                 let decision;
                 let mut reason = "";
                 if !self.device_commands_on {
@@ -1220,7 +1305,7 @@ impl Orchestrator {
                         if let Some(sp) = self.spec.take() {
                             sp.task.abort();
                         }
-                        self.start_device_command(cmd, &format!("[vad_label_{label}]"));
+                        self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", None);
                     } else {
                         decision = "duplicate";
                         reason = "same_label_in_window";
@@ -1234,11 +1319,18 @@ impl Orchestrator {
                     trace_id = %ev.trace_id,
                     semantic_label = label,
                     before_ready,
+                    has_candidate,
                     decision,
                     reason,
                     proposal_emitted = (decision == "accepted"),
                     "command_word 决策"
                 );
+            }
+            control::Inbound::Capability { contract_version } => {
+                // 2b 合同 v2 §2.1:wake 包能力声明,room 级保存;<2=只观察不发 L2
+                self.l2_capable = contract_version >= 2;
+                info!(room = %self.room_name, trace_id = %ev.trace_id, contract_version,
+                      l2_capable = self.l2_capable, "l2 capability");
             }
             control::Inbound::Bypass => {
                 // 芯片唤醒/VAD/命令词:只记录,**绝不改变 worker 的 turn 判定**。
@@ -1497,6 +1589,7 @@ impl Orchestrator {
 
     fn on_turn_event(&mut self, te: TurnEvent) {
         match te {
+            TurnEvent::DevIntent { label, text } => self.on_l2_intent(label, &text),
             TurnEvent::AudioStarted(id) => {
                 if self.agent_turn.as_ref().map(|t| t.id) != Some(id) {
                     return; // 已被替换的旧 turn,忽略
@@ -1772,7 +1865,7 @@ impl Orchestrator {
                         if let Some(sp) = self.spec.take() {
                             sp.task.abort();
                         }
-                        self.start_device_command(cmd, &user_text);
+                        self.start_device_command(cmd, &user_text, "L1", None);
                         self.latest_interim.clear();
                         self.tele_text.clear();
                         return;
@@ -2067,6 +2160,7 @@ impl Orchestrator {
                             // DevMarkStripper 剥离(不进 TTS/字幕/历史),此处只记日志**不执行**
                             // ——LLM→DEVICE commit 被 codex 标 BLOCKED_PENDING_VAD_CANDIDATE_ID,
                             // 关联合同落地前禁止提交。统计:grep 'llm device intent observed'。
+                            let mut l2_sent = false;
                             for label in &outcome.dev_labels {
                                 if *label == crate::device_intent::SESSION_EXIT_LABEL {
                                     // B 案(2026-08-28):慢路退出意图观察打点——ASR 错转/表达
@@ -2076,12 +2170,19 @@ impl Orchestrator {
                                         "llm session_exit intent observed (observe-only, not executed)"
                                     );
                                 } else {
+                                    // 观察打点保留(2a 数据不断);执行与否由主循环 on_l2_intent 门序决定
                                     info!(
                                         room = %room_name,
                                         label,
                                         known = crate::device_intent::known_label(*label),
-                                        "llm device intent observed (observe-only, not executed)"
+                                        "llm device intent observed"
                                     );
+                                    if l2_sent {
+                                        info!(room = %room_name, label, reason = "multi_label", "llm device intent suppressed");
+                                        continue;
+                                    }
+                                    l2_sent = true;
+                                    let _ = ev_tx.try_send(TurnEvent::DevIntent { label: *label, text: user_text.clone() });
                                 }
                             }
                             // tps=字符/秒近似(SSE chunk≠token,诚实口径;web 面板显示用)
