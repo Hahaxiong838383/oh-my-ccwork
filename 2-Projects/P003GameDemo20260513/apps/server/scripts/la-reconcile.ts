@@ -15,9 +15,11 @@ console.log(`| 设备 | gen commit(${day}) | 触发 | 新 revision | 首个新 m
 console.log('|---|---|---|---:|---|---|---:|---|');
 for (const a of relationStateStore.listAccounts().filter((x) => x.startsWith('device-'))) {
   const st = localAudioStore.getState(a) as { revision: number; last_generated_at: number };
+  // commit 时刻 = 该账号最近一次生成（state.last_generated_at），且必须落在当天；触发原因取离它最近的账本事件
   const commits = growthLedgerStore.list(a, { module: 'local_audio', limit: 200 }).filter((e) => e.ts >= dayStart);
-  const commitTs = commits.length ? Math.min(...commits.map((e) => e.ts)) : 0;
-  const trigger = commits[0]?.rule?.replace('local_audio:', '') ?? '—';
+  const commitTs = st.last_generated_at >= dayStart ? st.last_generated_at : 0;
+  const nearest = commits.length ? commits.reduce((b, e) => (Math.abs(e.ts - commitTs) < Math.abs(b.ts - commitTs) ? e : b)) : undefined;
+  const trigger = nearest?.rule?.replace('local_audio:', '') ?? '—';
   const rev = st.revision;
   const log = localAudioStore.listFetchLog(a, commitTs || dayStart);
   const firstServed = commitTs ? log.find((r) => r.served_revision === rev)?.ts : undefined;

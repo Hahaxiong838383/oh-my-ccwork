@@ -320,7 +320,7 @@ class LocalAudioStore {
   /** 触达流水（时间升序），sinceTs 之后的。对账脚本与单测用。 */
   listFetchLog(accountId: string, sinceTs = 0): { ts: number; served_revision: number; applied: number | null }[] {
     return this.db
-      .prepare(`SELECT ts, served_revision, applied FROM local_audio_fetch_log WHERE account_id = ? AND ts >= ? ORDER BY ts ASC`)
+      .prepare(`SELECT ts, served_revision, applied FROM local_audio_fetch_log WHERE account_id = ? AND ts >= ? ORDER BY ts ASC, id ASC`)
       .all(accountId, sinceTs) as { ts: number; served_revision: number; applied: number | null }[];
   }
 
