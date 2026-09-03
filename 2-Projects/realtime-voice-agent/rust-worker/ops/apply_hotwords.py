@@ -16,6 +16,10 @@ stdin 单行 JSON,stdout 单行 JSON 回执(stderr 才是人读日志):
   {"action":"race_stats","hours":48}             → journal「llm race won」统计(胜负/首字分位/兜底胜出分布)
   {"action":"race_bench","models":[..],"runs":3,"system":"..","user_texts":[..]}
       → 用 env 里的兜底 base+key(key 绝不从载荷来)对候选模型做流式首字基准,总预算 140s
+  语音链路配置（2026-09-03 晚,运营台「🎙 语音链路」,同一把 key 复用;川哥:供应商/方案/密钥后台手动配,不再找 cc 改 env）:
+  {"action":"voice_get"}                         → VOICE_KEYS 三视图:rust(覆盖层 rust-worker.env)/base(python 线 .env,只读参考)/proc(进程生效);密钥只回 hint/len
+  {"action":"voice_set","values":{白名单键},"force"} → 只写 rust-worker.env(覆盖层,EnvironmentFile 末位赢;绝不碰 .env/python 线)
+      → 快照 → 原子写 → 纪律重启 → 健康自检/回滚(同 apply);TTS_PROVIDER=xfyun 缺凭据时 worker 启动 bail → 自检失败 → 自动回滚
 
 安全纪律:
 - 键白名单只认三热词键;值字符白名单 [中文 A-Za-z0-9 ,](防 env 注入换行/引号)。
@@ -412,6 +416,144 @@ def do_race_set(req: dict) -> dict:
     }
 
 
+# ── 语音链路配置(2026-09-03)：键表与 server 侧 VOICE_RW 同形(后端为真防线,这里是最后一道)。
+# 值正则刻意窄:env 文件按行解析,任何换行/引号/$ 都可能变成注入;范围门在 server 也有一份。
+VOICE_KEYS = {
+    "VOLC_ASR_RESOURCE_ID": re.compile(r"^volc\.[a-z0-9_.]{3,60}$"),
+    "VOLC_ASR_END_WINDOW_MS": re.compile(r"^\d{2,4}$"),
+    "VOLC_ASR_ENABLE_DDC": re.compile(r"^[01]$"),
+    "VOLC_PREFLIGHT_ENABLED": re.compile(r"^[01]$"),
+    "VOLC_ASR_NONSTREAM_ENABLED": re.compile(r"^[01]$"),
+    "VOLC_ASR_NONSTREAM_CANARY_SN": re.compile(r"^(?:[A-Za-z0-9]{6,40}(?:,[A-Za-z0-9]{6,40})*)?$"),
+    "VOLC_ASR_BOOSTING_TABLE_ID": re.compile(r"^(?:[A-Za-z0-9-]{8,64})?$"),
+    "VOLC_APP_ID": re.compile(r"^\d{6,16}$"),
+    "VOLC_ACCESS_TOKEN": re.compile(r"^[A-Za-z0-9._-]{16,128}$"),
+    "VOLC_ASR_API_KEY": re.compile(r"^[A-Za-z0-9._-]{16,128}$"),
+    "TTS_PROVIDER": re.compile(r"^(?:volc|xfyun)$"),
+    "VOLC_TTS_RESOURCE_ID": re.compile(r"^[A-Za-z0-9._-]{3,60}$"),
+    "VOLC_TTS_SPEAKER": re.compile(r"^[A-Za-z0-9_]{4,80}$"),
+    "VOLC_TTS_SPEED": re.compile(r"^\d(?:\.\d{1,2})?$"),
+    "TTS_POOL_ENABLED": re.compile(r"^[01]$"),
+    "TTS_MIN_SENTENCE_LEN": re.compile(r"^\d{1,2}$"),
+    "XFYUN_TTS_VCN": re.compile(r"^[A-Za-z0-9_]{3,64}$"),
+    "XFYUN_TTS_SPEED": re.compile(r"^\d{1,3}$"),
+    "XFYUN_TTS_ORAL_LEVEL": re.compile(r"^(?:high|mid|low)$"),
+    "XFYUN_TTS_PRECONNECT": re.compile(r"^[01]$"),
+    "XFYUN_TTS_APP_ID": re.compile(r"^[A-Za-z0-9]{6,16}$"),
+    "XFYUN_TTS_API_KEY": re.compile(r"^[A-Za-z0-9]{16,64}$"),
+    "XFYUN_TTS_API_SECRET": re.compile(r"^[A-Za-z0-9]{16,64}$"),
+}
+VOICE_SECRET = ("VOLC_APP_ID", "VOLC_ACCESS_TOKEN", "VOLC_ASR_API_KEY", "XFYUN_TTS_APP_ID", "XFYUN_TTS_API_KEY", "XFYUN_TTS_API_SECRET")
+VOICE_RANGES = {"VOLC_ASR_END_WINDOW_MS": (100, 2000), "TTS_MIN_SENTENCE_LEN": (2, 40), "XFYUN_TTS_SPEED": (0, 100)}
+BASE_ENV = "/root/realtime-voice-agent/.env"  # python 线共享,只读参考,绝不写
+
+
+def _voice_mask(k: str, v: str):
+    if k in VOICE_SECRET:
+        return {"set": bool(v), "hint": (v[:4] + "…" + v[-2:]) if len(v) >= 8 else ("…" if v else ""), "len": len(v)}
+    return v
+
+
+def _voice_values(kvs) -> dict:
+    vals = {}
+    for kv in kvs:
+        for k in VOICE_KEYS:
+            if kv.startswith(f"{k}="):
+                vals[k] = _voice_mask(k, kv[len(k) + 1 :])
+    return vals
+
+
+def voice_proc_values() -> dict:
+    pid = main_pid()
+    if pid <= 0:
+        return {}
+    try:
+        raw = open(f"/proc/{pid}/environ", "rb").read().decode("utf-8", "replace")
+    except OSError:
+        return {}
+    return _voice_values(raw.split("\0"))
+
+
+def voice_validate(values) -> str:
+    """返回错误串;空串=通过。密钥空值由 server 层过滤,这里空密钥也拒(防误清空)。"""
+    if not isinstance(values, dict) or not values:
+        return "values 为空"
+    for k, v in values.items():
+        if k not in VOICE_KEYS:
+            return f"键不在白名单: {k}"
+        if not isinstance(v, str) or not VOICE_KEYS[k].fullmatch(v):
+            return f"{k} 值不合法"
+        if k in VOICE_RANGES:
+            lo, hi = VOICE_RANGES[k]
+            if not (lo <= int(v) <= hi):
+                return f"{k} 须在 {lo}~{hi}"
+        if k == "VOLC_TTS_SPEED" and not (0.5 <= float(v) <= 2.0):
+            return "VOLC_TTS_SPEED 须在 0.5~2.0"
+    return ""
+
+
+def _prune_tagged(tag: str) -> None:
+    d, prefix = os.path.dirname(RUST_ENV), os.path.basename(RUST_ENV)
+    baks = sorted(f for f in os.listdir(d) if f.startswith(f"{prefix}.bak-{tag}-"))
+    for old in baks[:-BAK_KEEP]:
+        os.unlink(os.path.join(d, old))
+
+
+def apply_env_and_restart(values: dict, tag: str, view) -> dict:
+    """通用:快照 rust-worker.env → 写键 → 纪律重启 → 健康自检;失败回滚快照再拉起。view()=回执用的进程视图。"""
+    ts = time.strftime("%Y%m%d-%H%M%S")
+    bak = f"{RUST_ENV}.bak-{tag}-{ts}"
+    with open(RUST_ENV, encoding="utf-8") as src, open(bak, "w", encoding="utf-8") as dst:
+        dst.write(src.read())
+    _prune_tagged(tag)
+    lines = read_lines(RUST_ENV)
+    for k, v in values.items():
+        lines = set_key(lines, k, v)
+    atomic_write(RUST_ENV, lines)
+    ok, why = stop_drain_start()
+    if ok:
+        return {"ok": True, "applied": sorted(values.keys()), "backup": bak, "proc": view()}
+    log(f"{tag} 健康自检失败({why}),回滚快照")
+    with open(bak, encoding="utf-8") as src:
+        content = src.read()
+    tmp = f"{RUST_ENV}.tmp-rollback"
+    with open(tmp, "w", encoding="utf-8") as dst:
+        dst.write(content)
+    os.replace(tmp, RUST_ENV)
+    run(["systemctl", "stop", UNIT], timeout=30)
+    time.sleep(2)
+    t_start = time.time()
+    run(["systemctl", "start", UNIT], timeout=30)
+    time.sleep(8)
+    ok2, why2 = health(t_start)
+    return {
+        "ok": False, "rolled_back": True, "reason": why, "recovered": ok2, "recover_detail": why2,
+        "backup": bak, "proc": view(),
+    }
+
+
+def do_voice_get() -> dict:
+    try:
+        base = _voice_values(read_lines(BASE_ENV))
+    except OSError:
+        base = {}
+    return {
+        "ok": True, "rust": _voice_values(read_lines(RUST_ENV)), "base": base, "proc": voice_proc_values(),
+        "unit_active": is_active(), "main_pid": main_pid(), "recent_activity": recent_activity(),
+        "ts": int(time.time()),
+    }
+
+
+def do_voice_set(req: dict) -> dict:
+    values = req.get("values") or {}
+    err = voice_validate(values)
+    if err:
+        return {"ok": False, "error": err}
+    if not req.get("force") and (n := recent_activity()) > 0:
+        return {"ok": False, "error": f"近 90s 有 {n} 条活动行(疑似通话中),拒绝重启;确认后带 force 重试"}
+    return apply_env_and_restart(values, "voice", voice_proc_values)
+
+
 def do_race_stats(req: dict) -> dict:
     try:
         hours = int(req.get("hours", 48))
@@ -604,6 +746,10 @@ def main() -> None:
         resp = do_race_stats(req)
     elif action == "race_bench":
         resp = do_race_bench(req)
+    elif action == "voice_get":
+        resp = do_voice_get()
+    elif action == "voice_set":
+        resp = do_voice_set(req)
     else:
         resp = {"ok": False, "error": f"未知 action: {action}"}
     print(json.dumps(resp, ensure_ascii=False))
