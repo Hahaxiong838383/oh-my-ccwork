@@ -307,6 +307,23 @@ await t('J1 开通即自动建档（空档兜底）——记忆抽取的「没�
   assert.equal(profile!.nickname, '');
 });
 
+await t('J2b interest-veto：否决后 state=retracted/parent，再提不升；空 value 400', async () => {
+  const SNJ = 'BJP00326060100200023';
+  profileStore.updateMemoryFields(`device-${SNJ}`, { interests: [{ value: '冷光', confidence: 0.5, last_updated: 1, source: 'voice', state: 'unverified', mention_days: ['2026-09-01'] }] });
+  const bad = await adminReq(adminToken, 'POST', `/devices/${SNJ}/interest-veto`, { value: '' });
+  assert.equal(bad.status, 400);
+  const res = await adminReq(adminToken, 'POST', `/devices/${SNJ}/interest-veto`, { value: '冷光' });
+  assert.equal(res.status, 200);
+  assert.equal(((await res.json()) as { vetoed: boolean }).vetoed, true);
+  const it = profileStore.getProfile(`device-${SNJ}`)!.interests.find((i) => i.value === '冷光')!;
+  assert.equal(it.state, 'retracted');
+  assert.equal(it.retracted_by, 'parent');
+  profileStore.updateMemoryFields(`device-${SNJ}`, { interests: [{ value: '冷光', confidence: 0.5, last_updated: 2, source: 'voice', state: 'unverified', mention_days: ['2026-09-02'] }] });
+  assert.equal(profileStore.getProfile(`device-${SNJ}`)!.interests.find((i) => i.value === '冷光')!.state, 'retracted', '否决后再提不升');
+  const agg = (await (await adminReq(adminToken, 'GET', `/devices/${SNJ}/brain`)).json()) as { profile: { interests: { value: string; state: string }[] } };
+  assert.equal(agg.profile.interests.find((i) => i.value === '冷光')!.state, 'retracted', 'GET 聚合带 state');
+});
+
 await t('J2 child-profile 编辑：PATCH 部分更新 + 校验 + GET 聚合可见', async () => {
   const SNJ = 'BJP00326060100200023';
   const bad = await adminReq(adminToken, 'PATCH', `/devices/${SNJ}/child-profile`, { birthday: '2019/06' });

@@ -2281,7 +2281,8 @@
                               </div>
                               <template v-if="brainState.view.profile">
                                 <div style="font-size:13px;margin-bottom:8px;color:#6B7785"><span v-if="brainState.view.profile.preferred_address">喜欢被叫「{{ brainState.view.profile.preferred_address }}」</span><span v-else>对话中可自然习得称呼偏好</span></div>
-                                <el-tag v-for="i in brainState.view.profile.interests" :key="i.value" size="small" style="margin-right:6px">{{ i.value }}</el-tag>
+                                <el-tag v-for="i in brainState.view.profile.interests" :key="i.value" size="small" :type="i.state==='verified'?'success':(i.state==='retracted'?'danger':'info')" :effect="i.state==='retracted'?'plain':'light'" :title="(i.evidence?('原话：'+i.evidence):'无原话')+((i.mention_days&&i.mention_days.length)?('｜提及日：'+i.mention_days.join(',')):'')" :closable="i.state!=='retracted'" @close="vetoInterest(i)" style="margin-right:6px;margin-bottom:4px">{{ i.value }}<span v-if="i.state!=='verified'" style="opacity:.75">·{{ i.state==='retracted'?(i.retracted_by==='parent'?'已否决':'已撤回'):'待确认' }}</span></el-tag>
+                                <div v-if="brainState.view.profile.interests.length" style="font-size:11px;color:#909399;margin-top:4px">绿=已确认(≥2 天提到)　灰=待确认(只在孩子提起时接)　红=已否决/已撤回；点 × 否决（之后语音再提也不升）；悬停看原话</div>
                                 <span v-if="!brainState.view.profile.interests.length" style="font-size:12px;color:#909399">暂无兴趣标签（语音对话中自动沉淀）</span>
                               </template>
                               <div v-else style="font-size:12px;color:#909399">暂无档案——填写上方昵称/性别保存即建档（记忆抽取随之激活）</div>
@@ -5068,6 +5069,21 @@
               if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('保存失败，请稍后重试');
             });
         }
+        function vetoInterest(i) {
+          var sn = brainState.selectedSn;
+          if (!sn || !i || !i.value) return;
+          ElementPlus.ElMessageBox.confirm('否决兴趣「' + i.value + '」？之后孩子语音再提也不会升为兴趣（可随时在此看到「已否决」）', '家长否决', { type: 'warning', confirmButtonText: '否决', cancelButtonText: '取消' })
+            .then(function () {
+              return deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/interest-veto', { method: 'POST', body: JSON.stringify({ value: i.value }) })
+                .then(function (data) {
+                  if (data && data.ok && data.vetoed) { ElementPlus.ElMessage.success('已否决「' + i.value + '」'); loadBrain(sn); }
+                  else ElementPlus.ElMessage.error((data && data.error) || '否决失败');
+                });
+            })
+            .catch(function (e) {
+              if (e && e.message && e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('否决失败，请稍后重试');
+            });
+        }
         function bindParent() {
           var sn = brainState.selectedSn;
           var id = (parentBind.input || '').trim();
@@ -6516,7 +6532,7 @@
           openBrain: openBrain, unbindBrain: unbindBrain, addBrainMemory: addBrainMemory,
           delBrainMemory: delBrainMemory,
           brainProfileDraft: brainProfileDraft, parentBind: parentBind,
-          saveChildProfile: saveChildProfile, bindParent: bindParent, unbindParent: unbindParent,
+          saveChildProfile: saveChildProfile, vetoInterest: vetoInterest, bindParent: bindParent, unbindParent: unbindParent,
           extractLlm: extractLlm, loadExtractLlm: loadExtractLlm, saveExtractLlm: saveExtractLlm, testExtractLlm: testExtractLlm,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem,

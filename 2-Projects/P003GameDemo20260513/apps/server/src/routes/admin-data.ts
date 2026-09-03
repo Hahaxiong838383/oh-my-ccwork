@@ -737,6 +737,21 @@ adminDataRoute.patch('/devices/:sn/child-profile', async (c) => {
 });
 
 // 家长账号关联（建档下发链预留，2026-08-19）：admin 手工绑定家长账号到设备。
+// R1 家长/运营否决兴趣（2026-09-03）：软撤回 retracted_by=parent，之后语音再提不升；body {value}。
+adminDataRoute.post('/devices/:sn/interest-veto', async (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  let body: { value?: unknown } = {};
+  try { body = (await c.req.json()) as { value?: unknown }; } catch { body = {}; }
+  const value = typeof body.value === 'string' ? body.value.trim() : '';
+  if (!value || value.length > 40) return c.json({ ok: false, error: 'value 必填(≤40字)' }, 400);
+  const vetoed = profileStore.vetoInterest(device.account_id, value);
+  if (vetoed) console.log(`[admin-brain] interest vetoed sn=${sn} value=${JSON.stringify(value)}`);
+  return c.json({ ok: true, vetoed });
+});
+
 // body {parent_account_id: string|null}。绑定时若设备已开通 brain 且设备账号无档、家长有档 → 同步建档。
 // 小程序自助绑定走 /api/profile/bind-sn（家长 JWT），与本端点写同一列。
 adminDataRoute.patch('/devices/:sn/parent', async (c) => {
