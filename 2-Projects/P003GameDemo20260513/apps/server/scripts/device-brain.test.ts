@@ -308,6 +308,15 @@ await t('J1 开通即自动建档（空档兜底）——记忆抽取的「没�
   assert.equal(profile!.nickname, '');
 });
 
+await t('J2d memory-whitebox：返回 extraction_log / inactive_items / ledger 三段', async () => {
+  const SNJ = 'BJP00326060100200023';
+  const res = await adminReq(adminToken, 'GET', `/devices/${SNJ}/memory-whitebox`);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { ok: boolean; extraction_log: unknown[]; inactive_items: unknown[]; ledger: unknown[] };
+  assert.equal(body.ok, true);
+  assert.ok(Array.isArray(body.extraction_log) && Array.isArray(body.inactive_items) && Array.isArray(body.ledger));
+});
+
 await t('J2c trait-snapshots / trait-rollback：列表、退回、坏 day 400、无快照 404', async () => {
   const SNJ = 'BJP00326060100200023';
   const acct = `device-${SNJ}`;

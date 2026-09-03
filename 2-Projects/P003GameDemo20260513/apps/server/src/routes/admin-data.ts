@@ -11,6 +11,7 @@ import { memoryItemStore } from '../memory-item-store.js';
 import { canWrite, getTokenUser, isAdminRole, isValidToken } from './auth.js';
 import { resetAllQuotas } from '../guard.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
+import { extractionLogStore } from '../extraction-log-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { buildDeviceLayers, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { AI_SAFETY_BASELINE } from '../ai-literacy.js';
@@ -964,6 +965,22 @@ adminDataRoute.post('/devices/:sn/persona-local-audio-run', async (c) => {
 
 // P0 人格成长（codex 3.2 生命周期兜底）：admin 显式重置设备账号的关系状态。
 // 用途：换孩子、测试数据清理、家长要求重置。物理删除（同儿童数据删除权模式）。
+// 记忆白盒（2026-09-03）：抽取流水 + 已撤回/取代条目 + 记忆因果账本（profile/insight/concern 模块）
+adminDataRoute.get('/devices/:sn/memory-whitebox', (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  const acct = device.account_id;
+  const all = memoryItemStore.listByAccount(acct).items;
+  const inactive = all.filter((it) => it.status !== 'active').slice(0, 15);
+  const ledger = ['profile', 'insight', 'concern']
+    .flatMap((m) => growthLedgerStore.list(acct, { module: m, limit: 20 }))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 30);
+  return c.json({ ok: true, extraction_log: extractionLogStore.list(acct, 20), inactive_items: inactive, ledger });
+});
+
 // R3（2026-09-03）：特质每日快照列表 + 退回任意一天
 adminDataRoute.get('/devices/:sn/trait-snapshots', (c) => {
   const sn = c.req.param('sn').trim();
@@ -1002,6 +1019,7 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
     const insightCleared = childInsightStore.clear(device.account_id);
     const traitCleared = traitStore.clear(device.account_id);
     const ledgerCleared = growthLedgerStore.clear(device.account_id);
+    if (scope !== 'persona') extractionLogStore.clear(device.account_id); // 全清连抽取流水一起（儿童数据删除权）
     const localAudioCleared = scope !== 'persona';
     if (localAudioCleared) {
       localAudioStore.clearAccount(device.account_id); // 第六样：本地音频条目+文件+revision 归零

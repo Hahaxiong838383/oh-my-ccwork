@@ -9,6 +9,7 @@ import { stylePoolStore, shouldCrystallize } from './style-pool-store.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
 import { createHash } from 'node:crypto';
 import { conversationStore } from './conversation-store.js';
+import { extractionLogStore } from './extraction-log-store.js';
 
 // P1.2 语音对话画像异步抽取：从近几轮对话抽取孩子的【长期画像更新】（改名/兴趣/性格/情绪），
 // 产出 MemoryPatch 写回 profile-store（由 pipeline 出主链路异步调用，失败不影响语音）。
@@ -51,6 +52,18 @@ export const EXTRACT_SYSTEM = // 导出仅供诊断探针/单测复用（2026-08
 // Phase 1 抽取字段扩到 12 类后,8s/512tok 旧预算不够(实测 DeepSeek 正好撞 8s 超时返 null)。
 // 抽取是 fire-and-forget 异步(不占语音主链路),放宽到 20s/1024tok 无 TTFT 代价。
 const EXTRACT_TIMEOUT_MS = 20000;
+
+// 抽取流水（extraction-log）用的拒绝原因累加器：parse* 纯函数只 push 字符串，extractAndPersist 每轮清空后取走。
+const _rejectReasons: string[] = [];
+function noteReject(reason: string): void {
+  if (_rejectReasons.length < 12) _rejectReasons.push(reason);
+}
+/** 单测/诊断用：取走并清空本轮拒绝原因。 */
+export function takeRejectReasons(): string[] {
+  const out = _rejectReasons.slice();
+  _rejectReasons.length = 0;
+  return out;
+}
 
 // 特质强化归因的相邻轮内存锚（trait-store 规则引擎用；重启丢=跨重启相邻轮本就罕见）
 const _prevTurnMap = new Map<string, { ts: number; valence?: number; story: boolean; hook: boolean }>();
@@ -106,6 +119,7 @@ export function parsePatch(raw: string, current: FamilyMember, history: ChatTurn
     } else if (r.value) {
       // reason=no_intent 才是「真意图可能被拒」，值得回头调句式集；same_as_current/invalid_name 是噪声
       console.log(`[memory] 改名候选被门拒: value=${JSON.stringify(r.value)} reason=${r.reason}`);
+      noteReject(`改名「${r.value}」${r.reason}`);
     }
   }
 
@@ -128,7 +142,7 @@ export function parsePatch(raw: string, current: FamilyMember, history: ChatTurn
       if (added.some((i) => isSameInterest(i.value, val))) continue;
       added.push({ value: val, confidence: 0.5, last_updated: now, source: 'voice', evidence: ev, state: 'unverified', mention_days: [cstDay(now)] });
     }
-    if (rejected) console.log(`[memory] 兴趣候选无证据/证据不符被拒 ${rejected} 项`);
+    if (rejected) { console.log(`[memory] 兴趣候选无证据/证据不符被拒 ${rejected} 项`); noteReject(`兴趣无证据×${rejected}`); }
     if (added.length) patch.interests = added;
   }
 
@@ -274,7 +288,7 @@ export function parseEpisodic(
       const expect = typeof p.expect === 'string' ? clip(p.expect, 20) : '';
       if (!by || !content || !evidence) continue;
       const haystack = by === 'xiaoke' ? assistantText : userText;
-      if (!haystack.includes(evidence)) continue; // 证据不在对应角色消息里 → 整条丢弃
+      if (!haystack.includes(evidence)) { noteReject(`约定证据不在原话(${by})`); continue; } // 证据不在对应角色消息里 → 整条丢弃
       items.push({
         type: 'promise', content, subject: by, due_text: dueText,
         source_role: by === 'xiaoke' ? 'assistant' : 'user',
@@ -364,7 +378,7 @@ export async function extractAll(
   history: ChatTurn[],
   current: FamilyMember,
   ctx: EpisodicContext,
-): Promise<{ patch: MemoryPatch | null; episodic: EpisodicResult | null; turnSignal: TurnSignal | null }> {
+): Promise<{ patch: MemoryPatch | null; episodic: EpisodicResult | null; turnSignal: TurnSignal | null; llmMs?: number; rawOk?: boolean }> {
   if (!history.length) return { patch: null, episodic: null, turnSignal: null };
   // 最后一条孩子输入标【本轮】：turn_valence/turn_engagement 只评它（codex 2.4 滑窗防偏置）。
   const lastUserIdx = history.map((t) => t.role).lastIndexOf('user');
@@ -381,12 +395,22 @@ export async function extractAll(
       ctx.activeDislikes?.length ? ctx.activeDislikes.map(dislikeSubject).join('/') : '无'
     }` +
     `\n已知未兑现约定（resolved_promise_ids 只能从这些编号选）：${promiseList}`;
+  const t0 = Date.now();
   const raw = await callExtractLlm(`${known}\n\n对话数据：\n"""\n${convo}\n"""`);
-  if (!raw) return { patch: null, episodic: null, turnSignal: null };
+  const llmMs = Date.now() - t0;
+  if (!raw) {
+    // 静默 null 曾伪装成「没触发」（Phase 1 教训）：超时/失败必须留痕
+    console.log(`[memory] 抽取返回空(超时或上游失败) turns=${history.length} ms=${llmMs}`);
+    return { patch: null, episodic: null, turnSignal: null, llmMs, rawOk: false };
+  }
+  const hasJson = /\{[\s\S]*\}/.test(raw);
+  if (!hasJson) console.log(`[memory] 抽取输出无 JSON raw_len=${raw.length}`);
   return {
     patch: parsePatch(raw, current, history),
     episodic: parseEpisodic(raw, history, ctx),
     turnSignal: parseTurnSignal(raw),
+    llmMs,
+    rawOk: hasJson,
   };
 }
 
@@ -519,9 +543,12 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
     const sampleKey = lastUser
       ? createHash('sha256').update(lastUser.content).digest('hex').slice(0, 16)
       : '';
+    takeRejectReasons(); // 清空上一轮残留
     const extracted = await extractAll(snapshot, current, { sessionId, activePromises, activeDislikes });
     const { episodic, turnSignal } = extracted;
     let patch = extracted.patch;
+    let episodicCandidates = 0;
+    let episodicAdded = 0;
     // LLM 失败（turnSignal=null）也记轮：会话切分/last_seen 不依赖抽取成功，只有 EMA 依赖。
     if (sampleKey && personaTrackEnabled(acctId)) {
       try {
@@ -663,7 +690,14 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
       // 明确说不喜欢时按原 content 复活（滑窗重抽的陈旧 dislike 拿不到新鲜原话，不会复活）。
       const revived = revivePreferences(acctId, episodic.items, lastUser?.content ?? '', sessionId);
       attachSourceIds(acctId, episodic.items, snapshot); // R2：条目指回 conversation.id
+      const candidates = episodic.items.length;
       const added = memoryItemStore.addItems(acctId, episodic.items);
+      episodicCandidates = candidates;
+      episodicAdded = added;
+      if (candidates && !added) {
+        // 候选全部未入库＝重复(UNIQUE)或危机过滤——不能再静默（2026-09-03「记忆板块一直没更新」排查）
+        console.log(`[memory] account=${acctId} 情景记忆候选 ${candidates} 条全部未入库(重复/过滤) types=${episodic.items.map((i) => i.type).join(',')}`);
+      }
       const resolved = memoryItemStore.resolvePromisesByIds(acctId, episodic.resolvedPromiseIds, 'extractor');
       // 只撤回「此刻仍 active 的不喜欢」对应的兴趣：刚被 relike 撤回的不喜欢若被滑窗重抽到，
       // 不能把刚加回的兴趣再抹掉。
@@ -676,6 +710,18 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
         );
       }
     }
+    // 抽取流水（记忆板块白盒）：每轮一行，候选/入库/拒绝原因都可回看
+    extractionLogStore.record(acctId, {
+      source_msg_id: lastUserMsgId,
+      user_len: lastUser ? [...lastUser.content].length : 0,
+      llm_ms: extracted.llmMs ?? 0,
+      ok: extracted.rawOk ? 1 : 0,
+      patch_keys: patch ? Object.keys(patch).filter((k) => k !== 'nickname_evidence').join(',') : '',
+      candidates: episodicCandidates,
+      added: episodicAdded,
+      rejected: takeRejectReasons().join(';'),
+      note: extracted.rawOk ? '' : '模型未返回 JSON(超时/失败)',
+    });
   } catch (err) {
     console.log('[memory] 抽取失败(不影响语音):', String((err as Error)?.message ?? err));
   }

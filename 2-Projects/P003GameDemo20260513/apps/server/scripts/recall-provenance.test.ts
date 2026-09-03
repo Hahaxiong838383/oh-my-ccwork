@@ -173,5 +173,16 @@ seed([
   eq('t-4 还没确认规则句', p.includes('绝不主动说"我知道你喜欢X"'), true);
 }
 
+// ── 抽取流水 store ──
+{
+  const { extractionLogStore } = await import('../src/extraction-log-store.js');
+  const ACC5 = 'device-RPTEST0005';
+  for (let i = 0; i < 105; i += 1) extractionLogStore.record(ACC5, { source_msg_id: 'm' + i, user_len: 5, llm_ms: 100 + i, ok: 1, patch_keys: i % 2 ? 'interests' : '', candidates: i % 3, added: i % 3 ? 1 : 0, rejected: i % 5 ? '' : '兴趣无证据×1', note: '', ts: 1_800_000_000_000 + i * 1000 });
+  const rows = extractionLogStore.list(ACC5, 20);
+  eq('x-1 最近在前', rows[0]?.source_msg_id, 'm104');
+  eq('x-2 每账号只留 100', extractionLogStore.list(ACC5, 100).length, 100);
+  eq('x-3 clear', (extractionLogStore.clear(ACC5), extractionLogStore.list(ACC5).length), 0);
+}
+
 console.log(`\nrecall-provenance tests: pass=${pass} fail=${fail} tmp=${tmp}`);
 if (fail > 0) process.exit(1);

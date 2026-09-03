@@ -60,5 +60,12 @@ const uid = await say('我最喜欢恐龙了，霸王龙最厉害！', '哇，�
   const p = assembleSystemPrompt('BASE', null, { accountId: ACC, role: 'device' } as never, null, null, null, null, null, { skipInjectReceipt: true });
   check('4c 否决后不注入', /兴趣：.*恐龙|还没确认.*恐龙/.test(p), false);
 }
+{
+  const { extractionLogStore } = await import('../src/extraction-log-store.js');
+  const rows = extractionLogStore.list(ACC, 10);
+  check('5 每轮都有抽取流水', rows.length >= 3, true);
+  check('5b 流水带模型耗时与画像字段', rows.some((r) => r.ok === 1 && r.llm_ms > 0 && /interests/.test(r.patch_keys)), true);
+  console.log('   流水样例=' + JSON.stringify(rows.slice(0, 2).map((r) => [r.user_len, r.llm_ms, r.patch_keys, r.candidates + '→' + r.added, r.rejected])));
+}
 console.log(`\ninterests-evidence-e2e: pass=${pass} fail=${fail} 耗时=${Math.round((Date.now() - t0) / 1000)}s`);
 process.exit(fail > 0 ? 1 : 0);

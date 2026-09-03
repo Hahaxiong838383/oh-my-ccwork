@@ -2338,6 +2338,54 @@
                                 </div>
                                 <div v-if="!g.items.length" style="font-size:12px;color:#909399">暂无</div>
                               </div>
+                              <!-- 记忆白盒（2026-09-03）：抽取流水 / 因果账本 / 已撤回 —— 与人格成长 tab 的成长账本同一套思路 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:14px;border-left:4px solid #6C8CFF">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                                  <span style="font-weight:700">🧪 抽取流水（最近 20 轮）</span>
+                                  <span style="font-size:12px;color:#909399">设备房每轮孩子发言后抽一次；条目少时看这里：是没抽到、没过门、还是重复</span>
+                                </div>
+                                <div style="font-size:11px;color:#6B7785;margin-bottom:8px">与人格成长的联动：「值得关心」(M5) 与「自我叙事」(M6) 读的就是本页条目；特质/风格不读记忆，只读逐轮情绪与投入度。</div>
+                                <div v-if="!brainState.whitebox || !(brainState.whitebox.extraction_log || []).length" style="font-size:12px;color:#909399">暂无流水（上线于 2026-09-03 19 时，之后的每一轮都会记）</div>
+                                <table v-else style="width:100%;font-size:12px;border-collapse:collapse">
+                                  <thead><tr style="color:#909399;text-align:left"><th style="padding:4px 6px">时间</th><th>孩子话(字)</th><th>模型(ms)</th><th>画像字段</th><th>情景候选→入库</th><th>被门拒/备注</th></tr></thead>
+                                  <tbody>
+                                    <tr v-for="e in brainState.whitebox.extraction_log" :key="e.id" style="border-top:1px solid #F2F5F8">
+                                      <td style="padding:4px 6px;white-space:nowrap">{{ fmtTs(e.ts) }}</td>
+                                      <td>{{ e.user_len }}</td>
+                                      <td :style="{color: e.ok ? '#6B7785' : '#E8833A'}">{{ e.ok ? e.llm_ms : '失败' }}</td>
+                                      <td>{{ e.patch_keys || '—' }}</td>
+                                      <td><span :style="{color: e.added ? '#3DBE78' : (e.candidates ? '#E8833A' : '#B0B8C1')}">{{ e.candidates }}→{{ e.added }}</span></td>
+                                      <td style="color:#909399">{{ e.rejected || e.note || '—' }}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:14px;border-left:4px solid #F0A93A">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                                  <span style="font-weight:700">🔗 记忆因果账本</span>
+                                  <span style="font-size:12px;color:#909399">改称呼 / 又喜欢 / 观察更新 / 关心事，每条带触发原话；人格成长 tab 的时间线也能按 profile 模块筛到</span>
+                                </div>
+                                <div v-if="!brainState.whitebox || !(brainState.whitebox.ledger || []).length" style="font-size:12px;color:#909399">暂无</div>
+                                <div v-for="ev in ((brainState.whitebox && brainState.whitebox.ledger) || [])" :key="ev.id" style="font-size:12px;padding:6px 4px;border-top:1px solid #F2F5F8">
+                                  <span style="color:#909399">{{ fmtTs(ev.ts) }}</span>
+                                  <span style="margin-left:8px;font-weight:600">{{ memRuleLabel(ev.rule) }}</span>
+                                  <span style="margin-left:8px;color:#6B7785">{{ ev.dimension }}：{{ ev.from_val || '—' }} → {{ ev.to_val || '—' }}</span>
+                                  <div v-if="ev.trigger_quote" style="color:#8A94A0;margin-top:2px">触发原话：「{{ ev.trigger_quote }}」</div>
+                                </div>
+                              </div>
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:14px;border-left:4px solid #C0C7D0">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                                  <span style="font-weight:700">🗂 已撤回 / 已取代 / 已兑现 / 已归档</span>
+                                  <span style="font-size:12px;color:#909399">旧条不删，记「被谁取代」和失效时间</span>
+                                </div>
+                                <div v-if="!brainState.whitebox || !(brainState.whitebox.inactive_items || []).length" style="font-size:12px;color:#909399">暂无</div>
+                                <div v-for="it in ((brainState.whitebox && brainState.whitebox.inactive_items) || [])" :key="it.id" style="font-size:12px;padding:6px 4px;border-top:1px solid #F2F5F8">
+                                  <el-tag size="small" :type="it.status==='resolved' ? 'success' : (it.status==='retracted' ? 'danger' : 'info')" style="margin-right:6px">{{ it.status }}</el-tag>
+                                  <span>{{ it.type }} · {{ it.content }}</span>
+                                  <span v-if="it.superseded_by" style="color:#909399;margin-left:6px">← {{ it.superseded_by }}</span>
+                                  <span v-if="it.valid_to" style="color:#B0B8C1;margin-left:6px">失效 {{ fmtTs(it.valid_to) }}</span>
+                                </div>
+                              </div>
                             </template>
                             <!-- 添加记忆 -->
                             <div class="kh-card" style="padding:14px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -2364,7 +2412,7 @@
                             <div class="kh-card" style="padding:14px 16px">
                               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                                 <span style="font-weight:700">💬 最近对话（{{ (brainState.view.recent_conversation || []).length }} 条）</span>
-                                <span style="font-size:12px;color:#909399">最新在上 · 落库于每轮回复完成后 · 记忆每 3 轮孩子发言抽取一次</span>
+                                <span style="font-size:12px;color:#909399">最新在上 · 落库于每轮回复完成后 · 设备房每轮孩子发言后抽取一次（Web 端每 3 轮）</span>
                               </div>
                               <div v-if="!(brainState.view.recent_conversation || []).length" style="padding:30px;text-align:center;font-size:13px;color:#909399">暂无对话——设备接通并说话后这里会出现记录</div>
                               <div v-for="m in (brainState.view.recent_conversation || [])" :key="m.id" style="display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid #F2F5F8;align-items:flex-start">
@@ -4680,7 +4728,7 @@
           } else { fallback(); }
         }
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
-        var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
+        var brainState = reactive({ whitebox: null, selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
         var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
         function traitVal(dim) {
@@ -5035,6 +5083,7 @@
               if (data && data.ok) {
                 brainState.view = data;
                 brainState.graphSelected = '';
+                loadMemoryWhitebox(sn);
                 // 编辑草稿与服务端同步（有未保存改动时不覆盖，防打字被刷新冲掉）
                 if (!brainState.cfgDirty && data.prompt_config) {
                   brainCfg.worldview_override = data.prompt_config.worldview_override || '';
@@ -5083,6 +5132,13 @@
             .catch(function (e) {
               if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('无法连接 brain 服务，请稍后重试');
             });
+        }
+        var MEM_RULE_LABEL = { explicit_rename: '孩子改称呼', explicit_relike: '又喜欢了→撤回不喜欢', dislike_restated: '再次不喜欢→复活', profile_field_update: '性格/情绪观察更新(旧值保留)', profile_extract: '画像更新', concern_extracted: '记下值得关心的事', concern_expire_7d: '关心事翻篇', cc_data_fix: '运营修复', rollback: '退回快照' };
+        function memRuleLabel(rule) { return MEM_RULE_LABEL[rule] || rule; }
+        function loadMemoryWhitebox(sn) {
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/memory-whitebox')
+            .then(function (data) { brainState.whitebox = (data && data.ok) ? data : null; })
+            .catch(function () { brainState.whitebox = null; });
         }
         function saveChildProfile() {
           var sn = brainState.selectedSn;
@@ -6561,7 +6617,7 @@
           openBrain: openBrain, unbindBrain: unbindBrain, addBrainMemory: addBrainMemory,
           delBrainMemory: delBrainMemory,
           brainProfileDraft: brainProfileDraft, parentBind: parentBind,
-          saveChildProfile: saveChildProfile, vetoInterest: vetoInterest, rollbackTrait: rollbackTrait, bindParent: bindParent, unbindParent: unbindParent,
+          saveChildProfile: saveChildProfile, vetoInterest: vetoInterest, rollbackTrait: rollbackTrait, memRuleLabel: memRuleLabel, bindParent: bindParent, unbindParent: unbindParent,
           extractLlm: extractLlm, loadExtractLlm: loadExtractLlm, saveExtractLlm: saveExtractLlm, testExtractLlm: testExtractLlm,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem,
