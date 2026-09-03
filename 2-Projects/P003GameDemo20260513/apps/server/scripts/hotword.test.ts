@@ -17,6 +17,8 @@ process.env.STUDIO_USER = 'admin-t';
 process.env.STUDIO_PASS = 'pass-t';
 process.env.STUDIO_EDITOR_USERS = 'editor-t';
 process.env.STUDIO_EDITOR_PASS = 'editor-pass-t';
+// 安全窗口分支要可判定：生产机 shell 带 .env.local 的 LIVEKIT_* 时会真查房间数，「不可达→409」会变 502 —— 显式清掉
+for (const k of ['LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET']) delete process.env[k];
 // 通道 mock：status/fillers/apply 各给一份可控回执
 const LIVE = {
   INTERRUPT_HOTWORDS: '停,停止',
