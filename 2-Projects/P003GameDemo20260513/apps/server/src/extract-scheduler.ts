@@ -98,6 +98,9 @@ export async function flushIdle(now = Date.now()): Promise<number> {
   return flushed;
 }
 
+// 启动自报模式（运行态真值：/proc 看不到 --env-file 注入的键，只能靠进程自己说）
+console.log(`[memory] extract scheduler mode=${extractMode()} allowlist=${JSON.stringify(process.env.MEMORY_EXTRACT_TRIGGER_SN_ALLOWLIST?.trim() ?? '')}`);
+
 // 定时扫描（unref：不阻止进程退出，单测不挂）
 const _timer = setInterval(() => {
   if (extractMode() !== 'trigger') return;
