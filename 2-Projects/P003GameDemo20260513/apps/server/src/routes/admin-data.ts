@@ -55,7 +55,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -1222,6 +1222,139 @@ adminDataRoute.post('/worker-race/bench', async (c) => {
   const r = await callHotwordChannel(payload, 150_000);
   if (!r.ok) return c.json({ ok: false, error: String(r.error ?? 'bench 失败'), detail: r }, 502);
   return c.json({ ...r, prompt: promptLabel });
+});
+
+// ── Worker 语音链路配置（2026-09-03 晚 川哥：供应商/方案/密钥后台手动配，不再找 cc 改 env）──
+// 通道同赛马（forced-command key → 64.90 apply_hotwords.py voice_get/voice_set）；只写 rust-worker.env 覆盖层
+// （EnvironmentFile 末位赢），python 线 .env 只读参考。server 侧：白名单/正则/范围（后端为真防线）+ LiveKit
+// 安全窗口 + 应用后对撞（非密钥比值，密钥比长度）；密钥永不回显、永不进日志。
+// 供应商可选项由 worker 二进制决定：识别只有火山（stt_volc 唯一实现），合成 volc/xfyun——换别家仍要写代码。
+export const VOICE_RW_KEYS = [
+  'VOLC_ASR_RESOURCE_ID', 'VOLC_ASR_END_WINDOW_MS', 'VOLC_ASR_ENABLE_DDC', 'VOLC_PREFLIGHT_ENABLED',
+  'VOLC_ASR_NONSTREAM_ENABLED', 'VOLC_ASR_NONSTREAM_CANARY_SN', 'VOLC_ASR_BOOSTING_TABLE_ID',
+  'VOLC_APP_ID', 'VOLC_ACCESS_TOKEN', 'VOLC_ASR_API_KEY',
+  'TTS_PROVIDER', 'VOLC_TTS_RESOURCE_ID', 'VOLC_TTS_SPEAKER', 'VOLC_TTS_SPEED', 'TTS_POOL_ENABLED', 'TTS_MIN_SENTENCE_LEN',
+  'XFYUN_TTS_VCN', 'XFYUN_TTS_SPEED', 'XFYUN_TTS_ORAL_LEVEL', 'XFYUN_TTS_PRECONNECT',
+  'XFYUN_TTS_APP_ID', 'XFYUN_TTS_API_KEY', 'XFYUN_TTS_API_SECRET',
+] as const;
+type VoiceRwKey = (typeof VOICE_RW_KEYS)[number];
+export const VOICE_SECRET_KEYS: readonly VoiceRwKey[] = ['VOLC_APP_ID', 'VOLC_ACCESS_TOKEN', 'VOLC_ASR_API_KEY', 'XFYUN_TTS_APP_ID', 'XFYUN_TTS_API_KEY', 'XFYUN_TTS_API_SECRET'];
+const VOICE_RW_RE: Record<VoiceRwKey, RegExp> = {
+  VOLC_ASR_RESOURCE_ID: /^volc\.[a-z0-9_.]{3,60}$/,
+  VOLC_ASR_END_WINDOW_MS: /^\d{2,4}$/,
+  VOLC_ASR_ENABLE_DDC: /^[01]$/,
+  VOLC_PREFLIGHT_ENABLED: /^[01]$/,
+  VOLC_ASR_NONSTREAM_ENABLED: /^[01]$/,
+  VOLC_ASR_NONSTREAM_CANARY_SN: /^(?:[A-Za-z0-9]{6,40}(?:,[A-Za-z0-9]{6,40})*)?$/,
+  VOLC_ASR_BOOSTING_TABLE_ID: /^(?:[A-Za-z0-9-]{8,64})?$/,
+  VOLC_APP_ID: /^\d{6,16}$/,
+  VOLC_ACCESS_TOKEN: /^[A-Za-z0-9._-]{16,128}$/,
+  VOLC_ASR_API_KEY: /^[A-Za-z0-9._-]{16,128}$/,
+  TTS_PROVIDER: /^(?:volc|xfyun)$/,
+  VOLC_TTS_RESOURCE_ID: /^[A-Za-z0-9._-]{3,60}$/,
+  VOLC_TTS_SPEAKER: /^[A-Za-z0-9_]{4,80}$/,
+  VOLC_TTS_SPEED: /^\d(?:\.\d{1,2})?$/,
+  TTS_POOL_ENABLED: /^[01]$/,
+  TTS_MIN_SENTENCE_LEN: /^\d{1,2}$/,
+  XFYUN_TTS_VCN: /^[A-Za-z0-9_]{3,64}$/,
+  XFYUN_TTS_SPEED: /^\d{1,3}$/,
+  XFYUN_TTS_ORAL_LEVEL: /^(?:high|mid|low)$/,
+  XFYUN_TTS_PRECONNECT: /^[01]$/,
+  XFYUN_TTS_APP_ID: /^[A-Za-z0-9]{6,16}$/,
+  XFYUN_TTS_API_KEY: /^[A-Za-z0-9]{16,64}$/,
+  XFYUN_TTS_API_SECRET: /^[A-Za-z0-9]{16,64}$/,
+};
+const VOICE_RANGES: Partial<Record<VoiceRwKey, [number, number]>> = {
+  VOLC_ASR_END_WINDOW_MS: [100, 2000], TTS_MIN_SENTENCE_LEN: [2, 40], XFYUN_TTS_SPEED: [0, 100], VOLC_TTS_SPEED: [0.5, 2],
+};
+/** 前端按此表渲染（单源在 server；前端不写死键）。type: select|toggle|number|text|secret；options 可空=自定义。 */
+export const VOICE_FIELDS: Array<{ key: VoiceRwKey; group: string; label: string; type: string; hint: string; options?: Array<{ v: string; l: string }>; min?: number; max?: number; step?: number }> = [
+  { key: 'VOLC_ASR_RESOURCE_ID', group: '识别（火山 Seed ASR）', label: 'ASR 资源', type: 'select', hint: '2.0（seedasr）走 X-Api-Key 鉴权，1.0（bigasr）走 App ID + Token；换代要同时确认凭据', options: [{ v: 'volc.seedasr.sauc.duration', l: '豆包 Seed ASR 2.0 流式（seedasr，现役）' }, { v: 'volc.bigasr.sauc.duration', l: '大模型 ASR 1.0 流式（bigasr）' }] },
+  { key: 'VOLC_ASR_END_WINDOW_MS', group: '识别（火山 Seed ASR）', label: '判停窗（ms）', type: 'number', hint: '句末静音多久判停；越小越快也越容易切断思考停顿（火山默认 800，现役 150）', min: 100, max: 2000, step: 10 },
+  { key: 'VOLC_ASR_NONSTREAM_ENABLED', group: '识别（火山 Seed ASR）', label: '二遍整段重识别', type: 'toggle', hint: '判停后用非流式模型整段重识别（bigmodel_async）；热词预算从 100 token 升到 5000 词；账单可能双倍计时长' },
+  { key: 'VOLC_ASR_NONSTREAM_CANARY_SN', group: '识别（火山 Seed ASR）', label: '二遍灰度 SN', type: 'text', hint: '逗号分隔；留空=所有设备房全开（当前）' },
+  { key: 'VOLC_ASR_ENABLE_DDC', group: '识别（火山 Seed ASR）', label: '语义顺滑（DDC）', type: 'toggle', hint: '删语气词/重复词；关掉会多出「嗯、那个」进 LLM' },
+  { key: 'VOLC_PREFLIGHT_ENABLED', group: '识别（火山 Seed ASR）', label: '会话预连', type: 'toggle', hint: '进房即预建 ASR 连接，省首句建连时延' },
+  { key: 'VOLC_ASR_BOOSTING_TABLE_ID', group: '识别（火山 Seed ASR）', label: '火山词表 ID', type: 'text', hint: '2026-08-18 实证两端点均零生效（待火山工单）；留空=不传。热词本身在「热词管理」' },
+  { key: 'VOLC_APP_ID', group: '火山凭据（识别 + 合成共用）', label: 'App ID', type: 'secret', hint: '火山语音控制台应用 ID' },
+  { key: 'VOLC_ACCESS_TOKEN', group: '火山凭据（识别 + 合成共用）', label: 'Access Token', type: 'secret', hint: '1.0 ASR 与火山 TTS 用；留空不改' },
+  { key: 'VOLC_ASR_API_KEY', group: '火山凭据（识别 + 合成共用）', label: 'ASR API Key（2.0）', type: 'secret', hint: 'seedasr 2.0 唯一鉴权方式；留空不改' },
+  { key: 'TTS_PROVIDER', group: '合成', label: '合成供应商', type: 'select', hint: 'worker 二进制内置两家；选讯飞时讯飞三项凭据必须齐全，否则启动失败会自动回滚', options: [{ v: 'xfyun', l: '讯飞（x6 超拟人，现役）' }, { v: 'volc', l: '火山 豆包 TTS' }] },
+  { key: 'XFYUN_TTS_VCN', group: '合成', label: '讯飞音色', type: 'select', hint: '讯飞控制台的发音人 ID', options: [{ v: 'x6_lingxiaoxuan_pro', l: 'x6_lingxiaoxuan_pro（凌小璇，现役）' }] },
+  { key: 'XFYUN_TTS_SPEED', group: '合成', label: '讯飞语速', type: 'number', hint: '0~100，50 为常速', min: 0, max: 100, step: 5 },
+  { key: 'XFYUN_TTS_ORAL_LEVEL', group: '合成', label: '讯飞口语化', type: 'select', hint: '超拟人口语化程度', options: [{ v: 'high', l: 'high' }, { v: 'mid', l: 'mid（默认）' }, { v: 'low', l: 'low' }] },
+  { key: 'XFYUN_TTS_PRECONNECT', group: '合成', label: '讯飞预连', type: 'toggle', hint: '首句前预建合成连接' },
+  { key: 'VOLC_TTS_SPEAKER', group: '合成', label: '火山音色', type: 'select', hint: '火山 TTS 发音人；仅合成供应商=火山时生效', options: [{ v: 'zh_male_lengkugege_emo_v2_mars_bigtts', l: 'zh_male_lengkugege_emo_v2（冷酷哥哥·多情感）' }, { v: 'zh_female_tianmeixiaoyuan_moon_bigtts', l: 'zh_female_tianmeixiaoyuan（甜美小源）' }, { v: 'zh_female_vv_uranus_bigtts', l: 'zh_female_vv_uranus（二进制默认）' }] },
+  { key: 'VOLC_TTS_RESOURCE_ID', group: '合成', label: '火山 TTS 资源', type: 'text', hint: '如 volc.service_type.10029（现役）' },
+  { key: 'VOLC_TTS_SPEED', group: '合成', label: '火山语速比', type: 'number', hint: '0.5~2.0，1.0 常速', min: 0.5, max: 2, step: 0.1 },
+  { key: 'TTS_POOL_ENABLED', group: '合成', label: '火山连接池', type: 'toggle', hint: '仅火山 TTS' },
+  { key: 'TTS_MIN_SENTENCE_LEN', group: '合成', label: '最短切句字数', type: 'number', hint: 'LLM 流式文本攒到几个字才送合成；小=首音快、句子碎', min: 2, max: 40, step: 1 },
+  { key: 'XFYUN_TTS_APP_ID', group: '讯飞凭据', label: 'App ID', type: 'secret', hint: '讯飞开放平台应用 ID' },
+  { key: 'XFYUN_TTS_API_KEY', group: '讯飞凭据', label: 'API Key', type: 'secret', hint: '留空不改' },
+  { key: 'XFYUN_TTS_API_SECRET', group: '讯飞凭据', label: 'API Secret', type: 'secret', hint: '留空不改' },
+];
+
+export function validateVoiceValues(raw: unknown): { ok: true; values: Partial<Record<VoiceRwKey, string>> } | { ok: false; error: string } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, error: 'values 须为对象' };
+  const values: Partial<Record<VoiceRwKey, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(VOICE_RW_KEYS as readonly string[]).includes(k)) return { ok: false, error: `键不在白名单: ${k}` };
+    if (typeof v !== 'string') return { ok: false, error: `${k} 须为字符串` };
+    const key = k as VoiceRwKey;
+    const val = v.trim();
+    if (VOICE_SECRET_KEYS.includes(key) && val === '') continue; // 空密钥=不改
+    if (!VOICE_RW_RE[key].test(val)) return { ok: false, error: `${k} 值不合法` };
+    const range = VOICE_RANGES[key];
+    if (range) {
+      const n = Number(val);
+      if (!(n >= range[0] && n <= range[1])) return { ok: false, error: `${k} 须在 ${range[0]}~${range[1]}` };
+    }
+    values[key] = val;
+  }
+  if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
+  return { ok: true, values };
+}
+
+adminDataRoute.get('/worker-voice', async (c) => {
+  const r = await callHotwordChannel({ action: 'voice_get' }, 20_000);
+  return c.json({ ok: r.ok === true, worker: r, fields: VOICE_FIELDS, secret_keys: VOICE_SECRET_KEYS }, r.ok ? 200 : 502);
+});
+
+adminDataRoute.put('/worker-voice', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { values?: unknown; force?: unknown };
+  const v = validateVoiceValues(body.values);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const force = body.force === true;
+  if (!force) {
+    const rooms = await fetchLiveKitRooms();
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms.device_rooms > 0)
+      return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
+  }
+  const t0 = Date.now();
+  const r = await callHotwordChannel({ action: 'voice_set', values: v.values, force }, 150_000);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+  const keys = Object.keys(v.values).join('+'); // 只记键名，值（含密钥）永不进日志
+  if (!r.ok) {
+    console.error(`[admin-voice] set FAILED keys=${keys} by=${by} ms=${Date.now() - t0} rolled_back=${r.rolled_back === true} recovered=${r.recovered === true}`);
+    return c.json({ ok: false, error: String(r.error ?? r.reason ?? '应用失败'), detail: r }, 502);
+  }
+  const proc = (r.proc ?? {}) as Record<string, unknown>;
+  const mismatch: string[] = [];
+  for (const [k, val] of Object.entries(v.values)) {
+    if (VOICE_SECRET_KEYS.includes(k as VoiceRwKey)) {
+      const pk = proc[k] as { len?: number } | undefined;
+      if (!pk || pk.len !== val.length) mismatch.push(k);
+    } else if (proc[k] !== val) mismatch.push(k);
+  }
+  if (mismatch.length > 0) {
+    console.error(`[admin-voice] set 对撞失败 keys=${mismatch.join('+')}(进程生效值≠期望值)`);
+    return c.json({ ok: false, error: `应用对撞失败：${mismatch.join('、')} 的进程生效值与期望不一致`, detail: r }, 502);
+  }
+  console.log(`[admin-voice] applied keys=${keys} by=${by} force=${force} ms=${Date.now() - t0} backup=${String(r.backup ?? '')}`);
+  return c.json({ ok: true, applied: r.applied, backup: r.backup, proc: r.proc });
 });
 
 // ── 记忆抽取 LLM 配置（Worker Brain tab「记忆抽取 LLM」卡，2026-08-19）──

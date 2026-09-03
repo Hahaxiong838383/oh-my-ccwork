@@ -1655,6 +1655,38 @@
                     </table>
                   </div>
                 </div>
+                <!-- 🎙 语音链路配置（2026-09-03 晚 川哥：供应商/方案/密钥后台手动配，不再找 cc 改 env；API routes/admin-data.ts /worker-voice；通道=热词发布 forced-command，64.90 脚本 voice_get/voice_set 纪律重启+健康自检+回滚；字段表由 server VOICE_FIELDS 单源渲染） -->
+                <div v-if="khNav==='voice' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">🎙 语音链路</div>
+                    <el-button size="small" :loading="voice.loading" @click="loadVoice()">刷新</el-button>
+                    <span v-if="voice.error" style="color:#E8833A;font-size:12px">{{ voice.error }}</span>
+                    <span v-if="voice.data && voice.data.worker && voice.data.worker.ok" style="font-size:12px;color:#888">worker {{ voice.data.worker.unit_active ? '运行中' : '未运行' }} · PID {{ voice.data.worker.main_pid }} · 近 90s 活动行 {{ voice.data.worker.recent_activity }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">现役：识别=火山 Seed ASR 2.0 流式 + 二遍整段重识别；合成=讯飞。可选项由 worker 二进制决定（识别只有火山，合成 火山/讯飞），换别家仍需 cc 写代码。应用 = 写 64.90 <code>rust-worker.env</code>（覆盖层，python 线不受影响）+ 纪律重启 worker（约 15 秒；有设备通话时会拦，可勾选强制）；启动失败会自动回滚到上一份快照。密钥后台永不回显，留空即不改。</div>
+                  <div v-for="g in voiceGroups()" :key="g.name" style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">{{ g.name }}</div>
+                    <div style="display:grid;grid-template-columns:190px 1fr;gap:8px 12px;align-items:center;font-size:13px">
+                      <template v-for="f in g.fields" :key="f.key">
+                        <div style="color:#6B7785">{{ f.label }}<div style="font-size:11px;color:#aaa"><code>{{ f.key }}</code></div></div>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                          <el-select v-if="f.type==='select'" v-model="voice.form[f.key]" size="small" filterable allow-create default-first-option style="width:360px"><el-option v-for="o in (f.options || [])" :key="o.v" :label="o.l" :value="o.v"></el-option></el-select>
+                          <el-switch v-else-if="f.type==='toggle'" :model-value="voice.form[f.key]==='1'" @change="voiceToggle(f.key, $event)"></el-switch>
+                          <input v-else-if="f.type==='number'" type="number" :min="f.min" :max="f.max" :step="f.step || 1" v-model="voice.form[f.key]" style="width:120px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                          <input v-else-if="f.type==='secret'" type="password" v-model="voice.form[f.key]" autocomplete="new-password" :placeholder="voiceSecretPlaceholder(f.key)" style="width:360px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                          <input v-else v-model="voice.form[f.key]" style="width:360px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                          <span style="color:#999;font-size:12px">{{ f.hint }}<span v-if="!voiceIsSecret(f.key)"> · 来源 {{ voiceOrigin(f.key) }}</span></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px;margin-top:4px;margin-bottom:14px">
+                    <el-button type="primary" :loading="voice.saving" :disabled="!(voice.data && voice.data.ok)" @click="saveVoice()">保存并纪律重启 worker</el-button>
+                    <el-checkbox v-model="voice.force">强制（忽略通话检查）</el-checkbox>
+                    <span v-if="voiceMismatch().length" style="color:#E8833A;font-size:12px">⚠️ 进程生效值 ≠ 文件值：{{ voiceMismatch().join('、') }}（改过 env 未重启？）</span>
+                  </div>
+                  <pre v-if="voice.applyResult" style="background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(voice.applyResult, null, 1) }}</pre>
+                </div>
                 <!-- 设备运行配置（通用键表：后端 CONFIG_KEYS 为真源，前端按 keys 渲染；合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + 2026-09-03 server 自用键 local_audio.refresh_days） -->
                 <div v-if="khNav==='devcfg' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
@@ -4071,7 +4103,7 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
 
         // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
         // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
@@ -4253,6 +4285,84 @@
             if (row.status === 200 && row.ttft_ms) { by[k].ttfts.push(row.ttft_ms); by[k].sample = row.text || ''; } else by[k].errs++;
           });
           return Object.keys(by).map(function (k) { var o = by[k]; var s = o.ttfts.slice().sort(function (a, b) { return a - b; }); o.med = s.length ? s[Math.floor(s.length / 2)] : null; o.max = s.length ? s[s.length - 1] : null; o.list = s.join(' · '); return o; });
+        }
+
+        // ── 🎙 语音链路配置（2026-09-03 晚；API /api/admin/worker-voice；64.90 脚本 voice_get/voice_set；字段表来自 server VOICE_FIELDS；后端为真防线：白名单/正则/范围/安全窗口/对撞/回滚）──
+        var voice = reactive({ loading: false, error: '', data: null, form: {}, force: false, saving: false, applyResult: null });
+        function voiceIsSecret(k) { return ((voice.data && voice.data.secret_keys) || []).indexOf(k) >= 0; }
+        function voiceEffective(k) {
+          var w = voice.data && voice.data.worker; if (!w) return undefined;
+          if (w.proc && Object.prototype.hasOwnProperty.call(w.proc, k)) return w.proc[k];
+          if (w.rust && Object.prototype.hasOwnProperty.call(w.rust, k)) return w.rust[k];
+          if (w.base && Object.prototype.hasOwnProperty.call(w.base, k)) return w.base[k];
+          return undefined;
+        }
+        function voiceOrigin(k) {
+          var w = voice.data && voice.data.worker; if (!w) return '';
+          if (w.rust && Object.prototype.hasOwnProperty.call(w.rust, k)) return 'rust-worker.env';
+          if (w.base && Object.prototype.hasOwnProperty.call(w.base, k)) return '基础 .env（python 线共享）';
+          return '二进制默认';
+        }
+        function voiceGroups() {
+          var out = [];
+          ((voice.data && voice.data.fields) || []).forEach(function (x) {
+            var g = out.find(function (o) { return o.name === x.group; });
+            if (!g) { g = { name: x.group, fields: [] }; out.push(g); }
+            g.fields.push(x);
+          });
+          return out;
+        }
+        function voiceSecretPlaceholder(k) { var v = voiceEffective(k); return (v && v.set) ? ('已配置 ' + v.hint + '（' + v.len + ' 位），留空不改') : '未配置'; }
+        function voiceToggle(k, val) { voice.form[k] = val ? '1' : '0'; }
+        function voiceMismatch() {
+          var w = voice.data && voice.data.worker; if (!w || !w.rust || !w.proc) return [];
+          return Object.keys(w.rust).filter(function (k) {
+            if (voiceIsSecret(k)) { var a = w.rust[k] || {}, b = w.proc[k] || {}; return (a.len || 0) !== (b.len || 0); }
+            return String(w.rust[k]) !== String(w.proc[k] === undefined ? '' : w.proc[k]);
+          });
+        }
+        async function loadVoice() {
+          if (!canManageInvites.value) return;
+          voice.loading = true; voice.error = '';
+          try {
+            var j = await deviceApi('/api/admin/worker-voice', { method: 'GET' });
+            voice.data = j;
+            if (!j.ok) { voice.error = (j.worker && j.worker.error) || j.error || '读取失败（通道不可达）'; }
+            else {
+              var form = {};
+              (j.fields || []).forEach(function (f) {
+                if (voiceIsSecret(f.key)) { form[f.key] = ''; return; }
+                var v = voiceEffective(f.key); form[f.key] = v === undefined ? '' : String(v);
+              });
+              voice.form = form;
+            }
+          } catch (e) { voice.error = '无法连接设备服务'; }
+          voice.loading = false;
+        }
+        function voiceDiff() {
+          var v = {};
+          ((voice.data && voice.data.fields) || []).forEach(function (f) {
+            var cur = voice.form[f.key]; if (cur === undefined || cur === null) return; cur = String(cur).trim();
+            if (voiceIsSecret(f.key)) { if (cur) v[f.key] = cur; return; }
+            var eff = voiceEffective(f.key); eff = eff === undefined ? '' : String(eff);
+            if (cur !== eff) v[f.key] = cur;
+          });
+          return v;
+        }
+        async function saveVoice() {
+          var v = voiceDiff(); var keys = Object.keys(v);
+          if (!keys.length) { ElementPlus.ElMessage.info('没有改动'); return; }
+          var summary = keys.map(function (k) { return voiceIsSecret(k) ? (k + '：更换') : (k + ' → ' + (v[k] === '' ? '（空）' : v[k])); }).join('\n');
+          try { await ElementPlus.ElMessageBox.confirm('将写入 64.90 rust-worker.env 并纪律重启 worker（约 15 秒，进行中的通话会断）：\n' + summary, voice.force ? '强制应用（忽略通话检查）' : '应用语音链路配置', { type: 'warning', confirmButtonText: '应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          voice.saving = true; voice.applyResult = null;
+          try {
+            var j = await deviceApi('/api/admin/worker-voice', { method: 'PUT', body: JSON.stringify({ values: v, force: voice.force }) });
+            voice.applyResult = j;
+            if (j.ok) { ElementPlus.ElMessage.success('已应用并重启：' + (j.applied || []).join('、')); voice.force = false; loadVoice(); }
+            else if (j.active_rooms) ElementPlus.ElMessage.warning(j.error);
+            else ElementPlus.ElMessage.error(j.error || '应用失败（若已自动回滚，worker 仍按旧配置运行）');
+          } catch (e) { ElementPlus.ElMessage.error('应用失败'); }
+          voice.saving = false;
         }
 
         // ── 设备运行配置（2026-08-21；API 见 routes/device-config.ts；合同 CC_P003_POSTURE_* + cc 回执；
@@ -5439,6 +5549,7 @@
           if (k === 'ota') nextTick(loadOta);
           if (k === 'devcfg') nextTick(loadDevcfg);
           if (k === 'race') nextTick(function () { loadRace(); loadRaceStats(); });
+          if (k === 'voice') nextTick(loadVoice);
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -6593,7 +6704,7 @@
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
-          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
+          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,

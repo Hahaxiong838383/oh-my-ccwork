@@ -16,6 +16,8 @@ process.env.STUDIO_PASS = 'pass-t';
 process.env.STUDIO_EDITOR_USERS = 'editor-t';
 process.env.STUDIO_EDITOR_PASS = 'editor-pass-t';
 process.env.AUTH_JWT_SECRET = 'test-secret';
+// 安全窗口分支要可判定：生产机跑测试时 shell 里带着 .env.local 的 LIVEKIT_*，会真去查房间数把 409 变 200 —— 显式清掉
+for (const k of ['LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET']) delete process.env[k];
 process.env.LLM_PROVIDER = 'race';
 process.env.DEEPSEEK_MODEL = 'deepseek-v4-flash';
 process.env.VOLC_LLM_MODEL = 'doubao-seed-2.0-lite';
