@@ -228,7 +228,8 @@ class TraitStore {
         updated_at INTEGER NOT NULL
       );
     `);
-    // R3 每日快照（2026-09-03）：五维 + 模板，每账号每天一份（同日覆盖），admin 可退回任意一天
+    // R3 每日快照（2026-09-03）：五维 + 模板，每账号每天一份（每日批路径同日只留第一份=回落前；
+    // 退回前的「存今天」显式覆盖），admin 可退回任意一天
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS trait_snapshot (
         account_id TEXT NOT NULL,
@@ -423,13 +424,16 @@ class TraitStore {
     return sum;
   }
 
-  /** R3 每日快照：当前五维 + 模板，同日覆盖。返回 day。 */
-  snapshotDaily(accountId: string, now = Date.now()): string {
+  /**
+   * R3 每日快照：当前五维 + 模板。默认同日不覆盖（每日批重跑/补跑时保住 3 点档回落前那份）；
+   * overwrite=true 才覆盖（rollbackTo 退回前把当前状态存成今天，供反悔）。返回 day。
+   */
+  snapshotDaily(accountId: string, now = Date.now(), opts?: { overwrite?: boolean }): string {
     const day = cstDayOf(now);
     const cur = this.get(accountId);
     const state: Record<TraitDim, number> = { playfulness: cur.playfulness, talkativeness: cur.talkativeness, storytelling: cur.storytelling, gentleness: cur.gentleness, curiosity_feed: cur.curiosity_feed };
     this.db
-      .prepare(`INSERT OR REPLACE INTO trait_snapshot (account_id, day, state, template, created_at) VALUES (?, ?, ?, ?, ?)`)
+      .prepare(`INSERT OR ${opts?.overwrite ? 'REPLACE' : 'IGNORE'} INTO trait_snapshot (account_id, day, state, template, created_at) VALUES (?, ?, ?, ?, ?)`)
       .run(accountId, day, JSON.stringify(state), this.getTemplate(accountId) ?? '', now);
     return day;
   }
@@ -456,7 +460,7 @@ class TraitStore {
     if (!row) return -1;
     let dims: Partial<Record<TraitDim, number>>;
     try { dims = JSON.parse(row.state) as Partial<Record<TraitDim, number>>; } catch { return -1; }
-    this.snapshotDaily(accountId, now); // 退回前存今天（可反悔）
+    this.snapshotDaily(accountId, now, { overwrite: true }); // 退回前存今天（可反悔）——显式覆盖
     this.ensureRow(accountId);
     const curTpl = this.getTemplate(accountId) ?? '';
     if ((row.template || '') !== curTpl) {
