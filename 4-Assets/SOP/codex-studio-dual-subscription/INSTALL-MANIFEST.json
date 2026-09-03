@@ -1,0 +1,13 @@
+{
+  "component": "studio-codex-dual-subscription-switch",
+  "ccswapVersion": "0.31.0",
+  "ccswapSourceCommit": "e5063a319bf5211f67df6351bf2d5d0919a132b8",
+  "sourceArchiveSha256": "0ec0d7c9e9d41236ff313f8eedf42d29ee451b2ffdab3c8cdc17f55596717a0d",
+  "strategy": "best",
+  "thresholdPct": 90,
+  "cooldownSeconds": 300,
+  "pollSeconds": 300,
+  "provider": "openai",
+  "cpaFallback": false,
+  "accountSlots": 2
+}

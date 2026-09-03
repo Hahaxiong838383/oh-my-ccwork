@@ -106,6 +106,14 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - 真实验收优先使用透明转发或安全日志，只记录 `model`、`service_tier`、状态码和脱敏 client metadata key，禁止记录 Authorization 或请求正文。
 - 当前已验证 Codex 0.145.0 经 `smart-api` 对 `gpt-5.6-sol` 发送 `service_tier: "priority"` 并返回 200；但响应元数据仍显示 `auto/default`。结论只能是“Fast 意图已成功发送和透传”，不能声称上游调度档位已确认。
 
+## 官方订阅双账号与 CPA 的边界（2026-09-04）
+
+- `503 auth_unavailable: no auth available (providers=codex, ...)` 是 CPA/CLIProxyAPI 授权池错误，不是 Studio SSH 并发限制，也不是官方 ChatGPT 订阅自动切换信号。
+- 用户目标是“两个 ChatGPT 订阅按用量自动切换”时，Studio 应使用 `model_provider = "openai"`、本机文件凭据和独立设备授权；不要继续接入 `smart-api`，也不要让 CC Switch 与本地账号守护同时接管。
+- Codex 官方文件凭据同一时刻只有一个活动 `auth.json`；切换文件后，已运行的 App Server 不会热加载。必须等待 Turn/队列空闲，再重启真实 `app-server-control.sock` owner。
+- 裸 `codex app-server daemon restart` 可能因现有 SSH proxy 长时间等待，且 PID 文件可能留下 zombie；运行真值优先取 control socket 的 `lsof` owner。
+- 此方案与 CPA 授权池完全隔离：两个订阅都耗尽时保持官方链路失败/等待，不允许静默回退 CPA。完整 SOP 见 `4-Assets/SOP/codex-studio-dual-subscription/README.md`。
+
 ## Codex App 模型目录防缩水（2026-08-13）
 
 - 三个选择器同时消失时，先检查 `~/.codex/config.toml` 的 `model_catalog_json`，再检查生效文件 `~/.codex/cc-switch-model-catalog.json`；`.bak-*` 只是刷新器备份，Codex App 不会主动从备份中选一个读取。

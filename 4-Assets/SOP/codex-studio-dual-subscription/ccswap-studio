@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+BASE="$HOME/.codex/account-switch"
+REAL_HOME="$HOME"
+export HOME="$BASE/home"
+export CODEX_HOME="$REAL_HOME/.codex"
+export PATH="$BASE/venv/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+
+exec "$BASE/venv/bin/ccswap" "$@"

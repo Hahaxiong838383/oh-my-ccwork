@@ -1,6 +1,6 @@
 ---
 name: cpa-smart-router
-description: CPA Smart Router 运维与迭代指南。用于检查、部署、验证阿里云日本服务器上的个人 CPA 调度 sidecar，排查 smart-api.hahaxiong.top、SQLite dashboard、provider 路由、Codex lane 灰度问题。
+description: CPA Smart Router 运维与迭代指南。用于检查、部署、验证阿里云日本服务器上的个人 CPA 调度 sidecar，排查 smart-api.hahaxiong.top、SQLite dashboard、provider 路由、Codex lane 灰度，以及区分 CPA 授权池与 Studio 官方 ChatGPT 双订阅切换边界。
 ---
 
 # cpa-smart-router（多引擎入口）
