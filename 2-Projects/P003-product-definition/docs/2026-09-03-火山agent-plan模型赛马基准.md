@@ -38,7 +38,7 @@
 
 - main（大脑 kidshub-ai）胜 335 轮（92.5%），fallback 胜 27 轮（7.5%）；race TTFT p50 799 / p90 1236 / p95 1349 / max 2064 ms。
 - fallback 胜出时 race TTFT 868–1507 ms：它只在 main 超过 800ms grace 后才有机会，而 lite 自己首字 ~850–1300ms，所以「救回来」的轮次仍要 1–1.5s 才出声。
-- **fallback 的 system prompt 是空的**（`AGENT_INSTRUCTIONS=` 空）：兜底胜出的 27 轮孩子听到的是没有小可人设、没有记忆的通用回复。这是比速度更先该修的事。
+- **fallback 的 system prompt 不是小可**（更正：`AGENT_INSTRUCTIONS` 未设置，走 `llm.rs` 内置的通用「中文实时语音助手」默认指令，无小可人设、无设备协议）：兜底胜出的 27 轮孩子听到的是通用助手口吻、没有记忆的回复。这是比速度更先该修的事。
 
 ## 四、能不能用作赛马机制——结论
 
@@ -75,3 +75,12 @@
 2. **大脑内赛马（DeepSeek 官方 + 火山 doubao）** 可把火山侧从现役 doubao 型号换成 mini，或把 deepseek-v4-flash 改走 Ark agent plan（HK→北京 ~800ms 稳定，规避官方 API 晚高峰 1.3–40s 抖动）——这是「同一模型换供应商」的低风险试法，先影子对比再切。
 3. evolving 不进生产（滚动升级=行为漂移）；2.1-turbo 与 lite 出局；glm/kimi 出局。
 4. 样本仍小（每格 4 次、单时段）；换之前用 64.90 `scripts/bench_race_pair.py` 跑 24h 影子对比看 p95。
+
+## 八、执行记录（2026-09-03 11:26 CST，川哥拍板：建议 1 执行；建议 2 大脑不改）
+
+- 64.90 `rust-worker.env`：`LLM_FALLBACK_BASE_URL=…/api/plan/v3`、`LLM_FALLBACK_MODEL=doubao-seed-2.0-mini`、`LLM_FALLBACK_API_KEY`=agent plan key、`LLM_FALLBACK_THINKING=disabled`；新增 `AGENT_INSTRUCTIONS`（363 字精简小可人设：语音语域 + 安全 + 第一批 9 个 `[[DEV:N]]` 映射；主路的大脑会过滤 system 消息，故只影响兜底）。`P003_DEVICE_INTENT_EXECUTE=1`/canary/二进制 `7ab90905` 未动。
+- 纪律重启 11:24:40 CST（PID 1678795，注册 1，ERROR 0）。烟测（worker 同一份 env，HK 发起）：「太亮了」528/571ms 首字、`[[DEV:6]]` 正确；「恐龙」543ms。
+- 回滚锚：`rust-worker.env.bak-20260903-pre-j2-open`（改回 coding plan lite：BASE_URL `…/api/coding/v3` + 原 key + `doubao-seed-2.0-lite`，去掉 `AGENT_INSTRUCTIONS`）+ 纪律重启。
+- **事故**：首次写入时 key 经 stdin 与 `bash -s` 脚本相撞，key 被当命令执行并回显进会话记录、错 key 上线约 1 分钟（11:23:39–11:24:40，期间零会话）；已修正。**agent plan key 已暴露在本机会话日志，建议控制台轮换后告知，cc 换 env。**
+- 验收：48h 后重跑 §三 统计——预期 fallback 胜出轮的 race TTFT 从 0.87–1.5s 左移到 ~0.8–0.9s，且回复带小可口吻；`journalctl -u voice-worker-rust | grep 'llm race 兜底路已配置 model=doubao-seed-2.0-mini'` 每 job 一行。
+- 大脑侧（建议 2）未动：仍是 DeepSeek 官方主 + 火山 doubao 兜底；川哥允许「拿火山的 DeepSeek Flash 做兜底」——若指大脑兜底，是 server env 一行改动，待点名。
