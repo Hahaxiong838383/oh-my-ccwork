@@ -1601,6 +1601,60 @@
                     </table>
                   </div>
                 </div>
+                <!-- 🏇 赛马配置（2026-09-03 川哥：赛马机制后台可选可配 + 延时测试；API routes/admin-data.ts /worker-race*；通道=热词发布 forced-command，64.90 脚本内纪律重启+健康自检+回滚） -->
+                <div v-if="khNav==='race' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">🏇 赛马配置</div>
+                    <el-button size="small" :loading="race.loading" @click="loadRace(); loadRaceStats()">刷新</el-button>
+                    <span v-if="race.error" style="color:#E8833A;font-size:12px">{{ race.error }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">worker 每轮同时发主路（大脑，带人设与记忆）和兜底路；主路在 grace 内出首字即胜，兜底只在主路慢于 grace 时接管。应用配置 = 写 64.90 env + 纪律重启 worker（约 15 秒；有设备通话时会拦，可勾选强制）。</div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">现役配置<span v-if="race.data && race.data.worker" style="font-weight:400;font-size:12px;color:#888;margin-left:8px">worker {{ race.data.worker.unit_active ? '运行中' : '未运行' }} · PID {{ race.data.worker.main_pid }} · 近 90s 活动行 {{ race.data.worker.recent_activity }}</span></div>
+                    <div style="display:grid;grid-template-columns:150px 1fr;gap:8px 12px;align-items:center;font-size:13px">
+                      <div style="color:#6B7785">主路（大脑，只读）</div><div><code>{{ race.data && race.data.worker.file ? race.data.worker.file.LLM_BASE_URL : '—' }}</code> · 模型 <b>{{ race.data && race.data.worker.file ? race.data.worker.file.LLM_MODEL : '—' }}</b> · thinking {{ race.data && race.data.worker.file ? race.data.worker.file.LLM_THINKING : '—' }}</div>
+                      <div style="color:#6B7785">主路 grace（ms）</div><div><input type="number" min="200" max="5000" step="50" v-model.number="race.form.grace" style="width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">主路在此时长内出首字即胜；低于主路中位会让兜底频繁抢胜（丢人设记忆）</span></div>
+                      <div style="color:#6B7785">兜底 Base</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.base_preset" size="small" style="width:280px"><el-option v-for="p in (race.data ? race.data.presets : [])" :key="p.key" :label="p.label" :value="p.key"></el-option><el-option label="自定义 URL" value="custom"></el-option></el-select><input v-if="race.form.base_preset==='custom'" v-model="race.form.base_custom" placeholder="https://…" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><code v-else style="font-size:12px;color:#999">{{ raceBaseUrl() }}</code></div>
+                      <div style="color:#6B7785">兜底模型</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.model" size="small" filterable style="width:280px"><el-option v-for="m in (race.data ? race.data.catalog : [])" :key="m.model" :label="m.model + '（' + raceTierTag(m.tier) + (m.ttft_prod_ms ? '，真 prompt ' + m.ttft_prod_ms + 'ms' : '') + '）'" :value="m.model" :disabled="m.tier==='unsupported'"></el-option><el-option label="自定义模型名" value="__custom"></el-option></el-select><input v-if="race.form.model==='__custom'" v-model="race.form.model_custom" placeholder="model name" style="width:220px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><span v-else style="font-size:12px;color:#999">{{ (race.data && race.data.catalog.find(function (m) { return m.model === race.form.model; }) || {}).note || '' }}</span></div>
+                      <div style="color:#6B7785">兜底 thinking</div><div><el-select v-model="race.form.thinking" size="small" style="width:160px"><el-option label="disabled（关思考，推荐）" value="disabled"></el-option><el-option label="enabled" value="enabled"></el-option><el-option label="adaptive" value="adaptive"></el-option></el-select></div>
+                      <div style="color:#6B7785">兜底 API key</div><div><input type="password" v-model="race.form.key" autocomplete="new-password" :placeholder="race.data && race.data.worker.file && race.data.worker.file.LLM_FALLBACK_API_KEY && race.data.worker.file.LLM_FALLBACK_API_KEY.set ? ('已配置 ' + race.data.worker.file.LLM_FALLBACK_API_KEY.hint + '（' + race.data.worker.file.LLM_FALLBACK_API_KEY.len + ' 位），留空不改') : '未配置'" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">后台永不回显整串；换套餐记得同时换 Base</span></div>
+                      <div style="color:#6B7785;align-self:start;padding-top:6px">兜底人设</div><div><textarea v-model="race.form.instructions" rows="4" style="width:100%;max-width:820px;padding:6px 8px;border:1px solid #dcdfe6;border-radius:6px;font-size:12px;line-height:1.5"></textarea><div style="font-size:12px;color:#999">{{ race.form.instructions.length }}/1200 字 · 单行；禁引号、反引号、$、反斜杠 · 主路走大脑，这段只影响兜底路胜出的轮次</div></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+                      <el-button type="primary" :loading="race.saving" @click="saveRace()">保存并纪律重启 worker</el-button>
+                      <el-checkbox v-model="race.force">强制（忽略通话检查）</el-checkbox>
+                      <span v-if="race.data && race.data.worker && race.data.worker.file && race.data.worker.proc && raceProcMismatch().length" style="color:#E8833A;font-size:12px">⚠️ 进程生效值 ≠ 文件值：{{ raceProcMismatch().join('、') }}（改过 env 未重启？）</span>
+                    </div>
+                    <pre v-if="race.applyResult" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(race.applyResult, null, 1) }}</pre>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">大脑内赛马（server 侧，只读）<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">改这里要动 server env + pm2 重启，找 cc</span></div>
+                    <div v-if="race.data && race.data.brain" style="font-size:13px">provider <b>{{ race.data.brain.provider || '—' }}</b> · 主路 <b>{{ race.data.brain.main_model || '—' }}</b> <code style="color:#999">{{ race.data.brain.main_base }}</code> · 兜底 <b>{{ race.data.brain.fallback_model || '—' }}</b> <code style="color:#999">{{ race.data.brain.fallback_base }}</code></div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-weight:700">现役实测（worker journal「llm race won」）</div><el-select v-model="race.statsHours" size="small" style="width:110px" @change="loadRaceStats()"><el-option label="24 小时" :value="24"></el-option><el-option label="48 小时" :value="48"></el-option><el-option label="7 天" :value="168"></el-option></el-select><el-button size="small" :loading="race.statsLoading" @click="loadRaceStats()">🔄</el-button></div>
+                    <div v-if="race.stats" style="font-size:13px">轮次 <b>{{ race.stats.n }}</b> · 主路胜 <b style="color:#3B7A99">{{ race.stats.won_main }}</b> · 兜底胜 <b style="color:#E8833A">{{ race.stats.won_fallback }}</b>（{{ race.stats.n ? Math.round(race.stats.won_fallback * 100 / race.stats.n) : 0 }}%）· 首字 p50 <b>{{ race.stats.p50 }}</b> / p90 {{ race.stats.p90 }} / p95 {{ race.stats.p95 }} / max {{ race.stats.max }} ms<div style="font-size:12px;color:#888;margin-top:4px">兜底胜出轮的首字（ms）：{{ (race.stats.fallback_won_ttft || []).join(' · ') || '无' }}</div></div>
+                    <div v-else style="color:#999;font-size:12px">{{ race.statsLoading ? '统计中…' : '暂无' }}</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">⏱ 延时测试<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">从 64.90 直连候选模型（用当前兜底 Base 与 key）测流式首字；每格 1~5 次，总预算 140 秒</span></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px">
+                      <el-checkbox v-for="m in (race.data ? race.data.catalog : [])" :key="m.model" v-model="race.bench.models[m.model]" :disabled="m.tier==='unsupported'"><span>{{ m.model }}</span> <span :style="{color: raceTierColor(m.tier), fontSize:'11px'}">{{ raceTierTag(m.tier) }}</span></el-checkbox>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                      <el-radio-group v-model="race.bench.prompt" size="small"><el-radio-button label="short">短提示（60 字）</el-radio-button><el-radio-button label="device">某台设备的生产 prompt</el-radio-button></el-radio-group>
+                      <el-select v-if="race.bench.prompt==='device'" v-model="race.bench.sn" size="small" filterable placeholder="选设备" style="width:260px"><el-option v-for="d in devcfgDeviceOptions()" :key="d.sn" :label="d.label" :value="d.sn"></el-option></el-select>
+                      <span style="font-size:12px;color:#6B7785">次数</span><el-select v-model="race.bench.runs" size="small" style="width:70px"><el-option v-for="n in [1,2,3,4,5]" :key="n" :label="n" :value="n"></el-option></el-select>
+                      <el-button type="primary" size="small" :loading="race.bench.running" @click="runRaceBench()">开始测试</el-button>
+                      <span v-if="race.bench.error" style="color:#E8833A;font-size:12px">{{ race.bench.error }}</span>
+                    </div>
+                    <div v-if="race.bench.result" style="font-size:12px;color:#888;margin-bottom:6px">Base {{ race.bench.result.base }} · prompt {{ race.bench.result.prompt }}（{{ race.bench.result.system_chars }} 字）· 耗时 {{ race.bench.result.elapsed_ms }} ms<span v-if="race.bench.result.truncated" style="color:#E8833A">（超预算，已截断）</span></div>
+                    <table v-if="race.bench.result" style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">问句</th><th style="padding:6px 8px">模型</th><th style="padding:6px 8px">首字各次（ms）</th><th style="padding:6px 8px">中位</th><th style="padding:6px 8px">最大</th><th style="padding:6px 8px">失败</th><th style="padding:6px 8px">回复样例</th></tr></thead>
+                      <tbody><tr v-for="row in raceBenchTable()" :key="row.user + row.model" style="border-bottom:1px solid #f5f5f5"><td style="padding:6px 8px">{{ row.user }}</td><td style="padding:6px 8px;font-family:monospace">{{ row.model }}</td><td style="padding:6px 8px">{{ row.list }}</td><td style="padding:6px 8px;font-weight:700">{{ row.med }}</td><td style="padding:6px 8px">{{ row.max }}</td><td style="padding:6px 8px" :style="{color: row.errs ? '#C0392B' : '#999'}">{{ row.errs }}</td><td style="padding:6px 8px;color:#666">{{ row.sample }}</td></tr></tbody>
+                    </table>
+                  </div>
+                </div>
                 <!-- 设备运行配置（通用键表：后端 CONFIG_KEYS 为真源，前端按 keys 渲染；合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + 2026-09-03 server 自用键 local_audio.refresh_days） -->
                 <div v-if="khNav==='devcfg' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
@@ -3961,7 +4015,7 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
 
         // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
         // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
@@ -4054,6 +4108,95 @@
               if (j.ok) { ElementPlus.ElMessage.success('已删除'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
             });
           }).catch(function () {});
+        }
+
+        // ── 🏇 赛马配置（2026-09-03；API /api/admin/worker-race*；64.90 脚本 race_* 动作；后端为真防线：白名单/正则/安全窗口/对撞/回滚）──
+        var race = reactive({ loading: false, error: '', data: null, form: { base_preset: 'agent_plan', base_custom: '', model: '', model_custom: '', thinking: 'disabled', key: '', grace: 800, instructions: '' }, force: false, saving: false, applyResult: null, stats: null, statsHours: 48, statsLoading: false, bench: { models: {}, prompt: 'short', sn: '', runs: 3, running: false, result: null, error: '' } });
+        function raceBaseUrl() { if (race.form.base_preset === 'custom') return race.form.base_custom.trim(); var p = ((race.data && race.data.presets) || []).find(function (x) { return x.key === race.form.base_preset; }); return p ? p.url : ''; }
+        function raceModel() { return race.form.model === '__custom' ? race.form.model_custom.trim() : race.form.model; }
+        function raceTierTag(t) { return ({ recommended: '推荐', ok: '可用', caution: '慎用', unsupported: '不可用' })[t] || t; }
+        function raceTierColor(t) { return ({ recommended: '#3DBE78', ok: '#3B7A99', caution: '#E8833A', unsupported: '#C0392B' })[t] || '#909399'; }
+        function raceProcMismatch() {
+          var w = race.data && race.data.worker; if (!w || !w.file || !w.proc) return [];
+          return ['LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS'].filter(function (k) { return (w.file[k] || '') !== (w.proc[k] || ''); });
+        }
+        async function loadRace() {
+          if (!canManageInvites.value) return;
+          race.loading = true; race.error = '';
+          try {
+            var j = await deviceApi('/api/admin/worker-race', { method: 'GET' });
+            race.data = j;
+            if (!j.ok) { race.error = (j.worker && j.worker.error) || j.error || '读取失败（通道不可达）'; }
+            else {
+              var f = j.worker.file || {}; var presets = j.presets || [];
+              var hit = presets.find(function (p) { return p.url === f.LLM_FALLBACK_BASE_URL; });
+              race.form.base_preset = hit ? hit.key : 'custom'; race.form.base_custom = hit ? '' : (f.LLM_FALLBACK_BASE_URL || '');
+              var inCat = (j.catalog || []).some(function (m) { return m.model === f.LLM_FALLBACK_MODEL; });
+              race.form.model = inCat ? f.LLM_FALLBACK_MODEL : '__custom'; race.form.model_custom = inCat ? '' : (f.LLM_FALLBACK_MODEL || '');
+              race.form.thinking = f.LLM_FALLBACK_THINKING || 'disabled';
+              race.form.grace = Number(f.LLM_RACE_MAIN_GRACE_MS || 800);
+              race.form.instructions = f.AGENT_INSTRUCTIONS || '';
+              race.form.key = '';
+              if (!(deviceData.devices || []).length) loadDevices();
+              if (!race.bench.sn && (deviceData.devices || []).length) race.bench.sn = deviceData.devices[0].sn;
+            }
+          } catch (e) { race.error = '无法连接设备服务'; }
+          race.loading = false;
+        }
+        function raceDiff() {
+          var w = race.data && race.data.worker; if (!w || !w.file) return {};
+          var f = w.file, v = {};
+          var b = raceBaseUrl(); if (b && b !== f.LLM_FALLBACK_BASE_URL) v.LLM_FALLBACK_BASE_URL = b;
+          var m = raceModel(); if (m && m !== f.LLM_FALLBACK_MODEL) v.LLM_FALLBACK_MODEL = m;
+          if (race.form.thinking !== f.LLM_FALLBACK_THINKING) v.LLM_FALLBACK_THINKING = race.form.thinking;
+          if (String(race.form.grace) !== String(f.LLM_RACE_MAIN_GRACE_MS)) v.LLM_RACE_MAIN_GRACE_MS = String(race.form.grace);
+          if (race.form.instructions.trim() !== (f.AGENT_INSTRUCTIONS || '')) v.AGENT_INSTRUCTIONS = race.form.instructions.trim();
+          if (race.form.key.trim()) v.LLM_FALLBACK_API_KEY = race.form.key.trim();
+          return v;
+        }
+        async function saveRace() {
+          var v = raceDiff(); var keys = Object.keys(v);
+          if (!keys.length) { ElementPlus.ElMessage.info('没有改动'); return; }
+          var summary = keys.map(function (k) { return k === 'LLM_FALLBACK_API_KEY' ? '密钥：更换' : (k + ' → ' + (k === 'AGENT_INSTRUCTIONS' ? v[k].slice(0, 30) + '…' : v[k])); }).join('\n');
+          try { await ElementPlus.ElMessageBox.confirm('将写入 64.90 并纪律重启 worker（约 15 秒）：\n' + summary, race.force ? '强制应用（忽略通话检查）' : '应用赛马配置', { type: 'warning', confirmButtonText: '应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          race.saving = true; race.applyResult = null;
+          try {
+            var j = await deviceApi('/api/admin/worker-race', { method: 'PUT', body: JSON.stringify({ values: v, force: race.force }) });
+            race.applyResult = j;
+            if (j.ok) { ElementPlus.ElMessage.success('已应用并重启：' + (j.applied || []).join('、')); race.form.key = ''; race.force = false; loadRace(); }
+            else if (j.active_rooms) ElementPlus.ElMessage.warning(j.error);
+            else ElementPlus.ElMessage.error(j.error || '应用失败');
+          } catch (e) { ElementPlus.ElMessage.error('应用失败'); }
+          race.saving = false;
+        }
+        async function loadRaceStats() {
+          if (!canManageInvites.value) return;
+          race.statsLoading = true;
+          try { var j = await deviceApi('/api/admin/worker-race/stats?hours=' + race.statsHours, { method: 'GET' }); race.stats = j.ok ? j : null; if (!j.ok) ElementPlus.ElMessage.error(j.error || '统计失败'); } catch (e) { race.stats = null; }
+          race.statsLoading = false;
+        }
+        function raceBenchModels() { return Object.keys(race.bench.models).filter(function (m) { return race.bench.models[m]; }); }
+        async function runRaceBench() {
+          var models = raceBenchModels();
+          if (!models.length) { ElementPlus.ElMessage.warning('先勾选要测的模型'); return; }
+          if (models.length > 8) { ElementPlus.ElMessage.warning('最多 8 个'); return; }
+          if (race.bench.prompt === 'device' && !race.bench.sn) { ElementPlus.ElMessage.warning('选一台设备'); return; }
+          race.bench.running = true; race.bench.error = ''; race.bench.result = null;
+          try {
+            var j = await deviceApi('/api/admin/worker-race/bench', { method: 'POST', body: JSON.stringify({ models: models, runs: race.bench.runs, prompt: race.bench.prompt, sn: race.bench.sn }) });
+            if (j.ok) race.bench.result = j; else race.bench.error = j.error || '测试失败';
+          } catch (e) { race.bench.error = '测试失败（通道超时或不可达）'; }
+          race.bench.running = false;
+        }
+        function raceBenchTable() {
+          var r = race.bench.result; if (!r) return [];
+          var by = {};
+          (r.rows || []).forEach(function (row) {
+            var k = row.user + '|' + row.model;
+            if (!by[k]) by[k] = { user: row.user, model: row.model, ttfts: [], errs: 0, sample: '' };
+            if (row.status === 200 && row.ttft_ms) { by[k].ttfts.push(row.ttft_ms); by[k].sample = row.text || ''; } else by[k].errs++;
+          });
+          return Object.keys(by).map(function (k) { var o = by[k]; var s = o.ttfts.slice().sort(function (a, b) { return a - b; }); o.med = s.length ? s[Math.floor(s.length / 2)] : null; o.max = s.length ? s[s.length - 1] : null; o.list = s.join(' · '); return o; });
         }
 
         // ── 设备运行配置（2026-08-21；API 见 routes/device-config.ts；合同 CC_P003_POSTURE_* + cc 回执；
@@ -5194,6 +5337,7 @@
           if (k === 'hotwords') nextTick(loadHotwords);
           if (k === 'ota') nextTick(loadOta);
           if (k === 'devcfg') nextTick(loadDevcfg);
+          if (k === 'race') nextTick(function () { loadRace(); loadRaceStats(); });
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -6348,7 +6492,7 @@
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
-          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
+          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,

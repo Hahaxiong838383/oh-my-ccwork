@@ -54,7 +54,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -1022,6 +1022,150 @@ adminDataRoute.put('/devices/:sn/style-template', async (c) => {
   } catch (error) {
     return c.json({ ok: false, error: `设置风格模板失败: ${String((error as Error)?.message ?? error)}` }, 500);
   }
+});
+
+// ── Worker 赛马配置（2026-09-03 川哥：赛马机制后台可选可配 + 延时测试，不用每次找 cc 改 env）──
+// 通道复用热词发布的 forced-command key（64.90 apply_hotwords.py 新增 race_get/race_set/race_stats/race_bench）：
+// server 只做校验/安全窗口/对撞/记账；env 写入、纪律重启、健康自检与回滚全在脚本内（与热词发布同一套安全网）。
+// key 永不回显（脚本只回 hint/len），也永不从 bench 载荷传（bench 用 64.90 env 里的兜底 key）。
+const RACE_RW_KEYS = [
+  'LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_FALLBACK_API_KEY',
+  'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS',
+] as const;
+type RaceRwKey = (typeof RACE_RW_KEYS)[number];
+const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
+  LLM_FALLBACK_BASE_URL: /^https:\/\/[A-Za-z0-9.-]+(?:\/[A-Za-z0-9._/-]*)?$/,
+  LLM_FALLBACK_MODEL: /^[A-Za-z0-9._-]{2,64}$/,
+  LLM_FALLBACK_THINKING: /^(?:disabled|enabled|adaptive|off)$/,
+  LLM_FALLBACK_API_KEY: /^[A-Za-z0-9._-]{16,128}$/,
+  LLM_RACE_MAIN_GRACE_MS: /^\d{3,4}$/,
+  AGENT_INSTRUCTIONS: /^[^\r\n"'`$\\]{0,1200}$/,
+};
+export const RACE_BASE_PRESETS = [
+  { key: 'agent_plan', label: '火山 agent plan（api/plan/v3）', url: 'https://ark.cn-beijing.volces.com/api/plan/v3' },
+  { key: 'coding_plan', label: '火山 coding plan（api/coding/v3）', url: 'https://ark.cn-beijing.volces.com/api/coding/v3' },
+];
+// 2026-09-03 基准（生产真 prompt 4.8k 字、HK 发起、4 次中位首字）；tier: recommended/ok/caution/unsupported
+export const RACE_MODEL_CATALOG = [
+  { model: 'doubao-seed-2.0-mini', tier: 'recommended', ttft_prod_ms: 787, note: '真 prompt 首字 ~710–790ms 且最稳；协议标记正确' },
+  { model: 'deepseek-v4-flash', tier: 'ok', ttft_prod_ms: 784, note: '真 prompt ~780–900ms，稳（火山侧供应）' },
+  { model: 'minimax-m3', tier: 'ok', ttft_prod_ms: 1003, note: '~850–1000ms，偶有 6s 长尾' },
+  { model: 'deepseek-v4-pro', tier: 'ok', ttft_prod_ms: null, note: '短提示 ~1.2s，未跑真 prompt' },
+  { model: 'doubao-seed-evolving', tier: 'caution', ttft_prod_ms: 814, note: '周级滚动升级=行为会漂；有 2s 尾' },
+  { model: 'doubao-seed-2.0-lite', tier: 'caution', ttft_prod_ms: 1785, note: '原兜底：真 prompt 下 0.8–4.9s 大抖' },
+  { model: 'doubao-seed-2.1-turbo', tier: 'caution', ttft_prod_ms: 2116, note: '真 prompt prefill 重，~2.1s 双峰' },
+  { model: 'glm-5.3-flash', tier: 'unsupported', ttft_prod_ms: null, note: '思考关不掉，80 token 内零正文' },
+  { model: 'glm-5.3', tier: 'unsupported', ttft_prod_ms: null, note: '同 glm-5.3-flash' },
+  { model: 'kimi-k2.7-code', tier: 'unsupported', ttft_prod_ms: null, note: '思考关不掉，首字 2.2s+' },
+  { model: 'kimi-k3', tier: 'unsupported', ttft_prod_ms: null, note: '排队 3.6–38s' },
+];
+
+export function validateRaceValues(raw: unknown): { ok: true; values: Partial<Record<RaceRwKey, string>> } | { ok: false; error: string } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, error: 'values 须为对象' };
+  const values: Partial<Record<RaceRwKey, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(RACE_RW_KEYS as readonly string[]).includes(k)) return { ok: false, error: `键不在白名单: ${k}` };
+    if (typeof v !== 'string') return { ok: false, error: `${k} 须为字符串` };
+    const val = k === 'AGENT_INSTRUCTIONS' ? v.trim() : v.trim();
+    if (k === 'LLM_FALLBACK_API_KEY' && val === '') continue; // 空=不改 key
+    if (!RACE_RW_RE[k as RaceRwKey].test(val)) return { ok: false, error: `${k} 值不合法` };
+    if (k === 'LLM_RACE_MAIN_GRACE_MS') {
+      const n = Number(val);
+      if (!(n >= 200 && n <= 5000)) return { ok: false, error: 'LLM_RACE_MAIN_GRACE_MS 须在 200~5000' };
+    }
+    values[k as RaceRwKey] = val;
+  }
+  if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
+  return { ok: true, values };
+}
+
+function brainRaceView(): Record<string, string> {
+  return {
+    provider: process.env.LLM_PROVIDER ?? '',
+    main_model: process.env.DEEPSEEK_MODEL ?? '',
+    main_base: process.env.DEEPSEEK_BASE_URL ?? '',
+    fallback_model: process.env.VOLC_LLM_MODEL ?? '',
+    fallback_base: process.env.VOLC_LLM_BASE_URL ?? '',
+  };
+}
+
+adminDataRoute.get('/worker-race', async (c) => {
+  const r = await callHotwordChannel({ action: 'race_get' }, 20_000);
+  return c.json({ ok: r.ok === true, worker: r, brain: brainRaceView(), presets: RACE_BASE_PRESETS, catalog: RACE_MODEL_CATALOG }, r.ok ? 200 : 502);
+});
+
+adminDataRoute.get('/worker-race/stats', async (c) => {
+  const hours = Math.max(1, Math.min(168, Number(c.req.query('hours') || 48) || 48));
+  const r = await callHotwordChannel({ action: 'race_stats', hours }, 40_000);
+  return c.json(r, r.ok ? 200 : 502);
+});
+
+adminDataRoute.put('/worker-race', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { values?: unknown; force?: unknown; note?: unknown };
+  const v = validateRaceValues(body.values);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const force = body.force === true;
+  if (!force) {
+    const rooms = await fetchLiveKitRooms();
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms.device_rooms > 0)
+      return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
+  }
+  const t0 = Date.now();
+  const r = await callHotwordChannel({ action: 'race_set', values: v.values, force }, 150_000);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+  const keys = Object.keys(v.values).join('+');
+  if (!r.ok) {
+    console.error(`[admin-race] set FAILED keys=${keys} by=${by} ms=${Date.now() - t0} rolled_back=${r.rolled_back === true} recovered=${r.recovered === true}`);
+    return c.json({ ok: false, error: String(r.error ?? r.reason ?? '应用失败'), detail: r }, 502);
+  }
+  // 对撞：非密钥键 进程生效值 === 期望值；密钥只对撞长度
+  const proc = (r.proc ?? {}) as Record<string, unknown>;
+  const mismatch: string[] = [];
+  for (const [k, val] of Object.entries(v.values)) {
+    if (k === 'LLM_FALLBACK_API_KEY') {
+      const pk = proc[k] as { len?: number } | undefined;
+      if (!pk || pk.len !== val.length) mismatch.push(k);
+    } else if (proc[k] !== val) mismatch.push(k);
+  }
+  if (mismatch.length > 0) {
+    console.error(`[admin-race] set 对撞失败 keys=${mismatch.join('+')}(进程生效值≠期望值)`);
+    return c.json({ ok: false, error: `应用对撞失败：${mismatch.join('、')} 的进程生效值与期望不一致`, detail: r }, 502);
+  }
+  console.log(`[admin-race] applied keys=${keys} by=${by} force=${force} ms=${Date.now() - t0} backup=${String(r.backup ?? '')}`);
+  return c.json({ ok: true, applied: r.applied, backup: r.backup, proc: r.proc });
+});
+
+adminDataRoute.post('/worker-race/bench', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as {
+    models?: unknown; runs?: unknown; prompt?: unknown; sn?: unknown; user_texts?: unknown; base?: unknown;
+  };
+  const models = Array.isArray(body.models) ? body.models.filter((m): m is string => typeof m === 'string') : [];
+  if (models.length < 1 || models.length > 8) return c.json({ ok: false, error: 'models 须为 1~8 个' }, 400);
+  if (models.some((m) => !RACE_RW_RE.LLM_FALLBACK_MODEL.test(m))) return c.json({ ok: false, error: '模型名不合法' }, 400);
+  const runs = Math.max(1, Math.min(5, Number(body.runs) || 3));
+  const userTexts = Array.isArray(body.user_texts) && body.user_texts.length
+    ? body.user_texts.filter((u): u is string => typeof u === 'string' && u.trim().length > 0 && u.length <= 60).slice(0, 3)
+    : ['太亮了', '给我讲一个恐龙的小知识'];
+  let system = '';
+  let promptLabel = 'short';
+  if (body.prompt === 'device') {
+    const sn = typeof body.sn === 'string' ? body.sn.trim() : '';
+    const device = sn ? deviceRegistryStore.get(sn) : null;
+    if (!device?.account_id) return c.json({ ok: false, error: '设备不在台账或未开通 brain' }, 400);
+    // 稳态生产 prompt（世界观/安全/记忆/附加规则/设备意图协议；逐轮护栏不含），与 Worker Brain 拼接可视化同源
+    system = buildDeviceLayers({ accountId: device.account_id, role: 'device' }).final;
+    promptLabel = `device:${sn.slice(-4)}`;
+  } else {
+    system = '你是小可，一个陪孩子学习的小伙伴。用中文口语回答，一到两句话，不用列表。';
+  }
+  const payload: Record<string, unknown> = { action: 'race_bench', models, runs, system, user_texts: userTexts };
+  if (typeof body.base === 'string' && RACE_RW_RE.LLM_FALLBACK_BASE_URL.test(body.base)) payload.base = body.base;
+  const r = await callHotwordChannel(payload, 150_000);
+  if (!r.ok) return c.json({ ok: false, error: String(r.error ?? 'bench 失败'), detail: r }, 502);
+  return c.json({ ...r, prompt: promptLabel });
 });
 
 // ── 记忆抽取 LLM 配置（Worker Brain tab「记忆抽取 LLM」卡，2026-08-19）──
