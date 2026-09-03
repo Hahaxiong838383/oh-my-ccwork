@@ -208,14 +208,21 @@ customLlmRoute.post('/chat/completions', async (c) => {
     const persistTurn = (): void => {
       if (!authContext || overridePrompt || isFeedback) return; // override/吐槽不落库不抽取(不污染真实 profile)
       const finalAssistant = assistantText.trim();
+      // R2 证据链（2026-09-03）：本轮两条消息的 conversation.id 随快照传给抽取器（窗口内旧消息由抽取器按原话反查）
+      let userMsgId: string | undefined;
+      let assistantMsgId: string | undefined;
       try {
-        conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText });
+        userMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText }).id;
         if (finalAssistant) {
-          conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant });
+          assistantMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant }).id;
         }
       } catch { /* 审计落库失败不阻断 */ }
       if (!finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
-      const full = [...history, { role: 'user' as const, content: userText }, { role: 'assistant' as const, content: finalAssistant }];
+      const full = [
+        ...history,
+        { role: 'user' as const, content: userText, id: userMsgId },
+        { role: 'assistant' as const, content: finalAssistant, id: assistantMsgId },
+      ];
       const userTurns = full.filter((t) => t.role === 'user').length;
       // 抽取节流分场景（2026-08-19）：设备房(role=device)每轮都抽——唤醒式交互以 1-2 轮短会话为主,
       // %3 取模下几乎永不触发(当日实证建档后三场会话全漏);UNIQUE(account,type,content) 去重兜滑窗重叠,幂等。

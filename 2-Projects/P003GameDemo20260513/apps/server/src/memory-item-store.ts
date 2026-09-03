@@ -34,6 +34,11 @@ export type MemoryItem = {
   created_at: number;
   last_injected_at: number; // 注入回执,异步写(评审 X3:绝不在读路径同步写)
   resolved_at: number | null;
+  // R2（2026-09-03）：证据链——指回 conversation.id；被谁取代；有效期（旧条不删，valid_to 关闭）
+  source_msg_id: string;
+  superseded_by: string;
+  valid_from: number | null;
+  valid_to: number | null;
 };
 
 export type NewMemoryItem = {
@@ -46,6 +51,8 @@ export type NewMemoryItem = {
   source_role?: string;
   source_quote?: string;
   due_text?: string;
+  source_msg_id?: string; // R2：抽取自哪条 conversation（服务端按证据/本轮定位，非 LLM 给）
+  meta?: Record<string, unknown>; // 扩展（promise.expect 等），入库 JSON
 };
 
 // 非 promise 类的存量上限(写时淘汰最旧;promise 永不淘汰——评审 X2:淘汰 active promise=系统性失约)。
@@ -131,6 +138,16 @@ class MemoryItemStore {
     // schema 版本(评审 C3):v1。后续加列走 user_version 判断 + ALTER。
     const v = (this.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
     if (v < 1) this.db.exec('PRAGMA user_version = 1');
+    // v2（R2 证据链，2026-09-03）：source_msg_id / superseded_by / valid_from / valid_to；幂等加列
+    const cols = new Set((this.db.prepare('PRAGMA table_info(memory_item)').all() as { name: string }[]).map((c) => c.name));
+    const adds: [string, string][] = [
+      ['source_msg_id', `ALTER TABLE memory_item ADD COLUMN source_msg_id TEXT NOT NULL DEFAULT ''`],
+      ['superseded_by', `ALTER TABLE memory_item ADD COLUMN superseded_by TEXT NOT NULL DEFAULT ''`],
+      ['valid_from', `ALTER TABLE memory_item ADD COLUMN valid_from INTEGER`],
+      ['valid_to', `ALTER TABLE memory_item ADD COLUMN valid_to INTEGER`],
+    ];
+    for (const [name, ddl] of adds) if (!cols.has(name)) this.db.exec(ddl);
+    if (v < 2) this.db.exec('PRAGMA user_version = 2');
   }
 
   /**
@@ -146,8 +163,8 @@ class MemoryItemStore {
     const ins = this.db.prepare(`
       INSERT INTO memory_item (id, account_id, type, content, subject, status, confidence, source,
         session_id, source_role, source_quote, due_text, due_at, due_granularity, meta,
-        created_at, last_injected_at, resolved_at)
-      VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, '{}', ?, 0, NULL)
+        created_at, last_injected_at, resolved_at, source_msg_id, valid_from)
+      VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, ?)
       ON CONFLICT (account_id, type, content) DO NOTHING
     `);
     let added = 0;
@@ -156,11 +173,16 @@ class MemoryItemStore {
         it.type === 'promise' || it.type === 'concern'
           ? parseDue(it.due_text ?? '', now)
           : { due_at: null, due_granularity: '' };
+      let metaJson = '{}';
+      if (it.meta && typeof it.meta === 'object') {
+        try { metaJson = JSON.stringify(it.meta).slice(0, 500); } catch { metaJson = '{}'; }
+      }
       const r = ins.run(
         randomUUID(), accountId, it.type, it.content, it.subject ?? '',
         it.confidence ?? 0.7, it.source ?? 'voice',
         it.session_id ?? '', it.source_role ?? '', it.source_quote ?? '',
-        it.due_text ?? '', due.due_at, due.due_granularity, now,
+        it.due_text ?? '', due.due_at, due.due_granularity, metaJson, now,
+        it.source_msg_id ?? '', now,
       );
       added += Number(r.changes);
       // 成长账本：concern 真实入库时记（changes>0 才记——UNIQUE 去重命中的不算新事件）
@@ -175,12 +197,12 @@ class MemoryItemStore {
     // 写后治理:非 promise 超限淘汰(retracted 化,非物理删,审计保留)
     for (const [type, cap] of Object.entries(TYPE_CAP)) {
       this.db.prepare(`
-        UPDATE memory_item SET status = 'retracted', resolved_at = ?
+        UPDATE memory_item SET status = 'retracted', resolved_at = ?, valid_to = ?, superseded_by = 'cap_evict'
         WHERE status = 'active' AND account_id = ? AND type = ? AND id NOT IN (
           SELECT id FROM memory_item WHERE status = 'active' AND account_id = ? AND type = ?
           ORDER BY created_at DESC LIMIT ${cap}
         )
-      `).run(now, accountId, type, accountId, type);
+      `).run(now, now, accountId, type, accountId, type);
     }
     const activePromises = this.countActive(accountId, 'promise');
     if (activePromises > PROMISE_ACTIVE_WARN) {
@@ -203,11 +225,13 @@ class MemoryItemStore {
     return n;
   }
 
-  /** LLM/系统撤销 = 软删(审计保留)。 */
-  retract(accountId: string, id: string): boolean {
+  /** LLM/系统撤销 = 软删(审计保留)。supersededBy：被谁取代（R2，如 relike:<msgId> / 新条目 id），可空。 */
+  retract(accountId: string, id: string, supersededBy = ''): boolean {
+    const now = Date.now();
     const r = this.db.prepare(`
-      UPDATE memory_item SET status = 'retracted', resolved_at = ? WHERE id = ? AND account_id = ?
-    `).run(Date.now(), id, accountId);
+      UPDATE memory_item SET status = 'retracted', resolved_at = ?, valid_to = ?, superseded_by = ?
+      WHERE id = ? AND account_id = ?
+    `).run(now, now, supersededBy, id, accountId);
     return Number(r.changes) > 0;
   }
 
@@ -216,10 +240,12 @@ class MemoryItemStore {
    * 让同内容重插静默失败，孩子本轮又明确说不喜欢时由抽取器调用复活。只动非 active 行；返回是否复活。
    */
   reviveIfRetracted(accountId: string, type: MemoryType, content: string, sessionId = ''): boolean {
+    const now = Date.now();
     const r = this.db.prepare(`
-      UPDATE memory_item SET status = 'active', created_at = ?, resolved_at = NULL, session_id = ?
+      UPDATE memory_item SET status = 'active', created_at = ?, resolved_at = NULL, session_id = ?,
+        valid_from = ?, valid_to = NULL, superseded_by = ''
       WHERE account_id = ? AND type = ? AND content = ? AND status IN ('retracted', 'archived')
-    `).run(Date.now(), sessionId, accountId, type, content);
+    `).run(now, sessionId, now, accountId, type, content);
     return Number(r.changes) > 0;
   }
 
@@ -237,10 +263,11 @@ class MemoryItemStore {
 
   /** 按"不喜欢了"的内容撤销 preference/event 同名项(抽取器 dislike 联动用,精确 content 匹配)。 */
   retractByContent(accountId: string, type: MemoryType, content: string): boolean {
+    const now = Date.now();
     const r = this.db.prepare(`
-      UPDATE memory_item SET status = 'retracted', resolved_at = ?
+      UPDATE memory_item SET status = 'retracted', resolved_at = ?, valid_to = ?
       WHERE account_id = ? AND type = ? AND content = ? AND status = 'active'
-    `).run(Date.now(), accountId, type, content);
+    `).run(now, now, accountId, type, content);
     return Number(r.changes) > 0;
   }
 
