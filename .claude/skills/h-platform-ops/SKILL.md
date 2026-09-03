@@ -6696,3 +6696,13 @@ ssh dev198 'journalctl --user -u feishu-grok-runner-worker --since "7 days ago" 
 
 灰度名单语义：功能入口对该 uid 可见（用户控制台出现绑定入口），**不改变现有引擎/线路**
 ——绑定与切换由用户（或川哥代操作）在其控制台完成。402 额度耗尽的用户开这个=给回归路径。
+
+### 2026-09-03 起端点绑定已全量开放（`all` 模式）
+
+川哥拍板「确保新增用户也是同样的功能」→ `H_GROK_ENDPOINT_BINDING_UIDS=all`
+（备份 `.env.bak-20260903-162712-pre-endpoint-all`）。**新增用户零配置自动可见**，
+不再逐人加名单；上面的「灰度扩员四步」自此只用于收窄场景。
+回滚两档：改回逗号名单（部分收窄）或 `H_GROK_ENDPOINT_BINDING=0`（一键全禁，
+优先级高于 UIDS，已验证）。日志锚形态变为 `灰度=all(all)`。
+入口渲染是每请求现判（server.mjs 注入 endpointBinding.allowed），重启后用户
+重开「配置」页即见，无需其它操作。
