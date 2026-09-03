@@ -4802,17 +4802,25 @@
             navigator.clipboard.writeText(text).then(done).catch(function () { ElementPlus.ElMessage.error('复制失败'); });
           }
         }
+        // 换设备必清旧成长视图（2026-09-03 川哥：点选设备后人格成长页不自动刷新，还挂着上一台的数据）
+        function resetGrowthView() {
+          growth.probe = null; growth.error = ''; growth.events = []; growth.eventsTotal = 0; growth.styleEvents = [];
+          growth.styleTemplate = 'default'; growth.stylePicked = 'default'; growth.styleSetAt = null; growth.styleSource = null;
+        }
         function selectBrainDevice(sn) {
           brainState.selectedSn = sn;
           brainState.showPrompt = false;
           brainState.isolation = null; // 换设备必清旧隔离视图——隔离面板自己串台展示旧设备数据是最讽刺的 bug
+          resetGrowthView();
           loadBrain(sn);
           if (brainState.subTab === 'isolation') loadIsolation(sn);
+          if (brainState.subTab === 'growth') loadGrowth(sn);
         }
         function refreshBrainTab() {
           loadDevices();
           if (brainState.selectedSn) loadBrain(brainState.selectedSn);
           if (brainState.selectedSn && brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
+          if (brainState.selectedSn && brainState.subTab === 'growth') loadGrowth(brainState.selectedSn);
         }
         // 全局隔离总览（2026-08-19）：全租户对账——逐台路由自检 + 全库不变量 + 24h 可靠性，进 brain tab 未选设备时默认展示。
         function loadOverview() {
