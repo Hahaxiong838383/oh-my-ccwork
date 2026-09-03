@@ -15,7 +15,7 @@ process.env.DEVICES_DB_PATH = join(tmp, 'devices.db');
 process.env.LOCAL_AUDIO_DIR = join(tmp, 'local-audio');
 
 const { mp3DurationMs, pcmToWav, parseWavHeader } = await import('../src/providers/xfyun-tts.js');
-const { sanitizeClipText, countChars, gateClipText, shouldRegenerate, traitPromptLines, describeTrigger, estimateRevisionBytes, REVISION_CAP_BYTES, DEFAULT_ROUTINE_REFRESH_DAYS } =
+const { sanitizeClipText, countChars, gateClipText, shouldRegenerate, traitPromptLines, describeTrigger, estimateRevisionBytes, REVISION_CAP_BYTES, DEFAULT_ROUTINE_REFRESH_DAYS, PUBLISH_ITEMS_PER_SLOT, buildSlot } =
   await import('../src/local-audio-generator.js');
 const { localAudioStore, LOCAL_AUDIO_SLOTS, MIN_ITEMS_PER_SLOT } = await import('../src/local-audio-store.js');
 const { TRAIT_BASELINE } = await import('../src/trait-store.js');
@@ -129,6 +129,24 @@ ok(
   ) <= REVISION_CAP_BYTES,
 );
 eq('est-5 上限单一真源=5MiB(codex 裁定提额时本锚随之改)', REVISION_CAP_BYTES, 5 * 1024 * 1024);
+
+// ── 发布预算硬证明（codex 2026-09-03 5MiB 裁定 §3.1）——正向守卫：以后加槽/加条会让它翻红 ──
+ok('pub-1 14 槽×2 条×160KiB ≤ 5MiB', LOCAL_AUDIO_SLOTS.length * PUBLISH_ITEMS_PER_SLOT * 160 * 1024 <= REVISION_CAP_BYTES);
+ok('pub-2 发布预算 ≥ 每槽保底', PUBLISH_ITEMS_PER_SLOT >= MIN_ITEMS_PER_SLOT);
+ok(
+  'pub-3 预检按发布预算估:2 条/槽×14×105KB 在门内',
+  estimateRevisionBytes(Object.fromEntries(LOCAL_AUDIO_SLOTS.map((s) => [s, Array(5).fill(105 * 1024)])), PUBLISH_ITEMS_PER_SLOT) <= REVISION_CAP_BYTES,
+);
+// staging 优先复用：够 target 就不碰 LLM/TTS（网络不可达的单测环境里能返回=没叫网络）
+{
+  const ACC = 'device-BJP00326060100009999';
+  const mk = (id: string, text: string) => localAudioStore.insertItem(ACC, { slot: 'greeting.normal', id, text, sha256: id.repeat(4), bytes: 90_000, duration_ms: 1800, format: 'wav' });
+  mk('aaaaaaaaaaaaaaaa', '来啦今天想聊点啥');
+  mk('bbbbbbbbbbbbbbbb', '欢迎回来坐好啦');
+  mk('cccccccccccccccc', '来啦今天想聊点啥'); // 同文案重复条目不应被选两次
+  const r = await buildSlot(ACC, 'greeting.normal', undefined, 2, true);
+  eq('pub-4 staging 优先复用取满 target 且文案去重', { n: r.keep.length, texts: r.keep.map((k) => k.text).sort(), keptOld: r.keptOld }, { n: 2, texts: ['来啦今天想聊点啥', '欢迎回来坐好啦'], keptOld: false });
+}
 
 // ── traitPromptLines 不泄孩子字段（结构性红线锚：输出只含小可自己的维度词）──
 const lines = traitPromptLines(T0);

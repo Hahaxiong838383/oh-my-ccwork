@@ -150,6 +150,10 @@ export const SLOT_SPECS: Record<
 
 const CANDIDATES_PER_CALL = 6; // 每 slot 一次 LLM 要 6 条，过门后取前 5
 export const MAX_ITEMS_PER_SLOT = 5; // 导出供容量算术锚（file 限频默认值 ≥ slot数×本值×1.5）
+/** 发布预算（codex 2026-09-03 5MiB 裁定 §3）：每槽 2 条 × 14 槽 × 单文件上限 160KiB = 4.375MiB，硬证明在 5MiB 合同门内。
+ *  上限不能 server 单边提（Android v193 parser 5MiB 硬门 + 12MiB current/previous 双 revision 预算）。
+ *  后续加条走「每槽轮流 +1、加入前按 unique id 算 bytes」，禁止单槽独占余量。 */
+export const PUBLISH_ITEMS_PER_SLOT = 2;
 const TRAIT_SHIFT_THRESHOLD = 0.05;
 /** 保底换新默认天数（admin 设备配置键 local_audio.refresh_days 覆盖；导出供单测锚） */
 export const DEFAULT_ROUTINE_REFRESH_DAYS = 3;
@@ -353,8 +357,8 @@ export function estimateRevisionBytes(poolBySlot: Record<string, number[]>, perS
 
 function sizePrecheck(accountId: string): { est: number; over: boolean } {
   const pool: Record<string, number[]> = {};
-  for (const slot of LOCAL_AUDIO_SLOTS) pool[slot] = localAudioStore.listRecentBytesBySlot(accountId, slot, MAX_ITEMS_PER_SLOT);
-  const est = estimateRevisionBytes(pool);
+  for (const slot of LOCAL_AUDIO_SLOTS) pool[slot] = localAudioStore.listRecentBytesBySlot(accountId, slot, PUBLISH_ITEMS_PER_SLOT);
+  const est = estimateRevisionBytes(pool, PUBLISH_ITEMS_PER_SLOT);
   return { est, over: est > REVISION_CAP_BYTES };
 }
 
@@ -431,7 +435,13 @@ export type SlotBuildResult = {
 
 /** 单 slot 构建：候选 → 门 → 复用/合成 → 时长门。不落 active 状态（由 commit 统一）。
  *  导出供外科式发布脚本用（如 v107 姿态扩展：只生成姿态 slot、六必选 slot 原 ID 保持）。 */
-export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptSuffix?: string): Promise<SlotBuildResult> {
+export async function buildSlot(
+  accountId: string,
+  slot: LocalAudioSlot,
+  promptSuffix?: string,
+  target = PUBLISH_ITEMS_PER_SLOT,
+  reuseStagingFirst = false,
+): Promise<SlotBuildResult> {
   const spec = SLOT_SPECS[slot];
   // WAV 迁移铁律：复用/补足/兜底全链只认 wav 条目（MP3 存量只作下载存量与回滚锚，绝不回流进新套）
   const oldActive = localAudioStore.listActive(accountId).filter((i) => i.slot === slot && i.format === 'wav');
@@ -439,9 +449,23 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
   const keep: Array<{ slot: LocalAudioSlot; id: string; text: string }> = [];
   const seenTexts = new Set<string>();
 
+  // codex 2026-09-03 §3.3.2：灰度发布优先复用 staging 里已过全部门（文案/WAV/SHA/时长/160KiB）的条目，够 target 就不叫 LLM/TTS
+  if (reuseStagingFirst) {
+    for (const st of localAudioStore.listStagedBySlot(accountId, slot)) {
+      if (keep.length >= target) break;
+      if (seenTexts.has(st.text)) continue;
+      seenTexts.add(st.text);
+      keep.push({ slot, id: st.id, text: st.text });
+    }
+    if (keep.length >= target) {
+      console.log(`[local-audio] gen slot=${slot} staging 优先复用 ${keep.length} 条，跳过 LLM/TTS`);
+      return { slot, keep, newCount: keep.length, reusedCount: 0, rejected, keptOld: false };
+    }
+  }
+
   const candidates = await generateSlotCandidates(accountId, slot, promptSuffix);
   for (const raw of candidates) {
-    if (keep.length >= MAX_ITEMS_PER_SLOT) break;
+    if (keep.length >= target) break;
     const gated = gateClipText(raw, slot);
     if (!gated.ok) {
       rejected[gated.reason] = (rejected[gated.reason] ?? 0) + 1;
@@ -493,7 +517,7 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
       .listStagedBySlot(accountId, slot)
       .filter((s) => !keep.some((k) => k.id === s.id) && !seenTexts.has(s.text));
     for (const s of staged) {
-      if (keep.length >= MAX_ITEMS_PER_SLOT) break;
+      if (keep.length >= target) break;
       keep.push({ slot, id: s.id, text: s.text });
       seenTexts.add(s.text);
     }
@@ -507,9 +531,9 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
   if (keep.length < MIN_ITEMS_PER_SLOT && oldActive.length >= MIN_ITEMS_PER_SLOT) {
     return {
       slot,
-      keep: oldActive.map((i) => ({ slot, id: i.id, text: i.text })),
+      keep: oldActive.slice(0, target).map((i) => ({ slot, id: i.id, text: i.text })),
       newCount: 0,
-      reusedCount: oldActive.length,
+      reusedCount: Math.min(oldActive.length, target),
       rejected,
       keptOld: true,
     };
@@ -523,7 +547,7 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
  */
 export async function runLocalAudioForAccount(
   accountId: string,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; reuseStagingFirst?: boolean },
 ): Promise<{ ok: boolean; skipped?: string; trigger?: string; revision?: number | null; detail?: string }> {
   try {
     const rel = relationStateStore.getState(accountId);
@@ -558,7 +582,7 @@ export async function runLocalAudioForAccount(
     const oldActive = localAudioStore.listActive(accountId);
     const results: SlotBuildResult[] = [];
     for (const slot of LOCAL_AUDIO_SLOTS) {
-      const r = await buildSlot(accountId, slot);
+      const r = await buildSlot(accountId, slot, undefined, PUBLISH_ITEMS_PER_SLOT, opts?.reuseStagingFirst === true);
       results.push(r);
       const rej = Object.entries(r.rejected)
         .map(([k, v]) => `${k}x${v}`)
@@ -585,9 +609,15 @@ export async function runLocalAudioForAccount(
     }
 
     // revision 总量门 ≤5MiB（WAV 合同增量 §2.2）：超限不发布（超大套宁可保持旧套）
+    // 合同 §3.3.4：按去重后的 clip id 计总量（同一条目跨槽复用只算一次，与 manifest 一致）
+    const seenIds = new Set<string>();
     const totalBytes = results
       .flatMap((r) => r.keep)
-      .reduce((sum, k) => sum + (localAudioStore.getItem(accountId, k.id)?.bytes ?? 0), 0);
+      .reduce((sum, k) => {
+        if (seenIds.has(k.id)) return sum;
+        seenIds.add(k.id);
+        return sum + (localAudioStore.getItem(accountId, k.id)?.bytes ?? 0);
+      }, 0);
     if (totalBytes > REVISION_CAP_BYTES) {
       console.log(`[local-audio] gen abort account=${accountId} revision 总量超限 ${totalBytes}B > ${REVISION_CAP_BYTES}B`);
       return { ok: false, trigger: triggerText, detail: `revision_too_big:${totalBytes}` };
