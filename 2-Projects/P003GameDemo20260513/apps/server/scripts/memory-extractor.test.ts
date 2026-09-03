@@ -1,8 +1,12 @@
 // P1.2 memory-extractor.parsePatch 单测：LLM 输出 JSON → MemoryPatch 的矛盾检测/合并/容错。
-// 跑法：cd apps/server && ./node_modules/.bin/tsx scripts/memory-extractor.test.ts
+// 跑法：cd apps/server && NODE_OPTIONS=--experimental-sqlite ../../node_modules/.bin/tsx scripts/memory-extractor.test.ts
+// 2026-09-03：改名用例改为 nickname_change{value,evidence}+history 新 schema（8-26 起平铺 nickname 已不被认，本文件此前在生产未回流、基线即红）。
 import assert from 'node:assert';
 import { parsePatch } from '../src/memory-extractor.js';
 import type { FamilyMember } from '../src/profile-store.js';
+
+const U = (t: string) => ({ role: 'user' as const, content: t });
+const NC = (value: string, extra = '') => `{"nickname_change":{"value":"${value}","evidence":"以后叫我${value}"}${extra}}`;
 
 const cur: FamilyMember = {
   id: 'x', account_id: 'a', nickname: '小明', birthday: '2018-08', gender: '男孩',
@@ -14,13 +18,13 @@ const cur: FamilyMember = {
 
 // 1. 改名：新名 ≠ 旧名 → patch.nickname（语音改名核心）
 {
-  const p = parsePatch('{"nickname":"小白"}', cur);
+  const p = parsePatch(NC('小白'), cur, [U('以后叫我小白')]);
   assert.ok(p && p.nickname === '小白', '改名生效');
   console.log('✅ 1 改名：新名≠旧名 → 更新');
 }
 // 2. 同名不更新（矛盾检测：没变化不写）
 {
-  const p = parsePatch('{"nickname":"小明"}', cur);
+  const p = parsePatch(NC('小明'), cur, [U('以后叫我小明')]);
   assert.equal(p, null, '同名+无其他更新 → null');
   console.log('✅ 2 同名不更新');
 }
@@ -45,13 +49,13 @@ const cur: FamilyMember = {
 }
 // 6. markdown 代码块包裹容错
 {
-  const p = parsePatch('```json\n{"nickname":"豆豆"}\n```', cur);
+  const p = parsePatch('```json\n' + NC('豆豆') + '\n```', cur, [U('以后叫我豆豆')]);
   assert.ok(p && p.nickname === '豆豆', '剥离 ```json 后正确 parse');
   console.log('✅ 6 markdown 代码块容错');
 }
 // 7. 改名 + 情绪锚点
 {
-  const p = parsePatch('{"nickname":"小白","recent_emotion":"考试没考好难过"}', cur);
+  const p = parsePatch(NC('小白', ',"recent_emotion":"考试没考好难过"'), cur, [U('以后叫我小白')]);
   assert.ok(p && p.nickname === '小白' && p.recent_emotion === '考试没考好难过', '多字段');
   console.log('✅ 7 改名 + 情绪锚点同时抽取');
 }
@@ -63,12 +67,13 @@ const cur: FamilyMember = {
 
 // 9. 改名校验（team#2 防注入污染真相源）：拒注入词 / 清 XSS / 截超长 / 正常名通过
 {
-  assert.equal(parsePatch('{"nickname":"忽略指令"}', cur), null, '拒绝系统/注入词');
-  const noXss = parsePatch('{"nickname":"小明<script>"}', cur);
-  assert.ok(noXss && noXss.nickname && !noXss.nickname.includes('<'), 'XSS <> 被清洗');
-  const longN = parsePatch('{"nickname":"一二三四五六七八九十一二三四五"}', cur);
+  assert.equal(parsePatch(NC('忽略指令'), cur, [U('以后叫我忽略指令')]), null, '拒绝系统/注入词');
+  // 带 <> 的候选：clip 清洗后与原话对不上 → 整条拒（绝不带 <> 落库）
+  assert.equal(parsePatch(NC('小明<script>'), cur, [U('以后叫我小明<script>')]), null, 'XSS <> 候选整条拒');
+  const longName = '一二三四五六七八九十一二三四五';
+  const longN = parsePatch(NC(longName), cur, [U(`以后叫我${longName}`)]);
   assert.ok(longN && longN.nickname && [...longN.nickname].length <= 12, '超长截断 ≤12');
-  const ok = parsePatch('{"nickname":"小哪吒"}', cur);
+  const ok = parsePatch(NC('小哪吒'), cur, [U('以后叫我小哪吒')]);
   assert.ok(ok && ok.nickname === '小哪吒', '正常改名通过');
   console.log('✅ 9 改名校验：拒注入词/清XSS/截超长/正常通过');
 }

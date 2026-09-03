@@ -211,6 +211,18 @@ class MemoryItemStore {
     return Number(r.changes) > 0;
   }
 
+  /**
+   * 撤回/淘汰过的条目按原 content 复活（2026-09-03 不喜欢撤回的对称路径）：UNIQUE(account,type,content)
+   * 让同内容重插静默失败，孩子本轮又明确说不喜欢时由抽取器调用复活。只动非 active 行；返回是否复活。
+   */
+  reviveIfRetracted(accountId: string, type: MemoryType, content: string, sessionId = ''): boolean {
+    const r = this.db.prepare(`
+      UPDATE memory_item SET status = 'active', created_at = ?, resolved_at = NULL, session_id = ?
+      WHERE account_id = ? AND type = ? AND content = ? AND status IN ('retracted', 'archived')
+    `).run(Date.now(), sessionId, accountId, type, content);
+    return Number(r.changes) > 0;
+  }
+
   /** 家长/admin 删除 = 物理删除(评审 C4:儿童数据删除权)。 */
   hardDelete(id: string): boolean {
     const r = this.db.prepare('DELETE FROM memory_item WHERE id = ?').run(id);

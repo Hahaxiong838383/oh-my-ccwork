@@ -1,5 +1,7 @@
-import { normalizeInterestValue, profileStore, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
+import { isSameInterest, normalizeInterestValue, profileStore, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
 import { memoryItemStore, type NewMemoryItem } from './memory-item-store.js';
+import { checkRenameCandidate, clipText, isValidNickname } from './rename-gate.js';
+import { dislikeSubject, isFreshDislikeStatement, parseRelikes, type Relike } from './dislike-undo.js';
 import { callExtractionLlm } from './llm-extract.js';
 import { relationStateStore, personaTrackEnabled, personaStyleEnabled, personaTraitEnabled, shanghaiHour } from './relation-state-store.js';
 import { traitStore, computeTraitDeltas, detectAssistantFeatures } from './trait-store.js';
@@ -20,7 +22,7 @@ export const EXTRACT_SYSTEM = // 导出仅供诊断探针/单测复用（2026-08
   '只抽孩子自己明确表达的、稳定的信息，不臆测，不把一次性玩笑/对话内容当画像。\n' +
   '严格输出 JSON（没有任何更新就输出 {}）：\n' +
   '{\n' +
-  '  "nickname_change": {"value":"新称呼≤12字","evidence":"孩子明确表达改名意图的那句话（照抄对话里孩子消息的连续片段，≤60字）"} —— 仅当孩子明确要求改变【对自己的称呼】（如「以后叫我XX」「请叫我XX」「我想改名叫XX」）时填。孩子呼喊别人的名字、聊天中提到别人的名字、开玩笑起外号，都【绝不算】改名，此时省略整个字段,\n' +
+  '  "nickname_change": {"value":"新称呼≤12字","evidence":"孩子表达改称呼意图的那句话（照抄对话里孩子消息的连续片段，≤60字）"} —— 孩子要求改变【小可对自己的称呼】时填，口语说法都算（如「以后叫我XX」「叫我XX」「你可以叫我XX」「我叫XX」「别叫我A了叫我B」「给我换个称呼叫XX」「我的名字叫XX」）。孩子呼喊别人（「哎XX」）、转述别人怎么叫自己（「他们都叫我XX」）、叫别人来（「我叫妈妈来」）、开玩笑起外号，都【绝不算】改名，此时省略整个字段。多次改名以最后一次为准,\n' +
   '  "interests": ["孩子明确表达喜欢/热爱的（如恐龙、奥特曼），否则省略。与已知兴趣同义/仅写法不同的不要输出；孩子表达过不喜欢/讨厌/不想聊的内容绝不能作为兴趣"],\n' +
   '  "personality_notes": "明显的性格观察（谨慎，否则省略）",\n' +
   '  "recent_emotion": "近期情绪锚点（如「考试没考好难过」，否则省略）",\n' +
@@ -32,6 +34,7 @@ export const EXTRACT_SYSTEM = // 导出仅供诊断探针/单测复用（2026-08
   '  "emotion_points": ["情绪打点（如「考试没考好有点难过」），只抽明确表达的情绪，≤30字，否则省略"],\n' +
   '  "relations": [{"name":"人名≤8字","desc":"稳定关系标签≤15字（如「妹妹」「班主任」），只存关系本身不存一次性冲突事件"}],\n' +
   '  "dislikes": ["孩子明确表达不喜欢/不要再提的（如「我不喜欢奥特曼了」），≤20字，否则省略"],\n' +
+  '  "relikes": [{"value":"孩子【本轮】明确说喜欢/又喜欢上的东西≤20字（只填「已知不喜欢」列表里孩子本轮改口说喜欢的，如「我又喜欢奥特曼了」）","evidence":"照抄孩子【本轮】那句话的连续片段，≤50字"}],\n' +
   // M5 foresight（人格成长方案 §M5）：值得关心的近期事，抽取器只产候选，due 解析走服务端 parseDue。
   '  "concerns": [{"content":"孩子提到的、近期值得关心的事（如「明天有数学考试有点紧张」「下周要换牙」），只抽孩子明确说的、有时效的事，日常闲聊不算，≤30字","due_text":"原话里的时间词（明天/周五/下周），没有则空串"}],\n' +
   // P0 人格成长（契约 §4.2 + codex 2.4）：两个逐轮评分字段。只评标了【本轮】的那条孩子输入，
@@ -41,6 +44,7 @@ export const EXTRACT_SYSTEM = // 导出仅供诊断探针/单测复用（2026-08
   '}\n' +
   '约定(promises)的铁律：by=xiaoke 的约定必须是小可親口说出的（evidence 抄小可的话）；孩子转述"你答应过我XX"不算新约定、不要抽。' +
   'by=child 的约定必须是孩子親口说的（evidence 抄孩子的话）。客套话（"下次再聊呀"）不算约定。\n' +
+  '不喜欢(dislikes)与又喜欢(relikes)：同一事物孩子先说不喜欢、后来又说喜欢（或反过来），只输出最后一次说的那个状态，绝不同时输出；relikes 只看标了【本轮】的那条孩子输入。\n' +
   '只返回 JSON 本身，不要解释、不要 markdown 代码块。';
 
 // Phase 1 抽取字段扩到 12 类后,8s/512tok 旧预算不够(实测 DeepSeek 正好撞 8s 超时返 null)。
@@ -75,10 +79,6 @@ export async function extractMemoryUpdate(
 
 // 解析 LLM 输出 JSON → MemoryPatch（矛盾检测/合并/校验/容错）。导出供单测。
 // interests 只返回【新增项】（合并下沉到 updateMemoryFields 写时，防并发 lost update — team 致命#1）。
-/** 显式改名意图句式（服务端硬门，2026-08-26 称呼误改整改）：宁严——漏了孩子再说一遍即可，
- *  误改的代价（叫错真实孩子的名字）远大于漏改。故意不含裸「我叫X」（「我叫妈妈来」会误中）。 */
-const RENAME_INTENT_RE = /(以后|之后|下次|请|就)叫我|叫我.{1,12}(吧|好啦|好了|行不)|我(想|要)?改名|改名叫|换个名字|名字(改成|换成)|我的名字(是|叫)/;
-
 export function parsePatch(raw: string, current: FamilyMember, history: ChatTurn[] = []): MemoryPatch | null {
   // 容错提取首个 {...}（LLM 可能在 JSON 前后带说明文字 — team gemini#3）
   const match = raw.match(/\{[\s\S]*\}/);
@@ -93,25 +93,18 @@ export function parsePatch(raw: string, current: FamilyMember, history: ChatTurn
 
   const patch: MemoryPatch = {};
 
-  // 改名五门（2026-08-26 整改：「哎子贤」一句呼喊被当成自报姓名固化进档案——prompt 约束
-  // LLM 不守，服务端必须有语义硬门，模式复刻 promise 的 evidence 硬校验）：
-  // ①结构完整 ②evidence 是孩子消息的真实连续子串 ③evidence 命中显式改名句式
-  // ④新名出现在 evidence 里（防拿 A 句证据填 B 值）⑤格式/黑名单合法且 ≠ 旧名。
-  // 全过才更新；nickname_evidence 仅供记账（updateMemoryFields 白名单合并不落库）。
+  // 改称呼硬门 v2（rename-gate.ts，2026-09-03 放开口语句式；8-26 的 evidence 硬校验保留）：
+  // LLM 只交候选 value + 照抄原话 evidence，结构/句式层级/黑名单/≠旧名全在 checkRenameCandidate。
+  // 通过才更新；nickname_evidence 仅供记账（updateMemoryFields 白名单合并不落库）。
   const nc = (obj as { nickname_change?: { value?: unknown; evidence?: unknown } }).nickname_change;
-  if (nc && typeof nc === 'object' && typeof nc.value === 'string' && typeof nc.evidence === 'string') {
-    const n = clip(nc.value, 12);
-    const ev = clip(nc.evidence, 60);
-    const userTexts = history.filter((t) => t.role === 'user').map((t) => t.content);
-    const evReal = ev.length >= 2 && userTexts.some((t) => t.includes(ev));
-    if (
-      n && evReal && RENAME_INTENT_RE.test(ev) && ev.includes(n) &&
-      n !== current.nickname && isValidNickname(n)
-    ) {
-      patch.nickname = n;
-      patch.nickname_evidence = ev;
-    } else if (n) {
-      console.log(`[memory] 改名候选被门拒: value=${JSON.stringify(n)} evReal=${evReal} intent=${RENAME_INTENT_RE.test(ev)}`);
+  if (nc && typeof nc === 'object') {
+    const r = checkRenameCandidate(nc.value, nc.evidence, history, current.nickname);
+    if (r.ok) {
+      patch.nickname = r.nickname;
+      patch.nickname_evidence = r.evidence;
+    } else if (r.value) {
+      // reason=no_intent 才是「真意图可能被拒」，值得回头调句式集；same_as_current/invalid_name 是噪声
+      console.log(`[memory] 改名候选被门拒: value=${JSON.stringify(r.value)} reason=${r.reason}`);
     }
   }
 
@@ -162,26 +155,9 @@ export function parsePatch(raw: string, current: FamilyMember, history: ChatTurn
   return Object.keys(patch).length ? patch : null;
 }
 
-// 昵称合法性：长度 1-12、不含特殊/注入符号、不含系统/注入关键词。
-function isValidNickname(name: string): boolean {
-  if (name.length < 1 || name.length > 12) return false;
-  if (/[<>{}[\]/\\|@#$%^&*=+`~]/.test(name)) return false;
-  if (/忽略|指令|system|prompt|ignore|assistant|叫我$/i.test(name)) return false;
-  // 代词/AI 自己的名字不是称呼（2026-08-26：004 曾被 onboarding 抽成「你」、0010 曾被抽成「小可」）
-  if (/^(你|我|他|她|它|咱|你们|我们|他们|大家|小可)$/.test(name)) return false;
-  return true;
-}
-
-// 字段清洗：去控制字符 + 去 <>（防存储型 XSS — team gemini#2）+ 截断。
+// 昵称合法性（isValidNickname）与字段清洗单一真源在 rename-gate.ts；这里只留薄封装。
 function clip(raw: string, max: number): string {
-  return [...raw]
-    .filter((ch) => {
-      const code = ch.charCodeAt(0);
-      return !(code < 0x20 || code === 0x7f) && ch !== '<' && ch !== '>';
-    })
-    .join('')
-    .trim()
-    .slice(0, max);
+  return clipText(raw, max);
 }
 
 function nowMs(): number {
@@ -242,12 +218,15 @@ export type EpisodicResult = {
   items: NewMemoryItem[]; // 直接喂 memoryItemStore.addItems
   resolvedPromiseIds: string[]; // 已映射回真实 memory_item.id（评审 C2：短 id → 真 id）
   retractInterests: string[]; // "不喜欢X了" → 从 interests 删除
+  relikes: Relike[]; // "我又喜欢X了" → 撤回 active 的不喜欢 + 兴趣加回（dislike-undo.ts，2026-09-03）
 };
 
 export type EpisodicContext = {
   sessionId: string;
   /** 该账号当前未兑现约定（listActivePromises），用于 known 上下文 + resolve 短 id 映射 */
   activePromises: { id: string; content: string }[];
+  /** 已知不喜欢（listActiveDislikes 的 content），进 known 上下文让 LLM 知道哪些算「改口又喜欢」 */
+  activeDislikes?: string[];
 };
 
 /**
@@ -360,8 +339,11 @@ export function parseEpisodic(
     }
   }
 
-  if (!items.length && !resolvedPromiseIds.length && !retractInterests.length) return null;
-  return { items, resolvedPromiseIds, retractInterests };
+  // 又喜欢了（撤回不喜欢）：只认【本轮】原话 + 整句无否定 + value 在证据里（dislike-undo.ts）
+  const relikes = parseRelikes(obj, history);
+
+  if (!items.length && !resolvedPromiseIds.length && !retractInterests.length && !relikes.length) return null;
+  return { items, resolvedPromiseIds, retractInterests, relikes };
 }
 
 /**
@@ -385,6 +367,9 @@ export async function extractAll(
   const known =
     `已知画像：昵称=${current.nickname || '未知'}，兴趣=${current.interests.map((i) => i.value).join('/') || '无'}` +
     `，方舟进展=${current.game_progress.map((g) => g.value).join('/') || '无'}` +
+    `\n已知不喜欢（relikes 只填这里面孩子【本轮】改口说喜欢的）：${
+      ctx.activeDislikes?.length ? ctx.activeDislikes.map(dislikeSubject).join('/') : '无'
+    }` +
     `\n已知未兑现约定（resolved_promise_ids 只能从这些编号选）：${promiseList}`;
   const raw = await callExtractLlm(`${known}\n\n对话数据：\n"""\n${convo}\n"""`);
   if (!raw) return { patch: null, episodic: null, turnSignal: null };
@@ -396,6 +381,68 @@ export async function extractAll(
 }
 
 /**
+ * 设备账号无档兜底（2026-09-03「所有设备 + 将来新增设备都生效」）：开通 brain / 家长 bind-sn 两条
+ * 接入路径都会建档，但抽取链不该赌在上游流程上——device-<SN> 账号无档时当场建空档（昵称/性别由
+ * 语音 onboarding 或运营台补全），非设备账号（Web/家长）仍按原样返回 null 由调用方留痕跳过。导出供单测。
+ */
+export function ensureDeviceProfile(acctId: string): FamilyMember | null {
+  const cur = profileStore.getProfile(acctId);
+  if (cur) return cur;
+  if (!acctId.startsWith('device-')) return null;
+  const created = profileStore.upsertProfile(acctId, { nickname: '', birthday: '', gender: '' });
+  console.log(`[memory] account=${acctId} 未建档→自动建空档(设备账号兜底)`);
+  return created;
+}
+
+/**
+ * 撤回不喜欢（导出供单测）：每个 relike 与 active「不喜欢」条目归一对撞，命中的软删 + 记账；
+ * 返回要加回兴趣的新增项（current.interests 已有的不重复）。没命中任何不喜欢的 relike 也当普通兴趣加回
+ * （孩子明确说喜欢，appendInterests 归一判重兜底）。
+ */
+export function applyRelikes(acctId: string, relikes: Relike[], current: FamilyMember): InterestItem[] {
+  const out: InterestItem[] = [];
+  const now = nowMs();
+  for (const r of relikes) {
+    const hits = memoryItemStore
+      .listActiveDislikes(acctId)
+      .filter((d) => isSameInterest(dislikeSubject(d.content), r.value));
+    for (const d of hits) {
+      if (!memoryItemStore.retract(acctId, d.id)) continue;
+      growthLedgerStore.record(acctId, {
+        module: 'profile', dimension: 'dislike', from: d.content, to: `又喜欢${r.value}`,
+        triggerQuote: r.evidence, rule: 'explicit_relike', theory: 'state_to_trait',
+        note: `孩子改口又喜欢了：撤回「${d.content}」`,
+      });
+      console.log(`[memory] account=${acctId} 撤回不喜欢 ${JSON.stringify(d.content)} evidence=${JSON.stringify(r.evidence)}`);
+    }
+    const dup = current.interests.some((i) => isSameInterest(i.value, r.value)) || out.some((i) => isSameInterest(i.value, r.value));
+    if (!dup) out.push({ value: r.value, confidence: 0.7, last_updated: now, source: 'voice' });
+  }
+  return out;
+}
+
+/**
+ * 不喜欢复活（导出供单测）：items 里的「不喜欢X」若孩子本轮原话新鲜地又说了不喜欢 X，则按原 content
+ * 复活撤回/淘汰过的条目（UNIQUE 阻止重插）。返回复活条数。
+ */
+export function revivePreferences(acctId: string, items: NewMemoryItem[], lastUserText: string, sessionId = ''): number {
+  let n = 0;
+  for (const it of items) {
+    if (it.type !== 'preference' || !it.content.startsWith('不喜欢')) continue;
+    if (!isFreshDislikeStatement(lastUserText, dislikeSubject(it.content))) continue;
+    if (!memoryItemStore.reviveIfRetracted(acctId, 'preference', it.content, sessionId)) continue;
+    n += 1;
+    growthLedgerStore.record(acctId, {
+      module: 'profile', dimension: 'dislike', from: '（曾撤回）', to: it.content,
+      triggerQuote: lastUserText, rule: 'dislike_restated', theory: 'state_to_trait',
+      note: `孩子又说不喜欢了：恢复「${it.content}」`,
+    });
+    console.log(`[memory] account=${acctId} 不喜欢复活 ${JSON.stringify(it.content)}`);
+  }
+  return n;
+}
+
+/**
  * Phase 1 抽取+持久化一站式(WS pipeline 与 RTC custom-llm 共用,docs/43 §8 F1):
  * getProfile → extractAll → 画像 patch 写回 + 情景 items 落库 + promise resolve + dislike 撤兴趣。
  * 所有写走 store 同步原子方法;本函数只应被 fire-and-forget 调用(失败 log 不抛)。
@@ -403,16 +450,18 @@ export async function extractAll(
 export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], sessionId: string): Promise<void> {
   try {
     if (!snapshot.length) return;
-    const current = profileStore.getProfile(acctId);
+    const current = ensureDeviceProfile(acctId);
     if (!current) {
-      // 无档跳过必须留痕（2026-08-19）：此静默 return 曾让设备链路记忆断写数周无人知
-      // ——设备账号历史上无建档步骤（现已在开通 brain 时自动建档，见 admin-data.ts）。
-      console.log(`[memory] account=${acctId} 未建档跳过抽取(开通 brain/绑定家长后自动建档恢复)`);
+      // 无档跳过必须留痕（2026-08-19）：此静默 return 曾让设备链路记忆断写数周无人知。
+      // 设备账号已由 ensureDeviceProfile 兜底建档，走到这里的只剩 Web/家长等非设备账号。
+      console.log(`[memory] account=${acctId} 未建档跳过抽取(非设备账号,建档后恢复)`);
       return;
     }
     const activePromises = memoryItemStore
       .listActivePromises(acctId)
       .map((p) => ({ id: p.id, content: p.content }));
+    // 已知不喜欢进 known 上下文（relikes 只认列表内改口）；对撞/撤回用的都是写入时刻的最新值，不用这份
+    const activeDislikes = memoryItemStore.listActiveDislikes(acctId).map((d) => d.content);
     // P0 人格成长：发起时刻 + 最新孩子输入指纹，在 LLM call 之前取——
     // 乱序保护（codex 2.3）靠发起时刻单调门；内容指纹防 close 补抽重复计入 EMA（codex 2.4）。
     const sampleTs = Date.now();
@@ -420,7 +469,9 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
     const sampleKey = lastUser
       ? createHash('sha256').update(lastUser.content).digest('hex').slice(0, 16)
       : '';
-    const { patch, episodic, turnSignal } = await extractAll(snapshot, current, { sessionId, activePromises });
+    const extracted = await extractAll(snapshot, current, { sessionId, activePromises, activeDislikes });
+    const { episodic, turnSignal } = extracted;
+    let patch = extracted.patch;
     // LLM 失败（turnSignal=null）也记轮：会话切分/last_seen 不依赖抽取成功，只有 EMA 依赖。
     if (sampleKey && personaTrackEnabled(acctId)) {
       try {
@@ -488,6 +539,15 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
         console.log('[style] 晶化失败(不影响记忆链):', String((err as Error)?.message ?? err));
       }
     }
+    // 撤回不喜欢（2026-09-03）：孩子本轮明确说又喜欢 X → 撤回（软删）匹配的 active「不喜欢」条目
+    // + 记账 + 把 X 加回兴趣。必须排在下面的 dislike 对撞之前，否则加回的兴趣会被刚撤回的条目拦住。
+    if (episodic?.relikes.length) {
+      const readd = applyRelikes(acctId, episodic.relikes, current);
+      if (readd.length) {
+        patch = patch ?? {};
+        patch.interests = [...(patch.interests ?? []), ...readd];
+      }
+    }
     if (patch) {
       // dislike 对撞（方案 B）：新兴趣写入前与该账号既有「不喜欢」条目归一对撞，命中即拦
       if (patch.interests?.length) {
@@ -522,12 +582,19 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
       });
     }
     if (episodic) {
+      // 不喜欢复活（2026-09-03）：撤回过的「不喜欢X」按 UNIQUE 重插会静默失败——只在孩子【本轮】又
+      // 明确说不喜欢时按原 content 复活（滑窗重抽的陈旧 dislike 拿不到新鲜原话，不会复活）。
+      const revived = revivePreferences(acctId, episodic.items, lastUser?.content ?? '', sessionId);
       const added = memoryItemStore.addItems(acctId, episodic.items);
       const resolved = memoryItemStore.resolvePromisesByIds(acctId, episodic.resolvedPromiseIds, 'extractor');
-      for (const v of episodic.retractInterests) profileStore.removeInterest(acctId, v);
-      if (added || resolved || episodic.retractInterests.length) {
+      // 只撤回「此刻仍 active 的不喜欢」对应的兴趣：刚被 relike 撤回的不喜欢若被滑窗重抽到，
+      // 不能把刚加回的兴趣再抹掉。
+      const activeNow = memoryItemStore.listActiveDislikes(acctId).map((d) => dislikeSubject(d.content));
+      const retract = episodic.retractInterests.filter((v) => activeNow.some((d) => isSameInterest(d, v)));
+      for (const v of retract) profileStore.removeInterest(acctId, v);
+      if (added || resolved || retract.length || revived) {
         console.log(
-          `[memory] account=${acctId} 情景记忆: +${added} 条, resolve=${resolved}, retract兴趣=${episodic.retractInterests.length}`,
+          `[memory] account=${acctId} 情景记忆: +${added} 条, resolve=${resolved}, retract兴趣=${retract.length}, 复活不喜欢=${revived}`,
         );
       }
     }

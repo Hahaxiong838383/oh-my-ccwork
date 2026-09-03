@@ -1,4 +1,5 @@
 import type { FamilyMember } from './profile-store.js';
+import { isValidNickname } from './rename-gate.js';
 import { callExtractionLlm } from './llm-extract.js';
 
 // 小可 onboarding 建档信息抽取：从对话抽取孩子【首次自报】的 昵称/性别/出生年月，
@@ -120,14 +121,7 @@ function stripNamePrefix(s: string): string {
 }
 
 // 昵称合法性（同 memory-extractor：长度 1-12、无特殊/注入符号、无系统/注入关键词）。
-function isValidNickname(name: string): boolean {
-  if (name.length < 1 || name.length > 12) return false;
-  if (/[<>{}[\]/\\|@#$%^&*=+`~]/.test(name)) return false;
-  if (/忽略|指令|system|prompt|ignore|assistant|叫我$/i.test(name)) return false;
-  // 代词/AI 自己的名字不是称呼（2026-08-26：004 曾被 onboarding 抽成「你」、0010 曾被抽成「小可」）
-  if (/^(你|我|他|她|它|咱|你们|我们|他们|大家|小可)$/.test(name)) return false;
-  return true;
-}
+// 昵称合法性单一真源在 rename-gate.ts（2026-09-03 统一：新设备首次建档与语音改名同一黑名单——代词/AI 名/动作词/家庭角色词）。
 
 // 字段清洗：去控制字符 + 去 <>（防存储型 XSS）+ 按「字符」截断（先 slice 再 join，避免砍断 surrogate pair / emoji）。
 function clip(raw: string, max: number): string {
