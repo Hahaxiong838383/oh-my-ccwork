@@ -110,6 +110,16 @@ class LocalAudioStore {
         last_applied_at       INTEGER NOT NULL DEFAULT 0,
         last_fetch_at         INTEGER NOT NULL DEFAULT 0
       );
+      -- 端侧 manifest 触达流水（2026-09-03，codex 联调对账用）：每次 GET 一行——服务端返回了哪个 revision、
+      -- 端侧报了哪个 applied；「首次发现新 revision」「首次 applied 回报」的时刻都从这里算。每账号留 300 行。
+      CREATE TABLE IF NOT EXISTS local_audio_fetch_log (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id      TEXT NOT NULL,
+        ts              INTEGER NOT NULL,
+        served_revision INTEGER NOT NULL DEFAULT -1,
+        applied         INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_la_fetch_account_ts ON local_audio_fetch_log (account_id, ts DESC);
       CREATE TABLE IF NOT EXISTS local_audio_item (
         account_id  TEXT NOT NULL,
         slot        TEXT NOT NULL,
@@ -282,17 +292,36 @@ class LocalAudioStore {
     return changed ? this.getState(accountId).revision : null;
   }
 
-  recordFetch(accountId: string, appliedRevision: number | null): void {
+  recordFetch(accountId: string, appliedRevision: number | null, servedRevision = -1): void {
     this.ensureStateRow(accountId);
+    const now = Date.now();
     if (appliedRevision !== null && Number.isInteger(appliedRevision) && appliedRevision >= 0) {
       this.db
         .prepare(
           `UPDATE local_audio_state SET last_fetch_at = ?, last_applied_revision = ?, last_applied_at = ? WHERE account_id = ?`,
         )
-        .run(Date.now(), appliedRevision, Date.now(), accountId);
+        .run(now, appliedRevision, now, accountId);
     } else {
-      this.db.prepare(`UPDATE local_audio_state SET last_fetch_at = ? WHERE account_id = ?`).run(Date.now(), accountId);
+      this.db.prepare(`UPDATE local_audio_state SET last_fetch_at = ? WHERE account_id = ?`).run(now, accountId);
     }
+    try {
+      this.db
+        .prepare(`INSERT INTO local_audio_fetch_log (account_id, ts, served_revision, applied) VALUES (?, ?, ?, ?)`)
+        .run(accountId, now, servedRevision, appliedRevision);
+      this.db
+        .prepare(`DELETE FROM local_audio_fetch_log WHERE account_id = ? AND id NOT IN (
+                    SELECT id FROM local_audio_fetch_log WHERE account_id = ? ORDER BY ts DESC LIMIT 300)`)
+        .run(accountId, accountId);
+    } catch (err) {
+      console.log('[local-audio] fetch_log 记账失败(不影响 manifest):', String((err as Error)?.message ?? err));
+    }
+  }
+
+  /** 触达流水（时间升序），sinceTs 之后的。对账脚本与单测用。 */
+  listFetchLog(accountId: string, sinceTs = 0): { ts: number; served_revision: number; applied: number | null }[] {
+    return this.db
+      .prepare(`SELECT ts, served_revision, applied FROM local_audio_fetch_log WHERE account_id = ? AND ts >= ? ORDER BY ts ASC`)
+      .all(accountId, sinceTs) as { ts: number; served_revision: number; applied: number | null }[];
   }
 
   /** 清理：active=0 且超 14 天的条目，删行+删盘上文件。返回清理数。 */
