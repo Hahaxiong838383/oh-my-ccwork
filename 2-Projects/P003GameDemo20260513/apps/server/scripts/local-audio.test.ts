@@ -202,6 +202,7 @@ const st = localAudioStore.getState(ACC);
 eq('st-16 applied_revision 记录', st.last_applied_revision, 2);
 ok('st-17 last_fetch_at 记录', st.last_fetch_at > 0);
 localAudioStore.recordFetch(ACC, null);
+eq('st-18 无 applied 只更 fetch', localAudioStore.getState(ACC).last_applied_revision, 2);
 // 触达流水（2026-09-03 对账用）：每次 GET 一行，带服务端 revision 与端侧 applied
 localAudioStore.recordFetch(ACC, 1, 2);
 {
@@ -210,7 +211,6 @@ localAudioStore.recordFetch(ACC, 1, 2);
   eq('fetch-log 最后一行 served/applied', [log[log.length - 1]!.served_revision, log[log.length - 1]!.applied], [2, 1]);
   eq('fetch-log sinceTs 过滤', localAudioStore.listFetchLog(ACC, Date.now() + 60_000).length, 0);
 }
-eq('st-18 无 applied 只更 fetch', localAudioStore.getState(ACC).last_applied_revision, 2);
 
 // cleanup：active=0 且 <14 天不清；手工把 created_at 拨老后清掉
 eq('st-19 新鲜 inactive 不清', localAudioStore.cleanup(ACC), 0);
