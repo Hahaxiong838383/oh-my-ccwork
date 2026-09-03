@@ -4,6 +4,7 @@ import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
 import { buildAiLiteracyGuide } from '../ai-literacy.js';
 import { getDevicePromptConfig, buildDeviceBase, deviceAddendum, deviceIntentProtocol, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
+import { detectStyleIntent, applyVoiceStyle } from '../style-intent.js';
 import { curriculumKG } from '../curriculum-kg.js';
 import { companionKG } from '../companion-kg.js';
 import { createGeminiLlmClient, type ChatHistoryTurn } from '../providers/gemini-llm.js';
@@ -103,6 +104,16 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 吐槽模式（docs/37）：前端点「我要吐槽」arm 过 → 本轮一次性消费走吐槽（落反馈库 + 吐槽人格回应）。
   // 吐槽优先：不走 onboarding 引导、不召回世界观，专注接住孩子的吐槽。
   const isFeedback = authContext ? consumeFeedbackArmed(authContext.accountId) : false;
+  // 语音调档 S1 快路（Phase A，2026-09-03）：仅设备账号真实轮；命中即处置（observe 只记 / execute 切档）——
+  // 必须在 assembleSystemPrompt 之前，切了本轮 prompt 就读到新档；policy 行让小可先答应一句。
+  let voiceStylePolicy = '';
+  if (authContext?.role === 'device' && !overridePrompt && !isFeedback && userText.trim()) {
+    const styleHit = detectStyleIntent(userText);
+    if (styleHit) {
+      const applied = applyVoiceStyle(authContext.accountId, styleHit, userText);
+      if (applied.policyLine) voiceStylePolicy = applied.policyLine;
+    }
+  }
   const inOnboarding = !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
@@ -120,6 +131,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
+  if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
   const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';

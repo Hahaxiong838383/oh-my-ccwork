@@ -2556,7 +2556,7 @@
                                 <el-radio-group v-model="growth.stylePicked" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
                                   <el-radio v-for="t in growth.styleAvailable" :key="t.key" :value="t.key" style="height:auto;margin-right:0">
                                     <span style="font-weight:600">{{ t.name }}</span>
-                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效<template v-if="growth.styleSetAt">（{{ hwFmtTime(growth.styleSetAt) }} 设定）</template></span>
+                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效<template v-if="growth.styleSetAt">（{{ hwFmtTime(growth.styleSetAt) }} 设定<template v-if="growth.styleSource"> · {{ growth.styleSource === 'voice' ? '孩子语音' : '家长' }}</template>）</template></span>
                                     <div style="font-size:12px;color:#909399;line-height:1.5">{{ t.desc }}</div>
                                   </el-radio>
                                 </el-radio-group>
@@ -4531,7 +4531,7 @@
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleEvents: [] });
+        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -4566,7 +4566,7 @@
           if (!sn) return;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template')
             .then(function (data) {
-              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; growth.styleSetAt = data.set_at || null; }
+              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; growth.styleSource = data.source || null; growth.styleSetAt = data.set_at || null; }
             })
             .catch(function () {});
           // 风格白盒（P2）：特质变化时间线独立拉取（不受卡6模块过滤影响）
@@ -4581,6 +4581,7 @@
         // 风格变化归因（P2 白盒三色）：家长设定 / 互动成长 / 自然回落
         function styleAttribution(ev) {
           if (ev.rule === 'parent_style_template') return { icon: '🟠', label: '家长设定' };
+          if (ev.rule === 'child_voice_style') return { icon: '🔵', label: '孩子要求' };
           if (ev.rule === 'daily_setpoint_decay') return { icon: '⚪', label: '自然回落' };
           return { icon: '🟢', label: '互动成长' };
         }

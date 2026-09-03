@@ -996,6 +996,8 @@ adminDataRoute.get('/devices/:sn/style-template', (c) => {
       template: current ?? 'default',
       // P2 白盒：设定时刻（四问之「什么时候变的」）；无模板行=null
       set_at: traitStore.getTemplateSetAt(device.account_id),
+      // 语音调档 Phase A：谁设的（parent/voice/null）
+      source: traitStore.getTemplateSource(device.account_id),
       available: listStyleTemplates(),
     });
   } catch (error) {
@@ -1014,7 +1016,7 @@ adminDataRoute.put('/devices/:sn/style-template', async (c) => {
     if (key !== 'default' && !getStyleTemplate(key)) {
       return c.json({ ok: false, error: `未知风格模板: ${key || '(空)'}` }, 400);
     }
-    const result = traitStore.setTemplate(device.account_id, key as StyleTemplateKey | 'default');
+    const result = traitStore.setTemplate(device.account_id, key as StyleTemplateKey | 'default', { source: 'parent' });
     console.log(`[persona] style-template set sn=${sn} account=${device.account_id} template=${result.template ?? 'default'}`);
     return c.json({ ok: true, template: result.template ?? 'default', trait: traitStore.get(device.account_id) });
   } catch (error) {

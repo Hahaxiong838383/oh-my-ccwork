@@ -166,6 +166,21 @@ class TraitStore {
         updated_at INTEGER NOT NULL
       );
     `);
+    // 语音调档 Phase A（2026-09-03）：记录是谁设的档（parent=家长端/admin，voice=孩子语音）；幂等加列
+    try {
+      this.db.exec(`ALTER TABLE trait_template ADD COLUMN source TEXT NOT NULL DEFAULT 'parent'`);
+    } catch {
+      /* 列已存在 */
+    }
+  }
+
+  /** 当前模板的来源（parent/voice）；无模板=null。白盒与家长端展示用。 */
+  getTemplateSource(accountId: string): 'parent' | 'voice' | null {
+    const row = this.db.prepare(`SELECT template, source FROM trait_template WHERE account_id = ?`).get(accountId) as
+      | { template: string; source: string }
+      | undefined;
+    if (!row || !getStyleTemplate(row.template)) return null;
+    return row.source === 'voice' ? 'voice' : 'parent';
   }
 
   /** 当前生效模板 key（无设置=null=出厂默认）。 */
@@ -195,27 +210,48 @@ class TraitStore {
    * 家长选定风格模板：写模板行 + 当前特质值直接置为模板五维（立即可感知，不等 EMA 慢漂）+ 记账。
    * key='default' / clearTemplate = 恢复出厂：删模板行 + 特质值回出厂基线。
    */
-  setTemplate(accountId: string, key: StyleTemplateKey | 'default'): { template: string | null } {
+  setTemplate(
+    accountId: string,
+    key: StyleTemplateKey | 'default',
+    opts?: { source?: 'parent' | 'voice'; quote?: string },
+  ): { template: string | null } {
+    const source = opts?.source ?? 'parent';
+    // 账本 rule 按写者分：家长端/admin=parent_style_template（🟠）；孩子语音=child_voice_style（🔵）
+    const rule = source === 'voice' ? 'child_voice_style' : 'parent_style_template';
+    const who = source === 'voice' ? '孩子' : '家长';
+    const quoteNote = source === 'voice' && opts?.quote ? `孩子说「${opts.quote.slice(0, 30)}」→ ` : '';
     const prev = this.getTemplate(accountId);
     if (key === 'default') {
       this.db.prepare(`DELETE FROM trait_template WHERE account_id = ?`).run(accountId);
-      this.resetDimsTo(accountId, TRAIT_BASELINE, prev ? `家长把风格从「${prev}」恢复为默认` : '家长选择默认风格');
+      this.resetDimsTo(
+        accountId,
+        TRAIT_BASELINE,
+        prev ? `${quoteNote}${who}把风格从「${prev}」恢复为默认` : `${quoteNote}${who}选择默认风格`,
+        rule,
+        opts?.quote,
+      );
       return { template: null };
     }
     const tpl = getStyleTemplate(key);
     if (!tpl) throw new Error(`未知风格模板: ${key}`);
     this.db
       .prepare(
-        `INSERT INTO trait_template (account_id, template, updated_at) VALUES (?, ?, ?)
-         ON CONFLICT(account_id) DO UPDATE SET template = excluded.template, updated_at = excluded.updated_at`,
+        `INSERT INTO trait_template (account_id, template, updated_at, source) VALUES (?, ?, ?, ?)
+         ON CONFLICT(account_id) DO UPDATE SET template = excluded.template, updated_at = excluded.updated_at, source = excluded.source`,
       )
-      .run(accountId, key, Date.now());
-    this.resetDimsTo(accountId, tpl.dims, `家长把说话风格设为「${tpl.name}」`);
+      .run(accountId, key, Date.now(), source);
+    this.resetDimsTo(accountId, tpl.dims, `${quoteNote}${who}把说话风格设为「${tpl.name}」`, rule, opts?.quote);
     return { template: key };
   }
 
-  /** 特质值整组置位（模板切换用）：逐维记账（from→to），温柔地板仍强制。 */
-  private resetDimsTo(accountId: string, target: Record<TraitDim, number>, note: string): void {
+  /** 特质值整组置位（模板切换用）：逐维记账（from→to），温柔地板仍强制。rule 按写者（家长/孩子语音）分。 */
+  private resetDimsTo(
+    accountId: string,
+    target: Record<TraitDim, number>,
+    note: string,
+    rule: string = 'parent_style_template',
+    triggerQuote?: string,
+  ): void {
     this.ensureRow(accountId);
     const cur = this.get(accountId);
     for (const dim of TRAIT_DIMS) {
@@ -225,7 +261,7 @@ class TraitStore {
       this.db.prepare(`UPDATE trait_state SET ${dim} = ?, updated_at = ? WHERE account_id = ?`).run(to, Date.now(), accountId);
       growthLedgerStore.record(accountId, {
         module: 'trait', dimension: TRAIT_LABELS[dim], from, to,
-        rule: 'parent_style_template', theory: 'setpoint', note,
+        rule, theory: 'setpoint', note, triggerQuote,
       });
     }
   }
