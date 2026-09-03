@@ -212,5 +212,5 @@ export function startPersonaDailyTimer(): void {
     }
   };
   setInterval(tick, 3600_000);
-  console.log('[persona-daily] 定时器已挂(每小时 tick,沪时 3 点档执行)');
+  console.log('[persona-daily] 定时器已挂(每小时 tick,沪时 3 点档执行),local_audio_paused=${process.env.LOCAL_AUDIO_GENERATION_PAUSED ?? '0'}');
 }
