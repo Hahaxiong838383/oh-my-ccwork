@@ -17,6 +17,7 @@ import { customLlmRoute } from './routes/custom-llm.js';
 import { rtcRoute } from './routes/rtc.js';
 import { deviceSessionRoute } from './routes/device-session.js';
 import { otaDeviceRoute } from './routes/ota.js';
+import { pckDeviceRoute } from './routes/ota-pck.js';
 import { deviceConfigRoute } from './routes/device-config.js';
 import { localAudioDeviceRoute } from './routes/local-audio.js';
 import { parentPairingRoute, devicePairingRoute } from './routes/pairing.js';
@@ -45,6 +46,7 @@ app.route('/api/feedback-themes', themesRoute);
 // P003 S2-B1 设备 Session API（安卓/MCU 设备换 LiveKit token；docs/CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
 app.route('/v1/device', deviceSessionRoute);
 app.route('/v1/device/ota', otaDeviceRoute);
+app.route('/v1/device/ota/content', pckDeviceRoute); // PCK 文件接口（双 OTA 合同 §6）
 app.route('/v1/device/config', deviceConfigRoute);
 // 本地人格音频（合同 CODEX_P003_LOCAL_AUDIO_CONTRACT_v1.1）：manifest + 音频文件分发
 app.route('/v1/device/local-audio', localAudioDeviceRoute);

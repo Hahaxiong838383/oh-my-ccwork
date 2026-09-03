@@ -10,12 +10,15 @@ import { verifyDeviceCredential } from './device-session.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { otaStore } from '../ota-store.js';
 import { inspectApk } from '../apk-inspect.js';
+import { ContentLastResultSchema, ContentStateSchema, pckAdminRoute, resolveContentUpdate } from './ota-pck.js';
 
 /**
  * P003 Android OTA（联调合同 CC_P003_OTA_JOINT_CONTRACT_20260820 + 冻结回执 + codex 修正）。
  *
  * 设备侧（挂 /v1/device/ota，S2B1 设备凭据鉴权）：
  *   POST /check —— 版本检查 + last_result 捎带落库 + 灰度裁决 + 防降级。
+ *                  2026-09-04 双 OTA 合同增量：可选 content_state / content_last_result 入参，响应恒带 content_update
+ *                  （null 或 PCK 包）；APK 与 PCK 裁决/账本完全分账（ota-pck.ts）。旧客户端忽略该字段即可。
  * admin 侧（挂 /api/admin/ota，复用 admin token 体系，路径已入 admin 专属正则）：
  *   PUT  /upload?filename=  流式收 APK → aapt/apksigner 实测（**实测值为发布真值**）→ 入库草稿
  *   GET  /releases          发布列表
@@ -80,6 +83,8 @@ const CheckSchema = z.object({
   version_name: z.string().max(60).optional().default(''),
   channel: z.string().max(20).optional().default('stable'),
   last_result: LastResultSchema,
+  content_state: ContentStateSchema,
+  content_last_result: ContentLastResultSchema,
 });
 
 export const otaDeviceRoute = new Hono();
@@ -91,7 +96,7 @@ otaDeviceRoute.post('/check', async (c) => {
 
   const parsed = CheckSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
-  const { sn, version_code, version_name, last_result } = parsed.data;
+  const { sn, version_code, version_name, last_result, content_state, content_last_result } = parsed.data;
 
   // 凭据绑 SN 与 body SN 必须一致（防 A 设备凭据探 B 设备灰度）
   if (cred.sn !== sn) return c.json({ ok: false, error: 'sn_mismatch' }, 403);
@@ -109,11 +114,15 @@ otaDeviceRoute.post('/check', async (c) => {
   }
   otaStore.reportCheck(sn, version_code, version_name, lastResultJson);
 
+  // PCK 分支（分账）：投影/流水/裁决都在 ota-pck.ts；旧客户端无 content_state → 恒 null
+  const content_update = resolveContentUpdate(sn, version_code, content_state, content_last_result);
+
   const rel = otaStore.resolveUpdate(sn, version_code);
-  if (!rel) return c.json({ ok: true, update: null });
+  if (!rel) return c.json({ ok: true, update: null, content_update });
   console.log(`[ota] offer sn=${sn} ${version_code} -> ${rel.version_code}`);
   return c.json({
     ok: true,
+    content_update,
     update: {
       version_code: rel.version_code,
       version_name: rel.version_name,
@@ -141,6 +150,8 @@ const PublishSchema = z.object({
 });
 
 export const otaAdminRoute = new Hono();
+// PCK admin 子路由（/api/admin/ota/pck/*，admin 专属正则已覆盖 ota）
+otaAdminRoute.route('/pck', pckAdminRoute);
 
 otaAdminRoute.put('/upload', async (c) => {
   const conf = cfg();
