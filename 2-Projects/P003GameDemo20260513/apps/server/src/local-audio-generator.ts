@@ -7,12 +7,14 @@ import { getStyleTemplate } from './style-template.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
 import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot } from './local-audio-store.js';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
+import { configStore } from './config-store.js';
 
 /**
  * 本地人格音频生成器（合同 v1.1 §5/§6 + codex 回执四修订）。
  *
  * 每日批检查（挂 insight-runner runDailyPersonaJobs），满足任一才重生成：
- * 首轮 / 距上次 ≥7 天 / 熟悉度档位切换 / 任一特质偏移 ≥0.05。
+ * 首轮 / 距上次 ≥N 天保底（N 默认 3，admin「设备配置」键 local_audio.refresh_days 可调）/ 熟悉度档位切换 / 任一特质偏移 ≥0.05。
+ * 体积预检（2026-09-03）：按近期条目池估算整套体积，预计超 revision 上限就不合成（此前每天白合成 ~165 条 TTS 后在发布门弃置）。
  * 门序：清洗 → 字数门 → 禁词门 → 危机过滤 → （复用判定）→ TTS → 时长门。
  * 发布门（整套原子的服务端镜像）：六 slot 各 ≥MIN_ITEMS_PER_SLOT 条才 commit；
  * 凑不齐 → 不动现套、不前移生成基准（TTS 修复后次日批自动恢复）。
@@ -149,7 +151,10 @@ export const SLOT_SPECS: Record<
 const CANDIDATES_PER_CALL = 6; // 每 slot 一次 LLM 要 6 条，过门后取前 5
 export const MAX_ITEMS_PER_SLOT = 5; // 导出供容量算术锚（file 限频默认值 ≥ slot数×本值×1.5）
 const TRAIT_SHIFT_THRESHOLD = 0.05;
-const ROUTINE_REFRESH_MS = 7 * 86_400_000;
+/** 保底换新默认天数（admin 设备配置键 local_audio.refresh_days 覆盖；导出供单测锚） */
+export const DEFAULT_ROUTINE_REFRESH_DAYS = 3;
+/** revision 总量上限（WAV 合同增量 §2.2）。⚠️ 单一真源：发布门与体积预检共用；codex 裁定提额只改这一处。 */
+export const REVISION_CAP_BYTES = 5 * 1024 * 1024;
 
 // ── 儿童情绪红线禁词（合同 §5.1：内疚诱导/情绪索取，命中即拒）──
 const FORBIDDEN_RE =
@@ -279,7 +284,7 @@ export function traitPromptLines(traits: Record<TraitDim, number>, baseline?: Re
 
 export type RegenTrigger =
   | { kind: 'first_time' }
-  | { kind: 'routine_7d' }
+  | { kind: 'routine'; days: number }
   | { kind: 'tier_change'; from: string; to: string }
   | { kind: 'trait_shift'; dim: TraitDim; delta: number }
   | { kind: 'manual' };
@@ -288,8 +293,8 @@ export function describeTrigger(t: RegenTrigger): string {
   switch (t.kind) {
     case 'first_time':
       return '首次生成';
-    case 'routine_7d':
-      return '7 天例行换新';
+    case 'routine':
+      return `${t.days} 天保底换新`;
     case 'tier_change':
       return `熟悉度档位变化：${t.from || '—'}→${t.to}`;
     case 'trait_shift':
@@ -309,6 +314,7 @@ export function shouldRegenerate(
   tierNow: string,
   traitsNow: Record<TraitDim, number>,
   now = Date.now(),
+  routineDays = DEFAULT_ROUTINE_REFRESH_DAYS,
 ): RegenTrigger | null {
   if (!state.last_generated_at) return { kind: 'first_time' };
   if (state.gen_tier && state.gen_tier !== tierNow) return { kind: 'tier_change', from: state.gen_tier, to: tierNow };
@@ -323,8 +329,33 @@ export function shouldRegenerate(
   } catch {
     /* gen_traits 解析失败按无基准处理 */
   }
-  if (now - state.last_generated_at >= ROUTINE_REFRESH_MS) return { kind: 'routine_7d' };
+  if (now - state.last_generated_at >= routineDays * 86_400_000) return { kind: 'routine', days: routineDays };
   return null;
+}
+
+/** 保底换新天数：admin 设备配置（SN 覆盖 > 全局 > 内置 3）。accountId 形如 device-<SN>。 */
+export function routineRefreshDays(accountId: string): number {
+  const sn = accountId.startsWith('device-') ? accountId.slice('device-'.length) : accountId;
+  return configStore.getEffective(sn, 'local_audio.refresh_days');
+}
+
+/**
+ * 体积预检（纯函数，导出供单测）：每槽取最新 ≤ perSlotMax 条的字节数求和 = 下轮整套的估计体积。
+ * 池 = 该账号近期 wav 条目（active + staging），正是发布门会保留的材料；估高于估低——宁可多拦一轮，也不再白合成。
+ */
+export function estimateRevisionBytes(poolBySlot: Record<string, number[]>, perSlotMax = MAX_ITEMS_PER_SLOT): number {
+  let total = 0;
+  for (const sizes of Object.values(poolBySlot)) {
+    for (const b of sizes.slice(0, perSlotMax)) total += b;
+  }
+  return total;
+}
+
+function sizePrecheck(accountId: string): { est: number; over: boolean } {
+  const pool: Record<string, number[]> = {};
+  for (const slot of LOCAL_AUDIO_SLOTS) pool[slot] = localAudioStore.listRecentBytesBySlot(accountId, slot, MAX_ITEMS_PER_SLOT);
+  const est = estimateRevisionBytes(pool);
+  return { est, over: est > REVISION_CAP_BYTES };
 }
 
 /** 人格快照 system prompt（单一真源）——导出供 filler-generator 复用（F1 2026-08-26）。 */
@@ -509,9 +540,19 @@ export async function runLocalAudioForAccount(
     await refreshDeviceCommandWords();
     const trigger: RegenTrigger | null = opts?.force
       ? { kind: 'manual' }
-      : shouldRegenerate(state, tierNow, traits);
+      : shouldRegenerate(state, tierNow, traits, Date.now(), routineRefreshDays(accountId));
     if (!trigger) return { ok: true, skipped: 'no_trigger' };
     const triggerText = describeTrigger(trigger);
+    // 体积预检：预计整套超上限就不进合成（admin force 手动不受限——人在看结果）
+    if (!opts?.force) {
+      const pre = sizePrecheck(accountId);
+      if (pre.over) {
+        console.log(
+          `[local-audio] gen skip account=${accountId} trigger=${triggerText} 体积预检 est=${pre.est}B > ${REVISION_CAP_BYTES}B（按近期条目池估算，不重合成；等上限裁定或裁剪）`,
+        );
+        return { ok: true, skipped: 'size_precheck', trigger: triggerText, detail: `est=${pre.est}` };
+      }
+    }
     console.log(`[local-audio] gen start account=${accountId} trigger=${triggerText}`);
 
     const oldActive = localAudioStore.listActive(accountId);
@@ -547,8 +588,8 @@ export async function runLocalAudioForAccount(
     const totalBytes = results
       .flatMap((r) => r.keep)
       .reduce((sum, k) => sum + (localAudioStore.getItem(accountId, k.id)?.bytes ?? 0), 0);
-    if (totalBytes > 5 * 1024 * 1024) {
-      console.log(`[local-audio] gen abort account=${accountId} revision 总量超限 ${totalBytes}B > 5MiB`);
+    if (totalBytes > REVISION_CAP_BYTES) {
+      console.log(`[local-audio] gen abort account=${accountId} revision 总量超限 ${totalBytes}B > ${REVISION_CAP_BYTES}B`);
       return { ok: false, trigger: triggerText, detail: `revision_too_big:${totalBytes}` };
     }
 

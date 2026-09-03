@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { verifyDeviceCredential } from './device-session.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
-import { configStore, CONFIG_KEYS } from '../config-store.js';
+import { configStore, CONFIG_KEYS, invalidValueMessage } from '../config-store.js';
 
 /**
  * 设备运行配置（联调合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + cc 回执冻结）。
@@ -94,7 +94,7 @@ configAdminRoute.put('/global', async (c) => {
   const parsed = parseSetBody(await c.req.json().catch(() => null));
   if (!parsed) return c.json({ ok: false, error: 'unknown_key' }, 400);
   const rev = configStore.setGlobal(parsed.key, parsed.value);
-  if (rev === null) return c.json({ ok: false, error: 'invalid_value', message: '取值须为 10~86400 的整数秒' }, 400);
+  if (rev === null) return c.json({ ok: false, error: 'invalid_value', message: invalidValueMessage(parsed.key) }, 400);
   console.log(`[device-config] global ${parsed.key}=${JSON.stringify(parsed.value)} rev=${rev}`);
   return c.json({ ok: true, rev });
 });
@@ -105,7 +105,7 @@ configAdminRoute.put('/sn/:sn', async (c) => {
   const parsed = parseSetBody(await c.req.json().catch(() => null));
   if (!parsed) return c.json({ ok: false, error: 'unknown_key' }, 400);
   const rev = configStore.setValue(sn, parsed.key, parsed.value);
-  if (rev === null) return c.json({ ok: false, error: 'invalid_value', message: '取值须为 10~86400 的整数秒' }, 400);
+  if (rev === null) return c.json({ ok: false, error: 'invalid_value', message: invalidValueMessage(parsed.key) }, 400);
   console.log(`[device-config] sn=${sn} ${parsed.key}=${JSON.stringify(parsed.value)} rev=${rev}`);
   return c.json({ ok: true, rev });
 });

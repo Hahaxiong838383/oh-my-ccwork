@@ -135,6 +135,40 @@ eq('val-7 边界 86400 收', (await adminPut('/global', { key: KEY, value: 86400
   eq('admin-4 清未知键拒', (await app.request(`/api/admin/device-config/sn/${SN_DB}?key=wat`, { method: 'DELETE' })).status, 400);
 }
 
+// ---------- server 自用键 local_audio.refresh_days（2026-09-03）：不进设备快照、不动设备 revision ----------
+{
+  const { configStore, CONFIG_KEYS } = await import('../src/config-store.js');
+  const K2 = 'local_audio.refresh_days';
+  eq('srv-1 已注册且标 server_only', CONFIG_KEYS[K2]?.serverOnly, true);
+  const credDb = await deviceCred(SN_DB);
+  const before = await pull(credDb);
+  eq('srv-2 设备快照不含 server 键(设备合同键集不变)', { st: before.status, la: before.json.local_audio }, { st: 200, la: undefined });
+  eq('srv-3 内置默认 3', configStore.getEffective(SN_DB, K2), 3);
+  eq(
+    'srv-4 越界拒 0/31/非整数',
+    [
+      (await adminPut('/global', { key: K2, value: 0 })).status,
+      (await adminPut('/global', { key: K2, value: 31 })).status,
+      (await adminPut('/global', { key: K2, value: 2.5 })).status,
+    ],
+    [400, 400, 400],
+  );
+  const bad = await adminPut('/global', { key: K2, value: 31 });
+  eq('srv-4b 提示文案随键表', bad.json.message, '取值须为 1~30 的整数天');
+  eq('srv-5 全局设 5 收', (await adminPut('/global', { key: K2, value: 5 })).status, 200);
+  const after = await pull(credDb);
+  eq('srv-6 设备 revision 不因 server 键变(负锚:设备合同 revision 不受污染)', after.json.revision, before.json.revision);
+  eq('srv-7 getEffective 走全局', configStore.getEffective(SN_DB, K2), 5);
+  eq('srv-8 SN 覆盖优先', (await adminPut(`/sn/${SN_DB}`, { key: K2, value: 2 })).status === 200 ? configStore.getEffective(SN_DB, K2) : -1, 2);
+  eq('srv-9 其他 SN 仍走全局', configStore.getEffective(SN_ENV, K2), 5);
+  const after2 = await pull(credDb);
+  eq('srv-10 SN 覆盖 server 键也不动设备 revision', after2.json.revision, before.json.revision);
+  const oj = (await (await app.request('/api/admin/device-config')).json()) as any;
+  const k2 = oj.keys.find((k: any) => k.key === K2);
+  eq('srv-11 admin 总览含 server 键元数据', { so: k2?.server_only, g: k2?.global, unit: k2?.unit, min: k2?.min, max: k2?.max }, { so: true, g: 5, unit: 'day', min: 1, max: 30 });
+  eq('srv-12 正锚:改设备键仍会动设备 revision', (await adminPut('/global', { key: KEY, value: 777 })).status === 200 ? (await pull(credDb)).json.revision !== before.json.revision : false, true);
+}
+
 // ---------- 限频（独立 SN + 临时收紧 RPM=6：第 7 次必 429）----------
 {
   const SN_RATE = 'BJP00326060100000888';

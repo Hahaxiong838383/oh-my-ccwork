@@ -200,6 +200,17 @@ class LocalAudioStore {
       .all(accountId, slot, format, Date.now() - STALE_ITEM_TTL_MS) as LocalAudioItem[];
   }
 
+  /** 体积预检用：该 slot 近期（14 天内）wav 条目字节数，新→旧，最多 limit 条（active + staging 都算，它们就是下轮会被保留的池）。 */
+  listRecentBytesBySlot(accountId: string, slot: LocalAudioSlot, limit: number): number[] {
+    return (
+      this.db
+        .prepare(
+          `SELECT bytes FROM local_audio_item WHERE account_id = ? AND slot = ? AND format = 'wav' AND created_at >= ? ORDER BY created_at DESC LIMIT ?`,
+        )
+        .all(accountId, slot, Date.now() - STALE_ITEM_TTL_MS, limit) as Array<{ bytes: number }>
+    ).map((r) => r.bytes);
+  }
+
   /** 同 slot 同 text 同 format 的既有条目（含 active=0）——J4 复用判定。
    *  format 必须参与判定（合同 WAV 增量 §4.5：文案相同 MP3/WAV 也不得共用 id——W4 首发实测踩过：
    *  撞文案复活了 rev=1 的 MP3 条目，rev=2 成混套）。 */
