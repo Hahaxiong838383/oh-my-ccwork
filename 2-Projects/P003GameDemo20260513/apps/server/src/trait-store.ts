@@ -84,14 +84,10 @@ export function computeTraitDeltas(ctx: TraitRuleContext): TraitDelta[] {
   const text = ctx.childText ?? '';
   const len = [...text].length;
 
-  // 镜像·话语量（LSM 趋同）：孩子长句 → 小可可以多聊；孩子简短 → 小可简洁陪伴
-  if (len > 25) {
-    out.push({ dim: 'talkativeness', delta: 0.01, rule: 'mirror_lsm_long', theory: 'social_mirror',
-      note: `孩子说了长句(${len}字)，小可的话语量向 ta 靠近 ↑` });
-  } else if (len > 0 && len < 8) {
-    out.push({ dim: 'talkativeness', delta: -0.01, rule: 'mirror_lsm_short', theory: 'social_mirror',
-      note: `孩子简短应答(${len}字)，小可学着更简洁 ↓` });
-  }
+  // 镜像·话语量已改为会话级（lsmTurn / computeLsmSessionDelta，2026-09-03 L1）：
+  // 旧的逐轮「<8 字 ↓0.01」在生产 17 天触发 194 次净 −1.94，把三台设备的话语量压到 0.01——
+  // 孩子原话 p50=5 字、66%<8 字（ASR 切句 + 儿童短答），量的是切句长度不是孩子的话。
+  void len;
 
   // 镜像·活泼度：孩子的玩闹语气感染小可
   if (/哈哈|嘿嘿|嘻嘻|哇[!！]?|太好玩|好好玩|耶[!！]?|啦啦/.test(text)) {
@@ -133,6 +129,63 @@ export function computeTraitDeltas(ctx: TraitRuleContext): TraitDelta[] {
   return out;
 }
 
+// ── 会话级话语量镜像（L1，2026-09-03）：与孩子自己的长期中位数比，不用绝对阈值 ──
+
+/** 每场会话最多动一次的步幅（= MAX_DELTA）。 */
+export const LSM_SESSION_DELTA = 0.02;
+/** 一场会话至少多少条合格原话才评一次（不足=这场不评）。 */
+export const LSM_MIN_SAMPLES = 10;
+/** 先攒多少场会话的个人基线才开始评（冷启动不评，防前几场把基线本身当偏离）。 */
+export const LSM_MIN_SESSIONS = 2;
+/** 本场中位数 / 长期中位数 的判定带：≥1.5 更啰嗦、≤0.67 更简短，中间不动。 */
+export const LSM_LONG_RATIO = 1.5;
+export const LSM_SHORT_RATIO = 0.67;
+/** 长期中位数的 EMA 系数（新会话权重）。 */
+export const LSM_EMA_ALPHA = 0.1; // 小一点：一场话多不至于把「平时」抬太高，下一场正常水平被判成简短（单测 lsm-13）
+const LSM_SESSION_GAP_MS = 30 * 60_000; // 与 relation-state 会话切分同语义（各自独立常量，互不引用）
+
+/** 纯应答/语气词不算「一句话」——它们量的是 ASR 切句，不是孩子想说多少。 */
+const LSM_FILLER_RE = /^(?:嗯+|哦+|啊+|哈+|呀+|好+的?|好的呀?|好呀|好吧|好啦|对+|对的|是+的?|不+|不是|不要|不行|可以|行|没有|没|知道了|谢谢|再见|拜拜)[。！!？?~～，,、 ]*$/;
+
+export function isLsmQualifyingUtterance(text: string): boolean {
+  const t = (text ?? '').trim();
+  if ([...t].length < 3) return false;
+  return !LSM_FILLER_RE.test(t);
+}
+
+export function medianOf(nums: number[]): number {
+  if (!nums.length) return 0;
+  const a = [...nums].sort((x, y) => x - y);
+  const mid = Math.floor(a.length / 2);
+  return a.length % 2 ? a[mid]! : (a[mid - 1]! + a[mid]!) / 2;
+}
+
+/**
+ * 会话级镜像判定（纯函数，供单测）：本场合格原话中位数 vs 该孩子长期中位数（EMA）。
+ * sessionsSeen < LSM_MIN_SESSIONS 或长期中位数无效 → null（冷启动不评）。
+ */
+export function computeLsmSessionDelta(
+  sessionMedian: number,
+  longRunMedian: number,
+  sessionsSeen: number,
+): TraitDelta | null {
+  if (sessionsSeen < LSM_MIN_SESSIONS || !(longRunMedian > 0) || !(sessionMedian > 0)) return null;
+  const ratio = sessionMedian / longRunMedian;
+  if (ratio >= LSM_LONG_RATIO) {
+    return { dim: 'talkativeness', delta: LSM_SESSION_DELTA, rule: 'mirror_lsm_session_long', theory: 'social_mirror',
+      note: `这场孩子比平时爱说（中位 ${sessionMedian} 字 vs 平时 ${longRunMedian.toFixed(1)}），小可的话语量向 ta 靠近 ↑` };
+  }
+  if (ratio <= LSM_SHORT_RATIO) {
+    return { dim: 'talkativeness', delta: -LSM_SESSION_DELTA, rule: 'mirror_lsm_session_short', theory: 'social_mirror',
+      note: `这场孩子比平时简短（中位 ${sessionMedian} 字 vs 平时 ${longRunMedian.toFixed(1)}），小可学着更简洁 ↓` };
+  }
+  return null;
+}
+
+type LsmSession = { start: number; last: number; lens: number[]; applied: boolean };
+/** 进程内会话缓冲（重启丢=当前这场不评，可接受；长期中位数落库不丢）。 */
+const _lsmSessions = new Map<string, LsmSession>();
+
 // ── 存储 ──
 
 export type TraitState = Record<TraitDim, number> & { updated_at: number; last_decay_day: string };
@@ -172,6 +225,59 @@ class TraitStore {
     } catch {
       /* 列已存在 */
     }
+    // L1 会话级话语量镜像（2026-09-03）：孩子长期原话中位数 EMA + 已折算会话数；幂等加列
+    for (const ddl of [
+      `ALTER TABLE trait_state ADD COLUMN lsm_len_ema REAL NOT NULL DEFAULT 0`,
+      `ALTER TABLE trait_state ADD COLUMN lsm_sessions INTEGER NOT NULL DEFAULT 0`,
+    ]) {
+      try {
+        this.db.exec(ddl);
+      } catch {
+        /* 列已存在 */
+      }
+    }
+  }
+
+  /** 长期原话中位数状态（无行=0/0）。白盒与单测用。 */
+  getLsmStats(accountId: string): { lenEma: number; sessions: number } {
+    const row = this.db.prepare(`SELECT lsm_len_ema, lsm_sessions FROM trait_state WHERE account_id = ?`).get(accountId) as
+      | { lsm_len_ema: number; lsm_sessions: number }
+      | undefined;
+    return { lenEma: row?.lsm_len_ema ?? 0, sessions: row?.lsm_sessions ?? 0 };
+  }
+
+  private foldLsmSession(accountId: string, sessionMedian: number): void {
+    this.ensureRow(accountId);
+    const { lenEma, sessions } = this.getLsmStats(accountId);
+    const next = sessions === 0 ? sessionMedian : lenEma * (1 - LSM_EMA_ALPHA) + sessionMedian * LSM_EMA_ALPHA;
+    this.db
+      .prepare(`UPDATE trait_state SET lsm_len_ema = ?, lsm_sessions = ? WHERE account_id = ?`)
+      .run(next, sessions + 1, accountId);
+  }
+
+  /**
+   * 每轮喂入孩子原话：维护本场合格原话长度缓冲；跨 30min 即新会话（上一场 ≥5 条才折入长期中位数）；
+   * 本场合格原话达 LSM_MIN_SAMPLES 时评一次（每场最多一次），返回 δ 或 null。零 LLM。
+   */
+  lsmTurn(accountId: string, childText: string, now = Date.now()): TraitDelta | null {
+    let buf = _lsmSessions.get(accountId);
+    if (!buf || now - buf.last > LSM_SESSION_GAP_MS) {
+      if (buf && buf.lens.length >= 5) this.foldLsmSession(accountId, medianOf(buf.lens));
+      buf = { start: now, last: now, lens: [], applied: false };
+      _lsmSessions.set(accountId, buf);
+      if (_lsmSessions.size > 500) _lsmSessions.clear(); // 容量兜底
+    }
+    buf.last = now;
+    if (isLsmQualifyingUtterance(childText)) buf.lens.push([...childText.trim()].length);
+    if (buf.applied || buf.lens.length < LSM_MIN_SAMPLES) return null;
+    buf.applied = true;
+    const { lenEma, sessions } = this.getLsmStats(accountId);
+    return computeLsmSessionDelta(medianOf(buf.lens), lenEma, sessions);
+  }
+
+  /** 单测用：清进程内会话缓冲。 */
+  resetLsmSessions(): void {
+    _lsmSessions.clear();
   }
 
   /** 当前模板的来源（parent/voice）；无模板=null。白盒与家长端展示用。 */

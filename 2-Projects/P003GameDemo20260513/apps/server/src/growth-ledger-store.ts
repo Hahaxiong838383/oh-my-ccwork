@@ -131,7 +131,7 @@ class GrowthLedgerStore {
     if (opts?.dimension) { conds.push('dimension = ?'); args.push(opts.dimension); }
     args.push(limit);
     return this.db
-      .prepare(`SELECT * FROM growth_event WHERE ${conds.join(' AND ')} ORDER BY ts DESC LIMIT ?`)
+      .prepare(`SELECT * FROM growth_event WHERE ${conds.join(' AND ')} ORDER BY ts DESC, rowid DESC LIMIT ?`)
       .all(...(args as never[])) as unknown as GrowthEvent[];
   }
 

@@ -505,6 +505,9 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
           engagement: turnSignal?.engagement,
           prevTurn,
         });
+        // L1（2026-09-03）：话语量镜像改会话级——每轮只喂入原话，攒够一场才评一次
+        const lsm = traitStore.lsmTurn(acctId, lastUser.content, sampleTs);
+        if (lsm) deltas.push(lsm);
         const applied = traitStore.applyDeltas(acctId, deltas, lastUser.content);
         if (applied) console.log(`[trait] account=${acctId} 应用 ${applied} 条特质调整`);
         // 为下一轮存本轮锚（小可回应特征 + 孩子情绪）

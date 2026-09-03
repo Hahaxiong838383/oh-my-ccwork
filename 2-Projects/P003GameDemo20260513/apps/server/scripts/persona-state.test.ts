@@ -255,14 +255,42 @@ eq('tr-2 clamp 上界', clampTrait('storytelling', 0.99), TRAIT_BASELINE.storyte
 eq('tr-3 温柔度地板', clampTrait('gentleness', 0.1), 0.5);
 
 // 规则引擎
-eq('tr-4 长句镜像', computeTraitDeltas({ childText: '今天我们在学校玩了一个特别好玩的游戏然后老师还表扬我了' }).some(d => d.dim === 'talkativeness' && d.delta > 0), true);
-eq('tr-5 短句镜像', computeTraitDeltas({ childText: '嗯好的' }).some(d => d.dim === 'talkativeness' && d.delta < 0), true);
+// L1（2026-09-03）：逐轮长短镜像已下线——生产 17 天 194 次 −0.01 把话语量压到地板（ASR 切句假象）
+eq('tr-4 逐轮长句不再动话语量', computeTraitDeltas({ childText: '今天我们在学校玩了一个特别好玩的游戏然后老师还表扬我了' }).some(d => d.dim === 'talkativeness'), false);
+eq('tr-5 逐轮短句不再动话语量', computeTraitDeltas({ childText: '嗯好的' }).some(d => d.dim === 'talkativeness'), false);
 eq('tr-6 玩闹镜像', computeTraitDeltas({ childText: '哈哈太好玩了' }).some(d => d.dim === 'playfulness'), true);
 eq('tr-7 故事正强化', computeTraitDeltas({ childText: '再讲一个', engagement: 0.9, prevTurn: { assistantHadStory: true } }).some(d => d.dim === 'storytelling' && d.delta > 0), true);
 eq('tr-8 故事负强化', computeTraitDeltas({ childText: '哦', engagement: 0.2, prevTurn: { assistantHadStory: true } }).some(d => d.dim === 'storytelling' && d.delta < 0), true);
 eq('tr-9 悬念强化', computeTraitDeltas({ childText: '为什么呀', prevTurn: { assistantHadHook: true } }).some(d => d.dim === 'curiosity_feed'), true);
 eq('tr-10 安抚归因', computeTraitDeltas({ childText: '好啦我开心了', valence: 0.5, prevTurn: { valence: -0.5 } }).some(d => d.dim === 'gentleness'), true);
 eq('tr-11 无信号零调整', computeTraitDeltas({ childText: '今天在学校上了数学课' }).length, 0); // 8-25 字中性句：不触发长短镜像也无玩闹词
+// ---------- L1 会话级话语量镜像 ----------
+{
+  const { computeLsmSessionDelta, isLsmQualifyingUtterance, medianOf, LSM_SESSION_DELTA } = await import('../src/trait-store.js');
+  eq('lsm-1 冷启动(会话数<2)不评', computeLsmSessionDelta(12, 5, 1), null);
+  eq('lsm-2 长期中位数无效不评', computeLsmSessionDelta(12, 0, 5), null);
+  eq('lsm-3 比平时啰嗦 ↑0.02', computeLsmSessionDelta(9, 5, 3)?.delta, LSM_SESSION_DELTA);
+  eq('lsm-4 比平时简短 ↓0.02', computeLsmSessionDelta(3, 5, 3)?.delta, -LSM_SESSION_DELTA);
+  eq('lsm-5 平时水平不动(儿童 5 字中位数不再被当短句)', computeLsmSessionDelta(5, 5, 3), null);
+  eq('lsm-6 应答词不算', ['嗯', '好的', '嗯嗯', '不要', '知道了', '哈哈哈'].map(isLsmQualifyingUtterance), [false, false, false, false, false, false]);
+  eq('lsm-7 三字起算', [isLsmQualifyingUtterance('叫我'), isLsmQualifyingUtterance('叫我小川')], [false, true]);
+  eq('lsm-8 中位数', [medianOf([5, 1, 9]), medianOf([1, 2, 3, 4]), medianOf([])], [5, 2.5, 0]);
+  // 整链：会话缓冲 + 折算 + 每场最多一次
+  const ACC = 'lsm-acct';
+  traitStore.resetLsmSessions();
+  const T0 = 1_800_000_000_000;
+  const feed = (texts: string[], t0: number) => { let last: unknown = null; texts.forEach((t, i) => { const r = traitStore.lsmTurn(ACC, t, t0 + i * 1000); if (r) last = r; }); return last; };
+  const short = Array.from({ length: 12 }, () => '我想玩游戏');           // 5 字 ×12
+  const long = Array.from({ length: 12 }, () => '今天我们班里发生了一件特别有意思的事情'); // 19 字 ×12
+  eq('lsm-9 第 1 场冷启动无 δ', feed(short, T0), null);
+  eq('lsm-10 第 2 场(跨 30min)先折上一场入长期中位数', (feed(short, T0 + 3600_000), traitStore.getLsmStats(ACC)), { lenEma: 5, sessions: 1 });
+  eq('lsm-11 第 3 场：会话数已到 2，长句 → ↑', (feed(long, T0 + 2 * 3600_000) as { rule?: string } | null)?.rule, 'mirror_lsm_session_long');
+  eq('lsm-12 同一场第 13 轮不再评(每场一次)', traitStore.lsmTurn(ACC, '今天我们班里发生了一件特别有意思的事情', T0 + 2 * 3600_000 + 20_000), null);
+  eq('lsm-13 第 4 场：与平时相当 → 不动', feed(short, T0 + 3 * 3600_000), null);
+  eq('lsm-14 长期中位数按 EMA 更新', Math.round(traitStore.getLsmStats(ACC).lenEma * 100) / 100, Math.round((5 * 0.9 + 19 * 0.1) * 100) / 100);
+  traitStore.resetLsmSessions();
+}
+
 
 // 特征检测
 eq('tr-12 故事特征', detectAssistantFeatures('从前有一座山').story, true);
