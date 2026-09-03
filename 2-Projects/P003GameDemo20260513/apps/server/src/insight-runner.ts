@@ -185,6 +185,7 @@ export async function runDailyPersonaJobs(): Promise<void> {
     if (personaNarrativeEnabled(acct)) await runNarrativeForAccount(acct);
     // 特质弹簧回拉（set-point 律）：每日一次向人设基线回落，有移动会记账（「回落也是事件」）
     if (personaTraitEnabled(acct)) {
+      traitStore.snapshotDaily(acct); // R3：回落前存今天的快照（可退回任意一天）
       const moved = traitStore.dailyDecay(acct);
       if (moved) console.log(`[trait] account=${acct} 弹簧回拉 ${moved} 维`);
     }

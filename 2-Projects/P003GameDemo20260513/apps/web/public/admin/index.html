@@ -2704,6 +2704,13 @@
                                   <el-button size="small" type="warning" :loading="growth.resetting" @click="resetPersona(brainState.selectedSn, 'persona')">♻️ 重置人格状态（保留本地音频）</el-button>
                                   <el-button size="small" type="danger" :loading="growth.resetting" @click="resetPersona(brainState.selectedSn, 'all')">🗑 全清（含本地音频 revision 归零）</el-button>
                                 </div>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">
+                                  <el-select v-model="growth.rollbackDay" size="small" placeholder="退回到某天的特质快照" style="width:220px" clearable>
+                                    <el-option v-for="s in growth.snapshots" :key="s.day" :label="s.day + (s.template ? ' · ' + s.template : ' · 出厂')" :value="s.day"></el-option>
+                                  </el-select>
+                                  <el-button size="small" :disabled="!growth.rollbackDay" :loading="growth.rollingBack" @click="rollbackTrait(brainState.selectedSn)">⏪ 退回该天特质</el-button>
+                                  <span style="font-size:11px;color:#909399">每天沪时 3 点批前自动存一份；退回前会把「现在」存成今天的快照，可反悔</span>
+                                </div>
                                 <div style="font-size:11px;color:#909399;margin-top:8px">安全档清 relation/style/insight/trait/ledger 五样；全清额外把本地音频条目+文件+revision 归零（已发布 revision 是与 Android 的冻结物，日常勿用全清）。</div>
                               </div>
                             </template>
@@ -4675,7 +4682,7 @@
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
+        var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -4698,12 +4705,34 @@
           growth.loading = true; growth.error = '';
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/persona-probe')
             .then(function (data) {
-              if (data && data.ok) { growth.probe = data; loadGrowthEvents(sn); }
+              if (data && data.ok) { growth.probe = data; loadGrowthEvents(sn); loadTraitSnapshots(sn); }
               else { growth.error = (data && data.error) || 'probe 失败'; growth.probe = null; }
             })
             .catch(function () { growth.error = '无法连接设备服务'; })
             .finally(function () { growth.loading = false; });
           loadStyleTemplate(sn);
+        }
+        function loadTraitSnapshots(sn) {
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/trait-snapshots')
+            .then(function (data) { growth.snapshots = (data && data.ok && data.snapshots) || []; })
+            .catch(function () { growth.snapshots = []; });
+        }
+        function rollbackTrait(sn) {
+          var day = growth.rollbackDay;
+          if (!sn || !day) return;
+          ElementPlus.ElMessageBox.confirm('把特质五维（含风格档）退回到 ' + day + ' 的快照？现在的状态会先存成今天的快照，可反悔。', '退回特质', { type: 'warning', confirmButtonText: '退回', cancelButtonText: '取消' })
+            .then(function () {
+              growth.rollingBack = true;
+              return deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/trait-rollback', { method: 'POST', body: JSON.stringify({ day: day }) })
+                .then(function (data) {
+                  if (data && data.ok) { ElementPlus.ElMessage.success('已退回到 ' + day + '（变动 ' + data.moved + ' 维）'); growth.rollbackDay = ''; loadGrowth(sn); }
+                  else ElementPlus.ElMessage.error((data && data.error) || '退回失败');
+                })
+                .finally(function () { growth.rollingBack = false; });
+            })
+            .catch(function (e) {
+              if (e && e.message && e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('退回失败，请稍后重试');
+            });
         }
         // 说话风格模板（P0 2026-09-01）：家长/运营选风格档——特质值立即置为模板五维，成长在模板附近继续。
         function loadStyleTemplate(sn) {
@@ -6532,7 +6561,7 @@
           openBrain: openBrain, unbindBrain: unbindBrain, addBrainMemory: addBrainMemory,
           delBrainMemory: delBrainMemory,
           brainProfileDraft: brainProfileDraft, parentBind: parentBind,
-          saveChildProfile: saveChildProfile, vetoInterest: vetoInterest, bindParent: bindParent, unbindParent: unbindParent,
+          saveChildProfile: saveChildProfile, vetoInterest: vetoInterest, rollbackTrait: rollbackTrait, bindParent: bindParent, unbindParent: unbindParent,
           extractLlm: extractLlm, loadExtractLlm: loadExtractLlm, saveExtractLlm: saveExtractLlm, testExtractLlm: testExtractLlm,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem,

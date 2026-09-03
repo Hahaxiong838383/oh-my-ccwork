@@ -964,6 +964,29 @@ adminDataRoute.post('/devices/:sn/persona-local-audio-run', async (c) => {
 
 // P0 人格成长（codex 3.2 生命周期兜底）：admin 显式重置设备账号的关系状态。
 // 用途：换孩子、测试数据清理、家长要求重置。物理删除（同儿童数据删除权模式）。
+// R3（2026-09-03）：特质每日快照列表 + 退回任意一天
+adminDataRoute.get('/devices/:sn/trait-snapshots', (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  return c.json({ ok: true, snapshots: traitStore.listSnapshots(device.account_id) });
+});
+adminDataRoute.post('/devices/:sn/trait-rollback', async (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  let body: { day?: unknown } = {};
+  try { body = (await c.req.json()) as { day?: unknown }; } catch { body = {}; }
+  const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : '';
+  if (!day) return c.json({ ok: false, error: 'day 必填(YYYY-MM-DD)' }, 400);
+  const moved = traitStore.rollbackTo(device.account_id, day);
+  if (moved < 0) return c.json({ ok: false, error: '该天没有快照' }, 404);
+  console.log(`[admin-brain] trait rollback sn=${sn} day=${day} moved=${moved}`);
+  return c.json({ ok: true, moved, trait: traitStore.get(device.account_id), template: traitStore.getTemplate(device.account_id) });
+});
+
 adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
   try {
     const sn = c.req.param('sn').trim();

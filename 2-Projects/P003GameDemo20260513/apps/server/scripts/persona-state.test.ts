@@ -291,6 +291,34 @@ eq('tr-11 无信号零调整', computeTraitDeltas({ childText: '今天在学校�
   traitStore.resetLsmSessions();
 }
 
+// ---------- R3 每日快照 / 退回 / 每日有机位移上限 ----------
+{
+  const { DAILY_ORGANIC_CAP } = await import('../src/trait-store.js');
+  const AC = 'r3-acct';
+  traitStore.clear(AC);
+  const D1 = new Date('2026-09-01T10:00:00+08:00').getTime();
+  traitStore.applyDeltas(AC, [{ dim: 'playfulness', delta: 0.02, rule: 'mirror_playful', theory: 'social_mirror', note: 'x' }]);
+  eq('r3-1 快照写入', traitStore.snapshotDaily(AC, D1), '2026-09-01');
+  const s1 = traitStore.listSnapshots(AC);
+  eq('r3-2 快照内容=当时五维', [s1.length, Math.round(s1[0]!.dims.playfulness * 100) / 100], [1, Math.round((TRAIT_BASELINE.playfulness + 0.02) * 100) / 100]);
+  traitStore.applyDeltas(AC, [{ dim: 'playfulness', delta: 0.02, rule: 'mirror_playful', theory: 'social_mirror', note: 'x' }]);
+  eq('r3-3 同日快照覆盖', (traitStore.snapshotDaily(AC, D1 + 3600_000), traitStore.listSnapshots(AC).length), 1);
+  eq('r3-4 退回不存在的天=-1', traitStore.rollbackTo(AC, '2025-01-01'), -1);
+  // 再动一下，然后退回 09-01
+  traitStore.applyDeltas(AC, [{ dim: 'storytelling', delta: 0.02, rule: 'reinforce_story_pos', theory: 'reinforcement', note: 'x' }]);
+  const before = traitStore.get(AC).storytelling;
+  const moved = traitStore.rollbackTo(AC, '2026-09-01', new Date('2026-09-02T10:00:00+08:00').getTime());
+  eq('r3-5 退回后 storytelling 回到快照值', [moved >= 1, Math.round(traitStore.get(AC).storytelling * 100) / 100 !== Math.round(before * 100) / 100], [true, true]);
+  eq('r3-6 退回前把当前存成当天快照', traitStore.listSnapshots(AC).map((s) => s.day).sort(), ['2026-09-01', '2026-09-02']);
+  eq('r3-7 退回记账 rule=rollback', growthLedgerStore.list(AC, { module: 'trait' }).some((e) => e.rule === 'rollback'), true);
+  // 每日有机位移上限：连续 +0.02 的镜像，超过 0.06 后被跳过；档位切换不受限
+  const AC2 = 'r3-cap-acct'; // 新账号：账本干净（上限按当天账本求和）
+  let applied = 0;
+  for (let i = 0; i < 6; i += 1) applied += traitStore.applyDeltas(AC2, [{ dim: 'playfulness', delta: 0.02, rule: 'mirror_playful', theory: 'social_mirror', note: 'x' }]);
+  eq('r3-8 一天内有机位移封顶 0.06(3 次 0.02)', [applied, Math.round((traitStore.get(AC2).playfulness - TRAIT_BASELINE.playfulness) * 100) / 100], [3, DAILY_ORGANIC_CAP]);
+  eq('r3-9 上限后非有机规则仍可动', traitStore.applyDeltas(AC2, [{ dim: 'playfulness', delta: 0.02, rule: 'cc_data_fix', theory: 'setpoint', note: 'x' }]), 1);
+}
+
 
 // 特征检测
 eq('tr-12 故事特征', detectAssistantFeatures('从前有一座山').story, true);

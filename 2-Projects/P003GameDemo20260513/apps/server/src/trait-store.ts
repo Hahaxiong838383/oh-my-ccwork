@@ -32,8 +32,17 @@ const MAX_DEVIATION = 0.35; //   界：[基线±0.35]
 const GENTLENESS_FLOOR = 0.5; // 温柔度地板（儿童红线：温柔有下限）
 const MAX_DELTA = 0.02; //       单次调整硬 clamp（慢变量——重复才固化，T1）
 const DAILY_DECAY = 0.01; //     每日向基线回拉（set-point 弹性）
+/** R3（2026-09-03）：每维每日有机位移上限——194 次 −0.01 把话语量压到地板的事故再也不可能一天内发生；
+ *  档位切换/家长设定/数据修复/回退/回落不计入。 */
+export const DAILY_ORGANIC_CAP = 0.06;
+const NON_ORGANIC_RULES = new Set(['parent_style_template', 'child_voice_style', 'cc_data_fix', 'rollback', 'daily_setpoint_decay']);
 
 const DEFAULT_DB_PATH = './data/profile.db';
+
+/** 沪时日期（+8h 偏移法）。 */
+function cstDayOf(ts: number): string {
+  return new Date(ts + 8 * 3600_000).toISOString().slice(0, 10);
+}
 
 function resolveDbPath(): string {
   const raw = process.env.PROFILE_DB_PATH?.trim() || DEFAULT_DB_PATH;
@@ -219,6 +228,17 @@ class TraitStore {
         updated_at INTEGER NOT NULL
       );
     `);
+    // R3 每日快照（2026-09-03）：五维 + 模板，每账号每天一份（同日覆盖），admin 可退回任意一天
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS trait_snapshot (
+        account_id TEXT NOT NULL,
+        day        TEXT NOT NULL,
+        state      TEXT NOT NULL,
+        template   TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (account_id, day)
+      );
+    `);
     // 语音调档 Phase A（2026-09-03）：记录是谁设的档（parent=家长端/admin，voice=孩子语音）；幂等加列
     try {
       this.db.exec(`ALTER TABLE trait_template ADD COLUMN source TEXT NOT NULL DEFAULT 'parent'`);
@@ -390,15 +410,99 @@ class TraitStore {
       .run(accountId, Date.now());
   }
 
-  /** 应用一批规则产出的 δ（每条硬 clamp ±0.02 + 界内 clip + 记账）。返回实际生效条数。 */
+  /** 今日（沪时）该维的有机位移总量（账本求和，排除档位/修复/回退/回落）。 */
+  organicMovedToday(accountId: string, dim: TraitDim, now = Date.now()): number {
+    const dayStart = new Date(`${cstDayOf(now)}T00:00:00+08:00`).getTime();
+    let sum = 0;
+    for (const e of growthLedgerStore.list(accountId, { module: 'trait', dimension: TRAIT_LABELS[dim], limit: 200 })) {
+      if (e.ts < dayStart) break; // list 按 ts DESC
+      if (NON_ORGANIC_RULES.has(e.rule)) continue;
+      const d = Number(e.to_val) - Number(e.from_val);
+      if (Number.isFinite(d)) sum += Math.abs(d);
+    }
+    return sum;
+  }
+
+  /** R3 每日快照：当前五维 + 模板，同日覆盖。返回 day。 */
+  snapshotDaily(accountId: string, now = Date.now()): string {
+    const day = cstDayOf(now);
+    const cur = this.get(accountId);
+    const state: Record<TraitDim, number> = { playfulness: cur.playfulness, talkativeness: cur.talkativeness, storytelling: cur.storytelling, gentleness: cur.gentleness, curiosity_feed: cur.curiosity_feed };
+    this.db
+      .prepare(`INSERT OR REPLACE INTO trait_snapshot (account_id, day, state, template, created_at) VALUES (?, ?, ?, ?, ?)`)
+      .run(accountId, day, JSON.stringify(state), this.getTemplate(accountId) ?? '', now);
+    return day;
+  }
+
+  listSnapshots(accountId: string, limit = 30): { day: string; template: string; dims: Record<TraitDim, number>; created_at: number }[] {
+    const rows = this.db
+      .prepare(`SELECT day, state, template, created_at FROM trait_snapshot WHERE account_id = ? ORDER BY day DESC LIMIT ?`)
+      .all(accountId, limit) as { day: string; state: string; template: string; created_at: number }[];
+    const out: { day: string; template: string; dims: Record<TraitDim, number>; created_at: number }[] = [];
+    for (const r of rows) {
+      try { out.push({ day: r.day, template: r.template, dims: JSON.parse(r.state) as Record<TraitDim, number>, created_at: r.created_at }); } catch { /* 损坏快照跳过 */ }
+    }
+    return out;
+  }
+
+  /**
+   * R3 退回到某天的快照：先把当前状态存成今天的快照（可再退回来），再恢复五维 + 模板，逐维记账 rule=rollback。
+   * 返回实际变化的维数；快照不存在返回 -1。
+   */
+  rollbackTo(accountId: string, day: string, now = Date.now()): number {
+    const row = this.db.prepare(`SELECT state, template FROM trait_snapshot WHERE account_id = ? AND day = ?`).get(accountId, day) as
+      | { state: string; template: string }
+      | undefined;
+    if (!row) return -1;
+    let dims: Partial<Record<TraitDim, number>>;
+    try { dims = JSON.parse(row.state) as Partial<Record<TraitDim, number>>; } catch { return -1; }
+    this.snapshotDaily(accountId, now); // 退回前存今天（可反悔）
+    this.ensureRow(accountId);
+    const curTpl = this.getTemplate(accountId) ?? '';
+    if ((row.template || '') !== curTpl) {
+      if (row.template && getStyleTemplate(row.template)) {
+        this.db.prepare(`INSERT OR REPLACE INTO trait_template (account_id, template, updated_at, source) VALUES (?, ?, ?, 'parent')`).run(accountId, row.template, now);
+      } else {
+        this.db.prepare(`DELETE FROM trait_template WHERE account_id = ?`).run(accountId);
+      }
+    }
+    const cur = this.get(accountId);
+    let moved = 0;
+    for (const dim of TRAIT_DIMS) {
+      const target = dims[dim];
+      if (typeof target !== 'number' || !Number.isFinite(target)) continue;
+      const from = cur[dim];
+      const to = Math.max(0, Math.min(1, target));
+      if (Math.abs(to - from) < 1e-9) continue;
+      this.db.prepare(`UPDATE trait_state SET ${dim} = ?, updated_at = ? WHERE account_id = ?`).run(to, now, accountId);
+      moved += 1;
+      growthLedgerStore.record(accountId, {
+        module: 'trait', dimension: TRAIT_LABELS[dim], from, to,
+        rule: 'rollback', theory: 'setpoint', note: `运营退回到 ${day} 的快照`,
+      });
+    }
+    return moved;
+  }
+
+  /** 应用一批规则产出的 δ（每条硬 clamp ±0.02 + 界内 clip + 记账 + 每维每日有机位移上限 R3）。返回实际生效条数。 */
   applyDeltas(accountId: string, deltas: TraitDelta[], triggerQuote?: string): number {
     if (!deltas.length) return 0;
     this.ensureRow(accountId);
     const cur = this.get(accountId);
     const base = this.baselineFor(accountId); // 漂移界锚定家长模板基线（无模板=出厂）
     let applied = 0;
+    const movedToday: Partial<Record<TraitDim, number>> = {};
     for (const d of deltas) {
       const delta = Math.max(-MAX_DELTA, Math.min(MAX_DELTA, d.delta));
+      if (!NON_ORGANIC_RULES.has(d.rule)) {
+        const used = movedToday[d.dim] ?? this.organicMovedToday(accountId, d.dim);
+        if (used + Math.abs(delta) > DAILY_ORGANIC_CAP + 1e-9) {
+          console.log(`[trait] account=${accountId} ${TRAIT_LABELS[d.dim]} 今日有机位移已达上限(${used.toFixed(2)}/${DAILY_ORGANIC_CAP})，跳过 ${d.rule}`);
+          movedToday[d.dim] = used;
+          continue;
+        }
+        movedToday[d.dim] = used + Math.abs(delta);
+      }
       const from = cur[d.dim];
       const to = clampTrait(d.dim, from + delta, base[d.dim]);
       if (Math.abs(to - from) < 1e-9) continue; // 到界/地板，无实际移动不记
