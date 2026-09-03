@@ -315,3 +315,5 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - 键：`.env.local` `STYLE_VOICE_MODE=off|observe|execute`（默认 observe；改后 `pm2 restart`）。词表/处置在 `src/style-intent.ts`；防抖 10min/日 3 次进程内（重启清零只放宽一次）。
 - 锚：`pm2 logs p003-voice | grep '\[style-intent\]'`（observed/executed/suppressed，不带原话）；账本 rule `child_voice_style`（admin 成长 tab 时间线 🔵）；GET style-template 的 `source`。
 - 测试：`NODE_OPTIONS=--experimental-sqlite npx tsx scripts/style-intent.test.ts`（语料改了必跑）。词表增删：只收「关于小可说话方式」的显式形态，内容诉求（讲个笑话）不进；含糊句留 S2。
+- **admin 加子页/枚举值的纪律**（2026-09-03 成长页串台实证）：新子页的加载要同时挂进 `selectBrainDevice`（点选设备）与 `refreshBrainTab`（顶部刷新）两处派发；切换先 `resetGrowthView()` 类清旧视图再拉，宁可短暂空白不要安静错着。
+- **语音调档实测判据**：看状态不看回复——`[style-intent] executed` + `trait_template.source=voice` + 账本 `child_voice_style`；LLM 会替漏召回的意图口头答应（「那就多聊两句」），回复内容不作证据。
