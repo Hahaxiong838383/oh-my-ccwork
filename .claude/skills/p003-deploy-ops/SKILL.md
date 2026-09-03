@@ -303,3 +303,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **一次性验证脚本走生产真路径**：文件放 `/tmp/x.mts`（`.ts` 在 /tmp 会被 tsx 当 CJS，top-level await 报错），`await import('/opt/p003/server/src/xxx.ts')` 绝对路径，`NODE_OPTIONS=--experimental-sqlite npx tsx --env-file=.env.local /tmp/x.mts`。只调贵分支前有门的函数（如 `runLocalAudioForAccount` 被预检拦住=零合成），用完 rm。
 - **admin in-DOM Vue 改动的无登录验证**：Vue 挂载时编译整棵根模板（含 v-if 未显示分支），所以 Browser 打开 `https://kidshub-ai.hahaxiong.cc/admin/`（⚠️ 不是 p003.hahaxiong.cc，那是 SPA 兜底假 200）出现登录框 + 控制台无 `[Vue warn]` = 模板语法过；登录后交互留给川哥（不代输密码）。投放 SOP 不变：commit → `git show HEAD:apps/web/public/admin/index.html` → 备份 `.bak-<date>-<tag>` → scp → md5 对撞 dist 与 URL。
 - **设备配置加 server 自用键**：`CONFIG_KEYS` 加行并 `serverOnly: true`（不进设备快照、不参与设备 revision、admin 总览标「仅服务端」）；admin 页已按键表通用渲染，加键零前端改动；改 `device-config.test.ts` 的 srv-* 负锚随之验。
+
+## 本地音频灰度发布 SOP（2026-09-03 rev6 003 实跑）
+1. 挡每日批：`.env.local` `LOCAL_AUDIO_GENERATION_PAUSED=1`（备份 `.bak-<date>-localaudio-paused`）+ 会话外 `pm2 restart`；admin force / 脚本 force 不受此闸限制。
+2. 只发目标账号：`/tmp/x.mts` 里 `runLocalAudioForAccount('device-<SN>', { force: true, reuseStagingFirst: true })`（staging 优先复用=零 LLM/TTS；`PUBLISH_ITEMS_PER_SLOT=2` 预算，14 槽×2×160KiB=4.375MiB 硬证明在 5MiB 门内）。
+3. 发布锚（store 层即可，无需设备凭据）：`getState().revision`、`listActive()` 逐槽计数与去重 bytes、`buildManifest()` 两次 JSON 相等 + sha256 指纹、抽检 `readAudio()` 的 RIFF/WAVE 头 + sha256==item.sha256（=file 端点 ETag）。探针**不带** `applied_revision`。
+4. 端侧受控同步由 codex 触发；对撞 `[local-audio] manifest sn=****XXXX revision=N applied=N` + `file … 200` 计数。通过后 `PAUSED=0` + 重启 → 其余账号在沪时 3 点档自动出新套。
+5. **上限 5MiB 是合同不是配置**：Android parser 硬门 + 12MiB 双 revision 预算，server 单边提额=端侧整套拒收静默用旧套；提额必须双端同版本+重做包级 M0。
