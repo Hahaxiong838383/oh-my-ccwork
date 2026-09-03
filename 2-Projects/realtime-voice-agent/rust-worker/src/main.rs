@@ -6,6 +6,7 @@
 mod config;
 mod contract;
 mod candidate;
+mod say_defer;
 mod control;
 mod device_intent;
 mod eot;

@@ -273,6 +273,44 @@ impl DevMarkStripper {
 
 // --- 流式调用核心(chat 与投机共用,不碰历史) -----------------------------------
 
+/// 带内控制 token 分隔符(私有区码点,LLM 正文不会产出)。形态 `\u{E000}DEV:<label>\u{E000}`。
+pub const DEV_INBAND_SEP: char = '\u{E000}';
+
+pub fn dev_inband(label: u32) -> String {
+    format!("{DEV_INBAND_SEP}DEV:{label}{DEV_INBAND_SEP}")
+}
+
+/// 消费方:把 delta 里的带内 token 剥出来(labels 按出现顺序),余下正文原样返回。
+/// 非法/未闭合的 token 段原样放行(宁念不吞,与 DevMarkStripper 同口径)。
+pub fn split_dev_inband(delta: &str) -> (Vec<u32>, String) {
+    if !delta.contains(DEV_INBAND_SEP) {
+        return (Vec::new(), delta.to_string());
+    }
+    let mut labels = Vec::new();
+    let mut text = String::new();
+    let mut rest = delta;
+    while let Some(i) = rest.find(DEV_INBAND_SEP) {
+        text.push_str(&rest[..i]);
+        let after = &rest[i + DEV_INBAND_SEP.len_utf8()..];
+        match after.find(DEV_INBAND_SEP) {
+            Some(j) => {
+                let body = &after[..j];
+                match body.strip_prefix("DEV:").and_then(|d| d.parse::<u32>().ok()) {
+                    Some(l) => labels.push(l),
+                    None => text.push_str(&rest[i..i + DEV_INBAND_SEP.len_utf8() + j + DEV_INBAND_SEP.len_utf8()]),
+                }
+                rest = &after[j + DEV_INBAND_SEP.len_utf8()..];
+            }
+            None => {
+                text.push_str(&rest[i..]);
+                rest = "";
+            }
+        }
+    }
+    text.push_str(rest);
+    (labels, text)
+}
+
 pub struct ChatOutcome {
     pub full: String,
     pub ttft_ms: u64,
@@ -328,6 +366,10 @@ pub async fn stream_chat(
 
     let mut stripper = cfg.strip_leading_filler.then(LeadingFillerStripper::new);
     let mut dev = DevMarkStripper::new(); // Phase 2a:无条件剥 [[DEV:N]],标记绝不进流/历史
+    // 2b(2026-09-03 M1 实证修):标记在回复最开头就解析出来了,却等整段回复合成完才派发→动作晚 3.3s。
+    // 解析到即用带内控制 token 经 tx 推给消费方(赛马/投机转发的是同一条 delta 流,赢家的标记天然跟着赢家走);
+    // token 不进 full(历史),消费方 split_dev_inband 剥掉后才进切句/TTS。
+    let mut dev_sent = 0usize;
     let mut full = String::new();
     let mut ttft_ms: Option<u64> = None;
     let mut n_chunks: u64 = 0;
@@ -361,6 +403,15 @@ pub async fn stream_chat(
                         None => text.to_string(),
                     };
                     let out = dev.feed(&out);
+                    while dev_sent < dev.labels.len() {
+                        let tok = dev_inband(dev.labels[dev_sent]);
+                        dev_sent += 1;
+                        if tx.send(tok).await.is_err() {
+                            warn!("llm consumer gone (interrupted), aborting stream");
+                            interrupted = true;
+                            break 'outer;
+                        }
+                    }
                     if out.is_empty() {
                         continue;
                     }
@@ -380,6 +431,10 @@ pub async fn stream_chat(
             None => String::new(),
         };
         tail.push_str(&dev.flush()); // dev 自己的未闭合疑似段:宁念不吞
+        while dev_sent < dev.labels.len() {
+            let _ = tx.send(dev_inband(dev.labels[dev_sent])).await;
+            dev_sent += 1;
+        }
         if !tail.is_empty() {
             full.push_str(&tail);
             let _ = tx.send(tail).await;
@@ -903,5 +958,29 @@ mod tests {
         llm.push_user("第三问");
         llm.settle(&ChatOutcome { full: String::new(), ttft_ms: 0, duration_ms: 0, interrupted: false, dev_labels: vec![] });
         assert_eq!(llm.history.len(), 4);
+    }
+}
+
+#[cfg(test)]
+mod dev_inband_tests {
+    use super::*;
+
+    #[test]
+    fn inband_roundtrip_and_text_untouched() {
+        let d = format!("{}你好{}世界", dev_inband(6), dev_inband(12));
+        let (labels, text) = split_dev_inband(&d);
+        assert_eq!(labels, vec![6, 12]);
+        assert_eq!(text, "你好世界");
+        assert_eq!(split_dev_inband("没有标记的普通正文"), (vec![], "没有标记的普通正文".to_string()));
+    }
+
+    #[test]
+    fn malformed_or_unclosed_passes_through() {
+        let bad = format!("{}DEV:x{}尾", DEV_INBAND_SEP, DEV_INBAND_SEP);
+        let (labels, text) = split_dev_inband(&bad);
+        assert!(labels.is_empty());
+        assert_eq!(text, bad);
+        let open = format!("正文{}DEV:6", DEV_INBAND_SEP);
+        assert_eq!(split_dev_inband(&open), (vec![], open.clone()));
     }
 }

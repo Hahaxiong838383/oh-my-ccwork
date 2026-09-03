@@ -31,6 +31,7 @@ use tracing::{info, warn};
 
 use crate::contract::Contract;
 use crate::candidate::{CandidateSlot, is_silent_result};
+use crate::say_defer::DeferredSay;
 use crate::control;
 use crate::eot::{EOT_MAX_SAMPLES, EotClient, UNLIKELY_THRESHOLD_ZH};
 use crate::filler::FillerBank;
@@ -290,6 +291,8 @@ struct Orchestrator {
     device_commands_on: bool,
     /// S2-B2 命令轮单槽:同时最多一个 pending 命令(新命令覆盖旧槽,迟到 result 按 key 忽略)
     pending_cmd: Option<PendingCmd>,
+    /// 2b §3.4:设备短句追加槽(回复在播时压后,播完再说;抢话作废)
+    deferred_say: DeferredSay,
     /// first-wins 去重(command_word ↔ ASR 双捕获,3s 窗)
     cmd_dedup: FirstWins,
     /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
@@ -603,6 +606,7 @@ pub async fn run_pipeline(
         session_started_at: Instant::now(),
         echo_short_turn_at: None,
         pending_cmd: None,
+        deferred_say: DeferredSay::default(),
         cmd_dedup: FirstWins::new(),
         device_trace: ready.trace_id.clone(),
         turn_gate: TurnGate::new(
@@ -1232,7 +1236,7 @@ impl Orchestrator {
             p.accepted_acked = true;
             p.sent_at = Instant::now();
             if first {
-                self.start_turn(TurnKind::Say("好的，正在调整".to_string()));
+                self.say_after_current("好的，正在调整".to_string());
             }
             return;
         }
@@ -1240,7 +1244,16 @@ impl Orchestrator {
         let action = p.action;
         let reply = device_reply(&r.status, relative, &r.reason, action);
         self.pending_cmd = None;
-        self.start_turn(TurnKind::Say(reply));
+        self.say_after_current(reply);
+    }
+
+    /// 2b 合同 v2 §3.4:设备短句**追加**在 LLM 回复之后——回复在播就压进槽等 PlayedOut,空闲则立刻说。
+    /// (M1 实证:回复在播时直接开新 Say 轮会与在播轮抢音频源,`capture_frame InvalidState`,短句丢、回复截)
+    fn say_after_current(&mut self, text: String) {
+        match self.deferred_say.offer(self.agent_turn.is_some(), text) {
+            Some(t) => self.start_turn(TurnKind::Say(t)),
+            None => info!(room = %self.room_name, "device reply deferred until current turn plays out"),
+        }
     }
 
     /// 兜底超时(Android 整个没回;它自身的 timeout status 是另一层)。
@@ -1259,7 +1272,7 @@ impl Orchestrator {
                 "device result 兜底超时,播失败句"
             );
             self.pending_cmd = None;
-            self.start_turn(TurnKind::Say("刚刚没有调成功，再试一次吧".to_string()));
+            self.say_after_current("刚刚没有调成功，再试一次吧".to_string());
         }
     }
 
@@ -1473,6 +1486,9 @@ impl Orchestrator {
 
     /// 硬打断:杀任务+清播放队列+历史截断为真实播出部分(暂存,下轮 LLM 请求前落账)。
     fn hard_abort_current(&mut self) {
+        if self.deferred_say.clear_on_abort() {
+            info!(room = %self.room_name, "deferred device reply dropped (turn aborted)");
+        }
         let Some(turn) = self.agent_turn.take() else {
             return;
         };
@@ -1617,6 +1633,11 @@ impl Orchestrator {
                 // boost,barge 桶文案落在非打断语境(2026-08-16「先你的。」实证)
                 self.tele_text.clear();
                 self.set_state(AgentState::Listening);
+                // 2b §3.4:回复播完 → 追加设备短句(若 result 已到而当时回复在播)
+                if let Some(t) = self.deferred_say.take_on_played_out() {
+                    info!(room = %self.room_name, "device reply appended after turn played out");
+                    self.start_turn(TurnKind::Say(t));
+                }
             }
         }
     }
@@ -2104,7 +2125,25 @@ impl Orchestrator {
                         }
                     };
                     let mut seg = Segmenter::new(min_len);
+                    // 2b(2026-09-03):[[DEV:N]] 在流里一解析到就派发(带内 token,见 llm::dev_inband),
+                    // 不再等整段回复合成完——动作跟着回复开头走。一轮只派首个,其余 multi_label 记 suppressed。
+                    let mut l2_sent = false;
                     while let Some(delta) = delta_rx.recv().await {
+                        let (early_labels, delta) = crate::llm::split_dev_inband(&delta);
+                        for label in early_labels {
+                            if label == crate::device_intent::SESSION_EXIT_LABEL {
+                                continue; // 慢路退出意图仍只观察(流末统一打点)
+                            }
+                            if l2_sent {
+                                info!(room = %room_name, label, reason = "multi_label", "llm device intent suppressed");
+                                continue;
+                            }
+                            l2_sent = true;
+                            let _ = ev_tx.try_send(TurnEvent::DevIntent { label, text: user_text.clone() });
+                        }
+                        if delta.is_empty() {
+                            continue;
+                        }
                         for sentence in seg.feed(&delta) {
                             // 舞台指示剥离(「（笑）」被 TTS 整句念出,2026-08-16 实测):
                             // TTS/track(字幕+历史+截断映射)统一用净文本;整句是描述则跳过
@@ -2152,7 +2191,6 @@ impl Orchestrator {
                             // DevMarkStripper 剥离(不进 TTS/字幕/历史),此处只记日志**不执行**
                             // ——LLM→DEVICE commit 被 codex 标 BLOCKED_PENDING_VAD_CANDIDATE_ID,
                             // 关联合同落地前禁止提交。统计:grep 'llm device intent observed'。
-                            let mut l2_sent = false;
                             for label in &outcome.dev_labels {
                                 if *label == crate::device_intent::SESSION_EXIT_LABEL {
                                     // B 案(2026-08-28):慢路退出意图观察打点——ASR 错转/表达
@@ -2169,12 +2207,7 @@ impl Orchestrator {
                                         known = crate::device_intent::known_label(*label),
                                         "llm device intent observed"
                                     );
-                                    if l2_sent {
-                                        info!(room = %room_name, label, reason = "multi_label", "llm device intent suppressed");
-                                        continue;
-                                    }
-                                    l2_sent = true;
-                                    let _ = ev_tx.try_send(TurnEvent::DevIntent { label: *label, text: user_text.clone() });
+                                    // 派发已在流中提前完成(split_dev_inband);这里只留观察打点
                                 }
                             }
                             // tps=字符/秒近似(SSE chunk≠token,诚实口径;web 面板显示用)
