@@ -521,7 +521,7 @@ export function revivePreferences(acctId: string, items: NewMemoryItem[], lastUs
  * getProfile → extractAll → 画像 patch 写回 + 情景 items 落库 + promise resolve + dislike 撤兴趣。
  * 所有写走 store 同步原子方法;本函数只应被 fire-and-forget 调用(失败 log 不抛)。
  */
-export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], sessionId: string): Promise<void> {
+export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], sessionId: string, opts?: { reason?: string }): Promise<void> {
   try {
     if (!snapshot.length) return;
     const current = ensureDeviceProfile(acctId);
@@ -720,7 +720,7 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
       candidates: episodicCandidates,
       added: episodicAdded,
       rejected: takeRejectReasons().join(';'),
-      note: extracted.rawOk ? '' : '模型未返回 JSON(超时/失败)',
+      note: [opts?.reason ? `reason=${opts.reason}` : '', extracted.rawOk ? '' : '模型未返回 JSON(超时/失败)'].filter(Boolean).join(' '),
     });
   } catch (err) {
     console.log('[memory] 抽取失败(不影响语音):', String((err as Error)?.message ?? err));

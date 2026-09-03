@@ -17,6 +17,7 @@ import { localAudioStore } from '../local-audio-store.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
 import { extractAndPersist } from '../memory-extractor.js';
+import * as extractScheduler from '../extract-scheduler.js';
 import { conversationStore } from '../conversation-store.js';
 import { createParenFilter } from '../paren-filter.js';
 import { createExitMarkerStripper } from '../exit-intent.js';
@@ -224,12 +225,11 @@ customLlmRoute.post('/chat/completions', async (c) => {
         { role: 'assistant' as const, content: finalAssistant, id: assistantMsgId },
       ];
       const userTurns = full.filter((t) => t.role === 'user').length;
-      // 抽取节流分场景（2026-08-19）：设备房(role=device)每轮都抽——唤醒式交互以 1-2 轮短会话为主,
-      // %3 取模下几乎永不触发(当日实证建档后三场会话全漏);UNIQUE(account,type,content) 去重兜滑窗重叠,幂等。
-      // web RTC(/m 手机端)保持每 3 轮(长会话为主,省调用;末尾 ≤2 轮漏抽窗口是已知局限,docs/43 §8 G2)。
-      const everyTurns = authContext.role === 'device' ? 1 : 3;
-      if (userTurns % everyTurns === 0) {
-        void extractAndPersist(authContext.accountId, full.slice(-6), 'rtc');
+      // 抽取时机（R5，2026-09-03）：默认 turn 模式=设备房每轮抽、Web 每 3 轮（原行为）；
+      // MEMORY_EXTRACT_MODE=trigger 时改「触发词立刻抽 / 攒 5 轮抽一次 / 空隙 3 分钟补抽」，可按 SN 灰度。
+      const decision = extractScheduler.onTurn(authContext.accountId, authContext.role, userText, userTurns);
+      if (decision.run) {
+        void extractAndPersist(authContext.accountId, full.slice(-decision.windowMessages), 'rtc', { reason: decision.reason });
       }
     };
 
