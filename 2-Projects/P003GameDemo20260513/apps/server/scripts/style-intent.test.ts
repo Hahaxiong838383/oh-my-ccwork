@@ -31,6 +31,7 @@ const POS: Array<[string, string]> = [
   ['小可你话太多了', 'quiet'], ['你说少一点', 'quiet'], ['少说点', 'quiet'], ['你能不能简短点', 'quiet'],
   ['安静一点', 'quiet'], ['别说那么多', 'quiet'], ['你太啰嗦了', 'quiet'], ['别一直说', 'quiet'],
   ['可不可以说少一点', 'quiet'], ['好不好搞笑一点', 'funny'], ['小可你能不能多说一点', 'chatty'],
+  ['你话多点', 'chatty'], ['话少点', 'quiet'], ['多说两句', 'chatty'], ['少说两句', 'quiet'], ['你多说话呀', 'chatty'], ['说话少一点', 'quiet'],
   ['你多说一点嘛', 'chatty'], ['多聊点', 'chatty'], ['别那么闷', 'chatty'], ['多陪我聊聊', 'chatty'], ['话多一点', 'chatty'],
   ['搞笑一点', 'funny'], ['你幽默点', 'funny'], ['活泼一点好不好', 'funny'], ['有趣点', 'funny'], ['皮一点', 'funny'],
   ['恢复原来的样子', 'default'], ['别搞笑了', 'default'], ['正常一点', 'default'], ['好好说话', 'default'], ['像以前那样', 'default'],
