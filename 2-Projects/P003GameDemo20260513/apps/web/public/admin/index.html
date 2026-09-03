@@ -1617,15 +1617,20 @@
                       <el-button size="small" type="primary" :loading="devcfg.savingKey === k.key" @click="saveDevcfgGlobal(k)">保存全局默认</el-button>
                     </div>
                     <div style="border-top:1px dashed #eee;padding-top:10px">
-                      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
                         <div style="font-weight:600;font-size:13px">按设备覆盖<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">覆盖优先于全局默认；清除后回落全局</span></div>
-                        <el-button size="small" @click="addDevcfgOverride(k)">添加覆盖</el-button>
+                        <el-select v-model="devcfg.pick[k.key]" placeholder="选择设备（台账）" size="small" filterable style="width:300px">
+                          <el-option v-for="d in devcfgDeviceOptions()" :key="d.sn" :label="d.label" :value="d.sn"></el-option>
+                        </el-select>
+                        <input type="number" :min="k.min" :max="k.max" step="1" v-model.number="devcfg.pickVal[k.key]" style="width:90px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                        <span style="font-size:12px;color:#666">{{ devcfgUnit(k) }}</span>
+                        <el-button size="small" type="primary" plain :loading="devcfg.savingKey === 'ov:' + k.key" @click="addDevcfgOverride(k)">添加覆盖</el-button>
                       </div>
                       <table style="width:100%;border-collapse:collapse;font-size:13px">
                         <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">覆盖值</th><th style="padding:6px 8px">更新时间</th><th style="padding:6px 8px">操作</th></tr></thead>
                         <tbody>
                           <tr v-for="o in devcfgOverridesFor(k)" :key="o.sn + o.key" style="border-bottom:1px solid #f5f5f5">
-                            <td style="padding:6px 8px;font-family:monospace">{{ o.sn }}</td>
+                            <td style="padding:6px 8px">{{ devcfgDeviceLabel(o.sn) }}</td>
                             <td style="padding:6px 8px;font-weight:700">{{ o.value }}{{ devcfgUnit(k) }}<span v-if="k.unit === 'sec'" style="font-weight:400;color:#999"> ≈ {{ devcfgFmtMin(o.value) }}</span></td>
                             <td style="padding:6px 8px">{{ new Date(o.updated_at).toLocaleString() }}</td>
                             <td style="padding:6px 8px;white-space:nowrap">
@@ -4054,7 +4059,19 @@
         // ── 设备运行配置（2026-08-21；API 见 routes/device-config.ts；合同 CC_P003_POSTURE_* + cc 回执；
         //    2026-09-03 改通用键表渲染 + server 自用键 local_audio.refresh_days）──
         // 后端为真防线（范围校验/键注册表/revision 单调）；前端只做交互。设备键生效延迟=设备 30min 轮询；server 键=下次每日批。
-        var devcfg = reactive({ loading: false, savingKey: '', keys: [], overrides: [], inputs: {} });
+        var devcfg = reactive({ loading: false, savingKey: '', keys: [], overrides: [], inputs: {}, pick: {}, pickVal: {} });
+        // 覆盖只从设备台账里选（川哥 2026-09-03：不手输 SN）；台账来自设备接入 tab 同一接口
+        function devcfgDeviceOptions() {
+          var list = (deviceData.devices || []).slice().sort(function (a, b) {
+            var sa = a.status === 'active' ? 0 : 1, sb = b.status === 'active' ? 0 : 1;
+            return sa - sb || String(a.note || '').localeCompare(String(b.note || ''), 'zh');
+          });
+          return list.map(function (d) { return { sn: d.sn, label: (d.note || '未备注') + ' · ' + d.sn + (d.status === 'active' ? '' : '（' + d.status + '）') }; });
+        }
+        function devcfgDeviceLabel(sn) {
+          var d = (deviceData.devices || []).find(function (x) { return x.sn === sn; });
+          return d && d.note ? d.note + ' · ' + sn : sn;
+        }
         function devcfgUnit(k) { return k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : ''); }
         function devcfgSpec(key) { for (var i = 0; i < devcfg.keys.length; i++) if (devcfg.keys[i].key === key) return devcfg.keys[i]; return null; }
         function devcfgOverridesFor(k) { return devcfg.overrides.filter(function (o) { return o.key === k.key; }); }
@@ -4074,9 +4091,14 @@
             var j = await deviceApi('/api/admin/device-config', { method: 'GET' });
             devcfg.keys = j.keys || [];
             devcfg.overrides = j.overrides || [];
-            var inputs = {};
-            devcfg.keys.forEach(function (k) { inputs[k.key] = k.global !== null ? k.global : k.builtin_default; });
+            var inputs = {}, pickVal = Object.assign({}, devcfg.pickVal);
+            devcfg.keys.forEach(function (k) {
+              inputs[k.key] = k.global !== null ? k.global : k.builtin_default;
+              if (pickVal[k.key] === undefined) pickVal[k.key] = inputs[k.key];
+            });
             devcfg.inputs = inputs;
+            devcfg.pickVal = pickVal;
+            if (!(deviceData.devices || []).length) loadDevices();
           } catch (e) { ElementPlus.ElMessage.error('设备配置加载失败'); }
           devcfg.loading = false;
         }
@@ -4099,15 +4121,14 @@
           }).catch(function () {});
         }
         function addDevcfgOverride(k) {
-          ElementPlus.ElMessageBox.prompt('输入设备 SN（BJP003 开头 20 位）', '添加设备覆盖 · ' + (k.label || k.key), { inputPlaceholder: 'BJP003…' }).then(function (r) {
-            var sn = String(r.value || '').trim();
-            if (!/^BJP003\d{14}$/.test(sn)) { ElementPlus.ElMessage.warning('SN 格式不符'); return; }
-            devcfgPromptValue(k, '覆盖 ' + sn, k.global !== null ? k.global : k.builtin_default, function (v) {
-              deviceApi('/api/admin/device-config/sn/' + sn, { method: 'PUT', body: JSON.stringify({ key: k.key, value: v }) }).then(function (j) {
-                if (j.ok) { ElementPlus.ElMessage.success('已设覆盖'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
-              });
-            });
-          }).catch(function () {});
+          var sn = devcfg.pick[k.key];
+          if (!sn) { ElementPlus.ElMessage.warning('先在台账里选一台设备'); return; }
+          var v = Number(devcfg.pickVal[k.key]);
+          if (!devcfgValid(k, v)) { ElementPlus.ElMessage.warning(devcfgRangeMsg(k)); return; }
+          devcfg.savingKey = 'ov:' + k.key;
+          deviceApi('/api/admin/device-config/sn/' + sn, { method: 'PUT', body: JSON.stringify({ key: k.key, value: v }) }).then(function (j) {
+            if (j.ok) { ElementPlus.ElMessage.success('已设覆盖 ' + devcfgDeviceLabel(sn)); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+          }).catch(function () { ElementPlus.ElMessage.error('失败'); }).finally(function () { devcfg.savingKey = ''; });
         }
         function editDevcfgOverride(o) {
           var k = devcfgSpec(o.key);
@@ -6318,7 +6339,7 @@
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
-          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
+          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,
