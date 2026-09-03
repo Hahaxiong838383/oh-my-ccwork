@@ -386,7 +386,7 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
             nickname: profile.nickname,
             birthday: profile.birthday,
             gender: profile.gender,
-            interests: profile.interests.map((i) => ({ value: i.value })),
+            interests: profile.interests.map((i) => ({ value: i.value, state: i.state ?? 'unverified', evidence: i.evidence ?? '', mention_days: i.mention_days ?? [], retracted_by: i.retracted_by ?? '' })),
             preferred_address: profile.preferred_address,
             recent_emotion: profile.recent_emotion,
             game_progress: profile.game_progress.map((g) => ({ value: g.value })),

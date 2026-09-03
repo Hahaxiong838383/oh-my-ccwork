@@ -1,4 +1,4 @@
-import { isSameInterest, normalizeInterestValue, profileStore, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
+import { isSameInterest, normalizeInterestValue, profileStore, activeInterests, cstDay, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
 import { memoryItemStore, type NewMemoryItem } from './memory-item-store.js';
 import { checkRenameCandidate, clipText, isValidNickname } from './rename-gate.js';
 import { dislikeSubject, isFreshDislikeStatement, parseRelikes, type Relike } from './dislike-undo.js';
@@ -24,7 +24,7 @@ export const EXTRACT_SYSTEM = // 导出仅供诊断探针/单测复用（2026-08
   '严格输出 JSON（没有任何更新就输出 {}）：\n' +
   '{\n' +
   '  "nickname_change": {"value":"新称呼≤12字","evidence":"孩子表达改称呼意图的那句话（照抄对话里孩子消息的连续片段，≤60字）"} —— 孩子要求改变【小可对自己的称呼】时填，口语说法都算（如「以后叫我XX」「叫我XX」「你可以叫我XX」「我叫XX」「别叫我A了叫我B」「给我换个称呼叫XX」「我的名字叫XX」）。孩子呼喊别人（「哎XX」）、转述别人怎么叫自己（「他们都叫我XX」）、叫别人来（「我叫妈妈来」）、开玩笑起外号，都【绝不算】改名，此时省略整个字段。多次改名以最后一次为准,\n' +
-  '  "interests": ["孩子明确表达喜欢/热爱的（如恐龙、奥特曼），否则省略。与已知兴趣同义/仅写法不同的不要输出；孩子表达过不喜欢/讨厌/不想聊的内容绝不能作为兴趣"],\n' +
+  '  "interests": [{"value":"孩子明确表达喜欢/热爱的东西（用孩子自己的词，如恐龙、奥特曼）","evidence":"照抄孩子那句话的连续片段（≤40字，必须包含 value 这个词）"}] —— 只抽孩子亲口说喜欢/最爱/想要的；已知兴趣再次被明确提到也要输出（用于确认）；孩子表达过不喜欢/讨厌/不想聊的内容绝不能作为兴趣；没有则省略,\n' +
   '  "personality_notes": "明显的性格观察（谨慎，否则省略）",\n' +
   '  "recent_emotion": "近期情绪锚点（如「考试没考好难过」，否则省略）",\n' +
   '  "game_progress": ["孩子明确表达的【方舟冒险游戏】进展/经历（如「通关了恐龙星域」「打捞到机械恐龙宝箱」「生态缸长出星光草」），只抽孩子自己明确说做到/经历的，不臆测、不把一次性闲聊当进展，否则省略"],\n' +
@@ -71,7 +71,7 @@ export async function extractMemoryUpdate(
   if (!history.length) return null;
   const convo = history.map((t) => `${t.role === 'user' ? '孩子' : '小可'}: ${t.content}`).join('\n');
   const known =
-    `已知画像：昵称=${current.nickname || '未知'}，兴趣=${current.interests.map((i) => i.value).join('/') || '无'}` +
+    `已知画像：昵称=${current.nickname || '未知'}，兴趣=${activeInterests(current.interests).map((i) => i.value).join('/') || '无'}` +
     `，方舟进展=${current.game_progress.map((g) => g.value).join('/') || '无'}`;
   const raw = await callExtractLlm(`${known}\n\n对话数据：\n"""\n${convo}\n"""`);
   if (!raw) return null;
@@ -109,21 +109,27 @@ export function parsePatch(raw: string, current: FamilyMember, history: ChatTurn
     }
   }
 
-  // 兴趣：只返回新增项（current 没有的），合并在 updateMemoryFields 写时做。
+  // 兴趣（R1 证据化，2026-09-03）：LLM 交 {value, evidence}，服务端硬门——evidence 必须是孩子消息的真实
+  // 连续子串且归一后包含 value；已知兴趣再次被提到也返回（appendInterests 按提及日累计，≥2 天升 verified）。
+  // 裸字符串（旧 schema）无证据 → 不收（兴趣污染治理从事后清洗升级为写入门）。
   if (Array.isArray(obj.interests) && obj.interests.length) {
     const now = nowMs();
-    const seen = new Set(current.interests.map((i) => i.value));
+    const userTexts = history.filter((t) => t.role === 'user').map((t) => t.content);
     const added: InterestItem[] = [];
+    let rejected = 0;
     for (const v of obj.interests) {
-      if (typeof v === 'string') {
-        const val = clip(v, 20);
-        if (val && !seen.has(val)) {
-          seen.add(val);
-          added.push({ value: val, confidence: 0.7, last_updated: now, source: 'voice' });
-        }
-      }
+      const o = v && typeof v === 'object' ? (v as { value?: unknown; evidence?: unknown }) : null;
+      const val = o && typeof o.value === 'string' ? clip(o.value, 20) : '';
+      const ev = o && typeof o.evidence === 'string' ? clip(o.evidence, 40) : '';
+      if (!val) { if (typeof v === 'string') rejected += 1; continue; }
+      const evReal = ev.length >= 2 && userTexts.some((t) => t.includes(ev));
+      const nv = normalizeInterestValue(val);
+      if (!evReal || !nv || !normalizeInterestValue(ev).includes(nv)) { rejected += 1; continue; }
+      if (added.some((i) => isSameInterest(i.value, val))) continue;
+      added.push({ value: val, confidence: 0.5, last_updated: now, source: 'voice', evidence: ev, state: 'unverified', mention_days: [cstDay(now)] });
     }
-    if (added.length) patch.interests = added; // 仅新增项
+    if (rejected) console.log(`[memory] 兴趣候选无证据/证据不符被拒 ${rejected} 项`);
+    if (added.length) patch.interests = added;
   }
 
   // 方舟冒险事件：同 interests，只返回新增项（current 没有的），合并/截断在 updateMemoryFields 写时做。
@@ -369,7 +375,7 @@ export async function extractAll(
     ? ctx.activePromises.map((p, i) => `p${i + 1}=「${p.content}」`).join('，')
     : '无';
   const known =
-    `已知画像：昵称=${current.nickname || '未知'}，兴趣=${current.interests.map((i) => i.value).join('/') || '无'}` +
+    `已知画像：昵称=${current.nickname || '未知'}，兴趣=${activeInterests(current.interests).map((i) => i.value).join('/') || '无'}` +
     `，方舟进展=${current.game_progress.map((g) => g.value).join('/') || '无'}` +
     `\n已知不喜欢（relikes 只填这里面孩子【本轮】改口说喜欢的）：${
       ctx.activeDislikes?.length ? ctx.activeDislikes.map(dislikeSubject).join('/') : '无'
@@ -459,8 +465,8 @@ export function applyRelikes(acctId: string, relikes: Relike[], current: FamilyM
       });
       console.log(`[memory] account=${acctId} 撤回不喜欢 ${JSON.stringify(d.content)} evidence=${JSON.stringify(r.evidence)}`);
     }
-    const dup = current.interests.some((i) => isSameInterest(i.value, r.value)) || out.some((i) => isSameInterest(i.value, r.value));
-    if (!dup) out.push({ value: r.value, confidence: 0.7, last_updated: now, source: 'voice' });
+    const dup = activeInterests(current.interests).some((i) => isSameInterest(i.value, r.value)) || out.some((i) => isSameInterest(i.value, r.value));
+    if (!dup) out.push({ value: r.value, confidence: 0.5, last_updated: now, source: 'voice', evidence: r.evidence, state: 'unverified', mention_days: [cstDay(now)] });
   }
   return out;
 }
@@ -600,6 +606,15 @@ export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], se
       }
     }
     if (patch) {
+      // R1：兴趣指回 conversation.id（含证据原话的那条孩子消息；无 id 按原话反查）
+      if (patch.interests?.length) {
+        for (const it of patch.interests) {
+          if (it.source_msg_id || !it.evidence) continue;
+          const host = snapshot.find((t) => t.role === 'user' && t.content.includes(it.evidence!));
+          if (!host) continue;
+          it.source_msg_id = host.id ?? (() => { try { return conversationStore.findRecentIdByText(acctId, 'user', host.content) ?? ''; } catch { return ''; } })();
+        }
+      }
       // dislike 对撞（方案 B）：新兴趣写入前与该账号既有「不喜欢」条目归一对撞，命中即拦
       if (patch.interests?.length) {
         const dislikes = memoryItemStore.listActiveDislikes(acctId).map((d) => d.content);

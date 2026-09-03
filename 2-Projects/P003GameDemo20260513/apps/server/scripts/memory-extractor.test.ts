@@ -30,17 +30,17 @@ const cur: FamilyMember = {
 }
 // 3. 兴趣：只返回新增项（合并下沉到 updateMemoryFields 写时，防并发 lost update — team#1）
 {
-  const p = parsePatch('{"interests":["奥特曼"]}', cur);
-  assert.ok(p && p.interests && p.interests.length === 1, '只返回新增项(奥特曼)');
+  const p = parsePatch('{"interests":[{"value":"奥特曼","evidence":"我最喜欢奥特曼"}]}', cur, [U('我最喜欢奥特曼了')]);
+  assert.ok(p && p.interests && p.interests.length === 1, '有证据的新兴趣(奥特曼)');
   assert.equal(p.interests[0].value, '奥特曼', '新增项 value');
   assert.equal(p.interests[0].source, 'voice', '带 source');
   console.log('✅ 3 兴趣只返回新增项(合并下沉写时)');
 }
 // 4. 已有兴趣不重复 → 无更新
 {
-  const p = parsePatch('{"interests":["恐龙"]}', cur);
-  assert.equal(p, null, '已有兴趣不重复 → null');
-  console.log('✅ 4 已有兴趣不重复');
+  const p = parsePatch('{"interests":[{"value":"恐龙","evidence":"我喜欢恐龙"}]}', cur, [U('我喜欢恐龙')]);
+  assert.ok(p && p.interests && p.interests.length === 1, 'R1：已有兴趣再次提及也返回(供提及日累计升 verified)');
+  console.log('✅ 4 已有兴趣再次提及返回(确认用)');
 }
 // 5. 空 {} → null
 {

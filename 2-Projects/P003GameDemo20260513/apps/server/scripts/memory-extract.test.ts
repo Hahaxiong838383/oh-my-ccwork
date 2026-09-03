@@ -75,7 +75,7 @@ const p3 = parsePatch(raw('阿川', '我想改名叫阿川'), CUR, [U('我想改
 eq('nk-14 「我想改名叫X」过', p3?.nickname, '阿川');
 
 // ── 其他字段不受门影响 ──
-const p4 = parsePatch(JSON.stringify({ interests: ['恐龙'] }), CUR, [U('我喜欢恐龙')]);
+const p4 = parsePatch(JSON.stringify({ interests: [{ value: '恐龙', evidence: '我喜欢恐龙' }] }), CUR, [U('我喜欢恐龙')]);
 eq('nk-15 兴趣链路不受影响', p4?.interests?.[0]?.value, '恐龙');
 
 console.log(`\nmemory-extract tests: pass=${pass} fail=${fail}`);

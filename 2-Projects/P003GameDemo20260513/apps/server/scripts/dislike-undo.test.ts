@@ -62,7 +62,7 @@ profileStore.updateMemoryFields(ACCT, { interests: [{ value: '恐龙', confidenc
 memoryItemStore.addItems(ACCT, [{ type: 'preference', content: '不喜欢恐龙', session_id: 's', source_role: 'user' }]);
 profileStore.removeInterest(ACCT, '恐龙');
 eq('d-1 不喜欢 active', memoryItemStore.listActiveDislikes(ACCT).length, 1);
-eq('d-2 兴趣已删', profileStore.getProfile(ACCT)?.interests.length, 0);
+eq('d-2 兴趣已撤回(active 视图为空)', profileStore.getProfile(ACCT)?.interests.filter((i) => (i.state ?? 'unverified') !== 'retracted').length, 0);
 eq('d-3 单向门基线：再抽到恐龙被拦', filterInterestsAgainstDislikes([{ value: '恐龙', confidence: 0.7, last_updated: 1, source: 'voice' }], ['不喜欢恐龙']).length, 0);
 
 // 撤回：孩子本轮说「我又喜欢恐龙了」
@@ -74,7 +74,7 @@ eq('d-3 单向门基线：再抽到恐龙被拦', filterInterestsAgainstDislikes
   const active = memoryItemStore.listActiveDislikes(ACCT).map((d) => d.content);
   eq('d-6 对撞不再拦', filterInterestsAgainstDislikes(readd, active).length, 1);
   profileStore.updateMemoryFields(ACCT, { interests: readd });
-  eq('d-7 兴趣加回', profileStore.getProfile(ACCT)?.interests.map((i) => i.value), ['恐龙']);
+  eq('d-7 兴趣加回(复活为 active)', profileStore.getProfile(ACCT)?.interests.filter((i) => (i.state ?? 'unverified') !== 'retracted').map((i) => i.value), ['恐龙']);
   const led = growthLedgerStore.list(ACCT, { module: 'profile', dimension: 'dislike' });
   eq('d-8 记账 explicit_relike', led.map((e) => e.rule), ['explicit_relike']);
 }
@@ -91,7 +91,7 @@ eq('d-3 单向门基线：再抽到恐龙被拦', filterInterestsAgainstDislikes
   eq('d-10 陈旧 dislike 不复活', revivePreferences(ACCT, stale, '我们聊聊别的吧'), 0);
   eq('d-11 UNIQUE 阻止重插', memoryItemStore.addItems(ACCT, stale), 0);
   eq('d-12 不喜欢仍撤回状态', memoryItemStore.listActiveDislikes(ACCT).length, 0);
-  eq('d-13 兴趣仍在', profileStore.getProfile(ACCT)?.interests.map((i) => i.value), ['恐龙']);
+  eq('d-13 兴趣仍在', profileStore.getProfile(ACCT)?.interests.filter((i) => (i.state ?? 'unverified') !== 'retracted').map((i) => i.value), ['恐龙']);
 }
 // 孩子本轮又明确说不喜欢 → 复活
 {

@@ -157,5 +157,21 @@ seed([
   eq('d-4 到期核对规则句', p.includes('带「到期核对」的约定'), true);
 }
 
+// ── R1 注入分级：verified 进「兴趣」，unverified 进「还没确认」+ 规则句 ──
+{
+  const ACC4 = 'device-RPTEST0004';
+  profileStore.upsertBasics(ACC4, { nickname: '小四', gender: '女' });
+  profileStore.updateMemoryFields(ACC4, { interests: [
+    { value: '恐龙', confidence: 0.8, last_updated: 1, source: 'voice', state: 'verified', mention_days: ['2026-09-01', '2026-09-02'] },
+    { value: '画画', confidence: 0.5, last_updated: 2, source: 'voice', state: 'unverified', mention_days: ['2026-09-03'] },
+    { value: '冷光', confidence: 0.5, last_updated: 3, source: 'voice', state: 'retracted', retracted_by: 'parent', mention_days: ['2026-09-03'] },
+  ] });
+  const p = assembleSystemPrompt('BASE', null, { accountId: ACC4, role: 'device' } as never, null, null, null, null, null, { skipInjectReceipt: true });
+  eq('t-1 verified 进兴趣行', p.includes('兴趣：恐龙'), true);
+  eq('t-2 unverified 进还没确认行', p.includes('最近提到过(还没确认是不是真喜欢)：画画'), true);
+  eq('t-3 retracted 不注入', p.includes('冷光'), false);
+  eq('t-4 还没确认规则句', p.includes('绝不主动说"我知道你喜欢X"'), true);
+}
+
 console.log(`\nrecall-provenance tests: pass=${pass} fail=${fail} tmp=${tmp}`);
 if (fail > 0) process.exit(1);

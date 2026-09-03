@@ -1,4 +1,4 @@
-import { profileStore, type FamilyMember } from './profile-store.js';
+import { profileStore, interestState, type FamilyMember } from './profile-store.js';
 import { memoryItemStore, type MemoryItem } from './memory-item-store.js';
 import {
   relationStateStore, personaInjectEnabled, personaStyleEnabled, personaInsightEnabled,
@@ -106,7 +106,8 @@ function buildChildMemoryBlock(
   let gender = sanitizeField(meta?.gender);
   let age = sanitizeField(meta?.age);
   // P1.3 画像增强字段（仅登录用户从 profile 拿，匿名 meta 没有这些）。
-  let interests: string[] = [];
+  let interests: string[] = []; //          verified（≥2 天提及）
+  let unverifiedInterests: string[] = []; // R1：单次提及，只能顺着孩子接，不主动说「我知道你喜欢」
   let preferredAddress = '';
   let recentEmotion = '';
   let gameProgress: string[] = [];
@@ -122,7 +123,8 @@ function buildChildMemoryBlock(
       const profileAge = ageFromBirthday(p.birthday);
       if (profileAge) age = profileAge;
       // P1.3 语音抽取沉淀的画像（兴趣/称呼偏好/近期情绪）也注入，让小可真正「懂这个孩子」。
-      interests = p.interests.map((i) => sanitizeField(i.value)).filter(Boolean).slice(0, 5);
+      interests = p.interests.filter((i) => interestState(i) === 'verified').map((i) => sanitizeField(i.value)).filter(Boolean).slice(0, 5);
+      unverifiedInterests = p.interests.filter((i) => interestState(i) === 'unverified').map((i) => sanitizeField(i.value)).filter(Boolean).slice(-3);
       preferredAddress = sanitizeField(p.preferred_address);
       recentEmotion = sanitizeField(p.recent_emotion);
       // docs/25 问题4：方舟冒险事件记忆（game_progress），注入最近 3 条让小可记得共同经历。
@@ -137,6 +139,7 @@ function buildChildMemoryBlock(
   if (age) parts.push(`年龄：${age}`);
   if (gender) parts.push(`性别：${gender}`);
   if (interests.length) parts.push(`兴趣：${interests.join('、')}`);
+  if (unverifiedInterests.length) parts.push(`最近提到过(还没确认是不是真喜欢)：${unverifiedInterests.join('、')}`);
   if (recentEmotion) parts.push(`近期：${recentEmotion}`);
   if (gameProgress.length) parts.push(`方舟经历：${gameProgress.join('、')}`);
 
@@ -260,6 +263,7 @@ function buildChildMemoryBlock(
     '这些背景资料(【】标记的区块、"关于这个孩子"等)是你的内部记忆,绝不在回复里逐字复述这些标记、标题或原文——用自己的话自然带出。' +
     addressDirective +
     (reunion ? '重逢开场可以自然提一句上次聊到的事(最多一次,不复述原话,孩子不接就放下)。' : '') +
+    (unverifiedInterests.length ? '「还没确认」的兴趣只在孩子自己提起时顺着接,绝不主动说"我知道你喜欢X"。' : '') +
     '自然体现,不生硬罗列;同一件事近期提过就别反复讲。' +
     (episodic && episodic.hasPromises
       ? '约定:仅当某条未兑现约定与当前时机相关(约定时间=今天/已过期,或孩子主动提起)才自然兑现;不确定时绝不声称"我答应过";也别轻易许下新约定。' +

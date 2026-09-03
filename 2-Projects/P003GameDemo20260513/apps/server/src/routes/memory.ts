@@ -40,7 +40,7 @@ memoryRoute.get('/', (c) => {
         nickname: member.nickname,
         birthday: member.birthday,
         gender: member.gender,
-        interests: member.interests.map((i) => ({ value: i.value })),
+        interests: member.interests.map((i) => ({ value: i.value, state: i.state ?? 'unverified', evidence: i.evidence ?? '' })),
       }
     : null;
   const { items, archived_emotion_count } = memoryItemStore.listByAccount(accountId);
@@ -103,8 +103,21 @@ memoryRoute.delete('/interest/:value', (c) => {
   } catch {
     // 非法编码时用原值兜底,不抛 500
   }
-  const removed = profileStore.removeInterest(c.get('accountId'), value);
+  const removed = profileStore.deleteInterest(c.get('accountId'), value);
   return c.json({ ok: true, removed });
+});
+
+// R1 家长否决（2026-09-03）：软撤回 + 标记 parent，之后同名兴趣不再被语音抽取升格（区别于 DELETE 的物理删）。
+memoryRoute.post('/interest/:value/veto', (c) => {
+  const raw = c.req.param('value');
+  let value = raw;
+  try {
+    value = decodeURIComponent(raw);
+  } catch {
+    // 非法编码时用原值兜底
+  }
+  const vetoed = profileStore.vetoInterest(c.get('accountId'), value);
+  return c.json({ ok: true, vetoed });
 });
 
 // 面板用户删除:归属校验版物理删(儿童数据删除权)。越权(别人的 id)→ deleted=false,数据不动。
