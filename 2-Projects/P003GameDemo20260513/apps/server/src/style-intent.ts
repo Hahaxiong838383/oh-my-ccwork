@@ -21,6 +21,16 @@ export type ApplyResult = { outcome: ApplyOutcome; key: StyleIntentKey; reason?:
 export const VOICE_STYLE_COOLDOWN_MS = 10 * 60_000;
 export const VOICE_STYLE_DAILY_MAX = 3;
 
+/** 防抖参数（川哥 2026-09-03 拍板 10min/日 3 次为默认）；联调期可用 env 临时放宽，测完删键+restart 回默认。 */
+export function voiceStyleLimits(): { cooldownMs: number; dailyMax: number } {
+  const c = Number(process.env.STYLE_VOICE_COOLDOWN_MS);
+  const d = Number(process.env.STYLE_VOICE_DAILY_MAX);
+  return {
+    cooldownMs: Number.isFinite(c) && c >= 0 && process.env.STYLE_VOICE_COOLDOWN_MS !== undefined ? c : VOICE_STYLE_COOLDOWN_MS,
+    dailyMax: Number.isFinite(d) && d >= 1 ? d : VOICE_STYLE_DAILY_MAX,
+  };
+}
+
 export function styleVoiceMode(): StyleVoiceMode {
   const v = (process.env.STYLE_VOICE_MODE ?? 'observe').trim().toLowerCase();
   return v === 'off' || v === 'execute' ? v : 'observe';
@@ -116,15 +126,16 @@ export function applyVoiceStyle(
     console.log(`[style-intent] suppressed ${tag} reason=same_template`);
     return { outcome: 'suppressed', key: hit.key, reason: 'same_template' };
   }
+  const limits = voiceStyleLimits();
   const last = lastSwitchAt.get(accountId) ?? 0;
-  if (now - last < VOICE_STYLE_COOLDOWN_MS) {
+  if (now - last < limits.cooldownMs) {
     console.log(`[style-intent] suppressed ${tag} reason=cooldown since_ms=${now - last}`);
     return { outcome: 'suppressed', key: hit.key, reason: 'cooldown' };
   }
   const day = shanghaiDay(now);
   const dc = dailyCount.get(accountId);
   const n = dc && dc.day === day ? dc.n : 0;
-  if (n >= VOICE_STYLE_DAILY_MAX) {
+  if (n >= limits.dailyMax) {
     console.log(`[style-intent] suppressed ${tag} reason=daily_cap n=${n}`);
     return { outcome: 'suppressed', key: hit.key, reason: 'daily_cap' };
   }

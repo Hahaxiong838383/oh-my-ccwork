@@ -88,5 +88,22 @@ ok('par-2 账本 rule 仍 parent_style_template', growthLedgerStore.list(ACC2, {
 traitStore.setTemplate(ACC2, 'default', { source: 'voice', quote: '恢复原来' });
 eq('par-3 语音恢复默认=模板清空', traitStore.getTemplate(ACC2), null);
 
+// ── 防抖 env 放宽（联调期）：冷却 0 + 日上限 10 → 连续切档不被拦 ──
+{
+  const { voiceStyleLimits } = await import('../src/style-intent.js');
+  process.env.STYLE_VOICE_COOLDOWN_MS = '0';
+  process.env.STYLE_VOICE_DAILY_MAX = '10';
+  eq('env-1 放宽读到', voiceStyleLimits(), { cooldownMs: 0, dailyMax: 10 });
+  const ACC3 = 'device-BJP00326060100009997';
+  const T1 = 1_800_000_000_000;
+  eq('env-2 连续两次不同档均 executed', [
+    applyVoiceStyle(ACC3, detectStyleIntent('说少一点')!, 'x', 'execute', T1).outcome,
+    applyVoiceStyle(ACC3, detectStyleIntent('搞笑一点')!, 'x', 'execute', T1 + 1000).outcome,
+  ], ['executed', 'executed']);
+  delete process.env.STYLE_VOICE_COOLDOWN_MS;
+  delete process.env.STYLE_VOICE_DAILY_MAX;
+  eq('env-3 删键回默认', voiceStyleLimits(), { cooldownMs: VOICE_STYLE_COOLDOWN_MS, dailyMax: VOICE_STYLE_DAILY_MAX });
+}
+
 console.log(`\nstyle-intent tests: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);

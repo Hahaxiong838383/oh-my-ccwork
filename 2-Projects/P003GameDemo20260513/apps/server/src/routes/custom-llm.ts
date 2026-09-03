@@ -5,6 +5,7 @@ import { buildAiLiteracyGuide } from '../ai-literacy.js';
 import { getDevicePromptConfig, buildDeviceBase, deviceAddendum, deviceIntentProtocol, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
 import { detectStyleIntent, applyVoiceStyle } from '../style-intent.js';
+import { personaTraitEnabled } from '../relation-state-store.js';
 import { curriculumKG } from '../curriculum-kg.js';
 import { companionKG } from '../companion-kg.js';
 import { createGeminiLlmClient, type ChatHistoryTurn } from '../providers/gemini-llm.js';
@@ -107,7 +108,8 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 语音调档 S1 快路（Phase A，2026-09-03）：仅设备账号真实轮；命中即处置（observe 只记 / execute 切档）——
   // 必须在 assembleSystemPrompt 之前，切了本轮 prompt 就读到新档；policy 行让小可先答应一句。
   let voiceStylePolicy = '';
-  if (authContext?.role === 'device' && !overridePrompt && !isFeedback && userText.trim()) {
+  // 范围=人格名单（personaTraitEnabled：PERSONA_TRAIT_ENABLED + PERSONA_STATE_ACCOUNT_ALLOWLIST），与方案 §二 S3 canary 一致
+  if (authContext?.role === 'device' && !overridePrompt && !isFeedback && userText.trim() && personaTraitEnabled(authContext.accountId)) {
     const styleHit = detectStyleIntent(userText);
     if (styleHit) {
       const applied = applyVoiceStyle(authContext.accountId, styleHit, userText);
