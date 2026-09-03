@@ -310,3 +310,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 3. 发布锚（store 层即可，无需设备凭据）：`getState().revision`、`listActive()` 逐槽计数与去重 bytes、`buildManifest()` 两次 JSON 相等 + sha256 指纹、抽检 `readAudio()` 的 RIFF/WAVE 头 + sha256==item.sha256（=file 端点 ETag）。探针**不带** `applied_revision`。
 4. 端侧受控同步由 codex 触发；对撞 `[local-audio] manifest sn=****XXXX revision=N applied=N` + `file … 200` 计数。通过后 `PAUSED=0` + 重启 → 其余账号在沪时 3 点档自动出新套。
 5. **上限 5MiB 是合同不是配置**：Android parser 硬门 + 12MiB 双 revision 预算，server 单边提额=端侧整套拒收静默用旧套；提额必须双端同版本+重做包级 M0。
+
+## 语音调档（孩子说一句切风格档，2026-09-03 Phase A）
+- 键：`.env.local` `STYLE_VOICE_MODE=off|observe|execute`（默认 observe；改后 `pm2 restart`）。词表/处置在 `src/style-intent.ts`；防抖 10min/日 3 次进程内（重启清零只放宽一次）。
+- 锚：`pm2 logs p003-voice | grep '\[style-intent\]'`（observed/executed/suppressed，不带原话）；账本 rule `child_voice_style`（admin 成长 tab 时间线 🔵）；GET style-template 的 `source`。
+- 测试：`NODE_OPTIONS=--experimental-sqlite npx tsx scripts/style-intent.test.ts`（语料改了必跑）。词表增删：只收「关于小可说话方式」的显式形态，内容诉求（讲个笑话）不进；含糊句留 S2。
