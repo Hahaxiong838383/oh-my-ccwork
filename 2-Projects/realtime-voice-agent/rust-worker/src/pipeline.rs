@@ -31,7 +31,7 @@ use tracing::{info, warn};
 
 use crate::contract::Contract;
 use crate::candidate::{CandidateSlot, is_silent_result};
-use crate::say_defer::DeferredSay;
+use crate::say_defer::{success_reply_silent, DeferredSay};
 use crate::control;
 use crate::eot::{EOT_MAX_SAMPLES, EotClient, UNLIKELY_THRESHOLD_ZH};
 use crate::filler::FillerBank;
@@ -200,6 +200,8 @@ struct PendingCmd {
     sent_at: Instant,
     /// accepted 已播「好的，正在调整」(只播一次,终态还会再播终句)
     accepted_acked: bool,
+    /// 命令来源 lane("L1" 快路 / "L2" 慢路):成功句是否静默按它判(say_defer::success_reply_silent)
+    lane: &'static str,
 }
 
 /// Worker 等 result 的兜底超时(合同缺口,守恒默认 8s——交接文档待 codex 确认;
@@ -1165,8 +1167,13 @@ impl Orchestrator {
             relative,
             sent_at: Instant::now(),
             accepted_acked: false,
+            lane,
         });
-        self.set_state(AgentState::Thinking);
+        // L1 路调用前已 hard_abort(无在播轮)→Thinking 照旧;L2 路回复仍在播→保持 Speaking
+        // (否则向 Android 误发 speaking:false、急停白名单与打断判定全失效,2026-09-03 复盘)
+        if self.agent_turn.is_none() {
+            self.set_state(AgentState::Thinking);
+        }
     }
 
     /// 2b:LLM 慢路意图落主循环。门序在 device_intent::l2_gate(纯函数);通过则以 L2 lane
@@ -1242,8 +1249,14 @@ impl Orchestrator {
         }
         let relative = p.relative;
         let action = p.action;
-        let reply = device_reply(&r.status, relative, &r.reason, action);
+        let lane = p.lane;
         self.pending_cmd = None;
+        if success_reply_silent(&r.status, lane, self.agent_turn.is_some()) {
+            info!(room = %self.room_name, lane, reason = %r.reason,
+                  "device success reply skipped (LLM reply in flight already acknowledged)");
+            return;
+        }
+        let reply = device_reply(&r.status, relative, &r.reason, action);
         self.say_after_current(reply);
     }
 

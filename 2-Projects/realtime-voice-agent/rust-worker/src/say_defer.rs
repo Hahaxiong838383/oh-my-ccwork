@@ -32,6 +32,13 @@ impl DeferredSay {
     }
 }
 
+/// 2026-09-03 口径（川哥拍板，回执 A 增量提案）：成功态短句在慢路回复之后显迟且重复——
+/// `succeeded` 且命令来自 L2（LLM 回复本身已认领动作）且 result 到达时回复仍在播 → 不追加成功句（灯已变 + 回复已说）；
+/// 失败 / 边界 / already_applied / 超时 仍追加（必须纠正 LLM 的乐观回复）；L1 快路无 LLM 回复，成功句照播。
+pub fn success_reply_silent(status: &str, lane: &str, turn_in_flight: bool) -> bool {
+    status == "succeeded" && lane == "L2" && turn_in_flight
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -45,6 +52,16 @@ mod tests {
         assert!(d.is_some());
         assert_eq!(d.take_on_played_out(), Some("好，调了一点".into()));
         assert_eq!(d.take_on_played_out(), None, "取一次即清");
+    }
+
+    #[test]
+    fn success_silent_only_for_l2_with_reply_in_flight() {
+        assert!(success_reply_silent("succeeded", "L2", true), "慢路成功且回复在播=静默");
+        assert!(!success_reply_silent("succeeded", "L2", false), "回复已播完/被打断=照说");
+        assert!(!success_reply_silent("succeeded", "L1", true), "快路无 LLM 回复=照说");
+        for st in ["already_applied", "rejected", "failed", "timeout"] {
+            assert!(!success_reply_silent(st, "L2", true), "{st} 必须追加纠正");
+        }
     }
 
     #[test]
