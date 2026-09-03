@@ -317,3 +317,5 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - 测试：`NODE_OPTIONS=--experimental-sqlite npx tsx scripts/style-intent.test.ts`（语料改了必跑）。词表增删：只收「关于小可说话方式」的显式形态，内容诉求（讲个笑话）不进；含糊句留 S2。
 - **admin 加子页/枚举值的纪律**（2026-09-03 成长页串台实证）：新子页的加载要同时挂进 `selectBrainDevice`（点选设备）与 `refreshBrainTab`（顶部刷新）两处派发；切换先 `resetGrowthView()` 类清旧视图再拉，宁可短暂空白不要安静错着。
 - **语音调档实测判据**：看状态不看回复——`[style-intent] executed` + `trait_template.source=voice` + 账本 `child_voice_style`；LLM 会替漏召回的意图口头答应（「那就多聊两句」），回复内容不作证据。
+- **admin API 真通道 E2E（不登录浏览器）**：脚本必须放 `/opt/p003/server/scripts/_cc_xxx.mts`（放 /tmp 解析不到 `hono` 等包），内建 `new Hono()` 挂 `authRoute`+`adminDataRoute`，用 `--env-file=.env.local` 的 `STUDIO_USER/PASS` 走 `/api/auth/login` 拿 token（凭据只在进程内，不打印），再 `app.request` 打管理端点；用完 `rm`。mock 单测（`HOTWORD_CHANNEL_MOCK`）管形状，这条管真通道。
+- **forced-command 脚本改动 SOP**：真源 `feat/rust-worker:…/rust-worker/ops/apply_hotwords.py` → `py_compile` + 正则自检 → scp 到 64.90 `.new.py` → 远端 `py_compile` 后 mv 覆盖（先 `.bak-<date>-<tag>`）→ 从 aliyun-hk 用真 key `echo '{"action":"race_get"}' | ssh -i /root/.ssh/hotword-apply-key root@64.90.13.117 apply` 验只读动作 + 未知 action 仍拒。
