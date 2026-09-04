@@ -259,6 +259,22 @@ pub fn l2_gate(
     Ok(())
 }
 
+/// 2026-09-04(川哥拍板):慢路标记被 `not_in_batch` 压制时追加的固定纠正句——LLM 回复常自称「已经调好」
+/// 而这条标签其实没执行(003 实证「画面调到5米」→ LLM 说「画面离远些啦」但什么都没发生)。
+/// **只纠正、不教词表原句**:TTS 念出词表句会被 Android KWS / 本机 ASR 当成新命令(8-27 命令词禁入门同理),
+/// 句子不得含任何别名(单测拿整张别名表对撞)。
+pub const L2_FALLBACK_HINT: &str = "这个我暂时还不能这样调，你换个更直接的说法再试试";
+
+/// 纠正句门(纯函数):只在 `not_in_batch` + 快路没在途(否则快路正在做同一件事) + 有 trace(设备房) 时给。
+/// execute_off / 能力缺失 / unknown_label / fast_path_hit / no_trace / multi_label 一律不提示。
+/// 调用方已在 `l2_execute_on` 门后(仅 EXECUTE 名单内设备),非 canary 设备行为零变化。
+pub fn l2_fallback_hint(reason: &str, label: u32, fast_path_pending: bool, has_trace: bool) -> Option<&'static str> {
+    if reason != "not_in_batch" || fast_path_pending || !has_trace || !known_label(label) {
+        return None;
+    }
+    Some(L2_FALLBACK_HINT)
+}
+
 pub fn known_label(label: u32) -> bool {
     table().map.values().any(|(l, _, _)| *l == label)
 }
@@ -707,5 +723,35 @@ mod tests {
         assert_eq!(l2_gate(true, true, 6, false, false), Err("no_trace"));
         assert_eq!(l2_gate(true, true, 6, false, true), Ok(()), "全门通过");
         assert_eq!(l2_gate(true, true, 24, false, true), Ok(()), "中性光在第一批");
+    }
+
+    /// 2026-09-04:纠正句只在 not_in_batch + 快路没在途 + 设备房;其余压制原因一律不提示。
+    #[test]
+    fn l2_fallback_hint_only_for_not_in_batch_on_device_room() {
+        assert_eq!(l2_fallback_hint("not_in_batch", 35, false, true), Some(L2_FALLBACK_HINT), "虚像最远在第二批");
+        assert_eq!(l2_fallback_hint("not_in_batch", 3, false, true), Some(L2_FALLBACK_HINT), "关灯在第二批也纠正");
+        assert_eq!(l2_fallback_hint("not_in_batch", 35, true, true), None, "快路在途=快路已在做,不纠正");
+        assert_eq!(l2_fallback_hint("not_in_batch", 35, false, false), None, "无 trace=非设备房");
+        assert_eq!(l2_fallback_hint("not_in_batch", 999, false, true), None, "未知标签");
+        for r in ["execute_off", "android_capability_missing", "unknown_label", "fast_path_hit", "no_trace", "multi_label", ""] {
+            assert_eq!(l2_fallback_hint(r, 35, false, true), None, "{r} 不提示");
+        }
+    }
+
+    /// 纠正句会被 TTS 念出、再被本机 ASR / Android KWS 听到:含任何别名=自触发命令。整张别名表对撞。
+    #[test]
+    fn l2_fallback_hint_contains_no_device_alias() {
+        assert!(match_command(L2_FALLBACK_HINT).is_none(), "整句不得命中命令");
+        let norm = normalize(L2_FALLBACK_HINT);
+        assert!(!norm.is_empty());
+        let mut checked = 0;
+        for alias in table().map.keys() {
+            checked += 1;
+            assert!(!norm.contains(alias.as_str()), "纠正句含别名「{alias}」");
+        }
+        assert!(checked >= 200, "别名表未加载({checked})——对撞等于没做");
+        // 负锚:判据本身有区分力(含别名的句子必须被同一判据抓到)
+        let bad = normalize("这个我暂时还不能这样调，你直接说虚像调到最远就可以啦");
+        assert!(table().map.keys().any(|a| bad.contains(a.as_str())), "负锚:含别名句必须被抓到");
     }
 }

@@ -265,6 +265,32 @@ pub struct DeviceResult {
     pub semantic_label: u64,
     pub status: String,
     pub reason: String,
+    /// v217+ 增量透传(2026-09-04):payload 里 semantic_label/action/status/reason 之外的键
+    /// (规范化读数/来源/image_distance_boundary_conflict/observed_state…)紧凑 JSON,截 400 字符。
+    /// 只进日志对撞(`device command result … extra=`),不参与任何判定;老 APK 无增量键=空串。
+    pub extra: String,
+}
+
+/// result payload 增量键透传(见 DeviceResult.extra):剔除已知键后为空 → ""。
+pub fn device_result_extra(payload: &Value) -> String {
+    const KNOWN: [&str; 4] = ["semantic_label", "action", "status", "reason"];
+    let Some(obj) = payload.as_object() else {
+        return String::new();
+    };
+    let m: serde_json::Map<String, Value> = obj
+        .iter()
+        .filter(|(k, _)| !KNOWN.contains(&k.as_str()))
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+    if m.is_empty() {
+        return String::new();
+    }
+    let s = Value::Object(m).to_string();
+    if s.chars().count() > 400 {
+        s.chars().take(400).collect()
+    } else {
+        s
+    }
 }
 
 pub fn parse_device_result(raw: &[u8]) -> Option<DeviceResult> {
@@ -280,6 +306,7 @@ pub fn parse_device_result(raw: &[u8]) -> Option<DeviceResult> {
         semantic_label: p["semantic_label"].as_u64().unwrap_or(0),
         status: p["status"].as_str()?.to_string(),
         reason: p["reason"].as_str().unwrap_or("").to_string(),
+        extra: device_result_extra(p),
     })
 }
 
@@ -646,5 +673,29 @@ mod tests {
         let r = parse_device_result(raw2.as_bytes()).unwrap();
         assert_eq!(r.lane, "L2");
         assert_eq!(r.reason, "candidate_conflict");
+    }
+
+    /// 2026-09-04:v217+ result 增量键(规范化读数/来源/冲突标记)原样进 extra 供双端对撞;老包为空;超长截 400。
+    #[test]
+    fn device_result_extra_passthrough_for_v217_fields() {
+        let raw = r#"{"trace_id":"r","type":"device.command.result","ts_ms":1,"lane":"L1",
+            "src":"android","idempotency_key":"voice:r:3:35",
+            "payload":{"semantic_label":35,"action":"virtual_image_farthest","status":"rejected","reason":"boundary_reached",
+            "image_distance_boundary_conflict":true,"image_distance_raw":120,"image_distance_source":"mcu_boundary_conflict"}}"#;
+        let r = parse_device_result(raw.as_bytes()).unwrap();
+        assert!(r.extra.contains("\"image_distance_boundary_conflict\":true"), "{}", r.extra);
+        assert!(r.extra.contains("\"image_distance_raw\":120"), "{}", r.extra);
+        assert!(r.extra.contains("\"image_distance_source\":\"mcu_boundary_conflict\""), "{}", r.extra);
+        assert!(!r.extra.contains("\"status\""), "已知键不重复进 extra: {}", r.extra);
+        assert_eq!(r.status, "rejected", "增量键不影响既有字段");
+        let old = r#"{"trace_id":"r","type":"device.command.result","ts_ms":1,
+            "src":"android","idempotency_key":"voice:r:3:2",
+            "payload":{"semantic_label":2,"action":"led_on","status":"succeeded","reason":"state_confirmed"}}"#;
+        assert_eq!(parse_device_result(old.as_bytes()).unwrap().extra, "", "老 APK 无增量键=空串");
+        let big = format!(
+            r#"{{"trace_id":"r","type":"device.command.result","ts_ms":1,"src":"android","idempotency_key":"k","payload":{{"semantic_label":2,"status":"succeeded","blob":"{}"}}}}"#,
+            "x".repeat(1000)
+        );
+        assert_eq!(parse_device_result(big.as_bytes()).unwrap().extra.chars().count(), 400, "截 400 字符");
     }
 }

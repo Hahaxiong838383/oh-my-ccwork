@@ -419,17 +419,41 @@ fn device_reply(status: &str, relative: bool, reason: &str, action: &str) -> Str
         "already_applied" => "现在已经是这个状态了".to_string(),
         "rejected" => {
             if reason.contains("boundary") {
-                if action.contains("up") || action.contains("max") || action.contains("farther") {
-                    "已经到最高了".to_string()
-                } else {
-                    "已经到最低了".to_string()
-                }
+                boundary_reply(action)
             } else {
                 "现在暂时不能这样调".to_string()
             }
         }
         // failed/timeout/未知状态统一失败句(守恒:未知不冒充成功)
         _ => "刚刚没有调成功，再试一次吧".to_string(),
+    }
+}
+
+/// 边界句按动作族措辞(2026-09-04 003 实证:`virtual_image_farthest` 不含 "farther",曾落到「已经到最低了」)。
+/// 族由动作名前缀定(虚像 远/近、亮度 亮/暗、色温 暖/冷、音量 大/小、升降 高/低);
+/// 方向词 `_up`/max/farth/warm=上限,down/min/near/cool/cold=下限;辨不出方向=中性到头句(不冒充方向)。
+fn boundary_reply(action: &str) -> String {
+    let up = action.contains("_up") || action.contains("max") || action.contains("farth") || action.contains("warm");
+    let down = action.contains("down")
+        || action.contains("min")
+        || action.contains("near")
+        || action.contains("cool")
+        || action.contains("cold");
+    let (hi, lo) = if action.starts_with("virtual_image") {
+        ("已经到最远了", "已经到最近了")
+    } else if action.starts_with("brightness") {
+        ("已经是最亮了", "已经是最暗了")
+    } else if action.starts_with("color_temperature") {
+        ("已经是最暖了", "已经是最冷了")
+    } else if action.starts_with("volume") {
+        ("已经是最大声了", "已经是最小声了")
+    } else {
+        ("已经到最高了", "已经到最低了")
+    };
+    match (up, down) {
+        (true, false) => hi.to_string(),
+        (false, true) => lo.to_string(),
+        _ => "已经调到头了".to_string(),
     }
 }
 
@@ -1188,6 +1212,14 @@ impl Orchestrator {
             self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace,
         ) {
             info!(room = %self.room_name, label, reason, "llm device intent suppressed");
+            // 2026-09-04(川哥拍板):不在首批的标签被压制时,LLM 回复常已自称「调好了」(003「画面调到5米」实证)
+            // → 固定纠正句追加在回复之后(say_after_current);不教词表原句(TTS 念出=自触发风险)。
+            if let Some(hint) =
+                crate::device_intent::l2_fallback_hint(reason, label, fast_path_pending, has_trace)
+            {
+                info!(room = %self.room_name, label, reason, "llm device intent fallback hint queued");
+                self.say_after_current(hint.to_string());
+            }
             return;
         }
         let Some(mut cmd) = crate::device_intent::command_by_label(label) else {
@@ -1226,6 +1258,7 @@ impl Orchestrator {
             status = %r.status,
             reason = %r.reason,
             lane = %r.lane,
+            extra = %r.extra,
             result_received_ts_ms = unix_ms_now(),
             "device command result"
         );
@@ -2412,6 +2445,22 @@ mod device_turn_tests {
         assert_eq!(device_reply("rejected", false, "whitelist", "led_on"), "现在暂时不能这样调");
         assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_up_step"), "已经到最高了");
         assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_down_step"), "已经到最低了");
+        // 2026-09-04:边界句按动作族(003 实证 farthest 曾念「最低」)
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "virtual_image_farthest"), "已经到最远了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "virtual_image_farther_step"), "已经到最远了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "virtual_image_nearest"), "已经到最近了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "virtual_image_nearer_step"), "已经到最近了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "brightness_down"), "已经是最暗了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "brightness_up"), "已经是最亮了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "brightness_max"), "已经是最亮了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "brightness_min"), "已经是最暗了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "color_temperature_warmer"), "已经是最暖了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "color_temperature_cooler"), "已经是最冷了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "volume_up_5"), "已经是最大声了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "volume_down_5_min_5"), "已经是最小声了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "motor_max"), "已经到最高了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "motor_min"), "已经到最低了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "color_temperature_normal"), "已经调到头了", "辨不出方向不冒充");
         assert_eq!(device_reply("failed", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
         assert_eq!(device_reply("timeout", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
         assert_eq!(device_reply("weird_status", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
