@@ -37,6 +37,8 @@ export const PCK_FLAG_REL_FILEBASE = 1 << 1;
 export const PCK_FLAG_SPARSE_BUNDLE = 1 << 2;
 export const PCK_FILE_ENCRYPTED = 1 << 0;
 export const PCK_FILE_REMOVAL = 1 << 1;
+/** 4.6+ 增量补丁条目（需要基包才能还原内容，服务端无法审核）→ 拒。 */
+export const PCK_FILE_DELTA = 1 << 2;
 export const PCK_MANIFEST_PATH_DEFAULT = 'res://pck/g1_content_manifest.json';
 /** 首期禁止的扩展（代码 / 原生 / shader）——合同 §3.8 + CC J0 补充口径。 */
 export const PCK_FORBIDDEN_EXT = [
@@ -77,6 +79,12 @@ export function pckMaxBytes(): number {
   // 仅测试覆盖（生产不设此 env）：合同硬上限 32MiB 不动
   const o = Number(process.env.PCK_MAX_BYTES_OVERRIDE || 0);
   return o > 0 ? o : PCK_MAX_BYTES;
+}
+
+/** 目录路径归一：Godot 4.6.1 导出的 V3 包目录里路径**不带** `res://`（"pck/x.json"），4.4 导出带；manifest 匹配两边都剥掉前缀再比。
+ *  （2026-09-04 codex 真包实证：manifest 正文写 `res://pck/...`，目录条目是 `pck/...`，原来的全等比较抽不到 required_resources。） */
+export function normalizePckPath(path: string): string {
+  return path.replace(/^res:\/\//, '').replace(/^\.\//, '');
 }
 
 export function forbiddenExt(path: string): string | null {
@@ -160,6 +168,7 @@ export async function inspectPck(path: string, manifestPath = process.env.PCK_MA
     const paths: string[] = [];
     const forbidden: string[] = [];
     let manifest: PckEntry | null = null;
+    const manifestNorm = normalizePckPath(manifestPath);
     for (let i = 0; i < fileCount; i++) {
       const sl = await r.u32();
       if (sl > MAX_PATH_LEN) throw new PckInspectError('bad_path', `路径长度 ${sl} 异常`);
@@ -172,11 +181,12 @@ export async function inspectPck(path: string, manifestPath = process.env.PCK_MA
       await r.take(16); // md5
       const flags = await r.u32();
       if (flags & PCK_FILE_ENCRYPTED) throw new PckInspectError('file_encrypted', `文件已加密：${p}`);
+      if (flags & PCK_FILE_DELTA) throw new PckInspectError('file_delta_unsupported', `增量补丁条目无法审核：${p}`);
       if (!(flags & PCK_FILE_REMOVAL)) {
         if (fileBase + ofs + size > st.size) throw new PckInspectError('bad_offset', `文件越界：${p}`);
         const bad = forbiddenExt(p);
         if (bad) forbidden.push(p);
-        if (p === manifestPath) manifest = { path: p, ofs, size, flags };
+        if (normalizePckPath(p) === manifestNorm) manifest = { path: p, ofs, size, flags };
       }
       if (paths.length < MAX_PATHS_KEPT) paths.push(p);
     }

@@ -32,7 +32,7 @@ const { otaDeviceRoute, otaAdminRoute } = await import('../src/routes/ota.js');
 const { pckDeviceRoute, PCK_ASSET_PREFIX } = await import('../src/routes/ota-pck.js');
 const { pckStore } = await import('../src/pck-store.js');
 const { otaStore } = await import('../src/ota-store.js');
-const { buildPck, PCK_FLAG_SPARSE_BUNDLE } = await import('../src/pck-inspect.js');
+const { buildPck, PCK_FLAG_SPARSE_BUNDLE, PCK_FILE_DELTA } = await import('../src/pck-inspect.js');
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 
 let pass = 0, fail = 0;
@@ -300,6 +300,19 @@ const REL1 = pckStore.listReleases()[0].id;
   const v3ext = buildPck([{ path: 'res://art/a.png', data: Buffer.from('x') }, { path: 'res://scripts/hack.gdc', data: Buffer.from('bin') }], { version: 3 });
   const re = await upload(v3ext, { content_version: 'v3-badext-1' });
   eq('v3-8 V3 禁扩展门照常', [re.status, re.json.error], [400, 'forbidden_content']);
+  // Godot 4.6.1 真包形态：目录路径不带 res:// 前缀，manifest 正文却写 res://（2026-09-04 实证 required_resources 抽空）
+  const V3_NOPREFIX = buildPck([
+    { path: 'pck/g1_content_manifest.json', data: manifest },
+    { path: 'pck/g1_art_inventory.json', data: Buffer.from('{"files":[]}') },
+    { path: '.godot/imported/x.ctex', data: Buffer.from('CTEX'.repeat(50)) },
+  ], { version: 3, godot: [4, 6, 1] });
+  const rn = await upload(V3_NOPREFIX, { content_version: 'v3-noprefix-1', product_models: MODEL, min_launcher_version_code: '217' });
+  eq('v3-11 目录无 res:// 前缀仍抽到 manifest', [rn.status, rn.json.facts.manifest_found, rn.json.release.required_resources], [200, true, ['res://pck/g1_content_manifest.json', 'res://art/a.png']]);
+  eq('v3-12 无前缀路径的禁扩展照拒', (await upload(buildPck([{ path: 'scripts/hack.gd', data: Buffer.from('x') }], { version: 3 }), { content_version: 'v3-noprefix-bad' })).json.error, 'forbidden_content');
+  const delta = buildPck([{ path: 'pck/a.png', data: Buffer.from('x'.repeat(30)) }], { version: 3, fileFlags: PCK_FILE_DELTA });
+  const rdl = await upload(delta, { content_version: 'v3-delta-1' });
+  eq('v3-13 增量补丁条目拒', [rdl.status, rdl.json.error], [400, 'file_delta_unsupported']);
+  eq('v3-14 清理无前缀草稿', (await admin('DELETE', `/releases/${rn.json.release.id}`)).status, 200);
   const v2again = await upload(GOOD, { content_version: 'v2-still-ok-1' });
   eq('v3-9 V2 仍可上传（回归锚）', [v2again.status, v2again.json.facts.pack_version], [200, 2]);
   eq('v3-10 清理 V3/V2 草稿', [(await admin('DELETE', `/releases/${r.json.release.id}`)).status, (await admin('DELETE', `/releases/${v2again.json.release.id}`)).status], [200, 200]);
