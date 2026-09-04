@@ -5653,8 +5653,21 @@ dev198 是中文 locale，`diff -rq` 输出「只在…中存在」「文件…�
 而控制面**只 rsync `control-plane/` 子树**，`/srv/h-control/control-plane/server.mjs` 根本不存在。
 
 ⚠️ **本 skill 上文那条 `node --test test/*.test.mjs && systemctl restart h-control` 是坏配方**
-——`&&` 永远等不到 0，照抄等于永不重启。正确做法：**跑之前先在旧版本（站外备份目录）跑一遍做对照组**，
-失败集合相同即环境性失败，手动重启；新增的红必须逐条归因到"同族"才放行。
+——`&&` 永远等不到 0，照抄等于永不重启。
+
+**2026-09-04 更正：那 5 条恒失败已有正解，不必再跑对照组。** 线上带 `H_CONTROL_SUBTREE_TEST=1`
+即可全绿（实测 329/329，exit=0）——这个开关的语义就是「**我正跑在控制面子树里**」，
+那几条测试据此改用子树语义断言（例如断言 `../lib/schedule-runner.mjs` 应当 ENOENT）。
+
+```bash
+# 线上（/srv/h-control/app）——先落文件再断言，别把 grep 接进闸门
+ssh aliyun-hk 'cd /srv/h-control/app && H_CONTROL_SUBTREE_TEST=1 node --test test/*.test.mjs > /tmp/h-control-test.txt 2>&1; echo "exit=$?"'
+```
+
+⚠️ **方向别用反（2026-09-04 实撞）**：这个开关只在**线上子树**为真。在**本地全仓**带上它，
+等于骗测试说自己在子树里，而 `../lib/schedule-runner.mjs` 明明存在 → `Missing expected rejection`
+**假红**。本地跑一律**不带**，线上跑一律**带**。两边都会红，但红的原因相反，
+只看「红了」会把方向判反。
 
 ### 部署后唯一能证明新分支跑过的东西：healthz 新字段
 
@@ -6742,3 +6755,68 @@ confirmed sends=N` / `delivery missing, rerun once` / `delivery failed after rer
    的 && 绑的是 grep 的退出码（命中即 0），**测试失败拦不住重启**。当天真发生：
    328/329 带着 1 fail 直接 restart 了（幸而那条是存量环境红）。要摘要就先落文件：
    `H_CONTROL_SUBTREE_TEST=1 node --test test/*.test.mjs > /tmp/t.txt 2>&1 && systemctl restart h-control; grep -E "^# (pass|fail)" /tmp/t.txt`
+
+---
+
+## 全平台「零回复」普查（2026-09-04 立，杨平反馈那次）
+
+用户报「说了要输出、内容却是空的」时，**别只查那一个人**——先做全平台普查，
+分类之后才知道他撞的是哪一类。这次 82 次零回复分属 7 类，杨平一个人就占了 3 类。
+
+### 判据在哪：`traces/*/*.jsonl` 的 `task_end.replyChars`
+
+```bash
+# 每租户零回复统计（只读机制层字段，不碰 prompt/reply 正文）
+ssh dev198 'python3 -' <<'PY'
+import json, glob, os
+for d in sorted(glob.glob("/srv/h-platform/users/*/traces")):
+    uid = d.split("/")[4]; tot = 0; zero = []
+    for day in sorted(os.listdir(d)):
+        if day < "2026-08-01": continue
+        for f in glob.glob(os.path.join(d, day, "*.jsonl")):
+            for line in open(f, encoding="utf8", errors="replace"):
+                try: j = json.loads(line.strip())
+                except Exception: continue
+                if j.get("type") != "task_end": continue
+                tot += 1
+                if j.get("replyChars") == 0:
+                    u = j.get("usage") or {}
+                    zero.append((j.get("ts","")[:16], u.get("output"), u.get("turns"), str(j.get("error"))[:60]))
+    if tot: print("%-16s ends=%-5d zero=%d" % (uid, tot, len(zero)))
+PY
+```
+
+### ⚠️ 两个会把结论带偏的坑（都实撞过）
+
+1. **别用 `task-session-log.v1.jsonl` 的 `task_completed.replyChars` 做普查**——
+   零回复任务的终态是 `task_failed` / `task_cancelled`，**天然不在 `task_completed` 里**。
+   我第一轮就是这么扫的，全平台 0 命中、最小值 5，差点据此回答「没有这个现象」。
+   这是「在错误的子集上做存在性普查」：全集阳性掩盖子集阴性。
+   **`traces` 的 `task_end` 才覆盖全部终态。**
+
+2. **`usage.output` 才是「模型到底干没干活」的判据**，不是 `durationMs`。
+   典型样本：跑 8.2 分钟、32 轮、产出 19587 output token，`replyChars=0`——
+   模型全程在调工具，最终文本没落笔就被中断。这类叫 WASTED，
+   和「刚起步就挂」（out_tok<500）必须分开看，处置完全不同。
+
+### 错误文本的噪声前缀会骗人
+
+`grok exit 1: Memory flush started.\nMemory flush skipped: ...` ——
+`Memory flush` **不是根因**，真错误在后面（`reqwest error stream: error sending
+request for url (https://api.x.ai/v1/responses)` = 传输断流）。归类一律**按子串匹配，
+别锚行首**。同理 `Session ID ... already in use` 多半是**上一次失败的残留**（派生错误），
+根因在它前面那次。
+
+### 分类与处置（v1.67.0 起有代码支撑）
+
+| 错误特征 | 类 | 处置 |
+|---|---|---|
+| `reqwest error stream` / `error sending request for url` | network | 已纳入重试闸门；用户看人话文案 |
+| `stopped by user` | stopped | 用户主动停，不告警 |
+| `403 personal-team-blocked:spending-limit` | provider_quota | 额度耗尽，让用户充值（8-12 杨平那次） |
+| `bwrap: Can't find source path` | — | grok 升级后 downloads 路径变了，全平台性 |
+| `Couldn't set model 'grok-4.6'` | — | 额度耗尽→拉不到模型池→钉定模型被判非法 |
+
+告警：非用户主动停 + 零产出 → owner 单聊卡（`bridge.mjs` 零回复告警块）。
+完整 usage 在 **runner-worker 侧** trace 的 `zero reply` 日志行——
+worker 是独立进程、**没有飞书 client**，别想在那儿发卡。
