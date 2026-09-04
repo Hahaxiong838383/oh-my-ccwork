@@ -67,6 +67,8 @@ export type PckFacts = {
   /** 内嵌 manifest 抽出的 required_resources（无 manifest / 无该键 = []） */
   required_resources: string[];
   manifest_found: boolean;
+  /** 内嵌 manifest 的 content_version（无 manifest / 无该键 = null）；上传门要求它等于描述符版本（v220 端侧 manifest_identity_mismatch 同源） */
+  manifest_content_version: string | null;
 };
 
 export class PckInspectError extends Error {
@@ -193,15 +195,17 @@ export async function inspectPck(path: string, manifestPath = process.env.PCK_MA
 
     let required: string[] = [];
     let manifestFound = false;
+    let manifestContentVersion: string | null = null;
     if (manifest && manifest.size <= MAX_MANIFEST_BYTES) {
       const buf = Buffer.alloc(manifest.size);
       await fh.read(buf, 0, manifest.size, fileBase + manifest.ofs);
       try {
-        const j = JSON.parse(buf.toString('utf8')) as { required_resources?: unknown };
+        const j = JSON.parse(buf.toString('utf8')) as { required_resources?: unknown; content_version?: unknown };
         manifestFound = true;
         if (Array.isArray(j.required_resources)) {
           required = j.required_resources.filter((x): x is string => typeof x === 'string' && x.startsWith('res://') && x.length <= 512).slice(0, 500);
         }
+        if (typeof j.content_version === 'string' && j.content_version.length <= 64) manifestContentVersion = j.content_version;
       } catch {
         manifestFound = false;
       }
@@ -218,6 +222,7 @@ export async function inspectPck(path: string, manifestPath = process.env.PCK_MA
       forbidden,
       required_resources: required,
       manifest_found: manifestFound,
+      manifest_content_version: manifestContentVersion,
     };
   } finally {
     await fh.close();

@@ -243,13 +243,13 @@ class PckStore {
   }
 
   /** 草稿期元数据可改（字节不可改）。 */
-  updateMeta(id: number, m: Partial<Pick<PckRelease, 'product_models' | 'min_launcher_version_code' | 'required_resources' | 'release_notes' | 'force'>>): boolean {
+  updateMeta(id: number, m: Partial<Pick<PckRelease, 'product_models' | 'min_launcher_version_code' | 'required_resources' | 'release_notes' | 'force' | 'rollback_of'>>): boolean {
     const cur = this.getRelease(id);
     if (!cur || cur.status !== 'draft') return false;
     const next = { ...cur, ...m };
     const r = this.db
-      .prepare(`UPDATE pck_release SET product_models = ?, min_launcher_version_code = ?, required_resources = ?, release_notes = ?, force = ?, updated_at = ? WHERE id = ? AND status = 'draft'`)
-      .run(next.product_models, next.min_launcher_version_code, next.required_resources, next.release_notes, next.force, Date.now(), id);
+      .prepare(`UPDATE pck_release SET product_models = ?, min_launcher_version_code = ?, required_resources = ?, release_notes = ?, force = ?, rollback_of = ?, updated_at = ? WHERE id = ? AND status = 'draft'`)
+      .run(next.product_models, next.min_launcher_version_code, next.required_resources, next.release_notes, next.force, next.rollback_of ?? null, Date.now(), id);
     return Number(r.changes) > 0;
   }
 

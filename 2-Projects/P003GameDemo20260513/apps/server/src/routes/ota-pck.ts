@@ -178,7 +178,7 @@ export function resolveContentUpdate(sn: string, launcherVersionCode: number, st
 const NOT_FOR_THIS_DEVICE = new Set(['sn_not_in_rollout', 'model_mismatch', 'launcher_too_old']);
 
 /** 合同 §5.2 八条（1 Bearer=SN 与 8 冻结在外层）；返回空串=合格。 */
-export function eligibilityReason(r: PckRelease & { rollout: { policy: string; sns: string } }, sn: string, launcherVersionCode: number, state: ContentState): string {
+export function eligibilityReason(r: PckRelease & { rollout: { policy: string; sns: string; updated_at: number } }, sn: string, launcherVersionCode: number, state: ContentState): string {
   if (r.rollout.policy === 'sns' && !parseSns(r.rollout.sns).includes(sn)) return 'sn_not_in_rollout';
   if (r.rollout.policy === 'none') return 'no_rollout';
   const models = jsonArr(r.product_models);
@@ -186,6 +186,11 @@ export function eligibilityReason(r: PckRelease & { rollout: { policy: string; s
   if (launcherVersionCode < r.min_launcher_version_code) return 'launcher_too_old';
   if (state.active_content_version === r.content_version) return 'same_version';
   if (state.pending_content_version === r.content_version) return 'pending_same';
+  // 回滚熔断（F2 竞态）：设备上报 rolled_back 的那个版本，对这台设备不再下发——上报与再次 check 只隔十几秒，
+  // 人工撤回赶不上；撤回 release 仍要做，只是不再和设备赛跑。边界：运营方之后显式 publish/resume 了该版本
+  // （rollout.updated_at 晚于回滚上报）即解除——「再推一次」是人的决定，不由旧回滚记录永久封死。
+  const rbAt = rolledBackVersions(sn, state).get(r.content_version);
+  if (rbAt !== undefined && rbAt > r.rollout.updated_at) return 'rolled_back_by_device';
   // 身份门（2026-09-04 codex §8）：候选序号 ≤ 现役序号 = 旧发布，不下发；降级必须走更高序号的 rollback revision。
   // 现役版本服务端不认识/未编号（历史遗留）时不拦——门只在两边都有序号时生效，避免把老设备锁死。
   if (state.active_content_version && r.release_sequence !== null) {
@@ -204,6 +209,21 @@ export function eligibilityReason(r: PckRelease & { rollout: { policy: string; s
 
 function statSyncSafe(p: string): number | null {
   try { return statSync(p).size; } catch { return null; }
+}
+
+/** 设备最近一次 rolled_back 涉及的版本 → 服务端收到时刻（from/to 两个字段都算，剔除现役——现役是被恢复的那个）。 */
+function rolledBackVersions(sn: string, state: ContentState): Map<string, number> {
+  const out = new Map<string, number>();
+  const raw = pckStore.getDevice(sn)?.last_rollback_json;
+  if (!raw) return out;
+  try {
+    const rb = JSON.parse(raw) as { from_version?: unknown; to_version?: unknown; server_received_ms?: unknown };
+    const at = typeof rb.server_received_ms === 'number' ? rb.server_received_ms : Number.MAX_SAFE_INTEGER;
+    for (const v of [rb.from_version, rb.to_version]) {
+      if (typeof v === 'string' && v && v !== state.active_content_version) out.set(v, at);
+    }
+  } catch { /* 坏 JSON 视为无回滚记录 */ }
+  return out;
 }
 
 // ───────────────────────── J3-F1 窄 500 注入开关（内存态，进程重启即清） ─────────────────────────
@@ -409,6 +429,13 @@ pckAdminRoute.put('/upload', async (c) => {
     console.warn(`[pck] upload rejected forbidden=${facts.forbidden.length}`);
     return c.json({ ok: false, error: 'forbidden_content', message: `含代码/原生扩展，首期只允许非执行内容：${facts.forbidden.slice(0, 5).join('、')}${facts.forbidden.length > 5 ? '…' : ''}`, forbidden: facts.forbidden.slice(0, 50) }, 400);
   }
+  // 身份门（2026-09-04 codex 审计）：内嵌 manifest 的 content_version 必须等于描述符版本，否则端侧 manifest_identity_mismatch 必拒；
+  // 同字节改名的「回滚 revision」正是这类畸形包，入口就挡掉。无 manifest / manifest 无该键的包不受此门约束。
+  if (facts.manifest_content_version !== null && facts.manifest_content_version !== contentVersion) {
+    await unlink(tmpPath).catch(() => {});
+    console.warn(`[pck] upload rejected manifest_identity_mismatch descriptor=${contentVersion} embedded=${facts.manifest_content_version}`);
+    return c.json({ ok: false, error: 'manifest_identity_mismatch', message: `包内嵌 manifest 的 content_version=${facts.manifest_content_version} 与描述符 ${contentVersion} 不一致；回滚/修复请重新构建自洽包` }, 400);
+  }
   // 不可变：同 content_id+content_version 已存在 → 同 SHA=重复，不同 SHA=违规，都拒
   const dup = pckStore.getByVersion(contentId, contentVersion);
   if (dup) {
@@ -463,6 +490,8 @@ const MetaSchema = z.object({
   required_resources: z.array(z.string().max(512)).max(500).optional(),
   release_notes: z.array(z.string().max(500)).max(20).optional(),
   force: z.boolean().optional(),
+  /** 回滚语义（2026-09-04 改）：对一份已上传且内嵌 manifest 自洽的草稿标记「它是 #N 的回滚」→ transition_kind=rollback；null 清除 */
+  rollback_of: z.number().int().positive().nullable().optional(),
 });
 
 pckAdminRoute.patch('/releases/:id', async (c) => {
@@ -474,12 +503,17 @@ pckAdminRoute.patch('/releases/:id', async (c) => {
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request', message: parsed.error.issues[0]?.message }, 400);
   const m = parsed.data;
   if (m.required_resources?.some((x) => !x.startsWith('res://'))) return c.json({ ok: false, error: 'bad_required', message: 'required_resources 须以 res:// 开头' }, 400);
+  if (typeof m.rollback_of === 'number') {
+    const target = pckStore.getRelease(m.rollback_of);
+    if (!target || target.id === id) return c.json({ ok: false, error: 'bad_rollback_of', message: 'rollback_of 须指向另一条已存在的 release' }, 400);
+  }
   pckStore.updateMeta(id, {
     ...(m.product_models ? { product_models: JSON.stringify([...new Set(m.product_models)]) } : {}),
     ...(m.min_launcher_version_code !== undefined ? { min_launcher_version_code: m.min_launcher_version_code } : {}),
     ...(m.required_resources ? { required_resources: JSON.stringify(m.required_resources) } : {}),
     ...(m.release_notes ? { release_notes: JSON.stringify(m.release_notes) } : {}),
     ...(m.force !== undefined ? { force: m.force ? 1 : 0 } : {}),
+    ...(m.rollback_of !== undefined ? { rollback_of: m.rollback_of } : {}),
   });
   return c.json({ ok: true, release: view(pckStore.getRelease(id)!) });
 });
@@ -561,37 +595,12 @@ pckAdminRoute.post('/releases/:id/revoke', (c) => {
   return c.json({ ok: true, release: view(pckStore.getRelease(id)!) });
 });
 
-const RollbackSchema = z.object({ content_version: z.string().regex(VERSION_RE), notes: z.string().max(500).optional().default('') });
-
-/** 用该版本已验证字节建新 revision（合同 §9.3）：同 SHA、新 content_version、草稿态；发布走常规 publish。 */
-pckAdminRoute.post('/releases/:id/rollback', async (c) => {
-  const id = Number.parseInt(c.req.param('id'), 10);
-  const src = pckStore.getRelease(id);
-  if (!src) return c.json({ ok: false, error: 'not_found' }, 404);
-  const parsed = RollbackSchema.safeParse(await c.req.json().catch(() => ({})));
-  if (!parsed.success) return c.json({ ok: false, error: 'bad_version', message: 'content_version 不合法' }, 400);
-  if (pckStore.getByVersion(src.content_id, parsed.data.content_version)) return c.json({ ok: false, error: 'duplicate', message: '该 content_version 已存在' }, 409);
-  const size = statSyncSafe(src.file_path);
-  if (size !== src.length) return c.json({ ok: false, error: 'file_inconsistent' }, 409);
-  const rel = pckStore.insertRelease({
-    content_id: src.content_id,
-    content_version: parsed.data.content_version,
-    product_models: src.product_models,
-    min_launcher_version_code: src.min_launcher_version_code,
-    length: src.length,
-    sha256: src.sha256,
-    file_path: src.file_path,
-    required_resources: src.required_resources,
-    release_notes: JSON.stringify([parsed.data.notes || `rollback from #${src.id} ${src.content_version}`]),
-    force: 0,
-    status: 'draft',
-    rollback_of: src.id,
-    godot_version: src.godot_version,
-    file_count: src.file_count,
-  });
-  console.log(`[pck] rollback revision ${rel.content_version} (release#${rel.id}) from #${src.id} ${src.content_version}`);
-  return c.json({ ok: true, release: view(rel) });
-});
+/**
+ * 已停用（2026-09-04 codex 审计）：原「同字节换 content_version」的回滚 revision 会让描述符与包内嵌 manifest 的版本不一致，
+ * v220 端侧 manifest_identity_mismatch 必拒。回滚现在 = 上传一份内嵌 manifest 自洽的新包（端侧构建）+ PATCH rollback_of 标记。
+ */
+pckAdminRoute.post('/releases/:id/rollback', (c) =>
+  c.json({ ok: false, error: 'relabel_rollback_retired', message: '同字节改名的回滚已停用（端侧身份校验必拒）；请上传自洽的新包后 PATCH {rollback_of:<id>}' }, 410));
 
 pckAdminRoute.delete('/releases/:id', async (c) => {
   const id = Number.parseInt(c.req.param('id'), 10);

@@ -10,6 +10,7 @@
  *  - 文件接口：401 / 坏名 404 / 仅草稿 404 / 200 全量(sha 对撞) / HEAD / Range 206 / 越界 416 / 暂停仍可读 / 撤回 410 / xaccel 头
  *  - publish 前重算：字节被改 → 409；rollback 建新 revision 同 SHA；APK 与 PCK 账本分账；草稿删除不误删共享字节
  *  - 身份门(2026-09-04)：publish 分配 release_sequence 严格递增；content_update 带 release_sequence/transition_kind；≤ 现役序号不下发；回填幂等
+ *  - 回滚语义(2026-09-04 codex 审计)：改名式 /rollback 410；上传门拒内嵌 manifest 版本≠描述符；PATCH rollback_of 标记自洽新包；rolled_back 上报即对该机熔断
  *  - J3-F1 注入开关：admin 武装 → 该 sha 文件 500（鉴权在前）→ 首次命中后 recover_after 自动恢复 → 状态/清除
  */
 import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -241,14 +242,21 @@ const REL1 = pckStore.listReleases()[0].id;
   // 元数据只在草稿可改
   const meta = await admin('PATCH', `/releases/${d.id}`, { force: true });
   eq('meta-1 已发布不可改', meta.status, 400);
-  // rollback：用 REL1 字节建新 revision
-  const rk = await admin('POST', `/releases/${REL1}/rollback`, { content_version: 'v216-rollback-v214-1' });
-  eq('rb-1 回滚版=草稿+同 SHA+rollback_of', [rk.status, rk.json.release.status, rk.json.release.sha256, rk.json.release.rollback_of], [200, 'draft', GOOD_SHA, REL1]);
-  const m2 = await admin('PATCH', `/releases/${rk.json.release.id}`, { release_notes: ['回滚到 v214 字节'], min_launcher_version_code: 212 });
-  eq('meta-2 草稿可改', [m2.status, m2.json.release.release_notes], [200, ['回滚到 v214 字节']]);
+  // rollback（2026-09-04 codex 审计后改）：同字节改名接口停用 410；回滚 = 上传内嵌 manifest 自洽的新包 + PATCH rollback_of
+  eq('rb-0 改名式 rollback 接口 410', (await admin('POST', `/releases/${REL1}/rollback`, { content_version: 'v216-rollback-v214-1' })).status, 410);
+  const RB_PACK = buildPck([
+    { path: 'res://pck/g1_content_manifest.json', data: Buffer.from(JSON.stringify({ content_version: 'v216-rollback-v214-1', required_resources: ['res://pck/g1_content_manifest.json'] })) },
+    { path: 'res://art/rb.png', data: Buffer.from('RB'.repeat(100)) },
+  ]);
+  eq('rb-1a 描述符与内嵌 manifest 版本不一致 → 400', (await upload(RB_PACK, { content_version: 'v216-other-name' })).json.error, 'manifest_identity_mismatch');
+  const rk = await upload(RB_PACK, { content_version: 'v216-rollback-v214-1', product_models: MODEL, min_launcher_version_code: '212' });
+  eq('rb-1 自洽回滚包入草稿', [rk.status, rk.json.release.status, rk.json.facts.manifest_content_version], [200, 'draft', 'v216-rollback-v214-1']);
+  eq('rb-1b rollback_of 指向不存在 → 400', (await admin('PATCH', `/releases/${rk.json.release.id}`, { rollback_of: 999999 })).status, 400);
+  const m2 = await admin('PATCH', `/releases/${rk.json.release.id}`, { release_notes: ['回滚到 v214 内容'], min_launcher_version_code: 212, rollback_of: REL1 });
+  eq('meta-2 草稿可改 + rollback_of 标记', [m2.status, m2.json.release.release_notes, m2.json.release.rollback_of, m2.json.release.transition_kind], [200, ['回滚到 v214 内容'], REL1, 'rollback']);
   await admin('POST', `/releases/${rk.json.release.id}/publish`, { rollout: 'sns', sns: [SN_B] });
   const rb2 = await check(SN_B, CRED_B, { content_state: state({ active_content_version: 'v215-draft-1' }) });
-  eq('rb-2 设备拿到回滚版', rb2.json.content_update?.content_version, 'v216-rollback-v214-1');
+  eq('rb-2 设备拿到回滚版(transition_kind=rollback)', [rb2.json.content_update?.content_version, rb2.json.content_update?.transition_kind], ['v216-rollback-v214-1', 'rollback']);
   // 撤回 → 文件 410（该 sha 的所有 release 都撤回时）
   await admin('POST', `/releases/${d.id}/revoke`);
   eq('rv-1 撤回后 410', (await file(`${d.sha256}.pck`, CRED_A)).status, 410);
@@ -379,9 +387,14 @@ let draftSha = '';
   // content_update 带序号与 kind
   let c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: null }) });
   eq('sq-3 content_update 带 release_sequence/transition_kind', [c.json.content_update?.content_version, c.json.content_update?.release_sequence, c.json.content_update?.transition_kind], ['v300-old', old.release_sequence, 'upgrade']);
-  // rollback revision：同字节新版本,更高序号,kind=rollback;对现役 v301(已撤回,序号 2)也能下发
-  const rb = await admin('POST', `/releases/${neu.id}/rollback`, { content_version: 'v311-rollback-of-301', notes: 'F2 演练' });
-  eq('sq-4 rollback revision 草稿', [rb.status, rb.json.release.rollback_of, rb.json.release.transition_kind, rb.json.release.release_sequence], [200, neu.id, 'rollback', null]);
+  // rollback revision（自洽新包 + PATCH rollback_of）：更高序号,kind=rollback;对现役 v301(已撤回,序号 2)也能下发
+  const RB311 = buildPck([
+    { path: 'res://pck/g1_content_manifest.json', data: Buffer.from(JSON.stringify({ content_version: 'v311-rollback-of-301', required_resources: ['res://pck/g1_content_manifest.json'] })) },
+    { path: 'res://art/rb311.png', data: Buffer.from('RB311'.repeat(60)) },
+  ]);
+  const rbUp = await upload(RB311, { content_version: 'v311-rollback-of-301', product_models: MODEL, min_launcher_version_code: '212' });
+  const rb = await admin('PATCH', `/releases/${rbUp.json.release.id}`, { rollback_of: neu.id, release_notes: ['F2 演练'] });
+  eq('sq-4 rollback revision 草稿', [rbUp.status, rb.json.release.rollback_of, rb.json.release.transition_kind, rb.json.release.release_sequence], [200, neu.id, 'rollback', null]);
   eq('sq-5 发布 rollback revision', (await admin('POST', `/releases/${rb.json.release.id}/publish`, { rollout: 'sns', sns: [SN_A] })).status, 200);
   const rbRel = pckStore.getRelease(rb.json.release.id)!;
   ok('sq-6 rollback 序号高于此前全部', rbRel.release_sequence! > oth.release_sequence!);
@@ -404,6 +417,19 @@ let draftSha = '';
   // 现役版本服务端不认识(历史遗留) → 门不生效,照常 offer
   c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'unknown-legacy' }) });
   eq('sq-12 现役未知版本不拦', c.json.content_update?.content_version, 'v311-rollback-of-301');
+  // 回滚熔断（F2 竞态）：设备上报 rolled_back(from=新版 → to=恢复版)的同一次 check 里,新版对它不再下发;他机不受影响
+  await new Promise((r) => setTimeout(r, 5)); // 回滚上报时刻必须晚于该版本最近一次 publish(rollout.updated_at)
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }), content_last_result: { stage: 'rolled_back', status: 'success', from_content_version: 'v311-rollback-of-301', to_content_version: 'v300-old' } });
+  eq('sq-13 rolled_back 版本对上报设备不再 offer', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'rolled_back_by_device']);
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
+  eq('sq-13b 下一次 check 仍熔断(不靠同一请求)', pckStore.getDevice(SN_A)!.last_decision, 'rolled_back_by_device');
+  c = await check(SN_B, CRED_B, { content_state: state({ active_content_version: null }) });
+  eq('sq-14 熔断只对上报设备生效', c.json.content_update?.content_version, 'v311-rollback-of-301');
+  // 运营方显式再发布(rollout.updated_at 晚于回滚上报) → 解除熔断
+  await new Promise((r) => setTimeout(r, 5));
+  await admin('POST', `/releases/${rb.json.release.id}/publish`, { rollout: 'sns', sns: [SN_A, SN_B] });
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
+  eq('sq-15 显式再发布后解除熔断', c.json.content_update?.content_version, 'v311-rollback-of-301');
 }
 
 // ── 11. J3-F1 窄 500 注入开关 ──
