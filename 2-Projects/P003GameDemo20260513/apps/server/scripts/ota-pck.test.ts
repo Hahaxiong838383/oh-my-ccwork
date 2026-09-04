@@ -32,7 +32,7 @@ const { otaDeviceRoute, otaAdminRoute } = await import('../src/routes/ota.js');
 const { pckDeviceRoute, PCK_ASSET_PREFIX } = await import('../src/routes/ota-pck.js');
 const { pckStore } = await import('../src/pck-store.js');
 const { otaStore } = await import('../src/ota-store.js');
-const { buildPck } = await import('../src/pck-inspect.js');
+const { buildPck, PCK_FLAG_SPARSE_BUNDLE } = await import('../src/pck-inspect.js');
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 
 let pass = 0, fail = 0;
@@ -274,6 +274,35 @@ const REL1 = pckStore.listReleases()[0].id;
   ok('dev-1 devices 视图含两台', dv.json.devices.length >= 2);
   const lg = await admin('GET', `/devices/${SN_A}/log?limit=5`);
   eq('dev-2 日志接口', [lg.status, lg.json.log.length], [200, 5]);
+}
+
+// ── 8. Godot 4.5 pack format 3（2026-09-04 codex 交接真包实证：V3 头带 dir_offset，目录不再紧随头部）──
+{
+  const GOOD_V3 = buildPck([
+    { path: 'res://pck/g1_content_manifest.json', data: manifest },
+    { path: 'res://art/v3.png', data: Buffer.from('V3DATA'.repeat(300)) },
+  ], { version: 3 });
+  const r = await upload(GOOD_V3, { content_version: 'v3-format-1', product_models: MODEL, min_launcher_version_code: '217' });
+  eq('v3-1 V3 包入草稿', [r.status, r.json.ok, r.json.release.status], [200, true, 'draft']);
+  eq('v3-2 facts pack_version/godot/文件数/manifest', [r.json.facts.pack_version, r.json.facts.godot_version, r.json.facts.file_count, r.json.facts.manifest_found], [3, '4.5.0', 2, true]);
+  eq('v3-3 sha/length 实测', [r.json.release.sha256, r.json.release.length], [sha(GOOD_V3), GOOD_V3.length]);
+  eq('v3-4 V3 内嵌 manifest 抽 required_resources', r.json.release.required_resources, ['res://pck/g1_content_manifest.json', 'res://art/a.png']);
+  const sparse = buildPck([{ path: 'res://art/s.png', data: Buffer.from('x'.repeat(50)) }], { version: 3, packFlags: PCK_FLAG_SPARSE_BUNDLE });
+  const rs = await upload(sparse, { content_version: 'v3-sparse-1' });
+  eq('v3-5 稀疏包（文件在 pck 外）拒', [rs.status, rs.json.error], [400, 'sparse_bundle_unsupported']);
+  const badDir = buildPck([{ path: 'res://art/d.png', data: Buffer.from('x'.repeat(50)) }], { version: 3, dirOffsetOverride: 10_000_000 });
+  const rd = await upload(badDir, { content_version: 'v3-baddir-1' });
+  eq('v3-6 目录偏移越界拒', [rd.status, rd.json.error], [400, 'bad_offset']);
+  const v4 = Buffer.from(GOOD_V3);
+  v4.writeUInt32LE(4, 4);
+  const r4 = await upload(v4, { content_version: 'v4-format-1' });
+  eq('v3-7 未知格式 4 拒', [r4.status, r4.json.error], [400, 'pack_version_unsupported']);
+  const v3ext = buildPck([{ path: 'res://art/a.png', data: Buffer.from('x') }, { path: 'res://scripts/hack.gdc', data: Buffer.from('bin') }], { version: 3 });
+  const re = await upload(v3ext, { content_version: 'v3-badext-1' });
+  eq('v3-8 V3 禁扩展门照常', [re.status, re.json.error], [400, 'forbidden_content']);
+  const v2again = await upload(GOOD, { content_version: 'v2-still-ok-1' });
+  eq('v3-9 V2 仍可上传（回归锚）', [v2again.status, v2again.json.facts.pack_version], [200, 2]);
+  eq('v3-10 清理 V3/V2 草稿', [(await admin('DELETE', `/releases/${r.json.release.id}`)).status, (await admin('DELETE', `/releases/${v2again.json.release.id}`)).status], [200, 200]);
 }
 
 console.log(`\nota-pck tests: pass=${pass} fail=${fail}`);

@@ -5,11 +5,12 @@ import { open, stat } from 'node:fs/promises';
 /**
  * Godot PCK 实测检查（双 OTA 合同 §3.8 / §7 / CC J0 补充口径）。
  *
- * 只读解析 Godot 4.x PCK（pack format 2；magic "GDPC"）的头与文件表：
- *   u32 magic=0x43504447 · u32 pack_version=2 · u32 major · u32 minor · u32 patch · u32 pack_flags ·
- *   u64 file_base · 16×u32 reserved · u32 file_count · [u32 path_len, path(补零), u64 ofs, u64 size, md5[16], u32 flags]…
- *   文件绝对偏移 = file_base + ofs（4.4 源码 add_path(file_base + ofs + p_offset)）。
- * 真值来源：godot 4.4 core/io/file_access_pack.{h,cpp}（2026-09-04 取证）。
+ * 只读解析 Godot 4.x PCK（pack format 2 与 3；magic "GDPC"）的头与文件表：
+ *   V2：u32 magic · u32 pack_version=2 · u32 major · u32 minor · u32 patch · u32 pack_flags · u64 file_base · 16×u32 reserved ·
+ *       u32 file_count · [条目]…
+ *   V3（Godot 4.5+）：… · u64 file_base · u64 dir_offset → 目录在 dir_offset：u32 file_count · [条目]…
+ *   条目 = u32 path_len, path(补零), u64 ofs, u64 size, md5[16], u32 flags；文件绝对偏移 = file_base + ofs。
+ * 真值来源：godot 4.4-stable / 4.5-stable core/io/file_access_pack.{h,cpp}（2026-09-04 取证；4.5 引入 V3 与 PACK_SPARSE_BUNDLE）。
  *
  * 门（任一不过即拒，PCK 本体为真值，不信文件名）：
  *   - 体积 ≤ 32MiB（合同 §2 端侧硬上限，同值）；
@@ -21,10 +22,19 @@ import { open, stat } from 'node:fs/promises';
  */
 
 export const PCK_MAGIC = 0x43504447; // "GDPC"
-export const PCK_FORMAT_VERSION = 2;
+/** Godot ≤4.4 导出的 pack 格式（头后 16 字保留区 + file_count，目录紧随其后）。 */
+export const PCK_FORMAT_VERSION_V2 = 2;
+/** Godot 4.5+ 导出的 pack 格式（file_access_pack.h 4.5-stable：头 = magic·version·major·minor·patch·flags·file_base(u64)·dir_offset(u64)，
+ *  目录在 dir_offset 处以 file_count 开头；REL_FILEBASE 对 V3 恒真；条目格式与 V2 相同）。2026-09-04 codex 交接的真包即 V3。 */
+export const PCK_FORMAT_VERSION_V3 = 3;
+export const PCK_FORMAT_VERSIONS: readonly number[] = [PCK_FORMAT_VERSION_V2, PCK_FORMAT_VERSION_V3];
+/** buildPck 缺省格式（测试/探针造包用）。 */
+export const PCK_FORMAT_VERSION = PCK_FORMAT_VERSION_V2;
 export const PCK_MAX_BYTES = 32 * 1024 * 1024;
 export const PCK_FLAG_DIR_ENCRYPTED = 1 << 0;
 export const PCK_FLAG_REL_FILEBASE = 1 << 1;
+/** 稀疏包：文件本体在 pck 之外（4.5+），服务端无法审核内容 → 拒。 */
+export const PCK_FLAG_SPARSE_BUNDLE = 1 << 2;
 export const PCK_FILE_ENCRYPTED = 1 << 0;
 export const PCK_FILE_REMOVAL = 1 << 1;
 export const PCK_MANIFEST_PATH_DEFAULT = 'res://pck/g1_content_manifest.json';
@@ -102,6 +112,11 @@ class Reader {
     this.pos += n;
     return out;
   }
+  /** 跳到绝对位置（V3 目录偏移用）：丢弃缓冲，从新位置顺序读。 */
+  seek(pos: number): void {
+    this.buf = Buffer.alloc(0);
+    this.pos = pos;
+  }
   async u32(): Promise<number> { return (await this.take(4)).readUInt32LE(0); }
   async u64(): Promise<number> {
     const b = await this.take(8);
@@ -121,16 +136,25 @@ export async function inspectPck(path: string, manifestPath = process.env.PCK_MA
     const magic = await r.u32();
     if (magic !== PCK_MAGIC) throw new PckInspectError('bad_magic', 'magic 不是 GDPC');
     const packVersion = await r.u32();
-    if (packVersion !== PCK_FORMAT_VERSION) throw new PckInspectError('pack_version_unsupported', `pack 格式版本 ${packVersion} 不支持（只认 ${PCK_FORMAT_VERSION}）`);
+    if (!PCK_FORMAT_VERSIONS.includes(packVersion)) {
+      throw new PckInspectError('pack_version_unsupported', `pack 格式版本 ${packVersion} 不支持（只认 ${PCK_FORMAT_VERSIONS.join('/')}）`);
+    }
     const major = await r.u32();
     const minor = await r.u32();
     const patch = await r.u32();
     const packFlags = await r.u32();
-    const fileBase = await r.u64();
-    for (let i = 0; i < 16; i++) await r.u32();
-    const fileCount = await r.u32();
     if (packFlags & PCK_FLAG_DIR_ENCRYPTED) throw new PckInspectError('dir_encrypted', '目录已加密，无法审核内容');
-    // PCK_FLAG_REL_FILEBASE：独立 .pck 文件 pck_start_pos=0，相对基址等同绝对，无需调整
+    if (packFlags & PCK_FLAG_SPARSE_BUNDLE) throw new PckInspectError('sparse_bundle_unsupported', '稀疏包（文件本体在 pck 之外）无法审核');
+    // 独立 .pck 文件 pck_start_pos=0：V3 / REL_FILEBASE 的相对基址等同绝对，无需调整
+    const fileBase = await r.u64();
+    if (packVersion === PCK_FORMAT_VERSION_V3) {
+      const dirOffset = await r.u64();
+      if (dirOffset + 4 > st.size) throw new PckInspectError('bad_offset', `目录偏移 ${dirOffset} 越界（文件 ${st.size} 字节）`);
+      r.seek(dirOffset);
+    } else {
+      for (let i = 0; i < 16; i++) await r.u32(); // V2 保留区
+    }
+    const fileCount = await r.u32();
     if (fileCount > MAX_FILE_COUNT) throw new PckInspectError('too_many_files', `文件数 ${fileCount} 超过 ${MAX_FILE_COUNT}`);
 
     const paths: string[] = [];
@@ -190,26 +214,39 @@ export async function inspectPck(path: string, manifestPath = process.env.PCK_MA
   }
 }
 
-/** 造一个最小合法 PCK（pack format 2；测试/探针用，与 Godot PCKPacker 写法同形：路径补零到 4 字节）。 */
-export function buildPck(files: Array<{ path: string; data: Buffer }>, opts?: { godot?: [number, number, number]; packFlags?: number; fileFlags?: number }): Buffer {
-  const [ma, mi, pa] = opts?.godot ?? [4, 3, 0];
+/** 造一个最小合法 PCK（缺省 pack format 2；`version: 3` 造 Godot 4.5+ 形态；测试/探针用，与 PCKPacker 写法同形：路径补零到 4 字节）。
+ *  `dirOffsetOverride` 仅负向测试（越界目录偏移）。 */
+export function buildPck(
+  files: Array<{ path: string; data: Buffer }>,
+  opts?: { godot?: [number, number, number]; packFlags?: number; fileFlags?: number; version?: 2 | 3; dirOffsetOverride?: number },
+): Buffer {
+  const version = opts?.version ?? PCK_FORMAT_VERSION_V2;
+  const [ma, mi, pa] = opts?.godot ?? (version === PCK_FORMAT_VERSION_V3 ? [4, 5, 0] : [4, 3, 0]);
   const entries = files.map((f) => {
     const pb = Buffer.from(f.path, 'utf8');
     const pad = (4 - (pb.length % 4)) % 4;
     return { pathBuf: Buffer.concat([pb, Buffer.alloc(pad)]), data: f.data };
   });
-  const headerLen = 4 * 6 + 8 + 16 * 4 + 4;
+  const isV3 = version === PCK_FORMAT_VERSION_V3;
+  // V2：头含 16 字保留区 + file_count，目录（条目表）紧随其后；V3：头只到 dir_offset，目录 = file_count + 条目表，放在 dir_offset 处
+  const headerLen = isV3 ? 4 * 6 + 8 + 8 : 4 * 6 + 8 + 16 * 4 + 4;
   const tableLen = entries.reduce((n, e) => n + 4 + e.pathBuf.length + 8 + 8 + 16 + 4, 0);
-  const fileBase = headerLen + tableLen;
+  const dirLen = isV3 ? 4 + tableLen : tableLen;
+  const fileBase = headerLen + dirLen;
   const header = Buffer.alloc(headerLen);
   let o = 0;
   const w32 = (v: number) => { header.writeUInt32LE(v >>> 0, o); o += 4; };
-  w32(PCK_MAGIC); w32(PCK_FORMAT_VERSION); w32(ma); w32(mi); w32(pa); w32(opts?.packFlags ?? 0);
+  w32(PCK_MAGIC); w32(version); w32(ma); w32(mi); w32(pa); w32(opts?.packFlags ?? 0);
   header.writeBigUInt64LE(BigInt(fileBase), o); o += 8;
-  for (let i = 0; i < 16; i++) w32(0);
-  w32(entries.length);
-  const table = Buffer.alloc(tableLen);
+  if (isV3) {
+    header.writeBigUInt64LE(BigInt(opts?.dirOffsetOverride ?? headerLen), o); o += 8;
+  } else {
+    for (let i = 0; i < 16; i++) w32(0);
+    w32(entries.length);
+  }
+  const table = Buffer.alloc(dirLen);
   let t = 0;
+  if (isV3) { table.writeUInt32LE(entries.length, 0); t = 4; }
   let dataOfs = 0;
   const datas: Buffer[] = [];
   for (const e of entries) {
