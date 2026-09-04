@@ -6706,3 +6706,39 @@ ssh dev198 'journalctl --user -u feishu-grok-runner-worker --since "7 days ago" 
 优先级高于 UIDS，已验证）。日志锚形态变为 `灰度=all(all)`。
 入口渲染是每请求现判（server.mjs 注入 endpointBinding.allowed），重启后用户
 重开「配置」页即见，无需其它操作。
+
+## 晨报送达 watchdog（2026-09-04 · 方案 A · `224efb3`+v1.66.0）
+
+**背景**：张雨琦晨报——grok 撞 API 500 后「泄气早退」（`shell.handle_prompt.done` 2 分钟
+交卷，把「我换路子继续捞」的中途独白当最终回复），runner 只认「正常退出=完成」，
+用户收到 173 字独白，晨报没发且零失败信号。**模型半途而废是 runner 观测不到的**。
+
+**机制**：daily schedule 新增 `expectDelivery` 字段。任务终态后 5 分钟，执行面对账
+**lark-audit 审计日志**里的真实发送（`+messages-send/reply/send-file/send`，两站
+audit 实测枚举的全集）：零发送→自动补跑一次→仍零→用户可读说明卡+owner 告警。
+「待对账」写在 scheduler state 由 tick 扫描——bridge 重启天然恢复。
+
+**全租户覆盖三通道**（存量+新增零人工）：
+- 存量：控制面启动 lazy migration（缺字段按名称启发补：晨报/日报/周报/月报/简报/
+  早报/晚报/速报=true；幂等；显式 false 不翻）——2026-09-04 首启迁移 20 条、9 条 true
+- 新增：`normalizeDailyScheduleInput` 智能默认（bot 创建与控制台同一归一化点，真机验证
+  bot 建「测试晨报勿动」自动 true）；控制台 UI 有勾选框+「送达保障」徽标
+- 下发：`/internal/schedules` 序列化是**逐字段硬编码白名单**，新字段必须显式加
+ （multi-hop 教训；五跳=UI/Bot 创建/迁移/下发/执行面）
+
+**降级语义**（别当故障修）：站点 `H_LARK_AUDIT=0`（Mini 现状）→ watchdog 整体只记
+log `delivery watchdog skipped (audit off)`；per-uid 无日志文件→`degraded (no audit log)`
+放行——「没日志」≠「没发送」。Mini 要吃到 watchdog 需先开它的 lark-audit。
+
+**观察锚**（journal · bridge unit）：`delivery check armed attempt=N` / `delivery
+confirmed sends=N` / `delivery missing, rerun once` / `delivery failed after rerun`。
+
+### 🔴 控制面部署命令两个坑（2026-09-04 现行犯实录）
+
+1. **`node --test test/*.test.mjs` 必须带 `H_CONTROL_SUBTREE_TEST=1`**——
+   deploy-boundary 测试有子树模式开关，不带则「schedule-contract 被 Bridge 复用」
+   那条在生产子树上恒红（去读仓根 lib/，生产没有）。恒红守卫=没有守卫。
+2. **绝不在测试和 restart 之间插 `| grep`**——`node --test ... | grep ... && restart`
+   的 && 绑的是 grep 的退出码（命中即 0），**测试失败拦不住重启**。当天真发生：
+   328/329 带着 1 fail 直接 restart 了（幸而那条是存量环境红）。要摘要就先落文件：
+   `H_CONTROL_SUBTREE_TEST=1 node --test test/*.test.mjs > /tmp/t.txt 2>&1 && systemctl restart h-control; grep -E "^# (pass|fail)" /tmp/t.txt`
