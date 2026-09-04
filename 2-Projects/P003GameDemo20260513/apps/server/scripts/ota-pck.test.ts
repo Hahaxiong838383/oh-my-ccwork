@@ -9,6 +9,8 @@
  *  - 回报：append-only 流水 + 双钟；success 不覆盖 failed/rolled_back 证据；未知 stage 归一
  *  - 文件接口：401 / 坏名 404 / 仅草稿 404 / 200 全量(sha 对撞) / HEAD / Range 206 / 越界 416 / 暂停仍可读 / 撤回 410 / xaccel 头
  *  - publish 前重算：字节被改 → 409；rollback 建新 revision 同 SHA；APK 与 PCK 账本分账；草稿删除不误删共享字节
+ *  - 身份门(2026-09-04)：publish 分配 release_sequence 严格递增；content_update 带 release_sequence/transition_kind；≤ 现役序号不下发；回填幂等
+ *  - J3-F1 注入开关：admin 武装 → 该 sha 文件 500（鉴权在前）→ 首次命中后 recover_after 自动恢复 → 状态/清除
  */
 import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -357,10 +359,85 @@ const REL1 = pckStore.listReleases()[0].id;
   c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
   eq('pp-9 新版文件不一致 → file_missing,不回落旧版', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'file_missing']);
   writeFileSync(newPath, bak);
-  // 撤回新版 → 旧版重新成为目标(显式动作才允许降级)
+  // 撤回新版 → 旧版序号 < 现役序号,仍不得 offer(身份门 2026-09-04);降级只能走更高序号的 rollback revision(见 sq-*)
   eq('pp-10 撤回新版', (await admin('POST', `/releases/${rn.json.release.id}/revoke`)).status, 200);
   c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v301-new' }) });
-  eq('pp-11 撤回后旧版才被 offer(显式降级)', c.json.content_update?.content_version, 'v300-old');
+  eq('pp-11 撤回后旧版序号更低 → null sequence_not_newer(不再自动降级)', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'sequence_not_newer']);
+}
+
+// ── 10. release_sequence + transition_kind 身份门（codex 2026-09-04 §8 纵深防御，服务端侧）──
+let draftSha = '';
+{
+  const old = pckStore.getByVersion('g1-content', 'v300-old')!;
+  const neu = pckStore.getByVersion('g1-content', 'v301-new')!;
+  const oth = pckStore.getByVersion('g1-content', 'v302-other-sn')!;
+  ok('sq-0 发布过的都有序号', old.release_sequence !== null && neu.release_sequence !== null && oth.release_sequence !== null);
+  ok('sq-1 序号按发布顺序严格递增', old.release_sequence! < neu.release_sequence! && neu.release_sequence! < oth.release_sequence!);
+  const d = await upload(buildPck([{ path: 'res://art/seq.png', data: Buffer.from('SEQ'.repeat(50)) }]), { content_version: 'v310-draft', product_models: MODEL, min_launcher_version_code: '212' });
+  draftSha = d.json.release.sha256;
+  eq('sq-2 草稿无序号且 transition_kind=upgrade', [d.json.release.release_sequence, d.json.release.transition_kind], [null, 'upgrade']);
+  // content_update 带序号与 kind
+  let c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: null }) });
+  eq('sq-3 content_update 带 release_sequence/transition_kind', [c.json.content_update?.content_version, c.json.content_update?.release_sequence, c.json.content_update?.transition_kind], ['v300-old', old.release_sequence, 'upgrade']);
+  // rollback revision：同字节新版本,更高序号,kind=rollback;对现役 v301(已撤回,序号 2)也能下发
+  const rb = await admin('POST', `/releases/${neu.id}/rollback`, { content_version: 'v311-rollback-of-301', notes: 'F2 演练' });
+  eq('sq-4 rollback revision 草稿', [rb.status, rb.json.release.rollback_of, rb.json.release.transition_kind, rb.json.release.release_sequence], [200, neu.id, 'rollback', null]);
+  eq('sq-5 发布 rollback revision', (await admin('POST', `/releases/${rb.json.release.id}/publish`, { rollout: 'sns', sns: [SN_A] })).status, 200);
+  const rbRel = pckStore.getRelease(rb.json.release.id)!;
+  ok('sq-6 rollback 序号高于此前全部', rbRel.release_sequence! > oth.release_sequence!);
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v301-new' }) });
+  eq('sq-7 现役 v301 → offer 更高序号的 rollback revision', [c.json.content_update?.content_version, c.json.content_update?.transition_kind, c.json.content_update?.release_sequence], ['v311-rollback-of-301', 'rollback', rbRel.release_sequence]);
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v311-rollback-of-301' }) });
+  eq('sq-8 激活 rollback 后 → same_version,旧 v300 不回落', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'same_version']);
+  // 同一 release 再 publish(改名单)不换号
+  await admin('POST', `/releases/${rb.json.release.id}/publish`, { rollout: 'sns', sns: [SN_A, SN_B] });
+  eq('sq-9 再发布不换号', pckStore.getRelease(rb.json.release.id)!.release_sequence, rbRel.release_sequence);
+  // 迁移回填幂等：把序号全清空,再起一个 store 实例 → 按发布时间顺序回填,顺序与原编号一致
+  const { DatabaseSync } = await import('node:sqlite');
+  const raw = new DatabaseSync(process.env.OTA_DB_PATH!);
+  raw.exec('UPDATE pck_release SET release_sequence = NULL');
+  raw.close();
+  const store2 = new (pckStore.constructor as new () => typeof pckStore)();
+  const seqOf = (v: string) => store2.getByVersion('g1-content', v)!.release_sequence!;
+  ok('sq-10 回填按发布时间严格递增', seqOf('v300-old') < seqOf('v301-new') && seqOf('v301-new') < seqOf('v302-other-sn') && seqOf('v302-other-sn') < seqOf('v311-rollback-of-301'));
+  eq('sq-11 回填不给草稿编号', store2.getByVersion('g1-content', 'v310-draft')!.release_sequence, null);
+  // 现役版本服务端不认识(历史遗留) → 门不生效,照常 offer
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'unknown-legacy' }) });
+  eq('sq-12 现役未知版本不拦', c.json.content_update?.content_version, 'v311-rollback-of-301');
+}
+
+// ── 11. J3-F1 窄 500 注入开关 ──
+{
+  const old = pckStore.getByVersion('g1-content', 'v300-old')!; // published to SN_A
+  const oth = pckStore.getByVersion('g1-content', 'v302-other-sn')!; // published to SN_B
+  const name = `${old.sha256}.pck`;
+  eq('ft-0 未武装 200', (await file(name, CRED_A)).status, 200);
+  // F1 实跑口径(2026-09-04 14:46):先武装再发布,所以草稿可武装;草稿命中判定在可读性之后,设备仍 404,不会撞 500
+  const armDraft = await admin('POST', '/fault', { sha256: draftSha, recover_after_s: 60, arm_ttl_s: 30 });
+  eq('ft-1 草稿 sha 可武装(先武装再发布)', [armDraft.status, armDraft.json.fault.hits], [200, 0]);
+  eq('ft-1a 草稿武装期间设备仍 404 且不计命中', [(await file(`${draftSha}.pck`, CRED_A)).status, (await admin('GET', '/fault')).json.fault.hits], [404, 0]);
+  eq('ft-1b 坏参数 400', (await admin('POST', '/fault', { sha256: 'zz' })).status, 400);
+  eq('ft-1c 未知 sha 404', (await admin('POST', '/fault', { sha256: 'f'.repeat(64) })).status, 404);
+  eq('ft-1d 清除草稿武装', (await admin('DELETE', '/fault')).json.cleared, true);
+  const arm = await admin('POST', '/fault', { sha256: old.sha256, recover_after_s: 1, arm_ttl_s: 30 });
+  eq('ft-2 武装', [arm.status, arm.json.fault.active, arm.json.fault.hits, arm.json.fault.recovers_at], [200, true, 0, null]);
+  eq('ft-3 无凭据仍 401(注入不绕鉴权)', (await file(name)).status, 401);
+  const h1 = await file(name, CRED_A);
+  eq('ft-4 命中 500 injected_fault', [h1.status, JSON.parse(h1.buf.toString()).error], [500, 'injected_fault']);
+  eq('ft-5 Range 也 500', (await file(name, CRED_A, { range: 'bytes=0-9' })).status, 500);
+  const st = await admin('GET', '/fault');
+  eq('ft-6 状态 hits=2 且 recovers_at=首次命中+1s', [st.json.fault.hits, st.json.fault.recovers_at - st.json.fault.first_hit_at], [2, 1000]);
+  eq('ft-7 其他 sha 不受影响', (await file(`${oth.sha256}.pck`, CRED_B)).status, 200);
+  await new Promise((r) => setTimeout(r, 1100));
+  eq('ft-8 首次命中 1s 后自动恢复 200', (await file(name, CRED_A)).status, 200);
+  eq('ft-9 恢复后状态清空', (await admin('GET', '/fault')).json.fault, null);
+  await admin('POST', '/fault', { sha256: old.sha256, recover_after_s: 60, arm_ttl_s: 30 });
+  eq('ft-10 再武装命中 500', (await file(name, CRED_A)).status, 500);
+  eq('ft-11 DELETE 清除', (await admin('DELETE', '/fault')).json.cleared, true);
+  eq('ft-12 清除后 200', (await file(name, CRED_A)).status, 200);
+  const a2 = await admin('POST', '/fault', { sha256: old.sha256, recover_after_s: 70 });
+  eq('ft-13 缺省 70s/300s', [a2.json.fault.recover_after_ms, a2.json.fault.expires_at - a2.json.fault.armed_at], [70000, 300000]);
+  await admin('DELETE', '/fault');
 }
 
 console.log(`\nota-pck tests: pass=${pass} fail=${fail}`);

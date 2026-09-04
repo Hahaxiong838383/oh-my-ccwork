@@ -8,7 +8,7 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { verifyDeviceCredential } from './device-session.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
-import { pckStore, parseSns, PCK_STAGES, type PckRelease } from '../pck-store.js';
+import { pckStore, parseSns, PCK_STAGES, transitionKind, type PckRelease, type TransitionKind } from '../pck-store.js';
 import { inspectPck, PckInspectError, pckMaxBytes, sha256File } from '../pck-inspect.js';
 
 /**
@@ -91,11 +91,17 @@ export type ContentUpdate = {
   activation_policy: typeof PCK_ACTIVATION_POLICY;
   force: boolean;
   release_notes: string[];
+  /** 发布身份序号（可选字段，老客户端忽略）：严格递增；设备默认拒绝 ≤ 现役序号的不同版本。 */
+  release_sequence: number | null;
+  /** upgrade | rollback（rollback revision 也是更高序号；rollback_of 只作审计）。 */
+  transition_kind: TransitionKind;
 };
 
 export function toContentUpdate(r: PckRelease): ContentUpdate {
   return {
     schema_version: 1,
+    release_sequence: r.release_sequence ?? null,
+    transition_kind: transitionKind(r),
     content_id: r.content_id,
     content_version: r.content_version,
     product_models: jsonArr(r.product_models),
@@ -180,6 +186,12 @@ export function eligibilityReason(r: PckRelease & { rollout: { policy: string; s
   if (launcherVersionCode < r.min_launcher_version_code) return 'launcher_too_old';
   if (state.active_content_version === r.content_version) return 'same_version';
   if (state.pending_content_version === r.content_version) return 'pending_same';
+  // 身份门（2026-09-04 codex §8）：候选序号 ≤ 现役序号 = 旧发布，不下发；降级必须走更高序号的 rollback revision。
+  // 现役版本服务端不认识/未编号（历史遗留）时不拦——门只在两边都有序号时生效，避免把老设备锁死。
+  if (state.active_content_version && r.release_sequence !== null) {
+    const active = pckStore.getByVersion(r.content_id, state.active_content_version);
+    if (active && active.release_sequence !== null && r.release_sequence <= active.release_sequence) return 'sequence_not_newer';
+  }
   try {
     // 目标文件/长度与发布记录一致（SHA 在 publish 时已重算；offer 时只做 stat，不每次 hash 20MB）
     const st = statSyncSafe(r.file_path);
@@ -192,6 +204,68 @@ export function eligibilityReason(r: PckRelease & { rollout: { policy: string; s
 
 function statSyncSafe(p: string): number | null {
   try { return statSync(p).size; } catch { return null; }
+}
+
+// ───────────────────────── J3-F1 窄 500 注入开关（内存态，进程重启即清） ─────────────────────────
+//
+// 语义（合同 CC_P003_PCK_J3_F1_PREP_REPLY_20260904）：武装后该 sha 的文件请求回 500；从**首次命中**起 recover_after_ms 后
+// 自动恢复（默认 70 s：端侧 attempt1 +30 s 失败、attempt2 +60 s 续传成功，绝不撞第 4 次失败的 4 h 冷却）；
+// 武装后 arm_ttl_ms 内没被命中也自动作废（默认 5 min 硬上限）。只影响 PCK 文件接口，不影响 check/APK/health。
+export type PckFault = {
+  sha256: string;
+  armed_at: number;
+  arm_ttl_ms: number;
+  recover_after_ms: number;
+  first_hit_at: number | null;
+  hits: number;
+};
+let fault: PckFault | null = null;
+
+export function faultStatus(now = Date.now()): (PckFault & { active: boolean; recovers_at: number | null; expires_at: number }) | null {
+  if (!fault) return null;
+  return {
+    ...fault,
+    active: faultActive(now),
+    recovers_at: fault.first_hit_at === null ? null : fault.first_hit_at + fault.recover_after_ms,
+    expires_at: fault.armed_at + fault.arm_ttl_ms,
+  };
+}
+
+function faultActive(now: number): boolean {
+  if (!fault) return false;
+  if (now - fault.armed_at > fault.arm_ttl_ms) {
+    console.warn(`[pck] FAULT expired unarmed sha=${fault.sha256.slice(0, 8)} hits=${fault.hits}`);
+    fault = null;
+    return false;
+  }
+  if (fault.first_hit_at !== null && now - fault.first_hit_at >= fault.recover_after_ms) {
+    console.warn(`[pck] FAULT recovered sha=${fault.sha256.slice(0, 8)} hits=${fault.hits} after_ms=${now - fault.first_hit_at}`);
+    fault = null;
+    return false;
+  }
+  return true;
+}
+
+/** 命中判定：sha 匹配且仍在窗内 → 记一次命中（首次命中启动恢复计时）并返回 true。 */
+function faultHit(sha: string, now: number): boolean {
+  if (!fault || fault.sha256 !== sha) return false;
+  if (!faultActive(now)) return false;
+  if (fault.first_hit_at === null) fault.first_hit_at = now;
+  fault.hits += 1;
+  return true;
+}
+
+export function armFault(sha256: string, recoverAfterMs: number, armTtlMs: number, now = Date.now()): PckFault {
+  fault = { sha256, armed_at: now, arm_ttl_ms: armTtlMs, recover_after_ms: recoverAfterMs, first_hit_at: null, hits: 0 };
+  console.warn(`[pck] FAULT armed sha=${sha256.slice(0, 8)} recover_after_ms=${recoverAfterMs} arm_ttl_ms=${armTtlMs}`);
+  return fault;
+}
+
+export function clearFault(): boolean {
+  const had = fault !== null;
+  if (had) console.warn(`[pck] FAULT cleared sha=${fault!.sha256.slice(0, 8)} hits=${fault!.hits}`);
+  fault = null;
+  return had;
 }
 
 // ───────────────────────── 设备文件接口 ─────────────────────────
@@ -222,6 +296,11 @@ pckDeviceRoute.on(['GET', 'HEAD'], '/files/:name', async (c) => {
     return c.json({ ok: false, error: 'file_inconsistent' }, 500);
   }
   const range = c.req.header('range') || '';
+  // J3-F1 窄 500 注入（admin 显式武装，只影响该 sha；鉴权/白名单/可读性判定都在前面，注入不会绕过它们）
+  if (faultHit(sha, Date.now())) {
+    console.warn(`[pck] FAULT 500 sn=…${cred.sn.slice(-4)} sha=${sha.slice(0, 8)} ${c.req.method}${range ? ' ' + range : ''} hits=${fault?.hits ?? 0}`);
+    return c.json({ ok: false, error: 'injected_fault' }, 500);
+  }
   console.log(`[pck] file sn=…${cred.sn.slice(-4)} sha=${sha.slice(0, 8)} ${c.req.method}${range ? ' ' + range : ''} mode=${conf.serveMode}`);
 
   if (conf.serveMode === 'xaccel') {
@@ -370,6 +449,7 @@ function view(r: PckRelease & { rollout?: unknown }) {
     required_resources: jsonArr(r.required_resources),
     release_notes: jsonArr(r.release_notes),
     asset_name: `${PCK_ASSET_PREFIX}${r.sha256}.pck`,
+    transition_kind: transitionKind(r),
     rollout,
     devices_active: pckStore.countDevicesOnVersion(r.content_version),
   };
@@ -423,10 +503,33 @@ pckAdminRoute.post('/releases/:id/publish', async (c) => {
   if (size !== rel.length) return c.json({ ok: false, error: 'file_inconsistent', message: `文件长度 ${size} ≠ 记录 ${rel.length}` }, 409);
   const sha = await sha256File(rel.file_path);
   if (sha !== rel.sha256) return c.json({ ok: false, error: 'file_inconsistent', message: '文件 SHA256 与记录不一致（字节被改动）' }, 409);
-  pckStore.publish(id, rollout, sns);
-  console.log(`[pck] published ${rel.content_version} (release#${id}) rollout=${rollout === 'all' ? 'ALL' : sns.join(',')}`);
+  const seq = pckStore.publish(id, rollout, sns);
+  console.log(`[pck] published ${rel.content_version} (release#${id}) seq=${seq} kind=${transitionKind(rel)} rollout=${rollout === 'all' ? 'ALL' : sns.join(',')}`);
   return c.json({ ok: true, release: view(pckStore.getRelease(id)!) });
 });
+
+// ── J3-F1 注入开关（生产闸门动作：回执里先说再武装；GET 随时可看） ──
+const FaultSchema = z.object({
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  recover_after_s: z.number().int().min(1).max(300).optional().default(70),
+  arm_ttl_s: z.number().int().min(5).max(300).optional().default(300),
+});
+
+pckAdminRoute.get('/fault', (c) => c.json({ ok: true, fault: faultStatus() }));
+
+pckAdminRoute.post('/fault', async (c) => {
+  const parsed = FaultSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ ok: false, error: 'bad_request', message: 'sha256 须为 64 位小写 hex；recover_after_s 1..300；arm_ttl_s 5..300' }, 400);
+  const { sha256, recover_after_s, arm_ttl_s } = parsed.data;
+  // 台账里认识的 sha 都可武装（含草稿：F1 实跑口径是「先武装再发布」，草稿期武装无副作用——草稿本就 404，
+  // 命中判定在可读性判定之后；只拒绝完全未知的 sha，防手误武装一个不存在的目标白等）。
+  const rels = pckStore.listBySha(sha256);
+  if (rels.length === 0) return c.json({ ok: false, error: 'not_found', message: '该 sha256 不在 PCK 台账中' }, 404);
+  armFault(sha256, recover_after_s * 1000, arm_ttl_s * 1000);
+  return c.json({ ok: true, fault: faultStatus() });
+});
+
+pckAdminRoute.delete('/fault', (c) => c.json({ ok: true, cleared: clearFault(), fault: faultStatus() }));
 
 pckAdminRoute.post('/releases/:id/pause', (c) => {
   const id = Number.parseInt(c.req.param('id'), 10);

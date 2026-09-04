@@ -34,11 +34,20 @@ export type PckRelease = {
   force: number;
   status: PckStatus;
   rollback_of: number | null;
+  /** 发布身份序号（2026-09-04 codex §8 纵深防御）：每次 publish 分配严格递增，含回滚 revision；草稿为 null。
+   *  设备/服务端一律拒绝 sequence ≤ 现役 sequence 的不同版本——降级只能走「更高 sequence 的 rollback revision」。 */
+  release_sequence: number | null;
   godot_version: string;
   file_count: number;
   created_at: number;
   updated_at: number;
 };
+
+export type TransitionKind = 'upgrade' | 'rollback';
+/** rollback_of 只作审计来源；transition_kind 由它派生，不授权直接下发旧 sequence。 */
+export function transitionKind(r: Pick<PckRelease, 'rollback_of'>): TransitionKind {
+  return r.rollback_of !== null && r.rollback_of !== undefined ? 'rollback' : 'upgrade';
+}
 
 export type PckRollout = {
   release_id: number;
@@ -170,10 +179,36 @@ class PckStore {
       );
       CREATE INDEX IF NOT EXISTS idx_pck_report_sn ON pck_report_log (sn, id);
     `);
+    this.migrateReleaseSequence();
+  }
+
+  /** 加列 release_sequence（幂等）+ 回填：历史上发布过的（published_at 非空）按发布时间升序编号，草稿保持 null。 */
+  private migrateReleaseSequence(): void {
+    const cols = this.db.prepare(`PRAGMA table_info(pck_release)`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'release_sequence')) {
+      this.db.exec(`ALTER TABLE pck_release ADD COLUMN release_sequence INTEGER`);
+    }
+    const pending = this.db
+      .prepare(
+        `SELECT r.id FROM pck_release r JOIN pck_rollout o ON o.release_id = r.id
+         WHERE r.release_sequence IS NULL AND o.published_at IS NOT NULL ORDER BY o.published_at ASC, r.id ASC`,
+      )
+      .all() as Array<{ id: number }>;
+    for (const row of pending) {
+      const seq = this.nextSequence();
+      this.db.prepare(`UPDATE pck_release SET release_sequence = ? WHERE id = ? AND release_sequence IS NULL`).run(seq, row.id);
+      console.log(`[pck] backfill release_sequence release#${row.id} seq=${seq}`);
+    }
+  }
+
+  private nextSequence(): number {
+    const row = this.db.prepare(`SELECT COALESCE(MAX(release_sequence), 0) AS m FROM pck_release`).get() as { m: number };
+    return (row?.m ?? 0) + 1;
   }
 
   // ── release ──
-  insertRelease(r: Omit<PckRelease, 'id' | 'created_at' | 'updated_at'>): PckRelease {
+  /** 入库恒为草稿、无序号（release_sequence 只在 publish 时分配）。 */
+  insertRelease(r: Omit<PckRelease, 'id' | 'created_at' | 'updated_at' | 'release_sequence'> & { release_sequence?: null }): PckRelease {
     const now = Date.now();
     const res = this.db
       .prepare(
@@ -234,12 +269,20 @@ class PckStore {
     return (this.db.prepare(`SELECT * FROM pck_rollout WHERE release_id = ?`).get(id) as PckRollout | undefined) ?? null;
   }
 
-  publish(id: number, policy: 'sns' | 'all', sns: string[]): void {
+  /** 发布：首次发布分配 release_sequence（严格递增、全表唯一）；同一 release 再次 publish（改名单）不换号。 */
+  publish(id: number, policy: 'sns' | 'all', sns: string[]): number {
     const now = Date.now();
     this.db
       .prepare(`UPDATE pck_rollout SET policy = ?, sns = ?, published_at = COALESCE(published_at, ?), paused_at = NULL, updated_at = ? WHERE release_id = ?`)
       .run(policy, policy === 'all' ? '' : sns.join(','), now, now, id);
+    const cur = this.getRelease(id);
+    let seq = cur?.release_sequence ?? null;
+    if (seq === null) {
+      seq = this.nextSequence();
+      this.db.prepare(`UPDATE pck_release SET release_sequence = ? WHERE id = ? AND release_sequence IS NULL`).run(seq, id);
+    }
     this.setStatus(id, 'published');
+    return seq;
   }
 
   pause(id: number): void {
@@ -260,13 +303,13 @@ class PckStore {
     this.setStatus(id, 'revoked');
   }
 
-  /** 已发布且未暂停/撤回的候选，按发布时间倒序（最新发布优先）。 */
+  /** 已发布且未暂停/撤回的候选，按 release_sequence 倒序（最新发布身份优先；旧库无号的按发布时间兜底）。 */
   publishedCandidates(contentId: string): Array<PckRelease & { rollout: PckRollout }> {
     const rows = this.db
       .prepare(
         `SELECT r.* FROM pck_release r JOIN pck_rollout o ON o.release_id = r.id
          WHERE r.content_id = ? AND r.status = 'published' AND o.policy != 'none' AND o.paused_at IS NULL AND o.revoked_at IS NULL
-         ORDER BY o.published_at DESC, r.id DESC`,
+         ORDER BY r.release_sequence DESC, o.published_at DESC, r.id DESC`,
       )
       .all(contentId) as unknown as PckRelease[];
     return rows.map((r) => ({ ...r, rollout: this.getRollout(r.id)! }));
