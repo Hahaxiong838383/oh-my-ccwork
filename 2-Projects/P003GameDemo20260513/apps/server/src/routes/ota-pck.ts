@@ -154,14 +154,22 @@ export function resolveContentUpdate(sn: string, launcherVersionCode: number, st
   if (dev?.frozen) return decide('frozen', null);
   const candidates = pckStore.publishedCandidates(state.content_id);
   if (candidates.length === 0) return decide('no_release', null);
+  // 目标 = 最新发布且「对这台设备适用」的 release（灰度名单/机型/最低 Launcher 不匹配的才往旧的看）。
+  // 目标定了就不再往旧 release 回落：same_version / pending_same / file_missing 一律 null。
+  // 2026-09-04 11:22 事故：003 激活新版后，旧的 published v214 被当成「另一个可升级版本」offer 回去 → 降级乒乓
+  //（v214→j3→v214，2 分钟内两次整机重启）。多个 published 并存是合法场景（灰度分层），但设备只有一个目标。
   let firstReason = '';
   for (const r of candidates) {
     const reason = eligibilityReason(r, sn, launcherVersionCode, state);
     if (!reason) return decide('offer', r);
     if (!firstReason) firstReason = reason;
+    if (!NOT_FOR_THIS_DEVICE.has(reason)) return decide(reason, null);
   }
   return decide(firstReason, null);
 }
+
+/** 这些原因说明该 release 不是给这台设备的，可以继续看更早的 release；其余原因意味着「目标就是它」，不回落。 */
+const NOT_FOR_THIS_DEVICE = new Set(['sn_not_in_rollout', 'model_mismatch', 'launcher_too_old']);
 
 /** 合同 §5.2 八条（1 Bearer=SN 与 8 冻结在外层）；返回空串=合格。 */
 export function eligibilityReason(r: PckRelease & { rollout: { policy: string; sns: string } }, sn: string, launcherVersionCode: number, state: ContentState): string {

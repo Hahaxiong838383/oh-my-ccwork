@@ -318,5 +318,50 @@ const REL1 = pckStore.listReleases()[0].id;
   eq('v3-10 清理 V3/V2 草稿', [(await admin('DELETE', `/releases/${r.json.release.id}`)).status, (await admin('DELETE', `/releases/${v2again.json.release.id}`)).status], [200, 200]);
 }
 
+// ── 9. 多 published 并存不得回落到旧版（2026-09-04 11:22 003 降级乒乓事故回归锚）──
+{
+  // 干净起点：把所有 published/draft 清掉再造两版
+  for (const r of pckStore.listReleases()) {
+    if (r.status === 'published') await admin('POST', `/releases/${r.id}/revoke`);
+  }
+  const OLD = buildPck([{ path: 'res://art/old.png', data: Buffer.from('OLD'.repeat(100)) }]);
+  const NEW = buildPck([{ path: 'res://art/new.png', data: Buffer.from('NEW'.repeat(100)) }]);
+  const ro = await upload(OLD, { content_version: 'v300-old', product_models: MODEL, min_launcher_version_code: '212' });
+  const rn = await upload(NEW, { content_version: 'v301-new', product_models: MODEL, min_launcher_version_code: '212' });
+  eq('pp-0 两版入草稿', [ro.status, rn.status], [200, 200]);
+  eq('pp-1 先发旧版', (await admin('POST', `/releases/${ro.json.release.id}/publish`, { rollout: 'sns', sns: [SN_A] })).status, 200);
+  await new Promise((r) => setTimeout(r, 5));
+  eq('pp-2 再发新版', (await admin('POST', `/releases/${rn.json.release.id}/publish`, { rollout: 'sns', sns: [SN_A] })).status, 200);
+  // 设备在旧版 → 目标是新版
+  let c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
+  eq('pp-3 设备在旧版 → offer 新版', c.json.content_update?.content_version, 'v301-new');
+  // 设备激活了新版 → 必须 null(same_version),绝不能把旧版 offer 回去
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v301-new' }) });
+  eq('pp-4 设备在新版 → null 且判定 same_version(不回落旧版)', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'same_version']);
+  // 设备 pending 新版 → pending_same,同样不回落
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old', pending_content_version: 'v301-new' }) });
+  eq('pp-5 pending 新版 → null pending_same', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'pending_same']);
+  // 新版不在这台的灰度名单 → 才允许看旧版
+  const rn2 = await upload(buildPck([{ path: 'res://art/n2.png', data: Buffer.from('N2'.repeat(100)) }]), { content_version: 'v302-other-sn', product_models: MODEL, min_launcher_version_code: '212' });
+  await new Promise((r) => setTimeout(r, 5));
+  eq('pp-6 发一个只给 SN_B 的更新版', (await admin('POST', `/releases/${rn2.json.release.id}/publish`, { rollout: 'sns', sns: [SN_B] })).status, 200);
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
+  eq('pp-7 更新版不给 SN_A → 回落到 SN_A 适用的 v301-new', c.json.content_update?.content_version, 'v301-new');
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v301-new' }) });
+  eq('pp-8 SN_A 在 v301-new → null(v302 不给它,v300 是旧版)', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'same_version']);
+  // 新版文件丢失 → file_missing 且不回落旧版
+  const newRel = pckStore.getRelease(rn.json.release.id)!;
+  const newPath = join(tmp, 'ota-files', 'pck', `${newRel.sha256}.pck`);
+  const bak = readFileSync(newPath);
+  writeFileSync(newPath, Buffer.from('truncated'));
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
+  eq('pp-9 新版文件不一致 → file_missing,不回落旧版', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'file_missing']);
+  writeFileSync(newPath, bak);
+  // 撤回新版 → 旧版重新成为目标(显式动作才允许降级)
+  eq('pp-10 撤回新版', (await admin('POST', `/releases/${rn.json.release.id}/revoke`)).status, 200);
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v301-new' }) });
+  eq('pp-11 撤回后旧版才被 offer(显式降级)', c.json.content_update?.content_version, 'v300-old');
+}
+
 console.log(`\nota-pck tests: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
