@@ -417,9 +417,10 @@ let draftSha = '';
   // 现役版本服务端不认识(历史遗留) → 门不生效,照常 offer
   c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'unknown-legacy' }) });
   eq('sq-12 现役未知版本不拦', c.json.content_update?.content_version, 'v311-rollback-of-301');
-  // 回滚熔断（F2 竞态）：设备上报 rolled_back(from=新版 → to=恢复版)的同一次 check 里,新版对它不再下发;他机不受影响
+  // 回滚熔断（F2 竞态）：设备上报 rolled_back 的同一次 check 里,被放弃的版本对它不再下发;他机不受影响。
+  // 字段真值(2026-09-04 F2 003 实测,合同冻结)：from=恢复后的现役(#6), to=被放弃的候选(#7)；服务端 from/to 两向都计入再剔除现役,不依赖顺序。
   await new Promise((r) => setTimeout(r, 5)); // 回滚上报时刻必须晚于该版本最近一次 publish(rollout.updated_at)
-  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }), content_last_result: { stage: 'rolled_back', status: 'success', from_content_version: 'v311-rollback-of-301', to_content_version: 'v300-old' } });
+  c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }), content_last_result: { stage: 'rolled_back', status: 'success', from_content_version: 'v300-old', to_content_version: 'v311-rollback-of-301' } });
   eq('sq-13 rolled_back 版本对上报设备不再 offer', [c.json.content_update, pckStore.getDevice(SN_A)!.last_decision], [null, 'rolled_back_by_device']);
   c = await check(SN_A, CRED_A, { content_state: state({ active_content_version: 'v300-old' }) });
   eq('sq-13b 下一次 check 仍熔断(不靠同一请求)', pckStore.getDevice(SN_A)!.last_decision, 'rolled_back_by_device');
