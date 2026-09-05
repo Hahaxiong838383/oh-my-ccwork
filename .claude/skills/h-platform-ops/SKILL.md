@@ -6820,3 +6820,52 @@ request for url (https://api.x.ai/v1/responses)` = 传输断流）。归类一�
 告警：非用户主动停 + 零产出 → owner 单聊卡（`bridge.mjs` 零回复告警块）。
 完整 usage 在 **runner-worker 侧** trace 的 `zero reply` 日志行——
 worker 是独立进程、**没有飞书 client**，别想在那儿发卡。
+
+---
+
+## grok 订阅登录（OIDC session）—— 2026-09-05 全量
+
+租户走 `cli-chat-proxy.grok.com`（SuperGrok 订阅池），不再注入 `XAI_API_KEY` 走 `api.x.ai`（API credits 池）。
+**两个独立计费池**：API 通道打满报 `403 personal-team-blocked:spending-limit`，订阅通道打满报
+`402 Grok Build usage balance exhausted`。**402 是周期性窗口（实测 ~30 min 自愈），不是耗尽，别让用户去续订。**
+
+### 真值
+| 项 | 值 |
+|---|---|
+| 开关 | dev198 `.env` `H_GROK_SUBSCRIPTION_LOGIN_UIDS`：逗号 uid / `all`（09-05 起 all）/ 空=关 |
+| 生效条件 | 命中名单 **且** 控制面 creds `mode==='device'` **且** 令牌未过期（<5min skew 判不可用） |
+| 不生效 | `mode==='endpoint'`（自定义接口用户）、kimi 引擎、令牌过期 → 一律回退 API key 路径（fail-safe） |
+| 令牌来源 | 控制面 `/internal/creds/<uid>` → `xai.{access,expires_at,email,user_id,mode}`，**不是** owner 本机 |
+| 续期 | 控制面 `token-manager`（<4h 自动刷），执行面不持 refresh |
+| 写入 | `lib/control-client.mjs::writeGrokAuth`（10 字段，`refresh_token` 空，`create_time` 自造） |
+| 重启 | `systemctl --user restart feishu-grok-bridge feishu-grok-runner-worker`（两个都自己 load `.env`） |
+
+### 切换成功判据（三个都要，缺一不算）
+```bash
+# 1) worker 日志（uid 脱敏，别按 uid 过滤）
+journalctl --user -u feishu-grok-runner-worker --since today --no-pager | grep -c "sub-login 订阅 session 生效"
+# 2) 该租户 auth.json 新写出 + endpoint 块被剜
+test -f /srv/h-platform/users/<uid>/.grok/auth.json; grep -c 'endpoint context window' /srv/h-platform/users/<uid>/.grok/config.toml
+# 3) 模型池 12 → 2，且 info.base_url = cli-chat-proxy
+python3 -c "import json;d=json.load(open('/srv/h-platform/users/<uid>/.grok/models_cache.json'));m=d['models'];print(len(m),(m.get('grok-4.6') or {}).get('info',{}).get('base_url'))"
+```
+
+### 急停
+```bash
+ssh dev198 "cd ~/feishu-grok-bridge && sed -i 's/^H_GROK_SUBSCRIPTION_LOGIN_UIDS=.*/H_GROK_SUBSCRIPTION_LOGIN_UIDS=/' .env && systemctl --user restart feishu-grok-bridge feishu-grok-runner-worker"
+```
+残留的 auth.json 会被 `env_key` 覆盖块架空（鉴权序 per-model env_key > session），要干净就顺手 `rm` 掉。
+
+### ⚠️ 验证判据教训
+- `grok models` 的 `You are logged in with grok.com.` **不是鉴权判据**——key 改坏它照样这么说（本地解析）。
+  只认真实 `grok -p` 请求 + 负锚（坏 key → 401）。
+- 模型池只有 `grok-4.5/4.6` 两项，但**画图仍可用**（grok 内建，真产出过 jpg）；工具自述列表里没有画图工具，自述不算数。
+- 订阅路径下 `task_end.usage` 偶为 null（已知，怀疑 finish 时序；数据在 `unified.jsonl`，`collectGrokUsage` 真 offset 能采到）。
+
+### 送达 watchdog 与「检查型」任务
+名字含 `闸|检查|巡检|审批|校验|核对|补发|监控|提醒|确认|对账|复核|勿动|测试` 的任务**正常路径零发送**，
+`defaultExpectDelivery` 已排除。给存量上默认值时**导出名单逐条过，不看计数**（09-05 「晨报补发闸」误报实录）。
+
+### Mini 站点
+AI 专家（`u-aca292be3f`，`executionSite=mini`）跑在 `mini-pub` → `limactl shell h-b2`，healthz `18775`。
+**停在 8-13 版本（37e6db55），本轮全部修复未上**，川哥说搁置。它不在 dev198 名册是 by design，不是孤儿。
