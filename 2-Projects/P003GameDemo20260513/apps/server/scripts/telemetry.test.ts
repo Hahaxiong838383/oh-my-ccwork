@@ -170,6 +170,30 @@ const seg = {
 }
 eq('evt-4 未知 type rejected', (await postBatch(tk, mkBatch({ events: [{ event_id: 'x1', type: 'alien_event', occurred_at_ms: NOW, data: {} }] }))).json.data.rejected, [{ event_id: 'x1', reason: 'invalid_event_type' }]);
 
+// ---------- device_command（合同 v3.1 §4，2026-09-05）----------
+{
+  const dc = (id: string, data: Record<string, unknown>) => ({ event_id: id, type: 'device_command', occurred_at_ms: NOW, data });
+  const good = {
+    source: 'vad_chip', label: 2, action: 'led_on', lane: 'L0', status: 'succeeded', reason: 'state_confirmed',
+    execution_ms: 180, mcu_tx_count: 3, steps_done: 1, boundary_basis: 'none', spoken_locally: true, candidate_seq: 1, trace_id: 'trace-dc-1',
+  };
+  let r = await postBatch(tk, mkBatch({ events: [dc('dc_1', good)] }));
+  eq('dc-1 合法 device_command 逐条 ACK', r.json.data.acked_event_ids, ['dc_1']);
+  r = await postBatch(tk, mkBatch({ events: [dc('dc_1', good)] }));
+  eq('dc-2 同 event_id 同 payload 重传 = duplicated（不重复入账）', r.json.data.duplicated_event_ids, ['dc_1']);
+  r = await postBatch(tk, mkBatch({ events: [dc('dc_x', { ...good, canonical_phrase: '打开灯光' })] }));
+  eq('dc-3 多余键（原话类）拒 invalid_event_data', r.json.data.rejected, [{ event_id: 'dc_x', reason: 'invalid_event_data' }]);
+  r = await postBatch(tk, mkBatch({ events: [dc('dc_r', { ...good, reason: 'r'.repeat(65) })] }));
+  eq('dc-4 reason>64 拒', r.json.data.rejected[0]?.reason, 'invalid_event_data');
+  r = await postBatch(tk, mkBatch({ events: [dc('dc_n', { ...good, lane: null, trace_id: null, candidate_seq: null, source: 'ui' })] }));
+  eq('dc-5 lane/trace/candidate 可空（UI 来源）', r.json.data.acked_event_ids, ['dc_n']);
+  r = await postBatch(tk, mkBatch({ events: [dc('dc_a', { ...good, status: 'accepted' })] }));
+  eq('dc-6 非终态 accepted 不是执行事件，拒', r.json.data.rejected[0]?.reason, 'invalid_event_data');
+  r = await postBatch(tk, mkBatch({ events: [dc('dc_bad', { ...good, mcu_tx_count: 'three' }), dc('dc_ok', { ...good, label: 6, action: 'brightness_down' })] }));
+  eq('dc-7 坏事件不误删同批其他事件', { rej: r.json.data.rejected.map((x: { event_id: string }) => x.event_id), ack: r.json.data.acked_event_ids }, { rej: ['dc_bad'], ack: ['dc_ok'] });
+  eq('dc-8 坏事件的批仍 200（逐条 ACK 语义）', r.status, 200);
+}
+
 // ---------- parent API ----------
 const ptk = await parentJwt('acct-90');
 {
