@@ -30,7 +30,7 @@ use tokio::task::JoinHandle;
 use tracing::{info, warn};
 
 use crate::contract::Contract;
-use crate::candidate::{CandidateSlot, is_silent_result};
+use crate::candidate::is_silent_result;
 use crate::say_defer::{success_reply_silent, DeferredSay};
 use crate::control;
 use crate::eot::{EOT_MAX_SAMPLES, EotClient, UNLIKELY_THRESHOLD_ZH};
@@ -187,7 +187,8 @@ enum TurnEvent {
     AudioStarted(u64),
     PlayedOut(u64),
     /// 2b:LLM task 剥出的 [[DEV:N]] 意图回主循环(执行需 &mut self:pending_cmd/trace/publish)
-    DevIntent { label: u32, text: String },
+    /// v3.1(codex 复核 §2):带创建时捕获的 turn id 与说话轮次,消费前过 device_ledger::l2_event_gate
+    DevIntent { label: u32, text: String, turn_id: u64, utterance: u64 },
 }
 
 /// S2-B2 命令轮槽(合同 §4.3/4.4):发布 proposed 后等 result,终态播固定短句。
@@ -294,8 +295,6 @@ struct Orchestrator {
     l2_execute_on: bool,
     /// 2b:Android 能力声明(wake 包 contract_version>=2 才允许发 L2;room 级,job 结束即弃)
     l2_capable: bool,
-    /// 2b:硬件候选槽(turn-scoped,消费即清;见 candidate.rs)
-    pending_candidate: CandidateSlot,
     /// 本地音频回声对撞库(2026-09-01):(slot, normalize 后文案)。job 开始异步拉取填充,
     /// 拉不到=空(fail-open)。只装 greeting.*(farewell 播于关房时刻不需要;且退出词
     /// 与 farewell 文案对撞会误吞真退出意图——greeting 生成门本就禁退出/命令词,双保险)。
@@ -467,7 +466,7 @@ pub async fn run_pipeline(
     room_name: String,
     route: transcript_pub::Route,
     mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
-    mut devres_rx: mpsc::Receiver<control::DeviceResult>,
+    mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
 ) -> Result<()> {
@@ -615,7 +614,6 @@ pub async fn run_pipeline(
         exit_pending: None,
         l2_execute_on,
         l2_capable: false,
-        pending_candidate: CandidateSlot::default(),
         echo_local_texts,
         session_started_at: Instant::now(),
         echo_short_turn_at: None,
@@ -826,8 +824,8 @@ pub async fn run_pipeline(
             }
             // S2-B2:Android 设备命令执行结果(独立 topic 独立管道)
             r = devres_rx.recv() => {
-                if let Some(r) = r {
-                    orch.on_device_result(r);
+                if let Some((r, identity)) = r {
+                    orch.on_device_result(r, identity.as_deref());
                 }
                 // channel 关闭不退主循环——命令通道是可选能力
             }
@@ -976,7 +974,8 @@ impl Orchestrator {
             VadEvent::SpeechStart => {
                 self.turn_gate.on_speech_start();
                 // v3.1 账本:停说 ≥ NEW_UTTERANCE_GAP 后再开口 = 新句;上一句若从未 commit(ASR 缺失),其芯片观测作孤儿(只诊断)
-                for o in self.ledger.on_speech_start(now) {
+                let gate_has_pending = !self.turn_gate.pending().is_empty();
+                for o in self.ledger.on_speech_start(now, gate_has_pending) {
                     info!(room = %self.room_name, label = o.label, action = %o.action, ownership = ?o.ownership,
                           candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_obs_orphaned");
                 }
@@ -1161,8 +1160,6 @@ impl Orchestrator {
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
         // v3.1 账本:记录去重键(utterance + action + params + source);芯片在 commit 前的提案 utterance=None,commit 时归属
         self.ledger.record_proposal(utterance, cmd.action, "", source, Instant::now());
-        // 2b:同一句话的硬件候选随本 proposal 用掉(L1 快路命中=该候选已被快路消费,L2 已 take)
-        self.pending_candidate.clear(Instant::now());
         // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
         info!(
             room = %self.room_name,
@@ -1201,7 +1198,7 @@ impl Orchestrator {
 
     /// 2b:LLM 慢路意图落主循环。门序在 device_intent::l2_gate(纯函数);通过则以 L2 lane
     /// 复用快路的 proposal/result/短句链路。EXECUTE=0 时静默(task 内 observed 打点已代表)。
-    fn on_l2_intent(&mut self, label: u32, user_text: &str) {
+    fn on_l2_intent(&mut self, label: u32, user_text: &str, utterance: u64) {
         if !self.l2_execute_on {
             return;
         }
@@ -1229,10 +1226,9 @@ impl Orchestrator {
         cmd.normalized_text = crate::device_intent::normalize(user_text);
         // v3.1 账本(R3):claimed / ignored / unknown 所有权对 L2 同样生效;同句芯片候选原样回传;
         // 被压制时同句候选槽一并消费,不留给后续误当可执行候选
-        let ledger_candidate = match self.ledger.decide(cmd.action, "", "llm") {
+        let candidate = match self.ledger.decide(utterance, cmd.action, "") {
             crate::device_ledger::Decision::Suppress(reason) => {
-                info!(room = %self.room_name, label, reason, utterance = self.ledger.current_utterance(), "llm device intent suppressed");
-                let _ = self.pending_candidate.take_for(self.device_trace.as_deref(), self.next_turn_id, Instant::now());
+                info!(room = %self.room_name, label, reason, utterance, "llm device intent suppressed");
                 return;
             }
             crate::device_ledger::Decision::Propose { candidate, mismatch_with, .. } => {
@@ -1243,10 +1239,7 @@ impl Orchestrator {
                 candidate
             }
         };
-        // 候选关联(candidate.rs 单测覆盖 turn-scoped/长 turn/消费即清/覆盖/job 隔离):账本无候选时回退到候选槽;都无=None 交 Android 裁决
-        let candidate = ledger_candidate.or_else(|| {
-            self.pending_candidate.take_for(self.device_trace.as_deref(), self.next_turn_id, Instant::now())
-        });
+        // 候选关联只认账本(codex 复核 §3:旧槽会把已作废候选带回下一句);账本无同句候选 = None 交 Android 裁决
         info!(
             room = %self.room_name,
             label,
@@ -1254,14 +1247,14 @@ impl Orchestrator {
             candidate = %candidate.as_deref().unwrap_or("none"),
             "llm device intent executed"
         );
-        let utterance = Some(self.ledger.current_utterance());
-        self.start_device_command(cmd, user_text, "L2", candidate, "llm", utterance);
+        self.start_device_command(cmd, user_text, "L2", candidate, "llm", Some(utterance));
     }
 
     /// Android result 到达:key 对撞 → 终态播固定短句清槽;accepted 播「正在调整」延时限。
-    fn on_device_result(&mut self, r: control::DeviceResult) {
+    /// `identity`=收包层已按绑定设备 participant 核验过的来源身份(job.rs),这里只记日志
+    fn on_device_result(&mut self, r: control::DeviceResult, identity: Option<&str>) {
         if r.lane == "L0" {
-            self.on_l0_result(r);
+            self.on_l0_result(r, identity);
             return;
         }
         let Some(p) = &mut self.pending_cmd else {
@@ -1320,8 +1313,13 @@ impl Orchestrator {
 
     /// v3.1 §3.4/§3.6:L0(芯片本地执行)result——无 pending 槽,按 key 去重(只记终态);accepted 不说;
     /// 端侧已开始播报不说;候选冲突静默;其余终态按同一话术表补说。ignored observation / UI 结果不是 result,不走这里。
-    fn on_l0_result(&mut self, r: control::DeviceResult) {
-        // codex R4 门序:active trace → source(vad_chip|fallback)→ action 非空 → status 枚举(accepted 只诊断)→ (trace,key) 去重
+    fn on_l0_result(&mut self, r: control::DeviceResult, identity: Option<&str>) {
+        // codex R4 门序:绑定身份(收包层已验)→ active trace → source(vad_chip|fallback)→ action 非空且与 label 目录一致
+        // → status 枚举(accepted 只诊断)→ (trace,key) 去重
+        let action_valid = u32::try_from(r.semantic_label)
+            .ok()
+            .and_then(crate::device_intent::command_by_label)
+            .is_some_and(|c| c.action == r.action);
         let gate = self.ledger.l0_check(
             self.device_trace.as_deref(),
             &r.trace_id,
@@ -1329,6 +1327,7 @@ impl Orchestrator {
             &r.source,
             &r.status,
             &r.action,
+            action_valid,
         );
         info!(
             room = %self.room_name,
@@ -1338,6 +1337,7 @@ impl Orchestrator {
             reason = %r.reason,
             lane = "L0",
             source = %r.source,
+            identity = identity.unwrap_or("-"),
             spoken_locally = ?r.spoken_locally,
             clip = %r.spoken_clip_key,
             execution_ms = ?r.execution_ms,
@@ -1419,9 +1419,6 @@ impl Orchestrator {
                 let now = Instant::now();
                 // 2b:候选 ID 先于 commit 到达,记为本 turn 候选(L2 proposal 发出时消费)
                 let has_candidate = candidate_id.is_some();
-                if let Some(id) = candidate_id.as_deref() {
-                    self.pending_candidate.record(&ev.trace_id, id, self.next_turn_id, now);
-                }
                 // v3.1:芯片决策纯函数(device_intent::chip_decision 单测锁死矩阵):
                 // 合同 <3 / 缺字段 / 未知值 → 旧策略;合同 ≥3 → claimed 不提案 / ignored 不提案 / 电机 deferred 等 ASR
                 let cmd = crate::device_intent::command_by_label(label);
@@ -1763,7 +1760,16 @@ impl Orchestrator {
 
     fn on_turn_event(&mut self, te: TurnEvent) {
         match te {
-            TurnEvent::DevIntent { label, text } => self.on_l2_intent(label, &text),
+            TurnEvent::DevIntent { label, text, turn_id, utterance } => {
+                // codex 复核 §2:旧 turn 的事件在新句后才被消费 → 丢弃,不按「当前」轮次查账
+                let active = self.agent_turn.as_ref().map(|t| t.id);
+                if let Err(reason) = crate::device_ledger::l2_event_gate(turn_id, utterance, active, self.ledger.current_utterance()) {
+                    info!(room = %self.room_name, label, turn_id, utterance, active_turn = ?active,
+                          current_utterance = self.ledger.current_utterance(), reason, "llm device intent dropped (stale event)");
+                    return;
+                }
+                self.on_l2_intent(label, &text, utterance);
+            }
             TurnEvent::AudioStarted(id) => {
                 if self.agent_turn.as_ref().map(|t| t.id) != Some(id) {
                     return; // 已被替换的旧 turn,忽略
@@ -2036,7 +2042,8 @@ impl Orchestrator {
                     Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
                         // v3.1 账本(R1/R3):同句裁决按语音段归属,不按时间窗;claimed/ignored/unknown 所有权在此生效;
                         // deferred 电机被同句 ASR 独立确认时,候选 ID 原样回传
-                        let (candidate, utterance) = match self.ledger.decide(cmd.action, "", "asr") {
+                        let cur_utterance = self.ledger.current_utterance();
+                        let (candidate, utterance) = match self.ledger.decide(cur_utterance, cmd.action, "") {
                             crate::device_ledger::Decision::Suppress(reason) => {
                                 info!(
                                     room = %self.room_name,
@@ -2060,7 +2067,7 @@ impl Orchestrator {
                                     info!(room = %self.room_name, label = cmd.semantic_label, action = %cmd.action,
                                           candidate = %candidate.as_deref().unwrap_or("none"), "chip_candidate_confirmed_by_asr");
                                 }
-                                (candidate, Some(self.ledger.current_utterance()))
+                                (candidate, Some(cur_utterance))
                             }
                         };
                         if self.agent_turn.is_some() {
@@ -2180,6 +2187,8 @@ impl Orchestrator {
         };
         self.next_turn_id += 1;
         let id = self.next_turn_id;
+        // codex 复核 §2:LLM 子任务派发的 DevIntent 必须带创建时的 turn id 与说话轮次
+        let utterance_at_start = self.ledger.current_utterance();
         self.tr_started = 0;
         self.tr_finaled = 0;
         let (pcm_tx, pcm_rx) = mpsc::channel::<Vec<u8>>(32);
@@ -2330,7 +2339,12 @@ impl Orchestrator {
                                 continue;
                             }
                             l2_sent = true;
-                            let _ = ev_tx.try_send(TurnEvent::DevIntent { label, text: user_text.clone() });
+                            let _ = ev_tx.try_send(TurnEvent::DevIntent {
+                                label,
+                                text: user_text.clone(),
+                                turn_id: id,
+                                utterance: utterance_at_start,
+                            });
                         }
                         if delta.is_empty() {
                             continue;

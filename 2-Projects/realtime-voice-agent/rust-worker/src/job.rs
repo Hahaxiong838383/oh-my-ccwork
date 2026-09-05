@@ -136,7 +136,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         mpsc::channel::<(control::Envelope, control::Inbound, Option<String>)>(64);
     let mut ctrl_rx = Some(ctrl_rx);
     // S2-B2 设备命令结果通道(android → worker,独立 topic 独立管道)
-    let (devres_tx, devres_rx) = mpsc::channel::<control::DeviceResult>(16);
+    let (devres_tx, devres_rx) = mpsc::channel::<(control::DeviceResult, Option<String>)>(16);
     let mut devres_rx = Some(devres_rx);
     // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
     // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
@@ -190,19 +190,20 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                         warn!(room = %room_name, "control 队列满,丢弃一个控制包");
                     }
                 } else if topic.as_deref() == Some(control::DEVICE_RESULT_TOPIC) {
-                    // S2-B2:result 只认 android 参与者实体(payload src 自述在 parse 里二验)
-                    let from_agent = participant
-                        .as_ref()
-                        .map(|p| p.identity().as_str().starts_with("agent-"))
-                        .unwrap_or(true);
-                    if !from_agent
+                    // S2-B2 + v3.1 R4(codex 复核 §5):result 只认**本房绑定的设备 participant**(用户轨订阅时记下的身份),
+                    // 不再只排除 agent- 前缀;payload src 自述在 parse 里二验。身份随包透传给 pipeline 记日志。
+                    let ident = participant.as_ref().map(|p| p.identity().to_string());
+                    let bound = user_info.as_ref().map(|(i, _)| i.as_str());
+                    if bound.is_some()
+                        && ident.as_deref() == bound
                         && let Some(r) = control::parse_device_result(&payload)
                     {
-                        if devres_tx.try_send(r).is_err() {
+                        if devres_tx.try_send((r, ident)).is_err() {
                             warn!(room = %room_name, "device result 队列满,丢弃");
                         }
                     } else {
-                        tracing::debug!(room = %room_name, "丢弃非法 device result 包");
+                        tracing::debug!(room = %room_name, identity = ident.as_deref().unwrap_or("-"),
+                            bound = bound.unwrap_or("-"), "丢弃 device result 包(非绑定设备身份或畸形)");
                     }
                 } else {
                     tracing::debug!(room = %room_name, ?topic, "丢弃无法解析的 data packet");

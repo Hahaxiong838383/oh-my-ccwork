@@ -137,11 +137,14 @@ impl Ledger {
         self.utterance
     }
 
-    /// VAD 开口:记当前未提交语音段的起点。上一段已停说且间隔 ≥ NEW_UTTERANCE_GAP 而**从未 commit**(ASR 缺失)
-    /// → 上一句作废:其未归属观测作孤儿返回(只诊断),提案退休;本次开口是新句起点。
-    pub fn on_speech_start(&mut self, now: Instant) -> Vec<ChipObs> {
+    /// VAD 开口:记当前未提交语音段的起点。上一段已停说、间隔 ≥ NEW_UTTERANCE_GAP、**且 TurnGate 没有待提交文本**
+    /// (真·ASR 缺失,不是 EOT 还在等)→ 上一句作废:其未归属观测作孤儿返回(只诊断),提案退休;本次开口是新句起点。
+    /// `gate_has_pending`=TurnGate.pending 非空:有文本在等提交 = 同句仍在生命周期内,所有权必须跟着文本保留
+    /// (codex 复核向量 `eot_pending_text_must_not_lose_chip_ownership`)。
+    pub fn on_speech_start(&mut self, now: Instant, gate_has_pending: bool) -> Vec<ChipObs> {
         let mut orphans = Vec::new();
-        if let (Some(_), Some(end)) = (self.utterance_started_at, self.last_speech_end_at)
+        if !gate_has_pending
+            && let (Some(_), Some(end)) = (self.utterance_started_at, self.last_speech_end_at)
             && now.duration_since(end) >= NEW_UTTERANCE_GAP
         {
             let (gone, keep): (Vec<ChipObs>, Vec<ChipObs>) =
@@ -264,13 +267,13 @@ impl Ledger {
         stale
     }
 
-    /// 当前已提交句的 ASR / LLM 命中裁决(source = "asr" | "llm")。
-    pub fn decide(&mut self, action: &'static str, params: &str, source: &'static str) -> Decision {
-        let u = self.utterance;
+    /// 指定说话轮次的 ASR / LLM 命中裁决。调用方必须传事件**创建时**捕获的轮次(异步 L2 事件不得按「当前」查账:
+    /// codex 复核向量 `queued_l2_must_not_escape_original_claimed_turn`);过期轮次先由 l2_event_gate 丢弃。
+    pub fn decide(&mut self, utterance: u64, action: &'static str, params: &str) -> Decision {
+        let u = utterance;
         if let Some(p) = self.proposals.iter().find(|p| p.utterance == Some(u) && p.action == action && p.params == params) {
             return Decision::Suppress(if p.source == "chip" { "command_word_already_proposed" } else { "duplicate_same_utterance" });
         }
-        let _ = source;
         let mut candidate = None;
         let mut mismatch_with = None;
         let mut confirmed_deferred = false;
@@ -309,8 +312,20 @@ impl Ledger {
         self.obs.iter().rev().find(|o| o.utterance == Some(u)).map(|o| o.ownership)
     }
 
-    /// L0(芯片本地执行)result 门序:active trace → source → action → status 枚举 → (trace,key) 去重(只记终态)。
-    pub fn l0_check(&mut self, active_trace: Option<&str>, r_trace: &str, key: &str, source: &str, status: &str, action: &str) -> L0Outcome {
+    /// L0(芯片本地执行)result 门序:active trace → source → action 非空且**与 semantic_label 目录一致**(`action_valid`
+    /// 由调用方按 device_intent 词表算)→ status 枚举 → (trace,key) 去重(只记终态)。非法 action 不得取得播报资格,
+    /// 也不得抢占终态 key(codex 复核向量 `unknown_l0_action_must_not_speak_or_consume_key`)。
+    #[allow(clippy::too_many_arguments)]
+    pub fn l0_check(
+        &mut self,
+        active_trace: Option<&str>,
+        r_trace: &str,
+        key: &str,
+        source: &str,
+        status: &str,
+        action: &str,
+        action_valid: bool,
+    ) -> L0Outcome {
         match active_trace {
             Some(t) if t == r_trace => {}
             _ => return L0Outcome::Silent("stale_or_foreign_trace"),
@@ -320,6 +335,9 @@ impl Ledger {
         }
         if action.is_empty() {
             return L0Outcome::Silent("missing_action");
+        }
+        if !action_valid {
+            return L0Outcome::Silent("invalid_action");
         }
         if status == "accepted" {
             return L0Outcome::Silent("accepted_diagnostic");
@@ -339,6 +357,18 @@ impl Ledger {
     }
 }
 
+/// 异步 L2 事件(LLM 子任务派发的 DevIntent)消费前的门:事件必须带**创建时**捕获的 turn id 与说话轮次;
+/// 原 turn 已被替换/打断、或说话轮次已推进 → 丢弃(不按「当前」轮次查账)。纯函数,dispatcher 与单测共用。
+pub fn l2_event_gate(event_turn: u64, event_utterance: u64, active_turn: Option<u64>, current_utterance: u64) -> Result<(), &'static str> {
+    if active_turn != Some(event_turn) {
+        return Err("stale_turn");
+    }
+    if event_utterance != current_utterance {
+        return Err("stale_utterance");
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -352,18 +382,18 @@ mod tests {
     fn r1_second_utterance_asr_only_not_swallowed() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(600));
+        l.on_speech_start(t0 - ms(600), false);
         assert_eq!(l.on_chip(4, "brightness_up", Ownership::Proposed, Some("vad:t:1".into()), t0), ChipOutcome::ProposeNow { candidate: Some("vad:t:1".into()), utterance: None });
         l.record_proposal(None, "brightness_up", "", "chip", t0);
         // 第一句 ASR final:停说于 t0+100,提交于 t0+300(eou 200ms)
         let rep = l.on_commit(t0 + ms(300), ms(200));
         assert_eq!((rep.utterance, rep.orphans.len()), (1, 0));
-        assert_eq!(l.decide("brightness_up", "", "asr"), Decision::Suppress("command_word_already_proposed"), "同句 ASR 抑制,正确");
+        assert_eq!(l.decide(l.current_utterance(), "brightness_up", ""), Decision::Suppress("command_word_already_proposed"), "同句 ASR 抑制,正确");
         // 第二句:t0+900 开口,t0+1300 提交(芯片没识别到)
-        l.on_speech_start(t0 + ms(900));
+        l.on_speech_start(t0 + ms(900), false);
         let rep2 = l.on_commit(t0 + ms(1300), ms(200));
         assert_eq!(rep2.utterance, 2);
-        assert_eq!(l.decide("brightness_up", "", "asr"), Decision::Propose { candidate: None, mismatch_with: None, confirmed_deferred: false }, "下一真实句仅 ASR 命中不被上一句 chip 吞掉");
+        assert_eq!(l.decide(l.current_utterance(), "brightness_up", ""), Decision::Propose { candidate: None, mismatch_with: None, confirmed_deferred: false }, "下一真实句仅 ASR 命中不被上一句 chip 吞掉");
     }
 
     /// codex R1 反例②(合同 3 结构性):前一句 claimed 开灯、该句 ASR 缺失,下一句关灯 3 s 内到达 → 不得当 mismatch 压制
@@ -371,15 +401,15 @@ mod tests {
     fn r1_claimed_without_asr_does_not_suppress_next_utterance() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(500));
+        l.on_speech_start(t0 - ms(500), false);
         assert_eq!(l.on_chip(2, "led_on", Ownership::Claimed, Some("vad:t:1".into()), t0), ChipOutcome::Held);
         l.on_speech_end(t0 + ms(200));
         // 第一句没有 ASR(commit 从未发生);第二句 t0+1200 开口(停说后 1 s ≥ NEW_UTTERANCE_GAP → 新句)、t0+1700 提交
-        let gone = l.on_speech_start(t0 + ms(1200));
+        let gone = l.on_speech_start(t0 + ms(1200), false);
         assert_eq!((gone.len(), gone[0].ownership), (1, Ownership::Claimed), "上一句的 claimed 观测在再开口时作孤儿(只诊断)");
         let rep = l.on_commit(t0 + ms(1700), ms(200));
         assert_eq!((rep.utterance, rep.orphans.len()), (1, 0));
-        assert_eq!(l.decide("led_off", "", "asr"), Decision::Propose { candidate: None, mismatch_with: None, confirmed_deferred: false }, "关灯照常提案");
+        assert_eq!(l.decide(l.current_utterance(), "led_off", ""), Decision::Propose { candidate: None, mismatch_with: None, confirmed_deferred: false }, "关灯照常提案");
     }
 
     /// 同句内短停顿(< NEW_UTTERANCE_GAP)不拆句:芯片观测仍归本句
@@ -387,12 +417,12 @@ mod tests {
     fn short_pause_within_utterance_keeps_association() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0);
+        l.on_speech_start(t0, false);
         l.on_chip(2, "led_on", Ownership::Claimed, None, t0 + ms(500));
         l.on_speech_end(t0 + ms(600));
-        assert!(l.on_speech_start(t0 + ms(900)).is_empty(), "300 ms 换气不算新句");
+        assert!(l.on_speech_start(t0 + ms(900), false).is_empty(), "300 ms 换气不算新句");
         l.on_commit(t0 + ms(1800), ms(300));
-        assert_eq!(l.decide("led_on", "", "asr"), Decision::Suppress("chip_claimed_same_turn"));
+        assert_eq!(l.decide(l.current_utterance(), "led_on", ""), Decision::Suppress("chip_claimed_same_turn"));
     }
 
     /// 同句 claimed:同动作 ASR 吞句;不同动作 ASR 压制并标 mismatch
@@ -400,11 +430,11 @@ mod tests {
     fn claimed_same_utterance_suppresses_asr_and_l2() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(400));
+        l.on_speech_start(t0 - ms(400), false);
         l.on_chip(2, "led_on", Ownership::Claimed, Some("vad:t:3".into()), t0);
         l.on_commit(t0 + ms(400), ms(200));
-        assert_eq!(l.decide("led_on", "", "asr"), Decision::Suppress("chip_claimed_same_turn"));
-        assert_eq!(l.decide("brightness_up", "", "llm"), Decision::Suppress("chip_asr_mismatch_suppressed"), "claimed → 非 L1 短语 → L2 意图仍零 proposal");
+        assert_eq!(l.decide(l.current_utterance(), "led_on", ""), Decision::Suppress("chip_claimed_same_turn"));
+        assert_eq!(l.decide(l.current_utterance(), "brightness_up", ""), Decision::Suppress("chip_asr_mismatch_suppressed"), "claimed → 非 L1 短语 → L2 意图仍零 proposal");
         assert_eq!(l.ownership_of_current(), Some(Ownership::Claimed));
     }
 
@@ -413,19 +443,19 @@ mod tests {
     fn deferred_motor_confirmed_by_same_utterance_asr_carries_candidate() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(300));
+        l.on_speech_start(t0 - ms(300), false);
         assert_eq!(l.on_chip(33, "virtual_image_farther_step", Ownership::DeferredMotor, Some("vad:t:7".into()), t0), ChipOutcome::Held);
         l.on_commit(t0 + ms(500), ms(200));
         assert_eq!(
-            l.decide("virtual_image_farther_step", "", "asr"),
+            l.decide(l.current_utterance(), "virtual_image_farther_step", ""),
             Decision::Propose { candidate: Some("vad:t:7".into()), mismatch_with: None, confirmed_deferred: true }
         );
         let mut l2 = Ledger::new();
-        l2.on_speech_start(t0 - ms(300));
+        l2.on_speech_start(t0 - ms(300), false);
         l2.on_chip(33, "virtual_image_farther_step", Ownership::DeferredMotor, Some("vad:t:8".into()), t0);
         l2.on_commit(t0 + ms(500), ms(200));
         assert_eq!(
-            l2.decide("virtual_image_nearer_step", "", "asr"),
+            l2.decide(l2.current_utterance(), "virtual_image_nearer_step", ""),
             Decision::Propose { candidate: Some("vad:t:8".into()), mismatch_with: Some((33, "virtual_image_farther_step")), confirmed_deferred: false },
             "ASR 独立命中为准,候选原样回传,mismatch 只诊断"
         );
@@ -436,7 +466,7 @@ mod tests {
     fn deferred_motor_without_asr_becomes_orphan() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(300));
+        l.on_speech_start(t0 - ms(300), false);
         l.on_chip(30, "motor_up_step", Ownership::DeferredMotor, Some("vad:t:9".into()), t0);
         assert!(l.poll(t0 + ms(4000)).is_empty(), "开口未提交期间不作孤儿");
         let mut l2 = Ledger::new();
@@ -451,15 +481,15 @@ mod tests {
     fn unknown_or_ignored_ownership_blocks_same_utterance_proposals() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(300));
+        l.on_speech_start(t0 - ms(300), false);
         l.on_chip(30, "motor_up_step", Ownership::Unknown, None, t0);
         l.on_commit(t0 + ms(400), ms(200));
-        assert_eq!(l.decide("motor_up_step", "", "asr"), Decision::Suppress("ownership_unknown_same_turn"));
+        assert_eq!(l.decide(l.current_utterance(), "motor_up_step", ""), Decision::Suppress("ownership_unknown_same_turn"));
         let mut l2 = Ledger::new();
-        l2.on_speech_start(t0 - ms(300));
+        l2.on_speech_start(t0 - ms(300), false);
         l2.on_chip(2, "led_on", Ownership::Ignored, Some("vad:t:2".into()), t0);
         l2.on_commit(t0 + ms(400), ms(200));
-        assert_eq!(l2.decide("led_on", "", "llm"), Decision::Suppress("chip_ignored_same_turn"));
+        assert_eq!(l2.decide(l2.current_utterance(), "led_on", ""), Decision::Suppress("chip_ignored_same_turn"));
     }
 
     /// 精确去重:同句同 action 不同参数不互吞;同句同键第二次(ASR 后 LLM 又提)吞
@@ -467,12 +497,12 @@ mod tests {
     fn exact_key_includes_params() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(300));
+        l.on_speech_start(t0 - ms(300), false);
         l.on_commit(t0 + ms(400), ms(200));
-        assert!(matches!(l.decide("virtual_image_target", "t50", "asr"), Decision::Propose { .. }));
+        assert!(matches!(l.decide(l.current_utterance(), "virtual_image_target", "t50"), Decision::Propose { .. }));
         l.record_proposal(Some(1), "virtual_image_target", "t50", "asr", t0 + ms(400));
-        assert!(matches!(l.decide("virtual_image_target", "t80", "llm"), Decision::Propose { .. }), "不同目标不得互吞");
-        assert_eq!(l.decide("virtual_image_target", "t50", "llm"), Decision::Suppress("duplicate_same_utterance"));
+        assert!(matches!(l.decide(l.current_utterance(), "virtual_image_target", "t80"), Decision::Propose { .. }), "不同目标不得互吞");
+        assert_eq!(l.decide(l.current_utterance(), "virtual_image_target", "t50"), Decision::Suppress("duplicate_same_utterance"));
     }
 
     /// 晚到的芯片 hint(ASR 先提交):归到上一句 → 同键 Duplicate,不发第二个提案
@@ -480,7 +510,7 @@ mod tests {
     fn late_chip_hint_after_commit_is_duplicate() {
         let t0 = Instant::now();
         let mut l = Ledger::new();
-        l.on_speech_start(t0 - ms(500));
+        l.on_speech_start(t0 - ms(500), false);
         l.on_commit(t0, ms(200));
         l.record_proposal(Some(1), "brightness_up", "", "asr", t0);
         assert_eq!(l.on_chip(4, "brightness_up", Ownership::Proposed, None, t0 + ms(400)), ChipOutcome::Duplicate);
@@ -497,23 +527,77 @@ mod tests {
         l.record_proposal(None, "brightness_up", "", "chip", t0);
         let rep = l.on_commit(t0 + ms(800), ms(200));
         assert_eq!(rep.orphans.len(), 0);
-        assert_eq!(l.decide("brightness_up", "", "asr"), Decision::Suppress("command_word_already_proposed"));
+        assert_eq!(l.decide(l.current_utterance(), "brightness_up", ""), Decision::Suppress("command_word_already_proposed"));
     }
 
     /// codex R4:L0 门序——旧 trace / UI 冒充 / 未知状态 / accepted / 重复终态 / 缺 action
     #[test]
     fn l0_gate_order_and_dedupe() {
         let mut l = Ledger::new();
-        let ok = |l: &mut Ledger, key: &str| l.l0_check(Some("tr-1"), "tr-1", key, "vad_chip", "succeeded", "led_on");
-        assert_eq!(l.l0_check(Some("tr-1"), "tr-0", "chip:tr-0:1", "vad_chip", "succeeded", "led_on"), L0Outcome::Silent("stale_or_foreign_trace"));
-        assert_eq!(l.l0_check(None, "tr-1", "chip:tr-1:1", "vad_chip", "succeeded", "led_on"), L0Outcome::Silent("stale_or_foreign_trace"), "无 active trace 不播");
-        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "ui", "succeeded", "led_on"), L0Outcome::Silent("invalid_l0_source"));
-        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "vad_chip", "succeeded", ""), L0Outcome::Silent("missing_action"));
-        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "vad_chip", "accepted", "led_on"), L0Outcome::Silent("accepted_diagnostic"));
-        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "vad_chip", "weird", "led_on"), L0Outcome::Silent("unknown_status"));
+        let ok = |l: &mut Ledger, key: &str| l.l0_check(Some("tr-1"), "tr-1", key, "vad_chip", "succeeded", "led_on", true);
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-0", "chip:tr-0:1", "vad_chip", "succeeded", "led_on", true), L0Outcome::Silent("stale_or_foreign_trace"));
+        assert_eq!(l.l0_check(None, "tr-1", "chip:tr-1:1", "vad_chip", "succeeded", "led_on", true), L0Outcome::Silent("stale_or_foreign_trace"), "无 active trace 不播");
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "ui", "succeeded", "led_on", true), L0Outcome::Silent("invalid_l0_source"));
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "vad_chip", "succeeded", "", true), L0Outcome::Silent("missing_action"));
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "vad_chip", "accepted", "led_on", true), L0Outcome::Silent("accepted_diagnostic"));
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:1", "vad_chip", "weird", "led_on", true), L0Outcome::Silent("unknown_status"));
         assert_eq!(ok(&mut l, "chip:tr-1:1"), L0Outcome::Speak, "未知状态/accepted 不得污染已见集合");
         assert_eq!(ok(&mut l, "chip:tr-1:1"), L0Outcome::Silent("duplicate_terminal"));
-        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:2", "fallback", "rejected", "led_on"), L0Outcome::Speak, "fallback 来源合法");
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:2", "fallback", "rejected", "led_on", true), L0Outcome::Speak, "fallback 来源合法");
+    }
+
+    /// codex 复核 §4:EOT 还在等待、TurnGate 有待提交文本时再开口(间隔 800 ms)→ 不作废,claimed 所有权跟文本保留
+    #[test]
+    fn eot_pending_text_must_not_lose_chip_ownership() {
+        let t0 = Instant::now();
+        let mut l = Ledger::new();
+        l.on_speech_start(t0, false);
+        l.on_chip(4, "brightness_up", Ownership::Claimed, Some("vad:t:5".into()), t0 + ms(400));
+        l.on_speech_end(t0 + ms(600));
+        assert!(l.on_speech_start(t0 + ms(1400), true).is_empty(), "gate 有 pending 文本:同句仍在生命周期内,不作孤儿");
+        let rep = l.on_commit(t0 + ms(3000), ms(300));
+        assert_eq!(rep.orphans.len(), 0);
+        assert_eq!(l.decide(rep.utterance, "brightness_up", ""), Decision::Suppress("chip_claimed_same_turn"), "最终 commit 含第一段文本 → L2/ASR 裁决仍持有该所有权");
+    }
+
+    /// codex 复核 §2:旧 turn 的 L2 事件在新句 commit 后被消费 → 门先丢弃,不得按当前轮次查账
+    #[test]
+    fn queued_l2_must_not_escape_original_claimed_turn() {
+        let t0 = Instant::now();
+        let mut l = Ledger::new();
+        l.on_speech_start(t0, false);
+        l.on_chip(4, "brightness_up", Ownership::Claimed, Some("vad:t:1".into()), t0 + ms(300));
+        let u1 = l.on_commit(t0 + ms(800), ms(200)).utterance;
+        assert_eq!(l.decide(u1, "brightness_up", ""), Decision::Suppress("chip_claimed_same_turn"), "原轮裁决 Suppress");
+        // 第二句 commit 推进轮次;旧 DevIntent(turn 7 / utterance u1)此刻才被消费
+        l.on_speech_start(t0 + ms(2000), false);
+        let u2 = l.on_commit(t0 + ms(2600), ms(200)).utterance;
+        assert_eq!(l2_event_gate(7, u1, Some(8), u2), Err("stale_turn"), "原 turn 已被新轮替换");
+        assert_eq!(l2_event_gate(8, u1, Some(8), u2), Err("stale_utterance"), "同 turn 但说话轮次已推进");
+        assert_eq!(l2_event_gate(8, u2, Some(8), u2), Ok(()));
+        assert_eq!(l.decide(u1, "brightness_up", ""), Decision::Suppress("chip_claimed_same_turn"), "即便按原轮查账也仍是 Suppress,不会变 Propose");
+    }
+
+    /// codex 复核 §3:上一句作废后,下一句不得从任何缓存带回旧候选(账本是唯一来源)
+    #[test]
+    fn orphaned_candidate_must_not_reappear() {
+        let t0 = Instant::now();
+        let mut l = Ledger::new();
+        l.on_speech_start(t0, false);
+        l.on_chip(2, "led_on", Ownership::Claimed, Some("vad:review:old".into()), t0 + ms(300));
+        l.on_speech_end(t0 + ms(500));
+        let gone = l.on_speech_start(t0 + ms(1500), false);
+        assert_eq!(gone[0].candidate.as_deref(), Some("vad:review:old"));
+        let u = l.on_commit(t0 + ms(2200), ms(200)).utterance;
+        assert_eq!(l.decide(u, "brightness_up", ""), Decision::Propose { candidate: None, mismatch_with: None, confirmed_deferred: false }, "独立下一句,无候选");
+    }
+
+    /// codex 复核 §5:非法 action 不得取得播报资格、不得抢占终态 key
+    #[test]
+    fn unknown_l0_action_must_not_speak_or_consume_key() {
+        let mut l = Ledger::new();
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:9", "vad_chip", "succeeded", "not_a_device_action", false), L0Outcome::Silent("invalid_action"));
+        assert_eq!(l.l0_check(Some("tr-1"), "tr-1", "chip:tr-1:9", "vad_chip", "succeeded", "led_on", true), L0Outcome::Speak, "随后相同 key 的合法终态照常播报");
     }
 
     /// 编排向量:识别→候选→ASR→proposal(记录待发布候选)→第二句(合同 2 旧策略全链)
@@ -523,17 +607,17 @@ mod tests {
         let mut l = Ledger::new();
         let mut published: Vec<(&str, Option<String>)> = Vec::new();
         // 句 1:芯片先到 → 立即提案(带候选) → ASR 同句吞
-        l.on_speech_start(t0);
+        l.on_speech_start(t0, false);
         if let ChipOutcome::ProposeNow { candidate, utterance } = l.on_chip(2, "led_on", Ownership::Proposed, Some("vad:t:1".into()), t0 + ms(700)) {
             published.push(("led_on", candidate));
             l.record_proposal(utterance, "led_on", "", "chip", t0 + ms(700));
         }
         l.on_commit(t0 + ms(1200), ms(300));
-        assert!(matches!(l.decide("led_on", "", "asr"), Decision::Suppress(_)));
+        assert!(matches!(l.decide(l.current_utterance(), "led_on", ""), Decision::Suppress(_)));
         // 句 2:只有 ASR
-        l.on_speech_start(t0 + ms(2500));
+        l.on_speech_start(t0 + ms(2500), false);
         l.on_commit(t0 + ms(3600), ms(300));
-        if let Decision::Propose { candidate, .. } = l.decide("led_off", "", "asr") {
+        if let Decision::Propose { candidate, .. } = l.decide(l.current_utterance(), "led_off", "") {
             published.push(("led_off", candidate));
             l.record_proposal(Some(l.current_utterance()), "led_off", "", "asr", t0 + ms(3600));
         }
