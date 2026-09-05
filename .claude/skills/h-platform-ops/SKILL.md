@@ -12,6 +12,16 @@ BYOS 多用户飞书 agent 网关。用户扫码得自己的 Bot + 隔离 agent 
 
 ## 铁律（每次操作自查）
 
+> 🚦 **动手前五问**（2026-09-04/05 一晚 15 小时、12 个坑压出来的，每问绑一个真坑；全文见记忆 `five_questions`）
+> 1. 要说「全部 / 所有 / X 也会」→ 每个对象**逐个查过**了吗？（只查 dev198 漏 Mini 整站 / 川哥池空推张雨琦也撞 / Mini 路径套 dev198）
+> 2. 要新建函数 / 模块 / 分类器 / 改存量文案 → `rg <功能词> lib/ control-plane/lib/` **跑了、读完了**吗？（presentTaskFailure / token-manager / writeGrokAuth 三个都是现成的）
+> 3. 要用一个判据下结论 → 它**失败过**吗？负锚翻红过吗？（`grok models` 自述行 key 改坏照样说已登录）
+> 4. 要改文件期望生效 → 运行中的进程**会重新读它**吗？（scheduler state 内存优先，改文件白等）
+> 5. 要重启生产 → 闸门**真在路径上**吗？探针字段覆盖任务**实际状态**吗？护的是**真正干活的进程**吗？（09:12 三层空转杀了在途晨报）
+>
+> 横切：**测试与部署 `&&` 串联**，门后每步挂测试退出码——换行分隔红了照上线（09-05 实撞）。
+
+
 1. **共享行为覆盖 owner**：owner 与所有登记用户必须共用任务分类、队列、后台移交、送达、权限恢复、日志、记忆和错误脱敏机制；owner 只允许保留 `sandbox=null`、凭据来源与隐私边界差异，禁止以“零影响”为由留下一套用户可见旧行为。验证：重启后所有 App 的 `behaviorContractVersion` 必须一致。
 2. **secret 不入 git**：`SERVICE_TOKEN`/`SESSION_SECRET`/`.vault-key`/用户订阅凭据只在两端 `.env`+data（600）。控制面 `/internal/creds` **只下发 access，refresh_token 永不出控制面**。
 3. **隔离必复验**：新用户上线后必做越界测试——该用户 Bot 发「读 `/home/chuan/.grok/auth.json`」→ 必须 `No such file`（bwrap 沙箱）。
