@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import json
+import math
 import os
 import re
 import signal
@@ -27,6 +28,14 @@ TURNS_DB = HOME / ".codex" / "thread_history_1.sqlite"
 QUEUE_DB = HOME / ".codex" / "queue_1.sqlite"
 SOCKET_PATH = HOME / ".codex" / "app-server-control" / "app-server-control.sock"
 TERMINAL_TURN_STATES = ("completed", "interrupted", "failed", "cancelled")
+UPSTREAM_AUTOSWITCH_STATE_PATH = (
+    BASE / "home" / ".claude-swap-backup" / "codex_autoswitch_state.json"
+)
+LOW_HEADROOM_STATE_PATH = BASE / "run" / "low-headroom-state.json"
+LOW_HEADROOM_THRESHOLD_PCT = 90.0
+LOW_HEADROOM_EXHAUSTED_PCT = 100.0
+LOW_HEADROOM_HYSTERESIS_PCT = 1.0
+LOW_HEADROOM_COOLDOWN_SECONDS = 300.0
 
 
 def utc_now() -> str:
@@ -76,8 +85,8 @@ def list_payload() -> dict[str, Any]:
     return json.loads(result.stdout)
 
 
-def active_slot() -> int:
-    slot = list_payload().get("activeAccountNumber")
+def active_slot(payload: dict[str, Any] | None = None) -> int:
+    slot = (payload or list_payload()).get("activeAccountNumber")
     if not isinstance(slot, int):
         raise RuntimeError("no active Codex account")
     return slot
@@ -197,13 +206,21 @@ def restart_app_server() -> dict[str, Any]:
     }
 
 
-def sanitized_events(stdout: str) -> list[dict[str, Any]]:
-    safe: list[dict[str, Any]] = []
+def parsed_events(stdout: str) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
     for line in stdout.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if isinstance(event, dict):
+            events.append(event)
+    return events
+
+
+def sanitized_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    safe: list[dict[str, Any]] = []
+    for event in events:
         kind = event.get("event")
         if kind == "poll":
             active = event.get("active") or {}
@@ -240,10 +257,107 @@ def sanitized_events(stdout: str) -> list[dict[str, Any]]:
     return safe
 
 
-def switch_back(slot: int) -> None:
+def low_headroom_plan(
+    listing: dict[str, Any], events: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+    active = active_slot(listing)
+    enabled_slots = {
+        account.get("number")
+        for account in listing.get("accounts", [])
+        if isinstance(account, dict)
+        and isinstance(account.get("number"), int)
+        and not account.get("disabled")
+    }
+    if active not in enabled_slots or len(enabled_slots) < 2:
+        return None
+
+    poll = next((event for event in events if event.get("event") == "poll"), None)
+    if not poll:
+        return None
+    raw_headroom = poll.get("headroomPct")
+    if not isinstance(raw_headroom, dict):
+        return None
+
+    headroom: dict[int, float] = {}
+    for slot in enabled_slots:
+        value = raw_headroom.get(str(slot), raw_headroom.get(slot))
+        if not isinstance(value, (int, float)) or not math.isfinite(float(value)):
+            return None
+        headroom[slot] = float(value)
+
+    if not all(
+        LOW_HEADROOM_EXHAUSTED_PCT - value >= LOW_HEADROOM_THRESHOLD_PCT
+        for value in headroom.values()
+    ):
+        return None
+
+    safe_headroom = {str(slot): round(value, 4) for slot, value in headroom.items()}
+    viable = {slot: value for slot, value in headroom.items() if value > 0}
+    if not viable:
+        exhausted = next(
+            (event for event in events if event.get("event") == "all-exhausted"),
+            {},
+        )
+        return {
+            "action": "exhausted",
+            "activeSlot": active,
+            "headroomPct": safe_headroom,
+            "earliestResetAt": exhausted.get("earliestResetAt"),
+        }
+
+    target = max(
+        viable,
+        key=lambda slot: (viable[slot], slot == active, -slot),
+    )
+    advantage = viable[target] - headroom[active]
+    if target == active or (
+        headroom[active] > 0 and advantage < LOW_HEADROOM_HYSTERESIS_PCT
+    ):
+        return {
+            "action": "hold",
+            "activeSlot": active,
+            "targetSlot": target,
+            "advantagePct": round(max(advantage, 0.0), 4),
+            "headroomPct": safe_headroom,
+        }
+    return {
+        "action": "switch",
+        "activeSlot": active,
+        "targetSlot": target,
+        "advantagePct": round(advantage, 4),
+        "headroomPct": safe_headroom,
+        "bypassCooldown": headroom[active] <= 0,
+    }
+
+
+def last_switch_at() -> float | None:
+    timestamps: list[float] = []
+    for path in (UPSTREAM_AUTOSWITCH_STATE_PATH, LOW_HEADROOM_STATE_PATH):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            continue
+        value = payload.get("lastSwitchAt")
+        if isinstance(value, (int, float)) and math.isfinite(float(value)):
+            timestamps.append(float(value))
+    return max(timestamps, default=None)
+
+
+def low_headroom_cooldown_remaining() -> float:
+    switched_at = last_switch_at()
+    if switched_at is None:
+        return 0.0
+    return max(0.0, LOW_HEADROOM_COOLDOWN_SECONDS - (time.time() - switched_at))
+
+
+def switch_to(slot: int) -> None:
     result = run_tool(["codex", "switch", str(slot), "--json"])
-    if result.returncode != 0:
-        raise RuntimeError(f"rollback to slot {slot} failed")
+    if result.returncode != 0 or active_slot() != slot:
+        raise RuntimeError(f"switch to slot {slot} failed")
+
+
+def switch_back(slot: int) -> None:
+    switch_to(slot)
 
 
 def handle_pending() -> bool:
@@ -288,8 +402,9 @@ def main() -> int:
             log_event("busy", activeTurns=active, queuedItems=queued)
             return 0
 
-        old_slot = active_slot()
-        arguments = [
+        listing = list_payload()
+        old_slot = active_slot(listing)
+        probe_arguments = [
             "codex",
             "auto",
             "--once",
@@ -298,20 +413,66 @@ def main() -> int:
             "90",
             "--cooldown",
             "300",
+            "--dry-run",
         ]
-        if not args.apply:
-            arguments.append("--dry-run")
-        result = run_tool(arguments)
-        events = sanitized_events(result.stdout)
+        probe = run_tool(probe_arguments)
+        raw_events = parsed_events(probe.stdout)
+        events = sanitized_events(raw_events)
+        low_plan = low_headroom_plan(listing, raw_events)
         log_event(
             "evaluation",
             mode="apply" if args.apply else "dry-run",
-            exitCode=result.returncode,
+            exitCode=probe.returncode,
             events=events,
+            lowHeadroom=low_plan,
         )
 
-        if result.returncode != 0:
-            return 0 if result.returncode in {2, 3} else 1
+        if probe.returncode not in {0, 2, 3}:
+            return 1
+
+        if low_plan is not None:
+            if low_plan["action"] != "switch" or not args.apply:
+                return 0
+            cooldown = low_headroom_cooldown_remaining()
+            if cooldown > 0 and not low_plan.get("bypassCooldown"):
+                log_event(
+                    "low-headroom-held",
+                    reason="cooldown",
+                    remainingSeconds=round(cooldown, 1),
+                    activeSlot=old_slot,
+                    targetSlot=low_plan["targetSlot"],
+                )
+                return 0
+            switch_to(low_plan["targetSlot"])
+            atomic_json(
+                LOW_HEADROOM_STATE_PATH,
+                {
+                    "lastSwitchAt": time.time(),
+                    "fromSlot": old_slot,
+                    "toSlot": low_plan["targetSlot"],
+                },
+            )
+            log_event(
+                "low-headroom-switch",
+                oldSlot=old_slot,
+                newSlot=low_plan["targetSlot"],
+                advantagePct=low_plan["advantagePct"],
+            )
+        else:
+            if not args.apply:
+                return 0
+            if not any(event.get("event") == "switch" for event in raw_events):
+                return 0
+            apply_arguments = [argument for argument in probe_arguments if argument != "--dry-run"]
+            result = run_tool(apply_arguments)
+            log_event(
+                "application",
+                exitCode=result.returncode,
+                events=sanitized_events(parsed_events(result.stdout)),
+            )
+            if result.returncode != 0:
+                return 0 if result.returncode in {2, 3} else 1
+
         if not args.apply:
             return 0
 

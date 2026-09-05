@@ -7,6 +7,10 @@
   "thresholdPct": 90,
   "cooldownSeconds": 300,
   "pollSeconds": 300,
+  "lowHeadroomMode": "most-weekly-headroom",
+  "lowHeadroomThresholdPct": 90,
+  "lowHeadroomExhaustedPct": 100,
+  "lowHeadroomHysteresisPct": 1,
   "provider": "openai",
   "cpaFallback": false,
   "accountSlots": 2
