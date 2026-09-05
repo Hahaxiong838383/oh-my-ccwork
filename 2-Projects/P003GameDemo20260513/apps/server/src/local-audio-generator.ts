@@ -7,6 +7,7 @@ import { getStyleTemplate } from './style-template.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
 import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot } from './local-audio-store.js';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
+import { activeDeviceReplyKeep } from './local-audio-device-reply.js';
 import { configStore } from './config-store.js';
 
 /**
@@ -358,7 +359,8 @@ export function estimateRevisionBytes(poolBySlot: Record<string, number[]>, perS
 function sizePrecheck(accountId: string): { est: number; over: boolean } {
   const pool: Record<string, number[]> = {};
   for (const slot of LOCAL_AUDIO_SLOTS) pool[slot] = localAudioStore.listRecentBytesBySlot(accountId, slot, PUBLISH_ITEMS_PER_SLOT);
-  const est = estimateRevisionBytes(pool, PUBLISH_ITEMS_PER_SLOT);
+  // 设备回复槽（已 active 的 18 条）随套搬运，体积一并计入
+  const est = estimateRevisionBytes(pool, PUBLISH_ITEMS_PER_SLOT) + activeDeviceReplyKeep(accountId).reduce((a, k) => a + k.bytes, 0);
   return { est, over: est > REVISION_CAP_BYTES };
 }
 
@@ -608,11 +610,13 @@ export async function runLocalAudioForAccount(
       return { ok: false, trigger: triggerText, detail: `slots_short:${short.map((r) => r.slot).join(',')}` };
     }
 
+    // 设备回复槽（合同 v3.1 §5）：只搬运**已 active** 的条目——staging 里的十八条绝不在这里自动提为 active，
+    // 发布必须显式走 scripts/local-audio-device-reply.ts --publish（新的不可变 revision）
+    const deviceReplyKeep = activeDeviceReplyKeep(accountId);
     // revision 总量门 ≤5MiB（WAV 合同增量 §2.2）：超限不发布（超大套宁可保持旧套）
     // 合同 §3.3.4：按去重后的 clip id 计总量（同一条目跨槽复用只算一次，与 manifest 一致）
     const seenIds = new Set<string>();
-    const totalBytes = results
-      .flatMap((r) => r.keep)
+    const totalBytes = [...results.flatMap((r) => r.keep), ...deviceReplyKeep.map((k) => ({ slot: k.slot, id: k.id }))]
       .reduce((sum, k) => {
         if (seenIds.has(k.id)) return sum;
         seenIds.add(k.id);
@@ -623,7 +627,7 @@ export async function runLocalAudioForAccount(
       return { ok: false, trigger: triggerText, detail: `revision_too_big:${totalBytes}` };
     }
 
-    const keepAll = results.flatMap((r) => r.keep.map(({ slot, id }) => ({ slot, id })));
+    const keepAll = [...results.flatMap((r) => r.keep.map(({ slot, id }) => ({ slot, id }))), ...deviceReplyKeep.map(({ slot, id }) => ({ slot, id }))];
     const revision = localAudioStore.commitSet(accountId, keepAll, {
       tier: tierNow,
       traits: JSON.stringify(traits),

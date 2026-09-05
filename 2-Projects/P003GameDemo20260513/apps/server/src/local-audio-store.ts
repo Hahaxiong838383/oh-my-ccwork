@@ -35,6 +35,35 @@ export const LOCAL_AUDIO_SLOTS = [
 export type LocalAudioSlot = (typeof LOCAL_AUDIO_SLOTS)[number];
 
 /**
+ * 设备回复槽（合同 v3.1 §5，codex 2026-09-05 定稿 18 条）：文本冻结、每槽 1 条、optional。
+ * 不进 LLM 生成循环（LOCAL_AUDIO_SLOTS 不含），只由 local-audio-device-reply.ts 显式 stage / 发布；
+ * 日常再生成只搬运已 active 的条目。文本真源见 DEVICE_REPLY_TEXTS。
+ */
+export const DEVICE_REPLY_SLOTS = [
+  'device_reply.applied_relative',
+  'device_reply.applied_absolute',
+  'device_reply.applied_unconfirmed',
+  'device_reply.already',
+  'device_reply.boundary.virtual_image_far',
+  'device_reply.boundary.virtual_image_near',
+  'device_reply.boundary.brightness_max',
+  'device_reply.boundary.brightness_min',
+  'device_reply.boundary.color_temperature_warm',
+  'device_reply.boundary.color_temperature_cold',
+  'device_reply.boundary.volume_max',
+  'device_reply.boundary.volume_min',
+  'device_reply.boundary.height_max',
+  'device_reply.boundary.height_min',
+  'device_reply.boundary.generic',
+  'device_reply.not_now',
+  'device_reply.failed',
+  'device_reply.unsupported_motor',
+] as const;
+export type DeviceReplySlot = (typeof DEVICE_REPLY_SLOTS)[number];
+/** 条目可落的全部槽（人格 14 + 设备回复 18） */
+export type AnyAudioSlot = LocalAudioSlot | DeviceReplySlot;
+
+/**
  * 必选六 slot（v107 合同 §1：required 缺任一即整套 abort）。
  * posture.* 为 optional：缺失=合法（v107 端侧回退 APK 内置），但一旦出现必须 2..5 条——
  * 单条不成套（发布门会弃 1 条的 optional slot，条目留 staging 下轮补足后再进）。
@@ -52,7 +81,7 @@ export const MIN_ITEMS_PER_SLOT = 2;
 const STALE_ITEM_TTL_MS = 14 * 86_400_000;
 
 export type LocalAudioItem = {
-  slot: LocalAudioSlot;
+  slot: AnyAudioSlot;
   id: string;
   text: string;
   sha256: string;
@@ -202,7 +231,7 @@ class LocalAudioStore {
 
   /** 该 slot 的 staging 条目（active=0，14 天窗内，新→旧，限定 format）——LLM 空手轮的补足来源。
    *  format 过滤是 WAV 迁移铁律：staging 里的 MP3 遗留绝不能补进 WAV 套（混套=违反合同 §4.5）。 */
-  listStagedBySlot(accountId: string, slot: LocalAudioSlot, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem[] {
+  listStagedBySlot(accountId: string, slot: AnyAudioSlot, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem[] {
     return this.db
       .prepare(
         `SELECT * FROM local_audio_item WHERE account_id = ? AND slot = ? AND active = 0 AND format = ? AND created_at >= ? ORDER BY created_at DESC`,
@@ -211,7 +240,7 @@ class LocalAudioStore {
   }
 
   /** 体积预检用：该 slot 近期（14 天内）wav 条目字节数，新→旧，最多 limit 条（active + staging 都算，它们就是下轮会被保留的池）。 */
-  listRecentBytesBySlot(accountId: string, slot: LocalAudioSlot, limit: number): number[] {
+  listRecentBytesBySlot(accountId: string, slot: AnyAudioSlot, limit: number): number[] {
     return (
       this.db
         .prepare(
@@ -224,7 +253,7 @@ class LocalAudioStore {
   /** 同 slot 同 text 同 format 的既有条目（含 active=0）——J4 复用判定。
    *  format 必须参与判定（合同 WAV 增量 §4.5：文案相同 MP3/WAV 也不得共用 id——W4 首发实测踩过：
    *  撞文案复活了 rev=1 的 MP3 条目，rev=2 成混套）。 */
-  findByText(accountId: string, slot: LocalAudioSlot, text: string, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem | null {
+  findByText(accountId: string, slot: AnyAudioSlot, text: string, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem | null {
     const row = this.db
       .prepare(`SELECT * FROM local_audio_item WHERE account_id = ? AND slot = ? AND text = ? AND format = ? LIMIT 1`)
       .get(accountId, slot, text, format) as LocalAudioItem | undefined;
@@ -251,7 +280,7 @@ class LocalAudioStore {
    */
   commitSet(
     accountId: string,
-    keep: Array<{ slot: LocalAudioSlot; id: string }>,
+    keep: Array<{ slot: AnyAudioSlot; id: string }>,
     gen: { tier: string; traits: string },
     // minRevision：跨设备 revision 命名空间对齐用（v133 合同硬门 2「不得低于双机已持有值」，
     // 0010 3→5 跳号）。默认 0 = MAX(revision+1, 0) = 纯 +1，旧路径行为不变。

@@ -19,6 +19,8 @@ const { sanitizeClipText, countChars, gateClipText, shouldRegenerate, traitPromp
   await import('../src/local-audio-generator.js');
 const { localAudioStore, LOCAL_AUDIO_SLOTS, MIN_ITEMS_PER_SLOT } = await import('../src/local-audio-store.js');
 const { TRAIT_BASELINE } = await import('../src/trait-store.js');
+const { DEVICE_REPLY_SLOTS } = await import('../src/local-audio-store.js');
+const { DEVICE_REPLY_TEXTS, activeDeviceReplyKeep, candidateManifestReport, DEVICE_REPLY_MAX_MS } = await import('../src/local-audio-device-reply.js');
 
 let pass = 0,
   fail = 0;
@@ -427,6 +429,46 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   // 枚举扩容会先让本锚翻红逼提额——把容量断言从「注释」升格成「随枚举收紧的测试」。
   ok('cap-1 file 限频默认 ≥ 理论最大套×1.5', LOCAL_AUDIO_FILE_RPM_DEFAULT >= LOCAL_AUDIO_SLOTS.length * MAX_ITEMS_PER_SLOT * 1.5);
   ok('cap-2 默认值即当前生产值(env 未配时行为一致)', LOCAL_AUDIO_FILE_RPM_DEFAULT === 120);
+}
+
+
+// ---------- 设备回复十八槽（合同 v3.1 §5，2026-09-05）----------
+{
+  const ACC = 'device-BJP00326060100200099';
+  eq('dr-1 十八槽数量', DEVICE_REPLY_SLOTS.length, 18);
+  eq('dr-2 文本表覆盖全部槽且非空', DEVICE_REPLY_SLOTS.every((s) => (DEVICE_REPLY_TEXTS[s] ?? '').length > 0), true);
+  eq('dr-3 文本互不重复', new Set(Object.values(DEVICE_REPLY_TEXTS)).size, 18);
+  eq('dr-4 冻结文本样点（codex 调整的三条）', [DEVICE_REPLY_TEXTS['device_reply.applied_absolute'], DEVICE_REPLY_TEXTS['device_reply.boundary.generic'], DEVICE_REPLY_TEXTS['device_reply.not_now']], ['好的，已经调好了', '已经调到头啦', '现在暂时不能这样调']);
+  ok('dr-5 时长上限 3200ms', DEVICE_REPLY_MAX_MS === 3200);
+  // 现役：两个人格槽各 2 条（模拟已发布）
+  const mk = (slot: string, id: string, bytes: number) => localAudioStore.insertItem(ACC, { slot: slot as never, id, text: `t-${id}`, sha256: id.repeat(4), bytes, duration_ms: 1500, format: 'wav' });
+  mk('greeting.normal', 'aaaaaaaaaaaaaaa1', 90000); mk('greeting.normal', 'aaaaaaaaaaaaaaa2', 90000);
+  mk('farewell.general', 'bbbbbbbbbbbbbbb1', 90000); mk('farewell.general', 'bbbbbbbbbbbbbbb2', 90000);
+  const rev1 = localAudioStore.commitSet(ACC, [
+    { slot: 'greeting.normal', id: 'aaaaaaaaaaaaaaa1' }, { slot: 'greeting.normal', id: 'aaaaaaaaaaaaaaa2' },
+    { slot: 'farewell.general', id: 'bbbbbbbbbbbbbbb1' }, { slot: 'farewell.general', id: 'bbbbbbbbbbbbbbb2' },
+  ], { tier: 't', traits: '{}' });
+  ok('dr-6 现役集合发布 revision≥1', (rev1 ?? 0) >= 1);
+  // 十八条入 staging（active=0）：不进 manifest、不进 activeDeviceReplyKeep
+  const drRows = DEVICE_REPLY_SLOTS.map((slot, i) => { const id = `d${String(i).padStart(15, '0')}`; mk(slot, id, 96000); return { id, bytes: 96000 }; });
+  eq('dr-7 staging 不进现役 manifest', Object.keys(localAudioStore.buildManifest(ACC).slots).filter((k) => k.startsWith('device_reply.')).length, 0);
+  eq('dr-8 日常搬运只认已 active 的设备回复条目（staging 为 0）', activeDeviceReplyKeep(ACC).length, 0);
+  const rep = candidateManifestReport(ACC, drRows, 5 * 1024 * 1024);
+  eq('dr-9 候选 manifest = 现役 ∪ 十八条按 id 去重求和', { files: rep.candidate_unique_files, bytes: rep.candidate_bytes, dr: rep.device_reply_items }, { files: 22, bytes: 4 * 90000 + 18 * 96000, dr: 18 });
+  eq('dr-10 旧槽计数与未丢失证明', { gn: rep.old_slot_counts['greeting.normal'], short: rep.old_slots_short }, { gn: 2, short: [] });
+  ok('dr-11 在 5MiB 内且余量为正', rep.within_cap && rep.headroom_bytes > 0);
+  const over = candidateManifestReport(ACC, drRows.map((r) => ({ ...r, bytes: 300000 })), 5 * 1024 * 1024);
+  ok('dr-12 超限判定翻红（每条 300KB×18 + 现役 > 5MiB）', over.within_cap === false && over.headroom_bytes < 0);
+  // 显式发布：现役 ∪ 十八条 → 新 revision；之后日常搬运能看见 18 条
+  const rev2 = localAudioStore.commitSet(ACC, [
+    ...localAudioStore.listActive(ACC).map((i) => ({ slot: i.slot, id: i.id })),
+    ...DEVICE_REPLY_SLOTS.map((slot, i) => ({ slot, id: `d${String(i).padStart(15, '0')}` })),
+  ], { tier: 't', traits: '{}' });
+  eq('dr-13 显式发布 bump revision', (rev2 ?? 0), (rev1 ?? 0) + 1);
+  const m = localAudioStore.buildManifest(ACC);
+  eq('dr-14 发布后 manifest 含十八槽各 1 条', DEVICE_REPLY_SLOTS.every((s) => (m.slots[s] ?? []).length === 1), true);
+  eq('dr-15 发布后日常搬运带上 18 条', activeDeviceReplyKeep(ACC).length, 18);
+  eq('dr-16 旧槽仍各 2 条（未丢失）', (m.slots['greeting.normal'] ?? []).length + (m.slots['farewell.general'] ?? []).length, 4);
 }
 
 console.log(`\nlocal-audio tests: pass=${pass} fail=${fail}`);
