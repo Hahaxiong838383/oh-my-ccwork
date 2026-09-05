@@ -6862,10 +6862,48 @@ ssh dev198 "cd ~/feishu-grok-bridge && sed -i 's/^H_GROK_SUBSCRIPTION_LOGIN_UIDS
 - 模型池只有 `grok-4.5/4.6` 两项，但**画图仍可用**（grok 内建，真产出过 jpg）；工具自述列表里没有画图工具，自述不算数。
 - 订阅路径下 `task_end.usage` 偶为 null（已知，怀疑 finish 时序；数据在 `unified.jsonl`，`collectGrokUsage` 真 offset 能采到）。
 
-### 送达 watchdog 与「检查型」任务
-名字含 `闸|检查|巡检|审批|校验|核对|补发|监控|提醒|确认|对账|复核|勿动|测试` 的任务**正常路径零发送**，
-`defaultExpectDelivery` 已排除。给存量上默认值时**导出名单逐条过，不看计数**（09-05 「晨报补发闸」误报实录）。
+### 送达 watchdog：默认 false，白名单式开启（09-05 两次误报后启发式退役）
+晨报有 **A/B 两型，名字上不可区分**：A 型 grok 自己调 lark-cli 发（张雨琦「晨报」，audit 有 sends）；
+B 型 grok 只生成文本、平台 sendCard 送出（刘晨「晨报」，audit **永远零**）。watchdog 对账 lark-cli audit，
+对 B 型必误报（白补跑 + 用户收两份 + 「没能送达」卡 + owner 告警）。检查型（「晨报补发闸」）同理。
+→ `defaultExpectDelivery` 一律 false；全平台仅张雨琦「晨报」true。要开必须**先证明是 A 型**（audit 有该任务的
+sends），UI 只提示不自动勾。给存量上默认值时**导出名单逐条过，不看计数**。
 
 ### Mini 站点
 AI 专家（`u-aca292be3f`，`executionSite=mini`）跑在 `mini-pub` → `limactl shell h-b2`，healthz `18775`。
 **停在 8-13 版本（37e6db55），本轮全部修复未上**，川哥说搁置。它不在 dev198 名册是 by design，不是孤儿。
+
+
+---
+
+## 定时任务：重启铁律 / 补跑 SOP / pending 持久化 —— 2026-09-05
+
+### 重启铁律（09:12 事故：杨平晨报被 SIGTERM、高霏晨报随内存 pending 消失）
+- **只准**走 `ops/deploy-sites.sh dev198`（已带在途闸门 + 串行重启）或 `ops/safe-restart.sh`；**禁裸 `systemctl restart`**。
+- 探针 = `ops/inflight-count.py`（读 healthz：`runnerRpc.running − orphaned`、`liveGrokSessions`、`activeSessions`、
+  `queueDepthTotal`…）。非零 → deploy `die`；确认可牺牲才 `FORCE_RESTART=1`。
+- 为什么以前的 drain 没用：探针漏了 `running`（任务真跑起来后 inflight/requested 归零）；deploy 裸 restart 不调闸门；
+  **worker 无 ExecStop、KillMode=control-group、TimeoutStopSec=8**——并行停机 8s 就 SIGKILL。现在串行（先 bridge 再 worker）。
+- deploy 体检里那段 `/srv/h-platform/ops/` 检查是 **Mini VM 专用**（dev198 走仓内 `ops/`，随 git 自动跟上），别把它读成 dev198 缺脚本。
+
+### pending 持久化（6a9cd13 上线）
+scheduler 的 daily：`reconcileDaily` 写 `entry.pendingSince` → `fireDaily` 写 `startedAt` → 结束清两者。
+bridge 重启后 `loadState` 首次加载扫到未清的自动重新入队（日志 `schedule resumed after restart (was pending|was running)`）；
+`startedAt` 还在的额外 owner 告警（可能已发过半份，重跑有重复风险）。**正常重启 resumed 行应为 0。**
+
+### 补跑 SOP（持久化上线前的遗留场景 / 手工救场）
+state 在 `workspace/evolve/schedule-state.json`，**内存优先**（`loadState` 只在进程首次读一次）——改文件必须重启 bridge 才生效。
+```bash
+# 1) 在途必须为 0
+ssh dev198 'curl -s http://127.0.0.1:18765/healthz | python3 ~/feishu-grok-bridge/ops/inflight-count.py'
+# 2) 备份 → 把目标 entry 的 lastSlotMs 回退一天（86400000）→ 原子写（tmp + os.replace）
+# 3) 确认 state mtime 未被 saveState 覆盖 → 只重启 bridge（不碰 worker）
+ssh dev198 'systemctl --user restart feishu-grok-bridge'
+# 4) 重启后第一个 tick fire；串行，多条按 pending 顺序排队
+```
+09-05 用它补了杨平（11:48 fire / 11:52 送达）与高霏（11:52 fire / 12:02 送达）。
+
+### 判据速查
+- 任务被重启杀掉：trace 只有 `task_begin` 没 `task_end` + worker 日志同刻 `shutdown SIGTERM`
+- 任务被 pending 丢失：state `lastSlotMs` = 今天 slot 但 bridge.log 无该任务 `schedule fire`
+- `runnerRpc.orphaned` = 被杀任务的残留记录，重启即清，**不是在途**
