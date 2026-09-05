@@ -1258,11 +1258,13 @@ impl Orchestrator {
             return;
         }
         let Some(p) = &mut self.pending_cmd else {
-            info!(room = %self.room_name, key = %r.idempotency_key, status = %r.status, "迟到/无主 device result,忽略");
+            info!(room = %self.room_name, key = %r.idempotency_key, status = %r.status, reason = %r.reason,
+                  lane = %r.lane, extra = %r.extra, "迟到/无主 device result,忽略");
             return;
         };
         if p.idempotency_key != r.idempotency_key {
-            info!(room = %self.room_name, key = %r.idempotency_key, "result key 与在途命令不符(旧轮迟到),忽略");
+            info!(room = %self.room_name, key = %r.idempotency_key, status = %r.status, reason = %r.reason,
+                  extra = %r.extra, "result key 与在途命令不符(旧轮迟到),忽略");
             return;
         }
         info!(
@@ -1858,17 +1860,6 @@ impl Orchestrator {
         // 判停提交
         if let Some(commit) = self.turn_gate.poll_commit(now) {
             let user_text = commit.text;
-            // v3.1 账本(R1):开新说话轮次,把语音段区间内的芯片观测归到本句;区间外 = 上一句没有 ASR 的孤儿(只诊断)
-            let commit_rep = self.ledger.on_commit(now, commit.eou_delay);
-            for o in &commit_rep.orphans {
-                if o.ownership == crate::device_ledger::Ownership::DeferredMotor {
-                    info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
-                          candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_candidate_unconfirmed");
-                } else {
-                    info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
-                          ownership = ?o.ownership, "chip_obs_orphaned");
-                }
-            }
             // 本地音频回声对撞(2026-09-01「刚打了个盹儿」幽灵轮,招呼语回声第三次实证):
             // 开场窗内 commit 若模糊命中该设备本地招呼语文案(LCS≥0.8,回声只掉字不加字:
             // 「刚打了个盹儿」掉头、「我在这等你呢」掉中间,严格子串只兜得住前者)→判回声
@@ -1916,6 +1907,20 @@ impl Orchestrator {
                 // 紧随的后续碎片命中时按上方追杀逻辑撤销。真人短句不受影响(无后续命中=标过期)。
                 if n_chars <= 3 {
                     self.echo_short_turn_at = Some(Instant::now());
+                }
+            }
+            // v3.1 账本(R1):开新说话轮次,把语音段区间内的芯片观测归到本句;区间外 = 上一句没有 ASR 的孤儿(只诊断)。
+            // ⚠️ 必须放在本地音频回声丢弃之后(2026-09-05 12:28 003 实证):回声 commit(设备自己的「我在呢」)不是
+            // 用户的一句话,若先走 on_commit 会把轮次号和芯片观测一起吃掉,随后真正的「暗一点」提交被当成新句
+            // → 芯片提案 + ASR 提案各一次 → 端侧 hardware_busy。急停/退出吞句是真句,消费轮次无妨。
+            let commit_rep = self.ledger.on_commit(now, commit.eou_delay);
+            for o in &commit_rep.orphans {
+                if o.ownership == crate::device_ledger::Ownership::DeferredMotor {
+                    info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
+                          candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_candidate_unconfirmed");
+                } else {
+                    info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
+                          ownership = ?o.ownership, "chip_obs_orphaned");
                 }
             }
             // stop_only 吞句(2026-08-17 生命周期统一):整句=急停词 → 不成 turn,静默。
