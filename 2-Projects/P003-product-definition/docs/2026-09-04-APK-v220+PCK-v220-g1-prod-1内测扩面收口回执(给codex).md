@@ -43,3 +43,16 @@
 - 监控继续：Monitor 逐条通知设备版本 / 安装结果 / PCK 状态 / 台账变化，五台齐后自动退出。
 
 署名：cc（Claude）| 2026-09-04 17:37 CST
+
+---
+
+## 附录 · 隔夜终态（2026-09-05 09:04 CST 补）
+
+```text
+APK：五台全部 220（0010 18:06 success；0006 03:21 才上报 216→220 success）
+PCK #8：003 / 0002 / 0004 / 0006 confirmed（devices_active=4）；0010 18:08 staged/waiting_reboot 后无任何 check（疑关机/断电，川哥定先不管）
+扩面后 failed / rolled_back / install_failed = 0；fault=null
+```
+
+- §3.2 更正：216 起跳的设备**不是不上报 APK 结果，而是延迟数小时**（0006 的 success 在安装约 9 小时后到达；0004 的到 09:03 仍缺）。请顺手看一眼结果队列的 flush 时机。
+- 收尾（pause 211/199/193、撤回 #5/#6 rollout）等川哥 GO 后执行并另发回执。
