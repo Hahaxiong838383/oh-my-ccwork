@@ -208,58 +208,6 @@ struct PendingCmd {
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
 const DEVICE_RESULT_DEADLINE: Duration = Duration::from_secs(8);
 
-/// 同句跨源去重窗(合同 v3.1 §1.1.3 / codex 阶段 B §2.1;前身 PRE_INPUT_READY_COMMAND_WORD §4.3 的同 label 窗):
-/// 同一句可能被 VAD 芯片(command_word)和稍晚的云端 ASR 双捕获——键 = **action + 归一化参数**,
-/// 3 s 窗内只拦**不同来源**(芯片↔ASR)的同键;同来源(用户又说了一句「再亮一点」)不拦。
-/// 不再按「同标签族」封禁:开灯→关灯、不同 count/target 都是独立意图。纯逻辑可测。
-pub(crate) struct FirstWins {
-    /// (action, 归一化参数, 来源, 时刻)
-    recent: Vec<(&'static str, String, &'static str, Instant)>,
-    window: Duration,
-}
-
-impl FirstWins {
-    fn new() -> Self {
-        Self { recent: Vec::new(), window: Duration::from_secs(3) }
-    }
-
-    #[cfg(test)]
-    fn with_window(window: Duration) -> Self {
-        Self { recent: Vec::new(), window }
-    }
-
-    /// 尝试占坑:同 (action, params) 在窗内已被**另一来源**占 → false(duplicate);否则记录并放行。
-    fn try_claim(&mut self, action: &'static str, params: &str, source: &'static str, now: Instant) -> bool {
-        self.recent.retain(|(_, _, _, t)| now.duration_since(*t) < self.window);
-        if self.recent.iter().any(|(a, p, src, _)| *a == action && p == params && *src != source) {
-            return false;
-        }
-        self.recent.push((action, params.to_string(), source, now));
-        true
-    }
-}
-
-/// v3.1 芯片观测(3 s 窗,诊断与同句裁决用):芯片 command_word 的所有权/来源标记。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ChipKind {
-    /// 合同 2 旧策略:worker 已据标签提案
-    Proposed,
-    /// 合同 3:端侧已认领(local_action=claimed),worker 不提案
-    Claimed,
-    /// 合同 3:白名单外电机,等同轮 ASR 独立命中
-    DeferredMotor,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct ChipObs {
-    label: u32,
-    action: &'static str,
-    kind: ChipKind,
-    at: Instant,
-}
-
-const CHIP_OBS_WINDOW: Duration = Duration::from_secs(3);
-
 /// 相对调节动作(成功句「好嘞，调好啦」;绝对/目标动作「好的，已经调好了」)。
 fn is_relative_action(action: &str) -> bool {
     matches!(
@@ -329,14 +277,11 @@ struct Orchestrator {
     pending_cmd: Option<PendingCmd>,
     /// 2b §3.4:设备短句追加槽(回复在播时压后,播完再说;抢话作废)
     deferred_say: DeferredSay,
-    /// 同句跨源去重(command_word ↔ ASR 双捕获,action+params 键,3s 窗)
-    cmd_dedup: FirstWins,
+    /// v3.1(codex R1–R4 修正):设备命令账本——同句归属按语音段时序、所有权统一裁决 L1/L2、精确去重键、L0 门序
+    /// (device_ledger.rs,纯逻辑单测)。取代 3 s 时间窗 FirstWins。
+    ledger: crate::device_ledger::Ledger,
     /// v3.1:Android 能力声明原值(wake 包 contract_version;0=未声明);≥3 才启用 claimed/deferred 电机等 ASR 语义
     contract_version: u32,
-    /// v3.1:近 3 s 芯片观测(所有权/来源),ASR 命中时裁决 mismatch / 同轮吞句 / 电机确认
-    chip_obs: Vec<ChipObs>,
-    /// v3.1:L0(芯片本地执行)result 去重(按 idempotency_key,最近 32 条)
-    l0_seen: std::collections::VecDeque<String>,
     /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
     device_trace: Option<String>,
     /// v140 退出信令灰度(合同 §8.3 先仅 0010;fail-closed:env 未配=不发,吞句照常)
@@ -676,10 +621,8 @@ pub async fn run_pipeline(
         echo_short_turn_at: None,
         pending_cmd: None,
         deferred_say: DeferredSay::default(),
-        cmd_dedup: FirstWins::new(),
+        ledger: crate::device_ledger::Ledger::new(),
         contract_version: 0,
-        chip_obs: Vec::new(),
-        l0_seen: std::collections::VecDeque::new(),
         device_trace: ready.trace_id.clone(),
         turn_gate: TurnGate::new(
             cfg.min_endpointing_delay,
@@ -878,7 +821,7 @@ pub async fn run_pipeline(
                     in_report = Instant::now();
                 }
                 orch.poll_device_timeout(Instant::now());
-                orch.poll_chip_obs(Instant::now());
+                orch.poll_ledger(Instant::now());
                 orch.on_tick().await;
             }
             // S2-B2:Android 设备命令执行结果(独立 topic 独立管道)
@@ -1032,6 +975,11 @@ impl Orchestrator {
         match ev {
             VadEvent::SpeechStart => {
                 self.turn_gate.on_speech_start();
+                // v3.1 账本:停说 ≥ NEW_UTTERANCE_GAP 后再开口 = 新句;上一句若从未 commit(ASR 缺失),其芯片观测作孤儿(只诊断)
+                for o in self.ledger.on_speech_start(now) {
+                    info!(room = %self.room_name, label = o.label, action = %o.action, ownership = ?o.ownership,
+                          candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_obs_orphaned");
+                }
                 self.contract.user_speech_started();
                 self.eot_gap_gen += 1;
                 self.eot_requested = false;
@@ -1052,6 +1000,8 @@ impl Orchestrator {
             VadEvent::SpeechEnd => {
                 self.turn_gate
                     .on_speech_end(now, Duration::from_secs_f32(gate.min_silence_s()));
+                self.ledger
+                    .on_speech_end(now.checked_sub(Duration::from_secs_f32(gate.min_silence_s())).unwrap_or(now));
                 self.eot_requested = false;
                 if let Some(timeout) = self.paused {
                     self.false_deadline = Some(now + timeout);
@@ -1181,6 +1131,8 @@ impl Orchestrator {
         user_text: &str,
         lane: &'static str,
         candidate: Option<String>,
+        source: &'static str,
+        utterance: Option<u64>,
     ) {
         let Some(trace) = self.device_trace.clone() else {
             // 无受信 trace(老 token/调试房)不发命令——与 input_ready 同纪律,fail-visible
@@ -1207,6 +1159,8 @@ impl Orchestrator {
             turn_id,
         );
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
+        // v3.1 账本:记录去重键(utterance + action + params + source);芯片在 commit 前的提案 utterance=None,commit 时归属
+        self.ledger.record_proposal(utterance, cmd.action, "", source, Instant::now());
         // 2b:同一句话的硬件候选随本 proposal 用掉(L1 快路命中=该候选已被快路消费,L2 已 take)
         self.pending_candidate.clear(Instant::now());
         // 合同 §8 结构化打点(llm_started/filler_started 恒 false 是命令轮硬约束的自证)
@@ -1273,10 +1227,26 @@ impl Orchestrator {
         };
         cmd.match_type = "llm";
         cmd.normalized_text = crate::device_intent::normalize(user_text);
-        // 候选关联(candidate.rs 单测覆盖 turn-scoped/长 turn/消费即清/覆盖/job 隔离):不匹配=None 交 Android 裁决
-        let candidate = self
-            .pending_candidate
-            .take_for(self.device_trace.as_deref(), self.next_turn_id, Instant::now());
+        // v3.1 账本(R3):claimed / ignored / unknown 所有权对 L2 同样生效;同句芯片候选原样回传;
+        // 被压制时同句候选槽一并消费,不留给后续误当可执行候选
+        let ledger_candidate = match self.ledger.decide(cmd.action, "", "llm") {
+            crate::device_ledger::Decision::Suppress(reason) => {
+                info!(room = %self.room_name, label, reason, utterance = self.ledger.current_utterance(), "llm device intent suppressed");
+                let _ = self.pending_candidate.take_for(self.device_trace.as_deref(), self.next_turn_id, Instant::now());
+                return;
+            }
+            crate::device_ledger::Decision::Propose { candidate, mismatch_with, .. } => {
+                if let Some((cl, ca)) = mismatch_with {
+                    info!(room = %self.room_name, chip_label = cl, chip_action = %ca, asr_label = label,
+                          asr_action = %cmd.action, suppress = false, "chip_asr_mismatch");
+                }
+                candidate
+            }
+        };
+        // 候选关联(candidate.rs 单测覆盖 turn-scoped/长 turn/消费即清/覆盖/job 隔离):账本无候选时回退到候选槽;都无=None 交 Android 裁决
+        let candidate = ledger_candidate.or_else(|| {
+            self.pending_candidate.take_for(self.device_trace.as_deref(), self.next_turn_id, Instant::now())
+        });
         info!(
             room = %self.room_name,
             label,
@@ -1284,7 +1254,8 @@ impl Orchestrator {
             candidate = %candidate.as_deref().unwrap_or("none"),
             "llm device intent executed"
         );
-        self.start_device_command(cmd, user_text, "L2", candidate);
+        let utterance = Some(self.ledger.current_utterance());
+        self.start_device_command(cmd, user_text, "L2", candidate, "llm", utterance);
     }
 
     /// Android result 到达:key 对撞 → 终态播固定短句清槽;accepted 播「正在调整」延时限。
@@ -1350,17 +1321,15 @@ impl Orchestrator {
     /// v3.1 §3.4/§3.6:L0(芯片本地执行)result——无 pending 槽,按 key 去重(只记终态);accepted 不说;
     /// 端侧已开始播报不说;候选冲突静默;其余终态按同一话术表补说。ignored observation / UI 结果不是 result,不走这里。
     fn on_l0_result(&mut self, r: control::DeviceResult) {
-        let terminal = r.status != "accepted";
-        if terminal && self.l0_seen.contains(&r.idempotency_key) {
-            info!(room = %self.room_name, key = %r.idempotency_key, "L0 result 重复终态,忽略(不重播)");
-            return;
-        }
-        if terminal {
-            if self.l0_seen.len() >= 32 {
-                self.l0_seen.pop_front();
-            }
-            self.l0_seen.push_back(r.idempotency_key.clone());
-        }
+        // codex R4 门序:active trace → source(vad_chip|fallback)→ action 非空 → status 枚举(accepted 只诊断)→ (trace,key) 去重
+        let gate = self.ledger.l0_check(
+            self.device_trace.as_deref(),
+            &r.trace_id,
+            &r.idempotency_key,
+            &r.source,
+            &r.status,
+            &r.action,
+        );
         info!(
             room = %self.room_name,
             semantic_label = r.semantic_label,
@@ -1375,42 +1344,32 @@ impl Orchestrator {
             mcu_tx_count = ?r.mcu_tx_count,
             steps_done = ?r.steps_done,
             boundary_basis = %r.boundary_basis,
+            gate = ?gate,
             extra = %r.extra,
             result_received_ts_ms = unix_ms_now(),
             "device command result"
         );
-        if !terminal || r.spoken_locally == Some(true) || is_silent_result(&r.status, &r.reason) {
+        if let crate::device_ledger::L0Outcome::Silent(reason) = gate {
+            info!(room = %self.room_name, key = %r.idempotency_key, reason, "L0 result 不播报");
+            return;
+        }
+        if r.spoken_locally == Some(true) || is_silent_result(&r.status, &r.reason) {
             return;
         }
         let reply = device_reply(&r.status, is_relative_action(&r.action), &r.reason, &r.action);
         self.say_after_current(reply);
     }
 
-    /// v3.1:近 3 s 芯片观测——裁剪过期项;DeferredMotor 到期仍无 ASR 命中 → chip_candidate_unconfirmed(诊断,不执行)
-    fn poll_chip_obs(&mut self, now: Instant) {
-        let (expired, keep): (Vec<ChipObs>, Vec<ChipObs>) =
-            self.chip_obs.drain(..).partition(|o| now.duration_since(o.at) >= CHIP_OBS_WINDOW);
-        self.chip_obs = keep;
-        for o in expired {
-            if o.kind == ChipKind::DeferredMotor {
-                info!(room = %self.room_name, label = o.label, action = %o.action, "chip_candidate_unconfirmed");
+    /// v3.1 账本轮询:无语音活动时未归属的芯片观测超时 → 诊断(deferred 电机=chip_candidate_unconfirmed),不改决策
+    fn poll_ledger(&mut self, now: Instant) {
+        for o in self.ledger.poll(now) {
+            if o.ownership == crate::device_ledger::Ownership::DeferredMotor {
+                info!(room = %self.room_name, label = o.label, action = %o.action,
+                      candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_candidate_unconfirmed");
+            } else {
+                info!(room = %self.room_name, label = o.label, action = %o.action, ownership = ?o.ownership, "chip_obs_orphaned");
             }
         }
-    }
-
-    fn chip_obs_latest(&mut self, now: Instant) -> Option<ChipObs> {
-        self.chip_obs.retain(|o| now.duration_since(o.at) < CHIP_OBS_WINDOW);
-        self.chip_obs.last().copied()
-    }
-
-    fn chip_obs_any(&mut self, now: Instant, f: impl Fn(&ChipObs) -> bool) -> bool {
-        self.chip_obs.retain(|o| now.duration_since(o.at) < CHIP_OBS_WINDOW);
-        self.chip_obs.iter().any(f)
-    }
-
-    /// 该动作的芯片观测已被同句 ASR 裁决(吞句/确认/mismatch 压制)→ 移除,不再触发 unconfirmed 诊断
-    fn chip_obs_take(&mut self, now: Instant, action: &str) {
-        self.chip_obs.retain(|o| now.duration_since(o.at) < CHIP_OBS_WINDOW && o.action != action);
     }
 
     /// 2b 合同 v2 §3.4:设备短句**追加**在 LLM 回复之后——回复在播就压进槽等 PlayedOut,空闲则立刻说。
@@ -1460,8 +1419,8 @@ impl Orchestrator {
                 let now = Instant::now();
                 // 2b:候选 ID 先于 commit 到达,记为本 turn 候选(L2 proposal 发出时消费)
                 let has_candidate = candidate_id.is_some();
-                if let Some(id) = candidate_id {
-                    self.pending_candidate.record(&ev.trace_id, &id, self.next_turn_id, now);
+                if let Some(id) = candidate_id.as_deref() {
+                    self.pending_candidate.record(&ev.trace_id, id, self.next_turn_id, now);
                 }
                 // v3.1:芯片决策纯函数(device_intent::chip_decision 单测锁死矩阵):
                 // 合同 <3 / 缺字段 / 未知值 → 旧策略;合同 ≥3 → claimed 不提案 / ignored 不提案 / 电机 deferred 等 ASR
@@ -1478,38 +1437,46 @@ impl Orchestrator {
                     reason = "commands_disabled_or_not_canary";
                 } else if let Some(cmd) = cmd {
                     use crate::device_intent::ChipDecision as D;
+                    use crate::device_ledger::{ChipOutcome, Ownership};
                     match chip {
                         D::Propose => {
-                            // 旧策略(合同 2 / deferred 灯光音量):同句跨源去重后即提案
-                            if self.cmd_dedup.try_claim(cmd.action, "", "chip", now) {
-                                decision = "accepted";
-                                self.chip_obs.push(ChipObs { label, action: cmd.action, kind: ChipKind::Proposed, at: now });
-                                if self.agent_turn.is_some() {
-                                    self.hard_abort_current();
+                            // 旧策略(合同 2 / deferred 灯光音量):账本按语音段归属去重,候选 ID 原样带上(R3)
+                            match self.ledger.on_chip(label, cmd.action, Ownership::Proposed, candidate_id.clone(), now) {
+                                ChipOutcome::ProposeNow { candidate, utterance } => {
+                                    decision = "accepted";
+                                    if self.agent_turn.is_some() {
+                                        self.hard_abort_current();
+                                    }
+                                    if let Some(sp) = self.spec.take() {
+                                        sp.task.abort();
+                                    }
+                                    self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", candidate, "chip", utterance);
                                 }
-                                if let Some(sp) = self.spec.take() {
-                                    sp.task.abort();
+                                ChipOutcome::Duplicate => {
+                                    decision = "duplicate";
+                                    reason = "same_utterance_already_proposed";
                                 }
-                                self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", None);
-                            } else {
-                                decision = "duplicate";
-                                reason = "same_action_in_window";
+                                ChipOutcome::Held => {}
                             }
                         }
                         D::Claimed => {
-                            // v3.1 §1.4:端侧已认领(所有权≠物理成功),worker 不提案;记入跨源窗让同句 ASR 命中吞句
+                            // v3.1 §1.4:端侧已认领(所有权≠物理成功),worker 不提案;同句 ASR/LLM 由账本压制
                             decision = "claimed";
-                            let _ = self.cmd_dedup.try_claim(cmd.action, "", "chip", now);
-                            self.chip_obs.push(ChipObs { label, action: cmd.action, kind: ChipKind::Claimed, at: now });
+                            let _ = self.ledger.on_chip(label, cmd.action, Ownership::Claimed, candidate_id.clone(), now);
                         }
                         D::DeferredWaitAsr => {
-                            // v3.1 §1.2:白名单外电机——芯片只提供候选,等同轮 ASR 独立命中(命中走 ASR 路径正常提案);
-                            // 3 s 无命中 → poll_chip_obs 记 chip_candidate_unconfirmed(诊断,不执行)
+                            // v3.1 §1.2:白名单外电机——只作候选,等同句 ASR/LLM 独立命中(命中时候选原样回传)
                             decision = "deferred_wait_asr";
-                            self.chip_obs.push(ChipObs { label, action: cmd.action, kind: ChipKind::DeferredMotor, at: now });
+                            let _ = self.ledger.on_chip(label, cmd.action, Ownership::DeferredMotor, candidate_id.clone(), now);
                         }
                         D::Ignored => {
                             decision = "ignored";
+                            let _ = self.ledger.on_chip(label, cmd.action, Ownership::Ignored, candidate_id.clone(), now);
+                        }
+                        D::OwnershipUnknown => {
+                            // codex R2:合同 3 所有权缺失/非法 → fail-closed,同句 ASR/LLM 也不提案
+                            decision = "ownership_unknown";
+                            let _ = self.ledger.on_chip(label, cmd.action, Ownership::Unknown, candidate_id.clone(), now);
                         }
                         D::NotInCatalog => {}
                     }
@@ -1885,6 +1852,17 @@ impl Orchestrator {
         // 判停提交
         if let Some(commit) = self.turn_gate.poll_commit(now) {
             let user_text = commit.text;
+            // v3.1 账本(R1):开新说话轮次,把语音段区间内的芯片观测归到本句;区间外 = 上一句没有 ASR 的孤儿(只诊断)
+            let commit_rep = self.ledger.on_commit(now, commit.eou_delay);
+            for o in &commit_rep.orphans {
+                if o.ownership == crate::device_ledger::Ownership::DeferredMotor {
+                    info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
+                          candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_candidate_unconfirmed");
+                } else {
+                    info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
+                          ownership = ?o.ownership, "chip_obs_orphaned");
+                }
+            }
             // 本地音频回声对撞(2026-09-01「刚打了个盹儿」幽灵轮,招呼语回声第三次实证):
             // 开场窗内 commit 若模糊命中该设备本地招呼语文案(LCS≥0.8,回声只掉字不加字:
             // 「刚打了个盹儿」掉头、「我在这等你呢」掉中间,严格子串只兜得住前者)→判回声
@@ -2056,51 +2034,42 @@ impl Orchestrator {
             if self.device_commands_on {
                 match crate::device_intent::match_command(&user_text) {
                     Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
-                        let now = Instant::now();
-                        // v3.1 §1.1:同句跨源去重(action+归一化参数,只拦不同来源;同来源=用户又说了一句,不拦)
-                        // → 本 ASR 命中吞句不重发(决策日志同构),仍不进 LLM
-                        if !self.cmd_dedup.try_claim(cmd.action, "", "asr", now) {
-                            let claimed = self.chip_obs_any(now, |o| o.kind == ChipKind::Claimed && o.action == cmd.action);
-                            info!(
-                                room = %self.room_name,
-                                semantic_label = cmd.semantic_label,
-                                decision = "duplicate",
-                                reason = if claimed { "chip_claimed_same_turn" } else { "command_word_already_proposed" },
-                                proposal_emitted = false,
-                                "asr 命中与 command_word 撞窗,吞句"
-                            );
-                            self.chip_obs_take(now, cmd.action);
-                            self.latest_interim.clear();
-                            self.tele_text.clear();
-                            return;
-                        }
-                        // v3.1 §1.2/§1.6:窗内芯片观测与 ASR 动作不一致 = 诊断信号(chip_asr_mismatch,不是芯片错的证明);
-                        // 合同 ≥3 且芯片已认领 → 不再提案(同句两个物理动作是最坏结果);合同 2 保持旧策略只记日志。
-                        if let Some(obs) = self.chip_obs_latest(now) {
-                            if obs.action != cmd.action {
-                                let suppress = obs.kind == ChipKind::Claimed && self.contract_version >= 3;
-                                info!(room = %self.room_name, chip_label = obs.label, chip_action = %obs.action,
-                                      asr_label = cmd.semantic_label, asr_action = %cmd.action,
-                                      chip_kind = ?obs.kind, suppress, "chip_asr_mismatch");
-                                if suppress {
-                                    self.chip_obs_take(now, obs.action);
-                                    self.latest_interim.clear();
-                                    self.tele_text.clear();
-                                    return;
-                                }
-                            } else if obs.kind == ChipKind::DeferredMotor {
-                                info!(room = %self.room_name, label = obs.label, action = %obs.action,
-                                      "chip_candidate_confirmed_by_asr");
-                                self.chip_obs_take(now, obs.action);
+                        // v3.1 账本(R1/R3):同句裁决按语音段归属,不按时间窗;claimed/ignored/unknown 所有权在此生效;
+                        // deferred 电机被同句 ASR 独立确认时,候选 ID 原样回传
+                        let (candidate, utterance) = match self.ledger.decide(cmd.action, "", "asr") {
+                            crate::device_ledger::Decision::Suppress(reason) => {
+                                info!(
+                                    room = %self.room_name,
+                                    semantic_label = cmd.semantic_label,
+                                    utterance = self.ledger.current_utterance(),
+                                    decision = "suppressed",
+                                    reason,
+                                    proposal_emitted = false,
+                                    "asr 命中被账本压制(同句已有所有权/提案)"
+                                );
+                                self.latest_interim.clear();
+                                self.tele_text.clear();
+                                return;
                             }
-                        }
+                            crate::device_ledger::Decision::Propose { candidate, mismatch_with, confirmed_deferred } => {
+                                if let Some((cl, ca)) = mismatch_with {
+                                    info!(room = %self.room_name, chip_label = cl, chip_action = %ca,
+                                          asr_label = cmd.semantic_label, asr_action = %cmd.action, suppress = false, "chip_asr_mismatch");
+                                }
+                                if confirmed_deferred {
+                                    info!(room = %self.room_name, label = cmd.semantic_label, action = %cmd.action,
+                                          candidate = %candidate.as_deref().unwrap_or("none"), "chip_candidate_confirmed_by_asr");
+                                }
+                                (candidate, Some(self.ledger.current_utterance()))
+                            }
+                        };
                         if self.agent_turn.is_some() {
                             self.hard_abort_current();
                         }
                         if let Some(sp) = self.spec.take() {
                             sp.task.abort();
                         }
-                        self.start_device_command(cmd, &user_text, "L1", None);
+                        self.start_device_command(cmd, &user_text, "L1", candidate, "asr", utterance);
                         self.latest_interim.clear();
                         self.tele_text.clear();
                         return;
@@ -2586,27 +2555,6 @@ mod device_turn_tests {
 
     /// first-wins 双向去重(PRE_INPUT_READY §4.3/§6 矩阵 2/3):
     /// 同 label 3s 窗内第二次 claim 必拒;窗外/异 label 放行。
-    #[test]
-    fn first_wins_window() {
-        let mut fw = FirstWins::with_window(Duration::from_millis(100));
-        let t0 = Instant::now();
-        assert!(fw.try_claim("led_on", "", "chip", t0), "首次 claim 放行(hint 或 ASR 谁先都一样)");
-        assert!(!fw.try_claim("led_on", "", "asr", t0 + Duration::from_millis(50)), "窗内同动作跨来源必拒");
-        assert!(fw.try_claim("led_off", "", "asr", t0 + Duration::from_millis(50)), "异动作不受影响(开灯→关灯不吞)");
-        assert!(fw.try_claim("led_on", "", "asr", t0 + Duration::from_millis(150)), "窗外重新放行");
-        let mut fw_same = FirstWins::with_window(Duration::from_millis(100));
-        assert!(fw_same.try_claim("brightness_up", "", "asr", t0));
-        assert!(fw_same.try_claim("brightness_up", "", "asr", t0 + Duration::from_millis(60)), "同来源=用户又说了一句(再亮一点→再亮一点),不拦");
-        let mut fw2 = FirstWins::with_window(Duration::from_millis(100));
-        assert!(fw2.try_claim("virtual_image_target", "t50", "chip", t0));
-        assert!(fw2.try_claim("virtual_image_target", "t80", "asr", t0), "归一化参数不同不得互吞");
-        assert!(!fw2.try_claim("virtual_image_target", "t50", "asr", t0), "同参数跨来源拒");
-        let mut fw3 = FirstWins::with_window(Duration::from_millis(100));
-        assert!(fw3.try_claim("brightness_up", "", "asr", t0));
-        assert!(!fw3.try_claim("brightness_up", "", "chip", t0 + Duration::from_millis(10)), "ASR 先→迟到 hint 记 duplicate(对称)");
-    }
-
-    /// 合同 §4.5 固定回复表全分支(含守恒默认:未知状态按失败,不冒充成功)。
     #[test]
     fn device_reply_table() {
         // 合同 v3.1 十八槽冻结文本(codex 2026-09-05 §3):两端同表

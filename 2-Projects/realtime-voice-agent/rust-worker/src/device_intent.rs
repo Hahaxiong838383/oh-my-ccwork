@@ -237,9 +237,9 @@ pub fn motor_label(label: u32) -> bool {
 
 /// 芯片候选决策(纯函数,合同 v3.1 §1.2/§1.4 + codex 阶段 B §2.2 边界):
 /// - 不在目录 → NotInCatalog;
-/// - local_action 未知值 → 旧策略并记诊断(不驱动新动作);
-/// - 端侧合同 <3 → **旧策略**(目录内即提案),reason 标明原因;
-/// - 合同 ≥3:claimed=端侧已认领,不提案;ignored=不提案;deferred 且电机=等 ASR;其余 deferred=旧策略。
+/// - 端侧合同 <3(含旧包缺字段、带未知值)→ **既有兼容策略**(目录内即提案),reason 标明原因;
+/// - 合同 ≥3:claimed=端侧已认领,不提案;ignored=不提案;deferred 且电机=等 ASR;其余 deferred=旧策略;
+///   **所有权缺失/未知/非法 → OwnershipUnknown,fail-closed 不提案**(codex R2:旧策略也是物理执行提案,不能退回)。
 ///
 /// 新电机等待策略**只对合同 ≥3 的端生效**——旧 APK 仍有 1 s fallback,worker 单独等 ASR 会造成「先兜底动一次再提案」。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -248,6 +248,8 @@ pub enum ChipDecision {
     Claimed,
     DeferredWaitAsr,
     Ignored,
+    /// 已声明合同 3 却缺失/非法所有权:fail-closed,不进任何执行路径(codex R2)
+    OwnershipUnknown,
     NotInCatalog,
 }
 
@@ -261,18 +263,27 @@ pub fn chip_decision(
         return (ChipDecision::NotInCatalog, "label_not_in_catalog");
     }
     let known = matches!(local_action, None | Some("claimed") | Some("deferred") | Some("ignored"));
-    if !known {
-        return (ChipDecision::Propose, "local_action_unknown");
-    }
     if contract_version < 3 {
-        return (ChipDecision::Propose, if local_action.is_some() { "contract_below_3" } else { "contract_v2" });
+        // 合同 2 / 旧包:保持既有兼容(目录内即提案);带了新字段甚至未知值也只记诊断,不改老端行为
+        let reason = if !known {
+            "local_action_unknown_contract_v2"
+        } else if local_action.is_some() {
+            "contract_below_3"
+        } else {
+            "contract_v2"
+        };
+        return (ChipDecision::Propose, reason);
+    }
+    // 已声明合同 3:所有权缺失 / 非法 → fail-closed(codex R2:「旧策略」也是物理执行提案,不能退回)
+    if !known {
+        return (ChipDecision::OwnershipUnknown, "local_action_unknown");
     }
     match local_action {
         Some("claimed") => (ChipDecision::Claimed, "android_owned"),
         Some("ignored") => (ChipDecision::Ignored, "android_ignored"),
         Some("deferred") if motor_label(label) => (ChipDecision::DeferredWaitAsr, "motor_outside_chip_first"),
         Some("deferred") => (ChipDecision::Propose, "deferred_light_volume"),
-        _ => (ChipDecision::Propose, "no_local_action"),
+        _ => (ChipDecision::OwnershipUnknown, "ownership_missing"),
     }
 }
 
@@ -831,8 +842,10 @@ mod tests {
         assert_eq!(chip_decision(3, Some("ignored"), 4, true), (Ignored, "android_ignored"));
         assert_eq!(chip_decision(3, Some("deferred"), 30, true), (DeferredWaitAsr, "motor_outside_chip_first"));
         assert_eq!(chip_decision(3, Some("deferred"), 4, true), (Propose, "deferred_light_volume"));
-        assert_eq!(chip_decision(3, None, 30, true), (Propose, "no_local_action"), "合同 3 但缺字段=按旧包");
-        assert_eq!(chip_decision(3, Some("weird"), 30, true), (Propose, "local_action_unknown"), "未知值不驱动新动作,只记诊断");
+        assert_eq!(chip_decision(3, None, 30, true), (OwnershipUnknown, "ownership_missing"), "合同 3 缺所有权=fail-closed,不提电机动作(R2)");
+        assert_eq!(chip_decision(3, Some("unknown_ownership"), 30, true), (OwnershipUnknown, "local_action_unknown"), "codex R2 反例:未知所有权不得提电机动作");
+        assert_eq!(chip_decision(3, Some("weird"), 4, true).0, OwnershipUnknown, "灯光同样 fail-closed");
+        assert_eq!(chip_decision(2, Some("weird"), 30, true), (Propose, "local_action_unknown_contract_v2"), "合同 2 未知值仍旧兼容策略,只记诊断");
         assert_eq!(chip_decision(3, Some("claimed"), 1, false).0, NotInCatalog);
     }
 

@@ -9,6 +9,7 @@ mod candidate;
 mod say_defer;
 mod control;
 mod device_intent;
+mod device_ledger;
 mod eot;
 mod eot_snapshot;
 mod filler;
