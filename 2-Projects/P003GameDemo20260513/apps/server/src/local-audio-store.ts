@@ -355,8 +355,12 @@ class LocalAudioStore {
 
   /** 清理：active=0 且超 14 天的条目，删行+删盘上文件。返回清理数。 */
   cleanup(accountId: string): number {
+    // 设备回复槽（device_reply.*）的 staging 条目豁免 14 天清理：它们是冻结文本的交付物，SHA 已被端侧核验，
+    // 等配套 APK 就位再显式发布；清掉重合成会换 SHA（TTS 非确定性），让已核验的指纹作废（codex 2026-09-05 验收回执）。
     const stale = this.db
-      .prepare(`SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ?`)
+      .prepare(
+        `SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ? AND slot NOT LIKE 'device_reply.%'`,
+      )
       .all(accountId, Date.now() - STALE_ITEM_TTL_MS) as Array<{ id: string; format: 'mp3' | 'wav' }>;
     for (const { id, format } of stale) {
       const p = this.audioPath(accountId, id, format);

@@ -469,6 +469,19 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   eq('dr-14 发布后 manifest 含十八槽各 1 条', DEVICE_REPLY_SLOTS.every((s) => (m.slots[s] ?? []).length === 1), true);
   eq('dr-15 发布后日常搬运带上 18 条', activeDeviceReplyKeep(ACC).length, 18);
   eq('dr-16 旧槽仍各 2 条（未丢失）', (m.slots['greeting.normal'] ?? []).length + (m.slots['farewell.general'] ?? []).length, 4);
+  // dr-17：设备回复槽的 staging 条目豁免 14 天清理（等 APK 期间 SHA 不能变）
+  const ACC2 = 'device-BJP00326060100200098';
+  mk('greeting.normal', 'eeeeeeeeeeeeeee1', 1000);
+  localAudioStore.insertItem(ACC2, { slot: 'device_reply.already', id: 'fffffffffffffff1', text: '现在就是这样啦', sha256: 'f'.repeat(64), bytes: 1000, duration_ms: 1000, format: 'wav' });
+  localAudioStore.insertItem(ACC2, { slot: 'greeting.normal', id: 'fffffffffffffff2', text: 'x', sha256: 'e'.repeat(64), bytes: 1000, duration_ms: 1000, format: 'wav' });
+  {
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(process.env.PROFILE_DB_PATH!);
+    db.prepare(`UPDATE local_audio_item SET created_at = ? WHERE account_id = ? AND active = 0`).run(Date.now() - 15 * 86_400_000, ACC2);
+    db.close();
+  }
+  eq('dr-17 过期 staging 只清人格槽，设备回复槽豁免', localAudioStore.cleanup(ACC2), 1);
+  ok('dr-18 设备回复 staging 条目仍在', localAudioStore.getItem(ACC2, 'fffffffffffffff1') !== null && localAudioStore.getItem(ACC2, 'fffffffffffffff2') === null);
 }
 
 console.log(`\nlocal-audio tests: pass=${pass} fail=${fail}`);
