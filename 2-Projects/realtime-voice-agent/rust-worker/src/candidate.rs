@@ -193,7 +193,7 @@ mod tests {
         let t = t0();
         s.record(&ev.trace_id, &id, 0, t);
         let picked = s.take_for(Some("tr"), 1, t + Duration::from_millis(1500)).expect("同 trace 本 turn 关联");
-        let v = control::device_command_proposed(&ev.trace_id, 1, "voice:r:1:6", 6, "brightness_down", "调暗一级", "太亮了", "llm", "L2", Some(&picked));
+        let v = control::device_command_proposed(&ev.trace_id, 1, "voice:r:1:6", 6, "brightness_down", "调暗一级", "太亮了", "llm", "L2", Some(&picked), 4);
         assert_eq!(v["lane"], "L2");
         assert_eq!(v["payload"]["vad_candidate_id"], "vad:tr:7", "proposal 原样回传同 ID");
         assert_eq!(v["payload"]["match_type"], "llm");

@@ -195,7 +195,7 @@ enum TurnEvent {
 struct PendingCmd {
     idempotency_key: String,
     action: &'static str,
-    /// 相对调节动作(成功句「好，调了一点」;其余「好的，已经调好了」)
+    /// 相对调节动作(成功句「好嘞，调好啦」;其余「好的，已经调好了」)
     relative: bool,
     sent_at: Instant,
     /// accepted 已播「好的，正在调整」(只播一次,终态还会再播终句)
@@ -208,11 +208,13 @@ struct PendingCmd {
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
 const DEVICE_RESULT_DEADLINE: Duration = Duration::from_secs(8);
 
-/// first-wins 去重窗(PRE_INPUT_READY_COMMAND_WORD §4.3):同一句可能被 VAD 芯片
-/// (command_word)和稍晚的云端 ASR 双捕获——同 label 3s 窗内只允许一次写操作,
-/// 双向对称(hint 先→ASR 记 duplicate;ASR 先→hint 记 duplicate)。纯逻辑可测。
+/// 同句跨源去重窗(合同 v3.1 §1.1.3 / codex 阶段 B §2.1;前身 PRE_INPUT_READY_COMMAND_WORD §4.3 的同 label 窗):
+/// 同一句可能被 VAD 芯片(command_word)和稍晚的云端 ASR 双捕获——键 = **action + 归一化参数**,
+/// 3 s 窗内只拦**不同来源**(芯片↔ASR)的同键;同来源(用户又说了一句「再亮一点」)不拦。
+/// 不再按「同标签族」封禁:开灯→关灯、不同 count/target 都是独立意图。纯逻辑可测。
 pub(crate) struct FirstWins {
-    recent: Vec<(u32, Instant)>,
+    /// (action, 归一化参数, 来源, 时刻)
+    recent: Vec<(&'static str, String, &'static str, Instant)>,
     window: Duration,
 }
 
@@ -226,15 +228,47 @@ impl FirstWins {
         Self { recent: Vec::new(), window }
     }
 
-    /// 尝试占坑:该 label 在窗内已有 proposal → false(duplicate);否则记录并放行。
-    fn try_claim(&mut self, label: u32, now: Instant) -> bool {
-        self.recent.retain(|(_, t)| now.duration_since(*t) < self.window);
-        if self.recent.iter().any(|(l, _)| *l == label) {
+    /// 尝试占坑:同 (action, params) 在窗内已被**另一来源**占 → false(duplicate);否则记录并放行。
+    fn try_claim(&mut self, action: &'static str, params: &str, source: &'static str, now: Instant) -> bool {
+        self.recent.retain(|(_, _, _, t)| now.duration_since(*t) < self.window);
+        if self.recent.iter().any(|(a, p, src, _)| *a == action && p == params && *src != source) {
             return false;
         }
-        self.recent.push((label, now));
+        self.recent.push((action, params.to_string(), source, now));
         true
     }
+}
+
+/// v3.1 芯片观测(3 s 窗,诊断与同句裁决用):芯片 command_word 的所有权/来源标记。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ChipKind {
+    /// 合同 2 旧策略:worker 已据标签提案
+    Proposed,
+    /// 合同 3:端侧已认领(local_action=claimed),worker 不提案
+    Claimed,
+    /// 合同 3:白名单外电机,等同轮 ASR 独立命中
+    DeferredMotor,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ChipObs {
+    label: u32,
+    action: &'static str,
+    kind: ChipKind,
+    at: Instant,
+}
+
+const CHIP_OBS_WINDOW: Duration = Duration::from_secs(3);
+
+/// 相对调节动作(成功句「好嘞，调好啦」;绝对/目标动作「好的，已经调好了」)。
+fn is_relative_action(action: &str) -> bool {
+    matches!(
+        action,
+        "brightness_up" | "brightness_down" | "color_temperature_warmer"
+            | "color_temperature_cooler" | "color_temperature_cycle_down"
+            | "motor_up_step" | "motor_down_step" | "virtual_image_farther_step"
+            | "virtual_image_nearer_step" | "volume_up_5" | "volume_down_5_min_5"
+    )
 }
 
 enum TurnKind {
@@ -295,8 +329,14 @@ struct Orchestrator {
     pending_cmd: Option<PendingCmd>,
     /// 2b §3.4:设备短句追加槽(回复在播时压后,播完再说;抢话作废)
     deferred_say: DeferredSay,
-    /// first-wins 去重(command_word ↔ ASR 双捕获,3s 窗)
+    /// 同句跨源去重(command_word ↔ ASR 双捕获,action+params 键,3s 窗)
     cmd_dedup: FirstWins,
+    /// v3.1:Android 能力声明原值(wake 包 contract_version;0=未声明);≥3 才启用 claimed/deferred 电机等 ASR 语义
+    contract_version: u32,
+    /// v3.1:近 3 s 芯片观测(所有权/来源),ASR 命中时裁决 mismatch / 同轮吞句 / 电机确认
+    chip_obs: Vec<ChipObs>,
+    /// v3.1:L0(芯片本地执行)result 去重(按 idempotency_key,最近 32 条)
+    l0_seen: std::collections::VecDeque<String>,
     /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
     device_trace: Option<String>,
     /// v140 退出信令灰度(合同 §8.3 先仅 0010;fail-closed:env 未配=不发,吞句照常)
@@ -406,26 +446,29 @@ fn short_hash(s: &str) -> String {
 /// executed_unconfirmed(v58 新语义:命令已执行但状态快照未刷新,≠失败):播中性完成句,
 /// 不声称精确档位、不触发重试——话术过度自信会在罕见未生效场景误导用户。
 fn device_reply(status: &str, relative: bool, reason: &str, action: &str) -> String {
+    // 文本=合同 v3.1 十八槽冻结值(codex 2026-09-05 阶段 B GO §3),与端侧本地音频 text 同表,两端不得自行润色。
     match status {
         "succeeded" => {
             if reason == "executed_unconfirmed" {
-                "好的，已为你调整".to_string()
+                "已发送调整，暂未确认".to_string() // 下发未确认≠物理成功,不说「调好了」
             } else if relative {
-                "好，调了一点".to_string()
+                "好嘞，调好啦".to_string()
             } else {
                 "好的，已经调好了".to_string()
             }
         }
-        "already_applied" => "现在已经是这个状态了".to_string(),
+        "already_applied" => "现在就是这样啦".to_string(),
         "rejected" => {
             if reason.contains("boundary") {
                 boundary_reply(action)
+            } else if reason == "unsupported_device_type" {
+                "这台设备不支持调画面距离".to_string()
             } else {
                 "现在暂时不能这样调".to_string()
             }
         }
-        // failed/timeout/未知状态统一失败句(守恒:未知不冒充成功)
-        _ => "刚刚没有调成功，再试一次吧".to_string(),
+        // failed/timeout/未知状态统一「未确认」句(守恒:未知不冒充成功;也不催促立即重试)
+        _ => "暂时没能确认调整结果".to_string(),
     }
 }
 
@@ -440,20 +483,20 @@ fn boundary_reply(action: &str) -> String {
         || action.contains("cool")
         || action.contains("cold");
     let (hi, lo) = if action.starts_with("virtual_image") {
-        ("已经到最远了", "已经到最近了")
+        ("画面已经是最远的了", "画面已经是最近的了")
     } else if action.starts_with("brightness") {
-        ("已经是最亮了", "已经是最暗了")
+        ("亮度已经是最高了", "亮度已经是最低了")
     } else if action.starts_with("color_temperature") {
-        ("已经是最暖了", "已经是最冷了")
+        ("色温已经是最暖的了", "色温已经是最冷的了")
     } else if action.starts_with("volume") {
-        ("已经是最大声了", "已经是最小声了")
+        ("音量已经是最大了", "音量已经是最小了")
     } else {
-        ("已经到最高了", "已经到最低了")
+        ("高度已经是最高了", "高度已经是最低了")
     };
     match (up, down) {
         (true, false) => hi.to_string(),
         (false, true) => lo.to_string(),
-        _ => "已经调到头了".to_string(),
+        _ => "已经调到头啦".to_string(),
     }
 }
 
@@ -634,6 +677,9 @@ pub async fn run_pipeline(
         pending_cmd: None,
         deferred_say: DeferredSay::default(),
         cmd_dedup: FirstWins::new(),
+        contract_version: 0,
+        chip_obs: Vec::new(),
+        l0_seen: std::collections::VecDeque::new(),
         device_trace: ready.trace_id.clone(),
         turn_gate: TurnGate::new(
             cfg.min_endpointing_delay,
@@ -832,6 +878,7 @@ pub async fn run_pipeline(
                     in_report = Instant::now();
                 }
                 orch.poll_device_timeout(Instant::now());
+                orch.poll_chip_obs(Instant::now());
                 orch.on_tick().await;
             }
             // S2-B2:Android 设备命令执行结果(独立 topic 独立管道)
@@ -1140,15 +1187,12 @@ impl Orchestrator {
             warn!(room = %self.room_name, "device command skipped: 无 trace,落回闲聊");
             return;
         };
+        // v3.1 §1.1:每次提案消费一个轮次号(与对话轮共用计数器),保证「用户又说了一句」的同标签命令拿到不同幂等键
+        // ——此前只有中间插了 Say 轮才推进,静默成功场景会复用旧键被端侧判 already_applied。
         let turn_id = self.next_turn_id + 1;
+        self.next_turn_id = turn_id;
         let key = format!("voice:{}:{}:{}", self.room_name, turn_id, cmd.semantic_label);
-        let relative = matches!(
-            cmd.action,
-            "brightness_up" | "brightness_down" | "color_temperature_warmer"
-                | "color_temperature_cooler" | "color_temperature_cycle_down"
-                | "motor_up_step" | "motor_down_step" | "virtual_image_farther_step"
-                | "virtual_image_nearer_step" | "volume_up_5" | "volume_down_5_min_5"
-        );
+        let relative = is_relative_action(cmd.action);
         let v = control::device_command_proposed(
             &trace,
             unix_ms_now(),
@@ -1160,6 +1204,7 @@ impl Orchestrator {
             cmd.match_type,
             lane,
             candidate.as_deref(),
+            turn_id,
         );
         self.publish_json(control::DEVICE_CMD_TOPIC, v);
         // 2b:同一句话的硬件候选随本 proposal 用掉(L1 快路命中=该候选已被快路消费,L2 已 take)
@@ -1244,6 +1289,10 @@ impl Orchestrator {
 
     /// Android result 到达:key 对撞 → 终态播固定短句清槽;accepted 播「正在调整」延时限。
     fn on_device_result(&mut self, r: control::DeviceResult) {
+        if r.lane == "L0" {
+            self.on_l0_result(r);
+            return;
+        }
         let Some(p) = &mut self.pending_cmd else {
             info!(room = %self.room_name, key = %r.idempotency_key, status = %r.status, "迟到/无主 device result,忽略");
             return;
@@ -1284,6 +1333,11 @@ impl Orchestrator {
         let action = p.action;
         let lane = p.lane;
         self.pending_cmd = None;
+        // v3.1 §1.4/§3.6:端侧已开始本地播报 → worker 不补说(重复终态不重播)
+        if r.spoken_locally == Some(true) {
+            info!(room = %self.room_name, lane, clip = %r.spoken_clip_key, "device reply spoken locally, worker silent");
+            return;
+        }
         if success_reply_silent(&r.status, lane, self.agent_turn.is_some()) {
             info!(room = %self.room_name, lane, reason = %r.reason,
                   "device success reply skipped (LLM reply in flight already acknowledged)");
@@ -1291,6 +1345,72 @@ impl Orchestrator {
         }
         let reply = device_reply(&r.status, relative, &r.reason, action);
         self.say_after_current(reply);
+    }
+
+    /// v3.1 §3.4/§3.6:L0(芯片本地执行)result——无 pending 槽,按 key 去重(只记终态);accepted 不说;
+    /// 端侧已开始播报不说;候选冲突静默;其余终态按同一话术表补说。ignored observation / UI 结果不是 result,不走这里。
+    fn on_l0_result(&mut self, r: control::DeviceResult) {
+        let terminal = r.status != "accepted";
+        if terminal && self.l0_seen.contains(&r.idempotency_key) {
+            info!(room = %self.room_name, key = %r.idempotency_key, "L0 result 重复终态,忽略(不重播)");
+            return;
+        }
+        if terminal {
+            if self.l0_seen.len() >= 32 {
+                self.l0_seen.pop_front();
+            }
+            self.l0_seen.push_back(r.idempotency_key.clone());
+        }
+        info!(
+            room = %self.room_name,
+            semantic_label = r.semantic_label,
+            action = %r.action,
+            status = %r.status,
+            reason = %r.reason,
+            lane = "L0",
+            source = %r.source,
+            spoken_locally = ?r.spoken_locally,
+            clip = %r.spoken_clip_key,
+            execution_ms = ?r.execution_ms,
+            mcu_tx_count = ?r.mcu_tx_count,
+            steps_done = ?r.steps_done,
+            boundary_basis = %r.boundary_basis,
+            extra = %r.extra,
+            result_received_ts_ms = unix_ms_now(),
+            "device command result"
+        );
+        if !terminal || r.spoken_locally == Some(true) || is_silent_result(&r.status, &r.reason) {
+            return;
+        }
+        let reply = device_reply(&r.status, is_relative_action(&r.action), &r.reason, &r.action);
+        self.say_after_current(reply);
+    }
+
+    /// v3.1:近 3 s 芯片观测——裁剪过期项;DeferredMotor 到期仍无 ASR 命中 → chip_candidate_unconfirmed(诊断,不执行)
+    fn poll_chip_obs(&mut self, now: Instant) {
+        let (expired, keep): (Vec<ChipObs>, Vec<ChipObs>) =
+            self.chip_obs.drain(..).partition(|o| now.duration_since(o.at) >= CHIP_OBS_WINDOW);
+        self.chip_obs = keep;
+        for o in expired {
+            if o.kind == ChipKind::DeferredMotor {
+                info!(room = %self.room_name, label = o.label, action = %o.action, "chip_candidate_unconfirmed");
+            }
+        }
+    }
+
+    fn chip_obs_latest(&mut self, now: Instant) -> Option<ChipObs> {
+        self.chip_obs.retain(|o| now.duration_since(o.at) < CHIP_OBS_WINDOW);
+        self.chip_obs.last().copied()
+    }
+
+    fn chip_obs_any(&mut self, now: Instant, f: impl Fn(&ChipObs) -> bool) -> bool {
+        self.chip_obs.retain(|o| now.duration_since(o.at) < CHIP_OBS_WINDOW);
+        self.chip_obs.iter().any(f)
+    }
+
+    /// 该动作的芯片观测已被同句 ASR 裁决(吞句/确认/mismatch 压制)→ 移除,不再触发 unconfirmed 诊断
+    fn chip_obs_take(&mut self, now: Instant, action: &str) {
+        self.chip_obs.retain(|o| now.duration_since(o.at) < CHIP_OBS_WINDOW && o.action != action);
     }
 
     /// 2b 合同 v2 §3.4:设备短句**追加**在 LLM 回复之后——回复在播就压进槽等 PlayedOut,空闲则立刻说。
@@ -1318,7 +1438,7 @@ impl Orchestrator {
                 "device result 兜底超时,播失败句"
             );
             self.pending_cmd = None;
-            self.say_after_current("刚刚没有调成功，再试一次吧".to_string());
+            self.say_after_current("暂时没能确认调整结果".to_string());
         }
     }
 
@@ -1336,34 +1456,63 @@ impl Orchestrator {
             // 补早说空窗——事件可先于 input_ready 到达(control 通道在 job 层缓冲,
             // pipeline 起后消费,天然满足)。决策日志四态:accepted/duplicate/rejected。
             // (expired=会话已关,包无处投递,由 job 生命周期结构保证)
-            control::Inbound::CommandWord { label, before_ready, candidate_id } => {
+            control::Inbound::CommandWord { label, before_ready, candidate_id, local_action, ignore_reason } => {
+                let now = Instant::now();
                 // 2b:候选 ID 先于 commit 到达,记为本 turn 候选(L2 proposal 发出时消费)
                 let has_candidate = candidate_id.is_some();
                 if let Some(id) = candidate_id {
-                    self.pending_candidate.record(&ev.trace_id, &id, self.next_turn_id, Instant::now());
+                    self.pending_candidate.record(&ev.trace_id, &id, self.next_turn_id, now);
                 }
-                let decision;
-                let mut reason = "";
+                // v3.1:芯片决策纯函数(device_intent::chip_decision 单测锁死矩阵):
+                // 合同 <3 / 缺字段 / 未知值 → 旧策略;合同 ≥3 → claimed 不提案 / ignored 不提案 / 电机 deferred 等 ASR
+                let cmd = crate::device_intent::command_by_label(label);
+                let (chip, chip_reason) = crate::device_intent::chip_decision(
+                    self.contract_version,
+                    local_action.as_deref(),
+                    label,
+                    cmd.is_some(),
+                );
+                let mut decision = "rejected";
+                let mut reason: &str = chip_reason;
                 if !self.device_commands_on {
-                    decision = "rejected";
                     reason = "commands_disabled_or_not_canary";
-                } else if let Some(cmd) = crate::device_intent::command_by_label(label) {
-                    if self.cmd_dedup.try_claim(label, Instant::now()) {
-                        decision = "accepted";
-                        if self.agent_turn.is_some() {
-                            self.hard_abort_current();
+                } else if let Some(cmd) = cmd {
+                    use crate::device_intent::ChipDecision as D;
+                    match chip {
+                        D::Propose => {
+                            // 旧策略(合同 2 / deferred 灯光音量):同句跨源去重后即提案
+                            if self.cmd_dedup.try_claim(cmd.action, "", "chip", now) {
+                                decision = "accepted";
+                                self.chip_obs.push(ChipObs { label, action: cmd.action, kind: ChipKind::Proposed, at: now });
+                                if self.agent_turn.is_some() {
+                                    self.hard_abort_current();
+                                }
+                                if let Some(sp) = self.spec.take() {
+                                    sp.task.abort();
+                                }
+                                self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", None);
+                            } else {
+                                decision = "duplicate";
+                                reason = "same_action_in_window";
+                            }
                         }
-                        if let Some(sp) = self.spec.take() {
-                            sp.task.abort();
+                        D::Claimed => {
+                            // v3.1 §1.4:端侧已认领(所有权≠物理成功),worker 不提案;记入跨源窗让同句 ASR 命中吞句
+                            decision = "claimed";
+                            let _ = self.cmd_dedup.try_claim(cmd.action, "", "chip", now);
+                            self.chip_obs.push(ChipObs { label, action: cmd.action, kind: ChipKind::Claimed, at: now });
                         }
-                        self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", None);
-                    } else {
-                        decision = "duplicate";
-                        reason = "same_label_in_window";
+                        D::DeferredWaitAsr => {
+                            // v3.1 §1.2:白名单外电机——芯片只提供候选,等同轮 ASR 独立命中(命中走 ASR 路径正常提案);
+                            // 3 s 无命中 → poll_chip_obs 记 chip_candidate_unconfirmed(诊断,不执行)
+                            decision = "deferred_wait_asr";
+                            self.chip_obs.push(ChipObs { label, action: cmd.action, kind: ChipKind::DeferredMotor, at: now });
+                        }
+                        D::Ignored => {
+                            decision = "ignored";
+                        }
+                        D::NotInCatalog => {}
                     }
-                } else {
-                    decision = "rejected";
-                    reason = "label_not_in_catalog";
                 }
                 info!(
                     room = %self.room_name,
@@ -1371,6 +1520,9 @@ impl Orchestrator {
                     semantic_label = label,
                     before_ready,
                     has_candidate,
+                    local_action = local_action.as_deref().unwrap_or("-"),
+                    ignore_reason = ignore_reason.as_deref().unwrap_or("-"),
+                    contract_version = self.contract_version,
                     decision,
                     reason,
                     proposal_emitted = (decision == "accepted"),
@@ -1380,8 +1532,9 @@ impl Orchestrator {
             control::Inbound::Capability { contract_version } => {
                 // 2b 合同 v2 §2.1:wake 包能力声明,room 级保存;<2=只观察不发 L2
                 self.l2_capable = contract_version >= 2;
+                self.contract_version = contract_version;
                 info!(room = %self.room_name, trace_id = %ev.trace_id, contract_version,
-                      l2_capable = self.l2_capable, "l2 capability");
+                      l2_capable = self.l2_capable, v31_chip_semantics = contract_version >= 3, "l2 capability");
             }
             control::Inbound::Bypass => {
                 // 芯片唤醒/VAD/命令词:只记录,**绝不改变 worker 的 turn 判定**。
@@ -1903,20 +2056,43 @@ impl Orchestrator {
             if self.device_commands_on {
                 match crate::device_intent::match_command(&user_text) {
                     Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
-                        // first-wins 对称去重:同 label 3s 窗内已有 command_word proposal
+                        let now = Instant::now();
+                        // v3.1 §1.1:同句跨源去重(action+归一化参数,只拦不同来源;同来源=用户又说了一句,不拦)
                         // → 本 ASR 命中吞句不重发(决策日志同构),仍不进 LLM
-                        if !self.cmd_dedup.try_claim(cmd.semantic_label, Instant::now()) {
+                        if !self.cmd_dedup.try_claim(cmd.action, "", "asr", now) {
+                            let claimed = self.chip_obs_any(now, |o| o.kind == ChipKind::Claimed && o.action == cmd.action);
                             info!(
                                 room = %self.room_name,
                                 semantic_label = cmd.semantic_label,
                                 decision = "duplicate",
-                                reason = "command_word_already_proposed",
+                                reason = if claimed { "chip_claimed_same_turn" } else { "command_word_already_proposed" },
                                 proposal_emitted = false,
                                 "asr 命中与 command_word 撞窗,吞句"
                             );
+                            self.chip_obs_take(now, cmd.action);
                             self.latest_interim.clear();
                             self.tele_text.clear();
                             return;
+                        }
+                        // v3.1 §1.2/§1.6:窗内芯片观测与 ASR 动作不一致 = 诊断信号(chip_asr_mismatch,不是芯片错的证明);
+                        // 合同 ≥3 且芯片已认领 → 不再提案(同句两个物理动作是最坏结果);合同 2 保持旧策略只记日志。
+                        if let Some(obs) = self.chip_obs_latest(now) {
+                            if obs.action != cmd.action {
+                                let suppress = obs.kind == ChipKind::Claimed && self.contract_version >= 3;
+                                info!(room = %self.room_name, chip_label = obs.label, chip_action = %obs.action,
+                                      asr_label = cmd.semantic_label, asr_action = %cmd.action,
+                                      chip_kind = ?obs.kind, suppress, "chip_asr_mismatch");
+                                if suppress {
+                                    self.chip_obs_take(now, obs.action);
+                                    self.latest_interim.clear();
+                                    self.tele_text.clear();
+                                    return;
+                                }
+                            } else if obs.kind == ChipKind::DeferredMotor {
+                                info!(room = %self.room_name, label = obs.label, action = %obs.action,
+                                      "chip_candidate_confirmed_by_asr");
+                                self.chip_obs_take(now, obs.action);
+                            }
                         }
                         if self.agent_turn.is_some() {
                             self.hard_abort_current();
@@ -2414,59 +2590,68 @@ mod device_turn_tests {
     fn first_wins_window() {
         let mut fw = FirstWins::with_window(Duration::from_millis(100));
         let t0 = Instant::now();
-        assert!(fw.try_claim(42, t0), "首次 claim 放行(hint 或 ASR 谁先都一样)");
-        assert!(!fw.try_claim(42, t0 + Duration::from_millis(50)), "窗内同 label 必拒");
-        assert!(fw.try_claim(43, t0 + Duration::from_millis(50)), "异 label 不受影响");
-        assert!(fw.try_claim(42, t0 + Duration::from_millis(150)), "窗外重新放行");
+        assert!(fw.try_claim("led_on", "", "chip", t0), "首次 claim 放行(hint 或 ASR 谁先都一样)");
+        assert!(!fw.try_claim("led_on", "", "asr", t0 + Duration::from_millis(50)), "窗内同动作跨来源必拒");
+        assert!(fw.try_claim("led_off", "", "asr", t0 + Duration::from_millis(50)), "异动作不受影响(开灯→关灯不吞)");
+        assert!(fw.try_claim("led_on", "", "asr", t0 + Duration::from_millis(150)), "窗外重新放行");
+        let mut fw_same = FirstWins::with_window(Duration::from_millis(100));
+        assert!(fw_same.try_claim("brightness_up", "", "asr", t0));
+        assert!(fw_same.try_claim("brightness_up", "", "asr", t0 + Duration::from_millis(60)), "同来源=用户又说了一句(再亮一点→再亮一点),不拦");
+        let mut fw2 = FirstWins::with_window(Duration::from_millis(100));
+        assert!(fw2.try_claim("virtual_image_target", "t50", "chip", t0));
+        assert!(fw2.try_claim("virtual_image_target", "t80", "asr", t0), "归一化参数不同不得互吞");
+        assert!(!fw2.try_claim("virtual_image_target", "t50", "asr", t0), "同参数跨来源拒");
+        let mut fw3 = FirstWins::with_window(Duration::from_millis(100));
+        assert!(fw3.try_claim("brightness_up", "", "asr", t0));
+        assert!(!fw3.try_claim("brightness_up", "", "chip", t0 + Duration::from_millis(10)), "ASR 先→迟到 hint 记 duplicate(对称)");
     }
 
     /// 合同 §4.5 固定回复表全分支(含守恒默认:未知状态按失败,不冒充成功)。
     #[test]
     fn device_reply_table() {
+        // 合同 v3.1 十八槽冻结文本(codex 2026-09-05 §3):两端同表
         assert_eq!(device_reply("succeeded", false, "state_confirmed", "led_on"), "好的，已经调好了");
-        assert_eq!(device_reply("succeeded", true, "state_confirmed", "brightness_up"), "好，调了一点");
-        // v58 合同:曾超时后实态确认=确定成功,不因底层结果帧超时改播失败
+        assert_eq!(device_reply("succeeded", true, "state_confirmed", "brightness_up"), "好嘞，调好啦");
         assert_eq!(
             device_reply("succeeded", false, "state_confirmed_after_result_timeout", "motor_min"),
             "好的，已经调好了"
         );
-        // v58 合同:executed_unconfirmed=已执行未确认,中性句,相对/绝对档同句(不声称档位)
         assert_eq!(
             device_reply("succeeded", false, "executed_unconfirmed", "color_temperature_normal"),
-            "好的，已为你调整"
+            "已发送调整，暂未确认"
         );
-        assert_eq!(
-            device_reply("succeeded", true, "executed_unconfirmed", "brightness_up"),
-            "好的，已为你调整"
-        );
-        assert_eq!(device_reply("already_applied", false, "", "led_on"), "现在已经是这个状态了");
-        // M4(2b):fallback 已执行后迟到同 ID L2 → already_applied/vad_fallback_already_applied,播同一句(非失败句)
-        assert_eq!(device_reply("already_applied", true, "vad_fallback_already_applied", "brightness_down"), "现在已经是这个状态了");
+        assert_eq!(device_reply("succeeded", true, "executed_unconfirmed", "brightness_up"), "已发送调整，暂未确认");
+        assert_eq!(device_reply("already_applied", false, "", "led_on"), "现在就是这样啦");
+        assert_eq!(device_reply("already_applied", true, "vad_fallback_already_applied", "brightness_down"), "现在就是这样啦");
         assert_eq!(device_reply("rejected", false, "whitelist", "led_on"), "现在暂时不能这样调");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_up_step"), "已经到最高了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_down_step"), "已经到最低了");
-        // 2026-09-04:边界句按动作族(003 实证 farthest 曾念「最低」)
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "virtual_image_farthest"), "已经到最远了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "virtual_image_farther_step"), "已经到最远了");
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "virtual_image_nearest"), "已经到最近了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "virtual_image_nearer_step"), "已经到最近了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "brightness_down"), "已经是最暗了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "brightness_up"), "已经是最亮了");
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "brightness_max"), "已经是最亮了");
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "brightness_min"), "已经是最暗了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "color_temperature_warmer"), "已经是最暖了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "color_temperature_cooler"), "已经是最冷了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "volume_up_5"), "已经是最大声了");
-        assert_eq!(device_reply("rejected", true, "boundary_reached", "volume_down_5_min_5"), "已经是最小声了");
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "motor_max"), "已经到最高了");
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "motor_min"), "已经到最低了");
-        assert_eq!(device_reply("rejected", false, "boundary_reached", "color_temperature_normal"), "已经调到头了", "辨不出方向不冒充");
-        assert_eq!(device_reply("failed", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
-        assert_eq!(device_reply("timeout", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
-        assert_eq!(device_reply("weird_status", false, "", "led_on"), "刚刚没有调成功，再试一次吧");
+        assert_eq!(device_reply("rejected", false, "unsupported_device_type", "virtual_image_farther_step"), "这台设备不支持调画面距离");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_up_step"), "高度已经是最高了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "motor_down_step"), "高度已经是最低了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "virtual_image_farthest"), "画面已经是最远的了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "virtual_image_farther_step"), "画面已经是最远的了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "virtual_image_nearest"), "画面已经是最近的了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "virtual_image_nearer_step"), "画面已经是最近的了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "brightness_down"), "亮度已经是最低了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "brightness_up"), "亮度已经是最高了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "brightness_max"), "亮度已经是最高了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "brightness_min"), "亮度已经是最低了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "color_temperature_warmer"), "色温已经是最暖的了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "color_temperature_cooler"), "色温已经是最冷的了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "volume_up_5"), "音量已经是最大了");
+        assert_eq!(device_reply("rejected", true, "boundary_reached", "volume_down_5_min_5"), "音量已经是最小了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "motor_max"), "高度已经是最高了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "motor_min"), "高度已经是最低了");
+        assert_eq!(device_reply("rejected", false, "boundary_reached", "color_temperature_normal"), "已经调到头啦", "辨不出方向不冒充方向");
+        assert_eq!(device_reply("failed", false, "", "led_on"), "暂时没能确认调整结果");
+        assert_eq!(device_reply("timeout", false, "", "led_on"), "暂时没能确认调整结果");
+        assert_eq!(device_reply("weird_status", false, "", "led_on"), "暂时没能确认调整结果");
     }
 
-    // ── TTS 回声对撞(2026-08-26 关灯自嗨实证的回归锚) ──
+    #[test]
+    fn relative_action_table() {
+        assert!(is_relative_action("brightness_up") && is_relative_action("volume_down_5_min_5") && is_relative_action("virtual_image_nearer_step"));
+        assert!(!is_relative_action("led_on") && !is_relative_action("brightness_max") && !is_relative_action("virtual_image_farthest") && !is_relative_action(""));
+    }
     #[test]
     fn echo_normalize_strips_punct_and_lowercases() {
         assert_eq!(normalize_echo("好的，灯已经关上啦！"), "好的灯已经关上啦");

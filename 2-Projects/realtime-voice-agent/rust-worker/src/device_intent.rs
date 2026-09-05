@@ -229,6 +229,73 @@ pub fn l2_first_batch(label: u32) -> bool {
     L2_FIRST_BATCH.contains(&label)
 }
 
+/// 合同 v3.1 §1.2:电机域标签(25–36,升降/虚像远近)。`light_volume` 之外,芯片只提供候选,
+/// worker 须等同轮 ASR 独立命中才提案;端侧同时不启 1000 ms fallback。
+pub fn motor_label(label: u32) -> bool {
+    (25..=36).contains(&label)
+}
+
+/// 芯片候选决策(纯函数,合同 v3.1 §1.2/§1.4 + codex 阶段 B §2.2 边界):
+/// - 不在目录 → NotInCatalog;
+/// - local_action 未知值 → 旧策略并记诊断(不驱动新动作);
+/// - 端侧合同 <3 → **旧策略**(目录内即提案),reason 标明原因;
+/// - 合同 ≥3:claimed=端侧已认领,不提案;ignored=不提案;deferred 且电机=等 ASR;其余 deferred=旧策略。
+///
+/// 新电机等待策略**只对合同 ≥3 的端生效**——旧 APK 仍有 1 s fallback,worker 单独等 ASR 会造成「先兜底动一次再提案」。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChipDecision {
+    Propose,
+    Claimed,
+    DeferredWaitAsr,
+    Ignored,
+    NotInCatalog,
+}
+
+pub fn chip_decision(
+    contract_version: u32,
+    local_action: Option<&str>,
+    label: u32,
+    in_catalog: bool,
+) -> (ChipDecision, &'static str) {
+    if !in_catalog {
+        return (ChipDecision::NotInCatalog, "label_not_in_catalog");
+    }
+    let known = matches!(local_action, None | Some("claimed") | Some("deferred") | Some("ignored"));
+    if !known {
+        return (ChipDecision::Propose, "local_action_unknown");
+    }
+    if contract_version < 3 {
+        return (ChipDecision::Propose, if local_action.is_some() { "contract_below_3" } else { "contract_v2" });
+    }
+    match local_action {
+        Some("claimed") => (ChipDecision::Claimed, "android_owned"),
+        Some("ignored") => (ChipDecision::Ignored, "android_ignored"),
+        Some("deferred") if motor_label(label) => (ChipDecision::DeferredWaitAsr, "motor_outside_chip_first"),
+        Some("deferred") => (ChipDecision::Propose, "deferred_light_volume"),
+        _ => (ChipDecision::Propose, "no_local_action"),
+    }
+}
+
+/// 参数归一化(合同 v3.1 §1.1 / codex §2.1):去重键的参数分量。缺省 count 与 count=1 同;
+/// 无参数=空串(合同 2 恒空串)。**只在类型/范围校验之后调用**,不把字符串/小数转成合法整数。
+/// 阶段 D(params 进 proposal)前无生产调用方,先以单测锁死语义。
+#[allow(dead_code)]
+pub fn normalize_params(count: Option<u32>, value: Option<u32>, target_deci_units: Option<u32>) -> String {
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(c) = count
+        && c > 1
+    {
+        parts.push(format!("c{c}"));
+    }
+    if let Some(v) = value {
+        parts.push(format!("v{v}"));
+    }
+    if let Some(t) = target_deci_units {
+        parts.push(format!("t{t}"));
+    }
+    parts.join(",")
+}
+
 /// LLM 慢路执行门序(纯函数,单测载体)。Err=suppress 原因(日志 reason 枚举);顺序即优先级:
 /// execute_off → android_capability_missing → unknown_label → not_in_batch → fast_path_hit → no_trace。
 pub fn l2_gate(
@@ -753,5 +820,34 @@ mod tests {
         // 负锚:判据本身有区分力(含别名的句子必须被同一判据抓到)
         let bad = normalize("这个我暂时还不能这样调，你直接说虚像调到最远就可以啦");
         assert!(table().map.keys().any(|a| bad.contains(a.as_str())), "负锚:含别名句必须被抓到");
+    }
+    /// v3.1:芯片决策纯函数——合同 2 旧策略不变;合同 3 才有 claimed/ignored/电机等 ASR。
+    #[test]
+    fn chip_decision_matrix() {
+        use ChipDecision::*;
+        assert_eq!(chip_decision(2, None, 30, true).0, Propose, "合同 2 老包:目录内即提案");
+        assert_eq!(chip_decision(2, Some("deferred"), 30, true), (Propose, "contract_below_3"), "旧端带新字段也走旧策略");
+        assert_eq!(chip_decision(3, Some("claimed"), 4, true), (Claimed, "android_owned"));
+        assert_eq!(chip_decision(3, Some("ignored"), 4, true), (Ignored, "android_ignored"));
+        assert_eq!(chip_decision(3, Some("deferred"), 30, true), (DeferredWaitAsr, "motor_outside_chip_first"));
+        assert_eq!(chip_decision(3, Some("deferred"), 4, true), (Propose, "deferred_light_volume"));
+        assert_eq!(chip_decision(3, None, 30, true), (Propose, "no_local_action"), "合同 3 但缺字段=按旧包");
+        assert_eq!(chip_decision(3, Some("weird"), 30, true), (Propose, "local_action_unknown"), "未知值不驱动新动作,只记诊断");
+        assert_eq!(chip_decision(3, Some("claimed"), 1, false).0, NotInCatalog);
+    }
+
+    #[test]
+    fn motor_label_range_is_25_to_36() {
+        assert!(!motor_label(24) && motor_label(25) && motor_label(36) && !motor_label(37));
+    }
+
+    #[test]
+    fn normalize_params_default_count_equals_one() {
+        assert_eq!(normalize_params(None, None, None), "");
+        assert_eq!(normalize_params(Some(1), None, None), "", "缺省 count 与 count=1 归一一致");
+        assert_eq!(normalize_params(Some(2), None, None), "c2");
+        assert_eq!(normalize_params(None, Some(0), None), "v0", "绝对静音 0 合法且可辨");
+        assert_eq!(normalize_params(Some(3), Some(50), Some(80)), "c3,v50,t80");
+        assert_ne!(normalize_params(None, None, Some(50)), normalize_params(None, None, Some(80)), "不同目标不得互吞");
     }
 }

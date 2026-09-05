@@ -57,7 +57,15 @@ pub enum Inbound {
     /// →进房转发,worker 按目录生成 proposed——早说空窗(命令早于 input_ready 540ms
     /// 真机实证)的补链。Android 仍不直接执行,worker 保持设备命令权威。
     /// 2b 合同 v2:Android 硬件候选 ID(`vad:<trace_id>:<seq>`,原样透传不解析;v185 前老包=None)
-    CommandWord { label: u32, before_ready: bool, candidate_id: Option<String> },
+    /// v3.1(2026-09-05):`local_action`(claimed|deferred|ignored,端侧所有权)与 `ignore_reason` 原样透传;
+    /// 老 APK 无字段=None(合同 2 行为)。未知值不在此判,交 device_intent::chip_decision(按旧包处理并记诊断)。
+    CommandWord {
+        label: u32,
+        before_ready: bool,
+        candidate_id: Option<String>,
+        local_action: Option<String>,
+        ignore_reason: Option<String>,
+    },
     /// S2B1 联调:确定性长句走**正式** TTS→segmenter→playout 链路(合同真值
     /// tests/fixtures/s2b1_canary_control_contract.json,rust 侧用 include_str! 锁死)
     CanarySay,
@@ -96,6 +104,8 @@ pub fn parse(raw: &[u8]) -> Option<(Envelope, Inbound)> {
                     .get("vad_candidate_id")
                     .and_then(|v| v.as_str())
                     .map(String::from),
+                local_action: ev.payload.get("local_action").and_then(|v| v.as_str()).map(String::from),
+                ignore_reason: ev.payload.get("ignore_reason").and_then(|v| v.as_str()).map(String::from),
             },
             _ => Inbound::Bypass,
         },
@@ -234,6 +244,7 @@ pub fn device_command_proposed(
     match_type: &str,
     lane: &str,
     vad_candidate_id: Option<&str>,
+    turn_id: u64,
 ) -> Value {
     json!({
         "version": "1.0",
@@ -250,6 +261,9 @@ pub fn device_command_proposed(
             "normalized_text": normalized_text,
             "match_type": match_type,
             "vad_candidate_id": vad_candidate_id,
+            // v3.1 §1.1:轮次显式传输(JSON 无符号整数;老 APK 忽略未知键)。同句跨源去重靠它+action+params,
+            // 不得拆幂等键反推。
+            "turn_id": turn_id,
         },
     })
 }
@@ -265,6 +279,17 @@ pub struct DeviceResult {
     pub semantic_label: u64,
     pub status: String,
     pub reason: String,
+    /// v3.1(2026-09-05)payload.action 原样(老包缺=空串);L0 result 无 pending 槽,据此选短句
+    pub action: String,
+    /// v3.1 `source`(vad_chip|worker_l1|worker_l2|fallback|ui);老包=空串
+    pub source: String,
+    /// v3.1:端侧已**开始**本地播报=Some(true)→worker 不补说;老包=None
+    pub spoken_locally: Option<bool>,
+    pub spoken_clip_key: String,
+    pub execution_ms: Option<u64>,
+    pub mcu_tx_count: Option<u64>,
+    pub steps_done: Option<u64>,
+    pub boundary_basis: String,
     /// v217+ 增量透传(2026-09-04):payload 里 semantic_label/action/status/reason 之外的键
     /// (规范化读数/来源/image_distance_boundary_conflict/observed_state…)紧凑 JSON,截 400 字符。
     /// 只进日志对撞(`device command result … extra=`),不参与任何判定;老 APK 无增量键=空串。
@@ -306,6 +331,14 @@ pub fn parse_device_result(raw: &[u8]) -> Option<DeviceResult> {
         semantic_label: p["semantic_label"].as_u64().unwrap_or(0),
         status: p["status"].as_str()?.to_string(),
         reason: p["reason"].as_str().unwrap_or("").to_string(),
+        action: p["action"].as_str().unwrap_or("").to_string(),
+        source: p["source"].as_str().unwrap_or("").to_string(),
+        spoken_locally: p["spoken_locally"].as_bool(),
+        spoken_clip_key: p["spoken_clip_key"].as_str().unwrap_or("").to_string(),
+        execution_ms: p["execution_ms"].as_u64(),
+        mcu_tx_count: p["mcu_tx_count"].as_u64(),
+        steps_done: p["steps_done"].as_u64(),
+        boundary_basis: p["boundary_basis"].as_str().unwrap_or("").to_string(),
         extra: device_result_extra(p),
     })
 }
@@ -547,7 +580,7 @@ mod tests {
         let with_label = r#"{"trace_id":"t","ts_ms":1,"src":"android","type":"command_word",
             "lane":"L1","seq":1,"payload":{"label":42,"source":"vad_chip","observed_before_input_ready":true}}"#;
         let (_, kind) = parse(with_label.as_bytes()).expect("合法包必须解析");
-        assert_eq!(kind, Inbound::CommandWord { label: 42, before_ready: true, candidate_id: None });
+        assert_eq!(kind, Inbound::CommandWord { label: 42, before_ready: true, candidate_id: None, local_action: None, ignore_reason: None });
         let no_label = r#"{"trace_id":"t","ts_ms":1,"src":"android","type":"command_word",
             "lane":"L1","seq":1,"payload":{}}"#;
         let (_, kind2) = parse(no_label.as_bytes()).expect("旧形态仍解析");
@@ -585,7 +618,9 @@ mod tests {
             "打开灯光", "把灯打开", "exact_alias",
             "L1",
             None,
+            3,
         );
+        assert_eq!(v["payload"]["turn_id"], 3, "v3.1 轮次显式为 JSON 整数");
         assert_eq!(v["version"], "1.0");
         assert_eq!(v["type"], "device.command.proposed");
         assert_eq!(v["src"], "worker");
@@ -644,19 +679,19 @@ mod tests {
         let raw = json!({"trace_id":"t1","ts_ms":1,"src":"android","type":"command_word","seq":2,
             "payload":{"label":6,"observed_before_input_ready":false,"vad_candidate_id":"vad:t1:1"}}).to_string();
         let (_, k) = parse(raw.as_bytes()).unwrap();
-        assert_eq!(k, Inbound::CommandWord { label: 6, before_ready: false, candidate_id: Some("vad:t1:1".into()) });
+        assert_eq!(k, Inbound::CommandWord { label: 6, before_ready: false, candidate_id: Some("vad:t1:1".into()), local_action: None, ignore_reason: None });
         let raw2 = json!({"trace_id":"t1","ts_ms":1,"src":"android","type":"command_word","seq":3,
             "payload":{"label":6}}).to_string();
-        assert_eq!(parse(raw2.as_bytes()).unwrap().1, Inbound::CommandWord { label: 6, before_ready: false, candidate_id: None });
+        assert_eq!(parse(raw2.as_bytes()).unwrap().1, Inbound::CommandWord { label: 6, before_ready: false, candidate_id: None, local_action: None, ignore_reason: None });
     }
 
     #[test]
     fn proposed_l2_carries_lane_and_candidate() {
-        let v = device_command_proposed("t1", 1, "voice:r:3:6", 6, "brightness_down", "调暗一点", "太亮了", "llm", "L2", Some("vad:t1:1"));
+        let v = device_command_proposed("t1", 1, "voice:r:3:6", 6, "brightness_down", "调暗一点", "太亮了", "llm", "L2", Some("vad:t1:1"), 3);
         assert_eq!(v["lane"], "L2");
         assert_eq!(v["payload"]["match_type"], "llm");
         assert_eq!(v["payload"]["vad_candidate_id"], "vad:t1:1");
-        let v1 = device_command_proposed("t1", 1, "voice:r:3:6", 6, "brightness_down", "调暗一点", "太亮了", "exact_alias", "L1", None);
+        let v1 = device_command_proposed("t1", 1, "voice:r:3:6", 6, "brightness_down", "调暗一点", "太亮了", "exact_alias", "L1", None, 3);
         assert_eq!(v1["lane"], "L1");
         assert!(v1["payload"]["vad_candidate_id"].is_null(), "L1 候选恒 null");
     }
@@ -697,5 +732,39 @@ mod tests {
             "x".repeat(1000)
         );
         assert_eq!(parse_device_result(big.as_bytes()).unwrap().extra.chars().count(), 400, "截 400 字符");
+    }
+    /// v3.1:local_action / ignore_reason 原样透传;缺失=None(合同 2 老包)。
+    #[test]
+    fn command_word_v31_local_action_passthrough() {
+        let raw = json!({"trace_id":"t1","ts_ms":1,"src":"android","type":"command_word","seq":9,
+            "payload":{"label":30,"observed_before_input_ready":false,"vad_candidate_id":"vad:t1:4",
+                       "local_action":"deferred","ignore_reason":null}}).to_string();
+        let (_, k) = parse(raw.as_bytes()).unwrap();
+        assert_eq!(k, Inbound::CommandWord { label: 30, before_ready: false, candidate_id: Some("vad:t1:4".into()),
+            local_action: Some("deferred".into()), ignore_reason: None });
+        let raw2 = json!({"trace_id":"t1","ts_ms":1,"src":"android","type":"command_word","seq":10,
+            "payload":{"label":2,"local_action":"ignored","ignore_reason":"work_state"}}).to_string();
+        let (_, k2) = parse(raw2.as_bytes()).unwrap();
+        assert_eq!(k2, Inbound::CommandWord { label: 2, before_ready: false, candidate_id: None,
+            local_action: Some("ignored".into()), ignore_reason: Some("work_state".into()) });
+    }
+
+    /// v3.1:result 新字段全部可选;L0 lane 原样;老包全缺=空/None。
+    #[test]
+    fn device_result_v31_fields_and_l0_lane() {
+        let raw = json!({"src":"android","type":"device.command.result","trace_id":"t","lane":"L0",
+            "idempotency_key":"chip:t:7","payload":{"semantic_label":2,"action":"led_on","status":"succeeded",
+            "reason":"state_confirmed","source":"vad_chip","spoken_locally":true,"spoken_clip_key":"device_reply.applied_absolute",
+            "execution_ms":180,"mcu_tx_count":3,"steps_done":1,"boundary_basis":"none"}}).to_string();
+        let r = parse_device_result(raw.as_bytes()).unwrap();
+        assert_eq!((r.lane.as_str(), r.action.as_str(), r.source.as_str()), ("L0", "led_on", "vad_chip"));
+        assert_eq!(r.spoken_locally, Some(true));
+        assert_eq!((r.execution_ms, r.mcu_tx_count, r.steps_done), (Some(180), Some(3), Some(1)));
+        assert_eq!(r.spoken_clip_key, "device_reply.applied_absolute");
+        let old = json!({"src":"android","type":"device.command.result","trace_id":"t",
+            "idempotency_key":"voice:r:1:2","payload":{"semantic_label":2,"status":"succeeded","reason":"state_confirmed"}}).to_string();
+        let o = parse_device_result(old.as_bytes()).unwrap();
+        assert_eq!((o.lane.as_str(), o.action.as_str(), o.source.as_str(), o.spoken_locally), ("L1", "", "", None));
+        assert_eq!((o.execution_ms, o.mcu_tx_count, o.steps_done), (None, None, None));
     }
 }
