@@ -19,6 +19,7 @@
  *    nonce_expired(410) / SN 不匹配按 pending / 已绑他人 409 / 台账外 403
  *  - ECIES 端到端：设备侧参考解密对撞 / AAD 错 SN 必败 / nonce 错一字节必败
  *  - v1 开关：默认关（404）/ 开着时 v1 全链可用（回滚锚活性）
+ *  - 容量向量（2026-09-06 v234 增量）：claim SN30/IP120 下两台同 IP 各 14 claim + announce 零 429；SN 31/IP 121 次 429；桶独立
  */
 
 import { mkdtempSync } from 'node:fs';
@@ -191,10 +192,10 @@ async function confirm(jwt: string, sn: string, nonce: string, pk: string) {
   return { status: res.status, json: (await res.json()) as any };
 }
 
-async function claimV2(sn: string, nonce: string) {
+async function claimV2(sn: string, nonce: string, ip?: string) {
   const res = await app.request('/v1/device/pairing/claim', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...(ip ? { 'x-forwarded-for': ip } : {}) },
     body: JSON.stringify({ sn, pairing_nonce: nonce, pairing_protocol: 2 }),
   });
   return { status: res.status, json: (await res.json()) as any };
@@ -300,10 +301,10 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   const SN_G = 'BJP00326060100000808'; // 过期预授权
   const SN_U = 'BJP00326060100000899'; // 台账外
   for (const [sn, note] of [[SN_A, 'v3-A'], [SN_B, 'v3-B'], [SN_C, 'v3-C'], [SN_D, 'v3-D'], [SN_E, 'v3-E'], [SN_F, 'v3-F'], [SN_G, 'v3-G']]) deviceRegistryStore.add(sn, note);
-  async function announce(sn: string, nonce: string, pk: string) {
+  async function announce(sn: string, nonce: string, pk: string, ip?: string) {
     const res = await app.request('/v1/device/pairing/announce', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...(ip ? { 'x-forwarded-for': ip } : {}) },
       body: JSON.stringify({ v: 2, sn, nonce, pk }),
     });
     return { status: res.status, json: (await res.json()) as any };
@@ -391,6 +392,41 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   eq('rl-1 announce 桶第三次 429', (await announce(SN_F, newNonce(), kF.pkB64)).status, 429);
   eq('rl-2 claim 不受 announce 桶影响', (await claimV2(SN_F, newNonce())).json.code, 'pairing_pending');
   delete process.env.PAIRING_ANNOUNCE_RPM_SN;
+
+  // ── 容量向量（codex v234 增量回执 2026-09-06 §2.2）：生产 claim SN30/IP120、announce 6/20 独立桶。
+  //    端侧 claim 节奏 0/2/3/5s 封顶 → 单机首分钟上界 14 次；两台共出口 IP 各 14 次 claim + 各 4 次 announce
+  //    交错 → 零 429；单 SN 第 31 次 429；同 IP 第 121 次 429（未满 SN 桶照拦）；claim IP 桶打满 announce 仍 200。
+  //    IP 走 x-forwarded-for 首段（nginx $proxy_add_x_forwarded_for），用文档保留段 203.0.113.7 与其它用例的桶隔离。
+  process.env.PAIRING_CLAIM_RPM_SN = '30';
+  process.env.PAIRING_CLAIM_RPM_IP = '120';
+  const IP_NAT = '203.0.113.7';
+  const SN_H = 'BJP00326060100000809';
+  const SN_I = 'BJP00326060100000810';
+  let cap429 = 0;
+  let capPending = 0;
+  let capAnn = 0;
+  for (let i = 0; i < 14; i += 1) {
+    for (const sn of [SN_H, SN_I]) {
+      const r = await claimV2(sn, newNonce(), IP_NAT);
+      if (r.status === 429) cap429 += 1;
+      if (r.json.code === 'pairing_pending') capPending += 1;
+      if (i < 4 && (await announce(sn, newNonce(), newDeviceKeys().pkB64, IP_NAT)).status === 200) capAnn += 1;
+    }
+  }
+  eq('rl-3 两台同 IP 各 14 次 claim + 各 4 次 announce → 零 429', { c429: cap429, pending: capPending, ann: capAnn }, { c429: 0, pending: 28, ann: 8 });
+  for (let i = 14; i < 30; i += 1) await claimV2(SN_H, newNonce(), IP_NAT);
+  eq('rl-4 单 SN 第 31 次 claim 429', (await claimV2(SN_H, newNonce(), IP_NAT)).status, 429);
+  eq('rl-5 同 IP 另一台仍可 claim（SN 桶独立）', (await claimV2(SN_I, newNonce(), IP_NAT)).json.code, 'pairing_pending');
+  // IP 桶已计 30(H)+15(I)=45，再用三台各 25 次补到 120（429 不计入桶）
+  let ipFill = 0;
+  for (const sn of ['BJP00326060100000811', 'BJP00326060100000812', 'BJP00326060100000813']) {
+    for (let i = 0; i < 25; i += 1) if ((await claimV2(sn, newNonce(), IP_NAT)).status !== 429) ipFill += 1;
+  }
+  eq('rl-6 IP 桶 120 内零 429', ipFill, 75);
+  eq('rl-7 同 IP 第 121 次 claim 429（SN 桶未满照拦）', (await claimV2('BJP00326060100000814', newNonce(), IP_NAT)).status, 429);
+  eq('rl-8 claim IP 桶打满时 announce 仍 200（桶独立）', (await announce('BJP00326060100000814', newNonce(), newDeviceKeys().pkB64, IP_NAT)).status, 200);
+  process.env.PAIRING_CLAIM_RPM_SN = '100';
+  process.env.PAIRING_CLAIM_RPM_IP = '1000';
 
   // ── 过期预授权忽略 ──
   pairingStore.setPreauth(SN_G, P3, '13800000008', Date.now() - 1000, 'tester');
