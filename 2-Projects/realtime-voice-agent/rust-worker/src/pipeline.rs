@@ -67,6 +67,9 @@ pub struct PipelineConfig {
     /// (LCS≥0.8,回声只掉字不加字)→判回声丢弃。招呼语只在开场播,窗外零对撞零误伤面。
     /// 0 = 关闭该门(零二进制回滚)。
     pub local_audio_echo_window: Duration,
+    /// 最长本地招呼语时长(开场重叠窗时间锚;server 生成器 greeting 各槽 maxDurationMs≤3000,取 3200 留余量)。
+    /// 0 = 关闭开场重叠放宽门(零二进制回滚),原 LCS≥0.8 门不受影响。
+    pub local_audio_greeting_max: Duration,
     /// 芯片候选播放窗持有(2026-09-06 v230 灯控实证:LLM 回复「帮你调亮一点」被喇叭念出,芯片麦路径无 AEC
     /// 参考,听回成第二个 label 4 → worker 直接提案+硬打断在播回复=一次语音两次执行、回复截成「这」)。
     /// 开:在播或播完 ECHO_SUPPRESS_WINDOW_MS 内到达的芯片候选**不提案、不 abort**,记为等 ASR 的候选
@@ -153,6 +156,12 @@ impl PipelineConfig {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(15_000),
+            ),
+            local_audio_greeting_max: Duration::from_millis(
+                std::env::var("LOCAL_AUDIO_GREETING_MAX_MS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(3_200),
             ),
             chip_playback_hold: parse_flag(std::env::var("DEVICE_CHIP_PLAYBACK_HOLD").ok().as_deref(), true),
             cmd_single_exit: parse_flag(std::env::var("DEVICE_CMD_SINGLE_EXIT").ok().as_deref(), true),
@@ -317,6 +326,9 @@ struct Orchestrator {
     session_started_at: Instant,
     /// 开场窗内对撞 miss 的短 commit(≤3字)时刻——错转碎片追杀标(01:00「那」实证)
     echo_short_turn_at: Option<Instant>,
+    /// 开场重叠窗截止(unix ms):建房秒(≈唤醒)+ 最长招呼语 + 余量;None = 非设备房/放宽门关闭。
+    /// 说完时刻 ≤ 此值的 commit 视为「招呼语可能还在播」,回声门放宽到 LCS≥0.3(textproc::local_audio_echo_overlap_hit)。
+    opening_overlap_deadline_ms: Option<i64>,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -619,6 +631,13 @@ pub async fn run_pipeline(
     if l2_execute_on {
         info!(room = %room_name, "LLM 慢路执行已启用(2b canary 命中;仍需 Android capability>=2)");
     }
+    // 开场重叠窗时间锚(2026-09-06 0006 实证:动态招呼语尾巴错转穿过 0.8 门)。房名时间戳=server 建房秒≈唤醒时刻。
+    let opening_overlap_deadline_ms = if cfg.local_audio_greeting_max.is_zero() {
+        None
+    } else {
+        crate::textproc::room_unix_secs(&room_name)
+            .map(|s| crate::textproc::opening_overlap_deadline_ms(s, cfg.local_audio_greeting_max.as_millis() as u64))
+    };
     let mut orch = Orchestrator {
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
@@ -631,6 +650,7 @@ pub async fn run_pipeline(
         echo_local_texts,
         session_started_at: Instant::now(),
         echo_short_turn_at: None,
+        opening_overlap_deadline_ms,
         pending_cmd: None,
         deferred_say: DeferredSay::default(),
         ledger: crate::device_ledger::Ledger::new(),
@@ -1952,6 +1972,36 @@ impl Orchestrator {
                         s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
                     }
                     return;
+                }
+                // 开场重叠窗放宽门(2026-09-06 0006 实证,详见 textproc::local_audio_echo_overlap_hit):动态招呼语
+                // 2.1–2.8 s 长过 wake→input_ready(~1.8 s),尾巴被 ASR 听到并错转成「我想啊怎么了」「不行了」,
+                // LCS 0.5/0.33 穿过 0.8 门→幽灵轮/打断在播回复。以「这句说完时招呼语可能还没播完」为时间锚
+                // (建房秒≈唤醒 + 最长招呼语 + 余量),锚内 ≥2 字 LCS≥0.3 判回声;命令词/急停/退出词不进此门。
+                if let Some(deadline) = self.opening_overlap_deadline_ms {
+                    let speech_end_ms = unix_ms_now() - commit.eou_delay.as_millis() as i64;
+                    if speech_end_ms <= deadline
+                        && crate::device_intent::match_command(&user_text).is_none()
+                        && !crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text)
+                        && crate::textproc::session_exit_tail_hit(&user_text).is_none()
+                    {
+                        let overlap = {
+                            let bank = self.echo_local_texts.lock().unwrap();
+                            crate::textproc::local_audio_echo_overlap_hit(&nu, &bank).map(|(slot, r)| (slot.to_string(), r))
+                        };
+                        if let Some((slot, ratio)) = overlap {
+                            info!(room = %self.room_name, slot = %slot, lcs = ratio,
+                                  before_deadline_ms = deadline - speech_end_ms,
+                                  "local-audio echo suppressed (opening overlap): '{user_text}'");
+                            self.echo_short_turn_at = None;
+                            self.latest_interim.clear();
+                            self.tele_text.clear();
+                            if let Some(s) = &mut self.snap {
+                                let path = format!("overlap:{slot}");
+                                s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &path)]);
+                            }
+                            return;
+                        }
+                    }
                 }
                 // 对撞 miss 的短 commit(≤3字)打标:若它其实是错转回声碎片并起了幽灵轮,
                 // 紧随的后续碎片命中时按上方追杀逻辑撤销。真人短句不受影响(无后续命中=标过期)。

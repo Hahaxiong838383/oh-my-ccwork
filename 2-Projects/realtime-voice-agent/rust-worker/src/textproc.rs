@@ -279,6 +279,37 @@ pub fn lcs_char_ratio(needle: &str, hay: &str) -> f32 {
     f32::from(prev[b.len()]) / a.len() as f32
 }
 
+/// 开场重叠窗放宽门(2026-09-06 0006 实证):动态招呼语 2.1–2.8 s 长过 wake→input_ready(~1.8 s),
+/// 尾巴被 ASR 听到并错转——「我想啊怎么了」(←嘿我醒啦今天想玩什么,LCS 0.50)、「不行了」(←你来了故事继续,
+/// LCS 0.33)穿过 0.8 门起幽灵轮/打断在播回复。字符相似度对错转结构性偏低,只能在「这句说完时招呼语可能
+/// 还没播完」的时间锚内放宽:≥2 字且 LCS≥0.3 即判回声。锚外维持 local_audio_echo_hit;命令词/急停/退出词
+/// 由调用方先排除。已知代价:锚内说「讲个故事」(LCS 0.5 vs 你来了故事继续)会被吞——招呼语还在播时开口,重说一次。
+pub const LOCAL_AUDIO_OVERLAP_LCS: f32 = 0.3;
+
+pub fn local_audio_echo_overlap_hit<'a>(commit_norm: &str, bank: &'a [(String, String)]) -> Option<(&'a str, f32)> {
+    if commit_norm.chars().count() < 2 {
+        return None;
+    }
+    bank.iter()
+        .map(|(slot, t)| (slot.as_str(), lcs_char_ratio(commit_norm, t)))
+        .filter(|(_, r)| *r >= LOCAL_AUDIO_OVERLAP_LCS)
+        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+}
+
+/// 设备房名 `sn-<SN>-<unix 秒>`(server 建房时刻≈唤醒时刻,量化到秒)→ unix 秒;非设备房/无法解析 None。
+pub fn room_unix_secs(room_name: &str) -> Option<i64> {
+    if !room_name.starts_with("sn-") {
+        return None;
+    }
+    let (_, ts) = room_name.rsplit_once('-')?;
+    ts.parse::<i64>().ok().filter(|v| *v > 1_600_000_000)
+}
+
+/// 招呼语最晚播完时刻(unix ms):建房秒向下量化 +1000 补量化 + 最长招呼语时长 + 500 ms 余量。
+pub fn opening_overlap_deadline_ms(room_secs: i64, greeting_max_ms: u64) -> i64 {
+    room_secs * 1000 + 1000 + greeting_max_ms as i64 + 500
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -471,5 +502,58 @@ mod tests {
         assert!(!is_stop_only(&words, "一加一等于几"));
         // 白名单禁用(空集)恒不吞
         assert!(!is_stop_only(&parse_hotwords(Some("")), "停"));
+    }
+}
+
+#[cfg(test)]
+mod overlap_tests {
+    use super::*;
+
+    fn bank() -> Vec<(String, String)> {
+        // 0006 现役对撞库(9 内置 + 6 动态,normalize 后形态)
+        [
+            "哎你好呀", "嗯呐我在呢", "来啦想聊点啥", "来啦", "哎来啦来啦", "嗨我在呢", "哟你来啦", "哎哟是你呀",
+            "嗨嗨等你好久啦", "嘿来啦", "亮起来咯", "在呢在呢聊点啥好呀", "嘿我醒啦今天想玩什么", "回来啦一起玩吧",
+            "你来了故事继续",
+        ]
+        .iter()
+        .map(|t| ("greeting.x".to_string(), (*t).to_string()))
+        .collect()
+    }
+
+    #[test]
+    fn overlap_hits_0006_ghost_fragments() {
+        let b = bank();
+        let (_, r) = local_audio_echo_overlap_hit("我想啊怎么了", &b).expect("我想啊怎么了 应命中");
+        assert!((r - 0.5).abs() < 0.01, "lcs={r}");
+        let (_, r) = local_audio_echo_overlap_hit("不行了", &b).expect("不行了 应命中");
+        assert!(r >= LOCAL_AUDIO_OVERLAP_LCS && r < 0.34, "lcs={r}");
+    }
+
+    #[test]
+    fn overlap_passes_real_early_commits() {
+        let b = bank();
+        for t in ["虚像调到5米", "画面调近一点", "测试一测试一下你说个长句", "唱首歌", "开灯"] {
+            assert!(local_audio_echo_overlap_hit(t, &b).is_none(), "{t} 不该被判回声");
+        }
+    }
+
+    #[test]
+    fn overlap_single_char_and_empty_bank_none() {
+        assert!(local_audio_echo_overlap_hit("嗯", &bank()).is_none());
+        assert!(local_audio_echo_overlap_hit("我想啊怎么了", &[]).is_none());
+    }
+
+    #[test]
+    fn room_secs_parse() {
+        assert_eq!(room_unix_secs("sn-BJP00326070804800006-1788690141"), Some(1_788_690_141));
+        assert_eq!(room_unix_secs("web-abc-1788690141"), None);
+        assert_eq!(room_unix_secs("sn-BJP00326070804800006-notnum"), None);
+        assert_eq!(room_unix_secs("sn-BJP00326070804800006-12"), None);
+    }
+
+    #[test]
+    fn deadline_arith() {
+        assert_eq!(opening_overlap_deadline_ms(1_788_690_141, 3200), 1_788_690_141 * 1000 + 1000 + 3200 + 500);
     }
 }
