@@ -57,3 +57,10 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 - 新门语义（v3）：放宽分支（LCS≥0.3）只在「设备房 + 本会话第 1 句 + 首个 VAD 起点距输入环启动 ≤ LOCAL_AUDIO_OVERLAP_ONSET_MS(450) + 说完时刻 ≤ 建房秒锚 + 非命令/急停/退出」时启用；其余一律原门。日志锚同前，多 `onset_ms`。
 - 回滚：零二进制 `LOCAL_AUDIO_GREETING_MAX_MS=0`（只关放宽门）；二进制 `cp voice-rust-worker.bak-20260906-114959 voice-rust-worker` + 零 job restart（回到第三次、无起点判据、无应急杆）。
 - 触发回滚的信号：明早 0006 v237 首句房「就绪后立刻讲个故事」被 `opening overlap` 吞（应不可能：起点 ≥600ms）；或任何设备第 1 句真人话被吞且 onset_ms ≤450（判据阈值错）——先降 ONSET_MS 到 250 再考虑关门。
+
+## 追加 · 第五次换装：放宽门 v4——判据改「第 1 句 + commit 前无 VAD 起点」（2026-09-07 07:29 CST）
+- 现役 commit feat/rust-worker `ab32d4219`，二进制 sha256 前 16 `77465e8285fe6916`（72,039,336 B），MainPID 2013814，ActiveEnter 2026-09-06 23:28:07 UTC（07:28:07 CST），换装时在途 job=0。
+- 备份链：`voice-rust-worker.bak-20260906-232805` = v3 `37f1f19fd9bbe050`（fcb9f81ef）；`.bak-20260906-114959` = 838999a8…（0019bb8e0）；`.bak-20260906-103923` = 25da353f1。env md5 `d0bd412276756936` 未动（`LOCAL_AUDIO_OVERLAP_ONSET_MS` 已从代码删除，env 中本就没有）。
+- 为什么换：v3「VAD 起点 ≤450ms=回声」被今早真人打破（起点 +51/+104ms 也是真人），且回放昨日两条真幽灵句 journal 无 VAD 起点——v3 分支对真幽灵永不命中、对真人早开口反而命中。v4 只对「commit 前从未出现 VAD 起点」的第 1 句放宽（+ 截止 + 豁免 + LCS≥0.3）。
+- 回滚：零二进制 `LOCAL_AUDIO_GREETING_MAX_MS=0`（关放宽门，原门不变）；二进制 `cp voice-rust-worker.bak-20260906-232805 voice-rust-worker` + 零 job restart（回 v3，注意 v3 判据反向，回滚意义只在 v4 出现新问题时）。
+- 触发回滚的信号：任何设备第 1 句真人话被 `opening overlap` 吞且日志 `vad_onset_seen=false`（说明真人太轻没触发 VAD 且句子像招呼语）连续 ≥2 次 → 先把 LCS 阈值/截止收紧再谈关门。
