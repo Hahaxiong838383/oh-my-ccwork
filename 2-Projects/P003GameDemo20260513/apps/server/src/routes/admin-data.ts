@@ -30,7 +30,7 @@ import {
   personaInsightEnabled, personaNarrativeEnabled, personaTraitEnabled, personaLocalAudioEnabled,
 } from '../relation-state-store.js';
 import { localAudioStore } from '../local-audio-store.js';
-import { runLocalAudioForAccount } from '../local-audio-generator.js';
+import { runLocalAudioForAccount, shouldKickoffLocalAudioOnOpen } from '../local-audio-generator.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
 import { runInsightForAccount, runNarrativeForAccount } from '../insight-runner.js';
@@ -324,6 +324,16 @@ adminDataRoute.post('/devices/:sn/brain', async (c) => {
     // brain_token 分发已取消（2026-08-20 川哥拍板）：多设备架构下身份由房名 SN 路由，
     // worker 只需一个进程级通行证（已配置）；per-device token 无消费场景，返回它只会
     // 误导运营「要找地方填」。通行证续签走 scripts/sign-worker-token.ts（唯一签发口）。
+    // 绑定即生成（2026-09-06）：建档后异步触发一次本地音频生成，不阻塞路由、失败只留日志；
+    // 已生成过的账号由门判跳过，生成本身仍受每日批同一套门（暂停开关/体积预检/发布门）约束。
+    if (shouldKickoffLocalAudioOnOpen(localAudioStore.getState(accountId), personaLocalAudioEnabled(accountId))) {
+      console.log(`[admin-brain] local-audio kickoff sn=${sn} account=${accountId}`);
+      void runLocalAudioForAccount(accountId)
+        .then((r) => console.log(`[admin-brain] local-audio kickoff done sn=${sn} ${JSON.stringify(r)}`))
+        .catch((err) => console.log(`[admin-brain] local-audio kickoff failed sn=${sn}: ${String((err as Error)?.message ?? err)}`));
+    } else {
+      console.log(`[admin-brain] local-audio kickoff skipped sn=${sn} account=${accountId} (已生成过或开关关)`);
+    }
     console.log(`[admin-brain] opened sn=${sn} account=${accountId}`);
     return c.json({ ok: true, account_id: accountId });
   } catch (error) {

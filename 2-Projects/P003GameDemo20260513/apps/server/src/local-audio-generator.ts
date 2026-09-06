@@ -547,6 +547,18 @@ export async function buildSlot(
  * 单账号生成主入口。opts.force 跳过触发判断（admin 手动触发）。
  * 返回：{ok, trigger?, revision?, detail} —— probe/回执可读。
  */
+/**
+ * 绑定即生成的门（2026-09-06 川哥拍板；0001 首日实证：白天建档要等次日沪时 3 点每日批才有成长语音，第 0 天只有 APK 内置）：
+ * 开关开 + 从未生成过（revision 0 且 last_generated_at 0）才在开通 brain 时异步触发一次。重复开通 / 换绑到旧账号不重生成；
+ * 真正生成仍走 runLocalAudioForAccount 的 first_time 触发（尊重 LOCAL_AUDIO_GENERATION_PAUSED 与体积预检）。
+ */
+export function shouldKickoffLocalAudioOnOpen(
+  state: { revision: number; last_generated_at: number },
+  enabled: boolean,
+): boolean {
+  return enabled && state.revision === 0 && state.last_generated_at === 0;
+}
+
 export async function runLocalAudioForAccount(
   accountId: string,
   opts?: { force?: boolean; reuseStagingFirst?: boolean },

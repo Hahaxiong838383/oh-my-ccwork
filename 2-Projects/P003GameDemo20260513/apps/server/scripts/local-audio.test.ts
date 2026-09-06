@@ -501,5 +501,15 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   delete process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS;
 }
 
+// ---- 绑定即生成门(2026-09-06) ----
+{
+  const { shouldKickoffLocalAudioOnOpen } = await import('../src/local-audio-generator.js');
+  const fresh = { revision: 0, last_generated_at: 0 };
+  ok('kick-1 开关开+从未生成 → 触发', shouldKickoffLocalAudioOnOpen(fresh, true));
+  ok('kick-2 已生成过(revision>0) → 不触发', !shouldKickoffLocalAudioOnOpen({ revision: 1, last_generated_at: 1 }, true));
+  ok('kick-2b 生成过但未发布(revision 0, last_generated_at>0) → 不触发', !shouldKickoffLocalAudioOnOpen({ revision: 0, last_generated_at: 5 }, true));
+  ok('kick-3 开关关 → 不触发', !shouldKickoffLocalAudioOnOpen(fresh, false));
+}
+
 console.log(`\nlocal-audio tests: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);
