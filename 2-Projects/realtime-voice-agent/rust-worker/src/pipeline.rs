@@ -532,32 +532,25 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
     SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task }
 }
 
-pub struct ReadyCtx {
-    /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
-    pub trace_id: Option<String>,
-    /// 输出方向就绪信号(job 层 LocalTrackSubscribed 时置 true)
-    pub out_rx: tokio::sync::watch::Receiver<bool>,
-    /// assignment 到达时刻(elapsed_ms 基准)
-    pub t_assign: Instant,
-    /// user 轨订到时刻(track_to_input_loop 基准)
-    pub t_user_track: Instant,
-    pub connect_ms: u64,
-    pub issue_to_assignment_ms: Option<i64>,
+/// 预组装产物(2026-09-07):不依赖音轨/房间对象的全部重活。job 收到 assignment 即起 `prebuild`,与建房/发布出声轨/
+/// 等用户音轨并行;订到轨后 pipeline 直接接管,把「订到音轨 → 输入环启动」从 176–337 ms(VAD 模型 + 填充语库读盘为主,
+/// 期间麦克风帧在 NativeAudioStream 队列里溢出丢帧)压到接管尾巴。无预组装路径在 run_pipeline 内原地调用同一函数。
+pub struct Prebuilt {
+    pub cfg: PipelineConfig,
+    pub tts_cfg: TtsCfg,
+    pub llm: Arc<Mutex<Llm>>,
+    pub echo_local_texts: Arc<StdMutex<Vec<(String, String)>>>,
+    pub speaker: Option<SpeakerSidecar>,
+    pub vad: SileroVad,
+    pub bank: Option<FillerBank>,
+    pub stt: SttPre,
+    pub started_at: Instant,
 }
 
-#[allow(clippy::too_many_arguments)] // job→pipeline 的装配线,拆 struct 反而断上下文
-pub async fn run_pipeline(
-    mut mic: NativeAudioStream,
-    source: NativeAudioSource,
-    participant: LocalParticipant,
-    room_name: String,
-    route: transcript_pub::Route,
-    mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
-    mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
-    beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
-    ready: ReadyCtx,
-    stt_pre: Option<SttPre>,
-) -> Result<()> {
+pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
+    let started_at = Instant::now();
+    // ASR 预连最先起(握手最长,0.4–0.6 s)
+    let stt = spawn_stt(stt_cfg_for_room(&room_name), &room_name);
     let cfg = PipelineConfig::from_env();
     let tts_cfg = TtsCfg::from_env()?;
     info!(
@@ -569,14 +562,14 @@ pub async fn run_pipeline(
     let mut llm_cfg = LlmConfig::from_env().ok_or_else(|| anyhow::anyhow!("LLM_BASE_URL 未配置"))?;
     // per-device 身份路由:room(sn-<SN>-<ts>)随 query 传大脑,由大脑按 SN 反查该设备 brain 账号
     // (多设备防串号;非 sn- 房间大脑忽略 room 走 token 兜底语义)。
-    llm_cfg.room = room_name.to_string();
+    llm_cfg.room = room_name.clone();
     // 本地音频回声对撞库(2026-09-01):异步拉该设备文案,拉不到=空库 fail-open。
     // 只对 sn- 设备房拉(web/probe 房没有本地音频,省一次空转)。
     let echo_local_texts: Arc<StdMutex<Vec<(String, String)>>> = Arc::new(StdMutex::new(Vec::new()));
     if !cfg.local_audio_echo_window.is_zero() && room_name.starts_with("sn-") {
         let ecfg = llm_cfg.clone();
         let etexts = echo_local_texts.clone();
-        let rn = room_name.to_string();
+        let rn = room_name.clone();
         tokio::spawn(async move {
             match llm::fetch_local_audio_texts(&ecfg, &ecfg.room).await {
                 Some(list) => {
@@ -611,14 +604,64 @@ pub async fn run_pipeline(
         let tc = tts_cfg.clone();
         tokio::spawn(async move { tc.prewarm().await });
     }
-    // 声纹旁路(SPEAKER_ID_ENABLED=1 且注册库在):粘滞身份槽接入 LLM 近因位
-    let speaker = SpeakerSidecar::load_from_env();
+    // 重活进 blocking 线程(VAD 模型 / 填充语库 93 条读盘 / 声纹注册库),不占 runtime 线程——建房与等音轨正在并行 await。
+    let vad_path = cfg.vad_model_path.clone();
+    let (vad, bank, speaker) = tokio::task::spawn_blocking(move || -> Result<(SileroVad, Option<FillerBank>, Option<SpeakerSidecar>)> {
+        let vad = SileroVad::load(&vad_path)?;
+        let bank = FillerBank::load_from_env();
+        // 声纹旁路(SPEAKER_ID_ENABLED=1 且注册库在):粘滞身份槽接入 LLM 近因位
+        let speaker = SpeakerSidecar::load_from_env();
+        Ok((vad, bank, speaker))
+    })
+    .await
+    .map_err(|e| anyhow::anyhow!("prebuild join: {e}"))??;
     if let Some(s) = &speaker {
         llm_inner.set_speaker_slot(s.sticky_slot());
     }
     let llm = Arc::new(Mutex::new(llm_inner));
+    info!(
+        room = %room_name,
+        elapsed_ms = started_at.elapsed().as_millis() as u64,
+        has_fillers = bank.is_some(),
+        has_speaker = speaker.is_some(),
+        "pipeline prebuilt"
+    );
+    Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, stt, started_at })
+}
 
-    let mut vad = SileroVad::load(&cfg.vad_model_path)?;
+pub struct ReadyCtx {
+    /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
+    pub trace_id: Option<String>,
+    /// 输出方向就绪信号(job 层 LocalTrackSubscribed 时置 true)
+    pub out_rx: tokio::sync::watch::Receiver<bool>,
+    /// assignment 到达时刻(elapsed_ms 基准)
+    pub t_assign: Instant,
+    /// user 轨订到时刻(track_to_input_loop 基准)
+    pub t_user_track: Instant,
+    pub connect_ms: u64,
+    pub issue_to_assignment_ms: Option<i64>,
+}
+
+#[allow(clippy::too_many_arguments)] // job→pipeline 的装配线,拆 struct 反而断上下文
+pub async fn run_pipeline(
+    mut mic: NativeAudioStream,
+    source: NativeAudioSource,
+    participant: LocalParticipant,
+    room_name: String,
+    route: transcript_pub::Route,
+    mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
+    mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
+    beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
+    ready: ReadyCtx,
+    prebuilt: Option<Prebuilt>,
+) -> Result<()> {
+    // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
+    // 回声库拉取/ASR 预连)此处直接接管;无预组装路径(web 调试直连)原地组装,行为一致。
+    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, bank, stt, started_at: prebuilt_at } = match prebuilt {
+        Some(p) => p,
+        None => prebuild(room_name.clone()).await?,
+    };
+    info!(room = %room_name, prebuilt_age_ms = prebuilt_at.elapsed().as_millis() as u64, "pipeline takeover prebuilt");
     let mut gate = VadGate::new(
         std::env::var("VAD_ACTIVATION_THRESHOLD")
             .ok()
@@ -631,12 +674,8 @@ pub async fn run_pipeline(
         0.3,
     );
 
-    // STT 长连:优先接管 job 层在建房阶段预连的句柄(2026-09-07,握手与建房/等音轨并行);
-    // 无预连(web 调试直连等)则此处现连——行为与旧版一致。
-    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: stt_task } = match stt_pre {
-        Some(p) => p,
-        None => spawn_stt(stt_cfg_for_room(&room_name), &room_name),
-    };
+    // STT 长连:由预组装接管(握手已在建房阶段完成)。
+    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: stt_task } = stt;
 
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
@@ -722,7 +761,7 @@ pub async fn run_pipeline(
         eot_gap_gen: 0,
         eot_requested: false,
         pending_amend: None,
-        bank: FillerBank::load_from_env(),
+        bank,
         pf: PreflightGate::new(PreflightConfig::from_env()),
         spec: None,
         speaker,

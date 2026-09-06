@@ -85,9 +85,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         // 老 token / 非 Session API 房(web 调试直连):ready 事件无 trace 可绑,降级不发
         warn!(room = %room_name, "job.metadata 无 trace_id,session.input_ready 将不发(fail-visible)");
     }
-    // 预连火山 ASR(2026-09-07):与建房/发布出声轨/等用户音轨并行,pipeline 启动时握手已完成——真人「提示音一停就说」
-    // 的首段不再排队等 0.4–0.6 s 握手。job 在 pipeline 启动前退出时随本函数丢弃(sender drop → 流按 InputDone 收尾)。
-    let mut stt_pre = Some(pipeline::spawn_stt(pipeline::stt_cfg_for_room(&room_name), &room_name));
+    // 预组装(2026-09-07):ASR 预连 + VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/回声库拉取,全部与建房/发布出声轨/
+    // 等用户音轨并行;订到轨后 pipeline 直接接管。job 在 pipeline 启动前退出时产物随本函数丢弃(ASR sender drop → 流收尾)。
+    let mut prebuilt_task = Some(tokio::spawn(pipeline::prebuild(room_name.clone())));
     info!(job_id = %job.id, room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "worker_room_connect_start");
 
     let (room, mut events) = Room::connect(&url, &token, RoomOptions::default())
@@ -312,10 +312,23 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 connect_ms,
                 issue_to_assignment_ms: issue_ms,
             };
-            let stt = stt_pre.take();
+            let prebuilt = match prebuilt_task.take() {
+                Some(h) => match h.await {
+                    Ok(Ok(p)) => Some(p),
+                    Ok(Err(e)) => {
+                        warn!(room = %room_name, error = %e, "pipeline prebuild failed; falling back to inline build");
+                        None
+                    }
+                    Err(e) => {
+                        warn!(room = %room_name, error = %e, "pipeline prebuild join failed; falling back to inline build");
+                        None
+                    }
+                },
+                None => None,
+            };
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, beat2, ready, stt)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, beat2, ready, prebuilt)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
