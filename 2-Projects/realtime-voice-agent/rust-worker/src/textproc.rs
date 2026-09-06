@@ -296,14 +296,19 @@ pub fn local_audio_echo_overlap_hit<'a>(commit_norm: &str, bank: &'a [(String, S
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
 }
 
-/// 开场重叠窗决策(纯函数,编排层唯一入口):deadline None(非设备房/门关闭/SN 在例外表)→ 永不判回声;
-/// 说完时刻晚于截止 → 不判;否则按 local_audio_echo_overlap_hit。命令/急停/退出豁免由调用方在此之前判。
+/// 开场重叠窗决策(纯函数,编排层唯一入口):commit 前见过 VAD 起点 → 永不判回声(真人话);deadline None
+/// (非设备房/门关闭/SN 在例外表)→ 不判;说完时刻晚于截止 → 不判;否则按 local_audio_echo_overlap_hit。
+/// 命令/急停/退出豁免由调用方在此之前判。
 pub fn opening_overlap_decision<'a>(
     deadline_ms: Option<i64>,
     speech_end_ms: i64,
+    vad_onset_seen_before_commit: bool,
     commit_norm: &str,
     bank: &'a [(String, String)],
 ) -> Option<(&'a str, f32)> {
+    if !overlap_vadless_qualifies(vad_onset_seen_before_commit) {
+        return None;
+    }
     let deadline = deadline_ms?;
     if speech_end_ms > deadline {
         return None;
@@ -311,12 +316,13 @@ pub fn opening_overlap_decision<'a>(
     local_audio_echo_overlap_hit(commit_norm, bank)
 }
 
-/// 开场重叠窗的「起点」判据(普适,不依赖 APK 版本/SN 表):worker 输入环启动后 ≤ limit_ms 内就检测到语音起点
-/// = 开始听的那一刻音频里已经有人在说——旧包(v236)招呼语还在放时麦已开,正是回灌形态;v237 类设备提示音
-/// 播完才开麦,用户看到就绪再开口,起点 ≥ 人的反应时延(就绪显示≈输入环+270ms,反应≥300ms,VAD 检出+100–200ms
-/// → 最快 ≈ +600–900ms)。None(无起点/无环启动时刻)→ false。
-pub fn overlap_onset_qualifies(onset_after_loop_ms: Option<i64>, limit_ms: i64) -> bool {
-    matches!(onset_after_loop_ms, Some(ms) if ms <= limit_ms)
+/// 开场重叠窗的「无 VAD 起点」判据(2026-09-07 真机实证,普适、不依赖 APK 版本/SN 表):
+/// 昨天两条真实幽灵句(「不行了」「我想啊怎么了」)的 worker journal 里**没有 VadEvent::SpeechStart**——招呼语尾巴电平
+/// 低于 VAD 门(prob≥0.6 且 ≥150ms),只有 ASR(自带更灵敏的端点检测)把它转成 final;今早三句真人话(起点 +51/+104/+674ms)
+/// 全部触发了 VAD。所以「本会话第 1 句 commit 前从未出现 VAD 起点」才是回声尾巴的物理签名;有 VAD 起点的第 1 句一律
+/// 不进放宽分支。v3 的「起点 ≤450ms」判据方向反了(真人早开口 +51ms 就命中,幽灵句反而永不命中),已废。
+pub fn overlap_vadless_qualifies(vad_onset_seen_before_commit: bool) -> bool {
+    !vad_onset_seen_before_commit
 }
 
 /// 设备房名 `sn-<SN>-<unix 秒>`(server 建房时刻≈唤醒时刻,量化到秒)→ unix 秒;非设备房/无法解析 None。
@@ -575,35 +581,33 @@ mod overlap_tests {
         assert_eq!(room_unix_secs("sn-BJP00326070804800006-12"), None);
     }
 
-    /// codex v237 §7.3 反例(编排负向):建房标签 T,估算截止 T+4700ms;v237 下就绪(T+3000)后立刻说
-    /// 「讲个故事」,T+4000 说完 → 不在例外表的设备会被误吞(已知向量,故 0006 进例外表);例外表设备 deadline=None
-    /// → 永不进 swallowed。旧设备招呼语碎片正向不变。
+    /// codex v237 §7.3 反例(编排负向)+ 今早真人早开口样本:有 VAD 起点的第 1 句永不进 swallowed(不再靠例外表);
+    /// 昨日两条真实幽灵句(无 VAD 起点)正向保留。
     #[test]
     fn v237_first_sentence_after_ready_not_swallowed_when_skipped() {
         let b = bank();
         let t = 1_788_690_000i64;
         let deadline = opening_overlap_deadline_ms(t, 3200); // = t*1000 + 4700
         assert_eq!(deadline, t * 1000 + 4700);
-        // 不跳过:反例确实会被吞(记录为已知向量,不是期望行为)
-        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4000, "讲个故事", &b).is_some());
-        // 0006 例外(deadline=None):同一句永不判回声
-        assert!(opening_overlap_decision(None, t * 1000 + 4000, "讲个故事", &b).is_none());
+        // 真人早开口(今早实证 +51/+104ms 也有 VAD 起点):有 VAD 起点 → 即使窗内、即使 LCS 0.5 也永不判回声
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4000, true, "讲个故事", &b).is_none());
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 2050, true, "我想啊怎么了", &b).is_none());
+        // 无 VAD 起点 + 窗内 + 相似:会被吞(已知向量:真人太轻没触发 VAD 且句子像招呼语)
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4000, false, "讲个故事", &b).is_some());
+        // 例外表/门关闭(deadline=None):永不判回声
+        assert!(opening_overlap_decision(None, t * 1000 + 4000, false, "讲个故事", &b).is_none());
         // 说完时刻晚于截止:不判
-        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4701, "我想啊怎么了", &b).is_none());
-        // 旧设备招呼语碎片正向保留
-        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 2050, "我想啊怎么了", &b).is_some());
-        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 1320, "不行了", &b).is_some());
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4701, false, "我想啊怎么了", &b).is_none());
+        // 昨日两条真实幽灵句(无 VAD 起点、窗内):正向保留
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 2050, false, "我想啊怎么了", &b).is_some());
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 1320, false, "不行了", &b).is_some());
     }
 
-    /// 普适起点判据:旧包招呼语在放(起点 +150ms)→ 进放宽分支;v237 就绪后开口(+700ms)→ 不进;无起点 → 不进。
+    /// 无 VAD 起点判据(真机样本):幽灵句 commit 前无 VAD 起点 → 进;真人话(今早 +51/+104/+674ms 均有 VAD 起点)→ 不进。
     #[test]
-    fn onset_predicate_separates_overlap_from_ready_then_speak() {
-        assert!(overlap_onset_qualifies(Some(150), 450));
-        assert!(overlap_onset_qualifies(Some(0), 450));
-        assert!(overlap_onset_qualifies(Some(450), 450));
-        assert!(!overlap_onset_qualifies(Some(451), 450));
-        assert!(!overlap_onset_qualifies(Some(700), 450), "v237 就绪后立刻说「讲个故事」的起点 ≥600ms,不进放宽分支");
-        assert!(!overlap_onset_qualifies(None, 450));
+    fn vadless_predicate_from_real_samples() {
+        assert!(overlap_vadless_qualifies(false), "昨日幽灵句「不行了」「我想啊怎么了」:journal 无 UserSpeechStarted");
+        assert!(!overlap_vadless_qualifies(true), "今早「说个长句介绍一下」起点 +51ms、「长句继续测试一下」+104ms:有 VAD 起点,真人");
     }
 
     #[test]

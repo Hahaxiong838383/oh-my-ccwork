@@ -70,9 +70,6 @@ pub struct PipelineConfig {
     /// 最长本地招呼语时长(开场重叠窗时间锚;server 生成器 greeting 各槽 maxDurationMs≤3000,取 3200 留余量)。
     /// 0 = 关闭开场重叠放宽门(零二进制回滚),原 LCS≥0.8 门不受影响。
     pub local_audio_greeting_max: Duration,
-    /// 开场重叠窗起点上限(普适判据):输入环启动后多少 ms 内检出的首个语音起点才算「开听时已有人在说」。
-    /// 默认 450(旧包招呼语在放:+100–300ms;v237 就绪后开口:≥+600ms)。
-    pub local_audio_overlap_onset: Duration,
     /// 芯片候选播放窗持有(2026-09-06 v230 灯控实证:LLM 回复「帮你调亮一点」被喇叭念出,芯片麦路径无 AEC
     /// 参考,听回成第二个 label 4 → worker 直接提案+硬打断在播回复=一次语音两次执行、回复截成「这」)。
     /// 开:在播或播完 ECHO_SUPPRESS_WINDOW_MS 内到达的芯片候选**不提案、不 abort**,记为等 ASR 的候选
@@ -165,12 +162,6 @@ impl PipelineConfig {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(3_200),
-            ),
-            local_audio_overlap_onset: Duration::from_millis(
-                std::env::var("LOCAL_AUDIO_OVERLAP_ONSET_MS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(450),
             ),
             chip_playback_hold: parse_flag(std::env::var("DEVICE_CHIP_PLAYBACK_HOLD").ok().as_deref(), true),
             cmd_single_exit: parse_flag(std::env::var("DEVICE_CMD_SINGLE_EXIT").ok().as_deref(), true),
@@ -2003,17 +1994,15 @@ impl Orchestrator {
                 // 2.1–2.8 s 长过 wake→input_ready(~1.8 s),尾巴被 ASR 听到并错转成「我想啊怎么了」「不行了」,
                 // LCS 0.5/0.33 穿过 0.8 门→幽灵轮/打断在播回复。以「这句说完时招呼语可能还没播完」为时间锚
                 // (建房秒≈唤醒 + 最长招呼语 + 余量),锚内 ≥2 字 LCS≥0.3 判回声;命令词/急停/退出词不进此门。
-                // 普适起点判据(2026-09-06 codex v237 §7.3 反例 → 川哥要求不按 SN 特判):只有「本会话第 1 句」且
-                // 「输入环启动 ≤450ms 内就检出语音起点(开听时音频里已有人在说)」才进放宽分支;v237 类设备提示音播完
-                // 才开麦,就绪后开口的起点 ≥600ms,永不进此门——「讲个故事」不会被吞。
-                let onset_ms = match (self.input_loop_started_at, self.first_speech_onset_at) {
-                    (Some(l), Some(o)) => Some(o.saturating_duration_since(l).as_millis() as i64),
-                    _ => None,
-                };
-                let onset_ok = crate::textproc::overlap_onset_qualifies(onset_ms, self.cfg.local_audio_overlap_onset.as_millis() as i64);
+                // 普适判据 v4(2026-09-07 真机实证,不按 SN/APK 版本特判):只有「本会话第 1 句」且「commit 前从未出现
+                // VAD 起点」才进放宽分支。昨日两条真实幽灵句 journal 无 UserSpeechStarted(招呼语尾巴电平低于 VAD 门,
+                // 只有 ASR 转出 final);今早三句真人话起点 +51/+104/+674ms 全触发 VAD——有 VAD 起点=真人,一律不进。
+                // v3「起点 ≤450ms」判据方向反了(真人早开口就命中,幽灵句永不命中),已废。
+                let vad_onset_seen = self.first_speech_onset_at.is_some();
+                let since_loop_ms = self.input_loop_started_at.map(|l| l.elapsed().as_millis() as i64).unwrap_or(-1);
                 if let Some(deadline) = self.opening_overlap_deadline_ms
                     && self.user_commit_count == 1
-                    && onset_ok
+                    && crate::textproc::overlap_vadless_qualifies(vad_onset_seen)
                 {
                     let speech_end_ms = unix_ms_now() - commit.eou_delay.as_millis() as i64;
                     if speech_end_ms <= deadline
@@ -2023,11 +2012,11 @@ impl Orchestrator {
                     {
                         let overlap = {
                             let bank = self.echo_local_texts.lock().unwrap();
-                            crate::textproc::opening_overlap_decision(Some(deadline), speech_end_ms, &nu, &bank).map(|(slot, r)| (slot.to_string(), r))
+                            crate::textproc::opening_overlap_decision(Some(deadline), speech_end_ms, vad_onset_seen, &nu, &bank).map(|(slot, r)| (slot.to_string(), r))
                         };
                         if let Some((slot, ratio)) = overlap {
                             info!(room = %self.room_name, slot = %slot, lcs = ratio,
-                                  before_deadline_ms = deadline - speech_end_ms, onset_ms = onset_ms.unwrap_or(-1),
+                                  before_deadline_ms = deadline - speech_end_ms, vad_onset_seen, since_loop_ms,
                                   "local-audio echo suppressed (opening overlap): '{user_text}'");
                             self.echo_short_turn_at = None;
                             self.latest_interim.clear();
