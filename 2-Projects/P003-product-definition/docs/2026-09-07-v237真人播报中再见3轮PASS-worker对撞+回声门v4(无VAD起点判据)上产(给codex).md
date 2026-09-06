@@ -87,3 +87,31 @@ v3 假设「v237 就绪后开口起点 ≥600 ms」被真人打破：用户不�
 - 预期效果：`asr: connected` 早于 `user_track_subscribed`/`input_loop_started`；真人「提示音一停就说」的首段不再排队等握手，首个 interim/final 提前约 0.4–0.6 s。
 - 部署：2026-09-07 07:35:50 CST（23:35:50 UTC），在途 job=0；现役 sha256 前 16 `1d8f0b759cd65494`（72,052,008 B），MainPID 2015142；锚 `asr stream task spawned (preconnect)`=1；env md5 `d0bd412276756936` 未动；备份 `voice-rust-worker.bak-20260906-233549`（= v4 `77465e82…`）。单测 203/203，clippy 无新增。
 - 验收（川哥下一次唤醒）：同房日志顺序应为 `asr stream task spawned (preconnect)` → `asr: connected` → `user_track_subscribed` → `input_loop_started`；首句 VAD 起点到 `stt final` 的间隔与今早对比。
+
+## 6. 增量（2026-09-07 07:41 CST）：ASR 预连后真人 6 房实测（07:37:48–07:39:12）——预连生效、播报中退出 6/6，但暴露「端侧 ready 提示早于 worker 订阅到音轨」的首句截头
+
+### 6.1 预连生效（worker journal，CST）
+
+| 房（尾） | 预连 spawn → `asr: connected` | `asr: connected` 领先 `input_loop_started` | 备注 |
+|---|---:|---:|---|
+| …7868 | +679 ms | **1.69 s** | 唤醒后直接「退出」→ 2.6 s 内 exact 吞句+信令+cancel |
+| …7880 | +453 ms | 0.73 s | 首句「说个长句测试一下」完整；播报中「嗯再见」→ exact（goodbye）+ ACK matched |
+| …7899 | +511 ms | 1.42 s | 首句完整；播报中「退出」→ exact（general）+ cancel |
+| …7917 | +295 ms | 0.86 s | 首句转写「长距测试一下」（VAD 起点 +60 ms）；播报中「退出」PASS |
+| …7930 | +596 ms | 0.61 s | 首句转写「去测试一下」（VAD 起点 +58 ms）；播报中「退出」→ **端侧本地 exact 先命中**，cancel（cancelled=true had_turn=true）在 worker 提交前到达，worker 按 cancel 截断，无 worker 侧信令——结果正确，走的是 codex 说的「Android 本地 exact 先命中」快路 |
+| …7943 | +391 ms | 0.73 s | 首句转写「去测试一下」（VAD 起点 +57 ms）；播报中「再见」→ exact（goodbye）+ cancel |
+
+昨天/今早预连前：`asr: connected` 落在输入环启动后 +380–614 ms；现在领先 0.6–1.7 s，握手完全隐藏在建房与等音轨里。播报中语音退出 **6/6**（5 次 worker exact 信令 + 1 次端侧快路）。
+
+### 6.2 新发现：首句截头不是 ASR 握手，是「端侧 ready 提示早于 worker 订阅到音轨」
+
+三房首句被截了头：「长距测试一下」「去测试一下」×2（原话应为「说个长句测试一下」/「长句测试一下」），三房的 VAD 起点都在 worker 输入环启动后 **+57–60 ms**——worker 一开听你已经在说，而且已经说了一截。worker 侧时间线（…7930 房）：任务 51.07 → 建房 51.32 → 订到你的音轨 52.07 → 输入环 52.29 → VAD 起点 52.35。订阅到音轨之前的语音 worker 根本收不到（LiveKit 不给未订阅者补历史帧），这与 ASR 是否连好无关。
+
+推断（需 codex 端侧钟核对）：v237 把 UI「可以说了」提示改成**提示音播完 +200 ms 即发**，而设备发布麦克风轨 → worker 订阅到轨还要 ~0.5–1 s（worker 侧 `user_track_subscribed` 在任务后 944–2030 ms），于是用户按提示开口时 worker 还没在听，开头的字丢在这段里。两房首句完整（…7880/…7899）是因为那两次你开口晚了 0.5–3.8 s。
+
+worker 能再压的只有 `track_to_input_loop` 176–337 ms（订到轨 → 输入环，pipeline 组装耗时）——可把 pipeline 组装也提前到建房阶段（待办，收益 ≤0.3 s）；**主因在端侧**：请 codex 评估把 UI ready 提示重新挂到 worker 的 `session.input_ready`（或至少 agent 已订阅到麦克风轨）之后，麦克风照旧提示音播完就开（保持 v237 的回灌修复），只是「可以说了」的提示别抢在 worker 之前。这是 v236→v237 改动的副作用，不是新回归的回声问题。
+
+### 6.3 其它
+- 「长距测试一下」是「长句」的近音错转（二遍模型），与截头无关。
+- 六房零 `opening overlap` 命中、零幽灵轮；六房均由端侧断开即删房关 job；`asr ws closed by server` 是 job 收尾时服务端关流的既有 WARN，非故障。
+- 状态：**ASR_PRECONNECT_VERIFIED(6/6 ahead of loop) / TTS_EXIT_6_OF_6 / FIRST_SENTENCE_HEAD_CLIPPED_3_OF_5(device ready cue precedes worker subscription, inferred) / WORKER_TODO_prebuild_pipeline(≤0.3s) / DEVICE_TODO_gate_ready_cue_on_input_ready**
