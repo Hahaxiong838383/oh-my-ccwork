@@ -526,6 +526,33 @@ fn commands_gate(enabled: bool, canary_csv: &str, room_name: &str) -> bool {
     list.iter().any(|e| *e == sn_lower || *e == sn_hash)
 }
 
+/// 开场重叠窗放宽门的 SN 例外(2026-09-06 codex v237 §7.3):端侧 v237 起「提示音完整播完才开麦」,就绪后
+/// 立刻说的真人首句(「讲个故事」vs「你来了故事继续」LCS 0.5)会落进估算窗被误吞。已核实装 v237 的 SN 列在
+/// LOCAL_AUDIO_OVERLAP_SKIP_SN_HASHES(逗号分隔 sha256(SN) hex 或小写 SN)即跳过放宽分支;精确回声门(LCS≥0.8)、
+/// 命令/急停/退出保护不变。**空表=不跳过任何设备**(与 canary 的「空=全开」相反,这是例外表)。
+/// 设备回滚到旧 APK 时必须同步把它从表里拿掉。
+pub fn overlap_gate_skipped_for(room_name: &str) -> bool {
+    sn_listed(&std::env::var("LOCAL_AUDIO_OVERLAP_SKIP_SN_HASHES").unwrap_or_default(), room_name)
+}
+
+/// 纯函数:设备房 `sn-<SN>-<ts>` 的 SN 是否在列表(小写 SN 或 sha256(SN) hex);非设备房/空表 → false。
+pub fn sn_listed(csv: &str, room_name: &str) -> bool {
+    let Some(sn) = room_name
+        .strip_prefix("sn-")
+        .and_then(|r| r.rsplit_once('-'))
+        .map(|(sn, _)| sn)
+    else {
+        return false;
+    };
+    let list: Vec<String> = csv.split(',').map(|s| s.trim().to_lowercase()).filter(|s| !s.is_empty()).collect();
+    if list.is_empty() {
+        return false;
+    }
+    let sn_lower = sn.to_lowercase();
+    let sn_hash = sha256_hex(sn.as_bytes());
+    list.iter().any(|e| *e == sn_lower || *e == sn_hash)
+}
+
 fn sha256_hex(data: &[u8]) -> String {
     use sha2::{Digest, Sha256};
     let mut h = Sha256::new();
@@ -900,5 +927,22 @@ mod chip_echo_tests {
         assert!(spoken_contains_label_phrase(&spoken, 4));
         assert!(!spoken_contains_label_phrase(&normalize("今天天气真好呀"), 4));
         assert!(!spoken_contains_label_phrase("", 4));
+    }
+}
+
+#[cfg(test)]
+mod overlap_skip_tests {
+    use super::*;
+    const H0006: &str = "ec35e1b52da5ecbfb8737a90680ee10e9c6ac8b6d1cf057a20955fa5bca4758b"; // sha256("BJP00326070804800006")
+
+    #[test]
+    fn skip_list_matches_hash_or_lowercase_sn_only() {
+        let room = "sn-BJP00326070804800006-1788690141";
+        assert!(sn_listed(H0006, room));
+        assert!(sn_listed(&format!(" other , {H0006} "), room));
+        assert!(sn_listed("bjp00326070804800006", room));
+        assert!(!sn_listed("", room), "空表=不跳过任何设备");
+        assert!(!sn_listed(H0006, "sn-BJP00326010100000001-1788690141"), "0001 不在表");
+        assert!(!sn_listed(H0006, "web-debug-1788690141"), "非设备房恒 false");
     }
 }

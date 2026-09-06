@@ -296,6 +296,21 @@ pub fn local_audio_echo_overlap_hit<'a>(commit_norm: &str, bank: &'a [(String, S
         .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
 }
 
+/// 开场重叠窗决策(纯函数,编排层唯一入口):deadline None(非设备房/门关闭/SN 在例外表)→ 永不判回声;
+/// 说完时刻晚于截止 → 不判;否则按 local_audio_echo_overlap_hit。命令/急停/退出豁免由调用方在此之前判。
+pub fn opening_overlap_decision<'a>(
+    deadline_ms: Option<i64>,
+    speech_end_ms: i64,
+    commit_norm: &str,
+    bank: &'a [(String, String)],
+) -> Option<(&'a str, f32)> {
+    let deadline = deadline_ms?;
+    if speech_end_ms > deadline {
+        return None;
+    }
+    local_audio_echo_overlap_hit(commit_norm, bank)
+}
+
 /// 设备房名 `sn-<SN>-<unix 秒>`(server 建房时刻≈唤醒时刻,量化到秒)→ unix 秒;非设备房/无法解析 None。
 pub fn room_unix_secs(room_name: &str) -> Option<i64> {
     if !room_name.starts_with("sn-") {
@@ -550,6 +565,26 @@ mod overlap_tests {
         assert_eq!(room_unix_secs("web-abc-1788690141"), None);
         assert_eq!(room_unix_secs("sn-BJP00326070804800006-notnum"), None);
         assert_eq!(room_unix_secs("sn-BJP00326070804800006-12"), None);
+    }
+
+    /// codex v237 §7.3 反例(编排负向):建房标签 T,估算截止 T+4700ms;v237 下就绪(T+3000)后立刻说
+    /// 「讲个故事」,T+4000 说完 → 不在例外表的设备会被误吞(已知向量,故 0006 进例外表);例外表设备 deadline=None
+    /// → 永不进 swallowed。旧设备招呼语碎片正向不变。
+    #[test]
+    fn v237_first_sentence_after_ready_not_swallowed_when_skipped() {
+        let b = bank();
+        let t = 1_788_690_000i64;
+        let deadline = opening_overlap_deadline_ms(t, 3200); // = t*1000 + 4700
+        assert_eq!(deadline, t * 1000 + 4700);
+        // 不跳过:反例确实会被吞(记录为已知向量,不是期望行为)
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4000, "讲个故事", &b).is_some());
+        // 0006 例外(deadline=None):同一句永不判回声
+        assert!(opening_overlap_decision(None, t * 1000 + 4000, "讲个故事", &b).is_none());
+        // 说完时刻晚于截止:不判
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 4701, "我想啊怎么了", &b).is_none());
+        // 旧设备招呼语碎片正向保留
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 2050, "我想啊怎么了", &b).is_some());
+        assert!(opening_overlap_decision(Some(deadline), t * 1000 + 1320, "不行了", &b).is_some());
     }
 
     #[test]

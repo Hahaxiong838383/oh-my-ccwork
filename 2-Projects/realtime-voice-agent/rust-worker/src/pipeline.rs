@@ -632,12 +632,17 @@ pub async fn run_pipeline(
         info!(room = %room_name, "LLM 慢路执行已启用(2b canary 命中;仍需 Android capability>=2)");
     }
     // 开场重叠窗时间锚(2026-09-06 0006 实证:动态招呼语尾巴错转穿过 0.8 门)。房名时间戳=server 建房秒≈唤醒时刻。
-    let opening_overlap_deadline_ms = if cfg.local_audio_greeting_max.is_zero() {
+    // SN 例外表(codex v237 §7.3):端侧「提示音播完才开麦」的设备,就绪后立刻说的真人首句会落进估算窗——跳过放宽分支。
+    let opening_overlap_skip = crate::device_intent::overlap_gate_skipped_for(&room_name);
+    let opening_overlap_deadline_ms = if cfg.local_audio_greeting_max.is_zero() || opening_overlap_skip {
         None
     } else {
         crate::textproc::room_unix_secs(&room_name)
             .map(|s| crate::textproc::opening_overlap_deadline_ms(s, cfg.local_audio_greeting_max.as_millis() as u64))
     };
+    if opening_overlap_skip {
+        info!(room = %room_name, "local-audio opening-overlap gate skipped for this SN (v237 full-prompt-then-mic)");
+    }
     let mut orch = Orchestrator {
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
@@ -1986,7 +1991,7 @@ impl Orchestrator {
                     {
                         let overlap = {
                             let bank = self.echo_local_texts.lock().unwrap();
-                            crate::textproc::local_audio_echo_overlap_hit(&nu, &bank).map(|(slot, r)| (slot.to_string(), r))
+                            crate::textproc::opening_overlap_decision(Some(deadline), speech_end_ms, &nu, &bank).map(|(slot, r)| (slot.to_string(), r))
                         };
                         if let Some((slot, ratio)) = overlap {
                             info!(room = %self.room_name, slot = %slot, lcs = ratio,
