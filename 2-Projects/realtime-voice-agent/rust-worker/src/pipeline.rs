@@ -2147,10 +2147,11 @@ impl Orchestrator {
                     && user_text.chars().count() <= CMD_SINGLE_EXIT_MAX_CHARS
                 {
                     info!(room = %self.room_name, utterance = cur, owner, text_len = user_text.chars().count(),
-                          pending = self.pending_cmd.is_some(), "command turn single exit: filler/LLM skipped");
-                    if self.agent_turn.is_some() {
-                        self.hard_abort_current();
-                    }
+                          pending = self.pending_cmd.is_some(), in_flight = self.agent_turn.is_some(),
+                          "command turn single exit: filler/LLM skipped");
+                    // 不 abort 在途轮:此刻若有在播的,只可能是本命令的冻结短句/「正在调整」(芯片提案时已清过旧回复;
+                    // result 先于 commit 到达时它正在播,本 trace 两者只差 219 ms)——掐掉它=孩子听到半句「好嘞—」。
+                    // 只作废投机生成;在途时状态也不动(PlayedOut 自然回 Listening)。
                     if let Some(sp) = self.spec.take() {
                         sp.task.abort();
                     }
@@ -2159,10 +2160,12 @@ impl Orchestrator {
                     }
                     self.latest_interim.clear();
                     self.tele_text.clear();
-                    if self.pending_cmd.is_some() {
-                        self.set_state(AgentState::Thinking);
-                    } else {
-                        self.set_state(AgentState::Listening);
+                    if self.agent_turn.is_none() {
+                        if self.pending_cmd.is_some() {
+                            self.set_state(AgentState::Thinking);
+                        } else {
+                            self.set_state(AgentState::Listening);
+                        }
                     }
                     return;
                 }
