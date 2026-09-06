@@ -477,6 +477,61 @@ fn boundary_reply(action: &str) -> String {
 }
 
 /// job 层传入的就绪上下文(input_ready 合同 2026-08-18):trace 绑定 + 输出门信号 + 打点基准。
+/// 预连 ASR 句柄(2026-09-07):job 层在 assignment 到达后立刻 spawn,火山 ASR websocket 握手(实测 0.4–0.6 s)与
+/// 建房/发布出声轨/等用户音轨并行;pipeline 启动时直接接管。此前握手在 pipeline 内起,落在输入环启动后
+/// +380–614ms(今早四房实读),真人「提示音一停就说」的首段语音只能在 channel 里排队等握手,首个转写整体延后。
+/// job 在 pipeline 启动前退出时句柄随之丢弃:sender drop → 流发空尾段按 InputDone 自然收尾。
+pub struct SttPre {
+    pub pcm_tx: mpsc::Sender<Vec<i16>>,
+    pub ev_rx: mpsc::Receiver<SttEvent>,
+    pub task: tokio::task::JoinHandle<()>,
+}
+
+/// 该房的 ASR 配置:env 基线 + 二遍识别 per-SN 灰度(命中即切 bigmodel_async + enable_nonstream,必须同调:
+/// 老 bigmodel 静默忽略此参数)。非命中房间零变化。
+pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
+    let mut stt_cfg = SttConfig::from_env();
+    if crate::device_intent::asr_nonstream_enabled_for(room_name) {
+        stt_cfg.nonstream = true;
+        stt_cfg.url = stt_volc::ASYNC_ASR_URL.to_string();
+        info!(room = %room_name, "ASR 二遍识别灰度命中(bigmodel_async+nonstream)");
+    }
+    stt_cfg
+}
+
+/// 起 STT 长连任务(断线重连:改进项,Python 版死流;连续 5 败放弃)。返回 pcm 发送端/事件接收端/任务句柄。
+pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
+    let (stt_pcm_tx, stt_pcm_rx) = mpsc::channel::<Vec<i16>>(128);
+    let (stt_ev_tx, stt_ev_rx) = mpsc::channel::<SttEvent>(64);
+    info!(room = %room_name, nonstream = stt_cfg.nonstream, "asr stream task spawned (preconnect)");
+    let rn = room_name.to_string();
+    let task = tokio::spawn(async move {
+        let mut pcm_rx = stt_pcm_rx;
+        let mut fails = 0u32;
+        loop {
+            let started = Instant::now();
+            match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone()).await {
+                Ok(AsrEnd::InputDone) => break,
+                Ok(AsrEnd::ServerClosed) => {}
+                Err(e) => warn!(room = %rn, error = %e, "火山 ASR 流异常"),
+            }
+            if started.elapsed() > Duration::from_secs(10) {
+                fails = 0; // 长稳连接后的断开不算连败
+            }
+            fails += 1;
+            if fails > 5 {
+                warn!(room = %rn, "asr 连续 {fails} 次失败,放弃重连");
+                break;
+            }
+            let backoff = Duration::from_millis(500 * 2u64.pow((fails - 1).min(3)));
+            warn!(room = %rn, attempt = fails, backoff_ms = backoff.as_millis() as u64, "asr 断线重连");
+            tokio::time::sleep(backoff).await;
+        }
+        let _ = stt_ev_tx.send(SttEvent::Closed).await;
+    });
+    SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task }
+}
+
 pub struct ReadyCtx {
     /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
     pub trace_id: Option<String>,
@@ -501,16 +556,9 @@ pub async fn run_pipeline(
     mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
+    stt_pre: Option<SttPre>,
 ) -> Result<()> {
     let cfg = PipelineConfig::from_env();
-    let mut stt_cfg = SttConfig::from_env();
-    // ASR 二遍识别 per-SN 灰度:命中即该 job 切 bigmodel_async + enable_nonstream
-    // (必须同调:老 bigmodel 静默忽略此参数)。非命中房间零变化。
-    if crate::device_intent::asr_nonstream_enabled_for(&room_name) {
-        stt_cfg.nonstream = true;
-        stt_cfg.url = stt_volc::ASYNC_ASR_URL.to_string();
-        info!(room = %room_name, "ASR 二遍识别灰度命中(bigmodel_async+nonstream)");
-    }
     let tts_cfg = TtsCfg::from_env()?;
     info!(
         room = %room_name,
@@ -583,39 +631,12 @@ pub async fn run_pipeline(
         0.3,
     );
 
-    // STT 长连(断线重连:改进项,Python 版死流;连续 5 败放弃)
-    let (stt_pcm_tx, stt_pcm_rx) = mpsc::channel::<Vec<i16>>(128);
-    let (stt_ev_tx, mut stt_ev_rx) = mpsc::channel::<SttEvent>(64);
-    let stt_task = tokio::spawn({
-        let stt_cfg = stt_cfg.clone();
-        let rn = room_name.clone();
-        let mut pcm_rx = stt_pcm_rx;
-        async move {
-            let mut fails = 0u32;
-            loop {
-                let started = Instant::now();
-                match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone())
-                    .await
-                {
-                    Ok(AsrEnd::InputDone) => break,
-                    Ok(AsrEnd::ServerClosed) => {}
-                    Err(e) => warn!(room = %rn, error = %e, "火山 ASR 流异常"),
-                }
-                if started.elapsed() > Duration::from_secs(10) {
-                    fails = 0; // 长稳连接后的断开不算连败
-                }
-                fails += 1;
-                if fails > 5 {
-                    warn!(room = %rn, "asr 连续 {fails} 次失败,放弃重连");
-                    break;
-                }
-                let backoff = Duration::from_millis(500 * 2u64.pow((fails - 1).min(3)));
-                warn!(room = %rn, attempt = fails, backoff_ms = backoff.as_millis() as u64, "asr 断线重连");
-                tokio::time::sleep(backoff).await;
-            }
-            let _ = stt_ev_tx.send(SttEvent::Closed).await;
-        }
-    });
+    // STT 长连:优先接管 job 层在建房阶段预连的句柄(2026-09-07,握手与建房/等音轨并行);
+    // 无预连(web 调试直连等)则此处现连——行为与旧版一致。
+    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: stt_task } = match stt_pre {
+        Some(p) => p,
+        None => spawn_stt(stt_cfg_for_room(&room_name), &room_name),
+    };
 
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
