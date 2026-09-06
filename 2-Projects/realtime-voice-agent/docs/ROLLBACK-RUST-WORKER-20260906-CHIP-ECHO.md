@@ -33,5 +33,5 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 
 ## 终值（2026-09-06 12:41 CST，第二次换装）
 - 现役 commit `25da353f1`，二进制 sha256 前 16 `73f8d5e8fbc56693`（72,054,632 B），MainPID 1944923，ActiveEnter 2026-09-06 04:41:03 UTC（12:41:03 CST）；换装时在途 job 0（received=closed=1）。
-- 备份链：`voice-rust-worker.bak-20260906-044102` = 中间版 9172323a（9f9a96af2，只上线 3 分 41 秒，其间 1 个 job、非 003 房）；`voice-rust-worker.bak-20260906-043721` = **原版 464da5a4**（回滚目标）。
+- 备份链：`voice-rust-worker.bak-20260906-044102` = 中间版 9172323a（9f9a96af2，只上线 3 分 41 秒，其间 1 个 job = 003 房（12:37:33 CST 起 17 s，journal 零 command_word/零提案/零回复事件，未触及新分支））；`voice-rust-worker.bak-20260906-043721` = **原版 464da5a4**（回滚目标）。
 - 二进制锚（grep -a）：`command turn single exit`=1、`chip candidate held in playback window`=1、旧标识 `DeferredMotor`=0；env md5 仍 `d0bd412276756936`。
