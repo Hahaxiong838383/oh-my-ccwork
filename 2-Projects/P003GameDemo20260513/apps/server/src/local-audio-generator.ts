@@ -41,10 +41,14 @@ export const SLOT_SPECS: Record<
     forbiddenRe?: RegExp;
   }
 > = {
+  // 2026-09-06 codex v237 口径：普通唤醒只用「完整且 ≤1800ms」的动态招呼语（超长则本次回退内置短句）——
+  // 0006 实证动态招呼语 2.5–2.8s 长过唤醒→input_ready，尾巴被开麦回灌成幽灵句。故 normal 槽收成 2–6 字 / 1800ms；
+  // cover_open / presence_return（首次开盖/返场）端侧保完整播放，维持原较长口径不动。
   'greeting.normal': {
-    maxDurationMs: 3000,
-    maxChars: 12,
-    scene: '孩子喊小可的名字把设备唤醒了，小可答应一声打个招呼（马上要开始聊天，别问问题连环轰炸）',
+    maxDurationMs: 1800,
+    minChars: 2,
+    maxChars: 6,
+    scene: '孩子喊小可的名字把设备唤醒了，小可答应一声（两到六个字的短应答，一句就够，马上要开始聊天，别问问题连环轰炸）',
   },
   'greeting.cover_open': {
     maxDurationMs: 2400,

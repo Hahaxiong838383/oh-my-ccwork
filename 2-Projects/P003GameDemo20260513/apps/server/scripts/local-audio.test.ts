@@ -59,9 +59,9 @@ eq('cn-3 去 emoji', sanitizeClipText('嗨呀😀我们开始吧'), '嗨呀我�
 eq('cn-4 计字含中文数字字母', countChars('来啦，聊 5 分钟 ok？'), 8);
 eq('cn-5 纯标点计 0', countChars('！？。'), 0);
 
-// ── 文案门（slot=greeting.normal ≤12 字；选句已对照全部规则分支确认真中性）──
-const g1 = gateClipText('来啦今天想聊点啥', 'greeting.normal');
-eq('gate-1 正例通过', g1, { ok: true, text: '来啦今天想聊点啥' });
+// ── 文案门（slot=greeting.normal 2026-09-06 起 2–6 字/1800ms，codex v237 普通唤醒口径；选句已对照全部规则分支确认真中性）──
+const g1 = gateClipText('来啦聊点啥', 'greeting.normal');
+eq('gate-1 正例通过', g1, { ok: true, text: '来啦聊点啥' });
 eq(
   'gate-2 超字数拒',
   gateClipText('今天我们一起来聊聊有趣的新发现吧', 'greeting.normal'),
@@ -73,9 +73,13 @@ eq('gate-5 禁词「你终于来了」拒', gateClipText('你终于来了呀', '
 // 宁严语义：正向句里含「孤单」也拒（门认词不认语义，产品定夺过的取舍）
 eq('gate-6 「孤单」正向句也拒', gateClipText('一个人也不孤单哦', 'greeting.normal').ok, false);
 eq('gate-7 太短拒', gateClipText('嗯', 'greeting.normal'), { ok: false, reason: 'too_short' });
-// cover_open ≤9：同一句（11 字，已逐字数过）在 normal(≤12) 过、cover_open(≤9) 拒——字数门跟 slot 走
-eq('gate-8 slot 字数差异·normal 过', gateClipText('欢迎回到小书桌前坐好啦', 'greeting.normal').ok, true);
-eq('gate-9 slot 字数差异·cover_open 拒', gateClipText('欢迎回到小书桌前坐好啦', 'greeting.cover_open').ok, false);
+// 字数门跟 slot 走：同一句（7 字，已逐字数过）在 cover_open(≤9) 过、normal(≤6) 拒
+eq('gate-8 slot 字数差异·cover_open 过', gateClipText('欢迎回到书桌前', 'greeting.cover_open').ok, true);
+eq('gate-9 slot 字数差异·normal 拒', gateClipText('欢迎回到书桌前', 'greeting.normal'), { ok: false, reason: 'too_long:7' });
+// 规格锚（codex v237 §4：普通唤醒只用完整且 ≤1800ms 的动态招呼语；2–6 汉字）
+const { SLOT_SPECS: SPEC_N } = await import('../src/local-audio-generator.js');
+eq('gate-10 greeting.normal 规格 1800ms/2–6 字', [SPEC_N['greeting.normal'].maxDurationMs, SPEC_N['greeting.normal'].minChars, SPEC_N['greeting.normal'].maxChars], [1800, 2, 6]);
+eq('gate-11 cover_open/presence_return 规格不动', [SPEC_N['greeting.cover_open'].maxDurationMs, SPEC_N['greeting.cover_open'].maxChars, SPEC_N['greeting.presence_return'].maxDurationMs], [2400, 9, 2400]);
 // 危机门在链上（isCrisisContent 词表独立维护，这里锚「门顺序不吞禁词」即可——见 gate-3）
 
 // ── 触发判断全分支 ──
@@ -358,7 +362,7 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   eq('ew-4 greeting 含「再见」拒', (gateClipText('嗨嗨，再见啦', 'greeting.normal') as { ok: false; reason: string }).reason, 'exit_word:再见');
   ok('ew-5 farewell 含「再见」豁免过', gateClipText('再见啦，明天见', 'farewell.goodbye').ok === true);
   eq('ew-6 farewell 含命令词仍拒', (gateClipText('关灯睡觉吧再见', 'farewell.night') as { ok: false; reason: string }).reason, 'device_command_word:关灯');
-  ok('ew-7 干净文案不受影响', gateClipText('嗨，今天想聊点啥', 'greeting.normal').ok === true);
+  ok('ew-7 干净文案不受影响', gateClipText('嗨，聊点啥', 'greeting.normal').ok === true);
   ok('ew-8 词表快照 ≥200 词(同源加载非兜底集)', commandEchoReason('帮我把灯打开') !== null && commandEchoReason('虚像最近') !== null);
   eq('ew-9 filler 语义(无豁免)拒再见', commandEchoReason('那再见咯'), 'exit_word:再见');
   eq('ew-10 干净短语零命中', commandEchoReason('嗯呐，我想想'), null);
