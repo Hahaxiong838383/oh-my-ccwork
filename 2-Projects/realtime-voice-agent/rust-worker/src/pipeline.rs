@@ -67,6 +67,16 @@ pub struct PipelineConfig {
     /// (LCS≥0.8,回声只掉字不加字)→判回声丢弃。招呼语只在开场播,窗外零对撞零误伤面。
     /// 0 = 关闭该门(零二进制回滚)。
     pub local_audio_echo_window: Duration,
+    /// 芯片候选播放窗持有(2026-09-06 v230 灯控实证:LLM 回复「帮你调亮一点」被喇叭念出,芯片麦路径无 AEC
+    /// 参考,听回成第二个 label 4 → worker 直接提案+硬打断在播回复=一次语音两次执行、回复截成「这」)。
+    /// 开:在播或播完 ECHO_SUPPRESS_WINDOW_MS 内到达的芯片候选**不提案、不 abort**,记为等 ASR 的候选
+    /// (同句真人 ASR/LLM 命中才执行;worker 自己的 VAD/ASR 打断门与急停词照旧负责真人打断)。
+    /// env DEVICE_CHIP_PLAYBACK_HOLD,默认开;0 = 旧行为(零二进制回滚)。
+    pub chip_playback_hold: bool,
+    /// 命令句单出口(同一实证的另一半):已被芯片提案/端侧认领的说话轮次不起 filler/LLM,
+    /// 唯一出口是结果驱动的冻结短句——从源头去掉「LLM 复述命令词」与双出口。
+    /// env DEVICE_CMD_SINGLE_EXIT,默认开;0 = 旧行为(LLM 叙述 + 追加短句)。
+    pub cmd_single_exit: bool,
     pub tts_min_sentence_len: usize,
     pub greeting_text: String,
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
@@ -144,6 +154,8 @@ impl PipelineConfig {
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(15_000),
             ),
+            chip_playback_hold: parse_flag(std::env::var("DEVICE_CHIP_PLAYBACK_HOLD").ok().as_deref(), true),
+            cmd_single_exit: parse_flag(std::env::var("DEVICE_CMD_SINGLE_EXIT").ok().as_deref(), true),
             tts_min_sentence_len: std::env::var("TTS_MIN_SENTENCE_LEN")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -208,6 +220,8 @@ struct PendingCmd {
 /// Worker 等 result 的兜底超时(合同缺口,守恒默认 8s——交接文档待 codex 确认;
 /// Android 自身有 timeout status,这里兜的是 Android 整个没回的情况)
 const DEVICE_RESULT_DEADLINE: Duration = Duration::from_secs(8);
+/// 命令句单出口的长度豁免线:超过它视为「命令+闲聊」混合句,仍交 LLM。
+const CMD_SINGLE_EXIT_MAX_CHARS: usize = 20;
 
 /// 相对调节动作(成功句「好嘞，调好啦」;绝对/目标动作「好的，已经调好了」)。
 fn is_relative_action(action: &str) -> bool {
@@ -1365,7 +1379,7 @@ impl Orchestrator {
     /// v3.1 账本轮询:无语音活动时未归属的芯片观测超时 → 诊断(deferred 电机=chip_candidate_unconfirmed),不改决策
     fn poll_ledger(&mut self, now: Instant) {
         for o in self.ledger.poll(now) {
-            if o.ownership == crate::device_ledger::Ownership::DeferredMotor {
+            if o.ownership == crate::device_ledger::Ownership::DeferredWaitAsr {
                 info!(room = %self.room_name, label = o.label, action = %o.action,
                       candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_candidate_unconfirmed");
             } else {
@@ -1439,23 +1453,40 @@ impl Orchestrator {
                     use crate::device_ledger::{ChipOutcome, Ownership};
                     match chip {
                         D::Propose => {
-                            // 旧策略(合同 2 / deferred 灯光音量):账本按语音段归属去重,候选 ID 原样带上(R3)
-                            match self.ledger.on_chip(label, cmd.action, Ownership::Proposed, candidate_id.clone(), now) {
-                                ChipOutcome::ProposeNow { candidate, utterance } => {
-                                    decision = "accepted";
-                                    if self.agent_turn.is_some() {
-                                        self.hard_abort_current();
+                            // 2026-09-06 v230 灯控实证:在播/播完窗内到达的芯片候选先过回声门——不提案、不 abort,
+                            // 记为等 ASR 的候选(同句真人 ASR/LLM 命中才执行,候选 ID 原样回传);芯片永远不是 abort 的发起者。
+                            let playing = self.agent_turn.is_some();
+                            let in_window = self
+                                .echo_playout_end
+                                .is_some_and(|t| t.elapsed() <= self.cfg.echo_suppress_window);
+                            if self.cfg.chip_playback_hold && (playing || in_window) {
+                                let spoken = crate::device_intent::normalize(&self.recent_spoken_text(playing, in_window));
+                                let echo_suspect = crate::device_intent::spoken_contains_label_phrase(&spoken, label);
+                                let since_ms = self.echo_playout_end.map(|t| t.elapsed().as_millis() as i64).unwrap_or(-1);
+                                let _ = self.ledger.on_chip(label, cmd.action, Ownership::DeferredWaitAsr, candidate_id.clone(), now);
+                                decision = "held_wait_asr";
+                                reason = if echo_suspect { "playback_window_echo_suspect" } else { "playback_window" };
+                                info!(room = %self.room_name, trace_id = %ev.trace_id, semantic_label = label, playing,
+                                      since_playout_ms = since_ms, echo_suspect, "chip candidate held in playback window");
+                            } else {
+                                // 旧策略(合同 2 / deferred 灯光音量):账本按语音段归属去重,候选 ID 原样带上(R3)
+                                match self.ledger.on_chip(label, cmd.action, Ownership::Proposed, candidate_id.clone(), now) {
+                                    ChipOutcome::ProposeNow { candidate, utterance } => {
+                                        decision = "accepted";
+                                        if self.agent_turn.is_some() {
+                                            self.hard_abort_current();
+                                        }
+                                        if let Some(sp) = self.spec.take() {
+                                            sp.task.abort();
+                                        }
+                                        self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", candidate, "chip", utterance);
                                     }
-                                    if let Some(sp) = self.spec.take() {
-                                        sp.task.abort();
+                                    ChipOutcome::Duplicate => {
+                                        decision = "duplicate";
+                                        reason = "same_utterance_already_proposed";
                                     }
-                                    self.start_device_command(cmd, &format!("[vad_label_{label}]"), "L1", candidate, "chip", utterance);
+                                    ChipOutcome::Held => {}
                                 }
-                                ChipOutcome::Duplicate => {
-                                    decision = "duplicate";
-                                    reason = "same_utterance_already_proposed";
-                                }
-                                ChipOutcome::Held => {}
                             }
                         }
                         D::Claimed => {
@@ -1466,7 +1497,7 @@ impl Orchestrator {
                         D::DeferredWaitAsr => {
                             // v3.1 §1.2:白名单外电机——只作候选,等同句 ASR/LLM 独立命中(命中时候选原样回传)
                             decision = "deferred_wait_asr";
-                            let _ = self.ledger.on_chip(label, cmd.action, Ownership::DeferredMotor, candidate_id.clone(), now);
+                            let _ = self.ledger.on_chip(label, cmd.action, Ownership::DeferredWaitAsr, candidate_id.clone(), now);
                         }
                         D::Ignored => {
                             decision = "ignored";
@@ -1650,6 +1681,25 @@ impl Orchestrator {
     }
 
     /// 硬打断:杀任务+清播放队列+历史截断为真实播出部分(暂存,下轮 LLM 请求前落账)。
+    /// 最近播出文本(回声对撞库):播完窗内=上一轮实际播出文本;在播=当前 filler + 已合成正文。
+    /// ASR 回声门与芯片候选回声嫌疑诊断共用同一份,判据不分叉。
+    fn recent_spoken_text(&self, playing: bool, in_window: bool) -> String {
+        let mut recent = String::new();
+        if in_window {
+            recent.push_str(&self.echo_tts_text);
+        }
+        if playing {
+            recent.push('\n');
+            recent.push_str(&self.echo_cur_filler);
+            if let Some(turn) = &self.agent_turn
+                && let Ok(t) = turn.synth_text.lock()
+            {
+                recent.push_str(&t);
+            }
+        }
+        recent
+    }
+
     fn hard_abort_current(&mut self) {
         if self.deferred_say.clear_on_abort() {
             info!(room = %self.room_name, "deferred device reply dropped (turn aborted)");
@@ -1915,7 +1965,7 @@ impl Orchestrator {
             // → 芯片提案 + ASR 提案各一次 → 端侧 hardware_busy。急停/退出吞句是真句,消费轮次无妨。
             let commit_rep = self.ledger.on_commit(now, commit.eou_delay);
             for o in &commit_rep.orphans {
-                if o.ownership == crate::device_ledger::Ownership::DeferredMotor {
+                if o.ownership == crate::device_ledger::Ownership::DeferredWaitAsr {
                     info!(room = %self.room_name, utterance = commit_rep.utterance, label = o.label, action = %o.action,
                           candidate = %o.candidate.as_deref().unwrap_or("none"), "chip_candidate_unconfirmed");
                 } else {
@@ -2005,20 +2055,7 @@ impl Orchestrator {
                     .is_some_and(|t| t.elapsed() <= self.cfg.echo_suppress_window);
                 if playing || in_window {
                     let nu = normalize_echo(&user_text);
-                    let mut recent = String::new();
-                    if in_window {
-                        recent.push_str(&self.echo_tts_text);
-                    }
-                    if playing {
-                        recent.push('\n');
-                        recent.push_str(&self.echo_cur_filler);
-                        if let Some(turn) = &self.agent_turn {
-                            if let Ok(s) = turn.synth_text.lock() {
-                                recent.push_str(&s);
-                            }
-                        }
-                    }
-                    let nt = normalize_echo(&recent);
+                    let nt = normalize_echo(&self.recent_spoken_text(playing, in_window));
                     if nu.chars().count() >= 2 && !nt.is_empty() && nt.contains(&nu) {
                         let since_ms = self
                             .echo_playout_end
@@ -2099,6 +2136,35 @@ impl Orchestrator {
                         return;
                     }
                     None => {}
+                }
+            }
+            // 命令句单出口(2026-09-06 v230 灯控实证):本句已被芯片提案/端侧认领 → 零 filler、零 LLM、零 UserTurnCommitted,
+            // 唯一出口是结果驱动的冻结短句(on_device_result / on_l0_result)。LLM 自由叙述会复述命令词→喇叭→芯片听回。
+            // 长句(>20 字)豁免:命令+闲聊混合句仍交 LLM(同句 L2 由账本压制,不会二次执行)。
+            if self.cfg.cmd_single_exit && self.device_commands_on {
+                let cur = self.ledger.current_utterance();
+                if let Some(owner) = self.ledger.command_owner_of(cur)
+                    && user_text.chars().count() <= CMD_SINGLE_EXIT_MAX_CHARS
+                {
+                    info!(room = %self.room_name, utterance = cur, owner, text_len = user_text.chars().count(),
+                          pending = self.pending_cmd.is_some(), "command turn single exit: filler/LLM skipped");
+                    if self.agent_turn.is_some() {
+                        self.hard_abort_current();
+                    }
+                    if let Some(sp) = self.spec.take() {
+                        sp.task.abort();
+                    }
+                    if let Some(s) = &mut self.snap {
+                        s.event("command_single_exit", &[("owner", owner)]);
+                    }
+                    self.latest_interim.clear();
+                    self.tele_text.clear();
+                    if self.pending_cmd.is_some() {
+                        self.set_state(AgentState::Thinking);
+                    } else {
+                        self.set_state(AgentState::Listening);
+                    }
+                    return;
                 }
             }
             // 有在途回答(播放中/已 pause/生成中)→ 提交即接管:硬打断再开新轮

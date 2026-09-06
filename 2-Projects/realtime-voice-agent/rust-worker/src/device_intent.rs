@@ -427,6 +427,20 @@ pub fn command_by_label(label: u32) -> Option<DeviceCommand> {
     None
 }
 
+/// label 的全部别名短语(归一化后;含 env 覆盖词表)。芯片候选回声嫌疑诊断用(2026-09-06 v230 灯控实证):
+/// 刚播出的文本若包含该 label 的任一别名 → 极可能是喇叭念出命令词被芯片(无 AEC 参考的麦路径)听回。
+pub fn phrases_for_label(label: u32) -> Vec<&'static str> {
+    table().map.iter().filter(|(_, (l, _, _))| *l == label).map(|(k, _)| k.as_str()).collect()
+}
+
+/// 播出文本(已 normalize)是否包含 label 的任一别名短语。只作诊断字段,不改变裁决。
+pub fn spoken_contains_label_phrase(spoken_norm: &str, label: u32) -> bool {
+    if spoken_norm.is_empty() {
+        return false;
+    }
+    phrases_for_label(label).iter().any(|p| !p.is_empty() && spoken_norm.contains(p))
+}
+
 /// ASR boost 追加词(env P003_DEVICE_ASR_HOTWORDS,逗号分隔;stt_volc 合并进火山热词表)。
 /// 只提高识别概率,与执行判定完全无关(合同铁律 4)。
 pub fn device_asr_hotwords() -> Vec<String> {
@@ -862,5 +876,29 @@ mod tests {
         assert_eq!(normalize_params(None, Some(0), None), "v0", "绝对静音 0 合法且可辨");
         assert_eq!(normalize_params(Some(3), Some(50), Some(80)), "c3,v50,t80");
         assert_ne!(normalize_params(None, None, Some(50)), normalize_params(None, None, Some(80)), "不同目标不得互吞");
+    }
+}
+
+#[cfg(test)]
+mod chip_echo_tests {
+    use super::*;
+
+    #[test]
+    fn phrases_for_label_reflect_alias_table() {
+        let p = phrases_for_label(4);
+        assert!(!p.is_empty(), "label 4 必须有别名");
+        for ph in &p {
+            assert_eq!(lookup(ph).map(|m| match m { DeviceMatch::Command(c) => c.semantic_label, _ => 0 }), Some(4), "{ph}");
+        }
+        assert!(phrases_for_label(1).is_empty(), "label 1 永不入表");
+    }
+
+    #[test]
+    fn spoken_text_containing_alias_is_echo_suspect() {
+        let p = phrases_for_label(4);
+        let spoken = normalize(&format!("好嘞，帮你{}。这样看着舒服些。", p[0]));
+        assert!(spoken_contains_label_phrase(&spoken, 4));
+        assert!(!spoken_contains_label_phrase(&normalize("今天天气真好呀"), 4));
+        assert!(!spoken_contains_label_phrase("", 4));
     }
 }

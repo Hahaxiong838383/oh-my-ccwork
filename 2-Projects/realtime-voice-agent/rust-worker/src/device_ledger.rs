@@ -17,8 +17,9 @@ pub enum Ownership {
     Proposed,
     /// 合同 3:端侧已认领(所有权≠物理成功),worker 不提案
     Claimed,
-    /// 合同 3:白名单外电机,只作候选,等同句 ASR/LLM 独立命中
-    DeferredMotor,
+    /// 合同 3:白名单外电机 / **播放窗内到达的芯片候选**(2026-09-06 v230 灯控实证:喇叭念出命令词被芯片听回):
+    /// 只作候选,等同句 ASR/LLM 独立命中才执行,候选 ID 原样回传
+    DeferredWaitAsr,
     /// 端侧明确忽略(工作态/资格门),同句 worker 提案也没有执行资格
     Ignored,
     /// 已声明合同 3 却缺失/非法所有权:fail-closed,不进任何执行路径
@@ -135,6 +136,19 @@ impl Ledger {
 
     pub fn current_utterance(&self) -> u64 {
         self.utterance
+    }
+
+    /// 命令句单出口(2026-09-06 v230 灯控实证):该说话轮次是否已被 L1 芯片提案或端侧认领。
+    /// 是 → 本句不起 filler/LLM,唯一出口是结果驱动的冻结短句(LLM 自由叙述会复述命令词→喇叭→芯片二次触发)。
+    /// 等 ASR 的候选(DeferredWaitAsr)不算所有权:它需要 ASR/LLM 路确认,LLM 必须照常起。
+    pub fn command_owner_of(&self, utterance: u64) -> Option<&'static str> {
+        if self.proposals.iter().any(|p| p.utterance == Some(utterance) && p.source == "chip") {
+            return Some("chip_proposed");
+        }
+        if self.obs.iter().any(|o| o.utterance == Some(utterance) && o.ownership == Ownership::Claimed) {
+            return Some("chip_claimed");
+        }
+        None
     }
 
     /// VAD 开口:记当前未提交语音段的起点。上一段已停说、间隔 ≥ NEW_UTTERANCE_GAP、**且 TurnGate 没有待提交文本**
@@ -285,7 +299,7 @@ impl Ledger {
                 }
                 Ownership::Ignored => return Decision::Suppress("chip_ignored_same_turn"),
                 Ownership::Unknown => return Decision::Suppress("ownership_unknown_same_turn"),
-                Ownership::DeferredMotor => {
+                Ownership::DeferredWaitAsr => {
                     if candidate.is_none() {
                         candidate = o.candidate.clone();
                     }
@@ -444,7 +458,7 @@ mod tests {
         let t0 = Instant::now();
         let mut l = Ledger::new();
         l.on_speech_start(t0 - ms(300), false);
-        assert_eq!(l.on_chip(33, "virtual_image_farther_step", Ownership::DeferredMotor, Some("vad:t:7".into()), t0), ChipOutcome::Held);
+        assert_eq!(l.on_chip(33, "virtual_image_farther_step", Ownership::DeferredWaitAsr, Some("vad:t:7".into()), t0), ChipOutcome::Held);
         l.on_commit(t0 + ms(500), ms(200));
         assert_eq!(
             l.decide(l.current_utterance(), "virtual_image_farther_step", ""),
@@ -452,7 +466,7 @@ mod tests {
         );
         let mut l2 = Ledger::new();
         l2.on_speech_start(t0 - ms(300), false);
-        l2.on_chip(33, "virtual_image_farther_step", Ownership::DeferredMotor, Some("vad:t:8".into()), t0);
+        l2.on_chip(33, "virtual_image_farther_step", Ownership::DeferredWaitAsr, Some("vad:t:8".into()), t0);
         l2.on_commit(t0 + ms(500), ms(200));
         assert_eq!(
             l2.decide(l2.current_utterance(), "virtual_image_nearer_step", ""),
@@ -467,13 +481,13 @@ mod tests {
         let t0 = Instant::now();
         let mut l = Ledger::new();
         l.on_speech_start(t0 - ms(300), false);
-        l.on_chip(30, "motor_up_step", Ownership::DeferredMotor, Some("vad:t:9".into()), t0);
+        l.on_chip(30, "motor_up_step", Ownership::DeferredWaitAsr, Some("vad:t:9".into()), t0);
         assert!(l.poll(t0 + ms(4000)).is_empty(), "开口未提交期间不作孤儿");
         let mut l2 = Ledger::new();
-        l2.on_chip(30, "motor_up_step", Ownership::DeferredMotor, None, t0);
+        l2.on_chip(30, "motor_up_step", Ownership::DeferredWaitAsr, None, t0);
         assert!(l2.poll(t0 + ms(4000)).is_empty());
         let stale = l2.poll(t0 + ms(5100));
-        assert_eq!((stale.len(), stale[0].ownership), (1, Ownership::DeferredMotor));
+        assert_eq!((stale.len(), stale[0].ownership), (1, Ownership::DeferredWaitAsr));
     }
 
     /// codex R2 语义在账本侧:同句 unknown 所有权 → ASR/LLM 都不提案(fail-closed);ignored 同理
@@ -622,5 +636,58 @@ mod tests {
             l.record_proposal(Some(l.current_utterance()), "led_off", "", "asr", t0 + ms(3600));
         }
         assert_eq!(published, vec![("led_on", Some("vad:t:1".into())), ("led_off", None)], "两句各一次动作,候选原样回传");
+    }
+
+    /// 2026-09-06 v230 灯控实证:播放窗内的芯片候选记为等 ASR;同句真人 ASR 同动作提交 → 提案一次并回传候选
+    #[test]
+    fn held_chip_in_playback_confirmed_by_same_utterance_asr() {
+        let t0 = Instant::now();
+        let mut l = Ledger::new();
+        assert_eq!(l.on_chip(4, "brightness_up", Ownership::DeferredWaitAsr, Some("vad:t:2".into()), t0), ChipOutcome::Held);
+        assert_eq!(l.command_owner_of(l.current_utterance()), None, "等 ASR 的候选不是所有权,LLM 照常起");
+        l.on_speech_start(t0 + ms(100), false);
+        l.on_speech_end(t0 + ms(700));
+        l.on_commit(t0 + ms(1100), ms(400));
+        assert_eq!(
+            l.decide(l.current_utterance(), "brightness_up", ""),
+            Decision::Propose { candidate: Some("vad:t:2".into()), mismatch_with: None, confirmed_deferred: true }
+        );
+    }
+
+    /// 播放窗内的芯片候选没有任何 ASR/LLM 命中 → 永不提案,空闲超时作孤儿(回声候选零动作)
+    #[test]
+    fn held_chip_without_asr_never_proposes() {
+        let t0 = Instant::now();
+        let mut l = Ledger::new();
+        l.on_chip(4, "brightness_up", Ownership::DeferredWaitAsr, Some("vad:t:2".into()), t0);
+        assert!(l.poll(t0 + ms(4000)).is_empty());
+        let stale = l.poll(t0 + ms(5100));
+        assert_eq!((stale.len(), stale[0].ownership), (1, Ownership::DeferredWaitAsr));
+        // 之后真人开口的新句与它无关:无候选、无压制
+        l.on_speech_start(t0 + ms(8000), false);
+        l.on_commit(t0 + ms(9000), ms(300));
+        assert_eq!(l.decide(l.current_utterance(), "brightness_up", ""), Decision::Propose { candidate: None, mismatch_with: None, confirmed_deferred: false });
+    }
+
+    /// 命令句单出口的所有权判定:芯片已提案的句 / 端侧已认领的句 → Some;普通句 / 等 ASR 候选 → None
+    #[test]
+    fn command_owner_of_matrix() {
+        let t0 = Instant::now();
+        let mut l = Ledger::new();
+        l.on_speech_start(t0 - ms(300), false);
+        l.record_proposal(None, "brightness_up", "", "chip", t0);
+        let rep = l.on_commit(t0 + ms(500), ms(200));
+        assert_eq!(l.command_owner_of(rep.utterance), Some("chip_proposed"));
+        assert_eq!(l.command_owner_of(rep.utterance + 1), None);
+        let mut c = Ledger::new();
+        c.on_speech_start(t0 - ms(300), false);
+        c.on_chip(4, "brightness_up", Ownership::Claimed, Some("vad:t:3".into()), t0);
+        let rep = c.on_commit(t0 + ms(500), ms(200));
+        assert_eq!(c.command_owner_of(rep.utterance), Some("chip_claimed"));
+        let mut a = Ledger::new();
+        a.on_speech_start(t0 - ms(300), false);
+        a.record_proposal(None, "brightness_up", "", "asr", t0);
+        let rep = a.on_commit(t0 + ms(500), ms(200));
+        assert_eq!(a.command_owner_of(rep.utterance), None, "ASR 提案路本就零 LLM,不由本判定接管");
     }
 }
