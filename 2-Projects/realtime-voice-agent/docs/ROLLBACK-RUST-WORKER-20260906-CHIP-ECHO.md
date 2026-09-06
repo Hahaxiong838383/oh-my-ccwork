@@ -49,3 +49,11 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 - 新门语义：设备房建房秒（房名尾巴≈唤醒时刻）+1000 量化 + `LOCAL_AUDIO_GREETING_MAX_MS`（默认 3200）+500 余量 = 截止；说完时刻 ≤ 截止的 commit，若 ≥2 字且与本地招呼语对撞库 LCS≥0.3 → 判回声丢弃（日志锚上行）；命令词/急停/退出词不进此门；截止之后维持原 LCS≥0.8 门。
 - 回滚三档：① 零二进制：`rust-worker.env` 加 `LOCAL_AUDIO_GREETING_MAX_MS=0` + 零 job restart（只关新门）；② 二进制：`cp voice-rust-worker.bak-20260906-103923 voice-rust-worker` + 零 job restart（回到 25da353f1，词表「吊井」仍在，无害）；③ 词表：`cp device_aliases.tsv.bak-20260906-pre-diaojing device_aliases.tsv` + restart。
 - 触发回滚的信号：真人在招呼语播放期间开口的短句被吞（日志锚出现且文本明显是用户话）连续 ≥3 次；或任何命令句被该锚吞掉（理论上被命令词豁免拦住，出现即 bug）。
+
+## 追加 · 第四次换装：开场重叠窗改普适起点判据（2026-09-06 19:50 CST）
+- 现役 commit feat/rust-worker `fcb9f81ef`（= 第三次 `0019bb8e0` + `ebb88e9a8` SN 应急表 + `fcb9f81ef` 起点判据），二进制 sha256 前 16 `37f1f19fd9bbe050`（72,044,504 B），MainPID 1987686，ActiveEnter 2026-09-06 11:50:00 UTC（19:50:00 CST），换装时在途 job=0。
+- 备份链：`voice-rust-worker.bak-20260906-114959` = 第三次现役 `838999a88518891a`（0019bb8e0，19:50 前）；`.bak-20260906-103923` = 25da353f1。
+- env：`rust-worker.env` md5 `d0bd412276756936`（**未改**）；19:44 曾追加 `LOCAL_AUDIO_OVERLAP_SKIP_SN_HASHES`(0006) 后于 19:48 用 `rust-worker.env.bak-20260906-pre-overlap-skip` 恢复——川哥要求普适方案，SN 例外不作为交付；该键代码里保留为空表应急杆。
+- 新门语义（v3）：放宽分支（LCS≥0.3）只在「设备房 + 本会话第 1 句 + 首个 VAD 起点距输入环启动 ≤ LOCAL_AUDIO_OVERLAP_ONSET_MS(450) + 说完时刻 ≤ 建房秒锚 + 非命令/急停/退出」时启用；其余一律原门。日志锚同前，多 `onset_ms`。
+- 回滚：零二进制 `LOCAL_AUDIO_GREETING_MAX_MS=0`（只关放宽门）；二进制 `cp voice-rust-worker.bak-20260906-114959 voice-rust-worker` + 零 job restart（回到第三次、无起点判据、无应急杆）。
+- 触发回滚的信号：明早 0006 v237 首句房「就绪后立刻讲个故事」被 `opening overlap` 吞（应不可能：起点 ≥600ms）；或任何设备第 1 句真人话被吞且 onset_ms ≤450（判据阈值错）——先降 ONSET_MS 到 250 再考虑关门。
