@@ -41,3 +41,11 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 - 生效方式：零 job 时 `systemctl restart voice-worker-rust`（13:25:23 CST，PID 1949922，registered 1，零报错；二进制 73f8d5e8 与 env 未变）。表在房内首次匹配时懒加载，日志锚 `device alias 词表已加载 entries=267 origin=env-file`。
 - 回滚：`cp device_aliases.tsv.bak-20260906-pre-oral-aliases device_aliases.tsv` + 零 job restart。仓库内置表已对齐（feat/rust-worker 6191ca0b9），只作 env 缺失兜底。
 
+
+## 追加 · 第三次换装：开场重叠窗放宽本地招呼语回声门（2026-09-06 18:40 CST）
+- 现役 commit feat/rust-worker `0019bb8e0`（含 `37e634c0b` 重叠窗 + `6191ca0b9` 内置词表对齐 + 「吊井」补回），二进制 sha256 前 16 `838999a88518891a`（72,047,104 B），MainPID 1985062，ActiveEnter 2026-09-06 10:39:24 UTC（18:39:24 CST），换装时在途 job=0（received=closed=26）。
+- 备份链：`voice-rust-worker.bak-20260906-103923` = 上一现役 `73f8d5e8fbc56693`（25da353f1）。词表：`device_aliases.tsv.bak-20260906-pre-diaojing`（改前，md5 c0835fa2…）→ 现役 md5 `8e05852c447c7b92`（与仓库内置表逐字节一致）。
+- 二进制锚（grep -a -c）：`local-audio echo suppressed (opening overlap)`=1（新）、`command turn single exit`=1、`chip candidate held in playback window`=1；env md5 `d0bd412276756936` 未动。
+- 新门语义：设备房建房秒（房名尾巴≈唤醒时刻）+1000 量化 + `LOCAL_AUDIO_GREETING_MAX_MS`（默认 3200）+500 余量 = 截止；说完时刻 ≤ 截止的 commit，若 ≥2 字且与本地招呼语对撞库 LCS≥0.3 → 判回声丢弃（日志锚上行）；命令词/急停/退出词不进此门；截止之后维持原 LCS≥0.8 门。
+- 回滚三档：① 零二进制：`rust-worker.env` 加 `LOCAL_AUDIO_GREETING_MAX_MS=0` + 零 job restart（只关新门）；② 二进制：`cp voice-rust-worker.bak-20260906-103923 voice-rust-worker` + 零 job restart（回到 25da353f1，词表「吊井」仍在，无害）；③ 词表：`cp device_aliases.tsv.bak-20260906-pre-diaojing device_aliases.tsv` + restart。
+- 触发回滚的信号：真人在招呼语播放期间开口的短句被吞（日志锚出现且文本明显是用户话）连续 ≥3 次；或任何命令句被该锚吞掉（理论上被命令词豁免拦住，出现即 bug）。
