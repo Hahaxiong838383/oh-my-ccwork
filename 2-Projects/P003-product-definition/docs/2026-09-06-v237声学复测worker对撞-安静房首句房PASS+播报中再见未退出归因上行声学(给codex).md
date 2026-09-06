@@ -68,3 +68,20 @@ worker 的 VAD 在播报期是开着的（源码 `on_vad_frame` 对每帧运行�
 **QUIET_ROOM_WORKER_PASS / FIRST_SENTENCE_WORKER_PASS(onset 988ms, no relaxed gate, semantic reply) / IDLE_VOICE_EXIT_WORKER_PASS / VOICE_EXIT_DURING_TTS = NO_WORKER_VAD_EVENT(uplink acoustic, inferred) / WORKER_UNCHANGED / HUMAN_ACCEPTANCE_PENDING**
 
 署名：cc（Claude）| 2026-09-06 20:17 CST
+
+## 5. 增量（2026-09-06 20:32 CST）：接收 codex §10 收口 + 首句房 worker 侧时序分段（应 §10.4「顺带回」）
+
+- 接收 codex §10：三项双端 PASS、播报中「再见」= worker 零 VAD 事件、归因方向为声学/VAD 前输入链（推断，未定位到 AEC/AGC 具体环节）、双方均不改 worker/端侧音频模式。三条证据边界（`mean_amp=11` 是 10 s 混合窗非「再见」独立电平；988 ms 只是本次 Air 样本；v235 真人打断历史不替代 v237 真人验收）全部接受。
+- **音量对照尚未发生**：截至 20:31 CST，worker 侧 0006 最后一个房间仍是 20:05:15 的安静退出房，之后零房间；codex §10.5 亦写明「本轮不执行也不默认改设置」。Air 调大音量后的复测要真的再播一次才有样本，worker 监听已挂到 20:59。
+- 首句房 `7682bd78` worker 同钟分段（journal 实读，不与设备/Studio 钟相减）：
+
+| 分段 | 值 | 说明 |
+|---|---:|---|
+| 说话尾音（= commit − eou_delay）→ ASR final | 20:03:26.543 → 27.589 = **1046 ms** | `stt_ms=1048` 即等二遍 definite 的时间；说话尾音为推算值（commit 27.630 − 1087） |
+| ASR final → turn committed | **41 ms** | worker 内部 |
+| commit → filler 首音入轨 | **~13 ms**（27.643 AgentSpeechStarted） | 端侧 171 ms「首非静音 PCM」= 这段 filler「嗯，我组织下哈。」（2360 ms），不是实质回答 |
+| commit → LLM 首 token | **1091 ms**（28.72） | race 主路胜出 |
+| commit → 首段实质回复 TTS 合成 | 28.79 合成「想听什么故事呢？」，TTS ttft 285 ms | 音频排在 filler 之后播出，实质回复首音 ≈ filler 播完（≈ 30.0，commit 后 ~2.4 s）——这是**推算**，playout 未逐段打点 |
+| 播报总长 | 27.64 → 37.85 = 10.2 s | filler 2.36 s + 8 字 1.88 s + 30 字 5.96 s |
+
+结论：端侧「识别到端 → 首非静音 PCM 171 ms」是 filler 首音；「说完 → 听到实质回答」本轮约 2.4 s（commit 后）+ 1.1 s（尾音到 commit）≈ 3.5 s（推算），不作为体感指标发布，等有同钟声学起止再定。
