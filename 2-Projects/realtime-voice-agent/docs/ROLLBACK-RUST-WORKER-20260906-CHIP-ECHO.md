@@ -64,3 +64,9 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 - 为什么换：v3「VAD 起点 ≤450ms=回声」被今早真人打破（起点 +51/+104ms 也是真人），且回放昨日两条真幽灵句 journal 无 VAD 起点——v3 分支对真幽灵永不命中、对真人早开口反而命中。v4 只对「commit 前从未出现 VAD 起点」的第 1 句放宽（+ 截止 + 豁免 + LCS≥0.3）。
 - 回滚：零二进制 `LOCAL_AUDIO_GREETING_MAX_MS=0`（关放宽门，原门不变）；二进制 `cp voice-rust-worker.bak-20260906-232805 voice-rust-worker` + 零 job restart（回 v3，注意 v3 判据反向，回滚意义只在 v4 出现新问题时）。
 - 触发回滚的信号：任何设备第 1 句真人话被 `opening overlap` 吞且日志 `vad_onset_seen=false`（说明真人太轻没触发 VAD 且句子像招呼语）连续 ≥2 次 → 先把 LCS 阈值/截止收紧再谈关门。
+
+## 追加 · 第六次换装：ASR 预连提前到建房阶段（2026-09-07 07:36 CST）
+- 现役 commit feat/rust-worker `a1acbf517`（= v4 `ab32d4219` + 预连），二进制 sha256 前 16 `1d8f0b759cd65494`（72,052,008 B），MainPID 2015142，ActiveEnter 2026-09-06 23:35:50 UTC（07:35:50 CST），换装时在途 job=0。
+- 备份链：`voice-rust-worker.bak-20260906-233549` = v4 `77465e8285fe6916`；`.bak-20260906-232805` = v3 `37f1f19f…`；env md5 `d0bd412276756936` 未动。
+- 语义：job 层 assignment 到达即 spawn ASR 长连（`asr stream task spawned (preconnect)`），pipeline 接管；其余不变。
+- 回滚：`cp voice-rust-worker.bak-20260906-233549 voice-rust-worker` + 零 job restart（回 v4，握手回到 pipeline 内）。触发信号：房间内 `asr 断线重连`/`火山 ASR 流异常` 频次上升（预连期间服务端空闲断开）或首句转写反而变慢。

@@ -74,9 +74,16 @@ v3 假设「v237 就绪后开口起点 ≥600 ms」被真人打破：用户不�
 
 ## 4. 顺带观察（不阻塞）
 
-- ASR websocket 在输入环启动后 +0.4–0.6 s 才连上（今早四房 +564/+415/+614/+380 ms），这之前的语音不进转写——…6710 房首段（+51 ms 起）就丢了，用户重说才提交。真人「提示音一停就说」很常见，这段空窗值得后续把 ASR 连接提前到房间连接阶段（worker 侧待办，非本轮）。
+- ASR websocket 在输入环启动后 +0.4–0.6 s 才连上（今早四房 +564/+415/+614/+380 ms）。**勘误**：握手前的音频不是丢掉，而是在 channel 里排队（128 段≈25 s），握手后一并送出——效果是首个转写整体延后 0.4–0.6 s，不是不转写；…6710 房 +51 ms 那段 VAD 起点是否为真人语音，worker 侧无法定案（推断），不再写「丢了」。真人「提示音一停就说」很常见，故已把 ASR 预连提前到 job 建房阶段（见 §5）。
 - 中央 × 与自然 5 秒 idle 本轮未测（codex 同口径）。
 
-状态：**HUMAN_TTS_EXIT_3_OF_3_PASS(worker+device) / QUIET_WAKE_PASS / FIRST_SENTENCE_PASS / V3_PREMISE_FALSIFIED / OPENING_GATE_V4_VADLESS_LIVE / WORKER_ASR_CONNECT_GAP_NOTED**
+状态：**HUMAN_TTS_EXIT_3_OF_3_PASS(worker+device) / QUIET_WAKE_PASS / FIRST_SENTENCE_PASS / V3_PREMISE_FALSIFIED / OPENING_GATE_V4_VADLESS_LIVE / ASR_PRECONNECT_AT_JOB_START_LIVE**
 
 署名：cc（Claude）| 2026-09-07 07:28 CST
+
+## 5. 增量（2026-09-07 07:36 CST）：ASR 预连提前到建房阶段已上产（feat/rust-worker `a1acbf517`）
+
+- 改法：job 层 assignment 到达即 spawn 火山 ASR 长连任务（握手 0.4–0.6 s 与建房 141 ms + 发布出声轨 + 等用户音轨 ~0.8–2 s 并行），pipeline 启动时接管句柄；无预连路径（web 调试直连）保持原地现连；job 在 pipeline 启动前退出时句柄随函数丢弃，流按 InputDone 收尾。协议/灰度/热词/二遍配置全部不变。
+- 预期效果：`asr: connected` 早于 `user_track_subscribed`/`input_loop_started`；真人「提示音一停就说」的首段不再排队等握手，首个 interim/final 提前约 0.4–0.6 s。
+- 部署：2026-09-07 07:35:50 CST（23:35:50 UTC），在途 job=0；现役 sha256 前 16 `1d8f0b759cd65494`（72,052,008 B），MainPID 2015142；锚 `asr stream task spawned (preconnect)`=1；env md5 `d0bd412276756936` 未动；备份 `voice-rust-worker.bak-20260906-233549`（= v4 `77465e82…`）。单测 203/203，clippy 无新增。
+- 验收（川哥下一次唤醒）：同房日志顺序应为 `asr stream task spawned (preconnect)` → `asr: connected` → `user_track_subscribed` → `input_loop_started`；首句 VAD 起点到 `stt final` 的间隔与今早对比。
