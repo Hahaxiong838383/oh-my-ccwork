@@ -35,3 +35,9 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 - 现役 commit `25da353f1`，二进制 sha256 前 16 `73f8d5e8fbc56693`（72,054,632 B），MainPID 1944923，ActiveEnter 2026-09-06 04:41:03 UTC（12:41:03 CST）；换装时在途 job 0（received=closed=1）。
 - 备份链：`voice-rust-worker.bak-20260906-044102` = 中间版 9172323a（9f9a96af2，只上线 3 分 41 秒，其间 1 个 job = 003 房（12:37:33 CST 起 17 s，journal 零 command_word/零提案/零回复事件，未触及新分支））；`voice-rust-worker.bak-20260906-043721` = **原版 464da5a4**（回滚目标）。
 - 二进制锚（grep -a）：`command turn single exit`=1、`chip candidate held in playback window`=1、旧标识 `DeferredMotor`=0；env md5 仍 `d0bd412276756936`。
+
+## 追加 · 词表补充（2026-09-06 13:25 CST，与二进制无关）
+- 生产 `/root/rust-worker/device_aliases.tsv` 加 13 条口语别名（label 4/6 各 5、label 24 各 3），备份 `device_aliases.tsv.bak-20260906-pre-oral-aliases`（md5 3e3ad036…→ 新 c0835fa2…）；254→267 键，零跨标签冲突（本地脚本核）。
+- 生效方式：零 job 时 `systemctl restart voice-worker-rust`（13:25:23 CST，PID 1949922，registered 1，零报错；二进制 73f8d5e8 与 env 未变）。表在房内首次匹配时懒加载，日志锚 `device alias 词表已加载 entries=267 origin=env-file`。
+- 回滚：`cp device_aliases.tsv.bak-20260906-pre-oral-aliases device_aliases.tsv` + 零 job restart。仓库内置表已对齐（feat/rust-worker 6191ca0b9），只作 env 缺失兜底。
+
