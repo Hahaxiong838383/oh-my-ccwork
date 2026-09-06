@@ -10,9 +10,9 @@ import { rmSync } from 'node:fs';
 import { Hono } from 'hono';
 
 const DB_PATH = '/private/tmp/claude-501/-Users-rayman-chen-mycc/410a354a-ee50-4c8b-9b06-02a639743e97/scratchpad/test-device-registry.db';
-for (const suffix of ['', '-wal', '-shm']) {
+for (const suffix of ['', '-wal', '-shm', '-pairing.db', '-pairing.db-wal', '-pairing.db-shm']) {
   try {
-    rmSync(DB_PATH + suffix);
+    rmSync(DB_PATH.replace(/\.db$/, '') + (suffix.startsWith('-pairing') ? suffix : '.db' + suffix));
   } catch {
     /* 不存在即干净 */
   }
@@ -20,6 +20,7 @@ for (const suffix of ['', '-wal', '-shm']) {
 
 // env 必须在业务模块加载前就位（store 单例在模块顶层建库）
 process.env.DEVICES_DB_PATH = DB_PATH;
+process.env.PAIRING_DB_PATH = DB_PATH.replace(/\.db$/, '-pairing.db'); // E 段：台账凭据列由 claim 会话回填，需隔离 pairing 库
 process.env.AUTH_JWT_SECRET = 'test-auth-secret';
 process.env.LIVEKIT_API_KEY = 'voicekey';
 process.env.LIVEKIT_API_SECRET = '0123456789abcdef0123456789abcdef';
@@ -32,6 +33,7 @@ process.env.STUDIO_PASS = 'test-pass';
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 const { deviceSessionRoute } = await import('../src/routes/device-session.js');
 const { adminDataRoute } = await import('../src/routes/admin-data.js');
+const { pairingStore, hashToken } = await import('../src/pairing-store.js');
 const { authRoute } = await import('../src/routes/auth.js');
 const { SignJWT, jwtVerify, decodeJwt } = await import('jose');
 
@@ -297,6 +299,35 @@ await t('E4 分页：total 恒定 + offset 翻页不重叠不遗漏', async () =
   assert.ok(ids1.every((id: number) => !ids2.includes(id)), '两页出现重叠 id');
   const all = (await (await adminReq(adminToken, 'GET', `/device-sessions?limit=${j1.total}`)).json()) as Record<string, any>;
   assert.equal(all.sessions.length, j1.total, 'limit=total 拉全量数量不符');
+});
+
+// ═══ G. 台账「凭据」列读侧回填（2026-09-06）：配网 claim 签发只进 ECIES 载荷、不写 registry.credential_* ═══
+
+await t('G1 有 claim 会话、台账无签发记录 → credential_source=pairing_claim，到期=claimed_at 取整秒+365d', async () => {
+  const SN_P = 'BJP00326060100200011';
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_P, note: '配网签发回填' })).status, 200);
+  const nonce = 'e1-nonce-' + 'x'.repeat(24);
+  pairingStore.confirmSessionByHash('acct-e1', SN_P, hashToken(nonce), 'AgEBAQEB', 'admin');
+  pairingStore.markSessionClaimed(nonce, 'ready');
+  const claimedAt = pairingStore.lastClaimedSessionBySn(SN_P)!.claimed_at!;
+  const dev = ((await (await adminReq(adminToken, 'GET', '/devices')).json()) as any).devices.find((d: any) => d.sn === SN_P);
+  assert.equal(dev.credential_source, 'pairing_claim');
+  assert.equal(dev.credential_issued_at, Math.floor(claimedAt / 1000) * 1000);
+  assert.equal(dev.credential_expires_at, Math.floor(claimedAt / 1000) * 1000 + 365 * 86_400_000);
+});
+
+await t('G2 台账手工签发后台账优先 credential_source=registry；未 claim 未签发 → null', async () => {
+  const SN_P = 'BJP00326060100200011';
+  const SN_BARE = 'BJP00326060100200012';
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_BARE, note: '未 claim 未签发' })).status, 200);
+  const issued = (await (await adminReq(adminToken, 'POST', `/devices/${SN_P}/credential`, { days: 30 })).json()) as any;
+  const list = ((await (await adminReq(adminToken, 'GET', '/devices')).json()) as any).devices;
+  const dev = list.find((d: any) => d.sn === SN_P);
+  assert.equal(dev.credential_source, 'registry');
+  assert.equal(dev.credential_expires_at, issued.expires_at_ms);
+  const bare = list.find((d: any) => d.sn === SN_BARE);
+  assert.equal(bare.credential_source, null);
+  assert.equal(bare.credential_expires_at, null);
 });
 
 // ═══ F. 日志敏感扫描 ═══

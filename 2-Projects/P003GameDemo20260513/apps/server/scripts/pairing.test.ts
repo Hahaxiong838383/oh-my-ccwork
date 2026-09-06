@@ -43,7 +43,7 @@ const { parentPairingRoute, devicePairingRoute } = await import('../src/routes/p
 const { verifyDeviceCredential } = await import('../src/routes/device-session.js');
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 const { decryptCredential, b64url } = await import('../src/pairing-crypto.js');
-const { hashToken } = await import('../src/pairing-store.js');
+const { hashToken, credentialWindowFromClaim } = await import('../src/pairing-store.js');
 const { createECDH, randomBytes: rndBytes } = await import('node:crypto');
 const { accountStore } = await import('../src/account-store.js');
 
@@ -368,7 +368,14 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   await announce(SN_D, nD, kD.pkB64);
   eq('adm-1 一键确认', manualConfirm(SN_D, P3, 'tester').done, true);
   eq('adm-2 重复一键确认 already_confirmed', manualConfirm(SN_D, P3, 'tester').reason, 'already_confirmed');
-  eq('adm-3 claim 200 且 source=admin', { code: (await claimV2(SN_D, nD)).json.code, src: pairingStore.findSessionByHash(hashToken(nD))?.source }, { code: 'claimed', src: 'admin' });
+  const resD = await claimV2(SN_D, nD);
+  eq('adm-3 claim 200 且 source=admin', { code: resD.json.code, src: pairingStore.findSessionByHash(hashToken(nD))?.source }, { code: 'claimed', src: 'admin' });
+  // ── 台账「凭据」列读侧回填（2026-09-06）：claim 签发不写 device_registry.credential_*，admin 由最近 claim 会话推导 ──
+  const lastD = pairingStore.lastClaimedSessionBySn(SN_D);
+  eq('cred-1 lastClaimedSessionBySn 取到刚 claim 的会话', { src: lastD?.source, claimed: typeof lastD?.claimed_at === 'number' }, { src: 'admin', claimed: true });
+  const credDiff = Math.abs(credentialWindowFromClaim(lastD!.claimed_at!).expires_at - Number(resD.json.credential_expires_at_ms));
+  eq('cred-2 由 claimed_at 推导的到期 == claim 响应 credential_expires_at_ms（双载体，≤1s）', credDiff <= 1000 ? 'ok' : `diff_ms=${credDiff}`, 'ok');
+  eq('cred-3 未 claim 过的 SN → null', pairingStore.lastClaimedSessionBySn('BJP00326060100000805'), null);
   eq('adm-4 无 announce 的 SN → no_announce', manualConfirm('BJP00326060100000805', P3, 'tester').reason, 'no_announce');
 
   // ── M9：开关 0 → 永不代确认；TTL 到期不续命 ──

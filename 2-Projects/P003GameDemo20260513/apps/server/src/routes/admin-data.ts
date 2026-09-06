@@ -31,7 +31,7 @@ import {
 } from '../relation-state-store.js';
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
-import { pairingStore } from '../pairing-store.js';
+import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
 import { tryAutoConfirm, manualConfirm, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
@@ -161,6 +161,7 @@ adminDataRoute.get('/devices', (c) => {
     const now = Date.now();
     const devices = deviceRegistryStore.list().map((d) => ({
       ...d,
+      ...credentialView(d),
       parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
       preauth: preauthView(pairingStore.getPreauth(d.sn), now),
     }));
@@ -174,6 +175,26 @@ adminDataRoute.get('/devices', (c) => {
     return c.json({ ok: false, error: '拉取设备台账失败，请稍后重试' }, 500);
   }
 });
+
+/** 台账「凭据」列读侧回填（2026-09-06，0006 首台免手传设备暴露）：配网 claim（v1/v2）签发的凭据只进 ECIES 载荷，
+ *  不写 device_registry.credential_*，台账会显示「未签发」而设备已在正常鉴权。后台手工签发写过台账则台账优先；
+ *  否则取最近一次 claim 成功会话推导窗口，并打 credential_source 标记——占位必须带来源，判定认标记不认内容。 */
+type CredentialSource = 'registry' | 'pairing_claim' | null;
+export function credentialView(d: { sn: string; credential_issued_at: number | null; credential_expires_at: number | null }): {
+  credential_issued_at: number | null;
+  credential_expires_at: number | null;
+  credential_source: CredentialSource;
+} {
+  if (d.credential_expires_at) {
+    return { credential_issued_at: d.credential_issued_at, credential_expires_at: d.credential_expires_at, credential_source: 'registry' };
+  }
+  const claimed = pairingStore.lastClaimedSessionBySn(d.sn);
+  if (claimed?.claimed_at) {
+    const w = credentialWindowFromClaim(claimed.claimed_at);
+    return { credential_issued_at: w.issued_at, credential_expires_at: w.expires_at, credential_source: 'pairing_claim' };
+  }
+  return { credential_issued_at: null, credential_expires_at: null, credential_source: null };
+}
 
 // ── 后台预授权自动认领 v1（2026-09-06）：SN + 家长手机号 = 预授权；设备 announce 到达即代确认，claim 拿凭据，免手传 ──
 const PHONE_RE = /^1[3-9]\d{9}$/;

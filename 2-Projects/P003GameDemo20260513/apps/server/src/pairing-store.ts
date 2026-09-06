@@ -71,6 +71,16 @@ function resolveDbPath(): string {
   return resolve(process.cwd(), raw);
 }
 
+/** 设备凭据 TTL：与 routes/pairing.ts CREDENTIAL_TTL_MS 同值（pairing.test cred-2 用 claim 响应 credential_expires_at_ms 对撞守护，双载体必须相等）。 */
+export const DEVICE_CREDENTIAL_TTL_MS = 365 * 86_400_000;
+
+/** 由 claim 时刻推导凭据窗口：signDeviceCredential 先把签发时刻取整到秒再派生 exp，claimed_at 晚于签发仅数 ms，
+ *  故按秒取整后与真实 exp 至多差 1 s。只用于台账展示，必须带 credential_source 标记，不进任何鉴权判定。 */
+export function credentialWindowFromClaim(claimedAtMs: number): { issued_at: number; expires_at: number } {
+  const issued = Math.floor(claimedAtMs / 1000) * 1000;
+  return { issued_at: issued, expires_at: issued + DEVICE_CREDENTIAL_TTL_MS };
+}
+
 export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
@@ -211,6 +221,16 @@ class PairingStore {
 
   findSessionByHash(nonceHash: string): PairingSessionRow | null {
     return (this.db.prepare(`SELECT * FROM pairing_session WHERE nonce_hash = ?`).get(nonceHash) as PairingSessionRow) ?? null;
+  }
+
+  /** 同 SN 最近一次真实 claim 成功的会话——admin 台账「凭据」列读侧回填用：配网 claim 签发的凭据
+   *  不写 device_registry.credential_*（只有后台手工签发写），否则台账显示「未签发」而设备已在用。 */
+  lastClaimedSessionBySn(sn: string): PairingSessionRow | null {
+    return (
+      (this.db
+        .prepare(`SELECT * FROM pairing_session WHERE sn = ? AND claimed_at IS NOT NULL ORDER BY claimed_at DESC LIMIT 1`)
+        .get(sn) as PairingSessionRow) ?? null
+    );
   }
 
   /** 同 SN 当前有效且未 claim 的会话（家长优先判定：存在即不代确认）。 */

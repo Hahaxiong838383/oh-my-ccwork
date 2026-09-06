@@ -1892,6 +1892,7 @@
                         <template #default="{row}">
                           <span v-if="!row.credential_expires_at" style="color:#909399">未签发</span>
                           <span v-else :style="{color: row.credential_expires_at < Date.now() ? '#E8503A' : '#1F2933', fontWeight:600}">{{ fmtTs(row.credential_expires_at) }}</span>
+                          <small v-if="row.credential_source==='pairing_claim'" title="配网 claim 签发（台账列由最近一次 claim 会话推导，误差≤1s）" style="color:#909399;margin-left:4px">配网</small>
                         </template>
                       </el-table-column>
                       <el-table-column label="最近活跃" width="150">
