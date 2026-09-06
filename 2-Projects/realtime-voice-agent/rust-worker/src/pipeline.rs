@@ -70,6 +70,9 @@ pub struct PipelineConfig {
     /// 最长本地招呼语时长(开场重叠窗时间锚;server 生成器 greeting 各槽 maxDurationMs≤3000,取 3200 留余量)。
     /// 0 = 关闭开场重叠放宽门(零二进制回滚),原 LCS≥0.8 门不受影响。
     pub local_audio_greeting_max: Duration,
+    /// 开场重叠窗起点上限(普适判据):输入环启动后多少 ms 内检出的首个语音起点才算「开听时已有人在说」。
+    /// 默认 450(旧包招呼语在放:+100–300ms;v237 就绪后开口:≥+600ms)。
+    pub local_audio_overlap_onset: Duration,
     /// 芯片候选播放窗持有(2026-09-06 v230 灯控实证:LLM 回复「帮你调亮一点」被喇叭念出,芯片麦路径无 AEC
     /// 参考,听回成第二个 label 4 → worker 直接提案+硬打断在播回复=一次语音两次执行、回复截成「这」)。
     /// 开:在播或播完 ECHO_SUPPRESS_WINDOW_MS 内到达的芯片候选**不提案、不 abort**,记为等 ASR 的候选
@@ -162,6 +165,12 @@ impl PipelineConfig {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(3_200),
+            ),
+            local_audio_overlap_onset: Duration::from_millis(
+                std::env::var("LOCAL_AUDIO_OVERLAP_ONSET_MS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(450),
             ),
             chip_playback_hold: parse_flag(std::env::var("DEVICE_CHIP_PLAYBACK_HOLD").ok().as_deref(), true),
             cmd_single_exit: parse_flag(std::env::var("DEVICE_CMD_SINGLE_EXIT").ok().as_deref(), true),
@@ -329,6 +338,12 @@ struct Orchestrator {
     /// 开场重叠窗截止(unix ms):建房秒(≈唤醒)+ 最长招呼语 + 余量;None = 非设备房/放宽门关闭。
     /// 说完时刻 ≤ 此值的 commit 视为「招呼语可能还在播」,回声门放宽到 LCS≥0.3(textproc::local_audio_echo_overlap_hit)。
     opening_overlap_deadline_ms: Option<i64>,
+    /// 输入环启动时刻(首帧到达;开场重叠窗起点判据基准)
+    input_loop_started_at: Option<Instant>,
+    /// 本会话首个 VAD 语音起点(只记一次)
+    first_speech_onset_at: Option<Instant>,
+    /// 用户 commit 计数(含被吞的;放宽分支只看第 1 句)
+    user_commit_count: u32,
     cfg: PipelineConfig,
     tts_cfg: TtsCfg,
     llm: Arc<Mutex<Llm>>,
@@ -656,6 +671,9 @@ pub async fn run_pipeline(
         session_started_at: Instant::now(),
         echo_short_turn_at: None,
         opening_overlap_deadline_ms,
+        input_loop_started_at: None,
+        first_speech_onset_at: None,
+        user_commit_count: 0,
         pending_cmd: None,
         deferred_say: DeferredSay::default(),
         ledger: crate::device_ledger::Ledger::new(),
@@ -791,6 +809,7 @@ pub async fn run_pipeline(
                         None => warn!(room = %room_name, "input_ready skipped: 无 trace(老 token 或非 Session API 房)"),
                     }
                 }
+                orch.input_loop_started_at.get_or_insert(Instant::now());
                 if !samples.is_empty() {
                     in_amp_acc += samples.iter().map(|s| u64::from(s.unsigned_abs())).sum::<u64>()
                         / samples.len() as u64;
@@ -1011,6 +1030,7 @@ impl Orchestrator {
         let now = Instant::now();
         match ev {
             VadEvent::SpeechStart => {
+                self.first_speech_onset_at.get_or_insert(now);
                 self.turn_gate.on_speech_start();
                 // v3.1 账本:停说 ≥ NEW_UTTERANCE_GAP 后再开口 = 新句;上一句若从未 commit(ASR 缺失),其芯片观测作孤儿(只诊断)
                 let gate_has_pending = !self.turn_gate.pending().is_empty();
@@ -1935,6 +1955,7 @@ impl Orchestrator {
         // 判停提交
         if let Some(commit) = self.turn_gate.poll_commit(now) {
             let user_text = commit.text;
+            self.user_commit_count += 1;
             // 本地音频回声对撞(2026-09-01「刚打了个盹儿」幽灵轮,招呼语回声第三次实证):
             // 开场窗内 commit 若模糊命中该设备本地招呼语文案(LCS≥0.8,回声只掉字不加字:
             // 「刚打了个盹儿」掉头、「我在这等你呢」掉中间,严格子串只兜得住前者)→判回声
@@ -1982,7 +2003,18 @@ impl Orchestrator {
                 // 2.1–2.8 s 长过 wake→input_ready(~1.8 s),尾巴被 ASR 听到并错转成「我想啊怎么了」「不行了」,
                 // LCS 0.5/0.33 穿过 0.8 门→幽灵轮/打断在播回复。以「这句说完时招呼语可能还没播完」为时间锚
                 // (建房秒≈唤醒 + 最长招呼语 + 余量),锚内 ≥2 字 LCS≥0.3 判回声;命令词/急停/退出词不进此门。
-                if let Some(deadline) = self.opening_overlap_deadline_ms {
+                // 普适起点判据(2026-09-06 codex v237 §7.3 反例 → 川哥要求不按 SN 特判):只有「本会话第 1 句」且
+                // 「输入环启动 ≤450ms 内就检出语音起点(开听时音频里已有人在说)」才进放宽分支;v237 类设备提示音播完
+                // 才开麦,就绪后开口的起点 ≥600ms,永不进此门——「讲个故事」不会被吞。
+                let onset_ms = match (self.input_loop_started_at, self.first_speech_onset_at) {
+                    (Some(l), Some(o)) => Some(o.saturating_duration_since(l).as_millis() as i64),
+                    _ => None,
+                };
+                let onset_ok = crate::textproc::overlap_onset_qualifies(onset_ms, self.cfg.local_audio_overlap_onset.as_millis() as i64);
+                if let Some(deadline) = self.opening_overlap_deadline_ms
+                    && self.user_commit_count == 1
+                    && onset_ok
+                {
                     let speech_end_ms = unix_ms_now() - commit.eou_delay.as_millis() as i64;
                     if speech_end_ms <= deadline
                         && crate::device_intent::match_command(&user_text).is_none()
@@ -1995,7 +2027,7 @@ impl Orchestrator {
                         };
                         if let Some((slot, ratio)) = overlap {
                             info!(room = %self.room_name, slot = %slot, lcs = ratio,
-                                  before_deadline_ms = deadline - speech_end_ms,
+                                  before_deadline_ms = deadline - speech_end_ms, onset_ms = onset_ms.unwrap_or(-1),
                                   "local-audio echo suppressed (opening overlap): '{user_text}'");
                             self.echo_short_turn_at = None;
                             self.latest_interim.clear();

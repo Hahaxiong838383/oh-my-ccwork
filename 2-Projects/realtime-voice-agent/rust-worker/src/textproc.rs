@@ -311,6 +311,14 @@ pub fn opening_overlap_decision<'a>(
     local_audio_echo_overlap_hit(commit_norm, bank)
 }
 
+/// 开场重叠窗的「起点」判据(普适,不依赖 APK 版本/SN 表):worker 输入环启动后 ≤ limit_ms 内就检测到语音起点
+/// = 开始听的那一刻音频里已经有人在说——旧包(v236)招呼语还在放时麦已开,正是回灌形态;v237 类设备提示音
+/// 播完才开麦,用户看到就绪再开口,起点 ≥ 人的反应时延(就绪显示≈输入环+270ms,反应≥300ms,VAD 检出+100–200ms
+/// → 最快 ≈ +600–900ms)。None(无起点/无环启动时刻)→ false。
+pub fn overlap_onset_qualifies(onset_after_loop_ms: Option<i64>, limit_ms: i64) -> bool {
+    matches!(onset_after_loop_ms, Some(ms) if ms <= limit_ms)
+}
+
 /// 设备房名 `sn-<SN>-<unix 秒>`(server 建房时刻≈唤醒时刻,量化到秒)→ unix 秒;非设备房/无法解析 None。
 pub fn room_unix_secs(room_name: &str) -> Option<i64> {
     if !room_name.starts_with("sn-") {
@@ -585,6 +593,17 @@ mod overlap_tests {
         // 旧设备招呼语碎片正向保留
         assert!(opening_overlap_decision(Some(deadline), t * 1000 + 2050, "我想啊怎么了", &b).is_some());
         assert!(opening_overlap_decision(Some(deadline), t * 1000 + 1320, "不行了", &b).is_some());
+    }
+
+    /// 普适起点判据:旧包招呼语在放(起点 +150ms)→ 进放宽分支;v237 就绪后开口(+700ms)→ 不进;无起点 → 不进。
+    #[test]
+    fn onset_predicate_separates_overlap_from_ready_then_speak() {
+        assert!(overlap_onset_qualifies(Some(150), 450));
+        assert!(overlap_onset_qualifies(Some(0), 450));
+        assert!(overlap_onset_qualifies(Some(450), 450));
+        assert!(!overlap_onset_qualifies(Some(451), 450));
+        assert!(!overlap_onset_qualifies(Some(700), 450), "v237 就绪后立刻说「讲个故事」的起点 ≥600ms,不进放宽分支");
+        assert!(!overlap_onset_qualifies(None, 450));
     }
 
     #[test]
