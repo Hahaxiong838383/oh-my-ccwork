@@ -70,3 +70,9 @@ ssh root@64.90.13.117 "T=\$(systemctl show voice-worker-rust -p ActiveEnterTimes
 - 备份链：`voice-rust-worker.bak-20260906-233549` = v4 `77465e8285fe6916`；`.bak-20260906-232805` = v3 `37f1f19f…`；env md5 `d0bd412276756936` 未动。
 - 语义：job 层 assignment 到达即 spawn ASR 长连（`asr stream task spawned (preconnect)`），pipeline 接管；其余不变。
 - 回滚：`cp voice-rust-worker.bak-20260906-233549 voice-rust-worker` + 零 job restart（回 v4，握手回到 pipeline 内）。触发信号：房间内 `asr 断线重连`/`火山 ASR 流异常` 频次上升（预连期间服务端空闲断开）或首句转写反而变慢。
+
+## 追加 · 第七次换装：pipeline 预组装（2026-09-07 07:50 CST）
+- 现役 commit feat/rust-worker `3a2af41c3`（= 预连 `a1acbf517` + 预组装），二进制 sha256 前 16 `f3707e7eae7e3a42`（72,137,496 B），MainPID 2017631，ActiveEnter 2026-09-06 23:49:55 UTC（07:49:55 CST），换装时在途 job=0。
+- 备份链：`voice-rust-worker.bak-20260906-234953` = 预连版 `1d8f0b759cd65494`；`.bak-20260906-233549` = v4 `77465e82…`；env md5 `d0bd412276756936` 未动。
+- 语义：job 收到 assignment 即 `tokio::spawn(pipeline::prebuild)`（ASR 预连 → 配置/LLM·TTS 客户端与预热/回声库拉取 → `spawn_blocking` 加载 VAD 模型/填充语库/声纹库），订到轨后 pipeline 接管；prebuild 失败或 join 失败 → 原地组装（旧行为）。锚：`pipeline prebuilt`（elapsed_ms）早于 `user_track_subscribed`，`pipeline takeover prebuilt`（prebuilt_age_ms）。
+- 回滚：`cp voice-rust-worker.bak-20260906-234953 voice-rust-worker` + 零 job restart（回预连版）。触发信号：`pipeline prebuild failed` 频发、`track_to_input_loop_ms` 未下降、或 job 提前退出后残留 ASR 连接告警。
