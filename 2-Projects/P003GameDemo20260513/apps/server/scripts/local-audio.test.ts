@@ -484,5 +484,22 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   ok('dr-18 设备回复 staging 条目仍在', localAudioStore.getItem(ACC2, 'fffffffffffffff1') !== null && localAudioStore.getItem(ACC2, 'fffffffffffffff2') === null);
 }
 
+// ---- 回声库内置兜底(2026-09-06 0001 首日实证) ----
+{
+  const { builtinGreetingTexts, BUILTIN_GREETING_TEXTS } = await import('../src/local-audio-store.js');
+  const ACC3 = 'device-echo-builtin-test';
+  const t0 = localAudioStore.listTextsForEcho(ACC3);
+  ok('eb-1 无动态套的账号回声库=内置招呼语(greeting.builtin)', t0.length === BUILTIN_GREETING_TEXTS.length && t0.every((r) => r.slot === 'greeting.builtin'));
+  ok('eb-2 内置含 0001 首日被当用户话的两句', t0.some((r) => r.text === '来啦，想聊点啥？') && t0.some((r) => r.text === '哟，你来啦。'));
+  localAudioStore.writeAudio(ACC3, 'eb00000000000001', Buffer.from('x'), 'wav');
+  localAudioStore.insertItem(ACC3, { slot: 'greeting.normal', id: 'eb00000000000001', text: '嗨，我醒啦', sha256: 'eb00000000000001'.repeat(4), bytes: 1, duration_ms: 1000, format: 'wav' });
+  localAudioStore.commitSet(ACC3, [{ slot: 'greeting.normal', id: 'eb00000000000001' }], { tier: '新朋友', traits: '{}' });
+  const t1 = localAudioStore.listTextsForEcho(ACC3);
+  ok('eb-3 有动态套时=动态在前 ∪ 内置', t1[0]?.slot === 'greeting.normal' && t1[0]?.text === '嗨，我醒啦' && t1.length === 1 + BUILTIN_GREETING_TEXTS.length);
+  process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS = '测试追加句, 来啦。';
+  ok('eb-4 env 追加去重', builtinGreetingTexts().length === BUILTIN_GREETING_TEXTS.length + 1 && localAudioStore.listTextsForEcho(ACC3).some((r) => r.text === '测试追加句'));
+  delete process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS;
+}
+
 console.log(`\nlocal-audio tests: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);

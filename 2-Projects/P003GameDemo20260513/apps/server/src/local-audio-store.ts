@@ -436,10 +436,42 @@ class LocalAudioStore {
     // 对撞面放大近 3 倍,而人格化文案与用户日常语言分布天然重叠(「有啥好玩的事儿说说」
     // 既是招呼语也是用户真话),误伤面随对撞面同步放大。revision 交界缝(设备夜间换新前
     // 播上一版)的窗口只有几小时且低频,取舍上放弃焊缝换全天误伤面收窄。
-    return this.db
+    // 2026-09-06 补兜底(0001 首日实证:新设备当天未轮到每日批 → revision 0 → 库空 → APK 内置招呼语
+    // 「来啦，想聊点啥？」「哟，你来啦。」被 worker 当用户话提交,小可接着自家招呼语开讲):端侧无现役动态槽、
+    // 缺槽、tombstone/rev0 都回退 APK 内置招呼语,故**恒并入**内置文案(槽名 greeting.builtin,worker 只装
+    // greeting.* 进对撞库);动态在前,同文案去重。内置表是固定小集合(8-16 交付 greet_01–09),不放大误伤面。
+    const active = this.db
       .prepare(`SELECT DISTINCT slot, text FROM local_audio_item WHERE account_id = ? AND active = 1 ORDER BY slot`)
       .all(accountId) as Array<{ slot: string; text: string }>;
+    const seen = new Set(active.map((r) => r.text));
+    const builtin = builtinGreetingTexts()
+      .filter((t) => !seen.has(t))
+      .map((text) => ({ slot: 'greeting.builtin', text }));
+    return [...active, ...builtin];
   }
+}
+
+/**
+ * APK 内置唤醒招呼语文案(2026-08-16 S2B1 交付 greet_01–09,端侧无动态套/缺槽/tombstone 时播它们)。
+ * 改内置包文案时同步改这里;临时追加走 env LOCAL_AUDIO_BUILTIN_GREETING_TEXTS(逗号分隔,restart 生效)。
+ */
+export const BUILTIN_GREETING_TEXTS: readonly string[] = [
+  '哎，你好呀。',
+  '嗯呐，我在呢。',
+  '来啦，想聊点啥？',
+  '来啦。',
+  '哎，来啦来啦。',
+  '嗨，我在呢。',
+  '哟，你来啦。',
+  '哎哟，是你呀～',
+  '嗨嗨，等你好久啦。',
+];
+
+/** 内置招呼语 ∪ env 追加(去重,保序)。 */
+export function builtinGreetingTexts(): string[] {
+  const raw = process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS?.trim();
+  const extra = raw ? raw.split(',').map((x) => x.trim()).filter(Boolean) : [];
+  return [...new Set([...BUILTIN_GREETING_TEXTS, ...extra])];
 }
 
 export const localAudioStore = new LocalAudioStore();
