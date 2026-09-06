@@ -5,6 +5,7 @@ import { verifyAuthToken } from '../auth-jwt.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { accountStore } from '../account-store.js';
+import { kickoffLocalAudioOnce } from '../local-audio-generator.js';
 
 // 家长端建档 + 配网绑定 API。鉴权用邀请码登录 JWT（与 WS 鉴权同 verifyAuthToken），按 accountId 隔离。
 const profileRoute = new Hono<{ Variables: { accountId: string } }>();
@@ -111,6 +112,11 @@ export function performSnBinding(
   if (brainAccountId && !profileStore.getProfile(brainAccountId)) {
     syncedProfile = Boolean(profileStore.copyProfile(parentAccountId, brainAccountId));
     if (!syncedProfile) profileStore.upsertProfile(brainAccountId, { nickname: '', birthday: '', gender: '' });
+  }
+  // 绑定即生成（2026-09-06）：配网 claim / 短信 bind-sn 两条绑定路都从这里进，与 admin 开通 brain 共用同一入口（并发去重）
+  if (brainAccountId) {
+    const k = kickoffLocalAudioOnce(brainAccountId, 'sn-binding');
+    if (k !== 'started') console.log(`[local-audio] kickoff ${k} account=${brainAccountId} reason=sn-binding`);
   }
   return { ok: true, brainAccountId, syncedProfile, alreadyBound };
 }

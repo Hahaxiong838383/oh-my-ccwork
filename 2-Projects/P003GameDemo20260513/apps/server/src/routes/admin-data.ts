@@ -30,7 +30,9 @@ import {
   personaInsightEnabled, personaNarrativeEnabled, personaTraitEnabled, personaLocalAudioEnabled,
 } from '../relation-state-store.js';
 import { localAudioStore } from '../local-audio-store.js';
-import { runLocalAudioForAccount, shouldKickoffLocalAudioOnOpen } from '../local-audio-generator.js';
+import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
+import { pairingStore } from '../pairing-store.js';
+import { tryAutoConfirm, manualConfirm, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
 import { runInsightForAccount, runNarrativeForAccount } from '../insight-runner.js';
@@ -156,9 +158,11 @@ adminDataRoute.get('/devices', (c) => {
   try {
     // 绑定家长可视化（2026-08-23）：join 家长账号手机号（admin 内部台，显示全号便于核对；
     // 手机号只出现在 admin 鉴权接口，不进 worker 日志/普通用户接口）
+    const now = Date.now();
     const devices = deviceRegistryStore.list().map((d) => ({
       ...d,
       parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
+      preauth: preauthView(pairingStore.getPreauth(d.sn), now),
     }));
     const envAllow = (process.env.DEVICE_SN_ALLOW || '')
       .split(',')
@@ -168,6 +172,127 @@ adminDataRoute.get('/devices', (c) => {
     return c.json({ ok: true, devices, env_allow: envAllow, stats });
   } catch (error) {
     return c.json({ ok: false, error: '拉取设备台账失败，请稍后重试' }, 500);
+  }
+});
+
+// ── 后台预授权自动认领 v1（2026-09-06）：SN + 家长手机号 = 预授权；设备 announce 到达即代确认，claim 拿凭据，免手传 ──
+const PHONE_RE = /^1[3-9]\d{9}$/;
+const PREAUTH_DAYS_DEFAULT = Math.max(1, Number(process.env.PAIRING_PREAUTH_DAYS || 7));
+function preauthView(p: ReturnType<typeof pairingStore.getPreauth>, now = Date.now()) {
+  return p ? { phone: p.phone, until_at: p.until_at, used_at: p.used_at, created_at: p.created_at, active: p.until_at > now && p.used_at === null } : null;
+}
+function opUser(c: { req: { header: (k: string) => string | undefined } }): string {
+  const t = /^Bearer\s+(.+)$/i.exec(c.req.header('authorization')?.trim() ?? '')?.[1];
+  return (t && getTokenUser(t)) || '?';
+}
+type PreauthApply =
+  | { ok: true; parentAccountId: string; created: boolean; preauth: NonNullable<ReturnType<typeof preauthView>>; auto: AutoConfirmResult | null }
+  | { ok: false; error: string };
+/** 预授权 + 家长绑定 + 晚到 announce 代确认（添加设备 / PUT preauth 共用）。 */
+function applyPreauth(sn: string, phone: string, days: number, by: string): PreauthApply {
+  const existing = accountStore.findByPhone(phone);
+  if (existing && existing.role === 'device') return { ok: false, error: '该手机号对应设备账号，不能绑定为家长' };
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return { ok: false, error: '设备不在台账中' };
+  const acct = existing ?? accountStore.upsertPhoneAccount(phone);
+  if (device.parent_account_id && device.parent_account_id !== acct.id) return { ok: false, error: '该设备已绑定其他家长，换绑请走现役解绑/换绑流程' };
+  if (!device.parent_account_id) {
+    deviceRegistryStore.setParentAccountId(sn, acct.id);
+    console.log(`[admin-brain] parent bound=${acct.id} sn=${sn} via=preauth${existing ? '' : '(预建账号)'}`);
+  }
+  const p = pairingStore.setPreauth(sn, acct.id, phone, Date.now() + days * 86_400_000, by);
+  const ann = pairingStore.findAnnounce(sn);
+  const auto = ann && ann.expires_at > Date.now() ? tryAutoConfirm(sn, ann.nonce_hash, ann.device_pk, 'late_preauth') : null;
+  console.log(`[pairing] preauth set sn=${sn} days=${days} by=${by} late_announce=${ann ? 'yes' : 'no'} auto=${auto?.reason ?? '-'}`);
+  return { ok: true, parentAccountId: acct.id, created: !existing, preauth: preauthView(p)!, auto };
+}
+
+// 已上线待认领（announce 列表；每次拉取顺手清过期）
+adminDataRoute.get('/devices/pairing/pending', (c) => {
+  try {
+    pairingStore.purgeExpiredAnnounces();
+    const now = Date.now();
+    const items = pairingStore.listAnnounces(now).map((a) => {
+      const device = deviceRegistryStore.get(a.sn);
+      const session = pairingStore.findUnclaimedSessionBySn(a.sn, now);
+      return {
+        sn: a.sn,
+        registered: Boolean(device),
+        status: device?.status ?? null,
+        note: device?.note ?? '',
+        parent_phone: device?.parent_account_id ? (accountStore.findAccount(device.parent_account_id)?.phone ?? null) : null,
+        announced_at: a.announced_at,
+        expires_at: a.expires_at,
+        expires_in_s: Math.max(0, Math.ceil((a.expires_at - now) / 1000)),
+        state: session ? 'confirmed' : 'pending',
+        confirmed_by: session?.source ?? null,
+        session_id: session?.session_id ?? null,
+        preauth: preauthView(pairingStore.getPreauth(a.sn), now),
+      };
+    });
+    return c.json({ ok: true, items, preauth_enabled: process.env.PAIRING_ADMIN_PREAUTH_ENABLED !== '0', preauth_days_default: PREAUTH_DAYS_DEFAULT });
+  } catch (error) {
+    return c.json({ ok: false, error: '拉取待认领列表失败' }, 500);
+  }
+});
+
+// 预授权：写/覆盖（覆盖即重新计时）
+adminDataRoute.put('/devices/:sn/preauth', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim().toUpperCase();
+    const body = (await c.req.json().catch(() => ({}))) as { phone?: unknown; days?: unknown };
+    const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+    const days = typeof body.days === 'number' && body.days >= 1 && body.days <= 90 ? Math.floor(body.days) : PREAUTH_DAYS_DEFAULT;
+    if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'SN 不合法' }, 400);
+    if (!PHONE_RE.test(phone)) return c.json({ ok: false, error: '家长手机号格式不对' }, 400);
+    const r = applyPreauth(sn, phone, days, opUser(c));
+    if (!r.ok) return c.json({ ok: false, error: r.error }, 409);
+    return c.json({ ok: true, preauth: r.preauth, parent_account_id: r.parentAccountId, parent_created: r.created, auto_confirm: r.auto });
+  } catch (error) {
+    return c.json({ ok: false, error: '预授权失败，请稍后重试' }, 500);
+  }
+});
+
+adminDataRoute.delete('/devices/:sn/preauth', (c) => {
+  try {
+    const sn = c.req.param('sn').trim().toUpperCase();
+    const removed = pairingStore.deletePreauth(sn);
+    console.log(`[pairing] preauth removed sn=${sn} by=${opUser(c)} removed=${removed}`);
+    return c.json({ ok: true, removed });
+  } catch (error) {
+    return c.json({ ok: false, error: '取消预授权失败' }, 500);
+  }
+});
+
+// 一键确认：人工代按（无预授权也可；家长账号 = 指定手机号 / 指定账号 / 台账已绑家长）
+adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim().toUpperCase();
+    const body = (await c.req.json().catch(() => ({}))) as { phone?: unknown; parent_account_id?: unknown };
+    if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'SN 不合法' }, 400);
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中，请先添加' }, 404);
+    let parentAccountId: string | null = null;
+    if (typeof body.parent_account_id === 'string' && body.parent_account_id.trim()) {
+      const acct = accountStore.findAccount(body.parent_account_id.trim());
+      if (!acct || acct.role === 'device') return c.json({ ok: false, error: '家长账号不存在' }, 404);
+      parentAccountId = acct.id;
+    } else if (typeof body.phone === 'string' && PHONE_RE.test(body.phone.trim())) {
+      const phone = body.phone.trim();
+      const existing = accountStore.findByPhone(phone);
+      if (existing && existing.role === 'device') return c.json({ ok: false, error: '该手机号对应设备账号，不能绑定为家长' }, 400);
+      parentAccountId = (existing ?? accountStore.upsertPhoneAccount(phone)).id;
+    } else if (device.parent_account_id) {
+      parentAccountId = device.parent_account_id;
+    } else {
+      return c.json({ ok: false, error: '需要家长手机号（该设备尚未绑定家长）' }, 400);
+    }
+    const r = manualConfirm(sn, parentAccountId, opUser(c));
+    if (!r.done) return c.json({ ok: false, error: r.reason }, r.reason === 'no_announce' ? 404 : 409);
+    if (!device.parent_account_id) deviceRegistryStore.setParentAccountId(sn, parentAccountId);
+    return c.json({ ok: true, session_id: r.sessionId, parent_account_id: parentAccountId });
+  } catch (error) {
+    return c.json({ ok: false, error: '一键确认失败，请稍后重试' }, 500);
   }
 });
 
@@ -192,7 +317,13 @@ adminDataRoute.post('/devices', async (c) => {
     }
     deviceRegistryStore.add(sn, note);
     let parentBound = false;
-    if (parentAccount) {
+    let preauthResult: PreauthApply | null = null;
+    if (parentPhone && PHONE_RE.test(parentPhone)) {
+      // 2026-09-06 川哥拍板：SN + 手机号 = 预授权自动认领。未注册手机号按短信登录同一套 upsert 预建家长账号
+      // （之后家长用该号登录即同账号），绑定家长 + 写预授权；设备联网 announce 到达即代确认 → claim 拿凭据。
+      preauthResult = applyPreauth(sn, parentPhone, PREAUTH_DAYS_DEFAULT, opUser(c));
+      parentBound = preauthResult.ok;
+    } else if (parentAccount) {
       deviceRegistryStore.setParentAccountId(sn, parentAccount.id);
       parentBound = true;
       console.log(`[admin-brain] parent bound=${parentAccount.id} sn=${sn} via=add-device`);
@@ -201,9 +332,13 @@ adminDataRoute.post('/devices', async (c) => {
       ok: true,
       device: deviceRegistryStore.get(sn),
       parent_bound: parentBound,
-      ...(parentPhone && !parentBound
-        ? { parent_bind_warning: `手机号 ${parentPhone} 尚未注册家长账号——设备已添加但未绑定；家长在 p003.hahaxiong.cc 用该号登录注册后，可在本页重新绑定` }
-        : {}),
+      ...(preauthResult?.ok
+        ? { preauth: preauthResult.preauth, parent_created: preauthResult.created, auto_confirm: preauthResult.auto }
+        : preauthResult
+          ? { parent_bind_warning: preauthResult.error }
+          : parentPhone && !parentBound
+            ? { parent_bind_warning: `手机号 ${parentPhone} 格式不对——设备已添加但未绑定/未预授权。` }
+            : {}),
     });
   } catch (error) {
     return c.json({ ok: false, error: '添加设备失败，请稍后重试' }, 500);
@@ -326,14 +461,7 @@ adminDataRoute.post('/devices/:sn/brain', async (c) => {
     // 误导运营「要找地方填」。通行证续签走 scripts/sign-worker-token.ts（唯一签发口）。
     // 绑定即生成（2026-09-06）：建档后异步触发一次本地音频生成，不阻塞路由、失败只留日志；
     // 已生成过的账号由门判跳过，生成本身仍受每日批同一套门（暂停开关/体积预检/发布门）约束。
-    if (shouldKickoffLocalAudioOnOpen(localAudioStore.getState(accountId), personaLocalAudioEnabled(accountId))) {
-      console.log(`[admin-brain] local-audio kickoff sn=${sn} account=${accountId}`);
-      void runLocalAudioForAccount(accountId)
-        .then((r) => console.log(`[admin-brain] local-audio kickoff done sn=${sn} ${JSON.stringify(r)}`))
-        .catch((err) => console.log(`[admin-brain] local-audio kickoff failed sn=${sn}: ${String((err as Error)?.message ?? err)}`));
-    } else {
-      console.log(`[admin-brain] local-audio kickoff skipped sn=${sn} account=${accountId} (已生成过或开关关)`);
-    }
+    console.log(`[admin-brain] local-audio kickoff ${kickoffLocalAudioOnce(accountId, 'admin-brain-open')} sn=${sn} account=${accountId}`);
     console.log(`[admin-brain] opened sn=${sn} account=${accountId}`);
     return c.json({ ok: true, account_id: accountId });
   } catch (error) {

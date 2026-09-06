@@ -511,5 +511,11 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   ok('kick-3 开关关 → 不触发', !shouldKickoffLocalAudioOnOpen(fresh, false));
 }
 
+// ---- 绑定即生成唯一入口(2026-09-06 codex §3:重试/幂等恢复不得反复生成) ----
+{
+  const { kickoffLocalAudioOnce } = await import('../src/local-audio-generator.js');
+  ok('kick-4 开关未开 → skipped_disabled(不起生成)', kickoffLocalAudioOnce('device-kick-test', 'unit') === 'skipped_disabled');
+}
+
 console.log(`\nlocal-audio tests: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);

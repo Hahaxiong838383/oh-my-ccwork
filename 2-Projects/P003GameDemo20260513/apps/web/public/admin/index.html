@@ -1828,6 +1828,42 @@
                     <el-button size="small" type="primary" :loading="deviceData.loading" @click="addDevice">添加设备</el-button>
                     <span style="font-size:12px;color:#909399">添加后默认启用；env 存量设备添加进台账即由台账接管（停用可压制）</span>
                   </div>
+                  <div class="kh-card" style="padding:14px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+                      <div style="font-size:13px;font-weight:700">已上线待认领（设备配网阶段自报，10 分钟有效）
+                        <el-tag size="small" :type="pairingPending.enabled ? 'success' : 'info'" style="margin-left:8px">{{ pairingPending.enabled ? '预授权自动认领：开' : '预授权自动认领：关（仅人工确认）' }}</el-tag>
+                      </div>
+                      <el-button size="small" :loading="pairingPending.loading" @click="loadPairingPending">刷新</el-button>
+                    </div>
+                    <el-table :data="pairingPending.items" style="width:100%" size="small" :empty-text="pairingPending.loading ? '加载中...' : '暂无上线待认领的设备（每 20 秒自动刷新）'">
+                      <el-table-column label="设备 SN" width="230">
+                        <template #default="{row}"><span style="font-family:monospace;font-weight:700">{{ row.sn }}</span><el-tag v-if="!row.registered" size="small" type="danger" style="margin-left:6px">不在台账</el-tag></template>
+                      </el-table-column>
+                      <el-table-column label="备注" min-width="110"><template #default="{row}">{{ row.note || '—' }}</template></el-table-column>
+                      <el-table-column label="上线时刻" width="150"><template #default="{row}">{{ fmtTs(row.announced_at) }}</template></el-table-column>
+                      <el-table-column label="剩余" width="70"><template #default="{row}">{{ row.expires_in_s }}s</template></el-table-column>
+                      <el-table-column label="状态" width="130">
+                        <template #default="{row}"><el-tag size="small" :type="row.state === 'confirmed' ? 'success' : 'warning'">{{ row.state === 'confirmed' ? ('已确认·' + (row.confirmed_by || '')) : '待确认' }}</el-tag></template>
+                      </el-table-column>
+                      <el-table-column label="预授权" width="190">
+                        <template #default="{row}">
+                          <span v-if="row.preauth && row.preauth.active" style="font-size:12px">{{ row.preauth.phone }} · 至 {{ fmtTs(row.preauth.until_at) }}</span>
+                          <span v-else-if="row.preauth" style="font-size:12px;color:#909399">{{ row.preauth.used_at ? '已消费' : '已过期' }}</span>
+                          <span v-else style="color:#C0C4CC">—</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="一键确认" min-width="280">
+                        <template #default="{row}">
+                          <div v-if="row.state !== 'confirmed' && row.registered" style="display:flex;gap:6px;align-items:center">
+                            <el-input v-model="pairingPending.phone[row.sn]" :placeholder="row.parent_phone ? ('默认 ' + row.parent_phone) : '家长手机号'" size="small" style="width:150px" clearable></el-input>
+                            <el-button size="small" type="primary" @click="confirmPairing(row)">确认认领</el-button>
+                          </div>
+                          <span v-else-if="row.state === 'confirmed'" style="font-size:12px;color:#67C23A">已确认，等设备自动拉取凭据</span>
+                          <span v-else style="font-size:12px;color:#909399">先添加进台账</span>
+                        </template>
+                      </el-table-column>
+                    </el-table>
+                  </div>
                   <div class="kh-card" style="overflow:hidden;margin-bottom:16px">
                     <el-table :data="filteredDevices" style="width:100%" :empty-text="deviceData.loading ? '加载中...' : (deviceFilter.phone ? '无匹配该手机号的设备' : '台账为空（env 兜底设备见下方）')">
                       <el-table-column label="设备 SN" width="200">
@@ -1840,6 +1876,13 @@
                         <template #default="{row}">
                           <span v-if="row.parent_phone" style="font-family:monospace;font-weight:600">{{ row.parent_phone }}</span>
                           <span v-else style="color:#C0C4CC">—</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="预授权认领" width="200">
+                        <template #default="{row}">
+                          <template v-if="row.preauth && row.preauth.active"><span style="font-size:12px">至 {{ fmtTs(row.preauth.until_at) }}</span> <el-button type="danger" link size="small" @click="cancelPreauth(row)">取消</el-button></template>
+                          <span v-else-if="row.preauth && row.preauth.used_at" style="font-size:12px;color:#67C23A">已认领 {{ fmtTs(row.preauth.used_at) }}</span>
+                          <template v-else><span style="color:#C0C4CC">—</span> <el-button type="primary" link size="small" :disabled="row.status !== 'active'" @click="openPreauth(row)">预授权</el-button></template>
                         </template>
                       </el-table-column>
                       <el-table-column label="状态" width="90">
@@ -4862,6 +4905,54 @@
           if (document.visibilityState === 'visible' && canManageInvites.value) loadWorkerStats();
         }, 60000);
         var deviceAdd = reactive({ sn: '', note: '', phone: '' });
+        // ── 后台预授权自动认领 v1（2026-09-06）：待认领列表 + 一键确认 + 预授权；API 见 admin-data.ts /devices/pairing/pending、/devices/:sn/preauth、/devices/:sn/pairing/confirm ──
+        var pairingPending = reactive({ items: [], loading: false, enabled: true, phone: {} });
+        function loadPairingPending() {
+          if (!canManageInvites.value) return;
+          pairingPending.loading = true;
+          deviceApi('/api/admin/devices/pairing/pending', { method: 'GET' })
+            .then(function (data) {
+              if (data && data.ok) { pairingPending.items = data.items || []; pairingPending.enabled = data.preauth_enabled !== false; }
+            })
+            .catch(function () { /* 拉不到不打扰 */ })
+            .finally(function () { pairingPending.loading = false; });
+        }
+        setInterval(function () {
+          if (document.visibilityState === 'visible' && canManageInvites.value && (deviceData.devices || []).length) loadPairingPending();
+        }, 20000);
+        function confirmPairing(row) {
+          var phone = ((pairingPending.phone[row.sn] || '') + '').trim();
+          if (phone && !/^1[3-9]\d{9}$/.test(phone)) { ElementPlus.ElMessage.warning('手机号格式不对'); return; }
+          if (!phone && !row.parent_phone) { ElementPlus.ElMessage.warning('该设备未绑定家长，请填家长手机号'); return; }
+          deviceApi('/api/admin/devices/' + encodeURIComponent(row.sn) + '/pairing/confirm', { method: 'POST', body: JSON.stringify(phone ? { phone: phone } : {}) })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('已确认 ' + row.sn + '，等设备自动拉取凭据'); loadPairingPending(); loadDevices(); }
+              else ElementPlus.ElMessage.error((data && data.error) || '确认失败');
+            })
+            .catch(function (e) { if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('确认失败，请稍后重试'); });
+        }
+        function openPreauth(row) {
+          ElementPlus.ElMessageBox.prompt('家长手机号（未注册会按短信登录同一套预建账号）；有效期 7 天，期内设备联网即自动认领、免手传凭据', '预授权自动认领 · ' + row.sn, {
+            inputValue: row.parent_phone || '', inputPattern: /^1[3-9]\d{9}$/, inputErrorMessage: '手机号格式不对', confirmButtonText: '预授权', cancelButtonText: '取消'
+          })
+            .then(function (r) {
+              return deviceApi('/api/admin/devices/' + encodeURIComponent(row.sn) + '/preauth', { method: 'PUT', body: JSON.stringify({ phone: (r.value || '').trim() }) });
+            })
+            .then(function (data) {
+              if (!data) return;
+              if (data.ok) { ElementPlus.ElMessage.success('已预授权' + (data.auto_confirm && data.auto_confirm.done ? '，设备已上线并已代确认' : '')); loadDevices(); loadPairingPending(); }
+              else ElementPlus.ElMessage.error(data.error || '预授权失败');
+            })
+            .catch(function () { /* 取消 / 401 已处理 */ });
+        }
+        function cancelPreauth(row) {
+          deviceApi('/api/admin/devices/' + encodeURIComponent(row.sn) + '/preauth', { method: 'DELETE' })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('已取消预授权'); loadDevices(); loadPairingPending(); }
+              else ElementPlus.ElMessage.error((data && data.error) || '取消失败');
+            })
+            .catch(function () {});
+        }
         var deviceSessions = reactive({ items: [], loading: false, filterSn: '', page: 1, total: 0 });
         var credDialog = reactive({ visible: false, sn: '', token: '', expiresAt: 0, days: 30, loading: false });
         function snInRegistry(sn) {
@@ -4887,6 +4978,7 @@
                 deviceData.devices = data.devices || [];
                 deviceData.envAllow = data.env_allow || [];
                 deviceData.stats = data.stats || { today_ok: 0, today_rejected: 0 };
+                loadPairingPending();
               } else {
                 ElementPlus.ElMessage.error((data && data.error) || '拉取设备台账失败');
               }
@@ -4903,7 +4995,9 @@
           deviceApi('/api/admin/devices', { method: 'POST', body: JSON.stringify({ sn: sn, note: (deviceAdd.note || '').trim(), parent_phone: (deviceAdd.phone || '').trim() }) })
             .then(function (data) {
               if (data && data.ok) {
-                if (data.parent_bound) {
+                if (data.preauth) {
+                  ElementPlus.ElMessage({ type: 'success', duration: 8000, showClose: true, message: '已添加 ' + data.device.sn + '：' + (data.parent_created ? '已预建家长账号并' : '已') + '绑定家长，预授权自动认领 7 天' + (data.auto_confirm && data.auto_confirm.done ? '（设备已上线，已代确认）' : '（设备联网自报后自动认领）') });
+                } else if (data.parent_bound) {
                   ElementPlus.ElMessage.success('已添加 ' + data.device.sn + ' 并绑定家长');
                 } else if (data.parent_bind_warning) {
                   ElementPlus.ElMessage({ type: 'warning', message: data.parent_bind_warning, duration: 8000, showClose: true });
@@ -6859,7 +6953,7 @@
           inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
-          deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
+          deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
           devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
@@ -6871,7 +6965,7 @@
           hwStartEdit: hwStartEdit, hwAddWord: hwAddWord, hwRemoveWord: hwRemoveWord,
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
-          snInRegistry: snInRegistry, loadDevices: loadDevices, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
+          snInRegistry: snInRegistry, loadDevices: loadDevices, loadPairingPending: loadPairingPending, confirmPairing: confirmPairing, openPreauth: openPreauth, cancelPreauth: cancelPreauth, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
           growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,

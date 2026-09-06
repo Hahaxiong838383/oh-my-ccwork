@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { callExtractionLlm } from './llm-extract.js';
 import { isCrisisContent } from './memory-safety-filter.js';
-import { relationStateStore, familiarityTier } from './relation-state-store.js';
+import { relationStateStore, familiarityTier, personaLocalAudioEnabled } from './relation-state-store.js';
 import { traitStore, TRAIT_DIMS, TRAIT_LABELS, TRAIT_BASELINE, type TraitDim } from './trait-store.js';
 import { getStyleTemplate } from './style-template.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
@@ -557,6 +557,29 @@ export function shouldKickoffLocalAudioOnOpen(
   enabled: boolean,
 ): boolean {
   return enabled && state.revision === 0 && state.last_generated_at === 0;
+}
+
+/** 绑定即生成的并发去重：同账号在途生成只允许一个（announce 重试 / claim 幂等恢复 / 重复开通不得反复建档生成）。 */
+const kickoffInFlight = new Set<string>();
+
+/**
+ * 绑定即生成的唯一入口（开通 brain / performSnBinding 共用）：开关 + 从未生成 + 不在途 三门后异步起一次，
+ * 不阻塞调用方、失败只留日志；生成本身仍受 runLocalAudioForAccount 的暂停开关 / 体积预检 / 发布门约束。
+ */
+export function kickoffLocalAudioOnce(
+  accountId: string,
+  reason: string,
+): 'started' | 'skipped_disabled' | 'skipped_generated' | 'skipped_in_flight' {
+  if (!personaLocalAudioEnabled(accountId)) return 'skipped_disabled';
+  if (!shouldKickoffLocalAudioOnOpen(localAudioStore.getState(accountId), true)) return 'skipped_generated';
+  if (kickoffInFlight.has(accountId)) return 'skipped_in_flight';
+  kickoffInFlight.add(accountId);
+  console.log(`[local-audio] kickoff account=${accountId} reason=${reason}`);
+  void runLocalAudioForAccount(accountId)
+    .then((r) => console.log(`[local-audio] kickoff done account=${accountId} ${JSON.stringify(r)}`))
+    .catch((err) => console.log(`[local-audio] kickoff failed account=${accountId}: ${String((err as Error)?.message ?? err)}`))
+    .finally(() => kickoffInFlight.delete(accountId));
+  return 'started';
 }
 
 export async function runLocalAudioForAccount(

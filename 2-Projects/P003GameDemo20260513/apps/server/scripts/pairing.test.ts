@@ -286,5 +286,118 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   process.env.PAIRING_PROTOCOL_V1_ENABLED = '1';
 }
 
+// ═══════════════ v3：announce + 后台预授权代确认（合同 v1 草案 + codex 开工回执 2026-09-06，M1–M9）═══════════════
+{
+  const { pairingStore } = await import('../src/pairing-store.js');
+  const { tryAutoConfirm, manualConfirm } = await import('../src/routes/pairing.js');
+  const P3 = 'acct-p3';
+  const SN_A = 'BJP00326060100000801'; // M1 先预授权后上线
+  const SN_B = 'BJP00326060100000802'; // M2 先上线后预授权
+  const SN_C = 'BJP00326060100000803'; // 家长优先
+  const SN_D = 'BJP00326060100000804'; // 一键确认
+  const SN_E = 'BJP00326060100000806'; // 开关 0 + TTL
+  const SN_F = 'BJP00326060100000807'; // 独立限流桶
+  const SN_G = 'BJP00326060100000808'; // 过期预授权
+  const SN_U = 'BJP00326060100000899'; // 台账外
+  for (const [sn, note] of [[SN_A, 'v3-A'], [SN_B, 'v3-B'], [SN_C, 'v3-C'], [SN_D, 'v3-D'], [SN_E, 'v3-E'], [SN_F, 'v3-F'], [SN_G, 'v3-G']]) deviceRegistryStore.add(sn, note);
+  async function announce(sn: string, nonce: string, pk: string) {
+    const res = await app.request('/v1/device/pairing/announce', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ v: 2, sn, nonce, pk }),
+    });
+    return { status: res.status, json: (await res.json()) as any };
+  }
+
+  // ── 形状 / 台账外 / 无预授权 ──
+  eq('an-1 nonce 形状不合 400', (await announce(SN_A, 'short', newDeviceKeys().pkB64)).status, 400);
+  eq('an-2 非法 pk 400', (await announce(SN_A, newNonce(), 'AAAA' + 'B'.repeat(40))).status, 400);
+  eq('an-3 台账外 SN 也 200 pending（不泄露存在性）', (await announce(SN_U, newNonce(), newDeviceKeys().pkB64)).json.state, 'pending');
+  const kB = newDeviceKeys();
+  const nB = newNonce();
+  const aB = await announce(SN_B, nB, kB.pkB64);
+  eq('an-4 无预授权 200 pending + ttl≤600', { s: aB.status, st: aB.json.state, ttl: aB.json.expires_in_s > 590 && aB.json.expires_in_s <= 600 }, { s: 200, st: 'pending', ttl: true });
+  eq('an-5 无预授权 claim 仍 pairing_pending', (await claimV2(SN_B, nB)).json.code, 'pairing_pending');
+
+  // ── M1：先预授权，设备首次上线 ──
+  const kA = newDeviceKeys();
+  const nA = newNonce();
+  const preA = pairingStore.setPreauth(SN_A, P3, '13800000001', Date.now() + 7 * 86_400_000, 'tester');
+  const aA = await announce(SN_A, nA, kA.pkB64);
+  eq('m1-1 announce 即代确认 state=confirmed', aA.json.state, 'confirmed');
+  const sessA = pairingStore.findSessionByHash(hashToken(nA));
+  eq('m1-2 会话来源 preauth / 家长=预授权账号 / 记 created_at', { src: sessA?.source, acct: sessA?.account_id, pre: sessA?.preauth_created_at }, { src: 'preauth', acct: P3, pre: preA.created_at });
+  const annAt = pairingStore.findAnnounce(SN_A)!.announced_at;
+  const cA = await claimV2(SN_A, nA);
+  eq('m1-3 claim 200 claimed', { s: cA.status, code: cA.json.code }, { s: 200, code: 'claimed' });
+  const jwtA = decryptCredential(kA.priv, cA.json.enc, nA, SN_A);
+  eq('m1-4 ECIES 解密 → 凭据三通道可验', (await verifyDeviceCredential(`Bearer ${jwtA}`, 'test-secret'))?.sn, SN_A);
+  eq('m1-5 家长绑定 + brain 账号建立', { p: deviceRegistryStore.get(SN_A)?.parent_account_id, b: deviceRegistryStore.get(SN_A)?.account_id }, { p: P3, b: `device-${SN_A}` });
+  eq('m1-6 预授权在真实 claim 时消费', typeof pairingStore.getPreauth(SN_A)?.used_at, 'number');
+  const usedAt = pairingStore.getPreauth(SN_A)!.used_at;
+  eq('m1-7 幂等恢复 code', (await claimV2(SN_A, nA)).json.code, 'idempotent_recovery');
+  eq('m1-8 幂等恢复不改 used_at', pairingStore.getPreauth(SN_A)!.used_at, usedAt);
+  const again = await announce(SN_A, nA, kA.pkB64);
+  eq('an-6 同 nonce 重发 200 且不续命', { s: again.status, same: pairingStore.findAnnounce(SN_A)!.announced_at === annAt }, { s: 200, same: true });
+  eq('an-7 同 nonce 异 pk 409 nonce_pk_mismatch', (await announce(SN_A, nA, newDeviceKeys().pkB64)).json.error, 'nonce_pk_mismatch');
+  eq('an-8 新 nonce 覆盖旧代', (await announce(SN_A, newNonce(), kA.pkB64)).status === 200 && pairingStore.findAnnounce(SN_A)!.nonce_hash !== hashToken(nA), true);
+
+  // ── M2：设备先上线，后台后预授权 ──
+  pairingStore.setPreauth(SN_B, P3, '13800000002', Date.now() + 86_400_000, 'tester');
+  const annB = pairingStore.findAnnounce(SN_B)!;
+  eq('m2-1 晚到预授权代确认（只用 hash + pk）', tryAutoConfirm(SN_B, annB.nonce_hash, annB.device_pk, 'late_preauth').done, true);
+  eq('m2-2 再触发 already_confirmed', tryAutoConfirm(SN_B, annB.nonce_hash, annB.device_pk, 'late_preauth').reason, 'already_confirmed');
+  eq('m2-3 claim 200 claimed', (await claimV2(SN_B, nB)).json.code, 'claimed');
+
+  // ── M7：家长先扫码，再来预授权/announce → 家长优先 ──
+  const kC = newDeviceKeys();
+  const nC = newNonce();
+  await confirm(jwt1, SN_C, nC, kC.pkB64);
+  pairingStore.setPreauth(SN_C, P3, '13800000003', Date.now() + 86_400_000, 'tester');
+  const aC = await announce(SN_C, nC, kC.pkB64);
+  const sessC = pairingStore.findSessionByHash(hashToken(nC));
+  eq('m7-1 家长已确认 → 代确认跳过，会话仍是家长', { st: aC.json.state, acct: sessC?.account_id, src: sessC?.source }, { st: 'confirmed', acct: P1, src: 'parent' });
+  eq('m7-2 claim 绑到扫码家长', (await claimV2(SN_C, nC)).json.code === 'claimed' && deviceRegistryStore.get(SN_C)?.parent_account_id === P1, true);
+  eq('m7-3 家长优先时预授权未被消费', pairingStore.getPreauth(SN_C)?.used_at, null);
+  eq('m7-4 已绑他人后预授权不代确认 sn_bound_by_other', tryAutoConfirm(SN_C, hashToken(newNonce()), kC.pkB64, 'announce').reason, 'sn_bound_by_other');
+
+  // ── 后台一键确认（无预授权）──
+  const kD = newDeviceKeys();
+  const nD = newNonce();
+  await announce(SN_D, nD, kD.pkB64);
+  eq('adm-1 一键确认', manualConfirm(SN_D, P3, 'tester').done, true);
+  eq('adm-2 重复一键确认 already_confirmed', manualConfirm(SN_D, P3, 'tester').reason, 'already_confirmed');
+  eq('adm-3 claim 200 且 source=admin', { code: (await claimV2(SN_D, nD)).json.code, src: pairingStore.findSessionByHash(hashToken(nD))?.source }, { code: 'claimed', src: 'admin' });
+  eq('adm-4 无 announce 的 SN → no_announce', manualConfirm('BJP00326060100000805', P3, 'tester').reason, 'no_announce');
+
+  // ── M9：开关 0 → 永不代确认；TTL 到期不续命 ──
+  process.env.PAIRING_ADMIN_PREAUTH_ENABLED = '0';
+  pairingStore.setPreauth(SN_E, P3, '13800000006', Date.now() + 86_400_000, 'tester');
+  const kE = newDeviceKeys();
+  const nE = newNonce();
+  const aE = await announce(SN_E, nE, kE.pkB64);
+  eq('m9-1 开关 0 → pending 且无会话', { st: aE.json.state, sess: pairingStore.findSessionByHash(hashToken(nE)) }, { st: 'pending', sess: null });
+  delete process.env.PAIRING_ADMIN_PREAUTH_ENABLED;
+  rawDb.prepare(`UPDATE pairing_announce SET expires_at = expires_at - ? WHERE sn = ?`).run(11 * 60_000, SN_E);
+  eq('ttl-1 过期 announce 不在待认领列表', pairingStore.listAnnounces().some((a) => a.sn === SN_E), false);
+  eq('ttl-2 过期同 nonce 重发不续命 ttl=0', (await announce(SN_E, nE, kE.pkB64)).json.expires_in_s, 0);
+  eq('ttl-3 过期后代确认也不发生（预授权仍在）', pairingStore.findSessionByHash(hashToken(nE)), null);
+
+  // ── 独立限流桶：announce 桶打满不影响 claim ──
+  process.env.PAIRING_ANNOUNCE_RPM_SN = '2';
+  const kF = newDeviceKeys();
+  await announce(SN_F, newNonce(), kF.pkB64);
+  await announce(SN_F, newNonce(), kF.pkB64);
+  eq('rl-1 announce 桶第三次 429', (await announce(SN_F, newNonce(), kF.pkB64)).status, 429);
+  eq('rl-2 claim 不受 announce 桶影响', (await claimV2(SN_F, newNonce())).json.code, 'pairing_pending');
+  delete process.env.PAIRING_ANNOUNCE_RPM_SN;
+
+  // ── 过期预授权忽略 ──
+  pairingStore.setPreauth(SN_G, P3, '13800000008', Date.now() - 1000, 'tester');
+  eq('pre-1 过期预授权不代确认', (await announce(SN_G, newNonce(), newDeviceKeys().pkB64)).json.state, 'pending');
+  eq('pre-2 activePreauth 过期为 null', pairingStore.activePreauth(SN_G), null);
+  eq('pre-3 删除预授权', pairingStore.deletePreauth(SN_G), true);
+}
+
 console.log(`\npairing.test: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);
