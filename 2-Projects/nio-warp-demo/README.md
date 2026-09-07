@@ -45,13 +45,15 @@ uv run nio-warp-display-demo
 
 **不知道现在怎么操作时，先看 [操作指南：现在怎么操作](docs/operator-guide.md)**，其中包含日常步骤、按钮区别、AA/画布尺寸示例、调试方法与回滚入口。
 
-当前本机开发版为 **v0.6.0 (10)**，固定安装路径：
+当前本机开发版为 **v0.6.1 (11)**，固定安装路径：
 
 ```text
 /Users/rayman.chen/Applications/NIOWarpApp.app
 ```
 
 控制台窗口标题和界面顶部都会显示当前 Bundle 版本。日常启动只使用固定安装版；临时构建产物放在隐藏的 `native/.build/app/` 中，避免被 Spotlight 和 LaunchServices 识别成第二个 NIO Warp 应用。
+
+**不接外屏也能正常打开。** 控制台显示“等待外屏”，可查看已保存参数、切换几何预览及导出参数；需要外屏的调节按钮暂时灰显，不捕获或覆盖笔记本内屏，也不改写外屏标定配置。接上可用外屏后自动恢复；拔掉外屏后保留待机控制台。详见 [无外屏待机说明](docs/offline-console-v061.md)。
 
 重新构建并安装最新版：
 
@@ -66,7 +68,7 @@ scripts/install-app.sh
 /Users/rayman.chen/mycc/2-Projects/nio-warp-demo/start-native-warp.command
 ```
 
-首次启动时：
+首次连接可用外屏并启用捕获时：
 
 1. macOS 会请求“屏幕与系统音频录制”权限。
 2. 在系统设置中允许 `NIOWarpApp`。

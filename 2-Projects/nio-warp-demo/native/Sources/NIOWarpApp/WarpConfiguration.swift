@@ -464,6 +464,7 @@ extension WarpConfiguration {
 final class ConfigurationStore {
     private let legacyKey = "nioWarpConfiguration.v1"
     private let profileKeyPrefix = "nioWarpConfiguration.v2"
+    private let lastProfileKey = "nioWarpLastDisplayProfile"
     private let defaults: UserDefaults
     private let encoder: JSONEncoder
     private let decoder = JSONDecoder()
@@ -482,6 +483,7 @@ final class ConfigurationStore {
         displayHeight: Int
     ) -> WarpConfiguration {
         activeKey = profileKey(for: displayIdentifier)
+        defaults.set(activeKey, forKey: lastProfileKey)
         if let configuration = decodedConfiguration(forKey: activeKey) {
             return persistSanitized(configuration, displayWidth: displayWidth, displayHeight: displayHeight)
         }
@@ -495,6 +497,21 @@ final class ConfigurationStore {
         let configuration = WarpConfiguration.defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
         save(configuration)
         return configuration
+    }
+
+    func offlineConfiguration() -> WarpConfiguration {
+        var keys = [String]()
+        if let last = defaults.string(forKey: lastProfileKey), last.hasPrefix(profileKeyPrefix + ".") { keys.append(last) }
+        keys += defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(profileKeyPrefix + ".") }.sorted()
+        keys.append(legacyKey)
+        for key in keys {
+            guard let saved = decodedConfiguration(forKey: key), saved.displayPixelWidth > 0, saved.displayPixelHeight > 0,
+                  saved.validationErrors().isEmpty else { continue }
+            let preview = saved.sanitized(forDisplayWidth: saved.displayPixelWidth, height: saved.displayPixelHeight)
+            if preview.validationErrors().isEmpty,
+               WarpMath.makeMesh(configuration: preview, columns: 32, rows: 16).validation.isValid { return preview }
+        }
+        return .defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
     }
 
     func save(_ configuration: WarpConfiguration) {

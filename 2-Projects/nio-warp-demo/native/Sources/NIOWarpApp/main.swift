@@ -36,12 +36,20 @@ final class LatestFrameStore {
         defer { lock.unlock() }
         return pixelBuffer
     }
+
+    func clear() {
+        lock.lock()
+        pixelBuffer = nil
+        lock.unlock()
+    }
 }
 
 private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     let frameStore = LatestFrameStore()
     private let queue = DispatchQueue(label: "com.mycc.nio-warp.capture", qos: .userInteractive)
     private var stream: SCStream?
+    private let streamIdentityLock = NSLock()
+    private var activeStreamIdentity: ObjectIdentifier?
     private var monitorTask: Task<Void, Never>?
     private var displayID: CGDirectDisplayID?
     private var displayPixelWidth = 0
@@ -69,6 +77,7 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         self.sourceMode = sourceMode
         self.minimumCoverage = minimumCoverage
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        try Task.checkCancellation()
         guard let display = content.displays.first(where: { $0.displayID == displayID }) else {
             throw NSError(domain: "NIOWarp", code: 1, userInfo: [NSLocalizedDescriptionKey: "无法找到源显示器"])
         }
@@ -78,7 +87,9 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         let stream = SCStream(filter: filter, configuration: configuration, delegate: self)
         try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
         self.stream = stream
+        markActiveStream(stream)
         try await stream.startCapture()
+        try Task.checkCancellation()
         emitPresentation(
             sourceMode == .automaticFullscreenWindow
                 ? .waitingForFullscreenWindow
@@ -87,12 +98,20 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         if sourceMode == .automaticFullscreenWindow { startMonitoring() }
     }
 
+    private func markActiveStream(_ stream: SCStream?) {
+        streamIdentityLock.lock()
+        activeStreamIdentity = stream.map(ObjectIdentifier.init)
+        if stream == nil { frameStore.clear() }
+        streamIdentityLock.unlock()
+    }
+
     func stop() async {
+        markActiveStream(nil)
         monitorTask?.cancel()
         monitorTask = nil
-        guard let stream else { return }
-        try? await stream.stopCapture()
+        if let stream { try? await stream.stopCapture() }
         self.stream = nil
+        frameStore.clear()
         currentWindowID = nil
         pendingWindowID = nil
         pendingWindowCount = 0
@@ -120,13 +139,17 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         guard outputType == .screen,
               sampleBuffer.isValid,
               let imageBuffer = sampleBuffer.imageBuffer else { return }
+        streamIdentityLock.lock()
+        defer { streamIdentityLock.unlock() }
+        guard activeStreamIdentity == ObjectIdentifier(stream) else { return }
         frameStore.update(imageBuffer)
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        DispatchQueue.main.async { [weak self] in
-            self?.onError?(error.localizedDescription)
-        }
+        streamIdentityLock.lock()
+        let isCurrent = activeStreamIdentity == ObjectIdentifier(stream)
+        streamIdentityLock.unlock()
+        if isCurrent { emitError(error.localizedDescription) }
     }
 
     private func startMonitoring() {
@@ -145,7 +168,7 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
               stream != nil else { return }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            guard sourceMode == .automaticFullscreenWindow, stream != nil else { return }
+            guard !Task.isCancelled, sourceMode == .automaticFullscreenWindow, stream != nil else { return }
             guard let display = content.displays.first(where: { $0.displayID == displayID }) else { return }
             let currentBundleID = Bundle.main.bundleIdentifier
             let eligibleWindows = content.windows.filter { window in
@@ -197,6 +220,7 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
             guard sourceMode == .automaticFullscreenWindow else { return }
             try await switchToWindow(window)
         } catch {
+            guard !Task.isCancelled else { return }
             emitNotice("自动跟随暂时不可用，已保留当前捕获：\(error.localizedDescription)")
         }
     }
@@ -290,15 +314,18 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         NSLog("[NIOWarp Capture] %@", presentation.summary)
         UserDefaults.standard.set(presentation.summary, forKey: "nioWarpRuntimeCaptureSummary")
         UserDefaults.standard.set(Date(), forKey: "nioWarpRuntimeCaptureUpdatedAt")
-        DispatchQueue.main.async { [weak self] in self?.onPresentation?(presentation) }
+        let callback = onPresentation
+        DispatchQueue.main.async { callback?(presentation) }
     }
 
     private func emitError(_ message: String) {
-        DispatchQueue.main.async { [weak self] in self?.onError?(message) }
+        let callback = onError
+        DispatchQueue.main.async { callback?(message) }
     }
 
     private func emitNotice(_ message: String) {
-        DispatchQueue.main.async { [weak self] in self?.onNotice?(message) }
+        let callback = onNotice
+        DispatchQueue.main.async { callback?(message) }
     }
 }
 
@@ -891,8 +918,8 @@ private final class OutputController {
     }
 }
 
-private final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
-    private let renderer: WarpRenderer
+final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
+    private let renderer: WarpRenderer?
     private let store: ConfigurationStore
     private let presetStore = PresetStore()
     private let historyStore = ConfigurationHistoryStore()
@@ -959,17 +986,21 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let presetPicker = NSPopUpButton()
     private let historyButton = NSButton(title: "撤销上一次设置", target: nil, action: nil)
 
+    var isWaitingForDisplay: Bool { renderer == nil }
+    var configurationForOfflinePreview: WarpConfiguration { lastAppliedConfiguration }
+
     init(
-        renderer: WarpRenderer,
+        renderer: WarpRenderer?,
         store: ConfigurationStore,
         configuration: WarpConfiguration,
-        sourceScreen: NSScreen,
-        outputScreen: NSScreen,
+        sourceScreen: NSScreen?,
+        outputScreen: NSScreen?,
         setWarpVisible: @escaping (Bool) -> Void,
         isWarpVisible: @escaping () -> Bool,
         applyCaptureConfiguration: @escaping (CaptureConfiguration) -> Void,
         updateAABoundary: @escaping (NormalizedRect, Bool) -> Void,
-        updateWarpBoundary: @escaping (WarpConfiguration, Bool) -> Void
+        updateWarpBoundary: @escaping (WarpConfiguration, Bool) -> Void,
+        presentWindow: Bool = true
     ) {
         self.renderer = renderer
         self.store = store
@@ -991,6 +1022,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             defer: false
         )
         panel.title = "NIO 全屏 Warp 标定控制台 · \(AppVersion.display)"
+        if renderer == nil { panel.title += " · 等待外屏" }
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
@@ -1001,20 +1033,20 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         refreshControls()
         refreshPresets()
         startPerformanceMonitoring()
-        let visibleFrame = sourceScreen.visibleFrame
+        let visibleFrame = sourceScreen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let origin = NSPoint(
             x: visibleFrame.midX - panel.frame.width * 0.5,
             y: visibleFrame.midY - panel.frame.height * 0.5
         )
         panel.setFrameOrigin(origin)
-        bringToFront()
+        if presentWindow { bringToFront() }
     }
 
     required init?(coder: NSCoder) { nil }
 
     deinit { performanceTimer?.invalidate() }
 
-    private func buildInterface(sourceScreen: NSScreen, outputScreen: NSScreen) {
+    private func buildInterface(sourceScreen: NSScreen?, outputScreen: NSScreen?) {
         guard let contentView = window?.contentView else { return }
         let scrollView = NSScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -1060,9 +1092,20 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(version)
         stack.addArrangedSubview(titleRow)
-        let topology = NSTextField(wrappingLabelWithString: "控制台：\(screenName(sourceScreen))\n捕获与输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) 物理像素\n先调好弯曲形状，再记住起点并增加画布宽高。AA 是显示窗口，不是画布边界。")
+        let controlDescription = sourceScreen.map(screenName) ?? "等待系统显示器信息"
+        let outputDescription = outputScreen.map(screenName) ?? "未连接；当前不捕获、不输出校正画面"
+        let parameterDescription = isWaitingForDisplay
+            ? "下方是已保存外屏参数的只读预览，没有历史时显示默认模板；尺寸不是笔记本内屏分辨率。"
+            : "\(displayWidth)×\(displayHeight) 物理像素；先调好弯曲形状，再记住起点并增加画布宽高。"
+        let topology = NSTextField(wrappingLabelWithString: "控制台：\(controlDescription)\n捕获与输出：\(outputDescription)\n\(parameterDescription)")
         topology.textColor = .secondaryLabelColor
         stack.addArrangedSubview(topology)
+        if isWaitingForDisplay {
+            let waiting = explanation("等待外接屏幕：程序已正常打开，画面处理尚未启动。可查看预览和导出参数；连接外屏后，灰色设置会自动恢复可操作。")
+            waiting.textColor = .systemOrange
+            waiting.font = .systemFont(ofSize: 13, weight: .semibold)
+            stack.addArrangedSubview(waiting)
+        }
 
         stack.addArrangedSubview(sectionTitle("0. 输入源与自动铺满"))
         CaptureSourceMode.allCases.forEach { captureSourcePicker.addItem(withTitle: $0.title) }
@@ -1415,6 +1458,27 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         refreshContentMappingStatus()
         refreshRuntimePreviewControls()
         refreshCanvasGeometry()
+        if isWaitingForDisplay { configureWaitingControls() }
+    }
+
+    private func configureWaitingControls() {
+        func disableEditing(in view: NSView) {
+            for child in view.subviews {
+                if let field = child as? NSTextField {
+                    if field.isEditable { field.isEnabled = false }
+                } else if let control = child as? NSControl {
+                    let canUseOffline = control === geometryPreviewPicker
+                        || control.action == #selector(exportConfiguration)
+                        || control.action == #selector(NSApplication.terminate(_:))
+                    control.isEnabled = canUseOffline
+                }
+                disableEditing(in: child)
+            }
+        }
+        if let content = window?.contentView { disableEditing(in: content) }
+        capturePresentationLabel.stringValue = "待机：尚未开始屏幕捕获；连接外屏后会自动启用。"
+        performanceLabel.stringValue = "待机中：没有启动 Warp 渲染或性能采样。"
+        pauseWarpButton.title = "等待外屏，暂不输出"
     }
 
     private func rebuildTermPicker() {
@@ -1435,6 +1499,12 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        guard let renderer else {
+            configuration = lastAppliedConfiguration
+            refreshControls()
+            setStatus("当前没有可用外屏，设置未应用。请连接外屏后再修改；已保存的外屏参数没有改变。", color: .systemOrange)
+            return
+        }
         let errors = configuration.validationErrors()
         if !errors.isEmpty {
             configuration = lastAppliedConfiguration
@@ -1589,6 +1659,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
+        guard let renderer else { return }
         let preview = previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
         let validation = renderer.updateConfiguration(preview)
         updateWarpBoundary(preview, preview.render.showWarpBoundary)
@@ -1599,6 +1670,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func leaveRuntimePreview(message: String = "已返回校正状态") {
+        guard let renderer else { return }
         runtimePreviewMode = .normal
         runtimePreviewReturnMode = .normal
         let validation = renderer.updateConfiguration(configuration)
@@ -1624,12 +1696,14 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func startPerformanceMonitoring() {
+        guard renderer != nil else { return }
         performanceTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.refreshPerformanceStatus()
         }
     }
 
     private func refreshPerformanceStatus() {
+        guard let renderer else { return }
         let didFallback = renderer.evaluateAutomaticPerformanceFallback()
         let snapshot = renderer.performanceSnapshot()
         let effective = renderer.effectiveAntiAliasingMode.title
@@ -1676,6 +1750,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
 
     func bringToFront() {
         guard let window else { return }
+        if window.isMiniaturized { window.deminiaturize(nil) }
         window.orderFrontRegardless()
         window.makeKey()
     }
@@ -1839,6 +1914,10 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     func updateWarpVisibilityState(_ visible: Bool) {
+        if isWaitingForDisplay {
+            pauseWarpButton.title = "等待外屏，暂不输出"
+            return
+        }
         pauseWarpButton.title = visible ? "暂时显示原始桌面" : "重新显示校正画面"
     }
 
@@ -2049,6 +2128,10 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isReconfiguring = false
     private var screenChangeWorkItem: DispatchWorkItem?
     private var startupRetryWorkItem: DispatchWorkItem?
+    private var captureStartupTask: Task<Void, Never>?
+    private var sessionEpoch = 0
+    private var waitingMessage: String?
+    private var displaysAsleep = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(AppPresentationPolicy.activationPolicy)
@@ -2073,27 +2156,31 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             name: NSWorkspace.screensDidWakeNotification,
             object: nil
         )
-        startSession(showFatalOnFailure: false)
+        startSession()
         if emergencyHotKey == nil {
             controlPanel?.setStatus("警告：全局紧急快捷键注册失败，请使用控制台的“暂时显示原始桌面”。", color: .systemRed)
         }
     }
 
-    private func startSession(showFatalOnFailure: Bool) {
+    private func startSession() {
         startupRetryWorkItem?.cancel()
+        guard !displaysAsleep else { return }
+        sessionEpoch += 1
+        let epoch = sessionEpoch
         guard let topology = chooseScreens(),
               let outputID = displayID(for: topology.output) else {
-            if showFatalOnFailure {
-                showFatal("需要同时连接 MacBook 内置屏和一台外接显示器。")
-            } else {
-                emergencyHideWarp(reason: "未检测到外接屏，Warp 已安全隐藏；重新连接后会自动恢复。")
-                scheduleStartupRetry()
-            }
+            showWaitingControlPanel(message: waitingForScreenMessage())
+            scheduleStartupRetry()
             return
         }
         let displayMode = CGDisplayCopyDisplayMode(outputID)
         let pixelWidth = displayMode?.pixelWidth ?? CGDisplayPixelsWide(outputID)
         let pixelHeight = displayMode?.pixelHeight ?? CGDisplayPixelsHigh(outputID)
+        guard pixelWidth > 0, pixelHeight > 0 else {
+            showWaitingControlPanel(message: "外屏像素信息尚未就绪，控制台保持待机；就绪后会自动启用。")
+            scheduleStartupRetry()
+            return
+        }
         let displayIdentifier = displayProfileIdentifier(for: outputID)
         let configuration = configurationStore.load(
             displayIdentifier: displayIdentifier,
@@ -2107,16 +2194,12 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             frameStore: captureEngine.frameStore,
             configuration: configuration
         ) else {
-            if showFatalOnFailure {
-                showFatal("无法初始化 Metal 输出。")
-            } else {
-                emergencyHideWarp(reason: "外屏尚未就绪，Warp 已安全隐藏；程序会自动重试。")
-                scheduleStartupRetry()
-            }
+            showWaitingControlPanel(message: "外屏图形输出尚未就绪，控制台保持待机；程序会自动重试。")
+            scheduleStartupRetry()
             return
         }
         self.outputController = outputController
-        controlPanel?.close()
+        let previousPanel = controlPanel
         let controlPanel = ControlPanelController(
             renderer: outputController.renderer,
             store: configurationStore,
@@ -2127,12 +2210,14 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             isWarpVisible: { [weak outputController] in outputController?.isWarpVisible ?? false },
             applyCaptureConfiguration: { [weak self] captureConfiguration in
                 Task { @MainActor [weak self] in
+                    guard self?.sessionEpoch == epoch else { return }
                     do {
                         try await self?.captureEngine.updateSourceMode(
                             captureConfiguration.sourceMode,
                             minimumCoverage: captureConfiguration.fullscreenCoverageThreshold
                         )
                     } catch {
+                        guard self?.sessionEpoch == epoch else { return }
                         self?.controlPanel?.setStatus(
                             "切换输入源失败：\(error.localizedDescription)。已保留当前捕获。",
                             color: .systemOrange
@@ -2148,15 +2233,20 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         )
         self.controlPanel = controlPanel
+        waitingMessage = nil
+        previousPanel?.close()
         NSApp.activate(ignoringOtherApps: true)
         controlPanel.bringToFront()
         captureEngine.onError = { [weak self] message in
+            guard self?.sessionEpoch == epoch else { return }
             self?.emergencyHideWarp(reason: "捕获中断：\(message)。Warp 覆盖层已安全隐藏。")
         }
         captureEngine.onNotice = { [weak self] message in
+            guard self?.sessionEpoch == epoch else { return }
             self?.controlPanel?.setStatus(message, color: .systemOrange)
         }
-        captureEngine.onPresentation = { [weak controlPanel] presentation in
+        captureEngine.onPresentation = { [weak self, weak controlPanel] presentation in
+            guard self?.sessionEpoch == epoch else { return }
             controlPanel?.updateCapturePresentation(presentation)
         }
 
@@ -2172,7 +2262,8 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        Task {
+        captureStartupTask = Task { @MainActor [weak self, weak controlPanel] in
+            guard let self else { return }
             do {
                 try await captureEngine.start(
                     displayID: outputID,
@@ -2181,42 +2272,83 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
                     sourceMode: configuration.capture.sourceMode,
                     minimumCoverage: configuration.capture.fullscreenCoverageThreshold
                 )
-                await MainActor.run {
-                    controlPanel.setStatus(
-                        configuration.capture.sourceMode == .automaticFullscreenWindow
-                            ? "自动跟随已启动：播放器进入全屏后会在约 1 秒内切为单窗口捕获。"
-                            : "正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。"
-                    )
-                    NSApp.activate(ignoringOtherApps: true)
-                    controlPanel.bringToFront()
-                }
+                guard !Task.isCancelled, self.sessionEpoch == epoch else { return }
+                controlPanel?.setStatus(
+                    configuration.capture.sourceMode == .automaticFullscreenWindow
+                        ? "自动跟随已启动：播放器进入全屏后会在约 1 秒内切为单窗口捕获。"
+                        : "正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。"
+                )
+                NSApp.activate(ignoringOtherApps: true)
+                controlPanel?.bringToFront()
             } catch {
-                await MainActor.run {
-                    self.emergencyHideWarp(reason: "启动失败：\(error.localizedDescription)。Warp 覆盖层已安全隐藏。")
-                }
+                guard !Task.isCancelled, self.sessionEpoch == epoch else { return }
+                self.emergencyHideWarp(reason: "启动失败：\(error.localizedDescription)。Warp 覆盖层已安全隐藏。")
             }
         }
     }
 
+    private func waitingForScreenMessage() -> String {
+        let hasExternal = NSScreen.screens.contains { screen in
+            guard let id = displayID(for: screen) else { return false }
+            return CGDisplayIsBuiltin(id) == 0
+        }
+        return DisplaySessionPolicy.waitingMessage(hasExternalScreen: hasExternal)
+    }
+
+    private func showWaitingControlPanel(message: String) {
+        outputController?.setWarpVisible(false)
+        if let controlPanel, controlPanel.isWaitingForDisplay {
+            if waitingMessage != message { controlPanel.setStatus(message, color: .systemOrange) }
+            waitingMessage = message
+            return
+        }
+        let preview = controlPanel?.configurationForOfflinePreview ?? configurationStore.offlineConfiguration()
+        let source = NSScreen.screens.first(where: { screen in
+            guard let id = displayID(for: screen) else { return false }
+            return CGDisplayIsBuiltin(id) != 0
+        }) ?? NSScreen.main ?? NSScreen.screens.first
+        let previousPanel = controlPanel
+        let panel = ControlPanelController(
+            renderer: nil, store: configurationStore, configuration: preview,
+            sourceScreen: source, outputScreen: nil,
+            setWarpVisible: { _ in }, isWarpVisible: { false },
+            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }
+        )
+        controlPanel = panel
+        waitingMessage = message
+        panel.setStatus(message, color: .systemOrange)
+        previousPanel?.close()
+        NSApp.activate(ignoringOtherApps: true)
+        panel.bringToFront()
+    }
+
     private func restartSession(reason: String) {
+        sessionEpoch += 1
+        captureStartupTask?.cancel()
+        outputController?.setWarpVisible(false)
+        if chooseScreens() == nil || displaysAsleep {
+            showWaitingControlPanel(message: displaysAsleep ? "显示器已休眠，画面处理暂停；唤醒后自动恢复。" : waitingForScreenMessage())
+        }
         guard !isReconfiguring else { return }
         isReconfiguring = true
-        emergencyHideWarp(reason: reason)
-        Task {
+        if controlPanel?.isWaitingForDisplay != true { emergencyHideWarp(reason: reason) }
+        let previousStartup = captureStartupTask
+        Task { @MainActor in
+            await previousStartup?.value
             await captureEngine.stop()
-            await MainActor.run {
-                outputController = nil
-                startSession(showFatalOnFailure: false)
-                isReconfiguring = false
-            }
+            outputController?.window.close()
+            outputController = nil
+            captureStartupTask = nil
+            isReconfiguring = false
+            startSession()
         }
     }
 
     private func scheduleStartupRetry() {
         startupRetryWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self, self.outputController == nil, !self.isReconfiguring else { return }
-            self.startSession(showFatalOnFailure: false)
+            guard let self, self.outputController == nil, !self.isReconfiguring, !self.displaysAsleep else { return }
+            self.startSession()
         }
         startupRetryWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: workItem)
@@ -2231,6 +2363,10 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func screenParametersChanged() {
+        sessionEpoch += 1
+        captureStartupTask?.cancel()
+        outputController?.setWarpVisible(false)
+        if chooseScreens() == nil { showWaitingControlPanel(message: waitingForScreenMessage()) }
         screenChangeWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             self?.restartSession(reason: "检测到外屏连接或分辨率变化，已隐藏覆盖层并重建输出。")
@@ -2240,15 +2376,21 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func screensDidSleep() {
-        emergencyHideWarp(reason: "显示器已休眠，Warp 覆盖层已安全隐藏。")
-        Task { await captureEngine.stop() }
+        displaysAsleep = true
+        startupRetryWorkItem?.cancel()
+        screenChangeWorkItem?.cancel()
+        restartSession(reason: "显示器已休眠，Warp 覆盖层已安全隐藏。")
     }
 
     @objc private func screensDidWake() {
+        displaysAsleep = false
         restartSession(reason: "显示器已唤醒，正在重建 Warp 输出。")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        sessionEpoch += 1
+        captureStartupTask?.cancel()
+        screenChangeWorkItem?.cancel()
         startupRetryWorkItem?.cancel()
         NotificationCenter.default.removeObserver(self)
         NSWorkspace.shared.notificationCenter.removeObserver(self)
@@ -2257,18 +2399,24 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if controlPanel == nil { startSession() }
+        NSApp.activate(ignoringOtherApps: true)
+        controlPanel?.bringToFront()
+        return false
+    }
+
     private func chooseScreens() -> (source: NSScreen, output: NSScreen)? {
         let screens = NSScreen.screens
-        guard screens.count >= 2 else { return nil }
-        let builtIn = screens.first(where: { screen in
-            guard let id = displayID(for: screen) else { return false }
-            return CGDisplayIsBuiltin(id) != 0
-        }) ?? NSScreen.main ?? screens[0]
-        let output = screens
-            .filter { $0 !== builtIn }
-            .max { lhs, rhs in lhs.frame.width * lhs.frame.height < rhs.frame.width * rhs.frame.height }
-        guard let output else { return nil }
-        return (builtIn, output)
+        let candidates = screens.compactMap { screen -> WarpScreenCandidate? in
+            guard let id = displayID(for: screen) else { return nil }
+            return WarpScreenCandidate(id: id, isBuiltIn: CGDisplayIsBuiltin(id) != 0, area: screen.frame.width * screen.frame.height)
+        }
+        let preferredControl = NSScreen.main.flatMap(displayID)
+        guard let selection = DisplaySessionPolicy.selection(screens: candidates, preferredControlID: preferredControl),
+              let control = screens.first(where: { displayID(for: $0) == selection.controlID }),
+              let output = screens.first(where: { displayID(for: $0) == selection.outputID }) else { return nil }
+        return (control, output)
     }
 
     private func displayID(for screen: NSScreen) -> CGDirectDisplayID? {
@@ -2282,14 +2430,6 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         return "vendor-\(vendor)-model-\(model)-serial-\(serial)"
     }
 
-    private func showFatal(_ message: String) {
-        let alert = NSAlert()
-        alert.messageText = "NIO Warp 无法启动"
-        alert.informativeText = message
-        alert.alertStyle = .critical
-        alert.runModal()
-        NSApp.terminate(nil)
-    }
 }
 
 let application = NSApplication.shared
