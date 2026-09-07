@@ -945,6 +945,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private var captureSourceHeight: Int
 
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
+    private let globalStatusLabel = NSTextField(wrappingLabelWithString: "正在准备控制台…")
+    private let configurationTabs = NSTabView()
+    private var tabPageDocuments = [NSView]()
     private let captureSourcePicker = NSPopUpButton()
     private let capturePresentationLabel = NSTextField(wrappingLabelWithString: "当前捕获：初始化中…")
     private let aaXField = NSTextField()
@@ -1021,7 +1024,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         captureSourceWidth = configuration.displayPixelWidth
         captureSourceHeight = configuration.displayPixelHeight
         let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 790),
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 790),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -1032,7 +1035,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
-        panel.minSize = NSSize(width: 560, height: 500)
+        panel.minSize = NSSize(width: 600, height: 500)
         super.init(window: panel)
         buildInterface(sourceScreen: sourceScreen, outputScreen: outputScreen)
         refreshControls()
@@ -1053,36 +1056,31 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
 
     private func buildInterface(sourceScreen: NSScreen?, outputScreen: NSScreen?) {
         guard let contentView = window?.contentView else { return }
-        let scrollView = NSScrollView()
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.hasVerticalScroller = true
-        scrollView.drawsBackground = false
-        contentView.addSubview(scrollView)
+        let header = NSStackView()
+        header.orientation = .vertical
+        header.alignment = .leading
+        header.spacing = 8
+        header.translatesAutoresizingMaskIntoConstraints = false
+        configurationTabs.translatesAutoresizingMaskIntoConstraints = false
+        configurationTabs.tabViewType = .topTabsBezelBorder
+        configurationTabs.font = .systemFont(ofSize: 13, weight: .medium)
+        configurationTabs.setAccessibilityLabel("配置分类")
+        contentView.addSubview(header)
+        contentView.addSubview(configurationTabs)
         NSLayoutConstraint.activate([
-            scrollView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            header.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
+            header.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
+            header.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
+            configurationTabs.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 12),
+            configurationTabs.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
+            configurationTabs.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
+            configurationTabs.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
         ])
-
-        let documentView = FlippedView()
-        documentView.translatesAutoresizingMaskIntoConstraints = false
-        scrollView.documentView = documentView
-        documentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor).isActive = true
-
-        let stack = NSStackView()
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 12
-        stack.edgeInsets = NSEdgeInsets(top: 20, left: 22, bottom: 22, right: 22)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        documentView.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
-            stack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
-            stack.topAnchor.constraint(equalTo: documentView.topAnchor),
-            stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
-        ])
+        let basicPage = makeTabPage(title: "基础配置", identifier: "basic")
+        let opticalPage = makeTabPage(title: "光学标定", identifier: "optical")
+        let settingsPage = makeTabPage(title: "属性设置", identifier: "settings")
+        configurationTabs.selectTabViewItem(at: 0)
+        var stack = header
 
         let titleRow = NSStackView()
         titleRow.orientation = .horizontal
@@ -1097,6 +1095,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(version)
         stack.addArrangedSubview(titleRow)
+        globalStatusLabel.textColor = .secondaryLabelColor
+        globalStatusLabel.font = .systemFont(ofSize: 12)
+        globalStatusLabel.maximumNumberOfLines = 2
+        globalStatusLabel.preferredMaxLayoutWidth = 550
+        globalStatusLabel.heightAnchor.constraint(equalToConstant: 34).isActive = true
+        globalStatusLabel.setAccessibilityIdentifier("nio-global-status")
+        stack.addArrangedSubview(globalStatusLabel)
+        stack = basicPage
         let controlDescription = sourceScreen.map(screenName) ?? "等待系统显示器信息"
         let outputDescription = outputScreen.map(screenName) ?? "未连接；当前不捕获、不输出校正画面"
         let parameterDescription = isWaitingForDisplay
@@ -1191,6 +1197,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         canvasMeasurementLabel.textColor = .secondaryLabelColor
         stack.addArrangedSubview(canvasMeasurementLabel)
 
+        stack = opticalPage
         stack.addArrangedSubview(sectionTitle("3. 镜像"))
         horizontalMirrorButton.target = self
         horizontalMirrorButton.action = #selector(updateMirror)
@@ -1198,6 +1205,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         verticalMirrorButton.action = #selector(updateMirror)
         stack.addArrangedSubview(buttonRow([horizontalMirrorButton, verticalMirrorButton]))
 
+        stack = basicPage
         stack.addArrangedSubview(sectionTitle("4. 基础校畸变"))
         warpButton.target = self
         warpButton.action = #selector(toggleWarp)
@@ -1212,6 +1220,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         stack.addArrangedSubview(makeSlider(title: "整体倾斜", slider: tiltSlider, minimum: -0.12, maximum: 0.12, action: #selector(updateTilt)))
         stack.addArrangedSubview(makeSlider(title: "水平弯曲", slider: horizontalBendSlider, minimum: -0.08, maximum: 0.08, action: #selector(updateHorizontalBend)))
 
+        stack = opticalPage
         stack.addArrangedSubview(sectionTitle("5. 多项式增量"))
         polynomialButton.target = self
         polynomialButton.action = #selector(togglePolynomial)
@@ -1255,6 +1264,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         performanceLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(performanceLabel)
 
+        stack = settingsPage
         stack.addArrangedSubview(sectionTitle("7. 预设与版本回退"))
         presetNameField.placeholderString = "例如：玻璃 A / 驾驶位"
         presetNameField.widthAnchor.constraint(equalToConstant: 220).isActive = true
@@ -1286,6 +1296,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         stack.addArrangedSubview(statusLabel)
 
         let hint = NSTextField(wrappingLabelWithString: "紧急恢复：按 ⌃⌥⌘Esc 可立即隐藏外屏覆盖层。当前是视觉接管，Warp 后的视觉坐标尚未做输入逆映射。")
+        hint.preferredMaxLayoutWidth = 490
         hint.textColor = .secondaryLabelColor
         stack.addArrangedSubview(hint)
         stack.addArrangedSubview(makeButton("退出程序，恢复原始桌面", action: #selector(NSApplication.terminate(_:)), target: NSApp))
@@ -1300,6 +1311,37 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             (testPatternButton, "用带方向角标的网格替代桌面，检查曲线和镜像；关闭后恢复桌面或视频。"),
         ]
         checkboxHelp.forEach { button, text in button.toolTip = text; button.setAccessibilityHelp(text) }
+    }
+
+    private func makeTabPage(title: String, identifier: String) -> NSStackView {
+        let scrollView = NSScrollView(frame: .zero)
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.drawsBackground = false
+        let documentView = FlippedView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.documentView = documentView
+        documentView.widthAnchor.constraint(equalTo: scrollView.contentView.widthAnchor).isActive = true
+        let stack = NSStackView()
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 12
+        stack.edgeInsets = NSEdgeInsets(top: 18, left: 22, bottom: 22, right: 22)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        documentView.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: documentView.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: documentView.bottomAnchor),
+        ])
+        let item = NSTabViewItem(identifier: identifier)
+        item.label = title
+        item.view = scrollView
+        configurationTabs.addTabViewItem(item)
+        tabPageDocuments.append(documentView)
+        return stack
     }
 
     private func screenName(_ screen: NSScreen) -> String {
@@ -1480,8 +1522,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                 disableEditing(in: child)
             }
         }
-        if let content = window?.contentView { disableEditing(in: content) }
+        tabPageDocuments.forEach { disableEditing(in: $0) }
         capturePresentationLabel.stringValue = "待机：尚未开始屏幕捕获；连接外屏后会自动启用。"
+        globalStatusLabel.stringValue = capturePresentationLabel.stringValue
         performanceLabel.stringValue = "待机中：没有启动 Warp 渲染或性能采样。"
         pauseWarpButton.title = "等待外屏，暂不输出"
     }
@@ -1739,6 +1782,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     func setStatus(_ text: String, color: NSColor = .systemGreen) {
         statusLabel.stringValue = text
         statusLabel.textColor = color
+        globalStatusLabel.stringValue = text
+        globalStatusLabel.textColor = color
+        globalStatusLabel.toolTip = text
     }
 
     func updateCapturePresentation(_ presentation: CapturePresentation) {

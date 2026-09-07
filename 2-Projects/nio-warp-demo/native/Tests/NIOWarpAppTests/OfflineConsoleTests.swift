@@ -118,7 +118,8 @@ final class OfflineConsoleTests: XCTestCase {
         func controls(_ view: NSView) -> [NSControl] {
             view.subviews.flatMap { child in (child as? NSControl).map { [$0] } ?? [] } + view.subviews.flatMap(controls)
         }
-        let allControls = controls(content)
+        let tabView = try XCTUnwrap(content.subviews.compactMap { $0 as? NSTabView }.first)
+        let allControls = tabView.tabViewItems.compactMap(\.view).flatMap(controls)
         let buttons = allControls.compactMap { $0 as? NSButton }
         for button in buttons {
             let allowed = ["导出参数备份", "退出程序，恢复原始桌面", "看完整曲面（含超出 AA 的部分）"].contains(button.title)
