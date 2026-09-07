@@ -141,10 +141,12 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 |------|------|
 | `api.anthropic.com` | **新美宅-Claude-GPT**（64.186.235.107:7443 → 落地 lisa 154.44.3.170） |
 | `github.com` 系 27 域 | **balancer `github-us2`**（两个 Gemini专用-US2 leastPing 优选，fallbackTag=DMIT-Gemini；JP-Linode-V1 手动兜底预案）—— 2026-09-01 因 DMIT 流量限速切换，**五台全同步**：Air / Mini / home-studio / linux-lan(sudo 密码在 hs Vaultwarden 条目 `linux-lan`) / **公司 Studio(fu-121 用户 ~/xray，2026-08-13 起有本机 xray，旧记载「Studio 无 xray」作废)** |
-| `chatgpt.com` / `youtube.com` / `x.com` | DMIT-Gemini-vps-chenchuan |
+| `chatgpt.com`/`openai.com` 系 79 域 | **新美宅-Claude-GPT**（2026-09-03 统一，Air 已改；Mini/hs/linux-lan/Studio 未同步）——旧记载「chatgpt.com 走 DMIT-Gemini」已作废，`yecaoyun.com`（野草云，与 ChatGPT 无关，此前误混进同一条规则）单独留在 DMIT-Gemini 未动 |
+| `gmail.com` / `yt4.ggpht.com` | JP-Linode-V1 |
+| `youtube.com` / `x.com` | DMIT-Gemini-vps-chenchuan |
 | `registry.npmjs.org` | 新美宅-Claude-GPT |
 | 大陆域名（`geosite:cn`） | direct |
-| **其他（兜底）** | **DMIT-Gemini-vps-chenchuan** ← 见下方"改默认节点" |
+| **其他（兜底）** | **DMIT-Gemini-vps-chenchuan**（⚠️ 真实落地出口 IP = `38.49.38.237`，2026-09-03 实测——**与两个 `Gemini专用-US2-*` 节点同一台机器**，不是"美宅系"记载的 lisa 154.44.3.170；那条记载专指「新美宅-Claude-GPT」与「美宅-Claude-GPT_mychenchuan」两个节点）← 见下方"改默认节点" |
 
 ### 🔴 domain+ip 写进同一条规则 = AND = 整条静默失效（2026-08-31 事故）
 
@@ -305,6 +307,17 @@ rule[5] 是「开发者下载」大组（github + githubusercontent + codeload +
 ### 节点连得上但整体慢 → 先问「流量配额限速」再谈线路劣化（2026-09-01）
 
 同节点全站慢（TLS 1s+/吞吐被压/入口 RTT 高抖）时，**配额限速与线路劣化症状完全同形**，链路层测不出区别；真值在服务商面板的流量余额，cc 够不到 → **直接问川哥该节点流量是否用完**，别急着给「切节点/等自愈」建议（限速不会自愈，等的是账期重置或补流量）。实例：DMIT 流量用尽限速，github 组 total 3.3s/吞吐 1.6MB/s，全套观测像极了「早高峰拥塞」。
+
+### 合并/删除路由规则前，先做完整域名差集比对（2026-09-03）
+
+把「域名 A 拆两条规则」收口成一条时，别凭肉眼扫一眼「看着差不多」就删旧留新——两个真实事故都在证明这一步必须用代码做精确差集：
+- **遗漏**：旧规则里的域名不一定是新规则的子集。实例：`ws.chatgpt.com` 只在旧的 DMIT 规则里，新美宅那条 79 域列表里没有；肉眼扫一遍 20 个相似域名很容易漏看这一个。
+- **混入**：历史编辑可能往规则里塞过完全不相关的域名。实例：`domain:yecaoyun.com`（野草云，EasyTier mesh 用的域名）混进了标注为 ChatGPT 专用的规则里，字面意思对不上，删规则前不细看会被一起错误迁移。
+- **做法**：`python3` 里对两个 `domain` 列表取差集（`[d for d in old if d not in new]`），非空就先分类每一项「该并入」还是「该保留独立」，绝不整条规则不做检查地删/并。
+
+### 用第三方域名测「当前页面走哪个出口」，探针域名必须和被测域名命中同一条路由规则（2026-09-03）
+
+排查 chatgpt.com/openai.com 时，为确认 Browser pane 真实走的出口 IP，先后两次用 `fetch('https://ifconfig.me/ip')` 探测：一次测出 `38.49.38.237`（跟当时被测页面 chatgpt.com 命中同一条规则，可信），另一次在 openai.com 页面里测也是 `38.49.38.237`，但 access.log 一查，openai.com 主文档实际走的是「新美宅-Claude-GPT」（应落地 154.44.3.170）——**`ifconfig.me` 这个域名本身不在任何自定义规则里，会单独命中兜底规则**，测出来的是探针自己的路由，不是被测页面的路由。跟 [[channel_exclusive_anchor_and_single_variable]]「验多通道系统的单通道，锚必须该通道独占」同族：这里的「通道」是路由规则而非系统层，用探针域名测某站点出口前，先确认探针域名和被测域名会命中同一条 rule（不同域名即使同时打开也可能各走各的），权威判据永远是 `access.log` 里**该域名自己**的 `[socks -> tag]`，不是找个通用探针站替它作证。
 
 ### 节点连得上但目标站 403/连不上 → 查出口IP信誉（非配置问题）
 
