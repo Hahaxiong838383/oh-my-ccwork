@@ -17,6 +17,8 @@ private struct ShaderUniforms {
     var sourceTexelSize: SIMD2<Float>
     var antiAliasingMode: UInt32
     var testPatternMode: UInt32
+    var contentUVScale: SIMD2<Float>
+    var gridUVScale: SIMD2<Float>
 }
 
 final class LatestFrameStore {
@@ -311,6 +313,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     private var indexCount = 0
     private var configuration: WarpConfiguration
     private let performanceMonitor = RollingPerformanceMonitor()
+    var activeConfiguration: WarpConfiguration { configuration }
     private var runtimeAntiAliasingOverride: AntiAliasingMode?
     private(set) var meshValidation = MeshValidation(foldedCellCount: 0, outOfAASampleCount: 0, totalSampleCount: 0)
 
@@ -345,6 +348,8 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             float2 sourceTexelSize;
             uint antiAliasingMode;
             uint testPatternMode;
+            float2 contentUVScale;
+            float2 gridUVScale;
         };
 
         vertex VertexOut vertexMain(VertexIn input [[stage_in]]) {
@@ -384,9 +389,10 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             return 1.0 - smoothstep(width, width * 2.5, distance);
         }
 
-        float4 calibrationPattern(float2 uv, bool smoothEdges) {
-            float minorGrid = max(gridLine(uv.x, 0.02, 0.7, smoothEdges), gridLine(uv.y, 0.02, 0.7, smoothEdges));
-            float majorGrid = max(gridLine(uv.x, 0.10, 1.0, smoothEdges), gridLine(uv.y, 0.10, 1.0, smoothEdges));
+        float4 calibrationPattern(float2 uv, float2 gridScale, bool smoothEdges) {
+            float2 gridUV = 0.5 + (uv - 0.5) * gridScale;
+            float minorGrid = max(gridLine(gridUV.x, 0.02, 0.7, smoothEdges), gridLine(gridUV.y, 0.02, 0.7, smoothEdges));
+            float majorGrid = max(gridLine(gridUV.x, 0.10, 1.0, smoothEdges), gridLine(gridUV.y, 0.10, 1.0, smoothEdges));
             float centerXWidth = max(fwidth(uv.x), 0.00005);
             float centerYWidth = max(fwidth(uv.y), 0.00005);
             float centerX = lineMask(abs(uv.x - 0.5), centerXWidth, smoothEdges);
@@ -478,7 +484,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             if (uniforms.testPatternMode == 1u) {
                 float2 patternUV = applyMirror(uv, uniforms.mirrorFlags);
                 bool smoothEdges = uniforms.antiAliasingMode != 0u;
-                float4 pattern = calibrationPattern(patternUV, smoothEdges);
+                float4 pattern = calibrationPattern(patternUV, uniforms.gridUVScale, smoothEdges);
                 return float4(pattern.rgb * edgeAlpha, 1.0);
             }
 
@@ -493,6 +499,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
                 return float4(pattern.rgb * edgeAlpha, 1.0);
             }
 
+            uv = 0.5 + (uv - 0.5) * uniforms.contentUVScale;
             if (uniforms.contentMode == 0) {
                 if (uniforms.sourceAspect < uniforms.canvasAspect) {
                     float visibleWidth = uniforms.sourceAspect / uniforms.canvasAspect;
@@ -557,9 +564,15 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
 
     @discardableResult
     func updateConfiguration(_ configuration: WarpConfiguration) -> MeshValidation {
+        guard configuration.validationErrors().isEmpty else {
+            return MeshValidation(foldedCellCount: 0, outOfAASampleCount: 0, totalSampleCount: 0, nonFiniteSampleCount: 1)
+        }
+        let dimensions = WarpMath.meshDimensions(configuration: configuration)
+        let mesh = WarpMath.makeMesh(configuration: configuration, columns: dimensions.columns, rows: dimensions.rows)
+        guard mesh.validation.isValid else { return mesh.validation }
         self.configuration = configuration
         runtimeAntiAliasingOverride = nil
-        rebuildMesh()
+        installMesh(mesh)
         return meshValidation
     }
 
@@ -584,18 +597,18 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             currentMode: configuration.render.antiAliasing
         ) else { return false }
         runtimeAntiAliasingOverride = .performance
-        rebuildMesh()
         return true
     }
 
     private func rebuildMesh() {
-        let dimensions: (Int, Int)
-        switch effectiveAntiAliasingMode {
-        case .off: dimensions = (96, 40)
-        case .performance: dimensions = (128, 48)
-        case .quality: dimensions = (192, 72)
-        }
-        let mesh = WarpMath.makeMesh(configuration: configuration, columns: dimensions.0, rows: dimensions.1)
+        let dimensions = WarpMath.meshDimensions(configuration: configuration)
+        let mesh = WarpMath.makeMesh(configuration: configuration, columns: dimensions.columns, rows: dimensions.rows)
+        meshValidation = mesh.validation
+        guard mesh.validation.isValid else { return }
+        installMesh(mesh)
+    }
+
+    private func installMesh(_ mesh: GeneratedMesh) {
         vertexBuffer = device.makeBuffer(
             bytes: mesh.vertices,
             length: mesh.vertices.count * MemoryLayout<MeshVertex>.stride
@@ -645,7 +658,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
         if configuration.mirror.vertical { mirrorFlags |= 2 }
         var uniforms = ShaderUniforms(
             sourceAspect: Float(width) / Float(height),
-            canvasAspect: configuration.canvas.aspect,
+            canvasAspect: configuration.contentCanvas.aspect,
             contentMode: configuration.contentMode.shaderValue,
             mirrorFlags: mirrorFlags,
             cropAnchor: SIMD2<Float>(
@@ -654,7 +667,9 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             ),
             sourceTexelSize: SIMD2<Float>(1 / Float(max(width, 1)), 1 / Float(max(height, 1))),
             antiAliasingMode: effectiveAntiAliasingMode.shaderValue,
-            testPatternMode: configuration.render.testPattern.shaderValue
+            testPatternMode: configuration.render.testPattern.shaderValue,
+            contentUVScale: configuration.contentUVScale,
+            gridUVScale: configuration.gridUVScale
         )
 
         let aa = configuration.aaRect.sanitized()
@@ -750,6 +765,10 @@ private final class WarpBoundaryOverlayView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         guard isBoundaryVisible, let configuration else { return }
+        NSGraphicsContext.saveGraphicsState()
+        defer { NSGraphicsContext.restoreGraphicsState() }
+        let clipRect = AABoundaryOverlayGeometry.borderRect(in: bounds, aaRect: configuration.aaRect, lineWidth: 0)
+        NSBezierPath(rect: clipRect).addClip()
         let points = WarpBoundaryOverlayGeometry.points(in: bounds, configuration: configuration)
         guard let first = points.first else { return }
         NSColor.systemCyan.setStroke()
@@ -900,9 +919,13 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let aaYField = NSTextField()
     private let aaWidthField = NSTextField()
     private let aaHeightField = NSTextField()
-    private let aaBoundaryButton = NSButton(checkboxWithTitle: "显示 AA 区物理边界线（调试）", target: nil, action: nil)
-    private let extendedWarpButton = NSButton(checkboxWithTitle: "启用外扩校畸变", target: nil, action: nil)
-    private let warpBoundaryButton = NSButton(checkboxWithTitle: "显示 Warp 区域边缘线（调试）", target: nil, action: nil)
+    private let aaBoundaryButton = NSButton(checkboxWithTitle: "显示黄色线：外屏允许显示的范围", target: nil, action: nil)
+    private let extendedWarpButton = NSButton(checkboxWithTitle: "让画布沿当前曲线向外延伸", target: nil, action: nil)
+    private let warpBoundaryButton = NSButton(checkboxWithTitle: "显示青色线：弯曲画布的外边缘", target: nil, action: nil)
+    private let canvasReferenceLabel = NSTextField(wrappingLabelWithString: "尚未记住外扩起点")
+    private let canvasMeasurementLabel = NSTextField(wrappingLabelWithString: "")
+    private let geometryPreview = CanvasGeometryPreviewView()
+    private let geometryPreviewPicker = NSPopUpButton()
     private let canvasWidthField = NSTextField()
     private let canvasHeightField = NSTextField()
     private let cropHorizontalSlider = NSSlider()
@@ -910,9 +933,9 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let contentMappingLabel = NSTextField(wrappingLabelWithString: "内容映射计算中…")
     private let horizontalMirrorButton = NSButton(checkboxWithTitle: "水平翻转", target: nil, action: nil)
     private let verticalMirrorButton = NSButton(checkboxWithTitle: "垂直翻转", target: nil, action: nil)
-    private let warpButton = NSButton(checkboxWithTitle: "启用基础 Warp", target: nil, action: nil)
+    private let warpButton = NSButton(checkboxWithTitle: "使用下方滑杆调整画面弯曲", target: nil, action: nil)
     private let inverseWarpTrendButton = NSButton(checkboxWithTitle: "反向预畸变趋势（屏幕中凹两侧翘）", target: nil, action: nil)
-    private let polynomialButton = NSButton(checkboxWithTitle: "启用多项式增量", target: nil, action: nil)
+    private let polynomialButton = NSButton(checkboxWithTitle: "在基础校正上叠加多项式微调", target: nil, action: nil)
     private let orderPicker = NSPopUpButton()
     private let termPicker = NSPopUpButton()
     private let coefficientXField = NSTextField()
@@ -925,16 +948,16 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     private let tiltSlider = NSSlider()
     private let horizontalBendSlider = NSSlider()
     private let antiAliasingPicker = NSPopUpButton()
-    private let antiAliasingEnabledButton = NSButton(checkboxWithTitle: "启用抗锯齿", target: nil, action: nil)
-    private let automaticPerformanceButton = NSButton(checkboxWithTitle: "性能不足时自动降级", target: nil, action: nil)
+    private let antiAliasingEnabledButton = NSButton(checkboxWithTitle: "平滑线条边缘（抗锯齿）", target: nil, action: nil)
+    private let automaticPerformanceButton = NSButton(checkboxWithTitle: "帧率不足时，自动降低采样档位保流畅", target: nil, action: nil)
     private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、中心线和边界", target: nil, action: nil)
     private let rawCalibrationButton = NSButton(title: "一键无畸变标定", target: nil, action: nil)
     private let antiAliasingComparisonButton = NSButton(title: "抗锯齿 A/B 对比", target: nil, action: nil)
     private let performanceLabel = NSTextField(wrappingLabelWithString: "性能采样中…")
-    private let pauseWarpButton = NSButton(title: "暂停 Warp", target: nil, action: nil)
+    private let pauseWarpButton = NSButton(title: "暂时显示原始桌面", target: nil, action: nil)
     private let presetNameField = NSTextField()
     private let presetPicker = NSPopUpButton()
-    private let historyButton = NSButton(title: "回退上一个版本", target: nil, action: nil)
+    private let historyButton = NSButton(title: "撤销上一次设置", target: nil, action: nil)
 
     init(
         renderer: WarpRenderer,
@@ -972,6 +995,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
+        panel.minSize = NSSize(width: 560, height: 500)
         super.init(window: panel)
         buildInterface(sourceScreen: sourceScreen, outputScreen: outputScreen)
         refreshControls()
@@ -1027,7 +1051,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         titleRow.orientation = .horizontal
         titleRow.alignment = .centerY
         titleRow.spacing = 10
-        let title = NSTextField(labelWithString: "外屏桌面 → 逻辑画布 → 预畸变 → 矩形 AA 区")
+        let title = NSTextField(labelWithString: "NIO Warp · 外屏曲面画布")
         title.font = .systemFont(ofSize: 18, weight: .bold)
         let version = NSTextField(labelWithString: AppVersion.display)
         version.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
@@ -1036,7 +1060,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(version)
         stack.addArrangedSubview(titleRow)
-        let topology = NSTextField(wrappingLabelWithString: "控制台：\(screenName(sourceScreen))\n捕获与输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) px\nAA 区外始终纯黑；多项式定义为逻辑画布到物理 AA 区的增量映射。")
+        let topology = NSTextField(wrappingLabelWithString: "控制台：\(screenName(sourceScreen))\n捕获与输出：\(screenName(outputScreen)) · \(displayWidth)×\(displayHeight) 物理像素\n先调好弯曲形状，再记住起点并增加画布宽高。AA 是显示窗口，不是画布边界。")
         topology.textColor = .secondaryLabelColor
         stack.addArrangedSubview(topology)
 
@@ -1053,7 +1077,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         captureHint.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(captureHint)
 
-        stack.addArrangedSubview(sectionTitle("1. 矩形 AA 区（物理屏像素）"))
+        stack.addArrangedSubview(sectionTitle("1. 外屏允许显示的矩形范围（AA）"))
+        stack.addArrangedSubview(explanation("X 是距外屏左边的距离，Y 是距外屏上边的距离，单位都是物理像素。AA 外保持黑色；开启曲面外扩后，改 AA 只改变裁切范围，不缩放画布。"))
         stack.addArrangedSubview(fieldGrid([
             ("X", numericField(aaXField, target: .aaX, decimal: false)),
             ("Y", numericField(aaYField, target: .aaY, decimal: false)),
@@ -1061,15 +1086,16 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             ("高", numericField(aaHeightField, target: .aaHeight, decimal: false)),
         ]))
         stack.addArrangedSubview(buttonRow([
-            makeButton("保存并应用 AA 区", action: #selector(applyAAFields)),
-            makeButton("居中 88%×48%", action: #selector(centerAA)),
-            makeButton("全屏 AA", action: #selector(fullAA)),
+            makeButton("保存显示范围", action: #selector(applyAAFields)),
+            makeButton("使用默认居中范围", action: #selector(centerAA)),
+            makeButton("使用整个外屏", action: #selector(fullAA)),
         ]))
         aaBoundaryButton.target = self
         aaBoundaryButton.action = #selector(toggleAABoundary)
         stack.addArrangedSubview(aaBoundaryButton)
 
-        stack.addArrangedSubview(sectionTitle("2. 逻辑画布"))
+        stack.addArrangedSubview(sectionTitle("2. 沿曲面延伸画布（逻辑像素）"))
+        stack.addArrangedSubview(explanation("宽沿弯曲长边向左右延伸，高沿倾斜短边向上下延伸。中心不动，新增部分继续弯曲，不会重新压回 AA。逻辑像素不是四条边的物理弧长。"))
         stack.addArrangedSubview(fieldGrid([
             ("宽", numericField(canvasWidthField, target: .canvasWidth, decimal: false)),
             ("高", numericField(canvasHeightField, target: .canvasHeight, decimal: false)),
@@ -1083,17 +1109,39 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         contentMappingLabel.textColor = .secondaryLabelColor
         contentMappingLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(contentMappingLabel)
-        stack.addArrangedSubview(makeButton("保存并应用画布尺寸", action: #selector(applyCanvasFields)))
+        stack.addArrangedSubview(makeButton("保存并应用上面的宽和高", action: #selector(applyCanvasFields)))
         extendedWarpButton.target = self
         extendedWarpButton.action = #selector(toggleExtendedWarp)
         warpBoundaryButton.target = self
         warpBoundaryButton.action = #selector(toggleWarpBoundary)
         stack.addArrangedSubview(extendedWarpButton)
+        extendedWarpButton.toolTip = "首次开启会记住当前画面；以后改宽高只延伸曲面。关闭后使用旧的 AA 适配方式；再次开启仍使用记住的起点。"
+        stack.addArrangedSubview(explanation("操作顺序：① 先打开上面的曲面延伸开关；② 输入新的宽、高；③ 点击“保存并应用”。只增加画布时，原内容大小不变。"))
+        stack.addArrangedSubview(buttonRow([
+            makeButton("把当前画面记为外扩起点", action: #selector(rebaseCanvas)),
+            makeButton("恢复到起点的宽高", action: #selector(restoreReferenceCanvas)),
+        ]))
+        canvasReferenceLabel.preferredMaxLayoutWidth = 490
+        canvasReferenceLabel.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(canvasReferenceLabel)
+        stack.addArrangedSubview(makeButton("把内容按当前画布重新铺满", action: #selector(refillCanvasContent)))
+        stack.addArrangedSubview(explanation("这一步只调整视频或桌面内容的等比缩放，多余部分裁掉；不改变曲线。画布变大不会生成新的 macOS 桌面，内容不够时可能仍有黑区。"))
         stack.addArrangedSubview(warpBoundaryButton)
-        let extendedWarpHint = NSTextField(wrappingLabelWithString: "开启后，扩大后的整张画布继续沿用当前基础 Warp、多项式和趋势，再将完整弯曲 Footprint 归一化铺满 AA。黄色线为 AA，青色线为 Warp 区域。")
-        extendedWarpHint.textColor = .secondaryLabelColor
-        extendedWarpHint.preferredMaxLayoutWidth = 500
-        stack.addArrangedSubview(extendedWarpHint)
+        aaBoundaryButton.toolTip = "在外屏画出黄色 AA 边界，便于检查裁切位置；正常观看时可关闭。"
+        warpBoundaryButton.toolTip = "在外屏画出青色曲面外边缘；边缘超出 AA 后会被裁掉，请在下面的完整曲面预览中查看。"
+        geometryPreviewPicker.addItems(withTitles: ["看完整曲面（含超出 AA 的部分）", "只看 AA 内的几何范围"])
+        geometryPreviewPicker.target = self
+        geometryPreviewPicker.action = #selector(changeGeometryPreview)
+        geometryPreviewPicker.toolTip = "只切换本控制台的小预览，不改变外屏输出、标定参数或保存配置。"
+        stack.addArrangedSubview(geometryPreviewPicker)
+        geometryPreview.widthAnchor.constraint(equalToConstant: 490).isActive = true
+        geometryPreview.heightAnchor.constraint(equalToConstant: 230).isActive = true
+        geometryPreview.setAccessibilityLabel("画布几何预览：黄色是 AA，青色是曲面，灰色虚线是起点边界")
+        stack.addArrangedSubview(geometryPreview)
+        stack.addArrangedSubview(explanation("黄色＝AA；青色＝当前曲面；灰虚线＝起点。这里只预览几何，不包含播放器黑边或真实玻璃效果；小图自动缩放不影响外屏。"))
+        canvasMeasurementLabel.preferredMaxLayoutWidth = 490
+        canvasMeasurementLabel.textColor = .secondaryLabelColor
+        stack.addArrangedSubview(canvasMeasurementLabel)
 
         stack.addArrangedSubview(sectionTitle("3. 镜像"))
         horizontalMirrorButton.target = self
@@ -1132,8 +1180,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
             ("Y 系数", numericField(coefficientYField, target: .coefficientY, decimal: true)),
         ]))
         stack.addArrangedSubview(buttonRow([
-            makeButton("应用当前系数", action: #selector(applyPolynomialCoefficients)),
-            makeButton("全部系数清零", action: #selector(clearPolynomial)),
+            makeButton("保存这一项的 X / Y 系数", action: #selector(applyPolynomialCoefficients)),
+            makeButton("清零全部多项式系数", action: #selector(clearPolynomial)),
         ]))
 
         stack.addArrangedSubview(sectionTitle("6. 画质与标定"))
@@ -1179,9 +1227,9 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         pauseWarpButton.action = #selector(toggleWarpVisibility)
         stack.addArrangedSubview(buttonRow([
             pauseWarpButton,
-            makeButton("导入 JSON", action: #selector(importConfiguration)),
-            makeButton("导出 JSON", action: #selector(exportConfiguration)),
-            makeButton("恢复默认", action: #selector(resetConfiguration)),
+            makeButton("导入参数文件", action: #selector(importConfiguration)),
+            makeButton("导出参数备份", action: #selector(exportConfiguration)),
+            makeButton("重置全部参数", action: #selector(resetConfiguration)),
         ]))
 
         statusLabel.textColor = .systemOrange
@@ -1192,7 +1240,18 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         let hint = NSTextField(wrappingLabelWithString: "紧急恢复：按 ⌃⌥⌘Esc 可立即隐藏外屏覆盖层。当前是视觉接管，Warp 后的视觉坐标尚未做输入逆映射。")
         hint.textColor = .secondaryLabelColor
         stack.addArrangedSubview(hint)
-        stack.addArrangedSubview(makeButton("退出 Warp", action: #selector(NSApplication.terminate(_:)), target: NSApp))
+        stack.addArrangedSubview(makeButton("退出程序，恢复原始桌面", action: #selector(NSApplication.terminate(_:)), target: NSApp))
+        let checkboxHelp: [(NSButton, String)] = [
+            (horizontalMirrorButton, "左右对调内容，AA 和曲面形状不变；标定网格也跟随翻转。"),
+            (verticalMirrorButton, "上下对调内容，AA 和曲面形状不变；标定网格也跟随翻转。"),
+            (warpButton, "使用下方滑杆的弧度、倾斜等设置；关闭不会删除数值，多项式仍单独控制。"),
+            (inverseWarpTrendButton, "反转基础校正与多项式的位移方向，用于预抵消玻璃反射弯曲；需要实拍验证。"),
+            (polynomialButton, "只开关多项式，不清空系数；翻折参数会拒绝应用。"),
+            (antiAliasingEnabledButton, "平滑细线和文字边缘，关闭使用点采样；不会改变几何形状。"),
+            (automaticPerformanceButton, "运行时降低采样档位以保护流畅度，不改写保存的画质选择。"),
+            (testPatternButton, "用带方向角标的网格替代桌面，检查曲线和镜像；关闭后恢复桌面或视频。"),
+        ]
+        checkboxHelp.forEach { button, text in button.toolTip = text; button.setAccessibilityHelp(text) }
     }
 
     private func screenName(_ screen: NSScreen) -> String {
@@ -1206,7 +1265,35 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func makeButton(_ title: String, action: Selector, target: AnyObject? = nil) -> NSButton {
-        NSButton(title: title, target: target ?? self, action: action)
+        let button = NSButton(title: title, target: target ?? self, action: action)
+        let help = [
+            "applyAAFields": "同时保存上面的 X、Y、宽、高。AA 外保持黑色。",
+            "centerAA": "把 AA 恢复成屏幕中部的 88% 宽、48% 高；不是仅移动当前矩形。",
+            "fullAA": "允许使用整个外屏。曲面外扩开启时，不会自动放大曲面。",
+            "applyCanvasFields": "同时保存宽和高；开启曲面延伸后只增加坐标范围，不重设起点。",
+            "rebaseCanvas": "将已应用的当前曲面和尺寸设为新的外扩起点，原形状不变。一般只在重新标定时使用。",
+            "restoreReferenceCanvas": "只恢复记住的画布宽高；不清空弧度、多项式、镜像或 AA。",
+            "refillCanvasContent": "按当前画布比例等比铺满内容，裁切多余部分；不会压扁，也不改变曲面。",
+            "applyPolynomialCoefficients": "保存当前选择项的 X、Y 系数。若曲面翻折则拒绝应用并保留原参数。",
+            "clearPolynomial": "清空所有多项式微调，基础校正和镜像保持不变。可撤销。",
+            "savePreset": "用填写的名字保存当前全部参数（含外扩起点）；同名预设会被替换。",
+            "applyPreset": "加载选中的参数组；外屏分辨率不匹配时拒绝应用。",
+            "deletePreset": "删除选中的已保存参数组，不改变当前画面。",
+            "importConfiguration": "导入完整参数备份或单独多项式 JSON。无效配置不会覆盖当前画面。",
+            "exportConfiguration": "保存当前全部参数到 JSON 文件，方便备份或迁移；不会修改画面。",
+            "resetConfiguration": "恢复当前显示器的初始设置，包括 AA、画布、曲线、镜像和外扩起点；操作前再次确认。",
+            "terminate:": "退出 NIO Warp，移除外屏覆盖层，显示原始桌面。",
+        ]
+        button.toolTip = help[NSStringFromSelector(action)] ?? title
+        button.setAccessibilityHelp(button.toolTip)
+        return button
+    }
+
+    private func explanation(_ text: String) -> NSTextField {
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.textColor = .secondaryLabelColor
+        label.preferredMaxLayoutWidth = 490
+        return label
     }
 
     private func buttonRow(_ views: [NSView]) -> NSStackView {
@@ -1259,6 +1346,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         let plus = makeButton("+", action: #selector(adjustNumericField(_:)))
         plus.tag = target.rawValue * 2 + 1
         plus.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        minus.toolTip = decimal ? "减小 0.001，立即保存并应用这一组系数。" : "减小 1 像素，立即保存并应用这一组数值。"
+        plus.toolTip = decimal ? "增加 0.001，立即保存并应用这一组系数。" : "增加 1 像素，立即保存并应用这一组数值。"
 
         let row = NSStackView(views: [minus, field, plus])
         row.orientation = .horizontal
@@ -1316,13 +1405,16 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         aaBoundaryButton.state = configuration.render.showAABoundary ? .on : .off
         extendedWarpButton.state = configuration.extendedWarpEnabled ? .on : .off
         warpBoundaryButton.state = configuration.render.showWarpBoundary ? .on : .off
-        pauseWarpButton.title = isWarpVisible() ? "暂停 Warp" : "恢复 Warp"
-        historyButton.title = "回退上一个版本（\(historyStore.count)）"
+        pauseWarpButton.title = isWarpVisible() ? "暂时显示原始桌面" : "重新显示校正画面"
+        pauseWarpButton.toolTip = "只隐藏或恢复覆盖层，不清空任何参数；与重置参数不同。"
+        historyButton.title = "撤销上一次设置（\(historyStore.count)）"
+        historyButton.toolTip = "恢复最近一次修改前的参数，包括当时的画布起点；不是回退软件版本。"
         historyButton.isEnabled = historyStore.count > 0
         orderPicker.selectItem(at: configuration.polynomial.order - 2)
         rebuildTermPicker()
         refreshContentMappingStatus()
         refreshRuntimePreviewControls()
+        refreshCanvasGeometry()
     }
 
     private func rebuildTermPicker() {
@@ -1343,26 +1435,41 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        let errors = configuration.validationErrors()
+        if !errors.isEmpty {
+            configuration = lastAppliedConfiguration
+            refreshControls()
+            setStatus("没有应用：\(errors.joined(separator: "；"))。已保留上一次有效设置。", color: .systemRed)
+            return
+        }
+        let candidate = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        let validation = renderer.updateConfiguration(candidate)
+        guard validation.isValid else {
+            configuration = lastAppliedConfiguration
+            refreshControls()
+            setStatus("没有应用本次修改：\(validation.summary)。已保留原画面和配置。", color: .systemRed)
+            return
+        }
         runtimePreviewMode = .normal
         runtimePreviewReturnMode = .normal
-        configuration = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        configuration = candidate
         if recordHistory, configuration != lastAppliedConfiguration {
             historyStore.record(lastAppliedConfiguration, reason: message)
         }
         store.save(configuration)
-        let validation = renderer.updateConfiguration(configuration)
         updateAABoundary(configuration.aaRect, configuration.render.showAABoundary)
         updateWarpBoundary(configuration, configuration.render.showWarpBoundary)
         if configuration.capture != lastAppliedConfiguration.capture {
             applyCaptureConfiguration(configuration.capture)
         }
         lastAppliedConfiguration = configuration
-        historyButton.title = "回退上一个版本（\(historyStore.count)）"
+        historyButton.title = "撤销上一次设置（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed
         setStatus("\(message)；\(validation.summary)", color: color)
         refreshRuntimePreviewControls()
         refreshContentMappingStatus()
+        refreshCanvasGeometry()
     }
 
     private func refreshContentMappingStatus(sourceWidth: Int? = nil, sourceHeight: Int? = nil) {
@@ -1373,8 +1480,8 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         let mapping = ContentMappingMath.mapping(
             sourceWidth: Float(effectiveSourceWidth),
             sourceHeight: Float(effectiveSourceHeight),
-            targetWidth: Float(configuration.canvas.width),
-            targetHeight: Float(configuration.canvas.height),
+            targetWidth: Float(configuration.contentCanvas.width),
+            targetHeight: Float(configuration.contentCanvas.height),
             mode: configuration.contentMode,
             anchor: configuration.cropAnchor
         )
@@ -1385,7 +1492,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         if configuration.extendedWarpEnabled {
             let core = WarpMath.extendedWarpCoreRect(configuration: configuration)
             extensionSummary = String(
-                format: " · 外扩核心 %.0f×%.0f px",
+                format: " · 外扩起点 %.0f×%.0f 逻辑像素",
                 Double(configuration.canvas.width) * core.width,
                 Double(configuration.canvas.height) * core.height
             )
@@ -1395,7 +1502,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         contentMappingLabel.stringValue = String(
             format: "源 %.4f · 目标 %.4f · 等比缩放 %.4fx · 裁切 X %d px / Y %d px%@%@",
             Float(effectiveSourceWidth) / Float(max(effectiveSourceHeight, 1)),
-            configuration.canvas.aspect,
+            configuration.contentCanvas.aspect,
             mapping.uniformScale,
             cropX,
             cropY,
@@ -1406,14 +1513,86 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     private func refreshRuntimePreviewControls() {
-        rawCalibrationButton.title = runtimePreviewMode == .rawReflectionCalibration ? "返回校正状态" : "一键无畸变标定"
-        antiAliasingComparisonButton.title = runtimePreviewMode == .antiAliasingComparison ? "退出抗锯齿 A/B" : "抗锯齿 A/B 对比"
+        rawCalibrationButton.title = runtimePreviewMode == .rawReflectionCalibration ? "返回校正画面" : "临时显示未校正网格"
+        rawCalibrationButton.toolTip = "临时关闭弯曲和外扩，显示矩形网格，供拍摄玻璃反射；不会覆盖保存的校正参数。再次点击返回。"
+        antiAliasingComparisonButton.title = runtimePreviewMode == .antiAliasingComparison ? "结束对比，返回原画面" : "对比抗锯齿：左关 / 右开"
+        antiAliasingComparisonButton.toolTip = "左右显示完全相同的图案，唯一差别是抗锯齿；不修改保存参数，退出后恢复进入前状态。"
+    }
+
+    private func refreshCanvasGeometry() {
+        let previewConfiguration: WarpConfiguration
+        switch runtimePreviewMode {
+        case .normal: previewConfiguration = configuration
+        case .rawReflectionCalibration: previewConfiguration = configuration.rawReflectionCalibrationConfiguration()
+        case .antiAliasingComparison: previewConfiguration = configuration.antiAliasingComparisonConfiguration()
+        }
+        let summary = geometryPreview.update(previewConfiguration)
+        canvasMeasurementLabel.stringValue = summary.measurementText
+        if let reference = configuration.canvasReference {
+            let horizontalGrowth = Double(configuration.canvas.width - reference.canvas.width) / 2
+            let verticalGrowth = Double(configuration.canvas.height - reference.canvas.height) / 2
+            canvasReferenceLabel.stringValue = String(
+                format: "%@ · 记住的起点：%d × %d；当前：%d × %d。\n相对起点：左右各 %+.0f，上下各 %+.0f 逻辑像素（负数表示收回）。",
+                configuration.extendedWarpEnabled ? "曲面延伸已开启" : "曲面延伸已关闭，起点仍保留",
+                reference.canvas.width, reference.canvas.height, configuration.canvas.width, configuration.canvas.height,
+                horizontalGrowth, verticalGrowth
+            )
+        } else {
+            canvasReferenceLabel.stringValue = "尚未记住外扩起点。首次开启会记住当前已应用的画布；之后改宽高不会改写起点。"
+        }
+    }
+
+    private func canvasFieldsAreSaved() -> Bool {
+        NumericInput.integer(from: canvasWidthField.stringValue) == configuration.canvas.width
+            && NumericInput.integer(from: canvasHeightField.stringValue) == configuration.canvas.height
+    }
+
+    @objc private func changeGeometryPreview() {
+        geometryPreview.clipsToAA = geometryPreviewPicker.indexOfSelectedItem == 1
+    }
+
+    @objc private func rebaseCanvas() {
+        guard canvasFieldsAreSaved() else {
+            setStatus("宽高还没保存。请先点击“保存并应用上面的宽和高”，再记住外扩起点。", color: .systemOrange)
+            return
+        }
+        let alert = NSAlert()
+        alert.messageText = "把当前画面作为新的外扩起点？"
+        alert.informativeText = "将记住当前 \(configuration.canvas.width) × \(configuration.canvas.height) 的尺寸和位置。当前曲线与内容大小不变；以后恢复起点会恢复到这个尺寸。旧起点可用“撤销上一次设置”找回。"
+        alert.addButton(withTitle: "记住当前画面")
+        alert.addButton(withTitle: "取消，不改动")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        configuration.rebaseCanvasGrowth()
+        applyConfiguration("已记住新的外扩起点；曲线形状不变")
+        refreshControls()
+    }
+
+    @objc private func restoreReferenceCanvas() {
+        guard let reference = configuration.canvasReference else {
+            setStatus("还没有外扩起点。请先开启曲面延伸，或点击“把当前画面记为外扩起点”。", color: .systemOrange)
+            return
+        }
+        configuration.canvas = reference.canvas
+        applyConfiguration("已恢复到起点的宽高；弧度、多项式和 AA 没有清空")
+        refreshControls()
+    }
+
+    @objc private func refillCanvasContent() {
+        guard canvasFieldsAreSaved() else {
+            setStatus("请先保存上面的宽和高，再按当前画布重新铺满内容。", color: .systemOrange)
+            return
+        }
+        configuration.refillContentCanvas()
+        configuration.contentMode = .fill
+        applyConfiguration("内容已按当前画布等比铺满，多余部分裁切；曲线与外扩起点不变")
+        refreshControls()
     }
 
     private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
         let preview = previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
         let validation = renderer.updateConfiguration(preview)
         updateWarpBoundary(preview, preview.render.showWarpBoundary)
+        refreshCanvasGeometry()
         refreshRuntimePreviewControls()
         let color: NSColor = validation.isValid ? .systemOrange : .systemRed
         setStatus("\(message)；临时预览不会保存配置或增加历史。\n\(validation.summary)", color: color)
@@ -1425,6 +1604,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
         let validation = renderer.updateConfiguration(configuration)
         updateWarpBoundary(configuration, configuration.render.showWarpBoundary)
         refreshRuntimePreviewControls()
+        refreshCanvasGeometry()
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed
         setStatus("\(message)；\(validation.summary)", color: color)
     }
@@ -1538,9 +1718,14 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     @objc private func applyCanvasFields() {
-        configuration.canvas.width = NumericInput.integer(from: canvasWidthField.stringValue) ?? configuration.canvas.width
-        configuration.canvas.height = NumericInput.integer(from: canvasHeightField.stringValue) ?? configuration.canvas.height
-        applyConfiguration("画布尺寸已应用")
+        guard let width = NumericInput.integer(from: canvasWidthField.stringValue),
+              let height = NumericInput.integer(from: canvasHeightField.stringValue),
+              (64...32768).contains(width), (64...32768).contains(height) else {
+            setStatus("宽和高都要填写 64～32768 之间的整数；两个数一起保存，本次没有改动画面。", color: .systemRed)
+            return
+        }
+        configuration.canvas = CanvasConfiguration(width: width, height: height)
+        applyConfiguration(configuration.extendedWarpEnabled ? "已沿原曲线更新画布宽高；没有重设起点或缩放内容" : "已保存画布尺寸；曲面延伸尚未开启")
         refreshControls()
     }
 
@@ -1594,11 +1779,20 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     @objc private func toggleExtendedWarp() {
-        configuration.extendedWarpEnabled = extendedWarpButton.state == .on
+        if extendedWarpButton.state == .on {
+            guard canvasFieldsAreSaved() else {
+                extendedWarpButton.state = configuration.extendedWarpEnabled ? .on : .off
+                setStatus("请先保存输入中的宽高，再开启曲面延伸，避免把未确认的尺寸记成起点。", color: .systemOrange)
+                return
+            }
+            configuration.enableCanvasGrowth()
+        } else {
+            configuration.extendedWarpEnabled = false
+        }
         applyConfiguration(
             configuration.extendedWarpEnabled
-                ? "外扩校畸变已开启"
-                : "外扩校畸变已关闭，恢复原 Warp 状态"
+                ? "曲面延伸已开启；现在增加宽高会向外生长，超过 AA 的部分仅裁切"
+                : "曲面延伸已关闭，使用旧的 AA 适配方式；记住的起点仍保留"
         )
         refreshControls()
     }
@@ -1645,7 +1839,7 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     func updateWarpVisibilityState(_ visible: Bool) {
-        pauseWarpButton.title = visible ? "暂停 Warp" : "恢复 Warp"
+        pauseWarpButton.title = visible ? "暂时显示原始桌面" : "重新显示校正画面"
     }
 
     @objc private func toggleWarp() {
@@ -1828,6 +2022,12 @@ private final class ControlPanelController: NSWindowController, NSTextFieldDeleg
     }
 
     @objc private func resetConfiguration() {
+        let alert = NSAlert()
+        alert.messageText = "重置当前外屏的全部参数？"
+        alert.informativeText = "将恢复 AA、画布、弧度、多项式、镜像和外扩起点的默认设置。已保存的命名预设不删除；重置后可撤销一次。"
+        alert.addButton(withTitle: "重置全部参数")
+        alert.addButton(withTitle: "取消，保留现状")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
         configuration = .defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
         refreshControls()
         applyConfiguration("已恢复默认配置")
@@ -1875,7 +2075,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         startSession(showFatalOnFailure: false)
         if emergencyHotKey == nil {
-            controlPanel?.setStatus("警告：全局紧急快捷键注册失败，请使用控制台的“暂停 Warp”。", color: .systemRed)
+            controlPanel?.setStatus("警告：全局紧急快捷键注册失败，请使用控制台的“暂时显示原始桌面”。", color: .systemRed)
         }
     }
 

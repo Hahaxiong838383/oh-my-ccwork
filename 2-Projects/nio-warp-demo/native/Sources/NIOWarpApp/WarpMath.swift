@@ -10,15 +10,21 @@ struct MeshValidation: Equatable {
     var foldedCellCount: Int
     var outOfAASampleCount: Int
     var totalSampleCount: Int
+    var nonFiniteSampleCount = 0
+    var intersectingBoundaryCount = 0
+    var unsafeScaleCount = 0
 
-    var isValid: Bool { foldedCellCount == 0 }
+    var isValid: Bool { foldedCellCount == 0 && nonFiniteSampleCount == 0 && intersectingBoundaryCount == 0 && unsafeScaleCount == 0 }
 
     var summary: String {
+        if nonFiniteSampleCount > 0 { return "出现无效坐标，已拒绝应用；请缩小画布或减小系数" }
+        if intersectingBoundaryCount > 0 { return "画布边界相交，已拒绝应用；请缩小画布或减小系数" }
+        if unsafeScaleCount > 0 { return "局部缩放过大或网格过于狭窄，已拒绝应用；请缩小画布或减小系数" }
         if foldedCellCount > 0 {
             return "网格折叠 \(foldedCellCount) 个单元，请减小系数"
         }
         if outOfAASampleCount > 0 {
-            return "\(outOfAASampleCount)/\(totalSampleCount) 个采样点越出 AA，将被硬裁剪"
+            return "曲面有效；\(outOfAASampleCount)/\(totalSampleCount) 个采样点在 AA 外，仅裁切显示，不压回边界"
         }
         return "网格有效，无折叠、无 AA 越界"
     }
@@ -100,6 +106,13 @@ enum WarpMath {
     }
 
     static func extendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
+        let reference = configuration.canvasReference?.canvas ?? configuration.canvas
+        let coreWidth = Double(reference.width) / Double(max(configuration.canvas.width, 1))
+        let coreHeight = Double(reference.height) / Double(max(configuration.canvas.height, 1))
+        return NormalizedRect(x: (1 - coreWidth) * 0.5, y: (1 - coreHeight) * 0.5, width: coreWidth, height: coreHeight)
+    }
+
+    private static func legacyExtendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
         let aa = configuration.aaRect.sanitized()
         let aaPixelWidth = max(Double(configuration.displayPixelWidth) * aa.width, 1)
         let aaPixelHeight = max(Double(configuration.displayPixelHeight) * aa.height, 1)
@@ -199,7 +212,7 @@ enum WarpMath {
     private static func extendedDomain(
         configuration: WarpConfiguration
     ) -> (minimum: SIMD2<Float>, maximum: SIMD2<Float>) {
-        let core = extendedWarpCoreRect(configuration: configuration)
+        let core = legacyExtendedWarpCoreRect(configuration: configuration)
         let minimum = SIMD2<Float>(
             -Float(core.x) / Float(core.width),
             -Float(core.y) / Float(core.height)
@@ -211,7 +224,7 @@ enum WarpMath {
         return (minimum, maximum)
     }
 
-    private static func mappingContext(configuration: WarpConfiguration) -> MappingContext {
+    private static func legacyMappingContext(configuration: WarpConfiguration) -> MappingContext {
         let manual = manualBounds(
             parameters: configuration.manual,
             trend: configuration.warpTrend
@@ -248,6 +261,34 @@ enum WarpMath {
             extendedMinimum: minimum,
             extendedMaximum: maximum
         )
+    }
+
+    static func captureCanvasReference(configuration: WarpConfiguration, preservingLegacyExtension: Bool = false) -> CanvasWarpReference {
+        let aa = configuration.aaRect.sanitized()
+        var reference = CanvasWarpReference(
+            canvas: configuration.canvas,
+            contentCanvas: configuration.canvas,
+            gridCanvas: configuration.canvas,
+            physicalX: aa.x * Double(configuration.displayPixelWidth),
+            physicalY: aa.y * Double(configuration.displayPixelHeight),
+            physicalWidth: aa.width * Double(configuration.displayPixelWidth),
+            physicalHeight: aa.height * Double(configuration.displayPixelHeight)
+        )
+        if preservingLegacyExtension, configuration.extendedWarpEnabled {
+            let context = legacyMappingContext(configuration: configuration)
+            let domain = extendedDomain(configuration: configuration)
+            reference.domain = WarpMappingBounds(minimum: domain.minimum, maximum: domain.maximum)
+            reference.outputBounds = WarpMappingBounds(minimum: context.extendedMinimum, maximum: context.extendedMaximum)
+            reference.legacyOutputClampDomain = reference.domain
+            reference.clampsOriginalManualDomain = false
+        }
+        return reference
+    }
+
+    private static func mappingContext(configuration: WarpConfiguration) -> MappingContext {
+        let manual = manualBounds(parameters: configuration.manual, trend: configuration.warpTrend)
+        let output = configuration.canvasReference?.outputBounds ?? .unit
+        return MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum)
     }
 
     private static func mix(_ minimum: Float, _ maximum: Float, t: Float) -> Float {
@@ -289,24 +330,43 @@ enum WarpMath {
                 clampManualResult: true
             )
         }
-        let domain = extendedDomain(configuration: configuration)
-        let domainPoint = domain.minimum + canvasPoint * (domain.maximum - domain.minimum)
+        let reference = configuration.canvasReference ?? captureCanvasReference(configuration: configuration)
+        let domain = reference.expandedDomain(for: configuration.canvas)
+        let domainPoint = domain.minimum + canvasPoint * domain.range
         let extended = normalizedBaseWarpPoint(
             domainPoint,
             configuration: configuration,
             manualMinimum: context.manualMinimum,
             manualMaximum: context.manualMaximum,
-            clampManualResult: false
+            clampManualResult: reference.clampsOriginalManualDomain && WarpMappingBounds.unit.contains(domainPoint)
         )
         let range = simd_max(
             context.extendedMaximum - context.extendedMinimum,
             SIMD2<Float>(repeating: 0.0001)
         )
-        return simd_clamp(
-            (extended - context.extendedMinimum) / range,
-            .zero,
-            SIMD2<Float>(repeating: 1)
-        )
+        var mapped = (extended - context.extendedMinimum) / range
+        if reference.legacyOutputClampDomain?.contains(domainPoint) == true {
+            mapped = simd_clamp(mapped, .zero, SIMD2<Float>(repeating: 1))
+        }
+        let physical = SIMD2<Float>(Float(reference.physicalX), Float(reference.physicalY))
+            + mapped * SIMD2<Float>(Float(reference.physicalWidth), Float(reference.physicalHeight))
+        let aa = configuration.aaRect.sanitized()
+        let origin = SIMD2<Float>(Float(aa.x * Double(configuration.displayPixelWidth)), Float(aa.y * Double(configuration.displayPixelHeight)))
+        let size = SIMD2<Float>(Float(aa.width * Double(configuration.displayPixelWidth)), Float(aa.height * Double(configuration.displayPixelHeight)))
+        return (physical - origin) / size
+    }
+
+    static func physicalPoints(canvasPoints: [SIMD2<Float>], configuration: WarpConfiguration) -> [SIMD2<Float>] {
+        let aa = configuration.aaRect.sanitized()
+        let size = SIMD2<Float>(Float(configuration.displayPixelWidth), Float(configuration.displayPixelHeight))
+        return localPhysicalPoints(canvasPoints: canvasPoints, configuration: configuration).map {
+            (SIMD2<Float>(Float(aa.x), Float(aa.y)) + $0 * SIMD2<Float>(Float(aa.width), Float(aa.height))) * size
+        }
+    }
+
+    static func meshDimensions(configuration: WarpConfiguration) -> (columns: Int, rows: Int) {
+        let scale = configuration.extendedWarpEnabled ? configuration.gridUVScale : SIMD2<Float>(repeating: 1)
+        return (min(512, max(192, Int(ceil(192 * scale.x)))), min(256, max(72, Int(ceil(72 * scale.y)))))
     }
 
     static func makeMesh(configuration: WarpConfiguration, columns: Int = 128, rows: Int = 48) -> GeneratedMesh {
@@ -319,6 +379,8 @@ enum WarpMath {
         vertices.reserveCapacity((columns + 1) * (rows + 1))
         localPoints.reserveCapacity((columns + 1) * (rows + 1))
         var outOfAA = 0
+        var nonFinite = 0
+        var unsafeScale = 0
 
         for row in 0...rows {
             let y = Float(row) / Float(rows)
@@ -330,6 +392,7 @@ enum WarpMath {
                     context: context
                 )
                 localPoints.append(local)
+                if !local.x.isFinite || !local.y.isFinite { nonFinite += 1 }
                 if local.x < 0 || local.x > 1 || local.y < 0 || local.y > 1 { outOfAA += 1 }
                 let screenX = Float(aa.x) + local.x * Float(aa.width)
                 let screenY = Float(aa.y) + local.y * Float(aa.height)
@@ -358,11 +421,18 @@ enum WarpMath {
                 let bottomRight = UInt32(bottomRightIndex)
                 indices.append(contentsOf: [topLeft, topRight, bottomRight, topLeft, bottomRight, bottomLeft])
 
-                let a = localPoints[topLeftIndex]
-                let b = localPoints[topRightIndex]
-                let c = localPoints[bottomLeftIndex]
-                let cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x)
-                if cross <= 0 { folded += 1 }
+                let topLeftPoint = localPoints[topLeftIndex]
+                let topRightPoint = localPoints[topRightIndex]
+                let bottomLeftPoint = localPoints[bottomLeftIndex]
+                let bottomRightPoint = localPoints[bottomRightIndex]
+                let firstArea = cross(topRightPoint - topLeftPoint, bottomRightPoint - topLeftPoint)
+                let secondArea = cross(bottomRightPoint - topLeftPoint, bottomLeftPoint - topLeftPoint)
+                if firstArea <= 0 || secondArea <= 0 { folded += 1 }
+                let horizontal = topRightPoint - topLeftPoint
+                let vertical = bottomLeftPoint - topLeftPoint
+                let condition = simd_length_squared(horizontal) + simd_length_squared(vertical)
+                if condition / max(abs(cross(horizontal, vertical)), 0.000000000001) > 10000
+                    || abs(topLeftPoint.x) > 128 || abs(topLeftPoint.y) > 128 { unsafeScale += 1 }
             }
         }
 
@@ -372,8 +442,37 @@ enum WarpMath {
             validation: MeshValidation(
                 foldedCellCount: folded,
                 outOfAASampleCount: outOfAA,
-                totalSampleCount: vertices.count
+                totalSampleCount: vertices.count,
+                nonFiniteSampleCount: nonFinite,
+                intersectingBoundaryCount: nonFinite == 0 ? boundaryIntersections(points: localPoints, columns: columns, rows: rows) : 0,
+                unsafeScaleCount: unsafeScale
             )
         )
+    }
+
+    private static func cross(_ first: SIMD2<Float>, _ second: SIMD2<Float>) -> Float {
+        first.x * second.y - first.y * second.x
+    }
+
+    private static func boundaryIntersections(points: [SIMD2<Float>], columns: Int, rows: Int) -> Int {
+        let stride = columns + 1
+        let perimeter = (0...columns).map { points[$0] }
+            + (1...rows).map { points[$0 * stride + columns] }
+            + (0..<columns).reversed().map { points[rows * stride + $0] }
+            + (1..<rows).reversed().map { points[$0 * stride] }
+        var count = 0
+        for firstIndex in perimeter.indices {
+            if firstIndex + 2 >= perimeter.count { continue }
+            let firstStart = perimeter[firstIndex]
+            let firstEnd = perimeter[(firstIndex + 1) % perimeter.count]
+            for secondIndex in (firstIndex + 2)..<perimeter.count {
+                if firstIndex == 0 && secondIndex == perimeter.count - 1 { continue }
+                let secondStart = perimeter[secondIndex]
+                let secondEnd = perimeter[(secondIndex + 1) % perimeter.count]
+                if cross(firstEnd - firstStart, secondStart - firstStart) * cross(firstEnd - firstStart, secondEnd - firstStart) < -0.000000000001
+                    && cross(secondEnd - secondStart, firstStart - secondStart) * cross(secondEnd - secondStart, firstEnd - secondStart) < -0.000000000001 { count += 1 }
+            }
+        }
+        return count
     }
 }

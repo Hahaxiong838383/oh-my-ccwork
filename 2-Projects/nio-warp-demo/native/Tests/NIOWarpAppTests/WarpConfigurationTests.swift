@@ -72,14 +72,14 @@ final class WarpConfigurationTests: XCTestCase {
         XCTAssertEqual(rect.height, 716, accuracy: 0.000_001)
     }
 
-    func testExtendedWarpCoreRectUsesCanvasToAAPixelRatio() {
+    func testExtendedWarpCoreRectDefaultsToCurrentCanvasNotAA() {
         let configuration = WarpConfiguration.defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
 
         let core = WarpMath.extendedWarpCoreRect(configuration: configuration)
 
-        XCTAssertEqual(core.x, 0.206_666_666_7, accuracy: 0.000_001)
+        XCTAssertEqual(core.x, 0, accuracy: 0.000_001)
         XCTAssertEqual(core.y, 0, accuracy: 0.000_001)
-        XCTAssertEqual(core.width, 0.586_666_666_7, accuracy: 0.000_001)
+        XCTAssertEqual(core.width, 1, accuracy: 0.000_001)
         XCTAssertEqual(core.height, 1, accuracy: 0.000_001)
     }
 
@@ -179,7 +179,7 @@ final class WarpConfigurationTests: XCTestCase {
         let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: legacyData)
 
         XCTAssertEqual(decoded.capture.sourceMode, .automaticFullscreenWindow)
-        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, 7)
+        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, WarpConfiguration.currentSchemaVersion)
     }
 
     func testAutomaticWindowSelectorPrefersActiveLargeWindow() {

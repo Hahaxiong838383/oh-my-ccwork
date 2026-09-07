@@ -6,11 +6,12 @@ NATIVE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="$NATIVE_DIR/.build/app/NIOWarpApp.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
-APP_VERSION="${NIO_WARP_APP_VERSION:-0.5.1}"
-APP_BUILD="${NIO_WARP_APP_BUILD:-9}"
+APP_VERSION="${NIO_WARP_APP_VERSION:-0.6.0}"
+APP_BUILD="${NIO_WARP_APP_BUILD:-10}"
 
 cd "$NATIVE_DIR"
 swift build -c release
+SOURCE_DIGEST="$( { find Sources -type f -name '*.swift' -print; printf '%s\n' Package.swift config/default-warp-configuration.json; } | LC_ALL=C sort | while IFS= read -r source; do shasum -a 256 "$source"; done | shasum -a 256 | awk '{print $1}')"
 
 rm -rf "$APP_DIR"
 mkdir -p "$MACOS_DIR"
@@ -37,6 +38,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>${APP_VERSION}</string>
   <key>CFBundleVersion</key>
   <string>${APP_BUILD}</string>
+  <key>NIOWarpSourceSHA256</key>
+  <string>${SOURCE_DIGEST}</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
   <key>NSHighResolutionCapable</key>

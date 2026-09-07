@@ -49,5 +49,5 @@
     "showWarpBoundary" : false,
     "testPattern" : "off"
   },
-  "schemaVersion" : 7
+  "schemaVersion" : 8
 }

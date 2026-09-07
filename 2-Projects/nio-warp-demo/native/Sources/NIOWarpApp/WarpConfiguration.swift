@@ -12,7 +12,8 @@ enum NumericInput {
     static func integer(from value: String) -> Int? {
         let normalizedValue = normalized(value)
         if let integer = Int(normalizedValue) { return integer }
-        guard let double = Double(normalizedValue), double.isFinite else { return nil }
+        guard let double = Double(normalizedValue), double.isFinite,
+              double.rounded() >= Double(Int.min), double.rounded() < Double(Int.max) else { return nil }
         return Int(double.rounded())
     }
 
@@ -288,7 +289,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 7
+    static let currentSchemaVersion = 8
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -300,6 +301,7 @@ struct WarpConfiguration: Codable, Equatable {
     var mirror = MirrorConfiguration()
     var contentMode = ContentMode.fill
     var extendedWarpEnabled = false
+    var canvasReference: CanvasWarpReference?
     var warpTrend = WarpTrend.forward
     var manual = ManualWarpParameters()
     var polynomial = PolynomialWarpConfiguration()
@@ -316,6 +318,7 @@ struct WarpConfiguration: Codable, Equatable {
         case mirror
         case contentMode
         case extendedWarpEnabled
+        case canvasReference
         case warpTrend
         case manual
         case polynomial
@@ -333,6 +336,7 @@ struct WarpConfiguration: Codable, Equatable {
         mirror: MirrorConfiguration = MirrorConfiguration(),
         contentMode: ContentMode = .fill,
         extendedWarpEnabled: Bool = false,
+        canvasReference: CanvasWarpReference? = nil,
         warpTrend: WarpTrend = .forward,
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
@@ -348,6 +352,7 @@ struct WarpConfiguration: Codable, Equatable {
         self.mirror = mirror
         self.contentMode = contentMode
         self.extendedWarpEnabled = extendedWarpEnabled
+        self.canvasReference = canvasReference
         self.warpTrend = warpTrend
         self.manual = manual
         self.polynomial = polynomial
@@ -366,6 +371,7 @@ struct WarpConfiguration: Codable, Equatable {
         mirror = try container.decodeIfPresent(MirrorConfiguration.self, forKey: .mirror) ?? MirrorConfiguration()
         contentMode = try container.decodeIfPresent(ContentMode.self, forKey: .contentMode) ?? .stretch
         extendedWarpEnabled = try container.decodeIfPresent(Bool.self, forKey: .extendedWarpEnabled) ?? false
+        canvasReference = try container.decodeIfPresent(CanvasWarpReference.self, forKey: .canvasReference)
         warpTrend = try container.decodeIfPresent(WarpTrend.self, forKey: .warpTrend) ?? .forward
         manual = try container.decodeIfPresent(ManualWarpParameters.self, forKey: .manual) ?? ManualWarpParameters()
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()
@@ -407,6 +413,9 @@ struct WarpConfiguration: Codable, Equatable {
         copy.manual.strength = min(max(copy.manual.strength, 0), 2)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
         copy.polynomial = copy.polynomial.normalized()
+        if copy.extendedWarpEnabled, copy.canvasReference == nil {
+            copy.canvasReference = WarpMath.captureCanvasReference(configuration: copy, preservingLegacyExtension: schemaVersion <= 7)
+        }
         return copy
     }
 
@@ -417,6 +426,7 @@ struct WarpConfiguration: Codable, Equatable {
         }
         if displayPixelWidth <= 0 || displayPixelHeight <= 0 { errors.append("显示器像素尺寸必须大于 0") }
         if canvas.width <= 0 || canvas.height <= 0 { errors.append("画布尺寸必须大于 0") }
+        if let reference = canvasReference, !reference.isValid { errors.append("画布基准无效，请重新设置基准或导入有效配置") }
         if cropAnchor != cropAnchor.sanitized() { errors.append("裁切位置必须位于 -1...1") }
         if aaRect != aaRect.sanitized() { errors.append("AA 区必须完全位于屏幕归一化范围内") }
         let normalizedPolynomial = polynomial.normalized()
@@ -438,6 +448,7 @@ extension WarpConfiguration {
         copy.contentMode = .fill
         copy.manual.enabled = false
         copy.polynomial.enabled = false
+        copy.extendedWarpEnabled = false
         copy.render.testPattern = .calibrationGrid
         return copy
     }
