@@ -9,9 +9,11 @@
 - [x] A 主线 voice-worker：disable --now + LiveKit 注册验收（2026-09-07 14:02，+526 MB 可用，rust 未动）
 - [ ] B1 通知同事 + 截止日；B2 到期停三件套；/opt/voice-agent 留档
 - [ ] C 磁盘：rust 备份留 5、eot-snapshots 留 7 天 + cron；deploy-worker-bin.sh 加轮转
+- [ ] D2 sidecar 单次耗时日志 + 是否开 2 个 sidecar（5 路并发前置，需重启）
 - [ ] D 收尾：7 键并入 rust-worker.env + unit 去两行 + restart 验 job；47.239 摘 voice-test.html；仓库/skill 标退役；记忆更新
 
 ## 进度记录
 - 2026-09-07：只读盘点完成（两机 unit/内存/端口/流量/耦合），同事线 9-05 起降到每天 1–2 次、今天 10:23 仍有一次真实会话；主线 8-19 起零流量。
 - 2026-09-07 14:02：川哥批 A → 已停并禁用 voice-worker；rust PID/重启数不变；LiveKit 注销干净；其余可清理项列表见盘点 §7。
 - 2026-09-07 14:08：川哥批「腾出的内存给 rust」→ rust unit MemoryHigh 900M→1400M / MemoryMax 1300M→1800M 热生效（set-property + unit 文件同步），OOMScoreAdjust=-900（drop-in + 现役进程即时），未重启；详见盘点 §8。
+- 2026-09-07 14:13：川哥问峰值并发 5 的内存分配 → 实测容量账（rust RSS 不随并发涨、sidecar 峰 481）：1400M/1800M 已够，约束在 sidecar 串行/上游配额/CPU；详见盘点 §9。待办追加：测试空窗给 sidecar 加单次耗时日志。

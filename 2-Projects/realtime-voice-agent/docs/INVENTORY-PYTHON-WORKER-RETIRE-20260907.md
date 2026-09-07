@@ -100,3 +100,9 @@
 - 验证：cgroup memory.high=1468006400、memory.max=1887436800；oom_score_adj rust/sidecar=-900、colleague=0；日志心跳照常。主机最坏情况账：rust 1.8 GB + 租户线 634 MB + 系统≈300 MB < 3.9 GB，不会互相挤爆。
 - 回滚：`systemctl set-property voice-worker-rust MemoryHigh=900M MemoryMax=1300M` + 还原 unit 文件备份 + 删 10-oom.conf + daemon-reload。
 - 没做（要重启才生效，等测试空窗）：WORKER_MAX_JOBS 10 目前够用（峰值并发 3），不动。
+
+## 9. 容量账：峰值并发 5 是否还要加内存（2026-09-07 14:27 CST）
+
+- 实测（7 天 journal 约 2 万个 `job rss` 采样对上当时并发数）：rust 进程 RSS 均值 90–120 MB、峰 172 MB，**不随并发涨**（2 路样本均值 120/峰 169，3 路 101）→ 每路边际 ≈10–20 MB；sidecar RSS 449、峰 481 MB（模型固定）；cgroup 开机至今峰 537 MB。
+- 投影：5 路 ≈ 172 + 5×20 + 481 ≈ 750–800 MB；10 路 ≈ 0.9 GB。MemoryHigh 1400M 余量 ≥1.75×，**不需要再分配**。公式：MemoryHigh ≥ 1.5×(sidecar 峰 + rust 峰 + 20 MB×N)。
+- 5 路并发的真实约束（非内存）：① sidecar 单锁串行推理（EOT+声纹同进程 num_threads=1；无单次耗时日志，先加日志再决定开 2 个 sidecar/加线程，需重启）②上游并发配额待核（讯飞 TTS / 火山 ASR / gemini 代理，控制台看）③CPU 单 job≈13% 一核、unit 均值 14%，4 核够；LiveKit 机 2 核 1.6G 撑 5 房无压力。WORKER_MAX_JOBS=10 不动。
