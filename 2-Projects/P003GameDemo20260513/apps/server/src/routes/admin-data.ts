@@ -32,7 +32,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
-import { tryAutoConfirm, manualConfirm, type AutoConfirmResult } from './pairing.js';
+import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
 import { runInsightForAccount, runNarrativeForAccount } from '../insight-runner.js';
@@ -236,6 +236,8 @@ adminDataRoute.get('/devices/pairing/pending', (c) => {
     const items = pairingStore.listAnnounces(now).map((a) => {
       const device = deviceRegistryStore.get(a.sn);
       const session = pairingStore.findUnclaimedSessionBySn(a.sn, now);
+      const byHash = pairingStore.findSessionByHash(a.nonce_hash);
+      const state = announceState(byHash, session, now);
       return {
         sn: a.sn,
         registered: Boolean(device),
@@ -245,14 +247,16 @@ adminDataRoute.get('/devices/pairing/pending', (c) => {
         announced_at: a.announced_at,
         expires_at: a.expires_at,
         expires_in_s: Math.max(0, Math.ceil((a.expires_at - now) / 1000)),
-        state: session ? 'confirmed' : 'pending',
-        confirmed_by: session?.source ?? null,
-        session_id: session?.session_id ?? null,
+        state,
+        confirmed_by: state === 'claimed' ? (byHash?.source ?? null) : (session?.source ?? null),
+        session_id: state === 'claimed' ? (byHash?.session_id ?? null) : (session?.session_id ?? null),
+        claimed_at: state === 'claimed' ? (byHash?.claimed_at ?? null) : null,
         preauth: preauthView(pairingStore.getPreauth(a.sn), now),
       };
     });
     return c.json({ ok: true, items, preauth_enabled: process.env.PAIRING_ADMIN_PREAUTH_ENABLED !== '0', preauth_days_default: PREAUTH_DAYS_DEFAULT });
   } catch (error) {
+    console.error('[pairing] pending list failed', error);
     return c.json({ ok: false, error: '拉取待认领列表失败' }, 500);
   }
 });
@@ -309,10 +313,22 @@ adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
       return c.json({ ok: false, error: '需要家长手机号（该设备尚未绑定家长）' }, 400);
     }
     const r = manualConfirm(sn, parentAccountId, opUser(c));
-    if (!r.done) return c.json({ ok: false, error: r.reason }, r.reason === 'no_announce' ? 404 : 409);
+    if (!r.done) {
+      const msg: Record<string, string> = {
+        no_announce: '设备近 10 分钟没有自报上线，等它联网后再试',
+        already_claimed: '设备已完成认领，凭据已下发，无需再确认',
+        already_confirmed: '已确认，等设备自动拉取凭据',
+        other_session: '该设备已有家长扫码确认的会话（家长优先）',
+        sn_bound_by_other: '设备已绑定其他家长',
+        sn_not_available: '设备不在台账或已停用',
+        invalid_pk: '设备自报的公钥不合法，请让设备重新配网',
+      };
+      return c.json({ ok: false, error: msg[r.reason] ?? r.reason, reason: r.reason }, r.reason === 'no_announce' ? 404 : 409);
+    }
     if (!device.parent_account_id) deviceRegistryStore.setParentAccountId(sn, parentAccountId);
     return c.json({ ok: true, session_id: r.sessionId, parent_account_id: parentAccountId });
   } catch (error) {
+    console.error(`[pairing] admin-confirm failed sn=${c.req.param('sn')}`, error);
     return c.json({ ok: false, error: '一键确认失败，请稍后重试' }, 500);
   }
 });

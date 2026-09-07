@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { SignJWT } from 'jose';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { validateDeviceSn } from '../device-sn.js';
+import type { PairingSessionRow } from '../pairing-store.js';
 import { pairingStore, hashToken, IDEMPOTENT_WINDOW_MS, TOKEN_TTL_S } from '../pairing-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDevicePk, encryptCredential, ECIES_ALG } from '../pairing-crypto.js';
@@ -305,6 +306,16 @@ const AnnounceSchema = z.object({
 
 export type AutoConfirmResult = { done: boolean; reason: string; sessionId?: string };
 
+export type AnnounceState = 'claimed' | 'confirmed' | 'pending';
+/** 待认领列表状态：先看本 announce 的 nonce 对应会话（claim 完成即「已认领」——announce 行在 10 分钟 TTL 内会残留），
+ *  再看同 SN 有无未认领会话（家长扫码确认）。2026-09-07 眼镜展两台实撞：claim 已完成仍显示「待确认」且一键确认 500。 */
+export function announceState(byHash: PairingSessionRow | null, unclaimedBySn: PairingSessionRow | null, now: number): AnnounceState {
+  if (byHash?.claimed_at) return 'claimed';
+  if (byHash && byHash.expires_at > now) return 'confirmed';
+  if (unclaimedBySn && !unclaimedBySn.claimed_at && unclaimedBySn.expires_at > now) return 'confirmed';
+  return 'pending';
+}
+
 /** 预授权代确认（announce 到达 / 晚到预授权两个触发点共用）。家长优先：同 SN 已有未认领会话即跳过。 */
 export function tryAutoConfirm(sn: string, nonceHash: string, devicePkB64: string, trigger: 'announce' | 'late_preauth'): AutoConfirmResult {
   if (!cfg().preauthEnabled) return { done: false, reason: 'disabled' };
@@ -313,6 +324,8 @@ export function tryAutoConfirm(sn: string, nonceHash: string, devicePkB64: strin
   const device = deviceRegistryStore.get(sn);
   if (!device || device.status !== 'active') return { done: false, reason: 'sn_not_available' };
   if (device.parent_account_id && device.parent_account_id !== preauth.parent_account_id) return { done: false, reason: 'sn_bound_by_other' };
+  // 本 nonce 已 claim（announce 行残留）：再确认会撞 nonce_hash 主键，温和拒绝
+  if (pairingStore.findSessionByHash(nonceHash)?.claimed_at) return { done: false, reason: 'already_claimed' };
   const existing = pairingStore.findUnclaimedSessionBySn(sn);
   if (existing) return { done: false, reason: existing.nonce_hash === nonceHash ? 'already_confirmed' : 'other_session' };
   const { sessionId } = pairingStore.confirmSessionByHash(preauth.parent_account_id, sn, nonceHash, devicePkB64, 'preauth', preauth.created_at);
@@ -328,6 +341,7 @@ export function manualConfirm(sn: string, parentAccountId: string, by: string): 
   const device = deviceRegistryStore.get(sn);
   if (!device || device.status !== 'active') return { done: false, reason: 'sn_not_available' };
   if (device.parent_account_id && device.parent_account_id !== parentAccountId) return { done: false, reason: 'sn_bound_by_other' };
+  if (pairingStore.findSessionByHash(ann.nonce_hash)?.claimed_at) return { done: false, reason: 'already_claimed' };
   const existing = pairingStore.findUnclaimedSessionBySn(sn);
   if (existing) return { done: false, reason: existing.nonce_hash === ann.nonce_hash ? 'already_confirmed' : 'other_session' };
   const { sessionId } = pairingStore.confirmSessionByHash(parentAccountId, sn, ann.nonce_hash, ann.device_pk, 'admin');

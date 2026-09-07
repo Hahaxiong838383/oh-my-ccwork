@@ -35,11 +35,15 @@ process.env.AUTH_JWT_SECRET = 'test-secret'; // 必须先于任何 import（auth
 process.env.PAIRING_CLAIM_RPM_SN = '100';
 process.env.PAIRING_PROTOCOL_V1_ENABLED = '1'; // v1 测试段保回滚锚活性；v2 段末尾切回默认关验开关
 process.env.PAIRING_CLAIM_RPM_IP = '1000';
+process.env.STUDIO_USER = 'test-admin'; // admin 路由（待认领列表 / 一键确认）用真实 /api/auth/login 拿 token，测试内绝不打印 token
+process.env.STUDIO_PASS = 'test-pass';
 
 const { Hono } = await import('hono');
 const { SignJWT, decodeJwt } = await import('jose');
 const { DatabaseSync } = await import('node:sqlite');
 const { parentPairingRoute, devicePairingRoute } = await import('../src/routes/pairing.js');
+const { authRoute } = await import('../src/routes/auth.js');
+const { adminDataRoute } = await import('../src/routes/admin-data.js');
 const { verifyDeviceCredential } = await import('../src/routes/device-session.js');
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 const { decryptCredential, b64url } = await import('../src/pairing-crypto.js');
@@ -62,6 +66,8 @@ function eq(name: string, got: unknown, want: unknown): void {
 const app = new Hono();
 app.route('/api/parent/pairing', parentPairingRoute);
 app.route('/v1/device/pairing', devicePairingRoute);
+app.route('/api/auth', authRoute);
+app.route('/api/admin', adminDataRoute);
 
 const SECRET = new TextEncoder().encode('test-secret');
 async function parentJwt(accountId: string): Promise<string> {
@@ -377,6 +383,33 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   eq('cred-2 由 claimed_at 推导的到期 == claim 响应 credential_expires_at_ms（双载体，≤1s）', credDiff <= 1000 ? 'ok' : `diff_ms=${credDiff}`, 'ok');
   eq('cred-3 未 claim 过的 SN → null', pairingStore.lastClaimedSessionBySn('BJP00326060100000805'), null);
   eq('adm-4 无 announce 的 SN → no_announce', manualConfirm('BJP00326060100000805', P3, 'tester').reason, 'no_announce');
+
+  // ── 已认领后 announce 行残留（2026-09-07 眼镜展两台实撞）：claim 完成后 announce 行还在 10 分钟 TTL 内，
+  //    后台列表把它当「待确认」，一键确认撞 nonce_hash 主键 → 500「一键确认失败」。修法：按本 nonce 会话判态，已 claim 温和拒绝。──
+  const { announceState } = await import('../src/routes/pairing.js');
+  // SN_B：announce nB → 晚到预授权代确认 → m2-3 已 claim；announce 行仍是 nB
+  eq('adm-5 已认领会话的 announce 再一键确认 → already_claimed（不抛、不 500）', (() => { try { return manualConfirm(SN_B, P3, 'tester').reason; } catch (e) { return `threw:${(e as Error).message}`; } })(), 'already_claimed');
+  pairingStore.setPreauth(SN_B, P3, '13800000002', Date.now() + 86_400_000, 'tester');
+  eq('adm-6 已认领后再来预授权，对同 nonce 不代确认 → already_claimed', (() => { try { return tryAutoConfirm(SN_B, annB.nonce_hash, annB.device_pk, 'late_preauth').reason; } catch (e) { return `threw:${(e as Error).message}`; } })(), 'already_claimed');
+  eq('adm-7 已认领后预授权未被误消费', pairingStore.getPreauth(SN_B)?.used_at, null);
+  const claimedB = pairingStore.findSessionByHash(annB.nonce_hash)!;
+  const nowP = Date.now();
+  eq('pend-1 announceState 本 nonce 已 claim → claimed', announceState(claimedB, null, nowP), 'claimed');
+  eq('pend-2 announceState 本 nonce 已确认未 claim → confirmed', announceState({ ...claimedB, claimed_at: null, expires_at: nowP + 60_000 }, null, nowP), 'confirmed');
+  eq('pend-3 announceState 本 nonce 无会话但同 SN 有未认领会话（家长扫码）→ confirmed', announceState(null, { ...claimedB, claimed_at: null, expires_at: nowP + 60_000 }, nowP), 'confirmed');
+  eq('pend-4 announceState 无会话 → pending', announceState(null, null, nowP), 'pending');
+  eq('pend-5 announceState 本 nonce 会话已过期未 claim → pending', announceState({ ...claimedB, claimed_at: null, expires_at: nowP - 1 }, null, nowP), 'pending');
+  // 路由级：真实 /api/auth/login 拿 admin token（不打印），待认领列表标 claimed，一键确认 409 带可读文案
+  const loginRes = await app.request('/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'test-admin', password: 'test-pass' }) });
+  const adminToken = ((await loginRes.json()) as { token?: string }).token ?? '';
+  eq('adm-login admin 登录成功', loginRes.status === 200 && adminToken.length > 20, true);
+  const pendRes = await app.request('/api/admin/devices/pairing/pending', { headers: { authorization: `Bearer ${adminToken}` } });
+  const pendJson = (await pendRes.json()) as { ok: boolean; items: Array<{ sn: string; state: string; claimed_at: number | null; confirmed_by: string | null }> };
+  const itemB = pendJson.items.find((i) => i.sn === SN_B);
+  eq('pend-6 待认领列表：已 claim 的 announce 标 claimed + 带 claimed_at/来源', { st: itemB?.state, at: typeof itemB?.claimed_at, by: itemB?.confirmed_by }, { st: 'claimed', at: 'number', by: 'preauth' });
+  const confRes = await app.request(`/api/admin/devices/${SN_B}/pairing/confirm`, { method: 'POST', headers: { authorization: `Bearer ${adminToken}`, 'content-type': 'application/json' }, body: '{}' });
+  const confJson = (await confRes.json()) as { ok: boolean; error?: string; reason?: string };
+  eq('adm-8 一键确认已认领设备 → 409 already_claimed + 可读文案（不是 500）', { s: confRes.status, r: confJson.reason, readable: /已完成认领/.test(confJson.error ?? '') }, { s: 409, r: 'already_claimed', readable: true });
 
   // ── M9：开关 0 → 永不代确认；TTL 到期不续命 ──
   process.env.PAIRING_ADMIN_PREAUTH_ENABLED = '0';
