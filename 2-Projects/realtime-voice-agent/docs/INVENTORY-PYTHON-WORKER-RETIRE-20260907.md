@@ -92,3 +92,11 @@
 | B 同事三件套 | 634 MB + 端口 8082/80/443 | 无 | **影响同事**，等拍板 |
 | D 共享 env 7 键并入 rust-worker.env + unit 去两行 | 0 | **有**（要 restart 验证） | B 之后、测试空窗做 |
 | voice-venv | 0 | 依赖 | 保留 |
+
+## 8. 执行记录：腾出的内存分配给 rust（2026-09-07 14:09 CST，川哥批）
+
+- 事实：rust unit 原来写死 `MemoryHigh=900M`（超过即限速）/`MemoryMax=1300M`（超过即杀）；当时用量 529 MB（sidecar 459 + rust 126），7 天峰值 563 MB，job RSS 峰值 172 MB，最高并发 3（WORKER_MAX_JOBS=10）。按 per-job ≈50 MB 推算，10 并发≈1.1 GB 会撞旧 MemoryHigh，所以抬上限对高并发是真收益。
+- 动作（全部热生效，未重启，MainPID 2017631/NRestarts 0 不变）：`systemctl set-property voice-worker-rust MemoryHigh=1400M MemoryMax=1800M`（drop-in 落 /etc/systemd/system.control/voice-worker-rust.service.d/）；unit 文件同步改成 1400M/1800M（备份 `.bak-20260907-pre-mem1400`）+ daemon-reload；OOM 保护 `OOMScoreAdjust=-900` 写 /etc/systemd/system/voice-worker-rust.service.d/10-oom.conf（下次启动生效）并对现役 rust 主进程与 eot_sidecar 即时写 /proc/<pid>/oom_score_adj=-900（Python 租户线仍 0 → 主机真 OOM 时先杀它们）。
+- 验证：cgroup memory.high=1468006400、memory.max=1887436800；oom_score_adj rust/sidecar=-900、colleague=0；日志心跳照常。主机最坏情况账：rust 1.8 GB + 租户线 634 MB + 系统≈300 MB < 3.9 GB，不会互相挤爆。
+- 回滚：`systemctl set-property voice-worker-rust MemoryHigh=900M MemoryMax=1300M` + 还原 unit 文件备份 + 删 10-oom.conf + daemon-reload。
+- 没做（要重启才生效，等测试空窗）：WORKER_MAX_JOBS 10 目前够用（峰值并发 3），不动。
