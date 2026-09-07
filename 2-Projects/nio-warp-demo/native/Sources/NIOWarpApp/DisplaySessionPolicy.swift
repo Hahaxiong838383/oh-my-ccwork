@@ -12,6 +12,10 @@ struct WarpScreenSelection: Equatable {
 }
 
 enum DisplaySessionPolicy {
+    static func shouldTerminateAfterWindowClose(isReconfiguring: Bool, controlWindowVisible: Bool, controlWindowMiniaturized: Bool) -> Bool {
+        !isReconfiguring && !controlWindowVisible && !controlWindowMiniaturized
+    }
+
     static func selection(screens: [WarpScreenCandidate], preferredControlID: UInt32?) -> WarpScreenSelection? {
         guard screens.count >= 2 else { return nil }
         let control = screens.first(where: { $0.isBuiltIn })

@@ -741,7 +741,12 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     }
 }
 
-private final class OutputWindow: NSWindow {
+final class OutputWindow: NSWindow {
+    override init(contentRect: NSRect, styleMask style: NSWindow.StyleMask, backing backingStoreType: NSWindow.BackingStoreType, defer flag: Bool) {
+        super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
+        isReleasedWhenClosed = false
+    }
+
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
 }
@@ -2397,7 +2402,13 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await captureEngine.stop() }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        DisplaySessionPolicy.shouldTerminateAfterWindowClose(
+            isReconfiguring: isReconfiguring,
+            controlWindowVisible: controlPanel?.window?.isVisible ?? false,
+            controlWindowMiniaturized: controlPanel?.window?.isMiniaturized ?? false
+        )
+    }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if controlPanel == nil { startSession() }

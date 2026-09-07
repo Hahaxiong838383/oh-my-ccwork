@@ -45,7 +45,7 @@ uv run nio-warp-display-demo
 
 **不知道现在怎么操作时，先看 [操作指南：现在怎么操作](docs/operator-guide.md)**，其中包含日常步骤、按钮区别、AA/画布尺寸示例、调试方法与回滚入口。
 
-当前本机开发版为 **v0.6.1 (11)**，固定安装路径：
+当前本机开发版为 **v0.6.2 (12)**，固定安装路径：
 
 ```text
 /Users/rayman.chen/Applications/NIOWarpApp.app
@@ -54,6 +54,8 @@ uv run nio-warp-display-demo
 控制台窗口标题和界面顶部都会显示当前 Bundle 版本。日常启动只使用固定安装版；临时构建产物放在隐藏的 `native/.build/app/` 中，避免被 Spotlight 和 LaunchServices 识别成第二个 NIO Warp 应用。
 
 **不接外屏也能正常打开。** 控制台显示“等待外屏”，可查看已保存参数、切换几何预览及导出参数；需要外屏的调节按钮暂时灰显，不捕获或覆盖笔记本内屏，也不改写外屏标定配置。接上可用外屏后自动恢复；拔掉外屏后保留待机控制台。详见 [无外屏待机说明](docs/offline-console-v061.md)。
+
+v0.6.2 修复了拔出外屏、关闭输出窗口时的重复释放崩溃，并增加窗口切换期间的自动退出保护。原因与回归方法见 [拔屏窗口生命周期修复](docs/unplug-window-lifecycle-v062.md)。
 
 重新构建并安装最新版：
 
