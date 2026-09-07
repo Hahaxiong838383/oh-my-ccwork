@@ -54,3 +54,39 @@ worker 收到首帧就发 `session.input_ready`（合同：PCM 真在流动才�
 状态：**FIRST_SENTENCE_HEAD_CLIP_CAUSE_INFERRED(device ready cue precedes agent subscription) / WORKER_ASR_PRECONNECT_LIVE / WORKER_PIPELINE_PREBUILD_LIVE / DEVICE_ACTION_REQUESTED(gate ready cue on input_ready)**
 
 署名：cc（Claude）| 2026-09-07 07:47 CST
+
+## 4. 增量（2026-09-07 08:09 CST）：预组装真机 6 房实测 + 川哥拍板方向「唤醒即并行建房/发轨，worker 屏蔽本地招呼语」
+
+### 4.1 预组装生效（08:02–08:04，worker journal）
+
+| 房（尾） | accept→`pipeline prebuilt` | accept→订到麦克风轨 | 订到轨→输入环（`track_to_input_loop_ms`） | 首句 VAD 起点（相对输入环） | 首句转写 |
+|---|---:|---:|---:|---:|---|
+| …9356 | 358 ms | 2005 ms | **213 ms**（换装后首个 job，二进制页缓存冷；有 1 条 overflow 丢帧） | +2.65 s | 退出 |
+| …9370 | 314 ms | 1745 ms | **13 ms** | +145 ms | 一下（截头） |
+| …9388 | 287 ms | 964 ms | **3 ms** | +1.85 s | 退出 |
+| …9399 | 295 ms | 1728 ms | **4 ms** | +4.6 s | 小可小可 |
+| …9418 | 236 ms | 1724 ms | **2 ms** | +286 ms | 说个长句测试一下（完整） |
+| …9435 | 239 ms | 1618 ms | **7 ms** | +253 ms | 你去测试一下（截头/错转） |
+
+- 订到轨 → 开始听：176–337 ms → **2–13 ms**（首个 job 213 ms 是新二进制冷页缓存，之后消失）；组装期麦克风帧溢出丢帧只在首个 job 出现 1 次。ASR 预连 6/6 早于音轨 0.4–1.6 s。播报中语音退出 6/6。
+- **首句截头仍在**（…9370「一下」、…9435「你去测试一下」，VAD 起点 +145/+253 ms）：worker 侧已无可压空间，坐实主因在**设备发布麦克风轨 → worker 订阅到** 这 ~0.4–0.6 s 与端侧提示时机之间；开口晚 ~0.3 s 以上的（…9418 +286 ms）就完整。
+
+### 4.2 川哥拍板方向（08:06）：唤醒后立刻并行建房并发轨，不等提示音；worker 侧屏蔽预置本地招呼语
+
+按 worker 侧看到的时序，房间本身早就是并行的（job 在唤醒后 ~0.5–1 s 已接房、已发出声轨、已预组装完毕，之后一直在等设备的麦克风轨）；**串行的只有一段：设备等提示音播完才发布麦克风轨**，于是「发轨 → 订阅 → input_ready」这 ~0.4–0.6 s 全部暴露在提示音结束之后，而 v237 的「可以说了」提示又抢在它前面。
+
+建议端侧改成（v236 的并行 + v237 的不回灌，两者兼得）：
+
+1. **唤醒即发布麦克风轨**（与提示音并行），worker 在提示音期间就订到轨、开始听——input_ready 在提示音还没播完时就到端侧。
+2. **提示音播放期间麦克风轨静音**（LiveKit `LocalAudioTrack.mute()`，或送静音帧；二选一，见下），提示音播完 +200 ms 尾音保护后 unmute——喇叭里的招呼语根本不进上行，回灌为零，不依赖任何过滤。
+3. 「可以说了」提示 = **max(提示音播完+200ms, 已收到 input_ready)**——此时 worker 一定在听，首句不再截头；预期比现在早 ~0.4–0.6 s。
+4. mute 与静音帧的区别：mute 后 SFU 不转发帧，worker 的 input_ready 要到 unmute 后首帧才发（提示音播完 +100–200 ms）；送静音帧则 input_ready 在提示音期间就发出，提示可以精确落在提示音播完那一刻。**推荐送静音帧**（或 unmute 时机提前到尾音保护开始）；两种 worker 都不用改。
+
+worker 侧承诺（不改协议、不加信令）：
+- 静音帧/mute 期间 VAD 不起跳、ASR 无输出，不会产生任何 turn；input_ready 语义不变（首帧 PCM 到达即发）。
+- 若端侧选择**不静音、真拾音并行**（v236 形态），worker 现有两道门兜底：精确回声库（内置 9 条 + 该设备动态招呼语，LCS≥0.8/子串）+ v4 放宽门（第 1 句且无 VAD 起点 + LCS≥0.3）。诚实边界：喇叭近场、招呼语触发了 VAD 又被错转到 LCS<0.8 的那一类（v236 时期的幽灵句形态之一）worker 仍拦不住——所以**静音是根治，过滤只是兜底**，别反过来。
+- worker 已无待办；本轮不再改。
+
+验收（下一轮真人）：提示一出就说「说个长句测试一下」×3 → worker 3/3 完整且 VAD 起点 ≥ +200 ms；唤醒 → 可说话 比现在缩短 ≥0.4 s（端侧钟）；提示音期间 worker 零 VAD 起点、零 commit（静音生效的直接证据）。
+
+状态：**WORKER_PREBUILD_VERIFIED(track→loop 2–13ms) / HEAD_CLIP_STILL_PRESENT(device-side) / PROPOSAL_publish_at_wake+mute_until_prompt_end+cue_on_input_ready / WORKER_NO_FURTHER_CHANGE**
