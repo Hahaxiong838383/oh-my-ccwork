@@ -156,6 +156,7 @@ otaAdminRoute.route('/pck', pckAdminRoute);
 otaAdminRoute.put('/upload', async (c) => {
   const conf = cfg();
   const filename = (c.req.query('filename') || 'upload.apk').replace(/[^A-Za-z0-9._-]/g, '_');
+  const uploadNotes = (c.req.query('notes') || '').trim().slice(0, 2000);
   if (!filename.endsWith('.apk')) return c.json({ ok: false, error: 'bad_filename', message: '仅接受 .apk' }, 400);
   const body = c.req.raw.body;
   if (!body) return c.json({ ok: false, error: 'empty_body' }, 400);
@@ -221,7 +222,7 @@ otaAdminRoute.put('/upload', async (c) => {
     cert_sha256: facts.cert_sha256,
     force_install: 0,
     install_hint: 'idle_only',
-    notes: '',
+    notes: uploadNotes,
     channel: 'stable',
     enabled: 0,
     rollout_sns: '',
@@ -241,12 +242,14 @@ otaAdminRoute.post('/releases/:vc/publish', async (c) => {
   if (!rel) return c.json({ ok: false, error: 'not_found' }, 404);
   const parsed = PublishSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request', message: 'rollout 须为 all 或 sns' }, 400);
-  const { rollout, sns, force, install_hint } = parsed.data;
+  const { rollout, sns, force, install_hint, notes } = parsed.data;
   // 全量必须显式 rollout='all'；rollout='sns' 时名单不可为空（防误全量）
   if (rollout === 'sns' && sns.length === 0) {
     return c.json({ ok: false, error: 'empty_sns', message: 'rollout=sns 时名单不可为空' }, 400);
   }
   otaStore.publish(vc, rollout === 'all' ? '' : sns.join(','), force, install_hint);
+  // 2026-09-07 前 notes 收了不落库（记忆 p003_ota「publish notes 不落库」坑）；不带 notes 的发布（强制/灰度切换）不清空
+  if (notes !== undefined) otaStore.updateNotes(vc, notes.trim());
   console.log(`[ota] published v${vc} rollout=${rollout === 'all' ? 'ALL' : sns.join(',')} force=${force}`);
   return c.json({ ok: true, release: { ...otaStore.getRelease(vc), apk_path: undefined } });
 });
@@ -266,6 +269,19 @@ otaAdminRoute.delete('/releases/:vc', async (c) => {
   if (!otaStore.deleteRelease(vc)) return c.json({ ok: false, error: 'delete_failed' }, 500);
   await unlink(rel.apk_path).catch(() => {});
   return c.json({ ok: true });
+});
+
+const NotesSchema = z.object({ notes: z.string().max(2000) });
+/** 更新说明：任何状态可改（已发布也能补写「更新了什么/解决了什么」）；设备 check offer 的 notes 字段同源。 */
+otaAdminRoute.patch('/releases/:vc/notes', async (c) => {
+  const vc = Number.parseInt(c.req.param('vc'), 10);
+  if (!otaStore.getRelease(vc)) return c.json({ ok: false, error: 'not_found' }, 404);
+  const parsed = NotesSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ ok: false, error: 'bad_request', message: '更新说明须为不超过 2000 字的文本' }, 400);
+  const notes = parsed.data.notes.trim();
+  otaStore.updateNotes(vc, notes);
+  console.log(`[ota] notes updated v${vc} len=${notes.length}`);
+  return c.json({ ok: true, release: { ...otaStore.getRelease(vc), apk_path: undefined } });
 });
 
 otaAdminRoute.get('/devices', (c) => {

@@ -518,6 +518,20 @@ pckAdminRoute.patch('/releases/:id', async (c) => {
   return c.json({ ok: true, release: view(pckStore.getRelease(id)!) });
 });
 
+const NotesSchema = z.object({ release_notes: z.array(z.string().max(500)).max(20) });
+/** 更新说明：任何状态可改（与 PATCH 元数据的「只草稿可改」分开——说明是文档，不是字节/策略）。 */
+pckAdminRoute.patch('/releases/:id/notes', async (c) => {
+  const id = Number.parseInt(c.req.param('id'), 10);
+  const rel = pckStore.getRelease(id);
+  if (!rel) return c.json({ ok: false, error: 'not_found' }, 404);
+  const parsed = NotesSchema.safeParse(await c.req.json().catch(() => ({})));
+  if (!parsed.success) return c.json({ ok: false, error: 'bad_request', message: '更新说明须为不超过 20 条、每条不超过 500 字的文本数组' }, 400);
+  const notes = parsed.data.release_notes.map((s) => s.trim()).filter(Boolean);
+  pckStore.updateReleaseNotes(id, JSON.stringify(notes));
+  console.log(`[pck] notes updated #${id} ${rel.content_version} items=${notes.length}`);
+  return c.json({ ok: true, release: view(pckStore.getRelease(id)!) });
+});
+
 const PublishSchema = z.object({
   rollout: z.enum(['all', 'sns']),
   sns: z.array(z.string().trim().min(1)).optional().default([]),

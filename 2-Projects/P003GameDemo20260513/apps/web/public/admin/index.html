@@ -1555,6 +1555,7 @@
                     <div style="font-weight:700;margin-bottom:10px">上传 APK<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">上传后服务端实测校验：包名 / 签名证书 / versionCode 单调（APK 本体为真值）</span></div>
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                       <input type="file" accept=".apk" @change="otaPickFile" :disabled="ota.uploading" />
+                      <input v-model="ota.form.notes" placeholder="更新说明（可空，之后可改）" style="width:260px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
                       <el-button size="small" type="primary" :loading="ota.uploading" :disabled="!ota.file" @click="uploadApk()">{{ ota.uploading ? ('上传中 ' + ota.uploadPct + '%') : '上传并校验' }}</el-button>
                     </div>
                     <div v-if="ota.uploadMsg" style="margin-top:8px;font-size:13px" :style="{ color: ota.uploadOk ? '#3A8A3A' : '#B03A3A' }">{{ ota.uploadMsg }}</div>
@@ -1562,16 +1563,18 @@
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
                     <div style="font-weight:700;margin-bottom:10px">版本发布</div>
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
-                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">versionCode</th><th style="padding:6px 8px">versionName</th><th style="padding:6px 8px">大小</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">状态</th><th style="padding:6px 8px">灰度</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">versionCode</th><th style="padding:6px 8px">versionName</th><th style="padding:6px 8px">大小</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">更新说明</th><th style="padding:6px 8px">状态</th><th style="padding:6px 8px">灰度</th><th style="padding:6px 8px">操作</th></tr></thead>
                       <tbody>
                         <tr v-for="r in ota.releases" :key="r.version_code" style="border-bottom:1px solid #f5f5f5">
                           <td style="padding:6px 8px;font-weight:700">{{ r.version_code }}</td>
                           <td style="padding:6px 8px">{{ r.version_name }}</td>
                           <td style="padding:6px 8px">{{ (r.size_bytes / 1048576).toFixed(1) }} MB</td>
                           <td style="padding:6px 8px;font-family:monospace">{{ r.sha256.slice(0, 12) }}…</td>
+                          <td style="padding:6px 8px;max-width:280px;font-size:12px;color:#555;white-space:pre-wrap;word-break:break-all" :title="r.notes || ''">{{ r.notes || '—' }}</td>
                           <td style="padding:6px 8px"><span :style="{ color: r.enabled ? '#3A8A3A' : '#999' }">{{ r.enabled ? ('发布中' + (r.force_install ? '·⚡强制' : '') + (r.install_hint && r.install_hint !== 'idle_only' ? '·' + r.install_hint : '')) : '草稿/暂停' }}</span></td>
                           <td style="padding:6px 8px;max-width:220px;word-break:break-all">{{ r.enabled ? (r.rollout_sns || '全量') : '—' }}</td>
                           <td style="padding:6px 8px;white-space:nowrap">
+                            <el-button size="small" plain @click="otaEditNotes(r)">改说明</el-button>
                             <el-button size="small" @click="otaPublish(r, 'sns')">灰度发布</el-button>
                             <el-button size="small" type="warning" @click="otaPublish(r, 'all')">全量发布</el-button>
                             <el-button v-if="r.enabled && !r.force_install" size="small" type="danger" plain @click="otaForce(r, true)">⚡ 强制更新</el-button>
@@ -1580,7 +1583,7 @@
                             <el-button v-if="!r.enabled" size="small" type="danger" @click="otaDelete(r)">删除</el-button>
                           </td>
                         </tr>
-                        <tr v-if="!ota.releases.length"><td colspan="7" style="padding:14px 8px;color:#999">暂无版本，先上传 APK</td></tr>
+                        <tr v-if="!ota.releases.length"><td colspan="8" style="padding:14px 8px;color:#999">暂无版本，先上传 APK</td></tr>
                       </tbody>
                     </table>
                     <div style="margin-top:8px;font-size:12px;color:#888">⚡ 强制更新 = force + immediate：跳过闲时等待尽快装，但<b>不打断进行中的语音会话</b>（会话结束立即装）；「取消强制」回到闲时安装。回滚提示：APK 层无真回滚，「暂停」只救未升级设备。</div>
@@ -1616,12 +1619,13 @@
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
                     <div style="font-weight:700;margin-bottom:10px">🧩 PCK 版本发布<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">草稿→发布→暂停/撤回；成功终态只有设备回报 confirmed；回滚=用旧字节建新 revision 再发布（字节不可改写）</span></div>
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
-                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">content_version</th><th style="padding:6px 8px">大小 / 文件数</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">机型 / 最低 Launcher</th><th style="padding:6px 8px">状态 / 灰度</th><th style="padding:6px 8px">已激活</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">content_version</th><th style="padding:6px 8px">大小 / 文件数</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">更新说明</th><th style="padding:6px 8px">机型 / 最低 Launcher</th><th style="padding:6px 8px">状态 / 灰度</th><th style="padding:6px 8px">已激活</th><th style="padding:6px 8px">操作</th></tr></thead>
                       <tbody>
                         <tr v-for="r in pck.releases" :key="r.id" style="border-bottom:1px solid #f5f5f5">
                           <td style="padding:6px 8px;font-weight:700">{{ r.content_version }}<div v-if="r.rollback_of" style="font-weight:400;font-size:11px;color:#E8833A">回滚版 ← #{{ r.rollback_of }}</div><div style="font-weight:400;font-size:11px;color:#999">#{{ r.id }} · godot {{ r.godot_version }}</div></td>
                           <td style="padding:6px 8px">{{ (r.length / 1048576).toFixed(2) }} MB<div style="font-size:11px;color:#999">{{ r.file_count }} 文件 · required {{ r.required_resources.length }}</div></td>
                           <td style="padding:6px 8px;font-family:monospace">{{ r.sha256.slice(0, 12) }}…</td>
+                          <td style="padding:6px 8px;max-width:280px;font-size:12px;color:#555;white-space:pre-wrap;word-break:break-all">{{ (r.release_notes && r.release_notes.length) ? r.release_notes.join('\n') : '—' }}</td>
                           <td style="padding:6px 8px">{{ r.product_models.join(', ') }}<div style="font-size:11px;color:#999">≥ v{{ r.min_launcher_version_code }}{{ r.force ? ' · force' : '' }}</div></td>
                           <td style="padding:6px 8px"><span :style="{ color: pckStatusColor(r.status), fontWeight: 700 }">{{ pckStatusLabel(r.status) }}</span><div style="font-size:11px;color:#666;max-width:220px;word-break:break-all">{{ (r.status === 'published' || r.status === 'paused') ? (r.rollout.policy === 'all' ? '全量' : r.rollout.sns) : '—' }}</div></td>
                           <td style="padding:6px 8px">{{ r.devices_active }} 台</td>
@@ -1631,12 +1635,13 @@
                             <el-button v-if="r.status === 'published'" size="small" type="danger" plain @click="pckAction(r, 'pause', '暂停 ' + r.content_version + '？之后不再下发新 offer；已开始下载的设备仍可读文件。')">暂停</el-button>
                             <el-button v-if="r.status === 'paused'" size="small" plain @click="pckAction(r, 'resume', '恢复 ' + r.content_version + ' 的发布？')">恢复</el-button>
                             <el-button v-if="r.status === 'published' || r.status === 'paused'" size="small" type="danger" @click="pckAction(r, 'revoke', '撤回 ' + r.content_version + '？不可逆：文件对设备返回 410，只能用旧字节建新版本恢复。')">撤回</el-button>
+                            <el-button size="small" plain @click="pckEditNotes(r)">改说明</el-button>
                             <el-button size="small" @click="pckRollback(r)">建回滚版</el-button>
                             <el-button v-if="r.status === 'draft'" size="small" @click="pckEditMeta(r)">改元数据</el-button>
                             <el-button v-if="r.status === 'draft' || r.status === 'revoked'" size="small" type="danger" plain @click="pckAction(r, 'delete', '删除 ' + r.content_version + '（' + (r.status === 'revoked' ? '已撤回，记录清理，流水保留' : '草稿') + '）？')">删除</el-button>
                           </td>
                         </tr>
-                        <tr v-if="!pck.releases.length"><td colspan="7" style="padding:14px 8px;color:#999">暂无 PCK 版本，先上传</td></tr>
+                        <tr v-if="!pck.releases.length"><td colspan="8" style="padding:14px 8px;color:#999">暂无 PCK 版本，先上传</td></tr>
                       </tbody>
                     </table>
                   </div>
@@ -4212,7 +4217,7 @@
 
         // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
         // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
-        var ota = reactive({ loading: false, uploading: false, uploadPct: 0, uploadMsg: '', uploadOk: false, file: null, releases: [], devices: [] });
+        var ota = reactive({ loading: false, uploading: false, uploadPct: 0, uploadMsg: '', uploadOk: false, file: null, form: { notes: '' }, releases: [], devices: [] });
         function otaPickFile(e) {
           ota.file = (e.target.files && e.target.files[0]) || null;
           ota.uploadMsg = '';
@@ -4234,7 +4239,7 @@
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           ota.uploading = true; ota.uploadPct = 0; ota.uploadMsg = ''; ota.uploadOk = false;
           var xhr = new XMLHttpRequest();
-          xhr.open('PUT', '/api/admin/ota/upload?filename=' + encodeURIComponent(ota.file.name));
+          xhr.open('PUT', '/api/admin/ota/upload?filename=' + encodeURIComponent(ota.file.name) + '&notes=' + encodeURIComponent(String(ota.form.notes || '').trim()));
           xhr.setRequestHeader('Authorization', 'Bearer ' + token);
           xhr.upload.onprogress = function (ev) { if (ev.lengthComputable) ota.uploadPct = Math.round(ev.loaded / ev.total * 100); };
           xhr.onload = function () {
@@ -4244,7 +4249,7 @@
             if (xhr.status === 200 && j.ok) {
               ota.uploadOk = true;
               ota.uploadMsg = '✓ 校验通过并入库（草稿）：v' + j.release.version_code + ' ' + j.release.version_name + ' · ' + (j.release.size_bytes / 1048576).toFixed(1) + 'MB · sha ' + j.release.sha256.slice(0, 12) + '…';
-              ota.file = null;
+              ota.file = null; ota.form.notes = '';
               loadOta();
             } else {
               ota.uploadOk = false;
@@ -4253,6 +4258,14 @@
           };
           xhr.onerror = function () { ota.uploading = false; ota.uploadOk = false; ota.uploadMsg = '✗ 网络错误'; };
           xhr.send(ota.file);
+        }
+        // 更新说明（2026-09-07 川哥：每版要知道更新了什么、解决了什么）：任何状态可改；设备 check 的 offer.notes 同源
+        function otaEditNotes(rel) {
+          ElementPlus.ElMessageBox.prompt('这一版更新了什么、解决了什么问题（多行可换行；不超过 2000 字）', '更新说明 v' + rel.version_code + ' ' + (rel.version_name || ''), { inputType: 'textarea', inputValue: rel.notes || '', inputPlaceholder: '例：修复首句截头；招呼语尾静音裁除后放行', confirmButtonText: '保存', cancelButtonText: '取消' }).then(function (r) {
+            deviceApi('/api/admin/ota/releases/' + rel.version_code + '/notes', { method: 'PATCH', body: JSON.stringify({ notes: String(r.value || '') }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已保存更新说明'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
         }
         function otaPublish(rel, mode) {
           if (mode === 'all') {
@@ -4460,6 +4473,14 @@
           ElementPlus.ElMessageBox.prompt('用 ' + rel.content_version + ' 的已验证字节建新 revision（同 SHA、新版本名、草稿态；发布走常规流程）', '建回滚版', { inputValue: 'vrb-' + rel.content_version + '-1', inputPlaceholder: 'v214-rollback-v211-1' }).then(function (r) {
             deviceApi('/api/admin/ota/pck/releases/' + rel.id + '/rollback', { method: 'POST', body: JSON.stringify({ content_version: String(r.value || '').trim() }) }).then(function (j) {
               if (j.ok) { ElementPlus.ElMessage.success('已建草稿 ' + j.release.content_version); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function pckEditNotes(rel) {
+          ElementPlus.ElMessageBox.prompt('每行一条（更新了什么 / 解决了什么）；不超过 20 条、每条 500 字', '更新说明 ' + rel.content_version, { inputType: 'textarea', inputValue: (rel.release_notes || []).join('\n'), confirmButtonText: '保存', cancelButtonText: '取消' }).then(function (r) {
+            var lines = String(r.value || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+            deviceApi('/api/admin/ota/pck/releases/' + rel.id + '/notes', { method: 'PATCH', body: JSON.stringify({ release_notes: lines }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已保存更新说明'); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
             });
           }).catch(function () {});
         }
@@ -6957,8 +6978,8 @@
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
-          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
-          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
+          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaEditNotes: otaEditNotes, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
+          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,

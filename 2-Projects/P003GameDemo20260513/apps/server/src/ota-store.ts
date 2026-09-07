@@ -127,6 +127,14 @@ class OtaStore {
     return Number(r.changes) > 0;
   }
 
+  /** 更新说明可在任何状态改（文档不是字节/策略）。2026-09-07 川哥：后台每版要能看到更新了什么、解决了什么。 */
+  updateNotes(versionCode: number, notes: string): boolean {
+    const r = this.db
+      .prepare(`UPDATE ota_release SET notes = ?, updated_at = ? WHERE version_code = ?`)
+      .run(notes, Date.now(), versionCode);
+    return Number(r.changes) > 0;
+  }
+
   pause(versionCode: number): boolean {
     const r = this.db
       .prepare(`UPDATE ota_release SET enabled = 0, updated_at = ? WHERE version_code = ?`)

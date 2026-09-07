@@ -253,6 +253,12 @@ class PckStore {
     return Number(r.changes) > 0;
   }
 
+  /** 更新说明可在任何状态改（文档不是字节/策略；「已发布不可变」只约束元数据与内容）。2026-09-07 川哥要求。 */
+  updateReleaseNotes(id: number, releaseNotesJson: string): boolean {
+    const r = this.db.prepare(`UPDATE pck_release SET release_notes = ?, updated_at = ? WHERE id = ?`).run(releaseNotesJson, Date.now(), id);
+    return Number(r.changes) > 0;
+  }
+
   setStatus(id: number, status: PckStatus): void {
     this.db.prepare(`UPDATE pck_release SET status = ?, updated_at = ? WHERE id = ?`).run(status, Date.now(), id);
   }

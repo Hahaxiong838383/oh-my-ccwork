@@ -467,5 +467,19 @@ let draftSha = '';
   await admin('DELETE', '/fault');
 }
 
+// ---------- 更新说明（2026-09-07）：任何状态可改 release_notes；元数据仍只草稿可改 ----------
+{
+  const all = (await admin('GET', '/releases')).json.releases as Array<{ id: number; status: string; release_notes: string[] }>;
+  const pubRel = all.find((r) => r.status === 'published') ?? all.find((r) => r.status === 'paused') ?? all.find((r) => r.status === 'revoked');
+  eq('pn-0 有非草稿版本可用于验证', typeof pubRel?.id, 'number');
+  const id = pubRel!.id;
+  const r1 = await admin('PATCH', `/releases/${id}/notes`, { release_notes: [' 更新了 G1 美术 ', '', '解决了加载卡顿'] });
+  eq('pn-1 非草稿 PATCH /notes 200 + 去空白/空条', { s: r1.status, n: r1.json.release?.release_notes }, { s: 200, n: ['更新了 G1 美术', '解决了加载卡顿'] });
+  eq('pn-2 列表读回', (await admin('GET', '/releases')).json.releases.find((r: any) => r.id === id)?.release_notes, ['更新了 G1 美术', '解决了加载卡顿']);
+  eq('pn-3 非草稿改元数据仍拒 not_draft（不可变边界不变）', (await admin('PATCH', `/releases/${id}`, { release_notes: ['x'] })).json.error, 'not_draft');
+  eq('pn-4 坏形状 400', (await admin('PATCH', `/releases/${id}/notes`, { release_notes: 'not-array' })).status, 400);
+  eq('pn-5 不存在 404', (await admin('PATCH', `/releases/999999/notes`, { release_notes: ['a'] })).status, 404);
+}
+
 console.log(`\nota-pck tests: pass=${pass} fail=${fail}`);
 process.exit(fail ? 1 : 0);
