@@ -70,3 +70,25 @@
 5. 要不要 cc 出一份给同事的通知文案？
 
 署名：cc（Claude）| 2026-09-07 13:57 CST
+
+---
+
+## 6. 执行记录：A 主线 voice-worker 已停并禁用（2026-09-07 14:03 CST，川哥批）
+
+- 动作：`systemctl disable --now voice-worker`（wants 链接已移除；unit 文件保留，回滚 `systemctl enable --now voice-worker`）。
+- 前后对照（64.90）：内存 used 2104→1577 MB、available 1811→**2337 MB（+526）**；端口 8081 监听 2→0；旧主进程与其 forkserver 子进程已退出。
+- 未碰：voice-worker-rust MainPID 2017631 不变、NRestarts=0、日志持续 `job rss` 心跳；voice-worker-colleague/voice-console/caddy 仍 active，8082 仍监听。
+- LiveKit 侧：14:02:38 `last worker deregistered agentName=realtime-voice-agent` + `closing worker`，注销干净。
+- 顺带盘到：journald 1.6 GB（可 vacuum 留 14 天）、pip cache 11 MB（忽略）。
+
+## 7. 其余「不影响 rust」的可清理项（等川哥点）
+
+| 项 | 释放 | 对 rust | 备注 |
+|---|---|---|---|
+| C1 rust 二进制备份 29→留 5 | ≈1.65 GB 磁盘 | 无（现役二进制与 .new 路径不动） | 顺手给 deploy-worker-bin.sh 加轮转 |
+| C2 eot-snapshots 留 7 天 + cron | ≈400 MB（8-31 前约 736 房） | 无（rust 只追加写） | cc 首句取证工具，别全删 |
+| C3 journald vacuum 留 14 天 | ≈1 GB | 无 | 日志也是取证源，14 天够 |
+| 47.239 nginx 摘 /voice-test.html | 忽略 | 无（rust 页 voice-test-rust.html 保留） | 30 天零访问 |
+| B 同事三件套 | 634 MB + 端口 8082/80/443 | 无 | **影响同事**，等拍板 |
+| D 共享 env 7 键并入 rust-worker.env + unit 去两行 | 0 | **有**（要 restart 验证） | B 之后、测试空窗做 |
+| voice-venv | 0 | 依赖 | 保留 |
