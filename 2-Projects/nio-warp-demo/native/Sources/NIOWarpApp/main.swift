@@ -8,7 +8,7 @@ import Metal
 import MetalKit
 import ScreenCaptureKit
 
-private struct ShaderUniforms {
+struct ShaderUniforms {
     var sourceAspect: Float
     var canvasAspect: Float
     var contentMode: Int32
@@ -19,6 +19,7 @@ private struct ShaderUniforms {
     var testPatternMode: UInt32
     var contentUVScale: SIMD2<Float>
     var gridUVScale: SIMD2<Float>
+    var gridParameters: SIMD4<Float>
 }
 
 final class LatestFrameStore {
@@ -343,16 +344,9 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     var activeConfiguration: WarpConfiguration { configuration }
     private var runtimeAntiAliasingOverride: AntiAliasingMode?
     private(set) var meshValidation = MeshValidation(foldedCellCount: 0, outOfAASampleCount: 0, totalSampleCount: 0)
+    private(set) var meshRevision = 0
 
-    init?(view: MTKView, frameStore: LatestFrameStore, configuration: WarpConfiguration) {
-        guard let device = MTLCreateSystemDefaultDevice(),
-              let commandQueue = device.makeCommandQueue() else { return nil }
-        self.device = device
-        self.commandQueue = commandQueue
-        self.frameStore = frameStore
-        self.configuration = configuration
-
-        let shaderSource = """
+    static let shaderSource = """
         #include <metal_stdlib>
         using namespace metal;
 
@@ -377,6 +371,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             uint testPatternMode;
             float2 contentUVScale;
             float2 gridUVScale;
+            float4 gridParameters;
         };
 
         vertex VertexOut vertexMain(VertexIn input [[stage_in]]) {
@@ -391,6 +386,15 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             float width = max(fwidth(coordinate) * thickness, 0.00005);
             if (!smoothEdges) { return repeated <= width ? 1.0 : 0.0; }
             return 1.0 - smoothstep(width, width * 1.8, repeated);
+        }
+
+        float majorGridLine(float coordinate, float spacing, float widthPixels, bool smoothEdges) {
+            float repeated = abs(fract(coordinate / spacing + 0.5) - 0.5) * spacing;
+            float pixelStep = max(length(float2(dfdx(coordinate), dfdy(coordinate))), 0.00000001);
+            float distancePixels = repeated / pixelStep;
+            float halfWidth = widthPixels * 0.5;
+            if (!smoothEdges) { return distancePixels <= halfWidth ? 1.0 : 0.0; }
+            return 1.0 - smoothstep(halfWidth - 0.5, halfWidth + 0.5, distancePixels);
         }
 
         float2 applyMirror(float2 uv, uint mirrorFlags) {
@@ -416,10 +420,11 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             return 1.0 - smoothstep(width, width * 2.5, distance);
         }
 
-        float4 calibrationPattern(float2 uv, float2 gridScale, bool smoothEdges) {
+        float4 calibrationPattern(float2 uv, float2 gridScale, float4 parameters, bool smoothEdges) {
             float2 gridUV = 0.5 + (uv - 0.5) * gridScale;
-            float minorGrid = max(gridLine(gridUV.x, 0.02, 0.7, smoothEdges), gridLine(gridUV.y, 0.02, 0.7, smoothEdges));
-            float majorGrid = max(gridLine(gridUV.x, 0.10, 1.0, smoothEdges), gridLine(gridUV.y, 0.10, 1.0, smoothEdges));
+            float2 spacing = 1.0 / parameters.xy;
+            float minorGrid = max(gridLine(gridUV.x, spacing.x / 5.0, 0.7, smoothEdges), gridLine(gridUV.y, spacing.y / 5.0, 0.7, smoothEdges));
+            float majorGrid = max(majorGridLine(gridUV.x, spacing.x, parameters.z, smoothEdges), majorGridLine(gridUV.y, spacing.y, parameters.z, smoothEdges));
             float centerXWidth = max(fwidth(uv.x), 0.00005);
             float centerYWidth = max(fwidth(uv.y), 0.00005);
             float centerX = lineMask(abs(uv.x - 0.5), centerXWidth, smoothEdges);
@@ -511,7 +516,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             if (uniforms.testPatternMode == 1u) {
                 float2 patternUV = applyMirror(uv, uniforms.mirrorFlags);
                 bool smoothEdges = uniforms.antiAliasingMode != 0u;
-                float4 pattern = calibrationPattern(patternUV, uniforms.gridUVScale, smoothEdges);
+                float4 pattern = calibrationPattern(patternUV, uniforms.gridUVScale, uniforms.gridParameters, smoothEdges);
                 return float4(pattern.rgb * edgeAlpha, 1.0);
             }
 
@@ -556,8 +561,16 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
         }
         """
 
+    init?(view: MTKView, frameStore: LatestFrameStore, configuration: WarpConfiguration) {
+        guard let device = MTLCreateSystemDefaultDevice(),
+              let commandQueue = device.makeCommandQueue() else { return nil }
+        self.device = device
+        self.commandQueue = commandQueue
+        self.frameStore = frameStore
+        self.configuration = configuration
+
         do {
-            let library = try device.makeLibrary(source: shaderSource, options: nil)
+            let library = try device.makeLibrary(source: Self.shaderSource, options: nil)
             let descriptor = MTLRenderPipelineDescriptor()
             descriptor.vertexFunction = library.makeFunction(name: "vertexMain")
             descriptor.fragmentFunction = library.makeFunction(name: "fragmentMain")
@@ -603,6 +616,13 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
         return meshValidation
     }
 
+    @discardableResult
+    func updateCalibrationGrid(_ grid: CalibrationGridConfiguration) -> Bool {
+        guard grid.isValid else { return false }
+        configuration.render.calibrationGrid = grid
+        return true
+    }
+
     var effectiveAntiAliasingMode: AntiAliasingMode {
         guard configuration.render.antiAliasingEnabled else { return .off }
         return runtimeAntiAliasingOverride ?? configuration.render.antiAliasing
@@ -636,6 +656,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     }
 
     private func installMesh(_ mesh: GeneratedMesh) {
+        meshRevision += 1
         vertexBuffer = device.makeBuffer(
             bytes: mesh.vertices,
             length: mesh.vertices.count * MemoryLayout<MeshVertex>.stride
@@ -696,7 +717,8 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             antiAliasingMode: effectiveAntiAliasingMode.shaderValue,
             testPatternMode: configuration.render.testPattern.shaderValue,
             contentUVScale: configuration.contentUVScale,
-            gridUVScale: configuration.gridUVScale
+            gridUVScale: configuration.gridUVScale,
+            gridParameters: configuration.render.calibrationGrid.shaderParameters
         )
 
         let aa = configuration.aaRect.sanitized()
@@ -826,6 +848,9 @@ private enum NumericFieldTarget: Int {
     case canvasHeight
     case coefficientX
     case coefficientY
+    case gridColumns
+    case gridRows
+    case gridLineWidth
 }
 
 private enum RuntimePreviewMode {
@@ -926,8 +951,8 @@ private final class OutputController {
 final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private let renderer: WarpRenderer?
     private let store: ConfigurationStore
-    private let presetStore = PresetStore()
-    private let historyStore = ConfigurationHistoryStore()
+    private let presetStore: PresetStore
+    private let historyStore: ConfigurationHistoryStore
     private let displayWidth: Int
     private let displayHeight: Int
     private let setWarpVisible: (Bool) -> Void
@@ -943,6 +968,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private var runtimePreviewReturnMode = RuntimePreviewMode.normal
     private var captureSourceWidth: Int
     private var captureSourceHeight: Int
+    private var gridHistoryRecorded = false
+    private var gridHistoryReset: DispatchWorkItem?
 
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
     private let globalStatusLabel = NSTextField(wrappingLabelWithString: "正在准备控制台…")
@@ -986,6 +1013,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private let antiAliasingEnabledButton = NSButton(checkboxWithTitle: "平滑线条边缘（抗锯齿）", target: nil, action: nil)
     private let automaticPerformanceButton = NSButton(checkboxWithTitle: "帧率不足时，自动降低采样档位保流畅", target: nil, action: nil)
     private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、中心线和边界", target: nil, action: nil)
+    private let gridColumnsField = NSTextField()
+    private let gridRowsField = NSTextField()
+    private let gridLineWidthField = NSTextField()
+    private let gridSummaryLabel = NSTextField(wrappingLabelWithString: "")
+    private let gridStatusLabel = NSTextField(wrappingLabelWithString: "")
     private let rawCalibrationButton = NSButton(title: "一键无畸变标定", target: nil, action: nil)
     private let antiAliasingComparisonButton = NSButton(title: "抗锯齿 A/B 对比", target: nil, action: nil)
     private let performanceLabel = NSTextField(wrappingLabelWithString: "性能采样中…")
@@ -1008,10 +1040,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         applyCaptureConfiguration: @escaping (CaptureConfiguration) -> Void,
         updateAABoundary: @escaping (NormalizedRect, Bool) -> Void,
         updateWarpBoundary: @escaping (WarpConfiguration, Bool) -> Void,
-        presentWindow: Bool = true
+        presentWindow: Bool = true,
+        historyStore: ConfigurationHistoryStore = ConfigurationHistoryStore(),
+        presetStore: PresetStore = PresetStore()
     ) {
         self.renderer = renderer
         self.store = store
+        self.historyStore = historyStore
+        self.presetStore = presetStore
         self.configuration = configuration
         lastAppliedConfiguration = configuration
         self.setWarpVisible = setWarpVisible
@@ -1052,7 +1088,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
 
     required init?(coder: NSCoder) { nil }
 
-    deinit { performanceTimer?.invalidate() }
+    deinit {
+        performanceTimer?.invalidate()
+        gridHistoryReset?.cancel()
+    }
 
     private func buildInterface(sourceScreen: NSScreen?, outputScreen: NSScreen?) {
         guard let contentView = window?.contentView else { return }
@@ -1259,6 +1298,28 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         antiAliasingComparisonButton.action = #selector(toggleAntiAliasingComparison)
         stack.addArrangedSubview(automaticPerformanceButton)
         stack.addArrangedSubview(testPatternButton)
+        stack.addArrangedSubview(explanation("设置基准画布分成几列、几行大格；合法数值实时生效并自动保存。开启曲面外扩后，增加画布只在边缘续格，不拉伸已有格子。"))
+        stack.addArrangedSubview(labeledRow("基准横向列数", numericField(gridColumnsField, target: .gridColumns, decimal: false)))
+        stack.addArrangedSubview(labeledRow("基准纵向行数", numericField(gridRowsField, target: .gridRows, decimal: false)))
+        stack.addArrangedSubview(labeledRow("白线宽度 px", numericField(gridLineWidthField, target: .gridLineWidth, decimal: true)))
+        for (field, identifier, help) in [
+            (gridColumnsField, "nio-grid-columns", "基准画布横向分几列大格，填写 1～200 的整数。改列数会重新分格；只加宽画布则继续增加格子。"),
+            (gridRowsField, "nio-grid-rows", "基准画布纵向分几行大格，填写 1～200 的整数。改行数会重新分格；只加高画布则继续增加格子。"),
+            (gridLineWidthField, "nio-grid-line-width", "粗白线的完整标称宽度，填写 1～32 个外屏物理像素；可填小数。加减每次 1 像素，抗锯齿会保留边缘过渡。"),
+        ] {
+            field.formatter = nil
+            field.delegate = self
+            field.setAccessibilityIdentifier(identifier)
+            field.setAccessibilityLabel(identifier == "nio-grid-columns" ? "基准横向列数" : identifier == "nio-grid-rows" ? "基准纵向行数" : "白线宽度（外屏物理像素）")
+            field.toolTip = help
+            field.setAccessibilityHelp(help)
+        }
+        gridSummaryLabel.preferredMaxLayoutWidth = 490
+        gridSummaryLabel.textColor = .secondaryLabelColor
+        gridStatusLabel.preferredMaxLayoutWidth = 490
+        gridStatusLabel.setAccessibilityIdentifier("nio-grid-status")
+        stack.addArrangedSubview(gridSummaryLabel)
+        stack.addArrangedSubview(gridStatusLabel)
         stack.addArrangedSubview(buttonRow([rawCalibrationButton, antiAliasingComparisonButton]))
         performanceLabel.textColor = .secondaryLabelColor
         performanceLabel.preferredMaxLayoutWidth = 500
@@ -1438,6 +1499,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         plus.widthAnchor.constraint(equalToConstant: 28).isActive = true
         minus.toolTip = decimal ? "减小 0.001，立即保存并应用这一组系数。" : "减小 1 像素，立即保存并应用这一组数值。"
         plus.toolTip = decimal ? "增加 0.001，立即保存并应用这一组系数。" : "增加 1 像素，立即保存并应用这一组数值。"
+        if [.gridColumns, .gridRows, .gridLineWidth].contains(target) {
+            let unit = target == .gridLineWidth ? "像素线宽" : "个基准大格"
+            minus.toolTip = "减少 1 \(unit)，网格实时更新并自动保存。"
+            plus.toolTip = "增加 1 \(unit)，网格实时更新并自动保存。"
+        }
 
         let row = NSStackView(views: [minus, field, plus])
         row.orientation = .horizontal
@@ -1492,6 +1558,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         automaticPerformanceButton.isEnabled = configuration.render.antiAliasingEnabled
         automaticPerformanceButton.state = configuration.render.automaticPerformanceFallback ? .on : .off
         testPatternButton.state = configuration.render.testPattern == .calibrationGrid ? .on : .off
+        gridColumnsField.stringValue = String(configuration.render.calibrationGrid.columns)
+        gridRowsField.stringValue = String(configuration.render.calibrationGrid.rows)
+        gridLineWidthField.stringValue = NumericInput.formattedDouble(configuration.render.calibrationGrid.lineWidthPixels)
         aaBoundaryButton.state = configuration.render.showAABoundary ? .on : .off
         extendedWarpButton.state = configuration.extendedWarpEnabled ? .on : .off
         warpBoundaryButton.state = configuration.render.showWarpBoundary ? .on : .off
@@ -1547,6 +1616,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        finishGridEditingSession()
         guard let renderer else {
             configuration = lastAppliedConfiguration
             refreshControls()
@@ -1635,6 +1705,104 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         rawCalibrationButton.toolTip = "临时关闭弯曲和外扩，显示矩形网格，供拍摄玻璃反射；不会覆盖保存的校正参数。再次点击返回。"
         antiAliasingComparisonButton.title = runtimePreviewMode == .antiAliasingComparison ? "结束对比，返回原画面" : "对比抗锯齿：左关 / 右开"
         antiAliasingComparisonButton.toolTip = "左右显示完全相同的图案，唯一差别是抗锯齿；不修改保存参数，退出后恢复进入前状态。"
+        refreshGridSummary()
+    }
+
+    private func refreshGridSummary() {
+        let active = renderer?.activeConfiguration ?? configuration
+        gridSummaryLabel.stringValue = configuration.calibrationGridSummary
+        gridStatusLabel.textColor = .secondaryLabelColor
+        if isWaitingForDisplay {
+            gridStatusLabel.stringValue = "待机只读：接上外屏后可修改。基础配置的小图仅示意曲面，不显示这些标定网格参数。"
+        } else if active.render.testPattern == .antiAliasingComparison {
+            gridStatusLabel.stringValue = "当前是抗锯齿专用对比图，网格参数不影响该图。结束对比后按网格设置显示。"
+        } else if active.render.testPattern == .off {
+            gridStatusLabel.stringValue = "参数已保存。勾选“显示标定网格”或进入未校正网格后，才能看到变化。"
+        } else if runtimePreviewMode == .rawReflectionCalibration {
+            gridStatusLabel.stringValue = "未校正预览：只按基准行列数铺满 AA，不展示正常外扩覆盖量。仍可实时调网格，不退出预览、不覆盖校正参数。"
+        } else {
+            gridStatusLabel.stringValue = "已实时生效并自动保存。只调大格与粗白线；每大格内保留 5 等分灰线，红绿中心线和方向角标不变。"
+        }
+    }
+
+    private func isGridField(_ object: Any?) -> Bool {
+        guard let field = object as? NSTextField else { return false }
+        return field === gridColumnsField || field === gridRowsField || field === gridLineWidthField
+    }
+
+    func controlTextDidBeginEditing(_ notification: Notification) {
+        guard isGridField(notification.object) else { return }
+        finishGridEditingSession()
+    }
+
+    func controlTextDidChange(_ notification: Notification) {
+        guard isGridField(notification.object) else { return }
+        applyGridFields()
+    }
+
+    func controlTextDidEndEditing(_ notification: Notification) {
+        guard isGridField(notification.object) else { return }
+        applyGridFields()
+        finishGridEditingSession()
+    }
+
+    private func applyGridFields() {
+        guard let renderer else { return }
+        guard let columns = Int(NumericInput.normalized(gridColumnsField.stringValue)),
+              let rows = Int(NumericInput.normalized(gridRowsField.stringValue)),
+              let width = NumericInput.double(from: gridLineWidthField.stringValue) else {
+            gridStatusLabel.stringValue = "本次输入尚未应用：请填完整的行列数和线宽；画面保留上一组有效数值。"
+            gridStatusLabel.textColor = .systemOrange
+            return
+        }
+        let grid = CalibrationGridConfiguration(columns: columns, rows: rows, lineWidthPixels: width)
+        guard grid.isValid else {
+            gridStatusLabel.stringValue = "本次输入未应用：行列须为 1～200 的整数，线宽须为 1～32 像素；没有改动其他数值。"
+            gridStatusLabel.textColor = .systemOrange
+            return
+        }
+        guard grid != configuration.render.calibrationGrid else { refreshGridSummary(); return }
+        guard renderer.updateCalibrationGrid(grid) else { return }
+        if !gridHistoryRecorded {
+            historyStore.record(lastAppliedConfiguration, reason: "调整标定网格", force: true)
+            gridHistoryRecorded = true
+        }
+        configuration.render.calibrationGrid = grid
+        lastAppliedConfiguration.render.calibrationGrid = grid
+        store.save(lastAppliedConfiguration)
+        historyButton.title = "撤销上一次设置（\(historyStore.count)）"
+        historyButton.isEnabled = historyStore.count > 0
+        refreshGridSummary()
+    }
+
+    private func finishGridEditingSession() {
+        gridHistoryReset?.cancel()
+        gridHistoryReset = nil
+        gridHistoryRecorded = false
+    }
+
+    private func stepGridField(_ target: NumericFieldTarget, direction: Double) {
+        guard renderer != nil else { return }
+        window?.makeFirstResponder(nil)
+        switch target {
+        case .gridColumns:
+            let parsed = Int(NumericInput.normalized(gridColumnsField.stringValue)) ?? configuration.render.calibrationGrid.columns
+            let value = min(max(parsed, 1), 200)
+            gridColumnsField.stringValue = String(min(max(value + Int(direction), 1), 200))
+        case .gridRows:
+            let parsed = Int(NumericInput.normalized(gridRowsField.stringValue)) ?? configuration.render.calibrationGrid.rows
+            let value = min(max(parsed, 1), 200)
+            gridRowsField.stringValue = String(min(max(value + Int(direction), 1), 200))
+        case .gridLineWidth:
+            let value = NumericInput.double(from: gridLineWidthField.stringValue) ?? configuration.render.calibrationGrid.lineWidthPixels
+            gridLineWidthField.stringValue = NumericInput.formattedDouble(min(max(value + direction, 1), 32))
+        default: return
+        }
+        applyGridFields()
+        gridHistoryReset?.cancel()
+        let reset = DispatchWorkItem { [weak self] in self?.finishGridEditingSession() }
+        gridHistoryReset = reset
+        DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(750), execute: reset)
     }
 
     private func refreshCanvasGeometry() {
@@ -1707,6 +1875,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
+        finishGridEditingSession()
         guard let renderer else { return }
         let preview = previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
         let validation = renderer.updateConfiguration(preview)
@@ -1718,6 +1887,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func leaveRuntimePreview(message: String = "已返回校正状态") {
+        finishGridEditingSession()
         guard let renderer else { return }
         runtimePreviewMode = .normal
         runtimePreviewReturnMode = .normal
@@ -2043,6 +2213,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         case .coefficientY:
             adjustDoubleField(coefficientYField, delta: direction * 0.001)
             applyPolynomialCoefficients()
+        case .gridColumns, .gridRows, .gridLineWidth:
+            stepGridField(target, direction: direction)
         }
     }
 

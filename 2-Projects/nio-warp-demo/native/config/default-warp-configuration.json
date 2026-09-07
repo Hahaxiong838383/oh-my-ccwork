@@ -45,9 +45,14 @@
     "antiAliasingEnabled" : true,
     "antiAliasing" : "performance",
     "automaticPerformanceFallback" : true,
+    "calibrationGrid" : {
+      "columns" : 10,
+      "rows" : 10,
+      "lineWidthPixels" : 2
+    },
     "showAABoundary" : false,
     "showWarpBoundary" : false,
     "testPattern" : "off"
   },
-  "schemaVersion" : 8
+  "schemaVersion" : 9
 }

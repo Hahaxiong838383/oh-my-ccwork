@@ -188,6 +188,7 @@ struct RenderConfiguration: Codable, Equatable {
     var antiAliasing = AntiAliasingMode.performance
     var automaticPerformanceFallback = true
     var testPattern = TestPatternMode.off
+    var calibrationGrid = CalibrationGridConfiguration()
     var showAABoundary = false
     var showWarpBoundary = false
 
@@ -196,6 +197,7 @@ struct RenderConfiguration: Codable, Equatable {
         case antiAliasing
         case automaticPerformanceFallback
         case testPattern
+        case calibrationGrid
         case showAABoundary
         case showWarpBoundary
     }
@@ -205,6 +207,7 @@ struct RenderConfiguration: Codable, Equatable {
         antiAliasing: AntiAliasingMode = .performance,
         automaticPerformanceFallback: Bool = true,
         testPattern: TestPatternMode = .off,
+        calibrationGrid: CalibrationGridConfiguration = CalibrationGridConfiguration(),
         showAABoundary: Bool = false,
         showWarpBoundary: Bool = false
     ) {
@@ -212,6 +215,7 @@ struct RenderConfiguration: Codable, Equatable {
         self.antiAliasing = antiAliasing == .off ? .performance : antiAliasing
         self.automaticPerformanceFallback = automaticPerformanceFallback
         self.testPattern = testPattern
+        self.calibrationGrid = calibrationGrid
         self.showAABoundary = showAABoundary
         self.showWarpBoundary = showWarpBoundary
     }
@@ -223,6 +227,7 @@ struct RenderConfiguration: Codable, Equatable {
         antiAliasing = legacyMode == .off ? .performance : legacyMode
         automaticPerformanceFallback = try container.decodeIfPresent(Bool.self, forKey: .automaticPerformanceFallback) ?? true
         testPattern = try container.decodeIfPresent(TestPatternMode.self, forKey: .testPattern) ?? .off
+        calibrationGrid = try container.decodeIfPresent(CalibrationGridConfiguration.self, forKey: .calibrationGrid) ?? CalibrationGridConfiguration()
         showAABoundary = try container.decodeIfPresent(Bool.self, forKey: .showAABoundary) ?? false
         showWarpBoundary = try container.decodeIfPresent(Bool.self, forKey: .showWarpBoundary) ?? false
     }
@@ -289,7 +294,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 8
+    static let currentSchemaVersion = 9
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -426,6 +431,7 @@ struct WarpConfiguration: Codable, Equatable {
         }
         if displayPixelWidth <= 0 || displayPixelHeight <= 0 { errors.append("显示器像素尺寸必须大于 0") }
         if canvas.width <= 0 || canvas.height <= 0 { errors.append("画布尺寸必须大于 0") }
+        if !render.calibrationGrid.isValid { errors.append("网格行列数须为 1～200 的整数，白线宽度须为 1～32 像素") }
         if let reference = canvasReference, !reference.isValid { errors.append("画布基准无效，请重新设置基准或导入有效配置") }
         if cropAnchor != cropAnchor.sanitized() { errors.append("裁切位置必须位于 -1...1") }
         if aaRect != aaRect.sanitized() { errors.append("AA 区必须完全位于屏幕归一化范围内") }
