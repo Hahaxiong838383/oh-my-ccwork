@@ -294,7 +294,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 9
+    static let currentSchemaVersion = 10
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -311,6 +311,7 @@ struct WarpConfiguration: Codable, Equatable {
     var manual = ManualWarpParameters()
     var polynomial = PolynomialWarpConfiguration()
     var render = RenderConfiguration()
+    var localWarp = LocalWarpConfiguration()
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -328,6 +329,7 @@ struct WarpConfiguration: Codable, Equatable {
         case manual
         case polynomial
         case render
+        case localWarp
     }
 
     init(
@@ -345,7 +347,8 @@ struct WarpConfiguration: Codable, Equatable {
         warpTrend: WarpTrend = .forward,
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
-        render: RenderConfiguration = RenderConfiguration()
+        render: RenderConfiguration = RenderConfiguration(),
+        localWarp: LocalWarpConfiguration = LocalWarpConfiguration()
     ) {
         self.schemaVersion = schemaVersion
         self.displayPixelWidth = displayPixelWidth
@@ -362,6 +365,7 @@ struct WarpConfiguration: Codable, Equatable {
         self.manual = manual
         self.polynomial = polynomial
         self.render = render
+        self.localWarp = localWarp
     }
 
     init(from decoder: Decoder) throws {
@@ -381,6 +385,7 @@ struct WarpConfiguration: Codable, Equatable {
         manual = try container.decodeIfPresent(ManualWarpParameters.self, forKey: .manual) ?? ManualWarpParameters()
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()
         render = try container.decodeIfPresent(RenderConfiguration.self, forKey: .render) ?? RenderConfiguration()
+        localWarp = try container.decodeIfPresent(LocalWarpConfiguration.self, forKey: .localWarp) ?? LocalWarpConfiguration()
     }
 
     static func defaultConfiguration(displayWidth: Int, displayHeight: Int) -> WarpConfiguration {
@@ -415,7 +420,7 @@ struct WarpConfiguration: Codable, Equatable {
         copy.canvas.height = min(max(copy.canvas.height, 64), 32768)
         copy.capture = copy.capture.sanitized()
         copy.cropAnchor = copy.cropAnchor.sanitized()
-        copy.manual.strength = min(max(copy.manual.strength, 0), 2)
+        copy.manual.strength = min(max(copy.manual.strength, 0), 2.25)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
         copy.polynomial = copy.polynomial.normalized()
         if copy.extendedWarpEnabled, copy.canvasReference == nil {
@@ -426,6 +431,7 @@ struct WarpConfiguration: Codable, Equatable {
 
     func validationErrors() -> [String] {
         var errors = [String]()
+        errors += localWarp.validationErrors()
         if schemaVersion < 1 || schemaVersion > Self.currentSchemaVersion {
             errors.append("不支持的 schemaVersion：\(schemaVersion)")
         }
@@ -454,6 +460,7 @@ extension WarpConfiguration {
         copy.contentMode = .fill
         copy.manual.enabled = false
         copy.polynomial.enabled = false
+        copy.localWarp.enabled = false
         copy.extendedWarpEnabled = false
         copy.render.testPattern = .calibrationGrid
         return copy

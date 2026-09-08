@@ -104,7 +104,7 @@ final class TabLayoutTests: XCTestCase {
                 if let field = control as? NSTextField {
                     if field.isEditable { XCTAssertFalse(field.isEnabled) }
                 } else if let button = control as? NSButton {
-                    let allowed = ["看完整曲面（含超出 AA 的部分）", "导出参数备份", "退出程序，恢复原始桌面"].contains(button.title)
+                    let allowed = ["看完整曲面（含超出 AA 的部分）", "导出参数备份", "退出程序，恢复原始桌面", "打开局部交点精调"].contains(button.title)
                     XCTAssertEqual(button.isEnabled, allowed, button.title)
                 } else if control is NSSlider {
                     XCTAssertFalse(control.isEnabled)
@@ -129,6 +129,7 @@ final class TabLayoutTests: XCTestCase {
         for scroll in scrollViews {
             XCTAssertTrue(scroll.hasVerticalScroller)
             XCTAssertFalse(scroll.hasHorizontalScroller)
+            XCTAssertEqual(scroll.scrollerStyle, .overlay)
         }
         for selection in 0..<3 {
             navigation.selectTabViewItem(at: selection)
@@ -146,12 +147,13 @@ final class TabLayoutTests: XCTestCase {
             window.setContentSize(size)
             for selection in 0..<3 {
                 navigation.selectTabViewItem(at: selection)
-                content.layoutSubtreeIfNeeded()
                 let scroll = try XCTUnwrap(navigation.selectedTabViewItem?.view as? NSScrollView)
+                content.layoutSubtreeIfNeeded()
                 let document = try XCTUnwrap(scroll.documentView)
                 XCTAssertGreaterThan(navigation.bounds.height, 200)
                 XCTAssertGreaterThan(scroll.contentView.bounds.width, 490)
-                XCTAssertEqual(document.bounds.width, scroll.contentView.bounds.width, accuracy: 1)
+                XCTAssertEqual(document.bounds.width, scroll.contentView.bounds.width, accuracy: 1,
+                               "\(navigation.tabViewItems[selection].label), document=\(document.frame), clipFrame=\(scroll.contentView.frame), clipBounds=\(scroll.contentView.bounds), style=\(scroll.scrollerStyle.rawValue), magnification=\(scroll.magnification)")
                 for control in descendants(document).compactMap({ $0 as? NSControl }) {
                     let frame = control.convert(control.bounds, to: document)
                     let value = (control as? NSButton)?.title ?? (control as? NSTextField)?.stringValue ?? ""

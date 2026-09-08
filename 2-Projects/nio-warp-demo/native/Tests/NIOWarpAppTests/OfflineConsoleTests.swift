@@ -122,7 +122,7 @@ final class OfflineConsoleTests: XCTestCase {
         let allControls = tabView.tabViewItems.compactMap(\.view).flatMap(controls)
         let buttons = allControls.compactMap { $0 as? NSButton }
         for button in buttons {
-            let allowed = ["导出参数备份", "退出程序，恢复原始桌面", "看完整曲面（含超出 AA 的部分）"].contains(button.title)
+            let allowed = ["导出参数备份", "退出程序，恢复原始桌面", "看完整曲面（含超出 AA 的部分）", "打开局部交点精调"].contains(button.title)
             XCTAssertEqual(button.isEnabled, allowed, button.title)
         }
         let editable = allControls.compactMap { $0 as? NSTextField }.filter(\.isEditable)

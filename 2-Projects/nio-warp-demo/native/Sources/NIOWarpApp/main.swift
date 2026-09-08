@@ -345,6 +345,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     private var runtimeAntiAliasingOverride: AntiAliasingMode?
     private(set) var meshValidation = MeshValidation(foldedCellCount: 0, outOfAASampleCount: 0, totalSampleCount: 0)
     private(set) var meshRevision = 0
+    private(set) var currentMesh: GeneratedMesh?
 
     static let shaderSource = """
         #include <metal_stdlib>
@@ -623,6 +624,14 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
         return true
     }
 
+    @discardableResult
+    func installPreparedConfiguration(_ configuration: WarpConfiguration, mesh: GeneratedMesh) -> Bool {
+        guard mesh.validation.isValid else { return false }
+        self.configuration = configuration
+        installMesh(mesh)
+        return true
+    }
+
     var effectiveAntiAliasingMode: AntiAliasingMode {
         guard configuration.render.antiAliasingEnabled else { return .off }
         return runtimeAntiAliasingOverride ?? configuration.render.antiAliasing
@@ -656,6 +665,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     }
 
     private func installMesh(_ mesh: GeneratedMesh) {
+        currentMesh = mesh
         meshRevision += 1
         vertexBuffer = device.makeBuffer(
             bytes: mesh.vertices,
@@ -970,6 +980,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private var captureSourceHeight: Int
     private var gridHistoryRecorded = false
     private var gridHistoryReset: DispatchWorkItem?
+    private let localUpdates = LocalWarpUpdateCoordinator()
+    private var localHistoryBaseline: WarpConfiguration?
+    private(set) var localEditor: LocalWarpEditorController?
 
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
     private let globalStatusLabel = NSTextField(wrappingLabelWithString: "正在准备控制台…")
@@ -1091,6 +1104,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     deinit {
         performanceTimer?.invalidate()
         gridHistoryReset?.cancel()
+        localUpdates.cancel()
+    }
+
+    override func close() {
+        cancelLocalUpdates()
+        localEditor?.close()
+        localEditor = nil
+        super.close()
     }
 
     private func buildInterface(sourceScreen: NSScreen?, outputScreen: NSScreen?) {
@@ -1252,12 +1273,16 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         inverseWarpTrendButton.target = self
         inverseWarpTrendButton.action = #selector(toggleWarpTrend)
         stack.addArrangedSubview(inverseWarpTrendButton)
-        stack.addArrangedSubview(makeSlider(title: "Warp 强度", slider: strengthSlider, minimum: 0, maximum: 1.5, action: #selector(updateStrength)))
-        stack.addArrangedSubview(makeSlider(title: "上下弧度", slider: archSlider, minimum: 0, maximum: 0.2, action: #selector(updateArch)))
+        stack.addArrangedSubview(makeSlider(title: "Warp 强度", slider: strengthSlider, minimum: 0, maximum: 2.25, action: #selector(updateStrength)))
+        stack.addArrangedSubview(makeSlider(title: "上下弧度", slider: archSlider, minimum: 0, maximum: 0.3, action: #selector(updateArch)))
         stack.addArrangedSubview(makeSlider(title: "垂直压缩", slider: verticalScaleSlider, minimum: 0.6, maximum: 1.1, action: #selector(updateVerticalScale)))
         stack.addArrangedSubview(makeSlider(title: "左右不对称", slider: asymmetrySlider, minimum: -0.2, maximum: 0.2, action: #selector(updateAsymmetry)))
         stack.addArrangedSubview(makeSlider(title: "整体倾斜", slider: tiltSlider, minimum: -0.12, maximum: 0.12, action: #selector(updateTilt)))
         stack.addArrangedSubview(makeSlider(title: "水平弯曲", slider: horizontalBendSlider, minimum: -0.08, maximum: 0.08, action: #selector(updateHorizontalBend)))
+        stack.addArrangedSubview(explanation("强度和上下弧度的上限增加约 50%；已有数值不会自动放大，极端组合仍须通过安全校验。"))
+        let localEditorButton = makeButton("打开局部交点精调", action: #selector(openLocalEditor))
+        localEditorButton.toolTip = "在内屏独立窗口点击交点，再用方向键精调整幅内容；原多项式保持不变。无外屏或临时测试图中只读。"
+        stack.addArrangedSubview(localEditorButton)
 
         stack = opticalPage
         stack.addArrangedSubview(sectionTitle("5. 多项式增量"))
@@ -1376,6 +1401,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
 
     private func makeTabPage(title: String, identifier: String) -> NSStackView {
         let scrollView = NSScrollView(frame: .zero)
+        scrollView.scrollerStyle = .overlay
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = false
         scrollView.autohidesScrollers = true
@@ -1575,6 +1601,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         refreshRuntimePreviewControls()
         refreshCanvasGeometry()
         if isWaitingForDisplay { configureWaitingControls() }
+        synchronizeLocalEditor()
     }
 
     private func configureWaitingControls() {
@@ -1584,6 +1611,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                     if field.isEditable { field.isEnabled = false }
                 } else if let control = child as? NSControl {
                     let canUseOffline = control === geometryPreviewPicker
+                        || control.action == #selector(openLocalEditor)
                         || control.action == #selector(exportConfiguration)
                         || control.action == #selector(NSApplication.terminate(_:))
                     control.isEnabled = canUseOffline
@@ -1616,6 +1644,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        cancelLocalUpdates()
         finishGridEditingSession()
         guard let renderer else {
             configuration = lastAppliedConfiguration
@@ -1658,6 +1687,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         refreshRuntimePreviewControls()
         refreshContentMappingStatus()
         refreshCanvasGeometry()
+        synchronizeLocalEditor()
     }
 
     private func refreshContentMappingStatus(sourceWidth: Int? = nil, sourceHeight: Int? = nil) {
@@ -1773,6 +1803,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         historyButton.title = "撤销上一次设置（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
         refreshGridSummary()
+        cancelLocalUpdates()
+        synchronizeLocalEditor()
     }
 
     private func finishGridEditingSession() {
@@ -1875,6 +1907,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
+        cancelLocalUpdates()
         finishGridEditingSession()
         guard let renderer else { return }
         let preview = previewConfiguration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
@@ -1884,9 +1917,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         refreshRuntimePreviewControls()
         let color: NSColor = validation.isValid ? .systemOrange : .systemRed
         setStatus("\(message)；临时预览不会保存配置或增加历史。\n\(validation.summary)", color: color)
+        synchronizeLocalEditor()
     }
 
     private func leaveRuntimePreview(message: String = "已返回校正状态") {
+        cancelLocalUpdates()
         finishGridEditingSession()
         guard let renderer else { return }
         runtimePreviewMode = .normal
@@ -1897,6 +1932,81 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         refreshCanvasGeometry()
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed
         setStatus("\(message)；\(validation.summary)", color: color)
+        synchronizeLocalEditor()
+    }
+
+    private var canEditLocalWarp: Bool { renderer != nil && runtimePreviewMode == .normal }
+
+    private func cancelLocalUpdates() {
+        localUpdates.cancel()
+        localHistoryBaseline = nil
+    }
+
+    private func synchronizeLocalEditor(message: String? = nil) {
+        guard let localEditor else { return }
+        let rendered = renderer?.activeConfiguration ?? configuration
+        let dimensions = WarpMath.meshDimensions(configuration: rendered)
+        let mesh = renderer?.currentMesh ?? WarpMath.makeMesh(configuration: rendered, columns: dimensions.columns, rows: dimensions.rows)
+        localEditor.synchronize(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canEditLocalWarp, message: message)
+    }
+
+    @objc private func openLocalEditor() { showLocalEditor() }
+
+    @discardableResult
+    func showLocalEditor(presentWindow: Bool = true) -> LocalWarpEditorController {
+        if localEditor == nil {
+            let rendered = renderer?.activeConfiguration ?? configuration
+            let dimensions = WarpMath.meshDimensions(configuration: rendered)
+            let mesh = renderer?.currentMesh ?? WarpMath.makeMesh(configuration: rendered, columns: dimensions.columns, rows: dimensions.rows)
+            let editor = LocalWarpEditorController(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canEditLocalWarp, screen: window?.screen)
+            editor.window?.title = "NIO Warp · 局部交点精调 · \(AppVersion.display)"
+            editor.onChange = { [weak self] local, history in self?.applyLocalWarp(local, recordHistory: history) }
+            editor.onUndo = { [weak self] in
+                guard let self, self.canEditLocalWarp else { return }
+                self.cancelLocalUpdates()
+                self.rollbackConfiguration()
+                self.synchronizeLocalEditor()
+            }
+            editor.onClose = { [weak self] in self?.cancelLocalUpdates() }
+            localEditor = editor
+        }
+        synchronizeLocalEditor()
+        if presentWindow {
+            localEditor?.showWindow(nil)
+            localEditor?.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        return localEditor!
+    }
+
+    private func applyLocalWarp(_ local: LocalWarpConfiguration, recordHistory: Bool) {
+        guard let renderer, canEditLocalWarp else { synchronizeLocalEditor(); return }
+        let baseline = lastAppliedConfiguration
+        if recordHistory { localHistoryBaseline = baseline }
+        var candidate = baseline
+        candidate.localWarp = local
+        localUpdates.submit(candidate) { [weak self] result in
+            guard let self, self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
+            switch result {
+            case .failure(let error):
+                self.localHistoryBaseline = nil
+                self.synchronizeLocalEditor()
+                self.localEditor?.showStatus("没有应用：\(error.message)。原画面和数据保留。", error: true)
+            case .success(let mesh):
+                guard renderer.installPreparedConfiguration(candidate, mesh: mesh) else { return }
+                if let previous = self.localHistoryBaseline, previous != candidate { self.historyStore.record(previous, reason: "局部交点精调", force: true) }
+                self.localHistoryBaseline = nil
+                self.configuration = candidate
+                self.lastAppliedConfiguration = candidate
+                self.store.save(candidate)
+                self.updateWarpBoundary(candidate, candidate.render.showWarpBoundary)
+                self.historyButton.title = "撤销上一次设置（\(self.historyStore.count)）"
+                self.historyButton.isEnabled = self.historyStore.count > 0
+                self.refreshCanvasGeometry()
+                self.synchronizeLocalEditor(message: "局部修正已应用并自动保存；\(mesh.validation.summary)。")
+                self.setStatus("局部修正已保存；\(mesh.validation.summary)")
+            }
+        }
     }
 
     private func restoreRuntimePreview(_ mode: RuntimePreviewMode) {

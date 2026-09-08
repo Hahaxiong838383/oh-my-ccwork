@@ -54,5 +54,11 @@
     "showWarpBoundary" : false,
     "testPattern" : "off"
   },
-  "schemaVersion" : 9
+  "localWarp" : {
+    "enabled" : false,
+    "lockBoundary" : true,
+    "radiusCells" : 2,
+    "anchors" : []
+  },
+  "schemaVersion" : 10
 }

@@ -59,7 +59,7 @@ final class CalibrationGridTests: XCTestCase {
         XCTAssertEqual(migrated.render.calibrationGrid, CalibrationGridConfiguration())
         XCTAssertEqual(migrated.gridUVScale, original.gridUVScale)
         XCTAssertEqual(migrated.canvasReference, original.canvasReference)
-        XCTAssertEqual(migrated.schemaVersion, 9)
+        XCTAssertEqual(migrated.schemaVersion, WarpConfiguration.currentSchemaVersion)
     }
 
     func testInvalidGridValuesAreRejectedInsteadOfClamped() {

@@ -34,6 +34,60 @@ struct GeneratedMesh {
     var vertices: [MeshVertex]
     var indices: [UInt32]
     var validation: MeshValidation
+    var horizontalAxis = [Float]()
+    var verticalAxis = [Float]()
+
+    func renderedPhysicalPoint(at uv: SIMD2<Float>, width: Int, height: Int) -> SIMD2<Float>? {
+        guard horizontalAxis.count > 1, verticalAxis.count > 1,
+              uv.x.isFinite, uv.y.isFinite, uv.x >= 0, uv.x <= 1, uv.y >= 0, uv.y <= 1 else { return nil }
+        func interval(_ axis: [Float], _ value: Float) -> Int {
+            var lower = 0
+            var upper = axis.count - 1
+            while upper - lower > 1 {
+                let middle = (lower + upper) / 2
+                if axis[middle] <= value { lower = middle } else { upper = middle }
+            }
+            return lower
+        }
+        let column = interval(horizontalAxis, uv.x)
+        let row = interval(verticalAxis, uv.y)
+        let horizontal = (uv.x - horizontalAxis[column]) / (horizontalAxis[column + 1] - horizontalAxis[column])
+        let vertical = (uv.y - verticalAxis[row]) / (verticalAxis[row + 1] - verticalAxis[row])
+        let index = row * horizontalAxis.count + column
+        guard index + horizontalAxis.count + 1 < vertices.count else { return nil }
+        let topLeft = vertices[index].position
+        let topRight = vertices[index + 1].position
+        let bottomLeft = vertices[index + horizontalAxis.count].position
+        let bottomRight = vertices[index + horizontalAxis.count + 1].position
+        let position = horizontal >= vertical
+            ? topLeft * (1 - horizontal) + topRight * (horizontal - vertical) + bottomRight * vertical
+            : topLeft * (1 - vertical) + bottomRight * horizontal + bottomLeft * (vertical - horizontal)
+        return SIMD2((position.x + 1) * 0.5 * Float(width), (1 - position.y) * 0.5 * Float(height))
+    }
+
+    func sourceUV(at physical: SIMD2<Float>, width: Int, height: Int) -> SIMD2<Float>? {
+        let point = SIMD2(physical.x / Float(width) * 2 - 1, 1 - physical.y / Float(height) * 2)
+        func cross(_ first: SIMD2<Float>, _ second: SIMD2<Float>) -> Float { first.x * second.y - first.y * second.x }
+        for index in stride(from: 0, to: indices.count, by: 3) {
+            let first = vertices[Int(indices[index])]
+            let second = vertices[Int(indices[index + 1])]
+            let third = vertices[Int(indices[index + 2])]
+            let minimum = simd_min(first.position, simd_min(second.position, third.position))
+            let maximum = simd_max(first.position, simd_max(second.position, third.position))
+            if point.x < minimum.x || point.x > maximum.x || point.y < minimum.y || point.y > maximum.y { continue }
+            let horizontal = second.position - first.position
+            let vertical = third.position - first.position
+            let determinant = cross(horizontal, vertical)
+            if abs(determinant) < 1e-15 { continue }
+            let offset = point - first.position
+            let secondWeight = cross(offset, vertical) / determinant
+            let thirdWeight = cross(horizontal, offset) / determinant
+            if secondWeight >= -0.00001 && thirdWeight >= -0.00001 && secondWeight + thirdWeight <= 1.00001 {
+                return first.uv * (1 - secondWeight - thirdWeight) + second.uv * secondWeight + third.uv * thirdWeight
+            }
+        }
+        return nil
+    }
 }
 
 struct ContentMappingResult: Equatable {
@@ -103,6 +157,7 @@ enum WarpMath {
         var manualMaximum: SIMD2<Float>
         var extendedMinimum: SIMD2<Float>
         var extendedMaximum: SIMD2<Float>
+        var localField: LocalWarpField? = nil
     }
 
     static func extendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
@@ -288,7 +343,8 @@ enum WarpMath {
     private static func mappingContext(configuration: WarpConfiguration) -> MappingContext {
         let manual = manualBounds(parameters: configuration.manual, trend: configuration.warpTrend)
         let output = configuration.canvasReference?.outputBounds ?? .unit
-        return MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum)
+        return MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum,
+                              localField: configuration.localWarp.enabled && !configuration.localWarp.anchors.isEmpty ? LocalWarpField(configuration.localWarp) : nil)
     }
 
     private static func mix(_ minimum: Float, _ maximum: Float, t: Float) -> Float {
@@ -320,6 +376,16 @@ enum WarpMath {
         canvasPoint: SIMD2<Float>,
         configuration: WarpConfiguration,
         context: MappingContext
+    ) -> SIMD2<Float> {
+        let base = baseLocalPhysicalPoint(canvasPoint: canvasPoint, configuration: configuration, context: context)
+        guard let field = context.localField else { return base }
+        let delta = field.displacement(at: configuration.localCoordinate(at: canvasPoint))
+        let aa = configuration.aaRect.sanitized()
+        return base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+    }
+
+    private static func baseLocalPhysicalPoint(
+        canvasPoint: SIMD2<Float>, configuration: WarpConfiguration, context: MappingContext
     ) -> SIMD2<Float> {
         guard configuration.extendedWarpEnabled else {
             return normalizedBaseWarpPoint(
@@ -370,8 +436,20 @@ enum WarpMath {
     }
 
     static func makeMesh(configuration: WarpConfiguration, columns: Int = 128, rows: Int = 48) -> GeneratedMesh {
-        let columns = max(columns, 2)
-        let rows = max(rows, 2)
+        let anchorUVs = configuration.localWarp.enabled ? configuration.localWarp.anchors.map { configuration.canvasUV(for: $0.coordinate) } : []
+        func axis(_ count: Int, _ anchors: [Float]) -> [Float] {
+            let anchors = Array(Set(anchors.filter { $0.isFinite && $0 >= 0 && $0 <= 1 })).sorted()
+            let count = max(count, 2)
+            let samples: [Float] = (0...count).map { Float($0) / Float(count) }
+            let regular = samples.filter { sample in
+                sample == 0 || sample == 1 || !anchors.contains(where: { abs($0 - sample) < Float(0.000001) })
+            }
+            return Array(Set(regular + anchors)).sorted()
+        }
+        let horizontalAxis = axis(columns, anchorUVs.map(\.x))
+        let verticalAxis = axis(rows, anchorUVs.map(\.y))
+        let columns = horizontalAxis.count - 1
+        let rows = verticalAxis.count - 1
         let aa = configuration.aaRect.sanitized()
         let context = mappingContext(configuration: configuration)
         var vertices = [MeshVertex]()
@@ -383,9 +461,9 @@ enum WarpMath {
         var unsafeScale = 0
 
         for row in 0...rows {
-            let y = Float(row) / Float(rows)
+            let y = verticalAxis[row]
             for column in 0...columns {
-                let x = Float(column) / Float(columns)
+                let x = horizontalAxis[column]
                 let local = localPhysicalPoint(
                     canvasPoint: SIMD2<Float>(x, y),
                     configuration: configuration,
@@ -428,8 +506,8 @@ enum WarpMath {
                 let firstArea = cross(topRightPoint - topLeftPoint, bottomRightPoint - topLeftPoint)
                 let secondArea = cross(bottomRightPoint - topLeftPoint, bottomLeftPoint - topLeftPoint)
                 if firstArea <= 0 || secondArea <= 0 { folded += 1 }
-                let horizontal = topRightPoint - topLeftPoint
-                let vertical = bottomLeftPoint - topLeftPoint
+                let horizontal = (topRightPoint - topLeftPoint) / (horizontalAxis[column + 1] - horizontalAxis[column])
+                let vertical = (bottomLeftPoint - topLeftPoint) / (verticalAxis[row + 1] - verticalAxis[row])
                 let condition = simd_length_squared(horizontal) + simd_length_squared(vertical)
                 if condition / max(abs(cross(horizontal, vertical)), 0.000000000001) > 10000
                     || abs(topLeftPoint.x) > 128 || abs(topLeftPoint.y) > 128 { unsafeScale += 1 }
@@ -446,7 +524,9 @@ enum WarpMath {
                 nonFiniteSampleCount: nonFinite,
                 intersectingBoundaryCount: nonFinite == 0 ? boundaryIntersections(points: localPoints, columns: columns, rows: rows) : 0,
                 unsafeScaleCount: unsafeScale
-            )
+            ),
+            horizontalAxis: horizontalAxis,
+            verticalAxis: verticalAxis
         )
     }
 

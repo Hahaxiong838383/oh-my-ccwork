@@ -48,7 +48,8 @@ final class CalibrationGridRenderingTests: XCTestCase {
     private func render(
         grid: CalibrationGridConfiguration = CalibrationGridConfiguration(columns: 8, rows: 4, lineWidthPixels: 4),
         scale: SIMD2<Float> = SIMD2(repeating: 1), smooth: Bool = true, patternMode: UInt32 = 1,
-        shaderSource: String = WarpRenderer.shaderSource, width: Int = 400, height: Int = 240
+        shaderSource: String = WarpRenderer.shaderSource, width: Int = 400, height: Int = 240,
+        mesh: GeneratedMesh? = nil, sourceMarker: Bool = false
     ) throws -> Image {
         guard let device = MTLCreateSystemDefaultDevice() else { throw XCTSkip("需要 Metal 设备") }
         let library = try device.makeLibrary(source: shaderSource, options: nil)
@@ -69,12 +70,20 @@ final class CalibrationGridRenderingTests: XCTestCase {
         textureDescriptor.storageMode = .shared
         textureDescriptor.usage = [.renderTarget, .shaderRead]
         let texture = try XCTUnwrap(device.makeTexture(descriptor: textureDescriptor))
-        let sourceDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: 1, height: 1, mipmapped: false)
+        let sourceDescriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .bgra8Unorm, width: sourceMarker ? width : 1, height: sourceMarker ? height : 1, mipmapped: false)
         sourceDescriptor.storageMode = .shared
         sourceDescriptor.usage = .shaderRead
         let source = try XCTUnwrap(device.makeTexture(descriptor: sourceDescriptor))
-        var black: UInt32 = 0xff000000
-        source.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: &black, bytesPerRow: 4)
+        if sourceMarker {
+            var marker = [UInt8](repeating: 0, count: width * height * 4)
+            for row in (height / 4 - 1)...(height / 4 + 1) {
+                for column in (width / 4 - 1)...(width / 4 + 1) { marker[(row * width + column) * 4 + 2] = 255; marker[(row * width + column) * 4 + 3] = 255 }
+            }
+            source.replace(region: MTLRegionMake2D(0, 0, width, height), mipmapLevel: 0, withBytes: marker, bytesPerRow: width * 4)
+        } else {
+            var black: UInt32 = 0xff000000
+            source.replace(region: MTLRegionMake2D(0, 0, 1, 1), mipmapLevel: 0, withBytes: &black, bytesPerRow: 4)
+        }
         let pass = MTLRenderPassDescriptor()
         pass.colorAttachments[0].texture = texture
         pass.colorAttachments[0].loadAction = .clear
@@ -88,7 +97,8 @@ final class CalibrationGridRenderingTests: XCTestCase {
             MeshVertex(position: SIMD2(-scale.x, -scale.y), uv: SIMD2(0, 1)),
             MeshVertex(position: SIMD2(scale.x, -scale.y), uv: SIMD2(1, 1)),
         ]
-        let buffer = try XCTUnwrap(device.makeBuffer(bytes: vertices, length: vertices.count * MemoryLayout<MeshVertex>.stride))
+        let actualVertices = mesh?.vertices ?? vertices
+        let buffer = try XCTUnwrap(device.makeBuffer(bytes: actualVertices, length: actualVertices.count * MemoryLayout<MeshVertex>.stride))
         var uniforms = ShaderUniforms(
             sourceAspect: 1, canvasAspect: 1, contentMode: 0, mirrorFlags: 0, cropAnchor: SIMD2(repeating: 0),
             sourceTexelSize: SIMD2(repeating: 1), antiAliasingMode: smooth ? 1 : 0, testPatternMode: patternMode,
@@ -99,7 +109,12 @@ final class CalibrationGridRenderingTests: XCTestCase {
         encoder.setVertexBuffer(buffer, offset: 0, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.stride, index: 1)
         encoder.setFragmentTexture(source, index: 0)
-        encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+        if let mesh {
+            let indices = try XCTUnwrap(device.makeBuffer(bytes: mesh.indices, length: mesh.indices.count * MemoryLayout<UInt32>.stride))
+            encoder.drawIndexedPrimitives(type: .triangle, indexCount: mesh.indices.count, indexType: .uint32, indexBuffer: indices, indexBufferOffset: 0)
+        } else {
+            encoder.drawPrimitives(type: .triangleStrip, vertexStart: 0, vertexCount: 4)
+        }
         encoder.endEncoding()
         command.commit()
         command.waitUntilCompleted()
@@ -162,5 +177,45 @@ final class CalibrationGridRenderingTests: XCTestCase {
         let original = try render(patternMode: 2)
         let changed = try render(grid: CalibrationGridConfiguration(columns: 37, rows: 13, lineWidthPixels: 12), patternMode: 2)
         XCTAssertEqual(original.pixels, changed.pixels)
+    }
+
+    func testLocalCorrectionMovesBothDesktopTextureAndCalibrationGridOnGPU() throws {
+        var config = WarpConfiguration.defaultConfiguration(displayWidth: 400, displayHeight: 240)
+        config.canvas = CanvasConfiguration(width: 400, height: 240)
+        config.aaRect = NormalizedRect(x: 0, y: 0, width: 1, height: 1)
+        config.manual.enabled = false
+        config.render.calibrationGrid = CalibrationGridConfiguration(columns: 8, rows: 4, lineWidthPixels: 4)
+        config = config.preparedForLocalEditing()
+        config.localWarp.enabled = true
+        let beforeMesh = WarpMath.makeMesh(configuration: config, columns: 192, rows: 72)
+        config.localWarp.setOffset(SIMD2(6, 4), at: config.localCoordinate(at: SIMD2(0.25, 0.25)))
+        let afterMesh = WarpMath.makeMesh(configuration: config, columns: 192, rows: 72)
+        XCTAssertTrue(afterMesh.validation.isValid)
+        let before = try render(smooth: false, patternMode: 0, mesh: beforeMesh, sourceMarker: true)
+        let after = try render(smooth: false, patternMode: 0, mesh: afterMesh, sourceMarker: true)
+        func center(_ image: Image) throws -> SIMD2<Double> {
+            var sum = SIMD2<Double>.zero
+            var count = 0.0
+            for row in 0..<image.height {
+                for column in 0..<image.width {
+                    let offset = (row * image.width + column) * 4
+                    if image.pixels[offset + 2] > 200 && image.pixels[offset + 1] < 20 {
+                        sum += SIMD2(Double(column), Double(row)); count += 1
+                    }
+                }
+            }
+            XCTAssertGreaterThan(count, 0)
+            return sum / max(count, 1)
+        }
+        let difference = try center(after) - center(before)
+        XCTAssertEqual(difference.x, 6, accuracy: 1)
+        XCTAssertEqual(difference.y, 4, accuracy: 1)
+        let beforeGrid = try render(mesh: beforeMesh)
+        let afterGrid = try render(mesh: afterMesh)
+        XCTAssertFalse(beforeGrid.isWhite(column: 106, row: 64))
+        XCTAssertTrue(afterGrid.isWhite(column: 106, row: 64))
+        try before.save("local-texture-before.png")
+        try after.save("local-texture-after.png")
+        try afterGrid.save("local-grid-after.png")
     }
 }
