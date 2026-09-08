@@ -232,6 +232,7 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
     var onChange: ((LocalWarpConfiguration, Bool) -> Void)?
     var onUndo: (() -> Void)?
     var onClose: (() -> Void)?
+    var onShowPolynomial: (() -> Void)?
     let canvasView = LocalWarpCanvasView()
     private let loupeView = LocalWarpCanvasView()
     private var working: WarpConfiguration
@@ -240,6 +241,8 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
     private let boundaryButton = NSButton(checkboxWithTitle: "微调时锁住参考边界", target: nil, action: nil)
     private let stepPicker = NSPopUpButton()
     private let radiusPicker = NSPopUpButton()
+    private let smoothnessPicker = NSPopUpButton()
+    private let polynomialSummaryLabel = NSTextField(wrappingLabelWithString: "")
     private let anchorPicker = NSPopUpButton()
     private let selectionLabel = NSTextField(wrappingLabelWithString: "点击网格交点进行选择")
     private let offsetLabel = NSTextField(wrappingLabelWithString: "")
@@ -357,9 +360,19 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         radiusPicker.addItems(withTitles: radii.map { "\(NumericInput.formattedDouble($0)) 个参考格" })
         radiusPicker.target = self
         radiusPicker.action = #selector(changeRadius)
-        for (title, picker) in [("移动步长", stepPicker), ("平滑范围", radiusPicker)] {
+        for (title, picker) in [("移动步长", stepPicker), ("影响范围", radiusPicker)] {
             stack.addArrangedSubview(NSStackView(views: [NSTextField(labelWithString: title), picker]))
         }
+        stack.addArrangedSubview(label("影响范围：带动周围多远。过渡等级：改变点与点之间的曲线，不改变锚点目标位置。"))
+        stack.addArrangedSubview(label("过渡平滑度（不是多项式阶数）"))
+        smoothnessPicker.addItems(withTitles: LocalWarpSmoothness.allCases.map(\.title))
+        smoothnessPicker.widthAnchor.constraint(equalToConstant: 228).isActive = true
+        smoothnessPicker.setAccessibilityIdentifier("nio-local-smoothness")
+        smoothnessPicker.target = self
+        smoothnessPicker.action = #selector(changeSmoothness)
+        smoothnessPicker.toolTip = "三级分别使用 C2 / C4 / C6 局部插值核。高阶不等于影响更广或一定更好；原多项式不改，其他锚点仍保留约束。"
+        stack.addArrangedSubview(smoothnessPicker)
+        stack.addArrangedSubview(label("先移动至少一个交点，再切换等级看周围曲线；交点目标不动。没有局部偏移时，切换不会改变画面。"))
         let up = button("↑", action: #selector(movePoint)); up.tag = 126
         let leftButton = button("←", action: #selector(movePoint)); leftButton.tag = 123
         let right = button("→", action: #selector(movePoint)); right.tag = 124
@@ -368,9 +381,17 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
             control.widthAnchor.constraint(equalToConstant: 48).isActive = true
             control.setAccessibilityLabel(title)
         }
-        let pad = NSGridView(views: [[NSView(), up, NSView()], [leftButton, NSTextField(labelWithString: "像素"), right], [NSView(), down, NSView()]])
+        let centerLabel = NSTextField(labelWithString: "像素")
+        centerLabel.alignment = .center
+        let pad = NSGridView(views: [[NSGridCell.emptyContentView, up, NSGridCell.emptyContentView], [leftButton, centerLabel, right], [NSGridCell.emptyContentView, down, NSGridCell.emptyContentView]])
         pad.rowSpacing = 4
         pad.columnSpacing = 6
+        pad.xPlacement = .center
+        pad.yPlacement = .center
+        pad.rowAlignment = .none
+        for index in 0..<3 { pad.column(at: index).width = 48 }
+        pad.widthAnchor.constraint(equalToConstant: 156).isActive = true
+        pad.setAccessibilityIdentifier("nio-local-direction-pad")
         stack.addArrangedSubview(pad)
         offsetLabel.font = .monospacedSystemFont(ofSize: 13, weight: .medium)
         offsetLabel.setAccessibilityIdentifier("nio-local-offset")
@@ -391,6 +412,10 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         undo.keyEquivalent = "z"
         undo.keyEquivalentModifierMask = [.command]
         stack.addArrangedSubview(undo)
+        polynomialSummaryLabel.preferredMaxLayoutWidth = 226
+        stack.addArrangedSubview(polynomialSummaryLabel)
+        stack.addArrangedSubview(button("打开全局多项式设置", action: #selector(showPolynomial)))
+        stack.addArrangedSubview(label("先用多项式调全局趋势，再用交点修局部。改变全局后要复核局部点；这里不会自动拟合或改写多项式。"))
         stack.addArrangedSubview(NSStackView(views: [button("放大", action: #selector(zoomIn)), button("缩小", action: #selector(zoomOut)), button("适合窗口", action: #selector(fit))]))
         referenceLabel.preferredMaxLayoutWidth = 226
         referenceLabel.font = .systemFont(ofSize: 11)
@@ -430,6 +455,9 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         boundaryButton.isEnabled = available
         radiusPicker.isEnabled = available
         radiusPicker.selectItem(at: radii.firstIndex(of: working.localWarp.radiusCells) ?? 2)
+        smoothnessPicker.isEnabled = available
+        smoothnessPicker.selectItem(at: LocalWarpSmoothness.allCases.firstIndex(of: working.localWarp.smoothness) ?? 0)
+        polynomialSummaryLabel.stringValue = "全局多项式：\(working.polynomial.enabled ? "已启用" : "未启用") · \(working.polynomial.order) 阶\n局部修正独立叠加，原系数保留。"
         anchorPicker.removeAllItems()
         anchorPicker.addItem(withTitle: "点击网格选择交点")
         for (index, anchor) in working.localWarp.anchors.enumerated() { anchorPicker.addItem(withTitle: String(format: "锚点 %02d · (%+.0f, %+.0f)", index + 1, anchor.x, anchor.y)) }
@@ -502,6 +530,8 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
     @objc private func toggleEnabled() { var local = working.localWarp; local.enabled = enabledButton.state == .on; submit(local); focusCanvas() }
     @objc private func toggleBoundary() { var local = working.localWarp; local.lockBoundary = boundaryButton.state == .on; submit(local); focusCanvas() }
     @objc private func changeRadius() { var local = working.localWarp; local.radiusCells = radii[max(radiusPicker.indexOfSelectedItem, 0)]; submit(local); focusCanvas() }
+    @objc private func changeSmoothness() { var local = working.localWarp; local.smoothness = LocalWarpSmoothness.allCases[max(smoothnessPicker.indexOfSelectedItem, 0)]; submit(local); focusCanvas() }
+    @objc private func showPolynomial() { onShowPolynomial?() }
     @objc private func selectSavedAnchor() { let index = anchorPicker.indexOfSelectedItem - 1; if working.localWarp.anchors.indices.contains(index) { select(working.localWarp.anchors[index].coordinate) }; focusCanvas() }
     @objc private func resetPoint() { guard let selected = canvasView.selectedCoordinate else { return }; var local = working.localWarp; local.setOffset(.zero, at: selected); submit(local); focusCanvas() }
     @objc private func removePoint() { guard let selected = canvasView.selectedCoordinate else { return }; var local = working.localWarp; local.anchors.removeAll { simd_length($0.coordinate - selected) < 0.0001 }; submit(local); focusCanvas() }

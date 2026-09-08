@@ -294,7 +294,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 10
+    static let currentSchemaVersion = 11
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int

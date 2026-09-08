@@ -1286,6 +1286,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
 
         stack = opticalPage
         stack.addArrangedSubview(sectionTitle("5. 多项式增量"))
+        stack.addArrangedSubview(explanation("多项式调整全局趋势，交点精调修正局部；两层叠加但参数独立。局部的一级/二级/三级是过渡等级，不是这里的多项式阶数。"))
+        stack.addArrangedSubview(makeButton("打开局部交点精调", action: #selector(openLocalEditor)))
         polynomialButton.target = self
         polynomialButton.action = #selector(togglePolynomial)
         stack.addArrangedSubview(polynomialButton)
@@ -1968,6 +1970,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                 self.synchronizeLocalEditor()
             }
             editor.onClose = { [weak self] in self?.cancelLocalUpdates() }
+            editor.onShowPolynomial = { [weak self] in self?.showGlobalPolynomialSettings() }
             localEditor = editor
         }
         synchronizeLocalEditor()
@@ -1977,6 +1980,17 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             NSApp.activate(ignoringOtherApps: true)
         }
         return localEditor!
+    }
+
+    func showGlobalPolynomialSettings(presentWindow: Bool = true) {
+        configurationTabs.selectTabViewItem(withIdentifier: "optical")
+        window?.contentView?.layoutSubtreeIfNeeded()
+        orderPicker.scrollToVisible(orderPicker.bounds)
+        if presentWindow {
+            showWindow(nil)
+            window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     private func applyLocalWarp(_ local: LocalWarpConfiguration, recordHistory: Bool) {

@@ -25,12 +25,58 @@ struct LocalWarpAnchor: Codable, Equatable, Identifiable {
     var offset: SIMD2<Double> { SIMD2(offsetX, offsetY) }
 }
 
+enum LocalWarpSmoothness: String, Codable, CaseIterable {
+    case standard
+    case higher
+    case highest
+
+    var title: String {
+        switch self {
+        case .standard: return "一级 · 标准过渡（原效果）"
+        case .higher: return "二级 · 高阶过渡"
+        case .highest: return "三级 · 更高阶过渡"
+        }
+    }
+
+    func kernel(at distance: Double) -> Double {
+        guard distance >= 0, distance < 1 else { return 0 }
+        let remaining = 1 - distance
+        let squared = remaining * remaining
+        let fourth = squared * squared
+        switch self {
+        case .standard:
+            return remaining * remaining * remaining * remaining * (4 * distance + 1)
+        case .higher:
+            return fourth * squared * (35 * distance * distance + 18 * distance + 3) / 3
+        case .highest:
+            return fourth * fourth * (32 * distance * distance * distance + 25 * distance * distance + 8 * distance + 1)
+        }
+    }
+}
+
 struct LocalWarpConfiguration: Codable, Equatable {
     var enabled = false
     var lockBoundary = true
     var radiusCells = 2.0
+    var smoothness = LocalWarpSmoothness.standard
     var reference: LocalWarpReference?
     var anchors = [LocalWarpAnchor]()
+
+    private enum CodingKeys: String, CodingKey {
+        case enabled, lockBoundary, radiusCells, smoothness, reference, anchors
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        lockBoundary = try container.decodeIfPresent(Bool.self, forKey: .lockBoundary) ?? true
+        radiusCells = try container.decodeIfPresent(Double.self, forKey: .radiusCells) ?? 2
+        smoothness = try container.decodeIfPresent(LocalWarpSmoothness.self, forKey: .smoothness) ?? .standard
+        reference = try container.decodeIfPresent(LocalWarpReference.self, forKey: .reference)
+        anchors = try container.decodeIfPresent([LocalWarpAnchor].self, forKey: .anchors) ?? []
+    }
 
     func boundaryWeight(at point: SIMD2<Double>) -> Double {
         guard lockBoundary, let reference else { return 1 }
@@ -95,7 +141,7 @@ struct LocalWarpField {
         guard count > 0 else { return }
         var matrix = [[Double]]()
         for anchor in anchors {
-            var row = anchors.map { center in Self.kernel(anchor.coordinate - center.coordinate, reference: reference, radius: configuration.radiusCells) }
+            var row = anchors.map { center in Self.kernel(anchor.coordinate - center.coordinate, reference: reference, radius: configuration.radiusCells, smoothness: configuration.smoothness) }
             let target = anchor.offset / configuration.boundaryWeight(at: anchor.coordinate)
             row.append(contentsOf: [target.x, target.y])
             matrix.append(row)
@@ -115,13 +161,11 @@ struct LocalWarpField {
         if coefficients.contains(where: { !$0.x.isFinite || !$0.y.isFinite }) { error = "局部求解出现无效数值" }
     }
 
-    private static func kernel(_ difference: SIMD2<Double>, reference: LocalWarpReference, radius: Double) -> Double {
+    private static func kernel(_ difference: SIMD2<Double>, reference: LocalWarpReference, radius: Double, smoothness: LocalWarpSmoothness) -> Double {
         let scaled = difference / SIMD2(reference.cellWidth * radius, reference.cellHeight * radius)
         let squared = simd_length_squared(scaled)
         guard squared < 1 else { return 0 }
-        let distance = sqrt(squared)
-        let remaining = 1 - distance
-        return remaining * remaining * remaining * remaining * (4 * distance + 1)
+        return smoothness.kernel(at: sqrt(squared))
     }
 
     func displacement(at point: SIMD2<Double>) -> SIMD2<Double> {
@@ -130,7 +174,7 @@ struct LocalWarpField {
         let boundary = configuration.boundaryWeight(at: point)
         guard boundary > 0 else { return .zero }
         var offset = SIMD2<Double>.zero
-        for index in centers.indices { offset += coefficients[index] * Self.kernel(point - centers[index], reference: reference, radius: configuration.radiusCells) }
+        for index in centers.indices { offset += coefficients[index] * Self.kernel(point - centers[index], reference: reference, radius: configuration.radiusCells, smoothness: configuration.smoothness) }
         return offset * boundary
     }
 }

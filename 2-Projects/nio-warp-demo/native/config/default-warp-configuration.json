@@ -58,7 +58,8 @@
     "enabled" : false,
     "lockBoundary" : true,
     "radiusCells" : 2,
+    "smoothness" : "standard",
     "anchors" : []
   },
-  "schemaVersion" : 10
+  "schemaVersion" : 11
 }

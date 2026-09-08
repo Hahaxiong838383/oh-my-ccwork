@@ -29,6 +29,71 @@ final class LocalWarpTests: XCTestCase {
         XCTAssertEqual(field.displacement(at: SIMD2(-2500, 0)), .zero)
     }
 
+    func testSmoothnessKernelsMatchNormalizedValuesAndDifferBetweenAnchors() {
+        let expectedMidpoints = [0.1875, 0.10807291666666667, 0.0595703125]
+        for (index, smoothness) in LocalWarpSmoothness.allCases.enumerated() {
+            XCTAssertEqual(smoothness.kernel(at: 0), 1)
+            XCTAssertEqual(smoothness.kernel(at: 1), 0)
+            XCTAssertEqual(smoothness.kernel(at: 1.1), 0)
+            XCTAssertEqual(smoothness.kernel(at: 0.5), expectedMidpoints[index], accuracy: 1e-12)
+            var config = baseline()
+            config.localWarp.smoothness = smoothness
+            config.localWarp.setOffset(SIMD2(8, -4), at: .zero)
+            let field = LocalWarpField(config.localWarp)
+            XCTAssertNil(field.error)
+            let reference = config.localWarp.reference!
+            let middle = SIMD2(reference.cellWidth * config.localWarp.radiusCells * 0.5, 0)
+            XCTAssertEqual(field.displacement(at: middle).x, 8 * expectedMidpoints[index], accuracy: 1e-10)
+        }
+    }
+
+    func testAllSmoothnessLevelsPreserveAnchorsBoundaryAndRenderPositions() throws {
+        for smoothness in LocalWarpSmoothness.allCases {
+            var config = baseline()
+            config.localWarp.smoothness = smoothness
+            config.localWarp.setOffset(SIMD2(3.5, -1.25), at: SIMD2(-500, 0))
+            config.localWarp.setOffset(SIMD2(-2, 4), at: .zero)
+            let field = LocalWarpField(config.localWarp)
+            XCTAssertNil(field.error)
+            var base = config
+            base.localWarp.enabled = false
+            let mesh = WarpMath.makeMesh(configuration: config, columns: 192, rows: 72)
+            XCTAssertTrue(mesh.validation.isValid, mesh.validation.summary)
+            for anchor in config.localWarp.anchors {
+                XCTAssertLessThan(simd_length(field.displacement(at: anchor.coordinate) - anchor.offset), 1e-8)
+                let uv = config.canvasUV(for: anchor.coordinate)
+                let original = WarpMath.physicalPoints(canvasPoints: [uv], configuration: base)[0]
+                let rendered = try XCTUnwrap(mesh.renderedPhysicalPoint(at: uv, width: 5120, height: 2880))
+                XCTAssertEqual(Double(rendered.x - original.x), anchor.offsetX, accuracy: 0.002)
+                XCTAssertEqual(Double(rendered.y - original.y), anchor.offsetY, accuracy: 0.002)
+            }
+            XCTAssertEqual(field.displacement(at: SIMD2(2200, 300)), .zero)
+            XCTAssertEqual(field.displacement(at: SIMD2(-2500, 0)), .zero)
+            let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: JSONEncoder().encode(config))
+            XCTAssertEqual(decoded, config)
+        }
+    }
+
+    func testSchemaTenDefaultsToOriginalKernelWithoutMovingSavedAnchors() throws {
+        var config = baseline()
+        config.localWarp.setOffset(SIMD2(3, -2), at: .zero)
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(config)) as? [String: Any])
+        json["schemaVersion"] = 10
+        var local = try XCTUnwrap(json["localWarp"] as? [String: Any])
+        local.removeValue(forKey: "smoothness")
+        json["localWarp"] = local
+        let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertEqual(decoded.localWarp, config.localWarp)
+        XCTAssertEqual(decoded.polynomial, config.polynomial)
+        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, 11)
+        for coordinate in [SIMD2<Double>.zero, SIMD2(150, 30), SIMD2(-600, 80)] {
+            XCTAssertEqual(LocalWarpField(decoded.localWarp).displacement(at: coordinate), LocalWarpField(config.localWarp).displacement(at: coordinate))
+        }
+        local["smoothness"] = "unsupported"
+        json["localWarp"] = local
+        XCTAssertThrowsError(try JSONDecoder().decode(WarpConfiguration.self, from: JSONSerialization.data(withJSONObject: json)))
+    }
+
     func testSelectedAnchorIsAnActualRenderVertexAndMovesInPhysicalPixels() throws {
         var original = baseline()
         let uv = SIMD2<Float>(5.0 / 13, 3.0 / 7)
@@ -276,6 +341,69 @@ final class LocalWarpTests: XCTestCase {
         canvas.changeZoom(by: 4)
         let zoomed = try XCTUnwrap(canvas.pick(at: canvas.viewPoint(for: physical)))
         XCTAssertLessThan(simd_length(zoomed - coordinate), 0.001)
+    }
+
+    func testDirectionPadStaysSymmetricAcrossWindowSizes() throws {
+        let fixture = try Fixture(active: false)
+        let window = try XCTUnwrap(fixture.editor.window)
+        let content = try XCTUnwrap(window.contentView)
+        let up = try fixture.editorButton("↑")
+        let down = try fixture.editorButton("↓")
+        let left = try fixture.editorButton("←")
+        let right = try fixture.editorButton("→")
+        for size in [NSSize(width: 880, height: 660), NSSize(width: 1060, height: 780), NSSize(width: 1280, height: 820)] {
+            window.setContentSize(size)
+            content.layoutSubtreeIfNeeded()
+            let upRect = up.convert(up.bounds, to: content)
+            let downRect = down.convert(down.bounds, to: content)
+            let leftRect = left.convert(left.bounds, to: content)
+            let rightRect = right.convert(right.bounds, to: content)
+            XCTAssertEqual(upRect.midX, downRect.midX, accuracy: 0.5)
+            XCTAssertEqual(leftRect.midY, rightRect.midY, accuracy: 0.5)
+            XCTAssertEqual(upRect.midX - leftRect.midX, rightRect.midX - upRect.midX, accuracy: 0.5)
+            XCTAssertLessThanOrEqual(rightRect.maxX - leftRect.minX, 180)
+        }
+    }
+
+    func testSmoothnessPickerUpdatesLiveAndUndoRestoresWithoutChangingPolynomial() throws {
+        let fixture = try Fixture()
+        try fixture.editorButton("启用局部修正").performClick(nil)
+        wait { fixture.panel.configurationForOfflinePreview.localWarp.enabled }
+        fixture.editor.select(.zero)
+        fixture.editor.nudge(dx: 8, dy: 4)
+        wait { fixture.panel.configurationForOfflinePreview.localWarp.anchors.count == 1 }
+        let original = fixture.panel.configurationForOfflinePreview
+        let picker = try XCTUnwrap(fixture.descendants(try XCTUnwrap(fixture.editor.window?.contentView)).compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityIdentifier() == "nio-local-smoothness" })
+        for level in [1, 2] {
+            picker.selectItem(at: level)
+            picker.sendAction(try XCTUnwrap(picker.action), to: picker.target)
+            wait { fixture.panel.configurationForOfflinePreview.localWarp.smoothness == LocalWarpSmoothness.allCases[level] }
+            let saved = fixture.store.offlineConfiguration()
+            XCTAssertEqual(saved.localWarp.anchors, original.localWarp.anchors)
+            XCTAssertEqual(saved.localWarp.reference, original.localWarp.reference)
+            XCTAssertEqual(saved.localWarp.radiusCells, original.localWarp.radiusCells)
+            XCTAssertEqual(saved.polynomial, original.polynomial)
+            XCTAssertEqual(saved.manual, original.manual)
+            XCTAssertEqual(saved.canvasReference, original.canvasReference)
+            XCTAssertEqual(fixture.renderer?.activeConfiguration.localWarp.smoothness, LocalWarpSmoothness.allCases[level])
+        }
+        try fixture.editorButton("撤销上一次设置").performClick(nil)
+        XCTAssertEqual(fixture.store.offlineConfiguration().localWarp.smoothness, .higher)
+    }
+
+    func testPolynomialNavigationIsReadOnlyAndAvailableOffline() throws {
+        let fixture = try Fixture(active: false)
+        let original = fixture.store.offlineConfiguration()
+        let content = try XCTUnwrap(fixture.editor.window?.contentView)
+        let picker = try XCTUnwrap(fixture.descendants(content).compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityIdentifier() == "nio-local-smoothness" })
+        XCTAssertFalse(picker.isEnabled)
+        fixture.editor.onShowPolynomial = { fixture.panel.showGlobalPolynomialSettings(presentWindow: false) }
+        try fixture.editorButton("打开全局多项式设置").performClick(nil)
+        let tabs = try XCTUnwrap(fixture.panel.window?.contentView?.subviews.compactMap { $0 as? NSTabView }.first)
+        XCTAssertEqual(tabs.selectedTabViewItem?.identifier as? String, "optical")
+        XCTAssertEqual(fixture.store.offlineConfiguration(), original)
+        XCTAssertEqual(fixture.history.count, 0)
+        fixture.editor.onShowPolynomial = nil
     }
 
     func testRejectedLiveMoveRetainsLastMeshAndDoesNotAddHistory() throws {
