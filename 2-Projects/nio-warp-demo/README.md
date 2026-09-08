@@ -45,7 +45,7 @@ uv run nio-warp-display-demo
 
 **不知道现在怎么操作时，先看 [操作指南：现在怎么操作](docs/operator-guide.md)**，其中包含日常步骤、按钮区别、AA/画布尺寸示例、调试方法与回滚入口。
 
-当前本机开发版为 **v0.9.2 (17)**，固定安装路径：
+当前源码及已构建版本为 **v0.9.2 (17)**；2026-09-08 本次交付时尚未覆盖安装，固定入口仍为 **v0.9.1 (16)**，等待用户暂停调参后升级。固定安装路径：
 
 ```text
 /Users/rayman.chen/Applications/NIOWarpApp.app
