@@ -32,8 +32,10 @@ Studio 与 Air 各自复用已有 ED25519 密钥，仅将公钥追加到目标�
 
 - 本项目现归属 `Hahaxiong838383/oh-my-ccwork` 仓库，目录 `2-Projects/nio-warp-demo`。
 - nio-war-mac 已完成设备命名、静态网络和 SSH 授权。
-- 本轮尚未向 nio-war-mac 克隆或迁移项目，尚未验证其 Xcode/Swift/uv 工具链，也未构建、安装或启动 NIO Warp App。
-- README 中原 Air 的 `/Users/rayman.chen/...` 路径属于历史运行记录，不能当作新开发机路径；后续在目标机查询实际 HOME、选定工作目录后再更新构建入口。
+- 2026-09-08 已从 Air 增量同步至 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，173 个文件 SHA-256 全部一致；本机构建、安装并启动 v0.9.2 (17)，入口 `/Users/futurus/Applications/NIOWarpApp.app`。
+- Command Line Tools 26.6 / Swift 6.3.2 已可用；缺少 XCTest，目标本地测试未通过。Air 同源测试 117/117 通过；uv 未安装验收。详见 [部署回执](nio-war-mac-deployment-20260908.md)。
+- README 下方原 Air 的 `/Users/rayman.chen/...` 路径属于历史记录；新开发机使用上述 futurus 路径。桌面 `NIO Warp.command` 可启动安装版。
+- 已配置禁止睡眠并实测合盖雷电/Wi-Fi SSH 正常；ProtoPie 10.4.0、UU 远程 4.39.1 已安装启动。用户已登录 ProtoPie，但 2026-09-08 15:57 MCP 仍返回未启用；UU 实际远控尚未验收。
 - 不将登录密码、私钥写入项目或共享记忆。
 
 署名：codex（OpenAI）| 2026-09-07（Asia/Shanghai）

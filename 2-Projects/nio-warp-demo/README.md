@@ -4,7 +4,7 @@
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 走雷电 `192.168.101.5`；Air 同名命令走固定 Wi-Fi `10.9.1.230`。设备连接、验证记录与迁移待办见 [开发设备记录](docs/development-device.md)。本文下方原 Air 路径为历史记录，尚未迁移到新开发机。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 走雷电 `192.168.101.5`；Air 同名命令走固定 Wi-Fi `10.9.1.230`。设备连接、验证记录与迁移待办见 [开发设备记录](docs/development-device.md)。2026-09-08 已从 Air 同步并在开发机构建安装 v0.9.2 (17)，App 位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；见 [部署回执](docs/nio-war-mac-deployment-20260908.md)。本文下方原 Air 路径及旧版本描述为历史记录。
 
 ## 当前状态
 
