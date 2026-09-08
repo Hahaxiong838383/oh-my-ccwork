@@ -51,6 +51,8 @@ uv run nio-warp-display-demo
 /Users/rayman.chen/Applications/NIOWarpApp.app
 ```
 
+**2026-09-08 用户确认当前功能可用，v0.9.2 已作为后续开发的验收基线固化。** 标签 `nio-warp-v0.9.2-accepted-20260908`；源码、App、验收时参数与校验分别归档。范围及恢复入口见 [v0.9.2 验收固化记录](docs/v0.9.2-acceptance.md)。本轮没有新增功能、重新安装或回写参数。
+
 控制台窗口标题和界面顶部都会显示当前 Bundle 版本。日常启动只使用固定安装版；临时构建产物放在隐藏的 `native/.build/app/` 中，避免被 Spotlight 和 LaunchServices 识别成第二个 NIO Warp 应用。
 
 控制台顶部按三个 Tab 分组，版本与运行状态始终可见：
