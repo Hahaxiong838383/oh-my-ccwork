@@ -1,0 +1,122 @@
+[
+ {
+  "file": "s01T.wav",
+  "text": "不要开灯",
+  "voice": "Tingting",
+  "dur_s": 0.95
+ },
+ {
+  "file": "s02T.wav",
+  "text": "小可小可不要开灯",
+  "voice": "Tingting",
+  "dur_s": 2.2
+ },
+ {
+  "file": "s03T.wav",
+  "text": "别关灯",
+  "voice": "Tingting",
+  "dur_s": 0.74
+ },
+ {
+  "file": "s04T.wav",
+  "text": "一加一等于二",
+  "voice": "Tingting",
+  "dur_s": 1.21
+ },
+ {
+  "file": "s05T.wav",
+  "text": "把音量调到三",
+  "voice": "Tingting",
+  "dur_s": 1.46
+ },
+ {
+  "file": "s06T.wav",
+  "text": "第五个故事",
+  "voice": "Tingting",
+  "dur_s": 1.03
+ },
+ {
+  "file": "s07T.wav",
+  "text": "不想聊了",
+  "voice": "Tingting",
+  "dur_s": 0.82
+ },
+ {
+  "file": "s08T.wav",
+  "text": "我不要",
+  "voice": "Tingting",
+  "dur_s": 0.62
+ },
+ {
+  "file": "s09T.wav",
+  "text": "退出",
+  "voice": "Tingting",
+  "dur_s": 0.58
+ },
+ {
+  "file": "s10T.wav",
+  "text": "说个长句测试一下首字有没有被吃掉",
+  "voice": "Tingting",
+  "dur_s": 3.65
+ },
+ {
+  "file": "s01E.wav",
+  "text": "不要开灯",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.19
+ },
+ {
+  "file": "s02E.wav",
+  "text": "小可小可不要开灯",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 2.14
+ },
+ {
+  "file": "s03E.wav",
+  "text": "别关灯",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.06
+ },
+ {
+  "file": "s04E.wav",
+  "text": "一加一等于二",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.52
+ },
+ {
+  "file": "s05E.wav",
+  "text": "把音量调到三",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.59
+ },
+ {
+  "file": "s06E.wav",
+  "text": "第五个故事",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.27
+ },
+ {
+  "file": "s07E.wav",
+  "text": "不想聊了",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.18
+ },
+ {
+  "file": "s08E.wav",
+  "text": "我不要",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 1.01
+ },
+ {
+  "file": "s09E.wav",
+  "text": "退出",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 0.94
+ },
+ {
+  "file": "s10E.wav",
+  "text": "说个长句测试一下首字有没有被吃掉",
+  "voice": "Eddy (中文（中国大陆）)",
+  "dur_s": 3.37
+ }
+]
