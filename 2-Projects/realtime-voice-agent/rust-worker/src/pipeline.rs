@@ -291,6 +291,10 @@ struct ExitSignalPending {
 }
 
 struct Orchestrator {
+    /// One-shot v0.3:有序 PCM 代次(Some=实验模式;None=现役 RTC,本字段零参与)
+    ordered: Option<crate::ordered_pcm::Session>,
+    /// ordered_pcm:待执行的「主动收流」(drop 唯一 ASR 发送端);由主循环消费,因为发送端不在 Orchestrator 里
+    ordered_end_stream_pending: bool,
     /// 输出门(gate.rs):Android 未订 agent 轨前扣住可听 PCM,首个待播起 5s fail-closed
     output_gate: crate::gate::OutputGate,
     /// 门超时 → 主循环 fail-closed 的传导通道
@@ -651,6 +655,8 @@ pub async fn run_pipeline(
     route: transcript_pub::Route,
     mut ctrl_rx: mpsc::Receiver<(control::Envelope, control::Inbound, Option<String>)>,
     mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
+    mut hist_rx: mpsc::Receiver<crate::ordered_pcm::Packet>,
+    input_mode: crate::ordered_pcm::InputMode,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
@@ -662,6 +668,15 @@ pub async fn run_pipeline(
         None => prebuild(room_name.clone()).await?,
     };
     info!(room = %room_name, prebuilt_age_ms = prebuilt_at.elapsed().as_millis() as u64, "pipeline takeover prebuilt");
+    // One-shot v0.3:受信输入模式在第一帧前固定。ordered_pcm=RTC 帧从第一帧起不进 VAD/ASR/EOT/投机,只吃有序 PCM 代次;
+    // 现役房 None,下方所有 `orch.ordered` 分支不触发(零行为变化)。
+    let ordered_session = match input_mode {
+        crate::ordered_pcm::InputMode::OrderedPcm => {
+            info!(room = %room_name, "ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃");
+            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), crate::ordered_pcm::Limits::default()))
+        }
+        crate::ordered_pcm::InputMode::Rtc => None,
+    };
     let mut gate = VadGate::new(
         std::env::var("VAD_ACTIVATION_THRESHOLD")
             .ok()
@@ -676,6 +691,9 @@ pub async fn run_pipeline(
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
     let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: stt_task } = stt;
+    // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
+    let mut stt_pcm_tx = Some(stt_pcm_tx);
+    let mut stt_closed = false;
 
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
@@ -773,6 +791,8 @@ pub async fn run_pipeline(
         canary_pending: None,
         t0: Instant::now(),
         snap: crate::eot_snapshot::SnapshotSink::from_env(&room_name),
+        ordered: ordered_session,
+        ordered_end_stream_pending: false,
     };
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
@@ -861,6 +881,11 @@ pub async fn run_pipeline(
                     }
                 }
                 orch.input_loop_started_at.get_or_insert(Instant::now());
+                if let Some(o) = orch.ordered.as_mut() {
+                    // ordered_pcm:RTC 帧到此为止——不进幅度统计/ASR 队列/EOT 环/声纹/投机/VAD(只计数)
+                    o.note_rtc_frame_dropped();
+                    continue;
+                }
                 if !samples.is_empty() {
                     in_amp_acc += samples.iter().map(|s| u64::from(s.unsigned_abs())).sum::<u64>()
                         / samples.len() as u64;
@@ -868,7 +893,9 @@ pub async fn run_pipeline(
                 stt_buf.extend_from_slice(&samples);
                 if stt_buf.len() >= STT_SEGMENT_SAMPLES {
                     // 满则丢段不阻塞热路径(channel 128 段 ≈ 25s 缓冲,正常永远不满)
-                    let _ = stt_pcm_tx.try_send(std::mem::take(&mut stt_buf));
+                    if let Some(tx) = &stt_pcm_tx {
+                        let _ = tx.try_send(std::mem::take(&mut stt_buf));
+                    }
                 }
                 eot_ring.extend(samples.iter().copied());
                 while eot_ring.len() > ring_keep {
@@ -888,12 +915,31 @@ pub async fn run_pipeline(
                     }
                 }
             }
-            ev = stt_ev_rx.recv() => match ev {
-                Some(SttEvent::Interim(t)) => orch.on_interim(t),
-                Some(SttEvent::Final(t)) => orch.on_final(t),
+            // One-shot v0.3:有序 PCM 包(现役房通道永远空,分支不触发)
+            Some(pkt) = hist_rx.recv() => {
+                orch.on_ordered_packet(&pkt, &stt_pcm_tx);
+                if orch.ordered_end_stream_pending {
+                    orch.ordered_end_stream_pending = false;
+                    stt_pcm_tx.take(); // 主动收流:供应商回 LastNoSeq → Closed → 裁决
+                }
+            }
+            ev = stt_ev_rx.recv(), if !stt_closed => match ev {
+                Some(SttEvent::Interim(t)) => {
+                    if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); } else { orch.on_interim(t) }
+                }
+                Some(SttEvent::Final(t)) => {
+                    if let Some(o) = orch.ordered.as_mut() { o.on_stt_final(t); } else { orch.on_final(t) }
+                }
                 Some(SttEvent::Closed) | None => {
-                    warn!(room = %room_name, "stt 事件流结束(重连=W2,job 收尾)");
-                    break;
+                    if orch.ordered.is_some() {
+                        // ordered_pcm:流结束=唯一裁决点。完整 → 一次 final 走现役 commit 路径;否则整代作废。
+                        // job 不在此退出(回复要播完),由设备断房/输出门收尾。
+                        stt_closed = true;
+                        orch.on_ordered_stream_end();
+                    } else {
+                        warn!(room = %room_name, "stt 事件流结束(重连=W2,job 收尾)");
+                        break;
+                    }
                 }
             },
             Some((gap_gen, prob)) = eot_rx.recv() => {
@@ -930,6 +976,10 @@ pub async fn run_pipeline(
                 orch.poll_device_timeout(Instant::now());
                 orch.poll_ledger(Instant::now());
                 orch.on_tick().await;
+                if orch.ordered_end_stream_pending {
+                    orch.ordered_end_stream_pending = false;
+                    stt_pcm_tx.take();
+                }
             }
             // S2-B2:Android 设备命令执行结果(独立 topic 独立管道)
             r = devres_rx.recv() => {
@@ -947,6 +997,9 @@ pub async fn run_pipeline(
     }
     if let Some(sp) = orch.spec.take() {
         sp.task.abort();
+    }
+    if let Some(o) = &orch.ordered {
+        info!(room = %room_name, evidence = %o.evidence(), "ordered_pcm summary");
     }
     drop(stt_pcm_tx);
     let _ = tokio::time::timeout(Duration::from_secs(3), stt_task).await;
@@ -992,6 +1045,72 @@ impl Orchestrator {
     }
 
     /// publish_data 到 room(web 延迟面板/租户状态机消费;失败只记不抛)。
+    /// One-shot v0.3:有序 PCM 包 → 代次状态机 → 按 3200 块写 ASR 队列(try_send 失败=计数+整代失败)→ 执行动作。
+    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) {
+        let now_ms = unix_ms_now();
+        let mut acts = self.ordered.as_mut().map(|o| o.on_packet(pkt, now_ms)).unwrap_or_default();
+        if let Some(o) = self.ordered.as_mut() {
+            let more = o.drain_submits(|block| match stt_tx {
+                Some(tx) => tx.try_send(block).is_ok(),
+                None => false,
+            });
+            acts.extend(more);
+        }
+        self.apply_ordered_actions(acts);
+    }
+
+    /// 代次动作:result 记日志(无 PCM/无文本)+ 出站(同 topic、OPCM 线格式、空 PCM);收流交主循环执行。
+    fn apply_ordered_actions(&mut self, acts: Vec<crate::ordered_pcm::Action>) {
+        for a in acts {
+            match a {
+                crate::ordered_pcm::Action::EndStream => self.ordered_end_stream_pending = true,
+                crate::ordered_pcm::Action::Publish(v) => {
+                    if v["t"] == "result" {
+                        info!(room = %self.room_name, result = %v, "ordered_pcm result");
+                    }
+                    self.publish_raw(crate::ordered_pcm::TOPIC, crate::ordered_pcm::encode_packet(&v, &[]));
+                }
+            }
+        }
+    }
+
+    /// 供应商流结束(LastNoSeq→Closed)=唯一裁决点:完整 → 一条 final 走现役 on_final→判停→commit 路径
+    /// (退出/急停/回声/设备命令/LLM 门全部照常);否则整代作废,零 commit。
+    fn on_ordered_stream_end(&mut self) {
+        let (decision, acts) = match self.ordered.as_mut() {
+            Some(o) => o.on_stream_end(),
+            None => return,
+        };
+        self.apply_ordered_actions(acts);
+        match decision {
+            crate::ordered_pcm::Decision::Commit(text) => {
+                info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm generation complete → final 进现役 commit 路径");
+                self.on_final(text);
+            }
+            crate::ordered_pcm::Decision::Discard(r) => {
+                info!(room = %self.room_name, reason = r.as_str(), "ordered_pcm generation discarded (zero commit)");
+            }
+        }
+        if let Some(o) = &self.ordered {
+            info!(room = %self.room_name, evidence = %o.evidence(), "ordered_pcm decision evidence");
+        }
+    }
+
+    fn publish_raw(&self, topic: &'static str, payload: Vec<u8>) {
+        let p = self.participant.clone();
+        tokio::spawn(async move {
+            let packet = DataPacket {
+                payload,
+                topic: Some(topic.to_string()),
+                reliable: true,
+                ..Default::default()
+            };
+            if let Err(e) = p.publish_data(packet).await {
+                tracing::debug!(error = %e, "publish_data failed");
+            }
+        });
+    }
+
     fn publish_json(&self, topic: &'static str, v: Value) {
         let p = self.participant.clone();
         tokio::spawn(async move {
@@ -1647,6 +1766,11 @@ impl Orchestrator {
                     "session_exit ack received");
             }
             control::Inbound::Cancel => {
+                // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
+                if self.ordered.is_some() {
+                    let acts = self.ordered.as_mut().map(|o| o.fail(crate::ordered_pcm::FailReason::Cancelled)).unwrap_or_default();
+                    self.apply_ordered_actions(acts);
+                }
                 // v140 §4.3:Android 本地 exact 先命中会先发既有 cancel——cancel 亦为退出
                 // 信令终态,停重试(不得形成重试风暴)。
                 if self.exit_pending.take().is_some() {
@@ -1963,6 +2087,12 @@ impl Orchestrator {
     }
 
     async fn on_tick(&mut self) {
+        // One-shot v0.3:有序 PCM 代次超时(begin 后无 end)→ 整代失败终态
+        if self.ordered.is_some() {
+            let now_ms = unix_ms_now();
+            let acts = self.ordered.as_mut().map(|o| o.on_tick(now_ms)).unwrap_or_default();
+            self.apply_ordered_actions(acts);
+        }
         // cancel 掉的 canary:turn.task.abort() 后 BufferWatch Drop 异步落槽,tick 兜底补发
         self.try_flush_canary_metrics();
         let now = Instant::now();

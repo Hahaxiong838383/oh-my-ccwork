@@ -16,6 +16,7 @@ mod filler;
 mod gate;
 mod job;
 mod llm;
+mod ordered_pcm;
 mod pipeline;
 mod playout;
 mod preflight;

@@ -43,6 +43,9 @@ struct JobMeta {
     /// 优先口径;缺省回退房名尾秒——秒级口径自带 ±1s 量化噪声,曾把真实 ~300ms 的
     /// assignment 观测成 p95=1290ms(50 轮 journal 实证,分布与噪声模型吻合)。
     issue_ts_ms: Option<i64>,
+    /// One-shot v0.3(2026-09-08):受信输入模式。`ordered_pcm`=实验(RTC 帧不进识别,只吃有序 PCM 代次);
+    /// 缺省/其它=现役。只认服务端签发的 job.metadata,设备 payload 自述不算;job 第一帧前固定,房中途不可改。
+    input_mode: Option<String>,
 }
 
 /// issue→assignment 观测(不进任何门禁)。毫秒口径优先(残余=两机 NTP 偏差,几十 ms 量级);
@@ -141,6 +144,15 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // S2-B2 设备命令结果通道(android → worker,独立 topic 独立管道)
     let (devres_tx, devres_rx) = mpsc::channel::<(control::DeviceResult, Option<String>)>(16);
     let mut devres_rx = Some(devres_rx);
+    // One-shot v0.3:有序 PCM 入口(默认关;只有受信 metadata 声明 ordered_pcm 的房才消费)。
+    // 容量 256:设备按 40 ms 片(640 样本)发 6 s 历史=150 片也放得下;满则丢包→该代因缺片终态失败(fail-closed)。
+    let input_mode = crate::ordered_pcm::InputMode::from_meta(meta.input_mode.as_deref());
+    let expected_device = crate::ordered_pcm::expected_device_identity(&room_name);
+    let (hist_tx, hist_rx) = mpsc::channel::<crate::ordered_pcm::Packet>(256);
+    let mut hist_rx = Some(hist_rx);
+    if input_mode == crate::ordered_pcm::InputMode::OrderedPcm {
+        info!(room = %room_name, expected_device = expected_device.as_deref().unwrap_or("-"), "input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别");
+    }
     // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
     // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
     // ——所以看门狗放这里,5s 无心跳即 break 走统一收尾(abort+关房删房),用户重连即新房。
@@ -207,6 +219,26 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     } else {
                         tracing::debug!(room = %room_name, identity = ident.as_deref().unwrap_or("-"),
                             bound = bound.unwrap_or("-"), "丢弃 device result 包(非绑定设备身份或畸形)");
+                    }
+                } else if topic.as_deref() == Some(crate::ordered_pcm::TOPIC) {
+                    // One-shot v0.3:有序 PCM 包。只在受信 ordered 模式 + 发包者身份 == 房名推导的设备身份(dev-<SN>)
+                    // 时进管道(begin 可早于用户轨订阅到达,故不用 user_info 绑定);其它一律丢弃(现役房零参与)。
+                    let ident = participant.as_ref().map(|p| p.identity().to_string());
+                    if input_mode == crate::ordered_pcm::InputMode::OrderedPcm
+                        && expected_device.is_some()
+                        && ident.as_deref() == expected_device.as_deref()
+                    {
+                        match crate::ordered_pcm::parse_packet(&payload) {
+                            Ok(pkt) => {
+                                if hist_tx.try_send(pkt).is_err() {
+                                    warn!(room = %room_name, "ordered_pcm 入站队列满,丢弃一个包(该代将因缺片终态失败)");
+                                }
+                            }
+                            Err(e) => warn!(room = %room_name, error = ?e, "ordered_pcm 包解析失败,丢弃"),
+                        }
+                    } else {
+                        tracing::debug!(room = %room_name, mode = ?input_mode, identity = ident.as_deref().unwrap_or("-"),
+                            "丢弃 ordered_pcm 包(非实验模式或非设备身份)");
                     }
                 } else {
                     tracing::debug!(room = %room_name, ?topic, "丢弃无法解析的 data packet");
@@ -303,6 +335,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             };
             let crx = ctrl_rx.take().expect("pipeline 只启动一次");
             let drx = devres_rx.take().expect("pipeline 只启动一次");
+            let hrx = hist_rx.take().expect("pipeline 只启动一次");
             let beat2 = beat.clone();
             let ready = pipeline::ReadyCtx {
                 trace_id: meta.trace_id.clone(),
@@ -328,7 +361,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             };
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, beat2, ready, prebuilt)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, beat2, ready, prebuilt)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
