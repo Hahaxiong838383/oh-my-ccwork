@@ -136,6 +136,14 @@ fn build_init_payload(cfg: &SttConfig, request_id: &str) -> serde_json::Value {
     })
 }
 
+/// 服务端「最后一帧」判定:火山把 LastNoSeq(0b0010)当**位**用——带序号的最后一帧 flag=0b0011(NegativeSeq)。
+/// Python 版是 `msg.flag & Flags.LastNoSeq`(位与);此前 Rust 用 `== LastNoSeq` 只认 0b0010,收流后的
+/// 最后一帧(0b0011)永远不被识别,只能等服务端关 socket(表现=每个 job 末尾一条「asr ws closed by server」WARN)。
+/// 2026-09-08 ordered_pcm POC 首跑实证(正常 LastNoSeq 被判成意外 EOF)。
+fn is_last_frame(flag: Flags) -> bool {
+    matches!(flag, Flags::LastNoSeq | Flags::NegativeSeq)
+}
+
 /// 一条 ASR 连接的结束方式(重连决策依据,Closed 事件由外层重连循环统一发)。
 #[derive(Debug, PartialEq, Eq)]
 pub enum AsrEnd {
@@ -247,7 +255,7 @@ pub async fn run_asr_stream(
                     if frame.msg_type != MsgType::FullServerResponse {
                         continue;
                     }
-                    let ended = frame.flag == Flags::LastNoSeq;
+                    let ended = is_last_frame(frame.flag);
                     if let Some(payload) = frame.json_payload() {
                         handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon, ended)
                             .await;
@@ -376,6 +384,15 @@ mod tests {
         let p2 = build_init_payload(&c2, "req");
         assert_eq!(p2["request"]["corpus"]["boosting_table_id"], "bt-test-id");
         assert!(p2["request"]["corpus"]["context"].as_str().unwrap_or("").contains("停"));
+    }
+
+    /// 火山最后一帧 flag 位语义:0b0010(LastNoSeq)与 0b0011(带序号的最后一帧)都是流结束;0b0001 不是。
+    #[test]
+    fn last_frame_flag_is_bitwise_like_python() {
+        assert!(is_last_frame(Flags::LastNoSeq));
+        assert!(is_last_frame(Flags::NegativeSeq));
+        assert!(!is_last_frame(Flags::PositiveSeq));
+        assert!(!is_last_frame(Flags::NoSeq));
     }
 
     #[test]
