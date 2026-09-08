@@ -998,7 +998,9 @@ pub async fn run_pipeline(
     if let Some(sp) = orch.spec.take() {
         sp.task.abort();
     }
-    if let Some(o) = &orch.ordered {
+    if let Some(o) = orch.ordered.as_mut() {
+        // job 收尾时代次若未终态(设备断房/输出门 fail-closed)→ room_closed 终态,证据里不留悬空代次
+        let _ = o.fail(crate::ordered_pcm::FailReason::RoomClosed);
         info!(room = %room_name, evidence = %o.evidence(), "ordered_pcm summary");
     }
     drop(stt_pcm_tx);
