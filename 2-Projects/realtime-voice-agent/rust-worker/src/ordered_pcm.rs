@@ -8,8 +8,12 @@
 //! - 样本切点：设备给**绝对样本索引**的半开区间 `[start,end)`；worker 只接受连续区间，不跨 data-channel/RTP 用相关峰猜切点。
 //! - 代次：wire `input_id` 独立唯一并绑定 trace/session/capture_epoch/wake_generation；同 job 只认**一个不可替换**的
 //!   输入代次；完全相同的 begin 幂等，冲突 begin 只拒绝该消息、不取消合法代次。
-//! - ACK 与信用：`received_next`（连续已接收）与 `submitted_next`（已写 ASR socket）分开命名；`credit_samples` 是
-//!   worker 还能缓冲的样本数。已写 socket ≠ 识别完成。
+//! - ACK 与信用：`received_next`（连续已接收）与 `queued_next`（已 `try_send` 进 worker 的 ASR 发送队列，**队列水位，
+//!   不是已写供应商 socket**，更不是识别完成）分开命名；`credit_samples` 是 worker 组包器还能缓冲的样本数（8 s 预算是
+//!   受控队列容量，不宣称无背压：ASR 队列 128 块满即 `queue_full` 终态）。Android 不得拿 `queued_next` 判 ASR ready/云端成功。
+//! - 单包上限三条同时成立：总包 ≤ 15 KiB、头 JSON ≤ 2 KiB、PCM ≤ 7168 样本（14 KiB PCM + 2 KiB 头 > 15 KiB 会被拒）。
+//! - 供应商流结束两种：LastNoSeq 正常终局 → 裁决；中途断连/协议错误/收流后 EOF → `Interrupted` → 整代作废，
+//!   已 hold 的半段 final 绝不提交。
 //! - 预算：历史积压上限 ≥ 7 s（默认 8 s），单代总样本上限 12 s；不足一块的尾巴按实际样本数 flush，**不静默丢尾**。
 //! - 完整性门：ASR 的 interim/final 只 hold，不进投机/命令/退出/LLM；`end` 后补尾静音并主动收流，供应商 LastNoSeq
 //!   之后（流结束）才裁决：完整 → 一次 commit（走现役 commit 路径）；任一失败 → 终态，旧 final 全部作废，不放行残余 RTC。
@@ -32,6 +36,8 @@ pub const BLOCK_SAMPLES: usize = 3200;
 pub const MAX_HEADER_BYTES: usize = 2048;
 /// 单包 PCM 上限：14 KiB 载荷（LiveKit 单包 15 KiB 为保守应用预算，不当作底层保证）。
 pub const MAX_CHUNK_SAMPLES: usize = 7168;
+/// 整包（头+PCM）上限：与 Android codec 同款三条限制（总包 ≤ 15 KiB、头 ≤ 2 KiB、PCM ≤ 7168 样本）。
+pub const MAX_PACKET_BYTES: usize = 15 * 1024;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum InputMode {
@@ -103,11 +109,15 @@ pub enum ParseError {
     PayloadLenMismatch { expected: usize, actual: usize },
     PayloadOnNonChunk,
     ChunkTooLarge(usize),
+    PacketTooLarge(usize),
 }
 
 /// 线格式：`OPCM` | u16 BE version | u16 BE header_len | header JSON | PCM s16le。
 /// chunk 的 PCM 字节数必须等于 (end-start)*2；非 chunk 不得带 PCM。
 pub fn parse_packet(raw: &[u8]) -> Result<Packet, ParseError> {
+    if raw.len() > MAX_PACKET_BYTES {
+        return Err(ParseError::PacketTooLarge(raw.len()));
+    }
     if raw.len() < 8 {
         return Err(ParseError::TooShort);
     }
@@ -315,6 +325,8 @@ pub struct Counters {
     pub finals_after_terminal: u64,
     pub end_before_final: u64,
     pub final_before_end: u64,
+    /// 供应商连接非正常结束次数（中途断连/协议错误/收流后 EOF）。
+    pub stream_interrupted: u64,
 }
 
 pub struct Session {
@@ -383,7 +395,7 @@ impl Session {
             "t": "ack",
             "input_id": self.input_id().unwrap_or(""),
             "received_next": self.recv_next,
-            "submitted_next": self.submitted_next,
+            "queued_next": self.submitted_next,
             "credit_samples": self.credit_samples(),
             "chunks_received": self.counters.chunks_received,
             "phase": phase_str(self.phase),
@@ -397,7 +409,7 @@ impl Session {
             "status": status,
             "reason": reason.map(FailReason::as_str),
             "received_next": self.recv_next,
-            "submitted_next": self.submitted_next,
+            "queued_next": self.submitted_next,
             "finals_held": self.counters.finals_held,
         });
         if let (Some(obj), Some(ex)) = (v.as_object_mut(), extra.as_object()) {
@@ -674,12 +686,19 @@ impl Session {
             None,
             json!({
                 "finals": self.held_finals.len(),
-                "samples_submitted": self.counters.samples_submitted,
+                "samples_queued": self.counters.samples_submitted,
                 "text_chars": text.chars().count(),
             }),
         ))];
         self.held_finals.clear();
         (Decision::Commit(text), acts)
+    }
+
+    /// 供应商连接非正常结束（中途断连 / 协议错误 / 收流后未见 LastNoSeq 即 EOF）：整代作废，已 hold 的半段 final 绝不提交。
+    /// 与 `on_stream_end`（LastNoSeq 正常终局）严格区分——两者在 pipeline 里都以「流结束」出现，但只有后者能 commit。
+    pub fn on_stream_interrupted(&mut self) -> Vec<Action> {
+        self.counters.stream_interrupted += 1;
+        self.fail(FailReason::AsrUnavailable)
     }
 
     /// 定时器：begin 后超时未 end → 整代失败。
@@ -706,7 +725,7 @@ impl Session {
             "keep_from": self.keep_from,
             "end_sample": self.end_sample,
             "received_next": self.recv_next,
-            "submitted_next": self.submitted_next,
+            "queued_next": self.submitted_next,
             "packets_total": c.packets_total,
             "packets_rejected": c.packets_rejected,
             "packets_after_terminal": c.packets_after_terminal,
@@ -714,8 +733,9 @@ impl Session {
             "chunks_duplicate": c.chunks_duplicate,
             "samples_received": c.samples_received,
             "samples_cropped_before_keep_from": c.samples_cropped_before_keep_from,
-            "blocks_submitted": c.blocks_submitted,
-            "samples_submitted": c.samples_submitted,
+            "blocks_queued": c.blocks_submitted,
+            "samples_queued": c.samples_submitted,
+            "stream_interrupted": c.stream_interrupted,
             "tail_block_samples": c.tail_block_samples,
             "silence_samples_submitted": c.silence_samples_submitted,
             "queue_full_events": c.queue_full_events,
@@ -1119,6 +1139,103 @@ mod tests {
         assert_eq!(d, Decision::Discard(FailReason::NoFinal));
     }
 
+    /// codex Kotlin 生成的 OPCM 夹具（P003_OPCM_V03_WIRE_VECTORS_20260908，tests/fixtures/opcm）：
+    /// 格式与内容逐样本对撞，并整代跑到 Draining → 流结束 commit。这是 Kotlin→Rust 互通证据。
+    #[test]
+    fn kotlin_fixtures_parse_and_run_through_session() {
+        const BEGIN: &[u8] = include_bytes!("../tests/fixtures/opcm/00-begin.opcm");
+        const CHUNK: &[u8] = include_bytes!("../tests/fixtures/opcm/01-chunk.opcm");
+        const TAIL: &[u8] = include_bytes!("../tests/fixtures/opcm/02-tail.opcm");
+        const END: &[u8] = include_bytes!("../tests/fixtures/opcm/03-end.opcm");
+        assert_eq!((BEGIN.len(), CHUNK.len(), TAIL.len(), END.len()), (295, 1577, 305, 297), "与 verification.json 字节数一致");
+        let b = parse_packet(BEGIN).unwrap();
+        assert_eq!(b.header.t, "begin");
+        assert_eq!(b.header.input_id, "fixture-input");
+        assert_eq!(b.header.trace_id, "fixture-trace");
+        assert_eq!(b.header.session_id, "fixture-session");
+        assert_eq!((b.header.capture_epoch, b.header.wake_generation, b.header.seq), (1, 1, 0));
+        assert_eq!(b.header.boundary_kind.as_deref(), Some("wake_lookback"));
+        assert_eq!(b.header.keep_from, Some(0));
+        assert_eq!(b.header.overlaps_local_playback, Some(false));
+        assert_eq!((b.header.sr, b.header.ch, b.header.fmt.as_deref()), (Some(16000), Some(1), Some("s16le")));
+        assert!(b.pcm.is_empty());
+        let c = parse_packet(CHUNK).unwrap();
+        assert_eq!((c.header.t.as_str(), c.header.seq, c.header.start, c.header.end), ("chunk", 0, 0, 640));
+        assert_eq!(c.pcm.len(), 640);
+        assert!(c.pcm.iter().enumerate().all(|(i, &x)| x == i as i16 - 320), "样本 -320..319 逐个一致");
+        let t = parse_packet(TAIL).unwrap();
+        assert_eq!((t.header.seq, t.header.start, t.header.end), (1, 640, 643));
+        assert_eq!(t.pcm, vec![-32768, 32767, -1], "带符号极值尾片");
+        let e = parse_packet(END).unwrap();
+        assert_eq!((e.header.t.as_str(), e.header.seq, e.header.start, e.header.end), ("end", 2, 643, 643));
+        assert!(e.pcm.is_empty());
+        // 整代跑通：begin→chunk→tail→end→drain(尾块 643 + 尾静音)→收流→final→commit
+        let mut s = Session::new(Some("fixture-trace".into()), Limits::default());
+        let mut sink = Sink { blocks: vec![], cap: None };
+        let acts = s.on_packet(&b, 0);
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "ack" && v["received_next"] == 0)));
+        s.on_packet(&c, 1);
+        let acts = s.drain_submits(sink.sender());
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "ack" && v["received_next"] == 640 && v["queued_next"] == 0)),
+            "640 样本不足一块:received 前进、queued 不动");
+        s.on_packet(&t, 2);
+        s.drain_submits(sink.sender());
+        assert!(s.on_packet(&e, 3).is_empty());
+        let acts = s.drain_submits(sink.sender());
+        assert!(acts.contains(&Action::EndStream));
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["queued_next"] == 643)));
+        assert_eq!(s.phase(), Phase::Draining);
+        let flat: Vec<i16> = sink.blocks.iter().flatten().copied().collect();
+        let expected: Vec<i16> = c.pcm.iter().chain(t.pcm.iter()).copied().collect();
+        assert_eq!(&flat[..643], &expected[..]);
+        assert_eq!(sink.samples(), 643 + Limits::default().tail_silence_samples);
+        assert_eq!((s.counters.chunks_received, s.counters.samples_received, s.counters.tail_block_samples), (2, 643, 643));
+        s.on_stt_final("夹具".into());
+        let (d, acts) = s.on_stream_end();
+        assert_eq!(d, Decision::Commit("夹具".into()));
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "complete" && v["samples_queued"] == 643)));
+    }
+
+    /// 供应商正常 LastNoSeq（→ on_stream_end）与意外 EOF/断连（→ on_stream_interrupted）必须区分：
+    /// 后者已 hold 的半段 final 绝不提交，且终态唯一。
+    #[test]
+    fn interrupted_stream_never_commits_held_finals() {
+        let mut s = session();
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+        let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &tone(16000, 2), 640, 0);
+        s.on_packet(&pkt(header("end", "in-1", seq, 16000, 16000), &[]), 1);
+        s.drain_submits(sink.sender());
+        s.on_stt_final("半段".into());
+        let acts = s.on_stream_interrupted();
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "failed" && v["reason"] == "asr_unavailable")));
+        assert_eq!(s.counters.stream_interrupted, 1);
+        let (d, acts2) = s.on_stream_end();
+        assert_eq!(d, Decision::Discard(FailReason::AsrUnavailable), "随后的 Closed 不得变成 commit");
+        assert!(acts2.is_empty(), "终态唯一，不发第二个 result");
+        // 中途断连(还没 end)同样作废
+        let mut s2 = session();
+        s2.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+        s2.on_stt_final("早到的半段".into());
+        let acts = s2.on_stream_interrupted();
+        assert!(acts.contains(&Action::EndStream), "未收流时中断也要请求收流");
+        assert_eq!(s2.outcome(), Some(&Outcome::Failed(FailReason::AsrUnavailable)));
+    }
+
+    /// 三条上限同时成立：总包 ≤ 15 KiB、头 ≤ 2 KiB、PCM ≤ 7168 样本；14 KiB PCM + 2 KiB 头 会因总包超限被拒。
+    #[test]
+    fn packet_total_size_limit() {
+        let mut h = header("chunk", "in-1", 0, 0, 7168);
+        h["pad"] = json!("x".repeat(1500)); // 头 ≈1.7 KiB(<2 KiB) + PCM 14 KiB > 15 KiB
+        let raw = encode_packet(&h, &tone(7168, 1));
+        assert!(raw.len() > MAX_PACKET_BYTES);
+        assert!(matches!(parse_packet(&raw).unwrap_err(), ParseError::PacketTooLarge(_)));
+        // 客户端实际形态:640 样本 + 短头 ≈ 1.6 KiB,放行
+        let ok = encode_packet(&header("chunk", "in-1", 0, 0, 640), &tone(640, 1));
+        assert!(ok.len() < 2048, "实际包 {} B", ok.len());
+        assert!(parse_packet(&ok).is_ok());
+    }
+
     /// 机器可读证据：跑一遍完整正向脚本并落盘 target/ordered_pcm_evidence.json（无 PCM、无文本）。
     #[test]
     fn evidence_dump_positive_path() {
@@ -1139,7 +1256,8 @@ mod tests {
         let ev = s.evidence();
         assert_eq!(ev["outcome"], "committed");
         assert_eq!(ev["samples_received"], pcm.len() as u64);
-        assert_eq!(ev["samples_submitted"], (pcm.len() - 480) as u64);
+        assert_eq!(ev["samples_queued"], (pcm.len() - 480) as u64);
+        assert_eq!(ev["stream_interrupted"], 0);
         assert_eq!(ev["rtc_frames_dropped"], 3);
         assert_eq!(ev["queue_full_events"], 0);
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target").join("ordered_pcm_evidence.json");

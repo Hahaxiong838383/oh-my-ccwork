@@ -1,0 +1,207 @@
+{
+  "status": "OFFLINE_PASS",
+  "archive": {
+    "zip_sha256": "2d5960c8f9a555c1165a43142b10a0dfa25b53d94ef317cf140194f805baae16",
+    "zip_bytes": 704478,
+    "runs": {
+      "1x": {
+        "runs": 20,
+        "with_definite": 20,
+        "exact_as_reported": 16,
+        "first_char_as_reported": 19,
+        "errors": 0,
+        "tail_dropped_bytes_max": 5524,
+        "after_last_chunk_median_ms": -352.0,
+        "after_last_chunk_p95_nearest_rank_ms": 12
+      },
+      "burst": {
+        "runs": 20,
+        "with_definite": 20,
+        "exact_as_reported": 17,
+        "first_char_as_reported": 20,
+        "errors": 0,
+        "tail_dropped_bytes_max": 5524,
+        "after_last_chunk_median_ms": 417.0,
+        "after_last_chunk_p95_nearest_rank_ms": 726
+      },
+      "hybrid": {
+        "runs": 24,
+        "with_definite": 24,
+        "exact_as_reported": 20,
+        "first_char_as_reported": 24,
+        "errors": 0,
+        "tail_dropped_bytes_max": 5524,
+        "after_last_chunk_median_ms": -279.5,
+        "after_last_chunk_p95_nearest_rank_ms": 92
+      },
+      "cancel_mid": {
+        "runs": 20,
+        "with_definite": 0,
+        "exact_as_reported": null,
+        "first_char_as_reported": null,
+        "errors": 20,
+        "tail_dropped_bytes_max": 5524,
+        "after_last_chunk_median_ms": null,
+        "after_last_chunk_p95_nearest_rank_ms": null
+      }
+    },
+    "waves": [
+      {
+        "file": "s01T.wav",
+        "samples": 15232,
+        "sha256": "9eaf2c25867017e5ef9a7364fd54869fd11bc0bd6aacc0a385f6763a270fd007"
+      },
+      {
+        "file": "s02T.wav",
+        "samples": 35152,
+        "sha256": "93696564b32464d1fbc51da996bdb6900187dead0b86fa98a17b099a6be406a9"
+      },
+      {
+        "file": "s03T.wav",
+        "samples": 11888,
+        "sha256": "05ca489febdca03381b34cb82289ce819a45bd9266e29839b5c1a00325ca5903"
+      },
+      {
+        "file": "s04T.wav",
+        "samples": 19376,
+        "sha256": "9daa57c29c2abe261d85aa0222f1a88252ff7a695f925d51ef68fdfd5b15a10c"
+      },
+      {
+        "file": "s05T.wav",
+        "samples": 23405,
+        "sha256": "4e12b154e29f61aad77bc80e751bf53574525a6aa11cadebd708d3a26ba3ca8c"
+      },
+      {
+        "file": "s06T.wav",
+        "samples": 16422,
+        "sha256": "bfd521f92906bab99f6e377415ec967657cfa154eb14c099391e88a7d27450ad"
+      },
+      {
+        "file": "s07T.wav",
+        "samples": 13188,
+        "sha256": "9ded3cfa26782e2cb5b1f7dce22be491957f9cd3788c3944ab2ce6ed516b5b59"
+      },
+      {
+        "file": "s08T.wav",
+        "samples": 9909,
+        "sha256": "ae18e41e8e4be3fcdce4651cc3c2af6361cb0fa164ddcb6d3ea864377261bab7"
+      },
+      {
+        "file": "s09T.wav",
+        "samples": 9340,
+        "sha256": "6da699b8e5aa238af6bdfa84d530ab5d22d6cdb23225a9c44548322681e893ee"
+      },
+      {
+        "file": "s10T.wav",
+        "samples": 58348,
+        "sha256": "274d482d7327da077b102386da2911a052ba15254bc3018f233ed2f472db968e"
+      },
+      {
+        "file": "s01E.wav",
+        "samples": 19085,
+        "sha256": "37d69f3852497f424f6c32089979ad86c88fd62ecb74e31946177fd93f8ab6ed"
+      },
+      {
+        "file": "s02E.wav",
+        "samples": 34282,
+        "sha256": "1a4c283445350392f8e9223eb891ec5a545d6d98b3c570e8699a64e4ae4766d3"
+      },
+      {
+        "file": "s03E.wav",
+        "samples": 17037,
+        "sha256": "5de814464c3f74000220eaed01f631b6de468866209bb03eb64a7eb3975e5fd1"
+      },
+      {
+        "file": "s04E.wav",
+        "samples": 24297,
+        "sha256": "49c68620685658ec6e3fac6f0590681bce052e057b25a689837927d223bef3c2"
+      },
+      {
+        "file": "s05E.wav",
+        "samples": 25485,
+        "sha256": "d925e5e96dc055cfb5db0560e5f5b508ed30034765bda85e92a5c16d2bbc69d0"
+      },
+      {
+        "file": "s06E.wav",
+        "samples": 20362,
+        "sha256": "5fb7a4f77dfb3bb87091d0598d4139931dd39b3b0e8b1cee3206aa918f092748"
+      },
+      {
+        "file": "s07E.wav",
+        "samples": 18829,
+        "sha256": "605b7027bedc00c50a06f9c1ecd530caba574b8daf2e98cffa25e436775c8966"
+      },
+      {
+        "file": "s08E.wav",
+        "samples": 16102,
+        "sha256": "c78d2dd66eb956c397546695c9e227a1d3043017110171689e3450989a840eec"
+      },
+      {
+        "file": "s09E.wav",
+        "samples": 14987,
+        "sha256": "04421c553ee83a2914a8dfe816cafedf0d9a5032e29c3e61016f72718ddab111"
+      },
+      {
+        "file": "s10E.wav",
+        "samples": 53993,
+        "sha256": "ad0e23d53b9cf50282b0edf3936f0543766b4cce2dcdfd37fee50f465e050757"
+      }
+    ],
+    "worker_evidence_as_delivered": {
+      "backlog_peak_samples": 3360,
+      "blocks_submitted": 31,
+      "chunks_duplicate": 0,
+      "chunks_received": 151,
+      "end_before_final": 1,
+      "end_sample": 96640,
+      "final_before_end": 0,
+      "finals_after_terminal": 0,
+      "finals_held": 1,
+      "first_sample": 0,
+      "input_id": "in-evidence",
+      "interims_held": 1,
+      "keep_from": 480,
+      "outcome": "committed",
+      "packets_after_terminal": 0,
+      "packets_rejected": 0,
+      "packets_total": 153,
+      "phase": "terminal",
+      "queue_full_events": 0,
+      "received_next": 96640,
+      "rtc_frames_dropped": 3,
+      "samples_cropped_before_keep_from": 480,
+      "samples_received": 96640,
+      "samples_submitted": 96160,
+      "silence_samples_submitted": 9600,
+      "submitted_next": 96640,
+      "tail_block_samples": 160
+    },
+    "provider_called_by_this_verification": false,
+    "worker_code_reexecuted": false
+  },
+  "wire": {
+    "frames": 4,
+    "samples": 643,
+    "end_exclusive": 643,
+    "files": {
+      "00-begin.opcm": {
+        "bytes": 295,
+        "sha256": "743115080248b978cf81854bc2c8d1cbd132381fd427f4adfa621c4e439eae2f"
+      },
+      "01-chunk.opcm": {
+        "bytes": 1577,
+        "sha256": "9bb670656f6fa501125050fb4fab1049448576998e958d3316e779fba779aa84"
+      },
+      "02-tail.opcm": {
+        "bytes": 305,
+        "sha256": "f1d2a66a18805a7efd5f8655eb02d495c9907c188ca30cacd705cd1b6b0ed2e2"
+      },
+      "03-end.opcm": {
+        "bytes": 297,
+        "sha256": "84a89ca1d81f3b28e5cfeab282929a611c6d12b64b254f19f0066455ae19c8a6"
+      }
+    },
+    "status": "KOTLIN_TO_PYTHON_PASS",
+    "rust_worker_verified": false
+  }
+}

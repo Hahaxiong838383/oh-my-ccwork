@@ -516,8 +516,19 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
             let started = Instant::now();
             match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone()).await {
                 Ok(AsrEnd::InputDone) => break,
-                Ok(AsrEnd::ServerClosed) => {}
-                Err(e) => warn!(room = %rn, error = %e, "火山 ASR 流异常"),
+                Ok(AsrEnd::InputDoneEof) => {
+                    // 收流后未见 LastNoSeq 即 EOF:输入已结束不重连,但先报 Interrupted(ordered_pcm 不得提交半段 final)
+                    warn!(room = %rn, "asr 收流后未见 LastNoSeq 即被关闭(意外 EOF)");
+                    let _ = stt_ev_tx.send(SttEvent::Interrupted).await;
+                    break;
+                }
+                Ok(AsrEnd::ServerClosed) => {
+                    let _ = stt_ev_tx.send(SttEvent::Interrupted).await;
+                }
+                Err(e) => {
+                    warn!(room = %rn, error = %e, "火山 ASR 流异常");
+                    let _ = stt_ev_tx.send(SttEvent::Interrupted).await;
+                }
             }
             if started.elapsed() > Duration::from_secs(10) {
                 fails = 0; // 长稳连接后的断开不算连败
@@ -929,6 +940,15 @@ pub async fn run_pipeline(
                 }
                 Some(SttEvent::Final(t)) => {
                     if let Some(o) = orch.ordered.as_mut() { o.on_stt_final(t); } else { orch.on_final(t) }
+                }
+                Some(SttEvent::Interrupted) => {
+                    // 现役:连接由 stt 任务重连,这里只记日志;ordered_pcm:代次作废(意外 EOF/断连 ≠ LastNoSeq,不得提交半段 final)
+                    if orch.ordered.is_some() {
+                        let acts = orch.ordered.as_mut().map(|o| o.on_stream_interrupted()).unwrap_or_default();
+                        orch.apply_ordered_actions(acts);
+                    } else {
+                        info!(room = %room_name, "stt 连接中断(现役:等待 stt 任务重连)");
+                    }
                 }
                 Some(SttEvent::Closed) | None => {
                     if orch.ordered.is_some() {

@@ -19,6 +19,9 @@ use crate::volc::{gzip, Flags, Frame, MsgType, ASR_URL, COMP_GZIP, SER_JSON};
 pub enum SttEvent {
     Interim(String),
     Final(String),
+    /// 一条连接非正常结束(服务端中途断开/协议错误/收流后未见 LastNoSeq 即 EOF)。现役路径只记日志(重连由 stt 任务负责);
+    /// ordered_pcm 代次据此作废——不得把已 hold 的半段 final 当完整提交(codex 2026-09-08 §2)。
+    Interrupted,
     Closed,
 }
 
@@ -138,6 +141,8 @@ fn build_init_payload(cfg: &SttConfig, request_id: &str) -> serde_json::Value {
 pub enum AsrEnd {
     /// 输入结束且服务端 LastNoSeq 收尾——正常终局,不重连。
     InputDone,
+    /// 输入结束(已发 NegativeSeq)但服务端未回 LastNoSeq 就关闭了连接——意外 EOF:不重连,但不是正常终局。
+    InputDoneEof,
     /// 服务端中途断开——外层重连(改进项:Python 版此处直接死流)。
     ServerClosed,
 }
@@ -253,7 +258,8 @@ pub async fn run_asr_stream(
                 }
                 Some(Ok(WsMessage::Close(_))) | None => {
                     warn!("asr ws closed by server");
-                    return Ok(if input_done { AsrEnd::InputDone } else { AsrEnd::ServerClosed });
+                    // 收流后未见 LastNoSeq 即被关闭 = 意外 EOF(与 LastNoSeq 正常终局区分;ordered_pcm 据此不提交半段 final)
+                    return Ok(if input_done { AsrEnd::InputDoneEof } else { AsrEnd::ServerClosed });
                 }
                 Some(Ok(_)) => {}
                 Some(Err(e)) => return Err(e.into()),
