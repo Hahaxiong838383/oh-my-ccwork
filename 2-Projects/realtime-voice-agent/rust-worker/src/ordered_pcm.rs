@@ -359,10 +359,13 @@ impl Session {
         }
     }
 
+    /// 测试/证据用访问器（生产路径只经 evidence() 读字段）。
+    #[allow(dead_code)]
     pub fn phase(&self) -> Phase {
         self.phase
     }
 
+    #[allow(dead_code)]
     pub fn outcome(&self) -> Option<&Outcome> {
         self.outcome.as_ref()
     }
