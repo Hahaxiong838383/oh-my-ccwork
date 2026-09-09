@@ -1119,7 +1119,14 @@ impl Orchestrator {
     /// One-shot v0.3:有序 PCM 包 → 代次状态机 → 按 3200 块写 ASR 队列(try_send 失败=计数+整代失败)→ 执行动作。
     fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) {
         let now_ms = unix_ms_now();
+        let was_idle = self.ordered.as_ref().map(|o| o.phase() == crate::ordered_pcm::Phase::Idle).unwrap_or(false);
         let mut acts = self.ordered.as_mut().map(|o| o.on_packet(pkt, now_ms)).unwrap_or_default();
+        // B14 早 begin 对账：begin 被接受的时刻（相对管线启动；job 层 `input gate open` 行带 since-assignment）+ 设备钟原值
+        if was_idle && self.ordered.as_ref().map(|o| o.phase() == crate::ordered_pcm::Phase::Receiving).unwrap_or(false) {
+            info!(room = %self.room_name, since_pipeline_ms = self.now_ms() as u64, device_sent_at_ms = pkt.header.sent_at_ms.unwrap_or(0),
+                  local_receipt = self.ordered.as_ref().map(|o| o.local_receipt_accepted()).unwrap_or(false),
+                  "ordered_pcm begin accepted");
+        }
         // 本地承接 v1：设备 end 被接受的时刻 = 正文门截止锚（worker 单调钟，不用设备 sent_at_ms）
         if self.ordered_end_seen_at.is_none() && self.ordered.as_ref().map(|o| o.end_seen()).unwrap_or(false) {
             self.ordered_end_seen_at = Some(Instant::now());
@@ -1130,6 +1137,10 @@ impl Orchestrator {
                 None => false,
             });
             acts.extend(more);
+            // B14：首块真正进 ASR 队列的时刻（早 begin 的收益只能在这一点对撞，不能拿 begin 提前量机械相加）
+            if o.note_submit_time(now_ms) {
+                info!(room = %self.room_name, since_pipeline_ms = self.now_ms() as u64, "ordered_pcm first block submitted to ASR");
+            }
         }
         self.apply_ordered_actions(acts);
     }
@@ -2659,7 +2670,14 @@ impl Orchestrator {
                 && spec_done && tts_warm_ready && spec_lead_ms >= self.cfg.ordered_skip_filler_min_lead_ms;
             // 本地承接 v1（2026-09-09 川哥拍板）：begin 声明 ∧ 房已签 ∧ 开关开 → 端侧自己播承接短语；
             // 本轮不播垫句，正文 PCM 扣到端侧 receipt_done 或截止（end 到达 + MAX_MS，到点放行）。投机/预热照常。
-            let local_receipt = commit.input_ended && self.ordered.as_ref().map(|s| s.local_receipt_accepted()).unwrap_or(false);
+            let lr_accepted = commit.input_ended && self.ordered.as_ref().map(|s| s.local_receipt_accepted()).unwrap_or(false);
+            // B14（codex B13 回执 §1）：端侧候选未成立走旧收尾时发 receipt_done played_ms=0 = 「我没播」。commit 前已知 →
+            // 退回 worker 自己的垫句路径，不然孩子从说完到正文全程无声；commit 后才到 → 门已在，只放行。
+            let lr_declined = lr_accepted && self.ordered.as_ref().map(|s| s.receipt_done_declined()).unwrap_or(false);
+            if lr_declined {
+                info!(room = %self.room_name, "local receipt declined by device (receipt_done played_ms=0 before commit) → worker filler path");
+            }
+            let local_receipt = lr_accepted && !lr_declined;
             if self.cfg.ordered_skip_filler_on_spec && commit.input_ended && spec.is_some() && !skip_filler && !local_receipt {
                 info!(room = %self.room_name, spec_lead_ms, spec_done, tts_warm_ready, "filler kept: body not imminent");
             }

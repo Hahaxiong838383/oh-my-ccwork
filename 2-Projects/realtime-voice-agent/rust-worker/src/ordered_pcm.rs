@@ -436,6 +436,10 @@ pub struct Session {
     local_receipt: LocalReceipt,
     receipt_done_at_ms: Option<i64>,
     receipt_done_played_ms: Option<u64>,
+    /// B14（早 begin 对账）：begin/end 头里的设备钟 `sent_at_ms`（原样记，跨机钟差只作对账）；首块进 ASR 的 worker 时刻。
+    begin_sent_at_ms: Option<i64>,
+    end_sent_at_ms: Option<i64>,
+    first_submit_at_ms: Option<i64>,
     pub counters: Counters,
 }
 
@@ -470,6 +474,9 @@ impl Session {
             local_receipt: LocalReceipt::NotDeclared,
             receipt_done_at_ms: None,
             receipt_done_played_ms: None,
+            begin_sent_at_ms: None,
+            end_sent_at_ms: None,
+            first_submit_at_ms: None,
             counters: Counters::default(),
         }
     }
@@ -502,6 +509,22 @@ impl Session {
     /// 设备 end 是否已被接受（pipeline 记录 worker 单调钟时刻作正文门截止锚）。
     pub fn end_seen(&self) -> bool {
         self.end_at_ms.is_some()
+    }
+
+    /// 本地承接 v1：端侧发了 `receipt_done` 且 `played_ms=0` = 端侧明确没播本地条目（候选未成立走旧收尾）。
+    /// commit 前收到 → worker 退回自己的垫句路径（否则孩子从说完到正文全程无声）；commit 后收到 → 只放行。
+    pub fn receipt_done_declined(&self) -> bool {
+        self.receipt_done_at_ms.is_some() && self.receipt_done_played_ms == Some(0)
+    }
+
+    /// B14：pipeline 在 `drain_submits` 后调用；首次有块进 ASR 时记 worker 时刻（相对 begin 进证据 `first_submit_ms`）。
+    /// 返回 true = 这次是首块（pipeline 据此记一条日志）。
+    pub fn note_submit_time(&mut self, now_ms: i64) -> bool {
+        if self.first_submit_at_ms.is_none() && self.counters.blocks_submitted > 0 {
+            self.first_submit_at_ms = Some(now_ms);
+            return true;
+        }
+        false
     }
 
     fn credit_samples(&self) -> u64 {
@@ -783,6 +806,7 @@ impl Session {
         self.recv_next = h.start;
         self.submitted_next = keep_from.max(h.start);
         self.begin_at_ms = now_ms;
+        self.begin_sent_at_ms = h.sent_at_ms;
         match h.boundary_kind.as_deref() {
             Some("kws_tail") | Some("wake_lookback") => {}
             _ => return self.fail(FailReason::BoundaryNone),
@@ -872,6 +896,7 @@ impl Session {
         }
         self.end_sample = Some(h.end);
         self.end_at_ms = Some(now_ms);
+        self.end_sent_at_ms = h.sent_at_ms;
         let thr = self.refresh_quiet_threshold();
         self.trailing_quiet_at_end_ms = Some(self.trailing_quiet_ms(thr));
         self.phase = Phase::Ended;
@@ -1068,6 +1093,12 @@ impl Session {
         v["receipt_done_played_ms"] = json!(self.receipt_done_played_ms);
         v["receipt_done_ignored"] = json!(c.receipt_done_ignored);
         v["receipt_done_duplicate"] = json!(c.receipt_done_duplicate);
+        v["receipt_done_declined"] = json!(self.receipt_done_declined());
+        // B14 早 begin 对账：worker 侧 begin 绝对时刻（unix ms，与 journal 同钟）+ 设备钟原值 + 首块入 ASR（相对 begin）
+        v["begin_at_unix_ms"] = json!(if self.begin_at_ms > 0 { Some(self.begin_at_ms) } else { None });
+        v["begin_sent_at_ms"] = json!(self.begin_sent_at_ms);
+        v["end_sent_at_ms"] = json!(self.end_sent_at_ms);
+        v["first_submit_ms"] = json!(self.first_submit_at_ms.map(|t| t - self.begin_at_ms));
         v
     }
 }
@@ -1884,5 +1915,51 @@ mod tests {
         assert_eq!(s.counters.receipt_done_ignored, 2);
         assert!(!s.receipt_done_seen());
         assert_eq!(s.evidence()["receipt_done_ignored"], 2);
+    }
+
+    // ───────── B14：端侧未播（played_ms=0）判定 + 设备钟/首块入 ASR 证据 ─────────
+    #[test]
+    fn receipt_done_played_zero_marks_declined_but_still_releases() {
+        let mut s = session_lr(true);
+        s.on_packet(&pkt(begin_lr("in-1"), &[]), 1000);
+        let mut h = header("receipt_done", "in-1", 1, 0, 0);
+        h["played_ms"] = json!(0);
+        let acts = s.on_packet(&pkt(h, &[]), 1300);
+        assert_eq!(acts, vec![Action::ReleaseBody], "played_ms=0 仍放行（不能扣死正文）");
+        assert!(s.receipt_done_declined(), "played_ms=0 = 端侧没播 → worker 该回自己的垫句");
+        assert_eq!(s.evidence()["receipt_done_declined"], true);
+        // 正常 played_ms>0 不算 declined
+        let mut s2 = session_lr(true);
+        s2.on_packet(&pkt(begin_lr("in-2"), &[]), 1000);
+        s2.on_packet(&pkt(receipt_done_hdr("in-2", 1, 0), &[]), 1300);
+        assert!(!s2.receipt_done_declined());
+        assert_eq!(s2.evidence()["receipt_done_declined"], false);
+    }
+
+    #[test]
+    fn evidence_carries_device_clocks_and_first_submit() {
+        let mut s = session();
+        let mut sink = Sink { blocks: vec![], cap: None };
+        let mut b = begin_hdr("in-1", 0, 0);
+        b["sent_at_ms"] = json!(1_700_000_000_123i64);
+        s.on_packet(&pkt(b, &[]), 5000);
+        assert!(!s.note_submit_time(5001), "还没有块进 ASR 不记首块");
+        let pcm = tone(3200, 2);
+        let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
+        assert!(s.note_submit_time(5250), "首块已进 ASR → 记一次");
+        assert!(!s.note_submit_time(5300), "只记首次");
+        let mut e = header("end", "in-1", seq, 3200, 3200);
+        e["sent_at_ms"] = json!(1_700_000_000_999i64);
+        s.on_packet(&pkt(e, &[]), 5400);
+        let ev = s.evidence();
+        assert_eq!(ev["begin_at_unix_ms"], 5000);
+        assert_eq!(ev["begin_sent_at_ms"], 1_700_000_000_123i64);
+        assert_eq!(ev["end_sent_at_ms"], 1_700_000_000_999i64);
+        assert_eq!(ev["first_submit_ms"], 250);
+        // 没给 sent_at_ms 的老端侧：null 不编数
+        let mut s2 = session();
+        s2.on_packet(&pkt(begin_hdr("in-2", 0, 0), &[]), 7000);
+        assert!(s2.evidence()["begin_sent_at_ms"].is_null());
+        assert!(s2.evidence()["first_submit_ms"].is_null());
     }
 }
