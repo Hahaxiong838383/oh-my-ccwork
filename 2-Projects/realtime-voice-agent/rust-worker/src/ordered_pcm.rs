@@ -504,14 +504,45 @@ impl Session {
         true
     }
 
-    /// B11：底噪 = 本代已接受 chunk RMS 的 p20（有说话段时 p20 落在环境声上；预滚静音不会把它压到 0 以下）。
+    /// B12：底噪 = 本代已接受 chunk 里**非数字零**（RMS ≥ 2）chunk 的**按样本加权** p20。
+    /// 真机 …1684 实证：预滚前 800 ms 全零把全代 p20 从 ≈100 拉到 70.5，门限 141 骑在尾部环境声 87–155 上，候选永不发
+    /// （codex 离线复现：2 s 零前缀 → p20=0 → 门限 90）。数字零本身不是环境声，只用来判安静，不参与底噪估计。
     fn noise_floor(&self) -> f64 {
-        if self.chunk_rms.is_empty() {
+        let mut v: Vec<(f32, u32)> = self.chunk_rms.iter().filter(|&&(_, r)| r >= 2.0).map(|&(n, r)| (r, n)).collect();
+        if v.is_empty() {
             return 0.0;
         }
-        let mut v: Vec<f32> = self.chunk_rms.iter().map(|&(_, r)| r).collect();
-        v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        v[(v.len() - 1) / 5] as f64
+        v.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
+        let total: u64 = v.iter().map(|&(_, n)| n as u64).sum();
+        let target = total / 5;
+        let mut acc: u64 = 0;
+        for &(r, n) in &v {
+            acc += n as u64;
+            if acc > target {
+                return r as f64;
+            }
+        }
+        v.last().map(|&(r, _)| r as f64).unwrap_or(0.0)
+    }
+
+    /// B12：从尾部起按 200 ms（3200 样本）分箱的 (样本数, 箱 RMS)，最新的箱在前；末箱可不足 200 ms。
+    fn tail_bins(&self) -> Vec<(u64, f64)> {
+        let bin = 3200u64;
+        let mut out = Vec::new();
+        let (mut acc_n, mut acc_sq) = (0u64, 0f64);
+        for &(n, r) in self.chunk_rms.iter().rev() {
+            acc_sq += (r as f64) * (r as f64) * n as f64;
+            acc_n += n as u64;
+            if acc_n >= bin {
+                out.push((acc_n, (acc_sq / acc_n as f64).sqrt()));
+                acc_n = 0;
+                acc_sq = 0.0;
+            }
+        }
+        if acc_n > 0 {
+            out.push((acc_n, (acc_sq / acc_n as f64).sqrt()));
+        }
+        out
     }
 
     /// B11：门限 = max(绝对下限, 底噪×k, 峰值×ratio)，**再封顶为峰值的一半（−6 dB）**：
@@ -528,12 +559,13 @@ impl Session {
         self.quiet_thr_rms
     }
 
-    /// B11：按当前门限从尾部回算连续安静毫秒（门限会随底噪估计变化，所以不用累加计数器）。
+    /// B12：按当前门限从尾部回算连续安静毫秒，**以 200 ms 箱为单位**（单个 40 ms 块的尖峰不再清零整段；
+    /// 真机尾部环境声 87–155 骑在门限上时，逐块判定几乎永远凑不齐 400 ms）。门限随底噪估计变化，故不用累加计数器。
     fn trailing_quiet_ms(&self, thr: f64) -> u64 {
         let mut samples: u64 = 0;
-        for &(n, r) in self.chunk_rms.iter().rev() {
-            if (r as f64) < thr {
-                samples += n as u64;
+        for (n, r) in self.tail_bins() {
+            if r < thr {
+                samples += n;
             } else {
                 break;
             }
@@ -1518,6 +1550,36 @@ mod tests {
         assert!(ev["noise_floor_rms"].as_f64().unwrap() > 80.0);
         assert!(ev["quiet_thr_rms"].as_f64().unwrap() > ev["noise_floor_rms"].as_f64().unwrap());
         assert!(ev["end_candidate_quiet_ms"].as_u64().unwrap() >= 400);
+    }
+
+    /// B12 真机回放锚（…1684 / codex 离线复现）：2 s 数字零预滚 + 1 s 语音 + 尾部环境声 RMS≈150。
+    /// 旧估计 p20=0 → 门限 90 → 尾部永不安静；新估计剔零加权 p20≈150 → 门限 ≈288（封顶）→ 候选照发。
+    #[test]
+    fn end_candidate_survives_digital_zero_preroll() {
+        let mut s = Session::new(Some(TRACE.into()), limits_with_candidate());
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-z", 0, 0), &[]), 0);
+        let zeros = vec![0i16; 32000];
+        let (seq, _) = feed(&mut s, &mut sink, "in-z", 0, &zeros, 640, 0);
+        let loud = tone(16000, 5);
+        let (mut seq, _) = feed(&mut s, &mut sink, "in-z", zeros.len() as u64, &loud, 640, seq);
+        let mut start = (zeros.len() + loud.len()) as u64;
+        s.on_stt_final("小可小可测试一下".into(), 3100);
+        let mut fired = 0;
+        for i in 0..25u64 {
+            let amb: Vec<i16> = (0..640).map(|j| (((j as u64 + i * 640) * 7919 % 521) as i16) - 260).collect();
+            let acts = s.on_packet(&pkt(header("chunk", "in-z", seq, start, start + 640), &amb), 3200 + i as i64 * 40);
+            s.drain_submits(sink.sender());
+            if acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "ack" && v["end_candidate"] == true)) {
+                fired += 1;
+            }
+            seq += 1;
+            start += 640;
+        }
+        assert_eq!(fired, 1, "零预滚不得把底噪拉到 0：候选必须能发");
+        let ev = s.evidence();
+        assert!(ev["noise_floor_rms"].as_f64().unwrap() > 100.0, "底噪估计须落在环境声(≈150)而非数字零");
+        assert_eq!(ev["rms_timeline_200ms"].as_array().unwrap()[0], 0, "时间线保留零段供判读");
     }
 
     /// B11 负锚：held 文本只有唤醒词（4 字 < min_chars 5）→ 即使安静也不发候选。

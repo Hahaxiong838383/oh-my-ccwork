@@ -134,6 +134,11 @@ fn preconnect_from(v: Option<&str>) -> bool {
 pub struct Prewarm(Option<tokio::task::JoinHandle<Result<tts_xfyun::Warm>>>);
 
 impl Prewarm {
+    /// B12：预建连任务是否已跑完（成功或失败）——只用于「跳垫句」决策，不取走连接。
+    pub fn is_finished(&self) -> bool {
+        self.0.as_ref().map(|h| h.is_finished()).unwrap_or(false)
+    }
+
     /// 关闭态(火山线,或 `XFYUN_TTS_PRECONNECT=0`)
     const fn off() -> Self {
         Self(None)

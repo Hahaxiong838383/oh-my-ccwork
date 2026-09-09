@@ -315,6 +315,8 @@ struct Orchestrator {
     ordered_end_stream_pending: bool,
     /// B9 #2：本 job 是否已记过候选日志（ack 字段幂等，只记第一次）。
     ordered_end_candidate_logged: bool,
+    /// B12：ordered held final 时提前预建的 TTS 连接（真机 …1684：commit 后 TTS 预热 632 ms + 首块 410 ms = 1.04 s 静默）；start_turn 取走。
+    pending_tts_warm: Option<crate::tts::Prewarm>,
     /// 输出门(gate.rs):Android 未订 agent 轨前扣住可听 PCM,首个待播起 5s fail-closed
     output_gate: crate::gate::OutputGate,
     /// 门超时 → 主循环 fail-closed 的传导通道
@@ -825,6 +827,7 @@ pub async fn run_pipeline(
         ordered: ordered_session,
         ordered_end_stream_pending: false,
         ordered_end_candidate_logged: false,
+        pending_tts_warm: None,
     };
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
@@ -1255,6 +1258,10 @@ impl Orchestrator {
         }
         info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm speculation on held final");
         self.start_speculation(text).await;
+        // B12：TTS 预建连也提前到这里（原来在 start_turn 才起，commit 后要等 225–632 ms 握手）。
+        if self.pending_tts_warm.is_none() {
+            self.pending_tts_warm = Some(self.tts_cfg.start_prewarm());
+        }
     }
 
     fn aec_active(&self, now: Instant) -> bool {
@@ -2058,7 +2065,14 @@ impl Orchestrator {
     fn log_playout_segments(&mut self) {
         let room = self.room_name.clone();
         let Some(turn) = self.agent_turn.as_mut() else { return };
-        if turn.filler_samples == 0 || turn.seg_stage >= 2 || !turn.ctl.audio_started() {
+        if turn.seg_stage >= 2 || !turn.ctl.audio_started() {
+            return;
+        }
+        if turn.filler_samples == 0 {
+            // B12：无垫句（跳过或未选中）时，首帧即正文首帧——这是「跳垫句后静默多久」的真值口径。
+            turn.seg_stage = 2;
+            info!(room = %room, turn_id = turn.id, since_turn_ms = turn.started.elapsed().as_millis() as u64,
+                  "body first frame published (no filler)");
             return;
         }
         let played = turn.ctl.played_samples();
@@ -2606,10 +2620,17 @@ impl Orchestrator {
             let shortest = self.cfg.ordered_filler_shortest && commit.input_ended && !boost;
             // B11：投机命中 = LLM 已在流、TTS 首块 ≈0.3 s 内到——垫句反而成了唯一等待（真机 …1683：正文 +297 ms 就绪等到 +999）。
             let spec_lead_ms = spec.as_ref().map(|sp| sp.started.elapsed().as_millis() as u64).unwrap_or(0);
+            // B12：投机「跑了多久」≠ 正文就绪（真机 …1684 跳了垫句仍静默 1.04 s）。改为三条件：
+            // LLM 流已结束（首句文本必在）∧ TTS 预建连已完成（握手不再占 commit 后时间）∧ lead ≥ 门；否则照播最短垫句。
+            let spec_done = spec.as_ref().map(|sp| sp.task.is_finished()).unwrap_or(false);
+            let tts_warm_ready = self.pending_tts_warm.as_ref().map(|w| w.is_finished()).unwrap_or(false);
             let skip_filler = self.cfg.ordered_skip_filler_on_spec && commit.input_ended && !boost && spec.is_some()
-                && spec_lead_ms >= self.cfg.ordered_skip_filler_min_lead_ms;
+                && spec_done && tts_warm_ready && spec_lead_ms >= self.cfg.ordered_skip_filler_min_lead_ms;
+            if self.cfg.ordered_skip_filler_on_spec && commit.input_ended && spec.is_some() && !skip_filler {
+                info!(room = %self.room_name, spec_lead_ms, spec_done, tts_warm_ready, "filler kept: body not imminent");
+            }
             let filler = if skip_filler {
-                info!(room = %self.room_name, spec_lead_ms, "filler skipped: ordered + speculation hit (body imminent)");
+                info!(room = %self.room_name, spec_lead_ms, spec_done, tts_warm_ready, "filler skipped: ordered + speculation hit (body imminent)");
                 None
             } else {
                 self.bank.as_mut().and_then(|b| {
@@ -2689,7 +2710,8 @@ impl Orchestrator {
         // turn 一开始就起预建连流水线:它与下面的 LLM 请求并行跑,
         // 等第一句文本出来时握手早已完成 → 首句省掉 ~220ms 建连。
         // (火山线返回关闭态,行为不变)
-        let mut warm = tts_cfg.start_prewarm();
+        // B12：held final 时已预热的连接优先；没有就按原样现起。
+        let mut warm = self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm());
 
         let task = tokio::spawn(async move {
             let publish = |v: Value| {
