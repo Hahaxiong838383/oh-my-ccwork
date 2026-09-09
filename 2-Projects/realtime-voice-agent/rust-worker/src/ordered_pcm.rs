@@ -514,14 +514,17 @@ impl Session {
         v[(v.len() - 1) / 5] as f64
     }
 
-    /// B11：门限 = max(绝对下限, 底噪×k, 峰值×ratio)，每次判定重算并留证据。
+    /// B11：门限 = max(绝对下限, 底噪×k, 峰值×ratio)，**再封顶为峰值的一半（−6 dB）**：
+    /// 本代若还没有环境段（全是语音），p20「底噪」= 语音电平，不封顶会把语音判成安静（单测实撞）；
+    /// 底噪估计 ≥ 峰值一半 = 本代分不开语音与环境，按不安静处理（退回设备 4 s 上限，安全侧）。
     fn refresh_quiet_threshold(&mut self) -> f64 {
         self.noise_floor_rms = self.noise_floor();
-        self.quiet_thr_rms = self
+        let raw = self
             .limits
             .end_candidate_quiet_abs_rms
             .max(self.noise_floor_rms * self.limits.end_candidate_floor_k)
             .max(self.speech_peak_rms * self.limits.end_candidate_quiet_ratio);
+        self.quiet_thr_rms = raw.min(self.speech_peak_rms * 0.5);
         self.quiet_thr_rms
     }
 
@@ -1470,6 +1473,7 @@ mod tests {
         let (seq, _) = feed(&mut s, &mut sink, "in-c", 0, &loud, 640, 0);
         let start = loud.len() as u64;
         assert!(s.on_stt_final("小可小可测试一下".into(), 1100).is_empty(), "尾部还不安静：不发候选");
+        assert!(s.evidence()["quiet_thr_rms"].as_f64().unwrap() < 577.0 * 0.5 + 1.0, "全语音段时门限必须封顶在峰值一半以下，不得把语音判成安静");
         let (fired, seq, start) = feed_quiet(&mut s, &mut sink, "in-c", seq, start, 20, 1200);
         assert_eq!(fired, 1, "每代只发一次候选");
         let ev = s.evidence();
