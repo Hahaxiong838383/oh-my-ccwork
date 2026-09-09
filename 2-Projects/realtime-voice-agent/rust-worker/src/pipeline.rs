@@ -2769,8 +2769,7 @@ impl Orchestrator {
                                 .await
                             {
                                 Ok((ttfb, bytes)) => {
-                                    if !body_ready_logged {
-                                        body_ready_logged = true;
+                                    if !std::mem::replace(&mut body_ready_logged, true) {
                                         info!(room = %room_name, turn_id = id, ttfb_ms = ttfb,
                                               body_ready_since_turn_ms = synth_t0.duration_since(turn_started).as_millis() as u64 + ttfb as u64,
                                               "body first sentence ready");
@@ -2793,8 +2792,7 @@ impl Orchestrator {
                                 .await
                             {
                                 Ok((ttfb, bytes)) => {
-                                    if !body_ready_logged {
-                                        body_ready_logged = true;
+                                    if !std::mem::replace(&mut body_ready_logged, true) {
                                         info!(room = %room_name, turn_id = id, ttfb_ms = ttfb,
                                               body_ready_since_turn_ms = synth_t0.duration_since(turn_started).as_millis() as u64 + ttfb as u64,
                                               "body first sentence ready");
