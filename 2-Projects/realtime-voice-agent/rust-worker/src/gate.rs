@@ -10,10 +10,11 @@
 //! StartupGates 是纯决策状态机(资源仍归 job.rs 持有),为的是把 9.1–9.5 合同
 //! 单测写成无 IO 的纯逻辑测试。
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use tokio::sync::{mpsc, watch};
-use tokio::time::timeout;
+use tokio::time::{timeout, timeout_at};
+use tracing::info;
 
 /// 门决策状态机:只回答「此刻该不该做 X」,幂等由内部标志保证。
 #[derive(Debug, Default)]
@@ -127,6 +128,44 @@ impl OutputGate {
     }
 }
 
+/// 本地承接 v1（2026-09-09 codex 方案，川哥拍板「截止即放行」）：端侧自己播承接短语，worker 扣住正文 PCM
+/// 到端侧 `receipt_done` 放行或截止时刻。与 `OutputGate::wrap` 同形（同 32 深，背压语义不变），区别是
+/// **fail-open**：截止锚 = 设备 end 到达 + ORDERED_LOCAL_RECEIPT_MAX_MS，本地条目 ≤2.4 s 到那时必已播完，
+/// 放行不会与本地声重叠；放行事件丢一包不能变成「孩子听完承接就没下文」。放行句柄亡同样放行（不悬挂）。
+/// 日志 `local receipt gate released reason=receipt_done|deadline|control_gone|receipt_done_before_body held_ms=…`
+/// 里的 held_ms = 正文首块到达门口起被扣了多久（= 门真正让用户多等的时间）。
+pub fn wrap_local_receipt(
+    mut pcm_rx: mpsc::Receiver<Vec<u8>>,
+    mut release_rx: watch::Receiver<bool>,
+    deadline: Instant,
+    room: String,
+    turn_id: u64,
+) -> mpsc::Receiver<Vec<u8>> {
+    let (tx2, rx2) = mpsc::channel::<Vec<u8>>(WRAP_CAPACITY);
+    tokio::spawn(async move {
+        let mut open = *release_rx.borrow();
+        if open {
+            info!(room = %room, turn_id, reason = "receipt_done_before_body", held_ms = 0u64, "local receipt gate released");
+        }
+        while let Some(chunk) = pcm_rx.recv().await {
+            if !open {
+                let held_from = Instant::now();
+                let reason = match timeout_at(tokio::time::Instant::from_std(deadline), release_rx.wait_for(|v| *v)).await {
+                    Ok(Ok(_)) => "receipt_done",
+                    Ok(Err(_)) => "control_gone",
+                    Err(_) => "deadline",
+                };
+                info!(room = %room, turn_id, reason, held_ms = held_from.elapsed().as_millis() as u64, "local receipt gate released");
+                open = true;
+            }
+            if tx2.send(chunk).await.is_err() {
+                return; // playout 已收摊(turn 结束/打断),包装层跟着退
+            }
+        }
+    });
+    rx2
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -221,5 +260,57 @@ mod tests {
         // watch 之后再翻 false(不会发生,但门语义=开过即恒开)
         wtx.send(false).unwrap();
         assert!(gate.is_open(), "门开过必须锁存");
+    }
+
+    // ───────── 本地承接 v1：正文门 ─────────
+    // 未放行时扣住正文块，放行后按序透传（首段不丢不截）
+    #[tokio::test]
+    async fn local_receipt_gate_holds_until_release_in_order() {
+        let (rtx, rrx) = watch::channel(false);
+        let (ptx, prx) = mpsc::channel::<Vec<u8>>(8);
+        let mut wrapped = wrap_local_receipt(prx, rrx, Instant::now() + Duration::from_millis(2000), "r".into(), 1);
+        ptx.send(vec![1]).await.unwrap();
+        ptx.send(vec![2]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(60)).await;
+        assert!(wrapped.try_recv().is_err(), "放行前不得有正文泄出");
+        rtx.send(true).unwrap();
+        assert_eq!(wrapped.recv().await.unwrap(), vec![1]);
+        assert_eq!(wrapped.recv().await.unwrap(), vec![2]);
+    }
+
+    // 截止即放行（fail-open）：放行事件永不到，到点正文照出，且不早于截止
+    #[tokio::test]
+    async fn local_receipt_gate_deadline_fail_open() {
+        let (_rtx, rrx) = watch::channel(false);
+        let (ptx, prx) = mpsc::channel::<Vec<u8>>(8);
+        let t0 = Instant::now();
+        let mut wrapped = wrap_local_receipt(prx, rrx, t0 + Duration::from_millis(80), "r".into(), 1);
+        ptx.send(vec![5]).await.unwrap();
+        let got = timeout(Duration::from_millis(1000), wrapped.recv()).await.expect("截止后必须放行").unwrap();
+        assert_eq!(got, vec![5]);
+        assert!(t0.elapsed() >= Duration::from_millis(70), "不得早于截止放行");
+    }
+
+    // receipt_done 早于正文到达（watch 初值 true）→ 零等待透传
+    #[tokio::test]
+    async fn local_receipt_gate_prereleased_passthrough() {
+        let (_rtx, rrx) = watch::channel(true);
+        let (ptx, prx) = mpsc::channel::<Vec<u8>>(8);
+        let mut wrapped = wrap_local_receipt(prx, rrx, Instant::now() + Duration::from_millis(5000), "r".into(), 1);
+        ptx.send(vec![7]).await.unwrap();
+        let got = timeout(Duration::from_millis(200), wrapped.recv()).await.expect("已放行不得等待").unwrap();
+        assert_eq!(got, vec![7]);
+    }
+
+    // 放行句柄亡（job 事件循环退）= 放行而非悬挂（与输出门的 fail-closed 相反：正文门只会多放不会扣死）
+    #[tokio::test]
+    async fn local_receipt_gate_dead_sender_releases() {
+        let (rtx, rrx) = watch::channel(false);
+        drop(rtx);
+        let (ptx, prx) = mpsc::channel::<Vec<u8>>(8);
+        let mut wrapped = wrap_local_receipt(prx, rrx, Instant::now() + Duration::from_millis(5000), "r".into(), 1);
+        ptx.send(vec![3]).await.unwrap();
+        let got = timeout(Duration::from_millis(500), wrapped.recv()).await.expect("sender 亡应放行").unwrap();
+        assert_eq!(got, vec![3]);
     }
 }
