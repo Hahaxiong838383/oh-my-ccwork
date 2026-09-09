@@ -55,6 +55,9 @@ pub struct PipelineConfig {
     pub min_interruption_duration: f32,
     pub false_interruption_timeout: Duration,
     pub aec_warmup_duration: Duration,
+    /// B(2026-09-09 codex GO,只在隔离 POC env 置 1):commit 来自 ordered 终局时,普通 filler 改为语义桶最短完整条。
+    /// 默认关;生产 env 不设;打断轮/非 ordered 轮不受影响。
+    pub ordered_filler_shortest: bool,
     /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
     /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
     /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
@@ -145,6 +148,7 @@ impl PipelineConfig {
                 1.5,
             )),
             aec_warmup_duration: Duration::from_secs_f32(f("AEC_WARMUP_DURATION", 0.5)),
+            ordered_filler_shortest: std::env::var("ORDERED_FILLER_SHORTEST").map(|v| v == "1").unwrap_or(false),
             echo_suppress_window: Duration::from_millis(
                 std::env::var("ECHO_SUPPRESS_WINDOW_MS")
                     .ok()
@@ -271,6 +275,10 @@ struct AgentTurn {
     synth_text: Arc<StdMutex<String>>,
     /// 每句合成完成后追加 (累计字符数, 累计样本数),打断截断用。
     progress: Arc<StdMutex<Vec<(usize, u64)>>>,
+    /// B 观测:本轮 filler 的 24k 样本数(0=无 filler);turn 起始时刻;分段日志阶段(0/1/2)。
+    filler_samples: u64,
+    started: Instant,
+    seg_stage: u8,
 }
 
 /// 在途 canary.say:turn 结束(播完或取消)后从 stats 槽取终态发 metrics。
@@ -2007,6 +2015,27 @@ impl Orchestrator {
         }
     }
 
+    /// B 观测(2026-09-09 codex §4):同一 worker 钟记「filler 实际播完」与「正文首帧发布」(50 ms tick 分辨率),
+    /// 只加日志;无 filler 的轮不记,正文未到不伪造。gap = 两行 since_turn_ms 之差(与 playout underrun 对账)。
+    fn log_playout_segments(&mut self) {
+        let room = self.room_name.clone();
+        let Some(turn) = self.agent_turn.as_mut() else { return };
+        if turn.filler_samples == 0 || turn.seg_stage >= 2 || !turn.ctl.audio_started() {
+            return;
+        }
+        let played = turn.ctl.played_samples();
+        if turn.seg_stage == 0 && played >= turn.filler_samples {
+            turn.seg_stage = 1;
+            info!(room = %room, turn_id = turn.id, filler_ms = turn.filler_samples / 24,
+                  since_turn_ms = turn.started.elapsed().as_millis() as u64, "filler playout done");
+        }
+        if turn.seg_stage == 1 && played > turn.filler_samples {
+            turn.seg_stage = 2;
+            info!(room = %room, turn_id = turn.id, played_samples = played,
+                  since_turn_ms = turn.started.elapsed().as_millis() as u64, "body first frame published");
+        }
+    }
+
     /// 打断收尾:已播完句补 final,在播句发截断部分 final,未开播句不发。
     fn tr_flush_on_abort(
         &mut self,
@@ -2141,6 +2170,7 @@ impl Orchestrator {
         }
         // 字幕逐句推进(按播出位置;pause 时 played 冻结自然停发)
         self.publish_agent_progress();
+        self.log_playout_segments();
         // 假打断定时:超时无 turn → resume 续播(渐起由 playout 配置)+ 契约 FalseInterruption
         if let Some(dl) = self.false_deadline
             && now >= dl
@@ -2533,7 +2563,12 @@ impl Orchestrator {
                 .unwrap_or(false);
             let room = self.room_name.clone();
             let next_turn = self.next_turn_id + 1; // picked 的轮紧接 start_turn 用此 id
-            let filler = self.bank.as_mut().and_then(|b| b.pick(&user_text, boost, &room, next_turn));
+            // B(2026-09-09):ordered 首句 + 隔离开关 → 语义桶最短完整条;打断轮/普通轮/开关关 → 原策略。
+            // ordered 来源随 CommitInfo 带出(gate 的标记在 poll_commit 返回前已复位,此处不能再读它)。
+            let shortest = self.cfg.ordered_filler_shortest && commit.input_ended && !boost;
+            let filler = self.bank.as_mut().and_then(|b| {
+                if shortest { b.pick_shortest(&user_text, &room, next_turn) } else { b.pick(&user_text, boost, &room, next_turn) }
+            });
             self.start_turn(TurnKind::Reply {
                 user_text,
                 pending_amend: amend,
@@ -2550,6 +2585,11 @@ impl Orchestrator {
             TurnKind::Reply { filler: Some((t, _)), .. } => t.clone(),
             _ => String::new(),
         };
+        let filler_samples = match &kind {
+            TurnKind::Reply { filler: Some((_, p)), .. } => (p.len() / 2) as u64,
+            _ => 0,
+        };
+        let turn_started = Instant::now();
         self.next_turn_id += 1;
         let id = self.next_turn_id;
         // codex 复核 §2:LLM 子任务派发的 DevIntent 必须带创建时的 turn id 与说话轮次
@@ -2693,6 +2733,8 @@ impl Orchestrator {
                     // 2b(2026-09-03):[[DEV:N]] 在流里一解析到就派发(带内 token,见 llm::dev_inband),
                     // 不再等整段回复合成完——动作跟着回复开头走。一轮只派首个,其余 multi_label 记 suppressed。
                     let mut l2_sent = false;
+                    // B 观测:正文首段 ready(TTS 首块)只记一次;tail 路径同样覆盖。
+                    let mut body_ready_logged = false;
                     while let Some(delta) = delta_rx.recv().await {
                         let (early_labels, delta) = crate::llm::split_dev_inband(&delta);
                         for label in early_labels {
@@ -2721,11 +2763,18 @@ impl Orchestrator {
                             if sentence.trim().is_empty() {
                                 continue;
                             }
+                            let synth_t0 = Instant::now();
                             match tts_cfg
                                 .synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
                             {
                                 Ok((ttfb, bytes)) => {
+                                    if !body_ready_logged {
+                                        body_ready_logged = true;
+                                        info!(room = %room_name, turn_id = id, ttfb_ms = ttfb,
+                                              body_ready_since_turn_ms = synth_t0.duration_since(turn_started).as_millis() as u64 + ttfb as u64,
+                                              "body first sentence ready");
+                                    }
                                     publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                     track(&sentence, bytes);
                                 }
@@ -2738,11 +2787,18 @@ impl Orchestrator {
                     if let Some(tail) = seg.flush() {
                         let tail = crate::textproc::strip_stage_directions(&tail);
                         if !tail.trim().is_empty() {
+                            let synth_t0 = Instant::now();
                             match tts_cfg
                                 .synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
                             {
                                 Ok((ttfb, bytes)) => {
+                                    if !body_ready_logged {
+                                        body_ready_logged = true;
+                                        info!(room = %room_name, turn_id = id, ttfb_ms = ttfb,
+                                              body_ready_since_turn_ms = synth_t0.duration_since(turn_started).as_millis() as u64 + ttfb as u64,
+                                              "body first sentence ready");
+                                    }
                                     publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                                     track(&tail, bytes);
                                 }
@@ -2803,6 +2859,9 @@ impl Orchestrator {
             ctl,
             synth_text,
             progress,
+            filler_samples,
+            started: turn_started,
+            seg_stage: 0,
         });
     }
 }

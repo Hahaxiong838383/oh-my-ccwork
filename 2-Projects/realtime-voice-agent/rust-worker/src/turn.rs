@@ -112,7 +112,7 @@ impl TurnGate {
             .last_final_at
             .map(|f| f.saturating_duration_since(anchor))
             .unwrap_or_default();
-        let info = CommitInfo { text, eou_delay: now.duration_since(anchor), stt_delay };
+        let info = CommitInfo { text, eou_delay: now.duration_since(anchor), stt_delay, input_ended: self.input_ended };
         self.last_final_at = None;
         self.speech_end_at = None;
         self.eot_prob = None;
@@ -125,6 +125,9 @@ pub struct CommitInfo {
     pub text: String,
     pub eou_delay: Duration,
     pub stt_delay: Duration,
+    /// 本次提交是否由 ordered 终局释放(B 短垫句选材依据)。标记本身在返回前复位,
+    /// 下游只能从这里读,不能再读 gate(codex 2026-09-09 §3 提醒)。
+    pub input_ended: bool,
 }
 
 #[cfg(test)]
@@ -212,10 +215,12 @@ mod tests {
         let c = g.poll_commit(t0 + Duration::from_millis(10)).expect("immediate commit");
         assert_eq!(c.text, "有序代次整句");
         assert!(c.eou_delay <= Duration::from_millis(10));
+        assert!(c.input_ended, "ordered 来源随结果带出");
         // 复位:下一句(无标记)仍按 VAD 漏检兜底等 MIN
         g.on_final("下一句", t0 + Duration::from_millis(20));
         assert!(g.poll_commit(t0 + Duration::from_millis(600)).is_none());
-        assert!(g.poll_commit(t0 + Duration::from_millis(700)).is_some());
+        let c2 = g.poll_commit(t0 + Duration::from_millis(700)).expect("普通提交");
+        assert!(!c2.input_ended, "下一次普通提交不得残留 ordered 标记");
     }
 
     /// 标记不能穿过「用户在说」门,且说话恢复即复位(VAD 路径语义不变)。

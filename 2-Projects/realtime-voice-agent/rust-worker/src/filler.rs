@@ -230,6 +230,38 @@ impl FillerBank {
         );
         Some((clip.text.clone(), clip.pcm.clone()))
     }
+
+    /// B(2026-09-09 codex GO):ordered 首句专用——语义桶(空回退 gen)取时长最短的完整条;
+    /// 概率门与普通轮相同(本来不播的不强补),忽略滑窗防重复,不碰 barge/greet 语义,不裁不截。
+    /// 只在 ORDERED_FILLER_SHORTEST=1 且 commit 来自 ordered 终局时由 pipeline 调用。
+    pub fn pick_shortest(&mut self, user_text: &str, room: &str, turn_id: u64) -> Option<(String, Vec<u8>)> {
+        let bucket = pick_bucket(user_text);
+        let prob = self.bucket_prob(bucket);
+        if rand::rng().random::<f64>() >= prob {
+            info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost=false policy=shortest reason=probability");
+            return None;
+        }
+        let (pool_name, pool) = match self.clips.get(bucket).filter(|p| !p.is_empty()) {
+            Some(p) => (bucket, p),
+            None => match self.clips.get("gen").filter(|p| !p.is_empty()) {
+                Some(p) => ("gen", p),
+                None => {
+                    info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost=false policy=shortest reason=no_pool");
+                    return None;
+                }
+            },
+        };
+        let clip = pool.iter().min_by_key(|c| c.duration_ms)?;
+        if self.recent.len() == 3 {
+            self.recent.pop_front();
+        }
+        self.recent.push_back(clip.text.clone());
+        info!(
+            "filler picked room={room} turn_id={turn_id} bucket={pool_name} dur_ms={} boost=false policy=shortest text='{}'",
+            clip.duration_ms, clip.text
+        );
+        Some((clip.text.clone(), clip.pcm.clone()))
+    }
 }
 
 #[cfg(test)]
@@ -245,6 +277,37 @@ mod tests {
         let mut m = std::collections::HashMap::new();
         m.insert("gen".to_string(), clips);
         FillerBank { clips: m, probability: 1.0, barge_max_ms: 1200, recent: VecDeque::new() }
+    }
+
+    /// B:ordered 首句只取最短完整条,且不受滑窗防重复影响(连选 5 次都是它)。
+    #[test]
+    fn shortest_policy_picks_min_duration_and_ignores_recent() {
+        let mut b = bank_with(vec![clip("长条", 2000), clip("短条", 960), clip("中条", 1480)]);
+        for _ in 0..5 {
+            let (t, _) = b.pick_shortest("随便聊聊", "t", 1).expect("prob=1 必播");
+            assert_eq!(t, "短条");
+        }
+    }
+
+    /// B:语义桶优先(问句→ask 最短),无命中回退 gen 最短;普通 pick 不受影响。
+    #[test]
+    fn shortest_policy_uses_semantic_bucket_then_gen() {
+        let mut m = std::collections::HashMap::new();
+        m.insert("gen".to_string(), vec![clip("gen短", 960), clip("gen长", 2000)]);
+        m.insert("ask".to_string(), vec![clip("ask长", 2200), clip("ask短", 1000)]);
+        let mut b = FillerBank { clips: m, probability: 1.0, barge_max_ms: 1500, recent: VecDeque::new() };
+        let (t, _) = b.pick_shortest("一加一等于几", "t", 1).unwrap();
+        assert_eq!(t, "ask短", "问句走 ask 桶最短");
+        let (t2, _) = b.pick_shortest("随便聊聊", "t", 2).unwrap();
+        assert_eq!(t2, "gen短", "无语义命中回退 gen 最短");
+        let mut seen = std::collections::HashSet::new();
+        for _ in 0..60 {
+            if let Some((t3, _)) = b.pick("一加一等于几", false, "t", 3) {
+                seen.insert(t3);
+            }
+            b.recent.clear();
+        }
+        assert_eq!(seen.len(), 2, "普通轮仍全池随机(旧策略未变)");
     }
 
     #[test]
