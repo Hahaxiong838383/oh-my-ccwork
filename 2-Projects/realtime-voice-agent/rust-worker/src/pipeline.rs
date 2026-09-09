@@ -58,6 +58,9 @@ pub struct PipelineConfig {
     /// B(2026-09-09 codex GO,只在隔离 POC env 置 1):commit 来自 ordered 终局时,普通 filler 改为语义桶最短完整条。
     /// 默认关;生产 env 不设;打断轮/非 ordered 轮不受影响。
     pub ordered_filler_shortest: bool,
+    /// B9 #3（只在隔离 POC env 置 1）：ordered 每条 held final 到达即起投机 LLM（复用 S1v3 start_speculation），
+    /// commit 时文本+历史版本相同才消费，否则丢弃；不改 commit 时序与任何门。
+    pub ordered_spec_on_final: bool,
     /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
     /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
     /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
@@ -149,6 +152,7 @@ impl PipelineConfig {
             )),
             aec_warmup_duration: Duration::from_secs_f32(f("AEC_WARMUP_DURATION", 0.5)),
             ordered_filler_shortest: std::env::var("ORDERED_FILLER_SHORTEST").map(|v| v == "1").unwrap_or(false),
+            ordered_spec_on_final: std::env::var("ORDERED_SPEC_ON_FINAL_ENABLED").map(|v| v == "1").unwrap_or(false),
             echo_suppress_window: Duration::from_millis(
                 std::env::var("ECHO_SUPPRESS_WINDOW_MS")
                     .ok()
@@ -303,6 +307,8 @@ struct Orchestrator {
     ordered: Option<crate::ordered_pcm::Session>,
     /// ordered_pcm:待执行的「主动收流」(drop 唯一 ASR 发送端);由主循环消费,因为发送端不在 Orchestrator 里
     ordered_end_stream_pending: bool,
+    /// B9 #2：本 job 是否已记过候选日志（ack 字段幂等，只记第一次）。
+    ordered_end_candidate_logged: bool,
     /// 输出门(gate.rs):Android 未订 agent 轨前扣住可听 PCM,首个待播起 5s fail-closed
     output_gate: crate::gate::OutputGate,
     /// 门超时 → 主循环 fail-closed 的传导通道
@@ -692,7 +698,7 @@ pub async fn run_pipeline(
     let ordered_session = match input_mode {
         crate::ordered_pcm::InputMode::OrderedPcm => {
             info!(room = %room_name, "ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃");
-            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), crate::ordered_pcm::Limits::default()))
+            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), crate::ordered_pcm::Limits::from_env()))
         }
         crate::ordered_pcm::InputMode::Rtc => None,
     };
@@ -812,6 +818,7 @@ pub async fn run_pipeline(
         snap: crate::eot_snapshot::SnapshotSink::from_env(&room_name),
         ordered: ordered_session,
         ordered_end_stream_pending: false,
+        ordered_end_candidate_logged: false,
     };
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
@@ -947,7 +954,13 @@ pub async fn run_pipeline(
                     if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); } else { orch.on_interim(t) }
                 }
                 Some(SttEvent::Final(t)) => {
-                    if let Some(o) = orch.ordered.as_mut() { o.on_stt_final(t, unix_ms_now()); } else { orch.on_final(t) }
+                    if let Some(o) = orch.ordered.as_mut() {
+                        let acts = o.on_stt_final(t, unix_ms_now());
+                        orch.apply_ordered_actions(acts);
+                        orch.on_ordered_final_held().await;
+                    } else {
+                        orch.on_final(t)
+                    }
                 }
                 Some(SttEvent::Interrupted) => {
                     // 现役:连接由 stt 任务重连,这里只记日志;ordered_pcm:代次作废(意外 EOF/断连 ≠ LastNoSeq,不得提交半段 final)
@@ -1098,6 +1111,11 @@ impl Orchestrator {
                     if v["t"] == "result" {
                         info!(room = %self.room_name, result = %v, "ordered_pcm result");
                     }
+                    if v["t"] == "ack" && v["end_candidate"] == true && !self.ordered_end_candidate_logged {
+                        self.ordered_end_candidate_logged = true;
+                        info!(room = %self.room_name, quiet_ms = v["end_candidate_quiet_ms"].as_u64().unwrap_or(0),
+                              "ordered_pcm end candidate published (held final + trailing quiet)");
+                    }
                     self.publish_raw(crate::ordered_pcm::TOPIC, crate::ordered_pcm::encode_packet(&v, &[]));
                 }
             }
@@ -1217,6 +1235,20 @@ impl Orchestrator {
             task,
             rx,
         });
+    }
+
+    /// B9 #3：ordered 模式 held final 到达即投机 LLM（RTC 路径的 preflight 在此模式旁路，故显式挂钩）。
+    /// 文本 = 已 hold 的 final 拼接（与裁决合并口径同源）；commit 时 sp.text==user_text 且历史版本相同才消费。
+    async fn on_ordered_final_held(&mut self) {
+        if !self.cfg.ordered_spec_on_final {
+            return;
+        }
+        let text = self.ordered.as_ref().map(|o| o.held_text()).unwrap_or_default();
+        if text.trim().is_empty() {
+            return;
+        }
+        info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm speculation on held final");
+        self.start_speculation(text).await;
     }
 
     fn aec_active(&self, now: Instant) -> bool {

@@ -231,6 +231,14 @@ pub struct Limits {
     pub begin_to_end_timeout_ms: i64,
     /// end 后补的尾静音（让供应商按音频时间判停），默认 600 ms。
     pub tail_silence_samples: usize,
+    /// B9 #2 结束候选（默认关，POC env 开）：已 hold final ∧ 尾部安静 ≥ quiet_ms ∧ 本代峰值 RMS ≥ min_speech_rms
+    /// → ack 带 `end_candidate`（每代一次；设备可忽略；相位/完整性门/commit 时序全部不变）。
+    pub end_candidate_enabled: bool,
+    pub end_candidate_quiet_ms: u64,
+    /// 安静门限 = max(quiet_abs_rms, 本代峰值 RMS × quiet_ratio)——相对峰值，不用固定值。
+    pub end_candidate_quiet_ratio: f64,
+    pub end_candidate_quiet_abs_rms: f64,
+    pub end_candidate_min_speech_rms: f64,
 }
 
 impl Default for Limits {
@@ -240,8 +248,36 @@ impl Default for Limits {
             max_total_samples: 12 * SAMPLE_RATE as usize,
             begin_to_end_timeout_ms: 7_000,
             tail_silence_samples: 9_600,
+            end_candidate_enabled: false,
+            end_candidate_quiet_ms: 600,
+            end_candidate_quiet_ratio: 0.08,
+            end_candidate_quiet_abs_rms: 80.0,
+            end_candidate_min_speech_rms: 300.0,
         }
     }
+}
+
+impl Limits {
+    /// env 覆盖（只影响 ordered 房；生产 env 不设 = 默认关）。
+    pub fn from_env() -> Self {
+        let mut l = Self::default();
+        let f = |k: &str, d: f64| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
+        l.end_candidate_enabled = std::env::var("ORDERED_END_CANDIDATE_ENABLED").map(|v| v == "1").unwrap_or(false);
+        l.end_candidate_quiet_ms = f("ORDERED_END_CANDIDATE_QUIET_MS", 600.0) as u64;
+        l.end_candidate_quiet_ratio = f("ORDERED_END_CANDIDATE_RATIO", 0.08);
+        l.end_candidate_quiet_abs_rms = f("ORDERED_END_CANDIDATE_ABS_RMS", 80.0);
+        l.end_candidate_min_speech_rms = f("ORDERED_END_CANDIDATE_MIN_SPEECH_RMS", 300.0);
+        l
+    }
+}
+
+/// 16k s16 块的 RMS（浮点）。
+fn rms_i16(x: &[i16]) -> f64 {
+    if x.is_empty() {
+        return 0.0;
+    }
+    let sum: f64 = x.iter().map(|&s| { let v = s as f64; v * v }).sum();
+    (sum / x.len() as f64).sqrt()
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -352,6 +388,12 @@ pub struct Session {
     first_final_at_ms: Option<i64>,
     end_at_ms: Option<i64>,
     stream_end_at_ms: Option<i64>,
+    /// B9 #2 能量/候选：本代峰值 RMS、尾部连续安静样本、候选发出时刻与安静量、end 到达时的尾部安静量。
+    speech_peak_rms: f64,
+    trailing_quiet_samples: u64,
+    end_candidate_at_ms: Option<i64>,
+    end_candidate_quiet_ms: Option<u64>,
+    trailing_quiet_at_end_ms: Option<u64>,
     pub counters: Counters,
 }
 
@@ -376,6 +418,11 @@ impl Session {
             first_final_at_ms: None,
             end_at_ms: None,
             stream_end_at_ms: None,
+            speech_peak_rms: 0.0,
+            trailing_quiet_samples: 0,
+            end_candidate_at_ms: None,
+            end_candidate_quiet_ms: None,
+            trailing_quiet_at_end_ms: None,
             counters: Counters::default(),
         }
     }
@@ -400,7 +447,7 @@ impl Session {
     }
 
     fn ack(&self) -> Value {
-        json!({
+        let mut v = json!({
             "t": "ack",
             "input_id": self.input_id().unwrap_or(""),
             "received_next": self.recv_next,
@@ -408,7 +455,37 @@ impl Session {
             "credit_samples": self.credit_samples(),
             "chunks_received": self.counters.chunks_received,
             "phase": phase_str(self.phase),
-        })
+        });
+        // B9 #2：候选一旦成立，后续 ack 持续带字段（幂等；设备按首次处理即可，不认识的忽略）
+        if let Some(q) = self.end_candidate_quiet_ms {
+            v["end_candidate"] = json!(true);
+            v["end_candidate_quiet_ms"] = json!(q);
+        }
+        v
+    }
+
+    /// B9 #3：已 hold 的 final 拼接文本（与 on_stream_end 合并口径同源），投机 LLM 用。
+    pub fn held_text(&self) -> String {
+        self.held_finals.join("")
+    }
+
+    /// B9 #2：候选判定（每代一次）。全部条件成立才记账并返回 true；不改相位、不 commit。
+    fn maybe_end_candidate(&mut self, now_ms: i64) -> bool {
+        if !self.limits.end_candidate_enabled
+            || self.end_candidate_at_ms.is_some()
+            || self.phase != Phase::Receiving
+            || self.held_finals.is_empty()
+            || self.speech_peak_rms < self.limits.end_candidate_min_speech_rms
+        {
+            return false;
+        }
+        let quiet_ms = self.trailing_quiet_samples * 1000 / SAMPLE_RATE as u64;
+        if quiet_ms < self.limits.end_candidate_quiet_ms {
+            return false;
+        }
+        self.end_candidate_at_ms = Some(now_ms);
+        self.end_candidate_quiet_ms = Some(quiet_ms);
+        true
     }
 
     fn result_json(&self, status: &str, reason: Option<FailReason>, extra: Value) -> Value {
@@ -579,6 +656,22 @@ impl Session {
         }
         self.counters.samples_received += (h.end - h.start) as u64;
         self.counters.backlog_peak_samples = self.counters.backlog_peak_samples.max(self.buf.len() as u64);
+        // B9 #2：能量只算被接受的样本（keep_from 前裁掉的不算）；安静门限相对本代峰值
+        if !pcm.is_empty() {
+            let rms = rms_i16(pcm);
+            if rms > self.speech_peak_rms {
+                self.speech_peak_rms = rms;
+            }
+            let thr = self.limits.end_candidate_quiet_abs_rms.max(self.speech_peak_rms * self.limits.end_candidate_quiet_ratio);
+            if rms < thr {
+                self.trailing_quiet_samples += pcm.len() as u64;
+            } else {
+                self.trailing_quiet_samples = 0;
+            }
+        }
+        if self.maybe_end_candidate(now_ms) {
+            return vec![Action::Publish(self.ack())];
+        }
         Vec::new() // ack 在 drain_submits 之后发（带最新 submitted_next）
     }
 
@@ -597,6 +690,7 @@ impl Session {
         }
         self.end_sample = Some(h.end);
         self.end_at_ms = Some(now_ms);
+        self.trailing_quiet_at_end_ms = Some(self.trailing_quiet_samples * 1000 / SAMPLE_RATE as u64);
         self.phase = Phase::Ended;
         if self.held_finals.is_empty() {
             self.counters.end_before_final += 1;
@@ -661,10 +755,10 @@ impl Session {
     }
 
     /// ASR definite：hold（不 commit）；终态后到达的只计数。
-    pub fn on_stt_final(&mut self, text: String, now_ms: i64) {
+    pub fn on_stt_final(&mut self, text: String, now_ms: i64) -> Vec<Action> {
         if self.phase == Phase::Terminal {
             self.counters.finals_after_terminal += 1;
-            return;
+            return Vec::new();
         }
         if self.end_sample.is_none() {
             self.counters.final_before_end += 1;
@@ -674,6 +768,11 @@ impl Session {
             self.first_final_at_ms = Some(now_ms);
         }
         self.held_finals.push(text);
+        // B9 #2：final 可能晚于尾部安静到达，此处再判一次
+        if self.maybe_end_candidate(now_ms) {
+            return vec![Action::Publish(self.ack())];
+        }
+        Vec::new()
     }
 
     /// 供应商流结束（LastNoSeq → Closed）：唯一裁决点。
@@ -769,6 +868,12 @@ impl Session {
             "end_ms": self.end_at_ms.map(|t| t - self.begin_at_ms),
             "stream_end_ms": self.stream_end_at_ms.map(|t| t - self.begin_at_ms),
             "final_lead_over_end_ms": match (self.first_final_at_ms, self.end_at_ms) { (Some(f), Some(e)) => Some(e - f), _ => None },
+            // B9 #2 能量与候选（相对 begin 的毫秒；缺失 null）
+            "speech_peak_rms": (self.speech_peak_rms * 10.0).round() / 10.0,
+            "end_candidate_ms": self.end_candidate_at_ms.map(|t| t - self.begin_at_ms),
+            "end_candidate_quiet_ms": self.end_candidate_quiet_ms,
+            "trailing_quiet_at_end_ms": self.trailing_quiet_at_end_ms,
+            "end_candidate_lead_over_end_ms": match (self.end_candidate_at_ms, self.end_at_ms) { (Some(c), Some(e)) => Some(e - c), _ => None },
         })
     }
 }
@@ -1260,6 +1365,87 @@ mod tests {
     }
 
     /// 机器可读证据：跑一遍完整正向脚本并落盘 target/ordered_pcm_evidence.json（无 PCM、无文本）。
+    fn limits_with_candidate() -> Limits {
+        Limits { end_candidate_enabled: true, ..Limits::default() }
+    }
+
+    /// 近似静音块（RMS≈2，低于 80 下限）
+    fn quiet(n: usize) -> Vec<i16> {
+        (0..n).map(|i| ((i % 7) as i16) - 3).collect()
+    }
+
+    /// 连喂 n 块静音（40 ms 一块），返回 (候选 ack 次数, seq, start)。
+    fn feed_quiet(s: &mut Session, sink: &mut Sink, input_id: &str, seq0: u64, start0: u64, n: usize, t0: i64) -> (usize, u64, u64) {
+        let (mut seq, mut start, mut fired) = (seq0, start0, 0usize);
+        for i in 0..n {
+            let q = quiet(640);
+            let acts = s.on_packet(&pkt(header("chunk", input_id, seq, start, start + 640), &q), t0 + i as i64 * 40);
+            s.drain_submits(sink.sender());
+            if acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "ack" && v["end_candidate"] == true)) {
+                fired += 1;
+            }
+            seq += 1;
+            start += 640;
+        }
+        (fired, seq, start)
+    }
+
+    /// B9 #2：1 s 有声 + held final + 尾部安静 ≥600 ms → 恰一次候选 ack；之后 ack 持续带字段；end 记尾部安静；裁决照常。
+    #[test]
+    fn end_candidate_fires_once_after_final_and_trailing_quiet() {
+        let mut s = Session::new(Some(TRACE.into()), limits_with_candidate());
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-c", 0, 0), &[]), 0);
+        let loud = tone(16000, 5); // RMS≈577 ≥ 300
+        let (seq, _) = feed(&mut s, &mut sink, "in-c", 0, &loud, 640, 0);
+        let start = loud.len() as u64;
+        assert!(s.on_stt_final("整句".into(), 1100).is_empty(), "尾部还不安静：不发候选");
+        let (fired, seq, start) = feed_quiet(&mut s, &mut sink, "in-c", seq, start, 20, 1200);
+        assert_eq!(fired, 1, "每代只发一次候选");
+        let ev = s.evidence();
+        assert!(ev["end_candidate_ms"].is_number());
+        assert!(ev["end_candidate_quiet_ms"].as_u64().unwrap() >= 600);
+        assert_eq!(s.ack()["end_candidate"], true, "候选后 ack 幂等带字段");
+        s.on_packet(&pkt(header("end", "in-c", seq, start, start), &[]), 2100);
+        s.drain_submits(sink.sender());
+        assert!(s.evidence()["trailing_quiet_at_end_ms"].as_u64().unwrap() >= 600);
+        let (d, _) = s.on_stream_end(2200);
+        assert_eq!(d, Decision::Commit("整句".into()));
+        assert!(s.evidence()["end_candidate_lead_over_end_ms"].as_i64().unwrap() > 0);
+    }
+
+    /// B9 #2 负锚：开关关 / 无 held final / 本代无可闻语音（峰值 < 300）三种都不发候选，evidence 为 null。
+    #[test]
+    fn end_candidate_negative_anchors() {
+        let mut sink = Sink { blocks: vec![], cap: None };
+        let loud = tone(16000, 5);
+        // (a) 开关关（默认 Limits）
+        let mut s = session();
+        s.on_packet(&pkt(begin_hdr("in-d", 0, 0), &[]), 0);
+        let (seq, _) = feed(&mut s, &mut sink, "in-d", 0, &loud, 640, 0);
+        s.on_stt_final("整句".into(), 1100);
+        let (fired, _, _) = feed_quiet(&mut s, &mut sink, "in-d", seq, loud.len() as u64, 20, 1200);
+        assert_eq!(fired, 0);
+        assert!(s.evidence()["end_candidate_ms"].is_null());
+        // (b) 开关开、没有 held final
+        let mut s = Session::new(Some(TRACE.into()), limits_with_candidate());
+        s.on_packet(&pkt(begin_hdr("in-e", 0, 0), &[]), 0);
+        let (seq, _) = feed(&mut s, &mut sink, "in-e", 0, &loud, 640, 0);
+        let (fired, _, _) = feed_quiet(&mut s, &mut sink, "in-e", seq, loud.len() as u64, 20, 1200);
+        assert_eq!(fired, 0);
+        assert!(s.evidence()["end_candidate_ms"].is_null());
+        // (c) 开关开、有 final、但全程低电平（峰值 RMS≈14 < 300）
+        let mut s = Session::new(Some(TRACE.into()), limits_with_candidate());
+        s.on_packet(&pkt(begin_hdr("in-f", 0, 0), &[]), 0);
+        let low: Vec<i16> = (0..16000).map(|i| ((i % 50) as i16) - 25).collect();
+        let (seq, _) = feed(&mut s, &mut sink, "in-f", 0, &low, 640, 0);
+        s.on_stt_final("弱句".into(), 1100);
+        let (fired, _, _) = feed_quiet(&mut s, &mut sink, "in-f", seq, low.len() as u64, 20, 1200);
+        assert_eq!(fired, 0);
+        assert!(s.evidence()["end_candidate_ms"].is_null());
+        assert!(s.evidence()["speech_peak_rms"].as_f64().unwrap() < 300.0);
+    }
+
     /// B6 时戳(2026-09-09):证据记 begin 相对时刻——首块/首 final/end/收流裁决,以及 final 领先 end 的毫秒数
     /// (真机 B 型房 final_before_end=1 却量不出领先量,这里补上;全部注入时钟,不依赖挂钟)。
     #[test]
