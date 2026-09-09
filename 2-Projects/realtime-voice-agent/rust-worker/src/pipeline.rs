@@ -63,6 +63,8 @@ pub struct PipelineConfig {
     pub ordered_spec_on_final: bool,
     /// B11（只在隔离 POC env 置 1）：ordered 提交且投机命中时跳过垫句——正文 ≈+0.3 s 起播，不再等最短垫句 0.96 s。
     pub ordered_skip_filler_on_spec: bool,
+    /// B11：投机至少领先这么多毫秒才跳垫句（突发/A 型房投机 lead≈20 ms，跳了就是 ~1 s 静默；B 型真机 lead≈1.1 s 才值得跳）。
+    pub ordered_skip_filler_min_lead_ms: u64,
     /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
     /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
     /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
@@ -156,6 +158,7 @@ impl PipelineConfig {
             ordered_filler_shortest: std::env::var("ORDERED_FILLER_SHORTEST").map(|v| v == "1").unwrap_or(false),
             ordered_spec_on_final: std::env::var("ORDERED_SPEC_ON_FINAL_ENABLED").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_on_spec: std::env::var("ORDERED_SKIP_FILLER_ON_SPEC").map(|v| v == "1").unwrap_or(false),
+            ordered_skip_filler_min_lead_ms: std::env::var("ORDERED_SKIP_FILLER_MIN_LEAD_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(600),
             echo_suppress_window: Duration::from_millis(
                 std::env::var("ECHO_SUPPRESS_WINDOW_MS")
                     .ok()
@@ -2602,9 +2605,11 @@ impl Orchestrator {
             // ordered 来源随 CommitInfo 带出(gate 的标记在 poll_commit 返回前已复位,此处不能再读它)。
             let shortest = self.cfg.ordered_filler_shortest && commit.input_ended && !boost;
             // B11：投机命中 = LLM 已在流、TTS 首块 ≈0.3 s 内到——垫句反而成了唯一等待（真机 …1683：正文 +297 ms 就绪等到 +999）。
-            let skip_filler = self.cfg.ordered_skip_filler_on_spec && commit.input_ended && !boost && spec.is_some();
+            let spec_lead_ms = spec.as_ref().map(|sp| sp.started.elapsed().as_millis() as u64).unwrap_or(0);
+            let skip_filler = self.cfg.ordered_skip_filler_on_spec && commit.input_ended && !boost && spec.is_some()
+                && spec_lead_ms >= self.cfg.ordered_skip_filler_min_lead_ms;
             let filler = if skip_filler {
-                info!(room = %self.room_name, "filler skipped: ordered + speculation hit (body imminent)");
+                info!(room = %self.room_name, spec_lead_ms, "filler skipped: ordered + speculation hit (body imminent)");
                 None
             } else {
                 self.bank.as_mut().and_then(|b| {
