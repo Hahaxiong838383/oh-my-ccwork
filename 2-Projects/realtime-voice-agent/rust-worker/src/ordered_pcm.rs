@@ -1473,7 +1473,8 @@ mod tests {
         let (seq, _) = feed(&mut s, &mut sink, "in-c", 0, &loud, 640, 0);
         let start = loud.len() as u64;
         assert!(s.on_stt_final("小可小可测试一下".into(), 1100).is_empty(), "尾部还不安静：不发候选");
-        assert!(s.evidence()["quiet_thr_rms"].as_f64().unwrap() < 577.0 * 0.5 + 1.0, "全语音段时门限必须封顶在峰值一半以下，不得把语音判成安静");
+        let ev0 = s.evidence();
+        assert!(ev0["quiet_thr_rms"].as_f64().unwrap() <= ev0["speech_peak_rms"].as_f64().unwrap() * 0.5 + 0.5, "全语音段时门限必须封顶在峰值一半，不得把语音判成安静");
         let (fired, seq, start) = feed_quiet(&mut s, &mut sink, "in-c", seq, start, 20, 1200);
         assert_eq!(fired, 1, "每代只发一次候选");
         let ev = s.evidence();
