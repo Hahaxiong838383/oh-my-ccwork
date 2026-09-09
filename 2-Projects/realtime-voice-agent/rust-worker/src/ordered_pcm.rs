@@ -90,6 +90,13 @@ pub struct Header {
     pub fmt: Option<String>,
     #[serde(default)]
     pub sent_at_ms: Option<i64>,
+    /// 本地承接 v1（2026-09-09，codex 方案 + 川哥拍板）：begin 声明本代由端侧本地播承接短语；
+    /// worker 接受后本轮不播垫句、扣住正文 PCM 到端侧 `receipt_done` 或截止再放。缺省/false = 旧行为。
+    #[serde(default)]
+    pub local_receipt: Option<bool>,
+    /// `receipt_done` 头可选：端侧实际播放毫秒数（只做度量，不进任何门）。
+    #[serde(default)]
+    pub played_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -243,6 +250,9 @@ pub struct Limits {
     pub end_candidate_floor_k: f64,
     /// B11：held 文本至少这么多字才发候选（只有唤醒词「小可小可」4 字不发，防只听到唤醒词就收窗）。
     pub end_candidate_min_chars: usize,
+    /// 本地承接 v1（默认关；POC env `ORDERED_LOCAL_RECEIPT_ENABLED=1` ∧ 签发 metadata `local_receipt:"v1"` 才真开）：
+    /// begin 带 `local_receipt:true` → ack 回显 `accepted`；关时回显 `ignored`（端侧不得播本地条目）。
+    pub local_receipt_enabled: bool,
 }
 
 impl Default for Limits {
@@ -259,6 +269,7 @@ impl Default for Limits {
             end_candidate_min_speech_rms: 300.0,
             end_candidate_floor_k: 2.0,
             end_candidate_min_chars: 5,
+            local_receipt_enabled: false,
         }
     }
 }
@@ -275,6 +286,7 @@ impl Limits {
         l.end_candidate_min_chars = f("ORDERED_END_CANDIDATE_MIN_CHARS", 5.0) as usize;
         l.end_candidate_quiet_abs_rms = f("ORDERED_END_CANDIDATE_ABS_RMS", 80.0);
         l.end_candidate_min_speech_rms = f("ORDERED_END_CANDIDATE_MIN_SPEECH_RMS", 300.0);
+        l.local_receipt_enabled = std::env::var("ORDERED_LOCAL_RECEIPT_ENABLED").map(|v| v == "1").unwrap_or(false);
         l
     }
 }
@@ -337,6 +349,8 @@ pub enum Action {
     EndStream,
     /// 出站 JSON（ack / result），走 `TOPIC`。
     Publish(Value),
+    /// 本地承接 v1：端侧 `receipt_done` 已核（身份匹配、代次未失败、首次）→ pipeline 放行正文门。
+    ReleaseBody,
 }
 
 /// 流结束时的裁决。
@@ -371,6 +385,18 @@ pub struct Counters {
     pub final_before_end: u64,
     /// 供应商连接非正常结束次数（中途断连/协议错误/收流后 EOF）。
     pub stream_interrupted: u64,
+    /// 本地承接 v1：身份不符 / 未声明或被忽略的代次 / 已失败代次收到的 `receipt_done`（只计数不回包）。
+    pub receipt_done_ignored: u64,
+    /// 本地承接 v1：首条之后的重复 `receipt_done`。
+    pub receipt_done_duplicate: u64,
+}
+
+/// 本地承接 v1：本代的承接归属。`Accepted` = worker 不播垫句 + 正文门；`Ignored` = 声明了但房未签/开关关（ack 回显让端侧退回旧路径）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LocalReceipt {
+    NotDeclared,
+    Accepted,
+    Ignored,
 }
 
 pub struct Session {
@@ -406,6 +432,10 @@ pub struct Session {
     end_candidate_at_ms: Option<i64>,
     end_candidate_quiet_ms: Option<u64>,
     trailing_quiet_at_end_ms: Option<u64>,
+    /// 本地承接 v1：begin 声明的裁决结果；`receipt_done` 首次到达时刻（注入时钟）与端侧自报播放时长。
+    local_receipt: LocalReceipt,
+    receipt_done_at_ms: Option<i64>,
+    receipt_done_played_ms: Option<u64>,
     pub counters: Counters,
 }
 
@@ -437,6 +467,9 @@ impl Session {
             end_candidate_at_ms: None,
             end_candidate_quiet_ms: None,
             trailing_quiet_at_end_ms: None,
+            local_receipt: LocalReceipt::NotDeclared,
+            receipt_done_at_ms: None,
+            receipt_done_played_ms: None,
             counters: Counters::default(),
         }
     }
@@ -454,6 +487,21 @@ impl Session {
 
     pub fn input_id(&self) -> Option<&str> {
         self.ident.as_ref().map(|i| i.input_id.as_str())
+    }
+
+    /// 本地承接 v1：本代是否由端侧承接（worker 不播垫句 + 正文门）。
+    pub fn local_receipt_accepted(&self) -> bool {
+        self.local_receipt == LocalReceipt::Accepted
+    }
+
+    /// 本地承接 v1：端侧 `receipt_done` 是否已到（可能早于 commit；start_turn 据此让门一开始就是开的）。
+    pub fn receipt_done_seen(&self) -> bool {
+        self.receipt_done_at_ms.is_some()
+    }
+
+    /// 设备 end 是否已被接受（pipeline 记录 worker 单调钟时刻作正文门截止锚）。
+    pub fn end_seen(&self) -> bool {
+        self.end_at_ms.is_some()
     }
 
     fn credit_samples(&self) -> u64 {
@@ -474,6 +522,12 @@ impl Session {
         if let Some(q) = self.end_candidate_quiet_ms {
             v["end_candidate"] = json!(true);
             v["end_candidate_quiet_ms"] = json!(q);
+        }
+        // 本地承接 v1：声明过的代次每个 ack 都回显裁决（端侧只在 accepted 时播本地条目；ignored 退回旧路径）
+        match self.local_receipt {
+            LocalReceipt::Accepted => v["local_receipt"] = json!("accepted"),
+            LocalReceipt::Ignored => v["local_receipt"] = json!("ignored"),
+            LocalReceipt::NotDeclared => {}
         }
         v
     }
@@ -648,6 +702,10 @@ impl Session {
     /// 设备→worker 包。返回待执行动作（Publish/EndStream）；PCM 提交要紧接着调 `drain_submits`。
     pub fn on_packet(&mut self, pkt: &Packet, now_ms: i64) -> Vec<Action> {
         self.counters.packets_total += 1;
+        // 本地承接 v1：放行事件不是代次包——任何相位都收（result 之后到达是常态），不计终态后包。
+        if pkt.header.t == "receipt_done" {
+            return self.on_receipt_done(&pkt.header, now_ms);
+        }
         if self.phase == Phase::Terminal {
             self.counters.packets_after_terminal += 1;
             return Vec::new();
@@ -665,6 +723,23 @@ impl Session {
             }
             _ => self.reject_msg(h, "unknown_type"),
         }
+    }
+
+    /// 本地承接 v1：端侧本地短语播完 → 放行正文。身份不符 / 未 accepted / 代次已失败 → 只计数不回 reject
+    /// （迟到事件不能干扰当前代，也不能复活已取消的代）；重复 → 首条生效。永不改相位、永不越 commit 门。
+    fn on_receipt_done(&mut self, h: &Header, now_ms: i64) -> Vec<Action> {
+        let failed = matches!(self.outcome, Some(Outcome::Failed(_)));
+        if !self.matches_ident(h) || self.local_receipt != LocalReceipt::Accepted || failed {
+            self.counters.receipt_done_ignored += 1;
+            return Vec::new();
+        }
+        if self.receipt_done_at_ms.is_some() {
+            self.counters.receipt_done_duplicate += 1;
+            return Vec::new();
+        }
+        self.receipt_done_at_ms = Some(now_ms);
+        self.receipt_done_played_ms = h.played_ms;
+        vec![Action::ReleaseBody]
     }
 
     fn on_begin(&mut self, h: &Header, now_ms: i64) -> Vec<Action> {
@@ -696,6 +771,12 @@ impl Session {
         }
         // 从这里起代次成立，后续失败是整代终态
         self.ident = Some(Identity::from_header(h));
+        // 本地承接 v1：声明 ∧（env ∧ 房已签）→ accepted；声明但没开 → ignored（ack 回显，端侧退回旧路径）
+        self.local_receipt = match h.local_receipt {
+            Some(true) if self.limits.local_receipt_enabled => LocalReceipt::Accepted,
+            Some(true) => LocalReceipt::Ignored,
+            _ => LocalReceipt::NotDeclared,
+        };
         self.phase = Phase::Receiving;
         self.first_sample = h.start;
         self.keep_from = keep_from;
@@ -979,6 +1060,12 @@ impl Session {
             "end_candidate_quiet_ms": self.end_candidate_quiet_ms,
             "trailing_quiet_at_end_ms": self.trailing_quiet_at_end_ms,
             "end_candidate_lead_over_end_ms": match (self.end_candidate_at_ms, self.end_at_ms) { (Some(c), Some(e)) => Some(e - c), _ => None },
+            // 本地承接 v1（相对 begin 的毫秒；未声明 null；放行本身由 pipeline 正文门日志记 reason/held_ms）
+            "local_receipt": match self.local_receipt { LocalReceipt::Accepted => Some("accepted"), LocalReceipt::Ignored => Some("ignored"), LocalReceipt::NotDeclared => None },
+            "receipt_done_ms": self.receipt_done_at_ms.map(|t| t - self.begin_at_ms),
+            "receipt_done_played_ms": self.receipt_done_played_ms,
+            "receipt_done_ignored": c.receipt_done_ignored,
+            "receipt_done_duplicate": c.receipt_done_duplicate,
         })
     }
 }
@@ -1684,5 +1771,116 @@ mod tests {
         let _ = std::fs::create_dir_all(path.parent().unwrap());
         std::fs::write(&path, serde_json::to_string_pretty(&ev).unwrap()).unwrap();
         println!("evidence: {}", serde_json::to_string(&ev).unwrap());
+    }
+
+    // ───────── 本地承接 v1（2026-09-09）：begin 声明 / ack 回显 / receipt_done 放行 ─────────
+    fn session_lr(enabled: bool) -> Session {
+        let mut l = Limits::default();
+        l.local_receipt_enabled = enabled;
+        Session::new(Some(TRACE.into()), l)
+    }
+
+    fn begin_lr(input_id: &str) -> Value {
+        let mut h = begin_hdr(input_id, 0, 0);
+        h["local_receipt"] = json!(true);
+        h
+    }
+
+    fn receipt_done_hdr(input_id: &str, seq: u64, at: u64) -> Value {
+        let mut h = header("receipt_done", input_id, seq, at, at);
+        h["played_ms"] = json!(1480);
+        h
+    }
+
+    fn first_ack(acts: &[Action]) -> Value {
+        match acts.first() {
+            Some(Action::Publish(v)) if v["t"] == "ack" => v.clone(),
+            other => panic!("begin 应回 ack，得到 {other:?}"),
+        }
+    }
+
+    #[test]
+    fn local_receipt_ack_echoes_accepted_when_enabled() {
+        let mut s = session_lr(true);
+        let ack = first_ack(&s.on_packet(&pkt(begin_lr("in-1"), &[]), 1000));
+        assert_eq!(ack["local_receipt"], "accepted");
+        assert!(s.local_receipt_accepted());
+        assert_eq!(s.evidence()["local_receipt"], "accepted");
+        assert!(s.evidence()["receipt_done_ms"].is_null(), "未放行不编数");
+    }
+
+    #[test]
+    fn local_receipt_ack_echoes_ignored_when_disabled_and_absent_when_undeclared() {
+        let mut s = session_lr(false);
+        let ack = first_ack(&s.on_packet(&pkt(begin_lr("in-1"), &[]), 1000));
+        assert_eq!(ack["local_receipt"], "ignored");
+        assert!(!s.local_receipt_accepted());
+        // 被忽略的代次收到 receipt_done：只计数，不放行、不回包
+        let acts = s.on_packet(&pkt(receipt_done_hdr("in-1", 9, 0), &[]), 1200);
+        assert!(acts.is_empty());
+        assert_eq!(s.counters.receipt_done_ignored, 1);
+        assert_eq!(s.evidence()["local_receipt"], "ignored");
+        // 未声明的 begin：ack 无该字段、证据 null（旧合同房零变化）
+        let mut s2 = session_lr(true);
+        let ack2 = first_ack(&s2.on_packet(&pkt(begin_hdr("in-2", 0, 0), &[]), 1000));
+        assert!(ack2.get("local_receipt").is_none());
+        assert!(s2.evidence()["local_receipt"].is_null());
+    }
+
+    /// 常态：receipt_done 在 result 之后到达 → 放行一次；重复只计数；不算终态后代次包；证据带相对毫秒与 played_ms。
+    #[test]
+    fn receipt_done_after_commit_releases_once() {
+        let mut s = session_lr(true);
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_lr("in-1"), &[]), 1000);
+        let pcm = tone(16000, 3);
+        let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
+        s.on_packet(&pkt(header("end", "in-1", seq, 16000, 16000), &[]), 2000);
+        s.drain_submits(sink.sender());
+        s.on_stt_final("小可小可测试一下".into(), 2100);
+        let (d, _) = s.on_stream_end(2200);
+        assert!(matches!(d, Decision::Commit(_)));
+        assert_eq!(s.phase(), Phase::Terminal);
+        let acts = s.on_packet(&pkt(receipt_done_hdr("in-1", seq + 1, 16000), &[]), 3500);
+        assert_eq!(acts, vec![Action::ReleaseBody]);
+        assert!(s.receipt_done_seen());
+        let acts = s.on_packet(&pkt(receipt_done_hdr("in-1", seq + 2, 16000), &[]), 3600);
+        assert!(acts.is_empty(), "重复放行不重复");
+        assert_eq!(s.counters.receipt_done_duplicate, 1);
+        assert_eq!(s.counters.packets_after_terminal, 0, "receipt_done 不算终态后的代次包");
+        let ev = s.evidence();
+        assert_eq!(ev["receipt_done_ms"], 2500);
+        assert_eq!(ev["receipt_done_played_ms"], 1480);
+        assert_eq!(ev["outcome"], "committed");
+    }
+
+    /// receipt_done 早于 end / 早于 commit 到达：记住（放行一次），不改相位。
+    #[test]
+    fn receipt_done_before_end_is_remembered() {
+        let mut s = session_lr(true);
+        s.on_packet(&pkt(begin_lr("in-1"), &[]), 1000);
+        let acts = s.on_packet(&pkt(receipt_done_hdr("in-1", 1, 0), &[]), 1300);
+        assert_eq!(acts, vec![Action::ReleaseBody]);
+        assert!(s.receipt_done_seen());
+        assert_eq!(s.evidence()["receipt_done_ms"], 300);
+        assert_eq!(s.phase(), Phase::Receiving, "放行事件不改相位");
+    }
+
+    /// 错身份 / 取消后迟到：只计数，不回 reject，不复活。
+    #[test]
+    fn receipt_done_wrong_identity_or_after_cancel_is_ignored() {
+        let mut s = session_lr(true);
+        s.on_packet(&pkt(begin_lr("in-1"), &[]), 1000);
+        let acts = s.on_packet(&pkt(receipt_done_hdr("in-other", 1, 0), &[]), 1100);
+        assert!(acts.is_empty(), "错身份不回 reject（不能干扰当前代）");
+        assert_eq!(s.counters.receipt_done_ignored, 1);
+        assert_eq!(s.counters.packets_rejected, 0);
+        let acts = s.on_packet(&pkt(header("cancel", "in-1", 2, 0, 0), &[]), 1200);
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "result" && v["status"] == "failed")));
+        let acts = s.on_packet(&pkt(receipt_done_hdr("in-1", 3, 0), &[]), 1300);
+        assert!(acts.is_empty(), "取消后的 receipt_done 不得复活");
+        assert_eq!(s.counters.receipt_done_ignored, 2);
+        assert!(!s.receipt_done_seen());
+        assert_eq!(s.evidence()["receipt_done_ignored"], 2);
     }
 }
