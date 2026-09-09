@@ -1,0 +1,296 @@
+################ scenario=positive wav=poc_q1T.wav
+{"t_ms": 731, "wall": "14:54:57", "ev": "history.ack", "received_next": 8320, "queued_next": 6400, "credit_samples": 126080, "chunks_received": 13, "phase": "receiving"}
+{"t_ms": 758, "wall": "14:54:57", "ev": "history.ack", "received_next": 8960, "queued_next": 6400, "credit_samples": 125440, "chunks_received": 14, "phase": "receiving"}
+{"t_ms": 759, "wall": "14:54:57", "ev": "history.ack", "received_next": 9600, "queued_next": 9600, "credit_samples": 128000, "chunks_received": 15, "phase": "receiving"}
+{"t_ms": 769, "wall": "14:54:57", "ev": "history.ack", "received_next": 10240, "queued_next": 9600, "credit_samples": 127360, "chunks_received": 16, "phase": "receiving"}
+{"t_ms": 789, "wall": "14:54:57", "ev": "history.ack", "received_next": 10880, "queued_next": 9600, "credit_samples": 126720, "chunks_received": 17, "phase": "receiving"}
+{"t_ms": 807, "wall": "14:54:57", "ev": "history.ack", "received_next": 11520, "queued_next": 9600, "credit_samples": 126080, "chunks_received": 18, "phase": "receiving"}
+{"t_ms": 817, "wall": "14:54:57", "ev": "history.ack", "received_next": 12160, "queued_next": 9600, "credit_samples": 125440, "chunks_received": 19, "phase": "receiving"}
+{"t_ms": 818, "wall": "14:54:57", "ev": "history.ack", "received_next": 12800, "queued_next": 12800, "credit_samples": 128000, "chunks_received": 20, "phase": "receiving"}
+{"t_ms": 836, "wall": "14:54:57", "ev": "history.ack", "received_next": 13440, "queued_next": 12800, "credit_samples": 127360, "chunks_received": 21, "phase": "receiving"}
+{"t_ms": 842, "wall": "14:54:57", "ev": "history.ack", "received_next": 14080, "queued_next": 12800, "credit_samples": 126720, "chunks_received": 22, "phase": "receiving"}
+{"t_ms": 846, "wall": "14:54:57", "ev": "history.ack", "received_next": 14720, "queued_next": 12800, "credit_samples": 126080, "chunks_received": 23, "phase": "receiving"}
+{"t_ms": 849, "wall": "14:54:57", "ev": "history.ack", "received_next": 15360, "queued_next": 12800, "credit_samples": 125440, "chunks_received": 24, "phase": "receiving"}
+{"t_ms": 857, "wall": "14:54:57", "ev": "history.ack", "received_next": 16000, "queued_next": 16000, "credit_samples": 128000, "chunks_received": 25, "phase": "receiving"}
+{"t_ms": 888, "wall": "14:54:57", "ev": "history.ack", "received_next": 16640, "queued_next": 16000, "credit_samples": 127360, "chunks_received": 26, "phase": "receiving"}
+{"t_ms": 888, "wall": "14:54:57", "ev": "history.ack", "received_next": 17280, "queued_next": 16000, "credit_samples": 126720, "chunks_received": 27, "phase": "receiving"}
+{"t_ms": 889, "wall": "14:54:57", "ev": "history.ack", "received_next": 17920, "queued_next": 16000, "credit_samples": 126080, "chunks_received": 28, "phase": "receiving"}
+{"t_ms": 889, "wall": "14:54:57", "ev": "history.ack", "received_next": 18560, "queued_next": 16000, "credit_samples": 125440, "chunks_received": 29, "phase": "receiving"}
+{"t_ms": 889, "wall": "14:54:57", "ev": "history.ack", "received_next": 19200, "queued_next": 19200, "credit_samples": 128000, "chunks_received": 30, "phase": "receiving"}
+{"t_ms": 890, "wall": "14:54:57", "ev": "history.ack", "received_next": 19840, "queued_next": 19200, "credit_samples": 127360, "chunks_received": 31, "phase": "receiving"}
+{"t_ms": 892, "wall": "14:54:57", "ev": "history.ack", "received_next": 20480, "queued_next": 19200, "credit_samples": 126720, "chunks_received": 32, "phase": "receiving"}
+{"t_ms": 899, "wall": "14:54:57", "ev": "history.ack", "received_next": 21120, "queued_next": 19200, "credit_samples": 126080, "chunks_received": 33, "phase": "receiving"}
+{"t_ms": 904, "wall": "14:54:57", "ev": "history.ack", "received_next": 21760, "queued_next": 19200, "credit_samples": 125440, "chunks_received": 34, "phase": "receiving"}
+{"t_ms": 915, "wall": "14:54:57", "ev": "history.ack", "received_next": 22400, "queued_next": 22400, "credit_samples": 128000, "chunks_received": 35, "phase": "receiving"}
+{"t_ms": 922, "wall": "14:54:57", "ev": "history.ack", "received_next": 23040, "queued_next": 22400, "credit_samples": 127360, "chunks_received": 36, "phase": "receiving"}
+{"t_ms": 926, "wall": "14:54:57", "ev": "history.ack", "received_next": 23680, "queued_next": 22400, "credit_samples": 126720, "chunks_received": 37, "phase": "receiving"}
+{"t_ms": 934, "wall": "14:54:57", "ev": "history.ack", "received_next": 24320, "queued_next": 22400, "credit_samples": 126080, "chunks_received": 38, "phase": "receiving"}
+{"t_ms": 946, "wall": "14:54:57", "ev": "history.ack", "received_next": 24960, "queued_next": 22400, "credit_samples": 125440, "chunks_received": 39, "phase": "receiving"}
+{"t_ms": 952, "wall": "14:54:57", "ev": "history.ack", "received_next": 25600, "queued_next": 25600, "credit_samples": 128000, "chunks_received": 40, "phase": "receiving"}
+{"t_ms": 964, "wall": "14:54:57", "ev": "history.ack", "received_next": 26240, "queued_next": 25600, "credit_samples": 127360, "chunks_received": 41, "phase": "receiving"}
+{"t_ms": 979, "wall": "14:54:57", "ev": "history.ack", "received_next": 26880, "queued_next": 25600, "credit_samples": 126720, "chunks_received": 42, "phase": "receiving"}
+{"t_ms": 980, "wall": "14:54:57", "ev": "history.ack", "received_next": 27520, "queued_next": 25600, "credit_samples": 126080, "chunks_received": 43, "phase": "receiving"}
+{"t_ms": 981, "wall": "14:54:57", "ev": "history.ack", "received_next": 28160, "queued_next": 25600, "credit_samples": 125440, "chunks_received": 44, "phase": "receiving"}
+{"t_ms": 983, "wall": "14:54:57", "ev": "history.ack", "received_next": 28800, "queued_next": 28800, "credit_samples": 128000, "chunks_received": 45, "phase": "receiving"}
+{"t_ms": 997, "wall": "14:54:57", "ev": "history.ack", "received_next": 29440, "queued_next": 28800, "credit_samples": 127360, "chunks_received": 46, "phase": "receiving"}
+{"t_ms": 998, "wall": "14:54:57", "ev": "history.ack", "received_next": 30080, "queued_next": 28800, "credit_samples": 126720, "chunks_received": 47, "phase": "receiving"}
+{"t_ms": 1005, "wall": "14:54:57", "ev": "history.ack", "received_next": 30720, "queued_next": 28800, "credit_samples": 126080, "chunks_received": 48, "phase": "receiving"}
+{"t_ms": 1009, "wall": "14:54:57", "ev": "history.ack", "received_next": 31360, "queued_next": 28800, "credit_samples": 125440, "chunks_received": 49, "phase": "receiving"}
+{"t_ms": 1015, "wall": "14:54:57", "ev": "history.ack", "received_next": 32000, "queued_next": 32000, "credit_samples": 128000, "chunks_received": 50, "phase": "receiving"}
+{"t_ms": 1018, "wall": "14:54:57", "ev": "history.ack", "received_next": 32640, "queued_next": 32000, "credit_samples": 127360, "chunks_received": 51, "phase": "receiving"}
+{"t_ms": 1026, "wall": "14:54:57", "ev": "history.ack", "received_next": 33280, "queued_next": 32000, "credit_samples": 126720, "chunks_received": 52, "phase": "receiving"}
+{"t_ms": 1029, "wall": "14:54:57", "ev": "history.ack", "received_next": 33920, "queued_next": 32000, "credit_samples": 126080, "chunks_received": 53, "phase": "receiving"}
+{"t_ms": 1032, "wall": "14:54:57", "ev": "history.ack", "received_next": 34560, "queued_next": 32000, "credit_samples": 125440, "chunks_received": 54, "phase": "receiving"}
+{"t_ms": 1035, "wall": "14:54:57", "ev": "history.ack", "received_next": 35200, "queued_next": 35200, "credit_samples": 128000, "chunks_received": 55, "phase": "receiving"}
+{"t_ms": 1047, "wall": "14:54:57", "ev": "history.ack", "received_next": 35840, "queued_next": 35200, "credit_samples": 127360, "chunks_received": 56, "phase": "receiving"}
+{"t_ms": 1047, "wall": "14:54:57", "ev": "history.ack", "received_next": 36480, "queued_next": 35200, "credit_samples": 126720, "chunks_received": 57, "phase": "receiving"}
+{"t_ms": 1050, "wall": "14:54:57", "ev": "history.ack", "received_next": 37120, "queued_next": 35200, "credit_samples": 126080, "chunks_received": 58, "phase": "receiving"}
+{"t_ms": 1060, "wall": "14:54:57", "ev": "history.ack", "received_next": 37760, "queued_next": 35200, "credit_samples": 125440, "chunks_received": 59, "phase": "receiving"}
+{"t_ms": 1063, "wall": "14:54:57", "ev": "history.ack", "received_next": 38400, "queued_next": 38400, "credit_samples": 128000, "chunks_received": 60, "phase": "receiving"}
+{"t_ms": 1064, "wall": "14:54:57", "ev": "history.ack", "received_next": 39040, "queued_next": 38400, "credit_samples": 127360, "chunks_received": 61, "phase": "receiving"}
+{"t_ms": 1068, "wall": "14:54:57", "ev": "history.ack", "received_next": 39680, "queued_next": 38400, "credit_samples": 126720, "chunks_received": 62, "phase": "receiving"}
+{"t_ms": 1070, "wall": "14:54:57", "ev": "history.ack", "received_next": 40320, "queued_next": 38400, "credit_samples": 126080, "chunks_received": 63, "phase": "receiving"}
+{"t_ms": 1079, "wall": "14:54:58", "ev": "history.ack", "received_next": 40960, "queued_next": 38400, "credit_samples": 125440, "chunks_received": 64, "phase": "receiving"}
+{"t_ms": 1081, "wall": "14:54:58", "ev": "history.ack", "received_next": 41600, "queued_next": 41600, "credit_samples": 128000, "chunks_received": 65, "phase": "receiving"}
+{"t_ms": 1085, "wall": "14:54:58", "ev": "history.ack", "received_next": 42240, "queued_next": 41600, "credit_samples": 127360, "chunks_received": 66, "phase": "receiving"}
+{"t_ms": 1086, "wall": "14:54:58", "ev": "history.end", "end": 43325, "chunks_sent": 68, "samples_sent": 43325}
+{"t_ms": 1087, "wall": "14:54:58", "ev": "history.ack", "received_next": 42880, "queued_next": 41600, "credit_samples": 126720, "chunks_received": 67, "phase": "receiving"}
+{"t_ms": 1093, "wall": "14:54:58", "ev": "history.ack", "received_next": 43325, "queued_next": 41600, "credit_samples": 126275, "chunks_received": 68, "phase": "receiving"}
+{"t_ms": 1094, "wall": "14:54:58", "ev": "history.ack", "received_next": 43325, "queued_next": 43325, "credit_samples": 128000, "chunks_received": 68, "phase": "draining"}
+{"t_ms": 1683, "wall": "14:54:58", "ev": "history.result", "action": "repeat_prompt", "finals_held": 2, "input_id": "b81683ab-d96e-4b3c-b57a-b38cc96de276", "queued_next": 43325, "reason": "asr_unavailable", "received_next": 43325, "status": "failed", "t": "result"}
+{"t_ms": 3231, "wall": "14:55:00", "ev": "summary", "scenario": "positive", "room": "sn-POCTEST0001-1788879296", "trace_id": "58f59102-0bff-446b-8c3f-ebf2cd3723ee", "input_id": "b81683ab-d96e-4b3c-b57a-b38cc96de276", "samples_in_wav": 43325, "chunks_sent": 68, "samples_sent": 43325, "input_ready": true, "acks": 71, "last_ack": {"chunks_received": 68, "credit_samples": 128000, "input_id": "b81683ab-d96e-4b3c-b57a-b38cc96de276", "phase": "draining", "queued_next": 43325, "received_next": 43325, "t": "ack"}, "result": {"action": "repeat_prompt", "finals_held": 2, "input_id": "b81683ab-d96e-4b3c-b57a-b38cc96de276", "queued_next": 43325, "reason": "asr_unavailable", "received_next": 43325, "status": "failed", "t": "result"}, "transcripts_final": [], "speaking": [], "reply_audio_ms": 10, "reply_nonzero_frames": 0, "reply_frames": 1, "control_types": ["session.input_ready", "session.output_ready"]}
+---- worker journal for sn-POCTEST0001-1788879296 ----
+Sep 08 14:54:28.487443 S9MSa5lydxwrr systemd[1]: Started voice-worker-poc.service - Voice Worker POC (ordered_pcm, agent_name=rust-worker-poc).
+Sep 08 14:54:57.266090 2026-09-08T14:54:57.265838Z  INFO received job request, accepting job_id=AJ_LbrB7YtYrKEn room=…POC
+Sep 08 14:54:57.274185 2026-09-08T14:54:57.274084Z  INFO job_assignment_received job_id=AJ_LbrB7YtYrKEn room=…POC elapsed_ms=0 issue_to_assignment_ms=342 issue_clock="ms" has_trace=true
+Sep 08 14:54:57.274185 2026-09-08T14:54:57.274185Z  INFO worker_room_connect_start job_id=AJ_LbrB7YtYrKEn room=…POC elapsed_ms=0
+Sep 08 14:54:57.316576 2026-09-08T14:54:57.315768Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=…POC
+Sep 08 14:54:57.316576 2026-09-08T14:54:57.315850Z  INFO asr stream task spawned (preconnect) room=…POC nonstream=true
+Sep 08 14:54:57.316576 2026-09-08T14:54:57.316247Z  INFO tts provider 生效值 room=…POC tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 14:54:57.486532 2026-09-08T14:54:57.486069Z  INFO worker_room_connected room=…POC elapsed_ms=212 connect_ms=212
+Sep 08 14:54:57.516398 2026-09-08T14:54:57.516060Z  INFO pipeline prebuilt room=…POC elapsed_ms=200 has_fillers=true has_speaker=true
+Sep 08 14:54:57.527882 2026-09-08T14:54:57.527733Z  INFO agent_track_published room=…POC elapsed_ms=253
+Sep 08 14:54:57.527882 2026-09-08T14:54:57.527847Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=…POC expected_device="dev-POCTEST0001"
+Sep 08 14:54:57.528272 2026-09-08T14:54:57.528079Z  INFO user_track_subscribed room=…POC identity=dev-POCTEST0001 elapsed_ms=254
+Sep 08 14:54:57.528272 2026-09-08T14:54:57.528144Z  INFO input gate open, starting cascade pipeline room=…POC elapsed_ms=254
+Sep 08 14:54:57.528847 2026-09-08T14:54:57.528395Z  INFO pipeline takeover prebuilt room=…POC prebuilt_age_ms=213
+Sep 08 14:54:57.528847 2026-09-08T14:54:57.528413Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=…POC
+Sep 08 14:54:57.528847 2026-09-08T14:54:57.528498Z  INFO session_exit 信令已启用(v140 canary 命中) room=…POC
+Sep 08 14:54:57.530062 2026-09-08T14:54:57.530012Z  INFO 开场白已关闭,保持 Listening room=…POC enabled=false text_empty=false
+Sep 08 14:54:57.537641 2026-09-08T14:54:57.536919Z  INFO input_loop_started room=…POC elapsed_ms=262 track_to_input_loop_ms=8
+Sep 08 14:54:57.537641 2026-09-08T14:54:57.537016Z  INFO session.input_ready published room=…POC
+Sep 08 14:54:57.538058 2026-09-08T14:54:57.537735Z  INFO local-audio echo bank unavailable (fail-open) room=…POC
+Sep 08 14:54:57.622131 2026-09-08T14:54:57.621454Z  INFO agent_track_subscribed_by_android room=…POC elapsed_ms=347
+Sep 08 14:54:57.622131 2026-09-08T14:54:57.621577Z  INFO output_ready room=…POC elapsed_ms=347
+Sep 08 14:54:57.882272 2026-09-08T14:54:57.882040Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 14:54:58.408528 2026-09-08T14:54:58.408077Z  INFO stt final: 小可小可
+Sep 08 14:54:58.595726 2026-09-08T14:54:58.595261Z  INFO stt final: 一加一等于几
+Sep 08 14:54:58.609143 2026-09-08T14:54:58.609004Z  WARN asr ws closed by server
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609501Z  WARN asr 收流后未见 LastNoSeq 即被关闭(意外 EOF) room=…POC
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609628Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":2,"input_id":"b81683ab-d96e-4b3c-b57a-b38cc96de276","queued_next":43325,"reason":"asr_unavailable","received_next":43325,"sta
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609681Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="asr_unavailable"
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609704Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":3200,"blocks_queued":14,"chunks_duplicate":0,"chunks_received":68,"end_before_final":1,"end_sample":43325,"final_before_end":0,"
+Sep 08 14:55:00.126614 2026-09-08T14:55:00.126369Z  INFO participant disconnected → closing job room=…POC identity=dev-POCTEST0001
+Sep 08 14:55:00.148283 2026-09-08T14:55:00.148115Z  INFO Disconnected from room "sn-POCTEST0001-1788879296" with reason: ClientInitiated
+Sep 08 14:55:00.189897 2026-09-08T14:55:00.189752Z  INFO room deleted (delete_room_on_close) room=…POC
+Sep 08 14:55:00.189897 2026-09-08T14:55:00.189869Z  INFO job closed room=…POC uptime_s=2
+################ scenario=positive wav=s01T.wav
+{"t_ms": 1, "wall": "14:55:04", "ev": "connect", "room": "sn-POCTEST0001-1788879304", "identity": "dev-POCTEST0001", "agent": "rust-worker-poc", "trace_id": "8fc15e38-ea9c-48cd-84b0-def84d0b818d", "input_id": "e88c3553-257e-47b2-a183-ce698421dc1e", "scenario": "positive"}
+{"t_ms": 208, "wall": "14:55:04", "ev": "connected"}
+{"t_ms": 218, "wall": "14:55:04", "ev": "mic_published"}
+{"t_ms": 524, "wall": "14:55:05", "ev": "history.begin", "samples": 15232}
+{"t_ms": 628, "wall": "14:55:05", "ev": "history.end", "end": 15232, "chunks_sent": 24, "samples_sent": 15232}
+{"t_ms": 25630, "wall": "14:55:30", "ev": "timeout"}
+{"t_ms": 25647, "wall": "14:55:30", "ev": "summary", "scenario": "positive", "room": "sn-POCTEST0001-1788879304", "trace_id": "8fc15e38-ea9c-48cd-84b0-def84d0b818d", "input_id": "e88c3553-257e-47b2-a183-ce698421dc1e", "samples_in_wav": 15232, "chunks_sent": 24, "samples_sent": 15232, "input_ready": false, "acks": 0, "last_ack": null, "result": null, "transcripts_final": [], "speaking": [], "reply_audio_ms": 0, "reply_nonzero_frames": 0, "reply_frames": 0, "control_types": []}
+---- worker journal for sn-POCTEST0001-1788879304 ----
+Sep 08 14:54:28.487443 S9MSa5lydxwrr systemd[1]: Started voice-worker-poc.service - Voice Worker POC (ordered_pcm, agent_name=rust-worker-poc).
+Sep 08 14:54:57.316576 2026-09-08T14:54:57.315850Z  INFO asr stream task spawned (preconnect) room=…POC nonstream=true
+Sep 08 14:54:57.527882 2026-09-08T14:54:57.527847Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=…POC expected_device="dev-POCTEST0001"
+Sep 08 14:54:57.528847 2026-09-08T14:54:57.528413Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=…POC
+Sep 08 14:54:57.537641 2026-09-08T14:54:57.537016Z  INFO session.input_ready published room=…POC
+Sep 08 14:54:57.882272 2026-09-08T14:54:57.882040Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 14:54:58.408528 2026-09-08T14:54:58.408077Z  INFO stt final: 小可小可
+Sep 08 14:54:58.595726 2026-09-08T14:54:58.595261Z  INFO stt final: 一加一等于几
+Sep 08 14:54:58.609143 2026-09-08T14:54:58.609004Z  WARN asr ws closed by server
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609501Z  WARN asr 收流后未见 LastNoSeq 即被关闭(意外 EOF) room=…POC
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609628Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":2,"input_id":"b81683ab-d96e-4b3c-b57a-b38cc96de276","queued_next":43325,"reason":"asr_unavailable","received_next":43325,"sta
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609681Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="asr_unavailable"
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609704Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":3200,"blocks_queued":14,"chunks_duplicate":0,"chunks_received":68,"end_before_final":1,"end_sample":43325,"final_before_end":0,"
+################ scenario=missing_chunk wav=s01T.wav
+{"t_ms": 0, "wall": "14:55:34", "ev": "connect", "room": "sn-POCTEST0001-1788879334", "identity": "dev-POCTEST0001", "agent": "rust-worker-poc", "trace_id": "459831e7-b235-405f-8fac-e9ebe73e97ea", "input_id": "ac491bba-4977-40ae-8d97-19ef9ac51133", "scenario": "missing_chunk"}
+{"t_ms": 211, "wall": "14:55:34", "ev": "connected"}
+{"t_ms": 220, "wall": "14:55:34", "ev": "mic_published"}
+{"t_ms": 526, "wall": "14:55:35", "ev": "history.begin", "samples": 15232}
+{"t_ms": 537, "wall": "14:55:35", "ev": "history.chunk_skipped", "seq": 3, "start": 1920, "end": 2560}
+{"t_ms": 551, "wall": "14:55:35", "ev": "control", "type": "session.input_ready", "src": "worker", "seq": null}
+{"t_ms": 555, "wall": "14:55:35", "ev": "history.ack", "received_next": 0, "queued_next": 0, "credit_samples": 128000, "chunks_received": 0, "phase": "receiving"}
+{"t_ms": 555, "wall": "14:55:35", "ev": "history.ack", "received_next": 0, "queued_next": 0, "credit_samples": 128000, "chunks_received": 0, "phase": "receiving"}
+{"t_ms": 561, "wall": "14:55:35", "ev": "history.result", "action": "repeat_prompt", "finals_held": 0, "input_id": "ac491bba-4977-40ae-8d97-19ef9ac51133", "queued_next": 0, "reason": "missing_seq", "received_next": 1920, "status": "failed", "t": "result"}
+{"t_ms": 562, "wall": "14:55:35", "ev": "history.ack", "received_next": 1920, "queued_next": 0, "credit_samples": 126080, "chunks_received": 3, "phase": "receiving"}
+{"t_ms": 563, "wall": "14:55:35", "ev": "history.ack", "received_next": 1280, "queued_next": 0, "credit_samples": 126720, "chunks_received": 2, "phase": "receiving"}
+{"t_ms": 564, "wall": "14:55:35", "ev": "history.ack", "received_next": 640, "queued_next": 0, "credit_samples": 127360, "chunks_received": 1, "phase": "receiving"}
+{"t_ms": 586, "wall": "14:55:35", "ev": "participant_connected", "identity": "agent-AJ_V4DQ7zbyb7uX"}
+{"t_ms": 615, "wall": "14:55:35", "ev": "control", "type": "session.output_ready", "src": "worker", "seq": null}
+{"t_ms": 616, "wall": "14:55:35", "ev": "track_subscribed", "kind": "1", "identity": "agent-AJ_V4DQ7zbyb7uX"}
+{"t_ms": 619, "wall": "14:55:35", "ev": "history.end", "end": 15232, "chunks_sent": 24, "samples_sent": 14592}
+Task exception was never retrieved
+future: <Task finished name='Task-4' coro=<Sim.drain_reply() done, defined at /root/asr-burst-probe/opcm_device_sim.py:246> exception=TypeError('memoryview: cannot cast between two non-byte formats')>
+Traceback (most recent call last):
+  File "/root/asr-burst-probe/opcm_device_sim.py", line 252, in drain_reply
+    data = memoryview(f.data).cast("h")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: memoryview: cannot cast between two non-byte formats
+{"t_ms": 2079, "wall": "14:55:36", "ev": "summary", "scenario": "missing_chunk", "room": "sn-POCTEST0001-1788879334", "trace_id": "459831e7-b235-405f-8fac-e9ebe73e97ea", "input_id": "ac491bba-4977-40ae-8d97-19ef9ac51133", "samples_in_wav": 15232, "chunks_sent": 24, "samples_sent": 14592, "input_ready": true, "acks": 5, "last_ack": {"chunks_received": 1, "credit_samples": 127360, "input_id": "ac491bba-4977-40ae-8d97-19ef9ac51133", "phase": "receiving", "queued_next": 0, "received_next": 640, "t": "ack"}, "result": {"action": "repeat_prompt", "finals_held": 0, "input_id": "ac491bba-4977-40ae-8d97-19ef9ac51133", "queued_next": 0, "reason": "missing_seq", "received_next": 1920, "status": "failed", "t": "result"}, "transcripts_final": [], "speaking": [], "reply_audio_ms": 10, "reply_nonzero_frames": 0, "reply_frames": 1, "control_types": ["session.input_ready", "session.output_ready"]}
+thread 'tokio-rt-worker' (2259762) panicked at /rustc/59807616e1fa2540724bfbac14d7976d7e4a3860/library/core/src/panicking.rs:225:5:
+panic in a function that cannot unwind
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+thread caused non-unwinding panic. aborting.
+---- worker journal for sn-POCTEST0001-1788879334 ----
+Sep 08 14:54:28.487443 S9MSa5lydxwrr systemd[1]: Started voice-worker-poc.service - Voice Worker POC (ordered_pcm, agent_name=rust-worker-poc).
+Sep 08 14:54:57.316576 2026-09-08T14:54:57.315850Z  INFO asr stream task spawned (preconnect) room=…POC nonstream=true
+Sep 08 14:54:57.527882 2026-09-08T14:54:57.527847Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=…POC expected_device="dev-POCTEST0001"
+Sep 08 14:54:57.528847 2026-09-08T14:54:57.528413Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=…POC
+Sep 08 14:54:57.537641 2026-09-08T14:54:57.537016Z  INFO session.input_ready published room=…POC
+Sep 08 14:54:57.882272 2026-09-08T14:54:57.882040Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 14:54:58.408528 2026-09-08T14:54:58.408077Z  INFO stt final: 小可小可
+Sep 08 14:54:58.595726 2026-09-08T14:54:58.595261Z  INFO stt final: 一加一等于几
+Sep 08 14:54:58.609143 2026-09-08T14:54:58.609004Z  WARN asr ws closed by server
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609501Z  WARN asr 收流后未见 LastNoSeq 即被关闭(意外 EOF) room=…POC
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609628Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":2,"input_id":"b81683ab-d96e-4b3c-b57a-b38cc96de276","queued_next":43325,"reason":"asr_unavailable","received_next":43325,"sta
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609681Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="asr_unavailable"
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609704Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":3200,"blocks_queued":14,"chunks_duplicate":0,"chunks_received":68,"end_before_final":1,"end_sample":43325,"final_before_end":0,"
+Sep 08 14:55:34.855375 2026-09-08T14:55:34.855119Z  INFO received job request, accepting job_id=AJ_V4DQ7zbyb7uX room=…POC
+Sep 08 14:55:34.862386 2026-09-08T14:55:34.862113Z  INFO job_assignment_received job_id=AJ_V4DQ7zbyb7uX room=…POC elapsed_ms=0 issue_to_assignment_ms=296 issue_clock="ms" has_trace=true
+Sep 08 14:55:34.862386 2026-09-08T14:55:34.862293Z  INFO worker_room_connect_start job_id=AJ_V4DQ7zbyb7uX room=…POC elapsed_ms=0
+Sep 08 14:55:34.907607 2026-09-08T14:55:34.907432Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=…POC
+Sep 08 14:55:34.907607 2026-09-08T14:55:34.907646Z  INFO asr stream task spawned (preconnect) room=…POC nonstream=true
+Sep 08 14:55:34.908522 2026-09-08T14:55:34.907961Z  INFO tts provider 生效值 room=…POC tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 14:55:35.054793 2026-09-08T14:55:35.054444Z  INFO worker_room_connected room=…POC elapsed_ms=192 connect_ms=192
+Sep 08 14:55:35.093021 2026-09-08T14:55:35.092891Z  INFO agent_track_published room=…POC elapsed_ms=230
+Sep 08 14:55:35.094427 2026-09-08T14:55:35.093803Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=…POC expected_device="dev-POCTEST0001"
+Sep 08 14:55:35.094427 2026-09-08T14:55:35.093902Z  INFO user_track_subscribed room=…POC identity=dev-POCTEST0001 elapsed_ms=231
+Sep 08 14:55:35.094427 2026-09-08T14:55:35.094247Z  INFO input gate open, starting cascade pipeline room=…POC elapsed_ms=232
+Sep 08 14:55:35.108152 2026-09-08T14:55:35.108000Z  INFO pipeline prebuilt room=…POC elapsed_ms=200 has_fillers=true has_speaker=true
+Sep 08 14:55:35.108339 2026-09-08T14:55:35.108238Z  INFO pipeline takeover prebuilt room=…POC prebuilt_age_ms=201
+Sep 08 14:55:35.108339 2026-09-08T14:55:35.108249Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=…POC
+Sep 08 14:55:35.108339 2026-09-08T14:55:35.108272Z  INFO session_exit 信令已启用(v140 canary 命中) room=…POC
+Sep 08 14:55:35.110123 2026-09-08T14:55:35.109841Z  INFO 开场白已关闭,保持 Listening room=…POC enabled=false text_empty=false
+Sep 08 14:55:35.110123 2026-09-08T14:55:35.109893Z  INFO input_loop_started room=…POC elapsed_ms=247 track_to_input_loop_ms=15
+Sep 08 14:55:35.110123 2026-09-08T14:55:35.109927Z  INFO session.input_ready published room=…POC
+Sep 08 14:55:35.120401 2026-09-08T14:55:35.120261Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":0,"input_id":"ac491bba-4977-40ae-8d97-19ef9ac51133","queued_next":0,"reason":"missing_seq","received_next":1920,"status":"fai
+Sep 08 14:55:35.126386 2026-09-08T14:55:35.126322Z  INFO local-audio echo bank unavailable (fail-open) room=…POC
+Sep 08 14:55:35.173397 2026-09-08T14:55:35.173315Z  INFO agent_track_subscribed_by_android room=…POC elapsed_ms=311
+Sep 08 14:55:35.173397 2026-09-08T14:55:35.173366Z  INFO output_ready room=…POC elapsed_ms=311
+Sep 08 14:55:35.408118 2026-09-08T14:55:35.407186Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 14:55:35.471289 2026-09-08T14:55:35.471044Z  WARN asr ws closed by server
+Sep 08 14:55:35.472141 2026-09-08T14:55:35.471874Z  WARN asr 收流后未见 LastNoSeq 即被关闭(意外 EOF) room=…POC
+Sep 08 14:55:35.472141 2026-09-08T14:55:35.472055Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="missing_seq"
+Sep 08 14:55:35.472368 2026-09-08T14:55:35.472095Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":1920,"blocks_queued":0,"chunks_duplicate":0,"chunks_received":3,"end_before_final":0,"end_sample":null,"final_before_end":0,"fin
+Sep 08 14:55:36.637341 2026-09-08T14:55:36.637208Z  INFO participant disconnected → closing job room=…POC identity=dev-POCTEST0001
+Sep 08 14:55:36.683753 2026-09-08T14:55:36.683636Z  INFO room deleted (delete_room_on_close) room=…POC
+Sep 08 14:55:36.683753 2026-09-08T14:55:36.683746Z  INFO job closed room=…POC uptime_s=1
+################ scenario=cancel_mid wav=poc_q1T.wav
+{"t_ms": 0, "wall": "14:55:47", "ev": "connect", "room": "sn-POCTEST0001-1788879347", "identity": "dev-POCTEST0001", "agent": "rust-worker-poc", "trace_id": "0d9ac700-b73c-4cbb-81f1-010b92311bc0", "input_id": "d30979e1-f7b6-47c0-a254-a95fa41d8e57", "scenario": "cancel_mid"}
+{"t_ms": 206, "wall": "14:55:47", "ev": "connected"}
+{"t_ms": 214, "wall": "14:55:47", "ev": "mic_published"}
+{"t_ms": 460, "wall": "14:55:47", "ev": "control", "type": "session.input_ready", "src": "worker", "seq": null}
+{"t_ms": 496, "wall": "14:55:47", "ev": "participant_connected", "identity": "agent-AJ_RTAZbi7rHMcF"}
+{"t_ms": 525, "wall": "14:55:47", "ev": "track_subscribed", "kind": "1", "identity": "agent-AJ_RTAZbi7rHMcF"}
+{"t_ms": 525, "wall": "14:55:47", "ev": "history.begin", "samples": 43325}
+{"t_ms": 535, "wall": "14:55:47", "ev": "control", "type": "session.output_ready", "src": "worker", "seq": null}
+Task exception was never retrieved
+future: <Task finished name='Task-4' coro=<Sim.drain_reply() done, defined at /root/asr-burst-probe/opcm_device_sim.py:246> exception=TypeError('memoryview: cannot cast between two non-byte formats')>
+Traceback (most recent call last):
+  File "/root/asr-burst-probe/opcm_device_sim.py", line 252, in drain_reply
+    data = memoryview(f.data).cast("h")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: memoryview: cannot cast between two non-byte formats
+{"t_ms": 544, "wall": "14:55:47", "ev": "history.ack", "received_next": 0, "queued_next": 0, "credit_samples": 128000, "chunks_received": 0, "phase": "receiving"}
+{"t_ms": 545, "wall": "14:55:47", "ev": "history.ack", "received_next": 0, "queued_next": 0, "credit_samples": 128000, "chunks_received": 0, "phase": "receiving"}
+{"t_ms": 549, "wall": "14:55:47", "ev": "history.ack", "received_next": 640, "queued_next": 0, "credit_samples": 127360, "chunks_received": 1, "phase": "receiving"}
+{"t_ms": 562, "wall": "14:55:47", "ev": "history.ack", "received_next": 1280, "queued_next": 0, "credit_samples": 126720, "chunks_received": 2, "phase": "receiving"}
+{"t_ms": 566, "wall": "14:55:47", "ev": "history.ack", "received_next": 1920, "queued_next": 0, "credit_samples": 126080, "chunks_received": 3, "phase": "receiving"}
+{"t_ms": 574, "wall": "14:55:47", "ev": "history.ack", "received_next": 2560, "queued_next": 0, "credit_samples": 125440, "chunks_received": 4, "phase": "receiving"}
+{"t_ms": 591, "wall": "14:55:47", "ev": "history.ack", "received_next": 3200, "queued_next": 3200, "credit_samples": 128000, "chunks_received": 5, "phase": "receiving"}
+{"t_ms": 594, "wall": "14:55:47", "ev": "history.ack", "received_next": 3840, "queued_next": 3200, "credit_samples": 127360, "chunks_received": 6, "phase": "receiving"}
+{"t_ms": 597, "wall": "14:55:47", "ev": "history.ack", "received_next": 4480, "queued_next": 3200, "credit_samples": 126720, "chunks_received": 7, "phase": "receiving"}
+{"t_ms": 600, "wall": "14:55:47", "ev": "history.ack", "received_next": 5760, "queued_next": 3200, "credit_samples": 125440, "chunks_received": 9, "phase": "receiving"}
+{"t_ms": 601, "wall": "14:55:47", "ev": "history.ack", "received_next": 5120, "queued_next": 3200, "credit_samples": 126080, "chunks_received": 8, "phase": "receiving"}
+{"t_ms": 603, "wall": "14:55:47", "ev": "history.ack", "received_next": 6400, "queued_next": 6400, "credit_samples": 128000, "chunks_received": 10, "phase": "receiving"}
+{"t_ms": 603, "wall": "14:55:47", "ev": "history.ack", "received_next": 7040, "queued_next": 6400, "credit_samples": 127360, "chunks_received": 11, "phase": "receiving"}
+{"t_ms": 606, "wall": "14:55:47", "ev": "history.ack", "received_next": 7680, "queued_next": 6400, "credit_samples": 126720, "chunks_received": 12, "phase": "receiving"}
+{"t_ms": 613, "wall": "14:55:48", "ev": "history.ack", "received_next": 8320, "queued_next": 6400, "credit_samples": 126080, "chunks_received": 13, "phase": "receiving"}
+{"t_ms": 618, "wall": "14:55:48", "ev": "history.ack", "received_next": 8960, "queued_next": 6400, "credit_samples": 125440, "chunks_received": 14, "phase": "receiving"}
+{"t_ms": 628, "wall": "14:55:48", "ev": "history.ack", "received_next": 9600, "queued_next": 9600, "credit_samples": 128000, "chunks_received": 15, "phase": "receiving"}
+{"t_ms": 634, "wall": "14:55:48", "ev": "history.ack", "received_next": 10240, "queued_next": 9600, "credit_samples": 127360, "chunks_received": 16, "phase": "receiving"}
+{"t_ms": 637, "wall": "14:55:48", "ev": "history.ack", "received_next": 10880, "queued_next": 9600, "credit_samples": 126720, "chunks_received": 17, "phase": "receiving"}
+{"t_ms": 653, "wall": "14:55:48", "ev": "history.ack", "received_next": 11520, "queued_next": 9600, "credit_samples": 126080, "chunks_received": 18, "phase": "receiving"}
+{"t_ms": 656, "wall": "14:55:48", "ev": "history.ack", "received_next": 12160, "queued_next": 9600, "credit_samples": 125440, "chunks_received": 19, "phase": "receiving"}
+{"t_ms": 656, "wall": "14:55:48", "ev": "history.ack", "received_next": 12800, "queued_next": 12800, "credit_samples": 128000, "chunks_received": 20, "phase": "receiving"}
+{"t_ms": 671, "wall": "14:55:48", "ev": "history.ack", "received_next": 13440, "queued_next": 12800, "credit_samples": 127360, "chunks_received": 21, "phase": "receiving"}
+{"t_ms": 677, "wall": "14:55:48", "ev": "history.ack", "received_next": 14080, "queued_next": 12800, "credit_samples": 126720, "chunks_received": 22, "phase": "receiving"}
+{"t_ms": 681, "wall": "14:55:48", "ev": "history.ack", "received_next": 14720, "queued_next": 12800, "credit_samples": 126080, "chunks_received": 23, "phase": "receiving"}
+{"t_ms": 688, "wall": "14:55:48", "ev": "history.ack", "received_next": 15360, "queued_next": 12800, "credit_samples": 125440, "chunks_received": 24, "phase": "receiving"}
+{"t_ms": 692, "wall": "14:55:48", "ev": "history.ack", "received_next": 16000, "queued_next": 16000, "credit_samples": 128000, "chunks_received": 25, "phase": "receiving"}
+{"t_ms": 696, "wall": "14:55:48", "ev": "history.ack", "received_next": 16640, "queued_next": 16000, "credit_samples": 127360, "chunks_received": 26, "phase": "receiving"}
+{"t_ms": 701, "wall": "14:55:48", "ev": "history.ack", "received_next": 17280, "queued_next": 16000, "credit_samples": 126720, "chunks_received": 27, "phase": "receiving"}
+{"t_ms": 707, "wall": "14:55:48", "ev": "history.ack", "received_next": 17920, "queued_next": 16000, "credit_samples": 126080, "chunks_received": 28, "phase": "receiving"}
+{"t_ms": 711, "wall": "14:55:48", "ev": "history.ack", "received_next": 18560, "queued_next": 16000, "credit_samples": 125440, "chunks_received": 29, "phase": "receiving"}
+{"t_ms": 713, "wall": "14:55:48", "ev": "history.ack", "received_next": 19200, "queued_next": 19200, "credit_samples": 128000, "chunks_received": 30, "phase": "receiving"}
+{"t_ms": 715, "wall": "14:55:48", "ev": "history.ack", "received_next": 19840, "queued_next": 19200, "credit_samples": 127360, "chunks_received": 31, "phase": "receiving"}
+{"t_ms": 722, "wall": "14:55:48", "ev": "history.ack", "received_next": 20480, "queued_next": 19200, "credit_samples": 126720, "chunks_received": 32, "phase": "receiving"}
+{"t_ms": 722, "wall": "14:55:48", "ev": "history.cancel_via_control", "at_sample": 21760}
+{"t_ms": 727, "wall": "14:55:48", "ev": "history.ack", "received_next": 21120, "queued_next": 19200, "credit_samples": 126080, "chunks_received": 33, "phase": "receiving"}
+{"t_ms": 731, "wall": "14:55:48", "ev": "history.ack", "received_next": 21760, "queued_next": 19200, "credit_samples": 125440, "chunks_received": 34, "phase": "receiving"}
+{"t_ms": 735, "wall": "14:55:48", "ev": "control", "type": "cancel.ack", "src": "worker", "seq": 1}
+{"t_ms": 735, "wall": "14:55:48", "ev": "history.result", "action": "repeat_prompt", "finals_held": 0, "input_id": "d30979e1-f7b6-47c0-a254-a95fa41d8e57", "queued_next": 19200, "reason": "cancelled", "received_next": 21760, "status": "failed", "t": "result"}
+{"t_ms": 2249, "wall": "14:55:49", "ev": "summary", "scenario": "cancel_mid", "room": "sn-POCTEST0001-1788879347", "trace_id": "0d9ac700-b73c-4cbb-81f1-010b92311bc0", "input_id": "d30979e1-f7b6-47c0-a254-a95fa41d8e57", "samples_in_wav": 43325, "chunks_sent": 34, "samples_sent": 21760, "input_ready": true, "acks": 36, "last_ack": {"chunks_received": 34, "credit_samples": 125440, "input_id": "d30979e1-f7b6-47c0-a254-a95fa41d8e57", "phase": "receiving", "queued_next": 19200, "received_next": 21760, "t": "ack"}, "result": {"action": "repeat_prompt", "finals_held": 0, "input_id": "d30979e1-f7b6-47c0-a254-a95fa41d8e57", "queued_next": 19200, "reason": "cancelled", "received_next": 21760, "status": "failed", "t": "result"}, "transcripts_final": [], "speaking": [], "reply_audio_ms": 10, "reply_nonzero_frames": 0, "reply_frames": 1, "control_types": ["session.input_ready", "session.output_ready", "cancel.ack"]}
+---- worker journal for sn-POCTEST0001-1788879347 ----
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609628Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":2,"input_id":"b81683ab-d96e-4b3c-b57a-b38cc96de276","queued_next":43325,"reason":"asr_unavailable","received_next":43325,"sta
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609681Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="asr_unavailable"
+Sep 08 14:54:58.609886 2026-09-08T14:54:58.609704Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":3200,"blocks_queued":14,"chunks_duplicate":0,"chunks_received":68,"end_before_final":1,"end_sample":43325,"final_before_end":0,"
+Sep 08 14:55:34.907607 2026-09-08T14:55:34.907646Z  INFO asr stream task spawned (preconnect) room=…POC nonstream=true
+Sep 08 14:55:35.094427 2026-09-08T14:55:35.093803Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=…POC expected_device="dev-POCTEST0001"
+Sep 08 14:55:35.108339 2026-09-08T14:55:35.108249Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=…POC
+Sep 08 14:55:35.110123 2026-09-08T14:55:35.109927Z  INFO session.input_ready published room=…POC
+Sep 08 14:55:35.120401 2026-09-08T14:55:35.120261Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":0,"input_id":"ac491bba-4977-40ae-8d97-19ef9ac51133","queued_next":0,"reason":"missing_seq","received_next":1920,"status":"fai
+Sep 08 14:55:35.408118 2026-09-08T14:55:35.407186Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 14:55:35.471289 2026-09-08T14:55:35.471044Z  WARN asr ws closed by server
+Sep 08 14:55:35.472141 2026-09-08T14:55:35.471874Z  WARN asr 收流后未见 LastNoSeq 即被关闭(意外 EOF) room=…POC
+Sep 08 14:55:35.472141 2026-09-08T14:55:35.472055Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="missing_seq"
+Sep 08 14:55:35.472368 2026-09-08T14:55:35.472095Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":1920,"blocks_queued":0,"chunks_duplicate":0,"chunks_received":3,"end_before_final":0,"end_sample":null,"final_before_end":0,"fin
+Sep 08 14:55:47.676734 2026-09-08T14:55:47.676602Z  INFO received job request, accepting job_id=AJ_RTAZbi7rHMcF room=…POC
+Sep 08 14:55:47.681039 2026-09-08T14:55:47.680799Z  INFO job_assignment_received job_id=AJ_RTAZbi7rHMcF room=…POC elapsed_ms=0 issue_to_assignment_ms=285 issue_clock="ms" has_trace=true
+Sep 08 14:55:47.681039 2026-09-08T14:55:47.680901Z  INFO worker_room_connect_start job_id=AJ_RTAZbi7rHMcF room=…POC elapsed_ms=0
+Sep 08 14:55:47.696694 2026-09-08T14:55:47.696576Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=…POC
+Sep 08 14:55:47.696694 2026-09-08T14:55:47.696652Z  INFO asr stream task spawned (preconnect) room=…POC nonstream=true
+Sep 08 14:55:47.697193 2026-09-08T14:55:47.696798Z  INFO tts provider 生效值 room=…POC tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 14:55:47.801373 2026-09-08T14:55:47.801281Z  INFO worker_room_connected room=…POC elapsed_ms=120 connect_ms=120
+Sep 08 14:55:47.821770 2026-09-08T14:55:47.821653Z  INFO pipeline prebuilt room=…POC elapsed_ms=125 has_fillers=true has_speaker=true
+Sep 08 14:55:47.836177 2026-09-08T14:55:47.836096Z  INFO agent_track_published room=…POC elapsed_ms=155
+Sep 08 14:55:47.836177 2026-09-08T14:55:47.836171Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=…POC expected_device="dev-POCTEST0001"
+Sep 08 14:55:47.836934 2026-09-08T14:55:47.836220Z  INFO user_track_subscribed room=…POC identity=dev-POCTEST0001 elapsed_ms=155
+Sep 08 14:55:47.836934 2026-09-08T14:55:47.836885Z  INFO input gate open, starting cascade pipeline room=…POC elapsed_ms=156
+Sep 08 14:55:47.837066 2026-09-08T14:55:47.837013Z  INFO pipeline takeover prebuilt room=…POC prebuilt_age_ms=140
+Sep 08 14:55:47.837066 2026-09-08T14:55:47.837019Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=…POC
+Sep 08 14:55:47.837066 2026-09-08T14:55:47.837051Z  INFO session_exit 信令已启用(v140 canary 命中) room=…POC
+Sep 08 14:55:47.838199 2026-09-08T14:55:47.838179Z  INFO 开场白已关闭,保持 Listening room=…POC enabled=false text_empty=false
+Sep 08 14:55:47.847638 2026-09-08T14:55:47.847354Z  INFO input_loop_started room=…POC elapsed_ms=166 track_to_input_loop_ms=11
+Sep 08 14:55:47.847638 2026-09-08T14:55:47.847528Z  INFO session.input_ready published room=…POC
+Sep 08 14:55:47.918451 2026-09-08T14:55:47.918362Z  INFO agent_track_subscribed_by_android room=…POC elapsed_ms=237
+Sep 08 14:55:47.918451 2026-09-08T14:55:47.918415Z  INFO output_ready room=…POC elapsed_ms=237
+Sep 08 14:55:47.964864 2026-09-08T14:55:47.962803Z  INFO local-audio echo bank unavailable (fail-open) room=…POC
+Sep 08 14:55:48.083115 2026-09-08T14:55:48.083013Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 14:55:48.123362 2026-09-08T14:55:48.123237Z  INFO ordered_pcm result room=…POC result={"action":"repeat_prompt","finals_held":0,"input_id":"d30979e1-f7b6-47c0-a254-a95fa41d8e57","queued_next":19200,"reason":"cancelled","received_next":21760,"status":"
+Sep 08 14:55:48.123362 2026-09-08T14:55:48.123363Z  INFO control cancel room=…POC trace_id=0d9ac700-b73c-4cbb-81f1-010b92311bc0 seq=1 cancelled=false already_done=false had_turn=false
+Sep 08 14:55:48.666416 2026-09-08T14:55:48.664926Z  INFO stt final: 小可小可
+Sep 08 14:55:48.666416 2026-09-08T14:55:48.664989Z  WARN asr ws closed by server
+Sep 08 14:55:48.666416 2026-09-08T14:55:48.665316Z  WARN asr 收流后未见 LastNoSeq 即被关闭(意外 EOF) room=…POC
+Sep 08 14:55:48.666416 2026-09-08T14:55:48.665431Z  INFO ordered_pcm generation discarded (zero commit) room=…POC reason="cancelled"
+Sep 08 14:55:48.666416 2026-09-08T14:55:48.665497Z  INFO ordered_pcm decision evidence room=…POC evidence={"backlog_peak_samples":3200,"blocks_queued":6,"chunks_duplicate":0,"chunks_received":34,"end_before_final":0,"end_sample":null,"final_before_end":0,"fi
+Sep 08 14:55:49.637708 2026-09-08T14:55:49.637340Z  INFO participant disconnected → closing job room=…POC identity=dev-POCTEST0001
+Sep 08 14:55:49.676127 2026-09-08T14:55:49.676009Z  INFO room deleted (delete_room_on_close) room=…POC
+Sep 08 14:55:49.676127 2026-09-08T14:55:49.676113Z  INFO job closed room=…POC uptime_s=1
+################ prod worker untouched:
+MainPID=2017631
+0

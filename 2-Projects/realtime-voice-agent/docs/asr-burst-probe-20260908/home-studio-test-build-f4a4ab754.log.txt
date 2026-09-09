@@ -1,0 +1,8 @@
+f4a4ab75
+test stt_volc::tests::last_frame_flag_is_bitwise_like_python ... ok
+test result: ok. 223 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+      1 warning: function `is_session_exit_tail` is never used
+      1 warning: method `is_some` is never used
+   ✓ glibc 全部 ≤ 2.39
+   ✓ libstdc++ 全部 ≤ GLIBCXX_3.4.33
+3973f78953babe652a1f283de7a7e2b9857d2647653f96d8bdc370aa388527f3

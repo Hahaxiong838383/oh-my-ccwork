@@ -83,6 +83,19 @@ class Sim:
         self.input_id = str(uuid.uuid4())
         self.room_name = f"sn-{a.sn}-{int(time.time())}"
         self.identity = f"dev-{a.sn}"
+        self.pre_token: str | None = None
+        self.server_url: str | None = None
+        self.room_source = "minted"
+        if getattr(a, "room_file", None):
+            # 预铸房模式：条目字段与生产 device-session 响应同名；本进程不读任何 LIVEKIT 密钥
+            doc = json.loads(Path(a.room_file).read_text(encoding="utf-8"))
+            e = doc["rooms"][a.room_index]
+            self.room_name, self.identity = e["room_name"], e["identity"]
+            self.trace_id, self.session_id = e["trace_id"], e["session_id"]
+            self.pre_token, self.server_url = e["token"], e["server_url"]
+            self.room_source = f"file#{a.room_index}"
+            if e.get("expected_agent_name") and e["expected_agent_name"] != a.agent:
+                a.agent = e["expected_agent_name"]
         self.result: dict | None = None
         self.acks: list[dict] = []
         self.input_ready = False
@@ -100,6 +113,8 @@ class Sim:
         print(json.dumps(rec, ensure_ascii=False), flush=True)
 
     def token(self) -> str:
+        if self.pre_token:
+            return self.pre_token
         meta = json.dumps({"trace_id": self.trace_id, "session_id": self.session_id, "issue_ts_ms": int(time.time() * 1000),
                            "input_mode": "ordered_pcm"})
         t = (api.AccessToken(self.env["LIVEKIT_API_KEY"], self.env["LIVEKIT_API_SECRET"])
@@ -171,7 +186,7 @@ class Sim:
             self.log("participant_connected", identity=p.identity)
 
         self.log("connect", room=self.room_name, identity=self.identity, agent=a.agent, trace_id=self.trace_id, input_id=self.input_id, scenario=a.scenario)
-        await room.connect(self.env["LIVEKIT_URL"], self.token(), options=rtc.RoomOptions(auto_subscribe=True))
+        await room.connect(self.server_url or self.env["LIVEKIT_URL"], self.token(), options=rtc.RoomOptions(auto_subscribe=True))
         self.log("connected")
         # 静音麦轨(让 worker 用户轨订阅→输入门开→pipeline 起)
         source = rtc.AudioSource(SR, 1)
@@ -225,6 +240,7 @@ class Sim:
         await room.disconnect()
         summary = {
             "scenario": a.scenario, "room": self.room_name, "trace_id": self.trace_id, "input_id": self.input_id,
+            "room_source": self.room_source,
             "samples_in_wav": n, "chunks_sent": seq, "samples_sent": sent,
             "input_ready": self.input_ready, "acks": len(self.acks),
             "last_ack": self.acks[-1] if self.acks else None, "result": self.result,
@@ -249,7 +265,8 @@ class Sim:
             f = ev.frame
             self.reply_frames += 1
             self.reply_samples += f.samples_per_channel
-            data = memoryview(f.data).cast("h")
+            mv = memoryview(f.data)
+            data = mv if mv.format == "h" else mv.cast("h")  # livekit-rtc 1.1.x 已是 int16 视图，cast 会抛 TypeError
             if any(abs(x) > 50 for x in data[: min(len(data), 480)]):
                 self.reply_nonzero_frames += 1
 
@@ -268,11 +285,16 @@ async def main() -> int:
     ap.add_argument("--pace-ms", type=float, default=0.0)
     ap.add_argument("--timeout", type=float, default=25.0)
     ap.add_argument("--out", default="opcm_sim_results.jsonl")
+    ap.add_argument("--room-file", default="", help="预铸房 JSON（opcm_poc_mint_rooms.py 输出）；给定则不读 LIVEKIT 密钥")
+    ap.add_argument("--room-index", type=int, default=0)
     a = ap.parse_args()
-    env = load_env()
-    for k in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"):
-        if not env.get(k):
-            print("missing env", k, file=sys.stderr); return 2
+    if a.room_file:
+        env: dict[str, str] = {}
+    else:
+        env = load_env()
+        for k in ("LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"):
+            if not env.get(k):
+                print("missing env", k, file=sys.stderr); return 2
     sim = Sim(a, env)
     summary = await sim.run()
     with open(a.out, "a", encoding="utf-8") as fo:

@@ -1,0 +1,40 @@
+{
+  "schema": "p003.oneshot.poc-rooms.v1",
+  "label": "cc-selfcheck2-20260908",
+  "issued_at_ms": 1788881929859,
+  "issued_at_utc": "2026-09-08T15:38:49Z",
+  "issuer": "cc/opcm_poc_mint_rooms.py",
+  "purpose": "One-shot v0.3 隔离 POC：只派 rust-worker-poc；不进生产 worker/大脑/设备记忆；一房一次不复用",
+  "server_url": "wss://voice-hk.hahaxiong.cc",
+  "expected_agent_name": "rust-worker-poc",
+  "sn": "POCTEST0001",
+  "identity": "dev-POCTEST0001",
+  "input_mode": "ordered_pcm",
+  "history_topic": "p003.audio.history.v1",
+  "ttl_seconds": 172800,
+  "count": 1,
+  "rules": [
+    "一房一次：每次实验取一个未用条目，进房前不改任何字段；失败关房换下一条，不复用",
+    "OPCM begin/chunk/end/cancel 头里的 trace_id/session_id 必须等于该条目的 trace_id/session_id（worker 只对撞 trace_id，session_id 记入证据）",
+    "identity 必须用条目的 identity（dev-<SN>）；worker 只收该身份在 history_topic 上的包",
+    "必须发布麦克风轨（与生产一致）：worker 用户轨订到后才起管线、才发 session.input_ready；ordered_pcm 房里该轨的 RTC 音频不进识别",
+    "queued_next 只是 worker ASR 队列水位，不是 ASR ready/成功；终局只看 result.status"
+  ],
+  "rooms": [
+    {
+      "status": "ok",
+      "server_url": "wss://voice-hk.hahaxiong.cc",
+      "room_name": "sn-POCTEST0001-1788881929",
+      "identity": "dev-POCTEST0001",
+      "trace_id": "d729a2d6-24bf-43cc-b882-31e22e15ca60",
+      "session_id": "9d963c5d-0fdf-4883-8d4e-7e22e6c9e7a2",
+      "issue_ts_ms": 1788881929858,
+      "expires_at_ms": 1789054729000,
+      "expires_at_utc": "2026-09-10T15:38:49Z",
+      "expected_agent_name": "rust-worker-poc",
+      "input_mode": "ordered_pcm",
+      "token_fingerprint": "b7aa9de23fe7b00d"
+    }
+  ],
+  "note": "去 token 副本；token_fingerprint=sha256(token) 前 16 位，仅供对账"
+}

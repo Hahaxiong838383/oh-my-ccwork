@@ -1,0 +1,132 @@
+Sep 08 15:00:06.114660 2026-09-08T15:00:06.114433Z  INFO received job request, accepting job_id=AJ_CNnAjtBF3TEF room=sn-POCTEST0001-1788879605
+Sep 08 15:00:06.120280 2026-09-08T15:00:06.120187Z  INFO job_assignment_received job_id=AJ_CNnAjtBF3TEF room=sn-POCTEST0001-1788879605 elapsed_ms=0 issue_to_assignment_ms=382 issue_clock="ms" has_trace=true
+Sep 08 15:00:06.120280 2026-09-08T15:00:06.120280Z  INFO worker_room_connect_start job_id=AJ_CNnAjtBF3TEF room=sn-POCTEST0001-1788879605 elapsed_ms=0
+Sep 08 15:00:06.243702 2026-09-08T15:00:06.231865Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1788879605
+Sep 08 15:00:06.243702 2026-09-08T15:00:06.231973Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1788879605 nonstream=true
+Sep 08 15:00:06.243702 2026-09-08T15:00:06.232144Z  INFO tts provider 生效值 room=sn-POCTEST0001-1788879605 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 15:00:06.376806 2026-09-08T15:00:06.376455Z  INFO worker_room_connected room=sn-POCTEST0001-1788879605 elapsed_ms=256 connect_ms=256
+Sep 08 15:00:06.387636 2026-09-08T15:00:06.387420Z  INFO agent_track_published room=sn-POCTEST0001-1788879605 elapsed_ms=267
+Sep 08 15:00:06.387636 2026-09-08T15:00:06.387522Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1788879605 expected_device="dev-POCTEST0001"
+Sep 08 15:00:06.387636 2026-09-08T15:00:06.387568Z  INFO user_track_subscribed room=sn-POCTEST0001-1788879605 identity=dev-POCTEST0001 elapsed_ms=267
+Sep 08 15:00:06.389529 2026-09-08T15:00:06.389073Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1788879605 elapsed_ms=268
+Sep 08 15:00:06.435964 2026-09-08T15:00:06.435309Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1788879605
+Sep 08 15:00:06.439237 2026-09-08T15:00:06.439008Z  INFO pipeline prebuilt room=sn-POCTEST0001-1788879605 elapsed_ms=207 has_fillers=true has_speaker=true
+Sep 08 15:00:06.439612 2026-09-08T15:00:06.439264Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1788879605 prebuilt_age_ms=207
+Sep 08 15:00:06.439612 2026-09-08T15:00:06.439273Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1788879605
+Sep 08 15:00:06.439612 2026-09-08T15:00:06.439301Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1788879605
+Sep 08 15:00:06.440412 2026-09-08T15:00:06.440398Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1788879605 enabled=false text_empty=false
+Sep 08 15:00:06.440553 2026-09-08T15:00:06.440431Z  INFO input_loop_started room=sn-POCTEST0001-1788879605 elapsed_ms=320 track_to_input_loop_ms=52
+Sep 08 15:00:06.440553 2026-09-08T15:00:06.440501Z  INFO session.input_ready published room=sn-POCTEST0001-1788879605
+Sep 08 15:00:06.472562 2026-09-08T15:00:06.472435Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1788879605 elapsed_ms=352
+Sep 08 15:00:06.472562 2026-09-08T15:00:06.472536Z  INFO output_ready room=sn-POCTEST0001-1788879605 elapsed_ms=352
+Sep 08 15:00:06.806306 2026-09-08T15:00:06.806213Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 15:00:07.376864 2026-09-08T15:00:07.376735Z  INFO stt final: 小可小可
+Sep 08 15:00:07.595953 2026-09-08T15:00:07.595738Z  INFO stt final: 一加一等于几
+Sep 08 15:00:07.611637 2026-09-08T15:00:07.611053Z  INFO ordered_pcm result room=sn-POCTEST0001-1788879605 result={"finals":2,"finals_held":2,"input_id":"a324e088-22a0-4343-887f-f518569d43a4","queued_next":43325,"reason":null,"received_next":43325,"samples_queued":43325,"status":"complete","t":"result","text_chars":10}
+Sep 08 15:00:07.611637 2026-09-08T15:00:07.611191Z  INFO ordered_pcm generation complete → final 进现役 commit 路径 room=sn-POCTEST0001-1788879605 chars=10
+Sep 08 15:00:07.611637 2026-09-08T15:00:07.611417Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1788879605 evidence={"backlog_peak_samples":3200,"blocks_queued":14,"chunks_duplicate":0,"chunks_received":68,"end_before_final":1,"end_sample":43325,"final_before_end":0,"finals_after_terminal":0,"finals_held":2,"first_sample":0,"input_id":"a324e088-22a0-4343-887f-f518569d43a4","interims_held":4,"keep_from":0,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":70,"phase":"terminal","queue_full_events":0,"queued_next":43325,"received_next":43325,"rtc_frames_dropped":122,"samples_cropped_before_keep_from":0,"samples_queued":43325,"samples_received":43325,"silence_samples_submitted":9600,"stream_interrupted":0,"tail_block_samples":1725}
+Sep 08 15:00:08.043025 2026-09-08T15:00:08.043141Z  INFO turn committed: 小可小可一加一等于几 room=sn-POCTEST0001-1788879605 eou_ms=430 stt_ms=0
+Sep 08 15:00:08.043025 2026-09-08T15:00:08.043244Z  INFO filler picked room=sn-POCTEST0001-1788879605 turn_id=1 bucket=ask dur_ms=2000 boost=false text='唔，让我捋捋。'
+Sep 08 15:00:08.055869 2026-09-08T15:00:08.055822Z  INFO aec warmup active, disabling interruptions for 0.50s room=sn-POCTEST0001-1788879605
+Sep 08 15:00:08.727610 2026-09-08T15:00:08.727022Z  INFO llm stream done ttft_ms=480 chunks=11 chars=16
+Sep 08 15:00:08.727610 2026-09-08T15:00:08.727440Z  INFO tts synth: 一加一等于二哦，是不是很简单呀。…(16字)
+Sep 08 15:00:13.107958 2026-09-08T15:00:13.107544Z  INFO playout metrics room=sn-POCTEST0001-1788879605 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=205 first_underrun_ms=-1 played_frames=504 exit="SourceDrained"
+Sep 08 15:00:13.109446 2026-09-08T15:00:13.108655Z  INFO interrupt telemetry: speaking→listening interim='' room=sn-POCTEST0001-1788879605
+Sep 08 15:00:13.936156 2026-09-08T15:00:13.935918Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1788879605 identity=dev-POCTEST0001
+Sep 08 15:00:14.020923 2026-09-08T15:00:14.020536Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1788879605
+Sep 08 15:00:14.020923 2026-09-08T15:00:14.020647Z  INFO job closed room=sn-POCTEST0001-1788879605 uptime_s=7
+Sep 08 15:00:22.787700 2026-09-08T15:00:22.787120Z  INFO received job request, accepting job_id=AJ_JrLuq7SdFMgQ room=sn-POCTEST0001-1788879622
+Sep 08 15:00:22.793697 2026-09-08T15:00:22.793255Z  INFO job_assignment_received job_id=AJ_JrLuq7SdFMgQ room=sn-POCTEST0001-1788879622 elapsed_ms=0 issue_to_assignment_ms=310 issue_clock="ms" has_trace=true
+Sep 08 15:00:22.793697 2026-09-08T15:00:22.793360Z  INFO worker_room_connect_start job_id=AJ_JrLuq7SdFMgQ room=sn-POCTEST0001-1788879622 elapsed_ms=0
+Sep 08 15:00:22.823166 2026-09-08T15:00:22.823056Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1788879622
+Sep 08 15:00:22.823166 2026-09-08T15:00:22.823120Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1788879622 nonstream=true
+Sep 08 15:00:22.823630 2026-09-08T15:00:22.823530Z  INFO tts provider 生效值 room=sn-POCTEST0001-1788879622 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 15:00:23.002875 2026-09-08T15:00:22.997302Z  INFO pipeline prebuilt room=sn-POCTEST0001-1788879622 elapsed_ms=174 has_fillers=true has_speaker=true
+Sep 08 15:00:23.005779 2026-09-08T15:00:23.005709Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 15:00:23.018631 2026-09-08T15:00:23.018447Z  INFO worker_room_connected room=sn-POCTEST0001-1788879622 elapsed_ms=225 connect_ms=225
+Sep 08 15:00:23.044276 2026-09-08T15:00:23.043786Z  INFO agent_track_published room=sn-POCTEST0001-1788879622 elapsed_ms=250
+Sep 08 15:00:23.044276 2026-09-08T15:00:23.043939Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1788879622 expected_device="dev-POCTEST0001"
+Sep 08 15:00:23.044276 2026-09-08T15:00:23.043992Z  INFO user_track_subscribed room=sn-POCTEST0001-1788879622 identity=dev-POCTEST0001 elapsed_ms=250
+Sep 08 15:00:23.045279 2026-09-08T15:00:23.044741Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1788879622 elapsed_ms=251
+Sep 08 15:00:23.045279 2026-09-08T15:00:23.044934Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1788879622 prebuilt_age_ms=222
+Sep 08 15:00:23.045279 2026-09-08T15:00:23.044944Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1788879622
+Sep 08 15:00:23.045279 2026-09-08T15:00:23.044981Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1788879622
+Sep 08 15:00:23.045668 2026-09-08T15:00:23.045487Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1788879622 enabled=false text_empty=false
+Sep 08 15:00:23.045668 2026-09-08T15:00:23.045517Z  INFO input_loop_started room=sn-POCTEST0001-1788879622 elapsed_ms=252 track_to_input_loop_ms=1
+Sep 08 15:00:23.045668 2026-09-08T15:00:23.045551Z  INFO session.input_ready published room=sn-POCTEST0001-1788879622
+Sep 08 15:00:23.056637 2026-09-08T15:00:23.052832Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1788879622
+Sep 08 15:00:23.172378 2026-09-08T15:00:23.172201Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1788879622 elapsed_ms=378
+Sep 08 15:00:23.172378 2026-09-08T15:00:23.172278Z  INFO output_ready room=sn-POCTEST0001-1788879622 elapsed_ms=379
+Sep 08 15:00:23.651155 2026-09-08T15:00:23.650600Z  INFO stt final: 不要开灯
+Sep 08 15:00:23.661315 2026-09-08T15:00:23.660053Z  INFO ordered_pcm result room=sn-POCTEST0001-1788879622 result={"finals":1,"finals_held":1,"input_id":"0db762d9-df10-4270-bb01-8c61ba82a45a","queued_next":15232,"reason":null,"received_next":15232,"samples_queued":15232,"status":"complete","t":"result","text_chars":4}
+Sep 08 15:00:23.661315 2026-09-08T15:00:23.660224Z  INFO ordered_pcm generation complete → final 进现役 commit 路径 room=sn-POCTEST0001-1788879622 chars=4
+Sep 08 15:00:23.661315 2026-09-08T15:00:23.660399Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1788879622 evidence={"backlog_peak_samples":3200,"blocks_queued":5,"chunks_duplicate":0,"chunks_received":24,"end_before_final":1,"end_sample":15232,"final_before_end":0,"finals_after_terminal":0,"finals_held":1,"first_sample":0,"input_id":"0db762d9-df10-4270-bb01-8c61ba82a45a","interims_held":3,"keep_from":0,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":26,"phase":"terminal","queue_full_events":0,"queued_next":15232,"received_next":15232,"rtc_frames_dropped":62,"samples_cropped_before_keep_from":0,"samples_queued":15232,"samples_received":15232,"silence_samples_submitted":9600,"stream_interrupted":0,"tail_block_samples":2432}
+Sep 08 15:00:24.103932 2026-09-08T15:00:24.097982Z  INFO turn committed: 不要开灯 room=sn-POCTEST0001-1788879622 eou_ms=436 stt_ms=0
+Sep 08 15:00:24.103932 2026-09-08T15:00:24.098112Z  INFO filler picked room=sn-POCTEST0001-1788879622 turn_id=1 bucket=gen dur_ms=2040 boost=false text='嗯——让我顺一顺。'
+Sep 08 15:00:24.103932 2026-09-08T15:00:24.100651Z  INFO aec warmup active, disabling interruptions for 0.50s room=sn-POCTEST0001-1788879622
+Sep 08 15:00:25.063497 2026-09-08T15:00:25.063401Z  INFO tts synth: 我会帮你把灯光关掉，现在周围会暗下来哦。…(20字)
+Sep 08 15:00:25.065009 2026-09-08T15:00:25.064801Z  INFO llm stream done ttft_ms=736 chunks=18 chars=20
+Sep 08 15:00:30.242740 2026-09-08T15:00:30.242551Z  INFO playout metrics room=sn-POCTEST0001-1788879622 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=194 first_underrun_ms=-1 played_frames=612 exit="SourceDrained"
+Sep 08 15:00:30.243819 2026-09-08T15:00:30.243209Z  INFO interrupt telemetry: speaking→listening interim='' room=sn-POCTEST0001-1788879622
+Sep 08 15:00:31.083114 2026-09-08T15:00:31.082947Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1788879622 identity=dev-POCTEST0001
+Sep 08 15:00:31.155092 2026-09-08T15:00:31.154764Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1788879622
+Sep 08 15:00:31.155092 2026-09-08T15:00:31.154865Z  INFO job closed room=sn-POCTEST0001-1788879622 uptime_s=8
+Sep 08 15:00:39.815906 2026-09-08T15:00:39.814279Z  INFO received job request, accepting job_id=AJ_KS9BUvQcaHc7 room=sn-POCTEST0001-1788879639
+Sep 08 15:00:39.819415 2026-09-08T15:00:39.819330Z  INFO job_assignment_received job_id=AJ_KS9BUvQcaHc7 room=sn-POCTEST0001-1788879639 elapsed_ms=0 issue_to_assignment_ms=304 issue_clock="ms" has_trace=true
+Sep 08 15:00:39.819727 2026-09-08T15:00:39.819420Z  INFO worker_room_connect_start job_id=AJ_KS9BUvQcaHc7 room=sn-POCTEST0001-1788879639 elapsed_ms=0
+Sep 08 15:00:39.845895 2026-09-08T15:00:39.845783Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1788879639
+Sep 08 15:00:39.845895 2026-09-08T15:00:39.845865Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1788879639 nonstream=true
+Sep 08 15:00:39.846292 2026-09-08T15:00:39.846064Z  INFO tts provider 生效值 room=sn-POCTEST0001-1788879639 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 15:00:40.007134 2026-09-08T15:00:40.006868Z  INFO worker_room_connected room=sn-POCTEST0001-1788879639 elapsed_ms=187 connect_ms=187
+Sep 08 15:00:40.016146 2026-09-08T15:00:40.015836Z  INFO pipeline prebuilt room=sn-POCTEST0001-1788879639 elapsed_ms=170 has_fillers=true has_speaker=true
+Sep 08 15:00:40.050540 2026-09-08T15:00:40.050396Z  INFO agent_track_published room=sn-POCTEST0001-1788879639 elapsed_ms=231
+Sep 08 15:00:40.050540 2026-09-08T15:00:40.050574Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1788879639 expected_device="dev-POCTEST0001"
+Sep 08 15:00:40.051034 2026-09-08T15:00:40.050624Z  INFO user_track_subscribed room=sn-POCTEST0001-1788879639 identity=dev-POCTEST0001 elapsed_ms=231
+Sep 08 15:00:40.051315 2026-09-08T15:00:40.051097Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1788879639 elapsed_ms=231
+Sep 08 15:00:40.051315 2026-09-08T15:00:40.051203Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1788879639 prebuilt_age_ms=205
+Sep 08 15:00:40.051315 2026-09-08T15:00:40.051211Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1788879639
+Sep 08 15:00:40.051315 2026-09-08T15:00:40.051241Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1788879639
+Sep 08 15:00:40.051768 2026-09-08T15:00:40.051758Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1788879639 enabled=false text_empty=false
+Sep 08 15:00:40.053845 2026-09-08T15:00:40.053623Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 15:00:40.055862 2026-09-08T15:00:40.055633Z  INFO input_loop_started room=sn-POCTEST0001-1788879639 elapsed_ms=236 track_to_input_loop_ms=4
+Sep 08 15:00:40.055862 2026-09-08T15:00:40.055734Z  INFO session.input_ready published room=sn-POCTEST0001-1788879639
+Sep 08 15:00:40.058906 2026-09-08T15:00:40.058542Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1788879639
+Sep 08 15:00:40.118980 2026-09-08T15:00:40.118618Z  INFO ordered_pcm result room=sn-POCTEST0001-1788879639 result={"action":"repeat_prompt","finals_held":0,"input_id":"60fdf574-4555-46aa-81a3-cec756bf937c","queued_next":0,"reason":"missing_seq","received_next":1920,"status":"failed","t":"result"}
+Sep 08 15:00:40.157585 2026-09-08T15:00:40.157405Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1788879639 elapsed_ms=338
+Sep 08 15:00:40.157585 2026-09-08T15:00:40.157506Z  INFO output_ready room=sn-POCTEST0001-1788879639 elapsed_ms=338
+Sep 08 15:00:40.185699 2026-09-08T15:00:40.185625Z  INFO ordered_pcm generation discarded (zero commit) room=sn-POCTEST0001-1788879639 reason="missing_seq"
+Sep 08 15:00:40.186079 2026-09-08T15:00:40.185803Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1788879639 evidence={"backlog_peak_samples":1920,"blocks_queued":0,"chunks_duplicate":0,"chunks_received":3,"end_before_final":0,"end_sample":null,"final_before_end":0,"finals_after_terminal":0,"finals_held":0,"first_sample":0,"input_id":"60fdf574-4555-46aa-81a3-cec756bf937c","interims_held":0,"keep_from":0,"outcome":"missing_seq","packets_after_terminal":11,"packets_rejected":0,"packets_total":16,"phase":"terminal","queue_full_events":0,"queued_next":0,"received_next":1920,"rtc_frames_dropped":12,"samples_cropped_before_keep_from":0,"samples_queued":0,"samples_received":1920,"silence_samples_submitted":0,"stream_interrupted":0,"tail_block_samples":0}
+Sep 08 15:00:41.645262 2026-09-08T15:00:41.645108Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1788879639 identity=dev-POCTEST0001
+Sep 08 15:00:41.667291 2026-09-08T15:00:41.667208Z  INFO Disconnected from room "sn-POCTEST0001-1788879639" with reason: ClientInitiated
+Sep 08 15:00:41.702533 2026-09-08T15:00:41.702174Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1788879639
+Sep 08 15:00:41.702533 2026-09-08T15:00:41.702347Z  INFO job closed room=sn-POCTEST0001-1788879639 uptime_s=1
+Sep 08 15:00:50.435535 2026-09-08T15:00:50.434308Z  INFO received job request, accepting job_id=AJ_qP5seBmq2kEH room=sn-POCTEST0001-1788879650
+Sep 08 15:00:50.441548 2026-09-08T15:00:50.440778Z  INFO job_assignment_received job_id=AJ_qP5seBmq2kEH room=sn-POCTEST0001-1788879650 elapsed_ms=0 issue_to_assignment_ms=334 issue_clock="ms" has_trace=true
+Sep 08 15:00:50.441548 2026-09-08T15:00:50.441253Z  INFO worker_room_connect_start job_id=AJ_qP5seBmq2kEH room=sn-POCTEST0001-1788879650 elapsed_ms=0
+Sep 08 15:00:50.476138 2026-09-08T15:00:50.476028Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1788879650
+Sep 08 15:00:50.476138 2026-09-08T15:00:50.476100Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1788879650 nonstream=true
+Sep 08 15:00:50.476658 2026-09-08T15:00:50.476275Z  INFO tts provider 生效值 room=sn-POCTEST0001-1788879650 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+Sep 08 15:00:50.654695 2026-09-08T15:00:50.653757Z  INFO worker_room_connected room=sn-POCTEST0001-1788879650 elapsed_ms=213 connect_ms=213
+Sep 08 15:00:50.660119 2026-09-08T15:00:50.660049Z  INFO pipeline prebuilt room=sn-POCTEST0001-1788879650 elapsed_ms=184 has_fillers=true has_speaker=true
+Sep 08 15:00:50.666203 2026-09-08T15:00:50.665842Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+Sep 08 15:00:50.685066 2026-09-08T15:00:50.684990Z  INFO agent_track_published room=sn-POCTEST0001-1788879650 elapsed_ms=244
+Sep 08 15:00:50.685066 2026-09-08T15:00:50.685062Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1788879650 expected_device="dev-POCTEST0001"
+Sep 08 15:00:50.685664 2026-09-08T15:00:50.685102Z  INFO user_track_subscribed room=sn-POCTEST0001-1788879650 identity=dev-POCTEST0001 elapsed_ms=244
+Sep 08 15:00:50.685664 2026-09-08T15:00:50.685170Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1788879650 elapsed_ms=244
+Sep 08 15:00:50.685664 2026-09-08T15:00:50.685281Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1788879650 prebuilt_age_ms=209
+Sep 08 15:00:50.685664 2026-09-08T15:00:50.685291Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1788879650
+Sep 08 15:00:50.685664 2026-09-08T15:00:50.685321Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1788879650
+Sep 08 15:00:50.686286 2026-09-08T15:00:50.686191Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1788879650 enabled=false text_empty=false
+Sep 08 15:00:50.696000 2026-09-08T15:00:50.695893Z  INFO input_loop_started room=sn-POCTEST0001-1788879650 elapsed_ms=255 track_to_input_loop_ms=10
+Sep 08 15:00:50.696000 2026-09-08T15:00:50.695984Z  INFO session.input_ready published room=sn-POCTEST0001-1788879650
+Sep 08 15:00:50.778841 2026-09-08T15:00:50.778727Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1788879650 elapsed_ms=338
+Sep 08 15:00:50.778841 2026-09-08T15:00:50.778806Z  INFO output_ready room=sn-POCTEST0001-1788879650 elapsed_ms=338
+Sep 08 15:00:50.898859 2026-09-08T15:00:50.898195Z  INFO ordered_pcm result room=sn-POCTEST0001-1788879650 result={"action":"repeat_prompt","finals_held":0,"input_id":"cde1f97a-10f4-4ae8-9602-da165e97528e","queued_next":19200,"reason":"cancelled","received_next":21760,"status":"failed","t":"result"}
+Sep 08 15:00:50.898859 2026-09-08T15:00:50.898288Z  INFO control cancel room=sn-POCTEST0001-1788879650 trace_id=36fa6e60-b9ee-489c-8fce-45e58ea9f907 seq=1 cancelled=false already_done=false had_turn=false
+Sep 08 15:00:51.252776 2026-09-08T15:00:51.252015Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1788879650
+Sep 08 15:00:51.275190 2026-09-08T15:00:51.274818Z  INFO stt final: 小可小可
+Sep 08 15:00:51.275948 2026-09-08T15:00:51.275825Z  INFO ordered_pcm generation discarded (zero commit) room=sn-POCTEST0001-1788879650 reason="cancelled"
+Sep 08 15:00:51.275948 2026-09-08T15:00:51.275908Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1788879650 evidence={"backlog_peak_samples":3200,"blocks_queued":6,"chunks_duplicate":0,"chunks_received":34,"end_before_final":0,"end_sample":null,"final_before_end":0,"finals_after_terminal":1,"finals_held":0,"first_sample":0,"input_id":"cde1f97a-10f4-4ae8-9602-da165e97528e","interims_held":0,"keep_from":0,"outcome":"cancelled","packets_after_terminal":0,"packets_rejected":0,"packets_total":35,"phase":"terminal","queue_full_events":0,"queued_next":19200,"received_next":21760,"rtc_frames_dropped":59,"samples_cropped_before_keep_from":0,"samples_queued":19200,"samples_received":21760,"silence_samples_submitted":0,"stream_interrupted":0,"tail_block_samples":0}
+Sep 08 15:00:52.425950 2026-09-08T15:00:52.425580Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1788879650 identity=dev-POCTEST0001
+Sep 08 15:00:52.485422 2026-09-08T15:00:52.483021Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1788879650
+Sep 08 15:00:52.485422 2026-09-08T15:00:52.483276Z  INFO job closed room=sn-POCTEST0001-1788879650 uptime_s=2
