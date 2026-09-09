@@ -347,6 +347,11 @@ pub struct Session {
     tail_done: bool,
     held_finals: Vec<String>,
     outcome: Option<Outcome>,
+    /// B6 时间线(注入时钟,unix ms):首块/首 held final/end/收流裁决——证据里以 begin 相对毫秒输出。
+    first_chunk_at_ms: Option<i64>,
+    first_final_at_ms: Option<i64>,
+    end_at_ms: Option<i64>,
+    stream_end_at_ms: Option<i64>,
     pub counters: Counters,
 }
 
@@ -367,6 +372,10 @@ impl Session {
             tail_done: false,
             held_finals: Vec::new(),
             outcome: None,
+            first_chunk_at_ms: None,
+            first_final_at_ms: None,
+            end_at_ms: None,
+            stream_end_at_ms: None,
             counters: Counters::default(),
         }
     }
@@ -463,8 +472,8 @@ impl Session {
         let h = &pkt.header;
         match h.t.as_str() {
             "begin" => self.on_begin(h, now_ms),
-            "chunk" => self.on_chunk(pkt),
-            "end" => self.on_end(h),
+            "chunk" => self.on_chunk(pkt, now_ms),
+            "end" => self.on_end(h, now_ms),
             "cancel" => {
                 if !self.matches_ident(h) {
                     return self.reject_msg(h, "identity_mismatch");
@@ -520,7 +529,7 @@ impl Session {
         vec![Action::Publish(self.ack())]
     }
 
-    fn on_chunk(&mut self, pkt: &Packet) -> Vec<Action> {
+    fn on_chunk(&mut self, pkt: &Packet, now_ms: i64) -> Vec<Action> {
         let h = &pkt.header;
         if self.phase == Phase::Idle {
             return self.reject_msg(h, "chunk_before_begin");
@@ -565,12 +574,15 @@ impl Session {
         self.buf.extend_from_slice(pcm);
         self.recv_next = h.end;
         self.counters.chunks_received += 1;
+        if self.first_chunk_at_ms.is_none() {
+            self.first_chunk_at_ms = Some(now_ms);
+        }
         self.counters.samples_received += (h.end - h.start) as u64;
         self.counters.backlog_peak_samples = self.counters.backlog_peak_samples.max(self.buf.len() as u64);
         Vec::new() // ack 在 drain_submits 之后发（带最新 submitted_next）
     }
 
-    fn on_end(&mut self, h: &Header) -> Vec<Action> {
+    fn on_end(&mut self, h: &Header, now_ms: i64) -> Vec<Action> {
         if self.phase == Phase::Idle {
             return self.reject_msg(h, "end_before_begin");
         }
@@ -584,6 +596,7 @@ impl Session {
             return self.fail(FailReason::MissingSeq);
         }
         self.end_sample = Some(h.end);
+        self.end_at_ms = Some(now_ms);
         self.phase = Phase::Ended;
         if self.held_finals.is_empty() {
             self.counters.end_before_final += 1;
@@ -648,7 +661,7 @@ impl Session {
     }
 
     /// ASR definite：hold（不 commit）；终态后到达的只计数。
-    pub fn on_stt_final(&mut self, text: String) {
+    pub fn on_stt_final(&mut self, text: String, now_ms: i64) {
         if self.phase == Phase::Terminal {
             self.counters.finals_after_terminal += 1;
             return;
@@ -657,11 +670,15 @@ impl Session {
             self.counters.final_before_end += 1;
         }
         self.counters.finals_held += 1;
+        if self.first_final_at_ms.is_none() {
+            self.first_final_at_ms = Some(now_ms);
+        }
         self.held_finals.push(text);
     }
 
     /// 供应商流结束（LastNoSeq → Closed）：唯一裁决点。
-    pub fn on_stream_end(&mut self) -> (Decision, Vec<Action>) {
+    pub fn on_stream_end(&mut self, now_ms: i64) -> (Decision, Vec<Action>) {
+        self.stream_end_at_ms = Some(now_ms);
         if self.phase == Phase::Terminal {
             let r = match &self.outcome {
                 Some(Outcome::Failed(r)) => *r,
@@ -746,6 +763,12 @@ impl Session {
             "finals_after_terminal": c.finals_after_terminal,
             "final_before_end": c.final_before_end,
             "end_before_final": c.end_before_final,
+            // B6 时间线(相对 begin 的毫秒;缺失为 null 不编数):量 held final 领先设备 end 多少
+            "first_chunk_ms": self.first_chunk_at_ms.map(|t| t - self.begin_at_ms),
+            "first_final_ms": self.first_final_at_ms.map(|t| t - self.begin_at_ms),
+            "end_ms": self.end_at_ms.map(|t| t - self.begin_at_ms),
+            "stream_end_ms": self.stream_end_at_ms.map(|t| t - self.begin_at_ms),
+            "final_lead_over_end_ms": match (self.first_final_at_ms, self.end_at_ms) { (Some(f), Some(e)) => Some(e - f), _ => None },
         })
     }
 }
@@ -950,7 +973,7 @@ mod tests {
         let mut sink = Sink { blocks: vec![], cap: None };
         s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
         s.on_packet(&pkt(header("chunk", "in-1", 0, 0, 640), &tone(640, 1)), 1);
-        s.on_stt_final("半句".into());
+        s.on_stt_final("半句".into(), 0);
         // 跳过 seq 1
         let acts = s.on_packet(&pkt(header("chunk", "in-1", 2, 1280, 1920), &tone(640, 1)), 2);
         assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "failed" && v["reason"] == "missing_seq")));
@@ -959,12 +982,12 @@ mod tests {
         assert_eq!(s.outcome(), Some(&Outcome::Failed(FailReason::MissingSeq)));
         // 终态后：end/chunk/final 全部只计数，不产生动作；裁决=Discard
         assert!(s.on_packet(&pkt(header("end", "in-1", 3, 1920, 1920), &[]), 3).is_empty());
-        s.on_stt_final("迟到".into());
+        s.on_stt_final("迟到".into(), 0);
         assert_eq!(s.counters.finals_after_terminal, 1);
         assert_eq!(s.counters.packets_after_terminal, 1);
         assert!(s.drain_submits(sink.sender()).is_empty());
         assert_eq!(sink.samples(), 0, "失败后不再提交任何 PCM");
-        let (d, acts) = s.on_stream_end();
+        let (d, acts) = s.on_stream_end(0);
         assert_eq!(d, Decision::Discard(FailReason::MissingSeq));
         assert!(acts.is_empty(), "终态唯一，不再发第二个 result");
     }
@@ -1082,22 +1105,22 @@ mod tests {
         let pcm = tone(2 * 16000 + 777, 4);
         let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
         s.on_stt_interim();
-        s.on_stt_final("小可小可，".into()); // 供应商在 end 之前就切出一句
+        s.on_stt_final("小可小可，".into(), 0); // 供应商在 end 之前就切出一句
         assert_eq!(s.counters.final_before_end, 1);
         s.on_packet(&pkt(header("end", "in-1", seq, pcm.len() as u64, pcm.len() as u64), &[]), 100);
         let acts = s.drain_submits(sink.sender());
         assert!(acts.contains(&Action::EndStream));
-        s.on_stt_final("不要开灯。".into());
+        s.on_stt_final("不要开灯。".into(), 0);
         // 裁决前：没有任何 commit（held 2 条），投机/命令零参与由 pipeline 不调用它们保证
         assert_eq!(s.counters.finals_held, 2);
-        let (d, acts) = s.on_stream_end();
+        let (d, acts) = s.on_stream_end(0);
         assert_eq!(d, Decision::Commit("小可小可，不要开灯。".into()));
         assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "complete" && v["finals"] == 2)));
         assert_eq!(s.outcome(), Some(&Outcome::Committed));
         // 之后再来的 final 只计数
-        s.on_stt_final("迟到".into());
+        s.on_stt_final("迟到".into(), 0);
         assert_eq!(s.counters.finals_after_terminal, 1);
-        let (d2, acts2) = s.on_stream_end();
+        let (d2, acts2) = s.on_stream_end(0);
         assert!(matches!(d2, Decision::Discard(_)));
         assert!(acts2.is_empty());
     }
@@ -1109,11 +1132,11 @@ mod tests {
         let mut sink = Sink { blocks: vec![], cap: None };
         s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
         let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &tone(16000, 2), 640, 0);
-        s.on_stt_final("不要".into());
+        s.on_stt_final("不要".into(), 0);
         let acts = s.on_packet(&pkt(header("cancel", "in-1", seq, 0, 0), &[]), 50);
         assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["reason"] == "cancelled")));
         assert!(acts.contains(&Action::EndStream));
-        let (d, _) = s.on_stream_end();
+        let (d, _) = s.on_stream_end(0);
         assert_eq!(d, Decision::Discard(FailReason::Cancelled));
         assert_eq!(s.counters.finals_held, 1, "hold 过 1 条但已作废");
         assert!(s.drain_submits(sink.sender()).is_empty());
@@ -1125,7 +1148,7 @@ mod tests {
         let mut s = session();
         s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
         s.on_packet(&pkt(header("chunk", "in-1", 0, 0, 640), &tone(640, 1)), 1);
-        let (d, acts) = s.on_stream_end();
+        let (d, acts) = s.on_stream_end(0);
         assert_eq!(d, Decision::Discard(FailReason::AsrUnavailable));
         assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["reason"] == "asr_unavailable")));
 
@@ -1135,7 +1158,7 @@ mod tests {
         let (seq, _) = feed(&mut s2, &mut sink, "in-1", 0, &tone(3200, 1), 640, 0);
         s2.on_packet(&pkt(header("end", "in-1", seq, 3200, 3200), &[]), 1);
         s2.drain_submits(sink.sender());
-        let (d, _) = s2.on_stream_end();
+        let (d, _) = s2.on_stream_end(0);
         assert_eq!(d, Decision::Discard(FailReason::NoFinal));
     }
 
@@ -1190,8 +1213,8 @@ mod tests {
         assert_eq!(&flat[..643], &expected[..]);
         assert_eq!(sink.samples(), 643 + Limits::default().tail_silence_samples);
         assert_eq!((s.counters.chunks_received, s.counters.samples_received, s.counters.tail_block_samples), (2, 643, 643));
-        s.on_stt_final("夹具".into());
-        let (d, acts) = s.on_stream_end();
+        s.on_stt_final("夹具".into(), 0);
+        let (d, acts) = s.on_stream_end(0);
         assert_eq!(d, Decision::Commit("夹具".into()));
         assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "complete" && v["samples_queued"] == 643)));
     }
@@ -1206,17 +1229,17 @@ mod tests {
         let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &tone(16000, 2), 640, 0);
         s.on_packet(&pkt(header("end", "in-1", seq, 16000, 16000), &[]), 1);
         s.drain_submits(sink.sender());
-        s.on_stt_final("半段".into());
+        s.on_stt_final("半段".into(), 0);
         let acts = s.on_stream_interrupted();
         assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "failed" && v["reason"] == "asr_unavailable")));
         assert_eq!(s.counters.stream_interrupted, 1);
-        let (d, acts2) = s.on_stream_end();
+        let (d, acts2) = s.on_stream_end(0);
         assert_eq!(d, Decision::Discard(FailReason::AsrUnavailable), "随后的 Closed 不得变成 commit");
         assert!(acts2.is_empty(), "终态唯一，不发第二个 result");
         // 中途断连(还没 end)同样作废
         let mut s2 = session();
         s2.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
-        s2.on_stt_final("早到的半段".into());
+        s2.on_stt_final("早到的半段".into(), 0);
         let acts = s2.on_stream_interrupted();
         assert!(acts.contains(&Action::EndStream), "未收流时中断也要请求收流");
         assert_eq!(s2.outcome(), Some(&Outcome::Failed(FailReason::AsrUnavailable)));
@@ -1237,6 +1260,35 @@ mod tests {
     }
 
     /// 机器可读证据：跑一遍完整正向脚本并落盘 target/ordered_pcm_evidence.json（无 PCM、无文本）。
+    /// B6 时戳(2026-09-09):证据记 begin 相对时刻——首块/首 final/end/收流裁决,以及 final 领先 end 的毫秒数
+    /// (真机 B 型房 final_before_end=1 却量不出领先量,这里补上;全部注入时钟,不依赖挂钟)。
+    #[test]
+    fn evidence_records_timeline_relative_to_begin() {
+        let mut s = session();
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-t", 0, 0), &[]), 1000);
+        let pcm = tone(3200, 9);
+        s.on_packet(&pkt(header("chunk", "in-t", 0, 0, 3200), &pcm), 1100);
+        s.drain_submits(sink.sender());
+        s.on_stt_final("先到的句".into(), 1250);
+        s.on_packet(&pkt(header("end", "in-t", 1, 3200, 3200), &[]), 1300);
+        s.drain_submits(sink.sender());
+        let (d, _) = s.on_stream_end(1350);
+        assert_eq!(d, Decision::Commit("先到的句".into()));
+        let ev = s.evidence();
+        assert_eq!(ev["first_chunk_ms"], 100);
+        assert_eq!(ev["first_final_ms"], 250);
+        assert_eq!(ev["end_ms"], 300);
+        assert_eq!(ev["stream_end_ms"], 350);
+        assert_eq!(ev["final_lead_over_end_ms"], 50);
+        assert_eq!(ev["final_before_end"], 1);
+        // 没有 final 的代次:领先量为 null,不编数
+        let mut s2 = session();
+        s2.on_packet(&pkt(begin_hdr("in-u", 0, 0), &[]), 0);
+        assert!(s2.evidence()["final_lead_over_end_ms"].is_null());
+        assert!(s2.evidence()["first_chunk_ms"].is_null());
+    }
+
     #[test]
     fn evidence_dump_positive_path() {
         let mut s = session();
@@ -1250,8 +1302,8 @@ mod tests {
         s.on_stt_interim();
         s.on_packet(&pkt(header("end", "in-evidence", seq, pcm.len() as u64, pcm.len() as u64), &[]), 100);
         s.drain_submits(sink.sender());
-        s.on_stt_final("不要开灯。".into());
-        let (d, _) = s.on_stream_end();
+        s.on_stt_final("不要开灯。".into(), 0);
+        let (d, _) = s.on_stream_end(0);
         assert!(matches!(d, Decision::Commit(_)));
         let ev = s.evidence();
         assert_eq!(ev["outcome"], "committed");

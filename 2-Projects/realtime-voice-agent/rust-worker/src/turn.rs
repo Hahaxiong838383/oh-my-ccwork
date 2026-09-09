@@ -21,6 +21,7 @@ pub struct TurnGate {
     speech_end_at: Option<Instant>, // 已回溯的真实停说时刻
     eot_prob: Option<f32>,          // 本句段 EOT 预测(说话恢复即作废)
     user_speaking: bool,
+    input_ended: bool, // ordered_pcm 终局:输入已由设备 end 宣告结束,判停不再等待(提交/说话恢复即复位)
 }
 
 impl TurnGate {
@@ -34,6 +35,7 @@ impl TurnGate {
             speech_end_at: None,
             eot_prob: None,
             user_speaking: false,
+            input_ended: false,
         }
     }
 
@@ -54,6 +56,7 @@ impl TurnGate {
 
     pub fn on_speech_start(&mut self) {
         self.user_speaking = true;
+        self.input_ended = false;
         self.speech_end_at = None;
         self.eot_prob = None; // 说话恢复,上一次预测作废
     }
@@ -62,6 +65,13 @@ impl TurnGate {
     pub fn on_speech_end(&mut self, now: Instant, silence: Duration) {
         self.user_speaking = false;
         self.speech_end_at = Some(now.checked_sub(silence).unwrap_or(now));
+    }
+
+    /// ordered_pcm 终局(B6 2026-09-09 真机实证:7/7 房 eou 400–448 ms 全是空等):输入已由设备 end
+    /// 宣告结束、完整性门已裁决,判停等待没有对象——下一次 poll 立即提交(eou_delay≈tick 间隔)。
+    /// 只由 ordered 终局调用;VAD 路径语义不变;提交或说话恢复即复位。
+    pub fn mark_input_ended(&mut self) {
+        self.input_ended = true;
     }
 
     /// EOT 预测结果到达(异步,可能在 END 前后)。
@@ -93,7 +103,7 @@ impl TurnGate {
             (None, Some(f)) => f,
             (None, None) => return None,
         };
-        let delay = self.chosen_delay();
+        let delay = if self.input_ended { Duration::ZERO } else { self.chosen_delay() };
         if now.duration_since(anchor) < delay {
             return None;
         }
@@ -106,6 +116,7 @@ impl TurnGate {
         self.last_final_at = None;
         self.speech_end_at = None;
         self.eot_prob = None;
+        self.input_ended = false;
         Some(info)
     }
 }
@@ -189,5 +200,35 @@ mod tests {
         g.on_final("漏检句", t0);
         assert!(g.poll_commit(t0 + Duration::from_millis(600)).is_none());
         assert!(g.poll_commit(t0 + Duration::from_millis(700)).is_some());
+    }
+
+    /// ordered_pcm 终局:设备 end 已宣告输入结束,final 释放后不等 MIN 延迟,下一次 poll 即提交;提交后复位。
+    #[test]
+    fn input_ended_commits_at_next_poll_without_endpointing_delay() {
+        let mut g = gate();
+        let t0 = Instant::now();
+        g.on_final("有序代次整句", t0);
+        g.mark_input_ended();
+        let c = g.poll_commit(t0 + Duration::from_millis(10)).expect("immediate commit");
+        assert_eq!(c.text, "有序代次整句");
+        assert!(c.eou_delay <= Duration::from_millis(10));
+        // 复位:下一句(无标记)仍按 VAD 漏检兜底等 MIN
+        g.on_final("下一句", t0 + Duration::from_millis(20));
+        assert!(g.poll_commit(t0 + Duration::from_millis(600)).is_none());
+        assert!(g.poll_commit(t0 + Duration::from_millis(700)).is_some());
+    }
+
+    /// 标记不能穿过「用户在说」门,且说话恢复即复位(VAD 路径语义不变)。
+    #[test]
+    fn input_ended_is_cleared_by_speech_start() {
+        let mut g = gate();
+        let t0 = Instant::now();
+        g.on_final("句", t0);
+        g.mark_input_ended();
+        g.on_speech_start();
+        assert!(g.poll_commit(t0 + Duration::from_millis(10)).is_none());
+        g.on_speech_end(t0 + Duration::from_millis(100), Duration::from_millis(0));
+        assert!(g.poll_commit(t0 + Duration::from_millis(200)).is_none()); // 标记已清,等 MIN(650)
+        assert!(g.poll_commit(t0 + Duration::from_millis(800)).is_some());
     }
 }

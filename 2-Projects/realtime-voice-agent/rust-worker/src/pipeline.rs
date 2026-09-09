@@ -939,7 +939,7 @@ pub async fn run_pipeline(
                     if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); } else { orch.on_interim(t) }
                 }
                 Some(SttEvent::Final(t)) => {
-                    if let Some(o) = orch.ordered.as_mut() { o.on_stt_final(t); } else { orch.on_final(t) }
+                    if let Some(o) = orch.ordered.as_mut() { o.on_stt_final(t, unix_ms_now()); } else { orch.on_final(t) }
                 }
                 Some(SttEvent::Interrupted) => {
                     // 现役:连接由 stt 任务重连,这里只记日志;ordered_pcm:代次作废(意外 EOF/断连 ≠ LastNoSeq,不得提交半段 final)
@@ -1100,7 +1100,7 @@ impl Orchestrator {
     /// (退出/急停/回声/设备命令/LLM 门全部照常);否则整代作废,零 commit。
     fn on_ordered_stream_end(&mut self) {
         let (decision, acts) = match self.ordered.as_mut() {
-            Some(o) => o.on_stream_end(),
+            Some(o) => o.on_stream_end(unix_ms_now()),
             None => return,
         };
         self.apply_ordered_actions(acts);
@@ -1108,6 +1108,9 @@ impl Orchestrator {
             crate::ordered_pcm::Decision::Commit(text) => {
                 info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm generation complete → final 进现役 commit 路径");
                 self.on_final(text);
+                // B6(2026-09-09 真机 7/7 房 eou 400–448 ms 全是空等):输入已由设备 end 宣告结束且完整性门已裁决,
+                // 终局 final 免 MIN_ENDPOINTING_DELAY——下一 tick 即 commit;退出/急停/回声/命令/LLM 门照常在 commit 后。
+                self.turn_gate.mark_input_ended();
             }
             crate::ordered_pcm::Decision::Discard(r) => {
                 info!(room = %self.room_name, reason = r.as_str(), "ordered_pcm generation discarded (zero commit)");
