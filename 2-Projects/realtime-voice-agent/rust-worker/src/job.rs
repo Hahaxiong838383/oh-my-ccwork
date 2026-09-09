@@ -46,6 +46,8 @@ struct JobMeta {
     /// One-shot v0.3(2026-09-08):受信输入模式。`ordered_pcm`=实验(RTC 帧不进识别,只吃有序 PCM 代次);
     /// 缺省/其它=现役。只认服务端签发的 job.metadata,设备 payload 自述不算;job 第一帧前固定,房中途不可改。
     input_mode: Option<String>,
+    /// 本地承接 v1（2026-09-09）：签发 metadata `"local_receipt":"v1"` 的房才允许 begin 声明本地承接（与 input_mode 同源受信）。
+    local_receipt: Option<String>,
 }
 
 /// issue→assignment 观测(不进任何门禁)。毫秒口径优先(残余=两机 NTP 偏差,几十 ms 量级);
@@ -147,11 +149,12 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // One-shot v0.3:有序 PCM 入口(默认关;只有受信 metadata 声明 ordered_pcm 的房才消费)。
     // 容量 256:设备按 40 ms 片(640 样本)发 6 s 历史=150 片也放得下;满则丢包→该代因缺片终态失败(fail-closed)。
     let input_mode = crate::ordered_pcm::InputMode::from_meta(meta.input_mode.as_deref());
+    let ordered_local_receipt = meta.local_receipt.as_deref() == Some("v1");
     let expected_device = crate::ordered_pcm::expected_device_identity(&room_name);
     let (hist_tx, hist_rx) = mpsc::channel::<crate::ordered_pcm::Packet>(256);
     let mut hist_rx = Some(hist_rx);
     if input_mode == crate::ordered_pcm::InputMode::OrderedPcm {
-        info!(room = %room_name, expected_device = expected_device.as_deref().unwrap_or("-"), "input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别");
+        info!(room = %room_name, expected_device = expected_device.as_deref().unwrap_or("-"), local_receipt = ordered_local_receipt, "input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别");
     }
     // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
     // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
@@ -361,7 +364,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             };
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, beat2, ready, prebuilt)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, ordered_local_receipt, beat2, ready, prebuilt)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");

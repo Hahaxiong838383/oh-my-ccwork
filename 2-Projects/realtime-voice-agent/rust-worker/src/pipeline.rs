@@ -65,6 +65,9 @@ pub struct PipelineConfig {
     pub ordered_skip_filler_on_spec: bool,
     /// B11：投机至少领先这么多毫秒才跳垫句（突发/A 型房投机 lead≈20 ms，跳了就是 ~1 s 静默；B 型真机 lead≈1.1 s 才值得跳）。
     pub ordered_skip_filler_min_lead_ms: u64,
+    /// 本地承接 v1（2026-09-09 川哥拍板「放行」）：正文门截止 = 设备 end 到达 + 此值（ms）；到点放行（fail-open），不取消整代。
+    /// 3000 = 端侧最长条目 2400 + 600 余量：到点本地声必已结束，放行不重叠。
+    pub ordered_local_receipt_max_ms: u64,
     /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
     /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
     /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
@@ -159,6 +162,7 @@ impl PipelineConfig {
             ordered_spec_on_final: std::env::var("ORDERED_SPEC_ON_FINAL_ENABLED").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_on_spec: std::env::var("ORDERED_SKIP_FILLER_ON_SPEC").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_min_lead_ms: std::env::var("ORDERED_SKIP_FILLER_MIN_LEAD_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(600),
+            ordered_local_receipt_max_ms: std::env::var("ORDERED_LOCAL_RECEIPT_MAX_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(3000),
             echo_suppress_window: Duration::from_millis(
                 std::env::var("ECHO_SUPPRESS_WINDOW_MS")
                     .ok()
@@ -317,6 +321,12 @@ struct Orchestrator {
     ordered_end_candidate_logged: bool,
     /// B12：ordered held final 时提前预建的 TTS 连接（真机 …1684：commit 后 TTS 预热 632 ms + 首块 410 ms = 1.04 s 静默）；start_turn 取走。
     pending_tts_warm: Option<crate::tts::Prewarm>,
+    /// 本地承接 v1：设备 end 被接受的时刻（worker 单调钟）= 正文门截止锚。
+    ordered_end_seen_at: Option<Instant>,
+    /// 本地承接 v1：commit 时定下的正文门截止；start_turn 取走并包装本轮 PCM 管道（只对该轮生效）。
+    pending_local_receipt_deadline: Option<Instant>,
+    /// 本地承接 v1：当前轮正文门的放行句柄（receipt_done → true，幂等）。
+    local_receipt_release: Option<tokio::sync::watch::Sender<bool>>,
     /// 输出门(gate.rs):Android 未订 agent 轨前扣住可听 PCM,首个待播起 5s fail-closed
     output_gate: crate::gate::OutputGate,
     /// 门超时 → 主循环 fail-closed 的传导通道
@@ -690,6 +700,8 @@ pub async fn run_pipeline(
     mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
     mut hist_rx: mpsc::Receiver<crate::ordered_pcm::Packet>,
     input_mode: crate::ordered_pcm::InputMode,
+    // 本地承接 v1：签发 metadata `local_receipt:"v1"`（受信，与 input_mode 同源）。false = 即使 env 开也回 ignored。
+    ordered_local_receipt: bool,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
@@ -706,7 +718,11 @@ pub async fn run_pipeline(
     let ordered_session = match input_mode {
         crate::ordered_pcm::InputMode::OrderedPcm => {
             info!(room = %room_name, "ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃");
-            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), crate::ordered_pcm::Limits::from_env()))
+            let mut limits = crate::ordered_pcm::Limits::from_env();
+            // 本地承接 v1：env 开关 ∧ 签发 metadata 同时成立才接受 begin 声明；批次 2 未签的房恒回 ignored。
+            limits.local_receipt_enabled = limits.local_receipt_enabled && ordered_local_receipt;
+            info!(room = %room_name, local_receipt_enabled = limits.local_receipt_enabled, meta_local_receipt = ordered_local_receipt, "ordered_pcm local receipt v1");
+            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), limits))
         }
         crate::ordered_pcm::InputMode::Rtc => None,
     };
@@ -828,6 +844,9 @@ pub async fn run_pipeline(
         ordered_end_stream_pending: false,
         ordered_end_candidate_logged: false,
         pending_tts_warm: None,
+        ordered_end_seen_at: None,
+        pending_local_receipt_deadline: None,
+        local_receipt_release: None,
     };
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
@@ -1101,6 +1120,10 @@ impl Orchestrator {
     fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) {
         let now_ms = unix_ms_now();
         let mut acts = self.ordered.as_mut().map(|o| o.on_packet(pkt, now_ms)).unwrap_or_default();
+        // 本地承接 v1：设备 end 被接受的时刻 = 正文门截止锚（worker 单调钟，不用设备 sent_at_ms）
+        if self.ordered_end_seen_at.is_none() && self.ordered.as_ref().map(|o| o.end_seen()).unwrap_or(false) {
+            self.ordered_end_seen_at = Some(Instant::now());
+        }
         if let Some(o) = self.ordered.as_mut() {
             let more = o.drain_submits(|block| match stt_tx {
                 Some(tx) => tx.try_send(block).is_ok(),
@@ -1116,6 +1139,14 @@ impl Orchestrator {
         for a in acts {
             match a {
                 crate::ordered_pcm::Action::EndStream => self.ordered_end_stream_pending = true,
+                // 本地承接 v1：端侧本地短语播完 → 放行正文门（轮未起时 Session 已记住，start_turn 让门一开始就是开的）
+                crate::ordered_pcm::Action::ReleaseBody => {
+                    let turn_active = self.local_receipt_release.is_some();
+                    if let Some(tx) = &self.local_receipt_release {
+                        let _ = tx.send(true);
+                    }
+                    info!(room = %self.room_name, turn_active, "ordered_pcm receipt_done accepted → body release");
+                }
                 crate::ordered_pcm::Action::Publish(v) => {
                     if v["t"] == "result" {
                         info!(room = %self.room_name, result = %v, "ordered_pcm result");
@@ -2626,10 +2657,22 @@ impl Orchestrator {
             let tts_warm_ready = self.pending_tts_warm.as_ref().map(|w| w.is_finished()).unwrap_or(false);
             let skip_filler = self.cfg.ordered_skip_filler_on_spec && commit.input_ended && !boost && spec.is_some()
                 && spec_done && tts_warm_ready && spec_lead_ms >= self.cfg.ordered_skip_filler_min_lead_ms;
-            if self.cfg.ordered_skip_filler_on_spec && commit.input_ended && spec.is_some() && !skip_filler {
+            // 本地承接 v1（2026-09-09 川哥拍板）：begin 声明 ∧ 房已签 ∧ 开关开 → 端侧自己播承接短语；
+            // 本轮不播垫句，正文 PCM 扣到端侧 receipt_done 或截止（end 到达 + MAX_MS，到点放行）。投机/预热照常。
+            let local_receipt = commit.input_ended && self.ordered.as_ref().map(|s| s.local_receipt_accepted()).unwrap_or(false);
+            if self.cfg.ordered_skip_filler_on_spec && commit.input_ended && spec.is_some() && !skip_filler && !local_receipt {
                 info!(room = %self.room_name, spec_lead_ms, spec_done, tts_warm_ready, "filler kept: body not imminent");
             }
-            let filler = if skip_filler {
+            let filler = if local_receipt {
+                let deadline = self.ordered_end_seen_at.unwrap_or_else(Instant::now)
+                    + Duration::from_millis(self.cfg.ordered_local_receipt_max_ms);
+                self.pending_local_receipt_deadline = Some(deadline);
+                info!(room = %self.room_name, spec_lead_ms, spec_done, tts_warm_ready,
+                      receipt_done_seen = self.ordered.as_ref().map(|s| s.receipt_done_seen()).unwrap_or(false),
+                      max_ms = self.cfg.ordered_local_receipt_max_ms,
+                      "filler skipped: device local receipt (body gated until receipt_done/deadline)");
+                None
+            } else if skip_filler {
                 info!(room = %self.room_name, spec_lead_ms, spec_done, tts_warm_ready, "filler skipped: ordered + speculation hit (body imminent)");
                 None
             } else {
@@ -2672,6 +2715,17 @@ impl Orchestrator {
             pcm_rx
         } else {
             self.output_gate.wrap(pcm_rx, self.fatal_tx.clone())
+        };
+        // 本地承接 v1：正文门（截止即放行）。包在输出门外侧：输出门语义不变，正文门只扣住已过输出门的可听 PCM；
+        // 本轮无垫句（commit 分支已置 None），管道里全是正文。receipt_done 已先到 → 门一开始就是开的。
+        let pcm_rx = match self.pending_local_receipt_deadline.take() {
+            Some(deadline) => {
+                let already = self.ordered.as_ref().map(|s| s.receipt_done_seen()).unwrap_or(false);
+                let (rtx, rrx) = tokio::sync::watch::channel(already);
+                self.local_receipt_release = Some(rtx);
+                crate::gate::wrap_local_receipt(pcm_rx, rrx, deadline, self.room_name.clone(), id)
+            }
+            None => pcm_rx,
         };
         let (playout_task, ctl) =
             playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
