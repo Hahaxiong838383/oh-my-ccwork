@@ -53,3 +53,7 @@
 - 投机在真机多 final 房的命中率（文本变了就丢弃，最多多一次 LLM 调用）。
 
 署名：cc（Claude）| 2026-09-09 10:40 CST
+
+## 补：mycc 仓提交锚（2026-09-09 10:59 CST）
+
+- B5–B10 回执链 + `tools/opcm_poc_mint_rooms.py` / `opcm_device_sim.py` 补丁 + 两个证据目录已入 mycc `main` @ `d2d21d38e`（29 文件，origin 已推）；worker 代码仍在分支 `feat/ordered-pcm-input` @ `b73e9cb76`。本行为补记，不改上文内容。
