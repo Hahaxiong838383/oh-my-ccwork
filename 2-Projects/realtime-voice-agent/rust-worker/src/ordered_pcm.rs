@@ -1478,7 +1478,7 @@ mod tests {
         assert_eq!(fired, 1, "每代只发一次候选");
         let ev = s.evidence();
         assert!(ev["end_candidate_ms"].is_number());
-        assert!(ev["end_candidate_quiet_ms"].as_u64().unwrap() >= 600);
+        assert!(ev["end_candidate_quiet_ms"].as_u64().unwrap() >= 400, "默认 quiet_ms 已改 400");
         assert_eq!(s.ack()["end_candidate"], true, "候选后 ack 幂等带字段");
         s.on_packet(&pkt(header("end", "in-c", seq, start, start), &[]), 2100);
         s.drain_submits(sink.sender());
