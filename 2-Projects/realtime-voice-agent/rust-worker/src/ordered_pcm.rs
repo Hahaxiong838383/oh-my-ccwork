@@ -239,6 +239,10 @@ pub struct Limits {
     pub end_candidate_quiet_ratio: f64,
     pub end_candidate_quiet_abs_rms: f64,
     pub end_candidate_min_speech_rms: f64,
+    /// B11：安静门限相对本代底噪（chunk RMS 的 p20）的倍数；真机 …1683 实证固定 80 下限在底噪 ≥80 的麦上永不成立。
+    pub end_candidate_floor_k: f64,
+    /// B11：held 文本至少这么多字才发候选（只有唤醒词「小可小可」4 字不发，防只听到唤醒词就收窗）。
+    pub end_candidate_min_chars: usize,
 }
 
 impl Default for Limits {
@@ -249,10 +253,12 @@ impl Default for Limits {
             begin_to_end_timeout_ms: 7_000,
             tail_silence_samples: 9_600,
             end_candidate_enabled: false,
-            end_candidate_quiet_ms: 600,
-            end_candidate_quiet_ratio: 0.08,
+            end_candidate_quiet_ms: 400,
+            end_candidate_quiet_ratio: 0.15,
             end_candidate_quiet_abs_rms: 80.0,
             end_candidate_min_speech_rms: 300.0,
+            end_candidate_floor_k: 2.0,
+            end_candidate_min_chars: 5,
         }
     }
 }
@@ -263,8 +269,10 @@ impl Limits {
         let mut l = Self::default();
         let f = |k: &str, d: f64| std::env::var(k).ok().and_then(|v| v.parse().ok()).unwrap_or(d);
         l.end_candidate_enabled = std::env::var("ORDERED_END_CANDIDATE_ENABLED").map(|v| v == "1").unwrap_or(false);
-        l.end_candidate_quiet_ms = f("ORDERED_END_CANDIDATE_QUIET_MS", 600.0) as u64;
-        l.end_candidate_quiet_ratio = f("ORDERED_END_CANDIDATE_RATIO", 0.08);
+        l.end_candidate_quiet_ms = f("ORDERED_END_CANDIDATE_QUIET_MS", 400.0) as u64;
+        l.end_candidate_quiet_ratio = f("ORDERED_END_CANDIDATE_RATIO", 0.15);
+        l.end_candidate_floor_k = f("ORDERED_END_CANDIDATE_FLOOR_K", 2.0);
+        l.end_candidate_min_chars = f("ORDERED_END_CANDIDATE_MIN_CHARS", 5.0) as usize;
         l.end_candidate_quiet_abs_rms = f("ORDERED_END_CANDIDATE_ABS_RMS", 80.0);
         l.end_candidate_min_speech_rms = f("ORDERED_END_CANDIDATE_MIN_SPEECH_RMS", 300.0);
         l
@@ -390,7 +398,11 @@ pub struct Session {
     stream_end_at_ms: Option<i64>,
     /// B9 #2 能量/候选：本代峰值 RMS、尾部连续安静样本、候选发出时刻与安静量、end 到达时的尾部安静量。
     speech_peak_rms: f64,
-    trailing_quiet_samples: u64,
+    /// B11：每个被接受 chunk 的 (样本数, RMS)——底噪 p20、尾部安静回算、200 ms 时间线都从这里出（不存 PCM）。
+    chunk_rms: Vec<(u32, f32)>,
+    /// B11：最近一次判定用的底噪与门限（证据用）。
+    noise_floor_rms: f64,
+    quiet_thr_rms: f64,
     end_candidate_at_ms: Option<i64>,
     end_candidate_quiet_ms: Option<u64>,
     trailing_quiet_at_end_ms: Option<u64>,
@@ -419,7 +431,9 @@ impl Session {
             end_at_ms: None,
             stream_end_at_ms: None,
             speech_peak_rms: 0.0,
-            trailing_quiet_samples: 0,
+            chunk_rms: Vec::new(),
+            noise_floor_rms: 0.0,
+            quiet_thr_rms: 0.0,
             end_candidate_at_ms: None,
             end_candidate_quiet_ms: None,
             trailing_quiet_at_end_ms: None,
@@ -476,16 +490,73 @@ impl Session {
             || self.phase != Phase::Receiving
             || self.held_finals.is_empty()
             || self.speech_peak_rms < self.limits.end_candidate_min_speech_rms
+            || self.held_text().chars().count() < self.limits.end_candidate_min_chars
         {
             return false;
         }
-        let quiet_ms = self.trailing_quiet_samples * 1000 / SAMPLE_RATE as u64;
+        let thr = self.refresh_quiet_threshold();
+        let quiet_ms = self.trailing_quiet_ms(thr);
         if quiet_ms < self.limits.end_candidate_quiet_ms {
             return false;
         }
         self.end_candidate_at_ms = Some(now_ms);
         self.end_candidate_quiet_ms = Some(quiet_ms);
         true
+    }
+
+    /// B11：底噪 = 本代已接受 chunk RMS 的 p20（有说话段时 p20 落在环境声上；预滚静音不会把它压到 0 以下）。
+    fn noise_floor(&self) -> f64 {
+        if self.chunk_rms.is_empty() {
+            return 0.0;
+        }
+        let mut v: Vec<f32> = self.chunk_rms.iter().map(|&(_, r)| r).collect();
+        v.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+        v[(v.len() - 1) / 5] as f64
+    }
+
+    /// B11：门限 = max(绝对下限, 底噪×k, 峰值×ratio)，每次判定重算并留证据。
+    fn refresh_quiet_threshold(&mut self) -> f64 {
+        self.noise_floor_rms = self.noise_floor();
+        self.quiet_thr_rms = self
+            .limits
+            .end_candidate_quiet_abs_rms
+            .max(self.noise_floor_rms * self.limits.end_candidate_floor_k)
+            .max(self.speech_peak_rms * self.limits.end_candidate_quiet_ratio);
+        self.quiet_thr_rms
+    }
+
+    /// B11：按当前门限从尾部回算连续安静毫秒（门限会随底噪估计变化，所以不用累加计数器）。
+    fn trailing_quiet_ms(&self, thr: f64) -> u64 {
+        let mut samples: u64 = 0;
+        for &(n, r) in self.chunk_rms.iter().rev() {
+            if (r as f64) < thr {
+                samples += n as u64;
+            } else {
+                break;
+            }
+        }
+        samples * 1000 / SAMPLE_RATE as u64
+    }
+
+    /// B11：200 ms 粒度的 RMS 时间线（≤ 60 点，按样本数分箱），只有标量，不含 PCM。
+    fn rms_timeline_200ms(&self) -> Vec<u32> {
+        let bin = 3200u64;
+        let mut out = Vec::new();
+        let (mut acc_n, mut acc_sq) = (0u64, 0f64);
+        for &(n, r) in &self.chunk_rms {
+            acc_sq += (r as f64) * (r as f64) * n as f64;
+            acc_n += n as u64;
+            if acc_n >= bin {
+                out.push((acc_sq / acc_n as f64).sqrt() as u32);
+                acc_n = 0;
+                acc_sq = 0.0;
+            }
+        }
+        if acc_n > 0 {
+            out.push((acc_sq / acc_n as f64).sqrt() as u32);
+        }
+        out.truncate(60);
+        out
     }
 
     fn result_json(&self, status: &str, reason: Option<FailReason>, extra: Value) -> Value {
@@ -662,12 +733,7 @@ impl Session {
             if rms > self.speech_peak_rms {
                 self.speech_peak_rms = rms;
             }
-            let thr = self.limits.end_candidate_quiet_abs_rms.max(self.speech_peak_rms * self.limits.end_candidate_quiet_ratio);
-            if rms < thr {
-                self.trailing_quiet_samples += pcm.len() as u64;
-            } else {
-                self.trailing_quiet_samples = 0;
-            }
+            self.chunk_rms.push((pcm.len() as u32, rms as f32));
         }
         if self.maybe_end_candidate(now_ms) {
             return vec![Action::Publish(self.ack())];
@@ -690,7 +756,8 @@ impl Session {
         }
         self.end_sample = Some(h.end);
         self.end_at_ms = Some(now_ms);
-        self.trailing_quiet_at_end_ms = Some(self.trailing_quiet_samples * 1000 / SAMPLE_RATE as u64);
+        let thr = self.refresh_quiet_threshold();
+        self.trailing_quiet_at_end_ms = Some(self.trailing_quiet_ms(thr));
         self.phase = Phase::Ended;
         if self.held_finals.is_empty() {
             self.counters.end_before_final += 1;
@@ -870,6 +937,9 @@ impl Session {
             "final_lead_over_end_ms": match (self.first_final_at_ms, self.end_at_ms) { (Some(f), Some(e)) => Some(e - f), _ => None },
             // B9 #2 能量与候选（相对 begin 的毫秒；缺失 null）
             "speech_peak_rms": (self.speech_peak_rms * 10.0).round() / 10.0,
+            "noise_floor_rms": (self.noise_floor_rms * 10.0).round() / 10.0,
+            "quiet_thr_rms": (self.quiet_thr_rms * 10.0).round() / 10.0,
+            "rms_timeline_200ms": self.rms_timeline_200ms(),
             "end_candidate_ms": self.end_candidate_at_ms.map(|t| t - self.begin_at_ms),
             "end_candidate_quiet_ms": self.end_candidate_quiet_ms,
             "trailing_quiet_at_end_ms": self.trailing_quiet_at_end_ms,
@@ -1399,7 +1469,7 @@ mod tests {
         let loud = tone(16000, 5); // RMS≈577 ≥ 300
         let (seq, _) = feed(&mut s, &mut sink, "in-c", 0, &loud, 640, 0);
         let start = loud.len() as u64;
-        assert!(s.on_stt_final("整句".into(), 1100).is_empty(), "尾部还不安静：不发候选");
+        assert!(s.on_stt_final("小可小可测试一下".into(), 1100).is_empty(), "尾部还不安静：不发候选");
         let (fired, seq, start) = feed_quiet(&mut s, &mut sink, "in-c", seq, start, 20, 1200);
         assert_eq!(fired, 1, "每代只发一次候选");
         let ev = s.evidence();
@@ -1410,8 +1480,53 @@ mod tests {
         s.drain_submits(sink.sender());
         assert!(s.evidence()["trailing_quiet_at_end_ms"].as_u64().unwrap() >= 600);
         let (d, _) = s.on_stream_end(2200);
-        assert_eq!(d, Decision::Commit("整句".into()));
+        assert_eq!(d, Decision::Commit("小可小可测试一下".into()));
         assert!(s.evidence()["end_candidate_lead_over_end_ms"].as_i64().unwrap() > 0);
+        assert!(s.evidence()["rms_timeline_200ms"].as_array().unwrap().len() >= 5);
+    }
+
+    /// B11 真机回放锚（…1683：峰值≈600、说完后环境底噪≈150 ≥ 固定下限 80）：旧门永不安静，
+    /// 自适应门（底噪 p20×2=300）把底噪判为安静 → 候选照发；evidence 里底噪/门限可读。
+    #[test]
+    fn end_candidate_fires_on_noisy_floor_with_adaptive_gate() {
+        let mut s = Session::new(Some(TRACE.into()), limits_with_candidate());
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-n", 0, 0), &[]), 0);
+        let loud = tone(16000, 5); // RMS≈577
+        let (mut seq, _) = feed(&mut s, &mut sink, "in-n", 0, &loud, 640, 0);
+        let mut start = loud.len() as u64;
+        s.on_stt_final("小可小可测试一下".into(), 1100);
+        let mut fired = 0;
+        for i in 0..25u64 {
+            // 均匀噪声 ±260 → RMS≈150（高于固定下限 80，低于自适应门限 ≈300）
+            let amb: Vec<i16> = (0..640).map(|j| (((j as u64 + i * 640) * 7919 % 521) as i16) - 260).collect();
+            let acts = s.on_packet(&pkt(header("chunk", "in-n", seq, start, start + 640), &amb), 1200 + i as i64 * 40);
+            s.drain_submits(sink.sender());
+            if acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "ack" && v["end_candidate"] == true)) {
+                fired += 1;
+            }
+            seq += 1;
+            start += 640;
+        }
+        assert_eq!(fired, 1, "真机形态：底噪高于 80 也必须能发候选");
+        let ev = s.evidence();
+        assert!(ev["noise_floor_rms"].as_f64().unwrap() > 80.0);
+        assert!(ev["quiet_thr_rms"].as_f64().unwrap() > ev["noise_floor_rms"].as_f64().unwrap());
+        assert!(ev["end_candidate_quiet_ms"].as_u64().unwrap() >= 400);
+    }
+
+    /// B11 负锚：held 文本只有唤醒词（4 字 < min_chars 5）→ 即使安静也不发候选。
+    #[test]
+    fn end_candidate_requires_more_than_wake_word() {
+        let mut s = Session::new(Some(TRACE.into()), limits_with_candidate());
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-w", 0, 0), &[]), 0);
+        let loud = tone(16000, 5);
+        let (seq, _) = feed(&mut s, &mut sink, "in-w", 0, &loud, 640, 0);
+        s.on_stt_final("小可小可".into(), 1100);
+        let (fired, _, _) = feed_quiet(&mut s, &mut sink, "in-w", seq, loud.len() as u64, 20, 1200);
+        assert_eq!(fired, 0);
+        assert!(s.evidence()["end_candidate_ms"].is_null());
     }
 
     /// B9 #2 负锚：开关关 / 无 held final / 本代无可闻语音（峰值 < 300）三种都不发候选，evidence 为 null。
@@ -1423,7 +1538,7 @@ mod tests {
         let mut s = session();
         s.on_packet(&pkt(begin_hdr("in-d", 0, 0), &[]), 0);
         let (seq, _) = feed(&mut s, &mut sink, "in-d", 0, &loud, 640, 0);
-        s.on_stt_final("整句".into(), 1100);
+        s.on_stt_final("小可小可测试一下".into(), 1100);
         let (fired, _, _) = feed_quiet(&mut s, &mut sink, "in-d", seq, loud.len() as u64, 20, 1200);
         assert_eq!(fired, 0);
         assert!(s.evidence()["end_candidate_ms"].is_null());
@@ -1439,7 +1554,7 @@ mod tests {
         s.on_packet(&pkt(begin_hdr("in-f", 0, 0), &[]), 0);
         let low: Vec<i16> = (0..16000).map(|i| ((i % 50) as i16) - 25).collect();
         let (seq, _) = feed(&mut s, &mut sink, "in-f", 0, &low, 640, 0);
-        s.on_stt_final("弱句".into(), 1100);
+        s.on_stt_final("小可小可弱弱地说".into(), 1100);
         let (fired, _, _) = feed_quiet(&mut s, &mut sink, "in-f", seq, low.len() as u64, 20, 1200);
         assert_eq!(fired, 0);
         assert!(s.evidence()["end_candidate_ms"].is_null());

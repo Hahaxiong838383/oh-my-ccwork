@@ -61,6 +61,8 @@ pub struct PipelineConfig {
     /// B9 #3（只在隔离 POC env 置 1）：ordered 每条 held final 到达即起投机 LLM（复用 S1v3 start_speculation），
     /// commit 时文本+历史版本相同才消费，否则丢弃；不改 commit 时序与任何门。
     pub ordered_spec_on_final: bool,
+    /// B11（只在隔离 POC env 置 1）：ordered 提交且投机命中时跳过垫句——正文 ≈+0.3 s 起播，不再等最短垫句 0.96 s。
+    pub ordered_skip_filler_on_spec: bool,
     /// TTS 回声对撞窗(2026-08-26 关灯自嗨实证:确认语「好的…」被端侧回声收回,播完 48ms 后
     /// 从 EOU 正门 commit 成用户轮——打断门只管播放期间,不管回声轮次)。播放中或播完后
     /// 此窗内 commit 的文本若是最近播出文本的子串 → 判回声丢弃。0 = 关闭该门。
@@ -153,6 +155,7 @@ impl PipelineConfig {
             aec_warmup_duration: Duration::from_secs_f32(f("AEC_WARMUP_DURATION", 0.5)),
             ordered_filler_shortest: std::env::var("ORDERED_FILLER_SHORTEST").map(|v| v == "1").unwrap_or(false),
             ordered_spec_on_final: std::env::var("ORDERED_SPEC_ON_FINAL_ENABLED").map(|v| v == "1").unwrap_or(false),
+            ordered_skip_filler_on_spec: std::env::var("ORDERED_SKIP_FILLER_ON_SPEC").map(|v| v == "1").unwrap_or(false),
             echo_suppress_window: Duration::from_millis(
                 std::env::var("ECHO_SUPPRESS_WINDOW_MS")
                     .ok()
@@ -2598,9 +2601,16 @@ impl Orchestrator {
             // B(2026-09-09):ordered 首句 + 隔离开关 → 语义桶最短完整条;打断轮/普通轮/开关关 → 原策略。
             // ordered 来源随 CommitInfo 带出(gate 的标记在 poll_commit 返回前已复位,此处不能再读它)。
             let shortest = self.cfg.ordered_filler_shortest && commit.input_ended && !boost;
-            let filler = self.bank.as_mut().and_then(|b| {
-                if shortest { b.pick_shortest(&user_text, &room, next_turn) } else { b.pick(&user_text, boost, &room, next_turn) }
-            });
+            // B11：投机命中 = LLM 已在流、TTS 首块 ≈0.3 s 内到——垫句反而成了唯一等待（真机 …1683：正文 +297 ms 就绪等到 +999）。
+            let skip_filler = self.cfg.ordered_skip_filler_on_spec && commit.input_ended && !boost && spec.is_some();
+            let filler = if skip_filler {
+                info!(room = %self.room_name, "filler skipped: ordered + speculation hit (body imminent)");
+                None
+            } else {
+                self.bank.as_mut().and_then(|b| {
+                    if shortest { b.pick_shortest(&user_text, &room, next_turn) } else { b.pick(&user_text, boost, &room, next_turn) }
+                })
+            };
             self.start_turn(TurnKind::Reply {
                 user_text,
                 pending_amend: amend,
