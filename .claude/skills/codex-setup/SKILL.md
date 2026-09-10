@@ -52,6 +52,8 @@ node "$CODEX_PLUGIN_ROOT/scripts/codex-companion.mjs" setup --json $ARGUMENTS
 4. 默认策略为 `best`、90% 阈值、300 秒冷却与 300 秒轮询；所有账号耗尽时保持原状，不回退 CPA。
 5. 凭据文件切换只对下一进程生效。重启前读取 `thread_history_1.sqlite` 与 `queue_1.sqlite`，有活动 Turn/排队项时延后。
 6. 不以 `app-server.pid` 单独判活：PID 可能是 zombie。以 `app-server-control.sock` 的 `lsof` owner 为运行真值；已有 SSH proxy 时裸 `codex app-server daemon restart` 可能挂住，只在空闲时终止真实 socket owner 并等待重连。
-7. 验收必须包含两个独立 account ID、两份 usage 成功、`1 → 2 → 1` 双向切换、两槽各一次 `gpt-5.6-sol` 真调用、socket owner 变化、LaunchAgent 退出码 0、无敏感日志残留。
+7. `thread_turns.status=inProgress` 可能跨 App Server 重启永久残留，禁止直接统计全部非终态。只保护当前 socket owner 生命周期内启动的 Turn，或在新进程启动后写入新 `thread_items` 的恢复 Turn；新进程前 300 秒保持 fail-closed。
+8. 若账号已耗尽但日志连续 `busy`，先对比非终态 Turn 的 `started_at`、最新 item 时间与当前 socket owner 启动时间；确认是旧投影后修 Guard 判定，不要改写或删除历史 SQLite 行。
+9. 验收必须包含两个独立 account ID、两份 usage 成功、`1 → 2 → 1` 双向切换、两槽各一次真实模型调用、socket owner 变化、LaunchAgent 退出码 0、定时轮询能记录 `staleTurnsIgnored` 后继续 evaluation、无敏感日志残留。
 
 完整脚本和回滚步骤见 `4-Assets/SOP/codex-studio-dual-subscription/README.md`。

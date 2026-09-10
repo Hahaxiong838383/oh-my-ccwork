@@ -22,6 +22,7 @@
 6. **CC Switch 与本方案互斥**：守护进程检测到 `cc-switch`/`ccswitch` 就停止调度，避免双重接管。
 7. **失败回滚**：账号已换但 App Server 重启失败时，切回原槽位并再次重启。
 8. **低余量不抖动**：剩余额度至少多 `1` 个百分点才切换；活动账号已到 `100%` 时绕过冷却立即逃生。
+9. **陈旧 Turn 不永久阻塞**：只把当前 App Server 生命周期内启动或恢复后有新活动的非终态 Turn 视为在途；新 App Server 启动前 5 分钟仍保守等待，不改写历史数据库。
 
 ## 低余量模式说明
 
@@ -73,6 +74,7 @@ install -m 700 safe-account-summary.py ~/.codex/account-switch/bin/
 install -m 600 com.mycc.codex-account-switch.plist ~/Library/LaunchAgents/
 
 plutil -lint ~/Library/LaunchAgents/com.mycc.codex-account-switch.plist
+python3 -m unittest test_codex_account_guard.py
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mycc.codex-account-switch.plist
 launchctl kickstart gui/$(id -u)/com.mycc.codex-account-switch
 
@@ -89,6 +91,7 @@ launchctl print gui/$(id -u)/com.mycc.codex-account-switch
 - 两个槽位分别完成一次官方 `gpt-5.6-sol` 最小真调用。
 - LaunchAgent `last exit code = 0`，`launchd.err.log` 为 0 字节。
 - Guard 日志无 `fatal`/`restart-failed`，设备验证码与登录原始日志为 0 字节。
+- 回归测试必须覆盖：旧进程残留 Turn 被忽略、恢复后产生新活动的旧 Turn 继续受保护、恢复窗内 fail-closed。
 
 ## 生产验收记录（2026-09-04）
 
@@ -102,3 +105,9 @@ launchctl print gui/$(id -u)/com.mycc.codex-account-switch
 - Guard 已增加 `most-weekly-headroom` 覆盖层；上游 `ccswap 0.31.0` 保持原包不修改。
 - 低余量阈值 `90%`，真正耗尽阈值 `100%`，切换差值 `1%`，冷却 `300s`。
 - 低余量切换继续复用任务空闲门、文件凭据锁、App Server 精确重启和失败回滚。
+
+## 陈旧 Turn 门修复（2026-09-10）
+
+- `thread_history_1.sqlite` 可能长期保留旧 App Server 生命周期遗留的 `inProgress`，不能只按 `status` 总数判断当前任务。
+- Guard 以 `app-server-control.sock` 的真实 owner 启动时间为边界；旧 Turn 只有在新进程启动后写入了新 `thread_items` 才继续算活动。
+- App Server 刚启动的 300 秒恢复窗内仍保守阻止切换；找不到 owner 时只保护最近 300 秒有活动的 Turn。

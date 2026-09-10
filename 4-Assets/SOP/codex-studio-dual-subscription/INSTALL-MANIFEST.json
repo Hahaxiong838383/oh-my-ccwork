@@ -11,6 +11,10 @@
   "lowHeadroomThresholdPct": 90,
   "lowHeadroomExhaustedPct": 100,
   "lowHeadroomHysteresisPct": 1,
+  "turnActivityBoundary": "current-app-server-lifetime",
+  "appServerRecoveryGraceSeconds": 300,
+  "noAppServerActiveWindowSeconds": 300,
+  "regressionTest": "python3 -m unittest test_codex_account_guard.py",
   "provider": "openai",
   "cpaFallback": false,
   "accountSlots": 2

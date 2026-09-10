@@ -36,6 +36,9 @@ LOW_HEADROOM_THRESHOLD_PCT = 90.0
 LOW_HEADROOM_EXHAUSTED_PCT = 100.0
 LOW_HEADROOM_HYSTERESIS_PCT = 1.0
 LOW_HEADROOM_COOLDOWN_SECONDS = 300.0
+APP_SERVER_RECOVERY_GRACE_SECONDS = 300.0
+APP_SERVER_CLOCK_SKEW_SECONDS = 60.0
+NO_APP_SERVER_ACTIVE_WINDOW_SECONDS = 300.0
 
 
 def utc_now() -> str:
@@ -111,22 +114,96 @@ def cc_switch_running() -> bool:
     return False
 
 
-def workload() -> tuple[int, int]:
+def parse_elapsed_seconds(value: str) -> float | None:
+    value = value.strip()
+    if not value:
+        return None
+    days = 0
+    if "-" in value:
+        raw_days, value = value.split("-", 1)
+        if not raw_days.isdigit():
+            return None
+        days = int(raw_days)
+    fields = value.split(":")
+    if len(fields) == 2:
+        hours = "0"
+        minutes, seconds = fields
+    elif len(fields) == 3:
+        hours, minutes, seconds = fields
+    else:
+        return None
+    if not all(field.isdigit() for field in (hours, minutes, seconds)):
+        return None
+    return float(
+        days * 86400 + int(hours) * 3600 + int(minutes) * 60 + int(seconds)
+    )
+
+
+def process_started_at(pid: int) -> float | None:
+    result = subprocess.run(
+        ["ps", "-o", "etime=", "-p", str(pid)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    elapsed = parse_elapsed_seconds(result.stdout)
+    if elapsed is None:
+        return None
+    return time.time() - elapsed
+
+
+def active_turn_cutoff_ms() -> int | None:
+    now = time.time()
+    starts = [
+        started_at
+        for pid in app_server_socket_owners()
+        if (started_at := process_started_at(pid)) is not None
+    ]
+    if not starts:
+        return int((now - NO_APP_SERVER_ACTIVE_WINDOW_SECONDS) * 1000)
+    server_started_at = min(starts)
+    if now - server_started_at < APP_SERVER_RECOVERY_GRACE_SECONDS:
+        return None
+    return int((server_started_at - APP_SERVER_CLOCK_SKEW_SECONDS) * 1000)
+
+
+def turn_counts(path: Path, cutoff_ms: int | None) -> tuple[int, int]:
+    placeholders = ",".join("?" for _ in TERMINAL_TURN_STATES)
+    with sqlite3.connect(path) as database:
+        total = int(
+            database.execute(
+                f"SELECT COUNT(*) FROM thread_turns "
+                f"WHERE status NOT IN ({placeholders})",
+                TERMINAL_TURN_STATES,
+            ).fetchone()[0]
+        )
+        if cutoff_ms is None:
+            return total, 0
+        active = int(
+            database.execute(
+                f"SELECT COUNT(*) FROM thread_turns AS turn "
+                f"WHERE turn.status NOT IN ({placeholders}) "
+                "AND (turn.started_at IS NULL OR turn.started_at * 1000 >= ? "
+                "OR EXISTS (SELECT 1 FROM thread_items AS item "
+                "WHERE item.thread_id = turn.thread_id "
+                "AND item.turn_id = turn.turn_id "
+                "AND item.created_at_ms >= ?))",
+                (*TERMINAL_TURN_STATES, cutoff_ms, cutoff_ms),
+            ).fetchone()[0]
+        )
+    return active, total - active
+
+
+def workload() -> tuple[int, int, int]:
     active = 0
     queued = 0
+    stale = 0
     if TURNS_DB.exists():
-        placeholders = ",".join("?" for _ in TERMINAL_TURN_STATES)
-        with sqlite3.connect(TURNS_DB) as database:
-            active = int(
-                database.execute(
-                    f"SELECT COUNT(*) FROM thread_turns WHERE status NOT IN ({placeholders})",
-                    TERMINAL_TURN_STATES,
-                ).fetchone()[0]
-            )
+        active, stale = turn_counts(TURNS_DB, active_turn_cutoff_ms())
     if QUEUE_DB.exists():
         with sqlite3.connect(QUEUE_DB) as database:
             queued = int(database.execute("SELECT COUNT(*) FROM queued_items").fetchone()[0])
-    return active, queued
+    return active, queued, stale
 
 
 def process_state(pid: int) -> str:
@@ -363,9 +440,14 @@ def switch_back(slot: int) -> None:
 def handle_pending() -> bool:
     if not PENDING_PATH.exists():
         return False
-    active, queued = workload()
+    active, queued, stale = workload()
     if active or queued:
-        log_event("restart-deferred", activeTurns=active, queuedItems=queued)
+        log_event(
+            "restart-deferred",
+            activeTurns=active,
+            queuedItems=queued,
+            staleTurnsIgnored=stale,
+        )
         return True
     restart = restart_app_server()
     PENDING_PATH.unlink(missing_ok=True)
@@ -397,9 +479,14 @@ def main() -> int:
         if handle_pending():
             return 0
 
-        active, queued = workload()
+        active, queued, stale = workload()
         if active or queued:
-            log_event("busy", activeTurns=active, queuedItems=queued)
+            log_event(
+                "busy",
+                activeTurns=active,
+                queuedItems=queued,
+                staleTurnsIgnored=stale,
+            )
             return 0
 
         listing = list_payload()
@@ -425,6 +512,7 @@ def main() -> int:
             exitCode=probe.returncode,
             events=events,
             lowHeadroom=low_plan,
+            staleTurnsIgnored=stale,
         )
 
         if probe.returncode not in {0, 2, 3}:
@@ -484,7 +572,7 @@ def main() -> int:
             PENDING_PATH,
             {"createdAt": utc_now(), "oldSlot": old_slot, "newSlot": new_slot},
         )
-        active, queued = workload()
+        active, queued, stale = workload()
         if active or queued:
             log_event(
                 "switch-complete-restart-deferred",
@@ -492,6 +580,7 @@ def main() -> int:
                 newSlot=new_slot,
                 activeTurns=active,
                 queuedItems=queued,
+                staleTurnsIgnored=stale,
             )
             return 0
 
