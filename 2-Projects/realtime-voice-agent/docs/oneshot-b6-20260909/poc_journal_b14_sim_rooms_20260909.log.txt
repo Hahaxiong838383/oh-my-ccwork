@@ -1,0 +1,813 @@
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr systemd[1]: Started voice-worker-poc.service - Voice Worker POC (ordered_pcm, agent_name=rust-worker-poc).
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.934555Z  INFO voice-rust-worker starting agent_name=rust-worker-poc url=wss://voice-hk.hahaxiong.cc max_jobs=4
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.936111Z  INFO EOT sidecar connected (existing) sock=/tmp/rust-worker-eot.sock
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.971023Z  INFO Discovered OrtHardwareDevice {vendor_id:0x1013, device_id:0xb8, vendor:, type:1, metadata: [card_idx=0, pci_bus_id=0000:00:02.0, ]}
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.971077Z  INFO Discovered OrtHardwareDevice {vendor_id:0x8086, device_id:0x0, vendor:Intel, type:0, metadata: []}
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.971896Z  INFO Session Options {  execution_mode:0 execution_order:DEFAULT enable_profiling:0 optimized_model_filepath:"" enable_mem_pattern:1 enable_mem_reuse:1 enable_cpu_mem_arena:1 profile_file_prefix:onnxruntime_profile_ session_logid: session_log_severity_level:-1 session_log_verbosity_level:0 max_num_graph_transformation_steps:10 graph_optimization_level:4 intra_op_param:OrtThreadPoolParams { thread_pool_size: 1 auto_set_affinity: 0 allow_spinning: 0 spin_duration_us: -1 spin_backoff_max: 1 dynamic_block_base_: 0 stack_size: 0 affinity_str:  set_denormal_as_zero: 0 } inter_op_param:OrtThreadPoolParams { thread_pool_size: 1 auto_set_affinity: 0 allow_spinning: 0 spin_duration_us: -1 spin_backoff_max: 1 dynamic_block_base_: 0 stack_size: 0 affinity_str:  set_denormal_as_zero: 0 } use_per_session_threads:1 thread_pool_allow_spinning:1 use_deterministic_compute:0 ep_selection_policy:5 config_options: {  } }
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.971961Z  INFO Flush-to-zero and denormal-as-zero are off
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.971986Z  INFO Creating and using per session threadpools since use_per_session_threads_ is true
+2026-09-09T13:37:42+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:42.972007Z  INFO Dynamic block base set to 0
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.044841Z  INFO Initializing session.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.044956Z  INFO Creating BFCArena for Cpu with following configs: initial_chunk_size_bytes: 1048576 max_dead_bytes_per_chunk: 134217728 initial_growth_chunk_size_bytes: 2097152 max_power_of_two_extend_bytes: 1073741824 memory limit: 18446744073709551615 arena_extend_strategy: 0
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.049724Z  INFO This model does not have any local functions defined. AOT Inlining is not performed
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.051528Z  INFO GraphTransformer EnsureUniqueDQForNodeUnit modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.052198Z  INFO GraphTransformer Level1_RuleBasedTransformer modified: 1 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073162Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_19_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073243Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_20_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073249Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_12_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073262Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073269Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073285Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_18_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073310Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073328Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_13_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073340Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073352Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073360Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_21_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073368Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073673Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_18_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073682Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073689Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073696Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_12_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073701Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_19_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073707Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073718Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_20_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073726Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_13_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073744Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073751Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_21_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073756Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.073762Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.074107Z  INFO GraphTransformer DoubleQDQPairsRemover modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.074159Z  INFO GraphTransformer ConstantSharing modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.075702Z  INFO GraphTransformer CommonSubexpressionElimination modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.113222Z  INFO GraphTransformer ConstantFolding modified: 1 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129246Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Transpose_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129330Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/ConstantOfShape_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129360Z  INFO Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.bias_ih'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129374Z  INFO Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.weight_hh'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129380Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129389Z  INFO Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.weight_ih'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129395Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129401Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Slice_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129410Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Concat_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129416Z  INFO Removing initializer 'If_0_then_branch__Inline_0__self.stft.hop_length'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129421Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129426Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Reshape_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129431Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129436Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129441Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129446Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129451Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129522Z  INFO Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.bias_hh'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129616Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129622Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129627Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129631Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129636Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129641Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129646Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_27_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129651Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_25_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129657Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_23_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129661Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_22_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129671Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_20_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129696Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_16_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129712Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129720Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_13_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129728Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_17_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129736Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129746Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_38_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129755Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_12_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129763Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_28_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129771Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_18_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129780Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129789Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_41_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129798Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129829Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129837Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_14_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129848Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129854Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129860Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_34_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129866Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_24_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129872Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129878Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129885Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_29_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129895Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_40_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129931Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129941Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_30_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129950Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_31_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129959Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_32_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129968Z  INFO Removing initializer 'If_0_then_branch__Inline_0__250'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.129999Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_26_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130004Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_33_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130009Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_35_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130014Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130019Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_36_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130024Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_37_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130029Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_39_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130033Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_43_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130038Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_15_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130046Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130052Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_21_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130056Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130061Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130066Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_44_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130071Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130075Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130084Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_19_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130088Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_42_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130093Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130230Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130236Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130242Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_27_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130248Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130257Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_26_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130263Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_17_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130270Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_21_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130274Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_29_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130279Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_20_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130284Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_19_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130299Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_24_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130307Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_16_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130315Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130331Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_34_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130340Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_36_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130348Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_14_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130355Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_45_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130366Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130371Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130376Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_30_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130390Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_25_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130396Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_22_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130401Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130408Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_18_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130413Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_12_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130418Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_23_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130422Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130427Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_31_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130432Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130453Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_44_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130460Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_13_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130486Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_15_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130494Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_32_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130573Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_35_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130582Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_38_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130591Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_40_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130603Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_37_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130611Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_33_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130618Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_39_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130625Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_41_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130633Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_28_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130640Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130648Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130655Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130662Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_42_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130680Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130688Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_43_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130695Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130702Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130710Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130717Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130723Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130733Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130740Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130746Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.130752Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131031Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Concat_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131048Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Transpose_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131069Z  INFO Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.bias_ih'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131076Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Slice_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131085Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/ConstantOfShape_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131111Z  INFO Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.bias_hh'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131121Z  INFO Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.weight_ih'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131131Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131139Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131148Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131155Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131166Z  INFO Removing initializer 'If_0_else_branch__Inline_0__self.stft.filter_length'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131184Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131192Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Reshape_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131199Z  INFO Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.weight_hh'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131206Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131213Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131223Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131404Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131427Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131436Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131459Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_26_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131485Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_22_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131494Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_21_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131502Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_44_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131510Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_19_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131518Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_17_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131525Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_14_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131538Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_13_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131545Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131552Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131559Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_12_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131566Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131577Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_24_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131586Z  INFO Removing initializer 'If_0_else_branch__Inline_0__250'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131595Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131602Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_20_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131625Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131634Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131642Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131653Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_27_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131661Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_23_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131670Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_43_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131679Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_18_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131692Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131700Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_25_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131709Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131718Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131726Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_28_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131735Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_40_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131743Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131837Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131847Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_32_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131871Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_15_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131880Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_29_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131889Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_30_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131897Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_39_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131905Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_31_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131914Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_33_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131921Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131935Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_34_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131943Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_37_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131949Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_35_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131957Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131964Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131972Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_36_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131979Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_41_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131986Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_38_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.131995Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_42_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132015Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132025Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_16_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132033Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132041Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132049Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132057Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132320Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132349Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_29_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132357Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132364Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_23_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132372Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132381Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132390Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_24_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132398Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_16_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132405Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_21_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132414Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_18_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132437Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_30_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132444Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_2_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132453Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_17_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132461Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132488Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_13_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132498Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_19_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132507Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_22_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132526Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_25_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132533Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132544Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132552Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_31_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132559Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_28_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132566Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_26_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132574Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132581Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132590Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132609Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132616Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132625Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_12_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132633Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_14_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132640Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_20_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132648Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_37_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132656Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_5_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132746Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_15_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132754Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_32_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132759Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_34_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132764Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_36_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132769Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_3_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132775Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_38_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132781Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_35_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132788Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_41_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132795Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_40_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132812Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_42_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132820Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_43_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132825Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_44_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132831Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_45_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132837Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_11_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132842Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_10_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132847Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_27_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132854Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132859Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_39_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132864Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132869Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132875Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_4_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132880Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_33_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.132885Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_1_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133325Z  INFO GraphTransformer MatMulAddFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133402Z  INFO GraphTransformer ReshapeFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133424Z  INFO GraphTransformer FreeDimensionOverrideTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133511Z  INFO GraphTransformer SliceConcatToSpaceToDepthFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133521Z  INFO GraphTransformer GeluFusionL1 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133528Z  INFO GraphTransformer LayerNormFusionL1 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133602Z  INFO GraphTransformer QDQPropagationTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133698Z  INFO GraphTransformer WeightBiasQuantization modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133812Z  INFO GraphTransformer EnsureUniqueDQForNodeUnit modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.133937Z  INFO GraphTransformer WhereDummyDq modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.134692Z  INFO GraphTransformer TransposeOptimizer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.134920Z  INFO GraphTransformer Level1_RuleBasedTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.134937Z  INFO GraphTransformer DoubleQDQPairsRemover modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.135762Z  INFO GraphTransformer CommonSubexpressionElimination modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.135947Z  INFO GraphTransformer ConstantFolding modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136134Z  INFO GraphTransformer MatMulAddFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136218Z  INFO GraphTransformer ReshapeFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136229Z  INFO GraphTransformer FreeDimensionOverrideTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136320Z  INFO GraphTransformer SliceConcatToSpaceToDepthFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136329Z  INFO GraphTransformer GeluFusionL1 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136336Z  INFO GraphTransformer LayerNormFusionL1 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136409Z  INFO GraphTransformer QDQPropagationTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136499Z  INFO GraphTransformer WeightBiasQuantization modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136567Z  INFO GraphTransformer EnsureUniqueDQForNodeUnit modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.136637Z  INFO GraphTransformer WhereDummyDq modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.138134Z  INFO Running graph optimizations in loop 1 time/s (Graph Optimizations Loop Level : 1)
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.138243Z  INFO GraphTransformer Level2_RuleBasedTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.138913Z  INFO GraphTransformer TransposeOptimizer_CPUExecutionProvider modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.139033Z  INFO GraphTransformer QDQS8ToU8Transformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.139179Z  INFO GraphTransformer QDQSelectorActionTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.139281Z  INFO GraphTransformer GemmActivationFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.139379Z  INFO GraphTransformer MatMulIntegerToFloatFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.139445Z  INFO GraphTransformer DynamicQuantizeMatMulFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.139693Z  INFO GraphTransformer ConvActivationFusion modified: 1 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.158563Z  INFO GraphTransformer GeluFusionL2 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.159118Z  INFO GraphTransformer LayerNormFusionL2 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.159350Z  INFO GraphTransformer SimplifiedLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.159498Z  INFO GraphTransformer AttentionFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.159609Z  INFO GraphTransformer EmbedLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.160421Z  INFO GraphTransformer GatherSliceToSplitFusion modified: 1 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.178931Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_17_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179019Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_16_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179032Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_15_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179044Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_14_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179055Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179068Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179079Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179104Z  INFO Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179368Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_15_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179385Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_9_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179396Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_7_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179408Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_6_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179420Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_14_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179432Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_17_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179443Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_16_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179454Z  INFO Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_8_output_0'. It is no longer used by any node.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.179926Z  INFO GraphTransformer GatherToSliceFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180056Z  INFO GraphTransformer MatmulTransposeFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180169Z  INFO GraphTransformer BiasGeluFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180309Z  INFO GraphTransformer GroupQueryAttentionFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180415Z  INFO GraphTransformer MatMulAddFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180539Z  INFO GraphTransformer SkipLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180660Z  INFO GraphTransformer BiasSkipLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180809Z  INFO GraphTransformer FastGeluFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.180918Z  INFO GraphTransformer QuickGeluFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181038Z  INFO GraphTransformer BiasSoftmaxFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181139Z  INFO GraphTransformer BiasDropoutFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181360Z  INFO GraphTransformer MatMulScaleFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181484Z  INFO GraphTransformer MatMulActivationFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181636Z  INFO GraphTransformer MatMulNBitsFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181738Z  INFO GraphTransformer GroupQueryAttentionPreNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181851Z  INFO GraphTransformer QDQFinalCleanupTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.181965Z  INFO GraphTransformer Level2_RuleBasedTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182078Z  INFO GraphTransformer QDQS8ToU8Transformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182287Z  INFO GraphTransformer QDQSelectorActionTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182435Z  INFO GraphTransformer GemmActivationFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182569Z  INFO GraphTransformer MatMulIntegerToFloatFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182672Z  INFO GraphTransformer DynamicQuantizeMatMulFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182807Z  INFO GraphTransformer ConvActivationFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.182989Z  INFO GraphTransformer GeluFusionL2 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.183123Z  INFO GraphTransformer LayerNormFusionL2 modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.183264Z  INFO GraphTransformer SimplifiedLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.183401Z  INFO GraphTransformer AttentionFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.183529Z  INFO GraphTransformer EmbedLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.183865Z  INFO GraphTransformer GatherSliceToSplitFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.183983Z  INFO GraphTransformer GatherToSliceFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184101Z  INFO GraphTransformer MatmulTransposeFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184207Z  INFO GraphTransformer BiasGeluFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184327Z  INFO GraphTransformer GroupQueryAttentionFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184440Z  INFO GraphTransformer MatMulAddFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184570Z  INFO GraphTransformer SkipLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184683Z  INFO GraphTransformer BiasSkipLayerNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184817Z  INFO GraphTransformer FastGeluFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.184934Z  INFO GraphTransformer QuickGeluFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185045Z  INFO GraphTransformer BiasSoftmaxFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185152Z  INFO GraphTransformer BiasDropoutFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185334Z  INFO GraphTransformer MatMulScaleFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185445Z  INFO GraphTransformer MatMulActivationFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185607Z  INFO GraphTransformer MatMulNBitsFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185717Z  INFO GraphTransformer GroupQueryAttentionPreNormFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.185831Z  INFO GraphTransformer QDQFinalCleanupTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.186034Z  INFO GraphTransformer NchwcTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.186822Z  INFO GraphTransformer NhwcTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.187002Z  INFO GraphTransformer ConvAddActivationFusion modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.187494Z  INFO GraphTransformer RemoveDuplicateCastTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.187521Z  INFO GraphTransformer CastFloat16Transformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.187537Z  INFO GraphTransformer FuseFp16InitializerToFp32NodeTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.187557Z  INFO GraphTransformer MemcpyTransformer modified: 0 with status: OK
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.190526Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.191021Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.191073Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.191119Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.194896Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196022Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196115Z  INFO Reserving memory in BFCArena for Cpu size: 16
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196159Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196185Z  INFO Reserving memory in BFCArena for Cpu size: 4
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196206Z  INFO Reserving memory in BFCArena for Cpu size: 4
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196226Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196250Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196274Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196303Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196326Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196360Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196379Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196406Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196427Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196445Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196480Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196498Z  INFO Reserving memory in BFCArena for Cpu size: 4
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196512Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196528Z  INFO Reserving memory in BFCArena for Cpu size: 32
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.196549Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197619Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197751Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197790Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197821Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197883Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197910Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.197920Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198187Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198525Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198572Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198595Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198614Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198636Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198660Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198674Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198692Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.198940Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.199396Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.199900Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200067Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200096Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200125Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200145Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200161Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200176Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200248Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200275Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200288Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200318Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200361Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200383Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200393Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200424Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200449Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200461Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200503Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200535Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200558Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200568Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200613Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200642Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200653Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200695Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200732Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200744Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200764Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200779Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200830Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200855Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200866Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200904Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200926Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200937Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.200953Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201010Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201033Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201045Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201200Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201512Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201539Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201575Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201592Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201607Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201623Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201639Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201662Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201678Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201694Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201708Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.201863Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202227Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202641Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202778Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202797Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202823Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202839Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202860Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202876Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202943Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202971Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.202985Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203000Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203033Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203052Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203062Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203092Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203114Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203126Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203140Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203168Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203186Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203196Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203236Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203262Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203271Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203320Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203344Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203357Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203376Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203407Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203427Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203438Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203512Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203537Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203548Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203565Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203598Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203619Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203627Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.203887Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204693Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204731Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204757Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204775Z  INFO Reserving memory in BFCArena for Cpu size: 32
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204796Z  INFO Reserving memory in BFCArena for Cpu size: 4
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204823Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204838Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204861Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204880Z  INFO Reserving memory in BFCArena for Cpu size: 16
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204900Z  INFO Reserving memory in BFCArena for Cpu size: 4
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204914Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204933Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204953Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204968Z  INFO Reserving memory in BFCArena for Cpu size: 4
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.204986Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.205002Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.205016Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.205032Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.205046Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.205060Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206170Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206234Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206252Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206277Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206330Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206357Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206367Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206639Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206970Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.206994Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207020Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207039Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207063Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207088Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207108Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207127Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207308Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.207713Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208238Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208420Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208439Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208510Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208531Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208547Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208562Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208641Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208671Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208682Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208698Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208738Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208761Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208770Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208809Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208834Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208847Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208865Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208901Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208922Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208932Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.208973Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209002Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209013Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209066Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209102Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209116Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209136Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209150Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209200Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209227Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209240Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209282Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209321Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209336Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209355Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209389Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209410Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209419Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209625Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209908Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209935Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209958Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209980Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.209996Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210012Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210034Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210054Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210069Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210083Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210099Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210287Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.210731Z  INFO Reserving memory in BFCArena for Cpu size: 262144
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211162Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211338Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211363Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211388Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211407Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211423Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211439Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211556Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211590Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211602Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211622Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211670Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211694Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211704Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211745Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211777Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211790Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211808Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211852Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211873Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211882Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211931Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211964Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.211974Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212023Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212059Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212074Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212093Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212128Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212149Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212160Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212233Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212257Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212269Z  INFO Reserving memory in BFCArena for Cpu size: 8
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212284Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212335Z  INFO Use DeviceBasedPartition as default
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212358Z  INFO Saving initialized tensors.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212370Z  INFO Done saving initialized tensors
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212742Z  INFO Session successfully initialized.
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.212929Z  INFO vad 权重预加载完成(进程级共享) model=/root/rust-worker/silero_vad.onnx load_ms=278
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.259087Z  INFO connected to livekit /agent url=wss://voice-hk.hahaxiong.cc/agent agent_name=rust-worker-poc
+2026-09-09T13:37:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:37:43.262650Z  INFO registered worker worker_id=AW_cAmn3AVggU4A server=Some("1.13.2")
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.005896Z  INFO received job request, accepting job_id=AJ_DBzyMjtALi4b room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.010178Z  INFO job assignment received, spawning job task job_id=AJ_DBzyMjtALi4b
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.010932Z  INFO job_assignment_received job_id=AJ_DBzyMjtALi4b room=sn-POCTEST0001-1788961087 elapsed_ms=0 issue_to_assignment_ms=333 issue_clock="ms" has_trace=true
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.011028Z  INFO worker_room_connect_start job_id=AJ_DBzyMjtALi4b room=sn-POCTEST0001-1788961087 elapsed_ms=0
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.089646Z  INFO connecting to wss://voice-hk.hahaxiong.cc/rtc/v1
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.106320Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.106792Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1788961087 nonstream=true
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.107027Z  INFO tts provider 生效值 room=sn-POCTEST0001-1788961087 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.107109Z  INFO llm race 兜底路已配置 model=doubao-seed-2.0-mini
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.212739Z  INFO worker_room_connected room=sn-POCTEST0001-1788961087 elapsed_ms=201 connect_ms=201
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.252034Z  INFO agent_track_published room=sn-POCTEST0001-1788961087 elapsed_ms=241
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.252120Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1788961087 expected_device="dev-POCTEST0001" local_receipt=true
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.252174Z  INFO user_track_subscribed room=sn-POCTEST0001-1788961087 identity=dev-POCTEST0001 elapsed_ms=241
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.252256Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1788961087 elapsed_ms=241
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.317262Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.321290Z  INFO filler bank loaded: 93 clips buckets=["ask", "barge", "emo_neg", "emo_pos", "gen", "greet", "opinion", "story", "task", "thanks"]
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.321879Z  INFO speaker id: 旁路启用(2 人注册,threshold=0.50)
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.322975Z  INFO pipeline prebuilt room=sn-POCTEST0001-1788961087 elapsed_ms=216 has_fillers=true has_speaker=true
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.323252Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1788961087 prebuilt_age_ms=217
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.323269Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.323297Z  INFO ordered_pcm local receipt v1 room=sn-POCTEST0001-1788961087 local_receipt_enabled=true meta_local_receipt=true
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.323349Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.328636Z  INFO eot snapshot 存量盘点 existing_mb=0
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.329215Z  INFO eot snapshot 采集开启 job=20260909T133808-cadb6f
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.329253Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1788961087 enabled=false text_empty=false
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.329299Z  INFO input_loop_started room=sn-POCTEST0001-1788961087 elapsed_ms=318 track_to_input_loop_ms=77
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.329356Z  INFO session.input_ready published room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.329437Z  INFO ordered_pcm begin accepted room=sn-POCTEST0001-1788961087 since_pipeline_ms=6 device_sent_at_ms=1788961088296 local_receipt=true
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.336243Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1788961087 elapsed_ms=325
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.336331Z  INFO output_ready room=sn-POCTEST0001-1788961087 elapsed_ms=325
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.502588Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.512256Z  INFO ordered_pcm first block submitted to ASR room=sn-POCTEST0001-1788961087 since_pipeline_ms=188
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.878118Z  INFO llm prewarm done ms=740
+2026-09-09T13:38:08+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:08.984071Z  INFO llm prewarm done ms=846
+2026-09-09T13:38:11+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:11.609172Z  INFO stt final: 小可小可不要开灯
+2026-09-09T13:38:11+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:11.609371Z  INFO ordered_pcm end candidate published (held final + trailing quiet) room=sn-POCTEST0001-1788961087 quiet_ms=600
+2026-09-09T13:38:11+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:11.609442Z  INFO ordered_pcm speculation on held final room=sn-POCTEST0001-1788961087 chars=8
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.649569Z  INFO ordered_pcm receipt_done accepted → body release room=sn-POCTEST0001-1788961087 turn_active=false
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.739026Z  INFO ordered_pcm result room=sn-POCTEST0001-1788961087 result={"finals":1,"finals_held":1,"input_id":"6e9ca454-632a-4cc1-8b0d-2c8dcb4ebeac","queued_next":59152,"reason":null,"received_next":59152,"samples_queued":59152,"status":"complete","t":"result","text_chars":8}
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.739146Z  INFO ordered_pcm generation complete → final 进现役 commit 路径 room=sn-POCTEST0001-1788961087 chars=8
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.739171Z  INFO 契约 UserTranscriptFinal turn=turn-f72c8fdf775c4db096981099515ba04d
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.739386Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1788961087 evidence={"backlog_peak_samples":3200,"begin_at_unix_ms":1788961088329,"begin_sent_at_ms":1788961088296,"blocks_queued":19,"chunks_duplicate":0,"chunks_received":93,"end_before_final":0,"end_candidate_lead_over_end_ms":1037,"end_candidate_ms":3280,"end_candidate_quiet_ms":600,"end_ms":4317,"end_sample":59152,"end_sent_at_ms":1788961092641,"final_before_end":1,"final_lead_over_end_ms":1037,"finals_after_terminal":0,"finals_held":1,"first_chunk_ms":0,"first_final_ms":3280,"first_sample":0,"first_submit_ms":183,"input_id":"6e9ca454-632a-4cc1-8b0d-2c8dcb4ebeac","interims_held":6,"keep_from":0,"local_receipt":"accepted","noise_floor_rms":800.9,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":96,"phase":"terminal","queue_full_events":0,"queued_next":59152,"quiet_thr_rms":1601.9,"receipt_done_declined":true,"receipt_done_duplicate":0,"receipt_done_ignored":0,"receipt_done_ms":4320,"receipt_done_played_ms":0,"received_next":59152,"rms_timeline_200ms":[3596,3654,4438,3979,3000,4341,4205,5279,3436,3869,3755,0,0,0,0,0,0,0,0],"rtc_frames_dropped":448,"samples_cropped_before_keep_from":0,"samples_queued":59152,"samples_received":59152,"silence_samples_submitted":9600,"speech_peak_rms":6418.6,"stream_end_ms":4410,"stream_interrupted":0,"tail_block_samples":1552,"trailing_quiet_at_end_ms":1417}
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781392Z  INFO 契约 UserTurnCommitted turn=turn-f72c8fdf775c4db096981099515ba04d
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781680Z  INFO turn committed: 小可小可不要开灯 room=sn-POCTEST0001-1788961087 eou_ms=42 stt_ms=0
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781726Z  INFO speaker id: skip(有效语音 0.00s < 1.0s)
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781748Z  INFO using preemptive generation room=sn-POCTEST0001-1788961087 lead_ms=1172
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781757Z  INFO local receipt declined by device (receipt_done played_ms=0 before commit) → worker filler path room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781768Z  INFO filler kept: body not imminent room=sn-POCTEST0001-1788961087 spec_lead_ms=1172 spec_done=false tts_warm_ready=true
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.781793Z  INFO filler picked room=sn-POCTEST0001-1788961087 turn_id=1 bucket=gen dur_ms=960 boost=false policy=shortest text='嗯。'
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.793372Z  INFO 契约 AgentSpeechStarted turn=agent-0482443eaf9847a19fc422d8b1f7ed33
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.793518Z  INFO aec warmup active, disabling interruptions for 0.50s room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.866583Z  INFO tts synth: 我会帮你关掉额外的灯光，现在房间里会保持现在的亮…(27字)
+2026-09-09T13:38:12+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:12.866680Z  INFO llm stream done ttft_ms=930 chunks=22 chars=27
+2026-09-09T13:38:13+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:13.214660Z  INFO job rss: 71MB (uptime 30s)
+2026-09-09T13:38:13+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:13.780533Z  INFO filler playout done room=sn-POCTEST0001-1788961087 turn_id=1 filler_ms=960 since_turn_ms=998
+2026-09-09T13:38:13+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:13.780644Z  INFO body first frame published room=sn-POCTEST0001-1788961087 turn_id=1 played_samples=23958 since_turn_ms=998
+2026-09-09T13:38:15+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:15.595166Z  INFO tts metrics tts_connect_ms=0 warm=true warm_connect_ms=241 tts_ttft_ms=288 audio_frames=32 audio_duration_ms=5520 cancelled=false
+2026-09-09T13:38:15+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:15.595749Z  INFO body first sentence ready room=sn-POCTEST0001-1788961087 turn_id=1 ttfb_ms=288 body_ready_since_turn_ms=372
+2026-09-09T13:38:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:18.330831Z  INFO audio in (10s) room=sn-POCTEST0001-1788961087 frames=1007 mean_amp=0
+2026-09-09T13:38:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:19.276010Z  INFO playout metrics room=sn-POCTEST0001-1788961087 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=203 first_underrun_ms=-1 played_frames=648 exit="SourceDrained"
+2026-09-09T13:38:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:19.276549Z  INFO 契约 AgentTranscriptFinal turn=agent-0482443eaf9847a19fc422d8b1f7ed33
+2026-09-09T13:38:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:19.276577Z  INFO interrupt telemetry: speaking→listening interim='' room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:19.276585Z  INFO 契约 AgentSpeechStopped turn=agent-0482443eaf9847a19fc422d8b1f7ed33
+2026-09-09T13:38:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:20.091716Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1788961087 identity=dev-POCTEST0001
+2026-09-09T13:38:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:20.097944Z  WARN job termination requested (P2: relying on room close) job_id=AJ_DBzyMjtALi4b
+2026-09-09T13:38:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:20.137871Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1788961087
+2026-09-09T13:38:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:20.138007Z  INFO job closed room=sn-POCTEST0001-1788961087 uptime_s=12
+2026-09-09T13:38:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:20.138262Z  INFO process exiting job_id=AJ_DBzyMjtALi4b
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.863886Z  INFO received job request, accepting job_id=AJ_NDQMLpHs6qnw room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.867968Z  INFO job assignment received, spawning job task job_id=AJ_NDQMLpHs6qnw
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.868160Z  INFO job_assignment_received job_id=AJ_NDQMLpHs6qnw room=sn-POCTEST0001-1788961107 elapsed_ms=0 issue_to_assignment_ms=314 issue_clock="ms" has_trace=true
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.868242Z  INFO worker_room_connect_start job_id=AJ_NDQMLpHs6qnw room=sn-POCTEST0001-1788961107 elapsed_ms=0
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.884373Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.884435Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1788961107 nonstream=true
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.884759Z  INFO tts provider 生效值 room=sn-POCTEST0001-1788961107 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.884817Z  INFO llm race 兜底路已配置 model=doubao-seed-2.0-mini
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.907616Z  INFO connecting to wss://voice-hk.hahaxiong.cc/rtc/v1
+2026-09-09T13:38:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:27.997019Z  INFO worker_room_connected room=sn-POCTEST0001-1788961107 elapsed_ms=128 connect_ms=128
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.022057Z  INFO filler bank loaded: 93 clips buckets=["ask", "barge", "emo_neg", "emo_pos", "gen", "greet", "opinion", "story", "task", "thanks"]
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.022307Z  INFO speaker id: 旁路启用(2 人注册,threshold=0.50)
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.022414Z  INFO pipeline prebuilt room=sn-POCTEST0001-1788961107 elapsed_ms=138 has_fillers=true has_speaker=true
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036255Z  INFO agent_track_published room=sn-POCTEST0001-1788961107 elapsed_ms=168
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036356Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1788961107 expected_device="dev-POCTEST0001" local_receipt=true
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036397Z  INFO user_track_subscribed room=sn-POCTEST0001-1788961107 identity=dev-POCTEST0001 elapsed_ms=168
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036517Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1788961107 elapsed_ms=168
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036618Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1788961107 prebuilt_age_ms=152
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036628Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036667Z  INFO ordered_pcm local receipt v1 room=sn-POCTEST0001-1788961107 local_receipt_enabled=true meta_local_receipt=true
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.036698Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.037123Z  INFO eot snapshot 采集开启 job=20260909T133828-c23708
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.037196Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1788961107 enabled=false text_empty=false
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.044310Z  INFO input_loop_started room=sn-POCTEST0001-1788961107 elapsed_ms=176 track_to_input_loop_ms=7
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.044400Z  INFO session.input_ready published room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.086838Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.102197Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1788961107 elapsed_ms=234
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.102350Z  INFO output_ready room=sn-POCTEST0001-1788961107 elapsed_ms=234
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.116881Z  INFO ordered_pcm begin accepted room=sn-POCTEST0001-1788961107 since_pipeline_ms=80 device_sent_at_ms=1788961108091 local_receipt=true
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.211305Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.287604Z  INFO ordered_pcm first block submitted to ASR room=sn-POCTEST0001-1788961107 since_pipeline_ms=250
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.336692Z  INFO llm prewarm done ms=428
+2026-09-09T13:38:28+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:28.569596Z  INFO llm prewarm done ms=661
+2026-09-09T13:38:31+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:31.121673Z  INFO stt final: 小可小可不要开灯
+2026-09-09T13:38:31+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:31.121771Z  INFO ordered_pcm end candidate published (held final + trailing quiet) room=sn-POCTEST0001-1788961107 quiet_ms=600
+2026-09-09T13:38:31+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:31.121806Z  INFO ordered_pcm speculation on held final room=sn-POCTEST0001-1788961107 chars=8
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.296205Z  INFO ordered_pcm result room=sn-POCTEST0001-1788961107 result={"finals":1,"finals_held":1,"input_id":"bcdae376-7646-405f-8721-b7f5be68d750","queued_next":59152,"reason":null,"received_next":59152,"samples_queued":59152,"status":"complete","t":"result","text_chars":8}
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.296398Z  INFO ordered_pcm generation complete → final 进现役 commit 路径 room=sn-POCTEST0001-1788961107 chars=8
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.296425Z  INFO 契约 UserTranscriptFinal turn=turn-298661d9eed44c87a653923231586e67
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.296645Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1788961107 evidence={"backlog_peak_samples":3200,"begin_at_unix_ms":1788961108116,"begin_sent_at_ms":1788961108091,"blocks_queued":19,"chunks_duplicate":0,"chunks_received":93,"end_before_final":0,"end_candidate_lead_over_end_ms":1092,"end_candidate_ms":3005,"end_candidate_quiet_ms":600,"end_ms":4097,"end_sample":59152,"end_sent_at_ms":1788961112208,"final_before_end":1,"final_lead_over_end_ms":1092,"finals_after_terminal":0,"finals_held":1,"first_chunk_ms":1,"first_final_ms":3005,"first_sample":0,"first_submit_ms":171,"input_id":"bcdae376-7646-405f-8721-b7f5be68d750","interims_held":6,"keep_from":0,"local_receipt":"accepted","noise_floor_rms":800.9,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":95,"phase":"terminal","queue_full_events":0,"queued_next":59152,"quiet_thr_rms":1601.9,"receipt_done_declined":false,"receipt_done_duplicate":0,"receipt_done_ignored":0,"receipt_done_ms":null,"receipt_done_played_ms":null,"received_next":59152,"rms_timeline_200ms":[3596,3654,4438,3979,3000,4341,4205,5279,3436,3869,3755,0,0,0,0,0,0,0,0],"rtc_frames_dropped":425,"samples_cropped_before_keep_from":0,"samples_queued":59152,"samples_received":59152,"silence_samples_submitted":9600,"speech_peak_rms":6418.6,"stream_end_ms":4180,"stream_interrupted":0,"tail_block_samples":1552,"trailing_quiet_at_end_ms":1417}
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.338272Z  INFO 契约 UserTurnCommitted turn=turn-298661d9eed44c87a653923231586e67
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.338641Z  INFO turn committed: 小可小可不要开灯 room=sn-POCTEST0001-1788961107 eou_ms=41 stt_ms=0
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.339739Z  INFO speaker id: skip(有效语音 0.00s < 1.0s)
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.339770Z  INFO using preemptive generation room=sn-POCTEST0001-1788961107 lead_ms=1217
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.339785Z  INFO filler skipped: device local receipt (body gated until receipt_done/deadline) room=sn-POCTEST0001-1788961107 spec_lead_ms=1217 spec_done=false tts_warm_ready=true receipt_done_seen=false max_ms=3000
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.364917Z  INFO tts synth: 好的呀，那我们就不开灯啦，现在是不是感觉暖暖的很…(27字)
+2026-09-09T13:38:32+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:32.364983Z  INFO llm stream done ttft_ms=909 chunks=18 chars=27
+2026-09-09T13:38:33+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:33.717634Z  INFO ordered_pcm receipt_done accepted → body release room=sn-POCTEST0001-1788961107 turn_active=true
+2026-09-09T13:38:33+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:33.717702Z  INFO local receipt gate released room=sn-POCTEST0001-1788961107 turn_id=1 reason="receipt_done" held_ms=1052
+2026-09-09T13:38:33+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:33.722921Z  INFO 契约 AgentSpeechStarted turn=agent-c3b49506e0de4f33801b5b41939b8af0
+2026-09-09T13:38:33+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:33.723088Z  INFO aec warmup active, disabling interruptions for 0.50s room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:33+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:33.738046Z  INFO body first frame published (no filler) room=sn-POCTEST0001-1788961107 turn_id=1 since_turn_ms=1398
+2026-09-09T13:38:35+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:35.270703Z  INFO tts metrics tts_connect_ms=0 warm=true warm_connect_ms=269 tts_ttft_ms=300 audio_frames=34 audio_duration_ms=5960 cancelled=false
+2026-09-09T13:38:35+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:35.271101Z  INFO body first sentence ready room=sn-POCTEST0001-1788961107 turn_id=1 ttfb_ms=300 body_ready_since_turn_ms=325
+2026-09-09T13:38:38+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:38.037683Z  INFO audio in (10s) room=sn-POCTEST0001-1788961107 frames=999 mean_amp=0
+2026-09-09T13:38:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:39.691098Z  INFO playout metrics room=sn-POCTEST0001-1788961107 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=208 first_underrun_ms=-1 played_frames=596 exit="SourceDrained"
+2026-09-09T13:38:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:39.691701Z  INFO 契约 AgentTranscriptFinal turn=agent-c3b49506e0de4f33801b5b41939b8af0
+2026-09-09T13:38:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:39.691734Z  INFO interrupt telemetry: speaking→listening interim='' room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:39.691741Z  INFO 契约 AgentSpeechStopped turn=agent-c3b49506e0de4f33801b5b41939b8af0
+2026-09-09T13:38:40+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:40.506079Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1788961107 identity=dev-POCTEST0001
+2026-09-09T13:38:40+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:40.511318Z  WARN job termination requested (P2: relying on room close) job_id=AJ_NDQMLpHs6qnw
+2026-09-09T13:38:40+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:40.560814Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1788961107
+2026-09-09T13:38:40+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:40.560928Z  INFO job closed room=sn-POCTEST0001-1788961107 uptime_s=12
+2026-09-09T13:38:40+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:40.561190Z  INFO process exiting job_id=AJ_NDQMLpHs6qnw
+2026-09-09T13:38:43+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-09T13:38:43.216444Z  INFO job rss: 75MB (uptime 60s)

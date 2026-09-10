@@ -105,7 +105,15 @@ class Sim:
         self.reply_frames = 0
         self.reply_nonzero_frames = 0
         self.reply_samples = 0
+        # 本地承接 v1：正文门验收用——首个非零回复帧时刻 / receipt_done 发出前的非零帧数（期望 0）/ end 与 receipt_done 时刻
+        self.first_nonzero_t_ms: int | None = None
+        self.nonzero_before_receipt = 0
+        self.receipt_sent_t_ms: int | None = None
+        self.end_t_ms: int | None = None
         self.done = asyncio.Event()
+
+    def t_ms(self) -> int:
+        return round((time.monotonic() - self.t0) * 1000)
 
     def log(self, ev: str, **kw):
         rec = {"t_ms": round((time.monotonic() - self.t0) * 1000), "wall": time.strftime("%H:%M:%S"), "ev": ev, **kw}
@@ -116,7 +124,8 @@ class Sim:
         if self.pre_token:
             return self.pre_token
         meta = json.dumps({"trace_id": self.trace_id, "session_id": self.session_id, "issue_ts_ms": int(time.time() * 1000),
-                           "input_mode": "ordered_pcm"})
+                           "input_mode": "ordered_pcm",
+                           **({"local_receipt": "v1"} if self.a.local_receipt_meta else {})})
         t = (api.AccessToken(self.env["LIVEKIT_API_KEY"], self.env["LIVEKIT_API_SECRET"])
              .with_identity(self.identity)
              .with_grants(api.VideoGrants(room_join=True, room=self.room_name, can_publish=True, can_subscribe=True, can_publish_data=True))
@@ -137,7 +146,7 @@ class Sim:
                     self.log("history.bad_packet", n=len(pkt.data)); return
                 h, body = d
                 if h.get("t") == "ack":
-                    self.acks.append(h); self.log("history.ack", **{k: h.get(k) for k in ("received_next", "queued_next", "credit_samples", "chunks_received", "phase")})
+                    self.acks.append(h); self.log("history.ack", **{k: h.get(k) for k in ("received_next", "queued_next", "credit_samples", "chunks_received", "phase", "end_candidate", "local_receipt")})
                 elif h.get("t") == "result":
                     self.result = h; self.log("history.result", **h)
                     if h.get("status") in ("failed", "rejected"):
@@ -207,7 +216,7 @@ class Sim:
             await room.local_participant.publish_data(encode(h, body), reliable=True, topic=TOPIC)
 
         await asyncio.sleep(a.begin_delay)
-        await send({**base, "t": "begin", "seq": 0, "start": 0, "end": 0})
+        await send({**base, "t": "begin", "seq": 0, "start": 0, "end": 0, **({"local_receipt": True} if a.local_receipt else {})})
         self.log("history.begin", samples=n)
         seq = 0
         off = 0
@@ -231,7 +240,14 @@ class Sim:
                 await asyncio.sleep(a.pace_ms / 1000)
         if a.scenario != "cancel_mid":
             await send({**base, "t": "end", "seq": seq, "start": n, "end": n})
+            self.end_t_ms = self.t_ms()
             self.log("history.end", end=n, chunks_sent=seq, samples_sent=sent)
+        # 本地承接 v1：模拟端侧本地短语播完 → receipt_done（-1 = 永不发，验截止放行；cancel_mid 也发，验取消后不复活）
+        if a.local_receipt and a.receipt_delay_ms >= 0:
+            await asyncio.sleep(a.receipt_delay_ms / 1000)
+            await send({**base, "t": "receipt_done", "seq": seq + 1, "start": n, "end": n, "played_ms": a.receipt_delay_ms})
+            self.receipt_sent_t_ms = self.t_ms()
+            self.log("history.receipt_done", played_ms=a.receipt_delay_ms, nonzero_before=self.nonzero_before_receipt)
         try:
             await asyncio.wait_for(self.done.wait(), timeout=a.timeout)
         except asyncio.TimeoutError:
@@ -249,6 +265,12 @@ class Sim:
             "reply_audio_ms": round(self.reply_samples * 1000 / 48000) if self.reply_samples else 0,
             "reply_nonzero_frames": self.reply_nonzero_frames, "reply_frames": self.reply_frames,
             "control_types": [c.get("type") for c in self.control],
+            "local_receipt": bool(a.local_receipt), "receipt_delay_ms": a.receipt_delay_ms if a.local_receipt else None,
+            "ack_local_receipt": next((x.get("local_receipt") for x in reversed(self.acks) if x.get("local_receipt")), None),
+            "end_t_ms": self.end_t_ms, "receipt_sent_t_ms": self.receipt_sent_t_ms,
+            "first_nonzero_t_ms": self.first_nonzero_t_ms, "nonzero_before_receipt": self.nonzero_before_receipt,
+            "first_nonzero_after_end_ms": (self.first_nonzero_t_ms - self.end_t_ms) if (self.first_nonzero_t_ms is not None and self.end_t_ms is not None) else None,
+            "first_nonzero_after_receipt_ms": (self.first_nonzero_t_ms - self.receipt_sent_t_ms) if (self.first_nonzero_t_ms is not None and self.receipt_sent_t_ms is not None) else None,
         }
         self.log("summary", **summary)
         return summary
@@ -269,6 +291,11 @@ class Sim:
             data = mv if mv.format == "h" else mv.cast("h")  # livekit-rtc 1.1.x 已是 int16 视图，cast 会抛 TypeError
             if any(abs(x) > 50 for x in data[: min(len(data), 480)]):
                 self.reply_nonzero_frames += 1
+                if self.first_nonzero_t_ms is None:
+                    self.first_nonzero_t_ms = self.t_ms()
+                    self.log("reply.first_nonzero")
+                if self.receipt_sent_t_ms is None:
+                    self.nonzero_before_receipt += 1
 
 
 async def main() -> int:
@@ -287,6 +314,9 @@ async def main() -> int:
     ap.add_argument("--out", default="opcm_sim_results.jsonl")
     ap.add_argument("--room-file", default="", help="预铸房 JSON（opcm_poc_mint_rooms.py 输出）；给定则不读 LIVEKIT 密钥")
     ap.add_argument("--room-index", type=int, default=0)
+    ap.add_argument("--local-receipt", action="store_true", help="本地承接 v1：begin 带 local_receipt=true（期望 ack 回显 accepted，worker 不播垫句、扣正文到 receipt_done）")
+    ap.add_argument("--receipt-delay-ms", type=int, default=1500, help="end 后多少 ms 发 receipt_done（模拟本地短语时长）；-1 = 永不发（验截止放行）")
+    ap.add_argument("--local-receipt-meta", action="store_true", help="自铸 token 的 metadata 签 local_receipt=v1（不给则 worker 应回 ignored）")
     a = ap.parse_args()
     if a.room_file:
         env: dict[str, str] = {}
