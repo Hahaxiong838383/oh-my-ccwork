@@ -114,3 +114,7 @@ worker 侧（journal 已归档）：`local receipt v1 … local_receipt_enabled=
 生产 worker、生产 Session API、隔离 worker 二进制与 env、铸房脚本（sha 与仓库版一致 76a112b7…）、模拟器脚本（94f9d349…）、OPCM 合同（begin/chunk/end/cancel/receipt_done、ack 回显、正文门 3000 ms）、在线 ASR 打断 / 退出词 / 音量 / AEC / 开场白策略。
 
 署名：cc（Claude）| 2026-09-10 16:57 CST
+
+## 8. mycc 提交锚（2026-09-10 17:21 CST 补记）
+
+- 本回执与 §6 归档五文件、B11–B15 回执、两个工具脚本已进 mycc `main` **`6a851177e`**（28 文件，origin 已推）。去 token 公开副本按 `2-Projects/realtime-voice-agent/docs/oneshot-b6-20260909/opcm_poc_rooms_20260910_android4.public.json` 对指纹即可。
