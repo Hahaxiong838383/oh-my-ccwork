@@ -94,6 +94,9 @@ pub struct PipelineConfig {
     /// env DEVICE_CMD_SINGLE_EXIT,默认开;0 = 旧行为(LLM 叙述 + 追加短句)。
     pub cmd_single_exit: bool,
     pub tts_min_sentence_len: usize,
+    /// B17（POC env `TTS_FIRST_CLAUSE_MIN`，默认 0=关）：本轮第一段 TTS 累计 ≥N 字遇全角逗号即切，
+    /// 不等句末标点；只影响首段，后续段落仍按 tts_min_sentence_len + 句末标点。见 segmenter.rs。
+    pub tts_first_clause_min: usize,
     pub greeting_text: String,
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
     /// 默认 true —— 其余环境行为不变。
@@ -187,6 +190,10 @@ impl PipelineConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(6),
+            tts_first_clause_min: std::env::var("TTS_FIRST_CLAUSE_MIN")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
             greeting_text: std::env::var("AGENT_GREETING")
                 .unwrap_or_else(|_| "你好，我在。你可以直接打断我。".into()),
             greeting_enabled: parse_flag(
@@ -2773,6 +2780,7 @@ impl Orchestrator {
         let room_name = self.room_name.clone();
         let ev_tx = self.turn_ev_tx.clone();
         let min_len = self.cfg.tts_min_sentence_len;
+        let first_clause_min = self.cfg.tts_first_clause_min;
         let synth2 = synth_text.clone();
         let prog2 = progress.clone();
         let lp = self.participant.clone();
@@ -2870,7 +2878,7 @@ impl Orchestrator {
                             (delta_rx, h, false)
                         }
                     };
-                    let mut seg = Segmenter::new(min_len);
+                    let mut seg = Segmenter::new(min_len).with_first_clause_min(first_clause_min);
                     // 2b(2026-09-03):[[DEV:N]] 在流里一解析到就派发(带内 token,见 llm::dev_inband),
                     // 不再等整段回复合成完——动作跟着回复开头走。一轮只派首个,其余 multi_label 记 suppressed。
                     let mut l2_sent = false;
@@ -2897,7 +2905,13 @@ impl Orchestrator {
                         if delta.is_empty() {
                             continue;
                         }
-                        for sentence in seg.feed(&delta) {
+                        let sentences = seg.feed(&delta);
+                        // B17：首段由逗号切出时打点（对账「首句 TTS 提前了多少」用：与 body first sentence ready 配对）
+                        if let Some(chars) = seg.take_clause_split() {
+                            info!(room = %room_name, turn_id = id, chars, first_clause_min,
+                                  "tts first clause split (comma, before sentence end)");
+                        }
+                        for sentence in sentences {
                             // 舞台指示剥离(「（笑）」被 TTS 整句念出,2026-08-16 实测):
                             // TTS/track(字幕+历史+截断映射)统一用净文本;整句是描述则跳过
                             let sentence = crate::textproc::strip_stage_directions(&sentence);
