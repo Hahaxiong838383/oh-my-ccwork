@@ -1,0 +1,177 @@
+2026-09-10T09:05:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:05:19.437981Z  INFO job rss: 80MB (uptime 70056s)
+2026-09-10T09:05:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:05:49.440386Z  INFO job rss: 80MB (uptime 70086s)
+2026-09-10T09:06:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:06:19.442836Z  INFO job rss: 80MB (uptime 70116s)
+2026-09-10T09:06:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:06:49.444896Z  INFO job rss: 80MB (uptime 70146s)
+2026-09-10T09:07:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:07:19.451727Z  INFO job rss: 80MB (uptime 70176s)
+2026-09-10T09:07:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:07:49.454399Z  INFO job rss: 80MB (uptime 70206s)
+2026-09-10T09:08:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:08:19.456852Z  INFO job rss: 80MB (uptime 70236s)
+2026-09-10T09:08:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:08:49.458733Z  INFO job rss: 80MB (uptime 70266s)
+2026-09-10T09:09:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:09:19.461233Z  INFO job rss: 80MB (uptime 70296s)
+2026-09-10T09:09:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:09:49.465281Z  INFO job rss: 80MB (uptime 70326s)
+2026-09-10T09:10:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:10:19.468356Z  INFO job rss: 80MB (uptime 70356s)
+2026-09-10T09:10:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:10:49.471168Z  INFO job rss: 80MB (uptime 70386s)
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.483660Z  INFO received job request, accepting job_id=AJ_syYFMHGQzeWT room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.488136Z  INFO job assignment received, spawning job task job_id=AJ_syYFMHGQzeWT
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.488835Z  INFO job_assignment_received job_id=AJ_syYFMHGQzeWT room=sn-POCTEST0001-1789030274 elapsed_ms=0 issue_clock="ms" has_trace=true
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.489172Z  INFO worker_room_connect_start job_id=AJ_syYFMHGQzeWT room=sn-POCTEST0001-1789030274 elapsed_ms=0
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.557878Z  INFO connecting to wss://voice-hk.hahaxiong.cc/rtc/v1
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.559245Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.559304Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1789030274 nonstream=true
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.559718Z  INFO tts provider 生效值 room=sn-POCTEST0001-1789030274 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.559929Z  INFO llm race 兜底路已配置 model=doubao-seed-2.0-mini
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.675596Z  INFO worker_room_connected room=sn-POCTEST0001-1789030274 elapsed_ms=186 connect_ms=186
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.724085Z  INFO agent_track_published room=sn-POCTEST0001-1789030274 elapsed_ms=235
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.724217Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1789030274 expected_device="dev-POCTEST0001" local_receipt=true
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.746417Z  INFO filler bank loaded: 93 clips buckets=["ask", "barge", "emo_neg", "emo_pos", "gen", "greet", "opinion", "story", "task", "thanks"]
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.746852Z  INFO speaker id: 旁路启用(2 人注册,threshold=0.50)
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.747087Z  INFO pipeline prebuilt room=sn-POCTEST0001-1789030274 elapsed_ms=188 has_fillers=true has_speaker=true
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.783835Z  INFO user_track_subscribed room=sn-POCTEST0001-1789030274 identity=dev-POCTEST0001 elapsed_ms=295
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.783928Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1789030274 elapsed_ms=295
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.784109Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1789030274 prebuilt_age_ms=225
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.784122Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.784159Z  INFO ordered_pcm local receipt v1 room=sn-POCTEST0001-1789030274 local_receipt_enabled=true meta_local_receipt=true
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.784225Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.785072Z  INFO eot snapshot 采集开启 job=20260910T091100-b03af0
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.785145Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1789030274 enabled=false text_empty=false
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.794303Z  INFO input_loop_started room=sn-POCTEST0001-1789030274 elapsed_ms=305 track_to_input_loop_ms=10
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.794430Z  INFO session.input_ready published room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.917320Z  INFO ordered_pcm begin accepted room=sn-POCTEST0001-1789030274 since_pipeline_ms=133 device_sent_at_ms=1789031460809 local_receipt=true
+2026-09-10T09:11:00+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:00.950801Z  INFO ordered_pcm first block submitted to ASR room=sn-POCTEST0001-1789030274 since_pipeline_ms=166
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.054098Z  INFO llm prewarm done ms=458
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.080710Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.134526Z  INFO llm prewarm done ms=538
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.681817Z  INFO stt final: 小可小可测试一下
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.682267Z  INFO ordered_pcm end candidate published (held final + trailing quiet) room=sn-POCTEST0001-1789030274 quiet_ms=800
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.682323Z  INFO ordered_pcm speculation on held final room=sn-POCTEST0001-1789030274 chars=8
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.891413Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1789030274 elapsed_ms=1402
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.891505Z  INFO output_ready room=sn-POCTEST0001-1789030274 elapsed_ms=1402
+2026-09-10T09:11:01+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:01.916276Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.109374Z  INFO ordered_pcm receipt_done accepted → body release room=sn-POCTEST0001-1789030274 turn_active=false
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.160163Z  INFO ordered_pcm result room=sn-POCTEST0001-1789030274 result={"finals":1,"finals_held":1,"input_id":"d24a66e8-9b9e-444b-9782-9dcc008bf690","queued_next":545280,"reason":null,"received_next":545280,"samples_queued":48960,"status":"complete","t":"result","text_chars":8}
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.160335Z  INFO ordered_pcm generation complete → final 进现役 commit 路径 room=sn-POCTEST0001-1789030274 chars=8
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.160358Z  INFO 契约 UserTranscriptFinal turn=turn-78551a60f4c44a84afa22be784bef90c
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.160584Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1789030274 evidence={"backlog_peak_samples":3200,"begin_at_unix_ms":1789031460917,"begin_sent_at_ms":1789031460809,"blocks_queued":16,"chunks_duplicate":0,"chunks_received":77,"end_before_final":0,"end_candidate_lead_over_end_ms":400,"end_candidate_ms":765,"end_candidate_quiet_ms":800,"end_ms":1165,"end_sample":545280,"end_sent_at_ms":1789031462042,"final_before_end":1,"final_lead_over_end_ms":400,"finals_after_terminal":0,"finals_held":1,"first_chunk_ms":11,"first_final_ms":765,"first_sample":496320,"first_submit_ms":33,"input_id":"d24a66e8-9b9e-444b-9782-9dcc008bf690","interims_held":0,"keep_from":496320,"local_receipt":"accepted","noise_floor_rms":122.4,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":80,"phase":"terminal","queue_full_events":0,"queued_next":545280,"quiet_thr_rms":235.6,"receipt_done_declined":false,"receipt_done_duplicate":0,"receipt_done_ignored":0,"receipt_done_ms":1192,"receipt_done_played_ms":1180,"received_next":545280,"rms_timeline_200ms":[184,146,206,157,103,231,273,318,245,306,287,207,160,143,73,74],"rtc_frames_dropped":137,"samples_cropped_before_keep_from":0,"samples_queued":48960,"samples_received":48960,"silence_samples_submitted":9600,"speech_peak_rms":471.3,"stream_end_ms":1243,"stream_interrupted":0,"tail_block_samples":960,"trailing_quiet_at_end_ms":820}
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.185564Z  INFO 契约 UserTurnCommitted turn=turn-78551a60f4c44a84afa22be784bef90c
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.185725Z  INFO turn committed: 小可小可测试一下 room=sn-POCTEST0001-1789030274 eou_ms=25 stt_ms=0
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.185764Z  INFO speaker id: skip(有效语音 0.00s < 1.0s)
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.185790Z  INFO using preemptive generation room=sn-POCTEST0001-1789030274 lead_ms=503
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.185802Z  INFO filler skipped: device local receipt (body gated until receipt_done/deadline) room=sn-POCTEST0001-1789030274 spec_lead_ms=503 spec_done=false tts_warm_ready=true receipt_done_seen=true max_ms=3000
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.185930Z  INFO local receipt gate released room=sn-POCTEST0001-1789030274 turn_id=1 reason="receipt_done_before_body" held_ms=0
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.497589Z  INFO llm stream done ttft_ms=537 chunks=18 chars=24
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.497848Z  INFO tts synth: 你好呀，测试成功啦，我已经准备好陪你聊天玩耍啦😉…(24字)
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.810211Z  INFO 契约 AgentSpeechStarted turn=agent-b362c0eaa71248a2b7507064565ad47a
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.810331Z  INFO aec warmup active, disabling interruptions for 0.50s room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:02+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:02.835492Z  INFO body first frame published (no filler) room=sn-POCTEST0001-1789030274 turn_id=1 since_turn_ms=649
+2026-09-10T09:11:05+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:05.719757Z  INFO tts metrics tts_connect_ms=0 warm=true warm_connect_ms=298 tts_ttft_ms=301 audio_frames=38 audio_duration_ms=6400 cancelled=false
+2026-09-10T09:11:05+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:05.720156Z  INFO body first sentence ready room=sn-POCTEST0001-1789030274 turn_id=1 ttfb_ms=301 body_ready_since_turn_ms=612
+2026-09-10T09:11:09+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:09.217546Z  INFO playout metrics room=sn-POCTEST0001-1789030274 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=202 first_underrun_ms=-1 played_frames=640 exit="SourceDrained"
+2026-09-10T09:11:09+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:09.218710Z  INFO 契约 AgentTranscriptFinal turn=agent-b362c0eaa71248a2b7507064565ad47a
+2026-09-10T09:11:09+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:09.218751Z  INFO interrupt telemetry: speaking→listening interim='' room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:09+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:09.218760Z  INFO 契约 AgentSpeechStopped turn=agent-b362c0eaa71248a2b7507064565ad47a
+2026-09-10T09:11:10+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:10.786020Z  INFO audio in (10s) room=sn-POCTEST0001-1789030274 frames=1000 mean_amp=0
+2026-09-10T09:11:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:19.473664Z  INFO job rss: 81MB (uptime 70416s)
+2026-09-10T09:11:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:20.835805Z  INFO audio in (10s) room=sn-POCTEST0001-1789030274 frames=1005 mean_amp=0
+2026-09-10T09:11:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:22.245200Z  INFO control cancel room=sn-POCTEST0001-1789030274 trace_id=7a1b4125-7ddc-4839-80e1-23c9407c27e3 seq=1 cancelled=false already_done=false had_turn=false
+2026-09-10T09:11:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:22.254789Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1789030274 identity=dev-POCTEST0001
+2026-09-10T09:11:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:22.265359Z  WARN job termination requested (P2: relying on room close) job_id=AJ_syYFMHGQzeWT
+2026-09-10T09:11:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:22.317393Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1789030274
+2026-09-10T09:11:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:22.317560Z  INFO job closed room=sn-POCTEST0001-1789030274 uptime_s=21
+2026-09-10T09:11:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:22.317955Z  INFO process exiting job_id=AJ_syYFMHGQzeWT
+2026-09-10T09:11:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:11:49.475563Z  INFO job rss: 81MB (uptime 70446s)
+2026-09-10T09:12:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:12:19.478697Z  INFO job rss: 81MB (uptime 70476s)
+2026-09-10T09:12:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:12:49.480993Z  INFO job rss: 81MB (uptime 70506s)
+2026-09-10T09:13:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:13:19.483542Z  INFO job rss: 81MB (uptime 70536s)
+2026-09-10T09:13:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:13:49.486708Z  INFO job rss: 81MB (uptime 70566s)
+2026-09-10T09:14:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:14:19.489763Z  INFO job rss: 81MB (uptime 70596s)
+2026-09-10T09:14:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:14:49.492436Z  INFO job rss: 81MB (uptime 70626s)
+2026-09-10T09:15:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:15:19.495323Z  INFO job rss: 81MB (uptime 70656s)
+2026-09-10T09:15:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:15:49.497331Z  INFO job rss: 81MB (uptime 70686s)
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.791537Z  INFO received job request, accepting job_id=AJ_44LUP37GbbxK room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.795561Z  INFO job assignment received, spawning job task job_id=AJ_44LUP37GbbxK
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.795928Z  INFO job_assignment_received job_id=AJ_44LUP37GbbxK room=sn-POCTEST0001-1789030276 elapsed_ms=0 issue_clock="ms" has_trace=true
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.796195Z  INFO worker_room_connect_start job_id=AJ_44LUP37GbbxK room=sn-POCTEST0001-1789030276 elapsed_ms=0
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.821972Z  INFO ASR 二遍识别灰度命中(bigmodel_async+nonstream) room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.822044Z  INFO asr stream task spawned (preconnect) room=sn-POCTEST0001-1789030276 nonstream=true
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.822251Z  INFO tts provider 生效值 room=sn-POCTEST0001-1789030276 tts_provider="xfyun" tts_voice=x6_lingxiaoxuan_pro
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.822333Z  INFO llm race 兜底路已配置 model=doubao-seed-2.0-mini
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.856355Z  INFO connecting to wss://voice-hk.hahaxiong.cc/rtc/v1
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.941146Z  INFO worker_room_connected room=sn-POCTEST0001-1789030276 elapsed_ms=145 connect_ms=145
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.976546Z  INFO filler bank loaded: 93 clips buckets=["ask", "barge", "emo_neg", "emo_pos", "gen", "greet", "opinion", "story", "task", "thanks"]
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.976908Z  INFO speaker id: 旁路启用(2 人注册,threshold=0.50)
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.977000Z  INFO pipeline prebuilt room=sn-POCTEST0001-1789030276 elapsed_ms=155 has_fillers=true has_speaker=true
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.979745Z  INFO agent_track_published room=sn-POCTEST0001-1789030276 elapsed_ms=183
+2026-09-10T09:16:16+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:16.979804Z  INFO input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 room=sn-POCTEST0001-1789030276 expected_device="dev-POCTEST0001" local_receipt=true
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.035790Z  INFO local-audio echo bank unavailable (fail-open) room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.113445Z  INFO user_track_subscribed room=sn-POCTEST0001-1789030276 identity=dev-POCTEST0001 elapsed_ms=317
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114096Z  INFO input gate open, starting cascade pipeline room=sn-POCTEST0001-1789030276 elapsed_ms=318
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114221Z  INFO pipeline takeover prebuilt room=sn-POCTEST0001-1789030276 prebuilt_age_ms=292
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114233Z  INFO ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114256Z  INFO ordered_pcm local receipt v1 room=sn-POCTEST0001-1789030276 local_receipt_enabled=true meta_local_receipt=true
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114282Z  INFO session_exit 信令已启用(v140 canary 命中) room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114804Z  INFO eot snapshot 采集开启 job=20260910T091617-e5c706
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.114848Z  INFO 开场白已关闭,保持 Listening room=sn-POCTEST0001-1789030276 enabled=false text_empty=false
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.124222Z  INFO input_loop_started room=sn-POCTEST0001-1789030276 elapsed_ms=328 track_to_input_loop_ms=10
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.124380Z  INFO session.input_ready published room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.176263Z  INFO ordered_pcm begin accepted room=sn-POCTEST0001-1789030276 since_pipeline_ms=61 device_sent_at_ms=1789031777059 local_receipt=true
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.209701Z  INFO ordered_pcm first block submitted to ASR room=sn-POCTEST0001-1789030276 since_pipeline_ms=95
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.428530Z  INFO llm prewarm done ms=566
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.492562Z  INFO llm prewarm done ms=630
+2026-09-10T09:16:17+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:17.593439Z  INFO asr: connected (seedasr bigmodel) end_window_ms=150 hotwords=267
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.175648Z  INFO stt final: 小可小可帮我
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.175760Z  INFO ordered_pcm speculation on held final room=sn-POCTEST0001-1789030276 chars=6
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.250359Z  INFO agent_track_subscribed_by_android room=sn-POCTEST0001-1789030276 elapsed_ms=1454
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.250461Z  INFO output_ready room=sn-POCTEST0001-1789030276 elapsed_ms=1454
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.566818Z  INFO ordered_pcm end candidate published (held final + trailing quiet) room=sn-POCTEST0001-1789030276 quiet_ms=400
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.920949Z  INFO stt final: 测试一下
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.921189Z  INFO ordered_pcm speculation on held final room=sn-POCTEST0001-1789030276 chars=10
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.931743Z  INFO ordered_pcm result room=sn-POCTEST0001-1789030276 result={"finals":2,"finals_held":2,"input_id":"b538b8ed-2466-44d6-bfba-ad951888f77e","queued_next":521440,"reason":null,"received_next":521440,"samples_queued":61280,"status":"complete","t":"result","text_chars":10}
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.931993Z  INFO ordered_pcm generation complete → final 进现役 commit 路径 room=sn-POCTEST0001-1789030276 chars=10
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.932033Z  INFO 契约 UserTranscriptFinal turn=turn-3c3f5a5b01c347b6901662ab53bc26ec
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.932288Z  INFO ordered_pcm decision evidence room=sn-POCTEST0001-1789030276 evidence={"backlog_peak_samples":3520,"begin_at_unix_ms":1789031777176,"begin_sent_at_ms":1789031777059,"blocks_queued":20,"chunks_duplicate":0,"chunks_received":97,"end_before_final":0,"end_candidate_lead_over_end_ms":132,"end_candidate_ms":1390,"end_candidate_quiet_ms":400,"end_ms":1522,"end_sample":521440,"end_sent_at_ms":1789031778657,"final_before_end":1,"final_lead_over_end_ms":523,"finals_after_terminal":0,"finals_held":2,"first_chunk_ms":4,"first_final_ms":999,"first_sample":460160,"first_submit_ms":33,"input_id":"b538b8ed-2466-44d6-bfba-ad951888f77e","interims_held":4,"keep_from":460160,"local_receipt":"accepted","noise_floor_rms":58.9,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":99,"phase":"terminal","queue_full_events":0,"queued_next":521440,"quiet_thr_rms":117.7,"receipt_done_declined":false,"receipt_done_duplicate":0,"receipt_done_ignored":0,"receipt_done_ms":null,"receipt_done_played_ms":null,"received_next":521440,"rms_timeline_200ms":[64,60,55,54,63,152,211,255,314,431,105,63,276,239,150,91,67,66,57,94],"rtc_frames_dropped":181,"samples_cropped_before_keep_from":0,"samples_queued":61280,"samples_received":61280,"silence_samples_submitted":9600,"speech_peak_rms":570.6,"stream_end_ms":1755,"stream_interrupted":0,"tail_block_samples":480,"trailing_quiet_at_end_ms":810}
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.966449Z  INFO 契约 UserTurnCommitted turn=turn-3c3f5a5b01c347b6901662ab53bc26ec
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.966648Z  INFO turn committed: 小可小可帮我测试一下 room=sn-POCTEST0001-1789030276 eou_ms=34 stt_ms=0
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.966690Z  INFO speaker id: skip(有效语音 0.00s < 1.0s)
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.966708Z  INFO using preemptive generation room=sn-POCTEST0001-1789030276 lead_ms=45
+2026-09-10T09:16:18+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:18.966716Z  INFO filler skipped: device local receipt (body gated until receipt_done/deadline) room=sn-POCTEST0001-1789030276 spec_lead_ms=45 spec_done=false tts_warm_ready=true receipt_done_seen=false max_ms=3000
+2026-09-10T09:16:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:19.233175Z  INFO ordered_pcm receipt_done accepted → body release room=sn-POCTEST0001-1789030276 turn_active=true
+2026-09-10T09:16:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:19.498948Z  INFO job rss: 81MB (uptime 70716s)
+2026-09-10T09:16:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:19.835547Z  INFO tts synth: 你想测试什么内容呢？…(10字)
+2026-09-10T09:16:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:19.893010Z  INFO llm stream done ttft_ms=736 chunks=19 chars=23
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.109958Z  INFO local receipt gate released room=sn-POCTEST0001-1789030276 turn_id=1 reason="receipt_done" held_ms=0
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.112567Z  INFO 契约 AgentSpeechStarted turn=agent-f2b3fb5cfc114c939e15925591772d72
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.112725Z  INFO aec warmup active, disabling interruptions for 0.50s room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.115446Z  INFO body first frame published (no filler) room=sn-POCTEST0001-1789030276 turn_id=1 since_turn_ms=1148
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.993507Z  INFO tts metrics tts_connect_ms=0 warm=true warm_connect_ms=262 tts_ttft_ms=274 audio_frames=13 audio_duration_ms=2480 cancelled=false
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.994047Z  INFO body first sentence ready room=sn-POCTEST0001-1789030276 turn_id=1 ttfb_ms=274 body_ready_since_turn_ms=1142
+2026-09-10T09:16:20+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:20.994208Z  INFO tts synth: 可以跟我说说具体的想法哦。…(13字)
+2026-09-10T09:16:22+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:22.101388Z  INFO tts metrics tts_connect_ms=0 warm=true warm_connect_ms=229 tts_ttft_ms=263 audio_frames=12 audio_duration_ms=2400 cancelled=false
+2026-09-10T09:16:25+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:25.003240Z  INFO playout metrics room=sn-POCTEST0001-1789030276 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=207 first_underrun_ms=-1 played_frames=488 exit="SourceDrained"
+2026-09-10T09:16:25+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:25.004230Z  INFO 契约 AgentTranscriptFinal turn=agent-f2b3fb5cfc114c939e15925591772d72
+2026-09-10T09:16:25+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:25.004257Z  INFO interrupt telemetry: speaking→listening interim='' room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:25+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:25.004266Z  INFO 契约 AgentSpeechStopped turn=agent-f2b3fb5cfc114c939e15925591772d72
+2026-09-10T09:16:27+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:27.116232Z  INFO audio in (10s) room=sn-POCTEST0001-1789030276 frames=1000 mean_amp=0
+2026-09-10T09:16:37+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:37.165660Z  INFO audio in (10s) room=sn-POCTEST0001-1789030276 frames=1005 mean_amp=0
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.245005Z  INFO control cancel room=sn-POCTEST0001-1789030276 trace_id=35093323-8b8c-4bde-b9de-3cfac9f5b595 seq=1 cancelled=false already_done=false had_turn=false
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.261733Z  INFO participant disconnected → closing job room=sn-POCTEST0001-1789030276 identity=dev-POCTEST0001
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.267145Z  WARN job termination requested (P2: relying on room close) job_id=AJ_44LUP37GbbxK
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.271733Z  INFO Disconnected from room "sn-POCTEST0001-1789030276" with reason: ClientInitiated
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.302496Z  INFO room deleted (delete_room_on_close) room=sn-POCTEST0001-1789030276
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.302628Z  INFO job closed room=sn-POCTEST0001-1789030276 uptime_s=22
+2026-09-10T09:16:39+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:39.302968Z  INFO process exiting job_id=AJ_44LUP37GbbxK
+2026-09-10T09:16:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:16:49.500655Z  INFO job rss: 81MB (uptime 70746s)
+2026-09-10T09:17:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:17:19.505387Z  INFO job rss: 81MB (uptime 70776s)
+2026-09-10T09:17:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:17:49.508784Z  INFO job rss: 81MB (uptime 70806s)
+2026-09-10T09:18:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:18:19.511298Z  INFO job rss: 81MB (uptime 70836s)
+2026-09-10T09:18:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:18:49.513923Z  INFO job rss: 81MB (uptime 70866s)
+2026-09-10T09:19:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:19:19.516053Z  INFO job rss: 81MB (uptime 70896s)
+2026-09-10T09:19:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:19:49.518021Z  INFO job rss: 81MB (uptime 70926s)
+2026-09-10T09:20:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:20:19.520657Z  INFO job rss: 81MB (uptime 70956s)
+2026-09-10T09:20:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:20:49.523519Z  INFO job rss: 81MB (uptime 70986s)
+2026-09-10T09:21:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:21:19.527093Z  INFO job rss: 81MB (uptime 71016s)
+2026-09-10T09:21:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:21:49.529173Z  INFO job rss: 81MB (uptime 71046s)
+2026-09-10T09:22:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:22:19.532276Z  INFO job rss: 81MB (uptime 71076s)
+2026-09-10T09:22:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:22:49.534928Z  INFO job rss: 81MB (uptime 71106s)
+2026-09-10T09:23:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:23:19.536277Z  INFO job rss: 81MB (uptime 71136s)
+2026-09-10T09:23:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:23:49.539019Z  INFO job rss: 81MB (uptime 71166s)
+2026-09-10T09:24:19+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:24:19.540837Z  INFO job rss: 81MB (uptime 71196s)
+2026-09-10T09:24:49+00:00 S9MSa5lydxwrr voice-rust-worker[2428059]: 2026-09-10T09:24:49.542774Z  INFO job rss: 81MB (uptime 71226s)
