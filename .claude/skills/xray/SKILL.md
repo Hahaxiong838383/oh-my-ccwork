@@ -145,6 +145,7 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 | `gmail.com` / `yt4.ggpht.com` | JP-Linode-V1 |
 | `youtube.com` / `x.com` | DMIT-Gemini-vps-chenchuan |
 | `registry.npmjs.org` | 新美宅-Claude-GPT |
+| `dmit.io`（DMIT 官网/客户后台） | **direct**（2026-09-11 并入规则 #15 自有服务商 direct 组，与 contabo.com/hostinger.com 同类） |
 | 大陆域名（`geosite:cn`） | direct |
 | **其他（兜底）** | **DMIT-Gemini-vps-chenchuan**（⚠️ 真实落地出口 IP = `38.49.38.237`，2026-09-03 实测——**与两个 `Gemini专用-US2-*` 节点同一台机器**，不是"美宅系"记载的 lisa 154.44.3.170；那条记载专指「新美宅-Claude-GPT」与「美宅-Claude-GPT_mychenchuan」两个节点）← 见下方"改默认节点" |
 
@@ -326,6 +327,7 @@ rule[5] 是「开发者下载」大组（github + githubusercontent + codeload +
 - **查真实出口IP**：`curl -x http://127.0.0.1:10808 https://ifconfig.me` → 再 `curl https://ipinfo.io/<IP>/json` 看归属。**ColoCrossing 等机房IP 会被 OpenAI/Cloudflare 403**（google 不严所以 200）。
 - **同一中转入口不同端口落到不同出口机**：住宅IP中转常在一个入口IP开多端口，每端口NAT到不同落地。「v2rayN 正常、xray 不通」且其他参数全同时，**重点核对端口**。让用户导出 v2rayN 的 `vless://` 链接逐字段比对，差异常藏在端口。改 reality 节点要**按分享链接完整重建 outbound**，别在旧配置改单字段（残留临时字段会干扰）。
 - 详见 memory `feedback_xray_port_routes_different_landing`。
+- ⚠️ **403 不总是 Cloudflare 挑战**——2026-09-11 `dmit.io` 客户后台 curl 测 403，实为 WHMCS **应用层鉴权拒绝**（该页面本来就要登录，返回 "This page is restricted"），跟节点/出口 IP 毫无关系，跟直连还是代理也无关。看返回内容判断具体是哪种 403：`cf-mitigated`/`__cf_chl` 头是 Cloudflare 挑战（走浏览器验证）；登录页/"restricted" 字样是业务鉴权（本来就该这样，别去查出口IP）。
 
 ## 重要注意事项
 
