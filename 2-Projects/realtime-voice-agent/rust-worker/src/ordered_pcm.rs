@@ -30,6 +30,9 @@ pub const TOPIC: &str = "p003.audio.history.v1";
 pub const MAGIC: &[u8; 4] = b"OPCM";
 pub const WIRE_VERSION: u16 = 1;
 pub const SAMPLE_RATE: u32 = 16_000;
+/// B25：单个 job 最多回这么多条消息级 `rejected`。实测 begin 被拒（如 session_mismatch）后端侧若继续发完
+/// 整代 chunk，逐包回执会变成 55 条出站包，挤占可靠数据通道；前几条端侧已足够判定，之后只计数。
+const REJECT_MSG_MAX: u64 = 8;
 /// 与 pipeline 的 STT_SEGMENT_SAMPLES 同值：200 ms 一块进火山。
 pub const BLOCK_SAMPLES: usize = 3200;
 /// 头部 JSON 上限（防畸形包）。
@@ -758,6 +761,9 @@ impl Session {
     /// 只拒绝这一条消息（不影响合法代次）。
     fn reject_msg(&mut self, h: &Header, reason: &str) -> Vec<Action> {
         self.counters.packets_rejected += 1;
+        if self.counters.packets_rejected > REJECT_MSG_MAX {
+            return Vec::new(); // 限流：只计数，不再出站（见 REJECT_MSG_MAX）
+        }
         vec![Action::Publish(json!({
             "t": "result", "input_id": h.input_id, "status": "rejected", "reason": reason,
             "active_input_id": self.input_id(),
@@ -1405,6 +1411,23 @@ mod tests {
         assert!(s.on_packet(&pkt(header("chunk", "in-late", 0, 0, 640), &tone(640, 1)), 3100).is_empty());
         assert!(s.on_packet(&pkt(header("end", "in-late", 1, 640, 640), &[]), 3200).is_empty());
         assert_eq!(s.counters.packets_after_terminal, 3);
+    }
+
+    /// B25：消息级 rejected 限流——begin 被拒后端侧继续发整代 chunk，不得逐包回执刷屏。
+    #[test]
+    fn b25_rejected_messages_are_rate_limited() {
+        let mut s = session_v1().with_expected_session(Some("s-other".into()));
+        // begin 被拒（session_mismatch），随后 20 个 chunk 全部落在 chunk_before_begin
+        let mut published = 0usize;
+        published += s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0).len();
+        for i in 0..20 {
+            published += s
+                .on_packet(&pkt(header("chunk", "in-1", i, i * 640, (i + 1) * 640), &tone(640, 1)), 1)
+                .len();
+        }
+        assert_eq!(s.counters.packets_rejected, 21, "拒绝计数不因限流丢失");
+        assert_eq!(published, REJECT_MSG_MAX as usize, "出站 rejected 被限到 REJECT_MSG_MAX 条");
+        assert_eq!(s.phase(), Phase::Idle, "限流不改相位");
     }
 
     /// B25 §3.3：no_task 两种成因必须可区分——端侧据此决定要不要重播 greet。
