@@ -149,6 +149,26 @@ awk -v s="$START" '$0 >= s && /app\/dns: failed/ {print}' ~/xray/xray.log
 | 大陆域名（`geosite:cn`） | direct |
 | **其他（兜底）** | **DMIT-Gemini-vps-chenchuan**（⚠️ 真实落地出口 IP = `38.49.38.237`，2026-09-03 实测——**与两个 `Gemini专用-US2-*` 节点同一台机器**，不是"美宅系"记载的 lisa 154.44.3.170；那条记载专指「新美宅-Claude-GPT」与「美宅-Claude-GPT_mychenchuan」两个节点）← 见下方"改默认节点" |
 
+### 🔴 DMIT admin 不限速端口切换（2026-09-11）——五台现状 + 摸排方法论坑
+
+DMIT 常规端口（6443/7443 等）流量超额被限速后，DMIT 新开了两个不限速的 admin 端口，落地跟旧端口完全相同（丽萨 154.44.3.170 / ZGO 落地 38.49.38.237），只是走 `64.186.235.107` 中转口的端口号不同：`admin-dmit-LISA-不限速`(11443→丽萨)、`admin-dmit-ZGO-不限速`(11447→ZGO落地)。用批量改 `outboundTag`/`balancer.selector`+`fallbackTag` 的方式把旧节点引用切到新节点（不覆写旧节点定义，保留可回退）。**五台现状**：
+
+| 机器 | 补的新节点 | 改动 | 备注 |
+|---|---|---|---|
+| Air | LISA+ZGO | 11 条规则 + 1 balancer(`github-us2` fallbackTag) | B组(US2/美宅_mychenchuan 直连)未动 |
+| Mini | LISA+ZGO | 2 条规则(#4/#8) + 1 balancer | 复刻 Air |
+| Studio | 只ZGO | 1 条规则(#1) + 1 balancer | 本来就没走丽萨这条线 |
+| dev198 | 只ZGO | `main-balancer` 的 **selector**（不是fallbackTag） | 架构特殊，见下 |
+| home-studio/linux-lan | 未处理 | — | 这次范围限定"公司里"设备，家用机未动 |
+
+**dev198 架构特殊，三个坑一次踩全**：
+1. **身份陷阱**：`ssh dev198` 的 `~.ssh/config` 没写 `User`，实际登录身份是 `chuan` 不是我以为的默认用户——之前"无标准xray config"的判断是错的，只是没找对路径模式（真实路径 `/home/chuan/.config/xray/config.json`，既不是 `~/xray/` 也不是 `/usr/local/etc/xray/`）。排查"某机器没有 xray"前必须先 `ss -tlnp`/`lsof -i :<port>` 查真实监听进程 + `cat /proc/<pid>/cmdline` 反查配置路径，标准路径试不到不等于没有。
+2. **猜错转发方向**：一开始猜"10808 是被 frp 从别的机器转发进来的"，结果 `frpc.toml` 其实是反方向（把 dev198 自己的服务暴露到公网），跟 10808 毫无关系——10808 是本机自己的 xray 在监听（`systemctl --user` 管理，unit 名 `xray.service`）。
+3. **access.log 不是想当然的"同目录文件"**：这台配置里 `log` 没有 `access` 字段，不产生文件日志，走 stdout 被 `systemd-journald` 接管——查日志要 `journalctl --user -u xray`，不是 grep 一个瞎拼的文件路径（瞎拼路径去 grep 违反不准猜红线，必须先读 config 确认 `log.access` 字段存在与否）。
+4. **改对了还可能验出"没生效"，且这次是正常的**：`main-balancer` 的 selector 已确认指向新 `admin-dmit-ZGO-不限速`，但当前 DMIT 限流下这个新端口被 leastPing 健康探测判定不健康，实际流量走了 `fallbackTag=mini`（降级到 Mini 代理）——这是 balancer 设计的正常降级，不是配置错误；跟 [[feedback_xray_balancer_bug]]（没设 fallbackTag 时无声落到任意节点）不是同一回事，这次是**设了 fallbackTag 后按设计触发**。流量恢复后健康检查会自动切回，不需要额外操作。
+
+**摸排方法论坑（最贵的一个，进了 memory `feedback_xray_domain_ip_and_rule`）**：判断"哪些 outbound 指向丽萨/ZGO 这两个落地"时，一开始只查 outbound 的 `settings.address` 字段是否**直接等于**落地 IP——完全漏掉了「新美宅-Claude-GPT」「DMIT-Gemini-vps-chenchuan」这两个经 `64.186.235.107` 中转访问同一落地的节点（它们的 `address` 字段是中转 IP 不是落地 IP），而这两个恰恰是本次真正要换的对象。查某个落地 IP 归属，必须同时覆盖"直连该 IP"和"经中转到该 IP"两种 outbound 定义模式，只查字面地址字段相等 = 只覆盖了对象的一种形态。
+
 ### 🔴 domain+ip 写进同一条规则 = AND = 整条静默失效（2026-08-31 事故）
 
 - xray 语义：**同条规则内 domain 与 ip 是 AND**（需同时满足）；且 `domainStrategy: AsIs` 下域名流量不解析 IP → 含 ip 条件的规则**对域名流量永不命中**。想要「域名或 IP 任一命中就走 X」必须写两条规则。
