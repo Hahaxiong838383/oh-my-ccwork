@@ -287,6 +287,15 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 
 ## Rust 灰度线(2026-08-12 起,64.90 同机并行)
 
+- 🔑 **连接真值(先看这行,别编别名)**:`ssh root@64.90.13.117` —— 这台**没有 ssh 别名**
+  (2026-09-11 我编了个 `p003-worker` 去探生产,连接失败的信号与"服务挂了"完全同形)。
+  真值另见记忆 `reference_cloud_servers.md` 的 voice-worker-hk 行。
+  unit 三件套:**生产** `voice-worker-rust`(MainPID 2017631 / ActiveEnter 2026-09-06 23:49:55 UTC,
+  动它前先对这两个数)、**隔离 POC** `voice-worker-poc`(one-shot 联调专用,可随便停)、
+  Python 主线 `voice-worker` + `voice-worker-colleague` + `voice-console`。
+  ⚠️ unit 名先 `systemctl list-units --type=service | grep -i voice` 列一遍再用——
+  不存在的 unit,`is-active` 照答 `inactive`。
+
 - **为什么同机**:A/B 对照只能差被测变量本身。最初部署在 dev198(另一台机/另一地理)被川哥当场驳回——
   跨机测出的差异不可归因。**同机、同配置源、同网络路径,只差实现语言**。
 - **unit**:`voice-worker-rust`。与 `voice-worker`(Python 主线)/`voice-worker-colleague`/`voice-console`
@@ -315,6 +324,16 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   但永远等不到 AI 且零报错;Python 主线无 AGENT_NAME(自动派单),显式 dispatch 会抑制它不串台
   (30 天日志实证 0 次误接,8078 条它接别的房间作对照锚);并发上限 `WORKER_MAX_JOBS=2`;
   **设备侧必须自带 AEC**——服务端只有 0.5s 打断抑制窗不是回声消除,外放设备会每句自我打断。
+- **内存账目(2026-09-11 实测,川哥问过一次"rust 占到 1G 了")**:面板上那个数是
+  **整个 service cgroup**,不是 rust 进程。`MemoryCurrent` 1011M = 匿名 769M + 文件页缓存 223M
+  (可回收) + 内核对象 16M;组里**两个进程**:rust `voice-rust-worker` RSS 324M(峰值 343M)、
+  **python `eot_sidecar.py` RSS 548M(峰值 613M)——大头是它不是 rust**(模型文件才 29M:
+  声纹 campplus 27M + silero_vad 2M,其余是 onnxruntime/OpenBLAS/livekit local_inference/解释器/8 线程)。
+  上限 `MemoryHigh` 1400M / `MemoryMax` 1800M,组峰值 1146M,**`memory.events` low/high/max/oom 全 0**
+  ——从未被限流或 OOM 过。rust 4 天从 49M 爬到 335M 呈**阶梯状**、且**与 job 数不成正比**
+  (631 job,忙时反而平),触发源未定位;判据=盯它自报的 `job rss`,稳在 340M 上下即收敛。
+  ⚠️ 别拿"配置值相除"当证据(见 [[feedback_optimizing_a_constraint_that_never_bound]]),
+  要看 `memory.peak` 与 `memory.events` 的实际计数。
 - **日志**:`journalctl -u voice-worker-rust`。关键行与 Python 线同名不同措辞
   (`asr: connected (... hotwords=N)`);输入观测每 10s 一行 `audio in (10s) frames=N mean_amp=X`
   (frames=0 → 上行断流/息屏;amp≈0 → 送的是静音;正常 → 问题在下游)。
