@@ -61,6 +61,16 @@ wrapper 输出单行 JSON：`schemaVersion=2`，保留 `status`、`levels{critic
 
 收工对比基线：控制面 `v1.67.0`，`in_sync/mismatch=0`；releaseId `20260911-170637-h-control-v1.67.0`，源 `ba3c2bd`；dev198 Bot 18/18、记忆 17/17；租户待办 1 为上述测试用例，合法个性化 4 人 6 项，平台 0。`v1.65.0 / 17 Bot / 4 人 5 项` 已过期；对比基线不是永恒阈值，实时值与 A 后续更新优先。
 
+## 报告排版（2026-09-11 调整）
+
+先用人话说明影响与动作，再给对应技术术语。阅读顺序为“一句话结论 → 需要关注 → 运行概况与已知项 → 技术依据”，无内容的栏目省略。
+
+- 严重问题最前；每项先讲影响、年龄和谁处理，再附 code。已知测试差异、合法个性化放在已知项，不混入修复清单。
+- 概况使用“检查项｜人话结果｜技术对应”三列短表；连接与模型出口分别说明，不写“平台一切正常”。少量信息用短列表。
+- 原始分级、必要定位信息和四个记忆键放在末尾。正常时不铺开 schemaVersion、serviceExit、完整 releaseId 等内部字段；需要解释问题才展开。
+- 标题/列表前留空行，只加粗结论和关键数字；长命令不挤进表格。常规正文约300–600字，不能为了短而隐去严重事项。
+- 分级仍按 v2，模型、调度、四键召回和单次采集不变。排版验证可复用已采集数据离线预览，不需要为格式改动重新访问生产。
+
 ## 只读边界
 
 - 只调用既有 wrapper；它内部的只读采集、本机巡检 state/临时文件与桌面提示属于既有链路，不授权 agent 另行写入。
@@ -82,7 +92,7 @@ wrapper 输出单行 JSON：`schemaVersion=2`，保留 `status`、`levels{critic
 
 仅更新判读策略与模型时，通过正式 `POST /api/automation_update` 提交 `{id:4,draft:<完整 AutomationDraft>}`；先读取/保存当前配置，保留无关字段，只改 prompt 和 `config.config_values.model`。禁止直写 SQLite。Token 只在进程内从本机凭据文件读取，不放 argv、文档或日志。
 
-更新后以 `POST /api/automation_get {"id":4}` 回读调度、agent、root、isolation 和模型；人工触发一次 `automation_run_now` 后，通过 `automation_runs` 对应的 conversation 及 Codex rollout `turn_context.payload.model` 核实实际为 `gpt-5.6-luna`，并确认四键召回、探针一次和判读结果。运行记录成功只表示任务完成，不能把平台 WARNING/CRITICAL 改成 OK。
+更新后以 `POST /api/automation_get {"id":4}` 回读调度、agent、root、isolation 和模型。首次接入、更换模型或采集链时，人工触发一次 `automation_run_now`，通过 `automation_runs` 对应的 conversation 及 Codex rollout `turn_context.payload.model` 核实实际为 `gpt-5.6-luna`，并确认四键召回、探针一次和判读结果；纯排版调整可复用快照做离线样稿验收，不重复采集。运行记录成功只表示任务完成，不能把平台 WARNING/CRITICAL 改成 OK。
 
 ## 离线验证
 

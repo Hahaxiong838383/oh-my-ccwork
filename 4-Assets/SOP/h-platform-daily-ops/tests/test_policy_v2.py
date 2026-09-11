@@ -146,6 +146,41 @@ class PolicyV2Test(unittest.TestCase):
         self.assertNotIn("install -m ", self.readme)
         self.assertNotIn("systemctl --user daemon-reload", self.readme)
 
+    def test_report_explains_impact_before_technical_terms(self) -> None:
+        layout = self.prompt.split("六、最终输出", 1)[1]
+        self.assert_tokens(
+            layout, "先说人话，再匹配技术术语", "本节只约束呈现",
+            "不改变前五节的分级、证据标准和只读边界",
+            "第一句不得以 WARNING、CRITICAL、issue code 或 JSON 字段开头",
+            "影响与时间；建议由谁做什么；技术对应",
+        )
+
+    def test_report_is_scannable_and_keeps_raw_evidence_at_end(self) -> None:
+        layout = self.prompt.split("六、最终输出", 1)[1]
+        self.assert_tokens(
+            layout, "一句话结论 → 需要关注 → 运行概况与已知项 → 技术依据",
+            "没有内容的栏目省略", "最多三列", "检查项｜人话结果｜技术对应",
+            "标题后与列表前均留空行", "保留原始 status/levels",
+            "记忆键不塞进表格", "不重复堆一遍",
+        )
+
+    def test_known_items_are_not_a_repair_list(self) -> None:
+        layout = self.prompt.split("六、最终输出", 1)[1]
+        self.assert_tokens(
+            layout, "保留的测试差异，无需修改", "不当成修复清单",
+            "不能把恢复候选直接写成失败或积压",
+            "不是固定数据", "数值必须来自本次 details",
+            "连接正常与模型出口正常分开写",
+        )
+
+    def test_layout_retains_memory_anchors_and_honest_completion_time(self) -> None:
+        layout = self.prompt.split("六、最终输出", 1)[1]
+        self.assert_tokens(
+            layout, *MEMORY_REFS, "逐键未命中必须明示",
+            "不能把采集/开始时间当完成时间", "不为凑长度删掉受影响对象",
+            "只在当前 Codeg 任务内汇报",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
