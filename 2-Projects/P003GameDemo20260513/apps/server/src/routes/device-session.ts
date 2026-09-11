@@ -17,6 +17,8 @@ import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-st
  *   JWT、Authorization、密钥一律不进日志——这条被单测的敏感扫描守着。
  */
 
+// 旧路径（= 现役生产 worker）的 agent 名。B29：产品首句 v1 不能派给它——它没有 ordered_pcm
+// 代次状态机，设备发了 begin 也没人接。新能力走 cfg().firstTurnAgent 指定的独立 agent。
 const AGENT_NAME = 'rust-worker';
 
 // ── env 全部请求时读取（不在模块顶层快照）：测试注入与生产热调参都靠这个 ──
@@ -25,6 +27,9 @@ const cfg = () => ({
   lkKey: process.env.LIVEKIT_API_KEY || '',
   lkSecret: process.env.LIVEKIT_API_SECRET || '',
   authSecret: process.env.AUTH_JWT_SECRET || '',
+  // B29 定向派单：产品首句 v1 专用 worker 的 agent 名。**没配 = 不签新能力**
+  // （codex B29 §3：缺可用派单目标时拒签，绝不把 ordered 首句投给旧 worker）。
+  firstTurnAgent: (process.env.ONESHOT_FIRST_TURN_AGENT_NAME || '').trim(),
   // 白名单 fail-closed：没配就一台都不放行（403），绝不默认全放
   allow: (process.env.DEVICE_SN_ALLOW || '')
     .split(',')
@@ -126,6 +131,7 @@ export function assertTokenMatchesResponse(
     room_name: string;
     expires_at_ms: number;
     trace_id?: string;
+    expected_agent_name?: string;
     contract?: { input_mode: string; oneshot_first_turn: string; local_receipt: string } | null;
   },
 ): void {
@@ -133,8 +139,12 @@ export function assertTokenMatchesResponse(
   if (c.sub !== resp.identity) throw new Error(`自检失败: sub=${c.sub} ≠ identity`);
   if (c.video?.room !== resp.room_name) throw new Error('自检失败: video.room ≠ room_name');
   const agents: Array<{ agentName?: string; metadata?: string }> = c.roomConfig?.agents || [];
-  const agent = agents.find((a) => a.agentName === AGENT_NAME);
-  if (!agent) throw new Error(`自检失败: roomConfig.agents 缺 ${AGENT_NAME}`);
+  // B29：拿**响应里的** expected_agent_name 去 JWT 里找，而不是两边各自对同一个常量
+  // （那样实现和守护共用一个参数，改错了两边一起错=双恒绿）。缺该字段时退回旧常量兼容老调用。
+  const wantAgent = resp.expected_agent_name ?? AGENT_NAME;
+  if (agents.length !== 1) throw new Error(`自检失败: roomConfig.agents 应恰好 1 项，实为 ${agents.length}`);
+  const agent = agents.find((a) => a.agentName === wantAgent);
+  if (!agent) throw new Error(`自检失败: JWT agentName=${agents[0]?.agentName} ≠ 响应 expected_agent_name=${wantAgent}`);
   // input_ready 合同：metadata 的 trace 必须与响应 trace_id 同值（worker 侧会拿它绑事件）
   if (resp.trace_id !== undefined) {
     let metaTrace: unknown;
@@ -210,7 +220,13 @@ deviceSessionRoute.post('/session', async (c) => {
     return c.json({ status: 'error', code: 503, message: '签发服务不可用' }, 503);
 
   // B23：灰度名单内 ∧ 客户端声明 → 签产品首句合同；否则旧路径。回滚 = 清空 ONESHOT_FIRST_TURN_SN_ALLOW。
-  const firstTurn = conf.firstTurnAllow.includes(sn as string) && supports.includes(FIRST_TURN_SUPPORT_TAG);
+  // B29 第三个条件：必须有定向派单目标。没有就**退回旧路径**（contract:null + 旧 agent），
+  // 不签一个会被投给旧 worker 的空头合同——那样设备会发 begin 然后永远等不到 ack。
+  const firstTurnEligible =
+    conf.firstTurnAllow.includes(sn as string) && supports.includes(FIRST_TURN_SUPPORT_TAG);
+  const firstTurn = firstTurnEligible && conf.firstTurnAgent !== '';
+  // 本次派单目标：签了新合同 → 专用 agent；否则旧 agent。**JWT / 响应 / 自检三处同用这一个值。**
+  const agentName = firstTurn ? conf.firstTurnAgent : AGENT_NAME;
   const contract = firstTurn ? { ...FIRST_TURN_CONTRACT, worker_capabilities: [...FIRST_TURN_CONTRACT.worker_capabilities] } : null;
 
   const roomSec = nextRoomSecond();
@@ -234,7 +250,7 @@ deviceSessionRoute.post('/session', async (c) => {
     roomConfig: {
       agents: [
         {
-          agentName: AGENT_NAME,
+          agentName,
           // issue_ts_ms：签发时刻毫秒级（READY_LATENCY 合同 2026-08-18）——旧口径用
           // room 名尾秒(秒级)算 issue_to_assignment，自带 ±1s 量化噪声；worker 优先取此值。
           metadata: JSON.stringify({
@@ -266,7 +282,7 @@ deviceSessionRoute.post('/session', async (c) => {
     trace_id: traceId,
     session_id: sessionId,
     expires_at_ms: expSec * 1000,
-    expected_agent_name: AGENT_NAME,
+    expected_agent_name: agentName,
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,
   };

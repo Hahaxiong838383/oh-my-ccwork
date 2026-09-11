@@ -263,9 +263,13 @@ await t('日志敏感扫描（含正锚）', () => {
   assert.equal(leaked.length, 0, `日志泄露疑似 JWT ${leaked.length} 行`);
 });
 
+const FT_AGENT = 'rust-worker-firstturn'; // B29 单机灰度定向派单目标（测试值）
+const OLD_AGENT = 'rust-worker';
+
 // ── B23 产品首句 v1 签发协商（2026-09-11）：名单 ∧ 声明 才签；任一不成立 = 旧路径；contract 与 metadata 同源 ──
 await t('B23 名单内且声明 → 签 contract，metadata 三字段同源', async () => {
   process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
   try {
     const r = await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] });
     assert.equal(r.status, 200);
@@ -288,6 +292,7 @@ await t('B23 名单内且声明 → 签 contract，metadata 三字段同源', as
     assert.ok(logLines.some((l) => l.includes('contract=first_turn_v1')));
   } finally {
     delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
   }
 });
 
@@ -303,6 +308,7 @@ await t('B23 名单内但客户端未声明（v261 老客户端）→ 旧路径�
     for (const k of ['input_mode', 'oneshot_first_turn', 'local_receipt']) assert.ok(!(k in meta), k);
   } finally {
     delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
   }
 });
 
@@ -315,6 +321,7 @@ await t('B23 声明了但不在名单 / 名单为空 → 旧路径', async () =>
     assertTokenMatchesResponse(j.token, j);
   } finally {
     delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
   }
   const r2 = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
   const j2 = (await r2.json()) as Record<string, any>;
@@ -330,6 +337,7 @@ await t('B23 supports 畸形值被忽略，不影响签发', async () => {
 
 await t('B23 自检：contract 与 metadata 不同源必 throw（负锚）', async () => {
   process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
   try {
     const r = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
     const j = (await r.json()) as Record<string, any>;
@@ -340,6 +348,88 @@ await t('B23 自检：contract 与 metadata 不同源必 throw（负锚）', asy
     );
   } finally {
     delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+// ── B29 单机灰度定向派单（2026-09-11）：签了新合同必须同时把房派给专用 agent；
+//    缺派单目标 = 拒签新能力退回旧路径，绝不把 ordered 首句投给没有代次状态机的旧 worker ──
+await t('B29 ①目标 SN + supports + 有派单目标 → v1 合同 ∧ 派给新 agent（响应/JWT/自检三处同值）', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] });
+    const j = (await r.json()) as Record<string, any>;
+    assert.ok(j.contract, 'contract 应非空');
+    assert.equal(j.expected_agent_name, FT_AGENT, '响应 expected_agent_name');
+    const c = decodeJwt(j.token) as Record<string, any>;
+    assert.equal(c.roomConfig.agents.length, 1);
+    assert.equal(c.roomConfig.agents[0].agentName, FT_AGENT, 'JWT roomConfig.agents[0].agentName');
+    assertTokenMatchesResponse(j.token, j); // 自检用的是响应里的名字，不是常量
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B29 ②同 SN 无 supports → contract null ∧ 仍派旧 agent', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const j = (await (await callSession({ cred })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    assert.equal((decodeJwt(j.token) as any).roomConfig.agents[0].agentName, OLD_AGENT);
+    assertTokenMatchesResponse(j.token, j);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B29 ③非名单合法 SN + supports → contract null ∧ 仍派旧 agent', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN2;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1'] })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    assert.equal((decodeJwt(j.token) as any).roomConfig.agents[0].agentName, OLD_AGENT);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B29 ④fail-closed：名单内 + supports 但未配派单目标 → 拒签新能力，退回旧路径旧 agent', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME; // 就是要它缺席
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] })).json()) as Record<string, any>;
+    assert.equal(j.contract, null, '缺派单目标时绝不能签出 contract');
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    const meta = JSON.parse((decodeJwt(j.token) as any).roomConfig.agents[0].metadata);
+    for (const k of ['input_mode', 'oneshot_first_turn', 'local_receipt'])
+      assert.ok(!(k in meta), `旧路径 metadata 不得含 ${k}`);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  }
+});
+
+await t('B29 负锚：响应 expected_agent_name 与 JWT 不符必 throw（证明自检真在对撞而非恒绿）', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1'] })).json()) as Record<string, any>;
+    assertTokenMatchesResponse(j.token, j); // 正锚：原样必过
+    assert.throws(
+      () => assertTokenMatchesResponse(j.token, { ...j, expected_agent_name: OLD_AGENT }),
+      /expected_agent_name/,
+      '把响应的 agent 名改成旧的，自检必须翻红',
+    );
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
   }
 });
 
