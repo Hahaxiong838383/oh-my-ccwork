@@ -97,11 +97,13 @@ def self_check(token: str, env: dict, entry: dict, agent: str) -> None:
         raise SystemExit("自检失败: metadata trace/session/input_mode 不一致")
     if (m.get("local_receipt") or "") != (entry.get("local_receipt") or ""):
         raise SystemExit("自检失败: metadata local_receipt 与条目不一致")
+    if (m.get("oneshot_first_turn") or "") != (entry.get("oneshot_first_turn") or ""):
+        raise SystemExit("自检失败: metadata oneshot_first_turn 与条目不一致")
     if int(c["exp"]) * 1000 != entry["expires_at_ms"]:
         raise SystemExit("自检失败: exp 与 expires_at_ms 不一致")
 
 
-def mint_one(env: dict, sn: str, agent: str, ttl_s: int, local_receipt: str = "") -> dict:
+def mint_one(env: dict, sn: str, agent: str, ttl_s: int, local_receipt: str = "", first_turn: str = "") -> dict:
     now_s = int(time.time())
     room = f"sn-{sn}-{now_s}"
     identity = f"dev-{sn}"
@@ -111,6 +113,8 @@ def mint_one(env: dict, sn: str, agent: str, ttl_s: int, local_receipt: str = ""
     md = {"trace_id": trace_id, "session_id": session_id, "issue_ts_ms": issue_ts_ms, "input_mode": "ordered_pcm"}
     if local_receipt:
         md["local_receipt"] = local_receipt  # 本地承接 v1：受信房级能力（worker 只认签发 metadata，不认设备自述）
+    if first_turn:
+        md["oneshot_first_turn"] = first_turn  # B23 产品首句 v1：首句代次终态后同房切回 RTC 多轮（缺省 = POC 一房一代）
     meta = json.dumps(md)
     token = (api.AccessToken(env["LIVEKIT_API_KEY"], env["LIVEKIT_API_SECRET"])
              .with_identity(identity)
@@ -133,6 +137,7 @@ def mint_one(env: dict, sn: str, agent: str, ttl_s: int, local_receipt: str = ""
         "expected_agent_name": agent,
         "input_mode": "ordered_pcm",
         "local_receipt": local_receipt or None,
+        "oneshot_first_turn": first_turn or None,
         "token_fingerprint": hashlib.sha256(token.encode()).hexdigest()[:16],
     }
     self_check(token, env, entry, agent)
@@ -158,6 +163,7 @@ def main() -> int:
     ap.add_argument("--public-out", default="", help="去 token 副本（归档用）")
     ap.add_argument("--env-file", action="append", default=[], help="覆盖默认 env 文件列表（可多次）")
     ap.add_argument("--local-receipt", default="", help="签进 metadata 的本地承接版本（如 v1）；空 = 不签（旧合同房，worker 对声明恒回 ignored）")
+    ap.add_argument("--first-turn", default="", help="B23：签进 metadata 的产品首句合同版本（如 v1）→ 首句终态后同房切 RTC；空 = POC 一房一代")
     a = ap.parse_args()
 
     if a.sn.upper().startswith(FORBIDDEN_SN_PREFIX) or len(a.sn) >= 20:
@@ -188,7 +194,7 @@ def main() -> int:
         # 房名尾秒=真实签发秒；与注册表里最后一秒及本批上一房都必须严格递增
         while int(time.time()) <= last_sec:
             time.sleep(0.05)
-        e = mint_one(env, a.sn, a.agent, a.ttl_seconds, a.local_receipt)
+        e = mint_one(env, a.sn, a.agent, a.ttl_seconds, a.local_receipt, a.first_turn)
         if e["room_name"] in seen:
             print("拒绝: 房名已在注册表/本批出现", e["room_name"], file=sys.stderr)
             return 3
@@ -214,7 +220,8 @@ def main() -> int:
         "identity": f"dev-{a.sn}",
         "input_mode": "ordered_pcm",
         "local_receipt": a.local_receipt or None,
-        "worker_capabilities": (["android_local_receipt_v1"] if a.local_receipt == "v1" else []),
+        "oneshot_first_turn": a.first_turn or None,
+        "worker_capabilities": (["android_local_receipt_v1"] if a.local_receipt == "v1" else []) + (["oneshot_first_turn_v1"] if a.first_turn == "v1" else []),
         "history_topic": TOPIC,
         "ttl_seconds": a.ttl_seconds,
         "count": len(rooms),

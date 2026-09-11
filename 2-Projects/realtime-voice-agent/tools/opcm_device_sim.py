@@ -110,6 +110,12 @@ class Sim:
         self.nonzero_before_receipt = 0
         self.receipt_sent_t_ms: int | None = None
         self.end_t_ms: int | None = None
+        # B23 产品首句 v1：首句终态后同房切 RTC——第二句经 mic 轨真实推流；session.input_phase 事件；RTC 阶段的用户 final
+        self.rtc_queue = bytearray()
+        self.rtc_push_t_ms: int | None = None
+        self.rtc_end_t_ms: int | None = None
+        self.input_phase_events: list[dict] = []
+        self.first_reply_done_t_ms: int | None = None
         self.done = asyncio.Event()
 
     def t_ms(self) -> int:
@@ -123,9 +129,14 @@ class Sim:
     def token(self) -> str:
         if self.pre_token:
             return self.pre_token
-        meta = json.dumps({"trace_id": self.trace_id, "session_id": self.session_id, "issue_ts_ms": int(time.time() * 1000),
-                           "input_mode": "ordered_pcm",
-                           **({"local_receipt": "v1"} if self.a.local_receipt_meta else {})})
+        # B23：--rtc-only-meta = 生产同款 metadata（无 input_mode）→ 普通 RTC 房回归；--first-turn-meta = 签 oneshot_first_turn v1
+        if self.a.rtc_only_meta:
+            meta = json.dumps({"trace_id": self.trace_id, "session_id": self.session_id, "issue_ts_ms": int(time.time() * 1000)})
+        else:
+            meta = json.dumps({"trace_id": self.trace_id, "session_id": self.session_id, "issue_ts_ms": int(time.time() * 1000),
+                               "input_mode": "ordered_pcm",
+                               **({"local_receipt": "v1"} if self.a.local_receipt_meta else {}),
+                               **({"oneshot_first_turn": "v1"} if self.a.first_turn_meta else {})})
         t = (api.AccessToken(self.env["LIVEKIT_API_KEY"], self.env["LIVEKIT_API_SECRET"])
              .with_identity(self.identity)
              .with_grants(api.VideoGrants(room_join=True, room=self.room_name, can_publish=True, can_subscribe=True, can_publish_data=True))
@@ -149,8 +160,8 @@ class Sim:
                     self.acks.append(h); self.log("history.ack", **{k: h.get(k) for k in ("received_next", "queued_next", "credit_samples", "chunks_received", "phase", "end_candidate", "local_receipt")})
                 elif h.get("t") == "result":
                     self.result = h; self.log("history.result", **h)
-                    if h.get("status") in ("failed", "rejected"):
-                        # 失败即可收尾(等 1 s 看有没有幽灵回复)
+                    if h.get("status") in ("failed", "rejected") and not self.a.rtc_wav:
+                        # 失败即可收尾(等 1 s 看有没有幽灵回复)；B23 带 --rtc-wav 时失败后还要验切 RTC，不收尾
                         asyncio.get_event_loop().call_later(1.5, self.done.set)
                 else:
                     self.log("history.other", t=h.get("t"))
@@ -164,6 +175,11 @@ class Sim:
                 self.log("control", type=kind, src=j.get("src"), seq=j.get("seq"))
                 if kind == "session.input_ready":
                     self.input_ready = True
+                if kind == "session.input_phase":
+                    pl = j.get("payload") or {}
+                    self.input_phase_events.append({"t_ms": self.t_ms(), **pl})
+                    self.log("control.input_phase", reason=pl.get("reason"), phase=pl.get("phase"), ordered=pl.get("ordered"),
+                             stt_spawned_ms_ago=pl.get("stt_spawned_ms_ago"))
             elif topic == "state":
                 try:
                     j = json.loads(pkt.data.decode("utf-8"))
@@ -172,15 +188,21 @@ class Sim:
                 if j.get("k") == "speaking":
                     self.speaking.append((round((time.monotonic() - self.t0) * 1000), bool(j.get("speaking"))))
                     self.log("state.speaking", speaking=j.get("speaking"))
-                    if j.get("speaking") is False and self.result and self.result.get("status") == "complete":
-                        asyncio.get_event_loop().call_later(0.8, self.done.set)
+                    if j.get("speaking") is False:
+                        if self.first_reply_done_t_ms is None:
+                            self.first_reply_done_t_ms = self.t_ms()
+                        if self.a.rtc_wav:
+                            if self.rtc_end_t_ms is not None:
+                                asyncio.get_event_loop().call_later(0.8, self.done.set)
+                        elif self.result and self.result.get("status") == "complete":
+                            asyncio.get_event_loop().call_later(0.8, self.done.set)
             else:
                 self.log("data.other", topic=topic, n=len(pkt.data))
 
         @room.on("transcription_received")
         def on_tr(segments, participant, publication):
             for s in segments:
-                rec = {"identity": getattr(participant, "identity", "?"), "final": bool(s.final), "text": s.text}
+                rec = {"identity": getattr(participant, "identity", "?"), "final": bool(s.final), "text": s.text, "t_ms": self.t_ms()}
                 self.transcripts.append(rec)
                 self.log("transcription", **rec)
 
@@ -202,12 +224,16 @@ class Sim:
         track = rtc.LocalAudioTrack.create_audio_track("mic", source)
         await room.local_participant.publish_track(track, rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE))
         self.log("mic_published")
-        silence_task = asyncio.ensure_future(self.push_silence(source))
+        silence_task = asyncio.ensure_future(self.push_mic(source))
 
         pcm = read_wav(Path(a.wav))
+        if a.wav_head_ms > 0:
+            pcm = pcm[: (SR * a.wav_head_ms // 1000) * 2]  # B23：只发头部（纯唤醒词回归）
         n = len(pcm) // 2
         chunk = a.chunk_samples
-        base = {"input_id": self.input_id, "trace_id": self.trace_id, "session_id": self.session_id,
+        # B25：--session-mismatch 让包头 session_id 与签发 metadata 不同（token 里仍是真值）
+        wire_session = ("mismatch-" + self.session_id[8:]) if a.session_mismatch else self.session_id
+        base = {"input_id": self.input_id, "trace_id": self.trace_id, "session_id": wire_session,
                 "capture_epoch": 1, "wake_generation": 1, "keep_from": a.keep_from, "boundary_kind": a.boundary,
                 "overlaps_local_playback": False, "sr": SR, "ch": 1, "fmt": "s16le"}
 
@@ -216,11 +242,16 @@ class Sim:
             await room.local_participant.publish_data(encode(h, body), reliable=True, topic=TOPIC)
 
         await asyncio.sleep(a.begin_delay)
-        await send({**base, "t": "begin", "seq": 0, "start": 0, "end": 0, **({"local_receipt": True} if a.local_receipt else {})})
-        self.log("history.begin", samples=n)
         seq = 0
         off = 0
         sent = 0
+        if a.no_begin:
+            # B23：端侧没走首句（旧客户端/开关关）——不发任何 OPCM，期望 worker begin 超时后切 RTC
+            self.log("history.no_begin")
+            n = 0
+        else:
+            await send({**base, "t": "begin", "seq": 0, "start": 0, "end": 0, **({"local_receipt": True} if a.local_receipt else {})})
+            self.log("history.begin", samples=n)
         while off < n:
             m = min(chunk, n - off)
             if a.scenario == "missing_chunk" and seq == a.skip_seq:
@@ -238,16 +269,42 @@ class Sim:
                 break
             if a.pace_ms:
                 await asyncio.sleep(a.pace_ms / 1000)
-        if a.scenario != "cancel_mid":
+        # B25 end 锚：负偏移 = 先推第二句再发 end（RTC 帧早于 end 到达 worker）
+        if a.rtc_wav and a.rtc_at == "end" and a.rtc_offset_ms < 0:
+            await self.push_rtc_utterance("end-early")
+            await asyncio.sleep(-a.rtc_offset_ms / 1000)
+        if a.scenario != "cancel_mid" and not a.no_begin:
             await send({**base, "t": "end", "seq": seq, "start": n, "end": n})
             self.end_t_ms = self.t_ms()
             self.log("history.end", end=n, chunks_sent=seq, samples_sent=sent)
+        # B25 end 锚：非负偏移 = end 发送后 N ms 推第二句（与切换/STT2 建连交错）
+        if a.rtc_wav and a.rtc_at == "end" and a.rtc_offset_ms >= 0:
+            if a.rtc_offset_ms:
+                await asyncio.sleep(a.rtc_offset_ms / 1000)
+            await self.push_rtc_utterance("end-late")
         # 本地承接 v1：模拟端侧本地短语播完 → receipt_done（-1 = 永不发，验截止放行；cancel_mid 也发，验取消后不复活）
-        if a.local_receipt and a.receipt_delay_ms >= 0:
+        if a.local_receipt and a.receipt_delay_ms >= 0 and not a.no_begin:
             await asyncio.sleep(a.receipt_delay_ms / 1000)
             await send({**base, "t": "receipt_done", "seq": seq + 1, "start": n, "end": n, "played_ms": a.receipt_delay_ms})
             self.receipt_sent_t_ms = self.t_ms()
             self.log("history.receipt_done", played_ms=a.receipt_delay_ms, nonzero_before=self.nonzero_before_receipt)
+        if a.rtc_wav and a.rtc_at == "connect":
+            if a.rtc_offset_ms:
+                await asyncio.sleep(a.rtc_offset_ms / 1000)
+            await self.push_rtc_utterance("connect")
+        if a.rtc_wav and a.rtc_at == "phase":
+            # B23：首句终态（result / input_phase）后，等首答播完（有的话）再经 mic 轨真实推第二句
+            if a.no_begin:
+                ok = await self.wait_until(lambda: bool(self.input_phase_events), 8.0)
+                self.log("rtc.gate", waited_for="input_phase", ok=ok)
+            else:
+                ok = await self.wait_until(lambda: self.result is not None, 15.0)
+                self.log("rtc.gate", waited_for="result", ok=ok, outcome=(self.result or {}).get("outcome"))
+                if ok and (self.result or {}).get("outcome") == "task":
+                    ok2 = await self.wait_until(lambda: self.first_reply_done_t_ms is not None, 15.0)
+                    self.log("rtc.gate", waited_for="first_reply_done", ok=ok2)
+            await asyncio.sleep(a.rtc_delay_ms / 1000)
+            await self.push_rtc_utterance("phase")
         try:
             await asyncio.wait_for(self.done.wait(), timeout=a.timeout)
         except asyncio.TimeoutError:
@@ -269,17 +326,55 @@ class Sim:
             "ack_local_receipt": next((x.get("local_receipt") for x in reversed(self.acks) if x.get("local_receipt")), None),
             "end_t_ms": self.end_t_ms, "receipt_sent_t_ms": self.receipt_sent_t_ms,
             "first_nonzero_t_ms": self.first_nonzero_t_ms, "nonzero_before_receipt": self.nonzero_before_receipt,
+            "result_outcome": (self.result or {}).get("outcome"), "result_next": (self.result or {}).get("next"),
+            "input_phase_events": self.input_phase_events,
+            "rtc_at": a.rtc_at, "rtc_offset_ms": a.rtc_offset_ms,
+            "rtc_push_t_ms": self.rtc_push_t_ms, "rtc_end_t_ms": self.rtc_end_t_ms,
+            "rtc_push_minus_end_ms": (self.rtc_push_t_ms - self.end_t_ms) if (self.rtc_push_t_ms is not None and self.end_t_ms is not None) else None,
+            "rtc_user_finals": [t["text"] for t in self.transcripts if t["final"] and t["identity"] == self.identity and self.rtc_push_t_ms is not None and t["t_ms"] >= self.rtc_push_t_ms],
+            "user_finals_all": [t["text"] for t in self.transcripts if t["final"] and t["identity"] == self.identity],
+            "speaking_starts": sum(1 for _, sp in self.speaking if sp),
             "first_nonzero_after_end_ms": (self.first_nonzero_t_ms - self.end_t_ms) if (self.first_nonzero_t_ms is not None and self.end_t_ms is not None) else None,
             "first_nonzero_after_receipt_ms": (self.first_nonzero_t_ms - self.receipt_sent_t_ms) if (self.first_nonzero_t_ms is not None and self.receipt_sent_t_ms is not None) else None,
         }
         self.log("summary", **summary)
         return summary
 
-    async def push_silence(self, source: rtc.AudioSource):
-        frame = rtc.AudioFrame.create(SR, 1, SR // 100)  # 10 ms 零样本
+    async def push_mic(self, source: rtc.AudioSource):
+        """mic 轨：默认 10 ms 零样本；B23 队列里有 RTC 语音时按实时节拍推真实样本（第二句/无 begin 回归用）。"""
+        n = SR // 100
+        zero = rtc.AudioFrame.create(SR, 1, n)
+        pushing = False
         while True:
-            await source.capture_frame(frame)
+            if len(self.rtc_queue) >= n * 2:
+                chunk = bytes(self.rtc_queue[: n * 2]); del self.rtc_queue[: n * 2]
+                frame = rtc.AudioFrame.create(SR, 1, n)
+                memoryview(frame.data).cast("B")[:] = chunk
+                await source.capture_frame(frame)
+                pushing = True
+            else:
+                if pushing:
+                    pushing = False
+                    self.rtc_end_t_ms = self.t_ms()
+                    self.log("rtc.utterance_end")
+                await source.capture_frame(zero)
             await asyncio.sleep(0.01)
+
+    async def push_rtc_utterance(self, tag: str):
+        """B25：把第二句塞进 mic 队列（push_mic 按实时节拍推）。锚/偏移由调用方决定。"""
+        rtc_pcm = read_wav(Path(self.a.rtc_wav))
+        self.rtc_queue.extend(rtc_pcm)
+        self.rtc_push_t_ms = self.t_ms()
+        self.log("rtc.utterance_start", samples=len(rtc_pcm) // 2, wav=Path(self.a.rtc_wav).name, anchor=tag,
+                 offset_ms=self.a.rtc_offset_ms)
+
+    async def wait_until(self, pred, timeout_s: float) -> bool:
+        t0 = time.monotonic()
+        while time.monotonic() - t0 < timeout_s:
+            if pred():
+                return True
+            await asyncio.sleep(0.05)
+        return False
 
     async def drain_reply(self, track):
         stream = rtc.AudioStream(track)
@@ -317,6 +412,18 @@ async def main() -> int:
     ap.add_argument("--local-receipt", action="store_true", help="本地承接 v1：begin 带 local_receipt=true（期望 ack 回显 accepted，worker 不播垫句、扣正文到 receipt_done）")
     ap.add_argument("--receipt-delay-ms", type=int, default=1500, help="end 后多少 ms 发 receipt_done（模拟本地短语时长）；-1 = 永不发（验截止放行）")
     ap.add_argument("--local-receipt-meta", action="store_true", help="自铸 token 的 metadata 签 local_receipt=v1（不给则 worker 应回 ignored）")
+    ap.add_argument("--first-turn-meta", action="store_true", help="B23：自铸 token 的 metadata 签 oneshot_first_turn=v1（首句终态后 worker 切 RTC）")
+    ap.add_argument("--rtc-only-meta", action="store_true", help="B23：自铸 token 只签 trace/session/issue_ts（生产同款，无 input_mode）→ 普通 RTC 房回归")
+    ap.add_argument("--no-begin", action="store_true", help="B23：不发任何 OPCM（端侧没走首句）→ 期望 worker begin 超时切 RTC")
+    ap.add_argument("--rtc-wav", default="", help="B23：首句终态/首答后经 mic 轨真实推的第二句 wav（16k mono s16le）")
+    ap.add_argument("--rtc-delay-ms", type=int, default=1500, help="B23：推第二句前的等待（首答播完后计）")
+    ap.add_argument("--session-mismatch", action="store_true",
+                    help="B25：begin/chunk 头的 session_id 故意与签发 metadata 不一致（验 worker 消息级 rejected/session_mismatch）")
+    ap.add_argument("--rtc-at", default="phase", choices=["phase", "end", "connect"],
+                    help="B25：第二句推送锚——phase=等首句 result/相位切换(默认)；end=与 end 发送交错(验采样边界)；connect=进房即推")
+    ap.add_argument("--rtc-offset-ms", type=int, default=0,
+                    help="B25：相对 --rtc-at 锚的偏移；end 锚下负值 = 先推第二句再发 end（制造 RTC 早于 end 到达）")
+    ap.add_argument("--wav-head-ms", type=int, default=0, help="B23：只发 OPCM wav 的前 N ms（纯唤醒词回归）")
     a = ap.parse_args()
     if a.room_file:
         env: dict[str, str] = {}

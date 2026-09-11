@@ -1,0 +1,118 @@
+{
+  "note": "B25 wire 原包（worker→设备）；测试房 sn-POCTEST0001-*，无 token / 无真实 SN",
+  "samples": {
+    "task": {
+      "result": {
+        "finals": 1,
+        "finals_held": 1,
+        "input_id": "998357ef-890d-484d-be0a-2d906eef8b4b",
+        "next": "rtc",
+        "outcome": "task",
+        "queued_next": 35152,
+        "reason": null,
+        "received_next": 35152,
+        "samples_queued": 35152,
+        "status": "complete",
+        "t": "result",
+        "text_chars": 8
+      },
+      "input_phase_payload": {
+        "reason": "first_turn_committed",
+        "phase": "rtc",
+        "ordered": {
+          "end_sample": 35152,
+          "input_id": "998357ef-890d-484d-be0a-2d906eef8b4b",
+          "no_task_reason": null,
+          "outcome": "committed",
+          "session_id": "b911862e-965b-424b-9188-801eac9afaaf"
+        },
+        "stt_spawned_ms_ago": 462
+      },
+      "rejected": null
+    },
+    "no_task_wake_only": {
+      "result": {
+        "finals": 1,
+        "finals_held": 1,
+        "input_id": "02132a37-1334-43ae-966c-c7a65086269f",
+        "next": "rtc",
+        "no_task_reason": "wake_only",
+        "outcome": "no_task",
+        "queued_next": 19362,
+        "reason": null,
+        "received_next": 19362,
+        "samples_queued": 19362,
+        "status": "complete",
+        "t": "result",
+        "text_chars": 4
+      },
+      "input_phase_payload": {
+        "reason": "first_turn_no_task",
+        "phase": "rtc",
+        "ordered": {
+          "end_sample": 19362,
+          "input_id": "02132a37-1334-43ae-966c-c7a65086269f",
+          "no_task_reason": "wake_only",
+          "outcome": "no_task",
+          "session_id": "4f2b92c1-84ab-463e-bb88-d7ff1cacece0"
+        },
+        "stt_spawned_ms_ago": 461
+      },
+      "rejected": null
+    },
+    "begin_timeout": {
+      "result": {
+        "action": "repeat_prompt",
+        "finals_held": 0,
+        "input_id": "",
+        "next": "rtc",
+        "outcome": "failed",
+        "queued_next": 0,
+        "reason": "timeout",
+        "received_next": 0,
+        "status": "failed",
+        "t": "result"
+      },
+      "input_phase_payload": {
+        "reason": "begin_timeout",
+        "phase": "rtc",
+        "ordered": {
+          "end_sample": null,
+          "input_id": null,
+          "no_task_reason": null,
+          "outcome": "timeout",
+          "session_id": null
+        },
+        "stt_spawned_ms_ago": 0
+      },
+      "rejected": null
+    },
+    "session_mismatch": {
+      "result": null,
+      "input_phase_payload": null,
+      "rejected": {
+        "active_input_id": null,
+        "input_id": "5fff1918-2b9c-48a3-ab66-e3eb94bc2815",
+        "next": "rtc",
+        "reason": "session_mismatch",
+        "status": "rejected",
+        "t": "result"
+      }
+    },
+    "cancelled": {
+      "result": {
+        "action": "repeat_prompt",
+        "finals_held": 0,
+        "input_id": "04e09059-edd4-40de-b3a2-004b635b69c8",
+        "next": "rtc",
+        "outcome": "failed",
+        "queued_next": 16000,
+        "reason": "cancelled",
+        "received_next": 17920,
+        "status": "failed",
+        "t": "result"
+      },
+      "note": "B23 二进制(5365c86c)采集；B25 新增 next 字段，本包无"
+    }
+  }
+}
