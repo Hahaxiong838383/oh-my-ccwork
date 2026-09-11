@@ -952,6 +952,9 @@ pub async fn run_pipeline(
                 None => (spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()),
             };
             let SttPre { pcm_tx, ev_rx, task } = pre;
+            // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
+            // (2026-09-11 模拟实证:begin 超时/取消路径的 fail→EndStream 在切换后到达,关的是刚接管的第二条 → job 收尾)
+            drop(stt_pcm_tx.take());
             stt_pcm_tx = Some(pcm_tx);
             stt_ev_rx = ev_rx;
             stt_closed = false;
@@ -966,6 +969,7 @@ pub async fn run_pipeline(
             }
             orch.apply_ordered_actions(acts);
             orch.pending_phase_switch = None; // apply 可能再置位,切换只一次
+            orch.ordered_end_stream_pending = false; // 首句流已关;不得把第二条 STT 的发送端 take 掉
             // 追补环:只有完整闭合(committed / no_task)才回灌,且只回灌 end 到达之后的帧;失败/超时不回灌
             let cutoff = orch.ordered_end_seen_at;
             let frames: Vec<(Instant, Vec<i16>)> = orch.rtc_catchup.drain(..).collect();
@@ -1093,6 +1097,9 @@ pub async fn run_pipeline(
             // One-shot v0.3:有序 PCM 包(现役房通道永远空,分支不触发)
             Some(pkt) = hist_rx.recv() => {
                 orch.on_ordered_packet(&pkt, &stt_pcm_tx);
+                if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
+                    orch.ordered_end_stream_pending = false; // B23:已切 RTC,首句流早已关,忽略
+                }
                 if orch.ordered_end_stream_pending {
                     orch.ordered_end_stream_pending = false;
                     stt_pcm_tx.take(); // 主动收流:供应商回 LastNoSeq → Closed → 裁决
@@ -1174,6 +1181,9 @@ pub async fn run_pipeline(
                 orch.poll_device_timeout(Instant::now());
                 orch.poll_ledger(Instant::now());
                 orch.on_tick().await;
+                if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
+                    orch.ordered_end_stream_pending = false; // B23:已切 RTC,忽略
+                }
                 if orch.ordered_end_stream_pending {
                     orch.ordered_end_stream_pending = false;
                     stt_pcm_tx.take();
