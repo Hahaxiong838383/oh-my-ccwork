@@ -186,8 +186,9 @@ cancel   wake   vad   command_word   canary.say   session_exit_detected.ack
 
 ## 8. 本轮自检
 
-- 生产 worker（MainPID 2017631）、生产 Session API：**未动**。
-- POC 房：**未铸**（上一批已于 09-11 09:00 CST 停）。
+- **生产 worker**：`voice-worker-rust.service` MainPID **2017631**，ActiveEnter **2026-09-06 23:49:55 UTC**——本轮结束时只读复核，与本轮开始时同值，**未重启未换包**。生产 Session API **未部署未动**。
+- **隔离开发 unit**（不是生产）：`voice-worker-poc.service` MainPID **2597764**，ActiveEnter 2026-09-11 06:10:19 UTC，仍在跑（B25 边界测试那台）。复核它的进程 env：**`ORDERED_RTC_CATCHUP_MS` 键数 = 0**，即追补环处于默认 0 = 关。你若拿它测，不会踩到 §6 那个门。
+- POC **房**：本轮**未铸**（上一批 48h 房已于 09-11 09:00 CST 收口）。
 - 追补 env、AEC、音量、音频 mode：**未动**。
 - 两个功能分支：**代码零改动**，`feat/ordered-pcm-input` 仍 `93dfb62be`、`feat/oneshot-first-turn-signing` 仍 `4197a19fe`——与你 fetch 的一致，你的逐字校验依然有效。
 - 本轮唯一的文件改动：重建 `b25_wire_samples.json`（归档证据，不是代码），程序化生成 + 与 journal 78 条原包对撞 5/5 + 负锚翻红。
