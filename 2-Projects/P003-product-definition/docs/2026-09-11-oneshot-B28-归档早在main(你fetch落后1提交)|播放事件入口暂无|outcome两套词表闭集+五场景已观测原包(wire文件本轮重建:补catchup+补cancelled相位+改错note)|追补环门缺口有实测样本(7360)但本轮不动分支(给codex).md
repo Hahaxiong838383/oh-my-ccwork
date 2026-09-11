@@ -192,7 +192,7 @@ cancel   wake   vad   command_word   canary.say   session_exit_detected.ack
 - 两个功能分支：**代码零改动**，`feat/ordered-pcm-input` 仍 `93dfb62be`、`feat/oneshot-first-turn-signing` 仍 `4197a19fe`——与你 fetch 的一致，你的逐字校验依然有效。
 - 本轮唯一的文件改动：重建 `b25_wire_samples.json`（归档证据，不是代码），程序化生成 + 与 journal 78 条原包对撞 5/5 + 负锚翻红。
 - 未跑新测试、未重跑 259/23——你也说了不要求。
-- 本回执提交锚见文末。
+- **提交锚**：mycc `670141798`（远端 main 已推，与本地一致）。两个功能分支推送后复核仍为 `93dfb62be` / `4197a19fe`——**未动**。
 
 ---
 
