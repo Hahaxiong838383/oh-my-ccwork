@@ -346,9 +346,29 @@ pub enum Phase {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
     Committed,
-    /// B23：纯唤醒 / 无内容（只在 `first_turn_rtc`）——完整闭合但不产生用户任务。
-    NoTask,
+    /// B23/B25：纯唤醒 / 无内容（只在 `first_turn_rtc`）——完整闭合但不产生用户任务。
+    /// 带原因：`wake_only`（识别出唤醒词本身）与 `no_final`（供应商没给 final）**语义不同**，
+    /// 端侧据此决定要不要重播 greet（codex B25 §3.3：no_final 不能证明用户没说话）。
+    NoTask(NoTaskReason),
     Failed(FailReason),
+}
+
+/// B25：无任务的两种成因（端侧可区分处理；worker 两种都不进 LLM/TTS）。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NoTaskReason {
+    /// 识别文本去标点后只剩唤醒词「小可」×1～3 —— 用户确实只叫了一声。
+    WakeOnly,
+    /// 供应商流正常结束但一条 final 都没有 —— 可能是网络/识别问题，不能断言用户没说话。
+    NoFinal,
+}
+
+impl NoTaskReason {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            NoTaskReason::WakeOnly => "wake_only",
+            NoTaskReason::NoFinal => "no_final",
+        }
+    }
 }
 
 /// worker 对 pipeline 的动作（纯数据，pipeline 负责执行）。
@@ -368,8 +388,8 @@ pub enum Action {
 pub enum Decision {
     /// 完整：一次性提交的用户文本（多 definite 按序拼接）。
     Commit(String),
-    /// B23：完整闭合但无任务（纯唤醒词 / 收流无 final，只在 `first_turn_rtc`）——不进 LLM/TTS/垫句，pipeline 切 RTC。
-    NoTask(String),
+    /// B23/B25：完整闭合但无任务（纯唤醒词 / 收流无 final，只在 `first_turn_rtc`）——不进 LLM/TTS/垫句，pipeline 切 RTC。
+    NoTask(String, NoTaskReason),
     /// 作废：终态原因（可能是早已失败的终态）。
     Discard(FailReason),
 }
@@ -588,10 +608,17 @@ impl Session {
     pub fn session_id(&self) -> Option<&str> {
         self.ident.as_ref().map(|i| i.session_id.as_str())
     }
+    /// B25：无任务成因（`wake_only` / `no_final`），非 no_task 时 None。
+    pub fn no_task_reason(&self) -> Option<&'static str> {
+        match &self.outcome {
+            Some(Outcome::NoTask(r)) => Some(r.as_str()),
+            _ => None,
+        }
+    }
     pub fn outcome_str(&self) -> &'static str {
         match &self.outcome {
             Some(Outcome::Committed) => "committed",
-            Some(Outcome::NoTask) => "no_task",
+            Some(Outcome::NoTask(_)) => "no_task",
             Some(Outcome::Failed(r)) => r.as_str(),
             None => "none",
         }
@@ -734,6 +761,9 @@ impl Session {
         vec![Action::Publish(json!({
             "t": "result", "input_id": h.input_id, "status": "rejected", "reason": reason,
             "active_input_id": self.input_id(),
+            // B25：`next` 只表述「本 job 的输入去向」，与代次是否终态无关——v1 房恒 rtc，
+            // 端侧收到消息级 rejected 也知道这间房还能继续说（不必重开房）。
+            "next": if self.limits.first_turn_rtc { "rtc" } else { "none" },
         }))]
     }
 
@@ -770,6 +800,12 @@ impl Session {
         }
         if self.phase == Phase::Terminal {
             self.counters.packets_after_terminal += 1;
+            // B25（codex 问「begin_timeout 后迟到 begin 的明确拒绝行为」）：`begin` 是端侧**在等响应**的包，
+            // 终态后静默只计数会让它一直等 ack 到超时 → 明确回 `rejected / terminal`（带 `next`，端侧直接走 RTC）。
+            // chunk/end/cancel 端侧不等单独响应，保持静默只计数（迟到包不得干扰已终结的代次）。
+            if pkt.header.t == "begin" {
+                return self.reject_msg(&pkt.header, "terminal");
+            }
             return Vec::new();
         }
         let h = &pkt.header;
@@ -1047,13 +1083,14 @@ impl Session {
             if self.limits.first_turn_rtc {
                 // B23：v1 下收流无 final = 纯唤醒/无内容 → no_task（真 ASR 故障走 asr_unavailable/中断，可区分）
                 self.phase = Phase::Terminal;
-                self.outcome = Some(Outcome::NoTask);
+                self.outcome = Some(Outcome::NoTask(NoTaskReason::NoFinal));
                 let acts = vec![Action::Publish(self.result_json(
                     "complete",
                     None,
-                    json!({"finals": 0, "samples_queued": self.counters.samples_submitted, "text_chars": 0, "outcome": "no_task"}),
+                    json!({"finals": 0, "samples_queued": self.counters.samples_submitted, "text_chars": 0,
+                           "outcome": "no_task", "no_task_reason": "no_final"}),
                 ))];
-                return (Decision::NoTask(String::new()), acts);
+                return (Decision::NoTask(String::new(), NoTaskReason::NoFinal), acts);
             }
             let acts = self.fail(FailReason::NoFinal);
             return (Decision::Discard(FailReason::NoFinal), acts);
@@ -1062,19 +1099,19 @@ impl Session {
         self.phase = Phase::Terminal;
         // B23：纯唤醒词（小可 ×1～3，去标点空白）不是任务——端侧本地 greet，worker 不进 LLM
         let no_task = self.limits.first_turn_rtc && crate::textproc::is_wake_only(&text);
-        self.outcome = Some(if no_task { Outcome::NoTask } else { Outcome::Committed });
-        let acts = vec![Action::Publish(self.result_json(
-            "complete",
-            None,
-            json!({
-                "finals": self.held_finals.len(),
-                "samples_queued": self.counters.samples_submitted,
-                "text_chars": text.chars().count(),
-                "outcome": if no_task { "no_task" } else { "task" },
-            }),
-        ))];
+        self.outcome = Some(if no_task { Outcome::NoTask(NoTaskReason::WakeOnly) } else { Outcome::Committed });
+        let mut extra = json!({
+            "finals": self.held_finals.len(),
+            "samples_queued": self.counters.samples_submitted,
+            "text_chars": text.chars().count(),
+            "outcome": if no_task { "no_task" } else { "task" },
+        });
+        if no_task {
+            extra["no_task_reason"] = json!(NoTaskReason::WakeOnly.as_str());
+        }
+        let acts = vec![Action::Publish(self.result_json("complete", None, extra))];
         self.held_finals.clear();
-        if no_task { (Decision::NoTask(text), acts) } else { (Decision::Commit(text), acts) }
+        if no_task { (Decision::NoTask(text, NoTaskReason::WakeOnly), acts) } else { (Decision::Commit(text), acts) }
     }
 
     /// 供应商连接非正常结束（中途断连 / 协议错误 / 收流后未见 LastNoSeq 即 EOF）：整代作废，已 hold 的半段 final 绝不提交。
@@ -1159,6 +1196,7 @@ impl Session {
         v["end_sent_at_ms"] = json!(self.end_sent_at_ms);
         v["first_submit_ms"] = json!(self.first_submit_at_ms.map(|t| t - self.begin_at_ms));
         v["first_turn_rtc"] = json!(self.limits.first_turn_rtc);
+        v["no_task_reason"] = json!(match &self.outcome { Some(Outcome::NoTask(r)) => Some(r.as_str()), _ => None });
         v
     }
 }
@@ -1265,10 +1303,12 @@ mod tests {
             let res = acts.iter().find_map(|a| match a { Action::Publish(v) if v["t"] == "result" => Some(v.clone()), _ => None }).expect("result");
             assert_eq!(res["status"], "complete");
             if expect_no_task {
-                assert_eq!(d, Decision::NoTask("小可小可。".into()));
+                assert_eq!(d, Decision::NoTask("小可小可。".into(), NoTaskReason::WakeOnly));
                 assert_eq!(res["outcome"], "no_task");
                 assert_eq!(res["next"], "rtc");
-                assert_eq!(s.outcome(), Some(&Outcome::NoTask));
+                assert_eq!(s.outcome(), Some(&Outcome::NoTask(NoTaskReason::WakeOnly)));
+                assert_eq!(res["no_task_reason"], "wake_only");
+                assert_eq!(s.no_task_reason(), Some("wake_only"));
                 assert_eq!(s.evidence()["outcome"], "no_task");
                 assert_eq!(s.evidence()["first_turn_rtc"], true);
             } else {
@@ -1295,7 +1335,8 @@ mod tests {
             let (d, acts) = s.on_stream_end(0);
             let res = acts.iter().find_map(|a| match a { Action::Publish(v) if v["t"] == "result" => Some(v.clone()), _ => None }).expect("result");
             if v1 {
-                assert_eq!(d, Decision::NoTask(String::new()));
+                assert_eq!(d, Decision::NoTask(String::new(), NoTaskReason::NoFinal));
+                assert_eq!(res["no_task_reason"], "no_final");
                 assert_eq!(res["status"], "complete");
                 assert_eq!(res["outcome"], "no_task");
                 assert_eq!(res["text_chars"], 0);
@@ -1338,6 +1379,43 @@ mod tests {
         assert_eq!(res["outcome"], "failed");
         assert_eq!(res["next"], "rtc");
         assert_eq!(f.outcome_str(), "missing_seq");
+    }
+
+    /// B25（codex 问「begin_timeout 后迟到 begin 怎么办」）：切换块先把代次关成 Timeout 终态，
+    /// 之后到达的 begin **只拒该消息**（`rejected` / `input_conflict`），不产生第二个代次、不改终态。
+    #[test]
+    fn b25_late_begin_after_timeout_is_message_level_rejected() {
+        let mut s = session_v1();
+        // 模拟 pipeline 切换块：未收到 begin 就判超时
+        let acts = s.fail(FailReason::Timeout);
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "failed" && v["reason"] == "timeout")));
+        assert_eq!(s.phase(), Phase::Terminal);
+        // 迟到的 begin：明确回 rejected/terminal（端侧别再等 ack），相位/终态不变
+        let acts = s.on_packet(&pkt(begin_hdr("in-late", 0, 0), &[]), 3000);
+        let rej = acts
+            .iter()
+            .find_map(|a| match a { Action::Publish(v) if v["status"] == "rejected" => Some(v.clone()), _ => None })
+            .expect("迟到 begin 必须收到 rejected，不能静默");
+        assert_eq!(rej["reason"], "terminal");
+        assert_eq!(rej["input_id"], "in-late", "rejected 要对上端侧那条 begin 的 input_id");
+        assert_eq!(rej["next"], "rtc");
+        assert_eq!(s.phase(), Phase::Terminal);
+        assert_eq!(s.outcome(), Some(&Outcome::Failed(FailReason::Timeout)));
+        // 迟到的 chunk/end 端侧不等响应 → 静默只计数
+        assert!(s.on_packet(&pkt(header("chunk", "in-late", 0, 0, 640), &tone(640, 1)), 3100).is_empty());
+        assert!(s.on_packet(&pkt(header("end", "in-late", 1, 640, 640), &[]), 3200).is_empty());
+        assert_eq!(s.counters.packets_after_terminal, 3);
+    }
+
+    /// B25 §3.3：no_task 两种成因必须可区分——端侧据此决定要不要重播 greet。
+    #[test]
+    fn b25_no_task_reason_distinguishes_wake_only_from_no_final() {
+        assert_eq!(NoTaskReason::WakeOnly.as_str(), "wake_only");
+        assert_eq!(NoTaskReason::NoFinal.as_str(), "no_final");
+        assert_ne!(
+            Decision::NoTask(String::new(), NoTaskReason::WakeOnly),
+            Decision::NoTask(String::new(), NoTaskReason::NoFinal),
+        );
     }
 
     /// B23：预算 env——begin→end 超时与单代总样本可配置（不设 = 旧默认）。

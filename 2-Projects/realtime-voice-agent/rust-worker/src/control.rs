@@ -230,7 +230,16 @@ pub fn output_ready(trace_id: &str, ts_ms: i64, room: &str) -> Value {
 
 /// B23 §2.2 产品首句 v1：输入相位切换 `session.input_phase`——ordered 首句代次终态（或 begin 超时）后 worker 开始消费 RTC。
 /// 每 job 只发一次；端侧只当信息（可丢）：RTC 消费不依赖端侧确认，`result.next:"rtc"` 是同一事实的第二通道。
-pub fn input_phase(trace_id: &str, ts_ms: i64, room: &str, reason: &str, ordered: Value, stt_spawned_ms_ago: i64) -> Value {
+#[allow(clippy::too_many_arguments)]
+pub fn input_phase(
+    trace_id: &str,
+    ts_ms: i64,
+    room: &str,
+    reason: &str,
+    ordered: Value,
+    stt_spawned_ms_ago: i64,
+    catchup: Value,
+) -> Value {
     json!({
         "trace_id": trace_id,
         "ts_ms": ts_ms,
@@ -242,7 +251,11 @@ pub fn input_phase(trace_id: &str, ts_ms: i64, room: &str, reason: &str, ordered
             "phase": "rtc",
             "reason": reason,
             "ordered": ordered,
+            // 诊断口径（B25 §3.2）：第二条 STT 自 spawn 起的毫秒数，**恒 ≥0、恒非 null**；
+            // 切换当刻才起则为 0。它不是「STT 已连通」，端侧不得拿它当门。
             "stt_spawned_ms_ago": stt_spawned_ms_ago,
+            // B25：追补回灌实况（samples=实际喂进第二条 STT 的样本数；skipped=未回灌的原因）
+            "catchup": catchup,
         },
     })
 }

@@ -101,6 +101,11 @@ pub struct PipelineConfig {
     pub tts_first_clause_ordered_only: bool,
     /// B23 产品首句 v1：input_ready 后这么久没有 begin → 视为端侧没走首句，切回 RTC（env `ORDERED_BEGIN_TIMEOUT_MS`，默认 2500）。
     pub ordered_begin_timeout_ms: u64,
+    /// B25（codex §3.4 回声反例）：首句→RTC 切换时回灌多少毫秒的 RTC 追补音频（env `ORDERED_RTC_CATCHUP_MS`）。
+    /// **默认 0 = 关**：追补窗口 [end 到达, 切换] 恰好压在端侧播本地承接音／worker 播垫句的窗口上，
+    /// 回灌等于把自声喂进第二条 STT（文本过滤不是 AEC）。宁可丢承接音期间的插话（那本来就是 barge-in，
+    /// 现役 AEC warmup 期本就禁打断），也不要造幽灵轮。开启时仍会跳过有本地承接／垫句的轮次。
+    pub ordered_rtc_catchup_ms: u64,
     pub greeting_text: String,
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
     /// 默认 true —— 其余环境行为不变。
@@ -203,6 +208,10 @@ impl PipelineConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(2500),
+            ordered_rtc_catchup_ms: std::env::var("ORDERED_RTC_CATCHUP_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0),
             greeting_text: std::env::var("AGENT_GREETING")
                 .unwrap_or_else(|_| "你好，我在。你可以直接打断我。".into()),
             greeting_enabled: parse_flag(
@@ -970,13 +979,32 @@ pub async fn run_pipeline(
             orch.apply_ordered_actions(acts);
             orch.pending_phase_switch = None; // apply 可能再置位,切换只一次
             orch.ordered_end_stream_pending = false; // 首句流已关;不得把第二条 STT 的发送端 take 掉
-            // 追补环:只有完整闭合(committed / no_task)才回灌,且只回灌 end 到达之后的帧;失败/超时不回灌
+            // 追补环(B25 收紧):三道门全过才回灌——
+            //   ① env 开(默认 0=关);② 完整闭合(committed/no_task,失败/超时不回灌);
+            //   ③ **本轮没有任何本地播放**:本地承接 accepted 或 worker 垫句在播时,追补窗口
+            //      [end 到达, 切换] 就是自声窗口(codex B25 §3.4),回灌 = 把回声喂进第二条 STT。
+            // 采样边界口径:按到达墙钟截断,误差预算 = 端侧 704 ms 判停静音带(详见回执 B26 §2)。
             let cutoff = orch.ordered_end_seen_at;
             let frames: Vec<(Instant, Vec<i16>)> = orch.rtc_catchup.drain(..).collect();
             orch.rtc_catchup_samples = 0;
+            // 自声窗口:端侧本地承接 accepted / worker 本轮已挑垫句 / 有任务(worker 必出垫句或正文)——
+            // 三者任一成立,追补窗口里的 RTC 上行就含自声。
+            let local_audio_window = orch.ordered.as_ref().map(|o| o.local_receipt_accepted()).unwrap_or(false)
+                || !orch.echo_cur_filler.is_empty()
+                || reason == "first_turn_committed";
+            let complete = reason == "first_turn_committed" || reason == "first_turn_no_task";
+            let catchup_skipped = if orch.cfg.ordered_rtc_catchup_ms == 0 {
+                Some("disabled")
+            } else if !complete {
+                Some("not_complete")
+            } else if local_audio_window {
+                Some("local_audio_window")
+            } else {
+                None
+            };
             let mut fed = 0usize;
-            if let Some(cut) = cutoff
-                && (reason == "first_turn_committed" || reason == "first_turn_no_task")
+            if catchup_skipped.is_none()
+                && let Some(cut) = cutoff
             {
                 for (t, f) in frames {
                     if t >= cut {
@@ -987,13 +1015,16 @@ pub async fn run_pipeline(
             }
             let ordered_info = orch.ordered.as_ref().map(|o| json!({
                 "input_id": o.input_id(), "session_id": o.session_id(), "end_sample": o.end_sample_opt(), "outcome": o.outcome_str(),
+                "no_task_reason": o.no_task_reason(),
             })).unwrap_or(Value::Null);
+            let catchup_info = json!({"samples": fed, "skipped": catchup_skipped});
             if let Some(trace) = ready.trace_id.as_deref() {
                 let v = control::input_phase(trace, now_unix_ms(), &room_name, &reason, ordered_info,
-                    spawned_at.elapsed().as_millis() as i64);
+                    spawned_at.elapsed().as_millis() as i64, catchup_info);
                 orch.publish_json(control::TOPIC, v);
             }
             info!(room = %room_name, reason = %reason, catchup_samples = fed,
+                  catchup_skipped = catchup_skipped.unwrap_or("-"),
                   stt2_spawned_ms_ago = spawned_at.elapsed().as_millis() as u64, "ordered_pcm input phase → rtc");
         }
         tokio::select! {
@@ -1053,10 +1084,12 @@ pub async fn run_pipeline(
                     if let Some(o) = orch.ordered.as_mut() {
                         o.note_rtc_frame_dropped();
                     }
-                    if v1 {
+                    // B25:容量按 env(默认 0=不留环,零内存零回灌)
+                    let cap = (orch.cfg.ordered_rtc_catchup_ms as usize) * 16;
+                    if v1 && cap > 0 {
                         orch.rtc_catchup_samples += samples.len();
                         orch.rtc_catchup.push_back((Instant::now(), samples.to_vec()));
-                        while orch.rtc_catchup_samples > 16_000 {
+                        while orch.rtc_catchup_samples > cap {
                             match orch.rtc_catchup.pop_front() {
                                 Some((_, f)) => orch.rtc_catchup_samples -= f.len(),
                                 None => break,
@@ -1353,9 +1386,11 @@ impl Orchestrator {
                 self.turn_gate.mark_input_ended();
                 self.request_phase_switch("first_turn_committed".into());
             }
-            crate::ordered_pcm::Decision::NoTask(text) => {
-                // B23:纯唤醒/无内容——不进 LLM/TTS/垫句,不招呼(端侧本地 greet);同房等真正的问题
-                info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm generation complete → no_task (纯唤醒/无内容,不进 LLM)");
+            crate::ordered_pcm::Decision::NoTask(text, why) => {
+                // B23/B25:纯唤醒/无内容——不进 LLM/TTS/垫句,不招呼(端侧本地 greet);同房等真正的问题。
+                // reason 区分 wake_only(用户只叫了一声)与 no_final(供应商没给 final,不能断言没说话)。
+                info!(room = %self.room_name, chars = text.chars().count(), reason = why.as_str(),
+                      "ordered_pcm generation complete → no_task (不进 LLM)");
                 self.request_phase_switch("first_turn_no_task".into());
             }
             crate::ordered_pcm::Decision::Discard(r) => {
