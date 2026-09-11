@@ -46,6 +46,7 @@ async function callSession(opts: {
   sn?: string;
   trace?: string;
   raw?: string;
+  supports?: string[];
 }): Promise<Response> {
   return app.request('/v1/device/session', {
     method: 'POST',
@@ -60,6 +61,7 @@ async function callSession(opts: {
         trace_id: opts.trace ?? 'trace-test-1',
         app_version: '1.2.2-canary.2',
         firmware_version: 'unknown',
+        ...(opts.supports ? { supports: opts.supports } : {}),
       }),
   });
 }
@@ -259,6 +261,86 @@ await t('日志敏感扫描（含正锚）', () => {
   );
   const leaked = logLines.filter((l) => /eyJ[A-Za-z0-9_-]{10,}/.test(l));
   assert.equal(leaked.length, 0, `日志泄露疑似 JWT ${leaked.length} 行`);
+});
+
+// ── B23 产品首句 v1 签发协商（2026-09-11）：名单 ∧ 声明 才签；任一不成立 = 旧路径；contract 与 metadata 同源 ──
+await t('B23 名单内且声明 → 签 contract，metadata 三字段同源', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] });
+    assert.equal(r.status, 200);
+    const j = (await r.json()) as Record<string, any>;
+    assert.deepEqual(j.contract, {
+      input_mode: 'ordered_pcm',
+      oneshot_first_turn: 'v1',
+      local_receipt: 'v1',
+      history_topic: 'p003.audio.history.v1',
+      worker_capabilities: ['android_local_receipt_v1', 'oneshot_first_turn_v1'],
+    });
+    assertTokenMatchesResponse(j.token, j);
+    const c = decodeJwt(j.token) as Record<string, any>;
+    const meta = JSON.parse(c.roomConfig.agents[0].metadata);
+    assert.equal(meta.input_mode, 'ordered_pcm');
+    assert.equal(meta.oneshot_first_turn, 'v1');
+    assert.equal(meta.local_receipt, 'v1');
+    assert.equal(meta.trace_id, 'trace-test-1');
+    assert.equal(meta.session_id, j.session_id);
+    assert.ok(logLines.some((l) => l.includes('contract=first_turn_v1')));
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  }
+});
+
+await t('B23 名单内但客户端未声明（v261 老客户端）→ 旧路径，metadata 无三键', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  try {
+    const r = await callSession({ cred });
+    assert.equal(r.status, 200);
+    const j = (await r.json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assertTokenMatchesResponse(j.token, j);
+    const meta = JSON.parse((decodeJwt(j.token) as Record<string, any>).roomConfig.agents[0].metadata);
+    for (const k of ['input_mode', 'oneshot_first_turn', 'local_receipt']) assert.ok(!(k in meta), k);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  }
+});
+
+await t('B23 声明了但不在名单 / 名单为空 → 旧路径', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN2;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
+    const j = (await r.json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assertTokenMatchesResponse(j.token, j);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  }
+  const r2 = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
+  const j2 = (await r2.json()) as Record<string, any>;
+  assert.equal(j2.contract, null);
+});
+
+await t('B23 supports 畸形值被忽略，不影响签发', async () => {
+  const r = await callSession({ cred, raw: JSON.stringify({ device_sn: SN, trace_id: 'trace-test-2', supports: 'oneshot_first_turn_v1' }) });
+  assert.equal(r.status, 200);
+  const j = (await r.json()) as Record<string, any>;
+  assert.equal(j.contract, null);
+});
+
+await t('B23 自检：contract 与 metadata 不同源必 throw（负锚）', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
+    const j = (await r.json()) as Record<string, any>;
+    assert.throws(() => assertTokenMatchesResponse(j.token, { ...j, contract: null }), /旧路径 metadata 不得含/);
+    assert.throws(
+      () => assertTokenMatchesResponse(j.token, { ...j, contract: { ...j.contract, local_receipt: 'v2' } }),
+      /metadata\.local_receipt/,
+    );
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  }
 });
 
 console.log = origLog;

@@ -32,7 +32,24 @@ const cfg = () => ({
     .filter(Boolean),
   ttlS: Number(process.env.DEVICE_SESSION_TTL_S || 3600),
   rpm: Number(process.env.DEVICE_SESSION_RPM || 10),
+  // B23 产品首句 v1（2026-09-11）：签发名单 fail-closed（空 = 全关），且客户端必须在请求 supports 里声明
+  // oneshot_first_turn_v1 才签；任一不成立 = 旧 RTC 路径（metadata/响应与今天完全相同）。只看 env 名单，
+  // 不走 registry（isSnAllowed 会把所有 active 设备放行，那是准入名单不是灰度名单）。
+  firstTurnAllow: (process.env.ONESHOT_FIRST_TURN_SN_ALLOW || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
 });
+
+/** B23：产品首句合同（响应 `contract` 与 agent metadata 同源，自检对撞）。 */
+export const FIRST_TURN_CONTRACT = {
+  input_mode: 'ordered_pcm',
+  oneshot_first_turn: 'v1',
+  local_receipt: 'v1',
+  history_topic: 'p003.audio.history.v1',
+  worker_capabilities: ['android_local_receipt_v1', 'oneshot_first_turn_v1'],
+} as const;
+export const FIRST_TURN_SUPPORT_TAG = 'oneshot_first_turn_v1';
 
 // ── 限频：内存滑窗，每 SN 每 60s 最多 rpm 次（session 与 prefetch 共享额度）──
 const hits = new Map<string, number[]>();
@@ -104,7 +121,13 @@ export async function verifyDeviceCredential(
  */
 export function assertTokenMatchesResponse(
   token: string,
-  resp: { identity: string; room_name: string; expires_at_ms: number; trace_id?: string },
+  resp: {
+    identity: string;
+    room_name: string;
+    expires_at_ms: number;
+    trace_id?: string;
+    contract?: { input_mode: string; oneshot_first_turn: string; local_receipt: string } | null;
+  },
 ): void {
   const c = decodeJwt(token) as Record<string, any>;
   if (c.sub !== resp.identity) throw new Error(`自检失败: sub=${c.sub} ≠ identity`);
@@ -122,6 +145,22 @@ export function assertTokenMatchesResponse(
     }
     if (metaTrace !== resp.trace_id)
       throw new Error('自检失败: agents metadata trace_id ≠ 响应 trace_id');
+  }
+  // B23：响应 contract 与签进 token 的 metadata 三字段同源；旧路径 metadata 必须不含这三键
+  if (resp.contract !== undefined) {
+    let meta: Record<string, unknown>;
+    try {
+      meta = JSON.parse(agent.metadata ?? '{}');
+    } catch {
+      throw new Error('自检失败: agents[0].metadata 不是合法 JSON');
+    }
+    const keys = ['input_mode', 'oneshot_first_turn', 'local_receipt'] as const;
+    if (resp.contract) {
+      for (const k of keys)
+        if (meta[k] !== resp.contract[k]) throw new Error(`自检失败: metadata.${k} ≠ 响应 contract.${k}`);
+    } else {
+      for (const k of keys) if (k in meta) throw new Error(`自检失败: 旧路径 metadata 不得含 ${k}`);
+    }
   }
   if (c.exp * 1000 !== resp.expires_at_ms) throw new Error('自检失败: exp 与 expires_at_ms 不一致');
   if (c.exp * 1000 - Date.now() < 5_000) throw new Error('自检失败: 剩余 TTL 不足 5 秒');
@@ -148,6 +187,10 @@ deviceSessionRoute.post('/session', async (c) => {
   if (!check.ok) return c.json({ status: 'error', code: 400, message: check.reason }, 400);
   if (typeof traceId !== 'string' || !traceId.trim())
     return c.json({ status: 'error', code: 400, message: 'trace_id 必填' }, 400);
+  // B23：客户端能力声明（可选；非数组/非字符串项忽略；上限 16 项 × 64 字符）
+  const supports: string[] = Array.isArray(body.supports)
+    ? (body.supports as unknown[]).filter((x): x is string => typeof x === 'string' && x.length <= 64).slice(0, 16)
+    : [];
 
   if (cred.sn !== sn) {
     logQuiet({ sn: cred.sn, room: '', session_id: '', trace_id: traceId, status: 'rejected_403', ttl_s: 0, ms: Date.now() - t0 });
@@ -165,6 +208,10 @@ deviceSessionRoute.post('/session', async (c) => {
 
   if (!conf.lkKey || !conf.lkSecret)
     return c.json({ status: 'error', code: 503, message: '签发服务不可用' }, 503);
+
+  // B23：灰度名单内 ∧ 客户端声明 → 签产品首句合同；否则旧路径。回滚 = 清空 ONESHOT_FIRST_TURN_SN_ALLOW。
+  const firstTurn = conf.firstTurnAllow.includes(sn as string) && supports.includes(FIRST_TURN_SUPPORT_TAG);
+  const contract = firstTurn ? { ...FIRST_TURN_CONTRACT, worker_capabilities: [...FIRST_TURN_CONTRACT.worker_capabilities] } : null;
 
   const roomSec = nextRoomSecond();
   const roomName = `sn-${sn}-${roomSec}`;
@@ -190,7 +237,15 @@ deviceSessionRoute.post('/session', async (c) => {
           agentName: AGENT_NAME,
           // issue_ts_ms：签发时刻毫秒级（READY_LATENCY 合同 2026-08-18）——旧口径用
           // room 名尾秒(秒级)算 issue_to_assignment，自带 ±1s 量化噪声；worker 优先取此值。
-          metadata: JSON.stringify({ trace_id: traceId, session_id: sessionId, issue_ts_ms: Date.now() }),
+          metadata: JSON.stringify({
+            trace_id: traceId,
+            session_id: sessionId,
+            issue_ts_ms: Date.now(),
+            // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
+            ...(contract
+              ? { input_mode: contract.input_mode, oneshot_first_turn: contract.oneshot_first_turn, local_receipt: contract.local_receipt }
+              : {}),
+          }),
         },
       ],
     },
@@ -212,6 +267,8 @@ deviceSessionRoute.post('/session', async (c) => {
     session_id: sessionId,
     expires_at_ms: expSec * 1000,
     expected_agent_name: AGENT_NAME,
+    // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
+    contract,
   };
 
   try {
@@ -224,7 +281,7 @@ deviceSessionRoute.post('/session', async (c) => {
   }
 
   console.log(
-    `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId}` +
+    `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });
