@@ -54,6 +54,23 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **改动后必跑**:`npx tsx scripts/device-session.test.ts`(16/16)+ 灰度先行(`PORT=3005` 同 env 起 staging 打 E2E 再动生产——川哥 2026-08-15 门禁铁律)+ 公网 claims 校验(解 token 对 sub/room/agents/exp)。
 - **回滚**:`/root/p003-server-src-bak-20260815-pre-device-session.tgz` + 删 .env.local 尾部 S2B1 段 7 行 → restart → `/v1/device/session` 应回 404。
 
+## 产品首句 v1 单机灰度（2026-09-11 上产，机制详情见记忆 p003_oneshot）
+
+- **两个 env（`.env.local`，改后 `pm2 restart p003-voice`）**：`ONESHOT_FIRST_TURN_SN_ALLOW`（灰度 SN，逗号分隔）
+  + `ONESHOT_FIRST_TURN_AGENT_NAME`（定向派单目标 agent，现为 `rust-worker-firstturn`）。
+  **两者任一为空 = fail-closed**：即使 SN 在名单且客户端声明了 supports，也退回 `contract:null` + 旧 agent `rust-worker`。
+  **回滚就是清任一键 + restart**，不需要回滚代码。
+- **为什么必须配 agent 名**：`AGENT_NAME` 原是常量，签合同与派单是两件事；只填名单会把 ordered 首句派给
+  没有代次状态机的现役 worker，设备发 begin 无人接（codex B29 查出，B30 修）。
+- **准入真值（别再去翻 DEVICE_SN_ALLOW）**：`isSnAllowed` = **DB 台账优先**
+  （`data/devices.db` 的 `device_registry.status`，active 放行 / disabled 拒绝），
+  env `DEVICE_SN_ALLOW` 只是**无台账记录时的兜底**。查台账用 node 不用 sqlite3——
+  **服务器上没装 sqlite3**，`2>/dev/null` 会把 command not found 吞成假阴性：
+  `node --experimental-sqlite -e '...new DatabaseSync("./data/devices.db")...'`。
+- **公网 E2E 姿势**：在服务器上 `npx tsx scripts/sign-device-credential.ts <SN> 1` 签 1 天期凭据（只进 shell 变量），
+  curl 打 `https://kidshub-ai.hahaxiong.cc/v1/device/session`，node 解 JWT 断言
+  响应 `expected_agent_name` == JWT `roomConfig.agents[0].agentName` == metadata 三字段同源。脚本跑完即删。
+
 ## 邀请码运营（三端身份锚点）
 
 - **邀请码 `KH-XXXX` = accountId 锚点**,家长端/体验台/admin 三端登录同一码进同一账号。

@@ -290,9 +290,17 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - 🔑 **连接真值(先看这行,别编别名)**:`ssh root@64.90.13.117` —— 这台**没有 ssh 别名**
   (2026-09-11 我编了个 `p003-worker` 去探生产,连接失败的信号与"服务挂了"完全同形)。
   真值另见记忆 `reference_cloud_servers.md` 的 voice-worker-hk 行。
-  unit 三件套:**生产** `voice-worker-rust`(MainPID 2017631 / ActiveEnter 2026-09-06 23:49:55 UTC,
-  动它前先对这两个数)、**隔离 POC** `voice-worker-poc`(one-shot 联调专用,可随便停)、
+  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID 2017631 / ActiveEnter
+  2026-09-06 23:49:55 UTC,动它前先对这两个数)、**单机灰度** `voice-worker-firstturn`
+  (agent `rust-worker-firstturn`,2026-09-11 起,产品首句 v1 专用,env 链与生产逐行相同只叠 13 键差异,
+  MemoryHigh 700M/Max 900M)、**隔离 POC** `voice-worker-poc`(agent `rust-worker-poc`,已停,
+  ⚠️ **它是残废的**:设备命令关、LLM 指向火山 ark 裸端点而非 kidshub 大脑,**不能拿来接真机**)、
   Python 主线 `voice-worker` + `voice-worker-colleague` + `voice-console`。
+  🔑 **rust worker 的源码在 `feat/rust-worker`(生产线)与 `feat/ordered-pcm-input`(one-shot),
+  main 上没有**——去 main 找会得到空手,而「落后 main N 提交」对 worker 能力毫无意义。
+- 🔒 **看远端 env 一律用 `safe-env-dump.sh`**(已装两台 `/root/`,仓内 `4-Assets/scripts/`):
+  按**键名 + 值形态**双轴脱敏。手搓 `case "$k" in *TOKEN*|*KEY*)` 只有键名轴,
+  会把 `LLM_URL_QUERY=token=eyJ...` 这种**值里嵌密钥**的行原样打出来(2026-09-11 实撞)。
   ⚠️ unit 名先 `systemctl list-units --type=service | grep -i voice` 列一遍再用——
   不存在的 unit,`is-active` 照答 `inactive`。
 
