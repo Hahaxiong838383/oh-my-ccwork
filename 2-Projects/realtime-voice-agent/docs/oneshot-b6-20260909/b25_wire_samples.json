@@ -1,7 +1,20 @@
 {
-  "note": "B25 wire 原包（worker→设备）；测试房 sn-POCTEST0001-*，无 token / 无真实 SN",
+  "note": "B25 wire 原包（worker→设备），测试房 sn-POCTEST0001-*，无 token / 无真实 SN。本文件由 b23/b25 sim 结果 jsonl 程序化生成（不手抄），字段与 worker journal 的 ordered_pcm result 行逐字一致。",
+  "regenerated": "2026-09-11（B28 自检：上一版手抄漏了每条 phase 的 catchup 子对象、漏了 cancelled 的 phase 包、cancelled 的 note 误称「本包无 next」——实际 next 是 B23 就有的字段，journal 原包里在）。",
+  "field_notes": {
+    "result.status": "complete | failed | rejected（result_json 的第一参）",
+    "result.outcome": "task | no_task | failed（来自 extra，与 status 是两个字段）",
+    "phase.ordered.outcome": "committed | no_task | none | 13 个 FailReason 之一（outcome_str()），与 result.outcome 是两套词表",
+    "next": "B23 起就有：v1 房恒 \"rtc\"，POC 一房一代为 \"none\""
+  },
+  "not_observed": {
+    "no_final": "无实测样本。源码：v1 下收流零 final → status=complete / outcome=no_task / no_task_reason=no_final；非 v1 房则走 fail(NoFinal) → status=failed / outcome=failed / reason=no_final。同一个 \"no_final\" 字面量，靠 outcome 区分，别靠 reason。",
+    "terminal": "无实测样本（单测断言 rejected.reason==\"terminal\"）。终态后到的 begin → 消息级 rejected，不切相位。"
+  },
   "samples": {
     "task": {
+      "binary": "B25 (93dfb62be)",
+      "source": "b25_sim_results.jsonl",
       "result": {
         "finals": 1,
         "finals_held": 1,
@@ -17,8 +30,10 @@
         "text_chars": 8
       },
       "input_phase_payload": {
-        "reason": "first_turn_committed",
-        "phase": "rtc",
+        "catchup": {
+          "samples": 0,
+          "skipped": "disabled"
+        },
         "ordered": {
           "end_sample": 35152,
           "input_id": "998357ef-890d-484d-be0a-2d906eef8b4b",
@@ -26,11 +41,19 @@
           "outcome": "committed",
           "session_id": "b911862e-965b-424b-9188-801eac9afaaf"
         },
+        "phase": "rtc",
+        "reason": "first_turn_committed",
+        "room": "sn-POCTEST0001-1789106500",
         "stt_spawned_ms_ago": 462
       },
-      "rejected": null
+      "observed_t_ms": {
+        "result": null,
+        "input_phase": 1229
+      }
     },
     "no_task_wake_only": {
+      "binary": "B25 (93dfb62be)",
+      "source": "b25_sim_results.jsonl",
       "result": {
         "finals": 1,
         "finals_held": 1,
@@ -47,8 +70,10 @@
         "text_chars": 4
       },
       "input_phase_payload": {
-        "reason": "first_turn_no_task",
-        "phase": "rtc",
+        "catchup": {
+          "samples": 7360,
+          "skipped": null
+        },
         "ordered": {
           "end_sample": 19362,
           "input_id": "02132a37-1334-43ae-966c-c7a65086269f",
@@ -56,11 +81,20 @@
           "outcome": "no_task",
           "session_id": "4f2b92c1-84ab-463e-bb88-d7ff1cacece0"
         },
+        "phase": "rtc",
+        "reason": "first_turn_no_task",
+        "room": "sn-POCTEST0001-1789106715",
         "stt_spawned_ms_ago": 461
       },
-      "rejected": null
+      "observed_t_ms": {
+        "result": null,
+        "input_phase": 1112
+      },
+      "note": "⚠️ 该轮 ORDERED_RTC_CATCHUP_MS>0（边界测试用），catchup 实际回灌 7360 样本且 skipped=null——这正是 codex B27 §4.3 指出的门缺口的实测样本：纯唤醒走 first_turn_no_task 时 local_audio_window 三项全 false。生产默认 catchup=0，此现象不会发生。"
     },
     "begin_timeout": {
+      "binary": "B25 (93dfb62be)",
+      "source": "b25_sim_results.jsonl",
       "result": {
         "action": "repeat_prompt",
         "finals_held": 0,
@@ -74,8 +108,10 @@
         "t": "result"
       },
       "input_phase_payload": {
-        "reason": "begin_timeout",
-        "phase": "rtc",
+        "catchup": {
+          "samples": 0,
+          "skipped": "disabled"
+        },
         "ordered": {
           "end_sample": null,
           "input_id": null,
@@ -83,23 +119,20 @@
           "outcome": "timeout",
           "session_id": null
         },
+        "phase": "rtc",
+        "reason": "begin_timeout",
+        "room": "sn-POCTEST0001-1789106582",
         "stt_spawned_ms_ago": 0
       },
-      "rejected": null
-    },
-    "session_mismatch": {
-      "result": null,
-      "input_phase_payload": null,
-      "rejected": {
-        "active_input_id": null,
-        "input_id": "5fff1918-2b9c-48a3-ab66-e3eb94bc2815",
-        "next": "rtc",
-        "reason": "session_mismatch",
-        "status": "rejected",
-        "t": "result"
-      }
+      "observed_t_ms": {
+        "result": null,
+        "input_phase": 3131
+      },
+      "note": "无 begin：phase.ordered 的 input_id/session_id/end_sample 三个全 null；result.input_id 是空串 \"\" 不是 null。"
     },
     "cancelled": {
+      "binary": "B23 (5365c86c)",
+      "source": "b23_sim_results.jsonl",
       "result": {
         "action": "repeat_prompt",
         "finals_held": 0,
@@ -112,7 +145,41 @@
         "status": "failed",
         "t": "result"
       },
-      "note": "B23 二进制(5365c86c)采集；B25 新增 next 字段，本包无"
+      "input_phase_payload": {
+        "ordered": {
+          "end_sample": null,
+          "input_id": "04e09059-edd4-40de-b3a2-004b635b69c8",
+          "outcome": "cancelled",
+          "session_id": "f1b8e157-42ce-4272-8e28-5f0766301be3"
+        },
+        "phase": "rtc",
+        "reason": "first_turn_failed:cancelled",
+        "room": "sn-POCTEST0001-1789095052",
+        "stt_spawned_ms_ago": 0
+      },
+      "observed_t_ms": {
+        "result": null,
+        "input_phase": 666
+      },
+      "note": "⚠️ B23 二进制采集：其 phase.ordered 尚无 no_task_reason 字段、payload 尚无 catchup 字段（B25 才加），不是字段丢失。⚠️ 注意 end_sample=null 但 input_id/session_id 有值——「end_sample 为 null」不等于「没有 begin」，中途 cancel 也是 null。"
+    },
+    "session_mismatch": {
+      "binary": "B25 (93dfb62be)",
+      "source": "b25_sim_results.jsonl",
+      "rejected": {
+        "active_input_id": null,
+        "input_id": "5fff1918-2b9c-48a3-ab66-e3eb94bc2815",
+        "next": "rtc",
+        "reason": "session_mismatch",
+        "status": "rejected",
+        "t": "result"
+      },
+      "input_phase_payload": null,
+      "observed_t_ms": {
+        "rejected": 534,
+        "input_phase": null
+      },
+      "note": "消息级 rejected，不触发相位切换，因此无 input_phase 包。active_input_id=null 表示当时没有进行中的合法代次。"
     }
   }
 }
