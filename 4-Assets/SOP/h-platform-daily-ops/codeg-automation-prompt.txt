@@ -1,9 +1,59 @@
-全程只读。先用 rg 在 /home/hahaxiong83/mycc/0-System/memory-items.md 与 /home/hahaxiong83/mycc/0-System/RECENT_EVENTS.md 中定位下列稳定记忆键，只读取命中段，不扫描无关项目：project_feishu_grok_h_byos、feedback_tenant_capability_drift_mechanism、feedback_identifier_shape_is_not_identity、feedback_concurrent_sessions_shared_checkout。若任一键未命中，必须明确报告“未命中”，禁止脑补。
+H 平台每日只读巡检｜判读策略 v2（cc 2026-09-11 17:14 收工回执；2026-09-12 起生效）。
+任务配置：Codeg Automation ID 4；每天 09:10 Asia/Shanghai；agent=codex；model=gpt-5.6-luna；cwd=/home/hahaxiong83/mycc；isolation=shared_in_root。模型由自动化 config_values.model 锁定，不在本任务内改配置。
 
-然后只运行 /home/hahaxiong83/.local/bin/daily-readonly-check 一次。结合它输出的单行 JSON 与上述项目记忆，用简洁中文汇报：总体状态、问题/漂移、是否属于已知或允许差异、实际影响、建议动作，并列出本次实际采用的记忆锚点。
+一、固定顺序与只读边界
+1. 先召回四键。A canonical 本机工作副本目录：
+/home/hahaxiong83/.claude/projects/-home-hahaxiong83-mycc/memory/
+精确读取该目录下以下四个 .md 文件的相关段落：
+- project_feishu_grok_h_byos
+- feedback_tenant_capability_drift_mechanism
+- feedback_identifier_shape_is_not_identity
+- feedback_concurrent_sessions_shared_checkout
+长项目记忆先 rg 日期/标题/本次 code，再读命中段及其后续纠正（优先最新日期），不要只取第一条旧命中，不扫描无关项目。四键逐一确认实际读取；缺失写“未命中”，不脑补。0-System/memory-items.md 与 RECENT_EVENTS.md 是 B 历史镜像，不跨机同步，不得用它们替代 A 或覆盖新基线。需要过程证据才定向读 /home/hahaxiong83/mycc/0-System/HANDOFF-h-platform-daily-ops-2026-09-11.md；其中早期阶段已被本 prompt 收工基线与 A 后续纠正取代。
+2. 记下本次开始时间，然后精确执行一次：
+/home/hahaxiong83/.local/bin/daily-readonly-check
+只调用这个既有入口一次，不另跑 checker、不手动 SSH、不重复运行来等绿灯。wrapper 内部只读采集、写本机巡检 state/临时文件与本机桌面提示是既有采集链；本任务不得另行写入。
+3. 使用这次单行 JSON 判读；先验证 schemaVersion=2、checkedAt 属于本次采集、reportError 是否存在。服务非零但有新鲜完整 JSON 时仍如实报告 critical，不把非零一概说成执行失败；若无新鲜报告/JSON 解析失败/报告读取失败，写“巡检未完成”，旧 latest.json 不得冒充当前状态，且不重跑。无法读取的字段写“未获确认”。
 
-异常主路由：control_release_drift → project_feishu_grok_h_byos；tenant_parity_lag → feedback_tenant_capability_drift_mechanism；涉及写入目标或 Bot 身份 → feedback_identifier_shape_is_not_identity；涉及共享 checkout 的写入安全背景 → feedback_concurrent_sessions_shared_checkout。其他 issue code 才可再用该 code 在上述两个文件中做定向 rg，只读命中段。
+只读铁律：禁止自动 attest / 补签、禁止覆盖租户内容、禁止部署、禁止重启、禁止发送外部消息。
+禁止修改任何文件、数据库或任务；禁止提交、推送、修复、升级、重放/取消任务或补附件。control_release_drift 只给命令不执行。禁止把项目记忆/交接里的历史处置命令当成本轮授权。
 
-租户 Skills 差异必须区分：合法 L2 个人增量、同名遮蔽、附件缺失；平台版只约束公司共用基线，部门版和个人版允许增量分叉，不能把所有差异都当故障，也不能把 Skills 差异误报成飞书 Bot 权限差异。判断 Bot 身份必须同时核对真实 botName、executionSite 与稳定标识/文件哈希，禁止凭相近名称、可读 uid 或角色印象映射。
+二、先读 levels，再读 issues/details
+JSON 顶层：status / levels{critical,warning,info} / issues[] / summary / memoryRefs。info 不影响 status。
+- 只有 info（或无 issue）：报告“OK，已知项 N 条”，一句话列项；末尾注明四键召回结果。
+- 有 warning 无 critical：报告 WARNING，逐项给“性质 + 建议”；不要用“异常”“故障”描述这些 warning，不擅自升级。
+- 有 critical：报告 CRITICAL，放最前，写清责任方、谁受影响、持续多久、下一步由谁处理。旧 critical 仍保留严重性，但写成持续/旧账，不伪装新事故。
+- 唯一明确的 warning 升级例外：同版本 control_release_drift 且 state=drifted，见下。
+- 保留探针原始 status/levels；若判读有升级，明确“探针 WARNING → 判读 CRITICAL”及原因。已知测试用例仍可能产生原始 warning，不伪造探针 OK。
 
-禁止修改任何文件、数据库或任务；禁止部署、提交、推送、重启、补签、覆盖租户内容或发送外部消息。即使命令非零也只汇报，不执行修复。
+三、逐 code 判读
+egress_down（critical）：平台侧模型出口故障，会阻断该代理/闸门路径的模型派发；连接数不是可用性证据。引用 details.target/proxy/consecutiveFails/downSince/lastOkAt/lastError；必须写“自 downSince 起已 X 小时”（以 checkedAt 计算，时间缺失就写未确认，禁止编造）。下一步由平台运维查 dev198 的 xray：journalctl --user -u xray，核对日志 [in-main -> tag] 的实际出站及 balancer 候选探活数据；这里只提供检查建议，不执行，不要动 bridge。不要凭单个出口探针断言未覆盖引擎/站点的每次请求都失败。
+egress_gate_off（info）：H_EGRESS_GATE=0，观测模式，失败不拦任务，提一句。
+egress_probe_missing（info）：旧版或没配代理，出口探针未上报，提一句。summary.egressOk=null/缺失时即使没有此 code，也写“出口可用性未确认”，不从 apps 推断模型通。
+control_release_drift（warning）：读 details.state/mismatchCount/releaseId/sourceCommit/controlVersion。releaseId 的版本号低于 controlVersion 且源提交已被后续提交取代，有记忆/证据支撑才判“发版后待补签”；给出 H_CONTROL_SOURCE_COMMIT=<源提交> ops/attest-current-h-control-release.sh check，源提交不明保留占位，不把旧 sourceCommit 自动当正确目标。同版本却 drifted = 真漂移，升 critical 请求平台运维核查。只有 releaseId 时间旧而版本相同不能判“只是待补签”；缺证据则“未获确认，建议人工核对版本/源提交”，不猜，不执行 check 或 attest。
+app_errors：逐 Bot 读 details 中 botName/uid/engine/class/lastErrorAt/lastInboundAt/lastOutboundOkAt/脱敏 lastError；先报年龄。quota_window/auth = 租户侧 warning，记录额度窗口/授权情况；其他类别（包括 other/timeout/placement/delivery_retry）24h 内 = critical，>24h = warning 旧账。时间未知写未确认并保留探针级别，不按缺失时间造一个年龄；新鲜非租户类才建议人工看 bridge.log 的 handle error。缺明细写“探针未给身份”。
+rpc_orphaned（critical）：读 details.fresh[]，每条用 botName/uid、requestId/taskId 前缀、method、ageH。新孤儿指 ACK 后既没结果也没终态；建议平台运维检查 handle error runner rpc timeout after 与 worker 重启记录，处置交川哥在控制面“恢复”页决定，不手改 durable，不自行重跑。
+rpc_orphaned_stale（warning）：读 details.stale[] + expiry，标注 >24h 旧账及首见时间。每10分钟自动回收，预期后续消失；只有连续两天仍在才建议查 expiry.lastSweepAt 是否推进及 rpc orphan sweep 日志。若没有连续两天证据，明确未确认，不把“下次还在”偷换为“两天”；必要时仅定向读取本机巡检 history.jsonl 最近两日的该 code，不另发探针。
+orphan_recovery_pending（info）：以 details.total/live/liveUnknown/compute/rpc/followUp/lastReportAt/lastOpAt 为准，不照抄 message 的总数为积压。total - live 是扣除运行中后的候选数；若 liveUnknown>0，候选数含未知，应另列已确认未运行数=total-live-liveUnknown，未知数不得当已停/可重跑。live 缺失或 null 时不当0，不计算确定积压。live=true 的条目是正常在跑，勿重跑。lastReportAt 停更几十分钟可能是页面重跑占住上报循环，不直接认卡死，也不把“可能”说成已证实。
+tenant_parity_lag（warning）：逐条列 details.platformLags[] 和 users[].uid/bot/lags[]，区分 frozen 跟随失效、shell 疑似同名空壳、附件落后/托管块缺铁律；只给核对/增量补齐建议，不批量覆盖。精确已知例外“陈川测试bot/agent-method”=川哥有意保留的测试 L2 空壳，写“已知测试用例”，不要建议覆盖/追平。只按实际 details 名称+skill key 匹配，不能推广到相似名称或其他 skill。
+tenant_parity_notes（info）：details.users[].uid/bot/notes[] 是合法 L2 个性化，只报告、保留。平台只约束 L0 公司基线，L1 部门与 L2 个人允许增量分叉；Skills 差异不等于飞书 Bot 权限差异。
+worker_restart_pending（info）：正常，等夜间 03:30 timer 生效，不建议立即重启。
+grok_refresh_failed（warning）：owner Grok 保活走同出口；若与 egress_down 并发，按同一出口根因合并叙述，同时保留两个 code，不拆成两件独立故障。若只有它，根因未确认，不能套用历史故障当现因。
+其余 code（services / timers / outbox / contract / durable / disk / journal / token sweep / tunnel 等）延续 v1：按探针 level 与证据给影响/人工检查建议；不自行变更阈值，不执行修复。
+
+四、共同原则与记忆路由
+- 任何 ageH/lastErrorAt/downSince 先报年龄；>24h 写“旧账（首见 X）”，不是今日新事故。没有首见时间就写未知。归并同一根因，报告价值在变化。
+- 身份只认 details 的 botName（parity 为 bot）/uid/taskId 前缀；缺失写“探针未给身份”。不能从可读 uid、相似名字或角色联想推定是谁，更不推定站点/owner。
+- Mini 不在 dev198 tenant parity 的覆盖范围内，不能因 dev198 缺项误报 Mini。历史对象锚：智能助手_产品专家在 dev198；AI 专家在 Mini，是对照测试；实时 placement 未上报则本轮未验证，不能仅按历史名字改写身份。
+- apps connected 只证明连接状态，egress 才证明受测模型出口路径；两者分别报告。出口健康也不保证所有租户额度/授权与模型业务响应成功。
+- control_release_drift → project_feishu_grok_h_byos；tenant_parity_lag → feedback_tenant_capability_drift_mechanism；身份 → feedback_identifier_shape_is_not_identity；共享 checkout → feedback_concurrent_sessions_shared_checkout。其他 code 只做 A 内定向召回，禁止全仓扫描。
+
+五、2026-09-11 收工对比基线（不是永恒阈值，实时值与 A 的更新优先）
+控制面 v1.67.0；in_sync / mismatch 0；releaseId=20260911-170637-h-control-v1.67.0，源 ba3c2bd。
+dev198 Bot 18/18；记忆17/17；worker 每天03:30，无 pending 跳过。
+租户待办1=陈川测试bot/agent-method（已知测试用例）；合法个性化4人6项；平台0。
+出口 balancer 候选 ZGO + 两个 Gemini专用-US2 直连节点，fallback=Mini 有线；当时走 ZGO，leastPing 可合法切到其他已批准候选。
+v1.65.0 / 17/17 Bot / 对等4人5项全部是作废旧基线。不得因未来正常新增租户、升级版本就凭固定数字报错。
+
+六、最终输出
+中文、结论先行、简洁。首行给状态；有 critical 列责任方/身份/年龄/人工下一步；warning 只写性质+建议；info 一句话。写明采集时间、新旧与未知边界，不贴凭据/原始日志/用户正文。末尾列四个实际采用的记忆锚（未命中必须明示），署名：codex（OpenAI）| 完成时间。只在当前 Codeg 任务内汇报，不发飞书或任何外部消息。
