@@ -97,6 +97,10 @@ pub struct PipelineConfig {
     /// B17（POC env `TTS_FIRST_CLAUSE_MIN`，默认 0=关）：本轮第一段 TTS 累计 ≥N 字遇全角逗号即切，
     /// 不等句末标点；只影响首段，后续段落仍按 tts_min_sentence_len + 句末标点。见 segmenter.rs。
     pub tts_first_clause_min: usize,
+    /// B23：首句逗号切默认只对 ordered 首句轮生效（env `TTS_FIRST_CLAUSE_ORDERED_ONLY`，默认 1）；0 = 所有轮次含未签设备——上产前拍板。
+    pub tts_first_clause_ordered_only: bool,
+    /// B23 产品首句 v1：input_ready 后这么久没有 begin → 视为端侧没走首句，切回 RTC（env `ORDERED_BEGIN_TIMEOUT_MS`，默认 2500）。
+    pub ordered_begin_timeout_ms: u64,
     pub greeting_text: String,
     /// 连接后是否自动播固定开场白。P003 安卓 demo 要求关掉(2026-08-15 联调)。
     /// 默认 true —— 其余环境行为不变。
@@ -194,6 +198,11 @@ impl PipelineConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
+            tts_first_clause_ordered_only: std::env::var("TTS_FIRST_CLAUSE_ORDERED_ONLY").map(|v| v != "0").unwrap_or(true),
+            ordered_begin_timeout_ms: std::env::var("ORDERED_BEGIN_TIMEOUT_MS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(2500),
             greeting_text: std::env::var("AGENT_GREETING")
                 .unwrap_or_else(|_| "你好，我在。你可以直接打断我。".into()),
             greeting_enabled: parse_flag(
@@ -268,6 +277,15 @@ fn is_relative_action(action: &str) -> bool {
     )
 }
 
+/// B23 产品首句 v1：输入相位。FirstTurn = ordered 首句代次进行中（RTC 帧只计数，留追补环）；
+/// Rtc = 代次终态/begin 超时后切回 RTC 多轮（第二条 STT 接管）；NotOrdered = 现役房（零行为变化）。不可逆。
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum InputPhase {
+    NotOrdered,
+    FirstTurn,
+    Rtc,
+}
+
 enum TurnKind {
     Say(String),
     Reply {
@@ -322,6 +340,15 @@ struct ExitSignalPending {
 struct Orchestrator {
     /// One-shot v0.3:有序 PCM 代次(Some=实验模式;None=现役 RTC,本字段零参与)
     ordered: Option<crate::ordered_pcm::Session>,
+    /// B23：输入相位（见 `InputPhase`）
+    input_phase: InputPhase,
+    /// B23：切换请求（代次终态 / begin 超时置位；主循环消费：换 STT、回灌追补环、发 `session.input_phase`）
+    pending_phase_switch: Option<String>,
+    /// B23：首句期间最近 ≤1 s 的 RTC 帧（到达时刻 + 样本）；切换时只回灌 end 到达之后的帧
+    rtc_catchup: std::collections::VecDeque<(Instant, Vec<i16>)>,
+    rtc_catchup_samples: usize,
+    /// B23：本轮首句逗号切阈值（commit 时按「ordered 首句轮 / 全局开关」决定，start_turn 消费）
+    turn_first_clause_min: usize,
     /// ordered_pcm:待执行的「主动收流」(drop 唯一 ASR 发送端);由主循环消费,因为发送端不在 Orchestrator 里
     ordered_end_stream_pending: bool,
     /// B9 #2：本 job 是否已记过候选日志（ack 字段幂等，只记第一次）。
@@ -683,6 +710,17 @@ pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
     Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, stt, started_at })
 }
 
+/// B23：签发 metadata 里与 ordered 输入相关的受信声明（job 层解析，pipeline 只认这里，不认设备自述）。
+#[derive(Clone, Debug, Default)]
+pub struct OrderedCtx {
+    /// `local_receipt:"v1"`——允许 begin 声明本地承接（false = 即使 env 开也回 ignored）
+    pub local_receipt: bool,
+    /// `oneshot_first_turn:"v1"`——首句代次终态后同房切回 RTC 多轮；false = POC 一房一代旧语义
+    pub first_turn_rtc: bool,
+    /// `session_id`——OPCM 包头逐条对撞（None = 不对撞）
+    pub session_id: Option<String>,
+}
+
 pub struct ReadyCtx {
     /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
     pub trace_id: Option<String>,
@@ -707,8 +745,8 @@ pub async fn run_pipeline(
     mut devres_rx: mpsc::Receiver<(control::DeviceResult, Option<String>)>,
     mut hist_rx: mpsc::Receiver<crate::ordered_pcm::Packet>,
     input_mode: crate::ordered_pcm::InputMode,
-    // 本地承接 v1：签发 metadata `local_receipt:"v1"`（受信，与 input_mode 同源）。false = 即使 env 开也回 ignored。
-    ordered_local_receipt: bool,
+    // 受信 ordered 声明（local_receipt / oneshot_first_turn / session_id），与 input_mode 同源自签发 metadata。
+    ordered_ctx: OrderedCtx,
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
@@ -727,9 +765,14 @@ pub async fn run_pipeline(
             info!(room = %room_name, "ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃");
             let mut limits = crate::ordered_pcm::Limits::from_env();
             // 本地承接 v1：env 开关 ∧ 签发 metadata 同时成立才接受 begin 声明；批次 2 未签的房恒回 ignored。
-            limits.local_receipt_enabled = limits.local_receipt_enabled && ordered_local_receipt;
-            info!(room = %room_name, local_receipt_enabled = limits.local_receipt_enabled, meta_local_receipt = ordered_local_receipt, "ordered_pcm local receipt v1");
-            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), limits))
+            limits.local_receipt_enabled = limits.local_receipt_enabled && ordered_ctx.local_receipt;
+            // B23：产品首句 v1 只认签发 metadata（env 开不了）；POC 旧房无此字段 = 一房一代旧语义
+            limits.first_turn_rtc = ordered_ctx.first_turn_rtc;
+            info!(room = %room_name, local_receipt_enabled = limits.local_receipt_enabled, meta_local_receipt = ordered_ctx.local_receipt,
+                  first_turn_rtc = limits.first_turn_rtc, begin_to_end_timeout_ms = limits.begin_to_end_timeout_ms,
+                  max_total_s = limits.max_total_samples / crate::ordered_pcm::SAMPLE_RATE as usize,
+                  session_bound = ordered_ctx.session_id.is_some(), "ordered_pcm local receipt v1");
+            Some(crate::ordered_pcm::Session::new(ready.trace_id.clone(), limits).with_expected_session(ordered_ctx.session_id.clone()))
         }
         crate::ordered_pcm::InputMode::Rtc => None,
     };
@@ -746,10 +789,13 @@ pub async fn run_pipeline(
     );
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
-    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: stt_task } = stt;
+    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt;
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
     let mut stt_pcm_tx = Some(stt_pcm_tx);
     let mut stt_closed = false;
+    // B23：首句 end 收流后预连的第二条 STT（与首答并行建连），切 RTC 时接管；首条任务句柄留到收尾
+    let mut stt2: Option<(SttPre, Instant)> = None;
+    let mut stt_tasks_done: Vec<tokio::task::JoinHandle<()>> = Vec::new();
 
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
@@ -783,6 +829,7 @@ pub async fn run_pipeline(
     if opening_overlap_skip {
         info!(room = %room_name, "local-audio opening-overlap gate skipped for this SN (v237 full-prompt-then-mic)");
     }
+    let input_phase0 = if ordered_session.is_some() { InputPhase::FirstTurn } else { InputPhase::NotOrdered };
     let mut orch = Orchestrator {
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
@@ -848,6 +895,11 @@ pub async fn run_pipeline(
         t0: Instant::now(),
         snap: crate::eot_snapshot::SnapshotSink::from_env(&room_name),
         ordered: ordered_session,
+        input_phase: input_phase0,
+        pending_phase_switch: None,
+        rtc_catchup: std::collections::VecDeque::new(),
+        rtc_catchup_samples: 0,
+        turn_first_clause_min: 0,
         ordered_end_stream_pending: false,
         ordered_end_candidate_logged: false,
         pending_tts_warm: None,
@@ -893,6 +945,53 @@ pub async fn run_pipeline(
     let mut input_ready_fired = false;
 
     loop {
+        // B23 产品首句 v1:执行输入相位切换(代次终态 / begin 超时后置位,每 job 一次):换 STT、回灌追补环、发 session.input_phase。
+        if let Some(reason) = orch.pending_phase_switch.take() {
+            let (pre, spawned_at) = match stt2.take() {
+                Some(x) => x,
+                None => (spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()),
+            };
+            let SttPre { pcm_tx, ev_rx, task } = pre;
+            stt_pcm_tx = Some(pcm_tx);
+            stt_ev_rx = ev_rx;
+            stt_closed = false;
+            stt_tasks_done.push(std::mem::replace(&mut stt_task, task));
+            orch.input_phase = InputPhase::Rtc;
+            // 未终态就切(begin 超时):先把代次关成 timeout 终态,迟到的 begin 之后一律 input_conflict 拒绝
+            let mut acts = Vec::new();
+            if let Some(o) = orch.ordered.as_mut()
+                && o.phase() != crate::ordered_pcm::Phase::Terminal
+            {
+                acts = o.fail(crate::ordered_pcm::FailReason::Timeout);
+            }
+            orch.apply_ordered_actions(acts);
+            orch.pending_phase_switch = None; // apply 可能再置位,切换只一次
+            // 追补环:只有完整闭合(committed / no_task)才回灌,且只回灌 end 到达之后的帧;失败/超时不回灌
+            let cutoff = orch.ordered_end_seen_at;
+            let frames: Vec<(Instant, Vec<i16>)> = orch.rtc_catchup.drain(..).collect();
+            orch.rtc_catchup_samples = 0;
+            let mut fed = 0usize;
+            if let Some(cut) = cutoff
+                && (reason == "first_turn_committed" || reason == "first_turn_no_task")
+            {
+                for (t, f) in frames {
+                    if t >= cut {
+                        fed += f.len();
+                        stt_buf.extend_from_slice(&f);
+                    }
+                }
+            }
+            let ordered_info = orch.ordered.as_ref().map(|o| json!({
+                "input_id": o.input_id(), "session_id": o.session_id(), "end_sample": o.end_sample_opt(), "outcome": o.outcome_str(),
+            })).unwrap_or(Value::Null);
+            if let Some(trace) = ready.trace_id.as_deref() {
+                let v = control::input_phase(trace, now_unix_ms(), &room_name, &reason, ordered_info,
+                    spawned_at.elapsed().as_millis() as i64);
+                orch.publish_json(control::TOPIC, v);
+            }
+            info!(room = %room_name, reason = %reason, catchup_samples = fed,
+                  stt2_spawned_ms_ago = spawned_at.elapsed().as_millis() as u64, "ordered_pcm input phase → rtc");
+        }
         tokio::select! {
             // 输出门 fail-closed(冻结 2026-08-18):首个待播 PCM 起 5s Android 仍未订阅
             // agent 轨 → 整 job 收摊关房,绝不带着半聋房间继续跑
@@ -942,9 +1041,24 @@ pub async fn run_pipeline(
                     }
                 }
                 orch.input_loop_started_at.get_or_insert(Instant::now());
-                if let Some(o) = orch.ordered.as_mut() {
-                    // ordered_pcm:RTC 帧到此为止——不进幅度统计/ASR 队列/EOT 环/声纹/投机/VAD(只计数)
-                    o.note_rtc_frame_dropped();
+                if orch.ordered_first_turn_active() {
+                    // ordered_pcm 首句代次:RTC 帧到此为止——不进幅度统计/ASR 队列/EOT 环/声纹/投机/VAD(只计数)。
+                    // B23:v1 房留最近 ≤1 s 追补环(到达时刻+样本),切 RTC 时只回灌 end 到达之后的帧
+                    // (设备冻结在 end 发送之前 → 这些帧必在首句之后,不会把首句尾巴再识别成幽灵轮)。
+                    let v1 = orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false);
+                    if let Some(o) = orch.ordered.as_mut() {
+                        o.note_rtc_frame_dropped();
+                    }
+                    if v1 {
+                        orch.rtc_catchup_samples += samples.len();
+                        orch.rtc_catchup.push_back((Instant::now(), samples.to_vec()));
+                        while orch.rtc_catchup_samples > 16_000 {
+                            match orch.rtc_catchup.pop_front() {
+                                Some((_, f)) => orch.rtc_catchup_samples -= f.len(),
+                                None => break,
+                            }
+                        }
+                    }
                     continue;
                 }
                 if !samples.is_empty() {
@@ -982,15 +1096,23 @@ pub async fn run_pipeline(
                 if orch.ordered_end_stream_pending {
                     orch.ordered_end_stream_pending = false;
                     stt_pcm_tx.take(); // 主动收流:供应商回 LastNoSeq → Closed → 裁决
+                    // B23:首句已收流 → 立即预连第二条 STT(与首答 final/LLM/TTS/本地承接并行),切 RTC 时直接接管
+                    if stt2.is_none() && orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false) {
+                        stt2 = Some((spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()));
+                    }
                 }
             }
             ev = stt_ev_rx.recv(), if !stt_closed => match ev {
                 Some(SttEvent::Interim(t)) => {
-                    if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); } else { orch.on_interim(t) }
+                    if orch.ordered_first_turn_active() {
+                        if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); }
+                    } else {
+                        orch.on_interim(t)
+                    }
                 }
                 Some(SttEvent::Final(t)) => {
-                    if let Some(o) = orch.ordered.as_mut() {
-                        let acts = o.on_stt_final(t, unix_ms_now());
+                    if orch.ordered_first_turn_active() {
+                        let acts = orch.ordered.as_mut().map(|o| o.on_stt_final(t, unix_ms_now())).unwrap_or_default();
                         orch.apply_ordered_actions(acts);
                         orch.on_ordered_final_held().await;
                     } else {
@@ -999,7 +1121,7 @@ pub async fn run_pipeline(
                 }
                 Some(SttEvent::Interrupted) => {
                     // 现役:连接由 stt 任务重连,这里只记日志;ordered_pcm:代次作废(意外 EOF/断连 ≠ LastNoSeq,不得提交半段 final)
-                    if orch.ordered.is_some() {
+                    if orch.ordered_first_turn_active() {
                         let acts = orch.ordered.as_mut().map(|o| o.on_stream_interrupted()).unwrap_or_default();
                         orch.apply_ordered_actions(acts);
                     } else {
@@ -1007,7 +1129,7 @@ pub async fn run_pipeline(
                     }
                 }
                 Some(SttEvent::Closed) | None => {
-                    if orch.ordered.is_some() {
+                    if orch.ordered_first_turn_active() {
                         // ordered_pcm:流结束=唯一裁决点。完整 → 一次 final 走现役 commit 路径;否则整代作废。
                         // job 不在此退出(回复要播完),由设备断房/输出门收尾。
                         stt_closed = true;
@@ -1055,6 +1177,9 @@ pub async fn run_pipeline(
                 if orch.ordered_end_stream_pending {
                     orch.ordered_end_stream_pending = false;
                     stt_pcm_tx.take();
+                    if stt2.is_none() && orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false) {
+                        stt2 = Some((spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()));
+                    }
                 }
             }
             // S2-B2:Android 设备命令执行结果(独立 topic 独立管道)
@@ -1080,12 +1205,28 @@ pub async fn run_pipeline(
         info!(room = %room_name, evidence = %o.evidence(), "ordered_pcm summary");
     }
     drop(stt_pcm_tx);
+    for t in stt_tasks_done { t.abort(); }
+    if let Some((pre, _)) = stt2.take() { pre.task.abort(); }
     let _ = tokio::time::timeout(Duration::from_secs(3), stt_task).await;
     info!(room = %room_name, "pipeline closed");
     Ok(())
 }
 
 impl Orchestrator {
+    /// B23:ordered 首句代次是否仍在消费 OPCM(RTC 帧丢弃)。Rtc 相位后 `ordered` 仍保留(收 receipt_done/证据),但不再吃帧。
+    fn ordered_first_turn_active(&self) -> bool {
+        self.ordered.is_some() && self.input_phase == InputPhase::FirstTurn
+    }
+    /// B23:请求切回 RTC(只在 v1 ∧ FirstTurn ∧ 未置位);主循环执行。
+    fn request_phase_switch(&mut self, reason: String) {
+        if self.input_phase == InputPhase::FirstTurn
+            && self.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false)
+            && self.pending_phase_switch.is_none()
+        {
+            self.pending_phase_switch = Some(reason);
+        }
+    }
+
     /// agent 状态迁移:telemetry 行(speaking→listening)+ 契约事件(bridge 同款,
     /// 进 listening 一律发 AgentSpeechStopped——含 thinking→listening 的 quirk)
     /// + speaking 状态 publish(topic=state,租户图标 UI 状态机依赖)。
@@ -1168,6 +1309,11 @@ impl Orchestrator {
                 crate::ordered_pcm::Action::Publish(v) => {
                     if v["t"] == "result" {
                         info!(room = %self.room_name, result = %v, "ordered_pcm result");
+                        // B23:任何失败终态(cancel/timeout/missing_seq/...)也切 RTC——不重试、不重发、不 commit
+                        if v["status"] == "failed" {
+                            let r = v["reason"].as_str().unwrap_or("unknown").to_string();
+                            self.request_phase_switch(format!("first_turn_failed:{r}"));
+                        }
                     }
                     if v["t"] == "ack" && v["end_candidate"] == true && !self.ordered_end_candidate_logged {
                         self.ordered_end_candidate_logged = true;
@@ -1195,9 +1341,16 @@ impl Orchestrator {
                 // B6(2026-09-09 真机 7/7 房 eou 400–448 ms 全是空等):输入已由设备 end 宣告结束且完整性门已裁决,
                 // 终局 final 免 MIN_ENDPOINTING_DELAY——下一 tick 即 commit;退出/急停/回声/命令/LLM 门照常在 commit 后。
                 self.turn_gate.mark_input_ended();
+                self.request_phase_switch("first_turn_committed".into());
+            }
+            crate::ordered_pcm::Decision::NoTask(text) => {
+                // B23:纯唤醒/无内容——不进 LLM/TTS/垫句,不招呼(端侧本地 greet);同房等真正的问题
+                info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm generation complete → no_task (纯唤醒/无内容,不进 LLM)");
+                self.request_phase_switch("first_turn_no_task".into());
             }
             crate::ordered_pcm::Decision::Discard(r) => {
                 info!(room = %self.room_name, reason = r.as_str(), "ordered_pcm generation discarded (zero commit)");
+                self.request_phase_switch(format!("first_turn_failed:{}", r.as_str()));
             }
         }
         if let Some(o) = &self.ordered {
@@ -2248,6 +2401,17 @@ impl Orchestrator {
             let acts = self.ordered.as_mut().map(|o| o.on_tick(now_ms)).unwrap_or_default();
             self.apply_ordered_actions(acts);
         }
+        // B23:产品首句 v1——input_ready 后 ordered_begin_timeout_ms 内没有 begin = 端侧没走首句(旧客户端/开关关)
+        // → 切 RTC 当普通会话;切换块会把代次关成 timeout 终态,迟到 begin 一律拒绝。
+        let begin_timed_out = self.input_phase == InputPhase::FirstTurn
+            && self.ordered.as_ref().map(|o| o.first_turn_rtc() && o.phase() == crate::ordered_pcm::Phase::Idle).unwrap_or(false)
+            && self.input_loop_started_at
+                .map(|t| t.elapsed() > Duration::from_millis(self.cfg.ordered_begin_timeout_ms))
+                .unwrap_or(false);
+        if begin_timed_out {
+            info!(room = %self.room_name, timeout_ms = self.cfg.ordered_begin_timeout_ms, "ordered_pcm begin timeout → rtc (端侧未走首句)");
+            self.request_phase_switch("begin_timeout".into());
+        }
         // cancel 掉的 canary:turn.task.abort() 后 BufferWatch Drop 异步落槽,tick 兜底补发
         self.try_flush_canary_metrics();
         let now = Instant::now();
@@ -2348,6 +2512,7 @@ impl Orchestrator {
                 let since_loop_ms = self.input_loop_started_at.map(|l| l.elapsed().as_millis() as i64).unwrap_or(-1);
                 if let Some(deadline) = self.opening_overlap_deadline_ms
                     && self.user_commit_count == 1
+                    && !commit.input_ended // B23:ordered 首句代次结构性无 VAD 起点且端侧未播招呼语,不进放宽分支
                     && crate::textproc::overlap_vadless_qualifies(vad_onset_seen)
                 {
                     let speech_end_ms = unix_ms_now() - commit.eou_delay.as_millis() as i64;
@@ -2677,6 +2842,8 @@ impl Orchestrator {
                 && spec_done && tts_warm_ready && spec_lead_ms >= self.cfg.ordered_skip_filler_min_lead_ms;
             // 本地承接 v1（2026-09-09 川哥拍板）：begin 声明 ∧ 房已签 ∧ 开关开 → 端侧自己播承接短语；
             // 本轮不播垫句，正文 PCM 扣到端侧 receipt_done 或截止（end 到达 + MAX_MS，到点放行）。投机/预热照常。
+            // B23:首句逗号切默认只对 ordered 首句轮(未签设备零变化);env TTS_FIRST_CLAUSE_ORDERED_ONLY=0 才全局
+            self.turn_first_clause_min = if commit.input_ended || !self.cfg.tts_first_clause_ordered_only { self.cfg.tts_first_clause_min } else { 0 };
             let lr_accepted = commit.input_ended && self.ordered.as_ref().map(|s| s.local_receipt_accepted()).unwrap_or(false);
             // B14（codex B13 回执 §1）：端侧候选未成立走旧收尾时发 receipt_done played_ms=0 = 「我没播」。commit 前已知 →
             // 退回 worker 自己的垫句路径，不然孩子从说完到正文全程无声；commit 后才到 → 门已在，只放行。
@@ -2780,7 +2947,7 @@ impl Orchestrator {
         let room_name = self.room_name.clone();
         let ev_tx = self.turn_ev_tx.clone();
         let min_len = self.cfg.tts_min_sentence_len;
-        let first_clause_min = self.cfg.tts_first_clause_min;
+        let first_clause_min = self.turn_first_clause_min;
         let synth2 = synth_text.clone();
         let prog2 = progress.clone();
         let lp = self.participant.clone();

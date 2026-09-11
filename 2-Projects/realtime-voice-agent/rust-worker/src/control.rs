@@ -228,6 +228,25 @@ pub fn output_ready(trace_id: &str, ts_ms: i64, room: &str) -> Value {
     })
 }
 
+/// B23 §2.2 产品首句 v1：输入相位切换 `session.input_phase`——ordered 首句代次终态（或 begin 超时）后 worker 开始消费 RTC。
+/// 每 job 只发一次；端侧只当信息（可丢）：RTC 消费不依赖端侧确认，`result.next:"rtc"` 是同一事实的第二通道。
+pub fn input_phase(trace_id: &str, ts_ms: i64, room: &str, reason: &str, ordered: Value, stt_spawned_ms_ago: i64) -> Value {
+    json!({
+        "trace_id": trace_id,
+        "ts_ms": ts_ms,
+        "src": "worker",
+        "type": "session.input_phase",
+        "lane": "L2",
+        "payload": {
+            "room": room,
+            "phase": "rtc",
+            "reason": reason,
+            "ordered": ordered,
+            "stt_spawned_ms_ago": stt_spawned_ms_ago,
+        },
+    })
+}
+
 // ── S2-B2 设备命令(合同 CC_P003_S2B2_ONLINE_DEVICE_COMMANDS_HANDOFF_20260818 §4.3/§4.4) ──
 
 /// 构造 `device.command.proposed`。差异声明(交接文档同步):合同 schema 的

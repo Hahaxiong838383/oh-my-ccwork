@@ -45,6 +45,12 @@ pub fn normalize_utterance(text: &str) -> String {
         .collect()
 }
 
+/// B23 产品首句 v1：文本去空白/标点后只剩唤醒词「小可」×1～3 → 纯唤醒，不算任务
+/// （端侧本地 greet；worker 不进 LLM/TTS/垫句，不重复招呼）。带任何其它字都算任务。
+pub fn is_wake_only(text: &str) -> bool {
+    matches!(normalize_utterance(text).as_str(), "小可" | "小可小可" | "小可小可小可")
+}
+
 /// 退出词吞句集默认表(2026-08-17 川哥拍板,与 Android SESSION_EXIT 合同词表一致——
 /// 联调 v2 §一.4/5:codex 现有 5 词+扩充 4 词+睡觉类 3 词)。Worker 只吞轮次防幽灵回答,
 /// 回复/关房 100% 归 Android(退出权威不变)。
@@ -341,6 +347,18 @@ pub fn opening_overlap_deadline_ms(room_secs: i64, greeting_max_ms: u64) -> i64 
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn b23_wake_only_variants() {
+        for t in ["小可小可", "小可小可。", "小可，小可", " 小可小可 ", "小可", "小可小可小可！", "小可小可，"] {
+            assert!(super::is_wake_only(t), "{t}");
+        }
+    }
+    #[test]
+    fn b23_wake_plus_content_is_task() {
+        for t in ["小可小可帮我测试一下", "小可小可小可小可", "", "你好", "小可在吗", "小可小可打开灯"] {
+            assert!(!super::is_wake_only(t), "{t}");
+        }
+    }
     use super::*;
 
     /// 本地音频回声对撞正负锚(2026-09-01)。正锚=三次真机实证的实际掉字形态;

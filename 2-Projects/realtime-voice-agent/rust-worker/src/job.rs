@@ -48,6 +48,9 @@ struct JobMeta {
     input_mode: Option<String>,
     /// 本地承接 v1（2026-09-09）：签发 metadata `"local_receipt":"v1"` 的房才允许 begin 声明本地承接（与 input_mode 同源受信）。
     local_receipt: Option<String>,
+    /// B23 产品首句 v1（2026-09-11）：签发 metadata `"oneshot_first_turn":"v1"` → 首句代次终态后同房切回 RTC 多轮；
+    /// 缺省 = POC 一房一代旧语义。只认 job.metadata。
+    oneshot_first_turn: Option<String>,
 }
 
 /// issue→assignment 观测(不进任何门禁)。毫秒口径优先(残余=两机 NTP 偏差,几十 ms 量级);
@@ -150,11 +153,14 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 容量 256:设备按 40 ms 片(640 样本)发 6 s 历史=150 片也放得下;满则丢包→该代因缺片终态失败(fail-closed)。
     let input_mode = crate::ordered_pcm::InputMode::from_meta(meta.input_mode.as_deref());
     let ordered_local_receipt = meta.local_receipt.as_deref() == Some("v1");
+    let ordered_first_turn = input_mode == crate::ordered_pcm::InputMode::OrderedPcm && meta.oneshot_first_turn.as_deref() == Some("v1");
+    let ordered_ctx = pipeline::OrderedCtx { local_receipt: ordered_local_receipt, first_turn_rtc: ordered_first_turn, session_id: meta.session_id.clone() };
     let expected_device = crate::ordered_pcm::expected_device_identity(&room_name);
     let (hist_tx, hist_rx) = mpsc::channel::<crate::ordered_pcm::Packet>(256);
     let mut hist_rx = Some(hist_rx);
     if input_mode == crate::ordered_pcm::InputMode::OrderedPcm {
-        info!(room = %room_name, expected_device = expected_device.as_deref().unwrap_or("-"), local_receipt = ordered_local_receipt, "input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别");
+        info!(room = %room_name, expected_device = expected_device.as_deref().unwrap_or("-"), local_receipt = ordered_local_receipt,
+              first_turn_rtc = ordered_first_turn, "input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别");
     }
     // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
     // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
@@ -362,9 +368,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 },
                 None => None,
             };
+            let octx = ordered_ctx.clone();
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, ordered_local_receipt, beat2, ready, prebuilt)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");

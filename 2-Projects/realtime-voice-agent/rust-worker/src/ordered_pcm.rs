@@ -253,6 +253,10 @@ pub struct Limits {
     /// 本地承接 v1（默认关；POC env `ORDERED_LOCAL_RECEIPT_ENABLED=1` ∧ 签发 metadata `local_receipt:"v1"` 才真开）：
     /// begin 带 `local_receipt:true` → ack 回显 `accepted`；关时回显 `ignored`（端侧不得播本地条目）。
     pub local_receipt_enabled: bool,
+    /// 产品首句合同 `oneshot_first_turn:"v1"`（B23；pipeline 从签发 metadata 置入，env 不能开）：
+    /// result 带 `next:"rtc"`；纯唤醒词 / 收流无 final 判 `no_task`（不进 LLM，端侧本地 greet）；
+    /// 代次终态后 pipeline 切回 RTC 多轮。false = POC 一房一代旧语义（无版本不改旧语义）。
+    pub first_turn_rtc: bool,
 }
 
 impl Default for Limits {
@@ -270,6 +274,7 @@ impl Default for Limits {
             end_candidate_floor_k: 2.0,
             end_candidate_min_chars: 5,
             local_receipt_enabled: false,
+            first_turn_rtc: false,
         }
     }
 }
@@ -287,6 +292,9 @@ impl Limits {
         l.end_candidate_quiet_abs_rms = f("ORDERED_END_CANDIDATE_ABS_RMS", 80.0);
         l.end_candidate_min_speech_rms = f("ORDERED_END_CANDIDATE_MIN_SPEECH_RMS", 300.0);
         l.local_receipt_enabled = std::env::var("ORDERED_LOCAL_RECEIPT_ENABLED").map(|v| v == "1").unwrap_or(false);
+        // B23 §3.1 产品预算：首句可到 ≈10 s（begin→end 12 s）、单代 16 s（2 s 预滚 + ≤12 s 语音 + 尾）；不设 = 旧默认 7 s / 12 s。
+        l.begin_to_end_timeout_ms = f("ORDERED_BEGIN_TO_END_TIMEOUT_MS", 7_000.0) as i64;
+        l.max_total_samples = (f("ORDERED_MAX_TOTAL_S", 12.0) * SAMPLE_RATE as f64) as usize;
         l
     }
 }
@@ -338,6 +346,8 @@ pub enum Phase {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
     Committed,
+    /// B23：纯唤醒 / 无内容（只在 `first_turn_rtc`）——完整闭合但不产生用户任务。
+    NoTask,
     Failed(FailReason),
 }
 
@@ -358,6 +368,8 @@ pub enum Action {
 pub enum Decision {
     /// 完整：一次性提交的用户文本（多 definite 按序拼接）。
     Commit(String),
+    /// B23：完整闭合但无任务（纯唤醒词 / 收流无 final，只在 `first_turn_rtc`）——不进 LLM/TTS/垫句，pipeline 切 RTC。
+    NoTask(String),
     /// 作废：终态原因（可能是早已失败的终态）。
     Discard(FailReason),
 }
@@ -401,6 +413,8 @@ pub enum LocalReceipt {
 
 pub struct Session {
     expected_trace: Option<String>,
+    /// B23：签发 metadata `session_id`；Some 时 begin 头 `session_id` 不等即只拒该消息（与 trace 同款）。
+    expected_session: Option<String>,
     limits: Limits,
     phase: Phase,
     ident: Option<Identity>,
@@ -447,6 +461,7 @@ impl Session {
     pub fn new(expected_trace: Option<String>, limits: Limits) -> Self {
         Self {
             expected_trace,
+            expected_session: None,
             limits,
             phase: Phase::Idle,
             ident: None,
@@ -558,6 +573,28 @@ impl Session {
     /// B9 #3：已 hold 的 final 拼接文本（与 on_stream_end 合并口径同源），投机 LLM 用。
     pub fn held_text(&self) -> String {
         self.held_finals.join("")
+    }
+    /// B23：绑定签发 metadata 的 `session_id`（None = 不对撞，POC 旧房）。
+    pub fn with_expected_session(mut self, session_id: Option<String>) -> Self {
+        self.expected_session = session_id;
+        self
+    }
+    pub fn first_turn_rtc(&self) -> bool {
+        self.limits.first_turn_rtc
+    }
+    pub fn end_sample_opt(&self) -> Option<u64> {
+        self.end_sample
+    }
+    pub fn session_id(&self) -> Option<&str> {
+        self.ident.as_ref().map(|i| i.session_id.as_str())
+    }
+    pub fn outcome_str(&self) -> &'static str {
+        match &self.outcome {
+            Some(Outcome::Committed) => "committed",
+            Some(Outcome::NoTask) => "no_task",
+            Some(Outcome::Failed(r)) => r.as_str(),
+            None => "none",
+        }
     }
 
     /// B9 #2：候选判定（每代一次）。全部条件成立才记账并返回 true；不改相位、不 commit。
@@ -680,6 +717,8 @@ impl Session {
             "received_next": self.recv_next,
             "queued_next": self.submitted_next,
             "finals_held": self.counters.finals_held,
+            // B23：首句后输入去向——v1 = 同房切 RTC 多轮；none = POC 一房一代
+            "next": if self.limits.first_turn_rtc { "rtc" } else { "none" },
         });
         if let (Some(obj), Some(ex)) = (v.as_object_mut(), extra.as_object()) {
             for (k, val) in ex {
@@ -708,7 +747,7 @@ impl Session {
         self.outcome = Some(Outcome::Failed(reason));
         self.buf.clear();
         self.held_finals.clear();
-        let mut acts = vec![Action::Publish(self.result_json("failed", Some(reason), json!({"action": "repeat_prompt"})))];
+        let mut acts = vec![Action::Publish(self.result_json("failed", Some(reason), json!({"action": "repeat_prompt", "outcome": "failed"})))];
         if !was_draining {
             acts.push(Action::EndStream);
         }
@@ -770,6 +809,12 @@ impl Session {
         match &self.expected_trace {
             Some(t) if *t == h.trace_id => {}
             _ => return self.reject_msg(h, FailReason::TraceMismatch.as_str()),
+        }
+        // B23：签发 session_id 逐条对撞（错 session 只拒该消息，不取消合法代次）
+        if let Some(sid) = &self.expected_session
+            && *sid != h.session_id
+        {
+            return self.reject_msg(h, "session_mismatch");
         }
         if self.phase != Phase::Idle {
             // 同 job 只认一个代次：完全相同的 begin 幂等（重发 ack），其它一律拒绝该消息
@@ -999,12 +1044,25 @@ impl Session {
             return (Decision::Discard(FailReason::AsrUnavailable), acts);
         }
         if self.held_finals.is_empty() {
+            if self.limits.first_turn_rtc {
+                // B23：v1 下收流无 final = 纯唤醒/无内容 → no_task（真 ASR 故障走 asr_unavailable/中断，可区分）
+                self.phase = Phase::Terminal;
+                self.outcome = Some(Outcome::NoTask);
+                let acts = vec![Action::Publish(self.result_json(
+                    "complete",
+                    None,
+                    json!({"finals": 0, "samples_queued": self.counters.samples_submitted, "text_chars": 0, "outcome": "no_task"}),
+                ))];
+                return (Decision::NoTask(String::new()), acts);
+            }
             let acts = self.fail(FailReason::NoFinal);
             return (Decision::Discard(FailReason::NoFinal), acts);
         }
         let text: String = self.held_finals.join("");
         self.phase = Phase::Terminal;
-        self.outcome = Some(Outcome::Committed);
+        // B23：纯唤醒词（小可 ×1～3，去标点空白）不是任务——端侧本地 greet，worker 不进 LLM
+        let no_task = self.limits.first_turn_rtc && crate::textproc::is_wake_only(&text);
+        self.outcome = Some(if no_task { Outcome::NoTask } else { Outcome::Committed });
         let acts = vec![Action::Publish(self.result_json(
             "complete",
             None,
@@ -1012,10 +1070,11 @@ impl Session {
                 "finals": self.held_finals.len(),
                 "samples_queued": self.counters.samples_submitted,
                 "text_chars": text.chars().count(),
+                "outcome": if no_task { "no_task" } else { "task" },
             }),
         ))];
         self.held_finals.clear();
-        (Decision::Commit(text), acts)
+        if no_task { (Decision::NoTask(text), acts) } else { (Decision::Commit(text), acts) }
     }
 
     /// 供应商连接非正常结束（中途断连 / 协议错误 / 收流后未见 LastNoSeq 即 EOF）：整代作废，已 hold 的半段 final 绝不提交。
@@ -1044,7 +1103,7 @@ impl Session {
         let mut v = json!({
             "input_id": self.input_id(),
             "phase": phase_str(self.phase),
-            "outcome": match &self.outcome { Some(Outcome::Committed) => "committed", Some(Outcome::Failed(r)) => r.as_str(), None => "none" },
+            "outcome": self.outcome_str(),
             "first_sample": self.first_sample,
             "keep_from": self.keep_from,
             "end_sample": self.end_sample,
@@ -1099,6 +1158,7 @@ impl Session {
         v["begin_sent_at_ms"] = json!(self.begin_sent_at_ms);
         v["end_sent_at_ms"] = json!(self.end_sent_at_ms);
         v["first_submit_ms"] = json!(self.first_submit_at_ms.map(|t| t - self.begin_at_ms));
+        v["first_turn_rtc"] = json!(self.limits.first_turn_rtc);
         v
     }
 }
@@ -1167,6 +1227,126 @@ mod tests {
 
     fn session() -> Session {
         Session::new(Some(TRACE.into()), Limits::default())
+    }
+    /// B23 产品首句 v1（签发 metadata `oneshot_first_turn:"v1"` → pipeline 置 `first_turn_rtc`）。
+    fn session_v1() -> Session {
+        let mut l = Limits::default();
+        l.first_turn_rtc = true;
+        Session::new(Some(TRACE.into()), l)
+    }
+
+    /// B23：签发 session_id 与 begin 头不等 → 只拒该消息（不取消、不终态）；相等照常成立。
+    #[test]
+    fn b23_session_mismatch_rejects_begin_message_only() {
+        let mut s = session().with_expected_session(Some("s-other".into()));
+        let acts = s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["status"] == "rejected" && v["reason"] == "session_mismatch")));
+        assert_eq!(s.phase(), Phase::Idle, "拒消息不改相位");
+        let mut ok = session().with_expected_session(Some("s1".into()));
+        let acts = ok.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+        assert!(acts.iter().any(|a| matches!(a, Action::Publish(v) if v["t"] == "ack")));
+        assert_eq!(ok.phase(), Phase::Receiving);
+        assert_eq!(ok.session_id(), Some("s1"));
+    }
+
+    /// B23：v1 下纯唤醒词 → no_task（result complete/outcome no_task/next rtc），不 Commit；旧合同同文本仍 Commit。
+    #[test]
+    fn b23_wake_only_is_no_task_under_v1_but_commit_legacy() {
+        for (v1, expect_no_task) in [(true, true), (false, false)] {
+            let mut s = if v1 { session_v1() } else { session() };
+            let mut sink = Sink { blocks: vec![], cap: None };
+            s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+            let pcm = tone(16000, 4);
+            let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
+            s.on_packet(&pkt(header("end", "in-1", seq, pcm.len() as u64, pcm.len() as u64), &[]), 100);
+            let _ = s.drain_submits(sink.sender());
+            s.on_stt_final("小可小可。".into(), 0);
+            let (d, acts) = s.on_stream_end(0);
+            let res = acts.iter().find_map(|a| match a { Action::Publish(v) if v["t"] == "result" => Some(v.clone()), _ => None }).expect("result");
+            assert_eq!(res["status"], "complete");
+            if expect_no_task {
+                assert_eq!(d, Decision::NoTask("小可小可。".into()));
+                assert_eq!(res["outcome"], "no_task");
+                assert_eq!(res["next"], "rtc");
+                assert_eq!(s.outcome(), Some(&Outcome::NoTask));
+                assert_eq!(s.evidence()["outcome"], "no_task");
+                assert_eq!(s.evidence()["first_turn_rtc"], true);
+            } else {
+                assert_eq!(d, Decision::Commit("小可小可。".into()));
+                assert_eq!(res["outcome"], "task");
+                assert_eq!(res["next"], "none");
+                assert_eq!(s.outcome(), Some(&Outcome::Committed));
+            }
+            assert_eq!(s.phase(), Phase::Terminal);
+        }
+    }
+
+    /// B23：v1 下收流无 final → no_task（complete/text_chars 0）；旧合同仍 failed/no_final。
+    #[test]
+    fn b23_no_final_is_no_task_under_v1_failed_legacy() {
+        for v1 in [true, false] {
+            let mut s = if v1 { session_v1() } else { session() };
+            let mut sink = Sink { blocks: vec![], cap: None };
+            s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+            let pcm = tone(3200, 2);
+            let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
+            s.on_packet(&pkt(header("end", "in-1", seq, pcm.len() as u64, pcm.len() as u64), &[]), 100);
+            let _ = s.drain_submits(sink.sender());
+            let (d, acts) = s.on_stream_end(0);
+            let res = acts.iter().find_map(|a| match a { Action::Publish(v) if v["t"] == "result" => Some(v.clone()), _ => None }).expect("result");
+            if v1 {
+                assert_eq!(d, Decision::NoTask(String::new()));
+                assert_eq!(res["status"], "complete");
+                assert_eq!(res["outcome"], "no_task");
+                assert_eq!(res["text_chars"], 0);
+                assert_eq!(res["next"], "rtc");
+            } else {
+                assert_eq!(d, Decision::Discard(FailReason::NoFinal));
+                assert_eq!(res["status"], "failed");
+                assert_eq!(res["reason"], "no_final");
+                assert_eq!(res["outcome"], "failed");
+                assert_eq!(res["next"], "none");
+            }
+        }
+    }
+
+    /// B23：v1 下真任务 → Commit，result 带 outcome task + next rtc；失败终态 result 也带 next rtc。
+    #[test]
+    fn b23_task_and_failed_results_carry_outcome_and_next() {
+        let mut s = session_v1();
+        let mut sink = Sink { blocks: vec![], cap: None };
+        s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+        let pcm = tone(16000, 4);
+        let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
+        s.on_packet(&pkt(header("end", "in-1", seq, pcm.len() as u64, pcm.len() as u64), &[]), 100);
+        let _ = s.drain_submits(sink.sender());
+        s.on_stt_final("小可小可帮我测试一下".into(), 0);
+        let (d, acts) = s.on_stream_end(0);
+        assert_eq!(d, Decision::Commit("小可小可帮我测试一下".into()));
+        let res = acts.iter().find_map(|a| match a { Action::Publish(v) if v["t"] == "result" => Some(v.clone()), _ => None }).expect("result");
+        assert_eq!(res["outcome"], "task");
+        assert_eq!(res["next"], "rtc");
+        assert_eq!(s.evidence()["outcome"], "committed");
+
+        let mut f = session_v1();
+        f.on_packet(&pkt(begin_hdr("in-2", 0, 0), &[]), 0);
+        f.on_packet(&pkt(header("chunk", "in-2", 0, 0, 640), &tone(640, 1)), 1);
+        let acts = f.on_packet(&pkt(header("chunk", "in-2", 2, 1280, 1920), &tone(640, 1)), 2);
+        let res = acts.iter().find_map(|a| match a { Action::Publish(v) if v["t"] == "result" => Some(v.clone()), _ => None }).expect("failed result");
+        assert_eq!(res["status"], "failed");
+        assert_eq!(res["reason"], "missing_seq");
+        assert_eq!(res["outcome"], "failed");
+        assert_eq!(res["next"], "rtc");
+        assert_eq!(f.outcome_str(), "missing_seq");
+    }
+
+    /// B23：预算 env——begin→end 超时与单代总样本可配置（不设 = 旧默认）。
+    #[test]
+    fn b23_budget_env_overrides() {
+        let d = Limits::default();
+        assert_eq!(d.begin_to_end_timeout_ms, 7_000);
+        assert_eq!(d.max_total_samples, 12 * SAMPLE_RATE as usize);
+        assert!(!d.first_turn_rtc);
     }
 
     /// 把 [start,end) 的样本按 chunk_len 分片喂给 session（模拟设备 640 样本 peek 组包）。
