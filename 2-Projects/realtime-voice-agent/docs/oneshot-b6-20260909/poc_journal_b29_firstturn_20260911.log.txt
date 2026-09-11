@@ -1,0 +1,821 @@
+Started voice-worker-firstturn.service - Voice Worker (product first-turn v1 single-device gray, agent_name=rust-worker-firstturn).
+[2m2026-09-11T07:54:26.316123Z[0m [32m INFO[0m voice-rust-worker starting [3magent_name[0m[2m=[0mrust-worker-firstturn [3murl[0m[2m=[0mwss://voice-hk.hahaxiong.cc [3mmax_jobs[0m[2m=[0m2
+[2m2026-09-11T07:54:26.317249Z[0m [32m INFO[0m EOT sidecar connected (existing) [3msock[0m[2m=[0m/tmp/rust-worker-eot.sock
+[2m2026-09-11T07:54:26.367310Z[0m [32m INFO[0m Discovered OrtHardwareDevice {vendor_id:0x1013, device_id:0xb8, vendor:, type:1, metadata: [card_idx=0, pci_bus_id=0000:00:02.0, ]}
+[2m2026-09-11T07:54:26.367350Z[0m [32m INFO[0m Discovered OrtHardwareDevice {vendor_id:0x8086, device_id:0x0, vendor:Intel, type:0, metadata: []}
+[2m2026-09-11T07:54:26.368792Z[0m [32m INFO[0m Session Options {  execution_mode:0 execution_order:DEFAULT enable_profiling:0 optimized_model_filepath:"" enable_mem_pattern:1 enable_mem_reuse:1 enable_cpu_mem_arena:1 profile_file_prefix:onnxruntime_profile_ session_logid: session_log_severity_level:-1 session_log_verbosity_level:0 max_num_graph_transformation_steps:10 graph_optimization_level:4 intra_op_param:OrtThreadPoolParams { thread_pool_size: 1 auto_set_affinity: 0 allow_spinning: 0 spin_duration_us: -1 spin_backoff_max: 1 dynamic_block_base_: 0 stack_size: 0 affinity_str:  set_denormal_as_zero: 0 } inter_op_param:OrtThreadPoolParams { thread_pool_size: 1 auto_set_affinity: 0 allow_spinning: 0 spin_duration_us: -1 spin_backoff_max: 1 dynamic_block_base_: 0 stack_size: 0 affinity_str:  set_denormal_as_zero: 0 } use_per_session_threads:1 thread_pool_allow_spinning:1 use_deterministic_compute:0 ep_selection_policy:5 config_options: {  } }
+[2m2026-09-11T07:54:26.368841Z[0m [32m INFO[0m Flush-to-zero and denormal-as-zero are off
+[2m2026-09-11T07:54:26.368863Z[0m [32m INFO[0m Creating and using per session threadpools since use_per_session_threads_ is true
+[2m2026-09-11T07:54:26.368896Z[0m [32m INFO[0m Dynamic block base set to 0
+[2m2026-09-11T07:54:26.445786Z[0m [32m INFO[0m Initializing session.
+[2m2026-09-11T07:54:26.445907Z[0m [32m INFO[0m Creating BFCArena for Cpu with following configs: initial_chunk_size_bytes: 1048576 max_dead_bytes_per_chunk: 134217728 initial_growth_chunk_size_bytes: 2097152 max_power_of_two_extend_bytes: 1073741824 memory limit: 18446744073709551615 arena_extend_strategy: 0
+[2m2026-09-11T07:54:26.453159Z[0m [32m INFO[0m This model does not have any local functions defined. AOT Inlining is not performed
+[2m2026-09-11T07:54:26.455671Z[0m [32m INFO[0m GraphTransformer EnsureUniqueDQForNodeUnit modified: 0 with status: OK
+[2m2026-09-11T07:54:26.456534Z[0m [32m INFO[0m GraphTransformer Level1_RuleBasedTransformer modified: 1 with status: OK
+[2m2026-09-11T07:54:26.480449Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_19_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480563Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_20_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480588Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_12_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480609Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480621Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480650Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_18_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480663Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480681Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_13_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480692Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480704Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480712Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_21_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.480720Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481115Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_18_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481131Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481141Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481154Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_12_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481163Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_19_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481174Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481190Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_20_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481202Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_13_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481225Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481236Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_21_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481245Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481255Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.481711Z[0m [32m INFO[0m GraphTransformer DoubleQDQPairsRemover modified: 0 with status: OK
+[2m2026-09-11T07:54:26.481779Z[0m [32m INFO[0m GraphTransformer ConstantSharing modified: 0 with status: OK
+[2m2026-09-11T07:54:26.483383Z[0m [32m INFO[0m GraphTransformer CommonSubexpressionElimination modified: 0 with status: OK
+[2m2026-09-11T07:54:26.508174Z[0m [32m INFO[0m GraphTransformer ConstantFolding modified: 1 with status: OK
+[2m2026-09-11T07:54:26.529715Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Transpose_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529811Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/ConstantOfShape_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529851Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.bias_ih'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529864Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.weight_hh'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529873Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529887Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.weight_ih'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529898Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529909Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Slice_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529925Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Concat_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529937Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__self.stft.hop_length'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529946Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529956Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Reshape_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529965Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529974Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529985Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.529995Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530003Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/padding/Constant_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530096Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__decoder.rnn.bias_hh'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530239Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530252Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530262Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530270Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530278Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530287Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530296Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_27_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530306Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_25_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530340Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_23_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530359Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_22_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530376Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_20_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530390Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_16_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530401Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530411Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_13_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530420Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_17_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530429Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530441Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_38_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530450Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_12_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530459Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_28_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530485Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_18_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530496Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530506Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_41_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530516Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530526Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530541Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_14_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530552Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530590Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530605Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_34_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530623Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_24_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530636Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530646Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530658Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_29_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530670Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_40_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530708Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530717Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_30_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530726Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_31_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530735Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_32_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530746Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__250'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530757Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_26_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530766Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_33_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530775Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_35_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530786Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530805Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_36_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530815Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_37_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530825Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_39_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530834Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_43_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530843Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_15_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530852Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530863Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_21_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530873Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530882Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530891Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_44_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530901Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Slice_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530911Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530925Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_19_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530937Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Constant_42_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.530946Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn_1/Concat_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531180Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531196Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531208Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_27_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531219Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531231Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_26_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531241Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_17_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531251Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_21_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531261Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_29_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531271Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_20_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531281Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_19_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531292Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_24_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531314Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_16_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531325Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531345Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_34_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531356Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_36_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531367Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_14_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531378Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_45_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531390Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531399Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531407Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_30_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531416Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_25_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531426Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_22_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531449Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531457Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_18_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531487Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_12_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531498Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_23_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531512Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531521Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_31_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531547Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531558Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_44_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531567Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_13_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531590Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_15_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531601Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_32_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531674Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_35_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531715Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_38_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531724Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_40_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531732Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_37_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531742Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_33_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531760Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_39_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531769Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_41_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531780Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_28_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531789Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531797Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531807Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531815Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_42_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531825Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531833Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_43_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531842Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531851Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531860Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531878Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531886Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531894Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531904Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Slice_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531917Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.531924Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/decoder/rnn/Concat_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532234Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Concat_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532250Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Transpose_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532273Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.bias_ih'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532283Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Slice_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532292Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/ConstantOfShape_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532302Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.bias_hh'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532312Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.weight_ih'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532327Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532338Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532350Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532372Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532388Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__self.stft.filter_length'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532399Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532409Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Reshape_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532424Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__decoder.rnn.weight_hh'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532433Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532441Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532450Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/padding/Constant_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532648Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532664Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532674Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532683Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_26_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532692Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_22_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532701Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_21_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532710Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_44_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532720Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_19_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532744Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_17_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532754Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_14_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532763Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_13_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532772Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532789Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532797Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_12_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532806Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532817Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_24_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532826Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__250'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532834Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532843Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_20_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532851Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532860Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532869Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532880Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_27_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532890Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_23_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532914Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_43_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532926Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_18_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532935Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532944Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_25_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532956Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532966Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532974Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_28_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532982Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_40_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.532992Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533052Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533062Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_32_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533070Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_15_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533079Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_29_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533089Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_30_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533098Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_39_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533106Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_31_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533122Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_33_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533132Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533142Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_34_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533152Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_37_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533167Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_35_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533176Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533184Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533192Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_36_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533201Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_41_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533210Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_38_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533219Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_42_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533228Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533236Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Constant_16_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533245Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533254Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533263Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Concat_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533281Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn_1/Slice_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533552Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533568Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_29_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533593Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533607Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_23_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533616Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533625Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533634Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_24_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533644Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_16_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533655Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_21_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533666Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_18_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533675Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_30_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533684Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_2_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533693Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_17_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533702Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533711Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_13_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533734Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_19_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533744Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_22_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533753Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_25_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533763Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533777Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533785Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_31_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533795Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_28_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533803Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_26_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533811Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533820Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533829Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533837Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533846Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533854Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_12_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533864Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_14_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533872Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_20_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533891Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_37_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533900Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_5_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533933Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_15_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533942Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_32_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533959Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_34_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533967Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_36_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533976Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_3_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533985Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_38_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.533994Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_35_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534002Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_41_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534011Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_40_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534018Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_42_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534027Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_43_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534036Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_44_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534046Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_45_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534054Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_11_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534072Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_10_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534082Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_27_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534092Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534101Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_39_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534114Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534123Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534131Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Slice_4_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534140Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Constant_33_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534149Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/decoder/rnn/Concat_1_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.534756Z[0m [32m INFO[0m GraphTransformer MatMulAddFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.534902Z[0m [32m INFO[0m GraphTransformer ReshapeFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.534924Z[0m [32m INFO[0m GraphTransformer FreeDimensionOverrideTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535055Z[0m [32m INFO[0m GraphTransformer SliceConcatToSpaceToDepthFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535067Z[0m [32m INFO[0m GraphTransformer GeluFusionL1 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535075Z[0m [32m INFO[0m GraphTransformer LayerNormFusionL1 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535213Z[0m [32m INFO[0m GraphTransformer QDQPropagationTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535383Z[0m [32m INFO[0m GraphTransformer WeightBiasQuantization modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535528Z[0m [32m INFO[0m GraphTransformer EnsureUniqueDQForNodeUnit modified: 0 with status: OK
+[2m2026-09-11T07:54:26.535670Z[0m [32m INFO[0m GraphTransformer WhereDummyDq modified: 0 with status: OK
+[2m2026-09-11T07:54:26.536781Z[0m [32m INFO[0m GraphTransformer TransposeOptimizer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.537134Z[0m [32m INFO[0m GraphTransformer Level1_RuleBasedTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.537153Z[0m [32m INFO[0m GraphTransformer DoubleQDQPairsRemover modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538162Z[0m [32m INFO[0m GraphTransformer CommonSubexpressionElimination modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538415Z[0m [32m INFO[0m GraphTransformer ConstantFolding modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538571Z[0m [32m INFO[0m GraphTransformer MatMulAddFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538711Z[0m [32m INFO[0m GraphTransformer ReshapeFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538730Z[0m [32m INFO[0m GraphTransformer FreeDimensionOverrideTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538859Z[0m [32m INFO[0m GraphTransformer SliceConcatToSpaceToDepthFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538874Z[0m [32m INFO[0m GraphTransformer GeluFusionL1 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.538884Z[0m [32m INFO[0m GraphTransformer LayerNormFusionL1 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.539022Z[0m [32m INFO[0m GraphTransformer QDQPropagationTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.539171Z[0m [32m INFO[0m GraphTransformer WeightBiasQuantization modified: 0 with status: OK
+[2m2026-09-11T07:54:26.539303Z[0m [32m INFO[0m GraphTransformer EnsureUniqueDQForNodeUnit modified: 0 with status: OK
+[2m2026-09-11T07:54:26.539424Z[0m [32m INFO[0m GraphTransformer WhereDummyDq modified: 0 with status: OK
+[2m2026-09-11T07:54:26.542165Z[0m [32m INFO[0m Running graph optimizations in loop 1 time/s (Graph Optimizations Loop Level : 1)
+[2m2026-09-11T07:54:26.542376Z[0m [32m INFO[0m GraphTransformer Level2_RuleBasedTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.543246Z[0m [32m INFO[0m GraphTransformer TransposeOptimizer_CPUExecutionProvider modified: 0 with status: OK
+[2m2026-09-11T07:54:26.543399Z[0m [32m INFO[0m GraphTransformer QDQS8ToU8Transformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.543658Z[0m [32m INFO[0m GraphTransformer QDQSelectorActionTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.543772Z[0m [32m INFO[0m GraphTransformer GemmActivationFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.543871Z[0m [32m INFO[0m GraphTransformer MatMulIntegerToFloatFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.543972Z[0m [32m INFO[0m GraphTransformer DynamicQuantizeMatMulFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.544335Z[0m [32m INFO[0m GraphTransformer ConvActivationFusion modified: 1 with status: OK
+[2m2026-09-11T07:54:26.564820Z[0m [32m INFO[0m GraphTransformer GeluFusionL2 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.565129Z[0m [32m INFO[0m GraphTransformer LayerNormFusionL2 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.565297Z[0m [32m INFO[0m GraphTransformer SimplifiedLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.565452Z[0m [32m INFO[0m GraphTransformer AttentionFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.565940Z[0m [32m INFO[0m GraphTransformer EmbedLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.566706Z[0m [32m INFO[0m GraphTransformer GatherSliceToSplitFusion modified: 1 with status: OK
+[2m2026-09-11T07:54:26.585938Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_17_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586069Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_16_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586083Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_15_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586097Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_14_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586109Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586119Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586127Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586160Z[0m [32m INFO[0m Removing initializer 'If_0_then_branch__Inline_0__/stft/Constant_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586859Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_15_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586895Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_9_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586907Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_7_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586915Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_6_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586924Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_14_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586938Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_17_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586952Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_16_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.586962Z[0m [32m INFO[0m Removing initializer 'If_0_else_branch__Inline_0__/stft/Constant_8_output_0'. It is no longer used by any node.
+[2m2026-09-11T07:54:26.588092Z[0m [32m INFO[0m GraphTransformer GatherToSliceFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.588381Z[0m [32m INFO[0m GraphTransformer MatmulTransposeFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.588558Z[0m [32m INFO[0m GraphTransformer BiasGeluFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.588680Z[0m [32m INFO[0m GraphTransformer GroupQueryAttentionFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.588797Z[0m [32m INFO[0m GraphTransformer MatMulAddFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.588904Z[0m [32m INFO[0m GraphTransformer SkipLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.588995Z[0m [32m INFO[0m GraphTransformer BiasSkipLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.589152Z[0m [32m INFO[0m GraphTransformer FastGeluFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.589568Z[0m [32m INFO[0m GraphTransformer QuickGeluFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.589708Z[0m [32m INFO[0m GraphTransformer BiasSoftmaxFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.589799Z[0m [32m INFO[0m GraphTransformer BiasDropoutFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590043Z[0m [32m INFO[0m GraphTransformer MatMulScaleFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590157Z[0m [32m INFO[0m GraphTransformer MatMulActivationFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590309Z[0m [32m INFO[0m GraphTransformer MatMulNBitsFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590417Z[0m [32m INFO[0m GraphTransformer GroupQueryAttentionPreNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590552Z[0m [32m INFO[0m GraphTransformer QDQFinalCleanupTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590679Z[0m [32m INFO[0m GraphTransformer Level2_RuleBasedTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.590779Z[0m [32m INFO[0m GraphTransformer QDQS8ToU8Transformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591021Z[0m [32m INFO[0m GraphTransformer QDQSelectorActionTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591115Z[0m [32m INFO[0m GraphTransformer GemmActivationFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591208Z[0m [32m INFO[0m GraphTransformer MatMulIntegerToFloatFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591295Z[0m [32m INFO[0m GraphTransformer DynamicQuantizeMatMulFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591414Z[0m [32m INFO[0m GraphTransformer ConvActivationFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591704Z[0m [32m INFO[0m GraphTransformer GeluFusionL2 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.591837Z[0m [32m INFO[0m GraphTransformer LayerNormFusionL2 modified: 0 with status: OK
+[2m2026-09-11T07:54:26.592002Z[0m [32m INFO[0m GraphTransformer SimplifiedLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.592114Z[0m [32m INFO[0m GraphTransformer AttentionFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.592216Z[0m [32m INFO[0m GraphTransformer EmbedLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.592746Z[0m [32m INFO[0m GraphTransformer GatherSliceToSplitFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.592873Z[0m [32m INFO[0m GraphTransformer GatherToSliceFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.592981Z[0m [32m INFO[0m GraphTransformer MatmulTransposeFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593089Z[0m [32m INFO[0m GraphTransformer BiasGeluFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593185Z[0m [32m INFO[0m GraphTransformer GroupQueryAttentionFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593274Z[0m [32m INFO[0m GraphTransformer MatMulAddFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593365Z[0m [32m INFO[0m GraphTransformer SkipLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593457Z[0m [32m INFO[0m GraphTransformer BiasSkipLayerNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593683Z[0m [32m INFO[0m GraphTransformer FastGeluFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593791Z[0m [32m INFO[0m GraphTransformer QuickGeluFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593892Z[0m [32m INFO[0m GraphTransformer BiasSoftmaxFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.593984Z[0m [32m INFO[0m GraphTransformer BiasDropoutFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.594178Z[0m [32m INFO[0m GraphTransformer MatMulScaleFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.594279Z[0m [32m INFO[0m GraphTransformer MatMulActivationFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.594421Z[0m [32m INFO[0m GraphTransformer MatMulNBitsFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.594557Z[0m [32m INFO[0m GraphTransformer GroupQueryAttentionPreNormFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.594696Z[0m [32m INFO[0m GraphTransformer QDQFinalCleanupTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.594974Z[0m [32m INFO[0m GraphTransformer NchwcTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.596075Z[0m [32m INFO[0m GraphTransformer NhwcTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.596339Z[0m [32m INFO[0m GraphTransformer ConvAddActivationFusion modified: 0 with status: OK
+[2m2026-09-11T07:54:26.597275Z[0m [32m INFO[0m GraphTransformer RemoveDuplicateCastTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.597305Z[0m [32m INFO[0m GraphTransformer CastFloat16Transformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.597327Z[0m [32m INFO[0m GraphTransformer FuseFp16InitializerToFp32NodeTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.597357Z[0m [32m INFO[0m GraphTransformer MemcpyTransformer modified: 0 with status: OK
+[2m2026-09-11T07:54:26.603081Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.605190Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.605391Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.605535Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.613251Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.615882Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.616116Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 16
+[2m2026-09-11T07:54:26.616190Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616218Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 4
+[2m2026-09-11T07:54:26.616244Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 4
+[2m2026-09-11T07:54:26.616268Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616297Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616321Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616343Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616362Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616400Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616423Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616449Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616488Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616513Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616534Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616556Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 4
+[2m2026-09-11T07:54:26.616569Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.616601Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 32
+[2m2026-09-11T07:54:26.616629Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.619430Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.619662Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.619726Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.619797Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.619896Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.619935Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.619946Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.620626Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.621102Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.621171Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.621211Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.621239Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.621257Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.621284Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.621301Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.621322Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.621738Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.622493Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.623110Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.623312Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.623335Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.623372Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.623397Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.623408Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.623419Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.623532Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.623563Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.623573Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.623608Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.623652Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.623683Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.623693Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.623730Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.623759Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.623770Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.623784Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.623819Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.623840Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.623850Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.623908Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.623942Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.623950Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.624004Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.624042Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.624062Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.624082Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.624097Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.624150Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.624181Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.624190Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.624227Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.624258Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.624271Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.624291Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.624333Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.624356Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.624365Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.624881Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.625323Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.625357Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625403Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625418Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625431Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625443Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625458Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625496Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625510Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625522Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.625536Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.626682Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.627074Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.627460Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.627645Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.627668Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.627697Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.627712Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.627725Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.627739Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.627809Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.627837Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.627847Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.627862Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.627899Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.627921Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.627930Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.627960Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.627984Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.627994Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.628007Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628032Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.628050Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.628058Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628100Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.628127Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.628136Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628172Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.628195Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.628205Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.628219Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628248Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.628267Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.628275Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628324Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.628346Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.628356Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.628371Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628400Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.628420Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.628428Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.628755Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.629547Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.629591Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629621Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629635Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 32
+[2m2026-09-11T07:54:26.629656Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 4
+[2m2026-09-11T07:54:26.629682Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629694Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629716Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629732Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 16
+[2m2026-09-11T07:54:26.629750Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 4
+[2m2026-09-11T07:54:26.629762Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629776Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629793Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629803Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 4
+[2m2026-09-11T07:54:26.629814Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629828Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629838Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629851Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629861Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.629874Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.630724Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.630765Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.630778Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.630796Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.630840Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.630861Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.630869Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.631110Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.631354Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.631373Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.631393Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.631408Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.631426Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.631543Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.631557Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.631595Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.632028Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.632531Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.633086Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633247Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633263Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633290Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633307Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633323Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633337Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.633413Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633441Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633451Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633497Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.633539Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633559Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633568Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.633616Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633643Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633654Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633669Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.633704Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633732Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633746Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.633814Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633844Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633854Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.633911Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.633950Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.633965Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.633987Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.634007Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.634068Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.634095Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.634103Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.634149Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.634176Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.634189Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.634213Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.634254Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.634278Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.634291Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.634556Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.634978Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.635003Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635033Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635063Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635083Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635100Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635121Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635140Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635159Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635205Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.635221Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.635496Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.636024Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 262144
+[2m2026-09-11T07:54:26.636567Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.636818Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.636844Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.636871Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.636887Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.636900Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.636922Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637084Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637129Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637140Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.637158Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637204Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637233Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637241Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637279Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637301Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637311Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.637328Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637358Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637383Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637394Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637452Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637511Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637523Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637616Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637650Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637662Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.637681Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637719Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637739Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637747Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637812Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637836Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637849Z[0m [32m INFO[0m Reserving memory in BFCArena for Cpu size: 8
+[2m2026-09-11T07:54:26.637864Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.637899Z[0m [32m INFO[0m Use DeviceBasedPartition as default
+[2m2026-09-11T07:54:26.637919Z[0m [32m INFO[0m Saving initialized tensors.
+[2m2026-09-11T07:54:26.637926Z[0m [32m INFO[0m Done saving initialized tensors
+[2m2026-09-11T07:54:26.638404Z[0m [32m INFO[0m Session successfully initialized.
+[2m2026-09-11T07:54:26.638694Z[0m [32m INFO[0m vad 权重预加载完成(进程级共享) [3mmodel[0m[2m=[0m/root/rust-worker/silero_vad.onnx [3mload_ms[0m[2m=[0m322
+[2m2026-09-11T07:54:26.682861Z[0m [32m INFO[0m connected to livekit /agent [3murl[0m[2m=[0mwss://voice-hk.hahaxiong.cc/agent [3magent_name[0m[2m=[0mrust-worker-firstturn
+[2m2026-09-11T07:54:26.686866Z[0m [32m INFO[0m registered worker [3mworker_id[0m[2m=[0mAW_uBv9UqoFhLvW [3mserver[0m[2m=[0mSome("1.13.2")
+[2m2026-09-11T07:54:56.642104Z[0m [32m INFO[0m job rss: 49MB (uptime 30s)
+[2m2026-09-11T07:55:26.644366Z[0m [32m INFO[0m job rss: 49MB (uptime 60s)
+[2m2026-09-11T07:55:56.646134Z[0m [32m INFO[0m job rss: 49MB (uptime 90s)
+[2m2026-09-11T07:56:26.648590Z[0m [32m INFO[0m job rss: 49MB (uptime 120s)
+[2m2026-09-11T07:56:56.651124Z[0m [32m INFO[0m job rss: 49MB (uptime 150s)
+[2m2026-09-11T07:57:26.653888Z[0m [32m INFO[0m job rss: 49MB (uptime 180s)
+[2m2026-09-11T07:57:56.657575Z[0m [32m INFO[0m job rss: 49MB (uptime 210s)
+[2m2026-09-11T07:58:26.658756Z[0m [32m INFO[0m job rss: 49MB (uptime 240s)
+[2m2026-09-11T07:58:56.660821Z[0m [32m INFO[0m job rss: 49MB (uptime 270s)
+[2m2026-09-11T07:59:26.663985Z[0m [32m INFO[0m job rss: 49MB (uptime 300s)
+[2m2026-09-11T07:59:56.666613Z[0m [32m INFO[0m job rss: 49MB (uptime 330s)
+[2m2026-09-11T08:00:26.668751Z[0m [32m INFO[0m job rss: 49MB (uptime 360s)
+[2m2026-09-11T08:00:56.671887Z[0m [32m INFO[0m job rss: 49MB (uptime 390s)
+[2m2026-09-11T08:01:26.674853Z[0m [32m INFO[0m job rss: 49MB (uptime 420s)
+[2m2026-09-11T08:01:56.677926Z[0m [32m INFO[0m job rss: 49MB (uptime 450s)
+[2m2026-09-11T08:02:26.680014Z[0m [32m INFO[0m job rss: 49MB (uptime 480s)
+[2m2026-09-11T08:02:56.682805Z[0m [32m INFO[0m job rss: 49MB (uptime 510s)
+[2m2026-09-11T08:03:26.684843Z[0m [32m INFO[0m job rss: 49MB (uptime 540s)
+[2m2026-09-11T08:03:56.686901Z[0m [32m INFO[0m job rss: 49MB (uptime 570s)
+[2m2026-09-11T08:04:26.689188Z[0m [32m INFO[0m job rss: 49MB (uptime 600s)
+[2m2026-09-11T08:04:56.691650Z[0m [32m INFO[0m job rss: 49MB (uptime 630s)
+[2m2026-09-11T08:05:26.693661Z[0m [32m INFO[0m job rss: 49MB (uptime 660s)
+[2m2026-09-11T08:05:56.695209Z[0m [32m INFO[0m job rss: 49MB (uptime 690s)
+[2m2026-09-11T08:06:26.697586Z[0m [32m INFO[0m job rss: 49MB (uptime 720s)
+[2m2026-09-11T08:06:56.700328Z[0m [32m INFO[0m job rss: 49MB (uptime 750s)
+[2m2026-09-11T08:07:10.589377Z[0m [32m INFO[0m received job request, accepting [3mjob_id[0m[2m=[0mAJ_sEfoesbWAqfc [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:10.593570Z[0m [32m INFO[0m job assignment received, spawning job task [3mjob_id[0m[2m=[0mAJ_sEfoesbWAqfc
+[2m2026-09-11T08:07:10.594166Z[0m [32m INFO[0m job_assignment_received [3mjob_id[0m[2m=[0mAJ_sEfoesbWAqfc [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m0 [3missue_to_assignment_ms[0m[2m=[0m65634 [3missue_clock[0m[2m=[0m"ms" [3mhas_trace[0m[2m=[0mtrue
+[2m2026-09-11T08:07:10.594263Z[0m [32m INFO[0m worker_room_connect_start [3mjob_id[0m[2m=[0mAJ_sEfoesbWAqfc [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m0
+[2m2026-09-11T08:07:10.640590Z[0m [32m INFO[0m ASR 二遍识别灰度命中(bigmodel_async+nonstream) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:10.640674Z[0m [32m INFO[0m asr stream task spawned (preconnect) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mnonstream[0m[2m=[0mtrue
+[2m2026-09-11T08:07:10.641600Z[0m [32m INFO[0m tts provider 生效值 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mtts_provider[0m[2m=[0m"xfyun" [3mtts_voice[0m[2m=[0mx6_lingxiaoxuan_pro
+[2m2026-09-11T08:07:10.641966Z[0m [32m INFO[0m llm race 兜底路已配置 [3mmodel[0m[2m=[0mdoubao-seed-2.0-mini
+[2m2026-09-11T08:07:10.680285Z[0m [32m INFO[0m connecting to wss://voice-hk.hahaxiong.cc/rtc/v1
+[2m2026-09-11T08:07:10.786982Z[0m [32m INFO[0m worker_room_connected [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m192 [3mconnect_ms[0m[2m=[0m192
+[2m2026-09-11T08:07:10.812260Z[0m [32m INFO[0m asr: connected (seedasr bigmodel) [3mend_window_ms[0m[2m=[0m150 [3mhotwords[0m[2m=[0m267
+[2m2026-09-11T08:07:10.820273Z[0m [32m INFO[0m filler bank loaded: 93 clips buckets=["ask", "barge", "emo_neg", "emo_pos", "gen", "greet", "opinion", "story", "task", "thanks"]
+[2m2026-09-11T08:07:10.820786Z[0m [32m INFO[0m speaker id: 旁路启用(2 人注册,threshold=0.50)
+[2m2026-09-11T08:07:10.821072Z[0m [32m INFO[0m pipeline prebuilt [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m181 [3mhas_fillers[0m[2m=[0mtrue [3mhas_speaker[0m[2m=[0mtrue
+[2m2026-09-11T08:07:10.827337Z[0m [32m INFO[0m agent_track_published [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m233
+[2m2026-09-11T08:07:10.827458Z[0m [32m INFO[0m input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mexpected_device[0m[2m=[0m"dev-POCTEST0001" [3mlocal_receipt[0m[2m=[0mtrue [3mfirst_turn_rtc[0m[2m=[0mtrue
+[2m2026-09-11T08:07:10.827620Z[0m [32m INFO[0m user_track_subscribed [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3midentity[0m[2m=[0mdev-POCTEST0001 [3melapsed_ms[0m[2m=[0m233
+[2m2026-09-11T08:07:10.828262Z[0m [32m INFO[0m input gate open, starting cascade pipeline [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m234
+[2m2026-09-11T08:07:10.828624Z[0m [32m INFO[0m pipeline takeover prebuilt [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mprebuilt_age_ms[0m[2m=[0m188
+[2m2026-09-11T08:07:10.828640Z[0m [32m INFO[0m ordered_pcm 实验模式启用(受信 metadata):等待有序 PCM 代次,RTC 音频只计数丢弃 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:10.828674Z[0m [32m INFO[0m ordered_pcm local receipt v1 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mlocal_receipt_enabled[0m[2m=[0mtrue [3mmeta_local_receipt[0m[2m=[0mtrue [3mfirst_turn_rtc[0m[2m=[0mtrue [3mbegin_to_end_timeout_ms[0m[2m=[0m12000 [3mmax_total_s[0m[2m=[0m16 [3msession_bound[0m[2m=[0mtrue
+[2m2026-09-11T08:07:10.828716Z[0m [32m INFO[0m S2-B2 设备命令已启用(canary 命中) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:10.828726Z[0m [32m INFO[0m session_exit 信令已启用(v140 canary 命中) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:10.829511Z[0m [32m INFO[0m eot snapshot 存量盘点 [3mexisting_mb[0m[2m=[0m0
+[2m2026-09-11T08:07:10.829677Z[0m [32m INFO[0m eot snapshot 采集开启 [3mjob[0m[2m=[0m20260911T080710-e4d979
+[2m2026-09-11T08:07:10.829734Z[0m [32m INFO[0m 开场白已关闭,保持 Listening [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3menabled[0m[2m=[0mfalse [3mtext_empty[0m[2m=[0mfalse
+[2m2026-09-11T08:07:10.829841Z[0m [32m INFO[0m ordered_pcm begin accepted [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3msince_pipeline_ms[0m[2m=[0m0 [3mdevice_sent_at_ms[0m[2m=[0m1789114030821 [3mlocal_receipt[0m[2m=[0mtrue
+[2m2026-09-11T08:07:10.834286Z[0m [32m INFO[0m input_loop_started [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m240 [3mtrack_to_input_loop_ms[0m[2m=[0m6
+[2m2026-09-11T08:07:10.834485Z[0m [32m INFO[0m session.input_ready published [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:10.851534Z[0m [32m INFO[0m ordered_pcm first block submitted to ASR [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3msince_pipeline_ms[0m[2m=[0m22
+[2m2026-09-11T08:07:10.880301Z[0m [32m INFO[0m llm prewarm done [3mms[0m[2m=[0m210
+[2m2026-09-11T08:07:10.901048Z[0m [32m INFO[0m agent_track_subscribed_by_android [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m307
+[2m2026-09-11T08:07:10.901091Z[0m [32m INFO[0m output_ready [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3melapsed_ms[0m[2m=[0m307
+[2m2026-09-11T08:07:10.902692Z[0m [32m INFO[0m local-audio echo bank unavailable (fail-open) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:11.113339Z[0m [32m INFO[0m ASR 二遍识别灰度命中(bigmodel_async+nonstream) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:11.113384Z[0m [32m INFO[0m asr stream task spawned (preconnect) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mnonstream[0m[2m=[0mtrue
+[2m2026-09-11T08:07:11.413231Z[0m [32m INFO[0m stt final: 小可
+[2m2026-09-11T08:07:11.413395Z[0m [32m INFO[0m ordered_pcm speculation on held final [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mchars[0m[2m=[0m2
+[2m2026-09-11T08:07:11.499665Z[0m [32m INFO[0m asr: connected (seedasr bigmodel) [3mend_window_ms[0m[2m=[0m150 [3mhotwords[0m[2m=[0m267
+[2m2026-09-11T08:07:11.641299Z[0m [32m INFO[0m stt final: 一加一等于几
+[2m2026-09-11T08:07:11.641660Z[0m [32m INFO[0m ordered_pcm speculation on held final [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mchars[0m[2m=[0m8
+[2m2026-09-11T08:07:11.650269Z[0m [32m INFO[0m ordered_pcm result [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mresult[0m[2m=[0m{"finals":2,"finals_held":2,"input_id":"d1e9ba40-02f7-46f1-8d78-6ed470afdb9c","next":"rtc","outcome":"task","queued_next":34409,"reason":null,"received_next":34409,"samples_queued":34409,"status":"complete","t":"result","text_chars":8}
+[2m2026-09-11T08:07:11.650427Z[0m [32m INFO[0m ordered_pcm generation complete → final 进现役 commit 路径 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mchars[0m[2m=[0m8
+[2m2026-09-11T08:07:11.650459Z[0m [32m INFO[0m 契约 UserTranscriptFinal turn=turn-4a82c3ebcb04455f94864a0dcc396ca4
+[2m2026-09-11T08:07:11.650786Z[0m [32m INFO[0m ordered_pcm decision evidence [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mevidence[0m[2m=[0m{"backlog_peak_samples":3200,"begin_at_unix_ms":1789114030829,"begin_sent_at_ms":1789114030821,"blocks_queued":11,"chunks_duplicate":0,"chunks_received":54,"end_before_final":1,"end_candidate_lead_over_end_ms":null,"end_candidate_ms":null,"end_candidate_quiet_ms":null,"end_ms":284,"end_sample":34409,"end_sent_at_ms":1789114031105,"final_before_end":0,"final_lead_over_end_ms":-300,"finals_after_terminal":0,"finals_held":2,"first_chunk_ms":18,"first_final_ms":584,"first_sample":0,"first_submit_ms":22,"first_turn_rtc":true,"input_id":"d1e9ba40-02f7-46f1-8d78-6ed470afdb9c","interims_held":5,"keep_from":0,"local_receipt":"accepted","no_task_reason":null,"noise_floor_rms":926.3,"outcome":"committed","packets_after_terminal":0,"packets_rejected":0,"packets_total":56,"phase":"terminal","queue_full_events":0,"queued_next":34409,"quiet_thr_rms":1852.6,"receipt_done_declined":false,"receipt_done_duplicate":0,"receipt_done_ignored":0,"receipt_done_ms":null,"receipt_done_played_ms":null,"received_next":34409,"rms_timeline_200ms":[3454,3353,3626,845,2761,4213,5172,4241,5047,3222,2495],"rtc_frames_dropped":82,"samples_cropped_before_keep_from":0,"samples_queued":34409,"samples_received":34409,"silence_samples_submitted":9600,"speech_peak_rms":5893.0,"stream_end_ms":821,"stream_interrupted":0,"tail_block_samples":2409,"trailing_quiet_at_end_ms":0}
+[2m2026-09-11T08:07:11.650922Z[0m [32m INFO[0m ordered_pcm input phase → rtc [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mreason[0m[2m=[0mfirst_turn_committed [3mcatchup_samples[0m[2m=[0m0 [3mcatchup_skipped[0m[2m=[0m"disabled" [3mstt2_spawned_ms_ago[0m[2m=[0m537
+[2m2026-09-11T08:07:11.681023Z[0m [32m INFO[0m device alias 词表已加载 [3mentries[0m[2m=[0m268 [3morigin[0m[2m=[0m"env-file"
+[2m2026-09-11T08:07:11.681085Z[0m [32m INFO[0m 契约 UserTurnCommitted turn=turn-4a82c3ebcb04455f94864a0dcc396ca4
+[2m2026-09-11T08:07:11.681168Z[0m [32m INFO[0m turn committed: 小可一加一等于几 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3meou_ms[0m[2m=[0m29 [3mstt_ms[0m[2m=[0m0
+[2m2026-09-11T08:07:11.681199Z[0m [32m INFO[0m speaker id: skip(有效语音 0.00s < 1.0s)
+[2m2026-09-11T08:07:11.681220Z[0m [32m INFO[0m using preemptive generation [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mlead_ms[0m[2m=[0m39
+[2m2026-09-11T08:07:11.681232Z[0m [32m INFO[0m filler skipped: device local receipt (body gated until receipt_done/deadline) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mspec_lead_ms[0m[2m=[0m39 [3mspec_done[0m[2m=[0mfalse [3mtts_warm_ready[0m[2m=[0mfalse [3mreceipt_done_seen[0m[2m=[0mfalse [3mmax_ms[0m[2m=[0m3000
+[2m2026-09-11T08:07:11.686686Z[0m [32m INFO[0m Extending BFCArena for Cpu. bin_num:0 (requested) num_bytes: 1 (actual) rounded_bytes:256
+[2m2026-09-11T08:07:11.686783Z[0m [32m INFO[0m Extended allocation by 1048576 bytes.
+[2m2026-09-11T08:07:11.686807Z[0m [32m INFO[0m Total allocated bytes: 2098016
+[2m2026-09-11T08:07:11.686820Z[0m [32m INFO[0m Allocated memory at 0x585a780615c0 to 0x585a781615c0
+[2m2026-09-11T08:07:11.833077Z[0m [32m INFO[0m llm prewarm done [3mms[0m[2m=[0m1163
+[2m2026-09-11T08:07:12.612718Z[0m [32m INFO[0m ordered_pcm receipt_done accepted → body release [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_active[0m[2m=[0mtrue
+[2m2026-09-11T08:07:12.782072Z[0m [32m INFO[0m tts synth: 哇，这个我知道！…(8字)
+[2m2026-09-11T08:07:12.913629Z[0m [32m INFO[0m llm stream done [3mttft_ms[0m[2m=[0m1022 [3mchunks[0m[2m=[0m25 [3mchars[0m[2m=[0m36
+[2m2026-09-11T08:07:13.066436Z[0m [32m INFO[0m local receipt gate released [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m1 [3mreason[0m[2m=[0m"receipt_done" [3mheld_ms[0m[2m=[0m0
+[2m2026-09-11T08:07:13.076083Z[0m [32m INFO[0m 契约 AgentSpeechStarted turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:13.076173Z[0m [32m INFO[0m aec warmup active, disabling interruptions for 0.50s [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:13.080174Z[0m [32m INFO[0m body first frame published (no filler) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m1 [3msince_turn_ms[0m[2m=[0m1398
+[2m2026-09-11T08:07:13.791958Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m278 [3mtts_ttft_ms[0m[2m=[0m284 [3maudio_frames[0m[2m=[0m10 [3maudio_duration_ms[0m[2m=[0m2000 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:13.792944Z[0m [32m INFO[0m body first sentence ready [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m1 [3mttfb_ms[0m[2m=[0m284 [3mbody_ready_since_turn_ms[0m[2m=[0m1384
+[2m2026-09-11T08:07:13.793565Z[0m [32m INFO[0m tts synth: 一加一等于二呀。…(8字)
+[2m2026-09-11T08:07:14.618189Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m215 [3mtts_ttft_ms[0m[2m=[0m262 [3maudio_frames[0m[2m=[0m8 [3maudio_duration_ms[0m[2m=[0m1680 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:14.618676Z[0m [32m INFO[0m tts synth: 你怎么突然想到问这个呢，是在做数学题吗？…(20字)
+[2m2026-09-11T08:07:16.732673Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m216 [3mtts_ttft_ms[0m[2m=[0m267 [3maudio_frames[0m[2m=[0m25 [3maudio_duration_ms[0m[2m=[0m4400 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:20.830923Z[0m [32m INFO[0m audio in (10s) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mframes[0m[2m=[0m1000 [3mmean_amp[0m[2m=[0m0
+[2m2026-09-11T08:07:21.160438Z[0m [32m INFO[0m playout metrics [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m1 [3munderrun_count[0m[2m=[0m0 [3munderrun_ms[0m[2m=[0m0 [3mbuffered_audio_ms[0m[2m=[0m203 [3mfirst_underrun_ms[0m[2m=[0m-1 [3mplayed_frames[0m[2m=[0m808 [3mexit[0m[2m=[0m"SourceDrained"
+[2m2026-09-11T08:07:21.161235Z[0m [32m INFO[0m 契约 AgentTranscriptFinal turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:21.161262Z[0m [32m INFO[0m interrupt telemetry: speaking→listening interim='' [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:21.161276Z[0m [32m INFO[0m 契约 AgentSpeechStopped turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:23.487005Z[0m [32m INFO[0m 契约 UserSpeechStarted turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:23.667229Z[0m [32m INFO[0m 契约 UserTranscriptInterim turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:24.126907Z[0m [32m INFO[0m 契约 UserTranscriptInterim turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:24.250976Z[0m [32m INFO[0m 契约 UserTranscriptInterim turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:24.405135Z[0m [32m INFO[0m S1v3 preflight emitted (silence=239ms quiet=154ms tail='那3+3') [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:24.664963Z[0m [34mDEBUG[0m eot prediction [3mprobability[0m[2m=[0m0.4389590620994568 [3mthreshold[0m[2m=[0m0.18000000715255737
+[2m2026-09-11T08:07:24.671331Z[0m [32m INFO[0m 契约 UserTranscriptInterim turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:24.838691Z[0m [32m INFO[0m stt final: 那3+3呢
+[2m2026-09-11T08:07:24.838830Z[0m [32m INFO[0m 契约 UserTranscriptFinal turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:24.880230Z[0m [32m INFO[0m 契约 UserTurnCommitted turn=agent-0b63c4b2bdcb415697670674c402b476
+[2m2026-09-11T08:07:24.880551Z[0m [32m INFO[0m turn committed: 那3+3呢 [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3meou_ms[0m[2m=[0m713 [3mstt_ms[0m[2m=[0m671
+[2m2026-09-11T08:07:24.880815Z[0m [32m INFO[0m preemptive miss (text/ctx changed), discarding [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mspec_text[0m[2m=[0m那3+3
+[2m2026-09-11T08:07:24.880887Z[0m [32m INFO[0m filler picked room=sn-POCTEST0001-1789113964 turn_id=2 bucket=ask dur_ms=2120 boost=false text='嗯，好问题。'
+[2m2026-09-11T08:07:24.882132Z[0m [32m INFO[0m speaker embed channel connected [3msock[0m[2m=[0m/tmp/rust-worker-eot.sock
+[2m2026-09-11T08:07:24.892293Z[0m [32m INFO[0m 契约 AgentSpeechStarted turn=agent-a4133e6f54ee44078d407791f7025bd0
+[2m2026-09-11T08:07:25.085261Z[0m [32m INFO[0m speaker id: UNKNOWN best=probe score=0.489 thr=0.50 speech=1.2s infer=204ms scores={probe: 0.489, 川哥: 0.082}
+[2m2026-09-11T08:07:25.862042Z[0m [32m INFO[0m llm race won [3mwon_by[0m[2m=[0m"main" [3mrace_ttft_ms[0m[2m=[0m980
+[2m2026-09-11T08:07:25.967245Z[0m [32m INFO[0m tts synth: 三加三呀………(6字)
+[2m2026-09-11T08:07:26.175774Z[0m [32m INFO[0m llm stream done [3mttft_ms[0m[2m=[0m980 [3mchunks[0m[2m=[0m30 [3mchars[0m[2m=[0m46
+[2m2026-09-11T08:07:26.701593Z[0m [32m INFO[0m job rss: 69MB (uptime 780s)
+[2m2026-09-11T08:07:26.960912Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m245 [3mtts_ttft_ms[0m[2m=[0m268 [3maudio_frames[0m[2m=[0m10 [3maudio_duration_ms[0m[2m=[0m2120 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:26.961889Z[0m [32m INFO[0m body first sentence ready [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m2 [3mttfb_ms[0m[2m=[0m268 [3mbody_ready_since_turn_ms[0m[2m=[0m1354
+[2m2026-09-11T08:07:26.962210Z[0m [32m INFO[0m tts synth: 等于六！嘿嘿，这个也难不倒小可。…(16字)
+[2m2026-09-11T08:07:27.031260Z[0m [32m INFO[0m filler playout done [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m2 [3mfiller_ms[0m[2m=[0m2120 [3msince_turn_ms[0m[2m=[0m2150
+[2m2026-09-11T08:07:27.031358Z[0m [32m INFO[0m body first frame published [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m2 [3mplayed_samples[0m[2m=[0m51574 [3msince_turn_ms[0m[2m=[0m2150
+[2m2026-09-11T08:07:28.617602Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m230 [3mtts_ttft_ms[0m[2m=[0m291 [3maudio_frames[0m[2m=[0m18 [3maudio_duration_ms[0m[2m=[0m3280 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:28.617962Z[0m [32m INFO[0m tts synth: 要不要再来一个？…(8字)
+[2m2026-09-11T08:07:29.439067Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m240 [3mtts_ttft_ms[0m[2m=[0m256 [3maudio_frames[0m[2m=[0m8 [3maudio_duration_ms[0m[2m=[0m1720 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:29.439857Z[0m [32m INFO[0m tts synth: 还是你在和大家一起做算术比赛呀？…(16字)
+[2m2026-09-11T08:07:30.880551Z[0m [32m INFO[0m audio in (10s) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mframes[0m[2m=[0m1005 [3mmean_amp[0m[2m=[0m338
+[2m2026-09-11T08:07:30.917402Z[0m [32m INFO[0m tts metrics [3mtts_connect_ms[0m[2m=[0m0 [3mwarm[0m[2m=[0mtrue [3mwarm_connect_ms[0m[2m=[0m261 [3mtts_ttft_ms[0m[2m=[0m269 [3maudio_frames[0m[2m=[0m17 [3maudio_duration_ms[0m[2m=[0m3160 [3mcancelled[0m[2m=[0mfalse
+[2m2026-09-11T08:07:37.300515Z[0m [32m INFO[0m playout metrics [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3mturn_id[0m[2m=[0m2 [3munderrun_count[0m[2m=[0m0 [3munderrun_ms[0m[2m=[0m0 [3mbuffered_audio_ms[0m[2m=[0m202 [3mfirst_underrun_ms[0m[2m=[0m-1 [3mplayed_frames[0m[2m=[0m1240 [3mexit[0m[2m=[0m"SourceDrained"
+[2m2026-09-11T08:07:37.301299Z[0m [32m INFO[0m 契约 AgentTranscriptFinal turn=agent-a4133e6f54ee44078d407791f7025bd0
+[2m2026-09-11T08:07:37.301323Z[0m [32m INFO[0m interrupt telemetry: speaking→listening interim='' [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:37.301332Z[0m [32m INFO[0m 契约 AgentSpeechStopped turn=agent-a4133e6f54ee44078d407791f7025bd0
+[2m2026-09-11T08:07:38.117023Z[0m [32m INFO[0m participant disconnected → closing job [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3midentity[0m[2m=[0mdev-POCTEST0001
+[2m2026-09-11T08:07:38.122906Z[0m [33m WARN[0m job termination requested (P2: relying on room close) [3mjob_id[0m[2m=[0mAJ_sEfoesbWAqfc
+[2m2026-09-11T08:07:38.164557Z[0m [32m INFO[0m room deleted (delete_room_on_close) [3mroom[0m[2m=[0msn-POCTEST0001-1789113964
+[2m2026-09-11T08:07:38.164659Z[0m [32m INFO[0m job closed [3mroom[0m[2m=[0msn-POCTEST0001-1789113964 [3muptime_s[0m[2m=[0m27
+[2m2026-09-11T08:07:38.164994Z[0m [32m INFO[0m process exiting [3mjob_id[0m[2m=[0mAJ_sEfoesbWAqfc
+[2m2026-09-11T08:07:56.703849Z[0m [32m INFO[0m job rss: 69MB (uptime 810s)

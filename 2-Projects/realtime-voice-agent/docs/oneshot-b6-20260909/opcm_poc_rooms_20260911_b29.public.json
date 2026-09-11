@@ -1,0 +1,50 @@
+{
+  "schema": "p003.oneshot.poc-rooms.v1",
+  "label": "b29-firstturn-verify",
+  "issued_at_ms": 1789113964962,
+  "issued_at_utc": "2026-09-11T08:06:04Z",
+  "issuer": "cc/opcm_poc_mint_rooms.py",
+  "purpose": "One-shot v0.3 隔离 POC：只派 rust-worker-poc；不进生产 worker/大脑/设备记忆；一房一次不复用",
+  "server_url": "wss://voice-hk.hahaxiong.cc",
+  "expected_agent_name": "rust-worker-firstturn",
+  "sn": "POCTEST0001",
+  "identity": "dev-POCTEST0001",
+  "input_mode": "ordered_pcm",
+  "local_receipt": "v1",
+  "oneshot_first_turn": "v1",
+  "worker_capabilities": [
+    "android_local_receipt_v1",
+    "oneshot_first_turn_v1"
+  ],
+  "history_topic": "p003.audio.history.v1",
+  "ttl_seconds": 7200,
+  "count": 1,
+  "rules": [
+    "一房一次：每次实验取一个未用条目，进房前不改任何字段；失败关房换下一条，不复用",
+    "OPCM begin/chunk/end/cancel 头里的 trace_id/session_id 必须等于该条目的 trace_id/session_id（worker 只对撞 trace_id，session_id 记入证据）",
+    "identity 必须用条目的 identity（dev-<SN>）；worker 只收该身份在 history_topic 上的包",
+    "必须发布麦克风轨（与生产一致）：worker 用户轨订到后才起管线、才发 session.input_ready；ordered_pcm 房里该轨的 RTC 音频不进识别",
+    "queued_next 只是 worker ASR 队列水位，不是 ASR ready/成功；终局只看 result.status",
+    "本地承接 v1：begin 头可带 local_receipt=true；只有 ack 回显 local_receipt=accepted 才播本地承接短语（ignored=退回旧路径，worker 照播垫句）",
+    "本地承接 v1：本地短语播完发同 topic t=receipt_done（头同 begin 身份字段，可带 played_ms，空 body）；worker 正文门在 receipt_done 或 end 到达+3000ms 放行"
+  ],
+  "rooms": [
+    {
+      "status": "ok",
+      "server_url": "wss://voice-hk.hahaxiong.cc",
+      "room_name": "sn-POCTEST0001-1789113964",
+      "identity": "dev-POCTEST0001",
+      "trace_id": "74f133a8-6328-4f58-b9b9-33b28897922d",
+      "session_id": "d2fa99ba-bab0-490e-a0d1-dcc1f59d4dfa",
+      "issue_ts_ms": 1789113964960,
+      "expires_at_ms": 1789121164000,
+      "expires_at_utc": "2026-09-11T10:06:04Z",
+      "expected_agent_name": "rust-worker-firstturn",
+      "input_mode": "ordered_pcm",
+      "local_receipt": "v1",
+      "oneshot_first_turn": "v1",
+      "token_fingerprint": "f85686f19d0423b7"
+    }
+  ],
+  "note": "去 token 副本；token_fingerprint=sha256(token) 前 16 位，仅供对账"
+}
