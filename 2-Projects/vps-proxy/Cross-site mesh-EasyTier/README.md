@@ -14,7 +14,13 @@
 ./scripts/deploy-node.sh <节点名>      # 部署/更新单个节点（幂等，可反复跑）
 ./scripts/bench.sh dev198 hk-relay    # 测某条链路的延迟/丢包/吞吐
 ./scripts/uninstall-node.sh <节点名>   # 干净卸载
+./scripts/deploy-cheatsheet.sh         # 立即刷新 http://10.10.10.1:8080/
 ```
+
+`deploy-node.sh` 当前覆盖 Linux/macOS；`maxtkf-server` 是 Windows 原生节点，
+由 SYSTEM 开机任务 `EasyTier Mesh` 托管，巡检已接入 `mesh-status.sh`。
+每次 `deploy-node.sh` 成功后会自动重新生成并发布组网速查表；发布失败只告警，
+不会把已经成功的节点部署回滚成失败。
 
 需要 sudo 密码的节点（`linux-lan` / `air`）：
 
@@ -57,8 +63,10 @@ SUDO_PASS='xxx' ./scripts/deploy-node.sh linux-lan
 
 ## 安全边界
 
-- `network_secret` 只存在两处：`~/.mycc-secrets.env`（600，不进 git）和各节点
-  `/etc/easytier/node.toml`（600 root:root）。**不进 systemd unit、不进命令行参数、不进本仓库。**
+- `network_secret` 只进入本机私密配置和各节点运行配置：Unix 为
+  `/etc/easytier/node.toml`（600 root:root），Windows 为
+  `C:\ProgramData\EasyTier\node.toml`（仅 SYSTEM/Administrators）。
+  **不进启动参数、不进本仓库。**
 - 管理 RPC 绑 `127.0.0.1:15888`。
 - `private_mode = true`：只有持同一 network_name + secret 的节点能握手或中继，
   不会变成公开中继。

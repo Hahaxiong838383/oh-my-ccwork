@@ -13,7 +13,7 @@ PORT="${CHEATSHEET_PORT:-8080}"
 SRC="$PROJ_DIR/web/index.html"
 [[ -f "$SRC" ]] || die "缺少 $SRC"
 
-load_secrets
+# 本脚本只传静态 HTML，不需要 network_identity。缺 secrets 文件时仍可发布。
 
 log "上传页面…"
 vps_ssh "mkdir -p /var/www/mesh"
@@ -60,4 +60,9 @@ vps_ssh "
   echo BIND_OK
 " || die "服务未正常绑定"
 
+local_sum="$(sha256sum "$SRC" | awk '{print $1}')"
+remote_sum="$(vps_ssh "sha256sum /var/www/mesh/index.html" | awk '{print $1}')"
+[[ "$local_sum" == "$remote_sum" && -n "$local_sum" ]] || die "本地/线上 SHA256 不一致"
+
 ok "已部署 → http://10.10.10.1:$PORT"
+ok "SHA256 $local_sum"

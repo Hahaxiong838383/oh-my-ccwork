@@ -12,7 +12,9 @@
 #   · 描述缺失不静默跳过，而是印出醒目的「⚠ 描述待补」，逼人补上
 #   · mesh 别名去 ~/.ssh/config 里**实查**，查不到就如实标注，不假设 <name>-mesh 一定存在
 #
-# 幂等：反复跑结果一致。只替换 NODES:BEGIN/END 之间的内容，手写的其他段落不动。
+# 幂等：反复跑结果一致。只替换 NODES:BEGIN/END 与 PROXY:BEGIN/END 之间的内容，
+# 手写的其他段落不动。子网代理设备同样从 common.sh 的 ET_PROXY_DEVICES 生成，
+# 避免再出现「机器在网段里、页面上没有」的静默漏列。
 
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -32,6 +34,8 @@ node_role() {
     linux-lan)   echo "家 · Ubuntu 桌面 · 家侧网关（主）· 探针宿主" ;;
     fnos2)       echo "家 · 飞牛 NAS 2 号 · 家侧网关（备）· Docker" ;;
     home-studio) echo "家 · 主力开发机 · 20 线程 / 31G" ;;
+    maxtkf-server) echo "家 · Windows 11 · SYSTEM 开机任务" ;;
+    jidinghe-armbian) echo "家 · MGV3001-ZG 机顶盒 · Armbian / ARM64" ;;
     air)         echo "MacBook Air M5 · 随身" ;;
     *)           echo "" ;;
   esac
@@ -68,17 +72,40 @@ for entry in "${ET_NODES[@]}"; do
 "
 done
 
-python3 - "$PAGE" "$rows" <<'PY'
-import sys,pathlib
-page,rows=pathlib.Path(sys.argv[1]),sys.argv[2]
-t=page.read_text(encoding="utf-8")
-B="<!-- NODES:BEGIN"; E="      <!-- NODES:END -->"
-i=t.index(B); i=t.index("\n",i)+1
-j=t.index(E)
-page.write_text(t[:i]+rows+t[j:],encoding="utf-8")
+proxy_rows=""; p=0
+for entry in "${ET_PROXY_DEVICES[@]}"; do
+  IFS='|' read -r pname prole plan pmesh <<<"$entry"
+  p=$((p+1))
+  if [[ -n "$prole" ]]; then
+    role_html="<span class=\"role\">${prole}</span>"
+  else
+    role_html=""
+  fi
+  proxy_rows+="      <tr><td class=\"name\">${pname}${role_html}</td>
+          <td><code>${plan}</code></td>
+          <td><code class=\"cp\">${pmesh}</code></td></tr>
+"
+done
+
+python3 - "$PAGE" "$rows" "$proxy_rows" <<'PY'
+import sys, pathlib
+page = pathlib.Path(sys.argv[1])
+rows, proxy = sys.argv[2], sys.argv[3]
+t = page.read_text(encoding="utf-8")
+
+def splice(text, begin, end, payload):
+    i = text.index(begin)
+    i = text.index("\n", i) + 1
+    j = text.index(end)
+    return text[:i] + payload + text[j:]
+
+t = splice(t, "<!-- NODES:BEGIN", "      <!-- NODES:END -->", rows)
+t = splice(t, "<!-- PROXY:BEGIN", "      <!-- PROXY:END -->", proxy)
+page.write_text(t, encoding="utf-8")
 PY
 
 echo "✓ 已从 ET_NODES 生成节点表：${n} 个节点"
+echo "✓ 已从 ET_PROXY_DEVICES 生成子网代理表：${p} 条"
 [[ $missing_role  -gt 0 ]] && echo "⚠ ${missing_role} 个节点缺描述，页面上已标红，请登记 ROLE 表"
 [[ $missing_alias -gt 0 ]] && echo "⚠ ${missing_alias} 个节点在 ~/.ssh/config 里没有 -mesh 别名"
 echo "  页面：$PAGE"
