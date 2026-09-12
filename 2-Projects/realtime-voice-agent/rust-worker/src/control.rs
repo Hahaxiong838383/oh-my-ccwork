@@ -225,8 +225,11 @@ pub fn input_ready(
     })
 }
 
-/// B46:重述 `session.input_ready`——与首次发射**同一构造**,只在 payload 追加 `request_seq`
-/// 供端侧对账(Android 现有校验忽略额外字段,原校验不放宽)。不是 output_ready,不是另一套 ready。
+/// B46/B48:重述 `session.input_ready`——**同构造、同输入就绪语义**,`timings` 保持首次发射
+/// 时的原值;`ts_ms` 是重述时刻、`output_ready` 是重述时的真实值;payload 追加 `request_seq`
+/// 供端侧对账(Android 现有校验忽略额外字段,原校验不放宽)。
+/// ⚠️ **不是**整包字节与首次发送完全相同(B48 §3 末段要求的精确措辞),也不是 output_ready、
+/// 不是另一套 ready。
 pub fn input_ready_restated(
     trace_id: &str,
     ts_ms: i64,
