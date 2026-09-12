@@ -248,6 +248,39 @@ enum AgentState {
 
 /// B32-A:控制面发送失败只回**枚举类别**,绝不回原文。LiveKit 的错误链里可能带信令
 /// URL 与 query——token 就在 query 里,整条打进 journal 等于把凭据落盘。
+/// B34-A:判决点上下文闩的最长有效期。超过就退化成 unknown,不拿旧轮冒充「判决时在播」。
+const CTX_LATCH_MAX_AGE_MS: i64 = 200;
+
+/// B34-A:把「发送结果」这条结构化日志抽出来单独可测,**并且不带 room**。
+///
+/// B33 我写了「不打印房名」,而代码里就是 `room = %room`——房名形如 `sn-<SN>-<ts>`,
+/// 带完整设备 SN。而我当时的测试只测 `publish_fail_class` 返回枚举:那个函数确实不泄漏,
+/// **外围字段照样泄漏**,判据套在了错的对象上(codex B34 §2 P0-A,属实)。
+/// 关联键用已经受信的 trace(UUID),足够把两端对上。
+fn emit_publish_result(
+    event: &'static str,
+    trace: &str,
+    scheduled_at_job_ms: i64,
+    send_ms: i64,
+    err: Option<&str>,
+) {
+    match err {
+        None => info!(
+            event,
+            trace, scheduled_at_job_ms, send_ms, publish_ok = true, "control publish result"
+        ),
+        Some(e) => warn!(
+            event,
+            trace,
+            scheduled_at_job_ms,
+            send_ms,
+            publish_ok = false,
+            fail_class = publish_fail_class(e),
+            "control publish result"
+        ),
+    }
+}
+
 fn publish_fail_class(raw: &str) -> &'static str {
     let s = raw.to_ascii_lowercase();
     if s.contains("not connected") || s.contains("disconnect") {
@@ -484,6 +517,13 @@ struct Orchestrator {
     snap: Option<crate::eot_snapshot::SnapshotSink>,
     /// B32-B 打断取证快照(INTERRUPT_SNAPSHOT_ENABLED≠1 = None,零行为变化、不新增任何文件)
     isnap: Option<crate::eot_snapshot::InterruptSnap>,
+    /// B34-C 取证专用上行环。**只在诊断开启时分配**(8s@16k≈256KB/job);关 = None = 一个字节不占。
+    /// 独立于 eot_ring 是因为后者是输入环的局部变量,ASR 判决点够不着,而判决点必须能**立刻**取证。
+    isnap_ring: Option<std::collections::VecDeque<i16>>,
+    /// 最后一次向取证环写入样本的 job 单调时刻(用于标「窗口末端离判决多远」,不拿落盘调度时间冒充)
+    isnap_last_sample_ms: i64,
+    /// B34-B abort 前闩住的播放上下文
+    ctx_latch: crate::eot_snapshot::CtxLatch,
 }
 
 fn now_unix_ms() -> i64 {
@@ -923,6 +963,9 @@ pub async fn run_pipeline(
         t0: Instant::now(),
         snap: crate::eot_snapshot::SnapshotSink::from_env(&room_name),
         isnap: crate::eot_snapshot::InterruptSnap::from_env(),
+        isnap_ring: None,
+        isnap_last_sample_ms: 0,
+        ctx_latch: crate::eot_snapshot::CtxLatch::new(),
         ordered: ordered_session,
         input_phase: input_phase0,
         pending_phase_switch: None,
@@ -936,6 +979,11 @@ pub async fn run_pipeline(
         pending_local_receipt_deadline: None,
         local_receipt_release: None,
     };
+    // B34-C:诊断开启才分配取证环(8s@16k ≈ 256KB/job);关 = None = 一个字节不占。
+    if orch.isnap.is_some() {
+        orch.isnap_ring =
+            Some(std::collections::VecDeque::with_capacity(crate::eot_snapshot::SNAP_WINDOW));
+    }
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
     // predict 仍只取尾 1.2s,判停行为不变)
@@ -1091,7 +1139,7 @@ pub async fn run_pipeline(
                             // B32-A:published 只代表**已排队**(publish_json 是 spawn 即返回);
                             // 真实 publish_data 结果在下面那条 traced 行,别把这行当送达。
                             orch.publish_json_traced(control::TOPIC, v, "session.input_ready", trace.to_string());
-                            info!(room = %room_name, "session.input_ready published(scheduled)");
+                            info!(trace, "session.input_ready published(scheduled)");
                         }
                         // 老 token/调试房:无受信 trace 可绑,合同禁 pending → 降级不发
                         None => warn!(room = %room_name, "input_ready skipped: 无 trace(老 token 或非 Session API 房)"),
@@ -1135,8 +1183,6 @@ pub async fn run_pipeline(
                 while eot_ring.len() > ring_keep {
                     eot_ring.pop_front();
                 }
-                // B32-B:打断判决登记的取证请求在这里落盘(环已是本帧最新的 8s 窗)
-                orch.drain_interrupt_snapshot(&eot_ring);
                 if let Some(sp) = orch.speaker.as_mut() {
                     sp.ring.append(&samples); // 声纹 ring:写入即幅度过滤
                 }
@@ -1463,8 +1509,9 @@ impl Orchestrator {
     /// 这里 await 真结果并按 INFO/WARN 打出来。**不重发**:全函数只有一次 publish_data。
     fn publish_json_traced(&self, topic: &'static str, v: Value, event: &'static str, trace: String) {
         let p = self.participant.clone();
-        let room = self.room_name.clone();
-        let since_job_ms = self.now_ms() as i64;
+        // 字段定义(codex B34 §2 P0-A 要求写明):这是 pipeline 内**排队发送的时点**,
+        // 不是发送完成时点,更不是设备已收到。完成耗时看 send_ms。
+        let scheduled_at_job_ms = self.now_ms() as i64;
         tokio::spawn(async move {
             let packet = DataPacket {
                 payload: v.to_string().into_bytes(),
@@ -1475,82 +1522,117 @@ impl Orchestrator {
             let t0 = Instant::now();
             let r = p.publish_data(packet).await;
             let send_ms = t0.elapsed().as_millis() as i64;
-            match r {
-                Ok(()) => info!(room = %room, event, trace = %trace, since_job_ms, send_ms,
-                                publish_ok = true, "control publish result"),
-                Err(e) => warn!(room = %room, event, trace = %trace, since_job_ms, send_ms,
-                                publish_ok = false, fail_class = publish_fail_class(&e.to_string()),
-                                "control publish result"),
-            }
+            let e = r.err().map(|e| e.to_string());
+            emit_publish_result(event, &trace, scheduled_at_job_ms, send_ms, e.as_deref());
         });
     }
 
-    /// B32-B:判决那一刻的播放来源。**取不到证据就 unknown/门状态,不猜**(codex §3B)。
-    /// 设备侧本地承接 worker 只知道「门还没放行」,并不知道设备扬声器此刻是否真在响,
-    /// 故只标门状态,不冒充「正在播本地承接」。
-    fn playback_source(&self) -> &'static str {
-        if self.pending_local_receipt_deadline.is_some() && self.local_receipt_release.is_none() {
-            return "device_local_receipt_gate";
-        }
-        let Some(turn) = self.agent_turn.as_ref() else {
-            return "none";
-        };
+    /// B34-B:只由 turn 本身判定 filler/正文。
+    /// `played_samples` 是 **Worker 排播进度**,不等于设备物理扬声器声源——
+    /// 取值名里写 worker_ 前缀就是为了不让它被读成后者(codex B34 §2 P0-B)。
+    fn playing_of(turn: &AgentTurn) -> &'static str {
         if !turn.ctl.audio_started() {
-            return "turn_no_audio_yet";
-        }
-        if turn.filler_samples == 0 {
-            return "worker_body";
-        }
-        if turn.ctl.played_samples() < turn.filler_samples {
-            "worker_filler"
-        } else {
+            "turn_no_audio_yet"
+        } else if turn.filler_samples == 0 || turn.ctl.played_samples() >= turn.filler_samples {
             "worker_body"
+        } else {
+            "worker_filler"
         }
     }
 
-    /// B32-B:打断判决点登记取证请求。**无 IO**;关闭时只是一次 Option 判空。
+    /// B34-C:判决点**立即**取证,不再等下一 PCM 帧。
+    ///
+    /// B33 的实现挂在输入环的 mic 分支上,靠「下一帧 ≤20ms」提交。可用户退出时上行会
+    /// 立刻停,那条分支根本不再触发——于是**最需要取证的退出/打断恰好取不到**,把 B31
+    /// 「房②零快照」原样复现一遍(codex B34 §2 P0-C,属实)。现在用 self 上的取证环当场落。
+    ///
+    /// 配额用尽也**照写事件**:没有文件不等于没有这次 ASR,那正是 B31 判不了的另一种形态。
     fn request_interrupt_snapshot(&mut self, decision: &'static str, reason: String) {
         if self.isnap.is_none() || self.snap.is_none() {
             return;
         }
-        let playing = self.playback_source();
-        let turn_id = self.agent_turn.as_ref().map_or(0u64, |t| t.id as u64);
-        let at_ms = self.now_ms() as i64;
-        if let Some(is) = self.isnap.as_mut() {
-            is.request(crate::eot_snapshot::PendingSnap { decision, reason, playing, turn_id, at_ms });
-        }
-    }
+        let now_ms = self.now_ms() as i64;
 
-    /// B32-B:输入环每帧调用。有待办就用**当前**8s 环落一段 wav + 一条可关联事件。
-    /// 落盘沿用 `SnapshotSink::snapshot`(内部 spawn_blocking),不占热路径。
-    fn drain_interrupt_snapshot(&mut self, ring: &VecDeque<i16>) {
-        let Some((p, taken, cap)) = self.isnap.as_mut().and_then(|is| {
-            let p = is.take_pending()?;
-            Some((p, is.taken(), is.max_per_room()))
-        }) else {
+        // 现算的「此刻在播」。设备侧本地承接只标**门状态**:worker 只知道门没放行,
+        // 并不知道设备扬声器此刻是否真在响,不冒充播放事实。
+        let live = if let Some(t) = self.agent_turn.as_ref() {
+            Some(crate::eot_snapshot::PlaybackCtx {
+                turn_id: t.id as u64,
+                playing: Self::playing_of(t),
+                at_ms: now_ms,
+            })
+        } else if self.pending_local_receipt_deadline.is_some() && self.local_receipt_release.is_none() {
+            Some(crate::eot_snapshot::PlaybackCtx {
+                turn_id: 0,
+                playing: "device_local_receipt_gate",
+                at_ms: now_ms,
+            })
+        } else {
+            None
+        };
+        let (ctx, ctx_source) = self.ctx_latch.resolve(live, now_ms, CTX_LATCH_MAX_AGE_MS);
+
+        let Some((gate, taken, cap_max)) = self
+            .isnap
+            .as_mut()
+            .map(|is| (is.try_take(), is.taken(), is.max_per_room()))
+        else {
             return;
         };
-        let cap_ms = self.now_ms() as i64;
-        let pcm: Vec<i16> = ring.iter().copied().collect();
-        let room = self.room_name.clone();
-        let Some(s) = self.snap.as_mut() else { return };
-        let seq = s.snapshot(&pcm);
-        s.event(
-            "interrupt_snapshot",
-            &[
-                ("seq", &seq.map_or("capped".into(), |v| v.to_string())),
-                ("decision", p.decision),
-                ("reason", &p.reason),
-                ("playing", p.playing),
-                ("turn_id", &p.turn_id.to_string()),
-                ("decide_ms", &p.at_ms.to_string()),
-                ("capture_ms", &cap_ms.to_string()),
-                ("ring_samples", &pcm.len().to_string()),
-            ],
+
+        let pcm: Vec<i16> = match self.isnap_ring.as_ref() {
+            Some(r) => r.iter().copied().collect(),
+            None => Vec::new(),
+        };
+        // 窗口末端离判决多远(真实采样口径)。环里没样本时给 -1,不拿 0 冒充「刚采到」。
+        let last_sample_age_ms = if pcm.is_empty() { -1 } else { now_ms - self.isnap_last_sample_ms };
+
+        // 措辞按 codex B34 §2 收紧:snapshot 返回 seq 只代表**已排队** spawn_blocking,
+        // 不代表 WAV 写完。落盘失败由 SnapshotSink 自己按 path(含 seq)告警,可关联。
+        let capture = match gate {
+            crate::eot_snapshot::Capture::Capped => "quota_capped".to_string(),
+            crate::eot_snapshot::Capture::Go if pcm.is_empty() => "ring_empty".to_string(),
+            crate::eot_snapshot::Capture::Go => match self.snap.as_mut().and_then(|s| s.snapshot(&pcm)) {
+                Some(seq) => format!("queued:t{seq:04}"),
+                None => "sink_capped".to_string(),
+            },
+        };
+
+        let quota = format!("{taken}/{cap_max}");
+        let turn_id_s = ctx.turn_id.to_string();
+        let decide_s = now_ms.to_string();
+        let samples_s = pcm.len().to_string();
+        let age_s = last_sample_age_ms.to_string();
+        if let Some(s) = self.snap.as_mut() {
+            s.event_bg(
+                "interrupt_snapshot",
+                &[
+                    ("decision", decision),
+                    ("reason", &reason),
+                    ("playing", ctx.playing),
+                    ("turn_id", &turn_id_s),
+                    ("ctx_source", ctx_source),
+                    ("decide_ms", &decide_s),
+                    ("capture", &capture),
+                    ("samples", &samples_s),
+                    ("last_sample_age_ms", &age_s),
+                    ("quota", &quota),
+                ],
+            );
+        }
+        // 这条 info 同样不带 room(房名含 SN);对账用 events.jsonl 的 job(room_hash)。
+        info!(
+            decision,
+            reason = %reason,
+            playing = ctx.playing,
+            turn_id = ctx.turn_id,
+            ctx_source,
+            capture = %capture,
+            samples = pcm.len(),
+            last_sample_age_ms,
+            quota = %quota,
+            "interrupt snapshot"
         );
-        info!(room = %room, decision = p.decision, reason = %p.reason, playing = p.playing,
-              turn_id = p.turn_id, decide_ms = p.at_ms, capture_ms = cap_ms,
-              ring_samples = pcm.len(), taken, cap, "打断取证快照已落");
     }
 
     fn now_ms(&self) -> f64 {
@@ -1560,6 +1642,16 @@ impl Orchestrator {
     /// S1v3 触发器逐帧喂音频;fire → 起投机。
     async fn on_pf_frame(&mut self, samples: &[i16]) {
         let now_ms = self.now_ms();
+        // B34-C:取证环在这里维护。诊断关 = isnap_ring 为 None = 不分配、不拷贝。
+        if let Some(r) = self.isnap_ring.as_mut() {
+            r.extend(samples.iter().copied());
+            while r.len() > crate::eot_snapshot::SNAP_WINDOW {
+                r.pop_front();
+            }
+        }
+        if self.isnap_ring.is_some() {
+            self.isnap_last_sample_ms = now_ms as i64;
+        }
         if let Some((text, sil, quiet)) = self.pf.on_frame(samples, now_ms) {
             let tail_snip: String = text
                 .chars()
@@ -2372,6 +2464,17 @@ impl Orchestrator {
         let Some(turn) = self.agent_turn.take() else {
             return;
         };
+        // B34-B:在这里把「abort 之前在播什么」抄一份。普通 commit 与 STOP/EXIT 都是
+        // **先 abort 再登记**,等登记时 turn 已被 take 走,现算只会得到 none/turn_id=0,
+        // 恰好在 B31「是的」那类新轮上失真。**只抄不改**,中断执行顺序一行没动。
+        if self.isnap.is_some() {
+            let at_ms = self.now_ms() as i64;
+            self.ctx_latch.stash(crate::eot_snapshot::PlaybackCtx {
+                turn_id: turn.id as u64,
+                playing: Self::playing_of(&turn),
+                at_ms,
+            });
+        }
         let played = turn.ctl.played_samples();
         turn.ctl.abort();
         turn.task.abort();
@@ -3559,23 +3662,79 @@ mod device_turn_tests {
 
 #[cfg(test)]
 mod publish_result_tests {
-    use super::publish_fail_class;
+    use super::{emit_publish_result, publish_fail_class};
+    use std::io;
+    use std::sync::{Arc, Mutex};
 
-    /// 这条测试断言的是**脏值的缺席**,不是「脱敏动作发生过」。
-    /// 后者永远会绿(返回的本来就是固定字面量),前者才是真要求。
-    #[test]
-    fn fail_class_never_leaks_url_token_or_room() {
-        let dirty = "failed to publish to wss://live.example.com/rtc\
-?access_token=eyJhbGciOiJIUzI1NiJ9.PAYLOAD.SIG&room=sn-BJP00000000000000000: timed out";
-        let c = publish_fail_class(dirty);
-        assert_eq!(c, "timeout");
-        assert!(!c.contains("eyJ"), "类别串不得含 token");
-        assert!(!c.contains("wss://"), "类别串不得含信令 URL");
-        assert!(!c.contains("access_token"), "类别串不得含 query 参数名");
-        assert!(!c.contains("sn-"), "类别串不得含房名/SN");
+    #[derive(Clone, Default)]
+    struct Cap(Arc<Mutex<Vec<u8>>>);
+    impl io::Write for Cap {
+        fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+            self.0.lock().unwrap().extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
+        }
+    }
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for Cap {
+        type Writer = Cap;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
     }
 
-    /// 正锚:四类必须互相分得开。全归 other 的话,「分类正确」与「分类器没跑」不可区分。
+    const TRACE: &str = "11111111-2222-3333-4444-555555555555";
+    /// 真实错误链的形状:带信令 URL、query 里的 token、以及**含 SN 的房名**。
+    const DIRTY: &str = "failed to publish to wss://live.example.com/rtc\
+?access_token=eyJhbGciOiJIUzI1NiJ9.PAYLOAD.SIG&room=sn-BJP00000000000000000-1789178706: timed out";
+
+    fn emit_and_capture(err: Option<&str>) -> String {
+        let cap = Cap::default();
+        let sub = tracing_subscriber::fmt()
+            .with_writer(cap.clone())
+            .with_ansi(false)
+            .finish();
+        tracing::subscriber::with_default(sub, || {
+            emit_publish_result("session.input_ready", TRACE, 123, 7, err);
+        });
+        let bytes = cap.0.lock().unwrap().clone();
+        String::from_utf8(bytes).unwrap()
+    }
+
+    /// B34-A(codex 点名):断言的是**最终发出去的那条结构化日志**,不是脱敏函数的返回值。
+    /// B33 我只测了 publish_fail_class——它确实不泄漏,而外围的 room 字段照样把 SN 打了出去。
+    /// 判据必须套在真正会离开进程的那个对象上。
+    #[test]
+    fn emitted_log_carries_no_room_sn_token_or_url() {
+        for err in [None, Some(DIRTY)] {
+            let out = emit_and_capture(err);
+            // 负锚:脏值必须缺席
+            assert!(!out.contains("sn-"), "日志不得含房名: {out}");
+            assert!(!out.contains("BJP"), "日志不得含 SN: {out}");
+            assert!(!out.contains("eyJ"), "日志不得含 token: {out}");
+            assert!(!out.contains("wss://"), "日志不得含信令 URL: {out}");
+            assert!(!out.contains("access_token"), "日志不得含 query 参数名: {out}");
+            // 正锚:这条日志真的发出来了,且关联键在。否则「干净」与「根本没打印」不可区分。
+            assert!(out.contains("control publish result"), "正锚:日志必须真发出: {out}");
+            assert!(out.contains(TRACE), "正锚:trace 必须在,否则两端对不上: {out}");
+        }
+    }
+
+    /// 成功/失败两条路径的判别字段都要在,且字段名与口径一致。
+    #[test]
+    fn emitted_log_marks_ok_and_failure_with_defined_fields() {
+        let ok = emit_and_capture(None);
+        assert!(ok.contains("publish_ok=true"), "{ok}");
+        assert!(ok.contains("send_ms=7"), "{ok}");
+        assert!(ok.contains("scheduled_at_job_ms=123"), "口径字段名要明确: {ok}");
+
+        let bad = emit_and_capture(Some("operation timed out"));
+        assert!(bad.contains("publish_ok=false"), "{bad}");
+        assert!(bad.contains("timeout"), "失败类别要在: {bad}");
+    }
+
+    /// 类别函数本身:四类必须互相分得开。全归 other 则「分类正确」与「分类器没跑」不可区分。
     #[test]
     fn fail_class_discriminates_between_shapes() {
         assert_eq!(publish_fail_class("peer is not connected"), "not_connected");

@@ -121,14 +121,38 @@ impl SnapshotSink {
         if enabled { SNAP_WINDOW } else { default_keep }
     }
 
-    /// 事件流 append 一行 JSON。字段值做最小转义(文本里引号/反斜杠/控制符)。
-    pub fn event(&mut self, kind: &str, fields: &[(&str, &str)]) {
+    fn format_event(job_key: &str, kind: &str, fields: &[(&str, &str)]) -> String {
         let ts_ms = chrono::Utc::now().timestamp_millis();
-        let mut line = format!(r#"{{"ts_ms":{ts_ms},"job":"{}","ev":"{kind}""#, self.job_key);
+        let mut line = format!(r#"{{"ts_ms":{ts_ms},"job":"{job_key}","ev":"{kind}""#);
         for (k, v) in fields {
             line.push_str(&format!(r#","{k}":"{}""#, json_escape(v)));
         }
         line.push_str("}\n");
+        line
+    }
+
+    /// B34-C:事件行走**后台**写。`event()` 是同步 open+write,挂在 ASR 判决路径上就是
+    /// 热路径阻塞——B33 声称「整条路径不占热路径」只对 WAV 成立,对事件行不成立,codex 指出属实。
+    /// 本轮新增的打断取证事件量很小(每房 ≤3),直接交后台即可,不改造历史日志系统。
+    pub fn event_bg(&mut self, kind: &str, fields: &[(&str, &str)]) {
+        let line = Self::format_event(&self.job_key, kind, fields);
+        let path = self.root.join("events.jsonl");
+        GLOBAL_WRITTEN.fetch_add(line.len() as u64, Ordering::Relaxed);
+        tokio::task::spawn_blocking(move || {
+            let r = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+                .and_then(|mut f| f.write_all(line.as_bytes()));
+            if let Err(e) = r {
+                warn!(error = %e, "interrupt snapshot 事件落盘失败(旁路,不影响判停)");
+            }
+        });
+    }
+
+    /// 事件流 append 一行 JSON。字段值做最小转义(文本里引号/反斜杠/控制符)。
+    pub fn event(&mut self, kind: &str, fields: &[(&str, &str)]) {
+        let line = Self::format_event(&self.job_key, kind, fields);
         let path = self.root.join("events.jsonl");
         let r = std::fs::OpenOptions::new()
             .create(true)
@@ -196,30 +220,26 @@ impl SnapshotSink {
     }
 }
 
-/// B32-B(codex §3B):ASR **打断判决点**的短窗取证。
+/// B32-B/B34-C:ASR **打断判决点**的短窗取证。
 ///
 /// 为什么要单开一个:EOT 快照只在**判停路径**(`eot_request`)落盘,而被吞掉的碎片与
 /// 被打断 commit 的那一段上行**永远不经过判停路径**,于是没有任何音频本体。B31 里
-/// 「是的」到底是真人还是回声判不了,就是栽在这——文本级回声门对「回声被 ASR 错转成
-/// 别的字」结构性无效,而唯一能裁决的音频恰好从不落盘。
+/// 「是的」到底是真人还是回声判不了,就是栽在这。
 ///
 /// **默认关**:`INTERRUPT_SNAPSHOT_ENABLED` 未设或非 `1` → `None`,零行为变化、
-/// 不新增任何文件、不多占一字节环。开启还需 `EOT_SNAPSHOT_DIR` 已配(复用同一 sink
+/// 不新增任何文件、不分配取证环。开启还需 `EOT_SNAPSHOT_DIR` 已配(复用同一 sink
 /// 的目录、配额与全局字节上限)。
 pub struct InterruptSnap {
     max_per_room: u32,
     taken: u32,
-    pending: Option<PendingSnap>,
 }
 
-/// 判决点登记的取证意图。**只登记,不做 IO**——真正落盘在输入环下一帧(≤20ms),
-/// 8s 窗内容等价,且不把文件写入塞进判决热路径。
-pub struct PendingSnap {
-    pub decision: &'static str,
-    pub reason: String,
-    pub playing: &'static str,
-    pub turn_id: u64,
-    pub at_ms: i64,
+/// 闸门结果。`Capped` 也必须被**写进事件流**——否则「没有文件」会被读成
+/// 「没有这次 ASR」,那正是 B31 判不了的根源的另一种形态(codex B34 §2 P0-C)。
+#[derive(Debug, PartialEq, Eq)]
+pub enum Capture {
+    Go,
+    Capped,
 }
 
 impl InterruptSnap {
@@ -232,35 +252,23 @@ impl InterruptSnap {
         Self::from_flag(enabled, max)
     }
 
-    /// 纯构造(测试用:不碰进程环境。Rust 2024 起 set_var 是 unsafe,且并行测试会互相污染)。
+    /// 纯构造(测试用:不碰进程环境。Rust 2024 起 set_var 是 unsafe,且并行测试互相污染)。
     pub fn from_flag(enabled: bool, max_per_room: u32) -> Option<Self> {
         if !enabled {
             return None;
         }
         info!(max_per_room, "打断取证快照已开启(默认关,本次由 INTERRUPT_SNAPSHOT_ENABLED=1 显式打开)");
-        Some(Self { max_per_room, taken: 0, pending: None })
+        Some(Self { max_per_room, taken: 0 })
     }
 
-    /// 登记一次取证请求。同一帧内多次判决只留第一次——codex §3B 明确要求
-    /// 「不能每 interim 反复存盘」。
-    ///
-    /// **这里不查配额**:配额的唯一执行点是 `take_pending`。曾经两处各拦一道,
-    /// 结果是把 `>=` 改成 `>` 注入真 bug 后测试照样全绿——两道守卫互相遮蔽,
-    /// 谁都测不出来。守卫只留一处,判据才有区分力。
-    pub fn request(&mut self, p: PendingSnap) {
-        if self.pending.is_none() {
-            self.pending = Some(p);
-        }
-    }
-
-    pub fn take_pending(&mut self) -> Option<PendingSnap> {
+    /// 配额的**唯一执行点**。曾经在两处各拦一道,把 `>=` 改成 `>` 注入真 bug 后测试
+    /// 照样全绿——两道守卫互相遮蔽,谁都测不出来。守卫只留一处,判据才有区分力。
+    pub fn try_take(&mut self) -> Capture {
         if self.taken >= self.max_per_room {
-            self.pending = None;
-            return None;
+            return Capture::Capped;
         }
-        let p = self.pending.take()?;
         self.taken += 1;
-        Some(p)
+        Capture::Go
     }
 
     pub fn taken(&self) -> u32 {
@@ -269,6 +277,63 @@ impl InterruptSnap {
 
     pub fn max_per_room(&self) -> u32 {
         self.max_per_room
+    }
+}
+
+/// 判决那一刻的播放上下文。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlaybackCtx {
+    pub turn_id: u64,
+    pub playing: &'static str,
+    pub at_ms: i64,
+}
+
+/// B34-B:判决点要的是「判决**之前**在播什么」。
+///
+/// 而 `hard_abort_current` 会先 `agent_turn.take()`,普通 commit 与 STOP/EXIT 吞句
+/// 都是**先 abort 再登记**——等登记时 turn 已经没了,现算只会得到 `none`/turn_id=0,
+/// **恰好在 B31「是的」那类新轮上失真**,而那正是下一轮要查的字段。故 abort 前闩住。
+pub struct CtxLatch {
+    pre_abort: Option<PlaybackCtx>,
+}
+
+impl Default for CtxLatch {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl CtxLatch {
+    pub fn new() -> Self {
+        Self { pre_abort: None }
+    }
+
+    /// abort 掉旧 turn 之前调用。**不改变任何中断/吞词/commit 决策顺序**,只抄一份上下文。
+    pub fn stash(&mut self, c: PlaybackCtx) {
+        self.pre_abort = Some(c);
+    }
+
+    /// live 有真 turn 就用 live;否则用 `max_age_ms` 内闩住的那份。
+    /// 两者都没有 → `unknown`,**不猜**(codex B34 §2 P0-B:无法确定就 unknown)。
+    /// 返回值第二项是来源标签,写进事件流供对账,不让推断冒充观测。
+    pub fn resolve(
+        &self,
+        live: Option<PlaybackCtx>,
+        now_ms: i64,
+        max_age_ms: i64,
+    ) -> (PlaybackCtx, &'static str) {
+        if let Some(l) = live {
+            return (l, "live");
+        }
+        if let Some(pre) = self.pre_abort
+            && now_ms.saturating_sub(pre.at_ms) <= max_age_ms
+        {
+            return (pre, "pre_abort");
+        }
+        (
+            PlaybackCtx { turn_id: 0, playing: "unknown", at_ms: now_ms },
+            "unavailable",
+        )
     }
 }
 
@@ -399,61 +464,71 @@ mod tests {
 mod interrupt_snap_tests {
     use super::*;
 
-    fn p(reason: &str) -> PendingSnap {
-        PendingSnap {
-            decision: "swallowed",
-            reason: reason.to_string(),
-            playing: "worker_body",
-            turn_id: 1,
-            at_ms: 0,
-        }
-    }
-
     /// 默认关是这条特性的安全根基:关 = 连对象都不存在,不可能落盘。
     #[test]
     fn disabled_by_default_yields_none() {
         assert!(InterruptSnap::from_flag(false, 3).is_none(), "未显式开启时必须是 None");
-        // 正锚:开启路径确实能造出来,否则「永远 None」和「构造函数坏了」不可区分
-        assert!(InterruptSnap::from_flag(true, 3).is_some());
+        assert!(InterruptSnap::from_flag(true, 3).is_some(), "正锚:开启路径确实能构造");
     }
 
-    /// 每房 3 段封顶。断言的是**端到端不变量**(跑满 10 轮只许落 3 段),不是
-    /// 某一处守卫的写法——单点断言会被另一处守卫遮蔽而恒绿(实测过)。
+    /// 断言**端到端不变量**(跑满 10 轮只许放行 3 次),不是某一处守卫的写法。
     #[test]
-    fn never_exceeds_cap_whatever_the_request_pattern() {
+    fn never_exceeds_cap_whatever_the_pattern() {
         let mut s = InterruptSnap::from_flag(true, 3).unwrap();
-        let mut landed = 0;
-        for i in 0..10 {
-            s.request(p(&format!("r{i}")));
-            if s.take_pending().is_some() {
-                landed += 1;
+        let mut go = 0;
+        let mut capped = 0;
+        for _ in 0..10 {
+            match s.try_take() {
+                Capture::Go => go += 1,
+                Capture::Capped => capped += 1,
             }
         }
-        assert_eq!(landed, 3, "10 轮请求只许落 3 段");
-        assert_eq!(s.taken(), 3, "计数必须与实际落盘段数一致");
+        assert_eq!(go, 3, "10 次请求只许放行 3 次");
+        assert_eq!(capped, 7, "其余必须显式 Capped——不能静默消失");
+        assert_eq!(s.taken(), 3);
     }
 
-    /// 配额到顶后不得把请求挂着不放——否则测试结束时还留着一个永不落盘的 pending。
+    /// B34-B 最小回归(codex 点名):旧 turn=1/worker_body → abort 后登记 → 仍带旧 turn=1/worker_body。
     #[test]
-    fn clears_pending_once_capped() {
-        let mut s = InterruptSnap::from_flag(true, 1).unwrap();
-        s.request(p("first"));
-        assert!(s.take_pending().is_some());
-        s.request(p("after-cap"));
-        assert!(s.take_pending().is_none(), "到顶后不得再落盘");
-        assert!(s.take_pending().is_none(), "重复调用仍不得落盘");
+    fn ctx_survives_abort_before_registration() {
+        let mut latch = CtxLatch::new();
+        // abort 之前闩住
+        latch.stash(PlaybackCtx { turn_id: 1, playing: "worker_body", at_ms: 1_000 });
+        // 判决登记时 agent_turn 已被 take → live 为 None
+        let (ctx, src_tag) = latch.resolve(None, 1_010, 200);
+        assert_eq!(ctx.turn_id, 1, "必须仍是旧 turn,不能变 0");
+        assert_eq!(ctx.playing, "worker_body", "必须仍是旧正文来源,不能变 none");
+        assert_eq!(src_tag, "pre_abort", "来源标签要说实话");
     }
 
-    /// 同一帧内 ASR 可能连发多个判决;只落第一个,不做每 interim 存盘。
+    /// live 优先:没 abort 的路径不许被陈旧闩值污染。
     #[test]
-    fn coalesces_multiple_requests_in_one_frame() {
-        let mut s = InterruptSnap::from_flag(true, 3).unwrap();
-        s.request(p("first"));
-        s.request(p("second"));
-        s.request(p("third"));
-        let got = s.take_pending().expect("应有一段");
-        assert_eq!(got.reason, "first", "同帧多次请求只保留第一次");
-        assert!(s.take_pending().is_none(), "同帧不得落第二段");
-        assert_eq!(s.taken(), 1);
+    fn live_ctx_wins_over_stale_latch() {
+        let mut latch = CtxLatch::new();
+        latch.stash(PlaybackCtx { turn_id: 1, playing: "worker_body", at_ms: 1_000 });
+        let live = PlaybackCtx { turn_id: 2, playing: "worker_filler", at_ms: 2_000 };
+        let (ctx, tag) = latch.resolve(Some(live), 2_000, 200);
+        assert_eq!(ctx.turn_id, 2);
+        assert_eq!(tag, "live");
+    }
+
+    /// 闩值过期必须退化成 unknown,**不能拿几秒前的旧轮冒充「判决时在播」**。
+    #[test]
+    fn stale_latch_degrades_to_unknown_not_a_guess() {
+        let mut latch = CtxLatch::new();
+        latch.stash(PlaybackCtx { turn_id: 1, playing: "worker_body", at_ms: 1_000 });
+        let (ctx, tag) = latch.resolve(None, 9_999, 200);
+        assert_eq!(ctx.playing, "unknown", "过期必须 unknown");
+        assert_eq!(ctx.turn_id, 0);
+        assert_eq!(tag, "unavailable");
+    }
+
+    /// 从没闩过也没 live → unknown,不 panic、不编造。
+    #[test]
+    fn empty_latch_is_unknown() {
+        let latch = CtxLatch::new();
+        let (ctx, tag) = latch.resolve(None, 5, 200);
+        assert_eq!(ctx.playing, "unknown");
+        assert_eq!(tag, "unavailable");
     }
 }
