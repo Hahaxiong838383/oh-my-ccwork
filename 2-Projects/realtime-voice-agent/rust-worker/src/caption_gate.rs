@@ -91,7 +91,11 @@ pub enum Verdict {
 pub enum Flush {
     Hold,
     Publish(Vec<PendingFinal>),
-    Drop(usize),
+    /// 判回声:这批 final 不发。**但段 id 要带出来**——`on_interim` 是无条件发布的,
+    /// 那些段上已经有 interim 文本;若 final 既不发也不收尾,端侧会永远挂着一条
+    /// 未收尾的字幕段(B52 后台审计发现,是 B51 延迟发布引入的回归:改之前 final 总会发,
+    /// 段天然收尾)。调用方应对每个段发一条**空 final** 撤回并收尾。
+    Drop(Vec<PendingFinal>),
 }
 
 pub struct CaptionGate {
@@ -168,10 +172,9 @@ impl CaptionGate {
                 if v.is_empty() { Flush::Hold } else { Flush::Publish(v) }
             }
             Verdict::Drop => {
-                let n = self.buf.len();
-                self.buf.clear();
-                self.dropped_total += n as u32;
-                if n == 0 { Flush::Hold } else { Flush::Drop(n) }
+                let v: Vec<_> = self.buf.drain(..).collect();
+                self.dropped_total += v.len() as u32;
+                if v.is_empty() { Flush::Hold } else { Flush::Drop(v) }
             }
         }
     }
@@ -242,7 +245,7 @@ mod tests {
         g.on_final("A".into(), "吧");
         g.on_commit_decided();
         g.mark_echo_drop(None);
-        assert_eq!(g.take_flush(), Flush::Drop(1));
+        assert_eq!(g.take_flush(), Flush::Drop(vec![p("A", "吧")]));
         assert_eq!(g.buffered(), 0);
         assert_eq!(g.dropped_total(), 1);
         assert_eq!(g.published_total(), 0);
@@ -255,7 +258,7 @@ mod tests {
         g.on_final("A".into(), "吧");
         g.on_commit_decided();
         g.mark_echo_drop(None);
-        assert_eq!(g.take_flush(), Flush::Drop(1));
+        assert_eq!(g.take_flush(), Flush::Drop(vec![p("A", "吧")]));
 
         g.on_final("B".into(), "讲个故事");
         g.on_commit_decided();
@@ -372,7 +375,7 @@ mod tests {
         if control_outlet_kind("好", &stop, &exit, true).is_none() {
             g2.mark_echo_drop(None);
         }
-        assert_eq!(g2.take_flush(), Flush::Drop(1), "真回声仍然丢");
+        assert_eq!(g2.take_flush(), Flush::Drop(vec![p("E", "好")]), "真回声仍然丢");
     }
 
     /// **强制点直测**:控制出口传进来时,`mark_echo_drop` 自己拒绝丢弃并返回 false。
@@ -391,6 +394,26 @@ mod tests {
         g.on_final("E".into(), "好");
         g.on_commit_decided();
         assert!(g.mark_echo_drop(None), "普通回声必须返回 true 并丢弃");
-        assert_eq!(g.take_flush(), Flush::Drop(1));
+        assert_eq!(g.take_flush(), Flush::Drop(vec![p("E", "好")]));
+    }
+
+    /// **B52 回归锚**:判回声时必须把段 id 带出来。只返回个计数的话,调用方无法对那些段
+    /// 发空 final 收尾,端侧会留下永不收尾的 interim(这是 B51 延迟发布引入的回归)。
+    #[test]
+    fn drop_carries_segments_for_retraction() {
+        let mut g = CaptionGate::new(true);
+        g.on_final("S1".into(), "好");
+        g.on_final("S2".into(), "琪");
+        g.on_commit_decided();
+        assert!(g.mark_echo_drop(None));
+        match g.take_flush() {
+            Flush::Drop(v) => {
+                assert_eq!(v.len(), 2, "两段都要能被撤回");
+                assert_eq!(v[0].seg, "S1");
+                assert_eq!(v[1].seg, "S2");
+            }
+            other => panic!("期望 Drop(segments),得到 {other:?}"),
+        }
+        assert_eq!(g.buffered(), 0);
     }
 }

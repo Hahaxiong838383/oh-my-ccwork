@@ -86,6 +86,14 @@ impl TranscriptPub {
         self.publish(&self.route.user_identity, &self.route.user_track_sid, &p.seg, &p.text, true);
     }
 
+    /// B52:判回声丢弃时,对该段发一条**空 final** 撤回并收尾。
+    /// `on_interim` 是无条件发布的,那个段上已经有文本;只丢不收尾会让端侧永远挂着一条
+    /// 未收尾字幕(B51 延迟发布引入的回归——改之前 final 总会发,段天然收尾)。
+    /// 空文本 + final=true:既撤回显示内容,又不是"非空 final",不会让端侧启动等答。
+    pub fn retract_deferred_final(&self, p: &crate::caption_gate::PendingFinal) {
+        self.publish(&self.route.user_identity, &self.route.user_track_sid, &p.seg, "", true);
+    }
+
     /// agent 句段:id 由调用方按 (turn, 句序) 稳定生成,interim/final 同 id。
     pub fn agent_segment(&self, turn_id: u64, idx: usize, text: &str, fin: bool) {
         let id = format!("SG_a{turn_id}_{idx}");

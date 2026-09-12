@@ -2827,11 +2827,16 @@ impl Orchestrator {
                       dropped_total = self.caption_gate.dropped_total(),
                       "caption final published (deferred)");
             }
-            Flush::Drop(n) => {
-                info!(room = %self.room_name, segments = n,
+            Flush::Drop(v) => {
+                // B52:不发内容,但要把段收尾——否则 on_interim 已发的文本会永远挂在端侧。
+                let n = v.len();
+                for pf in &v {
+                    self.tr.retract_deferred_final(pf);
+                }
+                info!(room = %self.room_name, segments = n, retracted = n,
                       published_total = self.caption_gate.published_total(),
                       dropped_total = self.caption_gate.dropped_total(),
-                      "caption final suppressed (echo)");
+                      "caption final suppressed (echo; 已发空 final 撤回 interim 并收尾)");
             }
         }
     }
