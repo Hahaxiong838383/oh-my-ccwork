@@ -838,7 +838,7 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   | 门 | 生效条件 | 日志锚 |
   |---|---|---|
   | 开场单字门 | 会话起 `LOCAL_AUDIO_ECHO_WINDOW_MS`（默认 **15000**）内 ∧ 恰好 1 字 | `local-audio echo suppressed (opening window)` + `slot=single-char` |
-  | 开场 bank LCS | 同上，比的是**设备本地招呼语 15 条**（与 TTS 正文无关） | 同上，`slot=<bank 条目>` |
+  | 开场 bank LCS | 同上，比的是**设备本地音频文案**（与 TTS 正文无关） | 同上，`slot=<bank 条目>` |
   | 开场 overlap 放宽 | 同上 ∧ `user_commit_count==1` ∧ `!commit.input_ended` | `(opening overlap)` |
   | TTS 子串门 | 播放中 or 播完 `ECHO_SUPPRESS_WINDOW_MS`（800）内 ∧ ≥2 字 | `echo suppressed: 'X' ⊂ recent tts` |
 
@@ -848,6 +848,16 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   对 ASR 错转天然无效（「好起」对不上正在播的「雨琪，好呀，」，虽然「好」在、同音的「琪」也在）。
   ⇒ **2 字及以上、或 15 秒之后，目前没有任何回声防线。别把「没命中」读成「没发生」。**
   ⚠️ 反向也别乱补：「播放中 2 字一律吞」会把用户真实的「退出」吞得更死（B/C 已有疑似样本）。
+  🔴 **`local-audio echo bank loaded texts=N` 里的 N 是过滤后的数，不是设备的文案清单**
+  （2026-09-12 查了三轮才看见）：`pipeline.rs:738` 拉回全部槽位后
+  `filter(|(slot,_)| slot.starts_with("greeting."))` **只留 `greeting.*`**。
+  实测该设备服务端返回 **37 条**、留下 **15 条**、**静默丢掉 22 条**——
+  含全部 **6 条 `farewell.*`（设备退出/告别衔接语）**、12 条 `g1.*`、4 条 `posture.*`。
+  ⇒ **设备播告别语/坐姿提醒/奖励播报时，文案根本不在对撞库里，开场窗内也匹配不上。**
+  排「某类回声为什么没被拦住」先问**「它进过候选集吗」**，再问「判据为什么没命中」——
+  要看设备真实能播什么，只读拉 `/internal/local-audio-texts?room=<房名>`（worker 每次建房都发这个 GET）。
+  ⚠️ 放宽这个 filter 是最小修法，但 `farewell.*` 恰是**真人也会说**的短句，净收益比看上去小；
+  且它**救不了 15 秒窗之外**的回灌——那个要等端侧送「设备此刻在播本地音频」事件才有解。
   🔑 **TTS 子串门的参考文本是「已合成入轨」不是「已播出」**：`synth_text` 在 `track()` 里追加，
   而 `track` 在 `synthesize().await` 返回后才调；`tts synth:` 那行打在 `synthesize` 入口 ⇒
   **日志出现 ≠ 已进参考库**。领先量有界＝`pcm_tx` 的 32 段通道。已播片段用现成的
