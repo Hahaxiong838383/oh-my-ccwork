@@ -2800,12 +2800,28 @@ impl Orchestrator {
     /// 三个回声门都只调这个函数,`mark_echo_drop` 在 pipeline 里没有第二个调用点——
     /// 新增回声门只要走它就自动继承这条豁免。
     fn echo_drop_caption(&mut self, user_text: &str, gate: &'static str) {
-        let outlet = crate::caption_gate::control_outlet_kind(
+        // B52:`poll_commit` 交出来的是**合并后**的整句;「停」可能只是被合并进去的其中一条
+        // final,合并文本判不出来。判定取「合并文本 **或** 任一条原始 final」——保守方向:
+        // 宁可多留一批可见字幕,不可静默砍掉控制出口。
+        let mut outlet = crate::caption_gate::control_outlet_kind(
             user_text,
             &self.cfg.hotwords,
             &self.cfg.exit_hotwords,
             self.cfg.exit_tail_match,
         );
+        if outlet.is_none() {
+            for t in self.caption_gate.buffered_texts() {
+                outlet = crate::caption_gate::control_outlet_kind(
+                    &t,
+                    &self.cfg.hotwords,
+                    &self.cfg.exit_hotwords,
+                    self.cfg.exit_tail_match,
+                );
+                if outlet.is_some() {
+                    break;
+                }
+            }
+        }
         if !self.caption_gate.mark_echo_drop(outlet) {
             info!(room = %self.room_name, gate, outlet = outlet.unwrap_or("-"),
                   "caption kept: 控制出口被回声门吞掉,但 LOCAL final 仍发给端侧");
@@ -2819,9 +2835,7 @@ impl Orchestrator {
             Flush::Hold => {}
             Flush::Publish(v) => {
                 let n = v.len();
-                for pf in &v {
-                    self.tr.publish_deferred_final(pf);
-                }
+                self.tr.publish_deferred_batch(&v, false);
                 info!(room = %self.room_name, segments = n,
                       published_total = self.caption_gate.published_total(),
                       dropped_total = self.caption_gate.dropped_total(),
@@ -2830,9 +2844,7 @@ impl Orchestrator {
             Flush::Drop(v) => {
                 // B52:不发内容,但要把段收尾——否则 on_interim 已发的文本会永远挂在端侧。
                 let n = v.len();
-                for pf in &v {
-                    self.tr.retract_deferred_final(pf);
-                }
+                self.tr.publish_deferred_batch(&v, true);
                 info!(room = %self.room_name, segments = n, retracted = n,
                       published_total = self.caption_gate.published_total(),
                       dropped_total = self.caption_gate.dropped_total(),

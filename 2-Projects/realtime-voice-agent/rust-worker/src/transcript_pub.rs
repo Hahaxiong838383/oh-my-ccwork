@@ -81,18 +81,38 @@ impl TranscriptPub {
         std::mem::replace(&mut self.user_seg, new_seg_id())
     }
 
-    /// 裁决通过后补发一条被缓冲的 final(段 id 用当初那个,不是当前的)。
-    pub fn publish_deferred_final(&self, p: &crate::caption_gate::PendingFinal) {
-        self.publish(&self.route.user_identity, &self.route.user_track_sid, &p.seg, &p.text, true);
+    /// B52:一批被缓冲的 final 一次性发出。**同一个 spawn 里按序 await**——
+    /// 逐条 `publish()` 会各起一个 tokio 任务,批内顺序不作保证,端侧可能倒着收到
+    /// (B52 后台审计指出)。`retract=true` 时发空文本(撤回并收尾),否则发原文。
+    pub fn publish_deferred_batch(&self, items: &[crate::caption_gate::PendingFinal], retract: bool) {
+        let lp = self.lp.clone();
+        let identity = self.route.user_identity.clone();
+        let track = self.route.user_track_sid.clone();
+        let packets: Vec<(String, String)> = items
+            .iter()
+            .map(|p| (p.seg.clone(), if retract { String::new() } else { p.text.clone() }))
+            .collect();
+        tokio::spawn(async move {
+            for (seg, text) in packets {
+                let packet = Transcription {
+                    participant_identity: identity.clone(),
+                    track_id: track.clone(),
+                    segments: vec![TranscriptionSegment {
+                        id: seg,
+                        text,
+                        start_time: 0,
+                        end_time: 0,
+                        r#final: true,
+                        language: String::new(),
+                    }],
+                };
+                if let Err(e) = lp.publish_transcription(packet).await {
+                    tracing::debug!(error = %e, "publish_transcription failed");
+                }
+            }
+        });
     }
 
-    /// B52:判回声丢弃时,对该段发一条**空 final** 撤回并收尾。
-    /// `on_interim` 是无条件发布的,那个段上已经有文本;只丢不收尾会让端侧永远挂着一条
-    /// 未收尾字幕(B51 延迟发布引入的回归——改之前 final 总会发,段天然收尾)。
-    /// 空文本 + final=true:既撤回显示内容,又不是"非空 final",不会让端侧启动等答。
-    pub fn retract_deferred_final(&self, p: &crate::caption_gate::PendingFinal) {
-        self.publish(&self.route.user_identity, &self.route.user_track_sid, &p.seg, "", true);
-    }
 
     /// agent 句段:id 由调用方按 (turn, 句序) 稳定生成,interim/final 同 id。
     pub fn agent_segment(&self, turn_id: u64, idx: usize, text: &str, fin: bool) {

@@ -129,6 +129,13 @@ impl CaptionGate {
         self.buf.len()
     }
 
+    /// 缓冲里每条 final 的原文。用于控制出口判定:`poll_commit` 交出来的是**合并后**的
+    /// 整句,而「停」可能是被合并进去的其中一条 final——只看合并文本会把它判成普通句
+    /// (B52 后台审计指出)。判定取"合并文本 或 任一条原始 final"。
+    pub fn buffered_texts(&self) -> Vec<String> {
+        self.buf.iter().map(|p| p.text.clone()).collect()
+    }
+
     /// 一条 final 到达。返回 `true` = 已缓冲(调用方**不要**立即发);
     /// `false` = 门关着或空 final,调用方按原路立即发。
     pub fn on_final(&mut self, seg: String, text: &str) -> bool {
@@ -415,5 +422,24 @@ mod tests {
             other => panic!("期望 Drop(segments),得到 {other:?}"),
         }
         assert_eq!(g.buffered(), 0);
+    }
+
+    /// **合并句回归锚**:「停」被合并进一次 commit 时,合并文本不是纯急停词,
+    /// 但那条原始 final 是——控制出口判定必须看得见它。
+    #[test]
+    fn buffered_texts_exposes_individual_finals() {
+        let mut g = CaptionGate::new(true);
+        g.on_final("A".into(), "讲个故事");
+        g.on_final("B".into(), "停");
+        assert_eq!(g.buffered_texts(), vec!["讲个故事".to_string(), "停".to_string()]);
+        let stop = hw(&["停"]);
+        let exit = hw(&["退出"]);
+        // 合并文本判不出来
+        assert_eq!(control_outlet_kind("讲个故事 停", &stop, &exit, true), None, "合并后不是纯急停词");
+        // 逐条就能判出来
+        assert!(
+            g.buffered_texts().iter().any(|t| control_outlet_kind(t, &stop, &exit, true).is_some()),
+            "逐条扫描必须命中那条「停」"
+        );
     }
 }
