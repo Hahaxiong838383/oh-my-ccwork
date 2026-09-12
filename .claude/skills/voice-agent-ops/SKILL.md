@@ -856,6 +856,17 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ⇒ **设备播告别语/坐姿提醒/奖励播报时，文案根本不在对撞库里，开场窗内也匹配不上。**
   排「某类回声为什么没被拦住」先问**「它进过候选集吗」**，再问「判据为什么没命中」——
   要看设备真实能播什么，只读拉 `/internal/local-audio-texts?room=<房名>`（worker 每次建房都发这个 GET）。
+  🔴 **但别真去删那个 filter**（2026-09-12 我提了、被对端按行号推翻）：词库支/单字支
+  **一个控制词都不查**——2940 命中 → **2968 直接 `return`**，而 `match_command`/`is_stop_only`/
+  `session_exit_tail_hit` 只在 2987–2989 的 **overlap 支**，STOP/EXIT 真判定在 3039/3051，**都在 return 之后**。
+  放进 `farewell.*` 之后，**开场 15s 内真人说「再见」会被当回声吞掉、永远走不到退出分支**
+  （「再见」实测在 `EXIT_SWALLOW_HOTWORDS` 里，槽位就叫 `farewell.goodbye`）。
+  要碰这个门，修法是**把控制词豁免搬进 `local_audio_echo_hit` 自己**成为不变量（同 B53 的 `mark_echo_drop`），
+  调用点绕不过去——而不是在命中点补 `if`。
+  🔴 **既存洞**：`pipeline.rs:2939` 注释自称「急停单字在此被吞与 stop_only 效果等价」——
+  **「都不成 turn」真、「效果等价」假**。STOP 支 3097 无条件补硬停保证「停=安静」，词库支 2955 的
+  hard_abort 只服务追杀条件。⇒ 开场 15s 内轻声单字「停」且 `check_hotword` interim 支没命中时，
+  **字幕发出去了但小可不会停**。排「说了停还在说」先看是不是落在这一支。
   ⚠️ 放宽这个 filter 是最小修法，但 `farewell.*` 恰是**真人也会说**的短句，净收益比看上去小；
   且它**救不了 15 秒窗之外**的回灌——那个要等端侧送「设备此刻在播本地音频」事件才有解。
   🔑 **TTS 子串门的参考文本是「已合成入轨」不是「已播出」**：`synth_text` 在 `track()` 里追加，
