@@ -19,15 +19,25 @@
 
 业务站 `my.chenchuan.cc` 继续独立发版；其 502 **alone 通常不杀 Reality**（TLS 握手层仍可成功），但 dest 绑业务站会带来误判与偶发风险，故不再作 dest。
 
+## 2026-09-11 变更（限速 + admin + home-studio 直连）
+
+- 非 admin 通道（`443/10086/5443/6443/7443/8446/8447/9443`）共享 **1Mbps** HTB（脚本仍由 `dmit-limited-4mbit.service` 开机执行）。**不限**：SSH 22、admin 丽萨 `:11443`、admin ZGO `:11447`、菲律宾 `:8448`。
+- 2026-09-11：DMIT `gost.service` `:8443 → 丽萨:8443` 已停用下线（备份 `/root/backup-gost-8443/`）。落地丽萨 `:8443` inbound 未动。
+- admin ZGO 新 inbound `:11447` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-zgo` `:11447 → 38.49.38.237:11447`。参数 `/root/zgo-admin-r-chenchuan-params.json`。
+- admin 丽萨新 inbound `:11443` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-lisa` `:11443 → 154.44.3.170:11443`。参数 `/root/lisa-admin-r-chenchuan-params.json`。
+- home-studio Xray：原 DMIT→丽萨规则改 balancer `lisa-direct-then-dmit`（直连 `美宅-Claude-GPT_mychenchuan`，fallback `新美宅-Claude-GPT`）；原 DMIT→ZGO 改 `zgo-direct-then-dmit`（直连 `Gemini专用-US2-VLESS-Reality-IP`，fallback `DMIT-Gemini-vps-chenchuan`）。备份 `config.json.bak-direct-fallback-20260911-101229`。
+
 ## 中转 DMIT（`lax-relay` / `64.186.235.107` / fqzz）
 
-既有 gost（勿删）：`gost` 8443、`gost-lisa2` 7443、`gost-lisa3` 5443、`gost-usvps2` 6443、`gost-us-vps` 等。
+既有 gost（勿删）：`gost-lisa2` 7443、`gost-lisa3` 5443、`gost-usvps2` 6443、`gost-us-vps` 等。`gost.service` `:8443` 已下线。
 
 | 新增 unit | 监听 | 目标 |
 |-----------|------|------|
 | `gost-lisa-r` | `:8446` | 丽萨 `154.44.3.170:8446` |
 | `gost-zgo-r` | `:8447` | ZGO `38.49.38.237:8447` |
 | `gost-ph-r` | `:8448` | 菲律宾 Makati `61.245.11.252:443` |
+| `gost-admin-lisa` | `:11443` | 丽萨 `154.44.3.170:11443`（admin，不限速） |
+| `gost-admin-zgo` | `:11447` | ZGO `38.49.38.237:11447`（admin，不限速） |
 
 ## 落地丽萨（`lisa` / `154.44.3.170`，SSH 端口见本地 RTF）
 
