@@ -290,8 +290,11 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - 🔑 **连接真值(先看这行,别编别名)**:`ssh root@64.90.13.117` —— 这台**没有 ssh 别名**
   (2026-09-11 我编了个 `p003-worker` 去探生产,连接失败的信号与"服务挂了"完全同形)。
   真值另见记忆 `reference_cloud_servers.md` 的 voice-worker-hk 行。
-  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID 2017631 / ActiveEnter
-  2026-09-06 23:49:55 UTC,动它前先对这两个数)、**单机灰度** `voice-worker-firstturn`
+  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID **2720004** / ActiveEnter
+  **2026-09-12 06:48:18 UTC**,动它前先对这两个数;旧锚 2017631 / 09-06 23:49:55 已被 09-12 那次
+  第三方重启作废)。⚠️ **不存在 `voice-worker.service` 这个名字**——2026-09-12 我拿它查生产,
+  systemd 照答 `MainPID=0 NRestarts=0 ActiveEnterTimestamp=`(全空),与"服务真挂了"完全同形。
+  **先 `systemctl list-units --type=service --all | grep -i voice` 把名字列出来再判状态**、**单机灰度** `voice-worker-firstturn`
   (agent `rust-worker-firstturn`,2026-09-11 起,产品首句 v1 专用,env 链与生产逐行相同只叠 13 键差异,
   MemoryHigh 700M/Max 900M)、**隔离 POC** `voice-worker-poc`(agent `rust-worker-poc`,已停,
   ⚠️ **它是残废的**:设备命令关、LLM 指向火山 ark 裸端点而非 kidshub 大脑,**不能拿来接真机**)、
@@ -811,6 +814,33 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - 🔴 **回声/吞句级联的门序就是判据本身**（2026-09-12 实证，我在这上面栽过）：`on_tick_inner` 里 `poll_commit` 之后是**八条 return 的级联**，顺序是 ①单字/本地回声库门(2895，开场 15s 窗，**无控制词豁免**) → ②开场重叠 LCS 门(2947) → ③stop_only/session_exit 吞句(3005) → ④TTS 子串门(3082) → ⑤设备命令(3118) → ⑥普通 LLM 轮。**判「某类输入会怎样」必须看"哪个门先到"，不是"哪个门的默认值是什么"**——我按后者写了回执，被 codex 用行号推翻。另：`poll_commit` 交出的是**合并后**的整句（`turn::Gate::pending` 空格拼接多条 final），所有整句形态判据（`is_stop_only`/`match_command`）对合并串都会失效。
 - **上行录音量化排障法**（不用听也能定界）：读 WAV 算每 50ms RMS 包络 → ①看"agent 连续说话期"里贴噪底的帧占比（96% ⇒ 稳态 AEC 有效）②列出所有 RMS>100 的突发段，拿**录音起点 + 服务端事件 UTC** 对齐（`receipt_done`/`AgentSpeechStarted`/`stt final`）③**突发早于 TTS 开口 ⇒ 结构性不可能是 TTS 回声**，只能是设备本地承接音或人声 ④Goertzel 带能量 + 余弦相似度判"几段突发是否同源"。ASR final 距其声源突发约 **0.9s**（二遍非流式出字延迟），据此反推声源段。
 - 🔴 **排障「小可自己打断自己」先分两类，别当一个故障查**（2026-09-12 实证）：①日志有 `急停白名单命中: 'X' → interrupt` 且 `interim='X'` 而**没有对应 `stt final: X`** → 走的是 `check_hotword` 的 **interim 分支，排在所有回声门之前**，调回声门阈值治不了。②日志有 `stt final: X` 且随即 `agent turn aborted` + `turn committed: X` + `filler picked bucket=barge` → 穿过了 TTS 回声门，因为该门是**精确子串**判据，ASR 错转一个字就失效（`雨洁` ⊄ `雨琪…`）。注意小可每轮开头都说「雨琪，」＝固定回灌靶。**两类都不是阈值问题**，一个是层级、一个是判据形态。
+  ③（2026-09-12 B/C 两房实证，**样本最多的一类**）`interrupt telemetry interim='<2字>'` +
+  `turn committed:` 同样那 2 字 + `filler bucket=barge`，且 **`dropped_total=0`** ⇒ 四道回声门**一道都没命中**，
+  是 2 字 ASR 错转走了普通轮 commit。旧轮一律**硬停不 resume**（假打断 resume 只对 pause 生效）。
+  🔑 **判别器：`interrupt telemetry` 的 `interim` 为空＝自然轮结束，非空＝ASR 文本驱动的插话**——
+  一眼分清「它自己播完了」和「有东西把它打断了」。
+- 🔑 **回声门地图（排障前先定位「当时哪道门在场」，别对着不在场的门调参）**：
+
+  | 门 | 生效条件 | 日志锚 |
+  |---|---|---|
+  | 开场单字门 | 会话起 `LOCAL_AUDIO_ECHO_WINDOW_MS`（默认 **15000**）内 ∧ 恰好 1 字 | `local-audio echo suppressed (opening window)` + `slot=single-char` |
+  | 开场 bank LCS | 同上，比的是**设备本地招呼语 15 条**（与 TTS 正文无关） | 同上，`slot=<bank 条目>` |
+  | 开场 overlap 放宽 | 同上 ∧ `user_commit_count==1` ∧ `!commit.input_ended` | `(opening overlap)` |
+  | TTS 子串门 | 播放中 or 播完 `ECHO_SUPPRESS_WINDOW_MS`（800）内 ∧ ≥2 字 | `echo suppressed: 'X' ⊂ recent tts` |
+
+  灰度 unit 全量 journal 实测：开场门 **18 次命中全是单字**；overlap 门 **0 次**——它对 ordered 首句会话
+  **结构性永不进入**（首句 `input_ended=true` 被显式排除，其后 `user_commit_count≥2`）；TTS 子串门 **0 次**——
+  判据是 `normalize_echo` 后的**精确子串**，而 `normalize_echo` 只滤非字母数字+小写、**无音近归一**，
+  对 ASR 错转天然无效（「好起」对不上正在播的「雨琪，好呀，」，虽然「好」在、同音的「琪」也在）。
+  ⇒ **2 字及以上、或 15 秒之后，目前没有任何回声防线。别把「没命中」读成「没发生」。**
+  ⚠️ 反向也别乱补：「播放中 2 字一律吞」会把用户真实的「退出」吞得更死（B/C 已有疑似样本）。
+- 🔴 **数 journald 里的字段值之前必须先去 ANSI**（2026-09-12 实撞）：tracing 结构化日志的落盘形态是
+  `dropped_total^[[0m^[[2m=^[[0m0`，转义插在**字段名与 `=` 之间** ⇒ `grep -F "dropped_total="` 恒 0，
+  而同批消息文本 grep 得到 8 行——**两个数打架才发现**。固定写法：
+  `journalctl … -o cat | sed -r 's/\x1B\[[0-9;]*[mK]//g' | grep -c …`，或直接 `-o json`。
+- 🔴 **`audit_marker` 不能当判据**：它的函数体第一行是 `if let Some(a) = self.audit`，**只有音频采集开着时才打**。
+  禁录 drop-in 生效后它恒零 ⇒「零条 `echo_gate_*`」既可能是门没命中，也可能是打点没能力发信号。
+  改用三道门各自的**无条件 `info!`** 与 `dropped_total` 计数器，并拿「该锚在别处响过 N 次」当正锚。
 - 🔴 **「端侧一直等 / 转圈不回话」查 `local-audio echo suppressed (opening window)`**：开场 15s 窗（`LOCAL_AUDIO_ECHO_WINDOW_MS` 默认 15000）内单字一律判回声吞掉，零 commit/LLM/TTS。但 `on_final()` 里 `tr.user_final()` 排在吞句判定**之前**，字幕 final 已无条件发给端侧；而 `contract.rs` 只是日志不发包 ⇒ **wire 上宣告了「用户说了 X」却没有任何终结信号**。端侧等待是合理反应，别去查端侧死锁（上行每 10s 1000+ 帧、job 正常存活即可排除）。
 - **ready 补确认生命周期（B48/B49，2026-09-12 06:27 UTC 起在灰度跑）**：`cancel` **默认只是「停」**，不置终态——`Inbound::Cancel` 不带原因字段，worker 唯一可靠判据是「它有没有终结一条在途退出信令」（`exit_pending.take().is_some()`，v140 §4.3 Android 本地 exact 会先发 cancel 当退出终态）。终态来源另有一条：吞句判定 `session_exit`（`stop_only` 则是打断）。两处都走 `ready_confirm::apply()`，映射表是纯函数 `swallow_lifecycle` / `cancel_lifecycle`（`pipeline.rs:2400` / `:2950-2951`）。🔴 **终态判定不受 `SESSION_EXIT_SIGNAL_ENABLED`/canary SN 门控**——吞句面即判定面，否则同一句话在两台设备上语义不同。新 decision 枚举值 `closed`（排在 `budget_exhausted` **之前**：「会话没了」vs「已答过」要分得开）。
 - **部署档案 2026-09-12 06:27 UTC（B48/B49，灰度）**：`feat/ordered-pcm-input` `9918038f4` → sha256 `241585162416cfcde4d0d7d632b477a7fa29d1d6e6e70326cc263b6e5bb90fef`，PID 2714944，上一版 `.prev`=`4ba3b3a8…`（B37），备份 `/root/b48-backup/`。灰度专属 env 加 `ONESHOT_READY_CONFIRM_ENABLED=1`（13→14 键；三个共享 env 命中 0，配 37/11/41 键数正锚）。⚠️ **灰度不能用 `deploy-worker-bin.sh`**——那脚本只认生产路径 `/root/rust-worker/voice-rust-worker.new`；灰度是 `/root/rust-worker-firstturn/`，手动 `install -m 755`。
