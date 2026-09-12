@@ -502,6 +502,17 @@ mod tests {
         assert!(is_session_exit_tail("小可我去睡觉了哈"));
     }
 
+    /// codex B55 §5-2 点名的长句反锚:问「退出之后怎么再进来」不得真退出。
+    /// **单开一个测试函数**是有意的——放进 `session_exit_tail_exemptions_hold` 里,
+    /// 会被那支更早的「怎么退出」断言遮蔽,负向验证时先红的是别人,这条等于没验过。
+    #[test]
+    fn exit_tail_does_not_fire_on_question_about_reentry() {
+        assert!(!is_session_exit_tail("退出后告诉我怎么进入"));
+        assert_eq!(session_exit_tail_hit("退出后告诉我怎么进入"), None);
+        // 正锚:同一函数对真退出句仍然命中,否则上面两条 None 只证明「函数恒返回 None」
+        assert_eq!(session_exit_tail_hit("不想聊了，退出吧"), Some("退出"));
+    }
+
     #[test]
     fn session_exit_tail_exemptions_hold() {
         // 否定豁免:误吞它们=把「还想聊」当退出处理

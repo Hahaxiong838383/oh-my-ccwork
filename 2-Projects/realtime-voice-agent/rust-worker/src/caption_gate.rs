@@ -351,6 +351,26 @@ mod tests {
         assert_eq!(control_outlet_kind("", &stop, &exit, true), None);
     }
 
+    /// **B55 §5 真机数据锚**:B/C 两房四条 2 字错转全都不是控制出口。
+    /// 记这条是为了钉死修复方向——它们走的是普通轮 commit,不是控制通道,
+    /// 所以「保控制出口」那套改动对本轮自打断**一格都够不着**。
+    #[test]
+    fn b55_bc_misrecognitions_are_not_control_outlets() {
+        let stop = hw(&["停", "停下", "等等"]);
+        let exit = hw(&["退出", "不聊了"]);
+        // B 房 08:40:42 / 08:40:55,C 房 08:45:19 / 08:45:46 的实际 commit 文本
+        for t in ["啊急", "付出", "好起", "你说"] {
+            assert_eq!(
+                control_outlet_kind(t, &stop, &exit, true),
+                None,
+                "{t}:普通文本,不得被当成控制出口(否则回声门会被这张白名单整个架空)"
+            );
+        }
+        // 正锚:同一调用形态下真控制词仍分得出来,否则上面四个 None 只是「分类器没跑」
+        assert_eq!(control_outlet_kind("停", &stop, &exit, true), Some("stop"));
+        assert_eq!(control_outlet_kind("退出", &stop, &exit, true), Some("exit_exact"));
+    }
+
     /// `EXIT_TAIL_MATCH=0` 时尾部分支关闭,但精确退出词仍是出口。
     #[test]
     fn exit_tail_respects_switch() {
