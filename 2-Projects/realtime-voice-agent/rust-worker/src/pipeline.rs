@@ -246,6 +246,23 @@ enum AgentState {
     Speaking,
 }
 
+/// B32-A:控制面发送失败只回**枚举类别**,绝不回原文。LiveKit 的错误链里可能带信令
+/// URL 与 query——token 就在 query 里,整条打进 journal 等于把凭据落盘。
+fn publish_fail_class(raw: &str) -> &'static str {
+    let s = raw.to_ascii_lowercase();
+    if s.contains("not connected") || s.contains("disconnect") {
+        "not_connected"
+    } else if s.contains("timeout") || s.contains("timed out") {
+        "timeout"
+    } else if s.contains("too large") || s.contains("payload") {
+        "payload"
+    } else if s.contains("closed") {
+        "closed"
+    } else {
+        "other"
+    }
+}
+
 #[derive(Debug)]
 enum TurnEvent {
     AudioStarted(u64),
@@ -465,6 +482,8 @@ struct Orchestrator {
     t0: Instant,
     /// EOT 判停快照采集(上线前置① D1;EOT_SNAPSHOT_DIR 未设=None,零行为变化)
     snap: Option<crate::eot_snapshot::SnapshotSink>,
+    /// B32-B 打断取证快照(INTERRUPT_SNAPSHOT_ENABLED≠1 = None,零行为变化、不新增任何文件)
+    isnap: Option<crate::eot_snapshot::InterruptSnap>,
 }
 
 fn now_unix_ms() -> i64 {
@@ -903,6 +922,7 @@ pub async fn run_pipeline(
         canary_pending: None,
         t0: Instant::now(),
         snap: crate::eot_snapshot::SnapshotSink::from_env(&room_name),
+        isnap: crate::eot_snapshot::InterruptSnap::from_env(),
         ordered: ordered_session,
         input_phase: input_phase0,
         pending_phase_switch: None,
@@ -1068,8 +1088,10 @@ pub async fn run_pipeline(
                                     track_to_input_loop_ms: track_to_loop,
                                 },
                             );
-                            orch.publish_json(control::TOPIC, v);
-                            info!(room = %room_name, "session.input_ready published");
+                            // B32-A:published 只代表**已排队**(publish_json 是 spawn 即返回);
+                            // 真实 publish_data 结果在下面那条 traced 行,别把这行当送达。
+                            orch.publish_json_traced(control::TOPIC, v, "session.input_ready", trace.to_string());
+                            info!(room = %room_name, "session.input_ready published(scheduled)");
                         }
                         // 老 token/调试房:无受信 trace 可绑,合同禁 pending → 降级不发
                         None => warn!(room = %room_name, "input_ready skipped: 无 trace(老 token 或非 Session API 房)"),
@@ -1113,6 +1135,8 @@ pub async fn run_pipeline(
                 while eot_ring.len() > ring_keep {
                     eot_ring.pop_front();
                 }
+                // B32-B:打断判决登记的取证请求在这里落盘(环已是本帧最新的 8s 窗)
+                orch.drain_interrupt_snapshot(&eot_ring);
                 if let Some(sp) = orch.speaker.as_mut() {
                     sp.ring.append(&samples); // 声纹 ring:写入即幅度过滤
                 }
@@ -1431,6 +1455,102 @@ impl Orchestrator {
                 tracing::debug!(error = %e, "publish_data failed");
             }
         });
+    }
+
+    /// B32-A(codex §3A):只给 `session.input_ready` 用的**真实发送结果**通道。
+    /// 旧 `publish_json` 是 spawn 即返回,那行 `published` 只证明**排进了队**,不证明
+    /// `publish_data` 成功;而失败原本只落 `debug!`,INFO 级 journal 里根本看不见。
+    /// 这里 await 真结果并按 INFO/WARN 打出来。**不重发**:全函数只有一次 publish_data。
+    fn publish_json_traced(&self, topic: &'static str, v: Value, event: &'static str, trace: String) {
+        let p = self.participant.clone();
+        let room = self.room_name.clone();
+        let since_job_ms = self.now_ms() as i64;
+        tokio::spawn(async move {
+            let packet = DataPacket {
+                payload: v.to_string().into_bytes(),
+                topic: Some(topic.to_string()),
+                reliable: true,
+                ..Default::default()
+            };
+            let t0 = Instant::now();
+            let r = p.publish_data(packet).await;
+            let send_ms = t0.elapsed().as_millis() as i64;
+            match r {
+                Ok(()) => info!(room = %room, event, trace = %trace, since_job_ms, send_ms,
+                                publish_ok = true, "control publish result"),
+                Err(e) => warn!(room = %room, event, trace = %trace, since_job_ms, send_ms,
+                                publish_ok = false, fail_class = publish_fail_class(&e.to_string()),
+                                "control publish result"),
+            }
+        });
+    }
+
+    /// B32-B:判决那一刻的播放来源。**取不到证据就 unknown/门状态,不猜**(codex §3B)。
+    /// 设备侧本地承接 worker 只知道「门还没放行」,并不知道设备扬声器此刻是否真在响,
+    /// 故只标门状态,不冒充「正在播本地承接」。
+    fn playback_source(&self) -> &'static str {
+        if self.pending_local_receipt_deadline.is_some() && self.local_receipt_release.is_none() {
+            return "device_local_receipt_gate";
+        }
+        let Some(turn) = self.agent_turn.as_ref() else {
+            return "none";
+        };
+        if !turn.ctl.audio_started() {
+            return "turn_no_audio_yet";
+        }
+        if turn.filler_samples == 0 {
+            return "worker_body";
+        }
+        if turn.ctl.played_samples() < turn.filler_samples {
+            "worker_filler"
+        } else {
+            "worker_body"
+        }
+    }
+
+    /// B32-B:打断判决点登记取证请求。**无 IO**;关闭时只是一次 Option 判空。
+    fn request_interrupt_snapshot(&mut self, decision: &'static str, reason: String) {
+        if self.isnap.is_none() || self.snap.is_none() {
+            return;
+        }
+        let playing = self.playback_source();
+        let turn_id = self.agent_turn.as_ref().map_or(0u64, |t| t.id as u64);
+        let at_ms = self.now_ms() as i64;
+        if let Some(is) = self.isnap.as_mut() {
+            is.request(crate::eot_snapshot::PendingSnap { decision, reason, playing, turn_id, at_ms });
+        }
+    }
+
+    /// B32-B:输入环每帧调用。有待办就用**当前**8s 环落一段 wav + 一条可关联事件。
+    /// 落盘沿用 `SnapshotSink::snapshot`(内部 spawn_blocking),不占热路径。
+    fn drain_interrupt_snapshot(&mut self, ring: &VecDeque<i16>) {
+        let Some((p, taken, cap)) = self.isnap.as_mut().and_then(|is| {
+            let p = is.take_pending()?;
+            Some((p, is.taken(), is.max_per_room()))
+        }) else {
+            return;
+        };
+        let cap_ms = self.now_ms() as i64;
+        let pcm: Vec<i16> = ring.iter().copied().collect();
+        let room = self.room_name.clone();
+        let Some(s) = self.snap.as_mut() else { return };
+        let seq = s.snapshot(&pcm);
+        s.event(
+            "interrupt_snapshot",
+            &[
+                ("seq", &seq.map_or("capped".into(), |v| v.to_string())),
+                ("decision", p.decision),
+                ("reason", &p.reason),
+                ("playing", p.playing),
+                ("turn_id", &p.turn_id.to_string()),
+                ("decide_ms", &p.at_ms.to_string()),
+                ("capture_ms", &cap_ms.to_string()),
+                ("ring_samples", &pcm.len().to_string()),
+            ],
+        );
+        info!(room = %room, decision = p.decision, reason = %p.reason, playing = p.playing,
+              turn_id = p.turn_id, decide_ms = p.at_ms, capture_ms = cap_ms,
+              ring_samples = pcm.len(), taken, cap, "打断取证快照已落");
     }
 
     fn now_ms(&self) -> f64 {
@@ -2543,6 +2663,7 @@ impl Orchestrator {
                     if let Some(s) = &mut self.snap {
                         s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
                     }
+                    self.request_interrupt_snapshot("swallowed", format!("local_audio_echo:{slot}"));
                     return;
                 }
                 // 开场重叠窗放宽门(2026-09-06 0006 实证,详见 textproc::local_audio_echo_overlap_hit):动态招呼语
@@ -2581,6 +2702,7 @@ impl Orchestrator {
                                 let path = format!("overlap:{slot}");
                                 s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &path)]);
                             }
+                            self.request_interrupt_snapshot("swallowed", format!("local_audio_echo_overlap:{slot}"));
                             return;
                         }
                     }
@@ -2673,6 +2795,7 @@ impl Orchestrator {
                 if let Some(s) = &mut self.snap {
                     s.event("swallowed", &[("text", &user_text), ("kind", kind), ("path", path)]);
                 }
+                self.request_interrupt_snapshot("swallowed", format!("{kind}:{path}"));
                 return;
             }
             // TTS 回声对撞(2026-08-26 关灯自嗨实证:确认语「好的…」回声在播完 48ms 后从
@@ -2702,6 +2825,7 @@ impl Orchestrator {
                         if let Some(s) = &mut self.snap {
                             s.event("echo_suppressed", &[("text", &user_text)]);
                         }
+                        self.request_interrupt_snapshot("swallowed", "tts_echo_substring".to_string());
                         self.latest_interim.clear();
                         self.tele_text.clear();
                         return;
@@ -2819,6 +2943,8 @@ impl Orchestrator {
                 stt_ms = commit.stt_delay.as_millis() as u64,
                 "turn committed: {user_text}"
             );
+            // B32-B:被 commit 的那一段也要能关联到音频本体(B31 里「是的」判不了就栽在这)
+            self.request_interrupt_snapshot("committed", format!("eou:{}ms", commit.eou_delay.as_millis()));
             self.publish_json(
                 "metrics",
                 json!({
@@ -3428,5 +3554,35 @@ mod device_turn_tests {
         // 单字判据在门外(计字≥2 才参与)——这里只锚 contains 语义本身:
         // 「灯」是子串,靠调用处的 ≥2 字门挡住误杀,见 commit 对撞门注释
         assert!(tts.contains(&normalize_echo("调整")));
+    }
+}
+
+#[cfg(test)]
+mod publish_result_tests {
+    use super::publish_fail_class;
+
+    /// 这条测试断言的是**脏值的缺席**,不是「脱敏动作发生过」。
+    /// 后者永远会绿(返回的本来就是固定字面量),前者才是真要求。
+    #[test]
+    fn fail_class_never_leaks_url_token_or_room() {
+        let dirty = "failed to publish to wss://live.example.com/rtc\
+?access_token=eyJhbGciOiJIUzI1NiJ9.PAYLOAD.SIG&room=sn-BJP00000000000000000: timed out";
+        let c = publish_fail_class(dirty);
+        assert_eq!(c, "timeout");
+        assert!(!c.contains("eyJ"), "类别串不得含 token");
+        assert!(!c.contains("wss://"), "类别串不得含信令 URL");
+        assert!(!c.contains("access_token"), "类别串不得含 query 参数名");
+        assert!(!c.contains("sn-"), "类别串不得含房名/SN");
+    }
+
+    /// 正锚:四类必须互相分得开。全归 other 的话,「分类正确」与「分类器没跑」不可区分。
+    #[test]
+    fn fail_class_discriminates_between_shapes() {
+        assert_eq!(publish_fail_class("peer is not connected"), "not_connected");
+        assert_eq!(publish_fail_class("engine disconnected"), "not_connected");
+        assert_eq!(publish_fail_class("operation timed out"), "timeout");
+        assert_eq!(publish_fail_class("data channel closed"), "closed");
+        assert_eq!(publish_fail_class("payload too large"), "payload");
+        assert_eq!(publish_fail_class("某个没见过的错"), "other");
     }
 }

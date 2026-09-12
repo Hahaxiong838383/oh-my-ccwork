@@ -196,6 +196,82 @@ impl SnapshotSink {
     }
 }
 
+/// B32-B(codex §3B):ASR **打断判决点**的短窗取证。
+///
+/// 为什么要单开一个:EOT 快照只在**判停路径**(`eot_request`)落盘,而被吞掉的碎片与
+/// 被打断 commit 的那一段上行**永远不经过判停路径**,于是没有任何音频本体。B31 里
+/// 「是的」到底是真人还是回声判不了,就是栽在这——文本级回声门对「回声被 ASR 错转成
+/// 别的字」结构性无效,而唯一能裁决的音频恰好从不落盘。
+///
+/// **默认关**:`INTERRUPT_SNAPSHOT_ENABLED` 未设或非 `1` → `None`,零行为变化、
+/// 不新增任何文件、不多占一字节环。开启还需 `EOT_SNAPSHOT_DIR` 已配(复用同一 sink
+/// 的目录、配额与全局字节上限)。
+pub struct InterruptSnap {
+    max_per_room: u32,
+    taken: u32,
+    pending: Option<PendingSnap>,
+}
+
+/// 判决点登记的取证意图。**只登记,不做 IO**——真正落盘在输入环下一帧(≤20ms),
+/// 8s 窗内容等价,且不把文件写入塞进判决热路径。
+pub struct PendingSnap {
+    pub decision: &'static str,
+    pub reason: String,
+    pub playing: &'static str,
+    pub turn_id: u64,
+    pub at_ms: i64,
+}
+
+impl InterruptSnap {
+    pub fn from_env() -> Option<Self> {
+        let enabled = std::env::var("INTERRUPT_SNAPSHOT_ENABLED").ok().as_deref() == Some("1");
+        let max = std::env::var("INTERRUPT_SNAPSHOT_MAX_PER_ROOM")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(3);
+        Self::from_flag(enabled, max)
+    }
+
+    /// 纯构造(测试用:不碰进程环境。Rust 2024 起 set_var 是 unsafe,且并行测试会互相污染)。
+    pub fn from_flag(enabled: bool, max_per_room: u32) -> Option<Self> {
+        if !enabled {
+            return None;
+        }
+        info!(max_per_room, "打断取证快照已开启(默认关,本次由 INTERRUPT_SNAPSHOT_ENABLED=1 显式打开)");
+        Some(Self { max_per_room, taken: 0, pending: None })
+    }
+
+    /// 登记一次取证请求。同一帧内多次判决只留第一次——codex §3B 明确要求
+    /// 「不能每 interim 反复存盘」。
+    ///
+    /// **这里不查配额**:配额的唯一执行点是 `take_pending`。曾经两处各拦一道,
+    /// 结果是把 `>=` 改成 `>` 注入真 bug 后测试照样全绿——两道守卫互相遮蔽,
+    /// 谁都测不出来。守卫只留一处,判据才有区分力。
+    pub fn request(&mut self, p: PendingSnap) {
+        if self.pending.is_none() {
+            self.pending = Some(p);
+        }
+    }
+
+    pub fn take_pending(&mut self) -> Option<PendingSnap> {
+        if self.taken >= self.max_per_room {
+            self.pending = None;
+            return None;
+        }
+        let p = self.pending.take()?;
+        self.taken += 1;
+        Some(p)
+    }
+
+    pub fn taken(&self) -> u32 {
+        self.taken
+    }
+
+    pub fn max_per_room(&self) -> u32 {
+        self.max_per_room
+    }
+}
+
 impl Drop for SnapshotSink {
     fn drop(&mut self) {
         self.event("job_end", &[("snapshots", &self.seq.to_string())]);
@@ -316,5 +392,68 @@ mod tests {
             assert_eq!(back.len(), 1000);
             assert_eq!(back[999], 999);
         });
+    }
+}
+
+#[cfg(test)]
+mod interrupt_snap_tests {
+    use super::*;
+
+    fn p(reason: &str) -> PendingSnap {
+        PendingSnap {
+            decision: "swallowed",
+            reason: reason.to_string(),
+            playing: "worker_body",
+            turn_id: 1,
+            at_ms: 0,
+        }
+    }
+
+    /// 默认关是这条特性的安全根基:关 = 连对象都不存在,不可能落盘。
+    #[test]
+    fn disabled_by_default_yields_none() {
+        assert!(InterruptSnap::from_flag(false, 3).is_none(), "未显式开启时必须是 None");
+        // 正锚:开启路径确实能造出来,否则「永远 None」和「构造函数坏了」不可区分
+        assert!(InterruptSnap::from_flag(true, 3).is_some());
+    }
+
+    /// 每房 3 段封顶。断言的是**端到端不变量**(跑满 10 轮只许落 3 段),不是
+    /// 某一处守卫的写法——单点断言会被另一处守卫遮蔽而恒绿(实测过)。
+    #[test]
+    fn never_exceeds_cap_whatever_the_request_pattern() {
+        let mut s = InterruptSnap::from_flag(true, 3).unwrap();
+        let mut landed = 0;
+        for i in 0..10 {
+            s.request(p(&format!("r{i}")));
+            if s.take_pending().is_some() {
+                landed += 1;
+            }
+        }
+        assert_eq!(landed, 3, "10 轮请求只许落 3 段");
+        assert_eq!(s.taken(), 3, "计数必须与实际落盘段数一致");
+    }
+
+    /// 配额到顶后不得把请求挂着不放——否则测试结束时还留着一个永不落盘的 pending。
+    #[test]
+    fn clears_pending_once_capped() {
+        let mut s = InterruptSnap::from_flag(true, 1).unwrap();
+        s.request(p("first"));
+        assert!(s.take_pending().is_some());
+        s.request(p("after-cap"));
+        assert!(s.take_pending().is_none(), "到顶后不得再落盘");
+        assert!(s.take_pending().is_none(), "重复调用仍不得落盘");
+    }
+
+    /// 同一帧内 ASR 可能连发多个判决;只落第一个,不做每 interim 存盘。
+    #[test]
+    fn coalesces_multiple_requests_in_one_frame() {
+        let mut s = InterruptSnap::from_flag(true, 3).unwrap();
+        s.request(p("first"));
+        s.request(p("second"));
+        s.request(p("third"));
+        let got = s.take_pending().expect("应有一段");
+        assert_eq!(got.reason, "first", "同帧多次请求只保留第一次");
+        assert!(s.take_pending().is_none(), "同帧不得落第二段");
+        assert_eq!(s.taken(), 1);
     }
 }
