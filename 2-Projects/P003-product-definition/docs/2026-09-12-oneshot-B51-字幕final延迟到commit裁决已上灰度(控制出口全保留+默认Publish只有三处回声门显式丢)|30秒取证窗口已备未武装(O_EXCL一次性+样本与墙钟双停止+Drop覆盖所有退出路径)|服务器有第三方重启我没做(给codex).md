@@ -1,4 +1,4 @@
-# B51｜§4 已上灰度、§5 已备未武装；另有一件服务器上的事必须先说
+# B51｜§4 已上灰度、§5 **已武装（可以开始）**；另有一件服务器上的事必须先说
 
 **先说不属于本任务但必须报的一件事：今天 06:47:47 和 06:48:18（UTC，= 14:47/14:48 CST），有人把 64.90 上的全部 voice unit 重启了两次——不是我做的，也不是部署。**
 
@@ -107,6 +107,61 @@ caption final suppressed (echo)    room=… segments=N published_total=… dropp
 - **24 小时清理任务未登记**。你要求「先注册并回读再开始录音，期限从录音起算」——所以它必须和开关同时上，不能现在挂一个空转的。开录时我会一次做完：`systemd-run --on-active=24h` 注册 → `systemctl list-timers` 回读确认 → 才设开关重启。回执给你 timer 名、下次触发时刻、覆盖路径。
 - 默认不复制到 Air；需要你听证时再谈安全传输。
 
+### 2.5 ✅ 已补完并武装（本节是 15:3x 补记，早于本文件其余部分的时间戳）
+
+上面 2.4 写的「未武装」已经不成立了——两件事都做完了，**按你 §5 规定的顺序**：先登记并回读清理任务，再开开关。
+
+**① 24 小时清理任务：已登记、已回读、并且实测过真的能删。**
+
+```
+oneshot-audit-cleanup-20260912.timer  →  下次触发 Sun 2026-09-13 07:35:39 UTC
+ExecStart = /bin/bash -c rm -rf /root/oneshot-audit-20260912 && logger -t oneshot-audit "cleanup done: …"
+```
+
+我没有只看它「登记在册」就算数：造了两个假文件（`probe.wav` + `CLAIMED`）→ 手动 `systemctl start` 那个 service → 目录确认消失、`Result=success`、`ExecMainStatus=0`、syslog 锚 `cleanup done` 命中 1 → 再确认定时器**仍在册**（手动跑一次没把它取消）。**这个安全网是验过的，不是声明的。**
+
+注意期限口径：定时器从**登记时刻**起算 24 小时，录音发生在登记之后，所以实际删除时刻**早于**「录音起算 24 小时」。比你要求的更严，方向是安全的。
+
+**② 取证开关：已开，进程环境实测。**
+
+| 项 | 实测 |
+|---|---|
+| 灰度 PID | 2725881 → **2727243**，SubState=running，exe 仍 `83a8e38f…`（只重启不换二进制） |
+| `ONESHOT_AUDIT_CAPTURE_ENABLED=1` | 命中 1 |
+| `ONESHOT_AUDIT_CAPTURE_DIR` | `/root/oneshot-audit-20260912`（**专属根，不与任何既有快照树混**） |
+| `ONESHOT_CAPTION_DEFER_ENABLED=1` / `ONESHOT_READY_CONFIRM_ENABLED=1` | 各命中 1 |
+| `EOT_SNAPSHOT_DIR` / `INTERRUPT_SNAPSHOT_ENABLED` | 各命中 **0**（两条既有采集通道仍关） |
+| Umask | 0077；`registered worker` 1 次 |
+| 取证目录 | **尚不存在**——没有合格会话跑过，零文件。未用授权不建任何文件 |
+| 灰度专属 env 键数 | 15 → 17（只加这两个键） |
+| 三个共享 env 对 `ONESHOT_AUDIT_CAPTURE` 命中 | **0 / 0 / 0**（键总数 37/11/41 作正锚） |
+| 生产 `voice-worker-rust` | 2720004 / 06:48:18 UTC / NRestarts 0，**本次未动** |
+
+**→ 可以开始。**
+
+### 2.6 但开始之前，有两件事必须由你把住
+
+1. 🔴 **武装之后，下一个合格会话就是被录的那个，不管是谁触发的。** 判据是「首句 ordered_pcm 轮 + 抢到 `O_EXCL` 占坑」。设备上首句产品门现在是 1，所以**孩子随手唤醒一次就会把这次授权消费掉**。请你通知川哥之后**尽快做那一轮**，中间别让设备被别人用。
+2. 🔴 **本文件开头那个第三方重启还没定性。** 如果录音期间它再来一次，Drop 会写出一份**残缺** WAV，而 claim 已经消费。开录前最好先确认那位在做什么。
+
+两种情况的补救都一样：删掉 `/root/oneshot-audit-20260912/CLAIMED`，就是一次**可审计的重新授权**（不是自动续期）。要我删，说一声。
+
+### 2.7 录完之后我会交什么
+
+只交这些，**不贴音频、不贴 base64、不贴房名**：文件 SHA256、样本数、时长、`stop_reason`（`samples_cap` / `wall_cap` / `session_end`）、trace、以及取证锚点表——
+
+```
+audit capture marker event=check_hotword_interrupt   offset_ms=… samples=…
+audit capture marker event=echo_gate_local_audio     offset_ms=… samples=…
+audit capture marker event=echo_gate_overlap         offset_ms=… samples=…
+audit capture marker event=echo_gate_tts_substring   offset_ms=… samples=…
+audit capture 收口: samples=… duration_ms=… bytes_audio=… stop_reason=… window_wall_ms=…
+```
+
+拿偏移就能在 WAV 里定位到「打断发生的那一刻」。需要你听证时再谈怎么安全送到 Studio 受保护目录。
+
+**建议的那一轮按你 §5 原话**：说「小可小可，说个长句测试一下」，然后**保持安静、不主动说停**，看是否仍自打断；结束触摸「不聊了」收口。没复现就标 NOT_REPRODUCED，不延长、不自动再录。
+
 ---
 
 ## 三、部署锚
@@ -147,5 +202,8 @@ caption final suppressed (echo)    room=… segments=N published_total=… dropp
 - 本轮**零真机会话**通过新二进制，换装后灰度还没接到 job。上一版（B48/B49）在真机跑过 4 个房。
 - 两个自打断的洞（interim 绕门 / 子串判据对错转无效）**一个都没修**。没有声学证据之前我不动打断灵敏度。
 - 整体仍 **DEGRADED**。
+- §5 窗口**已武装**（2.5 节），清理任务已验过；等你协调那一轮。
 
 署名：cc（Claude）| 2026-09-12 15:32 CST
+
+（2.5–2.7 节为武装后补记，时间 15:37 CST）
