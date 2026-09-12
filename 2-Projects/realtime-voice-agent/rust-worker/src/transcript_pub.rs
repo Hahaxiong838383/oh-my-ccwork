@@ -74,6 +74,18 @@ impl TranscriptPub {
         self.user_seg = new_seg_id();
     }
 
+    /// B50 §4:**只轮换段 id,不发包**——把本段 id 交给 `CaptionGate` 缓冲,等 commit 裁决。
+    /// 立刻轮换是关键:否则下一句的 interim 会复用同一个段 id,覆盖掉这段还没发的 final
+    /// (codex §4「不能把下一句并到残留 interim 上」)。
+    pub fn take_seg_for_deferred_final(&mut self) -> String {
+        std::mem::replace(&mut self.user_seg, new_seg_id())
+    }
+
+    /// 裁决通过后补发一条被缓冲的 final(段 id 用当初那个,不是当前的)。
+    pub fn publish_deferred_final(&self, p: &crate::caption_gate::PendingFinal) {
+        self.publish(&self.route.user_identity, &self.route.user_track_sid, &p.seg, &p.text, true);
+    }
+
     /// agent 句段:id 由调用方按 (turn, 句序) 稳定生成,interim/final 同 id。
     pub fn agent_segment(&self, turn_id: u64, idx: usize, text: &str, fin: bool) {
         let id = format!("SG_a{turn_id}_{idx}");

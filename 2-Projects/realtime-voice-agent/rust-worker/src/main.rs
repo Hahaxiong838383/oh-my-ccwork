@@ -20,6 +20,8 @@ mod ordered_pcm;
 mod pipeline;
 mod playout;
 mod preflight;
+mod audit_capture;
+mod caption_gate;
 mod ready_confirm;
 mod segmenter;
 mod speaker_id;

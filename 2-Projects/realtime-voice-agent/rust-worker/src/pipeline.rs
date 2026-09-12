@@ -60,6 +60,9 @@ pub struct PipelineConfig {
     pub ordered_filler_shortest: bool,
     /// B46:ready 有界补确认(默认关;单机灰度 unit 显式 ONESHOT_READY_CONFIRM_ENABLED=1 才开)
     pub ready_confirm_enabled: bool,
+    /// B50 §4:用户 final 字幕延迟到 commit 裁决后再发(默认关,只进灰度专属 env)。
+    /// 开 → 被回声门判掉的句子不再向端侧发非空 LOCAL final,端侧不会空等。
+    pub caption_defer_enabled: bool,
     /// B9 #3（只在隔离 POC env 置 1）：ordered 每条 held final 到达即起投机 LLM（复用 S1v3 start_speculation），
     /// commit 时文本+历史版本相同才消费，否则丢弃；不改 commit 时序与任何门。
     pub ordered_spec_on_final: bool,
@@ -174,6 +177,7 @@ impl PipelineConfig {
             aec_warmup_duration: Duration::from_secs_f32(f("AEC_WARMUP_DURATION", 0.5)),
             ordered_filler_shortest: std::env::var("ORDERED_FILLER_SHORTEST").map(|v| v == "1").unwrap_or(false),
             ready_confirm_enabled: std::env::var("ONESHOT_READY_CONFIRM_ENABLED").map(|v| v == "1").unwrap_or(false),
+            caption_defer_enabled: std::env::var("ONESHOT_CAPTION_DEFER_ENABLED").map(|v| v == "1").unwrap_or(false),
             ordered_spec_on_final: std::env::var("ORDERED_SPEC_ON_FINAL_ENABLED").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_on_spec: std::env::var("ORDERED_SKIP_FILLER_ON_SPEC").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_min_lead_ms: std::env::var("ORDERED_SKIP_FILLER_MIN_LEAD_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(600),
@@ -529,6 +533,9 @@ struct Orchestrator {
     ctx_latch: crate::eot_snapshot::CtxLatch,
     /// B46 ready 有界补确认状态机(默认关)
     ready_confirm: crate::ready_confirm::ReadyConfirm,
+    caption_gate: crate::caption_gate::CaptionGate,
+    /// B50 §5:一次性 30s 上行取证窗口(默认不存在;Drop 即写盘收口)
+    audit: Option<crate::audit_capture::AuditCapture>,
 }
 
 fn now_unix_ms() -> i64 {
@@ -832,6 +839,9 @@ pub async fn run_pipeline(
     };
     // B46:cfg 随后整体 move 进 orch 字面量(字段按源码顺序求值),开关先取成局部值
     let ready_confirm_enabled = cfg.ready_confirm_enabled;
+    let caption_defer_enabled = cfg.caption_defer_enabled;
+    // B50 §5:取证窗口只对真实首句 ordered_pcm 轮武装(自动欢迎/presence_return 房 false)
+    let audit_first_turn = ordered_ctx.first_turn_rtc;
     info!(room = %room_name, prebuilt_age_ms = prebuilt_at.elapsed().as_millis() as u64, "pipeline takeover prebuilt");
     // One-shot v0.3:受信输入模式在第一帧前固定。ordered_pcm=RTC 帧从第一帧起不进 VAD/ASR/EOT/投机,只吃有序 PCM 代次;
     // 现役房 None,下方所有 `orch.ordered` 分支不触发(零行为变化)。
@@ -974,6 +984,8 @@ pub async fn run_pipeline(
         isnap_last_sample_ms: 0,
         ctx_latch: crate::eot_snapshot::CtxLatch::new(),
         ready_confirm: crate::ready_confirm::ReadyConfirm::new(ready_confirm_enabled),
+        caption_gate: crate::caption_gate::CaptionGate::new(caption_defer_enabled),
+        audit: crate::audit_capture::AuditCapture::arm_from_env(ready.trace_id.as_deref(), audit_first_turn),
         ordered: ordered_session,
         input_phase: input_phase0,
         pending_phase_switch: None,
@@ -1119,6 +1131,10 @@ pub async fn run_pipeline(
             frame = mic.next() => {
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
+                // B50 §5:一次性取证窗口旁路收音(默认不存在)。只做一次 extend,不进任何判定链。
+                if let Some(a) = orch.audit.as_mut() {
+                    a.push(&samples);
+                }
                 in_frames += 1;
                 if !input_ready_fired {
                     input_ready_fired = true;
@@ -1859,7 +1875,20 @@ impl Orchestrator {
 
     fn on_final(&mut self, t: String) {
         self.contract.user_transcript_final();
-        self.tr.user_final(&t);
+        // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
+        // 门关着或空 final → 原路立即发(空 final 在端侧不启动等待,且 turn_gate 也不收它)。
+        let seg = if self.caption_gate.enabled() && !t.is_empty() {
+            Some(self.tr.take_seg_for_deferred_final())
+        } else {
+            None
+        };
+        match seg {
+            Some(seg) => {
+                let buffered = self.caption_gate.on_final(seg, &t);
+                debug_assert!(buffered, "门开着且非空必然入缓冲");
+            }
+            None => self.tr.user_final(&t),
+        }
         self.tele_text = t.clone();
         self.pf.reset(); // definite 提交后,下个句段重新允许投机
         self.check_hotword(&t);
@@ -1867,6 +1896,15 @@ impl Orchestrator {
         self.latest_interim.clear();
         if let Some(s) = &mut self.snap {
             s.event("user_final", &[("text", &self.tele_text)]);
+        }
+    }
+
+    /// B50 §5:把取证锚点写进 journal——只记事件名与样本偏移,**不带任何转写正文**。
+    /// 窗口不存在时整条是 no-op。
+    fn audit_marker(&self, event: &str) {
+        if let Some(a) = self.audit.as_ref() {
+            info!(event, offset_ms = a.marker_ms(), samples = a.samples(),
+                  "audit capture marker");
         }
     }
 
@@ -1878,6 +1916,9 @@ impl Orchestrator {
         let norm = normalize_utterance(text);
         if self.cfg.hotwords.contains(&norm) {
             info!(room = %self.room_name, "急停白名单命中: '{norm}' → interrupt");
+            // B50 §5:这条走 interim 分支,绕过所有回声门(B49 §B.1),是最需要声学证据的一刻。
+            // 不另开采集口——本轮窗口是连续的,这里只落**索引**(事件名+样本偏移,不带转写正文)。
+            self.audit_marker("check_hotword_interrupt");
             self.hard_abort_current();
         }
     }
@@ -2747,7 +2788,38 @@ impl Orchestrator {
         }
     }
 
+    /// tick 唯一出口包装(B50 §4):`on_tick_inner` 有 8 条 return,把字幕裁决的落地放在这里,
+    /// 任何一条 return 都绕不过去——将来新增 return 分支自动继承默认判决 Publish。
     async fn on_tick(&mut self) {
+        self.on_tick_inner().await;
+        self.flush_caption_finals();
+    }
+
+    /// 字幕裁决落地。Hold=本 tick 没裁决,缓冲原样留着。
+    fn flush_caption_finals(&mut self) {
+        use crate::caption_gate::Flush;
+        match self.caption_gate.take_flush() {
+            Flush::Hold => {}
+            Flush::Publish(v) => {
+                let n = v.len();
+                for pf in &v {
+                    self.tr.publish_deferred_final(pf);
+                }
+                info!(room = %self.room_name, segments = n,
+                      published_total = self.caption_gate.published_total(),
+                      dropped_total = self.caption_gate.dropped_total(),
+                      "caption final published (deferred)");
+            }
+            Flush::Drop(n) => {
+                info!(room = %self.room_name, segments = n,
+                      published_total = self.caption_gate.published_total(),
+                      dropped_total = self.caption_gate.dropped_total(),
+                      "caption final suppressed (echo)");
+            }
+        }
+    }
+
+    async fn on_tick_inner(&mut self) {
         // One-shot v0.3:有序 PCM 代次超时(begin 后无 end)→ 整代失败终态
         if self.ordered.is_some() {
             let now_ms = unix_ms_now();
@@ -2809,6 +2881,10 @@ impl Orchestrator {
         // 判停提交
         if let Some(commit) = self.turn_gate.poll_commit(now) {
             let user_text = commit.text;
+            // B50 §4:裁决已发生 → 默认「这句有资格被处理」,字幕照发。
+            // 只有下面三处回声门会改判 Drop;其余 return 分支(STOP/EXIT 吞句、设备命令、
+            // 账本压制、音量提示、普通 LLM 轮)自动继承 Publish——控制出口不得被当回声删掉。
+            self.caption_gate.on_commit_decided();
             self.user_commit_count += 1;
             // 本地音频回声对撞(2026-09-01「刚打了个盹儿」幽灵轮,招呼语回声第三次实证):
             // 开场窗内 commit 若模糊命中该设备本地招呼语文案(LCS≥0.8,回声只掉字不加字:
@@ -2852,6 +2928,9 @@ impl Orchestrator {
                         s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
                     }
                     self.request_interrupt_snapshot("swallowed", format!("local_audio_echo:{slot}"));
+                    // B50 §4:判回声 → 本批 final 字幕整批丢,端侧永不因它启动等待
+                    self.caption_gate.mark_echo_drop();
+                    self.audit_marker("echo_gate_local_audio");
                     return;
                 }
                 // 开场重叠窗放宽门(2026-09-06 0006 实证,详见 textproc::local_audio_echo_overlap_hit):动态招呼语
@@ -2891,6 +2970,9 @@ impl Orchestrator {
                                 s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &path)]);
                             }
                             self.request_interrupt_snapshot("swallowed", format!("local_audio_echo_overlap:{slot}"));
+                            // B50 §4:同上(开场重叠窗)
+                            self.caption_gate.mark_echo_drop();
+                            self.audit_marker("echo_gate_overlap");
                             return;
                         }
                     }
@@ -3022,6 +3104,9 @@ impl Orchestrator {
                         self.request_interrupt_snapshot("swallowed", "tts_echo_substring".to_string());
                         self.latest_interim.clear();
                         self.tele_text.clear();
+                        // B50 §4:同上(TTS 子串门)
+                        self.caption_gate.mark_echo_drop();
+                        self.audit_marker("echo_gate_tts_substring");
                         return;
                     }
                 }
