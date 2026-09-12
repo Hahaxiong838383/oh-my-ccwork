@@ -20,6 +20,7 @@ mod ordered_pcm;
 mod pipeline;
 mod playout;
 mod preflight;
+mod ready_confirm;
 mod segmenter;
 mod speaker_id;
 mod stt_volc;

@@ -58,6 +58,8 @@ pub struct PipelineConfig {
     /// B(2026-09-09 codex GO,只在隔离 POC env 置 1):commit 来自 ordered 终局时,普通 filler 改为语义桶最短完整条。
     /// 默认关;生产 env 不设;打断轮/非 ordered 轮不受影响。
     pub ordered_filler_shortest: bool,
+    /// B46:ready 有界补确认(默认关;单机灰度 unit 显式 ONESHOT_READY_CONFIRM_ENABLED=1 才开)
+    pub ready_confirm_enabled: bool,
     /// B9 #3（只在隔离 POC env 置 1）：ordered 每条 held final 到达即起投机 LLM（复用 S1v3 start_speculation），
     /// commit 时文本+历史版本相同才消费，否则丢弃；不改 commit 时序与任何门。
     pub ordered_spec_on_final: bool,
@@ -171,6 +173,7 @@ impl PipelineConfig {
             )),
             aec_warmup_duration: Duration::from_secs_f32(f("AEC_WARMUP_DURATION", 0.5)),
             ordered_filler_shortest: std::env::var("ORDERED_FILLER_SHORTEST").map(|v| v == "1").unwrap_or(false),
+            ready_confirm_enabled: std::env::var("ONESHOT_READY_CONFIRM_ENABLED").map(|v| v == "1").unwrap_or(false),
             ordered_spec_on_final: std::env::var("ORDERED_SPEC_ON_FINAL_ENABLED").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_on_spec: std::env::var("ORDERED_SKIP_FILLER_ON_SPEC").map(|v| v == "1").unwrap_or(false),
             ordered_skip_filler_min_lead_ms: std::env::var("ORDERED_SKIP_FILLER_MIN_LEAD_MS").ok().and_then(|v| v.parse().ok()).unwrap_or(600),
@@ -260,19 +263,19 @@ const CTX_LATCH_MAX_AGE_MS: i64 = 200;
 fn emit_publish_result(
     event: &'static str,
     trace: &str,
-    scheduled_at_job_ms: i64,
+    since_pipeline_ms: i64,
     send_ms: i64,
     err: Option<&str>,
 ) {
     match err {
         None => info!(
             event,
-            trace, scheduled_at_job_ms, send_ms, publish_ok = true, "control publish result"
+            trace, since_pipeline_ms, send_ms, publish_ok = true, "control publish result"
         ),
         Some(e) => warn!(
             event,
             trace,
-            scheduled_at_job_ms,
+            since_pipeline_ms,
             send_ms,
             publish_ok = false,
             fail_class = publish_fail_class(e),
@@ -524,6 +527,8 @@ struct Orchestrator {
     isnap_last_sample_ms: i64,
     /// B34-B abort 前闩住的播放上下文
     ctx_latch: crate::eot_snapshot::CtxLatch,
+    /// B46 ready 有界补确认状态机(默认关)
+    ready_confirm: crate::ready_confirm::ReadyConfirm,
 }
 
 fn now_unix_ms() -> i64 {
@@ -825,6 +830,8 @@ pub async fn run_pipeline(
         Some(p) => p,
         None => prebuild(room_name.clone()).await?,
     };
+    // B46:cfg 随后整体 move 进 orch 字面量(字段按源码顺序求值),开关先取成局部值
+    let ready_confirm_enabled = cfg.ready_confirm_enabled;
     info!(room = %room_name, prebuilt_age_ms = prebuilt_at.elapsed().as_millis() as u64, "pipeline takeover prebuilt");
     // One-shot v0.3:受信输入模式在第一帧前固定。ordered_pcm=RTC 帧从第一帧起不进 VAD/ASR/EOT/投机,只吃有序 PCM 代次;
     // 现役房 None,下方所有 `orch.ordered` 分支不触发(零行为变化)。
@@ -966,6 +973,7 @@ pub async fn run_pipeline(
         isnap_ring: None,
         isnap_last_sample_ms: 0,
         ctx_latch: crate::eot_snapshot::CtxLatch::new(),
+        ready_confirm: crate::ready_confirm::ReadyConfirm::new(ready_confirm_enabled),
         ordered: ordered_session,
         input_phase: input_phase0,
         pending_phase_switch: None,
@@ -1140,6 +1148,29 @@ pub async fn run_pipeline(
                             // 真实 publish_data 结果在下面那条 traced 行,别把这行当送达。
                             orch.publish_json_traced(control::TOPIC, v, "session.input_ready", trace.to_string());
                             info!(trace, "session.input_ready published(scheduled)");
+                            // B46:记下这次真实 ready 的快照;若端侧的补确认请求先到过(pending),
+                            // 就在**同一事件路径**上用同一快照重述一次——不轮询、不另起管线。
+                            let snap = crate::ready_confirm::ReadySnapshot {
+                                issue_to_assignment_ms: ready.issue_to_assignment_ms,
+                                job_room_connect_ms: ready.connect_ms as i64,
+                                track_to_input_loop_ms: track_to_loop,
+                            };
+                            if let Some(req_seq) = orch.ready_confirm.on_real_ready(snap) {
+                                let rv = control::input_ready_restated(
+                                    trace,
+                                    now_unix_ms(),
+                                    &room_name,
+                                    orch.output_gate.is_open(),
+                                    &control::ReadyTimings {
+                                        issue_to_assignment_ms: ready.issue_to_assignment_ms,
+                                        job_room_connect_ms: ready.connect_ms as i64,
+                                        track_to_input_loop_ms: track_to_loop,
+                                    },
+                                    req_seq,
+                                );
+                                orch.publish_json_traced(control::TOPIC, rv, "session.input_ready.restated", trace.to_string());
+                                info!(trace, request_seq = req_seq, decision = "pending_fulfilled", "input_ready.request");
+                            }
                         }
                         // 老 token/调试房:无受信 trace 可绑,合同禁 pending → 降级不发
                         None => warn!(room = %room_name, "input_ready skipped: 无 trace(老 token 或非 Session API 房)"),
@@ -1509,9 +1540,10 @@ impl Orchestrator {
     /// 这里 await 真结果并按 INFO/WARN 打出来。**不重发**:全函数只有一次 publish_data。
     fn publish_json_traced(&self, topic: &'static str, v: Value, event: &'static str, trace: String) {
         let p = self.participant.clone();
-        // 字段定义(codex B34 §2 P0-A 要求写明):这是 pipeline 内**排队发送的时点**,
+        // 字段定义(B44 坑二更正):since_pipeline_ms = 相对 cascade pipeline 启动(self.t0)的毫秒,
+        // **不是**相对 job 受理(那是 input_loop_started 行的 elapsed_ms)。它是排队发送时点,
         // 不是发送完成时点,更不是设备已收到。完成耗时看 send_ms。
-        let scheduled_at_job_ms = self.now_ms() as i64;
+        let since_pipeline_ms = self.now_ms() as i64;
         tokio::spawn(async move {
             let packet = DataPacket {
                 payload: v.to_string().into_bytes(),
@@ -1523,7 +1555,7 @@ impl Orchestrator {
             let r = p.publish_data(packet).await;
             let send_ms = t0.elapsed().as_millis() as i64;
             let e = r.err().map(|e| e.to_string());
-            emit_publish_result(event, &trace, scheduled_at_job_ms, send_ms, e.as_deref());
+            emit_publish_result(event, &trace, since_pipeline_ms, send_ms, e.as_deref());
         });
     }
 
@@ -2302,7 +2334,56 @@ impl Orchestrator {
                     already_done = ev.payload.get("already_done").and_then(|v| v.as_bool()).unwrap_or(false),
                     "session_exit ack received");
             }
+            control::Inbound::InputReadyRequest { version } => {
+                // B46 §4.1:校验链=开关 → sender 身份 → trace → 幂等 → 状态机。任何一环不过只记枚举,
+                // **绝不**落到 ASR/LLM/greet/filler/设备命令/首句提交路径,也不新建或复活会话。
+                let expected = crate::ordered_pcm::expected_device_identity(&self.room_name);
+                let sender_ok = expected.is_some() && identity == expected.as_deref();
+                let trace_ok = self.device_trace.as_deref() == Some(ev.trace_id.as_str());
+                let decision: &str = if !self.cfg.ready_confirm_enabled {
+                    "disabled"
+                } else if !sender_ok {
+                    "rejected_sender"
+                } else if !trace_ok {
+                    "rejected_trace"
+                } else if version != 1 {
+                    "rejected_version"
+                } else if !self.ctrl_dedup.first_time(&ev.trace_id, ev.seq) {
+                    "duplicate_seq"
+                } else {
+                    use crate::ready_confirm::Decision as D;
+                    match self.ready_confirm.on_request(ev.seq) {
+                        D::Disabled => "disabled",
+                        D::Pending => "pending",
+                        D::AlreadyPending => "already_pending",
+                        D::BudgetExhausted => "budget_exhausted",
+                        D::Restated => {
+                            // 真实 ready 已到:用**当初那次**的快照原样重述,不重算、不伪造
+                            let s = self.ready_confirm.snapshot().cloned().expect("Restated 必有快照");
+                            let rv = control::input_ready_restated(
+                                &ev.trace_id,
+                                now_unix_ms(),
+                                &self.room_name,
+                                self.output_gate.is_open(),
+                                &control::ReadyTimings {
+                                    issue_to_assignment_ms: s.issue_to_assignment_ms,
+                                    job_room_connect_ms: s.job_room_connect_ms,
+                                    track_to_input_loop_ms: s.track_to_input_loop_ms,
+                                },
+                                ev.seq,
+                            );
+                            self.publish_json_traced(control::TOPIC, rv, "session.input_ready.restated", ev.trace_id.clone());
+                            "restated"
+                        }
+                    }
+                };
+                // 日志纪律(B46 §4.5):只记 trace / request_seq / decision / 预算;不带 room/SN/token/原始 payload
+                info!(trace_id = %ev.trace_id, request_seq = ev.seq, version, decision,
+                      budget_left = self.ready_confirm.budget_left(), "input_ready.request");
+            }
             control::Inbound::Cancel => {
+                // B46:取消=本 job 不会再有真实 ready,pending 作废(不新建、不复活)
+                self.ready_confirm.on_cancel();
                 // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
                 if self.ordered.is_some() {
                     let acts = self.ordered.as_mut().map(|o| o.fail(crate::ordered_pcm::FailReason::Cancelled)).unwrap_or_default();
@@ -3727,7 +3808,7 @@ mod publish_result_tests {
         let ok = emit_and_capture(None);
         assert!(ok.contains("publish_ok=true"), "{ok}");
         assert!(ok.contains("send_ms=7"), "{ok}");
-        assert!(ok.contains("scheduled_at_job_ms=123"), "口径字段名要明确: {ok}");
+        assert!(ok.contains("since_pipeline_ms=123"), "口径字段名要明确: {ok}");
 
         let bad = emit_and_capture(Some("operation timed out"));
         assert!(bad.contains("publish_ok=false"), "{bad}");

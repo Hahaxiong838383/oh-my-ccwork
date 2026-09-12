@@ -75,6 +75,11 @@ pub enum Inbound {
     /// 2b 合同 v2:Android 能力声明(随 wake 包 `payload.device_command_contract_version`);
     /// <2 或缺失=该 room 只观察不发 L2。缺字段的 wake 仍映射 Bypass(老 APK 兼容)。
     Capability { contract_version: u32 },
+    /// B46:端侧对 `session.input_ready` 的**只读状态查询**。一次性 ready 事件会丢,
+    /// 端侧在真实 Room 连接/放麦门完成后若仍无已验证 ready,发一次此请求;worker 在
+    /// 真实输入管线仍就绪时把现有 ready 原样重述一次(每 job 预算 1,见 ready_confirm.rs)。
+    /// **不复用 wake**:wake 只在 commandContractVersion≠3 时发布,设备控制 v3 路径无此事件。
+    InputReadyRequest { version: u32 },
 }
 
 /// 解析入站包。返回 None = 丢弃(非 android / 未知类型 / 畸形)。
@@ -111,6 +116,9 @@ pub fn parse(raw: &[u8]) -> Option<(Envelope, Inbound)> {
         },
         "canary.say" => Inbound::CanarySay,
         "session_exit_detected.ack" => Inbound::SessionExitAck,
+        "session.input_ready.request" => Inbound::InputReadyRequest {
+            version: ev.payload.get("version").and_then(|v| v.as_u64()).unwrap_or(0).min(u32::MAX as u64) as u32,
+        },
         _ => return None,
     };
     Some((ev, kind))
@@ -180,6 +188,7 @@ pub fn session_exit_detected(
 
 /// input_ready 各分段时延(合同 2026-08-18:dispatch 时刻 worker 观测不到,故第一段
 /// 以 room 名尾部的签发 unix 秒为锚——秒级精度+跨机 NTP 误差,仅供观测不进门禁)。
+#[derive(Debug, Clone)]
 pub struct ReadyTimings {
     pub issue_to_assignment_ms: Option<i64>,
     pub job_room_connect_ms: i64,
@@ -214,6 +223,23 @@ pub fn input_ready(
             },
         },
     })
+}
+
+/// B46:重述 `session.input_ready`——与首次发射**同一构造**,只在 payload 追加 `request_seq`
+/// 供端侧对账(Android 现有校验忽略额外字段,原校验不放宽)。不是 output_ready,不是另一套 ready。
+pub fn input_ready_restated(
+    trace_id: &str,
+    ts_ms: i64,
+    room: &str,
+    output_ready: bool,
+    t: &ReadyTimings,
+    request_seq: i64,
+) -> Value {
+    let mut v = input_ready(trace_id, ts_ms, room, output_ready, t);
+    if let Some(p) = v.get_mut("payload").and_then(|p| p.as_object_mut()) {
+        p.insert("request_seq".into(), json!(request_seq));
+    }
+    v
 }
 
 /// 构造 `session.output_ready`(合同 §5.4:仅诊断,不作为 Android 任何门)。
@@ -683,6 +709,36 @@ mod tests {
     }
 
     /// worker 自发的 ready 事件走同一 topic:入站 parse 必须丢弃(src=worker),不得自食。
+    /// B46:请求类型解析 + src 纪律 + 重述包形状。
+    #[test]
+    fn input_ready_request_parses_and_restated_keeps_shape() {
+        let raw = json!({"trace_id":"tr-9","ts_ms":1,"src":"android","type":"session.input_ready.request",
+                          "lane":"L2","seq":4,"payload":{"version":1}}).to_string();
+        let (ev, kind) = parse(raw.as_bytes()).expect("应解析");
+        assert_eq!(kind, Inbound::InputReadyRequest { version: 1 });
+        assert_eq!(ev.seq, 4);
+        // src=worker 的同名包必须被挡(worker 自己绝不会发这个类型,但纪律要锁死)
+        let bad = raw.replace("\"src\":\"android\"", "\"src\":\"worker\"");
+        assert!(parse(bad.as_bytes()).is_none());
+        // 缺 version 也解析(=0),由上层决定是否接受;不因端侧少字段就丢包
+        let nov = json!({"trace_id":"tr-9","src":"android","type":"session.input_ready.request","payload":{}}).to_string();
+        assert_eq!(parse(nov.as_bytes()).map(|(_, k)| k), Some(Inbound::InputReadyRequest { version: 0 }));
+
+        let t = ReadyTimings { issue_to_assignment_ms: Some(400), job_room_connect_ms: 150, track_to_input_loop_ms: 5 };
+        let v = input_ready_restated("tr-9", 2, "r", true, &t, 4);
+        // 与首次 ready 除 request_seq 外逐字段相同——「重述」不是「另一套 ready」
+        let base = input_ready("tr-9", 2, "r", true, &t);
+        assert_eq!(v["type"], "session.input_ready");
+        assert_eq!(v["src"], "worker");
+        assert_eq!(v["trace_id"], base["trace_id"]);
+        assert_eq!(v["payload"]["timings_ms"], base["payload"]["timings_ms"]);
+        assert_eq!(v["payload"]["input_loop_started"], base["payload"]["input_loop_started"]);
+        assert_eq!(v["payload"]["request_seq"], 4);
+        assert!(base["payload"].get("request_seq").is_none());
+        // 重述包同样是 src=worker,不得被自己的入站 parse 吃掉
+        assert!(parse(v.to_string().as_bytes()).is_none());
+    }
+
     #[test]
     fn own_ready_events_rejected_by_inbound_parse() {
         let t = ReadyTimings {
