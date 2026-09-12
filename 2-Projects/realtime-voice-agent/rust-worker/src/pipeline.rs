@@ -2795,6 +2795,23 @@ impl Orchestrator {
         self.flush_caption_finals();
     }
 
+    /// B52 §6.2:回声门判掉一条 commit 时的**唯一**字幕落点。控制出口(急停/退出/设备命令)
+    /// 即便被吞也必须把 LOCAL final 发出去,否则端侧失去控制通道。
+    /// 三个回声门都只调这个函数,`mark_echo_drop` 在 pipeline 里没有第二个调用点——
+    /// 新增回声门只要走它就自动继承这条豁免。
+    fn echo_drop_caption(&mut self, user_text: &str, gate: &'static str) {
+        let outlet = crate::caption_gate::control_outlet_kind(
+            user_text,
+            &self.cfg.hotwords,
+            &self.cfg.exit_hotwords,
+            self.cfg.exit_tail_match,
+        );
+        if !self.caption_gate.mark_echo_drop(outlet) {
+            info!(room = %self.room_name, gate, outlet = outlet.unwrap_or("-"),
+                  "caption kept: 控制出口被回声门吞掉,但 LOCAL final 仍发给端侧");
+        }
+    }
+
     /// 字幕裁决落地。Hold=本 tick 没裁决,缓冲原样留着。
     fn flush_caption_finals(&mut self) {
         use crate::caption_gate::Flush;
@@ -2928,8 +2945,8 @@ impl Orchestrator {
                         s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &slot)]);
                     }
                     self.request_interrupt_snapshot("swallowed", format!("local_audio_echo:{slot}"));
-                    // B50 §4:判回声 → 本批 final 字幕整批丢,端侧永不因它启动等待
-                    self.caption_gate.mark_echo_drop();
+                    // B50 §4 / B52 §6.2:判回声 → 丢本批 final 字幕;但控制出口除外(见 echo_drop_caption)
+                    self.echo_drop_caption(&user_text, "local_audio");
                     self.audit_marker("echo_gate_local_audio");
                     return;
                 }
@@ -2970,8 +2987,8 @@ impl Orchestrator {
                                 s.event("swallowed", &[("text", &user_text), ("kind", "local_audio_echo"), ("path", &path)]);
                             }
                             self.request_interrupt_snapshot("swallowed", format!("local_audio_echo_overlap:{slot}"));
-                            // B50 §4:同上(开场重叠窗)
-                            self.caption_gate.mark_echo_drop();
+                            // B50 §4 / B52 §6.2:同上(开场重叠窗)
+                            self.echo_drop_caption(&user_text, "overlap");
                             self.audit_marker("echo_gate_overlap");
                             return;
                         }
@@ -3104,8 +3121,8 @@ impl Orchestrator {
                         self.request_interrupt_snapshot("swallowed", "tts_echo_substring".to_string());
                         self.latest_interim.clear();
                         self.tele_text.clear();
-                        // B50 §4:同上(TTS 子串门)
-                        self.caption_gate.mark_echo_drop();
+                        // B50 §4 / B52 §6.2:同上(TTS 子串门)
+                        self.echo_drop_caption(&user_text, "tts_substring");
                         self.audit_marker("echo_gate_tts_substring");
                         return;
                     }

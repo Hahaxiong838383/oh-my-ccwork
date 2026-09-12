@@ -32,6 +32,42 @@
 //!
 //! 只保留「有资格被处理」的 final;工具/生成失败仍可能没有回复。端侧有界保护继续保留。
 
+/// B52 §6.2:**控制出口白名单**——这些文本即便被回声门吞掉不成轮,它们的 LOCAL final 字幕
+/// **仍必须发给端侧**,否则端侧失去控制出口。
+///
+/// 为什么必须有这个:B51 我声称「控制出口全保留」,依据是 `on_tick_inner` 里 stop_only /
+/// session_exit 分支不调 `mark_echo_drop`。**codex B52 §6.2 指出这个推理错了**——单字/本地
+/// 回声库门排在那些分支**之前**,开场 15 秒窗内一个单字「停」会先被它吞掉并丢字幕,根本走不到
+/// 后面的默认 Publish。判据套在了错误的层上(同族 [[feedback_criteria_must_match_object_variant]])。
+///
+/// 四类出口:
+/// - `stop`：急停词(`cfg.hotwords`)——端侧靠它清「等回复」状态
+/// - `exit_exact`：退出词精确命中(`cfg.exit_hotwords`)
+/// - `exit_tail`：复合句尾部/碎片退出意图——`SESSION_EXIT_SIGNAL_ENABLED=0` 的部署**只能**靠它退出
+/// - `command`：设备命令——有效输入,零 LLM 不等于该丢
+///
+/// 判决只影响**字幕**:吞句与否、成不成轮,全部维持原样,本函数不改任何打断/退出语义。
+pub fn control_outlet_kind(
+    text: &str,
+    hotwords: &std::collections::HashSet<String>,
+    exit_hotwords: &std::collections::HashSet<String>,
+    exit_tail_match: bool,
+) -> Option<&'static str> {
+    if crate::textproc::is_stop_only(hotwords, text) {
+        return Some("stop");
+    }
+    if crate::textproc::is_stop_only(exit_hotwords, text) {
+        return Some("exit_exact");
+    }
+    if exit_tail_match && crate::textproc::session_exit_tail_hit(text).is_some() {
+        return Some("exit_tail");
+    }
+    if crate::device_intent::match_command(text).is_some() {
+        return Some("command");
+    }
+    None
+}
+
 /// 一条等待裁决的用户 final 字幕:段 id 在 final 到达那刻就定下并轮换,内容照原样。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PendingFinal {
@@ -107,10 +143,19 @@ impl CaptionGate {
     }
 
     /// 三处回声门专用:判为回声 → 整批丢。只能在 `on_commit_decided` 之后调用。
-    pub fn mark_echo_drop(&mut self) {
+    ///
+    /// `control_outlet` = 该文本是不是控制出口(由 [`control_outlet_kind`] 得出)。**是 → 不丢**,
+    /// 返回 `false`。把豁免放在这里而不是调用点,是为了让「控制出口不会被丢」成为**本函数的
+    /// 不变量**:调用点必须显式给出判定结果,绕不过去。B51 的错就错在豁免散在调用点上,
+    /// 而单字门那个调用点根本没写豁免。
+    pub fn mark_echo_drop(&mut self, control_outlet: Option<&'static str>) -> bool {
+        if control_outlet.is_some() {
+            return false;
+        }
         if self.enabled {
             self.verdict = Verdict::Drop;
         }
+        true
     }
 
     /// tick 收尾唯一出口:取出裁决并复位。`Hold` 不动缓冲。
@@ -196,7 +241,7 @@ mod tests {
         let mut g = CaptionGate::new(true);
         g.on_final("A".into(), "吧");
         g.on_commit_decided();
-        g.mark_echo_drop();
+        g.mark_echo_drop(None);
         assert_eq!(g.take_flush(), Flush::Drop(1));
         assert_eq!(g.buffered(), 0);
         assert_eq!(g.dropped_total(), 1);
@@ -209,7 +254,7 @@ mod tests {
         let mut g = CaptionGate::new(true);
         g.on_final("A".into(), "吧");
         g.on_commit_decided();
-        g.mark_echo_drop();
+        g.mark_echo_drop(None);
         assert_eq!(g.take_flush(), Flush::Drop(1));
 
         g.on_final("B".into(), "讲个故事");
@@ -254,7 +299,7 @@ mod tests {
         assert_eq!(g.take_flush(), Flush::Hold);
         let mut g2 = CaptionGate::new(true);
         g2.on_commit_decided();
-        g2.mark_echo_drop();
+        g2.mark_echo_drop(None);
         assert_eq!(g2.take_flush(), Flush::Hold);
     }
 
@@ -267,5 +312,85 @@ mod tests {
         assert_eq!(g.take_flush(), Flush::Hold);
         assert_eq!(g.published_total(), 0);
         assert_eq!(g.dropped_total(), 0);
+    }
+
+    // ---------- B52 §6.2:控制出口白名单 ----------
+
+    fn hw(v: &[&str]) -> std::collections::HashSet<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    /// 四类控制出口逐条锁死。任何一类失效,端侧就会丢掉对应的控制通道。
+    #[test]
+    fn control_outlet_matrix() {
+        let stop = hw(&["停", "停下", "等等"]);
+        let exit = hw(&["退出", "不聊了"]);
+        assert_eq!(control_outlet_kind("停", &stop, &exit, true), Some("stop"), "急停词:端侧靠它清等答状态");
+        assert_eq!(control_outlet_kind("停下", &stop, &exit, true), Some("stop"));
+        assert_eq!(control_outlet_kind("退出", &stop, &exit, true), Some("exit_exact"), "精确退出词");
+        assert_eq!(control_outlet_kind("不聊了", &stop, &exit, true), Some("exit_exact"));
+        assert_eq!(
+            control_outlet_kind("那我们不想聊了", &stop, &hw(&[]), true),
+            Some("exit_tail"),
+            "尾部退出意图:SESSION_EXIT_SIGNAL_ENABLED=0 的部署只能靠这条字幕退出"
+        );
+        // 负锚:普通话不是控制出口,否则这张白名单等于关掉了整个回声门
+        assert_eq!(control_outlet_kind("讲个故事", &stop, &exit, true), None);
+        assert_eq!(control_outlet_kind("好", &stop, &exit, true), None, "单字回声照旧该丢");
+        assert_eq!(control_outlet_kind("琪", &stop, &exit, true), None);
+        assert_eq!(control_outlet_kind("", &stop, &exit, true), None);
+    }
+
+    /// `EXIT_TAIL_MATCH=0` 时尾部分支关闭,但精确退出词仍是出口。
+    #[test]
+    fn exit_tail_respects_switch() {
+        let stop = hw(&["停"]);
+        let exit = hw(&["退出"]);
+        assert_eq!(control_outlet_kind("那我们不想聊了", &stop, &exit, false), None, "开关关=尾部不算出口");
+        assert_eq!(control_outlet_kind("退出", &stop, &exit, false), Some("exit_exact"), "精确词不受该开关影响");
+    }
+
+    /// **codex B52 §6.2 那条缺陷的回归锚**:单字「停」在开场窗被回声门吞掉时,
+    /// 字幕判决必须仍是 Publish——这正是我 B51 说错的那一格。
+    #[test]
+    fn stop_swallowed_as_echo_still_publishes_caption() {
+        let stop = hw(&["停"]);
+        let exit = hw(&["退出"]);
+        let mut g = CaptionGate::new(true);
+        g.on_final("S".into(), "停");
+        g.on_commit_decided();
+        // 模拟单字回声门命中:调用方先查白名单,命中就**不**调 mark_echo_drop
+        if control_outlet_kind("停", &stop, &exit, true).is_none() {
+            g.mark_echo_drop(None);
+        }
+        assert_eq!(g.take_flush(), Flush::Publish(vec![p("S", "停")]), "被当回声吞掉也要把 final 发出去");
+
+        // 对照:同一条路径上的真回声必须照丢,否则这张白名单就是把门整个关掉
+        let mut g2 = CaptionGate::new(true);
+        g2.on_final("E".into(), "好");
+        g2.on_commit_decided();
+        if control_outlet_kind("好", &stop, &exit, true).is_none() {
+            g2.mark_echo_drop(None);
+        }
+        assert_eq!(g2.take_flush(), Flush::Drop(1), "真回声仍然丢");
+    }
+
+    /// **强制点直测**:控制出口传进来时,`mark_echo_drop` 自己拒绝丢弃并返回 false。
+    /// 这条不是测策略,是测「调用点绕不过去」这个不变量。
+    #[test]
+    fn mark_echo_drop_refuses_to_drop_control_outlets() {
+        for outlet in ["stop", "exit_exact", "exit_tail", "command"] {
+            let mut g = CaptionGate::new(true);
+            g.on_final("S".into(), "停");
+            g.on_commit_decided();
+            assert!(!g.mark_echo_drop(Some(outlet)), "{outlet}:必须拒绝丢弃并返回 false");
+            assert_eq!(g.take_flush(), Flush::Publish(vec![p("S", "停")]), "{outlet} 的字幕必须照发");
+        }
+        // 正锚:非控制出口照丢,否则这个不变量等于把整个回声门关掉
+        let mut g = CaptionGate::new(true);
+        g.on_final("E".into(), "好");
+        g.on_commit_decided();
+        assert!(g.mark_echo_drop(None), "普通回声必须返回 true 并丢弃");
+        assert_eq!(g.take_flush(), Flush::Drop(1));
     }
 }
