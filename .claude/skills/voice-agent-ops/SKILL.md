@@ -817,8 +817,22 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   ③（2026-09-12 B/C 两房实证，**样本最多的一类**）`interrupt telemetry interim='<2字>'` +
   `turn committed:` 同样那 2 字 + `filler bucket=barge`，且 **`dropped_total=0`** ⇒ 四道回声门**一道都没命中**，
   是 2 字 ASR 错转走了普通轮 commit。旧轮一律**硬停不 resume**（假打断 resume 只对 pause 生效）。
-  🔑 **判别器：`interrupt telemetry` 的 `interim` 为空＝自然轮结束，非空＝ASR 文本驱动的插话**——
-  一眼分清「它自己播完了」和「有东西把它打断了」。
+  🔑 **`interrupt telemetry` 的 `interim` 空＝自然轮结束，非空＝被一条 ASR 文本顶掉**——
+  ⚠️ 这是**路径信号，不是声学信号**（`pipeline.rs` 只是在状态切换时读 `tele_text` 快照）。
+  它回答「这次停是自己播完还是被文本打断」，**不回答声源是谁**（codex B57 §2-B-3 纠正）。
+- 🔑 **真正逐句的声学/意图信号有两个，而且它们不带 `room=` 字段——按房名 grep 会整批漏掉**
+  （我 B56 就是这么漏的，改按时间窗捞）：
+  | 锚 | 含义 | 注意 |
+  |---|---|---|
+  | `契约 UserSpeechStarted` | VAD 起点触发过 | **没有 `UserSpeechStopped` 这个事件**，别去数它（数出来的零是拿不存在的键得到的） |
+  | `speaker id: skip(有效语音 X s < 1.0s)` | 上次 commit 以来通过幅度门的上行时长（`snapshot_and_clear` 每次 commit 清零）＝**逐句** | 吞句路径不打这行；区间与真人重叠，只当量级参考不当判据 |
+  | `turn committed … stt_ms=N` | N>0 ⇒ VAD END 触发过且早于 final（`anchor` 无 END 时退化为 final 自身，`stt_delay` 恒 0） | 这是判断 VAD END 的唯一可用代理 |
+  2026-09-12 一坐席 12 条 RTC commit：**6 条用户本意全部有 VAD 起点，6 条非本意（自打断+单字回声）全部没有，零交叉**。
+  ⚠️ n=12、一台设备一个人，**是假设不是判据**；弱声真人同样可能没有 VAD 起点（codex B57 §2-B-2）。
+- 🔴 **`first_speech_onset_at` 是会话级闩锁不是逐句量**：`pipeline.rs:1788` 只有 `get_or_insert` 一个写点、**从不重置**。
+  本会话任何时刻出现过一次 VAD 起点，之后每一句都读成「有起点」。
+  要拿「无 VAD 起点」当逐句判据，**必须先换成「距上次 commit 以来是否出现过起点」**——
+  否则它在真实会话里静默失效，而失效形态恰好是「不再拦任何东西」，和没有防线完全同形。
 - 🔑 **回声门地图（排障前先定位「当时哪道门在场」，别对着不在场的门调参）**：
 
   | 门 | 生效条件 | 日志锚 |
@@ -834,6 +848,14 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   对 ASR 错转天然无效（「好起」对不上正在播的「雨琪，好呀，」，虽然「好」在、同音的「琪」也在）。
   ⇒ **2 字及以上、或 15 秒之后，目前没有任何回声防线。别把「没命中」读成「没发生」。**
   ⚠️ 反向也别乱补：「播放中 2 字一律吞」会把用户真实的「退出」吞得更死（B/C 已有疑似样本）。
+  🔑 **TTS 子串门的参考文本是「已合成入轨」不是「已播出」**：`synth_text` 在 `track()` 里追加，
+  而 `track` 在 `synthesize().await` 返回后才调；`tts synth:` 那行打在 `synthesize` 入口 ⇒
+  **日志出现 ≠ 已进参考库**。领先量有界＝`pcm_tx` 的 32 段通道。已播片段用现成的
+  `truncate_spoken(synth, progress, played_samples)` 就能算，不用新埋点。
+  📐 **`已播片段 ⊆ 参考库` 恒成立** ⇒ 把参考收紧到已播**只会更少命中**，
+  **修不了漏，只降误伤**（例：合成串已有「继续」而喇叭只播到「你好」时，真人说「继续」会被误吞）。
+  📌 `tts synth:` 只落**前 24 字**+字数（S2B1 合同：完整文本不进 journal）⇒
+  超过 24 字的句子事后**不可逐字恢复**，别拿 LLM 正文补造。
 - 🔴 **数 journald 里的字段值之前必须先去 ANSI**（2026-09-12 实撞）：tracing 结构化日志的落盘形态是
   `dropped_total^[[0m^[[2m=^[[0m0`，转义插在**字段名与 `=` 之间** ⇒ `grep -F "dropped_total="` 恒 0，
   而同批消息文本 grep 得到 8 行——**两个数打架才发现**。固定写法：
