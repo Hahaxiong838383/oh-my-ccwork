@@ -2354,6 +2354,7 @@ impl Orchestrator {
                     use crate::ready_confirm::Decision as D;
                     match self.ready_confirm.on_request(ev.seq) {
                         D::Disabled => "disabled",
+                        D::Closed => "closed",
                         D::Pending => "pending",
                         D::AlreadyPending => "already_pending",
                         D::BudgetExhausted => "budget_exhausted",
@@ -2382,8 +2383,6 @@ impl Orchestrator {
                       budget_left = self.ready_confirm.budget_left(), "input_ready.request");
             }
             control::Inbound::Cancel => {
-                // B46:取消=本 job 不会再有真实 ready,pending 作废(不新建、不复活)
-                self.ready_confirm.on_cancel();
                 // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
                 if self.ordered.is_some() {
                     let acts = self.ordered.as_mut().map(|o| o.fail(crate::ordered_pcm::FailReason::Cancelled)).unwrap_or_default();
@@ -2391,9 +2390,14 @@ impl Orchestrator {
                 }
                 // v140 §4.3:Android 本地 exact 先命中会先发既有 cancel——cancel 亦为退出
                 // 信令终态,停重试(不得形成重试风暴)。
-                if self.exit_pending.take().is_some() {
+                let terminated_exit_signal = self.exit_pending.take().is_some();
+                if terminated_exit_signal {
                     info!(room = %self.room_name, "session_exit signal terminated by cancel");
                 }
+                // B48 §3:cancel **默认是「停」**——只打断在说的 turn,会话与输入管线都还在,
+                // 补确认能力原封不动(把所有 cancel 置终态会损坏「停了还能接着聊」)。
+                // 唯一例外:它终结了在途退出信令(v140 §4.3 Android 本地 exact 先命中),那是退出终态。
+                self.ready_confirm.apply(crate::ready_confirm::cancel_lifecycle(terminated_exit_signal));
                 let first = self.ctrl_dedup.first_time(&ev.trace_id, ev.seq);
                 // 有在说的 turn 才谈得上"取消";没有则 cancelled=false 但不报错
                 let had_turn = self.agent_turn.is_some();
@@ -2940,6 +2944,12 @@ impl Orchestrator {
             };
             if let Some((kind, path)) = swallow_kind {
                 info!(room = %self.room_name, path, "{kind} utterance swallowed: '{user_text}'");
+                // B48 §3:停 vs 退出的分水岭。stop_only=只打断,补确认能力不变;
+                // session_exit=会话终态,此后迟到的补确认查询一律 Closed(不登记 pending、不重述)。
+                // ⚠️ 终态判定**不受 exit_signal_on 门控**:吞句面即判定面,信令发不发是另一回事。
+                if let Some(lc) = crate::ready_confirm::swallow_lifecycle(kind) {
+                    self.ready_confirm.apply(lc);
+                }
                 // v140 §4.1:三路命中(exact/tail/fragment)任一 → 发 session_exit_detected。
                 // 纪律:envelope 不带转写正文;trace 缺失=不发(受信通道没建立,fail-closed)。
                 if kind == "session_exit" && self.exit_signal_on {
