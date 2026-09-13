@@ -1,0 +1,97 @@
+# sherpa-onnx v1.13.5 源码构建 × MS ORT 1.28.0(上线前置② S1,tasks/voice-eot-上线前置.md)
+# 为什么源码建:sherpa 官方预编译(wheel/release tar)全部链 ORT ≤1.27.1,而 ort rc.13
+# 版本门只收 ≥1.28(原型报告 §一);单 ORT 统一 1.28 需要 sherpa 侧原生链 1.28。
+# 触发:push 本分支(dispatch 不认 feature 分支 workflow,同 eotbench 教训)。
+# ubuntu-24.04 = 64.90 glibc 2.39 对齐。
+name: sherpa-ort128
+on:
+  push:
+    branches: [feat/eot-snapshot]
+    paths:
+      - '2-Projects/realtime-voice-agent/rust-worker/sherpa128/**'
+      - '.github/workflows/sherpa-ort128-build.yml'
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: k2-fsa/sherpa-onnx
+          ref: v1.13.5
+          path: sherpa-src
+      - name: fetch MS onnxruntime 1.28.0
+        run: |
+          curl -sSL -o ort.tgz "https://github.com/microsoft/onnxruntime/releases/download/v1.28.0/onnxruntime-linux-x64-1.28.0.tgz"
+          tar xzf ort.tgz
+          mv onnxruntime-linux-x64-1.28.0 ort128
+          ls ort128/lib ort128/include | head -20
+      - name: cmake configure (pre-installed ORT, C API, no TTS/diarization/binaries)
+        env:
+          SHERPA_ONNXRUNTIME_INCLUDE_DIR: ${{ github.workspace }}/ort128/include
+          SHERPA_ONNXRUNTIME_LIB_DIR: ${{ github.workspace }}/ort128/lib
+        run: |
+          cmake -S sherpa-src -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DSHERPA_ONNX_USE_PRE_INSTALLED_ONNXRUNTIME_IF_AVAILABLE=ON \
+            -DSHERPA_ONNX_ENABLE_C_API=ON \
+            -DSHERPA_ONNX_ENABLE_TTS=OFF \
+            -DSHERPA_ONNX_ENABLE_SPEAKER_DIARIZATION=OFF \
+            -DSHERPA_ONNX_ENABLE_WEBSOCKET=OFF \
+            -DSHERPA_ONNX_ENABLE_PORTAUDIO=OFF \
+            -DSHERPA_ONNX_ENABLE_BINARY=OFF \
+            -DSHERPA_ONNX_ENABLE_PYTHON=OFF 2>&1 | tee cmake-config.log
+          # 配置自证:必须走 pre-installed 分支而不是又去下它自己的 ORT
+          grep -q "location_onnxruntime_header_dir" cmake-config.log
+      - name: build
+        run: cmake --build build --target sherpa-onnx-c-api -j"$(nproc)"
+      - name: compile spk_embed probe against new build
+        run: |
+          gcc -O2 -o spk_embed \
+            2-Projects/realtime-voice-agent/rust-worker/sherpa128/spk_embed.c \
+            -Isherpa-src -Lbuild/lib -lsherpa-onnx-c-api \
+            "-Wl,-rpath,\$ORIGIN"
+      - name: verify products (link inventory + exported symbols + glibc ceiling)
+        run: |
+          echo "== c-api so links (MS ORT SONAME is major-only 'libonnxruntime.so.1'):"
+          ldd build/lib/libsherpa-onnx-c-api.so | grep -i onnx
+          # 判据按真实 SONAME 形态:DT_NEEDED=.so.1 且解析到我们下载的 ort128 目录
+          ldd build/lib/libsherpa-onnx-c-api.so | grep "libonnxruntime.so.1" | grep -q "ort128/lib"
+          echo "== runtime version proof (GetVersionString must say 1.28):"
+          cat > /tmp/ortver.c <<'EOF'
+          #include <stdio.h>
+          #include "onnxruntime_c_api.h"
+          int main(void) { printf("%s\n", OrtGetApiBase()->GetVersionString()); return 0; }
+          EOF
+          gcc -O0 -o /tmp/ortver /tmp/ortver.c -Iort128/include -Lort128/lib -lonnxruntime "-Wl,-rpath,$PWD/ort128/lib"
+          /tmp/ortver
+          /tmp/ortver | grep -q "^1\.28\."
+          echo "== speaker embedding symbols exported (must be >0):"
+          nm -D build/lib/libsherpa-onnx-c-api.so | grep -c SpeakerEmbeddingExtractor
+          echo "== probe links:"
+          ldd spk_embed | grep -i "sherpa\|onnx"
+          echo "== glibc ceiling <= 2.39:"
+          for f in build/lib/libsherpa-onnx-c-api.so spk_embed; do
+            syms=$(objdump -T "$f" | grep -o 'GLIBC_2\.[0-9]*' | sort -t. -k2 -n -u)
+            echo "== $f"; echo "$syms"
+            echo "$syms" | awk -F. '$2 > 39 { print "TOO NEW: " $0; bad = 1 } END { exit bad }'
+          done
+      - name: assemble artifact dir
+        run: |
+          mkdir -p out
+          cp build/lib/libsherpa-onnx-c-api.so out/
+          # DT_NEEDED=libonnxruntime.so.1(major-only SONAME),zip 不保 symlink →
+          # 直接以运行时要找的名字放真身,落机免建链
+          cp -L ort128/lib/libonnxruntime.so.1 out/libonnxruntime.so.1
+          cp spk_embed out/
+          sha256sum out/* | tee out/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sherpa-c-api-ort128
+          path: out/
+          if-no-files-found: error

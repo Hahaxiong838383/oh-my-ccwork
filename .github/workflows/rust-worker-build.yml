@@ -5,8 +5,10 @@
 name: rust-worker-2404
 on:
   workflow_dispatch: {}
+# contents: write 仅为 release 上传产物(2026-08-20:actions artifact 配额被历史产物打满,
+# 删除后重算要 6-12h+,四连撞墙后改走 release asset——不占 artifact 配额,永不再撞)
 permissions:
-  contents: read
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -27,8 +29,14 @@ jobs:
           syms=$(objdump -T target/release/voice-rust-worker | grep -o 'GLIBC_2\.[0-9]*' | sort -t. -k2 -n -u)
           echo "$syms"
           echo "$syms" | awk -F. '$2 > 39 { print "TOO NEW: " $0; bad = 1 } END { exit bad }'
-      - uses: actions/upload-artifact@v4
-        with:
-          name: voice-rust-worker-ubuntu2404
-          path: 2-Projects/realtime-voice-agent/rust-worker/target/release/voice-rust-worker
-          if-no-files-found: error
+      - name: publish binary as release asset (artifact 配额绕道)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test -f target/release/voice-rust-worker
+          tag="rust-worker-build-${{ github.run_id }}"
+          gh release create "$tag" --title "$tag" \
+            --notes "voice-rust-worker ubuntu-24.04 (run ${{ github.run_id }}, sha ${{ github.sha }})" \
+            --target "${{ github.sha }}"
+          gh release upload "$tag" target/release/voice-rust-worker
+          echo "release=$tag"

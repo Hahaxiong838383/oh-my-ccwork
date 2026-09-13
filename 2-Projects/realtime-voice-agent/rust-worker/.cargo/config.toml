@@ -1,0 +1,8 @@
+# macOS 开发目标专用:libwebrtc 静态库的 ObjC category(NSString+AbslStringView 等)
+# 会被 linker strip → 运行时 unrecognized selector 崩溃(webrtc-sys build.rs 未带此参数)。
+# -ObjC 强制载入全部 ObjC 符号。Linux 生产目标不受影响。
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-ObjC"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-ObjC"]
