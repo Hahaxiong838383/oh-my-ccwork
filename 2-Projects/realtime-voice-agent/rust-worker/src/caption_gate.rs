@@ -46,7 +46,10 @@
 /// - `exit_tail`：复合句尾部/碎片退出意图——`SESSION_EXIT_SIGNAL_ENABLED=0` 的部署**只能**靠它退出
 /// - `command`：设备命令——有效输入,零 LLM 不等于该丢
 ///
-/// 判决只影响**字幕**:吞句与否、成不成轮,全部维持原样,本函数不改任何打断/退出语义。
+/// B53 时判决只影响**字幕**。B68 §3.2 起它同时是开场回声门的豁免依据
+/// (`textproc::opening_echo_verdict` 与重叠窗的 `control_outlet.is_none()`):分类为 Some 的句子
+/// 不再被开场回声门吞掉,而是放行到 STOP/EXIT/设备命令出口——本函数仍不执行任何打断/退出动作,
+/// 只决定这句**能不能走到**那些出口。
 pub fn control_outlet_kind(
     text: &str,
     hotwords: &std::collections::HashSet<String>,

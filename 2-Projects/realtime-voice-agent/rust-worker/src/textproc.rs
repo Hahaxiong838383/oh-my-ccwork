@@ -264,6 +264,34 @@ pub fn local_audio_echo_hit<'a>(commit_norm: &str, bank: &'a [(String, String)])
     }
 }
 
+/// B68 §3.2:开场回声门(单字规则 + 本地音频词库)的**共同入口**——两条规则与控制出口豁免放在
+/// 同一个函数里,调用方必须显式传入 `control_outlet`,绕不过去(同 B53 `caption_gate::mark_echo_drop`
+/// 的形状:不变量在被调方,不在调用点补 `if`)。
+///
+/// 返回 `Some(slot)` = 判回声(`"single-char"` 或命中的词槽名),调用方吞句不成轮;`None` = 放行,
+/// 交给后面的 STOP/EXIT/设备命令/LLM 裁决。
+///
+/// 不变量:`control_outlet.is_some()`(已被 [`crate::caption_gate::control_outlet_kind`] 分类为
+/// 急停/退出/设备命令)→ **永不**返回 `Some`,单字也不例外。
+///
+/// 为什么单字规则要搬进来(B63 §7.2 / B68 §3.1):此前 `n_chars == 1` 写在 `pipeline.rs` 的函数外、
+/// 命中即 `return`,STOP/EXIT 出口排在它**后面**根本走不到——开场 15 秒内真人说「停」,字幕发了但
+/// paused 的在途轮不停、假打断超时后续播;词库日后若放进 farewell,「再见」同样会被吞掉退出。
+/// 单字规则的原始动机(EOU+错转可产出任意单字,开场窗内单字成句语义≈0)对**非控制**单字继续成立。
+pub fn opening_echo_verdict<'a>(
+    commit_norm: &str,
+    bank: &'a [(String, String)],
+    control_outlet: Option<&'static str>,
+) -> Option<&'a str> {
+    if control_outlet.is_some() {
+        return None;
+    }
+    if commit_norm.chars().count() == 1 {
+        return Some("single-char");
+    }
+    local_audio_echo_hit(commit_norm, bank)
+}
+
 pub fn lcs_char_ratio(needle: &str, hay: &str) -> f32 {
     let a: Vec<char> = needle.chars().collect();
     let b: Vec<char> = hay.chars().collect();
@@ -642,5 +670,130 @@ mod overlap_tests {
     #[test]
     fn deadline_arith() {
         assert_eq!(opening_overlap_deadline_ms(1_788_690_141, 3200), 1_788_690_141 * 1000 + 1000 + 3200 + 500);
+    }
+}
+
+/// B68 §4 矩阵里能落到纯函数层的行(控制出口 vs 开场回声门)。
+/// 穿过真正 `on_tick_inner` 的用例本轮做不到:`Orchestrator` 是 ~100 个字段的活对象
+/// (Room / mpsc / JoinHandle / OutputGate),单测构造不出;调用点靠源码行号 + 负向注入交代(B69 回执)。
+#[cfg(test)]
+mod opening_echo_verdict_tests {
+    use super::*;
+    use crate::caption_gate::control_outlet_kind;
+
+    fn outlet(text: &str) -> Option<&'static str> {
+        let stops = parse_hotwords_with(None, DEFAULT_INTERRUPT_HOTWORDS);
+        let exits = parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
+        control_outlet_kind(text, &stops, &exits, true)
+    }
+
+    /// 词库形态 = pipeline 里 `normalize_echo` 之后(去标点);三条是 2026-09-01 / 09-06 真机实证文案。
+    fn greeting_bank() -> Vec<(String, String)> {
+        vec![
+            ("greeting.nap".into(), "来啦来啦刚打了个盹儿".into()),
+            ("greeting.wait".into(), "嘿我在这儿等你呢".into()),
+            ("greeting.story".into(), "你来了故事继续".into()),
+        ]
+    }
+
+    /// B61 提过的形态:日后若把 farewell.* 放进库,「再见」就是这条的精确子串。
+    fn bank_with_farewell() -> Vec<(String, String)> {
+        let mut b = greeting_bank();
+        b.push(("farewell.goodbye".into(), "好的再见下次见哦".into()));
+        b
+    }
+
+    // ── 正锚(矩阵「非控制的既有已知回声」):门没被拆 ──
+
+    #[test]
+    fn non_control_single_char_still_swallowed() {
+        assert_eq!(outlet("那"), None);
+        assert_eq!(opening_echo_verdict("那", &greeting_bank(), outlet("那")), Some("single-char"));
+    }
+
+    #[test]
+    fn non_control_bank_hits_still_swallowed() {
+        let b = greeting_bank();
+        assert_eq!(opening_echo_verdict("刚打了个盹儿", &b, None), Some("greeting.nap"), "≥4 字 LCS 层");
+        assert_eq!(opening_echo_verdict("来啦", &b, None), Some("greeting.nap"), "2-3 字子串层");
+        assert_eq!(opening_echo_verdict("讲个故事吧", &b, None), None, "正常话放行(LCS 0.4 < 0.8)");
+    }
+
+    // ── 矩阵行 1/2/3:开场窗内单字「停」必须走到 STOP 出口 ──
+
+    #[test]
+    fn stop_single_char_reaches_stop_outlet() {
+        assert_eq!(outlet("停"), Some("stop"));
+        assert_eq!(opening_echo_verdict("停", &greeting_bank(), outlet("停")), None);
+    }
+
+    // ── 矩阵行 4/9:「再见」恰为告别词槽子串 ──
+
+    #[test]
+    fn goodbye_in_farewell_bank_reaches_exit_outlet() {
+        let b = bank_with_farewell();
+        // 先证词库这层**真会命中**——否则下面的 None 可能只是「库里本来就没有」
+        assert_eq!(local_audio_echo_hit("再见", &b), Some("farewell.goodbye"));
+        assert_eq!(outlet("再见"), Some("exit_exact"));
+        assert_eq!(opening_echo_verdict("再见", &b, outlet("再见")), None);
+    }
+
+    // ── 矩阵行 5:退出词表与尾句语义不扩不缩,只是不被回声门吞 ──
+
+    #[test]
+    fn exit_words_and_tails_never_swallowed_even_if_bank_would_hit() {
+        for t in ["退出", "不聊了", "退出对话", "不用了", "我不想聊了", "不想聊了，退出吧"] {
+            let norm = normalize_utterance(t);
+            // 把这句本身放进库,保证词库层「必命中」(子串 / LCS 两层都覆盖)
+            let b = vec![("self".to_string(), norm.clone())];
+            assert!(local_audio_echo_hit(&norm, &b).is_some(), "{t}: 库必命中前提不成立");
+            let o = outlet(t);
+            assert!(o.is_some(), "{t} 必须是控制出口");
+            assert_eq!(opening_echo_verdict(&norm, &b, o), None, "{t}");
+        }
+    }
+
+    // ── 矩阵行 6:问「怎么重新进入」不是退出,也不因此免检回声 ──
+
+    #[test]
+    fn question_about_reentry_is_not_control_and_still_echo_checked() {
+        let t = "退出后告诉我怎么重新进入";
+        assert_eq!(outlet(t), None);
+        let norm = normalize_utterance(t);
+        assert_eq!(opening_echo_verdict(&norm, &greeting_bank(), None), None, "正常问句放行到 LLM");
+        // 有牙齿:同一句若真在库里(LCS 1.0),非控制 → 照吞
+        let b = vec![("g".to_string(), norm.clone())];
+        assert_eq!(opening_echo_verdict(&norm, &b, None), Some("g"));
+    }
+
+    // ── 不变量的全称形式:出口 Some ⇒ 永不 Some,遍历两张默认词表 ──
+
+    #[test]
+    fn control_outlet_is_never_swallowed_over_default_tables() {
+        let stops = parse_hotwords_with(None, DEFAULT_INTERRUPT_HOTWORDS);
+        let exits = parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
+        let mut n = 0;
+        for w in stops.iter().chain(exits.iter()) {
+            let b = vec![("self".to_string(), w.clone())];
+            let o = control_outlet_kind(w, &stops, &exits, true);
+            assert!(o.is_some(), "{w}");
+            assert_eq!(opening_echo_verdict(w, &b, o), None, "{w}");
+            n += 1;
+        }
+        assert!(n >= 20, "两张默认表合计应 ≥20 词(10+12),实际 {n}");
+    }
+
+    // ── 重叠窗(gate B)同样需要 outlet:精确退出词不在尾表也不在命令表 ──
+
+    #[test]
+    fn overlap_gate_would_swallow_exact_exit_word_without_outlet() {
+        // 「不用了」对「你来了故事继续」LCS = 1/3 ≥ 0.3:无 VAD 起点、截止前 → 旧代码判回声
+        let b = greeting_bank();
+        let hit = opening_overlap_decision(Some(1_000), 900, false, "不用了", &b);
+        assert!(hit.is_some(), "前提:重叠窗这层真会命中");
+        // 旧内联三豁免一条都不救它:非急停、非命令、不在尾表
+        assert!(session_exit_tail_hit("不用了").is_none());
+        // 新的共同判定认它是退出精确词 → pipeline 以 control_outlet.is_none() 守门
+        assert_eq!(outlet("不用了"), Some("exit_exact"));
     }
 }

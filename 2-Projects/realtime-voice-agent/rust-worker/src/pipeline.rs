@@ -2931,17 +2931,30 @@ impl Orchestrator {
             {
                 let nu = normalize_echo(&user_text);
                 let n_chars = nu.chars().count();
-                // 分层判定(≥4字 LCS / 2-3字精确子串)抽在 textproc,锚测试全覆盖。
+                // B68 §3.2(修 B63 §7.2 的洞):控制出口分类**先于**两道开场回声门,与下方 swallow_kind
+                // 用同一把尺子(`caption_gate::control_outlet_kind`)——不在这里另抄一套词表。
+                // 判定对象=`poll_commit` 合并后的整句:单条「停」被合并进长句时,这里与 STOP 出口
+                // 同样不认,是既有限制不是本轮引入。只在开场窗内算,窗外路径逐字不变。
+                let control_outlet = crate::caption_gate::control_outlet_kind(
+                    &user_text,
+                    &self.cfg.hotwords,
+                    &self.cfg.exit_hotwords,
+                    self.cfg.exit_tail_match,
+                );
+                // 分层判定(单字一律吞 / 2-3字精确子串 / ≥4字 LCS)连同控制出口豁免抽在
+                // textproc::opening_echo_verdict,锚测试全覆盖。调用点必须显式传 control_outlet,绕不过去。
                 // 2026-09-01 00:53 实证:EOU 把回声切成「来啦」(2字)+「刚打了个盹儿」,
                 // 后者被拦、前者穿过旧 len≥4 下限起了幽灵轮——短碎片层由此补上。
                 // 01:00 实证第二形态:「来啦」被 ASR 错转成「那」(la→na)——子串判定对
-                // 错转结构性无效,故开场窗内**单字 commit 一律吞**:EOU+错转可产出任意单字,
-                // 开场窗内单字成句语义≈0(急停单字在此被吞与 stop_only 效果等价:都不成 turn)。
-                let hit = if n_chars == 1 {
-                    Some("single-char".to_string())
-                } else {
+                // 错转结构性无效,故开场窗内**非控制单字 commit 一律吞**:EOU+错转可产出任意单字,
+                // 开场窗内单字成句语义≈0。
+                // ⚠️ 此处旧注释「急停单字在此被吞与 stop_only 效果等价」是假的(B63 §7.2):STOP 出口会
+                // 无条件硬停在途轮(含 paused 待续播的)并作废投机生成,本门只在下面的追杀条件下 abort。
+                // 所以控制单字必须放行到 STOP/EXIT 出口,不能在此吞——否则开场 15 秒内轻声说「停」,
+                // 字幕发了、在途播放不停,假打断超时后还会续播。
+                let hit = {
                     let bank = self.echo_local_texts.lock().unwrap();
-                    crate::textproc::local_audio_echo_hit(&nu, &bank).map(str::to_string)
+                    crate::textproc::opening_echo_verdict(&nu, &bank, control_outlet).map(str::to_string)
                 };
                 if let Some(slot) = hit {
                     info!(room = %self.room_name, slot = %slot,
@@ -2983,7 +2996,11 @@ impl Orchestrator {
                     && crate::textproc::overlap_vadless_qualifies(vad_onset_seen)
                 {
                     let speech_end_ms = unix_ms_now() - commit.eou_delay.as_millis() as i64;
-                    if speech_end_ms <= deadline
+                    // B68 §3.2:同一个 control_outlet 也守这道门。下面三条内联豁免保留(EXIT_TAIL_MATCH=0
+                    // 时 control_outlet 不含 tail,它们仍是唯一守 tail 的);新增的是 exit 精确词——
+                    // 「不用了」对「你来了故事继续」LCS 0.33 ≥ 0.3,旧代码在无 VAD 起点的首句上会把它吞掉。
+                    if control_outlet.is_none()
+                        && speech_end_ms <= deadline
                         && crate::device_intent::match_command(&user_text).is_none()
                         && !crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text)
                         && crate::textproc::session_exit_tail_hit(&user_text).is_none()
