@@ -21,7 +21,7 @@
 |---|---|---|
 | `capability`（V1.1 生产值） | 已准入设备 ∧ 请求 `supports` 同时含 `oneshot_first_turn_v1`、`local_receipt_v1` ∧ 已配派单目标 → 签首句合同、派 `rust-worker-firstturn`；否则普通语音 | 产品态：OTA 即用 |
 | `allowlist`（默认/未设） | 只对 `ONESHOT_FIRST_TURN_SN_ALLOW` 名单内 ∧ 声明 `oneshot_first_turn_v1` 的请求签 | 研发灰度 / 半回滚 |
-| `off` | 一台都不签。老端（无 supports）照常普通语音；**v271 原包的新端唤醒失败**（端侧强制合同，不回退普通票据）；B91 起的新包（待构建/装机）改为同次回落普通票据并播「请再说一遍。」 | v271：止扩，配合端侧停用才是完整回滚；B91 新包 B/C 验收通过后：可作普通回退 |
+| `off` | 一台都不签。老端（无 supports）照常普通语音；**v271 原包的新端唤醒失败**（端侧强制合同，不回退普通票据）；**v272 起**（B91 修复，`1.2.2-canary.260`）同次唤醒复用普通票据、播「请再说一遍。」后普通聊天 | v271：止扩，配合端侧停用才是完整回滚；**v272+：可作普通回退**（2026-09-13 B95 B/C 在 off 下实测通过：不失声、同 trace、零 ordered 投旧池；D 自动恢复待验） |
 | 其它值 | 按 `allowlist` 处理并 `console.warn` | 配置错保护 |
 
 每次签发日志带 `policy=<值> supports=<能力名|…或 ->`，老/新客户端各走哪条路径可从 `[device-session] ok` 行对账。
@@ -40,4 +40,5 @@
 - 真流量签发样本（新端 first_turn_v1 / 老端普通）：截至 2026-09-13T08:37Z 仍 0 条（无唤醒流量，非故障）。
 - 后台面板 B89（2026-09-13 09:03Z 上线）：生产 API E2E 通过（off→bogus 400→capability→清除→幂等→回落 env，日志四条留痕，终态 `runtime_flag` 0 行）；浏览器挂载无模板错误；登录后 UI 点按验收由川哥执行。
 - **B91/B92（2026-09-13）端侧回落修复进行中**：codex 已按 B90 改端侧源码——服务端回显式 `contract:null` 时**同次唤醒复用普通票据**、丢弃已采首句并本地播「请再说一遍。」、不缓存拒签（离线 Debug/Release 1023/1023 + Python 102/102，含负向验证），**尚未构建/装机**；cc 已交付本地提示音 `repeat_request.wav`（正式音色，1533ms，sha256 `757972dc…3f58`）+ manifest，并把「`contract` 键显式存在且为 JSON null」钉成严格单测（43/43）。**新包 B/C 通过前，后台 `off`/`allowlist` 对 v271 仍只是止扩**；通过后再把 `off` 改口径为新版可用的普通回退。
-- 变更记录：B84（codex 需求）→ B85/B86（cc 回执）→ B87（codex v271 交付 + 回滚边界）→ B88（cc 文档收口）→ B89（后台版本卡 + 开关）→ B90（cc 端侧需求：优雅回落）→ B91（codex 端侧实现 + 索要提示音）→ B92（cc 交付提示音 + 严格 null 单测）。
+- **B93–B96（2026-09-13）v272 回落验收窗口**：v272 装验收机（***0010）；cc 10:25:38Z 后台切 `off`（override）→ codex Air B 传统/C 连说在 off 下通过（同次唤醒普通票、提示音后重说得答、零 ordered 投旧池）→ cc 11:54:14Z 清覆盖恢复 `capability`（env）。真流量签发证据首次到手（A1/A2 `contract=first_turn_v1`，B/C `contract=- policy=off policy_src=override`，老端 `supports=-`）。观察：同声场邻机 0003/0004 随 0010 同醒，B 房两句额外输入疑为邻机回答声。**D（恢复后自动 One-shot）待。**
+- 变更记录：B84（codex 需求）→ B85/B86（cc 回执）→ B87（codex v271 交付 + 回滚边界）→ B88（cc 文档收口）→ B89（后台版本卡 + 开关）→ B90（cc 端侧需求：优雅回落）→ B91（codex 端侧实现 + 索要提示音）→ B92（cc 交付提示音 + 严格 null 单测）→ B93（codex v272 装机 + A 通过）→ B94（cc 切 off）→ B95（codex B/C 通过）→ B96（cc 恢复 capability + 对表）。
