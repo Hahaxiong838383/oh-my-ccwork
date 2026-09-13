@@ -277,6 +277,14 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   `ps -eo pid,ppid,etime,args | grep -F eot_sidecar.py | grep -v grep` 外部判;取消远程复合命令后
   必须回去清孤儿(找 PPID=1 的匹配进程,PID 直杀),不能只看本地任务已停。
 
+### 灰度线产品化清单(2026-09-13 B84 实撞:只改签发策略差点把 2 路灰度池当生产)
+
+把 `voice-worker-firstturn` 这类「同机并存的灰度 unit」切成生产主路径前,逐项过——每项都是灰度阶段**故意**缩/关的:
+1. `WORKER_MAX_JOBS`(灰度 2 → 生产 10,按台账设备数×0.3 核算,不照抄);2. `MemoryHigh/Max`(unit 本体 700M/900M → drop-in `50-*-capacity.conf` 1200M/1500M,别改 unit 本体);
+3. `UnsetEnvironment` 的取证/录音键(`99-disable-audit-capture.conf`、`EOT_SNAPSHOT_DIR`)——**产品化必须保持关**;4. 服务端签发:名单 → `ONESHOT_FIRST_TURN_POLICY=capability`(p003-deploy-ops);
+5. agent_name 仍叫 `rust-worker-firstturn`,产品化后它就是主路径,别按名字当灰度;6. 同机 CPU 总量不变,流量从 `voice-worker-rust` 迁过来,上限配置要跟着换边。
+失效形态是**静默**的:签发成功+注册成功+健康全绿,第 N+1 台设备就是没 AI。脚本 `docs/scripts/b84-firstturn-capacity-20260913.sh`。
+
 ### Rust 线容量真值(2026-08-14 实测,4 核 Xeon/3915MB)
 
 固定 ≈430MB(worker+sidecar+两个模型,**进程级单例不随 job 涨**;sidecar 单进程 302MB)/
