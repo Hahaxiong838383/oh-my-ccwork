@@ -1,0 +1,23 @@
+{
+  "current": {
+    "label": "V1.1 正式版",
+    "oneshot": true,
+    "since": "2026-09-13T07:06:25Z",
+    "server_commit": "add34a8db",
+    "server_tag": "p003-v1.1-oneshot",
+    "worker": { "unit": "voice-worker-firstturn", "commit": "299b074", "sha256_prefix": "c2b84b2e…", "max_jobs": 10 },
+    "apk": "需 versionCode > 270 且含启动迁移：v271 = 1.2.2-canary.259（codex 已交合包，待同事合入业务主线后 OTA）；v270 = 声学/交互基线，不含自动启用",
+    "notes": "具备 One-shot（唤醒+指令连说）：已准入设备只要请求声明 oneshot_first_turn_v1 + local_receipt_v1 即自动签首句合同并派到 rust-worker-firstturn，零逐台名单。开关见下方。"
+  },
+  "history": [
+    {
+      "label": "V1.0 正式版",
+      "oneshot": false,
+      "server_commit": "f011ace1a",
+      "server_tag": "p003-v1.0-no-oneshot",
+      "worker": "voice-worker-rust f3707e7e…（commit 3a2af41c3）",
+      "apk": "v263 = 1.2.2-canary.251（全量 rollout）",
+      "notes": "无 One-shot；首句合同只按灰度名单签（研发灰度一台）"
+    }
+  ]
+}

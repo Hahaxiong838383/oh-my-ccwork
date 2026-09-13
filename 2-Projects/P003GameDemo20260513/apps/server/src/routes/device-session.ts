@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { SignJWT, jwtVerify, decodeJwt } from 'jose';
 import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
+import { configStore, type RuntimeFlag } from '../config-store.js';
 
 /**
  * P003 S2-B1 设备 Session API（codex 联调合同：CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
@@ -50,7 +51,12 @@ const cfg = () => ({
   //   off：全局暂停（运维回滚开关）——一台都不签，已签发票据按 TTL 自然过期，不切断进行中的会话
   //   其它值 = 配置错 → 按 allowlist 处理并 console.warn（fail-closed 到最窄的可用形态，不静默放宽）
   // 三档都仍受 B29 第三条件约束：没配派单目标（ONESHOT_FIRST_TURN_AGENT_NAME）就不签。
-  firstTurnPolicy: normalizeFirstTurnPolicy(process.env.ONESHOT_FIRST_TURN_POLICY),
+  // B89（2026-09-13）：后台覆盖值（config.db runtime_flag）> env > 内置 allowlist；解析在 resolveFirstTurnPolicy，
+  // 后台 GET 与签发用同一函数，不会出现「后台显示 A、实际签 B」。
+  ...(() => {
+    const r = resolveFirstTurnPolicy();
+    return { firstTurnPolicy: r.policy, firstTurnPolicySource: r.source };
+  })(),
 });
 
 /** B23：产品首句合同（响应 `contract` 与 agent metadata 同源，自检对撞）。 */
@@ -93,6 +99,42 @@ export function firstTurnEligibleBy(policy: FirstTurnPolicy, allow: readonly str
     case 'allowlist':
       return allow.includes(sn) && supports.includes(FIRST_TURN_SUPPORT_TAG);
   }
+}
+/** B89：后台覆盖开关的键名（config.db `runtime_flag`），值域 = FIRST_TURN_POLICIES。 */
+export const FIRST_TURN_POLICY_FLAG = 'oneshot_first_turn_policy';
+export const FIRST_TURN_POLICIES = ['capability', 'allowlist', 'off'] as const;
+export type FirstTurnPolicySource = 'override' | 'env' | 'default';
+const warnedFlag = new Set<string>();
+/**
+ * 生效策略的唯一解析点：后台覆盖（合法值）> env（经 normalize，非法→allowlist+warn）> 内置 allowlist。
+ * 覆盖值非法（只可能来自手工改库；后台 PUT 会校验）→ 忽略覆盖、告警一次、按 env 走，绝不放宽。
+ * DB 读失败 → 告警并按 env 走（DB 坏了不断签发）。
+ */
+export function resolveFirstTurnPolicy(): {
+  policy: FirstTurnPolicy;
+  source: FirstTurnPolicySource;
+  override: RuntimeFlag | null;
+  env: string | null;
+} {
+  let override: RuntimeFlag | null = null;
+  try {
+    override = configStore.getFlag(FIRST_TURN_POLICY_FLAG);
+  } catch (e) {
+    console.error(`[device-session] runtime_flag 读取失败，回落 env: ${(e as Error).message}`);
+  }
+  const envRaw = (process.env.ONESHOT_FIRST_TURN_POLICY ?? '').trim() || null;
+  if (override) {
+    const v = override.value.trim().toLowerCase();
+    if ((FIRST_TURN_POLICIES as readonly string[]).includes(v)) {
+      return { policy: v as FirstTurnPolicy, source: 'override', override, env: envRaw };
+    }
+    if (!warnedFlag.has(v)) {
+      warnedFlag.add(v);
+      console.warn(`[device-session] runtime_flag ${FIRST_TURN_POLICY_FLAG}=${JSON.stringify(override.value)} 非法，忽略覆盖按 env 处理（合法值 ${FIRST_TURN_POLICIES.join('|')}）`);
+    }
+  }
+  if (envRaw !== null) return { policy: normalizeFirstTurnPolicy(envRaw), source: 'env', override, env: envRaw };
+  return { policy: 'allowlist', source: 'default', override, env: null };
 }
 /** 日志用：只放行 `[a-z0-9_]` 组成的能力名，其它形态一律打成 `?`——防客户端把 token 样的串塞进 supports 混进日志。 */
 function supportsForLog(supports: readonly string[]): string {
@@ -343,7 +385,7 @@ deviceSessionRoute.post('/session', async (c) => {
   console.log(
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
       // B84：policy 与 supports 进日志——旧/新客户端各走哪条路径、为什么，事后能从这一行对账
-      ` policy=${conf.firstTurnPolicy} supports=${supportsForLog(supports)}` +
+      ` policy=${conf.firstTurnPolicy} policy_src=${conf.firstTurnPolicySource} supports=${supportsForLog(supports)}` +
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });

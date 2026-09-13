@@ -9,6 +9,10 @@ import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
 import { memoryItemStore } from '../memory-item-store.js';
 import { canWrite, getTokenUser, isAdminRole, isValidToken } from './auth.js';
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+import { configStore } from '../config-store.js';
+import { resolveFirstTurnPolicy, FIRST_TURN_POLICIES, FIRST_TURN_POLICY_FLAG } from './device-session.js';
 import { resetAllQuotas } from '../guard.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { extractionLogStore } from '../extraction-log-store.js';
@@ -57,7 +61,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -1319,6 +1323,63 @@ function brainRaceView(): Record<string, string> {
     fallback_base: process.env.VOLC_LLM_BASE_URL ?? '',
   };
 }
+
+// ── 🧩 版本与 One-shot（2026-09-13 B89 川哥：后台要看到生产版本号/说明 + One-shot 关闭回滚按钮）──
+// 开关存 server 自己的 config.db runtime_flag（configStore），签发路由每请求读同一解析函数 → 改后下一次唤醒即生效，
+// 不重启、不动 env。版本卡来自随 server 部署的 release.json（发版时更新；RELEASE_JSON_PATH 可改路径）。
+const ONESHOT_ROLLBACK_CAVEAT =
+  '开关语义（codex B87 §3 端侧源码边界）：\n' +
+  '· capability → allowlist/off 是「止扩」：新签发立刻停；进行中会话不断，已签票据 ≤1h 自然过期。\n' +
+  '· 老 APK（不声明能力）设备：照常普通语音，不受影响。\n' +
+  '· 已升级到含迁移 APK（v271+）的设备：下一次唤醒会 first_turn_not_granted 失败，不会自动退回普通语音——' +
+  '要它们回普通须端侧合法停用首句工厂或回退 APK。\n' +
+  '· Worker 回滚：先等票据排空（≤1h）与活跃房结束，ordered 首句房不能派给旧 rust-worker。';
+function readReleaseJson(): { ok: true; data: unknown; path: string } | { ok: false; error: string; path: string } {
+  const p = resolvePath(process.cwd(), process.env.RELEASE_JSON_PATH?.trim() || 'release.json');
+  try {
+    return { ok: true, data: JSON.parse(readFileSync(p, 'utf8')), path: p };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message, path: p };
+  }
+}
+function oneshotView() {
+  const r = resolveFirstTurnPolicy();
+  return {
+    ok: true as const,
+    policy: { effective: r.policy, source: r.source, override: r.override, env: r.env, valid: FIRST_TURN_POLICIES },
+    agent_name: (process.env.ONESHOT_FIRST_TURN_AGENT_NAME || '').trim() || null,
+    allowlist_count: (process.env.ONESHOT_FIRST_TURN_SN_ALLOW || '').split(',').map((x) => x.trim()).filter(Boolean).length,
+    release: readReleaseJson(),
+    caveat: ONESHOT_ROLLBACK_CAVEAT,
+  };
+}
+function operatorOf(c: { req: { header: (n: string) => string | undefined } }): string {
+  const header = c.req.header('authorization');
+  const tok = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  return (tok ? getTokenUser(tok) : undefined) ?? 'admin';
+}
+adminDataRoute.get('/oneshot', (c) => c.json(oneshotView()));
+adminDataRoute.put('/oneshot/policy', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { policy?: unknown; note?: unknown };
+  const p = typeof body.policy === 'string' ? body.policy.trim().toLowerCase() : '';
+  if (!(FIRST_TURN_POLICIES as readonly string[]).includes(p))
+    return c.json({ ok: false, error: `policy 必须是 ${FIRST_TURN_POLICIES.join('|')}` }, 400);
+  const note = typeof body.note === 'string' ? body.note.slice(0, 200) : '';
+  const by = operatorOf(c);
+  const before = resolveFirstTurnPolicy();
+  configStore.setFlag(FIRST_TURN_POLICY_FLAG, p, by, note);
+  const after = resolveFirstTurnPolicy();
+  console.log(`[admin-oneshot] policy ${before.policy}(${before.source}) → ${after.policy}(${after.source}) by=${by} note=${JSON.stringify(note)}`);
+  return c.json({ ...oneshotView(), changed: before.policy !== after.policy, before: { policy: before.policy, source: before.source } });
+});
+adminDataRoute.delete('/oneshot/policy', (c) => {
+  const by = operatorOf(c);
+  const before = resolveFirstTurnPolicy();
+  const removed = configStore.clearFlag(FIRST_TURN_POLICY_FLAG);
+  const after = resolveFirstTurnPolicy();
+  console.log(`[admin-oneshot] override cleared removed=${removed} ${before.policy}(${before.source}) → ${after.policy}(${after.source}) by=${by}`);
+  return c.json({ ...oneshotView(), removed, before: { policy: before.policy, source: before.source } });
+});
 
 adminDataRoute.get('/worker-race', async (c) => {
   const r = await callHotwordChannel({ action: 'race_get' }, 20_000);

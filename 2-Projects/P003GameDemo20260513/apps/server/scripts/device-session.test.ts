@@ -14,6 +14,8 @@ process.env.LIVEKIT_API_KEY = 'voicekey';
 process.env.LIVEKIT_API_SECRET = '0123456789abcdef0123456789abcdef';
 process.env.DEVICE_SN_ALLOW = 'BJP00326060100200003,BJP00326060100200005';
 process.env.DEVICE_SESSION_RPM = '100';
+// B89：后台覆盖开关存 config.db；测试用临时库，绝不碰 ./data/config.db
+process.env.CONFIG_DB_PATH = `${(await import('node:os')).tmpdir()}/p003-device-session-test-${process.pid}.db`;
 
 const { deviceSessionRoute, assertTokenMatchesResponse } = await import(
   '../src/routes/device-session.js'
@@ -573,6 +575,76 @@ await t('B84 纯函数矩阵：normalizeFirstTurnPolicy / firstTurnEligibleBy', 
   assert.equal(firstTurnEligibleBy('allowlist', [SN], SN, ['oneshot_first_turn_v1']), true);
   assert.equal(firstTurnEligibleBy('allowlist', [], SN, BOTH), false);
   assert.equal(firstTurnEligibleBy('allowlist', [SN2], SN, BOTH), false);
+});
+
+// ── B89 后台覆盖开关（config.db runtime_flag）：覆盖 > env > 默认；非法覆盖被忽略；DELETE 回落 ──
+const { configStore } = await import('../src/config-store.js');
+const { FIRST_TURN_POLICY_FLAG, resolveFirstTurnPolicy } = await import('../src/routes/device-session.js');
+
+await t('B89 覆盖 off 压过 env capability：名单外+双 supports 不签，日志 policy_src=override', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  configStore.setFlag(FIRST_TURN_POLICY_FLAG, 'off', 'tester', '演练');
+  try {
+    assert.equal(resolveFirstTurnPolicy().policy, 'off');
+    assert.equal(resolveFirstTurnPolicy().source, 'override');
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.ok(logLines.some((l) => l.includes('policy=off policy_src=override')));
+  } finally {
+    configStore.clearFlag(FIRST_TURN_POLICY_FLAG);
+    clearPolicy();
+  }
+});
+
+await t('B89 覆盖 capability 压过 env 未设：名单外+双 supports 照签', async () => {
+  withPolicy(undefined, '', FT_AGENT);
+  configStore.setFlag(FIRST_TURN_POLICY_FLAG, 'capability', 'tester');
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract?.oneshot_first_turn, 'v1');
+    assert.equal(j.expected_agent_name, FT_AGENT);
+  } finally {
+    configStore.clearFlag(FIRST_TURN_POLICY_FLAG);
+    clearPolicy();
+  }
+});
+
+await t('B89 清除覆盖后回落 env：env=off 则不签', async () => {
+  withPolicy('off', SN, FT_AGENT);
+  configStore.setFlag(FIRST_TURN_POLICY_FLAG, 'capability', 'tester');
+  try {
+    let j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract?.oneshot_first_turn, 'v1', '覆盖 capability 时先能签');
+    assert.equal(configStore.clearFlag(FIRST_TURN_POLICY_FLAG), true);
+    assert.equal(resolveFirstTurnPolicy().source, 'env');
+    j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null, '回落 env=off 后不签');
+  } finally {
+    configStore.clearFlag(FIRST_TURN_POLICY_FLAG);
+    clearPolicy();
+  }
+});
+
+await t('B89 非法覆盖值（手工改库）被忽略并告警：按 env 走、绝不放宽', async () => {
+  const warns: string[] = [];
+  const origWarn = console.warn;
+  console.warn = (...a: unknown[]) => {
+    warns.push(a.map(String).join(' '));
+  };
+  withPolicy(undefined, '', FT_AGENT); // env 未设 = allowlist
+  configStore.setFlag(FIRST_TURN_POLICY_FLAG, 'capabilty', 'tester'); // 拼错：后台 PUT 会拒，这里模拟手工改库
+  try {
+    const r = resolveFirstTurnPolicy();
+    assert.equal(r.policy, 'allowlist');
+    assert.equal(r.source, 'default');
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.ok(warns.some((w) => w.includes('runtime_flag')), '必须告警');
+  } finally {
+    console.warn = origWarn;
+    configStore.clearFlag(FIRST_TURN_POLICY_FLAG);
+    clearPolicy();
+  }
 });
 
 console.log = origLog;

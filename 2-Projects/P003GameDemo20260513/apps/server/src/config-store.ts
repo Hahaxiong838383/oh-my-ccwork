@@ -64,6 +64,8 @@ export const CONFIG_SCHEMA_VERSION = 1;
 const GLOBAL_SCOPE = '(global)';
 const DEFAULT_DB_PATH = './data/config.db';
 
+export type RuntimeFlag = { key: string; value: string; updated_at: number; updated_by: string; note: string };
+
 export type ConfigRow = {
   scope: string;
   key: string;
@@ -98,7 +100,41 @@ class ConfigStore {
         k TEXT PRIMARY KEY,
         v INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS runtime_flag (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        updated_by TEXT NOT NULL,
+        note TEXT NOT NULL DEFAULT ''
+      );
     `);
+  }
+
+  // ── B89 运行时开关（2026-09-13 川哥：One-shot 关闭/回滚要在后台一键可点）──
+  // 字符串值、带操作人/时间/备注；语义与合法值由调用方定义并校验（本层不认识 policy）。
+  // 读取方每请求直查（一条主键 SELECT，WAL 下无锁争用），改后下一请求即生效，不需要重启。
+  getFlag(key: string): RuntimeFlag | null {
+    const row = this.db
+      .prepare(`SELECT key, value, updated_at, updated_by, note FROM runtime_flag WHERE key = ?`)
+      .get(key) as RuntimeFlag | undefined;
+    return row ?? null;
+  }
+
+  setFlag(key: string, value: string, updatedBy: string, note = ''): RuntimeFlag {
+    this.db
+      .prepare(
+        `INSERT INTO runtime_flag (key, value, updated_at, updated_by, note) VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at,
+           updated_by = excluded.updated_by, note = excluded.note`,
+      )
+      .run(key, value, Date.now(), updatedBy, note);
+    return this.getFlag(key) as RuntimeFlag;
+  }
+
+  /** 删除覆盖，回落到调用方的下一层（env/内置）。返回是否真删了一行。 */
+  clearFlag(key: string): boolean {
+    const r = this.db.prepare(`DELETE FROM runtime_flag WHERE key = ?`).run(key);
+    return Number(r.changes) > 0;
   }
 
   private nextSeq(): number {

@@ -1666,6 +1666,53 @@
                     <pre v-if="pck.logText" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:320px;overflow:auto">{{ pck.logText }}</pre>
                   </div>
                 </div>
+                <!-- 🧩 版本与 One-shot（2026-09-13 B89；API routes/admin-data.ts /oneshot*；开关存 server config.db runtime_flag 秒生效；版本卡读随 server 部署的 release.json）-->
+                <div v-if="khNav==='release' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">🧩 版本与 One-shot</div>
+                    <el-button size="small" :loading="release.loading" @click="loadRelease()">刷新</el-button>
+                    <span v-if="release.error" style="color:#E8833A;font-size:12px">{{ release.error }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">版本卡来自随 server 部署的 release.json（发版时更新）；开关存 server 数据库，改后下一次设备唤醒签发即生效，不用重启。</div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">生产版本</div>
+                    <div v-if="release.data && release.data.release && release.data.release.ok">
+                      <div style="font-size:15px;font-weight:800;margin-bottom:4px">{{ release.data.release.data.current.label }} <span :style="{ color: release.data.release.data.current.oneshot ? '#2E9E5B' : '#888', fontSize: '12px', fontWeight: 400, marginLeft: '8px' }">{{ release.data.release.data.current.oneshot ? '具备 One-shot（唤醒 + 指令连说）' : '无 One-shot' }}</span></div>
+                      <div style="font-size:12px;color:#6B7785;margin-bottom:10px">{{ release.data.release.data.current.notes }}</div>
+                      <div style="display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px">
+                        <div style="color:#6B7785">生效时间</div><div>{{ release.data.release.data.current.since }}</div>
+                        <div style="color:#6B7785">Server</div><div><code>{{ release.data.release.data.current.server_commit }}</code> · tag <code>{{ release.data.release.data.current.server_tag }}</code></div>
+                        <div style="color:#6B7785">Worker</div><div><code>{{ release.data.release.data.current.worker.unit }}</code> · commit <code>{{ release.data.release.data.current.worker.commit }}</code> · sha <code>{{ release.data.release.data.current.worker.sha256_prefix }}</code> · {{ release.data.release.data.current.worker.max_jobs }} 路</div>
+                        <div style="color:#6B7785">APK</div><div>{{ release.data.release.data.current.apk }}</div>
+                      </div>
+                      <div style="margin-top:14px;font-weight:700;font-size:13px">历史版本</div>
+                      <table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:6px">
+                        <tr style="color:#6B7785;text-align:left"><th style="padding:4px 6px">版本</th><th style="padding:4px 6px">One-shot</th><th style="padding:4px 6px">Server</th><th style="padding:4px 6px">Worker</th><th style="padding:4px 6px">APK</th><th style="padding:4px 6px">说明</th></tr>
+                        <tr v-for="h in release.data.release.data.history" :key="h.label" style="border-top:1px solid #EEF1F5"><td style="padding:4px 6px;font-weight:600">{{ h.label }}</td><td style="padding:4px 6px">{{ h.oneshot ? '有' : '无' }}</td><td style="padding:4px 6px"><code>{{ h.server_commit }}</code></td><td style="padding:4px 6px">{{ h.worker }}</td><td style="padding:4px 6px">{{ h.apk }}</td><td style="padding:4px 6px;color:#6B7785">{{ h.notes }}</td></tr>
+                      </table>
+                    </div>
+                    <div v-else-if="release.data && release.data.release" style="color:#E8833A;font-size:12px">release.json 读不到：{{ release.data.release.error }}（{{ release.data.release.path }}）</div>
+                    <div v-else style="color:#888;font-size:12px">加载中…</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">One-shot 签发开关 <span v-if="release.data" style="font-weight:400;font-size:12px;color:#888;margin-left:8px">当前生效：<b>{{ release.data.policy.effective }}</b>（来源：{{ policySourceLabel(release.data.policy.source) }}）· 派单目标 <code>{{ release.data.agent_name || '未配置（fail-closed，一律不签）' }}</code> · 灰度名单 {{ release.data.allowlist_count }} 台</span></div>
+                    <div style="font-size:12px;color:#6B7785;margin-bottom:10px">capability = 全量：升到含迁移 APK 的设备自动具备 One-shot；allowlist = 只灰度名单内设备；off = 一台都不签。</div>
+                    <el-radio-group v-model="release.form.policy" size="small">
+                      <el-radio-button label="capability">capability（One-shot 全量）</el-radio-button>
+                      <el-radio-button label="allowlist">allowlist（只灰度名单）</el-radio-button>
+                      <el-radio-button label="off">off（关闭）</el-radio-button>
+                    </el-radio-group>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+                      <input v-model="release.form.note" placeholder="备注（为什么改，可选，≤200 字）" style="flex:1;min-width:220px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:12px" />
+                      <el-button type="primary" size="small" :loading="release.saving" :disabled="!release.data || release.form.policy === release.data.policy.effective" @click="applyPolicy()">应用</el-button>
+                      <el-button size="small" :loading="release.saving" :disabled="!release.data || !release.data.policy.override" @click="clearPolicyOverride()">清除后台覆盖（回到 env 值）</el-button>
+                    </div>
+                    <div v-if="release.data && release.data.policy.override" style="font-size:12px;color:#888;margin-top:8px">后台覆盖：<b>{{ release.data.policy.override.value }}</b> · {{ new Date(release.data.policy.override.updated_at).toLocaleString() }} · {{ release.data.policy.override.updated_by }}<span v-if="release.data.policy.override.note"> · {{ release.data.policy.override.note }}</span></div>
+                    <div v-if="release.data" style="font-size:12px;color:#888;margin-top:4px">服务器 env 值：{{ release.data.policy.env || '未设（= allowlist）' }}</div>
+                    <div v-if="release.data" style="margin-top:12px;padding:10px 12px;background:#FFF7E6;border:1px solid #FFE1A8;border-radius:8px;font-size:12px;color:#8A5A00;white-space:pre-wrap">{{ release.data.caveat }}</div>
+                    <pre v-if="release.applyResult" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(release.applyResult, null, 2) }}</pre>
+                  </div>
+                </div>
                 <!-- 🏇 赛马配置（2026-09-03 川哥：赛马机制后台可选可配 + 延时测试；API routes/admin-data.ts /worker-race*；通道=热词发布 forced-command，64.90 脚本内纪律重启+健康自检+回滚） -->
                 <div v-if="khNav==='race' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
@@ -4213,7 +4260,7 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
 
         // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
         // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
@@ -4513,6 +4560,50 @@
 
         // ── 🎙 语音链路配置（2026-09-03 晚；API /api/admin/worker-voice；64.90 脚本 voice_get/voice_set；字段表来自 server VOICE_FIELDS；后端为真防线：白名单/正则/范围/安全窗口/对撞/回滚）──
         var voice = reactive({ loading: false, error: '', data: null, form: {}, force: false, saving: false, applyResult: null });
+
+        // ── 🧩 版本与 One-shot（2026-09-13 B89 川哥：后台要看到生产版本号/说明 + One-shot 关闭回滚按钮；
+        //    API /api/admin/oneshot*；开关存 server config.db runtime_flag，改后下一次唤醒签发即生效、不重启；
+        //    回滚边界（codex B87 §3）由服务端随载荷下发到 caveat，确认框里再念一遍）──
+        var release = reactive({ loading: false, saving: false, error: '', data: null, form: { policy: '', note: '' }, applyResult: null });
+        async function loadRelease() {
+          release.loading = true; release.error = '';
+          try {
+            var j = await deviceApi('/api/admin/oneshot', { method: 'GET' });
+            if (!j.ok) throw new Error(j.error || '加载失败');
+            release.data = j; release.form.policy = j.policy.effective;
+          } catch (e) { release.error = String((e && e.message) || e); }
+          finally { release.loading = false; }
+        }
+        function policySourceLabel(src) { return src === 'override' ? '后台覆盖' : src === 'env' ? '服务器 env' : '内置默认'; }
+        async function applyPolicy() {
+          var p = release.form.policy; if (!release.data || !p) return;
+          var cur = release.data.policy.effective;
+          var msg = '把 One-shot 签发策略从「' + cur + '」改为「' + p + '」？改后下一次设备唤醒即生效，不重启。';
+          if (p !== 'capability') msg += '\n\n⚠️ 这是「止扩」不是完整回滚：老设备照常普通语音；已升级到含迁移 APK（v271+）的设备下一次唤醒会失败（first_turn_not_granted），要它们回普通语音需端侧停用首句工厂或回退 APK。进行中的会话不受影响。';
+          try { await ElementPlus.ElMessageBox.confirm(msg, '应用 One-shot 策略', { type: p === 'capability' ? 'info' : 'warning', confirmButtonText: '确认应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          release.saving = true; release.applyResult = null;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/policy', { method: 'PUT', body: JSON.stringify({ policy: p, note: release.form.note || '' }) });
+            release.applyResult = { changed: j.changed, before: j.before, effective: j.policy && j.policy.effective, source: j.policy && j.policy.source, error: j.error };
+            if (!j.ok) throw new Error(j.error || '应用失败');
+            ElementPlus.ElMessage.success('已应用：' + j.policy.effective);
+            release.form.note = '';
+            await loadRelease();
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.saving = false; }
+        }
+        async function clearPolicyOverride() {
+          if (!release.data) return;
+          try { await ElementPlus.ElMessageBox.confirm('清除后台覆盖，回到服务器 env 值（' + (release.data.policy.env || '未设 = allowlist') + '）？', '清除覆盖', { type: 'warning' }); } catch (e) { return; }
+          release.saving = true;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/policy', { method: 'DELETE' });
+            if (!j.ok) throw new Error(j.error || '失败');
+            ElementPlus.ElMessage.success('已清除，当前生效：' + j.policy.effective);
+            await loadRelease();
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.saving = false; }
+        }
         function voiceIsSecret(k) { return ((voice.data && voice.data.secret_keys) || []).indexOf(k) >= 0; }
         function voiceEffective(k) {
           var w = voice.data && voice.data.worker; if (!w) return undefined;
@@ -5825,6 +5916,7 @@
           if (k === 'devcfg') nextTick(loadDevcfg);
           if (k === 'race') nextTick(function () { loadRace(); loadRaceStats(); });
           if (k === 'voice') nextTick(loadVoice);
+          if (k === 'release') nextTick(loadRelease);
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -6978,6 +7070,7 @@
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
+          release: release, loadRelease: loadRelease, applyPolicy: applyPolicy, clearPolicyOverride: clearPolicyOverride, policySourceLabel: policySourceLabel,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaEditNotes: otaEditNotes, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
           devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
