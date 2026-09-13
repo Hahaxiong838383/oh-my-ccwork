@@ -42,7 +42,7 @@
 - **B91/B92（2026-09-13）端侧回落修复进行中**：codex 已按 B90 改端侧源码——服务端回显式 `contract:null` 时**同次唤醒复用普通票据**、丢弃已采首句并本地播「请再说一遍。」、不缓存拒签（离线 Debug/Release 1023/1023 + Python 102/102，含负向验证），**尚未构建/装机**；cc 已交付本地提示音 `repeat_request.wav`（正式音色，1533ms，sha256 `757972dc…3f58`）+ manifest，并把「`contract` 键显式存在且为 JSON null」钉成严格单测（43/43）。**新包 B/C 通过前，后台 `off`/`allowlist` 对 v271 仍只是止扩**；通过后再把 `off` 改口径为新版可用的普通回退。
 - **B93–B96（2026-09-13）v272 回落验收窗口**：v272 装验收机（***0010）；cc 10:25:38Z 后台切 `off`（override）→ codex Air B 传统/C 连说在 off 下通过（同次唤醒普通票、提示音后重说得答、零 ordered 投旧池）→ cc 11:54:14Z 清覆盖恢复 `capability`（env）。真流量签发证据首次到手（A1/A2 `contract=first_turn_v1`，B/C `contract=- policy=off policy_src=override`，老端 `supports=-`）。观察：同声场邻机 0003/0004 随 0010 同醒，B 房两句额外输入疑为邻机回答声。**D（恢复后自动 One-shot）待。**
 - **B97–B101（2026-09-13 晚）首句边界修复**：D（v272）首句残句「小可小可3+」= 端侧 greet 冻结边界截断（B98 三轮对照 samples 37280=A1 尺寸、尾静音 0）；v273 候选（静音保护）挡住早 greet 但 6 s 无判停无回复被拒（B100：worker begin 后 1.19 s 已有 10 字 final + `end_candidate quiet 1000ms`，设备未发 end/cancel 静默断连）；**v274**（边界保护 + 消费 worker 候选 + 6 s 超时 cancel→FAILED→「请再说一遍」→同房普通麦）四场景通过（B101/B102）。
-- 变更记录：B84（codex 需求）→ B85/B86（cc 回执）→ B87（codex v271 交付 + 回滚边界）→ B88（cc 文档收口）→ B89（后台版本卡 + 开关）→ B90（cc 端侧需求：优雅回落）→ B91（codex 端侧实现 + 索要提示音）→ B92（cc 交付提示音 + 严格 null 单测）→ B93（codex v272 装机 + A 通过）→ B94（cc 切 off）→ B95（codex B/C 通过）→ B96（cc 恢复 capability + 对表）→ B97/B98（D 残句定位）→ B99/B100（v273 拒收取证）→ B101（codex v274）→ **B102（cc 四 trace 对账 + 封版）**。
+- 变更记录：B84（codex 需求）→ B85/B86（cc 回执）→ B87（codex v271 交付 + 回滚边界）→ B88（cc 文档收口）→ B89（后台版本卡 + 开关）→ B90（cc 端侧需求：优雅回落）→ B91（codex 端侧实现 + 索要提示音）→ B92（cc 交付提示音 + 严格 null 单测）→ B93（codex v272 装机 + A 通过）→ B94（cc 切 off）→ B95（codex B/C 通过）→ B96（cc 恢复 capability + 对表）→ B97/B98（D 残句定位）→ B99/B100（v273 拒收取证）→ B101（codex v274）→ **B102（cc 四 trace 对账 + 封版）** → B103（codex 接受封版，四处口径补正已并入本文：E 时长口径、单向时差不拆钟差、v274 改过 wake 路径、容量不写安全台数）。**本轮任务 2026-09-13 收口**；后续只剩分批交付：首批设备与窗口由川哥指定，cc 交每台首次能力签发行 + 接房 + 安装健康结果。
 
 ## 封版记录（2026-09-13 B102）
 
@@ -55,7 +55,7 @@
 | D 自动恢复（v272） | 7a32f1da | first_turn_v1 env，firstturn begin accepted | ✓ 恢复；✗ 首句残句（端侧边界，v274 修） |
 | D 短连说（v274） | 855b8a5e | end +917 ms，61,920 样本，10 字全句，1 次 commit，正文直出（本地承接），underrun 0 | ✓ |
 | T 传统（v274） | 645a03ba | wake_only → 普通轮「3+5等于几」，filler→正文，underrun 1×562 ms | ✓ |
-| E 长连说（v274） | 7d129eac | end +4755 ms，128,000 样本，28 字全句，1 次 commit，underrun 0 | ✓ |
+| E 长连说（v274） | 7d129eac | worker begin→end 4755 ms（端侧 receipt 在 wake+5995 ms，本地预算内完成；不是「唤醒后 4.76 s 判停」），128,000 样本，28 字全句，1 次 commit，underrun 0 | ✓ |
 | F 超预算重说（v274） | 21306920 | 无 end；cancel → `failed:cancelled action=repeat_prompt finals_held=0` → RTC；首句零 speculation/commit/caption/正文；重说普通轮 1 次 commit 答 8 | ✓ 闭环 |
 
 **已知残项（封版时冻结，不阻塞）**：
@@ -64,13 +64,13 @@
 3. worker 播出 filler→正文交接 underrun（T 562 ms、旧 D 374 ms、B 房 222 ms、邻机 735/475 ms）——既有播出缓冲问题，非 v274 引入；worker 侧改动待 V1.1 解冻。
 4. worker 被动断连/失败代次不 dump `decision evidence`（B100 缺口），一行改动待排。
 5. 同声场多设备同醒（0003/0004/0006 随 0010 醒并各自作答）——真实产品场景未处理；多机家庭/教室会「齐答」。
-6. off 回滚点在 v274 上未实机复验（v272 实机 B/C 通过；codex：v274 九文件差量不含 wake/contract 解析路径，离线 1035 项含回落测试）——建议分批 OTA 第 1 批后做一次 B/C（cc 切开关 5 分钟）。
+6. off 回滚点在 v274 上未实机复验（v272 实机 B/C 通过；**v274 改了 `VoiceRustWorkerClient` 的 wake 连接/恢复路径**，合同解析相对 v272 未改，离线 1035 项含回落测试）——第 1 批 OTA 后做一次 B/C：先存策略快照、`b93-oneshot-window.sh start ≤5` 带 systemd 定时自动恢复（不依赖聊天转发），复验后核 effective=capability/env/override 空并做一次 D，再批准第 2 批。
 7. 真人听感/物理首音时延未测（Air 代理：D 2556 / T 771 / E 1841 / F 722 ms，含观测链路）。
 8. APK 85.67 MB > 80 MB 目标（< 150 MB 红线）。
 9. v271 原包不追溯（off 对 v271 仍是止扩）；v273 REJECTED，版号不复用。
 10. 生产池 `voice-worker-rust` MemoryPeak 1.12 GiB（MemoryHigh 1.4 GiB 的 82%），与 One-shot 无关；分批期间老端流量仍走它，需盯。
 
-**分批 OTA 边界（服务端）**：firstturn 池 MAX_JOBS 10；2026-09-13 全天 17 房峰值并发 1、MemoryPeak 48 MB（单房级）；机队：注册表 active 10 台、近 7 天签发 9 台（完整 SN 去重；⚠️ 尾 4 位掩码会把不同批次码的设备撞成一台——0006/0010/0002 各有 2–3 台同尾号，对账掩码用末 8 位）。规则：峰值并发 ≤ 70% MAX_JOBS（7）；机队 > 14 台前先扩（单房内存小，加 MAX_JOBS 或第二实例）。
+**分批 OTA 边界（服务端）**：firstturn 池 MAX_JOBS 10；2026-09-13 全天 17 房峰值并发 1、MemoryPeak 48 MB（单房级）；机队：注册表 active 10 台、近 7 天签发 9 台（完整 SN 去重；⚠️ 尾 4 位掩码会把不同批次码的设备撞成一台——0006/0010/0002 各有 2–3 台同尾号，对账掩码用末 8 位）。口径（B103 补正）：10 台 < 10 路只是硬上限算术，不保证余量；1 并发 / 48 MB 是单样本，不等于 10 路压测；不写「N 台以内安全」。**扩批门槛**：firstturn active jobs 接近 7、或出现无 Worker 接房 / `failed` 即暂停扩批，扩容另评估；普通池与 firstturn 池容量分开看。
 
 **分批 OTA 机队底稿（2026-09-13 22:4x CST 快照，SN 掩码 = 末 8 位；OTA 版本 = `ota_device_status` 最近一行）**
 
@@ -87,4 +87,4 @@
 | …00800010 | active | —（从未 OTA check） | — | 4 | 09-11 新注册；OTA 链路未验 | 第 2 批末，先看 check 能不能到 |
 | …00000001 | active | 233 | 09-06 06:14Z | 0 | 7 天无签发、无 OTA 结果，疑离线/下线 | 观察，不主动催 |
 
-接入判据（每台升级后第一次唤醒，cc 交）：`[device-session] ok sn=… contract=first_turn_v1 policy=capability policy_src=env supports=oneshot_first_turn_v1|local_receipt_v1` + firstturn `begin accepted`。没有这行 = 端侧迁移/能力声明没生效（服务端不会拦）。增量新设备：激活→注册表 active（`isSnAllowed` 只认注册表状态，DB 异常才回落 env 名单）→ 同一判据；前提是 OTA 发布切成全量（`rollout_sns` 空，publish 显式 `rollout:'all'`），否则新设备拿不到 v27x。**池满形态**：LiveKit 无该 agentName 可派 → 首句房无 worker → 端 6 s 超时 → 提示重说但 RTC 也无人接；分批期间看 firstturn journal `accepting` 与 `job closed` 差、签发行 `policy/supports`、`result outcome` 分布（task / no_task / failed:cancelled）、underrun。建议第 1 批 = 0010 + 1–2 台此前只走普通合同的老端（如 0003/0004）→ cc 交每台首次 `first_turn_v1` 签发行 + firstturn 接房 → 一次 off B/C 复验 → 第 2 批余下。回滚顺序不变（上节）。
+接入判据（每台升级后第一次唤醒，cc 交）：`[device-session] ok sn=… contract=first_turn_v1 policy=capability policy_src=env supports=oneshot_first_turn_v1|local_receipt_v1` + firstturn `begin accepted`。没有这行 = 端侧迁移/能力声明没生效（服务端不会拦）。增量新设备：激活→注册表 active（`isSnAllowed` 只认注册表状态，DB 异常才回落 env 名单）→ 同一判据；前提是 OTA 发布切成全量（`rollout_sns` 空，publish 显式 `rollout:'all'`），否则新设备拿不到 v27x。**池满形态**：LiveKit 无该 agentName 可派 → 首句房无 worker → 端 6 s 超时 → 提示重说但 RTC 也无人接（**会失声，不是已验证的普通回落**）；分批期间看 firstturn journal `accepting` 与 `job closed` 差、签发行 `policy/supports`、`result outcome` 分布（task / no_task / failed:cancelled）、underrun。建议第 1 批 = 0010 + 1–2 台此前只走普通合同的老端（如 0003/0004）→ cc 交每台首次 `first_turn_v1` 签发行 + firstturn 接房 → 一次 off B/C 复验 → 第 2 批余下。回滚顺序不变（上节）。
