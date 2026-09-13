@@ -296,7 +296,7 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   systemd 照答 `MainPID=0 NRestarts=0 ActiveEnterTimestamp=`(全空),与"服务真挂了"完全同形。
   **先 `systemctl list-units --type=service --all | grep -i voice` 把名字列出来再判状态**、**单机灰度** `voice-worker-firstturn`
   (agent `rust-worker-firstturn`,2026-09-11 起,产品首句 v1 专用,env 链与生产逐行相同只叠 13 键差异,
-  MemoryHigh 700M/Max 900M;**二进制 `/root/rust-worker-firstturn/voice-rust-worker`,同目录 `.prev`=上一版回滚锚;⚠️ `deploy-worker-bin.sh` 只认 `/root/rust-worker/…new`,灰度 unit 换装是手工 mv+restart,动前核 MainPID/exe sha**)、**隔离 POC** `voice-worker-poc`(agent `rust-worker-poc`,已停,
+  MemoryHigh 700M/Max 900M;**二进制 `/root/rust-worker-firstturn/voice-rust-worker`,同目录 `.prev`=上一版回滚锚;⚠️ `deploy-worker-bin.sh` 只认 `/root/rust-worker/…new`,灰度 unit 换装是手工替换+restart,动前核 MainPID/exe sha;⚠️ 回滚件用 `cp -p … voice-rust-worker.rollback-<sha8>-<ActiveEnter ISO>`,**别 `mv` 成 `.prev` 覆盖既有回滚锚**(codex B70 §4.4);2026-09-13 起 `.new`=B69 候选 `c2b84b2e…` 已暂存未换装,HOLD 等 codex 窗口**)、**隔离 POC** `voice-worker-poc`(agent `rust-worker-poc`,已停,
   ⚠️ **它是残废的**:设备命令关、LLM 指向火山 ark 裸端点而非 kidshub 大脑,**不能拿来接真机**)、
   Python 主线 `voice-worker` + `voice-worker-colleague` + `voice-console`。
   🔑 **rust worker 的源码在 `feat/rust-worker`(生产线)与 `feat/ordered-pcm-input`(one-shot),
@@ -866,7 +866,7 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   （「再见」实测在 `EXIT_SWALLOW_HOTWORDS` 里，槽位就叫 `farewell.goodbye`）。
   要碰这个门，修法是**把控制词豁免搬进 `local_audio_echo_hit` 自己**成为不变量（同 B53 的 `mark_echo_drop`），
   调用点绕不过去——而不是在命中点补 `if`。
-  ✅ **已按此修法实现（2026-09-13 B68/B69，提交 `299b074`，产物 sha256 `c2b84b2e…`，未部署）**：开场窗内先算一次
+  ✅ **已按此修法实现（2026-09-13 B68/B69，提交 `299b074`，产物 sha256 `c2b84b2e…`，候选已暂存到 `.new` 未换装——B70 起 HOLD，安卓 AEC 先行；codex 源码守卫 `review_cc_b69_control_outlet.py` 7/7 可在本仓复跑）**：开场窗内先算一次
   `caption_gate::control_outlet_kind(合并句)`，单字+词库 → `textproc::opening_echo_verdict(nu, bank, control_outlet)`
   （outlet 为 Some 永不判回声，单字也不例外），重叠窗 `if` 首项加 `control_outlet.is_none()`（顺带修「不用了」LCS 0.33
   被无 VAD 首句吞的既存洞）。窗外路径逐字不变，filter 仍没动。8 锚测试在 `textproc::opening_echo_verdict_tests`。
