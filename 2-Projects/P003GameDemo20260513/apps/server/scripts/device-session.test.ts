@@ -46,6 +46,7 @@ async function callSession(opts: {
   sn?: string;
   trace?: string;
   raw?: string;
+  supports?: string[];
 }): Promise<Response> {
   return app.request('/v1/device/session', {
     method: 'POST',
@@ -60,6 +61,7 @@ async function callSession(opts: {
         trace_id: opts.trace ?? 'trace-test-1',
         app_version: '1.2.2-canary.2',
         firmware_version: 'unknown',
+        ...(opts.supports ? { supports: opts.supports } : {}),
       }),
   });
 }
@@ -259,6 +261,318 @@ await t('日志敏感扫描（含正锚）', () => {
   );
   const leaked = logLines.filter((l) => /eyJ[A-Za-z0-9_-]{10,}/.test(l));
   assert.equal(leaked.length, 0, `日志泄露疑似 JWT ${leaked.length} 行`);
+});
+
+const FT_AGENT = 'rust-worker-firstturn'; // B29 单机灰度定向派单目标（测试值）
+const OLD_AGENT = 'rust-worker';
+
+// ── B23 产品首句 v1 签发协商（2026-09-11）：名单 ∧ 声明 才签；任一不成立 = 旧路径；contract 与 metadata 同源 ──
+await t('B23 名单内且声明 → 签 contract，metadata 三字段同源', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] });
+    assert.equal(r.status, 200);
+    const j = (await r.json()) as Record<string, any>;
+    assert.deepEqual(j.contract, {
+      input_mode: 'ordered_pcm',
+      oneshot_first_turn: 'v1',
+      local_receipt: 'v1',
+      history_topic: 'p003.audio.history.v1',
+      worker_capabilities: ['android_local_receipt_v1', 'oneshot_first_turn_v1'],
+    });
+    assertTokenMatchesResponse(j.token, j);
+    const c = decodeJwt(j.token) as Record<string, any>;
+    const meta = JSON.parse(c.roomConfig.agents[0].metadata);
+    assert.equal(meta.input_mode, 'ordered_pcm');
+    assert.equal(meta.oneshot_first_turn, 'v1');
+    assert.equal(meta.local_receipt, 'v1');
+    assert.equal(meta.trace_id, 'trace-test-1');
+    assert.equal(meta.session_id, j.session_id);
+    assert.ok(logLines.some((l) => l.includes('contract=first_turn_v1')));
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B23 名单内但客户端未声明（v261 老客户端）→ 旧路径，metadata 无三键', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  try {
+    const r = await callSession({ cred });
+    assert.equal(r.status, 200);
+    const j = (await r.json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assertTokenMatchesResponse(j.token, j);
+    const meta = JSON.parse((decodeJwt(j.token) as Record<string, any>).roomConfig.agents[0].metadata);
+    for (const k of ['input_mode', 'oneshot_first_turn', 'local_receipt']) assert.ok(!(k in meta), k);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B23 声明了但不在名单 / 名单为空 → 旧路径', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN2;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
+    const j = (await r.json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assertTokenMatchesResponse(j.token, j);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+  const r2 = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
+  const j2 = (await r2.json()) as Record<string, any>;
+  assert.equal(j2.contract, null);
+});
+
+await t('B23 supports 畸形值被忽略，不影响签发', async () => {
+  const r = await callSession({ cred, raw: JSON.stringify({ device_sn: SN, trace_id: 'trace-test-2', supports: 'oneshot_first_turn_v1' }) });
+  assert.equal(r.status, 200);
+  const j = (await r.json()) as Record<string, any>;
+  assert.equal(j.contract, null);
+});
+
+await t('B23 自检：contract 与 metadata 不同源必 throw（负锚）', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1'] });
+    const j = (await r.json()) as Record<string, any>;
+    assert.throws(() => assertTokenMatchesResponse(j.token, { ...j, contract: null }), /旧路径 metadata 不得含/);
+    assert.throws(
+      () => assertTokenMatchesResponse(j.token, { ...j, contract: { ...j.contract, local_receipt: 'v2' } }),
+      /metadata\.local_receipt/,
+    );
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+// ── B29 单机灰度定向派单（2026-09-11）：签了新合同必须同时把房派给专用 agent；
+//    缺派单目标 = 拒签新能力退回旧路径，绝不把 ordered 首句投给没有代次状态机的旧 worker ──
+await t('B29 ①目标 SN + supports + 有派单目标 → v1 合同 ∧ 派给新 agent（响应/JWT/自检三处同值）', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const r = await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] });
+    const j = (await r.json()) as Record<string, any>;
+    assert.ok(j.contract, 'contract 应非空');
+    assert.equal(j.expected_agent_name, FT_AGENT, '响应 expected_agent_name');
+    const c = decodeJwt(j.token) as Record<string, any>;
+    assert.equal(c.roomConfig.agents.length, 1);
+    assert.equal(c.roomConfig.agents[0].agentName, FT_AGENT, 'JWT roomConfig.agents[0].agentName');
+    assertTokenMatchesResponse(j.token, j); // 自检用的是响应里的名字，不是常量
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B29 ②同 SN 无 supports → contract null ∧ 仍派旧 agent', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const j = (await (await callSession({ cred })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    assert.equal((decodeJwt(j.token) as any).roomConfig.agents[0].agentName, OLD_AGENT);
+    assertTokenMatchesResponse(j.token, j);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B29 ③非名单合法 SN + supports → contract null ∧ 仍派旧 agent', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN2;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1'] })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    assert.equal((decodeJwt(j.token) as any).roomConfig.agents[0].agentName, OLD_AGENT);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+await t('B29 ④fail-closed：名单内 + supports 但未配派单目标 → 拒签新能力，退回旧路径旧 agent', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME; // 就是要它缺席
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1', 'local_receipt_v1'] })).json()) as Record<string, any>;
+    assert.equal(j.contract, null, '缺派单目标时绝不能签出 contract');
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    const meta = JSON.parse((decodeJwt(j.token) as any).roomConfig.agents[0].metadata);
+    for (const k of ['input_mode', 'oneshot_first_turn', 'local_receipt'])
+      assert.ok(!(k in meta), `旧路径 metadata 不得含 ${k}`);
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  }
+});
+
+await t('B29 负锚：响应 expected_agent_name 与 JWT 不符必 throw（证明自检真在对撞而非恒绿）', async () => {
+  process.env.ONESHOT_FIRST_TURN_SN_ALLOW = SN;
+  process.env.ONESHOT_FIRST_TURN_AGENT_NAME = FT_AGENT;
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1'] })).json()) as Record<string, any>;
+    assertTokenMatchesResponse(j.token, j); // 正锚：原样必过
+    assert.throws(
+      () => assertTokenMatchesResponse(j.token, { ...j, expected_agent_name: OLD_AGENT }),
+      /expected_agent_name/,
+      '把响应的 agent 名改成旧的，自检必须翻红',
+    );
+  } finally {
+    delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+    delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  }
+});
+
+
+// ── B84 发布策略（2026-09-13，V1.1 产品化）：capability = OTA 到新版即自动具备，不再逐台加名单；off = 全局暂停（回滚开关） ──
+const BOTH = ['oneshot_first_turn_v1', 'local_receipt_v1'];
+function withPolicy(policy: string | undefined, allow: string | undefined, agent: string | undefined): void {
+  if (policy === undefined) delete process.env.ONESHOT_FIRST_TURN_POLICY;
+  else process.env.ONESHOT_FIRST_TURN_POLICY = policy;
+  if (allow === undefined) delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  else process.env.ONESHOT_FIRST_TURN_SN_ALLOW = allow;
+  if (agent === undefined) delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  else process.env.ONESHOT_FIRST_TURN_AGENT_NAME = agent;
+}
+const clearPolicy = () => withPolicy(undefined, undefined, undefined);
+const metaOf = (j: Record<string, any>) => JSON.parse((decodeJwt(j.token) as any).roomConfig.agents[0].metadata);
+const NO_CONTRACT_KEYS = ['input_mode', 'oneshot_first_turn', 'local_receipt'];
+
+await t('B84 capability：名单外的准入设备 + 双 supports → 签 contract、派 firstturn agent（OTA 即用，零人工名单）', async () => {
+  withPolicy('capability', '', FT_AGENT); // 灰度名单刻意为空：证明签发不再依赖它
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract?.oneshot_first_turn, 'v1');
+    assert.equal(j.expected_agent_name, FT_AGENT);
+    assertTokenMatchesResponse(j.token, j);
+    assert.equal(metaOf(j).input_mode, 'ordered_pcm');
+    assert.ok(
+      logLines.some((l) => l.includes('contract=first_turn_v1') && l.includes('policy=capability') && l.includes('supports=oneshot_first_turn_v1|local_receipt_v1')),
+      '日志必须标 policy=capability 与 supports',
+    );
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 capability：只声明 oneshot_first_turn_v1、缺 local_receipt_v1 → 旧路径（两项能力缺一不签）', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1'] })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    assertTokenMatchesResponse(j.token, j);
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 capability：老客户端无 supports → 旧路径、旧 agent、metadata 无三键（全量开关不得强派 ordered）', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    const meta = metaOf(j);
+    for (const k of NO_CONTRACT_KEYS) assert.ok(!(k in meta), k);
+    assert.ok(logLines.some((l) => l.includes('policy=capability') && l.includes('supports=-')), '老客户端日志 supports=-');
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 capability：缺派单目标 → fail-closed 旧路径（B29 第三条件不因策略放宽）', async () => {
+  withPolicy('capability', '', undefined);
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 off：名单内 + 双 supports + 有 agent → 一律不签（全局暂停 = 回滚开关）', async () => {
+  withPolicy('off', SN, FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    for (const k of NO_CONTRACT_KEYS) assert.ok(!(k in metaOf(j)), k);
+    assert.ok(logLines.some((l) => l.includes('policy=off')));
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 策略值非法 → 按 allowlist 处理并告警：名单外不签、名单内照签', async () => {
+  const warns: string[] = [];
+  const origWarn = console.warn;
+  console.warn = (...a: unknown[]) => {
+    warns.push(a.map(String).join(' '));
+  };
+  try {
+    withPolicy('capabilty', '', FT_AGENT); // 故意拼错
+    let j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null, '非法值不得放宽成 capability');
+    withPolicy('capabilty', SN, FT_AGENT);
+    j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract?.oneshot_first_turn, 'v1', '非法值下名单机制仍在');
+    assert.ok(warns.some((w) => w.includes('ONESHOT_FIRST_TURN_POLICY')), '必须告警而不是静默');
+  } finally {
+    console.warn = origWarn;
+    clearPolicy();
+  }
+});
+
+await t('B84 默认（未设策略）= allowlist：名单外 + 双 supports 不签（与今天生产行为逐字一致）', async () => {
+  withPolicy(undefined, '', FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.ok(logLines.some((l) => l.includes('policy=allowlist')));
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 日志脱敏：supports 里塞 token 样的串只打成 ?，敏感扫描仍零命中', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const before = logLines.length;
+    await callSession({ cred, supports: ['oneshot_first_turn_v1', 'eyJhbGciOiJIUzI1NiJ9.PAYLOAD.SIG'] });
+    const mine = logLines.slice(before);
+    assert.ok(mine.some((l) => l.includes('supports=oneshot_first_turn_v1|?')), mine.join('\n'));
+    assert.equal(mine.filter((l) => /eyJ[A-Za-z0-9_-]{10,}/.test(l)).length, 0);
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 纯函数矩阵：normalizeFirstTurnPolicy / firstTurnEligibleBy', async () => {
+  const { firstTurnEligibleBy, normalizeFirstTurnPolicy } = await import('../src/routes/device-session.js');
+  assert.equal(normalizeFirstTurnPolicy(undefined), 'allowlist');
+  assert.equal(normalizeFirstTurnPolicy(' Capability '), 'capability');
+  assert.equal(normalizeFirstTurnPolicy('OFF'), 'off');
+  assert.equal(normalizeFirstTurnPolicy('garbage'), 'allowlist');
+  assert.equal(firstTurnEligibleBy('off', [SN], SN, BOTH), false);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, BOTH), true);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, ['oneshot_first_turn_v1']), false);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, ['local_receipt_v1']), false);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, []), false);
+  assert.equal(firstTurnEligibleBy('allowlist', [SN], SN, ['oneshot_first_turn_v1']), true);
+  assert.equal(firstTurnEligibleBy('allowlist', [], SN, BOTH), false);
+  assert.equal(firstTurnEligibleBy('allowlist', [SN2], SN, BOTH), false);
 });
 
 console.log = origLog;
