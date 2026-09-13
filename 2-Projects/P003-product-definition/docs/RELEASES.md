@@ -70,4 +70,21 @@
 9. v271 原包不追溯（off 对 v271 仍是止扩）；v273 REJECTED，版号不复用。
 10. 生产池 `voice-worker-rust` MemoryPeak 1.12 GiB（MemoryHigh 1.4 GiB 的 82%），与 One-shot 无关；分批期间老端流量仍走它，需盯。
 
-**分批 OTA 边界（服务端）**：firstturn 池 MAX_JOBS 10；2026-09-13 全天 17 房峰值并发 1、MemoryPeak 48 MB（单房级）；近 7 天签发设备 9 台（`ota_device_status` 9 行）。规则：峰值并发 ≤ 70% MAX_JOBS（7）；机队 > 14 台前先扩（单房内存小，加 MAX_JOBS 或第二实例）。**池满形态**：LiveKit 无该 agentName 可派 → 首句房无 worker → 端 6 s 超时 → 提示重说但 RTC 也无人接；分批期间看 firstturn journal `accepting` 与 `job closed` 差、签发行 `policy/supports`、`result outcome` 分布（task / no_task / failed:cancelled）、underrun。建议第 1 批 = 0010 + 1–2 台此前只走普通合同的老端（如 0003/0004）→ cc 交每台首次 `first_turn_v1` 签发行 + firstturn 接房 → 一次 off B/C 复验 → 第 2 批余下。回滚顺序不变（上节）。
+**分批 OTA 边界（服务端）**：firstturn 池 MAX_JOBS 10；2026-09-13 全天 17 房峰值并发 1、MemoryPeak 48 MB（单房级）；机队：注册表 active 10 台、近 7 天签发 9 台（完整 SN 去重；⚠️ 尾 4 位掩码会把不同批次码的设备撞成一台——0006/0010/0002 各有 2–3 台同尾号，对账掩码用末 8 位）。规则：峰值并发 ≤ 70% MAX_JOBS（7）；机队 > 14 台前先扩（单房内存小，加 MAX_JOBS 或第二实例）。
+
+**分批 OTA 机队底稿（2026-09-13 22:4x CST 快照，SN 掩码 = 末 8 位；OTA 版本 = `ota_device_status` 最近一行）**
+
+| 设备 | 注册 | OTA 现役 vc | 最近 OTA check | 近 7 天签发 | 风险标记 | 建议批次 |
+|---|---|---|---|---|---|---|
+| …00100010 | active | 271（实机已 sideload v274） | 09-13 06:59Z | 193（含 12 次 supports） | 验收机 | 第 1 批（已装） |
+| …00200003 | active | 263 | 09-13 12:43Z | 31 | 与验收机同声场；2b 慢路 canary 命中 | 第 1 批 |
+| …00100004 | active | 259 | 09-13 13:28Z | 35 | 与验收机同声场 | 第 1 批 |
+| …03800006 | active | 264（非发布版号，疑 sideload） | 09-13 10:55Z | 138 | 高活跃 | 第 2 批 |
+| …01700006 | active | 242 | 09-10 01:44Z | 142 | **242 装机曾 `install_failed(unhealthy_start_limit)`**（3 次异常启动才 healthy）；高活跃 | 第 2 批，盯健康窗 |
+| …02000002 | active | 242 | 09-10 05:41Z | 97 | **同上 `unhealthy_start_limit` 史** | 第 2 批，盯健康窗 |
+| …04800006 | active | 259 | 09-11 06:47Z | 70 | 无凭据到期记录 | 第 2 批 |
+| …00000002 | active | 242 | 09-11 09:52Z | 14 | 低活跃 | 第 2 批 |
+| …00800010 | active | —（从未 OTA check） | — | 4 | 09-11 新注册；OTA 链路未验 | 第 2 批末，先看 check 能不能到 |
+| …00000001 | active | 233 | 09-06 06:14Z | 0 | 7 天无签发、无 OTA 结果，疑离线/下线 | 观察，不主动催 |
+
+接入判据（每台升级后第一次唤醒，cc 交）：`[device-session] ok sn=… contract=first_turn_v1 policy=capability policy_src=env supports=oneshot_first_turn_v1|local_receipt_v1` + firstturn `begin accepted`。没有这行 = 端侧迁移/能力声明没生效（服务端不会拦）。增量新设备：激活→注册表 active（`isSnAllowed` 只认注册表状态，DB 异常才回落 env 名单）→ 同一判据；前提是 OTA 发布切成全量（`rollout_sns` 空，publish 显式 `rollout:'all'`），否则新设备拿不到 v27x。**池满形态**：LiveKit 无该 agentName 可派 → 首句房无 worker → 端 6 s 超时 → 提示重说但 RTC 也无人接；分批期间看 firstturn journal `accepting` 与 `job closed` 差、签发行 `policy/supports`、`result outcome` 分布（task / no_task / failed:cancelled）、underrun。建议第 1 批 = 0010 + 1–2 台此前只走普通合同的老端（如 0003/0004）→ cc 交每台首次 `first_turn_v1` 签发行 + firstturn 接房 → 一次 off B/C 复验 → 第 2 批余下。回滚顺序不变（上节）。
