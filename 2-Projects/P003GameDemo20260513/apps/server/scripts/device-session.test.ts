@@ -647,6 +647,41 @@ await t('B89 非法覆盖值（手工改库）被忽略并告警：按 env 走�
   }
 });
 
+// ── B91 §4（2026-09-13）：端侧只认「字段明确为 JSON null」才走同次唤醒普通回落；字段缺失≠null。
+//    这里把「键存在且为 null」钉成严格断言（assert.equal(undefined,null) 会放过缺键，故用 'in' + strictEqual + 原文）。
+await t('B91 policy=off：响应 contract 键显式存在且为 JSON null（不是缺键）', async () => {
+  withPolicy('off', '', FT_AGENT);
+  try {
+    const res = await callSession({ cred, supports: BOTH });
+    assert.equal(res.status, 200);
+    const text = await res.text();
+    assert.ok(text.includes('"contract":null'), `原文必须含 "contract":null：${text.slice(0, 200)}`);
+    const j = JSON.parse(text) as Record<string, any>;
+    assert.ok('contract' in j, 'contract 键必须存在');
+    assert.strictEqual(j.contract, null);
+    assert.ok(typeof j.token === 'string' && j.token.length > 0, '普通票据仍签发');
+    assert.equal(metaOf(j).oneshot_first_turn, undefined, '普通票 metadata 不得含首句键');
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B91 capability 下旧端（无 supports）：contract 键显式 null + 普通票据', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const res = await callSession({ cred });
+    assert.equal(res.status, 200);
+    const text = await res.text();
+    assert.ok(text.includes('"contract":null'));
+    const j = JSON.parse(text) as Record<string, any>;
+    assert.ok('contract' in j);
+    assert.strictEqual(j.contract, null);
+    assert.ok(typeof j.token === 'string' && j.token.length > 0);
+  } finally {
+    clearPolicy();
+  }
+});
+
 console.log = origLog;
 origLog(`\n${pass} passed / ${fail} failed`);
 if (fail > 0) process.exit(1);
