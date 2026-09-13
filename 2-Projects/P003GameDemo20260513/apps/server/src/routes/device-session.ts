@@ -44,6 +44,13 @@ const cfg = () => ({
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean),
+  // B84 发布策略（2026-09-13，V1.1 产品化——OTA 到新版 APK 即自动具备 One-shot，不再逐台加名单）：
+  //   allowlist（默认 = 今天的行为）：只对 ONESHOT_FIRST_TURN_SN_ALLOW 名单内 ∧ supports 含 oneshot_first_turn_v1 的请求签
+  //   capability：任何已准入设备，只要本次请求 supports **同时**含 oneshot_first_turn_v1 与 local_receipt_v1 就签
+  //   off：全局暂停（运维回滚开关）——一台都不签，已签发票据按 TTL 自然过期，不切断进行中的会话
+  //   其它值 = 配置错 → 按 allowlist 处理并 console.warn（fail-closed 到最窄的可用形态，不静默放宽）
+  // 三档都仍受 B29 第三条件约束：没配派单目标（ONESHOT_FIRST_TURN_AGENT_NAME）就不签。
+  firstTurnPolicy: normalizeFirstTurnPolicy(process.env.ONESHOT_FIRST_TURN_POLICY),
 });
 
 /** B23：产品首句合同（响应 `contract` 与 agent metadata 同源，自检对撞）。 */
@@ -55,6 +62,43 @@ export const FIRST_TURN_CONTRACT = {
   worker_capabilities: ['android_local_receipt_v1', 'oneshot_first_turn_v1'],
 } as const;
 export const FIRST_TURN_SUPPORT_TAG = 'oneshot_first_turn_v1';
+
+// ── B84 发布策略：纯函数，单测锁矩阵 ──
+export type FirstTurnPolicy = 'allowlist' | 'capability' | 'off';
+/** capability 档要求客户端**同时**声明的两项能力（codex B84 §5.2；v270 起客户端两项一起发）。 */
+export const FIRST_TURN_REQUIRED_SUPPORTS = ['oneshot_first_turn_v1', 'local_receipt_v1'] as const;
+const warnedPolicy = new Set<string>();
+export function normalizeFirstTurnPolicy(raw: string | undefined): FirstTurnPolicy {
+  const v = (raw ?? 'allowlist').trim().toLowerCase();
+  if (v === 'allowlist' || v === 'capability' || v === 'off') return v;
+  // 非法值只告警一次（每个不同的错值一次），避免每请求刷屏；行为收缩到 allowlist，绝不放宽
+  if (!warnedPolicy.has(v)) {
+    warnedPolicy.add(v);
+    console.warn(`[device-session] ONESHOT_FIRST_TURN_POLICY=${JSON.stringify(raw)} 非法，按 allowlist 处理（合法值 allowlist|capability|off）`);
+  }
+  return 'allowlist';
+}
+/**
+ * 是否具备签产品首句合同的资格（不含 B29 派单目标条件，那条在调用点另判）：
+ *   off        → 永不
+ *   capability → supports 同时含两项能力即可，不看 SN 名单（准入已由 isSnAllowed 判过）
+ *   allowlist  → SN 在灰度名单 ∧ supports 含 oneshot_first_turn_v1（= B23/B29 至今的行为，逐字不变）
+ */
+export function firstTurnEligibleBy(policy: FirstTurnPolicy, allow: readonly string[], sn: string, supports: readonly string[]): boolean {
+  switch (policy) {
+    case 'off':
+      return false;
+    case 'capability':
+      return FIRST_TURN_REQUIRED_SUPPORTS.every((t) => supports.includes(t));
+    case 'allowlist':
+      return allow.includes(sn) && supports.includes(FIRST_TURN_SUPPORT_TAG);
+  }
+}
+/** 日志用：只放行 `[a-z0-9_]` 组成的能力名，其它形态一律打成 `?`——防客户端把 token 样的串塞进 supports 混进日志。 */
+function supportsForLog(supports: readonly string[]): string {
+  if (supports.length === 0) return '-';
+  return supports.map((s) => (/^[a-z0-9_]{1,64}$/.test(s) ? s : '?')).join('|');
+}
 
 // ── 限频：内存滑窗，每 SN 每 60s 最多 rpm 次（session 与 prefetch 共享额度）──
 const hits = new Map<string, number[]>();
@@ -219,11 +263,11 @@ deviceSessionRoute.post('/session', async (c) => {
   if (!conf.lkKey || !conf.lkSecret)
     return c.json({ status: 'error', code: 503, message: '签发服务不可用' }, 503);
 
-  // B23：灰度名单内 ∧ 客户端声明 → 签产品首句合同；否则旧路径。回滚 = 清空 ONESHOT_FIRST_TURN_SN_ALLOW。
-  // B29 第三个条件：必须有定向派单目标。没有就**退回旧路径**（contract:null + 旧 agent），
+  // B23/B84：资格由发布策略定（allowlist = 灰度名单 ∧ 声明；capability = 双能力声明即可；off = 全停）。
+  // 回滚 = ONESHOT_FIRST_TURN_POLICY=off（或退回 allowlist）+ pm2 restart；已签票据按 TTL 过期，不切断会话。
+  // B29 第三个条件不随策略放宽：必须有定向派单目标。没有就**退回旧路径**（contract:null + 旧 agent），
   // 不签一个会被投给旧 worker 的空头合同——那样设备会发 begin 然后永远等不到 ack。
-  const firstTurnEligible =
-    conf.firstTurnAllow.includes(sn as string) && supports.includes(FIRST_TURN_SUPPORT_TAG);
+  const firstTurnEligible = firstTurnEligibleBy(conf.firstTurnPolicy, conf.firstTurnAllow, sn as string, supports);
   const firstTurn = firstTurnEligible && conf.firstTurnAgent !== '';
   // 本次派单目标：签了新合同 → 专用 agent；否则旧 agent。**JWT / 响应 / 自检三处同用这一个值。**
   const agentName = firstTurn ? conf.firstTurnAgent : AGENT_NAME;
@@ -298,6 +342,8 @@ deviceSessionRoute.post('/session', async (c) => {
 
   console.log(
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
+      // B84：policy 与 supports 进日志——旧/新客户端各走哪条路径、为什么，事后能从这一行对账
+      ` policy=${conf.firstTurnPolicy} supports=${supportsForLog(supports)}` +
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });

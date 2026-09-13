@@ -433,6 +433,148 @@ await t('B29 负锚：响应 expected_agent_name 与 JWT 不符必 throw（证�
   }
 });
 
+
+// ── B84 发布策略（2026-09-13，V1.1 产品化）：capability = OTA 到新版即自动具备，不再逐台加名单；off = 全局暂停（回滚开关） ──
+const BOTH = ['oneshot_first_turn_v1', 'local_receipt_v1'];
+function withPolicy(policy: string | undefined, allow: string | undefined, agent: string | undefined): void {
+  if (policy === undefined) delete process.env.ONESHOT_FIRST_TURN_POLICY;
+  else process.env.ONESHOT_FIRST_TURN_POLICY = policy;
+  if (allow === undefined) delete process.env.ONESHOT_FIRST_TURN_SN_ALLOW;
+  else process.env.ONESHOT_FIRST_TURN_SN_ALLOW = allow;
+  if (agent === undefined) delete process.env.ONESHOT_FIRST_TURN_AGENT_NAME;
+  else process.env.ONESHOT_FIRST_TURN_AGENT_NAME = agent;
+}
+const clearPolicy = () => withPolicy(undefined, undefined, undefined);
+const metaOf = (j: Record<string, any>) => JSON.parse((decodeJwt(j.token) as any).roomConfig.agents[0].metadata);
+const NO_CONTRACT_KEYS = ['input_mode', 'oneshot_first_turn', 'local_receipt'];
+
+await t('B84 capability：名单外的准入设备 + 双 supports → 签 contract、派 firstturn agent（OTA 即用，零人工名单）', async () => {
+  withPolicy('capability', '', FT_AGENT); // 灰度名单刻意为空：证明签发不再依赖它
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract?.oneshot_first_turn, 'v1');
+    assert.equal(j.expected_agent_name, FT_AGENT);
+    assertTokenMatchesResponse(j.token, j);
+    assert.equal(metaOf(j).input_mode, 'ordered_pcm');
+    assert.ok(
+      logLines.some((l) => l.includes('contract=first_turn_v1') && l.includes('policy=capability') && l.includes('supports=oneshot_first_turn_v1|local_receipt_v1')),
+      '日志必须标 policy=capability 与 supports',
+    );
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 capability：只声明 oneshot_first_turn_v1、缺 local_receipt_v1 → 旧路径（两项能力缺一不签）', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred, supports: ['oneshot_first_turn_v1'] })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    assertTokenMatchesResponse(j.token, j);
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 capability：老客户端无 supports → 旧路径、旧 agent、metadata 无三键（全量开关不得强派 ordered）', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    const meta = metaOf(j);
+    for (const k of NO_CONTRACT_KEYS) assert.ok(!(k in meta), k);
+    assert.ok(logLines.some((l) => l.includes('policy=capability') && l.includes('supports=-')), '老客户端日志 supports=-');
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 capability：缺派单目标 → fail-closed 旧路径（B29 第三条件不因策略放宽）', async () => {
+  withPolicy('capability', '', undefined);
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 off：名单内 + 双 supports + 有 agent → 一律不签（全局暂停 = 回滚开关）', async () => {
+  withPolicy('off', SN, FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.equal(j.expected_agent_name, OLD_AGENT);
+    for (const k of NO_CONTRACT_KEYS) assert.ok(!(k in metaOf(j)), k);
+    assert.ok(logLines.some((l) => l.includes('policy=off')));
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 策略值非法 → 按 allowlist 处理并告警：名单外不签、名单内照签', async () => {
+  const warns: string[] = [];
+  const origWarn = console.warn;
+  console.warn = (...a: unknown[]) => {
+    warns.push(a.map(String).join(' '));
+  };
+  try {
+    withPolicy('capabilty', '', FT_AGENT); // 故意拼错
+    let j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null, '非法值不得放宽成 capability');
+    withPolicy('capabilty', SN, FT_AGENT);
+    j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract?.oneshot_first_turn, 'v1', '非法值下名单机制仍在');
+    assert.ok(warns.some((w) => w.includes('ONESHOT_FIRST_TURN_POLICY')), '必须告警而不是静默');
+  } finally {
+    console.warn = origWarn;
+    clearPolicy();
+  }
+});
+
+await t('B84 默认（未设策略）= allowlist：名单外 + 双 supports 不签（与今天生产行为逐字一致）', async () => {
+  withPolicy(undefined, '', FT_AGENT);
+  try {
+    const j = (await (await callSession({ cred, supports: BOTH })).json()) as Record<string, any>;
+    assert.equal(j.contract, null);
+    assert.ok(logLines.some((l) => l.includes('policy=allowlist')));
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 日志脱敏：supports 里塞 token 样的串只打成 ?，敏感扫描仍零命中', async () => {
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const before = logLines.length;
+    await callSession({ cred, supports: ['oneshot_first_turn_v1', 'eyJhbGciOiJIUzI1NiJ9.PAYLOAD.SIG'] });
+    const mine = logLines.slice(before);
+    assert.ok(mine.some((l) => l.includes('supports=oneshot_first_turn_v1|?')), mine.join('\n'));
+    assert.equal(mine.filter((l) => /eyJ[A-Za-z0-9_-]{10,}/.test(l)).length, 0);
+  } finally {
+    clearPolicy();
+  }
+});
+
+await t('B84 纯函数矩阵：normalizeFirstTurnPolicy / firstTurnEligibleBy', async () => {
+  const { firstTurnEligibleBy, normalizeFirstTurnPolicy } = await import('../src/routes/device-session.js');
+  assert.equal(normalizeFirstTurnPolicy(undefined), 'allowlist');
+  assert.equal(normalizeFirstTurnPolicy(' Capability '), 'capability');
+  assert.equal(normalizeFirstTurnPolicy('OFF'), 'off');
+  assert.equal(normalizeFirstTurnPolicy('garbage'), 'allowlist');
+  assert.equal(firstTurnEligibleBy('off', [SN], SN, BOTH), false);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, BOTH), true);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, ['oneshot_first_turn_v1']), false);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, ['local_receipt_v1']), false);
+  assert.equal(firstTurnEligibleBy('capability', [], SN, []), false);
+  assert.equal(firstTurnEligibleBy('allowlist', [SN], SN, ['oneshot_first_turn_v1']), true);
+  assert.equal(firstTurnEligibleBy('allowlist', [], SN, BOTH), false);
+  assert.equal(firstTurnEligibleBy('allowlist', [SN2], SN, BOTH), false);
+});
+
 console.log = origLog;
 origLog(`\n${pass} passed / ${fail} failed`);
 if (fail > 0) process.exit(1);
