@@ -3,11 +3,31 @@
     "label": "V1.1 正式版",
     "oneshot": true,
     "since": "2026-09-13T07:06:25Z",
-    "server_commit": "add34a8db",
-    "server_tag": "p003-v1.1-oneshot",
-    "worker": { "unit": "voice-worker-firstturn", "commit": "299b074", "sha256_prefix": "c2b84b2e…", "max_jobs": 10 },
-    "apk": "需 versionCode > 270 且含启动迁移：v271 = 1.2.2-canary.259（codex 已交合包，待同事合入业务主线后 OTA）；v270 = 声学/交互基线，不含自动启用",
-    "notes": "具备 One-shot（唤醒+指令连说）：已准入设备只要请求声明 oneshot_first_turn_v1 + local_receipt_v1 即自动签首句合同并派到 rust-worker-firstturn，零逐台名单。开关见下方。"
+    "server_commit": "a1d9802df（B89 后台面板；线上 src 三文件 md5 = 仓库 HEAD）",
+    "server_tag": "p003-v1.1-oneshot-sealed-20260913（上线锚 p003-v1.1-oneshot → add34a8db）",
+    "worker": {
+      "unit": "voice-worker-firstturn",
+      "commit": "299b074",
+      "sha256_prefix": "c2b84b2e…",
+      "max_jobs": 10
+    },
+    "apk": "v274 = 1.2.2-canary.262（versionCode 274，85,670,286 B，sha256 0017dc50…ddda）= 封版包：验收机四场景通过（D 短连说 / T 传统 / E 长连说 / F 超预算 cancel→重说，B101/B102 2026-09-13），待合包→分批 OTA；回滚包 v272（9f0eec54…）。谱系：v271 启动迁移原包（不发）→ v272 B90 同次回落（off 可作普通回退）→ v273 REJECTED → v274；v270 = 声学/交互基线",
+    "notes": "具备 One-shot（唤醒+指令连说）：已准入设备只要请求声明 oneshot_first_turn_v1 + local_receipt_v1 即自动签首句合同并派到 rust-worker-firstturn，零逐台名单。v272+ 在 off 下同次唤醒回落普通票并播「请再说一遍」；首句 6 s 无可信终点 → cancel → 提示重说（v274）。开关见下方。",
+    "sealed": {
+      "at": "2026-09-13T14:18:53Z",
+      "receipt": "B102",
+      "apk_sha256": "0017dc5072c3a0fa6db77db4e3c7dc72bfd3aaa84e05b0d021e455156d59ddda",
+      "rollback_apk_sha256": "9f0eec548e30b3ae3d0b4faea100a182babd49b4503b4c8e17b109dc75fa7f3c",
+      "acceptance_traces": {
+        "D": "855b8a5e",
+        "T": "645a03ba",
+        "E": "7d129eac",
+        "F": "21306920",
+        "B_off": "6e1f0a13",
+        "C_off": "39c96897"
+      },
+      "residuals_doc": "P003-product-definition/docs/RELEASES.md#封版记录"
+    }
   },
   "history": [
     {
