@@ -61,7 +61,7 @@
 **已知残项（封版时冻结，不阻塞）**：
 1. Worker 次级判停候选（端侧 `first_turn_worker_candidate`）离线覆盖、实机未命中——等自然样本，命中后按 trace 对 worker `end candidate published quiet_ms` 行。
 2. ready 3 s 兼容兜底（`input_ready_fallback mode=compatibility`）仍在，未修。
-3. worker 播出 filler→正文交接 underrun（T 562 ms、旧 D 374 ms、B 房 222 ms、邻机 735/475 ms）——既有播出缓冲问题，非 v274 引入；worker 侧改动待 V1.1 解冻。
+3. worker 播出 filler→正文交接 underrun——**2026-09-13 全天 firstturn 池 20 个 turn 中 8 个有 underrun（40%），生产池 15 中 3**（单次 222–735 ms，听感为回复中段短暂断音）；既有播出缓冲问题，非 v274 引入，但全量后会被更多人听到；worker 侧改动待 V1.1 解冻。
 4. worker 被动断连/失败代次不 dump `decision evidence`（B100 缺口），一行改动待排。
 5. 同声场多设备同醒（0003/0004/0006 随 0010 醒并各自作答）——真实产品场景未处理；多机家庭/教室会「齐答」。
 6. off 回滚点在 v274 上未实机复验（v272 实机 B/C 通过；**v274 改了 `VoiceRustWorkerClient` 的 wake 连接/恢复路径**，合同解析相对 v272 未改，离线 1035 项含回落测试）——第 1 批 OTA 后做一次 B/C：先存策略快照、`b93-oneshot-window.sh start ≤5` 带 systemd 定时自动恢复（不依赖聊天转发），复验后核 effective=capability/env/override 空并做一次 D，再批准第 2 批。
@@ -72,7 +72,9 @@
 
 **分批 OTA 边界（服务端）**：firstturn 池 MAX_JOBS 10；2026-09-13 全天 17 房峰值并发 1、MemoryPeak 48 MB（单房级）；机队：注册表 active 10 台、近 7 天签发 9 台（完整 SN 去重；⚠️ 尾 4 位掩码会把不同批次码的设备撞成一台——0006/0010/0002 各有 2–3 台同尾号，对账掩码用末 8 位）。口径（B103 补正）：10 台 < 10 路只是硬上限算术，不保证余量；1 并发 / 48 MB 是单样本，不等于 10 路压测；不写「N 台以内安全」。**扩批门槛**：firstturn active jobs 接近 7、或出现无 Worker 接房 / `failed` 即暂停扩批，扩容另评估；普通池与 firstturn 池容量分开看。
 
-**分批 OTA 机队底稿（2026-09-13 22:4x CST 快照，SN 掩码 = 末 8 位；OTA 版本 = `ota_device_status` 最近一行）**
+**🟢 川哥拍板（2026-09-13 22:59 CST）：全量，不分批、不另找灰度机——这些都是内测设备。明天同事合包后，OTA 到最新版的设备全量接入。** 下表「建议批次」列作废，仅留作机队底稿与风险标记。
+
+**机队底稿（2026-09-13 22:4x CST 快照，SN 掩码 = 末 8 位；OTA 版本 = `ota_device_status` 最近一行）**
 
 | 设备 | 注册 | OTA 现役 vc | 最近 OTA check | 近 7 天签发 | 风险标记 | 建议批次 |
 |---|---|---|---|---|---|---|
@@ -86,5 +88,7 @@
 | …00000002 | active | 242 | 09-11 09:52Z | 14 | 低活跃 | 第 2 批 |
 | …00800010 | active | —（从未 OTA check） | — | 4 | 09-11 新注册；OTA 链路未验 | 第 2 批末，先看 check 能不能到 |
 | …00000001 | active | 233 | 09-06 06:14Z | 0 | 7 天无签发、无 OTA 结果，疑离线/下线 | 观察，不主动催 |
+
+**全量接入清单（D-day）**：① 合包 versionCode ≥ 275（验收机已 274，OTA 不降级）、正式证书、包含 v274 首句代码（codex 冻结源 `d295436c…`）；② admin OTA 发布 `rollout:'all'`（显式，否则默认不是全量）、enabled=1；③ 发布后 cc 跑 `docs/scripts/b104-oneshot-adoption-report-20260913.sh <发布时刻 UTC>`（aliyun-hk `/root/b104-adoption-server.sh` + 64.90 `/root/b104-adoption-worker.sh`，只读）看每台设备 → ONESHOT / 声明了能力但未签 / 仍旧端，以及 OTA 每台安装结果、firstturn 池并发/outcome/underrun；④ 观测阈值（不是闸门）：firstturn active jobs 接近 7、出现无 Worker 接房、`failed:*` 激增、OTA `install_failed` → 先看再说，回滚见「回滚顺序」（后台 off = 所有 v272+ 设备回普通语音，秒生效）；⑤ 残项 6 的 off B/C 复验改在验收机上择时做（≤5 min 定时自动恢复），不占用全量节奏。
 
 接入判据（每台升级后第一次唤醒，cc 交）：`[device-session] ok sn=… contract=first_turn_v1 policy=capability policy_src=env supports=oneshot_first_turn_v1|local_receipt_v1` + firstturn `begin accepted`。没有这行 = 端侧迁移/能力声明没生效（服务端不会拦）。增量新设备：激活→注册表 active（`isSnAllowed` 只认注册表状态，DB 异常才回落 env 名单）→ 同一判据；前提是 OTA 发布切成全量（`rollout_sns` 空，publish 显式 `rollout:'all'`），否则新设备拿不到 v27x。**池满形态**：LiveKit 无该 agentName 可派 → 首句房无 worker → 端 6 s 超时 → 提示重说但 RTC 也无人接（**会失声，不是已验证的普通回落**）；分批期间看 firstturn journal `accepting` 与 `job closed` 差、签发行 `policy/supports`、`result outcome` 分布（task / no_task / failed:cancelled）、underrun。建议第 1 批 = 0010 + 1–2 台此前只走普通合同的老端（如 0003/0004）→ cc 交每台首次 `first_turn_v1` 签发行 + firstturn 接房 → 一次 off B/C 复验 → 第 2 批余下。回滚顺序不变（上节）。
