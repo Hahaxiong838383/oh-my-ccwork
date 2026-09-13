@@ -296,7 +296,7 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   systemd 照答 `MainPID=0 NRestarts=0 ActiveEnterTimestamp=`(全空),与"服务真挂了"完全同形。
   **先 `systemctl list-units --type=service --all | grep -i voice` 把名字列出来再判状态**、**单机灰度** `voice-worker-firstturn`
   (agent `rust-worker-firstturn`,2026-09-11 起,产品首句 v1 专用,env 链与生产逐行相同只叠 13 键差异,
-  MemoryHigh 700M/Max 900M)、**隔离 POC** `voice-worker-poc`(agent `rust-worker-poc`,已停,
+  MemoryHigh 700M/Max 900M;**二进制 `/root/rust-worker-firstturn/voice-rust-worker`,同目录 `.prev`=上一版回滚锚;⚠️ `deploy-worker-bin.sh` 只认 `/root/rust-worker/…new`,灰度 unit 换装是手工 mv+restart,动前核 MainPID/exe sha**)、**隔离 POC** `voice-worker-poc`(agent `rust-worker-poc`,已停,
   ⚠️ **它是残废的**:设备命令关、LLM 指向火山 ark 裸端点而非 kidshub 大脑,**不能拿来接真机**)、
   Python 主线 `voice-worker` + `voice-worker-colleague` + `voice-console`。
   🔑 **rust worker 的源码在 `feat/rust-worker`(生产线)与 `feat/ordered-pcm-input`(one-shot),
@@ -322,6 +322,9 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
   (比 CI 多查 libstdc++,带门禁负向验证;产物 md5 与 GHA 不同=正常,Rust 非重现构建)④产物**本机中转**
   scp 到 64.90(home-studio 直连 64.90 缺 host key)⑤deploy-worker-bin.sh;完事两侧 worktree+tmp 分支即清。
   部署档案记 commit+md5 锚。⚠️ 新二进制必须放 `/root/rust-worker/voice-rust-worker.new`(脚本只认此路径)。
+  ⚠️ **home-studio 上 `/tmp/wt-rust-build` 不是空的**(2026-09-13 实撞):分支 `tmp-rust-ordered24`、HEAD `93dfb62b`,带 09-12 13:44
+  的未提交改动(`be68f91b` ready 补确认提交前的构建副本)——`checkout` 会被它挡住,**别 `--force`/`reset --hard`**,另开
+  `/tmp/wt-rust-build-<tag>` 独立路径构建,完事只删自己的;离家用 `home-studio-mesh`(LAN 别名 `home-studio` 不通)。
   备用:本机/dev198 的 glibc 比 64.90(24.04/2.39)新,产物拷过去直接跑不起来→走 GitHub Actions
   `.github/workflows/rust-worker-build.yml`(ubuntu-24.04 + glibc 符号天花板门禁)。
   **产物走 release asset(2026-08-20 起)**:`gh release download rust-worker-build-<run_id> -p voice-rust-worker`
@@ -863,10 +866,17 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
   （「再见」实测在 `EXIT_SWALLOW_HOTWORDS` 里，槽位就叫 `farewell.goodbye`）。
   要碰这个门，修法是**把控制词豁免搬进 `local_audio_echo_hit` 自己**成为不变量（同 B53 的 `mark_echo_drop`），
   调用点绕不过去——而不是在命中点补 `if`。
+  ✅ **已按此修法实现（2026-09-13 B68/B69，提交 `299b074`，产物 sha256 `c2b84b2e…`，未部署）**：开场窗内先算一次
+  `caption_gate::control_outlet_kind(合并句)`，单字+词库 → `textproc::opening_echo_verdict(nu, bank, control_outlet)`
+  （outlet 为 Some 永不判回声，单字也不例外），重叠窗 `if` 首项加 `control_outlet.is_none()`（顺带修「不用了」LCS 0.33
+  被无 VAD 首句吞的既存洞）。窗外路径逐字不变，filter 仍没动。8 锚测试在 `textproc::opening_echo_verdict_tests`。
+  ⚠️ **单测看不见调用点回归**（把外层 `if n_chars==1` 装回去 320 全绿）——`Orchestrator` ~100 字段活句柄构造不出；
+  真机验收行=开场 15s 内 paused 状态轻声「停」不续播、「再见」能退出。
   🔴 **既存洞**：`pipeline.rs:2939` 注释自称「急停单字在此被吞与 stop_only 效果等价」——
   **「都不成 turn」真、「效果等价」假**。STOP 支 3097 无条件补硬停保证「停=安静」，词库支 2955 的
   hard_abort 只服务追杀条件。⇒ 开场 15s 内轻声单字「停」且 `check_hotword` interim 支没命中时，
   **字幕发出去了但小可不会停**。排「说了停还在说」先看是不是落在这一支。
+  ✅ `299b074` 起控制单字放行到 STOP 出口（该出口 `hard_abort_current` 清 `paused/false_deadline`，假打断续播两个前提同时不成立）；假注释已改正。**换装前线上仍是旧行为。**
   ⚠️ 放宽这个 filter 是最小修法，但 `farewell.*` 恰是**真人也会说**的短句，净收益比看上去小；
   且它**救不了 15 秒窗之外**的回灌——那个要等端侧送「设备此刻在播本地音频」事件才有解。
   🔑 **TTS 子串门的参考文本是「已合成入轨」不是「已播出」**：`synth_text` 在 `track()` 里追加，
