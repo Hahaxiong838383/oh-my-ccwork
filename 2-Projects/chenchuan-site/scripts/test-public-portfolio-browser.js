@@ -49,6 +49,6 @@ async (page) => {
     if (response.status() !== 206 || !response.headers()['content-type']?.includes('video/')) throw new Error('Video Range failed '+url)
     assets.push({ path: url.slice(base.length), status: response.status(), type: 'video' })
   }
-  console.log(JSON.stringify({ viewport: page.viewportSize(), pages: checks, assets, messages }, null, 2))
   if (messages.length) throw new Error('Browser console messages require review')
+  return { viewport: page.viewportSize(), pages: checks, assets, messages }
 }
