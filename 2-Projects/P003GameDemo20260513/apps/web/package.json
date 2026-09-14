@@ -12,7 +12,8 @@
     "check:scope": "node scripts/check-scope-boundary.mjs",
     "test:tutorial": "tsx scripts/tutorial-store-test.ts",
     "test:typewriter": "tsx scripts/typewriter-test.ts",
-    "test:experience": "tsx scripts/experience-store-test.ts"
+    "test:experience": "tsx scripts/experience-store-test.ts",
+    "test:admin-proto": "node scripts/admin-proto-guard-test.mjs"
   },
   "dependencies": {
     "@volcengine/rtc": "^4.68.5",
