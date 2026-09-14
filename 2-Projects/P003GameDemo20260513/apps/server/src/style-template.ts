@@ -45,6 +45,15 @@ export const STYLE_TEMPLATES: Record<StyleTemplateKey, StyleTemplate> = {
   },
 };
 
+/**
+ * 内容型长输出长度豁免（2026-09-14，…0010 讲故事实测）：说话风格/话语量只管日常对话怎么说；
+ * 孩子点名要的故事/科普讲解/儿歌古诗等长度由内容决定。必须拼在 policy 区、紧跟模板规则与特质行之后（recency），
+ * 否则 quiet「不超过两句/讲完即收」+ 话语量 0.15 会把基座 200-500 字的故事压成 87-269 字并停在悬念句。
+ */
+export const CONTENT_LENGTH_EXEMPTION =
+  '以上说话风格和话语量只管日常对话怎么说;孩子点名要的内容型长输出(讲故事/科普讲解/念儿歌背古诗)长度由内容决定,' +
+  '按【说话方式】里的故事规则一次讲完整,风格只体现在语气里,不因"安静/简短"把故事讲短或停在半路。';
+
 export function getStyleTemplate(key: string | null | undefined): StyleTemplate | null {
   if (!key) return null;
   return STYLE_TEMPLATES[key as StyleTemplateKey] ?? null;
