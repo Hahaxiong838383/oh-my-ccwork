@@ -109,6 +109,8 @@ NODE
   node scripts/update-video-copy-20260914.cjs prepare "$prod/data/analytics.db" "$backup/video-dry-run"
   node scripts/update-video-copy-20260914.cjs apply "$build/data/analytics.db" "$backup/video-stage"
   ANALYTICS_DB_PATH="$build/data/analytics.db" npm run build > "$backup/build.log" 2>&1
+  # Keep immutable hashed assets referenced by tabs opened before this deployment.
+  rsync -a --ignore-existing "$backup/next.before/static/" "$build/.next/static/"
   ANALYTICS_DB_PATH="$build/data/analytics.db" node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3101 > "$backup/canary.log" 2>&1 &
   canary_pid=$!
   trap 'kill "$canary_pid" 2>/dev/null || true' EXIT

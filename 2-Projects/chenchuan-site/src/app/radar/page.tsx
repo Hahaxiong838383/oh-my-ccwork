@@ -103,7 +103,7 @@ function RadarCTA() {
                 href="/contact"
                 className="group inline-flex items-center justify-center gap-2 rounded-lg bg-text-primary px-6 py-3 text-sm font-semibold text-bg-primary transition-all duration-300 hover:opacity-90"
               >
-                加微信 · 聊聊自动化合作
+                聊聊自动化合作
                 <span className="font-mono transition group-hover:translate-x-1">→</span>
               </Link>
               <Link

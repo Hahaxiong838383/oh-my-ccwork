@@ -478,7 +478,7 @@ function UpsellCta({ reason }: { reason: 'quota' | 'budget' | 'blacklisted' }) {
         </Link>
       </div>
       <div className="mt-3 font-mono text-[10px] text-white/35">
-        添加微信时，请简要说明想讨论的项目或问题。
+        联系时，请简要说明想讨论的项目或问题。
       </div>
     </div>
   )
