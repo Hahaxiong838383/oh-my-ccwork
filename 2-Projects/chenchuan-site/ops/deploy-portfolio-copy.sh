@@ -93,9 +93,11 @@ PY
   tar -czf "$backup/source.before.tar.gz" -T "$backup/existing.txt"
   cp -a "$prod/.next" "$backup/next.before"
   status > "$backup/pm2.before.json"
-  rsync -a --exclude='/.next*' --exclude='/node_modules/' --exclude='/data/' --exclude='/media/' --exclude='/public/' --exclude='/.git/' --exclude='*.log' "$prod/" "$build/"
-  ln -s "$prod/node_modules" "$build/node_modules"
-  ln -s "$prod/public" "$build/public"
+  # A trailing slash only matches directories, not symlinks (production data is a symlink).
+  rsync -a --exclude='/.next*' --exclude='/node_modules' --exclude='/data' --exclude='/media' --exclude='/public' --exclude='/.git' --exclude='*.log' "$prod/" "$build/"
+  test ! -e "$build/data" && test ! -L "$build/data"
+  ln -sT "$prod/node_modules" "$build/node_modules"
+  ln -sT "$prod/public" "$build/public"
   mkdir -m 700 "$build/data"
   rsync -a --exclude='/analytics.db*' "$prod/data/" "$build/data/"
   node - "$prod/data/analytics.db" "$build/data/analytics.db" <<'NODE'
