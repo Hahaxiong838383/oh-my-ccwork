@@ -92,3 +92,12 @@
 **全量接入清单（D-day）**：① 合包 versionCode ≥ 275（验收机已 274，OTA 不降级）、正式证书、包含 v274 首句代码（codex 冻结源 `d295436c…`）；② admin OTA 发布 `rollout:'all'`（显式，否则默认不是全量）、enabled=1；③ 发布后 cc 跑 `docs/scripts/b104-oneshot-adoption-report-20260913.sh <发布时刻 UTC>`（aliyun-hk `/root/b104-adoption-server.sh` + 64.90 `/root/b104-adoption-worker.sh`，只读）看每台设备 → ONESHOT / 声明了能力但未签 / 仍旧端，以及 OTA 每台安装结果、firstturn 池并发/outcome/underrun；④ 观测阈值（不是闸门）：firstturn active jobs 接近 7、出现无 Worker 接房、`failed:*` 激增、OTA `install_failed` → 先看再说，回滚见「回滚顺序」（后台 off = 所有 v272+ 设备回普通语音，秒生效）；⑤ 残项 6 的 off B/C 复验改在验收机上择时做（≤5 min 定时自动恢复），不占用全量节奏。
 
 接入判据（每台升级后第一次唤醒，cc 交）：`[device-session] ok sn=… contract=first_turn_v1 policy=capability policy_src=env supports=oneshot_first_turn_v1|local_receipt_v1` + firstturn `begin accepted`。没有这行 = 端侧迁移/能力声明没生效（服务端不会拦）。增量新设备：激活→注册表 active（`isSnAllowed` 只认注册表状态，DB 异常才回落 env 名单）→ 同一判据；前提是 OTA 发布切成全量（`rollout_sns` 空，publish 显式 `rollout:'all'`），否则新设备拿不到 v27x。**池满形态**：LiveKit 无该 agentName 可派 → 首句房无 worker → 端 6 s 超时 → 提示重说但 RTC 也无人接（**会失声，不是已验证的普通回落**）；分批期间看 firstturn journal `accepting` 与 `job closed` 差、签发行 `policy/supports`、`result outcome` 分布（task / no_task / failed:cancelled）、underrun。建议第 1 批 = 0010 + 1–2 台此前只走普通合同的老端（如 0003/0004）→ cc 交每台首次 `first_turn_v1` 签发行 + firstturn 接房 → 一次 off B/C 复验 → 第 2 批余下。回滚顺序不变（上节）。
+
+## 2026-09-14 server 提示词增量：内容型长输出长度豁免说话风格（已上线，来自分支）
+
+- **上线时刻**：2026-09-14 08:22 CST，`pm2 restart p003-voice`（health 200、重启后零 error 行）。**只改三个 src 文件**：`prompts.ts`（3d83e9f6…）/ `style-template.ts`（e2109bec…）/ `prompt-orchestrator.ts`（456356af…）；上线前三文件与 main 同源（f8effbc7… / cd74ca78… / f9aa7a4e…），备份 `/opt/p003/_backup/20260914-082212-b-story-length/src/`。
+- **代码位置**：分支 `p003/story-truncation-20260914` commit 088e2e296（**未合 main**）。⚠️ 合 main 之前，线上这三文件 ≠ main——部署前做同源核对时以该分支为准，别拿 main 版本覆盖回去。线上 `package.json` 与 main 本就不同源（c9a584f1… vs ab8d13df…），本次未动。
+- **内容**：说话风格/话语量只管日常对话；讲故事/科普讲解/儿歌古诗长度由内容决定（一次讲完整 200-500 字，「长一点」400-600，不停在悬念句，分次讲必问「要不要继续听？」）；policy 区在模板/特质之后拼豁免句。测试 `npm run test:story-length` 20/20。
+- **验收**：0010 brain 端点 `prompt_preview` 中旧措辞已消失、新规则在 700-820、豁免句紧跟「安静小可…讲完即收」之后（间隔 42 字）；匿名走生产 `/v1/chat/completions` 讲「长一点的小兔子故事」→ 501 字、finish_reason=stop、完整收尾、3.5 s。
+- **回滚**：`cp /opt/p003/_backup/20260914-082212-b-story-length/src/*.ts /opt/p003/server/src/ && pm2 restart p003-voice`。
+- 排查稿：`2026-09-14-讲故事截断排查-0010-*.md`（含 60s 排除链、五轮故事表、投机轮落库污染残项）。0010 的 quiet 模板由川哥手动切回默认（A）。
