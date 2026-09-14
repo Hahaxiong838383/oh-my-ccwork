@@ -19,7 +19,7 @@ export default async function VideosPage() {
       <SectionWrapper>
         <SectionTitle label="Video Library" title="视频库" />
         <p className="mb-12 max-w-2xl text-text-secondary">
-          产品演示、路测实录与工作流分享。部分视频待上传，可联系获取。
+          产品演示、路测实录与项目记录。
         </p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -63,7 +63,7 @@ export default async function VideosPage() {
                       关联项目 · {video.projectTitle}
                     </a>
                   )}
-                  <div className="flex gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
                     {video.tags.map((tag) => (
                       <Tag key={tag}>{tag}</Tag>
                     ))}

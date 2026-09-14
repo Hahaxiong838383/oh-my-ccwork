@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer'
 import { SiteMotion } from '@/components/layout/SiteMotion'
 import { AnalyticsTracker } from '@/components/analytics/AnalyticsTracker'
 import { formatCareerExperience } from '@/lib/experience'
+import { patents } from '@/data/patents'
 import '@/styles/globals.css'
 
 export function generateMetadata(): Metadata {
@@ -12,11 +13,11 @@ export function generateMetadata(): Metadata {
 
   return {
     title: {
-      default: '陈川 · AI 原生产品负责人',
+      default: '陈川 · AI Native 产品经理',
       template: '%s · 陈川',
     },
     description:
-      `AI 原生产品负责人，${experience}智能硬件与 AI 产品经验。主导空间光学、AR HUD、多模态交互、Agent 工作流与 AI 消费品孵化。`,
+      `AI Native 产品经理，${experience}产品经验。做儿童 AI 伙伴、团队 AI 助手和 AR HUD，参与产品定义、技术选型、原型开发与验收。`,
     keywords: [
       '陈川',
       'Chen Chuan',
@@ -30,9 +31,9 @@ export function generateMetadata(): Metadata {
       'Spatial Optics',
     ],
     openGraph: {
-      title: '陈川 · AI 原生产品负责人',
+      title: '陈川 · AI Native 产品经理',
       description:
-        `AI 原生产品负责人，${experience}智能硬件与 AI 产品经验，46 项专利成果。`,
+        `AI Native 产品经理，${experience}产品经验，${patents.length} 项专利记录。儿童 AI、团队 AI 助手与 AR HUD 项目。`,
       type: 'website',
       locale: 'zh_CN',
     },

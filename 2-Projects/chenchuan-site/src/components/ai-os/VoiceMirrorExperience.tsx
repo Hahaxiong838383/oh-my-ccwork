@@ -55,7 +55,7 @@ function friendlyError(error: string): string {
   if (error === 'invalid_experience_code') return '体验码无效、已用完或已过期。'
   if (error === 'voice_session_already_active') return '这个浏览器已有一段语音正在进行，请稍后再试。'
   if (error === 'public_voice_busy') return '当前语音通道正忙，请稍后再试。'
-  if (error === 'voice_feature_disabled') return '语音体验正在维护，文字对话仍可正常使用。'
+  if (error === 'voice_feature_disabled') return '语音体验暂未开放，可以尝试文字问答。'
   return '语音连接没有成功，请稍后重试。'
 }
 
@@ -63,7 +63,7 @@ const STATE_COPY: Record<VoiceState, string> = {
   idle: '准备就绪',
   connecting: '正在接通 MyJavis',
   listening: '正在听你说',
-  thinking: '正在组织判断',
+  thinking: '正在生成回答',
   speaking: 'AI 正在回答',
   ended: '本次体验已结束',
   error: '连接未成功',
@@ -292,9 +292,9 @@ export function VoiceMirrorExperience({ onClose }: { onClose?: () => void }) {
             <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-[#9B8CFF]">
               MyJavis · Live Voice
             </div>
-            <h2 className="mt-2 text-xl font-semibold sm:text-2xl">和陈川的 AI 战略镜像直接开口聊</h2>
+            <h2 className="mt-2 text-xl font-semibold sm:text-2xl">用语音聊项目和产品思路</h2>
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/60">
-              实时听、实时想、实时回答，可随时打断。公开体验最长 2 分钟。
+              支持语音问答和打断。公开体验最长 2 分钟。
             </p>
           </div>
           {onClose && (
@@ -338,7 +338,7 @@ export function VoiceMirrorExperience({ onClose }: { onClose?: () => void }) {
               </div>
               <div className="mt-4 space-y-3" aria-live="polite">
                 <Subtitle label="你" text={userSubtitle || '开口说一个具体问题，例如：这个 AI 产品方向值不值得做？'} />
-                <Subtitle label="AI 镜像" text={assistantSubtitle || '接通后，我会先自我介绍，然后等你提问。'} accent />
+                <Subtitle label="AI 回答" text={assistantSubtitle || '接通后可以直接提问。'} accent />
               </div>
               <p className="mt-4 text-[11px] leading-relaxed text-white/40">
                 公开会话不启用长期记忆、声纹、提醒、音乐与设备控制；本站不保存录音和对话转写。

@@ -3,11 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { getOrCreateCookieId } from '@/lib/chat/cookie-id'
-import { EngineBadge } from './EngineBadge'
 
 // 自由提问面板：消息列表 + 输入框 + SSE 流式输出 + 限额提示 + 加微信 CTA
-// gemini P0-1/P1-1 钦定：第 3 轮 ROLE_HANDOFF_SUFFIX 由后端追加
-// gemini P0-2 钦定：熔断时此面板降级，但页面经典回放仍可用
+// 限额与路由由后端控制；展示不把兼容路由字段当成真实模型标识。
 
 interface Message {
   role: 'user' | 'assistant'
@@ -19,17 +17,10 @@ interface Message {
 
 // 空状态示例问题：点击直接发送（降低小白冷启动门槛）
 const SAMPLE_QUESTIONS = [
-  '陈川这个人怎么样，靠谱吗？',
+  '陈川最近做了哪些 AI 产品项目？',
   '我们公司想做 AI 应用，怎么判断有没有市场？',
   '招 AI 产品经理时，看哪些能力最关键？',
   '想从传统行业转型做 AI 产品，第一步该做什么？',
-]
-
-const THINKING_STAGES = [
-  '接收问题',
-  '判断复杂度',
-  '调用深度问答模型',
-  '组织回答结构',
 ]
 
 type QuotaState =
@@ -273,7 +264,7 @@ export function FreeAskPanel() {
         {messages.length === 0 ? (
           <div className="flex h-full min-h-[320px] flex-col items-center justify-center gap-4 px-2 text-center">
             <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/35">
-              战略镜像就绪 · 等待你的问题
+              输入问题，开始文字问答
             </div>
             <div className="text-[12px] text-white/55">不知道问什么？点一下就开聊 👇</div>
             <div className="w-full max-w-md space-y-2">
@@ -333,7 +324,7 @@ export function FreeAskPanel() {
                   void send()
                 }
               }}
-              placeholder="比如：陈川这个人怎么样？我们公司要不要招 AI 产品经理？"
+              placeholder="比如：H 平台解决什么问题？小可的语音方案怎么设计？"
               rows={3}
               disabled={isStreaming || quota.kind !== 'ready'}
               className="w-full resize-none border-0 bg-transparent px-1.5 py-1 text-[14px] text-white placeholder:text-white/35 focus:outline-none focus:ring-0"
@@ -403,15 +394,7 @@ function MessageBubble({ message }: { message: Message }) {
   return (
     <div className="flex justify-start">
       <div className="max-w-[90%] rounded-lg rounded-tl-sm border border-white/10 bg-black/40 px-3.5 py-2.5">
-        {message.routing && (
-          <div className="mb-2">
-            <EngineBadge
-              engine={message.routing.engine}
-              stage={message.routing.label}
-              compact
-            />
-          </div>
-        )}
+        <div className="mb-2 text-[11px] text-white/50">AI 回答</div>
         {message.isStreaming && !message.content ? (
           <ThinkingProgress message={message} />
         ) : (
@@ -431,12 +414,6 @@ function ThinkingProgress({ message }: { message: Message }) {
   const [now, setNow] = useState(() => Date.now())
   const startedAt = message.startedAt ?? now
   const elapsedSeconds = Math.max(0, Math.floor((now - startedAt) / 1000))
-  const activeStage = Math.min(
-    THINKING_STAGES.length - 1,
-    elapsedSeconds < 2 ? 0 : elapsedSeconds < 5 ? 1 : elapsedSeconds < 9 ? 2 : 3,
-  )
-  const modeLabel = message.routing?.label ?? '正在接入问答模型'
-
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
@@ -448,9 +425,9 @@ function ThinkingProgress({ message }: { message: Message }) {
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#7FE5FF]/70 to-transparent" />
         <div className="mb-2 flex items-center justify-between gap-3">
           <div>
-            <div className="text-[13px] font-medium text-white">正在深度问答</div>
+            <div className="text-[13px] font-medium text-white">正在生成回答</div>
             <div className="mt-0.5 text-[11px] text-white/48">
-              首段回答生成前会先做问题拆解，不是界面卡住
+              正在等待回答内容，耗时会随问题和连接状态变化。
             </div>
           </div>
           <div className="rounded-full border border-[#7FE5FF]/25 bg-[#7FE5FF]/10 px-2.5 py-1 font-mono text-[10px] tabular-nums text-[#7FE5FF]">
@@ -462,34 +439,7 @@ function ThinkingProgress({ message }: { message: Message }) {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7FE5FF] opacity-60" />
             <span className="relative inline-flex h-2 w-2 rounded-full bg-[#7FE5FF]" />
           </span>
-          <span>{modeLabel}</span>
-        </div>
-        <div className="grid gap-1.5 sm:grid-cols-4">
-          {THINKING_STAGES.map((stage, index) => {
-            const isDone = index < activeStage
-            const isActive = index === activeStage
-            return (
-              <div
-                key={stage}
-                className={`rounded-lg border px-2.5 py-2 text-[11px] transition ${
-                  isActive
-                    ? 'border-[#7FE5FF]/50 bg-[#7FE5FF]/[0.12] text-[#7FE5FF]'
-                    : isDone
-                      ? 'border-emerald-300/25 bg-emerald-300/[0.07] text-emerald-100/80'
-                      : 'border-white/[0.08] bg-white/[0.03] text-white/35'
-                }`}
-              >
-                <span className="font-mono text-[10px] opacity-60">0{index + 1}</span>
-                <div className="mt-0.5">{stage}</div>
-              </div>
-            )
-          })}
-        </div>
-        <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/[0.06]">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-[#7FE5FF] via-[#A78BFA] to-[#7FE5FF] transition-all duration-700"
-            style={{ width: `${Math.min(92, 18 + elapsedSeconds * 6)}%` }}
-          />
+          <span>等待回答内容…</span>
         </div>
       </div>
     </div>
@@ -499,16 +449,16 @@ function ThinkingProgress({ message }: { message: Message }) {
 function UpsellCta({ reason }: { reason: 'quota' | 'budget' | 'blacklisted' }) {
   const title =
     reason === 'quota'
-      ? '🎙️ 战略镜像权限到上限了'
+      ? '本次文字体验次数已用完'
       : reason === 'budget'
-        ? '📌 今日全站自由咨询名额已满'
-        : '⚠️ IP 暂时被限制'
+        ? '今日文字体验额度已用完'
+        : '当前网络的访问暂时受限'
   const subtitle =
     reason === 'quota'
-      ? '通用决策逻辑我能聊，但深层 context 我没权限读取陈川的大脑。'
+      ? '可以继续查看项目决策示例，或联系陈川讨论具体问题。'
       : reason === 'budget'
-        ? '公平体验防恶意刷量。但「经典提问回放」永远可用（零成本）。'
-        : '短时间消耗过快被自动拉黑 24h。'
+        ? '可以查看已整理的项目决策示例，稍后再来提问。'
+        : '当前请求较多，请稍后再试，也可以通过联系页沟通。'
   return (
     <div className="rounded-lg border border-[#7FE5FF]/30 bg-[#7FE5FF]/[0.06] p-5">
       <div className="mb-2 font-medium text-white">{title}</div>
@@ -518,17 +468,17 @@ function UpsellCta({ reason }: { reason: 'quota' | 'budget' | 'blacklisted' }) {
           href="/contact"
           className="flex-1 rounded border border-[#7FE5FF]/55 bg-[#7FE5FF]/[0.08] px-4 py-2.5 text-center text-[13px] font-medium text-[#7FE5FF] transition hover:bg-[#7FE5FF]/[0.16] hover:shadow-[0_0_24px_rgba(127,229,255,0.32)]"
         >
-          加微信继续聊 →
+          联系陈川 →
         </Link>
         <Link
           href="#classic-demos"
           className="flex-1 rounded border border-white/15 bg-black/30 px-4 py-2.5 text-center text-[13px] text-white/80 transition hover:border-[#7FE5FF]/40 hover:text-[#7FE5FF]"
         >
-          继续看经典回放 ↑
+          查看项目决策示例 ↑
         </Link>
       </div>
       <div className="mt-3 font-mono text-[10px] text-white/35">
-        暗号「OS 访客」· 陈川会给你更有杀伤力的建议
+        添加微信时，请简要说明想讨论的项目或问题。
       </div>
     </div>
   )

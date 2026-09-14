@@ -74,7 +74,8 @@ export function Header() {
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="nav-icon-button text-text-secondary md:hidden"
-          aria-label="Toggle menu"
+          aria-label={mobileOpen ? '关闭菜单' : '打开菜单'}
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X size={20} /> : <Menu size={20} />}
         </button>

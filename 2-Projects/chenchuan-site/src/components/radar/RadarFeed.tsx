@@ -38,7 +38,7 @@ export function RadarFeed({ items }: Props) {
     return (
       <div className="rounded-2xl border border-dashed border-border bg-bg-secondary px-6 py-16 text-center">
         <p className="text-sm text-text-secondary">
-          信源正在同步中，稍后自动刷新。产线每 30 分钟运行一次。
+          暂未获取到资讯，请稍后刷新查看。
         </p>
       </div>
     )

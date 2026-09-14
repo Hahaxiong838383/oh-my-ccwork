@@ -26,7 +26,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const project = await getProjectBySlug(slug)
-  return { title: project?.title ?? '项目详情' }
+  return { title: project?.title ?? '项目详情', description: project?.description }
 }
 
 function getVideoPoster(url: string, poster?: string): string | undefined {
@@ -108,7 +108,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         <BlurFade delay={0.35}>
           <div className="mb-12 rounded-xl border border-white/[0.06] bg-bg-card p-6">
             <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
-              Key Highlights
+              设计与实现
             </h3>
             <ul className="space-y-2.5">
               {project.highlights.map((h) => (
@@ -118,6 +118,11 @@ export default async function ProjectDetailPage({ params }: Props) {
                 </li>
               ))}
             </ul>
+            {'brief' in project && project.brief && (
+              <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-text-secondary">
+                <span className="text-text-primary">技术：</span>{project.brief.stack}
+              </p>
+            )}
           </div>
         </BlurFade>
 
@@ -126,7 +131,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           <BlurFade delay={0.4}>
             <div className="mb-12">
               <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
-                Key Wins
+                项目进展
               </h3>
               <div className="flex flex-wrap gap-2">
                 {project.wins.map((win) => (
@@ -142,7 +147,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           <BlurFade delay={0.45}>
             <div className="mb-12">
               <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">
-                Video Demos
+                演示视频
               </h3>
               <div className="grid gap-4 md:grid-cols-2">
                 {project.videos.map((v) => (
@@ -174,7 +179,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           <BlurFade delay={0.48}>
             <div className="mb-12">
               <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">
-                Gallery
+                项目图片
               </h3>
               <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
                 {project.images.map((src) => (
@@ -197,7 +202,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           <BlurFade delay={0.5}>
             <div className="mb-12">
               <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">
-                Related Projects
+                相关项目
               </h3>
               <div className="grid gap-4 md:grid-cols-2">
                 {relatedProjects.map((rp) => (

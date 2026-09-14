@@ -24,7 +24,7 @@ export default async function ContactPage() {
           <div className="mx-auto max-w-2xl">
             <BlurFade>
               <p className="mb-12 text-lg text-text-secondary">
-                无论是产品合作、技术交流、投资咨询还是其他想法，欢迎与我联系。
+                想聊产品合作或技术方案，可以通过邮箱或微信联系我。
               </p>
             </BlurFade>
 
@@ -64,7 +64,7 @@ export default async function ContactPage() {
                 {[
                   { label: 'LinkedIn', href: profile.contact.linkedin },
                   { label: 'GitHub', href: profile.contact.github },
-                ].map((link) => (
+                ].filter((link) => link.href && !link.href.includes('yourprofile')).map((link) => (
                   <a
                     key={link.label}
                     href={link.href}

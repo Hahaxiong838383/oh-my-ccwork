@@ -25,12 +25,7 @@ async function tryFetch<T>(fetcher: () => Promise<T>, fallback: T): Promise<T> {
 function mapProfile(d: DProfile) {
   return {
     ...localProfile,
-    name: d.name,
-    nameEn: d.name_en,
-    title: d.title,
-    tagline: d.tagline,
-    bio: d.bio,
-    bioExtended: d.bio_extended,
+    // Reviewed public copy is versioned with the site; CMS still owns contact fields.
     contact: {
       ...localProfile.contact,
       phone: d.phone,
@@ -114,23 +109,18 @@ export async function getProjects() {
 
   if (cmsProjects.length === 0) return localProjects
 
-  // Merge: CMS projects + local-only projects (not in CMS)
-  const cmsSlugs = new Set(cmsProjects.map((p) => p.slug))
-  const localOnly = localProjects.filter((p) => !cmsSlugs.has(p.slug))
-
-  // For CMS projects, merge local videos/images/relatedSlugs
-  const merged = cmsProjects.map((cms) => {
-    const local = localProjects.find((p) => p.slug === cms.slug)
-    if (!local) return cms
+  // Keep reviewed copy and featured order stable when a legacy CMS seed is available.
+  // CMS-only projects remain accessible, and existing CMS media remains a fallback.
+  const localSlugs = new Set(localProjects.map((p) => p.slug))
+  const merged = localProjects.map((local) => {
+    const cms = cmsProjects.find((p) => p.slug === local.slug)
     return {
-      ...cms,
-      videos: (local.videos && local.videos.length > 0) ? local.videos : cms.videos,
-      images: local.images ?? cms.images,
-      relatedSlugs: local.relatedSlugs ?? cms.relatedSlugs,
+      ...local,
+      videos: local.videos?.length ? local.videos : cms?.videos,
     }
   })
 
-  return [...merged, ...localOnly]
+  return [...merged, ...cmsProjects.filter((p) => !localSlugs.has(p.slug))]
 }
 
 export async function getProjectBySlug(slug: string) {
@@ -159,6 +149,7 @@ export async function getProjectBySlug(slug: string) {
   // CMS manages the association, but actual playback uses local media files
   return {
     ...cms,
+    ...local,
     videos: (local.videos && local.videos.length > 0) ? local.videos : cms.videos,
     images: local.images ?? cms.images,
     relatedSlugs: local.relatedSlugs ?? cms.relatedSlugs,
@@ -189,7 +180,8 @@ export async function getTimeline() {
       const items = await directus.request(
         readItems('timeline', { sort: ['sort'], limit: -1 }),
       )
-      return items.map(mapTimeline)
+      const periods = new Set(localTimeline.map((t) => t.period))
+      return [...localTimeline, ...items.map(mapTimeline).filter((t) => !periods.has(t.period))]
     },
     localTimeline,
   )
@@ -217,13 +209,17 @@ export async function getArticles() {
           limit: -1,
         }),
       )
-      return items.map(mapArticle)
+      const slugs = new Set(localArticles.map((a) => a.slug))
+      return [...localArticles, ...items.map(mapArticle).filter((a) => !slugs.has(a.slug))]
+        .sort((a, b) => b.date.localeCompare(a.date))
     },
     localArticles,
   )
 }
 
 export async function getArticleBySlug(slug: string) {
+  const local = localArticles.find((a) => a.slug === slug)
+  if (local) return local
   try {
     const items = await directus.request(
       readItems('articles', {

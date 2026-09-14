@@ -50,7 +50,7 @@ export function TheoryReportSection({ reports }: { reports: TheoryReport[] }) {
             脑科学 × LLM 前沿论文
           </h2>
           <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-text-secondary">
-            每天早 9 点，agent 自动扫 arXiv 前沿 + 追踪李飞飞/LeCun/Hinton 等人新作，挑最相关的几篇做中文深度拆解。
+            从 arXiv 等学术来源筛选相关论文，按期整理中文解读，并保留原文链接。
             {list.length > 1 && `下方可切换查看历史归档，共 ${list.length} 期。`}
           </p>
         </div>
@@ -58,9 +58,9 @@ export function TheoryReportSection({ reports }: { reports: TheoryReport[] }) {
 
       {list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#16A34A]/30 bg-bg-card/60 px-6 py-12 text-center">
-          <p className="text-sm text-text-secondary">深度产线已就绪，最新一期拆解即将同步上站。</p>
+          <p className="text-sm text-text-secondary">暂时没有可展示的论文解读。</p>
           <p className="mt-1.5 font-mono text-[11px] text-text-muted">
-            arXiv 7 维检索 · 专家追踪 · 5 段式中文拆解
+            可先查看上方行业资讯
           </p>
         </div>
       ) : (
