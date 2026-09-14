@@ -21,7 +21,7 @@
 
 ## 2026-09-11 变更（限速 + admin + home-studio 直连）
 
-- 非 admin 通道（`443/10086/5443/6443/7443/8446/8447/9443`）共享 **1Mbps** HTB（脚本仍由 `dmit-limited-4mbit.service` 开机执行）。**不限**：SSH 22、admin 丽萨 `:11443`、admin ZGO `:11447`、菲律宾 `:8448`。
+- 非 admin 通道（`443/10086/5443/6443/7443/8446/8447/9443`）共享 **1Mbps** HTB（脚本仍由 `dmit-limited-4mbit.service` 开机执行）：回国 **sport** + 中转去 ZGO `38.49.38.237:{8447,443}` + 中转去丽萨 `154.44.3.170:{8446,8444,8445}`。**不限**：SSH 22、admin 丽萨 `:11443`、admin ZGO `:11447`、菲律宾 `:8448`。u32 只匹配 IPv4 包；`ss` 里的 `[::ffff:x.x.x.x]` 是 IPv4 客户在双栈套接字上的显示，网上仍走 IPv4。真 IPv6 客户才会绕过（现网 0 条）。
 - 2026-09-11：DMIT `gost.service` `:8443 → 丽萨:8443` 已停用下线（备份 `/root/backup-gost-8443/`）。落地丽萨 `:8443` inbound 未动。
 - admin ZGO 新 inbound `:11447` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-zgo` `:11447 → 38.49.38.237:11447`。参数 `/root/zgo-admin-r-chenchuan-params.json`。
 - admin 丽萨新 inbound `:11443` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-lisa` `:11443 → 154.44.3.170:11443`。参数 `/root/lisa-admin-r-chenchuan-params.json`。
