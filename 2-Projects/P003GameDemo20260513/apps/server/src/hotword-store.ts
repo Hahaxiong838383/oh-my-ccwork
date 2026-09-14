@@ -14,7 +14,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 
-export type HotwordKind = 'interrupt' | 'asr' | 'exit' | 'device_asr';
+export type HotwordKind = 'interrupt' | 'asr' | 'exit' | 'device_asr' | 'backchannel';
 
 export const KIND_TO_ENV: Record<HotwordKind, string> = {
   interrupt: 'INTERRUPT_HOTWORDS',
@@ -22,7 +22,26 @@ export const KIND_TO_ENV: Record<HotwordKind, string> = {
   exit: 'EXIT_SWALLOW_HOTWORDS',
   // S2-B2 设备 ASR boost 词(rust 侧与 asr 合并发火山;boost 与执行判定完全解耦)
   device_asr: 'P003_DEVICE_ASR_HOTWORDS',
+  // 播放中附和词(2026-09-14 川哥):小可正在播长文本(本轮回复 ≥ BACKCHANNEL_MIN_REPLY_CHARS)时,整句命中
+  // 表内词(≤2 字)不打断不起新轮只记日志;停/停止/退出/换一个不受影响。worker BACKCHANNEL_MODE=observe|enforce 决定是否真吞。
+  backchannel: 'BACKCHANNEL_HOTWORDS',
 };
+
+/** 附和词只收两字以内（川哥 2026-09-14 口径：B 组三字催更词不进） */
+export const BACKCHANNEL_MAX_CHARS = 2;
+/** 永远不许进附和词表：控制词（急停/退出/换一个）+ 唤醒词 + 句子开头词（真插话被判停切短的形态，不能当附和吞掉） */
+export const BACKCHANNEL_BLACKLIST = new Set([
+  '停', '停止', '停停', '停下', '停一下', '等等', '等一下', '别说了', '别说', '闭嘴', '安静',
+  '换一个', '换', '不', '不要', '别', '不听', '不想听',
+  '退出', '结束', '再见', '拜拜', '不聊了', '不用了',
+  '喂', '小可', '小可小可',
+  '我', '这个', '那个', '就是', '然后', '那', '你', '它', '他', '她',
+]);
+/** 附和词与打断语/退出词的交集（发布前真防线：同一个词不能既是急停又是附和） */
+export function backchannelConflicts(words: string[], lists: { interrupt: string[]; exit: string[] }): string[] {
+  const taken = new Set([...lists.interrupt, ...lists.exit]);
+  return words.filter((w) => taken.has(w));
+}
 export const HOTWORD_KINDS = Object.keys(KIND_TO_ENV) as HotwordKind[];
 
 /** 与 64.90 apply_hotwords.py 的 VALUE_RE 同形（词内字符；逗号是分隔符不在词内） */
@@ -60,6 +79,10 @@ export function validateWords(kind: HotwordKind, words: unknown): { ok: true; wo
     if (!WORD_RE.test(w)) return { ok: false, error: `词条含非法字符(只允许中文/字母数字/空格): ${w}` };
     if ((kind === 'asr' || kind === 'device_asr') && ASR_BLACKLIST.has(w))
       return { ok: false, error: `「${w}」是语气词，禁止进 ASR 热词表（会破坏环境音免疫，咳嗽/嗯啊会被吸成指令）` };
+    if (kind === 'backchannel') {
+      if ([...w].length > BACKCHANNEL_MAX_CHARS) return { ok: false, error: `「${w}」超过 ${BACKCHANNEL_MAX_CHARS} 字（附和词只收两字以内）` };
+      if (BACKCHANNEL_BLACKLIST.has(w)) return { ok: false, error: `「${w}」是控制词/唤醒词/句子开头词，禁止进附和词表` };
+    }
     if (seen.has(w)) continue; // 去重静默
     seen.add(w);
     cleaned.push(w);
@@ -98,7 +121,7 @@ class HotwordStore {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS hotword_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit','device_asr')),
+        kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit','device_asr','backchannel')),
         words_json TEXT NOT NULL,
         status TEXT NOT NULL CHECK(status IN ('draft','published','archived')),
         version INTEGER NOT NULL DEFAULT 0,
@@ -120,13 +143,13 @@ class HotwordStore {
       const row = db
         .prepare(`SELECT sql FROM sqlite_master WHERE type='table' AND name='hotword_config'`)
         .get() as { sql: string } | undefined;
-      if (!row || row.sql.includes('device_asr')) return;
+      if (!row || row.sql.includes('backchannel')) return; // 判据=最新 kind：旧表(缺 device_asr 或缺 backchannel)都走同一条迁移
       db.exec(`
         BEGIN;
         ALTER TABLE hotword_config RENAME TO hotword_config_old;
         CREATE TABLE hotword_config (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit','device_asr')),
+          kind TEXT NOT NULL CHECK(kind IN ('interrupt','asr','exit','device_asr','backchannel')),
           words_json TEXT NOT NULL,
           status TEXT NOT NULL CHECK(status IN ('draft','published','archived')),
           version INTEGER NOT NULL DEFAULT 0,
@@ -140,9 +163,9 @@ class HotwordStore {
         CREATE INDEX IF NOT EXISTS idx_hotword_kind ON hotword_config(kind, status);
         COMMIT;
       `);
-      console.log('[hotword-store] kind CHECK 迁移完成(+device_asr)');
+      console.log('[hotword-store] kind CHECK 迁移完成(+device_asr,+backchannel)');
     } catch (e) {
-      console.error(`[hotword-store] kind CHECK 迁移失败(device_asr 草稿将不可存): ${(e as Error).message}`);
+      console.error(`[hotword-store] kind CHECK 迁移失败(device_asr/backchannel 草稿将不可存): ${(e as Error).message}`);
     }
   }
 

@@ -101,3 +101,4 @@
 - **验收**：0010 brain 端点 `prompt_preview` 中旧措辞已消失、新规则在 700-820、豁免句紧跟「安静小可…讲完即收」之后（间隔 42 字）；匿名走生产 `/v1/chat/completions` 讲「长一点的小兔子故事」→ 501 字、finish_reason=stop、完整收尾、3.5 s。
 - **回滚**：`cp /opt/p003/_backup/20260914-082212-b-story-length/src/*.ts /opt/p003/server/src/ && pm2 restart p003-voice`。
 - 排查稿：`2026-09-14-讲故事截断排查-0010-*.md`（含 60s 排除链、五轮故事表、投机轮落库污染残项）。0010 的 quiet 模板由川哥手动切回默认（A）。
+- **同日 09:17 CST 第二次 server 增量（待办清单 + 第五类热词）**：`config-store.ts`（2e60aa64…）/ `hotword-store.ts`（a1140713…）/ `routes/admin-data.ts`（83f2dcdf…）+ admin 页 `public/admin/index.html`（5adacde3…）+ 64.90 `apply_hotwords.py`（b33f55b4…，白名单 +BACKCHANNEL_HOTWORDS）。备份 `/opt/p003/_backup/20260914-091752-b-todo-backchannel/`。「版本与 One-shot」新增下一版待办（4 条已录）；热词第五类「播放中附和词」A 表 27 词草稿未发布。worker 附和词逻辑已写未发（One-shot 池等全量 OTA 后）。

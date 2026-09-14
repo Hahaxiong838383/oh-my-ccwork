@@ -21,6 +21,7 @@ mod pipeline;
 mod playout;
 mod preflight;
 mod audit_capture;
+mod backchannel;
 mod caption_gate;
 mod ready_confirm;
 mod segmenter;

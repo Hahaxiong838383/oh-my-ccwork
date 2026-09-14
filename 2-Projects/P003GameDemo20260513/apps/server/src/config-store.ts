@@ -66,6 +66,25 @@ const DEFAULT_DB_PATH = './data/config.db';
 
 export type RuntimeFlag = { key: string; value: string; updated_at: number; updated_by: string; note: string };
 
+// ── 下一版待办（2026-09-14 川哥：「版本与 One-shot」里记 v1.2 待更新内容，后续相关待办都加进来，每次版本更新有来源）──
+export const RELEASE_TODO_STATUSES = ['open', 'done', 'dropped'] as const;
+export type ReleaseTodoStatus = (typeof RELEASE_TODO_STATUSES)[number];
+export const RELEASE_TODO_OWNERS = ['cc', 'codex', '川哥', '其它'] as const;
+export type ReleaseTodoOwner = (typeof RELEASE_TODO_OWNERS)[number];
+export type ReleaseTodo = {
+  id: number;
+  target: string; // 目标版本标签，如 v1.2
+  text: string; // 要更新什么（≤300 字）
+  source: string; // 来源：回执/分支/排查稿/日期（≤200 字）
+  owner: ReleaseTodoOwner;
+  status: ReleaseTodoStatus;
+  created_by: string;
+  created_at: number;
+  updated_by: string;
+  updated_at: number;
+  done_at: number | null;
+};
+
 export type ConfigRow = {
   scope: string;
   key: string;
@@ -107,7 +126,73 @@ class ConfigStore {
         updated_by TEXT NOT NULL,
         note TEXT NOT NULL DEFAULT ''
       );
+      CREATE TABLE IF NOT EXISTS release_todo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target TEXT NOT NULL DEFAULT 'v1.2',
+        text TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT '',
+        owner TEXT NOT NULL DEFAULT 'cc',
+        status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','done','dropped')),
+        created_by TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_by TEXT NOT NULL DEFAULT '',
+        updated_at INTEGER NOT NULL,
+        done_at INTEGER
+      );
     `);
+  }
+
+  // ── 下一版待办：open 在前（按创建顺序），done/dropped 在后（按更新时间倒序）。只软删（dropped），来源永远可追。──
+  listTodos(opts: { includeClosed?: boolean } = {}): ReleaseTodo[] {
+    const where = opts.includeClosed ? '' : `WHERE status = 'open'`;
+    return this.db
+      .prepare(
+        `SELECT * FROM release_todo ${where}
+         ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'done' THEN 1 ELSE 2 END,
+                  CASE status WHEN 'open' THEN created_at ELSE -updated_at END`,
+      )
+      .all() as ReleaseTodo[];
+  }
+
+  getTodo(id: number): ReleaseTodo | null {
+    return (this.db.prepare(`SELECT * FROM release_todo WHERE id = ?`).get(id) as ReleaseTodo | undefined) ?? null;
+  }
+
+  addTodo(input: { target?: string; text: string; source?: string; owner?: ReleaseTodoOwner }, by: string): ReleaseTodo {
+    const now = Date.now();
+    const r = this.db
+      .prepare(
+        `INSERT INTO release_todo (target, text, source, owner, status, created_by, created_at, updated_by, updated_at)
+         VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)`,
+      )
+      .run(input.target?.trim() || 'v1.2', input.text.trim(), (input.source ?? '').trim(), input.owner ?? 'cc', by, now, by, now);
+    return this.getTodo(Number(r.lastInsertRowid)) as ReleaseTodo;
+  }
+
+  /** 部分更新；status→done 记 done_at，→open 清 done_at。不存在返回 null。 */
+  updateTodo(
+    id: number,
+    patch: Partial<{ target: string; text: string; source: string; owner: ReleaseTodoOwner; status: ReleaseTodoStatus }>,
+    by: string,
+  ): ReleaseTodo | null {
+    const cur = this.getTodo(id);
+    if (!cur) return null;
+    const next = {
+      target: patch.target !== undefined ? patch.target.trim() || cur.target : cur.target,
+      text: patch.text !== undefined ? patch.text.trim() || cur.text : cur.text,
+      source: patch.source !== undefined ? patch.source.trim() : cur.source,
+      owner: patch.owner ?? cur.owner,
+      status: patch.status ?? cur.status,
+    };
+    const now = Date.now();
+    const doneAt = next.status === 'done' ? (cur.status === 'done' ? cur.done_at : now) : null;
+    this.db
+      .prepare(
+        `UPDATE release_todo SET target = ?, text = ?, source = ?, owner = ?, status = ?, updated_by = ?, updated_at = ?, done_at = ?
+         WHERE id = ?`,
+      )
+      .run(next.target, next.text, next.source, next.owner, next.status, by, now, doneAt, id);
+    return this.getTodo(id);
   }
 
   // ── B89 运行时开关（2026-09-13 川哥：One-shot 关闭/回滚要在后台一键可点）──

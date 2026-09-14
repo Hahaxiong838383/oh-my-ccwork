@@ -17,6 +17,7 @@
 use std::collections::{HashSet, VecDeque};
 use std::sync::Arc;
 use std::sync::Mutex as StdMutex;
+use std::sync::atomic::{AtomicUsize, Ordering as AtomicOrdering};
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
@@ -125,6 +126,8 @@ pub struct PipelineConfig {
     pub exit_hotwords: HashSet<String>,
     /// A 案(2026-08-28):exit 尾部匹配开关(EXIT_TAIL_MATCH,默认开;置 0 回退纯精确匹配)。
     pub exit_tail_match: bool,
+    /// 播放中附和词(2026-09-14):词表/模式/长文本阈值,见 backchannel.rs
+    pub backchannel: crate::backchannel::BackchannelCfg,
 }
 
 /// 是否播开场白。抽成函数是为了让**生产用的那条判据**能被单测直接调用——
@@ -242,6 +245,7 @@ impl PipelineConfig {
                 crate::textproc::DEFAULT_EXIT_HOTWORDS,
             ),
             exit_tail_match: parse_flag(std::env::var("EXIT_TAIL_MATCH").ok().as_deref(), true),
+            backchannel: crate::backchannel::BackchannelCfg::from_env(),
         }
     }
 }
@@ -380,6 +384,8 @@ struct AgentTurn {
     synth_text: Arc<StdMutex<String>>,
     /// 每句合成完成后追加 (累计字符数, 累计样本数),打断截断用。
     progress: Arc<StdMutex<Vec<(usize, u64)>>>,
+    /// 本轮回复 LLM 已产出字数(含尚未合成的部分)——附和词判「长文本」用,孩子第 3 秒说「嗯」也按整篇算。
+    llm_chars: Arc<AtomicUsize>,
     /// B 观测:本轮 filler 的 24k 样本数(0=无 filler);turn 起始时刻;分段日志阶段(0/1/2)。
     filler_samples: u64,
     started: Instant,
@@ -3125,6 +3131,45 @@ impl Orchestrator {
                 self.request_interrupt_snapshot("swallowed", format!("{kind}:{path}"));
                 return;
             }
+            // 播放中附和词(2026-09-14 川哥):小可正在播长文本时,孩子随口「嗯/对/是」是在听不是插话——
+            // 不 commit、不起 LLM、不投机,只记日志;控制词在上面的吞句分支已先行,这里永远轮不到「停/退出」。
+            // 位置=急停/退出之后、TTS 回声对撞之前。observe 只记候选行为不变;enforce 才真吞并续播。
+            let backchannel = match &self.agent_turn {
+                Some(turn) if !turn.task.is_finished() => {
+                    let reply_chars = turn.llm_chars.load(AtomicOrdering::Relaxed);
+                    Some((self.cfg.backchannel.decide(&user_text, reply_chars), reply_chars, turn.ctl.played_samples(), turn.ctl.clone()))
+                }
+                _ => None,
+            };
+            if let Some((decision, reply_chars, played_samples, ctl)) = backchannel {
+                match decision {
+                    crate::backchannel::Decision::NotCandidate => {}
+                    crate::backchannel::Decision::Observe => {
+                        info!(room = %self.room_name, text = %user_text, reply_chars, played_samples,
+                              "backchannel candidate (observe): would ignore, behavior unchanged");
+                    }
+                    crate::backchannel::Decision::Ignore => {
+                        info!(room = %self.room_name, text = %user_text, reply_chars, played_samples,
+                              "backchannel utterance ignored (long reply playing): no commit, no llm, resume");
+                        if let Some(sp) = self.spec.take() {
+                            sp.task.abort(); // 附和词的投机生成作废(否则空转一轮 LLM 还落库)
+                        }
+                        if self.paused.take().is_some() {
+                            ctl.resume();
+                            self.resume_grace = Some(Instant::now() + Duration::from_millis(250));
+                            self.set_state(AgentState::Speaking);
+                        }
+                        self.false_deadline = None;
+                        self.latest_interim.clear();
+                        self.tele_text.clear();
+                        if let Some(s) = &mut self.snap {
+                            s.event("swallowed", &[("text", &user_text), ("kind", "backchannel"), ("path", "exact")]);
+                        }
+                        self.request_interrupt_snapshot("swallowed", "backchannel:exact".to_string());
+                        return;
+                    }
+                }
+            }
             // TTS 回声对撞(2026-08-26 关灯自嗨实证:确认语「好的…」回声在播完 48ms 后从
             // EOU 正门 commit 成用户轮,再触发 filler+LLM=自我对话)。位置=STOP 之后 DEVICE 之前:
             // 急停/退出安全语义零影响(合同序 EXIT→STOP 不动),且挡住回声文本含命令词
@@ -3424,6 +3469,7 @@ impl Orchestrator {
             playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
         let synth_text = Arc::new(StdMutex::new(String::new()));
         let progress = Arc::new(StdMutex::new(Vec::new()));
+        let llm_chars = Arc::new(AtomicUsize::new(0));
 
         // 开播观察者:首帧 capture → AudioStarted(agent_state=speaking 的时刻语义)。
         // 退出条件必须含 abort:hard_abort 只杀外层 turn task,detached 的观察者
@@ -3451,6 +3497,7 @@ impl Orchestrator {
         let first_clause_min = self.turn_first_clause_min;
         let synth2 = synth_text.clone();
         let prog2 = progress.clone();
+        let llm_chars2 = llm_chars.clone();
         let lp = self.participant.clone();
         // 合成侧要能看见打断信号(讯飞在 pause 期间不能裸 send,见 tts_xfyun::send_or_abort);
         // ctl 本体后面还要交给 AgentTurn,这里克隆一份进 task。
@@ -3573,6 +3620,7 @@ impl Orchestrator {
                         if delta.is_empty() {
                             continue;
                         }
+                        llm_chars2.fetch_add(delta.chars().count(), AtomicOrdering::Relaxed);
                         let sentences = seg.feed(&delta);
                         // B17：首段由逗号切出时打点（对账「首句 TTS 提前了多少」用：与 body first sentence ready 配对）
                         if let Some(chars) = seg.take_clause_split() {
@@ -3680,6 +3728,7 @@ impl Orchestrator {
             ctl,
             synth_text,
             progress,
+            llm_chars,
             filler_samples,
             started: turn_started,
             seg_stage: 0,

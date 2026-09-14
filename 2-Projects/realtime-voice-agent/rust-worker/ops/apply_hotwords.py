@@ -44,7 +44,8 @@ POC_ENV = "/root/realtime-voice-agent/poc-eou.env"
 MANIFEST = "/opt/voice-agent/fillers-colleague/manifest.json"
 DEVICE_ALIASES = "/root/rust-worker/device_aliases.tsv"
 UNIT = "voice-worker-rust"
-ALLOW_KEYS = ("INTERRUPT_HOTWORDS", "VOLC_ASR_HOTWORDS", "EXIT_SWALLOW_HOTWORDS", "P003_DEVICE_ASR_HOTWORDS")
+# 2026-09-14:+BACKCHANNEL_HOTWORDS(播放中附和词,worker 未发版前发布=只落 env,旧二进制忽略该键)
+ALLOW_KEYS = ("INTERRUPT_HOTWORDS", "VOLC_ASR_HOTWORDS", "EXIT_SWALLOW_HOTWORDS", "P003_DEVICE_ASR_HOTWORDS", "BACKCHANNEL_HOTWORDS")
 # poc-eou.env(python 线)只持有这一个热词键——多写会污染它的 env
 POC_KEYS = ("VOLC_ASR_HOTWORDS",)
 VALUE_RE = re.compile(r"^[一-鿿A-Za-z0-9, ]+$")

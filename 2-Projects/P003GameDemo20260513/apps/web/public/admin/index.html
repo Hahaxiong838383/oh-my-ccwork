@@ -1712,6 +1712,43 @@
                     <div v-if="release.data" style="margin-top:12px;padding:10px 12px;background:#FFF7E6;border:1px solid #FFE1A8;border-radius:8px;font-size:12px;color:#8A5A00;white-space:pre-wrap">{{ release.data.caveat }}</div>
                     <pre v-if="release.applyResult" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(release.applyResult, null, 2) }}</pre>
                   </div>
+                  <!-- 📝 下一版待办（2026-09-14 川哥：v1.2 待更新内容清单，相关待办都记这里，每次版本更新有来源；API /api/admin/oneshot/todos*；删除=软删 dropped 仍可追）-->
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+                      <div style="font-weight:700">📝 下一版待办 <span style="font-weight:400;font-size:12px;color:#888">（{{ release.todo.target }} 待更新内容 · 开放 {{ todoOpen().length }} 条）</span></div>
+                      <el-button size="small" text @click="release.todo.showClosed = !release.todo.showClosed">{{ release.todo.showClosed ? '收起已完成/已放弃' : '看已完成/已放弃（' + todoClosed().length + '）' }}</el-button>
+                    </div>
+                    <div style="font-size:12px;color:#6B7785;margin-bottom:10px">相关改动先记在这里（要改什么 + 来源），发版时逐条对照勾完成；「放弃」只是标记，来源永远可追。</div>
+                    <div v-if="!todoOpen().length" style="font-size:12px;color:#999;margin-bottom:8px">暂无待办</div>
+                    <div v-for="td in todoOpen()" :key="td.id" style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #EEF1F5">
+                      <el-tag size="small" :type="td.owner==='codex' ? 'warning' : td.owner==='川哥' ? 'success' : 'info'" style="flex-shrink:0">{{ td.owner }}</el-tag>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:13px;white-space:pre-wrap">{{ td.text }}</div>
+                        <div style="font-size:11px;color:#909399;margin-top:2px">{{ td.target }} · 来源：{{ td.source || '—' }} · {{ td.created_by }} {{ new Date(td.created_at).toLocaleString() }}</div>
+                      </div>
+                      <div style="display:flex;gap:6px;flex-shrink:0">
+                        <el-button size="small" type="success" plain :loading="release.todo.saving" @click="setTodoStatus(td, 'done')">完成</el-button>
+                        <el-button size="small" type="danger" plain :loading="release.todo.saving" @click="setTodoStatus(td, 'dropped')">放弃</el-button>
+                      </div>
+                    </div>
+                    <div v-if="release.todo.showClosed">
+                      <div v-for="td in todoClosed()" :key="td.id" style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #EEF1F5;opacity:.65">
+                        <el-tag size="small" :type="td.status==='done' ? 'success' : 'info'" style="flex-shrink:0">{{ td.status==='done' ? '已完成' : '已放弃' }}</el-tag>
+                        <div style="flex:1;min-width:0">
+                          <div style="font-size:13px;text-decoration:line-through;white-space:pre-wrap">{{ td.text }}</div>
+                          <div style="font-size:11px;color:#909399;margin-top:2px">{{ td.target }} · {{ td.owner }} · 来源：{{ td.source || '—' }} · {{ td.updated_by }} {{ new Date(td.updated_at).toLocaleString() }}</div>
+                        </div>
+                        <el-button size="small" plain :loading="release.todo.saving" @click="setTodoStatus(td, 'open')">恢复</el-button>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+                      <input v-model="release.todo.text" placeholder="要更新什么（必填，≤300 字）" style="flex:2;min-width:240px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:13px">
+                      <input v-model="release.todo.source" placeholder="来源（回执/分支/排查稿/日期，≤200 字）" style="flex:2;min-width:200px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:13px">
+                      <el-select v-model="release.todo.owner" size="small" style="width:96px"><el-option v-for="o in ['cc','codex','川哥','其它']" :key="o" :label="o" :value="o"></el-option></el-select>
+                      <input v-model="release.todo.target" placeholder="v1.2" style="width:70px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:13px">
+                      <el-button type="primary" size="small" :loading="release.todo.saving" :disabled="!release.todo.text.trim()" @click="addTodo()">加入待办</el-button>
+                    </div>
+                  </div>
                 </div>
                 <!-- 🏇 赛马配置（2026-09-03 川哥：赛马机制后台可选可配 + 延时测试；API routes/admin-data.ts /worker-race*；通道=热词发布 forced-command，64.90 脚本内纪律重启+健康自检+回滚） -->
                 <div v-if="khNav==='race' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
@@ -3096,7 +3133,7 @@
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
                       <div class="kh-h1">Worker 热词管理</div>
-                      <div class="kh-sub">打断语 · ASR 识别热词 · 退出词 —— DB 草稿真源，发布经受限通道写 64.90 并按纪律重启 worker（自动备份+健康自检+失败回滚）</div>
+                      <div class="kh-sub">打断语 · ASR 识别热词 · 退出词 · 播放中附和词 —— DB 草稿真源，发布经受限通道写 64.90 并按纪律重启 worker（自动备份+健康自检+失败回滚）</div>
                     </div>
                     <el-button size="small" :loading="hw.loading" @click="loadHotwords()">刷新</el-button>
                   </div>
@@ -4564,7 +4601,7 @@
         // ── 🧩 版本与 One-shot（2026-09-13 B89 川哥：后台要看到生产版本号/说明 + One-shot 关闭回滚按钮；
         //    API /api/admin/oneshot*；开关存 server config.db runtime_flag，改后下一次唤醒签发即生效、不重启；
         //    回滚边界（codex B87 §3）由服务端随载荷下发到 caveat，确认框里再念一遍）──
-        var release = reactive({ loading: false, saving: false, error: '', data: null, form: { policy: '', note: '' }, applyResult: null });
+        var release = reactive({ loading: false, saving: false, error: '', data: null, form: { policy: '', note: '' }, applyResult: null, todo: { text: '', source: '', owner: 'cc', target: 'v1.2', showClosed: false, saving: false } });
         async function loadRelease() {
           release.loading = true; release.error = '';
           try {
@@ -4591,6 +4628,34 @@
             await loadRelease();
           } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
           finally { release.saving = false; }
+        }
+        // 下一版待办（2026-09-14 川哥）：列表随 /api/admin/oneshot 一次拉全，增改后用返回的 todos 整体替换
+        function todoOpen() { return ((release.data && release.data.todos) || []).filter(function (t) { return t.status === 'open'; }); }
+        function todoClosed() { return ((release.data && release.data.todos) || []).filter(function (t) { return t.status !== 'open'; }); }
+        async function addTodo() {
+          var text = (release.todo.text || '').trim(); if (!text) return;
+          release.todo.saving = true;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/todos', { method: 'POST', body: JSON.stringify({ text: text, source: release.todo.source || '', owner: release.todo.owner, target: release.todo.target || 'v1.2' }) });
+            if (!j.ok) throw new Error(j.error || '加入失败');
+            if (release.data) release.data.todos = j.todos;
+            release.todo.text = ''; release.todo.source = '';
+            ElementPlus.ElMessage.success('已加入待办 #' + j.todo.id);
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.todo.saving = false; }
+        }
+        async function setTodoStatus(td, status) {
+          if (status === 'dropped') {
+            try { await ElementPlus.ElMessageBox.confirm('标记「' + String(td.text).slice(0, 40) + '」为放弃？只是标记，来源仍可追。', '放弃待办', { type: 'warning', confirmButtonText: '放弃', cancelButtonText: '取消' }); }
+            catch (e) { return; }
+          }
+          release.todo.saving = true;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/todos/' + td.id, { method: 'PATCH', body: JSON.stringify({ status: status }) });
+            if (!j.ok) throw new Error(j.error || '更新失败');
+            if (release.data) release.data.todos = j.todos;
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.todo.saving = false; }
         }
         async function clearPolicyOverride() {
           if (!release.data) return;
@@ -4779,6 +4844,8 @@
           { k: 'asr', name: 'ASR 识别热词', desc: '火山服务端识别增强：对表内词降低检出门槛，救回孤立短指令。语气词（嗯/啊）禁入——会破坏环境音免疫', warn: '' },
           { k: 'exit', name: '退出词（关闭语）', desc: '命中即源头吞句并退出会话：零 commit、零 filler、零 LLM', warn: '与 Android 端 sessionExitPhrases 逐字合同——改动必须 codex 同步，发布时强制确认' },
           { k: 'device_asr', name: '设备 ASR 热词（S2-B2）', desc: '设备名/属性/模式词的识别增强，rust 侧与 ASR 热词合并发火山。只提高识别率，与命令执行判定完全无关', warn: '' },
+          // 2026-09-14 川哥：听故事时随口「嗯/对/是」被当插话截断续讲——播长文本期间附和声不打断；词表后台可编辑
+          { k: 'backchannel', name: '播放中附和词（不打断）', desc: '小可正在播放长文本（本轮回复 ≥120 字）时，整句命中这里的词不打断、不起新轮、只记日志；停/停止/退出/换一个不受影响。只收两字以内的附和声（嗯/对/是/好…），控制词与句子开头词后端拒收。worker 侧 BACKCHANNEL_MODE=observe 只观察记日志、enforce 才真不打断（默认 observe）', warn: '' },
         ];
         var HW_NAME_BY_KEY = {};
         HW_KIND_META.forEach(function (m) { HW_NAME_BY_KEY[m.k] = m.name; });
@@ -7070,7 +7137,7 @@
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
           workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
-          release: release, loadRelease: loadRelease, applyPolicy: applyPolicy, clearPolicyOverride: clearPolicyOverride, policySourceLabel: policySourceLabel,
+          release: release, loadRelease: loadRelease, applyPolicy: applyPolicy, clearPolicyOverride: clearPolicyOverride, todoOpen: todoOpen, todoClosed: todoClosed, addTodo: addTodo, setTodoStatus: setTodoStatus, policySourceLabel: policySourceLabel,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaEditNotes: otaEditNotes, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
           devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
