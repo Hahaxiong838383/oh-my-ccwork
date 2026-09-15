@@ -24,10 +24,9 @@ final class UsageParserTests: XCTestCase {
     }
 
     func testDecodesCreditsAndResetCards() throws {
-        let payload = try decode(#"{"credits":{"has_credits":true,"unlimited":false,"overage_limit_reached":false,"balance":"12.50"},"rate_limit_reset_credits":{"available_count":3,"applicable_available_count":1}}"#)
+        let payload = try decode(#"{"credits":{"has_credits":true,"unlimited":false,"overage_limit_reached":false,"balance":"12.50"},"rate_limit_reset_credits":{"available_count":3}}"#)
         XCTAssertEqual(payload.credits?.balance, "12.50")
         XCTAssertEqual(payload.resetCredits?.availableCount, 3)
-        XCTAssertEqual(payload.resetCredits?.applicableAvailableCount, 1)
     }
 
     func testDecodesXAIUsageAndCalculatesRates() throws {
@@ -89,6 +88,32 @@ final class UsageParserTests: XCTestCase {
         XCTAssertEqual(account.runtimeUsage?.requests, 3)
         XCTAssertEqual(account.runtimeUsage?.totalTokens, 285)
         XCTAssertEqual(account.runtimeUsage?.topModel, "grok-4.3")
+    }
+
+    func testDecodesOfficialXAIAccountQuota() throws {
+        let account = try JSONDecoder().decode(
+            Account.self,
+            from: Data(#"{"id":"xai-account","provider":"xai","email_masked":"xa***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"not_applicable","xai_quota":{"status":"ok","source":"xai_cli_billing","period_type":"weekly","used_percent":43,"remaining_percent":57,"usage_inferred":false,"period_start":"2026-09-12T09:00:22Z","period_end":"2026-09-19T09:00:22Z","product_usage":[{"product":"GrokBuild","used_percent":40},{"product":"GrokChat","used_percent":2}],"on_demand_cap_usd":50,"on_demand_used_usd":1.25,"prepaid_balance_usd":3,"unified_billing":true,"updated_at":"2026-09-15T00:43:00Z"}}"#.utf8)
+        )
+        XCTAssertEqual(account.xaiQuota?.usedPercent, 43)
+        XCTAssertEqual(account.xaiQuota?.remainingPercent, 57)
+        XCTAssertEqual(account.xaiQuota?.productUsage.first?.product, "GrokBuild")
+        XCTAssertEqual(account.xaiQuota?.onDemandCapUSD, 50)
+        XCTAssertNotEqual(UsageFormatting.dateTime("2026-09-19T09:00:22.833352Z"), "--")
+    }
+
+    func testBuildsXAIQuotaPoolFromSubscriptionAccounts() throws {
+        let response = try JSONDecoder().decode(
+            AccountsResponse.self,
+            from: Data(#"{"generated_at":"2026-09-15T01:00:00Z","accounts":[{"id":"xai-1","provider":"xai","email_masked":"xa***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"not_applicable","xai_quota":{"status":"ok","remaining_percent":57,"usage_inferred":false,"period_end":"2026-09-19T09:00:22.833352Z"}},{"id":"xai-2","provider":"xai","email_masked":"xb***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"not_applicable","xai_quota":{"status":"ok","remaining_percent":100,"usage_inferred":true,"period_end":"2026-09-20T06:34:56.531186Z"}},{"id":"codex-1","provider":"codex","email_masked":"co***@example.com","disabled":false,"has_refresh_token":true,"is_k12":false,"usage_status":"not_applicable"}]}"#.utf8)
+        )
+        let pool = XAIQuotaPool(accounts: response.accounts)
+        XCTAssertEqual(pool.totalAccounts, 2)
+        XCTAssertEqual(pool.measuredAccounts, 2)
+        XCTAssertEqual(pool.inferredAccounts, 1)
+        XCTAssertEqual(pool.averageRemainingPercent ?? 0, 78.5, accuracy: 0.001)
+        XCTAssertEqual(pool.minimumRemainingPercent, 57)
+        XCTAssertEqual(pool.earliestResetAt, "2026-09-19T09:00:22.833352Z")
     }
 
     func testDecodesAPIKeyRemainingBudget() throws {

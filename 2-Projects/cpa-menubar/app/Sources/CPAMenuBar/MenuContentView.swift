@@ -87,7 +87,7 @@ struct MenuContentView: View {
                 Task { await model.consumeResetCredit(for: account) }
             }
         } message: {
-            Text("这会消耗 1 张重置卡并重置该账号当前适用的短周期额度，操作不可撤销。")
+            Text("将尝试使用 1 张重置卡重置当前额度。只有官方确认存在可重置窗口时才会扣卡；成功后不可撤销。")
         }
         .confirmationDialog(
             "添加订阅",
@@ -372,6 +372,8 @@ struct MenuContentView: View {
 
     @ViewBuilder
     private var xaiOverview: some View {
+        let xaiAccounts = model.accounts.filter { $0.provider.lowercased() == "xai" }
+        let quotaPool = XAIQuotaPool(accounts: xaiAccounts)
         if let summary = model.summary, summary.xaiAccounts > 0 || summary.xaiUsage != nil {
             VStack(alignment: .leading, spacing: 9) {
                 HStack {
@@ -385,8 +387,8 @@ struct MenuContentView: View {
 
                 if let usage = summary.xaiUsage {
                     HStack(spacing: 8) {
-                        compactMetric("本月费用", value: UsageFormatting.usd(usage.officialSpendUSD))
-                        compactMetric("预付余额", value: usage.hasPrepaidCredit == true ? UsageFormatting.usd(usage.prepaidBalanceUSD) : "后付费")
+                        compactMetric("订阅池剩余", value: UsageFormatting.percent(quotaPool.averageRemainingPercent))
+                        compactMetric("已同步", value: "\(quotaPool.measuredAccounts)/\(quotaPool.totalAccounts)")
                         compactMetric("24h Token", value: UsageFormatting.integer(usage.totalTokens))
                     }
                 } else {
@@ -455,7 +457,8 @@ struct MenuContentView: View {
                     XAIUsageCard(
                         usage: summary.xaiUsage,
                         status: summary.xaiUsageStatus,
-                        error: summary.xaiUsageError
+                        error: summary.xaiUsageError,
+                        quotaPool: XAIQuotaPool(accounts: xaiAccounts)
                     )
                 } else {
                     ContentUnavailableView("暂无 xAI 数据", systemImage: "bolt.horizontal.circle")
@@ -718,18 +721,18 @@ private struct XAIUsageCard: View {
     let usage: XAIUsage?
     let status: String?
     let error: String?
+    let quotaPool: XAIQuotaPool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("xAI · 官方账单与 CPA 路由", systemImage: "bolt.horizontal.circle.fill")
+            Label("xAI 订阅池", systemImage: "bolt.horizontal.circle.fill")
                 .font(.subheadline.bold())
 
+            subscriptionPool
+
             if let usage {
-                officialBilling(usage)
-
                 Divider()
-
-                cpaRouterUsage(usage)
+                compactOperations(usage)
             } else {
                 Text(error ?? "暂时无法读取 xAI 用量")
                     .font(.caption)
@@ -746,87 +749,63 @@ private struct XAIUsageCard: View {
     }
 
     @ViewBuilder
-    private func officialBilling(_ usage: XAIUsage) -> some View {
+    private var subscriptionPool: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("xAI 官方 · 本月")
+                Text("平均剩余")
                     .font(.caption.bold())
                 Spacer()
-                if usage.hasOfficialBilling {
-                    Text("Management API")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+                Text(UsageFormatting.percent(quotaPool.averageRemainingPercent))
+                    .font(.title3.monospacedDigit().bold())
+                    .foregroundStyle(quotaColor(quotaPool.averageRemainingPercent))
             }
 
-            if usage.hasOfficialBilling {
-                HStack(spacing: 16) {
-                    metric("本月费用", value: UsageFormatting.usd(usage.officialSpendUSD))
-                    if usage.hasPrepaidCredit == true {
-                        metric("预付余额", value: UsageFormatting.usd(usage.prepaidBalanceUSD))
-                    } else if usage.hasPrepaidCredit == false {
-                        metric("计费方式", value: "后付费")
-                    }
-                }
+            if let remaining = quotaPool.averageRemainingPercent {
+                ProgressView(value: remaining, total: 100)
+                    .tint(quotaColor(remaining))
+                    .accessibilityLabel("xAI 订阅池平均剩余额度")
+                    .accessibilityValue(UsageFormatting.percent(remaining))
+            }
 
-                Text("统计至 \(UsageFormatting.timestamp(usage.officialPeriodEnd))")
+            HStack(spacing: 6) {
+                Text("\(quotaPool.measuredAccounts)/\(quotaPool.totalAccounts) 个账号已同步")
+                if let minimum = quotaPool.minimumRemainingPercent {
+                    Text("· 最低 \(UsageFormatting.percent(minimum))")
+                }
+                if let reset = quotaPool.earliestResetAt {
+                    Text("· 最近重置 \(UsageFormatting.dateTime(reset))")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+
+            if quotaPool.inferredAccounts > 0 {
+                Text("\(quotaPool.inferredAccounts) 个账号暂无计量，按 100% 剩余纳入等权平均")
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
-
-                if usage.officialLimitReached == true {
-                    Label("官方查询触达返回上限，结果可能不完整", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
-                }
-                if let officialError = usage.officialError {
-                    Text(officialError)
-                        .font(.caption2)
-                        .foregroundStyle(.orange)
-                }
-            } else {
-                Text(usage.officialError ?? "尚未配置 xAI Management Key，当前只显示 CPA 路由统计")
-                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
     }
 
     @ViewBuilder
-    private func cpaRouterUsage(_ usage: XAIUsage) -> some View {
+    private func compactOperations(_ usage: XAIUsage) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text("CPA 路由 · 近 \(usage.windowHours) 小时")
+                Text("账单与路由")
                     .font(.caption.bold())
                 Spacer()
-                Text("非官方账单")
+                Text("额度以上方订阅池为准")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
+            HStack(spacing: 12) {
+                metric("API 本月", value: UsageFormatting.usd(usage.officialSpendUSD))
+                metric("CPA 请求", value: UsageFormatting.integer(usage.requests))
+                metric("24h Token", value: UsageFormatting.compactInteger(usage.totalTokens))
+            }
+
             if usage.hasCPARouterUsage {
-                HStack(spacing: 16) {
-                    metric("请求", value: UsageFormatting.integer(usage.requests))
-                    metric("成功率", value: UsageFormatting.percent(usage.successPercent))
-                    metric("Token", value: UsageFormatting.integer(usage.totalTokens))
-                }
-
-                if let remainingPercent = usage.todayBudgetRemainingPercent,
-                   let remainingTokens = usage.todayBudgetRemainingTokens {
-                    HStack(spacing: 8) {
-                        Text("路由预算")
-                            .font(.caption)
-                            .frame(width: 52, alignment: .leading)
-                        ProgressView(value: remainingPercent, total: 100)
-                            .tint(remainingPercent <= 10 ? .red : (remainingPercent <= 35 ? .orange : .cyan))
-                        Text(UsageFormatting.percent(remainingPercent))
-                            .font(.caption2.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                    Text("内部剩余 \(UsageFormatting.integer(remainingTokens)) / \(UsageFormatting.integer(usage.dailyTokenLimit)) · 已用 \(UsageFormatting.integer(usage.todayTokens))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
                 Text("输入 \(UsageFormatting.integer(usage.inputTokens)) · 输出 \(UsageFormatting.integer(usage.outputTokens)) · 最近 \(UsageFormatting.timestamp(usage.lastRequestAt))")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -847,6 +826,13 @@ private struct XAIUsageCard: View {
                 .font(.caption.monospacedDigit().bold())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func quotaColor(_ remaining: Double?) -> Color {
+        guard let remaining else { return .secondary }
+        if remaining <= 10 { return .red }
+        if remaining <= 35 { return .orange }
+        return .cyan
     }
 }
 
@@ -905,12 +891,7 @@ private struct XAIAccountUsageCard: View {
 
             Divider()
 
-            HStack(spacing: 6) {
-                Image(systemName: "gauge.with.dots.needle.50percent")
-                Text("订阅剩余：xAI 未提供账号级官方额度")
-            }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
+            xaiQuotaSection
 
             removalAction
         }
@@ -919,6 +900,81 @@ private struct XAIAccountUsageCard: View {
         .overlay {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(account.disabled || !account.hasRefreshToken ? Color.orange.opacity(0.45) : Color.clear)
+        }
+    }
+
+    @ViewBuilder
+    private var xaiQuotaSection: some View {
+        if let quota = account.xaiQuota, quota.status == "ok" {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Label("官方周额度", systemImage: "gauge.with.dots.needle.50percent")
+                        .font(.caption2.bold())
+                    Spacer()
+                    Text(UsageFormatting.percent(quota.remainingPercent))
+                        .font(.caption2.monospacedDigit().bold())
+                }
+                if let remaining = quota.remainingPercent {
+                    ProgressView(value: remaining, total: 100)
+                        .tint(remaining <= 10 ? .red : (remaining <= 35 ? .orange : .cyan))
+                        .accessibilityLabel("\(account.emailMasked) xAI 周剩余额度")
+                        .accessibilityValue(UsageFormatting.percent(remaining))
+                }
+                HStack {
+                    Text(quota.usageInferred ? "本周暂无计量，按 0% 已用显示" : "本周已用 \(UsageFormatting.percent(quota.usedPercent))")
+                    Spacer()
+                    if let reset = quota.periodEnd {
+                        Text("重置 \(UsageFormatting.dateTime(reset))")
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+                if !quota.productUsage.isEmpty {
+                    Text(quota.productUsage.map { "\(productName($0.product)) \(UsageFormatting.percent($0.usedPercent))" }.joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                if let cap = quota.onDemandCapUSD, cap > 0 {
+                    Text("额外用量 \(UsageFormatting.compactUSD(quota.onDemandUsedUSD)) / \(UsageFormatting.compactUSD(cap))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("额外用量未开启")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("来源 xAI CLI Billing · 更新 \(UsageFormatting.timestamp(quota.updatedAt))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        } else if let quota = account.xaiQuota {
+            Label(xaiQuotaErrorText(quota.error), systemImage: "exclamationmark.triangle.fill")
+                .font(.caption2)
+                .foregroundStyle(.orange)
+        } else {
+            Text("xAI 订阅额度暂时无法读取")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func productName(_ value: String) -> String {
+        switch value.lowercased() {
+        case "grokbuild": return "Build"
+        case "grokchat": return "Chat"
+        case "grokimagine": return "Imagine"
+        default: return value
+        }
+    }
+
+    private func xaiQuotaErrorText(_ value: String?) -> String {
+        switch value {
+        case "authorization_required": return "订阅额度授权已失效，等待自动刷新"
+        case "rate_limited": return "订阅额度接口暂时限流"
+        default: return "订阅额度暂时无法读取"
         }
     }
 
@@ -1119,7 +1175,7 @@ private struct AccountRow: View {
                 Button(isResetting ? "重置中…" : "使用重置卡", action: onRequestReset)
                     .font(.caption2)
                     .buttonStyle(.borderless)
-                    .disabled(isResetting || resetCredits.applicableAvailableCount <= 0)
+                    .disabled(isResetting || resetCredits.availableCount <= 0)
             }
         }
     }

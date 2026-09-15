@@ -372,6 +372,31 @@ func TestGrok46LatestRouteRewritesToCanonicalModel(t *testing.T) {
 	}
 }
 
+func TestLegacyGrokTextAliasesUseLatestCanonicalModel(t *testing.T) {
+	cfg, err := loadConfig("../../config/router.example.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	aliases := []string{
+		"grok-4.5",
+		"grok-4.3",
+		"grok-4.20-0309-non-reasoning",
+		"grok-4.20-0309-reasoning",
+		"grok-4.20-multi-agent-0309",
+		"grok-3-mini",
+		"grok-3-mini-fast",
+	}
+	for _, alias := range aliases {
+		route, ok := cfg.Routes[alias]
+		if !ok || len(route.Candidates) != 1 {
+			t.Fatalf("route %q = %#v", alias, route)
+		}
+		if route.Candidates[0].Model != "grok-4.6" {
+			t.Fatalf("route %q model = %q, want grok-4.6", alias, route.Candidates[0].Model)
+		}
+	}
+}
+
 func TestExtractUsageFromJSONSupportsChatCompletions(t *testing.T) {
 	usage, ok := extractUsageFromJSON([]byte(`{"usage":{"prompt_tokens":11,"completion_tokens":7,"total_tokens":18}}`))
 	if !ok {

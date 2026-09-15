@@ -1,5 +1,17 @@
 import Foundation
 
+enum ISO8601Parsing {
+    static func date(_ value: String?) -> Date? {
+        guard let value else { return nil }
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let parsed = fractionalFormatter.date(from: value) {
+            return parsed
+        }
+        return ISO8601DateFormatter().date(from: value)
+    }
+}
+
 enum UsageParser {
     static func parse(_ payload: UsagePayload?) -> UsageSnapshot {
         guard let payload else {
@@ -122,7 +134,12 @@ enum UsageFormatting {
     }
 
     static func timestamp(_ value: String?) -> String {
-        guard let value, let date = ISO8601DateFormatter().date(from: value) else { return "--" }
+        guard let date = ISO8601Parsing.date(value) else { return "--" }
         return date.formatted(date: .omitted, time: .shortened)
+    }
+
+    static func dateTime(_ value: String?) -> String {
+        guard let date = ISO8601Parsing.date(value) else { return "--" }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 }

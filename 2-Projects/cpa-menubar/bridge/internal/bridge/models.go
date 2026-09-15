@@ -6,22 +6,23 @@ import (
 )
 
 type Account struct {
-	ID                string          `json:"id"`
-	Provider          string          `json:"provider"`
-	EmailMasked       string          `json:"email_masked"`
-	Plan              string          `json:"plan,omitempty"`
-	Disabled          bool            `json:"disabled"`
-	ExpiredAt         string          `json:"expired_at,omitempty"`
-	LastRefreshAt     string          `json:"last_refresh_at,omitempty"`
-	HasRefreshToken   bool            `json:"has_refresh_token"`
-	IsK12             bool            `json:"is_k12"`
-	Usage             json.RawMessage `json:"usage,omitempty"`
-	UsageStatus       string          `json:"usage_status"`
-	UsageError        string          `json:"usage_error,omitempty"`
-	RuntimeUsage      *RuntimeUsage   `json:"runtime_usage,omitempty"`
-	SubscriptionUntil string          `json:"subscription_until,omitempty"`
-	RemovalEligible   bool            `json:"removal_eligible"`
-	RemovalReason     string          `json:"removal_reason,omitempty"`
+	ID                string           `json:"id"`
+	Provider          string           `json:"provider"`
+	EmailMasked       string           `json:"email_masked"`
+	Plan              string           `json:"plan,omitempty"`
+	Disabled          bool             `json:"disabled"`
+	ExpiredAt         string           `json:"expired_at,omitempty"`
+	LastRefreshAt     string           `json:"last_refresh_at,omitempty"`
+	HasRefreshToken   bool             `json:"has_refresh_token"`
+	IsK12             bool             `json:"is_k12"`
+	Usage             json.RawMessage  `json:"usage,omitempty"`
+	UsageStatus       string           `json:"usage_status"`
+	UsageError        string           `json:"usage_error,omitempty"`
+	RuntimeUsage      *RuntimeUsage    `json:"runtime_usage,omitempty"`
+	XAIQuota          *XAIAccountQuota `json:"xai_quota,omitempty"`
+	SubscriptionUntil string           `json:"subscription_until,omitempty"`
+	RemovalEligible   bool             `json:"removal_eligible"`
+	RemovalReason     string           `json:"removal_reason,omitempty"`
 }
 
 type Summary struct {
@@ -107,6 +108,29 @@ type XAIUsage struct {
 	LastRequestAt        string   `json:"last_request_at,omitempty"`
 }
 
+type XAIAccountQuota struct {
+	Status            string            `json:"status"`
+	Error             string            `json:"error,omitempty"`
+	Source            string            `json:"source,omitempty"`
+	PeriodType        string            `json:"period_type,omitempty"`
+	UsedPercent       *float64          `json:"used_percent,omitempty"`
+	RemainingPercent  *float64          `json:"remaining_percent,omitempty"`
+	UsageInferred     bool              `json:"usage_inferred"`
+	PeriodStart       string            `json:"period_start,omitempty"`
+	PeriodEnd         string            `json:"period_end,omitempty"`
+	ProductUsage      []XAIProductQuota `json:"product_usage,omitempty"`
+	OnDemandCapUSD    *float64          `json:"on_demand_cap_usd,omitempty"`
+	OnDemandUsedUSD   *float64          `json:"on_demand_used_usd,omitempty"`
+	PrepaidBalanceUSD *float64          `json:"prepaid_balance_usd,omitempty"`
+	UnifiedBilling    *bool             `json:"unified_billing,omitempty"`
+	UpdatedAt         string            `json:"updated_at,omitempty"`
+}
+
+type XAIProductQuota struct {
+	Product     string   `json:"product"`
+	UsedPercent *float64 `json:"used_percent,omitempty"`
+}
+
 type AccountsResponse struct {
 	GeneratedAt time.Time `json:"generated_at"`
 	Accounts    []Account `json:"accounts"`
@@ -152,8 +176,9 @@ type ResetCreditRequest struct {
 }
 
 type ResetCreditResponse struct {
-	AccountID string `json:"account_id"`
-	Status    string `json:"status"`
+	AccountID    string `json:"account_id"`
+	Status       string `json:"status"`
+	WindowsReset int    `json:"windows_reset,omitempty"`
 }
 
 type RemoveAccountRequest struct {

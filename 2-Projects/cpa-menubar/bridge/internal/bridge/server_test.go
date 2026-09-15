@@ -603,7 +603,7 @@ func TestResetCreditRequiresExplicitConfirmation(t *testing.T) {
 	}
 }
 
-func TestResetCreditRejectsWhenNoApplicableCreditExists(t *testing.T) {
+func TestResetCreditRejectsWhenNoAvailableCreditExists(t *testing.T) {
 	authDir := t.TempDir()
 	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
 		"type":         "codex",
@@ -613,18 +613,18 @@ func TestResetCreditRejectsWhenNoApplicableCreditExists(t *testing.T) {
 	server := newTestServer(t, authDir)
 	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
 		if request.Method != http.MethodGet {
-			t.Fatalf("unexpected write request when no applicable credit exists: %s", request.Method)
+			t.Fatalf("unexpected write request without an available credit: %s", request.Method)
 		}
-		return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2,"applicable_available_count":0}}`), nil
+		return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":0}}`), nil
 	})}
 
 	response := performResetRequest(server, accountPublicID("codex.json"))
 	if response.Code != http.StatusConflict {
-		t.Fatalf("unavailable reset credit returned %d: %s", response.Code, response.Body.String())
+		t.Fatalf("no-credit reset returned %d: %s", response.Code, response.Body.String())
 	}
 }
 
-func TestResetCreditConsumesOneApplicableCredit(t *testing.T) {
+func TestResetCreditReportsNothingToResetWithoutConsumingCard(t *testing.T) {
 	authDir := t.TempDir()
 	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
 		"type":         "codex",
@@ -640,7 +640,70 @@ func TestResetCreditConsumesOneApplicableCredit(t *testing.T) {
 			if request.Method != http.MethodGet {
 				t.Fatalf("first request method = %s", request.Method)
 			}
-			return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2,"applicable_available_count":1}}`), nil
+			return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2,"applicable_available_count":0}}`), nil
+		case 2:
+			if request.Method != http.MethodPost || request.URL.String() != codexResetCreditsURL {
+				t.Fatalf("unexpected reset request: %s %s", request.Method, request.URL)
+			}
+			return jsonResponse(http.StatusOK, `{"code":"nothing_to_reset","windows_reset":0}`), nil
+		default:
+			t.Fatalf("unexpected request count: %d", requests)
+			return nil, nil
+		}
+	})}
+
+	response := performResetRequest(server, accountPublicID("codex.json"))
+	if response.Code != http.StatusOK {
+		t.Fatalf("nothing-to-reset returned %d: %s", response.Code, response.Body.String())
+	}
+	if !strings.Contains(response.Body.String(), `"status":"nothing_to_reset"`) {
+		t.Fatalf("unexpected response: %s", response.Body.String())
+	}
+	if requests != 2 {
+		t.Fatalf("request count = %d, want 2", requests)
+	}
+}
+
+func TestResetCreditRejectsUnknownConsumeOutcome(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
+		"type":         "codex",
+		"account_id":   "acct-1",
+		"access_token": "access",
+	})
+	server := newTestServer(t, authDir)
+	requests := 0
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		requests++
+		if requests == 1 {
+			return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2}}`), nil
+		}
+		return jsonResponse(http.StatusOK, `{"code":"future_outcome"}`), nil
+	})}
+
+	response := performResetRequest(server, accountPublicID("codex.json"))
+	if response.Code != http.StatusBadGateway {
+		t.Fatalf("unknown reset outcome returned %d: %s", response.Code, response.Body.String())
+	}
+}
+
+func TestResetCreditConsumesOneAvailableCredit(t *testing.T) {
+	authDir := t.TempDir()
+	writeFixture(t, filepath.Join(authDir, "codex.json"), map[string]any{
+		"type":         "codex",
+		"account_id":   "acct-1",
+		"access_token": "access",
+	})
+	server := newTestServer(t, authDir)
+	requests := 0
+	server.client = &http.Client{Transport: roundTripFunc(func(request *http.Request) (*http.Response, error) {
+		requests++
+		switch requests {
+		case 1:
+			if request.Method != http.MethodGet {
+				t.Fatalf("first request method = %s", request.Method)
+			}
+			return jsonResponse(http.StatusOK, `{"rate_limit_reset_credits":{"available_count":2}}`), nil
 		case 2:
 			if request.Method != http.MethodPost || request.URL.String() != codexResetCreditsURL {
 				t.Fatalf("unexpected reset request: %s %s", request.Method, request.URL)
@@ -652,7 +715,7 @@ func TestResetCreditConsumesOneApplicableCredit(t *testing.T) {
 			if len(body["redeem_request_id"]) != 36 {
 				t.Fatalf("invalid redeem request id: %q", body["redeem_request_id"])
 			}
-			return jsonResponse(http.StatusOK, `{}`), nil
+			return jsonResponse(http.StatusOK, `{"code":"reset","windows_reset":2}`), nil
 		default:
 			t.Fatalf("unexpected request count: %d", requests)
 			return nil, nil
@@ -665,6 +728,9 @@ func TestResetCreditConsumesOneApplicableCredit(t *testing.T) {
 	}
 	if requests != 2 {
 		t.Fatalf("request count = %d, want 2", requests)
+	}
+	if !strings.Contains(response.Body.String(), `"status":"reset"`) || !strings.Contains(response.Body.String(), `"windows_reset":2`) {
+		t.Fatalf("unexpected response: %s", response.Body.String())
 	}
 }
 

@@ -26,6 +26,7 @@ type authFile struct {
 	Email        string
 	Plan         string
 	AccountID    string
+	Subject      string
 	AccessToken  string
 	RefreshToken string
 	IDToken      string
@@ -132,6 +133,11 @@ func (s *Server) handleAccounts(w http.ResponseWriter, r *http.Request) {
 					account.UsageError = publicUsageError(usageErr)
 				}
 			}
+			if file.Provider == "xai" && !file.Disabled && file.AccessToken != "" {
+				sem <- struct{}{}
+				account.XAIQuota = s.fetchXAIAccountQuota(r.Context(), file)
+				<-sem
+			}
 			account.RemovalEligible, account.RemovalReason = accountRemovalEligibility(file, account.UsageStatus, time.Now())
 			accounts[index] = account
 		}()
@@ -175,6 +181,7 @@ func (s *Server) loadAuthFiles() ([]authFile, error) {
 			Provider:     provider,
 			Email:        stringValue(raw["email"]),
 			AccountID:    stringValue(raw["account_id"]),
+			Subject:      stringValue(raw["sub"]),
 			AccessToken:  stringValue(raw["access_token"]),
 			RefreshToken: stringValue(raw["refresh_token"]),
 			IDToken:      stringValue(raw["id_token"]),

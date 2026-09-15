@@ -51,16 +51,17 @@ func (s *Server) handleResetCredit(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, "unable to verify reset credits")
 		return
 	}
-	available, applicable, err := resetCreditCounts(usage)
+	available, err := resetCreditCount(usage)
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "unable to verify reset credits")
 		return
 	}
-	if available <= 0 || applicable <= 0 {
-		writeError(w, http.StatusConflict, "no applicable reset credits")
+	if available <= 0 {
+		writeError(w, http.StatusConflict, "no reset credits are available")
 		return
 	}
-	if err = s.consumeCodexResetCredit(r.Context(), *selected); err != nil {
+	result, err := s.consumeCodexResetCredit(r.Context(), *selected)
+	if err != nil {
 		if errors.Is(err, errResetUnauthorized) {
 			writeError(w, http.StatusConflict, "account authorization must be refreshed")
 			return
@@ -68,39 +69,47 @@ func (s *Server) handleResetCredit(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, "reset credit could not be consumed")
 		return
 	}
-	writeJSON(w, http.StatusOK, ResetCreditResponse{AccountID: accountID, Status: "consumed"})
+	writeJSON(w, http.StatusOK, ResetCreditResponse{
+		AccountID:    accountID,
+		Status:       result.Code,
+		WindowsReset: result.WindowsReset,
+	})
 }
 
-func resetCreditCounts(usage json.RawMessage) (int, int, error) {
+func resetCreditCount(usage json.RawMessage) (int, error) {
 	var payload struct {
 		ResetCredits *struct {
-			AvailableCount           int `json:"available_count"`
-			ApplicableAvailableCount int `json:"applicable_available_count"`
+			AvailableCount int `json:"available_count"`
 		} `json:"rate_limit_reset_credits"`
 	}
 	if err := json.Unmarshal(usage, &payload); err != nil {
-		return 0, 0, err
+		return 0, err
 	}
 	if payload.ResetCredits == nil {
-		return 0, 0, errors.New("reset credit status unavailable")
+		return 0, errors.New("reset credit status unavailable")
 	}
-	return payload.ResetCredits.AvailableCount, payload.ResetCredits.ApplicableAvailableCount, nil
+	return payload.ResetCredits.AvailableCount, nil
 }
 
 var errResetUnauthorized = errors.New("reset authorization rejected")
 
-func (s *Server) consumeCodexResetCredit(ctx context.Context, file authFile) error {
+type codexResetConsumeResult struct {
+	Code         string `json:"code"`
+	WindowsReset int    `json:"windows_reset"`
+}
+
+func (s *Server) consumeCodexResetCredit(ctx context.Context, file authFile) (codexResetConsumeResult, error) {
 	redeemID, err := randomUUID()
 	if err != nil {
-		return err
+		return codexResetConsumeResult{}, err
 	}
 	body, err := json.Marshal(map[string]string{"redeem_request_id": redeemID})
 	if err != nil {
-		return err
+		return codexResetConsumeResult{}, err
 	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodPost, codexResetCreditsURL, strings.NewReader(string(body)))
 	if err != nil {
-		return err
+		return codexResetConsumeResult{}, err
 	}
 	request.Header.Set("Authorization", "Bearer "+file.AccessToken)
 	request.Header.Set("Content-Type", "application/json")
@@ -111,19 +120,29 @@ func (s *Server) consumeCodexResetCredit(ctx context.Context, file authFile) err
 	}
 	response, err := s.client.Do(request)
 	if err != nil {
-		return err
+		return codexResetConsumeResult{}, err
 	}
 	defer response.Body.Close()
-	if _, err = readLimited(response.Body, 64*1024); err != nil {
-		return err
+	data, err := readLimited(response.Body, 64*1024)
+	if err != nil {
+		return codexResetConsumeResult{}, err
 	}
 	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
-		return errResetUnauthorized
+		return codexResetConsumeResult{}, errResetUnauthorized
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("reset endpoint returned %d", response.StatusCode)
+		return codexResetConsumeResult{}, fmt.Errorf("reset endpoint returned %d", response.StatusCode)
 	}
-	return nil
+	var result codexResetConsumeResult
+	if err = json.Unmarshal(data, &result); err != nil {
+		return codexResetConsumeResult{}, err
+	}
+	switch result.Code {
+	case "reset", "nothing_to_reset", "no_credit", "already_redeemed":
+		return result, nil
+	default:
+		return codexResetConsumeResult{}, fmt.Errorf("unknown reset outcome")
+	}
 }
 
 func randomUUID() (string, error) {

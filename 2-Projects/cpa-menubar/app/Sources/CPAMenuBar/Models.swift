@@ -224,6 +224,7 @@ struct Account: Decodable, Identifiable {
     let usageStatus: String
     let usageError: String?
     let runtimeUsage: RuntimeUsage?
+    let xaiQuota: XAIAccountQuota?
     let subscriptionUntil: String?
     let removalEligible: Bool
     let removalReason: String?
@@ -238,6 +239,7 @@ struct Account: Decodable, Identifiable {
         case usageStatus = "usage_status"
         case usageError = "usage_error"
         case runtimeUsage = "runtime_usage"
+        case xaiQuota = "xai_quota"
         case subscriptionUntil = "subscription_until"
         case removalEligible = "removal_eligible"
         case removalReason = "removal_reason"
@@ -258,6 +260,7 @@ struct Account: Decodable, Identifiable {
         usageStatus = try container.decode(String.self, forKey: .usageStatus)
         usageError = try container.decodeIfPresent(String.self, forKey: .usageError)
         runtimeUsage = try container.decodeIfPresent(RuntimeUsage.self, forKey: .runtimeUsage)
+        xaiQuota = try container.decodeIfPresent(XAIAccountQuota.self, forKey: .xaiQuota)
         subscriptionUntil = try container.decodeIfPresent(String.self, forKey: .subscriptionUntil)
         removalEligible = try container.decodeIfPresent(Bool.self, forKey: .removalEligible) ?? false
         removalReason = try container.decodeIfPresent(String.self, forKey: .removalReason)
@@ -265,6 +268,105 @@ struct Account: Decodable, Identifiable {
 
     var usageSnapshot: UsageSnapshot {
         UsageParser.parse(usage)
+    }
+}
+
+struct XAIAccountQuota: Decodable, Equatable {
+    let status: String
+    let error: String?
+    let source: String?
+    let periodType: String?
+    let usedPercent: Double?
+    let remainingPercent: Double?
+    let usageInferred: Bool
+    let periodStart: String?
+    let periodEnd: String?
+    let productUsage: [XAIProductQuota]
+    let onDemandCapUSD: Double?
+    let onDemandUsedUSD: Double?
+    let prepaidBalanceUSD: Double?
+    let unifiedBilling: Bool?
+    let updatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status, error, source
+        case periodType = "period_type"
+        case usedPercent = "used_percent"
+        case remainingPercent = "remaining_percent"
+        case usageInferred = "usage_inferred"
+        case periodStart = "period_start"
+        case periodEnd = "period_end"
+        case productUsage = "product_usage"
+        case onDemandCapUSD = "on_demand_cap_usd"
+        case onDemandUsedUSD = "on_demand_used_usd"
+        case prepaidBalanceUSD = "prepaid_balance_usd"
+        case unifiedBilling = "unified_billing"
+        case updatedAt = "updated_at"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        status = try container.decode(String.self, forKey: .status)
+        error = try container.decodeIfPresent(String.self, forKey: .error)
+        source = try container.decodeIfPresent(String.self, forKey: .source)
+        periodType = try container.decodeIfPresent(String.self, forKey: .periodType)
+        usedPercent = try container.decodeIfPresent(Double.self, forKey: .usedPercent)
+        remainingPercent = try container.decodeIfPresent(Double.self, forKey: .remainingPercent)
+        usageInferred = try container.decodeIfPresent(Bool.self, forKey: .usageInferred) ?? false
+        periodStart = try container.decodeIfPresent(String.self, forKey: .periodStart)
+        periodEnd = try container.decodeIfPresent(String.self, forKey: .periodEnd)
+        productUsage = try container.decodeIfPresent([XAIProductQuota].self, forKey: .productUsage) ?? []
+        onDemandCapUSD = try container.decodeIfPresent(Double.self, forKey: .onDemandCapUSD)
+        onDemandUsedUSD = try container.decodeIfPresent(Double.self, forKey: .onDemandUsedUSD)
+        prepaidBalanceUSD = try container.decodeIfPresent(Double.self, forKey: .prepaidBalanceUSD)
+        unifiedBilling = try container.decodeIfPresent(Bool.self, forKey: .unifiedBilling)
+        updatedAt = try container.decodeIfPresent(String.self, forKey: .updatedAt)
+    }
+}
+
+struct XAIProductQuota: Decodable, Equatable, Identifiable {
+    let product: String
+    let usedPercent: Double?
+
+    var id: String { product }
+
+    enum CodingKeys: String, CodingKey {
+        case product
+        case usedPercent = "used_percent"
+    }
+}
+
+struct XAIQuotaPool: Equatable {
+    let totalAccounts: Int
+    let measuredAccounts: Int
+    let inferredAccounts: Int
+    let averageRemainingPercent: Double?
+    let minimumRemainingPercent: Double?
+    let earliestResetAt: String?
+
+    init(accounts: [Account]) {
+        let xaiAccounts = accounts.filter { $0.provider.lowercased() == "xai" }
+        let quotas = xaiAccounts.compactMap { account -> XAIAccountQuota? in
+            guard let quota = account.xaiQuota,
+                  quota.status == "ok",
+                  quota.remainingPercent != nil
+            else { return nil }
+            return quota
+        }
+        let remaining = quotas.compactMap(\.remainingPercent)
+
+        totalAccounts = xaiAccounts.count
+        measuredAccounts = remaining.count
+        inferredAccounts = quotas.filter(\.usageInferred).count
+        averageRemainingPercent = remaining.isEmpty
+            ? nil
+            : remaining.reduce(0, +) / Double(remaining.count)
+        minimumRemainingPercent = remaining.min()
+        earliestResetAt = quotas
+            .compactMap(\.periodEnd)
+            .compactMap { value in ISO8601Parsing.date(value).map { ($0, value) } }
+            .min { $0.0 < $1.0 }?
+            .1
     }
 }
 
@@ -284,11 +386,9 @@ struct UsagePayload: Decodable {
 
 struct ResetCreditsInfo: Decodable {
     let availableCount: Int
-    let applicableAvailableCount: Int
 
     enum CodingKeys: String, CodingKey {
         case availableCount = "available_count"
-        case applicableAvailableCount = "applicable_available_count"
     }
 }
 
@@ -458,10 +558,12 @@ struct ResetCreditRequest: Encodable {
 struct ResetCreditResponse: Decodable {
     let accountID: String
     let status: String
+    let windowsReset: Int?
 
     enum CodingKeys: String, CodingKey {
         case accountID = "account_id"
         case status
+        case windowsReset = "windows_reset"
     }
 }
 

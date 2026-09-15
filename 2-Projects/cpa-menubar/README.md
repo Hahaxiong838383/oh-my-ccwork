@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.3.4`。
+当前版本：`0.3.7`。
 
 ## 当前能力
 
@@ -15,9 +15,10 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - 账号展开区域显示该账号今日请求、Token、最后使用时间、Fast 命中和最近 HTTP 错误；账号关联只使用 CLIProxyAPI 的稳定 auth index，客户端不会收到原始索引。
 - 优先通过 xAI Management API 显示本月官方费用、预付余额和查询完整性状态；Management Key 与普通推理/OAuth 凭据分离。
 - 同时显示 xAI 经 CPA Smart Router 的近 24 小时请求数、成功率、输入/输出/总 Token，以及内部路由日预算；CPA 数据只用于运维观测，不冒充官方账单。
-- xAI 页面分别显示两个 OAuth 订阅账号的今日请求、Token、成功率、最近使用、主要模型和授权刷新状态。
-- xAI 未提供账号级官方订阅剩余额度时明确标记“官方未提供”，不使用内部预算冒充官方额度。
-- 显示充值余额与重置卡数量；仅当官方接口返回可用且适用的重置卡时，才允许经过二次确认消耗 1 张。
+- xAI 页面分别显示两个 OAuth 订阅账号的官方周额度、重置时间、Build/Chat/Imagine 分项、额外用量状态，以及今日请求、Token、成功率、最近使用、主要模型和授权刷新状态。
+- xAI 总览只保留一条“订阅池平均剩余”进度条，按已同步订阅账号等权计算，并同时显示最低账号余量和最近重置时间；Management API 账单与 CPA 路由只显示紧凑指标，不再各自模拟额度。
+- 账号级订阅额度读取 xAI CLI Billing；CPA Token、内部日预算和 Management API 团队账单继续分层展示，不再互相冒充。接口缺少百分比但明确返回空周周期时，会标记“暂无计量，按 0% 已用显示”。
+- 显示充值余额与重置卡数量；只要官方 `available_count` 大于 0 即允许经过二次确认发起使用，最终按官方返回的 `reset`、`nothing_to_reset`、`no_credit` 或 `already_redeemed` 显示结果。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
 - “添加订阅”统一提供 Codex 与 xAI Grok 两种 OAuth 登录；Codex 保留 PKCE 回调，xAI 使用官方设备码流程并自动轮询完成状态。
 - 对已停用、无刷新能力且已过期、或上游明确返回 401/403 的账号显示“移除无效账号”；App 经过 destructive 二次确认，Bridge 再实时校验后把 auth JSON 原子移动到 `/root/.cli-proxy-api-removed/<UTC时间>/`，不会永久删除凭据。
@@ -42,7 +43,8 @@ cpa-desktop-bridge :8330
   ├─ 只读扫描 /root/.cli-proxy-api/*.json
   ├─ 使用 access token 查询 wham/usage
   ├─ 每 5 秒读取 CLIProxyAPI 本地 usage queue，脱敏后按小时持久化
-  ├─ 可选读取 /etc/xai-management.env，查询 xAI 官方团队账单与预付余额
+  ├─ 使用每张 xAI OAuth 查询 CLI Billing 周额度、产品分项与额外用量
+  ├─ 可选读取 /etc/xai-management.env，查询 xAI API 官方团队账单与预付余额
   ├─ 使用 /etc/cpa-smart-router.env 中的现有本地访问密钥只读查询 /debug/summary
   ├─ 代理 CLIProxyAPI Management xAI 设备码登录，只返回授权所需白名单字段
   └─ Codex OAuth 完成时原子写入 auth JSON；xAI auth 文件由 CLIProxyAPI 官方流程写入
@@ -101,6 +103,6 @@ ssh aliyun-jp 'systemctl disable --now cpa-desktop-bridge; rm -f /etc/systemd/sy
 - CLIProxyAPI usage queue 只由 Bridge 在本机读取；原始记录不会经公网接口返回。
 - OAuth state 与 PKCE verifier 只存在于 Bridge 内存，5 分钟过期。
 - xAI 授权 URL 必须是 `https://accounts.x.ai`，设备码和临时 state 不持久化；Bridge 不透传上游错误正文。
-- 重置卡属于不可逆消耗操作：App 二次确认，Bridge 再校验固定确认词与 `applicable_available_count > 0`。
+- 重置卡属于不可逆消耗操作：App 二次确认，Bridge 再校验固定确认词与实时 `available_count > 0`；只有官方返回 `reset` 才提示已扣卡，`nothing_to_reset` 必须明确提示未消耗。
 - 无效账号移除必须使用固定确认词 `REMOVE_INVALID_ACCOUNT`；低额度、429、网络错误和健康账号不得移除。隔离目录权限为 `0700`、文件为 `0600`，Bridge 不返回真实文件名或路径。
 - auth 文件通过同目录临时文件、`0600` 权限和原子 rename 更新，并保留账号原有 `priority`、`excluded-models`、`prefix`、`proxy_url` 字段。

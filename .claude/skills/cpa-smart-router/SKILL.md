@@ -44,9 +44,10 @@ description: CPA Smart Router 运维与迭代指南。用于检查、部署、�
 - `usage-queue` 是 destructive pop，同一 CPA 实例只能保留一个消费者。Canary Bridge 必须禁用 Management Key/collector，禁止与生产 Bridge 并发消费。
 - Bridge 的 Codex 总桶只能累计 `provider=codex`；按账号桶可以累计 `codex/xai`。直接放开 provider 过滤而同时写总桶，会把 xAI Token 污染到 Codex 今日汇总。
 - auth index 只在 Bridge 内用于匹配 auth 文件，Desktop API 只返回脱敏账号与聚合结果，不返回原始 index、文件名、Token、Key、Header、IP 或上游正文。
-- xAI OAuth 当前没有稳定的账号级官方订阅剩余额度接口。账号卡只展示真实请求、Token、成功率、最近使用、主要模型和刷新状态，并明确写“官方未提供”；不得用 Management API 团队账单、Smart Router 日预算或自定义预算冒充。
+- xAI OAuth 账号级订阅额度自 2026-09-15 起读取 `https://cli-chat-proxy.grok.com/v1/billing?format=credits`：使用对应 OAuth access token、`x-userid` 与 Grok CLI 请求头，返回周额度百分比、周期起止、Build/Chat/Imagine 分项及 Extra Usage。Bridge 只输出白名单聚合字段，不返回 Token、user ID 或原始正文。Management API 团队账单、Smart Router 日预算和 CPA 请求 Token 仍是独立口径，不得互相冒充。
+- 若 xAI 明确返回 weekly period，但 `creditUsagePercent` 与 `productUsage` 都缺失，当前按“本周暂无计量、0% 已用”展示并标 `usage_inferred=true`；该值是可解释推断，不得冒充上游显式百分比。
 - 用量解析必须同时支持 Chat Completions 的 `prompt_tokens/completion_tokens`、Responses 的 `input_tokens/output_tokens`，以及 SSE 完成事件中的 `response.usage`。若总 Token 更新但输入/输出为 0，先查 schema 覆盖，不要误判 App 没刷新。
-- xAI 文本默认路由当前仍使用 `grok-4.5`。生产已新增显式 `grok-4.6` 与 `grok-4.6-latest` Canary，两者都重写到上游 `grok-4.6`；`grok-3-mini*`、`grok-4.3`、`grok-4.20-*` 旧文本别名暂继续重写到 `grok-4.5`。图像、视频、Build 与 Composer 是专用模型，不做文本模型强制替换。
+- xAI 文本稳定主路由自 2026-09-15 起使用 `grok-4.6`。显式 `grok-4.6`/`grok-4.6-latest` 及 `grok-4.5`、`grok-4.3`、`grok-4.20-*`、`grok-3-mini*` 历史文本别名都重写到上游 `grok-4.6`；图像、视频、Build 与 Composer 是专用模型，不做文本模型强制替换。
 - 模型升级验收必须覆盖五层：带鉴权 `/v1/models` 可见、Router 候选明确重写、旧别名与新名 Canary 均 200、真实响应 `model` 命中目标系列、Bridge 与 macOS Accessibility 文本显示新主模型。配置文件写了新名字不算完成。
 - 2026-08-13 的 Grok 4.6 验收已覆盖 Chat Completions `high`/`xhigh`、流式响应、Responses API 和 usage；真实响应模型为 `grok-4.6-build`，Smart Router Canary 近期错误为 0。
 - 当前 4.6 能力来自 CLIProxyAPI 的远程模型目录刷新。远程目录声明 `low/medium/high/xhigh`，而同期内置离线目录候选仅声明 `low/medium/high`；在上游正式版完整内置前，必须保留目录刷新失败时的降级风险说明，不能把 `/v1/models` 可见冒充离线兜底已完成。
@@ -201,7 +202,7 @@ CPA 是 Codex 当前连接链路的一部分，升级 `cliproxy` 或 `cpa-smart-
 5. **双重回滚**：升级脚本任一验收失败立即恢复旧二进制；另设从升级开始计时约 120 秒的 watchdog，无终态 marker 时二次回滚。auth-dir 不自动回滚，避免覆盖已轮换的 refresh token。
 6. **最终验收不能只看 marker**：同时验证生产 SHA-256、service active/PID、`8317/8327/8330`、内外网目录、公开真实请求、Bridge 账号与 xAI、近时段 panic/fatal。
 
-推荐顺序：`CLIProxyAPI → Desktop Bridge → Smart Router`。2026-08-04 已按此顺序验证 CLIProxyAPI `7.2.116`；当时 5 个 Codex 中 4 个用量正常、原有 1 个 401，属于升级前后相同基线，后续仍须实时复核。
+推荐顺序：`CLIProxyAPI → Desktop Bridge → Smart Router`。2026-09-15 已按此顺序将生产 CLIProxyAPI 升级到 `7.3.3`、Bridge 升级到 `0.3.6` 并将 Grok 文本主路由提升到 4.6；升级新版本仍须独立 Canary、真实请求和 watchdog 回滚。
 
 ### 本次踩坑与防复发
 
@@ -265,7 +266,7 @@ sha256sum /tmp/cpa-smart-router
 - 已支持鉴权、请求体上限、sticky、最多 2 次重试、被动 EWMA、熔断 cooldown。
 - 已支持 JSONL 指标、SQLite 持久聚合、`/debug/summary`、`/dashboard` 和 provider 调度解释。
 - 已支持 `/v1/responses` state probe 观测：`previous_response_id`、`store`、`stream`、response id 捕获率、parent/provider mismatch 和错误采样；当前只观测，不启用 strict response-chain sticky。
-- 已支持显式 `grok-4.6` 与 `grok-4.6-latest` Canary 路由；默认 `grok-4.5` 与旧模型别名暂不切换。
+- 已将 `grok-4.6` 提升为 xAI 稳定文本主路由，历史文本别名统一重写到 4.6；专用媒体与 Composer 模型不变。
 - 正式使用默认优先走 `gpt-5.5`；`fable-5` 只是测试玩具模型，生产配置应放入 `blocked_models`，不要调用。
 - `/v1/chat/completions` 流式响应会注入 `stream_options.include_usage=true` 并解析 SSE usage；若上游不返回 usage，token 仍会是 0。
 

@@ -296,8 +296,20 @@ final class AppModel: ObservableObject {
         errorMessage = nil
         defer { resettingAccountID = nil }
         do {
-            _ = try await client.consumeResetCredit(accountID: account.id)
-            statusMessage = "已使用 1 张重置卡：\(account.emailMasked)"
+            let response = try await client.consumeResetCredit(accountID: account.id)
+            switch response.status {
+            case "reset":
+                let detail = response.windowsReset.map { "，已重置 \($0) 个额度窗口" } ?? ""
+                statusMessage = "已使用 1 张重置卡：\(account.emailMasked)\(detail)"
+            case "already_redeemed":
+                statusMessage = "该重置请求此前已完成，未重复扣卡"
+            case "nothing_to_reset":
+                statusMessage = "当前没有可重置的额度，未消耗重置卡"
+            case "no_credit":
+                errorMessage = "当前没有可用重置卡"
+            default:
+                errorMessage = "无法确认重置结果，请刷新后重试"
+            }
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
