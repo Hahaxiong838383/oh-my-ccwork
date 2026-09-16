@@ -5228,7 +5228,7 @@
         function delDevice(sn) {
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn), { method: 'DELETE' })
             .then(function (data) {
-              if (data && data.ok) { ElementPlus.ElMessage.success('已删除台账记录（流水保留）'); loadDevices(); }
+              if (data && data.ok) { ElementPlus.ElMessage.success({ message: '已删除台账记录（流水保留）。该 SN 此前签发的凭据已全部作废：设备回网会被拒（401），重新添加后需重新签发凭据，或添加时填家长手机号走预授权认领。', duration: 8000, showClose: true }); loadDevices(); }
               else ElementPlus.ElMessage.error((data && data.error) || '删除失败');
             })
             .catch(function (e) {

@@ -95,8 +95,45 @@ class DeviceRegistryStore {
       ON device_session_log (sn, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_session_log_time
       ON device_session_log (created_at DESC);
+      CREATE TABLE IF NOT EXISTS device_credential_revocation (
+        sn TEXT PRIMARY KEY,
+        not_before_sec INTEGER NOT NULL,
+        revoked_by TEXT NOT NULL DEFAULT '',
+        reason TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
     `);
     this.migrate();
+  }
+
+  /**
+   * 作废该 SN 在此刻之前签发的全部设备凭据（2026-09-16 川哥：后台删除设备 = 变回新设备，必须重新签发/认领）。
+   * 只记秒级水位 = 删除发生的那一秒：verifyDeviceCredential 拿 JWT iat 对撞，iat ≤ 水位即拒（iat 只有秒精度，
+   * 删除当秒签的一律算旧）；无 iat 的老 token 视为 0 → 一并作废。水位单调不回退；台账行删了也不影响
+   * （独立表，重加设备不清）。返回生效的秒级水位。
+   */
+  revokeCredentials(sn: string, by: string, reason: string): number {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const nowMs = Date.now();
+    this.db
+      .prepare(
+        `INSERT INTO device_credential_revocation (sn, not_before_sec, revoked_by, reason, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(sn) DO UPDATE SET
+           not_before_sec = MAX(not_before_sec, excluded.not_before_sec),
+           revoked_by = excluded.revoked_by, reason = excluded.reason, updated_at = excluded.updated_at`,
+      )
+      .run(sn, nowSec, by, reason, nowMs, nowMs);
+    return this.credentialNotBeforeSec(sn) ?? nowSec;
+  }
+
+  /** 该 SN 的凭据「不早于」秒级水位；从未作废过 → null。 */
+  credentialNotBeforeSec(sn: string): number | null {
+    const row = this.db
+      .prepare(`SELECT not_before_sec FROM device_credential_revocation WHERE sn = ?`)
+      .get(sn) as { not_before_sec: number } | undefined;
+    return row ? Number(row.not_before_sec) : null;
   }
 
   /** 老库迁移：幂等补列（生产 devices.db 建于各列之前）。失败记日志不阻断启动。 */

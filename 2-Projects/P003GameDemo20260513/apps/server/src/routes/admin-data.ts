@@ -413,7 +413,14 @@ adminDataRoute.delete('/devices/:sn', (c) => {
     const sn = c.req.param('sn').trim();
     const deleted = deviceRegistryStore.remove(sn);
     if (!deleted) return c.json({ ok: false, error: '设备不在台账中' }, 404);
-    return c.json({ ok: true });
+    // 2026-09-16 川哥：删除 = 变回新设备。此刻之前签发的全部凭据作废（独立水位表，重加台账不清），
+    // 设备回网拿旧凭据一律 401，必须重新签发或走预授权认领。token 原文不入日志。
+    const by = opUser(c);
+    const revokedThroughSec = deviceRegistryStore.revokeCredentials(sn, by, 'admin_delete');
+    // 水位是秒级，含删除当秒：iat ≤ 水位的凭据全部作废 → 对外口径「在这一刻之前签发的都已作废」= 水位下一秒起点
+    const revokedBeforeMs = (revokedThroughSec + 1) * 1000;
+    console.log(`[admin-devices] device removed sn=${sn} by=${by} credentials revoked before=${new Date(revokedBeforeMs).toISOString()}`);
+    return c.json({ ok: true, credentials_revoked_before_ms: revokedBeforeMs });
   } catch (error) {
     return c.json({ ok: false, error: '删除设备失败，请稍后重试' }, 500);
   }
