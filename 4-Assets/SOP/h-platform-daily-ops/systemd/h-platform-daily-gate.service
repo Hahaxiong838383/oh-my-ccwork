@@ -1,0 +1,12 @@
+[Unit]
+Description=H daily read-only collection and conditional Luna report
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/libexec/h-platform-daily-gate/h_platform_daily_gate.py --run
+# Collector (330s) + model (600s) + bounded API/cancellation overhead.
+TimeoutStartSec=25min
+UMask=0077
+Nice=10

@@ -1,0 +1,11 @@
+[Unit]
+Description=H daily check at 09:10 Asia/Shanghai (sole clock)
+
+[Timer]
+OnCalendar=*-*-* 09:10:00 Asia/Shanghai
+AccuracySec=1s
+Persistent=true
+Unit=h-platform-daily-gate.service
+
+[Install]
+WantedBy=timers.target

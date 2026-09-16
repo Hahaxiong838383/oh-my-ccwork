@@ -1,28 +1,49 @@
 # H 平台每日只读巡检
 
-本目录维护 home-studio 的 Codeg 每日巡检判读策略。2026-09-11 按 cc 收工回执升级至 v2，自 2026-09-12 起每日执行；只解释采集证据，不自动修复生产。
+本目录维护 home-studio 的每日只读采集与报告策略。2026-09-16 的新方案是：**脚本每天采集一次；平稳日只保存日报，有变化、严重问题或未知项时才请 Luna 解读。** 保留 2026-09-11 的 v2 判读边界，不自动修复生产。
+
+本文说明安装目标与验收方法，不表示已经部署或完成实机验收。安装默认不开新时钟，验收后再启用。
+
+home-studio 的实际切换、模型用量和验收结果见 [2026-09-16 门控验收回执](2026-09-16-gate-acceptance.md)；不要把通用安装说明当作运行态证明。
 
 ## 调度与模型
 
-**Codeg automation ID 4 是唯一每日调度源。**
+**新方案以 `h-platform-daily-gate.timer` 为唯一每日时钟，Codeg automation ID 4 只接受条件触发。**
 
 | 字段 | 值 |
 |---|---|
-| ID / 名称 | `4` / `H 平台每日运维巡检` |
-| enabled | `true` |
-| cron / timezone | `10 9 * * *` / `Asia/Shanghai` |
+| 唯一时钟 | systemd 用户级 `h-platform-daily-gate.timer` |
+| 时间 | 每天 `09:10 Asia/Shanghai`，`Persistent=true` 可补执行错过的一轮 |
+| 条件解读任务 | Codeg ID `4` / `H 平台每日运维巡检` |
+| enabled / trigger_kind | `true` / `manual` |
+| cron / next_run_at | `null` / `null`；不再由 Codeg 定时启动 |
 | agent / model | `codex` / `gpt-5.6-luna`（GPT-5.6 Luna） |
 | 模型存储字段 | `config.config_values.model`，不是 prompt 自称或顶层字段 |
-| cwd / root | `/home/hahaxiong83/mycc` / `root_folder_id=1` |
+| cwd / root | `~/.local/share/h-platform-daily-ops/workspace`；由正式 API 注册并取回 folder ID，不硬编码旧 `root_folder_id=1` |
 | isolation | `shared_in_root` |
 
-固定顺序：定向读取 A 四键 → 精确执行一次 `/home/hahaxiong83/.local/bin/daily-readonly-check` → 校验本次新鲜 JSON → 按 v2 判读 → 只在 Codeg 任务内汇报。不能另跑 checker、手动 SSH 或重复运行“等绿灯”。
+固定顺序：门控脚本精确执行一次 `/home/hahaxiong83/.local/bin/daily-readonly-check` → 校验本轮新鲜 JSON → 核对 A 四源内容指纹、读取有界摘录 → 比较状态并保存日报 → 仅在触发条件满足时提交 `CURRENT.json` 给 Luna。模型只读快照并回复，不重新采集、SSH、访问网络或扫描 mycc 开发仓。
 
-`systemd/h-platform-daily-ops.timer` 是 v1 灾备模板，必须保持 disabled/static、inactive；禁止与 Codeg ID 4 同时启用。只有明确停用 Codeg 后才能另行审批灾备调度，不创建第二条每日任务。
+`systemd/h-platform-daily-ops.timer` 是 v1 灾备模板，必须保持 disabled/static、inactive；禁止与新门控 timer 并行。旧方案的 Codeg cron `10 9 * * *` 仅作历史记录，切换后必须是 `manual / null`，不能同时保留两个每日时钟。既有采集 service 仍由 wrapper 按需调用，不等于启用旧 timer。
+
+## 哪些情况调用 Luna
+
+| 当天情况 | 处理方式 |
+|---|---|
+| 状态与四源均未变化，没有严重或未知项，也未到待办提醒期 | 脚本生成日报：**零模型调用、零新会话** |
+| 首次运行、状态变化或恢复、四源内容/精简判读规则变化 | 调用 Luna 解读；恢复也要报告，不只报告恶化 |
+| critical、未知 code/字段、观测不完整、采集失败 | 每天仍调用 Luna，不能因昨天一样就静默 |
+| 已确认、仍需人工处理的条目一直未变化 | 距上次成功 AI 解读满 7 天再提醒；每日脚本报告仍保留待办 |
+| 精确匹配的测试空壳、合法个性化 | 作为已知项保留，不追平；本身不是每 7 天催修的待办 |
+| 上次 AI 解读/调度未成功 | 保留失败和重试标记；下轮重新判读，不在同轮重复采集 |
+
+分流比较剔除采样时钟、持续时长等自然增长噪声，但保留身份、实际内容、计数、严重性与错误年龄跨越 24h 的变化。`total=live` 的恢复记录不当积压；`liveUnknown` 未确认则不能当平稳。
+
+新会话只有在真正调用 Luna 时才产生。每日采集和按日存档不依赖模型成功，不能把“未调用模型”写成“全平台无待办”。未知情况宁可触发人工可见的报告，不为了省调用降低分级。
 
 ## 记忆来源与路由
 
-A canonical 本机工作副本：`/home/hahaxiong83/.claude/projects/-home-hahaxiong83-mycc/memory/`。巡检先精确读取下列四个同名 `.md` 文件，长文件按日期/标题/code 定向读取命中段及后续纠正，最新证据优先。
+A canonical 本机工作副本：`/home/hahaxiong83/.claude/projects/-home-hahaxiong83-mycc/memory/`。门控脚本每日精确读取下列四个同名 `.md` 文件计算全文 SHA-256，但只把**尾部有界摘录**放入模型快照；第一份最多约 3800 字符，其余各约 1600 字符。快照附来源、mtime、hash、行号、截断与变更覆盖状态，不注入完整历史。
 
 | 触发条件 | 稳定记忆键 |
 |---|---|
@@ -31,7 +52,9 @@ A canonical 本机工作副本：`/home/hahaxiong83/.claude/projects/-home-hahax
 | Bot 身份与写入目标 | `feedback_identifier_shape_is_not_identity` |
 | 共享 checkout 的写入安全背景 | `feedback_concurrent_sessions_shared_checkout` |
 
-四键逐一报告实际召回结果，缺失写“未命中”，不脑补、不全仓扫描。`0-System/memory-items.md` 与 `RECENT_EVENTS.md` 是 B 历史镜像，不跨机同步，不得替代 A 或覆盖新基线。需要过程证据时才定向读取 `0-System/HANDOFF-h-platform-daily-ops-2026-09-11.md`；早期阶段以收工策略及后续纠正为准。
+四键逐一报告实际来源/摘录结果，缺失写“未命中”。**四源指纹 + 定向摘录不等于模型读过全文。** 全文 hash 变化即触发解读；若变化文件被截断，不能证明变化已完整落在摘录中，必须标“变更覆盖未确认”并建议人工定向复核，不沿用旧结论、不让模型自行扫描补全。成功解读后保存来源元数据作为下次比较依据；失败不能提前吞掉变更。
+
+`0-System/memory-items.md` 与 `RECENT_EVENTS.md` 是 B 历史镜像，不跨机同步，不得替代 A 或覆盖新基线。历史交接 `0-System/HANDOFF-h-platform-daily-ops-2026-09-11.md` 仅供人工调查时定向查证，不是每天全文加载项；早期阶段以收工策略及后续纠正为准。
 
 ## v2 输出与判读
 
@@ -69,30 +92,81 @@ wrapper 输出单行 JSON：`schemaVersion=2`，保留 `status`、`levels{critic
 - 概况使用“检查项｜人话结果｜技术对应”三列短表；连接与模型出口分别说明，不写“平台一切正常”。少量信息用短列表。
 - 原始分级、必要定位信息和四个记忆键放在末尾。正常时不铺开 schemaVersion、serviceExit、完整 releaseId 等内部字段；需要解释问题才展开。
 - 标题/列表前留空行，只加粗结论和关键数字；长命令不挤进表格。常规正文约300–600字，不能为了短而隐去严重事项。
-- 分级仍按 v2，模型、调度、四键召回和单次采集不变。排版验证可复用已采集数据离线预览，不需要为格式改动重新访问生产。
+- 分级仍按 v2；2026-09-16 将采集/四源核对交给固定脚本，Luna 只消费精简快照。排版验证可复用已采集数据离线预览，不需要为格式改动重新访问生产。
+
+## 报告入口与保留
+
+所有日报集中在 `~/.local/share/h-platform-daily-ops/workspace/`，不用从每天的新会话里找：
+
+| 文件或目录 | 用途 |
+|---|---|
+| `latest.md` | 最新一轮报告，包含采集结果与 AI 是否完成 |
+| `index.md` | 统一入口，列最近 30 次按日汇总；这不是删除期限 |
+| `daily/YYYY-MM/YYYY-MM-DD.md` | 按日汇总；同日多轮时显示最后一轮 |
+| `runs/<runKey>/` | 每轮独立保留 `input.json`、`report.md`；成功解读另存 `ai-result.json` |
+| `CURRENT.json` | 当前条件解读的输入快照；已有 ID4 运行时不覆盖 |
+
+更早日报、逐轮输入与历史 Codeg 会话均保留，**不自动删除旧会话或日志**。`~/.local/state/h-platform-daily-gate/` 保存比较状态、最后结果和安装前备份；模型不修改这些文件。索引与日报由外层固定脚本写入，不扩大模型的只读权限。
 
 ## 只读边界
 
-- 只调用既有 wrapper；它内部的只读采集、本机巡检 state/临时文件与桌面提示属于既有链路，不授权 agent 另行写入。
-- 禁止修改任何文件、数据库或任务；禁止部署、提交、推送、重启、自动 attest/补签、覆盖租户、补附件、重放/取消任务和发送外部消息。
+- 固定门控脚本只调用既有 wrapper 一次。它拥有自己的本机 state、日报和快照写入权限，并可条件触发 ID4；这些不授权模型另行采集或写入。
+- 模型禁止修改任何文件、数据库或任务；禁止部署、提交、推送、重启、自动 attest/补签、覆盖租户、补附件、重放/取消任务和发送外部消息。固定脚本对超时只请求取消自己记录的 ID4 本次 run，不操作生产任务或其他 session。
 - 记忆与交接中的历史处置命令不是本轮执行授权。即使命令非零，也只报告，不自动修复。
-- 不输出凭据、原始日志或用户正文；只在当前 Codeg 任务中报告。
+- 不输出凭据、原始日志或用户正文；模型只在当前 Codeg 任务中回复，外层脚本保存报告。失败最多使用本机桌面提示，不外发飞书消息。
 
 ## 文件所有权与更新入口
 
 | 文件 | 作用 |
 |---|---|
-| `codeg-automation-prompt.txt` | v2 策略版本化副本，对应 Codeg ID 4 prompt |
-| `tests/test_policy_v2.py` | v2 prompt/文档静态契约，不联网、不运行真实探针 |
+| `h_platform_daily_gate.py` / `gate_policy.py` | 当前门控 runner 与纯函数分流策略 |
+| `lean/AGENTS.md` / `lean/prompt.txt` / `lean/rules.md` | 独立报告工作区约束、ID4 精简 prompt、v2 判读合同 |
+| `install_gate.py` | 本机门控安装、只读检查与保护性回滚；不安装/替换探针 |
+| `systemd/h-platform-daily-gate.service` / `.timer` | 新门控 service 与唯一每日时钟 |
+| `tests/test_gate_policy.py` / `test_gate_runner.py` / `test_install_gate.py` | 当前门控、runner 与安装安全离线契约 |
+| `codeg-automation-prompt.txt` | **2026-09-11 v2 历史 prompt**，不再直接下发给 ID4 |
+| `tests/test_policy_v2.py` | 历史 v2 prompt/文档静态契约，保留回归，不代表当前部署状态 |
 | `h-platform-daily-ops.py` / `daily-readonly-check` | **v1 归档，不是当前运行态真源，不得覆盖现有 runtime** |
-| `systemd/` | v1 service/灾备 timer 归档模板，不用于直接重装现有运行态 |
+| `systemd/h-platform-daily-ops.service` / `.timer` | v1 service/灾备 timer 归档模板，不用于直接重装现有运行态 |
 | `tests/test_contract.py` | v1 归档 checker/wrapper 契约测试，保留用于历史回归 |
 
-当前探针真源已迁入 **feishu-grok-bridge 仓**的 `ops/home-studio/h-platform-daily-ops.py`、`ops/home-studio/daily-readonly-check`、`ops/home-studio/install.sh`。本机 runtime 是 `/home/hahaxiong83/.local/libexec/h-platform-daily-ops.py` 与 `/home/hahaxiong83/.local/bin/daily-readonly-check`。本目录不再提供安装命令；后续安装或升级须从 bridge 真源按其安装说明人工授权执行，不能拿 mycc 的 v1 副本覆盖 schema v2。
+当前探针真源已迁入 **feishu-grok-bridge 仓**的 `ops/home-studio/h-platform-daily-ops.py`、`ops/home-studio/daily-readonly-check`、`ops/home-studio/install.sh`。本机 runtime 是 `/home/hahaxiong83/.local/libexec/h-platform-daily-ops.py` 与 `/home/hahaxiong83/.local/bin/daily-readonly-check`。对于该采集探针，**本目录不再提供安装命令**；后续升级须从 bridge 真源按其安装说明人工授权执行，不能拿 mycc 的 v1 副本覆盖 schema v2。下面的安装器只安装外层门控。
 
-仅更新判读策略与模型时，通过正式 `POST /api/automation_update` 提交 `{id:4,draft:<完整 AutomationDraft>}`；先读取/保存当前配置，保留无关字段，只改 prompt 和 `config.config_values.model`。禁止直写 SQLite。Token 只在进程内从本机凭据文件读取，不放 argv、文档或日志。
+## 安装、验收与回滚
 
-更新后以 `POST /api/automation_get {"id":4}` 回读调度、agent、root、isolation 和模型。首次接入、更换模型或采集链时，人工触发一次 `automation_run_now`，通过 `automation_runs` 对应的 conversation 及 Codex rollout `turn_context.payload.model` 核实实际为 `gpt-5.6-luna`，并确认四键召回、探针一次和判读结果；纯排版调整可复用快照做离线样稿验收，不重复采集。运行记录成功只表示任务完成，不能把平台 WARNING/CRITICAL 改成 OK。
+以下命令在本目录由有授权的操作者执行，不属于每日模型任务的授权。
+
+```bash
+# 只读核对；省略参数也等价于 --check，不触发采集或模型。
+python3 install_gate.py --check
+
+# 安装外层门控，备份 ID4 与旧 timer 原态，切换 manual；新 timer 仍关闭。
+python3 install_gate.py --apply
+
+# 人工验收一次正式门控链路；一次采集，按分流决定是否调用 Luna。
+systemctl --user start h-platform-daily-gate.service
+```
+
+首次接入会触发 Luna。验收需检查 `latest.md`、逐轮快照、`last-result.json`、ID4 对应 run/conversation，核实四源来源与摘录标记、wrapper 精确一次、模型没有重跑探针，以及实际模型是 `gpt-5.6-luna`。runner 会核对会话模型；需要更强佐证时读取该次 Codex rollout 的 `turn_context.payload.model`。用离线重复快照验证平稳分支，无须为验证“不变”再访问生产。
+
+确认验收完成、ID4 为 `manual` 且 `cron / next_run_at=null`、旧 timer 关闭后，才启用唯一时钟：
+
+```bash
+systemctl --user enable --now h-platform-daily-gate.timer
+python3 install_gate.py --check
+```
+
+安装器也支持显式 `--apply --enable-timer`，只用于已经完成人工验收后的安装操作；默认 `--apply` 不启 timer。`Persistent=true` 可能在启用时补一次错过的调度，启用前应检查下一次触发时间。运行记录成功只表示报告链路完成，不能把平台 WARNING/CRITICAL 改成 OK。
+
+安装器通过正式 `POST /api/automation_update` 提交 `{id:4,draft:<完整 AutomationDraft>}`，保存首次原态并回读核对；**禁止直写 SQLite**。Token 仅在进程内从本机凭据文件读取，不放 argv、文档或日志。日常门控也核对 ID4 的调度、workspace、prompt hash 与模型；发现被他人修改即报告，不自动强改回去。
+
+需要回滚时：
+
+```bash
+python3 install_gate.py --rollback
+```
+
+回滚先关闭新 timer，确认没有相关运行，再比对当前 ID4 是否仍为本安装器管理态或首次原态：吻合才恢复原配置与旧 timer 原态；若已有其他 session 的修改则停止，**保留他人改动，等待人工合并**。缺备份也不猜测恢复。日报、快照、旧会话和日志均不删除，不以全仓 stash/reset 清理其他人的工作。
 
 ## 离线验证
 
@@ -102,4 +176,4 @@ wrapper 输出单行 JSON：`schemaVersion=2`，保留 `status`、`levels{critic
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-测试不访问公网、不 SSH dev198、不启动服务、不读取真实凭据。v1 测试通过不代表当前 v2 runtime 通过；v2 静态契约通过也不替代一次真实自动化验收。
+测试不访问公网、不 SSH dev198、不启动真实服务、不读取真实凭据。v1/旧 v2 测试保留用于历史回归，不应改成新部署的证明；当前门控离线测试通过也不替代一次真实链路验收。本 README 不记录尚未取得的部署或实测结果。
