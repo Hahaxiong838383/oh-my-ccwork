@@ -39,3 +39,26 @@ Studio 与 Air 各自复用已有 ED25519 密钥，仅将公钥追加到目标�
 - 不将登录密码、私钥写入项目或共享记忆。
 
 署名：codex（OpenAI）| 2026-09-07（Asia/Shanghai）
+
+## 2026-09-16 客户交付机组网
+
+- EasyTier 显示名称：**nio 开发机**；公司普通成员，虚拟地址 `10.10.10.14`。
+- Studio 连接：`ssh nio-war-mac-mesh`（用户 `futurus`）；已实测 SSH 登录成功。
+- EasyTier 2.6.4；`cn.easytier.mesh` LaunchDaemon 正在运行并设开机自启。管理口仅监听 `127.0.0.1:15888`。
+- 不导出公司子网，不配置出口代理；TCP/UDP 香港发现入口均 Connected。未重启电脑验证开机流程。
+- 节点模板、清单及本地速查页已更新；线上速查页待发布，当前 Studio 缺中继 SSH 已信任主机密钥。
+
+### Studio SSH 默认选路更新（2026-09-16）
+
+`ssh nio-war-mac` 现在优先连接 EasyTier `10.10.10.14`；TCP 22 端口探测在2秒内不可达时，自动回退 Wi-Fi `10.9.1.230`。`nio-war-mac-mesh` 和 `nio-war-mac-wifi` 保留为固定路径入口。统一验证已信任的设备主机密钥，不绕过校验。默认连接实测远端地址为 `10.10.10.14`，强制局域网路径实测为 `10.9.1.230`。此设置只适用于 Studio 新建连接，既有会话断线需要重新连接。
+
+### 2026-09-16 环境、清理及无头运行回执
+
+- 设备现为 macOS 26.6.2，Swift 6.3.3，仅 CLT；项目源码仍为 v0.9.2 的非 Git 副本，但安装 App 已为 **v0.9.10 (25)**，不可用旧源码直接覆盖安装。
+- 用户将用途补充为内部 POC、后续无头服务器；不安装代理，GitHub DNS 问题暂不处理。
+- Clash Verge 应用/后台/自启动已清除；飞连解除文件保护后官方卸载成功，无相关进程及系统扩展；`/Applications/ChatGPT.app` 已删除。飞连仍有日志，未声称用户数据全部抹除。
+- EasyTier 服务由 root 拥有，配置0600、目录0700；管理口仅回环。KeepAlive/RunAtLoad 开启，ThrottleInterval=30，Umask=63。日志每份1024 KiB轮转，保留3份。
+- 实测终止进程后 launchd 自动重启（PID7054→7099），随后组网 SSH 成功。主动管理员停用/卸载仍可执行；未部署隐藏、反卸载、绕过管理员的机制。
+- 电池和接电模式均设置 `disablesleep=1 sleep=0 disksleep=0 womp=1 tcpkeepalive=1`。原设置备份：目标机 `~/.local/state/nio-war-mac/power-before-headless-20260916.txt`。
+- 用户合盖后实测 `AppleClamshellState=Yes`、`SleepDisabled=1`，EasyTier SSH 成功。当时电池69%，未接电；断电、断网或关机不保证远程可达。
+- 用户要求的桌面远程维护说明已删除。当前 Studio 的 SSH 选路脚本归档于 `scripts/nio-war-mac-connect.sh`；本机实际使用 `~/.ssh/nio-war-mac-connect.sh`。

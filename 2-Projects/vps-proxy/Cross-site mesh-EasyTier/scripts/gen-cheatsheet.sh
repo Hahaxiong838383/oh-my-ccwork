@@ -28,6 +28,7 @@ node_role() {
     hk-relay)    echo "香港 · 中继 / 发现" ;;
     mini)        echo "公司 · Mac Mini M4 · 编排中枢" ;;
     studio)      echo "公司 · Mac Studio M2 Max · 算力" ;;
+    nio-war-mac) echo "公司 · nio 开发机 · 客户交付 MacBook Pro" ;;
     dev198)      echo "公司 · Ubuntu + RTX A2000" ;;
     linux-lan)   echo "家 · Ubuntu 桌面 · 家侧网关（主）· 探针宿主" ;;
     fnos2)       echo "家 · 飞牛 NAS 2 号 · 家侧网关（备）· Docker" ;;

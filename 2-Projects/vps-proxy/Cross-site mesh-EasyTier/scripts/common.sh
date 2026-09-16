@@ -21,6 +21,7 @@ ET_NODES=(
   "hk-relay|__VPS_DIRECT__|10.10.10.1|linux-x86_64|root"
   "mini|mini-pub|10.10.10.11|macos-aarch64|nopasswd"
   "studio|studio-pub|10.10.10.12|macos-aarch64|secret:STUDIO_SUDO_PASS"
+  "nio-war-mac|nio-war-mac-wifi|10.10.10.14|macos-aarch64|ask"
   "dev198|dev198|10.10.10.13|linux-x86_64|literal:1234"
   "linux-lan|linux-lan|10.10.10.21|linux-x86_64|ask"
   "home-studio|hahaxiong83@192.168.1.133|10.10.10.23|linux-x86_64|ask"

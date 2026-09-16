@@ -12,7 +12,8 @@ enum NumericInput {
     static func integer(from value: String) -> Int? {
         let normalizedValue = normalized(value)
         if let integer = Int(normalizedValue) { return integer }
-        guard let double = Double(normalizedValue), double.isFinite else { return nil }
+        guard let double = Double(normalizedValue), double.isFinite,
+              double.rounded() >= Double(Int.min), double.rounded() < Double(Int.max) else { return nil }
         return Int(double.rounded())
     }
 
@@ -187,6 +188,7 @@ struct RenderConfiguration: Codable, Equatable {
     var antiAliasing = AntiAliasingMode.performance
     var automaticPerformanceFallback = true
     var testPattern = TestPatternMode.off
+    var calibrationGrid = CalibrationGridConfiguration()
     var showAABoundary = false
     var showWarpBoundary = false
 
@@ -195,6 +197,7 @@ struct RenderConfiguration: Codable, Equatable {
         case antiAliasing
         case automaticPerformanceFallback
         case testPattern
+        case calibrationGrid
         case showAABoundary
         case showWarpBoundary
     }
@@ -204,6 +207,7 @@ struct RenderConfiguration: Codable, Equatable {
         antiAliasing: AntiAliasingMode = .performance,
         automaticPerformanceFallback: Bool = true,
         testPattern: TestPatternMode = .off,
+        calibrationGrid: CalibrationGridConfiguration = CalibrationGridConfiguration(),
         showAABoundary: Bool = false,
         showWarpBoundary: Bool = false
     ) {
@@ -211,6 +215,7 @@ struct RenderConfiguration: Codable, Equatable {
         self.antiAliasing = antiAliasing == .off ? .performance : antiAliasing
         self.automaticPerformanceFallback = automaticPerformanceFallback
         self.testPattern = testPattern
+        self.calibrationGrid = calibrationGrid
         self.showAABoundary = showAABoundary
         self.showWarpBoundary = showWarpBoundary
     }
@@ -222,6 +227,7 @@ struct RenderConfiguration: Codable, Equatable {
         antiAliasing = legacyMode == .off ? .performance : legacyMode
         automaticPerformanceFallback = try container.decodeIfPresent(Bool.self, forKey: .automaticPerformanceFallback) ?? true
         testPattern = try container.decodeIfPresent(TestPatternMode.self, forKey: .testPattern) ?? .off
+        calibrationGrid = try container.decodeIfPresent(CalibrationGridConfiguration.self, forKey: .calibrationGrid) ?? CalibrationGridConfiguration()
         showAABoundary = try container.decodeIfPresent(Bool.self, forKey: .showAABoundary) ?? false
         showWarpBoundary = try container.decodeIfPresent(Bool.self, forKey: .showWarpBoundary) ?? false
     }
@@ -288,7 +294,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 7
+    static let currentSchemaVersion = 11
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -300,10 +306,12 @@ struct WarpConfiguration: Codable, Equatable {
     var mirror = MirrorConfiguration()
     var contentMode = ContentMode.fill
     var extendedWarpEnabled = false
+    var canvasReference: CanvasWarpReference?
     var warpTrend = WarpTrend.forward
     var manual = ManualWarpParameters()
     var polynomial = PolynomialWarpConfiguration()
     var render = RenderConfiguration()
+    var localWarp = LocalWarpConfiguration()
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -316,10 +324,12 @@ struct WarpConfiguration: Codable, Equatable {
         case mirror
         case contentMode
         case extendedWarpEnabled
+        case canvasReference
         case warpTrend
         case manual
         case polynomial
         case render
+        case localWarp
     }
 
     init(
@@ -333,10 +343,12 @@ struct WarpConfiguration: Codable, Equatable {
         mirror: MirrorConfiguration = MirrorConfiguration(),
         contentMode: ContentMode = .fill,
         extendedWarpEnabled: Bool = false,
+        canvasReference: CanvasWarpReference? = nil,
         warpTrend: WarpTrend = .forward,
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
-        render: RenderConfiguration = RenderConfiguration()
+        render: RenderConfiguration = RenderConfiguration(),
+        localWarp: LocalWarpConfiguration = LocalWarpConfiguration()
     ) {
         self.schemaVersion = schemaVersion
         self.displayPixelWidth = displayPixelWidth
@@ -348,10 +360,12 @@ struct WarpConfiguration: Codable, Equatable {
         self.mirror = mirror
         self.contentMode = contentMode
         self.extendedWarpEnabled = extendedWarpEnabled
+        self.canvasReference = canvasReference
         self.warpTrend = warpTrend
         self.manual = manual
         self.polynomial = polynomial
         self.render = render
+        self.localWarp = localWarp
     }
 
     init(from decoder: Decoder) throws {
@@ -366,10 +380,12 @@ struct WarpConfiguration: Codable, Equatable {
         mirror = try container.decodeIfPresent(MirrorConfiguration.self, forKey: .mirror) ?? MirrorConfiguration()
         contentMode = try container.decodeIfPresent(ContentMode.self, forKey: .contentMode) ?? .stretch
         extendedWarpEnabled = try container.decodeIfPresent(Bool.self, forKey: .extendedWarpEnabled) ?? false
+        canvasReference = try container.decodeIfPresent(CanvasWarpReference.self, forKey: .canvasReference)
         warpTrend = try container.decodeIfPresent(WarpTrend.self, forKey: .warpTrend) ?? .forward
         manual = try container.decodeIfPresent(ManualWarpParameters.self, forKey: .manual) ?? ManualWarpParameters()
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()
         render = try container.decodeIfPresent(RenderConfiguration.self, forKey: .render) ?? RenderConfiguration()
+        localWarp = try container.decodeIfPresent(LocalWarpConfiguration.self, forKey: .localWarp) ?? LocalWarpConfiguration()
     }
 
     static func defaultConfiguration(displayWidth: Int, displayHeight: Int) -> WarpConfiguration {
@@ -404,19 +420,25 @@ struct WarpConfiguration: Codable, Equatable {
         copy.canvas.height = min(max(copy.canvas.height, 64), 32768)
         copy.capture = copy.capture.sanitized()
         copy.cropAnchor = copy.cropAnchor.sanitized()
-        copy.manual.strength = min(max(copy.manual.strength, 0), 2)
+        copy.manual.strength = min(max(copy.manual.strength, 0), 2.25)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
         copy.polynomial = copy.polynomial.normalized()
+        if copy.extendedWarpEnabled, copy.canvasReference == nil {
+            copy.canvasReference = WarpMath.captureCanvasReference(configuration: copy, preservingLegacyExtension: schemaVersion <= 7)
+        }
         return copy
     }
 
     func validationErrors() -> [String] {
         var errors = [String]()
+        errors += localWarp.validationErrors()
         if schemaVersion < 1 || schemaVersion > Self.currentSchemaVersion {
             errors.append("不支持的 schemaVersion：\(schemaVersion)")
         }
         if displayPixelWidth <= 0 || displayPixelHeight <= 0 { errors.append("显示器像素尺寸必须大于 0") }
         if canvas.width <= 0 || canvas.height <= 0 { errors.append("画布尺寸必须大于 0") }
+        if !render.calibrationGrid.isValid { errors.append("网格行列数须为 1～200 的整数，白线宽度须为 1～32 像素") }
+        if let reference = canvasReference, !reference.isValid { errors.append("画布基准无效，请重新设置基准或导入有效配置") }
         if cropAnchor != cropAnchor.sanitized() { errors.append("裁切位置必须位于 -1...1") }
         if aaRect != aaRect.sanitized() { errors.append("AA 区必须完全位于屏幕归一化范围内") }
         let normalizedPolynomial = polynomial.normalized()
@@ -438,6 +460,8 @@ extension WarpConfiguration {
         copy.contentMode = .fill
         copy.manual.enabled = false
         copy.polynomial.enabled = false
+        copy.localWarp.enabled = false
+        copy.extendedWarpEnabled = false
         copy.render.testPattern = .calibrationGrid
         return copy
     }
@@ -453,6 +477,7 @@ extension WarpConfiguration {
 final class ConfigurationStore {
     private let legacyKey = "nioWarpConfiguration.v1"
     private let profileKeyPrefix = "nioWarpConfiguration.v2"
+    private let lastProfileKey = "nioWarpLastDisplayProfile"
     private let defaults: UserDefaults
     private let encoder: JSONEncoder
     private let decoder = JSONDecoder()
@@ -471,6 +496,7 @@ final class ConfigurationStore {
         displayHeight: Int
     ) -> WarpConfiguration {
         activeKey = profileKey(for: displayIdentifier)
+        defaults.set(activeKey, forKey: lastProfileKey)
         if let configuration = decodedConfiguration(forKey: activeKey) {
             return persistSanitized(configuration, displayWidth: displayWidth, displayHeight: displayHeight)
         }
@@ -484,6 +510,21 @@ final class ConfigurationStore {
         let configuration = WarpConfiguration.defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
         save(configuration)
         return configuration
+    }
+
+    func offlineConfiguration() -> WarpConfiguration {
+        var keys = [String]()
+        if let last = defaults.string(forKey: lastProfileKey), last.hasPrefix(profileKeyPrefix + ".") { keys.append(last) }
+        keys += defaults.dictionaryRepresentation().keys.filter { $0.hasPrefix(profileKeyPrefix + ".") }.sorted()
+        keys.append(legacyKey)
+        for key in keys {
+            guard let saved = decodedConfiguration(forKey: key), saved.displayPixelWidth > 0, saved.displayPixelHeight > 0,
+                  saved.validationErrors().isEmpty else { continue }
+            let preview = saved.sanitized(forDisplayWidth: saved.displayPixelWidth, height: saved.displayPixelHeight)
+            if preview.validationErrors().isEmpty,
+               WarpMath.makeMesh(configuration: preview, columns: 32, rows: 16).validation.isValid { return preview }
+        }
+        return .defaultConfiguration(displayWidth: 5120, displayHeight: 2880)
     }
 
     func save(_ configuration: WarpConfiguration) {

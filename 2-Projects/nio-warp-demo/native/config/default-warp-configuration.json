@@ -45,9 +45,21 @@
     "antiAliasingEnabled" : true,
     "antiAliasing" : "performance",
     "automaticPerformanceFallback" : true,
+    "calibrationGrid" : {
+      "columns" : 10,
+      "rows" : 10,
+      "lineWidthPixels" : 2
+    },
     "showAABoundary" : false,
     "showWarpBoundary" : false,
     "testPattern" : "off"
   },
-  "schemaVersion" : 7
+  "localWarp" : {
+    "enabled" : false,
+    "lockBoundary" : true,
+    "radiusCells" : 2,
+    "smoothness" : "standard",
+    "anchors" : []
+  },
+  "schemaVersion" : 11
 }
