@@ -62,3 +62,9 @@ Studio 与 Air 各自复用已有 ED25519 密钥，仅将公钥追加到目标�
 - 电池和接电模式均设置 `disablesleep=1 sleep=0 disksleep=0 womp=1 tcpkeepalive=1`。原设置备份：目标机 `~/.local/state/nio-war-mac/power-before-headless-20260916.txt`。
 - 用户合盖后实测 `AppleClamshellState=Yes`、`SleepDisabled=1`，EasyTier SSH 成功。当时电池69%，未接电；断电、断网或关机不保证远程可达。
 - 用户要求的桌面远程维护说明已删除。当前 Studio 的 SSH 选路脚本归档于 `scripts/nio-war-mac-connect.sh`；本机实际使用 `~/.ssh/nio-war-mac-connect.sh`。
+
+### 后续清理与工作流检查（2026-09-16）
+
+- 已移除保存的 Wi-Fi `Amigo`、`BRO`，保留不同名称的 `iBRO` 和手机热点。
+- 已删除 Keynote/Pages/Numbers Creator Studio、Lark 应用，清理 Codex缓存与飞连日志；Codex会话数据保留。清理后mesh SSH成功，磁盘约878 GiB可用。
+- 安装版v0.9.10内置ProtoPie Cloud预览启动工作流；仅完成静态检查，等待接外屏联调。详见 [工作流检查记录](protopie-workflow-inspection-20260916.md)。
