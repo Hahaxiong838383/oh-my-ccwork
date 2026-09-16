@@ -98,3 +98,29 @@
 - 作废机制：`apps/server/src/device-registry-store.ts`（表 + `revokeCredentials/credentialNotBeforeSec`）、`routes/device-session.ts`（`verifyDeviceCredential`）、`routes/admin-data.ts`（DELETE 路由）；测试 `scripts/device-registry.test.ts` G1–G5。
 - 预授权/announce/claim：`routes/pairing.ts`、`routes/admin-data.ts`（`applyPreauth`、`PUT /devices/:sn/preauth`）、`pairing-store.ts`。
 - 备份：`/opt/p003/_backup/20260916-105036-delete-revokes-credentials/`；回滚命令在 `docs/RELEASES.md` 2026-09-16 节。
+
+---
+
+## 8. 收口（2026-09-16 17:09 CST 服务端复核）
+
+**结论：R3 已达成——设备恢复出厂 + v281 后，16:44:48 自主发出 announce，服务端代确认、claim 签发、鉴权全部恢复；服务端这半边闭环。R1 / R2 / R4 仍等端侧回执。** 下表全部 `已验证`（nginx + pm2 日志 + 四个库 + 后台接口亲读）。
+
+| 时间（CST） | 服务端可观测事实 |
+|---|---|
+| 15:03:36 → 15:04:01 | 后台删除（作废水位 15:03:36）→ 重加（家长手机号 → 预授权到 09-23 15:03:51 + 家长 acct-16）→ 开通 brain |
+| 16:44:48 | `POST /v1/device/pairing/announce 200`（UA okhttp/4.12.0）→ `[pairing] announce … outcome=new auto=confirmed state=confirmed ttl=600` + `[pairing] preauth-confirm … trigger=announce` |
+| 16:44:48 | `POST /v1/device/pairing/claim 404`（UA Dalvik/2.1.0）——与 announce 同一秒到达，会话尚未建立，按合同返回 `pairing_pending`（pairing.ts 判定序：无行 = 404） |
+| 16:44:50 | `POST /v1/device/pairing/claim 200` → `[pairing] v2 claim ok … source=preauth brain=ready alg=ECIES-P256-HKDF-SHA256-A256GCM`，`preauth consumed ok=true`；`device_preauth.used_at` 与 `pairing_session.claimed_at` 均为 16:44:50 |
+| 16:44:51 起 | 语音会话签发 ok ×4（至 16:56:56）+ prefetch ×4；新凭据 `iat` 晚于作废水位，验签通过；`/v1/device/*` 自 15:00 起 401 = 0（设备没带旧 token 回来） |
+| 16:45:20 起 | 遥测恢复 30 s 一条（至 16:58:52 共 26 条） |
+| 16:49:58 | OTA check 200，上报 vc=281（1.2.2-canary.269）；无 offer（281 高于全量 280），端侧 `check_failed` 应已消失 |
+| 16:51 | 该 SN 的 LLM 调用 4×200 + 1×499（客户端提前关闭，打断类），真实对话已发生 |
+| 后台 | 设备行凭据列：签发 16:44:50 / 到期 2027-09-16 16:44:50 / `credential_source=pairing_claim`；「待认领」列表为空 |
+
+pm2 error log 16:44 起 0 行；`/health` 200。
+
+### 8.1 遗留（不影响本次闭环）
+- **claim 抢跑**：首个 claim 与 announce 同秒到达拿到 404 `pairing_pending`，2 s 后重试成功。无害；建议端侧在 announce 响应 `state=confirmed` 之后再发 claim（或明确把 404 当轮询信号，现状看已是如此）。另外 announce 与 claim 的 UA 不同（okhttp vs Dalvik），请确认是同一进程的两个 HTTP 客户端还是两个组件。
+- **OTA 页「最近升级结果」仍显示 09-11 的 259→263 success**：`ota_device_status` 行不随后台删除清除，且 `last_result_json` 只在设备捎带新 `last_result` 时才覆盖（ota-store 用 COALESCE）。纯展示层遗留；若要「删除即新设备」在 OTA 页也成立，需在 DELETE 时顺带清该 SN 的 ota/pck 状态行——待川哥点头再改，服务端本轮不动。
+- **本次 announce 的触发源请在回执里写明**（自动循环 / 调试入口 / 用户操作）：这决定 R2 是否已经落在 v281。R1（09-15 01:24:30 清凭据根因与影响版本范围）、R4（v263 现行为）仍开放。
+- **One-shot 顺带观测**：4 次签发里 1 次声明 `supports=oneshot_first_turn_v1|local_receipt_v1` 拿到 `contract=first_turn_v1`，3 次未声明，与 D-day 首批观测同型；按川哥决定，等 OTA 设备多了再看。
