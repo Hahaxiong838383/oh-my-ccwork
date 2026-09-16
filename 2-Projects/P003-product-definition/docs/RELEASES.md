@@ -108,3 +108,8 @@
 - 上线：prod ota.ts md5 7e59974e22167ee85334162fb636f14c / admin 0e00bed91e68188e7d0ca0470a178e8d（此前 e0a4a0a4… / 5adacde3…，部署前三方同源核对过）；备份 `/opt/p003/_backup/20260916-082312-ota-devices-note/`；pm2 restart 后 health 200（4 s）、post-restart 0 ERROR；公网 E2E：10 台全部带 note 且非空，nginx 出的页含新表头。
 - 回滚：`cp /opt/p003/_backup/20260916-082312-ota-devices-note/src/routes/ota.ts /opt/p003/server/src/routes/ && cp /opt/p003/_backup/20260916-082312-ota-devices-note/admin/index.html /opt/p003/web/dist/admin/ && pm2 restart p003-voice --update-env`。
 - 未做：PCK「设备内容包状态」表没加备注列（川哥只点了 APK 的设备版本分布）。
+
+## 2026-09-16 admin OTA「设备版本分布」再加「当前 PCK 版本」列（川哥 08:35 要求，08:37 上线）
+- 改动：`GET /api/admin/ota/devices` 每行加 `pck_active_version`（pck_device_status.active_content_version，旧端/未上报=null，字段恒在）；页面在「当前版本」后加「当前 PCK 版本（设备上报）」列，空态 colspan 6；`ota.test.ts` +2 → 44/44，负向验证：去掉路由改动 pck-col-1/2 变红。
+- 上线：prod ota.ts md5 f5899c496bd266fa99346be3bfea7895 / admin f2b1053cee14de661439c83cea6b6a82（此前 7e59974e… / 0e00bed9…，三方同源核对过）；备份 `/opt/p003/_backup/20260916-083743-ota-devices-pckcol/`；health 200（3 s）、post-restart 0 ERROR；公网 E2E：10 台全部带 PCK 版本（v263-g1-prod-1 ×5、v220-g1-prod-1 ×5），nginx 出的页含新表头。
+- 回滚：`cp /opt/p003/_backup/20260916-083743-ota-devices-pckcol/src/routes/ota.ts /opt/p003/server/src/routes/ && cp /opt/p003/_backup/20260916-083743-ota-devices-pckcol/admin/index.html /opt/p003/web/dist/admin/ && pm2 restart p003-voice --update-env`（回到备注列版本）。

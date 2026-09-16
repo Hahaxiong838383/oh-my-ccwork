@@ -11,6 +11,7 @@ import { deviceRegistryStore } from '../device-registry-store.js';
 import { otaStore } from '../ota-store.js';
 import { inspectApk } from '../apk-inspect.js';
 import { ContentLastResultSchema, ContentStateSchema, pckAdminRoute, resolveContentUpdate } from './ota-pck.js';
+import { pckStore } from '../pck-store.js';
 
 /**
  * P003 Android OTA（联调合同 CC_P003_OTA_JOINT_CONTRACT_20260820 + 冻结回执 + codex 修正）。
@@ -289,6 +290,8 @@ otaAdminRoute.get('/devices', (c) => {
     ...d,
     // 2026-09-16 川哥：设备接入页人工填的备注同步到「设备版本分布」表（只读展示；台账无记录=空串）
     note: deviceRegistryStore.get(d.sn)?.note ?? '',
+    // 2026-09-16 川哥：同表带当前 PCK 版本（pck_device_status.active_content_version；旧端/未上报=null）
+    pck_active_version: pckStore.getDevice(d.sn)?.active_content_version ?? null,
     last_result: d.last_result_json ? JSON.parse(d.last_result_json) : null,
     last_result_json: undefined,
   }));

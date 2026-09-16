@@ -248,5 +248,17 @@ async function upload(name = 'test.apk') {
   eq('note-3 备注不影响原有字段', { vc: rowDb?.version_code, lr: rowDb?.last_result === undefined ? 'missing' : 'present' }, { vc: 62, lr: 'present' });
 }
 
+// ---------- 设备版本分布带当前 PCK 版本（2026-09-16 川哥：当前版本后加一列 PCK 版本）----------
+{
+  // SN_DB 带 content_state 上报 active_content_version；SN_ENV 是没上报过 content_state 的旧端 → 必须是 null 而不是缺字段
+  await check(SN_DB, 62, await deviceCred(SN_DB), { content_state: { active_content_version: 'v9-pck-test', product_model: 'rk3562_rc160' } });
+  await check(SN_ENV, 62, await deviceCred(SN_ENV));
+  const devs = ((await (await app.request('/api/admin/ota/devices')).json()) as any).devices as any[];
+  const rowDb = devs.find((d) => d.sn === SN_DB);
+  const rowEnv = devs.find((d) => d.sn === SN_ENV);
+  eq('pck-col-1 上报过 content_state 的设备行带当前 PCK 版本', rowDb?.pck_active_version, 'v9-pck-test');
+  eq('pck-col-2 未上报 content_state 的设备 pck_active_version 为 null（字段恒在）', { has: rowEnv ? 'pck_active_version' in rowEnv : null, v: rowEnv?.pck_active_version }, { has: true, v: null });
+}
+
 console.log(`\nota.test: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);
