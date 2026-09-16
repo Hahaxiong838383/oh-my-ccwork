@@ -1591,15 +1591,16 @@
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
                     <div style="font-weight:700;margin-bottom:10px">设备版本分布<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">设备每次 check 自动上报</span></div>
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
-                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">当前版本</th><th style="padding:6px 8px">最近检查</th><th style="padding:6px 8px">最近升级结果</th></tr></thead>
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">备注<span style="font-weight:400;margin-left:4px" title="来自「设备接入」页的人工备注，此处只读；要改去设备接入页">（设备接入页填）</span></th><th style="padding:6px 8px">当前版本</th><th style="padding:6px 8px">最近检查</th><th style="padding:6px 8px">最近升级结果</th></tr></thead>
                       <tbody>
                         <tr v-for="d in ota.devices" :key="d.sn" style="border-bottom:1px solid #f5f5f5">
                           <td style="padding:6px 8px;font-family:monospace">{{ d.sn }}</td>
+                          <td style="padding:6px 8px;max-width:220px;word-break:break-all" :style="{ color: d.note ? '#303133' : '#C0C4CC' }">{{ d.note || '—' }}</td>
                           <td style="padding:6px 8px">{{ d.version_code }}<span style="color:#999"> ({{ d.version_name }})</span></td>
                           <td style="padding:6px 8px">{{ new Date(d.last_check_at).toLocaleString() }}</td>
                           <td style="padding:6px 8px"><span v-if="d.last_result" :style="{ color: d.last_result.status === 'success' ? '#3A8A3A' : '#B03A3A' }">{{ d.last_result.from_version_code }}→{{ d.last_result.to_version_code }} {{ d.last_result.status }}</span><span v-else style="color:#999">—</span></td>
                         </tr>
-                        <tr v-if="!ota.devices.length"><td colspan="4" style="padding:14px 8px;color:#999">暂无设备上报（等设备接入新 OTA 接口后出现）</td></tr>
+                        <tr v-if="!ota.devices.length"><td colspan="5" style="padding:14px 8px;color:#999">暂无设备上报（等设备接入新 OTA 接口后出现）</td></tr>
                       </tbody>
                     </table>
                   </div>

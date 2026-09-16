@@ -102,3 +102,9 @@
 - **回滚**：`cp /opt/p003/_backup/20260914-082212-b-story-length/src/*.ts /opt/p003/server/src/ && pm2 restart p003-voice`。
 - 排查稿：`2026-09-14-讲故事截断排查-0010-*.md`（含 60s 排除链、五轮故事表、投机轮落库污染残项）。0010 的 quiet 模板由川哥手动切回默认（A）。
 - **同日 09:17 CST 第二次 server 增量（待办清单 + 第五类热词）**：`config-store.ts`（2e60aa64…）/ `hotword-store.ts`（a1140713…）/ `routes/admin-data.ts`（83f2dcdf…）+ admin 页 `public/admin/index.html`（5adacde3…）+ 64.90 `apply_hotwords.py`（b33f55b4…，白名单 +BACKCHANNEL_HOTWORDS）。备份 `/opt/p003/_backup/20260914-091752-b-todo-backchannel/`。「版本与 One-shot」新增下一版待办（4 条已录）；热词第五类「播放中附和词」A 表 27 词草稿未发布。worker 附和词逻辑已写未发（One-shot 池等全量 OTA 后）。
+
+## 2026-09-16 admin OTA「设备版本分布」加只读备注列（川哥 08:20 要求，08:23 上线）
+- 改动：`apps/server/src/routes/ota.ts` `GET /api/admin/ota/devices` 每行加 `note`（取 device_registry.note，台账无记录=空串，字段恒在）；`apps/web/public/admin/index.html` 表头/单元格在 SN 后加「备注（设备接入页填）」只读列、空态 colspan 5；`scripts/ota.test.ts` +3 → 42/42，负向验证：去掉路由改动 note-1/note-2 变红。
+- 上线：prod ota.ts md5 7e59974e22167ee85334162fb636f14c / admin 0e00bed91e68188e7d0ca0470a178e8d（此前 e0a4a0a4… / 5adacde3…，部署前三方同源核对过）；备份 `/opt/p003/_backup/20260916-082312-ota-devices-note/`；pm2 restart 后 health 200（4 s）、post-restart 0 ERROR；公网 E2E：10 台全部带 note 且非空，nginx 出的页含新表头。
+- 回滚：`cp /opt/p003/_backup/20260916-082312-ota-devices-note/src/routes/ota.ts /opt/p003/server/src/routes/ && cp /opt/p003/_backup/20260916-082312-ota-devices-note/admin/index.html /opt/p003/web/dist/admin/ && pm2 restart p003-voice --update-env`。
+- 未做：PCK「设备内容包状态」表没加备注列（川哥只点了 APK 的设备版本分布）。

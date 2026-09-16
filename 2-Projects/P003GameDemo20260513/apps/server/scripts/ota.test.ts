@@ -235,5 +235,18 @@ async function upload(name = 'test.apk') {
   eq('notes-9 清空说明也落库', (await app.request('/api/admin/ota/releases/66/notes', { method: 'PATCH', headers: hdr, body: JSON.stringify({ notes: '' }) })).status === 200 && otaStore.getRelease(66)?.notes === '', true);
 }
 
+// ---------- 设备版本分布带台账备注（2026-09-16 川哥：设备接入页人工备注同步到 OTA 页，只读）----------
+{
+  // SN_DB 台账备注 'ota测试机'；SN_ENV 仅 env 白名单、台账无记录 → note 必须是空串而不是缺字段/null
+  await check(SN_DB, 62, await deviceCred(SN_DB));
+  await check(SN_ENV, 62, await deviceCred(SN_ENV));
+  const devs = ((await (await app.request('/api/admin/ota/devices')).json()) as any).devices as any[];
+  const rowDb = devs.find((d) => d.sn === SN_DB);
+  const rowEnv = devs.find((d) => d.sn === SN_ENV);
+  eq('note-1 台账设备行带人工备注', rowDb?.note, 'ota测试机');
+  eq('note-2 台账无记录设备 note 为空串（字段恒在）', { has: rowEnv ? 'note' in rowEnv : null, n: rowEnv?.note }, { has: true, n: '' });
+  eq('note-3 备注不影响原有字段', { vc: rowDb?.version_code, lr: rowDb?.last_result === undefined ? 'missing' : 'present' }, { vc: 62, lr: 'present' });
+}
+
 console.log(`\nota.test: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);

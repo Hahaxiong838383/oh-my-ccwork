@@ -287,6 +287,8 @@ otaAdminRoute.patch('/releases/:vc/notes', async (c) => {
 otaAdminRoute.get('/devices', (c) => {
   const devices = otaStore.listDeviceStatus().map((d) => ({
     ...d,
+    // 2026-09-16 川哥：设备接入页人工填的备注同步到「设备版本分布」表（只读展示；台账无记录=空串）
+    note: deviceRegistryStore.get(d.sn)?.note ?? '',
     last_result: d.last_result_json ? JSON.parse(d.last_result_json) : null,
     last_result_json: undefined,
   }));
