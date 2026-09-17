@@ -298,9 +298,8 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - 🔑 **连接真值(先看这行,别编别名)**:`ssh root@64.90.13.117` —— 这台**没有 ssh 别名**
   (2026-09-11 我编了个 `p003-worker` 去探生产,连接失败的信号与"服务挂了"完全同形)。
   真值另见记忆 `reference_cloud_servers.md` 的 voice-worker-hk 行。
-  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID **2720004** / ActiveEnter
-  **2026-09-12 06:48:18 UTC**,动它前先对这两个数;旧锚 2017631 / 09-06 23:49:55 已被 09-12 那次
-  第三方重启作废)。⚠️ **不存在 `voice-worker.service` 这个名字**——2026-09-12 我拿它查生产,
+  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID **3274065** / ActiveEnter
+  **2026-09-17 01:42:14 UTC**,exe sha256 96d728a0…=3a2af41c3+重连修复 d4c2d7dc7,动它前先对这两个数;旧锚 3163903 / 09-15 22:17:23(nginx 硬切后 systemd 拉起)、2720004 / 09-12 06:48:18、2017631 / 09-06 23:49:55 均作废)。⚠️ **不存在 `voice-worker.service` 这个名字**——2026-09-12 我拿它查生产,
   systemd 照答 `MainPID=0 NRestarts=0 ActiveEnterTimestamp=`(全空),与"服务真挂了"完全同形。
   **先 `systemctl list-units --type=service --all | grep -i voice` 把名字列出来再判状态**、**单机灰度** `voice-worker-firstturn`
   (agent `rust-worker-firstturn`,2026-09-11 起,产品首句 v1 专用,env 链与生产逐行相同只叠 13 键差异,
@@ -785,9 +784,10 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **三个坑**:①control 消费在 **both directions ready 之后**才启动——设备只 connect 不发麦克风轨,canary.say 无人消费无 ack;②**一人一房**:任何 participant 断开=关整个 job(探针第二连接要用独立房间);③stale_trace 判定用 epoch 时钟(别拿 now_ms 单调毫秒比设备 ts,踩过恒 stale)。
 - **tts synth 日志已全局截 24 字**:验"没落全文"时 grep 短语必须取第 25 字以后的内容(保留区命中≠泄露),正锚=`(N字)` 截断标记。
 
-## rust worker /agent 重连计数（2026-09-17 修复在分支，未部署）
+## rust worker /agent 重连计数（2026-09-17 09:42 已发版两池：生产 96d728a0… / firstturn bd76e93d…）
 - 事故（09-16 06:17 CST）：47.239 nginx 被 unattended-upgrades 升级**重启**（postinst 走 restart 非 reload），所有 wss 硬切、无 close_notify；生产池 worker 旧计数只在「干净 Close 帧」时清零，重连成功不清零 → 09-12 下电 25 min 攒的 12 次 + 这 1 次 = 13 → `bail` 退出（exit 1）→ systemd Restart=always/3s 拉起；firstturn 池计数 0 → 2s 重连成功。两池二进制同码。
-- 修复：`WorkerState.reconnect_failures` 自上次注册成功起连续计数，注册成功清零（日志 `reconnected & registered, consecutive failure count reset`），>12 仍退出交 systemd。单测 6/6 + 负向验证。**发版真机触发**：灰度池先上，人为掐 /agent 连接 ≥14 次（3s 间隔），期望 14 次 `worker connection failed` + 14 次 `reconnected & registered`、NRestarts 不变 → 再上生产池。
+- 修复：`WorkerState.reconnect_failures` 自上次注册成功起连续计数，注册成功清零（日志 `reconnected & registered, consecutive failure count reset`），>12 仍退出交 systemd。单测 6/6 + 负向验证。已发版（两池各=现役基线 cherry-pick `d4c2d7dc7`，不夹带附和词/One-shot；firstturn `.prev`=c2b84b2e…，生产 `.bak-20260917-014213`=f3707e7e…）。
+- **掐线真机测试 SOP（可复用，不碰真流量）**：`systemd-run --unit=voice-worker-fixtest -p WorkingDirectory=/root/rust-worker-poc -p EnvironmentFile=×4(.env/poc-eou.env/rust-worker.env/rust-worker-poc.env) /root/rust-worker-poc/voice-rust-worker`（agent `rust-worker-poc` 无人派单）→ 循环 `SP=$(ss -tnpH | awk -v p="pid=$PID," '$0~p && $5~/:443$/{n=split($4,a,":");print a[n]}')` 后 `ss -K "dst 47.239.204.68 and sport = :$SP"`（内核 CONFIG_INET_DIAG_DESTROY=y 已验）每 4 s 一次 ≥14 次 → 数 journal `worker connection failed` / `reconnected & registered` / `次连接失败,放弃`=0 / 同 PID → `systemctl stop voice-worker-fixtest`。⚠️ 别对生产 unit 的 pid 掐：`ss -K` 只按 sport 杀，和 job 房间连接同目标 :443，掐错会杀在途房。
 - 47.239 nginx 自动升级史 07-23/08-21/08-22/09-16 全在 06:00–07:00 CST（timer 6:00+≤60min）；川哥：暂不加黑名单，频繁触发再做且放凌晨 3–4 点。47.239 09-12 17:16 干净 poweroff（非川哥操作，机内 root 经 logind，无 ACPI 电源键事件）→ 川哥查控制台。
 - 保活面现状：两 worker unit Restart=always RestartSec=3（StartLimit 5/10s 打不到）；worker 退避 2–10s、WorkerPing 30s；nginx `proxy_read_timeout 3600s`；LiveKit Restart=on-failure；无 watchdog。后台「🖥 服务器状态」tab 可看每个 worker 的注册/断线/放弃退出计数（`host-stats.py`，见 p003-deploy-ops）。
 
