@@ -1127,6 +1127,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let previewColumn = NSStackView()
     private let layerSummary = NSTextField(wrappingLabelWithString: "")
     private let pinButton = NSButton(checkboxWithTitle: "保持置顶", target: nil, action: nil)
+    private var quitConfirmation: NSAlert?
+    private let terminateApplication: () -> Void
     private var selectedLocalTool = 0
     private var builtInterface = false
     private let protoPie: ProtoPieCoordinator?
@@ -1202,13 +1204,15 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         presentWindow: Bool = true,
         historyStore: ConfigurationHistoryStore = ConfigurationHistoryStore(),
         presetStore: PresetStore = PresetStore(),
-        protoPie: ProtoPieCoordinator? = nil
+        protoPie: ProtoPieCoordinator? = nil,
+        terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) }
     ) {
         self.renderer = renderer
         self.store = store
         self.historyStore = historyStore
         self.presetStore = presetStore
         self.protoPie = protoPie
+        self.terminateApplication = terminateApplication
         self.configuration = configuration
         lastAppliedConfiguration = configuration
         self.setWarpVisible = setWarpVisible
@@ -1407,6 +1411,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         pinButton.target = self
         pinButton.action = #selector(toggleAlwaysOnTop)
         for button in [historyButton, pauseWarpButton, pinButton] { titleRow.addArrangedSubview(button) }
+        let quitButton = makeButton("退出程序", action: #selector(requestQuit))
+        quitButton.setAccessibilityIdentifier("nio-workbench-quit")
+        titleRow.addArrangedSubview(quitButton)
         stack.addArrangedSubview(titleRow)
         titleRow.widthAnchor.constraint(equalTo: header.widthAnchor).isActive = true
         globalStatusLabel.textColor = .secondaryLabelColor
@@ -1672,7 +1679,6 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         hint.preferredMaxLayoutWidth = 490
         hint.textColor = .secondaryLabelColor
         stack.addArrangedSubview(hint)
-        stack.addArrangedSubview(makeButton("退出程序，恢复原始桌面", action: #selector(NSApplication.terminate(_:)), target: NSApp))
         let checkboxHelp: [(NSButton, String)] = [
             (horizontalMirrorButton, "左右对调内容，AA 和曲面形状不变；标定网格也跟随翻转。"),
             (verticalMirrorButton, "上下对调内容，AA 和曲面形状不变；标定网格也跟随翻转。"),
@@ -1848,6 +1854,26 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     @objc private func togglePolynomialDetails() { polynomialDetails.isHidden = polynomialDisclosure.state != .on }
     @objc private func toggleAlwaysOnTop() { window?.level = pinButton.state == .on ? .floating : .normal }
 
+    @objc private func requestQuit() {
+        guard let window, window.attachedSheet == nil, quitConfirmation == nil else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "退出 NIO Warp？"
+        alert.informativeText = "退出后将停止画面校正并恢复原始桌面。已保存的参数会保留，尚未应用的输入会丢弃。"
+        let cancelButton = alert.addButton(withTitle: "取消")
+        let confirmButton = alert.addButton(withTitle: "退出程序")
+        quitConfirmation = alert
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            self.quitConfirmation = nil
+            if response == .alertSecondButtonReturn { self.terminateApplication() }
+        }
+        // NSAlert assigns button shortcuts while presenting the sheet.
+        confirmButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\r"
+        alert.window.defaultButtonCell = cancelButton.cell as? NSButtonCell
+    }
+
     func windowShouldClose(_ sender: NSWindow) -> Bool {
         setWarpVisible(false)
         protoPie?.setOutputPaused(true)
@@ -1891,7 +1917,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             "importConfiguration": "导入完整参数备份或单独多项式 JSON。无效配置不会覆盖当前画面。",
             "exportConfiguration": "保存当前全部参数到 JSON 文件，方便备份或迁移；不会修改画面。",
             "resetConfiguration": "恢复当前显示器的初始设置，包括 AA、画布、曲线、镜像和外扩起点；操作前再次确认。",
-            "terminate:": "退出 NIO Warp，移除外屏覆盖层，显示原始桌面。",
+            "requestQuit": "确认后退出 NIO Warp，移除外屏覆盖层，显示原始桌面。",
         ]
         button.toolTip = help[NSStringFromSelector(action)] ?? title
         button.setAccessibilityHelp(button.toolTip)
@@ -2064,7 +2090,6 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
                         || control.action == #selector(openLocalEditor)
                         || control.action == #selector(openBezierEditor)
                         || control.action == #selector(exportConfiguration)
-                        || control.action == #selector(NSApplication.terminate(_:))
                     control.isEnabled = canUseOffline
                 }
                 disableEditing(in: child)

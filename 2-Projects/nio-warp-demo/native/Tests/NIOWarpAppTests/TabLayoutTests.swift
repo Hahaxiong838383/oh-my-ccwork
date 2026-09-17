@@ -21,7 +21,7 @@ final class TabLayoutTests: XCTestCase {
         [view] + view.subviews.flatMap(descendants)
     }
 
-    private func controller(active: Bool = false, initialHistory: Bool = false, bezierEnabled: Bool = false, allowsGeometryCommit: Bool = false) throws -> (ControlPanelController, UserDefaults, String) {
+    private func controller(active: Bool = false, initialHistory: Bool = false, bezierEnabled: Bool = false, allowsGeometryCommit: Bool = false, terminateApplication: @escaping () -> Void = { XCTFail("测试不应终止宿主应用") }) throws -> (ControlPanelController, UserDefaults, String) {
         _ = NSApplication.shared
         let suite = "NIOWarp.TabLayout.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -48,7 +48,8 @@ final class TabLayoutTests: XCTestCase {
             applyCaptureConfiguration: { _ in XCTFail("切换模块不能重启捕获") },
             updateAABoundary: { _, _ in XCTFail("切换模块不能更新 AA") },
             updateWarpBoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 Warp") } }, presentWindow: false,
-            historyStore: history, presetStore: PresetStore(defaults: defaults), protoPie: protoPie
+            historyStore: history, presetStore: PresetStore(defaults: defaults), protoPie: protoPie,
+            terminateApplication: terminateApplication
         )
         return (panel, defaults, suite)
     }
@@ -193,6 +194,108 @@ final class TabLayoutTests: XCTestCase {
             panel.selectModule(module)
             XCTAssertEqual(status.stringValue, "全局测试状态：等待外屏")
         }
+    }
+
+    func testQuitButtonIsUniqueAtTopRightAndAvailableOfflineAcrossAllModules() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let window = try XCTUnwrap(panel.window)
+        let content = try XCTUnwrap(window.contentView)
+        let quit = try XCTUnwrap(identifiedView("nio-workbench-quit", in: panel) as? NSButton)
+        let titleRow = try XCTUnwrap(quit.superview as? NSStackView)
+        let navigation = try tabs(in: panel)
+        XCTAssertEqual(quit.title, "退出程序")
+        XCTAssertTrue(titleRow.arrangedSubviews.last === quit)
+        XCTAssertFalse(quit.isDescendant(of: navigation))
+        let historyButtons = descendants(try XCTUnwrap(item("history", in: panel).view)).compactMap { $0 as? NSButton }
+        XCTAssertFalse(historyButtons.contains { $0.title.contains("退出程序") })
+        for size in [NSSize(width: 1040, height: 650), NSSize(width: 1220, height: 790)] {
+            window.setContentSize(size)
+            for module in modules {
+                panel.selectModule(module)
+                content.layoutSubtreeIfNeeded()
+                XCTAssertTrue(quit.isEnabled)
+                XCTAssertFalse(quit.isHiddenOrHasHiddenAncestor)
+                XCTAssertEqual(descendants(content).filter { $0.accessibilityIdentifier() == "nio-workbench-quit" }.count, 1)
+                let quitFrame = quit.convert(quit.bounds, to: content)
+                for control in titleRow.arrangedSubviews.compactMap({ $0 as? NSControl }) {
+                    let frame = control.convert(control.bounds, to: content)
+                    XCTAssertGreaterThanOrEqual(frame.minX, -1, module)
+                    XCTAssertLessThanOrEqual(frame.maxX, content.bounds.width + 1, module)
+                    if control !== quit { XCTAssertLessThanOrEqual(frame.maxX, quitFrame.minX, "退出按钮应位于标题行最右侧") }
+                }
+            }
+        }
+    }
+
+    private func waitForQuitSheetChange(_ condition: () -> Bool, timeout: TimeInterval = 2) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition(), Date() < deadline {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
+        XCTAssertTrue(condition(), "退出确认对话框未在预期时间内更新")
+    }
+
+    func testQuitCancellationKeepsConfigurationHistoryAndDraftsUnchanged() throws {
+        var terminations = 0
+        let (panel, defaults, suite) = try controller(active: true, initialHistory: true, terminateApplication: { terminations += 1 })
+        let window = try XCTUnwrap(panel.window)
+        defer {
+            if let sheet = window.attachedSheet { window.endSheet(sheet, returnCode: .cancel) }
+            panel.close(); defaults.removePersistentDomain(forName: suite)
+        }
+        let quit = try XCTUnwrap(identifiedView("nio-workbench-quit", in: panel) as? NSButton)
+        let width = try XCTUnwrap(descendants(try XCTUnwrap(item("canvas", in: panel).view)).compactMap { $0 as? NSTextField }.first { $0.isEditable && $0.stringValue == "7680" })
+        width.stringValue = "8123"
+        let configuration = panel.configurationForOfflinePreview
+        let persisted = defaults.persistentDomain(forName: suite) as NSDictionary?
+        quit.performClick(nil)
+        waitForQuitSheetChange { window.attachedSheet != nil }
+        let sheet = try XCTUnwrap(window.attachedSheet)
+        let buttons = descendants(try XCTUnwrap(sheet.contentView)).compactMap { $0 as? NSButton }
+        let cancel = try XCTUnwrap(buttons.first { $0.title == "取消" })
+        let confirm = try XCTUnwrap(buttons.first { $0.title == "退出程序" })
+        XCTAssertTrue(sheet.defaultButtonCell === cancel.cell, "回车默认按钮应为取消")
+        XCTAssertTrue(confirm.keyEquivalent.isEmpty)
+        XCTAssertEqual(terminations, 0)
+        cancel.performClick(nil)
+        waitForQuitSheetChange { window.attachedSheet == nil }
+        quit.performClick(nil)
+        waitForQuitSheetChange { window.attachedSheet != nil }
+        let keyboardSheet = try XCTUnwrap(window.attachedSheet)
+        let returnKey = try XCTUnwrap(NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: keyboardSheet.windowNumber, context: nil,
+            characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36
+        ))
+        XCTAssertTrue(keyboardSheet.performKeyEquivalent(with: returnKey), "确认对话框应处理回车为取消")
+        waitForQuitSheetChange { window.attachedSheet == nil }
+        XCTAssertEqual(terminations, 0)
+        XCTAssertEqual(width.stringValue, "8123")
+        XCTAssertEqual(panel.configurationForOfflinePreview, configuration)
+        XCTAssertEqual(defaults.persistentDomain(forName: suite) as NSDictionary?, persisted)
+    }
+
+    func testQuitConfirmationRequiresSecondClickAndDoesNotStackSheets() throws {
+        var terminations = 0
+        let (panel, defaults, suite) = try controller(terminateApplication: { terminations += 1 })
+        let window = try XCTUnwrap(panel.window)
+        defer {
+            if let sheet = window.attachedSheet { window.endSheet(sheet, returnCode: .cancel) }
+            panel.close(); defaults.removePersistentDomain(forName: suite)
+        }
+        let quit = try XCTUnwrap(identifiedView("nio-workbench-quit", in: panel) as? NSButton)
+        quit.performClick(nil)
+        waitForQuitSheetChange { window.attachedSheet != nil }
+        let sheet = try XCTUnwrap(window.attachedSheet)
+        quit.performClick(nil)
+        XCTAssertTrue(window.attachedSheet === sheet)
+        XCTAssertEqual(window.sheets.count, 1)
+        XCTAssertEqual(terminations, 0)
+        let confirm = try XCTUnwrap(descendants(try XCTUnwrap(sheet.contentView)).compactMap { $0 as? NSButton }.first { $0.title == "退出程序" })
+        confirm.performClick(nil)
+        waitForQuitSheetChange { window.attachedSheet == nil && terminations == 1 }
+        XCTAssertEqual(terminations, 1)
     }
 
     func testCanvasDimensionDraftSurvivesAValidatedBezierSubmission() throws {
