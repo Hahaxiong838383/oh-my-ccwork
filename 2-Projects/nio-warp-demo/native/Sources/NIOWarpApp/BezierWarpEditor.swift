@@ -1,6 +1,22 @@
 import AppKit
 import simd
 
+/// Shared editor camera in output-display physical pixels. `physicalBounds` is
+/// the visible physical rectangle, including preview margins. A camera copied
+/// from another editor includes `pointsPerPhysicalPixel`, so changing toolbar
+/// or loupe sizes preserves zoom instead of repeatedly fitting and zooming out.
+struct WarpEditorViewport: Equatable {
+    var physicalBounds: NSRect
+    var pointsPerPhysicalPixel: CGFloat? = nil
+
+    var isValid: Bool {
+        physicalBounds.origin.x.isFinite && physicalBounds.origin.y.isFinite &&
+        physicalBounds.width.isFinite && physicalBounds.height.isFinite &&
+        physicalBounds.width > 0 && physicalBounds.height > 0 &&
+        (pointsPerPhysicalPixel.map { $0.isFinite && $0 > 0 } ?? true)
+    }
+}
+
 /// All distances in this editor are output-display physical pixels. AppKit points
 /// are converted through the fitted surface scale, never through the local Retina scale.
 final class BezierWarpCanvasView: NSView {
@@ -18,6 +34,7 @@ final class BezierWarpCanvasView: NSView {
     private var nodePoints = [SIMD2<Float>]()
     private var physicalBounds = NSRect(x: 0, y: 0, width: 5000, height: 1500)
     private var fitted = false
+    private var sharedViewport: WarpEditorViewport?
     private var zoom: CGFloat = 1
     private var dragStart: NSPoint?
     private var dragConfiguration: WarpConfiguration?
@@ -54,7 +71,32 @@ final class BezierWarpCanvasView: NSView {
         needsDisplay = true
     }
 
-    func cancelInteraction() { dragStart = nil; dragConfiguration = nil; dragHandle = nil }
+    /// Return the pre-drag configuration only while a gesture is uncommitted.
+    /// A submitted mouse-up has already cleared this state, so navigation cannot
+    /// roll back or cancel an in-flight mesh validation.
+    @discardableResult
+    func cancelInteraction(restoringDraft: Bool = false) -> WarpConfiguration? {
+        let original = dragConfiguration
+        dragStart = nil; dragConfiguration = nil; dragHandle = nil
+        if restoringDraft, let original { update(configuration: original) }
+        return original
+    }
+
+    var viewport: WarpEditorViewport? {
+        get {
+            guard fitted, bounds.width > 0, bounds.height > 0 else { return nil }
+            return WarpEditorViewport(physicalBounds: NSRect(
+                x: physicalBounds.midX - bounds.width / (2 * scale),
+                y: physicalBounds.midY - bounds.height / (2 * scale),
+                width: bounds.width / scale, height: bounds.height / scale), pointsPerPhysicalPixel: scale)
+        }
+        set {
+            guard let newValue, newValue.isValid else { return }
+            physicalBounds = newValue.physicalBounds
+            sharedViewport = newValue
+            fitted = true; zoom = 1; needsDisplay = true
+        }
+    }
 
     private func rebuildGeometry() {
         guard let config = configuration else { return }
@@ -90,12 +132,17 @@ final class BezierWarpCanvasView: NSView {
         let height = max(CGFloat(maximum.y - minimum.y), 100)
         physicalBounds = NSRect(x: CGFloat(minimum.x) - width * 0.10, y: CGFloat(minimum.y) - height * 0.18, width: width * 1.20, height: height * 1.36)
         fitted = true
+        sharedViewport = nil
         zoom = 1
         needsDisplay = true
     }
 
     private var scale: CGFloat {
-        max(0.000_001, min(max(bounds.width - 40, 1) / physicalBounds.width, max(bounds.height - 40, 1) / physicalBounds.height) * zoom)
+        if let sharedViewport {
+            let base = sharedViewport.pointsPerPhysicalPixel ?? min(max(bounds.width, 1) / physicalBounds.width, max(bounds.height, 1) / physicalBounds.height)
+            return max(0.000_001, base * zoom)
+        }
+        return max(0.000_001, min(max(bounds.width - 40, 1) / physicalBounds.width, max(bounds.height - 40, 1) / physicalBounds.height) * zoom)
     }
 
     func viewPoint(for physical: SIMD2<Float>) -> NSPoint {
@@ -194,8 +241,10 @@ final class BezierWarpCanvasView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
-        defer { dragStart = nil; dragConfiguration = nil; dragHandle = nil }
-        guard let start = dragConfiguration, let current = configuration, start.bezierWarp != current.bezierWarp else { return }
+        let start = dragConfiguration
+        let current = configuration
+        cancelInteraction()
+        guard let start, let current, start.bezierWarp != current.bezierWarp else { return }
         onDraft?(current.bezierWarp, true)
     }
 
@@ -285,11 +334,17 @@ final class BezierWarpCanvasView: NSView {
 
 private final class BezierEditorDocument: NSView { override var isFlipped: Bool { true } }
 
-final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
+final class BezierWarpEditorController: NSWindowController, NSWindowDelegate, NSTextFieldDelegate {
     var onChange: ((BezierWarpConfiguration, Bool) -> Void)?
     var onUndo: (() -> Void)?
     var onClose: (() -> Void)?
     let canvasView = BezierWarpCanvasView()
+    let embeddedPreview = NSView()
+    let embeddedInspector = NSScrollView()
+    private(set) var isEmbedded: Bool
+    private var standaloneConstraints = [NSLayoutConstraint]()
+    private var textDrafts = [ObjectIdentifier: String]()
+    private var lastFieldSelection: Int?
     private var working: WarpConfiguration
     private var available: Bool
     private let enabledButton = NSButton(checkboxWithTitle: "启用贝塞尔曲面叠加", target: nil, action: nil)
@@ -311,21 +366,86 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
     var draftConfiguration: WarpConfiguration { working }
     var statusText: String { statusLabel.stringValue }
 
-    init(configuration: WarpConfiguration, available: Bool) {
+    init(configuration: WarpConfiguration, available: Bool, embedded: Bool = false) {
         working = configuration
         self.available = available
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1220, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "NIO Warp · 贝塞尔曲面与分区趋势"
-        window.minSize = NSSize(width: 1040, height: 650)
-        window.isReleasedWhenClosed = false
-        window.appearance = NSAppearance(named: .darkAqua)
-        super.init(window: window)
-        window.delegate = self
+        isEmbedded = embedded
+        let standaloneWindow: NSWindow?
+        if embedded { standaloneWindow = nil }
+        else {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1220, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            window.title = "NIO Warp · 贝塞尔曲面与分区趋势"
+            window.minSize = NSSize(width: 1040, height: 650)
+            window.level = .normal
+            window.isReleasedWhenClosed = false
+            window.appearance = NSAppearance(named: .darkAqua)
+            standaloneWindow = window
+        }
+        super.init(window: standaloneWindow)
+        standaloneWindow?.delegate = self
         buildInterface()
         synchronize(configuration: configuration, available: available)
-        window.center()
+        standaloneWindow?.center()
     }
     required init?(coder: NSCoder) { nil }
+
+    /// Idempotent migration path for legacy callers. New workbench callers should
+    /// pass `embedded: true` to avoid allocating a secondary window altogether.
+    func prepareForEmbedding() {
+        guard !isEmbedded else { return }
+        deactivateInteraction()
+        isEmbedded = true
+        NSLayoutConstraint.deactivate(standaloneConstraints)
+        standaloneConstraints.removeAll()
+        embeddedPreview.removeFromSuperview()
+        embeddedInspector.removeFromSuperview()
+        window?.orderOut(nil)
+        window?.delegate = nil
+        window = nil
+    }
+
+    func deactivateInteraction() {
+        if let original = canvasView.cancelInteraction(restoringDraft: true) {
+            working.bezierWarp = original.bezierWarp
+            refresh()
+            showStatus("已取消未提交拖动；已应用修正与输入草稿保留。")
+        }
+    }
+
+    var viewport: WarpEditorViewport? {
+        get { canvasView.viewport }
+        set { canvasView.viewport = newValue }
+    }
+
+    /// Temporarily gate geometry edits while another module validates a change,
+    /// without replacing this editor's working state or text drafts.
+    func setEditingAvailable(_ available: Bool) {
+        self.available = available
+        canvasView.editable = available
+        refresh()
+    }
+
+    override func showWindow(_ sender: Any?) {
+        guard !isEmbedded else { return }
+        super.showWindow(sender)
+    }
+
+    func controlTextDidChange(_ notification: Notification) {
+        guard let field = notification.object as? NSTextField else { return }
+        textDrafts[ObjectIdentifier(field)] = field.currentEditor()?.string ?? field.stringValue
+    }
+
+    private func clearDrafts(_ fields: [NSTextField]) {
+        fields.forEach { textDrafts.removeValue(forKey: ObjectIdentifier($0)) }
+    }
+
+    private func setField(_ field: NSTextField, value: String) {
+        // Updates from another module or an asynchronous mesh result must not
+        // discard text that has not been explicitly applied by the user.
+        if let draft = textDrafts[ObjectIdentifier(field)] {
+            if field.currentEditor() == nil { field.stringValue = draft }
+        } else { field.stringValue = value }
+    }
 
     func showStatus(_ message: String, error: Bool = false) { statusLabel.stringValue = message; statusLabel.textColor = error ? .systemRed : .secondaryLabelColor }
 
@@ -354,8 +474,8 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
     }
     private func row(_ views: [NSView]) -> NSStackView { let stack = NSStackView(views: views); stack.spacing = 6; return stack }
     private func buildInterface() {
-        guard let content = window?.contentView else { return }
-        let sidebar = NSScrollView()
+        let sidebar = embeddedInspector
+        sidebar.scrollerStyle = .overlay
         sidebar.hasVerticalScroller = true; sidebar.autohidesScrollers = true; sidebar.drawsBackground = false
         sidebar.translatesAutoresizingMaskIntoConstraints = false
         let document = BezierEditorDocument(); document.translatesAutoresizingMaskIntoConstraints = false; sidebar.documentView = document
@@ -364,9 +484,14 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
         controls.edgeInsets = NSEdgeInsets(top: 12, left: 4, bottom: 20, right: 12)
         controls.translatesAutoresizingMaskIntoConstraints = false; document.addSubview(controls)
         NSLayoutConstraint.activate([controls.leadingAnchor.constraint(equalTo: document.leadingAnchor), controls.trailingAnchor.constraint(equalTo: document.trailingAnchor), controls.topAnchor.constraint(equalTo: document.topAnchor), controls.bottomAnchor.constraint(equalTo: document.bottomAnchor)])
-        let right = NSView(); right.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(sidebar); content.addSubview(right)
-        NSLayoutConstraint.activate([sidebar.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16), sidebar.topAnchor.constraint(equalTo: content.topAnchor, constant: 12), sidebar.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12), sidebar.widthAnchor.constraint(equalToConstant: 302), right.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: 14), right.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16), right.topAnchor.constraint(equalTo: content.topAnchor, constant: 16), right.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16)])
+        let right = embeddedPreview; right.translatesAutoresizingMaskIntoConstraints = false
+        if let content = window?.contentView {
+            content.addSubview(sidebar); content.addSubview(right)
+            standaloneConstraints = [sidebar.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16), sidebar.topAnchor.constraint(equalTo: content.topAnchor, constant: 12), sidebar.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12), sidebar.widthAnchor.constraint(equalToConstant: 302), right.leadingAnchor.constraint(equalTo: sidebar.trailingAnchor, constant: 14), right.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16), right.topAnchor.constraint(equalTo: content.topAnchor, constant: 16), right.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16)]
+            NSLayoutConstraint.activate(standaloneConstraints)
+        }
+        right.setAccessibilityIdentifier("nio-bezier-preview")
+        sidebar.setAccessibilityIdentifier("nio-bezier-inspector")
         let title = text("整体参数保持 · 以节点和切线塑造整片画面", heading: true)
         let legend = text("青色＝控制网　橙色圆点＝节点　橙色方点＝切线手柄　黄色＝AA 边界")
         title.preferredMaxLayoutWidth = 0
@@ -387,6 +512,8 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
         controls.addArrangedSubview(text("此处叠加曲面修正，不改写基础强度、上下弧度和局部交点。关闭后保留控制网数据。"))
         controls.addArrangedSubview(text("控制网密度", heading: true))
         for (field, id) in [(columnsField, "columns"), (rowsField, "rows"), (offsetXField, "offset-x"), (offsetYField, "offset-y"), (radiusXField, "radius-x"), (radiusYField, "radius-y")] {
+            field.delegate = self
+            field.cell?.sendsActionOnEndEditing = false
             field.widthAnchor.constraint(equalToConstant: 62).isActive = true
             field.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
             field.setAccessibilityIdentifier("nio-bezier-" + id)
@@ -403,7 +530,8 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
         controls.addArrangedSubview(scopePicker); controls.addArrangedSubview(linkagePicker)
         radiusXField.target = self; radiusXField.action = #selector(changeSettings)
         radiusYField.target = self; radiusYField.action = #selector(changeSettings)
-        controls.addArrangedSubview(row([text("横向半径 %"), radiusXField, text("纵向半径 %"), radiusYField]))
+        controls.addArrangedSubview(row([text("横向半径 %"), radiusXField]))
+        controls.addArrangedSubview(row([text("纵向半径 %"), radiusYField]))
         controls.addArrangedSubview(text("半径按画面宽高计，从选中点向两侧延伸。贯穿模式仍保留横向分区；100% 横向半径可带动全幅。淡青色为联动选点范围，曲面平滑过渡至相邻未修改行列。"))
         controls.addArrangedSubview(text("选中节点 · 物理像素", heading: true))
         selectionLabel.font = .monospacedSystemFont(ofSize: 12, weight: .medium); selectionLabel.preferredMaxLayoutWidth = 270; selectionLabel.setAccessibilityIdentifier("nio-bezier-selection")
@@ -440,25 +568,29 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
         let field = working.bezierWarp
         enabledButton.state = field.enabled ? .on : .off
         summaryLabel.stringValue = String(format: "Warp 强度 %.3f\n输出 %d × %d px · 控制点 %d", working.manual.strength, working.displayPixelWidth, working.displayPixelHeight, field.nodes.count)
-        columnsField.stringValue = "\(field.columns)"; rowsField.stringValue = "\(field.rows)"
+        setField(columnsField, value: "\(field.columns)"); setField(rowsField, value: "\(field.rows)")
         scopePicker.selectItem(at: field.scope == .wholeCanvas ? 1 : 0)
         linkagePicker.selectItem(at: field.linkage == .uniform ? 1 : 0)
-        radiusXField.stringValue = NumericInput.formattedDouble(field.horizontalRadius * 100)
-        radiusYField.stringValue = NumericInput.formattedDouble(field.verticalRadius * 100)
+        setField(radiusXField, value: NumericInput.formattedDouble(field.horizontalRadius * 100))
+        setField(radiusYField, value: NumericInput.formattedDouble(field.verticalRadius * 100))
         mutableControls.forEach { $0.isEnabled = available }
         radiusXField.isEnabled = available
         radiusYField.isEnabled = available && field.scope == .region
         let selected = canvasView.selectedIndex.flatMap { field.nodes.indices.contains($0) ? $0 : nil }
+        if selected != lastFieldSelection { clearDrafts([offsetXField, offsetYField]); lastFieldSelection = selected }
         selectedControls.forEach { $0.isEnabled = available && field.enabled && selected != nil }
         if let selected {
             let node = field.nodes[selected]
             selectionLabel.stringValue = "第 \(selected / field.columns + 1) 行 · 第 \(selected % field.columns + 1) 点\n手柄：水平 / 垂直切线，平滑连接相邻面片"
-            offsetXField.stringValue = NumericInput.formattedDouble(node.offset.x)
-            offsetYField.stringValue = NumericInput.formattedDouble(node.offset.y)
-        } else { selectionLabel.stringValue = "点击青色节点，再拖动圆点或切线方点"; offsetXField.stringValue = "0"; offsetYField.stringValue = "0" }
+            setField(offsetXField, value: NumericInput.formattedDouble(node.offset.x))
+            setField(offsetYField, value: NumericInput.formattedDouble(node.offset.y))
+        } else { selectionLabel.stringValue = "点击青色节点，再拖动圆点或切线方点"; setField(offsetXField, value: "0"); setField(offsetYField, value: "0") }
     }
 
-    func selectNode(_ index: Int?) { canvasView.selectNode(index); refresh() }
+    func selectNode(_ index: Int?) {
+        if canvasView.selectedIndex != index { clearDrafts([offsetXField, offsetYField]) }
+        canvasView.selectNode(index); refresh()
+    }
 
     private func submit(_ field: BezierWarpConfiguration, recordHistory: Bool = true) {
         guard available, field != working.bezierWarp else { return }
@@ -497,18 +629,20 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
         field.scope = scopePicker.indexOfSelectedItem == 1 ? .wholeCanvas : .region
         field.linkage = linkagePicker.indexOfSelectedItem == 1 ? .uniform : .gradient
         field.horizontalRadius = horizontal / 100; field.verticalRadius = vertical / 100
+        clearDrafts([radiusXField, radiusYField])
         submit(field)
     }
     @objc private func setOffset() {
         guard let index = canvasView.selectedIndex, let x = NumericInput.double(from: offsetXField.stringValue), let y = NumericInput.double(from: offsetYField.stringValue) else { showStatus("节点位移请输入有限数字，单位为输出物理像素。", error: true); return }
         var field = working.bezierWarp
         guard field.applyOffsetDelta(SIMD2(x, y) - field.nodes[index].offset, at: index) else { showStatus("位移超出允许范围。", error: true); return }
+        clearDrafts([offsetXField, offsetYField])
         submit(field)
     }
     @objc private func resizeGrid() {
         guard let columns = Int(columnsField.stringValue), let rows = Int(rowsField.stringValue) else { showStatus("控制点数量与行数必须是整数。", error: true); return }
         var field = working.bezierWarp
-        if field.resize(columns: columns, rows: rows) { selectNode(nil); submit(field); return }
+        if field.resize(columns: columns, rows: rows) { clearDrafts([columnsField, rowsField]); selectNode(nil); submit(field); return }
         // The model refuses destructive reduction unless explicitly authorized.
         guard columns >= 2, rows >= 2, columns <= 9, rows <= 7, columns < field.columns || rows < field.rows else { showStatus("请输入每行 2–9 点，共 2–7 行。", error: true); refresh(); return }
         let alert = NSAlert(); alert.messageText = "减少控制网密度并重建曲面？"
@@ -516,7 +650,7 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
         alert.addButton(withTitle: "取消"); alert.addButton(withTitle: "重建控制网")
         guard alert.runModal() == .alertSecondButtonReturn else { refresh(); return }
         guard field.resize(columns: columns, rows: rows, allowReset: true) else { showStatus("无法重建：控制点数量超出允许范围。", error: true); refresh(); return }
-        selectNode(nil); submit(field)
+        clearDrafts([columnsField, rowsField]); selectNode(nil); submit(field)
     }
     private func insertionPoint(_ knots: [Double], index: Int?) -> Double {
         if let index { let left = min(index, knots.count - 2); return (knots[left] + knots[left + 1]) / 2 }
@@ -555,5 +689,5 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate {
     @objc private func zoomIn() { canvasView.changeZoom(by: 1.5) }
     @objc private func zoomOut() { canvasView.changeZoom(by: 1 / 1.5) }
     @objc private func fit() { canvasView.fit() }
-    func windowWillClose(_ notification: Notification) { onClose?() }
+    func windowWillClose(_ notification: Notification) { if !isEmbedded { onClose?() } }
 }

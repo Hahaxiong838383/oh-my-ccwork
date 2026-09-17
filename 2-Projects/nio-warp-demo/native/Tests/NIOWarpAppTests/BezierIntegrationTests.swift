@@ -315,7 +315,7 @@ final class BezierIntegrationTests: XCTestCase {
         func controls() throws -> [NSControl] {
             func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
             let content = try XCTUnwrap(panel.window?.contentView)
-            let tabs = try XCTUnwrap(content.subviews.compactMap { $0 as? NSTabView }.first)
+            let tabs = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTabView }.first)
             return tabs.tabViewItems.compactMap(\.view).flatMap(descendants).compactMap { $0 as? NSControl }
         }
     }
@@ -387,7 +387,7 @@ final class BezierIntegrationTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(fixture.renderer.currentMesh).validation.isValid)
     }
 
-    func testLatestEditorSubmissionWinsAndPreservesTheOtherAppliedLayer() throws {
+    func testNavigationPreservesPendingValidationAndLocksOtherGeometryUntilCompletion() throws {
         var configuration = leftRightCorrection().preparedForLocalEditing()
         configuration.localWarp.enabled = true
         let fixture = try LiveFixture(configuration: configuration)
@@ -397,40 +397,40 @@ final class BezierIntegrationTests: XCTestCase {
         local.select(.zero)
         let initialRevision = fixture.renderer.meshRevision
 
-        // Both submissions happen in the same main-thread turn, before either completion.
+        // Navigation remains available, but a second layer cannot race an unfinished baseline.
         bezier.nudge(dx: 0, dy: -3)
+        fixture.panel.selectModule("quality")
+        fixture.panel.selectModule("local")
         local.nudge(dx: 1, dy: -1)
-        bezier.onClose?() // Closing the now-idle editor must not cancel the local submission.
-        let localDeadline = Date().addingTimeInterval(8)
-        while fixture.renderer.meshRevision == initialRevision, Date() < localDeadline {
+        fixture.panel.selectModule("protopie")
+        XCTAssertEqual(fixture.panel.selectedModuleIdentifier, "protopie")
+        let firstDeadline = Date().addingTimeInterval(8)
+        while fixture.renderer.meshRevision == initialRevision, Date() < firstDeadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.01))
         }
         RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         let firstApplied = fixture.store.offlineConfiguration()
-        XCTAssertEqual(firstApplied.bezierWarp, configuration.bezierWarp, "取消待处理贝塞尔草稿，保留之前已应用曲面")
-        XCTAssertEqual(firstApplied.localWarp.anchors.first?.offset, SIMD2(1, -1))
+        var expectedBezier = configuration.bezierWarp
+        XCTAssertTrue(expectedBezier.applyOffsetDelta(SIMD2(0, -3), at: 0))
+        XCTAssertEqual(firstApplied.bezierWarp, expectedBezier, "切模块不得取消已经提交的贝塞尔校验")
+        XCTAssertEqual(firstApplied.localWarp, configuration.localWarp, "校验期间不接受第二层的并发几何修改")
         XCTAssertEqual(fixture.renderer.meshRevision, initialRevision + 1)
         XCTAssertEqual(fixture.history.count, 1)
-        XCTAssertEqual(bezier.draftConfiguration, firstApplied)
-        XCTAssertEqual(local.draftConfiguration, firstApplied)
 
-        local.nudge(dx: 2, dy: 0)
-        bezier.nudge(dx: 0, dy: -2)
-        local.onClose?() // The same guarantee is required in the opposite direction.
-        let bezierDeadline = Date().addingTimeInterval(8)
-        while fixture.renderer.meshRevision == initialRevision + 1, Date() < bezierDeadline {
+        fixture.panel.selectModule("local")
+        local.select(.zero)
+        local.nudge(dx: 2, dy: -1)
+        fixture.panel.selectModule("canvas")
+        let secondDeadline = Date().addingTimeInterval(8)
+        while fixture.renderer.meshRevision == initialRevision + 1, Date() < secondDeadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.01))
         }
-        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
         let secondApplied = fixture.store.offlineConfiguration()
-        var expectedBezier = firstApplied.bezierWarp
-        XCTAssertTrue(expectedBezier.applyOffsetDelta(SIMD2(0, -2), at: 0))
-        XCTAssertEqual(secondApplied.localWarp, firstApplied.localWarp, "取消待处理局部草稿，保留之前已应用局部修正")
-        XCTAssertEqual(secondApplied.bezierWarp, expectedBezier)
+        XCTAssertEqual(secondApplied.localWarp.anchors.first?.offset, SIMD2(2, -1))
+        XCTAssertEqual(secondApplied.bezierWarp, firstApplied.bezierWarp)
         XCTAssertEqual(fixture.renderer.meshRevision, initialRevision + 2)
         XCTAssertEqual(fixture.history.count, 2)
-        XCTAssertEqual(bezier.draftConfiguration, secondApplied)
-        XCTAssertEqual(local.draftConfiguration, secondApplied)
         XCTAssertEqual(fixture.renderer.activeConfiguration, secondApplied)
+        XCTAssertEqual(fixture.panel.selectedModuleIdentifier, "canvas")
     }
 }

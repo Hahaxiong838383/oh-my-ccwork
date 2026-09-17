@@ -118,18 +118,22 @@ final class OfflineConsoleTests: XCTestCase {
         func controls(_ view: NSView) -> [NSControl] {
             view.subviews.flatMap { child in (child as? NSControl).map { [$0] } ?? [] } + view.subviews.flatMap(controls)
         }
-        let tabView = try XCTUnwrap(content.subviews.compactMap { $0 as? NSTabView }.first)
-        let allControls = tabView.tabViewItems.compactMap(\.view).flatMap(controls)
-        let buttons = allControls.compactMap { $0 as? NSButton }
-        for button in buttons {
-            let allowed = ["导出参数备份", "退出程序，恢复原始桌面", "看完整曲面（含超出 AA 的部分）", "打开局部交点精调", "打开贝塞尔曲面控制网"].contains(button.title)
-            XCTAssertEqual(button.isEnabled, allowed, button.title)
+        func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
+        let tabView = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTabView }.first)
+        let allControls = tabView.tabViewItems.filter { $0.identifier as? String != "protopie" }.compactMap(\.view).flatMap(controls)
+        let mutationActions = Set(["applyAAFields", "centerAA", "fullAA", "applyCanvasFields", "rebaseCanvas", "restoreReferenceCanvas", "refillCanvasContent", "applyPolynomialCoefficients", "clearPolynomial", "resetConfiguration", "applyPreset"])
+        for button in allControls.compactMap({ $0 as? NSButton }) {
+            if let action = button.action, mutationActions.contains(NSStringFromSelector(action)) { XCTAssertFalse(button.isEnabled, button.title) }
         }
         let editable = allControls.compactMap { $0 as? NSTextField }.filter(\.isEditable)
         XCTAssertFalse(editable.isEmpty)
         XCTAssertTrue(editable.allSatisfy { !$0.isEnabled })
-        let preview = allControls.compactMap { $0 as? NSPopUpButton }.first { $0.title == "看完整曲面（含超出 AA 的部分）" }
-        XCTAssertTrue(try XCTUnwrap(preview).isEnabled)
+        let allViews = descendants(content) + tabView.tabViewItems.compactMap(\.view).flatMap(descendants)
+        let export = try XCTUnwrap(allViews.compactMap { $0 as? NSButton }.first { $0.title == "导出参数备份" })
+        XCTAssertTrue(export.isEnabled)
+        let navigation = try XCTUnwrap(allViews.compactMap { $0 as? NSSegmentedControl }.first { $0.accessibilityIdentifier() == "nio-workbench-modules" })
+        XCTAssertTrue(navigation.isEnabled)
+        XCTAssertEqual(navigation.segmentCount, 6)
         XCTAssertNil(defaults.persistentDomain(forName: suite))
     }
 }

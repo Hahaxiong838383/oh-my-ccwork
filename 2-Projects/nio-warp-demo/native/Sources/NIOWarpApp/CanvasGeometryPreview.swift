@@ -50,8 +50,33 @@ struct CanvasGeometrySummary {
 
 final class CanvasGeometryPreviewView: NSView {
     private var summary: CanvasGeometrySummary?
+    private var camera: WarpEditorViewport?
     var clipsToAA = false { didSet { needsDisplay = true } }
     override var isFlipped: Bool { true }
+
+    private var worldBounds: CGRect {
+        guard let summary else { return CGRect(x: 0, y: 0, width: 5000, height: 1500) }
+        var world = summary.aaRect
+        if !clipsToAA {
+            for point in summary.boundary { world = world.union(CGRect(x: point.x, y: point.y, width: 0.001, height: 0.001)) }
+        }
+        return world
+    }
+    var viewport: WarpEditorViewport? {
+        get {
+            if let camera { return camera }
+            let world = worldBounds
+            let scale = min(max(bounds.width - 30, 1) / max(world.width, 1), max(bounds.height - 30, 1) / max(world.height, 1))
+            return WarpEditorViewport(physicalBounds: world, pointsPerPhysicalPixel: scale)
+        }
+        set { camera = newValue.flatMap { $0.isValid ? $0 : nil }; needsDisplay = true }
+    }
+    func fit() { camera = nil; needsDisplay = true }
+    override func magnify(with event: NSEvent) {
+        guard var value = viewport else { return }
+        value.pointsPerPhysicalPixel = max(0.000_001, (value.pointsPerPhysicalPixel ?? 1) * max(0.25, 1 + event.magnification))
+        viewport = value
+    }
 
     func update(_ configuration: WarpConfiguration) -> CanvasGeometrySummary {
         let next = CanvasGeometrySummary(configuration: configuration)
@@ -64,13 +89,8 @@ final class CanvasGeometryPreviewView: NSView {
         NSColor(calibratedWhite: 0.035, alpha: 1).setFill()
         bounds.fill()
         guard let summary else { return }
-        var world = summary.aaRect
-        if !clipsToAA {
-            for point in summary.boundary {
-                world = world.union(CGRect(x: point.x, y: point.y, width: 0.001, height: 0.001))
-            }
-        }
-        let scale = min((bounds.width - 30) / max(world.width, 1), (bounds.height - 30) / max(world.height, 1))
+        let world = camera?.physicalBounds ?? worldBounds
+        let scale = camera?.pointsPerPhysicalPixel ?? min((bounds.width - 30) / max(world.width, 1), (bounds.height - 30) / max(world.height, 1))
         let origin = CGPoint(x: bounds.midX - world.midX * scale, y: bounds.midY - world.midY * scale)
         func projected(_ point: CGPoint) -> CGPoint { CGPoint(x: origin.x + point.x * scale, y: origin.y + point.y * scale) }
         let aaRect = CGRect(origin: projected(summary.aaRect.origin), size: CGSize(width: summary.aaRect.width * scale, height: summary.aaRect.height * scale))

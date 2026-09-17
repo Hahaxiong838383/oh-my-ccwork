@@ -231,7 +231,14 @@ final class LocalWarpTests: XCTestCase {
                 historyStore: history, presetStore: PresetStore(defaults: defaults)
             )
             editor = panel.showLocalEditor(presentWindow: false)
-            editor.window?.contentView?.layoutSubtreeIfNeeded()
+            panel.selectModule("local")
+            let content = try XCTUnwrap(panel.window?.contentView)
+            let tabs = try XCTUnwrap(descendants(content).compactMap { $0 as? NSTabView }.first)
+            let localPage = try XCTUnwrap(tabs.tabViewItems.first { $0.identifier as? String == "local" }?.view)
+            let picker = try XCTUnwrap(descendants(localPage).compactMap { $0 as? NSSegmentedControl }.first { $0.accessibilityIdentifier() == "nio-local-tool-picker" })
+            picker.selectedSegment = 1
+            picker.sendAction(try XCTUnwrap(picker.action), to: picker.target)
+            content.layoutSubtreeIfNeeded()
         }
 
         deinit { panel.close(); defaults.removePersistentDomain(forName: suite) }
@@ -239,11 +246,11 @@ final class LocalWarpTests: XCTestCase {
         func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
 
         func editorButton(_ title: String) throws -> NSButton {
-            try XCTUnwrap(descendants(try XCTUnwrap(editor.window?.contentView)).compactMap { $0 as? NSButton }.first { $0.title == title })
+            try XCTUnwrap(descendants(editor.embeddedInspector).compactMap { $0 as? NSButton }.first { $0.title == title })
         }
 
         func primaryButton(_ title: String) throws -> NSButton {
-            let tabs = try XCTUnwrap(panel.window?.contentView?.subviews.compactMap { $0 as? NSTabView }.first)
+            let tabs = try XCTUnwrap(descendants(try XCTUnwrap(panel.window?.contentView)).compactMap { $0 as? NSTabView }.first)
             return try XCTUnwrap(tabs.tabViewItems.compactMap(\.view).flatMap(descendants).compactMap { $0 as? NSButton }.first { $0.title == title })
         }
     }
@@ -263,7 +270,7 @@ final class LocalWarpTests: XCTestCase {
         fixture.editor.nudge(dx: 1, dy: 0)
         XCTAssertEqual(fixture.store.offlineConfiguration(), saved)
         XCTAssertEqual(fixture.history.count, 0)
-        XCTAssertFalse(try XCTUnwrap(fixture.editor.window).isReleasedWhenClosed)
+        XCTAssertNil(fixture.editor.window, "内嵌编辑器不能分配第二个窗口")
         fixture.editor.close()
         XCTAssertNotNil(fixture.panel.window)
     }
@@ -290,7 +297,7 @@ final class LocalWarpTests: XCTestCase {
         XCTAssertTrue(fixture.panel.configurationForOfflinePreview.localWarp.anchors.isEmpty)
     }
 
-    func testRawPreviewAndClosingEditorCancelPendingResults() throws {
+    func testRawPreviewAndClosingWorkbenchCancelPendingResults() throws {
         let fixture = try Fixture()
         try fixture.editorButton("启用局部修正").performClick(nil)
         wait { fixture.panel.configurationForOfflinePreview.localWarp.enabled }
@@ -304,7 +311,7 @@ final class LocalWarpTests: XCTestCase {
         try fixture.primaryButton("返回校正画面").performClick(nil)
         fixture.editor.select(.zero)
         fixture.editor.nudge(dx: 2, dy: 2)
-        fixture.editor.close()
+        fixture.panel.close()
         RunLoop.current.run(until: Date().addingTimeInterval(0.2))
         XCTAssertTrue(fixture.panel.configurationForOfflinePreview.localWarp.anchors.isEmpty)
     }
@@ -318,8 +325,8 @@ final class LocalWarpTests: XCTestCase {
         fixture.editor.nudge(dx: 8, dy: 8)
         XCTAssertEqual(fixture.store.offlineConfiguration(), original)
         XCTAssertEqual(fixture.history.count, 0)
-        let window = try XCTUnwrap(fixture.editor.window)
-        window.setContentSize(NSSize(width: 880, height: 660))
+        let window = try XCTUnwrap(fixture.panel.window)
+        window.setContentSize(NSSize(width: 1040, height: 650))
         let content = try XCTUnwrap(window.contentView)
         content.layoutSubtreeIfNeeded()
         XCTAssertGreaterThan(fixture.editor.canvasView.bounds.width, 400)
@@ -345,13 +352,13 @@ final class LocalWarpTests: XCTestCase {
 
     func testDirectionPadStaysSymmetricAcrossWindowSizes() throws {
         let fixture = try Fixture(active: false)
-        let window = try XCTUnwrap(fixture.editor.window)
+        let window = try XCTUnwrap(fixture.panel.window)
         let content = try XCTUnwrap(window.contentView)
         let up = try fixture.editorButton("↑")
         let down = try fixture.editorButton("↓")
         let left = try fixture.editorButton("←")
         let right = try fixture.editorButton("→")
-        for size in [NSSize(width: 880, height: 660), NSSize(width: 1060, height: 780), NSSize(width: 1280, height: 820)] {
+        for size in [NSSize(width: 1040, height: 650), NSSize(width: 1120, height: 720), NSSize(width: 1280, height: 820)] {
             window.setContentSize(size)
             content.layoutSubtreeIfNeeded()
             let upRect = up.convert(up.bounds, to: content)
@@ -373,7 +380,7 @@ final class LocalWarpTests: XCTestCase {
         fixture.editor.nudge(dx: 8, dy: 4)
         wait { fixture.panel.configurationForOfflinePreview.localWarp.anchors.count == 1 }
         let original = fixture.panel.configurationForOfflinePreview
-        let picker = try XCTUnwrap(fixture.descendants(try XCTUnwrap(fixture.editor.window?.contentView)).compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityIdentifier() == "nio-local-smoothness" })
+        let picker = try XCTUnwrap(fixture.descendants(fixture.editor.embeddedInspector).compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityIdentifier() == "nio-local-smoothness" })
         for level in [1, 2] {
             picker.selectItem(at: level)
             picker.sendAction(try XCTUnwrap(picker.action), to: picker.target)
@@ -394,13 +401,12 @@ final class LocalWarpTests: XCTestCase {
     func testPolynomialNavigationIsReadOnlyAndAvailableOffline() throws {
         let fixture = try Fixture(active: false)
         let original = fixture.store.offlineConfiguration()
-        let content = try XCTUnwrap(fixture.editor.window?.contentView)
+        let content = fixture.editor.embeddedInspector
         let picker = try XCTUnwrap(fixture.descendants(content).compactMap { $0 as? NSPopUpButton }.first { $0.accessibilityIdentifier() == "nio-local-smoothness" })
         XCTAssertFalse(picker.isEnabled)
         fixture.editor.onShowPolynomial = { fixture.panel.showGlobalPolynomialSettings(presentWindow: false) }
         try fixture.editorButton("打开全局多项式设置").performClick(nil)
-        let tabs = try XCTUnwrap(fixture.panel.window?.contentView?.subviews.compactMap { $0 as? NSTabView }.first)
-        XCTAssertEqual(tabs.selectedTabViewItem?.identifier as? String, "optical")
+        XCTAssertEqual(fixture.panel.selectedModuleIdentifier, "global")
         XCTAssertEqual(fixture.store.offlineConfiguration(), original)
         XCTAssertEqual(fixture.history.count, 0)
         fixture.editor.onShowPolynomial = nil

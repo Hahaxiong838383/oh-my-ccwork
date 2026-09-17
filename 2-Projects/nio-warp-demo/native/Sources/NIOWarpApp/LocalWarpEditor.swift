@@ -37,6 +37,7 @@ final class LocalWarpCanvasView: NSView {
     var onUndo: (() -> Void)?
     var magnified = false
     private var physicalBounds: NSRect?
+    private var sharedViewport: WarpEditorViewport?
     private var zoom: CGFloat = 1
     private var pan = NSPoint.zero
     private var previousDrag: NSPoint?
@@ -73,9 +74,29 @@ final class LocalWarpCanvasView: NSView {
             maximum = simd_max(maximum, point)
         }
         physicalBounds = NSRect(x: CGFloat(minimum.x), y: CGFloat(minimum.y), width: CGFloat(max(maximum.x - minimum.x, 1)), height: CGFloat(max(maximum.y - minimum.y, 1)))
+        sharedViewport = nil
         zoom = 1
         pan = .zero
         needsDisplay = true
+    }
+
+    func cancelInteraction() { previousDrag = nil }
+
+    var viewport: WarpEditorViewport? {
+        get {
+            guard physicalBounds != nil, bounds.width > 0, bounds.height > 0 else { return nil }
+            let mapping = transform
+            return WarpEditorViewport(physicalBounds: NSRect(
+                x: mapping.center.x - bounds.width / (2 * mapping.scale),
+                y: mapping.center.y - bounds.height / (2 * mapping.scale),
+                width: bounds.width / mapping.scale, height: bounds.height / mapping.scale), pointsPerPhysicalPixel: mapping.scale)
+        }
+        set {
+            guard let newValue, newValue.isValid else { return }
+            physicalBounds = newValue.physicalBounds
+            sharedViewport = newValue
+            zoom = 1; pan = .zero; needsDisplay = true
+        }
     }
 
     private var transform: (scale: CGFloat, center: NSPoint) {
@@ -84,7 +105,10 @@ final class LocalWarpCanvasView: NSView {
             let scale = min(4, min(max(bounds.width - 44, 1) / (CGFloat(abs(selectedOffset.x)) + 24), max(bounds.height - 36, 1) / (CGFloat(abs(selectedOffset.y)) + 24)))
             return (scale, NSPoint(x: CGFloat(selected.x) - CGFloat(selectedOffset.x) / 2, y: CGFloat(selected.y) - CGFloat(selectedOffset.y) / 2))
         }
-        let scale = max(0.000001, min(max(bounds.width - 44, 1) / physical.width, max(bounds.height - 44, 1) / physical.height) * zoom)
+        let baseScale = sharedViewport.map {
+            $0.pointsPerPhysicalPixel ?? min(max(bounds.width, 1) / physical.width, max(bounds.height, 1) / physical.height)
+        } ?? min(max(bounds.width - 44, 1) / physical.width, max(bounds.height - 44, 1) / physical.height)
+        let scale = max(0.000001, baseScale * zoom)
         return (scale, NSPoint(x: physical.midX - pan.x / scale, y: physical.midY - pan.y / scale))
     }
 
@@ -101,7 +125,7 @@ final class LocalWarpCanvasView: NSView {
     func changeZoom(by factor: CGFloat) {
         zoom = min(max(zoom * factor, 0.25), 128)
         if let selectedCoordinate, let physical = physicalPoint(for: selectedCoordinate), let physicalBounds {
-            let scale = max(0.000001, min(max(bounds.width - 44, 1) / physicalBounds.width, max(bounds.height - 44, 1) / physicalBounds.height) * zoom)
+            let scale = transform.scale
             pan = NSPoint(x: -(CGFloat(physical.x) - physicalBounds.midX) * scale, y: -(CGFloat(physical.y) - physicalBounds.midY) * scale)
         }
         needsDisplay = true
@@ -156,6 +180,8 @@ final class LocalWarpCanvasView: NSView {
         previousDrag = location
         needsDisplay = true
     }
+
+    override func mouseUp(with event: NSEvent) { previousDrag = nil }
 
     override func scrollWheel(with event: NSEvent) {
         pan.x -= event.scrollingDeltaX
@@ -262,6 +288,10 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
     var onClose: (() -> Void)?
     var onShowPolynomial: (() -> Void)?
     let canvasView = LocalWarpCanvasView()
+    let embeddedPreview = NSView()
+    let embeddedInspector = NSScrollView()
+    private(set) var isEmbedded: Bool
+    private var standaloneConstraints = [NSLayoutConstraint]()
     private let loupeView = LocalWarpCanvasView()
     private var working: WarpConfiguration
     private var available: Bool
@@ -291,24 +321,63 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         statusLabel.textColor = error ? .systemRed : .secondaryLabelColor
     }
 
-    init(configuration: WarpConfiguration, renderedConfiguration: WarpConfiguration, mesh: GeneratedMesh, available: Bool, screen: NSScreen?) {
+    init(configuration: WarpConfiguration, renderedConfiguration: WarpConfiguration, mesh: GeneratedMesh, available: Bool, screen: NSScreen?, embedded: Bool = false) {
         working = configuration.preparedForLocalEditing()
         self.available = available
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 780), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "NIO Warp · 局部交点精调"
-        window.isReleasedWhenClosed = false
-        window.minSize = NSSize(width: 880, height: 660)
-        window.level = .floating
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        super.init(window: window)
-        window.delegate = self
+        isEmbedded = embedded
+        let standaloneWindow: NSWindow?
+        if embedded { standaloneWindow = nil }
+        else {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 780), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            window.title = "NIO Warp · 局部交点精调"
+            window.isReleasedWhenClosed = false
+            window.minSize = NSSize(width: 880, height: 660)
+            window.level = .normal
+            standaloneWindow = window
+        }
+        super.init(window: standaloneWindow)
+        standaloneWindow?.delegate = self
         buildInterface()
         synchronize(configuration: configuration, renderedConfiguration: renderedConfiguration, mesh: mesh, available: available)
-        let visible = Self.builtInScreen()?.visibleFrame ?? screen?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        window.setFrameOrigin(NSPoint(x: visible.midX - window.frame.width / 2, y: visible.midY - window.frame.height / 2))
+        if let window = standaloneWindow {
+            let visible = Self.builtInScreen()?.visibleFrame ?? screen?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            window.setFrameOrigin(NSPoint(x: visible.midX - window.frame.width / 2, y: visible.midY - window.frame.height / 2))
+        }
     }
 
     required init?(coder: NSCoder) { nil }
+
+    func prepareForEmbedding() {
+        guard !isEmbedded else { return }
+        deactivateInteraction()
+        isEmbedded = true
+        NSLayoutConstraint.deactivate(standaloneConstraints)
+        standaloneConstraints.removeAll()
+        embeddedPreview.removeFromSuperview()
+        embeddedInspector.removeFromSuperview()
+        window?.orderOut(nil)
+        window?.delegate = nil
+        window = nil
+    }
+
+    /// Navigation ends a pan gesture but preserves selection, camera, settings,
+    /// and already submitted local-warp changes awaiting validation.
+    func deactivateInteraction() { canvasView.cancelInteraction() }
+
+    var viewport: WarpEditorViewport? {
+        get { canvasView.viewport }
+        set { canvasView.viewport = newValue }
+    }
+
+    func setEditingAvailable(_ available: Bool) {
+        self.available = available
+        refresh()
+    }
+
+    override func showWindow(_ sender: Any?) {
+        guard !isEmbedded else { return }
+        super.showWindow(sender)
+    }
 
     private func label(_ text: String) -> NSTextField {
         let field = NSTextField(wrappingLabelWithString: text)
@@ -325,34 +394,46 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
     }
 
     private func buildInterface() {
-        guard let content = window?.contentView else { return }
-        let left = NSView()
-        let scroll = NSScrollView()
+        let left = embeddedPreview
+        let scroll = embeddedInspector
         scroll.scrollerStyle = .overlay
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.drawsBackground = false
-        [left, scroll].forEach { $0.translatesAutoresizingMaskIntoConstraints = false; content.addSubview($0) }
-        NSLayoutConstraint.activate([
+        [left, scroll].forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
+        left.setAccessibilityIdentifier("nio-local-preview")
+        scroll.setAccessibilityIdentifier("nio-local-inspector")
+        if let content = window?.contentView {
+            [left, scroll].forEach { content.addSubview($0) }
+            standaloneConstraints = [
             left.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16), left.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
             left.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16), left.trailingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: -16),
             scroll.topAnchor.constraint(equalTo: content.topAnchor, constant: 16), scroll.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -16),
             scroll.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16), scroll.widthAnchor.constraint(equalToConstant: 260),
-        ])
+            ]
+            NSLayoutConstraint.activate(standaloneConstraints)
+        }
         let heading = NSTextField(labelWithString: "在内屏选交点；方向键按外屏物理像素微调")
         let legend = NSTextField(labelWithString: "黄＝AA；青＝曲面/已有锚点；橙＝选中点。拖动或双指滚动平移预览。")
         legend.font = .systemFont(ofSize: 11)
         legend.textColor = .secondaryLabelColor
         loupeView.magnified = true
-        for view in [heading, canvasView, legend, loupeView, pointLabel] { view.translatesAutoresizingMaskIntoConstraints = false; left.addSubview(view) }
+        let previewViews = isEmbedded ? [heading, canvasView, legend] : [heading, canvasView, legend, loupeView, pointLabel]
+        for view in previewViews { view.translatesAutoresizingMaskIntoConstraints = false; left.addSubview(view) }
         NSLayoutConstraint.activate([
             heading.topAnchor.constraint(equalTo: left.topAnchor), heading.leadingAnchor.constraint(equalTo: left.leadingAnchor),
             canvasView.topAnchor.constraint(equalTo: heading.bottomAnchor, constant: 8), canvasView.leadingAnchor.constraint(equalTo: left.leadingAnchor), canvasView.trailingAnchor.constraint(equalTo: left.trailingAnchor),
             canvasView.bottomAnchor.constraint(equalTo: legend.topAnchor, constant: -6), legend.leadingAnchor.constraint(equalTo: left.leadingAnchor),
-            legend.bottomAnchor.constraint(equalTo: loupeView.topAnchor, constant: -8), loupeView.leadingAnchor.constraint(equalTo: left.leadingAnchor), loupeView.trailingAnchor.constraint(equalTo: left.trailingAnchor),
-            loupeView.heightAnchor.constraint(equalToConstant: 150), loupeView.bottomAnchor.constraint(equalTo: pointLabel.topAnchor, constant: -8),
-            pointLabel.leadingAnchor.constraint(equalTo: left.leadingAnchor), pointLabel.trailingAnchor.constraint(equalTo: left.trailingAnchor), pointLabel.bottomAnchor.constraint(equalTo: left.bottomAnchor),
         ])
+        if isEmbedded {
+            legend.bottomAnchor.constraint(equalTo: left.bottomAnchor).isActive = true
+        } else {
+            NSLayoutConstraint.activate([
+                legend.bottomAnchor.constraint(equalTo: loupeView.topAnchor, constant: -8), loupeView.leadingAnchor.constraint(equalTo: left.leadingAnchor), loupeView.trailingAnchor.constraint(equalTo: left.trailingAnchor),
+                loupeView.heightAnchor.constraint(equalToConstant: 150), loupeView.bottomAnchor.constraint(equalTo: pointLabel.topAnchor, constant: -8),
+                pointLabel.leadingAnchor.constraint(equalTo: left.leadingAnchor), pointLabel.trailingAnchor.constraint(equalTo: left.trailingAnchor), pointLabel.bottomAnchor.constraint(equalTo: left.bottomAnchor),
+            ])
+        }
         pointLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         canvasView.onSelect = { [weak self] point in self?.select(point) }
         canvasView.onDirection = { [weak self] key, modifiers, repeated in self?.direction(key, modifiers: modifiers, repeated: repeated) }
@@ -381,6 +462,16 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         stack.addArrangedSubview(anchorPicker)
         selectionLabel.preferredMaxLayoutWidth = 226
         stack.addArrangedSubview(selectionLabel)
+        if isEmbedded {
+            // Keep the main canvas in the shared workbench slot; the optional
+            // close-up belongs to the selected-point inspector.
+            stack.addArrangedSubview(loupeView)
+            loupeView.translatesAutoresizingMaskIntoConstraints = false
+            loupeView.heightAnchor.constraint(equalToConstant: 130).isActive = true
+            loupeView.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -14).isActive = true
+            pointLabel.preferredMaxLayoutWidth = 226
+            stack.addArrangedSubview(pointLabel)
+        }
         stepPicker.addItems(withTitles: ["0.1 px", "1 px", "10 px"])
         stepPicker.selectItem(at: 1)
         stepPicker.target = self
@@ -561,7 +652,7 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         }
     }
 
-    @objc private func focusCanvas() { window?.makeFirstResponder(canvasView) }
+    @objc private func focusCanvas() { canvasView.window?.makeFirstResponder(canvasView) }
     @objc private func movePoint(_ sender: NSButton) { direction(UInt16(sender.tag), modifiers: NSApp.currentEvent?.modifierFlags ?? [], repeated: false); focusCanvas() }
     @objc private func toggleEnabled() { var local = working.localWarp; local.enabled = enabledButton.state == .on; submit(local); focusCanvas() }
     @objc private func toggleBoundary() { var local = working.localWarp; local.lockBoundary = boundaryButton.state == .on; submit(local); focusCanvas() }
@@ -575,7 +666,7 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
     @objc private func zoomIn() { canvasView.changeZoom(by: 2); focusCanvas() }
     @objc private func zoomOut() { canvasView.changeZoom(by: 0.5); focusCanvas() }
     @objc private func fit() { canvasView.fit(); focusCanvas() }
-    func windowWillClose(_ notification: Notification) { onClose?() }
+    func windowWillClose(_ notification: Notification) { if !isEmbedded { onClose?() } }
 
     private static func builtInScreen() -> NSScreen? {
         NSScreen.screens.first { screen in

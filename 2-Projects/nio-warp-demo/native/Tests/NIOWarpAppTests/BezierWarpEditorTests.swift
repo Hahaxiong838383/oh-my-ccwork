@@ -21,7 +21,7 @@ final class BezierWarpEditorTests: XCTestCase {
     private func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
 
     private func button(_ id: String, in editor: BezierWarpEditorController) throws -> NSButton {
-        let content = try XCTUnwrap(editor.window?.contentView)
+        let content = editor.window?.contentView ?? editor.embeddedInspector
         return try XCTUnwrap(descendants(content).compactMap { $0 as? NSButton }.first { $0.accessibilityIdentifier() == id })
     }
 

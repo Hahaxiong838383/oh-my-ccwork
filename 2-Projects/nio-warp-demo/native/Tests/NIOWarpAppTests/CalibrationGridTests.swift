@@ -115,7 +115,7 @@ final class CalibrationGridTests: XCTestCase {
         func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
 
         var views: [NSView] {
-            let tabs = panel.window!.contentView!.subviews.compactMap { $0 as? NSTabView }.first!
+            let tabs = descendants(panel.window!.contentView!).compactMap { $0 as? NSTabView }.first!
             return tabs.tabViewItems.compactMap(\.view).flatMap(descendants)
         }
 
@@ -177,8 +177,7 @@ final class CalibrationGridTests: XCTestCase {
     func testNativeFieldEditorUpdatesGridBeforeLosingFocus() throws {
         let fixture = try Fixture()
         let window = try XCTUnwrap(fixture.panel.window)
-        let tabs = try XCTUnwrap(window.contentView?.subviews.compactMap { $0 as? NSTabView }.first)
-        tabs.selectTabViewItem(at: 1)
+        fixture.panel.selectModule("quality")
         let columns = try fixture.field("nio-grid-columns")
         columns.selectText(nil)
         let editor = try XCTUnwrap(columns.currentEditor() as? NSTextView)

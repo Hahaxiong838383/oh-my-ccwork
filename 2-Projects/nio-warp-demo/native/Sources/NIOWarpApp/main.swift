@@ -45,12 +45,45 @@ final class LatestFrameStore {
     }
 }
 
-private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
+/// A candidate stream is probed independently so a failed replacement cannot
+/// blank the current source or mistake an old stream's frame for readiness.
+private final class CaptureFrameProbe: NSObject, SCStreamOutput {
+    let frames = LatestFrameStore()
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
+        guard outputType == .screen, sampleBuffer.isValid,
+              let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+              let status = attachments.first?[.status] as? Int,
+              status == SCFrameStatus.complete.rawValue,
+              let image = sampleBuffer.imageBuffer else { return }
+        frames.update(image)
+    }
+}
+
+private final class CaptureFrameRouter: @unchecked Sendable {
     let frameStore = LatestFrameStore()
+    private let lock = NSLock()
+    private var active: ObjectIdentifier?
+    func activate(_ stream: SCStream?) {
+        lock.lock(); defer { lock.unlock() }
+        active = stream.map(ObjectIdentifier.init)
+        if stream == nil { frameStore.clear() }
+    }
+    func owns(_ stream: SCStream) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        return active == ObjectIdentifier(stream)
+    }
+    func receive(_ buffer: CVPixelBuffer, from stream: SCStream) {
+        lock.lock(); defer { lock.unlock() }
+        guard active == ObjectIdentifier(stream) else { return }
+        frameStore.update(buffer)
+    }
+}
+
+@MainActor private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
+    nonisolated private let routing = CaptureFrameRouter()
+    nonisolated var frameStore: LatestFrameStore { routing.frameStore }
     private let queue = DispatchQueue(label: "com.mycc.nio-warp.capture", qos: .userInteractive)
     private var stream: SCStream?
-    private let streamIdentityLock = NSLock()
-    private var activeStreamIdentity: ObjectIdentifier?
     private var monitorTask: Task<Void, Never>?
     private var displayID: CGDirectDisplayID?
     private var displayPixelWidth = 0
@@ -61,6 +94,9 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     private var pendingWindowID: CGWindowID?
     private var pendingWindowCount = 0
     private var missingWindowCount = 0
+    private var pinnedWindowID: CGWindowID?
+    private var pinning = false
+    private var captureGeneration = UUID()
     var onError: ((String) -> Void)?
     var onNotice: ((String) -> Void)?
     var onPresentation: ((CapturePresentation) -> Void)?
@@ -100,13 +136,13 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     private func markActiveStream(_ stream: SCStream?) {
-        streamIdentityLock.lock()
-        activeStreamIdentity = stream.map(ObjectIdentifier.init)
-        if stream == nil { frameStore.clear() }
-        streamIdentityLock.unlock()
+        routing.activate(stream)
     }
 
     func stop() async {
+        captureGeneration = UUID()
+        pinnedWindowID = nil
+        pinning = false
         markActiveStream(nil)
         monitorTask?.cancel()
         monitorTask = nil
@@ -122,6 +158,9 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
     func updateSourceMode(_ sourceMode: CaptureSourceMode, minimumCoverage: Double) async throws {
         self.sourceMode = sourceMode
         self.minimumCoverage = minimumCoverage
+        // Keep the user's ordinary-input preference without overriding an
+        // explicitly bound ProtoPie preview session.
+        guard pinnedWindowID == nil, !pinning else { return }
         pendingWindowID = nil
         pendingWindowCount = 0
         missingWindowCount = 0
@@ -136,21 +175,86 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
         }
     }
 
-    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
+    func pinPreviewWindow(_ windowID: CGWindowID, processID: pid_t) async throws {
+        guard stream != nil, displayID != nil else {
+            throw NSError(domain: "NIOWarp", code: 31, userInfo: [NSLocalizedDescriptionKey: "等待外屏捕获启动后重试联动"])
+        }
+        let generation = UUID()
+        captureGeneration = generation
+        pinning = true
+        let previousMonitor = monitorTask
+        previousMonitor?.cancel()
+        await previousMonitor?.value
+        monitorTask = nil
+        defer {
+            if captureGeneration == generation {
+                pinning = false
+                if pinnedWindowID == nil, sourceMode == .automaticFullscreenWindow, stream != nil { startMonitoring() }
+            }
+        }
+        try Task.checkCancellation()
+        guard captureGeneration == generation else { throw CancellationError() }
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        try Task.checkCancellation()
+        guard let window = content.windows.first(where: { $0.windowID == windowID && $0.owningApplication?.processID == processID && $0.windowLayer == 0 }) else {
+            throw NSError(domain: "NIOWarp", code: 32, userInfo: [NSLocalizedDescriptionKey: "指定 ProtoPie 预览窗口已关闭或不可捕获"])
+        }
+        let filter = SCContentFilter(desktopIndependentWindow: window)
+        let scale = max(Double(SCShareableContent.info(for: filter).pointPixelScale), 1)
+        let width = max(Int((window.frame.width * scale).rounded()), 1)
+        let height = max(Int((window.frame.height * scale).rounded()), 1)
+        let probe = CaptureFrameProbe()
+        let candidate = SCStream(filter: filter, configuration: streamConfiguration(width: width, height: height, singleWindow: true), delegate: self)
+        try candidate.addStreamOutput(probe, type: .screen, sampleHandlerQueue: queue)
+        do {
+            try await candidate.startCapture()
+            for _ in 0..<60 {
+                try Task.checkCancellation()
+                guard captureGeneration == generation, stream != nil else { throw CancellationError() }
+                if probe.frames.latest() != nil { break }
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
+            try Task.checkCancellation()
+            guard captureGeneration == generation, stream != nil, let firstFrame = probe.frames.latest() else {
+                throw NSError(domain: "NIOWarp", code: 33, userInfo: [NSLocalizedDescriptionKey: "预览窗口未产生有效画面，保留上一捕获来源"])
+            }
+            try candidate.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
+            let previous = stream
+            stream = candidate
+            markActiveStream(candidate)
+            frameStore.update(firstFrame)
+            pinnedWindowID = windowID
+            currentWindowID = windowID
+            monitorTask?.cancel()
+            monitorTask = nil
+            try? candidate.removeStreamOutput(probe, type: .screen)
+            emitPresentation(.fullscreenWindow(applicationName: window.owningApplication?.applicationName ?? "ProtoPie", title: window.title ?? "预览", width: width, height: height))
+            if let previous { try? await previous.stopCapture() }
+        } catch {
+            try? await candidate.stopCapture()
+            throw error
+        }
+    }
+
+    func releasePinnedPreview() async {
+        captureGeneration = UUID()
+        pinnedWindowID = nil
+        pinning = false
+        try? await updateSourceMode(sourceMode, minimumCoverage: minimumCoverage)
+    }
+
+    nonisolated func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
         guard outputType == .screen,
               sampleBuffer.isValid,
               let imageBuffer = sampleBuffer.imageBuffer else { return }
-        streamIdentityLock.lock()
-        defer { streamIdentityLock.unlock() }
-        guard activeStreamIdentity == ObjectIdentifier(stream) else { return }
-        frameStore.update(imageBuffer)
+        routing.receive(imageBuffer, from: stream)
     }
 
-    func stream(_ stream: SCStream, didStopWithError error: Error) {
-        streamIdentityLock.lock()
-        let isCurrent = activeStreamIdentity == ObjectIdentifier(stream)
-        streamIdentityLock.unlock()
-        if isCurrent { emitError(error.localizedDescription) }
+    nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
+        Task { @MainActor [weak self] in
+            guard let self, self.routing.owns(stream) else { return }
+            self.emitError(error.localizedDescription)
+        }
     }
 
     private func startMonitoring() {
@@ -165,11 +269,12 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
 
     private func scanForFullscreenWindow() async {
         guard sourceMode == .automaticFullscreenWindow,
+              pinnedWindowID == nil, !pinning,
               let displayID,
               stream != nil else { return }
         do {
             let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
-            guard !Task.isCancelled, sourceMode == .automaticFullscreenWindow, stream != nil else { return }
+            guard !Task.isCancelled, sourceMode == .automaticFullscreenWindow, pinnedWindowID == nil, !pinning, stream != nil else { return }
             guard let display = content.displays.first(where: { $0.displayID == displayID }) else { return }
             let currentBundleID = Bundle.main.bundleIdentifier
             let eligibleWindows = content.windows.filter { window in
@@ -218,7 +323,7 @@ private final class CaptureEngine: NSObject, SCStreamOutput, SCStreamDelegate {
                 pendingWindowCount = 1
             }
             guard pendingWindowCount >= 2 else { return }
-            guard sourceMode == .automaticFullscreenWindow else { return }
+            guard sourceMode == .automaticFullscreenWindow, pinnedWindowID == nil, !pinning else { return }
             try await switchToWindow(window)
         } catch {
             guard !Task.isCancelled else { return }
@@ -958,7 +1063,19 @@ private final class OutputController {
     }
 }
 
-final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
+private final class WorkbenchWindow: NSWindow {
+    var onModuleShortcut: ((Int) -> Void)?
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection([.command, .control, .option]) == .command,
+           let number = Int(event.charactersIgnoringModifiers ?? ""), (1...6).contains(number) {
+            onModuleShortcut?(number - 1)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NSTabViewDelegate, NSWindowDelegate, NSSplitViewDelegate {
     private let renderer: WarpRenderer?
     private let store: ConfigurationStore
     private let presetStore: PresetStore
@@ -986,6 +1103,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private(set) var bezierEditor: BezierWarpEditorController?
     private let bezierUpdates = LocalWarpUpdateCoordinator()
     private var bezierHistoryBaseline: WarpConfiguration?
+    private var geometryValidationInFlight = false
+    private var geometryValidationSource: String?
+    private var renderedFieldValues: [ObjectIdentifier: String] = [:]
+    private var draftFields: [NSTextField] { [aaXField, aaYField, aaWidthField, aaHeightField, canvasWidthField, canvasHeightField, coefficientXField, coefficientYField] }
     private let snapTiltButton = NSButton(checkboxWithTitle: "倾斜零点吸附", target: nil, action: nil)
     private let snapBendButton = NSButton(checkboxWithTitle: "水平弯曲零点吸附", target: nil, action: nil)
     private let centerSurfaceXButton = NSButton(checkboxWithTitle: "画面水平居中", target: nil, action: nil)
@@ -995,6 +1116,23 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
     private let globalStatusLabel = NSTextField(wrappingLabelWithString: "正在准备控制台…")
     private let configurationTabs = NSTabView()
+    static let modules = [("canvas", "画布与输入"), ("global", "整体校正"), ("local", "局部微调"), ("quality", "标定与画质"), ("history", "预设与历史"), ("protopie", "ProtoPie 联动")]
+    private let modulePicker = NSSegmentedControl()
+    private let localToolPicker = NSSegmentedControl(labels: ["贝塞尔曲面", "交点精调"], trackingMode: .selectOne, target: nil, action: nil)
+    private let previewHost = NSView()
+    private let standardPreview = NSView()
+    private let localInspectorHost = NSView()
+    private let polynomialDetails = NSStackView()
+    private let polynomialDisclosure = NSButton(checkboxWithTitle: "高级：展开多项式增量", target: nil, action: nil)
+    private let previewColumn = NSStackView()
+    private let layerSummary = NSTextField(wrappingLabelWithString: "")
+    private let pinButton = NSButton(checkboxWithTitle: "保持置顶", target: nil, action: nil)
+    private var selectedLocalTool = 0
+    private var builtInterface = false
+    private let protoPie: ProtoPieCoordinator?
+    private var protoPiePanel: ProtoPiePanel?
+    private var inspectorWidthConstraint: NSLayoutConstraint?
+    var selectedModuleIdentifier: String { configurationTabs.selectedTabViewItem?.identifier as? String ?? "canvas" }
     private var tabPageDocuments = [NSView]()
     private let captureSourcePicker = NSPopUpButton()
     private let capturePresentationLabel = NSTextField(wrappingLabelWithString: "当前捕获：初始化中…")
@@ -1063,12 +1201,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         updateWarpBoundary: @escaping (WarpConfiguration, Bool) -> Void,
         presentWindow: Bool = true,
         historyStore: ConfigurationHistoryStore = ConfigurationHistoryStore(),
-        presetStore: PresetStore = PresetStore()
+        presetStore: PresetStore = PresetStore(),
+        protoPie: ProtoPieCoordinator? = nil
     ) {
         self.renderer = renderer
         self.store = store
         self.historyStore = historyStore
         self.presetStore = presetStore
+        self.protoPie = protoPie
         self.configuration = configuration
         lastAppliedConfiguration = configuration
         self.setWarpVisible = setWarpVisible
@@ -1080,20 +1220,22 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         displayHeight = configuration.displayPixelHeight
         captureSourceWidth = configuration.displayPixelWidth
         captureSourceHeight = configuration.displayPixelHeight
-        let panel = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 790),
+        let panel = WorkbenchWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1120, height: 720),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
-        panel.title = "NIO 全屏 Warp 标定控制台 · \(AppVersion.display)"
+        panel.title = "NIO Warp 工作台 · \(AppVersion.display)"
         if renderer == nil { panel.title += " · 等待外屏" }
-        panel.level = .floating
+        panel.level = .normal
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
-        panel.minSize = NSSize(width: 600, height: 500)
+        panel.contentMinSize = NSSize(width: 1040, height: 650)
         super.init(window: panel)
+        panel.onModuleShortcut = { [weak self] index in self?.selectModule(Self.modules[index].0) }
+        panel.delegate = self
         buildInterface(sourceScreen: sourceScreen, outputScreen: outputScreen)
         refreshControls()
         refreshPresets()
@@ -1104,6 +1246,16 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             y: visibleFrame.midY - panel.frame.height * 0.5
         )
         panel.setFrameOrigin(origin)
+        if presentWindow {
+            _ = panel.setFrameUsingName("NIOWarpUnifiedWorkbench")
+            panel.setFrameAutosaveName("NIOWarpUnifiedWorkbench")
+            var frame = panel.frame
+            frame.size.width = min(frame.width, visibleFrame.width)
+            frame.size.height = min(frame.height, visibleFrame.height)
+            frame.origin.x = min(max(frame.minX, visibleFrame.minX), visibleFrame.maxX - frame.width)
+            frame.origin.y = min(max(frame.minY, visibleFrame.minY), visibleFrame.maxY - frame.height)
+            panel.setFrame(frame, display: false)
+        }
         if presentWindow { bringToFront() }
     }
 
@@ -1116,6 +1268,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     override func close() {
+        protoPiePanel?.disconnect()
         cancelLocalUpdates()
         localEditor?.close()
         localEditor = nil
@@ -1133,23 +1286,102 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         header.spacing = 8
         header.translatesAutoresizingMaskIntoConstraints = false
         configurationTabs.translatesAutoresizingMaskIntoConstraints = false
-        configurationTabs.tabViewType = .topTabsBezelBorder
+        configurationTabs.tabViewType = .noTabsNoBorder
         configurationTabs.font = .systemFont(ofSize: 13, weight: .medium)
         configurationTabs.setAccessibilityLabel("配置分类")
+        configurationTabs.setAccessibilityIdentifier("nio-workbench-inspector")
+        configurationTabs.delegate = self
+        modulePicker.segmentCount = Self.modules.count
+        for (index, module) in Self.modules.enumerated() { modulePicker.setLabel(module.1, forSegment: index) }
+        modulePicker.segmentStyle = .texturedRounded
+        modulePicker.trackingMode = .selectOne
+        modulePicker.selectedSegment = 0
+        modulePicker.target = self
+        modulePicker.action = #selector(changeModule(_:))
+        modulePicker.setAccessibilityIdentifier("nio-workbench-modules")
+        modulePicker.translatesAutoresizingMaskIntoConstraints = false
+        let body = NSSplitView()
+        body.isVertical = true
+        body.dividerStyle = .thin
+        body.delegate = self
+        body.translatesAutoresizingMaskIntoConstraints = false
+        body.addArrangedSubview(previewColumn)
+        body.addArrangedSubview(configurationTabs)
+        previewColumn.orientation = .vertical
+        previewColumn.alignment = .leading
+        previewColumn.spacing = 10
+        previewColumn.edgeInsets = NSEdgeInsets(top: 10, left: 8, bottom: 8, right: 12)
+        previewColumn.addArrangedSubview(previewHost)
+        previewHost.setAccessibilityIdentifier("nio-workbench-preview")
+        previewHost.translatesAutoresizingMaskIntoConstraints = false
+        layerSummary.font = .systemFont(ofSize: 11)
+        layerSummary.textColor = .secondaryLabelColor
+        layerSummary.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(header)
-        contentView.addSubview(configurationTabs)
+        contentView.addSubview(modulePicker)
+        contentView.addSubview(body)
+        contentView.addSubview(layerSummary)
         NSLayoutConstraint.activate([
-            header.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 22),
-            header.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -22),
-            header.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
-            configurationTabs.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 12),
-            configurationTabs.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12),
-            configurationTabs.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12),
-            configurationTabs.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            header.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            header.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            header.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            modulePicker.topAnchor.constraint(equalTo: header.bottomAnchor, constant: 8),
+            modulePicker.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            modulePicker.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            body.topAnchor.constraint(equalTo: modulePicker.bottomAnchor, constant: 10),
+            body.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 10),
+            body.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
+            body.bottomAnchor.constraint(equalTo: layerSummary.topAnchor, constant: -8),
+            previewColumn.widthAnchor.constraint(greaterThanOrEqualToConstant: 490),
+            configurationTabs.widthAnchor.constraint(greaterThanOrEqualToConstant: 350),
+            configurationTabs.widthAnchor.constraint(lessThanOrEqualToConstant: 440),
+            previewHost.widthAnchor.constraint(equalTo: previewColumn.widthAnchor, constant: -20),
+            previewHost.heightAnchor.constraint(greaterThanOrEqualToConstant: 260),
+            layerSummary.leadingAnchor.constraint(equalTo: header.leadingAnchor),
+            layerSummary.trailingAnchor.constraint(equalTo: header.trailingAnchor),
+            layerSummary.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -10),
+            layerSummary.heightAnchor.constraint(equalToConstant: 30),
         ])
-        let basicPage = makeTabPage(title: "基础配置", identifier: "basic")
-        let opticalPage = makeTabPage(title: "光学标定", identifier: "optical")
-        let settingsPage = makeTabPage(title: "属性设置", identifier: "settings")
+        let preferredWidth = configurationTabs.widthAnchor.constraint(equalToConstant: 366)
+        preferredWidth.priority = NSLayoutConstraint.Priority(999)
+        preferredWidth.isActive = true
+        inspectorWidthConstraint = preferredWidth
+        let basicPage = makeTabPage(title: "画布与输入", identifier: "canvas")
+        let globalPage = makeTabPage(title: "整体校正", identifier: "global")
+        let localPage = NSView()
+        let localItem = NSTabViewItem(identifier: "local")
+        localItem.label = "局部微调"
+        localItem.view = localPage
+        configurationTabs.addTabViewItem(localItem)
+        localToolPicker.selectedSegment = 0
+        localToolPicker.target = self
+        localToolPicker.action = #selector(changeLocalTool(_:))
+        localToolPicker.setAccessibilityIdentifier("nio-local-tool-picker")
+        for view in [localToolPicker, localInspectorHost] { view.translatesAutoresizingMaskIntoConstraints = false; localPage.addSubview(view) }
+        NSLayoutConstraint.activate([
+            localToolPicker.leadingAnchor.constraint(equalTo: localPage.leadingAnchor, constant: 12),
+            localToolPicker.trailingAnchor.constraint(equalTo: localPage.trailingAnchor, constant: -12),
+            localToolPicker.topAnchor.constraint(equalTo: localPage.topAnchor, constant: 12),
+            localInspectorHost.leadingAnchor.constraint(equalTo: localPage.leadingAnchor),
+            localInspectorHost.trailingAnchor.constraint(equalTo: localPage.trailingAnchor),
+            localInspectorHost.topAnchor.constraint(equalTo: localToolPicker.bottomAnchor, constant: 8),
+            localInspectorHost.bottomAnchor.constraint(equalTo: localPage.bottomAnchor),
+        ])
+        let qualityPage = makeTabPage(title: "标定与画质", identifier: "quality")
+        let settingsPage = makeTabPage(title: "预设与历史", identifier: "history")
+        let protoItem = NSTabViewItem(identifier: "protopie")
+        protoItem.label = "ProtoPie 联动"
+        if let protoPie {
+            let panel = ProtoPiePanel(coordinator: protoPie)
+            protoPiePanel = panel
+            protoItem.view = panel.inspectorView
+            previewColumn.addArrangedSubview(panel.statusView)
+            panel.statusView.widthAnchor.constraint(equalTo: previewHost.widthAnchor).isActive = true
+            panel.statusView.isHidden = false
+        } else {
+            protoItem.view = NSTextField(wrappingLabelWithString: "ProtoPie 联动：从正式应用启动后配置云端链接或本地 .pie 文件。")
+        }
+        configurationTabs.addTabViewItem(protoItem)
         configurationTabs.selectTabViewItem(at: 0)
         var stack = header
 
@@ -1165,14 +1397,26 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         version.toolTip = "当前运行版本"
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(version)
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        titleRow.addArrangedSubview(spacer)
+        historyButton.target = self
+        historyButton.action = #selector(rollbackConfiguration)
+        pauseWarpButton.target = self
+        pauseWarpButton.action = #selector(toggleWarpVisibility)
+        pinButton.target = self
+        pinButton.action = #selector(toggleAlwaysOnTop)
+        for button in [historyButton, pauseWarpButton, pinButton] { titleRow.addArrangedSubview(button) }
         stack.addArrangedSubview(titleRow)
+        titleRow.widthAnchor.constraint(equalTo: header.widthAnchor).isActive = true
         globalStatusLabel.textColor = .secondaryLabelColor
         globalStatusLabel.font = .systemFont(ofSize: 12)
         globalStatusLabel.maximumNumberOfLines = 2
-        globalStatusLabel.preferredMaxLayoutWidth = 550
+        globalStatusLabel.preferredMaxLayoutWidth = 1050
         globalStatusLabel.heightAnchor.constraint(equalToConstant: 34).isActive = true
         globalStatusLabel.setAccessibilityIdentifier("nio-global-status")
         stack.addArrangedSubview(globalStatusLabel)
+        globalStatusLabel.widthAnchor.constraint(equalTo: header.widthAnchor).isActive = true
         stack = basicPage
         let controlDescription = sourceScreen.map(screenName) ?? "等待系统显示器信息"
         let outputDescription = outputScreen.map(screenName) ?? "未连接；当前不捕获、不输出校正画面"
@@ -1258,17 +1502,30 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         geometryPreviewPicker.target = self
         geometryPreviewPicker.action = #selector(changeGeometryPreview)
         geometryPreviewPicker.toolTip = "只切换本控制台的小预览，不改变外屏输出、标定参数或保存配置。"
-        stack.addArrangedSubview(geometryPreviewPicker)
-        geometryPreview.widthAnchor.constraint(equalToConstant: 490).isActive = true
-        geometryPreview.heightAnchor.constraint(equalToConstant: 230).isActive = true
+        let previewToolbar = NSStackView(views: [geometryPreviewPicker, makeButton("适合窗口", action: #selector(fitWorkbenchPreview))])
+        previewToolbar.orientation = .horizontal
+        previewToolbar.spacing = 8
+        for view in [previewToolbar, geometryPreview, canvasMeasurementLabel] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            standardPreview.addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            previewToolbar.topAnchor.constraint(equalTo: standardPreview.topAnchor),
+            previewToolbar.leadingAnchor.constraint(equalTo: standardPreview.leadingAnchor),
+            previewToolbar.trailingAnchor.constraint(lessThanOrEqualTo: standardPreview.trailingAnchor),
+            geometryPreview.topAnchor.constraint(equalTo: previewToolbar.bottomAnchor, constant: 10),
+            geometryPreview.leadingAnchor.constraint(equalTo: standardPreview.leadingAnchor),
+            geometryPreview.trailingAnchor.constraint(equalTo: standardPreview.trailingAnchor),
+            geometryPreview.bottomAnchor.constraint(equalTo: canvasMeasurementLabel.topAnchor, constant: -10),
+            canvasMeasurementLabel.leadingAnchor.constraint(equalTo: standardPreview.leadingAnchor),
+            canvasMeasurementLabel.trailingAnchor.constraint(equalTo: standardPreview.trailingAnchor),
+            canvasMeasurementLabel.bottomAnchor.constraint(equalTo: standardPreview.bottomAnchor),
+        ])
         geometryPreview.setAccessibilityLabel("画布几何预览：黄色是 AA，青色是曲面，灰色虚线是起点边界")
-        stack.addArrangedSubview(geometryPreview)
-        stack.addArrangedSubview(explanation("黄色＝AA；青色＝当前曲面；灰虚线＝起点。这里只预览几何，不包含播放器黑边或真实玻璃效果；小图自动缩放不影响外屏。"))
+        geometryPreview.setAccessibilityIdentifier("nio-shared-geometry-preview")
         canvasMeasurementLabel.preferredMaxLayoutWidth = 490
         canvasMeasurementLabel.textColor = .secondaryLabelColor
-        stack.addArrangedSubview(canvasMeasurementLabel)
-
-        stack = opticalPage
+        stack = basicPage
         stack.addArrangedSubview(sectionTitle("3. 镜像"))
         horizontalMirrorButton.target = self
         horizontalMirrorButton.action = #selector(updateMirror)
@@ -1276,7 +1533,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         verticalMirrorButton.action = #selector(updateMirror)
         stack.addArrangedSubview(buttonRow([horizontalMirrorButton, verticalMirrorButton]))
 
-        stack = basicPage
+        stack = globalPage
         stack.addArrangedSubview(sectionTitle("4. 基础校畸变"))
         warpButton.target = self
         warpButton.action = #selector(toggleWarp)
@@ -1292,7 +1549,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         stack.addArrangedSubview(makeSlider(title: "水平弯曲", slider: horizontalBendSlider, minimum: -0.08, maximum: 0.08, action: #selector(updateHorizontalBend)))
         stack.addArrangedSubview(explanation("强度和上下弧度的上限增加约 50%；已有数值不会自动放大，极端组合仍须通过安全校验。"))
         let localEditorButton = makeButton("打开局部交点精调", action: #selector(openLocalEditor))
-        localEditorButton.toolTip = "在内屏独立窗口点击交点，再用方向键精调整幅内容；原多项式保持不变。无外屏或临时测试图中只读。"
+        localEditorButton.toolTip = "切换到局部微调模块，在同一工作台点击交点，再用方向键精调。"
         stack.addArrangedSubview(localEditorButton)
         let bezierButton = makeButton("打开贝塞尔曲面控制网", action: #selector(openBezierEditor))
         bezierButton.setAccessibilityIdentifier("nio-open-bezier-editor")
@@ -1307,7 +1564,16 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         stack.addArrangedSubview(makeButton("一键居中居正（保留曲率）", action: #selector(centerAndLevelSurface)))
         stack.addArrangedSubview(explanation("零点吸附：倾斜 ±0.002、水平弯曲 ±0.001 内精确归零。几何对齐按 AA 包围框居中、中心横线端点轴居正；保持曲线，不自动缩放，AA 外仍裁切。"))
 
-        stack = opticalPage
+        stack = globalPage
+        polynomialDisclosure.target = self
+        polynomialDisclosure.action = #selector(togglePolynomialDetails)
+        stack.addArrangedSubview(polynomialDisclosure)
+        polynomialDetails.orientation = .vertical
+        polynomialDetails.alignment = .leading
+        polynomialDetails.spacing = 12
+        polynomialDetails.isHidden = true
+        stack.addArrangedSubview(polynomialDetails)
+        stack = polynomialDetails
         stack.addArrangedSubview(sectionTitle("5. 多项式增量"))
         stack.addArrangedSubview(explanation("多项式调整全局趋势，交点精调修正局部；两层叠加但参数独立。局部的一级/二级/三级是过渡等级，不是这里的多项式阶数。"))
         stack.addArrangedSubview(makeButton("打开局部交点精调", action: #selector(openLocalEditor)))
@@ -1330,6 +1596,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             makeButton("清零全部多项式系数", action: #selector(clearPolynomial)),
         ]))
 
+        stack = qualityPage
         stack.addArrangedSubview(sectionTitle("6. 画质与标定"))
         AntiAliasingMode.enabledCases.forEach { antiAliasingPicker.addItem(withTitle: $0.title) }
         antiAliasingPicker.target = self
@@ -1378,24 +1645,19 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         stack = settingsPage
         stack.addArrangedSubview(sectionTitle("7. 预设与版本回退"))
         presetNameField.placeholderString = "例如：玻璃 A / 驾驶位"
-        presetNameField.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        presetNameField.widthAnchor.constraint(equalToConstant: 194).isActive = true
         stack.addArrangedSubview(labeledRow("预设名称", presetNameField))
-        presetPicker.widthAnchor.constraint(equalToConstant: 220).isActive = true
+        presetPicker.widthAnchor.constraint(equalToConstant: 194).isActive = true
         stack.addArrangedSubview(labeledRow("已有预设", presetPicker))
         stack.addArrangedSubview(buttonRow([
             makeButton("保存预设", action: #selector(savePreset)),
             makeButton("应用预设", action: #selector(applyPreset)),
             makeButton("删除预设", action: #selector(deletePreset)),
         ]))
-        historyButton.target = self
-        historyButton.action = #selector(rollbackConfiguration)
-        stack.addArrangedSubview(historyButton)
+        stack.addArrangedSubview(explanation("撤销在顶部始终可用；全部校正模块共用一条操作历史。"))
 
         stack.addArrangedSubview(sectionTitle("8. 安全控制与配置文件"))
-        pauseWarpButton.target = self
-        pauseWarpButton.action = #selector(toggleWarpVisibility)
         stack.addArrangedSubview(buttonRow([
-            pauseWarpButton,
             makeButton("导入参数文件", action: #selector(importConfiguration)),
             makeButton("导出参数备份", action: #selector(exportConfiguration)),
             makeButton("重置全部参数", action: #selector(resetConfiguration)),
@@ -1422,6 +1684,22 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             (testPatternButton, "用带方向角标的网格替代桌面，检查曲线和镜像；关闭后恢复桌面或视频。"),
         ]
         checkboxHelp.forEach { button, text in button.toolTip = text; button.setAccessibilityHelp(text) }
+        for document in tabPageDocuments {
+            func fitLabels(_ view: NSView) {
+                if let label = view as? NSTextField, !label.isEditable {
+                    label.preferredMaxLayoutWidth = 302
+                    label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+                }
+                if let button = view as? NSButton {
+                    button.font = .systemFont(ofSize: 12)
+                    button.cell?.wraps = true
+                }
+                view.subviews.forEach(fitLabels)
+            }
+            fitLabels(document)
+        }
+        builtInterface = true
+        mountModulePreview()
     }
 
     private func makeTabPage(title: String, identifier: String) -> NSStackView {
@@ -1439,7 +1717,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 12
-        stack.edgeInsets = NSEdgeInsets(top: 18, left: 22, bottom: 22, right: 22)
+        stack.edgeInsets = NSEdgeInsets(top: 14, left: 14, bottom: 20, right: 14)
         stack.translatesAutoresizingMaskIntoConstraints = false
         documentView.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -1456,13 +1734,142 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         return stack
     }
 
+    func selectModule(_ identifier: String) {
+        guard Self.modules.contains(where: { $0.0 == identifier }) else { return }
+        configurationTabs.selectTabViewItem(withIdentifier: identifier)
+    }
+
+    /// A display reconnection replaces the renderer, but should not reset the
+    /// operator's navigation, camera or same-display text drafts.
+    func restoreWorkspace(from previous: ControlPanelController, sameDisplay: Bool) {
+        selectedLocalTool = previous.selectedLocalTool
+        localToolPicker.selectedSegment = selectedLocalTool
+        pinButton.state = previous.pinButton.state
+        toggleAlwaysOnTop()
+        polynomialDisclosure.state = previous.polynomialDisclosure.state
+        togglePolynomialDetails()
+        geometryPreviewPicker.selectItem(at: previous.geometryPreviewPicker.indexOfSelectedItem)
+        geometryPreview.clipsToAA = previous.geometryPreview.clipsToAA
+        if sameDisplay {
+            if previous.selectedModuleIdentifier == "local" {
+                geometryPreview.viewport = previous.selectedLocalTool == 0 ? previous.bezierEditor?.viewport : previous.localEditor?.viewport
+            } else { geometryPreview.viewport = previous.geometryPreview.viewport }
+            for (old, new) in zip(previous.draftFields, draftFields) {
+                if let rendered = previous.renderedFieldValues[ObjectIdentifier(old)], old.stringValue != rendered { new.stringValue = old.stringValue }
+            }
+            if let index = previous.bezierEditor?.canvasView.selectedIndex { showBezierEditor(presentWindow: false).selectNode(index) }
+            if let point = previous.localEditor?.canvasView.selectedCoordinate { showLocalEditor(presentWindow: false).select(point) }
+        }
+        selectModule(previous.selectedModuleIdentifier)
+        window?.contentView?.layoutSubtreeIfNeeded()
+        for (oldItem, newItem) in zip(previous.configurationTabs.tabViewItems, configurationTabs.tabViewItems) {
+            guard let old = oldItem.view as? NSScrollView, let new = newItem.view as? NSScrollView else { continue }
+            new.contentView.scroll(to: old.contentView.bounds.origin)
+            new.reflectScrolledClipView(new.contentView)
+        }
+    }
+
+    @objc private func changeModule(_ sender: NSSegmentedControl) {
+        guard Self.modules.indices.contains(sender.selectedSegment) else { return }
+        selectModule(Self.modules[sender.selectedSegment].0)
+    }
+
+    func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
+        guard builtInterface else { return }
+        if selectedModuleIdentifier == "local" {
+            if selectedLocalTool == 0 {
+                bezierEditor?.deactivateInteraction()
+                geometryPreview.viewport = bezierEditor?.viewport
+            } else {
+                localEditor?.deactivateInteraction()
+                geometryPreview.viewport = localEditor?.viewport
+            }
+        }
+    }
+
+    func tabView(_ tabView: NSTabView, didSelect tabViewItem: NSTabViewItem?) {
+        guard builtInterface else { return }
+        modulePicker.selectedSegment = Self.modules.firstIndex { $0.0 == selectedModuleIdentifier } ?? 0
+        mountModulePreview()
+    }
+
+    private func mount(_ view: NSView, in host: NSView) {
+        if view.superview === host { return }
+        host.subviews.forEach { $0.removeFromSuperview() }
+        view.removeFromSuperview()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        host.addSubview(view)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: host.leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: host.trailingAnchor),
+            view.topAnchor.constraint(equalTo: host.topAnchor),
+            view.bottomAnchor.constraint(equalTo: host.bottomAnchor),
+        ])
+    }
+
+    private func mountModulePreview() {
+        guard builtInterface else { return }
+        if selectedModuleIdentifier == "local" {
+            if selectedLocalTool == 0 {
+                let editor = showBezierEditor(presentWindow: false)
+                editor.prepareForEmbedding()
+                mount(editor.embeddedPreview, in: previewHost)
+                mount(editor.embeddedInspector, in: localInspectorHost)
+                window?.contentView?.layoutSubtreeIfNeeded()
+                editor.viewport = geometryPreview.viewport
+            } else {
+                let editor = showLocalEditor(presentWindow: false)
+                editor.prepareForEmbedding()
+                mount(editor.embeddedPreview, in: previewHost)
+                mount(editor.embeddedInspector, in: localInspectorHost)
+                window?.contentView?.layoutSubtreeIfNeeded()
+                editor.viewport = geometryPreview.viewport
+            }
+        } else { mount(standardPreview, in: previewHost) }
+    }
+
+    @objc private func changeLocalTool(_ sender: NSSegmentedControl) {
+        guard selectedLocalTool != sender.selectedSegment else { return }
+        if selectedLocalTool == 0 {
+            bezierEditor?.deactivateInteraction(); geometryPreview.viewport = bezierEditor?.viewport
+        } else {
+            localEditor?.deactivateInteraction(); geometryPreview.viewport = localEditor?.viewport
+        }
+        selectedLocalTool = sender.selectedSegment
+        mountModulePreview()
+    }
+
+    @objc private func fitWorkbenchPreview() { geometryPreview.fit() }
+    func splitView(_ splitView: NSSplitView, constrainSplitPosition proposedPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
+        let width = min(max(splitView.bounds.width - proposedPosition - splitView.dividerThickness, 350), 440)
+        if NSApp.currentEvent?.type == .leftMouseDragged { inspectorWidthConstraint?.constant = width }
+        return splitView.bounds.width - (inspectorWidthConstraint?.constant ?? width) - splitView.dividerThickness
+    }
+    @objc private func togglePolynomialDetails() { polynomialDetails.isHidden = polynomialDisclosure.state != .on }
+    @objc private func toggleAlwaysOnTop() { window?.level = pinButton.state == .on ? .floating : .normal }
+
+    func windowShouldClose(_ sender: NSWindow) -> Bool {
+        setWarpVisible(false)
+        protoPie?.setOutputPaused(true)
+        updateWarpVisibilityState(false)
+        return true
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command), let number = Int(event.charactersIgnoringModifiers ?? ""), (1...6).contains(number) {
+            selectModule(Self.modules[number - 1].0)
+            return
+        }
+        super.keyDown(with: event)
+    }
+
     private func screenName(_ screen: NSScreen) -> String {
         "\(screen.localizedName) · \(Int(screen.frame.width))×\(Int(screen.frame.height)) pt"
     }
 
     private func sectionTitle(_ title: String) -> NSTextField {
         let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 14, weight: .bold)
+        label.font = .systemFont(ofSize: 13, weight: .semibold)
         return label
     }
 
@@ -1494,20 +1901,21 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private func explanation(_ text: String) -> NSTextField {
         let label = NSTextField(wrappingLabelWithString: text)
         label.textColor = .secondaryLabelColor
-        label.preferredMaxLayoutWidth = 490
+        label.preferredMaxLayoutWidth = 302
         return label
     }
 
     private func buttonRow(_ views: [NSView]) -> NSStackView {
         let row = NSStackView(views: views)
-        row.orientation = .horizontal
+        row.orientation = .vertical
+        row.alignment = .leading
         row.spacing = 8
         return row
     }
 
     private func labeledRow(_ title: String, _ view: NSView) -> NSStackView {
         let label = NSTextField(labelWithString: title)
-        label.widthAnchor.constraint(equalToConstant: 92).isActive = true
+        label.widthAnchor.constraint(equalToConstant: 94).isActive = true
         let row = NSStackView(views: [label, view])
         row.orientation = .horizontal
         row.spacing = 8
@@ -1515,14 +1923,13 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func fieldGrid(_ fields: [(String, NSView)]) -> NSGridView {
-        let rows = fields.chunked(into: 2).map { group -> [NSView] in
+        let rows = fields.chunked(into: 1).map { group -> [NSView] in
             var views = [NSView]()
             for item in group {
                 let label = NSTextField(labelWithString: item.0)
                 views.append(label)
                 views.append(item.1)
             }
-            while views.count < 4 { views.append(NSView()) }
             return views
         }
         let grid = NSGridView(views: rows)
@@ -1574,13 +1981,21 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         slider.target = self
         slider.action = action
         slider.isContinuous = true
-        slider.widthAnchor.constraint(equalToConstant: 490).isActive = true
+        slider.widthAnchor.constraint(equalToConstant: 296).isActive = true
         container.addArrangedSubview(label)
         container.addArrangedSubview(slider)
         return container
     }
 
     private func refreshControls() {
+        let drafts = draftFields.compactMap { field -> (NSTextField, String)? in
+            guard let previous = renderedFieldValues[ObjectIdentifier(field)], field.stringValue != previous else { return nil }
+            return (field, field.stringValue)
+        }
+        defer {
+            for field in draftFields { renderedFieldValues[ObjectIdentifier(field)] = field.stringValue }
+            for (field, text) in drafts { field.stringValue = text }
+        }
         let aa = configuration.aaRect.sanitized()
         aaXField.stringValue = String(Int((aa.x * Double(displayWidth)).rounded()))
         aaYField.stringValue = String(Int((aa.y * Double(displayHeight)).rounded()))
@@ -1623,7 +2038,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         pauseWarpButton.title = isWarpVisible() ? "暂时显示原始桌面" : "重新显示校正画面"
         pauseWarpButton.toolTip = "只隐藏或恢复覆盖层，不清空任何参数；与重置参数不同。"
         historyButton.title = "撤销上一次设置（\(historyStore.count)）"
-        historyButton.toolTip = "恢复最近一次修改前的参数，包括当时的画布起点；不是回退软件版本。"
+        historyButton.toolTip = historyStore.all().last.map { "撤销：\($0.reason)" } ?? "暂无可撤销的校正修改"
         historyButton.isEnabled = historyStore.count > 0
         orderPicker.selectItem(at: configuration.polynomial.order - 2)
         rebuildTermPicker()
@@ -1634,6 +2049,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         synchronizeLocalEditor()
     }
 
+    private func markFieldDraftsApplied(_ fields: [NSTextField]) {
+        for field in fields { renderedFieldValues[ObjectIdentifier(field)] = field.stringValue }
+    }
+
     private func configureWaitingControls() {
         func disableEditing(in view: NSView) {
             for child in view.subviews {
@@ -1641,6 +2060,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                     if field.isEditable { field.isEnabled = false }
                 } else if let control = child as? NSControl {
                     let canUseOffline = control === geometryPreviewPicker
+                        || control === polynomialDisclosure
                         || control.action == #selector(openLocalEditor)
                         || control.action == #selector(openBezierEditor)
                         || control.action == #selector(exportConfiguration)
@@ -1651,6 +2071,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             }
         }
         tabPageDocuments.forEach { disableEditing(in: $0) }
+        historyButton.isEnabled = false
+        pauseWarpButton.isEnabled = false
         capturePresentationLabel.stringValue = "待机：尚未开始屏幕捕获；连接外屏后会自动启用。"
         globalStatusLabel.stringValue = capturePresentationLabel.stringValue
         performanceLabel.stringValue = "待机中：没有启动 Warp 渲染或性能采样。"
@@ -1675,6 +2097,12 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+        guard !geometryValidationInFlight else {
+            configuration = lastAppliedConfiguration
+            refreshControls()
+            setStatus("正在校验局部修改，请稍候再调整；当前有效画面保留。", color: .systemOrange)
+            return
+        }
         cancelLocalUpdates()
         finishGridEditingSession()
         guard let renderer else {
@@ -1808,6 +2236,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyGridFields() {
+        guard !geometryValidationInFlight else {
+            gridStatusLabel.stringValue = "局部修改正在校验，请稍候再应用网格参数。"
+            gridStatusLabel.textColor = .systemOrange
+            return
+        }
         guard let renderer else { return }
         guard let columns = Int(NumericInput.normalized(gridColumnsField.stringValue)),
               let rows = Int(NumericInput.normalized(gridRowsField.stringValue)),
@@ -1869,6 +2302,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func refreshCanvasGeometry() {
+        layerSummary.stringValue = "当前叠加：整体 \(configuration.manual.enabled ? "开" : "关") · 贝塞尔 \(configuration.bezierWarp.enabled ? "开" : "关") · 交点 \(configuration.localWarp.enabled ? "开" : "关") · 多项式 \(configuration.polynomial.enabled ? "开" : "关")     紧急恢复 ⌃⌥⌘Esc"
         let previewConfiguration: WarpConfiguration
         switch runtimePreviewMode {
         case .normal: previewConfiguration = configuration
@@ -1968,7 +2402,13 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
 
     private var canEditLocalWarp: Bool { renderer != nil && runtimePreviewMode == .normal }
 
+    private func canSubmitGeometry(_ source: String) -> Bool {
+        canEditLocalWarp && (!geometryValidationInFlight || geometryValidationSource == source)
+    }
+
     private func cancelLocalUpdates() {
+        geometryValidationInFlight = false
+        geometryValidationSource = nil
         bezierHistoryBaseline = nil
         bezierUpdates.cancel()
         localUpdates.cancel()
@@ -1976,12 +2416,17 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func synchronizeLocalEditor(message: String? = nil) {
-        bezierEditor?.synchronize(configuration: configuration, available: canEditLocalWarp, message: message)
+        if geometryValidationInFlight {
+            bezierEditor?.setEditingAvailable(canSubmitGeometry("bezier"))
+            localEditor?.setEditingAvailable(canSubmitGeometry("local"))
+            return
+        }
+        bezierEditor?.synchronize(configuration: configuration, available: canSubmitGeometry("bezier"), message: message)
         guard let localEditor else { return }
         let rendered = renderer?.activeConfiguration ?? configuration
         let dimensions = WarpMath.meshDimensions(configuration: rendered)
         let mesh = renderer?.currentMesh ?? WarpMath.makeMesh(configuration: rendered, columns: dimensions.columns, rows: dimensions.rows)
-        localEditor.synchronize(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canEditLocalWarp, message: message)
+        localEditor.synchronize(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canSubmitGeometry("local"), message: message)
     }
 
     @objc private func openBezierEditor() { showBezierEditor() }
@@ -1989,45 +2434,55 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     @discardableResult
     func showBezierEditor(presentWindow: Bool = true) -> BezierWarpEditorController {
         if bezierEditor == nil {
-            let editor = BezierWarpEditorController(configuration: configuration, available: canEditLocalWarp)
+            let editor = BezierWarpEditorController(configuration: configuration, available: canSubmitGeometry("bezier"), embedded: true)
             editor.window?.title = "NIO Warp · 贝塞尔曲面控制网 · \(AppVersion.display)"
             editor.onChange = { [weak self] bezier, history in self?.applyBezierWarp(bezier, recordHistory: history) }
             editor.onUndo = { [weak self] in
                 guard let self, self.canEditLocalWarp else { return }
-                self.cancelLocalUpdates()
                 self.rollbackConfiguration()
                 self.synchronizeLocalEditor()
             }
             editor.onClose = { [weak self] in
                 self?.bezierUpdates.cancel()
+                self?.geometryValidationInFlight = false
                 self?.bezierHistoryBaseline = nil
             }
             bezierEditor = editor
         }
-        synchronizeLocalEditor()
         if presentWindow {
-            bezierEditor?.showWindow(nil)
-            bezierEditor?.window?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            if selectedModuleIdentifier == "local", selectedLocalTool != 0 { localEditor?.deactivateInteraction(); geometryPreview.viewport = localEditor?.viewport }
+            selectedLocalTool = 0
+            localToolPicker.selectedSegment = 0
+            if selectedModuleIdentifier == "local" { mountModulePreview() } else { selectModule("local") }
         }
         return bezierEditor!
     }
 
     private func applyBezierWarp(_ bezier: BezierWarpConfiguration, recordHistory: Bool) {
-        guard let renderer, canEditLocalWarp else { synchronizeLocalEditor(); return }
+        guard let renderer, canSubmitGeometry("bezier") else { return }
         let historyBaseline = bezierHistoryBaseline ?? (recordHistory ? lastAppliedConfiguration : nil)
         cancelLocalUpdates()
         bezierHistoryBaseline = historyBaseline
         let baseline = lastAppliedConfiguration
         var candidate = baseline
         candidate.bezierWarp = bezier
+        geometryValidationInFlight = true
+        geometryValidationSource = "bezier"
+        historyButton.title = "取消待应用的贝塞尔修改"
+        historyButton.isEnabled = true
+        setStatus("正在校验贝塞尔修改；可以切换模块或暂停输出。", color: .systemOrange)
+        localEditor?.setEditingAvailable(false)
         bezierUpdates.submit(candidate) { [weak self] result in
-            guard let self, self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
+            guard let self else { return }
+            self.geometryValidationInFlight = false
+            self.geometryValidationSource = nil
+            guard self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
             switch result {
             case .failure(let error):
                 self.synchronizeLocalEditor()
                 self.bezierHistoryBaseline = nil
                 self.bezierEditor?.showStatus("未应用：\(error.message)。保留上一有效画面。", error: true)
+                self.setStatus("贝塞尔修改未应用：\(error.message)。保留上一有效画面。", color: .systemRed)
             case .success(let mesh):
                 guard renderer.installPreparedConfiguration(candidate, mesh: mesh) else { return }
                 if let previous = self.bezierHistoryBaseline, previous != candidate { self.historyStore.record(previous, reason: "贝塞尔曲面调节", force: true) }
@@ -2038,6 +2493,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                 self.updateWarpBoundary(candidate, candidate.render.showWarpBoundary)
                 self.refreshControls()
                 self.bezierEditor?.showStatus("已应用并保存；\(mesh.validation.summary)", error: false)
+                self.setStatus("贝塞尔修改已保存；\(mesh.validation.summary)")
             }
         }
     }
@@ -2070,33 +2526,35 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
             let rendered = renderer?.activeConfiguration ?? configuration
             let dimensions = WarpMath.meshDimensions(configuration: rendered)
             let mesh = renderer?.currentMesh ?? WarpMath.makeMesh(configuration: rendered, columns: dimensions.columns, rows: dimensions.rows)
-            let editor = LocalWarpEditorController(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canEditLocalWarp, screen: window?.screen)
+            let editor = LocalWarpEditorController(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canSubmitGeometry("local"), screen: window?.screen, embedded: true)
             editor.window?.title = "NIO Warp · 局部交点精调 · \(AppVersion.display)"
             editor.onChange = { [weak self] local, history in self?.applyLocalWarp(local, recordHistory: history) }
             editor.onUndo = { [weak self] in
                 guard let self, self.canEditLocalWarp else { return }
-                self.cancelLocalUpdates()
                 self.rollbackConfiguration()
                 self.synchronizeLocalEditor()
             }
             editor.onClose = { [weak self] in
                 self?.localUpdates.cancel()
+                self?.geometryValidationInFlight = false
                 self?.localHistoryBaseline = nil
             }
             editor.onShowPolynomial = { [weak self] in self?.showGlobalPolynomialSettings() }
             localEditor = editor
         }
-        synchronizeLocalEditor()
         if presentWindow {
-            localEditor?.showWindow(nil)
-            localEditor?.window?.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            if selectedModuleIdentifier == "local", selectedLocalTool != 1 { bezierEditor?.deactivateInteraction(); geometryPreview.viewport = bezierEditor?.viewport }
+            selectedLocalTool = 1
+            localToolPicker.selectedSegment = 1
+            if selectedModuleIdentifier == "local" { mountModulePreview() } else { selectModule("local") }
         }
         return localEditor!
     }
 
     func showGlobalPolynomialSettings(presentWindow: Bool = true) {
-        configurationTabs.selectTabViewItem(withIdentifier: "optical")
+        selectModule("global")
+        polynomialDisclosure.state = .on
+        polynomialDetails.isHidden = false
         window?.contentView?.layoutSubtreeIfNeeded()
         orderPicker.scrollToVisible(orderPicker.bounds)
         if presentWindow {
@@ -2107,7 +2565,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     private func applyLocalWarp(_ local: LocalWarpConfiguration, recordHistory: Bool) {
-        guard let renderer, canEditLocalWarp else { synchronizeLocalEditor(); return }
+        guard let renderer, canSubmitGeometry("local") else { return }
         // The two editors share the same output configuration. Switching layers
         // cancels the other pending draft, so an older completion cannot win.
         bezierUpdates.cancel()
@@ -2117,13 +2575,23 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         if recordHistory { localHistoryBaseline = baseline }
         var candidate = baseline
         candidate.localWarp = local
+        geometryValidationInFlight = true
+        geometryValidationSource = "local"
+        historyButton.title = "取消待应用的交点修改"
+        historyButton.isEnabled = true
+        setStatus("正在校验交点修改；可以切换模块或暂停输出。", color: .systemOrange)
+        bezierEditor?.setEditingAvailable(false)
         localUpdates.submit(candidate) { [weak self] result in
-            guard let self, self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
+            guard let self else { return }
+            self.geometryValidationInFlight = false
+            self.geometryValidationSource = nil
+            guard self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
             switch result {
             case .failure(let error):
                 self.localHistoryBaseline = nil
                 self.synchronizeLocalEditor()
                 self.localEditor?.showStatus("没有应用：\(error.message)。原画面和数据保留。", error: true)
+                self.setStatus("交点修改未应用：\(error.message)。保留上一有效画面。", color: .systemRed)
             case .success(let mesh):
                 guard renderer.installPreparedConfiguration(candidate, mesh: mesh) else { return }
                 if let previous = self.localHistoryBaseline, previous != candidate { self.historyStore.record(previous, reason: "局部交点精调", force: true) }
@@ -2219,6 +2687,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     @objc private func applyAAFields() {
+        guard !geometryValidationInFlight else { setStatus("局部修改正在校验，请稍候再保存显示范围。", color: .systemOrange); return }
+        markFieldDraftsApplied([aaXField, aaYField, aaWidthField, aaHeightField])
         let aa = configuration.aaRect.sanitized()
         let currentX = Int((aa.x * Double(displayWidth)).rounded())
         let currentY = Int((aa.y * Double(displayHeight)).rounded())
@@ -2256,6 +2726,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     @objc private func applyCanvasFields() {
+        guard !geometryValidationInFlight else { setStatus("局部修改正在校验，请稍候再保存画布。", color: .systemOrange); return }
+        markFieldDraftsApplied([canvasWidthField, canvasHeightField])
         guard let width = NumericInput.integer(from: canvasWidthField.stringValue),
               let height = NumericInput.integer(from: canvasHeightField.stringValue),
               (64...32768).contains(width), (64...32768).contains(height) else {
@@ -2376,7 +2848,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         setStatus(nextVisible ? "Warp 覆盖层已恢复。" : "Warp 覆盖层已暂停，外屏恢复原始桌面。", color: nextVisible ? .systemGreen : .systemOrange)
     }
 
-    func updateWarpVisibilityState(_ visible: Bool) {
+    func updateWarpVisibilityState(_ visible: Bool, notifyProtoPie: Bool = true) {
+        if notifyProtoPie { protoPie?.setOutputPaused(!visible) }
         if isWaitingForDisplay {
             pauseWarpButton.title = "等待外屏，暂不输出"
             return
@@ -2416,6 +2889,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     @objc private func selectPolynomialTerm() { refreshCoefficientFields() }
 
     @objc private func applyPolynomialCoefficients() {
+        guard !geometryValidationInFlight else { setStatus("局部修改正在校验，请稍候再保存系数。", color: .systemOrange); return }
+        markFieldDraftsApplied([coefficientXField, coefficientYField])
         let index = max(termPicker.indexOfSelectedItem, 0)
         configuration.polynomial = configuration.polynomial.normalized()
         configuration.polynomial.coefficientsX[index] = NumericInput.double(from: coefficientXField.stringValue)
@@ -2523,6 +2998,15 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     }
 
     @objc private func rollbackConfiguration() {
+        guard renderer != nil else { return }
+        let wasValidating = geometryValidationInFlight
+        cancelLocalUpdates()
+        if wasValidating {
+            configuration = lastAppliedConfiguration
+            refreshControls()
+            setStatus("已取消待应用的局部修改；已保存画面与历史保留。")
+            return
+        }
         guard let revision = historyStore.popLatest() else {
             setStatus("没有可回退的历史版本。", color: .systemOrange)
             return
@@ -2584,8 +3068,10 @@ private extension Array {
     }
 }
 
-private final class AppDelegate: NSObject, NSApplicationDelegate {
+@MainActor private final class AppDelegate: NSObject, NSApplicationDelegate {
     private let captureEngine = CaptureEngine()
+    private let protoPie = ProtoPieCoordinator()
+    private var protoPieReleaseTask: Task<Void, Never>?
     private let configurationStore = ConfigurationStore()
     private var outputController: OutputController?
     private var controlPanel: ControlPanelController?
@@ -2596,10 +3082,23 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     private var captureStartupTask: Task<Void, Never>?
     private var sessionEpoch = 0
     private var waitingMessage: String?
+    private var workspaceDisplayIdentifier: String?
     private var displaysAsleep = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(AppPresentationPolicy.activationPolicy)
+        configureProtoPie()
+        let menu = NSMenu()
+        let appItem = NSMenuItem()
+        let appMenu = NSMenu()
+        let show = NSMenuItem(title: "显示 NIO Warp 工作台", action: #selector(showWorkbench), keyEquivalent: "0")
+        show.target = self
+        appMenu.addItem(show)
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "退出 NIO Warp", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+        menu.addItem(appItem)
+        NSApp.mainMenu = menu
         emergencyHotKey = GlobalHotKey(keyCode: UInt32(kVK_Escape), modifiers: UInt32(controlKey | cmdKey | optionKey)) { [weak self] in
             self?.emergencyHideWarp(reason: "已通过 ⌃⌥⌘Esc 紧急隐藏 Warp 覆盖层。")
         }
@@ -2647,6 +3146,8 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         let displayIdentifier = displayProfileIdentifier(for: outputID)
+        let sameDisplay = workspaceDisplayIdentifier == displayIdentifier
+        workspaceDisplayIdentifier = displayIdentifier
         let configuration = configurationStore.load(
             displayIdentifier: displayIdentifier,
             displayWidth: pixelWidth,
@@ -2695,8 +3196,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             },
             updateWarpBoundary: { [weak outputController] configuration, visible in
                 outputController?.updateWarpBoundary(configuration: configuration, visible: visible)
-            }
+            }, protoPie: protoPie
         )
+        if let previousPanel { controlPanel.restoreWorkspace(from: previousPanel, sameDisplay: sameDisplay) }
         self.controlPanel = controlPanel
         waitingMessage = nil
         previousPanel?.close()
@@ -2705,6 +3207,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
         captureEngine.onError = { [weak self] message in
             guard self?.sessionEpoch == epoch else { return }
             self?.emergencyHideWarp(reason: "捕获中断：\(message)。Warp 覆盖层已安全隐藏。")
+            self?.protoPie.reportCaptureInterrupted(message)
         }
         captureEngine.onNotice = { [weak self] message in
             guard self?.sessionEpoch == epoch else { return }
@@ -2738,6 +3241,8 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
                     minimumCoverage: configuration.capture.fullscreenCoverageThreshold
                 )
                 guard !Task.isCancelled, self.sessionEpoch == epoch else { return }
+                self.protoPie.setTargetDisplay(outputID)
+                self.protoPie.startIfConfigured()
                 controlPanel?.setStatus(
                     configuration.capture.sourceMode == .automaticFullscreenWindow
                         ? "自动跟随已启动：播放器进入全屏后会在约 1 秒内切为单窗口捕获。"
@@ -2777,17 +3282,21 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
             renderer: nil, store: configurationStore, configuration: preview,
             sourceScreen: source, outputScreen: nil,
             setWarpVisible: { _ in }, isWarpVisible: { false },
-            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }
+            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie
         )
+        if let previousPanel { panel.restoreWorkspace(from: previousPanel, sameDisplay: true) }
         controlPanel = panel
         waitingMessage = message
         panel.setStatus(message, color: .systemOrange)
         previousPanel?.close()
         NSApp.activate(ignoringOtherApps: true)
         panel.bringToFront()
+        protoPie.setTargetDisplay(nil)
+        protoPie.startIfConfigured()
     }
 
     private func restartSession(reason: String) {
+        protoPie.suspendForDisplayChange()
         sessionEpoch += 1
         captureStartupTask?.cancel()
         outputController?.setWarpVisible(false)
@@ -2853,6 +3362,7 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        protoPie.shutdown()
         sessionEpoch += 1
         captureStartupTask?.cancel()
         screenChangeWorkItem?.cancel()
@@ -2863,11 +3373,51 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        DisplaySessionPolicy.shouldTerminateAfterWindowClose(
-            isReconfiguring: isReconfiguring,
-            controlWindowVisible: controlPanel?.window?.isVisible ?? false,
-            controlWindowMiniaturized: controlPanel?.window?.isMiniaturized ?? false
-        )
+        false
+    }
+
+    @objc private func showWorkbench() {
+        controlPanel?.bringToFront()
+    }
+
+    private func configureProtoPie() {
+        protoPie.onCapture = { [weak self] windowID, processID in
+            guard let self, self.outputController != nil, !self.displaysAsleep else {
+                throw ProtoPieError.unavailable("等待目标外屏和捕获权限就绪后重试。")
+            }
+            let epoch = self.sessionEpoch
+            await self.protoPieReleaseTask?.value
+            try Task.checkCancellation()
+            guard self.sessionEpoch == epoch else { throw CancellationError() }
+            try await self.captureEngine.pinPreviewWindow(windowID, processID: processID)
+            guard self.sessionEpoch == epoch else { throw CancellationError() }
+        }
+        protoPie.onStop = { [weak self] in
+            guard let self else { return }
+            self.outputController?.setWarpVisible(false)
+            self.controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: false)
+            let epoch = self.sessionEpoch
+            self.protoPieReleaseTask = Task { @MainActor [weak self] in
+                guard let self, self.sessionEpoch == epoch else { return }
+                await self.captureEngine.releasePinnedPreview()
+            }
+        }
+        protoPie.onSuspendOutput = { [weak self] in self?.outputController?.setWarpVisible(false) }
+        protoPie.onResumeOutput = { [weak self] in self?.outputController?.setWarpVisible(true) }
+        protoPie.onStateChange = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .running:
+                self.outputController?.setWarpVisible(true)
+                self.controlPanel?.updateWarpVisibilityState(true, notifyProtoPie: false)
+            case .paused:
+                self.outputController?.setWarpVisible(false)
+                self.controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: false)
+            case .failed(let reason):
+                self.controlPanel?.setStatus("ProtoPie 联动：\(reason)", color: .systemOrange)
+            default: break
+            }
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -2903,7 +3453,9 @@ private final class AppDelegate: NSObject, NSApplicationDelegate {
 
 }
 
-let application = NSApplication.shared
-private let appDelegate = AppDelegate()
-application.delegate = appDelegate
-application.run()
+MainActor.assumeIsolated {
+    let application = NSApplication.shared
+    let appDelegate = AppDelegate()
+    application.delegate = appDelegate
+    withExtendedLifetime(appDelegate) { application.run() }
+}
