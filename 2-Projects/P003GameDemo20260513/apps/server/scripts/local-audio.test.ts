@@ -521,5 +521,71 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   ok('kick-4 开关未开 → skipped_disabled(不起生成)', kickoffLocalAudioOnce('device-kick-test', 'unit') === 'skipped_disabled');
 }
 
+// ---------- G1 设置引导三句（Android codex 需求 2026-09-17，A 方案上限；gs-*）----------
+{
+  const { G1_SETTINGS_SLOTS } = await import('../src/local-audio-store.js');
+  const { G1_SETTINGS_TEXTS, G1_SETTINGS_MAX_BYTES, G1_SETTINGS_MAX_MS, validateG1SettingsWav, resolveG1SettingsClips, stageG1SettingsClips, currentG1SettingsRows, activeG1SettingsKeep, publishG1Settings } =
+    await import('../src/local-audio-g1-settings.js');
+  const { carriedFrozenKeep } = await import('../src/local-audio-generator.js');
+  const A1 = 'device-BJP00326060100200097';
+  const A2 = 'device-BJP00326060100200096';
+  eq('gs-1 三槽 + 冻结文本逐字', [G1_SETTINGS_SLOTS.length, G1_SETTINGS_TEXTS['g1.settings.enter'], G1_SETTINGS_TEXTS['g1.settings.intro'], G1_SETTINGS_TEXTS['g1.settings.exit']], [3, '向下滑动，进入设置。', '在这里，可以把灯光设置成你喜欢的亮度和色温，调节音量大小，来试试吧。', '学会啦，向上滑动，回到方舟继续使用吧。']);
+  eq('gs-2 上限（A 方案：400KiB / 3000·8000·5500ms）', { b: G1_SETTINGS_MAX_BYTES, ms: G1_SETTINGS_MAX_MS }, { b: 409600, ms: { 'g1.settings.enter': 3000, 'g1.settings.intro': 8000, 'g1.settings.exit': 5500 } });
+  const wavOf = (pcmBytes: number) => pcmToWav(Buffer.alloc(pcmBytes));
+  const enterWav = wavOf(120000);
+  const introWav = wavOf(353280);
+  const exitWav = wavOf(238080);
+  eq('gs-3 校验：真值三句均过（2500/7360/4960ms）', [validateG1SettingsWav('g1.settings.enter', enterWav), validateG1SettingsWav('g1.settings.intro', introWav), validateG1SettingsWav('g1.settings.exit', exitWav)].map((v) => (v.ok ? v.durationMs : v.reason)), [2500, 7360, 4960]);
+  const badSr = wavOf(48000);
+  badSr.writeUInt32LE(22050, 24);
+  badSr.writeUInt32LE(44100, 28);
+  eq('gs-4 校验拒：intro 8.1s / exit 401KiB / 22.05k 采样率 / 非 WAV', [validateG1SettingsWav('g1.settings.intro', wavOf(388800)), validateG1SettingsWav('g1.settings.exit', wavOf(409600)), validateG1SettingsWav('g1.settings.enter', badSr), validateG1SettingsWav('g1.settings.enter', Buffer.from('not a wav'))].map((v) => (v.ok ? 'ok' : v.reason.split(':')[0])), ['too_long_audio', 'file_too_big', 'bad_format', 'bad_wav']);
+  // 基线现役（模拟已发布套中的一槽两条）
+  const mk2 = (acc: string, id: string, bytes: number) => localAudioStore.insertItem(acc, { slot: 'greeting.normal', id, text: `t-${id}`, sha256: id.repeat(4), bytes, duration_ms: 1500, format: 'wav' });
+  for (const acc of [A1, A2]) {
+    mk2(acc, 'ccccccccccccccc1', 90000);
+    mk2(acc, 'ccccccccccccccc2', 90000);
+    localAudioStore.commitSet(acc, [{ slot: 'greeting.normal', id: 'ccccccccccccccc1' }, { slot: 'greeting.normal', id: 'ccccccccccccccc2' }], { tier: 't', traits: '{}' });
+  }
+  const revA1 = localAudioStore.getState(A1).revision;
+  let synthCalls = 0;
+  const fakeSynth = async (text: string) => {
+    synthCalls += 1;
+    const w = text === G1_SETTINGS_TEXTS['g1.settings.enter'] ? enterWav : text === G1_SETTINGS_TEXTS['g1.settings.intro'] ? introWav : exitWav;
+    return { audio: w, durationMs: parseWavHeader(w)!.durationMs };
+  };
+  const r1 = await resolveG1SettingsClips([A1, A2], { synthesize: fakeSynth });
+  eq('gs-5 首次 resolve：每槽合成一次、零拒', { calls: synthCalls, n: Object.keys(r1.clips).length, rej: r1.rejected.length, origins: G1_SETTINGS_SLOTS.map((s) => r1.clips[s]?.origin) }, { calls: 3, n: 3, rej: 0, origins: ['synthesized', 'synthesized', 'synthesized'] });
+  const rows1 = stageG1SettingsClips([A1, A2], r1.clips);
+  const idsA1 = rows1.filter((r) => r.account_id === A1).map((r) => r.id);
+  const idsA2 = rows1.filter((r) => r.account_id === A2).map((r) => r.id);
+  eq('gs-6 扇出：两账号同槽同 id（同字节同 id）且 id=sha 前 16 位', { same: JSON.stringify(idsA1) === JSON.stringify(idsA2), hex: idsA1.every((id) => /^[0-9a-f]{16}$/.test(id)), pref: rows1.every((r) => r.sha256.startsWith(r.id)) }, { same: true, hex: true, pref: true });
+  eq('gs-7 staging 不进 manifest / 不进搬运 / report 可见', { m: Object.keys(localAudioStore.buildManifest(A1).slots).filter((k) => k.startsWith('g1.settings.')).length, keep: activeG1SettingsKeep(A1).length, cur: currentG1SettingsRows(A1).map((r) => r.origin) }, { m: 0, keep: 0, cur: ['staged', 'staged', 'staged'] });
+  synthCalls = 0;
+  const r2 = await resolveG1SettingsClips([A1], { synthesize: fakeSynth });
+  eq('gs-8 再次 resolve：复用已有条目，零合成', { calls: synthCalls, origins: G1_SETTINGS_SLOTS.map((s) => r2.clips[s]?.origin) }, { calls: 0, origins: ['reused', 'reused', 'reused'] });
+  const rows2 = stageG1SettingsClips([A1], r2.clips);
+  eq('gs-9 重复 stage 幂等（existing，不重写）', rows2.map((r) => r.origin), ['existing', 'existing', 'existing']);
+  const rep = candidateManifestReport(A1, rows1.filter((r) => r.account_id === A1), REVISION_CAP_BYTES);
+  eq('gs-10 候选预算 = 现役 2 条 + 三句', { files: rep.candidate_unique_files, bytes: rep.candidate_bytes, within: rep.within_cap }, { files: 5, bytes: 180000 + enterWav.length + introWav.length + exitWav.length, within: true });
+  const pub = publishG1Settings(A1, rows1.filter((r) => r.account_id === A1));
+  const m1 = localAudioStore.buildManifest(A1);
+  eq('gs-11 发布：revision +1，三槽各 1 条，旧槽不丢', { before: pub.before, after: pub.after, g1: G1_SETTINGS_SLOTS.map((s) => (m1.slots[s] ?? []).length), old: (m1.slots['greeting.normal'] ?? []).length, rev: m1.revision }, { before: revA1, after: revA1 + 1, g1: [1, 1, 1], old: 2, rev: revA1 + 1 });
+  const introEntry = (m1.slots['g1.settings.intro'] ?? [])[0] as Record<string, unknown>;
+  eq('gs-12 manifest 字段由真 WAV 回读', { f: introEntry.format, c: introEntry.codec, sr: introEntry.sample_rate, ch: introEntry.channels, b: introEntry.bits_per_sample, bytes: introEntry.bytes, ms: introEntry.duration_ms, sha: (introEntry.sha256 as string).length, url: introEntry.url, text: introEntry.text }, { f: 'wav', c: 'pcm_s16le', sr: 24000, ch: 1, b: 16, bytes: introWav.length, ms: 7360, sha: 64, url: `/v1/device/local-audio/file/${idsA1[1]}`, text: G1_SETTINGS_TEXTS['g1.settings.intro'] });
+  eq('gs-13 发布后日常搬运带上三句（carriedFrozenKeep）', { g1: activeG1SettingsKeep(A1).length, frozen: carriedFrozenKeep(A1).filter((k) => String(k.slot).startsWith('g1.settings.')).length }, { g1: 3, frozen: 3 });
+  eq('gs-14 重复发布内容未变不 bump（keep 去重）', publishG1Settings(A1, rows2).after, null);
+  const rows2b = stageG1SettingsClips([A1], r2.clips);
+  eq('gs-15 发布后再 stage 不把现役打回 staging', { origins: rows2b.map((r) => r.origin), still: activeG1SettingsKeep(A1).length }, { origins: ['existing', 'existing', 'existing'], still: 3 });
+  {
+    const { DatabaseSync } = await import('node:sqlite');
+    const db = new DatabaseSync(process.env.PROFILE_DB_PATH!);
+    db.prepare(`UPDATE local_audio_item SET created_at = ? WHERE account_id = ? AND active = 0`).run(Date.now() - 15 * 86_400_000, A2);
+    db.close();
+  }
+  eq('gs-16 过期 staging 清理豁免 g1.settings.*（A2 三句仍在）', { cleaned: localAudioStore.cleanup(A2), left: currentG1SettingsRows(A2).length }, { cleaned: 0, left: 3 });
+  eq('gs-17 listAccounts 含两账号', [A1, A2].every((a) => localAudioStore.listAccounts().includes(a)), true);
+}
+
 console.log(`\nlocal-audio tests: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);
