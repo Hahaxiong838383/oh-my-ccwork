@@ -179,6 +179,9 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **密码学坑位**:salt=SHA256(nonce **传输形态字符串** UTF-8,不是解码 bytes);
   `credential_expires_at_ms` 必须===JWT exp*1000(先取整秒再派生,毫秒尾数差=端上双校验拒);
   跨语言对撞用 `scripts/fixtures/pairing-ecies-vectors.json`(生成器可重跑自检)。
+- **恢复合同 S1（2026-09-17 上产）**：announce 收 `v:2|3`——`v:3` 已绑家长→`bound_recoverable`、停用→`denied`，`v:2` 老端恒 pending（纯函数 `deviceAnnounceState`）；claim 请求带 `v:3` 才回 `binding_outcome new|existing_binding_recovery`（按凭据历史判，落 `pairing_session.binding_outcome`）；恢复结局首次 claim 作废旧凭据（`device_credential_revocation` reason=existing_binding_recovery，水位 = 新 iat−1，幂等窗不推）；家长 confirm 前置查台账/绑定（404 `sn_not_available` / 409 `sn_bound_by_other` 不建会话）+ `relation new|owner`；admin 待认领 `parent_bound` → 「已绑定·待恢复」+「恢复认领」（不填手机号=台账家长）。总开关 `PAIRING_RECOVERY_CONTRACT_ENABLED`（默认开；置 0 + restart = 全老行为）。**仅凭 SN+nonce+pk 自动恢复不存在**（三者证明不了是原设备），锚只认原家长扫码 / 后台确认。
+  - 真机恢复 SOP：待认领列表「恢复认领」→ ≤5 s 日志 `v2 claim ok … binding=existing_binding_recovery` + `credentials rotated revoked_through=…` → 设备用新凭据 `[device-session] ok`。⚠️ **别用真机 SN 打 announce 探针**：`INSERT OR REPLACE` 顶掉设备现役 announce 行，一键确认会确认到探针 nonce；探针只用 2099 批合成 SN。
+  - 测试 `npm run test:pairing` 148 项（rv-* 段放开 `PAIRING_ANNOUNCE_RPM_SN/IP`，否则撞每 IP 20/min 桶）；负向验证锚 = rv-1b/rv-9c（拆 v:2 映射必红）。回执 `docs/2026-09-17-pairing-已绑定设备凭据恢复S1…(给codex).md`；回滚见 RELEASES 同日条目。
 - **测试**:`npm run test:pairing`(49 项);验收期解绑 0010 第一轮只清 parent_account_id
   (数据零丢失,brain id 确定性重挂);测试家长账号点对点给不入文档。
 

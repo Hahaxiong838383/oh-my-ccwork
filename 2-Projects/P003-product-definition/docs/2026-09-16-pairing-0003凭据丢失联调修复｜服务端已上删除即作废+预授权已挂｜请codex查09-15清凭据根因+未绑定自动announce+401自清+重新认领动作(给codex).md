@@ -39,7 +39,7 @@
 1. 后台预授权：`PUT /api/admin/devices/:sn/preauth {phone}` → pairing.db `device_preauth`（默认 7 天）+ 台账 `parent_account_id`。…00200003 已完成这步。
 2. 设备 announce：`POST /v1/device/pairing/announce`（SN + 设备 pk + nonce）。服务端存 announce，命中有效预授权即 `tryAutoConfirm(trigger='announce')` 代确认。
 3. 设备 claim：`POST /v1/device/pairing/claim` → 签发凭据（`SignJWT kind=p003-device, sub=SN, setIssuedAt`），`iat` 自然晚于水位，通过 §2.1 校验。
-4. 状态查询：`GET /v1/device/pairing/status`。
+4. ~~状态查询：`GET /v1/device/pairing/status`~~ —— **勘误（cc 2026-09-17）：此接口从未存在**，设备侧只有 `announce` / `claim`（`routes/pairing.ts` 全文核对）；codex 09-17 探测 404 属实，是本行笔误。
 - 限频（代码真值）：announce 每 SN 6/min、每 IP 20/min；claim 每 SN 6/min、每 IP 20/min。退避别低于 10 s。
 - 服务端日志（cc 用来对账的三行）：`[pairing] announce sn=… outcome=… auto=… state=…` → `[pairing] preauth-confirm sn=… trigger=announce` → `[pairing] v2 claim ok sn=… source=…`。claim 成功后后台设备行凭据列由 claim 会话回填（`credential_source=pairing_claim`），「待认领」列表同步变化。
 

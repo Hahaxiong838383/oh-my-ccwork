@@ -112,10 +112,11 @@ class DeviceRegistryStore {
    * 只记秒级水位 = 删除发生的那一秒：verifyDeviceCredential 拿 JWT iat 对撞，iat ≤ 水位即拒（iat 只有秒精度，
    * 删除当秒签的一律算旧）；无 iat 的老 token 视为 0 → 一并作废。水位单调不回退；台账行删了也不影响
    * （独立表，重加设备不清）。返回生效的秒级水位。
+   * 恢复换钥（2026-09-17）：调用方可显式给水位 = 新凭据 iat − 1，让刚签的这份（iat）恰好通过、更早的全部作废。
    */
-  revokeCredentials(sn: string, by: string, reason: string): number {
-    const nowSec = Math.floor(Date.now() / 1000);
+  revokeCredentials(sn: string, by: string, reason: string, notBeforeSec?: number): number {
     const nowMs = Date.now();
+    const nowSec = typeof notBeforeSec === 'number' && Number.isFinite(notBeforeSec) ? Math.floor(notBeforeSec) : Math.floor(nowMs / 1000);
     this.db
       .prepare(
         `INSERT INTO device_credential_revocation (sn, not_before_sec, revoked_by, reason, created_at, updated_at)

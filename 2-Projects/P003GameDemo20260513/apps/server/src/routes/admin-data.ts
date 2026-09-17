@@ -250,6 +250,7 @@ adminDataRoute.get('/devices/pairing/pending', (c) => {
         status: device?.status ?? null,
         note: device?.note ?? '',
         parent_phone: device?.parent_account_id ? (accountStore.findAccount(device.parent_account_id)?.phone ?? null) : null,
+        parent_bound: Boolean(device?.parent_account_id), // 恢复合同（2026-09-17）：已绑定的待认领 = 等原家长扫码 / 一键恢复
         announced_at: a.announced_at,
         expires_at: a.expires_at,
         expires_in_s: Math.max(0, Math.ceil((a.expires_at - now) / 1000)),

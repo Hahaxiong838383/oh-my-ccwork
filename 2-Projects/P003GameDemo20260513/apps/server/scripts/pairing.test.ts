@@ -20,6 +20,10 @@
  *  - ECIES 端到端：设备侧参考解密对撞 / AAD 错 SN 必败 / nonce 错一字节必败
  *  - v1 开关：默认关（404）/ 开着时 v1 全链可用（回滚锚活性）
  *  - 容量向量（2026-09-06 v234 增量）：claim SN30/IP120 下两台同 IP 各 14 claim + announce 零 429；SN 31/IP 121 次 429；桶独立
+ *  - 恢复合同 S1（2026-09-17，rv-*）：announce v:3 已绑→bound_recoverable / v:2→pending（通道独占锚）/ 停用 denied / 台账外 pending /
+ *    有效预授权仍优先 confirmed；原家长 confirm relation=owner → claim(v:3) binding_outcome=existing_binding_recovery（按凭据历史判，
+ *    claim 会话或后台手签都算）+ 旧凭据作废（水位 iat−1）+ 幂等不推水位；预绑家长新机首次 claim 仍 new；他人 confirm 409 不建会话 /
+ *    台账外·停用 404（claim 级门保留给 confirm→claim 竞态）；请求不带 v:3 无 binding_outcome；开关 0 全老行为
  */
 
 import { mkdtempSync } from 'node:fs';
@@ -198,11 +202,11 @@ async function confirm(jwt: string, sn: string, nonce: string, pk: string) {
   return { status: res.status, json: (await res.json()) as any };
 }
 
-async function claimV2(sn: string, nonce: string, ip?: string) {
+async function claimV2(sn: string, nonce: string, ip?: string, v?: 3) {
   const res = await app.request('/v1/device/pairing/claim', {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...(ip ? { 'x-forwarded-for': ip } : {}) },
-    body: JSON.stringify({ sn, pairing_nonce: nonce, pairing_protocol: 2 }),
+    body: JSON.stringify({ sn, pairing_nonce: nonce, pairing_protocol: 2, ...(v ? { v } : {}) }),
   });
   return { status: res.status, json: (await res.json()) as any };
 }
@@ -271,13 +275,27 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   await confirm(jwt1, SN_V2, n2, kp.pkB64);
   eq('v2-16 claim SN≠confirm SN 按 pending', (await claimV2('BJP00326060100000702', n2)).json.code, 'pairing_pending');
 
+  // 恢复合同（2026-09-17）起 confirm 前置查台账/绑定：台账外 404、他人 409 且不建会话；claim 级门保留给 confirm→claim 之间的竞态
   const n3 = newNonce();
-  await confirm(jwt1, SN_OUT, n3, kp.pkB64); // SN_OUT 台账外（confirm 不查台账,claim 查）
-  eq('v2-17 台账外 403', (await claimV2(SN_OUT, n3)).json.code, 'sn_not_allowed');
+  eq('v2-17a 台账外 confirm 404 sn_not_available（不建会话）', (await confirm(jwt1, SN_OUT, n3, kp.pkB64)).json.error, 'sn_not_available');
+  eq('v2-17b 无会话 → claim pairing_pending', (await claimV2(SN_OUT, n3)).json.code, 'pairing_pending');
+  const SN_DIS = 'BJP00326060100000703';
+  deviceRegistryStore.add(SN_DIS, 'v2停用竞态机');
+  const n3b = newNonce();
+  await confirm(jwt1, SN_DIS, n3b, kp.pkB64);
+  deviceRegistryStore.setStatus(SN_DIS, 'disabled'); // confirm 后被停用
+  eq('v2-17 confirm 后停用 → claim 403 sn_not_allowed（claim 级台账门保留）', (await claimV2(SN_DIS, n3b)).json.code, 'sn_not_allowed');
 
   const n4 = newNonce();
-  await confirm(jwt2, SN_NEW, n4, kp.pkB64); // SN_NEW 已被 P1 绑定,P2 来抢
-  eq('v2-18 已绑他人 409', (await claimV2(SN_NEW, n4)).json.code, 'sn_bound_by_other');
+  const cf4 = await confirm(jwt2, SN_NEW, n4, kp.pkB64); // SN_NEW 已被 P1 绑定,P2 来抢
+  eq('v2-18a 已绑他人 confirm 409 sn_bound_by_other（不建会话）', { s: cf4.status, e: cf4.json.error }, { s: 409, e: 'sn_bound_by_other' });
+  eq('v2-18b 无会话 → claim pairing_pending', (await claimV2(SN_NEW, n4)).json.code, 'pairing_pending');
+  const SN_RACE = 'BJP00326060100000704';
+  deviceRegistryStore.add(SN_RACE, 'v2抢绑竞态机');
+  const n4b = newNonce();
+  await confirm(jwt2, SN_RACE, n4b, kp.pkB64);
+  deviceRegistryStore.setParentAccountId(SN_RACE, P1); // confirm 后后台绑给 P1
+  eq('v2-18 confirm 后被绑他人 → claim 409（claim 级防抢绑保留）', (await claimV2(SN_RACE, n4b)).json.code, 'sn_bound_by_other');
 }
 
 // ---------- v1 开关（默认关=404；上面 v1 全段已证开着时可用=回滚锚活）----------
@@ -473,6 +491,132 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   eq('pre-1 过期预授权不代确认', (await announce(SN_G, newNonce(), newDeviceKeys().pkB64)).json.state, 'pending');
   eq('pre-2 activePreauth 过期为 null', pairingStore.activePreauth(SN_G), null);
   eq('pre-3 删除预授权', pairingStore.deletePreauth(SN_G), true);
+}
+
+// ═══════════════ 恢复合同 S1（2026-09-17，回 codex V286「绑定权威恢复」）：announce v:3 绑定态 / claim binding_outcome / confirm 前置检查 / 恢复换钥 ═══════════════
+{
+  const { pairingStore } = await import('../src/pairing-store.js');
+  const { deviceAnnounceState } = await import('../src/routes/pairing.js');
+  // 本段 announce 十余次且无 x-forwarded-for（全算 ip=unknown），会撞前面各段累计的 IP 桶 20/min → 放开限流（限流本身在 rl-* 已验）
+  process.env.PAIRING_ANNOUNCE_RPM_SN = '100';
+  process.env.PAIRING_ANNOUNCE_RPM_IP = '1000';
+  const P4 = 'acct-p4';
+  const P5 = 'acct-p5';
+  const jwt4 = await parentJwt(P4);
+  const jwt5 = await parentJwt(P5);
+  const SN_R1 = 'BJP00326060100000901'; // 已绑 + 有 claim 凭据历史 → 恢复
+  const SN_R2 = 'BJP00326060100000902'; // 后台预绑家长、从未签凭据 → 首次 claim 仍 new
+  const SN_R3 = 'BJP00326060100000903'; // 停用 → denied
+  const SN_R4 = 'BJP00326060100000904'; // 未绑 → pending
+  const SN_R5 = 'BJP00326060100000905'; // 已绑 + 有效预授权 → announce 直接 confirmed（优先级）
+  const SN_R6 = 'BJP00326060100000906'; // 已绑 + 后台手签凭据（registry 列）→ 恢复也算 existing
+  const SN_RU = 'BJP00326060100000998'; // 台账外
+  for (const [sn, note] of [[SN_R1, 'rv-1'], [SN_R2, 'rv-2'], [SN_R3, 'rv-3'], [SN_R4, 'rv-4'], [SN_R5, 'rv-5'], [SN_R6, 'rv-6']]) deviceRegistryStore.add(sn, note);
+  async function announceV(v: 2 | 3, sn: string, nonce: string, pk: string) {
+    const res = await app.request('/v1/device/pairing/announce', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ v, sn, nonce, pk }) });
+    return { status: res.status, json: (await res.json()) as any };
+  }
+  /** 换钥判据以秒为单位：让「旧凭据」与「新凭据」不落在同一秒，否则水位 iat−1 会放行旧凭据（真机恢复必隔很久，测试要人为跨秒） */
+  const crossSecond = () => new Promise((r) => setTimeout(r, 1100 - (Date.now() % 1000)));
+
+  // ── 造凭据历史：P4 首次配网 SN_R1（new），拿到第一份凭据 ──
+  const k1 = newDeviceKeys();
+  const n1 = newNonce();
+  const cf1 = await confirm(jwt4, SN_R1, n1, k1.pkB64);
+  eq('rv-0a 未绑 confirm 200 relation=new', { s: cf1.status, rel: cf1.json.relation }, { s: 200, rel: 'new' });
+  const c1 = await claimV2(SN_R1, n1, undefined, 3);
+  eq('rv-0b 首次 claim（v:3）binding_outcome=new', { code: c1.json.code, bo: c1.json.binding_outcome, idem: c1.json.idempotent }, { code: 'claimed', bo: 'new', idem: false });
+  const jwtOld = decryptCredential(k1.priv, c1.json.enc, n1, SN_R1);
+  eq('rv-0c 第一份凭据可验', (await verifyDeviceCredential(`Bearer ${jwtOld}`, 'test-secret'))?.sn, SN_R1);
+  eq('rv-0d 首次 claim 不换钥（水位 null）', deviceRegistryStore.credentialNotBeforeSec(SN_R1), null);
+  const brainBefore = deviceRegistryStore.get(SN_R1)?.account_id;
+
+  // ── rv-1 announce：同一已绑 SN，v:3 → bound_recoverable；v:2 → pending（通道独占锚）──
+  const k2 = newDeviceKeys();
+  const n2 = newNonce();
+  const a3 = await announceV(3, SN_R1, n2, k2.pkB64);
+  eq('rv-1a v:3 已绑无会话 → bound_recoverable，且不带家长信息', { s: a3.status, st: a3.json.state, keys: Object.keys(a3.json).sort() }, { s: 200, st: 'bound_recoverable', keys: ['expires_in_s', 'ok', 'state'] });
+  eq('rv-1b v:2 同 SN 同 nonce → pending（老端映射）', (await announceV(2, SN_R1, n2, k2.pkB64)).json.state, 'pending');
+  // ── rv-2 v:3 其它态 ──
+  eq('rv-2a v:3 台账外 → pending（不泄露存在性）', (await announceV(3, SN_RU, newNonce(), newDeviceKeys().pkB64)).json.state, 'pending');
+  deviceRegistryStore.setStatus(SN_R3, 'disabled');
+  const aD = await announceV(3, SN_R3, newNonce(), newDeviceKeys().pkB64);
+  eq('rv-2b v:3 停用 → denied + reason', { st: aD.json.state, r: aD.json.reason }, { st: 'denied', r: 'sn_not_available' });
+  eq('rv-2c v:3 未绑 → pending', (await announceV(3, SN_R4, newNonce(), newDeviceKeys().pkB64)).json.state, 'pending');
+  deviceRegistryStore.setParentAccountId(SN_R5, P4);
+  pairingStore.setPreauth(SN_R5, P4, '13800000009', Date.now() + 86_400_000, 'tester');
+  eq('rv-2d 已绑 + 有效预授权 → announce 直接 confirmed（预授权优先于 bound_recoverable）', (await announceV(3, SN_R5, newNonce(), newDeviceKeys().pkB64)).json.state, 'confirmed');
+
+  // ── rv-3 原家长扫码恢复：confirm relation=owner → claim existing_binding_recovery，绑定/brain 不变，凭据可验 ──
+  await crossSecond();
+  const cf2 = await confirm(jwt4, SN_R1, n2, k2.pkB64);
+  eq('rv-3a 原家长 confirm 200 relation=owner', { s: cf2.status, rel: cf2.json.relation }, { s: 200, rel: 'owner' });
+  eq('rv-3b confirm 后 announce 同 nonce → confirmed', (await announceV(3, SN_R1, n2, k2.pkB64)).json.state, 'confirmed');
+  const c2 = await claimV2(SN_R1, n2, undefined, 3);
+  eq('rv-3c claim claimed + binding_outcome=existing_binding_recovery + idempotent=true', { code: c2.json.code, bo: c2.json.binding_outcome, idem: c2.json.idempotent }, { code: 'claimed', bo: 'existing_binding_recovery', idem: true });
+  const jwtNew = decryptCredential(k2.priv, c2.json.enc, n2, SN_R1);
+  eq('rv-3d 新凭据三通道可验', (await verifyDeviceCredential(`Bearer ${jwtNew}`, 'test-secret'))?.sn, SN_R1);
+  eq('rv-3e 家长与 brain 账号不变', { p: deviceRegistryStore.get(SN_R1)?.parent_account_id, b: deviceRegistryStore.get(SN_R1)?.account_id }, { p: P4, b: brainBefore });
+  eq('rv-3f status bound 带 binding_outcome', await app.request(`/api/parent/pairing/status?session_id=${cf2.json.session_id}`, { headers: { authorization: `Bearer ${jwt4}` } }).then((r) => r.json()), { ok: true, state: 'bound', sn: SN_R1, binding_outcome: 'existing_binding_recovery' });
+  eq('rv-3g 会话落库 binding_outcome', pairingStore.findSessionByHash(hashToken(n2))?.binding_outcome, 'existing_binding_recovery');
+  // ── rv-6 恢复即换钥：旧凭据失效、新凭据通过；幂等重试不推水位 ──
+  eq('rv-6a 旧凭据作废', await verifyDeviceCredential(`Bearer ${jwtOld}`, 'test-secret'), null);
+  const wm1 = deviceRegistryStore.credentialNotBeforeSec(SN_R1);
+  eq('rv-6b 水位 = 新凭据 iat − 1（双载体同源）', wm1, (decodeJwt(jwtNew) as { iat: number }).iat - 1);
+  await crossSecond();
+  const c3 = await claimV2(SN_R1, n2, undefined, 3);
+  eq('rv-6c 幂等恢复回显 binding_outcome', { code: c3.json.code, bo: c3.json.binding_outcome }, { code: 'idempotent_recovery', bo: 'existing_binding_recovery' });
+  eq('rv-6d 幂等重试不推水位，第一份新凭据仍通过', { wm: deviceRegistryStore.credentialNotBeforeSec(SN_R1), ok: (await verifyDeviceCredential(`Bearer ${jwtNew}`, 'test-secret'))?.sn }, { wm: wm1, ok: SN_R1 });
+  eq('rv-6e 请求不带 v:3 → 响应无 binding_outcome（老端）', 'binding_outcome' in (await claimV2(SN_R1, n2)).json, false);
+
+  // ── rv-4 后台预绑家长的新机首次 claim → new（无凭据历史）──
+  const k4 = newDeviceKeys();
+  const n4 = newNonce();
+  deviceRegistryStore.setParentAccountId(SN_R2, P5);
+  eq('rv-4a v:3 预绑家长未签过凭据 → bound_recoverable（announce 只看绑定）', (await announceV(3, SN_R2, n4, k4.pkB64)).json.state, 'bound_recoverable');
+  eq('rv-4b 该家长 confirm relation=owner', (await confirm(jwt5, SN_R2, n4, k4.pkB64)).json.relation, 'owner');
+  const c4 = await claimV2(SN_R2, n4, undefined, 3);
+  eq('rv-4c 首次 claim binding_outcome=new（idempotent=true 但无凭据历史）', { bo: c4.json.binding_outcome, idem: c4.json.idempotent }, { bo: 'new', idem: true });
+  eq('rv-4d 无换钥（水位 null）', deviceRegistryStore.credentialNotBeforeSec(SN_R2), null);
+  // ── rv-5 他人 confirm 409 不建会话；台账外 / 停用 404 ──
+  const n6 = newNonce();
+  const cf6 = await confirm(jwt5, SN_R1, n6, newDeviceKeys().pkB64);
+  eq('rv-5a 他人 confirm 409 sn_bound_by_other', { s: cf6.status, e: cf6.json.error }, { s: 409, e: 'sn_bound_by_other' });
+  eq('rv-5b 不建会话 → claim pending', (await claimV2(SN_R1, n6)).json.code, 'pairing_pending');
+  eq('rv-5c 台账外 confirm 404', (await confirm(jwt5, SN_RU, newNonce(), newDeviceKeys().pkB64)).status, 404);
+  eq('rv-5d 停用 confirm 404', (await confirm(jwt5, SN_R3, newNonce(), newDeviceKeys().pkB64)).status, 404);
+  // ── rv-5e 后台手签凭据（registry 列）也算凭据历史 → 恢复 + 换钥 ──
+  deviceRegistryStore.setParentAccountId(SN_R6, P4);
+  deviceRegistryStore.recordCredential(SN_R6, Date.now() - 86_400_000, Date.now() + 300 * 86_400_000);
+  const k6 = newDeviceKeys();
+  const n6b = newNonce();
+  await confirm(jwt4, SN_R6, n6b, k6.pkB64);
+  const c6 = await claimV2(SN_R6, n6b, undefined, 3);
+  eq('rv-5e 手签凭据历史 → existing_binding_recovery + 水位落地', { bo: c6.json.binding_outcome, wm: typeof deviceRegistryStore.credentialNotBeforeSec(SN_R6) }, { bo: 'existing_binding_recovery', wm: 'number' });
+  // ── rv-7 admin 待认领列表：已绑 announce 带 parent_bound ──
+  const loginR = await app.request('/api/auth/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'test-admin', password: 'test-pass' }) });
+  const adminTok = ((await loginR.json()) as { token?: string }).token ?? '';
+  const pendR = await app.request('/api/admin/devices/pairing/pending', { headers: { authorization: `Bearer ${adminTok}` } });
+  const pendItems = ((await pendR.json()) as { items: Array<{ sn: string; parent_bound: boolean }> }).items;
+  eq('rv-7 待认领项 parent_bound：已绑 true / 未绑 false', { r1: pendItems.find((i) => i.sn === SN_R1)?.parent_bound, r4: pendItems.find((i) => i.sn === SN_R4)?.parent_bound }, { r1: true, r4: false });
+  // ── rv-8 开关 0：一律老行为 ──
+  process.env.PAIRING_RECOVERY_CONTRACT_ENABLED = '0';
+  const k8 = newDeviceKeys();
+  const n8 = newNonce();
+  eq('rv-8a 开关 0 → v:3 已绑也 pending', (await announceV(3, SN_R1, n8, k8.pkB64)).json.state, 'pending');
+  const cf8 = await confirm(jwt5, SN_R1, n8, k8.pkB64); // 他人也能 confirm（老行为），claim 侧 409
+  eq('rv-8b 开关 0 → confirm 不前置检查且无 relation', { s: cf8.status, rel: cf8.json.relation }, { s: 200, rel: undefined });
+  const c8 = await claimV2(SN_R1, n8, undefined, 3);
+  eq('rv-8c 开关 0 → claim 级门 409 且无 binding_outcome', { code: c8.json.code, bo: c8.json.binding_outcome }, { code: 'sn_bound_by_other', bo: undefined });
+  delete process.env.PAIRING_RECOVERY_CONTRACT_ENABLED;
+  // ── rv-9 纯函数判定序 ──
+  const nowR = Date.now();
+  eq('rv-9a 会话优先于绑定态', deviceAnnounceState({ session: { claimed_at: null, expires_at: nowR + 1000 }, device: { status: 'active', parent_account_id: 'x' }, now: nowR, v3: true, enabled: true }).state, 'confirmed');
+  eq('rv-9b 已 claim 的会话不算 → 走绑定判定', deviceAnnounceState({ session: { claimed_at: nowR, expires_at: nowR + 1000 }, device: { status: 'active', parent_account_id: 'x' }, now: nowR, v3: true, enabled: true }).state, 'bound_recoverable');
+  eq('rv-9c v:2 → pending', deviceAnnounceState({ session: null, device: { status: 'active', parent_account_id: 'x' }, now: nowR, v3: false, enabled: true }).state, 'pending');
+  eq('rv-9d 开关关 → pending', deviceAnnounceState({ session: null, device: { status: 'disabled', parent_account_id: null }, now: nowR, v3: true, enabled: false }).state, 'pending');
+  delete process.env.PAIRING_ANNOUNCE_RPM_SN;
+  delete process.env.PAIRING_ANNOUNCE_RPM_IP;
 }
 
 console.log(`\npairing.test: pass=${pass} fail=${fail}`);
