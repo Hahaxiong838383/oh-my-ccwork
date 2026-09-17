@@ -100,7 +100,7 @@ function defaultSpecs(): HostSpec[] {
     },
     {
       id: '47.239',
-      label: '47.239 · LiveKit 信令 / 媒体（nginx TLS 终止）',
+      label: '47.239 · KidsHubAI-VoiceKit 信令 / 媒体（nginx TLS 终止）',
       role: 'livekit',
       collect: sshCollector(
         process.env.LIVEKIT_STATS_SSH_KEY || '/root/.ssh/livekit-stats-key',

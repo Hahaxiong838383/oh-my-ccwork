@@ -140,3 +140,9 @@
 - 换装：firstturn 09:41:49 CST（活跃会话门 21/21/0 → `.prev`=c2b84b2e… → restart → 注册锚 1）PID 3273944，exe **sha256 bd76e93d506daba2…**（72,567,680 B）；生产池 09:42:14 CST（门 86/86/0 → `deploy-worker-bin.sh`：`.bak-20260917-014213`=f3707e7e… → stop → sidecar 清零 → start → 注册锚 1）PID 3274065，exe **sha256 96d728a066b6cf0e…**（md5 877d69c3…，72,150,408 B）。两池启动后 panic/ERROR 0，生产池已接 1 房；LiveKit 侧两次 closing/registered 成对；后台「服务器状态」显示两池「已注册」、本代断线 0、放弃 0。
 - 回滚：生产池 `cp /root/rust-worker/voice-rust-worker.bak-20260917-014213 /root/rust-worker/voice-rust-worker.new && bash /root/rust-worker/deploy-worker-bin.sh`；firstturn `cp /root/rust-worker-firstturn/voice-rust-worker.prev /root/rust-worker-firstturn/voice-rust-worker && systemctl restart voice-worker-firstturn`（先过活跃会话门）。
 - 清理：home-studio `/tmp/wt-rust-fix-{prod,ft}` + tmp 分支已删；Air worktree 已删；cherry-pick 提交只在 reflog，真源 = 分支上的 `d4c2d7dc7`。附和词 worker 改动（`6eae5cedc`）仍未发，等川哥「发 worker（observe），先普通池」。
+
+### 2026-09-17 09:49 文案：用户可见处「LiveKit」→「KidsHubAI-VoiceKit」（川哥 09:46 拍板并升为项目规则）
+- 改动：admin `index.html` 7 处可见文案（服务器状态 tab 副标题/表头/TLS 探针行、隔离白盒 SVG 三处、设备接入说明一处）+ 2 处注释；server `hosts-status.ts` 47.239 标签、`admin-data.ts` 三条「安全窗口检查失败(… 不可达)」文案。家长端/体验台源码本就零处。标识符/env/日志/协议字段不改。
+- 规则真源：`2-Projects/P003GameDemo20260513/CLAUDE.md` + `AGENTS.md`（新建）；skill p003-deploy-ops「文案红线」段；三条 grep 验收写在 CLAUDE.md。
+- 上线指纹：`hosts-status.ts` 13be9bce…（此前 ea9c214d…）/ `admin-data.ts` 2c5c83e2…（此前 31b2bdba…）/ admin `index.html` bc8e4a2c…（此前 284f6ffd…）；备份 `/opt/p003/_backup/20260917-094946-voicekit-wording/`；health 200；线上页 `grep -c LiveKit`=0、VoiceKit 7 处；hosts-status 接口标签已改。
+- 回滚：`B=/opt/p003/_backup/20260917-094946-voicekit-wording; cp $B/hosts-status.ts /opt/p003/server/src/ && cp $B/admin-data.ts /opt/p003/server/src/routes/ && pm2 restart p003-voice --update-env && cp $B/index.html /opt/p003/web/dist/admin/index.html`。

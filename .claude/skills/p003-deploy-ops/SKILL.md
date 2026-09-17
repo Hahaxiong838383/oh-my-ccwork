@@ -126,6 +126,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 - **多轮注入用服务器排程脚本**(sleep_until+switch,参考 /root/telemetry-inject-v105.sh,日志 /root/telemetry-inject-schedule.log)——逐轮人肉传话改一张时间表;ssh 起远端 nohup 会挂住本地(setsid 不救):**本地挂≠远端失败,读任务输出文件确认远端态再 TaskStop**;杀排程用具体 pid 或 `ps aux | grep "[t]el-"` 方括号技法,pkill -f 会自匹配杀掉自己的 ssh。
 - 测试:`npm run test:telemetry`(29 项);家长查询走 public_id 非 SN(bound-devices 带此字段)。
 
+## 文案红线：不露「LiveKit」（2026-09-17 川哥拍板，项目规则见项目根 CLAUDE.md/AGENTS.md）
+- 用户可见文案（admin 含 SVG 文字/表头/提示、家长端、体验台、server 返回的 error/message/label）一律写 **KidsHubAI-VoiceKit**；标识符/env/日志/内部文档不受限。
+- 部署 admin 或 server 文案前必跑：`grep -c 'LiveKit' apps/web/public/admin/index.html`=0、`grep -rn 'LiveKit' apps/server/src --include='*.ts' | grep -E 'c\.json\(|message:|error:|label:'` 为空；线上复验 `curl -s https://kidshub-ai.hahaxiong.cc/admin/ | grep -c LiveKit`=0。
+
 ## 验证铁律（cc 自己验,绝不甩给川哥）
 
 - **后端改**:本地起 server(parent 任务用 8787 / web·admin 任务用 3001)→ `curl` 真实 API E2E(login→操作→验证→**恢复不污染本地 db**)。

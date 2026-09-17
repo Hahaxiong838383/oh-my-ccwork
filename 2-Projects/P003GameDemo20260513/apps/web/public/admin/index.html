@@ -1886,7 +1886,7 @@
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
                       <div class="kh-h1">服务器状态</div>
-                      <div class="kh-sub">三台机资源 · systemd / pm2 服务 · worker ↔ LiveKit 连接 —— 同一份只读脚本采集，server 30 秒缓存，本页每分钟自动刷新</div>
+                      <div class="kh-sub">三台机资源 · systemd / pm2 服务 · worker ↔ KidsHubAI-VoiceKit 连接 —— 同一份只读脚本采集，server 30 秒缓存，本页每分钟自动刷新</div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center">
                       <span style="font-size:12px;color:#909399">数据采集于 {{ hostsStatus.ts ? hsAgo(hostsStatus.ts) : '—' }}{{ hostsStatus.fetchedAt ? ('，页面 ' + hostsStatus.fetchedAt + ' 拉取') : '' }}</span>
@@ -1920,7 +1920,7 @@
                         <el-table-column label="内存 / CPU" min-width="160"><template #default="{row}">{{ hsMb(row.mem_bytes) }} / {{ row.cpu_pct == null ? '—' : row.cpu_pct + '%' }}</template></el-table-column>
                       </el-table>
                       <el-table v-if="h.data.connections && h.data.connections.worker_links && h.data.connections.worker_links.length" :data="h.data.connections.worker_links" size="small" style="width:100%;margin-bottom:8px">
-                        <el-table-column label="worker ↔ LiveKit /agent" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.agent_name || row.unit }}</span></template></el-table-column>
+                        <el-table-column label="worker ↔ KidsHubAI-VoiceKit" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.agent_name || row.unit }}</span></template></el-table-column>
                         <el-table-column label="连接" width="100"><template #default="{row}"><el-tag size="small" :type="hsLinkType(row)">{{ hsLinkLabel(row) }}</el-tag></template></el-table-column>
                         <el-table-column label="注册于" width="230"><template #default="{row}">{{ row.registered_at_ms ? (fmtTs(row.registered_at_ms) + '（' + hsAgo(row.registered_at_ms) + '）') : '—' }}</template></el-table-column>
                         <el-table-column label="最近断线" width="230"><template #default="{row}">{{ row.last_failure_at_ms ? (fmtTs(row.last_failure_at_ms) + '（' + hsAgo(row.last_failure_at_ms) + '）') : '—' }}</template></el-table-column>
@@ -1930,7 +1930,7 @@
                         <el-table-column label="24h 接房" width="90"><template #default="{row}">{{ row.job_accepts_24h }}</template></el-table-column>
                         <el-table-column label="最近错误" min-width="220"><template #default="{row}"><span style="font-size:12px;color:#909399">{{ row.last_failure_error || '—' }}</span></template></el-table-column>
                       </el-table>
-                      <div v-if="h.data.connections && h.data.connections.livekit_probe" style="font-size:13px;margin-bottom:6px">本机到 LiveKit（{{ h.data.connections.livekit_probe.host || '?' }}:443）TLS 握手 <b :style="{color: h.data.connections.livekit_probe.tls_ms == null ? '#E8503A' : '#1F2933'}">{{ h.data.connections.livekit_probe.tls_ms == null ? ('失败：' + (h.data.connections.livekit_probe.error || '')) : (h.data.connections.livekit_probe.tls_ms + ' ms') }}</b></div>
+                      <div v-if="h.data.connections && h.data.connections.livekit_probe" style="font-size:13px;margin-bottom:6px">本机到 KidsHubAI-VoiceKit（{{ h.data.connections.livekit_probe.host || '?' }}:443）TLS 握手 <b :style="{color: h.data.connections.livekit_probe.tls_ms == null ? '#E8503A' : '#1F2933'}">{{ h.data.connections.livekit_probe.tls_ms == null ? ('失败：' + (h.data.connections.livekit_probe.error || '')) : (h.data.connections.livekit_probe.tls_ms + ' ms') }}</b></div>
                       <template v-if="h.data.connections && h.data.connections.livekit">
                         <div style="font-size:13px;margin-bottom:6px">worker 注册事件：24h 注册 <b>{{ h.data.connections.livekit.worker_registered_24h }}</b> / 注销 <b>{{ h.data.connections.livekit.worker_closing_24h }}</b>（7 天 {{ h.data.connections.livekit.worker_registered_7d }} / {{ h.data.connections.livekit.worker_closing_7d }}）· 监听 <span v-for="(v,k) in h.data.connections.listen" :key="k" style="margin-right:6px"><el-tag size="small" :type="v ? 'success' : 'danger'">:{{ k }}</el-tag></span> · 本机 7880 HTTP {{ h.data.connections.local_http && h.data.connections.local_http.status === 200 ? ('200 · ' + h.data.connections.local_http.ms + ' ms') : ('异常 ' + (h.data.connections.local_http ? (h.data.connections.local_http.status || h.data.connections.local_http.error || '') : '')) }}</div>
                         <div style="font-size:12px;color:#6B7785">最近事件：<span v-for="(e,i) in h.data.connections.livekit.last_events" :key="i" style="margin-right:10px">{{ fmtTs(e.ts_ms) }} {{ e.type === 'registered' ? '注册' : '注销' }} {{ e.agent || '' }}</span><span v-if="!h.data.connections.livekit.last_events.length">7 天内无</span></div>
@@ -2261,7 +2261,7 @@
                                 <text x="188" y="176" text-anchor="middle" font-size="9" fill="#909399">sub必须==SN</text>
 
                                 <line x1="370" y1="108" x2="406" y2="108" stroke="#3B7A99" stroke-width="1.5" marker-end="url(#isoArrow)"></line>
-                                <text x="388" y="50" text-anchor="middle" font-size="10" font-family="monospace" fill="#3B7A99">LiveKit token</text>
+                                <text x="388" y="50" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B7A99">KidsHubAI-VoiceKit token</text>
                                 <text x="388" y="176" text-anchor="middle" font-size="9" fill="#909399">video.room 钉死</text>
 
                                 <line x1="570" y1="108" x2="606" y2="108" stroke="#3B7A99" stroke-width="1.5" marker-end="url(#isoArrow)"></line>
@@ -2310,7 +2310,7 @@
                                 <text x="442" y="54" font-size="10.5" fill="#6B7785">限频 10/min/SN · ADB serial / Android ID 一律 400，只认 MCU SN</text>
                                 <!-- 步骤 2 -->
                                 <circle cx="32" cy="98" r="13" fill="#3B7A99"></circle><text x="32" y="102" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="700">2</text>
-                                <text x="56" y="96" font-size="12.5" font-weight="600" fill="#1F2D3D">签发 LiveKit token（绑房）</text>
+                                <text x="56" y="96" font-size="12.5" font-weight="600" fill="#1F2D3D">签发 KidsHubAI-VoiceKit token（绑房）</text>
                                 <text x="56" y="112" font-size="10.5" fill="#909399" font-family="monospace">room = sn-&lt;SN&gt;-&lt;unix秒&gt;</text>
                                 <rect x="430" y="80" width="540" height="40" rx="7" fill="#EAF3F7"></rect>
                                 <text x="442" y="97" font-size="10.5" fill="#3B7A99">video.room 钉死本次房名，换房无效 · TTL 3600s 作废 · 无跨会话恢复</text>
@@ -2318,7 +2318,7 @@
                                 <!-- 步骤 3 -->
                                 <circle cx="32" cy="156" r="13" fill="#3B7A99"></circle><text x="32" y="160" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="700">3</text>
                                 <text x="56" y="154" font-size="12.5" font-weight="600" fill="#1F2D3D">设备与 rust worker 进房</text>
-                                <text x="56" y="170" font-size="10.5" fill="#909399">LiveKit 按房派单 worker</text>
+                                <text x="56" y="170" font-size="10.5" fill="#909399">KidsHubAI-VoiceKit 按房派单 worker</text>
                                 <rect x="430" y="138" width="540" height="40" rx="7" fill="#EAF3F7"></rect>
                                 <text x="442" y="155" font-size="10.5" fill="#3B7A99">一房一 job：房间不复用 · worker 不持有任何账号态</text>
                                 <text x="442" y="170" font-size="10.5" fill="#6B7785">trace/session_id 经 agent metadata 服务端下发，不信设备自述</text>
@@ -2750,7 +2750,7 @@
                                     <div>· SN 三重校验：BJP003+真实日期+8 位流水，共 20 位</div>
                                     <div>· 凭据绑定：设备 JWT 的 sub 必须 == 请求 SN，不匹配 403（拿别机凭据换票无效）</div>
                                     <div>· 白名单 fail-closed：台账 status 优先 → 无记录回落 env → 都没有 = 拒绝（不配就一台不放）</div>
-                                    <div>· token 绑房：LiveKit token 钉死本次房名，换房无效；到期作废，无跨会话恢复</div>
+                                    <div>· token 绑房：KidsHubAI-VoiceKit token 钉死本次房名，换房无效；到期作废，无跨会话恢复</div>
                                     <div>· 签发后自检：token 解码与响应逐项对撞，不一致拒绝交付</div>
                                     <div style="color:#B0B8C1;font-family:monospace;font-size:11px;margin-top:4px">device-session.ts · device-sn.ts</div>
                                   </div>
@@ -5125,7 +5125,7 @@
           if (!q) return deviceData.devices;
           return deviceData.devices.filter(function(d){ return (d.parent_phone || '').indexOf(q) >= 0; });
         });
-        // worker 运行态（容量 = LiveKit 活跃房 vs WORKER_MAX_JOBS；机器资源 = 64.90 只读 stats）
+        // worker 运行态（容量 = VoiceKit 活跃房 vs WORKER_MAX_JOBS；机器资源 = 64.90 只读 stats）
         var workerStats = reactive({ machine: null, capacity: null, loading: false, fetchedAt: '' });
         function loadWorkerStats() {
           if (!canManageInvites.value) return;
@@ -5148,7 +5148,7 @@
         }, 60000);
         // ── 服务器状态 tab（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）──
         // 数据链：/api/admin/hosts-status（server 30s 共享缓存）← 三台机同一份只读脚本 ops/host-stats.py
-        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 livekit-stats 只读通道）。单台失败只标该台不可达。
+        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 voicekit-stats 只读通道）。单台失败只标该台不可达。
         var hostsStatus = reactive({ hosts: [], loading: false, fetchedAt: '', ts: 0, error: '' });
         function loadHostsStatus(fresh) {
           if (!canManageInvites.value) return;

@@ -1476,7 +1476,7 @@ adminDataRoute.put('/worker-race', async (c) => {
   const force = body.force === true;
   if (!force) {
     const rooms = await fetchLiveKitRooms();
-    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制应用' }, 409);
     if (rooms.device_rooms > 0)
       return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
   }
@@ -1640,7 +1640,7 @@ adminDataRoute.put('/worker-voice', async (c) => {
   const force = body.force === true;
   if (!force) {
     const rooms = await fetchLiveKitRooms();
-    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制应用' }, 409);
     if (rooms.device_rooms > 0)
       return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
   }
@@ -2018,7 +2018,7 @@ adminDataRoute.post('/hotwords/publish', async (c) => {
   if (!force) {
     const rooms = await fetchLiveKitRooms();
     if (rooms === null)
-      return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制发布' }, 409);
+      return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制发布' }, 409);
     if (rooms.device_rooms > 0)
       return c.json(
         { ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，发布会中断；等待结束或强制发布`, active_rooms: rooms.device_rooms },
