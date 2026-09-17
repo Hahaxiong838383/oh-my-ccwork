@@ -153,3 +153,4 @@
 - observe 期判据（journal，生产池 unit）：`backchannel candidate (observe): would ignore, behavior unchanged`（带 text / reply_chars / played_samples）= 本来会被吞的附和；`backchannel utterance ignored` 只在 enforce 出现（现在必须为 0）。切 enforce = `rust-worker.env` 加 `BACKCHANNEL_MODE=enforce` + 过活跃会话门 `systemctl restart voice-worker-rust`（不发版）；One-shot 池要先补 apply_hotwords.py 的 firstturn 重启选项 + 换同一二进制。
 - 待办：#1「worker 附和词发版」已标 done（前半完成）；新增 **#5「附和词 observe 观察期」**（owner cc，含切 enforce 与 One-shot 池跟进）。
 - 回滚：`cp /root/rust-worker/voice-rust-worker.bak-20260917-015918 /root/rust-worker/voice-rust-worker.new && bash /root/rust-worker/deploy-worker-bin.sh`（回到仅含重连修复的 96d728a0…）；词表：后台 backchannel 回滚草稿 → 发布空表（或 apply 空值）即 off。
+- 更正：commit 49ced4a0b 的 message 提到「缩短 09-16 交接文档文件名」——实测该文件名 196 字节（<255）未改名，本次提交只含 RELEASES + skill。
