@@ -6,11 +6,13 @@
 
 仅将“退出程序”移到顶部最右侧并增加二次确认，默认取消。基于已固化的v0.11.0人验版本；2026-09-17已在Air安装，用户测试OK并[固化验收基线](docs/v0.11.1-acceptance.md)，原参数保留，[安装回执](docs/air-v0111-install-20260917.md)。详见[退出按钮补丁](docs/quit-confirmation-v0111.md)。
 
+nio-war-mac 已同步同源代码并升级 v0.11.1(28)，原校正参数/预设/历史保留，旧 ProtoPie 云链接和自动启动配置已迁移。真实六Tab、退出确认及云端原型加载验收通过；按用户安排，外屏输出与捕获首帧待接屏后补验。见[开发机安装与回滚记录](docs/nio-war-mac-v0111-deployment-20260917.md)。
+
 ## 已验收基线：v0.11.0 (27)
 
 统一为一个普通层级工作台，六个模块共用预览区域；贝塞尔与交点精调直接嵌入“局部微调”，不再弹出调节窗口。最右侧新增 **ProtoPie 联动**：Cloud 链接 / 本地 .pie 来源配置、自动启动、有限恢复、首帧确认及替换失败回退。
 
-Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构建并验证签名。2026-09-17 后续已按用户要求将 Air 升级到 v0.11.0(27)，原参数保留、真实窗口版本与顺序已核验，用户已反馈整体没问题，现已固化为[用户验收基线](docs/v0.11.0-acceptance.md)；[安装与配对回滚](docs/air-v0110-install-20260917.md)。开发机保持 v0.9.10(25)。真实 ProtoPie 登录、Preview 窗口和外屏联动仍需现场验收，不能将假驱动测试当作播放实证。
+Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构建并验证签名。2026-09-17 后续已按用户要求将 Air 升级到 v0.11.0(27)，原参数保留、真实窗口版本与顺序已核验，用户已反馈整体没问题，现已固化为[用户验收基线](docs/v0.11.0-acceptance.md)；[安装与配对回滚](docs/air-v0110-install-20260917.md)。此时开发机为 v0.9.10(25)，后续升级与真实 ProtoPie 验收见上方最新记录。
 
 见 [操作与回滚](docs/workbench-v0110.md)、[测试与构建回执](docs/workbench-acceptance-20260917.md)、[UX 方案](docs/unified-workbench-ux-proposal.md)。
 
@@ -22,12 +24,12 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 走雷电 `192.168.101.5`；Air 同名命令走固定 Wi-Fi `10.9.1.230`。设备连接、验证记录与迁移待办见 [开发设备记录](docs/development-device.md)。2026-09-08 已从 Air 同步并在开发机构建安装 v0.9.2 (17)，App 位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；见 [部署回执](docs/nio-war-mac-deployment-20260908.md)。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`，不可达时回退 Wi-Fi `10.9.1.230`。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.11.1(28)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与验收版本对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口
 
-本仓库分发自 `Hahaxiong838383/oh-my-ccwork` 的 `2-Projects/nio-warp-demo`，当前基线 **v0.9.2 (17)**。来源及同步边界见 [分发记录](docs/distribution.md)。下文历史验收路径属于原设备，首次使用请按以下相对路径操作。
+独立仓库在2026-09-09分发自 `Hahaxiong838383/oh-my-ccwork` 的 `2-Projects/nio-warp-demo`，当时基线 **v0.9.2 (17)**，未建立自动双向同步。本轮 v0.11.1 推送目标为原 oh-my-ccwork 的 `codex/nio-unified-workbench-20260917` 分支。独立仓库来源及同步边界见 [分发记录](docs/distribution.md)。下文历史验收路径属于原设备，首次使用请按以下相对路径操作。
 
 ```bash
 git clone https://github.com/FUTURUS-ProductResearch/WarpDemo.git
