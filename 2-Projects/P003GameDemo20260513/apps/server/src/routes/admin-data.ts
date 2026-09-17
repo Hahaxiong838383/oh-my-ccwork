@@ -37,6 +37,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { getHostsStatus } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
@@ -62,7 +63,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -1850,6 +1851,14 @@ adminDataRoute.get('/worker-stats', async (c) => {
         : null,
     ts: Date.now(),
   });
+});
+
+// 服务器状态（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）：
+// 三台机同一份只读脚本 ops/host-stats.py 聚合；server 30s 共享缓存；?fresh=1 强制重采（≥5s 间隔）。
+// 单台失败只降级该台（ok:false），实现见 src/hosts-status.ts。
+adminDataRoute.get('/hosts-status', async (c) => {
+  const fresh = c.req.query('fresh') === '1';
+  return c.json(await getHostsStatus({ fresh }));
 });
 
 // Session 签发流水（按 SN 可选过滤 + offset/limit 分页；只含元数据，无任何 token）
