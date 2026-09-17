@@ -785,6 +785,12 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **三个坑**:①control 消费在 **both directions ready 之后**才启动——设备只 connect 不发麦克风轨,canary.say 无人消费无 ack;②**一人一房**:任何 participant 断开=关整个 job(探针第二连接要用独立房间);③stale_trace 判定用 epoch 时钟(别拿 now_ms 单调毫秒比设备 ts,踩过恒 stale)。
 - **tts synth 日志已全局截 24 字**:验"没落全文"时 grep 短语必须取第 25 字以后的内容(保留区命中≠泄露),正锚=`(N字)` 截断标记。
 
+## rust worker /agent 重连计数（2026-09-17 修复在分支，未部署）
+- 事故（09-16 06:17 CST）：47.239 nginx 被 unattended-upgrades 升级**重启**（postinst 走 restart 非 reload），所有 wss 硬切、无 close_notify；生产池 worker 旧计数只在「干净 Close 帧」时清零，重连成功不清零 → 09-12 下电 25 min 攒的 12 次 + 这 1 次 = 13 → `bail` 退出（exit 1）→ systemd Restart=always/3s 拉起；firstturn 池计数 0 → 2s 重连成功。两池二进制同码。
+- 修复：`WorkerState.reconnect_failures` 自上次注册成功起连续计数，注册成功清零（日志 `reconnected & registered, consecutive failure count reset`），>12 仍退出交 systemd。单测 6/6 + 负向验证。**发版真机触发**：灰度池先上，人为掐 /agent 连接 ≥14 次（3s 间隔），期望 14 次 `worker connection failed` + 14 次 `reconnected & registered`、NRestarts 不变 → 再上生产池。
+- 47.239 nginx 自动升级史 07-23/08-21/08-22/09-16 全在 06:00–07:00 CST（timer 6:00+≤60min）；川哥：暂不加黑名单，频繁触发再做且放凌晨 3–4 点。47.239 09-12 17:16 干净 poweroff（非川哥操作，机内 root 经 logind，无 ACPI 电源键事件）→ 川哥查控制台。
+- 保活面现状：两 worker unit Restart=always RestartSec=3（StartLimit 5/10s 打不到）；worker 退避 2–10s、WorkerPing 30s；nginx `proxy_read_timeout 3600s`；LiveKit Restart=on-failure；无 watchdog。后台「🖥 服务器状态」tab 可看每个 worker 的注册/断线/放弃退出计数（`host-stats.py`，见 p003-deploy-ops）。
+
 ## 64.90 rust worker 日志统计纪律（2026-09-02 踩坑固化）
 - **三个 unit 同时 active**：`voice-worker`(py 旧) / `voice-worker-colleague`(py,json 日志) / `voice-worker-rust`(生产 rust)。统计前 `systemctl list-units --state=active | grep voice-worker` 看全，**别 `head -1` 取名**（曾抓到 colleague 得全零误判「观察期零样本」）。
 - **rust tracing 日志带 ANSI 色码**：`journalctl -o cat` 直接 grep `label=`/`known=` 全空（`\x1b[3mlabel\x1b[0m=…`）。先 `sed "s/\x1b\[[0-9;]*m//g"` 剥色再 grep；`-o short-iso` 拿时间戳。
