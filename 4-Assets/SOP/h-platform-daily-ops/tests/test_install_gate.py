@@ -18,6 +18,12 @@ SPEC.loader.exec_module(installer)
 
 
 class InstallGateSafetyTest(unittest.TestCase):
+    def test_sole_timer_runs_at_seven_shanghai(self):
+        timer = (ROOT / "systemd/h-platform-daily-gate.timer").read_text()
+        self.assertIn("OnCalendar=*-*-* 07:00:00 Asia/Shanghai", timer)
+        self.assertEqual(timer.count("OnCalendar="), 1)
+        self.assertIn("Persistent=true", timer)
+
     def setUp(self):
         self.draft = {key: None for key in installer.DRAFT_KEYS}
         self.draft.update(

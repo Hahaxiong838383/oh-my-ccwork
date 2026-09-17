@@ -111,6 +111,7 @@ class RunnerTest(unittest.TestCase):
         self.assertIn("未调用模型、未新建会话", (self.workspace / "latest.md").read_text())
         self.assertTrue((self.workspace / "daily/2026-09/2026-09-16.md").exists())
         self.assertTrue((self.workspace / "index.md").exists())
+        self.assertIn("每天07:00（北京时间）采集", (self.workspace / "index.md").read_text())
 
     def test_first_run_dispatches_and_commits_only_after_success(self):
         with mock.patch.object(runner, "dispatch", return_value=self.outcome()) as dispatch:

@@ -320,7 +320,7 @@ def publish(workspace: Path, run_dir: Path, content: str, day: str) -> None:
     atomic(daily, content)
     atomic(workspace / "latest.md", content)
     files = sorted((workspace / "daily").glob("*/*.md"), reverse=True)
-    lines = ["# H 平台巡检报告索引", "", "每天09:10采集。平稳日只落盘；变化、严重、未知或失败时由Luna解释。", "",
+    lines = ["# H 平台巡检报告索引", "", "每天07:00（北京时间）采集。平稳日只落盘；变化、严重、未知或失败时由Luna解释。", "",
              "[最新日报](latest.md)｜[按月历史](daily/)", "", "## 最近30次日报", ""]
     lines += [f"- [{p.stem}]({p.relative_to(workspace).as_posix()})" for p in files[:30]]
     lines += ["", "更早报告保留在 daily/ 月目录，不自动删除旧会话或日志。", ""]

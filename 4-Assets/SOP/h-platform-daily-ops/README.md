@@ -13,7 +13,7 @@ home-studio 的实际切换、模型用量和验收结果见 [2026-09-16 门控�
 | 字段 | 值 |
 |---|---|
 | 唯一时钟 | systemd 用户级 `h-platform-daily-gate.timer` |
-| 时间 | 每天 `09:10 Asia/Shanghai`，`Persistent=true` 可补执行错过的一轮 |
+| 时间 | 每天 `07:00 Asia/Shanghai`（2026-09-17 按用户要求由 09:10 提前），`Persistent=true` 可补执行错过的一轮 |
 | 条件解读任务 | Codeg ID `4` / `H 平台每日运维巡检` |
 | enabled / trigger_kind | `true` / `manual` |
 | cron / next_run_at | `null` / `null`；不再由 Codeg 定时启动 |
