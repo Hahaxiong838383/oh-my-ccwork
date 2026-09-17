@@ -298,8 +298,8 @@ job 进程的 LLM prewarm 协程首次访问 `client.chat` 触发 **openai 惰�
 - 🔑 **连接真值(先看这行,别编别名)**:`ssh root@64.90.13.117` —— 这台**没有 ssh 别名**
   (2026-09-11 我编了个 `p003-worker` 去探生产,连接失败的信号与"服务挂了"完全同形)。
   真值另见记忆 `reference_cloud_servers.md` 的 voice-worker-hk 行。
-  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID **3274065** / ActiveEnter
-  **2026-09-17 01:42:14 UTC**,exe sha256 96d728a0…=3a2af41c3+重连修复 d4c2d7dc7,动它前先对这两个数;旧锚 3163903 / 09-15 22:17:23(nginx 硬切后 systemd 拉起)、2720004 / 09-12 06:48:18、2017631 / 09-06 23:49:55 均作废)。⚠️ **不存在 `voice-worker.service` 这个名字**——2026-09-12 我拿它查生产,
+  unit 清单:**生产** `voice-worker-rust`(agent `rust-worker`,MainPID **3276638** / ActiveEnter
+  **2026-09-17 02:01:00 UTC**,exe sha256 b0ec810b…=分支 d3681ee04 rust-worker(附和词 observe+重连修复+One-shot 代码,对生产池无派单不触发),动它前先对这两个数;旧锚 3274065 / 01:42:14(96d728a0…)、3163903 / 09-15 22:17:23、2720004 / 09-12 均作废)。⚠️ **不存在 `voice-worker.service` 这个名字**——2026-09-12 我拿它查生产,
   systemd 照答 `MainPID=0 NRestarts=0 ActiveEnterTimestamp=`(全空),与"服务真挂了"完全同形。
   **先 `systemctl list-units --type=service --all | grep -i voice` 把名字列出来再判状态**、**单机灰度** `voice-worker-firstturn`
   (agent `rust-worker-firstturn`,2026-09-11 起,产品首句 v1 专用,env 链与生产逐行相同只叠 13 键差异,
@@ -783,6 +783,12 @@ cd /root/realtime-voice-agent && set -a && . .env && set +a &&   PROBE_AGENT=jav
 - **E2E 验收**:`/root/rust-worker/canary_say_e2e_probe.py`(八判据:幂等 ack/振幅≥5s/metrics 零欠载/disabled/cancel 中止/伪造丢弃)。跑法:`set -a; . /root/realtime-voice-agent/.env; . /root/rust-worker/rust-worker.env; set +a; /root/voice-venv/bin/python canary_say_e2e_probe.py canary-e2e-$(date +%s)`。
 - **三个坑**:①control 消费在 **both directions ready 之后**才启动——设备只 connect 不发麦克风轨,canary.say 无人消费无 ack;②**一人一房**:任何 participant 断开=关整个 job(探针第二连接要用独立房间);③stale_trace 判定用 epoch 时钟(别拿 now_ms 单调毫秒比设备 ts,踩过恒 stale)。
 - **tts synth 日志已全局截 24 字**:验"没落全文"时 grep 短语必须取第 25 字以后的内容(保留区命中≠泄露),正锚=`(N字)` 截断标记。
+
+## 附和词「播放中不打断」observe（2026-09-17 10:01 生产池上线，A 表 v1=27 词）
+- 机制：`backchannel.rs`——本轮回复 LLM 字数 ≥`BACKCHANNEL_MIN_REPLY_CHARS`(默认 120) 且用户整句 ∈ A 表(≤2 字，黑名单排除急停/退出/打断词)才算候选；`BACKCHANNEL_MODE` 未设=observe 只记日志，`enforce` 才真吞(不 commit/不起 LLM/续播)；词表空=off。位置在急停/退出之后、回声对撞之前。
+- 数据链：后台热词第五类 `backchannel` 草稿→`POST /api/admin/hotwords/publish {kinds:[backchannel]}`→apply_hotwords.py 写 `BACKCHANNEL_HOTWORDS` + **只重启 voice-worker-rust**（firstturn 共用 rust-worker.env 不重启，且现役 firstturn 二进制无此代码）。
+- 观察判据：`journalctl -u voice-worker-rust | grep 'backchannel candidate (observe)'`（text/reply_chars/played_samples）；`backchannel utterance ignored` 在 observe 期必须 0。切 enforce：`rust-worker.env` 加 `BACKCHANNEL_MODE=enforce`，过活跃会话门 restart，不发版。One-shot 池跟进前先补 apply 脚本的 firstturn 重启选项并换同一二进制。
+- 构建坑：分支 HEAD 带 >255 字节中文文件名的历史文档，home-studio 全量 worktree checkout 报「文件名过长」→ `git worktree add --no-checkout` + `git sparse-checkout init --cone`（不接受 -q）+ `set 2-Projects/realtime-voice-agent/rust-worker` 再 checkout；crate 无目录外 path 依赖，稀疏检出可直接 build-local.sh。
 
 ## rust worker /agent 重连计数（2026-09-17 09:42 已发版两池：生产 96d728a0… / firstturn bd76e93d…）
 - 事故（09-16 06:17 CST）：47.239 nginx 被 unattended-upgrades 升级**重启**（postinst 走 restart 非 reload），所有 wss 硬切、无 close_notify；生产池 worker 旧计数只在「干净 Close 帧」时清零，重连成功不清零 → 09-12 下电 25 min 攒的 12 次 + 这 1 次 = 13 → `bail` 退出（exit 1）→ systemd Restart=always/3s 拉起；firstturn 池计数 0 → 2s 重连成功。两池二进制同码。
