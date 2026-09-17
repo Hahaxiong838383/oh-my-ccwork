@@ -983,6 +983,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private let localUpdates = LocalWarpUpdateCoordinator()
     private var localHistoryBaseline: WarpConfiguration?
     private(set) var localEditor: LocalWarpEditorController?
+    private(set) var bezierEditor: BezierWarpEditorController?
+    private let bezierUpdates = LocalWarpUpdateCoordinator()
+    private var bezierHistoryBaseline: WarpConfiguration?
+    private let snapTiltButton = NSButton(checkboxWithTitle: "倾斜零点吸附", target: nil, action: nil)
+    private let snapBendButton = NSButton(checkboxWithTitle: "水平弯曲零点吸附", target: nil, action: nil)
+    private let centerSurfaceXButton = NSButton(checkboxWithTitle: "画面水平居中", target: nil, action: nil)
+    private let centerSurfaceYButton = NSButton(checkboxWithTitle: "画面垂直居中", target: nil, action: nil)
+    private let levelSurfaceButton = NSButton(checkboxWithTitle: "参考轴居正", target: nil, action: nil)
 
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
     private let globalStatusLabel = NSTextField(wrappingLabelWithString: "正在准备控制台…")
@@ -1111,6 +1119,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         cancelLocalUpdates()
         localEditor?.close()
         localEditor = nil
+        bezierUpdates.cancel()
+        bezierEditor?.close()
+        bezierEditor = nil
         super.close()
     }
 
@@ -1283,6 +1294,18 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         let localEditorButton = makeButton("打开局部交点精调", action: #selector(openLocalEditor))
         localEditorButton.toolTip = "在内屏独立窗口点击交点，再用方向键精调整幅内容；原多项式保持不变。无外屏或临时测试图中只读。"
         stack.addArrangedSubview(localEditorButton)
+        let bezierButton = makeButton("打开贝塞尔曲面控制网", action: #selector(openBezierEditor))
+        bezierButton.setAccessibilityIdentifier("nio-open-bezier-editor")
+        stack.addArrangedSubview(bezierButton)
+        stack.addArrangedSubview(explanation("节点和手柄都驱动曲面：支持左右分区、多行联动、增加控制行列；整体参数保留。"))
+        for button in [snapTiltButton, snapBendButton, centerSurfaceXButton, centerSurfaceYButton, levelSurfaceButton] {
+            button.target = self
+            button.action = #selector(updateSurfaceAlignment)
+        }
+        stack.addArrangedSubview(buttonRow([snapTiltButton, snapBendButton]))
+        stack.addArrangedSubview(buttonRow([centerSurfaceXButton, centerSurfaceYButton, levelSurfaceButton]))
+        stack.addArrangedSubview(makeButton("一键居中居正（保留曲率）", action: #selector(centerAndLevelSurface)))
+        stack.addArrangedSubview(explanation("零点吸附：倾斜 ±0.002、水平弯曲 ±0.001 内精确归零。几何对齐按 AA 包围框居中、中心横线端点轴居正；保持曲线，不自动缩放，AA 外仍裁切。"))
 
         stack = opticalPage
         stack.addArrangedSubview(sectionTitle("5. 多项式增量"))
@@ -1578,6 +1601,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
         asymmetrySlider.doubleValue = configuration.manual.asymmetry
         tiltSlider.doubleValue = configuration.manual.tilt
         horizontalBendSlider.doubleValue = configuration.manual.horizontalBend
+        snapTiltButton.state = configuration.alignment.snapTilt ? .on : .off
+        snapBendButton.state = configuration.alignment.snapHorizontalBend ? .on : .off
+        centerSurfaceXButton.state = configuration.alignment.centerHorizontal ? .on : .off
+        centerSurfaceYButton.state = configuration.alignment.centerVertical ? .on : .off
+        levelSurfaceButton.state = configuration.alignment.level ? .on : .off
         contentModePicker.selectItem(at: ContentMode.allCases.firstIndex(of: configuration.contentMode) ?? 0)
         captureSourcePicker.selectItem(at: CaptureSourceMode.allCases.firstIndex(of: configuration.capture.sourceMode) ?? 0)
         antiAliasingEnabledButton.state = configuration.render.antiAliasingEnabled ? .on : .off
@@ -1614,6 +1642,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                 } else if let control = child as? NSControl {
                     let canUseOffline = control === geometryPreviewPicker
                         || control.action == #selector(openLocalEditor)
+                        || control.action == #selector(openBezierEditor)
                         || control.action == #selector(exportConfiguration)
                         || control.action == #selector(NSApplication.terminate(_:))
                     control.isEnabled = canUseOffline
@@ -1940,16 +1969,97 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     private var canEditLocalWarp: Bool { renderer != nil && runtimePreviewMode == .normal }
 
     private func cancelLocalUpdates() {
+        bezierHistoryBaseline = nil
+        bezierUpdates.cancel()
         localUpdates.cancel()
         localHistoryBaseline = nil
     }
 
     private func synchronizeLocalEditor(message: String? = nil) {
+        bezierEditor?.synchronize(configuration: configuration, available: canEditLocalWarp, message: message)
         guard let localEditor else { return }
         let rendered = renderer?.activeConfiguration ?? configuration
         let dimensions = WarpMath.meshDimensions(configuration: rendered)
         let mesh = renderer?.currentMesh ?? WarpMath.makeMesh(configuration: rendered, columns: dimensions.columns, rows: dimensions.rows)
         localEditor.synchronize(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canEditLocalWarp, message: message)
+    }
+
+    @objc private func openBezierEditor() { showBezierEditor() }
+
+    @discardableResult
+    func showBezierEditor(presentWindow: Bool = true) -> BezierWarpEditorController {
+        if bezierEditor == nil {
+            let editor = BezierWarpEditorController(configuration: configuration, available: canEditLocalWarp)
+            editor.window?.title = "NIO Warp · 贝塞尔曲面控制网 · \(AppVersion.display)"
+            editor.onChange = { [weak self] bezier, history in self?.applyBezierWarp(bezier, recordHistory: history) }
+            editor.onUndo = { [weak self] in
+                guard let self, self.canEditLocalWarp else { return }
+                self.cancelLocalUpdates()
+                self.rollbackConfiguration()
+                self.synchronizeLocalEditor()
+            }
+            editor.onClose = { [weak self] in
+                self?.bezierUpdates.cancel()
+                self?.bezierHistoryBaseline = nil
+            }
+            bezierEditor = editor
+        }
+        synchronizeLocalEditor()
+        if presentWindow {
+            bezierEditor?.showWindow(nil)
+            bezierEditor?.window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
+        return bezierEditor!
+    }
+
+    private func applyBezierWarp(_ bezier: BezierWarpConfiguration, recordHistory: Bool) {
+        guard let renderer, canEditLocalWarp else { synchronizeLocalEditor(); return }
+        let historyBaseline = bezierHistoryBaseline ?? (recordHistory ? lastAppliedConfiguration : nil)
+        cancelLocalUpdates()
+        bezierHistoryBaseline = historyBaseline
+        let baseline = lastAppliedConfiguration
+        var candidate = baseline
+        candidate.bezierWarp = bezier
+        bezierUpdates.submit(candidate) { [weak self] result in
+            guard let self, self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
+            switch result {
+            case .failure(let error):
+                self.synchronizeLocalEditor()
+                self.bezierHistoryBaseline = nil
+                self.bezierEditor?.showStatus("未应用：\(error.message)。保留上一有效画面。", error: true)
+            case .success(let mesh):
+                guard renderer.installPreparedConfiguration(candidate, mesh: mesh) else { return }
+                if let previous = self.bezierHistoryBaseline, previous != candidate { self.historyStore.record(previous, reason: "贝塞尔曲面调节", force: true) }
+                self.bezierHistoryBaseline = nil
+                self.configuration = candidate
+                self.lastAppliedConfiguration = candidate
+                self.store.save(candidate)
+                self.updateWarpBoundary(candidate, candidate.render.showWarpBoundary)
+                self.refreshControls()
+                self.bezierEditor?.showStatus("已应用并保存；\(mesh.validation.summary)", error: false)
+            }
+        }
+    }
+
+    @objc private func updateSurfaceAlignment() {
+        configuration.alignment.snapTilt = snapTiltButton.state == .on
+        configuration.alignment.snapHorizontalBend = snapBendButton.state == .on
+        configuration.alignment.centerHorizontal = centerSurfaceXButton.state == .on
+        configuration.alignment.centerVertical = centerSurfaceYButton.state == .on
+        configuration.alignment.level = levelSurfaceButton.state == .on
+        configuration.manual.tilt = WarpAlignmentConfiguration.snapped(configuration.manual.tilt, enabled: configuration.alignment.snapTilt, threshold: 0.002)
+        configuration.manual.horizontalBend = WarpAlignmentConfiguration.snapped(configuration.manual.horizontalBend, enabled: configuration.alignment.snapHorizontalBend, threshold: 0.001)
+        applyConfiguration("吸附与曲面几何对齐已更新；局部形状保留")
+        refreshControls()
+    }
+
+    @objc private func centerAndLevelSurface() {
+        configuration.alignment.centerHorizontal = true
+        configuration.alignment.centerVertical = true
+        configuration.alignment.level = true
+        applyConfiguration("画面已按 AA 基准居中居正，保留所有局部曲率")
+        refreshControls()
     }
 
     @objc private func openLocalEditor() { showLocalEditor() }
@@ -1969,7 +2079,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
                 self.rollbackConfiguration()
                 self.synchronizeLocalEditor()
             }
-            editor.onClose = { [weak self] in self?.cancelLocalUpdates() }
+            editor.onClose = { [weak self] in
+                self?.localUpdates.cancel()
+                self?.localHistoryBaseline = nil
+            }
             editor.onShowPolynomial = { [weak self] in self?.showGlobalPolynomialSettings() }
             localEditor = editor
         }
@@ -1995,6 +2108,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
 
     private func applyLocalWarp(_ local: LocalWarpConfiguration, recordHistory: Bool) {
         guard let renderer, canEditLocalWarp else { synchronizeLocalEditor(); return }
+        // The two editors share the same output configuration. Switching layers
+        // cancels the other pending draft, so an older completion cannot win.
+        bezierUpdates.cancel()
+        bezierHistoryBaseline = nil
+        bezierEditor?.synchronize(configuration: configuration, available: canEditLocalWarp)
         let baseline = lastAppliedConfiguration
         if recordHistory { localHistoryBaseline = baseline }
         var candidate = baseline
@@ -2280,8 +2398,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate {
     @objc private func updateArch(_ sender: NSSlider) { configuration.manual.arch = sender.doubleValue; applyConfiguration("上下弧度已更新") }
     @objc private func updateVerticalScale(_ sender: NSSlider) { configuration.manual.verticalScale = sender.doubleValue; applyConfiguration("垂直压缩已更新") }
     @objc private func updateAsymmetry(_ sender: NSSlider) { configuration.manual.asymmetry = sender.doubleValue; applyConfiguration("左右不对称已更新") }
-    @objc private func updateTilt(_ sender: NSSlider) { configuration.manual.tilt = sender.doubleValue; applyConfiguration("整体倾斜已更新") }
-    @objc private func updateHorizontalBend(_ sender: NSSlider) { configuration.manual.horizontalBend = sender.doubleValue; applyConfiguration("水平弯曲已更新") }
+    @objc private func updateTilt(_ sender: NSSlider) { configuration.manual.tilt = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapTilt, threshold: 0.002); sender.doubleValue = configuration.manual.tilt; applyConfiguration(configuration.manual.tilt == 0 && configuration.alignment.snapTilt ? "整体倾斜已吸附到精确零点" : "整体倾斜已更新") }
+    @objc private func updateHorizontalBend(_ sender: NSSlider) { configuration.manual.horizontalBend = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapHorizontalBend, threshold: 0.001); sender.doubleValue = configuration.manual.horizontalBend; applyConfiguration(configuration.manual.horizontalBend == 0 && configuration.alignment.snapHorizontalBend ? "水平弯曲已吸附到精确零点" : "水平弯曲已更新") }
 
     @objc private func togglePolynomial() {
         configuration.polynomial.enabled = polynomialButton.state == .on

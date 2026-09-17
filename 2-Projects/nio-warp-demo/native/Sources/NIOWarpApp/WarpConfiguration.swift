@@ -294,7 +294,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 11
+    static let currentSchemaVersion = 12
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -312,6 +312,8 @@ struct WarpConfiguration: Codable, Equatable {
     var polynomial = PolynomialWarpConfiguration()
     var render = RenderConfiguration()
     var localWarp = LocalWarpConfiguration()
+    var bezierWarp = BezierWarpConfiguration()
+    var alignment = WarpAlignmentConfiguration()
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -330,6 +332,8 @@ struct WarpConfiguration: Codable, Equatable {
         case polynomial
         case render
         case localWarp
+        case bezierWarp
+        case alignment
     }
 
     init(
@@ -348,7 +352,9 @@ struct WarpConfiguration: Codable, Equatable {
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
         render: RenderConfiguration = RenderConfiguration(),
-        localWarp: LocalWarpConfiguration = LocalWarpConfiguration()
+        localWarp: LocalWarpConfiguration = LocalWarpConfiguration(),
+        bezierWarp: BezierWarpConfiguration = BezierWarpConfiguration(),
+        alignment: WarpAlignmentConfiguration = WarpAlignmentConfiguration()
     ) {
         self.schemaVersion = schemaVersion
         self.displayPixelWidth = displayPixelWidth
@@ -366,6 +372,8 @@ struct WarpConfiguration: Codable, Equatable {
         self.polynomial = polynomial
         self.render = render
         self.localWarp = localWarp
+        self.bezierWarp = bezierWarp
+        self.alignment = alignment
     }
 
     init(from decoder: Decoder) throws {
@@ -386,6 +394,8 @@ struct WarpConfiguration: Codable, Equatable {
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()
         render = try container.decodeIfPresent(RenderConfiguration.self, forKey: .render) ?? RenderConfiguration()
         localWarp = try container.decodeIfPresent(LocalWarpConfiguration.self, forKey: .localWarp) ?? LocalWarpConfiguration()
+        bezierWarp = try container.decodeIfPresent(BezierWarpConfiguration.self, forKey: .bezierWarp) ?? BezierWarpConfiguration()
+        alignment = try container.decodeIfPresent(WarpAlignmentConfiguration.self, forKey: .alignment) ?? WarpAlignmentConfiguration()
     }
 
     static func defaultConfiguration(displayWidth: Int, displayHeight: Int) -> WarpConfiguration {
@@ -432,6 +442,7 @@ struct WarpConfiguration: Codable, Equatable {
     func validationErrors() -> [String] {
         var errors = [String]()
         errors += localWarp.validationErrors()
+        errors += bezierWarp.validationErrors()
         if schemaVersion < 1 || schemaVersion > Self.currentSchemaVersion {
             errors.append("不支持的 schemaVersion：\(schemaVersion)")
         }
@@ -461,6 +472,8 @@ extension WarpConfiguration {
         copy.manual.enabled = false
         copy.polynomial.enabled = false
         copy.localWarp.enabled = false
+        copy.bezierWarp.enabled = false
+        copy.alignment = WarpAlignmentConfiguration()
         copy.extendedWarpEnabled = false
         copy.render.testPattern = .calibrationGrid
         return copy

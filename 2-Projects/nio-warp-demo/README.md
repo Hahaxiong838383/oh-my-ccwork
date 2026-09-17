@@ -2,6 +2,12 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
+## 本轮开发：v0.10.0 (26)
+
+新增二维贝塞尔控制网、节点与切线的多行联动、左右分区微调，以及倾斜/水平弯曲零点吸附和 AA 居中居正。入口为「基础配置 → 4. 基础校畸变」。功能基于已验收 v0.9.2 源码；开发机已安装的 v0.9.10 ProtoPie 自启动流程尚未合入此分支。本轮仅构建和测试，未替换任何正式安装版。
+
+见 [功能与操作](docs/bezier-curve-v0100.md)、[验收记录](docs/bezier-acceptance-20260917.md)、[开发前回滚点](docs/bezier-rollback-20260917.md)。下文 v0.9.2 安装与验收记录保留为历史基线。
+
 ## 后续开发设备
 
 2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 走雷电 `192.168.101.5`；Air 同名命令走固定 Wi-Fi `10.9.1.230`。设备连接、验证记录与迁移待办见 [开发设备记录](docs/development-device.md)。2026-09-08 已从 Air 同步并在开发机构建安装 v0.9.2 (17)，App 位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；见 [部署回执](docs/nio-war-mac-deployment-20260908.md)。本文下方原 Air 路径及旧版本描述为历史记录。

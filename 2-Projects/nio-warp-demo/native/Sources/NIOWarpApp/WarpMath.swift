@@ -158,6 +158,8 @@ enum WarpMath {
         var extendedMinimum: SIMD2<Float>
         var extendedMaximum: SIMD2<Float>
         var localField: LocalWarpField? = nil
+        var bezierField: BezierWarpField? = nil
+        var alignment = WarpAlignmentTransform()
     }
 
     static func extendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
@@ -343,8 +345,30 @@ enum WarpMath {
     private static func mappingContext(configuration: WarpConfiguration) -> MappingContext {
         let manual = manualBounds(parameters: configuration.manual, trend: configuration.warpTrend)
         let output = configuration.canvasReference?.outputBounds ?? .unit
-        return MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum,
-                              localField: configuration.localWarp.enabled && !configuration.localWarp.anchors.isEmpty ? LocalWarpField(configuration.localWarp) : nil)
+        var context = MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum,
+                              localField: configuration.localWarp.enabled && !configuration.localWarp.anchors.isEmpty ? LocalWarpField(configuration.localWarp) : nil,
+                              bezierField: configuration.bezierWarp.enabled ? BezierWarpField(configuration.bezierWarp) : nil)
+        if configuration.alignment.isGeometricEnabled {
+            let dimensions = meshDimensions(configuration: configuration)
+            let anchorUVs = configuration.localWarp.enabled ? configuration.localWarp.anchors.map { configuration.canvasUV(for: $0.coordinate) } : []
+            let horizontal = (0...dimensions.columns).map { Float($0) / Float(dimensions.columns) }
+                + configuration.bezierWarp.horizontalKnots.map(Float.init) + anchorUVs.map(\.x)
+            let vertical = (0...dimensions.rows).map { Float($0) / Float(dimensions.rows) }
+                + configuration.bezierWarp.verticalKnots.map(Float.init) + anchorUVs.map(\.y)
+            var boundary = [SIMD2<Float>]()
+            for t in horizontal where t.isFinite && t >= 0 && t <= 1 {
+                for uv in [SIMD2(t, 0), SIMD2(t, 1)] { boundary.append(localPhysicalPoint(canvasPoint: uv, configuration: configuration, context: context)) }
+            }
+            for t in vertical where t.isFinite && t >= 0 && t <= 1 {
+                for uv in [SIMD2(0, t), SIMD2(1, t)] { boundary.append(localPhysicalPoint(canvasPoint: uv, configuration: configuration, context: context)) }
+            }
+            let left = localPhysicalPoint(canvasPoint: SIMD2(0, 0.5), configuration: configuration, context: context)
+            let right = localPhysicalPoint(canvasPoint: SIMD2(1, 0.5), configuration: configuration, context: context)
+            let aa = configuration.aaRect.sanitized()
+            context.alignment = WarpAlignmentTransform.make(configuration: configuration.alignment, boundary: boundary, axis: (left, right),
+                size: SIMD2(Float(aa.width * Double(configuration.displayPixelWidth)), Float(aa.height * Double(configuration.displayPixelHeight))))
+        }
+        return context
     }
 
     private static func mix(_ minimum: Float, _ maximum: Float, t: Float) -> Float {
@@ -378,10 +402,11 @@ enum WarpMath {
         context: MappingContext
     ) -> SIMD2<Float> {
         let base = baseLocalPhysicalPoint(canvasPoint: canvasPoint, configuration: configuration, context: context)
-        guard let field = context.localField else { return base }
-        let delta = field.displacement(at: configuration.localCoordinate(at: canvasPoint))
+        var delta = context.localField?.displacement(at: configuration.localCoordinate(at: canvasPoint)) ?? .zero
+        delta += context.bezierField?.displacement(at: SIMD2(Double(canvasPoint.x), Double(canvasPoint.y))) ?? .zero
         let aa = configuration.aaRect.sanitized()
-        return base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+        let displaced = base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+        return context.alignment.apply(displaced)
     }
 
     private static func baseLocalPhysicalPoint(
@@ -446,8 +471,8 @@ enum WarpMath {
             }
             return Array(Set(regular + anchors)).sorted()
         }
-        let horizontalAxis = axis(columns, anchorUVs.map(\.x))
-        let verticalAxis = axis(rows, anchorUVs.map(\.y))
+        let horizontalAxis = axis(columns, anchorUVs.map(\.x) + (configuration.bezierWarp.enabled ? configuration.bezierWarp.horizontalKnots.map(Float.init) : []))
+        let verticalAxis = axis(rows, anchorUVs.map(\.y) + (configuration.bezierWarp.enabled ? configuration.bezierWarp.verticalKnots.map(Float.init) : []))
         let columns = horizontalAxis.count - 1
         let rows = verticalAxis.count - 1
         let aa = configuration.aaRect.sanitized()

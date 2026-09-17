@@ -85,7 +85,7 @@ final class LocalWarpTests: XCTestCase {
         let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: JSONSerialization.data(withJSONObject: json))
         XCTAssertEqual(decoded.localWarp, config.localWarp)
         XCTAssertEqual(decoded.polynomial, config.polynomial)
-        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, 11)
+        XCTAssertEqual(decoded.sanitized(forDisplayWidth: 5120, height: 2880).schemaVersion, WarpConfiguration.currentSchemaVersion)
         for coordinate in [SIMD2<Double>.zero, SIMD2(150, 30), SIMD2(-600, 80)] {
             XCTAssertEqual(LocalWarpField(decoded.localWarp).displacement(at: coordinate), LocalWarpField(config.localWarp).displacement(at: coordinate))
         }
@@ -472,4 +472,78 @@ final class LocalWarpTests: XCTestCase {
         }
         XCTAssertEqual(changed, 0, "放大图不能覆盖旁边的主预览或控件")
     }
+    func testLeveledExistingLocalAnchorUsesVisiblePhysicalPixelDirections() throws {
+        _ = NSApplication.shared
+        var configuration = baseline()
+        configuration.manual.tilt = 0.12
+        configuration.alignment.level = true
+        configuration.alignment.centerHorizontal = true
+        configuration.alignment.centerVertical = true
+        configuration.bezierWarp.enabled = true
+        XCTAssertTrue(configuration.bezierWarp.applyOffsetDelta(SIMD2(0, -8), at: 0))
+        let coordinate = SIMD2<Double>(-500, -100)
+        configuration.localWarp.setOffset(SIMD2(5, -2), at: coordinate)
+        let uv = configuration.canvasUV(for: coordinate)
+        let mesh = WarpMath.makeMesh(configuration: configuration, columns: 192, rows: 72)
+        XCTAssertTrue(mesh.validation.isValid, mesh.validation.summary)
+        let editor = LocalWarpEditorController(configuration: configuration, renderedConfiguration: configuration, mesh: mesh, available: true, screen: nil)
+        defer { editor.close() }
+        editor.select(coordinate)
+        let before = try XCTUnwrap(mesh.renderedPhysicalPoint(at: uv, width: 5120, height: 2880))
+        editor.nudge(dx: 10, dy: 0)
+        let after = editor.draftConfiguration
+        let moved = WarpMath.physicalPoints(canvasPoints: [uv], configuration: after)[0] - before
+        XCTAssertEqual(moved.x, 10, accuracy: 0.005)
+        XCTAssertEqual(moved.y, 0, accuracy: 0.005, "归正后按右箭头不得沿模型旋转后的斜轴移动")
+        XCTAssertEqual(after.bezierWarp, configuration.bezierWarp)
+        XCTAssertEqual(after.manual, configuration.manual)
+        XCTAssertEqual(after.alignment, configuration.alignment)
+        let updatedMesh = WarpMath.makeMesh(configuration: after, columns: 192, rows: 72)
+        editor.synchronize(configuration: after, renderedConfiguration: after, mesh: updatedMesh, available: true)
+        editor.nudge(dx: 0, dy: -1)
+        let movedAgain = WarpMath.physicalPoints(canvasPoints: [uv], configuration: editor.draftConfiguration)[0] - before - moved
+        XCTAssertEqual(movedAgain.x, 0, accuracy: 0.005)
+        XCTAssertEqual(movedAgain.y, -1, accuracy: 0.005)
+    }
+
+    func testNewLocalAnchorPreservesDisplayedPointUnderBezierAndGeometricAlignment() throws {
+        _ = NSApplication.shared
+        var configuration = baseline()
+        configuration.manual.tilt = 0.12
+        configuration.alignment.level = true
+        configuration.alignment.centerHorizontal = true
+        configuration.alignment.centerVertical = true
+        configuration.bezierWarp.enabled = true
+        XCTAssertTrue(configuration.bezierWarp.applyOffsetDelta(SIMD2(0, -10), at: 0))
+        XCTAssertTrue(configuration.bezierWarp.applyTangentDelta(SIMD2(0, 45), axis: .horizontal, at: 1))
+        configuration.localWarp.setOffset(SIMD2(12, 8), at: SIMD2(-400, 0))
+        let coordinate = SIMD2<Double>(-250, 50)
+        XCTAssertNil(configuration.localWarp.anchor(at: coordinate))
+        XCTAssertGreaterThan(simd_length(LocalWarpField(configuration.localWarp).displacement(at: coordinate)), 1)
+        let uv = configuration.canvasUV(for: coordinate)
+        let mesh = WarpMath.makeMesh(configuration: configuration, columns: 192, rows: 72)
+        XCTAssertTrue(mesh.validation.isValid, mesh.validation.summary)
+        let editor = LocalWarpEditorController(configuration: configuration, renderedConfiguration: configuration, mesh: mesh, available: true, screen: nil)
+        defer { editor.close() }
+        editor.select(coordinate)
+        let before = try XCTUnwrap(mesh.renderedPhysicalPoint(at: uv, width: 5120, height: 2880))
+        // Creating an anchor with zero movement must preserve the actual rendered point,
+        // including mesh interpolation, rather than mixing pre/post-alignment coordinates.
+        editor.nudge(dx: 0, dy: 0)
+        let after = editor.draftConfiguration
+        XCTAssertNotNil(after.localWarp.anchor(at: coordinate))
+        let afterMesh = WarpMath.makeMesh(configuration: after, columns: 192, rows: 72)
+        XCTAssertTrue(afterMesh.validation.isValid, afterMesh.validation.summary)
+        let point = try XCTUnwrap(afterMesh.renderedPhysicalPoint(at: uv, width: 5120, height: 2880))
+        XCTAssertEqual(point.x, before.x, accuracy: 0.005)
+        XCTAssertEqual(point.y, before.y, accuracy: 0.005)
+        XCTAssertEqual(after.bezierWarp, configuration.bezierWarp)
+        XCTAssertEqual(after.alignment, configuration.alignment)
+        editor.synchronize(configuration: after, renderedConfiguration: after, mesh: afterMesh, available: true)
+        editor.nudge(dx: 2, dy: 0)
+        let moved = WarpMath.physicalPoints(canvasPoints: [uv], configuration: editor.draftConfiguration)[0] - before
+        XCTAssertEqual(moved.x, 2, accuracy: 0.005)
+        XCTAssertEqual(moved.y, 0, accuracy: 0.005)
+    }
+
 }

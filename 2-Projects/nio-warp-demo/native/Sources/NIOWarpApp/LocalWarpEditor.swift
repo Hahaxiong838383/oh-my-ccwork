@@ -2,6 +2,32 @@ import AppKit
 import CoreGraphics
 import simd
 
+/// Local RBF offsets are stored before final geometric alignment. The editor operates in
+/// visible physical-pixel axes, so vectors must cross the same rotation as the mesh.
+private enum LocalWarpEditingCoordinates {
+    static func angle(configuration: WarpConfiguration) -> Double {
+        guard configuration.alignment.level else { return 0 }
+        var unaligned = configuration
+        unaligned.alignment = WarpAlignmentConfiguration()
+        let axis = WarpMath.physicalPoints(canvasPoints: [SIMD2(0, 0.5), SIMD2(1, 0.5)], configuration: unaligned)
+        let direction = axis[1] - axis[0]
+        guard direction.x.isFinite, direction.y.isFinite, simd_length(direction) > 0.0001 else { return 0 }
+        return -atan2(Double(direction.y), Double(direction.x))
+    }
+
+    private static func rotate(_ vector: SIMD2<Double>, angle: Double) -> SIMD2<Double> {
+        SIMD2(cos(angle) * vector.x - sin(angle) * vector.y, sin(angle) * vector.x + cos(angle) * vector.y)
+    }
+
+    static func modelVector(_ vector: SIMD2<Double>, configuration: WarpConfiguration) -> SIMD2<Double> {
+        rotate(vector, angle: -angle(configuration: configuration))
+    }
+
+    static func screenVector(_ vector: SIMD2<Double>, configuration: WarpConfiguration) -> SIMD2<Double> {
+        rotate(vector, angle: angle(configuration: configuration))
+    }
+}
+
 final class LocalWarpCanvasView: NSView {
     private(set) var configuration: WarpConfiguration?
     private(set) var mesh: GeneratedMesh?
@@ -32,7 +58,9 @@ final class LocalWarpCanvasView: NSView {
     private func refreshSelection() {
         guard let selectedCoordinate else { selectedPhysical = nil; selectedOffset = .zero; return }
         selectedPhysical = physicalPoint(for: selectedCoordinate)
-        selectedOffset = configuration?.localWarp.enabled == true ? (field?.displacement(at: selectedCoordinate) ?? .zero) : .zero
+        if let configuration, configuration.localWarp.enabled {
+            selectedOffset = LocalWarpEditingCoordinates.screenVector(field?.displacement(at: selectedCoordinate) ?? .zero, configuration: configuration)
+        } else { selectedOffset = .zero }
     }
 
     func fit() {
@@ -463,7 +491,7 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
         for (index, anchor) in working.localWarp.anchors.enumerated() { anchorPicker.addItem(withTitle: String(format: "锚点 %02d · (%+.0f, %+.0f)", index + 1, anchor.x, anchor.y)) }
         if let selected = canvasView.selectedCoordinate {
             if let index = working.localWarp.anchors.firstIndex(where: { simd_length($0.coordinate - selected) < 0.0001 }) { anchorPicker.selectItem(at: index + 1) }
-            let delta = LocalWarpField(working.localWarp).displacement(at: selected)
+            let delta = LocalWarpEditingCoordinates.screenVector(LocalWarpField(working.localWarp).displacement(at: selected), configuration: working)
             selectionLabel.stringValue = String(format: "参考坐标：X %+.2f / Y %+.2f", selected.x, selected.y)
             offsetLabel.stringValue = String(format: "ΔX %+.2f px\nΔY %+.2f px", delta.x, delta.y)
             if let physical = canvasView.physicalPoint(for: selected) { pointLabel.stringValue = String(format: "已应用位置：X %.2f / Y %.2f 物理 px%@", Double(physical.x), Double(physical.y), pending ? " · 新请求待应用" : "") }
@@ -500,17 +528,25 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
               canvasView.physicalPoint(for: selected) != nil,
               working.localWarp.boundaryWeight(at: selected) >= 0.000001 else { return }
         var local = working.localWarp
-        let offset: SIMD2<Double>
+        var offset = LocalWarpField(local).displacement(at: selected)
         if local.anchor(at: selected) == nil, let rendered = canvasView.physicalPoint(for: selected) {
-            var base = working
-            base.localWarp.enabled = false
-            let physicalBase = WarpMath.physicalPoints(canvasPoints: [base.canvasUV(for: selected)], configuration: base)[0]
-            let difference = rendered - physicalBase
-            offset = SIMD2(Double(difference.x), Double(difference.y))
-        } else {
-            offset = LocalWarpField(local).displacement(at: selected)
+            if !working.alignment.isGeometricEnabled {
+                // Preserve the legacy exact rendered-point anchoring when no alignment is active.
+                var base = working
+                base.localWarp.enabled = false
+                let physicalBase = WarpMath.physicalPoints(canvasPoints: [base.canvasUV(for: selected)], configuration: base)[0]
+                let difference = rendered - physicalBase
+                offset = SIMD2(Double(difference.x), Double(difference.y))
+            } else if canvasView.configuration?.localWarp == local {
+                // Retain subpixel mesh interpolation error without subtracting two differently
+                // aligned surfaces. Disabling local warp can change the global alignment itself.
+                let analytic = WarpMath.physicalPoints(canvasPoints: [working.canvasUV(for: selected)], configuration: working)[0]
+                let residual = rendered - analytic
+                offset += LocalWarpEditingCoordinates.modelVector(SIMD2(Double(residual.x), Double(residual.y)), configuration: working)
+            }
         }
-        local.setOffset(offset + SIMD2(dx, dy), at: selected)
+        let delta = LocalWarpEditingCoordinates.modelVector(SIMD2(dx, dy), configuration: working)
+        local.setOffset(offset + delta, at: selected)
         submit(local, recordHistory: !isRepeat)
     }
 

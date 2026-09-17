@@ -104,7 +104,7 @@ final class TabLayoutTests: XCTestCase {
                 if let field = control as? NSTextField {
                     if field.isEditable { XCTAssertFalse(field.isEnabled) }
                 } else if let button = control as? NSButton {
-                    let allowed = ["看完整曲面（含超出 AA 的部分）", "导出参数备份", "退出程序，恢复原始桌面", "打开局部交点精调"].contains(button.title)
+                    let allowed = ["看完整曲面（含超出 AA 的部分）", "导出参数备份", "退出程序，恢复原始桌面", "打开局部交点精调", "打开贝塞尔曲面控制网"].contains(button.title)
                     XCTAssertEqual(button.isEnabled, allowed, button.title)
                 } else if control is NSSlider {
                     XCTAssertFalse(control.isEnabled)
