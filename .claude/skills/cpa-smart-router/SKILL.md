@@ -95,7 +95,7 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 
 - Codex app 读取 `~/.codex/cc-switch-model-catalog.json` 判断模型输入模态。
 - `gpt-5.5` 必须包含 `input_modalities: ["text", "image"]`。
-- `~/.codex/refresh-cc-switch-model-catalog.mjs` 会通过 LaunchAgent 每小时刷新 catalog；持久修复要改刷新脚本，不能只手改 JSON。
+- `~/.codex/refresh-cc-switch-model-catalog.mjs` 会通过 LaunchAgent 每 5 分钟刷新 catalog；持久修复要改 Git 真源和安装脚本，不能只手改 JSON。
 - API 层验证可直接向 `https://smart-api.hahaxiong.top/v1/responses` 发送带 `input_image` 的 `gpt-5.5` 请求；若返回 200，说明 CPA/smart-router 实际支持图片，问题在 Codex app catalog。
 
 ## Codex Fast 模式排障
@@ -103,7 +103,10 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - Codex 本机配置 `service_tier = "fast"` 只是意图；模型 catalog 还必须为目标模型声明 `service_tiers: [{"id":"priority",...}]` 和 `additional_speed_tiers: ["fast"]`，否则客户端会在发请求前省略 Fast。
 - CLIProxyAPI 官方能力接口是 `GET /v1/models?client_version=<version>`。普通 `GET /v1/models` 只返回 OpenAI 四字段目录，不能用于判断 Fast、图片或推理级别。
 - smart-router 的所有上游 URL 都必须保留 `r.URL.RawQuery`；尤其不能丢失 `client_version`，否则 Codex 专用目录会被静默降级。
-- 本机目录刷新器维护源：`2-Projects/cpa-smart-router/scripts/refresh-cc-switch-model-catalog.mjs`；运行态路径 `~/.codex/refresh-cc-switch-model-catalog.mjs` 由 LaunchAgent 每小时执行。
+- 本机目录刷新器维护源：`2-Projects/cpa-smart-router/scripts/refresh-cc-switch-model-catalog.mjs`；运行态路径 `~/.codex/refresh-cc-switch-model-catalog.mjs` 由 LaunchAgent 每 5 分钟执行。
+- 三个选择器一起缺失时，必须同时检查活动 catalog 的模型数和目标模型的 `supported_reasoning_levels`、`service_tiers`、`additional_speed_tiers`。少于 12 个模型属于缩水目录，即使文件是最新写入也不能接受。
+- GUI App 的 PATH 可能不含 `~/local/node/bin`。npm 版 Codex 即使在 Terminal 正常，也可能在 CC Switch 显示“已安装 · 无法运行”；用最小环境复测。`scripts/install-air-codex-runtime-guard.sh` 为 launchd 会话补齐 PATH，但目标 App 可能再次清理环境，必须核对其实际 PATH 与运行时检测结果；不能仅凭该风险解释已有 Node ESM 异常。
+- 刷新器应设置固定最低模型数、拒绝低于阈值的目录、只备份达到阈值的目录、内容未变化时不重写。模型数检查不能证明能力元数据完整，也不能阻止其他程序直接覆盖活动文件；仍需验证目标模型 reasoning/speed 字段和 App 启动时实际文件。
 - 真实验收优先使用透明转发或安全日志，只记录 `model`、`service_tier`、状态码和脱敏 client metadata key，禁止记录 Authorization 或请求正文。
 - 当前已验证 Codex 0.145.0 经 `smart-api` 对 `gpt-5.6-sol` 发送 `service_tier: "priority"` 并返回 200；但响应元数据仍显示 `auto/default`。结论只能是“Fast 意图已成功发送和透传”，不能声称上游调度档位已确认。
 
@@ -155,6 +158,7 @@ curl -I https://smart-api.hahaxiong.top/dashboard \
 - Desktop API、日志和错误文案不得返回 Management Key、路由密钥、Token、上游响应正文或内部错误正文；官方账单未配置/不可用时必须明确标记，不能静默用 CPA 数据冒充。
 - 重置卡消费入口为 `POST /desktop/v1/accounts/{id}/reset-credit`。这是不可逆写操作，必须同时满足 App 二次确认、Bridge 固定确认词 `CONSUME_RESET_CREDIT`、消费前实时 `available_count > 0` 与 `applicable_available_count > 0` 校验。
 - AI Ops、Grok、定时任务和自动刷新只能读取余额/卡数，禁止自动消费重置卡；卡数、余额属于实时状态，不得把历史快照当成当前结论。
+- `MenuBarExtra(.window)` 内的重置卡二次确认使用 `ZStack` 叠层，不用会触发浮窗失焦关闭的独立 `confirmationDialog`。确认展示脱敏账号、卡数和不可撤销提示；取消不得发请求。用户手动扣卡成功与构建/测试通过是不同验收层级，agent 不代消费验收。
 - 部署新 Bridge 二进制后必须显式 `systemctl restart cpa-desktop-bridge.service`；`systemctl enable --now` 不会重启已运行服务。验收要同时检查进程启动时间、新字段和接口行为。
 - 覆盖安装新版 macOS App 前必须先结束旧 `CPAMenuBar` 进程，再复制 Bundle、启动并核对新进程启动时间；否则旧进程可能继续运行被替换前的代码。
 - `MenuBarExtra(.window)` 的内容不能随账号数量无限增高：窗口使用固定尺寸（当前 `400×560`），标题/Tab/底部操作栏固定，只有中间内容区域进入 `ScrollView`；账号列表使用 `LazyVStack`。
@@ -238,7 +242,10 @@ ssh aliyun-jp 'ss -lnt | grep -E "[:](8317|8327|8330)[[:space:]]"'
 - 强制重启会丢失 `/proc` 活现场。若 SSH 尚可用，优先用 `pidstat -d`、`iotop -oPa`、`systemd-cgtop` 记录具体 reader；没有进程证据时只写“系统级 I/O 卡死，具体来源未知”。
 - 2026-08-12 事故时间线：K12 oneshot 在 16:28:51 一秒内成功退出，磁盘读取从 16:32 起升至约 1800–1900 IOPS；CPA 请求量维持每分钟约 13–20 次，没有 Kathy Key 流量突增。因此 K12 与 Kathy 均被排除为直接触发源。
 - Aegis 安全代理是高概率嫌疑而非已证实根因：它具备漏洞/基线扫描能力，时间线和 IO 模式吻合，但强制重启前未获得进程级读 IO 证据。对外结论必须区分“已证实系统级读取风暴”和“高概率来源”。
-- 生产已部署 `cpa-resource-guard.timer`：每 30 秒重申 Aegis 主扫描 cgroup 的 CPU、内存上限与最低磁盘调度优先级，并在 IO pressure 或低内存时把 `pressure`、`vmstat`、`pidstat` 写入 `/var/log/cpa-resource-guard.log`。Cloud Assistant 与 CloudMonitor 不限流，保留带外恢复与监控能力。
+- 生产已部署 `cpa-resource-guard.timer`：每 30 秒重申 Aegis 主扫描 cgroup 的 CPU、内存上限与最低磁盘调度优先级，并在 IO pressure 或低内存时记录 pressure、进程 RSS、实际 swappiness、cgroup 内存事件、vmstat、pidstat。Cloud Assistant 保持不限流；CloudMonitor 单独限制 CPU 20%、读盘 200 IOPS / 2 MB/s。
+- 2026-09-17 11:14 的故障已有全局 OOM 铁证：内核杀掉 CLIProxyAPI，CPA/Router RSS 合计约 617 MiB，故障前为连续 24–26 万 Token 的长上下文请求。`argusagent` 的高读取可能是内存压力下的重新读页，不能把最高 reader 或 `invoked oom-killer` 的进程直接定为根因；还须看 OOM victim、RSS 排名和请求时间线。
+- Swap 不能只检查 `swapon`：同时检查 `/proc/sys/vm/swappiness` 与所有配置源、sysctl 文件顺序和 tuned 的 reapply。此次 `/etc/sysctl.d/99-sysctl.conf` 指向 `/etc/sysctl.conf`，旧值 0 覆盖了 `99-cpa-memory.conf` 中的 10，导致 OOM 时 2 GiB swap 全空；两个源已统一为 10。
+- CPA 三服务已放入 `cpa.slice`（合计 MemoryMax 576 MiB、MemorySwapMax 1 GiB、CPUQuota 160%），并设 Go 回收目标和各服务上限。模板与数值见项目 README；限额只做故障隔离，不宣称无限长上下文可用。部署须有配置备份和独立 watchdog，并核对实际 cgroup、进程环境、鉴权 Desktop 请求、真实流式完成和连续资源观察。
 - Aegis 有自保护，常规 `disable/mask` 或改 unit 可能被拒绝；不要硬拆。优先 cgroup 限流、压力取证和阿里云控制台策略调整。
 - 1 GB 级 SWAS 必须配置低 swappiness 的 swap 兜底；当前生产 swap 总量 2 GB、`vm.swappiness=10`。Swap 只防瞬时内存尖峰，不能替代 IO 根因治理。
 - 最终恢复必须同时满足：四服务 active、端口监听、Desktop `summary`/`accounts` 带 Keychain Token 返回 200、敏感字段零泄漏、App 重启后感叹号消失、账号数据可见，以及至少 60 秒 CPU/内存/磁盘稳定观察。

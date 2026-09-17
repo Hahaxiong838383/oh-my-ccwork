@@ -12,6 +12,7 @@ const cpaOfficialCatalogUrl = process.env.CODEX_CATALOG_CPA_OFFICIAL_URL ||
   'https://raw.githubusercontent.com/router-for-me/CLIProxyAPI/main/internal/registry/models/codex_client_models.json';
 const baseUrl = readTomlString(cfg, 'base_url');
 const token = readTomlString(cfg, 'experimental_bearer_token');
+const minimumModelCount = positiveInteger(Number(process.env.CODEX_CATALOG_MIN_MODELS)) ?? 12;
 if (!baseUrl || !token) fail('missing base_url or experimental_bearer_token in ~/.codex/config.toml');
 
 const endpointLevels = [
@@ -40,6 +41,15 @@ if (endpointModels.length === 0) fail('endpoint returned no allowed text models'
 
 const models = endpointModels.map(({ id, endpointItem }) => {
   const official = officialModels.get(id);
+  const contextWindow = positiveInteger(endpointItem.context_window) ??
+    positiveInteger(official?.context_window) ??
+    inferContextWindow(id);
+  const maxContextWindow = Math.max(
+    contextWindow,
+    positiveInteger(endpointItem.max_context_window) ??
+      positiveInteger(official?.max_context_window) ??
+      contextWindow
+  );
   const endpointReasoning = normalizeReasoningLevels(
     endpointItem.supported_reasoning_levels ??
       endpointItem.supportedReasoningEfforts ??
@@ -53,7 +63,8 @@ const models = endpointModels.map(({ id, endpointItem }) => {
     slug: id,
     displayName: official?.display_name ?? humanizeModelName(id),
     description: official?.description ?? id,
-    contextWindow: official?.context_window ?? inferContextWindow(id),
+    contextWindow,
+    maxContextWindow,
     defaultReasoningLevel: supportedReasoningLevels.some((level) => level.effort === defaultReasoningLevel)
       ? defaultReasoningLevel
       : official?.default_reasoning_level ?? 'high',
@@ -67,13 +78,17 @@ const models = endpointModels.map(({ id, endpointItem }) => {
 }).sort((a, b) => b.priority - a.priority || a.slug.localeCompare(b.slug));
 
 const catalog = { models };
-assertCatalogIsSafe(catalogPath, catalog);
-backupIfExists(catalogPath);
-writeJSONAtomic(catalogPath, catalog);
-console.log(`updated ${catalogPath}`);
-console.log(`models=${models.length}`);
-for (const model of models) {
-  console.log(`${model.slug}: modalities=${model.input_modalities.join(',')} default=${model.default_reasoning_level} levels=${model.supported_reasoning_levels.map((x) => x.effort).join(',')}`);
+assertCatalogIsSafe(catalogPath, catalog, minimumModelCount);
+if (catalogsEqual(catalogPath, catalog)) {
+  console.log(`unchanged ${catalogPath}`);
+} else {
+  backupIfComplete(catalogPath, minimumModelCount);
+  writeJSONAtomic(catalogPath, catalog);
+  console.log(`updated ${catalogPath}`);
+  console.log(`models=${models.length}`);
+  for (const model of models) {
+    console.log(`${model.slug}: modalities=${model.input_modalities.join(',')} default=${model.default_reasoning_level} levels=${model.supported_reasoning_levels.map((x) => x.effort).join(',')}`);
+  }
 }
 
 function readTomlString(text, key) {
@@ -146,7 +161,7 @@ function normalizeReasoningLevels(value) {
   return levels.length ? levels : null;
 }
 
-function buildCatalogModel({ slug, displayName, description, contextWindow, defaultReasoningLevel, inputModalities, supportedReasoningLevels, additionalSpeedTiers, serviceTiers, defaultServiceTier, priority }) {
+function buildCatalogModel({ slug, displayName, description, contextWindow, maxContextWindow, defaultReasoningLevel, inputModalities, supportedReasoningLevels, additionalSpeedTiers, serviceTiers, defaultServiceTier, priority }) {
   return {
     additional_speed_tiers: additionalSpeedTiers,
     availability_nux: null,
@@ -159,7 +174,7 @@ function buildCatalogModel({ slug, displayName, description, contextWindow, defa
     effective_context_window_percent: 95,
     experimental_supported_tools: [],
     input_modalities: inputModalities,
-    max_context_window: contextWindow,
+    max_context_window: maxContextWindow,
     priority,
     service_tiers: serviceTiers,
     default_service_tier: defaultServiceTier,
@@ -211,6 +226,10 @@ function normalizeStringArray(value) {
   return values.length > 0 ? values : null;
 }
 
+function positiveInteger(value) {
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
 
 function resolveInputModalities(slug, endpointItem, official) {
   const endpointModalities = normalizeInputModalities(endpointItem?.input_modalities ?? endpointItem?.inputModalities) ?? [];
@@ -250,27 +269,46 @@ function priorityForModel(slug) {
   return 1000;
 }
 
-function backupIfExists(file) {
+function backupIfComplete(file, minimumCount) {
   if (!fs.existsSync(file)) return;
+  try {
+    const current = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const currentCount = Array.isArray(current.models) ? current.models.length : 0;
+    if (currentCount < minimumCount) return;
+  } catch {
+    return;
+  }
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
   fs.copyFileSync(file, `${file}.bak-${stamp}`);
 }
 
-function assertCatalogIsSafe(file, nextCatalog) {
-  if (!Array.isArray(nextCatalog.models) || nextCatalog.models.length === 0) {
-    fail('refusing to replace catalog with no models');
+function assertCatalogIsSafe(file, nextCatalog, minimumCount) {
+  if (!Array.isArray(nextCatalog.models) || nextCatalog.models.length < minimumCount) {
+    fail(`refusing incomplete catalog: next=${nextCatalog.models?.length ?? 0} minimum=${minimumCount}`);
   }
   if (!fs.existsSync(file)) return;
   try {
     const current = JSON.parse(fs.readFileSync(file, 'utf8'));
     const currentCount = Array.isArray(current.models) ? current.models.length : 0;
-    const minimumCount = currentCount >= 12 ? Math.max(12, Math.floor(currentCount * 0.7)) : 1;
-    if (nextCatalog.models.length < minimumCount) {
-      fail(`refusing suspicious catalog shrink: current=${currentCount} next=${nextCatalog.models.length} minimum=${minimumCount}`);
+    const shrinkFloor = currentCount >= minimumCount
+      ? Math.max(minimumCount, Math.floor(currentCount * 0.7))
+      : minimumCount;
+    if (nextCatalog.models.length < shrinkFloor) {
+      fail(`refusing suspicious catalog shrink: current=${currentCount} next=${nextCatalog.models.length} minimum=${shrinkFloor}`);
     }
   } catch (error) {
-    if (error?.message?.startsWith('refusing suspicious catalog shrink:')) throw error;
+    if (error?.message?.startsWith('refusing ')) throw error;
     console.warn(`refresh-cc-switch-model-catalog: existing catalog unreadable, replacing atomically (${error.message})`);
+  }
+}
+
+function catalogsEqual(file, nextCatalog) {
+  if (!fs.existsSync(file)) return false;
+  try {
+    const current = JSON.parse(fs.readFileSync(file, 'utf8'));
+    return JSON.stringify(current) === JSON.stringify(nextCatalog);
+  } catch {
+    return false;
   }
 }
 

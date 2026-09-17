@@ -1,0 +1,10 @@
+[Unit]
+Description=CPA proxy workload resource boundary
+
+[Slice]
+CPUAccounting=true
+MemoryAccounting=true
+CPUQuota=160%
+MemoryMax=576M
+MemorySwapMax=1G
+TasksMax=512

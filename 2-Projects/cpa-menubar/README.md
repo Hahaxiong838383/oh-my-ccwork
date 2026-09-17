@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.3.7`。
+当前版本：`0.3.8 (11)`。
 
 ## 当前能力
 
@@ -19,6 +19,7 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - xAI 总览只保留一条“订阅池平均剩余”进度条，按已同步订阅账号等权计算，并同时显示最低账号余量和最近重置时间；Management API 账单与 CPA 路由只显示紧凑指标，不再各自模拟额度。
 - 账号级订阅额度读取 xAI CLI Billing；CPA Token、内部日预算和 Management API 团队账单继续分层展示，不再互相冒充。接口缺少百分比但明确返回空周周期时，会标记“暂无计量，按 0% 已用显示”。
 - 显示充值余额与重置卡数量；只要官方 `available_count` 大于 0 即允许经过二次确认发起使用，最终按官方返回的 `reset`、`nothing_to_reset`、`no_credit` 或 `already_redeemed` 显示结果。
+- 重置卡确认使用浮窗内叠层，避免 `MenuBarExtra(.window)` 弹出独立确认菜单时失焦关闭；展示脱敏账号、可用卡数与不可撤销提示，只有确认按钮才提交消费。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
 - “添加订阅”统一提供 Codex 与 xAI Grok 两种 OAuth 登录；Codex 保留 PKCE 回调，xAI 使用官方设备码流程并自动轮询完成状态。
 - 对已停用、无刷新能力且已过期、或上游明确返回 401/403 的账号显示“移除无效账号”；App 经过 destructive 二次确认，Bridge 再实时校验后把 auth JSON 原子移动到 `/root/.cli-proxy-api-removed/<UTC时间>/`，不会永久删除凭据。

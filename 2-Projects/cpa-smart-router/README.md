@@ -70,8 +70,17 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 
 - 部署单元：`deploy/cpa-resource-guard.service`、`deploy/cpa-resource-guard.timer`。
 - 压力日志：`/var/log/cpa-resource-guard.log`，由 `deploy/cpa-resource-guard.logrotate` 控制大小。
-- Cloud Assistant 与 CloudMonitor 不受限制，保证主机失联时仍可走控制面恢复和查看指标。
+- Cloud Assistant 保持不限流，但系统 OOM/IO 卡死时仍可能无法执行命令。CloudMonitor 使用 `deploy/cloudmonitor-cpa-resource-guard.conf` 限制为 CPU 20%、读盘 200 IOPS / 2 MB/s；高读盘采样不能单独证明它是故障触发源。
 - K12 账号池已于 2026-08-12 退役；生产与代码仓不再保留账号源、历史账号、轮换脚本或定时器。
+
+### 长上下文内存保护（2026-09-17）
+
+- 11:14:21 内核记录全局 OOM，杀掉 `cli-proxy-api`；当时 CPA RSS 约 393 MiB、Router 约 224 MiB，主机可用物理内存总量仅 894 MiB。故障前连续 Responses 请求约 24–26 万输入 Token，长上下文负载是有证据支持的主要诱因；尚未做堆分析，不能断言具体泄漏函数。
+- `/etc/sysctl.d/99-sysctl.conf` 链接到 `/etc/sysctl.conf`，其中旧 `vm.swappiness=0` 覆盖 `99-cpa-memory.conf` 的 10，OOM 时 2 GiB swap 全空。已统一两个配置源为 10，并检查 `/proc/sys/vm/swappiness`。只看 swap 文件存在或单个配置文件不算生效。
+- `deploy/cpa.slice` 限制三项 CPA 工作负载合计内存 576 MiB、swap 1 GiB、CPU 160%（双核上预留部分 CPU 给系统）。`MemoryMax` 是故障隔离，极端负载仍可能使单个服务重启；不代表 1 GiB 主机已通过任意长上下文压力验收。
+- 将 `deploy/cliproxy-memory.conf`、`deploy/router-memory.conf`、`deploy/bridge-memory.conf` 分别安装到对应 unit 的 `30-cpa-memory.conf` drop-in。Go `GOMEMLIMIT` 分别为 256/128/48 MiB，服务硬上限为 384/256/96 MiB；Go 软目标不能代替 cgroup 硬边界。
+- Slice 与 Go 环境变量需在 `daemon-reload` 后重启对应服务才能生效。发布前保留配置，设置独立回滚 watchdog，验收服务 cgroup、进程环境、Desktop 鉴权请求和真实流式推理后再撤销 watchdog。
+- 本次备份位于服务器 `/root/cpa-ops-backups/20260917-114127-memory-recovery`。验证结果：Desktop 直连/代理四次 200，真实 Sol 流式完成并返回预期结果，60 秒无新增 OOM，CPU idle 86–98%；未重放故障时的完整私有长上下文。
 
 ## Codex OAuth 自动刷新（2026-07-27）
 
@@ -89,7 +98,8 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - Codex 客户端配置使用 `service_tier = "fast"`，实际 `/v1/responses` 请求应发送 `service_tier: "priority"`。
 - CLIProxyAPI 的 Codex 专用模型目录接口是 `GET /v1/models?client_version=<version>`；响应中的 `service_tiers` 与 `additional_speed_tiers` 是客户端是否发送 Fast 意图的能力真源。
 - smart-router 转发模型目录和推理请求时必须保留 `r.URL.RawQuery`；丢失 `client_version` 会让 CPA 降级返回普通四字段模型列表，导致本地 catalog 看不到 Fast。
-- 受 Git 管理的刷新器维护源是 `scripts/refresh-cc-switch-model-catalog.mjs`；本机 `~/.codex/refresh-cc-switch-model-catalog.mjs` 应指向该文件，由 LaunchAgent 每小时刷新。
+- 受 Git 管理的刷新器维护源是 `scripts/refresh-cc-switch-model-catalog.mjs`；运行 `scripts/install-air-codex-runtime-guard.sh` 后，本机 LaunchAgent 每 5 分钟刷新，并为 launchd 会话设置 Node/Codex 所需 PATH。安装前备份已有运行脚本和 plist；不改模型、鉴权或推理配置。
 - Codex App 只读取 `~/.codex/cc-switch-model-catalog.json`，不会主动选择 `.bak-*`。若主文件曾被缩水目录覆盖，App 会在启动时缓存缺少模型、推理档位和速度元数据的状态；恢复完整文件后还必须重启 App。刷新器必须先做模型数量防缩水校验，再通过临时文件原子 rename，异常时保留上一份完整目录；少于 12 个模型的旧备份不得保留。
+- GUI App 的 PATH 可能只有系统目录。若 `codex` 是 `#!/usr/bin/env node` 的 npm shim，终端可运行不代表 GUI 可运行；必须用最小 GUI 环境复测。部分 App 会清理继承的 PATH，runtime guard 设置成功不等于目标进程必然生效，仍需核对目标进程环境与运行时检测；这也不能单独证明原始 Node ESM 报错的原因。
 - 验收必须分开记录：客户端请求是否携带 `priority`、CPA 是否返回 HTTP 200、上游响应回报的 service tier。当前真实请求已携带 `priority`，但上游流式响应仍回 `auto/default`，不得把“请求已发出”写成“后台加速已确认”。
 - 生产 CLIProxyAPI 已于 2026-09-15 通过空 auth-dir 隔离 Canary、插件兼容、Codex/Grok 真实请求和 watchdog 回滚门升级到 `7.3.3`。当前 transient error cooling 显式为 12 秒，credential retry 为 3 轮、单轮全部凭据、最大等待 12 秒；升级新版本仍须独立回归，不能直接覆盖生产。

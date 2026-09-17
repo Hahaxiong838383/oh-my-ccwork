@@ -35,59 +35,51 @@ struct MenuContentView: View {
     @State private var removalAccount: Account?
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-
-            Divider()
-
-            if model.showSettings || !model.isConfigured {
-                ScrollView {
-                    settings
-                        .padding(16)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                tabPicker
+        ZStack {
+            VStack(spacing: 0) {
+                header
                     .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 12)
 
                 Divider()
 
-                tabContent
+                if model.showSettings || !model.isConfigured {
+                    ScrollView {
+                        settings
+                            .padding(16)
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    tabPicker
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
 
-                Divider()
+                    Divider()
 
-                footer
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    tabContent
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    Divider()
+
+                    footer
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                }
+            }
+
+            if let account = resetAccount {
+                resetCreditConfirmation(for: account)
+                    .transition(.opacity)
+                    .zIndex(10)
             }
         }
         .frame(width: 400, height: 560)
+        .animation(.easeOut(duration: 0.15), value: resetAccount?.id)
         .alert("确认清除本机 Token？", isPresented: $showTokenClearConfirmation) {
             Button("取消", role: .cancel) {}
             Button("清除 Token", role: .destructive, action: model.clearToken)
         } message: {
             Text("清除后应用将立即断开 CPA，重新连接需要再次输入 Desktop Token。")
-        }
-        .confirmationDialog(
-            "使用 1 张重置卡？",
-            isPresented: Binding(
-                get: { resetAccount != nil },
-                set: { if !$0 { resetAccount = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("取消", role: .cancel) { resetAccount = nil }
-            Button("确认使用", role: .destructive) {
-                guard let account = resetAccount else { return }
-                resetAccount = nil
-                Task { await model.consumeResetCredit(for: account) }
-            }
-        } message: {
-            Text("将尝试使用 1 张重置卡重置当前额度。只有官方确认存在可重置窗口时才会扣卡；成功后不可撤销。")
         }
         .confirmationDialog(
             "添加订阅",
@@ -126,6 +118,56 @@ struct MenuContentView: View {
             )
         ) {
             xaiAuthorizationSheet
+        }
+    }
+
+    private func resetCreditConfirmation(for account: Account) -> some View {
+        ZStack {
+            Color.black.opacity(0.22)
+                .contentShape(Rectangle())
+                .onTapGesture { resetAccount = nil }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label("使用 1 张重置卡？", systemImage: "exclamationmark.triangle.fill")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
+
+                Text(account.emailMasked)
+                    .font(.subheadline.bold())
+
+                Text("将尝试重置当前适用的额度窗口。Bridge 会在提交前重新确认仍有可用重置卡；成功后不可撤销。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let availableCount = account.usage?.resetCredits?.availableCount {
+                    Text("当前显示可用 \(availableCount) 张")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+
+                HStack(spacing: 10) {
+                    Spacer()
+                    Button("取消", role: .cancel) { resetAccount = nil }
+                        .buttonStyle(.bordered)
+                    Button("确认使用", role: .destructive) {
+                        resetAccount = nil
+                        Task { await model.consumeResetCredit(for: account) }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.red)
+                }
+            }
+            .padding(18)
+            .frame(maxWidth: 330)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.orange.opacity(0.35))
+            }
+            .shadow(radius: 16, y: 8)
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("使用重置卡确认")
         }
     }
 

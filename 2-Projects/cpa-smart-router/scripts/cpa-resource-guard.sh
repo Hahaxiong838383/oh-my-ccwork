@@ -41,7 +41,20 @@ if awk -v pressure="$io_pressure" -v available="$memory_available_kb" \
     printf '\n=== %s io_avg10=%s mem_available_kb=%s ===\n' \
       "$(date --iso-8601=seconds)" "$io_pressure" "$memory_available_kb"
     cat /proc/pressure/io /proc/pressure/memory
+    printf 'swappiness='
+    cat /proc/sys/vm/swappiness
+    free -m
+    ps -eo pid,ppid,comm,rss,pcpu,stat --sort=-rss | awk 'NR <= 16'
+    for group_path in /sys/fs/cgroup/cpa.slice /sys/fs/cgroup/system.slice/cloudmonitor.service; do
+      [[ -d "$group_path" ]] || continue
+      printf '\nCGROUP %s\n' "$group_path"
+      for metric in memory.current memory.peak memory.events memory.swap.current; do
+        [[ -f "$group_path/$metric" ]] || continue
+        printf '%s: ' "$metric"
+        cat "$group_path/$metric"
+      done
+    done
     vmstat 1 2
-    timeout 5 pidstat -d -u -p ALL 1 2 || true
+    timeout 5 pidstat -d -u -r 1 2 || true
   } >> "$LOG_FILE" 2>&1
 fi
