@@ -3171,6 +3171,10 @@ private extension Array {
     private var waitingMessage: String?
     private var workspaceDisplayIdentifier: String?
     private var displaysAsleep = false
+    private var outputDisplayState: WarpOutputDisplayState?
+    private var controlDisplayID: CGDirectDisplayID?
+    private var headlessWorkbenchRequested = false
+    private var outputWasDisconnected = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(AppPresentationPolicy.activationPolicy)
@@ -3252,6 +3256,8 @@ private extension Array {
             return
         }
         self.outputController = outputController
+        outputDisplayState = displayState(for: topology.output)
+        controlDisplayID = topology.source.flatMap(displayID)
         let previousPanel = controlPanel
         let controlPanel = ControlPanelController(
             renderer: outputController.renderer,
@@ -3259,7 +3265,10 @@ private extension Array {
             configuration: configuration,
             sourceScreen: topology.source,
             outputScreen: topology.output,
-            setWarpVisible: { [weak outputController] visible in outputController?.setWarpVisible(visible) },
+            setWarpVisible: { [weak self, weak outputController] visible in
+                if visible { self?.hideWorkbenchOnOutputScreen() }
+                outputController?.setWarpVisible(visible)
+            },
             isWarpVisible: { [weak outputController] in outputController?.isWarpVisible ?? false },
             applyCaptureConfiguration: { [weak self] captureConfiguration in
                 Task { @MainActor [weak self] in
@@ -3283,14 +3292,13 @@ private extension Array {
             },
             updateWarpBoundary: { [weak outputController] configuration, visible in
                 outputController?.updateWarpBoundary(configuration: configuration, visible: visible)
-            }, protoPie: protoPie
+            }, presentWindow: topology.source != nil, protoPie: protoPie
         )
         if let previousPanel { controlPanel.restoreWorkspace(from: previousPanel, sameDisplay: sameDisplay) }
         self.controlPanel = controlPanel
         waitingMessage = nil
         previousPanel?.close()
-        NSApp.activate(ignoringOtherApps: true)
-        controlPanel.bringToFront()
+        presentAutomaticWorkbench()
         captureEngine.onError = { [weak self] message in
             guard self?.sessionEpoch == epoch else { return }
             self?.emergencyHideWarp(reason: "捕获中断：\(message)。Warp 覆盖层已安全隐藏。")
@@ -3335,8 +3343,7 @@ private extension Array {
                         ? "自动跟随已启动：播放器进入全屏后会在约 1 秒内切为单窗口捕获。"
                         : "正在捕获外屏完整桌面；AA 区外纯黑，配置会自动保存。"
                 )
-                NSApp.activate(ignoringOtherApps: true)
-                controlPanel?.bringToFront()
+                self.presentAutomaticWorkbench()
             } catch {
                 guard !Task.isCancelled, self.sessionEpoch == epoch else { return }
                 self.emergencyHideWarp(reason: "启动失败：\(error.localizedDescription)。Warp 覆盖层已安全隐藏。")
@@ -3399,6 +3406,8 @@ private extension Array {
             await captureEngine.stop()
             outputController?.window.close()
             outputController = nil
+            outputDisplayState = nil
+            outputWasDisconnected = false
             captureStartupTask = nil
             isReconfiguring = false
             startSession()
@@ -3416,28 +3425,49 @@ private extension Array {
     }
 
     private func emergencyHideWarp(reason: String, userInitiated: Bool = false) {
+        if userInitiated, chooseScreens()?.source == nil { headlessWorkbenchRequested = true }
         outputController?.setWarpVisible(false)
         // Display/sleep recovery hides output temporarily; only an explicit user action pauses it.
         controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: userInitiated)
         controlPanel?.setStatus(reason, color: .systemOrange)
-        NSApp.activate(ignoringOtherApps: true)
-        controlPanel?.bringToFront()
+        if userInitiated || chooseScreens()?.source != nil || outputController == nil {
+            NSApp.activate(ignoringOtherApps: true)
+            controlPanel?.bringToFront()
+        }
     }
 
     @objc private func screenParametersChanged() {
-        sessionEpoch += 1
-        captureStartupTask?.cancel()
-        outputController?.setWarpVisible(false)
-        if chooseScreens() == nil { showWaitingControlPanel(message: waitingForScreenMessage()) }
+        if preserveOutputForCurrentDisplays() { return }
+        // Losing only the control screen must not invalidate capture callbacks or
+        // clear the last rendered frame. Debounce transient desktop topology changes.
+        if let state = outputDisplayState, CGDisplayIsActive(state.id) == 0 {
+            // This stream may no longer be usable. Finish rebuilding even if the
+            // same display returns before the debounce deadline.
+            outputWasDisconnected = true
+            outputController?.setWarpVisible(false)
+        }
+        if let screen = chooseScreens()?.output, let id = displayID(for: screen),
+           CGDisplayIsActive(id) != 0, CGDisplayIsAsleep(id) == 0 { displaysAsleep = false }
         screenChangeWorkItem?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
-            self?.restartSession(reason: "检测到外屏连接或分辨率变化，已隐藏覆盖层并重建输出。")
+            guard let self, !self.preserveOutputForCurrentDisplays() else { return }
+            self.restartSession(reason: "检测到外屏连接或分辨率变化，已隐藏覆盖层并重建输出。")
         }
         screenChangeWorkItem = workItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: workItem)
     }
 
     @objc private func screensDidSleep() {
+        // A lid event can remove/sleep the internal panel while the output stays awake.
+        // NSScreen can briefly omit the output during topology changes; the cached
+        // display ID still lets CoreGraphics report whether that output is awake.
+        let candidateID = chooseScreens().flatMap { displayID(for: $0.output) }
+        let outputIDs = [outputDisplayState?.id, candidateID].compactMap { $0 }
+        if outputIDs.contains(where: { CGDisplayIsActive($0) != 0 && CGDisplayIsAsleep($0) == 0 }) {
+            displaysAsleep = false
+            if !preserveOutputForCurrentDisplays() { screenParametersChanged() }
+            return
+        }
         displaysAsleep = true
         startupRetryWorkItem?.cancel()
         screenChangeWorkItem?.cancel()
@@ -3446,6 +3476,7 @@ private extension Array {
 
     @objc private func screensDidWake() {
         displaysAsleep = false
+        if preserveOutputForCurrentDisplays() { return }
         restartSession(reason: "显示器已唤醒，正在重建 Warp 输出。")
     }
 
@@ -3465,6 +3496,11 @@ private extension Array {
     }
 
     @objc private func showWorkbench() {
+        if outputController != nil, chooseScreens()?.source == nil {
+            emergencyHideWarp(reason: "已暂停演示以显示工作台；点击“重新显示校正画面”继续合盖演示。", userInitiated: true)
+            return
+        }
+        NSApp.activate(ignoringOtherApps: true)
         controlPanel?.bringToFront()
     }
 
@@ -3496,6 +3532,7 @@ private extension Array {
             guard let self else { return }
             switch state {
             case .running:
+                self.hideWorkbenchOnOutputScreen()
                 self.outputController?.setWarpVisible(true)
                 self.controlPanel?.updateWarpVisibilityState(true, notifyProtoPie: false)
             case .paused:
@@ -3510,21 +3547,70 @@ private extension Array {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if controlPanel == nil { startSession() }
-        NSApp.activate(ignoringOtherApps: true)
-        controlPanel?.bringToFront()
+        showWorkbench()
         return false
     }
 
-    private func chooseScreens() -> (source: NSScreen, output: NSScreen)? {
+    private func presentAutomaticWorkbench() {
+        guard chooseScreens()?.source != nil else {
+            if !headlessWorkbenchRequested { controlPanel?.window?.orderOut(nil) }
+            return
+        }
+        headlessWorkbenchRequested = false
+        NSApp.activate(ignoringOtherApps: true)
+        controlPanel?.bringToFront()
+    }
+
+    private func hideWorkbenchOnOutputScreen() {
+        guard chooseScreens()?.source == nil else { return }
+        headlessWorkbenchRequested = false
+        controlPanel?.window?.orderOut(nil)
+    }
+
+    private func displayState(for screen: NSScreen) -> WarpOutputDisplayState? {
+        guard let id = displayID(for: screen) else { return nil }
+        let mode = CGDisplayCopyDisplayMode(id)
+        return WarpOutputDisplayState(id: id,
+            pixelWidth: mode?.pixelWidth ?? CGDisplayPixelsWide(id),
+            pixelHeight: mode?.pixelHeight ?? CGDisplayPixelsHigh(id),
+            scale: Double(screen.backingScaleFactor))
+    }
+
+    @discardableResult private func preserveOutputForCurrentDisplays() -> Bool {
+        guard !isReconfiguring, !outputWasDisconnected, let outputController, let topology = chooseScreens(),
+              let next = displayState(for: topology.output),
+              DisplaySessionPolicy.canPreserveOutput(current: outputDisplayState, next: next,
+                  isActive: CGDisplayIsActive(next.id) != 0, isAsleep: CGDisplayIsAsleep(next.id) != 0) else { return false }
+        displaysAsleep = false
+        screenChangeWorkItem?.cancel()
+        startupRetryWorkItem?.cancel()
+        let previousControlID = controlDisplayID
+        controlDisplayID = topology.source.flatMap(displayID)
+        // Origin can change when the built-in display disappears. Keep the same
+        // renderer, stream, preview page and session epoch; relocate only the window.
+        outputController.window.setFrame(topology.output.frame, display: true)
+        if outputController.isWarpVisible { outputController.window.orderFrontRegardless() }
+        if let control = topology.source {
+            headlessWorkbenchRequested = false
+            controlPanel?.fitWindow(to: control.visibleFrame)
+            if previousControlID != controlDisplayID { controlPanel?.bringToFront() }
+        } else if !headlessWorkbenchRequested {
+            controlPanel?.window?.orderOut(nil)
+        }
+        return true
+    }
+
+    private func chooseScreens() -> (source: NSScreen?, output: NSScreen)? {
         let screens = NSScreen.screens
         let candidates = screens.compactMap { screen -> WarpScreenCandidate? in
             guard let id = displayID(for: screen) else { return nil }
             return WarpScreenCandidate(id: id, isBuiltIn: CGDisplayIsBuiltin(id) != 0, area: screen.frame.width * screen.frame.height)
         }
         let preferredControl = NSScreen.main.flatMap(displayID)
-        guard let selection = DisplaySessionPolicy.selection(screens: candidates, preferredControlID: preferredControl),
-              let control = screens.first(where: { displayID(for: $0) == selection.controlID }),
+        guard let selection = DisplaySessionPolicy.selection(screens: candidates, preferredControlID: preferredControl,
+                                                            preferredOutputID: outputDisplayState?.id),
               let output = screens.first(where: { displayID(for: $0) == selection.outputID }) else { return nil }
+        let control = selection.controlID.flatMap { id in screens.first { displayID(for: $0) == id } }
         return (control, output)
     }
 

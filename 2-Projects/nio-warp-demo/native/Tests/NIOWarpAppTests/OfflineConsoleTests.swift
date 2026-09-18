@@ -12,9 +12,11 @@ final class OfflineConsoleTests: XCTestCase {
         XCTAssertNil(DisplaySessionPolicy.selection(screens: [builtIn, WarpScreenCandidate(id: 3, isBuiltIn: true, area: 900)], preferredControlID: 1))
     }
 
-    func testOnlyExternalKeepsTheSoleControlScreenSafe() {
-        XCTAssertNil(DisplaySessionPolicy.selection(screens: [external], preferredControlID: 2))
-        XCTAssertTrue(DisplaySessionPolicy.waitingMessage(hasExternalScreen: true).contains("唯一"))
+    func testSingleExternalColdStartRunsWithoutAControlScreen() {
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [external], preferredControlID: 2), WarpScreenSelection(controlID: nil, outputID: 2))
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [external], preferredControlID: nil), WarpScreenSelection(controlID: nil, outputID: 2))
+        XCTAssertTrue(DisplaySessionPolicy.waitingMessage(hasExternalScreen: true).contains("合盖"))
+        XCTAssertFalse(DisplaySessionPolicy.waitingMessage(hasExternalScreen: true).contains("请打开"))
     }
 
     func testConnectDisconnectSequenceDoesNotDependOnScreenOrder() {
@@ -33,6 +35,74 @@ final class OfflineConsoleTests: XCTestCase {
     func testTwoExternalScreensCanUseSeparateControlAndOutput() {
         let second = WarpScreenCandidate(id: 3, isBuiltIn: false, area: 800 * 600)
         XCTAssertEqual(DisplaySessionPolicy.selection(screens: [external, second], preferredControlID: 3), WarpScreenSelection(controlID: 3, outputID: 2))
+    }
+
+    func testLidCloseAndOpenKeepTheSameOutputWhenExternalBecomesMain() {
+        let states = [[builtIn, external], [external], [external, builtIn]]
+        let selections = states.map { DisplaySessionPolicy.selection(screens: $0, preferredControlID: 2, preferredOutputID: 2) }
+        XCTAssertEqual(selections, [
+            WarpScreenSelection(controlID: 1, outputID: 2),
+            WarpScreenSelection(controlID: nil, outputID: 2),
+            WarpScreenSelection(controlID: 1, outputID: 2),
+        ])
+    }
+
+    func testPreferredOutputBeatsLargestDisplayAndPreferredControl() {
+        let larger = WarpScreenCandidate(id: 3, isBuiltIn: false, area: 7680 * 4320)
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [larger, external, builtIn], preferredControlID: 2, preferredOutputID: 2), WarpScreenSelection(controlID: 1, outputID: 2))
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [larger, external], preferredControlID: 2, preferredOutputID: 2), WarpScreenSelection(controlID: 3, outputID: 2))
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [external, larger], preferredControlID: 2, preferredOutputID: 2), WarpScreenSelection(controlID: 3, outputID: 2))
+    }
+
+    func testPreferredOutputCanNeverSelectBuiltInAsOutput() {
+        XCTAssertNil(DisplaySessionPolicy.selection(screens: [builtIn], preferredControlID: nil, preferredOutputID: 1))
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [builtIn, external], preferredControlID: 2, preferredOutputID: 1), WarpScreenSelection(controlID: 1, outputID: 2))
+    }
+
+    func testMissingPreferredOutputFallsBackToConnectedExternal() {
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [external], preferredControlID: nil, preferredOutputID: 99), WarpScreenSelection(controlID: nil, outputID: 2))
+        XCTAssertEqual(DisplaySessionPolicy.selection(screens: [external, builtIn], preferredControlID: 2, preferredOutputID: 99), WarpScreenSelection(controlID: 1, outputID: 2))
+        XCTAssertNil(DisplaySessionPolicy.selection(screens: [], preferredControlID: 1, preferredOutputID: 99))
+    }
+
+    func testPreserveOutputForStableExternalAcrossControlScreenChanges() {
+        let output = WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 936, scale: 1)
+        // No desktop-origin or control-screen state is part of this comparison:
+        // closing the lid moves the AUO screen to (0,0) without rebuilding it.
+        XCTAssertTrue(DisplaySessionPolicy.canPreserveOutput(current: output, next: output, isActive: true, isAsleep: false))
+    }
+
+    func testOutputIdentityPixelModeAndScaleChangesRequireRebuild() {
+        let output = WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 936, scale: 1)
+        let changes = [
+            WarpOutputDisplayState(id: 5, pixelWidth: 7680, pixelHeight: 936, scale: 1),
+            WarpOutputDisplayState(id: 4, pixelWidth: 3840, pixelHeight: 936, scale: 1),
+            WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 1080, scale: 1),
+            WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 936, scale: 2),
+        ]
+        for changed in changes {
+            XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: output, next: changed, isActive: true, isAsleep: false))
+        }
+    }
+
+    func testInactiveSleepingOrAbsentOutputCannotBePreserved() {
+        let output = WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 936, scale: 1)
+        XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: output, next: output, isActive: false, isAsleep: false))
+        XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: output, next: output, isActive: true, isAsleep: true))
+        XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: nil, next: output, isActive: true, isAsleep: false))
+        XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: output, next: nil, isActive: true, isAsleep: false))
+        XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: nil, next: nil, isActive: true, isAsleep: false))
+    }
+
+    func testInvalidOutputModeCannotBePreserved() {
+        for invalid in [
+            WarpOutputDisplayState(id: 4, pixelWidth: 0, pixelHeight: 936, scale: 1),
+            WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 0, scale: 1),
+            WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 936, scale: 0),
+            WarpOutputDisplayState(id: 4, pixelWidth: 7680, pixelHeight: 936, scale: .infinity),
+        ] {
+            XCTAssertFalse(DisplaySessionPolicy.canPreserveOutput(current: invalid, next: invalid, isActive: true, isAsleep: false))
+        }
     }
 
     func testFirstOfflineLaunchDoesNotPersistDefaultOrInternalProfile() throws {
