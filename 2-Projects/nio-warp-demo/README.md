@@ -2,7 +2,11 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
-## 最新安装版：v0.11.7 (34)
+## 最新安装版：v0.12.0 (35)
+
+新增「鼠标映射」Tab，位于最右侧 ProtoPie 联动左边。按真实网格、镜像与可见曲面转发专用 ProtoPie Cloud 的点击/拖动/滚轮，热点贴近可用边缘（半个物理像素），Esc恢复普通鼠标。已安装nio-war-mac，实机输入与配置保留验收通过；默认先检查落点，等待用户玻璃体验。详见[使用、验收与回滚](docs/mouse-mapping-v0120.md)。
+
+## 已验收基线：v0.11.7 (34)
 
 支持合盖后只用外屏持续演示：原外屏和像素模式不变时保留捕获、渲染及ProtoPie页面，只更新窗口位置；工作台合盖隐藏，开盖返回内屏。2026-09-18用户已确认实际合盖、开盖均正常，版本与选定参数已[固化验收](docs/v0.11.7-acceptance.md)，标签 `nio-warp-v0.11.7-accepted-20260918`。实现与先前测试见[合盖演示、验收与回滚](docs/clamshell-playback-v0117.md)；[经验与后续检查清单](04-决策记录.md)。
 
@@ -44,7 +48,7 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.11.7(34)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.12.0(35)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口

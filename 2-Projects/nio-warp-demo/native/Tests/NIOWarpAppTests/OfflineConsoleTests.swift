@@ -203,7 +203,7 @@ final class OfflineConsoleTests: XCTestCase {
         XCTAssertTrue(export.isEnabled)
         let navigation = try XCTUnwrap(allViews.compactMap { $0 as? NSSegmentedControl }.first { $0.accessibilityIdentifier() == "nio-workbench-modules" })
         XCTAssertTrue(navigation.isEnabled)
-        XCTAssertEqual(navigation.segmentCount, 6)
+        XCTAssertEqual(navigation.segmentCount, 7)
         XCTAssertNil(defaults.persistentDomain(forName: suite))
     }
 }

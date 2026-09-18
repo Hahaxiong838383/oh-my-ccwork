@@ -1,0 +1,374 @@
+import AppKit
+import XCTest
+@testable import NIOWarpApp
+
+final class MouseInputTransportTests: XCTestCase {
+    @MainActor func testBindsDedicatedDynamicSocketAndReturnsCSSViewportWithoutMutatingPage() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertEqual(viewport.cssWidth, 1920)
+        XCTAssertEqual(viewport.cssHeight, 1080)
+        XCTAssertEqual(viewport.devicePixelRatio, 2)
+        XCTAssertEqual(viewport.pixelSize, CGSize(width: 3840, height: 2160))
+        XCTAssertEqual(viewport.timeOrigin, 12345)
+        XCTAssertEqual(viewport.targetID, fixture.fake.targetID)
+        XCTAssertEqual(viewport.windowID, 42)
+        XCTAssertEqual(fixture.connectedURL?.host, "127.0.0.1")
+        XCTAssertEqual(fixture.connectedURL?.port, 18765)
+        XCTAssertEqual(fixture.fake.calls.filter { $0.method == "Target.attachToTarget" }.count, 1)
+        XCTAssertFalse(fixture.fake.calls.contains { ["Target.createTarget", "Browser.setWindowBounds", "Page.navigate"].contains($0.method) })
+        XCTAssertTrue(fixture.fake.calls.filter { $0.method == "Runtime.evaluate" }.allSatisfy { $0.sessionID == fixture.fake.pageSessionID })
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertTrue(fixture.fake.closed)
+    }
+
+    @MainActor func testRejectsStudioBeforeOpeningAnyConnection() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        var session = fixture.session; session.configuration.source = .localFile; session.cloudTargetID = nil
+        do { _ = try await fixture.transport.connect(session: session); XCTFail("Studio must not receive Cloud input") }
+        catch { XCTAssertTrue(error.localizedDescription.contains("Cloud")) }
+        XCTAssertNil(fixture.connectedURL)
+    }
+
+    @MainActor func testRejectsWrongProcessTargetURLOrWindowBeforeEnablingInput() async throws {
+        for failure in ["pid", "target", "url", "window", "fullscreen", "visualViewport"] {
+            let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+            switch failure {
+            case "pid": fixture.fake.processID = 999
+            case "target": fixture.fake.targetID = "different-target"
+            case "url": fixture.fake.url = "https://cloud.protopie.io/p/unrelated?ui=false"
+            case "window": fixture.fake.frame.size.width -= 100
+            case "fullscreen": fixture.fake.windowState = "normal"
+            default: fixture.fake.visualScale = 2
+            }
+            do { _ = try await fixture.transport.connect(session: fixture.session); XCTFail("Unexpected bind for \(failure)") }
+            catch { XCTAssertFalse(fixture.transport.isConnected) }
+            XCTAssertTrue(fixture.fake.inputs.isEmpty)
+        }
+    }
+
+    @MainActor func testMoveCoalescingCannotCrossButtonsWheelOrFlushAndMaintainsOrder() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.blockNextInput = true
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 1)))
+        await fixture.fake.waitForBlockedInput()
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 2)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 3)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, x: 3, button: .left, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 4, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 5, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .up, x: 5, button: .left)))
+        var wheel = fixture.event(viewport, .wheel, x: 5); wheel.deltaY = 40
+        XCTAssertTrue(fixture.transport.send(wheel))
+        let flushed = Task { try await fixture.transport.flush() }
+        fixture.fake.unblockInput()
+        try await flushed.value
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String },
+                       ["mouseMoved", "mouseMoved", "mousePressed", "mouseMoved", "mouseReleased", "mouseWheel"])
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["x"] as? Double }, [1, 3, 3, 5, 5, 5])
+        XCTAssertTrue(fixture.fake.inputs.allSatisfy { $0.sessionID == fixture.fake.pageSessionID })
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testReleaseWaitsForInflightDownAndDiscardsPendingBusinessEvents() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.blockNextInput = true
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        await fixture.fake.waitForBlockedInput()
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 400, buttons: 1)))
+        let close = Task { await fixture.transport.releaseAllAndClose() }
+        await Task.yield(); await Task.yield()
+        XCTAssertEqual(fixture.fake.inputs.count, 1)
+        fixture.fake.unblockInput()
+        await close.value
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String }, ["mousePressed", "mouseReleased"])
+        XCTAssertEqual(fixture.fake.inputs.last?.parameters["x"] as? Double, 100)
+        XCTAssertEqual(fixture.fake.inputs.last?.parameters["buttons"] as? Int, 0)
+        XCTAssertTrue(fixture.fake.closed)
+    }
+
+    @MainActor func testReleaseClearsAllPressedButtonsOnSamePage() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .right, buttons: 3)))
+        try await fixture.transport.flush()
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["buttons"] as? Int }, [1, 3, 2, 0])
+        XCTAssertEqual(fixture.fake.inputs.suffix(2).compactMap { $0.parameters["button"] as? String }, ["left", "right"])
+    }
+
+    @MainActor func testReloadInvalidatesBindingAndNeverSendsOldReleaseToNewDocument() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        try await fixture.transport.flush()
+        fixture.fake.timeOrigin += 1
+        fixture.fake.onEvent?("Runtime.executionContextsCleared", [:], fixture.fake.pageSessionID)
+        XCTAssertFalse(fixture.transport.send(fixture.event(viewport, .up, button: .left)))
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertEqual(fixture.failures.count, 1)
+        XCTAssertEqual(fixture.fake.inputs.count, 1)
+    }
+
+    @MainActor func testRefreshRejectsSilentPageEpochChangeBeforeBusinessClick() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.timeOrigin += 1
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        do { try await fixture.transport.flush(); XCTFail("Stale click must not flush") } catch { }
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertTrue(fixture.fake.inputs.isEmpty)
+        XCTAssertEqual(fixture.failures.count, 1)
+    }
+
+    @MainActor func testFullscreenExitInvalidatesAndReleasesExistingDragWithoutTogglingFullscreen() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        try await fixture.transport.flush()
+        fixture.fake.windowState = "normal"
+        do { _ = try await fixture.transport.refreshViewport(); XCTFail("Windowed input must fail") } catch { }
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertEqual(fixture.fake.inputs.count, 2)
+        XCTAssertEqual(fixture.fake.inputs.last?.parameters["type"] as? String, "mouseReleased")
+        XCTAssertFalse(fixture.fake.calls.contains { $0.method == "Browser.setWindowBounds" })
+    }
+
+    @MainActor func testDesktopOriginChangesPreserveBindingWhenCapturedWindowMovesWithBrowser() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.frame.origin = CGPoint(x: -1920, y: 300)
+        fixture.capturedFrame = fixture.fake.frame
+        let refreshed = try await fixture.transport.refreshViewport()
+        XCTAssertEqual(refreshed, viewport)
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testViewportResizeAndZoomInvalidateGeneration() async throws {
+        for changesDPR in [false, true] {
+            let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+            let viewport = try await fixture.transport.connect(session: fixture.session)
+            if changesDPR { fixture.fake.dpr = 1.5 } else { fixture.fake.width -= 10 }
+            do { _ = try await fixture.transport.refreshViewport(); XCTFail("Mapping dimensions changed") } catch { }
+            XCTAssertFalse(fixture.transport.send(fixture.event(viewport, .move)))
+            await fixture.transport.releaseAllAndClose()
+        }
+    }
+
+    @MainActor func testTimeoutAfterDownAttemptsReleaseBeforeClosingSameSocket() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.timeoutNextInput = true
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        do { try await fixture.transport.flush(); XCTFail("Timeout must reject pending barrier") } catch { }
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String }, ["mousePressed", "mouseReleased"])
+        XCTAssertEqual(fixture.failures.count, 1)
+        XCTAssertTrue(fixture.fake.closed)
+    }
+
+    @MainActor func testDisconnectedTargetClearsQueueWithoutRetargetingRelease() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        try await fixture.transport.flush()
+        fixture.fake.onEvent?("Target.detachedFromTarget", ["sessionId": fixture.fake.pageSessionID], nil)
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertEqual(fixture.fake.inputs.count, 1)
+        XCTAssertEqual(fixture.failures.count, 1)
+        XCTAssertFalse(fixture.transport.isConnected)
+    }
+
+    @MainActor func testOldBindingCannotSendToNewConnectionAndOutOfViewportIsNeverClamped() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let first = try await fixture.transport.connect(session: fixture.session)
+        await fixture.transport.releaseAllAndClose()
+        fixture.fake.closed = false
+        let next = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertNotEqual(first.bindingID, next.bindingID)
+        XCTAssertFalse(fixture.transport.send(fixture.event(first, .move)))
+        XCTAssertTrue(fixture.transport.isConnected)
+        XCTAssertFalse(fixture.transport.send(fixture.event(next, .down, x: next.cssWidth, button: .left, buttons: 1)))
+        await fixture.transport.releaseAllAndClose()
+        XCTAssertTrue(fixture.fake.inputs.isEmpty)
+    }
+
+    @MainActor func testURLMatchingRetainsPrivateShareQueryAndAllowsOnlySceneHashChange() throws {
+        var configuration = ProtoPieConfiguration()
+        configuration.cloudURL = "https://cloud.protopie.io/p/synthetic?shareKey=synthetic-test#scene-one"
+        let expected = try configuration.playbackURL()
+        XCTAssertTrue(MouseInputTransport.matchesPage(expected.absoluteString.replacingOccurrences(of: "scene-one", with: "scene-two"), expected: expected))
+        XCTAssertFalse(MouseInputTransport.matchesPage(expected.absoluteString.replacingOccurrences(of: "synthetic-test", with: "different-test"), expected: expected))
+        XCTAssertFalse(MouseInputTransport.matchesPage(expected.absoluteString.replacingOccurrences(of: "cloud.protopie.io", with: "cloud.protopie.io.example"), expected: expected))
+        XCTAssertFalse(MouseInputTransport.matchesPage(expected.absoluteString.replacingOccurrences(of: "https:", with: "http:"), expected: expected))
+    }
+
+    @MainActor func testMalformedDynamicPortNeverFallsBackToSharedChromePort() throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        for text in ["9222", "0\n/devtools/browser/test", "65536\n/devtools/browser/test", "1234\nws://evil.example/page", "1234\n/devtools/page/test", "1234\n/devtools/browser/test?redirect=bad"] {
+            try text.write(to: fixture.profile.appendingPathComponent("DevToolsActivePort"), atomically: true, encoding: .utf8)
+            XCTAssertThrowsError(try MouseInputTransport.browserSocket(profileURL: fixture.profile))
+        }
+    }
+
+    @MainActor func testSocketMatchesOutOfOrderRepliesToMonotonicRequestIDsOnOneWire() async throws {
+        let wire = FakeMouseSocketWire()
+        let socket = MouseInputWebSocket(wire: wire, timeout: 1)
+        let first = Task { try await socket.call("Runtime.evaluate", parameters: ["test": "first"], sessionID: "synthetic-fixed") }
+        let second = Task { try await socket.call("Input.dispatchMouseEvent", parameters: ["test": "second"], sessionID: "synthetic-fixed") }
+        await wire.waitForSends(2)
+        XCTAssertEqual(wire.sent.compactMap { $0["id"] as? Int }, [1, 2])
+        XCTAssertTrue(wire.sent.allSatisfy { $0["sessionId"] as? String == "synthetic-fixed" })
+        try wire.push(["id": 2, "result": ["reply": "second"]])
+        try wire.push(["id": 1, "result": ["reply": "first"]])
+        let firstReply = try await first.value, secondReply = try await second.value
+        XCTAssertEqual(firstReply["reply"] as? String, "first")
+        XCTAssertEqual(secondReply["reply"] as? String, "second")
+        socket.close()
+        XCTAssertTrue(wire.closed)
+    }
+
+    @MainActor func testSocketTimeoutDropsLateReplyAndKeepsWireForCleanupRequest() async throws {
+        let wire = FakeMouseSocketWire()
+        let socket = MouseInputWebSocket(wire: wire, timeout: 0.05)
+        do { _ = try await socket.call("Input.dispatchMouseEvent", parameters: [:], sessionID: "synthetic-fixed"); XCTFail("Expected actual deadline") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .timeout) }
+        XCTAssertFalse(wire.closed)
+        let cleanup = Task { try await socket.call("Runtime.evaluate", parameters: [:], sessionID: "synthetic-fixed") }
+        await wire.waitForSends(2)
+        try wire.push(["id": 1, "result": ["late": true]])
+        try wire.push(["id": 2, "result": ["cleanup": true]])
+        let result = try await cleanup.value
+        XCTAssertEqual(result["cleanup"] as? Bool, true)
+        XCTAssertNil(result["late"])
+        socket.close()
+    }
+
+    @MainActor func testSocketDisconnectResumesPendingAndDeliversFailureOnlyOnce() async throws {
+        let wire = FakeMouseSocketWire()
+        let socket = MouseInputWebSocket(wire: wire, timeout: 1)
+        var failures = 0
+        socket.onFailure = { _ in failures += 1 }
+        let pending = Task { try await socket.call("Runtime.evaluate", parameters: [:], sessionID: "synthetic-fixed") }
+        await wire.waitForSends(1)
+        wire.close()
+        do { _ = try await pending.value; XCTFail("Disconnected request must complete with failure") } catch { }
+        XCTAssertEqual(failures, 1)
+        socket.close()
+        XCTAssertEqual(failures, 1)
+    }
+}
+
+@MainActor private final class MouseTransportFixture {
+    let profile: URL
+    let fake = FakeMouseCDPConnection()
+    let session: ProtoPieSession
+    var connectedURL: URL?
+    var capturedFrame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+    var failures: [Error] = []
+    lazy var transport: MouseInputTransport = {
+        let result = MouseInputTransport(profileURL: profile, monitorInterval: 0, connectionFactory: { [unowned self] url in
+            self.connectedURL = url; return self.fake
+        }, windowLookup: { [unowned self] id, pid in id == 42 && pid == 123 ? self.capturedFrame : nil })
+        result.onFailure = { [unowned self] in self.failures.append($0) }
+        return result
+    }()
+
+    init() throws {
+        profile = FileManager.default.temporaryDirectory.appendingPathComponent("NIOWarpMouseTest-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: profile, withIntermediateDirectories: true)
+        try "18765\n/devtools/browser/synthetic-test".write(to: profile.appendingPathComponent("DevToolsActivePort"), atomically: true, encoding: .utf8)
+        var configuration = ProtoPieConfiguration(); configuration.cloudURL = "https://cloud.protopie.io/p/mouse-input-test"
+        session = ProtoPieSession(windowID: 42, processID: 123, configuration: configuration,
+                                cloudTargetID: fake.targetID, title: "Synthetic fixture")
+        fake.url = try configuration.playbackURL().absoluteString
+    }
+    func remove() { try? FileManager.default.removeItem(at: profile) }
+    func event(_ viewport: MouseInputViewport, _ kind: MouseInputEvent.Kind, x: Double = 100,
+               button: MouseInputEvent.Button = .none, buttons: Int = 0) -> MouseInputEvent {
+        MouseInputEvent(viewportID: viewport.bindingID, kind: kind, x: x, y: 100, button: button, buttons: buttons)
+    }
+}
+
+@MainActor private final class FakeMouseCDPConnection: MouseInputCDPConnection {
+    struct Call { let method: String; let parameters: [String: Any]; let sessionID: String? }
+    var onEvent: ((String, [String: Any], String?) -> Void)?
+    var onFailure: ((Error) -> Void)?
+    var calls: [Call] = []
+    var inputs: [Call] { calls.filter { $0.method == "Input.dispatchMouseEvent" } }
+    var closed = false
+    var targetID = "synthetic-page-target"
+    let pageSessionID = "synthetic-flat-session"
+    var processID = 123
+    var url = ""
+    var frame = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+    var windowState = "fullscreen"
+    var width: Double = 1920
+    var height: Double = 1080
+    var dpr: Double = 2
+    var timeOrigin: Double = 12345
+    var visualScale: Double = 1
+    var blockNextInput = false
+    var timeoutNextInput = false
+    private var blockedInput: CheckedContinuation<Void, Never>?
+
+    func call(_ method: String, parameters: [String: Any], sessionID: String?) async throws -> [String: Any] {
+        guard !closed else { throw MouseInputTransportError.disconnected }
+        calls.append(Call(method: method, parameters: parameters, sessionID: sessionID))
+        switch method {
+        case "SystemInfo.getProcessInfo": return ["processInfo": [["type": "browser", "id": processID]]]
+        case "Target.getTargetInfo": return ["targetInfo": ["targetId": targetID, "type": "page", "url": url]]
+        case "Target.attachToTarget": return ["sessionId": pageSessionID]
+        case "Browser.getWindowForTarget":
+            return ["windowId": 88, "bounds": ["left": frame.minX, "top": frame.minY, "width": frame.width,
+                                             "height": frame.height, "windowState": windowState]]
+        case "Runtime.evaluate":
+            return ["result": ["value": ["url": url, "width": width, "height": height, "dpr": dpr, "timeOrigin": timeOrigin,
+                                         "ready": true, "visualScale": visualScale, "visualOffsetX": 0, "visualOffsetY": 0]]]
+        case "Input.dispatchMouseEvent":
+            if blockNextInput { blockNextInput = false; await withCheckedContinuation { blockedInput = $0 } }
+            if timeoutNextInput { timeoutNextInput = false; throw MouseInputTransportError.timeout }
+            return [:]
+        default: return [:]
+        }
+    }
+    func waitForBlockedInput() async {
+        for _ in 0..<1000 { if blockedInput != nil { return }; await Task.yield() }
+        XCTFail("Input worker did not reach the expected dispatch")
+    }
+    func unblockInput() { blockedInput?.resume(); blockedInput = nil }
+    func close() { closed = true }
+}
+
+@MainActor private final class FakeMouseSocketWire: MouseInputWebSocketWire {
+    var sent: [[String: Any]] = []
+    var closed = false
+    private var incoming: [Data] = []
+    private var receiver: CheckedContinuation<Data, Error>?
+    func send(_ text: String) async throws {
+        guard !closed else { throw MouseInputTransportError.disconnected }
+        sent.append(try JSONSerialization.jsonObject(with: Data(text.utf8)) as! [String: Any])
+    }
+    func receive() async throws -> Data {
+        guard !closed else { throw MouseInputTransportError.disconnected }
+        if !incoming.isEmpty { return incoming.removeFirst() }
+        return try await withCheckedThrowingContinuation { receiver = $0 }
+    }
+    func push(_ object: [String: Any]) throws {
+        let data = try JSONSerialization.data(withJSONObject: object)
+        if let receiver { self.receiver = nil; receiver.resume(returning: data) }
+        else { incoming.append(data) }
+    }
+    func waitForSends(_ count: Int) async {
+        for _ in 0..<1000 { if sent.count >= count { return }; await Task.yield() }
+        XCTFail("Socket did not reach the expected sends")
+    }
+    func close() {
+        closed = true
+        receiver?.resume(throwing: MouseInputTransportError.disconnected); receiver = nil
+    }
+}

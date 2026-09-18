@@ -86,3 +86,7 @@ Studio 与 Air 各自复用已有 ED25519 密钥，仅将公钥追加到目标�
 - 已移除保存的 Wi-Fi `Amigo`、`BRO`，保留不同名称的 `iBRO` 和手机热点。
 - 已删除 Keynote/Pages/Numbers Creator Studio、Lark 应用，清理 Codex缓存与飞连日志；Codex会话数据保留。清理后mesh SSH成功，磁盘约878 GiB可用。
 - 安装版v0.9.10内置ProtoPie Cloud预览启动工作流；仅完成静态检查，等待接外屏联调。详见 [工作流检查记录](protopie-workflow-inspection-20260916.md)。
+
+### 2026-09-18 鼠标映射版本
+
+v0.12.0(35)已安装固定入口，新增ProtoPie Cloud鼠标映射与贴边热点；原8项配置语义保留，退出/紧急隐藏/失焦均恢复正常输入。捕获专用Chrome时排除隐藏工具栏子窗口，使有效纹理恢复7680×936。Air未改，新物理合盖周期与玻璃鼠标落点待用户现场体验。见[验收与回滚](mouse-mapping-v0120.md)。

@@ -25,23 +25,33 @@ struct ShaderUniforms {
 
 final class LatestFrameStore {
     private let lock = NSLock()
-    private var pixelBuffer: CVPixelBuffer?
+    private var frame: MouseCapturedFrame?
 
-    func update(_ buffer: CVPixelBuffer) {
+    func update(_ buffer: CVPixelBuffer, metadata: MouseCaptureMetadata? = nil, source: MouseCaptureSource? = nil) {
         lock.lock()
-        pixelBuffer = buffer
+        frame = MouseCapturedFrame(pixelBuffer: buffer, metadata: metadata, source: source)
         lock.unlock()
     }
 
     func latest() -> CVPixelBuffer? {
         lock.lock()
         defer { lock.unlock() }
-        return pixelBuffer
+        return frame?.pixelBuffer
+    }
+
+    func snapshot() -> MouseCapturedFrame? {
+        lock.lock(); defer { lock.unlock() }
+        return frame
+    }
+
+    func revokeInput() {
+        lock.lock(); defer { lock.unlock() }
+        if let frame { self.frame = MouseCapturedFrame(pixelBuffer: frame.pixelBuffer, metadata: nil, source: nil) }
     }
 
     func clear() {
         lock.lock()
-        pixelBuffer = nil
+        frame = nil
         lock.unlock()
     }
 }
@@ -56,7 +66,7 @@ private final class CaptureFrameProbe: NSObject, SCStreamOutput {
               let status = attachments.first?[.status] as? Int,
               status == SCFrameStatus.complete.rawValue,
               let image = sampleBuffer.imageBuffer else { return }
-        frames.update(image)
+        frames.update(image, metadata: MouseCaptureMetadata.read(sampleBuffer))
     }
 }
 
@@ -64,19 +74,26 @@ private final class CaptureFrameRouter: @unchecked Sendable {
     let frameStore = LatestFrameStore()
     private let lock = NSLock()
     private var active: ObjectIdentifier?
-    func activate(_ stream: SCStream?) {
+    private var source: MouseCaptureSource?
+    func activate(_ stream: SCStream?, source: MouseCaptureSource?) {
         lock.lock(); defer { lock.unlock() }
         active = stream.map(ObjectIdentifier.init)
+        self.source = source
         if stream == nil { frameStore.clear() }
     }
     func owns(_ stream: SCStream) -> Bool {
         lock.lock(); defer { lock.unlock() }
         return active == ObjectIdentifier(stream)
     }
-    func receive(_ buffer: CVPixelBuffer, from stream: SCStream) {
+    func revokeInput(from stream: SCStream) {
         lock.lock(); defer { lock.unlock() }
         guard active == ObjectIdentifier(stream) else { return }
-        frameStore.update(buffer)
+        frameStore.revokeInput()
+    }
+    func receive(_ buffer: CVPixelBuffer, metadata: MouseCaptureMetadata?, from stream: SCStream) {
+        lock.lock(); defer { lock.unlock() }
+        guard active == ObjectIdentifier(stream) else { return }
+        frameStore.update(buffer, metadata: metadata, source: source)
     }
 }
 
@@ -136,8 +153,8 @@ private final class CaptureFrameRouter: @unchecked Sendable {
         if sourceMode == .automaticFullscreenWindow { startMonitoring() }
     }
 
-    private func markActiveStream(_ stream: SCStream?) {
-        routing.activate(stream)
+    private func markActiveStream(_ stream: SCStream?, source: MouseCaptureSource? = nil) {
+        routing.activate(stream, source: source)
     }
 
     func stop() async {
@@ -205,7 +222,10 @@ private final class CaptureFrameRouter: @unchecked Sendable {
         let width = max(Int((window.frame.width * scale).rounded()), 1)
         let height = max(Int((window.frame.height * scale).rounded()), 1)
         let probe = CaptureFrameProbe()
-        let candidate = SCStream(filter: filter, configuration: streamConfiguration(width: width, height: height, singleWindow: true), delegate: self)
+        // Chrome's native-fullscreen toolbar is a separate child window above
+        // its webpage. Including it shrinks the capture and adds non-page pixels.
+        let includeChildren = window.owningApplication?.bundleIdentifier != "com.google.Chrome"
+        let candidate = SCStream(filter: filter, configuration: streamConfiguration(width: width, height: height, singleWindow: true, includeChildWindows: includeChildren), delegate: self)
         try candidate.addStreamOutput(probe, type: .screen, sampleHandlerQueue: queue)
         do {
             try await candidate.startCapture()
@@ -216,14 +236,16 @@ private final class CaptureFrameRouter: @unchecked Sendable {
                 try await Task.sleep(nanoseconds: 50_000_000)
             }
             try Task.checkCancellation()
-            guard captureGeneration == generation, stream != nil, let firstFrame = probe.frames.latest() else {
+            guard captureGeneration == generation, stream != nil, let firstFrame = probe.frames.snapshot() else {
                 throw NSError(domain: "NIOWarp", code: 33, userInfo: [NSLocalizedDescriptionKey: "预览窗口未产生有效画面，保留上一捕获来源"])
             }
             try candidate.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
             let previous = stream
             stream = candidate
-            markActiveStream(candidate)
-            frameStore.update(firstFrame)
+            let inputSource = MouseCaptureSource(generation: generation, windowID: windowID, processID: processID,
+                windowSize: window.frame.size, pointPixelScale: scale)
+            markActiveStream(candidate, source: inputSource)
+            frameStore.update(firstFrame.pixelBuffer, metadata: firstFrame.metadata, source: inputSource)
             pinnedWindowID = windowID
             currentWindowID = windowID
             monitorTask?.cancel()
@@ -245,13 +267,20 @@ private final class CaptureFrameRouter: @unchecked Sendable {
     }
 
     nonisolated func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
-        guard outputType == .screen,
-              sampleBuffer.isValid,
-              let imageBuffer = sampleBuffer.imageBuffer else { return }
-        routing.receive(imageBuffer, from: stream)
+        guard outputType == .screen, sampleBuffer.isValid,
+              let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+              let raw = attachments.first?[.status] as? NSNumber,
+              let status = SCFrameStatus(rawValue: raw.intValue) else { return }
+        if status == .idle { return } // A static page retains the last completed frame.
+        guard status == .complete, let imageBuffer = sampleBuffer.imageBuffer else {
+            routing.revokeInput(from: stream) // Keep visual last frame; revoke its input identity.
+            return
+        }
+        routing.receive(imageBuffer, metadata: MouseCaptureMetadata.read(sampleBuffer), from: stream)
     }
 
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
+        routing.revokeInput(from: stream)
         Task { @MainActor [weak self] in
             guard let self, self.routing.owns(stream) else { return }
             self.emitError(error.localizedDescription)
@@ -397,7 +426,7 @@ private final class CaptureFrameRouter: @unchecked Sendable {
         )
     }
 
-    private func streamConfiguration(width: Int, height: Int, singleWindow: Bool) -> SCStreamConfiguration {
+    private func streamConfiguration(width: Int, height: Int, singleWindow: Bool, includeChildWindows: Bool = true) -> SCStreamConfiguration {
         let configuration = SCStreamConfiguration()
         configuration.width = width
         configuration.height = height
@@ -412,7 +441,7 @@ private final class CaptureFrameRouter: @unchecked Sendable {
         configuration.ignoreShadowsSingleWindow = singleWindow
         configuration.ignoreGlobalClipSingleWindow = singleWindow
         if #available(macOS 14.2, *) {
-            configuration.includeChildWindows = true
+            configuration.includeChildWindows = includeChildWindows
         }
         return configuration
     }
@@ -452,6 +481,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     private(set) var meshValidation = MeshValidation(foldedCellCount: 0, outOfAASampleCount: 0, totalSampleCount: 0)
     private(set) var meshRevision = 0
     private(set) var currentMesh: GeneratedMesh?
+    private(set) var inputFrame: MouseMappingRenderFrame?
 
     static let shaderSource = """
         #include <metal_stdlib>
@@ -807,7 +837,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
     func draw(in view: MTKView) {
         let frameTimestamp = ProcessInfo.processInfo.systemUptime
         performanceMonitor.recordFrame(at: frameTimestamp)
-        guard let pixelBuffer = frameStore.latest(),
+        guard let capturedFrame = frameStore.snapshot(),
               let descriptor = view.currentRenderPassDescriptor,
               let drawable = view.currentDrawable,
               let commandBuffer = commandQueue.makeCommandBuffer(),
@@ -816,6 +846,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
               let indexBuffer,
               let textureCache else { return }
 
+        let pixelBuffer = capturedFrame.pixelBuffer
         let width = CVPixelBufferGetWidth(pixelBuffer)
         let height = CVPixelBufferGetHeight(pixelBuffer)
         var cvTexture: CVMetalTexture?
@@ -885,8 +916,19 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
         )
         encoder.endEncoding()
         commandBuffer.present(drawable)
-        commandBuffer.addCompletedHandler { [performanceMonitor] completedBuffer in
+        let mappedFrame: MouseMappingRenderFrame?
+        if let mesh = currentMesh, let source = capturedFrame.source, let metadata = capturedFrame.metadata {
+            mappedFrame = MouseMappingRenderFrame(mesh: mesh, revision: meshRevision, configuration: configuration,
+                sourceWidth: width, sourceHeight: height, source: source, metadata: metadata)
+        } else { mappedFrame = nil }
+        commandBuffer.addCompletedHandler { [weak self, performanceMonitor] completedBuffer in
             _ = cvTexture
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if completedBuffer.status == .completed, let mappedFrame, mappedFrame.revision == self.meshRevision,
+                   mappedFrame.configuration == self.configuration, self.frameStore.snapshot()?.source == mappedFrame.source { self.inputFrame = mappedFrame }
+                else { self.inputFrame = nil }
+            }
             let gpuDuration = completedBuffer.gpuEndTime - completedBuffer.gpuStartTime
             performanceMonitor.recordGPUTime(
                 seconds: gpuDuration,
@@ -903,7 +945,8 @@ final class OutputWindow: NSWindow {
         isReleasedWhenClosed = false
     }
 
-    override var canBecomeKey: Bool { false }
+    var acceptsMappedInput = false
+    override var canBecomeKey: Bool { acceptsMappedInput }
     override var canBecomeMain: Bool { false }
 }
 
@@ -1007,6 +1050,8 @@ private final class OutputController {
     let renderer: WarpRenderer
     private let aaBoundaryOverlay: AABoundaryOverlayView
     private let warpBoundaryOverlay: WarpBoundaryOverlayView
+    let mouseCursor = MouseCursorOverlay()
+    var onWillHide: (() -> Void)?
 
     init?(
         screen: NSScreen,
@@ -1053,6 +1098,10 @@ private final class OutputController {
             visible: configuration.render.showWarpBoundary
         )
         container.addSubview(warpBoundaryOverlay)
+        mouseCursor.frame = container.bounds
+        mouseCursor.autoresizingMask = [.width, .height]
+        mouseCursor.physicalSize = SIMD2(Float(pixelWidth), Float(pixelHeight))
+        container.addSubview(mouseCursor)
         window.contentView = container
         window.setFrame(screen.frame, display: true)
         window.orderFrontRegardless()
@@ -1069,8 +1118,16 @@ private final class OutputController {
         if visible {
             window.orderFrontRegardless()
         } else {
+            onWillHide?()
             window.orderOut(nil)
         }
+    }
+
+    func setMouseInputEnabled(_ enabled: Bool) {
+        (window as? OutputWindow)?.acceptsMappedInput = enabled
+        window.ignoresMouseEvents = !enabled
+        mouseCursor.receivesInput = enabled
+        if enabled { window.makeFirstResponder(mouseCursor) }
     }
 
     func updateAABoundary(aaRect: NormalizedRect, visible: Bool) {
@@ -1086,7 +1143,7 @@ private final class WorkbenchWindow: NSWindow {
     var onModuleShortcut: ((Int) -> Void)?
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.intersection([.command, .control, .option]) == .command,
-           let number = Int(event.charactersIgnoringModifiers ?? ""), (1...6).contains(number) {
+           let number = Int(event.charactersIgnoringModifiers ?? ""), (1...7).contains(number) {
             onModuleShortcut?(number - 1)
             return true
         }
@@ -1135,7 +1192,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let statusLabel = NSTextField(wrappingLabelWithString: "等待屏幕捕获权限…")
     private let globalStatusLabel = NSTextField(wrappingLabelWithString: "正在准备控制台…")
     private let configurationTabs = NSTabView()
-    static let modules = [("canvas", "画布与输入"), ("global", "整体校正"), ("local", "局部微调"), ("quality", "标定与画质"), ("history", "预设与历史"), ("protopie", "ProtoPie 联动")]
+    static let modules = [("canvas", "画布与输入"), ("global", "整体校正"), ("local", "局部微调"), ("quality", "标定与画质"), ("history", "预设与历史"), ("mouse", "鼠标映射"), ("protopie", "ProtoPie 联动")]
     private let modulePicker = NSSegmentedControl()
     private let localToolPicker = NSSegmentedControl(labels: ["贝塞尔曲面", "交点精调"], trackingMode: .selectOne, target: nil, action: nil)
     private let previewHost = NSView()
@@ -1152,6 +1209,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private var builtInterface = false
     private let protoPie: ProtoPieCoordinator?
     private var protoPiePanel: ProtoPiePanel?
+    private let mouseMapping: MouseMappingController?
+    private var mouseMappingPanel: MouseMappingPanel?
     private var inspectorWidthConstraint: NSLayoutConstraint?
     private let preferredControlDisplayID: CGDirectDisplayID?
     var selectedModuleIdentifier: String { configurationTabs.selectedTabViewItem?.identifier as? String ?? "canvas" }
@@ -1226,6 +1285,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         historyStore: ConfigurationHistoryStore = ConfigurationHistoryStore(),
         presetStore: PresetStore = PresetStore(),
         protoPie: ProtoPieCoordinator? = nil,
+        mouseMapping: MouseMappingController? = nil,
         terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) }
     ) {
         self.renderer = renderer
@@ -1233,6 +1293,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         self.historyStore = historyStore
         self.presetStore = presetStore
         self.protoPie = protoPie
+        self.mouseMapping = mouseMapping
         preferredControlDisplayID = (sourceScreen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
         self.terminateApplication = terminateApplication
         self.configuration = configuration
@@ -1390,6 +1451,16 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         ])
         let qualityPage = makeTabPage(title: "标定与画质", identifier: "quality")
         let settingsPage = makeTabPage(title: "预设与历史", identifier: "history")
+        let mouseItem = NSTabViewItem(identifier: "mouse")
+        mouseItem.label = "鼠标映射"
+        if let mouseMapping {
+            let panel = mouseMapping.makePanel()
+            mouseMappingPanel = panel
+            mouseItem.view = panel.inspectorView
+        } else {
+            mouseItem.view = NSTextField(wrappingLabelWithString: "从正式应用启动后，可接通 ProtoPie 演示鼠标。")
+        }
+        configurationTabs.addTabViewItem(mouseItem)
         let protoItem = NSTabViewItem(identifier: "protopie")
         protoItem.label = "ProtoPie 联动"
         if let protoPie {
@@ -1696,7 +1767,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         statusLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(statusLabel)
 
-        let hint = NSTextField(wrappingLabelWithString: "紧急恢复：按 ⌃⌥⌘Esc 可立即隐藏外屏覆盖层。当前是视觉接管，Warp 后的视觉坐标尚未做输入逆映射。")
+        let hint = NSTextField(wrappingLabelWithString: "鼠标映射页可接通 ProtoPie Cloud 演示点击；Esc 恢复普通鼠标。⌃⌥⌘Esc 可立即隐藏外屏覆盖层。")
         hint.preferredMaxLayoutWidth = 490
         hint.textColor = .secondaryLabelColor
         stack.addArrangedSubview(hint)
@@ -1903,7 +1974,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.modifierFlags.contains(.command), let number = Int(event.charactersIgnoringModifiers ?? ""), (1...6).contains(number) {
+        if event.modifierFlags.contains(.command), let number = Int(event.charactersIgnoringModifiers ?? ""), (1...7).contains(number) {
             selectModule(Self.modules[number - 1].0)
             return
         }
@@ -3158,6 +3229,7 @@ private extension Array {
 @MainActor private final class AppDelegate: NSObject, NSApplicationDelegate {
     private let captureEngine = CaptureEngine()
     private let protoPie = ProtoPieCoordinator()
+    private let mouseMapping = MouseMappingController()
     private var protoPieReleaseTask: Task<Void, Never>?
     private let configurationStore = ConfigurationStore()
     private var outputController: OutputController?
@@ -3179,6 +3251,7 @@ private extension Array {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(AppPresentationPolicy.activationPolicy)
         configureProtoPie()
+        configureMouseMapping()
         let menu = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
@@ -3256,6 +3329,7 @@ private extension Array {
             return
         }
         self.outputController = outputController
+        outputController.onWillHide = { [weak self] in self?.mouseMapping.stop(reason: "演示已暂停，已恢复普通鼠标。") }
         outputDisplayState = displayState(for: topology.output)
         controlDisplayID = topology.source.flatMap(displayID)
         let previousPanel = controlPanel
@@ -3292,7 +3366,7 @@ private extension Array {
             },
             updateWarpBoundary: { [weak outputController] configuration, visible in
                 outputController?.updateWarpBoundary(configuration: configuration, visible: visible)
-            }, presentWindow: topology.source != nil, protoPie: protoPie
+            }, presentWindow: topology.source != nil, protoPie: protoPie, mouseMapping: mouseMapping
         )
         if let previousPanel { controlPanel.restoreWorkspace(from: previousPanel, sameDisplay: sameDisplay) }
         self.controlPanel = controlPanel
@@ -3376,7 +3450,7 @@ private extension Array {
             renderer: nil, store: configurationStore, configuration: preview,
             sourceScreen: source, outputScreen: nil,
             setWarpVisible: { _ in }, isWarpVisible: { false },
-            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie
+            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie, mouseMapping: mouseMapping
         )
         if let previousPanel { panel.restoreWorkspace(from: previousPanel, sameDisplay: true) }
         controlPanel = panel
@@ -3390,6 +3464,7 @@ private extension Array {
     }
 
     private func restartSession(reason: String) {
+        mouseMapping.stop(reason: reason)
         protoPie.suspendForDisplayChange()
         sessionEpoch += 1
         captureStartupTask?.cancel()
@@ -3480,7 +3555,17 @@ private extension Array {
         restartSession(reason: "显示器已唤醒，正在重建 Warp 输出。")
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        mouseMapping.stop(reason: "程序正在退出。")
+        Task { @MainActor in
+            await mouseMapping.finishClosing()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        mouseMapping.stop(reason: "程序正在退出。")
         protoPie.shutdown()
         sessionEpoch += 1
         captureStartupTask?.cancel()
@@ -3496,12 +3581,30 @@ private extension Array {
     }
 
     @objc private func showWorkbench() {
+        if mouseMapping.isActive { mouseMapping.stop() }
         if outputController != nil, chooseScreens()?.source == nil {
             emergencyHideWarp(reason: "已暂停演示以显示工作台；点击“重新显示校正画面”继续合盖演示。", userInitiated: true)
             return
         }
         NSApp.activate(ignoringOtherApps: true)
         controlPanel?.bringToFront()
+    }
+
+    private func configureMouseMapping() {
+        mouseMapping.sessionProvider = { [weak self] in
+            guard let self, case .running = self.protoPie.state else { return nil }
+            return self.protoPie.activeSession
+        }
+        mouseMapping.outputProvider = { [weak self] in
+            guard let self, let output = self.outputController, output.isWarpVisible,
+                  let id = self.outputDisplayState?.id, let frame = output.renderer.inputFrame,
+                  frame.revision == output.renderer.meshRevision,
+                  frame.configuration == output.renderer.activeConfiguration,
+                  self.captureEngine.frameStore.snapshot()?.source == frame.source else { return nil }
+            return MouseMappingOutput(window: output.window, cursor: output.mouseCursor, displayID: id,
+                frame: frame, setInputEnabled: { [weak output] in output?.setMouseInputEnabled($0) })
+        }
+        mouseMapping.onReturnToWorkbench = { [weak self] in self?.showWorkbench() }
     }
 
     private func configureProtoPie() {
@@ -3539,6 +3642,7 @@ private extension Array {
                 self.outputController?.setWarpVisible(false)
                 self.controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: false)
             case .failed(let reason):
+                self.mouseMapping.stop(reason: reason)
                 self.controlPanel?.setStatus("ProtoPie 联动：\(reason)", color: .systemOrange)
             default: break
             }
@@ -3588,12 +3692,14 @@ private extension Array {
         controlDisplayID = topology.source.flatMap(displayID)
         // Origin can change when the built-in display disappears. Keep the same
         // renderer, stream, preview page and session epoch; relocate only the window.
+        let originChanged = outputController.window.frame.origin != topology.output.frame.origin
         outputController.window.setFrame(topology.output.frame, display: true)
+        if originChanged { mouseMapping.displayOriginChanged() }
         if outputController.isWarpVisible { outputController.window.orderFrontRegardless() }
         if let control = topology.source {
             headlessWorkbenchRequested = false
             controlPanel?.fitWindow(to: control.visibleFrame)
-            if previousControlID != controlDisplayID { controlPanel?.bringToFront() }
+            if previousControlID != controlDisplayID, !mouseMapping.isActive { controlPanel?.bringToFront() }
         } else if !headlessWorkbenchRequested {
             controlPanel?.window?.orderOut(nil)
         }

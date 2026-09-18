@@ -14,8 +14,8 @@ import XCTest
 }
 
 final class TabLayoutTests: XCTestCase {
-    private let modules = ["canvas", "global", "local", "quality", "history", "protopie"]
-    private let titles = ["画布与输入", "整体校正", "局部微调", "标定与画质", "预设与历史", "ProtoPie 联动"]
+    private let modules = ["canvas", "global", "local", "quality", "history", "mouse", "protopie"]
+    private let titles = ["画布与输入", "整体校正", "局部微调", "标定与画质", "预设与历史", "鼠标映射", "ProtoPie 联动"]
 
     private func descendants(_ view: NSView) -> [NSView] {
         [view] + view.subviews.flatMap(descendants)
@@ -36,6 +36,7 @@ final class TabLayoutTests: XCTestCase {
             history.record(previous, reason: "原有历史记录", force: true)
         }
         let protoPie = MainActor.assumeIsolated { ProtoPieCoordinator(defaults: defaults, driver: WorkbenchNoLaunchDriver()) }
+        let mouseMapping = MainActor.assumeIsolated { MouseMappingController(defaults: defaults) }
         var renderer: WarpRenderer?
         if active {
             guard MTLCreateSystemDefaultDevice() != nil else { throw XCTSkip("需要 Metal 设备") }
@@ -48,7 +49,7 @@ final class TabLayoutTests: XCTestCase {
             applyCaptureConfiguration: { _ in XCTFail("切换模块不能重启捕获") },
             updateAABoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 AA") } },
             updateWarpBoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 Warp") } }, presentWindow: false,
-            historyStore: history, presetStore: PresetStore(defaults: defaults), protoPie: protoPie,
+            historyStore: history, presetStore: PresetStore(defaults: defaults), protoPie: protoPie, mouseMapping: mouseMapping,
             terminateApplication: terminateApplication
         )
         return (panel, defaults, suite)
@@ -71,7 +72,7 @@ final class TabLayoutTests: XCTestCase {
         descendants(try XCTUnwrap(item.view)).compactMap { ($0 as? NSTextField)?.stringValue }
     }
 
-    func testSixModulesHaveRequestedOrderWithProtoPieLastAndCanvasDefault() throws {
+    func testSevenModulesHaveRequestedOrderWithProtoPieLastAndCanvasDefault() throws {
         let (panel, defaults, suite) = try controller()
         defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
         let navigation = try tabs(in: panel)
@@ -80,8 +81,8 @@ final class TabLayoutTests: XCTestCase {
         XCTAssertEqual(navigation.tabViewType, .noTabsNoBorder)
         XCTAssertEqual(panel.selectedModuleIdentifier, "canvas")
         let segments = try XCTUnwrap(identifiedView("nio-workbench-modules", in: panel) as? NSSegmentedControl)
-        XCTAssertEqual(segments.segmentCount, 6)
-        XCTAssertEqual((0..<6).compactMap { segments.label(forSegment: $0) }, titles)
+        XCTAssertEqual(segments.segmentCount, 7)
+        XCTAssertEqual((0..<7).compactMap { segments.label(forSegment: $0) }, titles)
         XCTAssertEqual(segments.selectedSegment, 0)
         for (index, module) in modules.enumerated() {
             segments.selectedSegment = index
@@ -90,6 +91,56 @@ final class TabLayoutTests: XCTestCase {
             XCTAssertEqual(navigation.selectedTabViewItem?.identifier as? String, module)
         }
         XCTAssertEqual(panel.window?.level, .normal, "工作台默认不能遮挡普通编辑或播放器窗口")
+    }
+
+    func testCommandNumberShortcutsIncludeMouseAndKeepProtoPieSeventh() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let window = try XCTUnwrap(panel.window)
+        let before = defaults.persistentDomain(forName: suite) as NSDictionary?
+        for number in 1...7 {
+            let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+                context: nil, characters: String(number), charactersIgnoringModifiers: String(number),
+                isARepeat: false, keyCode: 0))
+            XCTAssertTrue(window.performKeyEquivalent(with: event))
+            XCTAssertEqual(panel.selectedModuleIdentifier, modules[number - 1])
+        }
+        XCTAssertEqual(panel.selectedModuleIdentifier, "protopie")
+        let unsupported = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+            modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber,
+            context: nil, characters: "8", charactersIgnoringModifiers: "8", isARepeat: false, keyCode: 28))
+        XCTAssertFalse(window.performKeyEquivalent(with: unsupported))
+        XCTAssertEqual(panel.selectedModuleIdentifier, "protopie")
+        XCTAssertEqual(defaults.persistentDomain(forName: suite) as NSDictionary?, before)
+    }
+
+    func testMouseTabUsesRealPanelAndChangesOnlyInputPreferences() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let original = panel.configurationForOfflinePreview
+        panel.selectModule("mouse")
+        let mouse = try XCTUnwrap(item("mouse", in: panel).view)
+        let views = descendants(mouse)
+        let speed = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-speed" } as? NSSlider)
+        let preview = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-preview-only" } as? NSButton)
+        let mode = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-mode" } as? NSPopUpButton)
+        XCTAssertEqual(preview.state, .on)
+        XCTAssertEqual(mode.indexOfSelectedItem, 0)
+        XCTAssertTrue(speed.isEnabled, "离线允许预设鼠标偏好，不代表启动输入接管")
+        let before = defaults.persistentDomain(forName: suite) ?? [:]
+        speed.doubleValue = 1.75
+        speed.sendAction(try XCTUnwrap(speed.action), to: speed.target)
+        let loaded = MouseMappingSettings.load(defaults: defaults)
+        XCTAssertEqual(loaded.speed, 1.75)
+        XCTAssertTrue(loaded.previewOnly)
+        XCTAssertEqual(panel.configurationForOfflinePreview, original)
+        let after = defaults.persistentDomain(forName: suite) ?? [:]
+        let otherBefore = before.filter { $0.key != MouseMappingSettings.key } as NSDictionary
+        let otherAfter = after.filter { $0.key != MouseMappingSettings.key } as NSDictionary
+        XCTAssertEqual(otherAfter, otherBefore, "鼠标偏好不得修改校正配置、预设、历史或 ProtoPie 来源")
+        panel.selectModule("protopie"); panel.selectModule("mouse")
+        XCTAssertEqual(speed.doubleValue, 1.75)
     }
 
     func testMigratedControlWindowFitsVisibleFrameWithoutChangingCalibration() throws {
@@ -170,7 +221,7 @@ final class TabLayoutTests: XCTestCase {
         for module in modules {
             panel.selectModule(module)
             XCTAssertEqual(panel.selectedModuleIdentifier, module)
-            guard module != "protopie", module != "local" else { continue }
+            guard module != "protopie", module != "local", module != "mouse" else { continue }
             let controls = descendants(try XCTUnwrap(item(module, in: panel).view)).compactMap { $0 as? NSControl }
             for control in controls {
                 if let field = control as? NSTextField, field.isEditable { XCTAssertFalse(field.isEnabled, field.stringValue) }
@@ -477,14 +528,14 @@ final class TabLayoutTests: XCTestCase {
         canvas.contentView.scroll(to: NSPoint(x: 0, y: distance))
         canvas.reflectScrolledClipView(canvas.contentView)
         let saved = canvas.contentView.bounds.origin
-        for module in ["global", "quality", "history", "protopie", "canvas"] { panel.selectModule(module) }
+        for module in ["global", "quality", "history", "mouse", "protopie", "canvas"] { panel.selectModule(module) }
         content.layoutSubtreeIfNeeded()
         XCTAssertTrue(try item("canvas", in: panel).view === canvas)
         XCTAssertEqual(canvas.contentView.bounds.origin.x, saved.x, accuracy: 0.5)
         XCTAssertEqual(canvas.contentView.bounds.origin.y, saved.y, accuracy: 0.5)
     }
 
-    func testMinimumWorkbenchShowsAllSixTabsAndReachableInspectorControls() throws {
+    func testMinimumWorkbenchShowsAllSevenTabsAndReachableInspectorControls() throws {
         let (panel, defaults, suite) = try controller(active: true)
         defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
         let window = try XCTUnwrap(panel.window)
