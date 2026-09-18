@@ -43,6 +43,148 @@ final class NativeMouseScopeTests: XCTestCase {
         }
     }
 
+    private func cursorWindow(_ id: CGWindowID = 6, sharing: Int = 1, store: Int = 2,
+                              bounds: CGRect = CGRect(x: -3866, y: -494, width: 53, height: 53)) -> [String: Any] {
+        var result = window(sharing: sharing)
+        result[kCGWindowNumber as String] = NSNumber(value: id)
+        result[kCGWindowStoreType as String] = NSNumber(value: store)
+        result[kCGWindowBounds as String] = bounds.dictionaryRepresentation
+        return result
+    }
+
+    private var originalCursorImages: [NativeSystemCursorImage] {
+        [NativeSystemCursorImage(size: CGSize(width: 53, height: 53), hotSpot: CGPoint(x: 26, y: 26))!,
+         NativeSystemCursorImage(size: CGSize(width: 50, height: 50), hotSpot: CGPoint(x: 25, y: 25))!]
+    }
+
+    func testUnregisteredCursorUsesOnlyOriginalStrictIdentification() {
+        var otherOwner = cursorWindow(7, sharing: 0)
+        otherOwner[kCGWindowOwnerName as String] = "StatusIndicator"
+        var otherLevel = cursorWindow(8, sharing: 0)
+        otherLevel[kCGWindowLayer as String] = NSNumber(value: 24)
+        let entries = [cursorWindow(6, sharing: 0), cursorWindow(9, sharing: 1),
+                       cursorWindow(10, sharing: 2), cursorWindow(0, sharing: 0), otherOwner, otherLevel]
+        XCTAssertEqual(NativeMouseInputCapture.confirmedSystemCursorWindowIDs(in: entries), [6])
+    }
+
+    func testRegisteredImageIdentifiesShareableCursorWithoutEarlierNonshareableSample() {
+        let pointer = CGPoint(x: -3840, y: -468)
+        XCTAssertTrue(NativeMouseInputCapture.isSystemCursorWindow(cursorWindow(),
+            cursorImages: originalCursorImages, cursorPoint: pointer))
+        let entries = [cursorWindow(), surfaceWindow(101)]
+        let windows = NativeMouseInputCapture.scopeWindows(entries, outputWindow: 101, outputOwned: true,
+            cursorImages: originalCursorImages, cursorPoint: pointer)
+        XCTAssertEqual(windows.map { $0.0 }, [101])
+        XCTAssertTrue(owns(windows, target: 101, point: pointer))
+        XCTAssertEqual(NativeMouseInputCapture.confirmedSystemCursorWindowIDs(in: entries,
+            cursorImages: originalCursorImages, cursorPoint: pointer), [6])
+        let pressed = cursorWindow(bounds: CGRect(x: -3865, y: -493, width: 50, height: 50))
+        XCTAssertTrue(NativeMouseInputCapture.isSystemCursorWindow(pressed,
+            cursorImages: originalCursorImages, cursorPoint: pointer))
+    }
+
+    func testUnregisteredOrDifferentImageCannotIgnoreShareableWindow() {
+        let pointer = CGPoint(x: -3840, y: -468)
+        let other = NativeSystemCursorImage(size: CGSize(width: 20, height: 24), hotSpot: CGPoint(x: 3, y: 2))!
+        for images: [NativeSystemCursorImage] in [[], [other]] {
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(cursorWindow(),
+                cursorImages: images, cursorPoint: pointer))
+            let windows = NativeMouseInputCapture.scopeWindows([cursorWindow(), surfaceWindow(101)],
+                outputWindow: 101, outputOwned: true, cursorImages: images, cursorPoint: pointer)
+            XCTAssertEqual(windows.map { $0.0 }, [6, 101])
+            XCTAssertFalse(owns(windows, target: 101, point: pointer))
+        }
+    }
+
+    func testMatchingImageStillRequiresCursorOwnerLevelStoreAndNotStatusIndicator() {
+        let pointer = CGPoint(x: -3840, y: -468)
+        for (key, value): (String, Any) in [
+            (kCGWindowOwnerName as String, "StatusIndicator"),
+            (kCGWindowName as String, "StatusIndicator"),
+            (kCGWindowLayer as String, NSNumber(value: 24)),
+            (kCGWindowStoreType as String, NSNumber(value: 1)),
+            (kCGWindowSharingState as String, NSNumber(value: 2))] {
+            var changed = cursorWindow()
+            changed[key] = value
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(changed,
+                cursorImages: originalCursorImages, cursorPoint: pointer), key)
+        }
+        // The real shareable Window Server status indicator uses store 1.
+        let status = cursorWindow(store: 1)
+        let windows = NativeMouseInputCapture.scopeWindows([status, surfaceWindow(101)],
+            outputWindow: 101, outputOwned: true, cursorImages: originalCursorImages, cursorPoint: pointer)
+        XCTAssertEqual(windows.map { $0.0 }, [6, 101])
+        XCTAssertFalse(owns(windows, target: 101, point: pointer))
+    }
+
+    func testImageMatchRequiresFiniteBoundsAtActualHotspot() {
+        for pointer: CGPoint? in [nil, CGPoint(x: -4000, y: -468), CGPoint(x: CGFloat.nan, y: -468),
+                                 CGPoint(x: -3840, y: CGFloat.infinity)] {
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(cursorWindow(),
+                cursorImages: originalCursorImages, cursorPoint: pointer))
+        }
+        for bounds in [CGRect.null, CGRect.infinite, CGRect(x: CGFloat.nan, y: -494, width: 53, height: 53),
+                       CGRect(x: -3866, y: -494, width: -53, height: 53),
+                       CGRect(x: -3866, y: -494, width: 53, height: 0)] {
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(cursorWindow(bounds: bounds),
+                cursorImages: originalCursorImages, cursorPoint: CGPoint(x: -3840, y: -468)))
+        }
+    }
+
+    func testSharedCursorMissingOrMalformedMetadataStaysAnOccluder() {
+        for key in [kCGWindowNumber, kCGWindowOwnerName, kCGWindowLayer, kCGWindowSharingState,
+                    kCGWindowStoreType, kCGWindowBounds] {
+            var missing = cursorWindow()
+            missing.removeValue(forKey: key as String)
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(missing,
+                cursorImages: originalCursorImages, cursorPoint: CGPoint(x: -3840, y: -468)))
+            var malformed = cursorWindow()
+            malformed[key as String] = ["unexpected": "value"]
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(malformed,
+                cursorImages: originalCursorImages, cursorPoint: CGPoint(x: -3840, y: -468)))
+        }
+    }
+
+    func testRetinaAndNegativeFractionalCursorFootprintUsesLogicalPoints() {
+        for image in originalCursorImages {
+            for point in [CGPoint(x: 1074, y: -1013), CGPoint(x: -3840.5, y: -468.25), CGPoint(x: 0.25, y: 1.75)] {
+                let expected = CGRect(x: point.x - image.hotSpot.x, y: point.y - image.hotSpot.y,
+                    width: image.size.width, height: image.size.height)
+                for delta in [CGFloat(-1), -0.5, 0, 0.5, 1] {
+                    let quantized = CGRect(x: expected.minX + delta, y: expected.minY - delta,
+                        width: expected.width + delta, height: expected.height - delta)
+                    XCTAssertTrue(image.matches(bounds: quantized, cursorPoint: point))
+                }
+                let doublePixels = CGRect(origin: expected.origin,
+                    size: CGSize(width: image.size.width * 2, height: image.size.height * 2))
+                XCTAssertFalse(image.matches(bounds: doublePixels, cursorPoint: point), "Retina 不得重复乘二")
+            }
+        }
+    }
+
+    func testSameSizeWindowAtWrongOriginIsStillAnOccluder() {
+        let point = CGPoint(x: -3840, y: -468)
+        for offset in [CGFloat(-2), -1.01, 1.01, 2, 20] {
+            let wrong = cursorWindow(bounds: CGRect(x: -3866 + offset, y: -494, width: 53, height: 53))
+            XCTAssertFalse(NativeMouseInputCapture.isSystemCursorWindow(wrong,
+                cursorImages: originalCursorImages, cursorPoint: point))
+            let windows = NativeMouseInputCapture.scopeWindows([wrong, surfaceWindow(101)],
+                outputWindow: 101, outputOwned: true, cursorImages: originalCursorImages, cursorPoint: point)
+            XCTAssertEqual(windows.map { $0.0 }, [6, 101])
+        }
+    }
+
+    func testCursorFootprintRejectsInvalidSizesAndHotspots() {
+        for size in [CGSize(width: 0, height: 53), CGSize(width: -1, height: 53),
+                     CGSize(width: CGFloat.nan, height: 53), CGSize(width: 53, height: CGFloat.infinity)] {
+            XCTAssertNil(NativeSystemCursorImage(size: size, hotSpot: CGPoint(x: 26, y: 26)))
+        }
+        for point in [CGPoint(x: -1, y: 26), CGPoint(x: 53, y: 26), CGPoint(x: 26, y: 53),
+                      CGPoint(x: CGFloat.nan, y: 26), CGPoint(x: 26, y: CGFloat.infinity)] {
+            XCTAssertNil(NativeSystemCursorImage(size: CGSize(width: 53, height: 53), hotSpot: point))
+        }
+    }
+
     private func surfaceWindow(_ id: CGWindowID, owner: String = "NIOWarpApp", alpha: Double = 1,
                                bounds: CGRect? = nil) -> [String: Any] {
         [kCGWindowNumber as String: NSNumber(value: id),

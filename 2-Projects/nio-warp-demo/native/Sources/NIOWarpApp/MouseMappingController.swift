@@ -46,6 +46,7 @@ struct MouseCursorPageIdentity: Equatable {
     private var cursorRefreshNeeded = false
     private var cursorIdentifier = ""
     private var cursorHidden = false
+    private var cursorVisibility = CursorIdleVisibilityPolicy()
     private var cursorRevision: UInt64 = 0
     private var cursorRetryAfter: TimeInterval = 0
     private var lastVerifiedCursor: (page: MouseCursorPageIdentity, style: ProtoPieCursorStyle)?
@@ -61,7 +62,20 @@ struct MouseCursorPageIdentity: Equatable {
         self.defaults = defaults
         settings = MouseMappingSettings.load(defaults: defaults)
         input.onEvent = { [weak self] event in self?.receive(event) }
+        input.onPointerActivity = { [weak self] event in
+            guard let self, self.isActive, self.outputOwned else { return }
+            // Includes the first real hardware move even when movement priming
+            // suppresses its delta. Never consumes the click that wakes us.
+            self.cursorVisibility.receiveMouse(event, now: ProcessInfo.processInfo.systemUptime)
+            self.reconcileCursorVisibility()
+        }
         input.onKeyboardEvent = { [weak self] event in self?.receiveKeyboard(event) }
+        input.onCursorScopeChange = { [weak self] owned in
+            guard let self else { return }
+            self.cursorVisibility.setScope(owned: owned && self.isActive && self.outputOwned,
+                now: ProcessInfo.processInfo.systemUptime)
+            self.reconcileCursorVisibility()
+        }
         input.onEnter = { [weak self] point, allowSnap in self?.adoptNativeCursor(at: point, allowSnap: allowSnap) ?? false }
         input.onLeave = { [weak self] in
             self?.cursorRevision &+= 1
@@ -318,6 +332,7 @@ struct MouseCursorPageIdentity: Equatable {
         catch { stop(reason: error.localizedDescription, returnToWorkbench: true); return }
         input.refreshScope()
         if outputOwned, !input.engaged { input.adoptCurrentCursorIfInside() }
+        refreshCursorVisibility()
         if outputOwned, input.engaged { refreshOriginalCursor() }
         publish(force: false)
     }
@@ -480,17 +495,34 @@ struct MouseCursorPageIdentity: Equatable {
     }
 
     private func applyOriginalCursor(_ style: ProtoPieCursorStyle) {
-        cursorIdentifier = style.identifier
-        if style.isHidden != cursorHidden {
-            if style.isHidden { NSCursor.hide() } else { NSCursor.unhide() }
-            cursorHidden = style.isHidden
+        guard isActive, outputOwned, input.engaged, input.ownsCurrentSurface() else {
+            restoreCursorPresentation(); return
         }
+        cursorIdentifier = style.identifier
+        cursorVisibility.setPageHidden(style.isHidden)
+        input.registerCursorImage(style.cursor ?? .arrow)
         output?.cursor.sourceCursor = style.cursor ?? .arrow
         (style.cursor ?? .arrow).set()
+        refreshCursorVisibility()
+    }
+
+    private func refreshCursorVisibility() {
+        let now = ProcessInfo.processInfo.systemUptime
+        cursorVisibility.setScope(owned: isActive && outputOwned && input.engaged && input.ownsCurrentSurface(), now: now)
+        cursorVisibility.update(now: now, enabled: settings.cursorAutoHideEnabled, delay: settings.cursorAutoHideDelay)
+        reconcileCursorVisibility()
+    }
+
+    private func reconcileCursorVisibility() {
+        let hidden = cursorVisibility.wantsHidden
+        guard hidden != cursorHidden else { return }
+        if hidden { NSCursor.hide() } else { NSCursor.unhide() }
+        cursorHidden = hidden
     }
 
     private func restoreCursorPresentation() {
-        if cursorHidden { NSCursor.unhide(); cursorHidden = false }
+        cursorVisibility.setScope(owned: false, now: ProcessInfo.processInfo.systemUptime)
+        reconcileCursorVisibility()
         output?.cursor.sourceCursor = nil
     }
 
@@ -530,6 +562,13 @@ struct MouseCursorPageIdentity: Equatable {
             "sourceUV": [sourceUV.x, sourceUV.y], "edgeInsetPixels": 0.5]
         diagnostic["outputOwned"] = outputOwned
         diagnostic["cursorIdentifier"] = cursorIdentifier
+        diagnostic["cursorAutoHideEnabled"] = settings.cursorAutoHideEnabled
+        diagnostic["cursorAutoHideDelay"] = settings.cursorAutoHideDelay
+        diagnostic["cursorHidden"] = cursorHidden
+        diagnostic["cursorIdleHidden"] = cursorVisibility.idleHidden
+        diagnostic["cursorPageHidden"] = cursorVisibility.pageHidden
+        diagnostic["cursorHeldButtons"] = cursorVisibility.heldButtons
+        if let activity = cursorVisibility.lastMouseActivity { diagnostic["cursorIdleSeconds"] = max(0, now - activity) }
         diagnostic["cursorWarning"] = cursorWarning
         if let transport { diagnostic["transport"] = transport.diagnosticSnapshot }
         if isActive { diagnostic["nativeScope"] = input.scopeDiagnostic() }

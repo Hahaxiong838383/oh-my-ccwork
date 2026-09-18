@@ -2,11 +2,42 @@ import AppKit
 import ApplicationServices
 import Dispatch
 
+/// Logical-point footprint of an original CSS cursor already verified by the
+/// controller. No system-wide cursor image capture is involved.
+struct NativeSystemCursorImage: Equatable {
+    let size: CGSize
+    let hotSpot: CGPoint
+
+    init?(size: CGSize, hotSpot: CGPoint) {
+        guard size.width.isFinite, size.height.isFinite, size.width > 0, size.height > 0,
+              hotSpot.x.isFinite, hotSpot.y.isFinite,
+              hotSpot.x >= 0, hotSpot.x < size.width,
+              hotSpot.y >= 0, hotSpot.y < size.height else { return nil }
+        self.size = size; self.hotSpot = hotSpot
+    }
+
+    func matches(bounds: CGRect, cursorPoint: CGPoint) -> Bool {
+        guard !bounds.isInfinite, bounds.origin.x.isFinite, bounds.origin.y.isFinite,
+              bounds.size.width.isFinite, bounds.size.height.isFinite,
+              bounds.size.width > 0, bounds.size.height > 0,
+              bounds.maxX.isFinite, bounds.maxY.isFinite,
+              cursorPoint.x.isFinite, cursorPoint.y.isFinite else { return false }
+        // WindowServer and Retina backing pixels can quantize each edge. Both
+        // image dimensions and its origin must match within one logical point.
+        return abs(bounds.width - size.width) <= 1 && abs(bounds.height - size.height) <= 1
+            && abs(bounds.minX - (cursorPoint.x - hotSpot.x)) <= 1
+            && abs(bounds.minY - (cursorPoint.y - hotSpot.y)) <= 1
+    }
+}
+
 /// Filters only the bound external-screen input surface. The legacy path belongs
 /// to Chrome; a virtual source instead uses NIO Warp's physical output window.
 /// This capture never draws, hides, or disconnects the real system cursor.
 @MainActor final class NativeMouseInputCapture {
     var onEvent: ((MouseCaptureEvent) -> Void)?
+    /// Pointer activity is independent of mapped displacement. In particular,
+    /// the first hardware move wakes the cursor even when its delta is primed.
+    var onPointerActivity: ((MouseCaptureEvent) -> Void)?
     var onKeyboardEvent: ((MouseKeyboardInput) -> Void)?
     var onEnter: ((CGPoint, Bool) -> Bool)?
     var onLeave: (() -> Void)?
@@ -32,6 +63,8 @@ import Dispatch
     private var ownsEscape = false
     private var keyboard = NativeKeyboardOwnership()
     private var windows: [(CGWindowID, CGRect)] = []
+    private var knownSystemCursorWindowIDs = Set<CGWindowID>()
+    private var cursorImages = [NativeSystemCursorImage]()
 
     func begin(displayID: CGDirectDisplayID, processID: pid_t, targetWindow: CGWindowID,
                outputWindow: CGWindowID, outputOwned: Bool = false) throws {
@@ -41,6 +74,9 @@ import Dispatch
             throw MouseCaptureError("演示外屏不可用，原鼠标保持正常。")
         }
         resetMovement()
+        knownSystemCursorWindowIDs.removeAll()
+        cursorImages.removeAll()
+        registerCursorImage(.arrow)
         self.displayID = displayID; self.processID = processID
         self.targetWindow = targetWindow; self.outputWindow = outputWindow
         self.outputOwned = outputOwned
@@ -71,7 +107,13 @@ import Dispatch
     func refreshScope() {
         guard isActive else { return }
         let entries = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
-        windows = Self.scopeWindows(entries, outputWindow: outputWindow, outputOwned: outputOwned)
+        let cursorPoint = CGEvent(source: nil)?.location
+        // IDs are diagnostic only: sharing metadata can differ by caller, so
+        // each shareable image must independently match a registered footprint.
+        knownSystemCursorWindowIDs.formUnion(Self.confirmedSystemCursorWindowIDs(in: entries,
+            cursorImages: cursorImages, cursorPoint: cursorPoint))
+        windows = Self.scopeWindows(entries, outputWindow: outputWindow, outputOwned: outputOwned,
+            cursorImages: cursorImages, cursorPoint: cursorPoint)
         if engaged, let point = placement, !ownsSurface(at: point) { leaveSurface() }
         if keyboard.hasHeldKeys, !ownsCurrentSurface() { releaseKeyboard() }
     }
@@ -79,11 +121,12 @@ import Dispatch
     /// Preserve WindowServer's front-to-back ordering. A transparent Warp overlay
     /// is ignored only when Chrome owns input; it is the target in output mode.
     nonisolated static func scopeWindows(_ entries: [[String: Any]], outputWindow: CGWindowID,
-                                         outputOwned: Bool) -> [(CGWindowID, CGRect)] {
+                                         outputOwned: Bool, cursorImages: [NativeSystemCursorImage] = [],
+                                         cursorPoint: CGPoint? = nil) -> [(CGWindowID, CGRect)] {
         entries.compactMap { entry in
             guard let id = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
                   outputOwned || id != outputWindow,
-                  !Self.isSystemCursorWindow(entry),
+                  !Self.isSystemCursorWindow(entry, cursorImages: cursorImages, cursorPoint: cursorPoint),
                   (entry[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1 > 0,
                   let value = entry[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: value as CFDictionary), !rect.isEmpty else { return nil }
@@ -91,13 +134,46 @@ import Dispatch
         }
     }
 
-    /// WindowServer can expose the system cursor as a topmost, nonshareable
-    /// window. It is not an interactive occluder. Keep other windows at the
-    /// same level (including shareable status indicators) in the scope check.
-    nonisolated static func isSystemCursorWindow(_ entry: [String: Any]) -> Bool {
-        entry[kCGWindowOwnerName as String] as? String == "Window Server"
-            && (entry[kCGWindowLayer as String] as? NSNumber)?.intValue == Int(CGWindowLevelForKey(.cursorWindow))
-            && (entry[kCGWindowSharingState as String] as? NSNumber)?.intValue == 0
+    nonisolated static func confirmedSystemCursorWindowIDs(in entries: [[String: Any]],
+                                                          cursorImages: [NativeSystemCursorImage] = [],
+                                                          cursorPoint: CGPoint? = nil) -> Set<CGWindowID> {
+        Set(entries.compactMap { entry in
+            guard Self.isSystemCursorWindow(entry, cursorImages: cursorImages, cursorPoint: cursorPoint),
+                  let number = entry[kCGWindowNumber as String] as? NSNumber,
+                  number.int64Value > 0, number.int64Value <= Int64(UInt32.max) else { return nil }
+            return number.uint32Value
+        })
+    }
+
+    /// Retain only current and previous original artwork while WindowServer
+    /// finishes a hover/pressed image swap. The controller calls this before set().
+    func registerCursorImage(_ cursor: NSCursor) {
+        guard let image = NativeSystemCursorImage(size: cursor.image.size, hotSpot: cursor.hotSpot) else { return }
+        cursorImages.removeAll { $0 == image }
+        cursorImages.insert(image, at: 0)
+        if cursorImages.count > 2 { cursorImages.removeLast(cursorImages.count - 2) }
+    }
+
+    /// Cursor sharing metadata can vary by caller during hide/unhide or pressed
+    /// image updates. A read-only-shareable image must match our original CSS
+    /// cursor dimensions AND its origin relative to the actual system hotspot.
+    /// Other windows and explicit status indicators remain occluders.
+    nonisolated static func isSystemCursorWindow(_ entry: [String: Any],
+                                                cursorImages: [NativeSystemCursorImage] = [],
+                                                cursorPoint: CGPoint? = nil) -> Bool {
+        guard entry[kCGWindowOwnerName as String] as? String == "Window Server",
+              (entry[kCGWindowLayer as String] as? NSNumber)?.intValue == Int(CGWindowLevelForKey(.cursorWindow)),
+              let sharing = (entry[kCGWindowSharingState as String] as? NSNumber)?.intValue else { return false }
+        if sharing == 0 { return true }
+        guard sharing == 1,
+              let number = entry[kCGWindowNumber as String] as? NSNumber,
+              number.int64Value > 0, number.int64Value <= Int64(UInt32.max),
+              entry[kCGWindowName as String] as? String != "StatusIndicator",
+              (entry[kCGWindowStoreType as String] as? NSNumber)?.intValue == 2,
+              let cursorPoint,
+              let value = entry[kCGWindowBounds as String] as? [String: Any],
+              let bounds = CGRect(dictionaryRepresentation: value as CFDictionary) else { return false }
+        return cursorImages.contains { $0.matches(bounds: bounds, cursorPoint: cursorPoint) }
     }
 
     func adoptCurrentCursorIfInside() {
@@ -143,9 +219,21 @@ import Dispatch
         DispatchTime.now().uptimeNanoseconds
     }
 
+    /// Priming suppresses mapped motion, but a real hand movement still wakes
+    /// an idle cursor. Remove only the known warp contribution in that case.
+    /// Pure warp feedback and zero/invalid input never reset the idle clock.
+    nonisolated static func pointerActivityDelta(raw: SIMD2<Double>,
+                                                compensation: MouseWarpDeltaCompensator.Result) -> SIMD2<Double>? {
+        let delta = compensation.primed ? raw - compensation.correction : compensation.corrected
+        guard delta.x.isFinite, delta.y.isFinite, delta != .zero else { return nil }
+        return delta
+    }
+
     func stop() {
         releaseKeyboard()
         isActive = false; engaged = false; placement = nil; windows.removeAll()
+        knownSystemCursorWindowIDs.removeAll()
+        cursorImages.removeAll()
         setCursorScopeOwned(false)
         resetMovement()
         // Keep each consumed gesture until its physical release: both a mouse up
@@ -172,7 +260,7 @@ import Dispatch
         let first = covering.first.flatMap { id in
             (CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]])?.first
         }
-        let keys = [kCGWindowNumber, kCGWindowOwnerName, kCGWindowLayer, kCGWindowSharingState, kCGWindowStoreType]
+        let keys = [kCGWindowNumber, kCGWindowOwnerName, kCGWindowLayer, kCGWindowSharingState, kCGWindowStoreType, kCGWindowBounds]
         let details = keys.reduce(into: [String: Any]()) { result, key in
             if let value = first?[key as String] { result[key as String] = value }
         }
@@ -181,6 +269,9 @@ import Dispatch
                 "processID": processID, "targetWindow": targetWindow, "outputWindow": outputWindow,
                 "outputOwned": outputOwned, "cursorScopeOwned": cursorScopeOwned,
                 "heldKeyCount": keyboard.heldKeyCount, "drainingKeyCount": keyboard.drainingKeyCount,
+                "knownSystemCursorWindowIDs": knownSystemCursorWindowIDs.sorted(),
+                "registeredCursorImages": cursorImages.map { ["size": [$0.size.width, $0.size.height],
+                    "hotSpot": [$0.hotSpot.x, $0.hotSpot.y]] },
                 "outputWindowIsKey": NSApplication.shared.keyWindow?.windowNumber == Int(outputWindow),
                 "coveringWindows": windows.filter { $0.1.contains(point) }.prefix(4).map { $0.0 },
                 "point": [point.x, point.y]]
@@ -321,12 +412,17 @@ import Dispatch
         }
         if up && !ownedUp { return Unmanaged.passUnretained(event) }
         var corrected = SIMD2<Double>.zero
+        var pointerActivity: MouseCaptureEvent?
+        let flags = Self.modifiers(event.flags)
         if movement {
             let raw = SIMD2(event.getDoubleValueField(.mouseEventDeltaX), event.getDoubleValueField(.mouseEventDeltaY))
             let result = warpDeltas.compensate(raw: raw, timestamp: event.timestamp,
                 isHardware: event.getIntegerValueField(.eventSourceUnixProcessID) == 0)
             lastRawDelta = raw; lastCorrectedDelta = result.corrected; lastWarpCorrection = result.correction
             corrected = result.corrected
+            if let delta = Self.pointerActivityDelta(raw: raw, compensation: result) {
+                pointerActivity = .move(dx: delta.x, dy: delta.y, modifiers: flags)
+            }
         }
         if !engaged {
             // A move that enters the screen is already reflected in this position;
@@ -340,25 +436,36 @@ import Dispatch
             }
             engaged = true
             setCursorScopeOwned(true)
-            if type == .mouseMoved { return nil }
+            if type == .mouseMoved {
+                if let pointerActivity { onPointerActivity?(pointerActivity) }
+                return nil
+            }
         }
         eventCount += 1
-        let flags = Self.modifiers(event.flags)
         switch type {
         case .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
+            if let pointerActivity { onPointerActivity?(pointerActivity) }
             onEvent?(.move(dx: corrected.x, dy: corrected.y, modifiers: flags))
         case .leftMouseDown, .rightMouseDown, .otherMouseDown:
             guard bit != 0 else { return Unmanaged.passUnretained(event) }
             ownedButtons |= bit
-            onEvent?(.button(down: true, number: number, clickCount: Int(event.getIntegerValueField(.mouseEventClickState)), modifiers: flags))
+            let captured = MouseCaptureEvent.button(down: true, number: number,
+                clickCount: Int(event.getIntegerValueField(.mouseEventClickState)), modifiers: flags)
+            onPointerActivity?(captured)
+            onEvent?(captured)
         case .leftMouseUp, .rightMouseUp, .otherMouseUp:
             ownedButtons &= ~bit
-            onEvent?(.button(down: false, number: number, clickCount: Int(event.getIntegerValueField(.mouseEventClickState)), modifiers: flags))
+            let captured = MouseCaptureEvent.button(down: false, number: number,
+                clickCount: Int(event.getIntegerValueField(.mouseEventClickState)), modifiers: flags)
+            onPointerActivity?(captured)
+            onEvent?(captured)
         case .scrollWheel:
             let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
             let dx = continuous ? event.getDoubleValueField(.scrollWheelEventPointDeltaAxis2) : event.getDoubleValueField(.scrollWheelEventDeltaAxis2) * 40
             let dy = continuous ? event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1) : event.getDoubleValueField(.scrollWheelEventDeltaAxis1) * 40
-            onEvent?(.wheel(dx: -dx, dy: -dy, modifiers: flags))
+            let captured = MouseCaptureEvent.wheel(dx: -dx, dy: -dy, modifiers: flags)
+            onPointerActivity?(captured)
+            onEvent?(captured)
         default: return Unmanaged.passUnretained(event)
         }
         return nil

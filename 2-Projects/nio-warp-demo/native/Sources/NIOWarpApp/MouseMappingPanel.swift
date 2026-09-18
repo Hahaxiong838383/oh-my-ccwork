@@ -12,16 +12,20 @@ struct MouseMappingSettings: Codable, Equatable {
     var speed = 1.0
     var pointerSize = 28.0
     var reverseHorizontal = false
+    var cursorAutoHideEnabled = true
+    var cursorAutoHideDelay = 3.0
     static let key = "nioWarpMouseMapping.settings.v1"
 
     init(mode: MouseMappingMode = .glass, previewOnly: Bool = true, speed: Double = 1,
-         pointerSize: Double = 28, reverseHorizontal: Bool = false) {
+         pointerSize: Double = 28, reverseHorizontal: Bool = false,
+         cursorAutoHideEnabled: Bool = true, cursorAutoHideDelay: Double = 3) {
         self.mode = mode; self.previewOnly = previewOnly; self.speed = speed
         self.pointerSize = pointerSize; self.reverseHorizontal = reverseHorizontal
+        self.cursorAutoHideEnabled = cursorAutoHideEnabled; self.cursorAutoHideDelay = cursorAutoHideDelay
     }
 
     private enum CodingKeys: String, CodingKey {
-        case mode, previewOnly, speed, pointerSize, reverseHorizontal
+        case mode, previewOnly, speed, pointerSize, reverseHorizontal, cursorAutoHideEnabled, cursorAutoHideDelay
     }
 
     init(from decoder: Decoder) throws {
@@ -33,12 +37,15 @@ struct MouseMappingSettings: Codable, Equatable {
         // v0.12.0 / v0.12.1 have no explicit direction preference. Preserve all
         // existing choices while leaving horizontal reversal off by default.
         reverseHorizontal = try values.decodeIfPresent(Bool.self, forKey: .reverseHorizontal) ?? false
+        cursorAutoHideEnabled = try values.decodeIfPresent(Bool.self, forKey: .cursorAutoHideEnabled) ?? true
+        cursorAutoHideDelay = try values.decodeIfPresent(Double.self, forKey: .cursorAutoHideDelay) ?? 3
     }
 
     func sanitized() -> Self {
         var result = self
         result.speed = speed.isFinite ? min(max(speed, 0.25), 4) : 1
         result.pointerSize = pointerSize.isFinite ? min(max(pointerSize, 12), 64) : 28
+        result.cursorAutoHideDelay = cursorAutoHideDelay.isFinite ? min(max(cursorAutoHideDelay, 1), 30) : 3
         return result
     }
     static func load(defaults: UserDefaults = .standard) -> Self {
@@ -66,6 +73,9 @@ struct MouseMappingSettings: Codable, Equatable {
     private let preview = NSButton(checkboxWithTitle: "仅检查移动，暂不发送点击", target: nil, action: nil)
     private let speed = NSSlider(value: 1, minValue: 0.25, maxValue: 4, target: nil, action: nil)
     private let speedLabel = NSTextField(labelWithString: "移动速度 · 1.00×")
+    private let autoHide = NSButton(checkboxWithTitle: "鼠标静止时自动隐藏圆圈", target: nil, action: nil)
+    private let autoHideDelay = NSTextField(string: "3")
+    private var settingsEditable = true
     private var settings: MouseMappingSettings
 
     init(settings: MouseMappingSettings) {
@@ -108,6 +118,20 @@ struct MouseMappingSettings: Codable, Equatable {
         preview.setAccessibilityIdentifier("nio-mouse-preview-only"); add(preview)
         add(speedLabel); speed.target = self; speed.action = #selector(changed)
         speed.setAccessibilityIdentifier("nio-mouse-speed"); add(speed)
+        autoHide.target = self; autoHide.action = #selector(changed)
+        autoHide.setAccessibilityIdentifier("nio-mouse-auto-hide"); add(autoHide)
+        autoHideDelay.target = self; autoHideDelay.action = #selector(changed)
+        autoHideDelay.alignment = .right
+        autoHideDelay.placeholderString = "1～30"
+        autoHideDelay.setAccessibilityIdentifier("nio-mouse-auto-hide-delay")
+        autoHideDelay.setAccessibilityLabel("自动隐藏等待秒数")
+        autoHideDelay.setAccessibilityHelp("1 到 30 秒；按回车或离开输入框保存。")
+        let hideDelayRow = NSStackView(views: [NSTextField(labelWithString: "静止后隐藏"), autoHideDelay,
+                                              NSTextField(labelWithString: "秒（1～30）")])
+        hideDelayRow.orientation = .horizontal; hideDelayRow.spacing = 8
+        autoHideDelay.widthAnchor.constraint(equalToConstant: 68).isActive = true
+        add(hideDelayRow)
+        add(NSTextField(wrappingLabelWithString: "移动、点击或滚轮立即恢复原圆圈，首次操作仍然生效。长按和拖动时不隐藏，松开后重新计时；仅用键盘演示不会唤醒圆圈。按 Esc 返回工作台后可修改设置。"))
         let edge = NSTextField(labelWithString: "边缘范围 · 全部可见区域")
         edge.font = .systemFont(ofSize: 13, weight: .semibold); add(edge)
         add(NSTextField(wrappingLabelWithString: "按真实曲面、镜像与屏幕边界自动计算，不缩成内接矩形。热点仅保留半个物理像素，光标图案可在边缘裁切；沿弧形边缘继续滑动。"))
@@ -126,12 +150,17 @@ struct MouseMappingSettings: Codable, Equatable {
         preview.state = settings.previewOnly ? .on : .off
         speed.doubleValue = settings.speed
         speedLabel.stringValue = String(format: "移动速度 · %.2f×", settings.speed)
+        autoHide.state = settings.cursorAutoHideEnabled ? .on : .off
+        autoHideDelay.stringValue = String(format: "%g", settings.cursorAutoHideDelay)
+        autoHideDelay.isEnabled = settingsEditable && settings.cursorAutoHideEnabled
     }
 
     func update(active: Bool, busy: Bool, message: String, detail: String? = nil) {
         status.stringValue = message
+        settingsEditable = !active && !busy
         start.isEnabled = !active && !busy; stop.isEnabled = active || busy
-        [mode, reverse, preview, speed].forEach { $0.isEnabled = !active && !busy }
+        [mode, reverse, preview, speed, autoHide].forEach { $0.isEnabled = settingsEditable }
+        autoHideDelay.isEnabled = settingsEditable && settings.cursorAutoHideEnabled
         if let detail { coordinates.stringValue = detail }
     }
 
@@ -144,10 +173,16 @@ struct MouseMappingSettings: Codable, Equatable {
     @objc private func begin() { onStart?() }
     @objc private func end() { onStop?() }
     @objc private func changed() {
+        guard settingsEditable else { load(settings); return }
+        guard let delay = Double(autoHideDelay.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)) else {
+            load(settings); return
+        }
         settings.mode = mode.indexOfSelectedItem == 0 ? .glass : .physical
         settings.reverseHorizontal = reverse.state == .on
         settings.previewOnly = preview.state == .on
         settings.speed = speed.doubleValue
+        settings.cursorAutoHideEnabled = autoHide.state == .on
+        settings.cursorAutoHideDelay = delay
         load(settings); onSettingsChange?(settings)
     }
 }
