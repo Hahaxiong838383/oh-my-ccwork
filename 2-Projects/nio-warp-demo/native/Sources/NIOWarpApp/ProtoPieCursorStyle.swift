@@ -2,6 +2,20 @@ import AppKit
 import CryptoKit
 import ImageIO
 
+/// Artwork availability is independent of the validated page's input session.
+/// These errors never contain CSS, resource URLs or source response bodies.
+enum ProtoPieCursorArtworkError: String, LocalizedError {
+    case invalidCSS, resourceUnavailable, invalidImage
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidCSS: return "播放器原有鼠标样式暂不可读。"
+        case .resourceUnavailable: return "播放器原有鼠标资源暂不可用。"
+        case .invalidImage: return "播放器原有鼠标图片暂不可用。"
+        }
+    }
+}
+
 /// The player's original CSS artwork and hotspot, carried by the output window.
 /// No replacement artwork is generated and no resource URL enters diagnostics.
 @MainActor struct ProtoPieCursorStyle {
@@ -60,8 +74,8 @@ import ImageIO
                     imageSize: cursor.image.size, hotSpot: cursor.hotSpot)
     }
 
-    static func invalid() -> MouseInputTransportError {
-        .unavailable("无法读取播放器原有鼠标样式，已保持普通输入。")
+    static func invalid() -> ProtoPieCursorArtworkError {
+        .invalidImage
     }
 }
 
@@ -77,7 +91,9 @@ struct ProtoPieCursorDefinition {
         let value = css.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !value.isEmpty, value.utf8.count <= 192 * 1024 else { throw error() }
         if value.hasPrefix("image-set(") || value.hasPrefix("-webkit-image-set(") {
-            return try parseImageSet(value)
+            let choices = try parseImageSet(value)
+            guard let choice = choices.first(where: { $0.density == 1 }) ?? choices.min(by: { $0.density < $1.density }) else { throw error() }
+            return choice
         }
         if !value.lowercased().hasPrefix("url(") {
             let keywords = ["auto", "default", "pointer", "text", "none", "crosshair", "help", "wait", "progress",
@@ -104,7 +120,18 @@ struct ProtoPieCursorDefinition {
         return Self(resource: resource, hotSpot: CGPoint(x: x, y: y), keyword: fallback)
     }
 
-    private static func parseImageSet(_ value: String) throws -> Self {
+    /// Preserve every source-declared resource with its own density. A browser
+    /// may already hold only the Retina member of an image-set in its cache.
+    static func candidates(for css: String) throws -> [Self] {
+        let value = css.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty, value.utf8.count <= 192 * 1024 else { throw error() }
+        if value.hasPrefix("image-set(") || value.hasPrefix("-webkit-image-set(") {
+            return try parseImageSet(value)
+        }
+        return [try parse(value)]
+    }
+
+    private static func parseImageSet(_ value: String) throws -> [Self] {
         let number = #"([+-]?(?:\d+(?:\.\d*)?|\.\d+))"#
         let pattern = #"^(?:-webkit-)?image-set\((.*)\)\s*(?:"#
             + number + #"\s+"# + number + #")?\s*,\s*([a-z-]+)\s*$"#
@@ -131,10 +158,7 @@ struct ProtoPieCursorDefinition {
             let parsed = try parse(String(entry[urlRange]) + ", " + fallback)
             choices.append(Self(resource: parsed.resource, hotSpot: CGPoint(x: x, y: y), keyword: fallback, density: density))
         }
-        // Use the original 1 CSS-pixel asset where available, independently of
-        // which monitor owns the output; Retina-only assets keep their CSS size.
-        guard let choice = choices.first(where: { $0.density == 1 }) ?? choices.min(by: { $0.density < $1.density }) else { throw error() }
-        return choice
+        return choices
     }
 
     private static func imageSetEntries(_ body: String) throws -> [String] {
@@ -161,7 +185,7 @@ struct ProtoPieCursorDefinition {
         return entries
     }
 
-    private static func error() -> MouseInputTransportError {
-        .unavailable("播放器鼠标样式无效，已保持普通输入。")
+    private static func error() -> ProtoPieCursorArtworkError {
+        .invalidCSS
     }
 }

@@ -9,6 +9,15 @@ struct MouseMappingOutput {
     let setInputEnabled: (Bool) -> Void
 }
 
+struct MouseCursorPageIdentity: Equatable {
+    let targetID: String
+    let processID: pid_t
+    let timeOrigin: Double
+    init(_ viewport: MouseInputViewport) {
+        targetID = viewport.targetID; processID = viewport.processID; timeOrigin = viewport.timeOrigin
+    }
+}
+
 @MainActor final class MouseMappingController {
     var outputProvider: (() -> MouseMappingOutput?)?
     var outputDiagnosticProvider: (() -> [String: Any])?
@@ -37,6 +46,10 @@ struct MouseMappingOutput {
     private var cursorRefreshNeeded = false
     private var cursorIdentifier = ""
     private var cursorHidden = false
+    private var cursorRevision: UInt64 = 0
+    private var cursorRetryAfter: TimeInterval = 0
+    private var lastVerifiedCursor: (page: MouseCursorPageIdentity, style: ProtoPieCursorStyle)?
+    private var cursorWarning: String?
     private var generation = UUID()
     private var message = "先启动 ProtoPie 全屏预览，再进入演示鼠标控制。"
     private var lastPublication: TimeInterval = 0
@@ -51,6 +64,7 @@ struct MouseMappingOutput {
         input.onKeyboardEvent = { [weak self] event in self?.receiveKeyboard(event) }
         input.onEnter = { [weak self] point, allowSnap in self?.adoptNativeCursor(at: point, allowSnap: allowSnap) ?? false }
         input.onLeave = { [weak self] in
+            self?.cursorRevision &+= 1
             self?.releaseButtons()
             self?.restoreCursorPresentation()
         }
@@ -147,6 +161,8 @@ struct MouseMappingOutput {
                     throw MouseCaptureError("当前画面没有可用的可点击区域。")
                 }
                 self.region = region; self.output = current; self.viewport = viewport
+                if self.lastVerifiedCursor?.page != MouseCursorPageIdentity(viewport) { self.lastVerifiedCursor = nil }
+                self.cursorRetryAfter = 0; self.cursorWarning = nil; self.cursorRevision &+= 1
                 if armedOutput?.window !== current.window { disarmPresentationInput() }
                 else { armedOutput = nil }
                 self.outputOwned = session.presentationDisplayID.map { $0 != current.displayID } ?? false
@@ -199,6 +215,9 @@ struct MouseMappingOutput {
                     outputWindow: outputWindow, outputOwned: self.outputOwned)
                 self.isActive = true; self.startTask = nil
                 self.input.adoptCurrentCursorIfInside()
+                if self.outputOwned, self.input.engaged, let saved = self.lastVerifiedCursor {
+                    self.applyOriginalCursor(saved.style)
+                }
                 self.refreshOriginalCursor()
                 let direction = self.settings.reverseHorizontal ? "左右反向：开" : "左右反向：关"
                 self.message = self.settings.previewOnly ? "原圆形鼠标校正 · \(direction) · 仅检查移动 · Esc 暂停" : "原圆形鼠标校正 · \(direction) · 点击已接通 · Esc 暂停"
@@ -310,7 +329,7 @@ struct MouseMappingOutput {
                           Float((point.y - bounds.minY) / bounds.height) * region.physicalSize.y)
         let visible = allowSnap ? region.nearestVisiblePhysicalPoint(to: pixel) : pixel
         guard let visible, let uv = region.sourceUV(forPhysicalPoint: visible) else { return false }
-        sourceUV = uv
+        sourceUV = uv; cursorRevision &+= 1
         updateCursor()
         send(kind: .move)
         refreshOriginalCursor()
@@ -330,6 +349,7 @@ struct MouseMappingOutput {
             // These are already compensated deltas. A stationary/priming
             // event must not warp again or enqueue a second browser move.
             guard rawDX != 0 || dy != 0 else { return }
+            cursorRevision &+= 1
             movementEventCount += 1
             lastRawMovement = [rawDX, dy]
             // Direction is an explicit input preference, independent of the image
@@ -358,6 +378,7 @@ struct MouseMappingOutput {
                 guard buttons & button.mask != 0 else { return }
                 buttons &= ~button.mask
             }
+            cursorRevision &+= 1
             send(kind: down ? .down : .up, button: button, clickCount: min(max(clickCount, 1), 2), modifiers: modifiers)
             refreshOriginalCursor()
         case .wheel(let dx, let dy, let modifiers):
@@ -391,6 +412,7 @@ struct MouseMappingOutput {
     }
 
     private func releaseButtons() {
+        if buttons != 0 { cursorRevision &+= 1 }
         for button in [MouseInputEvent.Button.left, .right, .middle] where buttons & button.mask != 0 {
             buttons &= ~button.mask
             send(kind: .up, button: button)
@@ -398,7 +420,8 @@ struct MouseMappingOutput {
     }
 
     private func refreshOriginalCursor() {
-        guard isActive, outputOwned, input.engaged, let transport, let viewport else { return }
+        guard isActive, outputOwned, input.engaged, let transport, let viewport,
+              ProcessInfo.processInfo.systemUptime >= cursorRetryAfter else { return }
         cursorRefreshNeeded = true
         guard cursorTask == nil else { return }
         let token = generation
@@ -408,19 +431,41 @@ struct MouseMappingOutput {
             do {
                 while self.cursorRefreshNeeded, self.generation == token, self.isActive {
                     self.cursorRefreshNeeded = false
+                    let revision = self.cursorRevision
                     let point = CGPoint(x: Double(self.sourceUV.x) * viewport.cssWidth,
                                         y: Double(self.sourceUV.y) * viewport.cssHeight)
-                    let style = try await transport.cursorStyle(at: point)
+                    let style: ProtoPieCursorStyle
+                    do { style = try await transport.cursorStyle(at: point) }
+                    catch is ProtoPieCursorArtworkError {
+                        guard self.generation == token, !Task.isCancelled, self.isActive else { return }
+                        // A superseded pressed request must not delay the newer
+                        // released/hover style behind its own retry cooldown.
+                        guard self.cursorRevision == revision else {
+                            self.cursorRefreshNeeded = true
+                            continue
+                        }
+                        self.cursorWarning = "原光标资源暂不可用，保留原样式并稍后重试。"
+                        self.cursorRetryAfter = ProcessInfo.processInfo.systemUptime + 3
+                        self.cursorRefreshNeeded = false
+                        self.publish(force: true)
+                        return
+                    }
                     try Task.checkCancellation()
                     guard self.generation == token, self.outputOwned, self.input.engaged,
                           self.input.ownsCurrentSurface() else { return }
-                    self.cursorIdentifier = style.identifier
-                    if style.isHidden != self.cursorHidden {
-                        if style.isHidden { NSCursor.hide() } else { NSCursor.unhide() }
-                        self.cursorHidden = style.isHidden
+                    // The artwork fetch runs outside the input queue. A later
+                    // mouse-up/move wins over an old pressed/hover image.
+                    guard self.cursorRevision == revision else {
+                        self.cursorRefreshNeeded = true
+                        continue
                     }
-                    self.output?.cursor.sourceCursor = style.cursor ?? .arrow
-                    (style.cursor ?? .arrow).set()
+                    // Esc/re-entry must never resurrect an old pressed or
+                    // hidden state. Keep only a visible, released original.
+                    if self.buttons == 0, !style.isHidden {
+                        self.lastVerifiedCursor = (MouseCursorPageIdentity(viewport), style)
+                    }
+                    self.cursorWarning = nil; self.cursorRetryAfter = 0
+                    self.applyOriginalCursor(style)
                 }
             } catch {
                 if self.generation == token, !Task.isCancelled {
@@ -428,6 +473,16 @@ struct MouseMappingOutput {
                 }
             }
         }
+    }
+
+    private func applyOriginalCursor(_ style: ProtoPieCursorStyle) {
+        cursorIdentifier = style.identifier
+        if style.isHidden != cursorHidden {
+            if style.isHidden { NSCursor.hide() } else { NSCursor.unhide() }
+            cursorHidden = style.isHidden
+        }
+        output?.cursor.sourceCursor = style.cursor ?? .arrow
+        (style.cursor ?? .arrow).set()
     }
 
     private func restoreCursorPresentation() {
@@ -463,6 +518,7 @@ struct MouseMappingOutput {
             "sourceUV": [sourceUV.x, sourceUV.y], "edgeInsetPixels": 0.5]
         diagnostic["outputOwned"] = outputOwned
         diagnostic["cursorIdentifier"] = cursorIdentifier
+        diagnostic["cursorWarning"] = cursorWarning
         if let transport { diagnostic["transport"] = transport.diagnosticSnapshot }
         if isActive { diagnostic["nativeScope"] = input.scopeDiagnostic() }
         if let value = input.lastRawDelta { diagnostic["nativeRawDelta"] = [value.x, value.y] }

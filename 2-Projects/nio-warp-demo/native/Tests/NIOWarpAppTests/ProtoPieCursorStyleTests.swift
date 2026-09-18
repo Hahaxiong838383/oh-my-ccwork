@@ -143,18 +143,124 @@ import XCTest
 
     func testUnavailableResourceFailsWithoutReturningItsURL() async throws {
         let fixture = try CursorTransportFixture(); defer { fixture.remove() }
-        _ = try await fixture.transport.connect(session: fixture.session)
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        var failures = 0
+        fixture.transport.onFailure = { _ in failures += 1 }
+        XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .down,
+            x: 10, y: 20, button: .left, buttons: 1)))
         fixture.wire.resourceUnavailable = true
         do { _ = try await fixture.transport.cursorStyle(at: .zero); XCTFail("Missing original asset must fail") }
-        catch { XCTAssertFalse(error.localizedDescription.contains("example.test")) }
-        await fixture.transport.releaseAllAndClose()
-        XCTAssertFalse(fixture.transport.isConnected)
-        let failure = try XCTUnwrap(fixture.transport.diagnosticSnapshot["failureContext"] as? [String: Any])
-        XCTAssertEqual(failure["workItem"] as? String, "cursor")
-        XCTAssertEqual(failure["cursorState"] as? String, "nativeResourceEligibility")
-        XCTAssertEqual(failure["lastErrorKind"] as? String, "unavailable")
-        let json = String(decoding: try JSONSerialization.data(withJSONObject: failure), as: UTF8.self)
+        catch {
+            XCTAssertEqual(error as? ProtoPieCursorArtworkError, .resourceUnavailable)
+            XCTAssertFalse(error.localizedDescription.contains("example.test"))
+        }
+        XCTAssertTrue(fixture.transport.isConnected)
+        XCTAssertEqual(failures, 0)
+        XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .up,
+            x: 10, y: 20, button: .left)))
+        try await fixture.transport.flush()
+        XCTAssertEqual(fixture.wire.events.filter { $0.hasPrefix("mouse") }, ["mousePressed", "mouseReleased"])
+        let snapshot = fixture.transport.diagnosticSnapshot
+        XCTAssertNil(snapshot["failureContext"])
+        XCTAssertEqual(snapshot["cursorState"] as? String, "nativeResourceEligibility")
+        XCTAssertEqual(snapshot["lastErrorKind"] as? String, "artwork.resourceUnavailable")
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: snapshot), as: UTF8.self)
         XCTAssertFalse(json.contains("example.test"))
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    func testLoadedRetinaCandidateKeepsOriginalLogicalSizeAndHotspotWithoutNetwork() async throws {
+        for (name, size, hotspot) in [("Default", 53, 26), ("Active", 50, 25)] {
+            let fixture = try CursorTransportFixture(); defer { fixture.remove() }
+            let normal = "https://static.protopie.io/TouchPoint_\(name).png"
+            let retina = "https://static.protopie.io/Retina_TouchPoint_\(name).png"
+            fixture.wire.computedCSS = "image-set(url('\(normal)') 1dppx, url('\(retina)') 2dppx) \(hotspot) \(hotspot), auto"
+            fixture.wire.cachedResources[retina] = try Self.png(width: size * 2, height: size * 2)
+            fixture.wire.resourceUnavailable = true; fixture.loaderThrows = true
+            _ = try await fixture.transport.connect(session: fixture.session)
+            let style = try await fixture.transport.cursorStyle(at: .zero)
+            XCTAssertEqual(style.imageSize, CGSize(width: size, height: size))
+            XCTAssertEqual(style.hotSpot, CGPoint(x: hotspot, y: hotspot))
+            XCTAssertTrue(style.identifier.contains("density=2.0"))
+            XCTAssertEqual(fixture.wire.cacheRequestedURLs, [retina])
+            XCTAssertEqual(fixture.wire.cacheSessions, ["cursor-session"])
+            XCTAssertEqual(fixture.wire.resourceCount, 0)
+            XCTAssertTrue(fixture.loadedResources.isEmpty)
+            XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorResourceOrigin"] as? String, "page-cache")
+            XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorResourceDensity"] as? Double, 2)
+            _ = try await fixture.transport.cursorStyle(at: CGPoint(x: 10, y: 20))
+            XCTAssertEqual(fixture.wire.cacheRequestedURLs.count, 1)
+            await fixture.transport.releaseAllAndClose()
+        }
+    }
+
+    func testPageCacheRequiresExactDeclaredURLAndReevaluatesDensityAndHotspot() async throws {
+        let fixture = try CursorTransportFixture(); defer { fixture.remove() }
+        let resource = "https://example.test/Retina_TouchPoint_Default.png"
+        fixture.wire.computedCSS = "image-set(url('\(resource)') 2dppx) 26 26, auto"
+        fixture.wire.cachedResources[resource + "?other"] = try Self.png(width: 106, height: 106)
+        fixture.wire.resourceUnavailable = true
+        _ = try await fixture.transport.connect(session: fixture.session)
+        do { _ = try await fixture.transport.cursorStyle(at: .zero); XCTFail("An unrelated cached URL cannot supply original artwork") }
+        catch { XCTAssertEqual(error as? ProtoPieCursorArtworkError, .resourceUnavailable) }
+        XCTAssertTrue(fixture.wire.cacheRequestedURLs.isEmpty)
+        fixture.wire.cachedResources[resource] = try Self.png(width: 106, height: 106)
+        let first = try await fixture.transport.cursorStyle(at: .zero)
+        XCTAssertEqual(first.imageSize, CGSize(width: 53, height: 53))
+        fixture.wire.computedCSS = "image-set(url('\(resource)') 4dppx) 13 13, auto"
+        let second = try await fixture.transport.cursorStyle(at: .zero)
+        XCTAssertEqual(second.imageSize, CGSize(width: 26.5, height: 26.5))
+        XCTAssertEqual(second.hotSpot, CGPoint(x: 13, y: 13))
+        XCTAssertNotEqual(first.identifier, second.identifier)
+        XCTAssertEqual(fixture.wire.cacheRequestedURLs, [resource, resource])
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    func testMissingCachedBodyFallsBackButCDPTimeoutStillClosesInput() async throws {
+        for error in [MouseInputTransportError.unavailable("No resource body"), .timeout] {
+            let fixture = try CursorTransportFixture(); defer { fixture.remove() }
+            fixture.wire.cachedResources["https://example.test/TouchPoint_Default.png"] = try Self.png(width: 53, height: 53)
+            fixture.wire.cacheContentError = error
+            _ = try await fixture.transport.connect(session: fixture.session)
+            if error == .timeout {
+                do { _ = try await fixture.transport.cursorStyle(at: .zero); XCTFail("CDP timeout must remain fatal") }
+                catch { XCTAssertEqual(error as? MouseInputTransportError, .timeout) }
+                XCTAssertFalse(fixture.transport.isConnected)
+                XCTAssertEqual(fixture.wire.resourceCount, 0)
+            } else {
+                let style = try await fixture.transport.cursorStyle(at: .zero)
+                XCTAssertEqual(style.imageSize, CGSize(width: 53, height: 53))
+                XCTAssertTrue(fixture.transport.isConnected)
+                XCTAssertEqual(fixture.wire.resourceCount, 1)
+            }
+            await fixture.transport.releaseAllAndClose()
+        }
+    }
+
+    func testNativeResourceWaitDoesNotBlockReleaseOrViewportCheck() async throws {
+        let fixture = try CursorTransportFixture(); defer { fixture.remove() }
+        fixture.wire.assetHost = "static.protopie.io"; fixture.wire.resourceUnavailable = true
+        fixture.blockLoader = true; fixture.loaderThrows = true
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .down,
+            x: 10, y: 20, button: .left, buttons: 1)))
+        let reading = Task { try await fixture.transport.cursorStyle(at: .zero) }
+        await fixture.waitForBlockedLoader()
+        XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .up,
+            x: 10, y: 20, button: .left)))
+        var refreshed: MouseInputViewport?
+        let refreshing = Task { refreshed = try await fixture.transport.refreshViewport() }
+        for _ in 0..<1000 where !fixture.wire.events.contains("mouseReleased") { await Task.yield() }
+        XCTAssertTrue(fixture.wire.events.contains("mouseReleased"), "mouseUp must arrive before the resource loader is resumed")
+        for _ in 0..<1000 where refreshed == nil { await Task.yield() }
+        XCTAssertEqual(refreshed, viewport, "Viewport check must finish while artwork remains blocked")
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["queueLength"] as? Int, 0)
+        fixture.unblockLoader()
+        do { _ = try await reading.value; XCTFail("Unavailable image must not be invented") }
+        catch { XCTAssertEqual(error as? ProtoPieCursorArtworkError, .resourceUnavailable) }
+        try await refreshing.value
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
     }
 
     func testPublicAssetFallbackAllowsOnlyExactHTTPSHostWithoutCredentials() throws {
@@ -251,6 +357,35 @@ import XCTest
         await fixture.transport.releaseAllAndClose()
     }
 
+    func testReconnectDuringNativeLoadCannotCacheOldArtworkOrCloseNewBinding() async throws {
+        let fixture = try CursorTransportFixture(); defer { fixture.remove() }
+        fixture.wire.assetHost = "static.protopie.io"; fixture.wire.resourceUnavailable = true; fixture.blockLoader = true
+        let previous = try await fixture.transport.connect(session: fixture.session)
+        let reading = Task { try await fixture.transport.cursorStyle(at: .zero) }
+        await fixture.waitForBlockedLoader()
+        var closed = false
+        let closing = Task { await fixture.transport.releaseAllAndClose(); closed = true }
+        for _ in 0..<1000 where !closed { await Task.yield() }
+        XCTAssertTrue(closed, "Closing input must not wait for a decorative image load")
+        if !closed {
+            fixture.unblockLoader(); await closing.value; _ = try? await reading.value
+            return
+        }
+        await closing.value
+        fixture.blockLoader = false; fixture.wire.resourceUnavailable = false
+        let current = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertNotEqual(previous.bindingID, current.bindingID)
+        _ = try await fixture.transport.cursorStyle(at: .zero)
+        fixture.unblockLoader()
+        do { _ = try await reading.value; XCTFail("Old loading result must not enter the new cache") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .closed) }
+        XCTAssertTrue(fixture.transport.isConnected)
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorResourceOrigin"] as? String, "page-fetch")
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorCacheMisses"] as? Int, 1)
+        XCTAssertNil(fixture.transport.diagnosticSnapshot["failureContext"])
+        await fixture.transport.releaseAllAndClose()
+    }
+
     func testNavigationRejectsLateCursorWithoutReadingAssetFromNewPage() async throws {
         let fixture = try CursorTransportFixture(); defer { fixture.remove() }
         _ = try await fixture.transport.connect(session: fixture.session)
@@ -338,6 +473,10 @@ import XCTest
     var assetHost = "example.test"
     var events = [String](), cursorSessions = [String](), focusSessions = [String]()
     var focusRequests = [Bool]()
+    var computedCSS: String?
+    var cachedResources = [String: Data]()
+    var cacheRequestedURLs = [String](), cacheSessions = [String]()
+    var cacheContentError: MouseInputTransportError?
     var resourceCount = 0
     var pressed = false, resourceUnavailable = false, blockNextCursor = false, blockNextFocus = false
     private var blocked: CheckedContinuation<Void, Never>?
@@ -346,6 +485,17 @@ import XCTest
         case "SystemInfo.getProcessInfo": return ["processInfo": [["type": "browser", "id": 123]]]
         case "Target.getTargetInfo": return ["targetInfo": ["targetId": "cursor-target", "type": "page", "url": url]]
         case "Target.attachToTarget": return ["sessionId": "cursor-session"]
+        case "Page.getResourceTree":
+            return ["frameTree": ["frame": ["id": "cursor-frame", "url": url],
+                "resources": cachedResources.keys.sorted().map { ["url": $0, "type": "Image"] }]]
+        case "Page.getResourceContent":
+            let url = parameters["url"] as? String ?? ""
+            cacheRequestedURLs.append(url); cacheSessions.append(sessionID ?? "")
+            if let cacheContentError { throw cacheContentError }
+            guard parameters["frameId"] as? String == "cursor-frame", let data = cachedResources[url] else {
+                throw MouseInputTransportError.unavailable("No cached resource")
+            }
+            return ["base64Encoded": true, "content": data.base64EncodedString()]
         case "Browser.getWindowForTarget": return ["windowId": 88, "bounds": ["left": 0, "top": 0, "width": 1920, "height": 1080, "windowState": "fullscreen"]]
         case "Input.dispatchMouseEvent":
             let type = parameters["type"] as? String ?? "unknown"; events.append(type)
@@ -361,11 +511,11 @@ import XCTest
                 events.append("cursor"); cursorSessions.append(sessionID ?? "")
                 if blockNextCursor { blockNextCursor = false; await withCheckedContinuation { blocked = $0 } }
                 let name = pressed ? "Active" : "Default", hotspot = pressed ? 25 : 26
-                return ["result": ["value": ["timeOrigin": 12345, "css": "url(\"https://\(assetHost)/TouchPoint_\(name).png\") \(hotspot) \(hotspot), auto"]]]
+                return ["result": ["value": ["timeOrigin": 12345, "css": computedCSS ?? "url(\"https://\(assetHost)/TouchPoint_\(name).png\") \(hotspot) \(hotspot), auto"]]]
             }
             if expression.contains("nioCursorResource:true") {
                 events.append("resource"); cursorSessions.append(sessionID ?? ""); resourceCount += 1
-                let size = pressed ? 50 : 53
+                let size = expression.contains("TouchPoint_Active.png") ? 50 : 53
                 return ["result": ["value": ["timeOrigin": 12345, "ok": !resourceUnavailable,
                     "data": try ProtoPieCursorStyleTests.png(width: size, height: size).base64EncodedString()]]]
             }

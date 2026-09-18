@@ -2,6 +2,18 @@ import XCTest
 @testable import NIOWarpApp
 
 @MainActor final class MouseMappingStopReasonTests: XCTestCase {
+    func testOriginalCursorResumeIsScopedToProcessTargetAndDocument() {
+        func viewport(target: String = "original", process: pid_t = 123, epoch: Double = 10) -> MouseInputViewport {
+            MouseInputViewport(bindingID: UUID(), cssWidth: 1920, cssHeight: 600, devicePixelRatio: 1,
+                timeOrigin: epoch, targetID: target, browserWindowID: 2, windowID: 3, processID: process)
+        }
+        let original = MouseCursorPageIdentity(viewport())
+        XCTAssertEqual(original, MouseCursorPageIdentity(viewport())) // New input session, same document.
+        XCTAssertNotEqual(original, MouseCursorPageIdentity(viewport(target: "replacement")))
+        XCTAssertNotEqual(original, MouseCursorPageIdentity(viewport(process: 456)))
+        XCTAssertNotEqual(original, MouseCursorPageIdentity(viewport(epoch: 11))) // Reload in the same tab.
+    }
+
     func testWorkbenchCleanupPreservesFailureReason() throws {
         let name = "nio-warp-stop-tests-\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))

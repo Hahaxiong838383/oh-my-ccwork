@@ -102,6 +102,8 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     private var cursorState = "idle"
     private var cursorCacheHits = 0
     private var cursorCacheMisses = 0
+    private var cursorResourceOrigin = "none"
+    private var cursorResourceDensity: Double?
     private var nextDiagnosticRequestID = 1
     private var currentRequests: [Int: (method: String, started: TimeInterval)] = [:]
     private var lastRequest: [String: Any]?
@@ -116,12 +118,14 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             "connected": isConnected, "closing": closing, "queueLength": queue.count,
             "workItem": workItem, "cursorState": cursorState,
             "cursorCacheHits": cursorCacheHits, "cursorCacheMisses": cursorCacheMisses,
+            "cursorResourceOrigin": cursorResourceOrigin,
             "currentRequests": currentRequests.keys.sorted().compactMap { id -> [String: Any]? in
                 guard let request = currentRequests[id] else { return nil }
                 return ["method": request.method, "elapsedMS": max(0, now - request.started) * 1000]
             }
         ]
         if let lastRequest { value["lastRequest"] = lastRequest }
+        if let cursorResourceDensity { value["cursorResourceDensity"] = cursorResourceDensity }
         if let lastErrorKind { value["lastErrorKind"] = lastErrorKind }
         if let failureContext { value["failureContext"] = failureContext }
         return value
@@ -129,6 +133,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
 
     private static func diagnosticErrorKind(_ error: Error) -> String {
         if error is CancellationError { return "cancelled" }
+        if let artwork = error as? ProtoPieCursorArtworkError { return "artwork.\(artwork.rawValue)" }
         guard let error = error as? MouseInputTransportError else { return "other" }
         switch error {
         case .unavailable: return "unavailable"
@@ -171,12 +176,20 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         }
     }
 
+    private struct CursorObservation {
+        let css: String
+        let viewport: MouseInputViewport
+        let lifecycle: UUID
+        let connection: MouseInputCDPConnection
+        let pageSessionID: String
+    }
+
     private enum Operation {
         case event(MouseInputEvent)
         case key(MouseKeyboardEvent)
         case refresh(CheckedContinuation<MouseInputViewport, Error>)
         case flush(CheckedContinuation<Void, Error>)
-        case cursor(CGPoint, CheckedContinuation<ProtoPieCursorStyle, Error>)
+        case cursor(CGPoint, CheckedContinuation<CursorObservation, Error>)
         case focus(Bool, CheckedContinuation<Void, Error>)
 
         var diagnosticName: String {
@@ -217,6 +230,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         let connection = makeConnection(socket)
         let generation = UUID(); lifecycle = generation
         workItem = "idle"; cursorState = "idle"; cursorCacheHits = 0; cursorCacheMisses = 0
+        cursorResourceOrigin = "none"; cursorResourceDensity = nil
         currentRequests.removeAll(); lastRequest = nil; lastErrorKind = nil; failureContext = nil
         self.connection = connection; self.session = session; closing = false; originalPageInvalidated = false
         connection.onFailure = { [weak self] error in
@@ -315,8 +329,8 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         }
     }
 
-    /// Ordered behind preceding mouse events, so :active/hover belongs to the
-    /// same point and gesture. Only the already-bound page may supply artwork.
+    /// CSS is observed behind preceding input; resource loading happens outside
+    /// that queue so a slow image cannot hold mouse-up or viewport checks hostage.
     func cursorStyle(at point: CGPoint) async throws -> ProtoPieCursorStyle {
         try Task.checkCancellation()
         guard acceptingEvents, let viewport else { throw MouseInputTransportError.closed }
@@ -325,11 +339,25 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             throw MouseInputTransportError.invalidEvent
         }
         guard queue.count < 256 else { throw MouseInputTransportError.queueOverflow }
-        let style = try await withCheckedThrowingContinuation { continuation in
-            queue.append(.cursor(point, continuation)); startWorker()
+        let generation = lifecycle
+        do {
+            let observed = try await withCheckedThrowingContinuation { continuation in
+                queue.append(.cursor(point, continuation)); startWorker()
+            }
+            try Task.checkCancellation()
+            let style = try await resolveCursorStyle(observed)
+            try Task.checkCancellation()
+            return style
+        } catch {
+            if lifecycle == generation {
+                if error is ProtoPieCursorArtworkError {
+                    lastErrorKind = Self.diagnosticErrorKind(error)
+                } else if !(error is CancellationError) {
+                    fail(error, mayRelease: true)
+                }
+            }
+            throw error
         }
-        try Task.checkCancellation()
-        return style
     }
 
     /// The physical output owns macOS focus in the independent-source path.
@@ -404,8 +432,11 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                         catch { continuation.resume(throwing: error); throw error }
                     case .flush(let continuation): continuation.resume()
                     case .cursor(let point, let continuation):
-                        do { continuation.resume(returning: try await self.readCursorStyle(at: point)) }
-                        catch { continuation.resume(throwing: error); throw error }
+                        do { continuation.resume(returning: try await self.observeCursorStyle(at: point)) }
+                        catch {
+                            continuation.resume(throwing: error)
+                            if !(error is ProtoPieCursorArtworkError) { throw error }
+                        }
                     case .focus(let enabled, let continuation):
                         do {
                             guard let connection = self.connection, let pageSession = self.pageSessionID else {
@@ -507,36 +538,59 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         return value
     }
 
-    private func readCursorStyle(at point: CGPoint) async throws -> ProtoPieCursorStyle {
+    private func confirmCursorObservation(_ observed: CursorObservation) throws {
+        guard lifecycle == observed.lifecycle, acceptingEvents, !closing, !originalPageInvalidated,
+              viewport == observed.viewport, connection === observed.connection else { throw MouseInputTransportError.closed }
+    }
+
+    private func evaluateCursor(_ expression: String, observation: CursorObservation) async throws -> [String: Any] {
+        let result = try await trackedCall(observation.connection, "Runtime.evaluate", parameters: [
+            "expression": expression, "returnByValue": true, "awaitPromise": true], sessionID: observation.pageSessionID)
+        try confirmCursorObservation(observation)
+        guard result["exceptionDetails"] == nil,
+              let value = (result["result"] as? [String: Any])?["value"] as? [String: Any],
+              (value["timeOrigin"] as? NSNumber)?.doubleValue == observation.viewport.timeOrigin else {
+            throw MouseInputTransportError.staleViewport
+        }
+        return value
+    }
+
+    private func observeCursorStyle(at point: CGPoint) async throws -> CursorObservation {
         guard acceptingEvents, !closing, !originalPageInvalidated, let current = viewport,
               let connection, let pageSessionID else { throw MouseInputTransportError.closed }
-        let generation = lifecycle
-        func confirm() throws {
-            guard lifecycle == generation, acceptingEvents, !closing, !originalPageInvalidated,
-                  viewport == current, self.connection === connection else { throw MouseInputTransportError.closed }
-        }
-        func evaluate(_ expression: String) async throws -> [String: Any] {
-            let result = try await trackedCall(connection, "Runtime.evaluate", parameters: [
-                "expression": expression, "returnByValue": true, "awaitPromise": true], sessionID: pageSessionID)
-            try confirm()
-            guard result["exceptionDetails"] == nil,
-                  let value = (result["result"] as? [String: Any])?["value"] as? [String: Any],
-                  (value["timeOrigin"] as? NSNumber)?.doubleValue == current.timeOrigin else {
-                throw MouseInputTransportError.staleViewport
-            }
-            return value
-        }
+        let identity = CursorObservation(css: "", viewport: current, lifecycle: lifecycle,
+            connection: connection, pageSessionID: pageSessionID)
         cursorState = "query"
-        let observed = try await evaluate("""
+        let value = try await evaluateCursor("""
         (()=>{const element=document.elementFromPoint(\(point.x),\(point.y))||document.getElementById('webplayer-root')||document.body;
         return {nioCursorStyle:true,timeOrigin:performance.timeOrigin,css:element?getComputedStyle(element).cursor:''};})()
-        """)
-        guard let css = observed["css"] as? String else { throw ProtoPieCursorStyle.invalid() }
+        """, observation: identity)
+        guard let css = value["css"] as? String else { throw ProtoPieCursorArtworkError.invalidCSS }
+        return CursorObservation(css: css, viewport: current, lifecycle: identity.lifecycle,
+            connection: connection, pageSessionID: pageSessionID)
+    }
+
+    private func resolveCursorStyle(_ observed: CursorObservation) async throws -> ProtoPieCursorStyle {
+        func confirm() throws { try confirmCursorObservation(observed) }
+        func evaluate(_ expression: String) async throws -> [String: Any] {
+            try await evaluateCursor(expression, observation: observed)
+        }
+        try confirm()
+        let css = observed.css
         if let cached = cursorCache[css] {
             cursorCacheHits += 1; cursorState = "cacheHit"
             return cached
         }
         cursorCacheMisses += 1; cursorState = "parse"
+        cursorResourceOrigin = "none"; cursorResourceDensity = nil
+        let candidates = try ProtoPieCursorDefinition.candidates(for: css)
+        if let cached = try await cachedPageCursor(candidates, observation: observed) {
+            try confirm()
+            if cursorCache.count >= 24 { cursorCache.removeAll() }
+            cursorCache[css] = cached
+            cursorState = "ready"
+            return cached
+        }
         let definition = try ProtoPieCursorDefinition.parse(css)
         var imageData: Data?
         if let resource = definition.resource {
@@ -566,27 +620,76 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                       encodedData.utf8.count <= ((limit + 2) / 3) * 4,
                       let data = Data(base64Encoded: encodedData), data.count <= limit else { throw ProtoPieCursorStyle.invalid() }
                 imageData = data
+                cursorResourceOrigin = "page-fetch"
             } else {
                 // The normal path keeps browser origin/CORS policy. Only the
                 // player's fixed public asset host has a native fallback.
                 cursorState = "nativeResourceEligibility"
-                guard let url = ProtoPieCursorResourceLoader.permittedURL(resource) else { throw ProtoPieCursorStyle.invalid() }
+                guard let url = ProtoPieCursorResourceLoader.permittedURL(resource) else { throw ProtoPieCursorArtworkError.resourceUnavailable }
                 try confirm()
                 cursorState = "nativeResource"
                 do { imageData = try await loadCursorResource(url) }
-                catch { try confirm(); throw ProtoPieCursorStyle.invalid() }
+                catch { try confirm(); throw ProtoPieCursorArtworkError.resourceUnavailable }
                 try confirm()
                 guard let data = imageData, !data.isEmpty, data.count <= limit else { throw ProtoPieCursorStyle.invalid() }
+                cursorResourceOrigin = "native"
             }
         }
         try confirm()
         cursorState = "decode"
         let style = try ProtoPieCursorStyle.decode(definition, imageData: imageData)
+        cursorResourceDensity = definition.resource == nil ? nil : definition.density
         // Bound memory and retain no assets from a previous document/connection.
         if cursorCache.count >= 24 { cursorCache.removeAll() }
         cursorCache[css] = style
         cursorState = "ready"
         return style
+    }
+
+    /// Read only resources that both the bound page has loaded and its computed
+    /// CSS explicitly names. Keep the candidate's density and CSS hotspot intact.
+    private func cachedPageCursor(_ candidates: [ProtoPieCursorDefinition],
+                                  observation: CursorObservation) async throws -> ProtoPieCursorStyle? {
+        let candidates = candidates.filter { candidate in
+            guard let resource = candidate.resource, let url = URLComponents(string: resource) else { return false }
+            return url.scheme?.lowercased() == "https" && url.user == nil && url.password == nil
+        }
+        guard !candidates.isEmpty else { return nil }
+        try confirmCursorObservation(observation)
+        cursorState = "pageResourceTree"
+        let result = try await trackedCall(observation.connection, "Page.getResourceTree",
+            parameters: [:], sessionID: observation.pageSessionID)
+        try confirmCursorObservation(observation)
+        guard let tree = result["frameTree"] as? [String: Any],
+              let frame = tree["frame"] as? [String: Any], let frameID = frame["id"] as? String,
+              let resources = tree["resources"] as? [[String: Any]] else { return nil }
+        let loadedURLs = Set(resources.compactMap { $0["url"] as? String })
+        let limit = ProtoPieCursorStyle.maximumResourceBytes
+        for candidate in candidates {
+            guard let resource = candidate.resource, loadedURLs.contains(resource) else { continue }
+            cursorState = "pageResourceContent"
+            let content: [String: Any]
+            do {
+                content = try await trackedCall(observation.connection, "Page.getResourceContent",
+                    parameters: ["frameId": frameID, "url": resource], sessionID: observation.pageSessionID)
+            } catch {
+                try confirmCursorObservation(observation)
+                // This one resource RPC may report an evicted/missing body.
+                // Connection, timeout and lifecycle failures retain their meaning.
+                if case MouseInputTransportError.unavailable = error { continue }
+                throw error
+            }
+            try confirmCursorObservation(observation)
+            guard content["base64Encoded"] as? Bool == true, let encoded = content["content"] as? String,
+                  encoded.utf8.count <= ((limit + 2) / 3) * 4,
+                  let data = Data(base64Encoded: encoded), !data.isEmpty, data.count <= limit else { continue }
+            let style: ProtoPieCursorStyle
+            do { style = try ProtoPieCursorStyle.decode(candidate, imageData: data) }
+            catch is ProtoPieCursorArtworkError { continue }
+            cursorResourceOrigin = "page-cache"; cursorResourceDensity = candidate.density
+            return style
+        }
+        return nil
     }
 
     private func received(_ method: String, parameters: [String: Any], sessionID: String?) {
