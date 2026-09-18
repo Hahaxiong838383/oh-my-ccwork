@@ -96,6 +96,7 @@ struct MouseMappingSettings: Codable, Equatable {
         start.setAccessibilityIdentifier("nio-mouse-start"); stop.setAccessibilityIdentifier("nio-mouse-stop")
         let actions = NSStackView(views: [start, stop]); actions.orientation = .horizontal; actions.spacing = 8; add(actions)
         add(NSTextField(wrappingLabelWithString: "使用 ProtoPie 自带的圆形指针，不新增指针。Esc 返回工作台并恢复普通移动；⌃⌥⌘Esc 紧急隐藏演示。"))
+        add(NSTextField(wrappingLabelWithString: "完整高度预览：首次点击外屏画面进入操作，再次点击操作原型，数字键盘等演示按键同步可用；原型指针样式同步到外屏。切回工作台可继续调参。"))
         add(NSTextField(labelWithString: "操作方向"))
         MouseMappingMode.allCases.forEach { mode.addItem(withTitle: $0.title) }
         mode.target = self; mode.action = #selector(changed)

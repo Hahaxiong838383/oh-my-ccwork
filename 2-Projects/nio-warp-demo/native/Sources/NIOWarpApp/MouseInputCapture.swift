@@ -146,6 +146,12 @@ struct MouseCaptureError: LocalizedError {
 /// allowed to clip at the screen edge instead of shrinking the clickable area.
 final class MouseCursorOverlay: NSView {
     var receivesInput = false
+    /// Independent presentation sources use the original page's CSS artwork as
+    /// an AppKit system cursor. This does not draw an overlay pointer.
+    var sourceCursor: NSCursor? {
+        didSet { window?.invalidateCursorRects(for: self) }
+    }
+    var onActivate: (() -> Void)?
     var physicalPoint: SIMD2<Float>? { didSet { needsDisplay = true } }
     var physicalSize = SIMD2<Float>(1, 1)
     var diameter: Double = 28 { didSet { needsDisplay = true } }
@@ -155,6 +161,12 @@ final class MouseCursorOverlay: NSView {
     override var acceptsFirstResponder: Bool { receivesInput }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { receivesInput }
     override func hitTest(_ point: NSPoint) -> NSView? { receivesInput ? super.hitTest(point) : nil }
+    override func resetCursorRects() {
+        if receivesInput { addCursorRect(bounds, cursor: sourceCursor ?? .arrow) }
+    }
+    override func mouseDown(with event: NSEvent) {
+        if receivesInput { onActivate?() }
+    }
 
     override func draw(_ dirtyRect: NSRect) {
         guard let point = physicalPoint else { return }

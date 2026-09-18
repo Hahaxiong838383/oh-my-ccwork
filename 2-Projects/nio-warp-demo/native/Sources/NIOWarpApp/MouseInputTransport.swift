@@ -68,6 +68,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
 @MainActor final class MouseInputTransport {
     typealias ConnectionFactory = (URL) -> MouseInputCDPConnection
     typealias WindowLookup = (CGWindowID, pid_t) -> CGRect?
+    typealias CursorResourceLoader = (URL) async throws -> Data
     var onFailure: ((Error) -> Void)?
     private(set) var viewport: MouseInputViewport?
     var isConnected: Bool { acceptingEvents && viewport != nil }
@@ -75,6 +76,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     private let profileURL: URL
     private let makeConnection: ConnectionFactory
     private let findWindow: WindowLookup
+    private let loadCursorResource: CursorResourceLoader
     private let monitorInterval: UInt64
     private var connection: MouseInputCDPConnection?
     private var session: ProtoPieSession?
@@ -85,28 +87,37 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     private var originalPageInvalidated = false
     private var lifecycle = UUID()
     private var queuedButtons = 0
+    private var queuedKeys: [UInt16: MouseKeyboardEvent] = [:]
     /// Set before dispatching down, so an acknowledgement timeout still attempts release.
     private var possiblyPressed = 0
+    private var possiblyPressedKeys: [UInt16: MouseKeyboardEvent] = [:]
     private var lastPoint = CGPoint.zero
     private var queue: [Operation] = []
     private var worker: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
     private var closeTask: Task<Void, Never>?
+    private var cursorCache: [String: ProtoPieCursorStyle] = [:]
+    private var pageFocusPossiblyEnabled = false
 
     private enum Operation {
         case event(MouseInputEvent)
+        case key(MouseKeyboardEvent)
         case refresh(CheckedContinuation<MouseInputViewport, Error>)
         case flush(CheckedContinuation<Void, Error>)
+        case cursor(CGPoint, CheckedContinuation<ProtoPieCursorStyle, Error>)
+        case focus(Bool, CheckedContinuation<Void, Error>)
     }
 
     init(profileURL: URL? = nil, requestTimeout: TimeInterval = 2,
          monitorInterval: TimeInterval = 0.35,
          connectionFactory: ConnectionFactory? = nil,
-         windowLookup: WindowLookup? = nil) {
+         windowLookup: WindowLookup? = nil,
+         cursorResourceLoader: CursorResourceLoader? = nil) {
         self.profileURL = profileURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("NIOWarp/ProtoPieChrome", isDirectory: true)
         self.makeConnection = connectionFactory ?? { MouseInputWebSocket(url: $0, timeout: requestTimeout) }
         self.findWindow = windowLookup ?? Self.capturedWindow
+        self.loadCursorResource = cursorResourceLoader ?? { try await ProtoPieCursorResourceLoader.load($0) }
         self.monitorInterval = UInt64(max(0, monitorInterval) * 1_000_000_000)
     }
 
@@ -185,6 +196,25 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         return true
     }
 
+    /// Keyboard business events use the same page binding and ordering as mouse
+    /// input. Repeat never creates a second held key; releases cannot overtake down.
+    @discardableResult func sendKey(_ event: MouseKeyboardEvent) -> Bool {
+        guard acceptingEvents, let viewport, event.viewportID == viewport.bindingID else { return false }
+        guard event.isValid else { return false }
+        let code = event.input.keyCode, held = queuedKeys[code] != nil
+        if event.input.kind == .down {
+            guard event.input.isAutoRepeat ? held : !held else {
+                fail(MouseInputTransportError.invalidEvent, mayRelease: true); return false
+            }
+        } else {
+            guard held else { fail(MouseInputTransportError.invalidEvent, mayRelease: true); return false }
+        }
+        guard queue.count < 256 else { fail(MouseInputTransportError.queueOverflow, mayRelease: true); return false }
+        if event.input.kind == .down { queuedKeys[code] = event } else { queuedKeys.removeValue(forKey: code) }
+        queue.append(.key(event)); startWorker()
+        return true
+    }
+
     func flush() async throws {
         guard acceptingEvents else { throw MouseInputTransportError.closed }
         try await withCheckedThrowingContinuation { continuation in
@@ -198,6 +228,34 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         return try await withCheckedThrowingContinuation { continuation in
             queue.append(.refresh(continuation)); startWorker()
         }
+    }
+
+    /// Ordered behind preceding mouse events, so :active/hover belongs to the
+    /// same point and gesture. Only the already-bound page may supply artwork.
+    func cursorStyle(at point: CGPoint) async throws -> ProtoPieCursorStyle {
+        try Task.checkCancellation()
+        guard acceptingEvents, let viewport else { throw MouseInputTransportError.closed }
+        guard point.x.isFinite, point.y.isFinite, point.x >= 0, point.y >= 0,
+              point.x < viewport.cssWidth, point.y < viewport.cssHeight else {
+            throw MouseInputTransportError.invalidEvent
+        }
+        guard queue.count < 256 else { throw MouseInputTransportError.queueOverflow }
+        let style = try await withCheckedThrowingContinuation { continuation in
+            queue.append(.cursor(point, continuation)); startWorker()
+        }
+        try Task.checkCancellation()
+        return style
+    }
+
+    /// The physical output owns macOS focus in the independent-source path.
+    /// Scope emulation to this validated page and always undo it during close.
+    func setPageFocusEmulation(_ enabled: Bool) async throws {
+        try Task.checkCancellation()
+        guard acceptingEvents else { throw MouseInputTransportError.closed }
+        try await withCheckedThrowingContinuation { continuation in
+            queue.append(.focus(enabled, continuation)); startWorker()
+        }
+        try Task.checkCancellation()
     }
 
     /// Bring forward only the page already validated for this input binding.
@@ -244,10 +302,36 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                         if event.kind == .down { self.possiblyPressed |= event.button.mask }
                         _ = try await connection.call("Input.dispatchMouseEvent", parameters: event.parameters, sessionID: pageSession)
                         if event.kind == .up { self.possiblyPressed &= ~event.button.mask }
+                    case .key(let event):
+                        guard let viewport = self.viewport, event.viewportID == viewport.bindingID,
+                              let connection = self.connection, let pageSession = self.pageSessionID else {
+                            throw MouseInputTransportError.closed
+                        }
+                        _ = try await self.validateCurrentViewport()
+                        guard self.acceptingEvents, self.lifecycle == generation else { throw MouseInputTransportError.closed }
+                        if event.input.kind == .down { self.possiblyPressedKeys[event.input.keyCode] = event }
+                        _ = try await connection.call("Input.dispatchKeyEvent", parameters: event.parameters, sessionID: pageSession)
+                        if event.input.kind == .up { self.possiblyPressedKeys.removeValue(forKey: event.input.keyCode) }
                     case .refresh(let continuation):
                         do { continuation.resume(returning: try await self.validateCurrentViewport()) }
                         catch { continuation.resume(throwing: error); throw error }
                     case .flush(let continuation): continuation.resume()
+                    case .cursor(let point, let continuation):
+                        do { continuation.resume(returning: try await self.readCursorStyle(at: point)) }
+                        catch { continuation.resume(throwing: error); throw error }
+                    case .focus(let enabled, let continuation):
+                        do {
+                            guard let connection = self.connection, let pageSession = self.pageSessionID else {
+                                throw MouseInputTransportError.closed
+                            }
+                            if enabled { self.pageFocusPossiblyEnabled = true }
+                            _ = try await connection.call("Emulation.setFocusEmulationEnabled",
+                                parameters: ["enabled": enabled], sessionID: pageSession)
+                            guard self.lifecycle == generation, self.acceptingEvents, !self.closing,
+                                  !self.originalPageInvalidated else { throw MouseInputTransportError.closed }
+                            if !enabled { self.pageFocusPossiblyEnabled = false }
+                            continuation.resume()
+                        } catch { continuation.resume(throwing: error); throw error }
                     }
                 } catch {
                     self.fail(error, mayRelease: true)
@@ -336,6 +420,78 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         return value
     }
 
+    private func readCursorStyle(at point: CGPoint) async throws -> ProtoPieCursorStyle {
+        guard acceptingEvents, !closing, !originalPageInvalidated, let current = viewport,
+              let connection, let pageSessionID else { throw MouseInputTransportError.closed }
+        let generation = lifecycle
+        func confirm() throws {
+            guard lifecycle == generation, acceptingEvents, !closing, !originalPageInvalidated,
+                  viewport == current, self.connection === connection else { throw MouseInputTransportError.closed }
+        }
+        func evaluate(_ expression: String) async throws -> [String: Any] {
+            let result = try await connection.call("Runtime.evaluate", parameters: [
+                "expression": expression, "returnByValue": true, "awaitPromise": true], sessionID: pageSessionID)
+            try confirm()
+            guard result["exceptionDetails"] == nil,
+                  let value = (result["result"] as? [String: Any])?["value"] as? [String: Any],
+                  (value["timeOrigin"] as? NSNumber)?.doubleValue == current.timeOrigin else {
+                throw MouseInputTransportError.staleViewport
+            }
+            return value
+        }
+        let observed = try await evaluate("""
+        (()=>{const element=document.elementFromPoint(\(point.x),\(point.y))||document.getElementById('webplayer-root')||document.body;
+        return {nioCursorStyle:true,timeOrigin:performance.timeOrigin,css:element?getComputedStyle(element).cursor:''};})()
+        """)
+        guard let css = observed["css"] as? String else { throw ProtoPieCursorStyle.invalid() }
+        if let cached = cursorCache[css] { return cached }
+        let definition = try ProtoPieCursorDefinition.parse(css)
+        var imageData: Data?
+        if let resource = definition.resource {
+            let encoded = String(decoding: try JSONSerialization.data(withJSONObject: [resource]), as: UTF8.self)
+            let limit = ProtoPieCursorStyle.maximumResourceBytes
+            let result = try await evaluate("""
+            (async()=>{const result={nioCursorResource:true,timeOrigin:performance.timeOrigin,ok:false};
+            const valid=url=>!url.username&&!url.password&&(url.protocol==='https:'||
+              (url.protocol==='data:'&&/^data:image\\//i.test(url.href))||
+              (url.origin===location.origin&&url.protocol===location.protocol));
+            const abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),1200);
+            try {const url=new URL(\(encoded)[0],location.href);if(!valid(url))return result;
+              const response=await fetch(url.href,{credentials:'same-origin',redirect:'error',signal:abort.signal});
+              if(!response.ok||!valid(new URL(response.url||url.href))||!response.body)return result;
+              if(Number(response.headers.get('content-length'))>\(limit))return result;
+              const reader=response.body.getReader();let size=0;const chunks=[];
+              for(;;){const item=await reader.read();if(item.done)break;size+=item.value.byteLength;
+                if(size>\(limit)){await reader.cancel();return result;}chunks.push(item.value);}
+              const bytes=new Uint8Array(size);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}
+              let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+              return {...result,ok:true,data:btoa(binary)};
+            }catch{return result;}finally{clearTimeout(timeout);}})()
+            """)
+            if result["ok"] as? Bool == true {
+                guard let encodedData = result["data"] as? String,
+                      encodedData.utf8.count <= ((limit + 2) / 3) * 4,
+                      let data = Data(base64Encoded: encodedData), data.count <= limit else { throw ProtoPieCursorStyle.invalid() }
+                imageData = data
+            } else {
+                // The normal path keeps browser origin/CORS policy. Only the
+                // player's fixed public asset host has a native fallback.
+                guard let url = ProtoPieCursorResourceLoader.permittedURL(resource) else { throw ProtoPieCursorStyle.invalid() }
+                try confirm()
+                do { imageData = try await loadCursorResource(url) }
+                catch { try confirm(); throw ProtoPieCursorStyle.invalid() }
+                try confirm()
+                guard let data = imageData, !data.isEmpty, data.count <= limit else { throw ProtoPieCursorStyle.invalid() }
+            }
+        }
+        try confirm()
+        let style = try ProtoPieCursorStyle.decode(definition, imageData: imageData)
+        // Bound memory and retain no assets from a previous document/connection.
+        if cursorCache.count >= 24 { cursorCache.removeAll() }
+        cursorCache[css] = style
+        return style
+    }
+
     private func received(_ method: String, parameters: [String: Any], sessionID: String?) {
         guard let session else { return }
         if method == "Target.detachedFromTarget", parameters["sessionId"] as? String == pageSessionID {
@@ -383,26 +539,36 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         for operation in queue {
             switch operation {
             case .event: break
+            case .key: break
             case .refresh(let continuation): continuation.resume(throwing: error)
             case .flush(let continuation): continuation.resume(throwing: error)
+            case .cursor(_, let continuation): continuation.resume(throwing: error)
+            case .focus(_, let continuation): continuation.resume(throwing: error)
             }
         }
-        queue.removeAll(); queuedButtons = 0
+        queue.removeAll(); queuedButtons = 0; queuedKeys.removeAll()
         let existingWorker = worker
         closeTask = Task { [weak self] in
             guard let self else { return }
             // The in-flight event finishes before cleanup; release cannot overtake its down.
             await existingWorker?.value
             if mayRelease { await self.releasePressedOnOriginalPage() }
+            if self.pageFocusPossiblyEnabled, let connection = self.connection, let pageSessionID = self.pageSessionID {
+                _ = try? await connection.call("Emulation.setFocusEmulationEnabled",
+                    parameters: ["enabled": false], sessionID: pageSessionID)
+            }
+            self.pageFocusPossiblyEnabled = false
             self.connection?.onEvent = nil; self.connection?.onFailure = nil
             self.connection?.close(); self.connection = nil
             self.pageSessionID = nil; self.session = nil; self.viewport = nil
-            self.possiblyPressed = 0; self.worker = nil; self.closeTask = nil
+            self.cursorCache.removeAll()
+            self.possiblyPressed = 0; self.possiblyPressedKeys.removeAll(); self.worker = nil; self.closeTask = nil
         }
     }
 
     private func releasePressedOnOriginalPage() async {
-        guard !originalPageInvalidated, possiblyPressed != 0, let connection, let pageSessionID, let viewport, let session,
+        guard !originalPageInvalidated, (possiblyPressed != 0 || !possiblyPressedKeys.isEmpty),
+              let connection, let pageSessionID, let viewport, let session,
               let value = try? await runtimeViewport(connection, pageSessionID: pageSessionID),
               !originalPageInvalidated,
               (value["timeOrigin"] as? NSNumber)?.doubleValue == viewport.timeOrigin,
@@ -414,6 +580,10 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             let event = MouseInputEvent(viewportID: viewport.bindingID, kind: .up, x: lastPoint.x, y: lastPoint.y,
                                         button: button, buttons: possiblyPressed)
             _ = try? await connection.call("Input.dispatchMouseEvent", parameters: event.parameters, sessionID: pageSessionID)
+        }
+        for code in possiblyPressedKeys.keys.sorted() {
+            guard !originalPageInvalidated, let event = possiblyPressedKeys.removeValue(forKey: code) else { return }
+            _ = try? await connection.call("Input.dispatchKeyEvent", parameters: event.released().parameters, sessionID: pageSessionID)
         }
     }
 

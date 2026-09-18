@@ -3705,6 +3705,7 @@ private extension Array {
                 frame: frame, setInputEnabled: { [weak output] in output?.setMouseInputEnabled($0) })
         }
         mouseMapping.onReturnToWorkbench = { [weak self] in self?.showWorkbench() }
+        mouseMapping.monitorPresentation()
     }
 
     private func configureProtoPie() {

@@ -28,6 +28,13 @@ struct MouseMappingOutput {
     private var startTask: Task<Void, Never>?
     private var closingTask: Task<Void, Never>?
     private var timer: Timer?
+    private var presentationTimer: Timer?
+    private var armedOutput: MouseMappingOutput?
+    private var outputOwned = false
+    private var cursorTask: Task<Void, Never>?
+    private var cursorRefreshNeeded = false
+    private var cursorIdentifier = ""
+    private var cursorHidden = false
     private var generation = UUID()
     private var message = "先启动 ProtoPie 全屏预览，再进入演示鼠标控制。"
     private var lastPublication: TimeInterval = 0
@@ -39,8 +46,12 @@ struct MouseMappingOutput {
         self.defaults = defaults
         settings = MouseMappingSettings.load(defaults: defaults)
         input.onEvent = { [weak self] event in self?.receive(event) }
+        input.onKeyboardEvent = { [weak self] event in self?.receiveKeyboard(event) }
         input.onEnter = { [weak self] point, allowSnap in self?.adoptNativeCursor(at: point, allowSnap: allowSnap) ?? false }
-        input.onLeave = { [weak self] in self?.releaseButtons() }
+        input.onLeave = { [weak self] in
+            self?.releaseButtons()
+            self?.restoreCursorPresentation()
+        }
         input.onExit = { [weak self] reason, returnToWorkbench in self?.stop(reason: reason, returnToWorkbench: returnToWorkbench) }
     }
 
@@ -59,8 +70,41 @@ struct MouseMappingOutput {
         return panel
     }
 
+    /// Arm only a verified independent presentation, without taking focus from
+    /// the workbench. The first click focuses; subsequent clicks reach the page.
+    func monitorPresentation() {
+        guard presentationTimer == nil else { return }
+        presentationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshPresentationInput() }
+        }
+    }
+
+    private func refreshPresentationInput() {
+        guard !isActive, startTask == nil else { return }
+        guard let session = sessionProvider?(), let current = outputProvider?(),
+              session.configuration.source == .cloud,
+              let sourceID = session.presentationDisplayID, sourceID != current.displayID,
+              (try? Self.validate(current, session: session)) != nil else {
+            disarmPresentationInput(); return
+        }
+        if armedOutput?.window !== current.window { disarmPresentationInput() }
+        armedOutput = current
+        current.cursor.onActivate = { [weak self] in self?.start() }
+        current.setInputEnabled(true)
+    }
+
+    private func disarmPresentationInput() {
+        armedOutput?.cursor.onActivate = nil
+        armedOutput?.cursor.sourceCursor = nil
+        armedOutput?.setInputEnabled(false)
+        armedOutput = nil
+    }
+
     func start() {
         guard !isActive, startTask == nil else { return }
+        // Keep the clicked output surface until its activation gesture ends;
+        // dropping hit testing here could leak its mouse-up to the desktop.
+        armedOutput?.cursor.onActivate = nil
         let token = UUID(); generation = token
         message = "正在核对全屏来源、捕获尺寸和可点击边界…"
         startTask = Task { @MainActor [weak self] in
@@ -98,14 +142,22 @@ struct MouseMappingOutput {
                     throw MouseCaptureError("当前画面没有可用的可点击区域。")
                 }
                 self.region = region; self.output = current; self.viewport = viewport
+                if armedOutput?.window !== current.window { disarmPresentationInput() }
+                else { armedOutput = nil }
+                self.outputOwned = session.presentationDisplayID.map { $0 != current.displayID } ?? false
                 self.sessionID = session.id; self.sourceUV = start; self.buttons = 0
                 self.movementEventCount = 0; self.lastRawMovement = nil
-                current.setInputEnabled(false)
+                current.setInputEnabled(self.outputOwned)
                 current.cursor.physicalPoint = nil
-                // Chrome owns the existing CSS circle; the transparent Warp window
-                // must never become key or install a replacement cursor.
-                NSRunningApplication(processIdentifier: session.processID)?.activate(options: [])
-                try await transport.activateBoundTarget()
+                // The legacy same-screen path leaves Chrome in charge of input.
+                // Independent sources bridge their original CSS system cursor
+                // to the physical output, which owns real mouse focus instead.
+                if self.outputOwned {
+                    try await transport.setPageFocusEmulation(true)
+                } else {
+                    NSRunningApplication(processIdentifier: session.processID)?.activate(options: [])
+                    try await transport.activateBoundTarget()
+                }
                 try await Task.sleep(nanoseconds: 120_000_000)
                 try Task.checkCancellation()
                 guard self.generation == token, let latest = self.outputProvider?(),
@@ -116,10 +168,33 @@ struct MouseMappingOutput {
                 try Task.checkCancellation()
                 guard self.generation == token, let confirmed = self.outputProvider?(),
                       Self.sameBinding(current, confirmed), self.sessionProvider?()?.id == session.id else { throw CancellationError() }
-                try self.input.begin(displayID: current.displayID, processID: session.processID,
-                    targetWindow: session.windowID, outputWindow: CGWindowID(current.window.windowNumber))
+                if self.outputOwned {
+                    NSApp.activate(ignoringOtherApps: true)
+                    current.window.makeKeyAndOrderFront(nil)
+                    // Activation crosses from Chrome to this accessory app. The
+                    // key-window notification arrives on a later run-loop turn.
+                    for _ in 0..<12 {
+                        if current.window.isKeyWindow,
+                           NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier { break }
+                        try await Task.sleep(nanoseconds: 50_000_000)
+                        try Task.checkCancellation()
+                        guard self.generation == token, self.sessionProvider?()?.id == session.id,
+                              let latest = self.outputProvider?(), Self.sameBinding(current, latest) else { throw CancellationError() }
+                        current.window.makeKeyAndOrderFront(nil)
+                    }
+                    guard current.window.isKeyWindow,
+                          NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier else {
+                        throw MouseCaptureError("演示输出尚未取得鼠标焦点，请再次点击画面。")
+                    }
+                }
+                let outputWindow = CGWindowID(current.window.windowNumber)
+                try self.input.begin(displayID: current.displayID,
+                    processID: self.outputOwned ? ProcessInfo.processInfo.processIdentifier : session.processID,
+                    targetWindow: self.outputOwned ? outputWindow : session.windowID,
+                    outputWindow: outputWindow, outputOwned: self.outputOwned)
                 self.isActive = true; self.startTask = nil
                 self.input.adoptCurrentCursorIfInside()
+                self.refreshOriginalCursor()
                 let direction = self.settings.reverseHorizontal ? "左右反向：开" : "左右反向：关"
                 self.message = self.settings.previewOnly ? "原圆形鼠标校正 · \(direction) · 仅检查移动 · Esc 暂停" : "原圆形鼠标校正 · \(direction) · 点击已接通 · Esc 暂停"
                 self.timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
@@ -139,9 +214,14 @@ struct MouseMappingOutput {
         generation = UUID()
         startTask?.cancel(); startTask = nil
         timer?.invalidate(); timer = nil
+        cursorTask?.cancel(); cursorTask = nil; cursorRefreshNeeded = false
+        disarmPresentationInput()
         input.stop(); isActive = false; buttons = 0
         output?.cursor.physicalPoint = nil
+        restoreCursorPresentation()
         output?.setInputEnabled(false)
+        if outputOwned { NSCursor.arrow.set() }
+        outputOwned = false; cursorIdentifier = ""
         let oldTransport = transport
         oldTransport?.onFailure = nil
         transport = nil; viewport = nil; region = nil; output = nil; sessionID = nil
@@ -172,6 +252,8 @@ struct MouseMappingOutput {
         do { try Self.validate(current, session: session, viewport: viewport) }
         catch { stop(reason: error.localizedDescription, returnToWorkbench: true); return }
         input.refreshScope()
+        if outputOwned, !input.engaged { input.adoptCurrentCursorIfInside() }
+        if outputOwned, input.engaged { refreshOriginalCursor() }
         publish(force: false)
     }
 
@@ -185,6 +267,7 @@ struct MouseMappingOutput {
         sourceUV = uv
         updateCursor()
         send(kind: .move)
+        refreshOriginalCursor()
         return isActive
     }
 
@@ -198,6 +281,9 @@ struct MouseMappingOutput {
         switch event {
         case .move(let rawDX, let dy, let modifiers):
             guard rawDX.isFinite, dy.isFinite else { return }
+            // These are already compensated deltas. A stationary/priming
+            // event must not warp again or enqueue a second browser move.
+            guard rawDX != 0 || dy != 0 else { return }
             movementEventCount += 1
             lastRawMovement = [rawDX, dy]
             // Direction is an explicit input preference, independent of the image
@@ -227,6 +313,7 @@ struct MouseMappingOutput {
                 buttons &= ~button.mask
             }
             send(kind: down ? .down : .up, button: button, clickCount: min(max(clickCount, 1), 2), modifiers: modifiers)
+            refreshOriginalCursor()
         case .wheel(let dx, let dy, let modifiers):
             send(kind: .wheel, modifiers: modifiers, deltaX: dx, deltaY: dy)
         }
@@ -243,11 +330,63 @@ struct MouseMappingOutput {
         if !transport.send(event) { stop(reason: "输入会话已失效，已恢复普通鼠标。", returnToWorkbench: true) }
     }
 
+    private func receiveKeyboard(_ event: MouseKeyboardInput) {
+        guard isActive, outputOwned, !settings.previewOnly,
+              let viewport, let transport else { return }
+        // Releases produced on focus loss/stop still belong to the old page.
+        // Native capture decides ownership and drains the later physical up.
+        if event.kind == .down {
+            guard let previous = output, let current = outputProvider?(),
+                  Self.sameBinding(previous, current), sessionProvider?()?.id == sessionID else { return }
+        }
+        if !transport.sendKey(MouseKeyboardEvent(viewportID: viewport.bindingID, input: event)) {
+            stop(reason: "键盘输入会话已失效，已恢复普通输入。", returnToWorkbench: true)
+        }
+    }
+
     private func releaseButtons() {
         for button in [MouseInputEvent.Button.left, .right, .middle] where buttons & button.mask != 0 {
             buttons &= ~button.mask
             send(kind: .up, button: button)
         }
+    }
+
+    private func refreshOriginalCursor() {
+        guard isActive, outputOwned, input.engaged, let transport, let viewport else { return }
+        cursorRefreshNeeded = true
+        guard cursorTask == nil else { return }
+        let token = generation
+        cursorTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { if self.generation == token { self.cursorTask = nil } }
+            do {
+                while self.cursorRefreshNeeded, self.generation == token, self.isActive {
+                    self.cursorRefreshNeeded = false
+                    let point = CGPoint(x: Double(self.sourceUV.x) * viewport.cssWidth,
+                                        y: Double(self.sourceUV.y) * viewport.cssHeight)
+                    let style = try await transport.cursorStyle(at: point)
+                    try Task.checkCancellation()
+                    guard self.generation == token, self.outputOwned, self.input.engaged,
+                          self.input.ownsCurrentSurface() else { return }
+                    self.cursorIdentifier = style.identifier
+                    if style.isHidden != self.cursorHidden {
+                        if style.isHidden { NSCursor.hide() } else { NSCursor.unhide() }
+                        self.cursorHidden = style.isHidden
+                    }
+                    self.output?.cursor.sourceCursor = style.cursor ?? .arrow
+                    (style.cursor ?? .arrow).set()
+                }
+            } catch {
+                if self.generation == token, !Task.isCancelled {
+                    self.stop(reason: "无法同步原型鼠标样式，已恢复普通输入。", returnToWorkbench: true)
+                }
+            }
+        }
+    }
+
+    private func restoreCursorPresentation() {
+        if cursorHidden { NSCursor.unhide(); cursorHidden = false }
+        output?.cursor.sourceCursor = nil
     }
 
     private func updateCursor() {
@@ -273,9 +412,11 @@ struct MouseMappingOutput {
             "mode": settings.mode.rawValue, "previewOnly": settings.previewOnly, "buttons": buttons,
             "reverseHorizontal": settings.reverseHorizontal, "movementEventCount": movementEventCount,
             "updatedAt": Date().timeIntervalSince1970,
-            "pointerKind": "original-system-css", "nativeEngaged": input.engaged,
+            "pointerKind": outputOwned ? "original-css-system-on-output" : "original-system-css", "nativeEngaged": input.engaged,
             "nativeEventCount": input.eventCount, "overlayVisible": false,
             "sourceUV": [sourceUV.x, sourceUV.y], "edgeInsetPixels": 0.5]
+        diagnostic["outputOwned"] = outputOwned
+        diagnostic["cursorIdentifier"] = cursorIdentifier
         if isActive { diagnostic["nativeScope"] = input.scopeDiagnostic() }
         if let value = input.lastRawDelta { diagnostic["nativeRawDelta"] = [value.x, value.y] }
         if let value = input.lastCorrectedDelta { diagnostic["nativeCorrectedDelta"] = [value.x, value.y] }
@@ -309,7 +450,9 @@ struct MouseMappingOutput {
                                  viewport: MouseInputViewport? = nil) throws {
         let frame = output.frame
         if let sourceDisplayID = session.presentationDisplayID, sourceDisplayID != output.displayID {
-            throw MouseCaptureError("完整高度播放器使用独立内容画布；原圆形鼠标映射尚未适配此来源，输入保持关闭。")
+            guard OwnedPresentationDisplay.isOwnedDisplay(sourceDisplayID), CGDisplayIsActive(sourceDisplayID) != 0 else {
+                throw MouseCaptureError("独立播放器内容屏已不可用，输入保持关闭。")
+            }
         }
         guard output.window.isVisible, CGDisplayIsActive(output.displayID) != 0, CGDisplayIsAsleep(output.displayID) == 0,
               frame.configuration.render.testPattern == .off,

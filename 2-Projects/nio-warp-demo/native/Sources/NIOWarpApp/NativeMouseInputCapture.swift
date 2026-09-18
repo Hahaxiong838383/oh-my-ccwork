@@ -1,13 +1,16 @@
 import AppKit
 import ApplicationServices
+import Dispatch
 
-/// Filters only the dedicated player's external-screen input. Chrome retains
-/// ownership of the real system cursor (its CSS artwork, hotspot and pressed state).
-/// No cursor is drawn, hidden, replaced, or disconnected from the mouse.
+/// Filters only the bound external-screen input surface. The legacy path belongs
+/// to Chrome; a virtual source instead uses NIO Warp's physical output window.
+/// This capture never draws, hides, or disconnects the real system cursor.
 @MainActor final class NativeMouseInputCapture {
     var onEvent: ((MouseCaptureEvent) -> Void)?
+    var onKeyboardEvent: ((MouseKeyboardInput) -> Void)?
     var onEnter: ((CGPoint, Bool) -> Bool)?
     var onLeave: (() -> Void)?
+    var onCursorScopeChange: ((Bool) -> Void)?
     var onExit: ((String, Bool) -> Void)?
     private(set) var isActive = false
     private(set) var engaged = false
@@ -23,21 +26,26 @@ import ApplicationServices
     private var processID: pid_t = 0
     private var targetWindow: CGWindowID = 0
     private var outputWindow: CGWindowID = 0
+    private var outputOwned = false
+    private var cursorScopeOwned = false
     private var ownedButtons = 0
     private var ownsEscape = false
+    private var keyboard = NativeKeyboardOwnership()
     private var windows: [(CGWindowID, CGRect)] = []
 
-    func begin(displayID: CGDirectDisplayID, processID: pid_t, targetWindow: CGWindowID, outputWindow: CGWindowID) throws {
+    func begin(displayID: CGDirectDisplayID, processID: pid_t, targetWindow: CGWindowID,
+               outputWindow: CGWindowID, outputOwned: Bool = false) throws {
         guard !isActive else { return }
-        guard tap == nil else { throw MouseCaptureError("请先松开上次演示按住的 Esc 或鼠标按键，再启用校正。") }
+        guard tap == nil else { throw MouseCaptureError("请先松开上次演示按住的键盘或鼠标按键，再启用校正。") }
         guard CGDisplayIsActive(displayID) != 0, CGDisplayIsAsleep(displayID) == 0 else {
             throw MouseCaptureError("演示外屏不可用，原鼠标保持正常。")
         }
         resetMovement()
         self.displayID = displayID; self.processID = processID
         self.targetWindow = targetWindow; self.outputWindow = outputWindow
+        self.outputOwned = outputOwned
         let types: [CGEventType] = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
-            .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel, .keyDown, .keyUp]
+            .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel, .keyDown, .keyUp, .flagsChanged]
         let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
             options: .defaultTap, eventsOfInterest: mask, callback: { _, type, event, context in
@@ -63,16 +71,24 @@ import ApplicationServices
     func refreshScope() {
         guard isActive else { return }
         let entries = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
-        windows = entries.compactMap { entry in
+        windows = Self.scopeWindows(entries, outputWindow: outputWindow, outputOwned: outputOwned)
+        if engaged, let point = placement, !ownsSurface(at: point) { leaveSurface() }
+        if keyboard.hasHeldKeys, !ownsCurrentSurface() { releaseKeyboard() }
+    }
+
+    /// Preserve WindowServer's front-to-back ordering. A transparent Warp overlay
+    /// is ignored only when Chrome owns input; it is the target in output mode.
+    nonisolated static func scopeWindows(_ entries: [[String: Any]], outputWindow: CGWindowID,
+                                         outputOwned: Bool) -> [(CGWindowID, CGRect)] {
+        entries.compactMap { entry in
             guard let id = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
-                  id != outputWindow,
+                  outputOwned || id != outputWindow,
                   !Self.isSystemCursorWindow(entry),
                   (entry[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1 > 0,
                   let value = entry[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: value as CFDictionary), !rect.isEmpty else { return nil }
             return (id, rect)
         }
-        if engaged, let point = placement, !ownsSurface(at: point) { leaveSurface() }
     }
 
     /// WindowServer can expose the system cursor as a topmost, nonshareable
@@ -87,6 +103,7 @@ import ApplicationServices
     func adoptCurrentCursorIfInside() {
         guard let point = CGEvent(source: nil)?.location, ownsSurface(at: point), !engaged else { return }
         engaged = onEnter?(point, true) == true
+        setCursorScopeOwned(engaged)
     }
 
     func placeCursor(at point: CGPoint) -> Bool {
@@ -96,17 +113,31 @@ import ApplicationServices
         guard let after = CGEvent(source: nil) else { resetMovement(); return false }
         warpDeltas.recordWarp(delta: SIMD2(Double(after.location.x - before.location.x),
                                           Double(after.location.y - before.location.y)),
-                              timestamp: after.timestamp)
+                              timestamp: Self.completedWarpTimestamp())
         placement = point
         return true
     }
 
+    /// CGEvent(source: nil) is a position snapshot and has timestamp zero. CGEvent
+    /// hardware timestamps use the same nanoseconds-since-boot clock as Dispatch.
+    nonisolated static func completedWarpTimestamp() -> UInt64 {
+        DispatchTime.now().uptimeNanoseconds
+    }
+
     func stop() {
+        releaseKeyboard()
         isActive = false; engaged = false; placement = nil; windows.removeAll()
+        setCursorScopeOwned(false)
         resetMovement()
         // Keep each consumed gesture until its physical release: both a mouse up
         // and an Esc repeat/up must not leak to Chrome after mapping has stopped.
-        if ownedButtons == 0 && !ownsEscape { destroyTap() }
+        if !hasOwnedReleases { destroyTap() }
+    }
+
+    private var hasOwnedReleases: Bool { ownedButtons != 0 || ownsEscape || keyboard.hasPendingReleases }
+
+    private func releaseKeyboard() {
+        keyboard.releaseAll().forEach { onKeyboardEvent?($0) }
     }
 
     private func destroyTap() {
@@ -129,17 +160,55 @@ import ApplicationServices
         return ["firstWindowMetadata": details, "displayID": displayID, "insideDisplay": bounds.contains(point),
                 "frontPID": NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0,
                 "processID": processID, "targetWindow": targetWindow, "outputWindow": outputWindow,
+                "outputOwned": outputOwned, "cursorScopeOwned": cursorScopeOwned,
+                "heldKeyCount": keyboard.heldKeyCount, "drainingKeyCount": keyboard.drainingKeyCount,
+                "outputWindowIsKey": NSApplication.shared.keyWindow?.windowNumber == Int(outputWindow),
                 "coveringWindows": windows.filter { $0.1.contains(point) }.prefix(4).map { $0.0 },
                 "point": [point.x, point.y]]
     }
 
     private func ownsSurface(at point: CGPoint) -> Bool {
-        isActive && CGDisplayBounds(displayID).contains(point)
-            && NSWorkspace.shared.frontmostApplication?.processIdentifier == processID
+        Self.surfaceIsOwned(isActive: isActive, point: point, displayBounds: CGDisplayBounds(displayID),
+            frontProcessID: NSWorkspace.shared.frontmostApplication?.processIdentifier,
+            processID: processID, targetWindow: targetWindow, windows: windows,
+            outputOwned: outputOwned, outputWindowIsKey: NSApplication.shared.keyWindow?.windowNumber == Int(outputWindow))
+    }
+
+    /// Recheck after an asynchronous page/cursor lookup. Never move the pointer
+    /// or reuse the last corrected placement as proof that input is still ours.
+    func ownsCurrentSurface() -> Bool {
+        guard let point = CGEvent(source: nil)?.location else { return false }
+        return ownsSurface(at: point)
+    }
+
+    nonisolated static func surfaceIsOwned(isActive: Bool, point: CGPoint, displayBounds: CGRect,
+                                          frontProcessID: pid_t?, processID: pid_t, targetWindow: CGWindowID,
+                                          windows: [(CGWindowID, CGRect)], outputOwned: Bool,
+                                          outputWindowIsKey: Bool) -> Bool {
+        isActive && displayBounds.contains(point) && frontProcessID == processID
+            && (!outputOwned || outputWindowIsKey)
             && windows.first(where: { $0.1.contains(point) })?.0 == targetWindow
     }
 
+    nonisolated static func shouldConsumeEscape(outputOwned: Bool, surfaceOwned: Bool,
+                                               outputWindowIsKey: Bool) -> Bool {
+        !outputOwned || (surfaceOwned && outputWindowIsKey)
+    }
+
+    nonisolated static func scopePoint(eventLocation: CGPoint, placement: CGPoint?, engaged: Bool,
+                                      outputOwned: Bool, movement: Bool) -> CGPoint {
+        engaged && (!outputOwned || movement) ? (placement ?? eventLocation) : eventLocation
+    }
+
+    private func setCursorScopeOwned(_ owned: Bool) {
+        guard cursorScopeOwned != owned else { return }
+        cursorScopeOwned = owned
+        onCursorScopeChange?(owned)
+    }
+
     private func leaveSurface() {
+        releaseKeyboard()
+        setCursorScopeOwned(false)
         guard engaged || ownedButtons != 0 else { return }
         engaged = false; placement = nil
         resetMovement()
@@ -156,6 +225,10 @@ import ApplicationServices
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             let wasActive = isActive
             ownedButtons = 0; ownsEscape = false; stop()
+            // A disabled event tap cannot drain releases. Page key-ups were sent
+            // by stop; avoid retaining an unusable capture indefinitely.
+            keyboard = NativeKeyboardOwnership()
+            destroyTap()
             if wasActive { onExit?("原鼠标校正监听已停止，恢复普通输入。", false) }
             return Unmanaged.passUnretained(event)
         }
@@ -164,16 +237,23 @@ import ApplicationServices
                event.getIntegerValueField(.keyboardEventKeycode) == 53 {
                 if type == .keyUp {
                     ownsEscape = false
-                    if ownedButtons == 0 { destroyTap() }
+                    if !hasOwnedReleases { destroyTap() }
                 }
                 return nil
+            }
+            if let key = Self.keyboardInput(type, event) {
+                let result = keyboard.receive(key, canCapture: false,
+                    isSystemShortcut: !event.flags.intersection([.maskCommand, .maskControl]).isEmpty)
+                result.forwarded.forEach { onKeyboardEvent?($0) }
+                if !hasOwnedReleases { destroyTap() }
+                return result.consumed ? nil : Unmanaged.passUnretained(event)
             }
             let number = Int(event.getIntegerValueField(.mouseEventButtonNumber))
             let bit = number == 0 ? 1 : number == 1 ? 2 : number == 2 ? 4 : 0
             let owned = bit != 0 && ownedButtons & bit != 0
             if owned && [.leftMouseUp, .rightMouseUp, .otherMouseUp].contains(type) {
                 ownedButtons &= ~bit
-                if ownedButtons == 0 && !ownsEscape { destroyTap() }
+                if !hasOwnedReleases { destroyTap() }
                 return nil
             }
             if owned && [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged].contains(type) { return nil }
@@ -182,23 +262,38 @@ import ApplicationServices
         if type == .keyDown {
             let noCommand = event.flags.intersection([.maskCommand, .maskControl, .maskAlternate]).isEmpty
             if event.getIntegerValueField(.keyboardEventKeycode) == 53, noCommand {
-                ownsEscape = true
-                stop(); onExit?("已按 Esc 暂停原鼠标校正，返回工作台。", true); return nil
+                // Check the real pointer and keyboard owner, not a remembered
+                // output placement: ordinary desktop/text-field Esc passes through.
+                let surfaceOwned = CGEvent(source: nil).map { ownsSurface(at: $0.location) } ?? false
+                let outputWindowIsKey = NSApplication.shared.keyWindow?.windowNumber == Int(outputWindow)
+                if Self.shouldConsumeEscape(outputOwned: outputOwned, surfaceOwned: surfaceOwned,
+                                            outputWindowIsKey: outputWindowIsKey) {
+                    ownsEscape = true
+                    stop(); onExit?("已按 Esc 暂停原鼠标校正，返回工作台。", true); return nil
+                }
             }
+            if outputOwned { return receiveKeyboard(type, event) }
             return Unmanaged.passUnretained(event)
         }
         // Only the Esc whose down was consumed above belongs to this capture.
         // All other key releases remain ordinary keyboard input.
-        if type == .keyUp { return Unmanaged.passUnretained(event) }
+        if type == .keyUp || type == .flagsChanged {
+            if outputOwned { return receiveKeyboard(type, event) }
+            return Unmanaged.passUnretained(event)
+        }
         let up = [.leftMouseUp, .rightMouseUp, .otherMouseUp].contains(type)
         let number = Int(event.getIntegerValueField(.mouseEventButtonNumber))
         let bit = number == 0 ? 1 : number == 1 ? 2 : number == 2 ? 4 : 0
         let ownedUp = up && bit != 0 && ownedButtons & bit != 0
         let drag = [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged].contains(type)
+        let movement = type == .mouseMoved || drag
         if drag && ownedButtons == 0 { return Unmanaged.passUnretained(event) }
         // Raw event.location is the uncorrected candidate. At a mirrored edge it
         // may lie outside the screen while the corrected movement points inward.
-        let point = engaged ? (placement ?? event.location) : event.location
+        // Output-mode clicks/wheels must use their actual location so a desktop
+        // click can change focus even before AppKit updates the key window.
+        let point = Self.scopePoint(eventLocation: event.location, placement: placement,
+            engaged: engaged, outputOwned: outputOwned, movement: movement)
         guard ownsSurface(at: point) else {
             leaveSurface()
             if ownedUp { ownedButtons &= ~bit; return nil }
@@ -206,7 +301,6 @@ import ApplicationServices
             return Unmanaged.passUnretained(event)
         }
         if up && !ownedUp { return Unmanaged.passUnretained(event) }
-        let movement = type == .mouseMoved || drag
         var corrected = SIMD2<Double>.zero
         if movement {
             let raw = SIMD2(event.getDoubleValueField(.mouseEventDeltaX), event.getDoubleValueField(.mouseEventDeltaY))
@@ -226,6 +320,7 @@ import ApplicationServices
                 return nil
             }
             engaged = true
+            setCursorScopeOwned(true)
             if type == .mouseMoved { return nil }
         }
         eventCount += 1
@@ -250,8 +345,99 @@ import ApplicationServices
         return nil
     }
 
-    static func modifiers(_ flags: CGEventFlags) -> Int {
+    nonisolated static func modifiers(_ flags: CGEventFlags) -> Int {
         (flags.contains(.maskAlternate) ? 1 : 0) | (flags.contains(.maskControl) ? 2 : 0)
             | (flags.contains(.maskCommand) ? 4 : 0) | (flags.contains(.maskShift) ? 8 : 0)
+    }
+
+    private func receiveKeyboard(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
+        let systemShortcut = !event.flags.intersection([.maskCommand, .maskControl]).isEmpty
+        if type == .flagsChanged, systemShortcut { releaseKeyboard() }
+        guard let key = Self.keyboardInput(type, event) else { return Unmanaged.passUnretained(event) }
+        let result = keyboard.receive(key,
+            canCapture: isActive && outputOwned && onKeyboardEvent != nil && ownsCurrentSurface()
+                && MouseKeyboardEvent.isSupported(key),
+            isSystemShortcut: systemShortcut)
+        result.forwarded.forEach { onKeyboardEvent?($0) }
+        return result.consumed ? nil : Unmanaged.passUnretained(event)
+    }
+
+    nonisolated static func keyboardInput(_ type: CGEventType, _ event: CGEvent) -> MouseKeyboardInput? {
+        let code = UInt16(truncatingIfNeeded: event.getIntegerValueField(.keyboardEventKeycode))
+        let down: Bool
+        if type == .flagsChanged {
+            // Command, Control, Caps Lock and Fn remain system-owned. Shift and
+            // Option are ordinary page modifiers and may also be prototype keys.
+            let flag: CGEventFlags
+            switch code {
+            case 56, 60: flag = .maskShift
+            case 58, 61: flag = .maskAlternate
+            default: return nil
+            }
+            down = event.flags.contains(flag)
+        } else if type == .keyDown || type == .keyUp {
+            down = type == .keyDown
+        } else { return nil }
+        let nsEvent = NSEvent(cgEvent: event)
+        return MouseKeyboardInput(down: down, keyCode: code,
+            text: down && type == .keyDown ? nsEvent?.characters ?? "" : "",
+            unmodifiedText: type == .flagsChanged ? "" : nsEvent?.charactersIgnoringModifiers ?? "",
+            modifiers: Self.modifiers(event.flags),
+            isAutoRepeat: down && event.getIntegerValueField(.keyboardEventAutorepeat) != 0)
+    }
+}
+
+/// Keeps page key ownership separate from the current focus. A focus loss sends
+/// each page key-up once, then drains its remaining physical repeat/up gesture.
+struct NativeKeyboardOwnership {
+    struct Result {
+        let consumed: Bool
+        let forwarded: [MouseKeyboardInput]
+    }
+    private var held = [UInt16: MouseKeyboardInput]()
+    private var draining = Set<UInt16>()
+    var heldKeyCount: Int { held.count }
+    var drainingKeyCount: Int { draining.count }
+    var hasHeldKeys: Bool { !held.isEmpty }
+    var hasPendingReleases: Bool { !held.isEmpty || !draining.isEmpty }
+
+    mutating func receive(_ input: MouseKeyboardInput, canCapture: Bool, isSystemShortcut: Bool) -> Result {
+        if input.kind == .up {
+            if let original = held.removeValue(forKey: input.keyCode) {
+                let release = MouseKeyboardInput(down: false, keyCode: input.keyCode, text: original.text,
+                    unmodifiedText: original.unmodifiedText, modifiers: input.modifiers & ~(2 | 4), isAutoRepeat: false)
+                return Result(consumed: true, forwarded: [release])
+            }
+            return Result(consumed: draining.remove(input.keyCode) != nil, forwarded: [])
+        }
+        if isSystemShortcut {
+            let released = releaseAll()
+            // This new shortcut down is delivered to macOS; its matching up now
+            // belongs there too, even if this key was held before Cmd/Ctrl.
+            draining.remove(input.keyCode)
+            return Result(consumed: false, forwarded: released)
+        }
+        if draining.contains(input.keyCode) { return Result(consumed: true, forwarded: []) }
+        guard canCapture else {
+            let released = releaseAll()
+            return Result(consumed: draining.contains(input.keyCode), forwarded: released)
+        }
+        // Do not steal a gesture whose physical down occurred on another surface.
+        guard !input.isAutoRepeat || held[input.keyCode] != nil else {
+            return Result(consumed: false, forwarded: [])
+        }
+        if held[input.keyCode] == nil { held[input.keyCode] = input }
+        return Result(consumed: true, forwarded: [input])
+    }
+
+    mutating func releaseAll() -> [MouseKeyboardInput] {
+        let released = held.keys.sorted().compactMap { key -> MouseKeyboardInput? in
+            guard let input = held[key] else { return nil }
+            return MouseKeyboardInput(down: false, keyCode: key, text: input.text, unmodifiedText: input.unmodifiedText,
+                modifiers: 0, isAutoRepeat: false)
+        }
+        draining.formUnion(held.keys)
+        held.removeAll()
+        return released
     }
 }

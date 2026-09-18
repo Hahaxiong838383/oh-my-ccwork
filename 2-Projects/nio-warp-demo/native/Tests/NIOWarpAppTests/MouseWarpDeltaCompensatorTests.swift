@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 import XCTest
 @testable import NIOWarpApp
 
@@ -123,5 +124,51 @@ final class MouseWarpDeltaCompensatorTests: XCTestCase {
         XCTAssertEqual(first.correction, .zero)
         let next = value.compensate(raw: SIMD2(2, -1), timestamp: 120, isHardware: true)
         XCTAssertEqual(next.corrected, SIMD2(2, -1))
+    }
+
+    func testZeroTimestampCursorSnapshotDoesNotReprimeEveryHardwareMove() throws {
+        // A real CGEvent snapshot reports location, but has no event creation
+        // timestamp. Feeding its zero to recordWarp previously reset the filter
+        // after every placement and discarded every following hardware delta.
+        let snapshot = try XCTUnwrap(CGEvent(source: nil))
+        XCTAssertEqual(snapshot.timestamp, 0)
+        var value = primed()
+        for handDelta in [SIMD2<Double>(48, -21), SIMD2(3, 0), SIMD2(-2, 5), SIMD2(1, -1)] {
+            let before = DispatchTime.now().uptimeNanoseconds
+            let completed = NativeMouseInputCapture.completedWarpTimestamp()
+            let after = DispatchTime.now().uptimeNanoseconds
+            XCTAssertGreaterThan(completed, snapshot.timestamp)
+            XCTAssertGreaterThanOrEqual(completed, before)
+            XCTAssertLessThanOrEqual(completed, after)
+            // Even a zero-distance placement must not reset a primed filter.
+            value.recordWarp(delta: .zero, timestamp: completed)
+            let result = value.compensate(raw: handDelta, timestamp: completed + 1, isHardware: true)
+            XCTAssertFalse(result.primed)
+            XCTAssertEqual(result.correction, .zero)
+            XCTAssertEqual(result.corrected, handDelta)
+        }
+        let completed = NativeMouseInputCapture.completedWarpTimestamp()
+        value.recordWarp(delta: SIMD2(-50, 374), timestamp: completed)
+        let moved = value.compensate(raw: SIMD2(-56, 372), timestamp: completed + 1, isHardware: true)
+        XCTAssertFalse(moved.primed)
+        XCTAssertEqual(moved.corrected, SIMD2(-6, -2), "真实移动应在扣除 warp 后保留，不能再次当作首帧丢弃")
+    }
+
+    func testCompletedWarpClockDoesNotChargeQueuedOlderEventsForFutureMovement() {
+        var value = primed()
+        let completed = NativeMouseInputCapture.completedWarpTimestamp()
+        XCTAssertGreaterThan(completed, 1)
+        value.recordWarp(delta: SIMD2(-50, 374), timestamp: completed)
+        let queued = value.compensate(raw: SIMD2(4, 2), timestamp: completed - 1, isHardware: true)
+        XCTAssertFalse(queued.primed)
+        XCTAssertEqual(queued.corrected, SIMD2(4, 2))
+        XCTAssertEqual(queued.correction, .zero)
+        let following = value.compensate(raw: SIMD2(-56, 372), timestamp: completed + 1, isHardware: true)
+        XCTAssertFalse(following.primed)
+        XCTAssertEqual(following.correction, SIMD2(-50, 374))
+        XCTAssertEqual(following.corrected, SIMD2(-6, -2))
+        let subsequent = value.compensate(raw: SIMD2(3, 1), timestamp: completed + 2, isHardware: true)
+        XCTAssertEqual(subsequent.correction, .zero)
+        XCTAssertEqual(subsequent.corrected, SIMD2(3, 1), "同一 warp 只能补偿一次")
     }
 }
