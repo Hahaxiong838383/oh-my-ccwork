@@ -520,7 +520,7 @@ import XCTest
                     "data": try ProtoPieCursorStyleTests.png(width: size, height: size).base64EncodedString()]]]
             }
             return ["result": ["value": ["url": url, "width": 1920, "height": 1080, "dpr": 1, "timeOrigin": 12345,
-                "ready": true, "visualScale": 1, "visualOffsetX": 0, "visualOffsetY": 0]]]
+                "readyState": "complete", "visualScale": 1, "visualOffsetX": 0, "visualOffsetY": 0]]]
         default: return [:]
         }
     }

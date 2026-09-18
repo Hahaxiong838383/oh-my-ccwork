@@ -252,7 +252,7 @@ import XCTest
         case "Target.attachToTarget": return ["sessionId": "keyboard-session"]
         case "Browser.getWindowForTarget": return ["windowId": 88, "bounds": ["left": 0, "top": 0, "width": 1920, "height": 1080, "windowState": "fullscreen"]]
         case "Runtime.evaluate": return ["result": ["value": ["url": url, "width": 1920, "height": 1080, "dpr": 1,
-            "timeOrigin": epoch, "ready": true, "visualScale": 1, "visualOffsetX": 0, "visualOffsetY": 0]]]
+            "timeOrigin": epoch, "readyState": "complete", "visualScale": 1, "visualOffsetX": 0, "visualOffsetY": 0]]]
         case "Input.dispatchMouseEvent", "Input.dispatchKeyEvent":
             business.append((method, parameters)); businessSessions.append(sessionID ?? "")
             if method == "Input.dispatchKeyEvent" {

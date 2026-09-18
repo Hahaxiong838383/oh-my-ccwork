@@ -121,9 +121,11 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     private var lastRequest: [String: Any]?
     private var lastErrorKind: String?
     private var failureContext: [String: Any]?
+    private var viewportObservation: [String: Any]?
 
-    /// Fixed operation names and timing only: never include request parameters,
-    /// page identifiers, URLs, JavaScript, response bodies or keyboard content.
+    /// Fixed operation names, readiness enums, booleans and viewport numbers:
+    /// never include request parameters, page identifiers, URLs, JavaScript,
+    /// response bodies or keyboard content.
     var diagnosticSnapshot: [String: Any] {
         let now = ProcessInfo.processInfo.systemUptime
         var value: [String: Any] = [
@@ -139,6 +141,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         if let lastRequest { value["lastRequest"] = lastRequest }
         if let cursorResourceDensity { value["cursorResourceDensity"] = cursorResourceDensity }
         if let lastErrorKind { value["lastErrorKind"] = lastErrorKind }
+        if let viewportObservation { value["viewportObservation"] = viewportObservation }
         if let failureContext { value["failureContext"] = failureContext }
         return value
     }
@@ -162,6 +165,13 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         lastErrorKind = Self.diagnosticErrorKind(error)
         // Preserve the failure before close drains the queue or sends cleanup RPCs.
         if failureContext == nil { failureContext = diagnosticSnapshot }
+    }
+
+    private func rejectViewport(_ stage: String) -> MouseInputTransportError {
+        var observation = viewportObservation ?? [:]
+        observation["stage"] = stage; observation["rejected"] = true
+        viewportObservation = observation
+        return .staleViewport
     }
 
     private func trackedCall(_ connection: MouseInputCDPConnection, _ method: String,
@@ -244,6 +254,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         workItem = "idle"; cursorState = "idle"; cursorCacheHits = 0; cursorCacheMisses = 0
         cursorResourceOrigin = "none"; cursorResourceDensity = nil
         currentRequests.removeAll(); lastRequest = nil; lastErrorKind = nil; failureContext = nil
+        viewportObservation = nil
         self.connection = connection; self.session = session; closing = false; originalPageInvalidated = false
         connection.onFailure = { [weak self] error in
             guard let self, self.lifecycle == generation else { return }
@@ -488,15 +499,24 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         guard let current = viewport else { throw MouseInputTransportError.closed }
         let fresh = try await observeViewport(bindingID: current.bindingID)
         guard acceptingEvents, viewport == current else { throw MouseInputTransportError.closed }
-        guard fresh == current else { throw MouseInputTransportError.staleViewport }
+        guard fresh == current else {
+            viewportObservation?["sameDocument"] = fresh.timeOrigin == current.timeOrigin
+            viewportObservation?["sameDimensions"] = fresh.cssWidth == current.cssWidth && fresh.cssHeight == current.cssHeight
+            viewportObservation?["samePixelRatio"] = fresh.devicePixelRatio == current.devicePixelRatio
+            throw rejectViewport("bindingIdentity")
+        }
         return fresh
     }
 
     private func validateTarget(_ connection: MouseInputCDPConnection, targetID: String, expectedURL: URL) async throws {
+        viewportObservation = ["stage": "target", "rejected": false]
         let info = try await trackedCall(connection, "Target.getTargetInfo", parameters: ["targetId": targetID], sessionID: nil)
-        guard let target = info["targetInfo"] as? [String: Any], target["targetId"] as? String == targetID,
-              target["type"] as? String == "page", let text = target["url"] as? String,
-              Self.matchesPage(text, expected: expectedURL) else { throw MouseInputTransportError.staleViewport }
+        let target = info["targetInfo"] as? [String: Any]
+        let targetMatches = target?["targetId"] as? String == targetID && target?["type"] as? String == "page"
+        let urlMatches = (target?["url"] as? String).map { Self.matchesPage($0, expected: expectedURL) } == true
+        viewportObservation?["targetMatches"] = targetMatches
+        viewportObservation?["urlMatches"] = urlMatches
+        guard targetMatches, urlMatches else { throw rejectViewport("target") }
     }
 
     private func observeViewport(bindingID: UUID) async throws -> MouseInputViewport {
@@ -505,35 +525,62 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         }
         let expectedURL = try session.configuration.playbackURL()
         try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL)
+        viewportObservation?["stage"] = "browserWindow"
         let window = try await trackedCall(connection, "Browser.getWindowForTarget", parameters: ["targetId": targetID], sessionID: nil)
         guard let browserWindowID = window["windowId"] as? Int, let bounds = window["bounds"] as? [String: Any],
               bounds["windowState"] as? String == "fullscreen",
               let left = bounds["left"] as? NSNumber, let top = bounds["top"] as? NSNumber,
               let width = bounds["width"] as? NSNumber, let height = bounds["height"] as? NSNumber,
               let captured = findWindow(session.windowID, session.processID) else {
-            throw MouseInputTransportError.staleViewport
+            throw rejectViewport("browserWindow")
         }
         let browserFrame = CGRect(x: left.doubleValue, y: top.doubleValue, width: width.doubleValue, height: height.doubleValue)
         guard [browserFrame.minX, browserFrame.minY, browserFrame.width, browserFrame.height].allSatisfy(\.isFinite),
               browserFrame.width > 0, browserFrame.height > 0,
               abs(captured.minX - browserFrame.minX) < 2, abs(captured.minY - browserFrame.minY) < 2,
               abs(captured.width - browserFrame.width) < 2, abs(captured.height - browserFrame.height) < 2 else {
-            throw MouseInputTransportError.staleViewport
+            throw rejectViewport("windowGeometry")
         }
+        viewportObservation?["browserFrame"] = [browserFrame.minX, browserFrame.minY, browserFrame.width, browserFrame.height]
+        viewportObservation?["capturedFrame"] = [captured.minX, captured.minY, captured.width, captured.height]
+        viewportObservation?["stage"] = "runtimeViewport"
         let value = try await runtimeViewport(connection, pageSessionID: pageSessionID)
-        guard let url = value["url"] as? String, Self.matchesPage(url, expected: expectedURL),
-              let w = value["width"] as? NSNumber, let h = value["height"] as? NSNumber,
+        let readyState = value["readyState"] as? String
+        // Do not retain arbitrary page-provided strings in diagnostics.
+        viewportObservation?["readyState"] = readyState.map { ["loading", "interactive", "complete"].contains($0) ? $0 : "invalid" } ?? "missing"
+        let urlMatches = (value["url"] as? String).map { Self.matchesPage($0, expected: expectedURL) } == true
+        viewportObservation?["urlMatches"] = urlMatches
+        for key in ["width", "height", "dpr", "visualScale", "visualOffsetX", "visualOffsetY"] {
+            if let number = value[key] as? NSNumber, number.doubleValue.isFinite {
+                viewportObservation?[key] = number.doubleValue
+            } else { viewportObservation?[key] = "invalid" }
+        }
+        viewportObservation?["documentEpochValid"] = (value["timeOrigin"] as? NSNumber).map {
+            $0.doubleValue.isFinite && $0.doubleValue > 0
+        } == true
+        guard urlMatches else { throw rejectViewport("runtimeURL") }
+        guard let w = value["width"] as? NSNumber, let h = value["height"] as? NSNumber,
               let dpr = value["dpr"] as? NSNumber, let epoch = value["timeOrigin"] as? NSNumber,
               let scale = value["visualScale"] as? NSNumber,
-              let offsetX = value["visualOffsetX"] as? NSNumber, let offsetY = value["visualOffsetY"] as? NSNumber,
-              value["ready"] as? Bool == true else { throw MouseInputTransportError.staleViewport }
+              let offsetX = value["visualOffsetX"] as? NSNumber, let offsetY = value["visualOffsetY"] as? NSNumber else {
+            throw rejectViewport("runtimeFields")
+        }
+        // prepareCloud already verified playable prototype content. It accepts
+        // interactive pages because unrelated resources may delay window.load;
+        // the input bridge must use that same document-readiness boundary.
+        // Readiness is not part of viewport identity: interactive -> complete
+        // must not invalidate otherwise unchanged coordinates or held input.
+        guard readyState == "interactive" || readyState == "complete" else {
+            throw rejectViewport("documentReadiness")
+        }
         let numbers = [w.doubleValue, h.doubleValue, dpr.doubleValue, epoch.doubleValue, scale.doubleValue,
                        offsetX.doubleValue, offsetY.doubleValue]
         guard numbers.allSatisfy(\.isFinite), w.doubleValue > 0, h.doubleValue > 0, dpr.doubleValue > 0,
               epoch.doubleValue > 0, abs(scale.doubleValue - 1) < 0.0001,
               abs(offsetX.doubleValue) < 0.0001, abs(offsetY.doubleValue) < 0.0001 else {
-            throw MouseInputTransportError.staleViewport
+            throw rejectViewport("runtimeGeometry")
         }
+        viewportObservation?["stage"] = "ready"
         return MouseInputViewport(bindingID: bindingID, cssWidth: w.doubleValue, cssHeight: h.doubleValue,
             devicePixelRatio: dpr.doubleValue, timeOrigin: epoch.doubleValue, targetID: targetID,
             browserWindowID: browserWindowID, windowID: session.windowID, processID: session.processID)
@@ -541,11 +588,11 @@ enum MouseInputTransportError: LocalizedError, Equatable {
 
     private func runtimeViewport(_ connection: MouseInputCDPConnection, pageSessionID: String) async throws -> [String: Any] {
         let result = try await trackedCall(connection, "Runtime.evaluate", parameters: [
-            "expression": "({url:location.href,width:innerWidth,height:innerHeight,dpr:devicePixelRatio,timeOrigin:performance.timeOrigin,ready:document.readyState==='complete',visualScale:visualViewport?visualViewport.scale:1,visualOffsetX:visualViewport?visualViewport.offsetLeft:0,visualOffsetY:visualViewport?visualViewport.offsetTop:0})",
+            "expression": "({url:location.href,width:innerWidth,height:innerHeight,dpr:devicePixelRatio,timeOrigin:performance.timeOrigin,readyState:document.readyState,visualScale:visualViewport?visualViewport.scale:1,visualOffsetX:visualViewport?visualViewport.offsetLeft:0,visualOffsetY:visualViewport?visualViewport.offsetTop:0})",
             "returnByValue": true], sessionID: pageSessionID)
         guard result["exceptionDetails"] == nil,
               let value = (result["result"] as? [String: Any])?["value"] as? [String: Any] else {
-            throw MouseInputTransportError.staleViewport
+            throw rejectViewport("runtimeResult")
         }
         return value
     }

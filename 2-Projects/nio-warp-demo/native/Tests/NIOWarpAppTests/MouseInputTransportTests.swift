@@ -79,6 +79,98 @@ final class MouseInputTransportTests: XCTestCase {
         XCTAssertTrue(fixture.fake.closed)
     }
 
+    @MainActor func testInteractiveDocumentAcceptsFirstPressAndCompleteDoesNotChangeBinding() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        fixture.fake.readyState = "interactive"
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.isConnected)
+        let expression = try XCTUnwrap(fixture.fake.calls.last(where: { $0.method == "Runtime.evaluate" })?.parameters["expression"] as? String)
+        XCTAssertTrue(expression.contains("readyState:document.readyState"))
+        XCTAssertFalse(expression.contains("ready:document.readyState==='complete'"))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        try await fixture.transport.flush()
+        fixture.fake.readyState = "complete"
+        let refreshed = try await fixture.transport.refreshViewport()
+        XCTAssertEqual(refreshed, viewport, "同一文档完成后台加载不能释放已有按下状态")
+        XCTAssertTrue(fixture.transport.isConnected)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .up, button: .left)))
+        try await fixture.transport.flush()
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String }, ["mousePressed", "mouseReleased"])
+        XCTAssertTrue(fixture.failures.isEmpty)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testLoadingMissingOrUnknownDocumentReadinessRejectsBeforeInputAndHasSafeDiagnosis() async throws {
+        let unexpected = "https://private.invalid/readiness?token=synthetic-private"
+        for state: String? in ["loading", nil, unexpected] {
+            let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+            fixture.fake.readyState = state
+            do { _ = try await fixture.transport.connect(session: fixture.session); XCTFail("Unready document must not bind") }
+            catch { XCTAssertEqual(error as? MouseInputTransportError, .staleViewport) }
+            XCTAssertFalse(fixture.transport.isConnected)
+            XCTAssertTrue(fixture.fake.inputs.isEmpty)
+            let snapshot = fixture.transport.diagnosticSnapshot
+            let failure = try XCTUnwrap(snapshot["failureContext"] as? [String: Any])
+            let observation = try XCTUnwrap(failure["viewportObservation"] as? [String: Any])
+            XCTAssertEqual(observation["stage"] as? String, "documentReadiness")
+            XCTAssertEqual(observation["readyState"] as? String, state == "loading" ? "loading" : state == nil ? "missing" : "invalid")
+            XCTAssertEqual(observation["rejected"] as? Bool, true)
+            XCTAssertEqual(observation["urlMatches"] as? Bool, true)
+            XCTAssertEqual(observation["width"] as? Double, 1920)
+            XCTAssertEqual(observation["documentEpochValid"] as? Bool, true)
+            XCTAssertNil(observation["timeOrigin"])
+            let json = String(decoding: try JSONSerialization.data(withJSONObject: snapshot), as: UTF8.self)
+            for privateValue in [unexpected, fixture.fake.url, fixture.fake.targetID, fixture.fake.pageSessionID] {
+                XCTAssertFalse(json.contains(privateValue))
+            }
+            await fixture.transport.releaseAllAndClose()
+        }
+    }
+
+    @MainActor func testInteractiveDocumentStillInvalidatesOnActualBindingOrGeometryChange() async throws {
+        for change in ["width", "dpr", "epoch", "visualScale", "url", "fullscreen"] {
+            let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+            fixture.fake.readyState = "interactive"
+            let viewport = try await fixture.transport.connect(session: fixture.session)
+            switch change {
+            case "width": fixture.fake.width -= 10
+            case "dpr": fixture.fake.dpr = 1.5
+            case "epoch": fixture.fake.timeOrigin += 1
+            case "visualScale": fixture.fake.visualScale = 2
+            case "url": fixture.fake.url = "https://cloud.protopie.io/p/unrelated?ui=false"
+            default: fixture.fake.windowState = "normal"
+            }
+            do { _ = try await fixture.transport.refreshViewport(); XCTFail("Changed \(change) must invalidate binding") }
+            catch { XCTAssertEqual(error as? MouseInputTransportError, .staleViewport) }
+            XCTAssertFalse(fixture.transport.isConnected)
+            XCTAssertFalse(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+            XCTAssertTrue(fixture.fake.inputs.isEmpty)
+            XCTAssertEqual(fixture.failures.count, 1)
+            let failure = try XCTUnwrap(fixture.transport.diagnosticSnapshot["failureContext"] as? [String: Any])
+            let observation = try XCTUnwrap(failure["viewportObservation"] as? [String: Any])
+            let expectedStage = ["width": "bindingIdentity", "dpr": "bindingIdentity", "epoch": "bindingIdentity",
+                                 "visualScale": "runtimeGeometry", "url": "target", "fullscreen": "browserWindow"][change]
+            XCTAssertEqual(observation["stage"] as? String, expectedStage)
+            await fixture.transport.releaseAllAndClose()
+        }
+    }
+
+    @MainActor func testNonfiniteViewportDiagnosticRemainsJSONSerializable() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        fixture.fake.readyState = "interactive"
+        fixture.fake.visualScale = .nan
+        do { _ = try await fixture.transport.connect(session: fixture.session); XCTFail("Invalid geometry must not bind") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .staleViewport) }
+        let snapshot = fixture.transport.diagnosticSnapshot
+        let failure = try XCTUnwrap(snapshot["failureContext"] as? [String: Any])
+        let observation = try XCTUnwrap(failure["viewportObservation"] as? [String: Any])
+        XCTAssertEqual(observation["stage"] as? String, "runtimeGeometry")
+        XCTAssertEqual(observation["visualScale"] as? String, "invalid")
+        XCTAssertFalse(try JSONSerialization.data(withJSONObject: snapshot).isEmpty)
+        XCTAssertTrue(fixture.fake.inputs.isEmpty)
+        await fixture.transport.releaseAllAndClose()
+    }
+
     @MainActor func testRejectsStudioBeforeOpeningAnyConnection() async throws {
         let fixture = try MouseTransportFixture(); defer { fixture.remove() }
         var session = fixture.session; session.configuration.source = .localFile; session.cloudTargetID = nil
@@ -472,6 +564,7 @@ final class MouseInputTransportTests: XCTestCase {
     var dpr: Double = 2
     var timeOrigin: Double = 12345
     var visualScale: Double = 1
+    var readyState: String? = "complete"
     var blockNextInput = false
     var timeoutNextInput = false
     var blockNextActivation = false
@@ -495,8 +588,10 @@ final class MouseInputTransportTests: XCTestCase {
             if (parameters["expression"] as? String)?.contains("nioCursorStyle:true") == true {
                 return ["result": ["value": ["nioCursorStyle": true, "timeOrigin": timeOrigin, "css": "crosshair"]]]
             }
-            return ["result": ["value": ["url": url, "width": width, "height": height, "dpr": dpr, "timeOrigin": timeOrigin,
-                                         "ready": true, "visualScale": visualScale, "visualOffsetX": 0, "visualOffsetY": 0]]]
+            var value: [String: Any] = ["url": url, "width": width, "height": height, "dpr": dpr, "timeOrigin": timeOrigin,
+                                       "visualScale": visualScale, "visualOffsetX": 0, "visualOffsetY": 0]
+            if let readyState { value["readyState"] = readyState }
+            return ["result": ["value": value]]
         case "Input.dispatchMouseEvent":
             if blockNextInput { blockNextInput = false; await withCheckedContinuation { blockedInput = $0 } }
             if timeoutNextInput { timeoutNextInput = false; throw MouseInputTransportError.timeout }
