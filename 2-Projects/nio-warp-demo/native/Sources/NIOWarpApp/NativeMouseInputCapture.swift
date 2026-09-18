@@ -118,6 +118,25 @@ import Dispatch
         return true
     }
 
+    /// Bounds are the inclusive AA pixel-centre limits converted to global
+    /// Quartz points. WindowServer may quantize a warp to whole points; reserve
+    /// an integer-safe boundary while preserving every interior fraction.
+    /// An already-in-bounds request moves by less than one point per axis.
+    nonisolated static func confinedCursorPoint(_ requested: CGPoint, within bounds: CGRect) -> CGPoint? {
+        guard requested.x.isFinite, requested.y.isFinite, !bounds.isInfinite,
+              bounds.origin.x.isFinite, bounds.origin.y.isFinite,
+              bounds.size.width.isFinite, bounds.size.height.isFinite,
+              bounds.size.width >= 0, bounds.size.height >= 0,
+              bounds.maxX.isFinite, bounds.maxY.isFinite else { return nil }
+        let minimum = CGPoint(x: bounds.minX.rounded(.up), y: bounds.minY.rounded(.up))
+        let maximum = CGPoint(x: bounds.maxX.rounded(.down), y: bounds.maxY.rounded(.down))
+        // A sub-point AA interval may contain no representable whole point.
+        // Do not invent a destination outside the caller's visible region.
+        guard minimum.x <= maximum.x, minimum.y <= maximum.y else { return nil }
+        return CGPoint(x: min(max(requested.x, minimum.x), maximum.x),
+                       y: min(max(requested.y, minimum.y), maximum.y))
+    }
+
     /// CGEvent(source: nil) is a position snapshot and has timestamp zero. CGEvent
     /// hardware timestamps use the same nanoseconds-since-boot clock as Dispatch.
     nonisolated static func completedWarpTimestamp() -> UInt64 {

@@ -1,0 +1,102 @@
+{
+  "version": "0.13.11",
+  "build": "63",
+  "status": "installed; automated boundary checks and hardware-user validation passed",
+  "sourceSHA256": "9cb8700074773696f3f5d30b18bd167a79943dcdbe13640b33b914aa4b720702",
+  "binarySHA256": "82fe131a147c2356eb3efc77e74afda74e7c9e27530f3fc7104e116b34518c82",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "signatureVerified": true,
+  "sourceDigestMatched": true,
+  "rollbackTag": "nio-warp-before-aa-boundary-20260918",
+  "rollbackCommit": "0a42689fe35eaf636fd7b30f2d21f8fd0f037a29",
+  "pairedRollbackTo61": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-124540Z-before-v01310",
+  "fullSourceBaseline61": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-115919Z-v0139",
+  "intermediate62Backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-125222Z-before-v01311",
+  "verifiedBaseline63": {
+    "version": "0.13.11",
+    "build": "63",
+    "sourceSHA256": "9cb8700074773696f3f5d30b18bd167a79943dcdbe13640b33b914aa4b720702",
+    "binarySHA256": "82fe131a147c2356eb3efc77e74afda74e7c9e27530f3fc7104e116b34518c82",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/verified-baselines/20260918-125334Z-v01311",
+    "humanAcceptance": "待本机鼠标反馈；当前记录自动边缘、拖动与Esc重入检查",
+    "files": {
+      "NIOWarpApp-v0.13.11-63.zip": "39b1710dc41e69b47ccae34e47f45c1427ff8b111f9146845d6dd6495f37d7dd",
+      "native-source.tar.gz": "82be0e8f87bb0dff2d9affe3fb20a276c4c2c329cba51820bb49abd10b623e09",
+      "preferences-verified.plist": "930adb98b3bfa822297f3011f08937cbdd598ccbf79abae834aff05d52584b6b"
+    }
+  },
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "parameters": {
+    "parametersUnchanged": true,
+    "compared": {
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true,
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpMouseMapping.settings.v1": true,
+      "nioWarpPresets.v1": true,
+      "nioWarpProtoPie.configuration.v1": true
+    }
+  },
+  "tests": [
+    {
+      "group": "transport/cursor",
+      "tests": 54,
+      "assertions": 529,
+      "failures": 0
+    },
+    {
+      "group": "native scope/exit/recovery/AA integer placement",
+      "tests": 39,
+      "assertions": 275,
+      "failures": 0
+    },
+    {
+      "group": "existing geometry",
+      "tests": 8,
+      "assertions": 22690,
+      "failures": 0
+    }
+  ],
+  "testRuntime": "Original production/test methods using assertion shim; NOT XCTest; groups not aggregated",
+  "offlineCurrentProfiles": {
+    "profiles": 3,
+    "sourceViewportForAll": [
+      1920,
+      600
+    ],
+    "samples": 16080,
+    "checks": 96537,
+    "failures": 0,
+    "inwardRecoveryPass": 48,
+    "oldQueryInvalidSamples": 1071,
+    "homeProfileInvalidSamples": 312
+  },
+  "liveAutomated": {
+    "passed": true,
+    "samples": 28,
+    "outsideAASnapshots": 0,
+    "checks": [
+      "four-corner repeated outward movement",
+      "edge drag and release",
+      "Esc exit",
+      "re-entry and repeated edge movement",
+      "actual system pointer within AA"
+    ]
+  },
+  "humanAcceptance": "正常，边缘不再退出",
+  "productionPolicy": "Esc remains workbench exit; no shortcut changes; paired-Shift/Option issue still pending",
+  "knownBoundary": "Confinement covers pointer hotspot; original artwork may overlap the visible edge; integer-safe edge adjustment less than one logical point per axis for an already-in-bounds request",
+  "acceptedBaseline63": {
+    "version": "0.13.11",
+    "build": "63",
+    "sourceSHA256": "9cb8700074773696f3f5d30b18bd167a79943dcdbe13640b33b914aa4b720702",
+    "binarySHA256": "82fe131a147c2356eb3efc77e74afda74e7c9e27530f3fc7104e116b34518c82",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-125458Z-v01311",
+    "humanAcceptance": "用户本机鼠标外推边缘、沿边及移回确认：正常，边缘不再退出",
+    "files": {
+      "NIOWarpApp-v0.13.11-63.zip": "39b1710dc41e69b47ccae34e47f45c1427ff8b111f9146845d6dd6495f37d7dd",
+      "preferences-accepted.plist": "884f7fd8564f7ab2de54df3ef6ae9cbb31224f8a949722d2b14ea949d7f254e8",
+      "native-source.tar.gz": "15196e9b9a9d9999930464355d7d7727d0642332b2893aa015fb93acf925c2d1"
+    }
+  }
+}

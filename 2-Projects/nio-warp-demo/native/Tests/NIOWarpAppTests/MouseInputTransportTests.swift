@@ -3,6 +3,63 @@ import XCTest
 @testable import NIOWarpApp
 
 final class MouseInputTransportTests: XCTestCase {
+    @MainActor func testRawVisibleSourceEndpointReproducesCursorQueryRejection() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        // UV 1 is legal on a rendered mesh edge. The former cursor-query path
+        // multiplied it directly by the viewport width/height and then stopped
+        // the whole controller when this strict transport rejected the point.
+        for point in [CGPoint(x: viewport.cssWidth, y: 0), CGPoint(x: 0, y: viewport.cssHeight),
+                      CGPoint(x: viewport.cssWidth, y: viewport.cssHeight)] {
+            do { _ = try await fixture.transport.cursorStyle(at: point); XCTFail("Raw closed edge must remain invalid to the browser transport") }
+            catch { XCTAssertEqual(error as? MouseInputTransportError, .invalidEvent) }
+        }
+        XCTAssertTrue(fixture.transport.isConnected)
+        XCTAssertTrue(fixture.fake.inputs.isEmpty)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testVisibleSourceCornersAndFloatRoundingUseOneLegalPointForCursorAndInput() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        let low = Float.zero.nextDown, high = Float(1).nextUp
+        let cases: [(SIMD2<Float>, CGPoint)] = [
+            (SIMD2(0, 0), .zero),
+            (SIMD2(1, 0), CGPoint(x: viewport.cssWidth.nextDown, y: 0)),
+            (SIMD2(0, 1), CGPoint(x: 0, y: viewport.cssHeight.nextDown)),
+            (SIMD2(1, 1), CGPoint(x: viewport.cssWidth.nextDown, y: viewport.cssHeight.nextDown)),
+            (SIMD2(low, high), CGPoint(x: 0, y: viewport.cssHeight.nextDown)),
+            (SIMD2(high, low), CGPoint(x: viewport.cssWidth.nextDown, y: 0)),
+            (SIMD2(0.25, 0.75), CGPoint(x: viewport.cssWidth * 0.25, y: viewport.cssHeight * 0.75))
+        ]
+        for (uv, expected) in cases {
+            let point = try XCTUnwrap(viewport.point(forVisibleSourceUV: uv))
+            XCTAssertEqual(point, expected)
+            XCTAssertTrue(point.x >= 0 && point.x < viewport.cssWidth)
+            XCTAssertTrue(point.y >= 0 && point.y < viewport.cssHeight)
+            let event = MouseInputEvent(viewportID: viewport.bindingID, kind: .move, x: point.x, y: point.y)
+            XCTAssertTrue(fixture.transport.send(event))
+            _ = try await fixture.transport.cursorStyle(at: point)
+            XCTAssertEqual(fixture.fake.inputs.last?.parameters["x"] as? Double, Double(point.x))
+            XCTAssertEqual(fixture.fake.inputs.last?.parameters["y"] as? Double, Double(point.y))
+            XCTAssertTrue(fixture.transport.isConnected)
+        }
+        XCTAssertTrue(fixture.failures.isEmpty)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testVisibleSourcePointRejectsNonfiniteCoordinates() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        for uv in [SIMD2<Float>(.nan, 0), SIMD2<Float>(0, .nan),
+                   SIMD2<Float>(.infinity, 1), SIMD2<Float>(1, -.infinity)] {
+            XCTAssertNil(viewport.point(forVisibleSourceUV: uv))
+        }
+        XCTAssertTrue(fixture.fake.inputs.isEmpty)
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
     @MainActor func testBindsDedicatedDynamicSocketAndReturnsCSSViewportWithoutMutatingPage() async throws {
         let fixture = try MouseTransportFixture(); defer { fixture.remove() }
         let viewport = try await fixture.transport.connect(session: fixture.session)
@@ -435,6 +492,9 @@ final class MouseInputTransportTests: XCTestCase {
             return ["windowId": 88, "bounds": ["left": frame.minX, "top": frame.minY, "width": frame.width,
                                              "height": frame.height, "windowState": windowState]]
         case "Runtime.evaluate":
+            if (parameters["expression"] as? String)?.contains("nioCursorStyle:true") == true {
+                return ["result": ["value": ["nioCursorStyle": true, "timeOrigin": timeOrigin, "css": "crosshair"]]]
+            }
             return ["result": ["value": ["url": url, "width": width, "height": height, "dpr": dpr, "timeOrigin": timeOrigin,
                                          "ready": true, "visualScale": visualScale, "visualOffsetX": 0, "visualOffsetY": 0]]]
         case "Input.dispatchMouseEvent":

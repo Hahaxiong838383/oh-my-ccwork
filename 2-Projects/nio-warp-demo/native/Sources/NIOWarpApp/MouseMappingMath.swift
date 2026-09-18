@@ -76,6 +76,14 @@ final class MouseMappingRegion {
     private(set) var isValid = false
     var visiblePolygonCount: Int { polygons.count }
 
+    /// The renderer's inclusive AA pixel-centre limits, before desktop scaling.
+    var physicalCursorBounds: CGRect? {
+        guard let bounds = physicalIndex?.bounds else { return nil }
+        return CGRect(x: bounds.minimum.x, y: bounds.minimum.y,
+                      width: bounds.maximum.x - bounds.minimum.x,
+                      height: bounds.maximum.y - bounds.minimum.y)
+    }
+
     private struct Vertex {
         var physical: Point
         var source: Point // Source pixel coordinates: tangential motion uses a pixel, not UV, metric.

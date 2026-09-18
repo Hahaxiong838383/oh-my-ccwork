@@ -12,6 +12,18 @@ struct MouseInputViewport: Equatable {
     let windowID: CGWindowID
     let processID: pid_t
     var pixelSize: CGSize { CGSize(width: cssWidth * devicePixelRatio, height: cssHeight * devicePixelRatio) }
+
+    /// The rendered mesh includes its source edges (UV 0 and 1), but browser
+    /// coordinates use an exclusive upper bound. Call only after the mapping
+    /// region has established visibility; this does not alter the physical AA
+    /// boundary or make an invisible source point clickable. Cursor queries and
+    /// input events must use the same conversion, including Float edge rounding.
+    func point(forVisibleSourceUV uv: SIMD2<Float>) -> CGPoint? {
+        guard uv.x.isFinite, uv.y.isFinite,
+              cssWidth.isFinite, cssHeight.isFinite, cssWidth > 0, cssHeight > 0 else { return nil }
+        return CGPoint(x: min(max(Double(uv.x) * cssWidth, 0), cssWidth.nextDown),
+                       y: min(max(Double(uv.y) * cssHeight, 0), cssHeight.nextDown))
+    }
 }
 
 struct MouseInputEvent: Equatable {

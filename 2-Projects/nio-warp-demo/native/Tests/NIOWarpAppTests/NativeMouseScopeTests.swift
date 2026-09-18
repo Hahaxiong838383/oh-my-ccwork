@@ -139,4 +139,69 @@ final class NativeMouseScopeTests: XCTestCase {
         XCTAssertTrue(NativeMouseInputCapture.shouldConsumeEscape(outputOwned: false, surfaceOwned: false,
             outputWindowIsKey: false))
     }
+
+    func testRetinaAABottomEdgeStaysInsideAfterWindowServerQuantization() throws {
+        // Physical AA [0.5,0.5 ... 3839.5,799.5] on the live display
+        // Quartz rect (-221,-1200,1920,1200), at two pixels per point.
+        let bounds = CGRect(x: -220.75, y: -1199.75, width: 1919.5, height: 399.5)
+        let requested = CGPoint(x: 800.375, y: -800.24997)
+        let confined = try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(requested, within: bounds))
+        XCTAssertEqual(confined, CGPoint(x: 800.375, y: -801))
+        for quantizedY in [confined.y.rounded(.down), confined.y.rounded(.up), confined.y.rounded(.towardZero), confined.y.rounded()] {
+            let physicalY = (quantizedY + 1200) * 2
+            XCTAssertGreaterThanOrEqual(physicalY, 0.5)
+            XCTAssertLessThanOrEqual(physicalY, 799.5)
+        }
+    }
+
+    func testConfinementHandlesAllCornersAcrossPositiveAndNegativeOrigins() throws {
+        for origin in [CGPoint(x: 100.25, y: 200.25), CGPoint(x: -100.75, y: -200.75), CGPoint(x: -100.75, y: 200.25)] {
+            let bounds = CGRect(origin: origin, size: CGSize(width: 30.5, height: 20.5))
+            for x in [bounds.minX, bounds.maxX] {
+                for y in [bounds.minY, bounds.maxY] {
+                    let point = try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(CGPoint(x: x, y: y), within: bounds))
+                    XCTAssertEqual(point.x, x == bounds.minX ? bounds.minX.rounded(.up) : bounds.maxX.rounded(.down))
+                    XCTAssertEqual(point.y, y == bounds.minY ? bounds.minY.rounded(.up) : bounds.maxY.rounded(.down))
+                    XCTAssertLessThan(abs(point.x - x), 1)
+                    XCTAssertLessThan(abs(point.y - y), 1)
+                }
+            }
+        }
+    }
+
+    func testConfinementPreservesInteriorFractionsAndIntegralEdges() throws {
+        let bounds = CGRect(x: -200, y: -100, width: 500, height: 300)
+        for point in [CGPoint(x: -199.875, y: -99.625), CGPoint(x: -0.75, y: 0.125),
+                      CGPoint(x: 299.875, y: 199.625), CGPoint(x: -200, y: -100), CGPoint(x: 300, y: 200)] {
+            XCTAssertEqual(try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(point, within: bounds)), point)
+        }
+    }
+
+    func testFarOutsideCandidatesClampWithoutCreatingAnOutsideHotspot() throws {
+        let bounds = CGRect(x: -2.75, y: 10.25, width: 6.5, height: 5.5)
+        XCTAssertEqual(try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(CGPoint(x: -1_000_000, y: 1_000_000), within: bounds)),
+                       CGPoint(x: -2, y: 15))
+        XCTAssertEqual(try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(CGPoint(x: 1_000_000, y: -1_000_000), within: bounds)),
+                       CGPoint(x: 3, y: 11))
+    }
+
+    func testSubPointBoundsRequireAnIntegerDestinationOnBothAxes() throws {
+        XCTAssertNil(NativeMouseInputCapture.confinedCursorPoint(.zero, within: CGRect(x: 0.1, y: 0, width: 0.8, height: 10)))
+        XCTAssertNil(NativeMouseInputCapture.confinedCursorPoint(.zero, within: CGRect(x: 0, y: -0.9, width: 10, height: 0.8)))
+        XCTAssertEqual(try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(CGPoint(x: 0.9, y: -1.1),
+            within: CGRect(x: 0.75, y: -1.25, width: 0.5, height: 0.5))), CGPoint(x: 1, y: -1))
+        // Inclusive limits can describe exactly one physical pixel centre.
+        XCTAssertEqual(try XCTUnwrap(NativeMouseInputCapture.confinedCursorPoint(.zero,
+            within: CGRect(x: 2, y: -3, width: 0, height: 0))), CGPoint(x: 2, y: -3))
+    }
+
+    func testConfinementRejectsNonfiniteAndMalformedBounds() {
+        let bounds = CGRect(x: 0, y: 0, width: 10, height: 10)
+        XCTAssertNil(NativeMouseInputCapture.confinedCursorPoint(CGPoint(x: CGFloat.nan, y: 1), within: bounds))
+        XCTAssertNil(NativeMouseInputCapture.confinedCursorPoint(CGPoint(x: 1, y: CGFloat.infinity), within: bounds))
+        for invalid in [CGRect.null, CGRect.infinite, CGRect(x: CGFloat.nan, y: 0, width: 10, height: 10),
+                        CGRect(x: 0, y: 0, width: -1, height: 10), CGRect(x: 0, y: 0, width: 10, height: -1)] {
+            XCTAssertNil(NativeMouseInputCapture.confinedCursorPoint(.zero, within: invalid))
+        }
+    }
 }

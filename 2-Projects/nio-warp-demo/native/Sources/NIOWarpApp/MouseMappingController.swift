@@ -389,10 +389,11 @@ struct MouseCursorPageIdentity: Equatable {
 
     private func send(kind: MouseInputEvent.Kind, button: MouseInputEvent.Button = .none,
                       clickCount: Int = 1, modifiers: Int = 0, deltaX: Double = 0, deltaY: Double = 0) {
-        guard !settings.previewOnly || kind == .move, let viewport, let transport, region?.containsSourceUV(sourceUV) == true else { return }
+        guard !settings.previewOnly || kind == .move, let viewport, let transport,
+              region?.containsSourceUV(sourceUV) == true,
+              let point = viewport.point(forVisibleSourceUV: sourceUV) else { return }
         let event = MouseInputEvent(viewportID: viewport.bindingID, kind: kind,
-            x: min(max(Double(sourceUV.x) * viewport.cssWidth, 0), viewport.cssWidth.nextDown),
-            y: min(max(Double(sourceUV.y) * viewport.cssHeight, 0), viewport.cssHeight.nextDown),
+            x: point.x, y: point.y,
             button: button, buttons: buttons, modifiers: modifiers, clickCount: clickCount, deltaX: deltaX, deltaY: deltaY)
         if !transport.send(event) { stop(reason: "输入会话已失效，已恢复普通鼠标。", returnToWorkbench: true) }
     }
@@ -432,8 +433,11 @@ struct MouseCursorPageIdentity: Equatable {
                 while self.cursorRefreshNeeded, self.generation == token, self.isActive {
                     self.cursorRefreshNeeded = false
                     let revision = self.cursorRevision
-                    let point = CGPoint(x: Double(self.sourceUV.x) * viewport.cssWidth,
-                                        y: Double(self.sourceUV.y) * viewport.cssHeight)
+                    // Geometry includes UV edge endpoints; query the same legal
+                    // browser point as clicks without shrinking the AA hotspot.
+                    guard let point = viewport.point(forVisibleSourceUV: self.sourceUV) else {
+                        throw MouseInputTransportError.invalidEvent
+                    }
                     let style: ProtoPieCursorStyle
                     do { style = try await transport.cursorStyle(at: point) }
                     catch is ProtoPieCursorArtworkError {
@@ -491,12 +495,20 @@ struct MouseCursorPageIdentity: Equatable {
     }
 
     private func updateCursor() {
-        guard let output, let region else { return }
+        guard let output, let region, let physicalAA = region.physicalCursorBounds else { return }
         output.cursor.physicalPoint = nil
         guard let point = region.physicalPoint(forSourceUV: sourceUV) else { return }
         let bounds = CGDisplayBounds(output.displayID)
-        let global = CGPoint(x: bounds.minX + CGFloat(point.x / region.physicalSize.x) * bounds.width,
+        let proposed = CGPoint(x: bounds.minX + CGFloat(point.x / region.physicalSize.x) * bounds.width,
                              y: bounds.minY + CGFloat(point.y / region.physicalSize.y) * bounds.height)
+        let globalAA = CGRect(x: bounds.minX + physicalAA.minX / CGFloat(region.physicalSize.x) * bounds.width,
+                              y: bounds.minY + physicalAA.minY / CGFloat(region.physicalSize.y) * bounds.height,
+                              width: physicalAA.width / CGFloat(region.physicalSize.x) * bounds.width,
+                              height: physicalAA.height / CGFloat(region.physicalSize.y) * bounds.height)
+        guard let global = NativeMouseInputCapture.confinedCursorPoint(proposed, within: globalAA) else {
+            stop(reason: "AA 区没有可用的系统指针位置，已恢复普通鼠标。", returnToWorkbench: true)
+            return
+        }
         if !input.placeCursor(at: global) {
             stop(reason: "无法定位原圆形指针，已恢复普通鼠标。", returnToWorkbench: true)
         }
