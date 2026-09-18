@@ -106,22 +106,35 @@ final class ProtoPieConfigurationTests: XCTestCase {
 
 @MainActor private final class FakeProtoPieDriver: ProtoPiePreviewDriving {
     var preparations = [ProtoPieConfiguration]()
+    var preparedDisplayIDs = [CGDirectDisplayID]()
     var userOpens = 0
     var releases = [ProtoPieSession]()
     var alive = true
+    var presentationReady = true
+    var presentationChecks = 0
+    var presentationResponses = [Bool]()
+    var presentationCheck: (() async -> Bool)?
     var failForURL: String?
     var delay: UInt64 = 0
     var nextID: CGWindowID = 100
     var error: Error?
     func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID, progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
         preparations.append(configuration)
+        preparedDisplayIDs.append(displayID)
         if delay > 0 { try await Task.sleep(nanoseconds: delay) }
         if configuration.cloudURL == failForURL { throw ProtoPieError.waitingForUser("链接需要登录") }
         if let error { throw error }
+        presentationReady = true
         nextID += 1
         return ProtoPieSession(windowID: nextID, processID: 42, configuration: configuration, title: "Preview")
     }
     func isAlive(_ session: ProtoPieSession) async -> Bool { alive }
+    func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool {
+        presentationChecks += 1
+        if let presentationCheck { return await presentationCheck() }
+        if !presentationResponses.isEmpty { return presentationResponses.removeFirst() }
+        return presentationReady
+    }
     func release(_ session: ProtoPieSession) async { releases.append(session) }
     func openForUser(configuration: ProtoPieConfiguration) async throws {
         userOpens += 1
@@ -264,6 +277,301 @@ final class ProtoPieConfigurationTests: XCTestCase {
         XCTAssertEqual(driver.preparations.count, 2)
         coordinator.stop(); coordinator.setTargetDisplay(nil); coordinator.setTargetDisplay(2)
         XCTAssertEqual(driver.preparations.count, 2)
+    }
+
+    func testDisplayReconfigurationRebindsEvenWhenDisplayIDIsUnchanged() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver)
+        var captured = [CGWindowID]()
+        coordinator.onCapture = { id, _ in captured.append(id) }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.suspendForDisplayChange()
+        XCTAssertEqual(coordinator.state, .waitingForDisplay)
+        coordinator.setTargetDisplay(2)
+        await settle { coordinator.state == .running }
+        XCTAssertEqual(driver.preparedDisplayIDs, [2, 2])
+        XCTAssertEqual(captured.count, 2)
+        XCTAssertEqual(captured.last, coordinator.activeSession?.windowID)
+        XCTAssertFalse(captured.first == captured.last)
+    }
+
+    func testUserPauseSurvivesDisplayReconfigurationAndCanBeResumed() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver)
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.setOutputPaused(true)
+        coordinator.suspendForDisplayChange()
+        XCTAssertEqual(coordinator.state, .waitingForDisplay)
+        coordinator.setTargetDisplay(2)
+        await settle { coordinator.state == .paused }
+        XCTAssertEqual(driver.preparedDisplayIDs, [2, 2])
+        XCTAssertNotNil(coordinator.activeSession)
+        coordinator.setOutputPaused(false)
+        XCTAssertEqual(coordinator.state, .running)
+        XCTAssertEqual(driver.preparations.count, 2)
+    }
+
+    func testAliveWindowLosingFullscreenIsPreparedAndRecapturedAfterTwoFailedChecks() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var captured = [CGWindowID]()
+        coordinator.onCapture = { id, _ in captured.append(id) }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        let originalWindow = coordinator.activeSession?.windowID
+        let originalChecks = driver.presentationChecks
+        driver.presentationReady = false
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationChecks >= originalChecks + 2)
+        XCTAssertTrue(driver.alive)
+        XCTAssertEqual(driver.preparedDisplayIDs, [2, 2])
+        XCTAssertEqual(captured.count, 2)
+        XCTAssertFalse(coordinator.activeSession?.windowID == originalWindow)
+        XCTAssertEqual(captured.last, coordinator.activeSession?.windowID)
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testOneTransientPresentationFailureDoesNotRestartOrRecapture() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var captures = 0
+        coordinator.onCapture = { _, _ in captures += 1 }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        let checked = driver.presentationChecks
+        driver.presentationResponses = [false, true, false, true]
+        await settle { driver.presentationChecks >= checked + 6 }
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertEqual(captures, 1)
+        XCTAssertEqual(coordinator.state, .running)
+    }
+
+    func testRepeatedFullscreenLossHasBoundedRecoveryAndExplicitStartResetsBudget() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        driver.presentationCheck = { false }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { driver.preparations.count == 4 }
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 4)
+        XCTAssertNotNil(coordinator.activeSession)
+        coordinator.start()
+        await settle { driver.preparations.count == 8 }
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 8)
+        XCTAssertNotNil(coordinator.activeSession)
+    }
+
+    func testManualPlayerWindowIsNotForcedBackToFullscreenUntilExplicitStart() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.openPlayer()
+        await settle { driver.userOpens == 1 && coordinator.state == .running }
+        driver.presentationReady = false
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertFalse(driver.presentationReady)
+        coordinator.start()
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+        driver.presentationReady = false
+        await settle { driver.preparations.count == 3 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testReloadLeavesManualPlayerModeAndRestoresPresentationMonitoring() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.openPlayer()
+        await settle { driver.userOpens == 1 && coordinator.state == .running }
+        coordinator.reload()
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        driver.presentationReady = false
+        await settle { driver.preparations.count == 3 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testManualPlayerModeSurvivesDisplayChangeUntilExplicitStart() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var captured = [CGWindowID]()
+        coordinator.onCapture = { id, _ in captured.append(id) }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.openPlayer()
+        await settle { driver.userOpens == 1 && coordinator.state == .running }
+        driver.presentationReady = false
+        coordinator.suspendForDisplayChange(); coordinator.setTargetDisplay(3)
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparedDisplayIDs, [2])
+        XCTAssertEqual(captured.count, 1)
+        XCTAssertFalse(driver.presentationReady)
+        XCTAssertEqual(coordinator.targetDisplayID, 3)
+        coordinator.start()
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        XCTAssertEqual(driver.preparedDisplayIDs, [2, 3])
+        XCTAssertEqual(captured.count, 2)
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testManualPlayerModeSurvivesCaptureInterruptionUntilExplicitReload() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        XCTAssertTrue(coordinator.saveConfiguration())
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.openPlayer()
+        await settle { driver.userOpens == 1 && coordinator.state == .running }
+        driver.presentationReady = false
+        coordinator.reportCaptureInterrupted("人工操作时捕获中断")
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertFalse(driver.presentationReady)
+        coordinator.reload()
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+        driver.presentationReady = false
+        await settle { driver.preparations.count == 3 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testClosedManualPlayerDoesNotAutoRestartUntilExplicitStart() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.openPlayer()
+        await settle { driver.userOpens == 1 && coordinator.state == .running }
+        driver.alive = false
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        driver.alive = true
+        coordinator.start()
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testDisabledAutoRecoveryDoesNotForceAliveWindowBackToFullscreen() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        coordinator.draft.autoRecover = false
+        XCTAssertTrue(coordinator.saveConfiguration())
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        driver.presentationReady = false
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertFalse(driver.presentationReady)
+        XCTAssertEqual(coordinator.state, .running)
+    }
+
+    func testPausedOutputDoesNotForceFullscreenButResumingCanRecover() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        coordinator.setOutputPaused(true)
+        driver.presentationReady = false
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertEqual(coordinator.state, .paused)
+        coordinator.setOutputPaused(false)
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        XCTAssertTrue(driver.presentationReady)
+    }
+
+    func testStopDisablesFullscreenRecoveryAndDisplayReconnect() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { coordinator.state == .running }
+        driver.presentationReady = false
+        coordinator.stop()
+        coordinator.suspendForDisplayChange(); coordinator.setTargetDisplay(2)
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertEqual(coordinator.state, .stopped)
+    }
+
+    func testSlowPresentationCheckCannotRecoverAfterStop() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var pendingCheck: CheckedContinuation<Bool, Never>?
+        var healthCalls = 0
+        driver.presentationCheck = {
+            healthCalls += 1
+            if healthCalls == 1 { return false }
+            return await withCheckedContinuation { pendingCheck = $0 }
+        }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { pendingCheck != nil }
+        coordinator.stop()
+        driver.presentationCheck = nil
+        driver.presentationReady = false
+        pendingCheck?.resume(returning: false); pendingCheck = nil
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertEqual(coordinator.state, .stopped)
+    }
+
+    func testSlowPresentationCheckCannotRecoverAfterUserOpensPlayer() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var pendingCheck: CheckedContinuation<Bool, Never>?
+        var healthCalls = 0
+        driver.presentationCheck = {
+            healthCalls += 1
+            if healthCalls == 1 { return false }
+            return await withCheckedContinuation { pendingCheck = $0 }
+        }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { pendingCheck != nil }
+        coordinator.openPlayer()
+        await settle { driver.userOpens == 1 && coordinator.state == .running }
+        driver.presentationCheck = nil
+        driver.presentationReady = false
+        pendingCheck?.resume(returning: false); pendingCheck = nil
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertNotNil(coordinator.activeSession)
+        XCTAssertEqual(coordinator.state, .running)
+    }
+
+    func testSlowPresentationCheckHonorsAutoRecoveryDisabledWhileChecking() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var pendingCheck: CheckedContinuation<Bool, Never>?
+        var healthCalls = 0
+        driver.presentationCheck = {
+            healthCalls += 1
+            if healthCalls == 1 { return false }
+            return await withCheckedContinuation { pendingCheck = $0 }
+        }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { pendingCheck != nil }
+        coordinator.draft.autoRecover = false
+        XCTAssertTrue(coordinator.saveConfiguration())
+        driver.presentationCheck = nil
+        driver.presentationReady = false
+        pendingCheck?.resume(returning: false); pendingCheck = nil
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1)
+        XCTAssertNotNil(coordinator.activeSession)
+        XCTAssertEqual(coordinator.state, .running)
+    }
+
+    func testOldPresentationCheckCannotAffectDisplayReplacementSession() async {
+        let driver = FakeProtoPieDriver(); let (coordinator, _) = make(driver: driver, fastMonitor: true)
+        var pendingCheck: CheckedContinuation<Bool, Never>?
+        var healthCalls = 0
+        driver.presentationCheck = {
+            healthCalls += 1
+            if healthCalls == 1 { return false }
+            return await withCheckedContinuation { pendingCheck = $0 }
+        }
+        coordinator.setTargetDisplay(2); coordinator.start()
+        await settle { pendingCheck != nil }
+        driver.presentationCheck = nil
+        coordinator.suspendForDisplayChange(); coordinator.setTargetDisplay(3)
+        await settle { driver.preparations.count == 2 && coordinator.state == .running }
+        let replacement = coordinator.activeSession
+        pendingCheck?.resume(returning: false); pendingCheck = nil
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparedDisplayIDs, [2, 3])
+        XCTAssertEqual(coordinator.activeSession, replacement)
+        XCTAssertEqual(coordinator.state, .running)
     }
 
     func testDisplayChangesDuringStartupCancelOldCandidate() async {

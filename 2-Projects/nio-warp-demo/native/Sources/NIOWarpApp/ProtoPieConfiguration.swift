@@ -117,6 +117,7 @@ struct ProtoPieSession: Equatable {
     func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
                  progress: @escaping (String) -> Void) async throws -> ProtoPieSession
     func isAlive(_ session: ProtoPieSession) async -> Bool
+    func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool
     func release(_ session: ProtoPieSession) async
     func detach(_ session: ProtoPieSession)
     func requestFreshPreview()
@@ -124,6 +125,7 @@ struct ProtoPieSession: Equatable {
 }
 
 @MainActor extension ProtoPiePreviewDriving {
+    func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool { true }
     func detach(_ session: ProtoPieSession) { }
     func requestFreshPreview() { }
 }

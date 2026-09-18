@@ -45,3 +45,32 @@ struct ProtoPieFullscreenReadiness {
         return consecutive >= 3
     }
 }
+
+/// Leaving native fullscreen can first restore Chrome's previous maximized state.
+/// Wait for that transition to settle before issuing one additional normal request.
+struct ProtoPieWindowRestoreReadiness {
+    enum Action: Equatable { case waiting, requestNormal, ready }
+
+    private var previousFrame: CGRect?
+    private var previousState: String?
+    private var consecutive = 0
+    private var requestedNormalAgain = false
+
+    mutating func observe(frame: CGRect, state: String) -> Action {
+        let values = [frame.minX, frame.minY, frame.width, frame.height]
+        guard values.allSatisfy(\.isFinite), frame.width > 0, frame.height > 0,
+              state == "normal" || state == "maximized" else {
+            previousFrame = nil; previousState = nil; consecutive = 0
+            return .waiting
+        }
+        consecutive = frame == previousFrame && state == previousState ? consecutive + 1 : 1
+        previousFrame = frame
+        previousState = state
+        guard consecutive >= 3 else { return .waiting }
+        if state == "normal" { return .ready }
+        guard !requestedNormalAgain else { return .waiting }
+        requestedNormalAgain = true
+        previousFrame = nil; previousState = nil; consecutive = 0
+        return .requestNormal
+    }
+}

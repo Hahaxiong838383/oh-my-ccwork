@@ -121,6 +121,88 @@ final class ProtoPieFullscreenTests: XCTestCase {
         }
     }
 
+    func testWindowRestoreNeedsThreeStableNormalSamples() {
+        var readiness = ProtoPieWindowRestoreReadiness()
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .ready)
+    }
+
+    func testFullscreenExitToStableMaximizedRequestsNormalAgainBeforeReady() {
+        var readiness = ProtoPieWindowRestoreReadiness()
+        let maximized = CGRect(x: 1512, y: 30, width: 7680, height: 906)
+        let normal = CGRect(x: 1512, y: 30, width: 7660, height: 886)
+        XCTAssertEqual(readiness.observe(frame: target, state: "fullscreen"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: maximized, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: maximized, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: maximized, state: "maximized"), .requestNormal)
+        XCTAssertEqual(readiness.observe(frame: normal, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: normal, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: normal, state: "normal"), .ready)
+    }
+
+    func testWindowRestoreDoesNotRetryWhileMaximizedFrameIsAnimating() {
+        var readiness = ProtoPieWindowRestoreReadiness()
+        let moving = target.offsetBy(dx: 1, dy: 0)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: moving, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: moving, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .requestNormal)
+    }
+
+    func testWindowRestoreResetsStabilityWhenStateChangesWithIdenticalFrame() {
+        var readiness = ProtoPieWindowRestoreReadiness()
+        for state in ["maximized", "maximized", "normal", "normal", "maximized", "maximized"] {
+            XCTAssertEqual(readiness.observe(frame: target, state: state), .waiting)
+        }
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .requestNormal)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .ready)
+    }
+
+    func testWindowRestoreRetriesNormalOnlyOnceEvenIfMaximizedPersistsOrReturns() {
+        var readiness = ProtoPieWindowRestoreReadiness()
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .requestNormal)
+        for _ in 0..<20 { XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting) }
+        XCTAssertEqual(readiness.observe(frame: target, state: "fullscreen"), .waiting)
+        for _ in 0..<5 { XCTAssertEqual(readiness.observe(frame: target, state: "maximized"), .waiting) }
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+        XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .ready)
+    }
+
+    func testWindowRestoreInvalidGeometryAndUnexpectedStatesResetStability() {
+        let invalidFrames = [CGRect.zero, CGRect(x: CGFloat.nan, y: 0, width: 7680, height: 936),
+            CGRect(x: 1512, y: 0, width: CGFloat.infinity, height: 936),
+            CGRect(x: 1512, y: 0, width: 7680, height: -1)]
+        for state in ["normal", "maximized"] {
+            for invalid in invalidFrames {
+                var readiness = ProtoPieWindowRestoreReadiness()
+                XCTAssertEqual(readiness.observe(frame: target, state: state), .waiting)
+                XCTAssertEqual(readiness.observe(frame: target, state: state), .waiting)
+                XCTAssertEqual(readiness.observe(frame: invalid, state: state), .waiting)
+                XCTAssertEqual(readiness.observe(frame: target, state: state), .waiting)
+                XCTAssertEqual(readiness.observe(frame: target, state: state), .waiting)
+                XCTAssertEqual(readiness.observe(frame: target, state: state), state == "normal" ? .ready : .requestNormal)
+            }
+        }
+        for interruption in ["fullscreen", "minimized", ""] {
+            var readiness = ProtoPieWindowRestoreReadiness()
+            XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+            XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+            for _ in 0..<3 { XCTAssertEqual(readiness.observe(frame: target, state: interruption), .waiting) }
+            XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+            XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .waiting)
+            XCTAssertEqual(readiness.observe(frame: target, state: "normal"), .ready)
+        }
+    }
+
     private func cloudContext(host: String = "cloud.protopie.io", path: String = "/p/example",
                               href: String = "https://cloud.protopie.io/p/example",
                               state: String = "complete") throws -> JSContext {

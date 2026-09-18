@@ -45,6 +45,30 @@ import Foundation
         return true
     }
 
+    func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool {
+        guard let target = session.cloudTargetID else { return true }
+        guard CGDisplayIsActive(displayID) != 0, let socket = browserSocket,
+              let captured = Self.windows().first(where: { $0.id == session.windowID && $0.pid == session.processID }) else { return false }
+        do {
+            let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            guard let windowID = window["windowId"] as? Int else { return false }
+            let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            let page = try await pageSocket(target: target, browserSocket: socket)
+            let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [
+                "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
+                "returnByValue": true])
+            guard let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any],
+                  let width = value["width"] as? NSNumber, let height = value["height"] as? NSNumber else { return false }
+            let scale = NSScreen.screens.first {
+                ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == displayID
+            }?.backingScaleFactor ?? 1
+            return ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
+                browserFrame: bounds.frame, windowState: bounds.state,
+                viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: scale)
+                .isReady(for: Self.targetRect(displayID))
+        } catch { return false }
+    }
+
     func release(_ session: ProtoPieSession) async {
         detach(session)
         if let target = session.cloudTargetID, cloudTargets.removeValue(forKey: target) != nil, let socket = browserSocket {
@@ -149,17 +173,25 @@ import Foundation
 
     /// macOS fullscreen transitions are asynchronous, even after CDP acknowledges the command.
     private func restoreCloudWindow(socket: URL, windowID: Int) async throws {
+        try Task.checkCancellation()
         _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
             "windowId": windowID, "bounds": ["windowState": "normal"]])
-        var previous: CGRect?
-        var stable = 0
+        var readiness = ProtoPieWindowRestoreReadiness()
         let deadline = ProcessInfo.processInfo.systemUptime + 10
         while ProcessInfo.processInfo.systemUptime < deadline {
             try Task.checkCancellation()
             let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
-            stable = bounds.state == "normal" ? (previous == bounds.frame ? stable + 1 : 1) : 0
-            previous = bounds.frame
-            if stable >= 3 { return }
+            try Task.checkCancellation()
+            guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+            switch readiness.observe(frame: bounds.frame, state: bounds.state) {
+            case .ready: return
+            case .requestNormal:
+                // Fullscreen may have exited to a restored maximized window. Unmaximize only
+                // after three matching samples, once per restore attempt, within the same deadline.
+                _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+                    "windowId": windowID, "bounds": ["windowState": "normal"]])
+            case .waiting: break
+            }
             try await Task.sleep(nanoseconds: 150_000_000)
         }
         throw ProtoPieError.unavailable("播放器退出全屏尚未完成，请重试。")

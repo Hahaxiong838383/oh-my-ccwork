@@ -1153,6 +1153,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let protoPie: ProtoPieCoordinator?
     private var protoPiePanel: ProtoPiePanel?
     private var inspectorWidthConstraint: NSLayoutConstraint?
+    private let preferredControlDisplayID: CGDirectDisplayID?
     var selectedModuleIdentifier: String { configurationTabs.selectedTabViewItem?.identifier as? String ?? "canvas" }
     private var tabPageDocuments = [NSView]()
     private let captureSourcePicker = NSPopUpButton()
@@ -1232,6 +1233,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         self.historyStore = historyStore
         self.presetStore = presetStore
         self.protoPie = protoPie
+        preferredControlDisplayID = (sourceScreen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
         self.terminateApplication = terminateApplication
         self.configuration = configuration
         lastAppliedConfiguration = configuration
@@ -1256,7 +1258,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
-        panel.contentMinSize = NSSize(width: 1040, height: 650)
+        panel.contentMinSize = WorkbenchWindowPlacement.preferredMinimumContentSize
         super.init(window: panel)
         panel.onModuleShortcut = { [weak self] index in self?.selectModule(Self.modules[index].0) }
         panel.delegate = self
@@ -1273,12 +1275,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         if presentWindow {
             _ = panel.setFrameUsingName("NIOWarpUnifiedWorkbench")
             panel.setFrameAutosaveName("NIOWarpUnifiedWorkbench")
-            var frame = panel.frame
-            frame.size.width = min(frame.width, visibleFrame.width)
-            frame.size.height = min(frame.height, visibleFrame.height)
-            frame.origin.x = min(max(frame.minX, visibleFrame.minX), visibleFrame.maxX - frame.width)
-            frame.origin.y = min(max(frame.minY, visibleFrame.minY), visibleFrame.maxY - frame.height)
-            panel.setFrame(frame, display: false)
+            fitWindow(to: visibleFrame)
         }
         if presentWindow { bringToFront() }
     }
@@ -1468,7 +1465,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         capturePresentationLabel.textColor = .secondaryLabelColor
         capturePresentationLabel.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(capturePresentationLabel)
-        let captureHint = NSTextField(wrappingLabelWithString: "自动模式会识别覆盖外屏 82% 以上并连续稳定的最大窗口；播放器退出全屏或窗口关闭后自动恢复整屏捕获。画面继续按“保持比例·铺满裁切”映射，不会压扁。")
+        let captureHint = NSTextField(wrappingLabelWithString: "自动模式会识别覆盖外屏 82% 以上并连续稳定的最大窗口；播放器退出全屏或窗口关闭后自动恢复整屏捕获。内容适配选“保持比例·完整显示”可保留完整画面；“铺满裁切”会裁掉超出部分。")
         captureHint.textColor = .secondaryLabelColor
         captureHint.preferredMaxLayoutWidth = 500
         stack.addArrangedSubview(captureHint)
@@ -2743,8 +2740,28 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     func bringToFront() {
         guard let window else { return }
         if window.isMiniaturized { window.deminiaturize(nil) }
+        let screens = NSScreen.screens
+        let screenID: (NSScreen) -> CGDirectDisplayID? = {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
+        }
+        // AppKit can migrate the window to an external screen while the lid is
+        // closed. Resolve the current built-in screen again when showing it.
+        let controlScreen = screens.first { screenID($0).map { CGDisplayIsBuiltin($0) != 0 } ?? false }
+            ?? screens.first { screenID($0) == preferredControlDisplayID }
+            ?? window.screen
+            ?? NSScreen.main
+            ?? screens.first
+        if let controlScreen { fitWindow(to: controlScreen.visibleFrame) }
         window.orderFrontRegardless()
         window.makeKey()
+    }
+
+    func fitWindow(to visibleFrame: NSRect) {
+        guard let window, visibleFrame.width > 0, visibleFrame.height > 0 else { return }
+        let content = window.contentRect(forFrameRect: window.frame)
+        let decoration = NSSize(width: window.frame.width - content.width, height: window.frame.height - content.height)
+        window.contentMinSize = WorkbenchWindowPlacement.minimumContentSize(in: visibleFrame, frameDecoration: decoration)
+        window.setFrame(WorkbenchWindowPlacement.containedFrame(window.frame, in: visibleFrame), display: false)
     }
 
     @objc private func applyAAFields() {
@@ -3170,7 +3187,7 @@ private extension Array {
         menu.addItem(appItem)
         NSApp.mainMenu = menu
         emergencyHotKey = GlobalHotKey(keyCode: UInt32(kVK_Escape), modifiers: UInt32(controlKey | cmdKey | optionKey)) { [weak self] in
-            self?.emergencyHideWarp(reason: "已通过 ⌃⌥⌘Esc 紧急隐藏 Warp 覆盖层。")
+            self?.emergencyHideWarp(reason: "已通过 ⌃⌥⌘Esc 紧急隐藏 Warp 覆盖层。", userInitiated: true)
         }
         NotificationCenter.default.addObserver(
             self,
@@ -3398,9 +3415,10 @@ private extension Array {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: workItem)
     }
 
-    private func emergencyHideWarp(reason: String) {
+    private func emergencyHideWarp(reason: String, userInitiated: Bool = false) {
         outputController?.setWarpVisible(false)
-        controlPanel?.updateWarpVisibilityState(false)
+        // Display/sleep recovery hides output temporarily; only an explicit user action pauses it.
+        controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: userInitiated)
         controlPanel?.setStatus(reason, color: .systemOrange)
         NSApp.activate(ignoringOtherApps: true)
         controlPanel?.bringToFront()

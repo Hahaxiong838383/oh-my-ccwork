@@ -92,6 +92,34 @@ final class TabLayoutTests: XCTestCase {
         XCTAssertEqual(panel.window?.level, .normal, "工作台默认不能遮挡普通编辑或播放器窗口")
     }
 
+    func testMigratedControlWindowFitsVisibleFrameWithoutChangingCalibration() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let window = try XCTUnwrap(panel.window)
+        let before = panel.configurationForOfflinePreview
+        let visible = NSRect(x: 0, y: 90, width: 1512, height: 859)
+        window.setFrame(NSRect(x: 1900, y: 46, width: 1120, height: 752), display: false)
+        panel.fitWindow(to: visible)
+        window.contentView?.layoutSubtreeIfNeeded()
+        XCTAssertTrue(visible.insetBy(dx: 8, dy: 8).contains(window.frame))
+        XCTAssertEqual(window.frame.size, NSSize(width: 1120, height: 752))
+        XCTAssertEqual(panel.configurationForOfflinePreview, before)
+    }
+
+    func testSmallVisibleFrameAllowsShrinkingAndLargerScreenRestoresMinimum() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let window = try XCTUnwrap(panel.window)
+        let visible = NSRect(x: 0, y: 40, width: 1024, height: 620)
+        panel.fitWindow(to: visible)
+        window.contentView?.layoutSubtreeIfNeeded()
+        XCTAssertTrue(visible.insetBy(dx: 8, dy: 8).contains(window.frame))
+        XCTAssertLessThan(window.contentMinSize.width, 1040)
+        XCTAssertLessThan(window.contentMinSize.height, 650)
+        panel.fitWindow(to: NSRect(x: 0, y: 90, width: 1512, height: 859))
+        XCTAssertEqual(window.contentMinSize, NSSize(width: 1040, height: 650))
+    }
+
     func testExistingSectionsAreAssignedToTheirSemanticModules() throws {
         let (panel, defaults, suite) = try controller()
         defer { panel.close(); defaults.removePersistentDomain(forName: suite) }

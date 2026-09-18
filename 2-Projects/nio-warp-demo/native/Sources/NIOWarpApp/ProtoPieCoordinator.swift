@@ -28,6 +28,7 @@ import Foundation
     private var wantsToRun = false
     private var manuallyStopped = false
     private var outputPaused = false
+    private var manualPlayerOpen = false
     private var recoveryAttempts = 0
     private var pendingConfiguration: ProtoPieConfiguration?
     private let monitoringInterval: UInt64
@@ -70,6 +71,9 @@ import Foundation
         if changingActiveDisplay { cancelOperation(); state = .idle }
         if displayID == nil {
             suspendForDisplayChange()
+        } else if manualPlayerOpen {
+            // A display reconnect must not take the login/editor window away from the user.
+            state = activeSession == nil ? .idle : .paused
         } else if wantsToRun && !manuallyStopped {
             begin(configuration: pendingConfiguration ?? activeSession?.configuration ?? lastSuccessful ?? saved, resetRecovery: false)
         } else { notify() }
@@ -92,18 +96,22 @@ import Foundation
     }
 
     func start() {
+        guard !state.isBusy else { return }
+        manualPlayerOpen = false
         manuallyStopped = false; wantsToRun = true
         begin(configuration: draft, resetRecovery: true)
     }
 
     func reload() {
         guard !state.isBusy else { return }
+        manualPlayerOpen = false
         driver.requestFreshPreview()
         manuallyStopped = false; wantsToRun = true
         begin(configuration: activeSession?.configuration ?? saved, resetRecovery: true)
     }
 
     func stop() {
+        manualPlayerOpen = false
         manuallyStopped = true; wantsToRun = false; pendingConfiguration = nil
         cancelOperation(); monitor?.cancel(); monitor = nil
         // Do not close player applications or discard any Studio changes.
@@ -133,6 +141,8 @@ import Foundation
         guard !state.isBusy else { return }
         let configuration = draft
         let previousState = state
+        let previousManualPlayerOpen = manualPlayerOpen
+        manualPlayerOpen = true
         cancelOperation()
         let token = generation
         state = .launching
@@ -147,9 +157,11 @@ import Foundation
                     : "播放器已打开；完成登录或开启 Preview 后，点击启动/重试。"
             } catch {
                 guard self.generation == token, !Task.isCancelled else { return }
+                self.manualPlayerOpen = previousManualPlayerOpen
                 self.notice = error.localizedDescription
             }
             self.state = previousState
+            if self.activeSession != nil, self.wantsToRun { self.startMonitor() }
         }
     }
 
@@ -232,12 +244,36 @@ import Foundation
     private func startMonitor() {
         monitor?.cancel()
         let interval = monitoringInterval
+        let token = generation
         monitor = Task { [weak self] in
+            var unstablePresentationSamples = 0
             while !Task.isCancelled {
                 do { try await Task.sleep(nanoseconds: interval) } catch { return }
                 guard let self, let session = self.activeSession, self.wantsToRun, !self.manuallyStopped else { return }
-                if !(await self.driver.isAlive(session)) {
+                let alive = await self.driver.isAlive(session)
+                guard !Task.isCancelled, self.generation == token, self.activeSession?.id == session.id else { return }
+                if !alive {
                     self.handleInterruptedSession()
+                    return
+                }
+                guard let displayID = self.targetDisplayID, !self.state.isBusy,
+                      !self.manualPlayerOpen, !self.outputPaused, self.saved.autoRecover else {
+                    unstablePresentationSamples = 0
+                    continue
+                }
+                let ready = await self.driver.isPresentationReady(session, displayID: displayID)
+                guard !Task.isCancelled, self.generation == token, self.activeSession?.id == session.id,
+                      self.targetDisplayID == displayID else { return }
+                guard !self.state.isBusy, !self.manualPlayerOpen, !self.outputPaused, self.saved.autoRecover else {
+                    unstablePresentationSamples = 0
+                    continue
+                }
+                unstablePresentationSamples = ready ? 0 : unstablePresentationSamples + 1
+                if ready { self.recoveryAttempts = 0 }
+                if unstablePresentationSamples >= 2, self.recoveryAttempts < 3 {
+                    // Reuse the existing source and rebuild its capture only after fullscreen stabilizes.
+                    self.recoveryAttempts += 1
+                    self.begin(configuration: session.configuration, resetRecovery: false)
                     return
                 }
             }
@@ -255,7 +291,8 @@ import Foundation
     }
 
     private func scheduleRecovery(configuration: ProtoPieConfiguration) {
-        guard saved.autoRecover, wantsToRun, !manuallyStopped, targetDisplayID != nil, recoveryAttempts < 3 else { return }
+        guard saved.autoRecover, wantsToRun, !manuallyStopped, !manualPlayerOpen,
+              targetDisplayID != nil, recoveryAttempts < 3 else { return }
         recoveryAttempts += 1
         let attempt = recoveryAttempts
         let token = generation
@@ -264,7 +301,8 @@ import Foundation
         operation = Task { [weak self] in
             guard let self else { return }
             do { try await Task.sleep(nanoseconds: self.recoveryDelay * UInt64(attempt)) } catch { return }
-            guard self.generation == token, self.wantsToRun, !self.manuallyStopped else { return }
+            guard self.generation == token, self.wantsToRun, !self.manuallyStopped,
+                  !self.manualPlayerOpen, self.saved.autoRecover else { return }
             self.begin(configuration: configuration, resetRecovery: false)
         }
     }
