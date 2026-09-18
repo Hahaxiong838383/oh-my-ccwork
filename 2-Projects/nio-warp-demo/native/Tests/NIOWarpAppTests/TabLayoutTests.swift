@@ -177,6 +177,36 @@ final class TabLayoutTests: XCTestCase {
         }
     }
 
+    func testMousePanelUsesOriginalCursorWithoutPointerShapeControls() throws {
+        try MainActor.assumeIsolated {
+            let original = MouseMappingSettings(mode: .glass, previewOnly: true, speed: 1.8,
+                pointerSize: 40, reverseHorizontal: false)
+            let mouse = MouseMappingPanel(settings: original)
+            let views = descendants(mouse.inspectorView)
+            let start = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-start" } as? NSButton)
+            let stop = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-stop" } as? NSButton)
+            let preview = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-preview-only" } as? NSButton)
+            let speed = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-speed" } as? NSSlider)
+            XCTAssertEqual(start.title, "启用原有鼠标校正")
+            XCTAssertEqual(stop.title, "暂停鼠标校正")
+            XCTAssertEqual(preview.title, "仅检查移动，暂不发送点击")
+            XCTAssertNil(views.first { $0.accessibilityIdentifier() == "nio-mouse-pointer-size" })
+            XCTAssertEqual(views.compactMap { $0 as? NSSlider }.count, 1, "仅保留速度调节，不设置原有指针的形状或尺寸")
+            let copy = views.compactMap { ($0 as? NSTextField)?.stringValue }.joined(separator: "\n")
+            XCTAssertTrue(copy.contains("原生鼠标校正"))
+            XCTAssertTrue(copy.contains("使用 ProtoPie 自带的圆形指针，不新增指针"))
+            XCTAssertTrue(copy.contains("不改变画面镜像、上下方向或内屏鼠标"))
+            XCTAssertFalse(copy.contains("指针直径"))
+            XCTAssertFalse(copy.contains("圆圈十字"))
+            var updated: MouseMappingSettings?
+            mouse.onSettingsChange = { updated = $0 }
+            speed.doubleValue = 2
+            speed.sendAction(try XCTUnwrap(speed.action), to: speed.target)
+            var expected = original; expected.speed = 2
+            XCTAssertEqual(updated, expected, "移除尺寸控件后保存其他选项仍保留旧 pointerSize 字段")
+        }
+    }
+
     func testMouseDirectionControlRemainsReachableInMinimumWorkbench() throws {
         let (panel, defaults, suite) = try controller()
         defer { panel.close(); defaults.removePersistentDomain(forName: suite) }

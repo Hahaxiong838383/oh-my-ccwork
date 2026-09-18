@@ -77,5 +77,6 @@
     "Air安装",
     "新物理合盖周期",
     "UU远程输入方向"
-  ]
+  ],
+  "scopeCorrection": "用户后续明确：该次确认针对新增十字，不能认定原ProtoPie圆形系统指针已修复；见native-cursor-v0123.md"
 }

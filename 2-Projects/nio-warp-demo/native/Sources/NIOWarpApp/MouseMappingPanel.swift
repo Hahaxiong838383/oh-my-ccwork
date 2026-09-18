@@ -31,7 +31,7 @@ struct MouseMappingSettings: Codable, Equatable {
         speed = try values.decode(Double.self, forKey: .speed)
         pointerSize = try values.decode(Double.self, forKey: .pointerSize)
         // v0.12.0 / v0.12.1 have no explicit direction preference. Preserve all
-        // existing choices while adopting the current onsite-calibrated default.
+        // existing choices while leaving horizontal reversal off by default.
         reverseHorizontal = try values.decodeIfPresent(Bool.self, forKey: .reverseHorizontal) ?? false
     }
 
@@ -59,15 +59,13 @@ struct MouseMappingSettings: Codable, Equatable {
     private let stack = NSStackView()
     private let status = NSTextField(wrappingLabelWithString: "等待已接通的 ProtoPie Cloud 全屏预览。")
     private let coordinates = NSTextField(wrappingLabelWithString: "热点沿全部可见曲面贴边，可到最后一个物理像素中心。")
-    private let start = NSButton(title: "进入演示鼠标控制", target: nil, action: nil)
-    private let stop = NSButton(title: "返回普通鼠标", target: nil, action: nil)
+    private let start = NSButton(title: "启用原有鼠标校正", target: nil, action: nil)
+    private let stop = NSButton(title: "暂停鼠标校正", target: nil, action: nil)
     private let mode = NSPopUpButton()
     private let reverse = NSButton(checkboxWithTitle: "鼠标左右反向", target: nil, action: nil)
-    private let preview = NSButton(checkboxWithTitle: "仅显示落点，不发送点击", target: nil, action: nil)
+    private let preview = NSButton(checkboxWithTitle: "仅检查移动，暂不发送点击", target: nil, action: nil)
     private let speed = NSSlider(value: 1, minValue: 0.25, maxValue: 4, target: nil, action: nil)
-    private let size = NSSlider(value: 28, minValue: 12, maxValue: 64, target: nil, action: nil)
     private let speedLabel = NSTextField(labelWithString: "移动速度 · 1.00×")
-    private let sizeLabel = NSTextField(labelWithString: "指针直径 · 28 px")
     private var settings: MouseMappingSettings
 
     init(settings: MouseMappingSettings) {
@@ -90,27 +88,25 @@ struct MouseMappingSettings: Codable, Equatable {
             stack.trailingAnchor.constraint(equalTo: document.trailingAnchor),
             document.bottomAnchor.constraint(equalTo: stack.bottomAnchor)
         ])
-        let title = NSTextField(labelWithString: "演示鼠标控制")
+        let title = NSTextField(labelWithString: "原生鼠标校正")
         title.font = .systemFont(ofSize: 16, weight: .semibold); add(title)
         status.setAccessibilityIdentifier("nio-mouse-status"); add(status)
         start.target = self; start.action = #selector(begin)
         stop.target = self; stop.action = #selector(end)
         start.setAccessibilityIdentifier("nio-mouse-start"); stop.setAccessibilityIdentifier("nio-mouse-stop")
         let actions = NSStackView(views: [start, stop]); actions.orientation = .horizontal; actions.spacing = 8; add(actions)
-        add(NSTextField(wrappingLabelWithString: "Esc 返回普通鼠标；⌃⌥⌘Esc 紧急隐藏演示。进入后看着玻璃操作，退出后可继续使用内屏工作台。"))
+        add(NSTextField(wrappingLabelWithString: "使用 ProtoPie 自带的圆形指针，不新增指针。Esc 返回工作台并恢复普通移动；⌃⌥⌘Esc 紧急隐藏演示。"))
         add(NSTextField(labelWithString: "操作方向"))
         MouseMappingMode.allCases.forEach { mode.addItem(withTitle: $0.title) }
         mode.target = self; mode.action = #selector(changed)
         mode.setAccessibilityIdentifier("nio-mouse-mode"); add(mode)
         reverse.target = self; reverse.action = #selector(changed)
         reverse.setAccessibilityIdentifier("nio-mouse-reverse-horizontal"); add(reverse)
-        add(NSTextField(wrappingLabelWithString: "仅改变鼠标左右方向，不改变画面镜像和上下方向。若圆圈十字与手部移动相反，按 Esc 返回后切换此项。"))
+        add(NSTextField(wrappingLabelWithString: "仅改变演示外屏的鼠标左右方向，不改变画面镜像、上下方向或内屏鼠标。若原有圆形指针与手部移动相反，按 Esc 返回后切换此项。"))
         preview.target = self; preview.action = #selector(changed)
         preview.setAccessibilityIdentifier("nio-mouse-preview-only"); add(preview)
         add(speedLabel); speed.target = self; speed.action = #selector(changed)
         speed.setAccessibilityIdentifier("nio-mouse-speed"); add(speed)
-        add(sizeLabel); size.target = self; size.action = #selector(changed)
-        size.setAccessibilityIdentifier("nio-mouse-pointer-size"); add(size)
         let edge = NSTextField(labelWithString: "边缘范围 · 全部可见区域")
         edge.font = .systemFont(ofSize: 13, weight: .semibold); add(edge)
         add(NSTextField(wrappingLabelWithString: "按真实曲面、镜像与屏幕边界自动计算，不缩成内接矩形。热点仅保留半个物理像素，光标图案可在边缘裁切；沿弧形边缘继续滑动。"))
@@ -127,15 +123,14 @@ struct MouseMappingSettings: Codable, Equatable {
         mode.selectItem(at: settings.mode == .glass ? 0 : 1)
         reverse.state = settings.reverseHorizontal ? .on : .off
         preview.state = settings.previewOnly ? .on : .off
-        speed.doubleValue = settings.speed; size.doubleValue = settings.pointerSize
+        speed.doubleValue = settings.speed
         speedLabel.stringValue = String(format: "移动速度 · %.2f×", settings.speed)
-        sizeLabel.stringValue = String(format: "指针直径 · %.0f px", settings.pointerSize)
     }
 
     func update(active: Bool, busy: Bool, message: String, detail: String? = nil) {
         status.stringValue = message
         start.isEnabled = !active && !busy; stop.isEnabled = active || busy
-        [mode, reverse, preview, speed, size].forEach { $0.isEnabled = !active && !busy }
+        [mode, reverse, preview, speed].forEach { $0.isEnabled = !active && !busy }
         if let detail { coordinates.stringValue = detail }
     }
 
@@ -151,7 +146,7 @@ struct MouseMappingSettings: Codable, Equatable {
         settings.mode = mode.indexOfSelectedItem == 0 ? .glass : .physical
         settings.reverseHorizontal = reverse.state == .on
         settings.previewOnly = preview.state == .on
-        settings.speed = speed.doubleValue; settings.pointerSize = size.doubleValue
+        settings.speed = speed.doubleValue
         load(settings); onSettingsChange?(settings)
     }
 }
