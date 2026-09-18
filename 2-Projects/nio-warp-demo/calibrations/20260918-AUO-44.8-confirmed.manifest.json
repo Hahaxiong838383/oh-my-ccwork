@@ -1,0 +1,34 @@
+{
+  "name": "0918-44.8-2-固化",
+  "confirmedDate": "2026-09-18",
+  "appVersion": "0.11.4 (31)",
+  "appSourceCommit": "0d47807607d3017af0ca7594d360d884c9406ed1",
+  "configurationFile": "20260918-AUO-44.8-confirmed.json",
+  "configurationSHA256": "1dfa5155d24227516106847e42fd56971d3d09d6ada231ffea6323aec37bb481",
+  "displayProfile": "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+  "displayPixels": [
+    7680,
+    936
+  ],
+  "schemaVersion": 13,
+  "presetID": "B443DDAC-64CF-405A-8CD8-E4AF85E98C91",
+  "deviceBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/calibration-freezes/20260918-024521Z",
+  "validation": {
+    "columns": 200,
+    "foldedCells": 0,
+    "importedConfigurationEqual": true,
+    "indices": 165600,
+    "intersectingBoundaries": 0,
+    "invalidCoordinates": 0,
+    "jsonRoundtripEqual": true,
+    "meshValid": true,
+    "outOfAASamples": 11650,
+    "result": "PASS",
+    "rows": 135,
+    "totalSamples": 27939,
+    "unsafeScaleCount": 0,
+    "vertices": 27939
+  },
+  "savedView": "calibration grid off; ProtoPie preview",
+  "currentPreview": "calibration grid off; complete active configuration equals frozen baseline"
+}
