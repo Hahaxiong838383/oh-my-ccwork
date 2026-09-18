@@ -82,6 +82,7 @@ import UniformTypeIdentifiers
         urlField.setAccessibilityLabel("ProtoPie Cloud 预览链接")
         cloudGroup.addArrangedSubview(urlField)
         cloudGroup.addArrangedSubview(note("链接只在本机保存，不会写入校正预设。"))
+        cloudGroup.addArrangedSubview(note("启动预览时自动进入外屏无边框全屏；登录或操作播放器时可返回控制屏。"))
         constrainChildren(cloudGroup)
         add(cloudGroup)
         fileLabel.font = .systemFont(ofSize: 12); fileLabel.maximumNumberOfLines = 3

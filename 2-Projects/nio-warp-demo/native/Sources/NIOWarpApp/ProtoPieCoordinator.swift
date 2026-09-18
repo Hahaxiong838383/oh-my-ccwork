@@ -142,7 +142,9 @@ import Foundation
                 try configuration.validate()
                 try await self.driver.openForUser(configuration: configuration)
                 guard self.generation == token, !Task.isCancelled else { return }
-                self.notice = "播放器已打开；完成登录或开启 Preview 后，点击启动/重试。"
+                self.notice = configuration.source == .cloud
+                    ? "播放器已移到控制屏；完成操作后点击启动/重试，自动恢复外屏无边框全屏。"
+                    : "播放器已打开；完成登录或开启 Preview 后，点击启动/重试。"
             } catch {
                 guard self.generation == token, !Task.isCancelled else { return }
                 self.notice = error.localizedDescription
@@ -280,4 +282,3 @@ import Foundation
         defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(ProtoPieConfiguration.self, from: $0) }
     }
 }
-

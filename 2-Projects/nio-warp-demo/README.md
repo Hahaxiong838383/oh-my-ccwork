@@ -2,7 +2,11 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
-## 最新安装版：v0.11.4 (31)
+## 最新安装版：v0.11.5 (32)
+
+ProtoPie Cloud 演示现在默认进入目标外屏的**无边框全屏**，确认窗口、网页尺寸稳定后再接通捕获，避免把 Chrome 顶部标题栏带进 Warp。重新加载、启动/重试均自动处理；「打开播放器 / 登录」可临时回到内屏操作。已在 nio-war-mac 安装，42 项独立测试及真实新窗口/全屏返回/捕获检查通过，校正参数保留。见[联动流程、验收与回滚](docs/protopie-fullscreen-v0115.md)。
+
+## v0.11.4 (31)：标定圆纵向重复
 
 比例标定圆改为**左、中、右三列纵向连续重复**，为弧形反射区域提供更多可见标定圆。圆尺寸、间距和原校正参数保持；沿用垂直0.12～5.50×、弧度上限3。已安装nio-war-mac，10项实际Metal渲染测试、参数保留及真实UI/ProtoPie联动检查通过，已配对备份旧0.11.3。见[纵向重复、验收与回滚](docs/vertical-circle-repeat-v0114.md)；前版[九圆及垂直比例说明](docs/circle-calibration-v0113.md)。
 
@@ -32,7 +36,7 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.11.4(31)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.11.5(32)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口

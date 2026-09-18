@@ -70,8 +70,7 @@ import Foundation
             if let controlScreen {
                 let rect = Self.manualPreviewBounds(visibleFrame: controlScreen.visibleFrame,
                                                     primaryTop: NSScreen.screens.first?.frame.maxY ?? controlScreen.frame.maxY)
-                _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
-                    "windowId": windowID, "bounds": ["windowState": "normal"]])
+                try await restoreCloudWindow(socket: socket, windowID: windowID)
                 _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
                     "windowId": windowID, "bounds": ["left": Int(rect.minX), "top": Int(rect.minY),
                                                       "width": Int(rect.width), "height": Int(rect.height)]])
@@ -106,32 +105,116 @@ import Foundation
         let pid = pid_t(pidNumber.int32Value)
         let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
         guard let browserWindowID = window["windowId"] as? Int else { throw ProtoPieError.unavailable("播放器没有可捕获窗口。") }
-        let rect = Self.targetRect(displayID)
-        _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
-            "windowId": browserWindowID, "bounds": ["windowState": "normal"]])
-        _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
-            "windowId": browserWindowID, "bounds": ["left": Int(rect.minX), "top": Int(rect.minY),
-                                                   "width": Int(rect.width), "height": Int(rect.height)]])
         let pageSocket = try await pageSocket(target: target, browserSocket: socket)
         let expected = try configuration.playbackURL()
         let marker = "NIO Warp Preview · \(UUID().uuidString.prefix(8))"
         let expression = Self.cloudReadinessExpression(expectedURL: expected, marker: marker)
+        var previousProblem = ""
+        var problemSamples = 0
         for _ in 0..<60 {
             try Task.checkCancellation()
             let evaluation = try await ProtoPieCDP.call(pageSocket, method: "Runtime.evaluate", parameters: ["expression": expression, "returnByValue": true])
             let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any] ?? [:]
             if let problem = value["problem"] as? String, !problem.isEmpty {
-                throw ProtoPieError.waitingForUser(problem)
+                // Login redirects can appear briefly while a new Cloud window restores its session.
+                problemSamples = problem == previousProblem ? problemSamples + 1 : 1
+                previousProblem = problem
+                if problemSamples >= 3 { throw ProtoPieError.waitingForUser(problem) }
+            } else {
+                previousProblem = ""; problemSamples = 0
             }
-            if value["ready"] as? Bool == true,
-               let captured = Self.windows().first(where: { $0.pid == pid && $0.title.contains(marker) }) {
+            if value["ready"] as? Bool == true {
+                progress("正在进入外屏无边框全屏，等待画面尺寸稳定…")
+                let captured = try await prepareCloudFullscreen(socket: socket, pageSocket: pageSocket,
+                    windowID: browserWindowID, processID: pid, marker: marker, displayID: displayID)
                 return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
-                                       cloudTargetID: target, title: "ProtoPie Cloud")
+                                       cloudTargetID: target, title: "ProtoPie Cloud · 无边框全屏")
             }
             progress("等待云端预览加载；如需登录，请在专用播放器中完成。")
             try await Task.sleep(nanoseconds: 500_000_000)
         }
         throw ProtoPieError.waitingForUser("尚未识别到已加载的 ProtoPie 预览。请打开播放器检查登录、链接权限或网络后重试。")
+    }
+
+    private func cloudWindowBounds(socket: URL, windowID: Int) async throws -> (frame: CGRect, state: String) {
+        let result = try await ProtoPieCDP.call(socket, method: "Browser.getWindowBounds", parameters: ["windowId": windowID])
+        guard let bounds = result["bounds"] as? [String: Any],
+              let x = bounds["left"] as? NSNumber, let y = bounds["top"] as? NSNumber,
+              let width = bounds["width"] as? NSNumber, let height = bounds["height"] as? NSNumber,
+              let state = bounds["windowState"] as? String else {
+            throw ProtoPieError.unavailable("无法读取专用播放器的窗口状态。")
+        }
+        return (CGRect(x: x.doubleValue, y: y.doubleValue, width: width.doubleValue, height: height.doubleValue), state)
+    }
+
+    /// macOS fullscreen transitions are asynchronous, even after CDP acknowledges the command.
+    private func restoreCloudWindow(socket: URL, windowID: Int) async throws {
+        _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+            "windowId": windowID, "bounds": ["windowState": "normal"]])
+        var previous: CGRect?
+        var stable = 0
+        let deadline = ProcessInfo.processInfo.systemUptime + 10
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            try Task.checkCancellation()
+            let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            stable = bounds.state == "normal" ? (previous == bounds.frame ? stable + 1 : 1) : 0
+            previous = bounds.frame
+            if stable >= 3 { return }
+            try await Task.sleep(nanoseconds: 150_000_000)
+        }
+        throw ProtoPieError.unavailable("播放器退出全屏尚未完成，请重试。")
+    }
+
+    private func prepareCloudFullscreen(socket: URL, pageSocket: URL, windowID: Int, processID: pid_t,
+                                        marker: String, displayID: CGDirectDisplayID) async throws -> WindowRecord {
+        guard CGDisplayIsActive(displayID) != 0 else { throw ProtoPieError.unavailable("目标外屏不可用。") }
+        let target = Self.targetRect(displayID)
+        let displayScale = NSScreen.screens.first {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == displayID
+        }?.backingScaleFactor ?? 1
+        let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+        // Reuse an already-fullscreen source without leaving its Space or flashing a title bar.
+        if bounds.state != "fullscreen" || !ProtoPieFullscreenObservation.matches(bounds.frame, target) {
+            try await restoreCloudWindow(socket: socket, windowID: windowID)
+            _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+                "windowId": windowID, "bounds": ["left": Int(target.minX), "top": Int(target.minY),
+                                                  "width": Int(target.width), "height": Int(target.height)]])
+            // The normal window may be constrained by the menu bar/Dock. Its centre must first
+            // reach the chosen display, otherwise macOS can enter fullscreen on the control screen.
+            let placementDeadline = ProcessInfo.processInfo.systemUptime + 10
+            var placed = false
+            while ProcessInfo.processInfo.systemUptime < placementDeadline {
+                try Task.checkCancellation()
+                let moved = try await cloudWindowBounds(socket: socket, windowID: windowID)
+                if moved.state != "fullscreen", target.contains(CGPoint(x: moved.frame.midX, y: moved.frame.midY)) {
+                    placed = true; break
+                }
+                try await Task.sleep(nanoseconds: 150_000_000)
+            }
+            guard placed else { throw ProtoPieError.unavailable("播放器尚未移到目标外屏，请重试。") }
+            _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+                "windowId": windowID, "bounds": ["windowState": "fullscreen"]])
+        }
+        var readiness = ProtoPieFullscreenReadiness()
+        let deadline = ProcessInfo.processInfo.systemUptime + 12
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            try Task.checkCancellation()
+            let actual = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            let evaluation = try await ProtoPieCDP.call(pageSocket, method: "Runtime.evaluate", parameters: [
+                "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
+                "returnByValue": true])
+            let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any]
+            let captured = Self.windows().first { $0.pid == processID && $0.title.contains(marker) }
+            var observation: ProtoPieFullscreenObservation?
+            if let captured, let width = value?["width"] as? NSNumber, let height = value?["height"] as? NSNumber {
+                observation = ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
+                    browserFrame: actual.frame, windowState: actual.state,
+                    viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: displayScale)
+            }
+            if readiness.observe(observation, targetFrame: target), let captured { return captured }
+            try await Task.sleep(nanoseconds: 150_000_000)
+        }
+        throw ProtoPieError.unavailable("尚未确认播放器已无边框全屏，暂不切换捕获。请点击启动/重试。")
     }
 
     private func cloudTarget(_ configuration: ProtoPieConfiguration) async throws -> (URL, String) {
@@ -224,14 +307,16 @@ import Foundation
         return """
         (() => {
           const [expectedPath, marker] = \(arguments);
+          if (location.href === 'about:blank' || document.readyState === 'loading') return {ready:false};
+          const problem = message => document.readyState === 'complete' ? {problem:message} : {ready:false};
           const visible = e => { const r=e.getBoundingClientRect(); return r.width>8 && r.height>8 && getComputedStyle(e).visibility!=='hidden'; };
           const text=(document.body?.innerText || '').slice(0,12000);
           if (location.hostname !== 'cloud.protopie.io' || /\\/(login|signin|sign-in|auth)(\\/|$)/i.test(location.pathname))
-            return {problem:'播放器需要登录，请在专用窗口完成登录后重试。'};
+            return problem('播放器需要登录，请在专用窗口完成登录后重试。');
           if ([...document.querySelectorAll('input[type=password]')].some(visible))
-            return {problem:'预览需要登录或访问密码，请在专用窗口完成后重试。'};
+            return problem('预览需要登录或访问密码，请在专用窗口完成后重试。');
           if (/prototype (was |is )?(not found|deleted)|you (do not|don.t) have (access|permission)|access denied/i.test(text))
-            return {problem:'该预览不存在或当前账号无权访问，请检查链接。'};
+            return problem('该预览不存在或当前账号无权访问，请检查链接。');
           const canvases=[...document.querySelectorAll('canvas')].filter(e=>visible(e)&&e.width>16&&e.height>16);
           const videos=[...document.querySelectorAll('video')].filter(e=>visible(e)&&e.readyState>=2);
           const player=document.querySelector('[data-testid="player"], [data-testid="prototype-player"], #player, .prototype-player, [class*="PiePlayer"], [class*="pie-player"]');
@@ -239,7 +324,8 @@ import Foundation
           const viewportArea=Math.max(1,innerWidth*innerHeight);
           const substantialImage=layerImages.some(e=>{ const r=e.getBoundingClientRect();
             return r.width>=innerWidth*.45 && r.height>=innerHeight*.06 && r.width*r.height>=viewportArea*.06; });
-          const ready=location.pathname===expectedPath && document.readyState==='complete' &&
+          // A playable prototype can precede window.load while unrelated Cloud resources are pending.
+          const ready=location.pathname===expectedPath && ['interactive','complete'].includes(document.readyState) &&
             (canvases.length>0 || videos.length>0 || (player && visible(player)) || substantialImage);
           if(ready) document.title=marker;
           return {ready:!!ready};
