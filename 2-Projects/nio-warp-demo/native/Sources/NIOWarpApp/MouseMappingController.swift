@@ -176,7 +176,9 @@ struct MouseMappingOutput {
         case .move(let dx, let dy, let modifiers):
             guard dx.isFinite, dy.isFinite else { return }
             if settings.mode == .glass {
-                let proposed = sourceUV + SIMD2(Float(dx * settings.speed / viewport.cssWidth), Float(dy * settings.speed / viewport.cssHeight))
+                // The onsite reflection was verified to need the opposite horizontal
+                // input direction. Keep Y and the shared cursor/click source point intact.
+                let proposed = sourceUV + SIMD2(Float(-dx * settings.speed / viewport.cssWidth), Float(dy * settings.speed / viewport.cssHeight))
                 sourceUV = region.constrainedSourceMove(from: sourceUV, to: proposed)
             } else if let point = region.physicalPoint(forSourceUV: sourceUV) {
                 let delta = SIMD2(Float(dx * settings.speed) * region.physicalSize.x / Float(max(output.window.frame.width, 1)),
