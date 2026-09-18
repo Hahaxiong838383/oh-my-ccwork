@@ -2,7 +2,11 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
-## 最新验收版：v0.11.1 (28)
+## 最新安装版：v0.11.2 (29)
+
+「整体校正 → 4. 基础校畸变」的**上下弧度上限从0.30扩大到1.50（5倍）**，已有数值保持不变。已安装nio-war-mac，构建、模型探针与实际UI范围检查通过；原0.11.1应用及参数已配对备份。见[弧度扩展与回滚记录](docs/arch-range-v0112.md)。
+
+## 已验收基线：v0.11.1 (28)
 
 仅将“退出程序”移到顶部最右侧并增加二次确认，默认取消。基于已固化的v0.11.0人验版本；2026-09-17已在Air安装，用户测试OK并[固化验收基线](docs/v0.11.1-acceptance.md)，原参数保留，[安装回执](docs/air-v0111-install-20260917.md)。详见[退出按钮补丁](docs/quit-confirmation-v0111.md)。
 
@@ -24,12 +28,12 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`，不可达时回退 Wi-Fi `10.9.1.230`。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.11.1(28)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与验收版本对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.11.2(29)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口
 
-独立仓库在2026-09-09分发自 `Hahaxiong838383/oh-my-ccwork` 的 `2-Projects/nio-warp-demo`，当时基线 **v0.9.2 (17)**，未建立自动双向同步。本轮 v0.11.1 推送目标为原 oh-my-ccwork 的 `codex/nio-unified-workbench-20260917` 分支。独立仓库来源及同步边界见 [分发记录](docs/distribution.md)。下文历史验收路径属于原设备，首次使用请按以下相对路径操作。
+独立仓库在2026-09-09分发自 `Hahaxiong838383/oh-my-ccwork` 的 `2-Projects/nio-warp-demo`，当时基线 **v0.9.2 (17)**，未建立自动双向同步。当前功能更新推送到原 oh-my-ccwork 的 `codex/nio-unified-workbench-20260917` 分支。独立仓库来源及同步边界见 [分发记录](docs/distribution.md)。下文历史验收路径属于原设备，首次使用请按以下相对路径操作。
 
 ```bash
 git clone https://github.com/FUTURUS-ProductResearch/WarpDemo.git
