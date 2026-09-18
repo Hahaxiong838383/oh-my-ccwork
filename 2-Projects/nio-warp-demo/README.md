@@ -62,7 +62,7 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.13.6(58)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18晚设备已带回家，当前Wi-Fi为 `192.168.1.58`（用前现查），接AU16O外屏；默认mesh连接正常，旧局域网回退地址仍未调整。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.13.6(58)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口
