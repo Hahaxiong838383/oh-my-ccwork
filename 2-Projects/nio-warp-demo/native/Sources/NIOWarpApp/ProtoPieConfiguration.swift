@@ -148,6 +148,7 @@ struct ProtoPieSession: Equatable {
                  progress: @escaping (String) -> Void) async throws -> ProtoPieSession
     func isAlive(_ session: ProtoPieSession) async -> Bool
     func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool
+    func updatePresentationLayout(_ session: ProtoPieSession) async throws
     func release(_ session: ProtoPieSession) async
     func detach(_ session: ProtoPieSession)
     func requestFreshPreview()
@@ -155,6 +156,9 @@ struct ProtoPieSession: Equatable {
 }
 
 @MainActor extension ProtoPiePreviewDriving {
+    func updatePresentationLayout(_ session: ProtoPieSession) async throws {
+        throw ProtoPieError.unavailable("当前播放器不支持实时位置调节。")
+    }
     func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool { true }
     func detach(_ session: ProtoPieSession) { }
     func requestFreshPreview() { }

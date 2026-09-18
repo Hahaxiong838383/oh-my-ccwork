@@ -24,6 +24,8 @@ import Foundation
     private var observers: [UUID: () -> Void] = [:]
     private var operation: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
+    private var layoutOperation: Task<Void, Never>?
+    private var pendingVerticalPosition: Double?
     private var generation = UUID()
     private var wantsToRun = false
     private var manuallyStopped = false
@@ -52,6 +54,62 @@ import Foundation
     func removeObserver(_ id: UUID) { observers.removeValue(forKey: id) }
     var hasUnsavedDraft: Bool { draft != saved }
     var hasActiveSession: Bool { activeSession != nil }
+
+    /// Preview only this framing field, against the already-bound player. Never
+    /// start another source or silently apply unrelated edits in the draft.
+    func setVerticalPosition(_ value: Double) {
+        draft.widthFitVerticalPosition = value
+        guard let session = activeSession, state == .running, wantsToRun,
+              !manuallyStopped, !manualPlayerOpen, !outputPaused,
+              session.configuration.source == .cloud, session.configuration.fillWidth,
+              draft.source == .cloud, draft.fillWidth,
+              let expected = try? session.configuration.playbackURL(),
+              let requested = try? draft.playbackURL(), expected == requested else {
+            notice = "位置已记入草稿；请先应用并启动当前 Cloud 横向顶满预览。"
+            notify(); return
+        }
+        pendingVerticalPosition = draft.widthFitVerticalPosition
+        guard layoutOperation == nil else { return }
+        // Drain any monitor command already in flight before moving the content;
+        // otherwise its old session snapshot can reset the new position.
+        let previousMonitor = monitor
+        previousMonitor?.cancel(); monitor = nil
+        let token = generation
+        let sessionID = session.id
+        layoutOperation = Task { [weak self] in
+            await previousMonitor?.value
+            guard let self else { return }
+            while self.generation == token, !Task.isCancelled,
+                  self.activeSession?.id == sessionID, self.pendingVerticalPosition != nil {
+                do {
+                    try await Task.sleep(nanoseconds: 80_000_000)
+                    try self.requireCurrent(token)
+                    guard self.state == .running, !self.manualPlayerOpen, !self.outputPaused,
+                          var updated = self.activeSession, updated.id == sessionID,
+                          let position = self.pendingVerticalPosition else { break }
+                    self.pendingVerticalPosition = nil
+                    updated.configuration.widthFitVerticalPosition = position
+                    try await self.driver.updatePresentationLayout(updated)
+                    try self.requireCurrent(token)
+                    guard self.activeSession?.id == sessionID else { return }
+                    self.activeSession = updated
+                    self.lastSuccessful = updated.configuration
+                    self.persist(updated.configuration, key: Self.lastSuccessfulKey)
+                    self.notice = "上下位置已实时预览；满意后点击保存配置。"
+                    self.notify()
+                } catch {
+                    guard self.generation == token, !Task.isCancelled else { return }
+                    self.pendingVerticalPosition = nil
+                    self.notice = "实时位置调节未完成：\(error.localizedDescription)"
+                    self.notify(); break
+                }
+            }
+            guard self.generation == token, !Task.isCancelled else { return }
+            self.layoutOperation = nil
+            self.pendingVerticalPosition = nil
+            if self.activeSession != nil, self.wantsToRun { self.startMonitor() }
+        }
+    }
 
     @discardableResult func saveConfiguration() -> Bool {
         do {
@@ -307,7 +365,10 @@ import Foundation
         }
     }
 
-    private func cancelOperation() { generation = UUID(); operation?.cancel(); operation = nil }
+    private func cancelOperation() {
+        generation = UUID(); operation?.cancel(); operation = nil
+        layoutOperation?.cancel(); layoutOperation = nil; pendingVerticalPosition = nil
+    }
     private func requireCurrent(_ token: UUID) throws {
         try Task.checkCancellation()
         guard generation == token, targetDisplayID != nil, wantsToRun, !manuallyStopped else { throw CancellationError() }

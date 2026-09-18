@@ -31,6 +31,7 @@ import UniformTypeIdentifiers
     private let reloadButton = NSButton(title: "重新加载预览", target: nil, action: nil)
     private let openButton = NSButton(title: "打开播放器 / 登录", target: nil, action: nil)
     private var rendering = false
+    private var verticalPositionInputDirty = false
 
     init(coordinator: ProtoPieCoordinator) {
         self.coordinator = coordinator
@@ -106,14 +107,16 @@ import UniformTypeIdentifiers
         add(note("Cloud 预览按宽度等比放大，超出屏幕的上下内容可调整裁切位置；不改变 Warp 校正参数。"))
         add(title("横向顶满 · 画面上下位置"))
         verticalPosition.target = self; verticalPosition.action = #selector(verticalPositionChanged)
+        verticalPosition.isContinuous = true
         verticalPosition.setAccessibilityIdentifier("nio-protopie-vertical-position")
         verticalPosition.setAccessibilityLabel("画面上下位置，负值上移，零居中，正值下移")
         add(verticalPosition)
         verticalPositionInput.target = self; verticalPositionInput.action = #selector(verticalPositionEdited)
+        verticalPositionInput.delegate = self
         verticalPositionInput.setAccessibilityIdentifier("nio-protopie-vertical-position-input")
         verticalPositionInput.setAccessibilityLabel("画面上下位置数值，范围负一至正一")
         add(verticalPositionInput)
-        add(note("−1 画面上移 · 0 居中 · +1 画面下移。修改先存入草稿，点击启动 / 应用并切换后生效。"))
+        add(note("−1 画面上移 · 0 居中 · +1 画面下移。拖动实时预览，输入数值后按回车或离开输入框生效；保存配置可持久保留。预览未运行时，请先启动预览。"))
         add(hideUI)
         targetLabel.font = .systemFont(ofSize: 12); targetLabel.textColor = .secondaryLabelColor
         add(targetLabel)
@@ -199,7 +202,15 @@ import UniformTypeIdentifiers
     }
     func controlTextDidChange(_ obj: Notification) {
         guard !rendering else { return }
-        coordinator.draft.cloudURL = urlField.stringValue
+        if obj.object as? NSTextField === urlField {
+            coordinator.draft.cloudURL = urlField.stringValue
+        } else if obj.object as? NSTextField === verticalPositionInput {
+            verticalPositionInputDirty = true
+        }
+    }
+    func controlTextDidEndEditing(_ obj: Notification) {
+        guard !rendering, obj.object as? NSTextField === verticalPositionInput else { return }
+        commitVerticalPositionInput()
     }
     @objc private func sourceChanged() { coordinator.draft.source = source.selectedSegment == 0 ? .cloud : .localFile }
     private func loadVerticalPosition() {
@@ -210,13 +221,23 @@ import UniformTypeIdentifiers
     }
     @objc private func verticalPositionChanged() {
         guard coordinator.draft.source == .cloud, coordinator.draft.fillWidth else { return }
-        coordinator.draft.widthFitVerticalPosition = verticalPosition.doubleValue
+        verticalPositionInputDirty = false
+        coordinator.setVerticalPosition(verticalPosition.doubleValue)
     }
     @objc private func verticalPositionEdited() {
+        commitVerticalPositionInput(force: true)
+    }
+    private func commitVerticalPositionInput(force: Bool = false) {
         guard coordinator.draft.source == .cloud, coordinator.draft.fillWidth else { return }
-        if let value = Double(verticalPositionInput.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)), value.isFinite {
-            coordinator.draft.widthFitVerticalPosition = value
+        let text = verticalPositionInput.currentEditor()?.string ?? verticalPositionInput.stringValue
+        let formatted = String(format: "%.3f", coordinator.draft.widthFitVerticalPosition)
+        // Do not round an untouched full-precision value merely because its field
+        // displays three decimals when the user clicks Save or Apply.
+        if force || verticalPositionInputDirty || text != formatted,
+           let value = Double(text.trimmingCharacters(in: .whitespacesAndNewlines)), value.isFinite {
+            coordinator.setVerticalPosition(value)
         }
+        verticalPositionInputDirty = false
         verticalPositionInput.stringValue = String(format: "%.3f", coordinator.draft.widthFitVerticalPosition)
     }
     @objc private func optionsChanged() {
@@ -245,8 +266,8 @@ import UniformTypeIdentifiers
         if let window = inspectorView.window { panel.beginSheetModal(for: window, completionHandler: completion) }
         else { panel.begin(completionHandler: completion) }
     }
-    @objc private func save() { _ = coordinator.saveConfiguration() }
-    @objc private func start() { coordinator.start() }
+    @objc private func save() { commitVerticalPositionInput(); _ = coordinator.saveConfiguration() }
+    @objc private func start() { commitVerticalPositionInput(); coordinator.start() }
     @objc private func reload() { coordinator.reload() }
     @objc private func stop() { coordinator.stop() }
     @objc private func openPlayer() { coordinator.openPlayer() }

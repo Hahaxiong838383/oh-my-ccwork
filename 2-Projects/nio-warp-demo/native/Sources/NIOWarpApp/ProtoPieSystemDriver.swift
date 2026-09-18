@@ -199,7 +199,22 @@ import Foundation
         throw ProtoPieError.unavailable("播放器退出全屏尚未完成，请重试。")
     }
 
+    func updatePresentationLayout(_ session: ProtoPieSession) async throws {
+        guard let target = session.cloudTargetID, let socket = browserSocket,
+              session.configuration.source == .cloud, session.configuration.fillWidth else {
+            throw ProtoPieError.unavailable("请先启动横向顶满的 Cloud 预览。")
+        }
+        let page = try await pageSocket(target: target, browserSocket: socket)
+        for _ in 0..<10 {
+            try Task.checkCancellation()
+            if try await ensureCloudContentLayout(page: page, configuration: session.configuration) { return }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        throw ProtoPieError.unavailable("画面位置尚未更新，请等待预览加载后再调整。")
+    }
+
     private func ensureCloudContentLayout(page: URL, configuration: ProtoPieConfiguration) async throws -> Bool {
+        try Task.checkCancellation()
         let expression = ProtoPieWidthFit.expression(enabled: configuration.fillWidth,
             verticalPosition: configuration.widthFitVerticalPosition, expectedURL: try configuration.playbackURL())
         let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [

@@ -13,6 +13,21 @@ import XCTest
     func openForUser(configuration: ProtoPieConfiguration) async throws { XCTFail("配置测试不得打开播放器") }
 }
 
+@MainActor private final class WidthFitLiveTestDriver: ProtoPiePreviewDriving {
+    var preparations = [ProtoPieConfiguration]()
+    var updates = [ProtoPieSession]()
+    func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
+                 progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
+        preparations.append(configuration)
+        return ProtoPieSession(windowID: 42, processID: 123, configuration: configuration,
+            cloudTargetID: "synthetic-width-target", title: "Synthetic width preview")
+    }
+    func isAlive(_ session: ProtoPieSession) async -> Bool { true }
+    func updatePresentationLayout(_ session: ProtoPieSession) async throws { updates.append(session) }
+    func release(_ session: ProtoPieSession) async {}
+    func openForUser(configuration: ProtoPieConfiguration) async throws { XCTFail("布局测试不得打开真实播放器") }
+}
+
 final class ProtoPieWidthConfigurationTests: XCTestCase {
     func testLegacyConfigurationKeepsLinksBookmarksAndEveryExistingChoice() throws {
         for source in ProtoPieConfiguration.Source.allCases {
@@ -193,6 +208,7 @@ final class ProtoPieWidthConfigurationTests: XCTestCase {
         let slider = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-protopie-vertical-position" } as? NSSlider)
         let input = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-protopie-vertical-position-input" } as? NSTextField)
         XCTAssertEqual(slider.minValue, -1); XCTAssertEqual(slider.maxValue, 1)
+        XCTAssertTrue(slider.isContinuous)
         XCTAssertEqual(slider.doubleValue, -0.5); XCTAssertEqual(input.stringValue, "-0.500")
         XCTAssertTrue(slider.isEnabled); XCTAssertTrue(input.isEnabled)
         slider.doubleValue = 0.375
@@ -226,5 +242,89 @@ final class ProtoPieWidthConfigurationTests: XCTestCase {
         XCTAssertEqual(persisted.widthFitVerticalPosition, 1)
         XCTAssertEqual(persisted.cloudURL, "https://cloud.protopie.io/p/synthetic?shareKey=synthetic")
         XCTAssertEqual(coordinator.state, .idle)
+    }
+
+    func testNumericEndEditingAndSaveCommitWithoutChangingURLOrRoundingUntouchedValue() throws {
+        _ = NSApplication.shared
+        let suite = "NIOWarp.WidthFit.Commit.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let coordinator = ProtoPieCoordinator(defaults: defaults, driver: WidthFitNoLaunchDriver())
+        defer { coordinator.shutdown() }
+        let url = "https://cloud.protopie.io/p/synthetic?shareKey=synthetic"
+        coordinator.draft.cloudURL = url; coordinator.draft.fillWidth = true
+        coordinator.draft.widthFitVerticalPosition = -0.536480686695279
+        let panel = ProtoPiePanel(coordinator: coordinator)
+        defer { panel.disconnect() }
+        let views = descendants(panel.inspectorView)
+        let input = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-protopie-vertical-position-input" } as? NSTextField)
+        let save = try XCTUnwrap(views.compactMap { $0 as? NSButton }.first { $0.title.hasPrefix("保存配置") })
+        let start = try XCTUnwrap(views.compactMap { $0 as? NSButton }.first { $0.title.hasPrefix("启动 /") })
+        save.performClick(nil)
+        XCTAssertEqual(coordinator.saved.widthFitVerticalPosition, -0.536480686695279)
+        input.stringValue = "-0.625"
+        panel.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: input))
+        XCTAssertEqual(coordinator.draft.cloudURL, url)
+        XCTAssertEqual(coordinator.draft.widthFitVerticalPosition, -0.536480686695279)
+        panel.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification, object: input))
+        XCTAssertEqual(coordinator.draft.widthFitVerticalPosition, -0.625)
+        input.stringValue = "0.375"
+        panel.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: input))
+        save.performClick(nil)
+        XCTAssertEqual(coordinator.saved.widthFitVerticalPosition, 0.375)
+        XCTAssertEqual(coordinator.draft.cloudURL, url)
+        input.stringValue = "-0.875"
+        panel.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: input))
+        start.performClick(nil)
+        XCTAssertEqual(coordinator.draft.widthFitVerticalPosition, -0.875)
+        XCTAssertEqual(coordinator.state, .waitingForDisplay)
+        XCTAssertEqual(coordinator.draft.cloudURL, url)
+    }
+
+    func testSliderAndNumericFieldPreviewActiveTargetWithoutApplyingOrSaving() async throws {
+        _ = NSApplication.shared
+        let suite = "NIOWarp.WidthFit.LiveUI.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let driver = WidthFitLiveTestDriver()
+        let coordinator = ProtoPieCoordinator(defaults: defaults, driver: driver, monitoringInterval: 60_000_000_000)
+        defer { coordinator.shutdown() }
+        coordinator.draft.cloudURL = "https://cloud.protopie.io/p/synthetic"
+        coordinator.draft.fillWidth = true
+        XCTAssertTrue(coordinator.saveConfiguration())
+        coordinator.onCapture = { _, _ in }
+        coordinator.setTargetDisplay(42); coordinator.start()
+        for _ in 0..<200 {
+            if coordinator.state == .running { break }
+            try await Task.sleep(nanoseconds: 2_000_000)
+        }
+        XCTAssertEqual(coordinator.state, .running)
+        let session = try XCTUnwrap(coordinator.activeSession)
+        let panel = ProtoPiePanel(coordinator: coordinator)
+        defer { panel.disconnect() }
+        let views = descendants(panel.inspectorView)
+        let slider = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-protopie-vertical-position" } as? NSSlider)
+        let input = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-protopie-vertical-position-input" } as? NSTextField)
+        slider.doubleValue = 0.375
+        slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+        for _ in 0..<200 {
+            if driver.updates.count == 1 { break }
+            try await Task.sleep(nanoseconds: 2_000_000)
+        }
+        XCTAssertEqual(driver.updates.count, 1)
+        XCTAssertEqual(driver.updates.last?.configuration.widthFitVerticalPosition, 0.375)
+        XCTAssertEqual(driver.updates.last?.id, session.id)
+        XCTAssertEqual(driver.updates.last?.cloudTargetID, session.cloudTargetID)
+        XCTAssertEqual(coordinator.saved.widthFitVerticalPosition, 0)
+        input.stringValue = "-0.625"
+        input.sendAction(try XCTUnwrap(input.action), to: input.target)
+        for _ in 0..<200 {
+            if driver.updates.count == 2 { break }
+            try await Task.sleep(nanoseconds: 2_000_000)
+        }
+        XCTAssertEqual(driver.updates.count, 2)
+        XCTAssertEqual(driver.updates.last?.configuration.widthFitVerticalPosition, -0.625)
+        XCTAssertEqual(driver.preparations.count, 1, "上下位置应直接更新当前页面，不重新启动来源")
+        XCTAssertEqual(coordinator.saved.widthFitVerticalPosition, 0)
     }
 }

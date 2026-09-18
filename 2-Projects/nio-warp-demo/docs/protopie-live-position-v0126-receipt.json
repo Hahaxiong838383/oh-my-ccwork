@@ -1,0 +1,139 @@
+{
+  "version": "0.12.6",
+  "build": "48",
+  "sourceSHA256": "ef9f78a5a205f2d6f5a986c45e877fe83ecb468517e401374cb142986f0e9f66",
+  "binarySHA256": "873de96a7c48831b0562b693b516c914906966975003cbcd8bf8a9c236277690",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-084627Z-before-v0126",
+  "acceptance": {
+    "humanLivePreviewAccepted": true,
+    "humanRequestedPosition": -0.88,
+    "savedPositions": {
+      "nioWarpProtoPie.configuration.v1": -0.88,
+      "nioWarpProtoPie.draft.v1": -0.88,
+      "nioWarpProtoPie.lastSuccessful.v1": -0.88
+    },
+    "calibrationPreserved": {
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpConfigurationHistory.v1": true,
+      "nioWarpPresets.v1": true
+    },
+    "automatedDragAttempt": "incomplete: concurrent onsite parameter changes and restore timeout; not counted as PASS",
+    "cropSourceEvidence": {
+      "design": [
+        3840,
+        1400
+      ],
+      "images": [
+        {
+          "box": [
+            0,
+            -498.15625,
+            7680,
+            2160
+          ],
+          "intrinsic": [
+            3840,
+            1080
+          ],
+          "tag": "IMG"
+        },
+        {
+          "box": [
+            0,
+            -498.15625,
+            7680,
+            2160
+          ],
+          "intrinsic": [
+            3840,
+            1080
+          ],
+          "tag": "IMG"
+        },
+        {
+          "box": [
+            5831.27978515625,
+            654.7236328125,
+            304,
+            62
+          ],
+          "intrinsic": [
+            152,
+            31
+          ],
+          "tag": "IMG"
+        }
+      ],
+      "layers": [
+        {
+          "box": [
+            1458,
+            565.84375,
+            370,
+            52
+          ]
+        },
+        {
+          "box": [
+            1458,
+            643.84375,
+            306,
+            52
+          ]
+        },
+        {
+          "box": [
+            5832,
+            569.003662109375,
+            606,
+            74
+          ]
+        },
+        {
+          "box": [
+            5559.27978515625,
+            569.84375,
+            606.00048828125,
+            74
+          ]
+        },
+        {
+          "box": [
+            3812,
+            651.84375,
+            376,
+            118
+          ]
+        },
+        {
+          "box": [
+            3808,
+            569.84375,
+            444,
+            74
+          ]
+        }
+      ],
+      "position": -0.88,
+      "root": [
+        0,
+        -1752.15625,
+        7680,
+        2800
+      ],
+      "viewport": [
+        7680,
+        936
+      ]
+    }
+  },
+  "mouseMapping": "paused, hardware wave acceptance pending",
+  "tests": {
+    "count": 89,
+    "assertions": 848,
+    "formalXCTest": false
+  }
+}
