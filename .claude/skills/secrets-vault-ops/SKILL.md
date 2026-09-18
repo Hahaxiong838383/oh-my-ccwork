@@ -67,6 +67,16 @@ GH_TOKEN=$(vw get password "GitHub token") gh repo list
 2. `vw list items | jq -r '.[].name'` 确认**条目名**（空格、大小写必须完全一致）。
 3. 名字对但仍 `Not found` → **条目里那个字段是空的**。判据：`vw get item <id>` 的 `.login.password` 为 `null`，而 **name 能正常解出**（name 在 Bitwarden 里同样是加密的）⇒ 解密链路没问题，是川哥建了条目没填密码栏。让他去网页编辑 → 密码栏 → 保存。
 
+### 报 `More than one result was found` / 取到空值
+
+`vw get password "<名>"` 按**子串**匹配，不是精确匹配。库里同时有 `GitHub token` 和
+`GitHub token - 大权限` 时，取前者会撞两条，bw 拒绝并列出两个 id，命令替换得到空串——
+下游只看到「未认证」，看着像 token 坏了（2026-09-18 实测）。
+处置：先用 id 映射名字再按 id 取，且默认选**最小权限**那条：
+
+    for id in <列出的 id>; do echo "$id → $(vw get item "$id" | jq -r .name)"; done
+    GH_TOKEN=$(vw get item <精确匹配的 id> | jq -r .login.password | tr -d '[:space:]') gh api user --jq .login
+
 ### `status` 是 `locked` / 报未解锁
 
 session 过期或被锁。**只有川哥能解**：
