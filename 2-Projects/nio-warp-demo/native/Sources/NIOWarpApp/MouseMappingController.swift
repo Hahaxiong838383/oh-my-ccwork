@@ -32,6 +32,8 @@ struct MouseMappingOutput {
     private var message = "先启动 ProtoPie 全屏预览，再进入演示鼠标控制。"
     private var lastPublication: TimeInterval = 0
     private var attemptedCapture: [String: Any]?
+    private var movementEventCount = 0
+    private var lastRawMovement: [Double]?
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -49,6 +51,7 @@ struct MouseMappingOutput {
             guard let self, !self.isActive, self.startTask == nil else { return }
             self.settings = value.sanitized(); self.settings.save(defaults: self.defaults)
             self.panels.allObjects.forEach { $0.load(self.settings) }
+            self.publish(force: true)
         }
         publish(force: true)
         return panel
@@ -94,6 +97,7 @@ struct MouseMappingOutput {
                 }
                 self.region = region; self.output = current; self.viewport = viewport
                 self.sessionID = session.id; self.sourceUV = start; self.buttons = 0
+                self.movementEventCount = 0; self.lastRawMovement = nil
                 current.setInputEnabled(true)
                 NSApp.activate(ignoringOtherApps: true)
                 current.window.makeKeyAndOrderFront(nil)
@@ -110,7 +114,8 @@ struct MouseMappingOutput {
                       Self.sameBinding(current, confirmed), self.sessionProvider?()?.id == session.id else { throw CancellationError() }
                 try self.input.begin(window: current.window, displayID: current.displayID)
                 self.isActive = true; self.startTask = nil
-                self.message = self.settings.previewOnly ? "落点预览中 · 不发送点击 · Esc 返回普通鼠标" : "演示鼠标已接通 · Esc 返回普通鼠标"
+                let direction = self.settings.reverseHorizontal ? "左右反向：开" : "左右反向：关"
+                self.message = self.settings.previewOnly ? "落点预览中 · \(direction) · 不发送点击 · Esc 返回" : "演示鼠标已接通 · \(direction) · Esc 返回普通鼠标"
                 self.updateCursor()
                 self.timer = Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
                     MainActor.assumeIsolated { self?.checkBinding() }
@@ -173,12 +178,15 @@ struct MouseMappingOutput {
         checkBinding()
         guard isActive else { return }
         switch event {
-        case .move(let dx, let dy, let modifiers):
-            guard dx.isFinite, dy.isFinite else { return }
+        case .move(let rawDX, let dy, let modifiers):
+            guard rawDX.isFinite, dy.isFinite else { return }
+            movementEventCount += 1
+            lastRawMovement = [rawDX, dy]
+            // Direction is an explicit input preference, independent of the image
+            // mirror and geometry. Apply it once before either coordinate mode.
+            let dx = settings.reverseHorizontal ? -rawDX : rawDX
             if settings.mode == .glass {
-                // The onsite reflection was verified to need the opposite horizontal
-                // input direction. Keep Y and the shared cursor/click source point intact.
-                let proposed = sourceUV + SIMD2(Float(-dx * settings.speed / viewport.cssWidth), Float(dy * settings.speed / viewport.cssHeight))
+                let proposed = sourceUV + SIMD2(Float(dx * settings.speed / viewport.cssWidth), Float(dy * settings.speed / viewport.cssHeight))
                 sourceUV = region.constrainedSourceMove(from: sourceUV, to: proposed)
             } else if let point = region.physicalPoint(forSourceUV: sourceUV) {
                 let delta = SIMD2(Float(dx * settings.speed) * region.physicalSize.x / Float(max(output.window.frame.width, 1)),
@@ -239,8 +247,11 @@ struct MouseMappingOutput {
         panels.allObjects.forEach { $0.update(active: isActive, busy: startTask != nil, message: message, detail: detail) }
         var diagnostic: [String: Any] = ["active": isActive, "busy": startTask != nil, "message": message,
             "mode": settings.mode.rawValue, "previewOnly": settings.previewOnly, "buttons": buttons,
+            "reverseHorizontal": settings.reverseHorizontal, "movementEventCount": movementEventCount,
+            "updatedAt": Date().timeIntervalSince1970,
             "sourceUV": [sourceUV.x, sourceUV.y], "edgeInsetPixels": 0.5]
         if let attemptedCapture { diagnostic["capture"] = attemptedCapture }
+        if let lastRawMovement { diagnostic["lastRawMovement"] = lastRawMovement }
         if let point { diagnostic["physicalPoint"] = [point.x, point.y] }
         if let frame = output?.frame {
             diagnostic["meshRevision"] = frame.revision

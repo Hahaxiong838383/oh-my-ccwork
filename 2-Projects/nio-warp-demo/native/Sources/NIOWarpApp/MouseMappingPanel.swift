@@ -11,7 +11,30 @@ struct MouseMappingSettings: Codable, Equatable {
     var previewOnly = true
     var speed = 1.0
     var pointerSize = 28.0
+    var reverseHorizontal = false
     static let key = "nioWarpMouseMapping.settings.v1"
+
+    init(mode: MouseMappingMode = .glass, previewOnly: Bool = true, speed: Double = 1,
+         pointerSize: Double = 28, reverseHorizontal: Bool = false) {
+        self.mode = mode; self.previewOnly = previewOnly; self.speed = speed
+        self.pointerSize = pointerSize; self.reverseHorizontal = reverseHorizontal
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, previewOnly, speed, pointerSize, reverseHorizontal
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try values.decode(MouseMappingMode.self, forKey: .mode)
+        previewOnly = try values.decode(Bool.self, forKey: .previewOnly)
+        speed = try values.decode(Double.self, forKey: .speed)
+        pointerSize = try values.decode(Double.self, forKey: .pointerSize)
+        // v0.12.0 / v0.12.1 have no explicit direction preference. Preserve all
+        // existing choices while adopting the current onsite-calibrated default.
+        reverseHorizontal = try values.decodeIfPresent(Bool.self, forKey: .reverseHorizontal) ?? false
+    }
+
     func sanitized() -> Self {
         var result = self
         result.speed = speed.isFinite ? min(max(speed, 0.25), 4) : 1
@@ -39,6 +62,7 @@ struct MouseMappingSettings: Codable, Equatable {
     private let start = NSButton(title: "进入演示鼠标控制", target: nil, action: nil)
     private let stop = NSButton(title: "返回普通鼠标", target: nil, action: nil)
     private let mode = NSPopUpButton()
+    private let reverse = NSButton(checkboxWithTitle: "鼠标左右反向", target: nil, action: nil)
     private let preview = NSButton(checkboxWithTitle: "仅显示落点，不发送点击", target: nil, action: nil)
     private let speed = NSSlider(value: 1, minValue: 0.25, maxValue: 4, target: nil, action: nil)
     private let size = NSSlider(value: 28, minValue: 12, maxValue: 64, target: nil, action: nil)
@@ -78,6 +102,9 @@ struct MouseMappingSettings: Codable, Equatable {
         MouseMappingMode.allCases.forEach { mode.addItem(withTitle: $0.title) }
         mode.target = self; mode.action = #selector(changed)
         mode.setAccessibilityIdentifier("nio-mouse-mode"); add(mode)
+        reverse.target = self; reverse.action = #selector(changed)
+        reverse.setAccessibilityIdentifier("nio-mouse-reverse-horizontal"); add(reverse)
+        add(NSTextField(wrappingLabelWithString: "仅改变鼠标左右方向，不改变画面镜像和上下方向。若圆圈十字与手部移动相反，按 Esc 返回后切换此项。"))
         preview.target = self; preview.action = #selector(changed)
         preview.setAccessibilityIdentifier("nio-mouse-preview-only"); add(preview)
         add(speedLabel); speed.target = self; speed.action = #selector(changed)
@@ -98,6 +125,7 @@ struct MouseMappingSettings: Codable, Equatable {
     func load(_ value: MouseMappingSettings) {
         settings = value.sanitized()
         mode.selectItem(at: settings.mode == .glass ? 0 : 1)
+        reverse.state = settings.reverseHorizontal ? .on : .off
         preview.state = settings.previewOnly ? .on : .off
         speed.doubleValue = settings.speed; size.doubleValue = settings.pointerSize
         speedLabel.stringValue = String(format: "移动速度 · %.2f×", settings.speed)
@@ -107,7 +135,7 @@ struct MouseMappingSettings: Codable, Equatable {
     func update(active: Bool, busy: Bool, message: String, detail: String? = nil) {
         status.stringValue = message
         start.isEnabled = !active && !busy; stop.isEnabled = active || busy
-        [mode, preview, speed, size].forEach { $0.isEnabled = !active && !busy }
+        [mode, reverse, preview, speed, size].forEach { $0.isEnabled = !active && !busy }
         if let detail { coordinates.stringValue = detail }
     }
 
@@ -121,6 +149,7 @@ struct MouseMappingSettings: Codable, Equatable {
     @objc private func end() { onStop?() }
     @objc private func changed() {
         settings.mode = mode.indexOfSelectedItem == 0 ? .glass : .physical
+        settings.reverseHorizontal = reverse.state == .on
         settings.previewOnly = preview.state == .on
         settings.speed = speed.doubleValue; settings.pointerSize = size.doubleValue
         load(settings); onSettingsChange?(settings)

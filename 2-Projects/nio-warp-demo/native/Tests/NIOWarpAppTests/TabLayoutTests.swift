@@ -125,22 +125,77 @@ final class TabLayoutTests: XCTestCase {
         let speed = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-speed" } as? NSSlider)
         let preview = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-preview-only" } as? NSButton)
         let mode = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-mode" } as? NSPopUpButton)
+        let reverse = try XCTUnwrap(views.first { $0.accessibilityIdentifier() == "nio-mouse-reverse-horizontal" } as? NSButton)
         XCTAssertEqual(preview.state, .on)
+        XCTAssertEqual(reverse.state, .off)
         XCTAssertEqual(mode.indexOfSelectedItem, 0)
         XCTAssertTrue(speed.isEnabled, "离线允许预设鼠标偏好，不代表启动输入接管")
         let before = defaults.persistentDomain(forName: suite) ?? [:]
         speed.doubleValue = 1.75
         speed.sendAction(try XCTUnwrap(speed.action), to: speed.target)
+        reverse.performClick(nil)
         let loaded = MouseMappingSettings.load(defaults: defaults)
         XCTAssertEqual(loaded.speed, 1.75)
         XCTAssertTrue(loaded.previewOnly)
+        XCTAssertTrue(loaded.reverseHorizontal)
         XCTAssertEqual(panel.configurationForOfflinePreview, original)
         let after = defaults.persistentDomain(forName: suite) ?? [:]
-        let otherBefore = before.filter { $0.key != MouseMappingSettings.key } as NSDictionary
-        let otherAfter = after.filter { $0.key != MouseMappingSettings.key } as NSDictionary
+        let mouseKeys = [MouseMappingSettings.key, "nioWarpMouseMapping.runtime.v1"]
+        let otherBefore = before.filter { !mouseKeys.contains($0.key) } as NSDictionary
+        let otherAfter = after.filter { !mouseKeys.contains($0.key) } as NSDictionary
         XCTAssertEqual(otherAfter, otherBefore, "鼠标偏好不得修改校正配置、预设、历史或 ProtoPie 来源")
         panel.selectModule("protopie"); panel.selectModule("mouse")
         XCTAssertEqual(speed.doubleValue, 1.75)
+        XCTAssertEqual(reverse.state, .on)
+        reverse.performClick(nil)
+        XCTAssertFalse(MouseMappingSettings.load(defaults: defaults).reverseHorizontal)
+        XCTAssertEqual(MouseMappingSettings.load(defaults: defaults).speed, 1.75)
+    }
+
+    func testMouseDirectionControlLoadsAndIsDisabledWhileStartingOrControlling() throws {
+        try MainActor.assumeIsolated {
+            let original = MouseMappingSettings(mode: .physical, previewOnly: false, speed: 1.8,
+                pointerSize: 40, reverseHorizontal: true)
+            let mouse = MouseMappingPanel(settings: original)
+            let reverse = try XCTUnwrap(descendants(mouse.inspectorView).first {
+                $0.accessibilityIdentifier() == "nio-mouse-reverse-horizontal"
+            } as? NSButton)
+            var updated: [MouseMappingSettings] = []
+            mouse.onSettingsChange = { updated.append($0) }
+            XCTAssertEqual(reverse.state, .on)
+            for state in [(false, true), (true, false)] {
+                mouse.update(active: state.0, busy: state.1, message: "测试")
+                XCTAssertFalse(reverse.isEnabled)
+                reverse.performClick(nil)
+                XCTAssertTrue(updated.isEmpty, "接管中不能切换方向，避免拖动途中反转")
+            }
+            mouse.update(active: false, busy: false, message: "测试")
+            XCTAssertTrue(reverse.isEnabled)
+            reverse.performClick(nil)
+            var expected = original; expected.reverseHorizontal = false
+            XCTAssertEqual(updated, [expected])
+        }
+    }
+
+    func testMouseDirectionControlRemainsReachableInMinimumWorkbench() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let window = try XCTUnwrap(panel.window)
+        window.setContentSize(NSSize(width: 1040, height: 650))
+        panel.selectModule("mouse")
+        let content = try XCTUnwrap(window.contentView)
+        content.layoutSubtreeIfNeeded()
+        let scroll = try XCTUnwrap(item("mouse", in: panel).view as? NSScrollView)
+        let document = try XCTUnwrap(scroll.documentView)
+        let reverse = try identifiedView("nio-mouse-reverse-horizontal", in: panel)
+        reverse.scrollToVisible(reverse.bounds)
+        content.layoutSubtreeIfNeeded()
+        let frame = reverse.convert(reverse.bounds, to: document)
+        XCTAssertGreaterThanOrEqual(frame.minX, -1)
+        XCTAssertLessThanOrEqual(frame.maxX, document.bounds.width + 1)
+        XCTAssertFalse(reverse.isHiddenOrHasHiddenAncestor)
+        XCTAssertTrue(scroll.contentView.bounds.intersects(reverse.convert(reverse.bounds, to: scroll.contentView)))
+        XCTAssertFalse(scroll.hasHorizontalScroller)
     }
 
     func testMigratedControlWindowFitsVisibleFrameWithoutChangingCalibration() throws {
