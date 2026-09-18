@@ -11,6 +11,7 @@ struct MouseMappingOutput {
 
 @MainActor final class MouseMappingController {
     var outputProvider: (() -> MouseMappingOutput?)?
+    var outputDiagnosticProvider: (() -> [String: Any])?
     var sessionProvider: (() -> ProtoPieSession?)?
     var onReturnToWorkbench: (() -> Void)?
     var onPresentationTick: (() -> Void)?
@@ -215,6 +216,8 @@ struct MouseMappingOutput {
 
     /// Restore system input synchronously, before waiting for any network release.
     func stop(reason: String = "已返回普通鼠标。", returnToWorkbench: Bool = false) {
+        let hadSession = isActive || startTask != nil || transport != nil
+        if hadSession { recordStop(reason: reason, returnToWorkbench: returnToWorkbench) }
         generation = UUID()
         startTask?.cancel(); startTask = nil
         timer?.invalidate(); timer = nil
@@ -229,13 +232,52 @@ struct MouseMappingOutput {
         let oldTransport = transport
         oldTransport?.onFailure = nil
         transport = nil; viewport = nil; region = nil; output = nil; sessionID = nil
-        message = reason
+        // Workbench recovery can call stop again after a failure. Preserve the
+        // first cause instead of replacing it with the ordinary idle message.
+        if hadSession || reason != "已返回普通鼠标。" { message = reason }
         publish(force: true)
         if let oldTransport { closingTask = Task { await oldTransport.releaseAllAndClose() } }
         if returnToWorkbench { onReturnToWorkbench?() }
     }
 
     func finishClosing() async { await closingTask?.value }
+
+    private func recordStop(reason: String, returnToWorkbench: Bool) {
+        var entry: [String: Any] = ["timestamp": Date().timeIntervalSince1970,
+            "reason": reason, "returnToWorkbench": returnToWorkbench,
+            "active": isActive, "busy": startTask != nil, "buttons": buttons,
+            "nativeEngaged": input.engaged, "outputOwned": outputOwned,
+            "cursorIdentifier": cursorIdentifier]
+        if let point = CGEvent(source: nil)?.location { entry["actualPointer"] = [point.x, point.y] }
+        if let transport { entry["transport"] = transport.diagnosticSnapshot }
+        let current = outputProvider?()
+        entry["outputState"] = outputDiagnosticProvider?()
+        entry["currentOutputAvailable"] = current != nil
+        entry["sessionMatches"] = sessionProvider?()?.id == sessionID
+        if let output {
+            entry["meshRevision"] = output.frame.revision
+            if let current {
+                entry["binding"] = ["window": output.window === current.window,
+                    "display": output.displayID == current.displayID,
+                    "revision": output.frame.revision == current.frame.revision,
+                    "configuration": output.frame.configuration == current.frame.configuration,
+                    "source": output.frame.source == current.frame.source,
+                    "size": output.frame.sourceWidth == current.frame.sourceWidth && output.frame.sourceHeight == current.frame.sourceHeight,
+                    "metadata": output.frame.metadata.hasSameMapping(as: current.frame.metadata)]
+            }
+        }
+        // A stop may originate in the event tap. Capture only cheap state above;
+        // release native input before serializing or writing diagnostic history.
+        let defaults = self.defaults
+        DispatchQueue.main.async {
+            let key = "nioWarpMouseMapping.stops.v1"
+            var history = defaults.data(forKey: key).flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] } ?? []
+            history.append(entry)
+            if let data = try? JSONSerialization.data(withJSONObject: Array(history.suffix(16)), options: [.sortedKeys]) {
+                defaults.set(data, forKey: key)
+            }
+        }
+    }
 
     /// A stable external screen can change its desktop origin during a lid event.
     /// Keep its relative pointer, but end an in-progress gesture on the same page.
@@ -421,6 +463,7 @@ struct MouseMappingOutput {
             "sourceUV": [sourceUV.x, sourceUV.y], "edgeInsetPixels": 0.5]
         diagnostic["outputOwned"] = outputOwned
         diagnostic["cursorIdentifier"] = cursorIdentifier
+        if let transport { diagnostic["transport"] = transport.diagnosticSnapshot }
         if isActive { diagnostic["nativeScope"] = input.scopeDiagnostic() }
         if let value = input.lastRawDelta { diagnostic["nativeRawDelta"] = [value.x, value.y] }
         if let value = input.lastCorrectedDelta { diagnostic["nativeCorrectedDelta"] = [value.x, value.y] }

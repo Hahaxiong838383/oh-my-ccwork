@@ -98,6 +98,78 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     private var closeTask: Task<Void, Never>?
     private var cursorCache: [String: ProtoPieCursorStyle] = [:]
     private var pageFocusPossiblyEnabled = false
+    private var workItem = "idle"
+    private var cursorState = "idle"
+    private var cursorCacheHits = 0
+    private var cursorCacheMisses = 0
+    private var nextDiagnosticRequestID = 1
+    private var currentRequests: [Int: (method: String, started: TimeInterval)] = [:]
+    private var lastRequest: [String: Any]?
+    private var lastErrorKind: String?
+    private var failureContext: [String: Any]?
+
+    /// Fixed operation names and timing only: never include request parameters,
+    /// page identifiers, URLs, JavaScript, response bodies or keyboard content.
+    var diagnosticSnapshot: [String: Any] {
+        let now = ProcessInfo.processInfo.systemUptime
+        var value: [String: Any] = [
+            "connected": isConnected, "closing": closing, "queueLength": queue.count,
+            "workItem": workItem, "cursorState": cursorState,
+            "cursorCacheHits": cursorCacheHits, "cursorCacheMisses": cursorCacheMisses,
+            "currentRequests": currentRequests.keys.sorted().compactMap { id -> [String: Any]? in
+                guard let request = currentRequests[id] else { return nil }
+                return ["method": request.method, "elapsedMS": max(0, now - request.started) * 1000]
+            }
+        ]
+        if let lastRequest { value["lastRequest"] = lastRequest }
+        if let lastErrorKind { value["lastErrorKind"] = lastErrorKind }
+        if let failureContext { value["failureContext"] = failureContext }
+        return value
+    }
+
+    private static func diagnosticErrorKind(_ error: Error) -> String {
+        if error is CancellationError { return "cancelled" }
+        guard let error = error as? MouseInputTransportError else { return "other" }
+        switch error {
+        case .unavailable: return "unavailable"
+        case .staleViewport: return "staleViewport"
+        case .disconnected: return "disconnected"
+        case .timeout: return "timeout"
+        case .closed: return "closed"
+        case .invalidEvent: return "invalidEvent"
+        case .queueOverflow: return "queueOverflow"
+        }
+    }
+
+    private func recordFailure(_ error: Error) {
+        lastErrorKind = Self.diagnosticErrorKind(error)
+        // Preserve the failure before close drains the queue or sends cleanup RPCs.
+        if failureContext == nil { failureContext = diagnosticSnapshot }
+    }
+
+    private func trackedCall(_ connection: MouseInputCDPConnection, _ method: String,
+                             parameters: [String: Any], sessionID: String?) async throws -> [String: Any] {
+        let id = nextDiagnosticRequestID; nextDiagnosticRequestID += 1
+        let started = ProcessInfo.processInfo.systemUptime, generation = lifecycle
+        currentRequests[id] = (method, started)
+        func finish(_ error: Error?) {
+            guard lifecycle == generation else { return }
+            currentRequests.removeValue(forKey: id)
+            var result: [String: Any] = ["method": method,
+                "elapsedMS": max(0, ProcessInfo.processInfo.systemUptime - started) * 1000,
+                "result": error == nil ? "success" : "failure"]
+            if let error { result["errorKind"] = Self.diagnosticErrorKind(error) }
+            lastRequest = result
+        }
+        do {
+            let result = try await connection.call(method, parameters: parameters, sessionID: sessionID)
+            finish(nil)
+            return result
+        } catch {
+            finish(error)
+            throw error
+        }
+    }
 
     private enum Operation {
         case event(MouseInputEvent)
@@ -106,6 +178,17 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         case flush(CheckedContinuation<Void, Error>)
         case cursor(CGPoint, CheckedContinuation<ProtoPieCursorStyle, Error>)
         case focus(Bool, CheckedContinuation<Void, Error>)
+
+        var diagnosticName: String {
+            switch self {
+            case .event(let event): return event.kind.rawValue
+            case .key: return "keyboard"
+            case .refresh: return "viewport"
+            case .flush: return "flush"
+            case .cursor: return "cursor"
+            case .focus(let enabled, _): return enabled ? "focus.enable" : "focus.disable"
+            }
+        }
     }
 
     init(profileURL: URL? = nil, requestTimeout: TimeInterval = 2,
@@ -133,6 +216,8 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         let expectedURL = try session.configuration.playbackURL()
         let connection = makeConnection(socket)
         let generation = UUID(); lifecycle = generation
+        workItem = "idle"; cursorState = "idle"; cursorCacheHits = 0; cursorCacheMisses = 0
+        currentRequests.removeAll(); lastRequest = nil; lastErrorKind = nil; failureContext = nil
         self.connection = connection; self.session = session; closing = false; originalPageInvalidated = false
         connection.onFailure = { [weak self] error in
             guard let self, self.lifecycle == generation else { return }
@@ -143,28 +228,28 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             self.received(method, parameters: parameters, sessionID: id)
         }
         do {
-            let process = try await connection.call("SystemInfo.getProcessInfo", parameters: [:], sessionID: nil)
+            let process = try await trackedCall(connection, "SystemInfo.getProcessInfo", parameters: [:], sessionID: nil)
             guard let processes = process["processInfo"] as? [[String: Any]],
                   let browser = processes.first(where: { $0["type"] as? String == "browser" }),
                   (browser["id"] as? NSNumber)?.int32Value == session.processID else {
                 throw MouseInputTransportError.unavailable("调试端口不属于当前捕获的专用 Chrome 进程。")
             }
             try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL)
-            let attachment = try await connection.call("Target.attachToTarget",
+            let attachment = try await trackedCall(connection, "Target.attachToTarget",
                 parameters: ["targetId": targetID, "flatten": true], sessionID: nil)
             guard let pageSession = attachment["sessionId"] as? String, !pageSession.isEmpty else {
                 throw MouseInputTransportError.unavailable("无法绑定当前专用播放器页面。")
             }
             pageSessionID = pageSession
-            _ = try await connection.call("Page.enable", parameters: [:], sessionID: pageSession)
-            _ = try await connection.call("Runtime.enable", parameters: [:], sessionID: pageSession)
+            _ = try await trackedCall(connection, "Page.enable", parameters: [:], sessionID: pageSession)
+            _ = try await trackedCall(connection, "Runtime.enable", parameters: [:], sessionID: pageSession)
             let observed = try await observeViewport(bindingID: UUID())
             guard lifecycle == generation, !closing else { throw MouseInputTransportError.closed }
             viewport = observed; originalPageInvalidated = false; acceptingEvents = true
             startMonitor()
             return observed
         } catch {
-            if lifecycle == generation { await releaseAllAndClose() }
+            if lifecycle == generation { recordFailure(error); await releaseAllAndClose() }
             throw error
         }
     }
@@ -265,7 +350,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
               let current = viewport, let connection else { throw MouseInputTransportError.closed }
         let generation = lifecycle
         try Task.checkCancellation()
-        _ = try await connection.call("Target.activateTarget",
+        _ = try await trackedCall(connection, "Target.activateTarget",
             parameters: ["targetId": current.targetID], sessionID: nil)
         guard lifecycle == generation, acceptingEvents, !closing, !originalPageInvalidated,
               viewport == current, self.connection === connection else { throw MouseInputTransportError.closed }
@@ -285,6 +370,8 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             guard let self else { return }
             while self.acceptingEvents, self.lifecycle == generation, !self.queue.isEmpty {
                 let next = self.queue.removeFirst()
+                self.workItem = next.diagnosticName
+                defer { if self.lifecycle == generation { self.workItem = "idle" } }
                 do {
                     switch next {
                     case .event(let event):
@@ -300,7 +387,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                         guard self.acceptingEvents, self.lifecycle == generation else { throw MouseInputTransportError.closed }
                         self.lastPoint = CGPoint(x: event.x, y: event.y)
                         if event.kind == .down { self.possiblyPressed |= event.button.mask }
-                        _ = try await connection.call("Input.dispatchMouseEvent", parameters: event.parameters, sessionID: pageSession)
+                        _ = try await self.trackedCall(connection, "Input.dispatchMouseEvent", parameters: event.parameters, sessionID: pageSession)
                         if event.kind == .up { self.possiblyPressed &= ~event.button.mask }
                     case .key(let event):
                         guard let viewport = self.viewport, event.viewportID == viewport.bindingID,
@@ -310,7 +397,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                         _ = try await self.validateCurrentViewport()
                         guard self.acceptingEvents, self.lifecycle == generation else { throw MouseInputTransportError.closed }
                         if event.input.kind == .down { self.possiblyPressedKeys[event.input.keyCode] = event }
-                        _ = try await connection.call("Input.dispatchKeyEvent", parameters: event.parameters, sessionID: pageSession)
+                        _ = try await self.trackedCall(connection, "Input.dispatchKeyEvent", parameters: event.parameters, sessionID: pageSession)
                         if event.input.kind == .up { self.possiblyPressedKeys.removeValue(forKey: event.input.keyCode) }
                     case .refresh(let continuation):
                         do { continuation.resume(returning: try await self.validateCurrentViewport()) }
@@ -325,7 +412,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                                 throw MouseInputTransportError.closed
                             }
                             if enabled { self.pageFocusPossiblyEnabled = true }
-                            _ = try await connection.call("Emulation.setFocusEmulationEnabled",
+                            _ = try await self.trackedCall(connection, "Emulation.setFocusEmulationEnabled",
                                 parameters: ["enabled": enabled], sessionID: pageSession)
                             guard self.lifecycle == generation, self.acceptingEvents, !self.closing,
                                   !self.originalPageInvalidated else { throw MouseInputTransportError.closed }
@@ -363,7 +450,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     }
 
     private func validateTarget(_ connection: MouseInputCDPConnection, targetID: String, expectedURL: URL) async throws {
-        let info = try await connection.call("Target.getTargetInfo", parameters: ["targetId": targetID], sessionID: nil)
+        let info = try await trackedCall(connection, "Target.getTargetInfo", parameters: ["targetId": targetID], sessionID: nil)
         guard let target = info["targetInfo"] as? [String: Any], target["targetId"] as? String == targetID,
               target["type"] as? String == "page", let text = target["url"] as? String,
               Self.matchesPage(text, expected: expectedURL) else { throw MouseInputTransportError.staleViewport }
@@ -375,7 +462,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         }
         let expectedURL = try session.configuration.playbackURL()
         try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL)
-        let window = try await connection.call("Browser.getWindowForTarget", parameters: ["targetId": targetID], sessionID: nil)
+        let window = try await trackedCall(connection, "Browser.getWindowForTarget", parameters: ["targetId": targetID], sessionID: nil)
         guard let browserWindowID = window["windowId"] as? Int, let bounds = window["bounds"] as? [String: Any],
               bounds["windowState"] as? String == "fullscreen",
               let left = bounds["left"] as? NSNumber, let top = bounds["top"] as? NSNumber,
@@ -410,7 +497,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     }
 
     private func runtimeViewport(_ connection: MouseInputCDPConnection, pageSessionID: String) async throws -> [String: Any] {
-        let result = try await connection.call("Runtime.evaluate", parameters: [
+        let result = try await trackedCall(connection, "Runtime.evaluate", parameters: [
             "expression": "({url:location.href,width:innerWidth,height:innerHeight,dpr:devicePixelRatio,timeOrigin:performance.timeOrigin,ready:document.readyState==='complete',visualScale:visualViewport?visualViewport.scale:1,visualOffsetX:visualViewport?visualViewport.offsetLeft:0,visualOffsetY:visualViewport?visualViewport.offsetTop:0})",
             "returnByValue": true], sessionID: pageSessionID)
         guard result["exceptionDetails"] == nil,
@@ -429,7 +516,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                   viewport == current, self.connection === connection else { throw MouseInputTransportError.closed }
         }
         func evaluate(_ expression: String) async throws -> [String: Any] {
-            let result = try await connection.call("Runtime.evaluate", parameters: [
+            let result = try await trackedCall(connection, "Runtime.evaluate", parameters: [
                 "expression": expression, "returnByValue": true, "awaitPromise": true], sessionID: pageSessionID)
             try confirm()
             guard result["exceptionDetails"] == nil,
@@ -439,15 +526,21 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             }
             return value
         }
+        cursorState = "query"
         let observed = try await evaluate("""
         (()=>{const element=document.elementFromPoint(\(point.x),\(point.y))||document.getElementById('webplayer-root')||document.body;
         return {nioCursorStyle:true,timeOrigin:performance.timeOrigin,css:element?getComputedStyle(element).cursor:''};})()
         """)
         guard let css = observed["css"] as? String else { throw ProtoPieCursorStyle.invalid() }
-        if let cached = cursorCache[css] { return cached }
+        if let cached = cursorCache[css] {
+            cursorCacheHits += 1; cursorState = "cacheHit"
+            return cached
+        }
+        cursorCacheMisses += 1; cursorState = "parse"
         let definition = try ProtoPieCursorDefinition.parse(css)
         var imageData: Data?
         if let resource = definition.resource {
+            cursorState = "browserResource"
             let encoded = String(decoding: try JSONSerialization.data(withJSONObject: [resource]), as: UTF8.self)
             let limit = ProtoPieCursorStyle.maximumResourceBytes
             let result = try await evaluate("""
@@ -476,8 +569,10 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             } else {
                 // The normal path keeps browser origin/CORS policy. Only the
                 // player's fixed public asset host has a native fallback.
+                cursorState = "nativeResourceEligibility"
                 guard let url = ProtoPieCursorResourceLoader.permittedURL(resource) else { throw ProtoPieCursorStyle.invalid() }
                 try confirm()
+                cursorState = "nativeResource"
                 do { imageData = try await loadCursorResource(url) }
                 catch { try confirm(); throw ProtoPieCursorStyle.invalid() }
                 try confirm()
@@ -485,10 +580,12 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             }
         }
         try confirm()
+        cursorState = "decode"
         let style = try ProtoPieCursorStyle.decode(definition, imageData: imageData)
         // Bound memory and retain no assets from a previous document/connection.
         if cursorCache.count >= 24 { cursorCache.removeAll() }
         cursorCache[css] = style
+        cursorState = "ready"
         return style
     }
 
@@ -528,6 +625,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
 
     private func fail(_ error: Error, mayRelease: Bool) {
         guard !closing else { return }
+        recordFailure(error)
         beginClose(error: error, mayRelease: mayRelease)
         onFailure?(error)
     }
@@ -554,7 +652,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             await existingWorker?.value
             if mayRelease { await self.releasePressedOnOriginalPage() }
             if self.pageFocusPossiblyEnabled, let connection = self.connection, let pageSessionID = self.pageSessionID {
-                _ = try? await connection.call("Emulation.setFocusEmulationEnabled",
+                _ = try? await self.trackedCall(connection, "Emulation.setFocusEmulationEnabled",
                     parameters: ["enabled": false], sessionID: pageSessionID)
             }
             self.pageFocusPossiblyEnabled = false
@@ -579,11 +677,11 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             possiblyPressed &= ~button.mask
             let event = MouseInputEvent(viewportID: viewport.bindingID, kind: .up, x: lastPoint.x, y: lastPoint.y,
                                         button: button, buttons: possiblyPressed)
-            _ = try? await connection.call("Input.dispatchMouseEvent", parameters: event.parameters, sessionID: pageSessionID)
+            _ = try? await trackedCall(connection, "Input.dispatchMouseEvent", parameters: event.parameters, sessionID: pageSessionID)
         }
         for code in possiblyPressedKeys.keys.sorted() {
             guard !originalPageInvalidated, let event = possiblyPressedKeys.removeValue(forKey: code) else { return }
-            _ = try? await connection.call("Input.dispatchKeyEvent", parameters: event.released().parameters, sessionID: pageSessionID)
+            _ = try? await trackedCall(connection, "Input.dispatchKeyEvent", parameters: event.released().parameters, sessionID: pageSessionID)
         }
     }
 

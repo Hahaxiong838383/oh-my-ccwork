@@ -152,6 +152,30 @@ final class MouseInputTransportTests: XCTestCase {
         XCTAssertTrue(fixture.fake.closed)
     }
 
+    @MainActor func testDiagnosticShowsInflightRequestAndQueueWithoutPageContent() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.blockNextInput = true
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
+        await fixture.fake.waitForBlockedInput()
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 400, buttons: 1)))
+        let snapshot = fixture.transport.diagnosticSnapshot
+        XCTAssertEqual(snapshot["workItem"] as? String, "mousePressed")
+        XCTAssertEqual(snapshot["queueLength"] as? Int, 1)
+        let requests = try XCTUnwrap(snapshot["currentRequests"] as? [[String: Any]])
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertEqual(requests.first?["method"] as? String, "Input.dispatchMouseEvent")
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(requests.first?["elapsedMS"] as? Double), 0)
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: snapshot), as: UTF8.self)
+        for privateValue in [fixture.fake.url, fixture.fake.targetID, fixture.fake.pageSessionID,
+                             "expression", "parameters", "location.href"] {
+            XCTAssertFalse(json.contains(privateValue))
+        }
+        fixture.fake.unblockInput()
+        try await fixture.transport.flush()
+        await fixture.transport.releaseAllAndClose()
+    }
+
     @MainActor func testReleaseClearsAllPressedButtonsOnSamePage() async throws {
         let fixture = try MouseTransportFixture(); defer { fixture.remove() }
         let viewport = try await fixture.transport.connect(session: fixture.session)
@@ -225,6 +249,11 @@ final class MouseInputTransportTests: XCTestCase {
     @MainActor func testTimeoutAfterDownAttemptsReleaseBeforeClosingSameSocket() async throws {
         let fixture = try MouseTransportFixture(); defer { fixture.remove() }
         let viewport = try await fixture.transport.connect(session: fixture.session)
+        var failureSnapshot: [String: Any]?
+        fixture.transport.onFailure = { [unowned fixture] error in
+            fixture.failures.append(error)
+            failureSnapshot = fixture.transport.diagnosticSnapshot
+        }
         fixture.fake.timeoutNextInput = true
         XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, button: .left, buttons: 1)))
         do { try await fixture.transport.flush(); XCTFail("Timeout must reject pending barrier") } catch { }
@@ -232,6 +261,17 @@ final class MouseInputTransportTests: XCTestCase {
         XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String }, ["mousePressed", "mouseReleased"])
         XCTAssertEqual(fixture.failures.count, 1)
         XCTAssertTrue(fixture.fake.closed)
+        let failure = try XCTUnwrap(failureSnapshot?["failureContext"] as? [String: Any])
+        XCTAssertEqual(failure["lastErrorKind"] as? String, "timeout")
+        XCTAssertEqual(failure["workItem"] as? String, "mousePressed")
+        let request = try XCTUnwrap(failure["lastRequest"] as? [String: Any])
+        XCTAssertEqual(request["method"] as? String, "Input.dispatchMouseEvent")
+        XCTAssertEqual(request["result"] as? String, "failure")
+        XCTAssertEqual(request["errorKind"] as? String, "timeout")
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(request["elapsedMS"] as? Double), 0)
+        let retained = try XCTUnwrap(fixture.transport.diagnosticSnapshot["failureContext"] as? [String: Any])
+        XCTAssertEqual(failure as NSDictionary, retained as NSDictionary,
+                       "Cleanup requests must not overwrite the request that caused the failure")
     }
 
     @MainActor func testDisconnectedTargetClearsQueueWithoutRetargetingRelease() async throws {

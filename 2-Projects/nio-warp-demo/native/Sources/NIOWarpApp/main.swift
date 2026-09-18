@@ -26,6 +26,15 @@ struct ShaderUniforms {
 final class LatestFrameStore {
     private let lock = NSLock()
     private var frame: MouseCapturedFrame?
+    private var lastRevocation: [String: Any]?
+
+    func inputDiagnostic() -> [String: Any] {
+        lock.lock(); defer { lock.unlock() }
+        var result: [String: Any] = ["frameAvailable": frame != nil,
+            "sourceAvailable": frame?.source != nil, "metadataAvailable": frame?.metadata != nil]
+        result["lastRevocation"] = lastRevocation
+        return result
+    }
 
     func update(_ buffer: CVPixelBuffer, metadata: MouseCaptureMetadata? = nil, source: MouseCaptureSource? = nil) {
         lock.lock()
@@ -44,8 +53,9 @@ final class LatestFrameStore {
         return frame
     }
 
-    func revokeInput() {
+    func revokeInput(reason: String = "revoked") {
         lock.lock(); defer { lock.unlock() }
+        lastRevocation = ["reason": reason, "timestamp": Date().timeIntervalSince1970]
         if let frame { self.frame = MouseCapturedFrame(pixelBuffer: frame.pixelBuffer, metadata: nil, source: nil) }
     }
 
@@ -85,10 +95,10 @@ private final class CaptureFrameRouter: @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         return active == ObjectIdentifier(stream)
     }
-    func revokeInput(from stream: SCStream) {
+    func revokeInput(from stream: SCStream, reason: String = "revoked") {
         lock.lock(); defer { lock.unlock() }
         guard active == ObjectIdentifier(stream) else { return }
-        frameStore.revokeInput()
+        frameStore.revokeInput(reason: reason)
     }
     func receive(_ buffer: CVPixelBuffer, metadata: MouseCaptureMetadata?, from stream: SCStream) {
         lock.lock(); defer { lock.unlock() }
@@ -289,14 +299,14 @@ private final class CaptureFrameRouter: @unchecked Sendable {
               let status = SCFrameStatus(rawValue: raw.intValue) else { return }
         if status == .idle { return } // A static page retains the last completed frame.
         guard status == .complete, let imageBuffer = sampleBuffer.imageBuffer else {
-            routing.revokeInput(from: stream) // Keep visual last frame; revoke its input identity.
+            routing.revokeInput(from: stream, reason: "frame-status-\(status.rawValue)") // Keep visual last frame; revoke its input identity.
             return
         }
         routing.receive(imageBuffer, metadata: MouseCaptureMetadata.read(sampleBuffer), from: stream)
     }
 
     nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
-        routing.revokeInput(from: stream)
+        routing.revokeInput(from: stream, reason: "stream-error")
         Task { @MainActor [weak self] in
             guard let self, self.routing.owns(stream) else { return }
             self.emitError(error.localizedDescription)
@@ -3735,10 +3745,10 @@ private extension Array {
         returnToWorkbench()
     }
 
-    private func returnToWorkbench(notifyProtoPie: Bool = true) {
+    private func returnToWorkbench(notifyProtoPie: Bool = true, mouseReason: String = "已返回普通鼠标。") {
         // Cancel an asynchronous start too; a delayed activation must not take
         // focus back after the user has already requested the workbench.
-        mouseMapping.stop()
+        mouseMapping.stop(reason: mouseReason)
         if outputController != nil, chooseScreens()?.source == nil {
             emergencyHideWarp(reason: "已暂停演示以显示工作台；点击“重新显示校正画面”继续合盖演示。",
                               userInitiated: true, notifyProtoPie: notifyProtoPie)
@@ -3767,11 +3777,30 @@ private extension Array {
         } else if screens.contains(where: { $0.isOwned && $0.quartzBounds.contains(point) }) {
             // This display is a capture source, never an operator's desktop.
             // The guard also runs after an input/session failure.
-            showWorkbench()
+            returnToWorkbench(mouseReason: "指针进入了不可见的播放器内容屏，已返回工作台。")
         }
     }
 
     private func configureMouseMapping() {
+        mouseMapping.outputDiagnosticProvider = { [weak self] in
+            guard let self else { return ["appAvailable": false] }
+            var state: [String: Any] = ["outputExists": self.outputController != nil,
+                "displayIDAvailable": self.outputDisplayState != nil]
+            let captured = self.captureEngine.frameStore.snapshot()
+            state["capture"] = self.captureEngine.frameStore.inputDiagnostic()
+            state["captureSourceAvailable"] = captured?.source != nil
+            if let output = self.outputController {
+                state["warpVisible"] = output.isWarpVisible
+                state["rendererRevision"] = output.renderer.meshRevision
+                state["inputFrameAvailable"] = output.renderer.inputFrame != nil
+                if let frame = output.renderer.inputFrame {
+                    state["frameRevisionMatches"] = frame.revision == output.renderer.meshRevision
+                    state["configurationMatches"] = frame.configuration == output.renderer.activeConfiguration
+                    state["captureSourceMatches"] = captured?.source == frame.source
+                }
+            }
+            return state
+        }
         mouseMapping.sessionProvider = { [weak self] in
             guard let self, case .running = self.protoPie.state else { return nil }
             return self.protoPie.activeSession

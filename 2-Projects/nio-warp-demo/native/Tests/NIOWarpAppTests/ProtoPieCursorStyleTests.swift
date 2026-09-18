@@ -112,8 +112,11 @@ import XCTest
         let viewport = try await fixture.transport.connect(session: fixture.session)
         let normal = try await fixture.transport.cursorStyle(at: CGPoint(x: 10, y: 20))
         XCTAssertEqual(normal.imageSize, CGSize(width: 53, height: 53))
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorCacheMisses"] as? Int, 1)
         _ = try await fixture.transport.cursorStyle(at: CGPoint(x: 11, y: 20))
         XCTAssertEqual(fixture.wire.resourceCount, 1)
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorCacheHits"] as? Int, 1)
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorState"] as? String, "cacheHit")
         XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .down,
             x: 11, y: 20, button: .left, buttons: 1)))
         let pressed = try await fixture.transport.cursorStyle(at: CGPoint(x: 11, y: 20))
@@ -121,6 +124,7 @@ import XCTest
         XCTAssertEqual(pressed.hotSpot, CGPoint(x: 25, y: 25))
         XCTAssertNotEqual(normal.identifier, pressed.identifier)
         XCTAssertEqual(fixture.wire.resourceCount, 2)
+        XCTAssertEqual(fixture.transport.diagnosticSnapshot["cursorCacheMisses"] as? Int, 2)
         XCTAssertEqual(fixture.wire.events.suffix(3), ["mousePressed", "cursor", "resource"])
         XCTAssertTrue(fixture.wire.cursorSessions.allSatisfy { $0 == "cursor-session" })
         await fixture.transport.releaseAllAndClose()
@@ -145,6 +149,12 @@ import XCTest
         catch { XCTAssertFalse(error.localizedDescription.contains("example.test")) }
         await fixture.transport.releaseAllAndClose()
         XCTAssertFalse(fixture.transport.isConnected)
+        let failure = try XCTUnwrap(fixture.transport.diagnosticSnapshot["failureContext"] as? [String: Any])
+        XCTAssertEqual(failure["workItem"] as? String, "cursor")
+        XCTAssertEqual(failure["cursorState"] as? String, "nativeResourceEligibility")
+        XCTAssertEqual(failure["lastErrorKind"] as? String, "unavailable")
+        let json = String(decoding: try JSONSerialization.data(withJSONObject: failure), as: UTF8.self)
+        XCTAssertFalse(json.contains("example.test"))
     }
 
     func testPublicAssetFallbackAllowsOnlyExactHTTPSHostWithoutCredentials() throws {
