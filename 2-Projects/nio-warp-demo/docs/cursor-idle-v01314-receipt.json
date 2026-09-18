@@ -189,7 +189,7 @@
       "wheel",
       "Numpad2 keydown/keyup"
     ],
-    "evidenceBoundary": "Controller and real official-page DOM delivery. No optical screenshot or hardware user acceptance yet."
+    "evidenceBoundary": "Controller and original official-page DOM delivery from automatic checks; user confirmation is recorded separately in humanAcceptance."
   },
   "parameterComparison": {
     "parametersUnchanged": true,
@@ -214,7 +214,7 @@
     "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
     "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
     "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/verified-baselines/20260918-132316Z-v01314",
-    "humanAcceptance": "pending: automatic checks passed; hardware/visible confirmation requested",
+    "humanAcceptance": "此历史快照创建时仅完成自动检查；随后用户确认，见 humanAcceptance 与 acceptedBaseline。",
     "files": {
       "preferences-accepted.plist": "b7e1440243e1c3ccc9f952e6df2485b8a8426e7c0c6cea5da61eac884380bc93",
       "native-source.tar.gz": "fed6a97bc9a479e36a2b9e6729d4105d1fd42286a117c0c8840b9015f61f3f0f",
@@ -228,5 +228,47 @@
     "sourceTag": "nio-warp-before-cursor-idle-20260918",
     "sourceCommit": "ae4c78822fbcc8b8e16b48b3c7da2db5ff863a7d"
   },
-  "humanAcceptance": "pending: requested on-device confirmation of idle visibility, wake and hold"
+  "humanAcceptance": {
+    "status": "accepted",
+    "confirmedAt": "2026-09-18T13:36:43.762134+00:00",
+    "userConfirmation": "OK了，我确认了，更新记忆落盘commit + push 我的代码仓吧",
+    "scope": "本轮原圆圈静止隐藏、活动恢复及长按体验；固化时当前等待时间为2秒，不扩大为所有输入或其他屏幕光学验收"
+  },
+  "acceptedBaseline": {
+    "version": "0.13.14",
+    "build": "66",
+    "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
+    "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-133643Z-v01314",
+    "humanAcceptance": "accepted: 用户确认原圆圈静止自动隐藏、鼠标操作恢复及长按保持可见，本轮方案通过",
+    "sourceCommit": "18c750af912e0e1db5e707e379390ccf17456b12",
+    "acceptedAt": "2026-09-18T13:36:43.762134+00:00",
+    "files": {
+      "preferences-accepted.plist": "47e4f04bdafc5c14fbccf74597f36e241b7ed7564c9e2b8f1cc16c26af678cd0",
+      "native-source.tar.gz": "957e5595de0e9383be3e2702728db5186ff3303000a37773c9cfc4dbba438004",
+      "NIOWarpApp-v0.13.14-66.zip": "634d86f6e19f254f8ccb7805bffd5f92ec37b9f6c04f4ecc3d602c86182f7968"
+    }
+  },
+  "acceptedParameters": {
+    "currentHomeOutputVerticalOffsetPixels": -93.68523296460597,
+    "cursorAutoHideEnabled": true,
+    "cursorAutoHideDelay": 2,
+    "savedConfigurationKeys": [
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009",
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0"
+    ],
+    "preferencesSHA256": "47e4f04bdafc5c14fbccf74597f36e241b7ed7564c9e2b8f1cc16c26af678cd0"
+  },
+  "acceptanceVerification": {
+    "version": "0.13.14",
+    "build": "66",
+    "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
+    "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "strictSignatureVerified": true,
+    "sourceDigestMatched": true,
+    "running": true,
+    "note": "核验固定路径的运行进程、签名包、源码与最新参数；本轮未重新启动应用或修改参数。"
+  }
 }
