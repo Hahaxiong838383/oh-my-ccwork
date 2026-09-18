@@ -1,0 +1,97 @@
+{
+  "version": "0.12.4",
+  "build": "40",
+  "sourceSHA256": "f20820e9270e4a397d1fa18af95cb931cb12432dbec5e6bbfb2fbdeda4a6c339",
+  "binarySHA256": "ebaef749060eba6b2657374c0a0dc56203feb7dbfdda05326ef1ed198358ae71",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "verifiedAt": "2026-09-18T16:00:22.659161+08:00",
+  "originalPointer": {
+    "kind": "ProtoPie CSS system cursor",
+    "normalSize": [
+      53,
+      53
+    ],
+    "normalHotspot": [
+      26,
+      26
+    ],
+    "normalImageSHA256": "a38b6a1c705839989fcc89318934d10b29d5574c5d847eb8dd568017be2fff46",
+    "extraOverlayVisible": false
+  },
+  "escapeTest": {
+    "result": "PASS",
+    "releaseOrders": [
+      "noMouse",
+      "escapeUpFirst",
+      "mouseUpFirst"
+    ],
+    "keyboardEventsReceived": {
+      "noMouse": 0,
+      "escapeUpFirst": 0,
+      "mouseUpFirst": 0
+    },
+    "sameURLAndDocument": true,
+    "restartPassed": true
+  },
+  "settingsAndUITest": {
+    "testCount": 34,
+    "assertionCount": 1961,
+    "failureCount": 0,
+    "runtime": "Original production sources and original test method bodies with assertion shim; NOT formal XCTest"
+  },
+  "protoPieTest": {
+    "testCount": 68,
+    "assertionCount": 561,
+    "failureCount": 0,
+    "runtime": "Original production sources and original test method bodies with assertion shim; NOT formal XCTest"
+  },
+  "preservedConfigurationKeys": [
+    "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0",
+    "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+    "nioWarpConfigurationHistory.v1",
+    "nioWarpLastDisplayProfile",
+    "nioWarpPresets.v1",
+    "nioWarpProtoPie.configuration.v1",
+    "nioWarpProtoPie.draft.v1",
+    "nioWarpProtoPie.lastSuccessful.v1"
+  ],
+  "changedConfigurationKeys": [],
+  "rollbackTag": "nio-warp-before-native-escape-20260918",
+  "rollbackToV0123Directory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-075251Z-before-v0124",
+  "finalInstalledBackupDirectory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-075741Z-before-v0124",
+  "handoffState": {
+    "active": false,
+    "nativeEngaged": false,
+    "mode": "physical",
+    "previewOnly": false,
+    "reverseHorizontal": true,
+    "pointerKind": "original-system-css",
+    "overlayVisible": false
+  },
+  "onsiteAcceptance": "FAIL: 用户确认方向正确，但physical直线模式波动更大，解除关联A/B仍波浪",
+  "limits": [
+    "实机Escape注入回归不代替真实玻璃方向的人验",
+    "Air、UU、物理合盖周期未复验",
+    "恢复演示期间App重启创建配置匹配的新页面；不声称跨安装保持原页面运行态"
+  ],
+  "onsiteDirectionInGlassMode": {
+    "userReply": "向右，但是是波浪形移动。",
+    "activeDuringFeedback": true,
+    "nativeEngaged": true,
+    "movementEventCount": 1569
+  },
+  "straightMotionTest": {
+    "result": "PASS",
+    "mode": "physical",
+    "reverseHorizontal": true,
+    "rawHorizontalPixels": 640,
+    "mappedPhysicalHorizontalPixels": -640,
+    "maximumHorizontalYErrorPixels": 0.02,
+    "maximumVerticalXErrorPixels": 0.05,
+    "maximumClickErrorCSSPixels": 1,
+    "sameURLAndDocument": true
+  },
+  "nextAction": "v0.12.5修复CGWarp位移混入后续硬件delta的问题；不以模拟事件通过代替实体鼠标验证"
+}

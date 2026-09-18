@@ -104,7 +104,8 @@ struct MouseMappingOutput {
                 current.cursor.physicalPoint = nil
                 // Chrome owns the existing CSS circle; the transparent Warp window
                 // must never become key or install a replacement cursor.
-                NSRunningApplication(processIdentifier: session.processID)?.activate(options: [.activateAllWindows])
+                NSRunningApplication(processIdentifier: session.processID)?.activate(options: [])
+                try await transport.activateBoundTarget()
                 try await Task.sleep(nanoseconds: 120_000_000)
                 try Task.checkCancellation()
                 guard self.generation == token, let latest = self.outputProvider?(),
@@ -275,9 +276,14 @@ struct MouseMappingOutput {
             "pointerKind": "original-system-css", "nativeEngaged": input.engaged,
             "nativeEventCount": input.eventCount, "overlayVisible": false,
             "sourceUV": [sourceUV.x, sourceUV.y], "edgeInsetPixels": 0.5]
+        if isActive { diagnostic["nativeScope"] = input.scopeDiagnostic() }
+        if let value = input.lastRawDelta { diagnostic["nativeRawDelta"] = [value.x, value.y] }
+        if let value = input.lastCorrectedDelta { diagnostic["nativeCorrectedDelta"] = [value.x, value.y] }
+        if let value = input.lastWarpCorrection { diagnostic["nativeWarpCorrection"] = [value.x, value.y] }
         if let placement = input.placement { diagnostic["nativeCursorTarget"] = [placement.x, placement.y] }
         if let current = CGEvent(source: nil)?.location { diagnostic["nativeCursorActual"] = [current.x, current.y] }
         if let attemptedCapture { diagnostic["capture"] = attemptedCapture }
+        if let viewport { diagnostic["inputWindowID"] = viewport.windowID; diagnostic["inputBrowserWindowID"] = viewport.browserWindowID; diagnostic["inputProcessID"] = viewport.processID }
         if let lastRawMovement { diagnostic["lastRawMovement"] = lastRawMovement }
         if let point { diagnostic["physicalPoint"] = [point.x, point.y] }
         if let frame = output?.frame {

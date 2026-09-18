@@ -86,6 +86,69 @@ final class ProtoPieConfigurationTests: XCTestCase {
         XCTAssertNil(context.exception)
     }
 
+    private func domPlayerContext() throws -> JSContext {
+        let context = try XCTUnwrap(JSContext())
+        context.evaluateScript(#"""
+        var innerWidth=7680, innerHeight=936;
+        var location={hostname:'cloud.protopie.io',pathname:'/p/example',href:'https://cloud.protopie.io/p/example'};
+        var getComputedStyle=e=>({visibility:e.visibility || 'visible'});
+        const node=(className,width,height)=>({className,width,height,
+          getBoundingClientRect(){return {width:this.width,height:this.height};}});
+        var rootExists=true, password=false;
+        var layer=node('ContainerLayerContent',2567,722);
+        var descendants=[layer];
+        var root=node('WebPlayer',2567,936);
+        root.querySelectorAll=selector=>descendants.filter(e=>
+          [...selector.matchAll(/\[class\*="([^"]+)"\]/g)].some(match=>e.className.includes(match[1])));
+        var contentImage=Object.assign(node('layer',2567,722),
+          {complete:true,naturalWidth:3840,naturalHeight:1080,alt:'',src:'asset.png'});
+        var document={readyState:'complete',title:'unmarked-source',body:{innerText:'Prototype content'},
+          querySelector:s=>s==='#webplayer-root'&&rootExists?root:null,
+          querySelectorAll:s=>s==='img'?[contentImage]:(s==='input[type=password]'&&password?[root]:[])};
+        """#)
+        XCTAssertNil(context.exception)
+        return context
+    }
+
+    private func domPlayerEvaluation(_ context: JSContext) throws -> [AnyHashable: Any] {
+        let script = ProtoPieSystemDriver.cloudReadinessExpression(
+            expectedURL: URL(string: "https://cloud.protopie.io/p/example")!, marker: "owned-preview")
+        let result = try XCTUnwrap(context.evaluateScript(script)?.toDictionary())
+        XCTAssertNil(context.exception)
+        return result
+    }
+
+    func testNarrowDOMPrototypeWithRenderedLayersIsReadyWithoutLargeViewportImage() throws {
+        for className in ["ContainerLayer", "ContainerLayerContent", "TextLayer"] {
+            let context = try domPlayerContext()
+            context.setObject(className, forKeyedSubscript: "renderedClass" as NSString)
+            context.evaluateScript("layer.className=renderedClass;")
+            XCTAssertEqual(try domPlayerEvaluation(context)["ready"] as? Bool, true, className)
+            XCTAssertEqual(context.evaluateScript("document.title")?.toString(), "owned-preview")
+        }
+    }
+
+    func testDOMPlayerDoesNotAcceptEmptyHiddenOrUnrenderedMount() throws {
+        for setup in ["rootExists=false", "descendants=[]", "root.visibility='hidden'", "root.width=0",
+                      "layer.visibility='hidden'", "layer.height=0", "layer.className='LoadingSpinner'"] {
+            let context = try domPlayerContext()
+            context.evaluateScript(setup)
+            XCTAssertEqual(try domPlayerEvaluation(context)["ready"] as? Bool, false, setup)
+            XCTAssertEqual(context.evaluateScript("document.title")?.toString(), "unmarked-source")
+        }
+    }
+
+    func testRenderedDOMPlayerStillRequiresExpectedPageAndAccess() throws {
+        for setup in ["location.hostname='evil.example'", "location.pathname='/p/another'",
+                      "location.pathname='/login'", "password=true", "document.body.innerText='Access denied'",
+                      "document.readyState='loading'", "location.href='about:blank'"] {
+            let context = try domPlayerContext()
+            context.evaluateScript(setup)
+            XCTAssertFalse(try domPlayerEvaluation(context)["ready"] as? Bool ?? false, setup)
+            XCTAssertEqual(context.evaluateScript("document.title")?.toString(), "unmarked-source")
+        }
+    }
+
     func testCloudTargetBindsOnlyNewIsolatedTargetAndHandlesLoginRedirect() {
         let expected = URL(string: "https://cloud.protopie.io/p/example")!
         let existing: [String: Any] = ["targetId": "user-old", "type": "page", "url": expected.absoluteString]

@@ -30,6 +30,69 @@ final class MouseInputTransportTests: XCTestCase {
         XCTAssertNil(fixture.connectedURL)
     }
 
+    @MainActor func testActivatesOnlyBoundTargetOnBrowserConnectionWithoutNavigating() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        let before = fixture.fake.calls.count
+        try await fixture.transport.activateBoundTarget()
+        let activation = fixture.fake.calls.dropFirst(before)
+        XCTAssertEqual(activation.count, 1)
+        let call = try XCTUnwrap(activation.first)
+        XCTAssertEqual(call.method, "Target.activateTarget")
+        XCTAssertEqual(call.parameters as NSDictionary, ["targetId": viewport.targetID] as NSDictionary)
+        XCTAssertNil(call.sessionID, "Target.activateTarget 必须发给绑定浏览器连接，而非任意 page session")
+        XCTAssertEqual(fixture.transport.viewport, viewport)
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testActivationRejectsUnconnectedAndClosedTransportWithoutSending() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        do { try await fixture.transport.activateBoundTarget(); XCTFail("未绑定不能唤起播放器") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .closed) }
+        XCTAssertTrue(fixture.fake.calls.isEmpty)
+        _ = try await fixture.transport.connect(session: fixture.session)
+        await fixture.transport.releaseAllAndClose()
+        let count = fixture.fake.calls.count
+        do { try await fixture.transport.activateBoundTarget(); XCTFail("已关闭不能唤起旧播放器") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .closed) }
+        XCTAssertEqual(fixture.fake.calls.count, count)
+        XCTAssertFalse(fixture.transport.isConnected)
+    }
+
+    @MainActor func testActivationRejectsLateAcknowledgementAfterConcurrentClose() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        _ = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.blockNextActivation = true
+        let activation = Task { try await fixture.transport.activateBoundTarget() }
+        await fixture.fake.waitForBlockedActivation()
+        await fixture.transport.releaseAllAndClose()
+        fixture.fake.unblockActivation()
+        do { try await activation.value; XCTFail("关闭后的激活回执不能恢复输入接管") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .closed) }
+        XCTAssertFalse(fixture.transport.isConnected)
+        XCTAssertNil(fixture.transport.viewport)
+        XCTAssertEqual(fixture.fake.calls.filter { $0.method == "Target.activateTarget" }.count, 1)
+    }
+
+    @MainActor func testActivationFromPreviousBindingCannotCompleteAfterReconnect() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let previous = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.blockNextActivation = true
+        let activation = Task { try await fixture.transport.activateBoundTarget() }
+        await fixture.fake.waitForBlockedActivation()
+        await fixture.transport.releaseAllAndClose()
+        fixture.fake.closed = false
+        let current = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.unblockActivation()
+        do { try await activation.value; XCTFail("旧连接的激活回执不能被当作新连接的成功结果") }
+        catch { XCTAssertEqual(error as? MouseInputTransportError, .closed) }
+        XCTAssertNotEqual(previous.bindingID, current.bindingID)
+        XCTAssertEqual(fixture.transport.viewport, current)
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
     @MainActor func testRejectsWrongProcessTargetURLOrWindowBeforeEnablingInput() async throws {
         for failure in ["pid", "target", "url", "window", "fullscreen", "visualViewport"] {
             let fixture = try MouseTransportFixture(); defer { fixture.remove() }
@@ -314,7 +377,9 @@ final class MouseInputTransportTests: XCTestCase {
     var visualScale: Double = 1
     var blockNextInput = false
     var timeoutNextInput = false
+    var blockNextActivation = false
     private var blockedInput: CheckedContinuation<Void, Never>?
+    private var blockedActivation: CheckedContinuation<Void, Never>?
 
     func call(_ method: String, parameters: [String: Any], sessionID: String?) async throws -> [String: Any] {
         guard !closed else { throw MouseInputTransportError.disconnected }
@@ -323,6 +388,9 @@ final class MouseInputTransportTests: XCTestCase {
         case "SystemInfo.getProcessInfo": return ["processInfo": [["type": "browser", "id": processID]]]
         case "Target.getTargetInfo": return ["targetInfo": ["targetId": targetID, "type": "page", "url": url]]
         case "Target.attachToTarget": return ["sessionId": pageSessionID]
+        case "Target.activateTarget":
+            if blockNextActivation { blockNextActivation = false; await withCheckedContinuation { blockedActivation = $0 } }
+            return [:]
         case "Browser.getWindowForTarget":
             return ["windowId": 88, "bounds": ["left": frame.minX, "top": frame.minY, "width": frame.width,
                                              "height": frame.height, "windowState": windowState]]
@@ -341,6 +409,11 @@ final class MouseInputTransportTests: XCTestCase {
         XCTFail("Input worker did not reach the expected dispatch")
     }
     func unblockInput() { blockedInput?.resume(); blockedInput = nil }
+    func waitForBlockedActivation() async {
+        for _ in 0..<1000 { if blockedActivation != nil { return }; await Task.yield() }
+        XCTFail("Target activation did not reach the expected request")
+    }
+    func unblockActivation() { blockedActivation?.resume(); blockedActivation = nil }
     func close() { closed = true }
 }
 

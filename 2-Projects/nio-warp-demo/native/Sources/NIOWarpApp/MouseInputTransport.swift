@@ -200,6 +200,20 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         }
     }
 
+    /// Bring forward only the page already validated for this input binding.
+    /// Activating the Chrome process alone may select an older fullscreen window.
+    func activateBoundTarget() async throws {
+        guard acceptingEvents, !closing, !originalPageInvalidated,
+              let current = viewport, let connection else { throw MouseInputTransportError.closed }
+        let generation = lifecycle
+        try Task.checkCancellation()
+        _ = try await connection.call("Target.activateTarget",
+            parameters: ["targetId": current.targetID], sessionID: nil)
+        guard lifecycle == generation, acceptingEvents, !closing, !originalPageInvalidated,
+              viewport == current, self.connection === connection else { throw MouseInputTransportError.closed }
+        try Task.checkCancellation()
+    }
+
     func releaseAllAndClose() async {
         if let closeTask { await closeTask.value; return }
         beginClose(error: MouseInputTransportError.closed, mayRelease: true)

@@ -12,6 +12,36 @@ struct ProtoPieConfiguration: Codable, Equatable {
     var autoRecover = true
     var scaleToFit = true
     var hidePlayerUI = true
+    var fillWidth = false
+    var widthFitVerticalPosition = 0.0 {
+        didSet { widthFitVerticalPosition = Self.clampedVerticalPosition(widthFitVerticalPosition) }
+    }
+
+    init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case source, cloudURL, fileBookmark, filePath, autoStart, autoRecover, scaleToFit, hidePlayerUI, fillWidth
+        case widthFitVerticalPosition
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        source = try values.decode(Source.self, forKey: .source)
+        cloudURL = try values.decode(String.self, forKey: .cloudURL)
+        fileBookmark = try values.decodeIfPresent(Data.self, forKey: .fileBookmark)
+        filePath = try values.decode(String.self, forKey: .filePath)
+        autoStart = try values.decode(Bool.self, forKey: .autoStart)
+        autoRecover = try values.decode(Bool.self, forKey: .autoRecover)
+        scaleToFit = try values.decode(Bool.self, forKey: .scaleToFit)
+        hidePlayerUI = try values.decode(Bool.self, forKey: .hidePlayerUI)
+        fillWidth = try values.decodeIfPresent(Bool.self, forKey: .fillWidth) ?? false
+        widthFitVerticalPosition = Self.clampedVerticalPosition(
+            try values.decodeIfPresent(Double.self, forKey: .widthFitVerticalPosition) ?? 0)
+    }
+
+    private static func clampedVerticalPosition(_ value: Double) -> Double {
+        value.isFinite ? min(max(value, -1), 1) : 0
+    }
 
     var sourceLabel: String {
         if source == .localFile { return URL(fileURLWithPath: filePath).lastPathComponent }
@@ -30,7 +60,7 @@ struct ProtoPieConfiguration: Codable, Equatable {
         var items = components.queryItems ?? []
         items.removeAll { ["ui", "scaleToFit", "bgColor"].contains($0.name) }
         items += [URLQueryItem(name: "ui", value: hidePlayerUI ? "false" : "true"),
-                  URLQueryItem(name: "scaleToFit", value: scaleToFit ? "true" : "false"),
+                  URLQueryItem(name: "scaleToFit", value: scaleToFit || fillWidth ? "true" : "false"),
                   URLQueryItem(name: "bgColor", value: "#000000")]
         components.queryItems = items
         guard let result = components.url else { throw ProtoPieError.invalidSource("预览链接格式无效。") }

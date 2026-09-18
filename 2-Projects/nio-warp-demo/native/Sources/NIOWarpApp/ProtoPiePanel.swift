@@ -17,6 +17,9 @@ import UniformTypeIdentifiers
     private let autoStart = NSButton(checkboxWithTitle: "打开 NIO Warp 时自动联动", target: nil, action: nil)
     private let autoRecover = NSButton(checkboxWithTitle: "意外中断后自动恢复（最多 3 次）", target: nil, action: nil)
     private let fit = NSButton(checkboxWithTitle: "等比适配播放器窗口", target: nil, action: nil)
+    private let fillWidth = NSButton(checkboxWithTitle: "横向顶满（等比例）", target: nil, action: nil)
+    private let verticalPosition = NSSlider(value: 0, minValue: -1, maxValue: 1, target: nil, action: nil)
+    private let verticalPositionInput = NSTextField(string: "0.000")
     private let hideUI = NSButton(checkboxWithTitle: "隐藏 Cloud 播放工具栏", target: nil, action: nil)
     private let targetLabel = NSTextField(wrappingLabelWithString: "目标：沿用画布与输入的外接显示器")
     private let stateLabel = NSTextField(wrappingLabelWithString: "")
@@ -92,12 +95,26 @@ import UniformTypeIdentifiers
         constrainChildren(fileGroup)
         add(fileGroup)
         add(separator()); add(title("自动联动"))
-        for control in [autoStart, autoRecover, fit, hideUI] {
+        for control in [autoStart, autoRecover, fit, fillWidth, hideUI] {
             control.font = .systemFont(ofSize: 12); control.target = self; control.action = #selector(optionsChanged)
         }
         add(autoStart); add(autoRecover)
         add(separator()); add(title("播放与目标"))
-        add(fit); add(hideUI)
+        fit.setAccessibilityIdentifier("nio-protopie-scale-to-fit")
+        fillWidth.setAccessibilityIdentifier("nio-protopie-fill-width")
+        add(fit); add(fillWidth)
+        add(note("Cloud 预览按宽度等比放大，超出屏幕的上下内容可调整裁切位置；不改变 Warp 校正参数。"))
+        add(title("横向顶满 · 画面上下位置"))
+        verticalPosition.target = self; verticalPosition.action = #selector(verticalPositionChanged)
+        verticalPosition.setAccessibilityIdentifier("nio-protopie-vertical-position")
+        verticalPosition.setAccessibilityLabel("画面上下位置，负值上移，零居中，正值下移")
+        add(verticalPosition)
+        verticalPositionInput.target = self; verticalPositionInput.action = #selector(verticalPositionEdited)
+        verticalPositionInput.setAccessibilityIdentifier("nio-protopie-vertical-position-input")
+        verticalPositionInput.setAccessibilityLabel("画面上下位置数值，范围负一至正一")
+        add(verticalPositionInput)
+        add(note("−1 画面上移 · 0 居中 · +1 画面下移。修改先存入草稿，点击启动 / 应用并切换后生效。"))
+        add(hideUI)
         targetLabel.font = .systemFont(ofSize: 12); targetLabel.textColor = .secondaryLabelColor
         add(targetLabel)
         add(note("画布与输入中的目标屏幕是唯一设置入口；更换预览不重置校正参数。"))
@@ -149,7 +166,9 @@ import UniformTypeIdentifiers
         urlField.stringValue = draft.cloudURL
         autoStart.state = draft.autoStart ? .on : .off
         autoRecover.state = draft.autoRecover ? .on : .off
-        fit.state = draft.scaleToFit ? .on : .off
+        fit.state = draft.scaleToFit || draft.fillWidth ? .on : .off
+        fillWidth.state = draft.fillWidth ? .on : .off
+        loadVerticalPosition()
         hideUI.state = draft.hidePlayerUI ? .on : .off
         rendering = false
     }
@@ -157,7 +176,13 @@ import UniformTypeIdentifiers
         let cloud = coordinator.draft.source == .cloud
         cloudGroup.isHidden = !cloud; fileGroup.isHidden = cloud
         fileLabel.stringValue = coordinator.draft.filePath.isEmpty ? "尚未选择文件" : coordinator.draft.filePath
-        fit.isEnabled = cloud; hideUI.isEnabled = cloud
+        fit.state = coordinator.draft.scaleToFit || coordinator.draft.fillWidth ? .on : .off
+        fillWidth.state = coordinator.draft.fillWidth ? .on : .off
+        fit.isEnabled = cloud && !coordinator.draft.fillWidth
+        fillWidth.isEnabled = cloud; hideUI.isEnabled = cloud
+        verticalPosition.isEnabled = cloud && coordinator.draft.fillWidth
+        verticalPositionInput.isEnabled = verticalPosition.isEnabled
+        loadVerticalPosition()
         let busy = coordinator.state.isBusy
         startButton.isEnabled = !busy; reloadButton.isEnabled = !busy && coordinator.hasActiveSession
         openButton.isEnabled = !busy
@@ -177,10 +202,31 @@ import UniformTypeIdentifiers
         coordinator.draft.cloudURL = urlField.stringValue
     }
     @objc private func sourceChanged() { coordinator.draft.source = source.selectedSegment == 0 ? .cloud : .localFile }
+    private func loadVerticalPosition() {
+        verticalPosition.doubleValue = coordinator.draft.widthFitVerticalPosition
+        if verticalPositionInput.currentEditor() == nil {
+            verticalPositionInput.stringValue = String(format: "%.3f", coordinator.draft.widthFitVerticalPosition)
+        }
+    }
+    @objc private func verticalPositionChanged() {
+        guard coordinator.draft.source == .cloud, coordinator.draft.fillWidth else { return }
+        coordinator.draft.widthFitVerticalPosition = verticalPosition.doubleValue
+    }
+    @objc private func verticalPositionEdited() {
+        guard coordinator.draft.source == .cloud, coordinator.draft.fillWidth else { return }
+        if let value = Double(verticalPositionInput.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)), value.isFinite {
+            coordinator.draft.widthFitVerticalPosition = value
+        }
+        verticalPositionInput.stringValue = String(format: "%.3f", coordinator.draft.widthFitVerticalPosition)
+    }
     @objc private func optionsChanged() {
         var draft = coordinator.draft
         draft.autoStart = autoStart.state == .on; draft.autoRecover = autoRecover.state == .on
-        draft.scaleToFit = fit.state == .on; draft.hidePlayerUI = hideUI.state == .on
+        // Width fill uses native fitting but remembers the ordinary fit choice
+        // so switching width fill off restores the user's previous setting.
+        if !draft.fillWidth { draft.scaleToFit = fit.state == .on }
+        draft.fillWidth = fillWidth.state == .on
+        draft.hidePlayerUI = hideUI.state == .on
         coordinator.draft = draft
     }
     @objc private func chooseFile() {

@@ -13,6 +13,10 @@ import ApplicationServices
     private(set) var engaged = false
     private(set) var placement: CGPoint?
     private(set) var eventCount = 0
+    private(set) var lastRawDelta: SIMD2<Double>?
+    private(set) var lastCorrectedDelta: SIMD2<Double>?
+    private(set) var lastWarpCorrection: SIMD2<Double>?
+    private var warpDeltas = MouseWarpDeltaCompensator()
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var displayID: CGDirectDisplayID = 0
@@ -20,18 +24,20 @@ import ApplicationServices
     private var targetWindow: CGWindowID = 0
     private var outputWindow: CGWindowID = 0
     private var ownedButtons = 0
+    private var ownsEscape = false
     private var windows: [(CGWindowID, CGRect)] = []
 
     func begin(displayID: CGDirectDisplayID, processID: pid_t, targetWindow: CGWindowID, outputWindow: CGWindowID) throws {
         guard !isActive else { return }
-        guard tap == nil else { throw MouseCaptureError("请先松开上次演示按住的鼠标，再启用校正。") }
+        guard tap == nil else { throw MouseCaptureError("请先松开上次演示按住的 Esc 或鼠标按键，再启用校正。") }
         guard CGDisplayIsActive(displayID) != 0, CGDisplayIsAsleep(displayID) == 0 else {
             throw MouseCaptureError("演示外屏不可用，原鼠标保持正常。")
         }
+        resetMovement()
         self.displayID = displayID; self.processID = processID
         self.targetWindow = targetWindow; self.outputWindow = outputWindow
         let types: [CGEventType] = [.mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged,
-            .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel, .keyDown]
+            .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp, .scrollWheel, .keyDown, .keyUp]
         let mask = types.reduce(CGEventMask(0)) { $0 | (CGEventMask(1) << $1.rawValue) }
         guard let tap = CGEvent.tapCreate(tap: .cgSessionEventTap, place: .headInsertEventTap,
             options: .defaultTap, eventsOfInterest: mask, callback: { _, type, event, context in
@@ -60,12 +66,22 @@ import ApplicationServices
         windows = entries.compactMap { entry in
             guard let id = (entry[kCGWindowNumber as String] as? NSNumber)?.uint32Value,
                   id != outputWindow,
+                  !Self.isSystemCursorWindow(entry),
                   (entry[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1 > 0,
                   let value = entry[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: value as CFDictionary), !rect.isEmpty else { return nil }
             return (id, rect)
         }
         if engaged, let point = placement, !ownsSurface(at: point) { leaveSurface() }
+    }
+
+    /// WindowServer can expose the system cursor as a topmost, nonshareable
+    /// window. It is not an interactive occluder. Keep other windows at the
+    /// same level (including shareable status indicators) in the scope check.
+    nonisolated static func isSystemCursorWindow(_ entry: [String: Any]) -> Bool {
+        entry[kCGWindowOwnerName as String] as? String == "Window Server"
+            && (entry[kCGWindowLayer as String] as? NSNumber)?.intValue == Int(CGWindowLevelForKey(.cursorWindow))
+            && (entry[kCGWindowSharingState as String] as? NSNumber)?.intValue == 0
     }
 
     func adoptCurrentCursorIfInside() {
@@ -75,22 +91,46 @@ import ApplicationServices
 
     func placeCursor(at point: CGPoint) -> Bool {
         guard isActive, point.x.isFinite, point.y.isFinite else { return false }
+        guard let before = CGEvent(source: nil) else { return false }
         guard CGWarpMouseCursorPosition(point) == .success else { return false }
+        guard let after = CGEvent(source: nil) else { resetMovement(); return false }
+        warpDeltas.recordWarp(delta: SIMD2(Double(after.location.x - before.location.x),
+                                          Double(after.location.y - before.location.y)),
+                              timestamp: after.timestamp)
         placement = point
         return true
     }
 
     func stop() {
         isActive = false; engaged = false; placement = nil; windows.removeAll()
-        // A down consumed by us must never leak its later physical up to Chrome
-        // after the transport has already sent the compensating release.
-        if ownedButtons == 0 { destroyTap() }
+        resetMovement()
+        // Keep each consumed gesture until its physical release: both a mouse up
+        // and an Esc repeat/up must not leak to Chrome after mapping has stopped.
+        if ownedButtons == 0 && !ownsEscape { destroyTap() }
     }
 
     private func destroyTap() {
         if let tap { CGEvent.tapEnable(tap: tap, enable: false); CFMachPortInvalidate(tap) }
         if let source = runLoopSource { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         tap = nil; runLoopSource = nil
+    }
+
+    func scopeDiagnostic() -> [String: Any] {
+        let point = placement ?? CGEvent(source: nil)?.location ?? .zero
+        let bounds = CGDisplayBounds(displayID)
+        let covering = windows.filter { $0.1.contains(point) }.prefix(4).map { $0.0 }
+        let first = covering.first.flatMap { id in
+            (CGWindowListCopyWindowInfo(.optionIncludingWindow, id) as? [[String: Any]])?.first
+        }
+        let keys = [kCGWindowNumber, kCGWindowOwnerName, kCGWindowLayer, kCGWindowSharingState, kCGWindowStoreType]
+        let details = keys.reduce(into: [String: Any]()) { result, key in
+            if let value = first?[key as String] { result[key as String] = value }
+        }
+        return ["firstWindowMetadata": details, "displayID": displayID, "insideDisplay": bounds.contains(point),
+                "frontPID": NSWorkspace.shared.frontmostApplication?.processIdentifier ?? 0,
+                "processID": processID, "targetWindow": targetWindow, "outputWindow": outputWindow,
+                "coveringWindows": windows.filter { $0.1.contains(point) }.prefix(4).map { $0.0 },
+                "point": [point.x, point.y]]
     }
 
     private func ownsSurface(at point: CGPoint) -> Bool {
@@ -102,24 +142,38 @@ import ApplicationServices
     private func leaveSurface() {
         guard engaged || ownedButtons != 0 else { return }
         engaged = false; placement = nil
+        resetMovement()
         onLeave?()
         // Keep consumed button ownership until its physical up, even after focus changes.
+    }
+
+    private func resetMovement() {
+        warpDeltas.reset()
+        lastRawDelta = nil; lastCorrectedDelta = nil; lastWarpCorrection = nil
     }
 
     private func receive(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             let wasActive = isActive
-            ownedButtons = 0; stop()
+            ownedButtons = 0; ownsEscape = false; stop()
             if wasActive { onExit?("原鼠标校正监听已停止，恢复普通输入。", false) }
             return Unmanaged.passUnretained(event)
         }
         if !isActive {
+            if ownsEscape, (type == .keyDown || type == .keyUp),
+               event.getIntegerValueField(.keyboardEventKeycode) == 53 {
+                if type == .keyUp {
+                    ownsEscape = false
+                    if ownedButtons == 0 { destroyTap() }
+                }
+                return nil
+            }
             let number = Int(event.getIntegerValueField(.mouseEventButtonNumber))
             let bit = number == 0 ? 1 : number == 1 ? 2 : number == 2 ? 4 : 0
             let owned = bit != 0 && ownedButtons & bit != 0
             if owned && [.leftMouseUp, .rightMouseUp, .otherMouseUp].contains(type) {
                 ownedButtons &= ~bit
-                if ownedButtons == 0 { destroyTap() }
+                if ownedButtons == 0 && !ownsEscape { destroyTap() }
                 return nil
             }
             if owned && [.leftMouseDragged, .rightMouseDragged, .otherMouseDragged].contains(type) { return nil }
@@ -128,10 +182,14 @@ import ApplicationServices
         if type == .keyDown {
             let noCommand = event.flags.intersection([.maskCommand, .maskControl, .maskAlternate]).isEmpty
             if event.getIntegerValueField(.keyboardEventKeycode) == 53, noCommand {
+                ownsEscape = true
                 stop(); onExit?("已按 Esc 暂停原鼠标校正，返回工作台。", true); return nil
             }
             return Unmanaged.passUnretained(event)
         }
+        // Only the Esc whose down was consumed above belongs to this capture.
+        // All other key releases remain ordinary keyboard input.
+        if type == .keyUp { return Unmanaged.passUnretained(event) }
         let up = [.leftMouseUp, .rightMouseUp, .otherMouseUp].contains(type)
         let number = Int(event.getIntegerValueField(.mouseEventButtonNumber))
         let bit = number == 0 ? 1 : number == 1 ? 2 : number == 2 ? 4 : 0
@@ -148,10 +206,18 @@ import ApplicationServices
             return Unmanaged.passUnretained(event)
         }
         if up && !ownedUp { return Unmanaged.passUnretained(event) }
+        let movement = type == .mouseMoved || drag
+        var corrected = SIMD2<Double>.zero
+        if movement {
+            let raw = SIMD2(event.getDoubleValueField(.mouseEventDeltaX), event.getDoubleValueField(.mouseEventDeltaY))
+            let result = warpDeltas.compensate(raw: raw, timestamp: event.timestamp,
+                isHardware: event.getIntegerValueField(.eventSourceUnixProcessID) == 0)
+            lastRawDelta = raw; lastCorrectedDelta = result.corrected; lastWarpCorrection = result.correction
+            corrected = result.corrected
+        }
         if !engaged {
             // A move that enters the screen is already reflected in this position;
             // seed from it once instead of applying its delta twice or jumping to center.
-            let movement = type == .mouseMoved || drag
             guard onEnter?(point, movement) == true else {
                 // Outside the visible mesh, consume a click instead of snapping
                 // it onto an edge control or leaking its uncorrected coordinates.
@@ -166,7 +232,7 @@ import ApplicationServices
         let flags = Self.modifiers(event.flags)
         switch type {
         case .mouseMoved, .leftMouseDragged, .rightMouseDragged, .otherMouseDragged:
-            onEvent?(.move(dx: event.getDoubleValueField(.mouseEventDeltaX), dy: event.getDoubleValueField(.mouseEventDeltaY), modifiers: flags))
+            onEvent?(.move(dx: corrected.x, dy: corrected.y, modifiers: flags))
         case .leftMouseDown, .rightMouseDown, .otherMouseDown:
             guard bit != 0 else { return Unmanaged.passUnretained(event) }
             ownedButtons |= bit

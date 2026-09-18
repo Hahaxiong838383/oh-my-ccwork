@@ -54,6 +54,7 @@ import Foundation
             guard let windowID = window["windowId"] as? Int else { return false }
             let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
             let page = try await pageSocket(target: target, browserSocket: socket)
+            guard try await ensureCloudContentLayout(page: page, configuration: session.configuration) else { return false }
             let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [
                 "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
                 "returnByValue": true])
@@ -150,7 +151,8 @@ import Foundation
             if value["ready"] as? Bool == true {
                 progress("正在进入外屏无边框全屏，等待画面尺寸稳定…")
                 let captured = try await prepareCloudFullscreen(socket: socket, pageSocket: pageSocket,
-                    windowID: browserWindowID, processID: pid, marker: marker, displayID: displayID)
+                    windowID: browserWindowID, processID: pid, marker: marker, displayID: displayID,
+                    configuration: configuration)
                 return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
                                        cloudTargetID: target, title: "ProtoPie Cloud · 无边框全屏")
             }
@@ -197,8 +199,17 @@ import Foundation
         throw ProtoPieError.unavailable("播放器退出全屏尚未完成，请重试。")
     }
 
+    private func ensureCloudContentLayout(page: URL, configuration: ProtoPieConfiguration) async throws -> Bool {
+        let expression = ProtoPieWidthFit.expression(enabled: configuration.fillWidth,
+            verticalPosition: configuration.widthFitVerticalPosition, expectedURL: try configuration.playbackURL())
+        let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [
+            "expression": expression, "returnByValue": true])
+        return ((evaluation["result"] as? [String: Any])?["value"] as? [String: Any])?["ready"] as? Bool == true
+    }
+
     private func prepareCloudFullscreen(socket: URL, pageSocket: URL, windowID: Int, processID: pid_t,
-                                        marker: String, displayID: CGDirectDisplayID) async throws -> WindowRecord {
+                                        marker: String, displayID: CGDirectDisplayID,
+                                        configuration: ProtoPieConfiguration) async throws -> WindowRecord {
         guard CGDisplayIsActive(displayID) != 0 else { throw ProtoPieError.unavailable("目标外屏不可用。") }
         let target = Self.targetRect(displayID)
         let displayScale = NSScreen.screens.first {
@@ -243,7 +254,8 @@ import Foundation
                     browserFrame: actual.frame, windowState: actual.state,
                     viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: displayScale)
             }
-            if readiness.observe(observation, targetFrame: target), let captured { return captured }
+            if readiness.observe(observation, targetFrame: target), let captured,
+               try await ensureCloudContentLayout(page: pageSocket, configuration: configuration) { return captured }
             try await Task.sleep(nanoseconds: 150_000_000)
         }
         throw ProtoPieError.unavailable("尚未确认播放器已无边框全屏，暂不切换捕获。请点击启动/重试。")
@@ -352,13 +364,18 @@ import Foundation
           const canvases=[...document.querySelectorAll('canvas')].filter(e=>visible(e)&&e.width>16&&e.height>16);
           const videos=[...document.querySelectorAll('video')].filter(e=>visible(e)&&e.readyState>=2);
           const player=document.querySelector('[data-testid="player"], [data-testid="prototype-player"], #player, .prototype-player, [class*="PiePlayer"], [class*="pie-player"]');
+          // The current DOM player can occupy only a third of an ultrawide viewport.
+          // Recognize its rendered layers without treating an empty mount as ready.
+          const webPlayer=document.querySelector('#webplayer-root');
+          const renderedWebPlayer=webPlayer && visible(webPlayer) &&
+            [...webPlayer.querySelectorAll('[class*="ContainerLayer"], [class*="TextLayer"]')].some(visible);
           const layerImages=[...document.querySelectorAll('img')].filter(e=>visible(e)&&e.complete&&e.naturalWidth>16&&e.naturalHeight>16&&!/logo|avatar|icon/i.test(e.alt+' '+e.className+' '+e.src));
           const viewportArea=Math.max(1,innerWidth*innerHeight);
           const substantialImage=layerImages.some(e=>{ const r=e.getBoundingClientRect();
             return r.width>=innerWidth*.45 && r.height>=innerHeight*.06 && r.width*r.height>=viewportArea*.06; });
           // A playable prototype can precede window.load while unrelated Cloud resources are pending.
           const ready=location.pathname===expectedPath && ['interactive','complete'].includes(document.readyState) &&
-            (canvases.length>0 || videos.length>0 || (player && visible(player)) || substantialImage);
+            (canvases.length>0 || videos.length>0 || (player && visible(player)) || renderedWebPlayer || substantialImage);
           if(ready) document.title=marker;
           return {ready:!!ready};
         })()
