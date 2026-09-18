@@ -8,6 +8,12 @@
 # 分两档（依据 feedback_blocking_is_not_correcting：能给信息就别拦动作）：
 #   软提醒 → additionalContext 注入上下文，命令照跑
 #   硬红线 → permissionDecision=deny，只有川哥白纸黑字禁过的才进这档
+#   ⚠️ 2026-09-18 实测：codeg 拉起的 cc 会话（payload permission_mode=auto，带
+#   --allow-dangerously-skip-permissions）会整体跳过 hook 的 deny，且带 deny 键的输出**连
+#   additionalContext 一起丢弃**——四条硬红线自 8-22 起在 codeg 会话里既没拦住也没提醒
+#   （guard-log 记了 deny、tool-audit 显示 3 秒后命令照跑）。故按模式分支：auto/bypassPermissions
+#   只发带「🔴 硬红线」标记的提醒并记账为 note；其他模式照旧 deny。判「拦没拦住」只能拿
+#   guard-log 对撞 tool-audit，见 [[feedback_guard_itself_can_be_hollow]] 第 9 例。
 #
 # 失败策略：hook 自身出错必须放行（不能让守门器把所有命令卡死），但要把失败
 # 说出来——静默放行等于没装。
@@ -15,7 +21,11 @@
 set -uo pipefail
 
 payload="$(cat)"
-cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+# Claude Code 使用 snake_case，Grok Build 原生 hook 使用 camelCase。
+# Grok 会兼容加载 ~/.claude/settings.json，但不会替调用脚本改写 payload；只读
+# .tool_input 会让 hook 看似已加载、实际对 Grok 每次都因 cmd 为空而静默放行。
+cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // .toolInput.command // empty' 2>/dev/null)"
+pmode="$(printf '%s' "$payload" | jq -r '.permission_mode // .permissionMode // empty' 2>/dev/null)"
 
 # 取不到命令就放行：可能是 schema 变了，宁可不拦也别误伤
 if [ -z "$cmd" ]; then
@@ -45,7 +55,7 @@ log_hit() {   # $1=decision(note|deny)  $2..=rule ids
   local decision="$1"; shift
   local verb="${cmd%%[[:space:]]*}"
   local sid cwdb
-  sid="$(printf '%s' "$payload" | jq -r '(.session_id // "")[0:8]' 2>/dev/null)"
+  sid="$(printf '%s' "$payload" | jq -r '(.session_id // .sessionId // "")[0:8]' 2>/dev/null)"
   cwdb="$(basename "$(printf '%s' "$payload" | jq -r '.cwd // ""' 2>/dev/null)" 2>/dev/null)"
   {
     mkdir -p "$(dirname "$GUARD_LOG")" 2>/dev/null
@@ -90,8 +100,23 @@ elif has '(^|[;&|]\s*)git[[:space:]]+commit' && has 'Co-Authored-By:'; then
 fi
 
 if [ -n "$deny_reason" ]; then
+  case "$pmode" in
+    auto|bypassPermissions)
+      # 本会话跳过 hook 拒绝：deny 会被整体丢弃，只能把红线当轮递到眼前
+      log_hit note "$deny_rule"
+      ctx="🔴 硬红线（本会话 permission_mode=$pmode，hook 拒绝不生效，只能提醒，命令会照跑）：
+$deny_reason
+若这条命令已执行，立即评估后果并如实报告；不要因为「没被拦」就当作被允许。"
+      jq -nc --arg c "$ctx" '{
+        additionalContext: $c,
+        hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: $c }
+      }'
+      exit 0 ;;
+  esac
   log_hit deny "$deny_rule"
   jq -nc --arg r "$deny_reason" '{
+    decision: "deny",
+    reason: $r,
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       permissionDecision: "deny",
@@ -171,6 +196,7 @@ if [ ${#notes[@]} -gt 0 ]; then
   log_hit note "${rule_ids[@]}"
   ctx="$(printf '%s\n' "${notes[@]}")"
   jq -nc --arg c "$ctx" '{
+    additionalContext: $c,
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       additionalContext: $c

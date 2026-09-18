@@ -25,6 +25,27 @@ denied() {
   out=$(jq -nc --arg c "$1" '{tool_input:{command:$c}}' | bash "$GUARD")
   printf '%s' "$out" | grep -q '"permissionDecision":"deny"'
 }
+# 2026-09-18 起按 permission_mode 分支：auto 只发「🔴 硬红线」提醒，不发 deny
+denied_pm() {   # denied_pm <mode> <cmd>
+  out=$(jq -nc --arg m "$1" --arg c "$2" '{permission_mode:$m,tool_input:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '"permissionDecision":"deny"'
+}
+hardnote_pm() { # hardnote_pm <mode> <cmd>：带硬红线标记的提醒
+  out=$(jq -nc --arg m "$1" --arg c "$2" '{permission_mode:$m,tool_input:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '硬红线'
+}
+denied_auto()    { denied_pm auto "$1"; }
+hardnote_auto()  { hardnote_pm auto "$1"; }
+denied_default() { denied_pm default "$1"; }
+hardnote_default(){ hardnote_pm default "$1"; }
+denied_camel() {  # grok 形态：camelCase 键
+  out=$(jq -nc --arg c "$1" '{permissionMode:"auto",toolInput:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '"permissionDecision":"deny"'
+}
+hardnote_camel() {
+  out=$(jq -nc --arg c "$1" '{permissionMode:"auto",toolInput:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '硬红线'
+}
 
 PASS=0; FAIL=0
 chk() { # chk <期望 fire?> <标签> <命令>
@@ -79,6 +100,19 @@ r 1 'note: 检索管到 head'        anynote 'grep -rn foo . | head -5'
 r 1 'note: systemctl'           anynote 'systemctl --user status feishu-grok-bridge'
 r 1 'note: curl 127.0.0.1:port' anynote 'curl -s http://127.0.0.1:18765/healthz'
 r 0 'note 反例: 纯 echo'         anynote 'echo hello'
+echo
+echo "═══ 2b. permission_mode 分支（2026-09-18）：auto 只提醒不 deny；default 照旧 deny ═══"
+r 0 'auto: git add -A 不 deny'        denied_auto   'git add -A'
+r 1 'auto: git add -A 发硬红线提醒'    hardnote_auto 'git add -A'
+r 0 'auto: pkill -f 不 deny'          denied_auto   'pkill -f node'
+r 1 'auto: pkill -f 发硬红线提醒'      hardnote_auto 'pkill -f node'
+r 1 'auto: commit 署名发硬红线提醒'    hardnote_auto 'git commit -m "x Co-Authored-By: y"'
+r 0 'auto 反例: git add path 无提醒'   hardnote_auto 'git add rules/tools.md'
+r 1 'default: git add -A 仍 deny'     denied_default 'git add -A'
+r 0 'default: 不发硬红线提醒'          hardnote_default 'git add -A'
+r 0 'camel(grok) auto: 不 deny'       denied_camel  'git reset --hard origin/main'
+r 1 'camel(grok) auto: 发硬红线提醒'   hardnote_camel 'git reset --hard origin/main'
+r 1 '无 mode 字段: 仍 deny(旧夹具兼容)' denied 'git add -A'
 
 echo
 echo "═══ D. 新规则「| … || 兜底」：|| 绑的是管道尾恒成功命令 = 死代码 ═══"
