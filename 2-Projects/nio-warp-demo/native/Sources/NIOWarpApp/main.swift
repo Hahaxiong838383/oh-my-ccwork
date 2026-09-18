@@ -544,10 +544,12 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             color = mix(color, float3(0.85), majorGrid);
             color = mix(color, float3(1.0), border);
 
-            // Nearest of nine reference-canvas centers. Pixel-space distance makes
+            // Three reference-canvas columns, repeated vertically beyond the original rows.
+            // Pixel-space distance makes
             // the source markers circular even on an ultra-wide canvas. The mesh
             // still deforms them; derivatives adjust only the stroke width.
-            float2 circleCell = clamp(floor(gridUV * 3.0), float2(0.0), float2(2.0));
+            float2 circleCell = floor(gridUV * 3.0);
+            circleCell.x = clamp(circleCell.x, 0.0, 2.0);
             float2 circleCenter = (circleCell + 0.5) / 3.0;
             float signedCircleDistance = length((gridUV - circleCenter) * circleParameters.xy) - circleParameters.z;
             float circlePixelStep = max(length(float2(dfdx(signedCircleDistance), dfdy(signedCircleDistance))), 0.00000001);
@@ -1191,7 +1193,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let antiAliasingPicker = NSPopUpButton()
     private let antiAliasingEnabledButton = NSButton(checkboxWithTitle: "平滑线条边缘（抗锯齿）", target: nil, action: nil)
     private let automaticPerformanceButton = NSButton(checkboxWithTitle: "帧率不足时，自动降低采样档位保流畅", target: nil, action: nil)
-    private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、九圆、中心线和边界", target: nil, action: nil)
+    private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、纵向重复圆、中心线和边界", target: nil, action: nil)
     private let gridColumnsField = NSTextField()
     private let gridRowsField = NSTextField()
     private let gridLineWidthField = NSTextField()
@@ -1576,7 +1578,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         stack.addArrangedSubview(makeSlider(title: "左右不对称", slider: asymmetrySlider, minimum: -0.2, maximum: 0.2, action: #selector(updateAsymmetry)))
         stack.addArrangedSubview(makeSlider(title: "整体倾斜", slider: tiltSlider, minimum: -0.12, maximum: 0.12, action: #selector(updateTilt)))
         stack.addArrangedSubview(makeSlider(title: "水平弯曲", slider: horizontalBendSlider, minimum: -0.08, maximum: 0.08, action: #selector(updateHorizontalBend)))
-        stack.addArrangedSubview(explanation("上下弧度上限为 3.00。垂直比例 1.00× 保留原校正画面，向左压缩、向右拉伸；在最终观察位置对照九圆，调至等宽等高。超出黄色 AA 区的部分仍会裁切。"))
+        stack.addArrangedSubview(explanation("上下弧度上限为 3.00。垂直比例 1.00× 保留原校正画面，向左压缩、向右拉伸；在最终观察位置对照三列纵向重复圆，调至等宽等高。超出黄色 AA 区的部分仍会裁切。"))
         let localEditorButton = makeButton("打开局部交点精调", action: #selector(openLocalEditor))
         localEditorButton.toolTip = "切换到局部微调模块，在同一工作台点击交点，再用方向键精调。"
         stack.addArrangedSubview(localEditorButton)
@@ -1709,7 +1711,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             (polynomialButton, "只开关多项式，不清空系数；翻折参数会拒绝应用。"),
             (antiAliasingEnabledButton, "平滑细线和文字边缘，关闭使用点采样；不会改变几何形状。"),
             (automaticPerformanceButton, "运行时降低采样档位以保护流畅度，不改写保存的画质选择。"),
-            (testPatternButton, "用带方向角标及九个比例标定圆的网格替代桌面；圆随画面一起变形，用垂直压缩 / 拉伸校准比例。关闭后恢复桌面或视频。"),
+            (testPatternButton, "用带方向角标及三列纵向重复圆的网格替代桌面；圆沿画布向上、向下等距重复，随画面一起变形，用垂直压缩 / 拉伸校准比例。关闭后恢复桌面或视频。"),
         ]
         checkboxHelp.forEach { button, text in button.toolTip = text; button.setAccessibilityHelp(text) }
         for document in tabPageDocuments {

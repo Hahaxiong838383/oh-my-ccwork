@@ -262,6 +262,72 @@ final class CalibrationGridRenderingTests: XCTestCase {
         try expanded.save("nine-circles-expanded-13000x2800.png")
     }
 
+    func testGPUVerticalRepeatsFillExpandedCanvasWithoutAddingColumnsOrMovingOriginalCircles() throws {
+        let reference = CanvasConfiguration(width: 1920, height: 600)
+        let original = try render(width: 1920, height: 600, referenceCanvas: reference)
+        // Show the full expanded canvas instead of cropping to its original center.
+        let expanded = try render(
+            scale: SIMD2(2, 3), width: 3840, height: 1800,
+            geometryScale: SIMD2(0.5, 1.0 / 3.0), referenceCanvas: reference
+        )
+        for row in -3...5 {
+            for column in 0..<3 {
+                let region = CGRect(x: 960 + column * 640, y: 600 + row * 200, width: 640, height: 200)
+                let ring = try XCTUnwrap(expanded.circleBounds(in: region), "缺少纵向重复圆：行 \(row)，列 \(column)")
+                XCTAssertEqual(ring.midX, region.midX, accuracy: 1)
+                XCTAssertEqual(ring.midY, region.midY, accuracy: 1)
+                XCTAssertEqual(ring.width, ring.height, accuracy: 2)
+                let originalRow = min(2, max(0, row))
+                let before = try XCTUnwrap(original.circleBounds(in: CGRect(x: column * 640, y: originalRow * 200, width: 640, height: 200)))
+                XCTAssertEqual(ring.width, before.width, accuracy: 2)
+                XCTAssertEqual(ring.height, before.height, accuracy: 2)
+                if (0..<3).contains(row) {
+                    XCTAssertEqual(ring.midX - 960, before.midX, accuracy: 1)
+                    XCTAssertEqual(ring.midY - 600, before.midY, accuracy: 1)
+                }
+            }
+        }
+        XCTAssertTrue(expanded.circleBounds(in: CGRect(x: 0, y: 0, width: 960, height: 1800)) == nil, "横向左侧不应新增圆列")
+        XCTAssertTrue(expanded.circleBounds(in: CGRect(x: 2880, y: 0, width: 960, height: 1800)) == nil, "横向右侧不应新增圆列")
+        try expanded.save("vertical-repeat-three-columns-nine-rows.png")
+    }
+
+    func testGPUVerticalRepeatsFollowMirrorsAndVerticalAspectScale() throws {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 1920, displayHeight: 1800)
+        configuration.canvas = CanvasConfiguration(width: 1920, height: 600)
+        configuration.aaRect = NormalizedRect(x: 0, y: 1.0 / 3.0, width: 1, height: 1.0 / 3.0)
+        configuration.manual = ManualWarpParameters(enabled: true, strength: 0, arch: 0, verticalScale: 1, asymmetry: 0, tilt: 0, horizontalBend: 0)
+        configuration.enableCanvasGrowth()
+        configuration.canvas.height = 1800
+        configuration.aaRect = .full
+        for verticalScale in [0.5, 1.25] {
+            configuration.manual.verticalAspectScale = verticalScale
+            let mesh = WarpMath.makeMesh(configuration: configuration, columns: 192, rows: 216)
+            XCTAssertTrue(mesh.validation.isValid, mesh.validation.summary)
+            for mirrorFlags: UInt32 in [0, 1, 2, 3] {
+                let image = try render(
+                    scale: configuration.gridUVScale, width: 1920, height: 1800,
+                    mesh: mesh, mirrorFlags: mirrorFlags, configuration: configuration
+                )
+                // The repeated pattern is symmetric under either mirror; new rows -1 and 3
+                // must remain measurable, and each ring must reveal the real height multiplier.
+                for row in -1...3 {
+                    for column in 0..<3 {
+                        let centerY = 900 + Double(row - 1) * 200 * verticalScale
+                        let halfHeight = 80 * verticalScale + 8
+                        let ring = try XCTUnwrap(image.circleBounds(in: CGRect(
+                            x: Double(column * 640), y: centerY - halfHeight, width: 640, height: halfHeight * 2
+                        )))
+                        XCTAssertEqual(ring.midX, Double(column * 640 + 320), accuracy: 1)
+                        XCTAssertEqual(ring.midY, centerY, accuracy: 1)
+                        XCTAssertEqual((ring.height - 4) / (ring.width - 4), verticalScale, accuracy: 0.04)
+                    }
+                }
+                if mirrorFlags == 3 { try image.save("vertical-repeat-mirrored-scale-\(verticalScale).png") }
+            }
+        }
+    }
+
     func testLocalCorrectionMovesBothDesktopTextureAndCalibrationGridOnGPU() throws {
         var config = WarpConfiguration.defaultConfiguration(displayWidth: 400, displayHeight: 240)
         config.canvas = CanvasConfiguration(width: 400, height: 240)
