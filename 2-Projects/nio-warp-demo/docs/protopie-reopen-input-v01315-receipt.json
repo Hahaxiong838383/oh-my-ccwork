@@ -38,7 +38,13 @@
     ],
     "softwareOnly": true
   },
-  "humanAcceptance": "pending",
+  "humanAcceptance": {
+    "status": "accepted-app-relaunch",
+    "recordedAt": "2026-09-18T21:59:04+08:00",
+    "userStatement": "我测试了几次OK了",
+    "scope": "Repeated application quit/reopen and preview input acceptance",
+    "computerReboot": "pending user test; not performed by agent"
+  },
   "rollback": {
     "gitTag": "nio-warp-before-reopen-input-20260918",
     "gitCommit": "ba165dc24202ab701addaabf60833e680f8e0725",
