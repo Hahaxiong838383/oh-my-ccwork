@@ -16,6 +16,7 @@ enum ProtoPieWidthFit {
             window[key]?.dispose(); delete window[key]; return {ready:true};
           }
           if (!matchesPage()) {window[key]?.dispose();delete window[key];return {ready:false};}
+          if (window[key] && window[key].revision!==3) {window[key].dispose();delete window[key];}
           if (window[key] && window[key].path!==expectedPath) {window[key].dispose();delete window[key];}
           if (!window[key]) {
             let root, host, main, original, frame = 0, disposed = false, notifying = false;
@@ -49,7 +50,12 @@ enum ProtoPieWidthFit {
               }
               if (!root || !root.offsetWidth || !root.offsetHeight || !main.clientWidth || !main.clientHeight) return {ready:false};
               const width=main.clientWidth, height=Math.max(main.clientHeight,width*root.offsetHeight/root.offsetWidth);
-              const top=(main.clientHeight-height)/2+window[key].position*(height-main.clientHeight)/2;
+              // ProtoPie's toolbar toggles MAIN padding without resizing the
+              // viewport. Cancel this normal-flow offset, preserving the full
+              // canvas and the existing independent vertical crop position.
+              const flowTop=host.getBoundingClientRect().top-main.getBoundingClientRect().top-
+                (parseFloat(getComputedStyle(host).top)||0);
+              const top=(main.clientHeight-height)/2+window[key].position*(height-main.clientHeight)/2-flowTop;
               const values={width:width+'px',height:height+'px',flex:'none',top:top+'px'};
               let changed=false;
               for (const name of properties) if (host.style.getPropertyValue(name)!==values[name]) {
@@ -62,11 +68,13 @@ enum ProtoPieWidthFit {
               return status();
             };
             const schedule = () => { if (!disposed && !frame) frame=requestAnimationFrame(apply); };
-            const mutation=new MutationObserver(() => {if (document.getElementById('webplayer-root')!==root) schedule();});
-            mutation.observe(document.documentElement,{childList:true,subtree:true});
+            const mutation=new MutationObserver(records => {
+              if (document.getElementById('webplayer-root')!==root || records.some(r=>r.target===main)) schedule();
+            });
+            mutation.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});
             const onResize=()=>{if(!notifying) schedule();};
             window.addEventListener('resize',onResize);
-            window[key]={path:expectedPath,position:0,ensure:apply,dispose:()=>{disposed=true;cancelAnimationFrame(frame);resize.disconnect();mutation.disconnect();window.removeEventListener('resize',onResize);restore();window.dispatchEvent(new Event('resize'));}};
+            window[key]={revision:3,path:expectedPath,position:0,ensure:apply,dispose:()=>{disposed=true;cancelAnimationFrame(frame);resize.disconnect();mutation.disconnect();window.removeEventListener('resize',onResize);restore();window.dispatchEvent(new Event('resize'));}};
           }
           window[key].position=\#(position);
           return window[key].ensure();

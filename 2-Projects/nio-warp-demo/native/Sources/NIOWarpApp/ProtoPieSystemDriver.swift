@@ -57,33 +57,53 @@ import Foundation
 
     func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool {
         guard let target = session.cloudTargetID else { return true }
-        guard CGDisplayIsActive(displayID) != 0, let socket = browserSocket,
-              let captured = Self.windows().first(where: { $0.id == session.windowID && $0.pid == session.processID }) else { return false }
         let sourceDisplayID = session.presentationDisplayID ?? displayID
-        guard CGDisplayIsActive(sourceDisplayID) != 0 else { return false }
+        let targetFrame = Self.targetRect(sourceDisplayID)
+        func record(_ stage: ProtoPiePresentationDiagnostics.Stage, observation: ProtoPieFullscreenObservation? = nil,
+                    browserFrame: CGRect? = nil, windowState: String? = nil,
+                    layoutReady: Bool? = nil, issue: ProtoPiePresentationDiagnostics.Issue? = nil) {
+            ProtoPiePresentationDiagnostics.record(stage: stage, sourceDisplayID: sourceDisplayID, outputDisplayID: displayID,
+                processID: session.processID, windowID: session.windowID, targetFrame: targetFrame,
+                observation: observation, browserFrame: browserFrame, windowState: windowState,
+                layoutReady: layoutReady, issue: issue)
+        }
+        record(.monitorStart)
+        guard CGDisplayIsActive(displayID) != 0, let socket = browserSocket,
+              let captured = Self.windows().first(where: { $0.id == session.windowID && $0.pid == session.processID }) else {
+            record(.monitorStart, issue: .outputUnavailable); return false
+        }
+        guard CGDisplayIsActive(sourceDisplayID) != 0 else { record(.monitorStart, issue: .sourceUnavailable); return false }
         if let canvas = presentationCanvas {
             guard CGDisplayPixelsHigh(sourceDisplayID) == canvas.height,
-                  CGDisplayPixelsWide(sourceDisplayID) == CGDisplayPixelsWide(displayID) else { return false }
+                  CGDisplayPixelsWide(sourceDisplayID) == CGDisplayPixelsWide(displayID) else {
+                record(.monitorStart, issue: .sourceSizeMismatch); return false
+            }
         }
         do {
             let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
-            guard let windowID = window["windowId"] as? Int else { return false }
+            guard let windowID = window["windowId"] as? Int else { record(.monitorWindow, issue: .windowUnavailable); return false }
             let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            record(.monitorWindow, browserFrame: bounds.frame, windowState: bounds.state)
             let page = try await pageSocket(target: target, browserSocket: socket)
-            guard try await ensureCloudContentLayout(page: page, configuration: session.configuration) else { return false }
+            let layoutReady = try await ensureCloudContentLayout(page: page, configuration: session.configuration)
             let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [
                 "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
                 "returnByValue": true])
             guard let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any],
-                  let width = value["width"] as? NSNumber, let height = value["height"] as? NSNumber else { return false }
+                  let width = value["width"] as? NSNumber, let height = value["height"] as? NSNumber else {
+                record(.monitorGeometry, layoutReady: layoutReady, issue: .invalidViewport); return false
+            }
             let scale = NSScreen.screens.first {
                 ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == sourceDisplayID
             }?.backingScaleFactor ?? 1
-            return ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
+            let observation = ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
                 browserFrame: bounds.frame, windowState: bounds.state,
                 viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: scale)
-                .isReady(for: Self.targetRect(sourceDisplayID))
-        } catch { return false }
+            let geometryReady = observation.isReady(for: targetFrame)
+            record(.monitorComplete, observation: observation, layoutReady: layoutReady,
+                issue: !geometryReady ? .geometryNotReady : !layoutReady ? .layoutNotReady : nil)
+            return geometryReady && layoutReady
+        } catch { record(.monitorComplete, issue: .requestFailed); return false }
     }
 
     func release(_ session: ProtoPieSession) async {
@@ -104,18 +124,22 @@ import Foundation
             guard let windowID = window["windowId"] as? Int else {
                 throw ProtoPieError.unavailable("未找到本次专用播放器窗口。")
             }
-            let controlScreen = NSScreen.screens.first { screen in
+            let visiblePhysicalScreens = NSScreen.screens.filter { screen in
+                guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+                let id = number.uint32Value
+                return !OwnedPresentationDisplay.isOwnedDisplay(id) && CGDisplayIsActive(id) != 0 && CGDisplayIsAsleep(id) == 0
+            }
+            let controlScreen = visiblePhysicalScreens.first { screen in
                 guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
                 return CGDisplayIsBuiltin(number.uint32Value) != 0
-            } ?? NSApp.keyWindow?.screen ?? NSScreen.main ?? NSScreen.screens.first
-            if let controlScreen {
-                let rect = Self.manualPreviewBounds(visibleFrame: controlScreen.visibleFrame,
-                                                    primaryTop: NSScreen.screens.first?.frame.maxY ?? controlScreen.frame.maxY)
-                try await restoreCloudWindow(socket: socket, windowID: windowID)
-                _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
-                    "windowId": windowID, "bounds": ["left": Int(rect.minX), "top": Int(rect.minY),
-                                                      "width": Int(rect.width), "height": Int(rect.height)]])
-            }
+            } ?? visiblePhysicalScreens.first(where: { $0 === NSApp.keyWindow?.screen }) ?? visiblePhysicalScreens.first
+            guard let controlScreen else { throw ProtoPieError.unavailable("没有可见的物理控制屏，暂不打开播放器。请唤醒或连接屏幕后重试。") }
+            let rect = Self.manualPreviewBounds(visibleFrame: controlScreen.visibleFrame,
+                                                primaryTop: NSScreen.screens.first?.frame.maxY ?? controlScreen.frame.maxY)
+            try await restoreCloudWindow(socket: socket, windowID: windowID)
+            _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+                "windowId": windowID, "bounds": ["left": Int(rect.minX), "top": Int(rect.minY),
+                                                  "width": Int(rect.width), "height": Int(rect.height)]])
             let info = try await ProtoPieCDP.call(socket, method: "SystemInfo.getProcessInfo")
             guard let processes = info["processInfo"] as? [[String: Any]],
                   let processID = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber,
@@ -250,12 +274,21 @@ import Foundation
                                         configuration: ProtoPieConfiguration) async throws -> WindowRecord {
         guard CGDisplayIsActive(displayID) != 0 else { throw ProtoPieError.unavailable("目标外屏不可用。") }
         let target = Self.targetRect(displayID)
+        func record(_ stage: ProtoPiePresentationDiagnostics.Stage, observation: ProtoPieFullscreenObservation? = nil,
+                    browserFrame: CGRect? = nil, windowState: String? = nil, geometryStable: Bool? = nil,
+                    layoutReady: Bool? = nil, issue: ProtoPiePresentationDiagnostics.Issue? = nil) {
+            ProtoPiePresentationDiagnostics.record(stage: stage, sourceDisplayID: displayID, processID: processID,
+                targetFrame: target, observation: observation, browserFrame: browserFrame, windowState: windowState,
+                geometryStable: geometryStable, layoutReady: layoutReady, issue: issue)
+        }
+        record(.prepareStart)
         let displayScale = NSScreen.screens.first {
             ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == displayID
         }?.backingScaleFactor ?? 1
         let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
         // Reuse an already-fullscreen source without leaving its Space or flashing a title bar.
         if bounds.state != "fullscreen" || !ProtoPieFullscreenObservation.matches(bounds.frame, target) {
+            record(.prepareRestore, browserFrame: bounds.frame, windowState: bounds.state)
             try await restoreCloudWindow(socket: socket, windowID: windowID)
             _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
                 "windowId": windowID, "bounds": ["left": Int(target.minX), "top": Int(target.minY),
@@ -267,16 +300,21 @@ import Foundation
             while ProcessInfo.processInfo.systemUptime < placementDeadline {
                 try Task.checkCancellation()
                 let moved = try await cloudWindowBounds(socket: socket, windowID: windowID)
+                record(.preparePlacement, browserFrame: moved.frame, windowState: moved.state)
                 if moved.state != "fullscreen", target.contains(CGPoint(x: moved.frame.midX, y: moved.frame.midY)) {
                     placed = true; break
                 }
                 try await Task.sleep(nanoseconds: 150_000_000)
             }
-            guard placed else { throw ProtoPieError.unavailable("播放器尚未移到目标外屏，请重试。") }
+            guard placed else { record(.preparePlacement, issue: .placementNotReady); throw ProtoPieError.unavailable("播放器尚未移到目标外屏，请重试。") }
+            record(.prepareFullscreen)
             _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
                 "windowId": windowID, "bounds": ["windowState": "fullscreen"]])
         }
         var readiness = ProtoPieFullscreenReadiness()
+        var geometryStable = false
+        var layoutReady: Bool?
+        var lastObservation: ProtoPieFullscreenObservation?
         let deadline = ProcessInfo.processInfo.systemUptime + 12
         while ProcessInfo.processInfo.systemUptime < deadline {
             try Task.checkCancellation()
@@ -292,11 +330,21 @@ import Foundation
                     browserFrame: actual.frame, windowState: actual.state,
                     viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: displayScale)
             }
-            if readiness.observe(observation, targetFrame: target), let captured,
-               try await ensureCloudContentLayout(page: pageSocket, configuration: configuration) { return captured }
+            lastObservation = observation
+            geometryStable = readiness.observe(observation, targetFrame: target)
+            layoutReady = nil
+            record(.prepareGeometry, observation: observation, browserFrame: actual.frame, windowState: actual.state,
+                geometryStable: geometryStable)
+            if geometryStable, let captured {
+                layoutReady = try await ensureCloudContentLayout(page: pageSocket, configuration: configuration)
+                record(.prepareLayout, observation: observation, geometryStable: geometryStable, layoutReady: layoutReady,
+                    issue: layoutReady == true ? nil : .layoutNotReady)
+                if layoutReady == true { record(.prepareComplete, observation: observation, geometryStable: true, layoutReady: true); return captured }
+            }
             try await Task.sleep(nanoseconds: 150_000_000)
         }
-        throw ProtoPieError.unavailable("尚未确认播放器已无边框全屏，暂不切换捕获。请点击启动/重试。")
+        record(.prepareComplete, observation: lastObservation, geometryStable: geometryStable, layoutReady: layoutReady, issue: .timeout)
+        throw ProtoPieError.unavailable(ProtoPiePresentationDiagnostics.timeoutMessage(geometryStable: geometryStable, layoutReady: layoutReady))
     }
 
     private func cloudTarget(_ configuration: ProtoPieConfiguration) async throws -> (URL, String) {

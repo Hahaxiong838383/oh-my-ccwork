@@ -2875,7 +2875,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     func bringToFront() {
         guard let window else { return }
         if window.isMiniaturized { window.deminiaturize(nil) }
-        let screens = NSScreen.screens
+        let screens = NSScreen.screens.filter { screen in
+            guard let id = (screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value else { return false }
+            return !OwnedPresentationDisplay.isOwnedDisplay(id) && CGDisplayIsActive(id) != 0 && CGDisplayIsAsleep(id) == 0
+        }
         let screenID: (NSScreen) -> CGDirectDisplayID? = {
             ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
         }
@@ -2883,8 +2886,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         // closed. Resolve the current built-in screen again when showing it.
         let controlScreen = screens.first { screenID($0).map { CGDisplayIsBuiltin($0) != 0 } ?? false }
             ?? screens.first { screenID($0) == preferredControlDisplayID }
-            ?? window.screen
-            ?? NSScreen.main
+            ?? screens.first { $0 === window.screen }
+            ?? screens.first { $0 === NSScreen.main }
             ?? screens.first
         if let controlScreen { fitWindow(to: controlScreen.visibleFrame) }
         window.orderFrontRegardless()
@@ -3329,6 +3332,8 @@ private extension Array {
     private var outputController: OutputController?
     private var controlPanel: ControlPanelController?
     private var emergencyHotKey: GlobalHotKey?
+    private let presentationExit = PresentationExitCapture()
+    private var lastVisiblePointer: CGPoint?
     private var isReconfiguring = false
     private var screenChangeWorkItem: DispatchWorkItem?
     private var startupRetryWorkItem: DispatchWorkItem?
@@ -3536,10 +3541,14 @@ private extension Array {
             return
         }
         let preview = controlPanel?.configurationForOfflinePreview ?? configurationStore.offlineConfiguration()
-        let source = NSScreen.screens.first(where: { screen in
+        let physicalScreens = NSScreen.screens.filter { screen in
+            guard let id = displayID(for: screen) else { return false }
+            return !OwnedPresentationDisplay.isOwnedDisplay(id) && CGDisplayIsActive(id) != 0 && CGDisplayIsAsleep(id) == 0
+        }
+        let source = physicalScreens.first(where: { screen in
             guard let id = displayID(for: screen) else { return false }
             return CGDisplayIsBuiltin(id) != 0
-        }) ?? NSScreen.main ?? NSScreen.screens.first
+        }) ?? physicalScreens.first
         let previousPanel = controlPanel
         let panel = ControlPanelController(
             renderer: nil, store: configurationStore, configuration: preview,
@@ -3594,15 +3603,17 @@ private extension Array {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: workItem)
     }
 
-    private func emergencyHideWarp(reason: String, userInitiated: Bool = false) {
+    private func emergencyHideWarp(reason: String, userInitiated: Bool = false, notifyProtoPie: Bool = true) {
+        mouseMapping.stop(reason: reason)
         if userInitiated, chooseScreens()?.source == nil { headlessWorkbenchRequested = true }
         outputController?.setWarpVisible(false)
         // Display/sleep recovery hides output temporarily; only an explicit user action pauses it.
-        controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: userInitiated)
+        controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: userInitiated && notifyProtoPie)
         controlPanel?.setStatus(reason, color: .systemOrange)
         if userInitiated || chooseScreens()?.source != nil || outputController == nil {
             NSApp.activate(ignoringOtherApps: true)
             controlPanel?.bringToFront()
+            recoverVisiblePointer(forceWorkbench: userInitiated)
         }
     }
 
@@ -3651,6 +3662,7 @@ private extension Array {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        presentationExit.stop()
         mouseMapping.stop(reason: "程序正在退出。")
         Task { @MainActor in
             await mouseMapping.finishClosing()
@@ -3681,13 +3693,43 @@ private extension Array {
     }
 
     @objc private func showWorkbench() {
-        if mouseMapping.isActive { mouseMapping.stop() }
+        returnToWorkbench()
+    }
+
+    private func returnToWorkbench(notifyProtoPie: Bool = true) {
+        // Cancel an asynchronous start too; a delayed activation must not take
+        // focus back after the user has already requested the workbench.
+        mouseMapping.stop()
         if outputController != nil, chooseScreens()?.source == nil {
-            emergencyHideWarp(reason: "已暂停演示以显示工作台；点击“重新显示校正画面”继续合盖演示。", userInitiated: true)
+            emergencyHideWarp(reason: "已暂停演示以显示工作台；点击“重新显示校正画面”继续合盖演示。",
+                              userInitiated: true, notifyProtoPie: notifyProtoPie)
             return
         }
         NSApp.activate(ignoringOtherApps: true)
         controlPanel?.bringToFront()
+        recoverVisiblePointer(forceWorkbench: true)
+    }
+
+    private func recoverVisiblePointer(forceWorkbench: Bool) {
+        guard let point = VisiblePointerRecoveryRuntime.recoveryDestination(
+            window: controlPanel?.window, lastVisiblePoint: lastVisiblePointer,
+            forceWorkbench: forceWorkbench) else { return }
+        if CGWarpMouseCursorPosition(point) == .success {
+            lastVisiblePointer = point
+            NSCursor.arrow.set()
+        }
+    }
+
+    private func guardInvisiblePresentationScreen() {
+        guard !displaysAsleep, let point = CGEvent(source: nil)?.location else { return }
+        let screens = VisiblePointerRecoveryRuntime.screens()
+        if VisiblePointerRecoveryPolicy.physicalScreens(screens).contains(where: { $0.quartzBounds.contains(point) }) {
+            lastVisiblePointer = point
+        } else if screens.contains(where: { $0.isOwned && $0.quartzBounds.contains(point) }) {
+            // This display is a capture source, never an operator's desktop.
+            // The guard also runs after an input/session failure.
+            showWorkbench()
+        }
     }
 
     private func configureMouseMapping() {
@@ -3705,6 +3747,21 @@ private extension Array {
                 frame: frame, setInputEnabled: { [weak output] in output?.setMouseInputEnabled($0) })
         }
         mouseMapping.onReturnToWorkbench = { [weak self] in self?.showWorkbench() }
+        mouseMapping.onPresentationTick = { [weak self] in self?.guardInvisiblePresentationScreen() }
+        presentationExit.shouldExit = { [weak self] in
+            guard let self, let output = self.outputController, output.isWarpVisible,
+                  let front = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+                  let point = CGEvent(source: nil)?.location else { return false }
+            if front == ProcessInfo.processInfo.processIdentifier {
+                return output.window.isKeyWindow
+            }
+            guard front == self.protoPie.activeSession?.processID else { return false }
+            let sourcePoint = VisiblePointerRecoveryRuntime.screens().contains { $0.isOwned && $0.quartzBounds.contains(point) }
+            let outputPoint = self.outputDisplayState.map { CGDisplayBounds($0.id).contains(point) } ?? false
+            return sourcePoint || outputPoint
+        }
+        presentationExit.onExit = { [weak self] in self?.showWorkbench() }
+        _ = presentationExit.start()
         mouseMapping.monitorPresentation()
     }
 
@@ -3743,7 +3800,9 @@ private extension Array {
                 self.outputController?.setWarpVisible(false)
                 self.controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: false)
             case .failed(let reason):
-                self.mouseMapping.stop(reason: reason)
+                // A failed coordinator may notify again when paused. This is
+                // its failure callback, so never feed a pause back into it.
+                self.returnToWorkbench(notifyProtoPie: false)
                 self.controlPanel?.setStatus("ProtoPie 联动：\(reason)", color: .systemOrange)
             default: break
             }

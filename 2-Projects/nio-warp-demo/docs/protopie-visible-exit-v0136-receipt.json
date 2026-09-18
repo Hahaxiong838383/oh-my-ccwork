@@ -1,0 +1,233 @@
+{
+  "version": "0.13.6",
+  "build": 58,
+  "acceptedOn": "2026-09-18",
+  "userAcceptance": {
+    "result": "PASS",
+    "statement": "退出和鼠标都正常",
+    "scope": "本次退出与鼠标体验"
+  },
+  "deployment": {
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "strictSignatureVerified": true,
+    "sourceDigestMatched": true,
+    "sourceSHA256": "57519b6ecfa00a21dd95a8b9abd620eb3aed5d905a3fe93995fd90a638d012a8",
+    "binarySHA256": "94789ca43d661087cfdb25a3b8964f27d53c0bfc93ca795170e42ae15a139325"
+  },
+  "liveAcceptance": {
+    "result": "PASS",
+    "cycles": [
+      {
+        "cycle": 1,
+        "entered": true,
+        "originalCircleSize": [
+          53,
+          53
+        ],
+        "originalCircleHotspot": [
+          26,
+          26
+        ],
+        "exited": true,
+        "arrowSize": [
+          28,
+          40
+        ],
+        "arrowHotspot": [
+          5,
+          5
+        ],
+        "visiblePointerPoint": [
+          754,
+          483
+        ],
+        "pageReloaded": false,
+        "sourceViewport": [
+          7680,
+          2800
+        ],
+        "sourceFullscreen": true
+      },
+      {
+        "cycle": 2,
+        "entered": true,
+        "originalCircleSize": [
+          53,
+          53
+        ],
+        "originalCircleHotspot": [
+          26,
+          26
+        ],
+        "exited": true,
+        "arrowSize": [
+          28,
+          40
+        ],
+        "arrowHotspot": [
+          5,
+          5
+        ],
+        "visiblePointerPoint": [
+          754,
+          483
+        ],
+        "pageReloaded": false,
+        "sourceViewport": [
+          7680,
+          2800
+        ],
+        "sourceFullscreen": true
+      },
+      {
+        "cycle": 3,
+        "entered": true,
+        "originalCircleSize": [
+          53,
+          53
+        ],
+        "originalCircleHotspot": [
+          26,
+          26
+        ],
+        "exited": true,
+        "arrowSize": [
+          28,
+          40
+        ],
+        "arrowHotspot": [
+          5,
+          5
+        ],
+        "visiblePointerPoint": [
+          754,
+          483
+        ],
+        "pageReloaded": false,
+        "sourceViewport": [
+          7680,
+          2800
+        ],
+        "sourceFullscreen": true
+      }
+    ],
+    "mappingStoppedEscapeFallback": true,
+    "invisibleSourcePointerRecovered": true,
+    "toolbarPaddingChecks": [
+      {
+        "padding": 0,
+        "contentRect": [
+          0,
+          0,
+          7680,
+          2800
+        ],
+        "layoutReady": true,
+        "scale": 2
+      },
+      {
+        "padding": 56,
+        "contentRect": [
+          0,
+          0,
+          7680,
+          2800
+        ],
+        "layoutReady": true,
+        "scale": 2
+      },
+      {
+        "padding": 0,
+        "contentRect": [
+          0,
+          0,
+          7680,
+          2800
+        ],
+        "layoutReady": true,
+        "scale": 2
+      },
+      {
+        "padding": 56,
+        "contentRect": [
+          0,
+          0,
+          7680,
+          2800
+        ],
+        "layoutReady": true,
+        "scale": 2
+      }
+    ],
+    "finalGeometryReady": true,
+    "finalLayoutReady": true
+  },
+  "tests": [
+    {
+      "evidence": "artifacts/presentation-exit-v0135-20260918/result.json",
+      "testMethods": 7,
+      "assertions": 91,
+      "failures": 0,
+      "runtime": "Compiled original production source and test methods with local assertion shim; NOT formal XCTest"
+    },
+    {
+      "evidence": "artifacts/visible-pointer-recovery-v0132-20260918/result.json",
+      "testMethods": 10,
+      "assertions": 31,
+      "failures": 0,
+      "runtime": "Compiled original production sources and original test method bodies with minimal XCTest assertion shim; NOT formal XCTest"
+    },
+    {
+      "evidence": "artifacts/protopie-toolbar-v0135-20260918/result.json",
+      "testMethods": 7,
+      "assertions": 548,
+      "failures": 0,
+      "runtime": "Original production JS expression in JavaScriptCore fake DOM plus original XCTest bodies with assertion shim; NOT browser layout or formal XCTest"
+    },
+    {
+      "evidence": "artifacts/presentation-diagnostic-20260918/result.json",
+      "testMethods": 116,
+      "assertions": 1041,
+      "failures": 0,
+      "runtime": "Standalone Swift binary with minimal assertion shim; NOT formal XCTest"
+    },
+    {
+      "evidence": "artifacts/output-vertical-position-v0128-20260918/result.json",
+      "testMethods": 40,
+      "assertions": 2236,
+      "failures": 0,
+      "runtime": "Original complete production classes and test bodies with assertion shim; NOT formal XCTest"
+    }
+  ],
+  "testCountingPolicy": "Independent overlapping runs; do not aggregate counts. Assertion shims, not formal XCTest.",
+  "configurationVerification": {
+    "status": "PASS",
+    "savedConfigurationKeyCount": 9,
+    "allSemanticallyUnchanged": true,
+    "comparison": "Decoded JSON semantics; runtime/capture diagnostics excluded",
+    "rawPreferencesByteIdenticalClaimed": false,
+    "serializationDifference": "lastSuccessful JSON encoding differs; decoded value unchanged"
+  },
+  "rollback": {
+    "codeTag": "nio-warp-before-visible-exit-20260918",
+    "codeCommit": "e34c839c",
+    "acceptedBuild56Backup": ".rollback/accepted-baselines/20260918-101000Z-v0134",
+    "acceptedBuild58Backup": ".rollback/accepted-baselines/20260918-103146Z-v0136",
+    "acceptedBuild58Contents": [
+      "application archive",
+      "native source archive",
+      "accepted preferences snapshot"
+    ],
+    "acceptedBuild58ApplicationArchiveSHA256": "3931eb541e774aa08dc575bf196590fd7dc4b094b41737b601dc48d3b4065dae"
+  },
+  "notValidatedThisRound": [
+    "v0.13.6 lid-close/open cycle",
+    "long-duration unattended operation"
+  ],
+  "privateMaterialIncluded": false,
+  "signer": "codex（OpenAI）",
+  "initialAttempt": {
+    "result": "not counted as pass",
+    "note": "Entry immediately after app reopen did not activate; settled app passed three subsequent cycles. Exact transient cause not established."
+  }
+}

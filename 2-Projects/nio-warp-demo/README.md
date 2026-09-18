@@ -2,7 +2,11 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
-## 最新安装版：v0.13.4 (56)
+## 最新安装版：v0.13.6 (58)
+
+修复预览退出困难和鼠标消失：Esc 返回内屏工作台并恢复可见箭头，指针误入虚拟内容屏会自动收回；ProtoPie 工具栏出现不再造成画面下移或误判退出全屏。实机三轮进入/退出与独立 Esc 兜底通过，用户确认“退出和鼠标都正常”，校正参数保持。见[修复、验收与回滚](docs/protopie-visible-exit-v0136.md)。
+
+## v0.13.4 (56)
 
 已恢复独立完整高度播放器的原圆形系统指针和鼠标/键盘输入。点击外屏进入操作，数字键盘可演示，Esc返回工作台；修复真实鼠标位移被零时间戳反复归零。实机点击、拖动、滚轮、数字键盘201234与释放检查通过，原参数保持；用户现场确认“鼠标和键盘都正常”。见[交互修复与回滚](docs/protopie-input-v0134.md)。
 
@@ -58,7 +62,7 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.13.4(56)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.13.6(58)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口

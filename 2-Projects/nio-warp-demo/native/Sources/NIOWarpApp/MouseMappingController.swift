@@ -13,6 +13,7 @@ struct MouseMappingOutput {
     var outputProvider: (() -> MouseMappingOutput?)?
     var sessionProvider: (() -> ProtoPieSession?)?
     var onReturnToWorkbench: (() -> Void)?
+    var onPresentationTick: (() -> Void)?
     private(set) var isActive = false
     private(set) var settings: MouseMappingSettings
     private let defaults: UserDefaults
@@ -75,7 +76,10 @@ struct MouseMappingOutput {
     func monitorPresentation() {
         guard presentationTimer == nil else { return }
         presentationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.refreshPresentationInput() }
+            MainActor.assumeIsolated {
+                self?.onPresentationTick?()
+                self?.refreshPresentationInput()
+            }
         }
     }
 
