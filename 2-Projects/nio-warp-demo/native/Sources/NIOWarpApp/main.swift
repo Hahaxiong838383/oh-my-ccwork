@@ -1483,7 +1483,15 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         let protoItem = NSTabViewItem(identifier: "protopie")
         protoItem.label = "ProtoPie 联动"
         if let protoPie {
-            let panel = ProtoPiePanel(coordinator: protoPie)
+            let panel = ProtoPiePanel(coordinator: protoPie, outputPositionBinding: .init(
+                read: { [weak self] in
+                    guard let self else { return .init(value: 0, range: -1...1, isEnabled: false) }
+                    return .init(value: self.lastAppliedConfiguration.outputVerticalOffsetPixels,
+                        range: self.lastAppliedConfiguration.outputVerticalOffsetRange,
+                        isEnabled: self.renderer != nil && !self.geometryValidationInFlight)
+                },
+                apply: { [weak self] value in self?.applyOutputVerticalOffset(value) }
+            ))
             protoPiePanel = panel
             protoItem.view = panel.inspectorView
             previewColumn.addArrangedSubview(panel.statusView)
@@ -2160,6 +2168,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     private func refreshControls() {
+        protoPiePanel?.refreshOutputPosition()
         let drafts = draftFields.compactMap { field -> (NSTextField, String)? in
             guard let previous = renderedFieldValues[ObjectIdentifier(field)], field.stringValue != previous else { return nil }
             return (field, field.stringValue)
@@ -2318,6 +2327,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             protoPie?.setPresentationCanvas(configuration.canvas)
         }
         lastAppliedConfiguration = configuration
+        protoPiePanel?.refreshOutputPosition()
         historyButton.title = "撤销上一次设置（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed

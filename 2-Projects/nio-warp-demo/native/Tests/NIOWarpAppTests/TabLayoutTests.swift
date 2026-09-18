@@ -21,7 +21,7 @@ final class TabLayoutTests: XCTestCase {
         [view] + view.subviews.flatMap(descendants)
     }
 
-    private func controller(active: Bool = false, initialHistory: Bool = false, bezierEnabled: Bool = false, allowsGeometryCommit: Bool = false, terminateApplication: @escaping () -> Void = { XCTFail("测试不应终止宿主应用") }) throws -> (ControlPanelController, UserDefaults, String) {
+    private func controller(active: Bool = false, initialHistory: Bool = false, bezierEnabled: Bool = false, allowsGeometryCommit: Bool = false, protoPieConfiguration: ProtoPieConfiguration? = nil, terminateApplication: @escaping () -> Void = { XCTFail("测试不应终止宿主应用") }) throws -> (ControlPanelController, UserDefaults, String) {
         _ = NSApplication.shared
         let suite = "NIOWarp.TabLayout.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -34,6 +34,12 @@ final class TabLayoutTests: XCTestCase {
             var previous = config
             previous.manual.strength = 0.9
             history.record(previous, reason: "原有历史记录", force: true)
+        }
+        if let protoPieConfiguration {
+            let data = try JSONEncoder().encode(protoPieConfiguration)
+            for key in ["nioWarpProtoPie.configuration.v1", "nioWarpProtoPie.draft.v1", "nioWarpProtoPie.lastSuccessful.v1"] {
+                defaults.set(data, forKey: key)
+            }
         }
         let protoPie = MainActor.assumeIsolated { ProtoPieCoordinator(defaults: defaults, driver: WorkbenchNoLaunchDriver()) }
         let mouseMapping = MainActor.assumeIsolated { MouseMappingController(defaults: defaults) }
@@ -70,6 +76,16 @@ final class TabLayoutTests: XCTestCase {
 
     private func labels(in item: NSTabViewItem) throws -> [String] {
         descendants(try XCTUnwrap(item.view)).compactMap { ($0 as? NSTextField)?.stringValue }
+    }
+
+    private func protoPieConfigurations(in defaults: UserDefaults) throws -> [String: ProtoPieConfiguration] {
+        var result: [String: ProtoPieConfiguration] = [:]
+        for key in ["nioWarpProtoPie.configuration.v1", "nioWarpProtoPie.draft.v1", "nioWarpProtoPie.lastSuccessful.v1"] {
+            if let data = defaults.data(forKey: key) {
+                result[key] = try JSONDecoder().decode(ProtoPieConfiguration.self, from: data)
+            }
+        }
+        return result
     }
 
     func testSevenModulesHaveRequestedOrderWithProtoPieLastAndCanvasDefault() throws {
@@ -733,6 +749,159 @@ final class TabLayoutTests: XCTestCase {
         XCTAssertEqual(defaults.persistentDomain(forName: suite) as NSDictionary?, persisted)
         XCTAssertEqual(slider.doubleValue, original.outputVerticalOffsetPixels)
         XCTAssertEqual(NumericInput.double(from: field.stringValue), original.outputVerticalOffsetPixels)
+    }
+
+    func testProtoPieOutputPositionUsesSamePersistedGeometryAsCanvasInBothDirections() throws {
+        var preview = ProtoPieConfiguration()
+        preview.cloudURL = "https://cloud.protopie.io/p/shared-position-regression"
+        preview.fillWidth = true
+        preview.widthFitVerticalPosition = -0.9544000123
+        let (panel, defaults, suite) = try controller(active: true, allowsGeometryCommit: true, protoPieConfiguration: preview)
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let original = panel.configurationForOfflinePreview
+        let originalPreview = try protoPieConfigurations(in: defaults)
+        let canvasSlider = try XCTUnwrap(identifiedView("nio-output-vertical-offset", in: panel) as? NSSlider)
+        let canvasField = try XCTUnwrap(identifiedView("nio-output-vertical-offset-input", in: panel) as? NSTextField)
+        panel.selectModule("protopie")
+        let slider = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset", in: panel) as? NSSlider)
+        let field = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset-input", in: panel) as? NSTextField)
+        let internalSlider = try XCTUnwrap(identifiedView("nio-protopie-vertical-position", in: panel) as? NSSlider)
+        XCTAssertTrue(slider.isContinuous, "ProtoPie 页的主位置控件必须连续响应真实拖动")
+        XCTAssertTrue(slider.isEnabled)
+        XCTAssertEqual(slider.minValue, canvasSlider.minValue)
+        XCTAssertEqual(slider.maxValue, canvasSlider.maxValue)
+        for value in [-280.5, 100.25] {
+            slider.doubleValue = value
+            slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+            var expected = original; expected.outputVerticalOffsetPixels = value
+            XCTAssertEqual(panel.configurationForOfflinePreview, expected, "ProtoPie 页必须改变输出平移，其他几何保持")
+            XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration(), expected)
+            XCTAssertEqual(canvasSlider.doubleValue, value)
+            XCTAssertEqual(NumericInput.double(from: canvasField.stringValue), value)
+            XCTAssertEqual(NumericInput.double(from: field.stringValue), value)
+            XCTAssertEqual(internalSlider.doubleValue, preview.widthFitVerticalPosition)
+            XCTAssertEqual(try protoPieConfigurations(in: defaults), originalPreview, "物理位置不得写入原型内部取景或来源配置")
+        }
+
+        panel.selectModule("canvas")
+        canvasSlider.doubleValue = -176.125
+        canvasSlider.sendAction(try XCTUnwrap(canvasSlider.action), to: canvasSlider.target)
+        panel.selectModule("protopie")
+        XCTAssertEqual(slider.doubleValue, -176.125, "从画布页修改后，ProtoPie 页必须即时读取同一值")
+        XCTAssertEqual(NumericInput.double(from: field.stringValue), -176.125)
+        let save = try XCTUnwrap(descendants(try XCTUnwrap(item("protopie", in: panel).view)).compactMap { $0 as? NSButton }.first { $0.title == "保存配置" })
+        save.performClick(nil) // Coordinator notification refreshes this panel without changing the Warp setting.
+        for module in ["quality", "canvas", "protopie"] { panel.selectModule(module) }
+        XCTAssertEqual(slider.doubleValue, -176.125)
+        XCTAssertEqual(canvasSlider.doubleValue, -176.125)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, -176.125)
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration().outputVerticalOffsetPixels, -176.125)
+        XCTAssertEqual(try protoPieConfigurations(in: defaults), originalPreview, "保存和面板刷新不得把内部取景混入输出平移")
+    }
+
+    func testProtoPieOutputPositionPreciseEntryEndEditingResetAndInternalCropDisclosure() throws {
+        let (panel, defaults, suite) = try controller(active: true, allowsGeometryCommit: true)
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let original = panel.configurationForOfflinePreview
+        let originalPreview = try protoPieConfigurations(in: defaults)
+        let canvasSlider = try XCTUnwrap(identifiedView("nio-output-vertical-offset", in: panel) as? NSSlider)
+        let canvasField = try XCTUnwrap(identifiedView("nio-output-vertical-offset-input", in: panel) as? NSTextField)
+        panel.selectModule("protopie")
+        let slider = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset", in: panel) as? NSSlider)
+        let field = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset-input", in: panel) as? NSTextField)
+        let reset = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset-reset", in: panel) as? NSButton)
+        let internalGroup = try identifiedView("nio-protopie-internal-crop-controls", in: panel)
+        let disclosure = try XCTUnwrap(identifiedView("nio-protopie-internal-crop-toggle", in: panel) as? NSButton)
+        let internalSlider = try identifiedView("nio-protopie-vertical-position", in: panel)
+        XCTAssertTrue(internalGroup.isHidden, "原型内部取景应默认折叠，避免与物理平移混淆")
+        XCTAssertTrue(internalSlider.isHiddenOrHasHiddenAncestor)
+        XCTAssertFalse(slider.isHiddenOrHasHiddenAncestor)
+        disclosure.performClick(nil)
+        XCTAssertFalse(internalGroup.isHidden)
+        disclosure.performClick(nil)
+        XCTAssertTrue(internalGroup.isHidden)
+
+        field.stringValue = "-128.12345678"
+        field.sendAction(try XCTUnwrap(field.action), to: field.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, -128.12345678)
+        XCTAssertEqual(slider.doubleValue, -128.12345678)
+        XCTAssertEqual(canvasSlider.doubleValue, -128.12345678)
+        XCTAssertEqual(NumericInput.double(from: canvasField.stringValue), -128.12345678)
+        field.stringValue = "42.87654321"
+        try MainActor.assumeIsolated {
+            let delegate = try XCTUnwrap(field.delegate as? ProtoPiePanel)
+            delegate.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: field))
+            delegate.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification, object: field))
+        }
+        panel.selectModule("canvas"); panel.selectModule("protopie")
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, 42.87654321)
+        XCTAssertEqual(slider.doubleValue, 42.87654321)
+        XCTAssertEqual(canvasSlider.doubleValue, 42.87654321)
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration().outputVerticalOffsetPixels, 42.87654321)
+        reset.performClick(nil)
+        XCTAssertEqual(panel.configurationForOfflinePreview, original)
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration(), original)
+        XCTAssertEqual(slider.doubleValue, 0)
+        XCTAssertEqual(canvasSlider.doubleValue, 0)
+        XCTAssertEqual(NumericInput.double(from: field.stringValue), 0)
+        XCTAssertEqual(try protoPieConfigurations(in: defaults), originalPreview)
+    }
+
+    func testOfflineProtoPieOutputPositionCannotMutateSavedGeometry() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let original = panel.configurationForOfflinePreview
+        let before = defaults.persistentDomain(forName: suite) as NSDictionary?
+        panel.selectModule("protopie")
+        let slider = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset", in: panel) as? NSSlider)
+        let field = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset-input", in: panel) as? NSTextField)
+        let reset = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset-reset", in: panel) as? NSButton)
+        XCTAssertFalse(slider.isEnabled)
+        XCTAssertFalse(field.isEnabled)
+        XCTAssertFalse(reset.isEnabled)
+        slider.doubleValue = -100
+        slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+        field.stringValue = "72.5"
+        field.sendAction(try XCTUnwrap(field.action), to: field.target)
+        reset.sendAction(try XCTUnwrap(reset.action), to: reset.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview, original)
+        XCTAssertEqual(defaults.persistentDomain(forName: suite) as NSDictionary?, before)
+        XCTAssertEqual(slider.doubleValue, original.outputVerticalOffsetPixels)
+        XCTAssertEqual(NumericInput.double(from: field.stringValue), original.outputVerticalOffsetPixels)
+    }
+
+    func testFocusedUntouchedProtoPiePositionEditorCannotRestoreOldCanvasValueOnBlur() throws {
+        let (panel, defaults, suite) = try controller(active: true, allowsGeometryCommit: true)
+        defer { panel.window?.makeFirstResponder(nil); panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let canvasSlider = try XCTUnwrap(identifiedView("nio-output-vertical-offset", in: panel) as? NSSlider)
+        panel.selectModule("protopie")
+        let field = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset-input", in: panel) as? NSTextField)
+        let slider = try XCTUnwrap(identifiedView("nio-protopie-output-vertical-offset", in: panel) as? NSSlider)
+        field.selectText(nil)
+        let editor = try XCTUnwrap(field.currentEditor(), "必须以真实 AppKit field editor 覆盖焦点内旧值")
+        XCTAssertEqual(NumericInput.double(from: editor.string), 0)
+        canvasSlider.doubleValue = -73.875
+        canvasSlider.sendAction(try XCTUnwrap(canvasSlider.action), to: canvasSlider.target)
+        XCTAssertEqual(slider.doubleValue, -73.875)
+        XCTAssertEqual(NumericInput.double(from: editor.string), -73.875, "没有输入的已聚焦编辑器也须跟随实际保存值")
+        panel.window?.makeFirstResponder(nil)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, -73.875, "失焦不得回写旧的 0")
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration().outputVerticalOffsetPixels, -73.875)
+
+        field.selectText(nil)
+        let dirtyEditor = try XCTUnwrap(field.currentEditor())
+        dirtyEditor.string = "26.12345678"
+        try MainActor.assumeIsolated {
+            let delegate = try XCTUnwrap(field.delegate as? ProtoPiePanel)
+            delegate.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification, object: field))
+        }
+        canvasSlider.doubleValue = -98.5
+        canvasSlider.sendAction(try XCTUnwrap(canvasSlider.action), to: canvasSlider.target)
+        XCTAssertEqual(dirtyEditor.string, "26.12345678", "正在编辑的输入草稿不能被后台刷新吞掉")
+        panel.window?.makeFirstResponder(nil)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, 26.12345678)
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration().outputVerticalOffsetPixels, 26.12345678)
+        XCTAssertEqual(canvasSlider.doubleValue, 26.12345678)
     }
 
     func testVerticalAspectActionsPersistReadoutAndResetWithoutChangingLegacyCalibration() throws {
