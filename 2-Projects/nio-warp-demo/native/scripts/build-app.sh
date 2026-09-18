@@ -6,8 +6,8 @@ NATIVE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="$NATIVE_DIR/.build/app/NIOWarpApp.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
-APP_VERSION="${NIO_WARP_APP_VERSION:-0.13.6}"
-APP_BUILD="${NIO_WARP_APP_BUILD:-58}"
+APP_VERSION="${NIO_WARP_APP_VERSION:-0.13.7}"
+APP_BUILD="${NIO_WARP_APP_BUILD:-59}"
 
 cd "$NATIVE_DIR"
 swift build -c release
@@ -42,6 +42,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>${SOURCE_DIGEST}</string>
   <key>LSMinimumSystemVersion</key>
   <string>14.0</string>
+  <key>LSUIElement</key>
+  <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
 </dict>

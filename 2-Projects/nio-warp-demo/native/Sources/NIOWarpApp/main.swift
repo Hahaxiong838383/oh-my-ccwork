@@ -1062,7 +1062,7 @@ private enum AppVersion {
     }
 }
 
-private final class OutputController {
+@MainActor private final class OutputController {
     let window: NSWindow
     let renderer: WarpRenderer
     private let aaBoundaryOverlay: AABoundaryOverlayView
@@ -1077,6 +1077,7 @@ private final class OutputController {
         frameStore: LatestFrameStore,
         configuration: WarpConfiguration
     ) {
+        AppPresentationPolicy.ensureAccessoryPolicy()
         let window = OutputWindow(
             contentRect: NSRect(origin: .zero, size: screen.frame.size),
             styleMask: [.borderless],
@@ -1133,11 +1134,32 @@ private final class OutputController {
 
     func setWarpVisible(_ visible: Bool) {
         if visible {
-            window.orderFrontRegardless()
+            restorePresentation()
         } else {
             onWillHide?()
             window.orderOut(nil)
         }
+        publishPresentationDiagnostic()
+    }
+
+    func restorePresentation() {
+        AppPresentationPolicy.ensureAccessoryPolicy()
+        window.orderFrontRegardless()
+        publishPresentationDiagnostic()
+    }
+
+    func publishPresentationDiagnostic() {
+        // isVisible describes our requested visibility, not whether macOS has
+        // composited this window into another application's fullscreen Space.
+        UserDefaults.standard.set([
+            "updatedAt": Date().timeIntervalSince1970,
+            "activationPolicy": NSApp.activationPolicy().rawValue,
+            "windowNumber": window.windowNumber,
+            "requestedVisible": window.isVisible,
+            "onActiveSpace": window.isOnActiveSpace,
+            "occlusionVisible": window.occlusionState.contains(.visible),
+            "frame": NSStringFromRect(window.frame)
+        ], forKey: "nioWarpOutputPresentation.runtime.v1")
     }
 
     func setMouseInputEnabled(_ enabled: Bool) {
@@ -3348,7 +3370,7 @@ private extension Array {
     private var outputWasDisconnected = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(AppPresentationPolicy.activationPolicy)
+        AppPresentationPolicy.ensureAccessoryPolicy(reason: .startup)
         configureProtoPie()
         configureMouseMapping()
         let menu = NSMenu()
@@ -3373,6 +3395,12 @@ private extension Array {
         )
         NSWorkspace.shared.notificationCenter.addObserver(
             self,
+            selector: #selector(presentationSpaceChanged),
+            name: NSWorkspace.activeSpaceDidChangeNotification,
+            object: nil
+        )
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
             selector: #selector(screensDidSleep),
             name: NSWorkspace.screensDidSleepNotification,
             object: nil
@@ -3387,6 +3415,17 @@ private extension Array {
         if emergencyHotKey == nil {
             controlPanel?.setStatus("警告：全局紧急快捷键注册失败，请使用控制台的“暂时显示原始桌面”。", color: .systemRed)
         }
+    }
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        AppPresentationPolicy.ensureAccessoryPolicy(reason: .applicationActivation)
+        if let output = outputController, output.isWarpVisible { output.restorePresentation() }
+    }
+
+    @objc private func presentationSpaceChanged() {
+        // Rejoin the current Space without activating the workbench or taking
+        // input away from the player. A deliberately paused output stays paused.
+        if let output = outputController, output.isWarpVisible { output.restorePresentation() }
     }
 
     private func startSession() {
@@ -3747,7 +3786,10 @@ private extension Array {
                 frame: frame, setInputEnabled: { [weak output] in output?.setMouseInputEnabled($0) })
         }
         mouseMapping.onReturnToWorkbench = { [weak self] in self?.showWorkbench() }
-        mouseMapping.onPresentationTick = { [weak self] in self?.guardInvisiblePresentationScreen() }
+        mouseMapping.onPresentationTick = { [weak self] in
+            self?.guardInvisiblePresentationScreen()
+            self?.outputController?.publishPresentationDiagnostic()
+        }
         presentationExit.shouldExit = { [weak self] in
             guard let self, let output = self.outputController, output.isWarpVisible,
                   let front = NSWorkspace.shared.frontmostApplication?.processIdentifier,
@@ -3855,7 +3897,7 @@ private extension Array {
         let originChanged = outputController.window.frame.origin != topology.output.frame.origin
         outputController.window.setFrame(topology.output.frame, display: true)
         if originChanged { mouseMapping.displayOriginChanged() }
-        if outputController.isWarpVisible { outputController.window.orderFrontRegardless() }
+        if outputController.isWarpVisible { outputController.restorePresentation() }
         if let control = topology.source {
             headlessWorkbenchRequested = false
             controlPanel?.fitWindow(to: control.visibleFrame)

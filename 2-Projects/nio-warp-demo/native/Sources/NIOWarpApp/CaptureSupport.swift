@@ -69,6 +69,68 @@ enum OutputWindowBehavior {
 
 enum AppPresentationPolicy {
     static let activationPolicy = NSApplication.ActivationPolicy.accessory
+    static let diagnosticsKey = "nioWarpApp.activationPolicyDiagnostic.v1"
+    static let maximumDiagnosticRecords = 12
+
+    enum Reason: String {
+        case startup, outputPresentation, applicationActivation
+    }
+
+    struct Attempt {
+        let previous: NSApplication.ActivationPolicy
+        let observed: NSApplication.ActivationPolicy
+        let setterAccepted: Bool
+
+        var succeeded: Bool { setterAccepted && observed == activationPolicy }
+    }
+
+    /// Keep presentation eligible for other applications' fullscreen Spaces.
+    /// A successful request alone is insufficient: verify the effective policy.
+    @MainActor @discardableResult
+    static func ensureAccessoryPolicy(reason: Reason = .outputPresentation, defaults: UserDefaults = .standard) -> Bool {
+        reconcile(
+            readPolicy: { NSApplication.shared.activationPolicy() },
+            setPolicy: { NSApplication.shared.setActivationPolicy($0) },
+            recordAttempt: { record($0, reason: reason, defaults: defaults) }
+        )
+    }
+
+    /// Inject AppKit access so regression tests never change the test host's policy.
+    @discardableResult
+    static func reconcile(
+        readPolicy: () -> NSApplication.ActivationPolicy,
+        setPolicy: (NSApplication.ActivationPolicy) -> Bool,
+        recordAttempt: (Attempt) -> Void
+    ) -> Bool {
+        let previous = readPolicy()
+        guard previous != activationPolicy else { return true }
+        let accepted = setPolicy(activationPolicy)
+        let attempt = Attempt(previous: previous, observed: readPolicy(), setterAccepted: accepted)
+        recordAttempt(attempt)
+        return attempt.succeeded
+    }
+
+    /// Bounded local evidence: only enum values, outcomes and timestamps.
+    static func record(_ attempt: Attempt, reason: Reason, defaults: UserDefaults, now: Date = Date()) {
+        let entry: [String: Any] = [
+            "timestamp": now.timeIntervalSince1970,
+            "reason": reason.rawValue,
+            "previousPolicy": attempt.previous.rawValue,
+            "requestedPolicy": activationPolicy.rawValue,
+            "observedPolicy": attempt.observed.rawValue,
+            "setterAccepted": attempt.setterAccepted,
+            "succeeded": attempt.succeeded,
+        ]
+        var recent = [[String: Any]]()
+        if let data = defaults.data(forKey: diagnosticsKey),
+           let previous = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let records = previous["recent"] as? [[String: Any]] {
+            recent = Array(records.suffix(maximumDiagnosticRecords - 1))
+        }
+        recent.append(entry)
+        guard let data = try? JSONSerialization.data(withJSONObject: ["current": entry, "recent": recent], options: [.sortedKeys]) else { return }
+        defaults.set(data, forKey: diagnosticsKey)
+    }
 }
 
 enum AABoundaryOverlayGeometry {
