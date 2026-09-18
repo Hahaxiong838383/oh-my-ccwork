@@ -241,6 +241,27 @@ struct ManualWarpParameters: Codable, Equatable {
     var asymmetry = 0.08
     var tilt = 0.025
     var horizontalBend = 0.018
+    // Independent output-height multiplier. Legacy calibration keeps its original verticalScale.
+    var verticalAspectScale = 1.0
+
+    private enum CodingKeys: String, CodingKey {
+        case enabled, strength, arch, verticalScale, asymmetry, tilt, horizontalBend, verticalAspectScale
+    }
+}
+
+extension ManualWarpParameters {
+    // An extension keeps the existing memberwise initializer available to callers.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try container.decode(Bool.self, forKey: .enabled)
+        strength = try container.decode(Double.self, forKey: .strength)
+        arch = try container.decode(Double.self, forKey: .arch)
+        verticalScale = try container.decode(Double.self, forKey: .verticalScale)
+        asymmetry = try container.decode(Double.self, forKey: .asymmetry)
+        tilt = try container.decode(Double.self, forKey: .tilt)
+        horizontalBend = try container.decode(Double.self, forKey: .horizontalBend)
+        verticalAspectScale = try container.decodeIfPresent(Double.self, forKey: .verticalAspectScale) ?? 1.0
+    }
 }
 
 struct PolynomialTerm: Equatable {
@@ -294,7 +315,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 12
+    static let currentSchemaVersion = 13
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -432,6 +453,7 @@ struct WarpConfiguration: Codable, Equatable {
         copy.cropAnchor = copy.cropAnchor.sanitized()
         copy.manual.strength = min(max(copy.manual.strength, 0), 2.25)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
+        copy.manual.verticalAspectScale = min(max(copy.manual.verticalAspectScale, 0.12), 5.5)
         copy.polynomial = copy.polynomial.normalized()
         if copy.extendedWarpEnabled, copy.canvasReference == nil {
             copy.canvasReference = WarpMath.captureCanvasReference(configuration: copy, preservingLegacyExtension: schemaVersion <= 7)

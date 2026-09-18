@@ -20,6 +20,7 @@ struct ShaderUniforms {
     var contentUVScale: SIMD2<Float>
     var gridUVScale: SIMD2<Float>
     var gridParameters: SIMD4<Float>
+    var circleParameters: SIMD4<Float>
 }
 
 final class LatestFrameStore {
@@ -478,6 +479,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             float2 contentUVScale;
             float2 gridUVScale;
             float4 gridParameters;
+            float4 circleParameters;
         };
 
         vertex VertexOut vertexMain(VertexIn input [[stage_in]]) {
@@ -526,7 +528,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             return 1.0 - smoothstep(width, width * 2.5, distance);
         }
 
-        float4 calibrationPattern(float2 uv, float2 gridScale, float4 parameters, bool smoothEdges) {
+        float4 calibrationPattern(float2 uv, float2 gridScale, float4 parameters, float4 circleParameters, bool smoothEdges) {
             float2 gridUV = 0.5 + (uv - 0.5) * gridScale;
             float2 spacing = 1.0 / parameters.xy;
             float minorGrid = max(gridLine(gridUV.x, spacing.x / 5.0, 0.7, smoothEdges), gridLine(gridUV.y, spacing.y / 5.0, 0.7, smoothEdges));
@@ -541,6 +543,20 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             float3 color = mix(float3(0.035), float3(0.20), minorGrid);
             color = mix(color, float3(0.85), majorGrid);
             color = mix(color, float3(1.0), border);
+
+            // Nearest of nine reference-canvas centers. Pixel-space distance makes
+            // the source markers circular even on an ultra-wide canvas. The mesh
+            // still deforms them; derivatives adjust only the stroke width.
+            float2 circleCell = clamp(floor(gridUV * 3.0), float2(0.0), float2(2.0));
+            float2 circleCenter = (circleCell + 0.5) / 3.0;
+            float signedCircleDistance = length((gridUV - circleCenter) * circleParameters.xy) - circleParameters.z;
+            float circlePixelStep = max(length(float2(dfdx(signedCircleDistance), dfdy(signedCircleDistance))), 0.00000001);
+            float circleDistancePixels = abs(signedCircleDistance) / circlePixelStep;
+            float circleHalfWidth = parameters.z * 0.5;
+            float circles = smoothEdges
+                ? 1.0 - smoothstep(circleHalfWidth - 0.5, circleHalfWidth + 0.5, circleDistancePixels)
+                : (circleDistancePixels <= circleHalfWidth ? 1.0 : 0.0);
+            color = mix(color, float3(1.0, 0.72, 0.12), circles);
             color = mix(color, float3(1.0, 0.16, 0.10), centerX);
             color = mix(color, float3(0.15, 1.0, 0.28), centerY);
 
@@ -622,7 +638,7 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             if (uniforms.testPatternMode == 1u) {
                 float2 patternUV = applyMirror(uv, uniforms.mirrorFlags);
                 bool smoothEdges = uniforms.antiAliasingMode != 0u;
-                float4 pattern = calibrationPattern(patternUV, uniforms.gridUVScale, uniforms.gridParameters, smoothEdges);
+                float4 pattern = calibrationPattern(patternUV, uniforms.gridUVScale, uniforms.gridParameters, uniforms.circleParameters, smoothEdges);
                 return float4(pattern.rgb * edgeAlpha, 1.0);
             }
 
@@ -833,7 +849,8 @@ final class WarpRenderer: NSObject, MTKViewDelegate {
             testPatternMode: configuration.render.testPattern.shaderValue,
             contentUVScale: configuration.contentUVScale,
             gridUVScale: configuration.gridUVScale,
-            gridParameters: configuration.render.calibrationGrid.shaderParameters
+            gridParameters: configuration.render.calibrationGrid.shaderParameters,
+            circleParameters: configuration.calibrationCircleParameters
         )
 
         let aa = configuration.aaRect.sanitized()
@@ -1167,13 +1184,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let strengthSlider = NSSlider()
     private let archSlider = NSSlider()
     private let verticalScaleSlider = NSSlider()
+    private let verticalScaleReadout = NSTextField(labelWithString: "1.00×")
     private let asymmetrySlider = NSSlider()
     private let tiltSlider = NSSlider()
     private let horizontalBendSlider = NSSlider()
     private let antiAliasingPicker = NSPopUpButton()
     private let antiAliasingEnabledButton = NSButton(checkboxWithTitle: "平滑线条边缘（抗锯齿）", target: nil, action: nil)
     private let automaticPerformanceButton = NSButton(checkboxWithTitle: "帧率不足时，自动降低采样档位保流畅", target: nil, action: nil)
-    private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、中心线和边界", target: nil, action: nil)
+    private let testPatternButton = NSButton(checkboxWithTitle: "显示标定网格、九圆、中心线和边界", target: nil, action: nil)
     private let gridColumnsField = NSTextField()
     private let gridRowsField = NSTextField()
     private let gridLineWidthField = NSTextField()
@@ -1549,12 +1567,16 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         inverseWarpTrendButton.action = #selector(toggleWarpTrend)
         stack.addArrangedSubview(inverseWarpTrendButton)
         stack.addArrangedSubview(makeSlider(title: "Warp 强度", slider: strengthSlider, minimum: 0, maximum: 2.25, action: #selector(updateStrength)))
-        stack.addArrangedSubview(makeSlider(title: "上下弧度", slider: archSlider, minimum: 0, maximum: 1.5, action: #selector(updateArch)))
-        stack.addArrangedSubview(makeSlider(title: "垂直压缩", slider: verticalScaleSlider, minimum: 0.6, maximum: 1.1, action: #selector(updateVerticalScale)))
+        stack.addArrangedSubview(makeSlider(title: "上下弧度", slider: archSlider, minimum: 0, maximum: 3, action: #selector(updateArch)))
+        verticalScaleSlider.setAccessibilityIdentifier("nio-vertical-aspect-scale")
+        verticalScaleSlider.setAccessibilityLabel("垂直压缩 / 拉伸")
+        verticalScaleReadout.setAccessibilityIdentifier("nio-vertical-aspect-value")
+        stack.addArrangedSubview(makeSlider(title: "垂直压缩 / 拉伸", slider: verticalScaleSlider, minimum: 0.12, maximum: 5.5, action: #selector(updateVerticalScale), readout: verticalScaleReadout))
+        stack.addArrangedSubview(buttonRow([makeButton("恢复垂直基准（1.00×）", action: #selector(resetVerticalScale))]))
         stack.addArrangedSubview(makeSlider(title: "左右不对称", slider: asymmetrySlider, minimum: -0.2, maximum: 0.2, action: #selector(updateAsymmetry)))
         stack.addArrangedSubview(makeSlider(title: "整体倾斜", slider: tiltSlider, minimum: -0.12, maximum: 0.12, action: #selector(updateTilt)))
         stack.addArrangedSubview(makeSlider(title: "水平弯曲", slider: horizontalBendSlider, minimum: -0.08, maximum: 0.08, action: #selector(updateHorizontalBend)))
-        stack.addArrangedSubview(explanation("上下弧度上限为 1.50，是原上限 0.30 的 5 倍；已有数值保持不变，极端组合仍须通过安全校验。"))
+        stack.addArrangedSubview(explanation("上下弧度上限为 3.00。垂直比例 1.00× 保留原校正画面，向左压缩、向右拉伸；在最终观察位置对照九圆，调至等宽等高。超出黄色 AA 区的部分仍会裁切。"))
         let localEditorButton = makeButton("打开局部交点精调", action: #selector(openLocalEditor))
         localEditorButton.toolTip = "切换到局部微调模块，在同一工作台点击交点，再用方向键精调。"
         stack.addArrangedSubview(localEditorButton)
@@ -1687,7 +1709,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             (polynomialButton, "只开关多项式，不清空系数；翻折参数会拒绝应用。"),
             (antiAliasingEnabledButton, "平滑细线和文字边缘，关闭使用点采样；不会改变几何形状。"),
             (automaticPerformanceButton, "运行时降低采样档位以保护流畅度，不改写保存的画质选择。"),
-            (testPatternButton, "用带方向角标的网格替代桌面，检查曲线和镜像；关闭后恢复桌面或视频。"),
+            (testPatternButton, "用带方向角标及九个比例标定圆的网格替代桌面；圆随画面一起变形，用垂直压缩 / 拉伸校准比例。关闭后恢复桌面或视频。"),
         ]
         checkboxHelp.forEach { button, text in button.toolTip = text; button.setAccessibilityHelp(text) }
         for document in tabPageDocuments {
@@ -1995,7 +2017,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         return row
     }
 
-    private func makeSlider(title: String, slider: NSSlider, minimum: Double, maximum: Double, action: Selector) -> NSView {
+    private func makeSlider(title: String, slider: NSSlider, minimum: Double, maximum: Double, action: Selector, readout: NSTextField? = nil) -> NSView {
         let container = NSStackView()
         container.orientation = .vertical
         container.alignment = .leading
@@ -2008,7 +2030,18 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         slider.action = action
         slider.isContinuous = true
         slider.widthAnchor.constraint(equalToConstant: 296).isActive = true
-        container.addArrangedSubview(label)
+        if let readout {
+            readout.font = .monospacedDigitSystemFont(ofSize: 12, weight: .medium)
+            readout.alignment = .right
+            let spacer = NSView()
+            spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            let header = NSStackView(views: [label, spacer, readout])
+            header.orientation = .horizontal
+            header.widthAnchor.constraint(equalToConstant: 296).isActive = true
+            container.addArrangedSubview(header)
+        } else {
+            container.addArrangedSubview(label)
+        }
         container.addArrangedSubview(slider)
         return container
     }
@@ -2038,7 +2071,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         polynomialButton.state = configuration.polynomial.enabled ? .on : .off
         strengthSlider.doubleValue = configuration.manual.strength
         archSlider.doubleValue = configuration.manual.arch
-        verticalScaleSlider.doubleValue = configuration.manual.verticalScale
+        verticalScaleSlider.doubleValue = configuration.manual.verticalAspectScale
+        verticalScaleReadout.stringValue = String(format: "%.2f×", configuration.manual.verticalAspectScale)
         asymmetrySlider.doubleValue = configuration.manual.asymmetry
         tiltSlider.doubleValue = configuration.manual.tilt
         horizontalBendSlider.doubleValue = configuration.manual.horizontalBend
@@ -2894,7 +2928,16 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
 
     @objc private func updateStrength(_ sender: NSSlider) { configuration.manual.strength = sender.doubleValue; applyConfiguration("Warp 强度已更新") }
     @objc private func updateArch(_ sender: NSSlider) { configuration.manual.arch = sender.doubleValue; applyConfiguration("上下弧度已更新") }
-    @objc private func updateVerticalScale(_ sender: NSSlider) { configuration.manual.verticalScale = sender.doubleValue; applyConfiguration("垂直压缩已更新") }
+    @objc private func updateVerticalScale(_ sender: NSSlider) {
+        configuration.manual.verticalAspectScale = sender.doubleValue
+        applyConfiguration("垂直压缩 / 拉伸已更新")
+        refreshControls()
+    }
+    @objc private func resetVerticalScale() {
+        configuration.manual.verticalAspectScale = 1
+        applyConfiguration("垂直比例已恢复为 1.00×；原有基础校正保留")
+        refreshControls()
+    }
     @objc private func updateAsymmetry(_ sender: NSSlider) { configuration.manual.asymmetry = sender.doubleValue; applyConfiguration("左右不对称已更新") }
     @objc private func updateTilt(_ sender: NSSlider) { configuration.manual.tilt = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapTilt, threshold: 0.002); sender.doubleValue = configuration.manual.tilt; applyConfiguration(configuration.manual.tilt == 0 && configuration.alignment.snapTilt ? "整体倾斜已吸附到精确零点" : "整体倾斜已更新") }
     @objc private func updateHorizontalBend(_ sender: NSSlider) { configuration.manual.horizontalBend = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapHorizontalBend, threshold: 0.001); sender.doubleValue = configuration.manual.horizontalBend; applyConfiguration(configuration.manual.horizontalBend == 0 && configuration.alignment.snapHorizontalBend ? "水平弯曲已吸附到精确零点" : "水平弯曲已更新") }

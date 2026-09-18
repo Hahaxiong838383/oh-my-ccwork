@@ -1,7 +1,8 @@
 import Foundation
 import simd
 
-/// Each component is measured in output physical pixels. Derivatives use normalized canvas UV,
+/// Components use physical pixels before the output-height multiplier and alignment.
+/// Derivatives use normalized canvas UV,
 /// so a cubic Bezier handle is `offset ± tangent * neighbouringKnotDistance / 3`.
 struct BezierWarpNode: Codable, Equatable, Identifiable {
     var id = UUID()
@@ -113,7 +114,7 @@ struct BezierWarpConfiguration: Codable, Equatable {
         for node in nodes {
             if !valid(node.offset, limit: 1000) || !valid(node.tangentU, limit: 20_000)
                 || !valid(node.tangentV, limit: 20_000) || !valid(node.mixedDerivative, limit: 1_000_000) {
-                errors.append("贝塞尔偏移须在 ±1000 物理像素内，切线和混合导数必须有限且在安全范围内")
+                errors.append("贝塞尔基础偏移须在 ±1000 像素内（按 1.00× 垂直比例计），切线和混合导数必须有限且在安全范围内")
                 break
             }
         }

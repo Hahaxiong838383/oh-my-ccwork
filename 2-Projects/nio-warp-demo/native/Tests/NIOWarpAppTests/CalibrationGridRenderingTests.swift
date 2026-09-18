@@ -16,12 +16,31 @@ final class CalibrationGridRenderingTests: XCTestCase {
             return channels.min()! > 150 && Int(channels.max()!) - Int(channels.min()!) < 20
         }
 
+        func circleBounds(in region: CGRect) -> CGRect? {
+            var minimumX = width, minimumY = height, maximumX = -1, maximumY = -1
+            let rows = min(height, max(0, Int(region.minY)))..<min(height, max(0, Int(region.maxY)))
+            let columns = min(width, max(0, Int(region.minX)))..<min(width, max(0, Int(region.maxX)))
+            for row in rows {
+                for column in columns {
+                    let offset = (row * width + column) * 4
+                    // The amber ring is distinct from white grid lines and all four corner markers.
+                    if pixels[offset + 2] > 210 && (165...200).contains(pixels[offset + 1]) && pixels[offset] < 50 {
+                        minimumX = min(minimumX, column); maximumX = max(maximumX, column)
+                        minimumY = min(minimumY, row); maximumY = max(maximumY, row)
+                    }
+                }
+            }
+            guard maximumX >= minimumX, maximumY >= minimumY else { return nil }
+            return CGRect(x: minimumX, y: minimumY, width: maximumX - minimumX + 1, height: maximumY - minimumY + 1)
+        }
+
         func bands(horizontal: Bool) -> [Range<Int>] {
             let length = horizontal ? width : height
             var result = [Range<Int>]()
             var start: Int?
             for position in 12..<(length - 12) {
-                let white = isWhite(column: horizontal ? position : 31, row: horizontal ? 31 : position)
+                // Sample near the edge, outside the new nine-circle marker region.
+                let white = isWhite(column: horizontal ? position : 8, row: horizontal ? 8 : position)
                 if white && start == nil { start = position }
                 if !white, let first = start { result.append(first..<position); start = nil }
             }
@@ -49,7 +68,9 @@ final class CalibrationGridRenderingTests: XCTestCase {
         grid: CalibrationGridConfiguration = CalibrationGridConfiguration(columns: 8, rows: 4, lineWidthPixels: 4),
         scale: SIMD2<Float> = SIMD2(repeating: 1), smooth: Bool = true, patternMode: UInt32 = 1,
         shaderSource: String = WarpRenderer.shaderSource, width: Int = 400, height: Int = 240,
-        mesh: GeneratedMesh? = nil, sourceMarker: Bool = false
+        mesh: GeneratedMesh? = nil, sourceMarker: Bool = false,
+        geometryScale: SIMD2<Float> = SIMD2(repeating: 1), mirrorFlags: UInt32 = 0,
+        referenceCanvas: CanvasConfiguration? = nil, configuration: WarpConfiguration? = nil
     ) throws -> Image {
         guard let device = MTLCreateSystemDefaultDevice() else { throw XCTSkip("需要 Metal 设备") }
         let library = try device.makeLibrary(source: shaderSource, options: nil)
@@ -91,20 +112,24 @@ final class CalibrationGridRenderingTests: XCTestCase {
         pass.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 1)
         let command = try XCTUnwrap(device.makeCommandQueue()?.makeCommandBuffer())
         let encoder = try XCTUnwrap(command.makeRenderCommandEncoder(descriptor: pass))
+        let extent = scale * geometryScale
         let vertices = [
-            MeshVertex(position: SIMD2(-scale.x, scale.y), uv: SIMD2(0, 0)),
-            MeshVertex(position: SIMD2(scale.x, scale.y), uv: SIMD2(1, 0)),
-            MeshVertex(position: SIMD2(-scale.x, -scale.y), uv: SIMD2(0, 1)),
-            MeshVertex(position: SIMD2(scale.x, -scale.y), uv: SIMD2(1, 1)),
+            MeshVertex(position: SIMD2(-extent.x, extent.y), uv: SIMD2(0, 0)),
+            MeshVertex(position: SIMD2(extent.x, extent.y), uv: SIMD2(1, 0)),
+            MeshVertex(position: SIMD2(-extent.x, -extent.y), uv: SIMD2(0, 1)),
+            MeshVertex(position: SIMD2(extent.x, -extent.y), uv: SIMD2(1, 1)),
         ]
         let actualVertices = mesh?.vertices ?? vertices
         let buffer = try XCTUnwrap(device.makeBuffer(bytes: actualVertices, length: actualVertices.count * MemoryLayout<MeshVertex>.stride))
+        var circleConfiguration = configuration ?? WarpConfiguration.defaultConfiguration(displayWidth: width, displayHeight: height)
+        if configuration == nil { circleConfiguration.canvas = referenceCanvas ?? CanvasConfiguration(width: width, height: height) }
         var uniforms = ShaderUniforms(
-            sourceAspect: 1, canvasAspect: 1, contentMode: 0, mirrorFlags: 0, cropAnchor: SIMD2(repeating: 0),
+            sourceAspect: 1, canvasAspect: 1, contentMode: 0, mirrorFlags: mirrorFlags, cropAnchor: SIMD2(repeating: 0),
             sourceTexelSize: SIMD2(repeating: 1), antiAliasingMode: smooth ? 1 : 0, testPatternMode: patternMode,
-            contentUVScale: SIMD2(repeating: 1), gridUVScale: scale, gridParameters: grid.shaderParameters
+            contentUVScale: SIMD2(repeating: 1), gridUVScale: scale, gridParameters: grid.shaderParameters,
+            circleParameters: circleConfiguration.calibrationCircleParameters
         )
-        XCTAssertEqual(MemoryLayout<ShaderUniforms>.stride, 80)
+        XCTAssertEqual(MemoryLayout<ShaderUniforms>.stride, 96)
         encoder.setRenderPipelineState(pipeline)
         encoder.setVertexBuffer(buffer, offset: 0, index: 0)
         encoder.setFragmentBytes(&uniforms, length: MemoryLayout<ShaderUniforms>.stride, index: 1)
@@ -177,6 +202,64 @@ final class CalibrationGridRenderingTests: XCTestCase {
         let original = try render(patternMode: 2)
         let changed = try render(grid: CalibrationGridConfiguration(columns: 37, rows: 13, lineWidthPixels: 12), patternMode: 2)
         XCTAssertEqual(original.pixels, changed.pixels)
+    }
+
+    func testNineGPUCirclesAreRoundInPixelSpaceOnUltraWideCanvas() throws {
+        for smooth in [false, true] {
+            let image = try render(smooth: smooth, width: 7680, height: 936)
+            for row in 0..<3 {
+                for column in 0..<3 {
+                    let region = CGRect(x: column * 2560, y: row * 312, width: 2560, height: 312)
+                    let ring = try XCTUnwrap(image.circleBounds(in: region), "缺少第\(row + 1)行第\(column + 1)列标定圆")
+                    XCTAssertEqual(ring.midX, region.midX, accuracy: 1)
+                    XCTAssertEqual(ring.midY, region.midY, accuracy: 1)
+                    XCTAssertEqual(ring.width, ring.height, accuracy: 2)
+                    XCTAssertGreaterThan(ring.width, 170)
+                    XCTAssertLessThan(ring.width, 183)
+                }
+            }
+            try image.save("nine-circles-7680x936-aa-\(smooth).png")
+        }
+    }
+
+    func testGPUCirclesRevealCompressionAndStretchInsteadOfRemainingRound() throws {
+        var configuration = WarpConfiguration.defaultConfiguration(displayWidth: 7680, displayHeight: 1872)
+        configuration.canvas = CanvasConfiguration(width: 7680, height: 936)
+        // A taller render target leaves room to measure stretching at the actual 5.5x limit.
+        configuration.aaRect = NormalizedRect(x: 0, y: 0.25, width: 1, height: 0.5)
+        configuration.manual = ManualWarpParameters(enabled: true, strength: 0, arch: 0, verticalScale: 1, asymmetry: 0, tilt: 0, horizontalBend: 0)
+        for verticalScale in [0.12, 0.5, 1.0, 1.75, 5.5] {
+            configuration.manual.verticalAspectScale = verticalScale
+            let mesh = WarpMath.makeMesh(configuration: configuration, columns: 192, rows: 72)
+            XCTAssertTrue(mesh.validation.isValid, mesh.validation.summary)
+            let image = try render(width: 7680, height: 1872, mesh: mesh, configuration: configuration)
+            for column in 0..<3 {
+                let halfHeight = 100 * verticalScale + 8
+                let ring = try XCTUnwrap(image.circleBounds(in: CGRect(x: Double(column * 2560), y: 936 - halfHeight, width: 2560, height: halfHeight * 2)))
+                XCTAssertEqual(ring.midY, 936, accuracy: 1)
+                // Stroke width is deliberately physical-pixel based, so compare centerline diameters.
+                XCTAssertEqual((ring.height - 4) / (ring.width - 4), verticalScale, accuracy: 0.04)
+            }
+            try image.save("circle-vertical-scale-\(verticalScale).png")
+        }
+    }
+
+    func testGPUCanvasExpansionPreservesNineCircleSizeAndPosition() throws {
+        let reference = CanvasConfiguration(width: 7680, height: 936)
+        let original = try render(width: 7680, height: 936, referenceCanvas: reference)
+        let expanded = try render(scale: SIMD2(Float(13000) / 7680, Float(2800) / 936), width: 7680, height: 936, referenceCanvas: reference)
+        for row in 0..<3 {
+            for column in 0..<3 {
+                let region = CGRect(x: column * 2560, y: row * 312, width: 2560, height: 312)
+                let before = try XCTUnwrap(original.circleBounds(in: region))
+                let after = try XCTUnwrap(expanded.circleBounds(in: region))
+                XCTAssertEqual(before.midX, after.midX, accuracy: 1)
+                XCTAssertEqual(before.midY, after.midY, accuracy: 1)
+                XCTAssertEqual(before.width, after.width, accuracy: 2)
+                XCTAssertEqual(before.height, after.height, accuracy: 2)
+            }
+        }
+        try expanded.save("nine-circles-expanded-13000x2800.png")
     }
 
     func testLocalCorrectionMovesBothDesktopTextureAndCalibrationGridOnGPU() throws {

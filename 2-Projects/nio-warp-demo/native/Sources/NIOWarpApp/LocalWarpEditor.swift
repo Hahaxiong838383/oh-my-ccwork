@@ -2,8 +2,8 @@ import AppKit
 import CoreGraphics
 import simd
 
-/// Local RBF offsets are stored before final geometric alignment. The editor operates in
-/// visible physical-pixel axes, so vectors must cross the same rotation as the mesh.
+/// Local RBF offsets are stored before output-height scaling and final alignment.
+/// The editor operates in visible physical-pixel axes, so vectors cross both transforms.
 private enum LocalWarpEditingCoordinates {
     static func angle(configuration: WarpConfiguration) -> Double {
         guard configuration.alignment.level else { return 0 }
@@ -20,11 +20,14 @@ private enum LocalWarpEditingCoordinates {
     }
 
     static func modelVector(_ vector: SIMD2<Double>, configuration: WarpConfiguration) -> SIMD2<Double> {
-        rotate(vector, angle: -angle(configuration: configuration))
+        let unrotated = rotate(vector, angle: -angle(configuration: configuration))
+        let scale = configuration.manual.enabled ? configuration.manual.verticalAspectScale : 1
+        return SIMD2(unrotated.x, unrotated.y / scale)
     }
 
     static func screenVector(_ vector: SIMD2<Double>, configuration: WarpConfiguration) -> SIMD2<Double> {
-        rotate(vector, angle: angle(configuration: configuration))
+        let scale = configuration.manual.enabled ? configuration.manual.verticalAspectScale : 1
+        return rotate(SIMD2(vector.x, vector.y * scale), angle: angle(configuration: configuration))
     }
 }
 
@@ -627,7 +630,7 @@ final class LocalWarpEditorController: NSWindowController, NSWindowDelegate {
                 base.localWarp.enabled = false
                 let physicalBase = WarpMath.physicalPoints(canvasPoints: [base.canvasUV(for: selected)], configuration: base)[0]
                 let difference = rendered - physicalBase
-                offset = SIMD2(Double(difference.x), Double(difference.y))
+                offset = LocalWarpEditingCoordinates.modelVector(SIMD2(Double(difference.x), Double(difference.y)), configuration: working)
             } else if canvasView.configuration?.localWarp == local {
                 // Retain subpixel mesh interpolation error without subtracting two differently
                 // aligned surfaces. Disabling local warp can change the global alignment itself.

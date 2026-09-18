@@ -161,7 +161,22 @@ final class BezierWarpCanvasView: NSView {
     private static func rotate(_ vector: SIMD2<Double>, angle: Double) -> SIMD2<Double> {
         SIMD2(cos(angle) * vector.x - sin(angle) * vector.y, sin(angle) * vector.x + cos(angle) * vector.y)
     }
-    func modelDelta(forPhysicalDelta delta: SIMD2<Double>) -> SIMD2<Double> { Self.rotate(delta, angle: -alignmentAngle) }
+    private static func verticalAspectScale(for configuration: WarpConfiguration) -> Double {
+        configuration.manual.enabled ? configuration.manual.verticalAspectScale : 1
+    }
+    private static func modelDelta(forPhysicalDelta delta: SIMD2<Double>, configuration: WarpConfiguration) -> SIMD2<Double> {
+        let unrotated = rotate(delta, angle: -rotationAngle(for: configuration))
+        return SIMD2(unrotated.x, unrotated.y / verticalAspectScale(for: configuration))
+    }
+    func modelDelta(forPhysicalDelta delta: SIMD2<Double>) -> SIMD2<Double> {
+        guard let configuration else { return delta }
+        return Self.modelDelta(forPhysicalDelta: delta, configuration: configuration)
+    }
+    func physicalDelta(forModelDelta delta: SIMD2<Double>) -> SIMD2<Double> {
+        guard let configuration else { return delta }
+        let scaled = SIMD2(delta.x, delta.y * Self.verticalAspectScale(for: configuration))
+        return Self.rotate(scaled, angle: alignmentAngle)
+    }
     func changeZoom(by factor: CGFloat) { zoom = min(max(zoom * factor, 0.25), 16); needsDisplay = true }
 
     /// A cubic Bézier handle is P ± dP/du × adjacent knot interval / 3.
@@ -182,8 +197,11 @@ final class BezierWarpCanvasView: NSView {
         let baseU = (samples[1] - samples[0]) / Float(right - left)
         let baseV = (samples[3] - samples[2]) / Float(bottom - top)
         let node = field.nodes[index]
-        let rotatedU = Self.rotate(SIMD2(Double(baseU.x), Double(baseU.y)) + node.tangentU, angle: alignmentAngle)
-        let rotatedV = Self.rotate(SIMD2(Double(baseV.x), Double(baseV.y)) + node.tangentV, angle: alignmentAngle)
+        let aspectScale = Self.verticalAspectScale(for: config)
+        let scaledTangentU = SIMD2(node.tangentU.x, node.tangentU.y * aspectScale)
+        let scaledTangentV = SIMD2(node.tangentV.x, node.tangentV.y * aspectScale)
+        let rotatedU = Self.rotate(SIMD2(Double(baseU.x), Double(baseU.y)) + scaledTangentU, angle: alignmentAngle)
+        let rotatedV = Self.rotate(SIMD2(Double(baseV.x), Double(baseV.y)) + scaledTangentV, angle: alignmentAngle)
         let tangentU = SIMD2(Float(rotatedU.x), Float(rotatedU.y))
         let tangentV = SIMD2(Float(rotatedV.x), Float(rotatedV.y))
         return [true, false].flatMap { horizontal -> [Handle] in
@@ -229,7 +247,7 @@ final class BezierWarpCanvasView: NSView {
         guard let start = dragStart, var candidate = dragConfiguration, let selectedIndex else { return }
         let point = convert(event.locationInWindow, from: nil)
         let screenDelta = physicalDelta(forViewDelta: NSPoint(x: point.x - start.x, y: point.y - start.y))
-        let delta = Self.rotate(screenDelta, angle: -Self.rotationAngle(for: candidate))
+        let delta = Self.modelDelta(forPhysicalDelta: screenDelta, configuration: candidate)
         let changed: Bool
         if let handle = dragHandle {
             let tangentDelta = delta * (3 / (handle.sign * handle.interval))
@@ -581,9 +599,10 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate, NS
         selectedControls.forEach { $0.isEnabled = available && field.enabled && selected != nil }
         if let selected {
             let node = field.nodes[selected]
+            let physicalOffset = canvasView.physicalDelta(forModelDelta: node.offset)
             selectionLabel.stringValue = "第 \(selected / field.columns + 1) 行 · 第 \(selected % field.columns + 1) 点\n手柄：水平 / 垂直切线，平滑连接相邻面片"
-            setField(offsetXField, value: NumericInput.formattedDouble(node.offset.x))
-            setField(offsetYField, value: NumericInput.formattedDouble(node.offset.y))
+            setField(offsetXField, value: NumericInput.formattedDouble(physicalOffset.x))
+            setField(offsetYField, value: NumericInput.formattedDouble(physicalOffset.y))
         } else { selectionLabel.stringValue = "点击青色节点，再拖动圆点或切线方点"; setField(offsetXField, value: "0"); setField(offsetYField, value: "0") }
     }
 
@@ -635,7 +654,8 @@ final class BezierWarpEditorController: NSWindowController, NSWindowDelegate, NS
     @objc private func setOffset() {
         guard let index = canvasView.selectedIndex, let x = NumericInput.double(from: offsetXField.stringValue), let y = NumericInput.double(from: offsetYField.stringValue) else { showStatus("节点位移请输入有限数字，单位为输出物理像素。", error: true); return }
         var field = working.bezierWarp
-        guard field.applyOffsetDelta(SIMD2(x, y) - field.nodes[index].offset, at: index) else { showStatus("位移超出允许范围。", error: true); return }
+        let modelOffset = canvasView.modelDelta(forPhysicalDelta: SIMD2(x, y))
+        guard field.applyOffsetDelta(modelOffset - field.nodes[index].offset, at: index) else { showStatus("位移超出允许范围。", error: true); return }
         clearDrafts([offsetXField, offsetYField])
         submit(field)
     }

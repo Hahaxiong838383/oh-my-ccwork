@@ -46,7 +46,7 @@ final class TabLayoutTests: XCTestCase {
             sourceScreen: nil, outputScreen: nil,
             setWarpVisible: { _ in XCTFail("切换模块不能改变输出状态") }, isWarpVisible: { false },
             applyCaptureConfiguration: { _ in XCTFail("切换模块不能重启捕获") },
-            updateAABoundary: { _, _ in XCTFail("切换模块不能更新 AA") },
+            updateAABoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 AA") } },
             updateWarpBoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 Warp") } }, presentWindow: false,
             historyStore: history, presetStore: PresetStore(defaults: defaults), protoPie: protoPie,
             terminateApplication: terminateApplication
@@ -504,6 +504,101 @@ final class TabLayoutTests: XCTestCase {
                 let data = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
                 try data.write(to: folder.appendingPathComponent("\(module).png"))
             }
+        }
+    }
+
+    func testVerticalAspectActionsPersistReadoutAndResetWithoutChangingLegacyCalibration() throws {
+        let (panel, defaults, suite) = try controller(active: true, allowsGeometryCommit: true)
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        panel.selectModule("global")
+        let original = panel.configurationForOfflinePreview
+        let slider = try XCTUnwrap(identifiedView("nio-vertical-aspect-scale", in: panel) as? NSSlider)
+        let readout = try XCTUnwrap(identifiedView("nio-vertical-aspect-value", in: panel) as? NSTextField)
+        let controls = descendants(try XCTUnwrap(item("global", in: panel).view)).compactMap { $0 as? NSControl }
+        let reset = try XCTUnwrap(controls.compactMap { $0 as? NSButton }.first { $0.title == "恢复垂直基准（1.00×）" })
+        let arch = try XCTUnwrap(controls.compactMap { $0 as? NSSlider }.first { $0.action == NSSelectorFromString("updateArch:") })
+        XCTAssertEqual(slider.minValue, 0.12)
+        XCTAssertEqual(slider.maxValue, 5.5)
+        XCTAssertEqual(slider.doubleValue, 1)
+        XCTAssertEqual(readout.stringValue, "1.00×")
+        XCTAssertEqual(arch.maxValue, 3)
+        XCTAssertTrue(reset.isEnabled)
+        let samples: [SIMD2<Float>] = [SIMD2(0.1, 0.15), SIMD2(0.5, 0.5), SIMD2(0.9, 0.85)]
+        let originalPoints = WarpMath.physicalPoints(canvasPoints: samples, configuration: original)
+
+        for factor in [0.12, 0.65, 1.75, 5.5] {
+            slider.doubleValue = factor
+            slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+            let current = panel.configurationForOfflinePreview
+            let saved = ConfigurationStore(defaults: defaults).offlineConfiguration()
+            var expectedManual = original.manual
+            expectedManual.verticalAspectScale = factor
+            XCTAssertEqual(current.manual, expectedManual, "垂直比例不能改写原有垂直压缩、弧度或其他基础参数")
+            XCTAssertEqual(saved.manual, expectedManual, "新字段必须实际落入隔离偏好，而非仅更新滑杆")
+            XCTAssertEqual(readout.stringValue, String(format: "%.2f×", factor))
+            XCTAssertEqual(slider.doubleValue, factor)
+            XCTAssertEqual(current.aaRect, original.aaRect)
+            XCTAssertEqual(current.canvas, original.canvas)
+            XCTAssertEqual(current.polynomial, original.polynomial)
+            XCTAssertEqual(current.bezierWarp, original.bezierWarp)
+            XCTAssertEqual(current.localWarp, original.localWarp)
+            XCTAssertEqual(current.alignment, original.alignment)
+        }
+
+        reset.performClick(nil)
+        let restored = panel.configurationForOfflinePreview
+        XCTAssertEqual(restored.manual, original.manual)
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration().manual, original.manual)
+        XCTAssertEqual(slider.doubleValue, 1)
+        XCTAssertEqual(readout.stringValue, "1.00×")
+        let restoredPoints = WarpMath.physicalPoints(canvasPoints: samples, configuration: restored)
+        for (before, after) in zip(originalPoints, restoredPoints) {
+            XCTAssertEqual(before.x, after.x, accuracy: 0.002)
+            XCTAssertEqual(before.y, after.y, accuracy: 0.002)
+        }
+    }
+
+    func testOfflineVerticalAspectControlsRejectActionsWithoutChangingSavedConfiguration() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        panel.selectModule("global")
+        let original = panel.configurationForOfflinePreview
+        let persisted = defaults.persistentDomain(forName: suite) as NSDictionary?
+        let slider = try XCTUnwrap(identifiedView("nio-vertical-aspect-scale", in: panel) as? NSSlider)
+        let readout = try XCTUnwrap(identifiedView("nio-vertical-aspect-value", in: panel) as? NSTextField)
+        let reset = try XCTUnwrap(descendants(try XCTUnwrap(item("global", in: panel).view)).compactMap { $0 as? NSButton }.first { $0.title == "恢复垂直基准（1.00×）" })
+        XCTAssertFalse(slider.isEnabled)
+        XCTAssertFalse(reset.isEnabled)
+        slider.doubleValue = 2.4
+        slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+        reset.sendAction(try XCTUnwrap(reset.action), to: reset.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview, original)
+        XCTAssertEqual(defaults.persistentDomain(forName: suite) as NSDictionary?, persisted)
+        XCTAssertEqual(slider.doubleValue, 1)
+        XCTAssertEqual(readout.stringValue, "1.00×")
+    }
+
+    func testVerticalAspectReadoutAndResetRemainReachableInMinimumWorkbench() throws {
+        let (panel, defaults, suite) = try controller(active: true)
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let window = try XCTUnwrap(panel.window)
+        window.setContentSize(NSSize(width: 1040, height: 650))
+        panel.selectModule("global")
+        let content = try XCTUnwrap(window.contentView)
+        content.layoutSubtreeIfNeeded()
+        let scroll = try XCTUnwrap(item("global", in: panel).view as? NSScrollView)
+        let document = try XCTUnwrap(scroll.documentView)
+        let slider = try identifiedView("nio-vertical-aspect-scale", in: panel)
+        let readout = try identifiedView("nio-vertical-aspect-value", in: panel)
+        let reset = try XCTUnwrap(descendants(document).compactMap { $0 as? NSButton }.first { $0.title == "恢复垂直基准（1.00×）" })
+        for view in [slider, readout, reset] {
+            view.scrollToVisible(view.bounds)
+            content.layoutSubtreeIfNeeded()
+            let frame = view.convert(view.bounds, to: document)
+            XCTAssertGreaterThanOrEqual(frame.minX, -1)
+            XCTAssertLessThanOrEqual(frame.maxX, document.bounds.width + 1)
+            XCTAssertFalse(view.isHiddenOrHasHiddenAncestor)
+            XCTAssertTrue(scroll.contentView.bounds.intersects(view.convert(view.bounds, to: scroll.contentView)))
         }
     }
 }

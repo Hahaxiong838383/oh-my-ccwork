@@ -405,7 +405,24 @@ enum WarpMath {
         var delta = context.localField?.displacement(at: configuration.localCoordinate(at: canvasPoint)) ?? .zero
         delta += context.bezierField?.displacement(at: SIMD2(Double(canvasPoint.x), Double(canvasPoint.y))) ?? .zero
         let aa = configuration.aaRect.sanitized()
-        let displaced = base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+        var displaced = base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+        // Resize the complete deformed surface after normalization, so the multiplier is not
+        // cancelled by manualBounds or inverted by the optical trend. Alignment sees this shape.
+        let verticalAspectScale = Float(configuration.manual.verticalAspectScale)
+        if configuration.manual.enabled, verticalAspectScale != 1 {
+            // In the extended canvas, AA is only a crop. Keep the scale pivot in the
+            // captured physical frame so moving that crop cannot translate the surface.
+            let centerY: Float
+            if configuration.extendedWarpEnabled {
+                let reference = configuration.canvasReference ?? captureCanvasReference(configuration: configuration)
+                let physicalCenterY = reference.physicalY + reference.physicalHeight * 0.5
+                centerY = Float((physicalCenterY - aa.y * Double(configuration.displayPixelHeight))
+                    / (aa.height * Double(configuration.displayPixelHeight)))
+            } else {
+                centerY = 0.5
+            }
+            displaced.y = centerY + (displaced.y - centerY) * verticalAspectScale
+        }
         return context.alignment.apply(displaced)
     }
 
