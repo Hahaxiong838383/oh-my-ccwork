@@ -43,7 +43,7 @@
     "recordedAt": "2026-09-18T21:59:04+08:00",
     "userStatement": "我测试了几次OK了",
     "scope": "Repeated application quit/reopen and preview input acceptance",
-    "computerReboot": "pending user test; not performed by agent"
+    "computerReboot": "User rebooted and tested; post-boot core pipeline logs verified. User confirmed intentional app exit. Power flag correction separately requires next reboot verification."
   },
   "rollback": {
     "gitTag": "nio-warp-before-reopen-input-20260918",
@@ -57,5 +57,17 @@
     "cursorAutoHideEnabled": true,
     "cursorAutoHideDelaySeconds": 2,
     "preferencesByteIdenticalDuringInstall": true
+  },
+  "rebootInspection": {
+    "report": "reboot-acceptance-v01315-20260918.md",
+    "bootTime": "2026-09-18T22:02:32+08:00",
+    "applicationStillRunning": false,
+    "intentionalExitConfirmedByUser": true,
+    "postBootUnexpectedStops": 0,
+    "postBootRelatedCrashReports": 0,
+    "awakeFlagFound": 0,
+    "awakeFlagRestored": 1,
+    "awakeBootTask": "com.mycc.nio-warp.awake",
+    "newBootTaskColdBootVerification": "pending"
   }
 }
