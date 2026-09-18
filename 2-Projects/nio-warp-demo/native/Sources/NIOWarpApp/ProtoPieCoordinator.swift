@@ -18,6 +18,7 @@ import Foundation
     private(set) var state: ProtoPieRuntimeState = .idle { didSet { notify() } }
     private(set) var activeSession: ProtoPieSession?
     private(set) var targetDisplayID: CGDirectDisplayID?
+    private(set) var presentationCanvas: CanvasConfiguration?
     private(set) var notice = ""
     private let defaults: UserDefaults
     private let driver: ProtoPiePreviewDriving
@@ -33,6 +34,7 @@ import Foundation
     private var manualPlayerOpen = false
     private var recoveryAttempts = 0
     private var pendingConfiguration: ProtoPieConfiguration?
+    private var canvasRebuildPending = false
     private let monitoringInterval: UInt64
     private let recoveryDelay: UInt64
 
@@ -122,6 +124,55 @@ import Foundation
         } catch { notice = error.localizedDescription; notify(); return false }
     }
 
+    /// Runtime presentation dimensions come from the accepted Warp canvas, not
+    /// from a second persisted copy of the player's or calibration settings.
+    func setPresentationCanvas(_ canvas: CanvasConfiguration?) {
+        guard canvas != presentationCanvas else { return }
+        if let canvas, !(64...32768).contains(canvas.width) || !(64...32768).contains(canvas.height) { return }
+        let heightChanged = canvas?.height != presentationCanvas?.height
+        presentationCanvas = canvas
+        // The Cloud source width follows the physical output screen, so changing
+        // only the Warp canvas width must not rebuild the browser or its capture.
+        guard heightChanged else {
+            // A width-only edit can follow a pending height edit. Keep it queued
+            // with that resize instead of bypassing the old-operation drain.
+            if !canvasRebuildPending { driver.setPresentationCanvas(canvas) }
+            notify()
+            return
+        }
+        let configuration = pendingConfiguration ?? activeSession?.configuration ?? lastSuccessful ?? saved
+        guard wantsToRun, !manuallyStopped, !manualPlayerOpen,
+              targetDisplayID != nil, configuration.source == .cloud else {
+            driver.setPresentationCanvas(canvas)
+            notify()
+            return
+        }
+        // A canvas change can arrive while an older resize/prepare is suspended.
+        // Let its cancellation finish before the driver changes the owned source
+        // display, then prepare and capture only the latest requested dimensions.
+        let previousOperation = operation
+        let previousLayout = layoutOperation
+        let previousMonitor = monitor
+        cancelOperation()
+        previousMonitor?.cancel(); monitor = nil
+        let token = generation
+        canvasRebuildPending = true
+        notice = "画布尺寸已更新，正在调整播放器并重新确认完整画面…"
+        state = .launching
+        onSuspendOutput?()
+        operation = Task { [weak self] in
+            await previousOperation?.value
+            await previousLayout?.value
+            await previousMonitor?.value
+            guard let self, self.generation == token, !Task.isCancelled,
+                  self.wantsToRun, !self.manuallyStopped, !self.manualPlayerOpen,
+                  self.targetDisplayID != nil else { return }
+            self.driver.setPresentationCanvas(self.presentationCanvas)
+            self.state = .idle
+            self.begin(configuration: configuration, resetRecovery: true)
+        }
+    }
+
     func setTargetDisplay(_ displayID: CGDirectDisplayID?) {
         guard targetDisplayID != displayID else { return }
         let changingActiveDisplay = targetDisplayID != nil && displayID != nil && wantsToRun
@@ -170,6 +221,7 @@ import Foundation
 
     func stop() {
         manualPlayerOpen = false
+        canvasRebuildPending = false
         manuallyStopped = true; wantsToRun = false; pendingConfiguration = nil
         cancelOperation(); monitor?.cancel(); monitor = nil
         // Do not close player applications or discard any Studio changes.
@@ -180,12 +232,17 @@ import Foundation
     }
 
     func shutdown() {
+        canvasRebuildPending = false
         wantsToRun = false; manuallyStopped = true
         cancelOperation(); monitor?.cancel(); monitor = nil
         if let activeSession { driver.detach(activeSession) }
         activeSession = nil
         onStop?()
     }
+
+    /// Called after the application has awaited capture shutdown, so removing
+    /// the owned source display cannot race an active ScreenCaptureKit stream.
+    func finishShutdownPresentation() { driver.shutdownPresentation() }
 
     func setOutputPaused(_ paused: Bool) {
         outputPaused = paused
@@ -241,6 +298,7 @@ import Foundation
         let token = generation
         let previous = activeSession
         let replacingLocal = previous?.configuration.source == .localFile && configuration != previous?.configuration
+        let replacingCanvas = canvasRebuildPending
         notice = ""
         state = .launching
         if replacingLocal { onSuspendOutput?() }
@@ -248,6 +306,8 @@ import Foundation
             guard let self else { return }
             var candidate: ProtoPieSession?
             do {
+                try self.requireCurrent(token)
+                self.driver.setPresentationCanvas(self.presentationCanvas)
                 let session = try await self.driver.prepare(configuration: configuration, displayID: displayID) { [weak self] message in
                     guard let self, self.generation == token else { return }
                     self.state = .waitingForPreview(message)
@@ -258,11 +318,13 @@ import Foundation
                 self.state = .capturing
                 try await capture(session.windowID, session.processID)
                 try self.requireCurrent(token)
+                self.driver.presentationCaptured(session)
                 self.activeSession = session
                 self.lastSuccessful = configuration
                 self.persist(configuration, key: Self.lastSuccessfulKey)
                 self.pendingConfiguration = nil
-                if replacingLocal && !self.outputPaused { self.onResumeOutput?() }
+                self.canvasRebuildPending = false
+                if (replacingLocal || replacingCanvas) && !self.outputPaused { self.onResumeOutput?() }
                 self.state = self.outputPaused ? .paused : .running
                 if let previous, previous.windowID != session.windowID { await self.driver.release(previous) }
                 self.startMonitor()
@@ -278,18 +340,27 @@ import Foundation
                             old = try await self.driver.prepare(configuration: previous.configuration, displayID: displayID) { _ in }
                         } else { old = previous }
                         try self.requireCurrent(token)
-                        if await self.driver.isAlive(old), let capture = self.onCapture {
+                        let alive = await self.driver.isAlive(old)
+                        var completePresentation = alive
+                        if alive && replacingCanvas {
+                            completePresentation = await self.driver.isPresentationReady(old, displayID: displayID)
+                        }
+                        try self.requireCurrent(token)
+                        if alive, completePresentation, let capture = self.onCapture {
                             try await capture(old.windowID, old.processID)
                             try self.requireCurrent(token)
                             self.activeSession = old
                             oldRestored = true
-                            if replacingLocal && !self.outputPaused { self.onResumeOutput?() }
+                            if (replacingLocal || replacingCanvas) && !self.outputPaused { self.onResumeOutput?() }
                         }
                     } catch { /* Report the original failure plus rollback failure below. */ }
                 }
                 guard self.generation == token, !Task.isCancelled else { return }
                 if let candidate, candidate.windowID != self.activeSession?.windowID { await self.driver.release(candidate) }
-                let suffix = oldRestored ? "\n已保留上一预览来源。" : (previous == nil ? "" : "\n旧来源也不可用，已恢复原始桌面。")
+                self.canvasRebuildPending = false
+                let suffix = oldRestored ? "\n已保留上一预览来源。" : (replacingCanvas
+                    ? "\n完整高度尚未确认，已暂停校正输出，避免显示被裁切的旧画面。"
+                    : (previous == nil ? "" : "\n旧来源也不可用，已恢复原始桌面。"))
                 if previous != nil && !oldRestored { self.activeSession = nil; self.onStop?() }
                 self.notice = error.localizedDescription + suffix
                 self.state = .failed(self.notice)

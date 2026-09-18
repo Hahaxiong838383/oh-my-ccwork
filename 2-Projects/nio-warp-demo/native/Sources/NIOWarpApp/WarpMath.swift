@@ -379,11 +379,11 @@ enum WarpMath {
         canvasPoint: SIMD2<Float>,
         configuration: WarpConfiguration
     ) -> SIMD2<Float> {
-        localPhysicalPoint(
+        translatedOutputPoint(localPhysicalPoint(
             canvasPoint: canvasPoint,
             configuration: configuration,
             context: mappingContext(configuration: configuration)
-        )
+        ), configuration: configuration)
     }
 
     static func localPhysicalPoints(
@@ -392,8 +392,17 @@ enum WarpMath {
     ) -> [SIMD2<Float>] {
         let context = mappingContext(configuration: configuration)
         return canvasPoints.map {
-            localPhysicalPoint(canvasPoint: $0, configuration: configuration, context: context)
+            translatedOutputPoint(localPhysicalPoint(canvasPoint: $0, configuration: configuration, context: context), configuration: configuration)
         }
+    }
+
+    /// Keep this outside mappingContext: automatic centering/leveling must not
+    /// absorb the user's final physical translation, including in grown canvases.
+    private static func translatedOutputPoint(_ local: SIMD2<Float>, configuration: WarpConfiguration) -> SIMD2<Float> {
+        guard configuration.outputVerticalOffsetPixels != 0 else { return local }
+        let aa = configuration.aaRect.sanitized()
+        let physicalHeight = aa.height * Double(max(configuration.displayPixelHeight, 1))
+        return local + SIMD2(0, Float(configuration.outputVerticalOffsetPixels / physicalHeight))
     }
 
     private static func localPhysicalPoint(
@@ -511,11 +520,15 @@ enum WarpMath {
                     configuration: configuration,
                     context: context
                 )
+                // Shape validity is translation-invariant. Keep its original
+                // coordinates for fold/conditioning tests; AA coverage uses the
+                // translated surface and the renderer clips it normally.
                 localPoints.append(local)
-                if !local.x.isFinite || !local.y.isFinite { nonFinite += 1 }
-                if local.x < 0 || local.x > 1 || local.y < 0 || local.y > 1 { outOfAA += 1 }
-                let screenX = Float(aa.x) + local.x * Float(aa.width)
-                let screenY = Float(aa.y) + local.y * Float(aa.height)
+                let translated = translatedOutputPoint(local, configuration: configuration)
+                if !translated.x.isFinite || !translated.y.isFinite { nonFinite += 1 }
+                if translated.x < 0 || translated.x > 1 || translated.y < 0 || translated.y > 1 { outOfAA += 1 }
+                let screenX = Float(aa.x) + translated.x * Float(aa.width)
+                let screenY = Float(aa.y) + translated.y * Float(aa.height)
                 vertices.append(
                     MeshVertex(
                         position: SIMD2<Float>(screenX * 2 - 1, 1 - screenY * 2),

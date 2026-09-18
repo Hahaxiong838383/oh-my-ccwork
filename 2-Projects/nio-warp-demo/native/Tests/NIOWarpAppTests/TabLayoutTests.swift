@@ -671,6 +671,70 @@ final class TabLayoutTests: XCTestCase {
         }
     }
 
+    func testOutputVerticalPositionMovesWholeImageAndPersistsWithoutChangingCurveOrCanvas() throws {
+        let (panel, defaults, suite) = try controller(active: true, allowsGeometryCommit: true)
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let original = panel.configurationForOfflinePreview
+        let slider = try XCTUnwrap(identifiedView("nio-output-vertical-offset", in: panel) as? NSSlider)
+        let field = try XCTUnwrap(identifiedView("nio-output-vertical-offset-input", in: panel) as? NSTextField)
+        let reset = try XCTUnwrap(identifiedView("nio-output-vertical-offset-reset", in: panel) as? NSButton)
+        XCTAssertTrue(slider.isContinuous)
+        XCTAssertEqual(slider.minValue, -Double(original.displayPixelHeight))
+        XCTAssertEqual(slider.maxValue, Double(original.displayPixelHeight))
+        XCTAssertTrue(try labels(in: item("canvas", in: panel)).contains("整幅画面上下位置（物理 px）"))
+        for value in [-500.0, 275.5] {
+            slider.doubleValue = value
+            slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+            var expected = original; expected.outputVerticalOffsetPixels = value
+            XCTAssertEqual(panel.configurationForOfflinePreview, expected, "整幅平移不得改写曲率、镜像、AA、画布或输入裁切")
+            XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration(), expected)
+            XCTAssertEqual(NumericInput.double(from: field.stringValue), value)
+        }
+        field.stringValue = "-128.25"
+        field.sendAction(try XCTUnwrap(field.action), to: field.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, -128.25)
+        XCTAssertEqual(slider.doubleValue, -128.25)
+        field.stringValue = "42.5"
+        panel.controlTextDidEndEditing(Notification(name: NSControl.textDidEndEditingNotification, object: field))
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, 42.5)
+        let stepButtons = try XCTUnwrap(field.superview).subviews.compactMap { $0 as? NSButton }
+        let plus = try XCTUnwrap(stepButtons.first { $0.title == "+" })
+        plus.performClick(nil)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, 43.5)
+        field.stringValue = "50000"
+        field.sendAction(try XCTUnwrap(field.action), to: field.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, Double(original.displayPixelHeight))
+        field.stringValue = "invalid"
+        field.sendAction(try XCTUnwrap(field.action), to: field.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview.outputVerticalOffsetPixels, Double(original.displayPixelHeight))
+        reset.performClick(nil)
+        XCTAssertEqual(panel.configurationForOfflinePreview, original)
+        XCTAssertEqual(ConfigurationStore(defaults: defaults).offlineConfiguration(), original)
+        XCTAssertEqual(slider.doubleValue, 0)
+        XCTAssertEqual(field.stringValue, "0")
+    }
+
+    func testOfflineOutputVerticalPositionControlsDoNotChangeCalibration() throws {
+        let (panel, defaults, suite) = try controller()
+        defer { panel.close(); defaults.removePersistentDomain(forName: suite) }
+        let original = panel.configurationForOfflinePreview
+        let persisted = defaults.persistentDomain(forName: suite) as NSDictionary?
+        let slider = try XCTUnwrap(identifiedView("nio-output-vertical-offset", in: panel) as? NSSlider)
+        let field = try XCTUnwrap(identifiedView("nio-output-vertical-offset-input", in: panel) as? NSTextField)
+        let reset = try XCTUnwrap(identifiedView("nio-output-vertical-offset-reset", in: panel) as? NSButton)
+        XCTAssertFalse(slider.isEnabled)
+        XCTAssertFalse(field.isEnabled)
+        XCTAssertFalse(reset.isEnabled)
+        slider.doubleValue = -100
+        slider.sendAction(try XCTUnwrap(slider.action), to: slider.target)
+        field.stringValue = "80"
+        field.sendAction(try XCTUnwrap(field.action), to: field.target)
+        XCTAssertEqual(panel.configurationForOfflinePreview, original)
+        XCTAssertEqual(defaults.persistentDomain(forName: suite) as NSDictionary?, persisted)
+        XCTAssertEqual(slider.doubleValue, original.outputVerticalOffsetPixels)
+        XCTAssertEqual(NumericInput.double(from: field.stringValue), original.outputVerticalOffsetPixels)
+    }
+
     func testVerticalAspectActionsPersistReadoutAndResetWithoutChangingLegacyCalibration() throws {
         let (panel, defaults, suite) = try controller(active: true, allowsGeometryCommit: true)
         defer { panel.close(); defaults.removePersistentDomain(forName: suite) }

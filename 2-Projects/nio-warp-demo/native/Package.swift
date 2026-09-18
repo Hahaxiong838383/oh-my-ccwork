@@ -8,13 +8,21 @@ let package = Package(
         .executable(name: "NIOWarpApp", targets: ["NIOWarpApp"]),
     ],
     targets: [
+        .target(
+            name: "NIOVirtualDisplay",
+            path: "Sources/NIOVirtualDisplay",
+            publicHeadersPath: "include",
+            cSettings: [.unsafeFlags(["-fobjc-arc"])],
+            linkerSettings: [.linkedFramework("Foundation"), .linkedFramework("CoreGraphics")]
+        ),
         .executableTarget(
             name: "NIOWarpApp",
+            dependencies: ["NIOVirtualDisplay"],
             path: "Sources/NIOWarpApp"
         ),
         .testTarget(
             name: "NIOWarpAppTests",
-            dependencies: ["NIOWarpApp"],
+            dependencies: ["NIOWarpApp", "NIOVirtualDisplay"],
             path: "Tests/NIOWarpAppTests"
         ),
     ],

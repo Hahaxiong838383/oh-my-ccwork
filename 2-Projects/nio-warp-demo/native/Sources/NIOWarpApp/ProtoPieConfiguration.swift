@@ -141,9 +141,15 @@ struct ProtoPieSession: Equatable {
     var configuration: ProtoPieConfiguration
     var cloudTargetID: String?
     var title: String
+    /// The complete-height source may live on an app-owned display; Warp still
+    /// renders to the separately selected physical output display.
+    var presentationDisplayID: CGDirectDisplayID? = nil
 }
 
 @MainActor protocol ProtoPiePreviewDriving: AnyObject {
+    func setPresentationCanvas(_ canvas: CanvasConfiguration?)
+    func shutdownPresentation()
+    func presentationCaptured(_ session: ProtoPieSession)
     func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
                  progress: @escaping (String) -> Void) async throws -> ProtoPieSession
     func isAlive(_ session: ProtoPieSession) async -> Bool
@@ -156,6 +162,9 @@ struct ProtoPieSession: Equatable {
 }
 
 @MainActor extension ProtoPiePreviewDriving {
+    func setPresentationCanvas(_ canvas: CanvasConfiguration?) { }
+    func shutdownPresentation() { }
+    func presentationCaptured(_ session: ProtoPieSession) { }
     func updatePresentationLayout(_ session: ProtoPieSession) async throws {
         throw ProtoPieError.unavailable("当前播放器不支持实时位置调节。")
     }

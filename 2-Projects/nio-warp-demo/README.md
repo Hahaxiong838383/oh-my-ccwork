@@ -2,9 +2,9 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
-## 最新安装版：v0.12.6 (48)
+## 最新安装版：v0.12.8 (50)
 
-ProtoPie上下位置已改为**拖动实时预览**，用户已确认有效，当前位置`-0.88`已保存。横向等比满宽、刷新恢复继续保留；顶部截断已定位到源画面按宽度放大后的纵向裁切。原校正/历史/预设不变，鼠标波浪仍待验。见[实时预览与裁切分析](docs/protopie-live-position-v0126.md)。
+ProtoPie Cloud 播放器高度跟随画布，已接通完整 7680×2800 来源；新增「画布与输入 → 整幅画面上下位置」，按物理像素整体平移，保持曲面形状、比例和镜像。现场要求恢复横向顶满，当前使用等比铺满裁切、取景靠底保留道路和底部 UI。鼠标波浪仍待验，独立内容画布下原生映射保持关闭。见[完整高度与整幅平移](docs/protopie-canvas-height-v0128.md)。
 
 ## v0.12.0 (35)：鼠标映射
 
@@ -52,7 +52,7 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.12.4(40)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18当前Wi-Fi为DHCP `10.8.1.115`，旧自动降级地址 `10.9.1.230` 已不可达；本次未修改网络。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.12.8(50)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口

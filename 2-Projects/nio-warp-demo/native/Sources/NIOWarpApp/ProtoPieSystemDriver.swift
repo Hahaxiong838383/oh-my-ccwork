@@ -10,6 +10,16 @@ import Foundation
     private var cloudTargets: [String: ProtoPieConfiguration] = [:]
     private var fileScopes: [UUID: URL] = [:]
     private var freshPreviewRequested = false
+    private var presentationCanvas: CanvasConfiguration?
+    private let presentationDisplay = OwnedPresentationDisplay()
+
+    func setPresentationCanvas(_ canvas: CanvasConfiguration?) { presentationCanvas = canvas }
+    func shutdownPresentation() { presentationDisplay.shutdown() }
+    func presentationCaptured(_ session: ProtoPieSession) {
+        if let id = session.presentationDisplayID, OwnedPresentationDisplay.isOwnedDisplay(id) {
+            presentationDisplay.captureDidSwitch(to: id)
+        } else { presentationDisplay.shutdown() }
+    }
 
     deinit { for url in fileScopes.values { url.stopAccessingSecurityScopedResource() } }
 
@@ -49,6 +59,12 @@ import Foundation
         guard let target = session.cloudTargetID else { return true }
         guard CGDisplayIsActive(displayID) != 0, let socket = browserSocket,
               let captured = Self.windows().first(where: { $0.id == session.windowID && $0.pid == session.processID }) else { return false }
+        let sourceDisplayID = session.presentationDisplayID ?? displayID
+        guard CGDisplayIsActive(sourceDisplayID) != 0 else { return false }
+        if let canvas = presentationCanvas {
+            guard CGDisplayPixelsHigh(sourceDisplayID) == canvas.height,
+                  CGDisplayPixelsWide(sourceDisplayID) == CGDisplayPixelsWide(displayID) else { return false }
+        }
         do {
             let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
             guard let windowID = window["windowId"] as? Int else { return false }
@@ -61,12 +77,12 @@ import Foundation
             guard let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any],
                   let width = value["width"] as? NSNumber, let height = value["height"] as? NSNumber else { return false }
             let scale = NSScreen.screens.first {
-                ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == displayID
+                ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == sourceDisplayID
             }?.backingScaleFactor ?? 1
             return ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
                 browserFrame: bounds.frame, windowState: bounds.state,
                 viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: scale)
-                .isReady(for: Self.targetRect(displayID))
+                .isReady(for: Self.targetRect(sourceDisplayID))
         } catch { return false }
     }
 
@@ -149,12 +165,19 @@ import Foundation
                 previousProblem = ""; problemSamples = 0
             }
             if value["ready"] as? Bool == true {
-                progress("正在进入外屏无边框全屏，等待画面尺寸稳定…")
+                let sourceDisplayID: CGDirectDisplayID
+                if let canvas = presentationCanvas, canvas.height != CGDisplayPixelsHigh(displayID) {
+                    progress("正在准备与画布等高的完整播放器…")
+                    sourceDisplayID = try await presentationDisplay.ensure(width: CGDisplayPixelsWide(displayID), height: canvas.height)
+                } else { sourceDisplayID = displayID }
+                try Task.checkCancellation()
+                progress("正在进入完整高度的无边框预览，等待画面尺寸稳定…")
                 let captured = try await prepareCloudFullscreen(socket: socket, pageSocket: pageSocket,
-                    windowID: browserWindowID, processID: pid, marker: marker, displayID: displayID,
+                    windowID: browserWindowID, processID: pid, marker: marker, displayID: sourceDisplayID,
                     configuration: configuration)
                 return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
-                                       cloudTargetID: target, title: "ProtoPie Cloud · 无边框全屏")
+                                       cloudTargetID: target, title: "ProtoPie Cloud · 完整高度预览",
+                                       presentationDisplayID: sourceDisplayID)
             }
             progress("等待云端预览加载；如需登录，请在专用播放器中完成。")
             try await Task.sleep(nanoseconds: 500_000_000)

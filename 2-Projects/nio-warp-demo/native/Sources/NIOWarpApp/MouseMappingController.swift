@@ -308,6 +308,9 @@ struct MouseMappingOutput {
     private static func validate(_ output: MouseMappingOutput, session: ProtoPieSession,
                                  viewport: MouseInputViewport? = nil) throws {
         let frame = output.frame
+        if let sourceDisplayID = session.presentationDisplayID, sourceDisplayID != output.displayID {
+            throw MouseCaptureError("完整高度播放器使用独立内容画布；原圆形鼠标映射尚未适配此来源，输入保持关闭。")
+        }
         guard output.window.isVisible, CGDisplayIsActive(output.displayID) != 0, CGDisplayIsAsleep(output.displayID) == 0,
               frame.configuration.render.testPattern == .off,
               frame.source.windowID == session.windowID, frame.source.processID == session.processID else {

@@ -104,6 +104,7 @@ import UniformTypeIdentifiers
         fit.setAccessibilityIdentifier("nio-protopie-scale-to-fit")
         fillWidth.setAccessibilityIdentifier("nio-protopie-fill-width")
         add(fit); add(fillWidth)
+        add(note("播放器高度跟随当前 Warp 画布高度，先捕获完整内容。保持比例完整显示时，画面左右可能留边。"))
         add(note("Cloud 预览按宽度等比放大，超出屏幕的上下内容可调整裁切位置；不改变 Warp 校正参数。"))
         add(title("横向顶满 · 画面上下位置"))
         verticalPosition.target = self; verticalPosition.action = #selector(verticalPositionChanged)
@@ -116,7 +117,7 @@ import UniformTypeIdentifiers
         verticalPositionInput.setAccessibilityIdentifier("nio-protopie-vertical-position-input")
         verticalPositionInput.setAccessibilityLabel("画面上下位置数值，范围负一至正一")
         add(verticalPositionInput)
-        add(note("−1 画面上移 · 0 居中 · +1 画面下移。拖动实时预览，输入数值后按回车或离开输入框生效；保存配置可持久保留。预览未运行时，请先启动预览。"))
+        add(note("−1 画面上移 · 0 居中 · +1 画面下移。拖动实时预览，输入数值后按回车或离开输入框生效；保存配置可持久保留。预览未运行时，请先启动；内容高度未溢出时没有上下移动空间。"))
         add(hideUI)
         targetLabel.font = .systemFont(ofSize: 12); targetLabel.textColor = .secondaryLabelColor
         add(targetLabel)

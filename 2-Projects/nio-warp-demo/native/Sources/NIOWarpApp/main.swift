@@ -239,6 +239,22 @@ private final class CaptureFrameRouter: @unchecked Sendable {
             guard captureGeneration == generation, stream != nil, let firstFrame = probe.frames.snapshot() else {
                 throw NSError(domain: "NIOWarp", code: 33, userInfo: [NSLocalizedDescriptionKey: "预览窗口未产生有效画面，保留上一捕获来源"])
             }
+            let actualWidth = CVPixelBufferGetWidth(firstFrame.pixelBuffer)
+            let actualHeight = CVPixelBufferGetHeight(firstFrame.pixelBuffer)
+            if !includeChildren {
+                guard actualWidth == width, actualHeight == height,
+                      firstFrame.metadata?.coversTexture(width: width, height: height) == true else {
+                    throw NSError(domain: "NIOWarp", code: 34, userInfo: [NSLocalizedDescriptionKey: "播放器捕获未覆盖完整窗口，暂不切换，避免显示被截断的内容"])
+                }
+                // No URL or captured pixels are persisted; this records the actual
+                // accepted SCK surface rather than only the requested dimensions.
+                let verification: [String: Any] = ["windowID": windowID,
+                    "width": actualWidth, "height": actualHeight,
+                    "fullWindowVerified": true, "timestamp": Date().timeIntervalSince1970]
+                if let data = try? JSONSerialization.data(withJSONObject: verification, options: .sortedKeys) {
+                    UserDefaults.standard.set(data, forKey: "nioWarpProtoPie.captureVerification.v1")
+                }
+            }
             try candidate.addStreamOutput(self, type: .screen, sampleHandlerQueue: queue)
             let previous = stream
             stream = candidate
@@ -1028,6 +1044,7 @@ private enum NumericFieldTarget: Int {
     case gridColumns
     case gridRows
     case gridLineWidth
+    case outputVerticalOffset
 }
 
 private enum RuntimePreviewMode {
@@ -1182,7 +1199,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private var geometryValidationInFlight = false
     private var geometryValidationSource: String?
     private var renderedFieldValues: [ObjectIdentifier: String] = [:]
-    private var draftFields: [NSTextField] { [aaXField, aaYField, aaWidthField, aaHeightField, canvasWidthField, canvasHeightField, coefficientXField, coefficientYField] }
+    private var draftFields: [NSTextField] { [aaXField, aaYField, aaWidthField, aaHeightField, canvasWidthField, canvasHeightField, coefficientXField, coefficientYField, outputVerticalOffsetField] }
     private let snapTiltButton = NSButton(checkboxWithTitle: "倾斜零点吸附", target: nil, action: nil)
     private let snapBendButton = NSButton(checkboxWithTitle: "水平弯曲零点吸附", target: nil, action: nil)
     private let centerSurfaceXButton = NSButton(checkboxWithTitle: "画面水平居中", target: nil, action: nil)
@@ -1232,6 +1249,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let canvasHeightField = NSTextField()
     private let cropHorizontalSlider = NSSlider()
     private let cropVerticalSlider = NSSlider()
+    private let outputVerticalOffsetSlider = NSSlider()
+    private let outputVerticalOffsetField = NSTextField()
     private let contentMappingLabel = NSTextField(wrappingLabelWithString: "内容映射计算中…")
     private let horizontalMirrorButton = NSButton(checkboxWithTitle: "水平翻转", target: nil, action: nil)
     private let verticalMirrorButton = NSButton(checkboxWithTitle: "垂直翻转", target: nil, action: nil)
@@ -1557,6 +1576,26 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         aaBoundaryButton.target = self
         aaBoundaryButton.action = #selector(toggleAABoundary)
         stack.addArrangedSubview(aaBoundaryButton)
+
+        let outputOffsetRange = configuration.outputVerticalOffsetRange
+        outputVerticalOffsetSlider.setAccessibilityIdentifier("nio-output-vertical-offset")
+        stack.addArrangedSubview(makeSlider(title: "整幅画面上下位置（物理 px）", slider: outputVerticalOffsetSlider,
+            minimum: outputOffsetRange.lowerBound, maximum: outputOffsetRange.upperBound,
+            action: #selector(updateOutputVerticalOffset)))
+        outputVerticalOffsetField.setAccessibilityIdentifier("nio-output-vertical-offset-input")
+        outputVerticalOffsetField.delegate = self
+        outputVerticalOffsetField.target = self
+        outputVerticalOffsetField.action = #selector(applyOutputVerticalOffsetField)
+        let outputOffsetReset = makeButton("归零", action: #selector(resetOutputVerticalOffset))
+        outputOffsetReset.setAccessibilityIdentifier("nio-output-vertical-offset-reset")
+        let outputOffsetRow = NSStackView(views: [
+            numericField(outputVerticalOffsetField, target: .outputVerticalOffset, decimal: true),
+            NSTextField(labelWithString: "px"), outputOffsetReset,
+        ])
+        outputOffsetRow.orientation = .horizontal
+        outputOffsetRow.spacing = 8
+        stack.addArrangedSubview(outputOffsetRow)
+        stack.addArrangedSubview(explanation("负值上移，正值下移，0 为原位。拖动实时保存；输入数值后按回车或离开输入框生效。整块校正画面一起平移，曲面形状与画布大小不变，超出 AA 的部分仍会被裁切。"))
 
         stack.addArrangedSubview(sectionTitle("2. 沿曲面延伸画布（逻辑像素）"))
         stack.addArrangedSubview(explanation("宽沿弯曲长边向左右延伸，高沿倾斜短边向上下延伸。中心不动，新增部分继续弯曲，不会重新压回 AA。逻辑像素不是四条边的物理弧长。"))
@@ -2080,6 +2119,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             minus.toolTip = "减少 1 \(unit)，网格实时更新并自动保存。"
             plus.toolTip = "增加 1 \(unit)，网格实时更新并自动保存。"
         }
+        if target == .outputVerticalOffset {
+            minus.toolTip = "整幅画面上移 1 物理像素，立即保存并应用。"
+            plus.toolTip = "整幅画面下移 1 物理像素，立即保存并应用。"
+        }
 
         let row = NSStackView(views: [minus, field, plus])
         row.orientation = .horizontal
@@ -2134,6 +2177,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         canvasHeightField.stringValue = String(configuration.canvas.height)
         cropHorizontalSlider.doubleValue = configuration.cropAnchor.horizontal
         cropVerticalSlider.doubleValue = configuration.cropAnchor.vertical
+        outputVerticalOffsetSlider.minValue = configuration.outputVerticalOffsetRange.lowerBound
+        outputVerticalOffsetSlider.maxValue = configuration.outputVerticalOffsetRange.upperBound
+        outputVerticalOffsetSlider.doubleValue = configuration.outputVerticalOffsetPixels
+        outputVerticalOffsetField.stringValue = NumericInput.formattedDouble(configuration.outputVerticalOffsetPixels)
         horizontalMirrorButton.state = configuration.mirror.horizontal ? .on : .off
         verticalMirrorButton.state = configuration.mirror.vertical ? .on : .off
         warpButton.state = configuration.manual.enabled ? .on : .off
@@ -2267,6 +2314,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         if configuration.capture != lastAppliedConfiguration.capture {
             applyCaptureConfiguration(configuration.capture)
         }
+        if configuration.canvas != lastAppliedConfiguration.canvas {
+            protoPie?.setPresentationCanvas(configuration.canvas)
+        }
         lastAppliedConfiguration = configuration
         historyButton.title = "撤销上一次设置（\(historyStore.count)）"
         historyButton.isEnabled = historyStore.count > 0
@@ -2359,6 +2409,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     func controlTextDidEndEditing(_ notification: Notification) {
+        if let field = notification.object as? NSTextField, field === outputVerticalOffsetField {
+            applyOutputVerticalOffsetField()
+            return
+        }
         guard isGridField(notification.object) else { return }
         applyGridFields()
         finishGridEditingSession()
@@ -3090,7 +3144,37 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             applyPolynomialCoefficients()
         case .gridColumns, .gridRows, .gridLineWidth:
             stepGridField(target, direction: direction)
+        case .outputVerticalOffset:
+            let value = NumericInput.double(from: outputVerticalOffsetField.stringValue) ?? configuration.outputVerticalOffsetPixels
+            applyOutputVerticalOffset(value + direction)
         }
+    }
+
+    @objc private func updateOutputVerticalOffset() {
+        applyOutputVerticalOffset(outputVerticalOffsetSlider.doubleValue)
+    }
+
+    @objc private func applyOutputVerticalOffsetField() {
+        guard let value = NumericInput.double(from: outputVerticalOffsetField.stringValue), value.isFinite else {
+            setStatus("上下位置未应用：请输入有效的物理像素数值；原画面保持不变。", color: .systemOrange)
+            return
+        }
+        applyOutputVerticalOffset(value)
+    }
+
+    @objc private func resetOutputVerticalOffset() {
+        applyOutputVerticalOffset(0)
+    }
+
+    private func applyOutputVerticalOffset(_ value: Double) {
+        guard value.isFinite else { return }
+        let range = configuration.outputVerticalOffsetRange
+        let bounded = min(max(value, range.lowerBound), range.upperBound)
+        markFieldDraftsApplied([outputVerticalOffsetField])
+        guard bounded != configuration.outputVerticalOffsetPixels else { refreshControls(); return }
+        configuration.outputVerticalOffsetPixels = bounded
+        applyConfiguration("整幅画面上下位置已更新（\(NumericInput.formattedDouble(bounded)) px）")
+        refreshControls()
     }
 
     private func adjustIntegerField(_ field: NSTextField, delta: Int, minimum: Int, maximum: Int) {
@@ -3410,6 +3494,7 @@ private extension Array {
                     minimumCoverage: configuration.capture.fullscreenCoverageThreshold
                 )
                 guard !Task.isCancelled, self.sessionEpoch == epoch else { return }
+                self.protoPie.setPresentationCanvas(configuration.canvas)
                 self.protoPie.setTargetDisplay(outputID)
                 self.protoPie.startIfConfigured()
                 controlPanel?.setStatus(
@@ -3559,6 +3644,11 @@ private extension Array {
         mouseMapping.stop(reason: "程序正在退出。")
         Task { @MainActor in
             await mouseMapping.finishClosing()
+            protoPie.shutdown()
+            captureStartupTask?.cancel()
+            await protoPieReleaseTask?.value
+            await captureEngine.stop()
+            protoPie.finishShutdownPresentation()
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
@@ -3709,7 +3799,7 @@ private extension Array {
     private func chooseScreens() -> (source: NSScreen?, output: NSScreen)? {
         let screens = NSScreen.screens
         let candidates = screens.compactMap { screen -> WarpScreenCandidate? in
-            guard let id = displayID(for: screen) else { return nil }
+            guard let id = displayID(for: screen), !OwnedPresentationDisplay.isOwnedDisplay(id) else { return nil }
             return WarpScreenCandidate(id: id, isBuiltIn: CGDisplayIsBuiltin(id) != 0, area: screen.frame.width * screen.frame.height)
         }
         let preferredControl = NSScreen.main.flatMap(displayID)

@@ -19,7 +19,7 @@ final class VerticalAspectScaleTests: XCTestCase {
             json["manual"] = manual
             let decoded = try JSONDecoder().decode(WarpConfiguration.self, from: JSONSerialization.data(withJSONObject: json))
             let migrated = decoded.sanitized(forDisplayWidth: 5120, height: 2880)
-            XCTAssertEqual(migrated.schemaVersion, 13)
+            XCTAssertEqual(migrated.schemaVersion, WarpConfiguration.currentSchemaVersion)
             XCTAssertEqual(migrated.manual.verticalScale, legacyValue)
             XCTAssertEqual(migrated.manual.verticalAspectScale, 1)
             XCTAssertEqual(WarpMath.physicalPoints(canvasPoints: samples, configuration: migrated),
