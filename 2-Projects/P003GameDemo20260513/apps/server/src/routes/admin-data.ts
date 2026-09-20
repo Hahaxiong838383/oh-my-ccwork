@@ -5,6 +5,7 @@ import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
 import { otaAdminRoute } from './ota.js';
 import { configAdminRoute } from './device-config.js';
+import { diagnosticsAdminRoute } from './diagnostics.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
 import { memoryItemStore } from '../memory-item-store.js';
@@ -63,7 +64,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -2126,3 +2127,5 @@ adminDataRoute.route('/ota', otaAdminRoute);
 
 // 设备运行配置（admin 专属，正则已含 /device-config；实现在 routes/device-config.ts）
 adminDataRoute.route('/device-config', configAdminRoute);
+// 设备诊断日志后台（2026-09-19，合同 CC 诊断日志复核回执 §2 第 3 条；admin 专属正则已含 diagnostics）
+adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);

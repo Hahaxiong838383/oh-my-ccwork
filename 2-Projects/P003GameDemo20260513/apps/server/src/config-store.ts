@@ -14,11 +14,12 @@ import { DatabaseSync } from 'node:sqlite';
  */
 
 export type KeySpec = {
-  builtinDefault: number;
+  builtinDefault: number | boolean;
   validate: (v: unknown) => boolean;
   /** admin 通用渲染用的展示元数据；min/max 只做提示与前端预校验，真门在 validate */
   label: string;
-  unit: 'sec' | 'day';
+  /** bool 键：builtinDefault/值为 boolean，min/max 只占位（admin 渲染走开关） */
+  unit: 'sec' | 'day' | 'bool';
   hint: string;
   min: number;
   max: number;
@@ -50,12 +51,26 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     max: 30,
     serverOnly: true,
   },
+  // 诊断日志上云远程开关（键名 2026-09-19 川哥冻结；合同 CC 诊断日志复核回执 §2 第 4 条 / §7）。
+  // server 摄入门每请求读有效值（SN 覆盖 > 全局 > 内置 true），关 = 503 LOG_UPLOAD_DISABLED + Retry-After 900。
+  // 先 serverOnly：Launcher 确认能消费设备快照里的这个键（codex §4 第 9 条待 Launcher）后再翻成设备键——届时只删 serverOnly 这一行。
+  'diagnostics.log_upload_enabled': {
+    builtinDefault: true,
+    validate: (v) => typeof v === 'boolean',
+    label: '诊断日志上云开关',
+    unit: 'bool',
+    hint: '关闭后设备诊断日志接口返回 503 LOG_UPLOAD_DISABLED（Retry-After 15 分钟），设备保留本地 error/fatal 不再上传；可按设备覆盖',
+    min: 0,
+    max: 1,
+    serverOnly: true,
+  },
 };
 
 /** 校验失败的统一提示文案（route 复用，随键表走，别再手写范围） */
 export function invalidValueMessage(key: string): string {
   const s = CONFIG_KEYS[key];
   if (!s) return '取值不合法';
+  if (s.unit === 'bool') return '取值须为 true/false';
   return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : '天'}`;
 }
 
@@ -322,7 +337,7 @@ class ConfigStore {
   adminOverview(): {
     keys: Array<{
       key: string;
-      builtin_default: number;
+      builtin_default: number | boolean;
       global: unknown;
       global_updated_at: number | null;
       label: string;
@@ -362,20 +377,29 @@ class ConfigStore {
     return { keys, overrides };
   }
 
-  /** server 内部读有效值（SN 覆盖 > 全局 > 内置；tombstone 视为无覆盖）。scope 传 SN 原文（不带 device- 前缀）。 */
-  getEffective(scope: string, key: string): number {
+  /** server 内部读有效值（SN 覆盖 > 全局 > 内置；tombstone/类型不符视为无覆盖）。scope 传 SN 原文（不带 device- 前缀）。 */
+  private effectiveRaw(scope: string, key: string, accept: (v: unknown) => boolean): unknown {
     const spec = CONFIG_KEYS[key];
     if (!spec) throw new Error(`unknown config key: ${key}`);
-    let value: number = spec.builtinDefault;
+    let value: unknown = spec.builtinDefault;
     for (const s of [GLOBAL_SCOPE, scope]) {
       const row = this.db
         .prepare(`SELECT value_json FROM device_config WHERE scope = ? AND key = ?`)
         .get(s, key) as { value_json: string } | undefined;
       if (!row) continue;
       const parsed = JSON.parse(row.value_json);
-      if (typeof parsed === 'number') value = parsed;
+      if (accept(parsed)) value = parsed;
     }
     return value;
+  }
+
+  getEffective(scope: string, key: string): number {
+    return this.effectiveRaw(scope, key, (v) => typeof v === 'number') as number;
+  }
+
+  /** bool 键专用（如 diagnostics.log_upload_enabled）：只认 boolean 值，其余回落内置 */
+  getEffectiveBool(scope: string, key: string): boolean {
+    return this.effectiveRaw(scope, key, (v) => typeof v === 'boolean') as boolean;
   }
 }
 

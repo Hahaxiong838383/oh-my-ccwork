@@ -22,6 +22,7 @@ import { deviceConfigRoute } from './routes/device-config.js';
 import { localAudioDeviceRoute } from './routes/local-audio.js';
 import { parentPairingRoute, devicePairingRoute } from './routes/pairing.js';
 import { deviceTelemetryRoute, parentTelemetryRoute } from './routes/telemetry.js';
+import { diagnosticsDeviceRoute } from './routes/diagnostics.js';
 import { devItemsRoute } from './routes/dev-items.js';
 import { themesRoute } from './routes/themes.js';
 import { checkAndCount, getClientIp } from './guard.js';
@@ -54,6 +55,8 @@ app.route('/v1/device/pairing', devicePairingRoute);
 // 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824）
 app.route('/v1/device/telemetry', deviceTelemetryRoute);
 app.route('/v1/parent/devices', parentTelemetryRoute);
+// 设备诊断日志上云（Godot→Launcher→server；合同 DIAGNOSTIC_LOG_SERVER_HANDOFF + CC 复核回执 §3；路径字面冒号 logs:batch）
+app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);
 // 配网家长侧（联调合同 v3）：token 签发 + H5 轮询
 app.route('/api/parent/pairing', parentPairingRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
