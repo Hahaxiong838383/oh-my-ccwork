@@ -1254,6 +1254,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let pinButton = NSButton(checkboxWithTitle: "保持置顶", target: nil, action: nil)
     private var quitConfirmation: NSAlert?
     private var canvasRebaseConfirmation: NSAlert?
+    private var mouseMappingTestPatternReminder: NSAlert?
     private let terminateApplication: () -> Void
     private var selectedLocalTool = 0
     private var builtInterface = false
@@ -2117,6 +2118,36 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         confirmButton.keyEquivalent = ""
         cancelButton.keyEquivalent = "\r"
         alert.window.defaultButtonCell = cancelButton.cell as? NSButtonCell
+    }
+
+    func showMouseMappingTestPatternReminder(_ pattern: TestPatternMode) {
+        guard pattern != .off else { return }
+        setStatus("当前显示的是测试画面，请先在“标定与画质”返回预览画面，再启用鼠标校正。", color: .systemOrange)
+        guard let window, window.attachedSheet == nil, mouseMappingTestPatternReminder == nil else { return }
+        let alert = NSAlert()
+        alert.alertStyle = .informational
+        if runtimePreviewMode == .rawReflectionCalibration {
+            alert.messageText = "请先结束临时标定预览"
+            alert.informativeText = "当前正在显示未校正网格，鼠标映射尚未启动。请前往“标定与画质”，点击“返回校正画面”；如果标定网格仍开启，再关闭网格，然后重新启用鼠标校正。"
+        } else if pattern == .calibrationGrid {
+            alert.messageText = "请先关闭标定网格"
+            alert.informativeText = "标定网格开启时，鼠标映射不会操作网格背后的 ProtoPie。请前往“标定与画质”，取消勾选“显示标定网格、纵向重复圆、中心线和边界”，再重新启用鼠标校正。当前参数和网格设置会保留。"
+        } else {
+            alert.messageText = "请先结束测试画面"
+            alert.informativeText = "当前正在显示抗锯齿对比，鼠标映射尚未启动。请前往“标定与画质”，点击“结束对比，返回原画面”；如果标定网格仍开启，再关闭网格，然后重新启用鼠标校正。"
+        }
+        let dismiss = alert.addButton(withTitle: "知道了")
+        let navigate = alert.addButton(withTitle: "前往标定与画质")
+        bringToFront()
+        mouseMappingTestPatternReminder = alert
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            self.mouseMappingTestPatternReminder = nil
+            if response == .alertSecondButtonReturn { self.selectModule("quality") }
+        }
+        dismiss.keyEquivalent = "\r"
+        navigate.keyEquivalent = ""
+        alert.window.defaultButtonCell = dismiss.cell as? NSButtonCell
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
@@ -3889,6 +3920,21 @@ private extension Array {
     }
 
     private func configureMouseMapping() {
+        mouseMapping.testPatternProvider = { [weak self] in
+            self?.outputController?.renderer.activeConfiguration.render.testPattern
+                ?? self?.controlPanel?.configurationForOfflinePreview.render.testPattern
+        }
+        mouseMapping.onStartBlockedByTestPattern = { [weak self] pattern in
+            guard let self else { return }
+            // Keep the reminder attached to the visible workbench, never the
+            // invisible ProtoPie content display. The click cannot reach the page.
+            if self.outputController != nil, self.chooseScreens()?.source == nil {
+                self.emergencyHideWarp(reason: "请先结束测试画面，再启用鼠标校正。", userInitiated: true)
+            }
+            NSApp.activate(ignoringOtherApps: true)
+            self.controlPanel?.showMouseMappingTestPatternReminder(pattern)
+            self.recoverVisiblePointer(forceWorkbench: true)
+        }
         mouseMapping.outputDiagnosticProvider = { [weak self] in
             guard let self else { return ["appAvailable": false] }
             var state: [String: Any] = ["outputExists": self.outputController != nil,

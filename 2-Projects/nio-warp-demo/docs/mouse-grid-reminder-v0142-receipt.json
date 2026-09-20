@@ -1,0 +1,190 @@
+{
+  "version": "0.14.2",
+  "build": "70",
+  "checkedAt": "2026-09-20T15:34:44.322661+08:00",
+  "status": "installed_automated_acceptance_passed",
+  "installation": {
+    "version": "0.14.2 (70)",
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-073251Z-before-v0142",
+    "sourceSHA256": "d0f750dbf0a6a6de2a603459d6566961823d29cf396a26dde85ddc81ee773cfc",
+    "binarySHA256": "7caf69d9f9f154a23f4e09514678381b7158a275743a7681a00a77126ae945ab",
+    "signatureRequirementMatched": true,
+    "preferencesByteIdenticalBeforeRelaunch": true,
+    "sourceDigestMatched": true,
+    "backupSHA256": {
+      "previous-app.zip": "f48ae626db125c22fe994ccc1907051e532372febeb8f890552f7f84d2441d73",
+      "preferences-before.plist": "98fa6b4ed750ca4ad88dd589ee3f741f5c68a634ce0b24e2ce2f795c544b2a0e",
+      "source-files-before.tar.gz": "3bca9a236cfa163ad7dd8663e2a7e5d2929d291072ed1cc4cc6d1b77cf1dedd7"
+    },
+    "updatedSourceFiles": [
+      "native/Sources/NIOWarpApp/MouseMappingController.swift",
+      "native/Sources/NIOWarpApp/main.swift",
+      "native/Tests/NIOWarpAppTests/MouseMappingTestPatternGuardTests.swift",
+      "native/Tests/NIOWarpAppTests/MouseMappingReminderUITests.swift",
+      "native/scripts/build-app.sh"
+    ]
+  },
+  "tests": {
+    "controller": {
+      "runtime": "Original production sources and original test methods with assertion shim; NOT formal XCTest",
+      "testCount": 9,
+      "assertionCount": 73,
+      "failureCount": 0,
+      "result": "PASS"
+    },
+    "ui": {
+      "runtime": "Original production sources and original test methods with assertion shim; NOT formal XCTest",
+      "testCount": 15,
+      "assertionCount": 344,
+      "failureCount": 0,
+      "result": "PASS"
+    }
+  },
+  "remoteNativeUI": {
+    "passed": true,
+    "checks": [
+      {
+        "stage": "panel-start",
+        "sheetBounds": [
+          827,
+          342,
+          260,
+          237
+        ],
+        "inputBlocked": true,
+        "gridPreserved": true
+      },
+      {
+        "stage": "second-start",
+        "sheetBounds": [
+          827,
+          342,
+          260,
+          237
+        ],
+        "inputBlocked": true,
+        "gridPreserved": true
+      },
+      {
+        "stage": "external-click",
+        "sheetBounds": [
+          827,
+          342,
+          260,
+          237
+        ],
+        "inputBlocked": true,
+        "gridPreserved": true
+      },
+      {
+        "stage": "grid-off-normal-mapping",
+        "active": true,
+        "nativeEngaged": true,
+        "connected": true,
+        "movementEventCount": 2
+      },
+      {
+        "stage": "esc",
+        "returnedToInternal": true,
+        "cursorRestored": true
+      }
+    ],
+    "parameterCount": 10,
+    "changedParameters": [],
+    "initialGrid": "off",
+    "finalGrid": "off",
+    "pid": "12668"
+  },
+  "finalState": {
+    "version": "0.14.2",
+    "build": "70",
+    "sourceSHA256": "d0f750dbf0a6a6de2a603459d6566961823d29cf396a26dde85ddc81ee773cfc",
+    "presentation": {
+      "geometryReady": true,
+      "layoutReady": true,
+      "outputDisplayID": 4,
+      "sourceDisplayID": 13,
+      "windowID": 895,
+      "browserFrame": [
+        3432,
+        0,
+        1920,
+        1200
+      ],
+      "viewportPixels": [
+        1920,
+        1200
+      ],
+      "windowState": "fullscreen"
+    },
+    "output": {
+      "frame": "{{1512, -98}, {1920, 1080}}",
+      "requestedVisible": true,
+      "onActiveSpace": true,
+      "occlusionVisible": true
+    },
+    "mouse": {
+      "active": false,
+      "busy": false,
+      "cursorHidden": false,
+      "buttons": 0
+    },
+    "layout": [
+      {
+        "bounds": [
+          0,
+          0,
+          1512,
+          982
+        ],
+        "builtIn": true,
+        "id": 1,
+        "main": true,
+        "model": 41057,
+        "pixelHeight": 982,
+        "pixelWidth": 1512,
+        "serial": 4251086178,
+        "vendor": 1552
+      },
+      {
+        "bounds": [
+          1512,
+          0,
+          1920,
+          1080
+        ],
+        "builtIn": false,
+        "id": 4,
+        "main": false,
+        "model": 28931,
+        "pixelHeight": 1080,
+        "pixelWidth": 1920,
+        "serial": 16780800,
+        "vendor": 19501
+      },
+      {
+        "bounds": [
+          3432,
+          0,
+          1920,
+          1200
+        ],
+        "builtIn": false,
+        "id": 13,
+        "main": false,
+        "model": 22354,
+        "pixelHeight": 1200,
+        "pixelWidth": 1920,
+        "serial": 1105183919,
+        "vendor": 20041
+      }
+    ]
+  },
+  "rollbackTag": "nio-warp-before-grid-mouse-reminder-20260920",
+  "limits": [
+    "Automated runtime checks, not new human optical acceptance",
+    "No new long-running autoplay acceptance",
+    "Live grid toggle tests append normal undo history; calibration and input settings restored"
+  ]
+}

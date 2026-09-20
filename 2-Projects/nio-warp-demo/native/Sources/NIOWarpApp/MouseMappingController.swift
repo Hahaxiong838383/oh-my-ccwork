@@ -39,6 +39,10 @@ struct MouseAutomationHandoffBuffer {
     var outputProvider: (() -> MouseMappingOutput?)?
     var outputDiagnosticProvider: (() -> [String: Any])?
     var sessionProvider: (() -> ProtoPieSession?)?
+    /// Read the current renderer configuration even before its first capture
+    /// frame is ready. A rendered frame remains the fallback for other hosts.
+    var testPatternProvider: (() -> TestPatternMode?)?
+    var onStartBlockedByTestPattern: ((TestPatternMode) -> Void)?
     var onReturnToWorkbench: (() -> Void)?
     var onPresentationTick: (() -> Void)?
     var onAutomationUserActivity: (() -> Void)?
@@ -147,7 +151,7 @@ struct MouseAutomationHandoffBuffer {
         guard let session = sessionProvider?(), let current = outputProvider?(),
               session.configuration.source == .cloud,
               let sourceID = session.presentationDisplayID, sourceID != current.displayID,
-              (try? Self.validate(current, session: session)) != nil else {
+              (try? Self.validate(current, session: session, allowTestPatternForReminder: true)) != nil else {
             disarmPresentationInput(); return
         }
         if armedOutput?.window !== current.window { disarmPresentationInput() }
@@ -165,6 +169,16 @@ struct MouseAutomationHandoffBuffer {
 
     func start(automatic: Bool = false) {
         guard !isActive, startTask == nil else { return }
+        if let pattern = blockingTestPattern {
+            // Leave the activation surface in place until the physical mouse-up;
+            // this is a reminder-only click, never input for the hidden page.
+            onPickedPoint = nil
+            automationOwnsInput = false; automationGeneration = UUID()
+            message = Self.testPatternStartMessage(pattern)
+            publish(force: true)
+            if !automatic { onStartBlockedByTestPattern?(pattern) }
+            return
+        }
         if !automatic { onAutomationUserActivity?() }
         // Keep the clicked output surface until its activation gesture ends;
         // dropping hit testing here could leak its mouse-up to the desktop.
@@ -328,6 +342,13 @@ struct MouseAutomationHandoffBuffer {
     }
 
     func beginAutomation() async throws {
+        if let pattern = blockingTestPattern {
+            let reason = Self.testPatternStartMessage(pattern)
+            stop(reason: reason)
+            // The scheduler owns failure/retry. Never show unattended modal UI
+            // or wait through the normal ten-second connection deadline here.
+            throw MouseCaptureError(reason)
+        }
         if automationOwnsInput, isActive, transport?.isConnected == true { return }
         stop(reason: "正在准备自动演示输入。")
         await finishClosing()
@@ -829,16 +850,31 @@ struct MouseAutomationHandoffBuffer {
             && first.frame.metadata.hasSameMapping(as: second.frame.metadata)
     }
 
+    private var blockingTestPattern: TestPatternMode? {
+        let pattern = testPatternProvider?() ?? outputProvider?()?.frame.configuration.render.testPattern ?? .off
+        return pattern == .off ? nil : pattern
+    }
+
+    static func testPatternStartMessage(_ pattern: TestPatternMode) -> String {
+        if pattern == .calibrationGrid {
+            return "标定网格已开启，请先在“标定与画质”关闭网格，再启动鼠标映射。"
+        }
+        return "抗锯齿 A/B 测试图已开启，请先在“标定与画质”关闭测试图，再启动鼠标映射。"
+    }
+
     private static func validate(_ output: MouseMappingOutput, session: ProtoPieSession,
-                                 viewport: MouseInputViewport? = nil) throws {
+                                 viewport: MouseInputViewport? = nil,
+                                 allowTestPatternForReminder: Bool = false) throws {
         let frame = output.frame
+        if !allowTestPatternForReminder, frame.configuration.render.testPattern != .off {
+            throw MouseCaptureError(testPatternStartMessage(frame.configuration.render.testPattern))
+        }
         if let sourceDisplayID = session.presentationDisplayID, sourceDisplayID != output.displayID {
             guard OwnedPresentationDisplay.isOwnedDisplay(sourceDisplayID), CGDisplayIsActive(sourceDisplayID) != 0 else {
                 throw MouseCaptureError("独立播放器内容屏已不可用，输入保持关闭。")
             }
         }
         guard output.window.isVisible, CGDisplayIsActive(output.displayID) != 0, CGDisplayIsAsleep(output.displayID) == 0,
-              frame.configuration.render.testPattern == .off,
               frame.source.windowID == session.windowID, frame.source.processID == session.processID else {
             throw MouseCaptureError("演示输出与捕获来源不一致，输入保持关闭。")
         }
