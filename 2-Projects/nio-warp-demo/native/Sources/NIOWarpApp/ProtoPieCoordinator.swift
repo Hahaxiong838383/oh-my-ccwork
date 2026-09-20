@@ -361,6 +361,13 @@ import Foundation
             try checkPlaybackRequest(requestID, token: preparationToken)
             guard state == .running, let session = activeSession,
                   session.configuration == configuration else {
+                if case .failed(let reason) = state,
+                   !reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // Managed preparation is awaited by the playlist while its
+                    // runtime is still "preparing". Preserve the actual driver
+                    // or handoff failure for its UI and structured error log.
+                    throw ProtoPieError.unavailable(reason)
+                }
                 throw ProtoPieError.unavailable("播放来源未就绪。请检查链接、网络、登录和屏幕权限。")
             }
             return session
@@ -431,7 +438,10 @@ import Foundation
                 self.state = .capturing
                 try await capture(session.windowID, session.processID)
                 try self.requireCurrent(token)
-                self.driver.presentationCaptured(session)
+                // Releasing the previous virtual source can rearrange displays.
+                // Do not arm input until this handoff has restored a stable layout.
+                try await self.driver.presentationCaptured(session)
+                try self.requireCurrent(token)
                 self.activeSession = session
                 if !self.playbackManaged {
                     self.lastSuccessful = configuration

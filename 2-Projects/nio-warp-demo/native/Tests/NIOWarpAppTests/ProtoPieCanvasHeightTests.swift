@@ -19,13 +19,17 @@ import XCTest
     var presentationReady = true
     var presentationChecks = 0
     var prepareHandler: ((Int) async throws -> Void)?
+    var captureFinalizeHandler: ((ProtoPieSession) async throws -> Void)?
 
     func setPresentationCanvas(_ canvas: CanvasConfiguration?) {
         self.canvas = canvas
         canvasUpdates.append(canvas)
     }
     func shutdownPresentation() { presentationShutdowns += 1 }
-    func presentationCaptured(_ session: ProtoPieSession) { capturedPresentations.append(session) }
+    func presentationCaptured(_ session: ProtoPieSession) async throws {
+        capturedPresentations.append(session)
+        if let captureFinalizeHandler { try await captureFinalizeHandler(session) }
+    }
     func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
                  progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
         preparations.append(Preparation(canvas: canvas, configuration: configuration, outputDisplayID: displayID))
@@ -116,6 +120,142 @@ import XCTest
         XCTAssertEqual(driver.capturedPresentations.first, coordinator.activeSession)
         try? await Task.sleep(nanoseconds: 20_000_000)
         XCTAssertEqual(driver.capturedPresentations.count, 1)
+    }
+
+    func testCapturedSourceWaitsForDisplayPlacementFinalizationBeforePublishingRunning() async {
+        let driver = CanvasHeightProtoPieDriver(); let (coordinator, defaults) = make(driver)
+        var releaseFinalize: CheckedContinuation<Void, Never>?
+        driver.captureFinalizeHandler = { _ in await withCheckedContinuation { releaseFinalize = $0 } }
+        var states = [ProtoPieRuntimeState]()
+        coordinator.onStateChange = { states.append($0) }
+        let savedBytes = defaults.data(forKey: ProtoPieCoordinator.savedKey)
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 2800))
+        coordinator.setTargetDisplay(4); coordinator.start()
+        await settle { releaseFinalize != nil }
+        XCTAssertEqual(driver.capturedPresentations.count, 1)
+        XCTAssertEqual(coordinator.state, .capturing,
+            "捕获首帧之后，旧源释放引起的屏幕排列仍须等待稳定")
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertNil(coordinator.lastSuccessful)
+        XCTAssertNil(defaults.data(forKey: ProtoPieCoordinator.lastSuccessfulKey))
+        XCTAssertEqual(defaults.data(forKey: ProtoPieCoordinator.savedKey), savedBytes)
+        XCTAssertFalse(states.contains(.running))
+        releaseFinalize?.resume(); releaseFinalize = nil
+        await settle { coordinator.state == .running }
+        XCTAssertEqual(coordinator.activeSession?.windowID, 101)
+        XCTAssertNotNil(coordinator.lastSuccessful)
+        XCTAssertEqual(states.filter { $0 == .running }.count, 1)
+    }
+
+    func testDisplayPlacementFinalizationFailureCannotPublishOrPersistSuccess() async {
+        let driver = CanvasHeightProtoPieDriver(); let (coordinator, defaults) = make(driver)
+        driver.captureFinalizeHandler = { _ in throw ProtoPieError.permission("测试内容屏排列未稳定") }
+        var states = [ProtoPieRuntimeState]()
+        coordinator.onStateChange = { states.append($0) }
+        let savedBytes = defaults.data(forKey: ProtoPieCoordinator.savedKey)
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 2800))
+        coordinator.setTargetDisplay(4); coordinator.start()
+        await settle { if case .failed = coordinator.state { return true }; return false }
+        XCTAssertFalse(states.contains(.running))
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertNil(coordinator.lastSuccessful)
+        XCTAssertNil(defaults.data(forKey: ProtoPieCoordinator.lastSuccessfulKey))
+        XCTAssertEqual(defaults.data(forKey: ProtoPieCoordinator.savedKey), savedBytes)
+        XCTAssertEqual(driver.capturedPresentations.map(\.windowID), [101])
+        XCTAssertEqual(driver.releases.map(\.windowID), [101])
+        XCTAssertTrue(coordinator.notice.contains("内容屏排列未稳定"))
+    }
+
+    func testPlaylistPreparationPropagatesCaptureFinalizationCauseWithoutPublishingSuccess() async {
+        let driver = CanvasHeightProtoPieDriver(); let (coordinator, defaults) = make(driver)
+        let reason = "切换后播放器与内容屏的位置或尺寸未对齐（窗口 5352，内容屏 3432）。"
+        driver.captureFinalizeHandler = { _ in throw ProtoPieError.unavailable(reason) }
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 2800))
+        coordinator.setTargetDisplay(4)
+        let keys = [ProtoPieCoordinator.savedKey, ProtoPieCoordinator.draftKey, ProtoPieCoordinator.lastSuccessfulKey]
+        let savedBytes = keys.map { defaults.data(forKey: $0) }
+        var states = [ProtoPieRuntimeState]()
+        coordinator.onStateChange = { states.append($0) }
+        do {
+            _ = try await coordinator.prepareForPlayback(configuration: coordinator.saved, reload: false)
+            XCTFail("排列完成阶段失败不能让轮播继续派发输入")
+        } catch { XCTAssertEqual(error.localizedDescription, reason, "轮播日志必须保留实际失败原因") }
+        XCTAssertEqual(coordinator.state, .failed(reason))
+        XCTAssertFalse(states.contains(.running))
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertNil(coordinator.lastSuccessful)
+        XCTAssertEqual(keys.map { defaults.data(forKey: $0) }, savedBytes)
+        XCTAssertEqual(driver.capturedPresentations.map(\.windowID), [101])
+        XCTAssertEqual(driver.releases.map(\.windowID), [101])
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1, "统一重试仍由轮播调度器负责")
+    }
+
+    func testPlaylistPreparationPropagatesVirtualDisplayPreparationCauseBeforeCapture() async {
+        let driver = CanvasHeightProtoPieDriver(); let (coordinator, _) = make(driver)
+        let reason = "内容屏排列尚未稳定，请等待显示器配置完成后重试。"
+        driver.prepareHandler = { _ in throw ProtoPieError.unavailable(reason) }
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 1100))
+        coordinator.setTargetDisplay(4)
+        do {
+            _ = try await coordinator.prepareForPlayback(configuration: coordinator.saved, reload: false)
+            XCTFail("显示器准备失败应传递给轮播")
+        } catch { XCTAssertEqual(error.localizedDescription, reason) }
+        XCTAssertEqual(coordinator.notice, reason)
+        XCTAssertTrue(driver.capturedPresentations.isEmpty)
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertNil(coordinator.lastSuccessful)
+    }
+
+    func testStopDuringDisplayPlacementFinalizationRejectsLateSuccess() async {
+        let driver = CanvasHeightProtoPieDriver(); let (coordinator, defaults) = make(driver)
+        var releaseFinalize: CheckedContinuation<Void, Never>?
+        // Deliberately ignore cancellation to exercise the coordinator's token
+        // check after the driver returns from its final display transaction.
+        driver.captureFinalizeHandler = { _ in await withCheckedContinuation { releaseFinalize = $0 } }
+        var states = [ProtoPieRuntimeState]()
+        coordinator.onStateChange = { states.append($0) }
+        let savedBytes = defaults.data(forKey: ProtoPieCoordinator.savedKey)
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 2800))
+        coordinator.setTargetDisplay(4); coordinator.start()
+        await settle { releaseFinalize != nil }
+        coordinator.stop()
+        releaseFinalize?.resume(); releaseFinalize = nil
+        await settle { driver.releases.count == 1 }
+        XCTAssertEqual(coordinator.state, .stopped)
+        XCTAssertFalse(states.contains(.running))
+        XCTAssertNil(coordinator.activeSession)
+        XCTAssertNil(coordinator.lastSuccessful)
+        XCTAssertNil(defaults.data(forKey: ProtoPieCoordinator.lastSuccessfulKey))
+        XCTAssertEqual(defaults.data(forKey: ProtoPieCoordinator.savedKey), savedBytes)
+        XCTAssertEqual(driver.releases.map(\.windowID), [101])
+    }
+
+    func testNewHeightWaitsForCancelledPlacementFinalizationAndPublishesOnlyNewestSource() async {
+        let driver = CanvasHeightProtoPieDriver(); let (coordinator, _) = make(driver)
+        var releaseFinalize: CheckedContinuation<Void, Never>?
+        driver.captureFinalizeHandler = { session in
+            if session.windowID == 101 { await withCheckedContinuation { releaseFinalize = $0 } }
+        }
+        var runningWindows = [CGWindowID]()
+        coordinator.onStateChange = { state in
+            if state == .running, let id = coordinator.activeSession?.windowID { runningWindows.append(id) }
+        }
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 2800))
+        coordinator.setTargetDisplay(4); coordinator.start()
+        await settle { releaseFinalize != nil }
+        coordinator.setPresentationCanvas(CanvasConfiguration(width: 12500, height: 3200))
+        try? await Task.sleep(nanoseconds: 20_000_000)
+        XCTAssertEqual(driver.preparations.count, 1,
+            "上一次排列事务退出前不能创建另一块源显示器")
+        XCTAssertNil(coordinator.lastSuccessful)
+        releaseFinalize?.resume(); releaseFinalize = nil
+        await settle { coordinator.state == .running && driver.preparations.count == 2 }
+        XCTAssertEqual(driver.preparations.map { $0.canvas?.height }, [2800, 3200])
+        XCTAssertEqual(driver.capturedPresentations.map(\.windowID), [101, 102])
+        XCTAssertEqual(driver.releases.map(\.windowID), [101])
+        XCTAssertEqual(runningWindows, [102])
+        XCTAssertEqual(coordinator.activeSession?.windowID, 102)
     }
 
     func testRunningHeightChangeRecapturesAndKeepsUnappliedDraftOutOfActiveConfiguration() async throws {

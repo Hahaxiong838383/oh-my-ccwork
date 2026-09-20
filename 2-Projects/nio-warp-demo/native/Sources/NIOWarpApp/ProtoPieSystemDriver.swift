@@ -7,18 +7,50 @@ import Foundation
     private let workspace = NSWorkspace.shared
     private let profileURL: URL
     private var browserSocket: URL?
-    private var cloudTargets: [String: ProtoPieConfiguration] = [:]
+    private let cloudTargets = ProtoPieCloudTargetLifecycle(
+        closeTarget: { socket, target in
+            let result = try await ProtoPieCDP.call(socket, method: "Target.closeTarget", parameters: ["targetId": target])
+            return result["success"] as? Bool == true
+        }, targetExists: { socket, target in
+            let result = try await ProtoPieCDP.call(socket, method: "Target.getTargets")
+            let infos = try ProtoPieCloudTargetLifecycle.confirmedTargetInfos(result)
+            return infos.contains { $0["targetId"] as? String == target }
+        })
     private var fileScopes: [UUID: URL] = [:]
     private var freshPreviewRequested = false
     private var presentationCanvas: CanvasConfiguration?
     private let presentationDisplay = OwnedPresentationDisplay()
+    private var preparedPresentation: (sessionID: UUID, outputDisplayID: CGDirectDisplayID)?
 
     func setPresentationCanvas(_ canvas: CanvasConfiguration?) { presentationCanvas = canvas }
-    func shutdownPresentation() { presentationDisplay.shutdown() }
-    func presentationCaptured(_ session: ProtoPieSession) {
+    func shutdownPresentation() { preparedPresentation = nil; presentationDisplay.shutdown() }
+    func presentationCaptured(_ session: ProtoPieSession) async throws {
+        let prepared = preparedPresentation
+        let previousTarget = cloudTargets.committedTargetID
+        if session.cloudTargetID != nil, prepared?.sessionID != session.id { throw CancellationError() }
         if let id = session.presentationDisplayID, OwnedPresentationDisplay.isOwnedDisplay(id) {
-            presentationDisplay.captureDidSwitch(to: id)
-        } else { presentationDisplay.shutdown() }
+            try await presentationDisplay.captureDidSwitch(to: id)
+        } else { try await presentationDisplay.shutdownAfterCapture() }
+        try Task.checkCancellation()
+        if session.cloudTargetID != nil, preparedPresentation?.sessionID != session.id { throw CancellationError() }
+        // WindowServer can reposition a fullscreen Space after removing a source.
+        // A verified first frame alone does not prove its final global geometry.
+        if session.cloudTargetID != nil, let prepared {
+            guard await isPresentationReady(session, displayID: prepared.outputDisplayID) else {
+                throw ProtoPieError.unavailable("内容屏切换后，播放器位置或尺寸尚未对齐，请重试。")
+            }
+            try Task.checkCancellation()
+            guard preparedPresentation?.sessionID == session.id else { throw CancellationError() }
+        }
+        cloudTargets.commit(session.cloudTargetID, sessionID: session.id)
+        let protected = Set([session.cloudTargetID, previousTarget].compactMap { $0 })
+        if let socket = browserSocket, let available = try? await targets(socket) {
+            for target in ProtoPieCloudTargetLifecycle.markedOrphans(available, preserving: protected) {
+                cloudTargets.registerMarkedOrphan(target, socket: socket, preserving: protected)
+            }
+        }
+        await cloudTargets.cleanupFailures(preserving: protected)
+        try Task.checkCancellation()
     }
 
     deinit { for url in fileScopes.values { url.stopAccessingSecurityScopedResource() } }
@@ -36,10 +68,15 @@ import Foundation
     func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
                  progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
         try configuration.validate()
+        let session: ProtoPieSession
         switch configuration.source {
-        case .cloud: return try await prepareCloud(configuration, displayID: displayID, progress: progress)
-        case .localFile: return try await prepareStudio(configuration, displayID: displayID, progress: progress)
+        case .cloud: session = try await prepareCloud(configuration, displayID: displayID, progress: progress)
+        case .localFile: session = try await prepareStudio(configuration, displayID: displayID, progress: progress)
         }
+        // Return an acquired resource to the coordinator even if cancellation
+        // lands at this boundary; its candidate cleanup must retain ownership.
+        preparedPresentation = (session.id, displayID)
+        return session
     }
 
     func isAlive(_ session: ProtoPieSession) async -> Bool {
@@ -99,7 +136,7 @@ import Foundation
             let observation = ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
                 browserFrame: bounds.frame, windowState: bounds.state,
                 viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: scale)
-            let geometryReady = observation.isReady(for: targetFrame)
+            let geometryReady = observation.isReady(for: targetFrame) && Self.targetRect(sourceDisplayID) == targetFrame
             record(.monitorComplete, observation: observation, layoutReady: layoutReady,
                 issue: !geometryReady ? .geometryNotReady : !layoutReady ? .layoutNotReady : nil)
             return geometryReady && layoutReady
@@ -108,15 +145,16 @@ import Foundation
 
     func release(_ session: ProtoPieSession) async {
         detach(session)
-        if let target = session.cloudTargetID, cloudTargets.removeValue(forKey: target) != nil, let socket = browserSocket {
-            _ = try? await ProtoPieCDP.call(socket, method: "Target.closeTarget", parameters: ["targetId": target])
+        if let target = session.cloudTargetID {
+            await cloudTargets.releaseSessionTarget(target, sessionID: session.id)
         }
     }
 
     func openForUser(configuration: ProtoPieConfiguration) async throws {
         switch configuration.source {
         case .cloud:
-            let (socket, target) = try await cloudTarget(configuration)
+            let lease = try await cloudTarget(configuration)
+            let socket = lease.socket, target = lease.targetID
             try Task.checkCancellation()
             // This is an explicit user action. Automatic launch/recovery never steals focus
             // or moves a source back onto the control screen.
@@ -161,52 +199,65 @@ import Foundation
     private func prepareCloud(_ configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
                               progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
         progress("正在打开专用 ProtoPie Cloud 播放窗口…")
-        let (socket, target) = try await cloudTarget(configuration)
-        let info = try await ProtoPieCDP.call(socket, method: "SystemInfo.getProcessInfo")
-        guard let processes = info["processInfo"] as? [[String: Any]],
-              let pidNumber = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber else {
-            throw ProtoPieError.unavailable("无法识别专用播放器进程；请重试。")
-        }
-        let pid = pid_t(pidNumber.int32Value)
-        let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
-        guard let browserWindowID = window["windowId"] as? Int else { throw ProtoPieError.unavailable("播放器没有可捕获窗口。") }
-        let pageSocket = try await pageSocket(target: target, browserSocket: socket)
-        let expected = try configuration.playbackURL()
-        let marker = "NIO Warp Preview · \(UUID().uuidString.prefix(8))"
-        let expression = Self.cloudReadinessExpression(expectedURL: expected, marker: marker)
-        var previousProblem = ""
-        var problemSamples = 0
-        for _ in 0..<60 {
-            try Task.checkCancellation()
-            let evaluation = try await ProtoPieCDP.call(pageSocket, method: "Runtime.evaluate", parameters: ["expression": expression, "returnByValue": true])
-            let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any] ?? [:]
-            if let problem = value["problem"] as? String, !problem.isEmpty {
-                // Login redirects can appear briefly while a new Cloud window restores its session.
-                problemSamples = problem == previousProblem ? problemSamples + 1 : 1
-                previousProblem = problem
-                if problemSamples >= 3 { throw ProtoPieError.waitingForUser(problem) }
-            } else {
-                previousProblem = ""; problemSamples = 0
+        let lease = try await cloudTarget(configuration)
+        do {
+            let socket = lease.socket, target = lease.targetID
+            let info = try await ProtoPieCDP.call(socket, method: "SystemInfo.getProcessInfo")
+            guard let processes = info["processInfo"] as? [[String: Any]],
+                  let pidNumber = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber else {
+                throw ProtoPieError.unavailable("无法识别专用播放器进程；请重试。")
             }
-            if value["ready"] as? Bool == true {
-                let sourceDisplayID: CGDirectDisplayID
-                if let canvas = presentationCanvas, canvas.height != CGDisplayPixelsHigh(displayID) {
-                    progress("正在准备与画布等高的完整播放器…")
-                    sourceDisplayID = try await presentationDisplay.ensure(width: CGDisplayPixelsWide(displayID), height: canvas.height)
-                } else { sourceDisplayID = displayID }
+            let pid = pid_t(pidNumber.int32Value)
+            let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            guard let browserWindowID = window["windowId"] as? Int else { throw ProtoPieError.unavailable("播放器没有可捕获窗口。") }
+            let pageSocket = try await pageSocket(target: target, browserSocket: socket)
+            let expected = try configuration.playbackURL()
+            let marker = "NIO Warp Preview · \(UUID().uuidString.prefix(8))"
+            let expression = Self.cloudReadinessExpression(expectedURL: expected, marker: marker)
+            var previousProblem = ""
+            var problemSamples = 0
+            for _ in 0..<60 {
                 try Task.checkCancellation()
-                progress("正在进入完整高度的无边框预览，等待画面尺寸稳定…")
-                let captured = try await prepareCloudFullscreen(socket: socket, pageSocket: pageSocket,
-                    windowID: browserWindowID, processID: pid, marker: marker, displayID: sourceDisplayID,
-                    configuration: configuration)
-                return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
-                                       cloudTargetID: target, title: "ProtoPie Cloud · 完整高度预览",
-                                       presentationDisplayID: sourceDisplayID)
+                let evaluation = try await ProtoPieCDP.call(pageSocket, method: "Runtime.evaluate", parameters: ["expression": expression, "returnByValue": true])
+                let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any] ?? [:]
+                if let problem = value["problem"] as? String, !problem.isEmpty {
+                    // Login redirects can appear briefly while a new Cloud window restores its session.
+                    problemSamples = problem == previousProblem ? problemSamples + 1 : 1
+                    previousProblem = problem
+                    if problemSamples >= 3 { throw ProtoPieError.waitingForUser(problem) }
+                } else {
+                    previousProblem = ""; problemSamples = 0
+                }
+                if value["ready"] as? Bool == true {
+                    let sourceDisplayID: CGDirectDisplayID
+                    if let canvas = presentationCanvas, canvas.height != CGDisplayPixelsHigh(displayID) {
+                        progress("正在准备与画布等高的完整播放器…")
+                        sourceDisplayID = try await presentationDisplay.ensure(width: CGDisplayPixelsWide(displayID), height: canvas.height)
+                    } else { sourceDisplayID = displayID }
+                    try Task.checkCancellation()
+                    progress("正在进入完整高度的无边框预览，等待画面尺寸稳定…")
+                    let captured = try await prepareCloudFullscreen(socket: socket, pageSocket: pageSocket,
+                        windowID: browserWindowID, processID: pid, marker: marker, displayID: sourceDisplayID,
+                        configuration: configuration)
+                    try Task.checkCancellation()
+                    return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
+                                           cloudTargetID: target, title: "ProtoPie Cloud · 完整高度预览",
+                                           presentationDisplayID: sourceDisplayID)
+                }
+                progress("等待云端预览加载；如需登录，请在专用播放器中完成。")
+                try await Task.sleep(nanoseconds: 500_000_000)
             }
-            progress("等待云端预览加载；如需登录，请在专用播放器中完成。")
-            try await Task.sleep(nanoseconds: 500_000_000)
+            throw ProtoPieError.waitingForUser("尚未识别到已加载的 ProtoPie 预览。请打开播放器检查登录、链接权限或网络后重试。")
+        } catch {
+            // No newly-created page may keep playing after an unsuccessful
+            // automatic preparation. Explicit Open Player remains the login path.
+            await cloudTargets.preparationFailed(lease)
+            if !Task.isCancelled, lease.createdForRequest,
+               let previewError = error as? ProtoPieError, case .waitingForUser(let reason) = previewError {
+                throw ProtoPieError.waitingForUser(reason + "\n请点击“打开播放器”完成登录或检查预览后重试。")
+            }
+            throw error
         }
-        throw ProtoPieError.waitingForUser("尚未识别到已加载的 ProtoPie 预览。请打开播放器检查登录、链接权限或网络后重试。")
     }
 
     private func cloudWindowBounds(socket: URL, windowID: Int) async throws -> (frame: CGRect, state: String) {
@@ -347,20 +398,27 @@ import Foundation
         throw ProtoPieError.unavailable(ProtoPiePresentationDiagnostics.timeoutMessage(geometryStable: geometryStable, layoutReady: layoutReady))
     }
 
-    private func cloudTarget(_ configuration: ProtoPieConfiguration) async throws -> (URL, String) {
+    private func cloudTarget(_ configuration: ProtoPieConfiguration) async throws -> ProtoPieCloudTargetLease {
         let url = try configuration.playbackURL()
         let fresh = freshPreviewRequested; freshPreviewRequested = false
-        if let socket = await existingBrowserSocket() {
-            browserSocket = socket
+        // A crashed/exited dedicated browser invalidates its old socket. Only a
+        // socket verified on this acquisition may define the pre-launch baseline.
+        browserSocket = await existingBrowserSocket()
+        if let socket = browserSocket {
             if !fresh, let targets = try? await targets(socket) {
                 // Reuse a source we created, including a login page awaiting the user's action.
-                if let reused = cloudTargets.first(where: { pair in
-                    pair.value == configuration && targets.contains(where: { $0["targetId"] as? String == pair.key })
-                }) { return (socket, reused.key) }
+                if let reused = cloudTargets.reusable(configuration: configuration,
+                    available: Set(targets.compactMap { $0["targetId"] as? String })) {
+                    return cloudTargets.register(reused, socket: socket, configuration: configuration, createdForRequest: false)
+                }
                 // After an app restart, the dedicated profile can still have its playback window.
-                if let restored = targets.first(where: { $0["type"] as? String == "page" && $0["url"] as? String == url.absoluteString }),
+                if let restored = targets.first(where: {
+                    guard $0["type"] as? String == "page", $0["url"] as? String == url.absoluteString,
+                          let id = $0["targetId"] as? String else { return false }
+                    return cloudTargets.entries[id]?.failed != true
+                }),
                    let id = restored["targetId"] as? String {
-                    cloudTargets[id] = configuration; return (socket, id)
+                    return cloudTargets.register(id, socket: socket, configuration: configuration, createdForRequest: false)
                 }
             }
         }
@@ -369,8 +427,10 @@ import Foundation
         }
         try FileManager.default.createDirectory(at: profileURL, withIntermediateDirectories: true)
         let knownTargets: Set<String>
-        if let socket = browserSocket, let targets = try? await targets(socket) {
-            knownTargets = Set(targets.compactMap { $0["targetId"] as? String })
+        if let socket = browserSocket {
+            // An unknown baseline cannot establish which page this launch owns.
+            // Fail before opening another window if a live profile cannot list it.
+            knownTargets = Set(try await targets(socket).compactMap { $0["targetId"] as? String })
         } else { knownTargets = [] }
         let config = NSWorkspace.OpenConfiguration()
         config.createsNewApplicationInstance = true
@@ -378,30 +438,52 @@ import Foundation
         config.arguments = ["--user-data-dir=\(profileURL.path)", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0",
                             "--no-first-run", "--no-default-browser-check", "--disable-background-timer-throttling",
                             "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "--app=\(url.absoluteString)"]
-        _ = try await workspace.openApplication(at: chrome, configuration: config)
-        for _ in 0..<40 {
-            try Task.checkCancellation()
-            if let socket = await existingBrowserSocket(), let targets = try? await targets(socket),
-               let target = Self.newCloudTarget(targets, excluding: knownTargets, expectedURL: url),
-               let id = target["targetId"] as? String {
-                browserSocket = socket; cloudTargets[id] = configuration; return (socket, id)
+        do {
+            _ = try await workspace.openApplication(at: chrome, configuration: config)
+            for _ in 0..<40 {
+                try Task.checkCancellation()
+                if let socket = await existingBrowserSocket(), let targets = try? await targets(socket),
+                   let target = Self.newCloudTarget(targets, excluding: knownTargets, expectedURL: url),
+                   let id = target["targetId"] as? String {
+                    browserSocket = socket
+                    return cloudTargets.register(id, socket: socket, configuration: configuration, createdForRequest: true)
+                }
+                try await Task.sleep(nanoseconds: 250_000_000)
             }
-            try await Task.sleep(nanoseconds: 250_000_000)
+            throw ProtoPieError.unavailable("专用 Chrome 调试连接未就绪，请打开播放器后重试。")
+        } catch {
+            await cleanupUnboundCloudLaunch(configuration, knownTargets: knownTargets, expectedURL: url)
+            throw error
         }
-        throw ProtoPieError.unavailable("专用 Chrome 调试连接未就绪，请打开播放器后重试。")
+    }
+
+    private func cleanupUnboundCloudLaunch(_ configuration: ProtoPieConfiguration, knownTargets: Set<String>,
+                                          expectedURL: URL) async {
+        // Launch can complete while its caller is canceled, before a session or
+        // target lease exists. Inspect only this isolated profile and an
+        // unambiguous newly-added page, never arbitrary Chrome windows.
+        let cleanup = Task { @MainActor [self] in
+            let deadline = ProcessInfo.processInfo.systemUptime + 3
+            for _ in 0..<4 {
+                if let socket = await existingBrowserSocket(), let available = try? await targets(socket),
+                   let target = ProtoPieCloudTargetLifecycle.unboundLaunchedTarget(available,
+                       excluding: knownTargets, expectedURL: expectedURL) {
+                    let lease = cloudTargets.register(target, socket: socket, configuration: configuration, createdForRequest: true)
+                    await cloudTargets.preparationFailed(lease)
+                    return
+                }
+                if ProcessInfo.processInfo.systemUptime >= deadline { break }
+                try? await Task.sleep(nanoseconds: 150_000_000)
+            }
+            NSLog("NIO ProtoPie launch cleanup: no unambiguous new dedicated target found")
+        }
+        await cleanup.value
     }
 
     nonisolated static func newCloudTarget(_ targets: [[String: Any]], excluding known: Set<String>, expectedURL: URL) -> [String: Any]? {
-        let newPages = targets.filter { target in
-            guard let id = target["targetId"] as? String else { return false }
-            return !known.contains(id) && target["type"] as? String == "page"
-        }
-        if let exact = newPages.first(where: { $0["url"] as? String == expectedURL.absoluteString }) { return exact }
-        // A login redirect can happen before target enumeration. Only bind an unambiguous
-        // newly-created page in our isolated profile; readiness still verifies the actual source.
-        if newPages.count == 1, let text = newPages[0]["url"] as? String, let current = URL(string: text),
-           current.host == "cloud.protopie.io" || current.host == "accounts.protopie.io" { return newPages[0] }
-        return nil
+        guard let id = ProtoPieCloudTargetLifecycle.unboundLaunchedTarget(targets,
+            excluding: known, expectedURL: expectedURL) else { return nil }
+        return targets.first { $0["targetId"] as? String == id }
     }
 
     private func existingBrowserSocket() async -> URL? {
@@ -415,7 +497,7 @@ import Foundation
 
     private func targets(_ socket: URL) async throws -> [[String: Any]] {
         let result = try await ProtoPieCDP.call(socket, method: "Target.getTargets")
-        return result["targetInfos"] as? [[String: Any]] ?? []
+        return try ProtoPieCloudTargetLifecycle.confirmedTargetInfos(result)
     }
 
     private func pageSocket(target: String, browserSocket: URL) async throws -> URL {
