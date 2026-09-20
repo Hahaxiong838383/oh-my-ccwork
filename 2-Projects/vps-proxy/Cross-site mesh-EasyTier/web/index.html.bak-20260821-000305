@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>组网速查</title>
+<style>
+:root{
+  --bg:#f7f8f9; --card:#fff; --ink:#1a1d21; --muted:#6b7280;
+  --line:#e5e7eb; --accent:#0f766e; --code-bg:#f3f4f6; --ok:#059669;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#15171a; --card:#1d2024; --ink:#e8eaed; --muted:#9aa0a6;
+  --line:#2d3136; --accent:#5eead4; --code-bg:#26292e; --ok:#34d399;
+}}
+:root[data-theme=dark]{
+  --bg:#15171a; --card:#1d2024; --ink:#e8eaed; --muted:#9aa0a6;
+  --line:#2d3136; --accent:#5eead4; --code-bg:#26292e; --ok:#34d399;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  padding:24px 16px 60px}
+.wrap{max-width:820px;margin:0 auto}
+h1{font-size:1.5rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.88rem;margin-bottom:24px}
+section{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:18px 20px;margin-bottom:16px}
+h2{font-size:1.05rem;margin:0 0 12px;color:var(--accent);
+  display:flex;align-items:center;gap:8px}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th{text-align:left;font-weight:600;color:var(--muted);font-size:.78rem;
+  text-transform:uppercase;letter-spacing:.04em;padding:0 8px 8px 0;border-bottom:1px solid var(--line)}
+td{padding:9px 8px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.name{font-weight:600;white-space:nowrap}
+.role{color:var(--muted);font-size:.8rem;display:block;font-weight:400}
+code{font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:var(--code-bg);padding:3px 7px;border-radius:5px;white-space:nowrap}
+.cp{cursor:pointer;border:1px solid transparent;transition:.12s}
+.cp:hover{border-color:var(--accent)}
+.cp.done{color:var(--ok);border-color:var(--ok)}
+.note{font-size:.85rem;color:var(--muted);margin-top:12px;padding-top:12px;
+  border-top:1px dashed var(--line)}
+.warn{background:var(--code-bg);border-left:3px solid var(--accent);
+  padding:10px 14px;border-radius:0 6px 6px 0;font-size:.86rem;margin-top:12px}
+.scroll{overflow-x:auto}
+kbd{font-size:.8rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>组网速查</h1>
+<div class="sub">点任意 <code>代码块</code> 即复制 · 本页只在虚拟内网可达</div>
+
+<section>
+  <h2>装了 EasyTier 的机器</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>节点</th><th>虚拟 IP</th><th>连接</th></tr></thead>
+    <tbody>
+      <tr><td class="name">mini<span class="role">公司 · Mac Mini M4 · 编排中枢</span></td>
+          <td><code class="cp">10.10.10.11</code></td>
+          <td><code class="cp">ssh mini-mesh</code></td></tr>
+      <tr><td class="name">studio<span class="role">公司 · Mac Studio M2 Max · 算力</span></td>
+          <td><code class="cp">10.10.10.12</code></td>
+          <td><code class="cp">ssh studio-mesh</code></td></tr>
+      <tr><td class="name">dev198<span class="role">公司 · Ubuntu + RTX A2000</span></td>
+          <td><code class="cp">10.10.10.13</code></td>
+          <td><code class="cp">ssh dev198-mesh</code></td></tr>
+      <tr><td class="name">linux-lan<span class="role">家 · Ubuntu 桌面 · 家侧网关</span></td>
+          <td><code class="cp">10.10.10.21</code></td>
+          <td><code class="cp">ssh linux-lan-mesh</code></td></tr>
+      <tr><td class="name">air<span class="role">MacBook Air M5 · 随身</span></td>
+          <td><code class="cp">10.10.10.31</code></td>
+          <td><kbd>本机</kbd></td></tr>
+      <tr><td class="name">hk-relay<span class="role">香港 · 中继 / 发现</span></td>
+          <td><code class="cp">10.10.10.1</code></td>
+          <td><code class="cp">ssh hk-mesh</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note">这些地址<b>在家、在公司、在外网都一样</b>，不用再换 <code>-lan</code> / <code>-pub</code> 那套别名。
+  家↔公司走 P2P 直连，约 10ms。</div>
+</section>
+
+<section>
+  <h2>没装 EasyTier 的设备（子网代理）</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>设备</th><th>原地址</th><th>组网内用</th></tr></thead>
+    <tbody>
+      <tr><td class="name">QNAP NAS<span class="role">管理界面</span></td>
+          <td><code>192.168.61.18:5000</code></td>
+          <td><code class="cp">http://10.10.61.18:5000</code></td></tr>
+      <tr><td class="name">QNAP NAS<span class="role">HTTPS</span></td>
+          <td><code>192.168.61.18:5001</code></td>
+          <td><code class="cp">https://10.10.61.18:5001</code></td></tr>
+      <tr><td class="name">公司网关<span class="role">路由器后台</span></td>
+          <td><code>192.168.61.254</code></td>
+          <td><code class="cp">http://10.10.61.254</code></td></tr>
+      <tr><td class="name">家里路由器</td>
+          <td><code>192.168.1.1</code></td>
+          <td><code class="cp">http://10.10.1.1</code></td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note"><b>换算规则</b>：末位不变，只换前缀。公司 <code>192.168.61.X</code> → <code>10.10.61.X</code>；
+  家里 <code>192.168.1.X</code> → <code>10.10.1.X</code>。</div>
+  <div class="warn"><b>QNAP 管理口是 5000 不是 8080。</b>8080 上另有服务，访问它会返回
+  <code>404 page not found</code>——那是那个服务的正常响应，不是组网故障。</div>
+</section>
+
+<section>
+  <h2>常用操作</h2>
+  <div class="scroll">
+  <table>
+    <tbody>
+      <tr><td class="name">传文件到公司</td><td><code class="cp">scp 文件 dev198-mesh:~/</code></td></tr>
+      <tr><td class="name">同步目录</td><td><code class="cp">rsync -av 目录/ mini-mesh:~/备份/</code></td></tr>
+      <tr><td class="name">远程开发</td><td>VS Code / Cursor 的 Remote-SSH 填 <code class="cp">dev198-mesh</code></td></tr>
+      <tr><td class="name">全网巡检</td><td><code class="cp">cd ~/mycc/2-Projects/vps-proxy/Cross-site\ mesh-EasyTier && ./scripts/mesh-status.sh</code></td></tr>
+      <tr><td class="name">EasyTier 控制台</td><td><code class="cp">http://10.10.10.1:11211</code> <kbd>API Host 需填 http://10.10.10.1:11211</kbd></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section>
+  <h2>判读提醒</h2>
+  <div class="note" style="margin:0;padding:0;border:none">
+  <p style="margin:0 0 8px"><b>健康看 <code>p2p</code>，不要看丢包。</b>
+  <code>ping 10.10.10.1</code> 到中继虚拟 IP 会稳定丢 10–30%，是已知的测量假象——
+  同一时刻 TCP 跑 86 Mbps。判链路好坏看巡检里的第二列是 <code>p2p</code> 还是 <code>relay</code>。</p>
+  <p style="margin:0"><b>控制台里设备端口一直在变是正常的。</b>公司三台是对称 NAT，
+  这类 NAT 对每个目的地分配不同外部端口并周期重分配，底层通道并没有断。</p>
+  </div>
+</section>
+
+<div class="sub" style="text-align:center;margin:24px 0 0">
+  内容源：<code>mycc/2-Projects/vps-proxy/Cross-site mesh-EasyTier/web/index.html</code>
+</div>
+
+</div>
+<script>
+// http 下 navigator.clipboard 不可用（非安全上下文），用 textarea 兜底
+document.querySelectorAll('code.cp').forEach(function(el){
+  el.addEventListener('click', function(){
+    var t = el.textContent.trim();
+    var done = function(){ el.classList.add('done'); setTimeout(function(){el.classList.remove('done')},900); };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(t).then(done, fallback);
+    } else { fallback(); }
+    function fallback(){
+      var ta = document.createElement('textarea');
+      ta.value = t; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); done(); } catch(e){}
+      document.body.removeChild(ta);
+    }
+  });
+});
+</script>
+</body>
+</html>
