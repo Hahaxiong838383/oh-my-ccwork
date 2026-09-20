@@ -1,0 +1,121 @@
+{
+  "version": "0.14.1",
+  "build": "69",
+  "status": "installed_fix_automated_verification_passed",
+  "checkedAt": "2026-09-20T15:08:44.418238+08:00",
+  "rootCause": "Standalone rebaseCanvas NSAlert.runModal opened on the invisible owned content display, blocking the visible workbench.",
+  "evidence": {
+    "sampleSHA256": "c1d2b32fcaca9ee61aad7988bad2229be764b98a03607a4b49f281a8fd904cf7",
+    "mainThreadModalSamples": 3709,
+    "mainThreadTotalSamples": 3721,
+    "hiddenAlertCGRect": [
+      2342,
+      194,
+      260,
+      251
+    ],
+    "virtualDisplayXRange": [
+      1512,
+      3432
+    ]
+  },
+  "installation": {
+    "version": "0.14.1 (69)",
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-070618Z-before-v0141",
+    "sourceSHA256": "83d1cd54231c36e7ab8d5330c7a6f287271fbe2f37568b584a28af92cb7f4ce4",
+    "binarySHA256": "88936fc1aa4f3cb285f18acf41df68552ea5f6b85a11aa4f7dc6bb636ebba620",
+    "signatureRequirementMatched": true,
+    "preferencesByteIdenticalBeforeRelaunch": true,
+    "sourceDigestMatched": true,
+    "backupSHA256": {
+      "previous-app.zip": "fb7e6e390bfac9f75e6fba4ccf9a30ab32624f588dd5d43445d049c4cae27518",
+      "preferences-before.plist": "e3f7cefb5d4b81bbbcebd5518e7ddcc0602b002f48dd8137cafa3703c0ce8aee",
+      "source-files-before.tar.gz": "4230546f19529bb986335174de2ed18e16c2af90156711d1820240b6ba684134"
+    },
+    "updatedSourceFiles": [
+      "native/Sources/NIOWarpApp/main.swift",
+      "native/Tests/NIOWarpAppTests/CanvasGrowthConfirmationTests.swift",
+      "native/scripts/build-app.sh"
+    ]
+  },
+  "regression": {
+    "runtime": "Original production sources and original test methods with assertion shim; NOT formal XCTest",
+    "testCount": 8,
+    "assertionCount": 198,
+    "failureCount": 0,
+    "result": "PASS"
+  },
+  "remoteNativeUI": {
+    "pid": "11919",
+    "version": "0.14.1 (69)",
+    "cycles": [
+      {
+        "cycle": 1,
+        "attachedSheet": true,
+        "bounds": [
+          827,
+          375,
+          260,
+          171
+        ],
+        "onBuiltIn": true,
+        "returnedToWorkbench": true,
+        "elapsedSeconds": 0.891
+      },
+      {
+        "cycle": 2,
+        "attachedSheet": true,
+        "bounds": [
+          827,
+          375,
+          260,
+          171
+        ],
+        "onBuiltIn": true,
+        "returnedToWorkbench": true,
+        "elapsedSeconds": 0.817
+      },
+      {
+        "cycle": 3,
+        "attachedSheet": true,
+        "bounds": [
+          827,
+          375,
+          260,
+          171
+        ],
+        "onBuiltIn": true,
+        "returnedToWorkbench": true,
+        "elapsedSeconds": 0.809
+      }
+    ],
+    "protectedKeys": 11,
+    "changedProtectedKeys": [],
+    "result": "PASS"
+  },
+  "finalState": {
+    "protectedKeyCount": 11,
+    "changedKeys": [],
+    "nioWarpOutputPresentation.runtime.v1": {
+      "occlusionVisible": true,
+      "onActiveSpace": true,
+      "requestedVisible": true,
+      "updatedAt": 1789888065.4881902
+    },
+    "nioWarpMouseMapping.runtime.v1": {
+      "active": false,
+      "busy": false,
+      "message": "先启动 ProtoPie 全屏预览，再进入演示鼠标控制。",
+      "updatedAt": 1789887980.0882502
+    },
+    "pids": [
+      "11919"
+    ]
+  },
+  "limits": [
+    "No new long-run autoplay acceptance",
+    "No new optical calibration acceptance",
+    "System screenshot capture unavailable; live placement checked via AX sheet hierarchy and bounds"
+  ]
+}

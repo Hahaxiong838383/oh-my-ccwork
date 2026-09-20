@@ -1253,6 +1253,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private let layerSummary = NSTextField(wrappingLabelWithString: "")
     private let pinButton = NSButton(checkboxWithTitle: "保持置顶", target: nil, action: nil)
     private var quitConfirmation: NSAlert?
+    private var canvasRebaseConfirmation: NSAlert?
     private let terminateApplication: () -> Void
     private var selectedLocalTool = 0
     private var builtInterface = false
@@ -2634,19 +2635,42 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     @objc private func rebaseCanvas() {
+        guard let window, window.attachedSheet == nil, canvasRebaseConfirmation == nil else { return }
+        guard !geometryValidationInFlight else {
+            setStatus("局部修改正在校验，请稍候再记住外扩起点。", color: .systemOrange)
+            return
+        }
         guard canvasFieldsAreSaved() else {
             setStatus("宽高还没保存。请先点击“保存并应用上面的宽和高”，再记住外扩起点。", color: .systemOrange)
             return
         }
+        let confirmedConfiguration = configuration
         let alert = NSAlert()
         alert.messageText = "把当前画面作为新的外扩起点？"
         alert.informativeText = "将记住当前 \(configuration.canvas.width) × \(configuration.canvas.height) 的尺寸和位置。当前曲线与内容大小不变；以后恢复起点会恢复到这个尺寸。旧起点可用“撤销上一次设置”找回。"
-        alert.addButton(withTitle: "记住当前画面")
-        alert.addButton(withTitle: "取消，不改动")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        configuration.rebaseCanvasGrowth()
-        applyConfiguration("已记住新的外扩起点；曲线形状不变")
-        refreshControls()
+        let confirmButton = alert.addButton(withTitle: "记住当前画面")
+        let cancelButton = alert.addButton(withTitle: "取消，不改动")
+        // A standalone runModal alert can open on our invisible content display
+        // and block the visible workbench. Keep confirmation on its control window.
+        bringToFront()
+        canvasRebaseConfirmation = alert
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            self.canvasRebaseConfirmation = nil
+            guard response == .alertFirstButtonReturn else { return }
+            guard !self.geometryValidationInFlight,
+                  self.configuration == confirmedConfiguration,
+                  self.canvasFieldsAreSaved() else {
+                self.setStatus("画面或输入已变化，请核对后重新记住外扩起点。", color: .systemOrange)
+                return
+            }
+            self.configuration.rebaseCanvasGrowth()
+            self.applyConfiguration("已记住新的外扩起点；曲线形状不变")
+            self.refreshControls()
+        }
+        confirmButton.keyEquivalent = ""
+        cancelButton.keyEquivalent = "\r"
+        alert.window.defaultButtonCell = cancelButton.cell as? NSButtonCell
     }
 
     @objc private func restoreReferenceCanvas() {
