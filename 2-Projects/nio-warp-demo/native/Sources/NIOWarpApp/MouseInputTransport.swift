@@ -104,6 +104,9 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     private var possiblyPressed = 0
     private var possiblyPressedKeys: [UInt16: MouseKeyboardEvent] = [:]
     private var lastPoint = CGPoint.zero
+    /// Accepted event position, including events still queued or awaiting viewport
+    /// validation. A handoff drains those events, unlike close which discards them.
+    private var lastQueuedPoint = CGPoint.zero
     private var queue: [Operation] = []
     private var worker: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
@@ -314,6 +317,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             guard queue.count < 256 else { fail(MouseInputTransportError.queueOverflow, mayRelease: true); return false }
             queue.append(.event(event))
         }
+        lastQueuedPoint = CGPoint(x: event.x, y: event.y)
         startWorker()
         return true
     }
@@ -342,6 +346,25 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         try await withCheckedThrowingContinuation { continuation in
             queue.append(.flush(continuation)); startWorker()
         }
+    }
+
+    /// Transfer ownership to a human without closing/rebinding the same page.
+    /// Call only after the scripted producer has been cancelled. Releases are
+    /// queued behind any in-flight down and before the first human event.
+    func releaseHeldInputs() async throws {
+        guard acceptingEvents, let viewport else { throw MouseInputTransportError.closed }
+        let releasePoint = lastQueuedPoint
+        for event in queuedKeys.keys.sorted().compactMap({ queuedKeys[$0] }) {
+            guard sendKey(event.released()) else { throw MouseInputTransportError.closed }
+        }
+        for button: MouseInputEvent.Button in [.left, .right, .middle] where queuedButtons & button.mask != 0 {
+            let released = queuedButtons & ~button.mask
+            guard send(MouseInputEvent(viewportID: viewport.bindingID, kind: .up,
+                x: releasePoint.x, y: releasePoint.y, button: button, buttons: released)) else {
+                throw MouseInputTransportError.closed
+            }
+        }
+        try await flush()
     }
 
     /// A resize, reload or fullscreen exit invalidates the binding instead of rebasing queued clicks.
@@ -822,6 +845,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             self.connection?.close(); self.connection = nil
             self.pageSessionID = nil; self.session = nil; self.viewport = nil
             self.cursorCache.removeAll()
+            self.lastQueuedPoint = .zero
             self.possiblyPressed = 0; self.possiblyPressedKeys.removeAll(); self.worker = nil; self.closeTask = nil
         }
     }

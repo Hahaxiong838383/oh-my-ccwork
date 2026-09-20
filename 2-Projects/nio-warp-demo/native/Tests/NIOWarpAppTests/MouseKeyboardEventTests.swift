@@ -3,6 +3,81 @@ import XCTest
 @testable import NIOWarpApp
 
 @MainActor final class MouseKeyboardEventTests: XCTestCase {
+    func testScriptedDigitsKeepKeypadIdentityAndNeverTypeAgainOnRelease() throws {
+        let id = UUID()
+        for digit in 0...9 {
+            let main = try XCTUnwrap(MouseKeyboardEvent.scriptedInput(code: "Digit\(digit)", down: true))
+            let pad = try XCTUnwrap(MouseKeyboardEvent.scriptedInput(code: "Numpad\(digit)", down: true))
+            XCTAssertNotEqual(main.keyCode, pad.keyCode)
+            for (input, code, location, windows) in [(main, "Digit\(digit)", 0, 48 + digit), (pad, "Numpad\(digit)", 3, 96 + digit)] {
+                let down = MouseKeyboardEvent(viewportID: id, input: input)
+                XCTAssertEqual(down.parameters["code"] as? String, code)
+                XCTAssertEqual(down.parameters["text"] as? String, String(digit))
+                XCTAssertEqual(down.parameters["location"] as? Int, location)
+                XCTAssertEqual(down.parameters["windowsVirtualKeyCode"] as? Int, windows)
+                let up = MouseKeyboardEvent(viewportID: id, input: try XCTUnwrap(MouseKeyboardEvent.scriptedInput(code: code, down: false)))
+                XCTAssertEqual(up.parameters["code"] as? String, code)
+                XCTAssertEqual(up.parameters["key"] as? String, String(digit))
+                XCTAssertEqual(up.parameters["type"] as? String, "keyUp")
+                XCTAssertNil(up.parameters["text"])
+                XCTAssertEqual(up.input.keyCode, input.keyCode)
+            }
+        }
+    }
+
+    func testScriptedNavigationAndPunctuationDoNotFallBackToArbitraryText() throws {
+        for (code, key, text): (String, String, String?) in [("ArrowLeft", "ArrowLeft", nil), ("Space", " ", " "),
+            ("Enter", "Enter", "\r"), ("NumpadEnter", "Enter", "\r"), ("KeyW", "w", "w"),
+            ("NumpadAdd", "+", "+"), ("Backquote", "`", "`")] {
+            let input = try XCTUnwrap(MouseKeyboardEvent.scriptedInput(code: code, down: true))
+            let event = MouseKeyboardEvent(viewportID: UUID(), input: input)
+            XCTAssertEqual(event.parameters["code"] as? String, code)
+            XCTAssertEqual(event.parameters["key"] as? String, key)
+            XCTAssertEqual(event.parameters["text"] as? String, text)
+        }
+        for code in ["Escape", "MetaLeft", "ControlLeft", "Cmd+Q", "Digit22", "Numpad-1", "Unidentified", "private text"] {
+            XCTAssertNil(MouseKeyboardEvent.scriptedInput(code: code, down: true))
+            XCTAssertNil(MouseKeyboardEvent.scriptedInput(code: code, down: false))
+        }
+    }
+
+    func testScriptOwnershipReleaseBalancesKeysAndButtonsBeforeFirstHumanKeyOnSameSocket() async throws {
+        let fixture = try KeyboardFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.wire.blockNextKey = true
+        let scripted = MouseKeyboardEvent(viewportID: viewport.bindingID,
+            input: try XCTUnwrap(MouseKeyboardEvent.scriptedInput(code: "Numpad2", down: true)))
+        XCTAssertTrue(fixture.transport.sendKey(scripted))
+        await fixture.wire.waitForBlockedKey()
+        XCTAssertTrue(fixture.transport.sendKey(Self.key(viewport.bindingID, 13, text: "w")))
+        XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .down,
+            x: 120, y: 140, button: .left, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(MouseInputEvent(viewportID: viewport.bindingID, kind: .move,
+            x: 220, y: 240, buttons: 1)))
+        let handoff = Task { try await fixture.transport.releaseHeldInputs() }
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(fixture.wire.business.count, 1)
+        fixture.wire.unblockKey(); try await handoff.value
+        let count = fixture.wire.business.count
+        XCTAssertTrue(fixture.transport.sendKey(Self.key(viewport.bindingID, 84, text: "2")))
+        XCTAssertTrue(fixture.transport.sendKey(Self.key(viewport.bindingID, 84, down: false, text: "2")))
+        try await fixture.transport.flush()
+        XCTAssertEqual(fixture.wire.business.suffix(2).compactMap { $0.1["type"] as? String }, ["keyDown", "keyUp"])
+        XCTAssertEqual(fixture.wire.business.suffix(2).compactMap { $0.1["code"] as? String }, ["Numpad2", "Numpad2"])
+        XCTAssertEqual(fixture.wire.business.count, count + 2)
+        let beforeHuman = Array(fixture.wire.business.prefix(count))
+        XCTAssertEqual(beforeHuman.compactMap { $0.1["type"] as? String },
+            ["keyDown", "keyDown", "mousePressed", "mouseMoved", "keyUp", "keyUp", "mouseReleased"])
+        XCTAssertEqual(beforeHuman.last?.1["x"] as? Double, 220)
+        XCTAssertEqual(beforeHuman.last?.1["y"] as? Double, 240)
+        XCTAssertEqual(beforeHuman.last?.1["buttons"] as? Int, 0)
+        XCTAssertTrue(fixture.wire.businessSessions.allSatisfy { $0 == "keyboard-session" })
+        XCTAssertFalse(fixture.wire.closed)
+        XCTAssertEqual(fixture.transport.viewport, viewport)
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
     func testArrowsWASDAndNavigationUseBrowserKeyCodeAndNativeKeyCode() throws {
         for (native, text, code, key, windows): (UInt16, String, String, String, Int) in [
             (0,"a","KeyA","a",65),(1,"s","KeyS","s",83),(2,"d","KeyD","d",68),(13,"w","KeyW","w",87),

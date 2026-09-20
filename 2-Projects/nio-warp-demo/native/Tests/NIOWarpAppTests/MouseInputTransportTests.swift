@@ -3,6 +3,64 @@ import XCTest
 @testable import NIOWarpApp
 
 final class MouseInputTransportTests: XCTestCase {
+    @MainActor func testHumanHandoffReleasesPendingDownAtItsAcceptedPositionWithoutClosing() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, x: 345, button: .left, buttons: 1)))
+        // No flush/yield: last-dispatched coordinates are still the previous point.
+        try await fixture.transport.releaseHeldInputs()
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String }, ["mousePressed", "mouseReleased"])
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["x"] as? Double }, [345, 345])
+        XCTAssertEqual(fixture.transport.viewport, viewport)
+        XCTAssertTrue(fixture.transport.isConnected)
+        XCTAssertFalse(fixture.fake.closed)
+        XCTAssertEqual(fixture.fake.calls.filter { $0.method == "Target.attachToTarget" }.count, 1)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testHumanHandoffDrainsMovesBeforeReleaseAndKeepsFirstHumanClick() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        fixture.fake.blockNextInput = true
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, x: 100, button: .left, buttons: 1)))
+        await fixture.fake.waitForBlockedInput()
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 400, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .move, x: 500, buttons: 1)))
+        let handoff = Task { try await fixture.transport.releaseHeldInputs() }
+        for _ in 0..<20 { await Task.yield() }
+        XCTAssertEqual(fixture.fake.inputs.count, 1, "Release cannot overtake the in-flight press")
+        fixture.fake.unblockInput()
+        try await handoff.value
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, x: 650, button: .left, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .up, x: 650, button: .left)))
+        try await fixture.transport.flush()
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["type"] as? String },
+                       ["mousePressed", "mouseMoved", "mouseReleased", "mousePressed", "mouseReleased"])
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["x"] as? Double }, [100, 500, 500, 650, 650])
+        XCTAssertEqual(fixture.fake.inputs.compactMap { $0.parameters["buttons"] as? Int }, [1, 1, 0, 1, 0])
+        XCTAssertEqual(fixture.fake.calls.filter { $0.method == "Target.attachToTarget" }.count, 1)
+        XCTAssertTrue(fixture.failures.isEmpty)
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
+    @MainActor func testHumanHandoffDoesNotDuplicateQueuedReleasesAndUsesLastUpPosition() async throws {
+        let fixture = try MouseTransportFixture(); defer { fixture.remove() }
+        let viewport = try await fixture.transport.connect(session: fixture.session)
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, x: 10, button: .left, buttons: 1)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .down, x: 20, button: .right, buttons: 3)))
+        XCTAssertTrue(fixture.transport.send(fixture.event(viewport, .up, x: 30, button: .right, buttons: 1)))
+        try await fixture.transport.releaseHeldInputs()
+        let released = fixture.fake.inputs.filter { $0.parameters["type"] as? String == "mouseReleased" }
+        XCTAssertEqual(released.compactMap { $0.parameters["button"] as? String }, ["right", "left"])
+        XCTAssertEqual(released.compactMap { $0.parameters["x"] as? Double }, [30, 30])
+        XCTAssertEqual(released.compactMap { $0.parameters["buttons"] as? Int }, [1, 0])
+        try await fixture.transport.releaseHeldInputs()
+        XCTAssertEqual(fixture.fake.inputs.count, 4, "Repeated handoff must not synthesize duplicate mouse-up")
+        XCTAssertTrue(fixture.transport.isConnected)
+        await fixture.transport.releaseAllAndClose()
+    }
+
     @MainActor func testRawVisibleSourceEndpointReproducesCursorQueryRejection() async throws {
         let fixture = try MouseTransportFixture(); defer { fixture.remove() }
         let viewport = try await fixture.transport.connect(session: fixture.session)

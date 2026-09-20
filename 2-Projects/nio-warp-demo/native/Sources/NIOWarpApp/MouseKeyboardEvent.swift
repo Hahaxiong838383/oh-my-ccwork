@@ -26,6 +26,25 @@ struct MouseKeyboardEvent: Equatable {
     let viewportID: UUID
     let input: MouseKeyboardInput
 
+    /// A script stores DOM codes so Numpad2 never silently becomes Digit2.
+    static func scriptedInput(code: String, down: Bool) -> MouseKeyboardInput? {
+        guard let entry = keyMap.first(where: { $0.value.code == code }) else { return nil }
+        let key = entry.value
+        var text = ""
+        if code.hasPrefix("Key"), code.count == 4 { text = String(code.suffix(1)).lowercased() }
+        else if code.hasPrefix("Digit") { text = String(code.suffix(1)) }
+        else if code.hasPrefix("Numpad"), let digit = Int(code.dropFirst(6)), (0...9).contains(digit) { text = String(digit) }
+        else if key.named == nil {
+            text = ["Space": " ", "Equal": "=", "Minus": "-", "BracketRight": "]", "BracketLeft": "[",
+                "Quote": "'", "Semicolon": ";", "Backslash": "\\", "Comma": ",", "Slash": "/",
+                "Period": ".", "Backquote": "`", "NumpadDecimal": ".", "NumpadMultiply": "*",
+                "NumpadAdd": "+", "NumpadDivide": "/", "NumpadSubtract": "-", "NumpadEqual": "="][code] ?? ""
+        }
+        let result = MouseKeyboardInput(down: down, keyCode: entry.key, text: text,
+            unmodifiedText: text, modifiers: 0, isAutoRepeat: false)
+        return isSupported(result) ? result : nil
+    }
+
     /// Command/Control shortcuts and Escape stay with macOS / the workbench.
     /// Shift/Alt have explicit ownership; Command/Control/Caps/Fn stay native.
     var isValid: Bool { Self.isSupported(input) }

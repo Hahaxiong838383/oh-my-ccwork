@@ -18,12 +18,38 @@ struct MouseCursorPageIdentity: Equatable {
     }
 }
 
+/// A handoff may wait for a browser acknowledgement while physical input keeps
+/// arriving. Keep focus-loss releases in order with the actual input; never drop
+/// a trailing mouse/key up to fit a bounded queue.
+struct MouseAutomationHandoffBuffer {
+    enum Event { case mouse(MouseCaptureEvent), keyboard(MouseKeyboardInput), leftSurface }
+    static let capacity = 256
+    private(set) var events: [Event] = []
+    mutating func append(_ event: Event) -> Bool {
+        guard events.count < Self.capacity else { return false }
+        events.append(event); return true
+    }
+    mutating func drain() -> [Event] {
+        let result = events; events.removeAll(keepingCapacity: true); return result
+    }
+    mutating func reset() { events.removeAll(keepingCapacity: true) }
+}
+
 @MainActor final class MouseMappingController {
     var outputProvider: (() -> MouseMappingOutput?)?
     var outputDiagnosticProvider: (() -> [String: Any])?
     var sessionProvider: (() -> ProtoPieSession?)?
     var onReturnToWorkbench: (() -> Void)?
     var onPresentationTick: (() -> Void)?
+    var onAutomationUserActivity: (() -> Void)?
+    var onAutomationFailure: ((String) -> Void)?
+    var onAutomationExit: (() -> Void)?
+    var onPickedPoint: ((Double, Double) -> Void)?
+    private(set) var automationOwnsInput = false
+    private var automationGeneration = UUID()
+    private var handoffTask: Task<Void, Never>?
+    private typealias PendingHumanInput = MouseAutomationHandoffBuffer.Event
+    private var pendingHumanInputs = MouseAutomationHandoffBuffer()
     private(set) var isActive = false
     private(set) var settings: MouseMappingSettings
     private let defaults: UserDefaults
@@ -66,6 +92,7 @@ struct MouseCursorPageIdentity: Equatable {
             guard let self, self.isActive, self.outputOwned else { return }
             // Includes the first real hardware move even when movement priming
             // suppresses its delta. Never consumes the click that wakes us.
+            if self.automationOwnsInput { self.beginHumanHandoff() }
             self.cursorVisibility.receiveMouse(event, now: ProcessInfo.processInfo.systemUptime)
             self.reconcileCursorVisibility()
         }
@@ -78,9 +105,12 @@ struct MouseCursorPageIdentity: Equatable {
         }
         input.onEnter = { [weak self] point, allowSnap in self?.adoptNativeCursor(at: point, allowSnap: allowSnap) ?? false }
         input.onLeave = { [weak self] in
-            self?.cursorRevision &+= 1
-            self?.releaseButtons()
-            self?.restoreCursorPresentation()
+            guard let self else { return }
+            if self.automationOwnsInput || self.handoffTask != nil {
+                self.beginHumanHandoff(.leftSurface)
+            } else { self.releaseButtons() }
+            self.cursorRevision &+= 1
+            self.restoreCursorPresentation()
         }
         input.onExit = { [weak self] reason, returnToWorkbench in self?.stop(reason: reason, returnToWorkbench: returnToWorkbench) }
     }
@@ -133,8 +163,9 @@ struct MouseCursorPageIdentity: Equatable {
         armedOutput = nil
     }
 
-    func start() {
+    func start(automatic: Bool = false) {
         guard !isActive, startTask == nil else { return }
+        if !automatic { onAutomationUserActivity?() }
         // Keep the clicked output surface until its activation gesture ends;
         // dropping hit testing here could leak its mouse-up to the desktop.
         armedOutput?.cursor.onActivate = nil
@@ -249,6 +280,11 @@ struct MouseCursorPageIdentity: Equatable {
 
     /// Restore system input synchronously, before waiting for any network release.
     func stop(reason: String = "已返回普通鼠标。", returnToWorkbench: Bool = false) {
+        let wasAutomation = automationOwnsInput
+        let wasHandoff = handoffTask != nil
+        onPickedPoint = nil
+        automationOwnsInput = false; automationGeneration = UUID()
+        handoffTask?.cancel(); handoffTask = nil; pendingHumanInputs.reset()
         let hadSession = isActive || startTask != nil || transport != nil
         if hadSession { recordStop(reason: reason, returnToWorkbench: returnToWorkbench) }
         generation = UUID()
@@ -256,6 +292,10 @@ struct MouseCursorPageIdentity: Equatable {
         timer?.invalidate(); timer = nil
         cursorTask?.cancel(); cursorTask = nil; cursorRefreshNeeded = false
         disarmPresentationInput()
+        // Handoff-buffered downs may never have reached Chrome. Do not forward
+        // Native capture's cleanup key-ups for those discarded downs. The old
+        // transport still releases every input it actually sent below.
+        if wasHandoff { isActive = false }
         input.stop(); isActive = false; buttons = 0
         output?.cursor.physicalPoint = nil
         restoreCursorPresentation()
@@ -270,10 +310,181 @@ struct MouseCursorPageIdentity: Equatable {
         if hadSession || reason != "已返回普通鼠标。" { message = reason }
         publish(force: true)
         if let oldTransport { closingTask = Task { await oldTransport.releaseAllAndClose() } }
-        if returnToWorkbench { onReturnToWorkbench?() }
+        if wasAutomation, returnToWorkbench {
+            if reason.contains("Esc") { onAutomationExit?(); onReturnToWorkbench?() }
+            else { onAutomationFailure?(reason) }
+        } else if returnToWorkbench { onReturnToWorkbench?() }
     }
 
     func finishClosing() async { await closingTask?.value }
+
+    func pickAutomationPoint(_ callback: @escaping (Double, Double) -> Void) async {
+        stop(reason: "正在准备脚本取点。")
+        let token = generation
+        await finishClosing()
+        guard generation == token, !Task.isCancelled else { return }
+        onPickedPoint = callback
+        start()
+    }
+
+    func beginAutomation() async throws {
+        if automationOwnsInput, isActive, transport?.isConnected == true { return }
+        stop(reason: "正在准备自动演示输入。")
+        await finishClosing()
+        try Task.checkCancellation()
+        guard !settings.previewOnly else { throw MouseCaptureError("请在鼠标映射中关闭“仅检查移动”，再运行自动脚本。") }
+        let token = UUID(); automationGeneration = token; automationOwnsInput = true
+        start(automatic: true)
+        for _ in 0..<200 {
+            try Task.checkCancellation()
+            guard automationOwnsInput, automationGeneration == token else { throw MouseCaptureError(message) }
+            if isActive, transport?.isConnected == true { return }
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        stop(reason: "自动演示输入连接超时。")
+        throw MouseCaptureError("自动演示输入未就绪，请检查辅助功能权限与预览。")
+    }
+
+    func releaseAutomationInput() async {
+        if let handoffTask { await handoffTask.value; return }
+        guard automationOwnsInput else { return }
+        stop(reason: "自动演示输入已释放。")
+        await finishClosing()
+    }
+
+    var automationDiagnostic: [String: String] {
+        var result = ["inputConnected": String(transport?.isConnected == true),
+            "inputOwner": automationOwnsInput ? "automatic" : isActive ? "human" : "none"]
+        if let snapshot = transport?.diagnosticSnapshot {
+            if let count = snapshot["queueLength"] { result["inputQueue"] = String(describing: count) }
+            if let error = snapshot["lastErrorKind"] { result["inputError"] = String(describing: error) }
+        }
+        return result
+    }
+
+    private func beginHumanHandoff(_ event: PendingHumanInput? = nil) {
+        if let event, !pendingHumanInputs.append(event) {
+            stop(reason: "人工接管输入积压，已安全释放输入并返回工作台。", returnToWorkbench: true)
+            return
+        }
+        guard handoffTask == nil, automationOwnsInput, let transport else { return }
+        automationOwnsInput = false; automationGeneration = UUID()
+        let token = generation
+        handoffTask = Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await transport.releaseHeldInputs()
+                guard self.generation == token, !Task.isCancelled, self.isActive else { return }
+                self.buttons = 0
+                let now = ProcessInfo.processInfo.systemUptime
+                self.cursorVisibility.setScope(owned: false, now: now)
+                self.cursorVisibility.setScope(owned: self.outputOwned && self.input.engaged, now: now)
+                let pending = self.pendingHumanInputs.drain()
+                self.handoffTask = nil
+                for value in pending {
+                    guard self.generation == token, self.isActive else { break }
+                    switch value { case .mouse(let mouse):
+                        self.cursorVisibility.receiveMouse(mouse, now: now)
+                        self.receive(mouse)
+                    case .keyboard(let keyboard): self.receiveKeyboard(keyboard)
+                    case .leftSurface:
+                        // A scope exit consumes the later physical up. Balance
+                        // buffered downs here before replaying a re-entry click.
+                        self.releaseButtons()
+                        self.cursorVisibility.setScope(owned: false, now: now)
+                        self.cursorVisibility.setScope(owned: self.outputOwned && self.input.engaged, now: now)
+                        self.reconcileCursorVisibility()
+                    }
+                }
+            } catch {
+                if self.generation == token { self.stop(reason: "人工接管前输入释放失败，已恢复普通鼠标。", returnToWorkbench: true) }
+            }
+        }
+        onAutomationUserActivity?()
+    }
+
+    func performAutomation(_ step: ProtoPieScriptStep) async throws {
+        try step.validate()
+        guard automationOwnsInput, isActive, let viewport, let transport, let region else {
+            throw MouseCaptureError("自动输入所有权已结束。")
+        }
+        let token = automationGeneration
+        func check() throws {
+            try Task.checkCancellation()
+            guard automationOwnsInput, automationGeneration == token, isActive,
+                  self.transport === transport, transport.isConnected,
+                  sessionProvider?()?.id == sessionID else { throw CancellationError() }
+        }
+        func delay(_ seconds: Double) async throws {
+            try check()
+            if seconds > 0 { try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) }
+            try check()
+        }
+        func key(_ down: Bool) async throws {
+            try check()
+            guard let input = MouseKeyboardEvent.scriptedInput(code: step.key, down: down),
+                  transport.sendKey(MouseKeyboardEvent(viewportID: viewport.bindingID, input: input)) else {
+                throw MouseInputTransportError.invalidEvent
+            }
+            try await transport.flush(); try check()
+        }
+        let button: MouseInputEvent.Button = step.button == .left ? .left : step.button == .right ? .right : .middle
+        func move(_ x: Double, _ y: Double, kind: MouseInputEvent.Kind = .move, count: Int = 1) async throws {
+            try check()
+            let uv = SIMD2<Float>(Float(x), Float(y))
+            guard region.containsSourceUV(uv), let point = viewport.point(forVisibleSourceUV: uv) else {
+                throw MouseCaptureError("脚本位置不在当前可见画面内，请重新取点。")
+            }
+            self.sourceUV = uv
+            if kind == .down { self.buttons |= button.mask }
+            if kind == .up { self.buttons &= ~button.mask }
+            let event = MouseInputEvent(viewportID: viewport.bindingID, kind: kind,
+                x: point.x, y: point.y, button: kind == .down || kind == .up ? button : .none,
+                buttons: self.buttons, clickCount: count, deltaX: kind == .wheel ? step.deltaX : 0,
+                deltaY: kind == .wheel ? step.deltaY : 0)
+            guard transport.send(event) else { throw MouseInputTransportError.invalidEvent }
+            try await transport.flush(); try check()
+            if self.outputOwned, self.input.engaged {
+                self.updateCursor(); self.cursorRevision &+= 1
+                let activity: MouseCaptureEvent = kind == .down || kind == .up
+                    ? .button(down: kind == .down, number: button == .left ? 0 : button == .right ? 1 : 2, clickCount: count, modifiers: 0)
+                    : .move(dx: 1, dy: 0, modifiers: 0)
+                self.cursorVisibility.receiveMouse(activity, now: ProcessInfo.processInfo.systemUptime)
+                self.refreshOriginalCursor(); self.reconcileCursorVisibility()
+            }
+        }
+        switch step.kind {
+        case .wait: try await delay(step.duration)
+        case .keyPress, .keyHold:
+            try await key(true); try await delay(step.kind == .keyHold ? step.duration : 0.05); try await key(false)
+        case .mouseMove: try await move(step.x, step.y)
+        case .scroll: try await move(step.x, step.y, kind: .wheel)
+        case .mouseClick, .mouseDoubleClick, .mouseHold:
+            try await move(step.x, step.y)
+            for count in 1...(step.kind == .mouseDoubleClick ? 2 : 1) {
+                try await move(step.x, step.y, kind: .down, count: count)
+                try await delay(step.kind == .mouseHold ? step.duration : 0.05)
+                try await move(step.x, step.y, kind: .up, count: count)
+                if step.kind == .mouseDoubleClick, count == 1 { try await delay(0.08) }
+            }
+        case .mouseDrag:
+            // Check the whole path before pressing down; never snap to another control.
+            let pieces = max(1, min(240, Int(max(0.1, step.duration) * 30)))
+            for i in 0...pieces {
+                let t = Double(i) / Double(pieces)
+                guard region.containsSourceUV(SIMD2(Float(step.x + (step.endX - step.x) * t), Float(step.y + (step.endY - step.y) * t))) else {
+                    throw MouseCaptureError("拖动路径超出可见画面，请重新取点。")
+                }
+            }
+            try await move(step.x, step.y); try await move(step.x, step.y, kind: .down)
+            for i in 1...pieces {
+                try await delay(step.duration / Double(pieces))
+                let t = Double(i) / Double(pieces)
+                try await move(step.x + (step.endX - step.x) * t, step.y + (step.endY - step.y) * t)
+            }
+            try await move(step.endX, step.endY, kind: .up)
+        }
+    }
 
     private func recordStop(reason: String, returnToWorkbench: Bool) {
         var entry: [String: Any] = ["timestamp": Date().timeIntervalSince1970,
@@ -316,6 +527,10 @@ struct MouseCursorPageIdentity: Equatable {
     /// Keep its relative pointer, but end an in-progress gesture on the same page.
     func displayOriginChanged() {
         guard isActive else { return }
+        if automationOwnsInput || handoffTask != nil {
+            stop(reason: "显示器坐标已变化，需要重新接通自动演示输入。", returnToWorkbench: true)
+            return
+        }
         releaseButtons()
         input.refreshScope()
         if input.engaged { updateCursor() }
@@ -346,12 +561,18 @@ struct MouseCursorPageIdentity: Equatable {
         guard let visible, let uv = region.sourceUV(forPhysicalPoint: visible) else { return false }
         sourceUV = uv; cursorRevision &+= 1
         updateCursor()
-        send(kind: .move)
+        // A handoff has already queued its held-input releases. A scope refresh
+        // must not inject the controller's old scripted button mask behind them.
+        if handoffTask == nil { send(kind: .move) }
         refreshOriginalCursor()
         return isActive
     }
 
     private func receive(_ event: MouseCaptureEvent) {
+        if automationOwnsInput || handoffTask != nil {
+            if case .move(let dx, let dy, _) = event, dx == 0, dy == 0 { return }
+            beginHumanHandoff(.mouse(event)); return
+        }
         guard isActive, let region, let viewport, let output else { return }
         guard let current = outputProvider?(), Self.sameBinding(output, current),
               sessionProvider?()?.id == sessionID, transport?.isConnected == true else {
@@ -382,6 +603,13 @@ struct MouseCursorPageIdentity: Equatable {
             updateCursor()
             send(kind: .move, modifiers: modifiers)
         case .button(let down, let number, let clickCount, let modifiers):
+            if down, number == 0, let callback = onPickedPoint {
+                onPickedPoint = nil
+                let picked = sourceUV
+                stop(reason: "脚本坐标已选取，返回工作台。", returnToWorkbench: true)
+                callback(Double(picked.x), Double(picked.y))
+                return
+            }
             guard !settings.previewOnly else { return }
             let button: MouseInputEvent.Button
             switch number { case 0: button = .left; case 1: button = .right; case 2: button = .middle; default: return }
@@ -414,6 +642,7 @@ struct MouseCursorPageIdentity: Equatable {
     }
 
     private func receiveKeyboard(_ event: MouseKeyboardInput) {
+        if automationOwnsInput || handoffTask != nil { beginHumanHandoff(.keyboard(event)); return }
         guard isActive, outputOwned, !settings.previewOnly,
               let viewport, let transport else { return }
         // Releases produced on focus loss/stop still belong to the old page.

@@ -2,7 +2,11 @@
 
 用于验证“扩展虚拟画布 + 全反射面预畸变”的最小可行 Demo。
 
-## 最新版本：v0.13.15 (67)
+## 最新开发版：v0.14.0 (68)
+
+新增 ProtoPie 云端播放列表（左侧可直接改名）、各链接的自动演示步骤、轮播、时分秒与无时限计划、有限恢复和可导出日志。原画面设置与本地 `.pie` 在同页子导航保留，原校正配置独立保存。已安装开发机并完成保存重开与无外屏检查；当前只有内屏，实际外屏轮播、原圆圈人工接管和长稳验收待接屏继续。见[实现、验证与回滚](docs/protopie-autoplay-v0140.md)。
+
+## 已验收基线：v0.13.15 (67)
 
 修复重开后原型已可交互、点击预览却因加载状态检查退回内屏的问题。输入接管与预览统一接受可交互页面，完整加载不再中断输入；页面身份、全屏及几何检查保留。当前画面参数和 2 秒光标隐藏设置保持。用户多次退出重开复测通过，整机重启后的核心链路检查正常；另补禁休眠开机恢复，见[检查记录](docs/reboot-acceptance-v01315-20260918.md)。详见[故障证据、验证及回滚](docs/protopie-reopen-input-v01315.md)。
 
@@ -88,12 +92,12 @@ Air 独立测试环境完整清理后 **197/197 XCTest 通过**，release 已构
 
 ## 后续开发设备
 
-2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18晚设备已带回家，当前Wi-Fi为 `192.168.1.58`（用前现查），接AU16O外屏；默认mesh连接正常，旧局域网回退地址仍未调整。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.13.7(59)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
+2026-09-07 起，后续 NIO Warp App 开发指定使用 **nio-war-mac**（用户 `futurus`）。Studio 执行 `ssh nio-war-mac` 优先 EasyTier `10.10.10.14`。2026-09-18晚设备已带回家，当前Wi-Fi为 `192.168.1.58`（用前现查），接AU16O外屏；默认mesh连接正常，旧局域网回退地址仍未调整。设备连接真值见 [开发设备记录](docs/development-device.md)。当前 App 为 v0.14.0(68)，位于 `/Users/futurus/Applications/NIOWarpApp.app`，桌面 `NIO Warp.command` 可启动；源码在 `/Users/futurus/mycc/2-Projects/nio-warp-demo`，已与安装包对齐。本文下方原 Air 路径及旧版本描述为历史记录。
 
 
 ## 独立仓库运行入口
 
-独立仓库在2026-09-09分发自 `Hahaxiong838383/oh-my-ccwork` 的 `2-Projects/nio-warp-demo`，当时基线 **v0.9.2 (17)**，未建立自动双向同步。当前功能更新推送到原 oh-my-ccwork 的 `codex/nio-unified-workbench-20260917` 分支。独立仓库来源及同步边界见 [分发记录](docs/distribution.md)。下文历史验收路径属于原设备，首次使用请按以下相对路径操作。
+独立仓库在2026-09-09分发自 `Hahaxiong838383/oh-my-ccwork` 的 `2-Projects/nio-warp-demo`，当时基线 **v0.9.2 (17)**，未建立自动双向同步。本轮多链接功能在原 oh-my-ccwork 的 `codex/nio-protopie-autoplay-20260920` 分支；此前固化版本在 `codex/nio-unified-workbench-20260917`。独立仓库来源及同步边界见 [分发记录](docs/distribution.md)。下文历史验收路径属于原设备，首次使用请按以下相对路径操作。
 
 ```bash
 git clone https://github.com/FUTURUS-ProductResearch/WarpDemo.git

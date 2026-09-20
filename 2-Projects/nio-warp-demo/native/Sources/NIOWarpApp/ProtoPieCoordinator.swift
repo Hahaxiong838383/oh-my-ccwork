@@ -9,6 +9,10 @@ import Foundation
     var onCapture: ((CGWindowID, pid_t) async throws -> Void)?
     var onStop: (() -> Void)?
     var onStateChange: ((ProtoPieRuntimeState) -> Void)?
+    var onManualControl: (() -> Void)?
+    /// The playlist supplies the bounded recovery policy while it owns a run.
+    /// Existing single-source behavior is unchanged when false.
+    private(set) var playbackManaged = false
     /// Local Studio can reuse a Preview window while changing documents. Hide the output before that change.
     var onSuspendOutput: (() -> Void)?
     var onResumeOutput: (() -> Void)?
@@ -26,6 +30,11 @@ import Foundation
     private var operation: Task<Void, Never>?
     private var monitor: Task<Void, Never>?
     private var layoutOperation: Task<Void, Never>?
+    /// Cancellation alone does not await a driver already crossing an async API.
+    /// Keep its completion reachable until the next operation has drained it.
+    private var cancellationDrain: Task<Void, Never>?
+    private var playbackRequestID: UUID?
+    private var playbackInterruptionReason: String?
     private var pendingVerticalPosition: Double?
     private var generation = UUID()
     private var wantsToRun = false
@@ -95,8 +104,10 @@ import Foundation
                     try self.requireCurrent(token)
                     guard self.activeSession?.id == sessionID else { return }
                     self.activeSession = updated
-                    self.lastSuccessful = updated.configuration
-                    self.persist(updated.configuration, key: Self.lastSuccessfulKey)
+                    if !self.playbackManaged {
+                        self.lastSuccessful = updated.configuration
+                        self.persist(updated.configuration, key: Self.lastSuccessfulKey)
+                    }
                     self.notice = "上下位置已实时预览；满意后点击保存配置。"
                     self.notify()
                 } catch {
@@ -140,6 +151,13 @@ import Foundation
             notify()
             return
         }
+        if playbackManaged {
+            driver.setPresentationCanvas(canvas)
+            if wantsToRun, !manuallyStopped {
+                handleInterruptedSession(reason: "播放画布尺寸已变化，请重新确认完整画面。")
+            } else { notify() }
+            return
+        }
         let configuration = pendingConfiguration ?? activeSession?.configuration ?? lastSuccessful ?? saved
         guard wantsToRun, !manuallyStopped, !manualPlayerOpen,
               targetDisplayID != nil, configuration.source == .cloud else {
@@ -177,6 +195,12 @@ import Foundation
         guard targetDisplayID != displayID else { return }
         let changingActiveDisplay = targetDisplayID != nil && displayID != nil && wantsToRun
         targetDisplayID = displayID
+        if playbackManaged {
+            if wantsToRun, !manuallyStopped {
+                handleInterruptedSession(reason: "播放目标显示器已变化。")
+            } else { cancelOperation(); notify() }
+            return
+        }
         if changingActiveDisplay { cancelOperation(); state = .idle }
         if displayID == nil {
             suspendForDisplayChange()
@@ -190,6 +214,12 @@ import Foundation
 
     func suspendForDisplayChange() {
         targetDisplayID = nil
+        if playbackManaged {
+            if wantsToRun, !manuallyStopped {
+                handleInterruptedSession(reason: "等待播放目标显示器恢复。")
+            } else { cancelOperation(); notify() }
+            return
+        }
         cancelOperation()
         monitor?.cancel(); monitor = nil
         if wantsToRun || activeSession != nil {
@@ -199,12 +229,23 @@ import Foundation
     }
 
     func startIfConfigured() {
-        guard saved.autoStart, !manuallyStopped, !wantsToRun else { return }
+        guard !playbackManaged, saved.autoStart, !manuallyStopped, !wantsToRun else { return }
         wantsToRun = true
         begin(configuration: saved, resetRecovery: true)
     }
 
+    private func takeManualControl() {
+        onManualControl?()
+        // Also cancel locally when no integration callback is installed. Never
+        // just flip the owner flag while its candidate can still complete.
+        if playbackManaged {
+            cancelPlaybackPreparation()
+            playbackManaged = false
+        }
+    }
+
     func start() {
+        takeManualControl()
         guard !state.isBusy else { return }
         manualPlayerOpen = false
         manuallyStopped = false; wantsToRun = true
@@ -212,6 +253,7 @@ import Foundation
     }
 
     func reload() {
+        takeManualControl()
         guard !state.isBusy else { return }
         manualPlayerOpen = false
         driver.requestFreshPreview()
@@ -220,6 +262,7 @@ import Foundation
     }
 
     func stop() {
+        takeManualControl()
         manualPlayerOpen = false
         canvasRebuildPending = false
         manuallyStopped = true; wantsToRun = false; pendingConfiguration = nil
@@ -232,6 +275,7 @@ import Foundation
     }
 
     func shutdown() {
+        playbackManaged = false
         canvasRebuildPending = false
         wantsToRun = false; manuallyStopped = true
         cancelOperation(); monitor?.cancel(); monitor = nil
@@ -253,6 +297,7 @@ import Foundation
     }
 
     func openPlayer() {
+        takeManualControl()
         guard !state.isBusy else { return }
         let configuration = draft
         let previousState = state
@@ -260,10 +305,14 @@ import Foundation
         manualPlayerOpen = true
         cancelOperation()
         let token = generation
+        let drain = cancellationDrain
         state = .launching
         operation = Task { [weak self] in
             guard let self else { return }
             do {
+                await drain?.value
+                try Task.checkCancellation()
+                guard self.generation == token else { throw CancellationError() }
                 try configuration.validate()
                 try await self.driver.openForUser(configuration: configuration)
                 guard self.generation == token, !Task.isCancelled else { return }
@@ -286,6 +335,68 @@ import Foundation
         handleInterruptedSession()
     }
 
+    /// Prepare an immutable playlist item without modifying draft/saved/lastSuccessful.
+    /// Cancellation is also exposed synchronously so a late driver cannot steal focus
+    /// after Esc, pause or the overall deadline.
+    func prepareForPlayback(configuration: ProtoPieConfiguration, reload: Bool) async throws -> ProtoPieSession {
+        let requestID = UUID()
+        return try await withTaskCancellationHandler(operation: {
+            try Task.checkCancellation()
+            playbackManaged = true
+            cancelOperation()
+            playbackRequestID = requestID; playbackInterruptionReason = nil
+            let token = generation
+            manuallyStopped = false; wantsToRun = true
+            manualPlayerOpen = false; outputPaused = false
+            await cancellationDrain?.value
+            try checkPlaybackRequest(requestID, token: token)
+            try configuration.validate()
+            guard targetDisplayID != nil else { throw ProtoPieError.unavailable("等待外接显示器后再开始播放计划。") }
+            if reload { driver.requestFreshPreview() }
+            state = .idle
+            begin(configuration: configuration, resetRecovery: true)
+            let preparationToken = generation
+            let preparation = operation
+            await preparation?.value
+            try checkPlaybackRequest(requestID, token: preparationToken)
+            guard state == .running, let session = activeSession,
+                  session.configuration == configuration else {
+                throw ProtoPieError.unavailable("播放来源未就绪。请检查链接、网络、登录和屏幕权限。")
+            }
+            return session
+        }, onCancel: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.playbackRequestID == requestID else { return }
+                self.cancelPlaybackPreparation()
+            }
+        })
+    }
+
+    private func checkPlaybackRequest(_ id: UUID, token: UUID) throws {
+        try Task.checkCancellation()
+        guard playbackRequestID == id else { throw CancellationError() }
+        if let playbackInterruptionReason { throw ProtoPieError.unavailable(playbackInterruptionReason) }
+        // A missing display is a recoverable preparation failure, not a silent
+        // canceled script. The playlist supplies the bounded retry policy.
+        guard targetDisplayID != nil else { throw ProtoPieError.unavailable("等待外接显示器后再开始播放计划。") }
+        try requireCurrent(token)
+    }
+
+    func cancelPlaybackPreparation() {
+        guard playbackManaged else { return }
+        playbackRequestID = nil; playbackInterruptionReason = nil
+        cancelOperation(); monitor?.cancel(); monitor = nil
+        pendingConfiguration = nil; canvasRebuildPending = false
+        manuallyStopped = true; wantsToRun = false
+        // Keep the last valid image; do not resurrect a canceled candidate.
+        state = activeSession == nil ? .idle : outputPaused ? .paused : .running
+    }
+
+    func finishPlaybackOwnership() {
+        cancelPlaybackPreparation()
+        playbackManaged = false
+    }
+
     private func begin(configuration: ProtoPieConfiguration, resetRecovery: Bool) {
         guard !state.isBusy else { return }
         do { try configuration.validate() }
@@ -296,6 +407,7 @@ import Foundation
         cancelOperation()
         monitor?.cancel(); monitor = nil
         let token = generation
+        let drain = cancellationDrain
         let previous = activeSession
         let replacingLocal = previous?.configuration.source == .localFile && configuration != previous?.configuration
         let replacingCanvas = canvasRebuildPending
@@ -306,6 +418,7 @@ import Foundation
             guard let self else { return }
             var candidate: ProtoPieSession?
             do {
+                await drain?.value
                 try self.requireCurrent(token)
                 self.driver.setPresentationCanvas(self.presentationCanvas)
                 let session = try await self.driver.prepare(configuration: configuration, displayID: displayID) { [weak self] message in
@@ -320,8 +433,10 @@ import Foundation
                 try self.requireCurrent(token)
                 self.driver.presentationCaptured(session)
                 self.activeSession = session
-                self.lastSuccessful = configuration
-                self.persist(configuration, key: Self.lastSuccessfulKey)
+                if !self.playbackManaged {
+                    self.lastSuccessful = configuration
+                    self.persist(configuration, key: Self.lastSuccessfulKey)
+                }
                 self.pendingConfiguration = nil
                 self.canvasRebuildPending = false
                 if (replacingLocal || replacingCanvas) && !self.outputPaused { self.onResumeOutput?() }
@@ -329,7 +444,15 @@ import Foundation
                 if let previous, previous.windowID != session.windowID { await self.driver.release(previous) }
                 self.startMonitor()
             } catch {
-                guard self.generation == token, !Task.isCancelled else { return }
+                guard self.generation == token, !Task.isCancelled else {
+                    // A cooperative driver normally throws before returning. If
+                    // a system API finishes late, dispose only its uncommitted
+                    // candidate; preserve the current valid preview.
+                    if let candidate, candidate.windowID != self.activeSession?.windowID {
+                        await self.driver.release(candidate)
+                    }
+                    return
+                }
                 // The old window remains pinned during cloud preparation. Studio may have reused it,
                 // so explicitly reopen the previous source before reporting retained output.
                 var oldRestored = false
@@ -386,19 +509,23 @@ import Foundation
                     return
                 }
                 guard let displayID = self.targetDisplayID, !self.state.isBusy,
-                      !self.manualPlayerOpen, !self.outputPaused, self.saved.autoRecover else {
+                      !self.manualPlayerOpen, !self.outputPaused, (self.playbackManaged || self.saved.autoRecover) else {
                     unstablePresentationSamples = 0
                     continue
                 }
                 let ready = await self.driver.isPresentationReady(session, displayID: displayID)
                 guard !Task.isCancelled, self.generation == token, self.activeSession?.id == session.id,
                       self.targetDisplayID == displayID else { return }
-                guard !self.state.isBusy, !self.manualPlayerOpen, !self.outputPaused, self.saved.autoRecover else {
+                guard !self.state.isBusy, !self.manualPlayerOpen, !self.outputPaused, (self.playbackManaged || self.saved.autoRecover) else {
                     unstablePresentationSamples = 0
                     continue
                 }
                 unstablePresentationSamples = ready ? 0 : unstablePresentationSamples + 1
                 if ready { self.recoveryAttempts = 0 }
+                if unstablePresentationSamples >= 2, self.playbackManaged {
+                    self.handleInterruptedSession(reason: "播放窗口的全屏或布局连续两次未就绪。")
+                    return
+                }
                 if unstablePresentationSamples >= 2, self.recoveryAttempts < 3 {
                     // Reuse the existing source and rebuild its capture only after fullscreen stabilizes.
                     self.recoveryAttempts += 1
@@ -409,18 +536,23 @@ import Foundation
         }
     }
 
-    private func handleInterruptedSession() {
+    private func handleInterruptedSession(reason: String = "预览窗口或捕获已中断。") {
         guard wantsToRun, !manuallyStopped else { return }
+        if playbackManaged {
+            playbackInterruptionReason = reason
+            cancelOperation()
+            pendingConfiguration = nil; canvasRebuildPending = false
+        }
         let configuration = activeSession?.configuration ?? lastSuccessful ?? saved
         if let activeSession { driver.detach(activeSession) }
         activeSession = nil
         onStop?()
-        state = .failed("预览窗口或捕获已中断。")
+        state = .failed(reason)
         scheduleRecovery(configuration: configuration)
     }
 
     private func scheduleRecovery(configuration: ProtoPieConfiguration) {
-        guard saved.autoRecover, wantsToRun, !manuallyStopped, !manualPlayerOpen,
+        guard !playbackManaged, saved.autoRecover, wantsToRun, !manuallyStopped, !manualPlayerOpen,
               targetDisplayID != nil, recoveryAttempts < 3 else { return }
         recoveryAttempts += 1
         let attempt = recoveryAttempts
@@ -437,8 +569,21 @@ import Foundation
     }
 
     private func cancelOperation() {
+        let previousOperation = operation
+        let previousLayout = layoutOperation
+        let previousMonitor = monitor
+        let previousDrain = cancellationDrain
         generation = UUID(); operation?.cancel(); operation = nil
         layoutOperation?.cancel(); layoutOperation = nil; pendingVerticalPosition = nil
+        monitor?.cancel(); monitor = nil
+        if playbackManaged, previousOperation != nil || previousLayout != nil || previousMonitor != nil {
+            cancellationDrain = Task {
+                await previousDrain?.value
+                await previousOperation?.value
+                await previousLayout?.value
+                await previousMonitor?.value
+            }
+        }
     }
     private func requireCurrent(_ token: UUID) throws {
         try Task.checkCancellation()

@@ -1258,6 +1258,12 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     private var builtInterface = false
     private let protoPie: ProtoPieCoordinator?
     private var protoPiePanel: ProtoPiePanel?
+    private let playback: ProtoPiePlaybackController?
+    private var playbackPanel: ProtoPiePlaybackPanel?
+    private var standardBody: NSView?
+    private var playbackHost: NSTabView?
+    private var playbackWorkspace: NSView?
+    private var playbackSectionPicker: NSSegmentedControl?
     private let mouseMapping: MouseMappingController?
     private var mouseMappingPanel: MouseMappingPanel?
     private var inspectorWidthConstraint: NSLayoutConstraint?
@@ -1337,6 +1343,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         presetStore: PresetStore = PresetStore(),
         protoPie: ProtoPieCoordinator? = nil,
         mouseMapping: MouseMappingController? = nil,
+        playback: ProtoPiePlaybackController? = nil,
         terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) }
     ) {
         self.renderer = renderer
@@ -1345,6 +1352,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         self.presetStore = presetStore
         self.protoPie = protoPie
         self.mouseMapping = mouseMapping
+        self.playback = playback
         preferredControlDisplayID = (sourceScreen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value
         self.terminateApplication = terminateApplication
         self.configuration = configuration
@@ -1402,6 +1410,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
 
     override func close() {
         protoPiePanel?.disconnect()
+        playbackPanel?.disconnect()
         cancelLocalUpdates()
         localEditor?.close()
         localEditor = nil
@@ -1434,6 +1443,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         modulePicker.setAccessibilityIdentifier("nio-workbench-modules")
         modulePicker.translatesAutoresizingMaskIntoConstraints = false
         let body = NSSplitView()
+        standardBody = body
         body.isVertical = true
         body.dividerStyle = .thin
         body.delegate = self
@@ -1525,7 +1535,61 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
                 apply: { [weak self] value in self?.applyOutputVerticalOffset(value) }
             ))
             protoPiePanel = panel
-            protoItem.view = panel.inspectorView
+            if let playback {
+                let automation = ProtoPiePlaybackPanel(controller: playback)
+                playbackPanel = automation
+                automation.onPickPosition = { [weak self] callback in
+                    guard let self, let mouseMapping = self.mouseMapping else { return }
+                    playback.pause(reason: "已暂停自动演示，等待在画面上取点。")
+                    Task { @MainActor in await mouseMapping.pickAutomationPoint(callback) }
+                }
+                let host = NSTabView()
+                host.translatesAutoresizingMaskIntoConstraints = false
+                host.tabViewType = .noTabsNoBorder
+                host.setAccessibilityIdentifier("nio-protopie-full-workspace")
+                let automationItem = NSTabViewItem(identifier: "automation")
+                automationItem.label = "云端播放与自动演示"
+                automationItem.view = automation.view
+                host.addTabViewItem(automationItem)
+                let legacyItem = NSTabViewItem(identifier: "legacy")
+                legacyItem.label = "画面设置与本地 .pie"
+                legacyItem.view = panel.inspectorView
+                host.addTabViewItem(legacyItem)
+                let workspace = NSView()
+                workspace.translatesAutoresizingMaskIntoConstraints = false
+                workspace.setAccessibilityIdentifier("nio-protopie-workspace-wrapper")
+                let sectionPicker = NSSegmentedControl(labels: [automationItem.label, legacyItem.label],
+                    trackingMode: .selectOne, target: self, action: #selector(changePlaybackSection(_:)))
+                sectionPicker.segmentStyle = .rounded
+                sectionPicker.segmentDistribution = .fillEqually
+                sectionPicker.selectedSegment = 0
+                sectionPicker.font = .systemFont(ofSize: 12, weight: .medium)
+                sectionPicker.translatesAutoresizingMaskIntoConstraints = false
+                sectionPicker.setAccessibilityIdentifier("nio-protopie-workspace-sections")
+                sectionPicker.setAccessibilityLabel("ProtoPie 联动工作区")
+                workspace.addSubview(sectionPicker)
+                workspace.addSubview(host)
+                contentView.addSubview(workspace)
+                NSLayoutConstraint.activate([
+                    workspace.leadingAnchor.constraint(equalTo: body.leadingAnchor),
+                    workspace.trailingAnchor.constraint(equalTo: body.trailingAnchor),
+                    workspace.topAnchor.constraint(equalTo: body.topAnchor),
+                    workspace.bottomAnchor.constraint(equalTo: body.bottomAnchor),
+                    sectionPicker.leadingAnchor.constraint(equalTo: workspace.leadingAnchor, constant: 10),
+                    sectionPicker.trailingAnchor.constraint(equalTo: workspace.trailingAnchor, constant: -10),
+                    sectionPicker.topAnchor.constraint(equalTo: workspace.topAnchor),
+                    sectionPicker.heightAnchor.constraint(equalToConstant: 28),
+                    host.leadingAnchor.constraint(equalTo: workspace.leadingAnchor),
+                    host.trailingAnchor.constraint(equalTo: workspace.trailingAnchor),
+                    host.topAnchor.constraint(equalTo: sectionPicker.bottomAnchor, constant: 8),
+                    host.bottomAnchor.constraint(equalTo: workspace.bottomAnchor),
+                ])
+                workspace.isHidden = true
+                playbackHost = host
+                playbackWorkspace = workspace
+                playbackSectionPicker = sectionPicker
+                protoItem.view = NSView()
+            } else { protoItem.view = panel.inspectorView }
             previewColumn.addArrangedSubview(panel.statusView)
             panel.statusView.widthAnchor.constraint(equalTo: previewHost.widthAnchor).isActive = true
             panel.statusView.isHidden = false
@@ -1951,6 +2015,12 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         selectModule(Self.modules[sender.selectedSegment].0)
     }
 
+    @objc private func changePlaybackSection(_ sender: NSSegmentedControl) {
+        guard let host = playbackHost, host.tabViewItems.indices.contains(sender.selectedSegment) else { return }
+        window?.makeFirstResponder(nil)
+        host.selectTabViewItem(at: sender.selectedSegment)
+    }
+
     func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
         guard builtInterface else { return }
         if selectedModuleIdentifier == "local" {
@@ -1986,6 +2056,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
 
     private func mountModulePreview() {
         guard builtInterface else { return }
+        let showPlayback = selectedModuleIdentifier == "protopie" && playbackHost != nil
+        standardBody?.isHidden = showPlayback
+        playbackWorkspace?.isHidden = !showPlayback
         if selectedModuleIdentifier == "local" {
             if selectedLocalTool == 0 {
                 let editor = showBezierEditor(presentWindow: false)
@@ -2336,6 +2409,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             return
         }
         let candidate = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        if playback?.runtime.isActive == true { playback?.pause(reason: "校正参数正在手动调整，自动演示已暂停。") }
         let validation = renderer.updateConfiguration(candidate)
         guard validation.isValid else {
             configuration = lastAppliedConfiguration
@@ -3359,6 +3433,9 @@ private extension Array {
     private let captureEngine = CaptureEngine()
     private let protoPie = ProtoPieCoordinator()
     private let mouseMapping = MouseMappingController()
+    private lazy var playback = ProtoPiePlaybackController(
+        store: ProtoPiePlaybackStore(legacy: protoPie.saved), log: ProtoPiePlaybackLog())
+    private var playbackObserver: UUID?
     private var protoPieReleaseTask: Task<Void, Never>?
     private let configurationStore = ConfigurationStore()
     private var outputController: OutputController?
@@ -3383,6 +3460,7 @@ private extension Array {
         AppPresentationPolicy.ensureAccessoryPolicy(reason: .startup)
         configureProtoPie()
         configureMouseMapping()
+        configurePlayback()
         let menu = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
@@ -3514,7 +3592,7 @@ private extension Array {
             },
             updateWarpBoundary: { [weak outputController] configuration, visible in
                 outputController?.updateWarpBoundary(configuration: configuration, visible: visible)
-            }, presentWindow: topology.source != nil, protoPie: protoPie, mouseMapping: mouseMapping
+            }, presentWindow: topology.source != nil, protoPie: protoPie, mouseMapping: mouseMapping, playback: playback
         )
         if let previousPanel { controlPanel.restoreWorkspace(from: previousPanel, sameDisplay: sameDisplay) }
         self.controlPanel = controlPanel
@@ -3603,7 +3681,7 @@ private extension Array {
             renderer: nil, store: configurationStore, configuration: preview,
             sourceScreen: source, outputScreen: nil,
             setWarpVisible: { _ in }, isWarpVisible: { false },
-            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie, mouseMapping: mouseMapping
+            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie, mouseMapping: mouseMapping, playback: playback
         )
         if let previousPanel { panel.restoreWorkspace(from: previousPanel, sameDisplay: true) }
         controlPanel = panel
@@ -3617,6 +3695,7 @@ private extension Array {
     }
 
     private func restartSession(reason: String) {
+        if playback.runtime.isActive { playback.pause(reason: reason) }
         mouseMapping.stop(reason: reason)
         protoPie.suspendForDisplayChange()
         sessionEpoch += 1
@@ -3711,6 +3790,7 @@ private extension Array {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        playback.shutdown()
         presentationExit.stop()
         mouseMapping.stop(reason: "程序正在退出。")
         Task { @MainActor in
@@ -3720,12 +3800,14 @@ private extension Array {
             await protoPieReleaseTask?.value
             await captureEngine.stop()
             protoPie.finishShutdownPresentation()
+            await playback.log.flush()
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        playback.shutdown()
         mouseMapping.stop(reason: "程序正在退出。")
         protoPie.shutdown()
         sessionEpoch += 1
@@ -3746,6 +3828,7 @@ private extension Array {
     }
 
     private func returnToWorkbench(notifyProtoPie: Bool = true, mouseReason: String = "已返回普通鼠标。") {
+        if playback.runtime.isActive { playback.stop(reason: "已主动返回工作台") }
         // Cancel an asynchronous start too; a delayed activation must not take
         // focus back after the user has already requested the workbench.
         mouseMapping.stop(reason: mouseReason)
@@ -3836,6 +3919,78 @@ private extension Array {
         mouseMapping.monitorPresentation()
     }
 
+    private func configurePlayback() {
+        playback.prepare = { [weak self] item, reload in
+            guard let self else { throw CancellationError() }
+            try Task.checkCancellation()
+            self.mouseMapping.stop(reason: "正在切换自动演示来源。")
+            await self.mouseMapping.finishClosing()
+            try Task.checkCancellation()
+            let configuration = try item.configuration(inheriting: self.protoPie.saved)
+            _ = try await self.protoPie.prepareForPlayback(configuration: configuration, reload: reload)
+        }
+        playback.cancelPreparation = { [weak self] in self?.protoPie.cancelPlaybackPreparation() }
+        playback.bindInput = { [weak self] in
+            guard let self else { throw CancellationError() }
+            try await self.mouseMapping.beginAutomation()
+        }
+        playback.performAction = { [weak self] step in
+            guard let self else { throw CancellationError() }
+            try await self.mouseMapping.performAutomation(step)
+        }
+        playback.releaseInput = { [weak self] in await self?.mouseMapping.releaseAutomationInput() }
+        playback.stopPresentation = { [weak self] in
+            guard let self else { return }
+            self.protoPie.finishPlaybackOwnership()
+            self.protoPie.stop()
+            self.returnToWorkbench(notifyProtoPie: false)
+        }
+        playback.healthSnapshot = { [weak self] in
+            guard let self else { return [:] }
+            var health = self.mouseMapping.automationDiagnostic
+            health["captureActive"] = String(self.captureEngine.frameStore.snapshot() != nil)
+            health["appVersion"] = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            if let output = self.outputController {
+                let config = output.renderer.activeConfiguration
+                health["canvasWidth"] = String(config.canvas.width)
+                health["canvasHeight"] = String(config.canvas.height)
+                let performance = output.renderer.performanceSnapshot()
+                health["fps"] = String(performance.framesPerSecond)
+                health["latencyMS"] = String(performance.averageGPUTimeMilliseconds)
+            }
+            if let id = self.outputDisplayState?.id { health["displayID"] = String(id) }
+            let captured = self.captureEngine.frameStore.snapshot()
+            health["frameAvailable"] = String(captured != nil)
+            health["isVisible"] = String(self.outputController?.isWarpVisible == true)
+            if let frame = self.outputController?.renderer.inputFrame {
+                health["sourceMatches"] = String(captured?.source == frame.source)
+            }
+            var memory = task_vm_info_data_t()
+            var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+            let result = withUnsafeMutablePointer(to: &memory) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                    task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+                }
+            }
+            if result == KERN_SUCCESS { health["memoryMB"] = String(Double(memory.phys_footprint) / 1_048_576) }
+            return health
+        }
+        protoPie.onManualControl = { [weak self] in
+            guard let self, self.playback.runtime.isActive else { return }
+            self.playback.stop(reason: "已切换到手动播放器控制")
+            self.protoPie.finishPlaybackOwnership()
+        }
+        mouseMapping.onAutomationUserActivity = { [weak self] in
+            self?.playback.pause(reason: "检测到本机操作，自动演示已暂停；当前键鼠由你接管。")
+        }
+        mouseMapping.onAutomationFailure = { [weak self] reason in self?.playback.reportInterruption(reason) }
+        mouseMapping.onAutomationExit = { [weak self] in self?.playback.stop(reason: "已按 Esc 退出自动演示") }
+        playbackObserver = playback.observe { [weak self] in
+            guard let self, !self.playback.runtime.isActive, self.protoPie.playbackManaged else { return }
+            self.protoPie.finishPlaybackOwnership()
+        }
+    }
+
     private func configureProtoPie() {
         protoPie.onCapture = { [weak self] windowID, processID in
             guard let self, self.outputController != nil, !self.displaysAsleep else {
@@ -3871,6 +4026,10 @@ private extension Array {
                 self.outputController?.setWarpVisible(false)
                 self.controlPanel?.updateWarpVisibilityState(false, notifyProtoPie: false)
             case .failed(let reason):
+                if self.protoPie.playbackManaged {
+                    self.playback.reportInterruption(reason)
+                    return
+                }
                 // A failed coordinator may notify again when paused. This is
                 // its failure callback, so never feed a pause back into it.
                 self.returnToWorkbench(notifyProtoPie: false)
