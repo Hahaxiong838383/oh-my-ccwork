@@ -1,12 +1,12 @@
 ---
 name: fnos-nas
-description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"
+description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"、"WebDAV"、"loginprotect"
 ---
 
 # fnOS NAS 排障指南
 
 > 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。
-> 触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"
+> 触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"、"WebDAV"、"loginprotect"
 
 ---
 
@@ -32,6 +32,7 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 | `trim_sac` | Session Auth Center | `/var/log/trim_sac/` |
 | `trim_http_cgi` | HTTP/WebSocket 网关（Go，TRPC协议） | nginx 日志 |
 | nginx | 反向代理 | `/usr/trim/nginx/logs/access.log` |
+| `webdav.service` | 原生文件 WebDAV（`:5005` HTTP / `:5006` HTTPS） | `/usr/trim/logs/share_service.log`（分享重建）；进程 `/usr/trim/bin/webdav` |
 
 ---
 
@@ -138,6 +139,22 @@ INSERT INTO user_storage (uid, storage_id, ...) VALUES (1000, ...);
 
 ---
 
+
+### 6. WebDAV 401 对管理员账密仍拒
+
+**现象**：`PROPFIND http://192.168.1.115:5005/` 对 `hahaxiong83`（Administrators、登录密码=WebDAV 密码）回 `401 Not Authorized`，本机和 NAS localhost 一样。看起来像没授权。
+
+**根因**：`/usr/trim/bin/webdav` 的 `loginprotect`（`IsUserBanned` / `IsIPBanned` / `RecordFailure` / `sameCalendarDay`）。连续失败把用户或 IP 封进 **go-cache 内存**。封上之后对的账密也是 401。`ExecReload=kill -HUP` 清不掉。
+
+**修复**：
+```bash
+sudo systemctl restart webdav.service
+# 应 207。根下列的是共享名（如 开发机备份），不是 /vol2/1000/...
+```
+
+**注意**：Codeg `remoteDir` 不能带 `/`。home-studio 备份真值见 A 库 `project_home_studio_fnos2_backup`。
+
+---
 ## 常用诊断命令
 
 ```bash
