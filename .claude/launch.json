@@ -123,7 +123,13 @@
     {
       "name": "sdk-smoke",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8931", "--directory", "/Users/rayman.chen/mycc/2-Projects/realtime-voice-agent/web/sdk"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8931",
+        "--directory",
+        "/Users/rayman.chen/mycc/2-Projects/realtime-voice-agent/web/sdk"
+      ],
       "port": 8931
     },
     {
@@ -134,6 +140,27 @@
         "cd /Users/rayman.chen/mycc/2-Projects/MyJavis/apps/web && VITE_API_BASE=https://javis.chenchuan.cc VITE_NO_HTTPS=1 VITE_JAVIS_API_KEY= pnpm dev --port 5178 --strictPort"
       ],
       "port": 5178
+    },
+    {
+      "name": "p003-admin-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8932",
+        "--directory",
+        "/Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/web/public"
+      ],
+      "port": 8932
+    },
+    {
+      "name": "p003-server-diaglog",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/apps/server && eval \"$(grep -E '^(export )?P003_E2E_[A-Z_]+=' \"$HOME/.mycc-secrets.env\")\" && STUDIO_USER=${P003_E2E_ADMIN_USER:-e2e-admin} STUDIO_PASS=${P003_E2E_ADMIN_PASS:?P003_E2E_ADMIN_PASS 未设置(~/.mycc-secrets.env)} DEVICES_DB_PATH=/tmp/e2e-devices.db CONFIG_DB_PATH=/tmp/e2e-config.db DIAGNOSTICS_DB_PATH=/tmp/e2e-diagnostics.db DIAGLOG_SN_ALLOWLIST=* AUTH_JWT_SECRET=${P003_E2E_JWT_SECRET:?P003_E2E_JWT_SECRET 未设置} LIVEKIT_API_KEY=${P003_E2E_LIVEKIT_KEY:?P003_E2E_LIVEKIT_KEY 未设置} LIVEKIT_API_SECRET=${P003_E2E_LIVEKIT_SECRET:?P003_E2E_LIVEKIT_SECRET 未设置} npm run start"
+      ],
+      "port": 3001
     }
   ]
 }
