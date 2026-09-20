@@ -164,7 +164,92 @@
     "eightHourSoakCompleted": false,
     "physicalRebootRetested": false,
     "lidRetested": false,
-    "humanAcceptance": "Pending user validation; v0.14.5 remains the previous human-accepted release"
+    "humanAcceptance": "Pending user validation; v0.14.5 remains the previous human-accepted release",
+    "tenMinuteObservationCompleted": true,
+    "tenMinuteObservation": {
+      "passed": true,
+      "windowStart": "2026-09-21T07:41:26.556155+08:00",
+      "windowEnd": "2026-09-21T07:51:26.556155+08:00",
+      "windowSeconds": 600,
+      "appPID": 30986,
+      "runID": "AAC2B12F-027D-46C8-98EA-12F3FAC99E17",
+      "healthSamples": 40,
+      "healthMaxGapSeconds": 16.0,
+      "itemReadyCount": 16,
+      "readyByItem": {
+        "DE50C293-62E2-4202-8650-FB05D1AF94CF": 8,
+        "9C36C938-D484-4BA5-995D-6C4C9C59BE5E": 8
+      },
+      "eventCounts": {
+        "health": 40,
+        "item_preparing": 16,
+        "item_ready": 16
+      },
+      "nonInfo": [],
+      "captureOrOutputIssues": 0,
+      "fps": {
+        "min": 59.83230316352914,
+        "max": 60.03760735588221
+      },
+      "appFootprintMiB": {
+        "first": 293.3448486328125,
+        "last": 293.3604736328125,
+        "min": 293.2354736328125,
+        "max": 293.5010986328125,
+        "delta": 0.015625
+      },
+      "control": {
+        "attachedTargets": 1,
+        "attachingTargets": 0,
+        "cancelled": 0,
+        "completed": 1692,
+        "connected": true,
+        "connections": 1,
+        "disconnects": 0,
+        "legacyRequests": 0,
+        "maximumConnections": 16,
+        "mode": "persistent",
+        "pending": 0,
+        "requests": 1692,
+        "shutdown": false,
+        "timeouts": 0,
+        "updatedAt": 1789948307.326851
+      },
+      "lateControlSamples": 27,
+      "lateControlIssues": 0,
+      "controlSamplingStarted": 1789947909.0981052,
+      "resourceSamples": 11,
+      "resourceMaxGapSeconds": 60.15063500404358,
+      "monitor": {
+        "activeObservations": [],
+        "automaticRepairPerformed": false,
+        "businessPlaybackVerified": false,
+        "itemFailures": 0,
+        "label": "com.mycc.nio-warp.soak-20260921-v0146",
+        "lastSampleEpoch": 1789948227.900861,
+        "missingAppSamples": 0,
+        "monitorStatus": "ended",
+        "opticalAcceptanceVerified": false,
+        "parameterSegments": 0,
+        "playbackStatus": "running",
+        "readyEvents": 14,
+        "reason": "monitor_stop_requested",
+        "runEnded": null,
+        "samples": 11,
+        "schema": 1,
+        "scope": "current_external_display_only",
+        "startEpoch": 1789947686.556155,
+        "status": "ended"
+      },
+      "savedConfigurationKeys": 10,
+      "changedSettings": [],
+      "pageCountAtFinish": 1,
+      "physicalRebootRetested": false,
+      "lidRetested": false,
+      "longSoakCompleted": false,
+      "automaticAppRestartImplemented": false,
+      "appLeftPlaying": true
+    }
   },
   "soak": {
     "runDirectory": "/Users/futurus/Library/Logs/NIOWarp/Soak/20260921-074125-v0146-persistent",
@@ -174,9 +259,15 @@
     "appPID": 30986,
     "runID": "AAC2B12F-027D-46C8-98EA-12F3FAC99E17",
     "startedAt": "2026-09-21T07:41:26.567215+08:00",
-    "endsAfterHours": 8,
+    "endsAfterHours": 0.16666666666666666,
     "scriptSHA256": "8466859a8ccc75d4e11d7e2dbe34625c5199130451c542b83623462558388a23",
-    "scope": "Read-only observation; no restart, input or recovery; original growth threshold not used to declare memory stable."
+    "scope": "Read-only observation; no restart, input or recovery; original growth threshold not used to declare memory stable.",
+    "initialPlannedHours": 8,
+    "requestedTestMinutes": 10,
+    "userRevisedDuration": true,
+    "completed": true,
+    "observerStoppedAndLaunchAgentArchived": true,
+    "appLeftPlaying": true
   },
-  "verifiedAt": "2026-09-20T23:44:03.502393+00:00"
+  "verifiedAt": "2026-09-20T23:52:08.278292+00:00"
 }
