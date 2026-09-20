@@ -7,14 +7,21 @@ import Foundation
     private let workspace = NSWorkspace.shared
     private let profileURL: URL
     private var browserSocket: URL?
-    private let cloudTargets = ProtoPieCloudTargetLifecycle(
-        closeTarget: { socket, target in
-            let result = try await ProtoPieCDP.call(socket, method: "Target.closeTarget", parameters: ["targetId": target])
-            return result["success"] as? Bool == true
-        }, targetExists: { socket, target in
-            let result = try await ProtoPieCDP.call(socket, method: "Target.getTargets")
+    private let control = ProtoPieBrowserControl()
+    private lazy var cloudTargets = ProtoPieCloudTargetLifecycle(
+        closeTarget: { [weak self] socket, target in
+            guard let self else { return false }
+            let result = try await self.control.call(socket, method: "Target.closeTarget", parameters: ["targetId": target])
+            let closed = result["success"] as? Bool == true
+            if closed { await self.control.releaseTarget(target) }
+            return closed
+        }, targetExists: { [weak self] socket, target in
+            guard let self else { throw CancellationError() }
+            let result = try await self.control.call(socket, method: "Target.getTargets")
             let infos = try ProtoPieCloudTargetLifecycle.confirmedTargetInfos(result)
-            return infos.contains { $0["targetId"] as? String == target }
+            let exists = infos.contains { $0["targetId"] as? String == target }
+            if !exists { await self.control.releaseTarget(target) }
+            return exists
         })
     private var fileScopes: [UUID: URL] = [:]
     private var freshPreviewRequested = false
@@ -23,7 +30,7 @@ import Foundation
     private var preparedPresentation: (sessionID: UUID, outputDisplayID: CGDirectDisplayID)?
 
     func setPresentationCanvas(_ canvas: CanvasConfiguration?) { presentationCanvas = canvas }
-    func shutdownPresentation() { preparedPresentation = nil; presentationDisplay.shutdown() }
+    func shutdownPresentation() { preparedPresentation = nil; control.shutdown(); presentationDisplay.shutdown() }
     func presentationCaptured(_ session: ProtoPieSession) async throws {
         let prepared = preparedPresentation
         let previousTarget = cloudTargets.committedTargetID
@@ -84,7 +91,7 @@ import Foundation
               Self.windows().contains(where: { $0.id == session.windowID && $0.pid == session.processID }) else { return false }
         if let target = session.cloudTargetID {
             guard let socket = browserSocket,
-                  let result = try? await ProtoPieCDP.call(socket, method: "Target.getTargetInfo", parameters: ["targetId": target]),
+                  let result = try? await control.call(socket, method: "Target.getTargetInfo", parameters: ["targetId": target]),
                   let info = result["targetInfo"] as? [String: Any], let url = info["url"] as? String,
                   let actual = URLComponents(string: url), let expected = try? session.configuration.playbackURL() else { return false }
             return actual.host == expected.host && actual.path == expected.path
@@ -117,13 +124,13 @@ import Foundation
             }
         }
         do {
-            let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            let window = try await control.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
             guard let windowID = window["windowId"] as? Int else { record(.monitorWindow, issue: .windowUnavailable); return false }
             let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
             record(.monitorWindow, browserFrame: bounds.frame, windowState: bounds.state)
             let page = try await pageSocket(target: target, browserSocket: socket)
             let layoutReady = try await ensureCloudContentLayout(page: page, configuration: session.configuration)
-            let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [
+            let evaluation = try await control.call(page, method: "Runtime.evaluate", parameters: [
                 "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
                 "returnByValue": true])
             guard let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any],
@@ -158,7 +165,7 @@ import Foundation
             try Task.checkCancellation()
             // This is an explicit user action. Automatic launch/recovery never steals focus
             // or moves a source back onto the control screen.
-            let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            let window = try await control.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
             guard let windowID = window["windowId"] as? Int else {
                 throw ProtoPieError.unavailable("未找到本次专用播放器窗口。")
             }
@@ -175,10 +182,10 @@ import Foundation
             let rect = Self.manualPreviewBounds(visibleFrame: controlScreen.visibleFrame,
                                                 primaryTop: NSScreen.screens.first?.frame.maxY ?? controlScreen.frame.maxY)
             try await restoreCloudWindow(socket: socket, windowID: windowID)
-            _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+            _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
                 "windowId": windowID, "bounds": ["left": Int(rect.minX), "top": Int(rect.minY),
                                                   "width": Int(rect.width), "height": Int(rect.height)]])
-            let info = try await ProtoPieCDP.call(socket, method: "SystemInfo.getProcessInfo")
+            let info = try await control.call(socket, method: "SystemInfo.getProcessInfo")
             guard let processes = info["processInfo"] as? [[String: Any]],
                   let processID = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber,
                   let browser = NSRunningApplication(processIdentifier: processID.int32Value) else {
@@ -187,7 +194,7 @@ import Foundation
             try Task.checkCancellation()
             NSApp.yieldActivation(to: browser)
             browser.activate(from: NSRunningApplication.current, options: [])
-            _ = try await ProtoPieCDP.call(socket, method: "Target.activateTarget", parameters: ["targetId": target])
+            _ = try await control.call(socket, method: "Target.activateTarget", parameters: ["targetId": target])
         case .localFile:
             let file = try configuration.resolvedFile()
             let scoped = file.startAccessingSecurityScopedResource()
@@ -202,13 +209,13 @@ import Foundation
         let lease = try await cloudTarget(configuration)
         do {
             let socket = lease.socket, target = lease.targetID
-            let info = try await ProtoPieCDP.call(socket, method: "SystemInfo.getProcessInfo")
+            let info = try await control.call(socket, method: "SystemInfo.getProcessInfo")
             guard let processes = info["processInfo"] as? [[String: Any]],
                   let pidNumber = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber else {
                 throw ProtoPieError.unavailable("无法识别专用播放器进程；请重试。")
             }
             let pid = pid_t(pidNumber.int32Value)
-            let window = try await ProtoPieCDP.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            let window = try await control.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
             guard let browserWindowID = window["windowId"] as? Int else { throw ProtoPieError.unavailable("播放器没有可捕获窗口。") }
             let pageSocket = try await pageSocket(target: target, browserSocket: socket)
             let expected = try configuration.playbackURL()
@@ -218,7 +225,7 @@ import Foundation
             var problemSamples = 0
             for _ in 0..<60 {
                 try Task.checkCancellation()
-                let evaluation = try await ProtoPieCDP.call(pageSocket, method: "Runtime.evaluate", parameters: ["expression": expression, "returnByValue": true])
+                let evaluation = try await control.call(pageSocket, method: "Runtime.evaluate", parameters: ["expression": expression, "returnByValue": true])
                 let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any] ?? [:]
                 if let problem = value["problem"] as? String, !problem.isEmpty {
                     // Login redirects can appear briefly while a new Cloud window restores its session.
@@ -261,7 +268,7 @@ import Foundation
     }
 
     private func cloudWindowBounds(socket: URL, windowID: Int) async throws -> (frame: CGRect, state: String) {
-        let result = try await ProtoPieCDP.call(socket, method: "Browser.getWindowBounds", parameters: ["windowId": windowID])
+        let result = try await control.call(socket, method: "Browser.getWindowBounds", parameters: ["windowId": windowID])
         guard let bounds = result["bounds"] as? [String: Any],
               let x = bounds["left"] as? NSNumber, let y = bounds["top"] as? NSNumber,
               let width = bounds["width"] as? NSNumber, let height = bounds["height"] as? NSNumber,
@@ -274,7 +281,7 @@ import Foundation
     /// macOS fullscreen transitions are asynchronous, even after CDP acknowledges the command.
     private func restoreCloudWindow(socket: URL, windowID: Int) async throws {
         try Task.checkCancellation()
-        _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+        _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
             "windowId": windowID, "bounds": ["windowState": "normal"]])
         var readiness = ProtoPieWindowRestoreReadiness()
         let deadline = ProcessInfo.processInfo.systemUptime + 10
@@ -288,7 +295,7 @@ import Foundation
             case .requestNormal:
                 // Fullscreen may have exited to a restored maximized window. Unmaximize only
                 // after three matching samples, once per restore attempt, within the same deadline.
-                _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+                _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
                     "windowId": windowID, "bounds": ["windowState": "normal"]])
             case .waiting: break
             }
@@ -311,16 +318,16 @@ import Foundation
         throw ProtoPieError.unavailable("画面位置尚未更新，请等待预览加载后再调整。")
     }
 
-    private func ensureCloudContentLayout(page: URL, configuration: ProtoPieConfiguration) async throws -> Bool {
+    private func ensureCloudContentLayout(page: ProtoPiePageEndpoint, configuration: ProtoPieConfiguration) async throws -> Bool {
         try Task.checkCancellation()
         let expression = ProtoPieWidthFit.expression(enabled: configuration.fillWidth,
             verticalPosition: configuration.widthFitVerticalPosition, expectedURL: try configuration.playbackURL())
-        let evaluation = try await ProtoPieCDP.call(page, method: "Runtime.evaluate", parameters: [
+        let evaluation = try await control.call(page, method: "Runtime.evaluate", parameters: [
             "expression": expression, "returnByValue": true])
         return ((evaluation["result"] as? [String: Any])?["value"] as? [String: Any])?["ready"] as? Bool == true
     }
 
-    private func prepareCloudFullscreen(socket: URL, pageSocket: URL, windowID: Int, processID: pid_t,
+    private func prepareCloudFullscreen(socket: URL, pageSocket: ProtoPiePageEndpoint, windowID: Int, processID: pid_t,
                                         marker: String, displayID: CGDirectDisplayID,
                                         configuration: ProtoPieConfiguration) async throws -> WindowRecord {
         guard CGDisplayIsActive(displayID) != 0 else { throw ProtoPieError.unavailable("目标外屏不可用。") }
@@ -341,7 +348,7 @@ import Foundation
         if bounds.state != "fullscreen" || !ProtoPieFullscreenObservation.matches(bounds.frame, target) {
             record(.prepareRestore, browserFrame: bounds.frame, windowState: bounds.state)
             try await restoreCloudWindow(socket: socket, windowID: windowID)
-            _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+            _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
                 "windowId": windowID, "bounds": ["left": Int(target.minX), "top": Int(target.minY),
                                                   "width": Int(target.width), "height": Int(target.height)]])
             // The normal window may be constrained by the menu bar/Dock. Its centre must first
@@ -359,7 +366,7 @@ import Foundation
             }
             guard placed else { record(.preparePlacement, issue: .placementNotReady); throw ProtoPieError.unavailable("播放器尚未移到目标外屏，请重试。") }
             record(.prepareFullscreen)
-            _ = try await ProtoPieCDP.call(socket, method: "Browser.setWindowBounds", parameters: [
+            _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
                 "windowId": windowID, "bounds": ["windowState": "fullscreen"]])
         }
         var readiness = ProtoPieFullscreenReadiness()
@@ -370,7 +377,7 @@ import Foundation
         while ProcessInfo.processInfo.systemUptime < deadline {
             try Task.checkCancellation()
             let actual = try await cloudWindowBounds(socket: socket, windowID: windowID)
-            let evaluation = try await ProtoPieCDP.call(pageSocket, method: "Runtime.evaluate", parameters: [
+            let evaluation = try await control.call(pageSocket, method: "Runtime.evaluate", parameters: [
                 "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
                 "returnByValue": true])
             let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any]
@@ -491,16 +498,16 @@ import Foundation
         let lines = text.split(whereSeparator: \.isNewline)
         guard lines.count >= 2, let port = Int(lines[0]), (1...65535).contains(port), lines[1].hasPrefix("/devtools/browser/"),
               let socket = URL(string: "ws://127.0.0.1:\(port)\(lines[1])"),
-              (try? await ProtoPieCDP.call(socket, method: "Browser.getVersion")) != nil else { return nil }
+              (try? await control.call(socket, method: "Browser.getVersion")) != nil else { return nil }
         return socket
     }
 
     private func targets(_ socket: URL) async throws -> [[String: Any]] {
-        let result = try await ProtoPieCDP.call(socket, method: "Target.getTargets")
+        let result = try await control.call(socket, method: "Target.getTargets")
         return try ProtoPieCloudTargetLifecycle.confirmedTargetInfos(result)
     }
 
-    private func pageSocket(target: String, browserSocket: URL) async throws -> URL {
+    private func pageSocket(target: String, browserSocket: URL) async throws -> ProtoPiePageEndpoint {
         guard let port = browserSocket.port, let url = URL(string: "http://127.0.0.1:\(port)/json/list") else {
             throw ProtoPieError.unavailable("专用播放器连接无效。")
         }
@@ -510,7 +517,7 @@ import Foundation
               let text = pages.first(where: { $0["id"] as? String == target })?["webSocketDebuggerUrl"] as? String,
               let socket = URL(string: text), socket.host == "127.0.0.1" || socket.host == "localhost",
               socket.port == port else { throw ProtoPieError.unavailable("无法连接本次预览页面。") }
-        return socket
+        return ProtoPiePageEndpoint(browserSocket: browserSocket, targetID: target, legacySocket: socket)
     }
 
     nonisolated static func cloudReadinessExpression(expectedURL: URL, marker: String) -> String {
@@ -682,29 +689,5 @@ import Foundation
             return AXUIElementPerformAction(element, kAXPressAction as CFString) == .success
         }
         return axChildren(element).contains { pressPreviewMenu($0, depth: depth + 1) }
-    }
-}
-
-private enum ProtoPieCDP {
-    static func call(_ socket: URL, method: String, parameters: [String: Any] = [:]) async throws -> [String: Any] {
-        try Task.checkCancellation()
-        let data = try JSONSerialization.data(withJSONObject: ["id": 1, "method": method, "params": parameters])
-        let task = URLSession.shared.webSocketTask(with: socket)
-        task.resume()
-        let deadline = Task { try? await Task.sleep(nanoseconds: 6_000_000_000); if !Task.isCancelled { task.cancel(with: .goingAway, reason: nil) } }
-        defer { deadline.cancel(); task.cancel(with: .normalClosure, reason: nil) }
-        return try await withTaskCancellationHandler(operation: {
-            try await task.send(.string(String(decoding: data, as: UTF8.self)))
-            while true {
-                let message = try await task.receive()
-                let bytes: Data
-                switch message { case .data(let data): bytes = data; case .string(let string): bytes = Data(string.utf8); @unknown default: continue }
-                guard let response = try JSONSerialization.jsonObject(with: bytes) as? [String: Any], response["id"] as? Int == 1 else { continue }
-                if let error = response["error"] as? [String: Any] {
-                    throw ProtoPieError.unavailable("播放器控制失败：\(error["message"] as? String ?? method)")
-                }
-                return response["result"] as? [String: Any] ?? [:]
-            }
-        }, onCancel: { task.cancel(with: .goingAway, reason: nil) })
     }
 }

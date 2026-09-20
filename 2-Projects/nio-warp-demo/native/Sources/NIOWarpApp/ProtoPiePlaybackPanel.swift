@@ -445,6 +445,17 @@ import AppKit
     }
 
     private func buildLogs() {
+        add(title("浏览器控制"))
+        let effective = (UserDefaults.standard.dictionary(forKey: ProtoPieBrowserControl.runtimeKey)?["mode"] as? String)
+            .flatMap(ProtoPieControlMode.init(rawValue:)) ?? .persistent
+        add(note("本次运行：\(effective.title)。更改下面的选项后，退出并重新打开 NIO Warp 生效。"))
+        add(check("使用兼容控制（原机制）", value: ProtoPieControlMode.selected() == .legacy, id: "control-legacy") { [weak self] enabled in
+            UserDefaults.standard.set((enabled ? ProtoPieControlMode.legacy : .persistent).rawValue,
+                                      forKey: ProtoPieControlMode.preferenceKey)
+            self?.showMessage("已保存，下次打开 NIO Warp 时使用\(enabled ? "兼容控制（原机制）" : "持久连接")。")
+        })
+        add(note("兼容控制用于临时降级，保留原来的预览操作方式；持续播放时仍可能出现原有内存增长。"))
+        add(separator())
         add(horizontal([title("运行日志"), spacer(), button("导出诊断日志…", id: "export-logs") { [weak self] in self?.exportLogs() }]))
         add(note("记录计划、切源、步骤、恢复及异常。最近 200 条在此显示，完整日志按容量轮转保留；不记录私有链接及按键内容。"))
         if let warning = controller.log.warning { add(note(warning)) }
