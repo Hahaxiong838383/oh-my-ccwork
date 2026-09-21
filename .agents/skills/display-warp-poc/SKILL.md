@@ -7,7 +7,7 @@ description: 外接显示器、反射玻璃、HUD、超宽鱼屏和投影映射�
 
 本 Skill 的单一真源是：
 
-`../../../claude/skills/display-warp-poc/SKILL.md`
+`../../../.claude/skills/display-warp-poc/SKILL.md`
 
 执行相关工作前，先完整读取该文件，并按其中的流程、约束与验收口径执行。
 不要在本入口复制正文，避免多引擎版本漂移。
