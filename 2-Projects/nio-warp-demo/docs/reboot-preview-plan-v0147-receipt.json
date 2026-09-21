@@ -74,6 +74,68 @@
       "appProcess": "1377   7.7 172224 01:54"
     }
   },
-  "humanAcceptance": "Pending user validation of v0.14.7; no physical reboot performed after this installation",
-  "remotePushPerformed": false
+  "humanAcceptance": "User reports physical reboot basic test normal on 2026-09-21; post-boot logs independently checked. Not exhaustive input or optical acceptance.",
+  "remotePushPerformed": false,
+  "postRebootAcceptance": {
+    "boot": "2026-09-21T08:07:44+08:00",
+    "verifiedAt": "2026-09-21T08:11:46.070921+08:00",
+    "version": "0.14.7",
+    "build": "75",
+    "pid": "950",
+    "events": {
+      "run_started": 1,
+      "plan_started": 1,
+      "item_preparing": 5,
+      "item_ready": 5,
+      "health": 10
+    },
+    "nonInfo": [],
+    "healthCount": 10,
+    "fpsRange": [
+      59.49663921283942,
+      60.00770964973554
+    ],
+    "healthyCapture": true,
+    "pageCount": 1,
+    "fullWindowVerified": true,
+    "control": {
+      "attachedTargets": 1,
+      "attachingTargets": 0,
+      "cancelled": 0,
+      "completed": 495,
+      "connected": true,
+      "connections": 4,
+      "disconnects": 3,
+      "legacyRequests": 0,
+      "maximumConnections": 16,
+      "mode": "persistent",
+      "pending": 0,
+      "requests": 498,
+      "shutdown": false,
+      "timeouts": 0,
+      "updatedAt": 1789949505.76307
+    },
+    "stableControlObservations": 10,
+    "observationFrom": "2026-09-21T08:10:37.656878+08:00",
+    "observationUntil": "2026-09-21T08:11:22.974863+08:00",
+    "noAdditionalDisconnects": true,
+    "requestDelta": 100,
+    "physicalFootprintMiB": 277.0,
+    "peakFootprintMiB": 302.4,
+    "swapMiB": 0,
+    "crashReportsSinceBoot": [],
+    "savedSettingGroupsUnchanged": 9,
+    "startupFailures": {
+      "count": 3,
+      "times": [
+        "08:08:10.611",
+        "08:08:10.891",
+        "08:08:11.143"
+      ],
+      "reason": "Loopback connection refused (61 / -1004); before Chrome preview readiness, all same endpoint"
+    },
+    "automaticInputTestedThisTurn": false,
+    "userReported": "Reboot tested, basically normal; not an exhaustive input or optical acceptance",
+    "appOrConfigurationChanges": false
+  }
 }
