@@ -26,13 +26,10 @@ private enum DashboardTab: String, CaseIterable, Identifiable {
 
 struct MenuContentView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var presentation: MenuPresentation
     @State private var selectedTab: DashboardTab = .overview
     @State private var accountFilter: AccountListFilter = .all
     @State private var expandedAccountIDs: Set<String> = []
-    @State private var showTokenClearConfirmation = false
-    @State private var showSubscriptionPicker = false
-    @State private var resetAccount: Account?
-    @State private var removalAccount: Account?
 
     var body: some View {
         ZStack {
@@ -40,135 +37,38 @@ struct MenuContentView: View {
                 header
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-
                 Divider()
-
                 if model.showSettings || !model.isConfigured {
                     ScrollView {
-                        settings
-                            .padding(16)
+                        settings.padding(16)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     tabPicker
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-
                     Divider()
-
                     tabContent
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-
                     Divider()
-
                     footer
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                 }
             }
+            .disabled(presentation.overlay != nil)
+            .allowsHitTesting(presentation.overlay == nil)
+            .accessibilityHidden(presentation.overlay != nil)
 
-            if let account = resetAccount {
-                resetCreditConfirmation(for: account)
-                    .transition(.opacity)
+            if let overlay = presentation.overlay {
+                MenuActionOverlay(model: model, presentation: presentation, overlay: overlay)
+                    .id(overlay.id)
                     .zIndex(10)
             }
         }
-        .frame(width: 400, height: 560)
-        .animation(.easeOut(duration: 0.15), value: resetAccount?.id)
-        .alert("确认清除本机 Token？", isPresented: $showTokenClearConfirmation) {
-            Button("取消", role: .cancel) {}
-            Button("清除 Token", role: .destructive, action: model.clearToken)
-        } message: {
-            Text("清除后应用将立即断开 CPA，重新连接需要再次输入 Desktop Token。")
-        }
-        .confirmationDialog(
-            "添加订阅",
-            isPresented: $showSubscriptionPicker,
-            titleVisibility: .visible
-        ) {
-            Button("Codex") { model.addCodexAuthorization() }
-            Button("xAI Grok") { model.startXAIAuthorization() }
-            Button("取消", role: .cancel) {}
-        } message: {
-            Text("选择要添加到 CPA 的 OAuth 订阅账号。")
-        }
-        .confirmationDialog(
-            "移除这个 CPA 账号？",
-            isPresented: Binding(
-                get: { removalAccount != nil },
-                set: { if !$0 { removalAccount = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("取消", role: .cancel) { removalAccount = nil }
-            Button("确认移除", role: .destructive) {
-                guard let account = removalAccount else { return }
-                removalAccount = nil
-                Task { await model.removeInvalidAccount(account) }
-            }
-        } message: {
-            if let account = removalAccount {
-                Text("将移除 \(account.emailMasked)（\(account.provider.uppercased())）。账号会立即停止参与 CPA 调度，凭据文件将进入可恢复隔离区。")
-            }
-        }
-        .sheet(
-            isPresented: Binding(
-                get: { model.xaiAuthorizationSession != nil },
-                set: { if !$0 { model.cancelXAIAuthorization() } }
-            )
-        ) {
-            xaiAuthorizationSheet
-        }
-    }
-
-    private func resetCreditConfirmation(for account: Account) -> some View {
-        ZStack {
-            Color.black.opacity(0.22)
-                .contentShape(Rectangle())
-                .onTapGesture { resetAccount = nil }
-
-            VStack(alignment: .leading, spacing: 12) {
-                Label("使用 1 张重置卡？", systemImage: "exclamationmark.triangle.fill")
-                    .font(.headline)
-                    .foregroundStyle(.orange)
-
-                Text(account.emailMasked)
-                    .font(.subheadline.bold())
-
-                Text("将尝试重置当前适用的额度窗口。Bridge 会在提交前重新确认仍有可用重置卡；成功后不可撤销。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if let availableCount = account.usage?.resetCredits?.availableCount {
-                    Text("当前显示可用 \(availableCount) 张")
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack(spacing: 10) {
-                    Spacer()
-                    Button("取消", role: .cancel) { resetAccount = nil }
-                        .buttonStyle(.bordered)
-                    Button("确认使用", role: .destructive) {
-                        resetAccount = nil
-                        Task { await model.consumeResetCredit(for: account) }
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.red)
-                }
-            }
-            .padding(18)
-            .frame(maxWidth: 330)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.orange.opacity(0.35))
-            }
-            .shadow(radius: 16, y: 8)
-            .accessibilityElement(children: .contain)
-            .accessibilityLabel("使用重置卡确认")
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onExitCommand { presentation.handleEscape() }
     }
 
     private var header: some View {
@@ -195,6 +95,12 @@ struct MenuContentView: View {
             .buttonStyle(.plain)
             .disabled(!model.isConfigured)
             .help(model.isConfigured ? "连接设置" : "请先完成连接设置")
+            Button { presentation.hide() } label: {
+                Image(systemName: "xmark").frame(width: 20, height: 20)
+            }
+            .buttonStyle(.plain)
+            .help("收起浮窗，保留授权进度")
+            .accessibilityLabel("收起浮窗")
         }
     }
 
@@ -479,8 +385,8 @@ struct MenuContentView: View {
                                 isResetting: model.resettingAccountID == account.id,
                                 isRemoving: model.removingAccountID == account.id,
                                 onToggleExpanded: { toggleExpanded(account.id) },
-                                onRequestReset: { resetAccount = account },
-                                onRequestRemoval: { removalAccount = account }
+                                onRequestReset: { presentation.present(.resetCredit(account)) },
+                                onRequestRemoval: { presentation.present(.removeAccount(account)) }
                             )
                         }
                     }
@@ -521,7 +427,7 @@ struct MenuContentView: View {
                         XAIAccountUsageCard(
                             account: account,
                             isRemoving: model.removingAccountID == account.id,
-                            onRequestRemoval: { removalAccount = account }
+                            onRequestRemoval: { presentation.present(.removeAccount(account)) }
                         )
                     }
                 }
@@ -554,100 +460,22 @@ struct MenuContentView: View {
             .disabled(model.isRefreshing)
 
             Button {
-                showSubscriptionPicker = true
+                if model.xaiAuthorizationSession != nil || model.isStartingXAIAuthorization {
+                    presentation.present(.xaiAuthorization)
+                } else if model.isAuthorizing {
+                    presentation.present(.codexAuthorization)
+                } else {
+                    presentation.present(.subscriptions)
+                }
             } label: {
-                Label(model.isAuthorizationActive ? "等待授权" : "添加订阅", systemImage: "person.badge.plus")
+                Label(model.isAuthorizationActive || model.xaiAuthorizationSession != nil ? "继续授权" : "添加订阅", systemImage: "person.badge.plus")
             }
-            .disabled(model.isAuthorizationActive)
 
             Spacer()
+            Text(AppRelease.label).font(.caption2).foregroundStyle(.secondary)
             Button("退出") { NSApplication.shared.terminate(nil) }
         }
         .buttonStyle(.borderless)
-    }
-
-    @ViewBuilder
-    private var xaiAuthorizationSheet: some View {
-        if let session = model.xaiAuthorizationSession {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Label("添加 xAI Grok 订阅", systemImage: "bolt.horizontal.circle.fill")
-                        .font(.headline)
-                    Spacer()
-                    Button {
-                        model.cancelXAIAuthorization()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                }
-
-                Text("在已打开的 xAI 页面输入以下设备码。授权完成后，CPA 会自动刷新账号列表。")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-
-                VStack(spacing: 8) {
-                    Text(session.userCode)
-                        .font(.title2.monospaced().bold())
-                        .textSelection(.enabled)
-                    TimelineView(.periodic(from: .now, by: 1)) { context in
-                        Text("有效期剩余 \(UsageFormatting.duration(TimeInterval(session.remainingSeconds(at: context.date))))")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .padding(16)
-                .background(Color.blue.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
-
-                Label(xaiAuthorizationStatusText(session), systemImage: xaiAuthorizationStatusSymbol(session.status))
-                    .font(.callout)
-                    .foregroundStyle(xaiAuthorizationStatusColor(session.status))
-
-                HStack {
-                    Button("复制设备码", action: model.copyXAIDeviceCode)
-                    Button("打开授权网页", action: model.openXAIVerificationPage)
-                    Spacer()
-                    if session.status.isTerminal {
-                        Button("重试", action: model.startXAIAuthorization)
-                            .buttonStyle(.borderedProminent)
-                    } else {
-                        Button("取消", role: .cancel, action: model.cancelXAIAuthorization)
-                    }
-                }
-            }
-            .padding(20)
-            .frame(width: 380)
-            .interactiveDismissDisabled(session.status == .pending)
-        }
-    }
-
-    private func xaiAuthorizationStatusText(_ session: XAIOAuthSession) -> String {
-        if let message = session.message, !message.isEmpty { return message }
-        return switch session.status {
-        case .pending: "等待 xAI 授权"
-        case .complete: "xAI 授权已完成"
-        case .declined: "xAI 授权已取消"
-        case .expired: "xAI 授权已过期"
-        case .error: "xAI 授权失败"
-        }
-    }
-
-    private func xaiAuthorizationStatusSymbol(_ status: XAIOAuthStatus) -> String {
-        switch status {
-        case .pending: "clock.arrow.circlepath"
-        case .complete: "checkmark.circle.fill"
-        case .declined, .expired, .error: "exclamationmark.triangle.fill"
-        }
-    }
-
-    private func xaiAuthorizationStatusColor(_ status: XAIOAuthStatus) -> Color {
-        switch status {
-        case .pending: .secondary
-        case .complete: .green
-        case .declined, .expired, .error: .orange
-        }
     }
 
     private var settings: some View {
@@ -673,7 +501,7 @@ struct MenuContentView: View {
                     .buttonStyle(.borderedProminent)
                 if model.isConfigured {
                     Button("清除本机 Token", role: .destructive) {
-                        showTokenClearConfirmation = true
+                        presentation.present(.clearToken)
                     }
                 }
                 Spacer()

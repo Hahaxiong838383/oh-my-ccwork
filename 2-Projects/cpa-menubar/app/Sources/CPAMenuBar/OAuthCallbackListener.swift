@@ -6,22 +6,36 @@ final class OAuthCallbackListener: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.hahaxiong.cpa-menubar.oauth")
     private let lock = NSLock()
     private var completion: ((Result<URL, Error>) -> Void)?
+    private var generation = UUID()
+    private let port: NWEndpoint.Port
 
-    func start(completion: @escaping (Result<URL, Error>) -> Void) throws {
+    init(port: UInt16 = 1455) {
+        self.port = NWEndpoint.Port(rawValue: port) ?? .any
+    }
+
+    var listeningPort: UInt16? {
+        lock.lock()
+        defer { lock.unlock() }
+        return listener?.port?.rawValue
+    }
+
+    func start(expectedState: String, completion: @escaping (Result<URL, Error>) -> Void) throws {
         stop()
-        let listener = try NWListener(using: .tcp, on: 1455)
+        let listener = try NWListener(using: .tcp, on: port)
+        let generation = UUID()
         lock.lock()
         self.listener = listener
         self.completion = completion
+        self.generation = generation
         lock.unlock()
 
         listener.stateUpdateHandler = { [weak self] state in
             if case let .failed(error) = state {
-                self?.finish(.failure(error))
+                self?.finish(.failure(error), generation: generation)
             }
         }
         listener.newConnectionHandler = { [weak self] connection in
-            self?.handle(connection)
+            self?.handle(connection, expectedState: expectedState, generation: generation)
         }
         listener.start(queue: queue)
     }
@@ -31,16 +45,16 @@ final class OAuthCallbackListener: @unchecked Sendable {
         listener?.cancel()
         listener = nil
         completion = nil
+        generation = UUID()
         lock.unlock()
     }
 
-    private func handle(_ connection: NWConnection) {
+    private func handle(_ connection: NWConnection, expectedState: String, generation: UUID) {
         connection.start(queue: queue)
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, _, error in
             guard let self else { return }
-            if let error {
+            if error != nil {
                 connection.cancel()
-                finish(.failure(error))
                 return
             }
             guard let data,
@@ -50,11 +64,14 @@ final class OAuthCallbackListener: @unchecked Sendable {
                   let url = URL(string: "http://localhost:1455\(target)")
             else {
                 sendResponse(connection, success: false)
-                finish(.failure(OAuthListenerError.invalidRequest))
+                return
+            }
+            guard OAuthCallbackValidation.matches(url, expectedState: expectedState) else {
+                sendResponse(connection, success: false)
                 return
             }
             sendResponse(connection, success: true)
-            finish(.success(url))
+            finish(.success(url), generation: generation)
         }
     }
 
@@ -65,8 +82,12 @@ final class OAuthCallbackListener: @unchecked Sendable {
         connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
     }
 
-    private func finish(_ result: Result<URL, Error>) {
+    private func finish(_ result: Result<URL, Error>, generation: UUID) {
         lock.lock()
+        guard self.generation == generation else {
+            lock.unlock()
+            return
+        }
         let completion = completion
         self.completion = nil
         listener?.cancel()

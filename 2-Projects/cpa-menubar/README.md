@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.3.8 (11)`。
+当前版本：`0.4.1 (13)`。
 
 ## 当前能力
 
@@ -19,9 +19,12 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - xAI 总览只保留一条“订阅池平均剩余”进度条，按已同步订阅账号等权计算，并同时显示最低账号余量和最近重置时间；Management API 账单与 CPA 路由只显示紧凑指标，不再各自模拟额度。
 - 账号级订阅额度读取 xAI CLI Billing；CPA Token、内部日预算和 Management API 团队账单继续分层展示，不再互相冒充。接口缺少百分比但明确返回空周周期时，会标记“暂无计量，按 0% 已用显示”。
 - 显示充值余额与重置卡数量；只要官方 `available_count` 大于 0 即允许经过二次确认发起使用，最终按官方返回的 `reset`、`nothing_to_reset`、`no_credit` 或 `already_redeemed` 显示结果。
-- 重置卡确认使用浮窗内叠层，避免 `MenuBarExtra(.window)` 弹出独立确认菜单时失焦关闭；展示脱敏账号、可用卡数与不可撤销提示，只有确认按钮才提交消费。
+- 菜单栏由 `NSStatusItem` 与独立持有的可激活 `NSPanel` 承载；添加订阅、清除 Token、移除账号、重置卡与授权进度统一使用窗口内叠层，不再混用 `MenuBarExtra`、`alert`、`confirmationDialog` 或 `sheet`。
+- 确认期间屏蔽底层控件；点击外部不关闭确认。`Esc` 取消普通确认，授权过程中则只收起窗口、保留登录进度。后台刷新不重建窗口或抢焦点。
+- 重置卡确认展示脱敏账号、可用卡数与不可撤销提示，只有确认按钮才提交消费；原有 Bridge 实时校验与请求契约保持不变。
 - 标记账号是否具备 refresh token；CLIProxyAPI 继续负责正常的 access token 自动刷新与调度。
 - “添加订阅”统一提供 Codex 与 xAI Grok 两种 OAuth 登录；Codex 保留 PKCE 回调，xAI 使用官方设备码流程并自动轮询完成状态。
+- Codex 授权提供“取消授权 / 重新打开授权网页 / 暂时收起”；本机等待上限为 5 分钟，取消或超时会释放回调监听和请求。旧任务、旧 state 与迟到回调不能结束新一轮授权；关闭浏览器本身不等于取消授权。
 - 对已停用、无刷新能力且已过期、或上游明确返回 401/403 的账号显示“移除无效账号”；App 经过 destructive 二次确认，Bridge 再实时校验后把 auth JSON 原子移动到 `/root/.cli-proxy-api-removed/<UTC时间>/`，不会永久删除凭据。
 - xAI 设备码只在当前授权弹层短时显示，可复制或重新打开 `accounts.x.ai`，不会写入 Keychain、UserDefaults、磁盘或普通日志。
 - 最终授权结果仍由 CLIProxyAPI 官方流程写入生产 auth-dir，CPA Menu 和 Bridge 不自行保存 xAI OAuth 凭据。
@@ -81,6 +84,8 @@ cd ../app && swift test && ./scripts/build-app.sh
 
 ## 部署
 
+本机 App 安装前自动保存旧 Bundle、版本号和 SHA-256，并生成独立回滚脚本。仅替换应用包，不备份或修改 Keychain、UserDefaults、服务器配置或账号凭据。版本与原生窗口验收记录见 [0.4.1 发布记录](docs/RELEASE-0.4.1.md)；窗口架构及旧版基线见 [0.4.0 记录](docs/RELEASE-0.4.0.md)。
+
 ```bash
 bridge/deploy/deploy.sh aliyun-jp
 app/scripts/configure-production.sh aliyun-jp
@@ -89,7 +94,11 @@ app/scripts/install-app.sh
 
 部署脚本会保留已有 Desktop Token；首次部署才生成随机 Token。Nginx 原站点配置会备份为 `smart-api.before-cpa-desktop-bridge`，并只新增 `/desktop/v1/` 路由。
 
-## 回滚
+## 本机 App 回滚
+
+回滚包保存在 `~/Library/Application Support/CPAMenuBar/Backups/<run-id>/`。先查看 `release-receipt.json` 的 `previous.version` 选定版本，再执行该目录内的 `rollback-app.sh --verify-only` 验证，确认没有正在进行的授权后执行 `rollback-app.sh`。脚本保留被替换版本，只恢复 Bundle，不恢复或改写凭据。
+
+## 服务器回滚
 
 ```bash
 ssh aliyun-jp 'systemctl disable --now cpa-desktop-bridge; rm -f /etc/systemd/system/cpa-desktop-bridge.service; systemctl daemon-reload'

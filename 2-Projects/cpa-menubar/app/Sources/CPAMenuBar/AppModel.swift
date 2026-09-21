@@ -8,6 +8,8 @@ final class AppModel: ObservableObject {
     @Published var accounts: [Account] = []
     @Published var isRefreshing = false
     @Published var isAuthorizing = false
+    @Published private(set) var isCompletingCodexAuthorization = false
+    @Published private(set) var codexAuthorizationDeadline: Date?
     @Published var isStartingXAIAuthorization = false
     @Published var xaiAuthorizationSession: XAIOAuthSession?
     @Published var resettingAccountID: String?
@@ -24,6 +26,11 @@ final class AppModel: ObservableObject {
     private let oauthListener = OAuthCallbackListener()
     private var refreshTask: Task<Void, Never>?
     private var xaiAuthorizationTask: Task<Void, Never>?
+    private var codexAuthorizationAttempt = CodexAuthorizationAttempt()
+    private var codexAuthorizationURL: URL?
+    private var codexStartTask: Task<Void, Never>?
+    private var codexCompletionTask: Task<Void, Never>?
+    private var codexTimeoutTask: Task<Void, Never>?
 
     init() {
         endpoint = defaults.string(forKey: "bridgeEndpoint") ?? "https://smart-api.hahaxiong.top/desktop/v1"
@@ -45,6 +52,9 @@ final class AppModel: ObservableObject {
     deinit {
         refreshTask?.cancel()
         xaiAuthorizationTask?.cancel()
+        codexStartTask?.cancel()
+        codexCompletionTask?.cancel()
+        codexTimeoutTask?.cancel()
         oauthListener.stop()
     }
 
@@ -170,42 +180,113 @@ final class AppModel: ObservableObject {
     }
 
     func addCodexAuthorization() {
-        guard !isAuthorizing else { return }
+        guard !isAuthorizationActive else { return }
         guard let client = makeClient() else {
             showSettings = true
             return
         }
+        let attemptID = codexAuthorizationAttempt.begin()
+        codexAuthorizationDeadline = codexAuthorizationAttempt.deadline
+        codexAuthorizationURL = nil
+        isCompletingCodexAuthorization = false
         isAuthorizing = true
         errorMessage = nil
         statusMessage = "正在等待浏览器授权"
-        do {
-            try oauthListener.start { [weak self] result in
-                Task { @MainActor in
-                    guard let self else { return }
-                    switch result {
-                    case let .success(callbackURL):
-                        await self.completeOAuth(client: client, callbackURL: callbackURL)
-                    case let .failure(error):
-                        self.isAuthorizing = false
-                        self.errorMessage = error.localizedDescription
-                    }
-                }
+        codexTimeoutTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: .seconds(300))
+            } catch {
+                return
             }
-        } catch {
-            isAuthorizing = false
-            errorMessage = "无法监听本机 1455 端口：\(error.localizedDescription)"
-            return
+            self?.expireCodexAuthorization(attemptID)
         }
-        Task {
+        codexStartTask = Task { [weak self] in
+            guard let self else { return }
             do {
                 let response = try await client.startOAuth()
-                NSWorkspace.shared.open(response.url)
+                guard !Task.isCancelled, self.codexAuthorizationAttempt.isCurrent(attemptID) else { return }
+                guard self.codexAuthorizationAttempt.canContinue(attemptID) else {
+                    self.expireCodexAuthorization(attemptID)
+                    return
+                }
+                guard self.codexAuthorizationAttempt.recordState(response.state, for: attemptID) else {
+                    self.finishCodexAuthorization(attemptID, cancelRequests: false)
+                    self.errorMessage = "Codex 授权响应无效，请重新发起"
+                    return
+                }
+                try self.startCodexCallbackListener(client: client, attemptID: attemptID, state: response.state)
+                self.codexAuthorizationURL = response.url
+                self.openCodexAuthorizationPage()
             } catch {
-                oauthListener.stop()
-                isAuthorizing = false
-                errorMessage = error.localizedDescription
+                guard self.codexAuthorizationAttempt.isCurrent(attemptID) else { return }
+                self.finishCodexAuthorization(attemptID, cancelRequests: false)
+                self.errorMessage = error.localizedDescription
             }
         }
+    }
+
+    private func startCodexCallbackListener(client: BridgeClient, attemptID: UUID, state: String) throws {
+        try oauthListener.start(expectedState: state) { [weak self] result in
+            Task { @MainActor in
+                guard let self, self.codexAuthorizationAttempt.isCurrent(attemptID) else { return }
+                guard self.codexAuthorizationAttempt.canContinue(attemptID) else {
+                    self.expireCodexAuthorization(attemptID)
+                    return
+                }
+                switch result {
+                case let .success(callbackURL):
+                    guard self.codexAuthorizationAttempt.acceptsCallback(callbackURL, for: attemptID) else { return }
+                    self.isCompletingCodexAuthorization = true
+                    self.codexCompletionTask = Task {
+                        await self.completeOAuth(client: client, callbackURL: callbackURL, attemptID: attemptID)
+                    }
+                case let .failure(error):
+                    self.finishCodexAuthorization(attemptID, cancelRequests: true)
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    var canOpenCodexAuthorizationPage: Bool {
+        isAuthorizing && !isCompletingCodexAuthorization && codexAuthorizationURL != nil
+    }
+
+    func openCodexAuthorizationPage() {
+        guard canOpenCodexAuthorizationPage, let url = codexAuthorizationURL else { return }
+        if !NSWorkspace.shared.open(url) {
+            errorMessage = "无法打开授权网页，可以重试打开或取消本次授权"
+        }
+    }
+
+    func cancelCodexAuthorization() {
+        guard let attemptID = codexAuthorizationAttempt.id else { return }
+        finishCodexAuthorization(attemptID, cancelRequests: true)
+        errorMessage = nil
+        statusMessage = "已取消本次 Codex 授权等待，原有账号不受影响"
+    }
+
+    private func expireCodexAuthorization(_ attemptID: UUID) {
+        guard codexAuthorizationAttempt.isCurrent(attemptID) else { return }
+        finishCodexAuthorization(attemptID, cancelRequests: true)
+        errorMessage = "Codex 授权已超时，本机等待已结束；可重新发起授权"
+    }
+
+    private func finishCodexAuthorization(_ attemptID: UUID, cancelRequests: Bool) {
+        guard codexAuthorizationAttempt.finish(attemptID) else { return }
+        if cancelRequests {
+            codexStartTask?.cancel()
+            codexCompletionTask?.cancel()
+        }
+        codexStartTask = nil
+        codexCompletionTask = nil
+        codexTimeoutTask?.cancel()
+        codexTimeoutTask = nil
+        oauthListener.stop()
+        codexAuthorizationURL = nil
+        codexAuthorizationDeadline = nil
+        isCompletingCodexAuthorization = false
+        isAuthorizing = false
     }
 
     func startXAIAuthorization() {
@@ -338,13 +419,21 @@ final class AppModel: ObservableObject {
         }
     }
 
-    private func completeOAuth(client: BridgeClient, callbackURL: URL) async {
-        defer { isAuthorizing = false }
+    private func completeOAuth(client: BridgeClient, callbackURL: URL, attemptID: UUID) async {
+        guard codexAuthorizationAttempt.canContinue(attemptID), !Task.isCancelled else { return }
         do {
             let response = try await client.completeOAuth(redirectURL: callbackURL)
+            guard codexAuthorizationAttempt.isCurrent(attemptID), !Task.isCancelled else { return }
+            guard codexAuthorizationAttempt.canContinue(attemptID) else {
+                expireCodexAuthorization(attemptID)
+                return
+            }
+            finishCodexAuthorization(attemptID, cancelRequests: false)
             statusMessage = response.accountMasked.map { "已添加授权：\($0)" } ?? "授权已添加"
             await refresh()
         } catch {
+            guard codexAuthorizationAttempt.isCurrent(attemptID) else { return }
+            finishCodexAuthorization(attemptID, cancelRequests: false)
             errorMessage = error.localizedDescription
         }
     }
