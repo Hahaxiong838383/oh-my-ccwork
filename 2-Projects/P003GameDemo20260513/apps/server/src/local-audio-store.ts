@@ -60,8 +60,14 @@ export const DEVICE_REPLY_SLOTS = [
   'device_reply.unsupported_motor',
 ] as const;
 export type DeviceReplySlot = (typeof DEVICE_REPLY_SLOTS)[number];
-/** 条目可落的全部槽（人格 14 + 设备回复 18） */
-export type AnyAudioSlot = LocalAudioSlot | DeviceReplySlot;
+/**
+ * G1 设置引导三句（Android codex 需求 2026-09-17）：文本冻结、每槽 1 条、optional；同十八条不进 LLM 循环，
+ * 只由 local-audio-g1-settings.ts 显式 stage / 发布（合成一次、同字节扇出全机队）；文本真源 G1_SETTINGS_TEXTS。
+ */
+export const G1_SETTINGS_SLOTS = ['g1.settings.enter', 'g1.settings.intro', 'g1.settings.exit'] as const;
+export type G1SettingsSlot = (typeof G1_SETTINGS_SLOTS)[number];
+/** 条目可落的全部槽（人格 14 + 设备回复 18 + G1 设置引导 3） */
+export type AnyAudioSlot = LocalAudioSlot | DeviceReplySlot | G1SettingsSlot;
 
 /**
  * 必选六 slot（v107 合同 §1：required 缺任一即整套 abort）。
@@ -355,11 +361,11 @@ class LocalAudioStore {
 
   /** 清理：active=0 且超 14 天的条目，删行+删盘上文件。返回清理数。 */
   cleanup(accountId: string): number {
-    // 设备回复槽（device_reply.*）的 staging 条目豁免 14 天清理：它们是冻结文本的交付物，SHA 已被端侧核验，
+    // 冻结槽（device_reply.* / g1.settings.*）的 staging 条目豁免 14 天清理：它们是冻结文本的交付物，SHA 已被端侧核验，
     // 等配套 APK 就位再显式发布；清掉重合成会换 SHA（TTS 非确定性），让已核验的指纹作废（codex 2026-09-05 验收回执）。
     const stale = this.db
       .prepare(
-        `SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ? AND slot NOT LIKE 'device_reply.%'`,
+        `SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ? AND slot NOT LIKE 'device_reply.%' AND slot NOT LIKE 'g1.settings.%'`,
       )
       .all(accountId, Date.now() - STALE_ITEM_TTL_MS) as Array<{ id: string; format: 'mp3' | 'wav' }>;
     for (const { id, format } of stale) {
@@ -372,6 +378,11 @@ class LocalAudioStore {
       this.db.prepare(`DELETE FROM local_audio_item WHERE account_id = ? AND id = ?`).run(accountId, id);
     }
     return stale.length;
+  }
+
+  /** 有内容的账号（revision>0）——冻结槽全机队发布脚本 --all 用。 */
+  listAccounts(): string[] {
+    return (this.db.prepare(`SELECT account_id FROM local_audio_state WHERE revision > 0 ORDER BY account_id`).all() as Array<{ account_id: string }>).map((r) => r.account_id);
   }
 
   /** 重置（admin DELETE relation-state 联动第六样）：删全部条目+文件+状态行。 */

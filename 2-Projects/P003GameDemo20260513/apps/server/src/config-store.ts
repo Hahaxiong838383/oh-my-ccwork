@@ -14,11 +14,12 @@ import { DatabaseSync } from 'node:sqlite';
  */
 
 export type KeySpec = {
-  builtinDefault: number;
+  builtinDefault: number | boolean;
   validate: (v: unknown) => boolean;
   /** admin 通用渲染用的展示元数据；min/max 只做提示与前端预校验，真门在 validate */
   label: string;
-  unit: 'sec' | 'day';
+  /** bool 键：builtinDefault/值为 boolean，min/max 只占位（admin 渲染走开关） */
+  unit: 'sec' | 'day' | 'bool';
   hint: string;
   min: number;
   max: number;
@@ -50,12 +51,26 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     max: 30,
     serverOnly: true,
   },
+  // 诊断日志上云远程开关（键名 2026-09-19 川哥冻结；合同 CC 诊断日志复核回执 §2 第 4 条 / §7）。
+  // server 摄入门每请求读有效值（SN 覆盖 > 全局 > 内置 true），关 = 503 LOG_UPLOAD_DISABLED + Retry-After 900。
+  // 先 serverOnly：Launcher 确认能消费设备快照里的这个键（codex §4 第 9 条待 Launcher）后再翻成设备键——届时只删 serverOnly 这一行。
+  'diagnostics.log_upload_enabled': {
+    builtinDefault: true,
+    validate: (v) => typeof v === 'boolean',
+    label: '诊断日志上云开关',
+    unit: 'bool',
+    hint: '关闭后设备诊断日志接口返回 503 LOG_UPLOAD_DISABLED（Retry-After 15 分钟），设备保留本地 error/fatal 不再上传；可按设备覆盖',
+    min: 0,
+    max: 1,
+    serverOnly: true,
+  },
 };
 
 /** 校验失败的统一提示文案（route 复用，随键表走，别再手写范围） */
 export function invalidValueMessage(key: string): string {
   const s = CONFIG_KEYS[key];
   if (!s) return '取值不合法';
+  if (s.unit === 'bool') return '取值须为 true/false';
   return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : '天'}`;
 }
 
@@ -65,6 +80,25 @@ const GLOBAL_SCOPE = '(global)';
 const DEFAULT_DB_PATH = './data/config.db';
 
 export type RuntimeFlag = { key: string; value: string; updated_at: number; updated_by: string; note: string };
+
+// ── 下一版待办（2026-09-14 川哥：「版本与 One-shot」里记 v1.2 待更新内容，后续相关待办都加进来，每次版本更新有来源）──
+export const RELEASE_TODO_STATUSES = ['open', 'done', 'dropped'] as const;
+export type ReleaseTodoStatus = (typeof RELEASE_TODO_STATUSES)[number];
+export const RELEASE_TODO_OWNERS = ['cc', 'codex', '川哥', '其它'] as const;
+export type ReleaseTodoOwner = (typeof RELEASE_TODO_OWNERS)[number];
+export type ReleaseTodo = {
+  id: number;
+  target: string; // 目标版本标签，如 v1.2
+  text: string; // 要更新什么（≤300 字）
+  source: string; // 来源：回执/分支/排查稿/日期（≤200 字）
+  owner: ReleaseTodoOwner;
+  status: ReleaseTodoStatus;
+  created_by: string;
+  created_at: number;
+  updated_by: string;
+  updated_at: number;
+  done_at: number | null;
+};
 
 export type ConfigRow = {
   scope: string;
@@ -107,7 +141,73 @@ class ConfigStore {
         updated_by TEXT NOT NULL,
         note TEXT NOT NULL DEFAULT ''
       );
+      CREATE TABLE IF NOT EXISTS release_todo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        target TEXT NOT NULL DEFAULT 'v1.2',
+        text TEXT NOT NULL,
+        source TEXT NOT NULL DEFAULT '',
+        owner TEXT NOT NULL DEFAULT 'cc',
+        status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','done','dropped')),
+        created_by TEXT NOT NULL DEFAULT '',
+        created_at INTEGER NOT NULL,
+        updated_by TEXT NOT NULL DEFAULT '',
+        updated_at INTEGER NOT NULL,
+        done_at INTEGER
+      );
     `);
+  }
+
+  // ── 下一版待办：open 在前（按创建顺序），done/dropped 在后（按更新时间倒序）。只软删（dropped），来源永远可追。──
+  listTodos(opts: { includeClosed?: boolean } = {}): ReleaseTodo[] {
+    const where = opts.includeClosed ? '' : `WHERE status = 'open'`;
+    return this.db
+      .prepare(
+        `SELECT * FROM release_todo ${where}
+         ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'done' THEN 1 ELSE 2 END,
+                  CASE status WHEN 'open' THEN created_at ELSE -updated_at END`,
+      )
+      .all() as ReleaseTodo[];
+  }
+
+  getTodo(id: number): ReleaseTodo | null {
+    return (this.db.prepare(`SELECT * FROM release_todo WHERE id = ?`).get(id) as ReleaseTodo | undefined) ?? null;
+  }
+
+  addTodo(input: { target?: string; text: string; source?: string; owner?: ReleaseTodoOwner }, by: string): ReleaseTodo {
+    const now = Date.now();
+    const r = this.db
+      .prepare(
+        `INSERT INTO release_todo (target, text, source, owner, status, created_by, created_at, updated_by, updated_at)
+         VALUES (?, ?, ?, ?, 'open', ?, ?, ?, ?)`,
+      )
+      .run(input.target?.trim() || 'v1.2', input.text.trim(), (input.source ?? '').trim(), input.owner ?? 'cc', by, now, by, now);
+    return this.getTodo(Number(r.lastInsertRowid)) as ReleaseTodo;
+  }
+
+  /** 部分更新；status→done 记 done_at，→open 清 done_at。不存在返回 null。 */
+  updateTodo(
+    id: number,
+    patch: Partial<{ target: string; text: string; source: string; owner: ReleaseTodoOwner; status: ReleaseTodoStatus }>,
+    by: string,
+  ): ReleaseTodo | null {
+    const cur = this.getTodo(id);
+    if (!cur) return null;
+    const next = {
+      target: patch.target !== undefined ? patch.target.trim() || cur.target : cur.target,
+      text: patch.text !== undefined ? patch.text.trim() || cur.text : cur.text,
+      source: patch.source !== undefined ? patch.source.trim() : cur.source,
+      owner: patch.owner ?? cur.owner,
+      status: patch.status ?? cur.status,
+    };
+    const now = Date.now();
+    const doneAt = next.status === 'done' ? (cur.status === 'done' ? cur.done_at : now) : null;
+    this.db
+      .prepare(
+        `UPDATE release_todo SET target = ?, text = ?, source = ?, owner = ?, status = ?, updated_by = ?, updated_at = ?, done_at = ?
+         WHERE id = ?`,
+      )
+      .run(next.target, next.text, next.source, next.owner, next.status, by, now, doneAt, id);
+    return this.getTodo(id);
   }
 
   // ── B89 运行时开关（2026-09-13 川哥：One-shot 关闭/回滚要在后台一键可点）──
@@ -237,7 +337,7 @@ class ConfigStore {
   adminOverview(): {
     keys: Array<{
       key: string;
-      builtin_default: number;
+      builtin_default: number | boolean;
       global: unknown;
       global_updated_at: number | null;
       label: string;
@@ -277,20 +377,29 @@ class ConfigStore {
     return { keys, overrides };
   }
 
-  /** server 内部读有效值（SN 覆盖 > 全局 > 内置；tombstone 视为无覆盖）。scope 传 SN 原文（不带 device- 前缀）。 */
-  getEffective(scope: string, key: string): number {
+  /** server 内部读有效值（SN 覆盖 > 全局 > 内置；tombstone/类型不符视为无覆盖）。scope 传 SN 原文（不带 device- 前缀）。 */
+  private effectiveRaw(scope: string, key: string, accept: (v: unknown) => boolean): unknown {
     const spec = CONFIG_KEYS[key];
     if (!spec) throw new Error(`unknown config key: ${key}`);
-    let value: number = spec.builtinDefault;
+    let value: unknown = spec.builtinDefault;
     for (const s of [GLOBAL_SCOPE, scope]) {
       const row = this.db
         .prepare(`SELECT value_json FROM device_config WHERE scope = ? AND key = ?`)
         .get(s, key) as { value_json: string } | undefined;
       if (!row) continue;
       const parsed = JSON.parse(row.value_json);
-      if (typeof parsed === 'number') value = parsed;
+      if (accept(parsed)) value = parsed;
     }
     return value;
+  }
+
+  getEffective(scope: string, key: string): number {
+    return this.effectiveRaw(scope, key, (v) => typeof v === 'number') as number;
+  }
+
+  /** bool 键专用（如 diagnostics.log_upload_enabled）：只认 boolean 值，其余回落内置 */
+  getEffectiveBool(scope: string, key: string): boolean {
+    return this.effectiveRaw(scope, key, (v) => typeof v === 'boolean') as boolean;
   }
 }
 

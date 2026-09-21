@@ -200,9 +200,23 @@ export async function verifyDeviceCredential(
   try {
     const { payload } = await jwtVerify(header.slice(7), new TextEncoder().encode(secret));
     if (payload.kind !== 'p003-device' || typeof payload.sub !== 'string') return null;
+    // 2026-09-16 川哥：后台删除设备 = 作废该 SN 此前签发的全部凭据（重加即新设备，须重新签发/认领）。
+    // 只在该 SN 有作废水位时才比对 iat：iat 必须严格晚于删除那一秒（JWT iat 只有秒精度，删除当秒签的一律算旧）；
+    // 无 iat 的老 token 视为 0 → 一并作废。查库失败按今天的行为放行并留痕（不静默）。
+    if (!credentialAcceptedByRevocation(payload.sub, typeof payload.iat === 'number' ? payload.iat : 0)) return null;
     return { sn: payload.sub };
   } catch {
     return null;
+  }
+}
+
+function credentialAcceptedByRevocation(sn: string, iatSec: number): boolean {
+  try {
+    const revokedThroughSec = deviceRegistryStore.credentialNotBeforeSec(sn);
+    return revokedThroughSec === null || iatSec > revokedThroughSec;
+  } catch (e) {
+    console.error(`[device-credential] revocation lookup failed, fail-open sn=${sn}: ${(e as Error).message}`);
+    return true;
   }
 }
 

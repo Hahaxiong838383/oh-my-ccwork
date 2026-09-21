@@ -42,7 +42,12 @@ export type PairingSessionRow = {
   source: PairingSessionSource;
   /** v3：代确认所用预授权的 created_at（真实 claim 成功时按它精确消费，幂等恢复/新预授权不误消费） */
   preauth_created_at: number | null;
+  /** 恢复合同（2026-09-17）：本会话真实 claim 的绑定结局 new / existing_binding_recovery；幂等恢复原样回显；老行 null */
+  binding_outcome: BindingOutcome | null;
 };
+
+/** 恢复合同：existing_binding_recovery = 同家长重绑且该 SN 此前签过凭据（设备曾持有凭据，本次是恢复）；其余 new */
+export type BindingOutcome = 'new' | 'existing_binding_recovery';
 
 /** v3（2026-09-06）：设备自报二维码三元组——只存 nonce hash + 已校验 pk，与 nonce 同寿命 */
 export type PairingAnnounceRow = {
@@ -145,6 +150,9 @@ class PairingStore {
       }
       if (!cols.some((c) => c.name === 'preauth_created_at')) {
         this.db.exec(`ALTER TABLE pairing_session ADD COLUMN preauth_created_at INTEGER`);
+      }
+      if (!cols.some((c) => c.name === 'binding_outcome')) {
+        this.db.exec(`ALTER TABLE pairing_session ADD COLUMN binding_outcome TEXT`);
       }
     } catch (err) {
       console.error(`[pairing-store] v3 列迁移失败(不阻断): ${(err as Error).message}`);
@@ -250,10 +258,10 @@ class PairingStore {
     return (this.db.prepare(`SELECT * FROM pairing_session WHERE session_id = ?`).get(sessionId) as PairingSessionRow) ?? null;
   }
 
-  markSessionClaimed(nonceString: string, brainState: 'ready' | 'initializing'): void {
+  markSessionClaimed(nonceString: string, brainState: 'ready' | 'initializing', bindingOutcome: BindingOutcome | null = null): void {
     this.db
-      .prepare(`UPDATE pairing_session SET claimed_at = ?, brain_state = ? WHERE nonce_hash = ?`)
-      .run(Date.now(), brainState, hashToken(nonceString));
+      .prepare(`UPDATE pairing_session SET claimed_at = ?, brain_state = ?, binding_outcome = ? WHERE nonce_hash = ?`)
+      .run(Date.now(), brainState, bindingOutcome, hashToken(nonceString));
   }
 
   // ───────── v3：announce（设备自报三元组）+ 后台预授权 ─────────

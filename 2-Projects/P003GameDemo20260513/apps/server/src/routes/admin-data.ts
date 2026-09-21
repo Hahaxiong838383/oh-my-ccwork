@@ -5,13 +5,14 @@ import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
 import { otaAdminRoute } from './ota.js';
 import { configAdminRoute } from './device-config.js';
+import { diagnosticsAdminRoute } from './diagnostics.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
 import { memoryItemStore } from '../memory-item-store.js';
 import { canWrite, getTokenUser, isAdminRole, isValidToken } from './auth.js';
 import { readFileSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
-import { configStore } from '../config-store.js';
+import { configStore, RELEASE_TODO_OWNERS, RELEASE_TODO_STATUSES, type ReleaseTodoOwner, type ReleaseTodoStatus } from '../config-store.js';
 import { resolveFirstTurnPolicy, FIRST_TURN_POLICIES, FIRST_TURN_POLICY_FLAG } from './device-session.js';
 import { resetAllQuotas } from '../guard.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
@@ -20,11 +21,12 @@ import { validateDeviceSn } from '../device-sn.js';
 import { buildDeviceLayers, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { AI_SAFETY_BASELINE } from '../ai-literacy.js';
 import {
-  hotwordStore,
-  validateWords,
-  subsetWarnings,
-  KIND_TO_ENV,
   HOTWORD_KINDS,
+  KIND_TO_ENV,
+  backchannelConflicts,
+  hotwordStore,
+  subsetWarnings,
+  validateWords,
   type HotwordKind,
 } from '../hotword-store.js';
 import { callHotwordChannel } from '../hotword-channel.js';
@@ -36,6 +38,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { getHostsStatus } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
@@ -61,7 +64,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -248,6 +251,7 @@ adminDataRoute.get('/devices/pairing/pending', (c) => {
         status: device?.status ?? null,
         note: device?.note ?? '',
         parent_phone: device?.parent_account_id ? (accountStore.findAccount(device.parent_account_id)?.phone ?? null) : null,
+        parent_bound: Boolean(device?.parent_account_id), // 恢复合同（2026-09-17）：已绑定的待认领 = 等原家长扫码 / 一键恢复
         announced_at: a.announced_at,
         expires_at: a.expires_at,
         expires_in_s: Math.max(0, Math.ceil((a.expires_at - now) / 1000)),
@@ -412,7 +416,14 @@ adminDataRoute.delete('/devices/:sn', (c) => {
     const sn = c.req.param('sn').trim();
     const deleted = deviceRegistryStore.remove(sn);
     if (!deleted) return c.json({ ok: false, error: '设备不在台账中' }, 404);
-    return c.json({ ok: true });
+    // 2026-09-16 川哥：删除 = 变回新设备。此刻之前签发的全部凭据作废（独立水位表，重加台账不清），
+    // 设备回网拿旧凭据一律 401，必须重新签发或走预授权认领。token 原文不入日志。
+    const by = opUser(c);
+    const revokedThroughSec = deviceRegistryStore.revokeCredentials(sn, by, 'admin_delete');
+    // 水位是秒级，含删除当秒：iat ≤ 水位的凭据全部作废 → 对外口径「在这一刻之前签发的都已作废」= 水位下一秒起点
+    const revokedBeforeMs = (revokedThroughSec + 1) * 1000;
+    console.log(`[admin-devices] device removed sn=${sn} by=${by} credentials revoked before=${new Date(revokedBeforeMs).toISOString()}`);
+    return c.json({ ok: true, credentials_revoked_before_ms: revokedBeforeMs });
   } catch (error) {
     return c.json({ ok: false, error: '删除设备失败，请稍后重试' }, 500);
   }
@@ -1351,8 +1362,76 @@ function oneshotView() {
     allowlist_count: (process.env.ONESHOT_FIRST_TURN_SN_ALLOW || '').split(',').map((x) => x.trim()).filter(Boolean).length,
     release: readReleaseJson(),
     caveat: ONESHOT_ROLLBACK_CAVEAT,
+    // 下一版待办（2026-09-14 川哥）：全量下发（含已完成/已放弃，前端折叠），每条带来源与操作人
+    todos: configStore.listTodos({ includeClosed: true }),
   };
 }
+const TODO_TEXT_MAX = 300;
+const TODO_SOURCE_MAX = 200;
+const TODO_TARGET_MAX = 20;
+type TodoPatch = Partial<{ target: string; text: string; source: string; owner: ReleaseTodoOwner; status: ReleaseTodoStatus }>;
+/** 待办字段校验（真防线）：文本必填 ≤300、来源 ≤200、目标版本 ≤20、owner/status 枚举。 */
+function parseTodoBody(body: Record<string, unknown>, requireText: boolean): { ok: true; patch: TodoPatch } | { ok: false; error: string } {
+  const patch: TodoPatch = {};
+  if (body.text !== undefined || requireText) {
+    const text = typeof body.text === 'string' ? body.text.trim() : '';
+    if (!text) return { ok: false, error: 'text 必填' };
+    if (text.length > TODO_TEXT_MAX) return { ok: false, error: `text 过长(>${TODO_TEXT_MAX} 字)` };
+    patch.text = text;
+  }
+  if (body.source !== undefined) {
+    if (typeof body.source !== 'string') return { ok: false, error: 'source 必须是字符串' };
+    if (body.source.length > TODO_SOURCE_MAX) return { ok: false, error: `source 过长(>${TODO_SOURCE_MAX} 字)` };
+    patch.source = body.source;
+  }
+  if (body.target !== undefined) {
+    if (typeof body.target !== 'string' || body.target.trim().length > TODO_TARGET_MAX) return { ok: false, error: `target 必须是 ≤${TODO_TARGET_MAX} 字的字符串` };
+    patch.target = body.target;
+  }
+  if (body.owner !== undefined) {
+    if (!(RELEASE_TODO_OWNERS as readonly string[]).includes(String(body.owner))) return { ok: false, error: `owner 必须是 ${RELEASE_TODO_OWNERS.join('|')}` };
+    patch.owner = body.owner as ReleaseTodoOwner;
+  }
+  if (body.status !== undefined) {
+    if (!(RELEASE_TODO_STATUSES as readonly string[]).includes(String(body.status))) return { ok: false, error: `status 必须是 ${RELEASE_TODO_STATUSES.join('|')}` };
+    patch.status = body.status as ReleaseTodoStatus;
+  }
+  return { ok: true, patch };
+}
+adminDataRoute.get('/oneshot/todos', (c) =>
+  c.json({ ok: true, todos: configStore.listTodos({ includeClosed: c.req.query('all') === '1' }) }),
+);
+adminDataRoute.post('/oneshot/todos', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const v = parseTodoBody(body, true);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const by = operatorOf(c);
+  const todo = configStore.addTodo({ target: v.patch.target, text: v.patch.text!, source: v.patch.source, owner: v.patch.owner }, by);
+  console.log(`[admin-oneshot] todo added id=${todo.id} target=${todo.target} owner=${todo.owner} by=${by} text=${JSON.stringify(todo.text.slice(0, 60))}`);
+  return c.json({ ok: true, todo, todos: configStore.listTodos({ includeClosed: true }) });
+});
+adminDataRoute.patch('/oneshot/todos/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ ok: false, error: 'id 非法' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const v = parseTodoBody(body, false);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  if (Object.keys(v.patch).length === 0) return c.json({ ok: false, error: '没有可更新的字段' }, 400);
+  const by = operatorOf(c);
+  const todo = configStore.updateTodo(id, v.patch, by);
+  if (!todo) return c.json({ ok: false, error: '待办不存在' }, 404);
+  console.log(`[admin-oneshot] todo updated id=${id} status=${todo.status} by=${by} fields=${Object.keys(v.patch).join('+')}`);
+  return c.json({ ok: true, todo, todos: configStore.listTodos({ includeClosed: true }) });
+});
+adminDataRoute.delete('/oneshot/todos/:id', (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ ok: false, error: 'id 非法' }, 400);
+  const by = operatorOf(c);
+  const todo = configStore.updateTodo(id, { status: 'dropped' }, by); // 软删：来源永远可追
+  if (!todo) return c.json({ ok: false, error: '待办不存在' }, 404);
+  console.log(`[admin-oneshot] todo dropped id=${id} by=${by}`);
+  return c.json({ ok: true, todo, todos: configStore.listTodos({ includeClosed: true }) });
+});
 function operatorOf(c: { req: { header: (n: string) => string | undefined } }): string {
   const header = c.req.header('authorization');
   const tok = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
@@ -1399,7 +1478,7 @@ adminDataRoute.put('/worker-race', async (c) => {
   const force = body.force === true;
   if (!force) {
     const rooms = await fetchLiveKitRooms();
-    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制应用' }, 409);
     if (rooms.device_rooms > 0)
       return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
   }
@@ -1563,7 +1642,7 @@ adminDataRoute.put('/worker-voice', async (c) => {
   const force = body.force === true;
   if (!force) {
     const rooms = await fetchLiveKitRooms();
-    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制应用' }, 409);
     if (rooms.device_rooms > 0)
       return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
   }
@@ -1776,6 +1855,14 @@ adminDataRoute.get('/worker-stats', async (c) => {
   });
 });
 
+// 服务器状态（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）：
+// 三台机同一份只读脚本 ops/host-stats.py 聚合；server 30s 共享缓存；?fresh=1 强制重采（≥5s 间隔）。
+// 单台失败只降级该台（ok:false），实现见 src/hosts-status.ts。
+adminDataRoute.get('/hosts-status', async (c) => {
+  const fresh = c.req.query('fresh') === '1';
+  return c.json(await getHostsStatus({ fresh }));
+});
+
 // Session 签发流水（按 SN 可选过滤 + offset/limit 分页；只含元数据，无任何 token）
 adminDataRoute.get('/device-sessions', (c) => {
   try {
@@ -1851,7 +1938,7 @@ adminDataRoute.post('/reset-quota', (c) => {
 adminDataRoute.get('/hotwords', async (c) => {
   const live = await callHotwordChannel({ action: 'status' }, 15_000);
   const kinds: Record<string, unknown> = {};
-  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [], device_asr: [] };
+  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [], device_asr: [], backchannel: [] };
   for (const kind of HOTWORD_KINDS) {
     const envKey = KIND_TO_ENV[kind];
     const envVal = live.ok ? String((live.env as Record<string, string>)?.[envKey] ?? '') : '';
@@ -1885,6 +1972,13 @@ adminDataRoute.put('/hotwords/:kind/draft', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { words?: unknown; note?: unknown };
   const v = validateWords(kind, body.words);
   if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  if (kind === 'backchannel') {
+    // 真防线：附和词不能与打断语/退出词（已发布 ∪ 草稿）重叠——同一个词不能既是急停又是附和
+    const union = (k: HotwordKind): string[] => [...(hotwordStore.publishedOf(k)?.words ?? []), ...(hotwordStore.draftOf(k)?.words ?? [])];
+    const conflicts = backchannelConflicts(v.words, { interrupt: union('interrupt'), exit: union('exit') });
+    if (conflicts.length > 0)
+      return c.json({ ok: false, error: `「${conflicts.join('」「')}」已在打断语/退出词表中，不能同时作为附和词` }, 400);
+  }
   const header = c.req.header('authorization');
   const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
@@ -1926,7 +2020,7 @@ adminDataRoute.post('/hotwords/publish', async (c) => {
   if (!force) {
     const rooms = await fetchLiveKitRooms();
     if (rooms === null)
-      return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制发布' }, 409);
+      return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制发布' }, 409);
     if (rooms.device_rooms > 0)
       return c.json(
         { ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，发布会中断；等待结束或强制发布`, active_rooms: rooms.device_rooms },
@@ -2033,3 +2127,5 @@ adminDataRoute.route('/ota', otaAdminRoute);
 
 // 设备运行配置（admin 专属，正则已含 /device-config；实现在 routes/device-config.ts）
 adminDataRoute.route('/device-config', configAdminRoute);
+// 设备诊断日志后台（2026-09-19，合同 CC 诊断日志复核回执 §2 第 3 条；admin 专属正则已含 diagnostics）
+adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);

@@ -107,7 +107,9 @@ export async function bindSn(sn: string): Promise<BindSnResult> {
 // confirm：把设备屏二维码里的 SN+nonce+pk 与当前家长账号一次性关联；
 // status：轮询设备 claim 进度。结构化错误不抛（页面按 code 分支文案）。
 
-export type ConfirmResult = { ok: boolean; session_id?: string; error?: string };
+// relation（恢复合同 2026-09-17）：owner = 这台设备本来就绑在当前账号（凭据丢失后重新扫码 = 恢复）；new = 首次绑定。
+// error：sn_bound_by_other（409，已绑其他家庭，服务端不建会话）/ sn_not_available（404，台账外或停用）。
+export type ConfirmResult = { ok: boolean; session_id?: string; error?: string; relation?: 'new' | 'owner' };
 export async function confirmPairing(sn: string, nonce: string, pk: string): Promise<ConfirmResult> {
   const token = getToken();
   const res = await fetch('/api/parent/pairing/confirm', {
@@ -173,7 +175,7 @@ export function getWeeklyReport(publicId: string): Promise<{ ok: boolean; data: 
 }
 
 export type PairingState = 'pending' | 'bound' | 'initializing' | 'expired';
-export async function getPairingStatus(sessionId: string): Promise<{ ok: boolean; state?: PairingState; sn?: string }> {
+export async function getPairingStatus(sessionId: string): Promise<{ ok: boolean; state?: PairingState; sn?: string; binding_outcome?: string }> {
   const token = getToken();
   const res = await fetch(`/api/parent/pairing/status?session_id=${encodeURIComponent(sessionId)}`, {
     headers: { authorization: `Bearer ${token}` },
@@ -182,5 +184,5 @@ export async function getPairingStatus(sessionId: string): Promise<{ ok: boolean
     clearAuthToken();
     throw new Error('unauthorized');
   }
-  return (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; state?: PairingState; sn?: string };
+  return (await res.json().catch(() => ({ ok: false }))) as { ok: boolean; state?: PairingState; sn?: string; binding_outcome?: string };
 }

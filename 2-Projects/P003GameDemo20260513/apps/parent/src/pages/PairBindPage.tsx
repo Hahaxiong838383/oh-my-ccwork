@@ -1,6 +1,8 @@
 // 配网绑定页（SoftAP 两阶段的阶段 B 落点，联调合同 v4 + codex 开工 prompt 2026-08-22）。
 // 入口：设备屏 URL 二维码 → #/pair?v=2&sn=<SN>&nonce=<b64url>&pk=<b64url>。
 // 职责：校验参数 → 确认绑定（confirm 固定三元组）→ 轮询设备 claim 进度。
+// 恢复合同（2026-09-17）：confirm 返回 relation=owner 时按「恢复绑定」文案（设备本来就绑在本账号，凭据丢失后重扫）；
+// 409 sn_bound_by_other（已绑其他家庭）/ 404 sn_not_available 当场给结论，不再空等到二维码过期。
 // 红线：本页不读取/不上传/不保存家庭 WiFi；不调用 Web Bluetooth。
 import { useEffect, useRef, useState } from 'react';
 import { confirmPairing, getPairingStatus, type PairingState } from '../api';
@@ -24,6 +26,8 @@ type Phase = 'confirm' | 'waiting' | 'bound' | 'initializing' | 'expired' | 'err
 export default function PairBindPage({ params, onDone }: { params: PairParams; onDone: () => void }) {
   const [phase, setPhase] = useState<Phase>('confirm');
   const [errMsg, setErrMsg] = useState('');
+  const [errTitle, setErrTitle] = useState('二维码无效');
+  const [relation, setRelation] = useState<'new' | 'owner' | null>(null);
   const [busy, setBusy] = useState(false);
   const sessionRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,10 +59,20 @@ export default function PairBindPage({ params, onDone }: { params: PairParams; o
       const r = await confirmPairing(params.sn, params.nonce, params.pk);
       if (r.ok && r.session_id) {
         sessionRef.current = r.session_id;
+        setRelation(r.relation ?? null);
         setPhase('waiting');
         timerRef.current = setTimeout(poll, 2000);
+      } else if (r.error === 'sn_bound_by_other') {
+        setPhase('error');
+        setErrTitle('设备已绑定其他家庭');
+        setErrMsg('这台设备已绑定在另一个账号上，请由原绑定家长扫码恢复；如需换绑，请联系客服处理');
+      } else if (r.error === 'sn_not_available') {
+        setPhase('error');
+        setErrTitle('设备不存在或未激活');
+        setErrMsg('请核对设备底部编号；仍有问题请联系客服');
       } else if (r.error === 'invalid_pk' || r.error === 'bad_request') {
         setPhase('error');
+        setErrTitle('二维码无效');
         setErrMsg('二维码无效或已损坏，请在设备上点「重新生成」后再扫一次');
       } else {
         setErrMsg('绑定请求失败，请重试');
@@ -71,10 +85,10 @@ export default function PairBindPage({ params, onDone }: { params: PairParams; o
 
   return (
     <div className="flex h-full flex-col bg-page-bg px-5 pt-14">
-      <div className="mb-6 text-center text-xl font-bold text-text-main">绑定设备</div>
+      <div className="mb-6 text-center text-xl font-bold text-text-main">{relation === 'owner' ? '恢复绑定' : '绑定设备'}</div>
 
       {!versionOk || phase === 'error' ? (
-        <CenterCard emoji="⚠️" title={!versionOk ? '二维码版本不支持' : '二维码无效'}
+        <CenterCard emoji="⚠️" title={!versionOk ? '二维码版本不支持' : errTitle}
           desc={!versionOk ? '请先在设备上完成系统更新，再重新生成二维码' : errMsg || '请在设备上重新生成二维码后再试'} />
       ) : phase === 'confirm' ? (
         <div className="rounded-2xl bg-white p-5 shadow-card">
@@ -90,8 +104,10 @@ export default function PairBindPage({ params, onDone }: { params: PairParams; o
           </button>
         </div>
       ) : phase === 'waiting' ? (
-        <CenterCard emoji="📶" title="等待设备连接…"
-          desc="设备正在完成绑定，请保持设备开机联网。此过程通常在几秒内完成" spinning />
+        <CenterCard emoji="📶" title={relation === 'owner' ? '正在恢复设备连接…' : '等待设备连接…'}
+          desc={relation === 'owner'
+            ? '设备已绑定在你的账号，正在重新下发连接凭据，请保持设备开机联网。此过程通常在几秒内完成'
+            : '设备正在完成绑定，请保持设备开机联网。此过程通常在几秒内完成'} spinning />
       ) : phase === 'initializing' ? (
         <CenterCard emoji="🧠" title="设备已连接" desc="个性化服务初始化中，稍等片刻即可使用" spinning />
       ) : phase === 'expired' ? (
@@ -99,8 +115,8 @@ export default function PairBindPage({ params, onDone }: { params: PairParams; o
       ) : (
         <div className="flex flex-col items-center pt-8">
           <div className="mb-3 text-5xl">🎉</div>
-          <div className="mb-1 text-lg font-bold text-text-main">绑定成功</div>
-          <div className="mb-8 text-sm text-text-muted">设备 {maskSn(params.sn)} 已加入你的账号</div>
+          <div className="mb-1 text-lg font-bold text-text-main">{relation === 'owner' ? '已恢复绑定' : '绑定成功'}</div>
+          <div className="mb-8 text-sm text-text-muted">设备 {maskSn(params.sn)} {relation === 'owner' ? '已恢复到你的账号，原有档案与记忆不变' : '已加入你的账号'}</div>
           <button type="button" onClick={onDone}
             className="h-12 w-full rounded-2xl bg-brand-orange font-bold text-white shadow-card">开始使用</button>
         </div>

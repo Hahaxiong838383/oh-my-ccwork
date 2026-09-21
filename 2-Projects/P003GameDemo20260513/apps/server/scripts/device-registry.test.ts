@@ -332,6 +332,54 @@ await t('G2 台账手工签发后台账优先 credential_source=registry；未 c
 
 // ═══ F. 日志敏感扫描 ═══
 
+// ═══ G. 删除 = 作废旧凭据（2026-09-16 川哥：删了就是新设备，必须重新签发/认领） ═══
+
+const SN_REV = 'BJP00326060100200031'; // 本文件其它段未用过的 SN（200003/007/009/011/012 已占）
+let revToken1 = '';
+let revToken2 = '';
+
+await t('G1 添加 + 签发 → 凭据可用（前置正锚）', async () => {
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_REV, note: '作废测试机' })).status, 200);
+  const r = await adminReq(adminToken, 'POST', `/devices/${SN_REV}/credential`, { days: 30 });
+  assert.equal(r.status, 200);
+  revToken1 = ((await r.json()) as { token: string }).token;
+  assert.ok(revToken1 && !logLines.join('\n').includes(revToken1), '签发失败或 token 进了日志');
+  assert.equal((await callSession(revToken1, SN_REV)).status, 200);
+});
+
+await t('G2 DELETE 后：旧凭据 401、无 iat 老 token 也 401，响应带作废水位', async () => {
+  const r = await adminReq(adminToken, 'DELETE', `/devices/${SN_REV}`);
+  assert.equal(r.status, 200);
+  const j = (await r.json()) as { credentials_revoked_before_ms?: number };
+  assert.ok(typeof j.credentials_revoked_before_ms === 'number' && j.credentials_revoked_before_ms > 0, '响应缺作废水位');
+  assert.equal((await callSession(revToken1, SN_REV)).status, 401, '旧凭据仍被放行');
+  assert.equal((await callSession(await deviceCred(SN_REV), SN_REV)).status, 401, '无 iat 老 token 仍被放行');
+});
+
+await t('G3 重新添加 = 新设备：旧凭据仍 401，重新签发的新凭据 200', async () => {
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_REV, note: '重加' })).status, 200);
+  assert.equal((await callSession(revToken1, SN_REV)).status, 401, '重加后旧凭据复活');
+  // 水位含删除当秒（iat 秒精度）：新凭据必须签在下一秒起，等 1.1 s 再签（真实操作里删除→重签总隔着人手几秒）
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  const r = await adminReq(adminToken, 'POST', `/devices/${SN_REV}/credential`, { days: 30 });
+  assert.equal(r.status, 200);
+  revToken2 = ((await r.json()) as { token: string }).token;
+  assert.notEqual(revToken2, revToken1);
+  assert.equal((await callSession(revToken2, SN_REV)).status, 200, '新签凭据被误拒（水位秒级比对出错）');
+});
+
+await t('G4 负锚：从未删除过的设备，无 iat token 照常放行（存量真机不受影响）', async () => {
+  assert.equal(deviceRegistryStore.credentialNotBeforeSec(SN_DB), null);
+  assert.equal((await callSession(credDb, SN_DB)).status, 200);
+});
+
+await t('G5 删除审计日志命中且不含 JWT', async () => {
+  assert.ok(
+    logLines.some((l) => l.includes('[admin-devices] device removed') && l.includes(`sn=${SN_REV}`) && l.includes('credentials revoked before=')),
+    '删除审计日志缺失',
+  );
+});
+
 await t('F1 路由日志无 JWT + 签发审计正锚命中', async () => {
   const all = logLines.join('\n');
   assert.ok(!all.includes('eyJ'), '日志出现疑似 JWT');

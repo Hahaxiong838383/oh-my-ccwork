@@ -6,7 +6,7 @@
 //! 时 Availability 直接回 unavailable。
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -25,31 +25,60 @@ use crate::job;
 const ATTR_AGENT_NAME: &str = "lk.agent.name";
 const PING_INTERVAL: Duration = Duration::from_secs(30);
 const STATUS_INTERVAL: Duration = Duration::from_secs(30);
+/// /agent 重连：自上次注册成功起连续失败超过此数才放弃（退出交给 systemd Restart 拉起）。
+/// LiveKit 持续不可达时每次尝试 ≈ 连接超时 + 退避，走到放弃约需 25–30 min，此时房间本就已死。
+const MAX_CONSECUTIVE_RECONNECT_FAILURES: u32 = 12;
+const RECONNECT_BACKOFF_MAX_SECS: u32 = 10;
 
 pub struct WorkerState {
     pub active_jobs: AtomicUsize,
+    /// 自上次注册成功（收到 RegisterWorkerResponse）起的连续 /agent 连接失败数。
+    /// 2026-09-16 事故：旧计数只在「服务端干净关闭」时清零、重连成功不清零，09-12 LiveKit 机下电
+    /// 25 min 攒下 12 次后一直背着，09-16 nginx 自动升级重启硬切 1 次即凑满 13 次 → 进程退出。
+    pub reconnect_failures: AtomicU32,
+}
+
+/// 记一次 /agent 连接失败；返回自上次注册成功起的连续失败数。
+pub(crate) fn note_reconnect_failure(state: &WorkerState) -> u32 {
+    state.reconnect_failures.fetch_add(1, Ordering::SeqCst) + 1
+}
+
+/// 注册成功 → 连续失败数清零；返回清零前的值（>0 说明这次是断线后重连成功）。
+pub(crate) fn note_registered(state: &WorkerState) -> u32 {
+    state.reconnect_failures.swap(0, Ordering::SeqCst)
+}
+
+pub(crate) fn should_give_up(consecutive_failures: u32) -> bool {
+    consecutive_failures > MAX_CONSECUTIVE_RECONNECT_FAILURES
+}
+
+/// 退避：2s × 连续失败数，封顶 10s（与改前一致）。
+pub(crate) fn reconnect_backoff(consecutive_failures: u32) -> Duration {
+    Duration::from_secs(u64::from((consecutive_failures * 2).clamp(1, RECONNECT_BACKOFF_MAX_SECS)))
 }
 
 pub async fn run(config: Config) -> Result<()> {
-    let state = Arc::new(WorkerState { active_jobs: AtomicUsize::new(0) });
-    let mut retry: u32 = 0;
+    let state = Arc::new(WorkerState {
+        active_jobs: AtomicUsize::new(0),
+        reconnect_failures: AtomicU32::new(0),
+    });
     loop {
         match run_connection(&config, state.clone()).await {
             Ok(()) => {
                 info!("worker connection closed");
-                retry = 0;
+                note_registered(&state);
             }
             Err(e) => {
-                error!(error = %e, "worker connection failed");
-                retry += 1;
-                if retry > 12 {
-                    bail!("连续 {} 次连接失败,放弃: {}", retry, e);
+                let n = note_reconnect_failure(&state);
+                error!(error = %e, consecutive_failures = n, "worker connection failed");
+                if should_give_up(n) {
+                    bail!("自上次注册成功起连续 {n} 次连接失败,放弃(交给 systemd 拉起): {e}");
                 }
             }
         }
-        let backoff = u64::from((retry * 2).clamp(1, 10));
-        tokio::time::sleep(Duration::from_secs(backoff)).await;
-        info!("reconnecting to livekit /agent ...");
+        let n = state.reconnect_failures.load(Ordering::SeqCst);
+        tokio::time::sleep(reconnect_backoff(n)).await;
+        info!(consecutive_failures = n, "reconnecting to livekit /agent ...");
     }
 }
 
@@ -114,6 +143,10 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
         server = ?reg.server_info.as_ref().map(|s| s.version.clone()),
         "registered worker"
     );
+    let recovered_after = note_registered(&state);
+    if recovered_after > 0 {
+        info!(failures_before = recovered_after, "reconnected & registered, consecutive failure count reset");
+    }
 
     // job task → 主循环的出站消息通道
     let (msg_tx, mut msg_rx) = tokio::sync::mpsc::channel::<proto::WorkerMessage>(64);
@@ -293,5 +326,58 @@ mod tests {
             panic!("wrong variant");
         };
         assert!(!a.available);
+    }
+
+    fn fresh_state() -> WorkerState {
+        WorkerState { active_jobs: AtomicUsize::new(0), reconnect_failures: AtomicU32::new(0) }
+    }
+
+    /// 2026-09-16 事故回放：09-12 断网 12 次失败 → 第 12 次重连注册成功 → 三天后 nginx 重启再失败 1 次。
+    /// 改前：累计 13 次 → 放弃退出；改后：注册成功已清零，这 1 次只是第 1 次，必须继续重连。
+    #[test]
+    fn incident_20260916_reconnect_after_registration_must_not_give_up() {
+        let st = fresh_state();
+        for _ in 0..12 {
+            let n = note_reconnect_failure(&st);
+            assert!(!should_give_up(n), "12 次以内不放弃 n={n}");
+        }
+        assert_eq!(note_registered(&st), 12, "注册成功应返回清零前的连续失败数");
+        assert_eq!(st.reconnect_failures.load(Ordering::SeqCst), 0);
+        let n = note_reconnect_failure(&st);
+        assert_eq!(n, 1);
+        assert!(!should_give_up(n), "注册成功后再失败 1 次不得放弃（改前会 13 次退出）");
+        assert_eq!(reconnect_backoff(n), Duration::from_secs(2));
+    }
+
+    /// 真正连续 13 次（中间从未注册成功）才放弃 —— 放弃语义保留，只是「连续」名副其实。
+    #[test]
+    fn thirteen_consecutive_failures_without_registration_gives_up() {
+        let st = fresh_state();
+        for _ in 0..12 {
+            let n = note_reconnect_failure(&st);
+            assert!(!should_give_up(n));
+        }
+        let last = note_reconnect_failure(&st);
+        assert_eq!(last, 13);
+        assert!(should_give_up(last));
+    }
+
+    /// 干净关闭（Ok 路径）同样清零，与改前语义一致。
+    #[test]
+    fn clean_close_resets_counter_too() {
+        let st = fresh_state();
+        note_reconnect_failure(&st);
+        note_reconnect_failure(&st);
+        assert_eq!(note_registered(&st), 2);
+        assert_eq!(note_registered(&st), 0, "已清零时再清零返回 0（非重连恢复，不打日志）");
+    }
+
+    #[test]
+    fn backoff_table_unchanged() {
+        assert_eq!(reconnect_backoff(0), Duration::from_secs(1));
+        assert_eq!(reconnect_backoff(1), Duration::from_secs(2));
+        assert_eq!(reconnect_backoff(4), Duration::from_secs(8));
+        assert_eq!(reconnect_backoff(5), Duration::from_secs(10));
+        assert_eq!(reconnect_backoff(12), Duration::from_secs(10));
     }
 }

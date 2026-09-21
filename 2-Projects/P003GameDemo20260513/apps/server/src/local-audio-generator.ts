@@ -5,9 +5,10 @@ import { relationStateStore, familiarityTier, personaLocalAudioEnabled } from '.
 import { traitStore, TRAIT_DIMS, TRAIT_LABELS, TRAIT_BASELINE, type TraitDim } from './trait-store.js';
 import { getStyleTemplate } from './style-template.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
-import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot } from './local-audio-store.js';
+import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot, type AnyAudioSlot } from './local-audio-store.js';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
 import { activeDeviceReplyKeep } from './local-audio-device-reply.js';
+import { activeG1SettingsKeep } from './local-audio-g1-settings.js';
 import { configStore } from './config-store.js';
 
 /**
@@ -360,11 +361,17 @@ export function estimateRevisionBytes(poolBySlot: Record<string, number[]>, perS
   return total;
 }
 
+/** 冻结槽（设备回复十八条 + G1 设置引导三句）：只搬运**已 active** 的条目——staging 绝不在这里自动提为 active，
+ *  发布必须显式走各自脚本（新的不可变 revision）。日常再生成的 keep 与体积预检都从这里取，少接一处就会在下一次换新时把冻结槽丢掉。 */
+export function carriedFrozenKeep(accountId: string): Array<{ slot: AnyAudioSlot; id: string; bytes: number }> {
+  return [...activeDeviceReplyKeep(accountId), ...activeG1SettingsKeep(accountId)];
+}
+
 function sizePrecheck(accountId: string): { est: number; over: boolean } {
   const pool: Record<string, number[]> = {};
   for (const slot of LOCAL_AUDIO_SLOTS) pool[slot] = localAudioStore.listRecentBytesBySlot(accountId, slot, PUBLISH_ITEMS_PER_SLOT);
-  // 设备回复槽（已 active 的 18 条）随套搬运，体积一并计入
-  const est = estimateRevisionBytes(pool, PUBLISH_ITEMS_PER_SLOT) + activeDeviceReplyKeep(accountId).reduce((a, k) => a + k.bytes, 0);
+  // 冻结槽（已 active 的十八条 + 三句）随套搬运，体积一并计入
+  const est = estimateRevisionBytes(pool, PUBLISH_ITEMS_PER_SLOT) + carriedFrozenKeep(accountId).reduce((a, k) => a + k.bytes, 0);
   return { est, over: est > REVISION_CAP_BYTES };
 }
 
@@ -649,9 +656,9 @@ export async function runLocalAudioForAccount(
       return { ok: false, trigger: triggerText, detail: `slots_short:${short.map((r) => r.slot).join(',')}` };
     }
 
-    // 设备回复槽（合同 v3.1 §5）：只搬运**已 active** 的条目——staging 里的十八条绝不在这里自动提为 active，
-    // 发布必须显式走 scripts/local-audio-device-reply.ts --publish（新的不可变 revision）
-    const deviceReplyKeep = activeDeviceReplyKeep(accountId);
+    // 冻结槽（设备回复十八条 合同 v3.1 §5 + G1 设置引导三句 2026-09-17）：只搬运**已 active** 的条目——staging 绝不在这里
+    // 自动提为 active，发布必须显式走 scripts/local-audio-device-reply.ts / local-audio-g1-settings.ts publish（新的不可变 revision）
+    const deviceReplyKeep = carriedFrozenKeep(accountId);
     // revision 总量门 ≤5MiB（WAV 合同增量 §2.2）：超限不发布（超大套宁可保持旧套）
     // 合同 §3.3.4：按去重后的 clip id 计总量（同一条目跨槽复用只算一次，与 manifest 一致）
     const seenIds = new Set<string>();

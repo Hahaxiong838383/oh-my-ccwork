@@ -6,7 +6,7 @@ import {
 } from './relation-state-store.js';
 import { traitStore, TRAIT_BASELINE, isLsmQualifyingUtterance } from './trait-store.js';
 import { conversationStore } from './conversation-store.js';
-import { getStyleTemplate } from './style-template.js';
+import { CONTENT_LENGTH_EXEMPTION, getStyleTemplate } from './style-template.js';
 import { stylePoolStore } from './style-pool-store.js';
 import { childInsightStore } from './child-insight-store.js';
 import type { AuthContext } from './auth-jwt.js';
@@ -286,6 +286,9 @@ function buildChildMemoryBlock(
     (traitLine ? '相处倾向只影响表达方式的自然选择(多讲点还是简洁点/要不要用故事),不复述数值,不刻意表演。' : '') +
     // P0 风格模板：家长显式设定，优先级高于相处倾向的自然选择；固定常量文本（无用户输入）。
     (styleTemplateRule ? styleTemplateRule + '风格是表达习惯不是台本:自然体现,不复述这段设定,安全与事实准确永远优先。' : '') +
+    // 内容型长输出豁免（2026-09-14）：只要注入了风格模板或话语量特质，就紧跟其后声明「长度由内容决定」——
+    // 放在两者之后是为了 recency 压过「不超过两句/讲完即收」；两者都没有时不注入（基座故事规则已够）。
+    ((traitLine || styleTemplateRule) ? CONTENT_LENGTH_EXEMPTION : '') +
     (narrative ? '心里的小笔记是你的内心背景,自然流露,不逐条复述。' : '') +
     (episodic && episodic.hasConcerns
       ? '值得关心的事:仅当时机相关(时间就是今天/已过去,或孩子主动提起)才像朋友一样自然问起,不查岗式追问,同一件事问过就好。'

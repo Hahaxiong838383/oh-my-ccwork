@@ -19,7 +19,11 @@
     "test:pairing": "NODE_OPTIONS=--experimental-sqlite tsx scripts/pairing.test.ts",
     "test:interests": "NODE_OPTIONS=--experimental-sqlite tsx scripts/interests.test.ts",
     "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts",
-    "test:oneshot-admin": "NODE_OPTIONS=--experimental-sqlite tsx scripts/oneshot-admin.test.ts"
+    "test:oneshot-admin": "NODE_OPTIONS=--experimental-sqlite tsx scripts/oneshot-admin.test.ts",
+    "test:story-length": "NODE_OPTIONS=--experimental-sqlite tsx scripts/story-length-exemption.test.ts",
+    "test:release-todo": "NODE_OPTIONS=--experimental-sqlite tsx scripts/release-todo.test.ts",
+    "test:hosts-status": "NODE_OPTIONS=--experimental-sqlite tsx scripts/hosts-status.test.ts",
+    "test:diaglog": "NODE_OPTIONS=--experimental-sqlite tsx scripts/diagnostics.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",
