@@ -65,6 +65,15 @@ struct NativeSystemCursorImage: Equatable {
     private var windows: [(CGWindowID, CGRect)] = []
     private var knownSystemCursorWindowIDs = Set<CGWindowID>()
     private var cursorImages = [NativeSystemCursorImage]()
+    private(set) var physicalInputSuspended = false
+
+    /// A workbench password sheet owns physical input, while scripted CDP input
+    /// may continue. Keep consumed gestures until their real releases arrive.
+    func setPhysicalInputSuspended(_ suspended: Bool) {
+        guard physicalInputSuspended != suspended else { return }
+        physicalInputSuspended = suspended
+        if suspended { leaveSurface() }
+    }
 
     func begin(displayID: CGDirectDisplayID, processID: pid_t, targetWindow: CGWindowID,
                outputWindow: CGWindowID, outputOwned: Bool = false) throws {
@@ -278,7 +287,7 @@ struct NativeSystemCursorImage: Equatable {
     }
 
     private func ownsSurface(at point: CGPoint) -> Bool {
-        Self.surfaceIsOwned(isActive: isActive, point: point, displayBounds: CGDisplayBounds(displayID),
+        Self.surfaceIsOwned(isActive: isActive && !physicalInputSuspended, point: point, displayBounds: CGDisplayBounds(displayID),
             frontProcessID: NSWorkspace.shared.frontmostApplication?.processIdentifier,
             processID: processID, targetWindow: targetWindow, windows: windows,
             outputOwned: outputOwned, outputWindowIsKey: NSApplication.shared.keyWindow?.windowNumber == Int(outputWindow))
@@ -376,7 +385,7 @@ struct NativeSystemCursorImage: Equatable {
                 // output placement: ordinary desktop/text-field Esc passes through.
                 let surfaceOwned = CGEvent(source: nil).map { ownsSurface(at: $0.location) } ?? false
                 let outputWindowIsKey = NSApplication.shared.keyWindow?.windowNumber == Int(outputWindow)
-                if Self.shouldConsumeEscape(outputOwned: outputOwned, surfaceOwned: surfaceOwned,
+                if !physicalInputSuspended, Self.shouldConsumeEscape(outputOwned: outputOwned, surfaceOwned: surfaceOwned,
                                             outputWindowIsKey: outputWindowIsKey) {
                     ownsEscape = true
                     stop(); onExit?("已按 Esc 暂停原鼠标校正，返回工作台。", true); return nil

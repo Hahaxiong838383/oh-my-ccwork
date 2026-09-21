@@ -31,7 +31,7 @@ import XCTest
             setWarpVisible: { _ in }, isWarpVisible: { false },
             applyCaptureConfiguration: { _ in XCTFail("记住外扩起点不应重启捕获") },
             updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, presentWindow: false,
-            historyStore: history, presetStore: PresetStore(defaults: defaults))
+            historyStore: history, presetStore: PresetStore(defaults: defaults), accessSession: authorizedWorkbenchAccessSession())
         return Fixture(panel: panel, defaults: defaults, domain: domain, history: history)
     }
 

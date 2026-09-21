@@ -228,7 +228,7 @@ final class LocalWarpTests: XCTestCase {
                 setWarpVisible: { _ in XCTFail("局部编辑不能改变输出显隐") }, isWarpVisible: { true },
                 applyCaptureConfiguration: { _ in XCTFail("局部编辑不能重启捕获") },
                 updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, presentWindow: false,
-                historyStore: history, presetStore: PresetStore(defaults: defaults)
+                historyStore: history, presetStore: PresetStore(defaults: defaults), accessSession: authorizedWorkbenchAccessSession()
             )
             editor = panel.showLocalEditor(presentWindow: false)
             panel.selectModule("local")

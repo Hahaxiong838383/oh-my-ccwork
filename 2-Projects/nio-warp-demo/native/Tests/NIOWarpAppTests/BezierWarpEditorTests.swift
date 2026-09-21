@@ -180,7 +180,7 @@ final class BezierWarpEditorTests: XCTestCase {
         let panel = ControlPanelController(renderer: renderer, store: store, configuration: original, sourceScreen: nil, outputScreen: nil,
             setWarpVisible: { _ in XCTFail("曲面编辑不应改变输出显隐") }, isWarpVisible: { true },
             applyCaptureConfiguration: { _ in XCTFail("曲面编辑不应重启捕获") }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, presentWindow: false,
-            historyStore: history, presetStore: PresetStore(defaults: defaults))
+            historyStore: history, presetStore: PresetStore(defaults: defaults), accessSession: authorizedWorkbenchAccessSession())
         defer { panel.close() }
         let editor = panel.showBezierEditor(presentWindow: false)
         editor.selectNode(6)

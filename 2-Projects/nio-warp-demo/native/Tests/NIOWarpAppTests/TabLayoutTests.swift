@@ -56,7 +56,7 @@ final class TabLayoutTests: XCTestCase {
             updateAABoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 AA") } },
             updateWarpBoundary: { _, _ in if !allowsGeometryCommit { XCTFail("切换模块不能更新 Warp") } }, presentWindow: false,
             historyStore: history, presetStore: PresetStore(defaults: defaults), protoPie: protoPie, mouseMapping: mouseMapping,
-            terminateApplication: terminateApplication
+            terminateApplication: terminateApplication, accessSession: authorizedWorkbenchAccessSession()
         )
         return (panel, defaults, suite)
     }

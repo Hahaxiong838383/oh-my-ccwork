@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0 (77)",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260921-075631Z-before-v100",
+  "sourceSHA256": "013020fb485968d9f37f20d01f7a9c71fb4f30a6b792f27ee2ada91741a5c00c",
+  "binarySHA256": "11dd663dbd344296a1e16c060d902d5c8dc6be23f60254c91d5bdf6aae5ee2d7",
+  "signatureRequirementMatched": true,
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "sourceDigestMatched": true,
+  "backupSHA256": {
+    "previous-app.zip": "1b4c3406f93a040de6ddcf4430ea6c0b2c4dd098e60e686c7478fd32c5cd9c36",
+    "preferences-before.plist": "56a193a4db6d368229c29b5210439fbb13f6bd21419b92109cd8c82026188a8c",
+    "source-files-before.tar.gz": "3f7fc2164eeb7fe5f9beab41c67af1c54e56294fa71306251033bd3b3c427420"
+  },
+  "updatedSourceFiles": [
+    "native/Sources/NIOWarpApp/NativeMouseInputCapture.swift",
+    "native/Sources/NIOWarpApp/MouseMappingPanel.swift",
+    "native/Sources/NIOWarpApp/WorkbenchAccess.swift",
+    "native/Sources/NIOWarpApp/MouseMappingController.swift",
+    "native/Sources/NIOWarpApp/main.swift",
+    "native/Tests/NIOWarpAppTests/CalibrationGridTests.swift",
+    "native/Tests/NIOWarpAppTests/TabLayoutTests.swift",
+    "native/Tests/NIOWarpAppTests/WorkbenchAccessSessionTests.swift",
+    "native/Tests/NIOWarpAppTests/LocalWarpTests.swift",
+    "native/Tests/NIOWarpAppTests/CanvasGrowthConfirmationTests.swift",
+    "native/Tests/NIOWarpAppTests/WorkbenchModeUITests.swift",
+    "native/Tests/NIOWarpAppTests/BezierIntegrationTests.swift",
+    "native/Tests/NIOWarpAppTests/ProtoPiePlaybackUITests.swift",
+    "native/Tests/NIOWarpAppTests/WorkbenchTestAccess.swift",
+    "native/Tests/NIOWarpAppTests/BezierWarpEditorTests.swift",
+    "native/Tests/NIOWarpAppTests/WorkbenchModeInputTests.swift",
+    "native/Tests/NIOWarpAppTests/MouseMappingReminderUITests.swift",
+    "native/scripts/build-app.sh"
+  ],
+  "baselineCommit": "5a77f5aff00ce4e9513223c0f436dfb63ed77c33",
+  "baselineTag": "nio-warp-before-v1-mode-gate-20260921",
+  "testResult": {
+    "modeShim": {
+      "tests": 85,
+      "assertions": 3620,
+      "failures": 0,
+      "skipped": 0
+    },
+    "inputIsolationSpyCases": 10,
+    "lidPolicySpy": {
+      "tests": 14,
+      "assertions": 101
+    },
+    "liveAXStages": 7
+  },
+  "externalDisplayValidated": false,
+  "protectedSettingsAndHistoryKeysUnchanged": 10,
+  "status": "installed; mode and offline UI accepted, physical output regression pending"
+}

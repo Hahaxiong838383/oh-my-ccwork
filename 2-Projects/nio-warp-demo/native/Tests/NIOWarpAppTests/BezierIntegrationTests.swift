@@ -307,7 +307,7 @@ final class BezierIntegrationTests: XCTestCase {
             panel = ControlPanelController(renderer: renderer, store: store, configuration: configuration, sourceScreen: nil, outputScreen: nil,
                 setWarpVisible: { _ in XCTFail("调整不应改变输出显隐") }, isWarpVisible: { true },
                 applyCaptureConfiguration: { _ in XCTFail("调整不应重启捕获") }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in },
-                presentWindow: false, historyStore: history, presetStore: PresetStore(defaults: defaults))
+                presentWindow: false, historyStore: history, presetStore: PresetStore(defaults: defaults), accessSession: authorizedWorkbenchAccessSession())
         }
 
         deinit { panel.close(); defaults.removePersistentDomain(forName: suite) }

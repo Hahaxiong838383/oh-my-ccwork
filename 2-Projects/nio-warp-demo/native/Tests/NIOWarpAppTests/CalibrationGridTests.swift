@@ -103,7 +103,7 @@ final class CalibrationGridTests: XCTestCase {
                 setWarpVisible: { _ in XCTFail("网格编辑不能改变输出可见性") }, isWarpVisible: { false },
                 applyCaptureConfiguration: { _ in XCTFail("网格编辑不能重启捕获") },
                 updateAABoundary: { _, _ in XCTFail("网格编辑不能改变 AA") }, updateWarpBoundary: { _, _ in },
-                presentWindow: false, historyStore: history, presetStore: PresetStore(defaults: defaults)
+                presentWindow: false, historyStore: history, presetStore: PresetStore(defaults: defaults), accessSession: authorizedWorkbenchAccessSession()
             )
         }
 

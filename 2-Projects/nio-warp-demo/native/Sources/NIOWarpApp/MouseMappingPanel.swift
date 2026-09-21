@@ -63,6 +63,7 @@ struct MouseMappingSettings: Codable, Equatable {
     var onStart: (() -> Void)?
     var onStop: (() -> Void)?
     var onSettingsChange: ((MouseMappingSettings) -> Void)?
+    var settingsEditingAllowed: (() -> Bool)?
     private let stack = NSStackView()
     private let status = NSTextField(wrappingLabelWithString: "等待已接通的 ProtoPie Cloud 全屏预览。")
     private let coordinates = NSTextField(wrappingLabelWithString: "热点沿全部可见曲面贴边，可到最后一个物理像素中心。")
@@ -152,12 +153,12 @@ struct MouseMappingSettings: Codable, Equatable {
         speedLabel.stringValue = String(format: "移动速度 · %.2f×", settings.speed)
         autoHide.state = settings.cursorAutoHideEnabled ? .on : .off
         autoHideDelay.stringValue = String(format: "%g", settings.cursorAutoHideDelay)
-        autoHideDelay.isEnabled = settingsEditable && settings.cursorAutoHideEnabled
+        autoHideDelay.isEnabled = settingsEditable && (settingsEditingAllowed?() ?? true) && settings.cursorAutoHideEnabled
     }
 
     func update(active: Bool, busy: Bool, message: String, detail: String? = nil) {
         status.stringValue = message
-        settingsEditable = !active && !busy
+        settingsEditable = !active && !busy && (settingsEditingAllowed?() ?? true)
         start.isEnabled = !active && !busy; stop.isEnabled = active || busy
         [mode, reverse, preview, speed, autoHide].forEach { $0.isEnabled = settingsEditable }
         autoHideDelay.isEnabled = settingsEditable && settings.cursorAutoHideEnabled
@@ -173,7 +174,7 @@ struct MouseMappingSettings: Codable, Equatable {
     @objc private func begin() { onStart?() }
     @objc private func end() { onStop?() }
     @objc private func changed() {
-        guard settingsEditable else { load(settings); return }
+        guard settingsEditable, settingsEditingAllowed?() ?? true else { load(settings); return }
         guard let delay = Double(autoHideDelay.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             load(settings); return
         }

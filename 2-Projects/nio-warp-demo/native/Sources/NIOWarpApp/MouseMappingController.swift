@@ -49,6 +49,9 @@ struct MouseAutomationHandoffBuffer {
     var onAutomationFailure: ((String) -> Void)?
     var onAutomationExit: (() -> Void)?
     var onPickedPoint: ((Double, Double) -> Void)?
+    var settingsEditingAllowed: (() -> Bool)?
+    private(set) var workbenchInputExclusive = false
+    private var focusSuppressionEpoch: UInt64 = 0
     private(set) var automationOwnsInput = false
     private var automationGeneration = UUID()
     private var handoffTask: Task<Void, Never>?
@@ -114,7 +117,9 @@ struct MouseAutomationHandoffBuffer {
         input.onEnter = { [weak self] point, allowSnap in self?.adoptNativeCursor(at: point, allowSnap: allowSnap) ?? false }
         input.onLeave = { [weak self] in
             guard let self else { return }
-            if self.automationOwnsInput || self.handoffTask != nil {
+            if self.workbenchInputExclusive {
+                if !self.automationOwnsInput && self.handoffTask == nil { self.releaseButtons() }
+            } else if self.automationOwnsInput || self.handoffTask != nil {
                 self.beginHumanHandoff(.leftSurface)
             } else { self.releaseButtons() }
             self.cursorRevision &+= 1
@@ -125,11 +130,13 @@ struct MouseAutomationHandoffBuffer {
 
     func makePanel() -> MouseMappingPanel {
         let panel = MouseMappingPanel(settings: settings)
+        panel.settingsEditingAllowed = { [weak self] in self?.settingsEditingAllowed?() ?? true }
         panels.add(panel)
         panel.onStart = { [weak self] in self?.start() }
         panel.onStop = { [weak self] in self?.stop(reason: "已返回普通鼠标。", returnToWorkbench: true) }
         panel.onSettingsChange = { [weak self] value in
-            guard let self, !self.isActive, self.startTask == nil else { return }
+            guard let self, self.settingsEditingAllowed?() ?? true,
+                  !self.isActive, self.startTask == nil else { return }
             self.settings = value.sanitized(); self.settings.save(defaults: self.defaults)
             self.panels.allObjects.forEach { $0.load(self.settings) }
             self.publish(force: true)
@@ -137,6 +144,28 @@ struct MouseAutomationHandoffBuffer {
         publish(force: true)
         return panel
     }
+
+    func setWorkbenchInputExclusive(_ exclusive: Bool) {
+        guard workbenchInputExclusive != exclusive else { return }
+        workbenchInputExclusive = exclusive
+        if exclusive { focusSuppressionEpoch &+= 1 }
+        input.setPhysicalInputSuspended(exclusive)
+        if exclusive {
+            pendingHumanInputs.reset()
+            disarmPresentationInput()
+            // Cancel only a pending human acquisition. Automatic input keeps its
+            // transport, scheduler and held script gestures throughout the sheet.
+            if startTask != nil && !automationOwnsInput {
+                stop(reason: "工作台正在输入密码，暂不接管本机输入。")
+            }
+            output?.setInputEnabled(false)
+            restoreCursorPresentation()
+        } else if isActive {
+            output?.setInputEnabled(outputOwned)
+        }
+    }
+
+    func refreshWorkbenchAccess() { publish(force: true) }
 
     /// Arm only a verified independent presentation, without taking focus from
     /// the workbench. The first click focuses; subsequent clicks reach the page.
@@ -151,6 +180,7 @@ struct MouseAutomationHandoffBuffer {
     }
 
     private func refreshPresentationInput() {
+        guard !workbenchInputExclusive else { disarmPresentationInput(); return }
         guard !isActive, startTask == nil else { return }
         guard let session = sessionProvider?(), let current = outputProvider?(),
               session.configuration.source == .cloud,
@@ -172,6 +202,7 @@ struct MouseAutomationHandoffBuffer {
     }
 
     func start(automatic: Bool = false) {
+        guard automatic || !workbenchInputExclusive else { return }
         guard !isActive, startTask == nil else { return }
         if let pattern = blockingTestPattern {
             // Leave the activation surface in place until the physical mouse-up;
@@ -188,9 +219,16 @@ struct MouseAutomationHandoffBuffer {
         // dropping hit testing here could leak its mouse-up to the desktop.
         armedOutput?.cursor.onActivate = nil
         let token = UUID(); generation = token
+        let focusEpoch = focusSuppressionEpoch
+        let mayRequestFocus = !workbenchInputExclusive
         message = "正在核对全屏来源、捕获尺寸和可点击边界…"
         startTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            // A binding that overlapped the password sheet must never steal
+            // focus later just because the sheet closed during an await.
+            @MainActor func mayActivate() -> Bool {
+                mayRequestFocus && !self.workbenchInputExclusive && self.focusSuppressionEpoch == focusEpoch
+            }
             await self.closingTask?.value
             guard self.generation == token, !Task.isCancelled else { return }
             let transport = MouseInputTransport()
@@ -231,14 +269,14 @@ struct MouseAutomationHandoffBuffer {
                 self.outputOwned = session.presentationDisplayID.map { $0 != current.displayID } ?? false
                 self.sessionID = session.id; self.sourceUV = start; self.buttons = 0
                 self.movementEventCount = 0; self.lastRawMovement = nil
-                current.setInputEnabled(self.outputOwned)
+                current.setInputEnabled(self.outputOwned && !self.workbenchInputExclusive)
                 current.cursor.physicalPoint = nil
                 // The legacy same-screen path leaves Chrome in charge of input.
                 // Independent sources bridge their original CSS system cursor
                 // to the physical output, which owns real mouse focus instead.
                 if self.outputOwned {
                     try await transport.setPageFocusEmulation(true)
-                } else {
+                } else if mayActivate() {
                     NSRunningApplication(processIdentifier: session.processID)?.activate(options: [])
                     try await transport.activateBoundTarget()
                 }
@@ -252,22 +290,23 @@ struct MouseAutomationHandoffBuffer {
                 try Task.checkCancellation()
                 guard self.generation == token, let confirmed = self.outputProvider?(),
                       Self.sameBinding(current, confirmed), self.sessionProvider?()?.id == session.id else { throw CancellationError() }
-                if self.outputOwned {
+                if self.outputOwned && mayActivate() {
                     NSApp.activate(ignoringOtherApps: true)
                     current.window.makeKeyAndOrderFront(nil)
                     // Activation crosses from Chrome to this accessory app. The
                     // key-window notification arrives on a later run-loop turn.
                     for _ in 0..<12 {
+                        if !mayActivate() { break }
                         if current.window.isKeyWindow,
                            NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier { break }
                         try await Task.sleep(nanoseconds: 50_000_000)
                         try Task.checkCancellation()
                         guard self.generation == token, self.sessionProvider?()?.id == session.id,
                               let latest = self.outputProvider?(), Self.sameBinding(current, latest) else { throw CancellationError() }
-                        current.window.makeKeyAndOrderFront(nil)
+                        if mayActivate() { current.window.makeKeyAndOrderFront(nil) }
                     }
-                    guard current.window.isKeyWindow,
-                          NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier else {
+                    guard !mayActivate() || (current.window.isKeyWindow &&
+                          NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier) else {
                         throw MouseCaptureError("演示输出尚未取得鼠标焦点，请再次点击画面。")
                     }
                 }
@@ -388,6 +427,7 @@ struct MouseAutomationHandoffBuffer {
     }
 
     private func beginHumanHandoff(_ event: PendingHumanInput? = nil) {
+        guard !workbenchInputExclusive else { return }
         if let event, !pendingHumanInputs.append(event) {
             stop(reason: "人工接管输入积压，已安全释放输入并返回工作台。", returnToWorkbench: true)
             return
@@ -407,7 +447,7 @@ struct MouseAutomationHandoffBuffer {
                 let pending = self.pendingHumanInputs.drain()
                 self.handoffTask = nil
                 for value in pending {
-                    guard self.generation == token, self.isActive else { break }
+                    guard self.generation == token, self.isActive, !self.workbenchInputExclusive else { break }
                     switch value { case .mouse(let mouse):
                         self.cursorVisibility.receiveMouse(mouse, now: now)
                         self.receive(mouse)
@@ -594,6 +634,7 @@ struct MouseAutomationHandoffBuffer {
     }
 
     private func receive(_ event: MouseCaptureEvent) {
+        guard !workbenchInputExclusive else { return }
         if automationOwnsInput || handoffTask != nil {
             if case .move(let dx, let dy, _) = event, dx == 0, dy == 0 { return }
             beginHumanHandoff(.mouse(event)); return
@@ -667,6 +708,9 @@ struct MouseAutomationHandoffBuffer {
     }
 
     private func receiveKeyboard(_ event: MouseKeyboardInput) {
+        // Only balance keys already sent by a human. Password input never
+        // enters the handoff buffer or the prototype, even during page binding.
+        if workbenchInputExclusive && (event.kind != .up || automationOwnsInput || handoffTask != nil) { return }
         if automationOwnsInput || handoffTask != nil { beginHumanHandoff(.keyboard(event)); return }
         guard isActive, outputOwned, !settings.previewOnly,
               let viewport, let transport else { return }

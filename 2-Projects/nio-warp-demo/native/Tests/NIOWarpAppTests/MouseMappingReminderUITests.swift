@@ -40,7 +40,7 @@ import XCTest
             updateAABoundary: { _, _ in XCTFail("提示不应改变 AA") },
             updateWarpBoundary: { _, _ in if !allowsPreviewSetup { XCTFail("提示不应改变曲面") } }, presentWindow: false,
             historyStore: history, presetStore: PresetStore(defaults: defaults), mouseMapping: mouse,
-            terminateApplication: { XCTFail("提示不应退出程序") })
+            terminateApplication: { XCTFail("提示不应退出程序") }, accessSession: authorizedWorkbenchAccessSession())
         panel.selectModule("mouse")
         return Fixture(panel: panel, mouse: mouse, defaults: defaults, domain: domain, history: history, renderer: renderer)
     }

@@ -279,7 +279,7 @@ import XCTest
             updateWarpBoundary: { _, _ in XCTFail("导航不得修改 Warp") }, presentWindow: false,
             historyStore: ConfigurationHistoryStore(defaults: defaults), presetStore: PresetStore(defaults: defaults),
             protoPie: proto, mouseMapping: MouseMappingController(defaults: defaults), playback: playback,
-            terminateApplication: { XCTFail("测试不得退出 App") })
+            terminateApplication: { XCTFail("测试不得退出 App") }, accessSession: authorizedWorkbenchAccessSession())
         defer { workbench.close(); proto.shutdown() }
         let window = try XCTUnwrap(workbench.window)
         window.setContentSize(NSSize(width: 860, height: 650))

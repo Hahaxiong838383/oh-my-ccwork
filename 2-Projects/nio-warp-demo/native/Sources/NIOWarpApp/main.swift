@@ -1191,7 +1191,7 @@ private enum AppVersion {
 private final class WorkbenchWindow: NSWindow {
     var onModuleShortcut: ((Int) -> Void)?
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.intersection([.command, .control, .option]) == .command,
+        if attachedSheet == nil, event.modifierFlags.intersection([.command, .control, .option]) == .command,
            let number = Int(event.charactersIgnoringModifiers ?? ""), (1...7).contains(number) {
             onModuleShortcut?(number - 1)
             return true
@@ -1202,6 +1202,16 @@ private final class WorkbenchWindow: NSWindow {
 
 final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NSTabViewDelegate, NSWindowDelegate, NSSplitViewDelegate {
     private let renderer: WarpRenderer?
+    let accessSession: WorkbenchAccessSession
+    private let onAuthenticationInteractionChanged: ((Bool) -> Void)?
+    private let debugModeButton = NSButton(title: "调试模式", target: nil, action: nil)
+    private let accessModeLabel = NSTextField(labelWithString: "使用模式 · 已锁定")
+    private var authenticationAlert: NSAlert?
+    private var authenticationField: NSSecureTextField?
+    private var authenticationToken: UUID?
+    private var presetApplyConfirmation: NSAlert?
+    private var accessDisabledControls: [ObjectIdentifier: (NSControl, Bool)] = [:]
+
     private let store: ConfigurationStore
     private let presetStore: PresetStore
     private let historyStore: ConfigurationHistoryStore
@@ -1346,9 +1356,13 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         protoPie: ProtoPieCoordinator? = nil,
         mouseMapping: MouseMappingController? = nil,
         playback: ProtoPiePlaybackController? = nil,
-        terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) }
+        terminateApplication: @escaping () -> Void = { NSApplication.shared.terminate(nil) },
+        accessSession: WorkbenchAccessSession? = nil,
+        onAuthenticationInteractionChanged: ((Bool) -> Void)? = nil
     ) {
         self.renderer = renderer
+        self.accessSession = accessSession ?? WorkbenchAccessSession()
+        self.onAuthenticationInteractionChanged = onAuthenticationInteractionChanged
         self.store = store
         self.historyStore = historyStore
         self.presetStore = presetStore
@@ -1387,6 +1401,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         buildInterface(sourceScreen: sourceScreen, outputScreen: outputScreen)
         refreshControls()
         refreshPresets()
+        selectModule(self.accessSession.isDebugMode ? "canvas" : "protopie")
+        applyAccessRendering()
         startPerformanceMonitoring()
         let visibleFrame = sourceScreen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let origin = NSPoint(
@@ -1411,6 +1427,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     override func close() {
+        cancelAuthentication()
         protoPiePanel?.disconnect()
         playbackPanel?.disconnect()
         cancelLocalUpdates()
@@ -1532,7 +1549,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
                     guard let self else { return .init(value: 0, range: -1...1, isEnabled: false) }
                     return .init(value: self.lastAppliedConfiguration.outputVerticalOffsetPixels,
                         range: self.lastAppliedConfiguration.outputVerticalOffsetRange,
-                        isEnabled: self.renderer != nil && !self.geometryValidationInFlight)
+                        isEnabled: self.accessSession.allowsDebugEditing && self.renderer != nil && !self.geometryValidationInFlight)
                 },
                 apply: { [weak self] value in self?.applyOutputVerticalOffset(value) }
             ))
@@ -1606,7 +1623,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         titleRow.orientation = .horizontal
         titleRow.alignment = .centerY
         titleRow.spacing = 10
-        let title = NSTextField(labelWithString: "NIO Warp · 外屏曲面画布")
+        let title = NSTextField(labelWithString: "NIO Warp")
         title.font = .systemFont(ofSize: 18, weight: .bold)
         let version = NSTextField(labelWithString: AppVersion.display)
         version.font = .monospacedSystemFont(ofSize: 12, weight: .semibold)
@@ -1614,6 +1631,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         version.toolTip = "当前运行版本"
         titleRow.addArrangedSubview(title)
         titleRow.addArrangedSubview(version)
+        accessModeLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        accessModeLabel.setAccessibilityIdentifier("nio-workbench-access-mode")
+        titleRow.addArrangedSubview(accessModeLabel)
         let spacer = NSView()
         spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         titleRow.addArrangedSubview(spacer)
@@ -1624,6 +1644,10 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         pinButton.target = self
         pinButton.action = #selector(toggleAlwaysOnTop)
         for button in [historyButton, pauseWarpButton, pinButton] { titleRow.addArrangedSubview(button) }
+        debugModeButton.target = self
+        debugModeButton.action = #selector(toggleDebugMode)
+        debugModeButton.setAccessibilityIdentifier("nio-workbench-debug-mode")
+        titleRow.addArrangedSubview(debugModeButton)
         let quitButton = makeButton("退出程序", action: #selector(requestQuit))
         quitButton.setAccessibilityIdentifier("nio-workbench-quit")
         titleRow.addArrangedSubview(quitButton)
@@ -1898,7 +1922,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             makeButton("应用预设", action: #selector(applyPreset)),
             makeButton("删除预设", action: #selector(deletePreset)),
         ]))
-        stack.addArrangedSubview(explanation("撤销在顶部始终可用；全部校正模块共用一条操作历史。"))
+        stack.addArrangedSubview(explanation("使用模式可选择、确认应用已有预设及导出备份；保存、删除、导入、重置与顶部撤销需要解锁调试模式。"))
 
         stack.addArrangedSubview(sectionTitle("8. 安全控制与配置文件"))
         stack.addArrangedSubview(buttonRow([
@@ -1977,8 +2001,181 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         return stack
     }
 
+    var effectiveRuntimeConfiguration: WarpConfiguration {
+        let preview: WarpConfiguration
+        switch runtimePreviewMode {
+        case .normal: preview = lastAppliedConfiguration
+        case .rawReflectionCalibration: preview = lastAppliedConfiguration.rawReflectionCalibrationConfiguration()
+        case .antiAliasingComparison: preview = lastAppliedConfiguration.antiAliasingComparisonConfiguration()
+        }
+        return accessSession.renderConfiguration(preview)
+    }
+
+    @discardableResult
+    private func requireDebugEditing() -> Bool {
+        guard accessSession.allowsDebugEditing else {
+            setStatus("使用模式已锁定校正参数；请点击顶部“调试模式”并输入密码后再修改。", color: .systemOrange)
+            NSLog("[workbench-access] protected editing blocked")
+            return false
+        }
+        return true
+    }
+
+    private func restoreAccessDisabledControls() {
+        for (_, saved) in accessDisabledControls { saved.0.isEnabled = saved.1 }
+        accessDisabledControls.removeAll()
+    }
+
+    private func refreshAccessControls() {
+        for (index, module) in Self.modules.enumerated() {
+            let allowed = accessSession.allowsModule(module.0)
+            modulePicker.setEnabled(allowed, forSegment: index)
+            modulePicker.setLabel(allowed ? module.1 : "🔒 " + module.1, forSegment: index)
+        }
+        accessModeLabel.stringValue = accessSession.isDebugMode ? "调试模式 · 已解锁" : "使用模式 · 已锁定"
+        accessModeLabel.textColor = accessSession.isDebugMode ? .systemOrange : .secondaryLabelColor
+        debugModeButton.title = accessSession.isDebugMode ? "退出调试" : "调试模式"
+        debugModeButton.isEnabled = !accessSession.isAuthenticating
+        guard !accessSession.allowsDebugEditing else { return }
+        func disable(_ control: NSControl) {
+            let key = ObjectIdentifier(control)
+            if accessDisabledControls[key] == nil { accessDisabledControls[key] = (control, control.isEnabled) }
+            control.isEnabled = false
+        }
+        func disableDescendants(_ view: NSView) {
+            if let field = view as? NSTextField {
+                if field.isEditable { disable(field) }
+            } else if let control = view as? NSControl { disable(control) }
+            view.subviews.forEach(disableDescendants)
+        }
+        for item in configurationTabs.tabViewItems {
+            guard let id = item.identifier as? String, !["history", "protopie"].contains(id), let view = item.view else { continue }
+            disableDescendants(view)
+        }
+        let protectedActions: Set<String> = ["savePreset", "deletePreset", "importConfiguration", "resetConfiguration"]
+        func disableHistoryWrites(_ view: NSView) {
+            if let control = view as? NSControl, let action = control.action, protectedActions.contains(NSStringFromSelector(action)) { disable(control) }
+            view.subviews.forEach(disableHistoryWrites)
+        }
+        if let page = configurationTabs.tabViewItems.first(where: { $0.identifier as? String == "history" })?.view { disableHistoryWrites(page) }
+        [historyButton, pauseWarpButton, pinButton, presetNameField].forEach(disable)
+        protoPiePanel?.refreshOutputPosition()
+    }
+
+    private func applyAccessRendering() {
+        guard let renderer else { return }
+        let rendered = effectiveRuntimeConfiguration
+        guard renderer.activeConfiguration != rendered else { return }
+        _ = renderer.updateConfiguration(rendered)
+        updateAABoundary(rendered.aaRect, rendered.render.showAABoundary)
+        updateWarpBoundary(rendered, rendered.render.showWarpBoundary)
+        refreshGridSummary()
+    }
+
+    /// Refresh a shared session after authentication or explicit relocking. This
+    /// never saves configuration, restarts capture, or changes the playback plan.
+    func refreshAccessMode() {
+        if !accessSession.isDebugMode {
+            cancelLocalUpdates()
+            finishGridEditingSession()
+            localEditor?.deactivateInteraction()
+            bezierEditor?.deactivateInteraction()
+            runtimePreviewMode = .normal
+            runtimePreviewReturnMode = .normal
+            configuration = lastAppliedConfiguration
+            renderedFieldValues.removeAll()
+            window?.makeFirstResponder(nil)
+        }
+        refreshControls()
+        if !accessSession.allowsModule(selectedModuleIdentifier) { selectModule("protopie") }
+        applyAccessRendering()
+        mouseMapping?.refreshWorkbenchAccess()
+    }
+
+    @objc private func toggleDebugMode() {
+        guard let window, window.attachedSheet == nil else { return }
+        if accessSession.isDebugMode {
+            // Revoke first: ending a field/drag must not commit another edit.
+            accessSession.lock()
+            refreshAccessMode()
+            setStatus("已返回使用模式；当前校正参数与播放状态保留。")
+            return
+        }
+        guard accessSession.beginAuthentication() else { return }
+        authenticationToken = UUID()
+        onAuthenticationInteractionChanged?(true)
+        refreshAccessControls()
+        presentAuthentication(error: nil)
+    }
+
+    private func presentAuthentication(error: String?) {
+        guard let window, let token = authenticationToken, accessSession.isAuthenticating else { return }
+        let alert = NSAlert()
+        alert.messageText = "开启调试模式"
+        alert.informativeText = "输入调试密码后，可修改屏幕、校畸变和鼠标映射参数。本次解锁在退出 App 后失效。"
+        let field = NSSecureTextField(frame: NSRect(x: 0, y: 0, width: 310, height: 24))
+        field.placeholderString = "请输入调试密码"
+        field.setAccessibilityIdentifier("nio-debug-password")
+        field.setAccessibilityLabel("调试密码")
+        let accessory = NSStackView()
+        accessory.orientation = .vertical
+        accessory.alignment = .leading
+        accessory.spacing = 8
+        accessory.addArrangedSubview(field)
+        field.widthAnchor.constraint(equalToConstant: 310).isActive = true
+        if let error {
+            let label = NSTextField(labelWithString: error)
+            label.textColor = .systemRed
+            label.setAccessibilityIdentifier("nio-debug-password-error")
+            accessory.addArrangedSubview(label)
+        }
+        accessory.frame = NSRect(x: 0, y: 0, width: 310, height: error == nil ? 28 : 52)
+        alert.accessoryView = accessory
+        let cancel = alert.addButton(withTitle: "取消")
+        let unlock = alert.addButton(withTitle: "解锁调试模式")
+        authenticationAlert = alert
+        authenticationField = field
+        alert.beginSheetModal(for: window) { [weak self, weak field] response in
+            guard let self, self.authenticationToken == token else { field?.stringValue = ""; return }
+            let accepted = response == .alertSecondButtonReturn && self.accessSession.unlock(password: field?.stringValue ?? "")
+            field?.stringValue = ""
+            self.authenticationField = nil
+            self.authenticationAlert = nil
+            if response == .alertSecondButtonReturn && !accepted {
+                // Keep the workbench input reservation across a failed retry.
+                DispatchQueue.main.async { [weak self] in self?.presentAuthentication(error: "密码不正确，请重试。") }
+                return
+            }
+            self.authenticationToken = nil
+            self.accessSession.endAuthentication()
+            self.onAuthenticationInteractionChanged?(false)
+            self.refreshAccessMode()
+            self.setStatus(accepted ? "调试模式已开启；当前参数与播放状态保持。" : "已取消解锁，继续使用模式。")
+        }
+        cancel.keyEquivalent = "\u{1b}"
+        unlock.keyEquivalent = "\r"
+        alert.window.defaultButtonCell = unlock.cell as? NSButtonCell
+        alert.window.initialFirstResponder = field
+        alert.window.makeFirstResponder(field)
+    }
+
+    func cancelAuthentication() {
+        guard authenticationToken != nil else { return }
+        authenticationToken = nil
+        authenticationField?.stringValue = ""
+        authenticationField = nil
+        if let alert = authenticationAlert { window?.endSheet(alert.window, returnCode: .abort) }
+        authenticationAlert = nil
+        accessSession.endAuthentication()
+        onAuthenticationInteractionChanged?(false)
+    }
+
     func selectModule(_ identifier: String) {
-        guard Self.modules.contains(where: { $0.0 == identifier }) else { return }
+        guard Self.modules.contains(where: { $0.0 == identifier }),
+              accessSession.allowsModule(identifier) else {
+            modulePicker.selectedSegment = Self.modules.firstIndex { $0.0 == selectedModuleIdentifier } ?? 6
+            return
+        }
         configurationTabs.selectTabViewItem(withIdentifier: identifier)
     }
 
@@ -1988,12 +2185,12 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         selectedLocalTool = previous.selectedLocalTool
         localToolPicker.selectedSegment = selectedLocalTool
         pinButton.state = previous.pinButton.state
-        toggleAlwaysOnTop()
+        window?.level = pinButton.state == .on ? .floating : .normal
         polynomialDisclosure.state = previous.polynomialDisclosure.state
-        togglePolynomialDetails()
+        polynomialDetails.isHidden = polynomialDisclosure.state != .on
         geometryPreviewPicker.selectItem(at: previous.geometryPreviewPicker.indexOfSelectedItem)
         geometryPreview.clipsToAA = previous.geometryPreview.clipsToAA
-        if sameDisplay {
+        if sameDisplay && accessSession.allowsDebugEditing {
             if previous.selectedModuleIdentifier == "local" {
                 geometryPreview.viewport = previous.selectedLocalTool == 0 ? previous.bezierEditor?.viewport : previous.localEditor?.viewport
             } else { geometryPreview.viewport = previous.geometryPreview.viewport }
@@ -2003,7 +2200,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             if let index = previous.bezierEditor?.canvasView.selectedIndex { showBezierEditor(presentWindow: false).selectNode(index) }
             if let point = previous.localEditor?.canvasView.selectedCoordinate { showLocalEditor(presentWindow: false).select(point) }
         }
-        selectModule(previous.selectedModuleIdentifier)
+        selectModule(accessSession.allowsModule(previous.selectedModuleIdentifier) ? previous.selectedModuleIdentifier : "protopie")
         window?.contentView?.layoutSubtreeIfNeeded()
         for (oldItem, newItem) in zip(previous.configurationTabs.tabViewItems, configurationTabs.tabViewItems) {
             guard let old = oldItem.view as? NSScrollView, let new = newItem.view as? NSScrollView else { continue }
@@ -2021,6 +2218,12 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         guard let host = playbackHost, host.tabViewItems.indices.contains(sender.selectedSegment) else { return }
         window?.makeFirstResponder(nil)
         host.selectTabViewItem(at: sender.selectedSegment)
+    }
+
+    func tabView(_ tabView: NSTabView, shouldSelect tabViewItem: NSTabViewItem?) -> Bool {
+        guard builtInterface, tabView === configurationTabs else { return true }
+        guard let identifier = tabViewItem?.identifier as? String else { return false }
+        return accessSession.allowsModule(identifier)
     }
 
     func tabView(_ tabView: NSTabView, willSelect tabViewItem: NSTabViewItem?) {
@@ -2080,7 +2283,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         } else { mount(standardPreview, in: previewHost) }
     }
 
-    @objc private func changeLocalTool(_ sender: NSSegmentedControl) {
+    @objc private func changeLocalTool(_ sender: NSSegmentedControl) { guard requireDebugEditing() else { return };
         guard selectedLocalTool != sender.selectedSegment else { return }
         if selectedLocalTool == 0 {
             bezierEditor?.deactivateInteraction(); geometryPreview.viewport = bezierEditor?.viewport
@@ -2091,14 +2294,14 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         mountModulePreview()
     }
 
-    @objc private func fitWorkbenchPreview() { geometryPreview.fit() }
+    @objc private func fitWorkbenchPreview() { guard requireDebugEditing() else { return }; geometryPreview.fit() }
     func splitView(_ splitView: NSSplitView, constrainSplitPosition proposedPosition: CGFloat, ofSubviewAt dividerIndex: Int) -> CGFloat {
         let width = min(max(splitView.bounds.width - proposedPosition - splitView.dividerThickness, 350), 440)
         if NSApp.currentEvent?.type == .leftMouseDragged { inspectorWidthConstraint?.constant = width }
         return splitView.bounds.width - (inspectorWidthConstraint?.constant ?? width) - splitView.dividerThickness
     }
-    @objc private func togglePolynomialDetails() { polynomialDetails.isHidden = polynomialDisclosure.state != .on }
-    @objc private func toggleAlwaysOnTop() { window?.level = pinButton.state == .on ? .floating : .normal }
+    @objc private func togglePolynomialDetails() { guard requireDebugEditing() else { return }; polynomialDetails.isHidden = polynomialDisclosure.state != .on }
+    @objc private func toggleAlwaysOnTop() { guard requireDebugEditing() else { return }; window?.level = pinButton.state == .on ? .floating : .normal }
 
     @objc private func requestQuit() {
         guard let window, window.attachedSheet == nil, quitConfirmation == nil else { return }
@@ -2158,7 +2361,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.modifierFlags.contains(.command), let number = Int(event.charactersIgnoringModifiers ?? ""), (1...7).contains(number) {
+        if window?.attachedSheet == nil, event.modifierFlags.contains(.command), let number = Int(event.charactersIgnoringModifiers ?? ""), (1...7).contains(number) {
             selectModule(Self.modules[number - 1].0)
             return
         }
@@ -2305,6 +2508,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
     }
 
     private func refreshControls() {
+        restoreAccessDisabledControls()
+        defer { refreshAccessControls() }
         protoPiePanel?.refreshOutputPosition()
         let drafts = draftFields.compactMap { field -> (NSTextField, String)? in
             guard let previous = renderedFieldValues[ObjectIdentifier(field)], field.stringValue != previous else { return nil }
@@ -2418,7 +2623,13 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         coefficientYField.stringValue = NumericInput.formattedDouble(polynomial.coefficientsY[index])
     }
 
-    private func applyConfiguration(_ message: String, recordHistory: Bool = true) {
+    private func applyConfiguration(_ message: String, recordHistory: Bool = true, applyingSavedPreset: Bool = false) {
+        guard (!accessSession.isAuthenticating && applyingSavedPreset) || requireDebugEditing() else {
+            configuration = lastAppliedConfiguration
+            refreshControls()
+            return
+        }
+        defer { refreshAccessControls() }
         guard !geometryValidationInFlight else {
             configuration = lastAppliedConfiguration
             refreshControls()
@@ -2442,7 +2653,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         }
         let candidate = configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
         if playback?.runtime.isActive == true { playback?.pause(reason: "校正参数正在手动调整，自动演示已暂停。") }
-        let validation = renderer.updateConfiguration(candidate)
+        let validation = renderer.updateConfiguration(accessSession.renderConfiguration(candidate))
         guard validation.isValid else {
             configuration = lastAppliedConfiguration
             refreshControls()
@@ -2456,8 +2667,8 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             historyStore.record(lastAppliedConfiguration, reason: message)
         }
         store.save(configuration)
-        updateAABoundary(configuration.aaRect, configuration.render.showAABoundary)
-        updateWarpBoundary(configuration, configuration.render.showWarpBoundary)
+        updateAABoundary(configuration.aaRect, accessSession.renderConfiguration(configuration).render.showAABoundary)
+        updateWarpBoundary(configuration, accessSession.renderConfiguration(configuration).render.showWarpBoundary)
         if configuration.capture != lastAppliedConfiguration.capture {
             applyCaptureConfiguration(configuration.capture)
         }
@@ -2566,7 +2777,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         finishGridEditingSession()
     }
 
-    private func applyGridFields() {
+    private func applyGridFields() { guard requireDebugEditing() else { return };
         guard !geometryValidationInFlight else {
             gridStatusLabel.stringValue = "局部修改正在校验，请稍候再应用网格参数。"
             gridStatusLabel.textColor = .systemOrange
@@ -2608,7 +2819,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         gridHistoryRecorded = false
     }
 
-    private func stepGridField(_ target: NumericFieldTarget, direction: Double) {
+    private func stepGridField(_ target: NumericFieldTarget, direction: Double) { guard requireDebugEditing() else { return };
         guard renderer != nil else { return }
         window?.makeFirstResponder(nil)
         switch target {
@@ -2661,11 +2872,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             && NumericInput.integer(from: canvasHeightField.stringValue) == configuration.canvas.height
     }
 
-    @objc private func changeGeometryPreview() {
+    @objc private func changeGeometryPreview() { guard requireDebugEditing() else { return };
         geometryPreview.clipsToAA = geometryPreviewPicker.indexOfSelectedItem == 1
     }
 
-    @objc private func rebaseCanvas() {
+    @objc private func rebaseCanvas() { guard requireDebugEditing() else { return };
         guard let window, window.attachedSheet == nil, canvasRebaseConfirmation == nil else { return }
         guard !geometryValidationInFlight else {
             setStatus("局部修改正在校验，请稍候再记住外扩起点。", color: .systemOrange)
@@ -2688,7 +2899,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         alert.beginSheetModal(for: window) { [weak self] response in
             guard let self else { return }
             self.canvasRebaseConfirmation = nil
-            guard response == .alertFirstButtonReturn else { return }
+            guard response == .alertFirstButtonReturn, self.requireDebugEditing() else { return }
             guard !self.geometryValidationInFlight,
                   self.configuration == confirmedConfiguration,
                   self.canvasFieldsAreSaved() else {
@@ -2704,7 +2915,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         alert.window.defaultButtonCell = cancelButton.cell as? NSButtonCell
     }
 
-    @objc private func restoreReferenceCanvas() {
+    @objc private func restoreReferenceCanvas() { guard requireDebugEditing() else { return };
         guard let reference = configuration.canvasReference else {
             setStatus("还没有外扩起点。请先开启曲面延伸，或点击“把当前画面记为外扩起点”。", color: .systemOrange)
             return
@@ -2714,7 +2925,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    @objc private func refillCanvasContent() {
+    @objc private func refillCanvasContent() { guard requireDebugEditing() else { return };
         guard canvasFieldsAreSaved() else {
             setStatus("请先保存上面的宽和高，再按当前画布重新铺满内容。", color: .systemOrange)
             return
@@ -2725,7 +2936,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) {
+    private func applyRuntimePreview(_ previewConfiguration: WarpConfiguration, message: String) { guard requireDebugEditing() else { return };
         cancelLocalUpdates()
         finishGridEditingSession()
         guard let renderer else { return }
@@ -2746,7 +2957,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         runtimePreviewMode = .normal
         runtimePreviewReturnMode = .normal
         let validation = renderer.updateConfiguration(configuration)
-        updateWarpBoundary(configuration, configuration.render.showWarpBoundary)
+        updateWarpBoundary(configuration, accessSession.renderConfiguration(configuration).render.showWarpBoundary)
         refreshRuntimePreviewControls()
         refreshCanvasGeometry()
         let color: NSColor = validation.isValid ? .systemGreen : .systemRed
@@ -2754,7 +2965,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         synchronizeLocalEditor()
     }
 
-    private var canEditLocalWarp: Bool { renderer != nil && runtimePreviewMode == .normal }
+    private var canEditLocalWarp: Bool { accessSession.allowsDebugEditing && renderer != nil && runtimePreviewMode == .normal }
 
     private func canSubmitGeometry(_ source: String) -> Bool {
         canEditLocalWarp && (!geometryValidationInFlight || geometryValidationSource == source)
@@ -2783,7 +2994,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         localEditor.synchronize(configuration: configuration, renderedConfiguration: rendered, mesh: mesh, available: canSubmitGeometry("local"), message: message)
     }
 
-    @objc private func openBezierEditor() { showBezierEditor() }
+    @objc private func openBezierEditor() { guard requireDebugEditing() else { return }; showBezierEditor() }
 
     @discardableResult
     func showBezierEditor(presentWindow: Bool = true) -> BezierWarpEditorController {
@@ -2803,7 +3014,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             }
             bezierEditor = editor
         }
-        if presentWindow {
+        if presentWindow && accessSession.allowsDebugEditing {
             if selectedModuleIdentifier == "local", selectedLocalTool != 0 { localEditor?.deactivateInteraction(); geometryPreview.viewport = localEditor?.viewport }
             selectedLocalTool = 0
             localToolPicker.selectedSegment = 0
@@ -2826,8 +3037,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         historyButton.isEnabled = true
         setStatus("正在校验贝塞尔修改；可以切换模块或暂停输出。", color: .systemOrange)
         localEditor?.setEditingAvailable(false)
+        let accessGeneration = accessSession.generation
         bezierUpdates.submit(candidate) { [weak self] result in
-            guard let self else { return }
+            guard let self, self.accessSession.generation == accessGeneration, self.accessSession.allowsDebugEditing else { return }
             self.geometryValidationInFlight = false
             self.geometryValidationSource = nil
             guard self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
@@ -2852,7 +3064,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         }
     }
 
-    @objc private func updateSurfaceAlignment() {
+    @objc private func updateSurfaceAlignment() { guard requireDebugEditing() else { return };
         configuration.alignment.snapTilt = snapTiltButton.state == .on
         configuration.alignment.snapHorizontalBend = snapBendButton.state == .on
         configuration.alignment.centerHorizontal = centerSurfaceXButton.state == .on
@@ -2864,7 +3076,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    @objc private func centerAndLevelSurface() {
+    @objc private func centerAndLevelSurface() { guard requireDebugEditing() else { return };
         configuration.alignment.centerHorizontal = true
         configuration.alignment.centerVertical = true
         configuration.alignment.level = true
@@ -2872,7 +3084,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    @objc private func openLocalEditor() { showLocalEditor() }
+    @objc private func openLocalEditor() { guard requireDebugEditing() else { return }; showLocalEditor() }
 
     @discardableResult
     func showLocalEditor(presentWindow: Bool = true) -> LocalWarpEditorController {
@@ -2896,7 +3108,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             editor.onShowPolynomial = { [weak self] in self?.showGlobalPolynomialSettings() }
             localEditor = editor
         }
-        if presentWindow {
+        if presentWindow && accessSession.allowsDebugEditing {
             if selectedModuleIdentifier == "local", selectedLocalTool != 1 { bezierEditor?.deactivateInteraction(); geometryPreview.viewport = bezierEditor?.viewport }
             selectedLocalTool = 1
             localToolPicker.selectedSegment = 1
@@ -2905,7 +3117,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         return localEditor!
     }
 
-    func showGlobalPolynomialSettings(presentWindow: Bool = true) {
+    func showGlobalPolynomialSettings(presentWindow: Bool = true) { guard requireDebugEditing() else { return };
         selectModule("global")
         polynomialDisclosure.state = .on
         polynomialDetails.isHidden = false
@@ -2935,8 +3147,9 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         historyButton.isEnabled = true
         setStatus("正在校验交点修改；可以切换模块或暂停输出。", color: .systemOrange)
         bezierEditor?.setEditingAvailable(false)
+        let accessGeneration = accessSession.generation
         localUpdates.submit(candidate) { [weak self] result in
-            guard let self else { return }
+            guard let self, self.accessSession.generation == accessGeneration, self.accessSession.allowsDebugEditing else { return }
             self.geometryValidationInFlight = false
             self.geometryValidationSource = nil
             guard self.canEditLocalWarp, self.lastAppliedConfiguration == baseline else { return }
@@ -3063,7 +3276,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         window.setFrame(WorkbenchWindowPlacement.containedFrame(window.frame, in: visibleFrame), display: false)
     }
 
-    @objc private func applyAAFields() {
+    @objc private func applyAAFields() { guard requireDebugEditing() else { return };
         guard !geometryValidationInFlight else { setStatus("局部修改正在校验，请稍候再保存显示范围。", color: .systemOrange); return }
         markFieldDraftsApplied([aaXField, aaYField, aaWidthField, aaHeightField])
         let aa = configuration.aaRect.sanitized()
@@ -3081,7 +3294,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    @objc private func updateCaptureSourceMode() {
+    @objc private func updateCaptureSourceMode() { guard requireDebugEditing() else { return };
         configuration.capture.sourceMode = CaptureSourceMode.allCases[captureSourcePicker.indexOfSelectedItem]
         applyConfiguration(
             configuration.capture.sourceMode == .automaticFullscreenWindow
@@ -3090,19 +3303,19 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         )
     }
 
-    @objc private func centerAA() {
+    @objc private func centerAA() { guard requireDebugEditing() else { return };
         configuration.aaRect = NormalizedRect(x: 0.06, y: 0.26, width: 0.88, height: 0.48)
         applyConfiguration("AA 区已居中")
         refreshControls()
     }
 
-    @objc private func fullAA() {
+    @objc private func fullAA() { guard requireDebugEditing() else { return };
         configuration.aaRect = .full
         applyConfiguration("AA 区已设为全屏")
         refreshControls()
     }
 
-    @objc private func applyCanvasFields() {
+    @objc private func applyCanvasFields() { guard requireDebugEditing() else { return };
         guard !geometryValidationInFlight else { setStatus("局部修改正在校验，请稍候再保存画布。", color: .systemOrange); return }
         markFieldDraftsApplied([canvasWidthField, canvasHeightField])
         guard let width = NumericInput.integer(from: canvasWidthField.stringValue),
@@ -3116,12 +3329,12 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    @objc private func updateContentMode() {
+    @objc private func updateContentMode() { guard requireDebugEditing() else { return };
         configuration.contentMode = ContentMode.allCases[contentModePicker.indexOfSelectedItem]
         applyConfiguration("内容适配已更新")
     }
 
-    @objc private func updateCropAnchor() {
+    @objc private func updateCropAnchor() { guard requireDebugEditing() else { return };
         configuration.cropAnchor = CropAnchorConfiguration(
             horizontal: cropHorizontalSlider.doubleValue,
             vertical: cropVerticalSlider.doubleValue
@@ -3129,34 +3342,34 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         applyConfiguration("裁切位置已更新")
     }
 
-    @objc private func updateMirror() {
+    @objc private func updateMirror() { guard requireDebugEditing() else { return };
         configuration.mirror.horizontal = horizontalMirrorButton.state == .on
         configuration.mirror.vertical = verticalMirrorButton.state == .on
         applyConfiguration("镜像已更新")
     }
 
-    @objc private func updateAntiAliasing() {
+    @objc private func updateAntiAliasing() { guard requireDebugEditing() else { return };
         configuration.render.antiAliasing = AntiAliasingMode.enabledCases[antiAliasingPicker.indexOfSelectedItem]
         applyConfiguration("抗锯齿档位已更新")
     }
 
-    @objc private func toggleAntiAliasing() {
+    @objc private func toggleAntiAliasing() { guard requireDebugEditing() else { return };
         configuration.render.antiAliasingEnabled = antiAliasingEnabledButton.state == .on
         applyConfiguration(configuration.render.antiAliasingEnabled ? "抗锯齿已开启" : "抗锯齿已关闭")
         refreshControls()
     }
 
-    @objc private func updateAutomaticPerformance() {
+    @objc private func updateAutomaticPerformance() { guard requireDebugEditing() else { return };
         configuration.render.automaticPerformanceFallback = automaticPerformanceButton.state == .on
         applyConfiguration("自动性能保护已更新")
     }
 
-    @objc private func updateTestPattern() {
+    @objc private func updateTestPattern() { guard requireDebugEditing() else { return };
         configuration.render.testPattern = testPatternButton.state == .on ? .calibrationGrid : .off
         applyConfiguration("标定测试图已更新")
     }
 
-    @objc private func toggleAABoundary() {
+    @objc private func toggleAABoundary() { guard requireDebugEditing() else { return };
         configuration.render.showAABoundary = aaBoundaryButton.state == .on
         applyConfiguration(
             configuration.render.showAABoundary
@@ -3165,7 +3378,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         )
     }
 
-    @objc private func toggleExtendedWarp() {
+    @objc private func toggleExtendedWarp() { guard requireDebugEditing() else { return };
         if extendedWarpButton.state == .on {
             guard canvasFieldsAreSaved() else {
                 extendedWarpButton.state = configuration.extendedWarpEnabled ? .on : .off
@@ -3184,7 +3397,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshControls()
     }
 
-    @objc private func toggleWarpBoundary() {
+    @objc private func toggleWarpBoundary() { guard requireDebugEditing() else { return };
         configuration.render.showWarpBoundary = warpBoundaryButton.state == .on
         applyConfiguration(
             configuration.render.showWarpBoundary
@@ -3193,7 +3406,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         )
     }
 
-    @objc private func toggleRawCalibration() {
+    @objc private func toggleRawCalibration() { guard requireDebugEditing() else { return };
         if runtimePreviewMode == .rawReflectionCalibration {
             leaveRuntimePreview()
             return
@@ -3205,7 +3418,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         )
     }
 
-    @objc private func toggleAntiAliasingComparison() {
+    @objc private func toggleAntiAliasingComparison() { guard requireDebugEditing() else { return };
         if runtimePreviewMode == .antiAliasingComparison {
             restoreRuntimePreview(runtimePreviewReturnMode)
             return
@@ -3218,7 +3431,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         )
     }
 
-    @objc private func toggleWarpVisibility() {
+    @objc private func toggleWarpVisibility() { guard requireDebugEditing() else { return };
         let nextVisible = !isWarpVisible()
         setWarpVisible(nextVisible)
         updateWarpVisibilityState(nextVisible)
@@ -3234,47 +3447,47 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         pauseWarpButton.title = visible ? "暂时显示原始桌面" : "重新显示校正画面"
     }
 
-    @objc private func toggleWarp() {
+    @objc private func toggleWarp() { guard requireDebugEditing() else { return };
         configuration.manual.enabled = warpButton.state == .on
         applyConfiguration("基础 Warp 已更新")
     }
 
-    @objc private func toggleWarpTrend() {
+    @objc private func toggleWarpTrend() { guard requireDebugEditing() else { return };
         configuration.warpTrend = inverseWarpTrendButton.state == .on ? .inverse : .forward
         applyConfiguration("畸变趋势已切换为：\(configuration.warpTrend.title)")
     }
 
-    @objc private func updateStrength(_ sender: NSSlider) { configuration.manual.strength = sender.doubleValue; applyConfiguration("Warp 强度已更新") }
-    @objc private func updateArch(_ sender: NSSlider) { configuration.manual.arch = sender.doubleValue; applyConfiguration("上下弧度已更新") }
-    @objc private func updateVerticalScale(_ sender: NSSlider) {
+    @objc private func updateStrength(_ sender: NSSlider) { guard requireDebugEditing() else { return }; configuration.manual.strength = sender.doubleValue; applyConfiguration("Warp 强度已更新") }
+    @objc private func updateArch(_ sender: NSSlider) { guard requireDebugEditing() else { return }; configuration.manual.arch = sender.doubleValue; applyConfiguration("上下弧度已更新") }
+    @objc private func updateVerticalScale(_ sender: NSSlider) { guard requireDebugEditing() else { return };
         configuration.manual.verticalAspectScale = sender.doubleValue
         applyConfiguration("垂直压缩 / 拉伸已更新")
         refreshControls()
     }
-    @objc private func resetVerticalScale() {
+    @objc private func resetVerticalScale() { guard requireDebugEditing() else { return };
         configuration.manual.verticalAspectScale = 1
         applyConfiguration("垂直比例已恢复为 1.00×；原有基础校正保留")
         refreshControls()
     }
-    @objc private func updateAsymmetry(_ sender: NSSlider) { configuration.manual.asymmetry = sender.doubleValue; applyConfiguration("左右不对称已更新") }
-    @objc private func updateTilt(_ sender: NSSlider) { configuration.manual.tilt = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapTilt, threshold: 0.002); sender.doubleValue = configuration.manual.tilt; applyConfiguration(configuration.manual.tilt == 0 && configuration.alignment.snapTilt ? "整体倾斜已吸附到精确零点" : "整体倾斜已更新") }
-    @objc private func updateHorizontalBend(_ sender: NSSlider) { configuration.manual.horizontalBend = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapHorizontalBend, threshold: 0.001); sender.doubleValue = configuration.manual.horizontalBend; applyConfiguration(configuration.manual.horizontalBend == 0 && configuration.alignment.snapHorizontalBend ? "水平弯曲已吸附到精确零点" : "水平弯曲已更新") }
+    @objc private func updateAsymmetry(_ sender: NSSlider) { guard requireDebugEditing() else { return }; configuration.manual.asymmetry = sender.doubleValue; applyConfiguration("左右不对称已更新") }
+    @objc private func updateTilt(_ sender: NSSlider) { guard requireDebugEditing() else { return }; configuration.manual.tilt = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapTilt, threshold: 0.002); sender.doubleValue = configuration.manual.tilt; applyConfiguration(configuration.manual.tilt == 0 && configuration.alignment.snapTilt ? "整体倾斜已吸附到精确零点" : "整体倾斜已更新") }
+    @objc private func updateHorizontalBend(_ sender: NSSlider) { guard requireDebugEditing() else { return }; configuration.manual.horizontalBend = WarpAlignmentConfiguration.snapped(sender.doubleValue, enabled: configuration.alignment.snapHorizontalBend, threshold: 0.001); sender.doubleValue = configuration.manual.horizontalBend; applyConfiguration(configuration.manual.horizontalBend == 0 && configuration.alignment.snapHorizontalBend ? "水平弯曲已吸附到精确零点" : "水平弯曲已更新") }
 
-    @objc private func togglePolynomial() {
+    @objc private func togglePolynomial() { guard requireDebugEditing() else { return };
         configuration.polynomial.enabled = polynomialButton.state == .on
         applyConfiguration("多项式增量已更新")
     }
 
-    @objc private func updatePolynomialOrder() {
+    @objc private func updatePolynomialOrder() { guard requireDebugEditing() else { return };
         configuration.polynomial.order = orderPicker.indexOfSelectedItem + 2
         configuration.polynomial = configuration.polynomial.normalized()
         rebuildTermPicker()
         applyConfiguration("多项式阶数已更新")
     }
 
-    @objc private func selectPolynomialTerm() { refreshCoefficientFields() }
+    @objc private func selectPolynomialTerm() { guard requireDebugEditing() else { return }; refreshCoefficientFields() }
 
-    @objc private func applyPolynomialCoefficients() {
+    @objc private func applyPolynomialCoefficients() { guard requireDebugEditing() else { return };
         guard !geometryValidationInFlight else { setStatus("局部修改正在校验，请稍候再保存系数。", color: .systemOrange); return }
         markFieldDraftsApplied([coefficientXField, coefficientYField])
         let index = max(termPicker.indexOfSelectedItem, 0)
@@ -3287,7 +3500,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         refreshCoefficientFields()
     }
 
-    @objc private func adjustNumericField(_ sender: NSButton) {
+    @objc private func adjustNumericField(_ sender: NSButton) { guard requireDebugEditing() else { return };
         guard let target = NumericFieldTarget(rawValue: sender.tag / 2) else { return }
         let direction = sender.tag.isMultiple(of: 2) ? -1.0 : 1.0
 
@@ -3340,7 +3553,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         applyOutputVerticalOffset(0)
     }
 
-    private func applyOutputVerticalOffset(_ value: Double) {
+    private func applyOutputVerticalOffset(_ value: Double) { guard requireDebugEditing() else { return };
         guard value.isFinite else { return }
         let range = configuration.outputVerticalOffsetRange
         let bounded = min(max(value, range.lowerBound), range.upperBound)
@@ -3361,7 +3574,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         field.stringValue = NumericInput.formattedDouble(value + delta)
     }
 
-    @objc private func clearPolynomial() {
+    @objc private func clearPolynomial() { guard requireDebugEditing() else { return };
         let count = PolynomialWarpConfiguration.coefficientCount(order: configuration.polynomial.order)
         configuration.polynomial.coefficientsX = Array(repeating: 0, count: count)
         configuration.polynomial.coefficientsY = Array(repeating: 0, count: count)
@@ -3369,7 +3582,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         applyConfiguration("多项式系数已清零")
     }
 
-    @objc private func savePreset() {
+    @objc private func savePreset() { guard requireDebugEditing() else { return };
         do {
             let preset = try presetStore.save(name: presetNameField.stringValue, configuration: configuration)
             refreshPresets(selecting: preset.id)
@@ -3395,12 +3608,36 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             )
             return
         }
-        configuration = preset.configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
-        refreshControls()
-        applyConfiguration("已应用预设：\(preset.name)")
+        guard !accessSession.isAuthenticating else { return }
+        if accessSession.isDebugMode {
+            applyConfirmedPreset(preset)
+            return
+        }
+        guard let window, window.attachedSheet == nil, presetApplyConfirmation == nil else { return }
+        let alert = NSAlert()
+        alert.messageText = "应用预设“\(preset.name)”？"
+        alert.informativeText = "将把当前 \(displayWidth) × \(displayHeight) 外屏切换到这套已保存参数。预设文件不会被修改。"
+        let cancel = alert.addButton(withTitle: "取消，保留现状")
+        let confirm = alert.addButton(withTitle: "应用预设")
+        presetApplyConfirmation = alert
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard let self else { return }
+            self.presetApplyConfirmation = nil
+            guard response == .alertSecondButtonReturn, !self.accessSession.isAuthenticating else { return }
+            self.applyConfirmedPreset(preset)
+        }
+        cancel.keyEquivalent = "\r"
+        confirm.keyEquivalent = ""
+        alert.window.defaultButtonCell = cancel.cell as? NSButtonCell
     }
 
-    @objc private func deletePreset() {
+    private func applyConfirmedPreset(_ preset: WarpPreset) {
+        configuration = preset.configuration.sanitized(forDisplayWidth: displayWidth, height: displayHeight)
+        refreshControls()
+        applyConfiguration("已应用预设：\(preset.name)", applyingSavedPreset: true)
+    }
+
+    @objc private func deletePreset() { guard requireDebugEditing() else { return };
         let index = presetPicker.indexOfSelectedItem
         guard presets.indices.contains(index) else { return }
         let preset = presets[index]
@@ -3413,7 +3650,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         }
     }
 
-    @objc private func rollbackConfiguration() {
+    @objc private func rollbackConfiguration() { guard requireDebugEditing() else { return };
         guard renderer != nil else { return }
         let wasValidating = geometryValidationInFlight
         cancelLocalUpdates()
@@ -3432,11 +3669,11 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         applyConfiguration("已回退：\(revision.reason)", recordHistory: false)
     }
 
-    @objc private func importConfiguration() {
+    @objc private func importConfiguration() { guard requireDebugEditing() else { return };
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
+        guard panel.runModal() == .OK, let url = panel.url, requireDebugEditing() else { return }
         do {
             let data = try Data(contentsOf: url)
             configuration = try store.importData(
@@ -3465,13 +3702,13 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
         }
     }
 
-    @objc private func resetConfiguration() {
+    @objc private func resetConfiguration() { guard requireDebugEditing() else { return };
         let alert = NSAlert()
         alert.messageText = "重置当前外屏的全部参数？"
         alert.informativeText = "将恢复 AA、画布、弧度、多项式、镜像和外扩起点的默认设置。已保存的命名预设不删除；重置后可撤销一次。"
         alert.addButton(withTitle: "重置全部参数")
         alert.addButton(withTitle: "取消，保留现状")
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        guard alert.runModal() == .alertFirstButtonReturn, requireDebugEditing() else { return }
         configuration = .defaultConfiguration(displayWidth: displayWidth, displayHeight: displayHeight)
         refreshControls()
         applyConfiguration("已恢复默认配置")
@@ -3485,6 +3722,7 @@ private extension Array {
 }
 
 @MainActor private final class AppDelegate: NSObject, NSApplicationDelegate {
+    private let accessSession = WorkbenchAccessSession()
     private let captureEngine = CaptureEngine()
     private let protoPie = ProtoPieCoordinator()
     private let mouseMapping = MouseMappingController()
@@ -3603,7 +3841,7 @@ private extension Array {
             pixelWidth: pixelWidth,
             pixelHeight: pixelHeight,
             frameStore: captureEngine.frameStore,
-            configuration: configuration
+            configuration: accessSession.renderConfiguration(configuration)
         ) else {
             showWaitingControlPanel(message: "外屏图形输出尚未就绪，控制台保持待机；程序会自动重试。")
             scheduleStartupRetry()
@@ -3614,6 +3852,7 @@ private extension Array {
         outputDisplayState = displayState(for: topology.output)
         controlDisplayID = topology.source.flatMap(displayID)
         let previousPanel = controlPanel
+        previousPanel?.cancelAuthentication()
         let controlPanel = ControlPanelController(
             renderer: outputController.renderer,
             store: configurationStore,
@@ -3647,7 +3886,11 @@ private extension Array {
             },
             updateWarpBoundary: { [weak outputController] configuration, visible in
                 outputController?.updateWarpBoundary(configuration: configuration, visible: visible)
-            }, presentWindow: topology.source != nil, protoPie: protoPie, mouseMapping: mouseMapping, playback: playback
+            }, presentWindow: topology.source != nil, protoPie: protoPie, mouseMapping: mouseMapping, playback: playback,
+            accessSession: accessSession,
+            onAuthenticationInteractionChanged: { [weak self] exclusive in
+                self?.mouseMapping.setWorkbenchInputExclusive(exclusive)
+            }
         )
         if let previousPanel { controlPanel.restoreWorkspace(from: previousPanel, sameDisplay: sameDisplay) }
         self.controlPanel = controlPanel
@@ -3732,11 +3975,16 @@ private extension Array {
             return CGDisplayIsBuiltin(id) != 0
         }) ?? physicalScreens.first
         let previousPanel = controlPanel
+        previousPanel?.cancelAuthentication()
         let panel = ControlPanelController(
             renderer: nil, store: configurationStore, configuration: preview,
             sourceScreen: source, outputScreen: nil,
             setWarpVisible: { _ in }, isWarpVisible: { false },
-            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie, mouseMapping: mouseMapping, playback: playback
+            applyCaptureConfiguration: { _ in }, updateAABoundary: { _, _ in }, updateWarpBoundary: { _, _ in }, protoPie: protoPie, mouseMapping: mouseMapping, playback: playback,
+            accessSession: accessSession,
+            onAuthenticationInteractionChanged: { [weak self] exclusive in
+                self?.mouseMapping.setWorkbenchInputExclusive(exclusive)
+            }
         )
         if let previousPanel { panel.restoreWorkspace(from: previousPanel, sameDisplay: true) }
         controlPanel = panel
@@ -3955,6 +4203,7 @@ private extension Array {
     }
 
     private func configureMouseMapping() {
+        mouseMapping.settingsEditingAllowed = { [weak self] in self?.accessSession.allowsDebugEditing ?? false }
         mouseMapping.testPatternProvider = { [weak self] in
             self?.outputController?.renderer.activeConfiguration.render.testPattern
                 ?? self?.controlPanel?.configurationForOfflinePreview.render.testPattern
@@ -4009,6 +4258,7 @@ private extension Array {
         }
         presentationExit.shouldExit = { [weak self] in
             guard let self, let output = self.outputController, output.isWarpVisible,
+                  !self.accessSession.isAuthenticating,
                   let front = NSWorkspace.shared.frontmostApplication?.processIdentifier,
                   let point = CGEvent(source: nil)?.location else { return false }
             if front == ProcessInfo.processInfo.processIdentifier {
@@ -4161,7 +4411,7 @@ private extension Array {
     }
 
     private func hideWorkbenchOnOutputScreen() {
-        guard chooseScreens()?.source == nil else { return }
+        guard !accessSession.isAuthenticating, chooseScreens()?.source == nil else { return }
         headlessWorkbenchRequested = false
         controlPanel?.window?.orderOut(nil)
     }
@@ -4185,6 +4435,13 @@ private extension Array {
         startupRetryWorkItem?.cancel()
         let previousControlID = controlDisplayID
         controlDisplayID = topology.source.flatMap(displayID)
+        // A password sheet belongs to its physical control screen. Cancel an
+        // unsubmitted attempt if that screen vanishes, rather than leaving an
+        // invisible modal underneath the full-screen output after closing the lid.
+        if previousControlID != controlDisplayID && accessSession.isAuthenticating {
+            controlPanel?.cancelAuthentication()
+            controlPanel?.refreshAccessMode()
+        }
         // Origin can change when the built-in display disappears. Keep the same
         // renderer, stream, preview page and session epoch; relocate only the window.
         let originChanged = outputController.window.frame.origin != topology.output.frame.origin
@@ -4195,7 +4452,7 @@ private extension Array {
             headlessWorkbenchRequested = false
             controlPanel?.fitWindow(to: control.visibleFrame)
             if previousControlID != controlDisplayID, !mouseMapping.isActive { controlPanel?.bringToFront() }
-        } else if !headlessWorkbenchRequested {
+        } else if !headlessWorkbenchRequested && !accessSession.isAuthenticating {
             controlPanel?.window?.orderOut(nil)
         }
         return true
