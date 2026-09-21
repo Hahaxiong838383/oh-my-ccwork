@@ -63,12 +63,13 @@
 4. 抢跑 claim 先 404 再 200（两轮都有）属合同内，不用改。
 
 ## 6. a / b / c / f 附表（待端侧 rid 后补）
-| 用例 | rid 集合 | 服务端结果 | 结论 |
+| 用例 | 端侧（回执 DIAGNOSTIC_LOG_ABCF_CLIENT_RECEIPT_20260921，合同回放，未打服务端） | 服务端（09-19 上线 E2E，2099 合成探针 SN 真打生产端点） | 结论 |
 |---|---|---|---|
-| a | 待 | 待 | 待 |
-| b | 待 | 待 | 待 |
-| c | 待 | 待 | 待 |
-| f | 待 | 待 | 待 |
+| a 离线 25 条 | 模拟重启后恢复 25 条，accepted 25 / pending 0 | 批次幂等 + 部分成功路径已验（真机 15 批 66 条零丢） | 端侧自测通过 + 服务端合同已验；真机 25 条联调未做 |
+| b 同批重放 3 次 | 第 1 次 accepted 2，后两次 duplicated 2，事件表 2 行 | 同批重放仍 accepted 且事件表一行；同 ID 异载荷 event_id_payload_conflict | 同上 |
+| c 未登记 / 非法 level | invalid_event rejected 1，终态删除不重试 | event_not_allowed + invalid_event 进被拒表 | 同上 |
+| f 脱敏对撞 | wifi_password / token / 嵌套 password 端侧持久化即 [redacted] | 存储行零原文（SN→****末4、JWT→[redacted-jwt]、手机→139****xxxx、密码键→[redacted]） | 同上 |
+两半各自验过，真机端到端合流未做；按内测版口径接受，若日后要补，端侧给真实 rid 即可按 v3 §4 判据补一行。
 
 
 ## 7. 回你们「第二轮 401 端侧结果回执」§5（2026-09-21 09:23 CST 补，判定不变：第二轮 PASS，联调收口，不再排第三轮）
@@ -82,5 +83,12 @@
 - 你们 21:01:14 `pairing_recovery ACTIVATED` 比服务端 claim 200 晚 67 秒，属端侧状态机后段或设备钟，不影响判定。
 - 你们 21:00–21:02 抓取窗口没有 `diagnostic_log_*` 状态行，是端侧日志缺口（非阻塞，建议下一个包修）；服务端判据不依赖这些行。
 - 取证备注：nginx 访问日志按日轮转，21:00 窗口的行在 `kidshub-ai-access.log.1`。
+
+
+## 8. 收口声明（2026-09-21 11:27 CST）
+- 端侧 v6 收口补充回执：rid 337d7268-6/7/9 已对上；日志缺口定位为可观测性问题（无 pairing_recovery_activated 精确行、上传前无带 rid 的尝试行），已在 2d72868 补 `state=pairing_recovery_activated` 与 `state=diagnostic_log_upload_attempt`，进下一包，不需要再演练。
+- 联调结论：传输可靠性四档 + 开关关闭 + 401 两轮真机 PASS；a/b/c/f 两半各验（§6）。**服务端侧与端侧共同收口，可合并。**
+- 合并范围：端侧分支 codex/g1-settings-ui-20260915（含 b267be5、2d72868）合入其主线；服务端代码已在生产并提交于 p003/story-truncation-20260914，合入 main 的时机由川哥定。
+- 不阻塞的后续：端侧 announce/claim 带 v:3；下一正式 PCK 评估 boot nonce 形式的 client_event_id；确认 config 约 20 秒轮询是否预期；服务端后台把 builtin 标 bootstrap、clock_skew 改标队列龄；内部工单：nginx 访问日志与 worker env 里的设备 token 查询串。
 
 署名：cc（Claude）| 2026-09-20 21:02 CST
