@@ -180,7 +180,9 @@ struct ProtoPiePlaybackRuntime: Equatable {
             remainingTotalSeconds: newPlan.totalDurationSeconds)
         runClosed = false; hasReadyItemInRun = false; log.beginRun(id)
         record("plan_started", details: ["itemCount": String(items.count), "mode": String(describing: newPurpose)])
-        launchItem(at: 0)
+        // A new timed plan starts the prototype from its beginning, even when
+        // startup already opened the same source. Preview-only keeps reuse.
+        launchItem(at: 0, forceRefresh: newPurpose == .plan)
         startWatchdog(runID: id)
     }
 

@@ -76,6 +76,28 @@ import XCTest
         XCTAssertEqual(prepares, 0); XCTAssertEqual(controller.runtime.state, .idle)
     }
 
+    func testStartingPlanRestartsFirstDocumentButPreviewOnlyCanReuseIt() async throws {
+        let (controller, _) = try make()
+        var preparedIDs = [UUID](); var refreshes = [Bool]()
+        controller.prepare = { item, refresh in
+            preparedIDs.append(item.id); refreshes.append(refresh)
+        }
+        controller.previewSelected(); await settle()
+        XCTAssertEqual(controller.runtime.state, .completed)
+        XCTAssertEqual(refreshes, [false])
+
+        controller.start(); await settle()
+        XCTAssertEqual(controller.runtime.state, .running)
+        XCTAssertEqual(refreshes, [false, true])
+        XCTAssertEqual(preparedIDs, Array(repeating: controller.library.items[0].id, count: 2))
+        XCTAssertEqual(controller.runtime.remainingItemSeconds, 10)
+
+        controller.stop(); await settle()
+        controller.start(); await settle()
+        XCTAssertEqual(refreshes, [false, true, true])
+        XCTAssertEqual(controller.runtime.state, .running)
+    }
+
     func testDwellStartsOnlyAfterReadyAndRunningUsesImmutableSnapshot() async throws {
         let (controller, clock) = try make(); var ready: CheckedContinuation<Void, Never>?
         var prepared = [String]()
@@ -243,7 +265,7 @@ import XCTest
         controller.performAction = { actions.append($0.key) }
         controller.start(); await settle(); await step(clock, 2)
         controller.pause(); await settle(); controller.resume(); await settle()
-        XCTAssertEqual(refreshes, [false, true])
+        XCTAssertEqual(refreshes, [true, true])
         XCTAssertEqual(actions, ["Numpad2", "Numpad0", "Numpad2", "Numpad0"])
         XCTAssertEqual(controller.runtime.remainingItemSeconds, 8)
     }
@@ -267,7 +289,7 @@ import XCTest
         controller.prepare = { _, refresh in refreshes.append(refresh) }
         controller.bindInput = { binds += 1 }; controller.performAction = { actions.append($0.key) }
         controller.start(); await settle(); await step(clock, 1)
-        XCTAssertEqual(refreshes, [false, true]); XCTAssertEqual(binds, 2)
+        XCTAssertEqual(refreshes, [true, true]); XCTAssertEqual(binds, 2)
         XCTAssertEqual(actions, ["Numpad2", "Numpad0", "Numpad2", "Numpad0"])
         XCTAssertEqual(controller.runtime.state, .running)
     }

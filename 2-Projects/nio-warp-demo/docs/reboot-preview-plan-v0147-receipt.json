@@ -1,0 +1,79 @@
+{
+  "version": "0.14.7",
+  "build": 75,
+  "verifiedAt": "2026-09-21T00:05:21.114181+00:00",
+  "sourceSHA256": "807c7b37aa3f22d7d761a6e23bcaee7853a928d007075d1b45a8e91c20c2e81f",
+  "binarySHA256": "9f08a23d8e7e68d741cef5440fa07be92e9b9ca0be2e32c5e3214014f6e5e1eb",
+  "rollbackTag": "nio-warp-before-reboot-playback-20260921",
+  "fullBaseline": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/pre-change-baselines/20260920-235939Z-before-reboot-playback-v0147",
+  "installBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260921-000308Z-before-v0147",
+  "signatureRequirementMatched": true,
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "sourceDigestMatched": true,
+  "testRuntime": "Original production sources and test methods with assertion shim; NOT formal XCTest",
+  "tests": 124,
+  "assertions": 617,
+  "failures": 0,
+  "oldBehaviorRegressionFailures": 2,
+  "automaticAcceptance": {
+    "startupLabelCorrect": true,
+    "freshFirstDocument": true,
+    "stopStartFreshDocument": true,
+    "rotationStates": [
+      "演示 2 · 自动演示",
+      "演示1 · 自动演示"
+    ],
+    "progressBefore": 0.030102516666666634,
+    "progressAfter": 0.10296573749999993,
+    "protectedSettingGroups": 9,
+    "changedParameterKeys": [],
+    "pageCountAfterReady": 1,
+    "controlRuntime": {
+      "attachedTargets": 1,
+      "attachingTargets": 0,
+      "cancelled": 0,
+      "completed": 265,
+      "connected": true,
+      "connections": 1,
+      "disconnects": 0,
+      "legacyRequests": 0,
+      "maximumConnections": 16,
+      "mode": "persistent",
+      "pending": 0,
+      "requests": 265,
+      "shutdown": false,
+      "timeouts": 0,
+      "updatedAt": 1789949081.623248
+    },
+    "captureSize": [
+      1920,
+      1100
+    ],
+    "geometryReady": true,
+    "health": {
+      "file": "playback-20260921-1789948997110-F851D7E2.jsonl",
+      "events": {
+        "run_started": 2,
+        "plan_started": 2,
+        "item_preparing": 4,
+        "item_ready": 4,
+        "run_ended": 1,
+        "health": 6
+      },
+      "nonInfo": [],
+      "healthCount": 6,
+      "fps": [
+        59.676824848715256,
+        59.841050135767524,
+        59.33020306921191,
+        59.49917240160871,
+        59.98170892971177,
+        60.00064944837048
+      ],
+      "healthyCapture": true,
+      "appProcess": "1377   7.7 172224 01:54"
+    }
+  },
+  "humanAcceptance": "Pending user validation of v0.14.7; no physical reboot performed after this installation",
+  "remotePushPerformed": false
+}

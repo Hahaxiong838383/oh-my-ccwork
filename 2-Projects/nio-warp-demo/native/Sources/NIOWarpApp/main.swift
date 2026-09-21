@@ -1538,7 +1538,7 @@ final class ControlPanelController: NSWindowController, NSTextFieldDelegate, NST
             ))
             protoPiePanel = panel
             if let playback {
-                let automation = ProtoPiePlaybackPanel(controller: playback)
+                let automation = ProtoPiePlaybackPanel(controller: playback, coordinator: protoPie)
                 playbackPanel = automation
                 automation.onPickPosition = { [weak self] callback in
                     guard let self, let mouseMapping = self.mouseMapping else { return }

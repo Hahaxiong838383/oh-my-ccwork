@@ -9,8 +9,10 @@ import AppKit
     }
 
     private let controller: ProtoPiePlaybackController
+    private let coordinator: ProtoPieCoordinator?
     private var draft: ProtoPiePlaybackLibrary
     private var observer: UUID?
+    private var previewObserver: UUID?
     private var disconnected = false
     private var dirty = false
     private var saving = false
@@ -43,8 +45,9 @@ import AppKit
     private var displayedRunID: UUID?
     private var runningDurations: [UUID: Double] = [:]
 
-    init(controller: ProtoPiePlaybackController) {
+    init(controller: ProtoPiePlaybackController, coordinator: ProtoPieCoordinator? = nil) {
         self.controller = controller
+        self.coordinator = coordinator
         draft = controller.library
         super.init()
         build()
@@ -52,6 +55,10 @@ import AppKit
         renderContent()
         refreshRuntime()
         observer = controller.observe { [weak self] in self?.controllerChanged() }
+        previewObserver = coordinator?.observe { [weak self] in
+            guard let self, !self.disconnected else { return }
+            self.refreshRuntime()
+        }
     }
 
     deinit {
@@ -59,12 +66,16 @@ import AppKit
             let controller = controller
             Task { @MainActor in controller.removeObserver(observer) }
         }
+        if let previewObserver, let coordinator {
+            Task { @MainActor in coordinator.removeObserver(previewObserver) }
+        }
     }
 
     func disconnect() {
         disconnected = true
         exportTask?.cancel(); exportTask = nil
         if let observer { controller.removeObserver(observer); self.observer = nil }
+        if let previewObserver { coordinator?.removeObserver(previewObserver); self.previewObserver = nil }
     }
 
     private var selectedItem: ProtoPiePlaylistItem? {
@@ -165,7 +176,7 @@ import AppKit
             clock.font = .monospacedDigitSystemFont(ofSize: 17, weight: .medium)
             clock.widthAnchor.constraint(greaterThanOrEqualToConstant: 72).isActive = true
         }
-        let clocks = horizontal([field("本链接剩余", itemClock), field("整场剩余", totalClock)], spacing: 18)
+        let clocks = horizontal([field("计划本项剩余", itemClock), field("计划总剩余", totalClock)], spacing: 18)
         let status = vertical(spacing: 3); status.addArrangedSubview(runTitle); status.addArrangedSubview(runDetail)
         status.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         bar.addArrangedSubview(horizontal([status, spacer(), clocks]))
@@ -492,6 +503,27 @@ import AppKit
         return field.isDescendant(of: view)
     }
 
+    /// Independent preview animation does not mean the timed playlist is running.
+    /// Pure presentation text: observing this state never takes playback ownership.
+    static func idlePreviewStatus(_ state: ProtoPieRuntimeState?) -> (title: String, detail: String) {
+        switch state {
+        case .running:
+            return ("单链接预览中 · 自动计划未开始", "当前仅显示独立预览；点击“开始计划”后才会按计划计时和切换链接。")
+        case .paused:
+            return ("预览输出已暂停 · 自动计划未开始", "预览来源仍保留，Warp 输出已暂停；计划计时尚未开始。")
+        case .launching, .waitingForPreview, .capturing:
+            return ("单链接预览准备中 · 自动计划未开始", state?.summary ?? "")
+        case .waitingForDisplay:
+            return ("等待目标外屏 · 自动计划未开始", "外屏就绪后可显示预览；自动计划需点击“开始计划”。")
+        case .failed(let reason):
+            return ("单链接预览异常 · 自动计划未开始", reason)
+        case .stopped:
+            return ("预览联动已停止 · 自动计划未开始", "点击“开始计划”可按当前配置准备预览、计时和切换链接。")
+        case .idle, .none:
+            return ("自动计划未开始", "点击“开始计划”后才会按计划计时和切换链接。")
+        }
+    }
+
     private func refreshRuntime() {
         let runtime = controller.runtime
         if runtime.runID != displayedRunID {
@@ -500,7 +532,7 @@ import AppKit
         }
         let status: String
         switch runtime.state {
-        case .idle: status = "未运行"
+        case .idle: status = Self.idlePreviewStatus(coordinator?.state).title
         case .preparing: status = "准备播放"
         case .running: status = "自动演示"
         case .paused: status = "已暂停"
@@ -508,9 +540,13 @@ import AppKit
         case .completed: status = "已完成"
         case .failed: status = "播放失败"
         }
-        runTitle.stringValue = runtime.itemName.isEmpty ? status : "\(runtime.itemName) · \(status)"
+        runTitle.stringValue = runtime.state == .idle || runtime.itemName.isEmpty ? status : "\(runtime.itemName) · \(status)"
         let step = runtime.stepIndex.map { " · 步骤 \($0 + 1)" } ?? ""
         runDetail.stringValue = runtime.notice.isEmpty ? "\(draft.items.filter(\.enabled).count) 个启用链接 · 已执行 \(runtime.loopCount) 轮\(step)" : runtime.notice
+        if runtime.state == .idle {
+            let detail = Self.idlePreviewStatus(coordinator?.state).detail
+            runDetail.stringValue = runtime.notice.isEmpty ? detail : "\(runtime.notice) · \(detail)"
+        }
         itemClock.stringValue = runtime.isActive ? Self.durationText(runtime.remainingItemSeconds) : selectedItem.map { Self.durationText($0.durationSeconds) } ?? "—"
         let displayedTotal = runtime.isActive || runtime.state == .completed || runtime.state == .failed
             ? runtime.remainingTotalSeconds : draft.plan.totalDurationSeconds
