@@ -70,6 +70,12 @@ ssh root@47.239.204.68 'cd /root/realtime-voice-agent && timeout 50 \
   **音频轨 / 字幕(legacy Transcription 包) / metrics**,交付前三条都要有探针见证(probe 已常驻监听
   `transcription_received`)。详见 [[feedback_probe_subscribes_only_known_channels]]。
 
+## 语音体验 demo 独立线（2026-09-21 10:00 CST 起；详见仓内 docs/VOICE-DEMO-RUST-LINE.md，分支 feat/voice-test-rust-demo）
+- 页面 `https://voice-hk.hahaxiong.cc/voice-test-rust.html` = 川哥个人体验 demo，**与小可分离**：token 派单 agent `rust-worker-demo` → 64.90 `voice-worker-demo.service`（`/root/rust-worker-demo/`，独立 env `rust-worker-demo.env`：直连 DeepSeek、`LLM_URL_QUERY=` 空、unit `UnsetEnvironment=AGENT_INSTRUCTIONS` 用内置通用人设、问候开、P003 设备功能全关、独立 EOT socket）。小可生产池 `voice-worker-rust` / `voice-worker-firstturn` 与共享 env 一律不动。
+- 改页面/续 token：仓内 `web/voice-test-rust.html`（占位 `__LIVEKIT_TOKEN__`）→ `scripts/demo/deploy_demo_page.sh`（47.239 现签 180 天，只回显 room/agent/exp）。改人设/模型：64.90 demo env → `systemctl restart voice-worker-demo`（同步 `.example`）。换二进制：放 `/root/rust-worker-demo/voice-rust-worker.new` → `rust-worker/ops/demo/install_demo_pool.sh`。
+- 验收：47.239 `PROBE_AGENT=rust-worker-demo` 跑**仓内版** rtc_probe.py（服务器现役副本是旧版不认该变量，会派到已退役的 `realtime-voice-agent` 名而静默无指标）；判池：demo journal 有该房 job 且 `voice-worker-rust` 零该房行。
+- 64.90 真值：**总内存 3.9 GB**（不是 31 GB，那是 home-studio），三池 + sidecar 后可用 ~1.9 GB；demo unit MemoryHigh 700M / Max 900M。
+
 ## 排障决策树(按症状)
 
 **先跑通用三查**:`systemctl is-active livekit-server voice-worker`;`free -m`(1.6G 小机);
