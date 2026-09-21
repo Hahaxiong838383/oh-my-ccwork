@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>语音体验 demo · Rust worker 独立池</title>
+<!-- livekit-client 走同源本地文件(nginx 专置 location;jsdelivr CDN 国内可达性差) -->
+<script src="/livekit-client.umd.min.js"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, system-ui, "PingFang SC", sans-serif;
+    background: #0d1117; color: #e6edf3; height: 100dvh;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  header { padding: 16px; text-align: center; }
+  header h1 { font-size: 17px; margin: 0 0 4px; font-weight: 600; }
+  header .sub { font-size: 12px; color: #7d8590; }
+  #status {
+    font-size: 13px; padding: 4px 12px; border-radius: 12px;
+    background: #21262d; color: #7d8590; margin-top: 6px; display: inline-block;
+  }
+  #status.live { background: #0f5132; color: #3fb950; }
+  #status.err  { background: #5c1a1a; color: #ff7b72; }
+  #subs {
+    flex: 1; width: 100%; max-width: 640px; overflow-y: auto;
+    padding: 12px 16px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .bubble {
+    max-width: 80%; padding: 9px 13px; border-radius: 14px;
+    font-size: 15px; line-height: 1.45; word-break: break-word; white-space: pre-wrap;
+  }
+  .user  { align-self: flex-end; background: #1f6feb; color: #fff; border-bottom-right-radius: 4px; }
+  .agent { align-self: flex-start; background: #21262d; border-bottom-left-radius: 4px; }
+  .bubble.interim { opacity: 0.55; font-style: italic; }
+  .bubble.interrupted::after { content: " ⋯"; opacity: 0.5; }
+  footer { padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); width: 100%; max-width: 640px; }
+  #btn {
+    width: 100%; padding: 16px; border: none; border-radius: 14px;
+    font-size: 17px; font-weight: 600; cursor: pointer;
+    background: #238636; color: #fff; transition: background .15s;
+  }
+  #btn:active { background: #2ea043; }
+  #btn.stop { background: #da3633; }
+  #btn:disabled { background: #30363d; color: #7d8590; }
+  .hint { text-align: center; font-size: 12px; color: #7d8590; margin-top: 10px; }
+  #metrics { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+  #metrics .m { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 4px 9px; font-size: 11px; color: #7d8590; display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 46px; }
+  #metrics .mv { font-size: 14px; color: #e6edf3; font-variant-numeric: tabular-nums; }
+  #metrics .tot .mv { color: #3fb950; }
+</style>
+</head>
+<body>
+  <header>
+    <h1>🦀 语音体验 demo · 独立池 rust-worker-demo</h1>
+    <div class="sub">Rust worker(64.90 同机灰度) · 火山豆包 STT/TTS · v1-mini 判停</div>
+    <div id="status">未连接</div>
+    <div id="metrics">
+      <div class="m"><span class="ml">判停</span><b class="mv" data-k="eou">–</b></div>
+      <div class="m"><span class="ml">STT</span><b class="mv" data-k="stt">–</b></div>
+      <div class="m"><span class="ml">LLM</span><b class="mv" data-k="llm">–</b></div>
+      <div class="m"><span class="ml">TTS</span><b class="mv" data-k="tts">–</b></div>
+      <div class="m tot"><span class="ml">合计</span><b class="mv" data-k="total">–</b></div>
+    </div>
+  </header>
+  <div id="subs"></div>
+  <footer>
+    <button id="btn">开始对话</button>
+    <div class="hint">点按钮授权麦克风后即可直接说话，可随时打断对方</div>
+  </footer>
+
+<script>
+const LIVEKIT_URL = "wss://voice-hk.hahaxiong.cc";
+const TOKEN = "__LIVEKIT_TOKEN__"; // 部署脚本注入：scripts/deploy_demo_page.sh 在 47.239 上用 sign_demo_token.py 现签后替换
+
+const { Room, RoomEvent, Track } = LivekitClient;
+const statusEl = document.getElementById("status");
+const subsEl = document.getElementById("subs");
+const btn = document.getElementById("btn");
+let room = null;
+let connected = false;
+
+// 息屏防聋(2026-08-12):移动端锁屏/切后台会挂起 getUserMedia,对面表现为"全聋无报错"。
+// 通话期间申请屏幕常亮;回到前台自动补申请(锁屏会释放 wakeLock)。
+let wakeLock = null;
+async function acquireWakeLock() {
+  try { wakeLock = await navigator.wakeLock?.request("screen"); } catch (e) { /* 不支持则忽略 */ }
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && connected) acquireWakeLock();
+});
+
+// 气泡合并(2026-07-04,team 圆桌 grok+codex 共识定案):LiveKit 把火山每个 definite
+// 分句(句中自然停顿会被切成多句)当成独立 segment id,按 id 建气泡会把一句话说话中的
+// 停顿渲染成两个气泡,用户观感是"被截断了"(实际 ASR/判停均正常,纯显示层问题;agent
+// 侧同理,StreamAdapter 逐句合成也会产生多个 segment id)。改用"说话方"分界,不再用
+// segment id 做气泡 key。
+const active = { user: null, agent: null }; // { el, committed, lastUpdateAt }
+let lastSpeaker = null;
+// 同一说话方超时未更新 → 视为新一轮(兜底:agent 全链路静默失败时,不会把用户下一轮
+// 错误并入上一轮气泡;数值远大于正常轮内分句间隔,不会误拆真实的同一句话)。
+const MERGE_GAP_MS = { user: 2500, agent: 6000 };
+
+function setStatus(text, cls) {
+  statusEl.textContent = text;
+  statusEl.className = cls || "";
+}
+
+function startBubble(who) {
+  const el = document.createElement("div");
+  el.className = "bubble " + who;
+  subsEl.appendChild(el);
+  return { el, committed: "", lastUpdateAt: Date.now() };
+}
+
+function upsertBubble(text, who, final) {
+  const now = Date.now();
+
+  // barge-in 视觉标记(仅样式,不改变气泡边界逻辑):用户开口时如果 agent 气泡仍"新鲜"
+  // (未超时),大概率是打断了 agent 未说完的回复——标记但不强制关闭该气泡,如果 agent
+  // 实际仍在继续同一句回复(理论上的误判),后续分句仍能正常追加进这个气泡。
+  if (who === "user" && active.agent && now - active.agent.lastUpdateAt < MERGE_GAP_MS.agent) {
+    active.agent.el.classList.add("interrupted");
+  }
+
+  const msg = active[who];
+  const speakerChanged = who !== lastSpeaker;
+  const timedOut = !!msg && now - msg.lastUpdateAt > MERGE_GAP_MS[who];
+  if (!msg || speakerChanged || timedOut) {
+    active[who] = startBubble(who);
+  }
+  lastSpeaker = who;
+
+  const s = active[who];
+  s.lastUpdateAt = now;
+  if (final) {
+    s.committed += text;       // definite 分句 → 累加进已提交文本(同轮多句合并的关键)
+    s.el.textContent = s.committed;
+    s.el.classList.remove("interim");
+  } else {
+    s.el.textContent = s.committed + text;  // 进行中分句 → 已提交 + 当前 interim,不落 committed
+    s.el.classList.add("interim");
+  }
+  subsEl.scrollTop = subsEl.scrollHeight;
+}
+
+// 跨境网络兜底(2026-07-02):大陆直连境外的 WebRTC UDP 媒体常被运营商 QoS 掐断
+// (症状:代理可通、直连"通话中"但无声无指标)。走 TURN/TLS 中继(server 已配)解决。
+// ?relay=1 强制中转 / ?relay=0 清除记忆恢复直连;直连失败或掉线自动切中转并记住。
+const _relayQ = new URLSearchParams(location.search).get("relay");
+if (_relayQ === "0") localStorage.removeItem("vk_relay");
+function wantRelay() { return _relayQ === "1" || localStorage.getItem("vk_relay") === "1"; }
+function rememberRelay() { localStorage.setItem("vk_relay", "1"); }
+
+async function connect() {
+  const relay = wantRelay();
+  setStatus(relay ? "连接中…(中转模式)" : "连接中…");
+  btn.disabled = true;
+  try {
+    // audioCaptureDefaults 显式锁定(2026-07-17 降噪快赢1):此前走 livekit-client 默认
+    // (大概率开但未确认);显式声明后 AEC/降噪/AGC 行为不随库升级或浏览器默认漂移。
+    room = new Room({
+      adaptiveStream: true,
+      dynacast: true,
+      audioCaptureDefaults: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+    });
+
+    // 直连媒体中途被掐(建立后十几秒断,跨境 UDP QoS 典型)→ 记住走中转,立即重连
+    room.on(RoomEvent.Reconnecting, () => {
+      if (!relay) {
+        rememberRelay();
+        setStatus("网络中断,切中转模式重连…");
+        room.disconnect().then(() => connect());
+      } else {
+        setStatus("重连中…(中转模式)");
+      }
+    });
+
+    room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === Track.Kind.Audio) {
+        const el = track.attach();
+        el.autoplay = true;
+        document.body.appendChild(el);
+      }
+    });
+
+    // 字幕:user + agent 转写(livekit transcription)
+    room.on(RoomEvent.TranscriptionReceived, (segments, participant) => {
+      const isAgent = participant && participant.isAgent;
+      const who = isAgent ? "agent" : "user";
+      for (const s of segments) upsertBubble(s.text, who, s.final);
+    });
+
+    // 链路延迟面板:worker 经 publish_data 发来各段耗时(payload JSON 有 k 字段)
+    const lastM = {};
+    room.on(RoomEvent.DataReceived, (payload) => {
+      try {
+        const m = JSON.parse(new TextDecoder().decode(payload));
+        if (!m.k) return;
+        if (m.k === "eou") { lastM.eou = m.eou_ms; lastM.stt = m.stt_ms; }
+        else if (m.k === "llm") lastM.llm = m.ttft_ms;
+        else if (m.k === "tts") lastM.tts = m.ttfb_ms;
+        const set = (k, v) => {
+          const e = document.querySelector(`[data-k="${k}"]`);
+          if (e) e.textContent = v == null ? "–" : v + "ms";
+        };
+        set("eou", lastM.eou); set("stt", lastM.stt);
+        set("llm", lastM.llm); set("tts", lastM.tts);
+        const total = (lastM.eou || 0) + (lastM.llm || 0) + (lastM.tts || 0);
+        set("total", total || null);
+      } catch (e) { /* ignore non-metrics data */ }
+    });
+
+    room.on(RoomEvent.Disconnected, () => {
+      connected = false;
+      setStatus("已断开", "err");
+      btn.textContent = "重新连接"; btn.classList.remove("stop"); btn.disabled = false;
+    });
+
+    await room.connect(
+      LIVEKIT_URL,
+      TOKEN,
+      relay ? { rtcConfig: { iceTransportPolicy: "relay" } } : undefined
+    );
+    await room.localParticipant.setMicrophoneEnabled(true); // 用户手势栈内,麦克风+AudioContext 解锁
+    connected = true;
+    setStatus(relay ? "● 通话中(中转模式)" : "● 通话中", "live");
+    btn.textContent = "结束对话"; btn.classList.add("stop"); btn.disabled = false;
+    acquireWakeLock();
+  } catch (e) {
+    if (!relay) {
+      // 直连建立失败 → 自动切 TURN 中转重试一次(并记住,下次直接中转)
+      rememberRelay();
+      setStatus("直连失败,切中转模式重试…");
+      try { if (room) await room.disconnect(); } catch (_) { /* ignore */ }
+      return connect();
+    }
+    setStatus("连接失败: " + (e.message || e), "err");
+    btn.textContent = "重试"; btn.disabled = false;
+  }
+}
+
+async function disconnect() {
+  try { await wakeLock?.release(); } catch (e) {}
+  wakeLock = null;
+  if (room) await room.disconnect();
+  connected = false;
+}
+
+btn.addEventListener("click", () => { connected ? disconnect() : connect(); });
+</script>
+</body>
+</html>

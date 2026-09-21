@@ -1,0 +1,23 @@
+[Unit]
+Description=Voice Worker (chuan web demo, agent_name=rust-worker-demo; isolated from xiaoke pools)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/rust-worker-demo
+EnvironmentFile=/root/realtime-voice-agent/.env
+EnvironmentFile=/root/realtime-voice-agent/poc-eou.env
+EnvironmentFile=/root/rust-worker/rust-worker.env
+EnvironmentFile=/root/rust-worker-demo/rust-worker-demo.env
+# 抹掉从 rust-worker.env 继承的小可人设 / 设备快照 / One-shot 审计（UnsetEnvironment 在所有 EnvironmentFile 之后生效）
+UnsetEnvironment=AGENT_INSTRUCTIONS EOT_SNAPSHOT_DIR ONESHOT_AUDIT_CAPTURE_ENABLED ONESHOT_AUDIT_CAPTURE_DIR ONESHOT_AUDIT_CAPTURE_MAX_MS P003_DEVICE_COMMANDS_CANARY_SN_HASHES P003_DEVICE_INTENT_EXECUTE_CANARY_SN_HASHES VOLC_ASR_NONSTREAM_CANARY_SN SESSION_EXIT_SIGNAL_CANARY_SN CANARY_SAY_IDENTITY_ALLOW
+UMask=0077
+ExecStart=/root/rust-worker-demo/voice-rust-worker
+Restart=always
+RestartSec=3
+MemoryHigh=700M
+MemoryMax=900M
+
+[Install]
+WantedBy=multi-user.target
