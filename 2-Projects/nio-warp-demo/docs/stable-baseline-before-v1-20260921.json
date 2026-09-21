@@ -1,0 +1,63 @@
+{
+  "version": "0.14.8",
+  "build": 76,
+  "sourceCommit": "1f4db1cf771913ecb58208545b8adc8c5553a834",
+  "releaseRecordCommit": "4f7c71dd06663293c2a9e72465b7a4e84377dc12",
+  "sourceSHA256": "c51c48c21bc650bf57702a01bb33cb10847d653018f2d74cb1843a572b9fade0",
+  "binarySHA256": "cd3fb60bb3256738f43b4b0a0effe3082109a31a37bc5c8ebc3a86b1b629abd9",
+  "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260921-073622Z-v0148-four-hour-accepted-before-v1",
+  "createdAt": "2026-09-21T07:36:22.301147+00:00",
+  "files": {
+    "native-source.tar.gz": "2b0b3b6668e2fc8f3f1d13de595e95ee29419d696e72a07711ca263089af5890",
+    "four-hour-result.json": "2ad6201e5ea620d78e31bf3d765e36e8d1c13d4105788e91742a5dd550def64c",
+    "current-preferences.plist": "902befd51181871a1e6e59621a447ffb585e06085e8b4275364324a45e3599f7",
+    "app.zip": "2911b2c9c02abef8bedc37c3b47f119a3ba5cad5fbdeeb3d335f95ac7972ca61"
+  },
+  "mouseSettings": {
+    "reverseHorizontal": false,
+    "mode": "glass",
+    "speed": 1,
+    "cursorAutoHideDelay": 2,
+    "pointerSize": 28,
+    "cursorAutoHideEnabled": true,
+    "previewOnly": false
+  },
+  "protectedKeyCount": 9,
+  "fourHourAcceptance": "Passed for current closed-lid 44.8 display and two-link rotation; 3 slow preparations 19-24s retained as known finding.",
+  "rollbackRule": "Restore app/native separately; default preserve any newer user settings. This paired preference snapshot contains the accepted glass+false direction.",
+  "archivedBinaryMatchesInstalled": true,
+  "appPIDBefore": "8723",
+  "appPIDAfter": "8723",
+  "kind": "frozen-stable-baseline-not-importable-app-configuration",
+  "rollbackTag": "nio-warp-before-v1-mode-gate-20260921",
+  "acceptanceTag": "nio-warp-v0.14.8-soak-accepted-20260921",
+  "localBackup": "artifacts/before-v1-modes-20260921/20260921-073622Z-v0148-four-hour-accepted-before-v1",
+  "presetCount": 10,
+  "presetNames": [
+    "0908-44.8",
+    "0918-44.8",
+    "0918-44.8-2",
+    "0918-44.8-2-固化",
+    "0918-44.8-合盖验收-v0.11.7",
+    "0918-44.8-3",
+    "0918-16-test",
+    "三星test-0920",
+    "三星test-0920-2",
+    "20260921-44.8-封版1"
+  ],
+  "acceptance": {
+    "report": "docs/four-hour-soak-v0148-20260921.md",
+    "verdict": "accepted_for_current_four_hour_stability_scope",
+    "readyEvents": 387,
+    "observationSeconds": 14430.910004854202,
+    "warningOrErrorEvents": 0,
+    "knownSlowPreparationsSeconds": [
+      19,
+      24,
+      24
+    ]
+  },
+  "baselinePurpose": "Before the proposed V1.0 usage/debug-mode authorization gate; no product changes implemented this turn.",
+  "verification": "All local copied files SHA256 match remote manifest; archived binary equals current installed binary; 9 setting groups unchanged during backup.",
+  "passwordIncluded": false
+}
