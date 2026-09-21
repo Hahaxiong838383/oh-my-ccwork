@@ -17,6 +17,7 @@ final class PresentationDisplayPlacementTests: XCTestCase {
         screens.map { value in
             var value = value
             if let move = plan.moves.first(where: { $0.id == value.id }) { value.bounds.origin = move.origin }
+            if let main = plan.restoredMainDisplayID { value.isMain = value.id == main }
             return value
         }
     }
@@ -179,6 +180,100 @@ final class PresentationDisplayPlacementTests: XCTestCase {
         XCTAssertNil(PresentationDisplayPlacement.plan(baseline: baseline, current: physical + [screen(14, 3432, main: true)], movableIDs: [14]))
         var mirrored = screen(14, 3432); mirrored.mirror = 4
         XCTAssertNil(PresentationDisplayPlacement.plan(baseline: baseline, current: physical + [mirrored], movableIDs: [14]))
+    }
+
+    func testExplicitMainRecoveryRestoresClosedLidCreationAndThenSettles() throws {
+        let output = screen(4, 0, width: 7680, height: 936, main: true)
+        let baseline = PresentationDisplayPlacement.snapshot([output], movableIDs: [])
+        let current = [screen(15, 0, width: 7680, height: 2800, main: true),
+                       screen(4, -2846, -936, width: 7680, height: 936)]
+        XCTAssertNil(PresentationDisplayPlacement.plan(baseline: baseline, current: current, movableIDs: [15], leadingID: 15),
+                     "普通规划仍禁止移动虚拟主屏")
+        let recovery = try XCTUnwrap(PresentationDisplayPlacement.planRestoringBaselineMain(
+            baseline: baseline, current: current, movableIDs: [15], leadingID: 15))
+        XCTAssertTrue(recovery.restoredSnapshot)
+        XCTAssertEqual(recovery.restoredMainDisplayID, 4)
+        XCTAssertEqual(recovery.moves, [.init(id: 4, origin: .zero), .init(id: 15, origin: CGPoint(x: 7680, y: 0))])
+        let restored = applying(recovery, to: current)
+        XCTAssertEqual(restored.first { $0.id == 4 }, output)
+        XCTAssertEqual(restored.filter(\.isMain).map(\.id), [4])
+        let settled = try XCTUnwrap(PresentationDisplayPlacement.plan(
+            baseline: baseline, current: restored, movableIDs: [15], leadingID: 15))
+        XCTAssertTrue(settled.moves.isEmpty)
+        XCTAssertNil(settled.restoredMainDisplayID)
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(
+            baseline: baseline, current: restored, movableIDs: [15]), "不对正常实体主屏重复接管")
+    }
+
+    func testExplicitMainRecoveryRequiresEveryAnchorIdentityAndModeUnchanged() {
+        let baseline = PresentationDisplayPlacement.snapshot(physical, movableIDs: [])
+        var current = physical.map { value -> PresentationDisplayPlacement.Screen in
+            var value = value; value.isMain = false; value.bounds.origin.x -= 3432; return value
+        }
+        current.append(screen(15, 0, height: 2800, main: true))
+        XCTAssertNotNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: current, movableIDs: [15]))
+        let mutations: [(inout PresentationDisplayPlacement.Screen) -> Void] = [
+            { $0.id += 100 }, { $0.vendor += 1 }, { $0.model += 1 }, { $0.serial += 1 },
+            { $0.pixelWidth += 1 }, { $0.pixelHeight += 1 }, { $0.modeWidth += 1 }, { $0.modeHeight += 1 },
+            { $0.modeID += 1 }, { $0.refreshRate = 120 }, { $0.rotation = 90 },
+            { $0.bounds.size.width += 1 }, { $0.bounds.size.height += 1 },
+        ]
+        for index in physical.indices {
+            for mutate in mutations {
+                var changed = current; mutate(&changed[index])
+                XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(
+                    baseline: baseline, current: changed, movableIDs: [15]), "任一实体屏身份或模式变化均不得恢复旧主屏布局")
+            }
+        }
+    }
+
+    func testExplicitMainRecoveryRejectsMirroringOnAnyCurrentOrBaselineScreen() {
+        let baseline = PresentationDisplayPlacement.snapshot(physical, movableIDs: [])
+        var current = physical.map { value -> PresentationDisplayPlacement.Screen in
+            var value = value; value.isMain = false; return value
+        }
+        current.append(screen(15, 0, height: 2800, main: true))
+        for index in current.indices {
+            var mirrored = current; mirrored[index].mirror = 99
+            XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(
+                baseline: baseline, current: mirrored, movableIDs: [15]))
+        }
+        var mirroredBaseline = baseline; mirroredBaseline.anchors[1].mirror = 99
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(
+            baseline: mirroredBaseline, current: current, movableIDs: [15]))
+    }
+
+    func testExplicitMainRecoveryRejectsMissingAddedOrUnownedDisplays() {
+        let baseline = PresentationDisplayPlacement.snapshot(physical, movableIDs: [])
+        var anchors = physical.map { value -> PresentationDisplayPlacement.Screen in
+            var value = value; value.isMain = false; return value
+        }
+        let source = screen(15, 0, height: 2800, main: true)
+        let current = anchors + [source]
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: [source], movableIDs: [15]))
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: [anchors[1], source], movableIDs: [15]))
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: current + [screen(6, 1920)], movableIDs: [15]))
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: current, movableIDs: [16]),
+                     "外部创建的虚拟主屏不属于本实例，不能恢复")
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: current + [source], movableIDs: [15]))
+        anchors[0].isMain = true
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline, current: anchors + [source], movableIDs: [15]),
+                     "过渡中的多个主屏采样不能用于事务")
+    }
+
+    func testExplicitMainRecoveryRequiresUniquePhysicalBaselineMainAtOrigin() {
+        let output = screen(4, 0, main: true)
+        let baseline = PresentationDisplayPlacement.snapshot([output], movableIDs: [])
+        let current = [screen(4, -1920), screen(15, 0, height: 2800, main: true)]
+        var noMain = baseline; noMain.anchors[0].isMain = false
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: noMain, current: current, movableIDs: [15]))
+        var wrongOrigin = baseline; wrongOrigin.anchors[0].bounds.origin.y = 100
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: wrongOrigin, current: current, movableIDs: [15]))
+        var ownedMain = baseline; ownedMain.sources = [screen(16, 1920, main: true)]
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(baseline: ownedMain, current: current, movableIDs: [15]))
+        var duplicateMain = baseline; duplicateMain.anchors.append(screen(6, 1920, main: true))
+        XCTAssertNil(PresentationDisplayPlacement.planRestoringBaselineMain(
+            baseline: duplicateMain, current: current + [screen(6, 1920)], movableIDs: [15]))
     }
 
     func testSettledLayoutIsIdempotentAndNoSourcesRequiresNoChanges() throws {

@@ -3908,14 +3908,49 @@ private extension Array {
     }
 
     private func guardInvisiblePresentationScreen() {
-        guard !displaysAsleep, let point = CGEvent(source: nil)?.location else { return }
+        guard !displaysAsleep, !mouseMapping.protectsNativeInput,
+              let point = CGEvent(source: nil)?.location else { return }
         let screens = VisiblePointerRecoveryRuntime.screens()
-        if VisiblePointerRecoveryPolicy.physicalScreens(screens).contains(where: { $0.quartzBounds.contains(point) }) {
+        if !VisiblePointerRecoveryPolicy.needsRecovery(point: point, screens: screens) {
             lastVisiblePointer = point
-        } else if screens.contains(where: { $0.isOwned && $0.quartzBounds.contains(point) }) {
-            // This display is a capture source, never an operator's desktop.
-            // The guard also runs after an input/session failure.
-            returnToWorkbench(mouseReason: "指针进入了不可见的播放器内容屏，已返回工作台。")
+            return
+        }
+        // A lid transition can remove the internal screen while leaving the
+        // pointer at its old coordinates, now inside our source-only display.
+        // Recover only the pointer: this is not a user request to stop playback,
+        // hide the output, change focus, or cancel an in-flight page switch.
+        let destination = VisiblePointerRecoveryPolicy.recoveryDestination(
+            currentPoint: point, screens: screens, workbenchFrame: nil,
+            windowScreenID: nil, lastVisiblePoint: lastVisiblePointer)
+        guard let destination else {
+            recordAutomaticPointerRecovery(from: point, to: nil, screens: screens, outcome: "waiting_for_physical_screen")
+            return
+        }
+        let result = CGWarpMouseCursorPosition(destination)
+        if result == .success { lastVisiblePointer = destination; NSCursor.arrow.set() }
+        recordAutomaticPointerRecovery(from: point, to: destination, screens: screens,
+                                       outcome: result == .success ? "recovered_without_exiting" : "warp_failed")
+    }
+
+    private var lastAutomaticPointerRecoveryLog: TimeInterval = -.infinity
+    private func recordAutomaticPointerRecovery(from: CGPoint, to: CGPoint?,
+                                                screens: [VisiblePointerRecoveryPolicy.Screen], outcome: String) {
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - lastAutomaticPointerRecoveryLog >= 5 else { return }
+        lastAutomaticPointerRecoveryLog = now
+        var entry: [String: Any] = ["timestamp": Date().timeIntervalSince1970, "outcome": outcome,
+            "from": [from.x, from.y], "playbackActive": playback.runtime.isActive,
+            "warpVisible": outputController?.isWarpVisible ?? false,
+            "screens": screens.map { ["id": $0.id, "owned": $0.isOwned, "active": $0.isActive,
+                "asleep": $0.isAsleep, "bounds": [$0.quartzBounds.minX, $0.quartzBounds.minY,
+                    $0.quartzBounds.width, $0.quartzBounds.height]] as [String: Any] }]
+        if let to { entry["to"] = [to.x, to.y] }
+        let key = "nioWarpPointerRecovery.events.v1"
+        var history = UserDefaults.standard.data(forKey: key)
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [[String: Any]] } ?? []
+        history.append(entry)
+        if let data = try? JSONSerialization.data(withJSONObject: Array(history.suffix(16)), options: [.sortedKeys]) {
+            UserDefaults.standard.set(data, forKey: key)
         }
     }
 

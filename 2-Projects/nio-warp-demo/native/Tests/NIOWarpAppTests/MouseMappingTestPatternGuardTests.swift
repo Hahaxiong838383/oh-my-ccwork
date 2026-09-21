@@ -126,9 +126,11 @@ import XCTest
             XCTAssertEqual(activity, 1)
             XCTAssertEqual(prompts, 0)
             XCTAssertEqual(try runtime(defaults)["busy"] as? Bool, true)
+            XCTAssertTrue(controller.protectsNativeInput, "接通输入期间自动找回不能直接移动系统指针")
             // Cancel synchronously before the task may attempt native capture.
             controller.stop()
             XCTAssertEqual(try runtime(defaults)["busy"] as? Bool, false)
+            XCTAssertFalse(controller.protectsNativeInput, "取消接通后普通指针找回必须重新可用")
         }
     }
 

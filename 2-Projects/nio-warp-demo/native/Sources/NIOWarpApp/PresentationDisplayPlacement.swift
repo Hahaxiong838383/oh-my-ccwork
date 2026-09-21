@@ -33,7 +33,11 @@ enum PresentationDisplayPlacement {
 
     struct Snapshot { var anchors: [Screen]; var sources: [Screen] = [] }
     struct Move: Equatable { var id: CGDirectDisplayID; var origin: CGPoint }
-    struct Plan { var moves: [Move]; var restoredSnapshot: Bool }
+    struct Plan {
+        var moves: [Move]
+        var restoredSnapshot: Bool
+        var restoredMainDisplayID: CGDirectDisplayID? = nil
+    }
 
     /// Only the owner may supply a previously observed real mode. The current
     /// live identity and geometry must still agree; only the unavailable mode
@@ -120,6 +124,52 @@ enum PresentationDisplayPlacement {
             }
         }) else { return nil }
         return Plan(moves: moves, restoredSnapshot: compatible)
+    }
+
+    /// Explicitly undo our source creation taking over the main-display role.
+    /// Only the resource owner's bounded create/release transaction may use
+    /// this path. A changed physical topology or mode must still be rejected.
+    static func planRestoringBaselineMain(baseline: Snapshot, current: [Screen], movableIDs: [CGDirectDisplayID],
+                                          preservingIDs: Set<CGDirectDisplayID>? = nil,
+                                          leadingID: CGDirectDisplayID? = nil) -> Plan? {
+        let owned = Set(movableIDs)
+        let currentMain = current.filter(\.isMain)
+        let baselineMain = baseline.anchors.filter(\.isMain)
+        let anchors = snapshot(current, movableIDs: movableIDs).anchors
+        guard currentMain.count == 1, owned.contains(currentMain[0].id),
+              currentMain[0].bounds.origin == .zero,
+              baselineMain.count == 1, !owned.contains(baselineMain[0].id),
+              baselineMain[0].bounds.origin == .zero,
+              !baseline.sources.contains(where: \.isMain),
+              current.allSatisfy({ $0.mirror == kCGNullDirectDisplay }),
+              (baseline.anchors + baseline.sources).allSatisfy({ $0.mirror == kCGNullDirectDisplay }),
+              Set(current.map(\.id)).count == current.count,
+              Set(baseline.anchors.map(\.id)).count == baseline.anchors.count,
+              !anchors.isEmpty, anchors.count == baseline.anchors.count else { return nil }
+        let savedAnchors = baseline.anchors.sorted { $0.id < $1.id }
+        guard zip(anchors, savedAnchors).allSatisfy({ actual, saved in
+            var normalized = actual
+            normalized.isMain = saved.isMain
+            return normalized.matchesIdentityAndMode(saved)
+        }) else { return nil }
+        // Keep the live origins so the ordinary planner emits every required
+        // move, but compare roles against the verified pre-creation baseline.
+        let normalized = current.map { screen -> Screen in
+            var screen = screen
+            screen.isMain = screen.id == baselineMain[0].id
+            return screen
+        }
+        let orderedBaseline = Snapshot(anchors: savedAnchors, sources: baseline.sources)
+        guard var recovery = plan(baseline: orderedBaseline, current: normalized,
+                                  movableIDs: movableIDs, preservingIDs: preservingIDs,
+                                  leadingID: leadingID), recovery.restoredSnapshot else { return nil }
+        // Configuring the physical main's origin to (0,0) restores its role in
+        // the same session transaction that moves our source away from it.
+        let mainMove = Move(id: baselineMain[0].id, origin: .zero)
+        recovery.moves.removeAll { $0.id == mainMove.id }
+        recovery.moves.insert(mainMove, at: 0)
+        recovery.restoredMainDisplayID = mainMove.id
+        return recovery
     }
 }
 

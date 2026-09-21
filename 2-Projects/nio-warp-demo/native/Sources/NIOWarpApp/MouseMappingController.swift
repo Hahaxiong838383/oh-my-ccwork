@@ -55,6 +55,10 @@ struct MouseAutomationHandoffBuffer {
     private typealias PendingHumanInput = MouseAutomationHandoffBuffer.Event
     private var pendingHumanInputs = MouseAutomationHandoffBuffer()
     private(set) var isActive = false
+    /// The desktop guard must not warp around the mapped cursor's own delta
+    /// accounting, including asynchronous input acquisition. stop() releases
+    /// native capture synchronously; its retained closingTask only drains CDP.
+    var protectsNativeInput: Bool { isActive || startTask != nil }
     private(set) var settings: MouseMappingSettings
     private let defaults: UserDefaults
     private let input = NativeMouseInputCapture()

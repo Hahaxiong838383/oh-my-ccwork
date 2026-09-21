@@ -160,14 +160,20 @@ private final class OwnedPresentationDisplayResource {
                 continue
             }
             lastScreens = screens; lastMoves = []
+            let preservingIDs = Set(([captured, current].compactMap { $0 } + retired).filter { $0.handle != nil }.map(\.displayID))
+            let leadingID = pending?.handle != nil ? pending?.displayID : nil
             guard let plan = PresentationDisplayPlacement.plan(baseline: baseline,
-                current: screens, movableIDs: ownedDisplayIDs,
-                preservingIDs: Set(([captured, current].compactMap { $0 } + retired).filter { $0.handle != nil }.map(\.displayID)),
-                leadingID: pending?.handle != nil ? pending?.displayID : nil) else {
+                current: screens, movableIDs: ownedDisplayIDs, preservingIDs: preservingIDs, leadingID: leadingID)
+                ?? PresentationDisplayPlacement.planRestoringBaselineMain(baseline: baseline,
+                    current: screens, movableIDs: ownedDisplayIDs, preservingIDs: preservingIDs, leadingID: leadingID) else {
                 record("unsafePlan")
                 throw ProtoPieError.unavailable("当前主屏或镜像排列不允许安全放置内容屏（阶段 \(lastStage)，事务 \(applications)）。")
             }
             lastMoves = plan.moves
+            if let restoredMain = plan.restoredMainDisplayID {
+                record("restoringBaselineMain", restoredSnapshot: plan.restoredSnapshot)
+                entries[entries.count - 1]["restoredMainDisplayID"] = restoredMain
+            }
             if plan.moves.isEmpty {
                 stable = releasedDisplayIDs.isEmpty ? stable + 1 : 0
                 record(releasedDisplayIDs.isEmpty ? "settling" : "waitingReleased", restoredSnapshot: plan.restoredSnapshot)
