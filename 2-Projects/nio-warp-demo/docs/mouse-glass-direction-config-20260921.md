@@ -4,7 +4,7 @@
 
 ## 因果与历史边界
 
-1. 当前为 `mode=glass`、`reverseHorizontal=true`，44.8 屏画面水平镜像开启。右移首先在 `MouseMappingController.receive` 中被输入偏好取反，再经原有图像变换定位原生圆圈。
+1. 排查时为 `mode=glass`、`reverseHorizontal=true`，44.8 屏画面水平镜像开启。右移首先在 `MouseMappingController.receive` 中被输入偏好取反，再经原有图像变换定位原生圆圈。
 2. v75→v76 的 `receive`、`updateCursor`、`MouseMappingMath`、硬件位移补偿均未改变；新增普通指针 guard 在映射启动/接通时旁路。主屏恢复只平移 origin，坐标比例仍为正，不会持续反转水平运动。
 3. v75 修复前的完整偏好就是 `glass+true`，v76 安装前后 9 组参数哈希一致。此次并非合盖代码把方向算反。
 4. 原生圆圈曾为波浪问题切到 `physical+true`。本地 `artifacts/aa-boundary-v0140-20260918/final63.json` 在 **9月18日20:53:35** 仍是该组合；远端 `.rollback/pre-change-baselines/20260918-130806Z-before-v01312/preferences-accepted.plist` 在 **21:08** 已是 `glass+true`，21:10 与21:17备份相同。
@@ -28,3 +28,5 @@
 如需不同屏幕/输入模式自动保存各自方向，应另外设计按屏鼠标档案与迁移规则；不能直接用画面镜像自动推断玻璃反射方向。
 
 署名：codex（OpenAI）| 2026-09-21
+
+本轮合盖修复与最新鼠标方向统一固化记录见 [v0.14.8 回执](lid-and-pointer-v0148-receipt.json)。当前方向以该回执的 `glass + reverseHorizontal=false` 为准；上文“未 push”为当时的历史状态。

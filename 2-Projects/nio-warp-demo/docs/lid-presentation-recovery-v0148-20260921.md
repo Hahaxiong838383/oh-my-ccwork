@@ -73,3 +73,5 @@
 归档时用户继续手动操作：10:47:16 日志进入 `inputOwner=human` 并暂停计划，随后有实际 Esc 退出记录，最后处于普通鼠标、计划未运行、校正输出仍可见的开盖状态。本次不重新开启计划覆盖用户的操作意图。10:47:09 一次切链准备失败，原有重试机制于 10:47:15 恢复；未在本次限定修复中宣称长时间播放零失败。
 
 代码提交 `1f4db1cf771913ecb58208545b8adc8c5553a834`；本地人验标签 `nio-warp-v0.14.8-lid-accepted-20260921`，未 push。新人验完整基线：`.rollback/accepted-baselines/20260921-024716Z-v0148-lid-accepted`，包含 App、完整 native 和当刻偏好。旧 v75 配对回滚继续保留。
+
+本轮合盖修复与最新鼠标方向统一固化记录见 [v0.14.8 回执](lid-and-pointer-v0148-receipt.json)。当前方向以该回执的 `glass + reverseHorizontal=false` 为准；上文“未 push”为当时的历史状态。

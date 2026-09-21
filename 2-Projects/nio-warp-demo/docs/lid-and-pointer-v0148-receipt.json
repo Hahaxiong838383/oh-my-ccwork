@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "kind": "release-record-not-importable-app-configuration",
+  "recordedAt": "2026-09-21T10:59:41.673022+08:00",
+  "version": "0.14.8",
+  "build": 76,
+  "sourceCommit": "1f4db1cf771913ecb58208545b8adc8c5553a834",
+  "directionRecordCommit": "f84bb7ab494222fafa32ce98db8eab1e4926c533",
+  "sourceSHA256": "c51c48c21bc650bf57702a01bb33cb10847d653018f2d74cb1843a572b9fade0",
+  "binarySHA256": "cd3fb60bb3256738f43b4b0a0effe3082109a31a37bc5c8ebc3a86b1b629abd9",
+  "repository": "https://github.com/Hahaxiong838383/oh-my-ccwork",
+  "branch": "codex/nio-protopie-autoplay-20260920",
+  "frozenTag": "nio-warp-v0.14.8-frozen-20260921",
+  "rollbackTag": "nio-warp-before-lid-pointer-recovery-20260921",
+  "humanAcceptance": {
+    "closedLid": "合盖后仍正常演示",
+    "originalProtoPieCursorInReflectedGlass": "向右，正常"
+  },
+  "confirmedMouseSettings": {
+    "reverseHorizontal": false,
+    "mode": "glass",
+    "speed": 1,
+    "cursorAutoHideDelay": 2,
+    "pointerSize": 28,
+    "cursorAutoHideEnabled": true,
+    "previewOnly": false
+  },
+  "configurationRules": [
+    "鼠标方向只改 reverseHorizontal true→false，其余鼠标字段及8组保护配置保持。",
+    "鼠标设置为全局偏好，不随屏幕预设恢复；不可把本记录当作第8页参数JSON导入。",
+    "回退App默认保留当前参数；旧v75/v76整份偏好中的reverseHorizontal=true不代表当前确认值。"
+  ],
+  "tests": {
+    "runtime": "original production methods with assertion shim, not formal XCTest",
+    "existingAndPlacement": {
+      "testCount": 129,
+      "assertionCount": 671,
+      "failureCount": 0
+    },
+    "actualGuardRedGreen": {
+      "testCount": 14,
+      "assertionCount": 101,
+      "failureCount": 0,
+      "mainSourceSHA256": "37e586ab97bcb9d0b1823470c0e68d9d2a765846ed8c05fe843812c83b5ed08d"
+    },
+    "live": [
+      "闭盖启动",
+      "两链接30/35秒轮播",
+      "源屏指针恢复保持runID/窗口/焦点",
+      "原CSS圆圈接管与Esc",
+      "用户真实开合盖",
+      "用户本机鼠标玻璃右移方向"
+    ]
+  },
+  "rollback": {
+    "stableVersion": "0.14.7 (75)",
+    "baseline": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/pre-change-baselines/20260921-023259Z-before-lid-pointer-v0148",
+    "sourceSHA256": "807c7b37aa3f22d7d761a6e23bcaee7853a928d007075d1b45a8e91c20c2e81f",
+    "archiveSHA256": {
+      "previous-app.zip": "95817b914abd5a61ba749fe3a5238f208c1841971e77a14849db500ec7c8029a",
+      "native-source.tar.gz": "5bf9011ac894f0b23d50dfc4e3426dbc155ba52318d34b65cd5ba8a2ff966f13",
+      "preferences-live.plist": "ddb4b130e77d442ab4bdbcac1570cbe1857b29ab9e5187fa64356cc2988f01bc",
+      "confirmed-preset.json": "ed2c1aa28283c213535aa047662e77abd93b3363a81668678923f281307ef7ea"
+    },
+    "readOnlyVerification": "PASS"
+  },
+  "acceptedAppBaseline": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260921-024716Z-v0148-lid-accepted",
+  "latestConfirmedPreferences": {
+    "path": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/configuration-snapshots/20260921-025347Z-glass-direction-confirmed/preferences.plist",
+    "sha256": "bf5539368bccb0e7e774c51dbf0652cf6db495f4a82f23cb00c01a338687d737"
+  },
+  "knownBoundaries": [
+    "10:47:09一次切链准备失败，10:47:15原重试恢复，不宣称长稳零失败。",
+    "未扩大为8小时、任意换屏、断电、脚本持键中合盖验收。",
+    "Chrome内屏闪窗优化按用户决定暂缓。"
+  ],
+  "reports": [
+    "docs/lid-presentation-recovery-v0148-20260921.md",
+    "docs/mouse-glass-direction-config-20260921.md",
+    "docs/browser-window-flash-deferred-20260921.md"
+  ],
+  "author": "codex（OpenAI）"
+}
