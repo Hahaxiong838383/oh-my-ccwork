@@ -2053,8 +2053,9 @@ impl Orchestrator {
             self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace,
         ) {
             info!(room = %self.room_name, label, reason, "llm device intent suppressed");
-            // 2026-09-04(川哥拍板):不在首批的标签被压制时,LLM 回复常已自称「调好了」(003「画面调到5米」实证)
+            // 2026-09-04(川哥拍板):被压制的标签 LLM 回复常已自称「调好了」(003「画面调到5米」实证)
             // → 固定纠正句追加在回复之后(say_after_current);不教词表原句(TTS 念出=自触发风险)。
+            // D1(2026-09-22):批次=词表全集,纠正句只挂 unknown_label(表外标签),门在 device_intent::l2_fallback_hint。
             if let Some(hint) =
                 crate::device_intent::l2_fallback_hint(reason, label, fast_path_pending, has_trace)
             {

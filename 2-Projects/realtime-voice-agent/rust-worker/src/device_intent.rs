@@ -164,8 +164,12 @@ pub fn normalize(text: &str) -> String {
 /// 语气词前缀为 2026-08-19 Phase 1a 新增(实测受害样本:「好关灯」「嗯退出」「那退出」
 /// 「嗯调成暖光」——journal 归因)。安全性同「把」:剥后仍须完整命中,「好的呀」剥「好」
 /// 后「的呀」不中=无害;单字放尾部維持长前缀优先序。
-const POLITE_PREFIX: &[&str] = &["可以帮我", "麻烦", "帮我", "小可", "请", "把", "好", "那", "嗯", "哎"];
-const POLITE_SUFFIX: &[&str] = &["可以吗", "好吗", "一下", "吧"];
+/// D1 W1b(2026-09-22,方案 v1.1):句首「哦/啊/呃/就」与句尾「啊/呀/哈/呢/哦/了」入表——D0 实录「哦最暗」
+/// 「绘画模式啊」整句不中落了慢路。纪律不变:每轮至多剥一前一后、至多 4 轮、**剥后仍须完整命中**;
+/// 「哦」「啊」剥尽为空串不剥(strip 后 rest 非空才算),「亮了」「好了」剥后不是别名照样 None。
+const POLITE_PREFIX: &[&str] =
+    &["可以帮我", "麻烦", "帮我", "小可", "请", "把", "好", "那", "嗯", "哎", "哦", "啊", "呃", "就"];
+const POLITE_SUFFIX: &[&str] = &["可以吗", "好吗", "一下", "吧", "啊", "呀", "哈", "呢", "哦", "了"];
 
 /// 音量数值句式(合同 §6.6 六句式,归一后收敛为五模板)。
 fn match_volume_percent(s: &str) -> Option<u32> {
@@ -221,12 +225,13 @@ fn lookup(s: &str) -> Option<DeviceMatch> {
 /// 端侧信令合同)由 worker 通知 Android 走既有退出流程,worker 永不自行关房。
 pub const SESSION_EXIT_LABEL: u32 = 90;
 
-/// 2b 合同 v2 第一批低风险可逆集合(codex 终值):亮暗一级/暖冷一级/三光模式/音量 ±5。
-/// 画面远近 33/34 归实体电机域,开关灯/最值/静音/高度全在第二批(观察一周后议)。
-pub const L2_FIRST_BATCH: [u32; 9] = [4, 6, 12, 13, 22, 23, 24, 37, 38];
-
-pub fn l2_first_batch(label: u32) -> bool {
-    L2_FIRST_BATCH.contains(&label)
+/// 2b 合同 v2 首批(2026-09-05 起 003 灰度只放 9 个:4/6/12/13/22/23/24/37/38——亮暗一级/暖冷一级/三光模式/
+/// 音量 ±5;画面远近/开关灯/最值/静音/高度当时留第二批)。
+/// **D1(2026-09-22,方案 v1.1 §W2b 川哥拍板):批次扩到词表全部标签**(灯光 2–24 + 电机/虚像 25–36 + 音量 37/38/42–45),
+/// 闸=目录内即放行;`not_in_batch` 原因不再产生,纠正句改挂 `unknown_label`。60–79 音量绝对值段与 1/46/90 不在词表,
+/// 慢路照旧不执行。回退=换回旧二进制(批次无 env 开关;全停 L2 用 P003_DEVICE_INTENT_EXECUTE=0)。
+pub fn l2_batch_allows(label: u32) -> bool {
+    known_label(label)
 }
 
 /// 合同 v3.1 §1.2:电机域标签(25–36,升降/虚像远近)。`light_volume` 之外,芯片只提供候选,
@@ -308,7 +313,8 @@ pub fn normalize_params(count: Option<u32>, value: Option<u32>, target_deci_unit
 }
 
 /// LLM 慢路执行门序(纯函数,单测载体)。Err=suppress 原因(日志 reason 枚举);顺序即优先级:
-/// execute_off → android_capability_missing → unknown_label → not_in_batch → fast_path_hit → no_trace。
+/// execute_off → android_capability_missing → unknown_label → fast_path_hit → no_trace。
+/// (D1 起批次=词表全集,`not_in_batch` 不再产生;表外标签一律 unknown_label。)
 pub fn l2_gate(
     execute_on: bool,
     capable: bool,
@@ -322,11 +328,8 @@ pub fn l2_gate(
     if !capable {
         return Err("android_capability_missing");
     }
-    if !known_label(label) {
+    if !l2_batch_allows(label) {
         return Err("unknown_label");
-    }
-    if !l2_first_batch(label) {
-        return Err("not_in_batch");
     }
     if fast_path_pending {
         return Err("fast_path_hit");
@@ -343,11 +346,12 @@ pub fn l2_gate(
 /// 句子不得含任何别名(单测拿整张别名表对撞)。
 pub const L2_FALLBACK_HINT: &str = "这个我暂时还不能这样调，你换个更直接的说法再试试";
 
-/// 纠正句门(纯函数):只在 `not_in_batch` + 快路没在途(否则快路正在做同一件事) + 有 trace(设备房) 时给。
-/// execute_off / 能力缺失 / unknown_label / fast_path_hit / no_trace / multi_label 一律不提示。
-/// 调用方已在 `l2_execute_on` 门后(仅 EXECUTE 名单内设备),非 canary 设备行为零变化。
+/// 纠正句门(纯函数)。D1 起(方案 v1.1 §W2b):只在 `unknown_label`(LLM 给了词表外标签——46/60–79/幻觉值,回复常已自称
+/// 「调好了」)+ 快路没在途(否则快路正在做同一件事)+ 有 trace(设备房) 时给。多标记轮首个已派发、其余静默(multi_label);
+/// 拿不准(无标记)无事可纠;execute_off / 能力缺失 / fast_path_hit / no_trace 一律不提示。
+/// 调用方已在 `l2_execute_on` 门后(EXECUTE 名单内设备;D0 起名单空=设备房全开)。
 pub fn l2_fallback_hint(reason: &str, label: u32, fast_path_pending: bool, has_trace: bool) -> Option<&'static str> {
-    if reason != "not_in_batch" || fast_path_pending || !has_trace || !known_label(label) {
+    if reason != "unknown_label" || fast_path_pending || !has_trace || known_label(label) {
         return None;
     }
     Some(L2_FALLBACK_HINT)
@@ -495,6 +499,16 @@ pub fn asr_nonstream_enabled_for(room_name: &str) -> bool {
     commands_gate(
         std::env::var("VOLC_ASR_NONSTREAM_ENABLED").unwrap_or_default() == "1",
         &std::env::var("VOLC_ASR_NONSTREAM_CANARY_SN").unwrap_or_default(),
+        room_name,
+    )
+}
+
+/// 设备承接音桶灰度门(D1 W3a,方案 v1.1「先川哥两台听感再全量」):FILLER_DEVICE_BUCKET≠0(默认开)且 SN 命中
+/// FILLER_DEVICE_CANARY_SN_HASHES(空=设备房全开);非 sn- 房永不落 device 桶。只影响承接音选桶,不碰命令判定。
+pub fn device_filler_enabled_for(room_name: &str) -> bool {
+    commands_gate(
+        std::env::var("FILLER_DEVICE_BUCKET").map(|v| v != "0").unwrap_or(true),
+        &std::env::var("FILLER_DEVICE_CANARY_SN_HASHES").unwrap_or_default(),
         room_name,
     )
 }
@@ -741,6 +755,23 @@ mod tests {
         none("调远之后告诉我为什么");
     }
 
+    /// D1 W1b(2026-09-22):语气词前后缀剥离。正例=D0 真机实录(「哦最暗」「绘画模式啊」走了慢路)+方案 §W1b 三句;
+    /// 负例=剥尽为空/剥后非别名/陈述句,子串永不执行纪律不变。
+    #[test]
+    fn particle_affix_stripping_d1() {
+        for (text, label) in [
+            ("哦最暗", 7), ("绘画模式啊", 19), ("调到最亮吧", 5),
+            ("啊亮一点", 4), ("就调亮一点", 4), ("呃关灯", 3), ("关灯了", 3), ("暗一点哈", 6), ("开灯呢", 2),
+            ("哦哦调到最暗呀", 7), // 两轮剥离(每轮一前一后)
+            ("哦，最暗。", 7),      // 标点先归一再剥
+        ] {
+            assert_eq!(cmd(text).semantic_label, label, "「{text}」");
+        }
+        for text in ["哦", "啊", "哦哦", "了", "好了", "亮了", "灯亮了", "我关灯了", "太暗了看不清", "就这样吧", "哦是吗", "啊啊啊啊啊啊"] {
+            assert!(match_command(text).is_none(), "「{text}」不得命中");
+        }
+    }
+
     /// ASR 误转别名(2026-08-18 深夜):seedasr 双向流式端点热词预算 100 tokens 且
     /// boost 随词数稀释,声母级误转救不动 → Matcher 层兜实证误转形态。
     /// 完整命中制是误吸防线:含误转词的自然长句必须零执行。
@@ -821,13 +852,21 @@ mod tests {
         assert_eq!(normalize("百分之百"), "100");
     }
 
+    /// D1:批次=词表全集(表内每个标签都放行,表外一个不放)。锚:表内标签数 ≥ 40,防「表没加载=全拒」恒绿。
     #[test]
-    fn l2_first_batch_is_exactly_nine_low_risk_labels() {
-        for l in [4, 6, 12, 13, 22, 23, 24, 37, 38] {
-            assert!(l2_first_batch(l), "{l} 应在第一批");
+    fn l2_batch_allows_all_table_labels_only() {
+        let mut labels: Vec<u32> = table().map.values().map(|(l, _, _)| *l).collect();
+        labels.sort_unstable();
+        labels.dedup();
+        assert!(labels.len() >= 40, "表内标签数 {}——词表未加载", labels.len());
+        for l in &labels {
+            assert!(l2_batch_allows(*l), "{l} 在词表内,D1 起必须放行");
         }
-        for l in [2, 3, 5, 7, 25, 26, 33, 34, 42, 43, 44, 45, 90] {
-            assert!(!l2_first_batch(l), "{l} 不得在第一批");
+        for l in [2, 3, 5, 7, 25, 26, 33, 34, 35, 36, 42, 43, 44, 45] {
+            assert!(l2_batch_allows(l), "{l} 原第二批标签 D1 起放行");
+        }
+        for l in [0, 1, 39, 40, 41, 46, 60, 79, 90, 999] {
+            assert!(!l2_batch_allows(l), "{l} 不在词表,不得放行");
         }
     }
 
@@ -836,24 +875,32 @@ mod tests {
         assert_eq!(l2_gate(false, true, 6, false, true), Err("execute_off"));
         assert_eq!(l2_gate(true, false, 6, false, true), Err("android_capability_missing"));
         assert_eq!(l2_gate(true, true, 999, false, true), Err("unknown_label"));
-        assert_eq!(l2_gate(true, true, 3, false, true), Err("not_in_batch"), "关灯在第二批");
-        assert_eq!(l2_gate(true, true, 33, false, true), Err("not_in_batch"), "画面远近实体电机域");
+        assert_eq!(l2_gate(true, true, 46, false, true), Err("unknown_label"), "46 永不在表");
+        assert_eq!(l2_gate(true, true, 60, false, true), Err("unknown_label"), "音量绝对值段不在表");
         assert_eq!(l2_gate(true, true, 6, true, true), Err("fast_path_hit"));
         assert_eq!(l2_gate(true, true, 6, false, false), Err("no_trace"));
         assert_eq!(l2_gate(true, true, 6, false, true), Ok(()), "全门通过");
-        assert_eq!(l2_gate(true, true, 24, false, true), Ok(()), "中性光在第一批");
+        assert_eq!(l2_gate(true, true, 24, false, true), Ok(()), "中性光");
+        // D1:原第二批标签全部放行(关灯 3 / 最暗 7 / 音量最大 42 / 电机 25 / 虚像最远 35 / 静音 44)
+        for l in [3, 7, 42, 25, 35, 44, 33] {
+            assert_eq!(l2_gate(true, true, l, false, true), Ok(()), "{l} D1 起放行");
+        }
     }
 
-    /// 2026-09-04:纠正句只在 not_in_batch + 快路没在途 + 设备房;其余压制原因一律不提示。
+    /// D1(2026-09-22):纠正句只在 unknown_label + 快路没在途 + 设备房;其余压制原因一律不提示;
+    /// 表内标签(D1 起全部可执行)永不纠正——纠正句挂在已执行的标签上=自相矛盾。
     #[test]
-    fn l2_fallback_hint_only_for_not_in_batch_on_device_room() {
-        assert_eq!(l2_fallback_hint("not_in_batch", 35, false, true), Some(L2_FALLBACK_HINT), "虚像最远在第二批");
-        assert_eq!(l2_fallback_hint("not_in_batch", 3, false, true), Some(L2_FALLBACK_HINT), "关灯在第二批也纠正");
-        assert_eq!(l2_fallback_hint("not_in_batch", 35, true, true), None, "快路在途=快路已在做,不纠正");
-        assert_eq!(l2_fallback_hint("not_in_batch", 35, false, false), None, "无 trace=非设备房");
-        assert_eq!(l2_fallback_hint("not_in_batch", 999, false, true), None, "未知标签");
-        for r in ["execute_off", "android_capability_missing", "unknown_label", "fast_path_hit", "no_trace", "multi_label", ""] {
-            assert_eq!(l2_fallback_hint(r, 35, false, true), None, "{r} 不提示");
+    fn l2_fallback_hint_only_for_unknown_label_on_device_room() {
+        assert_eq!(l2_fallback_hint("unknown_label", 999, false, true), Some(L2_FALLBACK_HINT), "幻觉标签");
+        assert_eq!(l2_fallback_hint("unknown_label", 46, false, true), Some(L2_FALLBACK_HINT), "46 表外");
+        assert_eq!(l2_fallback_hint("unknown_label", 60, false, true), Some(L2_FALLBACK_HINT), "音量绝对值段表外");
+        assert_eq!(l2_fallback_hint("unknown_label", 999, true, true), None, "快路在途=快路已在做,不纠正");
+        assert_eq!(l2_fallback_hint("unknown_label", 999, false, false), None, "无 trace=非设备房");
+        for l in [3, 7, 25, 35, 42] {
+            assert_eq!(l2_fallback_hint("unknown_label", l, false, true), None, "{l} 在表内,不纠正");
+        }
+        for r in ["execute_off", "android_capability_missing", "not_in_batch", "fast_path_hit", "no_trace", "multi_label", ""] {
+            assert_eq!(l2_fallback_hint(r, 999, false, true), None, "{r} 不提示");
         }
     }
 

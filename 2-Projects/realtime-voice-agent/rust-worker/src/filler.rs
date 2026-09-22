@@ -35,8 +35,37 @@ const ASK_HINTS: &[&str] = &[
 ];
 const OPINION_HINTS: &[&str] = &["我觉得", "我认为", "我感觉"];
 
-/// 按用户 turn 文本选桶(优先级与 Python pick_bucket 一致)。
+// ── 设备句线索(D1 W3a,2026-09-22 方案 v1.1 川哥拍板):命中 → `device` 桶(「好嘞,这就调」类,概率 1.0)。
+// 判定在 greet/thanks 之后、emo 之前(「帮我把灯调亮」的「帮我」不能先落 task)。两级:强线索整词单独即判;
+// 弱线索须「设备对象 ∧ 调节词」同现——单字「亮/暗/高/大」太泛(「月亮的故事」「我今年长高了一点」「你的声音真好听」
+// 都不该听到「这就调」)。快路命中的命令句(≤20 字)走命令句单出口不播承接音(pipeline cmd_single_exit),与此无关。
+// 无 device 桶资产时 pick 自动回退 gen(既有降级链)。
+const DEVICE_STRONG_HINTS: &[&str] = &[
+    "开灯", "关灯", "灯光", "台灯", "亮度", "调亮", "调暗", "太亮", "太暗", "最亮", "最暗", "变亮", "变暗",
+    "亮一点", "暗一点", "亮一些", "暗一些", "色温", "光谱", "暖光", "冷光", "中性光", "暖一点", "冷一点",
+    "夜读", "绘画模式", "常规模式", "阅读模式", "护眼模式",
+    "音量", "静音", "大声一点", "小声一点", "大声点", "小声点", "声音大", "声音小", "声音太", "声音调",
+    "声音关掉", "声音关了", "声音打开",
+    "读写台", "虚像", "画面", "升高", "降低", "抬高", "调高", "调低", "拉远", "拉近", "调远", "调近", "远一点", "近一点",
+];
+const DEVICE_OBJECT_HINTS: &[&str] =
+    &["灯", "光线", "亮度", "色温", "光谱", "音量", "声音", "读写台", "虚像", "画面", "设备"];
+const DEVICE_ADJUST_HINTS: &[&str] = &[
+    "调", "开", "关", "亮", "暗", "大", "小", "高", "低", "远", "近", "暖", "冷", "模式", "一点", "一些", "太", "最", "变",
+];
+
+fn is_device_text(t: &str) -> bool {
+    let has = |hints: &[&str]| hints.iter().any(|h| t.contains(h));
+    has(DEVICE_STRONG_HINTS) || (has(DEVICE_OBJECT_HINTS) && has(DEVICE_ADJUST_HINTS))
+}
+
+/// 按用户 turn 文本选桶(优先级与 Python pick_bucket 一致;device 桶为 D1 新增,默认允许)。
 pub fn pick_bucket(user_text: &str) -> &'static str {
+    pick_bucket_with(user_text, true)
+}
+
+/// `allow_device=false`(灰度名单外的房)时 device 判定整段跳过,句子按原优先级落桶——名单外设备行为零变化。
+pub fn pick_bucket_with(user_text: &str, allow_device: bool) -> &'static str {
     let t = user_text.trim();
     let n = t.chars().count();
     let has = |hints: &[&str]| hints.iter().any(|h| t.contains(h));
@@ -45,6 +74,9 @@ pub fn pick_bucket(user_text: &str) -> &'static str {
     }
     if n <= 10 && has(THANKS_HINTS) {
         return "thanks";
+    }
+    if allow_device && is_device_text(t) {
+        return "device";
     }
     if has(EMO_NEG_HINTS) {
         return "emo_neg";
@@ -170,10 +202,11 @@ impl FillerBank {
         Ok(Some(Self { clips, probability, barge_max_ms, recent: VecDeque::with_capacity(3) }))
     }
 
-    /// 桶级概率覆盖(greet/thanks 0.5,结构性重复场景降频;其余全局)。
+    /// 桶级概率覆盖(greet/thanks 0.5,结构性重复场景降频;device 1.0=设备句必出承接音(D1);其余全局)。
     fn bucket_prob(&self, bucket: &str) -> f64 {
         match bucket {
             "greet" | "thanks" => 0.5,
+            "device" => 1.0,
             _ => self.probability,
         }
     }
@@ -183,7 +216,7 @@ impl FillerBank {
     /// 按房 grep 数它们必得 0,两次误判(2026-08-16/17)后补上;skip 结构化日志为
     /// codex trace 对撞要求(无它则"没看到 picked"区分不了概率跳过/资产缺/功能关)。
     pub fn pick(&mut self, user_text: &str, boost: bool, room: &str, turn_id: u64) -> Option<(String, Vec<u8>)> {
-        let bucket = pick_bucket(user_text);
+        let bucket = pick_bucket_with(user_text, crate::device_intent::device_filler_enabled_for(room));
         let prob = if boost { 1.0 } else { self.bucket_prob(bucket) };
         if rand::rng().random::<f64>() >= prob {
             info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost={boost} reason=probability");
@@ -235,7 +268,7 @@ impl FillerBank {
     /// 概率门与普通轮相同(本来不播的不强补),忽略滑窗防重复,不碰 barge/greet 语义,不裁不截。
     /// 只在 ORDERED_FILLER_SHORTEST=1 且 commit 来自 ordered 终局时由 pipeline 调用。
     pub fn pick_shortest(&mut self, user_text: &str, room: &str, turn_id: u64) -> Option<(String, Vec<u8>)> {
-        let bucket = pick_bucket(user_text);
+        let bucket = pick_bucket_with(user_text, crate::device_intent::device_filler_enabled_for(room));
         let prob = self.bucket_prob(bucket);
         if rand::rng().random::<f64>() >= prob {
             info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost=false policy=shortest reason=probability");
@@ -398,5 +431,38 @@ mod tests {
         assert_eq!(pick_bucket("跟你说个事儿"), "story");
         assert_eq!(pick_bucket("我觉得还行"), "opinion");
         assert_eq!(pick_bucket("随便聊聊"), "gen");
+    }
+
+    /// D1 W3a:设备句落 device 桶;greet/thanks 仍优先;名单外(allow_device=false)按原优先级落桶;
+    /// 负例=D0 实录误判句 + 含单字线索的闲聊,不得听到「这就调」。
+    #[test]
+    fn device_bucket_hints_and_gate() {
+        for t in [
+            "把灯弄亮一点吧", "太暗了看不清", "声音再大一点", "读写台升高一点", "帮我把灯调亮", "画面拉远一点",
+            "灯光调暗一些", "调成夜读模式", "有点吵把音量调小", "虚像太近了", "光线太暗", "设备升高一点",
+        ] {
+            assert_eq!(pick_bucket(t), "device", "「{t}」");
+        }
+        for (t, expect) in [
+            ("讲个月亮的故事", "task"), ("你的声音真好听", "gen"), ("我今年长高了一点", "gen"), ("班长", "gen"),
+            ("对有一点像这个", "gen"), ("我今天好难过", "emo_neg"), ("给我讲个故事好不好", "task"), ("你好呀", "greet"),
+            ("谢谢你", "thanks"), ("为什么天会黑", "ask"), ("我觉得还行", "opinion"), ("灯笼是什么", "ask"),
+        ] {
+            assert_eq!(pick_bucket(t), expect, "「{t}」");
+        }
+        // 名单外的房:device 判定整段跳过,原优先级不变
+        assert_eq!(pick_bucket_with("帮我把灯调亮", false), "task");
+        assert_eq!(pick_bucket_with("把灯弄亮一点吧", false), "gen");
+        assert_eq!(pick_bucket_with("太暗了看不清", false), "gen");
+        // device 桶概率恒 1.0(设备句必出承接音),与全局概率无关
+        let b = FillerBank {
+            clips: std::collections::HashMap::new(),
+            probability: 0.1,
+            barge_max_ms: 1500,
+            recent: VecDeque::new(),
+        };
+        assert_eq!(b.bucket_prob("device"), 1.0);
+        assert_eq!(b.bucket_prob("gen"), 0.1);
+        assert_eq!(b.bucket_prob("greet"), 0.5);
     }
 }
