@@ -3,6 +3,7 @@
 
 一份脚本三台机同用，按机器角色自动挑采集项（也可 --role 强制）：
   worker  ：64.90 / hk2（voice-worker-rust / -firstturn / -colleague）+ 各 worker 到 LiveKit 的 /agent 连接状态 + 判停/声纹边车（sidecars）
+            + 语音控设备 24h 统计（device_cmd：提案/结果/慢路/承接音/误触发嫌疑，D1 W4 2026-09-22）
   livekit ：47.239（livekit-server / nginx）+ worker 注册/注销事件 + 监听端口
   api     ：aliyun-hk（pm2 p003-voice / nginx）+ 本机 /health
 输出：单行 JSON。worker 角色保留 stats.sh 的老键（mem_total_mb…max_jobs…ts），/worker-stats 与资源卡零改动。
@@ -21,6 +22,7 @@ import ssl
 import subprocess
 import sys
 import time
+import collections
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 SUBPROCESS_TIMEOUT_S = 5
@@ -160,11 +162,11 @@ def services_block(units: tuple[str, ...]) -> list[dict]:
 
 # ── journald 解析（-o short-unix：行首 epoch.us）────────────────────────────────
 
-def journal_lines(unit: str, since: str = JOURNAL_WINDOW) -> list[tuple[float, str]]:
-    out = run(
-        ["journalctl", "-u", unit, f"--since={since}", "-o", "short-unix", "--no-pager", "-q"],
-        timeout=JOURNAL_TIMEOUT_S,
-    )
+def journal_lines(unit: str, since: str = JOURNAL_WINDOW, grep: str | None = None) -> list[tuple[float, str]]:
+    cmd = ["journalctl", "-u", unit, f"--since={since}", "-o", "short-unix", "--no-pager", "-q"]
+    if grep:
+        cmd += ["-g", grep]  # journald 侧过滤(PCRE),24h 全量行不过管道
+    out = run(cmd, timeout=JOURNAL_TIMEOUT_S)
     rows: list[tuple[float, str]] = []
     for line in out.splitlines():
         m = re.match(r"^(\d+(?:\.\d+)?)\s+(.*)$", line)
@@ -442,6 +444,134 @@ def sidecars_block(services: list[dict]) -> list[dict]:
     return rows
 
 
+# ── 语音控设备 24h（D1 W4，2026-09-22）：提案/结果/慢路/承接音/误触发嫌疑，只读 journal 锚（worker 日志原话，不猜）──
+DEVICE_CMD_WINDOW = "-24h"
+DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device"
+# 「误触发嫌疑」= 慢路(LLM)提案而原话不含任何设备词根(方案 v1.1 §W4);裸「高/低/远/近」太泛不算根,组合词才算
+DEVICE_ROOTS = (
+    "灯", "亮", "暗", "光", "色温", "模式", "音量", "声音", "大声", "小声", "静音", "吵", "听不清",
+    "读写台", "设备", "画面", "虚像", "台子", "升高", "降低", "抬高", "调高", "调低", "太高", "太低",
+    "拉远", "拉近", "调远", "调近", "太远", "太近", "暖", "冷",
+)
+KV_RE = re.compile(r"(\w+)=(\"[^\"]*\"|'[^']*'|\S+)")
+PROPOSED_TEXT_RE = re.compile(r"device command proposed: '([^']*)'")
+
+
+def _kv(s: str) -> dict:
+    return {k: v.strip('"').strip("'") for k, v in KV_RE.findall(s)}
+
+
+def _sn_tail(room: str) -> str:
+    """房名 sn-<SN>-<ts> → 只暴露 SN 末 8 位；非设备房原样截 16。"""
+    parts = room.split("-")
+    if len(parts) >= 3 and parts[0] == "sn":
+        return "…" + parts[1][-8:]
+    return room[:16]
+
+
+def _lane_of(p: dict) -> str:
+    mt = p.get("match_type", "")
+    if mt == "command_word":
+        return "chip"
+    if (p.get("lane") or "").upper() == "L2" or mt == "llm":
+        return "L2"
+    return "L1"
+
+
+def device_cmd_block(services: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    for s in services:
+        unit = s["name"]
+        if s.get("active_state") != "active":
+            continue
+        rows = journal_lines(unit, since=DEVICE_CMD_WINDOW, grep=DEVICE_CMD_GREP)
+        props: list[dict] = []
+        results: list[dict] = []
+        observed = executed = hints = filler_dev = 0
+        suppressed: collections.Counter = collections.Counter()
+        for t, raw in rows:
+            line = ANSI_RE.sub("", raw)
+            if "device command proposed" in line:
+                m = PROPOSED_TEXT_RE.search(line)
+                d = _kv(line.split("device command proposed", 1)[1])
+                d["t"] = t
+                d["text"] = m.group(1) if m else ""
+                props.append(d)
+            elif "device command result" in line:
+                d = _kv(line.split("device command result", 1)[1])
+                d["t"] = t
+                results.append(d)
+            elif "llm device intent observed" in line:
+                observed += 1
+            elif "llm device intent executed" in line:
+                executed += 1
+            elif "llm device intent suppressed" in line:
+                suppressed[_kv(line).get("reason", "?")] += 1
+            elif "fallback hint queued" in line:
+                hints += 1
+            elif "filler picked" in line and "bucket=device" in line:
+                filler_dev += 1
+        # 提案↔结果配对：同房同标签、提案后 30 s 内；首个非 accepted 为终态
+        for p in props:
+            same = [
+                r for r in results
+                if r.get("room") == p.get("room") and r.get("semantic_label") == p.get("semantic_label")
+                and p["t"] <= r["t"] <= p["t"] + 30
+            ]
+            term = next((r for r in same if r.get("status") != "accepted"), None)
+            p["status"] = term.get("status") if term else ("accepted" if same else None)
+            p["reason"] = term.get("reason") if term else None
+        by_lane = collections.Counter(_lane_of(p) for p in props)
+        st = collections.Counter((p["status"] or "none") for p in props)
+        failed = sum(v for k, v in st.items() if k not in ("succeeded", "already_applied", "none", "accepted"))
+        devices: dict[str, dict] = {}
+        for p in props:
+            k = _sn_tail(p.get("room", ""))
+            d = devices.setdefault(k, {"sn": k, "proposals": 0, "succeeded": 0, "already_applied": 0, "failed": 0, "none": 0, "last_text": "", "last_ms": 0})
+            d["proposals"] += 1
+            stt = p["status"] or "none"
+            if stt == "succeeded":
+                d["succeeded"] += 1
+            elif stt == "already_applied":
+                d["already_applied"] += 1
+            elif stt in ("none", "accepted"):
+                d["none"] += 1
+            else:
+                d["failed"] += 1
+            if int(p["t"] * 1000) > d["last_ms"]:
+                d["last_ms"] = int(p["t"] * 1000)
+                d["last_text"] = p["text"][:40]
+        suspects = [
+            {"ts_ms": int(p["t"] * 1000), "sn": _sn_tail(p.get("room", "")), "text": p["text"][:60],
+             "label": to_int(p.get("semantic_label")), "status": p["status"] or "none"}
+            for p in props if _lane_of(p) == "L2" and not any(r in p["text"] for r in DEVICE_ROOTS)
+        ]
+        recent = [
+            {"ts_ms": int(p["t"] * 1000), "sn": _sn_tail(p.get("room", "")), "text": p["text"][:40],
+             "label": to_int(p.get("semantic_label")), "lane": _lane_of(p), "match_type": p.get("match_type"),
+             "status": p["status"] or "none", "reason": p.get("reason")}
+            for p in sorted(props, key=lambda x: -x["t"])[:10]
+        ]
+        out.append({
+            "unit": unit,
+            "window": DEVICE_CMD_WINDOW,
+            "proposals": {"total": len(props), "l1": by_lane.get("L1", 0), "l2": by_lane.get("L2", 0), "chip": by_lane.get("chip", 0)},
+            "results": {
+                "succeeded": st.get("succeeded", 0), "already_applied": st.get("already_applied", 0),
+                "failed": failed, "none": st.get("none", 0) + st.get("accepted", 0),
+                "by_status": dict(st),
+            },
+            "l2": {"observed": observed, "executed": executed, "suppressed": sum(suppressed.values()),
+                   "suppressed_by_reason": dict(suppressed), "hints": hints},
+            "filler_device_picks": filler_dev,
+            "devices": sorted(devices.values(), key=lambda d: -d["proposals"]),
+            "misfire_suspects": suspects,
+            "recent": recent,
+            "journal_lines": len(rows),
+        })
+    return out
+
+
 # ── 角色装配 ────────────────────────────────────────────────────────────────────
 
 def detect_role() -> str:
@@ -509,6 +639,11 @@ def main() -> None:
         except Exception as e:  # noqa: BLE001
             note_error("sidecars", e)
             snap["sidecars"] = []
+        try:
+            snap["device_cmd"] = device_cmd_block(snap["services"])
+        except Exception as e:  # noqa: BLE001
+            note_error("device_cmd", e)
+            snap["device_cmd"] = []
         lk_host = read_livekit_host()
         snap["connections"] = {
             "worker_links": links,

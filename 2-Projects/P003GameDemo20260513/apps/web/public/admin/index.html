@@ -2042,6 +2042,29 @@
                         <el-table-column label="最近接通" width="230"><template #default="{row}">{{ row.last_connected_ms ? (fmtTs(row.last_connected_ms) + '（' + hsAgo(row.last_connected_ms) + (row.last_connected_mode ? '，' + row.last_connected_mode : '') + '）') : '—' }}</template></el-table-column>
                         <el-table-column label="1h 不可用告警" width="120"><template #default="{row}"><span :style="{color: row.unavailable_1h > 0 ? '#E8503A' : '#1F2933', fontWeight: row.unavailable_1h > 0 ? 700 : 400}">{{ row.unavailable_1h == null ? '—' : row.unavailable_1h }}</span></template></el-table-column>
                       </el-table>
+                      <template v-if="h.data.device_cmd && h.data.device_cmd.length">
+                      <div v-for="d in h.data.device_cmd" :key="'dc-'+d.unit" style="margin-bottom:10px;padding:8px 10px;border:1px solid #E5E9F0;border-radius:8px;background:#FAFBFC">
+                      <div style="font-size:13px;margin-bottom:6px"><b>语音控设备 24h</b> <span style="font-family:monospace;color:#6B7785">{{ d.unit }}</span>：提案 <b>{{ d.proposals.total }}</b>（快路 {{ d.proposals.l1 }} / 慢路 {{ d.proposals.l2 }} / 芯片 {{ d.proposals.chip }}）· 结果 成功 <b :style="{color:'#3DBE78'}">{{ d.results.succeeded }}</b> / 已是该状态 {{ d.results.already_applied }} / <span :style="{color: d.results.failed > 0 ? '#E8503A' : '#1F2933'}">失败 {{ d.results.failed }}</span> / 无结果 {{ d.results.none }} · 慢路 观察 {{ d.l2.observed }} 执行 {{ d.l2.executed }} 压制 {{ d.l2.suppressed }} 纠正句 {{ d.l2.hints }} · 设备承接音 {{ d.filler_device_picks }} · <span :style="{color: d.misfire_suspects.length ? '#E8503A' : '#1F2933', fontWeight: d.misfire_suspects.length ? 700 : 400}">误触发嫌疑 {{ d.misfire_suspects.length }}</span></div>
+                      <el-table v-if="d.devices.length" :data="d.devices" size="small" style="width:100%;margin-bottom:6px">
+                      <el-table-column label="设备（末 8 位）" width="130"><template #default="{row}"><span style="font-family:monospace">{{ row.sn }}</span></template></el-table-column>
+                      <el-table-column label="提案" width="70"><template #default="{row}">{{ row.proposals }}</template></el-table-column>
+                      <el-table-column label="成功" width="70"><template #default="{row}">{{ row.succeeded }}</template></el-table-column>
+                      <el-table-column label="已是该状态" width="100"><template #default="{row}">{{ row.already_applied }}</template></el-table-column>
+                      <el-table-column label="失败" width="70"><template #default="{row}"><span :style="{color: row.failed > 0 ? '#E8503A' : '#1F2933'}">{{ row.failed }}</span></template></el-table-column>
+                      <el-table-column label="无结果" width="80"><template #default="{row}">{{ row.none }}</template></el-table-column>
+                      <el-table-column label="最近一句" min-width="200"><template #default="{row}"><span style="font-size:12px">{{ row.last_text || '—' }}</span><span style="font-size:12px;color:#909399;margin-left:6px">{{ row.last_ms ? hsAgo(row.last_ms) : '' }}</span></template></el-table-column>
+                      </el-table>
+                      <el-table v-if="d.misfire_suspects.length" :data="d.misfire_suspects" size="small" style="width:100%;margin-bottom:6px">
+                      <el-table-column label="误触发嫌疑（慢路提案但原话无设备词根）" min-width="260"><template #default="{row}"><span style="font-size:12px">{{ row.text }}</span></template></el-table-column>
+                      <el-table-column label="设备" width="120"><template #default="{row}"><span style="font-family:monospace">{{ row.sn }}</span></template></el-table-column>
+                      <el-table-column label="标签" width="70"><template #default="{row}">{{ row.label }}</template></el-table-column>
+                      <el-table-column label="结果" width="130"><template #default="{row}">{{ row.status }}</template></el-table-column>
+                      <el-table-column label="时间" width="170"><template #default="{row}">{{ fmtTs(row.ts_ms) }}</template></el-table-column>
+                      </el-table>
+                      <div v-if="d.recent.length" style="font-size:12px;color:#6B7785">最近提案：<span v-for="(r,i) in d.recent" :key="i" style="margin-right:10px">{{ fmtTs(r.ts_ms) }} {{ r.sn }} 「{{ r.text }}」→{{ r.label }} {{ r.lane }} {{ r.status }}</span></div>
+                      <div v-else style="font-size:12px;color:#909399">24h 内无设备命令提案</div>
+                      </div>
+                      </template>
                       <div v-if="h.data.connections && h.data.connections.livekit_probe" style="font-size:13px;margin-bottom:6px">本机到 KidsHubAI-VoiceKit（{{ h.data.connections.livekit_probe.host || '?' }}:443）TLS 握手 <b :style="{color: h.data.connections.livekit_probe.tls_ms == null ? '#E8503A' : '#1F2933'}">{{ h.data.connections.livekit_probe.tls_ms == null ? ('失败：' + (h.data.connections.livekit_probe.error || '')) : (h.data.connections.livekit_probe.tls_ms + ' ms') }}</b></div>
                       <template v-if="h.data.connections && h.data.connections.livekit">
                         <div style="font-size:13px;margin-bottom:6px">worker 注册事件：24h 注册 <b>{{ h.data.connections.livekit.worker_registered_24h }}</b> / 注销 <b>{{ h.data.connections.livekit.worker_closing_24h }}</b>（7 天 {{ h.data.connections.livekit.worker_registered_7d }} / {{ h.data.connections.livekit.worker_closing_7d }}）· 监听 <span v-for="(v,k) in h.data.connections.listen" :key="k" style="margin-right:6px"><el-tag size="small" :type="v ? 'success' : 'danger'">:{{ k }}</el-tag></span> · 本机 7880 HTTP {{ h.data.connections.local_http && h.data.connections.local_http.status === 200 ? ('200 · ' + h.data.connections.local_http.ms + ' ms') : ('异常 ' + (h.data.connections.local_http ? (h.data.connections.local_http.status || h.data.connections.local_http.error || '') : '')) }}</div>

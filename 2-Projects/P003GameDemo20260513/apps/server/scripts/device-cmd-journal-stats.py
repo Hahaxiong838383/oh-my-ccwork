@@ -1,12 +1,37 @@
 #!/usr/bin/env python3
-# device-cmd-journal-stats.py —— 语音设备命令链 P0 统计（只读，离线分析 worker journal）
-# 用法: ssh root@64.90.13.117 "TZ=Asia/Shanghai journalctl -u voice-worker-rust --since '-14 days' --no-pager -o short-iso \
-#        | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -E 'command_word 决策|device command proposed|asr 命中与 command_word 撞窗|device command result|llm device intent|l2 capability|Started'" > /tmp/j.txt
-#      python3 scripts/device-cmd-journal-stats.py /tmp/j.txt
-# 输出: 提案/结果分布、发布→result 延迟(按 match_type)、芯片候选决策、芯片↔ASR 一致性、ASR 起源是否伴随芯片候选、LLM 标记。
-# 背景: 2026-09-04 双源单核联调合同 v3 §8.0（P003-product-definition/docs）。日志含 ASR 文本，分析文件勿入仓/勿外发。
-import re, sys, collections, statistics
-F=sys.argv[1]
+# device-cmd-journal-stats.py —— 语音设备命令链统计（只读，离线分析 worker journal）
+# 用法 A（直连拉取，D1 W4 2026-09-22 起默认新机）:
+#   python3 scripts/device-cmd-journal-stats.py --host root@64.90.13.177 --since '-24h'      # 日报
+#   python3 scripts/device-cmd-journal-stats.py --host root@64.90.13.177 --since '-7d'       # 周观察
+# 用法 B（离线文件，与旧法相同）:
+#   ssh root@<host> "TZ=Asia/Shanghai journalctl -u voice-worker-rust --since '-14 days' --no-pager -o short-iso | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g' | grep -E '<下面 GREP>'" > /tmp/j.txt
+#   python3 scripts/device-cmd-journal-stats.py /tmp/j.txt
+# 输出: 提案/结果分布(含快路/慢路)、发布→result 延迟(按 match_type)、芯片候选决策、芯片↔ASR 一致性、LLM 标记、
+#       **误触发嫌疑**(慢路提案而原话不含任何设备词根,方案 v1.1 §W4)、设备承接音次数。
+# 背景: 2026-09-04 双源单核联调合同 v3 §8.0；D1 W4 日报(2026-09-22)。日志含 ASR 文本，分析文件勿入仓/勿外发。
+import re, sys, collections, statistics, argparse, subprocess, tempfile, os
+GREP = r"command_word 决策|device command proposed|asr 命中与 command_word 撞窗|device command result|llm device intent|l2 capability|Started|filler picked .*bucket=device"
+DEVICE_ROOTS = ("灯","亮","暗","光","色温","模式","音量","声音","大声","小声","静音","吵","听不清","读写台","设备","画面","虚像","台子",
+                "升高","降低","抬高","调高","调低","太高","太低","拉远","拉近","调远","调近","太远","太近","暖","冷")
+ap=argparse.ArgumentParser(description="语音设备命令链 journal 统计")
+ap.add_argument("file", nargs="?", help="离线 journal 文件(与 --host 二选一)")
+ap.add_argument("--host", default=None, help="ssh 目标，如 root@64.90.13.177（直接拉 journal）")
+ap.add_argument("--unit", default="voice-worker-rust")
+ap.add_argument("--since", default="-24h", help="journalctl --since，相对时间(机器多为 UTC，别写本地钟点)")
+ARGS=ap.parse_args()
+if ARGS.host:
+    cmd = (f"TZ=Asia/Shanghai journalctl -u {ARGS.unit} --since '{ARGS.since}' --no-pager -o short-iso "
+           "| sed -E 's/\\x1b\\[[0-9;]*[A-Za-z]//g' | grep -E '" + GREP + "' || true")
+    r = subprocess.run(["ssh","-o","BatchMode=yes","-o","ConnectTimeout=10",ARGS.host,cmd], capture_output=True, text=True, timeout=120)
+    if r.returncode != 0 and not r.stdout:
+        sys.exit(f"ssh 失败: {r.stderr.strip()[:200]}")
+    tf = tempfile.NamedTemporaryFile("w", delete=False, suffix=".journal.txt", encoding="utf-8"); tf.write(r.stdout); tf.close()
+    F = tf.name
+    print(f"# source={ARGS.host} unit={ARGS.unit} since={ARGS.since} lines={r.stdout.count(chr(10))} (临时文件 {F}，用后删)")
+elif ARGS.file:
+    F = ARGS.file
+else:
+    ap.error("需要 file 或 --host")
 kv=re.compile(r'(\w+)=("[^"]*"|\'[^\']*\'|\S+)')
 def fields(s):
     d={}
@@ -14,7 +39,7 @@ def fields(s):
         d[k]=v.strip('"').strip("'")
     return d
 def ts(line): return line[:25]
-props=[];results=[];cw=[];clash=[];llm=[];starts=[]
+props=[];results=[];cw=[];clash=[];llm=[];starts=[];filler_dev=0
 for line in open(F,encoding='utf-8',errors='replace'):
     line=line.rstrip('\n')
     if 'device command proposed' in line:
@@ -31,8 +56,10 @@ for line in open(F,encoding='utf-8',errors='replace'):
         d=fields(line.split('llm device intent')[1]); d['ts']=ts(line); d['kind']=kind; llm.append(d)
     elif 'Started voice-worker-rust' in line:
         starts.append(ts(line))
+    elif 'filler picked' in line and 'bucket=device' in line:
+        filler_dev+=1
 sn=lambda room: room.split('-')[1][-4:] if room and room.count('-')>=2 else room
-print(f"proposals={len(props)} results={len(results)} command_word={len(cw)} clash={len(clash)} llm={len(llm)} restarts={len(starts)}")
+print(f"proposals={len(props)} results={len(results)} command_word={len(cw)} clash={len(clash)} llm={len(llm)} restarts={len(starts)} filler_device_picks={filler_dev}")
 print("\n== proposals by day / match_type / lane / sn ==")
 c=collections.Counter((p['ts'][:10],str(p.get('match_type')),str(p.get('lane')),sn(p.get('room',''))) for p in props)
 for k,v in sorted(c.items()): print(f"{k[0]} {k[1]:<14} {k[2]:<3} sn=…{k[3]} n={v}")
@@ -90,3 +117,22 @@ print("\n== llm device intent by kind/reason/known (since 2026-09-02) ==")
 c=collections.Counter((d['kind'],d.get('reason',''),d.get('known','')) for d in llm if d['ts'][:10]>='2026-09-02')
 for k,v in c.most_common(): print(k,v)
 print("\n== worker restarts (last 8) =="); print("\n".join(starts[-8:]))
+
+# ── 误触发嫌疑（D1 W4）：慢路(LLM)提案而原话不含任何设备词根 → 逐条人审，回填 prompt 反例/E2E ──
+lane_of=lambda p: 'chip' if p.get('match_type')=='command_word' else ('L2' if (p.get('lane') or '').upper()=='L2' or p.get('match_type')=='llm' else 'L1')
+res_by_room2=collections.defaultdict(list)
+for r in results: res_by_room2[r.get('room')].append(r)
+def term_status(p):
+    pub=ms(p.get('command_publish_ts_ms'))
+    cand=[r for r in res_by_room2[p.get('room')] if r.get('semantic_label')==p.get('semantic_label') and (pub is None or (ms(r.get('result_received_ts_ms')) and pub<=ms(r['result_received_ts_ms'])<=pub+30000))]
+    t=next((r for r in cand if r.get('status')!='accepted'),None)
+    return (t.get('status')+'/'+t.get('reason','')) if t else ('accepted' if cand else 'none')
+lanes=collections.Counter(lane_of(p) for p in props)
+print(f"\n== lanes: L1={lanes.get('L1',0)} L2={lanes.get('L2',0)} chip={lanes.get('chip',0)} ==")
+sus=[p for p in props if lane_of(p)=='L2' and not any(r in p.get('text','') for r in DEVICE_ROOTS)]
+print(f"\n== 误触发嫌疑 n={len(sus)}（慢路提案、原话无设备词根）==")
+for p in sus: print(f"{p['ts']} sn=…{sn(p.get('room',''))} 「{p.get('text','')}」 label={p.get('semantic_label')} → {term_status(p)}")
+print("\n== 慢路提案全表（人审用）==")
+for p in [q for q in props if lane_of(q)=='L2']: print(f"{p['ts']} sn=…{sn(p.get('room',''))} 「{p.get('text','')}」 label={p.get('semantic_label')} → {term_status(p)}")
+if ARGS.host:
+    os.unlink(F)
