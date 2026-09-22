@@ -14,3 +14,20 @@
 4. **独立安全排查，单独确认身份**：香港中继公网 SSH 的主机密钥出现变化；先经独立可信通道验证服务器身份，再决定是否更新 known_hosts。不得关闭 StrictHostKeyChecking 或直接删除旧记录绕过告警。
 
 本次用户已明确要求的记忆更新、代码 commit/push 为当前收口动作，不把它继续列为未完成后续事项。自动自愈的实现和启用不因本次 Git 收口而自动获得授权。
+
+
+## 2026-09-22 增量进展（保留原计划）
+
+- 家内 `.133` 与香港显式 IPv6 bootstrap 已落盘且运行态 Connected，避免依赖全部不可达的 IPv4 入口。
+- 当前项目的已知硬编码设备密码已清理；不代表历史 Git/设备密码完成轮换。
+- 香港身份经 home-studio 既有主机密钥严格核对后登录；没有修改 Air known_hosts。
+- IPv4 现场表现为间歇故障，回程有绕美迹象及真实 TCP 重传，尚未定位具体丢包设备；不能把稍后自行恢复当作根治。
+- 下一步细节与 Lucky 边界见 [本次调查](20260922-bootstrap-and-ipv4-path.md)。
+
+
+## 2026-09-22 Lucky 方案已实施
+
+- 家庭 mesh4/mesh6 DDNS、Lucky TCP21110→NAS2 EasyTier11010、路由器UPnP映射与NAS定时续租均已上线；旧fn2 AAAA已由DDNS维护。
+- 公司IPv4和香港IPv6分别完成外网EasyTier握手/peer验收；Air持久配置及localhost:8888拓扑/实际地址区同步。
+- 家内IPv4公网回流不通不等于外网入口坏；页面如实显示实时connector，保留NAS直连和IPv6。
+- 剩余：自然切网/重启观察、香港坏IPv4回程供应商处理、设备凭据历史风险、遗留无效UDP11010清理。详见 [部署记录](LUCKY-BOOTSTRAP-DEPLOYMENT.md)。

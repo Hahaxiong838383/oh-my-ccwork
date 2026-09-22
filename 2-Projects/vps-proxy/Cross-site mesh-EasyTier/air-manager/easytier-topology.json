@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "deployed_at": "2026-09-22T20:26:23+08:00",
+  "verified_at": "2026-09-22T20:26:23+08:00",
+  "nas_lan": "192.168.1.115",
+  "nas_mesh": "10.10.10.22",
+  "lucky_port": 21110,
+  "easytier_port": 11010,
+  "ddns_interval_seconds": 60,
+  "router_model": "Ruijie BE72-PRO",
+  "router_gateway": "192.168.1.1",
+  "lease_keeper": "NAS 用户定时任务每 5 分钟核对；7 天 UPnP 租约，少于 1 天自动续租；只维护 TCP 21110",
+  "verification": [
+    "公司 dev198 → 家庭 IPv4：EasyTier connector Connected + NAS peer 可见",
+    "香港中继 → 家庭 IPv6：EasyTier connector Connected + NAS peer 可见"
+  ],
+  "fn2_aaaa_repaired": true
+}

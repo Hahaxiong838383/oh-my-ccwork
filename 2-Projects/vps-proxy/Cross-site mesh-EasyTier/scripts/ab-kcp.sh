@@ -16,17 +16,18 @@
 set -uo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/common.sh"
 
-PEER_NODE="dev198"          # 对端（公司侧，我有免密 sudo）
+PEER_NODE="dev198"          # sudo 凭据仅从私密配置的 DEV198_SUDO_PASS 读取
 PEER_IP="10.10.10.13"
 SIZE_MB="${SIZE_MB:-24}"   # 单流 24MB：上次 40MB 在 0.5MB/s 下要 80s，太久
 PARALLEL="${PARALLEL:-10}"
 
 [[ -n "${SUDO_PASS:-}" ]] || die "需要 Air 的 sudo 密码：SUDO_PASS='xxx' $0"
 load_secrets
+[[ -n "${DEV198_SUDO_PASS:-}" ]] || die "Missing DEV198_SUDO_PASS in private credentials"
 
-air()  { echo "$SUDO_PASS" | sudo -S -p '' bash -c "$*"; }
-peer() { ssh -o BatchMode=yes -o ConnectTimeout=20 dev198 \
-           "echo 1234 | sudo -S -p '' bash -c $(printf '%q' "$*")"; }
+air()  { et_sudo_env __LOCAL__ SUDO_PASS "$@"; }
+peer() { et_sudo_env dev198 DEV198_SUDO_PASS "$@"; }
+
 
 CONF=/etc/easytier/node.toml
 BAK=/etc/easytier/node.toml.abkcp

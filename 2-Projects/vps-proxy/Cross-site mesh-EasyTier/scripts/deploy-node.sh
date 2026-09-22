@@ -26,22 +26,8 @@ remote() {  # remote <node> <cmd...>   —— 以 root 身份执行
       vps_ssh "$@" ;;
     nopasswd)
       ssh -o BatchMode=yes -o ConnectTimeout=20 "$alias" "sudo bash -c $(printf '%q' "$*")" ;;
-    secret:*)
-      local var="${sudo_kind#secret:}"
-      ssh -o BatchMode=yes -o ConnectTimeout=20 "$alias" \
-        "echo $(printf '%q' "${!var}") | sudo -S -p '' bash -c $(printf '%q' "$*")" ;;
-    literal:*)
-      local pw="${sudo_kind#literal:}"
-      ssh -o BatchMode=yes -o ConnectTimeout=20 "$alias" \
-        "echo $(printf '%q' "$pw") | sudo -S -p '' bash -c $(printf '%q' "$*")" ;;
-    ask)
-      [[ -n "${SUDO_PASS:-}" ]] || die "$node 需要 sudo 密码：SUDO_PASS=xxx $0 $node"
-      if [[ "$alias" == "__LOCAL__" ]]; then
-        echo "$SUDO_PASS" | sudo -S -p '' bash -c "$*"
-      else
-        ssh -o BatchMode=yes -o ConnectTimeout=20 "$alias" \
-          "echo $(printf '%q' "$SUDO_PASS") | sudo -S -p '' bash -c $(printf '%q' "$*")"
-      fi ;;
+    secret:*) et_sudo_env "$alias" "${sudo_kind#secret:}" "$@" ;;
+    ask) et_sudo_env "$alias" SUDO_PASS "$@" ;;
     *) die "未知 sudo 方式: $sudo_kind" ;;
   esac
 }

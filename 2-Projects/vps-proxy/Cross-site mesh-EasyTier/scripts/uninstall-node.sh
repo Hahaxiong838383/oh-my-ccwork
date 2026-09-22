@@ -20,16 +20,9 @@ remote() {
   case "$sudo_kind" in
     root)      vps_ssh "$@" ;;
     nopasswd)  ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" "sudo bash -c $(printf '%q' "$*")" ;;
-    secret:*)  local v="${sudo_kind#secret:}"
-               ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" \
-                 "echo $(printf '%q' "${!v}") | sudo -S -p '' bash -c $(printf '%q' "$*")" ;;
-    literal:*) local pw="${sudo_kind#literal:}"
-               ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" \
-                 "echo $(printf '%q' "$pw") | sudo -S -p '' bash -c $(printf '%q' "$*")" ;;
-    ask)       [[ -n "${SUDO_PASS:-}" ]] || die "需要 SUDO_PASS=xxx"
-               if [[ "$alias" == "__LOCAL__" ]]; then echo "$SUDO_PASS" | sudo -S -p '' bash -c "$*"
-               else ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" \
-                 "echo $(printf '%q' "$SUDO_PASS") | sudo -S -p '' bash -c $(printf '%q' "$*")"; fi ;;
+    secret:*) et_sudo_env "$alias" "${sudo_kind#secret:}" "$@" ;;
+    ask) et_sudo_env "$alias" SUDO_PASS "$@" ;;
+    *) die "Unsupported sudo kind" ;;
   esac
 }
 

@@ -28,21 +28,10 @@ peer_of() {  # peer_of <node> -> 该节点的 peer 表原文
     root) vps_ssh 'easytier-cli peer 2>/dev/null' ;;
     nopasswd) ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
             'sudo /usr/local/bin/easytier-cli peer 2>/dev/null' ;;
-    secret:*) local v="${sudo_kind#secret:}"
-            [[ -n "${!v:-}" ]] || return 0
-            ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
-            "echo $(printf '%q' "${!v}") | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null" ;;
-    literal:*) local pw="${sudo_kind#literal:}"
-            ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
-            "echo $(printf '%q' "$pw") | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null" ;;
+    secret:*) et_sudo_env "$alias" "${sudo_kind#secret:}" "/usr/local/bin/easytier-cli peer" ;;
     windows-admin) ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
             "powershell.exe -NoProfile -NonInteractive -Command \"& 'C:\Program Files\EasyTier\easytier-cli.exe' peer\"" 2>/dev/null ;;
-    ask) if [[ "$alias" == "__LOCAL__" ]]; then
-            [[ -n "${SUDO_PASS:-}" ]] && echo "$SUDO_PASS" | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null
-         else
-            [[ -n "${SUDO_PASS:-}" ]] && ssh -o BatchMode=yes -o ConnectTimeout=12 "$alias" \
-              "echo $(printf '%q' "$SUDO_PASS") | sudo -S -p '' /usr/local/bin/easytier-cli peer 2>/dev/null"
-         fi ;;
+    ask) et_sudo_env "$alias" SUDO_PASS "/usr/local/bin/easytier-cli peer" ;;
   esac
 }
 
@@ -57,7 +46,6 @@ creds_ready() {
                || [[ -n "${VPS_ROOT_PASS:-}" ]] ;;
     nopasswd)  return 0 ;;
     secret:*)  local v="${k#secret:}"; [[ -n "${!v:-}" ]] ;;
-    literal:*) return 0 ;;
     windows-admin) return 0 ;;
     ask)       [[ -n "${SUDO_PASS:-}" ]] ;;
     *)         return 1 ;;

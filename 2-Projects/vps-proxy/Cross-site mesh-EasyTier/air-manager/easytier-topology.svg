@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 374" role="img" aria-labelledby="title desc">
+<title id="title">Air EasyTier 家庭与香港双栈发现入口</title>
+<desc id="desc">Air 可通过两个家庭域名连接 Lucky，再连接 NAS2 的 EasyTier；香港 IPv4 和 IPv6 入口并列保留。此图表示入网入口，不代表实时业务流量路径。</desc>
+<defs><marker id="home-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10" fill="#69d791"/></marker><marker id="hk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10" fill="#79b8ff"/></marker></defs>
+<rect width="900" height="374" rx="8" fill="#0d1117"/>
+<g fill="none" stroke-width="1.5"><rect x="160" y="18" width="730" height="191" rx="8" stroke="#294435" stroke-dasharray="4 4"/><rect x="160" y="229" width="468" height="115" rx="8" stroke="#2c4565" stroke-dasharray="4 4"/>
+<path d="M138 166H150V80H174" stroke="#69d791" marker-end="url(#home-arrow)"/><path d="M150 166H174" stroke="#69d791" marker-end="url(#home-arrow)"/>
+<path d="M380 80H401V118H427" stroke="#69d791" marker-end="url(#home-arrow)"/><path d="M380 166H401V118" stroke="#69d791"/>
+<path d="M613 118H658" stroke="#69d791" marker-end="url(#home-arrow)"/>
+<path d="M138 166H150V291H174" stroke="#79b8ff" marker-end="url(#hk-arrow)"/>
+<path d="M613 291H658" stroke="#79b8ff" marker-end="url(#hk-arrow)"/>
+<path d="M769 159V251" stroke="#69d791" marker-end="url(#home-arrow)"/>
+</g>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,sans-serif">
+<rect x="18" y="130" width="120" height="72" rx="7" fill="#161b22" stroke="#48596d"/>
+<text x="78" y="158" text-anchor="middle" fill="#d8dee7" font-size="17" font-weight="600">Air</text><text x="78" y="181" text-anchor="middle" fill="#a3b0c1" font-size="12">10.10.10.31</text>
+<text x="175" y="34" fill="#69d791" font-size="11">家庭入口 · 独立于香港链路</text>
+<rect x="175" y="46" width="205" height="68" rx="6" fill="#14221b" stroke="#31563f"/>
+<text x="189" y="69" fill="#69d791" font-size="12">IPv4 · A 记录 / 路由器映射</text><text x="189" y="92" fill="#d8dee7" font-size="13">mesh4.hahaxiong.cc:21110</text>
+<rect x="175" y="132" width="205" height="62" rx="6" fill="#14221b" stroke="#31563f"/>
+<text x="189" y="154" fill="#69d791" font-size="12">IPv6 · AAAA 记录 / 直达 NAS</text><text x="189" y="177" fill="#d8dee7" font-size="13">mesh6.hahaxiong.cc:21110</text>
+<rect x="428" y="77" width="185" height="82" rx="6" fill="#161b22" stroke="#31563f"/>
+<text x="521" y="101" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">NAS 2 · Lucky</text><text x="521" y="123" text-anchor="middle" fill="#a3b0c1" font-size="12">TCP4 + TCP6 :21110</text><text x="521" y="145" text-anchor="middle" fill="#a3b0c1" font-size="12">原始 TCP 转发 · 非 HTTP 反代</text>
+<rect x="659" y="77" width="220" height="82" rx="6" fill="#161b22" stroke="#31563f"/>
+<text x="769" y="101" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">NAS 2 · EasyTier</text><text x="769" y="124" text-anchor="middle" fill="#d8dee7" font-size="13">192.168.1.115:11010</text><text x="769" y="145" text-anchor="middle" fill="#a3b0c1" font-size="12">组网地址 10.10.10.22</text>
+<text x="781" y="231" fill="#a3b0c1" font-size="11">私网认证</text>
+<text x="175" y="247" fill="#79b8ff" font-size="11">香港入口 · 原有配置保留</text>
+<rect x="175" y="257" width="438" height="73" rx="6" fill="#141e2b" stroke="#2c4565"/>
+<text x="191" y="280" fill="#d8dee7" font-size="13">IPv4  207.57.124.191:443 · TCP</text><text x="191" y="302" fill="#d8dee7" font-size="13">IPv6  [2001:df1:7880:6::1ca]:443 · TCP</text><text x="191" y="319" fill="#a3b0c1" font-size="11">入网后优先 P2P；不强制所有流量走中继</text>
+<rect x="659" y="252" width="220" height="83" rx="6" fill="#161b22" stroke="#48596d"/>
+<text x="769" y="278" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">现有 EasyTier 组网</text><text x="769" y="301" text-anchor="middle" fill="#a3b0c1" font-size="12">Studio · dev198 · 家里开发机</text><text x="769" y="322" text-anchor="middle" fill="#a3b0c1" font-size="12">真实路径与服务探测见节点列表</text>
+<text x="20" y="360" fill="#8e9bac" font-size="11">在家保留 LAN 直连：192.168.1.115:11010 / 192.168.1.133:11010，不依赖公网回流。</text>
+</g></svg>

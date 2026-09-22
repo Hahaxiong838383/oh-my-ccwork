@@ -28,7 +28,6 @@ on_src() {
     root)      vps_ssh "$@" ;;
     nopasswd)  ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" "$@" ;;
     secret:*)  ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" "$@" ;;
-    literal:*) ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" "$@" ;;
     ask)       [[ "$alias" == "__LOCAL__" ]] && bash -c "$*" \
                  || ssh -o BatchMode=yes -o ConnectTimeout=25 "$alias" "$@" ;;
   esac

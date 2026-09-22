@@ -22,3 +22,7 @@
 ## 后续工作
 
 见 [NEXT-STEPS.md](NEXT-STEPS.md)。自动恢复尚未实现或启用；先观察自然切网与唤醒。
+
+## 2026-09-22 家庭双栈入口
+
+新增 Lucky TCP 21110 → NAS2 EasyTier 11010、DDNS mesh4/mesh6、NAS 无特权 UPnP 租约核对脚本，以及现有 EasyTier Tab 内的拓扑/地址区。详情见 `LUCKY-BOOTSTRAP-DEPLOYMENT.md`（验收后记录）。不把 TCP 端口或 DNS 成功当作安全握手入网。

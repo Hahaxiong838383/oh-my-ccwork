@@ -16,12 +16,12 @@ ET_CONFIG_SERVER="udp://10.10.10.1:22020/${ET_CONFIG_SERVER_USER}"
 
 # ── 节点真值表 ────────────────────────────────────────────────────────────
 # name | ssh别名 | 虚拟IP | 平台 | sudo方式
-# sudo方式: nopasswd | secret:<VAR名> | literal:<值> | ask | windows-admin
+# sudo方式: nopasswd | secret:<VAR名> | ask | windows-admin
 ET_NODES=(
   "hk-relay|__VPS_DIRECT__|10.10.10.1|linux-x86_64|root"
   "mini|mini-pub|10.10.10.11|macos-aarch64|nopasswd"
   "studio|studio-pub|10.10.10.12|macos-aarch64|secret:STUDIO_SUDO_PASS"
-  "dev198|dev198|10.10.10.13|linux-x86_64|literal:1234"
+  "dev198|dev198|10.10.10.13|linux-x86_64|secret:DEV198_SUDO_PASS"
   "linux-lan|linux-lan|10.10.10.21|linux-x86_64|ask"
   "home-studio|hahaxiong83@192.168.1.133|10.10.10.23|linux-x86_64|ask"
   "maxtkf-server|Administrator@192.168.1.77|10.10.10.24|windows-x86_64|windows-admin"
@@ -50,6 +50,24 @@ load_secrets() {
   : "${EASYTIER_NETWORK_NAME:?secrets 里缺 EASYTIER_NETWORK_NAME}"
   : "${EASYTIER_NETWORK_SECRET:?secrets 里缺 EASYTIER_NETWORK_SECRET}"
 }
+
+
+# Resolve credentials by variable name; send password over SSH stdin, never argv.
+# Commands here must not consume stdin; remote_write stages data separately.
+et_sudo_env() (
+  case "$-" in *x*) set +x ;; esac
+  local host="$1" variable="$2"; shift 2
+  [[ "$variable" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || { printf 'Invalid credential variable\n' >&2; return 2; }
+  [[ -n "${!variable:-}" ]] || { printf 'Missing credential variable: %s (use private env or vault)\n' "$variable" >&2; return 2; }
+  local result
+  if [[ "$host" == "__LOCAL__" ]]; then
+    if printf '%s\n' "${!variable}" | sudo -S -p '' -- bash -c "$*"; then result=0; else result=$?; fi
+  else
+    if printf '%s\n' "${!variable}" | ssh -T -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=25 "$host" \
+        "sudo -S -p '' -- bash -c $(printf '%q' "$*")"; then result=0; else result=$?; fi
+  fi
+  return "$result"
+)
 
 # ── 香港中继的 SSH 通道 ────────────────────────────────────────────────────
 # 2026-08-16 起该机已开公钥登录（此前 sshd 是 PubkeyAuthentication no，只能走密码）。

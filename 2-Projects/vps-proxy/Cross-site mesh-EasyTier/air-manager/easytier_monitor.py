@@ -22,6 +22,8 @@ CLI = '/usr/local/bin/easytier-cli'
 HELPER = '/Library/PrivilegedHelperTools/cn.easytier.manager-restart'
 TARGETS = [('10.10.10.12', 'Studio'), ('10.10.10.23', '家里开发机'), ('10.10.10.13', 'dev198')]
 NAMES = dict(TARGETS + [('10.10.10.11', 'Mini'), ('10.10.10.1', '香港中继'), ('10.10.10.22', '飞牛 NAS'), ('10.10.10.24', 'Windows 开发机'), ('10.10.10.14', 'NIO 开发机')])
+from easytier_topology import collect as collect_topology
+
 INTERVAL = 30
 COOLDOWN = 600
 
@@ -125,9 +127,10 @@ def health(info, probes, rpc_ok):
 
 
 class Monitor:
-    def __init__(self, state_dir=STATE_DIR, runner=command, prober=probe, info_fn=system_info):
+    def __init__(self, state_dir=STATE_DIR, runner=command, prober=probe, info_fn=system_info, topology_fn=collect_topology):
         self.directory = Path(state_dir)
         self.runner, self.prober, self.info_fn = runner, prober, info_fn
+        self.topology_fn = topology_fn
         self.lock = threading.RLock()
         self.jobs = queue.Queue(maxsize=2)
         self.stop = threading.Event()
@@ -202,6 +205,10 @@ class Monitor:
                              'tunnel_proto': '', 'probe': by_ip[ip], 'observed': False})
         order = {ip: n for n, (ip, _) in enumerate(TARGETS)}
         rows.sort(key=lambda p: (order.get(p['ipv4'], 99), p['ipv4']))
+        try:
+            topology = self.topology_fn(self.runner)
+        except Exception:
+            topology = {'observed_at': time.time(), 'endpoints': [], 'deployment': {}, 'error': 'topology_unavailable'}
         current_health = health(info, probes, rpc_ok)
         signature = tuple(info.get(k) for k in ('interface', 'physical_ip', 'gateway'))
         with self.lock:
@@ -213,7 +220,7 @@ class Monitor:
                 messages = {'healthy': '3 个关键目标 SSH 服务均有响应', 'degraded': '部分关键目标 SSH 服务探测未通过',
                             'offline': '物理网络未就绪', 'stopped': '本机 EasyTier 未运行', 'unknown': '无法读取 EasyTier 路径状态'}
                 self.event('success' if current_health == 'healthy' else 'warning', messages[current_health])
-            self.state.update(local=info, nodes=rows, probes=probes, rpc_ok=rpc_ok,
+            self.state.update(local=info, nodes=rows, probes=probes, rpc_ok=rpc_ok, topology=topology,
                               last_checked=time.time(), network_signature=list(signature), observed_health=current_health)
             if not self.restart_pending:
                 self.state['health'] = current_health

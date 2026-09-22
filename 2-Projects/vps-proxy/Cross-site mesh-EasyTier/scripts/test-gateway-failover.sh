@@ -23,9 +23,10 @@ DOWN_NODE="linux-lan"
 
 [[ -n "${SUDO_PASS:-}" ]] || die "需要 linux-lan 的 sudo 密码：SUDO_PASS='xxx' $0"
 load_secrets
+[[ -n "${DEV198_SUDO_PASS:-}" ]] || die "Missing DEV198_SUDO_PASS in private credentials"
 
-lan()  { ssh -o BatchMode=yes -o ConnectTimeout=20 linux-lan \
-           "echo $(printf '%q' "$SUDO_PASS") | sudo -S -p '' bash -c $(printf '%q' "$*")"; }
+lan() { et_sudo_env linux-lan SUDO_PASS "$@"; }
+comp_sudo() { et_sudo_env dev198 DEV198_SUDO_PASS "$@"; }
 comp() { ssh -o BatchMode=yes -o ConnectTimeout=20 dev198 "$@"; }
 
 RESTORED=0
@@ -47,7 +48,7 @@ trap restore EXIT INT TERM
 # ── ① 基线：停机前必须是通的，否则整个实验没有意义 ──
 log "① 基线：停机前从 $PROBE_FROM 访问 $PROBE_TARGET"
 comp "ping -c4 -W2 -q $PROBE_TARGET 2>&1 | tail -2" || die "基线就不通，先修好再测"
-comp "echo 1234 | sudo -S -p '' /usr/local/bin/easytier-cli route 2>/dev/null | grep -E '10.10.1.0/24' | cut -c1-140" \
+comp_sudo "/usr/local/bin/easytier-cli route 2>/dev/null | grep -E '10.10.1.0/24' | cut -c1-140" \
   | sed 's/^/    当前路由: /'
 
 # ── ② 制造故障 ──
@@ -64,7 +65,7 @@ RESULT="$(comp "ping -c6 -W2 -q $PROBE_TARGET 2>&1 | tail -2")"
 printf '%s\n' "$RESULT" | sed 's/^/    /'
 
 log "   此刻由谁在提供这条路由"
-comp "echo 1234 | sudo -S -p '' /usr/local/bin/easytier-cli route 2>/dev/null | grep -E '10.10.1.0/24' | cut -c1-140" \
+comp_sudo "/usr/local/bin/easytier-cli route 2>/dev/null | grep -E '10.10.1.0/24' | cut -c1-140" \
   | sed 's/^/    /'
 
 LOSS="$(printf '%s' "$RESULT" | grep -oE '[0-9]+(\.[0-9]+)?% packet loss' | grep -oE '^[0-9]+')"

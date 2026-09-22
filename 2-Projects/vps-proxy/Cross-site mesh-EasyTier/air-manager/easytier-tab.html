@@ -12,6 +12,21 @@
 @media(max-width:550px){#et-live .et-header{padding:16px}#et-live .et-shell{padding:16px 12px}#et-live .et-brand{font-size:18px}#et-live .et-header-right .et-mono{display:none}#et-live .et-local{grid-template-columns:1fr 1fr;gap:16px 0}#et-live .et-local>div:nth-child(2){border:0}#et-live .et-local>div{padding:0 12px}#et-live .et-tab{padding:8px 10px;font-size:12px}#et-live .et-page-head h1{font-size:20px}#et-live .et-health{padding:13px 12px;gap:10px}#et-live .et-side-body{display:block}#et-live .et-rules{padding-top:12px;border-top:1px solid var(--et-border)}#et-live .et-scope{margin-top:14px}#et-live .et-actions{width:100%}#et-live .et-actions .et-button{flex:1}#et-live .et-preview-bar{align-items:flex-start}#et-live .et-preview-bar label{width:100%;justify-content:space-between}}
 @media(pointer:coarse){#et-live .et-button,#et-live select{min-height:44px}#et-live .et-toggle-row{min-height:44px}}
 @media(prefers-reduced-motion:reduce){#et-live *{transition:none!important}}
+
+#et-live .et-topology{margin:0 0 18px;border:1px solid #30363d;border-radius:7px;background:#161b22;overflow:hidden}
+#et-live .et-topology summary{padding:13px 16px;cursor:pointer;color:#d8dee7;font-weight:500;font-size:14px}
+#et-live .et-topology summary span{font-size:11px;font-weight:400;color:#8e9bac;margin-left:10px}
+#et-live .et-topology-body{padding:0 14px 14px}
+#et-live .et-topology-svg{overflow-x:auto;margin-top:5px}
+#et-live .et-topology-svg svg{display:block;width:100%;min-width:780px;height:auto}
+#et-live .et-topology-note{font-size:12px;color:#a3b0c1;margin:9px 0 13px;line-height:1.6}
+#et-live .et-topology-proof{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0 13px}
+#et-live .et-topology-proof span{font-size:11px;color:#afc8bb;padding:5px 9px;border:1px solid #294435;border-radius:4px;background:#121e19}
+#et-live .et-entry-url{font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere;color:#d8dee7}
+#et-live .et-resolved{font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:#8e9bac;overflow-wrap:anywhere;max-width:290px}
+#et-live .et-entry-table td{padding:10px 12px}#et-live .et-entry-table td:first-child{min-width:94px}
+#et-live .et-entry-table td:nth-child(2){min-width:240px}#et-live .et-entry-table td:last-child{min-width:90px}
+#et-live .et-topology-maintenance{font-size:11px;color:#8e9bac;border-top:1px solid #30363d;padding-top:12px;margin-top:12px;line-height:1.8}
 </style>
 <div class="tab-content" id="tab-easytier"><div id="et-live" data-scene="recovering" data-density="comfortable">
 
@@ -19,7 +34,53 @@
         <section class="et-health" aria-live="polite" aria-label="组网健康状态"><div class="et-health-symbol" id="et-symbol" aria-hidden="true">…</div><div><h2 id="et-health-title">正在读取状态</h2><p id="et-health-copy">正在连接本机独立监控服务…</p></div><div class="et-health-meta" id="et-health-meta">尚未检测</div></section>
         <section class="et-confirm" id="et-confirm" aria-label="确认重启本机" hidden><h3>确认重启 Air 的 EasyTier？</h3><p>会短暂中断 Air 当前的组网连接。不会重启 Xray，也不会操作远端机器。当前 SSH 和组网业务可能短暂中断，请确认没有不可中断的传输。</p><div class="et-actions"><button class="et-button" type="button" id="et-cancel">取消</button><button class="et-button et-button-amber" type="button" id="et-confirm-restart">确认重启</button></div></section>
         <section class="et-local" aria-label="Air 本机信息"><div><div class="et-local-label">守护进程</div><div class="et-local-value" id="et-process">正在读取</div><div class="et-local-sub"><span id="et-version">版本 —</span></div></div><div><div class="et-local-label">虚拟内网地址</div><div class="et-local-value et-mono" id="et-vip">—</div><div class="et-local-sub">节点名 · air</div></div><div><div class="et-local-label">当前物理网络</div><div class="et-local-value" id="et-interface">—</div><div class="et-local-sub et-mono" id="et-physical-ip">—</div></div><div><div class="et-local-label">连续运行</div><div class="et-local-value" id="et-uptime">—</div><div class="et-local-sub" id="et-last-restart">最近重启 —</div></div></section>
-        <div class="et-grid">
+
+<details class="et-topology" id="et-topology" open>
+ <summary>方案拓扑与实际地址 <span>家庭双栈 + 香港双栈 · 点击收起</span></summary>
+ <div class="et-topology-body">
+ <div class="et-topology-svg"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 374" role="img" aria-labelledby="title desc">
+<title id="title">Air EasyTier 家庭与香港双栈发现入口</title>
+<desc id="desc">Air 可通过两个家庭域名连接 Lucky，再连接 NAS2 的 EasyTier；香港 IPv4 和 IPv6 入口并列保留。此图表示入网入口，不代表实时业务流量路径。</desc>
+<defs><marker id="home-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10" fill="#69d791"/></marker><marker id="hk-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 10 5 0 10" fill="#79b8ff"/></marker></defs>
+<rect width="900" height="374" rx="8" fill="#0d1117"/>
+<g fill="none" stroke-width="1.5"><rect x="160" y="18" width="730" height="191" rx="8" stroke="#294435" stroke-dasharray="4 4"/><rect x="160" y="229" width="468" height="115" rx="8" stroke="#2c4565" stroke-dasharray="4 4"/>
+<path d="M138 166H150V80H174" stroke="#69d791" marker-end="url(#home-arrow)"/><path d="M150 166H174" stroke="#69d791" marker-end="url(#home-arrow)"/>
+<path d="M380 80H401V118H427" stroke="#69d791" marker-end="url(#home-arrow)"/><path d="M380 166H401V118" stroke="#69d791"/>
+<path d="M613 118H658" stroke="#69d791" marker-end="url(#home-arrow)"/>
+<path d="M138 166H150V291H174" stroke="#79b8ff" marker-end="url(#hk-arrow)"/>
+<path d="M613 291H658" stroke="#79b8ff" marker-end="url(#hk-arrow)"/>
+<path d="M769 159V251" stroke="#69d791" marker-end="url(#home-arrow)"/>
+</g>
+<g font-family="-apple-system,BlinkMacSystemFont,Segoe UI,PingFang SC,sans-serif">
+<rect x="18" y="130" width="120" height="72" rx="7" fill="#161b22" stroke="#48596d"/>
+<text x="78" y="158" text-anchor="middle" fill="#d8dee7" font-size="17" font-weight="600">Air</text><text x="78" y="181" text-anchor="middle" fill="#a3b0c1" font-size="12">10.10.10.31</text>
+<text x="175" y="34" fill="#69d791" font-size="11">家庭入口 · 独立于香港链路</text>
+<rect x="175" y="46" width="205" height="68" rx="6" fill="#14221b" stroke="#31563f"/>
+<text x="189" y="69" fill="#69d791" font-size="12">IPv4 · A 记录 / 路由器映射</text><text x="189" y="92" fill="#d8dee7" font-size="13">mesh4.hahaxiong.cc:21110</text>
+<rect x="175" y="132" width="205" height="62" rx="6" fill="#14221b" stroke="#31563f"/>
+<text x="189" y="154" fill="#69d791" font-size="12">IPv6 · AAAA 记录 / 直达 NAS</text><text x="189" y="177" fill="#d8dee7" font-size="13">mesh6.hahaxiong.cc:21110</text>
+<rect x="428" y="77" width="185" height="82" rx="6" fill="#161b22" stroke="#31563f"/>
+<text x="521" y="101" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">NAS 2 · Lucky</text><text x="521" y="123" text-anchor="middle" fill="#a3b0c1" font-size="12">TCP4 + TCP6 :21110</text><text x="521" y="145" text-anchor="middle" fill="#a3b0c1" font-size="12">原始 TCP 转发 · 非 HTTP 反代</text>
+<rect x="659" y="77" width="220" height="82" rx="6" fill="#161b22" stroke="#31563f"/>
+<text x="769" y="101" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">NAS 2 · EasyTier</text><text x="769" y="124" text-anchor="middle" fill="#d8dee7" font-size="13">192.168.1.115:11010</text><text x="769" y="145" text-anchor="middle" fill="#a3b0c1" font-size="12">组网地址 10.10.10.22</text>
+<text x="781" y="231" fill="#a3b0c1" font-size="11">私网认证</text>
+<text x="175" y="247" fill="#79b8ff" font-size="11">香港入口 · 原有配置保留</text>
+<rect x="175" y="257" width="438" height="73" rx="6" fill="#141e2b" stroke="#2c4565"/>
+<text x="191" y="280" fill="#d8dee7" font-size="13">IPv4  207.57.124.191:443 · TCP</text><text x="191" y="302" fill="#d8dee7" font-size="13">IPv6  [2001:df1:7880:6::1ca]:443 · TCP</text><text x="191" y="319" fill="#a3b0c1" font-size="11">入网后优先 P2P；不强制所有流量走中继</text>
+<rect x="659" y="252" width="220" height="83" rx="6" fill="#161b22" stroke="#48596d"/>
+<text x="769" y="278" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">现有 EasyTier 组网</text><text x="769" y="301" text-anchor="middle" fill="#a3b0c1" font-size="12">Studio · dev198 · 家里开发机</text><text x="769" y="322" text-anchor="middle" fill="#a3b0c1" font-size="12">真实路径与服务探测见节点列表</text>
+<text x="20" y="360" fill="#8e9bac" font-size="11">在家保留 LAN 直连：192.168.1.115:11010 / 192.168.1.133:11010，不依赖公网回流。</text>
+</g></svg>
+</div>
+ <p class="et-topology-note" id="et-topology-note">正在读取入口状态。图中表示发现与兜底入口，不代表每条业务流量都经过 Lucky 或香港。</p>
+ <div class="et-topology-proof" id="et-topology-proof"></div>
+ <p class="et-topology-note">家庭 IPv4 从家内访问需要路由器支持公网回流；若这里显示连接中或未连接，可使用家内 NAS 直连 / 家庭 IPv6。外网验收结果与当前 Air 连接状态分开展示。</p>
+ <div class="et-table-wrap"><table class="et-entry-table"><thead><tr><th scope="col">入口</th><th scope="col">配置 URI / 当前 DNS 解析</th><th scope="col">Air 连接状态</th></tr></thead><tbody id="et-topology-rows"><tr><td colspan="3">等待采样…</td></tr></tbody></table></div>
+ <div class="et-topology-maintenance" id="et-topology-maintenance"></div>
+ </div>
+</details>
+
+<div class="et-grid">
           <div>
             <section class="et-panel" aria-label="节点与真实连通性"><div class="et-panel-heading"><h2>节点与真实连通性</h2><span>核心目标 · 3 个</span></div><div class="et-table-wrap"><table><thead><tr><th scope="col">节点 / 虚拟 IP</th><th scope="col">连接路径</th><th scope="col">SSH 服务探测</th></tr></thead><tbody id="et-node-rows"></tbody></table></div><div class="et-table-foot">校验 SSH-2.0 服务标识，不登录或读取远端数据；节点可见不等于业务可用。</div></section>
             <section class="et-panel et-events" aria-label="最近事件"><div class="et-panel-heading"><h2>最近事件</h2><span>仅记录本机状态变化</span></div><div id="et-events"></div></section>
@@ -51,13 +112,22 @@ async function api(action,body){
 }
 function unavailable(text){
  current=null;root.dataset.scene='degraded';$('et-symbol').textContent='?';$('et-health-title').textContent='状态未知';$('et-health-copy').textContent=text;
- $('et-process').textContent='未知';$('et-node-rows').innerHTML='<tr><td colspan="3">无法取得实时状态；不沿用上次的正常判定。</td></tr>';
+ $('et-process').textContent='未知';$('et-topology-rows').innerHTML='<tr><td colspan="3">监控不可用，入口状态未知。</td></tr>';$('et-node-rows').innerHTML='<tr><td colspan="3">无法取得实时状态；不沿用上次的正常判定。</td></tr>';
  $('et-health-meta').textContent='监控不可用';$('et-updated').textContent='状态未更新';$('et-check').disabled=true;$('et-restart').disabled=true;$('et-confirm').hidden=true;
+}
+function renderTopology(t,stale){
+ const labels={connected:'已连接',connecting:'连接中',disconnected:'未连接',not_observed:'未观测',unknown:'未知'};
+ const rows=t?.endpoints||[];const d=t?.deployment||{};
+ $('et-topology-note').textContent=t?.note||'入口信息暂不可用；图示为已部署方案，不代表当前业务路径。';
+ $('et-topology-rows').innerHTML=rows.map(row=>{const label=stale?'状态已过期':labels[row.state]||'未知';const cls=stale?'et-muted':row.state==='connected'?'et-pass':'et-warn';const resolved=row.dns_status==='not_applicable'?'固定地址':row.resolved?.length?row.resolved.join(' · '):'DNS 尚未解析成功';return `<tr><td>${esc(row.name)}</td><td><div class="et-entry-url">${esc(row.url)}</div><div class="et-resolved">${esc(resolved)}</div></td><td class="${cls}">${esc(label)}</td></tr>`;}).join('')||'<tr><td colspan="3">入口状态未知，不沿用旧绿灯。</td></tr>';
+ $('et-topology-proof').innerHTML=(d.verification||[]).map(v=>`<span>已验收 · ${esc(v)}</span>`).join('');
+ $('et-topology-maintenance').textContent=d.lease_keeper?`历史验收：${d.verified_at||'—'}；实时入口采样：${clock(t?.observed_at)}。 DDNS 每 ${d.ddns_interval_seconds} 秒更新 A / AAAA。 ${d.lease_keeper}。 路由器重启后的映射重建尚未做断网验收。`:'部署记录暂不可用。';
 }
 function render(s){
  current=s;const l=s.local||{};const probes=s.probes||[];const ok=probes.filter(p=>p.ok).length;const restart=s.restart||{};
  const recovering=['queued','restarting','verifying'].includes(restart.phase);
  const h=s.stale&&!recovering?'unknown':s.health;
+ renderTopology(s.topology,s.stale);
  const healthText={healthy:['✓','组网连接正常',`${ok} / 3 个关键目标 SSH 服务有响应，当前无需重启。`],degraded:['!','部分链路异常',`${ok} / 3 个关键目标有响应。进程运行或 TCP 可达，不代表 SSH 服务可用。`],offline:['!','物理网络未就绪','请先确认 Wi-Fi / 有线网络，监控不会自动重启。'],stopped:['!','EasyTier 未运行','本机守护进程未运行，可手动尝试恢复。'],unknown:['?','状态未知','监控数据过期或路径查询失败；暂不判定连接正常。'],checking:['…','正在检测连接','等待独立监控服务完成首次采样。'],recovering:['…','正在验证恢复结果','重启请求已受理；新进程与关键目标探测通过后才确认恢复。']};
  const title=healthText[recovering?'recovering':h]||healthText.unknown;
  root.dataset.scene=recovering?'recovering':h==='healthy'?'healthy':'degraded';$('et-symbol').textContent=title[0];$('et-health-title').textContent=title[1];$('et-health-copy').textContent=title[2];
