@@ -43,6 +43,17 @@ const CASES: Case[] = [
   { text: '声音再大一点', expect: 37, why: '自然句 音量一级' },
   { text: '我今年长高了一点', expect: 'none', why: '规则 9：闲聊里的高/低不是设备（裸句「升高一点」已是 L1 别名，快路先接）' },
   { text: '读写台升高一点', expect: 25, why: '规则 9：带设备对象才出' },
+  // D1（09-22 15:35 批次全开）：给川哥真机测试用的慢路句——都不是 L1 精确别名（词表 grep 过），标签落在原第二批
+  { text: '太暗了看不清', expect: 4, why: 'D1 慢路 灯光一级调亮（无设备词但有亮暗词）' },
+  { text: '把灯开到最亮', expect: 5, why: 'D1 慢路 最值' },
+  { text: '灯太刺眼了关掉吧', expect: 3, why: 'D1 慢路 关灯（原第二批）' },
+  { text: '读写台太低了', expect: 25, why: 'D1 慢路 电机升一步（规则 7 没说最就一步）' },
+  { text: '画面拉远一点', expect: 33, why: 'D1 慢路 虚像远一步' },
+  { text: '画面离我太远了拉近点', expect: 34, why: 'D1 慢路 虚像近一步' },
+  { text: '先静音一下', expect: 44, why: 'D1 慢路 静音（原第二批）' },
+  { text: '把声音打开吧', expect: 45, why: 'D1 慢路 取消静音' },
+  { text: '讲个月亮的故事', expect: 'none', why: 'D1 负例：月亮≠灯光' },
+  { text: '今天的灯会真好看', expect: 'none', why: 'D1 负例：灯会是名词，无调节意图' },
 ];
 
 function markerOf(text: string): 'none' | number {
