@@ -36,6 +36,13 @@ const CASES: Case[] = [
   { text: '把灯调暗一点', expect: 6, why: '一级' },
   { text: '太亮了', expect: 6, why: '方向映射' },
   { text: '哦也对', expect: 'none', why: '附和(既有反例)' },
+  // 2026-09-22 D0 全量前正负锚：当天 observe 实录误判 + 规则 9（电机类须带设备对象）
+  { text: '班长', expect: 'none', why: '无关名词(09-22 实录误判→6)' },
+  { text: '对有一点像这个', expect: 'none', why: '闲聊比喻(09-22 实录误判→4)' },
+  { text: '把灯弄亮一点吧', expect: 4, why: '自然句 一级调亮' },
+  { text: '声音再大一点', expect: 37, why: '自然句 音量一级' },
+  { text: '我今年长高了一点', expect: 'none', why: '规则 9：闲聊里的高/低不是设备（裸句「升高一点」已是 L1 别名，快路先接）' },
+  { text: '读写台升高一点', expect: 25, why: '规则 9：带设备对象才出' },
 ];
 
 function markerOf(text: string): 'none' | number {
