@@ -426,6 +426,7 @@ struct MenuContentView: View {
                     ForEach(xaiAccounts) { account in
                         XAIAccountUsageCard(
                             account: account,
+                            routeModelText: model.summary?.xaiUsage?.routeModelText,
                             isRemoving: model.removingAccountID == account.id,
                             onRequestRemoval: { presentation.present(.removeAccount(account)) }
                         )
@@ -708,6 +709,7 @@ private struct XAIUsageCard: View {
 
 private struct XAIAccountUsageCard: View {
     let account: Account
+    let routeModelText: String?
     let isRemoving: Bool
     let onRequestRemoval: () -> Void
 
@@ -728,6 +730,14 @@ private struct XAIAccountUsageCard: View {
                     .foregroundStyle(statusColor)
             }
 
+            if !account.disabled {
+                Text("Smart API 文本路由 \(routeModelText ?? "暂时无法读取")")
+                    .font(.caption)
+                    .foregroundStyle(routeModelText == nil ? Color.secondary : .blue)
+                    .textSelection(.enabled)
+                    .help("当前 Smart API 配置的上游文本模型；不代表 CPA Direct 请求或历史调用使用的模型。")
+            }
+
             if let runtime = account.runtimeUsage, runtime.requests > 0 {
                 HStack(spacing: 14) {
                     metric("今日请求", UsageFormatting.integer(runtime.requests))
@@ -740,9 +750,10 @@ private struct XAIAccountUsageCard: View {
                     .foregroundStyle(.secondary)
 
                 if let topModel = runtime.topModel, !topModel.isEmpty {
-                    Text("主要模型 \(topModel)")
+                    Text("今日最多请求 \(topModel)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .help("今天请求中出现次数最多的模型标识，包含升级前记录；不是当前路由或上游实际响应型号。")
                 }
 
                 if runtime.errors > 0 {

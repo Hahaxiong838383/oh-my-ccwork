@@ -130,6 +130,7 @@ struct RuntimeUsage: Decodable, Equatable {
 }
 
 struct XAIUsage: Decodable, Equatable {
+    let routeUpstreamModels: [String]?
     let officialStatus: String?
     let officialError: String?
     let officialPeriodStart: String?
@@ -152,6 +153,7 @@ struct XAIUsage: Decodable, Equatable {
     let lastRequestAt: String?
 
     enum CodingKeys: String, CodingKey {
+        case routeUpstreamModels = "route_upstream_models"
         case requests, successes, errors
         case officialStatus = "official_status"
         case officialError = "official_error"
@@ -197,6 +199,12 @@ struct XAIUsage: Decodable, Equatable {
 
     var hasCPARouterUsage: Bool {
         cpaStatus == nil || cpaStatus == "ok"
+    }
+
+    var routeModelText: String? {
+        guard hasCPARouterUsage else { return nil }
+        let models = Set((routeUpstreamModels ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        return models.isEmpty ? nil : models.sorted().joined(separator: " / ")
     }
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -378,6 +379,10 @@ func TestLegacyGrokTextAliasesUseLatestCanonicalModel(t *testing.T) {
 		t.Fatal(err)
 	}
 	aliases := []string{
+		"grok-4.7",
+		"grok-4.7-latest",
+		"grok-4.6",
+		"grok-4.6-latest",
 		"grok-4.5",
 		"grok-4.3",
 		"grok-4.20-0309-non-reasoning",
@@ -391,8 +396,85 @@ func TestLegacyGrokTextAliasesUseLatestCanonicalModel(t *testing.T) {
 		if !ok || len(route.Candidates) != 1 {
 			t.Fatalf("route %q = %#v", alias, route)
 		}
-		if route.Candidates[0].Model != "grok-4.6" {
-			t.Fatalf("route %q model = %q, want grok-4.6", alias, route.Candidates[0].Model)
+		if route.Candidates[0].Model != "grok-4.7" {
+			t.Fatalf("route %q model = %q, want grok-4.7", alias, route.Candidates[0].Model)
+		}
+	}
+	for _, specialized := range []string{"grok-build-0.1", "grok-composer-2.5-fast", "grok-imagine-image", "grok-imagine-video", "grok-4.7-build-fast"} {
+		if _, ok := cfg.Routes[specialized]; ok {
+			t.Fatalf("specialized model %q must retain default-backend pass-through", specialized)
+		}
+	}
+}
+
+func TestGrok47ConfiguredAliasesRewriteBothProtocols(t *testing.T) {
+	cfg, err := loadConfig("../../config/router.example.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, alias := range []string{"grok-4.7", "grok-4.7-latest", "grok-4.6", "grok-4.6-latest", "grok-4.5", "grok-3-mini-fast"} {
+		for _, endpoint := range []string{"/v1/chat/completions", "/v1/responses"} {
+			t.Run(alias+endpoint, func(t *testing.T) {
+				upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					var payload map[string]any
+					if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+						t.Errorf("decode request: %v", err)
+						w.WriteHeader(http.StatusBadRequest)
+						return
+					}
+					if payload["model"] != "grok-4.7" || r.URL.Path != endpoint {
+						t.Errorf("unexpected rewrite: model=%v path=%s", payload["model"], r.URL.Path)
+					}
+					w.Header().Set("Content-Type", "application/json")
+					io.WriteString(w, `{"id":"fixture","model":"grok-4.7-build","usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2},"choices":[{"message":{"role":"assistant","content":"OK"}}]}`)
+				}))
+				defer upstream.Close()
+				candidate := cfg.Routes[alias].Candidates[0]
+				candidate.BaseURL = upstream.URL + "/v1"
+				candidate.APIKey = "fixture-upstream-key"
+				server := &Server{
+					cfg:        Config{BodyLimitBytes: 1 << 20, Routes: map[string]Route{alias: {Candidates: []Candidate{candidate}}}},
+					clientKeys: map[string]struct{}{"fixture-client-key": {}},
+					states:     map[string]*ProviderState{candidate.ID: {}},
+					bindings:   map[string]SessionBinding{},
+					httpClient: upstream.Client(),
+					metricCh:   make(chan MetricEvent, 1),
+				}
+				request := httptest.NewRequest(http.MethodPost, endpoint, strings.NewReader(fmt.Sprintf(`{"model":%q,"input":"ping","messages":[{"role":"user","content":"ping"}]}`, alias)))
+				request.Header.Set("Authorization", "Bearer fixture-client-key")
+				recorder := httptest.NewRecorder()
+				server.handleLLM(recorder, request)
+				if recorder.Code != http.StatusOK {
+					t.Fatalf("status=%d", recorder.Code)
+				}
+				metric := <-server.metricCh
+				if metric.RouteModel != alias || metric.UpstreamModel != "grok-4.7-build" {
+					t.Fatalf("unexpected metric: %#v", metric)
+				}
+			})
+		}
+	}
+}
+
+func TestGlobalXAILatestAliasesPreserveResponseTruthAndSpecializedModels(t *testing.T) {
+	data, err := os.ReadFile("../../config/xai-latest-aliases.example.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	aliases := []string{"grok-latest", "grok-4.7-latest", "grok-4.6", "grok-4.6-latest", "grok-4.5", "grok-4.3", "grok-4.20-0309-non-reasoning", "grok-4.20-0309-reasoning", "grok-4.20-multi-agent-0309", "grok-3-mini", "grok-3-mini-fast"}
+	if !strings.HasPrefix(text, "oauth-model-alias:\n  xai:\n") || strings.Count(text, "    - ") != len(aliases) {
+		t.Fatal("unexpected global OAuth alias structure")
+	}
+	for _, alias := range aliases {
+		entry := fmt.Sprintf("{name: grok-4.7, alias: %s, fork: true}", alias)
+		if strings.Count(text, entry) != 1 {
+			t.Fatalf("missing or repeated alias %q", alias)
+		}
+	}
+	for _, forbidden := range []string{"force-mapping", "grok-imagine", "grok-build", "grok-composer", "gpt-", "grok-4.7-build-fast"} {
+		if strings.Contains(text, forbidden) {
+			t.Fatalf("unexpected rewrite or specialized model %q", forbidden)
 		}
 	}
 }

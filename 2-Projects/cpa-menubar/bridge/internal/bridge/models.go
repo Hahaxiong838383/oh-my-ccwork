@@ -96,6 +96,7 @@ type XAIUsage struct {
 	OfficialLimitReached bool     `json:"official_limit_reached"`
 	CPAStatus            string   `json:"cpa_status"`
 	CPAError             string   `json:"cpa_error,omitempty"`
+	RouteUpstreamModels  []string `json:"route_upstream_models,omitempty"`
 	WindowHours          int      `json:"window_hours"`
 	Requests             int64    `json:"requests"`
 	Successes            int64    `json:"successes"`

@@ -2,7 +2,7 @@
 
 macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 
-当前版本：`0.4.1 (13)`。
+当前版本：`0.4.2 (14)`。
 
 ## 当前能力
 
@@ -16,6 +16,7 @@ macOS 顶部菜单栏中的 CPA 账号与用量状态工具。
 - 优先通过 xAI Management API 显示本月官方费用、预付余额和查询完整性状态；Management Key 与普通推理/OAuth 凭据分离。
 - 同时显示 xAI 经 CPA Smart Router 的近 24 小时请求数、成功率、输入/输出/总 Token，以及内部路由日预算；CPA 数据只用于运维观测，不冒充官方账单。
 - xAI 页面分别显示两个 OAuth 订阅账号的官方周额度、重置时间、Build/Chat/Imagine 分项、额外用量状态，以及今日请求、Token、成功率、最近使用、主要模型和授权刷新状态。
+- xAI 账号卡将“Smart API 文本路由”与“今日最多请求”分开：前者来自 Router 当前配置的 `upstream_model`，后者是当日请求模型标识的历史计数，不能据此判断当前实际路由。路由读取失败显示不可用，不回退为历史模型名或硬编码最新版本。
 - xAI 总览只保留一条“订阅池平均剩余”进度条，按已同步订阅账号等权计算，并同时显示最低账号余量和最近重置时间；Management API 账单与 CPA 路由只显示紧凑指标，不再各自模拟额度。
 - 账号级订阅额度读取 xAI CLI Billing；CPA Token、内部日预算和 Management API 团队账单继续分层展示，不再互相冒充。接口缺少百分比但明确返回空周周期时，会标记“暂无计量，按 0% 已用显示”。
 - 显示充值余额与重置卡数量；只要官方 `available_count` 大于 0 即允许经过二次确认发起使用，最终按官方返回的 `reset`、`nothing_to_reset`、`no_credit` 或 `already_redeemed` 显示结果。
@@ -84,7 +85,7 @@ cd ../app && swift test && ./scripts/build-app.sh
 
 ## 部署
 
-本机 App 安装前自动保存旧 Bundle、版本号和 SHA-256，并生成独立回滚脚本。仅替换应用包，不备份或修改 Keychain、UserDefaults、服务器配置或账号凭据。版本与原生窗口验收记录见 [0.4.1 发布记录](docs/RELEASE-0.4.1.md)；窗口架构及旧版基线见 [0.4.0 记录](docs/RELEASE-0.4.0.md)。
+本机 App 安装前自动保存旧 Bundle、版本号和 SHA-256，并生成独立回滚脚本。仅替换应用包，不备份或修改 Keychain、UserDefaults、服务器配置或账号凭据。当前模型展示修正见 [0.4.2 发布记录](docs/RELEASE-0.4.2.md)；授权取消见 [0.4.1 记录](docs/RELEASE-0.4.1.md)，窗口架构及旧版基线见 [0.4.0 记录](docs/RELEASE-0.4.0.md)。
 
 ```bash
 bridge/deploy/deploy.sh aliyun-jp

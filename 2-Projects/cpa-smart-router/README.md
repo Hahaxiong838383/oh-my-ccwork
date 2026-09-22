@@ -28,8 +28,11 @@ go run ./cmd/router -config config/router.example.json
 - 长期 API Key、Management Key 或密码的轮换/撤销必须由用户明确授权；疑似泄露只触发停止扩散与告警，不得自动替换凭据。OAuth access token 的既有自动刷新不受此限制。
 - `blocked_models` 用于拦截测试/玩具模型；正式流量不要调用 `fable-5`。
 - `gpt-5.3-codex` 是 Codex app 可能发出的模型名，router 将其别名映射到已验证的 `gpt-5.5` 上游候选，避免 CPA mixed 返回 unknown provider。
-- xAI 文本稳定主模型已提升到 `grok-4.6`：`grok-4.5`、`grok-4.3`、`grok-4.20-*` 和 `grok-3-mini*` 等历史文本别名统一重写到 `grok-4.6`；图像、视频、Build 与 Composer 专用模型保持原样。2026-09-15 升级前已完成一个月 Canary 观察，并在 CLIProxyAPI `7.3.3` 上重新验证真实响应模型为 `grok-4.6-build`。
-- 生产 CLIProxyAPI 可通过远程模型目录发现 `grok-4.6`；当前显式 4.6 Canary 已验证 Chat Completions、Responses、流式响应、`high`/`xhigh` 和 usage，真实响应模型为 `grok-4.6-build`。内置离线目录尚未完整覆盖时，不要把远程目录可见性当成永久离线兜底。
+- 2026-09-22 xAI 文本主模型提升到 `grok-4.7`：显式注册 `grok-4.7` / `grok-4.7-latest`，`grok-4.6` / `grok-4.6-latest`、`grok-4.5`、`grok-4.3`、`grok-4.20-*` 和 `grok-3-mini*` 历史文本别名统一重写到 `grok-4.7`。09:29 完成 CPA 核心的全局 xAI OAuth 别名更新，CPA Direct 和 Smart API 均覆盖旧文本名，并提供稳定入口 `grok-latest`。图像、视频、Build 与 Composer 专用模型保持直通；独立 `grok-4.7-build-fast` 未做额外启用。
+- 生产 CLIProxyAPI 已升级到 `7.3.11`，保留 `cpa-key-policy 0.4.4` 与原有资源保护、OAuth 调度和 Key 白名单。隔离 Canary 验证了 Grok 4.7 Chat/Responses、`high`/`xhigh`、SSE completed/usage、旧别名映射及 Codex 请求；实际 Grok 响应模型为 `grok-4.7-build`。7.3.11 内置目录没有 4.7，当前仍依赖远程模型目录，不能把在线成功视为离线兜底已完成。
+- 本次发布、回滚路径、测试和启动就绪门修正见 `GROK47-UPGRADE-20260922.md`。浮窗“主模型”是当日历史请求聚合，不应把未清零的 4.6 历史统计改写成 4.7；后续请求会自然进入 4.7 统计。
+- 全局别名真源模板为 `config/xai-latest-aliases.example.yaml`，通过官方管理接口 PATCH `oauth-model-alias` 的 `xai` channel 触发运行时 reload hook。不能把原子替换配置文件当作热加载成功；必须验证运行时目录和实际响应。原生 Key 的旧名请求直接报告 `grok-4.7-build`；插件受限 Key 的非流式响应可能为兼容客户端而回写旧别名，须用不重写的流式完成事件验证真实上游模型。
+- `grok-latest` 当前固定指向已验收的 4.7，不会未经测试自动追逐新发布型号。现有受限 Key 的允许模型/RPM/额度不扩充，继续使用原有允许的旧别名即可调用最新后端；未来若增加 xAI API Key 或第三方兼容后端，需要另行验证该通道，不把 OAuth 别名机制泛化到所有上游类型。
 - 流式响应开始输出后不做 failover。
 - `/v1/chat/completions` 流式请求会自动注入 `stream_options.include_usage=true` 并解析 SSE usage，用于 dashboard 和调度用量统计。
 - `/v1/responses` 强制 sticky，避免 `previous_response_id` 断链。

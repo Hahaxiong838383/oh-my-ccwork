@@ -63,6 +63,18 @@ final class UsageParserTests: XCTestCase {
         XCTAssertNil(usage.todayBudgetUsedPercent)
         XCTAssertNil(usage.todayBudgetRemainingTokens)
         XCTAssertNil(usage.todayBudgetRemainingPercent)
+        XCTAssertNil(usage.routeModelText)
+    }
+
+    func testCurrentXAIRouteModelsAreSeparateFromHistoryAndDeduplicated() throws {
+        let usage = try JSONDecoder().decode(XAIUsage.self, from: Data(#"{"cpa_status":"ok","route_upstream_models":["grok-4.7","grok-4.7","grok-4.6"],"window_hours":24,"requests":139,"successes":138,"errors":1,"input_tokens":0,"output_tokens":0,"total_tokens":0,"today_tokens":0,"daily_token_limit":0}"#.utf8))
+        XCTAssertEqual(usage.routeModelText, "grok-4.6 / grok-4.7")
+        XCTAssertEqual(usage.requests, 139)
+    }
+
+    func testFailedRouterDoesNotDisplayStaleTargets() throws {
+        let usage = try JSONDecoder().decode(XAIUsage.self, from: Data(#"{"cpa_status":"error","route_upstream_models":["grok-4.7"],"window_hours":24,"requests":0,"successes":0,"errors":0,"input_tokens":0,"output_tokens":0,"total_tokens":0,"today_tokens":0,"daily_token_limit":0}"#.utf8))
+        XCTAssertNil(usage.routeModelText)
     }
 
     func testDecodesRuntimeUsageAndCalculatesFastHitRate() throws {

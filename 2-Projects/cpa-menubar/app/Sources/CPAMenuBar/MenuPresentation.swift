@@ -88,11 +88,11 @@ final class MenuPresentation: ObservableObject {
 
 enum AppRelease {
     static var version: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.1"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.4.2"
     }
 
     static var build: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "13"
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "14"
     }
 
     static var label: String { "v\(version) (\(build))" }

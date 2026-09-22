@@ -260,7 +260,8 @@ function inferContextWindow(slug) {
 
 function priorityForModel(slug) {
   if (slug === defaultModel) return 2000;
-  if (slug === 'grok-4.6') return 1990;
+  if (slug === 'grok-4.7') return 1990;
+  if (slug === 'grok-4.6') return 1988;
   if (slug === 'grok-4.3') return 1985;
   if (/gpt-5\.5/i.test(slug)) return 1980;
   if (/gpt/i.test(slug)) return 1500;

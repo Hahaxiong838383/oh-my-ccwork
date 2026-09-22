@@ -8,11 +8,15 @@ import (
 	"fmt"
 	"net/http"
 	urlpkg "net/url"
+	"regexp"
+	"sort"
 	"strings"
 	"time"
 )
 
 const xaiUsageWindowHours = 24
+
+var grokRouteModelPattern = regexp.MustCompile(`^grok-[a-z0-9][a-z0-9._-]{0,95}$`)
 
 type routerSummary struct {
 	Providers  []routerProviderDebug `json:"providers"`
@@ -241,6 +245,7 @@ func sumXAIAnalyticsValues(response xaiAnalyticsResponse) float64 {
 }
 
 func copyXAIRouterUsage(target *XAIUsage, source XAIUsage) {
+	target.RouteUpstreamModels = append([]string(nil), source.RouteUpstreamModels...)
 	target.WindowHours = source.WindowHours
 	target.Requests = source.Requests
 	target.Successes = source.Successes
@@ -256,9 +261,14 @@ func copyXAIRouterUsage(target *XAIUsage, source XAIUsage) {
 func aggregateXAIUsage(summary routerSummary) (XAIUsage, bool) {
 	usage := XAIUsage{WindowHours: xaiUsageWindowHours}
 	providerIDs := make(map[string]struct{})
+	routeModels := make(map[string]struct{})
 	for _, provider := range summary.Providers {
 		if !isXAIName(provider.ID) && !isXAIName(provider.RouteModel) && !isXAIName(provider.UpstreamModel) {
 			continue
+		}
+		model := strings.ToLower(strings.TrimSpace(provider.UpstreamModel))
+		if grokRouteModelPattern.MatchString(model) && !strings.Contains(model, "imagine") && !strings.Contains(model, "image") && !strings.Contains(model, "video") && !strings.Contains(model, "audio") && !strings.Contains(model, "composer") && !strings.HasPrefix(model, "grok-build") {
+			routeModels[model] = struct{}{}
 		}
 		if _, exists := providerIDs[provider.ID]; exists {
 			continue
@@ -267,6 +277,10 @@ func aggregateXAIUsage(summary routerSummary) (XAIUsage, bool) {
 		usage.TodayTokens += provider.TokensToday
 		usage.DailyTokenLimit += provider.DailyTokenLimit
 	}
+	for model := range routeModels {
+		usage.RouteUpstreamModels = append(usage.RouteUpstreamModels, model)
+	}
+	sort.Strings(usage.RouteUpstreamModels)
 
 	found := false
 	for _, bucket := range summary.ByProvider {

@@ -1,0 +1,13 @@
+oauth-model-alias:
+  xai:
+    - {name: grok-4.7, alias: grok-latest, fork: true}
+    - {name: grok-4.7, alias: grok-4.7-latest, fork: true}
+    - {name: grok-4.7, alias: grok-4.6, fork: true}
+    - {name: grok-4.7, alias: grok-4.6-latest, fork: true}
+    - {name: grok-4.7, alias: grok-4.5, fork: true}
+    - {name: grok-4.7, alias: grok-4.3, fork: true}
+    - {name: grok-4.7, alias: grok-4.20-0309-non-reasoning, fork: true}
+    - {name: grok-4.7, alias: grok-4.20-0309-reasoning, fork: true}
+    - {name: grok-4.7, alias: grok-4.20-multi-agent-0309, fork: true}
+    - {name: grok-4.7, alias: grok-3-mini, fork: true}
+    - {name: grok-4.7, alias: grok-3-mini-fast, fork: true}
