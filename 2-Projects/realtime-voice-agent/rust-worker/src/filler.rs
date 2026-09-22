@@ -59,12 +59,8 @@ fn is_device_text(t: &str) -> bool {
     has(DEVICE_STRONG_HINTS) || (has(DEVICE_OBJECT_HINTS) && has(DEVICE_ADJUST_HINTS))
 }
 
-/// 按用户 turn 文本选桶(优先级与 Python pick_bucket 一致;device 桶为 D1 新增,默认允许)。
-pub fn pick_bucket(user_text: &str) -> &'static str {
-    pick_bucket_with(user_text, true)
-}
-
-/// `allow_device=false`(灰度名单外的房)时 device 判定整段跳过,句子按原优先级落桶——名单外设备行为零变化。
+/// 按用户 turn 文本选桶(优先级与 Python pick_bucket 一致;device 桶为 D1 新增)。
+/// `allow_device=false`(灰度名单外的房/非 sn- 房)时 device 判定整段跳过,句子按原优先级落桶——名单外设备行为零变化。
 pub fn pick_bucket_with(user_text: &str, allow_device: bool) -> &'static str {
     let t = user_text.trim();
     let n = t.chars().count();
@@ -416,6 +412,11 @@ mod tests {
             }
             b.recent.clear();
         }
+    }
+
+    /// 测试面保留旧签名:默认允许 device 桶(生产由 device_filler_enabled_for(room) 决定)。
+    fn pick_bucket(user_text: &str) -> &'static str {
+        pick_bucket_with(user_text, true)
     }
 
     #[test]
