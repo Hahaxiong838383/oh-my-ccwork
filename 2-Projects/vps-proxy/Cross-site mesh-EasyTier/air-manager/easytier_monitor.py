@@ -23,6 +23,7 @@ HELPER = '/Library/PrivilegedHelperTools/cn.easytier.manager-restart'
 TARGETS = [('10.10.10.12', 'Studio'), ('10.10.10.23', '家里开发机'), ('10.10.10.13', 'dev198')]
 NAMES = dict(TARGETS + [('10.10.10.11', 'Mini'), ('10.10.10.1', '香港中继'), ('10.10.10.22', '飞牛 NAS'), ('10.10.10.24', 'Windows 开发机'), ('10.10.10.14', 'NIO 开发机')])
 from easytier_topology import collect as collect_topology
+from easytier_reference import ReferenceCollector
 
 INTERVAL = 30
 COOLDOWN = 600
@@ -127,10 +128,11 @@ def health(info, probes, rpc_ok):
 
 
 class Monitor:
-    def __init__(self, state_dir=STATE_DIR, runner=command, prober=probe, info_fn=system_info, topology_fn=collect_topology):
+    def __init__(self, state_dir=STATE_DIR, runner=command, prober=probe, info_fn=system_info, topology_fn=collect_topology, reference_collector=None):
         self.directory = Path(state_dir)
         self.runner, self.prober, self.info_fn = runner, prober, info_fn
         self.topology_fn = topology_fn
+        self.reference_collector = reference_collector
         self.lock = threading.RLock()
         self.jobs = queue.Queue(maxsize=2)
         self.stop = threading.Event()
@@ -140,10 +142,11 @@ class Monitor:
         self.state = {'schema': 1, 'health': 'checking', 'last_checked': None, 'local': {},
                       'nodes': [], 'probes': [], 'events': [], 'auto_recovery': False,
                       'restart': {'phase': 'idle', 'last_success': 0, 'cooldown_seconds': COOLDOWN},
-                      'poll_seconds': INTERVAL}
+                      'poll_seconds': INTERVAL, 'reference': {}}
         try:
             previous = json.loads((self.directory / 'status.json').read_text())
             self.state['events'] = previous.get('events', [])[-50:]
+            self.state['reference'] = previous.get('reference', {})
             self.state['restart']['last_success'] = float(previous.get('restart', {}).get('last_success', 0))
             if previous.get('restart', {}).get('phase') in ('queued', 'restarting', 'verifying'):
                 self.state['restart']['phase'] = 'interrupted'
@@ -209,6 +212,12 @@ class Monitor:
             topology = self.topology_fn(self.runner)
         except Exception:
             topology = {'observed_at': time.time(), 'endpoints': [], 'deployment': {}, 'error': 'topology_unavailable'}
+        reference = {}
+        if self.reference_collector:
+            try:
+                reference = self.reference_collector.collect(self.runner, peers, probes, info, self.state.get('reference', {}), self.prober)
+            except Exception:
+                reference = {'checked_at': time.time(), 'error': 'reference_unavailable', 'devices': [], 'services': [], 'counts': {}}
         current_health = health(info, probes, rpc_ok)
         signature = tuple(info.get(k) for k in ('interface', 'physical_ip', 'gateway'))
         with self.lock:
@@ -220,7 +229,7 @@ class Monitor:
                 messages = {'healthy': '3 个关键目标 SSH 服务均有响应', 'degraded': '部分关键目标 SSH 服务探测未通过',
                             'offline': '物理网络未就绪', 'stopped': '本机 EasyTier 未运行', 'unknown': '无法读取 EasyTier 路径状态'}
                 self.event('success' if current_health == 'healthy' else 'warning', messages[current_health])
-            self.state.update(local=info, nodes=rows, probes=probes, rpc_ok=rpc_ok, topology=topology,
+            self.state.update(local=info, nodes=rows, probes=probes, rpc_ok=rpc_ok, topology=topology, reference=reference,
                               last_checked=time.time(), network_signature=list(signature), observed_health=current_health)
             if not self.restart_pending:
                 self.state['health'] = current_health
@@ -347,7 +356,7 @@ def main():
         if not stat.S_ISSOCK(st.st_mode) or st.st_uid != os.getuid():
             raise SystemExit('unexpected socket path')
         path.unlink()
-    monitor = Monitor()
+    monitor = Monitor(reference_collector=ReferenceCollector())
 
     class Handler(socketserver.StreamRequestHandler):
         def handle(self):

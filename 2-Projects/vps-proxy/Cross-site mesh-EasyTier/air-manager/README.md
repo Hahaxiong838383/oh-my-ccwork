@@ -26,3 +26,7 @@
 ## 2026-09-22 家庭双栈入口
 
 新增 Lucky TCP 21110 → NAS2 EasyTier 11010、DDNS mesh4/mesh6、NAS 无特权 UPnP 租约核对脚本，以及现有 EasyTier Tab 内的拓扑/地址区。详情见 `LUCKY-BOOTSTRAP-DEPLOYMENT.md`（验收后记录）。不把 TCP 端口或 DNS 成功当作安全握手入网。
+
+## 实时组网速查
+
+2026-09-22 新增独立「EasyTier 组网速查」Tab，登记表与实时peer/route合并、固定SSH/子网服务探测、过期标记与IP变化提示。见 [REFERENCE-TAB-DEPLOYMENT.md](REFERENCE-TAB-DEPLOYMENT.md)。约30秒采样/5秒页面刷新，不自动重启。

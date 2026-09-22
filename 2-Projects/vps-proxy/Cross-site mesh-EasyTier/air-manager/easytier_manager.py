@@ -31,7 +31,10 @@ def extend_manager(base_handler, html, rpc_call=rpc):
     token = secrets.token_urlsafe(32)
     fragment = Path(__file__).with_name('easytier-tab.html').read_text(encoding='utf-8')
     fragment = fragment.replace('__ET_TOKEN__', json.dumps(token))
+    reference = Path(__file__).with_name('easytier-reference.html').read_text(encoding='utf-8')
+    fragment += '\n' + reference.replace('__ET_TOKEN__', json.dumps(token))
     tab = '<button type="button" class="tab" style="background:none" onclick="switchTab(\'easytier\')">EasyTier 组网</button>'
+    tab += '<button type="button" class="tab" style="background:none" onclick="switchTab(\'easytier-reference\')">EasyTier 组网速查</button>'
     anchor = '<div class="tab" onclick="switchTab(\'logs\')">日志</div>'
     if html.count(anchor) != 1 or html.count('</body>') != 1:
         raise RuntimeError('Xray UI anchor changed; integration refused')
