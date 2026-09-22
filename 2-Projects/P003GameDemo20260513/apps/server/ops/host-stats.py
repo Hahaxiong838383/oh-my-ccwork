@@ -2,7 +2,7 @@
 """host-stats.py — 单机只读状态快照（运营台「服务器状态」tab 与「设备接入」资源卡共同消费）。
 
 一份脚本三台机同用，按机器角色自动挑采集项（也可 --role 强制）：
-  worker  ：64.90（voice-worker-rust / -firstturn / -colleague）+ 各 worker 到 LiveKit 的 /agent 连接状态
+  worker  ：64.90 / hk2（voice-worker-rust / -firstturn / -colleague）+ 各 worker 到 LiveKit 的 /agent 连接状态 + 判停/声纹边车（sidecars）
   livekit ：47.239（livekit-server / nginx）+ worker 注册/注销事件 + 监听端口
   api     ：aliyun-hk（pm2 p003-voice / nginx）+ 本机 /health
 输出：单行 JSON。worker 角色保留 stats.sh 的老键（mem_total_mb…max_jobs…ts），/worker-stats 与资源卡零改动。
@@ -35,7 +35,7 @@ LIVEKIT_URL_FILES = (
     "/root/realtime-voice-agent/.env",
     "/opt/p003/server/.env.local",
 )
-WORKER_UNITS = ("voice-worker-rust", "voice-worker-firstturn", "voice-worker-colleague")
+WORKER_UNITS = ("voice-worker-rust", "voice-worker-firstturn", "voice-worker-colleague", "voice-worker-demo")
 LIVEKIT_UNITS = ("livekit-server", "nginx")
 API_UNITS = ("nginx",)
 
@@ -327,6 +327,121 @@ def pm2_block() -> list[dict]:
     return res
 
 
+# ── 判停/声纹边车（EOT sidecar）────────────────────────────────────
+# worker 进程自己拉起的 python 边车（eot_sidecar.py <sock>），unix socket 通信；判停 + 声纹都走它。
+# 08-14 实证的故障形态：边车死了 worker 不重连（进程级单例）→ 判停变钝 + 声纹全失效，而 systemd 看 worker 一切正常。
+# 判据全部用外部可见事实：unit 生效 env 的 EOT_SOCK → ss 有无监听 → 监听进程 pid/rss/存活/是否在本 unit cgroup
+# → journal 锚（worker 原话）：最近一次「EOT sidecar connected」/「自愈」、1h 内「不可用」告警计数。
+SIDECAR_SCRIPT = "eot_sidecar.py"
+SIDECAR_UNAVAILABLE_RE = re.compile(r"无可用连接|通道不可用|自愈失败|首次连接失败")
+SIDECAR_CONNECTED_RE = re.compile(r"EOT sidecar connected \((spawned|existing)\)|EOT sidecar 连接已自愈|speaker embed 连接已自愈")
+
+
+def proc_env_value(pid: int, key: str) -> str | None:
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as f:
+            for item in f.read().split(b"\0"):
+                if item.startswith(key.encode() + b"="):
+                    return item.split(b"=", 1)[1].decode(errors="replace")
+    except OSError:
+        return None
+    return None
+
+
+def proc_unit(pid: int) -> str | None:
+    try:
+        with open(f"/proc/{pid}/cgroup", encoding="utf-8") as f:
+            m = re.search(r"/([^/]+)\.service", f.read())
+            return m.group(1) if m else None
+    except OSError:
+        return None
+
+
+def sidecar_processes() -> list[dict]:
+    out = run(["ps", "-eo", "pid,ppid,rss,etimes,args", "--no-headers"])
+    res = []
+    for line in out.splitlines():
+        if SIDECAR_SCRIPT not in line or "grep" in line:
+            continue
+        parts = line.split(None, 4)
+        if len(parts) < 5:
+            continue
+        args = parts[4]
+        sock = args.split()[-1] if args.split() else None
+        res.append({"pid": to_int(parts[0]), "ppid": to_int(parts[1]), "rss_bytes": (to_int(parts[2]) or 0) * 1024, "age_s": to_int(parts[3]), "sock": sock, "unit": proc_unit(int(parts[0]))})
+    return res
+
+
+def listening_unix_socks() -> set[str]:
+    out = run(["ss", "-xlH"])
+    socks = set()
+    for line in out.splitlines():
+        for tok in line.split():
+            if tok.endswith(".sock"):
+                socks.add(tok)
+    return socks
+
+
+def sidecars_block(services: list[dict]) -> list[dict]:
+    procs = sidecar_processes()
+    listening = listening_unix_socks()
+    now = time.time()
+    rows = []
+    sock_owner: dict[str, list[str]] = {}
+    for s in services:
+        pid = s.get("main_pid") or 0
+        sock = proc_env_value(pid, "EOT_SOCK") if pid else None
+        if sock:
+            sock_owner.setdefault(sock, []).append(s["name"])
+    for s in services:
+        unit = s["name"]
+        pid = s.get("main_pid") or 0
+        if not pid or s.get("active_state") != "active":
+            rows.append({"unit": unit, "state": "unit_inactive", "sock": None})
+            continue
+        sock = proc_env_value(pid, "EOT_SOCK")
+        if not sock:
+            continue  # 非 rust 池（python 租户线）没有边车
+        proc = next((p for p in procs if p["sock"] == sock), None)
+        is_listening = sock in listening
+        last_connected_ms = None
+        last_connected_mode = None
+        unavailable_1h = 0
+        try:
+            since_s = max(now - LINK_WINDOW_CAP_S, (s["active_since_ms"] / 1000) - 5 if s.get("active_since_ms") else now - 86400)
+            for t, line in journal_lines(unit, since=f"@{int(since_s)}"):
+                m = SIDECAR_CONNECTED_RE.search(line)
+                if m:
+                    last_connected_ms = int(t * 1000)
+                    last_connected_mode = m.group(1) or "healed"
+                if t >= now - 3600 and SIDECAR_UNAVAILABLE_RE.search(line):
+                    unavailable_1h += 1
+        except Exception as e:  # noqa: BLE001
+            note_error(f"sidecar journal {unit}", e)
+        if proc and is_listening and unavailable_1h == 0:
+            state = "ok"
+        elif proc and is_listening:
+            state = "degraded"
+        else:
+            state = "missing"
+        rows.append({
+            "unit": unit,
+            "state": state,
+            "sock": sock,
+            "listening": is_listening,
+            "pid": (proc or {}).get("pid"),
+            "rss_bytes": (proc or {}).get("rss_bytes"),
+            "age_s": (proc or {}).get("age_s"),
+            "owner_unit": (proc or {}).get("unit"),
+            "spawned_by_this_worker": bool(proc and proc.get("ppid") == pid),
+            "shared_with": [u for u in sock_owner.get(sock, []) if u != unit],
+            "last_connected_ms": last_connected_ms,
+            "last_connected_mode": last_connected_mode,
+            "unavailable_1h": unavailable_1h,
+        })
+    return rows
+
+
 # ── 角色装配 ────────────────────────────────────────────────────────────────────
 
 def detect_role() -> str:
@@ -389,6 +504,11 @@ def main() -> None:
                 links.append(worker_link_block(s["name"], s.get("active_since_ms")))
             except Exception as e:  # noqa: BLE001
                 note_error(f"worker_link {s['name']}", e)
+        try:
+            snap["sidecars"] = sidecars_block(snap["services"])
+        except Exception as e:  # noqa: BLE001
+            note_error("sidecars", e)
+            snap["sidecars"] = []
         lk_host = read_livekit_host()
         snap["connections"] = {
             "worker_links": links,
