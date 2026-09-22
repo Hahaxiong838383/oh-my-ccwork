@@ -446,7 +446,8 @@ def sidecars_block(services: list[dict]) -> list[dict]:
 
 # ── 语音控设备 24h（D1 W4，2026-09-22）：提案/结果/慢路/承接音/误触发嫌疑，只读 journal 锚（worker 日志原话，不猜）──
 DEVICE_CMD_WINDOW = "-24h"
-DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device"
+DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device|received job request, accepting"
+ACCEPT_ROOM_RE = re.compile(r"accepting job_id=\S+ room=(sn-[A-Za-z0-9]+-\d+)")
 # 「误触发嫌疑」= 慢路(LLM)提案而原话不含任何设备词根(方案 v1.1 §W4);裸「高/低/远/近」太泛不算根,组合词才算
 DEVICE_ROOTS = (
     "灯", "亮", "暗", "光", "色温", "模式", "音量", "声音", "大声", "小声", "静音", "吵", "听不清",
@@ -489,8 +490,14 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
         results: list[dict] = []
         observed = executed = hints = filler_dev = 0
         suppressed: collections.Counter = collections.Counter()
+        sessions: collections.Counter = collections.Counter()  # 24h 设备房数（按 SN 末 8 位）——没发过命令的设备也要在表里
         for t, raw in rows:
             line = ANSI_RE.sub("", raw)
+            if "accepting job_id" in line:
+                m = ACCEPT_ROOM_RE.search(line)
+                if m:
+                    sessions[_sn_tail(m.group(1))] += 1
+                continue
             if "device command proposed" in line:
                 m = PROPOSED_TEXT_RE.search(line)
                 d = _kv(line.split("device command proposed", 1)[1])
@@ -525,9 +532,11 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
         st = collections.Counter((p["status"] or "none") for p in props)
         failed = sum(v for k, v in st.items() if k not in ("succeeded", "already_applied", "none", "accepted"))
         devices: dict[str, dict] = {}
+        for k, n in sessions.items():
+            devices[k] = {"sn": k, "sessions": n, "proposals": 0, "succeeded": 0, "already_applied": 0, "failed": 0, "none": 0, "last_text": "", "last_ms": 0}
         for p in props:
             k = _sn_tail(p.get("room", ""))
-            d = devices.setdefault(k, {"sn": k, "proposals": 0, "succeeded": 0, "already_applied": 0, "failed": 0, "none": 0, "last_text": "", "last_ms": 0})
+            d = devices.setdefault(k, {"sn": k, "sessions": 0, "proposals": 0, "succeeded": 0, "already_applied": 0, "failed": 0, "none": 0, "last_text": "", "last_ms": 0})
             d["proposals"] += 1
             stt = p["status"] or "none"
             if stt == "succeeded":
@@ -564,7 +573,10 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
             "l2": {"observed": observed, "executed": executed, "suppressed": sum(suppressed.values()),
                    "suppressed_by_reason": dict(suppressed), "hints": hints},
             "filler_device_picks": filler_dev,
-            "devices": sorted(devices.values(), key=lambda d: -d["proposals"]),
+            "active_devices": sum(1 for d in devices.values() if d["sessions"] > 0),
+            "commanding_devices": sum(1 for d in devices.values() if d["proposals"] > 0),
+            "sessions_total": sum(sessions.values()),
+            "devices": sorted(devices.values(), key=lambda d: (-d["proposals"], -d["sessions"])),
             "misfire_suspects": suspects,
             "recent": recent,
             "journal_lines": len(rows),
