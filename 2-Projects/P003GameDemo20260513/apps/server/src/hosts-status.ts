@@ -5,6 +5,7 @@
  * 三台机各跑同一份只读脚本 ops/host-stats.py（输出单行 JSON，schema host-stats/1）：
  *   aliyun-hk：本机，直接 python3 执行；
  *   64.90    ：沿用 /worker-stats 的 forced-command 只读 key（stats.sh 已改为转调 host-stats.py，老键保留）；
+ *              2026-09-22 起可多台（WORKER_STATS_SSH_TARGETS，见 parseWorkerTargets），迁 hk2 并存期两台同屏；
  *   47.239   ：新增 livekit-stats-key forced-command → /root/host-stats.py。
  * 每台独立 try/catch 降级为 ok:false（错误只留一句可读原因），30s 共享缓存；?fresh=1 强制重采但 ≥5s 间隔。
  * 监控绝不拖垮管理页：单台超时 12s，三台并行。
@@ -85,19 +86,59 @@ function localCollector(script: string): HostCollector {
   };
 }
 
+/**
+ * worker 机列表（2026-09-22 迁 hk2：老机 64.90.13.117 与新机 64.90.13.177 并存期要同屏可见）。
+ * env `WORKER_STATS_SSH_TARGETS="user@host|标签,user@host2|标签2"`（逗号分机，竖线后为可选标签）；
+ * 未配 → 沿用单机 `WORKER_STATS_SSH_TARGET`（默认老机，id 保持 '64.90'，老页面/老测试不受影响）。
+ */
+export type WorkerTarget = { id: string; label: string; target: string; host: string };
+const LEGACY_WORKER_TARGET = 'root@64.90.13.117';
+const LEGACY_WORKER_LABEL = '64.90 · 语音 worker（生产池 / One-shot 池 / 租户）';
+
+export function parseWorkerTargets(raw: string | undefined, legacyTarget: string = LEGACY_WORKER_TARGET): WorkerTarget[] {
+  const entries = (raw ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const seen = new Set<string>();
+  const out: WorkerTarget[] = [];
+  for (const entry of entries) {
+    const [t, ...rest] = entry.split('|');
+    const target = (t ?? '').trim();
+    if (!target || seen.has(target)) continue;
+    seen.add(target);
+    const host = target.replace(/^[^@]*@/, '');
+    const label = rest.join('|').trim() || `${host} · 语音 worker`;
+    out.push({ id: `worker:${host}`, label, target, host });
+  }
+  if (out.length) return out;
+  return [{ id: '64.90', label: LEGACY_WORKER_LABEL, target: legacyTarget, host: legacyTarget.replace(/^[^@]*@/, '') }];
+}
+
+export function workerTargets(): WorkerTarget[] {
+  return parseWorkerTargets(process.env.WORKER_STATS_SSH_TARGETS, process.env.WORKER_STATS_SSH_TARGET || LEGACY_WORKER_TARGET);
+}
+
+export function workerStatsKeyPath(): string {
+  return process.env.WORKER_STATS_SSH_KEY || '/root/.ssh/worker-stats-key';
+}
+
+export function workerCollector(target: string): HostCollector {
+  return sshCollector(workerStatsKeyPath(), target);
+}
+
+/** 接入容量：多台 worker 的 max_jobs 求和（只算采到数字的机器；一台都没有 → null）。 */
+export function sumMaxJobs(machines: Array<{ ok: boolean; data: HostSnapshot | null }>): number | null {
+  let sum: number | null = null;
+  for (const m of machines) {
+    const v = m.ok && m.data ? m.data.max_jobs : undefined;
+    if (typeof v === 'number' && Number.isFinite(v)) sum = (sum ?? 0) + v;
+  }
+  return sum;
+}
+
 function defaultSpecs(): HostSpec[] {
   const script = process.env.HOSTS_STATUS_LOCAL_SCRIPT || path.resolve(process.cwd(), 'ops/host-stats.py');
   return [
     { id: 'aliyun-hk', label: 'aliyun-hk · P003 API / 后台', role: 'api', collect: localCollector(script) },
-    {
-      id: '64.90',
-      label: '64.90 · 语音 worker（生产池 / One-shot 池 / 租户）',
-      role: 'worker',
-      collect: sshCollector(
-        process.env.WORKER_STATS_SSH_KEY || '/root/.ssh/worker-stats-key',
-        process.env.WORKER_STATS_SSH_TARGET || 'root@64.90.13.117',
-      ),
-    },
+    ...workerTargets().map((w) => ({ id: w.id, label: w.label, role: 'worker', collect: workerCollector(w.target) })),
     {
       id: '47.239',
       label: '47.239 · KidsHubAI-VoiceKit 信令 / 媒体（nginx TLS 终止）',

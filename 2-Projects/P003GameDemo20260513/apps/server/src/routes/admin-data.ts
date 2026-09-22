@@ -1,5 +1,3 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
@@ -38,7 +36,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
-import { getHostsStatus } from '../hosts-status.js';
+import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
@@ -1784,30 +1782,38 @@ adminDataRoute.post('/memory/:accountId', async (c) => {
 });
 
 // ── worker 运行态（设备接入页的容量/资源卡）──
-// 机器资源：ssh 64.90 forced-command 只读脚本（专用 key，命令锁死）；
+// 机器资源：ssh 各 worker 机 forced-command 只读脚本（专用 key，命令锁死；目标列表 WORKER_STATS_SSH_TARGETS）；
 // 接入容量：LiveKit ListRooms（twirp，jose 手签 admin token）数 sn- 前缀设备房。
 // 两路各自 try-catch 降级为 null，绝不因监控拖垮管理页。
-const pexecFile = promisify(execFile);
-
 // 30s 共享缓存(2026-08-27):admin 资源卡改 60s 自动轮询后,多标签页各自轮询会成倍打 ssh——
-// 缓存让并发消费方共享一次采集;失败不缓存(下个请求重试)。
-let workerStatsCache: { data: Record<string, unknown>; ts: number } | null = null;
+// 缓存让并发消费方共享一次采集;至少一台采到才缓存(全失败下个请求重试)。
+// 2026-09-22 迁 hk2：worker 可多台（WORKER_STATS_SSH_TARGETS，解析在 hosts-status.ts），逐台 try/catch 降级，
+// 老机/新机并存期两台同屏；容量 = 各台 max_jobs 求和。
+type WorkerMachine = {
+  id: string;
+  label: string;
+  host: string;
+  ok: boolean;
+  error: string | null;
+  data: Record<string, unknown> | null;
+};
+let workerStatsCache: { data: WorkerMachine[]; ts: number } | null = null;
 const WORKER_STATS_TTL_MS = 30_000;
 
-async function fetchWorkerMachineStats(): Promise<Record<string, unknown> | null> {
+async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
   if (workerStatsCache && Date.now() - workerStatsCache.ts < WORKER_STATS_TTL_MS) return workerStatsCache.data;
-  try {
-    const { stdout } = await pexecFile(
-      'ssh',
-      ['-i', '/root/.ssh/worker-stats-key', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 'root@64.90.13.117', 'stats'],
-      { timeout: 8000 },
-    );
-    const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
-    workerStatsCache = { data: parsed, ts: Date.now() };
-    return parsed;
-  } catch {
-    return null;
-  }
+  const machines = await Promise.all(
+    workerTargets().map(async (w): Promise<WorkerMachine> => {
+      try {
+        const data = await workerCollector(w.target)();
+        return { id: w.id, label: w.label, host: w.host, ok: true, error: null, data };
+      } catch (e) {
+        return { id: w.id, label: w.label, host: w.host, ok: false, error: describeExecError(e), data: null };
+      }
+    }),
+  );
+  if (machines.some((m) => m.ok)) workerStatsCache = { data: machines, ts: Date.now() };
+  return machines;
 }
 
 async function fetchLiveKitRooms(): Promise<{ device_rooms: number; total_rooms: number } | null> {
@@ -1841,15 +1847,29 @@ async function fetchLiveKitRooms(): Promise<{ device_rooms: number; total_rooms:
 }
 
 adminDataRoute.get('/worker-stats', async (c) => {
-  const [machine, rooms] = await Promise.all([fetchWorkerMachineStats(), fetchLiveKitRooms()]);
-  const maxJobs = machine && typeof machine.max_jobs === 'number' ? (machine.max_jobs as number) : null;
+  const [machines, rooms] = await Promise.all([fetchWorkerMachines(), fetchLiveKitRooms()]);
+  const maxJobs = sumMaxJobs(machines);
+  // machine = 第一台采到的（老页面字段兼容）；machines = 全部 worker 机；capacity.per_machine = 各台上限明细
+  const machine = machines.find((m) => m.ok)?.data ?? null;
   return c.json({
     ok: true,
     machine,
+    machines,
     rooms,
     capacity:
       maxJobs !== null && rooms
-        ? { max_jobs: maxJobs, active_total: rooms.total_rooms, remaining: Math.max(maxJobs - rooms.total_rooms, 0) }
+        ? {
+            max_jobs: maxJobs,
+            active_total: rooms.total_rooms,
+            remaining: Math.max(maxJobs - rooms.total_rooms, 0),
+            per_machine: machines.map((m) => ({
+              id: m.id,
+              label: m.label,
+              host: m.host,
+              ok: m.ok,
+              max_jobs: m.ok && m.data && typeof m.data.max_jobs === 'number' ? (m.data.max_jobs as number) : null,
+            })),
+          }
         : null,
     ts: Date.now(),
   });

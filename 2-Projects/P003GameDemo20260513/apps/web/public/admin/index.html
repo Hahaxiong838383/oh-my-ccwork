@@ -2057,20 +2057,24 @@
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日 Session</div><div style="font-size:26px;font-weight:800;color:#3DBE78">{{ deviceData.stats.today_ok }}</div></div>
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日拒绝（403/429）</div><div style="font-size:26px;font-weight:800;color:#E8833A">{{ deviceData.stats.today_rejected }}</div></div>
                     <div class="kh-card" style="padding:14px">
-                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity ? workerStats.capacity.max_jobs : '—' }}）</div>
+                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity ? workerStats.capacity.max_jobs : '—' }}{{ workerStats.breakdown }}）</div>
                       <div v-if="workerStats.capacity" style="font-size:26px;font-weight:800" :style="{color: workerStats.capacity.remaining > 1 ? '#3DBE78' : (workerStats.capacity.remaining === 1 ? '#E8833A' : '#E8503A')}">{{ workerStats.capacity.remaining }}<span style="font-size:13px;color:#909399;font-weight:400"> / 在线 {{ workerStats.capacity.active_total }} 房</span></div>
                       <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
-                    <div class="kh-card" style="padding:14px">
-                      <div style="font-size:12px;color:#6B7785">Worker 服务器实时资源（64.90）</div>
-                      <template v-if="workerStats.machine">
+                    <div class="kh-card" style="padding:14px" v-for="m in workerStats.machines" :key="m.id">
+                      <div style="font-size:12px;color:#6B7785">Worker 实时资源 · {{ m.label }}</div>
+                      <template v-if="m.ok && m.data">
                         <div style="font-size:13px;margin-top:4px;line-height:1.9">
-                          内存可用 <b>{{ (workerStats.machine.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (workerStats.machine.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ workerStats.machine.load1 }}</b>/{{ workerStats.machine.nproc }}核<br/>
-                          rust <b>{{ Math.round(workerStats.machine.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(workerStats.machine.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="workerStats.machine.rust_active==='active' ? 'success' : 'danger'">{{ workerStats.machine.rust_active }}</el-tag>
+                          内存可用 <b>{{ (m.data.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (m.data.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ m.data.load1 }}</b>/{{ m.data.nproc }}核 · 并发上限 <b>{{ m.data.max_jobs == null ? '—' : m.data.max_jobs }}</b><br/>
+                          rust <b>{{ Math.round(m.data.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(m.data.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="m.data.rust_active==='active' ? 'success' : 'danger'">{{ m.data.rust_active }}</el-tag>
                         </div>
                         <div style="font-size:11px;color:#B0B8C4;margin-top:2px">更新于 {{ workerStats.fetchedAt || '—' }} · 每分钟自动刷新</div>
                       </template>
-                      <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
+                      <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : ('暂不可用' + (m.error ? '：' + m.error : '')) }}</div>
+                    </div>
+                    <div class="kh-card" style="padding:14px" v-if="!workerStats.machines.length">
+                      <div style="font-size:12px;color:#6B7785">Worker 服务器实时资源</div>
+                      <div style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
                   </div>
                   <div class="kh-card" style="padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -5287,8 +5291,9 @@
           if (!q) return deviceData.devices;
           return deviceData.devices.filter(function(d){ return (d.parent_phone || '').indexOf(q) >= 0; });
         });
-        // worker 运行态（容量 = VoiceKit 活跃房 vs WORKER_MAX_JOBS；机器资源 = 64.90 只读 stats）
-        var workerStats = reactive({ machine: null, capacity: null, loading: false, fetchedAt: '' });
+        // worker 运行态（容量 = VoiceKit 活跃房 vs 各 worker 机 WORKER_MAX_JOBS 之和；机器资源 = 各台只读 stats）
+        // 2026-09-22 迁 hk2：worker 可多台（machines[]），容量卡按各台 max_jobs 求和并给明细（breakdown）
+        var workerStats = reactive({ machine: null, machines: [], breakdown: '', capacity: null, loading: false, fetchedAt: '' });
         function loadWorkerStats() {
           if (!canManageInvites.value) return;
           workerStats.loading = true;
@@ -5296,6 +5301,9 @@
             .then(function (data) {
               if (data && data.ok) {
                 workerStats.machine = data.machine; workerStats.capacity = data.capacity;
+                workerStats.machines = data.machines || (data.machine ? [{ id: '64.90', label: '64.90', host: '64.90.13.117', ok: true, error: null, data: data.machine }] : []);
+                var pm = (data.capacity && data.capacity.per_machine) || [];
+                workerStats.breakdown = pm.length > 1 ? ' = ' + pm.map(function (m) { return m.max_jobs == null ? '?' : m.max_jobs; }).join(' + ') : '';
                 workerStats.fetchedAt = new Date().toTimeString().slice(0, 8);
               }
             })

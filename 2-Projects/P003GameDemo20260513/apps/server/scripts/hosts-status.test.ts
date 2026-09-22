@@ -4,6 +4,7 @@
  * 覆盖：
  *  - parseSnapshot：空 / 非 JSON / 数组 一律抛错；对象原样返回（老 stats.sh 无 schema 也接受）
  *  - describeExecError：超时 / 退出码+stderr 首行 / ENOENT / 普通 Error 四形态，且不带命令行原文
+ *  - parseWorkerTargets/workerTargets/sumMaxJobs（2026-09-22 迁 hk2 多 worker）：legacy 回退 / 多机去重与标签 / 垃圾输入回退 / 求和只算采到的
  *  - getHostsStatus：三台并行、单台抛错只降级该台（ok:false + error），其余照常；30s 缓存命中不重采；
  *    过 TTL 重采；fresh=1 在 5s 内仍回缓存、过 5s 重采（时间用注入的 now 推进）
  *  - 路由：/api/admin/hosts-status 无 token 401；guest 403（admin 专属门）；admin 200 且载荷形状齐
@@ -55,6 +56,29 @@ check('err-exit-stderr', exitDesc === 'exit 255: root@47.239.204.68: Permission 
 check('err-exit-no-cmdline', !exitDesc.includes('ssh -i'), exitDesc);
 check('err-enoent', hs.describeExecError({ code: 'ENOENT', message: 'spawn python3 ENOENT' }) === 'command not found');
 check('err-plain', hs.describeExecError(new Error('bad json')) === 'bad json');
+
+// 2026-09-22 迁 hk2：多 worker 目标解析 + 容量求和（纯函数，不连主机）
+{
+  const legacy = hs.parseWorkerTargets(undefined);
+  check('wt-legacy-default', legacy.length === 1 && legacy[0].id === '64.90' && legacy[0].target === 'root@64.90.13.117' && legacy[0].host === '64.90.13.117', legacy);
+  const legacyEnv = hs.parseWorkerTargets('', 'root@10.0.0.9');
+  check('wt-legacy-env-target', legacyEnv.length === 1 && legacyEnv[0].id === '64.90' && legacyEnv[0].target === 'root@10.0.0.9' && legacyEnv[0].host === '10.0.0.9', legacyEnv);
+  const multi = hs.parseWorkerTargets(' root@64.90.13.117|老机 · 生产池 , root@64.90.13.177|新机 · 单池 20 路 ,root@64.90.13.117, ,root@1.2.3.4 ');
+  check('wt-multi-count-dedupe', multi.length === 3, multi.map((w) => w.target));
+  check('wt-multi-id-label', multi[0].id === 'worker:64.90.13.117' && multi[0].label === '老机 · 生产池' && multi[1].id === 'worker:64.90.13.177' && multi[1].label === '新机 · 单池 20 路', multi);
+  check('wt-multi-default-label', multi[2].label === '1.2.3.4 · 语音 worker' && multi[2].host === '1.2.3.4', multi[2]);
+  const junk = hs.parseWorkerTargets(' , | , |x ');
+  check('wt-junk-falls-back', junk.length === 1 && junk[0].id === '64.90', junk);
+  check('sum-none', hs.sumMaxJobs([{ ok: false, data: null }, { ok: true, data: { max_jobs: 'x' } }]) === null);
+  check('sum-partial', hs.sumMaxJobs([{ ok: true, data: { max_jobs: 10 } }, { ok: false, data: { max_jobs: 20 } }, { ok: true, data: { max_jobs: 20 } }]) === 30);
+  const prevEnv = process.env.WORKER_STATS_SSH_TARGETS;
+  process.env.WORKER_STATS_SSH_TARGETS = 'root@64.90.13.117|a,root@64.90.13.177|b';
+  const ids = hs.workerTargets().map((w) => w.id).join(',');
+  check('wt-env-two', ids === 'worker:64.90.13.117,worker:64.90.13.177', ids);
+  if (prevEnv === undefined) delete process.env.WORKER_STATS_SSH_TARGETS;
+  else process.env.WORKER_STATS_SSH_TARGETS = prevEnv;
+  check('wt-env-unset-legacy', hs.workerTargets()[0].id === '64.90');
+}
 
 // ── getHostsStatus with injected collectors ──
 let clock = 1_000_000;
