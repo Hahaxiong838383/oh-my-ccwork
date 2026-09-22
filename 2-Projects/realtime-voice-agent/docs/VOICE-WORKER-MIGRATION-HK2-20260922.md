@@ -226,3 +226,13 @@ demo 池 + Javis 同事 demo 池 + voice-console/caddy 一起搬到新机。多�
 
 ### 10.6 你要做的
 拍板阶段 1 的开始时间（任意时段皆可，只加不减）和阶段 2 的那个早晨；迁完后决定老机去留与新机密码策略。其余全部 cc 执行。
+
+---
+
+## 11. 执行记录（cc 逐步追加）
+- 09-22 12:5x 阶段 0/0.5/1：rsync 四目录 + 12 标志合池 env（MAX_JOBS 20，3000M/3500M）；临时名 rust-worker-hk2 探针全绿（eou 424/首声 +729/llm ttft 748，小可人设回答）；12:57 改回 rust-worker 注册 AW_Ftd5oYjdi2Vs 与老生产池并存。13:32 首个真机房落新机 = 设备端 2 秒空房（与老机基线同型：当天 13 房 10 房零音频）。
+- 09-22 13:00–13:42 后台：服务器状态/接入容量支持多 worker（WORKER_STATS_SSH_TARGETS）+ 判停边车表（host-stats.py sidecars_block 四机同版）。
+- 09-22 13:45 观察：川哥体验的 3 场全是首句票据 → 全落老 One-shot 池（阶段 1 设计如此），新机未接到真对话；老生产池 45 分钟零房。
+- 09-22 13:46 **阶段 2 ①**：老生产池 in-flight=0 → `systemctl disable --now voice-worker-rust`（其共用边车随之退出，老 One-shot 池按需自愈）。
+- 09-22 13:47 **阶段 2 ②**：aliyun-hk .env.local `ONESHOT_FIRST_TURN_AGENT_NAME=rust-worker`（备份 _backup/20260922-phase2-env.local.bak），pm2 restart --update-env，health ok，/api/admin/oneshot agent_name=rust-worker，policy capability 不变。
+- 09-22 13:47+ **阶段 2 ③**：老 One-shot 池不停作热备；设备端预取票据 TTL 1h 仍指旧目标（13:47:52 …00800010 仍落老池），排空前不动它；排空后空转时重启一次让它拥有独立边车。④ 等新机首个首句房（watcher）。
