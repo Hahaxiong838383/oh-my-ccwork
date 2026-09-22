@@ -239,3 +239,16 @@ demo 池 + Javis 同事 demo 池 + voice-console/caddy 一起搬到新机。多�
 - 09-22 14:56 **阶段 3 项提前（行 22 的 HOTWORD_APPLY_TARGET）**：川哥发现热词页每类标题都挂「env 已改未重启」——根因是通道默认指老机 64.90.13.117，老生产池 13:46 已停（MainPID=0 → 进程值为空 ≠ 文件值），并非新机改了 env 没重启（新机 10 键文件=进程逐一对撞 SAME）；且此时从页面「发布」会 `systemctl start` 拉起老池造成 rust-worker 双注册。处置：先用 forced-command key 对新机干跑 status（ok/unit_active/五类 in_sync 全 true），再 aliyun-hk `.env.local` 追加 `HOTWORD_APPLY_TARGET=root@64.90.13.177`（备份 `_backup/20260922-145522-hotword-target/`，`.new` md5 复验后 mv），pm2 restart --update-env，health 200；后台 /api/admin/hotwords channel_ok、unit_active、五类 live_in_sync 全 true，worker-race 文件=进程零差异。赛马/音色面板同通道一并指新机。回滚：删该行（或 cp 备份回 .env.local）+ pm2 restart --update-env。
 - 09-22 15:00 **阶段 2 ③ 收口**：老 One-shot 热备 3h 接 5 房关 5 房（最后一房 13:49 …00800010），14:50 后零新房；14:40 它已自行 spawn 独立边车（`EOT sidecar connected (spawned)`，socket 在听）→ 计划中的「排空后重启一次」不再需要，不动它。观察器脚本判据写坏（in-flight 输出两列致比较失败）已停，未误操作。
 - 09-22 15:35 新机换装语音控设备 D1 二进制（sha 8fbc42bd…；备份 .bak-20260922-073535 = d3681ee04 产物 b0ec810b…；纪律换装 deploy-worker-bin.sh，in-flight 0）——与迁移无关，记机器史。老 One-shot 热备仍旧二进制。
+
+## 12. 阶段 3 执行清单（2026-09-22 16:50 拟，等切换后 24–48 h 即 09-23 13:47 之后；每步可单独回退）
+前提判据：老热备 24 h 零新房（今 13:49 后已零）、新机 24 h 无 ERROR 增长、后台卡两台 worker 都绿。
+**A. cc 直接做**
+1. 老 One-shot 热备 `voice-worker-firstturn` 于老机 stop + disable（unit 文件与二进制留作回滚锚 7 天；回滚 = start + 服务端 `ONESHOT_FIRST_TURN_AGENT_NAME` 改回旧名 + pm2 restart）。
+2. 代码去写死老机：`hotword-channel.ts` 默认 TARGET → hk2、`hosts-status.ts` `LEGACY_WORKER_TARGET` → hk2 + 注释、`admin-data.ts` 旧注释、`rollback-b8.sh`/`vi-collide.sh`/`build-local.sh` 提示语、hosts-status 测试；服务端 pm2 重启一次。
+3. 服务端 `.env.local`：`WORKER_STATS_SSH_TARGETS` 标签去「迁移中」；老机行是否保留取决于 B-8（老机上还有 demo/租户线要观测则保留到退役日）；`AGENT_NAME`/One-shot 注释更新。
+4. 观测脚本：`b104-oneshot-adoption-report-20260913.sh` journal 源改新机单 unit、按票据类型分流统计。
+5. 新机 unit `Description` 去「迁移中」；老机清理（老热备停后）：EOT 快照 2.1 G 按既有保留策略、31 份二进制备份留 5、socket 残留。
+6. 记忆与文档：cloud_servers 老机角色改为「caddy + voice-console + 租户线（7 天 0 房）+ demo 线（7 天 2 房）」、迁移文档 §11 收尾、RELEASES。
+**B. 川哥拍板**
+7. 老机去留（~10/16 到期）：老机上仍跑 caddy、voice-console、`voice-worker-colleague`（租户 python 线，7 天 0 房）、`voice-worker-demo`（7 天 2 房）——要么随机器退役、要么迁新机（8 G 可容）或别处；定了 cc 出方案。
+8. 新机安全：改 root 密码 + 关密码登录（sshd 改动分类器拦 cc，需你跑一条命令）；RTF 里的旧密码作废。老机上 aliyun-hk 的两把 forced-command key 随退役消失，新机已配。
