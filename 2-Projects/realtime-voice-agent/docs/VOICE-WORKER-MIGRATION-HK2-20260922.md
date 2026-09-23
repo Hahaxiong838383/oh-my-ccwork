@@ -240,6 +240,7 @@ demo 池 + Javis 同事 demo 池 + voice-console/caddy 一起搬到新机。多�
 - 09-22 15:00 **阶段 2 ③ 收口**：老 One-shot 热备 3h 接 5 房关 5 房（最后一房 13:49 …00800010），14:50 后零新房；14:40 它已自行 spawn 独立边车（`EOT sidecar connected (spawned)`，socket 在听）→ 计划中的「排空后重启一次」不再需要，不动它。观察器脚本判据写坏（in-flight 输出两列致比较失败）已停，未误操作。
 - 09-22 15:35 新机换装语音控设备 D1 二进制（sha 8fbc42bd…；备份 .bak-20260922-073535 = d3681ee04 产物 b0ec810b…；纪律换装 deploy-worker-bin.sh，in-flight 0）——与迁移无关，记机器史。老 One-shot 热备仍旧二进制。
 - 09-23 13:51 CST **阶段 3 收口（§12 A 项 1/3/4/5/6 完成；2 已于 09:58 上线）**：老热备 firstturn 05:51:51Z stop+disable（unit/二进制留 7 天，sock 残留已清，demo/租户线不受影响）；服务端标签去「迁移中」+ 老机行=租户/demo 线（env 备份 `_backup/20260923-135035-phase3-env/`，13:50 一次 pm2 restart 连同 D2.1 `[memory-slot]` 日志生效）；新机 b104 单池观测脚本就位、unit Description 收口（daemon-reload）；老机备份 31→5、EOT 快照 30 天清 1236 文件、两机 `eot-snapshots-clean.timer` 持久日清。B 项 7（老机去留 ~10/16）/ 8（新机 root 密码与 sshd）仍等川哥。详见 RELEASES 2026-09-23 13:51。
+- 09-23 15:48 CST **needrestart 豁免 + 安全更新挪凌晨（两机）**：`/etc/needrestart/conf.d/p003-voice-worker.conf`（voice-worker-* 不被包管理器重启）+ `apt-daily-upgrade.timer.d/override.conf`（19:30 UTC ± 20 min）；perl 回放四单元 rc=0、反例不匹配；验收锚＝下次升级 dpkg 日志 voice-worker 只在「deferred」段。见 RELEASES 2026-09-23 15:48。
 
 ## 12. 阶段 3 执行清单（2026-09-22 16:50 拟，等切换后 24–48 h 即 09-23 13:47 之后；每步可单独回退）
 前提判据：老热备 24 h 零新房（今 13:49 后已零）、新机 24 h 无 ERROR 增长、后台卡两台 worker 都绿。
