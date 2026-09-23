@@ -188,9 +188,67 @@ NUDGE_COVER = {
 # 同日自然实验：no-guessing-guard 的窄守门（grep|head 截断、unit 名/端口）上线后，它盯的那种写法 7 周 0 复发，
 # 复发全转移到它没盯的变体（cut -c、按主键过滤、git remote|head…）——有效的是「窄而具体」，不是「宽而泛」。
 _COVER = {f'feedback_{x}.md': g for g, xs in NUDGE_COVER.items() for x in xs}
+# 8-01 起就有窄守门（no-guessing-guard）的教训：不是 9-23 上线的提醒，做对照时既不算处理组也不算对照组，单列 G
+GUARD_COVER = ['truncated_output_negative_conclusion', 'probe_parameters_are_facts_too', 'exit_code_ownership', 'ssh_pkill_pgrep_self_match']
+_GUARD = {f'feedback_{x}.md' for x in GUARD_COVER}
 
 def cover_group(f):
-    return _COVER.get(f)
+    return _COVER.get(f) or ('G' if f in _GUARD else None)
+
+def recent_counts(r, days=28, today=None):
+    """近 days 天严口径复发次数 → Counter{旧教训文件: n}（链接式 + 自身追加）。hotindex-derive 用它挑「🔥 复发且未守门」。"""
+    today = today or datetime.date.today(); cut = today - datetime.timedelta(days=days)
+    c = collections.Counter()
+    for p in r['pairs']:
+        if r['kinds'][(p[0], p[1])] in STRICT and cut <= datetime.date.fromtimestamp(r['dates'][(p[0], p[1])]) <= today:
+            c[p[0]] += 1
+    for f, day, h, rsec in r['self_events']:
+        if cut <= datetime.date.fromisoformat(day) <= today:
+            c[f] += 1
+    return c
+
+def cuped_avi(units, alpha=0.05):
+    """小样本对照的两把工具（2026-09-23 grok 调研后加，出处见 reference_memory_research_grok_20260923）：
+    units = [(group, x_pre, y_post)]，group ∈ {'T','C'}。
+    CUPED（Deng/Xu/Kohavi/Walker 2013）：y_adj = y − θ(x − x̄)，θ = cov(x,y)/var(x) 用全体单位估计，事前协变量与事后相关时方差下降。
+    Always-valid（Johari/Pekelis/Walsh，两样本 mSPRT 正态近似，混合方差 τ² = σ²）：
+      Λ = sqrt(2σ²/(2σ²+nτ²))·exp(n²τ²Δ̂²/(4σ²(2σ²+nτ²)))，p = min(1, 1/Λ)（Ville 不等式保证任意时刻看都有效，不用记历史）；
+      置信序列 Δ̂ ± sqrt(4σ²(2σ²+nτ²)/(n²τ²)·(ln(1/α)+½ln((2σ²+nτ²)/(2σ²))))，n = 2·n_T·n_C/(n_T+n_C)。
+    返回 None = 样本不足。"""
+    import math
+    T = [(x, y) for g, x, y in units if g == 'T']; C = [(x, y) for g, x, y in units if g == 'C']
+    if len(T) < 2 or len(C) < 2:
+        return None
+    xs = [x for _, x, _ in units]; ys = [y for _, _, y in units]
+    xbar = sum(xs) / len(xs); ybar = sum(ys) / len(ys)
+    vx = sum((x - xbar) ** 2 for x in xs); cov = sum((x - xbar) * (y - ybar) for x, y in zip(xs, ys))
+    theta = cov / vx if vx > 0 else 0.0
+    mean = lambda v: sum(v) / len(v)
+    var = lambda v: sum((a - mean(v)) ** 2 for a in v) / (len(v) - 1) if len(v) > 1 else 0.0
+    pooled = lambda A, B: ((len(A) - 1) * var(A) + (len(B) - 1) * var(B)) / (len(A) + len(B) - 2)
+    rawT, rawC = [y for _, y in T], [y for _, y in C]
+    yT = [y - theta * (x - xbar) for x, y in T]; yC = [y - theta * (x - xbar) for x, y in C]
+    s2_raw, s2 = pooled(rawT, rawC), pooled(yT, yC)
+    n = 2 * len(yT) * len(yC) / (len(yT) + len(yC))
+    delta = mean(yT) - mean(yC)
+    def half_width(s2_, n_):
+        s2_ = max(s2_, 1e-12); tau2 = s2_
+        return math.sqrt(4 * s2_ * (2 * s2_ + n_ * tau2) / (n_ * n_ * tau2) * (math.log(1 / alpha) + 0.5 * math.log((2 * s2_ + n_ * tau2) / (2 * s2_))))
+    s2e = max(s2, 1e-12); tau2 = s2e
+    # 对数空间：强效应时 Λ 会溢出 float
+    loglam = 0.5 * math.log(2 * s2e / (2 * s2e + n * tau2)) + n * n * tau2 * delta * delta / (4 * s2e * (2 * s2e + n * tau2))
+    p_val = math.exp(-loglam) if loglam < 700 else 0.0
+    half = half_width(s2, n)
+    # 还需多少单位：要把「处理组减半」（Δ* = −0.5·对照均值）的效应排除 0，区间半宽须 < |Δ*|
+    target = 0.5 * mean(yC); need_n = None
+    if target > 0:
+        for n_ in range(int(n) + 1, 200000):
+            if half_width(s2, n_) < target:
+                need_n = n_; break
+    return dict(theta=theta, n_T=len(yT), n_C=len(yC), n_eff=n, mean_T=mean(yT), mean_C=mean(yC),
+                delta_raw=mean(rawT) - mean(rawC), delta=delta, s2_raw=s2_raw, s2=s2,
+                var_reduction=(1 - s2 / s2_raw) if s2_raw > 0 else 0.0, p=min(1.0, p_val),
+                ci=(delta - half, delta + half), need_n=need_n)
 
 # ── 严口径 ──
 STRONG = re.compile(r'同族|同类|同一个坑|同一类|又一次|再次|又踩|第[二三四五六七八九十0-9]+[次例]|变体|同形|同根|复发|老毛病|重犯|同款')
@@ -448,6 +506,44 @@ def main():
     W(f"\n单周比值波动极大（事件太少），只看两行合计。上线后「未覆盖」攒到 30 次再下结论（现 {post_un}）；"
       f"按最近 4 周的速率（每周 {recent:.1f} 次）还需约 {need / recent:.0f} 周。" if recent else
       f"\n单周比值波动极大，只看两行合计。最近 4 周没有未覆盖的复发，攒不出对照，暂时判不了。")
+
+    # ── CUPED + 随时可看的序贯区间（单位 = 教训 × 上线后的完整周；G 组不参与）──
+    W("\n**CUPED + 序贯置信区间**（单位=教训×完整周；处理组=A/B·M/C 覆盖的教训，对照=未覆盖；8-01 起就有窄守门的 G 组不参与）：")
+    W("方法与出处见脚本 `cuped_avi()` 注释：事前协变量=该教训上线前周均复发；置信序列随时看都有效，不必等预设周数；区间含 0 = 还判不了。")
+    files_at_risk = {p[0] for p in strict} | {f for f, *_ in selfs} | {f for f, sec in r['resident'].items() if sec == 'lesson'}
+    pre_weeks = max((NUDGE_LIVE - WINDOW_START).days / 7, 1e-9)
+    pre_cnt = collections.Counter(); wk_cnt = collections.Counter()
+    for p in strict:
+        d = datetime.date.fromtimestamp(dates[(p[0], p[1])])
+        (pre_cnt if d < live else wk_cnt)[(p[0], monday(d)) if d >= live else p[0]] += 1
+    for f, day, h, rsec in selfs:
+        d = datetime.date.fromisoformat(day)
+        (pre_cnt if d < live else wk_cnt)[(f, monday(d)) if d >= live else f] += 1
+    first_full = monday(live) + datetime.timedelta(days=7) if live.weekday() else monday(live)
+    full_weeks = []
+    w = first_full
+    while w + datetime.timedelta(days=7) <= today:
+        full_weeks.append(w); w += datetime.timedelta(days=7)
+    units = []
+    for f in sorted(files_at_risk):
+        g = cover_group(f)
+        if g == 'G': continue
+        grp = 'T' if g else 'C'
+        for w in full_weeks:
+            units.append((grp, pre_cnt[f] / pre_weeks, wk_cnt[(f, w)]))
+    res = cuped_avi(units)
+    nT = sum(1 for f in files_at_risk if cover_group(f) not in (None, 'G')); nC = sum(1 for f in files_at_risk if cover_group(f) is None)
+    if not full_weeks or res is None:
+        W(f"- 上线后完整周 {len(full_weeks)} 个（第一个完整周从 {first_full:%Y-%m-%d} 起）：机制就位，攒到 1 个完整周起出数。处理组教训 {nT} 条、对照 {nC} 条。")
+    else:
+        lo, hi = res['ci']
+        W(f"- 完整周 {len(full_weeks)} 个；单位 处理 {res['n_T']} / 对照 {res['n_C']}（教训 {nT}/{nC}）；θ={res['theta']:.2f}，CUPED 方差缩减 {res['var_reduction']:.0%}。")
+        W(f"- 每教训每周复发：处理组 {res['mean_T']:.3f} vs 对照 {res['mean_C']:.3f}（调整后）；差 Δ={res['delta']:+.3f}（原始 {res['delta_raw']:+.3f}），负=提醒组更少。")
+        verdict = '区间含 0，还判不了' if lo <= 0 <= hi else ('处理组显著更少 → 提醒有效' if hi < 0 else '处理组显著更多 → 提醒无效甚至有害')
+        W(f"- 95% 序贯置信区间 [{lo:+.3f}, {hi:+.3f}]，always-valid p={res['p']:.3f} → **{verdict}**。")
+        if res['need_n']:
+            per_week = (2 * nT * nC / (nT + nC)) if nT + nC else 0
+            W(f"- 若真实效应是「处理组减半」，按当前方差要把 0 排除在区间外约需 {res['need_n']:.0f} 个有效单位 ≈ {res['need_n'] / per_week:.1f} 周（每周新增有效单位 {per_week:.1f}）。" if per_week else "")
 
     W("\n## 3. 严口径「常驻 & 仍踩」排名\n")
     W("| 旧教训（常驻区） | 严 | 宽 | 复发它的新记忆 / 自身追加（最多 3 条） | 检索维 |")

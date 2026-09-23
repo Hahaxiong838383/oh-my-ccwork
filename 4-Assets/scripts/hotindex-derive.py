@@ -11,8 +11,11 @@ Air 全量热索引已 28K+ 字符，末尾场景簇整段加载不到；Air 侧
   - ★项目：真值锚行原样；其余行正文截到 PROJ_CAP 字符（保留链接/星级），原行里的 rg '…' 指引保留
   - ★教训：删 ≥PAREN_MIN 字符、不含加粗/链接/代码的括号旁白；仍超预算则正文截到 LES_CAP
   - 末尾「## 🏠 开发机本地」区块从现有开发机 MEMORY.md 原样带过（本机会话新加的索引行不丢）
+  - 重排（2026-09-23 加，依据 grok 调研核验：Lost in the Middle 首尾优势 / IFScale 靠前偏好 / 已被守门的降级让位）：
+      ★教训区里「近 HOT_DAYS 天有复发、且没被任何 nudge/守门覆盖」的前 HOT_K 行，移到文件最末新开一节「## 🔥 …」（每次重算不累积）；
+      已被 nudge/守门覆盖的行截到 GUARD_CAP 字符、加 🛡、排到教训区末尾。计数与覆盖来自 evaluate-memory-policy.py，评估器不可用则不重排。
 验证（任一不过 → 不替换，保留上一版，exit 非 0）：
-  字符 ≤ BUDGET；Air 版全部链接文件在派生版里一个不少；本地区块原样存在。
+  字符 ≤ BUDGET；Air 版全部链接文件在派生版里一个不少；Air 部分的条目行数不变（只挪不丢不复制）；本地区块原样存在。
 用法：hotindex-derive.py [--write] [--src 镜像MEMORY.md] [--dst 开发机MEMORY.md]
 """
 import os, re, sys, datetime
@@ -26,6 +29,10 @@ LES_CAP = int(os.environ.get('HX_LES_CAP', '0'))         # 0 = 不截，只删�
 PAREN_MIN = int(os.environ.get('HX_PAREN_MIN', '14'))
 ANCHORS = {'user_hw', 'h_byos', 'cloud_servers', 'hs_vault'}   # 头部声明「真值锚不限长度不下沉」
 LOCAL_HEAD = '## 🏠 开发机本地'
+HOT_HEAD = '## 🔥 近 %d 天复发且尚无守门/提醒'
+HOT_K = int(os.environ.get('HX_HOT_K', '8'))
+HOT_DAYS = int(os.environ.get('HX_HOT_DAYS', '28'))
+GUARD_CAP = int(os.environ.get('HX_GUARD_CAP', '90'))
 LINK = re.compile(r'\[([^\]]+)\]\(([^)]+\.md)\)')
 PAREN = re.compile(r'[（(]([^（）()]{%d,})[）)]' % PAREN_MIN)
 RG = re.compile(r"(?:→\s*)?rg\s+'[^']+'")
@@ -74,10 +81,50 @@ def strip_parens(line):
         out = out.replace(span, '', 1)
     return re.sub(r'[;；,，]{2,}', '；', out)
 
-def derive(src_text, local_block, les_cap, proj_cap=None):
+def recurrence_info():
+    """近 HOT_DAYS 天严口径复发计数 + 覆盖归类（来自评估器）。评估器不可用 → (None, None)，派生退回不重排。"""
+    try:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('ev', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'evaluate-memory-policy.py'))
+        ev = importlib.util.module_from_spec(spec); spec.loader.exec_module(ev)
+        return ev.recent_counts(ev.compute_full(), HOT_DAYS), ev.cover_group
+    except Exception as e:
+        print(f'评估器不可用，本次不重排：{e!r}', file=sys.stderr)
+        return None, None
+
+def reorder(out, hot, cover):
+    """★教训区：🔥 行（未覆盖且近期复发，按次数降序取前 HOT_K）抽出去；🛡 行（全部链接都已覆盖）截短排到区末。返回 (out, hot_lines)。"""
+    i0 = next((k for k, l in enumerate(out) if l.startswith('## ') and '★ 教训' in l), None)
+    if i0 is None: return out, []
+    i1 = next((k for k in range(i0 + 1, len(out)) if out[k].startswith('## ')), len(out))
+    body = out[i0 + 1:i1]
+    files = lambda l: [f for _, f in LINK.findall(l)]
+    score = lambda l: max([hot.get(f, 0) for f in files(l) if not cover(f)] or [0])
+    bullets = [l for l in body if l.startswith('- ')]
+    hot_lines = sorted([l for l in bullets if score(l) > 0], key=score, reverse=True)[:HOT_K]
+    guarded = [l for l in bullets if l not in hot_lines and files(l) and all(cover(f) for f in files(l))]
+    rest = [l for l in bullets if l not in hot_lines and l not in guarded]
+    guarded = [cut_gist(l, GUARD_CAP).rstrip() + ' 🛡' for l in guarded]
+    lead = [l for l in body if not l.startswith('- ') and l.strip()]
+    hot_lines = [f'{l} ×{score(l)}' for l in hot_lines]
+    return out[:i0 + 1] + lead + rest + guarded + [''] + out[i1:], hot_lines
+
+def hot_line_set(src_text, hot, cover):
+    """预先算出会进 🔥 的原始行（与 reorder 同一打分），这些行免截——它们正是最该被完整看到的。"""
+    if hot is None or cover is None: return set()
+    sec, cand = 'head', []
+    for line in src_text.split('\n'):
+        sec = section_of(line, sec)
+        if sec == 'les' and line.startswith('- '):
+            sc = max([hot.get(f, 0) for _, f in LINK.findall(line) if not cover(f)] or [0])
+            if sc > 0: cand.append((sc, line))
+    return {l for _, l in sorted(cand, key=lambda x: -x[0])[:HOT_K]}
+
+def derive(src_text, local_block, les_cap, proj_cap=None, hot=None, cover=None):
     global PROJ_CAP
     if proj_cap: PROJ_CAP = proj_cap
     out, sec = [], 'head'
+    exempt = hot_line_set(src_text, hot, cover)
     for line in src_text.split('\n'):
         sec = section_of(line, sec)
         if sec == 'local': continue          # Air 版不该有，防御
@@ -86,8 +133,9 @@ def derive(src_text, local_block, les_cap, proj_cap=None):
             if sec == 'proj' and slug not in ANCHORS:
                 line = cut_gist(line, PROJ_CAP)
             elif sec == 'les':
+                raw = line
                 line = strip_parens(line)
-                if les_cap: line = cut_gist(line, les_cap)
+                if les_cap and raw not in exempt: line = cut_gist(line, les_cap)
         out.append(line)
     # 头部加派生说明（插在第一个 ## 之前）
     note = (f"> 🔁 **本文件是 Air 全量热索引的派生压缩版**（{datetime.datetime.now():%Y-%m-%d %H:%M} 生成，hotindex-derive.py）："
@@ -95,13 +143,23 @@ def derive(src_text, local_block, les_cap, proj_cap=None):
             f"任何条目 `rg <词> ~/.mycc-global/air-mirror/`**。本机新增索引行写进文末「{LOCAL_HEAD}」区块，其余部分每次 Air 同步后重新生成，手改会被冲掉。")
     i = next((k for k, l in enumerate(out) if l.startswith('## ')), len(out))
     out.insert(i, note); out.insert(i + 1, '')
+    hot_lines = []
+    if hot is not None and cover is not None:
+        out, hot_lines = reorder(out, hot, cover)
     text = '\n'.join(out).rstrip('\n') + '\n'
     if local_block: text += '\n' + local_block.rstrip('\n') + '\n'
+    if hot_lines:
+        text += (f'\n{HOT_HEAD % HOT_DAYS}（评估器派生，每次重算；排在文末利于召回；已有守门/提醒的不在此列，×n=近 {HOT_DAYS} 天严口径复发次数）\n'
+                 + '\n'.join(hot_lines) + '\n')
     return text
 
 def local_block_of(dst_text):
+    """本地区块 = 从「## 🏠」到「## 🔥」之前（🔥 节是派生物，不能当本地区块带过去，否则每轮翻倍）。"""
     i = dst_text.find('\n' + LOCAL_HEAD)
-    return dst_text[i + 1:] if i >= 0 else ''
+    if i < 0: return ''
+    blk = dst_text[i + 1:]
+    j = blk.find('\n## 🔥')
+    return blk[:j + 1] if j >= 0 else blk
 
 def verify(src_text, new_text, local_block):
     P = []
@@ -109,6 +167,9 @@ def verify(src_text, new_text, local_block):
     miss = {f for _, f in LINK.findall(src_text)} - {f for _, f in LINK.findall(new_text)}
     if miss: P.append(f"链接丢失 {len(miss)}：{sorted(miss)[:5]}")
     if local_block and local_block.strip() not in new_text: P.append("本地区块丢失")
+    n_src = sum(1 for l in src_text.split('\n') if l.startswith('- '))
+    n_new = sum(1 for l in new_text.split('\n') if l.startswith('- ')) - sum(1 for l in local_block.split('\n') if l.startswith('- '))
+    if n_new != n_src: P.append(f"条目行数变了 {n_src}→{n_new}（重排只能挪不能丢/复制）")
     return P
 
 def main():
@@ -117,11 +178,14 @@ def main():
     d = open(dst, encoding='utf-8').read() if os.path.exists(dst) else ''
     lb = local_block_of(d)
     base_proj = PROJ_CAP
-    new = derive(s, lb, LES_CAP, base_proj); level = '0'
+    hot, cover = recurrence_info() if '--no-reorder' not in sys.argv else (None, None)
+    new = derive(s, lb, LES_CAP, base_proj, hot, cover); level = '0'
     # 预算不够时逐档收紧：先教训区正文，再项目区正文。都到下限仍超 → 验证失败、保留上一版（不写残缺文件）
     for les, proj in [(260, base_proj), (200, base_proj), (160, 100), (130, 90), (110, 80), (90, 70)]:
         if len(new) <= BUDGET: break
-        new = derive(s, lb, les, proj); level = f'教训≤{les}/项目≤{proj}'
+        new = derive(s, lb, les, proj, hot, cover); level = f'教训≤{les}/项目≤{proj}'
+    if hot is not None:
+        print(f"重排: 🔥 {new.count(chr(10)+'- ', new.find(chr(10)+'## 🔥')) if '## 🔥' in new else 0} 行移到文末；🛡 {new.count(' 🛡')} 行降级")
     print(f"收紧档位: {level}")
     probs = verify(s, new, lb)
     print(f"Air 版 {len(s)} 字符 → 派生 {len(new)} 字符（预算 {BUDGET}）；链接 {len(set(LINK.findall(s)))}→{len(set(LINK.findall(new)))}；本地区块 {len(lb)} 字符")

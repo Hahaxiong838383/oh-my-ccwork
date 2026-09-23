@@ -112,5 +112,26 @@ chk('D 组已回滚：criteria_must_match_object_variant → 未覆盖', ev.cove
 chk('truncated_output → C', ev.cover_group('feedback_truncated_output_negative_conclusion.md') == 'C')
 chk('未覆盖的教训 → None', ev.cover_group('feedback_old1.md') is None)
 
+print('═══ 守门 G 组 / 近期计数 / CUPED+序贯 ═══')
+chk('probe_parameters（8-01 起有窄守门）→ G', ev.cover_group('feedback_probe_parameters_are_facts_too.md') == 'G')
+chk('truncated 同时在 C 组与守门 → 归 C（nudge 优先）', ev.cover_group('feedback_truncated_output_negative_conclusion.md') == 'C')
+rc = ev.recent_counts(r, days=30, today=datetime.date(2026, 9, 10))
+chk('recent_counts：old1 = 链接式 3（strong/declared/追加）+ 自身追加 1 = 4', rc.get('feedback_old1.md') == 4)
+chk('recent_counts：窗口外不计（today 提前到 9-02 → old1 只剩 9-01 的 2 条）', ev.recent_counts(r, days=30, today=datetime.date(2026, 9, 2)).get('feedback_old1.md') == 2)
+import random
+rng = random.Random(7)
+null = [('T' if i % 2 else 'C', rng.random(), rng.choice([0, 0, 0, 1, 1, 2])) for i in range(200)]
+res0 = ev.cuped_avi(null)
+chk('无效应时 always-valid p 不显著、区间含 0', res0 and res0['p'] > 0.05 and res0['ci'][0] <= 0 <= res0['ci'][1])
+eff = [('T', 0.0, rng.choice([0, 0, 0, 0, 1])) for _ in range(300)] + [('C', 0.0, rng.choice([1, 2, 2, 3])) for _ in range(300)]
+res1 = ev.cuped_avi(eff)
+chk('强效应时 p<0.05、区间在 0 以下、Δ 为负', res1 and res1['p'] < 0.05 and res1['ci'][1] < 0 and res1['delta'] < 0)
+corr = []
+for i in range(300):
+    x = rng.random() * 4; corr.append(('T' if i % 2 else 'C', x, x + rng.random() * 0.5))
+res2 = ev.cuped_avi(corr)
+chk('协变量与结果相关时 CUPED 方差缩减 > 50%', res2 and res2['var_reduction'] > 0.5)
+chk('样本不足（每组 <2）返回 None', ev.cuped_avi([('T', 0, 1), ('C', 0, 1)]) is None)
+
 print(f'\n═══ 结果：{PASS} 通过 / {FAIL} 失败 ═══')
 sys.exit(1 if FAIL else 0)
