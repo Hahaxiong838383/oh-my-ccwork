@@ -21,4 +21,20 @@ if rsync -a -e "ssh -o BatchMode=yes -o ConnectTimeout=10 -J dev198" 'rayman.che
 else
   echo "$(ts) [air-pull] rsync 失败" >> "$LOG"; exit 1
 fi
-/usr/bin/python3 "$HOME/mycc/4-Assets/scripts/evaluate-memory-policy.py" > "$HOME/mycc/1-Inbox/评估器日报-latest.md" 2>>"$LOG" && echo "$(ts) [air-pull] 评估器已重跑" >> "$LOG"
+# 评估器的尺子（2026-09-23 P0）：Air ~/.claude 仓记忆路径的 git 历史 → ①出生台账（每个文件首次入库时间，替代会被编辑/同步刷新的 mtime）
+# ②逐次差异（后来追加的链接按追加时刻算、往老教训追加「变体」小节算自身复发）。两条在 Air 上都是只读 git log，失败沿用上一版。
+EV="$HOME/mycc/4-Assets/scripts/evaluate-memory-policy.py"; EVD="$HOME/.local/share/memory-eval"; mkdir -p "$EVD"
+MP='projects/-Users-rayman-chen-mycc/memory/'
+if "${AIR_SSH[@]}" "git -C ~/.claude log --reverse --diff-filter=A --format=@%at --name-only -- $MP" > "$EVD/air-births.log.tmp" 2>>"$LOG" && [ -s "$EVD/air-births.log.tmp" ]; then
+  echo "$(ts) [air-pull] $(/usr/bin/python3 "$EV" --seed-births < "$EVD/air-births.log.tmp" 2>&1 | tail -1)" >> "$LOG"
+else
+  echo "$(ts) [air-pull] 出生台账回填失败，沿用旧台账" >> "$LOG"
+fi
+rm -f "$EVD/air-births.log.tmp"
+if "${AIR_SSH[@]}" "git -C ~/.claude log --since=2026-08-20 -p --reverse --no-renames --format='@@COMMIT %at' -- $MP ':(exclude)${MP}MEMORY.md' ':(exclude)${MP}INDEX-full.md'" > "$EVD/air-memory-diff.log.tmp" 2>>"$LOG" && [ -s "$EVD/air-memory-diff.log.tmp" ]; then
+  mv "$EVD/air-memory-diff.log.tmp" "$EVD/air-memory-diff.log"; chmod 600 "$EVD/air-memory-diff.log"
+  echo "$(ts) [air-pull] 记忆差异日志已更新（$(grep -c '^@@COMMIT' "$EVD/air-memory-diff.log") 个提交）" >> "$LOG"
+else
+  rm -f "$EVD/air-memory-diff.log.tmp"; echo "$(ts) [air-pull] 记忆差异日志拉取失败，沿用上一版" >> "$LOG"
+fi
+/usr/bin/python3 "$EV" > "$HOME/mycc/1-Inbox/评估器日报-latest.md" 2>>"$LOG" && echo "$(ts) [air-pull] 评估器已重跑" >> "$LOG"

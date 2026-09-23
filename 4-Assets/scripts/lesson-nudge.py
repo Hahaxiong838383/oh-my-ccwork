@@ -8,6 +8,9 @@
   A 交付前四问：commit/push/部署/重启服务/远程推送时——验收类教训（58 对）
   B 结论落盘三档：Edit/Write 记忆文件、1-Inbox/0-System 报告时——断言类教训（14 对）
   C 截断：Grep 工具带结果条数上限时——阴性结论类（9 对）
+  M 写教训记忆（2026-09-23 P0 修尺子加）：B 的三档 + 复发声明写法。评估器严口径只认两种写法算复发：
+    新文件 frontmatter metadata 下 `recurrence_of: [旧文件名]`（不是复发写 []）；往旧教训文件追加新一例用「## 日期 变体：」小节。
+    不跟 B 共用冷却——写完报告紧接着写记忆时，这句不能被冷却吞掉。
 防疲劳：同一会话同一组 COOLDOWN 秒内只提醒一次。只发 additionalContext，永不 deny。
 失败策略：任何异常都静默放行并写 err 文件（fail-open 但留痕）。
 兼容：Claude Code（snake_case）与 grok（camelCase）payload；macOS bash 3.2 环境（本脚本直接由 python3 执行）。
@@ -32,11 +35,15 @@ A_PAT = re.compile(r'''(?x)
  |\bssh\b[^;&|]*\b(?:restart|reload|deploy)\b
 ''')
 B_PATH = re.compile(r'(/\.claude/projects/[^/]+/memory/[^/]+\.md$|/1-Inbox/.+\.md$|/0-System/[^/]+\.md$)')
+M_PATH = re.compile(r'/\.claude/projects/[^/]+/memory/(?!MEMORY\.md$|INDEX-full\.md$)[^/]+\.md$')
 MSG = {
  'A': "📋 交付前四问（这一步会把东西交出去/让它生效）：①这个数字/现象和目标有因果链吗？②验的是生产路径，还是我方便的路径？③症状消失，有没有别的解释（缓存/没流量/换了实例）？④「没报错」是真没发生，还是没有通道看得见？答不上的那条，先补验证再说「完成」。",
  'B': "✍️ 结论落盘前分三档：每句机制/事实陈述标清是【验过】【能验没验】【验不了】。后两档写成断言就是错——改成「推断/待验」或先去验。别替看不见的那一侧（对端代码、另一台机器、未来行为）下断言。",
  'C': "✂️ 这次搜索带了结果条数上限：截断后的结果只能证明「有」，证明不了「没有」。要下「不存在/零命中」的结论，去掉上限或改用计数。",
 }
+MSG['M'] = MSG['B'] + ("\n🔁 若这条是某个旧教训又踩了一次（同一个坑/变体）：新文件在 frontmatter 的 metadata 下写 `recurrence_of: [旧文件名]`，"
+                       "只是相关不是复发就写 `recurrence_of: []`；往旧教训文件里追加新一例，小节标题写「## YYYY-MM-DD 变体：…」。"
+                       "评估器只认这两种写法算复发，正文里的 [[链接]] 不算。")
 
 def err(m):
     try:
@@ -51,7 +58,9 @@ def classify(tool, ti):
         return None
     fp = str(ti.get('file_path') or ti.get('path') or ti.get('target_file') or '')
     if tool in ('Edit', 'Write', 'MultiEdit', 'search_replace', 'write', 'edit_file', 'write_file') and fp:
-        if B_PATH.search(os.path.expanduser(fp)): return 'B'
+        fp = os.path.expanduser(fp)
+        if M_PATH.search(fp): return 'M'
+        if B_PATH.search(fp): return 'B'
         return None
     if tool in ('Grep', 'grep'):
         hl = ti.get('head_limit')
