@@ -446,7 +446,7 @@ def sidecars_block(services: list[dict]) -> list[dict]:
 
 # ── 语音控设备 24h（D1 W4，2026-09-22）：提案/结果/慢路/承接音/误触发嫌疑，只读 journal 锚（worker 日志原话，不猜）──
 DEVICE_CMD_WINDOW = "-24h"
-DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device|received job request, accepting"
+DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device|device grammar hit|received job request, accepting"
 ACCEPT_ROOM_RE = re.compile(r"accepting job_id=\S+ room=(sn-[A-Za-z0-9]+-\d+)")
 # 「误触发嫌疑」= 慢路(LLM)提案而原话不含任何设备词根(方案 v1.1 §W4);裸「高/低/远/近」太泛不算根,组合词才算
 DEVICE_ROOTS = (
@@ -456,6 +456,7 @@ DEVICE_ROOTS = (
 )
 KV_RE = re.compile(r"(\w+)=(\"[^\"]*\"|'[^']*'|\S+)")
 PROPOSED_TEXT_RE = re.compile(r"device command proposed: '([^']*)'")
+GRAMMAR_TEXT_RE = re.compile(r"device grammar hit: '([^']*)'")  # D2 语法层（observe 只记这行；execute 另有 lane=L1g 提案）
 
 
 def _kv(s: str) -> dict:
@@ -474,6 +475,8 @@ def _lane_of(p: dict) -> str:
     mt = p.get("match_type", "")
     if mt == "command_word":
         return "chip"
+    if mt == "grammar" or (p.get("lane") or "") == "L1g":
+        return "L1g"
     if (p.get("lane") or "").upper() == "L2" or mt == "llm":
         return "L2"
     return "L1"
@@ -490,6 +493,7 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
         results: list[dict] = []
         observed = executed = hints = filler_dev = 0
         suppressed: collections.Counter = collections.Counter()
+        grammar: list[dict] = []  # D2 语法层命中（observe/execute 都记）
         sessions: collections.Counter = collections.Counter()  # 24h 设备房数（按 SN 末 8 位）——没发过命令的设备也要在表里
         for t, raw in rows:
             line = ANSI_RE.sub("", raw)
@@ -516,6 +520,12 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
                 suppressed[_kv(line).get("reason", "?")] += 1
             elif "fallback hint queued" in line:
                 hints += 1
+            elif "device grammar hit" in line:
+                g = _kv(line.split("device grammar hit", 1)[1])
+                m = GRAMMAR_TEXT_RE.search(line)
+                g["t"] = t
+                g["text"] = m.group(1) if m else ""
+                grammar.append(g)
             elif "filler picked" in line and "bucket=device" in line:
                 filler_dev += 1
         # 提案↔结果配对：同房同标签、提案后 30 s 内；首个非 accepted 为终态
@@ -555,6 +565,24 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
              "label": to_int(p.get("semantic_label")), "status": p["status"] or "none"}
             for p in props if _lane_of(p) == "L2" and not any(r in p["text"] for r in DEVICE_ROOTS)
         ]
+        # D2 语法层 observe 对账：同房同原话 60 s 内是否出现慢路(L2)提案 = 大模型也认；没有 = 大模型漏（或语法误）
+        for g in grammar:
+            g["llm_agree"] = any(
+                _lane_of(p) == "L2" and p.get("room") == g.get("room") and p["text"] == g["text"] and g["t"] <= p["t"] <= g["t"] + 60
+                for p in props
+            )
+        g_mode = collections.Counter((g.get("mode") or "?") for g in grammar)
+        g_dom = collections.Counter((g.get("domain") or "?") for g in grammar)
+        grammar_block = {
+            "hits": len(grammar), "by_mode": dict(g_mode), "by_domain": dict(g_dom),
+            "llm_agree": sum(1 for g in grammar if g["llm_agree"]),
+            "llm_missed": sum(1 for g in grammar if not g["llm_agree"]),
+            "recent": [
+                {"ts_ms": int(g["t"] * 1000), "sn": _sn_tail(g.get("room", "")), "text": g["text"][:40], "label": to_int(g.get("label")),
+                 "domain": g.get("domain"), "mode": g.get("mode"), "llm_agree": g["llm_agree"]}
+                for g in sorted(grammar, key=lambda x: -x["t"])[:8]
+            ],
+        }
         recent = [
             {"ts_ms": int(p["t"] * 1000), "sn": _sn_tail(p.get("room", "")), "text": p["text"][:40],
              "label": to_int(p.get("semantic_label")), "lane": _lane_of(p), "match_type": p.get("match_type"),
@@ -564,7 +592,7 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
         out.append({
             "unit": unit,
             "window": DEVICE_CMD_WINDOW,
-            "proposals": {"total": len(props), "l1": by_lane.get("L1", 0), "l2": by_lane.get("L2", 0), "chip": by_lane.get("chip", 0)},
+            "proposals": {"total": len(props), "l1": by_lane.get("L1", 0), "l1g": by_lane.get("L1g", 0), "l2": by_lane.get("L2", 0), "chip": by_lane.get("chip", 0)},
             "results": {
                 "succeeded": st.get("succeeded", 0), "already_applied": st.get("already_applied", 0),
                 "failed": failed, "none": st.get("none", 0) + st.get("accepted", 0),
@@ -573,6 +601,7 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
             "l2": {"observed": observed, "executed": executed, "suppressed": sum(suppressed.values()),
                    "suppressed_by_reason": dict(suppressed), "hints": hints},
             "filler_device_picks": filler_dev,
+            "grammar": grammar_block,
             "active_devices": sum(1 for d in devices.values() if d["sessions"] > 0),
             "commanding_devices": sum(1 for d in devices.values() if d["proposals"] > 0),
             "sessions_total": sum(sessions.values()),

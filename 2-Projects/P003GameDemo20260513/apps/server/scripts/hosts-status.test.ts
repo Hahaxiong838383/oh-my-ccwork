@@ -60,7 +60,7 @@ check('err-plain', hs.describeExecError(new Error('bad json')) === 'bad json');
 // 2026-09-22 迁 hk2：多 worker 目标解析 + 容量求和（纯函数，不连主机）
 {
   const legacy = hs.parseWorkerTargets(undefined);
-  check('wt-legacy-default', legacy.length === 1 && legacy[0].id === '64.90' && legacy[0].target === 'root@64.90.13.117' && legacy[0].host === '64.90.13.117', legacy);
+  check('wt-legacy-default', legacy.length === 1 && legacy[0].id === '64.90' && legacy[0].target === 'root@64.90.13.177' && legacy[0].host === '64.90.13.177', legacy);
   const legacyEnv = hs.parseWorkerTargets('', 'root@10.0.0.9');
   check('wt-legacy-env-target', legacyEnv.length === 1 && legacyEnv[0].id === '64.90' && legacyEnv[0].target === 'root@10.0.0.9' && legacyEnv[0].host === '10.0.0.9', legacyEnv);
   const multi = hs.parseWorkerTargets(' root@64.90.13.117|老机 · 生产池 , root@64.90.13.177|新机 · 单池 20 路 ,root@64.90.13.117, ,root@1.2.3.4 ');

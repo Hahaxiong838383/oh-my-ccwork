@@ -6,7 +6,7 @@
 # 背景: 2026-09-04 003 实机 2.5m / 遥测恒 12m / Android 对 label35 回 boundary_reached（联调单 CC_P003_VIRTUAL_IMAGE_READBACK_MISMATCH_20260904）
 set -euo pipefail
 SUF="${1:-0003}"; N="${2:-6}"; SINCE="${3:--2h}"
-WORKER_HOST="root@64.90.13.117"; SERVER_HOST="aliyun-hk"
+WORKER_HOST="root@64.90.13.177"; SERVER_HOST="aliyun-hk"  # 2026-09-23 阶段 3：生产池已迁 hk2
 echo "=== ① worker(64.90) 最近 ${N} 条设备命令 proposed/result  sn=…${SUF}  since=${SINCE}"
 out=$(ssh -o BatchMode=yes -o ConnectTimeout=10 "$WORKER_HOST" "TZ=Asia/Shanghai journalctl -u voice-worker-rust --since '${SINCE}' --no-pager -o short-iso 2>/dev/null" \
   | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g' \

@@ -87,13 +87,14 @@ function localCollector(script: string): HostCollector {
 }
 
 /**
- * worker 机列表（2026-09-22 迁 hk2：老机 64.90.13.117 与新机 64.90.13.177 并存期要同屏可见）。
+ * worker 机列表（2026-09-22 迁 hk2：老机 64.90.13.117 与新机 64.90.13.177 并存期要同屏可见；
+ * 2026-09-23 阶段 3：默认单机改指新机 voice-worker-hk2，老机只剩租户/demo 线，靠 env 多机列表保留其行）。
  * env `WORKER_STATS_SSH_TARGETS="user@host|标签,user@host2|标签2"`（逗号分机，竖线后为可选标签）；
- * 未配 → 沿用单机 `WORKER_STATS_SSH_TARGET`（默认老机，id 保持 '64.90'，老页面/老测试不受影响）。
+ * 未配 → 沿用单机 `WORKER_STATS_SSH_TARGET`（默认新机，id 保持 '64.90'，老页面/老测试不受影响）。
  */
 export type WorkerTarget = { id: string; label: string; target: string; host: string };
-const LEGACY_WORKER_TARGET = 'root@64.90.13.117';
-const LEGACY_WORKER_LABEL = '64.90 · 语音 worker（生产池 / One-shot 池 / 租户）';
+const LEGACY_WORKER_TARGET = 'root@64.90.13.177';
+const LEGACY_WORKER_LABEL = 'voice-worker-hk2 · 语音 worker 单池（20 路）';
 
 export function parseWorkerTargets(raw: string | undefined, legacyTarget: string = LEGACY_WORKER_TARGET): WorkerTarget[] {
   const entries = (raw ?? '').split(',').map((s) => s.trim()).filter(Boolean);

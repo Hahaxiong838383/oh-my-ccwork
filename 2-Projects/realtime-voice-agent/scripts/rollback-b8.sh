@@ -6,6 +6,8 @@
 # 只在"连 B9 一起退干净"时才用它。
 #
 # 用法(mycc 仓根):bash 2-Projects/realtime-voice-agent/scripts/rollback-b8.sh
+# ⚠️ 2026-09-23 阶段 3 注：本脚本针对老机 64.90.13.117 上的 python 线（voice-worker 单元已不存在，只剩 voice-worker-colleague）；
+#    rust 生产池 2026-09-22 起在 64.90.13.177（hk2），其回滚用 hk2 上的 deploy-worker-bin.sh 备份文件，与本脚本无关。
 set -euo pipefail
 
 HOST=root@64.90.13.117

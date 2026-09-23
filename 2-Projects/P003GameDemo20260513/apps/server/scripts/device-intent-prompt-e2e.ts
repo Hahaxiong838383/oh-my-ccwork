@@ -54,6 +54,10 @@ const CASES: Case[] = [
   { text: '把声音打开吧', expect: 45, why: 'D1 慢路 取消静音' },
   { text: '讲个月亮的故事', expect: 'none', why: 'D1 负例：月亮≠灯光' },
   { text: '今天的灯会真好看', expect: 'none', why: 'D1 负例：灯会是名词，无调节意图' },
+  { text: '太吵了', expect: 'none', why: 'D2 规则 10：感受类抱怨不出标记（可能嫌话多/声大/环境吵）' },
+  { text: '听不清', expect: 'none', why: 'D2 规则 10：可能想让你重说，不调音量' },
+  { text: '看不清', expect: 'none', why: 'D2 规则 10：暗/远/字小都可能，不调亮度' },
+  { text: '安静点', expect: 'none', why: 'D2 规则 10：嫌话多，走说话方式而不是设备' },
 ];
 
 function markerOf(text: string): 'none' | number {
