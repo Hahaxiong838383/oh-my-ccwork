@@ -131,6 +131,15 @@ sg docker -c 'docker ps -a --filter name=vaultwarden'
 
 ## 条目命名规范
 
+### sudo — 条目名 `home-studio 的 sudo 密码`（2026-09-23 实测）
+
+**开发机有 sudo。** 我曾凭 ensurepip 报错里的「You may need to use sudo」就断言「开发机没有 sudo」，是没验证的结论。
+取用只走 stdin，printf 是 shell 内建、值不进 argv：
+
+    PW=$(vw get item bf551e03-735c-4483-93ed-f95cf4fb5274 | jq -r '.login.password // empty'); [ -n "$PW" ] || exit 1
+    printf '%s\n' "$PW" | sudo -S -p '' -v; unset PW      # 之后本轮 sudo 走缓存，sudo -n true 验证
+
+
 川哥在网页上建条目，名字要**简单、稳定、可预测**，我按名字找：`GitHub token`、`aliyun-key-id`、`aliyun-key-secret`、`cloudflare-token`。
 
 名字变了我就找不到——找不到时先 `vw list items` 看实际名字，别猜。
