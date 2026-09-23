@@ -11,6 +11,10 @@
 //! 比词表多接住 77 句、闲聊 0 误开火、历史慢路 3 条误触发全拦、389 条词表回放 0 冲突）。
 //! 原型（Python，同规则）：`rust-worker/scripts/device_grammar_proto.py`；本文件是它的逐条移植，测试数据同源。
 //!
+//! D2.1（2026-09-23 10:57 川哥「按建议做」，依据同日 10:47 万能语法 20 槽体检）：加两道否决槽 时间(未来/延迟) TIME_FUTURE 与
+//! 地点(别的房间) PLACE；请求式情态 REQ_MODAL（能不能/可不可以/行不行）先于否定判；裸「对象+状态+了」（灯关了）按陈述不认。
+//! pipeline 对带设备词的否决记 `device grammar veto` 一行（原因前缀即守卫名），后台卡按原因计数并与慢路提案对账。
+//!
 //! 开关 `DEVICE_GRAMMAR_MODE=off|observe|execute`（默认 observe：只记日志不执行；execute 走与 L1 完全相同的
 //! `start_device_command` 链路，lane 标 `L1g`）。回退 = 置 off，无需换装。
 
@@ -54,6 +58,8 @@ pub struct GrammarHit {
     pub domain: &'static str,
     /// 剥完语气词后的句子（进日志 / normalized_text）
     pub peeled: String,
+    /// 原话带请求式情态（能不能/可不可以/行不行）——D2.1 起先于否定判，进日志 modal= 观察
+    pub modal: bool,
 }
 
 impl GrammarHit {
@@ -77,15 +83,30 @@ pub fn judge(text: &str) -> Result<GrammarHit, String> {
     if n > MAX_LEN {
         return Err("too_long".into());
     }
+    // D2.1：请求式情态「能不能/可不可以/行不行」先于否定判——它们字面含「不能/不可以/不行」，
+    // 按否定拦会把最礼貌的请求推去慢路。判否定时先把这几个词抠掉。
+    let modal = has(&t, REQ_MODAL).is_some();
+    let t_neg = if modal {
+        strip_all(&t, REQ_MODAL)
+    } else {
+        t.clone()
+    };
     for (name, ws) in [
         ("chat_sense", CHAT_SENSE),
         ("third_party", THIRD),
+        ("time_future", TIME_FUTURE),
+        ("place", PLACE),
+        ("negation", NEG),
         ("narrative", NARR),
         ("discuss", DISCUSS),
         ("perception", PERCEPT),
-        ("negation", NEG),
     ] {
-        if let Some(w) = has(&t, ws) {
+        let hay = if name == "negation" {
+            t_neg.as_str()
+        } else {
+            t.as_str()
+        };
+        if let Some(w) = has(hay, ws) {
             // 感受词（看不清/听不清）与说清物理量的抱怨（太暗/太亮/刺眼）同句时，按物理量走
             if name == "perception" && has(&t, PHYSICAL_COMPLAINT).is_some() {
                 continue;
@@ -93,7 +114,7 @@ pub fn judge(text: &str) -> Result<GrammarHit, String> {
             return Err(format!("{name}:{w}"));
         }
     }
-    if neg_adj(&t) {
+    if neg_adj(&t_neg) {
         return Err("negation_adj".into());
     }
     if has_number(&t) {
@@ -101,6 +122,11 @@ pub fn judge(text: &str) -> Result<GrammarHit, String> {
     }
     if has(&t, DONE).is_some() {
         return Err("done_action".into());
+    }
+    // D2.1 体槽：原话就是「对象 + 一字状态 + 了」（灯关了 / 声音小了 / 画面远了）——陈述现状与命令同形，宁漏勿误。
+    // 「把灯关了」「灯太亮了」「灯关了吧」都不在此列（有 把 / 太 / 吧）。
+    if bare_state_le(text) {
+        return Err("statement_le".into());
     }
     if t.ends_with('的') {
         return Err("statement_de".into());
@@ -137,6 +163,7 @@ pub fn judge(text: &str) -> Result<GrammarHit, String> {
                 action: c.action,
                 domain: dom,
                 peeled: t,
+                modal,
             }),
             None => Err(format!("label_not_in_table:{label}")),
         },
@@ -186,8 +213,8 @@ const NARR: &[&str] = &[
 const DISCUSS: &[&str] = &[
     "如果", "要是", "假如", "万一", "但是", "不过", "可是", "因为", "所以", "或者", "还是", "到底",
     "同时", "效果", "米数", "数值", "参数", "也", "用", "说", "你看", "看看", "挺", "比较", "怕",
-    "它", "这样", "那样", "一种", "会", "应该", "可能", "好像", "感觉", "觉得", "其实", "反正",
-    "而且",
+    "的话", "它", "这样", "那样", "一种", "会", "应该", "可能", "好像", "感觉", "觉得", "其实",
+    "反正", "而且",
 ];
 const PERCEPT: &[&str] = &[
     "听不到",
@@ -291,17 +318,107 @@ const CHAT_SENSE: &[&str] = &[
     "月亮",
     "星星",
     "天气",
-    "外面",
-    "屋里",
-    "房间",
-    "教室",
-    "学校",
     "画面感",
     "音量键",
     "声音像",
     "声音好",
     "声音真",
     "声音很",
+];
+/// D2.1 时间槽（未来/延迟）：说了「稍后」的请求不由本层立刻执行，推给慢路由大模型定。「现在/马上」不在此列。
+const TIME_FUTURE: &[&str] = &[
+    "明天",
+    "明早",
+    "明晚",
+    "后天",
+    "今晚",
+    "晚上",
+    "早上",
+    "早晨",
+    "中午",
+    "下午",
+    "傍晚",
+    "半夜",
+    "晚点",
+    "稍后",
+    "待会",
+    "等会",
+    "等下",
+    "等一下",
+    "一会",
+    "过会",
+    "回头",
+    "以后",
+    "之后",
+    "睡觉前",
+    "睡前",
+    "放学",
+    "周末",
+    "下次",
+    "下回",
+    "到时候",
+    "到时",
+    "再说",
+];
+/// D2.1 地点槽：别的房间/场所的灯和声音，不是桌上这台。原 CHAT_SENSE 里的 外面/屋里/房间/教室/学校 迁至此（原因标签更准，行为不变）。
+const PLACE: &[&str] = &[
+    "客厅",
+    "卧室",
+    "厨房",
+    "书房",
+    "餐厅",
+    "卫生间",
+    "洗手间",
+    "厕所",
+    "浴室",
+    "阳台",
+    "楼上",
+    "楼下",
+    "楼道",
+    "门口",
+    "走廊",
+    "过道",
+    "院子",
+    "车里",
+    "车上",
+    "隔壁",
+    "大厅",
+    "玄关",
+    "地下室",
+    "办公室",
+    "商场",
+    "医院",
+    "外面",
+    "屋里",
+    "房间",
+    "教室",
+    "学校",
+];
+/// D2.1 请求式情态：字面含「不能/不可以/不行」但是请求，先于否定判。
+const REQ_MODAL: &[&str] = &["能不能", "可不可以", "能否", "可否", "行不行"];
+/// D2.1 裸陈述「对象 + 一字状态 + 了」的对象与状态字。
+const STATE_OBJ: &[&str] = &[
+    "灯",
+    "台灯",
+    "灯光",
+    "光",
+    "亮度",
+    "声音",
+    "音量",
+    "声",
+    "画面",
+    "虚像",
+    "显示",
+    "距离",
+    "台子",
+    "高度",
+    "读写台",
+    "暖光",
+    "冷光",
+    "色温",
+];
+const STATE_TAIL: &[char] = &[
+    '开', '关', '亮', '暗', '大', '小', '高', '低', '远', '近', '响', '灭',
 ];
 const SELF_REQ: &[&str] = &[
     "我要",
@@ -402,6 +519,31 @@ const VERB_DIST: &[&str] = &[
 // ---------------- 小工具（无 regex 依赖，按字符位置判邻接）----------------
 fn has<'a>(t: &str, ws: &[&'a str]) -> Option<&'a str> {
     ws.iter().copied().find(|w| t.contains(w))
+}
+
+fn strip_all(t: &str, ws: &[&str]) -> String {
+    let mut s = t.to_string();
+    for w in ws {
+        s = s.replace(w, "");
+    }
+    s
+}
+
+/// 原话（未剥语气词）整句就是「对象 + 一字状态 + 了」。
+fn bare_state_le(orig: &str) -> bool {
+    let s = orig.trim();
+    let Some(body) = s.strip_suffix('了') else {
+        return false;
+    };
+    let mut cs: Vec<char> = body.chars().collect();
+    let Some(last) = cs.pop() else {
+        return false;
+    };
+    if !STATE_TAIL.contains(&last) || cs.is_empty() {
+        return false;
+    }
+    let obj: String = cs.into_iter().collect();
+    STATE_OBJ.iter().any(|o| *o == obj)
 }
 
 fn any(t: &str, ws: &[&str]) -> bool {
@@ -1051,10 +1193,98 @@ mod tests {
     #[test]
     fn never_panics_on_random_input() {
         let vocab: Vec<&str> = [
-            "灯", "光", "亮", "暗", "一点", "最", "太", "把", "吧", "了", "的", "是", "有", "我", "你", "他", "不", "要", "关", "开", "调", "声音", "音量",
-            "大", "小", "读写台", "画面", "虚像", "远", "近", "高", "低", "暖", "冷", "色温", "模式", "静音", "吗", "呢", "为什么", "如果", "刚才",
-            "点亮", "亮点", "百分之", "百", "5", "米", "一", "二", "三", "档", "空调", "灯会", "听不清", "看不清", "太吵", "，", "。", "！", "？", " ", "",
-            "哦", "嗯", "啊", "小可", "帮我", "可以", "升高", "降低", "拉远", "拉近", "阅读", "绘画", "常规", "中性", "熄", "灭", "着", "又", "还是",
+            "灯",
+            "光",
+            "亮",
+            "暗",
+            "一点",
+            "最",
+            "太",
+            "把",
+            "吧",
+            "了",
+            "的",
+            "是",
+            "有",
+            "我",
+            "你",
+            "他",
+            "不",
+            "要",
+            "关",
+            "开",
+            "调",
+            "声音",
+            "音量",
+            "大",
+            "小",
+            "读写台",
+            "画面",
+            "虚像",
+            "远",
+            "近",
+            "高",
+            "低",
+            "暖",
+            "冷",
+            "色温",
+            "模式",
+            "静音",
+            "吗",
+            "呢",
+            "为什么",
+            "如果",
+            "刚才",
+            "点亮",
+            "亮点",
+            "百分之",
+            "百",
+            "5",
+            "米",
+            "一",
+            "二",
+            "三",
+            "档",
+            "空调",
+            "灯会",
+            "听不清",
+            "看不清",
+            "太吵",
+            "，",
+            "。",
+            "！",
+            "？",
+            " ",
+            "",
+            "哦",
+            "嗯",
+            "啊",
+            "小可",
+            "帮我",
+            "可以",
+            "升高",
+            "降低",
+            "拉远",
+            "拉近",
+            "阅读",
+            "绘画",
+            "常规",
+            "中性",
+            "熄",
+            "灭",
+            "着",
+            "又",
+            "还是",
+            "能不能",
+            "行不行",
+            "晚上",
+            "等一下",
+            "客厅",
+            "房间",
+            "的话",
+            "了",
+            "关了",
+            "小了",
         ]
         .to_vec();
         let mut x: u64 = 0x9E37_79B9_7F4A_7C15;
@@ -1066,12 +1296,32 @@ mod tests {
         };
         for _ in 0..20_000 {
             let n = (next() % 9) as usize;
-            let s: String = (0..n).map(|_| vocab[(next() as usize) % vocab.len()]).collect();
+            let s: String = (0..n)
+                .map(|_| vocab[(next() as usize) % vocab.len()])
+                .collect();
             let _ = judge(&s);
             let _ = grammar_match(&s).map(|h| h.command());
         }
         // 边界串
-        for s in ["", " ", "。", "灯", "光光光光光光光光光光光光光光光", "点亮", "一点亮度", "有", "是", "我", "不", "太", "最", "百分之", "百分之百", "5米", "五米"] {
+        for s in [
+            "",
+            " ",
+            "。",
+            "灯",
+            "光光光光光光光光光光光光光光光",
+            "点亮",
+            "一点亮度",
+            "有",
+            "是",
+            "我",
+            "不",
+            "太",
+            "最",
+            "百分之",
+            "百分之百",
+            "5米",
+            "五米",
+        ] {
             let _ = judge(s);
         }
     }
@@ -1087,5 +1337,48 @@ mod tests {
         assert_eq!(Mode::Execute.as_str(), "execute");
     }
 
+    /// D2.1 万能语法 20 槽体检矩阵：否决槽 × 六域各至少一条负例，原因归属必须落在指定守卫上；情态请求各域放行。
+    #[test]
+    fn e8_slot_matrix_by_domain() {
+        let mut bad = vec![];
+        let mut cover: std::collections::BTreeMap<&str, std::collections::BTreeSet<&str>> =
+            Default::default();
+        for (slot, dom, t, want) in SLOT_NEGATIVES {
+            cover.entry(slot).or_default().insert(dom);
+            match judge(t) {
+                Ok(h) => bad.push(format!("「{t}」({slot}/{dom}) 误认 {}", h.label)),
+                Err(r) if !want.is_empty() && !r.starts_with(*want) => {
+                    bad.push(format!("「{t}」({slot}/{dom}) 原因 {r} 应为 {want}*"))
+                }
+                Err(_) => {}
+            }
+        }
+        assert!(bad.is_empty(), "{bad:#?}");
+        for (slot, doms) in &cover {
+            assert_eq!(doms.len(), 6, "槽 {slot} 未覆盖六域: {doms:?}");
+        }
+        for (t, want_action) in SLOT_MODAL_POSITIVES {
+            let h = grammar_match(t)
+                .unwrap_or_else(|| panic!("「{t}」应放行，得 {}", judge(t).unwrap_err()));
+            assert_eq!(h.action, *want_action, "「{t}」动作不符");
+            assert!(h.modal, "「{t}」应标 modal");
+        }
+        assert!(!grammar_match("把灯弄亮一点吧").unwrap().modal);
+        assert!(judge("能不能不要关灯").is_err(), "情态请求里的真否定仍要拦");
+    }
+
+    /// D2.1 34 句探针（10:47 评估报告那张表）逐句钉死：新否决槽的归属、情态放行、陈述歧义。
+    #[test]
+    fn e9_slot_probe_34() {
+        for (t, want) in PROBE_34 {
+            match (judge(t), want) {
+                (Ok(h), Ok(l)) => assert_eq!(h.label, *l, "「{t}」标签"),
+                (Err(r), Err(p)) => assert!(r.starts_with(*p), "「{t}」原因 {r} 应为 {p}*"),
+                (g, w) => panic!("「{t}」得 {g:?} 期望 {w:?}"),
+            }
+        }
+    }
+
     include!("device_grammar_testdata.rs");
+    include!("device_grammar_slot_matrix.rs");
 }

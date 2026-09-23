@@ -3221,11 +3221,11 @@ impl Orchestrator {
                 let (matched, lane): (Option<crate::device_intent::DeviceMatch>, &'static str) =
                     match crate::device_intent::match_command(&user_text) {
                         Some(m) => (Some(m), "L1"),
-                        None => match crate::device_grammar::grammar_match(&user_text) {
-                            Some(hit) => {
+                        None => match crate::device_grammar::judge(&user_text) {
+                            Ok(hit) => {
                                 let mode = crate::device_grammar::mode();
                                 info!(room = %self.room_name, label = hit.label, action = %hit.action, domain = hit.domain,
-                                      mode = mode.as_str(), text_len = user_text.chars().count(),
+                                      mode = mode.as_str(), modal = hit.modal, text_len = user_text.chars().count(),
                                       "device grammar hit: '{user_text}' → '{}'", hit.peeled);
                                 if mode == crate::device_grammar::Mode::Execute {
                                     (hit.command().map(crate::device_intent::DeviceMatch::Command), "L1g")
@@ -3233,7 +3233,16 @@ impl Orchestrator {
                                     (None, "L1")
                                 }
                             }
-                            None => (None, "L1"),
+                            Err(reason) => {
+                                // D2.1 观察(2026-09-23 川哥「通过日志而不是通过大模型观察」):带设备词却被语法层否决的句子记一行;
+                                // 原因前缀 time_future / place / statement_le 是 20 槽体检新增的三道否决,后台卡按原因计数,
+                                // 并与 60 s 内同房同句的慢路提案对账(否决了但大模型开火 = 分歧,人工看)。
+                                if reason != "empty" && crate::device_intent::l2_device_text(&user_text) {
+                                    info!(room = %self.room_name, reason = %reason, mode = crate::device_grammar::mode().as_str(),
+                                          text_len = user_text.chars().count(), "device grammar veto: '{user_text}'");
+                                }
+                                (None, "L1")
+                            }
                         },
                     };
                 match matched {

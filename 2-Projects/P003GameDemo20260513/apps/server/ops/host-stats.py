@@ -446,7 +446,7 @@ def sidecars_block(services: list[dict]) -> list[dict]:
 
 # ── 语音控设备 24h（D1 W4，2026-09-22）：提案/结果/慢路/承接音/误触发嫌疑，只读 journal 锚（worker 日志原话，不猜）──
 DEVICE_CMD_WINDOW = "-24h"
-DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device|device grammar hit|received job request, accepting"
+DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device|device grammar hit|device grammar veto|received job request, accepting"
 ACCEPT_ROOM_RE = re.compile(r"accepting job_id=\S+ room=(sn-[A-Za-z0-9]+-\d+)")
 # 「误触发嫌疑」= 慢路(LLM)提案而原话不含任何设备词根(方案 v1.1 §W4);裸「高/低/远/近」太泛不算根,组合词才算
 DEVICE_ROOTS = (
@@ -457,6 +457,8 @@ DEVICE_ROOTS = (
 KV_RE = re.compile(r"(\w+)=(\"[^\"]*\"|'[^']*'|\S+)")
 PROPOSED_TEXT_RE = re.compile(r"device command proposed: '([^']*)'")
 GRAMMAR_TEXT_RE = re.compile(r"device grammar hit: '([^']*)'")  # D2 语法层（observe 只记这行；execute 另有 lane=L1g 提案）
+VETO_TEXT_RE = re.compile(r"device grammar veto: '([^']*)'")  # D2.1 带设备词却被语法层否决（reason=守卫名[:词]）
+VETO_NEW_REASONS = ("time_future", "place", "statement_le")  # D2.1 万能语法 20 槽体检新增的三道否决
 
 
 def _kv(s: str) -> dict:
@@ -494,6 +496,7 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
         observed = executed = hints = filler_dev = 0
         suppressed: collections.Counter = collections.Counter()
         grammar: list[dict] = []  # D2 语法层命中（observe/execute 都记）
+        vetoes: list[dict] = []  # D2.1 语法层否决（只记带设备词的句子）
         sessions: collections.Counter = collections.Counter()  # 24h 设备房数（按 SN 末 8 位）——没发过命令的设备也要在表里
         for t, raw in rows:
             line = ANSI_RE.sub("", raw)
@@ -526,6 +529,12 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
                 g["t"] = t
                 g["text"] = m.group(1) if m else ""
                 grammar.append(g)
+            elif "device grammar veto" in line:
+                v = _kv(line.split("device grammar veto", 1)[1])
+                m = VETO_TEXT_RE.search(line)
+                v["t"] = t
+                v["text"] = m.group(1) if m else ""
+                vetoes.append(v)
             elif "filler picked" in line and "bucket=device" in line:
                 filler_dev += 1
         # 提案↔结果配对：同房同标签、提案后 30 s 内；首个非 accepted 为终态
@@ -571,12 +580,30 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
                 _lane_of(p) == "L2" and p.get("room") == g.get("room") and p["text"] == g["text"] and g["t"] <= p["t"] <= g["t"] + 60
                 for p in props
             )
+        # D2.1 否决对账：同房同原话 60 s 内出现慢路(L2)提案 = 语法否决了但大模型开火（分歧，人工看）
+        for v in vetoes:
+            v["reason_key"] = (v.get("reason") or "?").split(":", 1)[0]
+            v["llm_fired"] = any(
+                _lane_of(p) == "L2" and p.get("room") == v.get("room") and p["text"] == v["text"] and v["t"] <= p["t"] <= v["t"] + 60
+                for p in props
+            )
+        v_reason = collections.Counter(v["reason_key"] for v in vetoes)
         g_mode = collections.Counter((g.get("mode") or "?") for g in grammar)
         g_dom = collections.Counter((g.get("domain") or "?") for g in grammar)
         grammar_block = {
             "hits": len(grammar), "by_mode": dict(g_mode), "by_domain": dict(g_dom),
             "llm_agree": sum(1 for g in grammar if g["llm_agree"]),
             "llm_missed": sum(1 for g in grammar if not g["llm_agree"]),
+            "modal_hits": sum(1 for g in grammar if (g.get("modal") or "") == "true"),
+            "vetoes": len(vetoes),
+            "veto_by_reason": dict(v_reason),
+            "veto_new": {k: v_reason.get(k, 0) for k in VETO_NEW_REASONS},
+            "veto_llm_fired": sum(1 for v in vetoes if v["llm_fired"]),
+            "veto_recent": [
+                {"ts_ms": int(v["t"] * 1000), "sn": _sn_tail(v.get("room", "")), "text": v["text"][:40],
+                 "reason": v.get("reason"), "llm_fired": v["llm_fired"]}
+                for v in sorted(vetoes, key=lambda x: -x["t"])[:8]
+            ],
             "recent": [
                 {"ts_ms": int(g["t"] * 1000), "sn": _sn_tail(g.get("room", "")), "text": g["text"][:40], "label": to_int(g.get("label")),
                  "domain": g.get("domain"), "mode": g.get("mode"), "llm_agree": g["llm_agree"]}
