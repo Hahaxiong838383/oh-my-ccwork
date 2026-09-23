@@ -8,6 +8,7 @@ mod contract;
 mod candidate;
 mod say_defer;
 mod control;
+mod device_grammar;
 mod device_intent;
 mod device_ledger;
 mod eot;

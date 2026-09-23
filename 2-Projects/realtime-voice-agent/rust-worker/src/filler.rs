@@ -54,7 +54,7 @@ const DEVICE_ADJUST_HINTS: &[&str] = &[
     "调", "开", "关", "亮", "暗", "大", "小", "高", "低", "远", "近", "暖", "冷", "模式", "一点", "一些", "太", "最", "变",
 ];
 
-fn is_device_text(t: &str) -> bool {
+pub(crate) fn is_device_text(t: &str) -> bool {
     let has = |hints: &[&str]| hints.iter().any(|h| t.contains(h));
     has(DEVICE_STRONG_HINTS) || (has(DEVICE_OBJECT_HINTS) && has(DEVICE_ADJUST_HINTS))
 }

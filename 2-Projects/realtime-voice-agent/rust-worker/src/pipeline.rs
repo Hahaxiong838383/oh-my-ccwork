@@ -2049,8 +2049,11 @@ impl Orchestrator {
         }
         let fast_path_pending = self.pending_cmd.is_some();
         let has_trace = self.device_trace.is_some();
+        // D2 B5(2026-09-23):原话无设备词 → 暗号作废(env L2_REQUIRE_DEVICE_TEXT=0 可回退)
+        let device_text = !crate::device_intent::l2_require_device_text()
+            || crate::device_intent::l2_device_text(user_text);
         if let Err(reason) = crate::device_intent::l2_gate(
-            self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace,
+            self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace, device_text,
         ) {
             info!(room = %self.room_name, label, reason, "llm device intent suppressed");
             // 2026-09-04(川哥拍板):被压制的标签 LLM 回复常已自称「调好了」(003「画面调到5米」实证)
@@ -3009,6 +3012,7 @@ impl Orchestrator {
                     if control_outlet.is_none()
                         && speech_end_ms <= deadline
                         && crate::device_intent::match_command(&user_text).is_none()
+                        && crate::device_grammar::executable(&user_text).is_none()
                         && !crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text)
                         && crate::textproc::session_exit_tail_hit(&user_text).is_none()
                     {
@@ -3212,7 +3216,27 @@ impl Orchestrator {
             // 确定性匹配命中 → 发 proposed、零 UserTurnCommitted、零 filler、零 LLM,
             // 等 Android result 播固定短句。范围外音量 → 固定提示,零事件零执行。
             if self.device_commands_on {
-                match crate::device_intent::match_command(&user_text) {
+                // D2 语法层 L1g(2026-09-23,川哥拍板):词表精确未中 → 语法判(device_grammar,对象+方向+程度,只认结构);
+                // DEVICE_GRAMMAR_MODE=observe 只记日志(默认,观察 3~5 天),execute 与 L1 完全同链路,lane 标 L1g。
+                let (matched, lane): (Option<crate::device_intent::DeviceMatch>, &'static str) =
+                    match crate::device_intent::match_command(&user_text) {
+                        Some(m) => (Some(m), "L1"),
+                        None => match crate::device_grammar::grammar_match(&user_text) {
+                            Some(hit) => {
+                                let mode = crate::device_grammar::mode();
+                                info!(room = %self.room_name, label = hit.label, action = %hit.action, domain = hit.domain,
+                                      mode = mode.as_str(), text_len = user_text.chars().count(),
+                                      "device grammar hit: '{user_text}' → '{}'", hit.peeled);
+                                if mode == crate::device_grammar::Mode::Execute {
+                                    (hit.command().map(crate::device_intent::DeviceMatch::Command), "L1g")
+                                } else {
+                                    (None, "L1")
+                                }
+                            }
+                            None => (None, "L1"),
+                        },
+                    };
+                match matched {
                     Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
                         // v3.1 账本(R1/R3):同句裁决按语音段归属,不按时间窗;claimed/ignored/unknown 所有权在此生效;
                         // deferred 电机被同句 ASR 独立确认时,候选 ID 原样回传
@@ -3250,7 +3274,7 @@ impl Orchestrator {
                         if let Some(sp) = self.spec.take() {
                             sp.task.abort();
                         }
-                        self.start_device_command(cmd, &user_text, "L1", candidate, "asr", utterance);
+                        self.start_device_command(cmd, &user_text, lane, candidate, "asr", utterance);
                         self.latest_interim.clear();
                         self.tele_text.clear();
                         return;

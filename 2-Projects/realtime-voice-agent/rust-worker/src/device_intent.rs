@@ -321,9 +321,14 @@ pub fn l2_gate(
     label: u32,
     fast_path_pending: bool,
     has_trace: bool,
+    device_text: bool,
 ) -> Result<(), &'static str> {
     if !execute_on {
         return Err("execute_off");
+    }
+    // D2 B5(2026-09-23):原话里一个设备词都没有 → 大模型写了暗号也当没写(历史 3 次误触发全属此类)
+    if !device_text {
+        return Err("no_device_text");
     }
     if !capable {
         return Err("android_capability_missing");
@@ -394,6 +399,61 @@ pub fn match_command(text: &str) -> Option<DeviceMatch> {
         }
     }
     lookup(&s)
+}
+
+/// D2 B5(2026-09-23,川哥拍板):慢路「无设备词不认暗号」——判据复用承接音选桶的 `filler::is_device_text`
+/// (强提示词 ∪ 对象词∧调节词),门专用只加 刺眼/晃眼(方向不歧义的灯光抱怨);明确不收 吵/听不清/安静/响/看不清
+/// (09-23 决定:感受类抱怨不进设备命令,走别的处理)。
+const L2_GATE_EXTRA_HINTS: &[&str] = &["刺眼", "晃眼"];
+pub fn l2_device_text(text: &str) -> bool {
+    crate::filler::is_device_text(text) || L2_GATE_EXTRA_HINTS.iter().any(|h| text.contains(h))
+}
+
+/// env `L2_REQUIRE_DEVICE_TEXT`(默认开;=0 关=回退到 D1 行为,无需换装)。
+pub fn l2_require_device_text() -> bool {
+    std::env::var("L2_REQUIRE_DEVICE_TEXT").map(|v| v.trim() != "0").unwrap_or(true)
+}
+
+/// 语法层用:与 `match_command` 同构地剥礼貌/语气词(每轮先查表,命中即停——停点与精确匹配一致),返回最终串。
+pub fn peel_polite(text: &str) -> String {
+    let mut s = normalize(text);
+    if s.is_empty() {
+        return s;
+    }
+    for _ in 0..4 {
+        if lookup(&s).is_some() {
+            return s;
+        }
+        let mut peeled = false;
+        for p in POLITE_PREFIX {
+            if let Some(rest) = s.strip_prefix(p)
+                && !rest.is_empty()
+            {
+                s = rest.to_string();
+                peeled = true;
+                break;
+            }
+        }
+        for suf in POLITE_SUFFIX {
+            if let Some(rest) = s.strip_suffix(suf)
+                && !rest.is_empty()
+            {
+                s = rest.to_string();
+                peeled = true;
+                break;
+            }
+        }
+        if !peeled {
+            return s;
+        }
+    }
+    s
+}
+
+/// 测试用:词表全部(归一化别名, label)。
+#[cfg(test)]
+pub(crate) fn alias_entries() -> Vec<(String, u32)> {
+    table().map.iter().map(|(k, (l, _, _))| (k.clone(), *l)).collect()
 }
 
 /// label 反查目录(command_word 链路,PRE_INPUT_READY_COMMAND_WORD_HANDOFF §4.2):
@@ -870,20 +930,40 @@ mod tests {
         }
     }
 
+
+    /// D2 B5(2026-09-23):慢路门的设备词判据——三句真误触发无设备词,13 条慢路句+用例正例全含;
+    /// 感受类抱怨(太吵/听不清/看不清/安静)按决定不算设备词;刺眼/晃眼 门专用补入。
+    #[test]
+    fn l2_device_text_gate_d2() {
+        for t in ["嗯", "比较低够劲", "这个呢这本身没啥这个那我们这个产品是是别人代工的", "太吵了", "听不清", "看不清", "安静点", "别说了", "闭嘴", "太啰嗦"] {
+            assert!(!l2_device_text(t), "「{t}」不得算设备词");
+        }
+        for t in [
+            "把灯弄亮一点吧", "太暗了看不清", "把灯开到最亮", "把灯调暗一点", "太亮了", "灯太刺眼了关掉吧", "画面调到最远", "画面拉远一点",
+            "画面离我太远了拉近点", "读写台升高一点", "读写台太低了", "先静音一下", "把声音打开吧", "声音再大一点", "太刺眼了", "有点晃眼",
+        ] {
+            assert!(l2_device_text(t), "「{t}」应算设备词");
+        }
+        assert_eq!(l2_fallback_hint("no_device_text", 37, false, true), None, "无设备词压制不给纠正句");
+    }
+
     #[test]
     fn l2_gate_order_and_reasons() {
-        assert_eq!(l2_gate(false, true, 6, false, true), Err("execute_off"));
-        assert_eq!(l2_gate(true, false, 6, false, true), Err("android_capability_missing"));
-        assert_eq!(l2_gate(true, true, 999, false, true), Err("unknown_label"));
-        assert_eq!(l2_gate(true, true, 46, false, true), Err("unknown_label"), "46 永不在表");
-        assert_eq!(l2_gate(true, true, 60, false, true), Err("unknown_label"), "音量绝对值段不在表");
-        assert_eq!(l2_gate(true, true, 6, true, true), Err("fast_path_hit"));
-        assert_eq!(l2_gate(true, true, 6, false, false), Err("no_trace"));
-        assert_eq!(l2_gate(true, true, 6, false, true), Ok(()), "全门通过");
-        assert_eq!(l2_gate(true, true, 24, false, true), Ok(()), "中性光");
+        assert_eq!(l2_gate(false, true, 6, false, true, true), Err("execute_off"));
+        // D2 B5:无设备词排在能力门之前(与 execute_off 一样是"根本不该看暗号")
+        assert_eq!(l2_gate(true, false, 6, false, true, false), Err("no_device_text"));
+        assert_eq!(l2_gate(true, true, 6, false, true, false), Err("no_device_text"));
+        assert_eq!(l2_gate(true, false, 6, false, true, true), Err("android_capability_missing"));
+        assert_eq!(l2_gate(true, true, 999, false, true, true), Err("unknown_label"));
+        assert_eq!(l2_gate(true, true, 46, false, true, true), Err("unknown_label"), "46 永不在表");
+        assert_eq!(l2_gate(true, true, 60, false, true, true), Err("unknown_label"), "音量绝对值段不在表");
+        assert_eq!(l2_gate(true, true, 6, true, true, true), Err("fast_path_hit"));
+        assert_eq!(l2_gate(true, true, 6, false, false, true), Err("no_trace"));
+        assert_eq!(l2_gate(true, true, 6, false, true, true), Ok(()), "全门通过");
+        assert_eq!(l2_gate(true, true, 24, false, true, true), Ok(()), "中性光");
         // D1:原第二批标签全部放行(关灯 3 / 最暗 7 / 音量最大 42 / 电机 25 / 虚像最远 35 / 静音 44)
         for l in [3, 7, 42, 25, 35, 44, 33] {
-            assert_eq!(l2_gate(true, true, l, false, true), Ok(()), "{l} D1 起放行");
+            assert_eq!(l2_gate(true, true, l, false, true, true), Ok(()), "{l} D1 起放行");
         }
     }
 
