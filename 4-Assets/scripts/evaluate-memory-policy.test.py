@@ -106,5 +106,11 @@ print('═══ 台账只增不改 ═══')
 b2 = json.load(open(os.path.join(T, 'births.json')))
 chk('没见过的文件入账、已有的不被 mtime 改写', 'MEMORY.md' not in b2 and b2['feedback_n_edited_old.md'] == births['feedback_n_edited_old.md'])
 
+print('═══ 提醒覆盖归类 ═══')
+chk('acceptance_numbers → A', ev.cover_group('feedback_acceptance_numbers_need_causal_link.md') == 'A')
+chk('D 组已回滚：criteria_must_match_object_variant → 未覆盖', ev.cover_group('feedback_criteria_must_match_object_variant.md') is None)
+chk('truncated_output → C', ev.cover_group('feedback_truncated_output_negative_conclusion.md') == 'C')
+chk('未覆盖的教训 → None', ev.cover_group('feedback_old1.md') is None)
+
 print(f'\n═══ 结果：{PASS} 通过 / {FAIL} 失败 ═══')
 sys.exit(1 if FAIL else 0)

@@ -174,6 +174,24 @@ def resolve(wiki, by_name):
 
 TRJ_AIR = os.environ.get('EVAL_TRJ_AIR', os.path.join(HOME, '.mycc-global/0-System/trajectories-air'))   # 每日 12:30 从 Air 拉回（pull-air-replay.sh）
 
+# ── lesson-nudge 各组对准的教训（按提醒文案归类，属推断；改提醒文案时同步改这里）──
+# 用途：日报第 2b 节按周比「被提醒覆盖的教训」与「没覆盖的教训」的复发——提醒有效应表现为前者相对后者下降。
+NUDGE_LIVE = datetime.datetime(2026, 9, 23)
+NUDGE_COVER = {
+    'A': ['acceptance_numbers_need_causal_link', 'verification_path_vs_production_path', 'probe_not_on_the_production_path',
+          'absence_of_symptom_is_not_proof_of_fix', 'benefit_claim_needs_live_path_check', 'silent_non_events',
+          'negative_result_needs_signal_capable_channel'],
+    'B/M': ['asserted_the_side_i_cannot_see'],
+    'C': ['truncated_output_negative_conclusion'],
+}
+# 2026-09-23 试过 D 组（数数/curl/读配置时泛泛三问）后回滚：触发面宽、最吵、无证据。
+# 同日自然实验：no-guessing-guard 的窄守门（grep|head 截断、unit 名/端口）上线后，它盯的那种写法 7 周 0 复发，
+# 复发全转移到它没盯的变体（cut -c、按主键过滤、git remote|head…）——有效的是「窄而具体」，不是「宽而泛」。
+_COVER = {f'feedback_{x}.md': g for g, xs in NUDGE_COVER.items() for x in xs}
+
+def cover_group(f):
+    return _COVER.get(f)
+
 # ── 严口径 ──
 STRONG = re.compile(r'同族|同类|同一个坑|同一类|又一次|再次|又踩|第[二三四五六七八九十0-9]+[次例]|变体|同形|同根|复发|老毛病|重犯|同款')
 STRONG_NEG = re.compile(r'反向|方向相反|相反|区别|不同于|别合并')   # 「反向同族」「这条讲 A 那条讲 B（别合并）」明说不是同一个坑
@@ -402,6 +420,34 @@ def main():
     for w in sorted(rows_w):
         a, b_, c, d, e = rows_w[w]
         W(f"| {w:%Y-%m-%d} | {a} | {b_} | {c} | **{b_ + c}** | {d} | {e} |")
+
+    W("\n## 2b. 提醒覆盖 vs 未覆盖（严口径，双重差分）—— 提醒有效 = 覆盖的那几列相对「未覆盖」下降\n")
+    W(f"A/B·M/C 各组对准的教训见脚本 NUDGE_COVER（按提醒文案归类，属推断）。{NUDGE_LIVE:%Y-%m-%d} 起 A/B/C/M 全部在线；"
+      "周总数随活动量大起大落，所以只看比例：「覆盖 ÷ 未覆盖」在上线后若不降，提醒无效。\n")
+    W("| 周（周一起） | A | B·M | C | 未覆盖 | 覆盖÷未覆盖 |")
+    W("|---|---:|---:|---:|---:|---:|")
+    evd = [(datetime.date.fromtimestamp(dates[(p[0], p[1])]), cover_group(p[0]) or '未覆盖') for p in strict] + \
+          [(datetime.date.fromisoformat(day), cover_group(f) or '未覆盖') for f, day, h, rsec in selfs]
+    cw = collections.defaultdict(collections.Counter)
+    for d, g in evd:
+        cw[monday(d)][g] += 1
+    for w in sorted(cw):
+        c = cw[w]; cov = sum(v for k, v in c.items() if k != '未覆盖')
+        mark = ' ⬅ 提醒上线' if w == monday(NUDGE_LIVE.date()) else ''
+        W(f"| {w:%Y-%m-%d}{mark} | {c['A']} | {c['B/M']} | {c['C']} | {c['未覆盖']} | "
+          f"{(cov / c['未覆盖']) if c['未覆盖'] else float('nan'):.2f} |")
+    live = NUDGE_LIVE.date()
+    for name, sel in ((f'**上线前合计**（< {live:%m-%d}）', lambda d: d < live), (f'**上线后合计**（≥ {live:%m-%d}）', lambda d: d >= live)):
+        c = collections.Counter(g for d, g in evd if sel(d)); cov = sum(v for k, v in c.items() if k != '未覆盖')
+        W(f"| {name} | {c['A']} | {c['B/M']} | {c['C']} | {c['未覆盖']} | "
+          f"{(cov / c['未覆盖']) if c['未覆盖'] else float('nan'):.2f} |")
+    today = datetime.date.today()
+    recent = sum(1 for d, g in evd if g == '未覆盖' and (today - d).days < 28) / 4
+    post_un = sum(1 for d, g in evd if g == '未覆盖' and d >= live)
+    need = max(0, 30 - post_un)
+    W(f"\n单周比值波动极大（事件太少），只看两行合计。上线后「未覆盖」攒到 30 次再下结论（现 {post_un}）；"
+      f"按最近 4 周的速率（每周 {recent:.1f} 次）还需约 {need / recent:.0f} 周。" if recent else
+      f"\n单周比值波动极大，只看两行合计。最近 4 周没有未覆盖的复发，攒不出对照，暂时判不了。")
 
     W("\n## 3. 严口径「常驻 & 仍踩」排名\n")
     W("| 旧教训（常驻区） | 严 | 宽 | 复发它的新记忆 / 自身追加（最多 3 条） | 检索维 |")
