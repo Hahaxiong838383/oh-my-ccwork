@@ -252,3 +252,4 @@ demo 池 + Javis 同事 demo 池 + voice-console/caddy 一起搬到新机。多�
 **B. 川哥拍板**
 7. 老机去留（~10/16 到期）：老机上仍跑 caddy、voice-console、`voice-worker-colleague`（租户 python 线，7 天 0 房）、`voice-worker-demo`（7 天 2 房）——要么随机器退役、要么迁新机（8 G 可容）或别处；定了 cc 出方案。
 8. 新机安全：改 root 密码 + 关密码登录（sshd 改动分类器拦 cc，需你跑一条命令）；RTF 里的旧密码作废。老机上 aliyun-hk 的两把 forced-command key 随退役消失，新机已配。
+- 2026-09-23 09:58 CST 阶段 3 第 2 项「代码去写死老机」随语音控设备 D2 A 组上线（服务端 8f0951722：hotword-channel 默认 TARGET / hosts-status 默认目标与标签 → hk2，vi-collide / build-local 提示语 / rollback-b8 注 / b104 单池版）；env 已设故线上行为不变。其余项等 13:48（老热备 24h 零房到点）。
