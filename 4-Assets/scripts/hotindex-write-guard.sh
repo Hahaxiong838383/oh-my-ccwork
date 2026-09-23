@@ -12,8 +12,8 @@
 #       → 比对：没见过 → deny「先 Read」；mtime 变了 → deny「被并发改过，先重读」。
 # 覆盖边界：只管 cc（Claude Code hook；grok 会兼容加载但 payload camelCase，已兼容；codex 不管）。
 # 失败策略：脚本自身出错必须放行，错误写 .err 文件（fail-open 但不静默）。
-# 覆盖边界（2026-09-18 实测）：Edit/Write 工具本身已有内置 CAS（「modified since read」），本守门补的是 Bash 直写；
-#   codeg 会话（--allow-dangerously-skip-permissions）里 deny 不生效，只剩 additionalContext 软提醒 + 每日快照兜底。
+# 覆盖边界（2026-09-18 实测）：Edit/Write 工具本身已有内置 CAS（「modified since read」），本守门补的是 Bash 直写。
+#   2026-09-23 更正：codeg 会话里 deny 能生效，之前失效是输出里多了顶层 decision:'deny'（见下方输出处注释）。
 set -uo pipefail
 payload="$(cat)"
 # 快速退出：payload 里没提到目标就不起 python
@@ -141,22 +141,17 @@ try:
     if not problems: sys.exit(0)
     reason = "共享索引写前 CAS 拦截（2026-09-18 起）：\n" + "\n".join("- " + p for p in problems) + \
              "\n规矩：MEMORY.md / INDEX-full.md 是多会话共享文件，改它只能「读→改→写」一气呵成，中间被人改了就重来。"
-    pm0 = str(d.get('permission_mode') or d.get('permissionMode') or '')
-    log('deny' if pm0 not in ('auto', 'bypassPermissions') else 'note', 'hotindex_stale' if any('被改过' in p for p in problems) else 'hotindex_unseen', tool)
-    # ⚠️ 2026-09-18 实测：codeg 用 --allow-dangerously-skip-permissions 拉起 claude，PreToolUse 的
-    # permissionDecision=deny 被整体跳过（no-guessing-guard 的四条硬红线同样如此：deny 记了账、命令照跑）。
-    # deny 仍输出（CLI 会话有效），同时输出 additionalContext——它在 codeg 会话里可见，至少让写入者当轮就知道自己冲了什么。
-    ctx = "🔴 " + reason + "\n（本提醒来自 hotindex-write-guard；若你看到这条而命令仍执行了，说明当前会话跳过了 hook 拒绝——立即用 .bak 或 topic『热索引沉淀』节核对有无冲掉别人的改动。）"
-    pm = str(d.get('permission_mode') or d.get('permissionMode') or '')
-    if pm in ('auto', 'bypassPermissions'):
-        # 实测（2026-09-18，codeg 会话 permission_mode=auto）：带 permissionDecision=deny 的输出被整体丢弃，
-        # 连同 additionalContext 一起——只发提醒，才能让写入者当轮看到。
-        print(json.dumps({'additionalContext': ctx,
-                          'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'additionalContext': ctx}}, ensure_ascii=False))
-    else:
-        print(json.dumps({'decision': 'deny', 'reason': reason, 'additionalContext': ctx,
-                          'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
-                                                 'permissionDecisionReason': reason, 'additionalContext': ctx}}, ensure_ascii=False))
+    log('deny', 'hotindex_stale' if any('被改过' in p for p in problems) else 'hotindex_unseen', tool)
+    # ⚠️ 只输出 hookSpecificOutput：claude 对顶层 decision 只认 approve/block，写成 'deny' 会抛错、整条输出
+    # （连 additionalContext）作废、写入照样发生。9-18 看到的「auto 下 deny 连提醒一起被丢」，推断就是这个顶层
+    # 字段造成的；2026-09-23 在 codeg(auto) 会话里探针实测：合法格式的 deny 拦得住，带顶层 decision 的照跑。
+    out = {'hookSpecificOutput': {'hookEventName': 'PreToolUse', 'permissionDecision': 'deny',
+                                  'permissionDecisionReason': reason}}
+    if 'toolInput' in d:   # grok（camelCase）认不认 deny 没验证过：额外带一份提醒兜底
+        ctx = "🔴 " + reason + "\n（若写入仍然发生了，说明本会话没认 hook 拒绝——立即用 .bak 或 topic『热索引沉淀』节核对有无冲掉别人的改动。）"
+        out['additionalContext'] = ctx
+        out['hookSpecificOutput']['additionalContext'] = ctx
+    print(json.dumps(out, ensure_ascii=False))
 except SystemExit: raise
 except Exception as e:
     err(repr(e))
