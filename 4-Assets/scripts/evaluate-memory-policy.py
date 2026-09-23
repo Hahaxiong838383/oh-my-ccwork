@@ -71,9 +71,11 @@ def resolve(wiki, by_name):
             return by_name[k]
     return None
 
+TRJ_AIR = os.path.join(HOME, '.mycc-global/0-System/trajectories-air')   # 每日 12:30 从 Air 拉回（pull-air-replay.sh）
+
 def load_traces():
     out = {}
-    for fp in glob.glob(os.path.join(TRJ, '*.jsonl')):
+    for fp in glob.glob(os.path.join(TRJ, '*.jsonl')) + glob.glob(os.path.join(TRJ_AIR, '*.jsonl')):
         lines = [json.loads(l) for l in open(fp)]
         if lines:
             out[lines[0]['sid8']] = lines[1:]

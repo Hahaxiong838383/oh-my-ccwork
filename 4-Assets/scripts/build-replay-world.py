@@ -263,7 +263,15 @@ def build_trace(fp, guard_idx, recall_idx, audit_idx):
     return meta, events
 
 # ── 5. 主流程 ───────────────────────────────────────────────────────
+def _args():
+    """--out DIR：输出目录（Air 上用 ~/.claude/replay-world/，不在任何 git 仓里——
+    Air 的 ~/.mycc-global 每天自动提交并推 GitHub，默认的 0-System/trajectories 会被带上去）。"""
+    global OUT_DIR
+    a = sys.argv
+    if '--out' in a: OUT_DIR = os.path.expanduser(a[a.index('--out') + 1])
+
 def main():
+    _args()
     os.makedirs(OUT_DIR, exist_ok=True)
     guard_idx = index_by_sid(load_jsonl(os.path.join(SYS_DIR, 'guard-log.jsonl')))
     recall_idx = index_by_sid(load_jsonl(os.path.join(SYS_DIR, 'recall-log.jsonl')))
