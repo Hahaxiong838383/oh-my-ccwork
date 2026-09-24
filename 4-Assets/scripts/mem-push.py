@@ -14,14 +14,14 @@
        Air 不可达    → pending 留着，下次再试
 不处理：MEMORY.md（开发机是派生版）、点文件、删除。文件名只接受 [A-Za-z0-9._-]+.md。
 用法：mem-push.py [--dry-run]    （systemd：mem-push.path 盯目录即触发；mem-push.timer 每 30 分钟兜底）
-留痕：~/.mycc-global/mem-push/log.jsonl（每次动作一行）；Air 端文件变更由 Air 同步第 2 步进 git。
+留痕：~/.local/state/mem-push/log.jsonl（每次动作一行）；Air 端文件变更由 Air 同步第 2 步进 git。
 """
 import os, re, sys, json, time, fcntl, hashlib, subprocess, datetime
 
 H = os.path.expanduser('~')
 CANON = os.environ.get('MEMPUSH_CANON', f'{H}/.claude/projects/-home-hahaxiong83-mycc/memory')
 MIRROR = os.environ.get('MEMPUSH_MIRROR', f'{H}/.mycc-global/air-mirror')
-STATE = os.environ.get('MEMPUSH_STATE', f'{H}/.mycc-global/mem-push')
+STATE = os.environ.get('MEMPUSH_STATE', f'{H}/.local/state/mem-push')   # 不放进任何 git 仓：pending 里存着记忆原文
 REMOTE = os.environ.get('MEMPUSH_REMOTE', 'ssh')        # 'ssh' 或 'local:/目录'（测试用）
 AIR_SSH = ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-J', 'dev198', 'rayman.chen@RaymanMacBook-Air.local']
 AIR_DIR = os.environ.get('MEMPUSH_AIR_DIR', '.claude/projects/-Users-rayman-chen-mycc/memory')   # 相对 Air 的 $HOME
