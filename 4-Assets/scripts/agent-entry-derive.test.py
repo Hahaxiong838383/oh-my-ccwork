@@ -69,6 +69,27 @@ with tempfile.TemporaryDirectory() as td:
     r4 = run('# 没有教训节\n## ★ 项目\n- x\n', [codex])
     check('源格式不对：报错退出且不改目标', r4.returncode != 0 and open(codex).read() == before)
 
+print('═══ 宪法块（codex 与 grok 都要）═══')
+with tempfile.TemporaryDirectory() as td:
+    cons = os.path.join(td, 'HOME-AGENTS.md'); open(cons, 'w').write('# 宪法\n§一 铁律 原文\n')
+    cx = os.path.join(td, '.codex', 'AGENTS.md'); gk = os.path.join(td, '.grok', 'AGENTS.md')
+    os.makedirs(os.path.dirname(gk)); open(gk, 'w').write('# grok 原有\n')
+    def runc(src=SRC):
+        with tempfile.TemporaryDirectory() as t2:
+            sp = os.path.join(t2, 'MEMORY.md'); open(sp, 'w').write(src)
+            return subprocess.run([sys.executable, SCRIPT, '--targets', f'{cx},{gk}'], capture_output=True, text=True,
+                                  env={**os.environ, 'AGENT_ENTRY_SRC': sp, 'AGENT_ENTRY_CONSTITUTION': cons})
+    runc(); c = open(cx).read(); g = open(gk).read()
+    check('codex：宪法块原文在前、记忆块在后', c.index(ae.C_BEGIN) < c.index('§一 铁律 原文') < c.index(ae.C_END) < c.index(ae.BEGIN))
+    check('grok：原内容仍在最前，其后宪法块，再后记忆块', g.startswith('# grok 原有') and g.index('# grok 原有') < g.index(ae.C_BEGIN) < g.index(ae.C_END) < g.index(ae.BEGIN))
+    m1 = open(cx).read(); runc()
+    check('再跑不变', open(cx).read() == m1)
+    open(cons, 'w').write('# 宪法\n§一 铁律 改过的原文\n'); runc(); c2 = open(cx).read()
+    check('宪法改了：只换宪法块，记忆块与块数不变', '改过的原文' in c2 and c2.count(ae.C_BEGIN) == 1 and c2.count(ae.BEGIN) == 1
+          and c2.split(ae.BEGIN)[1] == m1.split(ae.BEGIN)[1])
+    open(cons, 'w').write('\n'); before = open(cx).read(); r = runc()
+    check('宪法原文为空：报错且不改 codex 文件', r.returncode != 0 and open(cx).read() == before)
+
 print('═══ 真实热索引预演 ═══')
 r = subprocess.run([sys.executable, SCRIPT, '--dry-run'], capture_output=True, text=True)
 check('真实热索引生成成功且在预算内', r.returncode == 0 and ae.BEGIN in r.stdout and len(r.stdout.split(ae.END)[0]) <= ae.BUDGET)

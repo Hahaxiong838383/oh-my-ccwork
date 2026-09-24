@@ -14,6 +14,14 @@ import os, re, sys, datetime
 H = os.path.expanduser('~')
 SRC = os.environ.get('AGENT_ENTRY_SRC', f'{H}/.claude/projects/-home-hahaxiong83-mycc/memory/MEMORY.md')
 TARGETS = [f'{H}/.codex/AGENTS.md', f'{H}/.grok/AGENTS.md']
+# 宪法：§五 设计的 codex 接线是 `ln -s ~/AGENTS.md ~/.codex/AGENTS.md`，Air 上有，home-studio 上从来没建（9-24 查实）。
+# codex 只读一个全局文件，所以在这里把宪法原文作为一块一起生成（宪法一改自动重同步，不手抄，不会漂）。
+# grok 也不读 ~/AGENTS.md：9-24 验收会话的 rules 段里没有宪法原文，只有 Claude rules 目录里的指针文件 home-constitution.md
+# （之前按「同时含『宪法』『白名单』」判成 15/20 注入，是把指针文件误算了——判据没对准对象）。所以 grok 也要这一块。
+CONSTITUTION = os.environ.get('AGENT_ENTRY_CONSTITUTION', f'{H}/mycc/docs/HOME-AGENTS.md')
+C_BEGIN = '<!-- home-constitution:begin（原文同步自 ~/mycc/docs/HOME-AGENTS.md，即 ~/AGENTS.md；勿改，改宪法原文会自动同步）-->'
+C_END = '<!-- home-constitution:end -->'
+WANTS_CONSTITUTION = ('/.codex/', '/.grok/')
 MEMDIR = '~/.claude/projects/-Users-rayman-chen-mycc/memory'      # 两台机器都能用（开发机上是指向正本的软链）
 BEGIN = '<!-- mem-entry:begin（自动生成，勿手改：mycc/4-Assets/scripts/agent-entry-derive.py）-->'
 END = '<!-- mem-entry:end -->'
@@ -27,8 +35,8 @@ HEADER = f"""# home-studio 记忆入口（给 codex / grok）
 
 | 要找什么 | 去哪 | 怎么查 |
 |---|---|---|
-| 知识：教训、项目状态、设备与网络真值 | A 库 `{MEMDIR}/`（约 980 个 topic，全量索引 `INDEX-full.md`） | MCP `mycc-memory` 的 `memory_search` → `memory_read`；或 `rg -n <词> {MEMDIR}/` |
-| 补充知识（旧库） | `~/mycc/0-System/memory-items.md` | `rg -n <词>`。两台机器已分叉、可能过时，但有 A 没有的近期事实 |
+| 知识：教训、项目状态、设备与网络真值 | A 库 `{MEMDIR}/`（约 980 个 topic，全量索引 `INDEX-full.md`） | **首选** MCP `mycc-memory` 的 `memory_search`（一次查 A 库 + 旧库条目，带日期）→ `memory_read`；`rg -n <词> {MEMDIR}/` 只查 A |
+| 补充知识（旧库） | `~/mycc/0-System/memory-items.md` | `memory_search` 已包含；单独查用 `rg -n <词>`。两台机器已分叉、可能过时，但有 A 没有的近期事实 |
 | 最近发生了什么 | `~/mycc/0-System/RECENT_EVENTS.md`（很大，越往后越新） | 只读末尾：`tail -n 80`；**别用 `head` 或 `sed -n '1,Np'`，读到的是最旧的** |
 
 - A 库与旧库说法冲突：以**日期更新**的为准，并在回复里点出冲突。
@@ -86,14 +94,24 @@ def fit(text):
     raise ValueError(f'收到最紧仍超预算 {len(b)} > {BUDGET}')
 
 
-def merge(existing, block):
-    """替换已有块；没有就追加到末尾。块外内容原样保留。"""
-    if BEGIN in existing and END in existing:
-        a = existing.index(BEGIN); b = existing.index(END) + len(END)
+def merge(existing, block, begin=BEGIN, end=END, before=None):
+    """替换已有块；没有就插到 before 标记前（有的话），否则追加到末尾。块外内容原样保留。"""
+    if begin in existing and end in existing:
+        a = existing.index(begin); b = existing.index(end) + len(end)
         rest = existing[b:]
         return existing[:a] + block.rstrip('\n') + (rest if rest.startswith('\n') else '\n' + rest)
+    if before and before in existing:
+        i = existing.index(before)
+        return existing[:i] + block.rstrip('\n') + '\n\n' + existing[i:]
     sep = '' if not existing or existing.endswith('\n\n') else ('\n' if existing.endswith('\n') else '\n\n')
     return existing + sep + block
+
+
+def constitution_block():
+    body = open(CONSTITUTION, encoding='utf-8').read().rstrip('\n')
+    if not body.strip():
+        raise ValueError(f'宪法原文为空：{CONSTITUTION}')
+    return f'{C_BEGIN}\n{body}\n{C_END}\n'
 
 
 def write_if_changed(path, content):
@@ -117,9 +135,13 @@ def main():
     stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
     if '--dry-run' in a:
         sys.stdout.write(block); print(f'\n（{len(block)} 字符，{len(block.encode())} 字节）'); return
+    cblock = constitution_block() if any(w in t for t in targets for w in WANTS_CONSTITUTION) else None
     for t in targets:
         old = open(t, encoding='utf-8').read() if os.path.exists(t) else ''
-        changed = write_if_changed(t, merge(old, block))
+        new = merge(old, block)
+        if cblock and any(w in t for w in WANTS_CONSTITUTION):
+            new = merge(new, cblock, C_BEGIN, C_END, before=BEGIN)
+        changed = write_if_changed(t, new)
         print(f'{stamp} {"更新" if changed else "未变"} {t}（块 {len(block)} 字符 / {len(block.encode())} 字节）')
 
 

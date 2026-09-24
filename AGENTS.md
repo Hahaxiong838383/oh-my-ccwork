@@ -32,8 +32,8 @@
 
 | 要找什么 | 去哪 | 怎么查 |
 |------|------|------|
-| 知识：教训、项目状态、设备与网络真值 | A 库 `~/.claude/projects/-Users-rayman-chen-mycc/memory/`（Air 与 home-studio 同路径可用；全量索引 `INDEX-full.md`） | MCP `mycc-memory` 的 `memory_search` → `memory_read`，或 `rg -n <词> <该目录>` |
-| 补充知识（旧库） | `0-System/memory-items.md` | `rg -n <词>`。两台机器已分叉、可能过时，但有 A 没有的近期事实 |
+| 知识：教训、项目状态、设备与网络真值 | A 库 `~/.claude/projects/-Users-rayman-chen-mycc/memory/`（Air 与 home-studio 同路径可用；全量索引 `INDEX-full.md`） | **首选** MCP `mycc-memory` 的 `memory_search`（一次查 A 库 + 旧库条目，带日期）→ `memory_read`；`rg -n <词> <该目录>` 只查 A |
+| 补充知识（旧库） | `0-System/memory-items.md` | `memory_search` 已包含；单独查用 `rg -n <词>`。两台机器已分叉、可能过时，但有 A 没有的近期事实 |
 | 最近发生了什么 | `0-System/RECENT_EVENTS.md`（很大，越往后越新；不是只有 24h） | 只读末尾 `tail -n 80`；**别用 `head` 或 `sed -n '1,Np'`，读到的是最旧的** |
 | 当前状态快照 | `0-System/status.md` | 直接读 |
 | 周复盘 | `5-Archive/周记/` | — |
