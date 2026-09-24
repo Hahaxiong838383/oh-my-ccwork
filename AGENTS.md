@@ -28,18 +28,21 @@
 
 ## 记忆系统
 
-你可以读取以下文件获得跨会话记忆：
+跨会话记忆在下面这些地方（2026-09-24 更新：原先只列 0-System，而教训与项目知识主要在 A 库，8-30 codex 就因只查 0-System 重犯了 A 库早有的教训）：
 
-| 文件 | 说明 |
-|------|------|
-| `0-System/RECENT_EVENTS.md` | 最近 24h 事件流 |
-| `0-System/memory-items.md` | 原子化可检索事实（按类别组织） |
-| `0-System/status.md` | 当前状态快照 |
-| `5-Archive/周记/` | 本周/上周复盘归档 |
+| 要找什么 | 去哪 | 怎么查 |
+|------|------|------|
+| 知识：教训、项目状态、设备与网络真值 | A 库 `~/.claude/projects/-Users-rayman-chen-mycc/memory/`（Air 与 home-studio 同路径可用；全量索引 `INDEX-full.md`） | MCP `mycc-memory` 的 `memory_search` → `memory_read`，或 `rg -n <词> <该目录>` |
+| 补充知识（旧库） | `0-System/memory-items.md` | `rg -n <词>`。两台机器已分叉、可能过时，但有 A 没有的近期事实 |
+| 最近发生了什么 | `0-System/RECENT_EVENTS.md`（很大，越往后越新；不是只有 24h） | 只读末尾 `tail -n 80`；**别用 `head` 或 `sed -n '1,Np'`，读到的是最旧的** |
+| 当前状态快照 | `0-System/status.md` | 直接读 |
+| 周复盘 | `5-Archive/周记/` | — |
+
+- A 库与旧库说法冲突：以**日期更新**的为准，并在回复里点出冲突。写记忆的规则本阶段不变（见 `~/AGENTS.md`）。
 
 **重要**：如果 prompt 中已包含 `[共享记忆]` 块，说明 cc 已注入了相关记忆，无需重复读取。
 
-**设备与网络真值**（各机 IP / SSH 别名 / 有线网段）在 `0-System/memory-items.md` 的 `[project/设备网络]` 与 `[feedback/设备网络]` 条目。**SSH 连任何机器、写任何含 IP 的配置前先查这里，禁止凭记忆猜 IP**——历史上 Studio 的 IP 就被记错过（记 10.9.1.159，实为 10.9.1.155）。
+**设备与网络真值**（各机 IP / SSH 别名 / 有线网段）：A 库 `user_hardware.md`（设备 + SSH）、`reference_cloud_servers.md`（云机），再补查 `0-System/memory-items.md` 的 `[project/设备网络]` 与 `[feedback/设备网络]` 条目。**SSH 连任何机器、写任何含 IP 的配置前先查这两处，禁止凭记忆猜 IP**——历史上 Studio 的 IP 就被记错过（记 10.9.1.159，实为 10.9.1.155）。
 
 ## 项目规则索引（RULE-ID 召回）
 
