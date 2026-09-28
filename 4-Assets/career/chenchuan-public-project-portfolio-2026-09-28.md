@@ -1,0 +1,85 @@
+# 陈川公开项目作品集文案（2026-09-28）
+
+用于远程平台介绍与作品集填写。本人负责产品定义、技术取舍和验收，通过 AI 工具协作完成实现。以下保留公开简介、角色与访问入口。
+
+## EvoDesk：AI 工作流与知识工作台
+
+EvoDesk: AI Workflow & Knowledge Workspace
+
+为解决多模型协作中背景反复解释、决策上下文丢失的问题，借助 AI 编程工具构建个人 AI 工作台，将对话、项目资料和任务汇入 Tauri 桌面应用，结合模型路由、分层记忆与飞书集成。本人负责产品定义、技术取舍和日常验收，已用于自己的产品研究、战略分析与软件交付。
+
+I defined and built a personal AI workspace with AI coding tools, bringing conversations, project context and tasks into a Tauri desktop app. The product combines model routing, layered memory and Feishu integrations. I own product definition, technical trade-offs and daily acceptance testing. It is used for my own product research, strategic analysis and software delivery.
+
+角色：产品定义、技术取舍、AI 辅助实现与验收
+
+Role: Product owner and AI-assisted builder
+
+公开入口：
+
+- https://my.chenchuan.cc/work/evodesk-ai-work-os
+
+## MyJavis：实时语音 AI 伙伴
+
+MyJavis: Real-Time AI Voice Companion
+
+借助 AI 编程工具构建并迭代个人 Mac 语音助手，围绕实时对话、自然插话、声纹识别、长期记忆与本机视觉设计体验。本人负责需求定义、交互取舍和日常试用验收，应用已长期自用，仍在优化主动提醒时机。个人站提供受限的公开语音体验。
+
+I defined and iterated a personal Mac voice assistant using AI coding tools. It supports streaming conversation and interruption, with speaker recognition, long-term memory and local visual context. I own product requirements, interaction design and daily usability checks. The app is in personal use, with reminder timing still being refined. A limited public voice experience is available on my website.
+
+角色：产品定义、交互设计、AI 辅助实现与日常验收
+
+Role: Product owner and AI-assisted builder
+
+公开入口：
+
+- https://my.chenchuan.cc/work/myjavis-voice-companion
+- https://my.chenchuan.cc/ai-os/chat
+
+## AR HUD：浏览器手势交互原型
+
+AR HUD: Browser-Based Gesture Interaction Demo
+
+借助 AI 编程工具把 AR HUD 的交互想法做成公开网页原型，用户可通过摄像头识别头部与手势，对信息卡片进行抓取、拖拽与重排。MediaPipe 在浏览器内处理感知，React 与 TypeScript 实现界面。本人定义交互流程和验收标准并持续迭代；该项目用于交互研究。
+
+I designed and built an interactive AR HUD concept demo with AI coding tools. Visitors can use a webcam to control on-screen cards through hand gestures and head tracking. MediaPipe runs perception in the browser, with React and TypeScript handling the interface. I defined the interaction flow and acceptance criteria, then iterated the prototype. It is a public interaction demo, not a vehicle-ready driving system.
+
+角色：交互定义、AI 辅助原型实现与验收
+
+Role: Product design and AI-assisted prototyping
+
+公开入口：
+
+- https://my.chenchuan.cc/lab/ar-hud-demo
+- https://my.chenchuan.cc/work/eye-gesture-multimodal
+
+## CPA Menu：macOS 用量与额度看板
+
+CPA Menu: Native macOS Usage & Quota Dashboard
+
+将分散的 AI 账号健康、用量与额度信息收敛为 macOS 菜单栏看板，并借助 AI 编程工具完成交付。公开实现包含 SwiftUI 原生界面、Go 桥接服务、脱敏账号展示和 Keychain 存储；本人负责工作流需求、界面取舍与交付检查。公开仓保留构建说明及测试。
+
+I shaped a compact macOS dashboard for AI account health, quota windows and usage, and delivered it with AI coding assistance. The open-source implementation combines a SwiftUI menu-bar app with a Go bridge, masked account data and Keychain storage. My role covers workflow requirements, interface decisions and delivery checks. The repository includes build instructions and tests for the desktop app and bridge.
+
+角色：需求定义、界面设计取舍、AI 辅助交付
+
+Role: Product owner and AI-assisted delivery
+
+公开入口：
+
+- https://github.com/Hahaxiong838383/cpa-menubar
+
+## Claude Code Monitor：macOS AI 工作流监视器
+
+Claude Code Monitor: macOS Workflow Visibility Tool
+
+借助 AI 编程工具构建开源 macOS 菜单栏工具，将 AI 工作流中的上下文预算、记忆、Git、引擎及技能状态集中展示。Swift/AppKit 界面读取本地 Bash 采集器，通过文件事件和轮询更新。项目是个人知识工作区的参考实现，部分集成需要按使用者环境配置。
+
+I created an open-source macOS menu-bar tool with AI coding assistance to make an AI workflow easier to inspect. It presents context budgets, memory and Git status, plus engine and skill health. A Swift/AppKit interface reads a local Bash collector and refreshes through file events and polling. This is a reference implementation for my knowledge workspace; optional integrations depend on the local setup.
+
+角色：产品定义、工作流可视化、AI 辅助实现
+
+Role: Product owner and AI-assisted builder
+
+公开入口：
+
+- https://github.com/Hahaxiong838383/claude-code-monitor
