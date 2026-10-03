@@ -38,7 +38,9 @@
 | `gost-ph-r` | `:8448` | 菲律宾 Makati `61.245.11.252:443` |
 | `gost-admin-lisa` | `:11443` | 丽萨 `154.44.3.170:11443`（admin，不限速） |
 | `gost-admin-zgo` | `:11447` | ZGO `38.49.38.237:11447`（admin，不限速） |
-| `gost-alex-lisa` | `:11444` | 丽萨 `154.44.3.170:11444`（Alex 专用，独立 10Mbps） |
+| `gost-alex-lisa` | `:11444` | 丽萨 `154.44.3.170:11444`（Alex 专用，独立 10Mbps；国内 IPv4 现不可达） |
+
+2026-10-03 国内入口改到 ZGO：`gemini-special` `38.49.38.237` 上同名 `gost-alex-lisa`，`:11444 → 154.44.3.170:11444`，ens3 class `1:20` 独立 10Mbps。客户端地址用灰云 `alex.chenchuan.cc`（A 记录直连 ZGO，不橙云）。丽萨 Reality 仍是原来的 Alex inbound，没有新 UUID。其他线路未改。
 
 ## 落地丽萨（`lisa` / `154.44.3.170`，SSH 端口见本地 RTF）
 
