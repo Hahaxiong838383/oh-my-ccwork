@@ -4,6 +4,7 @@ CPA Smart Router 是部署在 `aliyun-jp` 的 CLIProxyAPI 旁路调度层：客�
 
 ## 当前状态
 
+- 2026-10-03：日本生产 CLIProxyAPI 已从 `7.3.11` 升至官方 `8.0.12`，修复上游版本头固定为 `0.2.120` 导致的 Codeg Grok 426。公开 Grok/Codex 推理及两次 Codeg 正常 API/WS 回合通过；[修复复盘](./2026-10-03-codeg-grok-426-repair.md)与[脱敏验收记录](./2026-10-03-codeg-grok-426-validation.json)已归档。此次显式 `grok-4.7` 验收不代表变更文本默认路由。
 - M-1：已验证 CPA `openai-compatibility.prefix` 可固定命中候选上游。
 - M0/M1：Go 单二进制 MVP，支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models`、`/v1/images/generations`、`/v1/images/edits` 转发、鉴权、sticky、熔断、异步 JSONL 指标。
 - M2：支持 CST 日用量重置与鉴权状态查看 `/debug/state`。
@@ -91,4 +92,4 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - 受 Git 管理的刷新器维护源是 `scripts/refresh-cc-switch-model-catalog.mjs`；本机 `~/.codex/refresh-cc-switch-model-catalog.mjs` 应指向该文件，由 LaunchAgent 每小时刷新。
 - Codex App 只读取 `~/.codex/cc-switch-model-catalog.json`，不会主动选择 `.bak-*`。若主文件曾被缩水目录覆盖，App 会在启动时缓存缺少模型、推理档位和速度元数据的状态；恢复完整文件后还必须重启 App。刷新器必须先做模型数量防缩水校验，再通过临时文件原子 rename，异常时保留上一份完整目录；少于 12 个模型的旧备份不得保留。
 - 验收必须分开记录：客户端请求是否携带 `priority`、CPA 是否返回 HTTP 200、上游响应回报的 service tier。当前真实请求已携带 `priority`，但上游流式响应仍回 `auto/default`，不得把“请求已发出”写成“后台加速已确认”。
-- 现网 CLIProxyAPI 继续使用 `7.2.58`；Fast 链路不需要为了本次修复直接跨版本升级，升级应另做回归和时间窗。
+- 2026-07-28 历史快照：当时 CLIProxyAPI 使用 `7.2.58`，Fast 修复未跨版本升级；当前生产版本及后续升级验收见上方「当前状态」。
