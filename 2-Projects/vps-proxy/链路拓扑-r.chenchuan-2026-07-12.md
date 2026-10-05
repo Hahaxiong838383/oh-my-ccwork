@@ -27,7 +27,9 @@
 - admin 丽萨新 inbound `:11443` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-lisa` `:11443 → 154.44.3.170:11443`。参数 `/root/lisa-admin-r-chenchuan-params.json`。
 - home-studio Xray：原 DMIT→丽萨规则改 balancer `lisa-direct-then-dmit`（直连 `美宅-Claude-GPT_mychenchuan`，fallback `新美宅-Claude-GPT`）；原 DMIT→ZGO 改 `zgo-direct-then-dmit`（直连 `Gemini专用-US2-VLESS-Reality-IP`，fallback `DMIT-Gemini-vps-chenchuan`）。备份 `config.json.bak-direct-fallback-20260911-101229`。
 
-## 中转 DMIT（`lax-relay` / `64.186.235.107` / fqzz）
+## 中转 DMIT（`lax-relay` / `131.143.181.60` / fqzz）
+
+2026-10-05 工单更换 IPv4：旧地址 `64.186.235.107` 已被中国防火墙封锁，不再使用。IPv6 未变。vless/vmess 只改服务器地址，端口和密钥不变。`alex.chenchuan.cc` 仍指向 ZGO，不要改成这个新 IP。
 
 既有 gost（勿删）：`gost-lisa2` 7443、`gost-lisa3` 5443、`gost-usvps2` 6443、`gost-us-vps` 等。`gost.service` `:8443` 已下线。
 
@@ -71,7 +73,7 @@
 
 ```
 手机/电脑
-  → DMIT 64.186.235.107:<8446|8447|8448>
+  → DMIT 131.143.181.60:<8446|8447|8448>
   → 丽萨:8446、ZGO:8447 或菲律宾:443
   → Reality dest TLS: r.chenchuan.cc
   → 出口：住宅(丽萨) / 美国机房(ZGO) / 菲律宾机房(Makati)
@@ -102,7 +104,7 @@
 | **10086** | VMess WS | path 见服务器 params | 已验收 E2E |
 
 - 参数指针：服务器 `/root/ph-vps-proxy-params.json`；本机密钥目录 `Documents/陈川个人站/自建 vps 密钥/菲律宾-vps-proxy-params.env`（不进 git）。
-- DMIT 中转：`gost-ph-r.service`，监听 `64.186.235.107:8448`，转发到菲律宾 `:443`；`Restart=always`，随系统启动。
+- DMIT 中转：`gost-ph-r.service`，监听 `131.143.181.60:8448`，转发到菲律宾 `:443`；`Restart=always`，随系统启动。
 - 客户端导入：DMIT 中转 VLESS 链接保存在本机密钥 env 的 `VLESS_DMIT_LINK`，不写入 `~/xray/config.json`，不新增本地监听端口。
 - 性能：BBR+fq、`tcp_fastopen=3`、16MB buffer、1G swap、healthcheck 每 2min、`Restart=always`。
 - 2026-08-04 优化：修正网卡实际 qdisc 从 `pfifo_fast` 为 `fq`，由 `proxy-fq-qdisc.service` 开机持久化；TCP keepalive 调为 `120/30/4`；healthcheck 增加配置校验、dest TLS 与本地 Reality TLS 闭环。
