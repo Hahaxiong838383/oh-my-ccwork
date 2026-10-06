@@ -10,6 +10,12 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 
 ---
 
+## 维护原则
+
+1. 需要在飞牛上部署服务时，**优先使用飞牛应用中心的 APP**。先 `trim-cli app store search`，能装就 `trim-cli app install`。应用中心没有，或功能明确不够，才允许手动 fpk 或 Docker，并写明原因。
+2. 后续维护用官方 CLI：npm `@trimjs/trim-cli`，本机命令 `trim-cli`。登录只用 OAuth，不把密码或授权 code 放进命令参数。
+3. 家里局域网和两台飞牛的台账在独立仓 `~/home-lan`，不要写回 MyAgent。
+
 ## 系统架构
 
 | 组件 | 说明 |
@@ -19,7 +25,7 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 | 当前内核 | 6.12.43+deb12-amd64（通用，trimafs 挂载失败） |
 | 存储 | RAID1 (md0/md127) → LVM+dm-cache → btrfs /vol1 /vol2 |
 | 数据库 | PostgreSQL，数据库名 `trim` |
-| Web 端口 | 5668（HTTP）、5669（HTTPS） |
+| Web 端口 | 飞牛 2（2026-10-06）：5666 HTTP、5667 HTTPS。5668/5669 在该机拒绝连接。`trim-cli` 对远程 IP 默认 https:5667 |
 
 ---
 
