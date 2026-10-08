@@ -1,0 +1,24 @@
+{
+  "override": [
+    {
+      "models": [
+        {
+          "name": "gpt-6*",
+          "protocol": "codex",
+          "from-protocol": "responses",
+          "exist": [
+            "input.#(type==\"web_search_call\")"
+          ],
+          "not-exist": [
+            "tools.#(type%\"web_search*\")"
+          ]
+        }
+      ],
+      "params": {
+        "tools.-1": {
+          "type": "web_search"
+        }
+      }
+    }
+  ]
+}

@@ -9,6 +9,10 @@ CPA Smart Router 是部署在 `aliyun-jp` 的 CLIProxyAPI 旁路调度层：客�
 - M2：支持 CST 日用量重置与鉴权状态查看 `/debug/state`。
 - M3：支持 SQLite 持久聚合、`/debug/summary` 与简易 `/dashboard`。
 
+## 2026-10-08 搜索历史兼容修复
+
+CLIProxyAPI 8.0.12 已部署条件补齐：GPT-6 Responses 请求携带 `web_search_call` 历史但缺少工具声明时追加 `web_search`，保留完整历史及现有工具。完整历史回放已通过；Pro/Free 优先级调整与 502 分开归因。配置片段、生产证据、回滚与 App 未验收边界见 [CODEX-RESPONSE-PROTECTION-20261008.md](CODEX-RESPONSE-PROTECTION-20261008.md)。下文各版本/运行态描述为其对应日期的历史记录。
+
 ## 运行
 
 ```bash
