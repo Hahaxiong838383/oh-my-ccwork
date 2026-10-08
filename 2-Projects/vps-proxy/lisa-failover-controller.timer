@@ -1,0 +1,12 @@
+[Unit]
+Description=Recheck Lisa Reality routes every 30 seconds
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=30s
+AccuracySec=5s
+Persistent=true
+Unit=lisa-failover-controller.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,15 @@
+[Unit]
+Description=Choose Lisa Reality route from independent Xray health probes
+Wants=xray.service network-online.target
+After=xray.service network-online.target
+
+[Service]
+Type=oneshot
+StateDirectory=xray-lisa-failover
+StateDirectoryMode=0700
+ExecStart=/usr/local/sbin/xray-lisa-failover
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
