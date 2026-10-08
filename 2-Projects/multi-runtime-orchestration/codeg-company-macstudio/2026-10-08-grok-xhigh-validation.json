@@ -1,0 +1,433 @@
+{
+  "target": "Company Mac Studio fu-121deMac-Studio.local; Codeg 0.34.0 / Grok 1.0.46",
+  "correction": "Four tiers required: low/medium/high/xhigh. Highest display label Max maps to xhigh, not max. Default stays high.",
+  "cpa_xhigh_request": {
+    "mode": "probe",
+    "validated_at": "2026-10-08T13:31:00.498930+08:00",
+    "model": "grok-4.7",
+    "base_url": "https://smart-api.hahaxiong.top/v1",
+    "api_backend": "responses",
+    "requested_reasoning_effort": "xhigh",
+    "before": {
+      "default_reasoning_effort": "high",
+      "permission_mode": "bypassPermissions",
+      "custom_model_id": "grok-4.7",
+      "custom_base_url": "https://smart-api.hahaxiong.top/v1",
+      "custom_api_key": {
+        "present": true
+      },
+      "custom_api_backend": "responses",
+      "custom_context_window": 500000,
+      "auto_compact_threshold_percent": null
+    },
+    "models_payload_nonempty": true,
+    "requested_model_advertised": true,
+    "responses_http_status": 200,
+    "real_response_content_verified": true,
+    "response_completed": true,
+    "response_seconds": 6.427,
+    "event_types": {
+      "response.created": 1,
+      "response.in_progress": 1,
+      "response.output_item.added": 2,
+      "response.reasoning_summary_part.added": 1,
+      "response.reasoning_summary_text.delta": 1,
+      "response.reasoning_summary_text.done": 1,
+      "response.reasoning_summary_part.done": 1,
+      "response.output_item.done": 2,
+      "response.content_part.added": 1,
+      "response.output_text.delta": 34,
+      "response.output_text.done": 1,
+      "response.content_part.done": 1,
+      "response.completed": 1
+    },
+    "actual_response": "**12464**\n\n计算：  \n304 × 40 = 12160  \n304 × 1 = 304  \n12160 + 304 = 12464",
+    "test_expression": "304 * 41",
+    "expected_result": "12464",
+    "returned_reasoning_efforts": [
+      "xhigh",
+      "xhigh"
+    ],
+    "passed": true
+  },
+  "official_four_tier_save": {
+    "validated_at": "2026-10-08T13:31:57.550061+08:00",
+    "official_save_api": "acp_update_agent_config",
+    "model": "grok-4.7",
+    "reasoning_efforts": [
+      {
+        "value": "low",
+        "label": "Low"
+      },
+      {
+        "value": "medium",
+        "label": "Medium"
+      },
+      {
+        "value": "high",
+        "label": "High",
+        "default": true
+      },
+      {
+        "value": "xhigh",
+        "label": "Max"
+      }
+    ],
+    "default_reasoning_effort": "high",
+    "unrelated_config_and_credentials_preserved": true,
+    "stale_connections": 0,
+    "before_sha256": "1b1e2f2d1421011b28e92e5ef5449c7237748b6e7080c2e6191370276f7a3886",
+    "after_sha256": "9d85f3da0a0439c620cde4efa9fc09f502fd2cf7db6cb810880a3c720b86a7a8",
+    "config_mode": "0o600",
+    "preexisting_connection_count": 1,
+    "preexisting_connections_still_present": true,
+    "passed": true
+  },
+  "fresh_codeg_xhigh_turn": {
+    "default_model": "grok-4.7",
+    "model_selector": {
+      "id": "model",
+      "name": "Model",
+      "description": null,
+      "category": "model",
+      "kind": {
+        "type": "select",
+        "current_value": "grok-4.7",
+        "options": [
+          {
+            "value": "grok-4.6",
+            "name": "Grok 4.6",
+            "description": null
+          },
+          {
+            "value": "grok-4.5",
+            "name": "Grok 4.5",
+            "description": null
+          },
+          {
+            "value": "grok-4.7",
+            "name": "grok-4.7",
+            "description": null
+          }
+        ],
+        "groups": []
+      },
+      "recommended_value": null
+    },
+    "config_stale": false,
+    "initialization_seconds": 1.724,
+    "initial_effort_selector": {
+      "id": "reasoning_effort",
+      "name": "Reasoning effort",
+      "description": null,
+      "category": "mode",
+      "kind": {
+        "type": "select",
+        "current_value": "high",
+        "options": [
+          {
+            "value": "low",
+            "name": "Low",
+            "description": "Quick, fast responses"
+          },
+          {
+            "value": "medium",
+            "name": "Medium",
+            "description": "Balanced speed and quality"
+          },
+          {
+            "value": "high",
+            "name": "High",
+            "description": "Extensive reasoning for high quality"
+          },
+          {
+            "value": "xhigh",
+            "name": "Max",
+            "description": "Maximum reasoning for the most complex tasks"
+          }
+        ],
+        "groups": []
+      },
+      "recommended_value": null
+    },
+    "final_effort": "high",
+    "rounds": [
+      {
+        "effort": "xhigh",
+        "selected_effort_after_turn": "xhigh",
+        "expression": "639 * 83",
+        "expected_answer": "53037",
+        "actual_reply": "**53037**",
+        "content_verified": true,
+        "stop_reason": "end_turn",
+        "passed": true,
+        "seconds": 4.666
+      }
+    ],
+    "tool_events": 0,
+    "passed": true,
+    "agent": "grok",
+    "fresh_connection": true,
+    "preferred_config_values": null,
+    "manual_model_override": false,
+    "expected_answer": "53037",
+    "test_expression": "639 * 83",
+    "events": {
+      "prompt_capabilities": 1,
+      "fork_supported": 1,
+      "status_changed": 4,
+      "session_started": 1,
+      "session_config_options": 5,
+      "selectors_ready": 1,
+      "available_commands": 3,
+      "conversation_linked": 1,
+      "conversation_status_changed": 2,
+      "user_prompt_sent": 1,
+      "user_message": 1,
+      "usage_update": 2,
+      "thinking": 1,
+      "content_delta": 4,
+      "turn_complete": 1
+    },
+    "errors": [],
+    "cleanup": {
+      "disconnected": true,
+      "conversation_deleted": true,
+      "folder_closed": true,
+      "history_removed": true
+    },
+    "elapsed_seconds": 6.669,
+    "validated_at": "2026-10-08T13:32:26.732780+08:00",
+    "node_exit": 0,
+    "production_log_cpa_requests": 4,
+    "production_log_cpa_lisa_route": true,
+    "preexisting_connection_count": 1,
+    "preexisting_connections_still_present": true,
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    }
+  },
+  "production_frontend_clicks": {
+    "passed": true,
+    "frontend": "production Codeg web",
+    "variant": "four-tiers-xhigh",
+    "created_dirs": [
+      "/Users/fu-121/Library/Application Support/Codeg-company-studio/chat-sessions/2026-10-08/275bc5827300498eb7977243f5859321"
+    ],
+    "connections": [
+      {
+        "id": "38b081fc-cc6e-47ec-bf44-abfffa774a9b",
+        "agent": "codex",
+        "snapshot": {}
+      },
+      {
+        "id": "c6e0aa73-c091-4117-be42-b7c772bd1c5e",
+        "agent": "grok",
+        "snapshot": {
+          "model": "grok-4.7",
+          "effort": "high",
+          "effort_name": "Reasoning Effort",
+          "tiers": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "external_id": "01a119ff-9915-7870-82e2-721c576e0bc0"
+        }
+      }
+    ],
+    "clicks": [
+      {
+        "value": "xhigh",
+        "shown": "Reasoning Effort: Max",
+        "snapshot": {
+          "model": "grok-4.7",
+          "effort": "xhigh",
+          "effort_name": "Reasoning Effort",
+          "tiers": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "external_id": "01a119ff-9915-7870-82e2-721c576e0bc0"
+        },
+        "matched": true
+      },
+      {
+        "value": "high",
+        "shown": "Reasoning Effort: High",
+        "snapshot": {
+          "model": "grok-4.7",
+          "effort": "high",
+          "effort_name": "Reasoning Effort",
+          "tiers": [
+            "low",
+            "medium",
+            "high",
+            "xhigh"
+          ],
+          "external_id": "01a119ff-9915-7870-82e2-721c576e0bc0"
+        },
+        "matched": true
+      }
+    ],
+    "cleanup": [
+      {
+        "connection_id": "38b081fc-cc6e-47ec-bf44-abfffa774a9b",
+        "disconnected": true,
+        "already_closed_by_frontend": true
+      },
+      {
+        "connection_id": "c6e0aa73-c091-4117-be42-b7c772bd1c5e",
+        "disconnected": true
+      }
+    ],
+    "initial_controls": [
+      "New chat",
+      "Open Folder",
+      "New chat"
+    ],
+    "blocked_non_test_connect": true,
+    "agent_controls": [
+      {
+        "slot": "agent-pill",
+        "label": "CodexCodex",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "GrokGrok",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "Claude CodeClaude Code",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "Gemini CLIGemini CLI",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "OpenClawOpenClaw",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "OpenCodeOpenCode",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "ClineCline",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "Hermes AgentHermes Agent",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "CodeBuddyCodeBuddy",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "Kimi CodeKimi Code",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "PiPi",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "CursorCursor",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "DeepSeek HarnessDeepSeek Harness",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "QoderQoder",
+        "aria": null,
+        "disabled": false
+      },
+      {
+        "slot": "agent-pill",
+        "label": "Google AntigravityGoogle Antigravity",
+        "aria": null,
+        "disabled": false
+      }
+    ],
+    "after_agent_controls": [
+      "New chat",
+      "Open Folder",
+      "New chat",
+      "GrokGrok"
+    ],
+    "initial": {
+      "model": "grok-4.7",
+      "effort": "high",
+      "effort_name": "Reasoning effort",
+      "tiers": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "external_id": "01a119ff-9915-7870-82e2-721c576e0bc0"
+    },
+    "visible_tiers": [
+      "Low",
+      "Medium",
+      "High",
+      "Max"
+    ],
+    "effort_button_labels": [
+      "Reasoning effort: High",
+      "Reasoning Effort: High"
+    ]
+  },
+  "ui_exact_cleanup": {
+    "passed": true,
+    "scratch": "/Users/fu-121/Library/Application Support/Codeg-company-studio/chat-sessions/2026-10-08/275bc5827300498eb7977243f5859321",
+    "scratch_absent": true,
+    "native_session_id": "01a119ff-9915-7870-82e2-721c576e0bc0",
+    "native_directory": "/Users/fu-121/.grok/sessions/%2FUsers%2Ffu-121%2FLibrary%2FApplication%20Support%2FCodeg-company-studio%2Fchat-sessions%2F2026-10-08%2F275bc5827300498eb7977243f5859321",
+    "native_absent": true,
+    "codeg_folder_rows": [],
+    "codeg_conversation_rows": [],
+    "codex_rollouts_matching_exact_cwd": 0,
+    "shared_indexes_modified": false
+  },
+  "limits": {
+    "quality_or_sustained_performance_comparison": false,
+    "existing_user_session_restarted": false,
+    "old_native_docs_reference_version": "1.0.41; current production behavior verified separately on 1.0.46"
+  },
+  "git_commit_push_performed": false
+}

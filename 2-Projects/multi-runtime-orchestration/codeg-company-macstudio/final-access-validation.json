@@ -1,0 +1,35 @@
+{
+  "studio": {
+    "health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "system_job_running": true,
+    "deployed_runner_matches_archive": true,
+    "archive_and_logs_token_free": true,
+    "own_test_connection_absent": true,
+    "current_connection_count": 0
+  },
+  "air": {
+    "pages": {
+      "/": {
+        "status": 200,
+        "html_bytes": 372255
+      },
+      "/login": {
+        "status": 200,
+        "html_bytes": 372716
+      },
+      "/workspace": {
+        "status": 200,
+        "html_bytes": 380297
+      }
+    },
+    "websocket_http_upgrade": 101,
+    "websocket_ready_channel": "__ready__",
+    "desktop_shortcut_exists": true,
+    "archive_token_free": true,
+    "tunnel_job_running": true
+  },
+  "checked_at": "2026-10-08T11:36:52.493177+08:00"
+}

@@ -1,0 +1,414 @@
+{
+  "official_artifact": {
+    "version": "0.34.0",
+    "platform": "darwin-arm64",
+    "release_url": "https://github.com/spacering-net/codeg/releases/tag/v0.34.0",
+    "archive_bytes": 52637056,
+    "archive_sha256": "723b43eb81ce05e805a1ed4ef4eb54dddeb58f420ee8323a0f340e625ba71e76",
+    "official_digest_matches": true,
+    "minisign_archive_signature_valid": true,
+    "minisign_trusted_comment_signature_valid": true,
+    "minisign_key_id_matches": true,
+    "trusted_timestamp": 1791390672,
+    "member_count": 1092,
+    "symlink_count": 0,
+    "layout": [
+      {
+        "path": "codeg-server-darwin-arm64",
+        "size": 0,
+        "mode": "0o755"
+      },
+      {
+        "path": "codeg-server-darwin-arm64/web",
+        "size": 0,
+        "mode": "0o755"
+      },
+      {
+        "path": "codeg-server-darwin-arm64/codeg-computer-helper",
+        "size": 4212752,
+        "mode": "0o755"
+      },
+      {
+        "path": "codeg-server-darwin-arm64/codeg-mcp",
+        "size": 4733264,
+        "mode": "0o755"
+      },
+      {
+        "path": "codeg-server-darwin-arm64/codeg-server",
+        "size": 69739792,
+        "mode": "0o755"
+      }
+    ]
+  },
+  "studio_artifact": {
+    "host": "fu-121deMac-Studio.local",
+    "user": "fu-121",
+    "version": "0.34.0",
+    "project": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio",
+    "release": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/0.34.0",
+    "current": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current",
+    "data_dir": "/Users/fu-121/Library/Application Support/Codeg-company-studio",
+    "download_url": "https://github.com/spacering-net/codeg/releases/download/v0.34.0/codeg-server-darwin-arm64.tar.gz",
+    "archive_bytes": 52637056,
+    "archive_sha256": "723b43eb81ce05e805a1ed4ef4eb54dddeb58f420ee8323a0f340e625ba71e76",
+    "official_signature_verified_for_identical_archive": true,
+    "server_binary_sha256": "5f73aaebe3a9c52075137207f7370bd78c7b4dbcf1436c22124dbfaf5785fc9a",
+    "server_version_flag_passed": true,
+    "codesign_verify_exit": 0,
+    "node_version": "v22.14.0",
+    "codex_version": "codex-cli 0.156.0",
+    "proxy_environment": {
+      "http_proxy": {
+        "scheme": "http",
+        "hostname": "127.0.0.1",
+        "port": 10808
+      },
+      "https_proxy": {
+        "scheme": "http",
+        "hostname": "127.0.0.1",
+        "port": 10808
+      },
+      "HTTP_PROXY": {
+        "scheme": "http",
+        "hostname": "127.0.0.1",
+        "port": 10808
+      },
+      "HTTPS_PROXY": {
+        "scheme": "http",
+        "hostname": "127.0.0.1",
+        "port": 10808
+      },
+      "ALL_PROXY": {
+        "scheme": "socks5",
+        "hostname": "127.0.0.1",
+        "port": 10808
+      },
+      "all_proxy": {
+        "scheme": "socks5",
+        "hostname": "127.0.0.1",
+        "port": 10808
+      }
+    },
+    "proxy_jobs": [
+      "/Users/fu-121/Library/LaunchAgents/com.xray.proxy.plist"
+    ],
+    "prepared_at": "2026-10-08T11:15:49.240313+08:00"
+  },
+  "final_runner": {
+    "runner_sha256": "d886f50fbe0b4ba5c862448371c2f883495de3bcceaefad02927f62750686b5e",
+    "controlled_reload": true,
+    "health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "codex_status": {
+      "agent_type": "codex",
+      "available": true,
+      "enabled": true,
+      "installed_version": null,
+      "is_acp_adapter": true
+    },
+    "codex_preflight": {
+      "agent_type": "codex",
+      "agent_name": "Codex CLI",
+      "passed": true,
+      "checks": [
+        {
+          "check_id": "node_available",
+          "label": "Node.js",
+          "status": "pass",
+          "message": "Node.js v22.14.0 available",
+          "fixes": []
+        },
+        {
+          "check_id": "npm_available",
+          "label": "npm",
+          "status": "pass",
+          "message": "npm 10.9.2 available",
+          "fixes": []
+        },
+        {
+          "check_id": "node_version",
+          "label": "Node.js version",
+          "status": "pass",
+          "message": "Node.js v22.14.0 meets the minimum requirement (>=20.0.0)",
+          "fixes": []
+        }
+      ],
+      "adapter": {
+        "adapter_package": "@agentclientprotocol/codex-acp@2.1.1",
+        "adapter_cmd": "codex-acp",
+        "adapter_installed": false,
+        "native_cmd": "codex",
+        "native_label": "Codex CLI",
+        "native_path": "/Users/fu-121/.local/bin/codex",
+        "shared_config_dir": "~/.codex",
+        "docs_url": "https://docs.codeg.app/guide/supported-agents#acp-adapters"
+      }
+    }
+  },
+  "service": {
+    "validated_at": "2026-10-08T11:30:17.461358+08:00",
+    "health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "authorization_negative": {
+      "missing": 401,
+      "incorrect": 401
+    },
+    "frontend": {
+      "html_bytes": 372255,
+      "javascript_bytes": 40413,
+      "javascript_asset": "/_next/static/chunks/2d25480dfd0489ab.js"
+    },
+    "before": {
+      "runner_pid": 52280,
+      "worker_pid": 52283,
+      "uid": 501,
+      "process_group": 52280,
+      "listen_address": "127.0.0.1:3080",
+      "system_job_running": true,
+      "processes": [
+        "52280     1   501 52280 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+        "52281 52280   501 52280 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server",
+        "52283 52281   501 52280 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server"
+      ]
+    },
+    "after": {
+      "runner_pid": 52535,
+      "worker_pid": 52538,
+      "uid": 501,
+      "process_group": 52535,
+      "listen_address": "127.0.0.1:3080",
+      "system_job_running": true,
+      "processes": [
+        "52535     1   501 52535 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+        "52536 52535   501 52535 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server",
+        "52538 52536   501 52535 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server"
+      ]
+    },
+    "crash_recovery_seconds": 0.617,
+    "launcher_sigkill_recovery": {
+      "before": {
+        "runner_pid": 52535,
+        "worker_pid": 52538,
+        "uid": 501,
+        "process_group": 52535,
+        "listen_address": "127.0.0.1:3080",
+        "system_job_running": true,
+        "processes": [
+          "52535     1   501 52535 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+          "52536 52535   501 52535 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server",
+          "52538 52536   501 52535 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server"
+        ]
+      },
+      "after": {
+        "runner_pid": 52553,
+        "worker_pid": 52556,
+        "uid": 501,
+        "process_group": 52553,
+        "listen_address": "127.0.0.1:3080",
+        "system_job_running": true,
+        "processes": [
+          "52553     1   501 52553 /Library/Developer/CommandLineTools/Library/Frameworks/Python3.framework/Versions/3.9/Resources/Python.app/Contents/MacOS/Python",
+          "52554 52553   501 52553 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server",
+          "52556 52554   501 52553 /Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/current/codeg-server"
+        ]
+      },
+      "seconds": 10.758
+    },
+    "recovery_trigger": "SIGKILL actual TCP listener worker; official supervisor then launcher exit and launchd restart",
+    "logs_token_free": true,
+    "logs_checked": [
+      "/Users/fu-121/Library/Application Support/Codeg-company-studio/logs/service.log",
+      "/var/log/codeg-company-studio.launchd.log"
+    ],
+    "full_host_reboot_tested": false
+  },
+  "codex_adapter": {
+    "checked_at": "2026-10-08T11:29:33.748087+08:00",
+    "before": {
+      "agent_type": "codex",
+      "agent_name": "Codex CLI",
+      "passed": true,
+      "checks": [
+        {
+          "check_id": "node_available",
+          "label": "Node.js",
+          "status": "pass",
+          "message": "Node.js v22.14.0 available",
+          "fixes": []
+        },
+        {
+          "check_id": "npm_available",
+          "label": "npm",
+          "status": "pass",
+          "message": "npm 10.9.2 available",
+          "fixes": []
+        },
+        {
+          "check_id": "node_version",
+          "label": "Node.js version",
+          "status": "pass",
+          "message": "Node.js v22.14.0 meets the minimum requirement (>=20.0.0)",
+          "fixes": []
+        }
+      ],
+      "adapter": {
+        "adapter_package": "@agentclientprotocol/codex-acp@2.1.1",
+        "adapter_cmd": "codex-acp",
+        "adapter_installed": false,
+        "native_cmd": "codex",
+        "native_label": "Codex CLI",
+        "native_path": "/Users/fu-121/.local/bin/codex",
+        "shared_config_dir": "~/.codex",
+        "docs_url": "https://docs.codeg.app/guide/supported-agents#acp-adapters"
+      }
+    },
+    "official_adapter_prepare": "2.1.1",
+    "after": {
+      "agent_type": "codex",
+      "agent_name": "Codex CLI",
+      "passed": true,
+      "checks": [
+        {
+          "check_id": "node_available",
+          "label": "Node.js",
+          "status": "pass",
+          "message": "Node.js v22.14.0 available",
+          "fixes": []
+        },
+        {
+          "check_id": "npm_available",
+          "label": "npm",
+          "status": "pass",
+          "message": "npm 10.9.2 available",
+          "fixes": []
+        },
+        {
+          "check_id": "node_version",
+          "label": "Node.js version",
+          "status": "pass",
+          "message": "Node.js v22.14.0 meets the minimum requirement (>=20.0.0)",
+          "fixes": []
+        }
+      ],
+      "adapter": {
+        "adapter_package": "@agentclientprotocol/codex-acp@2.1.1",
+        "adapter_cmd": "codex-acp",
+        "adapter_installed": true,
+        "native_cmd": "codex",
+        "native_label": "Codex CLI",
+        "native_path": "/Users/fu-121/.local/bin/codex",
+        "shared_config_dir": "~/.codex",
+        "docs_url": "https://docs.codeg.app/guide/supported-agents#acp-adapters"
+      }
+    }
+  },
+  "codex_real_turn": {
+    "passed": true,
+    "agent": "codex",
+    "connection_id": "93f40791-8307-4ca0-899b-bb7ceb67c377",
+    "session_id": "01a11990-1848-78e1-8bf7-2977aee417ac",
+    "folder_id": 1,
+    "conversation_id": 1,
+    "working_dir": "/tmp/codeg-company-studio-validation-7xu0yh57",
+    "reply": "执行指定的只读命令。```text\n/private/tmp/codeg-company-studio-validation-7xu0yh57\n501\nfu-121deMac-Studio.local\nSTUDIO_NONCE_8eaa8fe2cebc55025dd6e644b4b9a8ba\n```\nCODEG_COMPANY_STUDIO_OK",
+    "stop_reason": "end_turn",
+    "event_types": {
+      "prompt_capabilities": 1,
+      "fork_supported": 1,
+      "status_changed": 4,
+      "session_started": 1,
+      "session_modes": 1,
+      "session_config_options": 1,
+      "selectors_ready": 1,
+      "conversation_linked": 1,
+      "available_commands": 1,
+      "conversation_status_changed": 2,
+      "user_prompt_sent": 1,
+      "user_message": 1,
+      "tool_call": 2,
+      "content_delta": 73,
+      "tool_call_update": 5,
+      "usage_update": 2,
+      "native_session_title": 1,
+      "turn_complete": 1
+    },
+    "permissions_allowed_once": 0,
+    "elapsed_seconds": 20.567,
+    "cleanup": {
+      "disconnected": true,
+      "conversation_deleted": true,
+      "folder_closed": true
+    },
+    "checked_at": "2026-10-08T11:30:53.958968+08:00",
+    "probe_exit": 0
+  },
+  "air_access": {
+    "air_url": "http://127.0.0.1:13080",
+    "job": "gui/501/cc.codeg-company-studio-tunnel",
+    "tunnel_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "command": "/Users/rayman.chen/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/Open-Company-Codeg.command",
+    "public_alias_tested": true,
+    "public_alias_host": "fu-121deMac-Studio.local",
+    "tunnel_log": "Starting company Studio tunnel via studio\n"
+  },
+  "final_air_tunnel": {
+    "updated": true,
+    "cancelled_only_own_forward": {
+      "studio": 255,
+      "studio-pub": 0
+    },
+    "multiplexing_disabled_for_tunnel": true,
+    "tunnel_script_sha256": "d7ef040ecd75a2528daf64398403fad04f15d9dbed7d993bb94d5efb6690314d"
+  },
+  "air_recovery": {
+    "before_ssh_pid": 67183,
+    "after_ssh_pid": 67214,
+    "recovery_seconds": 2.314,
+    "final_ssh_pid": 67231,
+    "health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "token_not_in_log": true,
+    "route_log": [
+      "Starting company Studio tunnel via studio",
+      "bind [127.0.0.1]:13080: Address already in use",
+      "channel_setup_fwd_listener_tcpip: cannot listen to port: 13080",
+      "Could not request local forwarding.",
+      "Starting company Studio tunnel via studio-pub",
+      "Starting company Studio tunnel via studio",
+      "Starting company Studio tunnel via studio-pub",
+      "Starting company Studio tunnel via studio"
+    ]
+  },
+  "npm_network": {
+    "via_proxy": {
+      "exit": 28,
+      "metrics": "000 0 12.011490",
+      "error": "curl: (28) Connection timed out after 12011 milliseconds"
+    },
+    "direct": {
+      "exit": 0,
+      "metrics": "200 357184 1.736133",
+      "error": ""
+    }
+  },
+  "completed_at": "2026-10-08 11:33 CST",
+  "full_host_reboot_tested": false,
+  "proxy_launch_scope": "Existing com.xray.proxy user LaunchAgent; model proxy before desktop login was not verified or migrated",
+  "credentials": {
+    "studio_keychain": "/Library/Keychains/System.keychain",
+    "service": "codeg.company-macstudio.server",
+    "account": "fu-121",
+    "air_existing_file": "~/.mycc-secrets.env",
+    "air_key": "CODEG_COMPANY_STUDIO_TOKEN",
+    "no_values_in_archive": true
+  }
+}

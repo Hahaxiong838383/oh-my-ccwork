@@ -1,0 +1,59 @@
+{
+  "studio": {
+    "updated_at": "2026-10-08T11:48:34.054655+08:00",
+    "hostname": "fu-121deMac-Studio.local",
+    "service_url": "http://10.10.10.12:3080",
+    "listen_host": "0.0.0.0",
+    "listener": "p54724\nccodeg-server\nu501\nf20\nn*:3080\n",
+    "loopback_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "mesh_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "old_runner_sha256": "d886f50fbe0b4ba5c862448371c2f883495de3bcceaefad02927f62750686b5e",
+    "new_runner_sha256": "00e2b480309d040489e5b2b5ed8472677c788808b6d57d58f0916366b6e8ffc0",
+    "backup": "/Library/Application Support/Codeg-company-studio/runner.py.pre-mesh-20261008",
+    "token_unchanged": true,
+    "active_connections_before_restart": 0
+  },
+  "air": {
+    "checked_at": "2026-10-08T11:50:42.940972+08:00",
+    "service_url": "http://10.10.10.12:3080",
+    "air_to_studio_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "health_seconds_single_probe": 6.4325,
+    "authorization_negative": {
+      "missing": 401,
+      "wrong": 401
+    },
+    "websocket_origins": {
+      "native_no_origin": {
+        "status": 101,
+        "ready_channel": "__ready__"
+      },
+      "tauri_origin": {
+        "status": 101,
+        "ready_channel": "__ready__"
+      },
+      "web_origin": {
+        "status": 101,
+        "ready_channel": "__ready__"
+      }
+    },
+    "codex_adapter_installed": true,
+    "old_air_loopback_entry_still_available": true,
+    "token_verified_from_existing_air_source": true
+  },
+  "recorded_at": "2026-10-08 11:51 CST",
+  "token_storage": {
+    "studio_keychain_service": "codeg.company-macstudio.server",
+    "studio_keychain_account": "fu-121",
+    "air_file": "~/.mycc-secrets.env",
+    "air_key": "CODEG_COMPANY_STUDIO_TOKEN"
+  }
+}

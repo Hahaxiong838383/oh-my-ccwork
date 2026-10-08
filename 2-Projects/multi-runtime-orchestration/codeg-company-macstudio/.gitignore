@@ -1,0 +1,6 @@
+downloads/
+cache/
+releases/
+__pycache__/
+*.env
+*.keychain*

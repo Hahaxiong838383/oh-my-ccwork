@@ -1,0 +1,712 @@
+{
+  "deployment": {
+    "deployed_at": "2026-10-08T12:18:33.598631+08:00",
+    "backup_directory": "/Library/Application Support/Codeg-company-studio/xray-backups/20261008-121833",
+    "config_path": "/Users/fu-121/xray/config.json",
+    "config_sha256": "ebb02a5bf7f7191b6a92db57d806a8bfc80d1e13a14f3ae908220c20b13b9e79",
+    "config_mode": "0o600",
+    "default_and_public_outbound": "admin-LISA-DMIT-11443",
+    "private_direct_only": true,
+    "no_balancer_or_public_direct_fallback": true,
+    "system_plist": "/Library/LaunchDaemons/com.xray.proxy.studio.plist",
+    "system_plist_sha256": "956af7e4fd5669d83150619dd89093e84cd062637d74df8cbe692cf014ba0219",
+    "old_gui_job_disabled": true,
+    "old_gui_plist_removed": true,
+    "run_at_load": true,
+    "keep_alive": true,
+    "full_host_reboot_tested": false,
+    "process": {
+      "pid": 58579,
+      "uid": 501,
+      "listen": "127.0.0.1:10808",
+      "system_job_running": true
+    }
+  },
+  "node_matches_user_uri": {
+    "existing_node_exactly_matches_user_uri": true,
+    "checks": {
+      "protocol": true,
+      "server": true,
+      "port": true,
+      "credential": true,
+      "encryption": true,
+      "flow": true,
+      "network": true,
+      "security": true,
+      "server_name": true,
+      "public_key": true,
+      "short_id": true,
+      "fingerprint": true
+    },
+    "tag": "admin-LISA-DMIT-11443",
+    "xray_version": "Xray 26.3.27 (Xray, Penetrates Everything.) d2758a0 (go1.26.1 darwin/arm64)"
+  },
+  "isolated_trial": {
+    "validated_at": "2026-10-08T12:15:20.218130+08:00",
+    "source_config_sha256": "24f2790585b6eb3c9073c2669b19b9a773df9aa5f413d8949cbbba1ab02b447d",
+    "target_tag": "admin-LISA-DMIT-11443",
+    "trial_passed": true,
+    "probes": {
+      "ipify": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 0.769,
+        "response_bytes": 21,
+        "json_valid": true,
+        "public_exit": {
+          "ip": "154.44.3.170"
+        },
+        "route_logged_to_lisa": true
+      },
+      "ipinfo": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 0.766,
+        "response_bytes": 274,
+        "json_valid": true,
+        "public_exit": {
+          "ip": "154.44.3.170",
+          "city": "Los Angeles",
+          "region": "California",
+          "country": "US",
+          "org": "AS174 Cogent Communications, LLC"
+        },
+        "route_logged_to_lisa": true
+      },
+      "openai": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 0.735,
+        "response_bytes": 151,
+        "json_valid": true,
+        "route_logged_to_lisa": true
+      },
+      "xai": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 0.741,
+        "response_bytes": 77,
+        "json_valid": true,
+        "route_logged_to_lisa": true
+      },
+      "npm": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 1.611,
+        "response_bytes": 357184,
+        "json_valid": true,
+        "package_name": "@agentclientprotocol/codex-acp",
+        "route_logged_to_lisa": true
+      },
+      "github": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 0.722,
+        "response_bytes": 678,
+        "json_valid": true,
+        "route_logged_to_lisa": true
+      },
+      "cpa": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 1.064,
+        "response_bytes": 13,
+        "json_valid": false,
+        "route_logged_to_lisa": true
+      }
+    },
+    "trial_process_pid": 58286,
+    "private_rules_only": true,
+    "no_balancer_or_public_direct_fallback": true
+  },
+  "system_proxies": {
+    "configured_at": "2026-10-08T12:20:03.274640+08:00",
+    "passed": true,
+    "services": {
+      "Ethernet": {
+        "-getwebproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getsecurewebproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getsocksfirewallproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getproxybypassdomains": "localhost\n127.0.0.1\n::1\n*.local\n10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16\n169.254.0.0/16\nfc00::/7\nfe80::/10",
+        "-getautoproxyurl": "URL: (null)\nEnabled: No",
+        "-getproxyautodiscovery": "Auto Proxy Discovery: Off"
+      },
+      "USB 10/100/1000 LAN": {
+        "-getwebproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getsecurewebproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getsocksfirewallproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getproxybypassdomains": "localhost\n127.0.0.1\n::1\n*.local\n10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16\n169.254.0.0/16\nfc00::/7\nfe80::/10",
+        "-getautoproxyurl": "URL: (null)\nEnabled: No",
+        "-getproxyautodiscovery": "Auto Proxy Discovery: Off"
+      },
+      "Wi-Fi": {
+        "-getwebproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getsecurewebproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getsocksfirewallproxy": "Enabled: Yes\nServer: 127.0.0.1\nPort: 10808\nAuthenticated Proxy Enabled: 0",
+        "-getproxybypassdomains": "localhost\n127.0.0.1\n::1\n*.local\n10.0.0.0/8\n172.16.0.0/12\n192.168.0.0/16\n169.254.0.0/16\nfc00::/7\nfe80::/10",
+        "-getautoproxyurl": "URL: (null)\nEnabled: No",
+        "-getproxyautodiscovery": "Auto Proxy Discovery: Off"
+      }
+    },
+    "private_bypass_only": true
+  },
+  "environment": {
+    "configured_at": "2026-10-08T12:21:46.514551+08:00",
+    "passed": true,
+    "private_no_proxy_only": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+    "gui_environment": {
+      "http_proxy": "http://127.0.0.1:10808",
+      "https_proxy": "http://127.0.0.1:10808",
+      "HTTP_PROXY": "http://127.0.0.1:10808",
+      "HTTPS_PROXY": "http://127.0.0.1:10808",
+      "all_proxy": "socks5://127.0.0.1:10808",
+      "ALL_PROXY": "socks5://127.0.0.1:10808",
+      "NO_PROXY": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+      "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10"
+    },
+    "lark_direct_flag_unset": true,
+    "gui_jobs_reloaded": [
+      "com.mycc.codex-gui-proxy-env",
+      "com.mycc.studio-feishu-auth-keepalive"
+    ],
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "codeg_restart": {
+      "before_pid": 54718,
+      "after_pid": 59096,
+      "seconds": 1.585
+    },
+    "updated_files": [
+      {
+        "path": "/Users/fu-121/.zshenv",
+        "sha256": "60c793985818f86332d96d8cb9e3fe85cf2dfb5e7a7a95611b00e7ebd3a4b5ca",
+        "mode": "0o600"
+      },
+      {
+        "path": "/Users/fu-121/.xray-proxy.sh",
+        "sha256": "0938a20d23be79dda575a1a45cffde0a1dae6d132a2fd9959b70ef7f4d07f105",
+        "mode": "0o600"
+      },
+      {
+        "path": "/Users/fu-121/.zprofile",
+        "sha256": "386b6e693046410b96f302d08673af1411bc5d12c425e302fedca5ce670f6477",
+        "mode": "0o600"
+      },
+      {
+        "path": "/Users/fu-121/Library/LaunchAgents/com.mycc.codex-gui-proxy-env.plist",
+        "sha256": "13d3d152cf82c331414618cb72b22e2c80437773b9ea195ca5231174df31d4e4",
+        "mode": "0o644"
+      },
+      {
+        "path": "/Users/fu-121/Library/LaunchAgents/com.mycc.studio-feishu-auth-keepalive.plist",
+        "sha256": "0e9d6b3aafff80c7389c3def639eb27611070ff4f9725933e2057c825ed1a69b",
+        "mode": "0o600"
+      },
+      {
+        "path": "/Library/Application Support/Codeg-company-studio/runner.py",
+        "sha256": "ece3ed45d3ee5a4af7e05cc55267261e6b8ba4f54dd9caf4e801c5af485b447f",
+        "mode": "0o755"
+      }
+    ],
+    "backup_directory": "/Library/Application Support/Codeg-company-studio/xray-backups/20261008-121833/environment"
+  },
+  "actual_service_and_recovery": {
+    "validated_at": "2026-10-08T12:23:02.550377+08:00",
+    "passed": true,
+    "runner_trusted_owner_and_expected_content": true,
+    "xray_sigkill_recovery": {
+      "before": {
+        "pid": 58579,
+        "uid": 501,
+        "listener": "127.0.0.1:10808"
+      },
+      "after": {
+        "pid": 59205,
+        "uid": 501,
+        "listener": "127.0.0.1:10808"
+      },
+      "seconds": 0.343,
+      "exit_after_restart": "154.44.3.170"
+    },
+    "actual_codeg_worker": {
+      "pid": 59099,
+      "uid": 501,
+      "listen": "*:3080",
+      "proxy_environment": {
+        "http_proxy": "http://127.0.0.1:10808",
+        "https_proxy": "http://127.0.0.1:10808",
+        "HTTP_PROXY": "http://127.0.0.1:10808",
+        "HTTPS_PROXY": "http://127.0.0.1:10808",
+        "all_proxy": "socks5://127.0.0.1:10808",
+        "ALL_PROXY": "socks5://127.0.0.1:10808",
+        "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "NO_PROXY": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10"
+      }
+    },
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "xray_logs_ownership": [
+      {
+        "path": "/Users/fu-121/xray/access.log",
+        "uid": 501
+      },
+      {
+        "path": "/Users/fu-121/xray/xray.log",
+        "uid": 501
+      },
+      {
+        "path": "/Users/fu-121/xray/launchd.out.log",
+        "uid": 501
+      },
+      {
+        "path": "/Users/fu-121/xray/launchd.err.log",
+        "uid": 501
+      }
+    ],
+    "full_host_reboot_tested": false
+  },
+  "default_shell_and_system_path": {
+    "validated_at": "2026-10-08T12:24:58.303377+08:00",
+    "passed": true,
+    "shell_contexts": {
+      "-c": {
+        "HTTP_PROXY": "http://127.0.0.1:10808",
+        "HTTPS_PROXY": "http://127.0.0.1:10808",
+        "ALL_PROXY": "socks5://127.0.0.1:10808",
+        "http_proxy": "http://127.0.0.1:10808",
+        "https_proxy": "http://127.0.0.1:10808",
+        "all_proxy": "socks5://127.0.0.1:10808",
+        "NO_PROXY": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "LARK_CLI_NO_PROXY": null
+      },
+      "-lc": {
+        "HTTP_PROXY": "http://127.0.0.1:10808",
+        "HTTPS_PROXY": "http://127.0.0.1:10808",
+        "ALL_PROXY": "socks5://127.0.0.1:10808",
+        "http_proxy": "http://127.0.0.1:10808",
+        "https_proxy": "http://127.0.0.1:10808",
+        "all_proxy": "socks5://127.0.0.1:10808",
+        "NO_PROXY": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "LARK_CLI_NO_PROXY": null
+      },
+      "-ic": {
+        "HTTP_PROXY": "http://127.0.0.1:10808",
+        "HTTPS_PROXY": "http://127.0.0.1:10808",
+        "ALL_PROXY": "socks5://127.0.0.1:10808",
+        "http_proxy": "http://127.0.0.1:10808",
+        "https_proxy": "http://127.0.0.1:10808",
+        "all_proxy": "socks5://127.0.0.1:10808",
+        "NO_PROXY": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "LARK_CLI_NO_PROXY": null
+      },
+      "-lic": {
+        "HTTP_PROXY": "http://127.0.0.1:10808",
+        "HTTPS_PROXY": "http://127.0.0.1:10808",
+        "ALL_PROXY": "socks5://127.0.0.1:10808",
+        "http_proxy": "http://127.0.0.1:10808",
+        "https_proxy": "http://127.0.0.1:10808",
+        "all_proxy": "socks5://127.0.0.1:10808",
+        "NO_PROXY": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10",
+        "LARK_CLI_NO_PROXY": null
+      }
+    },
+    "system_proxy_foundation_request": {
+      "environment_contains_no_proxy_variables": true,
+      "exit_ip": "154.44.3.170",
+      "route_logged_to_lisa": true
+    }
+  },
+  "production_domains_after_restart": {
+    "validated_at": "2026-10-08T12:25:45.101192+08:00",
+    "passed": true,
+    "configuration_sha256": "ebb02a5bf7f7191b6a92db57d806a8bfc80d1e13a14f3ae908220c20b13b9e79",
+    "production_proxy": "127.0.0.1:10808",
+    "default_outbound": "admin-LISA-DMIT-11443",
+    "log_evidence_after_probe_start": true,
+    "probes": {
+      "ipify": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 1.069,
+        "response_bytes": 21,
+        "json_valid": true,
+        "public_exit": {
+          "ip": "154.44.3.170"
+        },
+        "route_logged_to_lisa": true
+      },
+      "ipinfo": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 0.733,
+        "response_bytes": 274,
+        "json_valid": true,
+        "public_exit": {
+          "ip": "154.44.3.170",
+          "city": "Los Angeles",
+          "region": "California",
+          "country": "US",
+          "org": "AS174 Cogent Communications, LLC"
+        },
+        "route_logged_to_lisa": true
+      },
+      "openai": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 0.765,
+        "response_bytes": 151,
+        "json_valid": true,
+        "error_payload_present": true,
+        "route_logged_to_lisa": true
+      },
+      "xai": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 1.059,
+        "response_bytes": 77,
+        "json_valid": true,
+        "error_payload_present": true,
+        "route_logged_to_lisa": true
+      },
+      "npm": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 1.464,
+        "response_bytes": 357184,
+        "json_valid": true,
+        "package_name": "@agentclientprotocol/codex-acp",
+        "route_logged_to_lisa": true
+      },
+      "github": {
+        "exit": 0,
+        "http_status": 200,
+        "elapsed_seconds": 0.708,
+        "response_bytes": 678,
+        "json_valid": true,
+        "github_payload_valid": true,
+        "route_logged_to_lisa": true
+      },
+      "cpa": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 1.061,
+        "response_bytes": 13,
+        "json_valid": false,
+        "route_logged_to_lisa": true
+      },
+      "cpa_direct_hostname": {
+        "exit": 0,
+        "http_status": 401,
+        "elapsed_seconds": 1.054,
+        "response_bytes": 27,
+        "json_valid": true,
+        "route_logged_to_lisa": true
+      }
+    },
+    "xray_processes": [
+      "59205     1   501 /Users/fu-121/xray/xray"
+    ]
+  },
+  "codeg_terminal": {
+    "passed": true,
+    "test_json": {
+      "nonce": "743fcaf2112d9f5236bcb1f3099590a6",
+      "exit_ip": "154.44.3.170",
+      "ipinfo_exit_ip": "154.44.3.170",
+      "hostname": "fu-121deMac-Studio.local",
+      "uid": 501,
+      "http_proxy": "http://127.0.0.1:10808",
+      "https_proxy": "http://127.0.0.1:10808",
+      "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10"
+    },
+    "assertions": {
+      "actual_terminal_stdout": true,
+      "nonce": true,
+      "ipify_lisa": true,
+      "ipinfo_lisa": true,
+      "hostname": true,
+      "uid501": true,
+      "http_proxy_loopback": true,
+      "https_proxy_loopback": true,
+      "no_public_proxy_bypass": true,
+      "terminal_exit_event": true
+    },
+    "transport": "codeg_terminal_api_ws",
+    "terminal_id": "lisa-outbound-validation-5d5f947c-c0d0-498d-8699-6ef0c0709a72",
+    "event_types": {
+      "ready": 1,
+      "output": 1,
+      "exit": 1
+    },
+    "stdout_bytes": 495,
+    "elapsed_seconds": 13.504,
+    "cleanup": {
+      "terminal_cleaned": true,
+      "method": "terminal_exit_event"
+    },
+    "validated_at": "2026-10-08T12:33:04.927098+08:00",
+    "node_exit": 0,
+    "default_environment_no_explicit_proxy_override": true,
+    "production_log_routes": {
+      "api.ipify.org": true,
+      "ipinfo.io": true,
+      "smart-api.hahaxiong.top": false,
+      "api-direct.hahaxiong.top": false
+    },
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    }
+  },
+  "air_mesh_and_native_ws": {
+    "validated_at": "2026-10-08T12:25:43.544292+08:00",
+    "passed": true,
+    "service_url": "http://10.10.10.12:3080",
+    "health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "authorization_negative": {
+      "missing": 401,
+      "incorrect": 401
+    },
+    "native_websocket": {
+      "origin_header_absent": true,
+      "upgrade_status": 101,
+      "ready_received": true
+    },
+    "air_mesh_interface": "utun4"
+  },
+  "codex_agent_initialization": {
+    "passed": false,
+    "agent": "codex",
+    "error": "agent_error:unspecified",
+    "test_json": null,
+    "tool_output_verified": false,
+    "agent_errors": [
+      {
+        "keys": [
+          "seq",
+          "connection_id",
+          "type",
+          "message",
+          "agent_type",
+          "code"
+        ],
+        "code": null,
+        "message": "ACP protocol error: Internal error: {\n  \"details\": \"failed to load workspace requirements\"\n}"
+      }
+    ],
+    "event_types": {
+      "prompt_capabilities": 1,
+      "fork_supported": 1,
+      "status_changed": 3,
+      "error": 1
+    },
+    "tool_events": 0,
+    "permissions_allowed_once": 0,
+    "permissions_denied": 0,
+    "elapsed_seconds": 0.973,
+    "cleanup": {
+      "disconnected": false,
+      "disconnect_error": "Codeg acp_disconnect: HTTP 500",
+      "folder_closed": true
+    },
+    "validated_at": "2026-10-08T12:28:39.668281+08:00",
+    "node_exit": 1,
+    "default_environment_no_explicit_proxy_override": true,
+    "production_log_routes": {
+      "api.ipify.org": false,
+      "ipinfo.io": false,
+      "smart-api.hahaxiong.top": false,
+      "api-direct.hahaxiong.top": false
+    },
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "occurred_before_proxy_changes": true,
+    "pre_change_log_time": "2026-10-08 12:14:00 CST"
+  },
+  "recorded_at": "2026-10-08T12:34:50.671200+08:00",
+  "scope": {
+    "proxy_scope_complete": true,
+    "xray_public_outbound_fixed": "admin-LISA-DMIT-11443",
+    "exit_ip": "154.44.3.170",
+    "location": "Los Angeles, California, US",
+    "only_private_networks_direct": true,
+    "system_proxy_and_codeg_current_process_verified": true,
+    "host_wide_tun_enforcement": false,
+    "full_host_reboot_tested": false,
+    "existing_running_gui_apps_environment_not_replaced": true
+  },
+  "codex_real_turn": {
+    "passed": true,
+    "agent": "codex",
+    "test_json": {
+      "nonce": "f853d89928926bf54fb6837b2ec4e4c5",
+      "exit_ip": "154.44.3.170",
+      "hostname": "fu-121deMac-Studio.local",
+      "uid": 501,
+      "http_proxy": "http://127.0.0.1:10808",
+      "https_proxy": "http://127.0.0.1:10808",
+      "no_proxy": "localhost,127.0.0.1,::1,.local,10.10.10.12,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10"
+    },
+    "tool_output_verified": true,
+    "stop_reason": "end_turn",
+    "agent_errors": [],
+    "event_types": {
+      "prompt_capabilities": 1,
+      "fork_supported": 1,
+      "status_changed": 4,
+      "session_started": 1,
+      "session_modes": 1,
+      "session_config_options": 1,
+      "selectors_ready": 1,
+      "available_commands": 1,
+      "conversation_linked": 1,
+      "conversation_status_changed": 2,
+      "user_prompt_sent": 1,
+      "user_message": 1,
+      "tool_call": 3,
+      "content_delta": 261,
+      "tool_call_update": 4,
+      "usage_update": 3,
+      "permission_request": 1,
+      "permission_resolved": 1,
+      "native_session_title": 1,
+      "turn_complete": 1
+    },
+    "tool_events": 7,
+    "permissions_allowed_once": 1,
+    "permissions_denied": 0,
+    "elapsed_seconds": 28.851,
+    "cleanup": {
+      "disconnected": true,
+      "conversation_deleted": true,
+      "folder_closed": true
+    },
+    "validated_at": "2026-10-08T12:38:04.585508+08:00",
+    "node_exit": 0,
+    "default_environment_no_explicit_proxy_override": true,
+    "production_log_routes": {
+      "api.ipify.org": true,
+      "ipinfo.io": true,
+      "smart-api.hahaxiong.top": false,
+      "api-direct.hahaxiong.top": false
+    },
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    }
+  },
+  "codex_config_semantic_repair": {
+    "repair": {
+      "fixed_at": "2026-10-08T12:37:09.743002+08:00",
+      "config_path": "/Users/fu-121/.codex/config.toml",
+      "before_sha256": "7317162d0a774dffb47962de42c8f74a16b4aa2e864ae957d022aa05a30219c1",
+      "after_sha256": "3884439b3723d50f19effe03e3a866345f2e766fa1769d8eede83473de3fb4b9",
+      "removed_table": "model_providers.openai",
+      "removed_only_key": "supports_websockets",
+      "existing_model_provider_and_permissions_preserved": true,
+      "credentials_untouched": true,
+      "backup_path": "/Library/Application Support/Codeg-company-studio/xray-backups/20261008-121833/codex-config.pre-invalid-provider.toml"
+    },
+    "strict_nested_app_server_error_before": {
+      "messages": [
+        {
+          "id": 1,
+          "error": null,
+          "initialized": true
+        },
+        {
+          "id": 2,
+          "error": {
+            "code": -32603,
+            "message": "invalid configuration: model_providers contains reserved built-in provider IDs: `openai`. Built-in providers cannot be overridden. Rename your custom provider (for example, `openai-custom`).\nin `model_providers`\n"
+          }
+        }
+      ],
+      "stderr": [
+        "\u001b[2m2026-10-08T04:34:26.959733Z\u001b[0m \u001b[31mERROR\u001b[0m \u001b[2mcodex_app_server\u001b[0m\u001b[2m:\u001b[0m Invalid configuration; using defaults. /Users/fu-121/.codex/config.toml:60:2: model_providers contains reserved built-in provider IDs: `openai`. Built-in providers cannot be overridden. Rename your custom provider (for example, `openai-custom`).\n"
+      ],
+      "exit_code": 0
+    },
+    "strict_native_app_server_error_before": {
+      "messages": [
+        {
+          "id": 1,
+          "error": null,
+          "initialized": true
+        },
+        {
+          "id": 2,
+          "error": {
+            "code": -32603,
+            "message": "invalid configuration: model_providers contains reserved built-in provider IDs: `openai`. Built-in providers cannot be overridden. Rename your custom provider (for example, `openai-custom`).\nin `model_providers`\n"
+          }
+        }
+      ],
+      "stderr": [
+        "\u001b[2m2026-10-08T04:34:44.499484Z\u001b[0m \u001b[31mERROR\u001b[0m \u001b[2mcodex_app_server\u001b[0m\u001b[2m:\u001b[0m Invalid configuration; using defaults. /Users/fu-121/.codex/config.toml:60:2: model_providers contains reserved built-in provider IDs: `openai`. Built-in providers cannot be overridden. Rename your custom provider (for example, `openai-custom`).\n"
+      ],
+      "exit_code": 0
+    },
+    "exact_invalid_section_before": {
+      "path": "/Users/fu-121/.codex/config.toml",
+      "sha256": "7317162d0a774dffb47962de42c8f74a16b4aa2e864ae957d022aa05a30219c1",
+      "line": 93,
+      "section_keys": [
+        "supports_websockets"
+      ],
+      "supports_websockets": true,
+      "next_table": null,
+      "segment_is_final": true,
+      "mtime_ns": 1791432702260779238
+    }
+  },
+  "final_state": {
+    "validated_at": "2026-10-08T12:40:42.042720+08:00",
+    "passed": true,
+    "jobs": {
+      "system/com.xray.proxy.studio": {
+        "state": "running",
+        "pid": "59205",
+        "runs": "2"
+      },
+      "system/cc.codeg-company-studio": {
+        "state": "running",
+        "pid": "59096",
+        "runs": "2",
+        "last exit code": "0"
+      },
+      "gui/501/com.mycc.codex-gui-proxy-env": {
+        "state": "not running",
+        "runs": "1",
+        "last exit code": "0"
+      },
+      "gui/501/com.mycc.studio-feishu-auth-keepalive": {
+        "state": "not running",
+        "runs": "1",
+        "last exit code": "0"
+      }
+    },
+    "old_xray_gui_disabled": true,
+    "xray_config_expected_hash": true,
+    "codex_config_expected_hash": true,
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    },
+    "current_acp_connections_count": 0,
+    "current_terminals_count": 0
+  }
+}

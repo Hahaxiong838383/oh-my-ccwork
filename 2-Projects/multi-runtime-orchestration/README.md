@@ -66,3 +66,7 @@ skills   .claude/skills/（84 真源，唯一权威）
 `desktop-cc-gui`（★4062，Tauri，52.2 万行，MIT）—— 与 codeg 同栈、功能高度重叠但架构不同
 （它自建 engine 层 + `skills_hub.rs`，codeg 走 ACP 标准）。**两者规模都在 50 万行级，不可能融合**。
 codeg 用着不顺手时，去翻它的解法作参考，源码分析见 skill `mcp-hub`。
+
+## 公司 Mac Studio Codeg（2026-10-08）
+
+[部署与维护归档](codeg-company-macstudio/README.md)包含系统自启、Air/EasyTier 接入、Lisa 出站、个人 CPA 与 Grok 四档配置及脱敏验收。15:16 的远端失败已定位 Desktop 权限等待；当前修复状态以该归档的最新事件为准。

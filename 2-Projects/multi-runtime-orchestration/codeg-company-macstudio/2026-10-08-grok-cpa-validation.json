@@ -1,0 +1,209 @@
+{
+  "target": "Company Mac Studio fu-121deMac-Studio.local (macOS, UID 501)",
+  "codeg_version": "0.34.0",
+  "grok_version": "1.0.46",
+  "source_version": {
+    "tag": "v0.34.0",
+    "commit": "592131c7",
+    "verified_behavior": "With empty custom model ID, frontend discards base URL, API key, API backend and context fields; backend successfully removes managed model block."
+  },
+  "before": {
+    "agent_type": "grok",
+    "enabled": true,
+    "grok_settings": {
+      "default_reasoning_effort": null,
+      "permission_mode": "bypassPermissions",
+      "custom_model_id": null,
+      "custom_base_url": null,
+      "custom_api_key": {
+        "present": false
+      },
+      "custom_api_backend": null,
+      "custom_context_window": null,
+      "auto_compact_threshold_percent": null
+    },
+    "env_keys": [
+      "GROK_AUTH_MODE"
+    ],
+    "grok_config_toml_present": true
+  },
+  "personal_cpa_real_responses_probe": {
+    "mode": "probe",
+    "validated_at": "2026-10-08T13:07:03.916025+08:00",
+    "model": "grok-4.7",
+    "base_url": "https://smart-api.hahaxiong.top/v1",
+    "api_backend": "responses",
+    "before": {
+      "default_reasoning_effort": null,
+      "permission_mode": "bypassPermissions",
+      "custom_model_id": null,
+      "custom_base_url": null,
+      "custom_api_key": {
+        "present": false
+      },
+      "custom_api_backend": null,
+      "custom_context_window": null,
+      "auto_compact_threshold_percent": null
+    },
+    "models_payload_nonempty": true,
+    "requested_model_advertised": true,
+    "responses_http_status": 200,
+    "real_response_content_verified": true,
+    "response_completed": true,
+    "response_seconds": 8.854,
+    "event_types": {
+      "response.created": 1,
+      "response.in_progress": 1,
+      "response.output_item.added": 2,
+      "response.reasoning_summary_part.added": 1,
+      "response.reasoning_summary_text.delta": 1,
+      "response.reasoning_summary_text.done": 1,
+      "response.reasoning_summary_part.done": 1,
+      "response.output_item.done": 2,
+      "response.content_part.added": 1,
+      "response.output_text.delta": 9,
+      "response.output_text.done": 1,
+      "response.content_part.done": 1,
+      "response.completed": 1
+    },
+    "actual_response": "230 × 67 = 15410。",
+    "test_expression": "230 * 67",
+    "expected_result": "15410",
+    "passed": true
+  },
+  "official_config_save": {
+    "mode": "apply",
+    "validated_at": "2026-10-08T13:07:43.214176+08:00",
+    "model": "grok-4.7",
+    "base_url": "https://smart-api.hahaxiong.top/v1",
+    "api_backend": "responses",
+    "before": {
+      "default_reasoning_effort": null,
+      "permission_mode": "bypassPermissions",
+      "custom_model_id": null,
+      "custom_base_url": null,
+      "custom_api_key": {
+        "present": false
+      },
+      "custom_api_backend": null,
+      "custom_context_window": null,
+      "auto_compact_threshold_percent": null
+    },
+    "stale_connections": 0,
+    "after": {
+      "default_reasoning_effort": "high",
+      "permission_mode": "bypassPermissions",
+      "custom_model_id": "grok-4.7",
+      "custom_base_url": "https://smart-api.hahaxiong.top/v1",
+      "custom_api_key": {
+        "present": true
+      },
+      "custom_api_backend": "responses",
+      "custom_context_window": 500000,
+      "auto_compact_threshold_percent": null
+    },
+    "key_roundtrip_matches": true,
+    "permission_preserved": true,
+    "config_sha256": "2b1a2787631edeb37d0a78130f7ce726ae81281a236123f3e9897d54d4258458",
+    "config_mode": "0o600",
+    "passed": true
+  },
+  "fresh_codeg_grok_turn": {
+    "default_model": "grok-4.7",
+    "model_selector": {
+      "id": "model",
+      "name": "Model",
+      "description": null,
+      "category": "model",
+      "kind": {
+        "type": "select",
+        "current_value": "grok-4.7",
+        "options": [
+          {
+            "value": "grok-4.6",
+            "name": "Grok 4.6",
+            "description": null
+          },
+          {
+            "value": "grok-4.5",
+            "name": "Grok 4.5",
+            "description": null
+          },
+          {
+            "value": "grok-4.7",
+            "name": "grok-4.7",
+            "description": null
+          }
+        ],
+        "groups": []
+      },
+      "recommended_value": null
+    },
+    "config_stale": false,
+    "initialization_seconds": 1.723,
+    "reply": "**58697**\n\n743 × 79 = 743 × 70 + 743 × 9 = 52010 + 6687 = 58697。",
+    "stop_reason": "end_turn",
+    "content_verified": true,
+    "tool_events": 0,
+    "passed": true,
+    "agent": "grok",
+    "fresh_connection": true,
+    "preferred_config_values": null,
+    "manual_model_override": false,
+    "expected_answer": "58697",
+    "test_expression": "743 * 79",
+    "events": {
+      "prompt_capabilities": 1,
+      "fork_supported": 1,
+      "status_changed": 4,
+      "session_started": 1,
+      "session_config_options": 1,
+      "selectors_ready": 1,
+      "available_commands": 3,
+      "conversation_linked": 1,
+      "conversation_status_changed": 2,
+      "user_prompt_sent": 1,
+      "user_message": 1,
+      "usage_update": 2,
+      "thinking": 1,
+      "content_delta": 34,
+      "turn_complete": 1
+    },
+    "errors": [],
+    "cleanup": {
+      "disconnected": true,
+      "conversation_deleted": true,
+      "folder_closed": true,
+      "history_removed": true
+    },
+    "elapsed_seconds": 5.613,
+    "validated_at": "2026-10-08T13:08:16.777956+08:00",
+    "node_exit": 0,
+    "production_log_cpa_requests": 3,
+    "production_log_cpa_lisa_route": true,
+    "preexisting_connection_count": 1,
+    "preexisting_connections_still_present": true,
+    "codeg_health": {
+      "status": "ok",
+      "version": "0.34.0"
+    }
+  },
+  "air_selector_preferences": {
+    "client_version": "0.34.0",
+    "storage_owner": "app.codeg",
+    "origin": "tauri://localhost",
+    "sqlite_readonly_with_wal": true,
+    "selector_prefs_valid_json": true,
+    "grok_entry_present": false,
+    "running_webview_memory_inspected": false
+  },
+  "limits": {
+    "original_user_form_values_observed": false,
+    "exact_historical_trigger_proven": false,
+    "client_running_webview_memory_inspected": false,
+    "xray_log_observation": "CPA requests in test time window use Lisa; not independently correlated by process ID or request ID.",
+    "short_prompt_test_only": true
+  },
+  "credential_handling": "Existing personal CPA key read in memory and relayed through SSH stdin; no key/token included in reports. Normal private Grok config stays 0600.",
+  "git_commit_push_performed": false
+}
