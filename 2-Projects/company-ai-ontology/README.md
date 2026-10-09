@@ -1,5 +1,7 @@
 # Company AI Ontology
 
+> **历史副本（2026-10-09）**：本目录不再维护业务源码。完整项目的统一开发目录为 `/Users/fu-121/work/company-ai-ontology`，项目入口与切换方法见 [WORKSPACE.md](WORKSPACE.md)。下文保留为历史状态记录。
+
 公司级 AI Ontology 基座实施项目。P0-A 至 P0-F、V3 P0-S Foundation Pack、Goal 4 P0-EPI、Goal 5 P0-DEC 和 Goal 6 P1-DOMAIN 只读领域骨架已在公司 QNAP 部署并完成当前层级生产验收；现有 H 平台员工私人 Bot 保持不变，真实 ERP/社媒写回继续关闭。
 
 ## 资产身份门禁
