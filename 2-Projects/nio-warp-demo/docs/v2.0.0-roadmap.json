@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "product": "NIO Warp",
+  "targetVersion": "2.0.0",
+  "firstCandidateVersion": "2.0.0-rc.1",
+  "status": "planned",
+  "buildNumberPolicy": "Allocate a unique increasing build greater than 77 after checking release history before building.",
+  "baseline": {
+    "version": "1.0.0",
+    "build": 77,
+    "tag": "nio-warp-v1.0.0-frozen-20260921",
+    "tagCommit": "e010f964a50a52f36e9afca8df211bdc63ffe3f9",
+    "functionalSourceCommit": "0a13eac59f5472e306c222511ef790d1bb1d31f0"
+  },
+  "plannedBranch": "codex/nio-warp-v2-connect",
+  "topology": "Connect server and managed browser player run on the NIO Warp computer.",
+  "delivery": "Installable app plus independent input extension source, prototype example, documentation, agent skill and rollback instructions.",
+  "coreLibraryExtractionInScope": false,
+  "fullAppSourceDelivery": "Optional sanitized customer source package with reproducible build instructions.",
+  "validation": {
+    "localV2TestsCompleted": false,
+    "customerHardwareAvailableToDeveloper": false,
+    "customerAcceptanceCompleted": false,
+    "formalReleaseRequiresCustomerAcceptance": true
+  },
+  "plan": "v2.0.0-delivery-plan-20261010.md",
+  "createdDate": "2026-10-10"
+}
