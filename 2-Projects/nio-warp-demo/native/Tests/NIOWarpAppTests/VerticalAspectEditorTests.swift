@@ -1,4 +1,5 @@
 import AppKit
+import simd
 import XCTest
 @testable import NIOWarpApp
 

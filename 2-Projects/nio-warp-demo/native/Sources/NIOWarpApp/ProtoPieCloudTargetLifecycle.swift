@@ -107,9 +107,10 @@ struct ProtoPieCloudTargetLease {
         targets.compactMap { target in
             guard target["type"] as? String == "page", let id = target["targetId"] as? String,
                   !preserving.contains(id), let title = target["title"] as? String,
-                  title.hasPrefix("NIO Warp Preview · "), let text = target["url"] as? String,
-                  let url = URL(string: text), url.host == "cloud.protopie.io" else { return nil }
-            return id
+                  let text = target["url"] as? String, let url = URL(string: text) else { return nil }
+            if title.hasPrefix("NIO Warp Preview · "), url.host == "cloud.protopie.io" { return id }
+            if title.hasPrefix("NIO Warp Connect Preview · "), (try? ProtoPieConnectSource.pageIdentity(for: url)) != nil { return id }
+            return nil
         }
     }
 
@@ -129,6 +130,14 @@ struct ProtoPieCloudTargetLease {
         }
         let exact = added.filter { $0["url"] as? String == expectedURL.absoluteString }
         if exact.count == 1 { return exact[0]["targetId"] as? String }
+        // Connect must never claim another pieid or an unrelated service page.
+        if (try? ProtoPieConnectSource.pageIdentity(for: expectedURL)) != nil {
+            let bound = added.filter { target in
+                guard let text = target["url"] as? String, let actual = URL(string: text) else { return false }
+                return ProtoPieConnectSource.matchesPage(actual, expected: expectedURL)
+            }
+            return bound.count == 1 ? bound[0]["targetId"] as? String : nil
+        }
         guard added.count == 1, let text = added[0]["url"] as? String,
               let url = URL(string: text), url.host == "cloud.protopie.io" || url.host == "accounts.protopie.io" else { return nil }
         return added[0]["targetId"] as? String

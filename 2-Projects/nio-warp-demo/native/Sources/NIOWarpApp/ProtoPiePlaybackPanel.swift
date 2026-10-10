@@ -1,6 +1,6 @@
 import AppKit
 
-/// Cloud playlist, script editor and runtime controls. It is deliberately embeddable:
+/// Browser playlist, script editor and runtime controls. It is deliberately embeddable:
 /// the existing ProtoPie inspector continues to own display and calibration controls.
 @MainActor final class ProtoPiePlaybackPanel: NSObject {
     let view = NSView()
@@ -240,15 +240,23 @@ import AppKit
     }
 
     private func buildSource() {
-        guard let item = selectedItem else { add(note("先在左侧添加一个云端链接。")); return }
+        guard let item = selectedItem else { add(note("先在左侧添加一个 Cloud 或 Connect 链接。")); return }
         add(field("演示名称 · 与左侧列表一致", text(item.name, id: "source-name") { [weak self] value in
             self?.editItem(item.id) { $0.name = value }; self?.renderSidebar()
             self?.heading.stringValue = value
         }))
+        add(field("预览来源", popup(["ProtoPie Cloud", "ProtoPie Connect"], selected: item.source == .connect ? 1 : 0, id: "source-kind") { [weak self] index in
+            self?.editItem(item.id) { $0.source = index == 1 ? .connect : .cloud }
+            self?.renderContent()
+        }))
         let url = text(item.cloudURL, id: "source-url") { [weak self] value in self?.editItem(item.id) { $0.cloudURL = value } }
-        url.placeholderString = "https://cloud.protopie.io/p/…"
+        url.placeholderString = item.source == .connect ? "http://localhost:9981/pie?pieid=…" : "https://cloud.protopie.io/p/…"
         url.lineBreakMode = .byTruncatingMiddle
-        add(field("ProtoPie Cloud 链接", url))
+        add(field(item.source == .connect ? "Connect 完整播放器链接" : "ProtoPie Cloud 链接", url))
+        if item.source == .connect {
+            add(note("本机 Connect 主服务优先使用 localhost；更换网络不改变本机播放地址。外部控制输入直接连接 Connect，不写入校正参数。"))
+            add(note("消息连通性未验证。请用 Connect 消息面板及示例原型确认外接输入；画面可播放不等于消息已接通。"))
+        }
         add(check("启用此来源，参与顺序轮播", value: item.enabled, id: "source-enabled") { [weak self] value in
             self?.editItem(item.id) { $0.enabled = value }; self?.renderSidebar()
         })
@@ -259,23 +267,30 @@ import AppKit
         })
         add(note("画面与输入就绪后开始计时；加载、故障恢复和暂停不消耗本链接演示时长。"))
         add(separator()); add(title("此链接的画面取景"))
-        add(popup(["沿用原有横向显示设置", "等比例横向顶满", "关闭横向顶满（沿用原缩放）"],
-                  selected: item.fillWidth.map { $0 ? 1 : 2 } ?? 0, id: "source-fill-width") { [weak self] index in
-            self?.editItem(item.id) { $0.fillWidth = index == 0 ? nil : index == 1 }
-        })
-        add(check("为此链接设置原型内部上下取景", value: item.verticalPosition != nil, id: "source-position-override") { [weak self] enabled in
-            self?.editItem(item.id) { $0.verticalPosition = enabled ? 0 : nil }; self?.renderContent()
-        })
-        if let position = item.verticalPosition {
-            add(field("内部取景位置（−1 至 +1）", number(position, id: "source-position", range: -1...1) { [weak self] value in
-                self?.editItem(item.id) { $0.verticalPosition = value }
-            }))
+        if item.source == .connect {
+            add(check("使用 Connect 原生等比适应窗口", value: item.connectScaleToFit, id: "source-connect-scale-to-fit") { [weak self] enabled in
+                self?.editItem(item.id) { $0.connectScaleToFit = enabled }
+            })
+            add(note("Connect 当前仅支持原生显示；关闭等比适应后使用原型原始尺寸。横向铺满与原型内部上下取景暂不可用。"))
+        } else {
+            add(popup(["沿用原有横向显示设置", "等比例横向顶满", "关闭横向顶满（沿用原缩放）"],
+                      selected: item.fillWidth.map { $0 ? 1 : 2 } ?? 0, id: "source-fill-width") { [weak self] index in
+                self?.editItem(item.id) { $0.fillWidth = index == 0 ? nil : index == 1 }
+            })
+            add(check("为此链接设置原型内部上下取景", value: item.verticalPosition != nil, id: "source-position-override") { [weak self] enabled in
+                self?.editItem(item.id) { $0.verticalPosition = enabled ? 0 : nil }; self?.renderContent()
+            })
+            if let position = item.verticalPosition {
+                add(field("内部取景位置（−1 至 +1）", number(position, id: "source-position", range: -1...1) { [weak self] value in
+                    self?.editItem(item.id) { $0.verticalPosition = value }
+                }))
+            }
         }
         add(note("仅保存本链接的播放器取景。整幅位置、AA 区、镜像和曲面校正仍使用已固化的显示设置。"))
     }
 
     private func buildScript() {
-        guard let item = selectedItem else { add(note("先在左侧添加一个云端链接。")); return }
+        guard let item = selectedItem else { add(note("先在左侧添加一个 Cloud 或 Connect 链接。")); return }
         add(check("为此链接启用自动操作", value: item.script.enabled, id: "script-enabled") { [weak self] value in
             self?.editItem(item.id) { $0.script.enabled = value }
         })
@@ -635,7 +650,7 @@ import AppKit
         item.name = "新演示 \(draft.items.count + 1)"
         draft.items.append(item); draft.selectedItemID = item.id; dirty = true
         _ = saveDraft(); selectedStepID = nil; renderSidebar(); renderContent()
-        showMessage("已添加未启用的来源。填写云端链接后勾选启用。")
+        showMessage("已添加未启用的来源。选择来源并填写完整播放器链接后勾选启用。")
     }
 
     private func duplicateItem() {

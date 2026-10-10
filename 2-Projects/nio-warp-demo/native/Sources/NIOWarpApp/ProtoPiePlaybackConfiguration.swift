@@ -26,21 +26,47 @@ struct ProtoPiePlaybackLibrary: Codable, Equatable {
 struct ProtoPiePlaylistItem: Codable, Equatable, Identifiable {
     var id = UUID()
     var name = "新演示"
+    var source: ProtoPieConfiguration.Source = .cloud
+    /// The legacy field name remains the on-disk key for either browser source.
     var cloudURL = ""
     var enabled = true
     var durationSeconds = 300.0
     var script = ProtoPieAutomationScript()
+    /// Connect's native Stage fit is independent of the retained Cloud framing.
+    var connectScaleToFit = true
     var fillWidth: Bool?
     var verticalPosition: Double?
 
+    init() {}
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, source, cloudURL, enabled, durationSeconds, script, connectScaleToFit, fillWidth, verticalPosition
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        source = try values.decodeIfPresent(ProtoPieConfiguration.Source.self, forKey: .source) ?? .cloud
+        cloudURL = try values.decode(String.self, forKey: .cloudURL)
+        enabled = try values.decode(Bool.self, forKey: .enabled)
+        durationSeconds = try values.decode(Double.self, forKey: .durationSeconds)
+        script = try values.decode(ProtoPieAutomationScript.self, forKey: .script)
+        connectScaleToFit = try values.decodeIfPresent(Bool.self, forKey: .connectScaleToFit) ?? true
+        fillWidth = try values.decodeIfPresent(Bool.self, forKey: .fillWidth)
+        verticalPosition = try values.decodeIfPresent(Double.self, forKey: .verticalPosition)
+    }
+
     func validate() throws {
+        guard source == .cloud || source == .connect else { throw ProtoPiePlaybackValidationError.invalid("播放列表仅支持 Cloud 或 Connect 浏览器来源。") }
         try ProtoPiePlaybackValidation.name(name, field: "演示名称")
         try ProtoPiePlaybackValidation.number(durationSeconds, in: 1...604_800, field: "单链接播放时长（1 秒至 7 天）")
         if let verticalPosition { try ProtoPiePlaybackValidation.number(verticalPosition, in: -1...1, field: "画面上下位置") }
         guard cloudURL.utf8.count <= 16_384 else { throw ProtoPiePlaybackValidationError.invalid("预览链接过长。") }
         // Disabled, empty entries can be saved as drafts, without making them runnable.
         if enabled || !cloudURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            var configuration = ProtoPieConfiguration(); configuration.cloudURL = cloudURL
+            var configuration = ProtoPieConfiguration(); configuration.source = source
+            if source == .connect { configuration.connectURL = cloudURL } else { configuration.cloudURL = cloudURL }
             _ = try configuration.playbackURL()
         }
         try script.validate()
@@ -49,10 +75,16 @@ struct ProtoPiePlaylistItem: Codable, Equatable, Identifiable {
     func configuration(inheriting previous: ProtoPieConfiguration) throws -> ProtoPieConfiguration {
         try validate()
         var result = previous
-        result.source = .cloud
-        result.cloudURL = cloudURL.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let fillWidth { result.fillWidth = fillWidth }
-        if let verticalPosition { result.widthFitVerticalPosition = verticalPosition }
+        result.source = source
+        let link = cloudURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        if source == .connect {
+            result.connectURL = link
+            result.scaleToFit = connectScaleToFit
+        } else {
+            result.cloudURL = link
+            if let fillWidth { result.fillWidth = fillWidth }
+            if let verticalPosition { result.widthFitVerticalPosition = verticalPosition }
+        }
         _ = try result.playbackURL()
         return result
     }
@@ -153,8 +185,9 @@ private enum ProtoPiePlaybackValidation {
 
 /// The playback library never overwrites the existing single-source configuration.
 @MainActor final class ProtoPiePlaybackStore {
-    static let storageKey = "nioWarpProtoPie.playbackLibrary.v1"
-    static let unreadableBackupKey = "nioWarpProtoPie.playbackLibrary.unreadableBackup.v1"
+    static let storageKey = "nioWarpProtoPie.playbackLibrary.v2"
+    static let legacyStorageKey = "nioWarpProtoPie.playbackLibrary.v1"
+    static let unreadableBackupKey = "nioWarpProtoPie.playbackLibrary.unreadableBackup.v2"
     private let defaults: UserDefaults
     private var unreadableOriginal: Any?
     private(set) var library = ProtoPiePlaybackLibrary()
@@ -162,22 +195,25 @@ private enum ProtoPiePlaybackValidation {
 
     init(defaults: UserDefaults = .standard, legacy: ProtoPieConfiguration) {
         self.defaults = defaults
-        if let original = defaults.object(forKey: Self.storageKey) {
+        let current = defaults.object(forKey: Self.storageKey)
+        if let original = current ?? defaults.object(forKey: Self.legacyStorageKey) {
             do {
                 guard let data = original as? Data, data.count <= 16_777_216 else { throw ProtoPiePlaybackValidationError.invalid("播放计划数据格式或大小无效。") }
                 let decoded = try JSONDecoder().decode(ProtoPiePlaybackLibrary.self, from: data)
                 try decoded.validate()
                 library = decoded
+                if current == nil { try save(decoded) }
             } catch {
                 unreadableOriginal = original
                 warning = "播放计划无法读取，原数据已保留。保存新计划时会另存原数据备份。"
             }
             return
         }
-        if legacy.source == .cloud, (try? legacy.playbackURL()) != nil {
+        if (legacy.source == .cloud || legacy.source == .connect), (try? legacy.playbackURL()) != nil {
             var item = ProtoPiePlaylistItem()
             item.name = "当前预览"
-            item.cloudURL = legacy.cloudURL
+            item.source = legacy.source
+            item.cloudURL = legacy.source == .connect ? legacy.connectURL : legacy.cloudURL
             library.items = [item]
             library.selectedItemID = item.id
         }

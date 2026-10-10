@@ -1068,7 +1068,8 @@ private enum AppVersion {
         let dictionary = Bundle.main.infoDictionary
         let version = dictionary?["CFBundleShortVersionString"] as? String ?? "开发版"
         let build = dictionary?["CFBundleVersion"] as? String ?? "-"
-        return "v\(version) (\(build))"
+        let channel = dictionary?["NIOWarpReleaseChannel"] as? String ?? ""
+        return "v\(version) (\(build))" + (channel.isEmpty ? "" : " · \(channel) 候选版")
     }
 }
 

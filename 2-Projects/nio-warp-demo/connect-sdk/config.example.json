@@ -1,0 +1,10 @@
+{
+  "serverURL": "http://localhost:9981",
+  "protocol": "legacy2",
+  "name": "NIO Input Bridge",
+  "maxHz": 20,
+  "connectTimeoutMs": 5000,
+  "reconnectDelayMs": 1000,
+  "reconnectAttempts": 10,
+  "logDirectory": null
+}

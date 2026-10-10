@@ -247,8 +247,8 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         connecting = true
         defer { connecting = false }
         await releaseAllAndClose()
-        guard session.configuration.source == .cloud, let targetID = session.cloudTargetID, !targetID.isEmpty else {
-            throw MouseInputTransportError.unavailable("首版鼠标映射仅支持本应用专用的 ProtoPie Cloud 播放窗口。")
+        guard [.cloud, .connect].contains(session.configuration.source), let targetID = session.cloudTargetID, !targetID.isEmpty else {
+            throw MouseInputTransportError.unavailable("鼠标映射仅支持本应用专用的 ProtoPie Cloud 或 Connect 播放窗口。")
         }
         let socket = try Self.browserSocket(profileURL: profileURL)
         let expectedURL = try session.configuration.playbackURL()
@@ -274,7 +274,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
                   (browser["id"] as? NSNumber)?.int32Value == session.processID else {
                 throw MouseInputTransportError.unavailable("调试端口不属于当前捕获的专用 Chrome 进程。")
             }
-            try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL)
+            try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL, source: session.configuration.source)
             let attachment = try await trackedCall(connection, "Target.attachToTarget",
                 parameters: ["targetId": targetID, "flatten": true], sessionID: nil)
             guard let pageSession = attachment["sessionId"] as? String, !pageSession.isEmpty else {
@@ -531,12 +531,13 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         return fresh
     }
 
-    private func validateTarget(_ connection: MouseInputCDPConnection, targetID: String, expectedURL: URL) async throws {
+    private func validateTarget(_ connection: MouseInputCDPConnection, targetID: String, expectedURL: URL,
+                                source: ProtoPieConfiguration.Source) async throws {
         viewportObservation = ["stage": "target", "rejected": false]
         let info = try await trackedCall(connection, "Target.getTargetInfo", parameters: ["targetId": targetID], sessionID: nil)
         let target = info["targetInfo"] as? [String: Any]
         let targetMatches = target?["targetId"] as? String == targetID && target?["type"] as? String == "page"
-        let urlMatches = (target?["url"] as? String).map { Self.matchesPage($0, expected: expectedURL) } == true
+        let urlMatches = (target?["url"] as? String).map { Self.matchesPage($0, expected: expectedURL, source: source) } == true
         viewportObservation?["targetMatches"] = targetMatches
         viewportObservation?["urlMatches"] = urlMatches
         guard targetMatches, urlMatches else { throw rejectViewport("target") }
@@ -547,7 +548,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             throw MouseInputTransportError.closed
         }
         let expectedURL = try session.configuration.playbackURL()
-        try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL)
+        try await validateTarget(connection, targetID: targetID, expectedURL: expectedURL, source: session.configuration.source)
         viewportObservation?["stage"] = "browserWindow"
         let window = try await trackedCall(connection, "Browser.getWindowForTarget", parameters: ["targetId": targetID], sessionID: nil)
         guard let browserWindowID = window["windowId"] as? Int, let bounds = window["bounds"] as? [String: Any],
@@ -571,7 +572,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         let readyState = value["readyState"] as? String
         // Do not retain arbitrary page-provided strings in diagnostics.
         viewportObservation?["readyState"] = readyState.map { ["loading", "interactive", "complete"].contains($0) ? $0 : "invalid" } ?? "missing"
-        let urlMatches = (value["url"] as? String).map { Self.matchesPage($0, expected: expectedURL) } == true
+        let urlMatches = (value["url"] as? String).map { Self.matchesPage($0, expected: expectedURL, source: session.configuration.source) } == true
         viewportObservation?["urlMatches"] = urlMatches
         for key in ["width", "height", "dpr", "visualScale", "visualOffsetX", "visualOffsetY"] {
             if let number = value[key] as? NSNumber, number.doubleValue.isFinite {
@@ -679,11 +680,12 @@ enum MouseInputTransportError: LocalizedError, Equatable {
             cursorState = "browserResource"
             let encoded = String(decoding: try JSONSerialization.data(withJSONObject: [resource]), as: UTF8.self)
             let limit = ProtoPieCursorStyle.maximumResourceBytes
+            let connectHTTP = session?.configuration.source == .connect
             let result = try await evaluate("""
             (async()=>{const result={nioCursorResource:true,timeOrigin:performance.timeOrigin,ok:false};
             const valid=url=>!url.username&&!url.password&&(url.protocol==='https:'||
               (url.protocol==='data:'&&/^data:image\\//i.test(url.href))||
-              (url.origin===location.origin&&url.protocol===location.protocol));
+              (\(connectHTTP ? "true" : "false")&&url.protocol==='http:'&&url.origin===location.origin&&url.protocol===location.protocol));
             const abort=new AbortController(),timeout=setTimeout(()=>abort.abort(),1200);
             try {const url=new URL(\(encoded)[0],location.href);if(!valid(url))return result;
               const response=await fetch(url.href,{credentials:'same-origin',redirect:'error',signal:abort.signal});
@@ -732,9 +734,16 @@ enum MouseInputTransportError: LocalizedError, Equatable {
     /// CSS explicitly names. Keep the candidate's density and CSS hotspot intact.
     private func cachedPageCursor(_ candidates: [ProtoPieCursorDefinition],
                                   observation: CursorObservation) async throws -> ProtoPieCursorStyle? {
+        try confirmCursorObservation(observation)
+        let connectURL = session?.configuration.source == .connect ? try session?.configuration.playbackURL() : nil
         let candidates = candidates.filter { candidate in
             guard let resource = candidate.resource, let url = URLComponents(string: resource) else { return false }
-            return url.scheme?.lowercased() == "https" && url.user == nil && url.password == nil
+            guard url.user == nil, url.password == nil else { return false }
+            if url.scheme?.lowercased() == "https" { return true }
+            guard url.scheme?.lowercased() == "http", let expected = connectURL,
+                  let page = URLComponents(url: expected, resolvingAgainstBaseURL: false) else { return false }
+            return page.scheme?.lowercased() == "http" && url.host?.lowercased() == page.host?.lowercased()
+                && (url.port ?? 80) == (page.port ?? 80)
         }
         guard !candidates.isEmpty else { return nil }
         try confirmCursorObservation(observation)
@@ -857,7 +866,7 @@ enum MouseInputTransportError: LocalizedError, Equatable {
               !originalPageInvalidated,
               (value["timeOrigin"] as? NSNumber)?.doubleValue == viewport.timeOrigin,
               let url = value["url"] as? String, let expected = try? session.configuration.playbackURL(),
-              Self.matchesPage(url, expected: expected) else { return }
+              Self.matchesPage(url, expected: expected, source: session.configuration.source) else { return }
         for button: MouseInputEvent.Button in [.left, .right, .middle] where possiblyPressed & button.mask != 0 {
             guard !originalPageInvalidated else { return }
             possiblyPressed &= ~button.mask
@@ -884,7 +893,12 @@ enum MouseInputTransportError: LocalizedError, Equatable {
         return socket
     }
 
-    static func matchesPage(_ text: String, expected: URL) -> Bool {
+    static func matchesPage(_ text: String, expected: URL, source: ProtoPieConfiguration.Source = .cloud) -> Bool {
+        if source == .connect {
+            guard let actual = URL(string: text) else { return false }
+            return ProtoPieConnectSource.matchesPage(actual, expected: expected)
+        }
+        guard source == .cloud else { return false }
         guard let actual = URLComponents(string: text), let wanted = URLComponents(url: expected, resolvingAgainstBaseURL: false),
               actual.scheme == "https", actual.host == "cloud.protopie.io", actual.user == nil, actual.password == nil,
               actual.port == nil, actual.percentEncodedPath == wanted.percentEncodedPath else { return false }

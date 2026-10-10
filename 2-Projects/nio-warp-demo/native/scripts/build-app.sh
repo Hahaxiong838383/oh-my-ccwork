@@ -6,8 +6,9 @@ NATIVE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 APP_DIR="$NATIVE_DIR/.build/app/NIOWarpApp.app"
 CONTENTS_DIR="$APP_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
-APP_VERSION="${NIO_WARP_APP_VERSION:-1.0.0}"
-APP_BUILD="${NIO_WARP_APP_BUILD:-77}"
+APP_VERSION="${NIO_WARP_APP_VERSION:-2.0.0}"
+APP_BUILD="${NIO_WARP_APP_BUILD:-78}"
+RELEASE_CHANNEL="${NIO_WARP_RELEASE_CHANNEL:-rc.1}"
 
 cd "$NATIVE_DIR"
 swift build -c release
@@ -38,6 +39,8 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>${APP_VERSION}</string>
   <key>CFBundleVersion</key>
   <string>${APP_BUILD}</string>
+  <key>NIOWarpReleaseChannel</key>
+  <string>${RELEASE_CHANNEL}</string>
   <key>NIOWarpSourceSHA256</key>
   <string>${SOURCE_DIGEST}</string>
   <key>LSMinimumSystemVersion</key>

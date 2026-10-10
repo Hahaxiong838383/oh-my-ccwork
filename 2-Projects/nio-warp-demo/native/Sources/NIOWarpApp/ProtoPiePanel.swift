@@ -23,12 +23,16 @@ import UniformTypeIdentifiers
     private let outputPositionReset = NSButton(title: "整幅位置归零", target: nil, action: nil)
     private var outputPositionInputDirty = false
     private let internalCropGroup = NSStackView()
+    private let internalCropToggle = NSButton(checkboxWithTitle: "高级 · 原型内部取景", target: nil, action: nil)
     private var observer: UUID?
-    private let source = NSSegmentedControl(labels: ["云端链接", "本地 .pie"], trackingMode: .selectOne, target: nil, action: nil)
+    private let source = NSSegmentedControl(labels: ["云端链接", "本地 .pie", "ProtoPie Connect"], trackingMode: .selectOne, target: nil, action: nil)
     private let urlField = NSTextField()
     private let fileLabel = NSTextField(wrappingLabelWithString: "尚未选择文件")
     private let cloudGroup = NSStackView()
     private let fileGroup = NSStackView()
+    private let connectGroup = NSStackView()
+    private let connectStatus = NSTextField(wrappingLabelWithString: "消息连通性未验证")
+    private var connectTest: Task<Void, Never>?
     private let autoStart = NSButton(checkboxWithTitle: "打开 NIO Warp 时自动联动", target: nil, action: nil)
     private let autoRecover = NSButton(checkboxWithTitle: "意外中断后自动恢复（最多 3 次）", target: nil, action: nil)
     private let fit = NSButton(checkboxWithTitle: "等比适配播放器窗口", target: nil, action: nil)
@@ -58,6 +62,7 @@ import UniformTypeIdentifiers
     }
 
     deinit {
+        connectTest?.cancel()
         if let observer {
             let coordinator = coordinator
             Task { @MainActor in coordinator.removeObserver(observer) }
@@ -65,11 +70,12 @@ import UniformTypeIdentifiers
     }
 
     func disconnect() {
+        connectTest?.cancel(); connectTest = nil
         if let observer { coordinator.removeObserver(observer); self.observer = nil }
     }
 
     private func build() {
-        for stack in [inspectorStack, statusView, cloudGroup, fileGroup, internalCropGroup] {
+        for stack in [inspectorStack, statusView, cloudGroup, fileGroup, connectGroup, internalCropGroup] {
             stack.orientation = .vertical; stack.alignment = .leading; stack.spacing = 10
             stack.translatesAutoresizingMaskIntoConstraints = false
         }
@@ -111,6 +117,7 @@ import UniformTypeIdentifiers
         add(separator())
         source.target = self; source.action = #selector(sourceChanged)
         source.segmentStyle = .rounded; source.segmentDistribution = .fillEqually
+        source.setAccessibilityIdentifier("nio-protopie-source-kind")
         add(title("预览来源")); add(source)
         urlField.placeholderString = "https://cloud.protopie.io/p/…"
         urlField.font = .systemFont(ofSize: 12); urlField.delegate = self
@@ -121,6 +128,16 @@ import UniformTypeIdentifiers
         cloudGroup.addArrangedSubview(note("启动预览时自动进入外屏无边框全屏；登录或操作播放器时可返回控制屏。"))
         constrainChildren(cloudGroup)
         add(cloudGroup)
+        let probe = button("测试 Connect 链接", #selector(testConnect))
+        probe.setAccessibilityIdentifier("nio-protopie-connect-test")
+        connectGroup.addArrangedSubview(probe)
+        connectGroup.addArrangedSubview(button("打开本机 ProtoPie Connect", #selector(openConnect)))
+        connectGroup.addArrangedSubview(note("本机主服务使用 localhost 完整播放器链接；请先在 Connect 登录并加载原型。远端控制程序使用这台电脑的网络地址。"))
+        connectGroup.addArrangedSubview(note("Connect 使用原生舞台等比适应或原始尺寸；本候选版不覆盖舞台缩放，横向顶满和原型内部取景暂不可用。整幅画面位置仍由 Warp 控制。"))
+        connectStatus.font = .systemFont(ofSize: 11); connectStatus.textColor = .secondaryLabelColor
+        connectStatus.setAccessibilityIdentifier("nio-protopie-connect-status")
+        connectGroup.addArrangedSubview(connectStatus)
+        constrainChildren(connectGroup); add(connectGroup)
         fileLabel.font = .systemFont(ofSize: 12); fileLabel.maximumNumberOfLines = 3
         let choose = button("选择 / 替换 .pie 文件…", #selector(chooseFile))
         fileGroup.addArrangedSubview(fileLabel); fileGroup.addArrangedSubview(choose)
@@ -138,7 +155,7 @@ import UniformTypeIdentifiers
         add(fit); add(fillWidth)
         add(note("播放器高度跟随当前 Warp 画布高度，先捕获完整内容。保持比例完整显示时，画面左右可能留边。"))
         add(note("Cloud 预览按宽度等比放大，超出屏幕的上下内容可调整裁切位置；不改变 Warp 校正参数。"))
-        let internalCropToggle = NSButton(checkboxWithTitle: "高级 · 原型内部取景", target: self, action: #selector(toggleInternalCrop(_:)))
+        internalCropToggle.target = self; internalCropToggle.action = #selector(toggleInternalCrop(_:))
         internalCropToggle.setAccessibilityIdentifier("nio-protopie-internal-crop-toggle")
         add(internalCropToggle)
         internalCropGroup.setAccessibilityIdentifier("nio-protopie-internal-crop-controls")
@@ -204,8 +221,8 @@ import UniformTypeIdentifiers
     private func loadDraft() {
         rendering = true
         let draft = coordinator.draft
-        source.selectedSegment = draft.source == .cloud ? 0 : 1
-        urlField.stringValue = draft.cloudURL
+        source.selectedSegment = draft.source == .cloud ? 0 : draft.source == .localFile ? 1 : 2
+        urlField.stringValue = draft.source == .connect ? draft.connectURL : draft.cloudURL
         autoStart.state = draft.autoStart ? .on : .off
         autoRecover.state = draft.autoRecover ? .on : .off
         fit.state = draft.scaleToFit || draft.fillWidth ? .on : .off
@@ -217,14 +234,21 @@ import UniformTypeIdentifiers
     private func refresh() {
         refreshOutputPosition()
         let cloud = coordinator.draft.source == .cloud
-        cloudGroup.isHidden = !cloud; fileGroup.isHidden = cloud
+        let browser = coordinator.draft.source != .localFile
+        let connect = coordinator.draft.source == .connect
+        cloudGroup.isHidden = !browser; fileGroup.isHidden = browser
+        connectGroup.isHidden = !connect
+        urlField.placeholderString = connect ? "http://localhost:9981/pie?pieid=…" : "https://cloud.protopie.io/p/…"
+        urlField.setAccessibilityLabel(connect ? "ProtoPie Connect 完整播放器链接" : "ProtoPie Cloud 预览链接")
         fileLabel.stringValue = coordinator.draft.filePath.isEmpty ? "尚未选择文件" : coordinator.draft.filePath
-        fit.state = coordinator.draft.scaleToFit || coordinator.draft.fillWidth ? .on : .off
-        fillWidth.state = coordinator.draft.fillWidth ? .on : .off
-        fit.isEnabled = cloud && !coordinator.draft.fillWidth
+        fit.state = coordinator.draft.scaleToFit || (cloud && coordinator.draft.fillWidth) ? .on : .off
+        fillWidth.state = cloud && coordinator.draft.fillWidth ? .on : .off
+        fit.isEnabled = browser && (connect || !coordinator.draft.fillWidth)
         fillWidth.isEnabled = cloud; hideUI.isEnabled = cloud
         verticalPosition.isEnabled = cloud && coordinator.draft.fillWidth
         verticalPositionInput.isEnabled = verticalPosition.isEnabled
+        internalCropToggle.isEnabled = cloud
+        internalCropGroup.isHidden = !cloud || internalCropToggle.state != .on
         loadVerticalPosition()
         let busy = coordinator.state.isBusy
         startButton.isEnabled = !busy; reloadButton.isEnabled = !busy && coordinator.hasActiveSession
@@ -243,7 +267,11 @@ import UniformTypeIdentifiers
     func controlTextDidChange(_ obj: Notification) {
         guard !rendering else { return }
         if obj.object as? NSTextField === urlField {
-            coordinator.draft.cloudURL = urlField.stringValue
+            connectTest?.cancel(); connectTest = nil
+            if coordinator.draft.source == .connect {
+                coordinator.draft.connectURL = urlField.stringValue
+                connectStatus.stringValue = "链接已编辑 · 播放器及消息连通性未验证"
+            } else { coordinator.draft.cloudURL = urlField.stringValue }
         } else if obj.object as? NSTextField === verticalPositionInput {
             verticalPositionInputDirty = true
         } else if obj.object as? NSTextField === outputPositionInput {
@@ -294,8 +322,42 @@ import UniformTypeIdentifiers
             applyOutputPosition(state.value)
         }
     }
-    @objc private func toggleInternalCrop(_ sender: NSButton) { internalCropGroup.isHidden = sender.state != .on }
-    @objc private func sourceChanged() { coordinator.draft.source = source.selectedSegment == 0 ? .cloud : .localFile }
+    @objc private func toggleInternalCrop(_ sender: NSButton) {
+        guard coordinator.draft.source == .cloud else { return }
+        internalCropGroup.isHidden = sender.state != .on
+    }
+    @objc private func sourceChanged() {
+        connectTest?.cancel(); connectTest = nil
+        coordinator.draft.source = source.selectedSegment == 0 ? .cloud : source.selectedSegment == 1 ? .localFile : .connect
+        connectStatus.stringValue = "消息连通性未验证"
+        loadDraft(); refresh()
+    }
+    @objc private func testConnect() {
+        connectTest?.cancel()
+        let configuration = coordinator.draft
+        guard configuration.source == .connect else { return }
+        do {
+            let url = try configuration.playbackURL()
+            connectStatus.stringValue = "正在检查播放器页面；消息连通性未验证…"
+            connectTest = Task { [weak self] in
+                do {
+                    let result = try await ProtoPieConnectServiceProbe().probe(url)
+                    guard let self, !Task.isCancelled, self.coordinator.draft.source == .connect,
+                          self.coordinator.draft.connectURL == configuration.connectURL else { return }
+                    self.connectStatus.stringValue = result.summary + " · 消息连通性未验证"
+                } catch {
+                    guard let self, !Task.isCancelled else { return }
+                    self.connectStatus.stringValue = "链接检查未完成；请确认 Connect 运行、原型及端口。消息连通性未验证。"
+                }
+            }
+        } catch { connectStatus.stringValue = error.localizedDescription }
+    }
+    @objc private func openConnect() {
+        Task { [weak self] in
+            do { try await ProtoPieConnectApplication.open() }
+            catch { self?.connectStatus.stringValue = error.localizedDescription }
+        }
+    }
     private func loadVerticalPosition() {
         verticalPosition.doubleValue = coordinator.draft.widthFitVerticalPosition
         if verticalPositionInput.currentEditor() == nil {
@@ -328,9 +390,13 @@ import UniformTypeIdentifiers
         draft.autoStart = autoStart.state == .on; draft.autoRecover = autoRecover.state == .on
         // Width fill uses native fitting but remembers the ordinary fit choice
         // so switching width fill off restores the user's previous setting.
-        if !draft.fillWidth { draft.scaleToFit = fit.state == .on }
-        draft.fillWidth = fillWidth.state == .on
-        draft.hidePlayerUI = hideUI.state == .on
+        if draft.source == .connect {
+            draft.scaleToFit = fit.state == .on
+        } else if draft.source == .cloud {
+            if !draft.fillWidth { draft.scaleToFit = fit.state == .on }
+            draft.fillWidth = fillWidth.state == .on
+            draft.hidePlayerUI = hideUI.state == .on
+        }
         coordinator.draft = draft
     }
     @objc private func chooseFile() {

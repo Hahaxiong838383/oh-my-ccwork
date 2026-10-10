@@ -2,9 +2,9 @@ import AppKit
 import Foundation
 
 @MainActor final class ProtoPieCoordinator {
-    static let savedKey = "nioWarpProtoPie.configuration.v1"
-    static let draftKey = "nioWarpProtoPie.draft.v1"
-    static let lastSuccessfulKey = "nioWarpProtoPie.lastSuccessful.v1"
+    static let savedKey = "nioWarpProtoPie.configuration.v2"
+    static let draftKey = "nioWarpProtoPie.draft.v2"
+    static let lastSuccessfulKey = "nioWarpProtoPie.lastSuccessful.v2"
 
     var onCapture: ((CGWindowID, pid_t) async throws -> Void)?
     var onStop: (() -> Void)?
@@ -53,10 +53,10 @@ import Foundation
         self.driver = driver ?? ProtoPieSystemDriver()
         self.monitoringInterval = monitoringInterval
         self.recoveryDelay = recoveryDelay
-        let saved = Self.read(defaults, key: Self.savedKey) ?? ProtoPieConfiguration()
+        let saved = Self.readMigrating(defaults, key: Self.savedKey, legacyKey: "nioWarpProtoPie.configuration.v1") ?? ProtoPieConfiguration()
         self.saved = saved
-        draft = Self.read(defaults, key: Self.draftKey) ?? saved
-        lastSuccessful = Self.read(defaults, key: Self.lastSuccessfulKey)
+        draft = Self.readMigrating(defaults, key: Self.draftKey, legacyKey: "nioWarpProtoPie.draft.v1") ?? saved
+        lastSuccessful = Self.readMigrating(defaults, key: Self.lastSuccessfulKey, legacyKey: "nioWarpProtoPie.lastSuccessful.v1")
     }
 
     @discardableResult func observe(_ callback: @escaping () -> Void) -> UUID {
@@ -76,7 +76,7 @@ import Foundation
               draft.source == .cloud, draft.fillWidth,
               let expected = try? session.configuration.playbackURL(),
               let requested = try? draft.playbackURL(), expected == requested else {
-            notice = "位置已记入草稿；请先应用并启动当前 Cloud 横向顶满预览。"
+            notice = "位置已记入草稿；请先应用并启动当前浏览器横向顶满预览。"
             notify(); return
         }
         pendingVerticalPosition = draft.widthFitVerticalPosition
@@ -160,7 +160,7 @@ import Foundation
         }
         let configuration = pendingConfiguration ?? activeSession?.configuration ?? lastSuccessful ?? saved
         guard wantsToRun, !manuallyStopped, !manualPlayerOpen,
-              targetDisplayID != nil, configuration.source == .cloud else {
+              targetDisplayID != nil, configuration.source != .localFile else {
             driver.setPresentationCanvas(canvas)
             notify()
             return
@@ -316,7 +316,7 @@ import Foundation
                 try configuration.validate()
                 try await self.driver.openForUser(configuration: configuration)
                 guard self.generation == token, !Task.isCancelled else { return }
-                self.notice = configuration.source == .cloud
+                self.notice = configuration.source != .localFile
                     ? "播放器已移到控制屏；完成操作后点击启动/重试，自动恢复外屏无边框全屏。"
                     : "播放器已打开；完成登录或开启 Preview 后，点击启动/重试。"
             } catch {
@@ -603,6 +603,12 @@ import Foundation
     private func persist(_ value: ProtoPieConfiguration, key: String) {
         if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
     }
+    private static func readMigrating(_ defaults: UserDefaults, key: String, legacyKey: String) -> ProtoPieConfiguration? {
+        // V2 never writes back into V1, including continuously saved drafts.
+        let selectedKey = defaults.object(forKey: key) == nil ? legacyKey : key
+        return read(defaults, key: selectedKey)
+    }
+
     private static func read(_ defaults: UserDefaults, key: String) -> ProtoPieConfiguration? {
         defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(ProtoPieConfiguration.self, from: $0) }
     }

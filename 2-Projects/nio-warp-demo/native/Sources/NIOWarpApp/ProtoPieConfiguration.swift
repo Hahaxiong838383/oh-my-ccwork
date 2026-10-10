@@ -3,9 +3,10 @@ import Foundation
 
 // Deliberately independent of WarpConfiguration, presets and geometry undo history.
 struct ProtoPieConfiguration: Codable, Equatable {
-    enum Source: String, Codable, CaseIterable { case cloud, localFile }
+    enum Source: String, Codable, CaseIterable { case cloud, localFile, connect }
     var source: Source = .cloud
     var cloudURL = ""
+    var connectURL = ""
     var fileBookmark: Data?
     var filePath = ""
     var autoStart = false
@@ -20,7 +21,7 @@ struct ProtoPieConfiguration: Codable, Equatable {
     init() {}
 
     private enum CodingKeys: String, CodingKey {
-        case source, cloudURL, fileBookmark, filePath, autoStart, autoRecover, scaleToFit, hidePlayerUI, fillWidth
+        case source, cloudURL, connectURL, fileBookmark, filePath, autoStart, autoRecover, scaleToFit, hidePlayerUI, fillWidth
         case widthFitVerticalPosition
     }
 
@@ -28,6 +29,7 @@ struct ProtoPieConfiguration: Codable, Equatable {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         source = try values.decode(Source.self, forKey: .source)
         cloudURL = try values.decode(String.self, forKey: .cloudURL)
+        connectURL = try values.decodeIfPresent(String.self, forKey: .connectURL) ?? ""
         fileBookmark = try values.decodeIfPresent(Data.self, forKey: .fileBookmark)
         filePath = try values.decode(String.self, forKey: .filePath)
         autoStart = try values.decode(Bool.self, forKey: .autoStart)
@@ -45,11 +47,26 @@ struct ProtoPieConfiguration: Codable, Equatable {
 
     var sourceLabel: String {
         if source == .localFile { return URL(fileURLWithPath: filePath).lastPathComponent }
+        if source == .connect {
+            guard let link = try? ProtoPieConnectSource.parse(connectURL) else { return "ProtoPie Connect" }
+            let name = URLComponents(url: link.url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "name" }?.value
+            if let name, !name.isEmpty { return "Connect · \(name)（\(link.identity.pieID)）" }
+            return "Connect · \(link.identity.host) · \(link.identity.pieID)"
+        }
         let path = URLComponents(string: cloudURL.trimmingCharacters(in: .whitespacesAndNewlines))?.path ?? ""
         return path.isEmpty ? "ProtoPie Cloud" : "Cloud · \(path)"
     }
 
     func playbackURL() throws -> URL {
+        switch source {
+        case .connect:
+            // Connect's native Stage owns fitting; Cloud width-fill is separate.
+            return try ProtoPieConnectSource.parse(connectURL).playbackURL(scaleToFit: scaleToFit)
+        case .localFile:
+            throw ProtoPieError.invalidSource("本地 .pie 文件通过 ProtoPie Studio 打开，不使用浏览器预览链接。")
+        case .cloud:
+            break
+        }
         let text = cloudURL.trimmingCharacters(in: .whitespacesAndNewlines)
         guard var components = URLComponents(string: text), components.scheme?.lowercased() == "https",
               components.host?.lowercased() == "cloud.protopie.io", components.user == nil,
@@ -96,7 +113,7 @@ struct ProtoPieConfiguration: Codable, Equatable {
 
     func validate() throws {
         switch source {
-        case .cloud: _ = try playbackURL()
+        case .cloud, .connect: _ = try playbackURL()
         case .localFile: _ = try resolvedFile()
         }
     }

@@ -233,6 +233,7 @@ import XCTest
         let (panel, _, _) = make()
         let host = NSView(frame: NSRect(x: 0, y: 0, width: 860, height: 600))
         let window = NSWindow(contentRect: host.frame, styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false // The Swift fixture owns this window through tear down.
         window.contentView = host; host.addSubview(panel.view)
         NSLayoutConstraint.activate([
             panel.view.leadingAnchor.constraint(equalTo: host.leadingAnchor), panel.view.trailingAnchor.constraint(equalTo: host.trailingAnchor),

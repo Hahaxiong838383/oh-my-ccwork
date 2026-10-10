@@ -183,7 +183,7 @@ struct MouseAutomationHandoffBuffer {
         guard !workbenchInputExclusive else { disarmPresentationInput(); return }
         guard !isActive, startTask == nil else { return }
         guard let session = sessionProvider?(), let current = outputProvider?(),
-              session.configuration.source == .cloud,
+              [.cloud, .connect].contains(session.configuration.source),
               let sourceID = session.presentationDisplayID, sourceID != current.displayID,
               (try? Self.validate(current, session: session, allowTestPatternForReminder: true)) != nil else {
             disarmPresentationInput(); return

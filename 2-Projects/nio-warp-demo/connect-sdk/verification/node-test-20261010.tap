@@ -1,0 +1,88 @@
+TAP version 13
+# Subtest: configuration rejects unsafe destinations and a legacy client cannot leave loopback
+ok 1 - configuration rejects unsafe destinations and a legacy client cannot leave loopback
+  ---
+  duration_ms: 0.720833
+  type: 'test'
+  ...
+# Subtest: legacy2: a state callback cannot queue input behind registration while transport is busy
+ok 2 - legacy2: a state callback cannot queue input behind registration while transport is busy
+  ---
+  duration_ms: 65.786042
+  type: 'test'
+  ...
+# Subtest: legacy2: registers, sends exact official payload, rejects wrong values, limits bursts and duplicates
+ok 3 - legacy2: registers, sends exact official payload, rejects wrong values, limits bursts and duplicates
+  ---
+  duration_ms: 225.218958
+  type: 'test'
+  ...
+# Subtest: legacy2: real server outage reconnects without replaying old or offline commands
+ok 4 - legacy2: real server outage reconnects without replaying old or offline commands
+  ---
+  duration_ms: 339.162625
+  type: 'test'
+  ...
+# Subtest: modern4: a state callback cannot queue input behind registration while transport is busy
+ok 5 - modern4: a state callback cannot queue input behind registration while transport is busy
+  ---
+  duration_ms: 86.108416
+  type: 'test'
+  ...
+# Subtest: modern4: registers, sends exact official payload, rejects wrong values, limits bursts and duplicates
+ok 6 - modern4: registers, sends exact official payload, rejects wrong values, limits bursts and duplicates
+  ---
+  duration_ms: 231.098416
+  type: 'test'
+  ...
+# Subtest: modern4: real server outage reconnects without replaying old or offline commands
+ok 7 - modern4: real server outage reconnects without replaying old or offline commands
+  ---
+  duration_ms: 397.243208
+  type: 'test'
+  ...
+# Subtest: unchanged current state can refresh after the duplicate interval without replaying an action
+ok 8 - unchanged current state can refresh after the duplicate interval without replaying an action
+  ---
+  duration_ms: 1144.680625
+  type: 'test'
+  ...
+# Subtest: protocol mismatch reports a connection error without switching protocol or sending commands
+ok 9 - protocol mismatch reports a connection error without switching protocol or sending commands
+  ---
+  duration_ms: 17.04375
+  type: 'test'
+  ...
+# Subtest: JSON-lines input survives chunks, malformed and overlong lines, preserving subsequent commands
+ok 10 - JSON-lines input survives chunks, malformed and overlong lines, preserving subsequent commands
+  ---
+  duration_ms: 1.976458
+  type: 'test'
+  ...
+# Subtest: status log rotates within its bound and excludes payload, URL, error text and private paths
+ok 11 - status log rotates within its bound and excludes payload, URL, error text and private paths
+  ---
+  duration_ms: 7.619959
+  type: 'test'
+  ...
+# Subtest: actual CLI accepts JSON-lines while connected and exits cleanly at EOF
+ok 12 - actual CLI accepts JSON-lines while connected and exits cleanly at EOF
+  ---
+  duration_ms: 252.528458
+  type: 'test'
+  ...
+# Subtest: CLI rejects a secret-bearing config without echoing its text or path
+ok 13 - CLI rejects a secret-bearing config without echoing its text or path
+  ---
+  duration_ms: 86.284959
+  type: 'test'
+  ...
+1..13
+# tests 13
+# suites 0
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2635.276625

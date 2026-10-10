@@ -158,12 +158,11 @@ struct ProtoPiePlaybackRuntime: Equatable {
 
     private func begin(items candidates: [ProtoPiePlaylistItem], plan newPlan: ProtoPiePlaybackPlan,
                        purpose newPurpose: Purpose, step: Int? = nil) {
-        guard !candidates.isEmpty else { showFailure("请添加并启用至少一个云端预览来源。"); return }
+        guard !candidates.isEmpty else { showFailure("请添加并启用至少一个预览来源。"); return }
         do {
             for item in candidates {
                 try item.validate()
-                var source = ProtoPieConfiguration(); source.cloudURL = item.cloudURL
-                _ = try source.playbackURL()
+                _ = try item.configuration(inheriting: ProtoPieConfiguration())
             }
             guard newPlan.retryLimit >= 0, newPlan.retryLimit <= 10,
                   newPlan.totalDurationSeconds.map({ $0.isFinite && $0 > 0 }) ?? true else {

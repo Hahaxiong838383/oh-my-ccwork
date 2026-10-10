@@ -1,0 +1,126 @@
+{
+  "baseline": "nio-warp-v1.0.0-frozen-20260921",
+  "baselineCommit": "e010f964a50a52f36e9afca8df211bdc63ffe3f9",
+  "verifiedAtUTC": "2026-10-10T09:13:04.157069+00:00",
+  "comparison": "frozen Git blob bytes versus current working-tree bytes; SHA-256 for every baseline native/Sources file",
+  "existingSourceFiles": 50,
+  "byteIdentical": 39,
+  "allowedIntegrationFilesChanged": [
+    "native/Sources/NIOWarpApp/MouseInputTransport.swift",
+    "native/Sources/NIOWarpApp/MouseMappingController.swift",
+    "native/Sources/NIOWarpApp/ProtoPieCloudTargetLifecycle.swift",
+    "native/Sources/NIOWarpApp/ProtoPieConfiguration.swift",
+    "native/Sources/NIOWarpApp/ProtoPieCoordinator.swift",
+    "native/Sources/NIOWarpApp/ProtoPiePanel.swift",
+    "native/Sources/NIOWarpApp/ProtoPiePlaybackConfiguration.swift",
+    "native/Sources/NIOWarpApp/ProtoPiePlaybackController.swift",
+    "native/Sources/NIOWarpApp/ProtoPiePlaybackPanel.swift",
+    "native/Sources/NIOWarpApp/ProtoPieSystemDriver.swift",
+    "native/Sources/NIOWarpApp/main.swift"
+  ],
+  "unexpectedIntegrationFilesChanged": [],
+  "deletedExistingSourceFiles": [],
+  "newSourceFiles": [
+    "native/Sources/NIOWarpApp/ProtoPieConnectApplication.swift",
+    "native/Sources/NIOWarpApp/ProtoPieConnectLayout.swift",
+    "native/Sources/NIOWarpApp/ProtoPieConnectServiceProbe.swift",
+    "native/Sources/NIOWarpApp/ProtoPieConnectSource.swift"
+  ],
+  "sourceModeChanges": [],
+  "mainLogicExceptVersionDisplayIdentical": true,
+  "protectedCoreChanges": 0,
+  "protectedGroups": {
+    "mathAndGeometry": {
+      "expectedFiles": 6,
+      "verifiedFiles": 6,
+      "byteIdentical": true,
+      "files": [
+        "native/Sources/NIOWarpApp/CalibrationGrid.swift",
+        "native/Sources/NIOWarpApp/CanvasGeometryPreview.swift",
+        "native/Sources/NIOWarpApp/CanvasReference.swift",
+        "native/Sources/NIOWarpApp/WarpAlignment.swift",
+        "native/Sources/NIOWarpApp/WarpConfiguration.swift",
+        "native/Sources/NIOWarpApp/WarpMath.swift"
+      ]
+    },
+    "bezierAndLocalWarp": {
+      "expectedFiles": 5,
+      "verifiedFiles": 5,
+      "byteIdentical": true,
+      "files": [
+        "native/Sources/NIOWarpApp/BezierWarp.swift",
+        "native/Sources/NIOWarpApp/BezierWarpEditor.swift",
+        "native/Sources/NIOWarpApp/LocalWarp.swift",
+        "native/Sources/NIOWarpApp/LocalWarpEditor.swift",
+        "native/Sources/NIOWarpApp/LocalWarpUpdates.swift"
+      ]
+    },
+    "captureAndRenderSupport": {
+      "expectedFiles": 6,
+      "verifiedFiles": 6,
+      "byteIdentical": true,
+      "files": [
+        "native/Sources/NIOWarpApp/CaptureSupport.swift",
+        "native/Sources/NIOWarpApp/DisplaySessionPolicy.swift",
+        "native/Sources/NIOWarpApp/MouseCaptureFrame.swift",
+        "native/Sources/NIOWarpApp/PresentationExitCapture.swift",
+        "native/Sources/NIOWarpApp/ProtoPiePresentation.swift",
+        "native/Sources/NIOWarpApp/ProtoPiePresentationDiagnostics.swift"
+      ]
+    },
+    "virtualDisplayAndPlacement": {
+      "expectedFiles": 4,
+      "verifiedFiles": 4,
+      "byteIdentical": true,
+      "files": [
+        "native/Sources/NIOVirtualDisplay/NIOVirtualDisplay.m",
+        "native/Sources/NIOVirtualDisplay/include/NIOVirtualDisplay.h",
+        "native/Sources/NIOWarpApp/OwnedPresentationDisplay.swift",
+        "native/Sources/NIOWarpApp/PresentationDisplayPlacement.swift"
+      ]
+    },
+    "cloudLayoutAndControl": {
+      "expectedFiles": 6,
+      "verifiedFiles": 6,
+      "byteIdentical": true,
+      "files": [
+        "native/Sources/NIOWarpApp/ProtoPieBrowserControl.swift",
+        "native/Sources/NIOWarpApp/ProtoPieCDPTransport.swift",
+        "native/Sources/NIOWarpApp/ProtoPieCursorResourceLoader.swift",
+        "native/Sources/NIOWarpApp/ProtoPieCursorStyle.swift",
+        "native/Sources/NIOWarpApp/ProtoPieLegacyCDP.swift",
+        "native/Sources/NIOWarpApp/ProtoPieWidthFit.swift"
+      ]
+    }
+  },
+  "connectIncrementReview": {
+    "blockingFindings": 0,
+    "checks": [
+      "Connect source identity uses normalized origin, exact /pie path and one positive pieid without JS number rounding.",
+      "Dedicated browser launch claims one new bound page; cancellation reclaims only an owned lease, keeps committed sessions and does not terminate Connect or unrelated browsers.",
+      "HTTP probe is bounded by timeout, retries and body size; HTTP availability and rendered-player readiness never assert message connectivity.",
+      "Connect readiness requires a bound page, nonempty visible engine descendants and loaded image/video/canvas sizes; full-screen preparation also validates Stage ancestry and native D3 transform.",
+      "Connect layout leaves native transform/cursor untouched, fails closed for unknown Stage structures and explicitly rejects width-fill.",
+      "Input bind validates the captured dedicated browser PID/target/window/fullscreen viewport; subsequent checks retain source origin/path/pieid and timeOrigin binding.",
+      "HTTP cursor resources are accepted only for a bound Connect page on the same origin; Cloud source restrictions remain effective.",
+      "Playlist Connect native fit does not overwrite retained Cloud framing; Cloud-only controls remain source-specific."
+    ],
+    "nonBlockingFindings": [
+      {
+        "file": "native/Sources/NIOWarpApp/ProtoPieSystemDriver.swift",
+        "line": 262,
+        "code": "connect_session_title_fit_mode",
+        "severity": "low",
+        "description": "Connect session title says native proportional preview even when scaleToFit is false; runtime URL correctly selects originalSize. Consider a mode-neutral title or deriving the label from scaleToFit."
+      }
+    ],
+    "limits": [
+      "Static installed Connect 2.13 host evidence and executable fixtures were verified; no business prototype, live input, message-channel or hardware visual acceptance is claimed.",
+      "Readiness is DOM/resource-based; generic visible vector/text DOM and nonzero canvas size do not independently prove first rendered pixels.",
+      "Only the observed Connect 2.13 Stage ancestry/native D3 contract is accepted; changed host contracts fail closed."
+    ],
+    "productionFilesModifiedByThisAudit": false,
+    "swiftPMExecutedByThisAudit": false,
+    "remoteActionsByThisAudit": false
+  }
+}

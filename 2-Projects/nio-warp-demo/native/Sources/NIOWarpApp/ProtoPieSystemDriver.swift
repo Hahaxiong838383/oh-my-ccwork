@@ -77,7 +77,7 @@ import Foundation
         try configuration.validate()
         let session: ProtoPieSession
         switch configuration.source {
-        case .cloud: session = try await prepareCloud(configuration, displayID: displayID, progress: progress)
+        case .cloud, .connect: session = try await prepareCloud(configuration, displayID: displayID, progress: progress)
         case .localFile: session = try await prepareStudio(configuration, displayID: displayID, progress: progress)
         }
         // Return an acquired resource to the coordinator even if cancellation
@@ -94,6 +94,9 @@ import Foundation
                   let result = try? await control.call(socket, method: "Target.getTargetInfo", parameters: ["targetId": target]),
                   let info = result["targetInfo"] as? [String: Any], let url = info["url"] as? String,
                   let actual = URLComponents(string: url), let expected = try? session.configuration.playbackURL() else { return false }
+            if session.configuration.source == .connect, let actualURL = actual.url {
+                return ProtoPieConnectSource.matchesPage(actualURL, expected: expected)
+            }
             return actual.host == expected.host && actual.path == expected.path
         }
         return true
@@ -159,7 +162,7 @@ import Foundation
 
     func openForUser(configuration: ProtoPieConfiguration) async throws {
         switch configuration.source {
-        case .cloud:
+        case .cloud, .connect:
             let lease = try await cloudTarget(configuration)
             let socket = lease.socket, target = lease.targetID
             try Task.checkCancellation()
@@ -205,7 +208,13 @@ import Foundation
 
     private func prepareCloud(_ configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
                               progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
-        progress("正在打开专用 ProtoPie Cloud 播放窗口…")
+        if configuration.source == .connect {
+            progress("正在检测 Connect 主服务页面；消息链路仍需验证…")
+            let result = try await ProtoPieConnectServiceProbe().probe(configuration.playbackURL())
+            guard result.status == .playerPageAvailable else { throw ProtoPieError.waitingForUser(result.summary) }
+            try Task.checkCancellation()
+        }
+        progress(configuration.source == .connect ? "正在打开本机 Connect 浏览器播放器；消息链路仍需验证…" : "正在打开专用 ProtoPie Cloud 播放窗口…")
         let lease = try await cloudTarget(configuration)
         do {
             let socket = lease.socket, target = lease.targetID
@@ -219,8 +228,10 @@ import Foundation
             guard let browserWindowID = window["windowId"] as? Int else { throw ProtoPieError.unavailable("播放器没有可捕获窗口。") }
             let pageSocket = try await pageSocket(target: target, browserSocket: socket)
             let expected = try configuration.playbackURL()
-            let marker = "NIO Warp Preview · \(UUID().uuidString.prefix(8))"
-            let expression = Self.cloudReadinessExpression(expectedURL: expected, marker: marker)
+            let marker = (configuration.source == .connect ? "NIO Warp Connect Preview · " : "NIO Warp Preview · ") + String(UUID().uuidString.prefix(8))
+            let expression = configuration.source == .connect
+                ? Self.connectReadinessExpression(expectedURL: expected, marker: marker)
+                : Self.cloudReadinessExpression(expectedURL: expected, marker: marker)
             var previousProblem = ""
             var problemSamples = 0
             for _ in 0..<60 {
@@ -248,10 +259,10 @@ import Foundation
                         configuration: configuration)
                     try Task.checkCancellation()
                     return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
-                                           cloudTargetID: target, title: "ProtoPie Cloud · 完整高度预览",
+                                           cloudTargetID: target, title: configuration.source == .connect ? "ProtoPie Connect · 原生等比预览 · 消息未验证" : "ProtoPie Cloud · 完整高度预览",
                                            presentationDisplayID: sourceDisplayID)
                 }
-                progress("等待云端预览加载；如需登录，请在专用播放器中完成。")
+                progress(configuration.source == .connect ? "等待 Connect 原型加载，请确认主服务运行且此原型已加入；消息连接未验证。" : "等待云端预览加载；如需登录，请在专用播放器中完成。")
                 try await Task.sleep(nanoseconds: 500_000_000)
             }
             throw ProtoPieError.waitingForUser("尚未识别到已加载的 ProtoPie 预览。请打开播放器检查登录、链接权限或网络后重试。")
@@ -307,7 +318,7 @@ import Foundation
     func updatePresentationLayout(_ session: ProtoPieSession) async throws {
         guard let target = session.cloudTargetID, let socket = browserSocket,
               session.configuration.source == .cloud, session.configuration.fillWidth else {
-            throw ProtoPieError.unavailable("请先启动横向顶满的 Cloud 预览。")
+            throw ProtoPieError.unavailable("请先启动横向顶满的浏览器预览。")
         }
         let page = try await pageSocket(target: target, browserSocket: socket)
         for _ in 0..<10 {
@@ -320,8 +331,10 @@ import Foundation
 
     private func ensureCloudContentLayout(page: ProtoPiePageEndpoint, configuration: ProtoPieConfiguration) async throws -> Bool {
         try Task.checkCancellation()
-        let expression = ProtoPieWidthFit.expression(enabled: configuration.fillWidth,
-            verticalPosition: configuration.widthFitVerticalPosition, expectedURL: try configuration.playbackURL())
+        let expected = try configuration.playbackURL()
+        let expression = configuration.source == .connect
+            ? ProtoPieConnectLayout.expression(enabled: false, expectedURL: expected)
+            : ProtoPieWidthFit.expression(enabled: configuration.fillWidth, verticalPosition: configuration.widthFitVerticalPosition, expectedURL: expected)
         let evaluation = try await control.call(page, method: "Runtime.evaluate", parameters: [
             "expression": expression, "returnByValue": true])
         return ((evaluation["result"] as? [String: Any])?["value"] as? [String: Any])?["ready"] as? Bool == true
@@ -430,7 +443,7 @@ import Foundation
             }
         }
         guard let chrome = applicationURL(bundleIdentifiers: ["com.google.Chrome"], names: ["Google Chrome.app"]) else {
-            throw ProtoPieError.missingApplication("未找到 Google Chrome。请安装后重试；云端联动使用独立的播放器配置。")
+            throw ProtoPieError.missingApplication("未找到 Google Chrome。请安装后重试；浏览器联动使用独立的播放器配置。")
         }
         try FileManager.default.createDirectory(at: profileURL, withIntermediateDirectories: true)
         let knownTargets: Set<String>
@@ -553,6 +566,45 @@ import Foundation
             (canvases.length>0 || videos.length>0 || (player && visible(player)) || renderedWebPlayer || substantialImage);
           if(ready) document.title=marker;
           return {ready:!!ready};
+        })()
+        """
+    }
+
+    nonisolated static func connectReadinessExpression(expectedURL: URL, marker: String) -> String {
+        guard let identity = try? ProtoPieConnectSource.pageIdentity(for: expectedURL) else { return "({ready:false})" }
+        var origin = URLComponents()
+        origin.scheme = identity.scheme; origin.host = identity.host
+        if identity.port != (identity.scheme == "https" ? 443 : 80) { origin.port = identity.port }
+        let args: [Any] = [origin.string ?? "", identity.path, String(identity.pieID), marker]
+        let encoded = (try? JSONSerialization.data(withJSONObject: args)).map { String(decoding: $0, as: UTF8.self) } ?? "[]"
+        return """
+        (()=>{
+          const [origin,path,pieid,marker]=\(encoded);
+          if(document.readyState==='loading')return {ready:false};
+          const ids=new URLSearchParams(location.search).getAll('pieid');
+          const bound=location.origin===origin&&location.pathname===path&&ids.length===1&&/^\\d+$/.test(ids[0])&&ids[0].replace(/^0+/,'')===pieid;
+          if(!bound)return {ready:false,problem:'Connect 播放器地址或原型已变化，请检查完整链接。'};
+          const visible=e=>{const r=e.getBoundingClientRect();return r.width>8&&r.height>8&&getComputedStyle(e).visibility!=='hidden';};
+          const hasSize=(width,height)=>Number.isFinite(width)&&Number.isFinite(height)&&width>0&&height>0;
+          const renderedNode=e=>{
+            if(!visible(e))return false;
+            switch((e.tagName||'').toLowerCase()){
+              case 'img':return e.complete===true&&hasSize(e.naturalWidth,e.naturalHeight);
+              case 'video':return e.readyState>=2&&hasSize(e.videoWidth,e.videoHeight);
+              case 'canvas':return hasSize(e.width,e.height);
+              default:return true;
+            }
+          };
+          if([...document.querySelectorAll('input[type=password]')].some(visible))return {ready:false,problem:'Connect 需要登录或访问密码，请先在 Connect 中完成。'};
+          const text=(document.body?.innerText||'').slice(0,12000);
+          if(/prototype (was |is )?(not found|deleted)|access denied|pie not found/i.test(text))return {ready:false,problem:'Connect 原型不可用，请检查 pieid 并在主服务中加载原型。'};
+          // Connect 2.13 mounts the engine into #pie-screen, independently of
+          // the Cloud player. Do not accept an empty host or wrapper alone.
+          const root=document.querySelector('#pie-screen');
+          const rendered=root&&visible(root)&&[...root.querySelectorAll('*')]
+            .filter(e=>!e.children||e.children.length===0).some(renderedNode);
+          if(rendered)document.title=marker;
+          return {ready:!!rendered,messageConnectionVerified:false};
         })()
         """
     }

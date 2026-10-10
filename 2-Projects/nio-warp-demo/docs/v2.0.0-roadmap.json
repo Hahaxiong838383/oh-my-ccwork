@@ -3,7 +3,7 @@
   "product": "NIO Warp",
   "targetVersion": "2.0.0",
   "firstCandidateVersion": "2.0.0-rc.1",
-  "status": "planned",
+  "status": "candidate-built-awaiting-file-delivery",
   "buildNumberPolicy": "Allocate a unique increasing build greater than 77 after checking release history before building.",
   "baseline": {
     "version": "1.0.0",
@@ -14,15 +14,39 @@
   },
   "plannedBranch": "codex/nio-warp-v2-connect",
   "topology": "Connect server and managed browser player run on the NIO Warp computer.",
-  "delivery": "Installable app plus independent input extension source, prototype example, documentation, agent skill and rollback instructions.",
+  "delivery": "DMG plus independent input SDK source and lock, prototype-authoring instructions (no real .pie), customer docs, agent skill, V1 rollback and manifest.",
   "coreLibraryExtractionInScope": false,
   "fullAppSourceDelivery": "Optional sanitized customer source package with reproducible build instructions.",
   "validation": {
-    "localV2TestsCompleted": false,
+    "localV2TestsCompleted": true,
     "customerHardwareAvailableToDeveloper": false,
     "customerAcceptanceCompleted": false,
-    "formalReleaseRequiresCustomerAcceptance": true
+    "formalReleaseRequiresCustomerAcceptance": true,
+    "fullNativeSuiteAllGreen": false,
+    "nativeTestsTotal": 771,
+    "nativePassed": 766,
+    "nativeSkipped": 3,
+    "nativeFailedMethods": 2,
+    "nativeAssertionFailures": 20,
+    "newConnectNativeTestsPassed": 39,
+    "connectLayoutFixturesPassed": 13,
+    "sdkTestsPassed": 13,
+    "failuresMatchV1LayoutBaseline": true,
+    "realConnectMessageAcceptanceCompleted": false,
+    "customerAppModified": false,
+    "releaseBuildCompleted": true,
+    "strictSignatureVerificationPassed": true
   },
   "plan": "v2.0.0-delivery-plan-20261010.md",
-  "createdDate": "2026-10-10"
+  "createdDate": "2026-10-10",
+  "allocatedBuild": 78,
+  "branch": "codex/nio-warp-v2-connect",
+  "limitations": [
+    "Connect native fitToScreen/originalSize only; Connect width fill and internal crop unavailable.",
+    "Connect native auto/none cursor; Cloud circle behavior is not promised for Connect.",
+    "No real .pie, customer protocol/Enterprise permission, input hardware, optical output or sustained runtime acceptance.",
+    "arm64 ad-hoc RC, not notarized; formal distribution/acceptance remains pending.",
+    "Legacy SDK compatibility dependencies have disclosed moderate audit findings and loopback-only limits."
+  ],
+  "implementationReceipt": "v2.0.0-implementation-20261010.md"
 }
