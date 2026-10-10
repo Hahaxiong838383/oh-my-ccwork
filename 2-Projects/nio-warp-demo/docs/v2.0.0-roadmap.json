@@ -3,7 +3,7 @@
   "product": "NIO Warp",
   "targetVersion": "2.0.0",
   "firstCandidateVersion": "2.0.0-rc.1",
-  "status": "candidate-built-awaiting-file-delivery",
+  "status": "candidate-built-file-delivery-complete-customer-acceptance-pending",
   "buildNumberPolicy": "Allocate a unique increasing build greater than 77 after checking release history before building.",
   "baseline": {
     "version": "1.0.0",
@@ -48,5 +48,6 @@
     "arm64 ad-hoc RC, not notarized; formal distribution/acceptance remains pending.",
     "Legacy SDK compatibility dependencies have disclosed moderate audit findings and loopback-only limits."
   ],
-  "implementationReceipt": "v2.0.0-implementation-20261010.md"
+  "implementationReceipt": "v2.0.0-implementation-20261010.md",
+  "deliveryReceipt": "v2.0.0-delivery-receipt-20261010.json"
 }
