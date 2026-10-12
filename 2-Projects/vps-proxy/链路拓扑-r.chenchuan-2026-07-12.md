@@ -25,7 +25,7 @@
 - 2026-09-11：DMIT `gost.service` `:8443 → 丽萨:8443` 已停用下线（备份 `/root/backup-gost-8443/`）。落地丽萨 `:8443` inbound 未动。
 - admin ZGO 新 inbound `:11447` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-zgo` `:11447 → 38.49.38.237:11447`。参数 `/root/zgo-admin-r-chenchuan-params.json`。
 - admin 丽萨新 inbound `:11443` dest `r.chenchuan.cc`（新 UUID/密钥）；DMIT `gost-admin-lisa` `:11443 → 154.44.3.170:11443`。参数 `/root/lisa-admin-r-chenchuan-params.json`。
-- home-studio Xray：原 DMIT→丽萨规则改 balancer `lisa-direct-then-dmit`（直连 `美宅-Claude-GPT_mychenchuan`，fallback `新美宅-Claude-GPT`）；原 DMIT→ZGO 改 `zgo-direct-then-dmit`（直连 `Gemini专用-US2-VLESS-Reality-IP`，fallback `DMIT-Gemini-vps-chenchuan`）。备份 `config.json.bak-direct-fallback-20260911-101229`。
+- home-studio Xray：`lisa-direct-then-dmit` 自 2026-10-12 起主用 admin `131.143.181.60:11443`（`admin-LISA-DMIT-11443`），探测失败才切 ZGO `38.49.38.237:11445` → 丽萨 `:11443`（`admin-LISA-via-ZGO-11445`，不进 Alex 10Mbps）。`zgo-direct-then-dmit`（Gemini/GitHub）未改。备份 `config.json.bak-admin-dmit-zgo-20261012-152256`。
 
 ## 中转 DMIT（`lax-relay` / `131.143.181.60` / fqzz）
 
@@ -42,7 +42,9 @@
 | `gost-admin-zgo` | `:11447` | ZGO `38.49.38.237:11447`（admin，不限速） |
 | `gost-alex-lisa` | `:11444` | 丽萨 `154.44.3.170:11444`（Alex 专用，独立 10Mbps；国内 IPv4 现不可达） |
 
-2026-10-03 国内入口改到 ZGO：`gemini-special` `38.49.38.237` 上同名 `gost-alex-lisa`，`:11444 → 154.44.3.170:11444`，ens3 class `1:20` 独立 10Mbps。客户端地址用灰云 `alex.chenchuan.cc`（A 记录直连 ZGO，不橙云）。丽萨 Reality 仍是原来的 Alex inbound，没有新 UUID。其他线路未改。
+2026-10-03 国内入口改到 ZGO：`gemini-special` `38.49.38.237` 上同名 `gost-alex-lisa`，`:11444 → 154.44.3.170:11444`，ens3 class `1:20` 独立 10Mbps。客户端地址用灰云 `alex.chenchuan.cc`（A 记录直连 ZGO，不橙云）。丽萨 Reality 仍是原来的 Alex inbound，没有新 UUID。
+
+2026-10-12 home-studio 兜底：ZGO `gost-admin-lisa-via-zgo` `:11445 → 154.44.3.170:11443`，走默认不限速类，不进 Alex 的 `1:20`。只给 home-studio 的 `lisa-direct-then-dmit` 当备用。
 
 ## 落地丽萨（`lisa` / `154.44.3.170`，SSH 端口见本地 RTF）
 
