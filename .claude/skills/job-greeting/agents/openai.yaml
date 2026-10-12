@@ -1,0 +1,4 @@
+interface:
+  display_name: "求职打招呼"
+  short_description: "结合岗位要求与真实履历，突出匹配度、商业成果和AI原生竞争力，生成求职招呼话术"
+  default_prompt: "使用 $job-greeting，结合以下岗位描述与我的简历，写一版突出岗位匹配度和核心竞争力的求职打招呼话术。"
