@@ -25,7 +25,7 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 | 当前内核 | 6.12.43+deb12-amd64（通用，trimafs 挂载失败） |
 | 存储 | RAID1 (md0/md127) → LVM+dm-cache → btrfs /vol1 /vol2 |
 | 数据库 | PostgreSQL，数据库名 `trim` |
-| Web 端口 | 飞牛 2（2026-10-06）：5666 HTTP、5667 HTTPS。5668/5669 在该机拒绝连接。`trim-cli` 对远程 IP 默认 https:5667 |
+| Web 端口 | 飞牛 1 与飞牛 2（2026-10-12，系统 1.2.0800）：5666 HTTP、5667 HTTPS。`trim-cli` 对远程 IP 用 https:5667。管理接口在 `/ogh/ac/h/` |
 
 ---
 
@@ -212,3 +212,10 @@ sudo tail -f /usr/trim/nginx/logs/access.log  # nginx 访问日志（POST /uploa
 ```
 
 **注意**：上传走 WebSocket（`/websocket?type=file`）而非普通 HTTP POST，大文件调试看 uploadsrv.log 而不是 access.log。
+
+### 7. trim-cli 与 EasyTier（2026-10-12）
+
+系统升到 1.2.0800 后，`trim-cli --profile fnos2 app list` 和 `fnos1` 都能列出应用。1.2.0701 没有 `/ogh/ac/h/`，同一条命令拿到的是网页 404。
+
+应用中心的 `EasyTier` 1.0.9、`EasyTier-Web`、`易组网(用户版)` 不能替换飞牛 2 上已经在跑的 Docker `easytier/easytier:v2.6.4`。那个容器占 `10.10.10.22`，并导出家里网段。细节在 A 库 `project_fnos_trim_cli`。
+
