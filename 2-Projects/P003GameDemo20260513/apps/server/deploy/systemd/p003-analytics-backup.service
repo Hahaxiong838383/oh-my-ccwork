@@ -1,0 +1,15 @@
+[Unit]
+Description=P003 online analytics SQLite backup
+StartLimitIntervalSec=600
+StartLimitBurst=5
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/p003/server
+ExecStart=/bin/bash /opt/p003/server/scripts/analytics-maintenance.sh backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=120
+Restart=on-failure
+RestartSec=60

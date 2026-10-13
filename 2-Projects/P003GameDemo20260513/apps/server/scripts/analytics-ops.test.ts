@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {Hono} from 'hono';
+const {AnalyticsStore,DAY_MS,cstDay}=await import('../src/analytics/store.js');
+const {settleAnalyticsBatch}=await import('../src/analytics/ingest.js');
+const {validateAnalyticsBatch}=await import('../src/analytics/contracts.js');
+const {rollupDirtyDays,pruneAnalytics}=await import('../src/analytics/rollup.js');
+const {analyticsAdminGateway,queryAnalytics}=await import('../src/analytics/admin-query.js');
+const dir=mkdtempSync(join(tmpdir(),'analytics-ops-')),store=new AnalyticsStore(join(dir,'analytics.db'));
+const now=Date.now(),ctx={deviceKey:'0123456789abcdef'.repeat(4),active:true,uploadEnabled:true,uploadHourCst:23};
+const ev=(id:string,name='app.session_started',occurred=now,props:any={platform:'Android',entry_mode:'launcher'})=>({schema_version:1,client_event_id:id,event_name:name,occurred_at_ms:occurred,session_id:'s1',sequence:1,priority:'normal',context:{},properties:props});
+const ingest=(events:any[])=>settleAnalyticsBatch(store,ctx,validateAnalyticsBatch({schema_version:1,batch_id:'b',sent_at_ms:now,client:{},events}),'same-request',now);
+ingest([ev('a'),ev('b','app.bridge_ready',now-2*DAY_MS,{}),ev('clock','app.bridge_ready',0,{})]);
+assert.equal(rollupDirtyDays(store,now),3);const daily=queryAnalytics(store,'daily',new URLSearchParams());assert.equal(daily.items.length,2);
+const before=JSON.stringify(daily.items);assert.equal(rollupDirtyDays(store,now),0);assert.equal(JSON.stringify(queryAnalytics(store,'daily',new URLSearchParams()).items),before);
+ingest([ev('late','app.bridge_ready',now-2*DAY_MS,{})]);rollupDirtyDays(store,now);
+const older=queryAnalytics(store,'daily',new URLSearchParams('dimension=occurred')).items.find((d:any)=>d.day===cstDay(now-2*DAY_MS));assert.equal(older.event_count,2);
+const overview=queryAnalytics(store,'overview',new URLSearchParams());assert.equal(overview.clock_suspicious_events,1);assert.equal(overview.active_devices,1);
+const attempts=queryAnalytics(store,'batches',new URLSearchParams('request_id=same-request&limit=999999'));assert.equal(attempts.limit,100);assert.equal(attempts.items.length,2);assert.equal(JSON.stringify(attempts).includes(ctx.deviceKey),false);
+const events=queryAnalytics(store,'events',new URLSearchParams('client_event_id=late'));assert.equal(events.settlements.length,1);assert.equal(events.events.length,1);
+store.db.prepare('UPDATE analytics_event SET received_at_ms=?').run(now-15*DAY_MS);
+store.db.prepare('UPDATE analytics_batch SET received_at_ms=?').run(now-15*DAY_MS);
+assert.equal(pruneAnalytics(store,now,2).events,2);assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event_seen').get()!.n,4);
+// After received-based raw expiry, late arrival rebuild keeps retained minimal contributions.
+pruneAnalytics(store,now+20*DAY_MS,1000);
+assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event').get()!.n,0);
+settleAnalyticsBatch(store,ctx,validateAnalyticsBatch({schema_version:1,batch_id:'late-20',sent_at_ms:now+20*DAY_MS,client:{},events:[ev('late-20','app.bridge_ready',now,{})]}),'late-20',now+20*DAY_MS);
+rollupDirtyDays(store,now+20*DAY_MS);
+assert.equal(queryAnalytics(store,'daily',new URLSearchParams('dimension=occurred')).items.find((d:any)=>d.day===cstDay(now)).event_count,2);
+assert.equal(rollupDirtyDays(store,now+20*DAY_MS),0);
+settleAnalyticsBatch(store,ctx,validateAnalyticsBatch({schema_version:1,batch_id:'ancient',sent_at_ms:now,client:{},events:[ev('ancient','app.bridge_ready',now-100*DAY_MS,{})]}),'ancient',now);
+assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_dirty_day WHERE day<?").get(cstDay(now-90*DAY_MS))!.n,0);
+const app=new Hono();let role='admin';
+app.route('/analytics',analyticsAdminGateway({authorize:()=>role,internalUrl:'http://127.0.0.1:3006',internalSecret:'fake',fetchImpl:async()=>Response.json({ok:true,items:[]})}));
+for(const [who,code] of [['none',401],['editor',403],['guest',403],['admin',200]] as const){role=who;assert.equal((await app.request('/analytics/daily')).status,code);}
+assert.equal((await app.request('/analytics/unknown')).status,404);
+assert.equal((await app.request('/analytics/daily',{method:'POST'})).status,404);
+store.close();rmSync(dir,{recursive:true,force:true});console.log('analytics ops: PASS (dirty-day replay, late/clock, reconciliation, bounded TTL, admin roles)');

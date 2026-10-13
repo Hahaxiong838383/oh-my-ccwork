@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync,writeFileSync,readFileSync,mkdirSync,rmSync,statSync,realpathSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { parseEnv } from 'node:util';
+const dir=realpathSync(mkdtempSync(join(tmpdir(),'p003-env-preparation-')));
+try{
+ const fixture=join(dir,'server');mkdirSync(fixture);
+ const original='AUTH_JWT_SECRET="fake key with # symbol"\nOTHER_FEATURE="unchanged"\n';writeFileSync(join(fixture,'.env.local'),original,{mode:0o600});
+ const code=readFileSync(new URL('./analytics-prepare-env.mjs',import.meta.url),'utf8').replaceAll('/opt/p003/server',fixture);const script=join(dir,'prepare.mjs');writeFileSync(script,code);
+ const run=()=>{const r=spawnSync(process.execPath,[script],{cwd:fixture,encoding:'utf8'});assert.equal(r.status,0,r.stderr);assert.ok(!r.stdout.includes('fake key'));return JSON.parse(r.stdout);};
+ assert.equal(run().existing_runtime_secrets_reused,false);const first=parseEnv(readFileSync(join(fixture,'.env.analytics'),'utf8'));assert.equal(first.AUTH_JWT_SECRET,'fake key with # symbol');assert.notEqual(first.ANALYTICS_DEVICE_KEY_SECRET,first.ANALYTICS_INTERNAL_SECRET);
+ assert.equal(first.ANALYTICS_NODE_PATH,fixture+'/.runtime/node-v24.19.0-linux-x64/bin/node');assert.equal(first.ANALYTICS_ROLLUP_MAX_DAY_MS,'30000');
+ const ecosystem=new URL('./analytics.ecosystem.cjs',import.meta.url).pathname;
+ const runtimeEnv={...process.env,ANALYTICS_ENV_FILE:join(fixture,'.env.analytics')};delete runtimeEnv.ANALYTICS_NODE_PATH;
+ const pm2=spawnSync(process.execPath,['-e','process.stdout.write(require('+JSON.stringify(ecosystem)+').apps[0].interpreter)'],{env:runtimeEnv,encoding:'utf8'});assert.equal(pm2.status,0,pm2.stderr);assert.equal(pm2.stdout,first.ANALYTICS_NODE_PATH);
+ const updated=readFileSync(join(fixture,'.env.local'),'utf8');assert.ok(updated.startsWith(original));assert.equal(parseEnv(updated).OTHER_FEATURE,'unchanged');
+ assert.equal(run().existing_runtime_secrets_reused,true);assert.deepEqual(parseEnv(readFileSync(join(fixture,'.env.analytics'),'utf8')),first);assert.equal(readFileSync(join(fixture,'.env.local'),'utf8'),updated);
+ for(const name of ['.env.analytics','data/analytics-control.json','data/analytics.db'])assert.equal(statSync(join(fixture,name)).mode&0o777,0o600);
+ const editedFixture=join(dir,'edited-server');mkdirSync(editedFixture);writeFileSync(join(editedFixture,'.env.local'),original,{mode:0o600});
+ mkdirSync(join(editedFixture,'data'));const database=join(editedFixture,'data/analytics.db');writeFileSync(database,'accepted/seen preserved',{mode:0o600});
+ const later=original+'LATER_FEATURE="keep later edit"\n';
+ const editedCode=readFileSync(new URL('./analytics-prepare-env.mjs',import.meta.url),'utf8').replaceAll('/opt/p003/server',editedFixture).replace('fsyncSync(fd);','fsyncSync(fd);if(path.endsWith("/.env.local"))writeFileSync(path,'+JSON.stringify(later)+');');
+ const editedScript=join(dir,'edited-prepare.mjs');writeFileSync(editedScript,editedCode);const conflict=spawnSync(process.execPath,[editedScript],{cwd:editedFixture,encoding:'utf8'});
+ assert.equal(conflict.status,1,'temp生成后的.env.local later edit必须拒绝覆盖');assert.equal(readFileSync(join(editedFixture,'.env.local'),'utf8'),later);
+ assert.equal(readFileSync(database,'utf8'),'accepted/seen preserved');
+ const lock=join(fixture,'.analytics-deploy.lock');mkdirSync(lock);
+ const busy=spawnSync(process.execPath,[script],{cwd:fixture,encoding:'utf8'});assert.equal(busy.status,1,'共用部署锁持有时必须拒绝');assert.equal(readFileSync(join(fixture,'.env.local'),'utf8'),updated);
+ console.log('PASS: protected preparation retains other env bytes, secrets stable on rerun, independent keys and0600');
+}finally{rmSync(dir,{recursive:true,force:true});}
