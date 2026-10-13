@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "captured_at": "2026-10-13T07:55:41.800Z",
+  "real_device_data_used": false,
+  "synthetic_actors": 14,
+  "events_accepted": 84000,
+  "events_duplicated": 0,
+  "events_acknowledged": 84000,
+  "expected_events": 84000,
+  "expected_batches": 420,
+  "database_integrity": true,
+  "duration_ms": 193646,
+  "retry_reasons": {
+    "503:ANALYTICS_OVERLOADED:5": 104,
+    "503:ANALYTICS_WAL_PRESSURE:10": 94
+  },
+  "proxy_latency_ms": {
+    "p50": 48.61388000000443,
+    "p95": 454.1864340000029,
+    "p99": 809.4595649999974,
+    "max": 999.0714589999989
+  },
+  "rss_peak_bytes": 256286720,
+  "gates": {
+    "complete": true,
+    "monitoring": true,
+    "p95": true,
+    "p99": true,
+    "rss": true,
+    "existing_health": true
+  },
+  "voice_health": {
+    "samples": 190,
+    "p95_ms": 4.010445000021718,
+    "predeploy_p95_ms": 1.0511474683880806,
+    "delta_p95_ms": 2.959297531633638,
+    "probe_only": true
+  },
+  "actor_failures": [],
+  "monitor_failures": [],
+  "production_commit": "9b63e7e9135d667c807562fd1581b0ea04ce5a07",
+  "documents_commit": "787a03e6baaa7342e03d0ad475359b1605b67fc9",
+  "air_commit": "c8d196c719ac2e218158b6813a4f0d8f5300286f",
+  "maintenance": {
+    "duration_ms": 20485,
+    "maintenance_exit_code": 0,
+    "maintenance_timeout": false
+  },
+  "production_upload_enabled": false,
+  "real_device_and_midnight_acceptance": "pending_joint_window"
+}
