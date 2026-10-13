@@ -2,6 +2,16 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync,statSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import {configureAnalyticsWriter} from './sqlite-policy.mjs';
+const INGEST_SQL={
+ seen:'SELECT event_hash FROM analytics_event_seen WHERE device_key=? AND id_digest=?',
+ event:'INSERT INTO analytics_event VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+ remember:'INSERT INTO analytics_event_seen VALUES (?,?,?,?)',
+ fact:'INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)',
+ dirty:'INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)',
+ batch:'INSERT INTO analytics_batch VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+ settlement:'INSERT INTO analytics_settlement VALUES (?,?,?,?)'
+} as const;
+type IngestStatements={readonly [K in keyof typeof INGEST_SQL]:ReturnType<DatabaseSync['prepare']>};
 export class AnalyticsStorageUnavailable extends Error {
   constructor(readonly busy=false){super('ANALYTICS_STORAGE_UNAVAILABLE');}
 }
@@ -11,11 +21,14 @@ export class AnalyticsRollupBudgetExceeded extends Error {
 export class AnalyticsStore {
   readonly db: DatabaseSync;
   readonly sqliteVersion:string;
+  private ingestStatements?:IngestStatements;
   constructor(readonly path: string) {
     if(!isAbsolute(path)) throw new Error('analytics database path must be absolute');
     mkdirSync(dirname(path),{recursive:true});
     this.db=new DatabaseSync(path);
     try{this.sqliteVersion=configureAnalyticsWriter(this.db);}catch(error){this.db.close();throw error;}
+    // Negative cache_size is KiB, bounded to 32MiB; avoid the default 2MiB dirty-page thrash.
+    this.db.exec('PRAGMA cache_size=-32768');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS analytics_event (
         device_key TEXT NOT NULL, client_event_id TEXT NOT NULL, event_name TEXT NOT NULL,
@@ -54,6 +67,10 @@ export class AnalyticsStore {
   transaction<T>(fn:()=>T):T {
     try {this.db.exec('BEGIN IMMEDIATE');const result=fn();this.db.exec('COMMIT');return result;}
     catch(error) {try{this.db.exec('ROLLBACK');}catch{} if(error instanceof AnalyticsRollupBudgetExceeded)throw error;throw new AnalyticsStorageUnavailable([5,6].includes((error as {errcode?:number}).errcode??0));}
+  }
+  get ingest():IngestStatements{
+    // Exactly seven fixed statements per connection; no cache of arbitrary/dynamic queries.
+    return this.ingestStatements??=Object.freeze(Object.fromEntries(Object.entries(INGEST_SQL).map(([key,sql])=>[key,this.db.prepare(sql)])) as IngestStatements);
   }
   close(){this.db.close();}
   walBytes(){try{return statSync(this.path+'-wal').size;}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return 0;throw new AnalyticsStorageUnavailable();}}

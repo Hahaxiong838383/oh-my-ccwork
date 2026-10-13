@@ -79,7 +79,7 @@ python3 scripts/analytics-backup.py \
 
 analytics独立运行时为 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`，由主控核验官方SHA后安装；不升级系统Node或语音/个人站。ANALYTICS_NODE_PATH供PM2/maintenance显式选择。共享analytics writer拒绝旧SQLite3.51.2等未修WAL-reset版本，不能以改回系统Node绕过失败启动。
 
-关闭总闸时独立checkpoint仍每10秒推进，便于保留已有WAL；停p003-analytics时SIGTERM/SIGINT会清timer及child，WAL/DB/seen和专用runtime均保留。代码回退后重新发布仍用安全专用runtime，检查FULL=2、auto=0、checkpoint.last_success_ms及wal_pressure，再决定开灰度。不要手工删除WAL；256MiB准入硬闸/503数值10秒保护未结算客户端。采集停止、timer停止和数据恢复不混同，不因代码回退恢复旧config.db/devices.db或清seen。
+关闭总闸时独立checkpoint仍每10秒singleflight推进（30秒有界deadline；Linux nice10+ionice2/7，健康过期60秒），便于保留已有WAL；停p003-analytics时SIGTERM/SIGINT会清timer及child，WAL/DB/seen和专用runtime均保留。代码回退后重新发布仍用安全专用runtime，检查FULL=2、auto=0、checkpoint.last_success_ms及wal_pressure，再决定开灰度。不要手工删除WAL；256MiB准入硬闸/503数值10秒保护未结算客户端。采集停止、timer停止和数据恢复不混同，不因代码回退恢复旧config.db/devices.db或清seen。
 
 ## 协作部署互斥与后来编辑保护
 

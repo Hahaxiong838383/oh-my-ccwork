@@ -90,4 +90,4 @@ client可包含product/component/protocol_version/content_version；当前produc
 
 署名：codex（OpenAI）| 2026-10-13
 
-埋点独立使用Node24.19.0/SQLite3.53.3，所有共享writer保持FULL和commit后ACK；原语音运行时不变。独立checkpoint每10秒/超时5秒，WAL默认256MiB准入硬闸。checkpoint与回滚均不清seen，不轮换稳定HMAC。具体运行状态以health及部署回执为准，不能把本地测试当14台实测结果。
+埋点独立使用Node24.19.0/SQLite3.53.3，所有共享writer保持FULL和commit后ACK；原语音运行时不变。独立checkpoint每10秒singleflight/超时30秒，Linux子进程nice10+ionice2/7；健康过期阈值60秒；ingest页缓存预算32MiB且仅复用七条固定语句，WAL默认256MiB准入硬闸。checkpoint与回滚均不清seen，不轮换稳定HMAC。具体运行状态以health及部署回执为准，不能把本地测试当14台实测结果。

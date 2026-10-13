@@ -10,6 +10,9 @@ const {assertSafeSqliteVersion}=await import('../src/analytics/sqlite-policy.mjs
 for(const version of ['3.51.2','3.51.0','3.50.6','3.44.5','bad'])assert.throws(()=>assertSafeSqliteVersion(version),/UNSAFE_ANALYTICS_SQLITE_VERSION/);
 for(const version of ['3.51.3','3.53.3','3.50.7','3.44.6'])assert.doesNotThrow(()=>assertSafeSqliteVersion(version));
 const {AnalyticsCheckpointer}=await import('../src/analytics/checkpointer.js');
+const schedule=new AnalyticsCheckpointer(store.path);
+assert.equal(schedule.status().timeout_ms,30000,'大WAL约6秒checkpoint必须有30秒有界预算');
+assert.equal(schedule.status().stale_after_ms,60000,'健康过期需包含deadline及周期');
 const {createAnalyticsApp,startAnalyticsServer}=await import('../src/analytics/index.js');
 const control=join(dir,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
 const options={store,reader:{acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'a'.repeat(64),active:true,uploadEnabled:true,uploadHourCst:0})},authSecret:'fake-jwt-key',internalSecret:'fake-internal-key',controlPath:control,allowSubjects:['synthetic'],diskFreeBytes:()=>20*1024**3};
@@ -28,6 +31,8 @@ checkpointer.start();await until(()=>checkpointer.status().last_result!==null);
 assert.equal(checkpointer.status().stalled,true,'长reader应报告部分checkpoint，不能谎称全帧完成');
 assert.ok(store.walBytes()>=max);pinned.exec('ROLLBACK');pinned.close();
 await until(()=>checkpointer.status().last_result?.reclaimed===true);
+const realNow=Date.now,successful=checkpointer.status().last_success_ms!,staleAfter=checkpointer.status().stale_after_ms;
+try{Date.now=()=>successful+staleAfter-1;assert.equal(checkpointer.status().stale,false);Date.now=()=>successful+staleAfter+1;assert.equal(checkpointer.status().stale,true);}finally{Date.now=realNow;}
 assert.ok(store.walBytes()<max,'PASSIVE完成后高水位TRUNCATE必须真实恢复');
 response=await post(capped,'recovered');assert.equal(response.status,200);assert.deepEqual((await response.json()).accepted_event_ids,['recovered-0']);
 const health=await (await capped.request('/internal/analytics/health',{headers:{'X-Analytics-Internal-Token':options.internalSecret}})).json();
@@ -38,6 +43,8 @@ const timed=new AnalyticsCheckpointer(store.path,{intervalMs:1000,timeoutMs:300}
 response=await post(ordinary,'independent');assert.equal(response.status,200);assert.equal(timed.status().worker_pid,stoppedPid,'请求无需等child完成');
 await until(()=>timed.status().timeouts===1);await timed.stop();assert.throws(()=>process.kill(stoppedPid,0),/ESRCH/);
 const exiting=new AnalyticsCheckpointer(store.path,{intervalMs:1000,timeoutMs:5000});exiting.start();const exitingPid=exiting.status().worker_pid!;process.kill(exitingPid,'SIGSTOP');await exiting.stop();assert.throws(()=>process.kill(exitingPid,0),/ESRCH/);
+const single=new AnalyticsCheckpointer(store.path,{intervalMs:100,timeoutMs:1000});single.start();const singlePid=single.status().worker_pid!;process.kill(singlePid,'SIGSTOP');await new Promise(r=>setTimeout(r,250));assert.equal(single.status().worker_pid,singlePid,'多个周期经过仍只允许一个child');await single.stop();assert.throws(()=>process.kill(singlePid,0),/ESRCH/);
+const long=new AnalyticsCheckpointer(store.path);long.start();const longPid=long.status().worker_pid!;process.kill(longPid,'SIGSTOP');await new Promise(r=>setTimeout(r,5500));assert.equal(long.status().timeouts,0,'超过旧5秒deadline仍允许有界checkpoint推进');assert.equal(long.status().worker_pid,longPid);process.kill(longPid,'SIGCONT');await until(()=>long.status().last_success_ms!==null);await long.stop();assert.throws(()=>process.kill(longPid,0),/ESRCH/);
 const bootstrap=startAnalyticsServer(options,3306);await until(()=>bootstrap.checkpointer.status().last_success_ms!==null);
 const bootHealth=await (await fetch('http://127.0.0.1:3306/internal/analytics/health',{headers:{'X-Analytics-Internal-Token':options.internalSecret}})).json();assert.equal(bootHealth.checkpoint.enabled,true);assert.ok(bootHealth.checkpoint.last_success_ms>0);await bootstrap.stop();assert.equal(bootstrap.checkpointer.status().worker_pid,null);
 rmSync(dir,{recursive:true,force:true});console.log('analytics checkpoint: PASS (FULL/auto0, safe-version gate, pinned reader/backpressure/TRUNCATE recovery, independent child, timeout/exit cleanup)');

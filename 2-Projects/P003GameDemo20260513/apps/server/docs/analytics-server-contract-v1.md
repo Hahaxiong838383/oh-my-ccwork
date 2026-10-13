@@ -24,7 +24,7 @@ X-Request-Id必需，长度1..96，技术符号语法 `[A-Za-z0-9_.:-]+`，合�
 
 ANALYTICS_CONTROL_PATH指向绝对路径普通文件，内容精确 `{"enabled":false}` 或true；只许enabled键、boolean，≤4096字节、权限0600、非symlink。每请求热读并在事务前再次读。不存在即安全关闭且健康；格式/权限错误关闭且readiness不通过。总闸关闭/设备配置false均503、error_code=ANALYTICS_UPLOAD_DISABLED、Retry-After=900。独立allowlist空则全拒，非灰度403。后台只返回名单数量和短别名，不能输出SN/secret。
 
-台账/config数据库每次读取用 DatabaseSync readOnly:true重开，读取实时WAL，不用immutable、不留旧文件句柄。analytics库独立WAL+FULL+busy_timeout250ms，所有共享库writer及checkpointer关闭wal_autocheckpoint；版本门在journal变更/DDL/DML前执行。备份Python只读共享源库、只写独占隔离目标；成功水位writer同样过版本门及FULL/auto0。HMAC device_key 使用独立稳定密钥和固定命名空间p003-analytics-v1，续签不改变设备key。服务间认证使用另一密钥。
+台账/config数据库每次读取用 DatabaseSync readOnly:true重开，读取实时WAL，不用immutable、不留旧文件句柄。analytics库独立WAL+FULL+busy_timeout250ms；AnalyticsStore明确PRAGMA cache_size=-32768（32MiB页缓存预算，并非进程RSS硬限制），每连接仅懒编译七条固定ingest语句并跨批次复用，无动态SQL缓存，所有共享库writer及checkpointer关闭wal_autocheckpoint；版本门在journal变更/DDL/DML前执行。备份Python只读共享源库、只写独占隔离目标；成功水位writer同样过版本门及FULL/auto0。HMAC device_key 使用独立稳定密钥和固定命名空间p003-analytics-v1，续签不改变设备key。服务间认证使用另一密钥。
 
 ## 保留与聚合
 
@@ -44,13 +44,13 @@ CLI JSON为 `{ok:boolean,partial:boolean,rebuilt_days:number,rollup?:{attempted_
 
 ## 独立 checkpoint 与 WAL 背压
 
-ingest启动独立child立即执行一次，之后每10秒执行一次PASSIVE checkpoint。同一supervisor单flight、不排队重叠；SQLite的WAL checkpoint互斥锁处理其他连接竞争，busy/部分帧不冒称完成。parent强制5秒deadline，超时SIGKILL并记录受控失败，下一周期再试；输出最多4096字节，无凭据/正文。checkpoint子进程与请求线程独立；FULL每次事务提交仍fsync，ACK仍在COMMIT后返回。SIGTERM/SIGINT关闭HTTP、停止timer并杀/回收child，再关闭store；关采集总闸时checkpoint继续推进已有WAL。
+ingest启动独立child立即执行一次，之后每10秒执行一次PASSIVE checkpoint。同一supervisor单flight、不排队重叠；SQLite的WAL checkpoint互斥锁处理其他连接竞争，busy/部分帧不冒称完成。Linux child通过/usr/bin/ionice -c 2 -n 7和/usr/bin/nice -n 10降低I/O/CPU优先级（本机macOS仅nice）；wrapper exec保留相同PID，工具缺失/失败计checkpoint失败，不静默回退。I/O优先级效果依赖Linux磁盘调度器，需staging实测。parent强制30秒deadline，超时SIGKILL并记录受控失败，下一周期再试；输出最多4096字节，无凭据/正文。checkpoint子进程与请求线程独立；FULL每次事务提交仍fsync，ACK仍在COMMIT后返回。SIGTERM/SIGINT关闭HTTP、停止timer并杀/回收child，再关闭store；关采集总闸时checkpoint继续推进已有WAL。
 
 物理WAL达到默认256MiB后，新的收件在读正文前及事务前复核，HTTP503/ANALYTICS_WAL_PRESSURE，Retry-After=10（数字秒）；未accepted不得排空端侧pending。门槛是新事务准入硬闸，可越过至多一个同步有界200事件事务的增量，不是手工截断日志的物理文件绝对上限。后台有限维护写仍可推进保留；checkpoint停摆/长reader时不继续新增事件。file stat错误同样失败关闭。
 
-物理WAL高水位不等于尚未持久化数据。普通PASSIVE不缩文件；仅物理文件达到门槛且本次PASSIVE busy=0/log=checkpointed，child以busy_timeout=0尝试SQLite TRUNCATE恢复物理空间。并发writer/reader使TRUNCATE忙则不等待，不删除WAL，继续背压直到下一周期成功；5秒parent deadline仍适用。SQLite3.51.3+/已修backport版本门先通过，避免旧版本并行writer/checkpointer WAL-reset缺陷。不能手工删WAL或降FULL/NORMAL来消除延迟。
+物理WAL高水位不等于尚未持久化数据。普通PASSIVE不缩文件；仅物理文件达到门槛且本次PASSIVE busy=0/log=checkpointed，child以busy_timeout=0尝试SQLite TRUNCATE恢复物理空间。并发writer/reader使TRUNCATE忙则不等待，不删除WAL，继续背压直到下一周期成功；30秒parent deadline仍适用。SQLite3.51.3+/已修backport版本门先通过，避免旧版本并行writer/checkpointer WAL-reset缺陷。不能手工删WAL或降FULL/NORMAL来消除延迟。
 
-health可读版本/FULL/auto0、物理WAL及门槛、checkpoint是否running/超时/失败/长reader部分进度/末次全帧完成。生产readiness要求checkpoint启用且末次全帧完成距今≤30秒；启动第一轮完成前或长期停摆为not ready。WAL在门槛下仍可接收，达到门槛则独立背压。库/seen不因回滚或checkpoint清理。
+health可读版本/FULL/auto0、物理WAL及门槛、checkpoint是否running/超时/失败/长reader部分进度/末次全帧完成。生产readiness要求checkpoint启用且末次全帧完成距今≤timeout_ms+3×interval_ms（生产60秒）；启动第一轮完成前或长期停摆为not ready。WAL在门槛下仍可接收，达到门槛则独立背压。库/seen不因回滚或checkpoint清理。
 
 ## 环境变量
 
@@ -62,6 +62,6 @@ health可读版本/FULL/auto0、物理WAL及门槛、checkpoint是否running/超
 
 维护预算：ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY默认1000000、整数1..1000000；ANALYTICS_ROLLUP_MAX_DAY_MS内置默认30000、整数1..30000，生产env helper下发8000；仅可收窄预算，非法值为受控rollup失败且仍先尝试TTL。
 
-运行时：ANALYTICS_NODE_PATH绝对可执行路径，PM2生态及maintenance.sh从受控.env.analytics的JSON引号路径读取，显式进程env可覆盖；默认 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`。standalone wrapper/tests使用当前process.execPath，rollup子命令和checkpoint可显式选ANALYTICS_NODE_PATH；任何共享writer都先验证实际SQLite版本。ANALYTICS_WAL_MAX_BYTES默认268435456，整数65536..268435456，只可收窄准入阈值，不能扩大256MiB；child使用同一阈值。生产checkpoint周期10秒/超时5秒冻结，不依赖5分钟rollup刷新WAL。
+运行时：ANALYTICS_NODE_PATH绝对可执行路径，PM2生态及maintenance.sh从受控.env.analytics的JSON引号路径读取，显式进程env可覆盖；默认 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`。standalone wrapper/tests使用当前process.execPath，rollup子命令和checkpoint可显式选ANALYTICS_NODE_PATH；任何共享writer都先验证实际SQLite版本。ANALYTICS_WAL_MAX_BYTES默认268435456，整数65536..268435456，只可收窄准入阈值，不能扩大256MiB；child使用同一阈值。生产checkpoint周期10秒/超时30秒冻结，不依赖5分钟rollup刷新WAL。
 
 PM2 `deploy/analytics.ecosystem.cjs` 读 ANALYTICS_ENV_FILE（默认/opt/p003/server/.env.analytics，绝对），实例1，512M保护。脚本不读取真实env作为开发输入。部署/真实代理/真机/语音对照/备份异机验收由主控处理，本任务本地验证不能代替生产验收。

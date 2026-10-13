@@ -29,7 +29,21 @@ store.db.prepare('DELETE FROM analytics_event WHERE client_event_id=?').run('A')
 assert.deepEqual(run([A]).duplicated_event_ids,['A']);
 assert.throws(()=>batch([{...A,client_event_id:''}]),/INVALID_BATCH/);
 assert.throws(()=>batch([A], 'bad\nheader'),/INVALID_BATCH/);
+// Observe real SQLite prepare calls across two maximum batches; dynamic queries remain uncached.
+const originalPrepare=store.db.prepare.bind(store.db);let prepareCount=0;
+store.db.prepare=((sql:string)=>{prepareCount++;return originalPrepare(sql);}) as typeof store.db.prepare;
+const bulk=Array.from({length:200},(_,i)=>event('bulk-'+i));
+assert.equal(run(bulk,'bulk-first').accepted_event_ids.length,200);
+assert.equal(run(bulk,'bulk-replay').duplicated_event_ids.length,200);
+assert.equal(prepareCount,0,'已初始化的固定语句跨事件/批次复用，不再每200事件prepare1402次');
+assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,-32768,'ingest页缓存应明确有界32MiB');
+assert.equal(store.db.prepare('PRAGMA synchronous').get()!.synchronous,2);
+assert.equal(store.db.prepare('PRAGMA wal_autocheckpoint').get()!.wal_autocheckpoint,0);
+store.db.prepare=originalPrepare;
 store.close();
 const reopened=new AnalyticsStore(join(dir,'analytics.db'));
+const reopenedPrepare=reopened.db.prepare.bind(reopened.db);let reopenedCount=0;
+reopened.db.prepare=((sql:string)=>{reopenedCount++;return reopenedPrepare(sql);}) as typeof reopened.db.prepare;
 assert.deepEqual(settleAnalyticsBatch(reopened,ctx,batch([B]),'after-restart').duplicated_event_ids,['B']);
+assert.equal(reopenedCount,7,'每个连接仅首次准备七条固定语句');
 reopened.close();rmSync(dir,{recursive:true,force:true});console.log('analytics ingest: PASS (exact ACK, transaction rollback, dedupe TTL/restart, safe receipts)');
