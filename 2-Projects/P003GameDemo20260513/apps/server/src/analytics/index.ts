@@ -11,6 +11,7 @@ import { AnalyticsDeviceReader,type AnalyticsDeviceContext } from './device-cont
 import { AnalyticsStore,AnalyticsStorageUnavailable } from './store.js';
 import { LIMITS,validRequestId,validateAnalyticsBatch } from './contracts.js';
 import { settleAnalyticsBatch } from './ingest.js';
+import { AnalyticsWriter,AnalyticsWriterBusy } from './writer.js';
 import { ADMIN_ANALYTICS_PATHS,deviceAlias,queryAnalytics,analyticsQueryFilters } from './admin-query.js';
 export function readControl(path:string):{enabled:boolean;valid:boolean}{
   try{
@@ -22,7 +23,7 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
 type Reader={acceptsCredential(subject:string,iat:number):boolean;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
-export type AnalyticsAppOptions={store:AnalyticsStore;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
+export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
   const rpm=options.globalRpm??LIMITS.defaultGlobalRpm;if(!Number.isInteger(rpm)||rpm<1||rpm>60000)throw new Error('INVALID_ANALYTICS_GLOBAL_RPM');
@@ -40,6 +41,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     let meta:{key:string;value:string}[]=[];
     try{meta=options.store.db.prepare('SELECT key,value FROM analytics_meta').all() as {key:string;value:string}[];}catch{storageReady=false;}
     const checkpoint=options.checkpointStatus?.()??null;
+    if(options.writer&&!options.writer.ready)storageReady=false;
     return {ok:true,alive:true,ready:dependenciesReady&&storageReady&&(checkpoint===null||(!checkpoint.stale&&checkpoint.enabled))&&walReadable&&walBytes<walMax&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:options.allowSubjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,wal_max_bytes:walMax,wal_pressure:!walReadable||walBytes>=walMax,sqlite_version:options.store.sqliteVersion,sqlite_version_safe:true,sqlite_synchronous:2,sqlite_wal_autocheckpoint:0,checkpoint,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_rollup_attempt_ms:Number(meta.find(m=>m.key==='last_rollup_attempt_ms')?.value)||null,last_rollup_partial_ms:Number(meta.find(m=>m.key==='last_rollup_partial_ms')?.value)||null,rollup_status:meta.find(m=>m.key==='last_rollup_status')?.value??null,rollup_failed_days:Number(meta.find(m=>m.key==='last_rollup_failed_days')?.value)||0,rollup_remaining_dirty_days:Number(meta.find(m=>m.key==='last_rollup_remaining_dirty_days')?.value)||0,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
   };
   app.get('/health',c=>c.json({ok:true,alive:true}));
@@ -75,6 +77,8 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     for(const [key,arr] of deviceHits)if(!arr.length||now-arr[arr.length-1]>=60000)deviceHits.delete(key);
     const hits=(deviceHits.get(context.deviceKey)??[]).filter(t=>now-t<60000);
     if(globalHits.length>=rpm||hits.length>=LIMITS.deviceRpm)return error('ANALYTICS_RATE_LIMITED',429,60);
+    if(options.writer&&!options.writer.ready)return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);
+    if(options.writer?.busy)return error('ANALYTICS_OVERLOADED',503,5);
     if(inFlight>=LIMITS.concurrency)return error('ANALYTICS_OVERLOADED',503,5);
     if(options.store.walBytes()>=walMax)return error('ANALYTICS_WAL_PRESSURE',503,10);
     if(diskFree()<LIMITS.diskStopBytes)return error('ANALYTICS_DISK_PRESSURE',503,60);
@@ -86,15 +90,20 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
       const stream=c.req.raw.body;if(!stream)return error('INVALID_BATCH',400);
       const reader=stream.getReader(),chunks:Uint8Array[]=[];let bytes=0;
       while(true){const {value,done}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>LIMITS.bodyBytes){await reader.cancel();return error('ANALYTICS_BODY_TOO_LARGE',413);}chunks.push(value);}
-      let raw:unknown;try{raw=JSON.parse(Buffer.concat(chunks).toString('utf8'));}catch{return error('INVALID_JSON',400);}
+      const rawBody=Buffer.concat(chunks).toString('utf8');
+      let raw:unknown;try{raw=JSON.parse(rawBody);}catch{return error('INVALID_JSON',400);}
       let batch;try{batch=validateAnalyticsBatch(raw);}catch{return error('INVALID_BATCH',400);}
       if(!readControl(options.controlPath).enabled)return error('ANALYTICS_UPLOAD_DISABLED',503,900);
       const latestContext=options.reader.readAnalyticsDeviceContext(cred.sn);
       if(!latestContext.active)return error('ANALYTICS_DEVICE_NOT_ENABLED',403);
       if(!latestContext.uploadEnabled)return error('ANALYTICS_UPLOAD_DISABLED',503,900);
       if(options.store.walBytes()>=walMax)return error('ANALYTICS_WAL_PRESSURE',503,10);
-      const ack=settleAnalyticsBatch(options.store,latestContext,batch,requestId);return c.json(ack);
-    }catch(cause){storageFailures++;if(cause instanceof AnalyticsStorageUnavailable&&cause.busy)sqlBusy++;return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);}
+      if(options.writer&&!options.writer.ready)return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);
+      if(options.writer?.busy)return error('ANALYTICS_OVERLOADED',503,5);
+      // Transfer the original JSON text: structuredClone can overflow on a deeply invalid event
+      // before the worker can settle it as a per-event rejection alongside valid events.
+      const ack=options.writer?await options.writer.settle(latestContext,batch,requestId,rawBody):settleAnalyticsBatch(options.store,latestContext,batch,requestId);return c.json(ack);
+    }catch(cause){if(cause instanceof AnalyticsWriterBusy)return error('ANALYTICS_OVERLOADED',503,5);storageFailures++;if(cause instanceof AnalyticsStorageUnavailable&&cause.busy)sqlBusy++;return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);}
     finally{inFlight--;durations.push(Math.ceil(performance.now()-started));if(durations.length>1024)durations.shift();}
   });
   app.onError((e,c)=>{const invalid=e.message==='INVALID_QUERY';console.error('[analytics] '+(invalid?'INVALID_QUERY':'DEPENDENCY_UNAVAILABLE'));c.header('Retry-After','30');return c.json({ok:false,error_code:invalid?'INVALID_QUERY':'ANALYTICS_DEPENDENCY_UNAVAILABLE'},invalid?400:503);});
@@ -113,17 +122,23 @@ export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=
   if(configuredInterval!==undefined&&(!/^\d+$/.test(configuredInterval)||Number(configuredInterval)<100||Number(configuredInterval)>10000))throw new Error('INVALID_ANALYTICS_CHECKPOINT_INTERVAL_MS');
   const checkpointer=new AnalyticsCheckpointer(options.store.path,{walMaxBytes:options.walMaxBytes,nodePath:process.env.ANALYTICS_NODE_PATH??process.execPath,intervalMs:configuredInterval===undefined?10000:Number(configuredInterval)});
   options.checkpointStatus=()=>checkpointer.status();
+  // Validate configuration before creating a thread that would outlive a failed startup.
   const app=createAnalyticsApp(options);
-  const server=serve({fetch:app.fetch,hostname:'127.0.0.1',port});checkpointer.start();
+  // The HTTP connection is for queries only. Blocking SQLite transactions live in one worker.
+  options.store.db.exec('PRAGMA query_only=ON; PRAGMA cache_size=-8192; PRAGMA shrink_memory');
+  const writer=options.writer??new AnalyticsWriter(options.store.path);options.writer=writer;
+  let server!:ReturnType<typeof serve>;
+  try{server=serve({fetch:app.fetch,hostname:'127.0.0.1',port});checkpointer.start();}
+  catch(error){server?.close();void writer.close().catch(()=>{});void checkpointer.stop().catch(()=>{});throw error;}
   let stopped:Promise<void>|undefined;
-  const signal=()=>{void stop().then(()=>process.exit(0));};
+  const signal=()=>{void stop().then(()=>process.exit(0),()=>{console.error('[analytics] SHUTDOWN_STORAGE_UNAVAILABLE');process.exit(1);});};
   function stop(){
     if(stopped)return stopped;
-    stopped=(async()=>{process.removeListener('SIGTERM',signal);process.removeListener('SIGINT',signal);server.close();if('closeAllConnections' in server)server.closeAllConnections();await checkpointer.stop();options.store.close();})();
+    stopped=(async()=>{process.removeListener('SIGTERM',signal);process.removeListener('SIGINT',signal);server.close();try{await writer.close();}finally{if('closeAllConnections' in server)server.closeAllConnections();await checkpointer.stop();options.store.close();}})();
     return stopped;
   }
   process.once('SIGTERM',signal);process.once('SIGINT',signal);
-  return {server,checkpointer,stop};
+  return {server,checkpointer,writer,stop};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   let options:AnalyticsAppOptions|undefined;

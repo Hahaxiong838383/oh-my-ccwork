@@ -4,6 +4,7 @@ export type RollupBudget={maxFactsPerDay:number;maxDayMs:number};
 export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"}[];remaining_dirty_days:number;partial:boolean};
 type Counts={names:Record<string,number>;failures:Map<string,number>;suspicious:number;gm:number;facts:number;last:number};
 const newCounts=():Counts=>({names:{},failures:new Map(),suspicious:0,gm:0,facts:0,last:0});
+const compareText=(a:string,b:string)=>a<b?-1:a>b?1:0;
 function addFact(counts:Counts,fact:Fact,semantic:Record<string,unknown>){
   counts.facts++;counts.last=Math.max(counts.last,fact.received_at_ms);counts.names[fact.event_name]=(counts.names[fact.event_name]??0)+1;
   counts.suspicious+=fact.clock_suspicious;if(semantic.gm_override===true)counts.gm++;
@@ -13,7 +14,7 @@ function summary(counts:Counts,devices:number,sessions:number,rewards:number){
   const {names,failures}=counts;
   const select=(prefixes:string[])=>Object.fromEntries(Object.entries(names).filter(([n])=>prefixes.some(p=>n.startsWith(p))));
   return {event_count:counts.facts,active_devices:devices,sessions,event_counts:names,clock_suspicious_events:counts.suspicious,explicit_gm_events:counts.gm,unclassified_traffic_events:counts.facts-counts.gm,reward_grant_events:names['g1.reward_granted']??0,unique_reward_instances:rewards,
-    groups:{activity:select(['app.']),g1_flow:select(['g1.experience','g1.phase','g1.screen','g1.semantic','g1.runtime_command']),logical_day_ecotank:select(['g1.logical','g1.progress','g1.route','g1.ecotank','g1.historical']),rewards_makeup:select(['g1.reward','g1.gift','g1.makeup']),settings:select(['settings.']),voice_state:select(['voice.']),command_failures:[...failures].map(([key,count])=>{const [command,error_code]=JSON.parse(key);return {command,error_code,count};}).sort((a,b)=>b.count-a.count).slice(0,100)},data_cutoff_ms:counts.last};
+    groups:{activity:select(['app.']),g1_flow:select(['g1.experience','g1.phase','g1.screen','g1.semantic','g1.runtime_command']),logical_day_ecotank:select(['g1.logical','g1.progress','g1.route','g1.ecotank','g1.historical']),rewards_makeup:select(['g1.reward','g1.gift','g1.makeup']),settings:select(['settings.']),voice_state:select(['voice.']),command_failures:[...failures].map(([key,count])=>{const [command,error_code]=JSON.parse(key);return {command,error_code,count};}).sort((a,b)=>b.count-a.count||compareText(a.command,b.command)||compareText(a.error_code,b.error_code)).slice(0,100)},data_cutoff_ms:counts.last};
 }
 function summarizeFacts(facts:Iterable<Fact>,started:number,budget:RollupBudget,onDevice:(key:string,result:ReturnType<typeof summary>)=>void){
   const global=newCounts();let current:string|null=null,individual=newCounts(),sessions=new Set<string>(),rewards=new Set<string>(),devices=0,totalSessions=0,totalRewards=0;
@@ -49,7 +50,7 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
         const started=performance.now();
         store.db.prepare('DELETE FROM analytics_device_day WHERE dimension=? AND day=?').run(dimension,day);
         const insertDevice=store.db.prepare('INSERT INTO analytics_device_day VALUES (?,?,?,?,?,?,?)');
-        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
+        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
           insertDevice.run(dimension,day,key,individual.event_count,individual.sessions,individual.data_cutoff_ms,JSON.stringify({...individual,updated_at_ms:now}));
         });
         store.db.prepare('INSERT INTO analytics_day VALUES (?,?,?,?) ON CONFLICT(dimension,day) DO UPDATE SET summary_json=excluded.summary_json,updated_at_ms=excluded.updated_at_ms').run(dimension,day,JSON.stringify(result),now);
@@ -73,13 +74,27 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
   });
   return status;
 }
+function pruneDailyTable(store:AnalyticsStore,table:string,cutoff:string,limit:number):void{
+  // All callers use the fixed daily-table list below. Its existing keys start with dimension,day.
+  const first=store.db.prepare(`SELECT dimension FROM ${table} ORDER BY dimension LIMIT 1`);
+  const next=store.db.prepare(`SELECT dimension FROM ${table} WHERE dimension>? ORDER BY dimension LIMIT 1`);
+  const remove=store.db.prepare(`DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE dimension=? AND day<? LIMIT ?)`);
+  let current=first.get() as {dimension:string}|undefined,remaining=limit;
+  while(current&&remaining>0){
+    const dimension=current.dimension;
+    // LIMIT applies to this dimension; actual changes consume the one budget shared by the table.
+    remaining-=Number(remove.run(dimension,cutoff,remaining).changes);
+    // Seek past the saved key even if its last row was deleted. Empty/unknown dimensions are included.
+    if(remaining>0)current=next.get(dimension) as {dimension:string}|undefined;
+  }
+}
 export function pruneAnalytics(store:AnalyticsStore,now=Date.now(),chunk=1000):{events:number;batches:number}{
   const bounded=Math.max(1,Math.min(5000,chunk)),rawCutoff=now-14*DAY_MS,dailyCutoff=cstDay(now-90*DAY_MS);
   return store.transaction(()=>{
     const events=Number(store.db.prepare('DELETE FROM analytics_event WHERE rowid IN (SELECT rowid FROM analytics_event WHERE received_at_ms<? LIMIT ?)').run(rawCutoff,bounded).changes);
     const old=store.db.prepare('SELECT attempt_id FROM analytics_batch WHERE received_at_ms<? LIMIT ?').all(rawCutoff,bounded) as {attempt_id:string}[];
     for(const {attempt_id} of old){store.db.prepare('DELETE FROM analytics_settlement WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_batch WHERE attempt_id=?').run(attempt_id);}
-    for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry'])store.db.prepare(`DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE day<? LIMIT ?)`).run(dailyCutoff,bounded);
+    for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry'])pruneDailyTable(store,table,dailyCutoff,bounded);
     return {events,batches:old.length};
   });
 }
