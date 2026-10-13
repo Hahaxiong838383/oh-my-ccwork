@@ -6,9 +6,11 @@ let store:AnalyticsStore|undefined,rollup:RollupStatus|undefined,pruned:ReturnTy
 let rollupError:string|undefined,pruneError:string|undefined;
 try{
   store=new AnalyticsStore(path);
+  // Commit one bounded TTL chunk before any potentially long aggregation.
+  // External timeout/kill during rollup cannot skip already completed pruning.
+  try{pruned=pruneAnalytics(store,Date.now(),1000);}catch{pruneError='ANALYTICS_PRUNE_FAILED';}
   try{rollup=rollupDirtyDaysWithStatus(store,Date.now(),16,{maxFactsPerDay:Number(process.env.ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY??1_000_000),maxDayMs:Number(process.env.ANALYTICS_ROLLUP_MAX_DAY_MS??30_000)});}
   catch{rollupError='ANALYTICS_ROLLUP_FAILED';}
-  finally{try{pruned=pruneAnalytics(store,Date.now(),1000);}catch{pruneError='ANALYTICS_PRUNE_FAILED';}}
 }catch{rollupError='ANALYTICS_STORAGE_UNAVAILABLE';}
 finally{store?.close();}
 // Partial aggregation is an executed bounded maintenance run; preserve JSON status for the scheduler.

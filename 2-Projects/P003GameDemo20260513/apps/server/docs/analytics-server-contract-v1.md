@@ -36,7 +36,7 @@ analytics_day/analytics_device_day和最小 analytics_rollup_fact保留90天。f
 
 七组提供语义事件计数、活跃设备/会话、Runtime奖励事件与奖励instance去重、失败command/error_code排行。G1流程统计是事件计数，不能称严格序列转化率；没有有序漏斗推断。上传元数据来自batch当前client，不能当发生版本。
 
-独立 `npm run analytics:rollup`，建议每5分钟调度：最多16个dirty日、每日事务最多100万fact/30秒计算预算，每次TTL每张目标表≤1000行；不VACUUM、不在ingest进程启动重算。逐日事务隔离，超预算保留dirty并继续其他候选日；analytics_rollup_retry仅存维度/日期/末次失败时间，失败日排到未尝试日后且同样保留90天，防止有限名额饥饿。raw14天/receipt14天/fact与summary90天TTL在独立finally中尝试，即使聚合或水位写入失败。
+独立 `npm run analytics:rollup`，建议每5分钟调度：最多16个dirty日、每日事务最多100万fact/30秒计算预算，每次TTL每张目标表≤1000行；不VACUUM、不在ingest进程启动重算。逐日事务隔离，超预算保留dirty并继续其他候选日；analytics_rollup_retry仅存维度/日期/末次失败时间，失败日排到未尝试日后且同样保留90天，防止有限名额饥饿。raw14天/receipt14天/fact与summary90天TTL先独立尝试并提交一次有界chunk，再执行耗时rollup；不在finally重复清理。聚合或水位写入失败、聚合期间外部timeout/kill不能跳过此前已提交的TTL；TTL本身失败仍继续尝试rollup，但最终exit1，不冒称维护成功。外部kill发生在TTL提交前仍可能中断该次清理，保留周期由后续调度继续推进。
 
 CLI JSON为 `{ok:boolean,partial:boolean,rebuilt_days:number,rollup?:{attempted_days,rebuilt_days,failed_days:{dimension,day,reason:'budget_exceeded'|'storage_unavailable'}[],remaining_dirty_days,partial},pruned?:{events,batches},rollup_error?:string,prune_error?:string}`。部分失败或尚余dirty：exit0、ok=false、partial=true；全量完成：exit0、ok=true、partial=false；存储/元数据/TTL致命错误：exit1、受控error字段，不能冒称成功。wrapper保留相同ok/partial语义。每次记last_rollup_attempt_ms；partial只推进last_rollup_partial_ms，全部dirty完成才推进last_rollup_success_ms。每日及设备每日摘要updated_at_ms取该日真实完成时刻。
 
