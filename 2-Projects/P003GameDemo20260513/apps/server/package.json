@@ -21,7 +21,10 @@
     "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts",
     "test:persona": "NODE_OPTIONS=--experimental-sqlite tsx scripts/persona-state.test.ts",
     "test:local-audio": "NODE_OPTIONS=--experimental-sqlite tsx scripts/local-audio.test.ts",
-    "test:memory-extract": "NODE_OPTIONS=--experimental-sqlite tsx scripts/memory-extract.test.ts"
+    "test:memory-extract": "NODE_OPTIONS=--experimental-sqlite tsx scripts/memory-extract.test.ts",
+    "start:analytics": "node --experimental-sqlite --import tsx src/analytics/index.ts",
+    "test:analytics": "node --experimental-sqlite --import tsx scripts/analytics-auth-config.test.ts && node --experimental-sqlite --import tsx scripts/analytics-registry.test.ts && node --experimental-sqlite --import tsx scripts/analytics-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-http.test.ts && node --experimental-sqlite --import tsx scripts/analytics-ops.test.ts && node --experimental-sqlite --import tsx scripts/analytics-query.test.ts && node --experimental-sqlite --import tsx scripts/analytics-admin-auth.test.ts",
+    "analytics:rollup": "node --experimental-sqlite --import tsx scripts/analytics-rollup.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

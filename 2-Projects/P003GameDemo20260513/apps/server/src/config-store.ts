@@ -19,7 +19,7 @@ export type KeySpec = {
   /** admin 通用渲染用的展示元数据；min/max 只做提示与前端预校验，真门在 validate */
   label: string;
   /** bool 键：builtinDefault/值为 boolean，min/max 只占位（admin 渲染走开关） */
-  unit: 'sec' | 'day' | 'bool';
+  unit: 'sec' | 'day' | 'bool' | 'hour';
   hint: string;
   min: number;
   max: number;
@@ -38,6 +38,14 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     hint: '两次坐姿提醒的最短间隔',
     min: 10,
     max: 86400,
+  },
+  'analytics.event_upload_enabled': {
+    builtinDefault: false, validate: (v) => typeof v === 'boolean',
+    label: '产品事件上传开关', unit: 'bool', hint: '上传同时受服务端总闸和灰度名单控制', min: 0, max: 1,
+  },
+  'analytics.daily_upload_hour_cst': {
+    builtinDefault: 23, validate: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23,
+    label: '每日上传时间（北京时间）', unit: 'hour', hint: '设备常驻时约五分钟检查一次，积压可能立即补传', min: 0, max: 23,
   },
   // 本地人格音频保底刷新（2026-09-03 川哥定）：触发式重生成之外，超过 N 天没出新套就主动重生成一次（哪怕变化很小）。
   // 只有 server 每日批读它（local-audio-generator），设备不需要 → serverOnly。
@@ -71,7 +79,7 @@ export function invalidValueMessage(key: string): string {
   const s = CONFIG_KEYS[key];
   if (!s) return '取值不合法';
   if (s.unit === 'bool') return '取值须为 true/false';
-  return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : '天'}`;
+  return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : s.unit === 'hour' ? '小时' : '天'}`;
 }
 
 export const CONFIG_SCHEMA_VERSION = 1;
