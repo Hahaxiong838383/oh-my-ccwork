@@ -90,3 +90,7 @@ release记录目标原内容SHA、inode/device/模式/时间戳及父目录身�
 发布源码和manifest采用临时文件fsync、原子replace、父目录fsync；manifest0600。中途失败不能称整批发布成功，保留原始bundle和上一份完整manifest供主控比较；部分源码可能已换入，需按bundle逐文件核对后修复发布回执。所有这些操作都不恢复业务DB，不删analytics accepted/seen，不恢复旧config/devices快照。
 
 PM2启动使用 `pm2 start deploy/analytics.config.cjs --only p003-analytics`。当前PM2只把*.config.cjs识别为配置；analytics.ecosystem.cjs保留为共享定义，由config wrapper加载，不将它直接作为CLI入口。第一次直接运行误创建的analytics.ecosystem仅在exec_path完全匹配本发布文件时清理；不得删除其它PM2应用。
+
+PM2实际应用入口为 `deploy/analytics-start.ts`，它显式调用与staging共用的bootstrap。实机RED证明PM2的argv[1]是ProcessContainerFork.js，不能依赖CLI main判断启动。启动缺少配置时只输出固定错误并exit1；正式验收须同时检查3006 ready、FULL=2、auto=0、10秒checkpoint和三重关闭状态。
+
+Studio异机拉取使用安装器的 `--direct-ssh` 参数，保留aliyun-hk别名的同一用户、私钥和严格known_hosts校验，仅在该专用备份任务禁用代理；不更改全局SSH配置。原因是本次代理链出现SSH banner超时，而同一HK别名直连实测成功。若公网直连不可用，回执必须显示拉取失败，不能把HK本机备份当异机成功；每日00:45及每小时补拉由私有LaunchAgent执行，保留7天。
