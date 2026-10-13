@@ -45,6 +45,10 @@ def _copy_checked(source, target):
         src = sqlite3.connect('file:' + quote(str(source)) + '?mode=ro', uri=True, timeout=3)
         dst = sqlite3.connect(target, timeout=3)
         try:
+            # Fresh isolated destination only: its default 2MiB cache makes full
+            # index consistency checks thrash on the measured 504MB trial DB.
+            # Bound the verification pager to 128MiB; the live source stays RO.
+            dst.execute('PRAGMA cache_size=-131072')
             src.backup(dst, pages=256, progress=progress, sleep=0.05)
             check = dst.execute('PRAGMA integrity_check').fetchall()
             if check != [('ok',)]:
