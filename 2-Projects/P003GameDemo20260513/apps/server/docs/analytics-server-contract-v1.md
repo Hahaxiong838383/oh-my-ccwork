@@ -72,7 +72,7 @@ PM2 `deploy/analytics.ecosystem.cjs` 读 ANALYTICS_ENV_FILE（默认/opt/p003/se
 overview只读日/设备日汇总，禁止同步全扫逐事件fact；计数/clock求和、cutoff取max，跨窗口active设备/候选在device_day去重。dirty期间不补扫新事件，返回rollup.complete=false及selected/received clock dirty日期数/汇总日期数/更新时间/两个cutoff。最近成功入库批次时间last_batch_received_at_ms独立读received batch，拒收/重复批次也能推进，不绑定event截止。raw精确ID查询新增analytics_event_client_received(client_event_id,received_at_ms)，旧库启动幂等补索引，可能产生一次索引构建I/O与WAL；部署需停旧writer后允许新bootstrap完成构建/checkpoint，数据库/seen数据不恢复或删除。最终性能门槛仍须populated库实测，不因查询修复宣称负载通过。
 
 
-rollup每日期/维度仅一条有序fact iterator；每条semantic_json只解析一次，同时更新global与当前device计数。设备边界直接在该日事务写device_day，仅保留当前设备session/reward去重Set，不存原始fact数组或全设备Set；global去重数为各设备的sum（device key命名空间隔离）。仍保1m facts/日与生产8s预算，迭代/设备边界及最后日写入检查耗时；预算失败回滚已经写入的设备摘要及global，保留dirty、公平retry和诚实partial元数据。成功才清dirty；CLI先独立TTL不变。
+rollup每日期/维度仅一条有序fact iterator；每条semantic_json只解析一次，同时更新global与当前device计数。设备边界直接在该日事务写device_day，仅保留当前设备session/reward去重Set，不存原始fact数组或全设备Set；global去重数为各设备的sum（device key命名空间隔离）。仍保1m facts/日与生产30s有界预算，迭代/设备边界及最后日写入检查耗时；预算失败回滚已经写入的设备摘要及global，保留dirty、公平retry和诚实partial元数据。成功才清dirty；CLI先独立TTL不变。
 
 overview从摘要、device-day去重、received clock、dirty、batch到HTTP额外名单coverage，均处于同一个BEGIN/COMMIT读snapshot；WAL不取BEGIN IMMEDIATE writer lock。复用调用方已有事务不提交它，异常回滚自有读事务释放reader。独立rollup中途提交不可能让旧summary搭配新dirty0伪称complete。此短读事务不含异步await。
 
