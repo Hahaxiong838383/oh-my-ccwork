@@ -2,6 +2,8 @@
 
 用户于2026-10-13明确授权开发部署、更新记忆并保留回滚。本次回滚边界是公司P003后台/配置/独立埋点服务，不涉及HK2语音worker、个人站3002或实际儿童设备。
 
+**当前15:58容量增量版本的回退请先看[容量专用回退记录](analytics-capacity-rollback-20261013.md)。** 该次快照为`analytics-capacity-predeploy-20261013T075722Z`，反向包已预检，只回退5个自有旧文件、只重启analytics、保留数据库与新增模块。下面的`--code`是首次整套功能发布的回退，会重启3001，不用于本轮容量优化回退。
+
 ## 变更前恢复点
 
 HK在线快照：`/opt/p003/server/backups/analytics-releases/analytics-predeploy-20261013T005846Z`。

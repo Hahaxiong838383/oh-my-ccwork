@@ -19,7 +19,7 @@
 
 这是服务器发布全局配置的analytics片段，**不是可以代替完整快照的响应**。端侧内置默认仍false/23点；服务器全局发布为false/0点（北京时间）。SN覆盖优先于全局，再回落内置；revision单调更新。小时合法值为0..23整数。
 
-本次上线保持三重保护：服务器总闸关闭、独立灰度名单空、设备上传false。本轮14台集中上传性能门槛尚未通过，**当前不得打开任何设备上传或扩灰**；先完成关闭状态配置/鉴权联调，并等待服务端出具新的容量通过回执。不要全量打开端侧上传。请先约定一台明确的非儿童在用测试机及测试时间，再由服务端加入独立名单、仅为该SN打开配置、热开总闸；其他设备保持关闭。现有设备接入准入名单不等于埋点灰度名单。
+本次上线保持三重保护：服务器总闸关闭、独立灰度名单空、设备上传false。2026-10-13容量优化及维护重叠已通过原14主体/84000条全部门槛，并已关闭状态部署（P95 454ms/P99 809ms/RSS约244MiB/194秒、全量对账）。**尚未授权直接开启任何设备或扩灰**；先完成关闭状态联调并约定首台联合窗口。不要全量打开端侧上传。请先约定一台明确的非儿童在用测试机及测试时间，再由服务端加入独立名单、仅为该SN打开配置、热开总闸；其他设备保持关闭。现有设备接入准入名单不等于埋点灰度名单。
 
 ## 批次合同
 
@@ -63,7 +63,7 @@ client可包含product/component/protocol_version/content_version；当前produc
 
 ## 首台联合验收顺序
 
-**当前只可执行第1步。第2–7步须先拿到服务端新的容量通过回执并约定测试机，不能因收到本联调文档就自行打开上传。** 原14台/84000条、P95≤500ms、P99≤2000ms、RSS≤256MiB、原3001健康P95增量≤50ms全部门槛保留。
+**容量通过回执已出具；当前开关仍关闭。第2–7步须约定测试机与窗口后双方实施，不能因收到本文档就自行打开上传。** 原14台/84000条、P95≤500ms、P99≤2000ms、RSS≤256MiB、原3001健康P95增量≤50ms全部门槛保留。
 
 1. 同事确认测试APK/Launcher版本、测试机、联网和本地pending/confirmed/deadletter基线。服务器保持总闸关闭时，验证完整配置含analytics，上传关闭且原posture未丢失。
 2. 约定测试机后，服务端仅对该机设置灰度与upload=true，打开总闸。确认配置revision刷新、生效小时0，其他设备仍false。
@@ -72,6 +72,8 @@ client可包含product/component/protocol_version/content_version；当前produc
 5. 回滚演练只关闭总闸/设备upload，确认503/900且pending不丢；再开时原已接收ID仍duplicated。
 6. 北京时间00点夜间真实验收：前台/语音忙/OTA或配网时延后，闲时补传。核对当日已确认事件、剩余pending、deadletter及服务端received窗口与发生日窗口。等汇总任务刷新后再对账日报。
 7. 报告上述真机与夜间结果后再决定扩灰；这两项尚未在服务器发布验收中完成，不能因后台事件为0就判定端侧不活跃。
+
+建议后续端侧按设备分散到00点后10–20分钟上传，并在失败重试上增加随机抖动且不早于Retry-After；本次未修改APK，也未把错峰当成容量通过条件。
 
 端侧当前实现30轮是单次上传循环上限，约每批200条/间隔2秒；不把6000条当整个夜间硬上限。旧pending可能在白天配置生效后立即补传，首台测试时须先掌握本地积压。
 
@@ -92,7 +94,7 @@ client可包含product/component/protocol_version/content_version；当前produc
 
 署名：codex（OpenAI）| 2026-10-13
 
-埋点独立使用Node24.19.0/SQLite3.53.3，所有共享writer保持FULL和commit后ACK；原语音运行时不变。独立checkpoint每10秒singleflight/超时30秒，Linux子进程nice10+ionice2/7；健康过期阈值60秒；ingest页缓存预算64MiB且仅复用七条固定语句，WAL默认256MiB准入硬闸。checkpoint与回滚均不清seen，不轮换稳定HMAC。具体运行状态以health及部署回执为准，不能把本地测试当14台实测结果。
+埋点独立使用Node24.19.0/SQLite3.53.3，所有共享writer保持FULL和commit后ACK；原语音运行时不变。独立checkpoint每10秒singleflight/超时30秒，Linux子进程nice10+ionice2/7；健康过期阈值60秒；一个独立writer线程的页缓存预算64MiB，主查询连接只读8MiB，整进程RSS计入所有线程，writer仅复用七条固定语句，WAL默认256MiB准入硬闸。checkpoint与回滚均不清seen，不轮换稳定HMAC。具体运行状态以health及部署回执为准，不能把本地测试当14台实测结果。
 
 
 服务端集成调试可显式设置ANALYTICS_CHECKPOINT_INTERVAL_MS（100..10000十进制整数字符串，缺省10000），生产/stage共享bootstrap严格校验，非法值启动失败；30秒deadline、单flight、FULL/ACK/256MiB闸不变。health真实回显周期及stale_after_ms=30000+3×周期。默认周期不因探针而改变，具体取值需原库容量实测裁决。overview现读已完成日/设备日聚合，需同时展示rollup.complete/dirty与cutoff；最近批次使用last_batch_received_at_ms，不拿事件水位代替。
@@ -104,4 +106,4 @@ client可包含product/component/protocol_version/content_version；当前produc
 
 正式PM2启动入口为 `deploy/analytics.config.cjs`，加载同目录共享ecosystem定义；实际解释器与FULL/auto0/10秒checkpoint以health和PM2回执为准。
 
-2026-10-13 11:53 CST已完成正式关闭状态部署。PM2应用实际加载 `deploy/analytics-start.ts`，显式启动共享bootstrap；公网接口、真实后台页面、在线备份/隔离恢复和异机副本均已验收。集中上传容量仍未通过，真机与夜间上传未执行；详见本目录部署回执。
+2026-10-13 11:53 CST首次关闭部署，15:58:34 CST容量优化增量部署，源码9b63e7e9；PM2应用仍加载 `deploy/analytics-start.ts`。单写线程隔离同步SQL、fact按接收时间排列、TTL维度范围查找已上线；HTTP合同及FULL/提交后ACK不变。公网16:00:59复核7类admin GET200、无效凭据401、有效设备关闭上传JSON503/900、配置cfg-11 false/0、生产事件/seen/批次仍0。真实后台页面沿用首轮验收，本轮只改后端。真机与真实夜间上传未执行；详见本目录部署回执。

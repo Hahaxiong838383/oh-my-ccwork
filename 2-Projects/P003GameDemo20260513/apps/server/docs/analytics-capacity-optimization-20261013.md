@@ -95,4 +95,16 @@ fact唯一索引从`dimension,day,device_key,id_digest`调整为`dimension,day,d
 
 TTL查询修正只复用现有复合索引，不新增写入索引：先取首dimension，再以`dimension>last`逐维seek，在维内用`dimension=? AND day<? LIMIT remaining`删过期行；每表额度仍1000、严格cutoff、空/未知维度也处理、seen不删、外层事务不变。专测以原实际DELETE的SCAN取得RED，修正后SEARCH转GREEN；五表跨维限额、边界保留、删空维度结束和中途失败整事务回滚均通过，原maintenance/ops/fact-layout回归通过。实机同库修正后整个prune profile含打开/关闭共4ms，最慢单SQL0.217ms，仍删0行；该次缓存状态与前次不同，不按5.43秒/4毫秒直接宣称固定加速比。
 
-当前开始相同84000原负载与修正后维护重叠的复验，维护使用正式240秒子进程预算，CLI仅加stage数值计时。继续保留假数据/seen，不改1M facts/day或30秒预算；累计假数据接近单日1M上限，若触发partial须如实报告，不清数据或提高阈值。
+修正后原84000负载与维护重叠全PASS：P95454.186ms/P99809.460ms/最大999.071ms，RSS256286720B（244.41MiB），193.646秒，原health增量2.959ms；ACK/raw/seen全部一致，actor/monitor失败0。503共198次（忙104/WAL94），不冒称完全无退避。维护采用正式240秒子进程预算、CLI仅加stage数值计时：20.485秒退出0；两维各939160事实，分别15.203/4.943秒，rebuilt2/failed0/partial=false。
+
+末库1006360条event/seen、5084批、2012720fact全部保留，stage三端口16:03前均已停。累积假数据已超过原1M facts/维度/日上限，但本次维护开始时939160未越界；未提高预算，不能把本次结果外推为超过1M的整日汇总验收。旧失败以及wrapper90秒截断证据保留，不能把独立5.43秒TTL断言为旧90秒全部原因。
+
+## 生产关闭部署与恢复
+
+2026-10-13 15:58:34 CST，仅analytics增量发布10文件，运行提交9b63e7e9135d667c807562fd1581b0ea04ce5a07，源码逐SHA复核。无新增依赖，生产package.json不改；PM2只更新analytics，35秒退出等待保障writer drain，未调整HTTP超时。fact显式迁移从digest-first-v1到received-first-v2，0生产行、FULL integrity_check ok；不是拿压测数据放进生产。
+
+新快照`/opt/p003/server/backups/analytics-releases/analytics-capacity-predeploy-20261013T075722Z`：原5文件归档、forward/reverse包、state及私有新版apply工具；数据库在线一致备份118784B/SHA203fc7b4b43c07c2418e9c0af942f5b2f08c4fa997db392e948ca32efeca2414。正向包SHA06befd730422cd9a5b852abcc68ac5fa62ea66d6e9ba8db2061abb6b2d9a41a1；反向包c658bb87ceb11f7d85ab61a94b9deaeab3bdcea17633b5417fa01dce55fb81e1，5文件生产预检成功，未实际回滚。旧完整manifest保留，回退不恢复DB/seen，不重启3001；详见容量回退记录。
+
+16:03:14生产复核：10文件SHA同、analytics PID2899018/kill35000；公司2817417/23、个人1626403/0未变；global false/0点、gray0、gatefalse，events/seen/batches/facts仍0。公网admin七GET200、未登录/无效凭据401、有效设备关闭上传JSON503/900、完整配置cfg-11不丢posture。两维护timer active，rollup/backup实际success/exit0，Studio异机LaunchAgent16:02:29实拉新1份、核2份成功。
+
+私有数值证据归档`capacity-final-evidence-20261013.tar.gz` SHA6720e07d8e423875ff5efe71869c4bf602a9b4a0e2a865e6ce22591cd2014a1b，24文件全部逐SHA校验；Studio同时保存不含env的容量回退材料tar，SHA76a75a5bd4061eebc9ba85e22ee47ae20182a4cba09eff498167d0cafa18857a。真实采集、首台、午夜以及端侧重试时钟疑点仍待联合验收，未购机迁库。
