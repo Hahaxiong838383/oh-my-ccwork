@@ -24,7 +24,7 @@ X-Request-Id必需，长度1..96，技术符号语法 `[A-Za-z0-9_.:-]+`，合�
 
 ANALYTICS_CONTROL_PATH指向绝对路径普通文件，内容精确 `{"enabled":false}` 或true；只许enabled键、boolean，≤4096字节、权限0600、非symlink。每请求热读并在事务前再次读。不存在即安全关闭且健康；格式/权限错误关闭且readiness不通过。总闸关闭/设备配置false均503、error_code=ANALYTICS_UPLOAD_DISABLED、Retry-After=900。独立allowlist空则全拒，非灰度403。后台只返回名单数量和短别名，不能输出SN/secret。
 
-台账/config数据库每次读取用 DatabaseSync readOnly:true重开，读取实时WAL，不用immutable、不留旧文件句柄。analytics库独立WAL+FULL+busy_timeout250ms；AnalyticsStore明确PRAGMA cache_size=-32768（32MiB页缓存预算，并非进程RSS硬限制），每连接仅懒编译七条固定ingest语句并跨批次复用，无动态SQL缓存，所有共享库writer及checkpointer关闭wal_autocheckpoint；版本门在journal变更/DDL/DML前执行。备份Python只读共享源库、只写独占隔离目标；成功水位writer同样过版本门及FULL/auto0。HMAC device_key 使用独立稳定密钥和固定命名空间p003-analytics-v1，续签不改变设备key。服务间认证使用另一密钥。
+台账/config数据库每次读取用 DatabaseSync readOnly:true重开，读取实时WAL，不用immutable、不留旧文件句柄。analytics库独立WAL+FULL+busy_timeout250ms；AnalyticsStore明确PRAGMA cache_size=-65536（64MiB页缓存预算，并非进程RSS硬限制），每连接仅懒编译七条固定ingest语句并跨批次复用，无动态SQL缓存，所有共享库writer及checkpointer关闭wal_autocheckpoint；版本门在journal变更/DDL/DML前执行。备份Python只读共享源库、只写独占隔离目标；成功水位writer同样过版本门及FULL/auto0。HMAC device_key 使用独立稳定密钥和固定命名空间p003-analytics-v1，续签不改变设备key。服务间认证使用另一密钥。
 
 ## 保留与聚合
 
@@ -75,3 +75,6 @@ overview只读日/设备日汇总，禁止同步全扫逐事件fact；计数/clo
 rollup每日期/维度仅一条有序fact iterator；每条semantic_json只解析一次，同时更新global与当前device计数。设备边界直接在该日事务写device_day，仅保留当前设备session/reward去重Set，不存原始fact数组或全设备Set；global去重数为各设备的sum（device key命名空间隔离）。仍保1m facts/日与生产8s预算，迭代/设备边界及最后日写入检查耗时；预算失败回滚已经写入的设备摘要及global，保留dirty、公平retry和诚实partial元数据。成功才清dirty；CLI先独立TTL不变。
 
 overview从摘要、device-day去重、received clock、dirty、batch到HTTP额外名单coverage，均处于同一个BEGIN/COMMIT读snapshot；WAL不取BEGIN IMMEDIATE writer lock。复用调用方已有事务不提交它，异常回滚自有读事务释放reader。独立rollup中途提交不可能让旧summary搭配新dirty0伪称complete。此短读事务不含异步await。
+
+
+64MiB writer页缓存为单变量容量试验，较旧32MiB多32MiB建议预算；不新增env/API选项、不关cache_spill、不改变child缓存/优先级和checkpoint默认10秒/30秒。仅串行原库探针改善不足以证明14actor容量通过。原84000/P95≤500ms/P99≤2000ms/RSS≤256MiB门槛仍保留；包括最大200×8KiB合法batch在内，若实际RSS超门槛由主控回退32MiB，不自动放宽阈值。

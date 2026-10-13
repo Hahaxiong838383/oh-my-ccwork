@@ -27,8 +27,8 @@ export class AnalyticsStore {
     mkdirSync(dirname(path),{recursive:true});
     this.db=new DatabaseSync(path);
     try{this.sqliteVersion=configureAnalyticsWriter(this.db);}catch(error){this.db.close();throw error;}
-    // Negative cache_size is KiB, bounded to 32MiB; avoid the default 2MiB dirty-page thrash.
-    this.db.exec('PRAGMA cache_size=-32768');
+    // Negative cache_size is KiB: 64MiB pager budget, not an RSS limit. Keep spill unchanged.
+    this.db.exec('PRAGMA cache_size=-65536');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS analytics_event (
         device_key TEXT NOT NULL, client_event_id TEXT NOT NULL, event_name TEXT NOT NULL,

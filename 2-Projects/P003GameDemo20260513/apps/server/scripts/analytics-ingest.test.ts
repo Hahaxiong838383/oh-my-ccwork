@@ -36,7 +36,7 @@ const bulk=Array.from({length:200},(_,i)=>event('bulk-'+i));
 assert.equal(run(bulk,'bulk-first').accepted_event_ids.length,200);
 assert.equal(run(bulk,'bulk-replay').duplicated_event_ids.length,200);
 assert.equal(prepareCount,0,'已初始化的固定语句跨事件/批次复用，不再每200事件prepare1402次');
-assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,-32768,'ingest页缓存应明确有界32MiB');
+assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,-65536,'ingest页缓存应明确有界64MiB');
 assert.equal(store.db.prepare('PRAGMA synchronous').get()!.synchronous,2);
 assert.equal(store.db.prepare('PRAGMA wal_autocheckpoint').get()!.wal_autocheckpoint,0);
 store.db.prepare=originalPrepare;
