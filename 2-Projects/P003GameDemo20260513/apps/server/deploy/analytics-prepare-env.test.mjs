@@ -18,5 +18,14 @@ try{
  const updated=readFileSync(join(fixture,'.env.local'),'utf8');assert.ok(updated.startsWith(original));assert.equal(parseEnv(updated).OTHER_FEATURE,'unchanged');
  assert.equal(run().existing_runtime_secrets_reused,true);assert.deepEqual(parseEnv(readFileSync(join(fixture,'.env.analytics'),'utf8')),first);assert.equal(readFileSync(join(fixture,'.env.local'),'utf8'),updated);
  for(const name of ['.env.analytics','data/analytics-control.json','data/analytics.db'])assert.equal(statSync(join(fixture,name)).mode&0o777,0o600);
+ const editedFixture=join(dir,'edited-server');mkdirSync(editedFixture);writeFileSync(join(editedFixture,'.env.local'),original,{mode:0o600});
+ mkdirSync(join(editedFixture,'data'));const database=join(editedFixture,'data/analytics.db');writeFileSync(database,'accepted/seen preserved',{mode:0o600});
+ const later=original+'LATER_FEATURE="keep later edit"\n';
+ const editedCode=readFileSync(new URL('./analytics-prepare-env.mjs',import.meta.url),'utf8').replaceAll('/opt/p003/server',editedFixture).replace('fsyncSync(fd);','fsyncSync(fd);if(path.endsWith("/.env.local"))writeFileSync(path,'+JSON.stringify(later)+');');
+ const editedScript=join(dir,'edited-prepare.mjs');writeFileSync(editedScript,editedCode);const conflict=spawnSync(process.execPath,[editedScript],{cwd:editedFixture,encoding:'utf8'});
+ assert.equal(conflict.status,1,'temp生成后的.env.local later edit必须拒绝覆盖');assert.equal(readFileSync(join(editedFixture,'.env.local'),'utf8'),later);
+ assert.equal(readFileSync(database,'utf8'),'accepted/seen preserved');
+ const lock=join(fixture,'.analytics-deploy.lock');mkdirSync(lock);
+ const busy=spawnSync(process.execPath,[script],{cwd:fixture,encoding:'utf8'});assert.equal(busy.status,1,'共用部署锁持有时必须拒绝');assert.equal(readFileSync(join(fixture,'.env.local'),'utf8'),updated);
  console.log('PASS: protected preparation retains other env bytes, secrets stable on rerun, independent keys and0600');
 }finally{rmSync(dir,{recursive:true,force:true});}

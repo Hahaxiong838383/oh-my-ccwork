@@ -80,3 +80,11 @@ python3 scripts/analytics-backup.py \
 analytics独立运行时为 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`，由主控核验官方SHA后安装；不升级系统Node或语音/个人站。ANALYTICS_NODE_PATH供PM2/maintenance显式选择。共享analytics writer拒绝旧SQLite3.51.2等未修WAL-reset版本，不能以改回系统Node绕过失败启动。
 
 关闭总闸时独立checkpoint仍每10秒推进，便于保留已有WAL；停p003-analytics时SIGTERM/SIGINT会清timer及child，WAL/DB/seen和专用runtime均保留。代码回退后重新发布仍用安全专用runtime，检查FULL=2、auto=0、checkpoint.last_success_ms及wal_pressure，再决定开灰度。不要手工删除WAL；256MiB准入硬闸/503数值10秒保护未结算客户端。采集停止、timer停止和数据恢复不混同，不因代码回退恢复旧config.db/devices.db或清seen。
+
+## 协作部署互斥与后来编辑保护
+
+release-apply、rollback（含check-only）和prepare-env共用 `/opt/p003/server/.analytics-deploy.lock` 原子mkdir锁；持锁时其他参与工具立即失败，不穿插部署。正常退出只删除本次创建且身份相同的锁目录；异常进程被kill可能留锁，不自动猜测过期。主控确认没有参与进程后才人工处理残留锁。热关总闸的analytics-control.py仍可独立执行，不以源码部署锁阻断紧急停止采集。
+
+release记录目标原内容SHA、inode/device/模式/时间戳及父目录身份，临时文件准备后整体复核，并在每次replace前再次复核；rollback在关配置/停服务之后重新整体预检、持有当时身份快照，再逐个replace前复核。prepare-env保存最初.env.local原bytes/身份，临时env写入后换回前比较，变化则拒绝覆盖后来其他键。此协议覆盖参与工具互撞和可检测的later edit，不承诺抵挡不遵守锁的外部编辑者在最终检查与rename之间的微小CAS间隙。
+
+发布源码和manifest采用临时文件fsync、原子replace、父目录fsync；manifest0600。中途失败不能称整批发布成功，保留原始bundle和上一份完整manifest供主控比较；部分源码可能已换入，需按bundle逐文件核对后修复发布回执。所有这些操作都不恢复业务DB，不删analytics accepted/seen，不恢复旧config/devices快照。
