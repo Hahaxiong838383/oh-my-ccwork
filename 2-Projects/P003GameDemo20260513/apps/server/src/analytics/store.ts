@@ -37,6 +37,7 @@ export class AnalyticsStore {
         batch_attempt_id TEXT NOT NULL, occurred_day TEXT, received_day TEXT NOT NULL, clock_suspicious INTEGER NOT NULL,
         PRIMARY KEY(device_key,client_event_id));
       CREATE INDEX IF NOT EXISTS analytics_event_received ON analytics_event(received_at_ms);
+      CREATE INDEX IF NOT EXISTS analytics_event_client_received ON analytics_event(client_event_id,received_at_ms);
       CREATE INDEX IF NOT EXISTS analytics_event_days ON analytics_event(occurred_day,received_day);
       CREATE TABLE IF NOT EXISTS analytics_event_seen (
         device_key TEXT NOT NULL, id_digest TEXT NOT NULL, event_hash TEXT NOT NULL, first_received_at_ms INTEGER NOT NULL,

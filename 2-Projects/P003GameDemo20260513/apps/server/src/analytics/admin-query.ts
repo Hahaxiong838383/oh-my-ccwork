@@ -21,14 +21,20 @@ export function queryAnalytics(store:AnalyticsStore,kind:string,params:URLSearch
   const aliasSql=filter.alias?' AND substr(device_key,1,12)=?':'';
   const bindings=[filter.from,filter.to,...(filter.alias?[filter.aliasPrefix!]:[])];
   if(kind==='overview'){
-    const events=db.prepare(`SELECT count(*) event_count,count(DISTINCT device_key) active_devices,max(received_at_ms) last_received_at_ms,coalesce(sum(clock_suspicious),0) clock_suspicious_events FROM analytics_rollup_fact WHERE dimension=? AND day>=? AND day<=?${aliasSql}`).get(filter.dimension,...bindings) as any;
+    // At most daily/device-daily aggregate rows; never scan one row per accepted event here.
+    const table=filter.alias?'analytics_device_day':'analytics_day';
+    const aggregate=(dimension:string)=>db.prepare(`SELECT coalesce(sum(json_extract(summary_json,'$.event_count')),0) event_count,max(json_extract(summary_json,'$.data_cutoff_ms')) last_received_at_ms,coalesce(sum(json_extract(summary_json,'$.clock_suspicious_events')),0) clock_suspicious_events,count(DISTINCT day) summary_days,max(${filter.alias?"json_extract(summary_json,'$.updated_at_ms')":'updated_at_ms'}) updated_at_ms FROM ${table} WHERE dimension=? AND day>=? AND day<=?${aliasSql}`).get(dimension,...bindings) as {event_count:number;last_received_at_ms:number|null;clock_suspicious_events:number;summary_days:number;updated_at_ms:number|null};
+    const events=aggregate(filter.dimension),clock=filter.dimension==='received'?events:aggregate('received');
+    const active=db.prepare(`SELECT count(DISTINCT device_key) n FROM analytics_device_day WHERE dimension=? AND day>=? AND day<=?${aliasSql}`).get(filter.dimension,...bindings) as {n:number};
+    // Dirty is per whole day; conservatively report a device view incomplete when that day is dirty.
+    const dirty=(dimension:string)=>Number((db.prepare('SELECT count(*) n FROM analytics_dirty_day WHERE dimension=? AND day>=? AND day<=?').get(dimension,filter.from,filter.to) as {n:number}).n);
+    const dirtyDays=dirty(filter.dimension),clockDirty=filter.dimension==='received'?dirtyDays:dirty('received');
     const receiptWhere=` WHERE received_at_ms>=? AND received_at_ms<?${aliasSql}`;
     const receiptBindings=[Date.parse(filter.from+'T00:00:00Z')-8*3_600_000,Date.parse(filter.to+'T00:00:00Z')+16*3_600_000,...(filter.alias?[filter.aliasPrefix!]:[])];
-    const clock=db.prepare(`SELECT coalesce(sum(clock_suspicious),0) n FROM analytics_rollup_fact WHERE dimension='received' AND day>=? AND day<=?${aliasSql}`).get(...bindings) as {n:number};
-    const batches=db.prepare('SELECT count(*) batches,coalesce(sum(accepted),0) accepted,coalesce(sum(duplicated),0) duplicated,coalesce(sum(rejected),0) rejected FROM analytics_batch'+receiptWhere).get(...receiptBindings);
+    const batches=db.prepare('SELECT count(*) batches,coalesce(sum(accepted),0) accepted,coalesce(sum(duplicated),0) duplicated,coalesce(sum(rejected),0) rejected,max(received_at_ms) last_batch_received_at_ms FROM analytics_batch'+receiptWhere).get(...receiptBindings);
     const covered=db.prepare('SELECT count(DISTINCT device_key) n FROM analytics_batch'+receiptWhere).get(...receiptBindings) as {n:number};
-    const devices=db.prepare(`SELECT DISTINCT device_key FROM analytics_rollup_fact WHERE dimension=? AND day>=? AND day<=? ORDER BY device_key LIMIT 1000`).all(filter.dimension,filter.from,filter.to) as {device_key:string}[];
-    return {ok:true,window_days:filter.days,from:filter.from,to:filter.to,dimension:filter.dimension,device_alias:filter.alias??null,batch_dimension:'received',data_cutoff_ms:events.last_received_at_ms??null,...events,clock_suspicious_events:clock.n,receiving_devices:covered.n,...batches,client_pending_known:false,devices:devices.map(d=>({device_alias:deviceAlias(d.device_key)}))};
+    const devices=db.prepare(`SELECT DISTINCT device_key FROM analytics_device_day WHERE dimension=? AND day>=? AND day<=? ORDER BY device_key LIMIT 1000`).all(filter.dimension,filter.from,filter.to) as {device_key:string}[];
+    return {ok:true,window_days:filter.days,from:filter.from,to:filter.to,dimension:filter.dimension,device_alias:filter.alias??null,batch_dimension:'received',data_cutoff_ms:events.last_received_at_ms,event_count:events.event_count,active_devices:active.n,last_received_at_ms:events.last_received_at_ms,clock_suspicious_events:clock.clock_suspicious_events,receiving_devices:covered.n,...batches,rollup:{complete:dirtyDays===0&&clockDirty===0,dirty_days:dirtyDays,clock_dirty_days:clockDirty,summary_days:events.summary_days,clock_summary_days:clock.summary_days,updated_at_ms:events.updated_at_ms,data_cutoff_ms:events.last_received_at_ms,clock_data_cutoff_ms:clock.last_received_at_ms},client_pending_known:false,devices:devices.map(d=>({device_alias:deviceAlias(d.device_key)}))};
   }
   if(kind==='daily'){
     const table=filter.alias?'analytics_device_day':'analytics_day';

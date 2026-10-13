@@ -62,6 +62,11 @@ health可读版本/FULL/auto0、物理WAL及门槛、checkpoint是否running/超
 
 维护预算：ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY默认1000000、整数1..1000000；ANALYTICS_ROLLUP_MAX_DAY_MS内置默认30000、整数1..30000，生产env helper下发8000；仅可收窄预算，非法值为受控rollup失败且仍先尝试TTL。
 
-运行时：ANALYTICS_NODE_PATH绝对可执行路径，PM2生态及maintenance.sh从受控.env.analytics的JSON引号路径读取，显式进程env可覆盖；默认 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`。standalone wrapper/tests使用当前process.execPath，rollup子命令和checkpoint可显式选ANALYTICS_NODE_PATH；任何共享writer都先验证实际SQLite版本。ANALYTICS_WAL_MAX_BYTES默认268435456，整数65536..268435456，只可收窄准入阈值，不能扩大256MiB；child使用同一阈值。生产checkpoint周期10秒/超时30秒冻结，不依赖5分钟rollup刷新WAL。
+运行时：ANALYTICS_NODE_PATH绝对可执行路径，PM2生态及maintenance.sh从受控.env.analytics的JSON引号路径读取，显式进程env可覆盖；默认 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`。standalone wrapper/tests使用当前process.execPath，rollup子命令和checkpoint可显式选ANALYTICS_NODE_PATH；任何共享writer都先验证实际SQLite版本。ANALYTICS_WAL_MAX_BYTES默认268435456，整数65536..268435456，只可收窄准入阈值，不能扩大256MiB；child使用同一阈值。ANALYTICS_CHECKPOINT_INTERVAL_MS缺省10000，仅十进制整数字符串100..10000；空串、小数、指数、非数字/越界均启动失败，不静默回退。生产及stage共用bootstrap读取，health interval_ms和stale_after_ms=30000+3×interval_ms真实回显；默认周期仍10秒/超时30秒，不依赖5分钟rollup刷新WAL。
 
 PM2 `deploy/analytics.ecosystem.cjs` 读 ANALYTICS_ENV_FILE（默认/opt/p003/server/.env.analytics，绝对），实例1，512M保护。脚本不读取真实env作为开发输入。部署/真实代理/真机/语音对照/备份异机验收由主控处理，本任务本地验证不能代替生产验收。
+
+
+## 后台查询容量与聚合完整性
+
+overview只读日/设备日汇总，禁止同步全扫逐事件fact；计数/clock求和、cutoff取max，跨窗口active设备/候选在device_day去重。dirty期间不补扫新事件，返回rollup.complete=false及selected/received clock dirty日期数/汇总日期数/更新时间/两个cutoff。最近成功入库批次时间last_batch_received_at_ms独立读received batch，拒收/重复批次也能推进，不绑定event截止。raw精确ID查询新增analytics_event_client_received(client_event_id,received_at_ms)，旧库启动幂等补索引，可能产生一次索引构建I/O与WAL；部署需停旧writer后允许新bootstrap完成构建/checkpoint，数据库/seen数据不恢复或删除。最终性能门槛仍须populated库实测，不因查询修复宣称负载通过。

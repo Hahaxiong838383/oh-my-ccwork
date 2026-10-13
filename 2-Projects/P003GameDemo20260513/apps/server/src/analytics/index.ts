@@ -108,7 +108,9 @@ export function analyticsOptionsFromEnv():AnalyticsAppOptions{
 /** One lifecycle for production (3006) and the explicitly isolated staging listener (3306). */
 export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=3006){
   if(port!==3006&&port!==3306)throw new Error('INVALID_ANALYTICS_LISTEN_PORT');
-  const checkpointer=new AnalyticsCheckpointer(options.store.path,{walMaxBytes:options.walMaxBytes,nodePath:process.env.ANALYTICS_NODE_PATH??process.execPath});
+  const configuredInterval=process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS;
+  if(configuredInterval!==undefined&&(!/^\d+$/.test(configuredInterval)||Number(configuredInterval)<100||Number(configuredInterval)>10000))throw new Error('INVALID_ANALYTICS_CHECKPOINT_INTERVAL_MS');
+  const checkpointer=new AnalyticsCheckpointer(options.store.path,{walMaxBytes:options.walMaxBytes,nodePath:process.env.ANALYTICS_NODE_PATH??process.execPath,intervalMs:configuredInterval===undefined?10000:Number(configuredInterval)});
   options.checkpointStatus=()=>checkpointer.status();
   const app=createAnalyticsApp(options);
   const server=serve({fetch:app.fetch,hostname:'127.0.0.1',port});checkpointer.start();
