@@ -36,9 +36,12 @@ def _copy_checked(source, target):
     def progress(status, remaining, total):
         if time.monotonic() - started > 60:
             raise TimeoutError('analytics_backup_timeout')
+    created_identity = None
     try:
         with target.open('xb') as f:
-            os.chmod(target, 0o600)
+            identity = os.fstat(f.fileno())
+            created_identity = (identity.st_dev, identity.st_ino)
+            os.fchmod(f.fileno(), 0o600)
         src = sqlite3.connect('file:' + quote(str(source)) + '?mode=ro', uri=True, timeout=3)
         dst = sqlite3.connect(target, timeout=3)
         try:
@@ -53,7 +56,13 @@ def _copy_checked(source, target):
         with target.open('rb') as f:
             os.fsync(f.fileno())
     except Exception:
-        target.unlink(missing_ok=True)
+        if created_identity is not None:
+            try:
+                current = target.lstat()
+                if (current.st_dev, current.st_ino) == created_identity:
+                    target.unlink()
+            except FileNotFoundError:
+                pass
         raise
 
 
