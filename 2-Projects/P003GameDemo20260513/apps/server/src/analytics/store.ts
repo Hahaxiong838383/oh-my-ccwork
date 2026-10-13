@@ -2,6 +2,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync,statSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import {configureAnalyticsWriter} from './sqlite-policy.mjs';
+import {FACT_TABLE_COLUMNS} from './fact-layout.js';
 const INGEST_SQL={
  seen:'SELECT event_hash FROM analytics_event_seen WHERE device_key=? AND id_digest=?',
  event:'INSERT INTO analytics_event VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -53,10 +54,7 @@ export class AnalyticsStore {
         attempt_id TEXT NOT NULL, id_digest TEXT NOT NULL, outcome TEXT NOT NULL, reason TEXT,
         PRIMARY KEY(attempt_id,id_digest));
       CREATE INDEX IF NOT EXISTS analytics_settlement_id ON analytics_settlement(id_digest);
-      CREATE TABLE IF NOT EXISTS analytics_rollup_fact (
-        dimension TEXT NOT NULL, day TEXT NOT NULL, device_key TEXT NOT NULL, id_digest TEXT NOT NULL,
-        event_name TEXT NOT NULL, session_digest TEXT NOT NULL, clock_suspicious INTEGER NOT NULL, semantic_json TEXT NOT NULL,
-        received_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day,device_key,id_digest));
+      CREATE TABLE IF NOT EXISTS analytics_rollup_fact (${FACT_TABLE_COLUMNS});
       CREATE TABLE IF NOT EXISTS analytics_dirty_day (dimension TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY(dimension,day));
       CREATE TABLE IF NOT EXISTS analytics_rollup_retry (dimension TEXT NOT NULL,day TEXT NOT NULL,last_attempt_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day));
       CREATE TABLE IF NOT EXISTS analytics_day (dimension TEXT NOT NULL,day TEXT NOT NULL,summary_json TEXT NOT NULL,updated_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day));

@@ -48,7 +48,18 @@ const long=new AnalyticsCheckpointer(store.path);long.start();const longPid=long
 const originalInterval=process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS;
 for(const bad of ['', '99','10001','1e3','100.5','NaN']){process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS=bad;assert.throws(()=>startAnalyticsServer(options,3306),/INVALID_ANALYTICS_CHECKPOINT_INTERVAL_MS/);}
 process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS='1000';
-const bootstrap=startAnalyticsServer(options,3306);assert.equal(bootstrap.checkpointer.status().interval_ms,1000);assert.equal(bootstrap.checkpointer.status().stale_after_ms,33000);await until(()=>bootstrap.checkpointer.status().last_success_ms!==null);
-const bootHealth=await (await fetch('http://127.0.0.1:3306/internal/analytics/health',{headers:{'X-Analytics-Internal-Token':options.internalSecret}})).json();assert.equal(bootHealth.checkpoint.enabled,true);assert.ok(bootHealth.checkpoint.last_success_ms>0);await bootstrap.stop();assert.equal(bootstrap.checkpointer.status().worker_pid,null);
+assert.throws(()=>startAnalyticsServer({...options,globalRpm:0},3306),/INVALID_ANALYTICS_GLOBAL_RPM/);
+assert.equal(store.db.prepare('PRAGMA query_only').get()!.query_only,0,'启动参数校验失败不应遗留worker或改变连接模式');
+const bootstrap=startAnalyticsServer(options,3306);assert.equal(bootstrap.checkpointer.status().interval_ms,1000);assert.equal(bootstrap.checkpointer.status().stale_after_ms,33000);await until(()=>bootstrap.writer.ready&&bootstrap.checkpointer.status().last_success_ms!==null);
+const bootHealth=await (await fetch('http://127.0.0.1:3306/internal/analytics/health',{headers:{'X-Analytics-Internal-Token':options.internalSecret}})).json();assert.equal(bootHealth.checkpoint.enabled,true);assert.ok(bootHealth.checkpoint.last_success_ms>0);assert.equal(bootHealth.ready,true);
+assert.throws(()=>store.db.prepare('INSERT INTO analytics_meta VALUES (?,?)').run('http-must-not-write','1'),/readonly/,'HTTP查询连接不能意外重回同步写路径');
+const bootResponse=await fetch('http://127.0.0.1:3306/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':'bootstrap-worker'},body:body('bootstrap-worker')});assert.equal(bootResponse.status,200);assert.deepEqual((await bootResponse.json()).accepted_event_ids,['bootstrap-worker-0']);assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_event WHERE client_event_id='bootstrap-worker-0'").get()!.n,1);
+const shutdownLock=new DatabaseSync(store.path);shutdownLock.exec('BEGIN IMMEDIATE');
+const finalUpload=fetch('http://127.0.0.1:3306/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':'shutdown-worker'},body:body('shutdown-worker')});
+await until(()=>bootstrap.writer.busy);const drain=bootstrap.stop();
+const unlockTimer=setTimeout(()=>shutdownLock.exec('COMMIT'),75);
+try{const finalResponse=await finalUpload;assert.equal(finalResponse.status,200,'正常关闭应让已派发事务的HTTP ACK完成');assert.deepEqual((await finalResponse.json()).accepted_event_ids,['shutdown-worker-0']);await drain;}
+finally{clearTimeout(unlockTimer);if(shutdownLock.isTransaction)shutdownLock.exec('ROLLBACK');shutdownLock.close();await drain;}
+await bootstrap.stop();assert.equal(bootstrap.checkpointer.status().worker_pid,null);assert.equal(bootstrap.writer.ready,false);
 if(originalInterval===undefined)delete process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS;else process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS=originalInterval;
 rmSync(dir,{recursive:true,force:true});console.log('analytics checkpoint: PASS (FULL/auto0, safe-version gate, pinned reader/backpressure/TRUNCATE recovery, independent child, timeout/exit cleanup)');

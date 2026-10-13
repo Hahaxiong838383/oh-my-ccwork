@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Verify and install Git-snapshot files only; no DB, env, package install or restart."""
-import argparse,hashlib,json,os,tarfile,tempfile,stat,contextlib
+import argparse,hashlib,json,os,tarfile,tempfile,stat,contextlib,re,io
 from pathlib import Path
 
 SERVER=Path('/opt/p003/server');ADMIN=Path('/opt/p003/web/dist/admin/index.html')
 def digest(data):return hashlib.sha256(data).hexdigest()
+def release_id(value):
+ if len(value)>128 or not re.fullmatch(r'analytics-release-(?:[a-z][a-z0-9]*-)*[0-9]{8}(?:T[0-9]{6}Z)?(?:-[A-Za-z0-9]+)*',value):raise argparse.ArgumentTypeError('release-id must be a safe analytics-release basename containing YYYYMMDD')
+ return value
 def target_allowed(path):
+ if '..' in path.parts:return False
  if path==ADMIN:return True
  try:relative=path.relative_to(SERVER)
  except ValueError:return False
- return str(relative) in ['package.json'] or relative.parts[0] in ['src','scripts','deploy','docs']
+ return str(relative) in ['package.json'] or bool(relative.parts) and relative.parts[0] in ['src','scripts','deploy','docs']
 
 @contextlib.contextmanager
 def deployment_lock():
@@ -52,8 +56,10 @@ def sync_directory(path):
  finally:os.close(fd)
 
 def _main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--bundle',type=Path,required=True);p.add_argument('--apply',action='store_true');a=p.parse_args();prepared=[]
- with tarfile.open(a.bundle,'r:gz') as tar:
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--bundle',type=Path,required=True);p.add_argument('--apply',action='store_true');p.add_argument('--release-id',type=release_id,default='analytics-release-20261013');a=p.parse_args();prepared=[]
+ # Verify the same immutable archive bytes whose digest is bound to this release.
+ bundle_data=a.bundle.read_bytes()
+ with tarfile.open(fileobj=io.BytesIO(bundle_data),mode='r:gz') as tar:
   meta=json.load(tar.extractfile('release.json'))
   for item in meta['entries']:
    target=Path(item['target']);member=tar.getmember(item['member'])
@@ -67,8 +73,15 @@ def _main():
     if current not in [item.get('expected_current_sha256'),item['sha256']]:raise ValueError('target changed since baseline: '+str(target))
    elif item.get('expected_current_sha256') is not None:raise ValueError('expected baseline target missing')
    prepared.append((target,data,item['sha256'],expected))
- if not a.apply:print(json.dumps({'ok':True,'verified_files':len(prepared),'commit':meta['commit'],'mutated':False}));return
- release=SERVER/'backups/analytics-releases/analytics-release-20261013';manifest=release/'manifest.json';manifest_expected=capture_target(manifest)
+ release=SERVER/'backups/analytics-releases'/a.release_id;manifest=release/'manifest.json';manifest_expected=capture_target(manifest)
+ receipt={'schema_version':1,'release_id':a.release_id,'bundle_sha256':digest(bundle_data),'commit':meta['commit'],'baseline':meta['baseline'],'files':{str(target):sha for target,_,sha,_ in prepared}}
+ if manifest_expected['file'] is not None:
+  with os.fdopen(os.open(manifest,os.O_RDONLY|os.O_NOFOLLOW),'rb') as source:prior=source.read()
+  require_unchanged(manifest,manifest_expected)
+  # Legacy receipts without a bundle digest cannot prove package identity; retain
+  # them untouched and require a new release-id instead of reusing their name.
+  if digest(prior)!=manifest_expected['sha'] or json.loads(prior)!=receipt:raise ValueError('release-id already identifies a different bundle; choose a new release-id')
+ if not a.apply:print(json.dumps({'ok':True,'verified_files':len(prepared),'commit':meta['commit'],'release_id':a.release_id,'manifest_path':str(manifest),'mutated':False}));return
  temps=[]
  try:
   for target,data,_,expected in prepared:
@@ -77,10 +90,10 @@ def _main():
    with os.fdopen(fd,'wb') as file:os.fchmod(file.fileno(),0o644);file.write(data);file.flush();os.fsync(file.fileno())
    temps.append((Path(temp),target,expected))
   for _,target,expected in temps:require_unchanged(target,expected)
+  require_unchanged(manifest,manifest_expected)
   for temp,target,expected in temps:
    require_unchanged(target,expected);os.replace(temp,target);sync_directory(target.parent)
   release.mkdir(parents=True,exist_ok=True,mode=0o700)
-  receipt={'schema_version':1,'commit':meta['commit'],'baseline':meta['baseline'],'files':{str(target):sha for target,_,sha,_ in prepared}}
   path=manifest;fd,temp=tempfile.mkstemp(prefix='.analytics-manifest-',dir=release);temps.append((Path(temp),path,manifest_expected))
   with os.fdopen(fd,'wb') as file:os.fchmod(file.fileno(),0o600);file.write((json.dumps(receipt,indent=2)+'\n').encode());file.flush();os.fsync(file.fileno())
   require_unchanged(path,manifest_expected);os.replace(temp,path);sync_directory(release)

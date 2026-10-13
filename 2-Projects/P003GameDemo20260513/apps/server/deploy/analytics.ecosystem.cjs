@@ -12,7 +12,8 @@ module.exports = {
     name: 'p003-analytics', cwd, script: 'deploy/analytics-start.ts',
     interpreter: nodePath, interpreter_args: `--experimental-sqlite --import tsx --env-file=${envFile}`,
     instances: 1, exec_mode: 'fork', max_memory_restart: '512M',
-    kill_timeout: 5000, restart_delay: 2000,
+    // Allow the writer's bounded 30s drain before PM2 escalates; HTTP timeouts stay unchanged.
+    kill_timeout: 35000, restart_delay: 2000,
     env: { NODE_ENV: 'production' },
   }],
 };
