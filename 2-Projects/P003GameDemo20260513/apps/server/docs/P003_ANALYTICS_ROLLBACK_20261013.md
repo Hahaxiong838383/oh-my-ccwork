@@ -88,3 +88,5 @@ release-apply、rollback（含check-only）和prepare-env共用 `/opt/p003/serve
 release记录目标原内容SHA、inode/device/模式/时间戳及父目录身份，临时文件准备后整体复核，并在每次replace前再次复核；rollback在关配置/停服务之后重新整体预检、持有当时身份快照，再逐个replace前复核。prepare-env保存最初.env.local原bytes/身份，临时env写入后换回前比较，变化则拒绝覆盖后来其他键。此协议覆盖参与工具互撞和可检测的later edit，不承诺抵挡不遵守锁的外部编辑者在最终检查与rename之间的微小CAS间隙。
 
 发布源码和manifest采用临时文件fsync、原子replace、父目录fsync；manifest0600。中途失败不能称整批发布成功，保留原始bundle和上一份完整manifest供主控比较；部分源码可能已换入，需按bundle逐文件核对后修复发布回执。所有这些操作都不恢复业务DB，不删analytics accepted/seen，不恢复旧config/devices快照。
+
+PM2启动使用 `pm2 start deploy/analytics.config.cjs --only p003-analytics`。当前PM2只把*.config.cjs识别为配置；analytics.ecosystem.cjs保留为共享定义，由config wrapper加载，不将它直接作为CLI入口。第一次直接运行误创建的analytics.ecosystem仅在exec_path完全匹配本发布文件时清理；不得删除其它PM2应用。

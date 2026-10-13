@@ -99,3 +99,5 @@ client可包含product/component/protocol_version/content_version；当前produc
 既有大库首次raw ID索引构建可能超过旧12秒stage启动等待；隔离stage-run改为monotonic有界60秒等待，超时保留child/PID并明确先检查health，避免将仍启动的服务误重启或重seed fakekeys。rollup单遍优化及snapshot一致性仍需当前populated库30秒有界预算/容量实测，partial日报不能算完整完成。
 
 香港31.2万条既有假事件下，每日8秒计算预算会触及上限；发布采用代码原有30秒上界，仍保持独立240秒CLI/watchdog与partial标记。后台结果只在完整提交后更新；维护期间写锁竞争返回503/30秒退避，不能冒称全部16日一定能在一次任务内完成。14台摄入P95/P99/RSS/原服务门槛未放宽。
+
+正式PM2启动入口为 `deploy/analytics.config.cjs`，加载同目录共享ecosystem定义；实际解释器与FULL/auto0/10秒checkpoint以health和PM2回执为准。
