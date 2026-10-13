@@ -18,7 +18,10 @@
     "test:device-config": "NODE_OPTIONS=--experimental-sqlite tsx scripts/device-config.test.ts",
     "test:pairing": "NODE_OPTIONS=--experimental-sqlite tsx scripts/pairing.test.ts",
     "test:interests": "NODE_OPTIONS=--experimental-sqlite tsx scripts/interests.test.ts",
-    "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts"
+    "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts",
+    "test:persona": "NODE_OPTIONS=--experimental-sqlite tsx scripts/persona-state.test.ts",
+    "test:local-audio": "NODE_OPTIONS=--experimental-sqlite tsx scripts/local-audio.test.ts",
+    "test:memory-extract": "NODE_OPTIONS=--experimental-sqlite tsx scripts/memory-extract.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

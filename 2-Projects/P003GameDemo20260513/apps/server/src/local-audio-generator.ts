@@ -1,18 +1,22 @@
 import crypto from 'node:crypto';
 import { callExtractionLlm } from './llm-extract.js';
 import { isCrisisContent } from './memory-safety-filter.js';
-import { relationStateStore, familiarityTier } from './relation-state-store.js';
+import { relationStateStore, familiarityTier, personaLocalAudioEnabled } from './relation-state-store.js';
 import { traitStore, TRAIT_DIMS, TRAIT_LABELS, TRAIT_BASELINE, type TraitDim } from './trait-store.js';
 import { getStyleTemplate } from './style-template.js';
 import { growthLedgerStore } from './growth-ledger-store.js';
-import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot } from './local-audio-store.js';
+import { localAudioStore, LOCAL_AUDIO_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT, type LocalAudioSlot, type AnyAudioSlot } from './local-audio-store.js';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
+import { activeDeviceReplyKeep } from './local-audio-device-reply.js';
+import { activeG1SettingsKeep } from './local-audio-g1-settings.js';
+import { configStore } from './config-store.js';
 
 /**
  * 本地人格音频生成器（合同 v1.1 §5/§6 + codex 回执四修订）。
  *
  * 每日批检查（挂 insight-runner runDailyPersonaJobs），满足任一才重生成：
- * 首轮 / 距上次 ≥7 天 / 熟悉度档位切换 / 任一特质偏移 ≥0.05。
+ * 首轮 / 距上次 ≥N 天保底（N 默认 3，admin「设备配置」键 local_audio.refresh_days 可调）/ 熟悉度档位切换 / 任一特质偏移 ≥0.05。
+ * 体积预检（2026-09-03）：按近期条目池估算整套体积，预计超 revision 上限就不合成（此前每天白合成 ~165 条 TTS 后在发布门弃置）。
  * 门序：清洗 → 字数门 → 禁词门 → 危机过滤 → （复用判定）→ TTS → 时长门。
  * 发布门（整套原子的服务端镜像）：六 slot 各 ≥MIN_ITEMS_PER_SLOT 条才 commit；
  * 凑不齐 → 不动现套、不前移生成基准（TTS 修复后次日批自动恢复）。
@@ -38,10 +42,14 @@ export const SLOT_SPECS: Record<
     forbiddenRe?: RegExp;
   }
 > = {
+  // 2026-09-06 codex v237 口径：普通唤醒只用「完整且 ≤1800ms」的动态招呼语（超长则本次回退内置短句）——
+  // 0006 实证动态招呼语 2.5–2.8s 长过唤醒→input_ready，尾巴被开麦回灌成幽灵句。故 normal 槽收成 2–6 字 / 1800ms；
+  // cover_open / presence_return（首次开盖/返场）端侧保完整播放，维持原较长口径不动。
   'greeting.normal': {
-    maxDurationMs: 3000,
-    maxChars: 12,
-    scene: '孩子喊小可的名字把设备唤醒了，小可答应一声打个招呼（马上要开始聊天，别问问题连环轰炸）',
+    maxDurationMs: 1800,
+    minChars: 2,
+    maxChars: 6,
+    scene: '孩子喊小可的名字把设备唤醒了，小可答应一声（两到六个字的短应答，一句就够，马上要开始聊天，别问问题连环轰炸）',
   },
   'greeting.cover_open': {
     maxDurationMs: 2400,
@@ -148,8 +156,15 @@ export const SLOT_SPECS: Record<
 
 const CANDIDATES_PER_CALL = 6; // 每 slot 一次 LLM 要 6 条，过门后取前 5
 export const MAX_ITEMS_PER_SLOT = 5; // 导出供容量算术锚（file 限频默认值 ≥ slot数×本值×1.5）
+/** 发布预算（codex 2026-09-03 5MiB 裁定 §3）：每槽 2 条 × 14 槽 × 单文件上限 160KiB = 4.375MiB，硬证明在 5MiB 合同门内。
+ *  上限不能 server 单边提（Android v193 parser 5MiB 硬门 + 12MiB current/previous 双 revision 预算）。
+ *  后续加条走「每槽轮流 +1、加入前按 unique id 算 bytes」，禁止单槽独占余量。 */
+export const PUBLISH_ITEMS_PER_SLOT = 2;
 const TRAIT_SHIFT_THRESHOLD = 0.05;
-const ROUTINE_REFRESH_MS = 7 * 86_400_000;
+/** 保底换新默认天数（admin 设备配置键 local_audio.refresh_days 覆盖；导出供单测锚） */
+export const DEFAULT_ROUTINE_REFRESH_DAYS = 3;
+/** revision 总量上限（WAV 合同增量 §2.2）。⚠️ 单一真源：发布门与体积预检共用；codex 裁定提额只改这一处。 */
+export const REVISION_CAP_BYTES = 5 * 1024 * 1024;
 
 // ── 儿童情绪红线禁词（合同 §5.1：内疚诱导/情绪索取，命中即拒）──
 const FORBIDDEN_RE =
@@ -279,7 +294,7 @@ export function traitPromptLines(traits: Record<TraitDim, number>, baseline?: Re
 
 export type RegenTrigger =
   | { kind: 'first_time' }
-  | { kind: 'routine_7d' }
+  | { kind: 'routine'; days: number }
   | { kind: 'tier_change'; from: string; to: string }
   | { kind: 'trait_shift'; dim: TraitDim; delta: number }
   | { kind: 'manual' };
@@ -288,8 +303,8 @@ export function describeTrigger(t: RegenTrigger): string {
   switch (t.kind) {
     case 'first_time':
       return '首次生成';
-    case 'routine_7d':
-      return '7 天例行换新';
+    case 'routine':
+      return `${t.days} 天保底换新`;
     case 'tier_change':
       return `熟悉度档位变化：${t.from || '—'}→${t.to}`;
     case 'trait_shift':
@@ -309,6 +324,7 @@ export function shouldRegenerate(
   tierNow: string,
   traitsNow: Record<TraitDim, number>,
   now = Date.now(),
+  routineDays = DEFAULT_ROUTINE_REFRESH_DAYS,
 ): RegenTrigger | null {
   if (!state.last_generated_at) return { kind: 'first_time' };
   if (state.gen_tier && state.gen_tier !== tierNow) return { kind: 'tier_change', from: state.gen_tier, to: tierNow };
@@ -323,8 +339,40 @@ export function shouldRegenerate(
   } catch {
     /* gen_traits 解析失败按无基准处理 */
   }
-  if (now - state.last_generated_at >= ROUTINE_REFRESH_MS) return { kind: 'routine_7d' };
+  if (now - state.last_generated_at >= routineDays * 86_400_000) return { kind: 'routine', days: routineDays };
   return null;
+}
+
+/** 保底换新天数：admin 设备配置（SN 覆盖 > 全局 > 内置 3）。accountId 形如 device-<SN>。 */
+export function routineRefreshDays(accountId: string): number {
+  const sn = accountId.startsWith('device-') ? accountId.slice('device-'.length) : accountId;
+  return configStore.getEffective(sn, 'local_audio.refresh_days');
+}
+
+/**
+ * 体积预检（纯函数，导出供单测）：每槽取最新 ≤ perSlotMax 条的字节数求和 = 下轮整套的估计体积。
+ * 池 = 该账号近期 wav 条目（active + staging），正是发布门会保留的材料；估高于估低——宁可多拦一轮，也不再白合成。
+ */
+export function estimateRevisionBytes(poolBySlot: Record<string, number[]>, perSlotMax = MAX_ITEMS_PER_SLOT): number {
+  let total = 0;
+  for (const sizes of Object.values(poolBySlot)) {
+    for (const b of sizes.slice(0, perSlotMax)) total += b;
+  }
+  return total;
+}
+
+/** 冻结槽（设备回复十八条 + G1 设置引导三句）：只搬运**已 active** 的条目——staging 绝不在这里自动提为 active，
+ *  发布必须显式走各自脚本（新的不可变 revision）。日常再生成的 keep 与体积预检都从这里取，少接一处就会在下一次换新时把冻结槽丢掉。 */
+export function carriedFrozenKeep(accountId: string): Array<{ slot: AnyAudioSlot; id: string; bytes: number }> {
+  return [...activeDeviceReplyKeep(accountId), ...activeG1SettingsKeep(accountId)];
+}
+
+function sizePrecheck(accountId: string): { est: number; over: boolean } {
+  const pool: Record<string, number[]> = {};
+  for (const slot of LOCAL_AUDIO_SLOTS) pool[slot] = localAudioStore.listRecentBytesBySlot(accountId, slot, PUBLISH_ITEMS_PER_SLOT);
+  // 冻结槽（已 active 的十八条 + 三句）随套搬运，体积一并计入
+  const est = estimateRevisionBytes(pool, PUBLISH_ITEMS_PER_SLOT) + carriedFrozenKeep(accountId).reduce((a, k) => a + k.bytes, 0);
+  return { est, over: est > REVISION_CAP_BYTES };
 }
 
 /** 人格快照 system prompt（单一真源）——导出供 filler-generator 复用（F1 2026-08-26）。 */
@@ -400,7 +448,13 @@ export type SlotBuildResult = {
 
 /** 单 slot 构建：候选 → 门 → 复用/合成 → 时长门。不落 active 状态（由 commit 统一）。
  *  导出供外科式发布脚本用（如 v107 姿态扩展：只生成姿态 slot、六必选 slot 原 ID 保持）。 */
-export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptSuffix?: string): Promise<SlotBuildResult> {
+export async function buildSlot(
+  accountId: string,
+  slot: LocalAudioSlot,
+  promptSuffix?: string,
+  target = PUBLISH_ITEMS_PER_SLOT,
+  reuseStagingFirst = false,
+): Promise<SlotBuildResult> {
   const spec = SLOT_SPECS[slot];
   // WAV 迁移铁律：复用/补足/兜底全链只认 wav 条目（MP3 存量只作下载存量与回滚锚，绝不回流进新套）
   const oldActive = localAudioStore.listActive(accountId).filter((i) => i.slot === slot && i.format === 'wav');
@@ -408,9 +462,23 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
   const keep: Array<{ slot: LocalAudioSlot; id: string; text: string }> = [];
   const seenTexts = new Set<string>();
 
+  // codex 2026-09-03 §3.3.2：灰度发布优先复用 staging 里已过全部门（文案/WAV/SHA/时长/160KiB）的条目，够 target 就不叫 LLM/TTS
+  if (reuseStagingFirst) {
+    for (const st of localAudioStore.listStagedBySlot(accountId, slot)) {
+      if (keep.length >= target) break;
+      if (seenTexts.has(st.text)) continue;
+      seenTexts.add(st.text);
+      keep.push({ slot, id: st.id, text: st.text });
+    }
+    if (keep.length >= target) {
+      console.log(`[local-audio] gen slot=${slot} staging 优先复用 ${keep.length} 条，跳过 LLM/TTS`);
+      return { slot, keep, newCount: keep.length, reusedCount: 0, rejected, keptOld: false };
+    }
+  }
+
   const candidates = await generateSlotCandidates(accountId, slot, promptSuffix);
   for (const raw of candidates) {
-    if (keep.length >= MAX_ITEMS_PER_SLOT) break;
+    if (keep.length >= target) break;
     const gated = gateClipText(raw, slot);
     if (!gated.ok) {
       rejected[gated.reason] = (rejected[gated.reason] ?? 0) + 1;
@@ -462,7 +530,7 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
       .listStagedBySlot(accountId, slot)
       .filter((s) => !keep.some((k) => k.id === s.id) && !seenTexts.has(s.text));
     for (const s of staged) {
-      if (keep.length >= MAX_ITEMS_PER_SLOT) break;
+      if (keep.length >= target) break;
       keep.push({ slot, id: s.id, text: s.text });
       seenTexts.add(s.text);
     }
@@ -476,9 +544,9 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
   if (keep.length < MIN_ITEMS_PER_SLOT && oldActive.length >= MIN_ITEMS_PER_SLOT) {
     return {
       slot,
-      keep: oldActive.map((i) => ({ slot, id: i.id, text: i.text })),
+      keep: oldActive.slice(0, target).map((i) => ({ slot, id: i.id, text: i.text })),
       newCount: 0,
-      reusedCount: oldActive.length,
+      reusedCount: Math.min(oldActive.length, target),
       rejected,
       keptOld: true,
     };
@@ -490,9 +558,44 @@ export async function buildSlot(accountId: string, slot: LocalAudioSlot, promptS
  * 单账号生成主入口。opts.force 跳过触发判断（admin 手动触发）。
  * 返回：{ok, trigger?, revision?, detail} —— probe/回执可读。
  */
+/**
+ * 绑定即生成的门（2026-09-06 川哥拍板；0001 首日实证：白天建档要等次日沪时 3 点每日批才有成长语音，第 0 天只有 APK 内置）：
+ * 开关开 + 从未生成过（revision 0 且 last_generated_at 0）才在开通 brain 时异步触发一次。重复开通 / 换绑到旧账号不重生成；
+ * 真正生成仍走 runLocalAudioForAccount 的 first_time 触发（尊重 LOCAL_AUDIO_GENERATION_PAUSED 与体积预检）。
+ */
+export function shouldKickoffLocalAudioOnOpen(
+  state: { revision: number; last_generated_at: number },
+  enabled: boolean,
+): boolean {
+  return enabled && state.revision === 0 && state.last_generated_at === 0;
+}
+
+/** 绑定即生成的并发去重：同账号在途生成只允许一个（announce 重试 / claim 幂等恢复 / 重复开通不得反复建档生成）。 */
+const kickoffInFlight = new Set<string>();
+
+/**
+ * 绑定即生成的唯一入口（开通 brain / performSnBinding 共用）：开关 + 从未生成 + 不在途 三门后异步起一次，
+ * 不阻塞调用方、失败只留日志；生成本身仍受 runLocalAudioForAccount 的暂停开关 / 体积预检 / 发布门约束。
+ */
+export function kickoffLocalAudioOnce(
+  accountId: string,
+  reason: string,
+): 'started' | 'skipped_disabled' | 'skipped_generated' | 'skipped_in_flight' {
+  if (!personaLocalAudioEnabled(accountId)) return 'skipped_disabled';
+  if (!shouldKickoffLocalAudioOnOpen(localAudioStore.getState(accountId), true)) return 'skipped_generated';
+  if (kickoffInFlight.has(accountId)) return 'skipped_in_flight';
+  kickoffInFlight.add(accountId);
+  console.log(`[local-audio] kickoff account=${accountId} reason=${reason}`);
+  void runLocalAudioForAccount(accountId)
+    .then((r) => console.log(`[local-audio] kickoff done account=${accountId} ${JSON.stringify(r)}`))
+    .catch((err) => console.log(`[local-audio] kickoff failed account=${accountId}: ${String((err as Error)?.message ?? err)}`))
+    .finally(() => kickoffInFlight.delete(accountId));
+  return 'started';
+}
+
 export async function runLocalAudioForAccount(
   accountId: string,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; reuseStagingFirst?: boolean },
 ): Promise<{ ok: boolean; skipped?: string; trigger?: string; revision?: number | null; detail?: string }> {
   try {
     const rel = relationStateStore.getState(accountId);
@@ -509,15 +612,25 @@ export async function runLocalAudioForAccount(
     await refreshDeviceCommandWords();
     const trigger: RegenTrigger | null = opts?.force
       ? { kind: 'manual' }
-      : shouldRegenerate(state, tierNow, traits);
+      : shouldRegenerate(state, tierNow, traits, Date.now(), routineRefreshDays(accountId));
     if (!trigger) return { ok: true, skipped: 'no_trigger' };
     const triggerText = describeTrigger(trigger);
+    // 体积预检：预计整套超上限就不进合成（admin force 手动不受限——人在看结果）
+    if (!opts?.force) {
+      const pre = sizePrecheck(accountId);
+      if (pre.over) {
+        console.log(
+          `[local-audio] gen skip account=${accountId} trigger=${triggerText} 体积预检 est=${pre.est}B > ${REVISION_CAP_BYTES}B（按近期条目池估算，不重合成；等上限裁定或裁剪）`,
+        );
+        return { ok: true, skipped: 'size_precheck', trigger: triggerText, detail: `est=${pre.est}` };
+      }
+    }
     console.log(`[local-audio] gen start account=${accountId} trigger=${triggerText}`);
 
     const oldActive = localAudioStore.listActive(accountId);
     const results: SlotBuildResult[] = [];
     for (const slot of LOCAL_AUDIO_SLOTS) {
-      const r = await buildSlot(accountId, slot);
+      const r = await buildSlot(accountId, slot, undefined, PUBLISH_ITEMS_PER_SLOT, opts?.reuseStagingFirst === true);
       results.push(r);
       const rej = Object.entries(r.rejected)
         .map(([k, v]) => `${k}x${v}`)
@@ -543,16 +656,24 @@ export async function runLocalAudioForAccount(
       return { ok: false, trigger: triggerText, detail: `slots_short:${short.map((r) => r.slot).join(',')}` };
     }
 
+    // 冻结槽（设备回复十八条 合同 v3.1 §5 + G1 设置引导三句 2026-09-17）：只搬运**已 active** 的条目——staging 绝不在这里
+    // 自动提为 active，发布必须显式走 scripts/local-audio-device-reply.ts / local-audio-g1-settings.ts publish（新的不可变 revision）
+    const deviceReplyKeep = carriedFrozenKeep(accountId);
     // revision 总量门 ≤5MiB（WAV 合同增量 §2.2）：超限不发布（超大套宁可保持旧套）
-    const totalBytes = results
-      .flatMap((r) => r.keep)
-      .reduce((sum, k) => sum + (localAudioStore.getItem(accountId, k.id)?.bytes ?? 0), 0);
-    if (totalBytes > 5 * 1024 * 1024) {
-      console.log(`[local-audio] gen abort account=${accountId} revision 总量超限 ${totalBytes}B > 5MiB`);
+    // 合同 §3.3.4：按去重后的 clip id 计总量（同一条目跨槽复用只算一次，与 manifest 一致）
+    const seenIds = new Set<string>();
+    const totalBytes = [...results.flatMap((r) => r.keep), ...deviceReplyKeep.map((k) => ({ slot: k.slot, id: k.id }))]
+      .reduce((sum, k) => {
+        if (seenIds.has(k.id)) return sum;
+        seenIds.add(k.id);
+        return sum + (localAudioStore.getItem(accountId, k.id)?.bytes ?? 0);
+      }, 0);
+    if (totalBytes > REVISION_CAP_BYTES) {
+      console.log(`[local-audio] gen abort account=${accountId} revision 总量超限 ${totalBytes}B > ${REVISION_CAP_BYTES}B`);
       return { ok: false, trigger: triggerText, detail: `revision_too_big:${totalBytes}` };
     }
 
-    const keepAll = results.flatMap((r) => r.keep.map(({ slot, id }) => ({ slot, id })));
+    const keepAll = [...results.flatMap((r) => r.keep.map(({ slot, id }) => ({ slot, id }))), ...deviceReplyKeep.map(({ slot, id }) => ({ slot, id }))];
     const revision = localAudioStore.commitSet(accountId, keepAll, {
       tier: tierNow,
       traits: JSON.stringify(traits),

@@ -34,8 +34,17 @@ process.env.DEVICE_INTENT_OBSERVE = '1';
 const p4 = deviceIntentProtocol();
 assert.ok(p4.includes('哦也对'), 'T4 反例 few-shot 必须在场');
 assert.ok(p4.includes('幅度默认一级'), 'T4 幅度规则必须在场');
-assert.ok(p4.includes('不输出标记——本协议没有精确数值标签'), 'T4 数值规则必须在场');
+assert.ok(p4.includes('不输出任何标记——本协议没有精确数值标签'), 'T4 数值规则必须在场');
 assert.ok(p4.includes('色温调暖」→ [[DEV:12]]'), 'T4 一级示例必须在场');
 pass++;
 
-console.log(`device-intent-protocol: ${pass}/4 全过`);
+// T5 数值禁映射最值（2026-09-04 P0 实录：「画面调到 5 米」被映射成 35 最远）：距离/高度/档位数值也不出标记，且给反例
+process.env.DEVICE_INTENT_OBSERVE = '1';
+const p5 = deviceIntentProtocol();
+assert.ok(p5.includes('画面调到5米'), 'T5 距离数值反例必须在场');
+assert.ok(p5.includes('绝不把具体数值当成"最"'), 'T5 数值≠最值规则必须在场');
+assert.ok(p5.includes('米/分米/厘米'), 'T5 距离单位枚举必须在场');
+assert.ok(p5.includes('虚像调到最远'), 'T5 距离类快捷说法教学必须在场');
+pass++;
+
+console.log(`device-intent-protocol: ${pass}/5 全过`);

@@ -28,6 +28,7 @@ process.env.STUDIO_PASS = 'test-pass';
 
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 const { memoryItemStore } = await import('../src/memory-item-store.js');
+const { traitStore } = await import('../src/trait-store.js');
 const { profileStore } = await import('../src/profile-store.js');
 const { adminDataRoute } = await import('../src/routes/admin-data.js');
 const { authRoute } = await import('../src/routes/auth.js');
@@ -305,6 +306,48 @@ await t('J1 开通即自动建档（空档兜底）——记忆抽取的「没�
   const profile = profileStore.getProfile(`device-${SNJ}`);
   assert.ok(profile, '开通后应有档案行（空档也算档）');
   assert.equal(profile!.nickname, '');
+});
+
+await t('J2d memory-whitebox：返回 extraction_log / inactive_items / ledger 三段', async () => {
+  const SNJ = 'BJP00326060100200023';
+  const res = await adminReq(adminToken, 'GET', `/devices/${SNJ}/memory-whitebox`);
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { ok: boolean; extraction_log: unknown[]; inactive_items: unknown[]; ledger: unknown[] };
+  assert.equal(body.ok, true);
+  assert.ok(Array.isArray(body.extraction_log) && Array.isArray(body.inactive_items) && Array.isArray(body.ledger));
+});
+
+await t('J2c trait-snapshots / trait-rollback：列表、退回、坏 day 400、无快照 404', async () => {
+  const SNJ = 'BJP00326060100200023';
+  const acct = `device-${SNJ}`;
+  traitStore.applyDeltas(acct, [{ dim: 'playfulness', delta: 0.02, rule: 'mirror_playful', theory: 'social_mirror', note: 'x' }]);
+  const day = traitStore.snapshotDaily(acct);
+  const list = (await (await adminReq(adminToken, 'GET', `/devices/${SNJ}/trait-snapshots`)).json()) as { ok: boolean; snapshots: { day: string }[] };
+  assert.equal(list.ok && list.snapshots.some((s) => s.day === day), true);
+  assert.equal((await adminReq(adminToken, 'POST', `/devices/${SNJ}/trait-rollback`, { day: 'bad' })).status, 400);
+  assert.equal((await adminReq(adminToken, 'POST', `/devices/${SNJ}/trait-rollback`, { day: '2000-01-01' })).status, 404);
+  traitStore.applyDeltas(acct, [{ dim: 'storytelling', delta: 0.02, rule: 'reinforce_story_pos', theory: 'reinforcement', note: 'x' }]);
+  const res = await adminReq(adminToken, 'POST', `/devices/${SNJ}/trait-rollback`, { day });
+  assert.equal(res.status, 200);
+  const body = (await res.json()) as { ok: boolean; moved: number };
+  assert.equal(body.ok && body.moved >= 1, true);
+});
+
+await t('J2b interest-veto：否决后 state=retracted/parent，再提不升；空 value 400', async () => {
+  const SNJ = 'BJP00326060100200023';
+  profileStore.updateMemoryFields(`device-${SNJ}`, { interests: [{ value: '冷光', confidence: 0.5, last_updated: 1, source: 'voice', state: 'unverified', mention_days: ['2026-09-01'] }] });
+  const bad = await adminReq(adminToken, 'POST', `/devices/${SNJ}/interest-veto`, { value: '' });
+  assert.equal(bad.status, 400);
+  const res = await adminReq(adminToken, 'POST', `/devices/${SNJ}/interest-veto`, { value: '冷光' });
+  assert.equal(res.status, 200);
+  assert.equal(((await res.json()) as { vetoed: boolean }).vetoed, true);
+  const it = profileStore.getProfile(`device-${SNJ}`)!.interests.find((i) => i.value === '冷光')!;
+  assert.equal(it.state, 'retracted');
+  assert.equal(it.retracted_by, 'parent');
+  profileStore.updateMemoryFields(`device-${SNJ}`, { interests: [{ value: '冷光', confidence: 0.5, last_updated: 2, source: 'voice', state: 'unverified', mention_days: ['2026-09-02'] }] });
+  assert.equal(profileStore.getProfile(`device-${SNJ}`)!.interests.find((i) => i.value === '冷光')!.state, 'retracted', '否决后再提不升');
+  const agg = (await (await adminReq(adminToken, 'GET', `/devices/${SNJ}/brain`)).json()) as { profile: { interests: { value: string; state: string }[] } };
+  assert.equal(agg.profile.interests.find((i) => i.value === '冷光')!.state, 'retracted', 'GET 聚合带 state');
 });
 
 await t('J2 child-profile 编辑：PATCH 部分更新 + 校验 + GET 聚合可见', async () => {

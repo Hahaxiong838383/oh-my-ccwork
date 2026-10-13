@@ -70,14 +70,15 @@ localAudioDeviceRoute.get('/manifest', async (c) => {
   const accountId = `device-${sn}`;
   const appliedRaw = c.req.query('applied_revision');
   const applied = appliedRaw !== undefined && /^\d+$/.test(appliedRaw) ? Number(appliedRaw) : null;
-  localAudioStore.recordFetch(accountId, applied);
 
   if (!personaLocalAudioEnabled(accountId)) {
+    localAudioStore.recordFetch(accountId, applied, DISABLED_MANIFEST.revision);
     console.log(`[local-audio] manifest sn=${sn} enabled=false applied=${applied ?? '-'}`);
     return c.json(DISABLED_MANIFEST);
   }
 
   const manifest = localAudioStore.buildManifest(accountId);
+  localAudioStore.recordFetch(accountId, applied, manifest.revision); // 触达流水带服务端返回的 revision（对账用）
   console.log(`[local-audio] manifest sn=${sn} revision=${manifest.revision} applied=${applied ?? '-'}`);
   return c.json(manifest);
 });

@@ -35,6 +35,41 @@ export const LOCAL_AUDIO_SLOTS = [
 export type LocalAudioSlot = (typeof LOCAL_AUDIO_SLOTS)[number];
 
 /**
+ * 设备回复槽（合同 v3.1 §5，codex 2026-09-05 定稿 18 条）：文本冻结、每槽 1 条、optional。
+ * 不进 LLM 生成循环（LOCAL_AUDIO_SLOTS 不含），只由 local-audio-device-reply.ts 显式 stage / 发布；
+ * 日常再生成只搬运已 active 的条目。文本真源见 DEVICE_REPLY_TEXTS。
+ */
+export const DEVICE_REPLY_SLOTS = [
+  'device_reply.applied_relative',
+  'device_reply.applied_absolute',
+  'device_reply.applied_unconfirmed',
+  'device_reply.already',
+  'device_reply.boundary.virtual_image_far',
+  'device_reply.boundary.virtual_image_near',
+  'device_reply.boundary.brightness_max',
+  'device_reply.boundary.brightness_min',
+  'device_reply.boundary.color_temperature_warm',
+  'device_reply.boundary.color_temperature_cold',
+  'device_reply.boundary.volume_max',
+  'device_reply.boundary.volume_min',
+  'device_reply.boundary.height_max',
+  'device_reply.boundary.height_min',
+  'device_reply.boundary.generic',
+  'device_reply.not_now',
+  'device_reply.failed',
+  'device_reply.unsupported_motor',
+] as const;
+export type DeviceReplySlot = (typeof DEVICE_REPLY_SLOTS)[number];
+/**
+ * G1 设置引导三句（Android codex 需求 2026-09-17）：文本冻结、每槽 1 条、optional；同十八条不进 LLM 循环，
+ * 只由 local-audio-g1-settings.ts 显式 stage / 发布（合成一次、同字节扇出全机队）；文本真源 G1_SETTINGS_TEXTS。
+ */
+export const G1_SETTINGS_SLOTS = ['g1.settings.enter', 'g1.settings.intro', 'g1.settings.exit'] as const;
+export type G1SettingsSlot = (typeof G1_SETTINGS_SLOTS)[number];
+/** 条目可落的全部槽（人格 14 + 设备回复 18 + G1 设置引导 3） */
+export type AnyAudioSlot = LocalAudioSlot | DeviceReplySlot | G1SettingsSlot;
+
+/**
  * 必选六 slot（v107 合同 §1：required 缺任一即整套 abort）。
  * posture.* 为 optional：缺失=合法（v107 端侧回退 APK 内置），但一旦出现必须 2..5 条——
  * 单条不成套（发布门会弃 1 条的 optional slot，条目留 staging 下轮补足后再进）。
@@ -52,7 +87,7 @@ export const MIN_ITEMS_PER_SLOT = 2;
 const STALE_ITEM_TTL_MS = 14 * 86_400_000;
 
 export type LocalAudioItem = {
-  slot: LocalAudioSlot;
+  slot: AnyAudioSlot;
   id: string;
   text: string;
   sha256: string;
@@ -110,6 +145,16 @@ class LocalAudioStore {
         last_applied_at       INTEGER NOT NULL DEFAULT 0,
         last_fetch_at         INTEGER NOT NULL DEFAULT 0
       );
+      -- 端侧 manifest 触达流水（2026-09-03，codex 联调对账用）：每次 GET 一行——服务端返回了哪个 revision、
+      -- 端侧报了哪个 applied；「首次发现新 revision」「首次 applied 回报」的时刻都从这里算。每账号留 300 行。
+      CREATE TABLE IF NOT EXISTS local_audio_fetch_log (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id      TEXT NOT NULL,
+        ts              INTEGER NOT NULL,
+        served_revision INTEGER NOT NULL DEFAULT -1,
+        applied         INTEGER
+      );
+      CREATE INDEX IF NOT EXISTS idx_la_fetch_account_ts ON local_audio_fetch_log (account_id, ts DESC);
       CREATE TABLE IF NOT EXISTS local_audio_item (
         account_id  TEXT NOT NULL,
         slot        TEXT NOT NULL,
@@ -192,7 +237,7 @@ class LocalAudioStore {
 
   /** 该 slot 的 staging 条目（active=0，14 天窗内，新→旧，限定 format）——LLM 空手轮的补足来源。
    *  format 过滤是 WAV 迁移铁律：staging 里的 MP3 遗留绝不能补进 WAV 套（混套=违反合同 §4.5）。 */
-  listStagedBySlot(accountId: string, slot: LocalAudioSlot, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem[] {
+  listStagedBySlot(accountId: string, slot: AnyAudioSlot, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem[] {
     return this.db
       .prepare(
         `SELECT * FROM local_audio_item WHERE account_id = ? AND slot = ? AND active = 0 AND format = ? AND created_at >= ? ORDER BY created_at DESC`,
@@ -200,10 +245,21 @@ class LocalAudioStore {
       .all(accountId, slot, format, Date.now() - STALE_ITEM_TTL_MS) as LocalAudioItem[];
   }
 
+  /** 体积预检用：该 slot 近期（14 天内）wav 条目字节数，新→旧，最多 limit 条（active + staging 都算，它们就是下轮会被保留的池）。 */
+  listRecentBytesBySlot(accountId: string, slot: AnyAudioSlot, limit: number): number[] {
+    return (
+      this.db
+        .prepare(
+          `SELECT bytes FROM local_audio_item WHERE account_id = ? AND slot = ? AND format = 'wav' AND created_at >= ? ORDER BY created_at DESC LIMIT ?`,
+        )
+        .all(accountId, slot, Date.now() - STALE_ITEM_TTL_MS, limit) as Array<{ bytes: number }>
+    ).map((r) => r.bytes);
+  }
+
   /** 同 slot 同 text 同 format 的既有条目（含 active=0）——J4 复用判定。
    *  format 必须参与判定（合同 WAV 增量 §4.5：文案相同 MP3/WAV 也不得共用 id——W4 首发实测踩过：
    *  撞文案复活了 rev=1 的 MP3 条目，rev=2 成混套）。 */
-  findByText(accountId: string, slot: LocalAudioSlot, text: string, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem | null {
+  findByText(accountId: string, slot: AnyAudioSlot, text: string, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem | null {
     const row = this.db
       .prepare(`SELECT * FROM local_audio_item WHERE account_id = ? AND slot = ? AND text = ? AND format = ? LIMIT 1`)
       .get(accountId, slot, text, format) as LocalAudioItem | undefined;
@@ -230,7 +286,7 @@ class LocalAudioStore {
    */
   commitSet(
     accountId: string,
-    keep: Array<{ slot: LocalAudioSlot; id: string }>,
+    keep: Array<{ slot: AnyAudioSlot; id: string }>,
     gen: { tier: string; traits: string },
     // minRevision：跨设备 revision 命名空间对齐用（v133 合同硬门 2「不得低于双机已持有值」，
     // 0010 3→5 跳号）。默认 0 = MAX(revision+1, 0) = 纯 +1，旧路径行为不变。
@@ -271,23 +327,46 @@ class LocalAudioStore {
     return changed ? this.getState(accountId).revision : null;
   }
 
-  recordFetch(accountId: string, appliedRevision: number | null): void {
+  recordFetch(accountId: string, appliedRevision: number | null, servedRevision = -1): void {
     this.ensureStateRow(accountId);
+    const now = Date.now();
     if (appliedRevision !== null && Number.isInteger(appliedRevision) && appliedRevision >= 0) {
       this.db
         .prepare(
           `UPDATE local_audio_state SET last_fetch_at = ?, last_applied_revision = ?, last_applied_at = ? WHERE account_id = ?`,
         )
-        .run(Date.now(), appliedRevision, Date.now(), accountId);
+        .run(now, appliedRevision, now, accountId);
     } else {
-      this.db.prepare(`UPDATE local_audio_state SET last_fetch_at = ? WHERE account_id = ?`).run(Date.now(), accountId);
+      this.db.prepare(`UPDATE local_audio_state SET last_fetch_at = ? WHERE account_id = ?`).run(now, accountId);
     }
+    try {
+      this.db
+        .prepare(`INSERT INTO local_audio_fetch_log (account_id, ts, served_revision, applied) VALUES (?, ?, ?, ?)`)
+        .run(accountId, now, servedRevision, appliedRevision);
+      this.db
+        .prepare(`DELETE FROM local_audio_fetch_log WHERE account_id = ? AND id NOT IN (
+                    SELECT id FROM local_audio_fetch_log WHERE account_id = ? ORDER BY ts DESC LIMIT 300)`)
+        .run(accountId, accountId);
+    } catch (err) {
+      console.log('[local-audio] fetch_log 记账失败(不影响 manifest):', String((err as Error)?.message ?? err));
+    }
+  }
+
+  /** 触达流水（时间升序），sinceTs 之后的。对账脚本与单测用。 */
+  listFetchLog(accountId: string, sinceTs = 0): { ts: number; served_revision: number; applied: number | null }[] {
+    return this.db
+      .prepare(`SELECT ts, served_revision, applied FROM local_audio_fetch_log WHERE account_id = ? AND ts >= ? ORDER BY ts ASC, id ASC`)
+      .all(accountId, sinceTs) as { ts: number; served_revision: number; applied: number | null }[];
   }
 
   /** 清理：active=0 且超 14 天的条目，删行+删盘上文件。返回清理数。 */
   cleanup(accountId: string): number {
+    // 冻结槽（device_reply.* / g1.settings.*）的 staging 条目豁免 14 天清理：它们是冻结文本的交付物，SHA 已被端侧核验，
+    // 等配套 APK 就位再显式发布；清掉重合成会换 SHA（TTS 非确定性），让已核验的指纹作废（codex 2026-09-05 验收回执）。
     const stale = this.db
-      .prepare(`SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ?`)
+      .prepare(
+        `SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ? AND slot NOT LIKE 'device_reply.%' AND slot NOT LIKE 'g1.settings.%'`,
+      )
       .all(accountId, Date.now() - STALE_ITEM_TTL_MS) as Array<{ id: string; format: 'mp3' | 'wav' }>;
     for (const { id, format } of stale) {
       const p = this.audioPath(accountId, id, format);
@@ -299,6 +378,11 @@ class LocalAudioStore {
       this.db.prepare(`DELETE FROM local_audio_item WHERE account_id = ? AND id = ?`).run(accountId, id);
     }
     return stale.length;
+  }
+
+  /** 有内容的账号（revision>0）——冻结槽全机队发布脚本 --all 用。 */
+  listAccounts(): string[] {
+    return (this.db.prepare(`SELECT account_id FROM local_audio_state WHERE revision > 0 ORDER BY account_id`).all() as Array<{ account_id: string }>).map((r) => r.account_id);
   }
 
   /** 重置（admin DELETE relation-state 联动第六样）：删全部条目+文件+状态行。 */
@@ -363,10 +447,42 @@ class LocalAudioStore {
     // 对撞面放大近 3 倍,而人格化文案与用户日常语言分布天然重叠(「有啥好玩的事儿说说」
     // 既是招呼语也是用户真话),误伤面随对撞面同步放大。revision 交界缝(设备夜间换新前
     // 播上一版)的窗口只有几小时且低频,取舍上放弃焊缝换全天误伤面收窄。
-    return this.db
+    // 2026-09-06 补兜底(0001 首日实证:新设备当天未轮到每日批 → revision 0 → 库空 → APK 内置招呼语
+    // 「来啦，想聊点啥？」「哟，你来啦。」被 worker 当用户话提交,小可接着自家招呼语开讲):端侧无现役动态槽、
+    // 缺槽、tombstone/rev0 都回退 APK 内置招呼语,故**恒并入**内置文案(槽名 greeting.builtin,worker 只装
+    // greeting.* 进对撞库);动态在前,同文案去重。内置表是固定小集合(8-16 交付 greet_01–09),不放大误伤面。
+    const active = this.db
       .prepare(`SELECT DISTINCT slot, text FROM local_audio_item WHERE account_id = ? AND active = 1 ORDER BY slot`)
       .all(accountId) as Array<{ slot: string; text: string }>;
+    const seen = new Set(active.map((r) => r.text));
+    const builtin = builtinGreetingTexts()
+      .filter((t) => !seen.has(t))
+      .map((text) => ({ slot: 'greeting.builtin', text }));
+    return [...active, ...builtin];
   }
+}
+
+/**
+ * APK 内置唤醒招呼语文案(2026-08-16 S2B1 交付 greet_01–09,端侧无动态套/缺槽/tombstone 时播它们)。
+ * 改内置包文案时同步改这里;临时追加走 env LOCAL_AUDIO_BUILTIN_GREETING_TEXTS(逗号分隔,restart 生效)。
+ */
+export const BUILTIN_GREETING_TEXTS: readonly string[] = [
+  '哎，你好呀。',
+  '嗯呐，我在呢。',
+  '来啦，想聊点啥？',
+  '来啦。',
+  '哎，来啦来啦。',
+  '嗨，我在呢。',
+  '哟，你来啦。',
+  '哎哟，是你呀～',
+  '嗨嗨，等你好久啦。',
+];
+
+/** 内置招呼语 ∪ env 追加(去重,保序)。 */
+export function builtinGreetingTexts(): string[] {
+  const raw = process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS?.trim();
+  const extra = raw ? raw.split(',').map((x) => x.trim()).filter(Boolean) : [];
+  return [...new Set([...BUILTIN_GREETING_TEXTS, ...extra])];
 }
 
 export const localAudioStore = new LocalAudioStore();

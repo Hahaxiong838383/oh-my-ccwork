@@ -1555,6 +1555,7 @@
                     <div style="font-weight:700;margin-bottom:10px">上传 APK<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">上传后服务端实测校验：包名 / 签名证书 / versionCode 单调（APK 本体为真值）</span></div>
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                       <input type="file" accept=".apk" @change="otaPickFile" :disabled="ota.uploading" />
+                      <input v-model="ota.form.notes" placeholder="更新说明（可空，之后可改）" style="width:260px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
                       <el-button size="small" type="primary" :loading="ota.uploading" :disabled="!ota.file" @click="uploadApk()">{{ ota.uploading ? ('上传中 ' + ota.uploadPct + '%') : '上传并校验' }}</el-button>
                     </div>
                     <div v-if="ota.uploadMsg" style="margin-top:8px;font-size:13px" :style="{ color: ota.uploadOk ? '#3A8A3A' : '#B03A3A' }">{{ ota.uploadMsg }}</div>
@@ -1562,16 +1563,18 @@
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
                     <div style="font-weight:700;margin-bottom:10px">版本发布</div>
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
-                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">versionCode</th><th style="padding:6px 8px">versionName</th><th style="padding:6px 8px">大小</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">状态</th><th style="padding:6px 8px">灰度</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">versionCode</th><th style="padding:6px 8px">versionName</th><th style="padding:6px 8px">大小</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">更新说明</th><th style="padding:6px 8px">状态</th><th style="padding:6px 8px">灰度</th><th style="padding:6px 8px">操作</th></tr></thead>
                       <tbody>
                         <tr v-for="r in ota.releases" :key="r.version_code" style="border-bottom:1px solid #f5f5f5">
                           <td style="padding:6px 8px;font-weight:700">{{ r.version_code }}</td>
                           <td style="padding:6px 8px">{{ r.version_name }}</td>
                           <td style="padding:6px 8px">{{ (r.size_bytes / 1048576).toFixed(1) }} MB</td>
                           <td style="padding:6px 8px;font-family:monospace">{{ r.sha256.slice(0, 12) }}…</td>
+                          <td style="padding:6px 8px;max-width:280px;font-size:12px;color:#555;white-space:pre-wrap;word-break:break-all" :title="r.notes || ''">{{ r.notes || '—' }}</td>
                           <td style="padding:6px 8px"><span :style="{ color: r.enabled ? '#3A8A3A' : '#999' }">{{ r.enabled ? ('发布中' + (r.force_install ? '·⚡强制' : '') + (r.install_hint && r.install_hint !== 'idle_only' ? '·' + r.install_hint : '')) : '草稿/暂停' }}</span></td>
                           <td style="padding:6px 8px;max-width:220px;word-break:break-all">{{ r.enabled ? (r.rollout_sns || '全量') : '—' }}</td>
                           <td style="padding:6px 8px;white-space:nowrap">
+                            <el-button size="small" plain @click="otaEditNotes(r)">改说明</el-button>
                             <el-button size="small" @click="otaPublish(r, 'sns')">灰度发布</el-button>
                             <el-button size="small" type="warning" @click="otaPublish(r, 'all')">全量发布</el-button>
                             <el-button v-if="r.enabled && !r.force_install" size="small" type="danger" plain @click="otaForce(r, true)">⚡ 强制更新</el-button>
@@ -1580,7 +1583,7 @@
                             <el-button v-if="!r.enabled" size="small" type="danger" @click="otaDelete(r)">删除</el-button>
                           </td>
                         </tr>
-                        <tr v-if="!ota.releases.length"><td colspan="7" style="padding:14px 8px;color:#999">暂无版本，先上传 APK</td></tr>
+                        <tr v-if="!ota.releases.length"><td colspan="8" style="padding:14px 8px;color:#999">暂无版本，先上传 APK</td></tr>
                       </tbody>
                     </table>
                     <div style="margin-top:8px;font-size:12px;color:#888">⚡ 强制更新 = force + immediate：跳过闲时等待尽快装，但<b>不打断进行中的语音会话</b>（会话结束立即装）；「取消强制」回到闲时安装。回滚提示：APK 层无真回滚，「暂停」只救未升级设备。</div>
@@ -1588,56 +1591,491 @@
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
                     <div style="font-weight:700;margin-bottom:10px">设备版本分布<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">设备每次 check 自动上报</span></div>
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
-                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">当前版本</th><th style="padding:6px 8px">最近检查</th><th style="padding:6px 8px">最近升级结果</th></tr></thead>
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">备注<span style="font-weight:400;margin-left:4px" title="来自「设备接入」页的人工备注，此处只读；要改去设备接入页">（设备接入页填）</span></th><th style="padding:6px 8px">当前版本</th><th style="padding:6px 8px">当前 PCK 版本<span style="font-weight:400;margin-left:4px" title="设备 check 时上报的 active_content_version；旧端/未上报显示 —">（设备上报）</span></th><th style="padding:6px 8px">最近检查</th><th style="padding:6px 8px">最近升级结果</th></tr></thead>
                       <tbody>
                         <tr v-for="d in ota.devices" :key="d.sn" style="border-bottom:1px solid #f5f5f5">
                           <td style="padding:6px 8px;font-family:monospace">{{ d.sn }}</td>
+                          <td style="padding:6px 8px;max-width:220px;word-break:break-all" :style="{ color: d.note ? '#303133' : '#C0C4CC' }">{{ d.note || '—' }}</td>
                           <td style="padding:6px 8px">{{ d.version_code }}<span style="color:#999"> ({{ d.version_name }})</span></td>
+                          <td style="padding:6px 8px;font-family:monospace" :style="{ color: d.pck_active_version ? '#303133' : '#C0C4CC' }">{{ d.pck_active_version || '—' }}</td>
                           <td style="padding:6px 8px">{{ new Date(d.last_check_at).toLocaleString() }}</td>
                           <td style="padding:6px 8px"><span v-if="d.last_result" :style="{ color: d.last_result.status === 'success' ? '#3A8A3A' : '#B03A3A' }">{{ d.last_result.from_version_code }}→{{ d.last_result.to_version_code }} {{ d.last_result.status }}</span><span v-else style="color:#999">—</span></td>
                         </tr>
-                        <tr v-if="!ota.devices.length"><td colspan="4" style="padding:14px 8px;color:#999">暂无设备上报（等设备接入新 OTA 接口后出现）</td></tr>
+                        <tr v-if="!ota.devices.length"><td colspan="6" style="padding:14px 8px;color:#999">暂无设备上报（等设备接入新 OTA 接口后出现）</td></tr>
                       </tbody>
                     </table>
                   </div>
+                  <!-- 🧩 PCK 内容包（Godot 非执行内容）双 OTA（2026-09-04；API routes/ota-pck.ts /api/admin/ota/pck/*；合同 CODEX_P003_APK_PCK_DUAL_OTA_SERVER_CONTRACT_20260903；与 APK 卡片/状态/失败原因完全分开） -->
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-top:14px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">🧩 PCK 内容包 · 上传<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">Godot 非执行内容（美术/JSON）；服务端实测：解析文件表、拒代码/原生扩展、≤32MiB、重算 length+sha256；同 content_version 不同字节会被拒（不可变）</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                      <input type="file" accept=".pck" @change="pckPickFile" :disabled="pck.uploading" />
+                      <input v-model="pck.form.content_version" placeholder="content_version 如 v214-art-1" style="width:220px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                      <input v-model="pck.form.product_models" placeholder="机型，逗号分隔" style="width:170px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                      <input type="number" v-model="pck.form.min_launcher" placeholder="最低 Launcher" style="width:130px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                      <input v-model="pck.form.notes" placeholder="发布说明（可空）" style="width:220px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                      <el-button size="small" type="primary" :loading="pck.uploading" :disabled="!pck.file || !pck.form.content_version" @click="uploadPck()">{{ pck.uploading ? ('上传中 ' + pck.uploadPct + '%') : '上传并实测' }}</el-button>
+                    </div>
+                    <div v-if="pck.uploadMsg" style="margin-top:8px;font-size:13px;white-space:pre-wrap" :style="{ color: pck.uploadOk ? '#3A8A3A' : '#B03A3A' }">{{ pck.uploadMsg }}</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">🧩 PCK 版本发布<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">草稿→发布→暂停/撤回；成功终态只有设备回报 confirmed；回滚=用旧字节建新 revision 再发布（字节不可改写）</span></div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">content_version</th><th style="padding:6px 8px">大小 / 文件数</th><th style="padding:6px 8px">SHA256</th><th style="padding:6px 8px">更新说明</th><th style="padding:6px 8px">机型 / 最低 Launcher</th><th style="padding:6px 8px">状态 / 灰度</th><th style="padding:6px 8px">已激活</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <tbody>
+                        <tr v-for="r in pck.releases" :key="r.id" style="border-bottom:1px solid #f5f5f5">
+                          <td style="padding:6px 8px;font-weight:700">{{ r.content_version }}<div v-if="r.rollback_of" style="font-weight:400;font-size:11px;color:#E8833A">回滚版 ← #{{ r.rollback_of }}</div><div style="font-weight:400;font-size:11px;color:#999">#{{ r.id }} · godot {{ r.godot_version }}</div></td>
+                          <td style="padding:6px 8px">{{ (r.length / 1048576).toFixed(2) }} MB<div style="font-size:11px;color:#999">{{ r.file_count }} 文件 · required {{ r.required_resources.length }}</div></td>
+                          <td style="padding:6px 8px;font-family:monospace">{{ r.sha256.slice(0, 12) }}…</td>
+                          <td style="padding:6px 8px;max-width:280px;font-size:12px;color:#555;white-space:pre-wrap;word-break:break-all">{{ (r.release_notes && r.release_notes.length) ? r.release_notes.join('\n') : '—' }}</td>
+                          <td style="padding:6px 8px">{{ r.product_models.join(', ') }}<div style="font-size:11px;color:#999">≥ v{{ r.min_launcher_version_code }}{{ r.force ? ' · force' : '' }}</div></td>
+                          <td style="padding:6px 8px"><span :style="{ color: pckStatusColor(r.status), fontWeight: 700 }">{{ pckStatusLabel(r.status) }}</span><div style="font-size:11px;color:#666;max-width:220px;word-break:break-all">{{ (r.status === 'published' || r.status === 'paused') ? (r.rollout.policy === 'all' ? '全量' : r.rollout.sns) : '—' }}</div></td>
+                          <td style="padding:6px 8px">{{ r.devices_active }} 台</td>
+                          <td style="padding:6px 8px;white-space:nowrap">
+                            <el-button v-if="r.status !== 'revoked'" size="small" @click="pckPublish(r, 'sns')">灰度发布</el-button>
+                            <el-button v-if="r.status !== 'revoked'" size="small" type="warning" @click="pckPublish(r, 'all')">全量发布</el-button>
+                            <el-button v-if="r.status === 'published'" size="small" type="danger" plain @click="pckAction(r, 'pause', '暂停 ' + r.content_version + '？之后不再下发新 offer；已开始下载的设备仍可读文件。')">暂停</el-button>
+                            <el-button v-if="r.status === 'paused'" size="small" plain @click="pckAction(r, 'resume', '恢复 ' + r.content_version + ' 的发布？')">恢复</el-button>
+                            <el-button v-if="r.status === 'published' || r.status === 'paused'" size="small" type="danger" @click="pckAction(r, 'revoke', '撤回 ' + r.content_version + '？不可逆：文件对设备返回 410，只能用旧字节建新版本恢复。')">撤回</el-button>
+                            <el-button size="small" plain @click="pckEditNotes(r)">改说明</el-button>
+                            <el-button size="small" @click="pckRollback(r)">建回滚版</el-button>
+                            <el-button v-if="r.status === 'draft'" size="small" @click="pckEditMeta(r)">改元数据</el-button>
+                            <el-button v-if="r.status === 'draft' || r.status === 'revoked'" size="small" type="danger" plain @click="pckAction(r, 'delete', '删除 ' + r.content_version + '（' + (r.status === 'revoked' ? '已撤回，记录清理，流水保留' : '草稿') + '）？')">删除</el-button>
+                          </td>
+                        </tr>
+                        <tr v-if="!pck.releases.length"><td colspan="8" style="padding:14px 8px;color:#999">暂无 PCK 版本，先上传</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">🧩 设备 PCK 状态<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">与 APK 台账分开；只有 confirmed+success 算成功；失败/回滚证据单独保留，不会被后来的成功覆盖</span></div>
+                    <table style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">机型 / Launcher</th><th style="padding:6px 8px">active</th><th style="padding:6px 8px">pending / 阶段</th><th style="padding:6px 8px">最近决策</th><th style="padding:6px 8px">最近回报</th><th style="padding:6px 8px">失败 / 回滚证据</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <tbody>
+                        <tr v-for="d in pck.devices" :key="d.sn" style="border-bottom:1px solid #f5f5f5">
+                          <td style="padding:6px 8px;font-family:monospace">{{ d.sn }}<div v-if="d.frozen" style="font-size:11px;color:#C0392B">❄ 已冻结</div></td>
+                          <td style="padding:6px 8px">{{ d.product_model || '—' }}<div style="font-size:11px;color:#999">v{{ d.launcher_version_code }}</div></td>
+                          <td style="padding:6px 8px">{{ d.active_content_version || '—' }}</td>
+                          <td style="padding:6px 8px">{{ d.pending_content_version || '—' }}<div style="font-size:11px;color:#999">{{ d.activation_state || '' }}</div></td>
+                          <td style="padding:6px 8px">{{ d.last_decision || '—' }}<div v-if="d.last_offer_at" style="font-size:11px;color:#999">offer {{ new Date(d.last_offer_at).toLocaleString() }}</div></td>
+                          <td style="padding:6px 8px"><span v-if="d.last_result" :style="{ color: d.last_result.stage === 'confirmed' ? '#3A8A3A' : (d.last_result.status === 'failed' ? '#B03A3A' : '#666') }">{{ d.last_result.to_version }} {{ d.last_result.stage }}/{{ d.last_result.status }}</span><span v-else style="color:#999">—</span><div style="font-size:11px;color:#999">check {{ d.last_check_at ? new Date(d.last_check_at).toLocaleString() : '—' }}</div></td>
+                          <td style="padding:6px 8px;font-size:12px"><div v-if="d.last_failure" style="color:#B03A3A">✗ {{ d.last_failure.to_version }} {{ d.last_failure.error_code || d.last_failure.stage }}</div><div v-if="d.last_rollback" style="color:#E8833A">↩ {{ d.last_rollback.from_version }}→{{ d.last_rollback.to_version }}</div><span v-if="!d.last_failure && !d.last_rollback" style="color:#999">—</span></td>
+                          <td style="padding:6px 8px;white-space:nowrap"><el-button size="small" @click="pckLog(d)">日志</el-button><el-button size="small" :type="d.frozen ? 'success' : 'danger'" plain @click="pckFreeze(d, !d.frozen)">{{ d.frozen ? '解冻' : '冻结' }}</el-button></td>
+                        </tr>
+                        <tr v-if="!pck.devices.length"><td colspan="8" style="padding:14px 8px;color:#999">暂无设备上报 PCK 状态（等新 Launcher 接入 content_state 后出现）</td></tr>
+                      </tbody>
+                    </table>
+                    <pre v-if="pck.logText" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:320px;overflow:auto">{{ pck.logText }}</pre>
+                  </div>
                 </div>
-                <!-- 设备运行配置（坐姿冷却等；合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821） -->
+                <!-- 🧩 版本与 One-shot（2026-09-13 B89；API routes/admin-data.ts /oneshot*；开关存 server config.db runtime_flag 秒生效；版本卡读随 server 部署的 release.json）-->
+                <div v-if="khNav==='release' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">🧩 版本与 One-shot</div>
+                    <el-button size="small" :loading="release.loading" @click="loadRelease()">刷新</el-button>
+                    <span v-if="release.error" style="color:#E8833A;font-size:12px">{{ release.error }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">版本卡来自随 server 部署的 release.json（发版时更新）；开关存 server 数据库，改后下一次设备唤醒签发即生效，不用重启。</div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">生产版本</div>
+                    <div v-if="release.data && release.data.release && release.data.release.ok">
+                      <div style="font-size:15px;font-weight:800;margin-bottom:4px">{{ release.data.release.data.current.label }} <span :style="{ color: release.data.release.data.current.oneshot ? '#2E9E5B' : '#888', fontSize: '12px', fontWeight: 400, marginLeft: '8px' }">{{ release.data.release.data.current.oneshot ? '具备 One-shot（唤醒 + 指令连说）' : '无 One-shot' }}</span></div>
+                      <div style="font-size:12px;color:#6B7785;margin-bottom:10px">{{ release.data.release.data.current.notes }}</div>
+                      <div style="display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:13px">
+                        <div style="color:#6B7785">生效时间</div><div>{{ release.data.release.data.current.since }}</div>
+                        <div style="color:#6B7785">Server</div><div><code>{{ release.data.release.data.current.server_commit }}</code> · tag <code>{{ release.data.release.data.current.server_tag }}</code></div>
+                        <div style="color:#6B7785">Worker</div><div><code>{{ release.data.release.data.current.worker.unit }}</code> · commit <code>{{ release.data.release.data.current.worker.commit }}</code> · sha <code>{{ release.data.release.data.current.worker.sha256_prefix }}</code> · {{ release.data.release.data.current.worker.max_jobs }} 路</div>
+                        <div style="color:#6B7785">APK</div><div>{{ release.data.release.data.current.apk }}</div>
+                      </div>
+                      <div style="margin-top:14px;font-weight:700;font-size:13px">历史版本</div>
+                      <table style="width:100%;font-size:12px;border-collapse:collapse;margin-top:6px">
+                        <tr style="color:#6B7785;text-align:left"><th style="padding:4px 6px">版本</th><th style="padding:4px 6px">One-shot</th><th style="padding:4px 6px">Server</th><th style="padding:4px 6px">Worker</th><th style="padding:4px 6px">APK</th><th style="padding:4px 6px">说明</th></tr>
+                        <tr v-for="h in release.data.release.data.history" :key="h.label" style="border-top:1px solid #EEF1F5"><td style="padding:4px 6px;font-weight:600">{{ h.label }}</td><td style="padding:4px 6px">{{ h.oneshot ? '有' : '无' }}</td><td style="padding:4px 6px"><code>{{ h.server_commit }}</code></td><td style="padding:4px 6px">{{ h.worker }}</td><td style="padding:4px 6px">{{ h.apk }}</td><td style="padding:4px 6px;color:#6B7785">{{ h.notes }}</td></tr>
+                      </table>
+                    </div>
+                    <div v-else-if="release.data && release.data.release" style="color:#E8833A;font-size:12px">release.json 读不到：{{ release.data.release.error }}（{{ release.data.release.path }}）</div>
+                    <div v-else style="color:#888;font-size:12px">加载中…</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">One-shot 签发开关 <span v-if="release.data" style="font-weight:400;font-size:12px;color:#888;margin-left:8px">当前生效：<b>{{ release.data.policy.effective }}</b>（来源：{{ policySourceLabel(release.data.policy.source) }}）· 派单目标 <code>{{ release.data.agent_name || '未配置（fail-closed，一律不签）' }}</code> · 灰度名单 {{ release.data.allowlist_count }} 台</span></div>
+                    <div style="font-size:12px;color:#6B7785;margin-bottom:10px">capability = 全量：升到含迁移 APK 的设备自动具备 One-shot；allowlist = 只灰度名单内设备；off = 一台都不签。</div>
+                    <el-radio-group v-model="release.form.policy" size="small">
+                      <el-radio-button label="capability">capability（One-shot 全量）</el-radio-button>
+                      <el-radio-button label="allowlist">allowlist（只灰度名单）</el-radio-button>
+                      <el-radio-button label="off">off（关闭）</el-radio-button>
+                    </el-radio-group>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+                      <input v-model="release.form.note" placeholder="备注（为什么改，可选，≤200 字）" style="flex:1;min-width:220px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:12px" />
+                      <el-button type="primary" size="small" :loading="release.saving" :disabled="!release.data || release.form.policy === release.data.policy.effective" @click="applyPolicy()">应用</el-button>
+                      <el-button size="small" :loading="release.saving" :disabled="!release.data || !release.data.policy.override" @click="clearPolicyOverride()">清除后台覆盖（回到 env 值）</el-button>
+                    </div>
+                    <div v-if="release.data && release.data.policy.override" style="font-size:12px;color:#888;margin-top:8px">后台覆盖：<b>{{ release.data.policy.override.value }}</b> · {{ new Date(release.data.policy.override.updated_at).toLocaleString() }} · {{ release.data.policy.override.updated_by }}<span v-if="release.data.policy.override.note"> · {{ release.data.policy.override.note }}</span></div>
+                    <div v-if="release.data" style="font-size:12px;color:#888;margin-top:4px">服务器 env 值：{{ release.data.policy.env || '未设（= allowlist）' }}</div>
+                    <div v-if="release.data" style="margin-top:12px;padding:10px 12px;background:#FFF7E6;border:1px solid #FFE1A8;border-radius:8px;font-size:12px;color:#8A5A00;white-space:pre-wrap">{{ release.data.caveat }}</div>
+                    <pre v-if="release.applyResult" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(release.applyResult, null, 2) }}</pre>
+                  </div>
+                  <!-- 📝 下一版待办（2026-09-14 川哥：v1.2 待更新内容清单，相关待办都记这里，每次版本更新有来源；API /api/admin/oneshot/todos*；删除=软删 dropped 仍可追）-->
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap">
+                      <div style="font-weight:700">📝 下一版待办 <span style="font-weight:400;font-size:12px;color:#888">（{{ release.todo.target }} 待更新内容 · 开放 {{ todoOpen().length }} 条）</span></div>
+                      <el-button size="small" text @click="release.todo.showClosed = !release.todo.showClosed">{{ release.todo.showClosed ? '收起已完成/已放弃' : '看已完成/已放弃（' + todoClosed().length + '）' }}</el-button>
+                    </div>
+                    <div style="font-size:12px;color:#6B7785;margin-bottom:10px">相关改动先记在这里（要改什么 + 来源），发版时逐条对照勾完成；「放弃」只是标记，来源永远可追。</div>
+                    <div v-if="!todoOpen().length" style="font-size:12px;color:#999;margin-bottom:8px">暂无待办</div>
+                    <div v-for="td in todoOpen()" :key="td.id" style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #EEF1F5">
+                      <el-tag size="small" :type="td.owner==='codex' ? 'warning' : td.owner==='川哥' ? 'success' : 'info'" style="flex-shrink:0">{{ td.owner }}</el-tag>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:13px;white-space:pre-wrap">{{ td.text }}</div>
+                        <div style="font-size:11px;color:#909399;margin-top:2px">{{ td.target }} · 来源：{{ td.source || '—' }} · {{ td.created_by }} {{ new Date(td.created_at).toLocaleString() }}</div>
+                      </div>
+                      <div style="display:flex;gap:6px;flex-shrink:0">
+                        <el-button size="small" type="success" plain :loading="release.todo.saving" @click="setTodoStatus(td, 'done')">完成</el-button>
+                        <el-button size="small" type="danger" plain :loading="release.todo.saving" @click="setTodoStatus(td, 'dropped')">放弃</el-button>
+                      </div>
+                    </div>
+                    <div v-if="release.todo.showClosed">
+                      <div v-for="td in todoClosed()" :key="td.id" style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid #EEF1F5;opacity:.65">
+                        <el-tag size="small" :type="td.status==='done' ? 'success' : 'info'" style="flex-shrink:0">{{ td.status==='done' ? '已完成' : '已放弃' }}</el-tag>
+                        <div style="flex:1;min-width:0">
+                          <div style="font-size:13px;text-decoration:line-through;white-space:pre-wrap">{{ td.text }}</div>
+                          <div style="font-size:11px;color:#909399;margin-top:2px">{{ td.target }} · {{ td.owner }} · 来源：{{ td.source || '—' }} · {{ td.updated_by }} {{ new Date(td.updated_at).toLocaleString() }}</div>
+                        </div>
+                        <el-button size="small" plain :loading="release.todo.saving" @click="setTodoStatus(td, 'open')">恢复</el-button>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap">
+                      <input v-model="release.todo.text" placeholder="要更新什么（必填，≤300 字）" style="flex:2;min-width:240px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:13px">
+                      <input v-model="release.todo.source" placeholder="来源（回执/分支/排查稿/日期，≤200 字）" style="flex:2;min-width:200px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:13px">
+                      <el-select v-model="release.todo.owner" size="small" style="width:96px"><el-option v-for="o in ['cc','codex','川哥','其它']" :key="o" :label="o" :value="o"></el-option></el-select>
+                      <input v-model="release.todo.target" placeholder="v1.2" style="width:70px;padding:6px 8px;border:1px solid #DCDFE6;border-radius:6px;font-size:13px">
+                      <el-button type="primary" size="small" :loading="release.todo.saving" :disabled="!release.todo.text.trim()" @click="addTodo()">加入待办</el-button>
+                    </div>
+                  </div>
+                </div>
+                <!-- 🏇 赛马配置（2026-09-03 川哥：赛马机制后台可选可配 + 延时测试；API routes/admin-data.ts /worker-race*；通道=热词发布 forced-command，64.90 脚本内纪律重启+健康自检+回滚） -->
+                <div v-if="khNav==='race' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">🏇 赛马配置</div>
+                    <el-button size="small" :loading="race.loading" @click="loadRace(); loadRaceStats()">刷新</el-button>
+                    <span v-if="race.error" style="color:#E8833A;font-size:12px">{{ race.error }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">worker 每轮同时发主路（大脑，带人设与记忆）和兜底路；主路在 grace 内出首字即胜，兜底只在主路慢于 grace 时接管。应用配置 = 写 64.90 env + 纪律重启 worker（约 15 秒；有设备通话时会拦，可勾选强制）。</div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">现役配置<span v-if="race.data && race.data.worker" style="font-weight:400;font-size:12px;color:#888;margin-left:8px">worker {{ race.data.worker.unit_active ? '运行中' : '未运行' }} · PID {{ race.data.worker.main_pid }} · 近 90s 活动行 {{ race.data.worker.recent_activity }}</span></div>
+                    <div style="display:grid;grid-template-columns:150px 1fr;gap:8px 12px;align-items:center;font-size:13px">
+                      <div style="color:#6B7785">主路（大脑，只读）</div><div><code>{{ race.data && race.data.worker.file ? race.data.worker.file.LLM_BASE_URL : '—' }}</code> · 模型 <b>{{ race.data && race.data.worker.file ? race.data.worker.file.LLM_MODEL : '—' }}</b> · thinking {{ race.data && race.data.worker.file ? race.data.worker.file.LLM_THINKING : '—' }}</div>
+                      <div style="color:#6B7785">主路 grace（ms）</div><div><input type="number" min="200" max="5000" step="50" v-model.number="race.form.grace" style="width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">主路在此时长内出首字即胜；低于主路中位会让兜底频繁抢胜（丢人设记忆）</span></div>
+                      <div style="color:#6B7785">兜底 Base</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.base_preset" size="small" style="width:280px"><el-option v-for="p in (race.data ? race.data.presets : [])" :key="p.key" :label="p.label" :value="p.key"></el-option><el-option label="自定义 URL" value="custom"></el-option></el-select><input v-if="race.form.base_preset==='custom'" v-model="race.form.base_custom" placeholder="https://…" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><code v-else style="font-size:12px;color:#999">{{ raceBaseUrl() }}</code></div>
+                      <div style="color:#6B7785">兜底模型</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.model" size="small" filterable style="width:280px"><el-option v-for="m in (race.data ? race.data.catalog : [])" :key="m.model" :label="m.model + '（' + raceTierTag(m.tier) + (m.ttft_prod_ms ? '，真 prompt ' + m.ttft_prod_ms + 'ms' : '') + '）'" :value="m.model" :disabled="m.tier==='unsupported'"></el-option><el-option label="自定义模型名" value="__custom"></el-option></el-select><input v-if="race.form.model==='__custom'" v-model="race.form.model_custom" placeholder="model name" style="width:220px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><span v-else style="font-size:12px;color:#999">{{ (race.data && race.data.catalog.find(function (m) { return m.model === race.form.model; }) || {}).note || '' }}</span></div>
+                      <div style="color:#6B7785">兜底 thinking</div><div><el-select v-model="race.form.thinking" size="small" style="width:160px"><el-option label="disabled（关思考，推荐）" value="disabled"></el-option><el-option label="enabled" value="enabled"></el-option><el-option label="adaptive" value="adaptive"></el-option></el-select></div>
+                      <div style="color:#6B7785">兜底 API key</div><div><input type="password" v-model="race.form.key" autocomplete="new-password" :placeholder="race.data && race.data.worker.file && race.data.worker.file.LLM_FALLBACK_API_KEY && race.data.worker.file.LLM_FALLBACK_API_KEY.set ? ('已配置 ' + race.data.worker.file.LLM_FALLBACK_API_KEY.hint + '（' + race.data.worker.file.LLM_FALLBACK_API_KEY.len + ' 位），留空不改') : '未配置'" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">后台永不回显整串；换套餐记得同时换 Base</span></div>
+                      <div style="color:#6B7785;align-self:start;padding-top:6px">兜底人设</div><div><textarea v-model="race.form.instructions" rows="4" style="width:100%;max-width:820px;padding:6px 8px;border:1px solid #dcdfe6;border-radius:6px;font-size:12px;line-height:1.5"></textarea><div style="font-size:12px;color:#999">{{ race.form.instructions.length }}/1200 字 · 单行；禁引号、反引号、$、反斜杠 · 主路走大脑，这段只影响兜底路胜出的轮次</div></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+                      <el-button type="primary" :loading="race.saving" @click="saveRace()">保存并纪律重启 worker</el-button>
+                      <el-checkbox v-model="race.force">强制（忽略通话检查）</el-checkbox>
+                      <span v-if="race.data && race.data.worker && race.data.worker.file && race.data.worker.proc && raceProcMismatch().length" style="color:#E8833A;font-size:12px">⚠️ 进程生效值 ≠ 文件值：{{ raceProcMismatch().join('、') }}（改过 env 未重启？）</span>
+                    </div>
+                    <pre v-if="race.applyResult" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(race.applyResult, null, 1) }}</pre>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">大脑内赛马（server 侧，只读）<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">改这里要动 server env + pm2 重启，找 cc</span></div>
+                    <div v-if="race.data && race.data.brain" style="font-size:13px">provider <b>{{ race.data.brain.provider || '—' }}</b> · 主路 <b>{{ race.data.brain.main_model || '—' }}</b> <code style="color:#999">{{ race.data.brain.main_base }}</code> · 兜底 <b>{{ race.data.brain.fallback_model || '—' }}</b> <code style="color:#999">{{ race.data.brain.fallback_base }}</code></div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-weight:700">现役实测（worker journal「llm race won」）</div><el-select v-model="race.statsHours" size="small" style="width:110px" @change="loadRaceStats()"><el-option label="24 小时" :value="24"></el-option><el-option label="48 小时" :value="48"></el-option><el-option label="7 天" :value="168"></el-option></el-select><el-button size="small" :loading="race.statsLoading" @click="loadRaceStats()">🔄</el-button></div>
+                    <div v-if="race.stats" style="font-size:13px">轮次 <b>{{ race.stats.n }}</b> · 主路胜 <b style="color:#3B7A99">{{ race.stats.won_main }}</b> · 兜底胜 <b style="color:#E8833A">{{ race.stats.won_fallback }}</b>（{{ race.stats.n ? Math.round(race.stats.won_fallback * 100 / race.stats.n) : 0 }}%）· 首字 p50 <b>{{ race.stats.p50 }}</b> / p90 {{ race.stats.p90 }} / p95 {{ race.stats.p95 }} / max {{ race.stats.max }} ms<div style="font-size:12px;color:#888;margin-top:4px">兜底胜出轮的首字（ms）：{{ (race.stats.fallback_won_ttft || []).join(' · ') || '无' }}</div></div>
+                    <div v-else style="color:#999;font-size:12px">{{ race.statsLoading ? '统计中…' : '暂无' }}</div>
+                  </div>
+                  <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:6px">⏱ 延时测试<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">从 64.90 直连候选模型（用当前兜底 Base 与 key）测流式首字；每格 1~5 次，总预算 140 秒</span></div>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px">
+                      <el-checkbox v-for="m in (race.data ? race.data.catalog : [])" :key="m.model" v-model="race.bench.models[m.model]" :disabled="m.tier==='unsupported'"><span>{{ m.model }}</span> <span :style="{color: raceTierColor(m.tier), fontSize:'11px'}">{{ raceTierTag(m.tier) }}</span></el-checkbox>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+                      <el-radio-group v-model="race.bench.prompt" size="small"><el-radio-button label="short">短提示（60 字）</el-radio-button><el-radio-button label="device">某台设备的生产 prompt</el-radio-button></el-radio-group>
+                      <el-select v-if="race.bench.prompt==='device'" v-model="race.bench.sn" size="small" filterable placeholder="选设备" style="width:260px"><el-option v-for="d in devcfgDeviceOptions()" :key="d.sn" :label="d.label" :value="d.sn"></el-option></el-select>
+                      <span style="font-size:12px;color:#6B7785">次数</span><el-select v-model="race.bench.runs" size="small" style="width:70px"><el-option v-for="n in [1,2,3,4,5]" :key="n" :label="n" :value="n"></el-option></el-select>
+                      <el-button type="primary" size="small" :loading="race.bench.running" @click="runRaceBench()">开始测试</el-button>
+                      <span v-if="race.bench.error" style="color:#E8833A;font-size:12px">{{ race.bench.error }}</span>
+                    </div>
+                    <div v-if="race.bench.result" style="font-size:12px;color:#888;margin-bottom:6px">Base {{ race.bench.result.base }} · prompt {{ race.bench.result.prompt }}（{{ race.bench.result.system_chars }} 字）· 耗时 {{ race.bench.result.elapsed_ms }} ms<span v-if="race.bench.result.truncated" style="color:#E8833A">（超预算，已截断）</span></div>
+                    <table v-if="race.bench.result" style="width:100%;border-collapse:collapse;font-size:13px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">问句</th><th style="padding:6px 8px">模型</th><th style="padding:6px 8px">首字各次（ms）</th><th style="padding:6px 8px">中位</th><th style="padding:6px 8px">最大</th><th style="padding:6px 8px">失败</th><th style="padding:6px 8px">回复样例</th></tr></thead>
+                      <tbody><tr v-for="row in raceBenchTable()" :key="row.user + row.model" style="border-bottom:1px solid #f5f5f5"><td style="padding:6px 8px">{{ row.user }}</td><td style="padding:6px 8px;font-family:monospace">{{ row.model }}</td><td style="padding:6px 8px">{{ row.list }}</td><td style="padding:6px 8px;font-weight:700">{{ row.med }}</td><td style="padding:6px 8px">{{ row.max }}</td><td style="padding:6px 8px" :style="{color: row.errs ? '#C0392B' : '#999'}">{{ row.errs }}</td><td style="padding:6px 8px;color:#666">{{ row.sample }}</td></tr></tbody>
+                    </table>
+                  </div>
+                </div>
+                <!-- 🎙 语音链路配置（2026-09-03 晚 川哥：供应商/方案/密钥后台手动配，不再找 cc 改 env；API routes/admin-data.ts /worker-voice；通道=热词发布 forced-command，64.90 脚本 voice_get/voice_set 纪律重启+健康自检+回滚；字段表由 server VOICE_FIELDS 单源渲染） -->
+                <div v-if="khNav==='voice' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                    <div style="font-size:17px;font-weight:800">🎙 语音链路</div>
+                    <el-button size="small" :loading="voice.loading" @click="loadVoice()">刷新</el-button>
+                    <span v-if="voice.error" style="color:#E8833A;font-size:12px">{{ voice.error }}</span>
+                    <span v-if="voice.data && voice.data.worker && voice.data.worker.ok" style="font-size:12px;color:#888">worker {{ voice.data.worker.unit_active ? '运行中' : '未运行' }} · PID {{ voice.data.worker.main_pid }} · 近 90s 活动行 {{ voice.data.worker.recent_activity }}</span>
+                  </div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">现役：识别=火山 Seed ASR 2.0 流式 + 二遍整段重识别；合成=讯飞。可选项由 worker 二进制决定（识别只有火山，合成 火山/讯飞），换别家仍需 cc 写代码。应用 = 写 64.90 <code>rust-worker.env</code>（覆盖层，python 线不受影响）+ 纪律重启 worker（约 15 秒；有设备通话时会拦，可勾选强制）；启动失败会自动回滚到上一份快照。密钥后台永不回显，留空即不改。</div>
+                  <div v-for="g in voiceGroups()" :key="g.name" style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:10px">{{ g.name }}</div>
+                    <div style="display:grid;grid-template-columns:190px 1fr;gap:8px 12px;align-items:center;font-size:13px">
+                      <template v-for="f in g.fields" :key="f.key">
+                        <div style="color:#6B7785">{{ f.label }}<div style="font-size:11px;color:#aaa"><code>{{ f.key }}</code></div></div>
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                          <el-select v-if="f.type==='select'" v-model="voice.form[f.key]" size="small" filterable allow-create default-first-option style="width:360px"><el-option v-for="o in (f.options || [])" :key="o.v" :label="o.l" :value="o.v"></el-option></el-select>
+                          <el-switch v-else-if="f.type==='toggle'" :model-value="voice.form[f.key]==='1'" @change="voiceToggle(f.key, $event)"></el-switch>
+                          <input v-else-if="f.type==='number'" type="number" :min="f.min" :max="f.max" :step="f.step || 1" v-model="voice.form[f.key]" style="width:120px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                          <input v-else-if="f.type==='secret'" type="password" v-model="voice.form[f.key]" autocomplete="new-password" :placeholder="voiceSecretPlaceholder(f.key)" style="width:360px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                          <input v-else v-model="voice.form[f.key]" style="width:360px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                          <span style="color:#999;font-size:12px">{{ f.hint }}<span v-if="!voiceIsSecret(f.key)"> · 来源 {{ voiceOrigin(f.key) }}</span></span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:12px;margin-top:4px;margin-bottom:14px">
+                    <el-button type="primary" :loading="voice.saving" :disabled="!(voice.data && voice.data.ok)" @click="saveVoice()">保存并纪律重启 worker</el-button>
+                    <el-checkbox v-model="voice.force">强制（忽略通话检查）</el-checkbox>
+                    <span v-if="voiceMismatch().length" style="color:#E8833A;font-size:12px">⚠️ 进程生效值 ≠ 文件值：{{ voiceMismatch().join('、') }}（改过 env 未重启？）</span>
+                  </div>
+                  <pre v-if="voice.applyResult" style="background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(voice.applyResult, null, 1) }}</pre>
+                </div>
+                <!-- 设备运行配置（通用键表：后端 CONFIG_KEYS 为真源，前端按 keys 渲染；合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + 2026-09-03 server 自用键 local_audio.refresh_days） -->
                 <div v-if="khNav==='devcfg' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
                     <div style="font-size:17px;font-weight:800">设备配置</div>
                     <el-button size="small" :loading="devcfg.loading" @click="loadDevcfg()">刷新</el-button>
                   </div>
-                  <div style="font-size:12px;color:#888;margin-bottom:14px">设备每 30 分钟同步一次，改动<b>最迟 30 分钟后</b>全量生效；设备重启立即同步。离线设备沿用本地缓存值。</div>
-                  <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-                    <div style="font-weight:700;margin-bottom:4px">坐姿提醒冷却时间<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">两次坐姿提醒的最短间隔 · 合法范围 10~86400 秒</span></div>
-                    <div style="font-size:12px;color:#888;margin-bottom:10px">全局默认（未设置时设备用 APK 内置 {{ devcfgKey0.builtin_default }}s）· 当前：<b :style="{ color: devcfgKey0.global !== null ? '#3A8A3A' : '#999' }">{{ devcfgKey0.global !== null ? (devcfgKey0.global + 's（后台已配）') : ('内置默认 ' + devcfgKey0.builtin_default + 's') }}</b></div>
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-                      <input type="number" min="10" max="86400" step="1" v-model.number="devcfg.globalInput" :disabled="devcfg.savingGlobal" style="width:120px;padding:6px 10px;border:1px solid #dcdfe6;border-radius:6px;font-size:14px" />
-                      <span style="font-size:13px;color:#666">秒 ≈ {{ devcfgFmtMin(devcfg.globalInput) }}</span>
-                      <el-button size="small" type="primary" :loading="devcfg.savingGlobal" @click="saveDevcfgGlobal()">保存全局默认</el-button>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">设备键：设备每 30 分钟同步一次，改动<b>最迟 30 分钟后</b>全量生效，设备重启立即同步。标「仅服务端」的键不下发设备，保存后从下一次每日批（沪时 3 点档）开始生效。</div>
+                  <div v-for="k in devcfg.keys" :key="k.key" style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
+                    <div style="font-weight:700;margin-bottom:4px">{{ k.label || k.key }}<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">{{ k.hint }} · <code>{{ k.key }}</code></span><el-tag v-if="k.server_only" size="small" type="info" style="margin-left:8px">仅服务端</el-tag></div>
+                    <div style="font-size:12px;color:#888;margin-bottom:10px">全局默认（未设置时用内置 {{ devcfgFmtVal(k, k.builtin_default) }}）· 当前：<b :style="{ color: k.global !== null ? '#3DBE78' : '#909399' }">{{ k.global !== null ? devcfgFmtVal(k, k.global) : '内置默认' }}</b><span v-if="k.global_updated_at" style="margin-left:8px">更新于 {{ new Date(k.global_updated_at).toLocaleString() }}</span></div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+                      <el-switch v-if="k.unit === 'bool'" v-model="devcfg.inputs[k.key]" :disabled="devcfg.savingKey === k.key" active-text="开" inactive-text="关"></el-switch>
+                      <input v-else type="number" :min="k.min" :max="k.max" step="1" v-model.number="devcfg.inputs[k.key]" :disabled="devcfg.savingKey === k.key" style="width:120px;padding:6px 10px;border:1px solid #dcdfe6;border-radius:6px">
+                      <span v-if="k.unit !== 'bool'" style="font-size:13px;color:#666">{{ devcfgUnit(k) }}<template v-if="k.unit === 'sec'"> ≈ {{ devcfgFmtMin(devcfg.inputs[k.key]) }}</template><span style="color:#999"> · 范围 {{ k.min }}~{{ k.max }}</span></span>
+                      <el-button size="small" type="primary" :loading="devcfg.savingKey === k.key" @click="saveDevcfgGlobal(k)">保存全局默认</el-button>
+                    </div>
+                    <div style="border-top:1px dashed #eee;padding-top:10px">
+                      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+                        <div style="font-weight:600;font-size:13px">按设备覆盖<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">覆盖优先于全局默认；清除后回落全局</span></div>
+                        <el-select v-model="devcfg.pick[k.key]" placeholder="选择设备（台账）" size="small" filterable style="width:300px">
+                          <el-option v-for="d in devcfgDeviceOptions()" :key="d.sn" :label="d.label" :value="d.sn"></el-option>
+                        </el-select>
+                        <el-select v-if="k.unit === 'bool'" v-model="devcfg.pickVal[k.key]" size="small" style="width:90px"><el-option :value="true" label="开"></el-option><el-option :value="false" label="关"></el-option></el-select>
+                        <input v-else type="number" :min="k.min" :max="k.max" step="1" v-model.number="devcfg.pickVal[k.key]" style="width:90px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px">
+                        <span v-if="k.unit !== 'bool'" style="font-size:12px;color:#666">{{ devcfgUnit(k) }}</span>
+                        <el-button size="small" type="primary" plain :loading="devcfg.savingKey === 'ov:' + k.key" @click="addDevcfgOverride(k)">添加覆盖</el-button>
+                      </div>
+                      <table style="width:100%;border-collapse:collapse;font-size:13px">
+                        <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">覆盖值</th><th style="padding:6px 8px">更新时间</th><th style="padding:6px 8px">操作</th></tr></thead>
+                        <tbody>
+                          <tr v-for="o in devcfgOverridesFor(k)" :key="o.sn + o.key" style="border-bottom:1px solid #f5f5f5">
+                            <td style="padding:6px 8px">{{ devcfgDeviceLabel(o.sn) }}</td>
+                            <td style="padding:6px 8px;font-weight:700">{{ devcfgFmtVal(k, o.value) }}<span v-if="k.unit === 'sec'" style="font-weight:400;color:#999"> ≈ {{ devcfgFmtMin(o.value) }}</span></td>
+                            <td style="padding:6px 8px">{{ new Date(o.updated_at).toLocaleString() }}</td>
+                            <td style="padding:6px 8px;white-space:nowrap">
+                              <el-button size="small" @click="editDevcfgOverride(o)">修改</el-button>
+                              <el-button size="small" type="danger" @click="clearDevcfgOverride(o)">清除</el-button>
+                            </td>
+                          </tr>
+                          <tr v-if="!devcfgOverridesFor(k).length"><td colspan="4" style="padding:10px 8px;color:#999">暂无设备覆盖，全部设备使用全局默认</td></tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
-                  <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-                      <div style="font-weight:700">按设备覆盖<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">覆盖优先于全局默认；清除后回落全局</span></div>
-                      <el-button size="small" @click="addDevcfgOverride()">添加覆盖</el-button>
+                  <div v-if="!devcfg.keys.length && !devcfg.loading" style="color:#999;font-size:13px">暂无配置键（后端 CONFIG_KEYS 为空）</div>
+                </div>
+                <div v-if="khNav==='diaglog' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px;flex-wrap:wrap">
+                    <div>
+                      <div class="kh-h1">诊断日志</div>
+                      <div class="kh-sub">设备端（Godot → Launcher）上云的结构化诊断事件 · 服务端二次脱敏 · 保留 {{ diaglog.config.retention_days || 14 }} 天 · 限频 {{ diaglog.config.batch_rpm || 30 }} 批/分钟/设备 · 被拒事件为终态（端侧已删）</div>
                     </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                      <el-select v-model="diaglog.hours" size="small" style="width:130px" @change="loadDiaglog()">
+                        <el-option :value="1" label="近 1 小时"></el-option><el-option :value="24" label="近 24 小时"></el-option><el-option :value="72" label="近 3 天"></el-option><el-option :value="168" label="近 7 天"></el-option><el-option :value="336" label="近 14 天"></el-option>
+                      </el-select>
+                      <el-button size="small" :loading="diaglog.loading" @click="loadDiaglog()">刷新</el-button>
+                    </div>
+                  </div>
+                  <el-alert v-if="diaglog.error" :title="diaglog.error" type="error" :closable="false" style="margin-bottom:12px"></el-alert>
+                  <div class="kh-card" style="padding:14px;margin-bottom:14px;display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <b>上云开关（全局）</b>
+                      <el-switch :model-value="diaglog.switch.global" :loading="diaglog.switchSaving" @change="setDiaglogSwitch($event)"></el-switch>
+                      <span style="font-size:12px;color:#888">{{ diaglog.switch.global ? '开：设备可上传' : '关：接口返回 503 LOG_UPLOAD_DISABLED，设备 15 分钟后重试' }}<span v-if="diaglog.switch.global_is_builtin">（内置默认）</span></span>
+                    </div>
+                    <div style="font-size:12px;color:#888">灰度：<b>{{ dlAllowlistLabel() }}</b></div>
+                    <div style="font-size:12px;color:#888">设备配置快照下发键：<b>{{ diaglog.switch.device_visible ? '已下发' : '未下发（等 Launcher 确认能消费）' }}</b></div>
+                    <div v-if="diaglog.config.injection_active" style="font-size:12px;color:#e6a23c">⚠️ 验收注入生效中：{{ diaglog.config.injection_active }}</div>
+                  </div>
+                  <div v-if="diaglog.switch.overrides && diaglog.switch.overrides.length" class="kh-card" style="padding:10px 14px;margin-bottom:14px;font-size:13px">
+                    <b>按设备覆盖：</b>
+                    <span v-for="o in diaglog.switch.overrides" :key="o.sn" style="margin-right:14px">{{ devcfgDeviceLabel(o.sn) }} → {{ o.value ? '开' : '关' }} <el-button size="small" link type="danger" @click="clearDiaglogOverride(o.sn)">清除</el-button></span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px">
+                    <div class="kh-card" style="padding:12px"><div style="font-size:12px;color:#888">事件</div><div style="font-size:22px;font-weight:800">{{ diaglog.summary.events_total || 0 }}</div></div>
+                    <div class="kh-card" style="padding:12px"><div style="font-size:12px;color:#888">批次</div><div style="font-size:22px;font-weight:800">{{ diaglog.summary.batches_total || 0 }}</div></div>
+                    <div class="kh-card" style="padding:12px"><div style="font-size:12px;color:#888">被拒</div><div style="font-size:22px;font-weight:800;color:#f56c6c">{{ diaglog.summary.rejected_total || 0 }}</div></div>
+                    <div class="kh-card" style="padding:12px"><div style="font-size:12px;color:#888">按级别</div><div style="font-size:13px;line-height:24px"><span v-for="l in (diaglog.summary.levels || [])" :key="l.level" style="margin-right:8px"><el-tag size="small" :type="dlLevelType(l.level)">{{ l.level }}</el-tag> {{ l.count }}</span><span v-if="!(diaglog.summary.levels || []).length" style="color:#999">—</span></div></div>
+                  </div>
+                  <div class="kh-card" style="padding:14px;margin-bottom:14px">
+                    <div style="font-weight:700;margin-bottom:8px">设备（窗口内有上传）</div>
                     <table style="width:100%;border-collapse:collapse;font-size:13px">
-                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">SN</th><th style="padding:6px 8px">覆盖值</th><th style="padding:6px 8px">更新时间</th><th style="padding:6px 8px">操作</th></tr></thead>
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">设备</th><th style="padding:6px 8px">最近上传</th><th style="padding:6px 8px">批次</th><th style="padding:6px 8px">接受</th><th style="padding:6px 8px">重复</th><th style="padding:6px 8px">被拒</th><th style="padding:6px 8px">脱敏</th><th style="padding:6px 8px">钟差</th><th style="padding:6px 8px">资源包</th><th style="padding:6px 8px">操作</th></tr></thead>
                       <tbody>
-                        <tr v-for="o in devcfg.overrides" :key="o.sn + o.key" style="border-bottom:1px solid #f5f5f5">
-                          <td style="padding:6px 8px;font-family:monospace">{{ o.sn }}</td>
-                          <td style="padding:6px 8px;font-weight:700">{{ o.value }}s<span style="font-weight:400;color:#999"> ≈ {{ devcfgFmtMin(o.value) }}</span></td>
-                          <td style="padding:6px 8px">{{ new Date(o.updated_at).toLocaleString() }}</td>
-                          <td style="padding:6px 8px;white-space:nowrap">
-                            <el-button size="small" @click="editDevcfgOverride(o)">修改</el-button>
-                            <el-button size="small" type="danger" @click="clearDevcfgOverride(o)">清除</el-button>
-                          </td>
+                        <tr v-for="d in (diaglog.summary.devices || [])" :key="d.sn" style="border-bottom:1px solid #f5f5f5">
+                          <td style="padding:6px 8px">{{ devcfgDeviceLabel(d.sn) }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap">{{ dlAgo(d.last_received_ms) }}</td>
+                          <td style="padding:6px 8px">{{ d.batches }}</td>
+                          <td style="padding:6px 8px">{{ d.accepted }}</td>
+                          <td style="padding:6px 8px">{{ d.duplicated }}</td>
+                          <td style="padding:6px 8px" :style="{ color: d.rejected ? '#f56c6c' : '' }">{{ d.rejected }}</td>
+                          <td style="padding:6px 8px">{{ d.redacted }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap">{{ dlSkew(d.last_skew_ms) }}</td>
+                          <td style="padding:6px 8px;font-family:monospace;font-size:12px">{{ d.last_content_version || '—' }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap"><el-button size="small" @click="diaglog.filters.sn = d.sn; loadDiaglogEvents()">看事件</el-button></td>
                         </tr>
-                        <tr v-if="!devcfg.overrides.length"><td colspan="4" style="padding:14px 8px;color:#999">暂无设备覆盖，全部设备使用全局默认</td></tr>
+                        <tr v-if="!(diaglog.summary.devices || []).length"><td colspan="10" style="padding:10px 8px;color:#999">窗口内没有设备上传过</td></tr>
                       </tbody>
                     </table>
                   </div>
+                  <div class="kh-card" style="padding:14px;margin-bottom:14px">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+                      <div style="font-weight:700">事件</div>
+                      <el-select v-model="diaglog.filters.sn" size="small" clearable filterable placeholder="全部设备" style="width:300px" @change="loadDiaglogEvents()"><el-option v-for="d in devcfgDeviceOptions()" :key="d.sn" :label="d.label" :value="d.sn"></el-option></el-select>
+                      <el-select v-model="diaglog.filters.level" size="small" clearable placeholder="全部级别" style="width:120px" @change="loadDiaglogEvents()"><el-option v-for="l in ['fatal','error','warn','info','debug']" :key="l" :value="l" :label="l"></el-option></el-select>
+                      <el-select v-model="diaglog.filters.event" size="small" clearable filterable placeholder="全部事件" style="width:280px" @change="loadDiaglogEvents()"><el-option v-for="e in (diaglog.config.event_allowlist || [])" :key="e" :value="e" :label="e"></el-option></el-select>
+                      <el-button size="small" :loading="diaglog.eventsLoading" @click="loadDiaglogEvents()">查询</el-button>
+                      <span style="font-size:12px;color:#999">最多 200 条，按服务端接收时间倒序</span>
+                    </div>
+                    <div style="overflow-x:auto">
+                    <table style="width:100%;min-width:960px;border-collapse:collapse;font-size:12px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">接收时间</th><th style="padding:6px 8px">设备</th><th style="padding:6px 8px">级别</th><th style="padding:6px 8px">事件</th><th style="padding:6px 8px">message</th><th style="padding:6px 8px">data</th><th style="padding:6px 8px">钟差</th></tr></thead>
+                      <tbody>
+                        <tr v-for="r in diaglog.events" :key="r.sn + r.client_event_id" style="border-bottom:1px solid #f5f5f5;vertical-align:top">
+                          <td style="padding:6px 8px;white-space:nowrap">{{ new Date(r.server_received_ms).toLocaleString() }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap">…{{ String(r.sn).slice(-8) }}</td>
+                          <td style="padding:6px 8px"><el-tag size="small" :type="dlLevelType(r.level)">{{ r.level }}</el-tag></td>
+                          <td style="padding:6px 8px;font-family:monospace">{{ r.event }}<div style="color:#999">{{ r.component }}<span v-if="r.trace_id"> · {{ r.trace_id }}</span></div></td>
+                          <td style="padding:6px 8px;min-width:200px;max-width:300px;word-break:break-all">{{ r.message }}<span v-if="r.redacted_count" style="color:#e6a23c"> · 脱敏 {{ r.redacted_count }}</span></td>
+                          <td style="padding:6px 8px;min-width:260px;max-width:420px"><pre style="margin:0;max-height:140px;overflow:auto;white-space:pre-wrap;word-break:break-all;font-size:11px">{{ dlJson(r.data) }}</pre></td>
+                          <td style="padding:6px 8px;white-space:nowrap">{{ dlSkew(r.clock_skew_ms) }}</td>
+                        </tr>
+                        <tr v-if="!diaglog.events.length && !diaglog.eventsLoading"><td colspan="7" style="padding:10px 8px;color:#999">没有匹配的事件</td></tr>
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+                  <div class="kh-card" style="padding:14px;margin-bottom:14px">
+                    <div style="font-weight:700;margin-bottom:8px">被拒事件<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">原因统计：<span v-for="x in (diaglog.summary.rejected_reasons || [])" :key="x.reason" style="margin-right:10px"><code>{{ x.reason }}</code> {{ x.count }}</span><span v-if="!(diaglog.summary.rejected_reasons || []).length">无</span></span></div>
+                    <div style="overflow-x:auto">
+                    <table style="width:100%;min-width:900px;border-collapse:collapse;font-size:12px">
+                      <thead><tr style="text-align:left;color:#888;border-bottom:1px solid #eee"><th style="padding:6px 8px">时间</th><th style="padding:6px 8px">设备</th><th style="padding:6px 8px">原因</th><th style="padding:6px 8px">事件 / ID</th><th style="padding:6px 8px">摘录（已脱敏）</th></tr></thead>
+                      <tbody>
+                        <tr v-for="r in diaglog.rejected" :key="r.id" style="border-bottom:1px solid #f5f5f5;vertical-align:top">
+                          <td style="padding:6px 8px;white-space:nowrap">{{ new Date(r.server_received_ms).toLocaleString() }}</td>
+                          <td style="padding:6px 8px;white-space:nowrap">…{{ String(r.sn).slice(-8) }}</td>
+                          <td style="padding:6px 8px"><code>{{ r.reason }}</code></td>
+                          <td style="padding:6px 8px;font-family:monospace">{{ r.event || '—' }} <span style="color:#999">{{ r.client_event_id || '(无 ID)' }}</span></td>
+                          <td style="padding:6px 8px;min-width:320px;max-width:520px;color:#666"><div style="max-height:96px;overflow:auto;word-break:break-all;font-family:monospace;font-size:11px">{{ r.excerpt }}</div></td>
+                        </tr>
+                        <tr v-if="!diaglog.rejected.length"><td colspan="5" style="padding:10px 8px;color:#999">窗口内无被拒事件</td></tr>
+                      </tbody>
+                    </table>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="khNav==='servers' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
+                    <div>
+                      <div class="kh-h1">服务器状态</div>
+                      <div class="kh-sub">三台机资源 · systemd / pm2 服务 · worker ↔ KidsHubAI-VoiceKit 连接 —— 同一份只读脚本采集，server 30 秒缓存，本页每分钟自动刷新</div>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                      <span style="font-size:12px;color:#909399">数据采集于 {{ hostsStatus.ts ? hsAgo(hostsStatus.ts) : '—' }}{{ hostsStatus.fetchedAt ? ('，页面 ' + hostsStatus.fetchedAt + ' 拉取') : '' }}</span>
+                      <el-button size="small" :loading="hostsStatus.loading" @click="loadHostsStatus(true)">立即重采</el-button>
+                    </div>
+                  </div>
+                  <el-alert v-if="hostsStatus.error" :title="hostsStatus.error" type="error" :closable="false" style="margin-bottom:12px"></el-alert>
+                  <div v-for="h in hostsStatus.hosts" :key="h.id" class="kh-card" style="padding:14px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+                      <div style="font-size:14px;font-weight:700">{{ h.label }} <el-tag size="small" :type="h.ok ? 'success' : 'danger'" style="margin-left:6px">{{ h.ok ? '可达' : '不可达' }}</el-tag></div>
+                      <div style="font-size:12px;color:#909399">采集 {{ hsAgo(h.fetched_at_ms) }}{{ h.latency_ms != null ? ('，耗时 ' + h.latency_ms + ' ms') : '' }}{{ h.data && h.data.hostname ? ('，主机 ' + h.data.hostname) : '' }}</div>
+                    </div>
+                    <div v-if="!h.ok" style="color:#E8503A;font-size:13px">采集失败：{{ h.error || '未知' }}</div>
+                    <template v-else-if="h.data">
+                      <div style="font-size:13px;line-height:1.9;margin-bottom:8px">
+                        开机 <b>{{ hsDur(h.data.host && h.data.host.uptime_s) }}</b> · 负载 <b>{{ hsNum(h.data.host && h.data.host.load1) }}</b> / {{ hsNum(h.data.host && h.data.host.load5) }} / {{ hsNum(h.data.host && h.data.host.load15) }}（{{ hsNum(h.data.host && h.data.host.nproc) }} 核）· 内存可用 <b>{{ hsGb(h.data.host && h.data.host.mem_avail_mb) }}</b> / {{ hsGb(h.data.host && h.data.host.mem_total_mb) }} · 系统盘已用 <b :style="{color: h.data.host && h.data.host.disk_root_used_pct > 85 ? '#E8503A' : '#1F2933'}">{{ h.data.host && h.data.host.disk_root_used_pct != null ? h.data.host.disk_root_used_pct + '%' : '—' }}</b>（剩 {{ h.data.host && h.data.host.disk_root_avail_gb != null ? h.data.host.disk_root_avail_gb + 'G' : '—' }}）
+                      </div>
+                      <el-table v-if="h.data.services && h.data.services.length" :data="h.data.services" size="small" style="width:100%;margin-bottom:8px">
+                        <el-table-column label="systemd 服务" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.name }}</span></template></el-table-column>
+                        <el-table-column label="状态" width="130"><template #default="{row}"><el-tag size="small" :type="hsSvcType(row)">{{ row.active_state }} / {{ row.sub_state }}</el-tag></template></el-table-column>
+                        <el-table-column label="本代起始" width="230"><template #default="{row}">{{ row.active_since_ms ? (fmtTs(row.active_since_ms) + '（' + hsAgo(row.active_since_ms) + '）') : '—' }}</template></el-table-column>
+                        <el-table-column label="被拉起次数" width="110"><template #default="{row}"><span :style="{color: row.nrestarts > 0 ? '#E8833A' : '#1F2933', fontWeight: row.nrestarts > 0 ? 700 : 400}">{{ row.nrestarts == null ? '—' : row.nrestarts }}</span></template></el-table-column>
+                        <el-table-column label="内存" width="160"><template #default="{row}">{{ hsMb(row.mem_bytes) }}<span v-if="row.mem_high_bytes" style="color:#909399"> / 上限 {{ hsMb(row.mem_high_bytes) }}</span></template></el-table-column>
+                        <el-table-column label="拉起策略" min-width="120"><template #default="{row}">{{ row.restart_policy || '—' }}{{ row.restart_usec ? ('，' + Math.round(row.restart_usec / 1e6) + 's 后') : '' }}</template></el-table-column>
+                      </el-table>
+                      <el-table v-if="h.data.connections && h.data.connections.pm2 && h.data.connections.pm2.length" :data="h.data.connections.pm2" size="small" style="width:100%;margin-bottom:8px">
+                        <el-table-column label="pm2 进程" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.name }}</span></template></el-table-column>
+                        <el-table-column label="状态" width="130"><template #default="{row}"><el-tag size="small" :type="row.status === 'online' ? 'success' : 'danger'">{{ row.status }}</el-tag></template></el-table-column>
+                        <el-table-column label="本代起始" width="230"><template #default="{row}">{{ row.uptime_since_ms ? (fmtTs(row.uptime_since_ms) + '（' + hsAgo(row.uptime_since_ms) + '）') : '—' }}</template></el-table-column>
+                        <el-table-column label="重启次数" width="110"><template #default="{row}">{{ row.restarts == null ? '—' : row.restarts }}</template></el-table-column>
+                        <el-table-column label="内存 / CPU" min-width="160"><template #default="{row}">{{ hsMb(row.mem_bytes) }} / {{ row.cpu_pct == null ? '—' : row.cpu_pct + '%' }}</template></el-table-column>
+                      </el-table>
+                      <el-table v-if="h.data.connections && h.data.connections.worker_links && h.data.connections.worker_links.length" :data="h.data.connections.worker_links" size="small" style="width:100%;margin-bottom:8px">
+                        <el-table-column label="worker ↔ KidsHubAI-VoiceKit" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.agent_name || row.unit }}</span></template></el-table-column>
+                        <el-table-column label="连接" width="100"><template #default="{row}"><el-tag size="small" :type="hsLinkType(row)">{{ hsLinkLabel(row) }}</el-tag></template></el-table-column>
+                        <el-table-column label="注册于" width="230"><template #default="{row}">{{ row.registered_at_ms ? (fmtTs(row.registered_at_ms) + '（' + hsAgo(row.registered_at_ms) + '）') : '—' }}</template></el-table-column>
+                        <el-table-column label="最近断线" width="230"><template #default="{row}">{{ row.last_failure_at_ms ? (fmtTs(row.last_failure_at_ms) + '（' + hsAgo(row.last_failure_at_ms) + '）') : '—' }}</template></el-table-column>
+                        <el-table-column label="断线 24h / 本代" width="120"><template #default="{row}">{{ row.failures_24h }} / {{ row.failures_window }}</template></el-table-column>
+                        <el-table-column label="注册后连续失败" width="120"><template #default="{row}"><span :style="{color: row.consecutive_failures_since_register > 0 ? '#E8503A' : '#1F2933'}">{{ row.consecutive_failures_since_register }}</span></template></el-table-column>
+                        <el-table-column label="放弃退出(本代)" width="120"><template #default="{row}"><span :style="{color: row.give_ups_window > 0 ? '#E8503A' : '#1F2933', fontWeight: row.give_ups_window > 0 ? 700 : 400}">{{ row.give_ups_window }}</span></template></el-table-column>
+                        <el-table-column label="24h 接房" width="90"><template #default="{row}">{{ row.job_accepts_24h }}</template></el-table-column>
+                        <el-table-column label="最近错误" min-width="220"><template #default="{row}"><span style="font-size:12px;color:#909399">{{ row.last_failure_error || '—' }}</span></template></el-table-column>
+                      </el-table>
+                      <el-table v-if="h.data.sidecars && h.data.sidecars.length" :data="h.data.sidecars" size="small" style="width:100%;margin-bottom:8px">
+                        <el-table-column label="判停 / 声纹边车（EOT sidecar）" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.unit }}</span></template></el-table-column>
+                        <el-table-column label="状态" width="110"><template #default="{row}"><el-tag size="small" :type="row.state === 'ok' ? 'success' : (row.state === 'degraded' ? 'warning' : (row.state === 'unit_inactive' ? 'info' : 'danger'))">{{ row.state === 'ok' ? '正常' : (row.state === 'degraded' ? '有告警' : (row.state === 'unit_inactive' ? 'worker 未运行' : '缺失')) }}</el-tag></template></el-table-column>
+                        <el-table-column label="socket" min-width="230"><template #default="{row}"><span style="font-family:monospace;font-size:12px">{{ row.sock || '—' }}</span><span v-if="row.sock" :style="{color: row.listening ? '#3DBE78' : '#E8503A', marginLeft: '6px'}">{{ row.listening ? '在听' : '无监听' }}</span><span v-if="row.shared_with && row.shared_with.length" style="color:#E8833A;font-size:12px;margin-left:6px">共用：{{ row.shared_with.join('、') }}</span></template></el-table-column>
+                        <el-table-column label="进程" width="200"><template #default="{row}">{{ row.pid ? ('pid ' + row.pid + ' · ' + hsMb(row.rss_bytes) + ' · 存活 ' + hsDur(row.age_s)) : '—' }}</template></el-table-column>
+                        <el-table-column label="归属" width="150"><template #default="{row}">{{ row.pid ? (row.spawned_by_this_worker ? '本 worker 拉起' : ('由 ' + (row.owner_unit || '其它进程') + ' 拉起')) : '—' }}</template></el-table-column>
+                        <el-table-column label="最近接通" width="230"><template #default="{row}">{{ row.last_connected_ms ? (fmtTs(row.last_connected_ms) + '（' + hsAgo(row.last_connected_ms) + (row.last_connected_mode ? '，' + row.last_connected_mode : '') + '）') : '—' }}</template></el-table-column>
+                        <el-table-column label="1h 不可用告警" width="120"><template #default="{row}"><span :style="{color: row.unavailable_1h > 0 ? '#E8503A' : '#1F2933', fontWeight: row.unavailable_1h > 0 ? 700 : 400}">{{ row.unavailable_1h == null ? '—' : row.unavailable_1h }}</span></template></el-table-column>
+                      </el-table>
+                      <template v-if="h.data.device_cmd && h.data.device_cmd.length">
+                      <div v-for="d in h.data.device_cmd" :key="'dc-'+d.unit" style="margin-bottom:10px;padding:8px 10px;border:1px solid #E5E9F0;border-radius:8px;background:#FAFBFC">
+                      <div style="font-size:13px;margin-bottom:6px"><b>语音控设备 24h</b> <span style="font-family:monospace;color:#6B7785">{{ d.unit }}</span>：活跃设备 <b>{{ d.active_devices }}</b> 台 / 会话 {{ d.sessions_total }} / 发过命令 <b>{{ d.commanding_devices }}</b> 台 · 提案 <b>{{ d.proposals.total }}</b>（快路 {{ d.proposals.l1 }} / 语法 {{ d.proposals.l1g || 0 }} / 慢路 {{ d.proposals.l2 }} / 芯片 {{ d.proposals.chip }}）· 结果 成功 <b :style="{color:'#3DBE78'}">{{ d.results.succeeded }}</b> / 已是该状态 {{ d.results.already_applied }} / <span :style="{color: d.results.failed > 0 ? '#E8503A' : '#1F2933'}">失败 {{ d.results.failed }}</span> / 无结果 {{ d.results.none }} · 慢路 观察 {{ d.l2.observed }} 执行 {{ d.l2.executed }} 压制 {{ d.l2.suppressed }} 纠正句 {{ d.l2.hints }} · 设备承接音 {{ d.filler_device_picks }} · 语法命中 <b>{{ (d.grammar && d.grammar.hits) || 0 }}</b>（模型同意 {{ (d.grammar && d.grammar.llm_agree) || 0 }} / 模型漏 {{ (d.grammar && d.grammar.llm_missed) || 0 }} / 能不能放行 {{ (d.grammar && d.grammar.modal_hits) || 0 }}） · 语法否决 <b>{{ (d.grammar && d.grammar.vetoes) || 0 }}</b>（未来时间 {{ (d.grammar && d.grammar.veto_new && d.grammar.veto_new.time_future) || 0 }} / 其它房间 {{ (d.grammar && d.grammar.veto_new && d.grammar.veto_new.place) || 0 }} / 陈述了 {{ (d.grammar && d.grammar.veto_new && d.grammar.veto_new.statement_le) || 0 }} / <span :style="{color: (d.grammar && d.grammar.veto_llm_fired) ? '#E8503A' : '#1F2933', fontWeight: (d.grammar && d.grammar.veto_llm_fired) ? 700 : 400}">模型却开火 {{ (d.grammar && d.grammar.veto_llm_fired) || 0 }}</span>） · <span :style="{color: d.misfire_suspects.length ? '#E8503A' : '#1F2933', fontWeight: d.misfire_suspects.length ? 700 : 400}">误触发嫌疑 {{ d.misfire_suspects.length }}</span></div>
+                      <el-table v-if="d.devices.length" :data="d.devices" size="small" style="width:100%;margin-bottom:6px">
+                      <el-table-column label="设备（末 8 位）" width="130"><template #default="{row}"><span style="font-family:monospace">{{ row.sn }}</span></template></el-table-column>
+<el-table-column label="24h 会话" width="90"><template #default="{row}">{{ row.sessions }}</template></el-table-column>
+                      <el-table-column label="提案" width="70"><template #default="{row}">{{ row.proposals }}</template></el-table-column>
+                      <el-table-column label="成功" width="70"><template #default="{row}">{{ row.succeeded }}</template></el-table-column>
+                      <el-table-column label="已是该状态" width="100"><template #default="{row}">{{ row.already_applied }}</template></el-table-column>
+                      <el-table-column label="失败" width="70"><template #default="{row}"><span :style="{color: row.failed > 0 ? '#E8503A' : '#1F2933'}">{{ row.failed }}</span></template></el-table-column>
+                      <el-table-column label="无结果" width="80"><template #default="{row}">{{ row.none }}</template></el-table-column>
+                      <el-table-column label="最近一句" min-width="200"><template #default="{row}"><span style="font-size:12px">{{ row.last_text || '—' }}</span><span style="font-size:12px;color:#909399;margin-left:6px">{{ row.last_ms ? hsAgo(row.last_ms) : '' }}</span></template></el-table-column>
+                      </el-table>
+                      <el-table v-if="d.misfire_suspects.length" :data="d.misfire_suspects" size="small" style="width:100%;margin-bottom:6px">
+                      <el-table-column label="误触发嫌疑（慢路提案但原话无设备词根）" min-width="260"><template #default="{row}"><span style="font-size:12px">{{ row.text }}</span></template></el-table-column>
+                      <el-table-column label="设备" width="120"><template #default="{row}"><span style="font-family:monospace">{{ row.sn }}</span></template></el-table-column>
+                      <el-table-column label="标签" width="70"><template #default="{row}">{{ row.label }}</template></el-table-column>
+                      <el-table-column label="结果" width="130"><template #default="{row}">{{ row.status }}</template></el-table-column>
+                      <el-table-column label="时间" width="170"><template #default="{row}">{{ fmtTs(row.ts_ms) }}</template></el-table-column>
+                      </el-table>
+                      <div v-if="d.recent.length" style="font-size:12px;color:#6B7785">最近提案：<span v-for="(r,i) in d.recent" :key="i" style="margin-right:10px">{{ fmtTs(r.ts_ms) }} {{ r.sn }} 「{{ r.text }}」→{{ r.label }} {{ r.lane }} {{ r.status }}</span></div>
+                      <div v-else style="font-size:12px;color:#909399">24h 内无设备命令提案</div>
+                      </div>
+                      </template>
+                      <div v-if="h.data.connections && h.data.connections.livekit_probe" style="font-size:13px;margin-bottom:6px">本机到 KidsHubAI-VoiceKit（{{ h.data.connections.livekit_probe.host || '?' }}:443）TLS 握手 <b :style="{color: h.data.connections.livekit_probe.tls_ms == null ? '#E8503A' : '#1F2933'}">{{ h.data.connections.livekit_probe.tls_ms == null ? ('失败：' + (h.data.connections.livekit_probe.error || '')) : (h.data.connections.livekit_probe.tls_ms + ' ms') }}</b></div>
+                      <template v-if="h.data.connections && h.data.connections.livekit">
+                        <div style="font-size:13px;margin-bottom:6px">worker 注册事件：24h 注册 <b>{{ h.data.connections.livekit.worker_registered_24h }}</b> / 注销 <b>{{ h.data.connections.livekit.worker_closing_24h }}</b>（7 天 {{ h.data.connections.livekit.worker_registered_7d }} / {{ h.data.connections.livekit.worker_closing_7d }}）· 监听 <span v-for="(v,k) in h.data.connections.listen" :key="k" style="margin-right:6px"><el-tag size="small" :type="v ? 'success' : 'danger'">:{{ k }}</el-tag></span> · 本机 7880 HTTP {{ h.data.connections.local_http && h.data.connections.local_http.status === 200 ? ('200 · ' + h.data.connections.local_http.ms + ' ms') : ('异常 ' + (h.data.connections.local_http ? (h.data.connections.local_http.status || h.data.connections.local_http.error || '') : '')) }}</div>
+                        <div style="font-size:12px;color:#6B7785">最近事件：<span v-for="(e,i) in h.data.connections.livekit.last_events" :key="i" style="margin-right:10px">{{ fmtTs(e.ts_ms) }} {{ e.type === 'registered' ? '注册' : '注销' }} {{ e.agent || '' }}</span><span v-if="!h.data.connections.livekit.last_events.length">7 天内无</span></div>
+                      </template>
+                      <div v-if="h.data.connections && h.data.connections.health" style="font-size:13px">/health <b :style="{color: h.data.connections.health.status === 200 ? '#3DBE78' : '#E8503A'}">{{ h.data.connections.health.status || '失败' }}</b>{{ h.data.connections.health.ms != null ? ('（' + h.data.connections.health.ms + ' ms）') : '' }} · 监听 <span v-for="(v,k) in h.data.connections.listen" :key="k" style="margin-right:6px"><el-tag size="small" :type="v ? 'success' : 'danger'">:{{ k }}</el-tag></span></div>
+                      <div v-if="h.data.errors && h.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:6px">采集告警：{{ h.data.errors.join('；') }}</div>
+                    </template>
+                  </div>
+                  <div v-if="!hostsStatus.hosts.length && !hostsStatus.loading && !hostsStatus.error" style="color:#999;font-size:13px">暂无数据</div>
                 </div>
                 <div v-if="khNav==='devices' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
@@ -1652,20 +2090,24 @@
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日 Session</div><div style="font-size:26px;font-weight:800;color:#3DBE78">{{ deviceData.stats.today_ok }}</div></div>
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日拒绝（403/429）</div><div style="font-size:26px;font-weight:800;color:#E8833A">{{ deviceData.stats.today_rejected }}</div></div>
                     <div class="kh-card" style="padding:14px">
-                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity ? workerStats.capacity.max_jobs : '—' }}）</div>
+                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity ? workerStats.capacity.max_jobs : '—' }}{{ workerStats.breakdown }}）</div>
                       <div v-if="workerStats.capacity" style="font-size:26px;font-weight:800" :style="{color: workerStats.capacity.remaining > 1 ? '#3DBE78' : (workerStats.capacity.remaining === 1 ? '#E8833A' : '#E8503A')}">{{ workerStats.capacity.remaining }}<span style="font-size:13px;color:#909399;font-weight:400"> / 在线 {{ workerStats.capacity.active_total }} 房</span></div>
                       <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
-                    <div class="kh-card" style="padding:14px">
-                      <div style="font-size:12px;color:#6B7785">Worker 服务器实时资源（64.90）</div>
-                      <template v-if="workerStats.machine">
+                    <div class="kh-card" style="padding:14px" v-for="m in workerStats.machines" :key="m.id">
+                      <div style="font-size:12px;color:#6B7785">Worker 实时资源 · {{ m.label }}</div>
+                      <template v-if="m.ok && m.data">
                         <div style="font-size:13px;margin-top:4px;line-height:1.9">
-                          内存可用 <b>{{ (workerStats.machine.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (workerStats.machine.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ workerStats.machine.load1 }}</b>/{{ workerStats.machine.nproc }}核<br/>
-                          rust <b>{{ Math.round(workerStats.machine.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(workerStats.machine.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="workerStats.machine.rust_active==='active' ? 'success' : 'danger'">{{ workerStats.machine.rust_active }}</el-tag>
+                          内存可用 <b>{{ (m.data.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (m.data.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ m.data.load1 }}</b>/{{ m.data.nproc }}核 · 并发上限 <b>{{ m.data.max_jobs == null ? '—' : m.data.max_jobs }}</b><br/>
+                          rust <b>{{ Math.round(m.data.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(m.data.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="m.data.rust_active==='active' ? 'success' : 'danger'">{{ m.data.rust_active }}</el-tag>
                         </div>
                         <div style="font-size:11px;color:#B0B8C4;margin-top:2px">更新于 {{ workerStats.fetchedAt || '—' }} · 每分钟自动刷新</div>
                       </template>
-                      <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
+                      <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : ('暂不可用' + (m.error ? '：' + m.error : '')) }}</div>
+                    </div>
+                    <div class="kh-card" style="padding:14px" v-if="!workerStats.machines.length">
+                      <div style="font-size:12px;color:#6B7785">Worker 服务器实时资源</div>
+                      <div style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
                   </div>
                   <div class="kh-card" style="padding:14px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1675,6 +2117,47 @@
                     <el-input v-model="deviceAdd.phone" placeholder="家长手机号（选填，已注册即绑定）" style="width:210px" size="small" clearable></el-input>
                     <el-button size="small" type="primary" :loading="deviceData.loading" @click="addDevice">添加设备</el-button>
                     <span style="font-size:12px;color:#909399">添加后默认启用；env 存量设备添加进台账即由台账接管（停用可压制）</span>
+                  </div>
+                  <div class="kh-card" style="padding:14px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+                      <div style="font-size:13px;font-weight:700">已上线待认领（设备配网阶段自报，10 分钟有效）
+                        <el-tag size="small" :type="pairingPending.enabled ? 'success' : 'info'" style="margin-left:8px">{{ pairingPending.enabled ? '预授权自动认领：开' : '预授权自动认领：关（仅人工确认）' }}</el-tag>
+                      </div>
+                      <el-button size="small" :loading="pairingPending.loading" @click="loadPairingPending">刷新</el-button>
+                    </div>
+                    <el-table :data="pairingPending.items" style="width:100%" size="small" :empty-text="pairingPending.loading ? '加载中...' : '暂无上线待认领的设备（每 20 秒自动刷新）'">
+                      <el-table-column label="设备 SN" width="230">
+                        <template #default="{row}"><span style="font-family:monospace;font-weight:700">{{ row.sn }}</span><el-tag v-if="!row.registered" size="small" type="danger" style="margin-left:6px">不在台账</el-tag></template>
+                      </el-table-column>
+                      <el-table-column label="备注" min-width="110"><template #default="{row}">{{ row.note || '—' }}</template></el-table-column>
+                      <el-table-column label="上线时刻" width="150"><template #default="{row}">{{ fmtTs(row.announced_at) }}</template></el-table-column>
+                      <el-table-column label="剩余" width="70"><template #default="{row}">{{ row.expires_in_s }}s</template></el-table-column>
+                      <el-table-column label="状态" width="130">
+                        <template #default="{row}"><el-tag size="small" :type="row.state === 'pending' ? (row.parent_bound ? 'info' : 'warning') : 'success'">{{ row.state === 'claimed' ? ('已认领·' + (row.confirmed_by || '')) : (row.state === 'confirmed' ? ('已确认·' + (row.confirmed_by || '')) : (row.parent_bound ? '已绑定·待恢复' : '待确认')) }}</el-tag></template>
+                      </el-table-column>
+                      <el-table-column label="预授权" width="190">
+                        <template #default="{row}">
+                          <span v-if="row.preauth && row.preauth.active" style="font-size:12px">{{ row.preauth.phone }} · 至 {{ fmtTs(row.preauth.until_at) }}</span>
+                          <span v-else-if="row.preauth" style="font-size:12px;color:#909399">{{ row.preauth.used_at ? '已消费' : '已过期' }}</span>
+                          <span v-else style="color:#C0C4CC">—</span>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="一键确认" min-width="280">
+                        <template #default="{row}">
+                          <div v-if="row.state === 'pending' && row.registered">
+                            <!-- 恢复合同（2026-09-17）：已绑定设备的待认领 = 凭据丢失后重上线，等原家长扫码恢复，或后台按台账家长一键恢复（旧凭据随即作废） -->
+                            <div v-if="row.parent_bound" style="font-size:11px;color:#909399;margin-bottom:4px">已绑家长 {{ row.parent_phone || '—' }} · 等原家长扫码恢复；或不填手机号点「恢复认领」按台账家长恢复（旧凭据随即作废）</div>
+                            <div style="display:flex;gap:6px;align-items:center">
+                              <el-input v-model="pairingPending.phone[row.sn]" :placeholder="row.parent_phone ? ('默认 ' + row.parent_phone) : '家长手机号'" size="small" style="width:150px" clearable></el-input>
+                              <el-button size="small" type="primary" @click="confirmPairing(row)">{{ row.parent_bound ? '恢复认领' : '确认认领' }}</el-button>
+                            </div>
+                          </div>
+                          <span v-else-if="row.state === 'claimed'" style="font-size:12px;color:#67C23A">已认领，凭据已下发{{ row.claimed_at ? ('（' + fmtTs(row.claimed_at) + '）') : '' }}</span>
+                          <span v-else-if="row.state === 'confirmed'" style="font-size:12px;color:#67C23A">已确认，等设备自动拉取凭据</span>
+                          <span v-else style="font-size:12px;color:#909399">先添加进台账</span>
+                        </template>
+                      </el-table-column>
+                    </el-table>
                   </div>
                   <div class="kh-card" style="overflow:hidden;margin-bottom:16px">
                     <el-table :data="filteredDevices" style="width:100%" :empty-text="deviceData.loading ? '加载中...' : (deviceFilter.phone ? '无匹配该手机号的设备' : '台账为空（env 兜底设备见下方）')">
@@ -1690,6 +2173,13 @@
                           <span v-else style="color:#C0C4CC">—</span>
                         </template>
                       </el-table-column>
+                      <el-table-column label="预授权认领" width="200">
+                        <template #default="{row}">
+                          <template v-if="row.preauth && row.preauth.active"><span style="font-size:12px">至 {{ fmtTs(row.preauth.until_at) }}</span> <el-button type="danger" link size="small" @click="cancelPreauth(row)">取消</el-button></template>
+                          <span v-else-if="row.preauth && row.preauth.used_at" style="font-size:12px;color:#67C23A">已认领 {{ fmtTs(row.preauth.used_at) }}</span>
+                          <template v-else><span style="color:#C0C4CC">—</span> <el-button type="primary" link size="small" :disabled="row.status !== 'active'" @click="openPreauth(row)">预授权</el-button></template>
+                        </template>
+                      </el-table-column>
                       <el-table-column label="状态" width="90">
                         <template #default="{row}"><el-switch :model-value="row.status" active-value="active" inactive-value="disabled" @change="toggleDeviceStatus(row, $event)"></el-switch></template>
                       </el-table-column>
@@ -1697,6 +2187,7 @@
                         <template #default="{row}">
                           <span v-if="!row.credential_expires_at" style="color:#909399">未签发</span>
                           <span v-else :style="{color: row.credential_expires_at < Date.now() ? '#E8503A' : '#1F2933', fontWeight:600}">{{ fmtTs(row.credential_expires_at) }}</span>
+                          <small v-if="row.credential_source==='pairing_claim'" title="配网 claim 签发（台账列由最近一次 claim 会话推导，误差≤1s）" style="color:#909399;margin-left:4px">配网</small>
                         </template>
                       </el-table-column>
                       <el-table-column label="最近活跃" width="150">
@@ -1914,7 +2405,7 @@
                                 <text x="188" y="176" text-anchor="middle" font-size="9" fill="#909399">sub必须==SN</text>
 
                                 <line x1="370" y1="108" x2="406" y2="108" stroke="#3B7A99" stroke-width="1.5" marker-end="url(#isoArrow)"></line>
-                                <text x="388" y="50" text-anchor="middle" font-size="10" font-family="monospace" fill="#3B7A99">LiveKit token</text>
+                                <text x="388" y="50" text-anchor="middle" font-size="9" font-family="monospace" fill="#3B7A99">KidsHubAI-VoiceKit token</text>
                                 <text x="388" y="176" text-anchor="middle" font-size="9" fill="#909399">video.room 钉死</text>
 
                                 <line x1="570" y1="108" x2="606" y2="108" stroke="#3B7A99" stroke-width="1.5" marker-end="url(#isoArrow)"></line>
@@ -1963,7 +2454,7 @@
                                 <text x="442" y="54" font-size="10.5" fill="#6B7785">限频 10/min/SN · ADB serial / Android ID 一律 400，只认 MCU SN</text>
                                 <!-- 步骤 2 -->
                                 <circle cx="32" cy="98" r="13" fill="#3B7A99"></circle><text x="32" y="102" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="700">2</text>
-                                <text x="56" y="96" font-size="12.5" font-weight="600" fill="#1F2D3D">签发 LiveKit token（绑房）</text>
+                                <text x="56" y="96" font-size="12.5" font-weight="600" fill="#1F2D3D">签发 KidsHubAI-VoiceKit token（绑房）</text>
                                 <text x="56" y="112" font-size="10.5" fill="#909399" font-family="monospace">room = sn-&lt;SN&gt;-&lt;unix秒&gt;</text>
                                 <rect x="430" y="80" width="540" height="40" rx="7" fill="#EAF3F7"></rect>
                                 <text x="442" y="97" font-size="10.5" fill="#3B7A99">video.room 钉死本次房名，换房无效 · TTL 3600s 作废 · 无跨会话恢复</text>
@@ -1971,7 +2462,7 @@
                                 <!-- 步骤 3 -->
                                 <circle cx="32" cy="156" r="13" fill="#3B7A99"></circle><text x="32" y="160" text-anchor="middle" font-size="11" fill="#FFFFFF" font-weight="700">3</text>
                                 <text x="56" y="154" font-size="12.5" font-weight="600" fill="#1F2D3D">设备与 rust worker 进房</text>
-                                <text x="56" y="170" font-size="10.5" fill="#909399">LiveKit 按房派单 worker</text>
+                                <text x="56" y="170" font-size="10.5" fill="#909399">KidsHubAI-VoiceKit 按房派单 worker</text>
                                 <rect x="430" y="138" width="540" height="40" rx="7" fill="#EAF3F7"></rect>
                                 <text x="442" y="155" font-size="10.5" fill="#3B7A99">一房一 job：房间不复用 · worker 不持有任何账号态</text>
                                 <text x="442" y="170" font-size="10.5" fill="#6B7785">trace/session_id 经 agent metadata 服务端下发，不信设备自述</text>
@@ -2221,7 +2712,8 @@
                               </div>
                               <template v-if="brainState.view.profile">
                                 <div style="font-size:13px;margin-bottom:8px;color:#6B7785"><span v-if="brainState.view.profile.preferred_address">喜欢被叫「{{ brainState.view.profile.preferred_address }}」</span><span v-else>对话中可自然习得称呼偏好</span></div>
-                                <el-tag v-for="i in brainState.view.profile.interests" :key="i.value" size="small" style="margin-right:6px">{{ i.value }}</el-tag>
+                                <el-tag v-for="i in brainState.view.profile.interests" :key="i.value" size="small" :type="i.state==='verified'?'success':(i.state==='retracted'?'danger':'info')" :effect="i.state==='retracted'?'plain':'light'" :title="(i.evidence?('原话：'+i.evidence):'无原话')+((i.mention_days&&i.mention_days.length)?('｜提及日：'+i.mention_days.join(',')):'')" :closable="i.state!=='retracted'" @close="vetoInterest(i)" style="margin-right:6px;margin-bottom:4px">{{ i.value }}<span v-if="i.state!=='verified'" style="opacity:.75">·{{ i.state==='retracted'?(i.retracted_by==='parent'?'已否决':'已撤回'):'待确认' }}</span></el-tag>
+                                <div v-if="brainState.view.profile.interests.length" style="font-size:11px;color:#909399;margin-top:4px">绿=已确认(≥2 天提到)　灰=待确认(只在孩子提起时接)　红=已否决/已撤回；点 × 否决（之后语音再提也不升）；悬停看原话</div>
                                 <span v-if="!brainState.view.profile.interests.length" style="font-size:12px;color:#909399">暂无兴趣标签（语音对话中自动沉淀）</span>
                               </template>
                               <div v-else style="font-size:12px;color:#909399">暂无档案——填写上方昵称/性别保存即建档（记忆抽取随之激活）</div>
@@ -2277,6 +2769,54 @@
                                 </div>
                                 <div v-if="!g.items.length" style="font-size:12px;color:#909399">暂无</div>
                               </div>
+                              <!-- 记忆白盒（2026-09-03）：抽取流水 / 因果账本 / 已撤回 —— 与人格成长 tab 的成长账本同一套思路 -->
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:14px;border-left:4px solid #6C8CFF">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                                  <span style="font-weight:700">🧪 抽取流水（最近 20 轮）</span>
+                                  <span style="font-size:12px;color:#909399">设备房每轮孩子发言后抽一次；条目少时看这里：是没抽到、没过门、还是重复</span>
+                                </div>
+                                <div style="font-size:11px;color:#6B7785;margin-bottom:8px">与人格成长的联动：「值得关心」(M5) 与「自我叙事」(M6) 读的就是本页条目；特质/风格不读记忆，只读逐轮情绪与投入度。</div>
+                                <div v-if="!brainState.whitebox || !(brainState.whitebox.extraction_log || []).length" style="font-size:12px;color:#909399">暂无流水（上线于 2026-09-03 19 时，之后的每一轮都会记）</div>
+                                <table v-else style="width:100%;font-size:12px;border-collapse:collapse">
+                                  <thead><tr style="color:#909399;text-align:left"><th style="padding:4px 6px">时间</th><th>孩子话(字)</th><th>模型(ms)</th><th>画像字段</th><th>情景候选→入库</th><th>被门拒/备注</th></tr></thead>
+                                  <tbody>
+                                    <tr v-for="e in brainState.whitebox.extraction_log" :key="e.id" style="border-top:1px solid #F2F5F8">
+                                      <td style="padding:4px 6px;white-space:nowrap">{{ fmtTs(e.ts) }}</td>
+                                      <td>{{ e.user_len }}</td>
+                                      <td :style="{color: e.ok ? '#6B7785' : '#E8833A'}">{{ e.ok ? e.llm_ms : '失败' }}</td>
+                                      <td>{{ e.patch_keys || '—' }}</td>
+                                      <td><span :style="{color: e.added ? '#3DBE78' : (e.candidates ? '#E8833A' : '#B0B8C1')}">{{ e.candidates }}→{{ e.added }}</span></td>
+                                      <td style="color:#909399">{{ e.rejected || e.note || '—' }}</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:14px;border-left:4px solid #F0A93A">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                                  <span style="font-weight:700">🔗 记忆因果账本</span>
+                                  <span style="font-size:12px;color:#909399">改称呼 / 又喜欢 / 观察更新 / 关心事，每条带触发原话；人格成长 tab 的时间线也能按 profile 模块筛到</span>
+                                </div>
+                                <div v-if="!brainState.whitebox || !(brainState.whitebox.ledger || []).length" style="font-size:12px;color:#909399">暂无</div>
+                                <div v-for="ev in ((brainState.whitebox && brainState.whitebox.ledger) || [])" :key="ev.id" style="font-size:12px;padding:6px 4px;border-top:1px solid #F2F5F8">
+                                  <span style="color:#909399">{{ fmtTs(ev.ts) }}</span>
+                                  <span style="margin-left:8px;font-weight:600">{{ memRuleLabel(ev.rule) }}</span>
+                                  <span style="margin-left:8px;color:#6B7785">{{ ev.dimension }}：{{ ev.from_val || '—' }} → {{ ev.to_val || '—' }}</span>
+                                  <div v-if="ev.trigger_quote" style="color:#8A94A0;margin-top:2px">触发原话：「{{ ev.trigger_quote }}」</div>
+                                </div>
+                              </div>
+                              <div class="kh-card" style="padding:14px 16px;margin-bottom:14px;border-left:4px solid #C0C7D0">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                                  <span style="font-weight:700">🗂 已撤回 / 已取代 / 已兑现 / 已归档</span>
+                                  <span style="font-size:12px;color:#909399">旧条不删，记「被谁取代」和失效时间</span>
+                                </div>
+                                <div v-if="!brainState.whitebox || !(brainState.whitebox.inactive_items || []).length" style="font-size:12px;color:#909399">暂无</div>
+                                <div v-for="it in ((brainState.whitebox && brainState.whitebox.inactive_items) || [])" :key="it.id" style="font-size:12px;padding:6px 4px;border-top:1px solid #F2F5F8">
+                                  <el-tag size="small" :type="it.status==='resolved' ? 'success' : (it.status==='retracted' ? 'danger' : 'info')" style="margin-right:6px">{{ it.status }}</el-tag>
+                                  <span>{{ it.type }} · {{ it.content }}</span>
+                                  <span v-if="it.superseded_by" style="color:#909399;margin-left:6px">← {{ it.superseded_by }}</span>
+                                  <span v-if="it.valid_to" style="color:#B0B8C1;margin-left:6px">失效 {{ fmtTs(it.valid_to) }}</span>
+                                </div>
+                              </div>
                             </template>
                             <!-- 添加记忆 -->
                             <div class="kh-card" style="padding:14px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -2303,7 +2843,7 @@
                             <div class="kh-card" style="padding:14px 16px">
                               <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                                 <span style="font-weight:700">💬 最近对话（{{ (brainState.view.recent_conversation || []).length }} 条）</span>
-                                <span style="font-size:12px;color:#909399">最新在上 · 落库于每轮回复完成后 · 记忆每 3 轮孩子发言抽取一次</span>
+                                <span style="font-size:12px;color:#909399">最新在上 · 落库于每轮回复完成后 · 设备房每轮孩子发言后抽取一次（Web 端每 3 轮）</span>
                               </div>
                               <div v-if="!(brainState.view.recent_conversation || []).length" style="padding:30px;text-align:center;font-size:13px;color:#909399">暂无对话——设备接通并说话后这里会出现记录</div>
                               <div v-for="m in (brainState.view.recent_conversation || [])" :key="m.id" style="display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid #F2F5F8;align-items:flex-start">
@@ -2354,7 +2894,7 @@
                                     <div>· SN 三重校验：BJP003+真实日期+8 位流水，共 20 位</div>
                                     <div>· 凭据绑定：设备 JWT 的 sub 必须 == 请求 SN，不匹配 403（拿别机凭据换票无效）</div>
                                     <div>· 白名单 fail-closed：台账 status 优先 → 无记录回落 env → 都没有 = 拒绝（不配就一台不放）</div>
-                                    <div>· token 绑房：LiveKit token 钉死本次房名，换房无效；到期作废，无跨会话恢复</div>
+                                    <div>· token 绑房：KidsHubAI-VoiceKit token 钉死本次房名，换房无效；到期作废，无跨会话恢复</div>
                                     <div>· 签发后自检：token 解码与响应逐项对撞，不一致拒绝交付</div>
                                     <div style="color:#B0B8C1;font-family:monospace;font-size:11px;margin-top:4px">device-session.ts · device-sn.ts</div>
                                   </div>
@@ -2550,7 +3090,7 @@
                                 <el-radio-group v-model="growth.stylePicked" style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
                                   <el-radio v-for="t in growth.styleAvailable" :key="t.key" :value="t.key" style="height:auto;margin-right:0">
                                     <span style="font-weight:600">{{ t.name }}</span>
-                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效<template v-if="growth.styleSetAt">（{{ hwFmtTime(growth.styleSetAt) }} 设定）</template></span>
+                                    <span v-if="t.key === growth.styleTemplate" style="color:#2E7D4F;font-size:11px;margin-left:6px">✓ 当前生效<template v-if="growth.styleSetAt">（{{ hwFmtTime(growth.styleSetAt) }} 设定<template v-if="growth.styleSource"> · {{ growth.styleSource === 'voice' ? '孩子语音' : '家长' }}</template>）</template></span>
                                     <div style="font-size:12px;color:#909399;line-height:1.5">{{ t.desc }}</div>
                                   </el-radio>
                                 </el-radio-group>
@@ -2642,6 +3182,13 @@
                                   <el-button size="small" :loading="growth.running" @click="runInsightNow(brainState.selectedSn)">🧪 立即跑画像+叙事（M3/M6）</el-button>
                                   <el-button size="small" type="warning" :loading="growth.resetting" @click="resetPersona(brainState.selectedSn, 'persona')">♻️ 重置人格状态（保留本地音频）</el-button>
                                   <el-button size="small" type="danger" :loading="growth.resetting" @click="resetPersona(brainState.selectedSn, 'all')">🗑 全清（含本地音频 revision 归零）</el-button>
+                                </div>
+                                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px">
+                                  <el-select v-model="growth.rollbackDay" size="small" placeholder="退回到某天的特质快照" style="width:220px" clearable>
+                                    <el-option v-for="s in growth.snapshots" :key="s.day" :label="s.day + (s.template ? ' · ' + s.template : ' · 出厂')" :value="s.day"></el-option>
+                                  </el-select>
+                                  <el-button size="small" :disabled="!growth.rollbackDay" :loading="growth.rollingBack" @click="rollbackTrait(brainState.selectedSn)">⏪ 退回该天特质</el-button>
+                                  <span style="font-size:11px;color:#909399">每天沪时 3 点批前自动存一份；退回前会把「现在」存成今天的快照，可反悔</span>
                                 </div>
                                 <div style="font-size:11px;color:#909399;margin-top:8px">安全档清 relation/style/insight/trait/ledger 五样；全清额外把本地音频条目+文件+revision 归零（已发布 revision 是与 Android 的冻结物，日常勿用全清）。</div>
                               </div>
@@ -2791,7 +3338,7 @@
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
                       <div class="kh-h1">Worker 热词管理</div>
-                      <div class="kh-sub">打断语 · ASR 识别热词 · 退出词 —— DB 草稿真源，发布经受限通道写 64.90 并按纪律重启 worker（自动备份+健康自检+失败回滚）</div>
+                      <div class="kh-sub">打断语 · ASR 识别热词 · 退出词 · 播放中附和词 —— DB 草稿真源，发布经受限通道写 64.90 并按纪律重启 worker（自动备份+健康自检+失败回滚）</div>
                     </div>
                     <el-button size="small" :loading="hw.loading" @click="loadHotwords()">刷新</el-button>
                   </div>
@@ -3955,11 +4502,11 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'servers', l: '🖥 服务器状态' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }, { k: 'diaglog', l: '🧾 诊断日志' }];
 
         // ── OTA 升级管理（2026-08-20 P0；API 见 routes/ota.ts；合同 CC_P003_OTA_*）──
         // 上传用 XHR（要上传进度，140MB 包体）；实测校验在服务端（APK 本体为真值）。
-        var ota = reactive({ loading: false, uploading: false, uploadPct: 0, uploadMsg: '', uploadOk: false, file: null, releases: [], devices: [] });
+        var ota = reactive({ loading: false, uploading: false, uploadPct: 0, uploadMsg: '', uploadOk: false, file: null, form: { notes: '' }, releases: [], devices: [] });
         function otaPickFile(e) {
           ota.file = (e.target.files && e.target.files[0]) || null;
           ota.uploadMsg = '';
@@ -3981,7 +4528,7 @@
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
           ota.uploading = true; ota.uploadPct = 0; ota.uploadMsg = ''; ota.uploadOk = false;
           var xhr = new XMLHttpRequest();
-          xhr.open('PUT', '/api/admin/ota/upload?filename=' + encodeURIComponent(ota.file.name));
+          xhr.open('PUT', '/api/admin/ota/upload?filename=' + encodeURIComponent(ota.file.name) + '&notes=' + encodeURIComponent(String(ota.form.notes || '').trim()));
           xhr.setRequestHeader('Authorization', 'Bearer ' + token);
           xhr.upload.onprogress = function (ev) { if (ev.lengthComputable) ota.uploadPct = Math.round(ev.loaded / ev.total * 100); };
           xhr.onload = function () {
@@ -3991,7 +4538,7 @@
             if (xhr.status === 200 && j.ok) {
               ota.uploadOk = true;
               ota.uploadMsg = '✓ 校验通过并入库（草稿）：v' + j.release.version_code + ' ' + j.release.version_name + ' · ' + (j.release.size_bytes / 1048576).toFixed(1) + 'MB · sha ' + j.release.sha256.slice(0, 12) + '…';
-              ota.file = null;
+              ota.file = null; ota.form.notes = '';
               loadOta();
             } else {
               ota.uploadOk = false;
@@ -4000,6 +4547,14 @@
           };
           xhr.onerror = function () { ota.uploading = false; ota.uploadOk = false; ota.uploadMsg = '✗ 网络错误'; };
           xhr.send(ota.file);
+        }
+        // 更新说明（2026-09-07 川哥：每版要知道更新了什么、解决了什么）：任何状态可改；设备 check 的 offer.notes 同源
+        function otaEditNotes(rel) {
+          ElementPlus.ElMessageBox.prompt('这一版更新了什么、解决了什么问题（多行可换行；不超过 2000 字）', '更新说明 v' + rel.version_code + ' ' + (rel.version_name || ''), { inputType: 'textarea', inputValue: rel.notes || '', inputPlaceholder: '例：修复首句截头；招呼语尾静音裁除后放行', confirmButtonText: '保存', cancelButtonText: '取消' }).then(function (r) {
+            deviceApi('/api/admin/ota/releases/' + rel.version_code + '/notes', { method: 'PATCH', body: JSON.stringify({ notes: String(r.value || '') }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已保存更新说明'); loadOta(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
         }
         function otaPublish(rel, mode) {
           if (mode === 'all') {
@@ -4050,10 +4605,374 @@
           }).catch(function () {});
         }
 
-        // ── 设备运行配置（2026-08-21；API 见 routes/device-config.ts；合同 CC_P003_POSTURE_* + cc 回执）──
-        // 后端为真防线（范围校验/键注册表/revision 单调）；前端只做交互。生效延迟=设备 30min 轮询。
-        var devcfg = reactive({ loading: false, savingGlobal: false, keys: [], overrides: [], globalInput: 900 });
-        var devcfgKey0 = computed(function () { return devcfg.keys[0] || { key: 'posture.reminder_cooldown_sec', builtin_default: 900, global: null }; });
+        // ── 🏇 赛马配置（2026-09-03；API /api/admin/worker-race*；64.90 脚本 race_* 动作；后端为真防线：白名单/正则/安全窗口/对撞/回滚）──
+        var race = reactive({ loading: false, error: '', data: null, form: { base_preset: 'agent_plan', base_custom: '', model: '', model_custom: '', thinking: 'disabled', key: '', grace: 800, instructions: '' }, force: false, saving: false, applyResult: null, stats: null, statsHours: 48, statsLoading: false, bench: { models: {}, prompt: 'short', sn: '', runs: 3, running: false, result: null, error: '' } });
+        function raceBaseUrl() { if (race.form.base_preset === 'custom') return race.form.base_custom.trim(); var p = ((race.data && race.data.presets) || []).find(function (x) { return x.key === race.form.base_preset; }); return p ? p.url : ''; }
+        function raceModel() { return race.form.model === '__custom' ? race.form.model_custom.trim() : race.form.model; }
+        function raceTierTag(t) { return ({ recommended: '推荐', ok: '可用', caution: '慎用', unsupported: '不可用' })[t] || t; }
+        function raceTierColor(t) { return ({ recommended: '#3DBE78', ok: '#3B7A99', caution: '#E8833A', unsupported: '#C0392B' })[t] || '#909399'; }
+        function raceProcMismatch() {
+          var w = race.data && race.data.worker; if (!w || !w.file || !w.proc) return [];
+          return ['LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS'].filter(function (k) { return (w.file[k] || '') !== (w.proc[k] || ''); });
+        }
+        async function loadRace() {
+          if (!canManageInvites.value) return;
+          race.loading = true; race.error = '';
+          try {
+            var j = await deviceApi('/api/admin/worker-race', { method: 'GET' });
+            race.data = j;
+            if (!j.ok) { race.error = (j.worker && j.worker.error) || j.error || '读取失败（通道不可达）'; }
+            else {
+              var f = j.worker.file || {}; var presets = j.presets || [];
+              var hit = presets.find(function (p) { return p.url === f.LLM_FALLBACK_BASE_URL; });
+              race.form.base_preset = hit ? hit.key : 'custom'; race.form.base_custom = hit ? '' : (f.LLM_FALLBACK_BASE_URL || '');
+              var inCat = (j.catalog || []).some(function (m) { return m.model === f.LLM_FALLBACK_MODEL; });
+              race.form.model = inCat ? f.LLM_FALLBACK_MODEL : '__custom'; race.form.model_custom = inCat ? '' : (f.LLM_FALLBACK_MODEL || '');
+              race.form.thinking = f.LLM_FALLBACK_THINKING || 'disabled';
+              race.form.grace = Number(f.LLM_RACE_MAIN_GRACE_MS || 800);
+              race.form.instructions = f.AGENT_INSTRUCTIONS || '';
+              race.form.key = '';
+              if (!(deviceData.devices || []).length) loadDevices();
+              if (!race.bench.sn && (deviceData.devices || []).length) race.bench.sn = deviceData.devices[0].sn;
+            }
+          } catch (e) { race.error = '无法连接设备服务'; }
+          race.loading = false;
+        }
+        function raceDiff() {
+          var w = race.data && race.data.worker; if (!w || !w.file) return {};
+          var f = w.file, v = {};
+          var b = raceBaseUrl(); if (b && b !== f.LLM_FALLBACK_BASE_URL) v.LLM_FALLBACK_BASE_URL = b;
+          var m = raceModel(); if (m && m !== f.LLM_FALLBACK_MODEL) v.LLM_FALLBACK_MODEL = m;
+          if (race.form.thinking !== f.LLM_FALLBACK_THINKING) v.LLM_FALLBACK_THINKING = race.form.thinking;
+          if (String(race.form.grace) !== String(f.LLM_RACE_MAIN_GRACE_MS)) v.LLM_RACE_MAIN_GRACE_MS = String(race.form.grace);
+          if (race.form.instructions.trim() !== (f.AGENT_INSTRUCTIONS || '')) v.AGENT_INSTRUCTIONS = race.form.instructions.trim();
+          if (race.form.key.trim()) v.LLM_FALLBACK_API_KEY = race.form.key.trim();
+          return v;
+        }
+        async function saveRace() {
+          var v = raceDiff(); var keys = Object.keys(v);
+          if (!keys.length) { ElementPlus.ElMessage.info('没有改动'); return; }
+          var summary = keys.map(function (k) { return k === 'LLM_FALLBACK_API_KEY' ? '密钥：更换' : (k + ' → ' + (k === 'AGENT_INSTRUCTIONS' ? v[k].slice(0, 30) + '…' : v[k])); }).join('\n');
+          try { await ElementPlus.ElMessageBox.confirm('将写入 64.90 并纪律重启 worker（约 15 秒）：\n' + summary, race.force ? '强制应用（忽略通话检查）' : '应用赛马配置', { type: 'warning', confirmButtonText: '应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          race.saving = true; race.applyResult = null;
+          try {
+            var j = await deviceApi('/api/admin/worker-race', { method: 'PUT', body: JSON.stringify({ values: v, force: race.force }) });
+            race.applyResult = j;
+            if (j.ok) { ElementPlus.ElMessage.success('已应用并重启：' + (j.applied || []).join('、')); race.form.key = ''; race.force = false; loadRace(); }
+            else if (j.active_rooms) ElementPlus.ElMessage.warning(j.error);
+            else ElementPlus.ElMessage.error(j.error || '应用失败');
+          } catch (e) { ElementPlus.ElMessage.error('应用失败'); }
+          race.saving = false;
+        }
+        async function loadRaceStats() {
+          if (!canManageInvites.value) return;
+          race.statsLoading = true;
+          try { var j = await deviceApi('/api/admin/worker-race/stats?hours=' + race.statsHours, { method: 'GET' }); race.stats = j.ok ? j : null; if (!j.ok) ElementPlus.ElMessage.error(j.error || '统计失败'); } catch (e) { race.stats = null; }
+          race.statsLoading = false;
+        }
+        function raceBenchModels() { return Object.keys(race.bench.models).filter(function (m) { return race.bench.models[m]; }); }
+        async function runRaceBench() {
+          var models = raceBenchModels();
+          if (!models.length) { ElementPlus.ElMessage.warning('先勾选要测的模型'); return; }
+          if (models.length > 8) { ElementPlus.ElMessage.warning('最多 8 个'); return; }
+          if (race.bench.prompt === 'device' && !race.bench.sn) { ElementPlus.ElMessage.warning('选一台设备'); return; }
+          race.bench.running = true; race.bench.error = ''; race.bench.result = null;
+          try {
+            var j = await deviceApi('/api/admin/worker-race/bench', { method: 'POST', body: JSON.stringify({ models: models, runs: race.bench.runs, prompt: race.bench.prompt, sn: race.bench.sn }) });
+            if (j.ok) race.bench.result = j; else race.bench.error = j.error || '测试失败';
+          } catch (e) { race.bench.error = '测试失败（通道超时或不可达）'; }
+          race.bench.running = false;
+        }
+        function raceBenchTable() {
+          var r = race.bench.result; if (!r) return [];
+          var by = {};
+          (r.rows || []).forEach(function (row) {
+            var k = row.user + '|' + row.model;
+            if (!by[k]) by[k] = { user: row.user, model: row.model, ttfts: [], errs: 0, sample: '' };
+            if (row.status === 200 && row.ttft_ms) { by[k].ttfts.push(row.ttft_ms); by[k].sample = row.text || ''; } else by[k].errs++;
+          });
+          return Object.keys(by).map(function (k) { var o = by[k]; var s = o.ttfts.slice().sort(function (a, b) { return a - b; }); o.med = s.length ? s[Math.floor(s.length / 2)] : null; o.max = s.length ? s[s.length - 1] : null; o.list = s.join(' · '); return o; });
+        }
+
+        // ── 🧩 PCK 内容包双 OTA（2026-09-04；API routes/ota-pck.ts /api/admin/ota/pck/*；合同 CODEX_P003_APK_PCK_DUAL_OTA_SERVER_CONTRACT_20260903）──
+        // 与 APK 卡片分账：字节按 sha256 内容寻址且不可变；发布/暂停/撤回是策略；成功终态只认设备回报 confirmed。
+        var pck = reactive({ loading: false, uploading: false, uploadPct: 0, uploadMsg: '', uploadOk: false, file: null, form: { content_version: '', product_models: 'rk3562_rc160', min_launcher: 212, notes: '' }, releases: [], devices: [], logText: '' });
+        function pckPickFile(e) { pck.file = (e.target.files && e.target.files[0]) || null; pck.uploadMsg = ''; }
+        function pckStatusLabel(s) { return ({ draft: '草稿', published: '发布中', paused: '已暂停', revoked: '已撤回' })[s] || s; }
+        function pckStatusColor(s) { return ({ draft: '#909399', published: '#3A8A3A', paused: '#E8833A', revoked: '#C0392B' })[s] || '#666'; }
+        async function loadPck() {
+          if (!canManageInvites.value) return;
+          pck.loading = true;
+          try {
+            var r1 = await deviceApi('/api/admin/ota/pck/releases', { method: 'GET' });
+            var r2 = await deviceApi('/api/admin/ota/pck/devices', { method: 'GET' });
+            pck.releases = r1.releases || []; pck.devices = r2.devices || [];
+          } catch (e) { ElementPlus.ElMessage.error('PCK 数据加载失败'); }
+          pck.loading = false;
+        }
+        function uploadPck() {
+          if (!pck.file || pck.uploading) return;
+          var token = getToken(); if (!token) { ElementPlus.ElMessage.warning('请先登录'); return; }
+          pck.uploading = true; pck.uploadPct = 0; pck.uploadMsg = ''; pck.uploadOk = false;
+          var q = '?filename=' + encodeURIComponent(pck.file.name) + '&content_version=' + encodeURIComponent(String(pck.form.content_version || '').trim()) + '&product_models=' + encodeURIComponent(String(pck.form.product_models || '').trim()) + '&min_launcher_version_code=' + encodeURIComponent(String(pck.form.min_launcher || 212)) + '&notes=' + encodeURIComponent(String(pck.form.notes || '').trim());
+          var xhr = new XMLHttpRequest();
+          xhr.open('PUT', '/api/admin/ota/pck/upload' + q);
+          xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+          xhr.upload.onprogress = function (ev) { if (ev.lengthComputable) pck.uploadPct = Math.round(ev.loaded / ev.total * 100); };
+          xhr.onload = function () {
+            pck.uploading = false; var j = {};
+            try { j = JSON.parse(xhr.responseText); } catch (e) {}
+            if (xhr.status === 200 && j.ok) {
+              pck.uploadOk = true;
+              pck.uploadMsg = '✓ 实测通过并入草稿：' + j.release.content_version + ' · ' + (j.release.length / 1048576).toFixed(2) + 'MB · ' + j.release.file_count + ' 文件 · godot ' + j.release.godot_version + ' · sha ' + j.release.sha256.slice(0, 12) + '…\nrequired_resources(' + j.release.required_resources.length + ')：' + (j.release.required_resources.slice(0, 6).join('，') || '（内嵌 manifest 未提供，可在「改元数据」补）');
+              pck.file = null; pck.form.content_version = '';
+              loadPck();
+            } else { pck.uploadOk = false; pck.uploadMsg = '✗ ' + (j.message || j.error || ('HTTP ' + xhr.status)) + (j.forbidden ? '\n' + j.forbidden.join('\n') : ''); }
+          };
+          xhr.onerror = function () { pck.uploading = false; pck.uploadOk = false; pck.uploadMsg = '✗ 网络错误'; };
+          xhr.send(pck.file);
+        }
+        function pckPublish(rel, mode) {
+          if (mode === 'all') {
+            ElementPlus.ElMessageBox.confirm('全量发布 ' + rel.content_version + '（所有台账设备、机型 ' + rel.product_models.join('/') + '、Launcher ≥ v' + rel.min_launcher_version_code + '）？发布前服务端会重算文件 SHA。', '全量发布 PCK', { type: 'warning', confirmButtonText: '确认全量' }).then(function () {
+              deviceApi('/api/admin/ota/pck/releases/' + rel.id + '/publish', { method: 'POST', body: JSON.stringify({ rollout: 'all' }) }).then(function (j) {
+                if (j.ok) { ElementPlus.ElMessage.success('已全量发布'); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+              });
+            }).catch(function () {});
+            return;
+          }
+          ElementPlus.ElMessageBox.prompt('输入灰度 SN 名单（逗号分隔；J3 只开 003）', '灰度发布 ' + rel.content_version, { inputValue: (rel.rollout && rel.rollout.policy === 'sns') ? rel.rollout.sns : '', inputPlaceholder: 'BJP003…,BJP003…' }).then(function (r) {
+            var sns = String(r.value || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+            if (!sns.length) { ElementPlus.ElMessage.warning('名单为空，未发布'); return; }
+            deviceApi('/api/admin/ota/pck/releases/' + rel.id + '/publish', { method: 'POST', body: JSON.stringify({ rollout: 'sns', sns: sns }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已灰度发布 ' + sns.length + ' 台'); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function pckAction(rel, action, msg) {
+          var labels = { pause: '暂停', resume: '恢复', revoke: '撤回', delete: '删除' };
+          ElementPlus.ElMessageBox.confirm(msg, labels[action] || action, { type: 'warning' }).then(function () {
+            var path = '/api/admin/ota/pck/releases/' + rel.id + (action === 'delete' ? '' : '/' + action);
+            deviceApi(path, { method: action === 'delete' ? 'DELETE' : 'POST' }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已' + (labels[action] || action)); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function pckRollback(rel) {
+          ElementPlus.ElMessageBox.prompt('用 ' + rel.content_version + ' 的已验证字节建新 revision（同 SHA、新版本名、草稿态；发布走常规流程）', '建回滚版', { inputValue: 'vrb-' + rel.content_version + '-1', inputPlaceholder: 'v214-rollback-v211-1' }).then(function (r) {
+            deviceApi('/api/admin/ota/pck/releases/' + rel.id + '/rollback', { method: 'POST', body: JSON.stringify({ content_version: String(r.value || '').trim() }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已建草稿 ' + j.release.content_version); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function pckEditNotes(rel) {
+          ElementPlus.ElMessageBox.prompt('每行一条（更新了什么 / 解决了什么）；不超过 20 条、每条 500 字', '更新说明 ' + rel.content_version, { inputType: 'textarea', inputValue: (rel.release_notes || []).join('\n'), confirmButtonText: '保存', cancelButtonText: '取消' }).then(function (r) {
+            var lines = String(r.value || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+            deviceApi('/api/admin/ota/pck/releases/' + rel.id + '/notes', { method: 'PATCH', body: JSON.stringify({ release_notes: lines }) }).then(function (j) {
+              if (j.ok) { ElementPlus.ElMessage.success('已保存更新说明'); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+            });
+          }).catch(function () {});
+        }
+        function pckEditMeta(rel) {
+          ElementPlus.ElMessageBox.prompt('required_resources（每行一个 res:// 路径；留空=不改）', '改元数据 ' + rel.content_version, { inputType: 'textarea', inputValue: rel.required_resources.join('\n') }).then(function (r) {
+            var lines = String(r.value || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+            var body = {}; if (lines.length) body.required_resources = lines;
+            ElementPlus.ElMessageBox.prompt('机型（逗号分隔）|最低 Launcher，如 rk3562_rc160|212', '机型与最低 Launcher', { inputValue: rel.product_models.join(',') + '|' + rel.min_launcher_version_code }).then(function (r2) {
+              var parts = String(r2.value || '').split('|');
+              var models = (parts[0] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+              if (models.length) body.product_models = models;
+              var ml = parseInt(parts[1], 10); if (ml > 0) body.min_launcher_version_code = ml;
+              deviceApi('/api/admin/ota/pck/releases/' + rel.id, { method: 'PATCH', body: JSON.stringify(body) }).then(function (j) {
+                if (j.ok) { ElementPlus.ElMessage.success('已更新'); loadPck(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+              });
+            }).catch(function () {});
+          }).catch(function () {});
+        }
+        async function pckLog(d) {
+          try {
+            var j = await deviceApi('/api/admin/ota/pck/devices/' + d.sn + '/log?limit=50', { method: 'GET' });
+            pck.logText = (j.log || []).map(function (x) { return new Date(x.ts_server).toLocaleString() + ' [' + x.source + '] ' + (x.from_version ? x.from_version + '→' : '') + (x.to_version || '') + ' ' + x.stage + '/' + x.status + (x.error_code ? ' ' + x.error_code : '') + (x.result_ts_ms ? ' dev@' + new Date(x.result_ts_ms).toLocaleString() : '') + (x.note ? ' ' + x.note : ''); }).join('\n') || '（无记录）';
+          } catch (e) { ElementPlus.ElMessage.error('日志加载失败'); }
+        }
+        function pckFreeze(d, frozen) {
+          deviceApi('/api/admin/ota/pck/devices/' + d.sn + '/freeze', { method: 'POST', body: JSON.stringify({ frozen: frozen }) }).then(function (j) {
+            if (j.ok) { ElementPlus.ElMessage.success(frozen ? '已冻结（不再下发 PCK）' : '已解冻'); loadPck(); } else ElementPlus.ElMessage.error(j.error || '失败');
+          });
+        }
+
+        // ── 🎙 语音链路配置（2026-09-03 晚；API /api/admin/worker-voice；64.90 脚本 voice_get/voice_set；字段表来自 server VOICE_FIELDS；后端为真防线：白名单/正则/范围/安全窗口/对撞/回滚）──
+        var voice = reactive({ loading: false, error: '', data: null, form: {}, force: false, saving: false, applyResult: null });
+
+        // ── 🧩 版本与 One-shot（2026-09-13 B89 川哥：后台要看到生产版本号/说明 + One-shot 关闭回滚按钮；
+        //    API /api/admin/oneshot*；开关存 server config.db runtime_flag，改后下一次唤醒签发即生效、不重启；
+        //    回滚边界（codex B87 §3）由服务端随载荷下发到 caveat，确认框里再念一遍）──
+        var release = reactive({ loading: false, saving: false, error: '', data: null, form: { policy: '', note: '' }, applyResult: null, todo: { text: '', source: '', owner: 'cc', target: 'v1.2', showClosed: false, saving: false } });
+        async function loadRelease() {
+          release.loading = true; release.error = '';
+          try {
+            var j = await deviceApi('/api/admin/oneshot', { method: 'GET' });
+            if (!j.ok) throw new Error(j.error || '加载失败');
+            release.data = j; release.form.policy = j.policy.effective;
+          } catch (e) { release.error = String((e && e.message) || e); }
+          finally { release.loading = false; }
+        }
+        function policySourceLabel(src) { return src === 'override' ? '后台覆盖' : src === 'env' ? '服务器 env' : '内置默认'; }
+        async function applyPolicy() {
+          var p = release.form.policy; if (!release.data || !p) return;
+          var cur = release.data.policy.effective;
+          var msg = '把 One-shot 签发策略从「' + cur + '」改为「' + p + '」？改后下一次设备唤醒即生效，不重启。';
+          if (p !== 'capability') msg += '\n\n⚠️ 这是「止扩」不是完整回滚：老设备照常普通语音；已升级到含迁移 APK（v271+）的设备下一次唤醒会失败（first_turn_not_granted），要它们回普通语音需端侧停用首句工厂或回退 APK。进行中的会话不受影响。';
+          try { await ElementPlus.ElMessageBox.confirm(msg, '应用 One-shot 策略', { type: p === 'capability' ? 'info' : 'warning', confirmButtonText: '确认应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          release.saving = true; release.applyResult = null;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/policy', { method: 'PUT', body: JSON.stringify({ policy: p, note: release.form.note || '' }) });
+            release.applyResult = { changed: j.changed, before: j.before, effective: j.policy && j.policy.effective, source: j.policy && j.policy.source, error: j.error };
+            if (!j.ok) throw new Error(j.error || '应用失败');
+            ElementPlus.ElMessage.success('已应用：' + j.policy.effective);
+            release.form.note = '';
+            await loadRelease();
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.saving = false; }
+        }
+        // 下一版待办（2026-09-14 川哥）：列表随 /api/admin/oneshot 一次拉全，增改后用返回的 todos 整体替换
+        function todoOpen() { return ((release.data && release.data.todos) || []).filter(function (t) { return t.status === 'open'; }); }
+        function todoClosed() { return ((release.data && release.data.todos) || []).filter(function (t) { return t.status !== 'open'; }); }
+        async function addTodo() {
+          var text = (release.todo.text || '').trim(); if (!text) return;
+          release.todo.saving = true;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/todos', { method: 'POST', body: JSON.stringify({ text: text, source: release.todo.source || '', owner: release.todo.owner, target: release.todo.target || 'v1.2' }) });
+            if (!j.ok) throw new Error(j.error || '加入失败');
+            if (release.data) release.data.todos = j.todos;
+            release.todo.text = ''; release.todo.source = '';
+            ElementPlus.ElMessage.success('已加入待办 #' + j.todo.id);
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.todo.saving = false; }
+        }
+        async function setTodoStatus(td, status) {
+          if (status === 'dropped') {
+            try { await ElementPlus.ElMessageBox.confirm('标记「' + String(td.text).slice(0, 40) + '」为放弃？只是标记，来源仍可追。', '放弃待办', { type: 'warning', confirmButtonText: '放弃', cancelButtonText: '取消' }); }
+            catch (e) { return; }
+          }
+          release.todo.saving = true;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/todos/' + td.id, { method: 'PATCH', body: JSON.stringify({ status: status }) });
+            if (!j.ok) throw new Error(j.error || '更新失败');
+            if (release.data) release.data.todos = j.todos;
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.todo.saving = false; }
+        }
+        async function clearPolicyOverride() {
+          if (!release.data) return;
+          try { await ElementPlus.ElMessageBox.confirm('清除后台覆盖，回到服务器 env 值（' + (release.data.policy.env || '未设 = allowlist') + '）？', '清除覆盖', { type: 'warning' }); } catch (e) { return; }
+          release.saving = true;
+          try {
+            var j = await deviceApi('/api/admin/oneshot/policy', { method: 'DELETE' });
+            if (!j.ok) throw new Error(j.error || '失败');
+            ElementPlus.ElMessage.success('已清除，当前生效：' + j.policy.effective);
+            await loadRelease();
+          } catch (e) { ElementPlus.ElMessage.error(String((e && e.message) || e)); }
+          finally { release.saving = false; }
+        }
+        function voiceIsSecret(k) { return ((voice.data && voice.data.secret_keys) || []).indexOf(k) >= 0; }
+        function voiceEffective(k) {
+          var w = voice.data && voice.data.worker; if (!w) return undefined;
+          if (w.proc && Object.prototype.hasOwnProperty.call(w.proc, k)) return w.proc[k];
+          if (w.rust && Object.prototype.hasOwnProperty.call(w.rust, k)) return w.rust[k];
+          if (w.base && Object.prototype.hasOwnProperty.call(w.base, k)) return w.base[k];
+          return undefined;
+        }
+        function voiceOrigin(k) {
+          var w = voice.data && voice.data.worker; if (!w) return '';
+          if (w.rust && Object.prototype.hasOwnProperty.call(w.rust, k)) return 'rust-worker.env';
+          if (w.base && Object.prototype.hasOwnProperty.call(w.base, k)) return '基础 .env（python 线共享）';
+          return '二进制默认';
+        }
+        function voiceGroups() {
+          var out = [];
+          ((voice.data && voice.data.fields) || []).forEach(function (x) {
+            var g = out.find(function (o) { return o.name === x.group; });
+            if (!g) { g = { name: x.group, fields: [] }; out.push(g); }
+            g.fields.push(x);
+          });
+          return out;
+        }
+        function voiceSecretPlaceholder(k) { var v = voiceEffective(k); return (v && v.set) ? ('已配置 ' + v.hint + '（' + v.len + ' 位），留空不改') : '未配置'; }
+        function voiceToggle(k, val) { voice.form[k] = val ? '1' : '0'; }
+        function voiceMismatch() {
+          var w = voice.data && voice.data.worker; if (!w || !w.rust || !w.proc) return [];
+          return Object.keys(w.rust).filter(function (k) {
+            if (voiceIsSecret(k)) { var a = w.rust[k] || {}, b = w.proc[k] || {}; return (a.len || 0) !== (b.len || 0); }
+            return String(w.rust[k]) !== String(w.proc[k] === undefined ? '' : w.proc[k]);
+          });
+        }
+        async function loadVoice() {
+          if (!canManageInvites.value) return;
+          voice.loading = true; voice.error = '';
+          try {
+            var j = await deviceApi('/api/admin/worker-voice', { method: 'GET' });
+            voice.data = j;
+            if (!j.ok) { voice.error = (j.worker && j.worker.error) || j.error || '读取失败（通道不可达）'; }
+            else {
+              var form = {};
+              (j.fields || []).forEach(function (f) {
+                if (voiceIsSecret(f.key)) { form[f.key] = ''; return; }
+                var v = voiceEffective(f.key); form[f.key] = v === undefined ? '' : String(v);
+              });
+              voice.form = form;
+            }
+          } catch (e) { voice.error = '无法连接设备服务'; }
+          voice.loading = false;
+        }
+        function voiceDiff() {
+          var v = {};
+          ((voice.data && voice.data.fields) || []).forEach(function (f) {
+            var cur = voice.form[f.key]; if (cur === undefined || cur === null) return; cur = String(cur).trim();
+            if (voiceIsSecret(f.key)) { if (cur) v[f.key] = cur; return; }
+            var eff = voiceEffective(f.key); eff = eff === undefined ? '' : String(eff);
+            if (cur !== eff) v[f.key] = cur;
+          });
+          return v;
+        }
+        async function saveVoice() {
+          var v = voiceDiff(); var keys = Object.keys(v);
+          if (!keys.length) { ElementPlus.ElMessage.info('没有改动'); return; }
+          var summary = keys.map(function (k) { return voiceIsSecret(k) ? (k + '：更换') : (k + ' → ' + (v[k] === '' ? '（空）' : v[k])); }).join('\n');
+          try { await ElementPlus.ElMessageBox.confirm('将写入 64.90 rust-worker.env 并纪律重启 worker（约 15 秒，进行中的通话会断）：\n' + summary, voice.force ? '强制应用（忽略通话检查）' : '应用语音链路配置', { type: 'warning', confirmButtonText: '应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          voice.saving = true; voice.applyResult = null;
+          try {
+            var j = await deviceApi('/api/admin/worker-voice', { method: 'PUT', body: JSON.stringify({ values: v, force: voice.force }) });
+            voice.applyResult = j;
+            if (j.ok) { ElementPlus.ElMessage.success('已应用并重启：' + (j.applied || []).join('、')); voice.force = false; loadVoice(); }
+            else if (j.active_rooms) ElementPlus.ElMessage.warning(j.error);
+            else ElementPlus.ElMessage.error(j.error || '应用失败（若已自动回滚，worker 仍按旧配置运行）');
+          } catch (e) { ElementPlus.ElMessage.error('应用失败'); }
+          voice.saving = false;
+        }
+
+        // ── 设备运行配置（2026-08-21；API 见 routes/device-config.ts；合同 CC_P003_POSTURE_* + cc 回执；
+        //    2026-09-03 改通用键表渲染 + server 自用键 local_audio.refresh_days）──
+        // 后端为真防线（范围校验/键注册表/revision 单调）；前端只做交互。设备键生效延迟=设备 30min 轮询；server 键=下次每日批。
+        var devcfg = reactive({ loading: false, savingKey: '', keys: [], overrides: [], inputs: {}, pick: {}, pickVal: {} });
+        // 覆盖只从设备台账里选（川哥 2026-09-03：不手输 SN）；台账来自设备接入 tab 同一接口
+        function devcfgDeviceOptions() {
+          var list = (deviceData.devices || []).slice().sort(function (a, b) {
+            var sa = a.status === 'active' ? 0 : 1, sb = b.status === 'active' ? 0 : 1;
+            return sa - sb || String(a.note || '').localeCompare(String(b.note || ''), 'zh');
+          });
+          return list.map(function (d) { return { sn: d.sn, label: (d.note || '未备注') + ' · ' + d.sn + (d.status === 'active' ? '' : '（' + d.status + '）') }; });
+        }
+        function devcfgDeviceLabel(sn) {
+          var d = (deviceData.devices || []).find(function (x) { return x.sn === sn; });
+          return d && d.note ? d.note + ' · ' + sn : sn;
+        }
+        function devcfgUnit(k) { return k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : ''); }
+        function devcfgSpec(key) { for (var i = 0; i < devcfg.keys.length; i++) if (devcfg.keys[i].key === key) return devcfg.keys[i]; return null; }
+        function devcfgOverridesFor(k) { return devcfg.overrides.filter(function (o) { return o.key === k.key; }); }
+        function devcfgValid(k, v) { if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
+        function devcfgRangeMsg(k) { if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
+        // bool 键（2026-09-19 diagnostics.log_upload_enabled 起）：值是 true/false，展示为 开/关，编辑走开关/下拉不走数字框
+        function devcfgFmtVal(k, v) { return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
         function devcfgFmtMin(sec) {
           var n = Number(sec);
           if (!isFinite(n) || n <= 0) return '—';
@@ -4068,53 +4987,113 @@
             var j = await deviceApi('/api/admin/device-config', { method: 'GET' });
             devcfg.keys = j.keys || [];
             devcfg.overrides = j.overrides || [];
-            var k0 = devcfg.keys[0];
-            if (k0) devcfg.globalInput = k0.global !== null ? k0.global : k0.builtin_default;
+            var inputs = {}, pickVal = Object.assign({}, devcfg.pickVal);
+            devcfg.keys.forEach(function (k) {
+              inputs[k.key] = k.global !== null ? k.global : k.builtin_default;
+              if (pickVal[k.key] === undefined) pickVal[k.key] = inputs[k.key];
+            });
+            devcfg.inputs = inputs;
+            devcfg.pickVal = pickVal;
+            if (!(deviceData.devices || []).length) loadDevices();
           } catch (e) { ElementPlus.ElMessage.error('设备配置加载失败'); }
           devcfg.loading = false;
         }
-        async function saveDevcfgGlobal() {
-          var v = Number(devcfg.globalInput);
-          if (!Number.isInteger(v) || v < 10 || v > 86400) { ElementPlus.ElMessage.warning('取值须为 10~86400 的整数秒'); return; }
-          devcfg.savingGlobal = true;
+        async function saveDevcfgGlobal(k) {
+          var v = k.unit === 'bool' ? devcfg.inputs[k.key] === true : Number(devcfg.inputs[k.key]);
+          if (!devcfgValid(k, v)) { ElementPlus.ElMessage.warning(devcfgRangeMsg(k)); return; }
+          devcfg.savingKey = k.key;
           try {
-            var j = await deviceApi('/api/admin/device-config/global', { method: 'PUT', body: JSON.stringify({ key: devcfgKey0.value.key, value: v }) });
-            if (j.ok) { ElementPlus.ElMessage.success('已保存（rev ' + j.rev + '），最迟 30 分钟全量生效'); loadDevcfg(); }
+            var j = await deviceApi('/api/admin/device-config/global', { method: 'PUT', body: JSON.stringify({ key: k.key, value: v }) });
+            if (j.ok) { ElementPlus.ElMessage.success('已保存（rev ' + j.rev + '）' + (k.server_only ? '，下次每日批生效' : '，最迟 30 分钟全量生效')); loadDevcfg(); }
             else ElementPlus.ElMessage.error(j.message || j.error || '保存失败');
           } catch (e) { ElementPlus.ElMessage.error('保存失败'); }
-          devcfg.savingGlobal = false;
+          devcfg.savingKey = '';
         }
-        function devcfgPromptValue(title, initial, cb) {
-          ElementPlus.ElMessageBox.prompt('输入冷却秒数（10~86400 整数）', title, { inputValue: String(initial), inputPattern: /^\d+$/, inputErrorMessage: '须为整数' }).then(function (r) {
+        function devcfgPromptValue(k, title, initial, cb) {
+          ElementPlus.ElMessageBox.prompt('输入' + (k.label || k.key) + '（' + k.min + '~' + k.max + ' 整数' + devcfgUnit(k) + '）', title, { inputValue: String(initial), inputPattern: /^\d+$/, inputErrorMessage: '须为整数' }).then(function (r) {
             var v = Number(r.value);
-            if (!Number.isInteger(v) || v < 10 || v > 86400) { ElementPlus.ElMessage.warning('取值须为 10~86400 的整数秒'); return; }
+            if (!devcfgValid(k, v)) { ElementPlus.ElMessage.warning(devcfgRangeMsg(k)); return; }
             cb(v);
           }).catch(function () {});
         }
-        function addDevcfgOverride() {
-          ElementPlus.ElMessageBox.prompt('输入设备 SN（BJP003 开头 20 位）', '添加设备覆盖', { inputPlaceholder: 'BJP003…' }).then(function (r) {
-            var sn = String(r.value || '').trim();
-            if (!/^BJP003\d{14}$/.test(sn)) { ElementPlus.ElMessage.warning('SN 格式不符'); return; }
-            devcfgPromptValue('覆盖 ' + sn, devcfgKey0.value.global !== null ? devcfgKey0.value.global : devcfgKey0.value.builtin_default, function (v) {
-              deviceApi('/api/admin/device-config/sn/' + sn, { method: 'PUT', body: JSON.stringify({ key: devcfgKey0.value.key, value: v }) }).then(function (j) {
-                if (j.ok) { ElementPlus.ElMessage.success('已设覆盖'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
-              });
-            });
-          }).catch(function () {});
+        function addDevcfgOverride(k) {
+          var sn = devcfg.pick[k.key];
+          if (!sn) { ElementPlus.ElMessage.warning('先在台账里选一台设备'); return; }
+          var v = k.unit === 'bool' ? devcfg.pickVal[k.key] === true : Number(devcfg.pickVal[k.key]);
+          if (!devcfgValid(k, v)) { ElementPlus.ElMessage.warning(devcfgRangeMsg(k)); return; }
+          devcfg.savingKey = 'ov:' + k.key;
+          deviceApi('/api/admin/device-config/sn/' + sn, { method: 'PUT', body: JSON.stringify({ key: k.key, value: v }) }).then(function (j) {
+            if (j.ok) { ElementPlus.ElMessage.success('已设覆盖 ' + devcfgDeviceLabel(sn)); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
+          }).catch(function () { ElementPlus.ElMessage.error('失败'); }).finally(function () { devcfg.savingKey = ''; });
         }
         function editDevcfgOverride(o) {
-          devcfgPromptValue('修改 ' + o.sn, o.value, function (v) {
+          var k = devcfgSpec(o.key);
+          if (!k) { ElementPlus.ElMessage.error('未知配置键 ' + o.key); return; }
+          var save = function (v) {
             deviceApi('/api/admin/device-config/sn/' + o.sn, { method: 'PUT', body: JSON.stringify({ key: o.key, value: v }) }).then(function (j) {
               if (j.ok) { ElementPlus.ElMessage.success('已更新'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
             });
-          });
+          };
+          if (k.unit === 'bool') {
+            ElementPlus.ElMessageBox.confirm('将 ' + o.sn + ' 的「' + (k.label || k.key) + '」覆盖改为 ' + (o.value ? '关' : '开') + '？', '修改覆盖').then(function () { save(!o.value); }).catch(function () {});
+            return;
+          }
+          devcfgPromptValue(k, '修改 ' + o.sn, o.value, save);
         }
         function clearDevcfgOverride(o) {
-          ElementPlus.ElMessageBox.confirm('清除 ' + o.sn + ' 的覆盖？之后该设备回落全局默认。', '清除覆盖', { type: 'warning' }).then(function () {
+          ElementPlus.ElMessageBox.confirm('清除 ' + o.sn + ' 的「' + o.key + '」覆盖？之后该设备回落全局默认。', '清除覆盖', { type: 'warning' }).then(function () {
             deviceApi('/api/admin/device-config/sn/' + o.sn + '?key=' + encodeURIComponent(o.key), { method: 'DELETE' }).then(function (j) {
               if (j.ok) { ElementPlus.ElMessage.success('已清除'); loadDevcfg(); } else ElementPlus.ElMessage.error(j.message || j.error || '失败');
             });
           }).catch(function () {});
+        }
+
+        // ── 诊断日志 tab（2026-09-19；API 见 routes/diagnostics.ts；合同 CC 诊断日志复核回执 §2 第 3 条 + §7 冻结）──
+        // 后端为真防线（凭据/灰度/开关/限频/脱敏）；这里只做查看 + 开关。SN 在 admin 台内可见，事件表只显末 8 位省宽度。
+        var diaglog = reactive({ loading: false, eventsLoading: false, error: '', hours: 24, summary: {}, switch: { global: true, overrides: [], global_is_builtin: true, device_visible: false }, config: {}, events: [], rejected: [], filters: { sn: '', level: '', event: '' }, switchSaving: false });
+        function dlLevelType(l) { return l === 'fatal' || l === 'error' ? 'danger' : (l === 'warn' ? 'warning' : (l === 'info' ? 'success' : 'info')); }
+        function dlAgo(ms) { if (!ms) return '—'; var d = Date.now() - ms; if (d < 60000) return Math.round(d / 1000) + ' 秒前'; if (d < 3600000) return Math.round(d / 60000) + ' 分钟前'; if (d < 86400000) return Math.round(d / 360000) / 10 + ' 小时前'; return Math.round(d / 8640000) / 10 + ' 天前'; }
+        function dlSkew(ms) { if (ms === null || ms === undefined) return '—'; var a = Math.abs(ms); var s = a < 1000 ? a + 'ms' : (a < 60000 ? Math.round(a / 100) / 10 + 's' : (a < 3600000 ? Math.round(a / 6000) / 10 + 'min' : Math.round(a / 360000) / 10 + 'h')); return a < 2000 ? '≈同步' : ((ms < 0 ? '设备快 ' : '设备慢 ') + s); }
+        function dlJson(d) { try { return JSON.stringify(d, null, 1); } catch (e) { return String(d); } }
+        function dlAllowlistLabel() { var m = diaglog.config.allowlist_mode; if (m === 'open') return '全开'; if (m === 'list') return (diaglog.config.allowlist || []).map(function (s) { return devcfgDeviceLabel(s); }).join('，') || '名单为空'; return '全关（未设名单，fail-closed）'; }
+        async function loadDiaglogEvents() {
+          diaglog.eventsLoading = true;
+          try {
+            var q = '?hours=' + diaglog.hours + '&limit=200' + (diaglog.filters.sn ? '&sn=' + encodeURIComponent(diaglog.filters.sn) : '') + (diaglog.filters.level ? '&level=' + diaglog.filters.level : '') + (diaglog.filters.event ? '&event=' + encodeURIComponent(diaglog.filters.event) : '');
+            var j = await deviceApi('/api/admin/diagnostics/events' + q, { method: 'GET' });
+            diaglog.events = (j && j.ok) ? (j.rows || []) : [];
+            var r = await deviceApi('/api/admin/diagnostics/rejected?hours=' + diaglog.hours + '&limit=100' + (diaglog.filters.sn ? '&sn=' + encodeURIComponent(diaglog.filters.sn) : ''), { method: 'GET' });
+            diaglog.rejected = (r && r.ok) ? (r.rows || []) : [];
+          } catch (e) { diaglog.error = '事件拉取失败（网络或登录态）'; }
+          diaglog.eventsLoading = false;
+        }
+        async function loadDiaglog() {
+          if (!canManageInvites.value) return;
+          diaglog.loading = true; diaglog.error = '';
+          try {
+            var j = await deviceApi('/api/admin/diagnostics/summary?hours=' + diaglog.hours, { method: 'GET' });
+            if (j && j.ok) { diaglog.summary = j.summary || {}; diaglog.switch = j.switch || diaglog.switch; diaglog.config = j.config || {}; }
+            else diaglog.error = (j && (j.message || j.error)) || '拉取失败';
+            if (!(deviceData.devices || []).length) loadDevices();
+            await loadDiaglogEvents();
+          } catch (e) { diaglog.error = '拉取失败（网络或登录态）'; }
+          diaglog.loading = false;
+        }
+        async function setDiaglogSwitch(enabled) {
+          diaglog.switchSaving = true;
+          try {
+            var j = await deviceApi('/api/admin/diagnostics/switch', { method: 'PUT', body: JSON.stringify({ enabled: !!enabled }) });
+            if (j && j.ok) { diaglog.switch = j.switch || diaglog.switch; ElementPlus.ElMessage.success(enabled ? '已打开上云' : '已关闭上云：设备下一批起收 503，15 分钟后重试'); }
+            else ElementPlus.ElMessage.error((j && (j.message || j.error)) || '切换失败');
+          } catch (e) { ElementPlus.ElMessage.error('切换失败'); }
+          diaglog.switchSaving = false;
+        }
+        async function clearDiaglogOverride(sn) {
+          try {
+            var j = await deviceApi('/api/admin/diagnostics/switch/' + encodeURIComponent(sn), { method: 'DELETE' });
+            if (j && j.ok) { diaglog.switch = j.switch || diaglog.switch; ElementPlus.ElMessage.success('已清除覆盖，回落全局'); }
+            else ElementPlus.ElMessage.error((j && j.error) || '清除失败');
+          } catch (e) { ElementPlus.ElMessage.error('清除失败'); }
         }
 
         // ── Worker 热词管理（2026-08-18 P0；API 见 admin-data.ts /hotwords*）──
@@ -4125,6 +5104,8 @@
           { k: 'asr', name: 'ASR 识别热词', desc: '火山服务端识别增强：对表内词降低检出门槛，救回孤立短指令。语气词（嗯/啊）禁入——会破坏环境音免疫', warn: '' },
           { k: 'exit', name: '退出词（关闭语）', desc: '命中即源头吞句并退出会话：零 commit、零 filler、零 LLM', warn: '与 Android 端 sessionExitPhrases 逐字合同——改动必须 codex 同步，发布时强制确认' },
           { k: 'device_asr', name: '设备 ASR 热词（S2-B2）', desc: '设备名/属性/模式词的识别增强，rust 侧与 ASR 热词合并发火山。只提高识别率，与命令执行判定完全无关', warn: '' },
+          // 2026-09-14 川哥：听故事时随口「嗯/对/是」被当插话截断续讲——播长文本期间附和声不打断；词表后台可编辑
+          { k: 'backchannel', name: '播放中附和词（不打断）', desc: '小可正在播放长文本（本轮回复 ≥120 字）时，整句命中这里的词不打断、不起新轮、只记日志；停/停止/退出/换一个不受影响。只收两字以内的附和声（嗯/对/是/好…），控制词与句子开头词后端拒收。worker 侧 BACKCHANNEL_MODE=observe 只观察记日志、enforce 才真不打断（默认 observe）', warn: '' },
         ];
         var HW_NAME_BY_KEY = {};
         HW_KIND_META.forEach(function (m) { HW_NAME_BY_KEY[m.k] = m.name; });
@@ -4343,8 +5324,9 @@
           if (!q) return deviceData.devices;
           return deviceData.devices.filter(function(d){ return (d.parent_phone || '').indexOf(q) >= 0; });
         });
-        // worker 运行态（容量 = LiveKit 活跃房 vs WORKER_MAX_JOBS；机器资源 = 64.90 只读 stats）
-        var workerStats = reactive({ machine: null, capacity: null, loading: false, fetchedAt: '' });
+        // worker 运行态（容量 = VoiceKit 活跃房 vs 各 worker 机 WORKER_MAX_JOBS 之和；机器资源 = 各台只读 stats）
+        // 2026-09-22 迁 hk2：worker 可多台（machines[]），容量卡按各台 max_jobs 求和并给明细（breakdown）
+        var workerStats = reactive({ machine: null, machines: [], breakdown: '', capacity: null, loading: false, fetchedAt: '' });
         function loadWorkerStats() {
           if (!canManageInvites.value) return;
           workerStats.loading = true;
@@ -4352,6 +5334,9 @@
             .then(function (data) {
               if (data && data.ok) {
                 workerStats.machine = data.machine; workerStats.capacity = data.capacity;
+                workerStats.machines = data.machines || (data.machine ? [{ id: '64.90', label: '64.90', host: '64.90.13.117', ok: true, error: null, data: data.machine }] : []);
+                var pm = (data.capacity && data.capacity.per_machine) || [];
+                workerStats.breakdown = pm.length > 1 ? ' = ' + pm.map(function (m) { return m.max_jobs == null ? '?' : m.max_jobs; }).join(' + ') : '';
                 workerStats.fetchedAt = new Date().toTimeString().slice(0, 8);
               }
             })
@@ -4364,7 +5349,94 @@
         setInterval(function () {
           if (document.visibilityState === 'visible' && canManageInvites.value) loadWorkerStats();
         }, 60000);
+        // ── 服务器状态 tab（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）──
+        // 数据链：/api/admin/hosts-status（server 30s 共享缓存）← 三台机同一份只读脚本 ops/host-stats.py
+        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 voicekit-stats 只读通道）。单台失败只标该台不可达。
+        var hostsStatus = reactive({ hosts: [], loading: false, fetchedAt: '', ts: 0, error: '' });
+        function loadHostsStatus(fresh) {
+          if (!canManageInvites.value) return;
+          hostsStatus.loading = true;
+          deviceApi('/api/admin/hosts-status' + (fresh === true ? '?fresh=1' : ''), { method: 'GET' })
+            .then(function (data) {
+              if (data && data.ok) {
+                hostsStatus.hosts = data.hosts || []; hostsStatus.ts = data.ts || 0; hostsStatus.error = '';
+                hostsStatus.fetchedAt = new Date().toTimeString().slice(0, 8);
+              } else { hostsStatus.error = (data && data.error) || '拉取失败'; }
+            })
+            .catch(function () { hostsStatus.error = '拉取失败（网络或登录态）'; })
+            .finally(function () { hostsStatus.loading = false; });
+        }
+        setInterval(function () {
+          if (document.visibilityState === 'visible' && canManageInvites.value && khNav.value === 'servers') loadHostsStatus();
+        }, 60000);
+        function hsAgo(ms) {
+          if (!ms) return '—';
+          var s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+          if (s < 60) return s + ' 秒前';
+          if (s < 3600) return Math.floor(s / 60) + ' 分钟前';
+          if (s < 86400) return Math.floor(s / 3600) + ' 小时前';
+          return Math.floor(s / 86400) + ' 天前';
+        }
+        function hsDur(sec) {
+          if (sec == null) return '—';
+          var d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+          return d ? (d + ' 天 ' + h + ' 时') : (h ? (h + ' 时 ' + m + ' 分') : (m + ' 分'));
+        }
+        function hsNum(v) { return (v == null || v === '') ? '—' : v; }
+        function hsMb(b) { return b == null ? '—' : Math.round(b / 1048576) + 'M'; }
+        function hsGb(mb) { return mb == null ? '—' : (mb / 1024).toFixed(1) + 'G'; }
+        function hsSvcType(s) { return s.active_state === 'active' ? 'success' : (s.active_state === 'failed' ? 'danger' : 'warning'); }
+        function hsLinkType(l) { return l.state === 'registered' ? 'success' : (l.state === 'reconnecting' ? 'danger' : 'info'); }
+        function hsLinkLabel(l) { return l.state === 'registered' ? '已注册' : (l.state === 'reconnecting' ? '重连中' : '无事件'); }
         var deviceAdd = reactive({ sn: '', note: '', phone: '' });
+        // ── 后台预授权自动认领 v1（2026-09-06）：待认领列表 + 一键确认 + 预授权；API 见 admin-data.ts /devices/pairing/pending、/devices/:sn/preauth、/devices/:sn/pairing/confirm ──
+        var pairingPending = reactive({ items: [], loading: false, enabled: true, phone: {} });
+        function loadPairingPending() {
+          if (!canManageInvites.value) return;
+          pairingPending.loading = true;
+          deviceApi('/api/admin/devices/pairing/pending', { method: 'GET' })
+            .then(function (data) {
+              if (data && data.ok) { pairingPending.items = data.items || []; pairingPending.enabled = data.preauth_enabled !== false; }
+            })
+            .catch(function () { /* 拉不到不打扰 */ })
+            .finally(function () { pairingPending.loading = false; });
+        }
+        setInterval(function () {
+          if (document.visibilityState === 'visible' && canManageInvites.value && (deviceData.devices || []).length) loadPairingPending();
+        }, 20000);
+        function confirmPairing(row) {
+          var phone = ((pairingPending.phone[row.sn] || '') + '').trim();
+          if (phone && !/^1[3-9]\d{9}$/.test(phone)) { ElementPlus.ElMessage.warning('手机号格式不对'); return; }
+          if (!phone && !row.parent_phone) { ElementPlus.ElMessage.warning('该设备未绑定家长，请填家长手机号'); return; }
+          deviceApi('/api/admin/devices/' + encodeURIComponent(row.sn) + '/pairing/confirm', { method: 'POST', body: JSON.stringify(phone ? { phone: phone } : {}) })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('已确认 ' + row.sn + '，等设备自动拉取凭据'); loadPairingPending(); loadDevices(); }
+              else ElementPlus.ElMessage.error((data && data.error) || '确认失败');
+            })
+            .catch(function (e) { if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('确认失败，请稍后重试'); });
+        }
+        function openPreauth(row) {
+          ElementPlus.ElMessageBox.prompt('家长手机号（未注册会按短信登录同一套预建账号）；有效期 7 天，期内设备联网即自动认领、免手传凭据', '预授权自动认领 · ' + row.sn, {
+            inputValue: row.parent_phone || '', inputPattern: /^1[3-9]\d{9}$/, inputErrorMessage: '手机号格式不对', confirmButtonText: '预授权', cancelButtonText: '取消'
+          })
+            .then(function (r) {
+              return deviceApi('/api/admin/devices/' + encodeURIComponent(row.sn) + '/preauth', { method: 'PUT', body: JSON.stringify({ phone: (r.value || '').trim() }) });
+            })
+            .then(function (data) {
+              if (!data) return;
+              if (data.ok) { ElementPlus.ElMessage.success('已预授权' + (data.auto_confirm && data.auto_confirm.done ? '，设备已上线并已代确认' : '')); loadDevices(); loadPairingPending(); }
+              else ElementPlus.ElMessage.error(data.error || '预授权失败');
+            })
+            .catch(function () { /* 取消 / 401 已处理 */ });
+        }
+        function cancelPreauth(row) {
+          deviceApi('/api/admin/devices/' + encodeURIComponent(row.sn) + '/preauth', { method: 'DELETE' })
+            .then(function (data) {
+              if (data && data.ok) { ElementPlus.ElMessage.success('已取消预授权'); loadDevices(); loadPairingPending(); }
+              else ElementPlus.ElMessage.error((data && data.error) || '取消失败');
+            })
+            .catch(function () {});
+        }
         var deviceSessions = reactive({ items: [], loading: false, filterSn: '', page: 1, total: 0 });
         var credDialog = reactive({ visible: false, sn: '', token: '', expiresAt: 0, days: 30, loading: false });
         function snInRegistry(sn) {
@@ -4390,6 +5462,7 @@
                 deviceData.devices = data.devices || [];
                 deviceData.envAllow = data.env_allow || [];
                 deviceData.stats = data.stats || { today_ok: 0, today_rejected: 0 };
+                loadPairingPending();
               } else {
                 ElementPlus.ElMessage.error((data && data.error) || '拉取设备台账失败');
               }
@@ -4406,7 +5479,9 @@
           deviceApi('/api/admin/devices', { method: 'POST', body: JSON.stringify({ sn: sn, note: (deviceAdd.note || '').trim(), parent_phone: (deviceAdd.phone || '').trim() }) })
             .then(function (data) {
               if (data && data.ok) {
-                if (data.parent_bound) {
+                if (data.preauth) {
+                  ElementPlus.ElMessage({ type: 'success', duration: 8000, showClose: true, message: '已添加 ' + data.device.sn + '：' + (data.parent_created ? '已预建家长账号并' : '已') + '绑定家长，预授权自动认领 7 天' + (data.auto_confirm && data.auto_confirm.done ? '（设备已上线，已代确认）' : '（设备联网自报后自动认领）') });
+                } else if (data.parent_bound) {
                   ElementPlus.ElMessage.success('已添加 ' + data.device.sn + ' 并绑定家长');
                 } else if (data.parent_bind_warning) {
                   ElementPlus.ElMessage({ type: 'warning', message: data.parent_bind_warning, duration: 8000, showClose: true });
@@ -4454,7 +5529,7 @@
         function delDevice(sn) {
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn), { method: 'DELETE' })
             .then(function (data) {
-              if (data && data.ok) { ElementPlus.ElMessage.success('已删除台账记录（流水保留）'); loadDevices(); }
+              if (data && data.ok) { ElementPlus.ElMessage.success({ message: '已删除台账记录（流水保留）。该 SN 此前签发的凭据已全部作废：设备回网会被拒（401），重新添加后需重新签发凭据，或添加时填家长手机号走预授权认领。', duration: 8000, showClose: true }); loadDevices(); }
               else ElementPlus.ElMessage.error((data && data.error) || '删除失败');
             })
             .catch(function (e) {
@@ -4499,9 +5574,9 @@
           } else { fallback(); }
         }
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
-        var brainState = reactive({ selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
+        var brainState = reactive({ whitebox: null, selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleEvents: [] });
+        var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -4524,19 +5599,41 @@
           growth.loading = true; growth.error = '';
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/persona-probe')
             .then(function (data) {
-              if (data && data.ok) { growth.probe = data; loadGrowthEvents(sn); }
+              if (data && data.ok) { growth.probe = data; loadGrowthEvents(sn); loadTraitSnapshots(sn); }
               else { growth.error = (data && data.error) || 'probe 失败'; growth.probe = null; }
             })
             .catch(function () { growth.error = '无法连接设备服务'; })
             .finally(function () { growth.loading = false; });
           loadStyleTemplate(sn);
         }
+        function loadTraitSnapshots(sn) {
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/trait-snapshots')
+            .then(function (data) { growth.snapshots = (data && data.ok && data.snapshots) || []; })
+            .catch(function () { growth.snapshots = []; });
+        }
+        function rollbackTrait(sn) {
+          var day = growth.rollbackDay;
+          if (!sn || !day) return;
+          ElementPlus.ElMessageBox.confirm('把特质五维（含风格档）退回到 ' + day + ' 的快照？现在的状态会先存成今天的快照，可反悔。', '退回特质', { type: 'warning', confirmButtonText: '退回', cancelButtonText: '取消' })
+            .then(function () {
+              growth.rollingBack = true;
+              return deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/trait-rollback', { method: 'POST', body: JSON.stringify({ day: day }) })
+                .then(function (data) {
+                  if (data && data.ok) { ElementPlus.ElMessage.success('已退回到 ' + day + '（变动 ' + data.moved + ' 维）'); growth.rollbackDay = ''; loadGrowth(sn); }
+                  else ElementPlus.ElMessage.error((data && data.error) || '退回失败');
+                })
+                .finally(function () { growth.rollingBack = false; });
+            })
+            .catch(function (e) {
+              if (e && e.message && e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('退回失败，请稍后重试');
+            });
+        }
         // 说话风格模板（P0 2026-09-01）：家长/运营选风格档——特质值立即置为模板五维，成长在模板附近继续。
         function loadStyleTemplate(sn) {
           if (!sn) return;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template')
             .then(function (data) {
-              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; growth.styleSetAt = data.set_at || null; }
+              if (data && data.ok) { growth.styleTemplate = data.template; growth.stylePicked = data.template; growth.styleAvailable = data.available || []; growth.styleSource = data.source || null; growth.styleSetAt = data.set_at || null; }
             })
             .catch(function () {});
           // 风格白盒（P2）：特质变化时间线独立拉取（不受卡6模块过滤影响）
@@ -4551,6 +5648,7 @@
         // 风格变化归因（P2 白盒三色）：家长设定 / 互动成长 / 自然回落
         function styleAttribution(ev) {
           if (ev.rule === 'parent_style_template') return { icon: '🟠', label: '家长设定' };
+          if (ev.rule === 'child_voice_style') return { icon: '🔵', label: '孩子要求' };
           if (ev.rule === 'daily_setpoint_decay') return { icon: '⚪', label: '自然回落' };
           return { icon: '🟢', label: '互动成长' };
         }
@@ -4771,17 +5869,25 @@
             navigator.clipboard.writeText(text).then(done).catch(function () { ElementPlus.ElMessage.error('复制失败'); });
           }
         }
+        // 换设备必清旧成长视图（2026-09-03 川哥：点选设备后人格成长页不自动刷新，还挂着上一台的数据）
+        function resetGrowthView() {
+          growth.probe = null; growth.error = ''; growth.events = []; growth.eventsTotal = 0; growth.styleEvents = [];
+          growth.styleTemplate = 'default'; growth.stylePicked = 'default'; growth.styleSetAt = null; growth.styleSource = null;
+        }
         function selectBrainDevice(sn) {
           brainState.selectedSn = sn;
           brainState.showPrompt = false;
           brainState.isolation = null; // 换设备必清旧隔离视图——隔离面板自己串台展示旧设备数据是最讽刺的 bug
+          resetGrowthView();
           loadBrain(sn);
           if (brainState.subTab === 'isolation') loadIsolation(sn);
+          if (brainState.subTab === 'growth') loadGrowth(sn);
         }
         function refreshBrainTab() {
           loadDevices();
           if (brainState.selectedSn) loadBrain(brainState.selectedSn);
           if (brainState.selectedSn && brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
+          if (brainState.selectedSn && brainState.subTab === 'growth') loadGrowth(brainState.selectedSn);
         }
         // 全局隔离总览（2026-08-19）：全租户对账——逐台路由自检 + 全库不变量 + 24h 可靠性，进 brain tab 未选设备时默认展示。
         function loadOverview() {
@@ -4823,6 +5929,7 @@
               if (data && data.ok) {
                 brainState.view = data;
                 brainState.graphSelected = '';
+                loadMemoryWhitebox(sn);
                 // 编辑草稿与服务端同步（有未保存改动时不覆盖，防打字被刷新冲掉）
                 if (!brainState.cfgDirty && data.prompt_config) {
                   brainCfg.worldview_override = data.prompt_config.worldview_override || '';
@@ -4872,6 +5979,13 @@
               if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('无法连接 brain 服务，请稍后重试');
             });
         }
+        var MEM_RULE_LABEL = { explicit_rename: '孩子改称呼', explicit_relike: '又喜欢了→撤回不喜欢', dislike_restated: '再次不喜欢→复活', profile_field_update: '性格/情绪观察更新(旧值保留)', profile_extract: '画像更新', concern_extracted: '记下值得关心的事', concern_expire_7d: '关心事翻篇', cc_data_fix: '运营修复', rollback: '退回快照' };
+        function memRuleLabel(rule) { return MEM_RULE_LABEL[rule] || rule; }
+        function loadMemoryWhitebox(sn) {
+          deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/memory-whitebox')
+            .then(function (data) { brainState.whitebox = (data && data.ok) ? data : null; })
+            .catch(function () { brainState.whitebox = null; });
+        }
         function saveChildProfile() {
           var sn = brainState.selectedSn;
           if (!sn) return;
@@ -4884,6 +5998,21 @@
             })
             .catch(function (e) {
               if (e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('保存失败，请稍后重试');
+            });
+        }
+        function vetoInterest(i) {
+          var sn = brainState.selectedSn;
+          if (!sn || !i || !i.value) return;
+          ElementPlus.ElMessageBox.confirm('否决兴趣「' + i.value + '」？之后孩子语音再提也不会升为兴趣（可随时在此看到「已否决」）', '家长否决', { type: 'warning', confirmButtonText: '否决', cancelButtonText: '取消' })
+            .then(function () {
+              return deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/interest-veto', { method: 'POST', body: JSON.stringify({ value: i.value }) })
+                .then(function (data) {
+                  if (data && data.ok && data.vetoed) { ElementPlus.ElMessage.success('已否决「' + i.value + '」'); loadBrain(sn); }
+                  else ElementPlus.ElMessage.error((data && data.error) || '否决失败');
+                });
+            })
+            .catch(function (e) {
+              if (e && e.message && e.message !== '401' && e.message !== 'no-token') ElementPlus.ElMessage.error('否决失败，请稍后重试');
             });
         }
         function bindParent() {
@@ -5152,9 +6281,14 @@
         }
         function khSelectNav(k) {
           khNav.value = k;
+          if (k === 'servers') nextTick(loadHostsStatus);
           if (k === 'hotwords') nextTick(loadHotwords);
-          if (k === 'ota') nextTick(loadOta);
+          if (k === 'ota') nextTick(function () { loadOta(); loadPck(); });
           if (k === 'devcfg') nextTick(loadDevcfg);
+          if (k === 'diaglog') nextTick(loadDiaglog);
+          if (k === 'race') nextTick(function () { loadRace(); loadRaceStats(); });
+          if (k === 'voice') nextTick(loadVoice);
+          if (k === 'release') nextTick(loadRelease);
           if (k === 'metrics') nextTick(initKhRetention);
           if (k === 'board') {
             nextTick(function () {
@@ -6306,10 +7440,11 @@
           inviteList: inviteList,
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
-          deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, deviceSessions: deviceSessions, credDialog: credDialog,
-          workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS,
-          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
-          devcfg: devcfg, devcfgKey0: devcfgKey0, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
+          deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
+          workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS, hostsStatus: hostsStatus, loadHostsStatus: loadHostsStatus, hsAgo: hsAgo, hsDur: hsDur, hsMb: hsMb, hsGb: hsGb, hsNum: hsNum, hsSvcType: hsSvcType, hsLinkType: hsLinkType, hsLinkLabel: hsLinkLabel,
+          release: release, loadRelease: loadRelease, applyPolicy: applyPolicy, clearPolicyOverride: clearPolicyOverride, todoOpen: todoOpen, todoClosed: todoClosed, addTodo: addTodo, setTodoStatus: setTodoStatus, policySourceLabel: policySourceLabel,
+          ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaEditNotes: otaEditNotes, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
+          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, devcfgFmtVal: devcfgFmtVal, diaglog: diaglog, loadDiaglog: loadDiaglog, loadDiaglogEvents: loadDiaglogEvents, setDiaglogSwitch: setDiaglogSwitch, clearDiaglogOverride: clearDiaglogOverride, dlLevelType: dlLevelType, dlAgo: dlAgo, dlSkew: dlSkew, dlJson: dlJson, dlAllowlistLabel: dlAllowlistLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,
@@ -6318,7 +7453,7 @@
           hwStartEdit: hwStartEdit, hwAddWord: hwAddWord, hwRemoveWord: hwRemoveWord,
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
-          snInRegistry: snInRegistry, loadDevices: loadDevices, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
+          snInRegistry: snInRegistry, loadDevices: loadDevices, loadPairingPending: loadPairingPending, confirmPairing: confirmPairing, openPreauth: openPreauth, cancelPreauth: cancelPreauth, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
           growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
@@ -6333,7 +7468,7 @@
           openBrain: openBrain, unbindBrain: unbindBrain, addBrainMemory: addBrainMemory,
           delBrainMemory: delBrainMemory,
           brainProfileDraft: brainProfileDraft, parentBind: parentBind,
-          saveChildProfile: saveChildProfile, bindParent: bindParent, unbindParent: unbindParent,
+          saveChildProfile: saveChildProfile, vetoInterest: vetoInterest, rollbackTrait: rollbackTrait, memRuleLabel: memRuleLabel, bindParent: bindParent, unbindParent: unbindParent,
           extractLlm: extractLlm, loadExtractLlm: loadExtractLlm, saveExtractLlm: saveExtractLlm, testExtractLlm: testExtractLlm,
           shortSessionId: shortSessionId, roleLabel: roleLabel, roleTagType: roleTagType,
           getSceneLabel: getSceneLabel, fmtTs: fmtTs, getColKey: getColKey, normalizeFeedbackItem: normalizeFeedbackItem,

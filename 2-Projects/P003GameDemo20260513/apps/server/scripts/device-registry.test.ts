@@ -10,9 +10,9 @@ import { rmSync } from 'node:fs';
 import { Hono } from 'hono';
 
 const DB_PATH = '/private/tmp/claude-501/-Users-rayman-chen-mycc/410a354a-ee50-4c8b-9b06-02a639743e97/scratchpad/test-device-registry.db';
-for (const suffix of ['', '-wal', '-shm']) {
+for (const suffix of ['', '-wal', '-shm', '-pairing.db', '-pairing.db-wal', '-pairing.db-shm']) {
   try {
-    rmSync(DB_PATH + suffix);
+    rmSync(DB_PATH.replace(/\.db$/, '') + (suffix.startsWith('-pairing') ? suffix : '.db' + suffix));
   } catch {
     /* 不存在即干净 */
   }
@@ -20,6 +20,7 @@ for (const suffix of ['', '-wal', '-shm']) {
 
 // env 必须在业务模块加载前就位（store 单例在模块顶层建库）
 process.env.DEVICES_DB_PATH = DB_PATH;
+process.env.PAIRING_DB_PATH = DB_PATH.replace(/\.db$/, '-pairing.db'); // E 段：台账凭据列由 claim 会话回填，需隔离 pairing 库
 process.env.AUTH_JWT_SECRET = 'test-auth-secret';
 process.env.LIVEKIT_API_KEY = 'voicekey';
 process.env.LIVEKIT_API_SECRET = '0123456789abcdef0123456789abcdef';
@@ -32,6 +33,7 @@ process.env.STUDIO_PASS = 'test-pass';
 const { deviceRegistryStore } = await import('../src/device-registry-store.js');
 const { deviceSessionRoute } = await import('../src/routes/device-session.js');
 const { adminDataRoute } = await import('../src/routes/admin-data.js');
+const { pairingStore, hashToken } = await import('../src/pairing-store.js');
 const { authRoute } = await import('../src/routes/auth.js');
 const { SignJWT, jwtVerify, decodeJwt } = await import('jose');
 
@@ -299,7 +301,84 @@ await t('E4 分页：total 恒定 + offset 翻页不重叠不遗漏', async () =
   assert.equal(all.sessions.length, j1.total, 'limit=total 拉全量数量不符');
 });
 
+// ═══ G. 台账「凭据」列读侧回填（2026-09-06）：配网 claim 签发只进 ECIES 载荷、不写 registry.credential_* ═══
+
+await t('G1 有 claim 会话、台账无签发记录 → credential_source=pairing_claim，到期=claimed_at 取整秒+365d', async () => {
+  const SN_P = 'BJP00326060100200011';
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_P, note: '配网签发回填' })).status, 200);
+  const nonce = 'e1-nonce-' + 'x'.repeat(24);
+  pairingStore.confirmSessionByHash('acct-e1', SN_P, hashToken(nonce), 'AgEBAQEB', 'admin');
+  pairingStore.markSessionClaimed(nonce, 'ready');
+  const claimedAt = pairingStore.lastClaimedSessionBySn(SN_P)!.claimed_at!;
+  const dev = ((await (await adminReq(adminToken, 'GET', '/devices')).json()) as any).devices.find((d: any) => d.sn === SN_P);
+  assert.equal(dev.credential_source, 'pairing_claim');
+  assert.equal(dev.credential_issued_at, Math.floor(claimedAt / 1000) * 1000);
+  assert.equal(dev.credential_expires_at, Math.floor(claimedAt / 1000) * 1000 + 365 * 86_400_000);
+});
+
+await t('G2 台账手工签发后台账优先 credential_source=registry；未 claim 未签发 → null', async () => {
+  const SN_P = 'BJP00326060100200011';
+  const SN_BARE = 'BJP00326060100200012';
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_BARE, note: '未 claim 未签发' })).status, 200);
+  const issued = (await (await adminReq(adminToken, 'POST', `/devices/${SN_P}/credential`, { days: 30 })).json()) as any;
+  const list = ((await (await adminReq(adminToken, 'GET', '/devices')).json()) as any).devices;
+  const dev = list.find((d: any) => d.sn === SN_P);
+  assert.equal(dev.credential_source, 'registry');
+  assert.equal(dev.credential_expires_at, issued.expires_at_ms);
+  const bare = list.find((d: any) => d.sn === SN_BARE);
+  assert.equal(bare.credential_source, null);
+  assert.equal(bare.credential_expires_at, null);
+});
+
 // ═══ F. 日志敏感扫描 ═══
+
+// ═══ G. 删除 = 作废旧凭据（2026-09-16 川哥：删了就是新设备，必须重新签发/认领） ═══
+
+const SN_REV = 'BJP00326060100200031'; // 本文件其它段未用过的 SN（200003/007/009/011/012 已占）
+let revToken1 = '';
+let revToken2 = '';
+
+await t('G1 添加 + 签发 → 凭据可用（前置正锚）', async () => {
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_REV, note: '作废测试机' })).status, 200);
+  const r = await adminReq(adminToken, 'POST', `/devices/${SN_REV}/credential`, { days: 30 });
+  assert.equal(r.status, 200);
+  revToken1 = ((await r.json()) as { token: string }).token;
+  assert.ok(revToken1 && !logLines.join('\n').includes(revToken1), '签发失败或 token 进了日志');
+  assert.equal((await callSession(revToken1, SN_REV)).status, 200);
+});
+
+await t('G2 DELETE 后：旧凭据 401、无 iat 老 token 也 401，响应带作废水位', async () => {
+  const r = await adminReq(adminToken, 'DELETE', `/devices/${SN_REV}`);
+  assert.equal(r.status, 200);
+  const j = (await r.json()) as { credentials_revoked_before_ms?: number };
+  assert.ok(typeof j.credentials_revoked_before_ms === 'number' && j.credentials_revoked_before_ms > 0, '响应缺作废水位');
+  assert.equal((await callSession(revToken1, SN_REV)).status, 401, '旧凭据仍被放行');
+  assert.equal((await callSession(await deviceCred(SN_REV), SN_REV)).status, 401, '无 iat 老 token 仍被放行');
+});
+
+await t('G3 重新添加 = 新设备：旧凭据仍 401，重新签发的新凭据 200', async () => {
+  assert.equal((await adminReq(adminToken, 'POST', '/devices', { sn: SN_REV, note: '重加' })).status, 200);
+  assert.equal((await callSession(revToken1, SN_REV)).status, 401, '重加后旧凭据复活');
+  // 水位含删除当秒（iat 秒精度）：新凭据必须签在下一秒起，等 1.1 s 再签（真实操作里删除→重签总隔着人手几秒）
+  await new Promise((resolve) => setTimeout(resolve, 1100));
+  const r = await adminReq(adminToken, 'POST', `/devices/${SN_REV}/credential`, { days: 30 });
+  assert.equal(r.status, 200);
+  revToken2 = ((await r.json()) as { token: string }).token;
+  assert.notEqual(revToken2, revToken1);
+  assert.equal((await callSession(revToken2, SN_REV)).status, 200, '新签凭据被误拒（水位秒级比对出错）');
+});
+
+await t('G4 负锚：从未删除过的设备，无 iat token 照常放行（存量真机不受影响）', async () => {
+  assert.equal(deviceRegistryStore.credentialNotBeforeSec(SN_DB), null);
+  assert.equal((await callSession(credDb, SN_DB)).status, 200);
+});
+
+await t('G5 删除审计日志命中且不含 JWT', async () => {
+  assert.ok(
+    logLines.some((l) => l.includes('[admin-devices] device removed') && l.includes(`sn=${SN_REV}`) && l.includes('credentials revoked before=')),
+    '删除审计日志缺失',
+  );
+});
 
 await t('F1 路由日志无 JWT + 签发审计正锚命中', async () => {
   const all = logLines.join('\n');

@@ -10,10 +10,12 @@ import {
 } from './relation-state-store.js';
 import { traitStore } from './trait-store.js';
 import { runLocalAudioForAccount } from './local-audio-generator.js';
+import { jobRunStore, cstDayOf } from './job-run-store.js';
 import crypto from 'node:crypto';
 
 // M3 行为画像 + M6 自我叙事 · 每日批 runner（人格成长方案 §M3/§M6）。
-// 触发：index.ts 每小时 tick，沪时 3 点档跑一次/日（重启丢标记则当日重复跑——覆盖式更新幂等无害）；
+// 触发：index.ts 每小时 tick，沪时 3 点档跑一次/日，「当天跑过」落库 job_run（2026-09-03 前只在内存：
+// 白天每次部署重启都补跑一次，当日实测 6 次——洞察/叙事无同日守卫，账本刷进 56 条同义改写假事件）；
 // admin 可手动触发单账号（POST /api/admin/devices/:sn/persona-insight-run，调试即时出结果）。
 // 全链 fire-and-forget 语义：任何失败留痕日志，绝不影响语音主链。
 
@@ -185,6 +187,7 @@ export async function runDailyPersonaJobs(): Promise<void> {
     if (personaNarrativeEnabled(acct)) await runNarrativeForAccount(acct);
     // 特质弹簧回拉（set-point 律）：每日一次向人设基线回落，有移动会记账（「回落也是事件」）
     if (personaTraitEnabled(acct)) {
+      traitStore.snapshotDaily(acct); // R3：回落前存今天的快照（可退回任意一天）
       const moved = traitStore.dailyDecay(acct);
       if (moved) console.log(`[trait] account=${acct} 弹簧回拉 ${moved} 维`);
     }
@@ -194,22 +197,42 @@ export async function runDailyPersonaJobs(): Promise<void> {
   console.log(`[persona-daily] 完成`);
 }
 
-// ── 每小时 tick（index.ts 启动时挂）：沪时 3 点档、每日一次 ──
-let lastRunDay = '';
+// ── 每小时 tick（index.ts 启动时挂）：沪时 3 点档、每日一次，标记落库 job_run ──
+export const PERSONA_DAILY_JOB = 'persona_daily';
+export type DailyDecision = 'run' | 'run_reclaim' | 'skip_hour' | 'skip_done' | 'skip_busy';
+
+/**
+ * 每日批决策（导出供单测 + 生产探针 scripts/job-run-ops.ts peek）。
+ * dryRun=true 只看不认领；否则 run/run_reclaim 已把今天认领下来，调用方跑完必须 finish。
+ */
+export function decideDailyRun(now = Date.now(), dryRun = false): DailyDecision {
+  if (shanghaiHour(now) < 3) return 'skip_hour';
+  const day = cstDayOf(now);
+  const r = dryRun ? jobRunStore.peek(PERSONA_DAILY_JOB, day, now) : jobRunStore.claim(PERSONA_DAILY_JOB, day, now, undefined, 'timer');
+  if (r === 'claimed') return 'run';
+  if (r === 'reclaimed') return 'run_reclaim';
+  return r === 'done' ? 'skip_done' : 'skip_busy';
+}
 
 export function startPersonaDailyTimer(): void {
   const tick = () => {
     try {
       const now = Date.now();
-      const day = new Date(now + 8 * 3600_000).toISOString().slice(0, 10);
-      if (shanghaiHour(now) >= 3 && day !== lastRunDay) {
-        lastRunDay = day;
-        void runDailyPersonaJobs();
+      const day = cstDayOf(now);
+      const d = decideDailyRun(now);
+      if (d === 'skip_hour') return;
+      if (d === 'skip_done' || d === 'skip_busy') {
+        console.log(`[persona-daily] day=${day} ${d === 'skip_done' ? '今日已跑过' : '上一次仍在租约内'} 跳过`);
+        return;
       }
+      if (d === 'run_reclaim') console.log(`[persona-daily] day=${day} 上次认领未完成(疑似进程崩溃) 重新认领`);
+      void runDailyPersonaJobs()
+        .catch((err) => console.log('[persona-daily] 批异常:', String((err as Error)?.message ?? err)))
+        .finally(() => jobRunStore.finish(PERSONA_DAILY_JOB, day));
     } catch (err) {
       console.log('[persona-daily] tick 异常:', String((err as Error)?.message ?? err));
     }
   };
   setInterval(tick, 3600_000);
-  console.log('[persona-daily] 定时器已挂(每小时 tick,沪时 3 点档执行)');
+  console.log(`[persona-daily] 定时器已挂(每小时 tick,沪时 3 点档执行,job_run 落库防重启补跑) local_audio_paused=${process.env.LOCAL_AUDIO_GENERATION_PAUSED ?? '0'}`);
 }

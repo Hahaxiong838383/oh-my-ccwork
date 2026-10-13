@@ -28,7 +28,32 @@ const EVENT_TYPES = new Set([
   'posture_round',
   'posture_reminder',
   'presence_transition',
+  // 2026-09-05 语音设备控制合同 v3.1 §4（codex 阶段 B GO §4）：一次逻辑请求一条终态事件，data 严格白名单见下
+  'device_command',
 ]);
+
+/**
+ * `device_command` 事件 data 白名单（合同 v3.1 §4 终值）：只含下列字段，多余键拒（strict）；
+ * 不含任何原话/文本/SN 全文/token。lane/trace_id 可空（离线芯片=L0、UI 为空）；reason 自由串 ≤64；
+ * status 只收终态（accepted 不是执行事件）。校验失败 → 逐条 rejected `invalid_event_data`，不影响同批其他事件。
+ */
+const DeviceCommandDataSchema = z
+  .object({
+    source: z.enum(['vad_chip', 'worker_l1', 'worker_l2', 'fallback', 'ui']),
+    label: z.number().int().min(0).max(1000),
+    action: z.string().min(1).max(64),
+    lane: z.enum(['L0', 'L1', 'L2']).nullish(),
+    status: z.enum(['succeeded', 'already_applied', 'rejected', 'failed', 'timeout']),
+    reason: z.string().max(64),
+    execution_ms: z.number().int().min(0).max(600_000),
+    mcu_tx_count: z.number().int().min(0).max(100),
+    steps_done: z.number().int().min(0).max(3),
+    boundary_basis: z.string().max(32),
+    spoken_locally: z.boolean(),
+    candidate_seq: z.number().int().min(0).nullish(),
+    trace_id: z.string().max(80).nullish(),
+  })
+  .strict();
 const MAX_EVENTS_PER_BATCH = 50;
 const RATE_PER_HOUR = 240; // 2026-08-25 提额:设备默认 30s 上传=120次/h,原 60 不到节奏一半(恢复后30分钟打满全 429);240=2倍余量,防风暴语义仍在
 const ONLINE_WINDOW_MS = 10 * 60_000; // 心跳 5min 的两倍
@@ -139,6 +164,10 @@ deviceTelemetryRoute.post('/', async (c) => {
   for (const ev of batch.events ?? []) {
     if (!EVENT_TYPES.has(ev.type)) {
       rejected.push({ event_id: ev.event_id, reason: 'invalid_event_type' });
+      continue;
+    }
+    if (ev.type === 'device_command' && !DeviceCommandDataSchema.safeParse(ev.data).success) {
+      rejected.push({ event_id: ev.event_id, reason: 'invalid_event_data' });
       continue;
     }
     const outcome = telemetryStore.ingestEvent(sn, ev, meta);

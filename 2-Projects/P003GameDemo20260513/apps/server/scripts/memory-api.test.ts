@@ -181,7 +181,7 @@ const tokenB = await signToken(ACCT_B);
   );
   const interests = profile.interests as Array<Record<string, unknown>>;
   assert.equal(interests.length, 2);
-  assert.deepEqual(Object.keys(interests[0]), ['value'], 'interests 元素只留 value,裁掉 confidence/source');
+  assert.deepEqual(Object.keys(interests[0]), ['value', 'state', 'evidence'], 'interests 元素只留 value/state/evidence,裁掉 confidence/source');
   const del = await call('DELETE', `/interest/${encodeURIComponent('恐龙')}`, tokenA);
   assert.equal(del.json.removed, true, 'URL 编码中文兴趣删除成功');
   const after = await call('GET', '/', tokenA);

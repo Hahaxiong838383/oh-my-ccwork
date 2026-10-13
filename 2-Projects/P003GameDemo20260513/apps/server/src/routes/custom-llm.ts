@@ -4,6 +4,8 @@ import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
 import { buildAiLiteracyGuide } from '../ai-literacy.js';
 import { getDevicePromptConfig, buildDeviceBase, deviceAddendum, deviceIntentProtocol, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { assembleSystemPrompt, buildOnboardingGuide } from '../prompt-orchestrator.js';
+import { detectStyleIntent, applyVoiceStyle } from '../style-intent.js';
+import { personaTraitEnabled } from '../relation-state-store.js';
 import { curriculumKG } from '../curriculum-kg.js';
 import { companionKG } from '../companion-kg.js';
 import { createGeminiLlmClient, type ChatHistoryTurn } from '../providers/gemini-llm.js';
@@ -15,6 +17,7 @@ import { localAudioStore } from '../local-audio-store.js';
 import { profileStore, needsOnboarding } from '../profile-store.js';
 import { extractOnboarding } from '../onboarding-extractor.js';
 import { extractAndPersist } from '../memory-extractor.js';
+import * as extractScheduler from '../extract-scheduler.js';
 import { conversationStore } from '../conversation-store.js';
 import { createParenFilter } from '../paren-filter.js';
 import { createExitMarkerStripper } from '../exit-intent.js';
@@ -103,6 +106,17 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 吐槽模式（docs/37）：前端点「我要吐槽」arm 过 → 本轮一次性消费走吐槽（落反馈库 + 吐槽人格回应）。
   // 吐槽优先：不走 onboarding 引导、不召回世界观，专注接住孩子的吐槽。
   const isFeedback = authContext ? consumeFeedbackArmed(authContext.accountId) : false;
+  // 语音调档 S1 快路（Phase A，2026-09-03）：仅设备账号真实轮；命中即处置（observe 只记 / execute 切档）——
+  // 必须在 assembleSystemPrompt 之前，切了本轮 prompt 就读到新档；policy 行让小可先答应一句。
+  let voiceStylePolicy = '';
+  // 范围=人格名单（personaTraitEnabled：PERSONA_TRAIT_ENABLED + PERSONA_STATE_ACCOUNT_ALLOWLIST），与方案 §二 S3 canary 一致
+  if (authContext?.role === 'device' && !overridePrompt && !isFeedback && userText.trim() && personaTraitEnabled(authContext.accountId)) {
+    const styleHit = detectStyleIntent(userText);
+    if (styleHit) {
+      const applied = applyVoiceStyle(authContext.accountId, styleHit, userText);
+      if (applied.policyLine) voiceStylePolicy = applied.policyLine;
+    }
+  }
   const inOnboarding = !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
@@ -120,6 +134,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
+  if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
   const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
@@ -194,21 +209,27 @@ customLlmRoute.post('/chat/completions', async (c) => {
     const persistTurn = (): void => {
       if (!authContext || overridePrompt || isFeedback) return; // override/吐槽不落库不抽取(不污染真实 profile)
       const finalAssistant = assistantText.trim();
+      // R2 证据链（2026-09-03）：本轮两条消息的 conversation.id 随快照传给抽取器（窗口内旧消息由抽取器按原话反查）
+      let userMsgId: string | undefined;
+      let assistantMsgId: string | undefined;
       try {
-        conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText });
+        userMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText }).id;
         if (finalAssistant) {
-          conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant });
+          assistantMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant }).id;
         }
       } catch { /* 审计落库失败不阻断 */ }
       if (!finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
-      const full = [...history, { role: 'user' as const, content: userText }, { role: 'assistant' as const, content: finalAssistant }];
+      const full = [
+        ...history,
+        { role: 'user' as const, content: userText, id: userMsgId },
+        { role: 'assistant' as const, content: finalAssistant, id: assistantMsgId },
+      ];
       const userTurns = full.filter((t) => t.role === 'user').length;
-      // 抽取节流分场景（2026-08-19）：设备房(role=device)每轮都抽——唤醒式交互以 1-2 轮短会话为主,
-      // %3 取模下几乎永不触发(当日实证建档后三场会话全漏);UNIQUE(account,type,content) 去重兜滑窗重叠,幂等。
-      // web RTC(/m 手机端)保持每 3 轮(长会话为主,省调用;末尾 ≤2 轮漏抽窗口是已知局限,docs/43 §8 G2)。
-      const everyTurns = authContext.role === 'device' ? 1 : 3;
-      if (userTurns % everyTurns === 0) {
-        void extractAndPersist(authContext.accountId, full.slice(-6), 'rtc');
+      // 抽取时机（R5，2026-09-03）：默认 turn 模式=设备房每轮抽、Web 每 3 轮（原行为）；
+      // MEMORY_EXTRACT_MODE=trigger 时改「触发词立刻抽 / 攒 5 轮抽一次 / 空隙 3 分钟补抽」，可按 SN 灰度。
+      const decision = extractScheduler.onTurn(authContext.accountId, authContext.role, userText, userTurns);
+      if (decision.run) {
+        void extractAndPersist(authContext.accountId, full.slice(-decision.windowMessages), 'rtc', { reason: decision.reason });
       }
     };
 

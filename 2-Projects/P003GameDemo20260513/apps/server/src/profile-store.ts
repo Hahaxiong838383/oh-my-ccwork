@@ -11,7 +11,32 @@ import { DatabaseSync } from 'node:sqlite';
 // recent_emotion），供语音对话异步抽取写入（updateMemoryFields），实现"懂孩子"的长期画像。
 // profile-store 是孩子画像的【唯一真相源】，多端（体验台/admin/家长端）都读它 → 多端打通。
 
-export type InterestItem = { value: string; confidence: number; last_updated: number; source: string };
+/** R1 画像证据化（2026-09-03）：兴趣三态——unverified（单次提及）/ verified（≥2 个不同日子提及）/ retracted（不喜欢或家长否决）。
+ *  存量无 state 视为 unverified；家长否决（retracted_by=parent）后同名不再升；不喜欢撤回（dislike）可被「又喜欢」复活。 */
+export type InterestState = 'unverified' | 'verified' | 'retracted';
+export type InterestItem = {
+  value: string;
+  confidence: number;
+  last_updated: number;
+  source: string;
+  evidence?: string; //       孩子原话连续片段（服务端子串硬校验后存）
+  source_msg_id?: string; //  指回 conversation.id
+  state?: InterestState;
+  mention_days?: string[]; // 提及日（沪时 YYYY-MM-DD），≥2 个不同日子升 verified
+  retracted_by?: 'parent' | 'dislike';
+};
+
+export function interestState(i: InterestItem): InterestState {
+  return i.state ?? 'unverified';
+}
+export function activeInterests(list: InterestItem[]): InterestItem[] {
+  return list.filter((i) => interestState(i) !== 'retracted');
+}
+/** 沪时日期（+8h 偏移法，禁进程时区）。 */
+export function cstDay(ts = Date.now()): string {
+  return new Date(ts + 8 * 3600_000).toISOString().slice(0, 10);
+}
+const VERIFY_DAYS = 2;
 
 // 方舟冒险事件记忆（game_progress）：孩子明确表达的方舟游戏进展/冒险经历（"通关了恐龙星域"…）。
 // 轻量扩展，持久化同 interests（family_member.game_progress JSON TEXT 列），写时只留最近 5 条。
@@ -258,10 +283,35 @@ class ProfileStore {
    * Phase 1(docs/43):孩子明确说"不喜欢X了" → 从 interests 删除该项(dislike 联动撤销)。
    * 同 updateMemoryFields 的同步原子策略:读最新→过滤→写回,无 await 间隙,防并发 lost update。
    */
-  removeInterest(accountId: string, value: string): boolean {
+  /**
+   * 「不喜欢X了」撤回兴趣（R1 起为软撤回：state=retracted, retracted_by=dislike，条目保留可被「又喜欢」复活）。
+   * 归一互含匹配（旧为字面全等——retract 词「不想聊冷光」删不掉兴趣「冷光」）。
+   */
+  removeInterest(accountId: string, value: string, by: 'dislike' | 'parent' = 'dislike'): boolean {
     const existing = this.getProfile(accountId);
     if (!existing) return false;
-    // 归一互含匹配（旧为字面全等——retract 词「不想聊冷光」删不掉兴趣「冷光」）
+    let changed = false;
+    const next = existing.interests.map((i) => {
+      if (interestState(i) === 'retracted' || !isSameInterest(i.value, value)) return i;
+      changed = true;
+      return { ...i, state: 'retracted' as const, retracted_by: by, last_updated: Date.now() };
+    });
+    if (!changed) return false;
+    this.db
+      .prepare('UPDATE family_member SET interests = ?, updated_at = ? WHERE id = ?')
+      .run(JSON.stringify(next), Date.now(), existing.id);
+    return true;
+  }
+
+  /** 家长否决（R1）：state=retracted, retracted_by=parent；此后同名兴趣不再被抽取升格。 */
+  vetoInterest(accountId: string, value: string): boolean {
+    return this.removeInterest(accountId, value, 'parent');
+  }
+
+  /** 物理删除一条兴趣（儿童数据删除权；家长端 DELETE 用）。 */
+  deleteInterest(accountId: string, value: string): boolean {
+    const existing = this.getProfile(accountId);
+    if (!existing) return false;
     const next = existing.interests.filter((i) => !isSameInterest(i.value, value));
     if (next.length === existing.interests.length) return false;
     this.db
@@ -354,12 +404,30 @@ export function isSameInterest(a: string, b: string): boolean {
 }
 
 function appendInterests(existing: InterestItem[], added: InterestItem[]): InterestItem[] {
-  const merged = [...existing];
+  const merged = existing.map((i) => ({ ...i }));
   for (const item of added) {
     if (!item || typeof item.value !== 'string') continue;
+    const days = Array.isArray(item.mention_days) && item.mention_days.length ? item.mention_days : [cstDay(item.last_updated)];
     // 归一互含判重（旧为字面全等——「KETPET」与「KET/PET考试」当作两项，是污染根因）
-    if (merged.some((i) => isSameInterest(i.value, item.value))) continue;
-    merged.push(item);
+    const idx = merged.findIndex((i) => isSameInterest(i.value, item.value));
+    if (idx < 0) {
+      merged.push({ ...item, state: item.state ?? 'unverified', mention_days: days, confidence: item.confidence ?? 0.5 });
+      continue;
+    }
+    const cur = merged[idx]!;
+    if (interestState(cur) === 'retracted' && cur.retracted_by === 'parent') continue; // 家长否决过：不再升
+    const mentionDays = Array.from(new Set([...(cur.mention_days ?? []), ...days])).sort();
+    const verified = interestState(cur) === 'verified' || mentionDays.length >= VERIFY_DAYS;
+    merged[idx] = {
+      ...cur,
+      last_updated: Math.max(cur.last_updated ?? 0, item.last_updated ?? 0),
+      evidence: cur.evidence || item.evidence,
+      source_msg_id: cur.source_msg_id || item.source_msg_id,
+      mention_days: mentionDays,
+      state: verified ? 'verified' : 'unverified', // 不喜欢撤回过的被「又喜欢」重提 → 复活
+      retracted_by: undefined,
+      confidence: verified ? Math.max(cur.confidence ?? 0, 0.8) : (cur.confidence ?? 0.5),
+    };
   }
   return merged;
 }

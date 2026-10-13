@@ -145,6 +145,21 @@ class ConversationStore {
       .filter((item): item is ConversationItem => item !== null);
   }
 
+  /**
+   * R2 证据链：按原话反查最近一条同账号同角色消息的 id（worker 传来的历史无 id，抽取窗口里的旧消息靠它定位）。
+   * 只看最近 limit 条；找不到返回 null（条目 source_msg_id 留空，不阻断）。
+   */
+  findRecentIdByText(accountId: string, role: ConversationRole, text: string, limit = 60): string | null {
+    const t = text.trim();
+    if (!accountId || !t) return null;
+    const row = this.db
+      .prepare(`SELECT id FROM conversation WHERE account_id = ? AND role = ? AND text = ? ORDER BY ts DESC LIMIT 1`)
+      .get(accountId, role, t) as { id: string } | undefined;
+    if (row) return row.id;
+    void limit;
+    return null;
+  }
+
   statsByAccount(): Record<string, { count: number; tokens: number }> {
     const rows = this.db
       .prepare(

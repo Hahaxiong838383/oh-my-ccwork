@@ -17,10 +17,12 @@ import { customLlmRoute } from './routes/custom-llm.js';
 import { rtcRoute } from './routes/rtc.js';
 import { deviceSessionRoute } from './routes/device-session.js';
 import { otaDeviceRoute } from './routes/ota.js';
+import { pckDeviceRoute } from './routes/ota-pck.js';
 import { deviceConfigRoute } from './routes/device-config.js';
 import { localAudioDeviceRoute } from './routes/local-audio.js';
 import { parentPairingRoute, devicePairingRoute } from './routes/pairing.js';
 import { deviceTelemetryRoute, parentTelemetryRoute } from './routes/telemetry.js';
+import { diagnosticsDeviceRoute } from './routes/diagnostics.js';
 import { devItemsRoute } from './routes/dev-items.js';
 import { themesRoute } from './routes/themes.js';
 import { checkAndCount, getClientIp } from './guard.js';
@@ -45,6 +47,7 @@ app.route('/api/feedback-themes', themesRoute);
 // P003 S2-B1 设备 Session API（安卓/MCU 设备换 LiveKit token；docs/CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
 app.route('/v1/device', deviceSessionRoute);
 app.route('/v1/device/ota', otaDeviceRoute);
+app.route('/v1/device/ota/content', pckDeviceRoute); // PCK 文件接口（双 OTA 合同 §6）
 app.route('/v1/device/config', deviceConfigRoute);
 // 本地人格音频（合同 CODEX_P003_LOCAL_AUDIO_CONTRACT_v1.1）：manifest + 音频文件分发
 app.route('/v1/device/local-audio', localAudioDeviceRoute);
@@ -52,6 +55,8 @@ app.route('/v1/device/pairing', devicePairingRoute);
 // 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824）
 app.route('/v1/device/telemetry', deviceTelemetryRoute);
 app.route('/v1/parent/devices', parentTelemetryRoute);
+// 设备诊断日志上云（Godot→Launcher→server；合同 DIAGNOSTIC_LOG_SERVER_HANDOFF + CC 复核回执 §3；路径字面冒号 logs:batch）
+app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);
 // 配网家长侧（联调合同 v3）：token 签发 + H5 轮询
 app.route('/api/parent/pairing', parentPairingRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。

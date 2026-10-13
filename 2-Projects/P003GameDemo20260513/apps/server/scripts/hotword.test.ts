@@ -17,6 +17,8 @@ process.env.STUDIO_USER = 'admin-t';
 process.env.STUDIO_PASS = 'pass-t';
 process.env.STUDIO_EDITOR_USERS = 'editor-t';
 process.env.STUDIO_EDITOR_PASS = 'editor-pass-t';
+// 安全窗口分支要可判定：生产机 shell 带 .env.local 的 LIVEKIT_* 时会真查房间数，「不可达→409」会变 502 —— 显式清掉
+for (const k of ['LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET']) delete process.env[k];
 // 通道 mock：status/fillers/apply 各给一份可控回执
 const LIVE = {
   INTERRUPT_HOTWORDS: '停,停止',
@@ -102,6 +104,56 @@ await t('device_asr kind:黑名单同适用+草稿可存(CHECK 迁移生效)', (
   hotwordStore.saveDraft('device_asr', ['读写台', '虚像'], 'cc');
   assert.deepEqual(hotwordStore.draftOf('device_asr')?.words, ['读写台', '虚像']);
   hotwordStore.deleteDraft('device_asr');
+});
+
+// ── 第五类：播放中附和词（2026-09-14 川哥）──
+await t('backchannel kind：两字以内 / 黑名单 / 与打断语退出词交集门', async () => {
+  assert.equal(validateWords('backchannel', ['嗯', '对对', '好的', '哇塞']).ok, true);
+  assert.equal(validateWords('backchannel', ['嗯嗯嗯']).ok, false, '3 字必须拒');
+  assert.equal(validateWords('backchannel', ['停']).ok, false, '急停词必须拒');
+  assert.equal(validateWords('backchannel', ['换一个']).ok, false, '换一个必须拒');
+  assert.equal(validateWords('backchannel', ['我']).ok, false, '句子开头词必须拒');
+  assert.equal(validateWords('backchannel', ['小可']).ok, false, '唤醒词必须拒');
+  hotwordStore.saveDraft('interrupt', ['停', '安静'], 'cc');
+  const bad = await app.request('/api/admin/hotwords/backchannel/draft', {
+    method: 'PUT', headers: H(adminToken), body: JSON.stringify({ words: ['嗯', '安静'] }),
+  });
+  const bj = (await bad.json()) as { error: string };
+  assert.equal(bad.status, 400, JSON.stringify(bj));
+  assert.match(bj.error, /安静/);
+  assert.equal(hotwordStore.draftOf('backchannel'), null, '交集命中一条都不能存');
+  const good = await app.request('/api/admin/hotwords/backchannel/draft', {
+    method: 'PUT', headers: H(adminToken), body: JSON.stringify({ words: ['嗯', '对'] }),
+  });
+  assert.equal(good.status, 200);
+  assert.deepEqual(hotwordStore.draftOf('backchannel')?.words, ['嗯', '对']);
+  hotwordStore.deleteDraft('interrupt');
+});
+await t('GET /hotwords 含 backchannel（env_key=BACKCHANNEL_HOTWORDS；通道无值 → live 空、draft 在）', async () => {
+  const r = await app.request('/api/admin/hotwords', { headers: H(adminToken) });
+  const j = (await r.json()) as Record<string, any>;
+  assert.equal(r.status, 200);
+  assert.equal(j.kinds.backchannel.env_key, 'BACKCHANNEL_HOTWORDS');
+  assert.deepEqual(j.kinds.backchannel.live, []);
+  assert.deepEqual(j.kinds.backchannel.draft.words, ['嗯', '对']);
+});
+await t('publish backchannel：不需要 exit_confirmed；mock proc 对撞一致 → v1', async () => {
+  const prev = process.env.HOTWORD_CHANNEL_MOCK!;
+  const tbl = JSON.parse(prev) as Record<string, any>;
+  tbl.apply = { ok: true, applied: ['BACKCHANNEL_HOTWORDS'], proc: { ...LIVE, BACKCHANNEL_HOTWORDS: '嗯,对' } };
+  process.env.HOTWORD_CHANNEL_MOCK = JSON.stringify(tbl);
+  try {
+    const r = await app.request('/api/admin/hotwords/publish', {
+      method: 'POST', headers: H(adminToken), body: JSON.stringify({ kinds: ['backchannel'], force: true }),
+    });
+    const j = (await r.json()) as Record<string, any>;
+    assert.equal(r.status, 200, JSON.stringify(j));
+    assert.equal(j.versions.backchannel, 1);
+    assert.deepEqual(hotwordStore.publishedOf('backchannel')?.words, ['嗯', '对']);
+    assert.equal(hotwordStore.draftOf('backchannel'), null);
+  } finally {
+    process.env.HOTWORD_CHANNEL_MOCK = prev;
+  }
 });
 
 // ── store 版本模型 ──

@@ -1,25 +1,30 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
 import { otaAdminRoute } from './ota.js';
 import { configAdminRoute } from './device-config.js';
+import { diagnosticsAdminRoute } from './diagnostics.js';
 import { conversationStore } from '../conversation-store.js';
 import { profileStore } from '../profile-store.js';
 import { memoryItemStore } from '../memory-item-store.js';
 import { canWrite, getTokenUser, isAdminRole, isValidToken } from './auth.js';
+import { readFileSync } from 'node:fs';
+import { resolve as resolvePath } from 'node:path';
+import { configStore, RELEASE_TODO_OWNERS, RELEASE_TODO_STATUSES, type ReleaseTodoOwner, type ReleaseTodoStatus } from '../config-store.js';
+import { resolveFirstTurnPolicy, FIRST_TURN_POLICIES, FIRST_TURN_POLICY_FLAG } from './device-session.js';
 import { resetAllQuotas } from '../guard.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
+import { extractionLogStore } from '../extraction-log-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { buildDeviceLayers, resolveDeviceIdentity } from '../device-brain-prompt.js';
 import { AI_SAFETY_BASELINE } from '../ai-literacy.js';
 import {
-  hotwordStore,
-  validateWords,
-  subsetWarnings,
-  KIND_TO_ENV,
   HOTWORD_KINDS,
+  KIND_TO_ENV,
+  backchannelConflicts,
+  hotwordStore,
+  subsetWarnings,
+  validateWords,
   type HotwordKind,
 } from '../hotword-store.js';
 import { callHotwordChannel } from '../hotword-channel.js';
@@ -29,7 +34,10 @@ import {
   personaInsightEnabled, personaNarrativeEnabled, personaTraitEnabled, personaLocalAudioEnabled,
 } from '../relation-state-store.js';
 import { localAudioStore } from '../local-audio-store.js';
-import { runLocalAudioForAccount } from '../local-audio-generator.js';
+import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
+import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
+import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
 import { runInsightForAccount, runNarrativeForAccount } from '../insight-runner.js';
@@ -54,7 +62,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hotwords|extract-llm|isolation-overview|ota|device-config)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -155,9 +163,12 @@ adminDataRoute.get('/devices', (c) => {
   try {
     // 绑定家长可视化（2026-08-23）：join 家长账号手机号（admin 内部台，显示全号便于核对；
     // 手机号只出现在 admin 鉴权接口，不进 worker 日志/普通用户接口）
+    const now = Date.now();
     const devices = deviceRegistryStore.list().map((d) => ({
       ...d,
+      ...credentialView(d),
       parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
+      preauth: preauthView(pairingStore.getPreauth(d.sn), now),
     }));
     const envAllow = (process.env.DEVICE_SN_ALLOW || '')
       .split(',')
@@ -167,6 +178,164 @@ adminDataRoute.get('/devices', (c) => {
     return c.json({ ok: true, devices, env_allow: envAllow, stats });
   } catch (error) {
     return c.json({ ok: false, error: '拉取设备台账失败，请稍后重试' }, 500);
+  }
+});
+
+/** 台账「凭据」列读侧回填（2026-09-06，0006 首台免手传设备暴露）：配网 claim（v1/v2）签发的凭据只进 ECIES 载荷，
+ *  不写 device_registry.credential_*，台账会显示「未签发」而设备已在正常鉴权。后台手工签发写过台账则台账优先；
+ *  否则取最近一次 claim 成功会话推导窗口，并打 credential_source 标记——占位必须带来源，判定认标记不认内容。 */
+type CredentialSource = 'registry' | 'pairing_claim' | null;
+export function credentialView(d: { sn: string; credential_issued_at: number | null; credential_expires_at: number | null }): {
+  credential_issued_at: number | null;
+  credential_expires_at: number | null;
+  credential_source: CredentialSource;
+} {
+  if (d.credential_expires_at) {
+    return { credential_issued_at: d.credential_issued_at, credential_expires_at: d.credential_expires_at, credential_source: 'registry' };
+  }
+  const claimed = pairingStore.lastClaimedSessionBySn(d.sn);
+  if (claimed?.claimed_at) {
+    const w = credentialWindowFromClaim(claimed.claimed_at);
+    return { credential_issued_at: w.issued_at, credential_expires_at: w.expires_at, credential_source: 'pairing_claim' };
+  }
+  return { credential_issued_at: null, credential_expires_at: null, credential_source: null };
+}
+
+// ── 后台预授权自动认领 v1（2026-09-06）：SN + 家长手机号 = 预授权；设备 announce 到达即代确认，claim 拿凭据，免手传 ──
+const PHONE_RE = /^1[3-9]\d{9}$/;
+const PREAUTH_DAYS_DEFAULT = Math.max(1, Number(process.env.PAIRING_PREAUTH_DAYS || 7));
+function preauthView(p: ReturnType<typeof pairingStore.getPreauth>, now = Date.now()) {
+  return p ? { phone: p.phone, until_at: p.until_at, used_at: p.used_at, created_at: p.created_at, active: p.until_at > now && p.used_at === null } : null;
+}
+function opUser(c: { req: { header: (k: string) => string | undefined } }): string {
+  const t = /^Bearer\s+(.+)$/i.exec(c.req.header('authorization')?.trim() ?? '')?.[1];
+  return (t && getTokenUser(t)) || '?';
+}
+type PreauthApply =
+  | { ok: true; parentAccountId: string; created: boolean; preauth: NonNullable<ReturnType<typeof preauthView>>; auto: AutoConfirmResult | null }
+  | { ok: false; error: string };
+/** 预授权 + 家长绑定 + 晚到 announce 代确认（添加设备 / PUT preauth 共用）。 */
+function applyPreauth(sn: string, phone: string, days: number, by: string): PreauthApply {
+  const existing = accountStore.findByPhone(phone);
+  if (existing && existing.role === 'device') return { ok: false, error: '该手机号对应设备账号，不能绑定为家长' };
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return { ok: false, error: '设备不在台账中' };
+  const acct = existing ?? accountStore.upsertPhoneAccount(phone);
+  if (device.parent_account_id && device.parent_account_id !== acct.id) return { ok: false, error: '该设备已绑定其他家长，换绑请走现役解绑/换绑流程' };
+  if (!device.parent_account_id) {
+    deviceRegistryStore.setParentAccountId(sn, acct.id);
+    console.log(`[admin-brain] parent bound=${acct.id} sn=${sn} via=preauth${existing ? '' : '(预建账号)'}`);
+  }
+  const p = pairingStore.setPreauth(sn, acct.id, phone, Date.now() + days * 86_400_000, by);
+  const ann = pairingStore.findAnnounce(sn);
+  const auto = ann && ann.expires_at > Date.now() ? tryAutoConfirm(sn, ann.nonce_hash, ann.device_pk, 'late_preauth') : null;
+  console.log(`[pairing] preauth set sn=${sn} days=${days} by=${by} late_announce=${ann ? 'yes' : 'no'} auto=${auto?.reason ?? '-'}`);
+  return { ok: true, parentAccountId: acct.id, created: !existing, preauth: preauthView(p)!, auto };
+}
+
+// 已上线待认领（announce 列表；每次拉取顺手清过期）
+adminDataRoute.get('/devices/pairing/pending', (c) => {
+  try {
+    pairingStore.purgeExpiredAnnounces();
+    const now = Date.now();
+    const items = pairingStore.listAnnounces(now).map((a) => {
+      const device = deviceRegistryStore.get(a.sn);
+      const session = pairingStore.findUnclaimedSessionBySn(a.sn, now);
+      const byHash = pairingStore.findSessionByHash(a.nonce_hash);
+      const state = announceState(byHash, session, now);
+      return {
+        sn: a.sn,
+        registered: Boolean(device),
+        status: device?.status ?? null,
+        note: device?.note ?? '',
+        parent_phone: device?.parent_account_id ? (accountStore.findAccount(device.parent_account_id)?.phone ?? null) : null,
+        parent_bound: Boolean(device?.parent_account_id), // 恢复合同（2026-09-17）：已绑定的待认领 = 等原家长扫码 / 一键恢复
+        announced_at: a.announced_at,
+        expires_at: a.expires_at,
+        expires_in_s: Math.max(0, Math.ceil((a.expires_at - now) / 1000)),
+        state,
+        confirmed_by: state === 'claimed' ? (byHash?.source ?? null) : (session?.source ?? null),
+        session_id: state === 'claimed' ? (byHash?.session_id ?? null) : (session?.session_id ?? null),
+        claimed_at: state === 'claimed' ? (byHash?.claimed_at ?? null) : null,
+        preauth: preauthView(pairingStore.getPreauth(a.sn), now),
+      };
+    });
+    return c.json({ ok: true, items, preauth_enabled: process.env.PAIRING_ADMIN_PREAUTH_ENABLED !== '0', preauth_days_default: PREAUTH_DAYS_DEFAULT });
+  } catch (error) {
+    console.error('[pairing] pending list failed', error);
+    return c.json({ ok: false, error: '拉取待认领列表失败' }, 500);
+  }
+});
+
+// 预授权：写/覆盖（覆盖即重新计时）
+adminDataRoute.put('/devices/:sn/preauth', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim().toUpperCase();
+    const body = (await c.req.json().catch(() => ({}))) as { phone?: unknown; days?: unknown };
+    const phone = typeof body.phone === 'string' ? body.phone.trim() : '';
+    const days = typeof body.days === 'number' && body.days >= 1 && body.days <= 90 ? Math.floor(body.days) : PREAUTH_DAYS_DEFAULT;
+    if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'SN 不合法' }, 400);
+    if (!PHONE_RE.test(phone)) return c.json({ ok: false, error: '家长手机号格式不对' }, 400);
+    const r = applyPreauth(sn, phone, days, opUser(c));
+    if (!r.ok) return c.json({ ok: false, error: r.error }, 409);
+    return c.json({ ok: true, preauth: r.preauth, parent_account_id: r.parentAccountId, parent_created: r.created, auto_confirm: r.auto });
+  } catch (error) {
+    return c.json({ ok: false, error: '预授权失败，请稍后重试' }, 500);
+  }
+});
+
+adminDataRoute.delete('/devices/:sn/preauth', (c) => {
+  try {
+    const sn = c.req.param('sn').trim().toUpperCase();
+    const removed = pairingStore.deletePreauth(sn);
+    console.log(`[pairing] preauth removed sn=${sn} by=${opUser(c)} removed=${removed}`);
+    return c.json({ ok: true, removed });
+  } catch (error) {
+    return c.json({ ok: false, error: '取消预授权失败' }, 500);
+  }
+});
+
+// 一键确认：人工代按（无预授权也可；家长账号 = 指定手机号 / 指定账号 / 台账已绑家长）
+adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
+  try {
+    const sn = c.req.param('sn').trim().toUpperCase();
+    const body = (await c.req.json().catch(() => ({}))) as { phone?: unknown; parent_account_id?: unknown };
+    if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'SN 不合法' }, 400);
+    const device = deviceRegistryStore.get(sn);
+    if (!device) return c.json({ ok: false, error: '设备不在台账中，请先添加' }, 404);
+    let parentAccountId: string | null = null;
+    if (typeof body.parent_account_id === 'string' && body.parent_account_id.trim()) {
+      const acct = accountStore.findAccount(body.parent_account_id.trim());
+      if (!acct || acct.role === 'device') return c.json({ ok: false, error: '家长账号不存在' }, 404);
+      parentAccountId = acct.id;
+    } else if (typeof body.phone === 'string' && PHONE_RE.test(body.phone.trim())) {
+      const phone = body.phone.trim();
+      const existing = accountStore.findByPhone(phone);
+      if (existing && existing.role === 'device') return c.json({ ok: false, error: '该手机号对应设备账号，不能绑定为家长' }, 400);
+      parentAccountId = (existing ?? accountStore.upsertPhoneAccount(phone)).id;
+    } else if (device.parent_account_id) {
+      parentAccountId = device.parent_account_id;
+    } else {
+      return c.json({ ok: false, error: '需要家长手机号（该设备尚未绑定家长）' }, 400);
+    }
+    const r = manualConfirm(sn, parentAccountId, opUser(c));
+    if (!r.done) {
+      const msg: Record<string, string> = {
+        no_announce: '设备近 10 分钟没有自报上线，等它联网后再试',
+        already_claimed: '设备已完成认领，凭据已下发，无需再确认',
+        already_confirmed: '已确认，等设备自动拉取凭据',
+        other_session: '该设备已有家长扫码确认的会话（家长优先）',
+        sn_bound_by_other: '设备已绑定其他家长',
+        sn_not_available: '设备不在台账或已停用',
+        invalid_pk: '设备自报的公钥不合法，请让设备重新配网',
+      };
+      return c.json({ ok: false, error: msg[r.reason] ?? r.reason, reason: r.reason }, r.reason === 'no_announce' ? 404 : 409);
+    }
+    if (!device.parent_account_id) deviceRegistryStore.setParentAccountId(sn, parentAccountId);
+    return c.json({ ok: true, session_id: r.sessionId, parent_account_id: parentAccountId });
+  } catch (error) {
+    console.error(`[pairing] admin-confirm failed sn=${c.req.param('sn')}`, error);
+    return c.json({ ok: false, error: '一键确认失败，请稍后重试' }, 500);
   }
 });
 
@@ -191,7 +360,13 @@ adminDataRoute.post('/devices', async (c) => {
     }
     deviceRegistryStore.add(sn, note);
     let parentBound = false;
-    if (parentAccount) {
+    let preauthResult: PreauthApply | null = null;
+    if (parentPhone && PHONE_RE.test(parentPhone)) {
+      // 2026-09-06 川哥拍板：SN + 手机号 = 预授权自动认领。未注册手机号按短信登录同一套 upsert 预建家长账号
+      // （之后家长用该号登录即同账号），绑定家长 + 写预授权；设备联网 announce 到达即代确认 → claim 拿凭据。
+      preauthResult = applyPreauth(sn, parentPhone, PREAUTH_DAYS_DEFAULT, opUser(c));
+      parentBound = preauthResult.ok;
+    } else if (parentAccount) {
       deviceRegistryStore.setParentAccountId(sn, parentAccount.id);
       parentBound = true;
       console.log(`[admin-brain] parent bound=${parentAccount.id} sn=${sn} via=add-device`);
@@ -200,9 +375,13 @@ adminDataRoute.post('/devices', async (c) => {
       ok: true,
       device: deviceRegistryStore.get(sn),
       parent_bound: parentBound,
-      ...(parentPhone && !parentBound
-        ? { parent_bind_warning: `手机号 ${parentPhone} 尚未注册家长账号——设备已添加但未绑定；家长在 p003.hahaxiong.cc 用该号登录注册后，可在本页重新绑定` }
-        : {}),
+      ...(preauthResult?.ok
+        ? { preauth: preauthResult.preauth, parent_created: preauthResult.created, auto_confirm: preauthResult.auto }
+        : preauthResult
+          ? { parent_bind_warning: preauthResult.error }
+          : parentPhone && !parentBound
+            ? { parent_bind_warning: `手机号 ${parentPhone} 格式不对——设备已添加但未绑定/未预授权。` }
+            : {}),
     });
   } catch (error) {
     return c.json({ ok: false, error: '添加设备失败，请稍后重试' }, 500);
@@ -235,7 +414,14 @@ adminDataRoute.delete('/devices/:sn', (c) => {
     const sn = c.req.param('sn').trim();
     const deleted = deviceRegistryStore.remove(sn);
     if (!deleted) return c.json({ ok: false, error: '设备不在台账中' }, 404);
-    return c.json({ ok: true });
+    // 2026-09-16 川哥：删除 = 变回新设备。此刻之前签发的全部凭据作废（独立水位表，重加台账不清），
+    // 设备回网拿旧凭据一律 401，必须重新签发或走预授权认领。token 原文不入日志。
+    const by = opUser(c);
+    const revokedThroughSec = deviceRegistryStore.revokeCredentials(sn, by, 'admin_delete');
+    // 水位是秒级，含删除当秒：iat ≤ 水位的凭据全部作废 → 对外口径「在这一刻之前签发的都已作废」= 水位下一秒起点
+    const revokedBeforeMs = (revokedThroughSec + 1) * 1000;
+    console.log(`[admin-devices] device removed sn=${sn} by=${by} credentials revoked before=${new Date(revokedBeforeMs).toISOString()}`);
+    return c.json({ ok: true, credentials_revoked_before_ms: revokedBeforeMs });
   } catch (error) {
     return c.json({ ok: false, error: '删除设备失败，请稍后重试' }, 500);
   }
@@ -323,6 +509,9 @@ adminDataRoute.post('/devices/:sn/brain', async (c) => {
     // brain_token 分发已取消（2026-08-20 川哥拍板）：多设备架构下身份由房名 SN 路由，
     // worker 只需一个进程级通行证（已配置）；per-device token 无消费场景，返回它只会
     // 误导运营「要找地方填」。通行证续签走 scripts/sign-worker-token.ts（唯一签发口）。
+    // 绑定即生成（2026-09-06）：建档后异步触发一次本地音频生成，不阻塞路由、失败只留日志；
+    // 已生成过的账号由门判跳过，生成本身仍受每日批同一套门（暂停开关/体积预检/发布门）约束。
+    console.log(`[admin-brain] local-audio kickoff ${kickoffLocalAudioOnce(accountId, 'admin-brain-open')} sn=${sn} account=${accountId}`);
     console.log(`[admin-brain] opened sn=${sn} account=${accountId}`);
     return c.json({ ok: true, account_id: accountId });
   } catch (error) {
@@ -386,7 +575,7 @@ adminDataRoute.get('/devices/:sn/brain', (c) => {
             nickname: profile.nickname,
             birthday: profile.birthday,
             gender: profile.gender,
-            interests: profile.interests.map((i) => ({ value: i.value })),
+            interests: profile.interests.map((i) => ({ value: i.value, state: i.state ?? 'unverified', evidence: i.evidence ?? '', mention_days: i.mention_days ?? [], retracted_by: i.retracted_by ?? '' })),
             preferred_address: profile.preferred_address,
             recent_emotion: profile.recent_emotion,
             game_progress: profile.game_progress.map((g) => ({ value: g.value })),
@@ -737,6 +926,21 @@ adminDataRoute.patch('/devices/:sn/child-profile', async (c) => {
 });
 
 // 家长账号关联（建档下发链预留，2026-08-19）：admin 手工绑定家长账号到设备。
+// R1 家长/运营否决兴趣（2026-09-03）：软撤回 retracted_by=parent，之后语音再提不升；body {value}。
+adminDataRoute.post('/devices/:sn/interest-veto', async (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  let body: { value?: unknown } = {};
+  try { body = (await c.req.json()) as { value?: unknown }; } catch { body = {}; }
+  const value = typeof body.value === 'string' ? body.value.trim() : '';
+  if (!value || value.length > 40) return c.json({ ok: false, error: 'value 必填(≤40字)' }, 400);
+  const vetoed = profileStore.vetoInterest(device.account_id, value);
+  if (vetoed) console.log(`[admin-brain] interest vetoed sn=${sn} value=${JSON.stringify(value)}`);
+  return c.json({ ok: true, vetoed });
+});
+
 // body {parent_account_id: string|null}。绑定时若设备已开通 brain 且设备账号无档、家长有档 → 同步建档。
 // 小程序自助绑定走 /api/profile/bind-sn（家长 JWT），与本端点写同一列。
 adminDataRoute.patch('/devices/:sn/parent', async (c) => {
@@ -949,6 +1153,45 @@ adminDataRoute.post('/devices/:sn/persona-local-audio-run', async (c) => {
 
 // P0 人格成长（codex 3.2 生命周期兜底）：admin 显式重置设备账号的关系状态。
 // 用途：换孩子、测试数据清理、家长要求重置。物理删除（同儿童数据删除权模式）。
+// 记忆白盒（2026-09-03）：抽取流水 + 已撤回/取代条目 + 记忆因果账本（profile/insight/concern 模块）
+adminDataRoute.get('/devices/:sn/memory-whitebox', (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  const acct = device.account_id;
+  const all = memoryItemStore.listByAccount(acct).items;
+  const inactive = all.filter((it) => it.status !== 'active').slice(0, 15);
+  const ledger = ['profile', 'insight', 'concern']
+    .flatMap((m) => growthLedgerStore.list(acct, { module: m, limit: 20 }))
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 30);
+  return c.json({ ok: true, extraction_log: extractionLogStore.list(acct, 20), inactive_items: inactive, ledger });
+});
+
+// R3（2026-09-03）：特质每日快照列表 + 退回任意一天
+adminDataRoute.get('/devices/:sn/trait-snapshots', (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  return c.json({ ok: true, snapshots: traitStore.listSnapshots(device.account_id) });
+});
+adminDataRoute.post('/devices/:sn/trait-rollback', async (c) => {
+  const sn = c.req.param('sn').trim();
+  const device = deviceRegistryStore.get(sn);
+  if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
+  if (!device.account_id) return c.json({ ok: false, error: '该设备未开通 brain' }, 400);
+  let body: { day?: unknown } = {};
+  try { body = (await c.req.json()) as { day?: unknown }; } catch { body = {}; }
+  const day = typeof body.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.day) ? body.day : '';
+  if (!day) return c.json({ ok: false, error: 'day 必填(YYYY-MM-DD)' }, 400);
+  const moved = traitStore.rollbackTo(device.account_id, day);
+  if (moved < 0) return c.json({ ok: false, error: '该天没有快照' }, 404);
+  console.log(`[admin-brain] trait rollback sn=${sn} day=${day} moved=${moved}`);
+  return c.json({ ok: true, moved, trait: traitStore.get(device.account_id), template: traitStore.getTemplate(device.account_id) });
+});
+
 adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
   try {
     const sn = c.req.param('sn').trim();
@@ -964,6 +1207,7 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
     const insightCleared = childInsightStore.clear(device.account_id);
     const traitCleared = traitStore.clear(device.account_id);
     const ledgerCleared = growthLedgerStore.clear(device.account_id);
+    if (scope !== 'persona') extractionLogStore.clear(device.account_id); // 全清连抽取流水一起（儿童数据删除权）
     const localAudioCleared = scope !== 'persona';
     if (localAudioCleared) {
       localAudioStore.clearAccount(device.account_id); // 第六样：本地音频条目+文件+revision 归零
@@ -996,6 +1240,8 @@ adminDataRoute.get('/devices/:sn/style-template', (c) => {
       template: current ?? 'default',
       // P2 白盒：设定时刻（四问之「什么时候变的」）；无模板行=null
       set_at: traitStore.getTemplateSetAt(device.account_id),
+      // 语音调档 Phase A：谁设的（parent/voice/null）
+      source: traitStore.getTemplateSource(device.account_id),
       available: listStyleTemplates(),
     });
   } catch (error) {
@@ -1014,12 +1260,414 @@ adminDataRoute.put('/devices/:sn/style-template', async (c) => {
     if (key !== 'default' && !getStyleTemplate(key)) {
       return c.json({ ok: false, error: `未知风格模板: ${key || '(空)'}` }, 400);
     }
-    const result = traitStore.setTemplate(device.account_id, key as StyleTemplateKey | 'default');
+    const result = traitStore.setTemplate(device.account_id, key as StyleTemplateKey | 'default', { source: 'parent' });
     console.log(`[persona] style-template set sn=${sn} account=${device.account_id} template=${result.template ?? 'default'}`);
     return c.json({ ok: true, template: result.template ?? 'default', trait: traitStore.get(device.account_id) });
   } catch (error) {
     return c.json({ ok: false, error: `设置风格模板失败: ${String((error as Error)?.message ?? error)}` }, 500);
   }
+});
+
+// ── Worker 赛马配置（2026-09-03 川哥：赛马机制后台可选可配 + 延时测试，不用每次找 cc 改 env）──
+// 通道复用热词发布的 forced-command key（64.90 apply_hotwords.py 新增 race_get/race_set/race_stats/race_bench）：
+// server 只做校验/安全窗口/对撞/记账；env 写入、纪律重启、健康自检与回滚全在脚本内（与热词发布同一套安全网）。
+// key 永不回显（脚本只回 hint/len），也永不从 bench 载荷传（bench 用 64.90 env 里的兜底 key）。
+const RACE_RW_KEYS = [
+  'LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_FALLBACK_API_KEY',
+  'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS',
+] as const;
+type RaceRwKey = (typeof RACE_RW_KEYS)[number];
+const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
+  LLM_FALLBACK_BASE_URL: /^https:\/\/[A-Za-z0-9.-]+(?:\/[A-Za-z0-9._/-]*)?$/,
+  LLM_FALLBACK_MODEL: /^[A-Za-z0-9._-]{2,64}$/,
+  LLM_FALLBACK_THINKING: /^(?:disabled|enabled|adaptive|off)$/,
+  LLM_FALLBACK_API_KEY: /^[A-Za-z0-9._-]{16,128}$/,
+  LLM_RACE_MAIN_GRACE_MS: /^\d{3,4}$/,
+  AGENT_INSTRUCTIONS: /^[^\r\n"'`$\\]{0,1200}$/,
+};
+export const RACE_BASE_PRESETS = [
+  { key: 'agent_plan', label: '火山 agent plan（api/plan/v3）', url: 'https://ark.cn-beijing.volces.com/api/plan/v3' },
+  { key: 'coding_plan', label: '火山 coding plan（api/coding/v3）', url: 'https://ark.cn-beijing.volces.com/api/coding/v3' },
+];
+// 2026-09-03 基准（生产真 prompt 4.8k 字、HK 发起、4 次中位首字）；tier: recommended/ok/caution/unsupported
+export const RACE_MODEL_CATALOG = [
+  { model: 'doubao-seed-2.0-mini', tier: 'recommended', ttft_prod_ms: 787, note: '真 prompt 首字 ~710–790ms 且最稳；协议标记正确' },
+  { model: 'deepseek-v4-flash', tier: 'ok', ttft_prod_ms: 784, note: '真 prompt ~780–900ms，稳（火山侧供应）' },
+  { model: 'minimax-m3', tier: 'ok', ttft_prod_ms: 1003, note: '~850–1000ms，偶有 6s 长尾' },
+  { model: 'deepseek-v4-pro', tier: 'ok', ttft_prod_ms: null, note: '短提示 ~1.2s，未跑真 prompt' },
+  { model: 'doubao-seed-evolving', tier: 'caution', ttft_prod_ms: 814, note: '周级滚动升级=行为会漂；有 2s 尾' },
+  { model: 'doubao-seed-2.0-lite', tier: 'caution', ttft_prod_ms: 1785, note: '原兜底：真 prompt 下 0.8–4.9s 大抖' },
+  { model: 'doubao-seed-2.1-turbo', tier: 'caution', ttft_prod_ms: 2116, note: '真 prompt prefill 重，~2.1s 双峰' },
+  { model: 'glm-5.3-flash', tier: 'unsupported', ttft_prod_ms: null, note: '思考关不掉，80 token 内零正文' },
+  { model: 'glm-5.3', tier: 'unsupported', ttft_prod_ms: null, note: '同 glm-5.3-flash' },
+  { model: 'kimi-k2.7-code', tier: 'unsupported', ttft_prod_ms: null, note: '思考关不掉，首字 2.2s+' },
+  { model: 'kimi-k3', tier: 'unsupported', ttft_prod_ms: null, note: '排队 3.6–38s' },
+];
+
+export function validateRaceValues(raw: unknown): { ok: true; values: Partial<Record<RaceRwKey, string>> } | { ok: false; error: string } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, error: 'values 须为对象' };
+  const values: Partial<Record<RaceRwKey, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(RACE_RW_KEYS as readonly string[]).includes(k)) return { ok: false, error: `键不在白名单: ${k}` };
+    if (typeof v !== 'string') return { ok: false, error: `${k} 须为字符串` };
+    const val = k === 'AGENT_INSTRUCTIONS' ? v.trim() : v.trim();
+    if (k === 'LLM_FALLBACK_API_KEY' && val === '') continue; // 空=不改 key
+    if (!RACE_RW_RE[k as RaceRwKey].test(val)) return { ok: false, error: `${k} 值不合法` };
+    if (k === 'LLM_RACE_MAIN_GRACE_MS') {
+      const n = Number(val);
+      if (!(n >= 200 && n <= 5000)) return { ok: false, error: 'LLM_RACE_MAIN_GRACE_MS 须在 200~5000' };
+    }
+    values[k as RaceRwKey] = val;
+  }
+  if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
+  return { ok: true, values };
+}
+
+function brainRaceView(): Record<string, string> {
+  return {
+    provider: process.env.LLM_PROVIDER ?? '',
+    main_model: process.env.DEEPSEEK_MODEL ?? '',
+    main_base: process.env.DEEPSEEK_BASE_URL ?? '',
+    fallback_model: process.env.VOLC_LLM_MODEL ?? '',
+    fallback_base: process.env.VOLC_LLM_BASE_URL ?? '',
+  };
+}
+
+// ── 🧩 版本与 One-shot（2026-09-13 B89 川哥：后台要看到生产版本号/说明 + One-shot 关闭回滚按钮）──
+// 开关存 server 自己的 config.db runtime_flag（configStore），签发路由每请求读同一解析函数 → 改后下一次唤醒即生效，
+// 不重启、不动 env。版本卡来自随 server 部署的 release.json（发版时更新；RELEASE_JSON_PATH 可改路径）。
+const ONESHOT_ROLLBACK_CAVEAT =
+  '开关语义（codex B87 §3 端侧源码边界）：\n' +
+  '· capability → allowlist/off 是「止扩」：新签发立刻停；进行中会话不断，已签票据 ≤1h 自然过期。\n' +
+  '· 老 APK（不声明能力）设备：照常普通语音，不受影响。\n' +
+  '· 已升级到含迁移 APK（v271+）的设备：下一次唤醒会 first_turn_not_granted 失败，不会自动退回普通语音——' +
+  '要它们回普通须端侧合法停用首句工厂或回退 APK。\n' +
+  '· Worker 回滚：先等票据排空（≤1h）与活跃房结束，ordered 首句房不能派给旧 rust-worker。';
+function readReleaseJson(): { ok: true; data: unknown; path: string } | { ok: false; error: string; path: string } {
+  const p = resolvePath(process.cwd(), process.env.RELEASE_JSON_PATH?.trim() || 'release.json');
+  try {
+    return { ok: true, data: JSON.parse(readFileSync(p, 'utf8')), path: p };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message, path: p };
+  }
+}
+function oneshotView() {
+  const r = resolveFirstTurnPolicy();
+  return {
+    ok: true as const,
+    policy: { effective: r.policy, source: r.source, override: r.override, env: r.env, valid: FIRST_TURN_POLICIES },
+    agent_name: (process.env.ONESHOT_FIRST_TURN_AGENT_NAME || '').trim() || null,
+    allowlist_count: (process.env.ONESHOT_FIRST_TURN_SN_ALLOW || '').split(',').map((x) => x.trim()).filter(Boolean).length,
+    release: readReleaseJson(),
+    caveat: ONESHOT_ROLLBACK_CAVEAT,
+    // 下一版待办（2026-09-14 川哥）：全量下发（含已完成/已放弃，前端折叠），每条带来源与操作人
+    todos: configStore.listTodos({ includeClosed: true }),
+  };
+}
+const TODO_TEXT_MAX = 300;
+const TODO_SOURCE_MAX = 200;
+const TODO_TARGET_MAX = 20;
+type TodoPatch = Partial<{ target: string; text: string; source: string; owner: ReleaseTodoOwner; status: ReleaseTodoStatus }>;
+/** 待办字段校验（真防线）：文本必填 ≤300、来源 ≤200、目标版本 ≤20、owner/status 枚举。 */
+function parseTodoBody(body: Record<string, unknown>, requireText: boolean): { ok: true; patch: TodoPatch } | { ok: false; error: string } {
+  const patch: TodoPatch = {};
+  if (body.text !== undefined || requireText) {
+    const text = typeof body.text === 'string' ? body.text.trim() : '';
+    if (!text) return { ok: false, error: 'text 必填' };
+    if (text.length > TODO_TEXT_MAX) return { ok: false, error: `text 过长(>${TODO_TEXT_MAX} 字)` };
+    patch.text = text;
+  }
+  if (body.source !== undefined) {
+    if (typeof body.source !== 'string') return { ok: false, error: 'source 必须是字符串' };
+    if (body.source.length > TODO_SOURCE_MAX) return { ok: false, error: `source 过长(>${TODO_SOURCE_MAX} 字)` };
+    patch.source = body.source;
+  }
+  if (body.target !== undefined) {
+    if (typeof body.target !== 'string' || body.target.trim().length > TODO_TARGET_MAX) return { ok: false, error: `target 必须是 ≤${TODO_TARGET_MAX} 字的字符串` };
+    patch.target = body.target;
+  }
+  if (body.owner !== undefined) {
+    if (!(RELEASE_TODO_OWNERS as readonly string[]).includes(String(body.owner))) return { ok: false, error: `owner 必须是 ${RELEASE_TODO_OWNERS.join('|')}` };
+    patch.owner = body.owner as ReleaseTodoOwner;
+  }
+  if (body.status !== undefined) {
+    if (!(RELEASE_TODO_STATUSES as readonly string[]).includes(String(body.status))) return { ok: false, error: `status 必须是 ${RELEASE_TODO_STATUSES.join('|')}` };
+    patch.status = body.status as ReleaseTodoStatus;
+  }
+  return { ok: true, patch };
+}
+adminDataRoute.get('/oneshot/todos', (c) =>
+  c.json({ ok: true, todos: configStore.listTodos({ includeClosed: c.req.query('all') === '1' }) }),
+);
+adminDataRoute.post('/oneshot/todos', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const v = parseTodoBody(body, true);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const by = operatorOf(c);
+  const todo = configStore.addTodo({ target: v.patch.target, text: v.patch.text!, source: v.patch.source, owner: v.patch.owner }, by);
+  console.log(`[admin-oneshot] todo added id=${todo.id} target=${todo.target} owner=${todo.owner} by=${by} text=${JSON.stringify(todo.text.slice(0, 60))}`);
+  return c.json({ ok: true, todo, todos: configStore.listTodos({ includeClosed: true }) });
+});
+adminDataRoute.patch('/oneshot/todos/:id', async (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ ok: false, error: 'id 非法' }, 400);
+  const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+  const v = parseTodoBody(body, false);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  if (Object.keys(v.patch).length === 0) return c.json({ ok: false, error: '没有可更新的字段' }, 400);
+  const by = operatorOf(c);
+  const todo = configStore.updateTodo(id, v.patch, by);
+  if (!todo) return c.json({ ok: false, error: '待办不存在' }, 404);
+  console.log(`[admin-oneshot] todo updated id=${id} status=${todo.status} by=${by} fields=${Object.keys(v.patch).join('+')}`);
+  return c.json({ ok: true, todo, todos: configStore.listTodos({ includeClosed: true }) });
+});
+adminDataRoute.delete('/oneshot/todos/:id', (c) => {
+  const id = Number(c.req.param('id'));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ ok: false, error: 'id 非法' }, 400);
+  const by = operatorOf(c);
+  const todo = configStore.updateTodo(id, { status: 'dropped' }, by); // 软删：来源永远可追
+  if (!todo) return c.json({ ok: false, error: '待办不存在' }, 404);
+  console.log(`[admin-oneshot] todo dropped id=${id} by=${by}`);
+  return c.json({ ok: true, todo, todos: configStore.listTodos({ includeClosed: true }) });
+});
+function operatorOf(c: { req: { header: (n: string) => string | undefined } }): string {
+  const header = c.req.header('authorization');
+  const tok = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  return (tok ? getTokenUser(tok) : undefined) ?? 'admin';
+}
+adminDataRoute.get('/oneshot', (c) => c.json(oneshotView()));
+adminDataRoute.put('/oneshot/policy', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { policy?: unknown; note?: unknown };
+  const p = typeof body.policy === 'string' ? body.policy.trim().toLowerCase() : '';
+  if (!(FIRST_TURN_POLICIES as readonly string[]).includes(p))
+    return c.json({ ok: false, error: `policy 必须是 ${FIRST_TURN_POLICIES.join('|')}` }, 400);
+  const note = typeof body.note === 'string' ? body.note.slice(0, 200) : '';
+  const by = operatorOf(c);
+  const before = resolveFirstTurnPolicy();
+  configStore.setFlag(FIRST_TURN_POLICY_FLAG, p, by, note);
+  const after = resolveFirstTurnPolicy();
+  console.log(`[admin-oneshot] policy ${before.policy}(${before.source}) → ${after.policy}(${after.source}) by=${by} note=${JSON.stringify(note)}`);
+  return c.json({ ...oneshotView(), changed: before.policy !== after.policy, before: { policy: before.policy, source: before.source } });
+});
+adminDataRoute.delete('/oneshot/policy', (c) => {
+  const by = operatorOf(c);
+  const before = resolveFirstTurnPolicy();
+  const removed = configStore.clearFlag(FIRST_TURN_POLICY_FLAG);
+  const after = resolveFirstTurnPolicy();
+  console.log(`[admin-oneshot] override cleared removed=${removed} ${before.policy}(${before.source}) → ${after.policy}(${after.source}) by=${by}`);
+  return c.json({ ...oneshotView(), removed, before: { policy: before.policy, source: before.source } });
+});
+
+adminDataRoute.get('/worker-race', async (c) => {
+  const r = await callHotwordChannel({ action: 'race_get' }, 20_000);
+  return c.json({ ok: r.ok === true, worker: r, brain: brainRaceView(), presets: RACE_BASE_PRESETS, catalog: RACE_MODEL_CATALOG }, r.ok ? 200 : 502);
+});
+
+adminDataRoute.get('/worker-race/stats', async (c) => {
+  const hours = Math.max(1, Math.min(168, Number(c.req.query('hours') || 48) || 48));
+  const r = await callHotwordChannel({ action: 'race_stats', hours }, 40_000);
+  return c.json(r, r.ok ? 200 : 502);
+});
+
+adminDataRoute.put('/worker-race', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { values?: unknown; force?: unknown; note?: unknown };
+  const v = validateRaceValues(body.values);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const force = body.force === true;
+  if (!force) {
+    const rooms = await fetchLiveKitRooms();
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms.device_rooms > 0)
+      return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
+  }
+  const t0 = Date.now();
+  const r = await callHotwordChannel({ action: 'race_set', values: v.values, force }, 150_000);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+  const keys = Object.keys(v.values).join('+');
+  if (!r.ok) {
+    console.error(`[admin-race] set FAILED keys=${keys} by=${by} ms=${Date.now() - t0} rolled_back=${r.rolled_back === true} recovered=${r.recovered === true}`);
+    return c.json({ ok: false, error: String(r.error ?? r.reason ?? '应用失败'), detail: r }, 502);
+  }
+  // 对撞：非密钥键 进程生效值 === 期望值；密钥只对撞长度
+  const proc = (r.proc ?? {}) as Record<string, unknown>;
+  const mismatch: string[] = [];
+  for (const [k, val] of Object.entries(v.values)) {
+    if (k === 'LLM_FALLBACK_API_KEY') {
+      const pk = proc[k] as { len?: number } | undefined;
+      if (!pk || pk.len !== val.length) mismatch.push(k);
+    } else if (proc[k] !== val) mismatch.push(k);
+  }
+  if (mismatch.length > 0) {
+    console.error(`[admin-race] set 对撞失败 keys=${mismatch.join('+')}(进程生效值≠期望值)`);
+    return c.json({ ok: false, error: `应用对撞失败：${mismatch.join('、')} 的进程生效值与期望不一致`, detail: r }, 502);
+  }
+  console.log(`[admin-race] applied keys=${keys} by=${by} force=${force} ms=${Date.now() - t0} backup=${String(r.backup ?? '')}`);
+  return c.json({ ok: true, applied: r.applied, backup: r.backup, proc: r.proc });
+});
+
+adminDataRoute.post('/worker-race/bench', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as {
+    models?: unknown; runs?: unknown; prompt?: unknown; sn?: unknown; user_texts?: unknown; base?: unknown;
+  };
+  const models = Array.isArray(body.models) ? body.models.filter((m): m is string => typeof m === 'string') : [];
+  if (models.length < 1 || models.length > 8) return c.json({ ok: false, error: 'models 须为 1~8 个' }, 400);
+  if (models.some((m) => !RACE_RW_RE.LLM_FALLBACK_MODEL.test(m))) return c.json({ ok: false, error: '模型名不合法' }, 400);
+  const runs = Math.max(1, Math.min(5, Number(body.runs) || 3));
+  const userTexts = Array.isArray(body.user_texts) && body.user_texts.length
+    ? body.user_texts.filter((u): u is string => typeof u === 'string' && u.trim().length > 0 && u.length <= 60).slice(0, 3)
+    : ['太亮了', '给我讲一个恐龙的小知识'];
+  let system = '';
+  let promptLabel = 'short';
+  if (body.prompt === 'device') {
+    const sn = typeof body.sn === 'string' ? body.sn.trim() : '';
+    const device = sn ? deviceRegistryStore.get(sn) : null;
+    if (!device?.account_id) return c.json({ ok: false, error: '设备不在台账或未开通 brain' }, 400);
+    // 稳态生产 prompt（世界观/安全/记忆/附加规则/设备意图协议；逐轮护栏不含），与 Worker Brain 拼接可视化同源
+    system = buildDeviceLayers({ accountId: device.account_id, role: 'device' }).final;
+    promptLabel = `device:${sn.slice(-4)}`;
+  } else {
+    system = '你是小可，一个陪孩子学习的小伙伴。用中文口语回答，一到两句话，不用列表。';
+  }
+  const payload: Record<string, unknown> = { action: 'race_bench', models, runs, system, user_texts: userTexts };
+  if (typeof body.base === 'string' && RACE_RW_RE.LLM_FALLBACK_BASE_URL.test(body.base)) payload.base = body.base;
+  const r = await callHotwordChannel(payload, 150_000);
+  if (!r.ok) return c.json({ ok: false, error: String(r.error ?? 'bench 失败'), detail: r }, 502);
+  return c.json({ ...r, prompt: promptLabel });
+});
+
+// ── Worker 语音链路配置（2026-09-03 晚 川哥：供应商/方案/密钥后台手动配，不再找 cc 改 env）──
+// 通道同赛马（forced-command key → 64.90 apply_hotwords.py voice_get/voice_set）；只写 rust-worker.env 覆盖层
+// （EnvironmentFile 末位赢），python 线 .env 只读参考。server 侧：白名单/正则/范围（后端为真防线）+ LiveKit
+// 安全窗口 + 应用后对撞（非密钥比值，密钥比长度）；密钥永不回显、永不进日志。
+// 供应商可选项由 worker 二进制决定：识别只有火山（stt_volc 唯一实现），合成 volc/xfyun——换别家仍要写代码。
+export const VOICE_RW_KEYS = [
+  'VOLC_ASR_RESOURCE_ID', 'VOLC_ASR_END_WINDOW_MS', 'VOLC_ASR_ENABLE_DDC', 'VOLC_PREFLIGHT_ENABLED',
+  'VOLC_ASR_NONSTREAM_ENABLED', 'VOLC_ASR_NONSTREAM_CANARY_SN', 'VOLC_ASR_BOOSTING_TABLE_ID',
+  'VOLC_APP_ID', 'VOLC_ACCESS_TOKEN', 'VOLC_ASR_API_KEY',
+  'TTS_PROVIDER', 'VOLC_TTS_RESOURCE_ID', 'VOLC_TTS_SPEAKER', 'VOLC_TTS_SPEED', 'TTS_POOL_ENABLED', 'TTS_MIN_SENTENCE_LEN',
+  'XFYUN_TTS_VCN', 'XFYUN_TTS_SPEED', 'XFYUN_TTS_ORAL_LEVEL', 'XFYUN_TTS_PRECONNECT',
+  'XFYUN_TTS_APP_ID', 'XFYUN_TTS_API_KEY', 'XFYUN_TTS_API_SECRET',
+] as const;
+type VoiceRwKey = (typeof VOICE_RW_KEYS)[number];
+export const VOICE_SECRET_KEYS: readonly VoiceRwKey[] = ['VOLC_APP_ID', 'VOLC_ACCESS_TOKEN', 'VOLC_ASR_API_KEY', 'XFYUN_TTS_APP_ID', 'XFYUN_TTS_API_KEY', 'XFYUN_TTS_API_SECRET'];
+const VOICE_RW_RE: Record<VoiceRwKey, RegExp> = {
+  VOLC_ASR_RESOURCE_ID: /^volc\.[a-z0-9_.]{3,60}$/,
+  VOLC_ASR_END_WINDOW_MS: /^\d{2,4}$/,
+  VOLC_ASR_ENABLE_DDC: /^[01]$/,
+  VOLC_PREFLIGHT_ENABLED: /^[01]$/,
+  VOLC_ASR_NONSTREAM_ENABLED: /^[01]$/,
+  VOLC_ASR_NONSTREAM_CANARY_SN: /^(?:[A-Za-z0-9]{6,40}(?:,[A-Za-z0-9]{6,40})*)?$/,
+  VOLC_ASR_BOOSTING_TABLE_ID: /^(?:[A-Za-z0-9-]{8,64})?$/,
+  VOLC_APP_ID: /^\d{6,16}$/,
+  VOLC_ACCESS_TOKEN: /^[A-Za-z0-9._-]{16,128}$/,
+  VOLC_ASR_API_KEY: /^[A-Za-z0-9._-]{16,128}$/,
+  TTS_PROVIDER: /^(?:volc|xfyun)$/,
+  VOLC_TTS_RESOURCE_ID: /^[A-Za-z0-9._-]{3,60}$/,
+  VOLC_TTS_SPEAKER: /^[A-Za-z0-9_]{4,80}$/,
+  VOLC_TTS_SPEED: /^\d(?:\.\d{1,2})?$/,
+  TTS_POOL_ENABLED: /^[01]$/,
+  TTS_MIN_SENTENCE_LEN: /^\d{1,2}$/,
+  XFYUN_TTS_VCN: /^[A-Za-z0-9_]{3,64}$/,
+  XFYUN_TTS_SPEED: /^\d{1,3}$/,
+  XFYUN_TTS_ORAL_LEVEL: /^(?:high|mid|low)$/,
+  XFYUN_TTS_PRECONNECT: /^[01]$/,
+  XFYUN_TTS_APP_ID: /^[A-Za-z0-9]{6,16}$/,
+  XFYUN_TTS_API_KEY: /^[A-Za-z0-9]{16,64}$/,
+  XFYUN_TTS_API_SECRET: /^[A-Za-z0-9]{16,64}$/,
+};
+const VOICE_RANGES: Partial<Record<VoiceRwKey, [number, number]>> = {
+  VOLC_ASR_END_WINDOW_MS: [100, 2000], TTS_MIN_SENTENCE_LEN: [2, 40], XFYUN_TTS_SPEED: [0, 100], VOLC_TTS_SPEED: [0.5, 2],
+};
+/** 前端按此表渲染（单源在 server；前端不写死键）。type: select|toggle|number|text|secret；options 可空=自定义。 */
+export const VOICE_FIELDS: Array<{ key: VoiceRwKey; group: string; label: string; type: string; hint: string; options?: Array<{ v: string; l: string }>; min?: number; max?: number; step?: number }> = [
+  { key: 'VOLC_ASR_RESOURCE_ID', group: '识别（火山 Seed ASR）', label: 'ASR 资源', type: 'select', hint: '2.0（seedasr）走 X-Api-Key 鉴权，1.0（bigasr）走 App ID + Token；换代要同时确认凭据', options: [{ v: 'volc.seedasr.sauc.duration', l: '豆包 Seed ASR 2.0 流式（seedasr，现役）' }, { v: 'volc.bigasr.sauc.duration', l: '大模型 ASR 1.0 流式（bigasr）' }] },
+  { key: 'VOLC_ASR_END_WINDOW_MS', group: '识别（火山 Seed ASR）', label: '判停窗（ms）', type: 'number', hint: '句末静音多久判停；越小越快也越容易切断思考停顿（火山默认 800，现役 150）', min: 100, max: 2000, step: 10 },
+  { key: 'VOLC_ASR_NONSTREAM_ENABLED', group: '识别（火山 Seed ASR）', label: '二遍整段重识别', type: 'toggle', hint: '判停后用非流式模型整段重识别（bigmodel_async）；热词预算从 100 token 升到 5000 词；账单可能双倍计时长' },
+  { key: 'VOLC_ASR_NONSTREAM_CANARY_SN', group: '识别（火山 Seed ASR）', label: '二遍灰度 SN', type: 'text', hint: '逗号分隔；留空=所有设备房全开（当前）' },
+  { key: 'VOLC_ASR_ENABLE_DDC', group: '识别（火山 Seed ASR）', label: '语义顺滑（DDC）', type: 'toggle', hint: '删语气词/重复词；关掉会多出「嗯、那个」进 LLM' },
+  { key: 'VOLC_PREFLIGHT_ENABLED', group: '识别（火山 Seed ASR）', label: '会话预连', type: 'toggle', hint: '进房即预建 ASR 连接，省首句建连时延' },
+  { key: 'VOLC_ASR_BOOSTING_TABLE_ID', group: '识别（火山 Seed ASR）', label: '火山词表 ID', type: 'text', hint: '2026-08-18 实证两端点均零生效（待火山工单）；留空=不传。热词本身在「热词管理」' },
+  { key: 'VOLC_APP_ID', group: '火山凭据（识别 + 合成共用）', label: 'App ID', type: 'secret', hint: '火山语音控制台应用 ID' },
+  { key: 'VOLC_ACCESS_TOKEN', group: '火山凭据（识别 + 合成共用）', label: 'Access Token', type: 'secret', hint: '1.0 ASR 与火山 TTS 用；留空不改' },
+  { key: 'VOLC_ASR_API_KEY', group: '火山凭据（识别 + 合成共用）', label: 'ASR API Key（2.0）', type: 'secret', hint: 'seedasr 2.0 唯一鉴权方式；留空不改' },
+  { key: 'TTS_PROVIDER', group: '合成', label: '合成供应商', type: 'select', hint: 'worker 二进制内置两家；选讯飞时讯飞三项凭据必须齐全，否则启动失败会自动回滚', options: [{ v: 'xfyun', l: '讯飞（x6 超拟人，现役）' }, { v: 'volc', l: '火山 豆包 TTS' }] },
+  { key: 'XFYUN_TTS_VCN', group: '合成', label: '讯飞音色', type: 'select', hint: '讯飞控制台的发音人 ID', options: [{ v: 'x6_lingxiaoxuan_pro', l: 'x6_lingxiaoxuan_pro（凌小璇，现役）' }] },
+  { key: 'XFYUN_TTS_SPEED', group: '合成', label: '讯飞语速', type: 'number', hint: '0~100，50 为常速', min: 0, max: 100, step: 5 },
+  { key: 'XFYUN_TTS_ORAL_LEVEL', group: '合成', label: '讯飞口语化', type: 'select', hint: '超拟人口语化程度', options: [{ v: 'high', l: 'high' }, { v: 'mid', l: 'mid（默认）' }, { v: 'low', l: 'low' }] },
+  { key: 'XFYUN_TTS_PRECONNECT', group: '合成', label: '讯飞预连', type: 'toggle', hint: '首句前预建合成连接' },
+  { key: 'VOLC_TTS_SPEAKER', group: '合成', label: '火山音色', type: 'select', hint: '火山 TTS 发音人；仅合成供应商=火山时生效', options: [{ v: 'zh_male_lengkugege_emo_v2_mars_bigtts', l: 'zh_male_lengkugege_emo_v2（冷酷哥哥·多情感）' }, { v: 'zh_female_tianmeixiaoyuan_moon_bigtts', l: 'zh_female_tianmeixiaoyuan（甜美小源）' }, { v: 'zh_female_vv_uranus_bigtts', l: 'zh_female_vv_uranus（二进制默认）' }] },
+  { key: 'VOLC_TTS_RESOURCE_ID', group: '合成', label: '火山 TTS 资源', type: 'text', hint: '如 volc.service_type.10029（现役）' },
+  { key: 'VOLC_TTS_SPEED', group: '合成', label: '火山语速比', type: 'number', hint: '0.5~2.0，1.0 常速', min: 0.5, max: 2, step: 0.1 },
+  { key: 'TTS_POOL_ENABLED', group: '合成', label: '火山连接池', type: 'toggle', hint: '仅火山 TTS' },
+  { key: 'TTS_MIN_SENTENCE_LEN', group: '合成', label: '最短切句字数', type: 'number', hint: 'LLM 流式文本攒到几个字才送合成；小=首音快、句子碎', min: 2, max: 40, step: 1 },
+  { key: 'XFYUN_TTS_APP_ID', group: '讯飞凭据', label: 'App ID', type: 'secret', hint: '讯飞开放平台应用 ID' },
+  { key: 'XFYUN_TTS_API_KEY', group: '讯飞凭据', label: 'API Key', type: 'secret', hint: '留空不改' },
+  { key: 'XFYUN_TTS_API_SECRET', group: '讯飞凭据', label: 'API Secret', type: 'secret', hint: '留空不改' },
+];
+
+export function validateVoiceValues(raw: unknown): { ok: true; values: Partial<Record<VoiceRwKey, string>> } | { ok: false; error: string } {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { ok: false, error: 'values 须为对象' };
+  const values: Partial<Record<VoiceRwKey, string>> = {};
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!(VOICE_RW_KEYS as readonly string[]).includes(k)) return { ok: false, error: `键不在白名单: ${k}` };
+    if (typeof v !== 'string') return { ok: false, error: `${k} 须为字符串` };
+    const key = k as VoiceRwKey;
+    const val = v.trim();
+    if (VOICE_SECRET_KEYS.includes(key) && val === '') continue; // 空密钥=不改
+    if (!VOICE_RW_RE[key].test(val)) return { ok: false, error: `${k} 值不合法` };
+    const range = VOICE_RANGES[key];
+    if (range) {
+      const n = Number(val);
+      if (!(n >= range[0] && n <= range[1])) return { ok: false, error: `${k} 须在 ${range[0]}~${range[1]}` };
+    }
+    values[key] = val;
+  }
+  if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
+  return { ok: true, values };
+}
+
+adminDataRoute.get('/worker-voice', async (c) => {
+  const r = await callHotwordChannel({ action: 'voice_get' }, 20_000);
+  return c.json({ ok: r.ok === true, worker: r, fields: VOICE_FIELDS, secret_keys: VOICE_SECRET_KEYS }, r.ok ? 200 : 502);
+});
+
+adminDataRoute.put('/worker-voice', async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { values?: unknown; force?: unknown };
+  const v = validateVoiceValues(body.values);
+  if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  const force = body.force === true;
+  if (!force) {
+    const rooms = await fetchLiveKitRooms();
+    if (rooms === null) return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制应用' }, 409);
+    if (rooms.device_rooms > 0)
+      return c.json({ ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，应用会中断；等待结束或强制应用`, active_rooms: rooms.device_rooms }, 409);
+  }
+  const t0 = Date.now();
+  const r = await callHotwordChannel({ action: 'voice_set', values: v.values, force }, 150_000);
+  const header = c.req.header('authorization');
+  const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+  const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
+  const keys = Object.keys(v.values).join('+'); // 只记键名，值（含密钥）永不进日志
+  if (!r.ok) {
+    console.error(`[admin-voice] set FAILED keys=${keys} by=${by} ms=${Date.now() - t0} rolled_back=${r.rolled_back === true} recovered=${r.recovered === true}`);
+    return c.json({ ok: false, error: String(r.error ?? r.reason ?? '应用失败'), detail: r }, 502);
+  }
+  const proc = (r.proc ?? {}) as Record<string, unknown>;
+  const mismatch: string[] = [];
+  for (const [k, val] of Object.entries(v.values)) {
+    if (VOICE_SECRET_KEYS.includes(k as VoiceRwKey)) {
+      const pk = proc[k] as { len?: number } | undefined;
+      if (!pk || pk.len !== val.length) mismatch.push(k);
+    } else if (proc[k] !== val) mismatch.push(k);
+  }
+  if (mismatch.length > 0) {
+    console.error(`[admin-voice] set 对撞失败 keys=${mismatch.join('+')}(进程生效值≠期望值)`);
+    return c.json({ ok: false, error: `应用对撞失败：${mismatch.join('、')} 的进程生效值与期望不一致`, detail: r }, 502);
+  }
+  console.log(`[admin-voice] applied keys=${keys} by=${by} force=${force} ms=${Date.now() - t0} backup=${String(r.backup ?? '')}`);
+  return c.json({ ok: true, applied: r.applied, backup: r.backup, proc: r.proc });
 });
 
 // ── 记忆抽取 LLM 配置（Worker Brain tab「记忆抽取 LLM」卡，2026-08-19）──
@@ -1134,30 +1782,38 @@ adminDataRoute.post('/memory/:accountId', async (c) => {
 });
 
 // ── worker 运行态（设备接入页的容量/资源卡）──
-// 机器资源：ssh 64.90 forced-command 只读脚本（专用 key，命令锁死）；
+// 机器资源：ssh 各 worker 机 forced-command 只读脚本（专用 key，命令锁死；目标列表 WORKER_STATS_SSH_TARGETS）；
 // 接入容量：LiveKit ListRooms（twirp，jose 手签 admin token）数 sn- 前缀设备房。
 // 两路各自 try-catch 降级为 null，绝不因监控拖垮管理页。
-const pexecFile = promisify(execFile);
-
 // 30s 共享缓存(2026-08-27):admin 资源卡改 60s 自动轮询后,多标签页各自轮询会成倍打 ssh——
-// 缓存让并发消费方共享一次采集;失败不缓存(下个请求重试)。
-let workerStatsCache: { data: Record<string, unknown>; ts: number } | null = null;
+// 缓存让并发消费方共享一次采集;至少一台采到才缓存(全失败下个请求重试)。
+// 2026-09-22 迁 hk2：worker 可多台（WORKER_STATS_SSH_TARGETS，解析在 hosts-status.ts），逐台 try/catch 降级，
+// 老机/新机并存期两台同屏；容量 = 各台 max_jobs 求和。
+type WorkerMachine = {
+  id: string;
+  label: string;
+  host: string;
+  ok: boolean;
+  error: string | null;
+  data: Record<string, unknown> | null;
+};
+let workerStatsCache: { data: WorkerMachine[]; ts: number } | null = null;
 const WORKER_STATS_TTL_MS = 30_000;
 
-async function fetchWorkerMachineStats(): Promise<Record<string, unknown> | null> {
+async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
   if (workerStatsCache && Date.now() - workerStatsCache.ts < WORKER_STATS_TTL_MS) return workerStatsCache.data;
-  try {
-    const { stdout } = await pexecFile(
-      'ssh',
-      ['-i', '/root/.ssh/worker-stats-key', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 'root@64.90.13.117', 'stats'],
-      { timeout: 8000 },
-    );
-    const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
-    workerStatsCache = { data: parsed, ts: Date.now() };
-    return parsed;
-  } catch {
-    return null;
-  }
+  const machines = await Promise.all(
+    workerTargets().map(async (w): Promise<WorkerMachine> => {
+      try {
+        const data = await workerCollector(w.target)();
+        return { id: w.id, label: w.label, host: w.host, ok: true, error: null, data };
+      } catch (e) {
+        return { id: w.id, label: w.label, host: w.host, ok: false, error: describeExecError(e), data: null };
+      }
+    }),
+  );
+  if (machines.some((m) => m.ok)) workerStatsCache = { data: machines, ts: Date.now() };
+  return machines;
 }
 
 async function fetchLiveKitRooms(): Promise<{ device_rooms: number; total_rooms: number } | null> {
@@ -1191,18 +1847,40 @@ async function fetchLiveKitRooms(): Promise<{ device_rooms: number; total_rooms:
 }
 
 adminDataRoute.get('/worker-stats', async (c) => {
-  const [machine, rooms] = await Promise.all([fetchWorkerMachineStats(), fetchLiveKitRooms()]);
-  const maxJobs = machine && typeof machine.max_jobs === 'number' ? (machine.max_jobs as number) : null;
+  const [machines, rooms] = await Promise.all([fetchWorkerMachines(), fetchLiveKitRooms()]);
+  const maxJobs = sumMaxJobs(machines);
+  // machine = 第一台采到的（老页面字段兼容）；machines = 全部 worker 机；capacity.per_machine = 各台上限明细
+  const machine = machines.find((m) => m.ok)?.data ?? null;
   return c.json({
     ok: true,
     machine,
+    machines,
     rooms,
     capacity:
       maxJobs !== null && rooms
-        ? { max_jobs: maxJobs, active_total: rooms.total_rooms, remaining: Math.max(maxJobs - rooms.total_rooms, 0) }
+        ? {
+            max_jobs: maxJobs,
+            active_total: rooms.total_rooms,
+            remaining: Math.max(maxJobs - rooms.total_rooms, 0),
+            per_machine: machines.map((m) => ({
+              id: m.id,
+              label: m.label,
+              host: m.host,
+              ok: m.ok,
+              max_jobs: m.ok && m.data && typeof m.data.max_jobs === 'number' ? (m.data.max_jobs as number) : null,
+            })),
+          }
         : null,
     ts: Date.now(),
   });
+});
+
+// 服务器状态（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）：
+// 三台机同一份只读脚本 ops/host-stats.py 聚合；server 30s 共享缓存；?fresh=1 强制重采（≥5s 间隔）。
+// 单台失败只降级该台（ok:false），实现见 src/hosts-status.ts。
+adminDataRoute.get('/hosts-status', async (c) => {
+  const fresh = c.req.query('fresh') === '1';
+  return c.json(await getHostsStatus({ fresh }));
 });
 
 // Session 签发流水（按 SN 可选过滤 + offset/limit 分页；只含元数据，无任何 token）
@@ -1280,7 +1958,7 @@ adminDataRoute.post('/reset-quota', (c) => {
 adminDataRoute.get('/hotwords', async (c) => {
   const live = await callHotwordChannel({ action: 'status' }, 15_000);
   const kinds: Record<string, unknown> = {};
-  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [], device_asr: [] };
+  const liveWords: Record<HotwordKind, string[]> = { interrupt: [], asr: [], exit: [], device_asr: [], backchannel: [] };
   for (const kind of HOTWORD_KINDS) {
     const envKey = KIND_TO_ENV[kind];
     const envVal = live.ok ? String((live.env as Record<string, string>)?.[envKey] ?? '') : '';
@@ -1314,6 +1992,13 @@ adminDataRoute.put('/hotwords/:kind/draft', async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { words?: unknown; note?: unknown };
   const v = validateWords(kind, body.words);
   if (!v.ok) return c.json({ ok: false, error: v.error }, 400);
+  if (kind === 'backchannel') {
+    // 真防线：附和词不能与打断语/退出词（已发布 ∪ 草稿）重叠——同一个词不能既是急停又是附和
+    const union = (k: HotwordKind): string[] => [...(hotwordStore.publishedOf(k)?.words ?? []), ...(hotwordStore.draftOf(k)?.words ?? [])];
+    const conflicts = backchannelConflicts(v.words, { interrupt: union('interrupt'), exit: union('exit') });
+    if (conflicts.length > 0)
+      return c.json({ ok: false, error: `「${conflicts.join('」「')}」已在打断语/退出词表中，不能同时作为附和词` }, 400);
+  }
   const header = c.req.header('authorization');
   const opToken = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const by = (opToken ? getTokenUser(opToken) : null) ?? 'admin';
@@ -1355,7 +2040,7 @@ adminDataRoute.post('/hotwords/publish', async (c) => {
   if (!force) {
     const rooms = await fetchLiveKitRooms();
     if (rooms === null)
-      return c.json({ ok: false, error: '安全窗口检查失败(LiveKit 不可达)，确认后可强制发布' }, 409);
+      return c.json({ ok: false, error: '安全窗口检查失败(KidsHubAI-VoiceKit 不可达)，确认后可强制发布' }, 409);
     if (rooms.device_rooms > 0)
       return c.json(
         { ok: false, error: `当前有 ${rooms.device_rooms} 路设备通话，发布会中断；等待结束或强制发布`, active_rooms: rooms.device_rooms },
@@ -1462,3 +2147,5 @@ adminDataRoute.route('/ota', otaAdminRoute);
 
 // 设备运行配置（admin 专属，正则已含 /device-config；实现在 routes/device-config.ts）
 adminDataRoute.route('/device-config', configAdminRoute);
+// 设备诊断日志后台（2026-09-19，合同 CC 诊断日志复核回执 §2 第 3 条；admin 专属正则已含 diagnostics）
+adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);
