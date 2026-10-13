@@ -96,4 +96,6 @@ client可包含product/component/protocol_version/content_version；当前produc
 服务端集成调试可显式设置ANALYTICS_CHECKPOINT_INTERVAL_MS（100..10000十进制整数字符串，缺省10000），生产/stage共享bootstrap严格校验，非法值启动失败；30秒deadline、单flight、FULL/ACK/256MiB闸不变。health真实回显周期及stale_after_ms=30000+3×周期。默认周期不因探针而改变，具体取值需原库容量实测裁决。overview现读已完成日/设备日聚合，需同时展示rollup.complete/dirty与cutoff；最近批次使用last_batch_received_at_ms，不拿事件水位代替。
 
 
-既有大库首次raw ID索引构建可能超过旧12秒stage启动等待；隔离stage-run改为monotonic有界60秒等待，超时保留child/PID并明确先检查health，避免将仍启动的服务误重启或重seed fakekeys。rollup单遍优化及snapshot一致性仍需当前populated库8秒预算/容量实测，partial日报不能算完整完成。
+既有大库首次raw ID索引构建可能超过旧12秒stage启动等待；隔离stage-run改为monotonic有界60秒等待，超时保留child/PID并明确先检查health，避免将仍启动的服务误重启或重seed fakekeys。rollup单遍优化及snapshot一致性仍需当前populated库30秒有界预算/容量实测，partial日报不能算完整完成。
+
+香港31.2万条既有假事件下，每日8秒计算预算会触及上限；发布采用代码原有30秒上界，仍保持独立240秒CLI/watchdog与partial标记。后台结果只在完整提交后更新；维护期间写锁竞争返回503/30秒退避，不能冒称全部16日一定能在一次任务内完成。14台摄入P95/P99/RSS/原服务门槛未放宽。

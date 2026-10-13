@@ -11,7 +11,7 @@ try{
  const code=readFileSync(new URL('./analytics-prepare-env.mjs',import.meta.url),'utf8').replaceAll('/opt/p003/server',fixture);const script=join(dir,'prepare.mjs');writeFileSync(script,code);
  const run=()=>{const r=spawnSync(process.execPath,[script],{cwd:fixture,encoding:'utf8'});assert.equal(r.status,0,r.stderr);assert.ok(!r.stdout.includes('fake key'));return JSON.parse(r.stdout);};
  assert.equal(run().existing_runtime_secrets_reused,false);const first=parseEnv(readFileSync(join(fixture,'.env.analytics'),'utf8'));assert.equal(first.AUTH_JWT_SECRET,'fake key with # symbol');assert.notEqual(first.ANALYTICS_DEVICE_KEY_SECRET,first.ANALYTICS_INTERNAL_SECRET);
- assert.equal(first.ANALYTICS_NODE_PATH,fixture+'/.runtime/node-v24.19.0-linux-x64/bin/node');assert.equal(first.ANALYTICS_ROLLUP_MAX_DAY_MS,'8000');
+ assert.equal(first.ANALYTICS_NODE_PATH,fixture+'/.runtime/node-v24.19.0-linux-x64/bin/node');assert.equal(first.ANALYTICS_ROLLUP_MAX_DAY_MS,'30000');
  const ecosystem=new URL('./analytics.ecosystem.cjs',import.meta.url).pathname;
  const runtimeEnv={...process.env,ANALYTICS_ENV_FILE:join(fixture,'.env.analytics')};delete runtimeEnv.ANALYTICS_NODE_PATH;
  const pm2=spawnSync(process.execPath,['-e','process.stdout.write(require('+JSON.stringify(ecosystem)+').apps[0].interpreter)'],{env:runtimeEnv,encoding:'utf8'});assert.equal(pm2.status,0,pm2.stderr);assert.equal(pm2.stdout,first.ANALYTICS_NODE_PATH);

@@ -60,7 +60,7 @@ health可读版本/FULL/auto0、物理WAL及门槛、checkpoint是否running/超
 
 名单：ANALYTICS_SN_ALLOW（逗号SN，独立灰度，默认空，最多1000），DEVICE_SN_ALLOW（台账无记录env准入，默认空）。ANALYTICS_GLOBAL_RPM默认600。3001网关可配ANALYTICS_INTERNAL_URL，默认http://127.0.0.1:3006且只允许127.0.0.1 HTTP。
 
-维护预算：ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY默认1000000、整数1..1000000；ANALYTICS_ROLLUP_MAX_DAY_MS内置默认30000、整数1..30000，生产env helper下发8000；仅可收窄预算，非法值为受控rollup失败且仍先尝试TTL。
+维护预算：ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY默认1000000、整数1..1000000；ANALYTICS_ROLLUP_MAX_DAY_MS内置默认30000、整数1..30000，生产env helper下发30000（同内置上界）；仅可收窄预算，非法值为受控rollup失败且仍先尝试TTL。
 
 运行时：ANALYTICS_NODE_PATH绝对可执行路径，PM2生态及maintenance.sh从受控.env.analytics的JSON引号路径读取，显式进程env可覆盖；默认 `/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node`。standalone wrapper/tests使用当前process.execPath，rollup子命令和checkpoint可显式选ANALYTICS_NODE_PATH；任何共享writer都先验证实际SQLite版本。ANALYTICS_WAL_MAX_BYTES默认268435456，整数65536..268435456，只可收窄准入阈值，不能扩大256MiB；child使用同一阈值。ANALYTICS_CHECKPOINT_INTERVAL_MS缺省10000，仅十进制整数字符串100..10000；空串、小数、指数、非数字/越界均启动失败，不静默回退。生产及stage共用bootstrap读取，health interval_ms和stale_after_ms=30000+3×interval_ms真实回显；默认周期仍10秒/超时30秒，不依赖5分钟rollup刷新WAL。
 
