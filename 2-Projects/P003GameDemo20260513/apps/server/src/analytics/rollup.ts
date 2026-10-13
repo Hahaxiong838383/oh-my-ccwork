@@ -2,23 +2,39 @@ import { AnalyticsStore,AnalyticsRollupBudgetExceeded,cstDay,DAY_MS } from './st
 type Fact={device_key:string;event_name:string;session_digest:string;clock_suspicious:number;semantic_json:string;received_at_ms:number};
 export type RollupBudget={maxFactsPerDay:number;maxDayMs:number};
 export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"}[];remaining_dirty_days:number;partial:boolean};
-function summarizeFacts(facts:Iterable<Fact>,started:number,budget:RollupBudget){
-  const names:Record<string,number>={},devices=new Map<string,{events:number;sessions:Set<string>;last:number}>(),sessions=new Set<string>(),failures=new Map<string,number>(),rewards=new Set<string>();
-  let suspicious=0,gm=0,factCount=0,lastReceived=0;
-  for(const fact of facts){
-    factCount++;lastReceived=Math.max(lastReceived,fact.received_at_ms);
-    if(factCount>budget.maxFactsPerDay||(factCount%256===0&&performance.now()-started>budget.maxDayMs))throw new AnalyticsRollupBudgetExceeded();
-    names[fact.event_name]=(names[fact.event_name]??0)+1;
-    const d=devices.get(fact.device_key)??{events:0,sessions:new Set<string>(),last:0};d.events++;d.last=Math.max(d.last,fact.received_at_ms);
-    if(fact.event_name==='app.session_started'){sessions.add(fact.device_key+':'+fact.session_digest);d.sessions.add(fact.session_digest);}devices.set(fact.device_key,d);
-    suspicious+=fact.clock_suspicious;const semantic=JSON.parse(fact.semantic_json);
-    if(semantic.gm_override===true)gm++;
-    if(fact.event_name==='g1.command_failed'){const key=JSON.stringify([semantic.command??'',semantic.error_code??'']);failures.set(key,(failures.get(key)??0)+1);}
-    if(fact.event_name==='g1.reward_granted'&&semantic.reward_instance_digest)rewards.add(fact.device_key+':'+semantic.reward_instance_digest);
-  }
+type Counts={names:Record<string,number>;failures:Map<string,number>;suspicious:number;gm:number;facts:number;last:number};
+const newCounts=():Counts=>({names:{},failures:new Map(),suspicious:0,gm:0,facts:0,last:0});
+function addFact(counts:Counts,fact:Fact,semantic:Record<string,unknown>){
+  counts.facts++;counts.last=Math.max(counts.last,fact.received_at_ms);counts.names[fact.event_name]=(counts.names[fact.event_name]??0)+1;
+  counts.suspicious+=fact.clock_suspicious;if(semantic.gm_override===true)counts.gm++;
+  if(fact.event_name==='g1.command_failed'){const key=JSON.stringify([semantic.command??'',semantic.error_code??'']);counts.failures.set(key,(counts.failures.get(key)??0)+1);}
+}
+function summary(counts:Counts,devices:number,sessions:number,rewards:number){
+  const {names,failures}=counts;
   const select=(prefixes:string[])=>Object.fromEntries(Object.entries(names).filter(([n])=>prefixes.some(p=>n.startsWith(p))));
-  return {devices,summary:{event_count:factCount,active_devices:devices.size,sessions:sessions.size,event_counts:names,clock_suspicious_events:suspicious,explicit_gm_events:gm,unclassified_traffic_events:factCount-gm,reward_grant_events:names['g1.reward_granted']??0,unique_reward_instances:rewards.size,
-    groups:{activity:select(['app.']),g1_flow:select(['g1.experience','g1.phase','g1.screen','g1.semantic','g1.runtime_command']),logical_day_ecotank:select(['g1.logical','g1.progress','g1.route','g1.ecotank','g1.historical']),rewards_makeup:select(['g1.reward','g1.gift','g1.makeup']),settings:select(['settings.']),voice_state:select(['voice.']),command_failures:[...failures].map(([key,count])=>{const [command,error_code]=JSON.parse(key);return {command,error_code,count};}).sort((a,b)=>b.count-a.count).slice(0,100)},data_cutoff_ms:lastReceived}};
+  return {event_count:counts.facts,active_devices:devices,sessions,event_counts:names,clock_suspicious_events:counts.suspicious,explicit_gm_events:counts.gm,unclassified_traffic_events:counts.facts-counts.gm,reward_grant_events:names['g1.reward_granted']??0,unique_reward_instances:rewards,
+    groups:{activity:select(['app.']),g1_flow:select(['g1.experience','g1.phase','g1.screen','g1.semantic','g1.runtime_command']),logical_day_ecotank:select(['g1.logical','g1.progress','g1.route','g1.ecotank','g1.historical']),rewards_makeup:select(['g1.reward','g1.gift','g1.makeup']),settings:select(['settings.']),voice_state:select(['voice.']),command_failures:[...failures].map(([key,count])=>{const [command,error_code]=JSON.parse(key);return {command,error_code,count};}).sort((a,b)=>b.count-a.count).slice(0,100)},data_cutoff_ms:counts.last};
+}
+function summarizeFacts(facts:Iterable<Fact>,started:number,budget:RollupBudget,onDevice:(key:string,result:ReturnType<typeof summary>)=>void){
+  const global=newCounts();let current:string|null=null,individual=newCounts(),sessions=new Set<string>(),rewards=new Set<string>(),devices=0,totalSessions=0,totalRewards=0;
+  const checkBudget=()=>{if(global.facts>budget.maxFactsPerDay||performance.now()-started>budget.maxDayMs)throw new AnalyticsRollupBudgetExceeded();};
+  const finishDevice=()=>{
+    if(current===null)return;checkBudget();
+    onDevice(current,summary(individual,1,sessions.size,rewards.size));
+    // Keys are scoped to the device, so global distinct counts are sums of device counts.
+    devices++;totalSessions+=sessions.size;totalRewards+=rewards.size;
+  };
+  for(const fact of facts){
+    if(current!==fact.device_key){finishDevice();current=fact.device_key;individual=newCounts();sessions=new Set();rewards=new Set();}
+    const semantic=JSON.parse(fact.semantic_json) as Record<string,unknown>; // Exactly once per fact.
+    addFact(global,fact,semantic);addFact(individual,fact,semantic);
+    if(fact.event_name==='app.session_started')sessions.add(fact.session_digest);
+    if(fact.event_name==='g1.reward_granted'&&semantic.reward_instance_digest)rewards.add(String(semantic.reward_instance_digest));
+    if(global.facts>budget.maxFactsPerDay||global.facts%256===0)checkBudget();
+  }
+  finishDevice();checkBudget();
+  // Only the current device's distinct sets are retained, never raw fact arrays or all-device sets.
+  return summary(global,devices,totalSessions,totalRewards);
 }
 export function rollupDirtyDays(store:AnalyticsStore,now=Date.now(),limit=16,budget?:RollupBudget):number{
   return rollupDirtyDaysWithStatus(store,now,limit,budget).rebuilt_days;
@@ -31,13 +47,13 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
     try{
       store.transaction(()=>{
         const started=performance.now();
-        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget);
-        store.db.prepare('INSERT INTO analytics_day VALUES (?,?,?,?) ON CONFLICT(dimension,day) DO UPDATE SET summary_json=excluded.summary_json,updated_at_ms=excluded.updated_at_ms').run(dimension,day,JSON.stringify(result.summary),now);
         store.db.prepare('DELETE FROM analytics_device_day WHERE dimension=? AND day=?').run(dimension,day);
-        for(const [key,d] of result.devices){
-          const individual=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? AND device_key=? ORDER BY id_digest').iterate(dimension,day,key) as Iterable<Fact>,started,budget);
-          store.db.prepare('INSERT INTO analytics_device_day VALUES (?,?,?,?,?,?,?)').run(dimension,day,key,d.events,d.sessions.size,d.last,JSON.stringify({...individual.summary,updated_at_ms:now}));
-        }
+        const insertDevice=store.db.prepare('INSERT INTO analytics_device_day VALUES (?,?,?,?,?,?,?)');
+        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
+          insertDevice.run(dimension,day,key,individual.event_count,individual.sessions,individual.data_cutoff_ms,JSON.stringify({...individual,updated_at_ms:now}));
+        });
+        store.db.prepare('INSERT INTO analytics_day VALUES (?,?,?,?) ON CONFLICT(dimension,day) DO UPDATE SET summary_json=excluded.summary_json,updated_at_ms=excluded.updated_at_ms').run(dimension,day,JSON.stringify(result),now);
+        if(performance.now()-started>budget.maxDayMs)throw new AnalyticsRollupBudgetExceeded();
         store.db.prepare('DELETE FROM analytics_dirty_day WHERE dimension=? AND day=?').run(dimension,day);
         store.db.prepare('DELETE FROM analytics_rollup_retry WHERE dimension=? AND day=?').run(dimension,day);
       });

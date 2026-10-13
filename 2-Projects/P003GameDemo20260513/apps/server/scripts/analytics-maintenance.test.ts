@@ -1,6 +1,31 @@
 import assert from 'node:assert/strict';import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';import {spawnSync} from 'node:child_process';
 const {AnalyticsStore,DAY_MS,cstDay}=await import('../src/analytics/store.js');const {rollupDirtyDays}=await import('../src/analytics/rollup.js');
 const dir=mkdtempSync(join(tmpdir(),'analytics-maintenance-')),path=join(dir,'analytics.db'),store=new AnalyticsStore(path),now=Date.now(),key='a'.repeat(64);
+// A fixed semantic fixture verifies full-day and per-device output without retaining fact rows in the worker.
+const semanticStore=new AnalyticsStore(join(dir,'semantic.db')),semanticDay=cstDay(now-5*DAY_MS);
+const fixture:[string,string,string,Record<string,unknown>,number][]=[
+ ['a','app.session_started','s1',{},0],['a','app.session_started','s1',{},0],['a','app.session_started','s2',{},0],
+ ['a','g1.reward_granted','s2',{reward_instance_digest:'r1',gm_override:true},0],['a','g1.reward_granted','s2',{reward_instance_digest:'r1'},0],['a','g1.command_failed','s2',{command:'start',error_code:'E'},0],
+ ['b','app.session_started','s1',{},0],['b','g1.reward_granted','s1',{reward_instance_digest:'r1',gm_override:true},0],['b','settings.closed','s1',{},0],
+ ['c','voice.session_started','s1',{},0],['c','g1.command_failed','s1',{command:'start',error_code:'E'},1],['c','g1.phase_changed','s1',{},0],['c','g1.logical_day_changed','s1',{logical_day:2},0]
+];
+semanticStore.transaction(()=>{fixture.forEach(([device,name,session,semantic,clock],i)=>semanticStore.db.prepare('INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)').run('received',semanticDay,device,String(i).padStart(2,'0'),name,session,clock,JSON.stringify({tank_id:'fixture',...semantic}),now+i));semanticStore.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('received',semanticDay);});
+const semanticPrepare=semanticStore.db.prepare.bind(semanticStore.db),parse=JSON.parse;let traversals=0,parses=0;
+semanticStore.db.prepare=((sql:string)=>{if(sql.includes('SELECT * FROM analytics_rollup_fact'))traversals++;return semanticPrepare(sql);}) as typeof semanticStore.db.prepare;
+JSON.parse=((value:string,...args:any[])=>{if(value.includes('"tank_id":"fixture"'))parses++;return parse(value,...args);}) as typeof JSON.parse;
+try{assert.equal(rollupDirtyDays(semanticStore,now,16,{maxFactsPerDay:1_000_000,maxDayMs:8000}),1);}finally{JSON.parse=parse;semanticStore.db.prepare=semanticPrepare;}
+const globalSummary=JSON.parse(String(semanticStore.db.prepare('SELECT summary_json FROM analytics_day').get()!.summary_json));
+assert.equal(globalSummary.event_count,13);assert.equal(globalSummary.active_devices,3);assert.equal(globalSummary.sessions,3);assert.equal(globalSummary.unique_reward_instances,2);assert.equal(globalSummary.reward_grant_events,3);assert.equal(globalSummary.explicit_gm_events,2);assert.equal(globalSummary.unclassified_traffic_events,11);assert.equal(globalSummary.clock_suspicious_events,1);assert.equal(globalSummary.data_cutoff_ms,now+12);
+assert.deepEqual(globalSummary.event_counts,{'app.session_started':4,'g1.reward_granted':3,'g1.command_failed':2,'settings.closed':1,'voice.session_started':1,'g1.phase_changed':1,'g1.logical_day_changed':1});
+assert.deepEqual(globalSummary.groups,{activity:{'app.session_started':4},g1_flow:{'g1.phase_changed':1},logical_day_ecotank:{'g1.logical_day_changed':1},rewards_makeup:{'g1.reward_granted':3},settings:{'settings.closed':1},voice_state:{'voice.session_started':1},command_failures:[{command:'start',error_code:'E',count:2}]});
+const individual=()=>semanticStore.db.prepare('SELECT * FROM analytics_device_day ORDER BY device_key').all() as any[];
+const devices=individual();
+for(const [i,counts] of [[0,[6,2,1,1,0,now+5]],[1,[3,1,1,1,0,now+8]],[2,[4,0,0,0,1,now+12]]] as const){const row=devices[i],s=JSON.parse(row.summary_json);assert.deepEqual([s.event_count,s.sessions,s.unique_reward_instances,s.explicit_gm_events,s.clock_suspicious_events,s.data_cutoff_ms],counts);assert.equal(s.active_devices,1);assert.equal(row.event_count,s.event_count);assert.equal(row.session_count,s.sessions);assert.equal(row.last_received_at_ms,s.data_cutoff_ms);assert.equal(s.updated_at_ms,now);}
+assert.equal(parses,fixture.length,'semantic_json每条只解析一次');assert.equal(traversals,1,'每个日期仅一条有序fact iterator，无设备回扫');
+const beforeSemantic=JSON.stringify(individual());
+semanticStore.db.prepare('INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)').run('received',semanticDay,'a','late','g1.makeup_card_used','s2',0,'{"used_makeup_card":true}',now+100);semanticStore.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('received',semanticDay);
+assert.equal(rollupDirtyDays(semanticStore,now+200,16,{maxFactsPerDay:8,maxDayMs:8000}),0);assert.equal(JSON.stringify(individual()),beforeSemantic,'预算失败不能部分替换旧设备摘要');assert.deepEqual(JSON.parse(String(semanticStore.db.prepare('SELECT summary_json FROM analytics_day').get()!.summary_json)),globalSummary);assert.equal(semanticStore.db.prepare('SELECT count(*) n FROM analytics_dirty_day').get()!.n,1);
+assert.equal(rollupDirtyDays(semanticStore,now+300,16,{maxFactsPerDay:1_000_000,maxDayMs:8000}),1);const lateSummary=JSON.parse(String(semanticStore.db.prepare('SELECT summary_json FROM analytics_day').get()!.summary_json));assert.equal(lateSummary.event_count,14);assert.equal(lateSummary.sessions,3);assert.equal(lateSummary.unique_reward_instances,2);assert.equal(lateSummary.data_cutoff_ms,now+100);assert.equal(lateSummary.groups.rewards_makeup['g1.makeup_card_used'],1);assert.equal(JSON.parse(individual()[0].summary_json).event_count,7);assert.equal(semanticStore.db.prepare('SELECT count(*) n FROM analytics_dirty_day').get()!.n,0);semanticStore.close();
 const fact=(day:string,id:string,dirty=true)=>{store.db.prepare('INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)').run('received',day,key,id,'app.bridge_ready','session-digest',0,'{}',now);if(dirty)store.db.prepare('INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)').run('received',day);};
 const badDay=cstDay(now-DAY_MS),goodDay=cstDay(now);
 fact(badDay,'over-budget-1');fact(badDay,'over-budget-2');fact(goodDay,'within-budget');

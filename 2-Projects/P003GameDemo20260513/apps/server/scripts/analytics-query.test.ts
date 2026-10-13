@@ -31,6 +31,14 @@ assert.equal(received.active_devices,2,'跨日同设备不能相加重复计数'
 assert.equal(queryAnalytics(store,'overview',new URLSearchParams('device_alias='+encodeURIComponent('设备-'+ 'a'.repeat(12))),now).devices.length,2,'候选设备不受当前alias再次缩窄');
 assert.equal(queryAnalytics(store,'overview',new URLSearchParams(window.replace(/&device_alias=.*/,'')),now).devices.length,1);
 rollupDirtyDays(store,now+200);assert.equal(queryAnalytics(store,'overview',new URLSearchParams(window),now).event_count,3);
+// A second real connection commits rollup after summary read but before dirty read.
+ingest('a','snapshot-arrival',old,now+400);const concurrent=new AnalyticsStore(store.path);let interleaved=false;
+store.db.prepare=((sql:string)=>{const statement=prepare(sql);if(sql.includes('event_count')&&sql.includes('FROM analytics_device_day')){const get=statement.get.bind(statement);statement.get=((...args:any[])=>{const result=get(...args);if(!interleaved){interleaved=true;assert.equal(rollupDirtyDays(concurrent,now+500),2);}return result;}) as typeof statement.get;}return statement;}) as typeof store.db.prepare;
+const snapshot=queryAnalytics(store,'overview',new URLSearchParams(window),now);store.db.prepare=prepare;concurrent.close();
+assert.equal(interleaved,true);assert.equal(snapshot.event_count,3);assert.equal(snapshot.rollup.complete,false,'旧摘要不可配新commit的dirty=0冒称完整');assert.equal(snapshot.rollup.dirty_days,1);
+assert.equal(queryAnalytics(store,'overview',new URLSearchParams(window),now).event_count,4);
+store.transaction(()=>{queryAnalytics(store,'overview',new URLSearchParams(window),now);assert.equal(store.db.isTransaction,true,'不得提交或破坏调用方现有事务');});assert.equal(store.db.isTransaction,false);
+store.db.prepare=((sql:string)=>{if(sql.includes('FROM analytics_device_day'))throw new Error('test-read-failure');return prepare(sql);}) as typeof store.db.prepare;assert.throws(()=>queryAnalytics(store,'overview',new URLSearchParams(window),now),/test-read-failure/);store.db.prepare=prepare;assert.equal(store.db.isTransaction,false,'异常读snapshot必须回滚并释放reader');
 assert.throws(()=>queryAnalytics(store,'overview',new URLSearchParams('from=2026-02-31&to=2026-03-01')),/INVALID_QUERY/);
 assert.throws(()=>queryAnalytics(store,'daily',new URLSearchParams('from=2020-01-01&to=2026-10-13')),/INVALID_QUERY/);
 assert.throws(()=>queryAnalytics(store,'daily',new URLSearchParams('device_alias=BJP00312345678901234')),/INVALID_QUERY/);
@@ -39,6 +47,9 @@ const config=new DatabaseSync(join(dir,'config.db'));config.exec(`CREATE TABLE d
 const reader=new AnalyticsDeviceReader({devicesPath:join(dir,'devices.db'),configPath:join(dir,'config.db'),deviceKeySecret:'fake-key',envAllow:[]});
 const control=join(dir,'control.json');writeFileSync(control,'{"enabled":false}',{mode:0o600});const app=createAnalyticsApp({store,reader,authSecret:'fake',internalSecret:'fake',controlPath:control,allowSubjects:[],diskFreeBytes:()=>20*1024**3});
 const response=await app.request('/internal/analytics/collection-config',{headers:{'X-Analytics-Internal-Token':'fake'}});assert.equal(response.status,200);const value=await response.json();assert.equal(value.allowlist_count,0);assert.deepEqual(value.global,{event_upload_enabled:false,daily_upload_hour_cst:0});assert.deepEqual(value.device_defaults,{event_upload_enabled:false,daily_upload_hour_cst:23});
+const coverageApp=createAnalyticsApp({store,reader,authSecret:'fake',internalSecret:'fake',controlPath:control,allowSubjects:['synthetic'],diskFreeBytes:()=>20*1024**3});let coverageRead=false;
+store.db.prepare=((sql:string)=>{if(sql.includes('device_key IN')){coverageRead=true;assert.equal(store.db.isTransaction,true,'HTTP额外名单coverage也必须在同一snapshot内');}return prepare(sql);}) as typeof store.db.prepare;
+assert.equal((await coverageApp.request('/internal/analytics/overview',{headers:{'X-Analytics-Internal-Token':'fake'}})).status,200);store.db.prepare=prepare;assert.equal(coverageRead,true);assert.equal(store.db.isTransaction,false);
 // Existing populated databases obtain the missing index at startup without replacing raw/seen data.
 const rawCount=store.db.prepare('SELECT count(*) n FROM analytics_event').get()!.n,seenCount=store.db.prepare('SELECT count(*) n FROM analytics_event_seen').get()!.n;
 store.db.exec('DROP INDEX analytics_event_client_received');const migrated=new AnalyticsStore(store.path);

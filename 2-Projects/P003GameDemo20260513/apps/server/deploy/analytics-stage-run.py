@@ -9,9 +9,9 @@ if not NODE.is_absolute():raise RuntimeError('absolute analytics runtime require
 def run(args,cwd=None):
  p=subprocess.run(args,cwd=cwd,capture_output=True,text=True,check=True); return p.stdout
 
-def alive(port):
+def alive(port,timeout=2):
  try:
-  with urllib.request.urlopen(f'http://127.0.0.1:{port}/health',timeout=2) as r:return r.status==200
+  with urllib.request.urlopen(f'http://127.0.0.1:{port}/health',timeout=timeout) as r:return r.status==200
  except Exception:return False
 
 def occupied(port):
@@ -41,11 +41,12 @@ def start_one(name,script):
  env['ANALYTICS_NODE_PATH']=str(NODE)
  p=subprocess.Popen([str(NODE),'./node_modules/tsx/dist/cli.mjs','--env-file=.env.stage',script],cwd=ROOT/'server',env=env,stdout=f,stderr=f,start_new_session=True); f.close()
  (ROOT/(name+'.pid')).write_text(str(p.pid)); os.chmod(ROOT/(name+'.pid'),0o600)
- for _ in range(60):
-  if alive(3005 if name=='gateway' else 3306):return
+ deadline=time.monotonic()+60
+ while time.monotonic()<deadline:
+  if alive(3005 if name=='gateway' else 3306,timeout=min(2,max(.001,deadline-time.monotonic()))):return
   if p.poll() is not None:raise RuntimeError('staging child failed, inspect protected stage log')
-  time.sleep(.2)
- raise RuntimeError('staging startup timeout')
+  time.sleep(min(.2,max(0,deadline-time.monotonic())))
+ raise RuntimeError('staging startup wait exceeded 60s; child/pid retained, inspect health before restart')
 
 def main():
  p=argparse.ArgumentParser();p.add_argument('action',choices=['start','restart-ingest','stop']);a=p.parse_args()

@@ -21,6 +21,7 @@ export function queryAnalytics(store:AnalyticsStore,kind:string,params:URLSearch
   const aliasSql=filter.alias?' AND substr(device_key,1,12)=?':'';
   const bindings=[filter.from,filter.to,...(filter.alias?[filter.aliasPrefix!]:[])];
   if(kind==='overview'){
+    return store.readSnapshot(()=>{
     // At most daily/device-daily aggregate rows; never scan one row per accepted event here.
     const table=filter.alias?'analytics_device_day':'analytics_day';
     const aggregate=(dimension:string)=>db.prepare(`SELECT coalesce(sum(json_extract(summary_json,'$.event_count')),0) event_count,max(json_extract(summary_json,'$.data_cutoff_ms')) last_received_at_ms,coalesce(sum(json_extract(summary_json,'$.clock_suspicious_events')),0) clock_suspicious_events,count(DISTINCT day) summary_days,max(${filter.alias?"json_extract(summary_json,'$.updated_at_ms')":'updated_at_ms'}) updated_at_ms FROM ${table} WHERE dimension=? AND day>=? AND day<=?${aliasSql}`).get(dimension,...bindings) as {event_count:number;last_received_at_ms:number|null;clock_suspicious_events:number;summary_days:number;updated_at_ms:number|null};
@@ -35,6 +36,7 @@ export function queryAnalytics(store:AnalyticsStore,kind:string,params:URLSearch
     const covered=db.prepare('SELECT count(DISTINCT device_key) n FROM analytics_batch'+receiptWhere).get(...receiptBindings) as {n:number};
     const devices=db.prepare(`SELECT DISTINCT device_key FROM analytics_device_day WHERE dimension=? AND day>=? AND day<=? ORDER BY device_key LIMIT 1000`).all(filter.dimension,filter.from,filter.to) as {device_key:string}[];
     return {ok:true,window_days:filter.days,from:filter.from,to:filter.to,dimension:filter.dimension,device_alias:filter.alias??null,batch_dimension:'received',data_cutoff_ms:events.last_received_at_ms,event_count:events.event_count,active_devices:active.n,last_received_at_ms:events.last_received_at_ms,clock_suspicious_events:clock.clock_suspicious_events,receiving_devices:covered.n,...batches,rollup:{complete:dirtyDays===0&&clockDirty===0,dirty_days:dirtyDays,clock_dirty_days:clockDirty,summary_days:events.summary_days,clock_summary_days:clock.summary_days,updated_at_ms:events.updated_at_ms,data_cutoff_ms:events.last_received_at_ms,clock_data_cutoff_ms:clock.last_received_at_ms},client_pending_known:false,devices:devices.map(d=>({device_alias:deviceAlias(d.device_key)}))};
+    });
   }
   if(kind==='daily'){
     const table=filter.alias?'analytics_device_day':'analytics_day';

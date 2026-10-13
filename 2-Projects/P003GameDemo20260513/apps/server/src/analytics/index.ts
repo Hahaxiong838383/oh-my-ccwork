@@ -53,12 +53,13 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
   for(const kind of ADMIN_ANALYTICS_PATHS)app.get('/internal/analytics/'+kind,c=>{
     if(kind==='health')return c.json(health());
     if(kind==='collection-config')return c.json({ok:true,server_gate:readControl(options.controlPath),allowlist_count:options.allowSubjects.length,global:options.reader.readGlobalCollectionConfig?.()??{event_upload_enabled:false,daily_upload_hour_cst:23},device_defaults:{event_upload_enabled:false,daily_upload_hour_cst:23},items:options.allowSubjects.map(subject=>{const ctx=options.reader.readAnalyticsDeviceContext(subject);return {device_alias:deviceAlias(ctx.deviceKey),active:ctx.active,event_upload_enabled:ctx.uploadEnabled,daily_upload_hour_cst:ctx.uploadHourCst};})});
-    const result=queryAnalytics(options.store,kind,new URL(c.req.url).searchParams);
+    const readResult=()=>{const result=queryAnalytics(options.store,kind,new URL(c.req.url).searchParams);
     if(kind==='overview'){result.allowlist_count=options.allowSubjects.length;const allowKeys=options.allowSubjects.map(subject=>options.reader.readAnalyticsDeviceContext(subject).deviceKey);
       const filter=analyticsQueryFilters(new URL(c.req.url).searchParams);
       const covered=allowKeys.length?Number((options.store.db.prepare(`SELECT count(DISTINCT device_key) n FROM analytics_batch WHERE received_at_ms>=? AND received_at_ms<? AND device_key IN (${allowKeys.map(()=>'?').join(',')})${filter.alias?' AND substr(device_key,1,12)=?':''}`).get(Date.parse(filter.from+'T00:00:00Z')-8*3_600_000,Date.parse(filter.to+'T00:00:00Z')+16*3_600_000,...allowKeys,...(filter.alias?[filter.aliasPrefix!]:[])) as {n:number}).n):0;
       result.receiving_allowlisted_devices=covered;result.receiving_coverage=allowKeys.length?covered/allowKeys.length:null;}
-    return c.json(result);
+    return result;};
+    return c.json(kind==='overview'?options.store.readSnapshot(readResult):readResult());
   });
   app.post('/v1/device/analytics/events:batch',async c=>{
     const started=performance.now();requests++;

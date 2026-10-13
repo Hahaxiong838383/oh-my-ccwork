@@ -32,3 +32,6 @@ Checkpoint：`{enabled:boolean,running:boolean,worker_pid:number|null,interval_m
 
 
 OverviewRollup：`{complete:boolean,dirty_days:number,clock_dirty_days:number,summary_days:number,clock_summary_days:number,updated_at_ms:number|null,data_cutoff_ms:number|null,clock_data_cutoff_ms:number|null}`。dirty_days 为所选维度/日期的待重建日期数，clock_dirty_days 为同窗口 received 维度日期数；任一非零 complete=false，设备筛选也保守使用整日 dirty。summary_days/clock_summary_days 是实际读取的不同日期数，不是窗口预期天数（没有事件的空日可没有汇总行）；updated_at_ms 是所选汇总最近完成时刻，不代表整个窗口的新事件全部覆盖。cutoff 是已聚合数据最大接收时刻，clock cutoff 与 selected cutoff分别报告。global事件/clock计数求和day摘要，alias求和device_day；active_devices跨日从device_day去重，候选设备同窗口去重且不受当前alias缩窄。成功批次计数与覆盖率继续独立读received batch。精确events查询由(client_event_id,received_at_ms)索引保护命中/缺失及occurred/received两维度，不返回原始正文。
+
+
+overview所有摘要、dirty、batch/coverage读取使用同一个WAL读snapshot；并发rollup提交后新摘要/dirty在下一请求一起可见，旧摘要仍配该snapshot的dirty状态。读取不取得writer锁；异常释放reader，不改变ACK写事务。

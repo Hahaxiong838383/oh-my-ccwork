@@ -69,6 +69,13 @@ export class AnalyticsStore {
     try {this.db.exec('BEGIN IMMEDIATE');const result=fn();this.db.exec('COMMIT');return result;}
     catch(error) {try{this.db.exec('ROLLBACK');}catch{} if(error instanceof AnalyticsRollupBudgetExceeded)throw error;throw new AnalyticsStorageUnavailable([5,6].includes((error as {errcode?:number}).errcode??0));}
   }
+  readSnapshot<T>(fn:()=>T):T{
+    // Reuse a caller's existing snapshot without committing it; never take a writer lock.
+    if(this.db.isTransaction)return fn();
+    this.db.exec('BEGIN');
+    try{const result=fn();this.db.exec('COMMIT');return result;}
+    catch(error){try{this.db.exec('ROLLBACK');}catch{}throw error;}
+  }
   get ingest():IngestStatements{
     // Exactly seven fixed statements per connection; no cache of arbitrary/dynamic queries.
     return this.ingestStatements??=Object.freeze(Object.fromEntries(Object.entries(INGEST_SQL).map(([key,sql])=>[key,this.db.prepare(sql)])) as IngestStatements);
