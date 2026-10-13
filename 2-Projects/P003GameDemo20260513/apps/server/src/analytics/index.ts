@@ -13,7 +13,7 @@ import { ADMIN_ANALYTICS_PATHS,deviceAlias,queryAnalytics,analyticsQueryFilters 
 export function readControl(path:string):{enabled:boolean;valid:boolean}{
   try{
     const stat=lstatSync(path);
-    if(!stat.isFile()||stat.size>4096||(stat.mode&0o077)!==0) return {enabled:false,valid:false};
+    if(!stat.isFile()||stat.size>4096||(stat.mode&0o7777)!==0o600) return {enabled:false,valid:false};
     const data=JSON.parse(readFileSync(path,'utf8'));
     if(!data||typeof data!=='object'||Array.isArray(data)||Object.keys(data).some(k=>k!=='enabled')||typeof data.enabled!=='boolean')return {enabled:false,valid:false};
     return {enabled:data.enabled,valid:true};
@@ -36,7 +36,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     let walBytes=0;try{walBytes=lstatSync(options.store.path+'-wal').size;}catch{}
     let meta:{key:string;value:string}[]=[];
     try{meta=options.store.db.prepare('SELECT key,value FROM analytics_meta').all() as {key:string;value:string}[];}catch{storageReady=false;}
-    return {ok:true,alive:true,ready:dependenciesReady&&storageReady&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:options.allowSubjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
+    return {ok:true,alive:true,ready:dependenciesReady&&storageReady&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:options.allowSubjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_rollup_attempt_ms:Number(meta.find(m=>m.key==='last_rollup_attempt_ms')?.value)||null,last_rollup_partial_ms:Number(meta.find(m=>m.key==='last_rollup_partial_ms')?.value)||null,rollup_status:meta.find(m=>m.key==='last_rollup_status')?.value??null,rollup_failed_days:Number(meta.find(m=>m.key==='last_rollup_failed_days')?.value)||0,rollup_remaining_dirty_days:Number(meta.find(m=>m.key==='last_rollup_remaining_dirty_days')?.value)||0,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
   };
   app.get('/health',c=>c.json({ok:true,alive:true}));
   app.get('/ready',c=>{const value=health();return c.json(value,value.ready?200:503);});

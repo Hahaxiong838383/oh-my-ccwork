@@ -33,7 +33,7 @@ export function queryAnalytics(store:AnalyticsStore,kind:string,params:URLSearch
   if(kind==='daily'){
     const table=filter.alias?'analytics_device_day':'analytics_day';
     const rows=db.prepare(`SELECT day,summary_json${filter.alias?'':',updated_at_ms'} FROM ${table} WHERE dimension=? AND day>=? AND day<=?${aliasSql} ORDER BY day DESC LIMIT ? OFFSET ?`).all(filter.dimension,...bindings,limit,offset) as {day:string;summary_json:string;updated_at_ms?:number}[];
-    return {ok:true,dimension:filter.dimension,from:filter.from,to:filter.to,device_alias:filter.alias??null,limit,offset,items:rows.map(r=>({day:r.day,...JSON.parse(r.summary_json),updated_at_ms:r.updated_at_ms??(Number((db.prepare("SELECT value FROM analytics_meta WHERE key='last_rollup_success_ms'").get() as {value:string}|undefined)?.value)||null)}))};
+    return {ok:true,dimension:filter.dimension,from:filter.from,to:filter.to,device_alias:filter.alias??null,limit,offset,items:rows.map(r=>{const summary=JSON.parse(r.summary_json);return {day:r.day,...summary,updated_at_ms:r.updated_at_ms??summary.updated_at_ms??null};})};
   }
   if(kind==='batches'){
     const requestId=params.get('request_id');if(requestId&&requestId.length>96)throw new Error('INVALID_QUERY');

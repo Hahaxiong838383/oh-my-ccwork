@@ -1,3 +1,4 @@
+import { inspectEventStructure } from './structure.js';
 import { createHash } from 'node:crypto';
 import { validateProperties } from './event-registry-v1.js';
 export const LIMITS={eventBytes:8*1024,bodyBytes:2*1024*1024,events:200,deviceRpm:60,concurrency:2,defaultGlobalRpm:600,diskWarnBytes:8*1024**3,diskStopBytes:4*1024**3} as const;
@@ -16,6 +17,7 @@ export function validateAnalyticsBatch(raw:unknown):AnalyticsBatch {
   return raw as AnalyticsBatch;
 }
 export function validateAnalyticsEvent(raw:unknown):{ok:true;event:AnalyticsEvent}|{ok:false;reason:RejectReason} {
+  const structuralReason=inspectEventStructure(raw);if(structuralReason)return {ok:false,reason:structuralReason};
   if(Buffer.byteLength(JSON.stringify(raw),'utf8')>LIMITS.eventBytes)return {ok:false,reason:'event_too_large'};
   if(!isObject(raw)||!onlyKeys(raw,['schema_version','client_event_id','event_name','occurred_at_ms','session_id','sequence','priority','context','properties'])||raw.schema_version!==1||!safeIdentifier(raw.client_event_id,128)||!safeIdentifier(raw.session_id,64)||typeof raw.event_name!=='string'||raw.event_name.length>96||!integer(raw.occurred_at_ms)||!integer(raw.sequence)||!['low','normal','critical'].includes(raw.priority as string))return {ok:false,reason:'invalid_event'};
   if(!isObject(raw.context)||!onlyKeys(raw.context,['screen','phase','external_screen_connected'])||Object.entries(raw.context).some(([k,v])=>k==='external_screen_connected'?typeof v!=='boolean':!safeString(v)))return {ok:false,reason:'invalid_context'};
@@ -24,8 +26,12 @@ export function validateAnalyticsEvent(raw:unknown):{ok:true;event:AnalyticsEven
   return {ok:true,event:raw as AnalyticsEvent};
 }
 export function canonicalJson(v:unknown):string{
-  if(Array.isArray(v))return '['+v.map(canonicalJson).join(',')+']';
-  if(isObject(v))return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonicalJson(v[k])).join(',')+'}';
+  if(inspectEventStructure(v))throw new Error('INVALID_EVENT_STRUCTURE');
+  return canonicalJsonChecked(v);
+}
+function canonicalJsonChecked(v:unknown):string{
+  if(Array.isArray(v))return '['+v.map(canonicalJsonChecked).join(',')+']';
+  if(isObject(v))return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonicalJsonChecked(v[k])).join(',')+'}';
   return JSON.stringify(v);
 }
 export const digest=(v:string)=>createHash('sha256').update(v).digest('hex');

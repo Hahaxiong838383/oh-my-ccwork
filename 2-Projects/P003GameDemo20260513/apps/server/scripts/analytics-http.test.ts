@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync,writeFileSync,rmSync } from 'node:fs';
+import { mkdtempSync,writeFileSync,rmSync,chmodSync } from 'node:fs';
 import {tmpdir} from 'node:os';import {join} from 'node:path';
 import {SignJWT} from 'jose';
-const {createAnalyticsApp}=await import('../src/analytics/index.js');
+const {createAnalyticsApp,readControl}=await import('../src/analytics/index.js');
 const {AnalyticsStore}=await import('../src/analytics/store.js');
 const dir=mkdtempSync(join(tmpdir(),'analytics-http-')),control=join(dir,'control.json');
 writeFileSync(control,JSON.stringify({enabled:false}),{mode:0o600});
@@ -55,5 +55,10 @@ writeFileSync(control,JSON.stringify({enabled:true}),{mode:0o600});
 const perDevice=createAnalyticsApp(options);
 for(let i=0;i<60;i++){r=await perDevice.request('/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'rpm-'+i},body:JSON.stringify(batch('rpm'))});assert.equal(r.status,200);}
 r=await perDevice.request('/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'rpm-61'},body:JSON.stringify(batch('rpm'))});assert.equal(r.status,429);
+for(const mode of [0o400,0o700,0o640]){
+ chmodSync(control,mode);assert.deepEqual(readControl(control),{enabled:false,valid:false},'只有精确0600可用');
+ assert.equal((await app.request('/ready')).status,503);
+}
+chmodSync(control,0o600);assert.deepEqual(readControl(control),{enabled:true,valid:true});
 writeFileSync(control,'broken',{mode:0o600});assert.equal((await app.request('/ready')).status,503);assert.equal((await post()).status,503);
 store.close();rmSync(dir,{recursive:true,force:true});console.log('analytics HTTP: PASS (auth/gates, JSON413, full-body limits, rates, disk, internal auth, readiness)');

@@ -1,3 +1,4 @@
+import { sameJsonContent } from './structure.js';
 import { randomUUID } from 'node:crypto';
 import { AnalyticsStore,cstDay,analysisDay } from './store.js';
 import {canonicalJson,digest,validateAnalyticsEvent,type AnalyticsBatch,type AnalyticsBatchAck,type RejectReason} from './contracts.js';
@@ -11,9 +12,8 @@ export function settleAnalyticsBatch(store:AnalyticsStore,context:AnalyticsDevic
     const ack:AnalyticsBatchAck={ok:true,request_id:requestId,accepted_event_ids:[],duplicated_event_ids:[],rejected:[],retry_after_ms:0};
     const settlements:{id:string;outcome:string;reason:RejectReason|null}[]=[];
     for(const [id,items] of grouped){
-      const hashes=items.map(e=>digest(canonicalJson(e)));
       let reason:RejectReason|null=null;
-      if(hashes.some(h=>h!==hashes[0])) reason='client_event_id_conflict';
+      if(items.some(item=>!sameJsonContent(items[0],item))) reason='client_event_id_conflict';
       const validated=validateAnalyticsEvent(items[0]);
       if(!reason&&!validated.ok)reason=validated.reason;
       if(reason){ack.rejected.push({client_event_id:id,reason});settlements.push({id,outcome:'rejected',reason});continue;}

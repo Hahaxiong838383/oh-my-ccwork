@@ -10,7 +10,7 @@
 
 外层仅 schema_version=1/batch_id/sent_at_ms/client/events，事件1..200。client仅 product/component/protocol_version/content_version，可缺省成员，成员为最多256字符的符号字符串；现 producer protocol_version=`1.0`，不是数字。未知外层/身份/敏感client键400。事件ID不能识别则整批400；事件内容不合法则该ID200终态拒绝。优先级仅low/normal/critical，事件含原 occurred_at_ms 与独立 received_at_ms。context仅 screen/phase/external_screen_connected。
 
-冻结额度：事件UTF-8 JSON≤8192字节，HTTP正文≤2097152字节；超过正文JSON413。nginx硬顶3MiB由部署文件提供。每主体60rpm；进程全局默认600rpm，可配1..60000；处理并发2。429/503使用数字秒Retry-After；内存RSS超过512MiB停止新接收；磁盘可用<8GiB警告、<4GiB停止接收503/60。
+冻结额度：事件UTF-8 JSON≤8192字节，HTTP正文≤2097152字节；超过正文JSON413。任意递归校验/规范化前迭代检查单事件结构：根深度0，最大深度8、最多4096节点；深度超限终态invalid_event，节点超限终态event_too_large。可识别ID的坏结构不阻断同批正常事件；同ID深结构比较迭代执行，仍保留唯一结算及冲突规则。nginx硬顶3MiB由部署文件提供。每主体60rpm；进程全局默认600rpm，可配1..60000；处理并发2。429/503使用数字秒Retry-After；内存RSS超过512MiB停止新接收；磁盘可用<8GiB警告、<4GiB停止接收503/60。
 
 X-Request-Id必需，长度1..96，技术符号语法 `[A-Za-z0-9_.:-]+`，合法输入原样回显；禁止trim/截断。batch_id/client_event_id/session_id沿用技术标识语法与96/128/64上限。完整SN、JWT形状、手机号、控制字符拒绝。该符号收窄用于杜绝自由文本，覆盖固定producer现有ID形状。客户端时钟偏差不拒收。
 
@@ -36,7 +36,11 @@ analytics_day/analytics_device_day和最小 analytics_rollup_fact保留90天。f
 
 七组提供语义事件计数、活跃设备/会话、Runtime奖励事件与奖励instance去重、失败command/error_code排行。G1流程统计是事件计数，不能称严格序列转化率；没有有序漏斗推断。上传元数据来自batch当前client，不能当发生版本。
 
-独立 `npm run analytics:rollup`，建议每5分钟调度：最多16个dirty日、每日事务最多100万fact/30秒计算预算，每次TTL≤1000行；不VACUUM、不在ingest进程启动重算。超预算保留dirty日并报受控失败，需运营进一步分片，不能声称无限容量。
+独立 `npm run analytics:rollup`，建议每5分钟调度：最多16个dirty日、每日事务最多100万fact/30秒计算预算，每次TTL每张目标表≤1000行；不VACUUM、不在ingest进程启动重算。逐日事务隔离，超预算保留dirty并继续其他候选日；analytics_rollup_retry仅存维度/日期/末次失败时间，失败日排到未尝试日后且同样保留90天，防止有限名额饥饿。raw14天/receipt14天/fact与summary90天TTL在独立finally中尝试，即使聚合或水位写入失败。
+
+CLI JSON为 `{ok:boolean,partial:boolean,rebuilt_days:number,rollup?:{attempted_days,rebuilt_days,failed_days:{dimension,day,reason:'budget_exceeded'|'storage_unavailable'}[],remaining_dirty_days,partial},pruned?:{events,batches},rollup_error?:string,prune_error?:string}`。部分失败或尚余dirty：exit0、ok=false、partial=true；全量完成：exit0、ok=true、partial=false；存储/元数据/TTL致命错误：exit1、受控error字段，不能冒称成功。wrapper保留相同ok/partial语义。每次记last_rollup_attempt_ms；partial只推进last_rollup_partial_ms，全部dirty完成才推进last_rollup_success_ms。每日及设备每日摘要updated_at_ms取该日真实完成时刻。
+
+维护共用文件锁：rollup碰锁exit0且JSON明确skipped=true/reason=maintenance_lock_busy；backup最多等待20秒，超时exit1且ok=false/skipped=true/reason=maintenance_lock_timeout。backup oneshot总预算120秒（等锁≤20秒+Python备份≤90秒），失败60秒后重试，600秒内最多5次启动；避免00:30与较长rollup争锁后整日假成功漏备份。仍需Linux真实flock与systemd运行验收，超预算聚合容量需后续分片，不能声称无限容量。
 
 ## 环境变量
 
@@ -45,5 +49,7 @@ analytics_day/analytics_device_day和最小 analytics_rollup_fact保留90天。f
 必需秘密：AUTH_JWT_SECRET（既有JWT）、ANALYTICS_DEVICE_KEY_SECRET（独立、稳定、至少32随机字节建议）、ANALYTICS_INTERNAL_SECRET（另一独立秘密，3001网关同值）。生产不得把两新秘密设相同。
 
 名单：ANALYTICS_SN_ALLOW（逗号SN，独立灰度，默认空，最多1000），DEVICE_SN_ALLOW（台账无记录env准入，默认空）。ANALYTICS_GLOBAL_RPM默认600。3001网关可配ANALYTICS_INTERNAL_URL，默认http://127.0.0.1:3006且只允许127.0.0.1 HTTP。
+
+维护预算：ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY默认1000000、整数1..1000000；ANALYTICS_ROLLUP_MAX_DAY_MS默认30000、整数1..30000，仅可收窄预算，非法值为受控rollup失败且仍尝试TTL。
 
 PM2 `deploy/analytics.ecosystem.cjs` 读 ANALYTICS_ENV_FILE（默认/opt/p003/server/.env.analytics，绝对），实例1，512M保护。脚本不读取真实env作为开发输入。部署/真实代理/真机/语音对照/备份异机验收由主控处理，本任务本地验证不能代替生产验收。

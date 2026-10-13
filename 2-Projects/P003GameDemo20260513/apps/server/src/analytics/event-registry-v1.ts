@@ -1,3 +1,4 @@
+import { inspectEventStructure } from './structure.js';
 import { readFileSync } from 'node:fs';
 const schema=JSON.parse(readFileSync(new URL('./event-property-schema-v1.json',import.meta.url),'utf8'));
 export const EVENT_REGISTRY: {eventName:string;group:string;sample:Record<string,unknown>;jsonSchema:Schema}[]=schema.events;
@@ -25,6 +26,6 @@ function containsSensitive(v:unknown):boolean {
 export function validateProperties(eventName:string,properties:unknown):'event_not_allowed'|'invalid_properties'|null{
   const entry=EVENT_REGISTRY.find(e=>e.eventName===eventName);
   if(!entry)return 'event_not_allowed';
-  if(containsSensitive(properties)||!matchesSchema(properties,entry.jsonSchema))return 'invalid_properties';
+  if(inspectEventStructure(properties)||containsSensitive(properties)||!matchesSchema(properties,entry.jsonSchema))return 'invalid_properties';
   return null;
 }

@@ -4,6 +4,9 @@ import { dirname, isAbsolute } from 'node:path';
 export class AnalyticsStorageUnavailable extends Error {
   constructor(readonly busy=false){super('ANALYTICS_STORAGE_UNAVAILABLE');}
 }
+export class AnalyticsRollupBudgetExceeded extends Error {
+  constructor(){super('ANALYTICS_ROLLUP_BUDGET_EXCEEDED');}
+}
 export class AnalyticsStore {
   readonly db: DatabaseSync;
   constructor(readonly path: string) {
@@ -38,6 +41,7 @@ export class AnalyticsStore {
         event_name TEXT NOT NULL, session_digest TEXT NOT NULL, clock_suspicious INTEGER NOT NULL, semantic_json TEXT NOT NULL,
         received_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day,device_key,id_digest));
       CREATE TABLE IF NOT EXISTS analytics_dirty_day (dimension TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY(dimension,day));
+      CREATE TABLE IF NOT EXISTS analytics_rollup_retry (dimension TEXT NOT NULL,day TEXT NOT NULL,last_attempt_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day));
       CREATE TABLE IF NOT EXISTS analytics_day (dimension TEXT NOT NULL,day TEXT NOT NULL,summary_json TEXT NOT NULL,updated_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day));
       CREATE TABLE IF NOT EXISTS analytics_device_day (dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,event_count INTEGER NOT NULL,session_count INTEGER NOT NULL,last_received_at_ms INTEGER NOT NULL,summary_json TEXT NOT NULL, PRIMARY KEY(dimension,day,device_key));
       CREATE TABLE IF NOT EXISTS analytics_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -46,7 +50,7 @@ export class AnalyticsStore {
   }
   transaction<T>(fn:()=>T):T {
     try {this.db.exec('BEGIN IMMEDIATE');const result=fn();this.db.exec('COMMIT');return result;}
-    catch(error) {try{this.db.exec('ROLLBACK');}catch{} throw new AnalyticsStorageUnavailable([5,6].includes((error as {errcode?:number}).errcode??0));}
+    catch(error) {try{this.db.exec('ROLLBACK');}catch{} if(error instanceof AnalyticsRollupBudgetExceeded)throw error;throw new AnalyticsStorageUnavailable([5,6].includes((error as {errcode?:number}).errcode??0));}
   }
   close(){this.db.close();}
 }
