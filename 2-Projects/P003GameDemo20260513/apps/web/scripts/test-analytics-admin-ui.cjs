@@ -9,7 +9,7 @@ const assetDir=process.env.ASSET_DIR || '/tmp/p003-analytics-ui-assets';
 const html=fs.readFileSync(path.resolve(__dirname,'../public/admin/index.html'),'utf8');
 for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)) if(match[1].trim())new vm.Script(match[1]);
 const health={ok:true,alive:true,ready:true,dependencies_ready:true,storage_ready:true,gate_enabled:false,control_valid:true,allowlist_count:0,in_flight:0,requests:0,storage_failures:0,sql_busy:0,rss_bytes:1000,wal_bytes:0,disk_free_bytes:null,disk_warning:false,processing_p95_ms:null,processing_p99_ms:null,last_rollup_success_ms:null,last_rollup_attempt_ms:null,last_rollup_partial_ms:null,rollup_status:null,rollup_failed_days:0,rollup_remaining_dirty_days:0,last_backup_success_ms:null};
-function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimension:q.get('dimension'),devices:[{device_alias:'设备-012345abcdef'}],event_count:n,active_devices:0,receiving_devices:0,batches:0,accepted:0,duplicated:0,rejected:0,clock_suspicious_events:0,allowlist_count:0,receiving_allowlisted_devices:0,receiving_coverage:null,data_cutoff_ms:null,last_received_at_ms:null,client_pending_known:false};}
+function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimension:q.get('dimension'),devices:[{device_alias:'设备-012345abcdef'}],event_count:n,active_devices:0,receiving_devices:0,batches:0,accepted:0,duplicated:0,rejected:0,clock_suspicious_events:0,allowlist_count:0,receiving_allowlisted_devices:0,receiving_coverage:null,data_cutoff_ms:null,last_received_at_ms:null,last_batch_received_at_ms:null,rollup:{complete:true,dirty_days:0,clock_dirty_days:0,summary_days:n?1:0,clock_summary_days:n?1:0,updated_at_ms:null,data_cutoff_ms:null,clock_data_cutoff_ms:null},client_pending_known:false};}
 (async()=>{
  const server=http.createServer((req,res)=>{res.setHeader('Content-Type','text/html');res.end(html);});await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
  const origin='http://127.0.0.1:'+server.address().port;
@@ -33,6 +33,11 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
     if(state.mode==='error' && kind==='overview')return route.fulfill({status:503,json:{ok:false,error:'analytics_unavailable'}});
     if(state.mode==='unauthorized' && kind==='overview')return route.fulfill({status:401,json:{ok:false}});
     if(kind==='overview'){
+     if(state.mode==='finalwave'){
+      const cutoff=Date.parse('2026-10-13T02:00:00Z'),batch=Date.parse('2026-10-13T04:00:00Z');let data={...overview(q,4),active_devices:1,batches:1,accepted:0,rejected:2,data_cutoff_ms:cutoff,last_received_at_ms:cutoff,last_batch_received_at_ms:batch,rollup:{complete:true,dirty_days:0,clock_dirty_days:0,summary_days:1,clock_summary_days:1,updated_at_ms:cutoff,data_cutoff_ms:cutoff,clock_data_cutoff_ms:cutoff}};
+      if(state.waveCase==='dirty')data={...data,event_count:0,active_devices:0,accepted:3,rejected:0,data_cutoff_ms:null,last_received_at_ms:null,rollup:{complete:false,dirty_days:2,clock_dirty_days:1,summary_days:0,clock_summary_days:0,updated_at_ms:null,data_cutoff_ms:null,clock_data_cutoff_ms:null}};
+      if(state.waveCase==='legacy')delete data.rollup;return route.fulfill({json:data});
+     }
      if(state.mode==='candidate-error' && q.get('dimension')==='received')return route.fulfill({status:503,json:{ok:false,error:'analytics_unavailable'}});
      if(state.mode==='alias-race' && q.get('dimension')==='received' && q.get('from')==='2026-10-12'){state.pendingCandidates.push(route);state.pendingReady();return;}
      if(['aliases','alias-race','candidate-error'].includes(state.mode))return route.fulfill({json:{...overview(q),devices:q.get('dimension')==='occurred'?[]:[{device_alias:q.get('from')==='2026-10-12'?'设备-111111111111':'设备-abcdef012345'}]}});
@@ -50,6 +55,24 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
    const compile=await page.evaluate(source=>{const dom=new DOMParser().parseFromString(source,'text/html');const template=dom.querySelector('#app').innerHTML;Vue.compile(template);return template.length;},html);assert(compile>100000);checks++;
    return {context,page,state};
   }
+  // Final wave: rejected-only receipts advance batch watermark without event cutoff;
+  // dirty zero-summary and missing freshness must not present complete zero counts.
+  const wave=await session('admin');wave.state.mode='finalwave';wave.state.waveCase='rejected';
+  await wave.page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('analytics');});
+  await wave.page.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analytics.overview.data);
+  const batchNote=wave.page.locator('.analytics-panel .an-note').filter({hasText:'最近批次：'});
+  assert.match(await batchNote.innerText(),/最近批次：[^\n]*12:00:00/,'M1: rejected-only batch must advance the independent receipt watermark');
+  assert.equal(await wave.page.getByRole('heading',{name:'所选接收窗口尚未接收到设备批次'}).count(),0);checks++;
+  wave.state.waveCase='dirty';await wave.page.evaluate(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());
+  await wave.page.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analytics.overview.data?.rollup?.dirty_days===2);
+  assert((await wave.page.locator('.analytics-panel').innerText()).includes('汇总待更新'),'dirty aggregate must be explicitly pending');
+  assert.equal(await wave.page.locator('.analytics-panel .an-stat-value').nth(0).innerText(),'—');assert.equal(await wave.page.locator('.analytics-panel .an-stat-value').nth(1).innerText(),'—');
+  assert((await wave.page.locator('.analytics-panel').innerText()).includes('所选维度待更新 2 日'));assert((await wave.page.locator('.analytics-panel').innerText()).includes('可疑时钟接收维度待更新 1 日'));checks++;
+  wave.state.waveCase='legacy';await wave.page.evaluate(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());
+  await wave.page.waitForFunction(()=>{const d=document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analytics.overview.data;return d && !d.rollup;});
+  assert((await wave.page.locator('.analytics-panel').innerText()).includes('汇总状态未知'),'missing rollup must not default to complete');assert.equal(await wave.page.locator('.analytics-panel .an-stat-value').nth(1).innerText(),'—');checks++;
+  assert.deepEqual(wave.state.errors,[]);await wave.context.close();
+  if(process.env.ANALYTICS_REGRESSION_ONLY==='finalwave'){console.log('PASS: finalwave batch watermark, dirty zero-summary pending and unknown freshness');return;}
   // I1 regression: a response from a logged-out session must not revoke a new login.
   // Cover both a changed token and token reuse: epoch must isolate both cases.
   for(const newToken of ['replacement-ui-token','ui-stub-token']){
@@ -92,7 +115,7 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
   const admin=await session('admin'),{page,state}=admin;
   const run=fn=>page.evaluate(fn);
   await run(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('analytics');});
-  await page.getByRole('heading',{name:'所选接收窗口尚未接收到设备批次'}).waitFor();assert(await page.locator('.analytics-panel').innerText().then(t=>t.includes('待灰度接收')&&t.includes('未知，需端侧审计')));checks++;await page.screenshot({path:'/tmp/p003-analytics-ui-empty.png',fullPage:true});
+  await page.getByRole('heading',{name:'所选接收窗口尚未接收到设备批次'}).waitFor();assert(await page.locator('.analytics-panel').innerText().then(t=>t.includes('待灰度接收')&&t.includes('未知，需端侧审计')));assert.equal(await page.locator('.analytics-panel .an-stat-value').nth(0).innerText(),'0');assert.equal(await page.locator('.analytics-panel .an-stat-value').nth(1).innerText(),'0');checks++;await page.screenshot({path:'/tmp/p003-analytics-ui-empty.png',fullPage:true});
   state.mode='error';await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());await page.locator('.analytics-panel .an-error').filter({hasText:'采集服务暂时不可用'}).waitFor();assert.equal(await page.getByRole('heading',{name:'所选接收窗口尚未接收到设备批次'}).count(),0);checks++;
   state.mode='race';await run(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.analyticsFilters.dimension='occurred';p.analyticsRefresh();p.analyticsFilters.dimension='received';});await page.waitForTimeout(500);assert.equal(await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analytics.overview.data.event_count),222);checks++;
   state.mode='daily';await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());await page.getByText('2 台 / 3 会话',{exact:true}).waitFor();assert.equal(await page.locator('.analytics-panel .an-group').count(),7);await page.locator('.analytics-panel .an-group').filter({hasText:'奖励与补签'}).click();assert((await page.locator('.analytics-panel').innerText()).includes('当日去重奖励实例：2'));await page.locator('.analytics-panel .an-group').filter({hasText:'命令失败'}).click();assert((await page.locator('.analytics-panel').innerText()).includes('advance · INVALID_STATE'));await page.screenshot({path:'/tmp/p003-analytics-ui-daily.png',fullPage:true});checks++;

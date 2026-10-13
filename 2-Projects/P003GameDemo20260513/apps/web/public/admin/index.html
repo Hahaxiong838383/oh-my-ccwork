@@ -1253,22 +1253,23 @@
                   <template v-if="analytics.tab==='overview'">
                     <div v-if="analytics.overview.loading" class="an-status" role="status">正在查询当前筛选…</div><div v-if="analytics.overview.error" class="an-status an-error" role="alert">{{ analytics.overview.error }} · 上次统计已失效</div>
                     <template v-if="analytics.overview.data">
+                      <div v-if="!analyticsRollupComplete" class="an-status" role="status"><strong>{{ analyticsRollupLabel }}</strong><template v-if="analyticsRollup"><br>所选维度待更新 {{ analyticsNumber(analyticsRollup.dirty_days) }} 日 · 可疑时钟接收维度待更新 {{ analyticsNumber(analyticsRollup.clock_dirty_days) }} 日<br>已有事件汇总 {{ analyticsNumber(analyticsRollup.summary_days) }} 日 / 接收维度时钟汇总 {{ analyticsNumber(analyticsRollup.clock_summary_days) }} 日 · 最近汇总完成：{{ analyticsTime(analyticsRollup.updated_at_ms) }}<br>事件统计仅覆盖已完成汇总；接收批次与结算为即时记录。</template><template v-else><br>无法确认汇总进度，事件与设备统计暂不可确认；接收记录仍按即时批次显示。</template></div>
                       <div class="an-stats">
-                        <div class="kh-card an-stat"><div class="an-stat-label">窗口活跃设备</div><div class="an-stat-value">{{ analyticsNumber(analytics.overview.data.active_devices) }}</div><div class="an-muted">设备键去重 · 不代表孩子人数</div></div>
-                        <div class="kh-card an-stat"><div class="an-stat-label">新增入库事件</div><div class="an-stat-value">{{ analyticsNumber(analytics.overview.data.event_count) }}</div><div class="an-muted">{{ analytics.overview.data.dimension==='received' ? '接收日' : '发生日' }}窗口 · 重放不增加事件</div></div>
+                        <div class="kh-card an-stat"><div class="an-stat-label">窗口活跃设备</div><div class="an-stat-value">{{ analyticsOverviewCount('active_devices') }}</div><div class="an-muted">已汇总设备键去重 · 不代表孩子人数</div></div>
+                        <div class="kh-card an-stat"><div class="an-stat-label">已汇总入库事件</div><div class="an-stat-value">{{ analyticsOverviewCount('event_count') }}</div><div class="an-muted">{{ analytics.overview.data.dimension==='received' ? '接收日' : '发生日' }}日汇总 · 约每 5 分钟更新</div></div>
                         <div class="kh-card an-stat"><div class="an-stat-label">接收尝试</div><div class="an-stat-value">{{ analyticsNumber(analytics.overview.data.batches) }}</div><div class="an-muted">按所选接收日窗口 · 多次重放逐次计数</div></div>
                         <div class="kh-card an-stat"><div class="an-stat-label">灰度上传覆盖</div><div class="an-stat-value">{{ analytics.overview.data.receiving_coverage == null ? '—' : (analytics.overview.data.receiving_coverage*100).toFixed(1)+'%' }}</div><div class="an-muted">{{ analyticsNumber(analytics.overview.data.receiving_allowlisted_devices) }} / {{ analyticsNumber(analytics.overview.data.allowlist_count) }} 台独立名单设备 · 接收日窗口</div></div>
                       </div>
                       <div v-if="analytics.overview.data.batches===0" class="an-empty"><h2>所选接收窗口尚未接收到设备批次</h2><p class="an-muted">设备可能仍在本地保存事件。没有到达服务器，不代表设备不活跃；端侧剩余队列需本地审计。</p><el-button size="small" style="margin-top:14px" @click="analyticsSetTab('config')">查看采集配置</el-button></div>
-                      <div class="an-note">数据截止（最后事件接收）：{{ analyticsTime(analytics.overview.data.data_cutoff_ms) }} · 最近批次：{{ analyticsTime(analytics.overview.data.last_received_at_ms) }}<br>按接收日结算：新入库 {{ analyticsNumber(analytics.overview.data.accepted) }} / 重复 {{ analyticsNumber(analytics.overview.data.duplicated) }} / 拒收 {{ analyticsNumber(analytics.overview.data.rejected) }} · 可疑时钟事件 {{ analyticsNumber(analytics.overview.data.clock_suspicious_events) }} · 端侧 pending：未知，需端侧审计</div>
+                      <div class="an-note">已汇总事件数据截止：{{ analyticsTime(analytics.overview.data.data_cutoff_ms) }} · 接收维度时钟数据截止：{{ analyticsTime(analyticsRollup && analyticsRollup.clock_data_cutoff_ms) }} · 最近批次：{{ analyticsTime(analytics.overview.data.last_batch_received_at_ms) }}<br>按接收日结算：新入库 {{ analyticsNumber(analytics.overview.data.accepted) }} / 重复 {{ analyticsNumber(analytics.overview.data.duplicated) }} / 拒收 {{ analyticsNumber(analytics.overview.data.rejected) }} · 已汇总可疑时钟事件 {{ analyticsOverviewCount('clock_suspicious_events') }} · 端侧 pending：未知，需端侧审计</div>
                     </template>
                     <div class="an-grid">
-                      <div class="kh-card an-card"><div class="an-section-head"><h2>每日新增事件</h2><span class="an-muted">{{ analyticsFilters.dimension==='received' ? '接收日' : '发生日' }}</span></div><p class="an-note">仅绘制已有汇总日；补传可能更新历史发生日，汇总可稍晚于接收数据。</p>
+                      <div class="kh-card an-card"><div class="an-section-head"><h2>每日新增事件</h2><span class="an-muted">{{ analyticsFilters.dimension==='received' ? '接收日' : '发生日' }}</span></div><p class="an-note">仅绘制已完成的汇总日；补传会更新历史发生日，汇总约每 5 分钟更新。</p>
                         <div v-if="analytics.daily.loading" class="an-status">正在加载每日汇总…</div><div v-if="analytics.daily.error" class="an-status an-error">{{ analytics.daily.error }}</div>
                         <template v-if="analytics.daily.data && analyticsDays.length">
                           <svg class="an-chart" viewBox="0 0 620 176" role="img" aria-label="已有汇总日的事件数量，详见下方每日数据表"><line x1="42" y1="140" x2="582" y2="140" stroke="#e4e9ef"></line><polyline :points="analyticsTrendPoints" fill="none" stroke="#3b7a99" stroke-width="2"></polyline><g v-for="p in analyticsTrend" :key="p.day"><circle :cx="p.x" :cy="p.y" r="3" fill="#3b7a99"><title>{{ p.day }}：{{ analyticsNumber(p.count) }} 条</title></circle></g><text x="42" y="166">{{ analyticsTrend[0].day }}</text><text x="582" y="166" text-anchor="end">{{ analyticsTrend[analyticsTrend.length-1].day }}</text></svg>
                           <div class="an-scroll"><table class="an-table"><thead><tr><th>汇总日</th><th class="an-num">事件</th><th class="an-num">活跃设备</th><th class="an-num">启动会话</th><th>汇总更新时间（CST）</th></tr></thead><tbody><tr v-for="d in analyticsDays" :key="d.day" :class="{selected:analyticsSelectedDay && d.day===analyticsSelectedDay.day}"><td><el-button link size="small" @click="analytics.selectedDay=d.day">{{ d.day }}</el-button></td><td class="an-num">{{ analyticsNumber(d.event_count) }}</td><td class="an-num">{{ analyticsNumber(d.active_devices) }}</td><td class="an-num">{{ analyticsNumber(d.sessions) }}</td><td>{{ analyticsTime(d.updated_at_ms) }}</td></tr></tbody></table></div>
-                        </template><div v-else-if="analytics.daily.data" class="an-empty"><h2>暂无每日汇总</h2><p class="an-muted">尚无汇总日可显示；请结合接收记录与汇总水位查看。</p></div>
+                        </template><div v-else-if="analytics.daily.data" class="an-empty"><h2>{{ analyticsRollup && !analyticsRollupComplete ? '每日汇总待更新' : '暂无每日汇总' }}</h2><p class="an-muted">当前尚无已完成汇总日，请结合接收记录与汇总进度查看。</p></div>
                       </div>
                       <div class="kh-card an-card"><h2>采集服务</h2><div v-if="analytics.health.loading" class="an-status">正在检查服务…</div><div v-if="analytics.health.error" class="an-status an-error">{{ analytics.health.error }}</div><template v-if="analytics.health.data"><div class="an-status">{{ analyticsHealthLabel }}</div><dl class="an-dl"><dt>就绪 / 存活</dt><dd>{{ analytics.health.data.ready ? '就绪' : '未就绪' }} / {{ analytics.health.data.alive ? '存活' : '未知' }}</dd><dt>依赖 / 存储就绪</dt><dd>{{ analytics.health.data.dependencies_ready ? '是' : '否' }} / {{ analytics.health.data.storage_ready ? '是' : '否' }}</dd><dt>接收总闸 / 控制有效</dt><dd>{{ analyticsBool(analytics.health.data.gate_enabled) }} / {{ analytics.health.data.control_valid ? '是' : '否' }}</dd><dt>P95 / P99（ms）</dt><dd>{{ analyticsNumber(analytics.health.data.processing_p95_ms) }} / {{ analyticsNumber(analytics.health.data.processing_p99_ms) }}</dd><dt>在途 / 请求</dt><dd>{{ analyticsNumber(analytics.health.data.in_flight) }} / {{ analyticsNumber(analytics.health.data.requests) }}</dd><dt>存储故障 / SQL busy</dt><dd>{{ analyticsNumber(analytics.health.data.storage_failures) }} / {{ analyticsNumber(analytics.health.data.sql_busy) }}</dd><dt>进程内存 / WAL</dt><dd>{{ analyticsBytes(analytics.health.data.rss_bytes) }} / {{ analyticsBytes(analytics.health.data.wal_bytes) }}</dd><dt>磁盘剩余</dt><dd>{{ analyticsBytes(analytics.health.data.disk_free_bytes) }}{{ analytics.health.data.disk_warning ? ' · 空间告警' : '' }}</dd><dt>最近汇总尝试</dt><dd>{{ analyticsTime(analytics.health.data.last_rollup_attempt_ms) }}</dd><dt>汇总状态</dt><dd>{{ analytics.health.data.rollup_status==='partial' ? '部分完成' : analytics.health.data.rollup_status==='complete' ? '全部完成' : '暂无' }}</dd><dt>失败日 / 剩余待汇总日</dt><dd>{{ analyticsNumber(analytics.health.data.rollup_failed_days) }} / {{ analyticsNumber(analytics.health.data.rollup_remaining_dirty_days) }}</dd><dt>全部完成水位</dt><dd>{{ analyticsTime(analytics.health.data.last_rollup_success_ms) }}</dd><dt>部分完成水位</dt><dd>{{ analyticsTime(analytics.health.data.last_rollup_partial_ms) }}</dd><dt>备份成功水位</dt><dd>{{ analyticsTime(analytics.health.data.last_backup_success_ms) }}</dd></dl><p class="an-note">关闸且服务就绪是正常待灰度状态。处理耗时仅最近 1024 次进程内采样，重启后清零。</p></template></div>
                     </div>
@@ -4687,6 +4688,23 @@
           var q=new URLSearchParams({client_event_id:analytics.eventQuery,limit:String(analytics.limit),offset:String(analytics.eventOffset)});
           analyticsRead('events','events?'+q);
         }
+        var analyticsRollup = computed(function () { return analytics.overview.data ? analytics.overview.data.rollup || null : null; });
+        var analyticsRollupComplete = computed(function () {
+          var r=analyticsRollup.value;
+          return !!r && r.complete===true && r.dirty_days===0 && r.clock_dirty_days===0 && Number.isInteger(r.summary_days) && r.summary_days>=0 && Number.isInteger(r.clock_summary_days) && r.clock_summary_days>=0;
+        });
+        var analyticsRollupLabel = computed(function () {
+          var r=analyticsRollup.value;
+          if(analyticsRollupComplete.value)return '当前窗口汇总已完成';
+          return r && (r.complete===false || r.dirty_days>0 || r.clock_dirty_days>0) ? '汇总待更新' : '汇总状态未知';
+        });
+        function analyticsOverviewCount(key) {
+          var d=analytics.overview.data,r=analyticsRollup.value;
+          if(!d || !r)return '—';
+          var summaryDays=key==='clock_suspicious_events'?r.clock_summary_days:r.summary_days;
+          if(!analyticsRollupComplete.value && !(Number.isInteger(summaryDays) && summaryDays>0))return '—';
+          return analyticsNumber(d[key]);
+        }
         var analyticsDays = computed(function () { return analytics.daily.data ? analytics.daily.data.items || [] : []; });
         var analyticsSelectedDay = computed(function () { return analyticsDays.value.find(function(d){return d.day===analytics.selectedDay;}) || analyticsDays.value[0] || null; });
         var analyticsDevices = computed(function () { return analytics.overview.data ? analytics.overview.data.devices || [] : []; });
@@ -7592,6 +7610,10 @@
           analyticsBatchSearch: analyticsBatchSearch,
           analyticsPage: analyticsPage,
           analyticsLookup: analyticsLookup,
+          analyticsRollup: analyticsRollup,
+          analyticsRollupComplete: analyticsRollupComplete,
+          analyticsRollupLabel: analyticsRollupLabel,
+          analyticsOverviewCount: analyticsOverviewCount,
           analyticsDays: analyticsDays,
           analyticsSelectedDay: analyticsSelectedDay,
           analyticsDevices: analyticsDevices,
