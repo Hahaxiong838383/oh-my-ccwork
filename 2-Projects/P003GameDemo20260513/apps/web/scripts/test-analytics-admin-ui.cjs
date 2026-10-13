@@ -25,18 +25,23 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
     if(!u.pathname.startsWith('/api/'))return route.continue();
     state.seen.push({path:u.pathname,query:u.search,method:req.method()});
     if(u.pathname==='/api/auth/check')return route.fulfill({json:{ok:true,role}});
+    if(u.pathname==='/api/auth/login')return route.fulfill({json:{ok:true,token:state.loginToken||'new-ui-stub-token',role:'admin'}});
     if(!u.pathname.startsWith('/api/admin/analytics/'))return route.fulfill({json:{ok:true,items:[],devices:[],sessions:[],themes:[]}});
     if(role!=='admin')return route.fulfill({status:403,json:{ok:false,error:'FORBIDDEN'}});
     const kind=u.pathname.split('/').pop(),q=u.searchParams;
+    if(state.mode==='late401' && kind==='overview'){state.release401=()=>route.fulfill({status:401,json:{ok:false}});state.pendingReady();return;}
     if(state.mode==='error' && kind==='overview')return route.fulfill({status:503,json:{ok:false,error:'analytics_unavailable'}});
     if(state.mode==='unauthorized' && kind==='overview')return route.fulfill({status:401,json:{ok:false}});
     if(kind==='overview'){
+     if(state.mode==='candidate-error' && q.get('dimension')==='received')return route.fulfill({status:503,json:{ok:false,error:'analytics_unavailable'}});
+     if(state.mode==='alias-race' && q.get('dimension')==='received' && q.get('from')==='2026-10-12'){state.pendingCandidates.push(route);state.pendingReady();return;}
+     if(['aliases','alias-race','candidate-error'].includes(state.mode))return route.fulfill({json:{...overview(q),devices:q.get('dimension')==='occurred'?[]:[{device_alias:q.get('from')==='2026-10-12'?'设备-111111111111':'设备-abcdef012345'}]}});
      let n=0;if(state.mode==='race'){n=q.get('dimension')==='occurred'?111:222;await new Promise(resolve=>setTimeout(resolve,n===111?350:30));}
      return route.fulfill({json:overview(q,n)});
     }
     if(kind==='daily')return route.fulfill({json:{ok:true,items:state.mode==='daily'?[{day:'2026-10-13',event_count:11,event_counts:{'g1.command_failed':1},active_devices:2,sessions:3,reward_grant_events:4,unique_reward_instances:2,explicit_gm_events:1,unclassified_traffic_events:10,clock_suspicious_events:0,updated_at_ms:Date.now(),groups:{activity:{'app.session_started':3},g1_flow:{'g1.experience_started':2},logical_day_ecotank:{'g1.ecotank_selected':1},rewards_makeup:{'g1.reward_granted':4},settings:{'settings.opened':1},voice_state:{'voice.session_state_changed':2},command_failures:[{command:'advance',error_code:'INVALID_STATE',count:1}]}},{day:'2026-10-12',event_count:5,active_devices:2,sessions:3,reward_grant_events:1,unique_reward_instances:1,updated_at_ms:Date.now(),groups:{}}]:[]}});
     if(kind==='health')return route.fulfill({json:health});
-    if(kind==='batches')return route.fulfill({json:{ok:true,limit:25,offset:Number(q.get('offset')),items:[{attempt_id:'attempt-1',request_id:'request-1',batch_id:'batch-1',received_at_ms:Date.now(),sent_at_ms:Date.now(),accepted:1,duplicated:0,rejected:0,device_alias:'设备-012345abcdef',http_status:200,processing_ms:1,sent_received_skew_ms:0,upload_client:{product:'KidsHubAI-VoiceKit',component:'uploader',protocol_version:'1',content_version:'v1'}}]}});
+    if(kind==='batches')return route.fulfill({json:{ok:true,limit:25,offset:Number(q.get('offset')),items:[{attempt_id:'attempt-1',request_id:'request-1',batch_id:'batch-1',received_at_ms:Date.now(),sent_at_ms:Date.now(),accepted:1,duplicated:0,rejected:0,device_alias:state.mode==='candidate-error'?'设备-fedcba987654':['aliases','alias-race'].includes(state.mode)?'设备-abcdef012345':'设备-012345abcdef',http_status:200,processing_ms:1,sent_received_skew_ms:0,upload_client:{product:'KidsHubAI-VoiceKit',component:'uploader',protocol_version:'1',content_version:'v1'}}]}});
     if(kind==='events')return route.fulfill({json:{ok:true,id_digest:'safe-digest',events:[],settlements:[{attempt_id:'attempt-1',request_id:'request-1',received_at_ms:Date.now(),device_alias:'设备-012345abcdef',outcome:'rejected',reason:'INVALID_SCHEMA'}]}});
     if(kind==='registry')return route.fulfill({json:{ok:true,event_count:57,schema_version:1,items:[{event_name:'g1.reward_granted',group:'reward',properties_schema:{type:'object',description:'<img src=x onerror=alert(1)>'}}]}});
     if(kind==='collection-config')return route.fulfill({json:{ok:true,server_gate:{enabled:false,valid:state.mode!=='invalid-config'},allowlist_count:0,global:{event_upload_enabled:false,daily_upload_hour_cst:0},device_defaults:{event_upload_enabled:false,daily_upload_hour_cst:23},items:[]}});
@@ -45,6 +50,44 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
    const compile=await page.evaluate(source=>{const dom=new DOMParser().parseFromString(source,'text/html');const template=dom.querySelector('#app').innerHTML;Vue.compile(template);return template.length;},html);assert(compile>100000);checks++;
    return {context,page,state};
   }
+  // I1 regression: a response from a logged-out session must not revoke a new login.
+  // Cover both a changed token and token reuse: epoch must isolate both cases.
+  for(const newToken of ['replacement-ui-token','ui-stub-token']){
+   const s=await session('admin');s.state.mode='late401';s.state.loginToken=newToken;
+   const held=new Promise(resolve=>{s.state.pendingReady=resolve;});
+   await s.page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('analytics');});await held;
+   await s.page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleDropdown('logout');p.loginForm.username='new-stub-account';p.loginForm.password='stub-password';p.handleLogin();});
+   await s.page.waitForFunction(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;return p.isLoggedIn && p.currentUser.username==='new-stub-account';});
+   const late=s.page.waitForResponse(r=>r.url().includes('/analytics/overview') && r.status()===401);await s.state.release401();await late;await s.page.waitForTimeout(100);
+   assert.equal(await s.page.evaluate(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.isLoggedIn),true,'I1: late 401 revoked the new session');
+   assert.equal(await s.page.evaluate(()=>localStorage.getItem('kidshub_admin_token')),newToken);
+   assert.equal(await s.page.locator('.login-card').count(),0);assert.deepEqual(s.state.errors.filter(e=>!/^Failed to load resource:.*status of 401 /.test(e)),[]);checks++;await s.context.close();
+  }
+  if(process.env.ANALYTICS_REGRESSION_ONLY==='i1'){console.log('PASS: I1 changed-token and reused-token late 401 isolation');return;}
+  // I2 regression: receipt-date candidates are independent of occurred-date facts.
+  const aliases=await session('admin');aliases.state.mode='aliases';
+  await aliases.page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.analyticsFilters.from='2026-10-13';p.analyticsFilters.to='2026-10-13';p.handleMenuSelect('worker');p.khSelectNav('analytics');});
+  await aliases.page.waitForFunction(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;return p.analytics.overview.data && p.analytics.overview.data.devices.length===0;});
+  await aliases.page.evaluate(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsSetTab('batches'));await aliases.page.getByText('attempt-1',{exact:true}).waitFor();
+  const aliasLabel=aliases.page.locator('.analytics-panel label').filter({hasText:'设备别名'});
+  await aliases.page.waitForTimeout(100);assert.equal(await aliasLabel.locator('option[value="设备-abcdef012345"]').count(),1,'I2: receiving device missing from batch alias candidates');checks++;
+  aliases.state.mode='alias-race';aliases.state.pendingCandidates=[];const heldCandidate=new Promise(resolve=>{aliases.state.pendingReady=resolve;});
+  await aliases.page.evaluate(()=>{document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsFilters.from='2026-10-12';});await heldCandidate;
+  await aliases.page.evaluate(()=>{document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsFilters.from='2026-10-13';});
+  await aliasLabel.locator('option[value="设备-abcdef012345"]').waitFor({state:'attached'});
+  for(const route of aliases.state.pendingCandidates)await route.fulfill({json:{ok:true,devices:[{device_alias:'设备-111111111111'}]}});await aliases.page.waitForTimeout(100);
+  assert.equal(await aliasLabel.locator('option[value="设备-abcdef012345"]').count(),1);assert.equal(await aliasLabel.locator('option[value="设备-111111111111"]').count(),0);checks++;
+  aliases.state.mode='candidate-error';await aliases.page.evaluate(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());
+  await aliases.page.locator('.analytics-panel .an-error').filter({hasText:'设备候选'}).waitFor();assert.equal(await aliasLabel.locator('option').count(),0,'failed candidates must not reuse an old list');
+  const aliasQuery=aliases.page.waitForRequest(r=>r.url().includes('/analytics/batches') && new URL(r.url()).searchParams.get('device_alias')==='设备-fedcba987654');
+  await aliasLabel.locator('input').fill('设备-fedcba987654');await aliasLabel.locator('input').press('Tab');await aliasQuery;
+  assert(aliases.state.seen.some(r=>r.path.endsWith('/batches') && new URLSearchParams(r.query).get('device_alias')==='设备-fedcba987654'),'rejected-only alias must remain queryable');checks++;
+  const validRequestCount=aliases.state.seen.filter(r=>r.path.endsWith('/batches')).length;
+  await aliasLabel.locator('input').fill('unsafe-full-sn');await aliasLabel.locator('input').press('Tab');await aliases.page.locator('.analytics-panel .an-error').filter({hasText:'筛选无效'}).first().waitFor();
+  assert.equal(aliases.state.seen.filter(r=>r.path.endsWith('/batches')).length,validRequestCount,'invalid aliases must never be sent');assert.deepEqual(aliases.state.errors.filter(e=>!/^Failed to load resource:.*status of 503 /.test(e)),[]);checks++;
+  assert(aliases.state.seen.filter(r=>r.path.endsWith('/overview') && new URLSearchParams(r.query).get('dimension')==='received').every(r=>!new URLSearchParams(r.query).has('device_alias')));
+  await aliases.context.close();
+  if(process.env.ANALYTICS_REGRESSION_ONLY==='i2'){console.log('PASS: I2 receipt-date candidates, late candidate isolation and direct alias after candidate failure');return;}
   const guest=await session(null);assert.equal(await guest.page.locator('.login-card').count(),1);assert.equal(await guest.page.locator('.login-card input').count(),2);assert.deepEqual(guest.state.errors,[]);checks++;await guest.context.close();
   const admin=await session('admin'),{page,state}=admin;
   const run=fn=>page.evaluate(fn);

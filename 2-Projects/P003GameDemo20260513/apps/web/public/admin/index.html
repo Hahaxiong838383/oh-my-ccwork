@@ -1245,7 +1245,8 @@
                   <div v-if="analytics.tab==='overview' || analytics.tab==='batches'" class="an-filters">
                     <label>起始日期（CST）<input type="date" class="an-input" v-model="analyticsFilters.from"></label><label>结束日期（CST）<input type="date" class="an-input" v-model="analyticsFilters.to"></label>
                     <label v-if="analytics.tab==='overview'">日期维度<select v-model="analyticsFilters.dimension" class="an-input"><option value="occurred">发生日</option><option value="received">接收日</option></select></label>
-                    <label>设备别名<select v-model="analyticsFilters.alias" class="an-input"><option value="">全部设备</option><option v-if="analyticsFilters.alias && !analyticsDevices.some(d=>d.device_alias===analyticsFilters.alias)" :value="analyticsFilters.alias">{{ analyticsFilters.alias }}</option><option v-for="d in analyticsDevices" :key="d.device_alias" :value="d.device_alias">{{ d.device_alias }}</option></select></label>
+                    <label v-if="analytics.tab==='overview'">设备别名<select v-model="analyticsFilters.alias" class="an-input"><option value="">全部设备</option><option v-if="analyticsFilters.alias && !analyticsDevices.some(d=>d.device_alias===analyticsFilters.alias)" :value="analyticsFilters.alias">{{ analyticsFilters.alias }}</option><option v-for="d in analyticsDevices" :key="d.device_alias" :value="d.device_alias">{{ d.device_alias }}</option></select></label>
+                    <label v-else>设备别名（可粘贴）<input class="an-input" :value="analyticsFilters.alias" list="analytics-batch-devices" placeholder="全部设备 / 设备-12位小写hex" autocomplete="off" @change="analyticsFilters.alias=$event.target.value.trim()" @keyup.enter="analyticsFilters.alias=$event.target.value.trim();analyticsBatchSearch()"><datalist id="analytics-batch-devices"><option v-for="d in analyticsBatchDevices" :key="d.device_alias" :value="d.device_alias">{{ d.device_alias }}</option></datalist></label>
                     <label v-if="analytics.tab==='batches'">request_id 精确匹配<input class="an-input" v-model="analytics.requestId" placeholder="留空查询全部" @keyup.enter="analyticsBatchSearch"></label><el-button v-if="analytics.tab==='batches'" size="small" @click="analyticsBatchSearch">查询批次</el-button>
                     <span class="an-muted">最多 90 天{{ analytics.tab==='batches' ? ' · 批次始终按接收日' : '' }}</span>
                   </div>
@@ -1277,6 +1278,7 @@
                     </div>
                   </template>
                   <template v-if="analytics.tab==='batches'">
+                    <div v-if="analytics.batchDevices.loading" class="an-status" role="status">正在加载当前接收窗口设备候选…</div><div v-if="analytics.batchDevices.error" class="an-status an-error" role="alert">设备候选：{{ analytics.batchDevices.error }}。可粘贴批次表中的安全别名继续查询。</div><p class="an-note">设备候选按当前接收日窗口读取；只有拒收或暂无入库事件的设备，可直接粘贴设备-12位小写hex 别名查询。留空查询全部。</p>
                     <div v-if="analytics.batches.loading" class="an-status">正在加载上传批次…</div><div v-if="analytics.batches.error" class="an-status an-error">{{ analytics.batches.error }}</div>
                     <div v-if="analytics.batches.data" class="kh-card an-card"><div class="an-section-head"><h2>上传批次 · 接收尝试</h2><span class="an-muted">当前返回 {{ analytics.batches.data.items.length }} 条</span></div><p class="an-note">同一 request_id 的多个 attempt 分行展示。这里只显示结算数量，逐条 ID 对账请使用“事件对账”。</p><div class="an-scroll"><table class="an-table"><thead><tr><th>接收时间（CST）</th><th>request_id / batch_id / attempt_id</th><th>设备</th><th class="an-num">新入库</th><th class="an-num">重复</th><th class="an-num">拒收</th><th>上传端元数据</th></tr></thead><tbody><tr v-for="b in analytics.batches.data.items" :key="b.attempt_id"><td>{{ analyticsTime(b.received_at_ms) }}</td><td class="an-mono">{{ b.request_id }}<div class="an-muted an-mono">{{ b.batch_id }}</div><div class="an-muted an-mono">{{ b.attempt_id }}</div></td><td>{{ b.device_alias }}</td><td class="an-num">{{ analyticsNumber(b.accepted) }}</td><td class="an-num">{{ analyticsNumber(b.duplicated) }}</td><td class="an-num">{{ analyticsNumber(b.rejected) }}</td><td><el-button link size="small" @click="analytics.batchDetail=b">查看摘要</el-button></td></tr><tr v-if="!analytics.batches.data.items.length"><td colspan="7"><div class="an-empty"><h2>尚未收到匹配的设备批次</h2><p class="an-muted">请检查接收日期、别名和 request_id。批次保留 14 天，旧日期没有回执不代表没有历史汇总。</p></div></td></tr></tbody></table></div><div class="an-pages"><span class="an-muted">偏移 {{ analytics.batchOffset }} · 每次最多 {{ analytics.limit }} 条 · 无总页数</span><div><el-button size="small" :disabled="analytics.batchOffset===0" @click="analyticsPage('batches',-1)">上一页</el-button><el-button size="small" :disabled="analytics.batches.data.items.length &lt; analytics.limit || analytics.batchOffset>=10000" @click="analyticsPage('batches',1)">下一页</el-button></div></div></div>
                     <div v-if="analytics.batchDetail" class="kh-card an-card"><div class="an-section-head"><h2>上传端元数据</h2><el-button link @click="analytics.batchDetail=null">关闭摘要</el-button></div><p class="an-note">上传时上报的元数据，不用于反推事件发生时的内容版本。</p><dl class="an-dl"><dt>产品 / 组件</dt><dd>{{ (analytics.batchDetail.upload_client||{}).product || '—' }} / {{ (analytics.batchDetail.upload_client||{}).component || '—' }}</dd><dt>协议 / 内容版本</dt><dd>{{ (analytics.batchDetail.upload_client||{}).protocol_version || '—' }} / {{ (analytics.batchDetail.upload_client||{}).content_version || '—' }}</dd><dt>上传时间（CST）</dt><dd>{{ analyticsTime(analytics.batchDetail.sent_at_ms) }}</dd><dt>上传与接收偏差（ms）</dt><dd>{{ analyticsNumber(analytics.batchDetail.sent_received_skew_ms) }}</dd><dt>HTTP 状态 / 处理耗时（ms）</dt><dd>{{ analytics.batchDetail.http_status }} / {{ analyticsNumber(analytics.batchDetail.processing_ms) }}</dd></dl></div>
@@ -3938,6 +3940,8 @@
     var app = createApp({
       setup: function() {
         var isLoggedIn = ref(false);
+        // 登录/退出推进世代；即使重新登录复用 token，旧请求也不能清当前认证。
+        var authSessionEpoch = 0;
         var loginLoading = ref(false);
         var loginForm = reactive({ username: '', password: '' });
         var currentUser = reactive({ username: '', role: '' });
@@ -3978,6 +3982,7 @@
         });
 
         function handleAuthError() {
+          authSessionEpoch++;
           analyticsReset();
           clearAuth();
           isLoggedIn.value = false;
@@ -4010,6 +4015,7 @@
               // ok + token 双校验：token 是鉴权成功的契约字段（与 KidsHub 工作台一致），
               // 防后端契约漂移成 {ok:true} 无 token 时误放行
               if (data && data.ok && data.token) {
+                authSessionEpoch++;
                 currentUser.username = loginForm.username;
                 // 用后端返回的真实 role（admin / editor / guest），不再写死 admin。
                 currentUser.role = data.role || 'guest';
@@ -4032,6 +4038,7 @@
 
         function handleDropdown(cmd) {
           if (cmd === 'logout') {
+            authSessionEpoch++;
             analyticsReset();
             clearAuth();
             isLoggedIn.value = false;
@@ -4615,7 +4622,7 @@
         function analyticsSection() { return { loading:false, error:'', stale:false, data:null, seq:0 }; }
         function analyticsDay(ms) { return new Date(ms + 8 * 3600000).toISOString().slice(0,10); }
         var analyticsFilters = reactive({ from:analyticsDay(Date.now()-13*86400000), to:analyticsDay(Date.now()), dimension:'occurred', alias:'' });
-        var analytics = reactive({ tab:'overview', overview:analyticsSection(), daily:analyticsSection(), health:analyticsSection(), batches:analyticsSection(), events:analyticsSection(), registry:analyticsSection(), config:analyticsSection(), batchOffset:0, eventOffset:0, limit:25, requestId:'', eventId:'', eventQuery:'', catalogSearch:'', catalogGroup:'', catalogDetail:null, batchDetail:null, selectedDay:'', group:'activity' });
+        var analytics = reactive({ tab:'overview', overview:analyticsSection(), daily:analyticsSection(), health:analyticsSection(), batches:analyticsSection(), batchDevices:analyticsSection(), events:analyticsSection(), registry:analyticsSection(), config:analyticsSection(), batchOffset:0, eventOffset:0, limit:25, requestId:'', eventId:'', eventQuery:'', catalogSearch:'', catalogGroup:'', catalogDetail:null, batchDetail:null, selectedDay:'', group:'activity' });
         var analyticsTabs = [{k:'overview',l:'概览'},{k:'batches',l:'上传批次'},{k:'events',l:'事件对账'},{k:'registry',l:'57事件目录'},{k:'config',l:'采集配置'}];
         var analyticsGroupDefs = [{k:'activity',l:'设备与会话',hint:'设备键 / 应用会话去重'}, {k:'g1_flow',l:'G1 主流程',hint:'主流程语义事件计数'}, {k:'logical_day_ecotank',l:'逻辑日与生态缸',hint:'逻辑日、进度与生态缸'}, {k:'rewards_makeup',l:'奖励与补签',hint:'实际发奖与奖励实例'}, {k:'settings',l:'设置使用',hint:'设置相关事件计数'}, {k:'voice_state',l:'语音状态',hint:'KidsHubAI-VoiceKit 状态事件'}, {k:'command_failures',l:'命令失败',hint:'按命令与受控错误分组'}];
         function analyticsNumber(n) { return n == null ? '—' : Number(n).toLocaleString('zh-CN'); }
@@ -4627,7 +4634,7 @@
         function analyticsError(e) { var code=e && e.message; return ({INVALID_QUERY:'筛选无效：请检查日期、维度和设备别名',analytics_unavailable:'采集服务暂时不可用，请稍后刷新',FORBIDDEN:'无权访问，请使用管理员账号'})[code] || '请求失败，当前数据不可用，请稍后刷新'; }
         function analyticsReset() {
           if (!analytics) return;
-          ['overview','daily','health','batches','events','registry','config'].forEach(function (k) { var state=analytics[k]; state.seq++;state.loading=false;state.error='';state.stale=false;state.data=null; });
+          ['overview','daily','health','batches','batchDevices','events','registry','config'].forEach(function (k) { var state=analytics[k]; state.seq++;state.loading=false;state.error='';state.stale=false;state.data=null; });
           analytics.eventId='';analytics.eventQuery='';analytics.requestId='';analytics.catalogDetail=null;analytics.batchDetail=null;analytics.selectedDay='';analytics.batchOffset=0;analytics.eventOffset=0;analytics.tab='overview';analytics.catalogSearch='';analytics.catalogGroup='';analytics.group='activity';analyticsFilters.alias='';analyticsFilters.dimension='occurred';analyticsFilters.from=analyticsDay(Date.now()-13*86400000);analyticsFilters.to=analyticsDay(Date.now());
         }
         watch(canManageInvites,function (allowed) { if (!allowed) analyticsReset(); });
@@ -4658,8 +4665,12 @@
             catch(e) { analyticsInvalidate('overview',e);analyticsInvalidate('daily',e); }
           } else if (analytics.tab==='batches') {
             analytics.batchDetail=null;
-            try { var b=analyticsFilterQuery(true);b.set('limit',String(analytics.limit));b.set('offset',String(analytics.batchOffset));if(analytics.requestId.trim())b.set('request_id',analytics.requestId.trim());analyticsRead('batches','batches?'+b); }
-            catch(e) { analyticsInvalidate('batches',e); }
+            try {
+              var b=analyticsFilterQuery(true), candidates=new URLSearchParams(b);
+              // 独立接收日候选不随当前 alias/request_id 缩窄；只有拒收的设备仍可粘贴安全别名查询。
+              candidates.delete('device_alias');analyticsRead('batchDevices','overview?'+candidates);
+              b.set('limit',String(analytics.limit));b.set('offset',String(analytics.batchOffset));if(analytics.requestId.trim())b.set('request_id',analytics.requestId.trim());analyticsRead('batches','batches?'+b);
+            } catch(e) { analyticsInvalidate('batches',e);analyticsInvalidate('batchDevices',e); }
           } else if (analytics.tab==='registry') { analytics.catalogDetail=null;analyticsRead('registry','registry'); }
           else if (analytics.tab==='config') analyticsRead('config','collection-config');
           else if (analytics.tab==='events' && analytics.eventQuery) analyticsLookup(false);
@@ -4679,6 +4690,7 @@
         var analyticsDays = computed(function () { return analytics.daily.data ? analytics.daily.data.items || [] : []; });
         var analyticsSelectedDay = computed(function () { return analyticsDays.value.find(function(d){return d.day===analytics.selectedDay;}) || analyticsDays.value[0] || null; });
         var analyticsDevices = computed(function () { return analytics.overview.data ? analytics.overview.data.devices || [] : []; });
+        var analyticsBatchDevices = computed(function () { return analytics.batchDevices.data ? analytics.batchDevices.data.devices || [] : []; });
         var analyticsCatalogGroups = computed(function () { return Array.from(new Set(((analytics.registry.data||{}).items||[]).map(function (r) {return r.group;}))); });
         var analyticsCatalog = computed(function () { var query=analytics.catalogSearch.trim().toLowerCase();return ((analytics.registry.data||{}).items||[]).filter(function (r) {return (!analytics.catalogGroup || r.group===analytics.catalogGroup) && (!query || (r.event_name+' '+r.group).toLowerCase().includes(query));}); });
         function analyticsGroupRows(key) {
@@ -5640,12 +5652,15 @@
         }
         // 统一请求小工具（沿用 invites 的 401 处理约定）
         function deviceApi(path, opts) {
-          var token = getToken();
+          var token = getToken(), requestEpoch = authSessionEpoch;
           if (!token) { ElementPlus.ElMessage.warning('请先登录'); return Promise.reject(new Error('no-token')); }
           var o = opts || {};
           o.headers = Object.assign({ 'Authorization': 'Bearer ' + token }, o.body ? { 'Content-Type': 'application/json' } : {});
           return fetch(path, o).then(function (res) {
-            if (res.status === 401) { handleAuthError(); throw new Error('401'); }
+            if (res.status === 401) {
+              if (requestEpoch === authSessionEpoch && token === getToken()) handleAuthError();
+              throw new Error('401');
+            }
             return res.json().catch(function () { return { ok: false, error: '服务响应异常' }; });
           });
         }
@@ -7580,6 +7595,7 @@
           analyticsDays: analyticsDays,
           analyticsSelectedDay: analyticsSelectedDay,
           analyticsDevices: analyticsDevices,
+          analyticsBatchDevices: analyticsBatchDevices,
           analyticsCatalogGroups: analyticsCatalogGroups,
           analyticsCatalog: analyticsCatalog,
           analyticsGroupRows: analyticsGroupRows,
