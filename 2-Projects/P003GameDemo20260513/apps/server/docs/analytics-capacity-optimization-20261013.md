@@ -86,3 +86,13 @@ fact唯一索引从`dimension,day,device_key,id_digest`调整为`dimension,day,d
 96MiB worker首轮：84000全部ACK/raw/seen一致，P95452.95ms/P99705.30ms/最大924.86ms、原health增量2.27ms，时延通过；RSS291733504B（278.22MiB）未通过，整轮FAIL。总耗时188.46秒、WAL503共94次、忙503共81次；退避与总耗时增多，不能把成功请求时延变短说成吞吐提升。新增数据保留，raw/seen821100、batch4149。
 
 复审独立复现一个P1：structuredClone遇4000层坏事件会整批503，拖累正常事件。已RED/GREEN改为HTTP传原始JSON文本，worker JSON.parse后沿用结算，不重写深对象；4000/10000层混合批、同ID同内容/冲突均保持合同。原结构回归现用真实worker，全部10组再次通过。下一轮worker缓存64MiB，候选v3包SHA `4b921a3997ee46a680988698657e86ac37a702ba18c2f0ac7096dd839e0f6d00`，隔离代码回退锚`capacity-prewriter64-20261013T073005Z`，10文件SHA一致；生产仍未改。
+
+64MiB worker与原JSON文本IPC完整验收：84000条全部ACK/raw/seen一致，P95408.378ms/P99553.772ms/最大670.3ms，整进程RSS251879424B（约240.21MiB），原3001健康P95增量1.970ms，189.604秒，205次503（忙141、WAL64），actor/monitor失败0，原全部门槛通过。退避及总耗时并未下降，不能称为吞吐提升。运行代码提交`2c086ae6`，仅本地提交未push。
+
+随后额外维护重叠测试失败：同一进程不重启，原负载开始25秒后启动原rollup CLI；仅完成17000条/85批，14主体均耗尽8次重试预算，WAL压力503共111次。该次wrapper在90秒截断维护，不能把90秒说成生产预算（正式子进程240秒、systemd300秒）。原失败报告及空维护输出保留，不能因独立上传已过而放行。
+
+已分段诊断：现有922360条事件、1844720条fact，同库单独TTL没有任何过期行仍在fact DELETE上耗时5429.66ms；其余TTL SQL均不到0.1ms。单独rollup两维均922360条，分别12449.68/4092.17ms、合计16.56秒，rebuilt=2/failed=0/dirty=0。两项独立运行不能单独解释重叠90秒，应保留争用场景复验。
+
+TTL查询修正只复用现有复合索引，不新增写入索引：先取首dimension，再以`dimension>last`逐维seek，在维内用`dimension=? AND day<? LIMIT remaining`删过期行；每表额度仍1000、严格cutoff、空/未知维度也处理、seen不删、外层事务不变。专测以原实际DELETE的SCAN取得RED，修正后SEARCH转GREEN；五表跨维限额、边界保留、删空维度结束和中途失败整事务回滚均通过，原maintenance/ops/fact-layout回归通过。实机同库修正后整个prune profile含打开/关闭共4ms，最慢单SQL0.217ms，仍删0行；该次缓存状态与前次不同，不按5.43秒/4毫秒直接宣称固定加速比。
+
+当前开始相同84000原负载与修正后维护重叠的复验，维护使用正式240秒子进程预算，CLI仅加stage数值计时。继续保留假数据/seen，不改1M facts/day或30秒预算；累计假数据接近单日1M上限，若触发partial须如实报告，不清数据或提高阈值。

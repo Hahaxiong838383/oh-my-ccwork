@@ -74,13 +74,27 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
   });
   return status;
 }
+function pruneDailyTable(store:AnalyticsStore,table:string,cutoff:string,limit:number):void{
+  // All callers use the fixed daily-table list below. Its existing keys start with dimension,day.
+  const first=store.db.prepare(`SELECT dimension FROM ${table} ORDER BY dimension LIMIT 1`);
+  const next=store.db.prepare(`SELECT dimension FROM ${table} WHERE dimension>? ORDER BY dimension LIMIT 1`);
+  const remove=store.db.prepare(`DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE dimension=? AND day<? LIMIT ?)`);
+  let current=first.get() as {dimension:string}|undefined,remaining=limit;
+  while(current&&remaining>0){
+    const dimension=current.dimension;
+    // LIMIT applies to this dimension; actual changes consume the one budget shared by the table.
+    remaining-=Number(remove.run(dimension,cutoff,remaining).changes);
+    // Seek past the saved key even if its last row was deleted. Empty/unknown dimensions are included.
+    if(remaining>0)current=next.get(dimension) as {dimension:string}|undefined;
+  }
+}
 export function pruneAnalytics(store:AnalyticsStore,now=Date.now(),chunk=1000):{events:number;batches:number}{
   const bounded=Math.max(1,Math.min(5000,chunk)),rawCutoff=now-14*DAY_MS,dailyCutoff=cstDay(now-90*DAY_MS);
   return store.transaction(()=>{
     const events=Number(store.db.prepare('DELETE FROM analytics_event WHERE rowid IN (SELECT rowid FROM analytics_event WHERE received_at_ms<? LIMIT ?)').run(rawCutoff,bounded).changes);
     const old=store.db.prepare('SELECT attempt_id FROM analytics_batch WHERE received_at_ms<? LIMIT ?').all(rawCutoff,bounded) as {attempt_id:string}[];
     for(const {attempt_id} of old){store.db.prepare('DELETE FROM analytics_settlement WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_batch WHERE attempt_id=?').run(attempt_id);}
-    for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry'])store.db.prepare(`DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE day<? LIMIT ?)`).run(dailyCutoff,bounded);
+    for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry'])pruneDailyTable(store,table,dailyCutoff,bounded);
     return {events,batches:old.length};
   });
 }
