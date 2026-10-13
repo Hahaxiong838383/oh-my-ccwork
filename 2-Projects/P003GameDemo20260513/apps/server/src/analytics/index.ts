@@ -1,3 +1,5 @@
+import {AnalyticsCheckpointer} from './checkpointer.js';
+import {ANALYTICS_WAL_MAX_BYTES,validateWalMaxBytes} from './sqlite-policy.mjs';
 import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
 import { readFileSync,lstatSync,statfsSync } from 'node:fs';
@@ -20,11 +22,12 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
 type Reader={acceptsCredential(subject:string,iat:number):boolean;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
-export type AnalyticsAppOptions={store:AnalyticsStore;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number};
+export type AnalyticsAppOptions={store:AnalyticsStore;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
   const rpm=options.globalRpm??LIMITS.defaultGlobalRpm;if(!Number.isInteger(rpm)||rpm<1||rpm>60000)throw new Error('INVALID_ANALYTICS_GLOBAL_RPM');
   if(options.allowSubjects.length>1000)throw new Error('ANALYTICS_ALLOWLIST_LIMIT');
+  const walMax=validateWalMaxBytes(options.walMaxBytes??ANALYTICS_WAL_MAX_BYTES);
   const app=new Hono(),deviceHits=new Map<string,number[]>(),globalHits:number[]=[],durations:number[]=[];
   let inFlight=0,storageFailures=0,sqlBusy=0,requests=0;
   const diskFree=options.diskFreeBytes??(()=>{const info=statfsSync(options.store.path);return Number(info.bavail)*Number(info.bsize);});
@@ -33,10 +36,11 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     try{dependenciesReady=options.reader.readiness();}catch{}
     try{options.store.db.prepare('SELECT count(*) FROM analytics_meta').get();storageReady=true;freeBytes=diskFree();}catch{}
     const control=readControl(options.controlPath),sorted=[...durations].sort((a,b)=>a-b);
-    let walBytes=0;try{walBytes=lstatSync(options.store.path+'-wal').size;}catch{}
+    let walBytes=0,walReadable=true;try{walBytes=options.store.walBytes();}catch{walReadable=false;storageReady=false;}
     let meta:{key:string;value:string}[]=[];
     try{meta=options.store.db.prepare('SELECT key,value FROM analytics_meta').all() as {key:string;value:string}[];}catch{storageReady=false;}
-    return {ok:true,alive:true,ready:dependenciesReady&&storageReady&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:options.allowSubjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_rollup_attempt_ms:Number(meta.find(m=>m.key==='last_rollup_attempt_ms')?.value)||null,last_rollup_partial_ms:Number(meta.find(m=>m.key==='last_rollup_partial_ms')?.value)||null,rollup_status:meta.find(m=>m.key==='last_rollup_status')?.value??null,rollup_failed_days:Number(meta.find(m=>m.key==='last_rollup_failed_days')?.value)||0,rollup_remaining_dirty_days:Number(meta.find(m=>m.key==='last_rollup_remaining_dirty_days')?.value)||0,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
+    const checkpoint=options.checkpointStatus?.()??null;
+    return {ok:true,alive:true,ready:dependenciesReady&&storageReady&&(checkpoint===null||(!checkpoint.stale&&checkpoint.enabled))&&walReadable&&walBytes<walMax&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:options.allowSubjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,wal_max_bytes:walMax,wal_pressure:!walReadable||walBytes>=walMax,sqlite_version:options.store.sqliteVersion,sqlite_version_safe:true,sqlite_synchronous:2,sqlite_wal_autocheckpoint:0,checkpoint,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_rollup_attempt_ms:Number(meta.find(m=>m.key==='last_rollup_attempt_ms')?.value)||null,last_rollup_partial_ms:Number(meta.find(m=>m.key==='last_rollup_partial_ms')?.value)||null,rollup_status:meta.find(m=>m.key==='last_rollup_status')?.value??null,rollup_failed_days:Number(meta.find(m=>m.key==='last_rollup_failed_days')?.value)||0,rollup_remaining_dirty_days:Number(meta.find(m=>m.key==='last_rollup_remaining_dirty_days')?.value)||0,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
   };
   app.get('/health',c=>c.json({ok:true,alive:true}));
   app.get('/ready',c=>{const value=health();return c.json(value,value.ready?200:503);});
@@ -71,6 +75,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     const hits=(deviceHits.get(context.deviceKey)??[]).filter(t=>now-t<60000);
     if(globalHits.length>=rpm||hits.length>=LIMITS.deviceRpm)return error('ANALYTICS_RATE_LIMITED',429,60);
     if(inFlight>=LIMITS.concurrency)return error('ANALYTICS_OVERLOADED',503,5);
+    if(options.store.walBytes()>=walMax)return error('ANALYTICS_WAL_PRESSURE',503,10);
     if(diskFree()<LIMITS.diskStopBytes)return error('ANALYTICS_DISK_PRESSURE',503,60);
     if(process.memoryUsage().rss>512*1024**2)return error('ANALYTICS_MEMORY_PRESSURE',503,60);
     globalHits.push(now);hits.push(now);deviceHits.set(context.deviceKey,hits);inFlight++;
@@ -86,6 +91,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
       const latestContext=options.reader.readAnalyticsDeviceContext(cred.sn);
       if(!latestContext.active)return error('ANALYTICS_DEVICE_NOT_ENABLED',403);
       if(!latestContext.uploadEnabled)return error('ANALYTICS_UPLOAD_DISABLED',503,900);
+      if(options.store.walBytes()>=walMax)return error('ANALYTICS_WAL_PRESSURE',503,10);
       const ack=settleAnalyticsBatch(options.store,latestContext,batch,requestId);return c.json(ack);
     }catch(cause){storageFailures++;if(cause instanceof AnalyticsStorageUnavailable&&cause.busy)sqlBusy++;return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);}
     finally{inFlight--;durations.push(Math.ceil(performance.now()-started));if(durations.length>1024)durations.shift();}
@@ -97,9 +103,27 @@ export function analyticsOptionsFromEnv():AnalyticsAppOptions{
   const required=(key:string)=>{const value=process.env[key];if(!value)throw new Error('MISSING_'+key);return value;};
   const devicesPath=required('ANALYTICS_DEVICES_DB_PATH'),configPath=required('ANALYTICS_CONFIG_DB_PATH');
   const allow=(process.env.ANALYTICS_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean);
-  return {store:new AnalyticsStore(required('ANALYTICS_DB_PATH')),reader:new AnalyticsDeviceReader({devicesPath,configPath,deviceKeySecret:required('ANALYTICS_DEVICE_KEY_SECRET'),envAllow:(process.env.DEVICE_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean)}),authSecret:required('AUTH_JWT_SECRET'),internalSecret:required('ANALYTICS_INTERNAL_SECRET'),controlPath:required('ANALYTICS_CONTROL_PATH'),allowSubjects:allow,globalRpm:Number(process.env.ANALYTICS_GLOBAL_RPM??600)};
+  return {store:new AnalyticsStore(required('ANALYTICS_DB_PATH')),reader:new AnalyticsDeviceReader({devicesPath,configPath,deviceKeySecret:required('ANALYTICS_DEVICE_KEY_SECRET'),envAllow:(process.env.DEVICE_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean)}),authSecret:required('AUTH_JWT_SECRET'),internalSecret:required('ANALYTICS_INTERNAL_SECRET'),controlPath:required('ANALYTICS_CONTROL_PATH'),allowSubjects:allow,walMaxBytes:Number(process.env.ANALYTICS_WAL_MAX_BYTES??ANALYTICS_WAL_MAX_BYTES),globalRpm:Number(process.env.ANALYTICS_GLOBAL_RPM??600)};
+}
+/** One lifecycle for production (3006) and the explicitly isolated staging listener (3306). */
+export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=3006){
+  if(port!==3006&&port!==3306)throw new Error('INVALID_ANALYTICS_LISTEN_PORT');
+  const checkpointer=new AnalyticsCheckpointer(options.store.path,{walMaxBytes:options.walMaxBytes,nodePath:process.env.ANALYTICS_NODE_PATH??process.execPath});
+  options.checkpointStatus=()=>checkpointer.status();
+  const app=createAnalyticsApp(options);
+  const server=serve({fetch:app.fetch,hostname:'127.0.0.1',port});checkpointer.start();
+  let stopped:Promise<void>|undefined;
+  const signal=()=>{void stop().then(()=>process.exit(0));};
+  function stop(){
+    if(stopped)return stopped;
+    stopped=(async()=>{process.removeListener('SIGTERM',signal);process.removeListener('SIGINT',signal);server.close();if('closeAllConnections' in server)server.closeAllConnections();await checkpointer.stop();options.store.close();})();
+    return stopped;
+  }
+  process.once('SIGTERM',signal);process.once('SIGINT',signal);
+  return {server,checkpointer,stop};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
-  try{const app=createAnalyticsApp(analyticsOptionsFromEnv());serve({fetch:app.fetch,hostname:'127.0.0.1',port:3006});console.log('[analytics] LISTENING_3006');}
-  catch{console.error('[analytics] STARTUP_CONFIGURATION_ERROR');process.exitCode=1;}
+  let options:AnalyticsAppOptions|undefined;
+  try{options=analyticsOptionsFromEnv();startAnalyticsServer(options);console.log('[analytics] LISTENING_3006');}
+  catch{options?.store.close();console.error('[analytics] STARTUP_CONFIGURATION_ERROR');process.exitCode=1;}
 }

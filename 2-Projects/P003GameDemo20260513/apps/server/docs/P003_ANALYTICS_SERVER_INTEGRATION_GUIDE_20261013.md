@@ -56,6 +56,7 @@ client可包含product/component/protocol_version/content_version；当前produc
 | 413 ANALYTICS_BODY_TOO_LARGE 或代理ANALYTICS_BATCH_TOO_LARGE | JSON错误；需要端侧拆批，不能将整批当ACK排空 |
 | 429 ANALYTICS_RATE_LIMITED | 数字秒Retry-After，退避后重试同一批；默认每主体60rpm/全局600rpm |
 | 503 ANALYTICS_UPLOAD_DISABLED | Retry-After=900秒，暂停；关闭/回滚不会返回404或HTML导致误入deadletter |
+| 503 ANALYTICS_WAL_PRESSURE | 独立checkpoint延迟/长reader导致物理WAL达准入阈值；Retry-After=10秒，无accepted不删除pending，恢复后同ID重试 |
 | 503 OVERLOADED/STORAGE/DEPENDENCY/DISK/MEMORY相关受控码 | 遵守数字秒Retry-After；无成功ACK不删除pending，后续重试 |
 
 逐事件rejected原因：event_not_allowed、event_too_large、invalid_event、invalid_context、invalid_properties、client_event_id_conflict。深层非法结构也给该ID终态拒收，不把正常同批事件拖成永久503。`properties:{"truncated":true}`是端侧超限退化的显式兼容分支。
@@ -88,3 +89,5 @@ client可包含product/component/protocol_version/content_version；当前produc
 更多精确字段见 [服务端合同](analytics-server-contract-v1.md)、[后台API合同](analytics-admin-api-v1.md)。发布信息见 [部署回执](P003_ANALYTICS_SERVER_DEPLOY_RECEIPT_20261013.md)，运维回退见 [回滚记录](P003_ANALYTICS_ROLLBACK_20261013.md)。
 
 署名：codex（OpenAI）| 2026-10-13
+
+埋点独立使用Node24.19.0/SQLite3.53.3，所有共享writer保持FULL和commit后ACK；原语音运行时不变。独立checkpoint每10秒/超时5秒，WAL默认256MiB准入硬闸。checkpoint与回滚均不清seen，不轮换稳定HMAC。具体运行状态以health及部署回执为准，不能把本地测试当14台实测结果。

@@ -1,6 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync,statSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
+import {configureAnalyticsWriter} from './sqlite-policy.mjs';
 export class AnalyticsStorageUnavailable extends Error {
   constructor(readonly busy=false){super('ANALYTICS_STORAGE_UNAVAILABLE');}
 }
@@ -9,11 +10,13 @@ export class AnalyticsRollupBudgetExceeded extends Error {
 }
 export class AnalyticsStore {
   readonly db: DatabaseSync;
+  readonly sqliteVersion:string;
   constructor(readonly path: string) {
     if(!isAbsolute(path)) throw new Error('analytics database path must be absolute');
     mkdirSync(dirname(path),{recursive:true});
     this.db=new DatabaseSync(path);
-    this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=250;
+    try{this.sqliteVersion=configureAnalyticsWriter(this.db);}catch(error){this.db.close();throw error;}
+    this.db.exec(`
       CREATE TABLE IF NOT EXISTS analytics_event (
         device_key TEXT NOT NULL, client_event_id TEXT NOT NULL, event_name TEXT NOT NULL,
         occurred_at_ms INTEGER NOT NULL, received_at_ms INTEGER NOT NULL, session_id TEXT NOT NULL,
@@ -53,6 +56,7 @@ export class AnalyticsStore {
     catch(error) {try{this.db.exec('ROLLBACK');}catch{} if(error instanceof AnalyticsRollupBudgetExceeded)throw error;throw new AnalyticsStorageUnavailable([5,6].includes((error as {errcode?:number}).errcode??0));}
   }
   close(){this.db.close();}
+  walBytes(){try{return statSync(this.path+'-wal').size;}catch(error){if((error as NodeJS.ErrnoException).code==='ENOENT')return 0;throw new AnalyticsStorageUnavailable();}}
 }
 export const DAY_MS=86_400_000;
 export function cstDay(ms:number):string{return new Date(ms+8*3_600_000).toISOString().slice(0,10);}
