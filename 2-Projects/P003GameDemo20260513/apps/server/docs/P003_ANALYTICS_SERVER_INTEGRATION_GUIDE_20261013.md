@@ -63,6 +63,8 @@ client可包含product/component/protocol_version/content_version；当前produc
 
 ## 首台联合验收顺序
 
+**当前只可执行第1步。第2–7步须先拿到服务端新的容量通过回执并约定测试机，不能因收到本联调文档就自行打开上传。** 原14台/84000条、P95≤500ms、P99≤2000ms、RSS≤256MiB、原3001健康P95增量≤50ms全部门槛保留。
+
 1. 同事确认测试APK/Launcher版本、测试机、联网和本地pending/confirmed/deadletter基线。服务器保持总闸关闭时，验证完整配置含analytics，上传关闭且原posture未丢失。
 2. 约定测试机后，服务端仅对该机设置灰度与upload=true，打开总闸。确认配置revision刷新、生效小时0，其他设备仍false。
 3. 发送正常/未知事件/单事件超限混合批，核对完整互斥ACK与端侧本地结算；在后台“Worker管理→数据埋点”按request_id和client_event_id对账。
@@ -101,3 +103,5 @@ client可包含product/component/protocol_version/content_version；当前produc
 香港31.2万条既有假事件下，每日8秒计算预算会触及上限；发布采用代码原有30秒上界，仍保持独立240秒CLI/watchdog与partial标记。后台结果只在完整提交后更新；维护期间写锁竞争返回503/30秒退避，不能冒称全部16日一定能在一次任务内完成。14台摄入P95/P99/RSS/原服务门槛未放宽。
 
 正式PM2启动入口为 `deploy/analytics.config.cjs`，加载同目录共享ecosystem定义；实际解释器与FULL/auto0/10秒checkpoint以health和PM2回执为准。
+
+2026-10-13 11:53 CST已完成正式关闭状态部署。PM2应用实际加载 `deploy/analytics-start.ts`，显式启动共享bootstrap；公网接口、真实后台页面、在线备份/隔离恢复和异机副本均已验收。集中上传容量仍未通过，真机与夜间上传未执行；详见本目录部署回执。
