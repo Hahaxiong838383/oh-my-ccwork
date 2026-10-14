@@ -1,0 +1,121 @@
+{
+  "ok": true,
+  "checked_at": "2026-10-14T03:39:38.895Z",
+  "operation": "read_only_checkpoint_no_gate_or_process_mutation",
+  "node_version": "v24.19.0",
+  "window": {
+    "phase": "open",
+    "device_suffix": "03800006",
+    "started_at": "2026-10-14T03:24:59.000Z",
+    "gate_opened_at": "2026-10-14T03:25:00.456Z",
+    "expires_at": "2026-10-14T10:00:00.000Z",
+    "timer": "p003-analytics-window-20261014T032410Z-03800006.timer",
+    "timer_properties": "NextElapseUSecRealtime=Wed 2026-10-14 18:00:00 CST\nActiveState=active\nUnitFileState=enabled",
+    "controller_sha256": "ce318acbf81d64055d20346b5c204ebb47838d7e8d84d7604461d55a80bfa1e9",
+    "owner_matches": true
+  },
+  "config": {
+    "global": {
+      "event_upload_enabled": false,
+      "daily_upload_hour_cst": 0
+    },
+    "target": {
+      "event_upload_enabled": true,
+      "daily_upload_hour_cst": 0
+    },
+    "target_revisions": [
+      {
+        "key": "analytics.daily_upload_hour_cst",
+        "rev": 16
+      },
+      {
+        "key": "analytics.event_upload_enabled",
+        "rev": 17
+      }
+    ],
+    "other_registry_devices": 13,
+    "checks": {
+      "target_active": true,
+      "allowlist_only_target": true,
+      "other_devices_disabled": true,
+      "unrelated_config_unchanged": true
+    }
+  },
+  "health": {
+    "http_status": 200,
+    "ready": true,
+    "gate_enabled": true,
+    "allowlist_count": 1,
+    "storage_failures": 0,
+    "sql_busy": 0,
+    "wal_bytes": 4152,
+    "wal_pressure": false,
+    "rss_bytes": 103809024
+  },
+  "db": {
+    "counts": {
+      "analytics_event": 2408,
+      "analytics_event_seen": 2408,
+      "analytics_batch": 13,
+      "analytics_settlement": 2435
+    },
+    "summary": {
+      "batches": 13,
+      "first_received_at_ms": 1791945852987,
+      "last_received_at_ms": 1791945880561,
+      "accepted": 2408,
+      "duplicated": 0,
+      "rejected": 27,
+      "min_processing_ms": 3,
+      "max_processing_ms": 29
+    },
+    "prefixes": [
+      {
+        "prefix": "ana-03800006-",
+        "batches": 13,
+        "accepted": 2408,
+        "duplicated": 0,
+        "rejected": 27
+      }
+    ],
+    "rejections": [
+      {
+        "reason": "invalid_properties",
+        "count": 27
+      }
+    ]
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2817417,
+      "status": "online",
+      "restarts": 23
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "status": "online",
+      "restarts": 0
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3084873,
+      "status": "online",
+      "restarts": 3
+    }
+  ],
+  "previous_window_close": {
+    "phase": "closed",
+    "closed_at": "2026-10-14T03:13:42.216Z",
+    "gate_enabled": false,
+    "allowlist_count": 0,
+    "target_upload_enabled": false,
+    "counts": {
+      "analytics_event": 2408,
+      "analytics_event_seen": 2408,
+      "analytics_batch": 13
+    }
+  },
+  "pending_client_reconciliation": true
+}

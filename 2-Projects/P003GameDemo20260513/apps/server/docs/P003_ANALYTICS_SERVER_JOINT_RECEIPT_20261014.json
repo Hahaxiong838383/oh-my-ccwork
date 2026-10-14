@@ -1,0 +1,319 @@
+{
+  "schema_version": 1,
+  "status": "WINDOW_OPEN_SERVER_SETTLEMENT_CONFIRMED_CLIENT_RECONCILIATION_PENDING",
+  "timezone": "Asia/Shanghai",
+  "window": {
+    "ok": true,
+    "phase": "open",
+    "device_suffix": "03800006",
+    "request_id_prefix": "ana-07000180-",
+    "started_at": "2026-10-14T03:24:59.000Z",
+    "gate_opened_at": "2026-10-14T03:25:00.456Z",
+    "expires_at": "2026-10-14T10:00:00.000Z",
+    "verified_at": "2026-10-14T03:25:00.723Z",
+    "allowlist_count": 1,
+    "gate_enabled": true,
+    "upload_enabled": true,
+    "daily_upload_hour_cst": 0,
+    "config_revisions": {
+      "hour": 16,
+      "enabled": 17
+    },
+    "timer": "p003-analytics-window-20261014T032410Z-03800006.timer",
+    "timer_next": "Wed 2026-10-14 18:00:00 CST",
+    "proof": {
+      "public_config_status": 200,
+      "revision": "cfg-17",
+      "posture_preserved": true,
+      "target_empty_probe": 400,
+      "other_empty_probe": 403,
+      "other_registry_devices_disabled": 13,
+      "global_upload_enabled": false
+    },
+    "baseline_counts": {
+      "analytics_event": 2408,
+      "analytics_event_seen": 2408,
+      "analytics_batch": 13
+    },
+    "current_counts": {
+      "analytics_event": 2408,
+      "analytics_event_seen": 2408,
+      "analytics_batch": 13
+    },
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 2817417,
+        "status": "online",
+        "restarts": 23
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "status": "online",
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3084873,
+        "status": "online",
+        "restarts": 3
+      }
+    ]
+  },
+  "client": {
+    "version_code": 325,
+    "version_name": "1.2.2-canary.311",
+    "mcu_jwt_sn_suffix": "03800006",
+    "adb_serial_suffix": "07000180",
+    "requested_rid_prefix": "ana-07000180-",
+    "observed_rid_prefix": "ana-03800006-",
+    "reported_pending": 2423,
+    "final_pending": null
+  },
+  "previous_window": {
+    "started_at": "2026-10-14T02:43:41.000Z",
+    "expires_at": "2026-10-14T03:13:41.000Z",
+    "closed_at": "2026-10-14T03:13:42.216Z",
+    "close_service_result": "success",
+    "gate_enabled": false,
+    "allowlist_count": 0
+  },
+  "initial_settlement": {
+    "ok": true,
+    "checked_at": "2026-10-14T03:25:41.072Z",
+    "summary": {
+      "batches": 13,
+      "first_received_at_ms": 1791945852987,
+      "last_received_at_ms": 1791945880561,
+      "accepted": 2408,
+      "duplicated": 0,
+      "rejected": 27,
+      "min_processing_ms": 3,
+      "max_processing_ms": 29
+    },
+    "batches": [
+      {
+        "received_at_ms": 1791945852987,
+        "accepted": 190,
+        "duplicated": 0,
+        "rejected": 10,
+        "http_status": 200,
+        "processing_ms": 29,
+        "request_id_suffix": "767922-5",
+        "request_id_length": 23,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945855348,
+        "accepted": 194,
+        "duplicated": 0,
+        "rejected": 6,
+        "http_status": 200,
+        "processing_ms": 18,
+        "request_id_suffix": "767922-6",
+        "request_id_length": 23,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945857667,
+        "accepted": 191,
+        "duplicated": 0,
+        "rejected": 9,
+        "http_status": 200,
+        "processing_ms": 25,
+        "request_id_suffix": "767922-7",
+        "request_id_length": 23,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945859992,
+        "accepted": 198,
+        "duplicated": 0,
+        "rejected": 2,
+        "http_status": 200,
+        "processing_ms": 20,
+        "request_id_suffix": "767922-8",
+        "request_id_length": 23,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945862308,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 16,
+        "request_id_suffix": "767922-9",
+        "request_id_length": 23,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945864612,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 12,
+        "request_id_suffix": "67922-10",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945866908,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 13,
+        "request_id_suffix": "67922-11",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945869212,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 12,
+        "request_id_suffix": "67922-12",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945871488,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 13,
+        "request_id_suffix": "67922-13",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945873788,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 13,
+        "request_id_suffix": "67922-14",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945876076,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 16,
+        "request_id_suffix": "67922-15",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945878382,
+        "accepted": 200,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 12,
+        "request_id_suffix": "67922-16",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      },
+      {
+        "received_at_ms": 1791945880561,
+        "accepted": 35,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200,
+        "processing_ms": 3,
+        "request_id_suffix": "67922-17",
+        "request_id_length": 24,
+        "expected_prefix_matched": false,
+        "request_id_is_hex": false
+      }
+    ],
+    "rejections": [
+      {
+        "reason": "invalid_properties",
+        "count": 27
+      }
+    ],
+    "outcomes": [
+      {
+        "outcome": "accepted",
+        "count": 2408
+      },
+      {
+        "outcome": "rejected",
+        "count": 27
+      }
+    ],
+    "totals": {
+      "analytics_event": 2408,
+      "analytics_event_seen": 2408,
+      "analytics_batch": 13,
+      "analytics_settlement": 2435
+    },
+    "distinct_batch_devices": 1,
+    "reported_pending": 2423,
+    "client_pending_unverified": true
+  },
+  "observed_rid_prefixes": [
+    {
+      "prefix": "ana-03800006-",
+      "batches": 13,
+      "accepted": 2408,
+      "duplicated": 0,
+      "rejected": 27
+    }
+  ],
+  "latest_verification": {
+    "checked_at": "2026-10-14T03:26:30.480Z",
+    "timer_active": true,
+    "timer_enabled": true,
+    "next_expiry": "2026-10-14T10:00:00.000Z",
+    "close_controller_matches": true,
+    "health": {
+      "ready": true,
+      "gate_enabled": true,
+      "allowlist_count": 1,
+      "storage_failures": 0,
+      "sql_busy": 0,
+      "wal_bytes": 4152,
+      "wal_pressure": false,
+      "rss_bytes": 112947200
+    }
+  },
+  "pending": [
+    "客户端最终 pending 与新增12条来源",
+    "27条 invalid_properties 的预期性及终态移队",
+    "请求ID前缀口径确认",
+    "关闭与恢复端侧自动续传",
+    "受控重放与故障注入",
+    "18:00实际自动关闭复核"
+  ],
+  "fault_injection_performed": false,
+  "real_queue_cleared": false,
+  "other_devices_enabled": false,
+  "data_rollback_performed": false,
+  "author": "codex（OpenAI）",
+  "generated_at_cst": "2026-10-14 11:29:17 CST"
+}
