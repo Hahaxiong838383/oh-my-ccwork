@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "status": "NORMAL_UPLOAD_PATH_CLOSED_WITH_CONTROLLED_TESTS_DEFERRED",
+  "timezone": "Asia/Shanghai",
+  "client_receipt": {
+    "filename": "P003_ANALYTICS_SINGLE_DEVICE_CLIENT_RECEIPT_20261014.md",
+    "sha256": "0f96953c7e6ecbd4ea173bbaf65f94792da516d9aa37667103e4d3f7c0422a48",
+    "review_result": "no_client_server_accounting_contradiction",
+    "device_suffix": "03800006",
+    "rid_prefix": "ana-03800006-",
+    "first_round": {
+      "batches": 13,
+      "accepted": 2408,
+      "duplicated": 0,
+      "rejected": 27,
+      "all_http_200": true
+    },
+    "pending_audit_reported_at": "2026-10-14T03:46:20.000Z",
+    "pending_reported": 0,
+    "dead_letter_terminal_reported": 27,
+    "dead_letter_by_event_name": [
+      {
+        "event_name": "g1.reward_granted",
+        "reason": "invalid_properties",
+        "count": 11
+      },
+      {
+        "event_name": "g1.inventory_changed",
+        "reason": "invalid_properties",
+        "count": 9
+      },
+      {
+        "event_name": "g1.experience_started",
+        "reason": "invalid_properties",
+        "count": 4
+      },
+      {
+        "event_name": "g1.ecotank_selected",
+        "reason": "invalid_properties",
+        "count": 2
+      },
+      {
+        "event_name": "g1.route_day_selected",
+        "reason": "invalid_properties",
+        "count": 1
+      }
+    ],
+    "specific_invalid_fields_known": false,
+    "all_legacy_rejections_proven_expected_test_data": false
+  },
+  "v326_followup": {
+    "client_reported_version_code": 326,
+    "client_reported_version_name": "1.2.2-canary.312",
+    "client_reported_apk_sha256": "5089c9e7805140d048d87721cbbd963c1312050dcf876bd3520d9c19507d5ee5",
+    "server_batch": {
+      "request_id": "ana-03800006-1a3fa379-1",
+      "received_at_ms": 1791951308688,
+      "accepted": 19,
+      "duplicated": 0,
+      "rejected": 0,
+      "http_status": 200
+    },
+    "client_reported_pending": 0,
+    "same_process_false_to_true_controlled_test_completed": false
+  },
+  "server_closeout": {
+    "ok": true,
+    "operation": "verified_early_closeout_after_client_receipt_review",
+    "checked_at": "2026-10-14T05:45:26.422Z",
+    "window": {
+      "phase": "closed",
+      "device_suffix": "03800006",
+      "closed_at": "2026-10-14T05:44:02.941Z",
+      "scheduled_expiry_canceled": true,
+      "previous_deadline": "2026-10-14T10:00:00.000Z",
+      "owner_removed": true,
+      "timers": [
+        {
+          "timer": "p003-analytics-window-20261014T032410Z-03800006.timer",
+          "properties": "NextElapseUSecRealtime=\nActiveState=inactive\nUnitFileState=disabled"
+        },
+        {
+          "timer": "p003-analytics-window-20261014T024325Z-03800006.timer",
+          "properties": "NextElapseUSecRealtime=\nActiveState=inactive\nUnitFileState=disabled"
+        }
+      ]
+    },
+    "config": {
+      "global": {
+        "enabled": false,
+        "hour": 0
+      },
+      "target": {
+        "enabled": false,
+        "hour": 0
+      },
+      "public_status": 200,
+      "public_revision": "cfg-19",
+      "posture_preserved": true,
+      "all_registry_devices_disabled": true,
+      "registry_device_count": 14,
+      "unrelated_config_unchanged": true
+    },
+    "closed_gate_probe": {
+      "status": 503,
+      "error_code": "ANALYTICS_UPLOAD_DISABLED",
+      "retry_after_seconds": 900,
+      "zero_test_events": true
+    },
+    "health": {
+      "ready": true,
+      "gate_enabled": false,
+      "allowlist_count": 0,
+      "storage_failures": 0,
+      "sql_busy": 0,
+      "wal_pressure": false
+    },
+    "data": {
+      "counts": {
+        "analytics_event": 2427,
+        "analytics_event_seen": 2427,
+        "analytics_batch": 14,
+        "analytics_settlement": 2454
+      },
+      "summary": {
+        "batches": 14,
+        "accepted": 2427,
+        "duplicated": 0,
+        "rejected": 27
+      },
+      "prefixes": [
+        {
+          "prefix": "ana-03800006-",
+          "batches": 14,
+          "accepted": 2427,
+          "duplicated": 0,
+          "rejected": 27
+        }
+      ],
+      "rejections": [
+        {
+          "reason": "invalid_properties",
+          "count": 27
+        }
+      ]
+    },
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 2817417,
+        "status": "online",
+        "restarts": 23
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "status": "online",
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3122854,
+        "status": "online",
+        "restarts": 4
+      }
+    ],
+    "pending_controlled_tests_deferred": true,
+    "client_pending_reported_zero": true,
+    "client_dead_letter_reported_terminal": 27
+  },
+  "deferred": [
+    "同 client_event_id 受控重放",
+    "受控混合 ACK 与五类 invalid_properties 事件逐项复验",
+    "429 Retry-After",
+    "503 ANALYTICS_WAL_PRESSURE",
+    "500/403",
+    "有 pending 时关闭保队与同进程 false→true",
+    "401 单独预约",
+    "真实午夜调度"
+  ],
+  "full_joint_acceptance_pass": false,
+  "real_data_deleted": false,
+  "existing_frozen_handoff_modified": false,
+  "author": "codex（OpenAI）",
+  "generated_at_cst": "2026-10-14 13:46:51 CST"
+}
