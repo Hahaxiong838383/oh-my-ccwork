@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "status": "SINGLE_DEVICE_DAILY_23_UPLOAD_ENABLED_REAL_BACKLOG_RECEIVED",
+  "timezone": "Asia/Shanghai",
+  "authorization": {
+    "device_scope": "previously_confirmed_single_device",
+    "device_suffix": "03800006",
+    "client_version_code_reported": 328,
+    "schedule": "daily_23_CST",
+    "continuous": true,
+    "auto_close": false
+  },
+  "enable_receipt": {
+    "ok": true,
+    "policy_id": "nightly-20261014T091950Z-03800006",
+    "mode": "continuous_daily",
+    "phase": "enabled",
+    "device_suffix": "03800006",
+    "request_id_prefix": "ana-03800006-",
+    "enabled_at": "2026-10-14T09:22:31.095Z",
+    "expires_at": null,
+    "daily_upload_hour_cst": 23,
+    "event_upload_enabled": true,
+    "config_revisions": {
+      "hour": 20,
+      "enabled": 21
+    },
+    "baseline_counts": {
+      "analytics_event": 2427,
+      "analytics_event_seen": 2427,
+      "analytics_batch": 14,
+      "analytics_settlement": 2454
+    },
+    "proof": {
+      "checked_at": "2026-10-14T09:22:31.160Z",
+      "config": {
+        "public_status": 200,
+        "revision": "cfg-21",
+        "target": {
+          "event_upload_enabled": true,
+          "daily_upload_hour_cst": 23
+        },
+        "global": {
+          "enabled": false,
+          "hour": 0
+        },
+        "posture_preserved": true,
+        "unrelated_config_unchanged": true,
+        "other_registry_devices_disabled": 13,
+        "registry_devices": 14
+      },
+      "health": {
+        "ready": true,
+        "gate_enabled": true,
+        "allowlist_count": 1,
+        "storage_failures": 0,
+        "sql_busy": 0,
+        "wal_pressure": false
+      },
+      "target_empty_probe": {
+        "status": 400,
+        "error_code": "INVALID_BATCH",
+        "retry_after": null,
+        "real_event_written": false
+      },
+      "other_empty_probe": {
+        "status": 403,
+        "error_code": "ANALYTICS_DEVICE_NOT_ENABLED",
+        "real_event_written": false
+      },
+      "other_public_config_upload_enabled": false,
+      "old_window_timers": [
+        {
+          "timer": "p003-analytics-window-20261014T032410Z-03800006.timer",
+          "properties": "NextElapseUSecRealtime=\nActiveState=inactive\nUnitFileState=disabled"
+        },
+        {
+          "timer": "p003-analytics-window-20261014T024325Z-03800006.timer",
+          "properties": "NextElapseUSecRealtime=\nActiveState=inactive\nUnitFileState=disabled"
+        }
+      ],
+      "counts": {
+        "analytics_event": 2427,
+        "analytics_event_seen": 2427,
+        "analytics_batch": 14,
+        "analytics_settlement": 2454
+      }
+    },
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 2817417,
+        "status": "online",
+        "restarts": 23
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "status": "online",
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "status": "online",
+        "restarts": 5
+      }
+    ],
+    "client_version_code_reported": 328,
+    "client_installation_verified": false,
+    "actual_2300_upload_verified": false,
+    "data_deleted": false
+  },
+  "independent_verification": {
+    "ok": true,
+    "operation": "independent_read_only_nightly_enable_verification",
+    "checked_at": "2026-10-14T09:24:53.367Z",
+    "policy_id": "nightly-20261014T091950Z-03800006",
+    "device_suffix": "03800006",
+    "phase": "enabled",
+    "mode": "continuous_daily",
+    "enabled_at": "2026-10-14T09:22:31.095Z",
+    "expires_at": null,
+    "config": {
+      "public_status": 200,
+      "revision": "cfg-21",
+      "target": {
+        "event_upload_enabled": true,
+        "daily_upload_hour_cst": 23
+      },
+      "global": {
+        "enabled": false,
+        "hour": 0
+      },
+      "registry_devices": 14,
+      "other_registry_devices_disabled": 13,
+      "other_public_upload_enabled": false,
+      "posture_preserved": true,
+      "unrelated_config_unchanged": true
+    },
+    "env_only_allowlist_changed": true,
+    "control_persisted_enabled": true,
+    "health": {
+      "ready": true,
+      "gate_enabled": true,
+      "allowlist_count": 1,
+      "storage_failures": 0,
+      "sql_busy": 0,
+      "wal_pressure": false
+    },
+    "counts": {
+      "analytics_event": 2573,
+      "analytics_event_seen": 2573,
+      "analytics_batch": 15,
+      "analytics_settlement": 2600
+    },
+    "settlement_summary": {
+      "batches": 15,
+      "accepted": 2573,
+      "duplicated": 0,
+      "rejected": 27
+    },
+    "new_real_batches_since_enable": [
+      {
+        "request_id": "ana-03800006-8c9f3f3c-8",
+        "received_at_ms": 1791969780886,
+        "accepted": 146,
+        "duplicated": 0,
+        "rejected": 0,
+        "http_status": 200
+      }
+    ],
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 2817417,
+        "status": "online",
+        "restarts": 23
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "status": "online",
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "status": "online",
+        "restarts": 5
+      }
+    ],
+    "timers": [
+      {
+        "timer": "p003-analytics-window-20261014T032410Z-03800006.timer",
+        "properties": "NextElapseUSecRealtime=\nActiveState=inactive\nUnitFileState=disabled"
+      },
+      {
+        "timer": "p003-analytics-window-20261014T024325Z-03800006.timer",
+        "properties": "NextElapseUSecRealtime=\nActiveState=inactive\nUnitFileState=disabled"
+      }
+    ],
+    "private_backup_files_mode": "0600",
+    "operator_sha256": "700a3139a57cde5ee22bbb49f63c8afac24f15bb8a1b5d66b002c108ce3871f5",
+    "client_v328_installation_verified": false,
+    "actual_2300_upload_verified": false,
+    "data_deleted": false
+  },
+  "operator_sha256": "700a3139a57cde5ee22bbb49f63c8afac24f15bb8a1b5d66b002c108ce3871f5",
+  "evidence_boundaries": {
+    "temporary_server_credentials_used_for_public_configuration_probe": true,
+    "real_device_new_batch_received": true,
+    "client_installation_version_independently_verified": false,
+    "client_pending_report_received": false,
+    "actual_2300_schedule_verified": false,
+    "controlled_error_and_replay_tests_completed": false
+  },
+  "real_event_probe_injection_count": 0,
+  "real_data_deleted": false,
+  "prior_frozen_receipts_modified": false,
+  "author": "codex（OpenAI）",
+  "generated_at_cst": "2026-10-14 17:26 CST"
+}

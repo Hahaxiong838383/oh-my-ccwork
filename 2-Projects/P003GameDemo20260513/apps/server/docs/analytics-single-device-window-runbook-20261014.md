@@ -1,8 +1,25 @@
-# P003 单机埋点窗口运行手册
+# P003 单机埋点运行手册
 
 适用：使用现有 P003 服务器进行一台明确身份的联调，操作范围已经获得用户授权。本轮控制器已经在服务器受控目录运行；此文件用于恢复与复用，不是对任意设备开放采集的授权。
 
-源码：[deploy/analytics-window-controller.mjs](../deploy/analytics-window-controller.mjs)。归档 SHA256：`ce318acbf81d64055d20346b5c204ebb47838d7e8d84d7604461d55a80bfa1e9`，与 2026-10-14 11:39:38.895 只读核验的当前窗口脚本一致。
+限时窗口源码：[deploy/analytics-window-controller.mjs](../deploy/analytics-window-controller.mjs)。归档 SHA256：`ce318acbf81d64055d20346b5c204ebb47838d7e8d84d7604461d55a80bfa1e9`，与 2026-10-14 历史窗口脚本一致。该控制器使用 true/0 和有限截止时间；下面的持续每日策略不调用它重新开窗。
+
+## 当前持续每日策略（2026-10-14 17:22 启用）
+
+- 用户新授权：仍仅云端 MCU/JWT 末 8 位 `03800006`，目标 true/23、cfg-21、master=true、独立名单 1；全局和其他 13 台保持 false。每日 23:00 调度在客户端，服务端持续允许合法补传，本次无到期自动关闭。
+- 私有 owner 为 `nightly-20261014T091950Z-03800006`，mode=continuous_daily、expires_at=null；不要复用旧窗口 ID、开启旧 timer 或用限时脚本改本次 owner。
+- 新受控操作目录为 `/opt/p003/server/backups/analytics-policies/nightly-20261014T091950Z-03800006`，原 env/control/config、state、启用回执、独立验证、关闭恢复计划及操作脚本保留为 0600。这属于配置操作取证，不是新的业务源码发布；脚本 SHA256 `700a3139a57cde5ee22bbb49f63c8afac24f15bb8a1b5d66b002c108ce3871f5`。
+- 17:23:00.886 已真实入库 146 accepted/0 dup/0 rejected；17:24:53.367 独立复核持续开启。设备实际安装 v328、当前 pending、今晚 23:00 自动触发仍待端侧回执，不因补传已到账改成全项通过。完整结果见[v328 启用回执](P003_ANALYTICS_V328_NIGHTLY_ENABLE_RECEIPT_20261014.md)、[JSON](P003_ANALYTICS_V328_NIGHTLY_ENABLE_RECEIPT_20261014.json)。
+
+关闭或恢复时，先确认 owner 仍为该 ID、脚本 SHA 一致，在 `/opt/p003/server` 执行：
+
+```bash
+/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node \
+  --experimental-sqlite --env-file=.env.local --env-file=.env.analytics \
+  backups/analytics-policies/nightly-20261014T091950Z-03800006/operator.mjs close
+```
+
+操作先关闭总闸，再目标 false、恢复原 hour=0、清独立名单，仅普通重启 analytics；保 DB/WAL/seen/HMAC、不清设备队列。恢复后独立读回公网 false/0、gate=false、名单 0、state=closed、owner 释放及关闭空批 503/Retry-After900。不得用原 env/config 整份盲覆盖后续合法修改。此处记录可执行恢复步骤，本轮未实际关闭新每日策略。
 
 ## 依赖与固定边界
 
@@ -29,7 +46,7 @@
 }
 ```
 
-省略 `requested_expires_at` 时默认 30 分钟；指定时必须为未来且距注册时刻不超过 24 小时。本次用户要求放长后的明确截止为 2026-10-14T10:00:00.000Z，即当日 18:00 CST。此上限是代码校验，不代表已授权任何未来窗口。
+省略 `requested_expires_at` 时默认 30 分钟；指定时必须为未来且距注册时刻不超过 24 小时。历史延长窗口曾定 2026-10-14T10:00:00.000Z，即当日 18:00 CST，后于 13:44 提前关闭并取消计划。此上限是代码校验，不代表已授权任何未来窗口。
 
 ## 执行与核验
 
@@ -79,6 +96,6 @@ PM2 子进程只继承受控基本环境，不能加 `--update-env` 把临时加
 - 输出中的 requested RID 前缀只记录申请口径，不能替代数据库实际前缀。查询应结合目标键和接收时段，按完整三分区与端侧 pending 结算。
 - 被拒绝事件原始正文不落库，计数只能证明拒绝类别；具体字段需端侧提供脱敏事件名与字段名。
 
-2026-10-14 当前目录 ID 为 `20261014T032410Z-03800006`；原 30 分钟目录 ID 为 `20261014T024325Z-03800006`。私有状态包含完整设备身份和 env 原件，不进入 Git。当前快照见[检查点](analytics-joint-checkpoint-20261014.json)，原关闭已成功，新截止 18:00 的实际执行仍待复核。
+历史延长窗口目录 ID 为 `20261014T032410Z-03800006`；原 30 分钟目录 ID 为 `20261014T024325Z-03800006`。二者均已关闭、timer 停止禁用，18:00 计划取消；不能当作当前持续每日策略的恢复入口。私有状态包含完整设备身份和 env 原件，不进入 Git。[11:39 检查点](analytics-joint-checkpoint-20261014.json)是历史开窗快照。
 
 署名：codex（OpenAI）| 2026-10-14
