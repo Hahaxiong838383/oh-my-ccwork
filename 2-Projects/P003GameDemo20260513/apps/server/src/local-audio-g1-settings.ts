@@ -81,6 +81,7 @@ export async function resolveG1SettingsClips(
         const existing = localAudioStore.findByText(acc, slot, text, 'wav');
         const audio = existing ? localAudioStore.readAudio(acc, existing.id, 'wav') : null;
         if (existing && audio) {
+          localAudioStore.retainCandidate(acc, existing.id);
           candidate = { audio, origin: 'reused' };
           break;
         }

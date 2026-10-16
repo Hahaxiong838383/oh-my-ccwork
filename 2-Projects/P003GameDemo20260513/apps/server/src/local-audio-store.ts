@@ -49,6 +49,7 @@ function safeSegment(s: string): string {
 }
 
 class LocalAudioStore {
+  readonly publicationGuardVersion = 1;
   private readonly db: DatabaseSync;
 
   constructor() {
@@ -220,21 +221,56 @@ class LocalAudioStore {
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`)
           .run(accountId, item.slot, item.id, item.text, item.sha256, item.bytes, item.duration_ms, item.format, Date.now());
       }
+      this.pinCandidate(accountId, this.getItem(accountId, item.id)!);
       this.db.exec('COMMIT');
     } catch (err) { this.db.exec('ROLLBACK'); throw err; }
+  }
+
+  // 清理租约独立于created_at与manifest；正常生成在分钟内完成，24h留出进程/发布恢复余量。
+  private pinCandidate(accountId: string, item: LocalAudioItem): void {
+    writeFileSync(this.audioPath(accountId, item.id, item.format) + '.pin', String(Date.now() + 86400000), { mode: 0o600 });
+  }
+
+  private candidatePinned(accountId: string, id: string, format: 'mp3' | 'wav'): boolean {
+    try {
+      const expires = Number(readFileSync(this.audioPath(accountId, id, format) + '.pin', 'utf8'));
+      return !Number.isFinite(expires) || expires > Date.now();
+    } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ENOENT'; }
+  }
+
+  retainCandidate(accountId: string, id: string): LocalAudioItem {
+    assertLocalAudioWritesAllowed();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const item = this.validateItem(accountId, id);
+      this.pinCandidate(accountId, item);
+      this.db.exec('COMMIT');
+      return item;
+    } catch (e) { this.db.exec('ROLLBACK'); throw e; }
+  }
+
+  validateItem(accountId: string, id: string): LocalAudioItem {
+    const item = this.getItem(accountId, id);
+    if (!item) fail('clip_missing', id);
+    const p = this.audioPath(accountId, id, item.format);
+    if (!existsSync(p)) fail('clip_file_missing', id);
+    if (!lstatSync(p).isFile()) fail('clip_file_mismatch', id);
+    validateClipBytes(item, readFileSync(p));
+    return item;
   }
 
   /** 调用者必须在候选构造之前读取 expectedRevision。最终 CAS、字节校验、激活在同一写事务内。
    * 每套最多 5MiB，选择事务内读取/散列，避免校验到提交之间的 cleanup 竞争；LLM/TTS 不在事务内。
    */
   commitSet(accountId: string, keep: Array<{ slot: AnyAudioSlot; id: string }>,
-    gen: { tier: string; traits: string }, opts: { expectedRevision: number; minRevision?: number }): number | null {
+    gen: { tier: string; traits: string }, opts: { expectedRevision: number; minRevision?: number; guard?: () => void }): number | null {
     assertLocalAudioWritesAllowed();
     if (!Number.isSafeInteger(opts?.expectedRevision) || opts.expectedRevision < 0
       || (opts.minRevision !== undefined && (!Number.isSafeInteger(opts.minRevision) || opts.minRevision < 0))) fail('invalid_revision');
     this.db.exec('BEGIN IMMEDIATE');
     try {
       if (this.getState(accountId).revision !== opts.expectedRevision) fail('revision_conflict');
+      opts.guard?.();
       const ids = new Set<string>();
       const candidate = keep.map(k => {
         if (ids.has(k.id)) fail('duplicate_clip_id', k.id);
@@ -314,8 +350,9 @@ class LocalAudioStore {
         .all(accountId, Date.now() - STALE_ITEM_TTL_MS) as Array<{ id: string; format: 'mp3' | 'wav' }>;
       let removed = 0;
       for (const { id, format } of stale) {
+        if (this.candidatePinned(accountId, id, format)) continue;
         const p = this.audioPath(accountId, id, format);
-        try { if (existsSync(p)) unlinkSync(p); } catch { continue; }
+        try { if (existsSync(p)) unlinkSync(p); if (existsSync(p + '.pin')) unlinkSync(p + '.pin'); } catch { continue; }
         this.db.prepare('DELETE FROM local_audio_item WHERE account_id = ? AND id = ? AND active = 0').run(accountId, id);
         removed++;
       }
@@ -341,6 +378,7 @@ class LocalAudioStore {
       try {
         const p = this.audioPath(accountId, id, format);
         if (existsSync(p)) unlinkSync(p);
+        if (existsSync(p + '.pin')) unlinkSync(p + '.pin');
       } catch {
         /* 同上 */
       }

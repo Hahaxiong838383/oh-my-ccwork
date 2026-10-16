@@ -39,6 +39,9 @@ const keep = REQUIRED_SLOTS.flatMap(slot => [0, 1].map(n => {
 assert.equal(store.commitSet(acc, keep, gen, { expectedRevision: 0 }), 1);
 const snapshot = () => JSON.stringify({ state: store.getState(acc), active: store.listActive(acc) });
 let before = snapshot();
+assert.throws(() => store.commitSet(acc, keep, gen, { expectedRevision: 1, guard: () => { throw Object.assign(new Error('changed'), { code: 'relation_identity_changed' }); } }), code('relation_identity_changed'));
+assert.equal(snapshot(), before);
+assert.equal(store.publicationGuardVersion, 1);
 const rejectsUnchanged = (candidate: typeof keep, expected: string) => {
   assert.throws(() => store.commitSet(acc, candidate, gen, { expectedRevision: 1 }), code(expected));
   assert.equal(snapshot(), before);
@@ -91,6 +94,23 @@ process.env.LOCAL_AUDIO_WRITES_PAUSED = '0';
 assert.equal(store.commitSet(acc, keep, gen, { expectedRevision: 2 }), 3);
 assert.equal(store.getState(acc).last_applied_revision, 0);
 console.log('local-audio-integrity: immutable staging / real publication / CAS / maintenance / forward recovery PASS');
+
+// 曾经较老的inactive素材被复用时，需要独立清理租约；不得改created_at或已发布字段。
+process.env.LOCAL_AUDIO_WRITES_PAUSED = '0';
+const pinAccount = 'pin-fixture';
+store.writeAudio(pinAccount, item.id, wav, 'wav'); store.insertItem(pinAccount, item);
+const { DatabaseSync } = await import('node:sqlite');
+const pinDb = new DatabaseSync(process.env.PROFILE_DB_PATH!);
+pinDb.prepare('UPDATE local_audio_item SET created_at=? WHERE account_id=?').run(Date.now()-15*86400000,pinAccount);
+const pinnedBefore = store.getItem(pinAccount,item.id);
+assert.equal(typeof store.retainCandidate, 'function', 'candidate retention API must exist');
+store.retainCandidate(pinAccount,item.id);
+assert.equal(store.cleanup(pinAccount),0);
+assert.deepEqual(store.getItem(pinAccount,item.id),pinnedBefore);
+writeFileSync(store.audioPath(pinAccount,item.id,'wav')+'.pin','0');
+assert.equal(store.cleanup(pinAccount),1);
+assert.equal(store.getItem(pinAccount,item.id),null);
+pinDb.close();
 
 // 仅内存 HTTP 请求 + 临时 SQLite，绝不发送到公网或伪造生产 applied。
 const sn = 'BJP00326060100009991', otherSn = 'BJP00326060100009992', httpAcc = `device-${sn}`;

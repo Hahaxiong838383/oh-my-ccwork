@@ -84,6 +84,7 @@ export async function stageDeviceReplyClips(accountId: string): Promise<DeviceRe
     const text = DEVICE_REPLY_TEXTS[slot];
     const existing = localAudioStore.findByText(accountId, slot, text, 'wav');
     if (existing) {
+      localAudioStore.retainCandidate(accountId, existing.id);
       rows.push({ slot, text, id: existing.id, sha256: existing.sha256, bytes: existing.bytes, duration_ms: existing.duration_ms, origin: 'reused' });
       continue;
     }

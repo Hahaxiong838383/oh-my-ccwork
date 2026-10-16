@@ -469,6 +469,7 @@ export async function buildSlot(
     for (const st of localAudioStore.listStagedBySlot(accountId, slot)) {
       if (keep.length >= target) break;
       if (seenTexts.has(st.text)) continue;
+      localAudioStore.retainCandidate(accountId, st.id);
       seenTexts.add(st.text);
       keep.push({ slot, id: st.id, text: st.text });
     }
@@ -492,6 +493,7 @@ export async function buildSlot(
     // J4 复用：同 slot 同 text 直接复活旧条目，不重合成（TTS 非确定性，重合成=白换 id）
     const existing = localAudioStore.findByText(accountId, slot, gated.text);
     if (existing) {
+      localAudioStore.retainCandidate(accountId, existing.id);
       keep.push({ slot, id: existing.id, text: existing.text });
       continue;
     }
@@ -533,6 +535,7 @@ export async function buildSlot(
       .filter((s) => !keep.some((k) => k.id === s.id) && !seenTexts.has(s.text));
     for (const s of staged) {
       if (keep.length >= target) break;
+      localAudioStore.retainCandidate(accountId, s.id);
       keep.push({ slot, id: s.id, text: s.text });
       seenTexts.add(s.text);
     }
@@ -544,6 +547,7 @@ export async function buildSlot(
 
   // 仍不够保底 → 该 slot 沿用旧 active 条目（合同 §4：保持上一版不切换）
   if (keep.length < MIN_ITEMS_PER_SLOT && oldActive.length >= MIN_ITEMS_PER_SLOT) {
+    for (const item of oldActive.slice(0, target)) localAudioStore.retainCandidate(accountId, item.id);
     return {
       slot,
       keep: oldActive.slice(0, target).map((i) => ({ slot, id: i.id, text: i.text })),
