@@ -1,3 +1,4 @@
+import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
 /**
  * 设备回复本地短句（合同 v3.1 §5 · codex 阶段 B GO §3 定稿十八条，2026-09-05）。
  *
@@ -76,6 +77,7 @@ export function activeDeviceReplyKeep(accountId: string): Array<{ slot: DeviceRe
 
 /** 十八条合成/复用入 staging（active=0）。同文本已有 wav 条目直接复用（TTS 非确定性，重合成=白换 id）。 */
 export async function stageDeviceReplyClips(accountId: string): Promise<DeviceReplyStageResult> {
+  assertLocalAudioWritesAllowed();
   const rows: DeviceReplyRow[] = [];
   const rejected: Array<{ slot: DeviceReplySlot; reason: string }> = [];
   for (const slot of DEVICE_REPLY_SLOTS) {

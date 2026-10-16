@@ -1,3 +1,4 @@
+import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
 import crypto from 'node:crypto';
 import { callExtractionLlm } from './llm-extract.js';
 import { isCrisisContent } from './memory-safety-filter.js';
@@ -455,6 +456,7 @@ export async function buildSlot(
   target = PUBLISH_ITEMS_PER_SLOT,
   reuseStagingFirst = false,
 ): Promise<SlotBuildResult> {
+  assertLocalAudioWritesAllowed();
   const spec = SLOT_SPECS[slot];
   // WAV 迁移铁律：复用/补足/兜底全链只认 wav 条目（MP3 存量只作下载存量与回滚锚，绝不回流进新套）
   const oldActive = localAudioStore.listActive(accountId).filter((i) => i.slot === slot && i.format === 'wav');
@@ -598,6 +600,7 @@ export async function runLocalAudioForAccount(
   opts?: { force?: boolean; reuseStagingFirst?: boolean },
 ): Promise<{ ok: boolean; skipped?: string; trigger?: string; revision?: number | null; detail?: string }> {
   try {
+    if (process.env.LOCAL_AUDIO_WRITES_PAUSED === '1') return { ok: true, skipped: 'writes_paused' };
     const rel = relationStateStore.getState(accountId);
     const traits = traitStore.get(accountId);
     const daysKnown = rel ? Math.max(0, Math.floor((Date.now() - rel.first_seen_at) / 86_400_000)) : 0;
@@ -677,7 +680,7 @@ export async function runLocalAudioForAccount(
     const revision = localAudioStore.commitSet(accountId, keepAll, {
       tier: tierNow,
       traits: JSON.stringify(traits),
-    });
+    }, { expectedRevision: state.revision });
 
     if (revision !== null) {
       // 成长账本：每个内容变化的 slot 记一条（因果白盒，合同 §6）

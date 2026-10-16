@@ -1203,6 +1203,10 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
     // Android 的合同冻结物（0010 G1 rev5 不可变），「重置人格记账」场景清音频=过度执行。
     // 默认(all)保留原六样语义（换孩子/儿童数据删除权场景仍需全清）。
     const scope = c.req.query('scope')?.trim() || 'all';
+    // 在任何关联表删除之前拒绝，避免维护门只挡音频而造成部分重置。
+    if (scope !== 'persona' && process.env.LOCAL_AUDIO_WRITES_PAUSED === '1') {
+      return c.json({ ok: false, error: '本地回复语正在维护，请稍后重试', code: 'local_audio_writes_paused' }, 503);
+    }
     const cleared = relationStateStore.clear(device.account_id);
     const styleCleared = stylePoolStore.clear(device.account_id);
     const insightCleared = childInsightStore.clear(device.account_id);

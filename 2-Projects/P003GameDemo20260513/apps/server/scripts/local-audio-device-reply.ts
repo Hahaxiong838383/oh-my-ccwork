@@ -52,7 +52,7 @@ if (mode === 'publish') {
     ...localAudioStore.listActive(accountId).map((i) => ({ slot: i.slot, id: i.id })),
     ...rows.map((r) => ({ slot: r.slot as (typeof DEVICE_REPLY_SLOTS)[number], id: r.id })),
   ];
-  const revision = localAudioStore.commitSet(accountId, keep, { tier: state.gen_tier, traits: state.gen_traits });
+  const revision = localAudioStore.commitSet(accountId, keep, { tier: state.gen_tier, traits: state.gen_traits }, { expectedRevision: state.revision });
   console.log(`published: revision ${state.revision} -> ${revision ?? '(unchanged)'}`);
 }
 

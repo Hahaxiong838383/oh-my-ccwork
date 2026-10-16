@@ -1,3 +1,4 @@
+import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
 /**
  * G1 设置引导三句（Android codex《G1设置引导正式小可音色_服务端离线语音联调需求》2026-09-17；
  * 川哥 2026-09-17 18:57 拍板 A 方案：音色/语速/音量基线不动，端侧放宽上限；先灰度 …03800006）。
@@ -66,6 +67,7 @@ export async function resolveG1SettingsClips(
   accountIds: string[],
   opts: ResolveG1SettingsOpts = {},
 ): Promise<{ clips: Partial<Record<G1SettingsSlot, G1SettingsClip>>; rejected: Array<{ slot: G1SettingsSlot; reason: string }> }> {
+  assertLocalAudioWritesAllowed();
   const synth = opts.synthesize ?? synthesizeXfyunTtsWav;
   const clips: Partial<Record<G1SettingsSlot, G1SettingsClip>> = {};
   const rejected: Array<{ slot: G1SettingsSlot; reason: string }> = [];
@@ -107,6 +109,7 @@ export async function resolveG1SettingsClips(
  * INSERT OR REPLACE 且 active=0，重跑绝不能把现役条目打回 staging。
  */
 export function stageG1SettingsClips(accountIds: string[], clips: Partial<Record<G1SettingsSlot, G1SettingsClip>>): G1SettingsRow[] {
+  assertLocalAudioWritesAllowed();
   const rows: G1SettingsRow[] = [];
   for (const account_id of accountIds) {
     for (const slot of G1_SETTINGS_SLOTS) {
@@ -164,6 +167,6 @@ export function publishG1Settings(accountId: string, rows: Array<Pick<G1Settings
     seen.add(key);
     keep.push(k);
   }
-  const after = localAudioStore.commitSet(accountId, keep, { tier: state.gen_tier, traits: state.gen_traits });
+  const after = localAudioStore.commitSet(accountId, keep, { tier: state.gen_tier, traits: state.gen_traits }, { expectedRevision: state.revision });
   return { before: state.revision, after };
 }
