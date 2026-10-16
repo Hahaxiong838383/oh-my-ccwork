@@ -1,0 +1,616 @@
+{
+  "authorization": "2026-10-16 用户明确全部设备均内测，要求全量发布；不再等待038单机验收后才扩大发布",
+  "source_commit": "181f83d328fa5a826e290b07a10fa48cd64a4043",
+  "safety_commit": "2a643f8fa5e3c878aed8611ab69d76f4fa30fcf7",
+  "backup_root": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z",
+  "preparation": {
+    "prepared_at": "2026-10-16T14:41:43.050Z",
+    "authorization": "user_all_devices_internal_testing_20261016",
+    "dir": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z",
+    "scope_count": 14,
+    "results": [
+      {
+        "suffix": "00000001",
+        "previous_revision": 11,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00000001",
+        "before_sha": "6bbcdf5e344c1dc66a5916ce0ffec6d796eef908973a9096f111987d6fa11f2f",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00000001",
+        "recovery_sha": "6bbcdf5e344c1dc66a5916ce0ffec6d796eef908973a9096f111987d6fa11f2f"
+      },
+      {
+        "suffix": "00000002",
+        "previous_revision": 12,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00000002",
+        "before_sha": "472431b52ae42de8e5a650db0b395d0201956d9eca043c749c853877f9b42978",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00000002",
+        "recovery_sha": "472431b52ae42de8e5a650db0b395d0201956d9eca043c749c853877f9b42978"
+      },
+      {
+        "suffix": "00100004",
+        "previous_revision": 13,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00100004",
+        "before_sha": "5a5b33f745d5ddb0697dfdb9ff6564187da58c74ae8407fe14d670269e9fb890",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00100004",
+        "recovery_sha": "5a5b33f745d5ddb0697dfdb9ff6564187da58c74ae8407fe14d670269e9fb890"
+      },
+      {
+        "suffix": "00100010",
+        "previous_revision": 17,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00100010",
+        "before_sha": "899253f8eee7b382379a57b4555ce591ecfc162476be2e9dd5b40adedbffde1e",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00100010",
+        "recovery_sha": "899253f8eee7b382379a57b4555ce591ecfc162476be2e9dd5b40adedbffde1e"
+      },
+      {
+        "suffix": "00200003",
+        "previous_revision": 18,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00200003",
+        "before_sha": "2ea45e9ccba4b87851d91d713b3c3d161c4f6b24d6f0af4906b4facb7ef277cd",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00200003",
+        "recovery_sha": "2ea45e9ccba4b87851d91d713b3c3d161c4f6b24d6f0af4906b4facb7ef277cd"
+      },
+      {
+        "suffix": "03800006",
+        "previous_revision": 16,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-03800006",
+        "before_sha": "50ea384b50c2edc98d484b21142d3c05582e7bd0a5d46ff2fbbb33bd07ca1ce6",
+        "clips_before": 31,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-03800006",
+        "recovery_sha": "50ea384b50c2edc98d484b21142d3c05582e7bd0a5d46ff2fbbb33bd07ca1ce6"
+      },
+      {
+        "suffix": "04800006",
+        "previous_revision": 11,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-04800006",
+        "before_sha": "1caf8daf9b343775f0c57adf65009fae3094bf1a6abab6afac7881c0e9557b26",
+        "clips_before": 27,
+        "valid_before": false,
+        "action": "repair",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/recovery-04800006",
+        "recovery_sha": "356302e22542f7455ddc050a0f257ad6764197405e0f2daa39348847d504f753",
+        "candidate_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/candidate-04800006",
+        "candidate_sha": "778679738e8ca0ef9f8579487e8bafa5acf88b1e67d93595f75944af7a40fe1e"
+      },
+      {
+        "suffix": "00800010",
+        "previous_revision": 10,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00800010",
+        "before_sha": "56ba936a90da3845159ebab792a950b35ec8e6c1abbb9f398cb7e7ae8adf4c77",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-00800010",
+        "recovery_sha": "56ba936a90da3845159ebab792a950b35ec8e6c1abbb9f398cb7e7ae8adf4c77"
+      },
+      {
+        "suffix": "02000002",
+        "previous_revision": 13,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000002",
+        "before_sha": "dd6acc74686a6278fc4457735ac354093314e59041edd192e68372af8469eefb",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000002",
+        "recovery_sha": "dd6acc74686a6278fc4457735ac354093314e59041edd192e68372af8469eefb"
+      },
+      {
+        "suffix": "02000004",
+        "previous_revision": 7,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000004",
+        "before_sha": "91d7e3718572004a239dc7c8c2dd2102be7d2c0238901a15fe96d8fbdf3b81e6",
+        "clips_before": 27,
+        "valid_before": false,
+        "action": "repair",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/recovery-02000004",
+        "recovery_sha": "4f48bfa0d7457037fb5cb111dc77f06f5ec367b3da63c73eab264384b274cadd",
+        "candidate_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/candidate-02000004",
+        "candidate_sha": "0fc242ffd242a37d8420ab55a8201da7bd0a8b4fe1da4a6d45f22c9c8b9f8190"
+      },
+      {
+        "suffix": "02000020",
+        "previous_revision": 5,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000020",
+        "before_sha": "8ad7392a0b57139178b9cecc4acb4f98045c5e9100710dfcc8037f464e5aada6",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000020",
+        "recovery_sha": "8ad7392a0b57139178b9cecc4acb4f98045c5e9100710dfcc8037f464e5aada6"
+      },
+      {
+        "suffix": "02000025",
+        "previous_revision": 4,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000025",
+        "before_sha": "13df1bc5bd70286e68be9e01b29d3cbeea2d8e9635dd017552415873a622fffe",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000025",
+        "recovery_sha": "13df1bc5bd70286e68be9e01b29d3cbeea2d8e9635dd017552415873a622fffe"
+      },
+      {
+        "suffix": "02000053",
+        "previous_revision": 3,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000053",
+        "before_sha": "a53694cf513f43bb6d2e86961cdf7f095e643efa994b9fcd72d20a22951e94ea",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-02000053",
+        "recovery_sha": "a53694cf513f43bb6d2e86961cdf7f095e643efa994b9fcd72d20a22951e94ea"
+      },
+      {
+        "suffix": "01700006",
+        "previous_revision": 14,
+        "before_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-01700006",
+        "before_sha": "14ea2856d7af2f8a1e20559e55aafba0a8cc9fe52d35fea5e4b77e7fe4283f1e",
+        "clips_before": 28,
+        "valid_before": true,
+        "action": "keep_verified",
+        "recovery_bundle": "/opt/p003/server/backups/local-audio-integrity/full-rollout-20261016T144143050Z/before-01700006",
+        "recovery_sha": "14ea2856d7af2f8a1e20559e55aafba0a8cc9fe52d35fea5e4b77e7fe4283f1e"
+      }
+    ],
+    "source_commit": "181f83d328fa5a826e290b07a10fa48cd64a4043",
+    "safety_commit": "2a643f8fa5e3c878aed8611ab69d76f4fa30fcf7",
+    "profile_backup_sha": "082a05bb4471f3ecd82694cc65e697fc4317d4857acaa0ee354ffb113f37b2d5",
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 3752181,
+        "status": "online",
+        "restarts": 23
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "status": "online",
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "status": "online",
+        "restarts": 5
+      }
+    ]
+  },
+  "publication": {
+    "started_at": "2026-10-16T14:42:34.042Z",
+    "authorization": "user_full_rollout_all_internal_devices",
+    "results": [
+      {
+        "device_suffix": "00000001",
+        "action": "kept_valid_package",
+        "revision": 11
+      },
+      {
+        "device_suffix": "00000002",
+        "action": "kept_valid_package",
+        "revision": 12
+      },
+      {
+        "device_suffix": "00100004",
+        "action": "kept_valid_package",
+        "revision": 13
+      },
+      {
+        "device_suffix": "00100010",
+        "action": "kept_valid_package",
+        "revision": 17
+      },
+      {
+        "device_suffix": "00200003",
+        "action": "kept_valid_package",
+        "revision": 18
+      },
+      {
+        "device_suffix": "03800006",
+        "action": "kept_valid_package",
+        "revision": 16
+      },
+      {
+        "mode": "publish",
+        "device_suffix": "04800006",
+        "previous_revision": 11,
+        "revision": 12,
+        "changed": true,
+        "bundle_sha256": "778679738e8ca0ef9f8579487e8bafa5acf88b1e67d93595f75944af7a40fe1e",
+        "clips": 28,
+        "applied_not_modified": true
+      },
+      {
+        "device_suffix": "00800010",
+        "action": "kept_valid_package",
+        "revision": 10
+      },
+      {
+        "device_suffix": "02000002",
+        "action": "kept_valid_package",
+        "revision": 13
+      },
+      {
+        "mode": "publish",
+        "device_suffix": "02000004",
+        "previous_revision": 7,
+        "revision": 8,
+        "changed": true,
+        "bundle_sha256": "0fc242ffd242a37d8420ab55a8201da7bd0a8b4fe1da4a6d45f22c9c8b9f8190",
+        "clips": 28,
+        "applied_not_modified": true
+      },
+      {
+        "device_suffix": "02000020",
+        "action": "kept_valid_package",
+        "revision": 5
+      },
+      {
+        "device_suffix": "02000025",
+        "action": "kept_valid_package",
+        "revision": 4
+      },
+      {
+        "device_suffix": "02000053",
+        "action": "kept_valid_package",
+        "revision": 3
+      },
+      {
+        "device_suffix": "01700006",
+        "action": "kept_valid_package",
+        "revision": 14
+      }
+    ],
+    "verified": [
+      {
+        "suffix": "00000001",
+        "revision": 11,
+        "last_applied_revision": 1,
+        "last_applied_at": 1788675272615,
+        "clips": 28,
+        "bytes": 2689232,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "00000002",
+        "revision": 12,
+        "last_applied_revision": 7,
+        "last_applied_at": 1790574115621,
+        "clips": 28,
+        "bytes": 2716112,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "00100004",
+        "revision": 13,
+        "last_applied_revision": 13,
+        "last_applied_at": 1792145114810,
+        "clips": 28,
+        "bytes": 2595152,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "00100010",
+        "revision": 17,
+        "last_applied_revision": 16,
+        "last_applied_at": 1791618175797,
+        "clips": 28,
+        "bytes": 2604752,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "00200003",
+        "revision": 18,
+        "last_applied_revision": 12,
+        "last_applied_at": 1789935192388,
+        "clips": 28,
+        "bytes": 2675792,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "03800006",
+        "revision": 16,
+        "last_applied_revision": 15,
+        "last_applied_at": 1792123229460,
+        "clips": 31,
+        "bytes": 3330644,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "04800006",
+        "revision": 12,
+        "last_applied_revision": 10,
+        "last_applied_at": 1792152263335,
+        "clips": 28,
+        "bytes": 2721872,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "00800010",
+        "revision": 10,
+        "last_applied_revision": 10,
+        "last_applied_at": 1792128943743,
+        "clips": 28,
+        "bytes": 2671952,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "02000002",
+        "revision": 13,
+        "last_applied_revision": 0,
+        "last_applied_at": 0,
+        "clips": 28,
+        "bytes": 2673872,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "02000004",
+        "revision": 8,
+        "last_applied_revision": 6,
+        "last_applied_at": 1792014486671,
+        "clips": 28,
+        "bytes": 2597072,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "02000020",
+        "revision": 5,
+        "last_applied_revision": 1,
+        "last_applied_at": 1790672600573,
+        "clips": 28,
+        "bytes": 2741072,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "02000025",
+        "revision": 4,
+        "last_applied_revision": 4,
+        "last_applied_at": 1792160690206,
+        "clips": 28,
+        "bytes": 2618192,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "02000053",
+        "revision": 3,
+        "last_applied_revision": 3,
+        "last_applied_at": 1792114476030,
+        "clips": 28,
+        "bytes": 2623952,
+        "all_slots_and_files_valid": true
+      },
+      {
+        "suffix": "01700006",
+        "revision": 14,
+        "last_applied_revision": 0,
+        "last_applied_at": 0,
+        "clips": 28,
+        "bytes": 2716112,
+        "all_slots_and_files_valid": true
+      }
+    ],
+    "completed_at": "2026-10-16T14:42:34.595Z",
+    "active_clips": 395,
+    "scope_count": 14
+  },
+  "activation": {
+    "started_at": "2026-10-16T14:43:09.525742+00:00",
+    "before": {
+      "p003-voice": {
+        "pid": 3752181,
+        "restarts": 23,
+        "status": "online",
+        "writes_paused": "1"
+      },
+      "kidshub-voice": {
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online",
+        "writes_paused": null
+      },
+      "p003-analytics": {
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online",
+        "writes_paused": null
+      }
+    },
+    "rooms_before": 0,
+    "global_local_audio_enabled": true,
+    "allowlist_unrestricted": true,
+    "completed_at": "2026-10-16T14:43:11.706887+00:00",
+    "after": {
+      "p003-voice": {
+        "pid": 3873258,
+        "restarts": 24,
+        "status": "online",
+        "writes_paused": "0"
+      },
+      "kidshub-voice": {
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online",
+        "writes_paused": null
+      },
+      "p003-analytics": {
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online",
+        "writes_paused": null
+      }
+    },
+    "status": "all_devices_enabled_writes_resumed",
+    "health": "ok",
+    "daily_timer_ready": true,
+    "pm2_persistence_verified": true,
+    "unrelated_env_preserved": true
+  },
+  "http_verification": {
+    "at": "2026-10-16T14:43:42.925Z",
+    "probe": "server_http_without_applied_revision_parameter",
+    "scope_count": 14,
+    "results": [
+      {
+        "suffix": "00000001",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 11,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 1,
+        "last_applied_at": 1788675272615
+      },
+      {
+        "suffix": "00000002",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 12,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 7,
+        "last_applied_at": 1790574115621
+      },
+      {
+        "suffix": "00100004",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 13,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 13,
+        "last_applied_at": 1792145114810
+      },
+      {
+        "suffix": "00100010",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 17,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 16,
+        "last_applied_at": 1791618175797
+      },
+      {
+        "suffix": "00200003",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 18,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 12,
+        "last_applied_at": 1789935192388
+      },
+      {
+        "suffix": "03800006",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 16,
+        "clips": 31,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 15,
+        "last_applied_at": 1792123229460
+      },
+      {
+        "suffix": "04800006",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 12,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "public_manifest_and_new_audio_verified": true,
+        "last_applied_revision": 10,
+        "last_applied_at": 1792152263335
+      },
+      {
+        "suffix": "00800010",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 10,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 10,
+        "last_applied_at": 1792128943743
+      },
+      {
+        "suffix": "02000002",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 13,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 0,
+        "last_applied_at": 0
+      },
+      {
+        "suffix": "02000004",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 8,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "public_manifest_and_new_audio_verified": true,
+        "last_applied_revision": 6,
+        "last_applied_at": 1792014486671
+      },
+      {
+        "suffix": "02000020",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 5,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 1,
+        "last_applied_at": 1790672600573
+      },
+      {
+        "suffix": "02000025",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 4,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 4,
+        "last_applied_at": 1792160690206
+      },
+      {
+        "suffix": "02000053",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 3,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 3,
+        "last_applied_at": 1792114476030
+      },
+      {
+        "suffix": "01700006",
+        "manifest_status": 200,
+        "enabled": true,
+        "revision": 14,
+        "clips": 28,
+        "sample_audio_sha_wav_valid": true,
+        "last_applied_revision": 0,
+        "last_applied_at": 0
+      }
+    ],
+    "all_manifests_enabled_and_valid": true
+  },
+  "device_applied_or_playback_fabricated": false,
+  "nightly_cycle_and_24h_validation_complete": false
+}
