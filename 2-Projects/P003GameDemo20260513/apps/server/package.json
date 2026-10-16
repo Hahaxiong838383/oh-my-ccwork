@@ -20,6 +20,8 @@
     "test:interests": "NODE_OPTIONS=--experimental-sqlite tsx scripts/interests.test.ts",
     "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts",
     "test:persona": "NODE_OPTIONS=--experimental-sqlite tsx scripts/persona-state.test.ts",
+    "test:local-audio-release": "node --experimental-sqlite --import tsx scripts/local-audio-release.test.ts",
+    "test:local-audio-concurrency": "node --experimental-sqlite --import tsx scripts/local-audio-concurrency.test.ts",
     "test:local-audio-integrity": "node --experimental-sqlite --import tsx scripts/local-audio-integrity.test.ts",
     "test:local-audio": "NODE_OPTIONS=--experimental-sqlite tsx scripts/local-audio.test.ts",
     "test:memory-extract": "NODE_OPTIONS=--experimental-sqlite tsx scripts/memory-extract.test.ts",

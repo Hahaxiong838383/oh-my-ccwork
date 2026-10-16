@@ -149,3 +149,9 @@ export function validatePublicationItems(items: ReadonlyArray<LocalAudioItem>): 
 export function sameClipMetadata(a: Omit<LocalAudioItem, 'created_at' | 'active'>, b: Omit<LocalAudioItem, 'created_at' | 'active'>): boolean {
   return (['slot', 'id', 'text', 'sha256', 'bytes', 'duration_ms', 'format'] as const).every(k => a[k] === b[k]);
 }
+
+/** ID 标识场景及不可变播放元信息；文件SHA仍独立表示音频字节。 */
+export function deriveClipId(item: Pick<LocalAudioItem, 'slot' | 'text' | 'sha256' | 'bytes' | 'duration_ms' | 'format'>): string {
+  return sha256(JSON.stringify(['la-v2', item.slot, item.format, item.text.trim().normalize('NFC'),
+    item.sha256, item.bytes, item.duration_ms, 24000, 1, 16])).slice(0, 16);
+}

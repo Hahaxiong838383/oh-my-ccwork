@@ -49,7 +49,7 @@ if (mode === 'publish') {
   }
   const state = localAudioStore.getState(accountId);
   const keep = [
-    ...localAudioStore.listActive(accountId).map((i) => ({ slot: i.slot, id: i.id })),
+    ...localAudioStore.listActive(accountId).filter(i => !rows.some(r => r.slot === i.slot)).map((i) => ({ slot: i.slot, id: i.id })),
     ...rows.map((r) => ({ slot: r.slot as (typeof DEVICE_REPLY_SLOTS)[number], id: r.id })),
   ];
   const revision = localAudioStore.commitSet(accountId, keep, { tier: state.gen_tier, traits: state.gen_traits }, { expectedRevision: state.revision });

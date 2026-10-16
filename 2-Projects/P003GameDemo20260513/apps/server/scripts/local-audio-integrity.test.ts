@@ -39,6 +39,9 @@ const keep = REQUIRED_SLOTS.flatMap(slot => [0, 1].map(n => {
 assert.equal(store.commitSet(acc, keep, gen, { expectedRevision: 0 }), 1);
 const snapshot = () => JSON.stringify({ state: store.getState(acc), active: store.listActive(acc) });
 let before = snapshot();
+assert.throws(() => store.commitSet(acc, keep, gen, { expectedRevision: 1, guard: () => { throw Object.assign(new Error('changed'), { code: 'relation_identity_changed' }); } }), code('relation_identity_changed'));
+assert.equal(snapshot(), before);
+assert.equal(store.publicationGuardVersion, 1);
 const rejectsUnchanged = (candidate: typeof keep, expected: string) => {
   assert.throws(() => store.commitSet(acc, candidate, gen, { expectedRevision: 1 }), code(expected));
   assert.equal(snapshot(), before);
@@ -92,6 +95,23 @@ assert.equal(store.commitSet(acc, keep, gen, { expectedRevision: 2 }), 3);
 assert.equal(store.getState(acc).last_applied_revision, 0);
 console.log('local-audio-integrity: immutable staging / real publication / CAS / maintenance / forward recovery PASS');
 
+// 曾经较老的inactive素材被复用时，需要独立清理租约；不得改created_at或已发布字段。
+process.env.LOCAL_AUDIO_WRITES_PAUSED = '0';
+const pinAccount = 'pin-fixture';
+store.writeAudio(pinAccount, item.id, wav, 'wav'); store.insertItem(pinAccount, item);
+const { DatabaseSync } = await import('node:sqlite');
+const pinDb = new DatabaseSync(process.env.PROFILE_DB_PATH!);
+pinDb.prepare('UPDATE local_audio_item SET created_at=? WHERE account_id=?').run(Date.now()-15*86400000,pinAccount);
+const pinnedBefore = store.getItem(pinAccount,item.id);
+assert.equal(typeof store.retainCandidate, 'function', 'candidate retention API must exist');
+store.retainCandidate(pinAccount,item.id);
+assert.equal(store.cleanup(pinAccount),0);
+assert.deepEqual(store.getItem(pinAccount,item.id),pinnedBefore);
+writeFileSync(store.audioPath(pinAccount,item.id,'wav')+'.pin','0');
+assert.equal(store.cleanup(pinAccount),1);
+assert.equal(store.getItem(pinAccount,item.id),null);
+pinDb.close();
+
 // 仅内存 HTTP 请求 + 临时 SQLite，绝不发送到公网或伪造生产 applied。
 const sn = 'BJP00326060100009991', otherSn = 'BJP00326060100009992', httpAcc = `device-${sn}`;
 process.env.AUTH_JWT_SECRET = 'local-audio-test-secret-only';
@@ -120,3 +140,21 @@ assert.equal((await localAudioDeviceRoute.request(`/file/${keep[0].id}`, { heade
 assert.equal((await localAudioDeviceRoute.request('/file/ffffffffffffffff', { headers: auth })).status, 404);
 assert.equal(store.getState(httpAcc).last_applied_revision, 0);
 console.log('local-audio-integrity: HTTP auth / owner / legacy ID / SHA / ETag / read during maintenance PASS');
+
+process.env.LOCAL_AUDIO_WRITES_PAUSED = '0';
+assert.equal(typeof store.stageClipImmutable, 'function', 'namespace staging API must exist');
+const sharedA = store.stageClipImmutable(acc, { slot: 'greeting.cover_open', text: '嘿你来啦', audio: wav, format: 'wav', durationMs: 1000 });
+const sharedB = store.stageClipImmutable(acc, { slot: 'greeting.presence_return', text: '嘿你来啦', audio: wav, format: 'wav', durationMs: 1000 });
+assert.notEqual(sharedA.id, sharedB.id);
+assert.equal(sharedA.sha256, sharedB.sha256);
+assert.notEqual(sharedA.id, sharedA.sha256.slice(0, 16));
+assert.deepEqual(store.stageClipImmutable(acc, { slot: 'greeting.cover_open', text: '嘿你来啦', audio: wav, format: 'wav', durationMs: 1000 }), sharedA);
+// metadata 改变必须换ID；真实旧ID和slot/text/SHA完全相同则原样复用。
+assert.equal(store.stageClipImmutable(acc, { slot: item.slot, text: item.text, audio: wav, format: 'wav', durationMs: 1000 }).id, item.id);
+const isolatedKeep = keep.map((k, i) => i === 2 ? { slot: sharedA.slot, id: sharedA.id } : i === 4 ? { slot: sharedB.slot, id: sharedB.id } : k);
+assert.equal(store.commitSet(acc, isolatedKeep, gen, { expectedRevision: 3 }), 4);
+assert.equal(store.listActive(acc).filter(i => i.slot === 'greeting.cover_open').length, 2);
+assert.equal(store.listActive(acc).filter(i => i.slot === 'greeting.presence_return').length, 2);
+process.env.LOCAL_AUDIO_WRITES_PAUSED = '1';
+assert.throws(() => store.stageClipImmutable(acc, { slot: item.slot, text: item.text, audio: wav, format: 'wav', durationMs: 1000 }), code('local_audio_writes_paused'));
+console.log('local-audio-integrity: namespaced IDs / cross-slot shared bytes / legacy reuse PASS');

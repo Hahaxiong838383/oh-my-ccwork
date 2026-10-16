@@ -9,7 +9,6 @@ import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
  *
  * 与 worker `pipeline.rs::device_reply` 话术表同源：改文本先改合同再两端同步。
  */
-import crypto from 'node:crypto';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
 import {
   DEVICE_REPLY_SLOTS,
@@ -84,6 +83,7 @@ export async function stageDeviceReplyClips(accountId: string): Promise<DeviceRe
     const text = DEVICE_REPLY_TEXTS[slot];
     const existing = localAudioStore.findByText(accountId, slot, text, 'wav');
     if (existing) {
+      localAudioStore.retainCandidate(accountId, existing.id);
       rows.push({ slot, text, id: existing.id, sha256: existing.sha256, bytes: existing.bytes, duration_ms: existing.duration_ms, origin: 'reused' });
       continue;
     }
@@ -100,10 +100,8 @@ export async function stageDeviceReplyClips(accountId: string): Promise<DeviceRe
       rejected.push({ slot, reason: `file_too_big:${tts.audio.length}` });
       continue;
     }
-    const sha256 = crypto.createHash('sha256').update(tts.audio).digest('hex');
-    const id = sha256.slice(0, 16);
-    localAudioStore.writeAudio(accountId, id, tts.audio, 'wav');
-    localAudioStore.insertItem(accountId, { slot, id, text, sha256, bytes: tts.audio.length, duration_ms: tts.durationMs, format: 'wav' });
+    const item = localAudioStore.stageClipImmutable(accountId, { slot, text, audio: tts.audio, durationMs: tts.durationMs, format: 'wav' });
+    const { id, sha256 } = item;
     rows.push({ slot, text, id, sha256, bytes: tts.audio.length, duration_ms: tts.durationMs, origin: 'synthesized' });
   }
   return { rows, rejected };

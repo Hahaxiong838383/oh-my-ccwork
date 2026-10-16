@@ -7,12 +7,11 @@ import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
  * 发布必须显式（scripts/local-audio-g1-settings.ts publish → 新的不可变 revision）；日常再生成只搬运已 active
  * 的条目（activeG1SettingsKeep → generator.carriedFrozenKeep）。
  *
- * 与十八条不同的一点：**合成一次、同一份字节扇出到各账号**（id = sha256 前 16 位 → 同字节同 id），
+ * 与十八条不同的一点：**合成一次、同一份字节扇出到各账号**（同场景、文本与字节得到稳定 ID），
  * 全机队与 APK 内置兜底逐字节相同（讯飞 TTS 非确定性，按账号各合成会得到不同字节）。
  * 上限（A 方案）：单文件 ≤400 KiB；时长 enter ≤3000 / intro ≤8000 / exit ≤5500 ms。
  * 物理：WAV PCM16/mono/24 kHz 每秒 48 000 B，160 KiB 只装 3.4 s——原需求「≤160 KiB + intro 7 s」互斥，端侧按本上限放宽。
  */
-import crypto from 'node:crypto';
 import { synthesizeXfyunTtsWav, parseWavHeader } from './providers/xfyun-tts.js';
 import { localAudioStore, G1_SETTINGS_SLOTS, type G1SettingsSlot } from './local-audio-store.js';
 
@@ -81,6 +80,7 @@ export async function resolveG1SettingsClips(
         const existing = localAudioStore.findByText(acc, slot, text, 'wav');
         const audio = existing ? localAudioStore.readAudio(acc, existing.id, 'wav') : null;
         if (existing && audio) {
+          localAudioStore.retainCandidate(acc, existing.id);
           candidate = { audio, origin: 'reused' };
           break;
         }
@@ -104,10 +104,7 @@ export async function resolveG1SettingsClips(
   return { clips, rejected };
 }
 
-/**
- * 扇出入 staging：每账号每槽一行，id = sha256 前 16 位。已有同 id 条目（含已 active）原样保留——insertItem 是
- * INSERT OR REPLACE 且 active=0，重跑绝不能把现役条目打回 staging。
- */
+/** 同一份冻结音频按账号扇出；统一不可变入口保留合法旧ID，跨槽相同字节不会覆盖。 */
 export function stageG1SettingsClips(accountIds: string[], clips: Partial<Record<G1SettingsSlot, G1SettingsClip>>): G1SettingsRow[] {
   assertLocalAudioWritesAllowed();
   const rows: G1SettingsRow[] = [];
@@ -115,17 +112,11 @@ export function stageG1SettingsClips(accountIds: string[], clips: Partial<Record
     for (const slot of G1_SETTINGS_SLOTS) {
       const clip = clips[slot];
       if (!clip) continue;
-      const sha256 = crypto.createHash('sha256').update(clip.audio).digest('hex');
-      const id = sha256.slice(0, 16);
       const text = G1_SETTINGS_TEXTS[slot];
-      const existing = localAudioStore.getItem(account_id, id);
-      if (existing) {
-        rows.push({ account_id, slot, text, id, sha256, bytes: existing.bytes, duration_ms: existing.duration_ms, origin: 'existing' });
-        continue;
-      }
-      localAudioStore.writeAudio(account_id, id, clip.audio, 'wav');
-      localAudioStore.insertItem(account_id, { slot, id, text, sha256, bytes: clip.audio.length, duration_ms: clip.durationMs, format: 'wav' });
-      rows.push({ account_id, slot, text, id, sha256, bytes: clip.audio.length, duration_ms: clip.durationMs, origin: clip.origin });
+      const old = localAudioStore.findByText(account_id, slot, text, 'wav');
+      const item = localAudioStore.stageClipImmutable(account_id, { slot, text, audio: clip.audio, durationMs: clip.durationMs, format: 'wav' });
+      rows.push({ account_id, slot, text, id: item.id, sha256: item.sha256, bytes: item.bytes, duration_ms: item.duration_ms,
+        origin: old?.id === item.id ? 'existing' : clip.origin });
     }
   }
   return rows;
@@ -161,7 +152,7 @@ export function publishG1Settings(accountId: string, rows: Array<Pick<G1Settings
   const state = localAudioStore.getState(accountId);
   const seen = new Set<string>();
   const keep: Array<{ slot: G1SettingsRow['slot'] | ReturnType<typeof localAudioStore.listActive>[number]['slot']; id: string }> = [];
-  for (const k of [...localAudioStore.listActive(accountId).map((i) => ({ slot: i.slot, id: i.id })), ...rows.map((r) => ({ slot: r.slot, id: r.id }))]) {
+  for (const k of [...localAudioStore.listActive(accountId).filter(i => !rows.some(r => r.slot === i.slot)).map((i) => ({ slot: i.slot, id: i.id })), ...rows.map((r) => ({ slot: r.slot, id: r.id }))]) {
     const key = `${k.slot}:${k.id}`;
     if (seen.has(key)) continue;
     seen.add(key);

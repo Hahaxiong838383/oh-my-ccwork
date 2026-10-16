@@ -5,7 +5,7 @@
  * manifest 结构（schema_version=1、六 slot 对齐）。
  * TTS/LLM 走网络不进单测（生成链 E2E 在 D1 验收 A1/A2 用真机验）。
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -242,6 +242,7 @@ eq('st-19 新鲜 inactive 不清', localAudioStore.cleanup(ACC), 0);
   );
   db.close();
 }
+writeFileSync(localAudioStore.audioPath(ACC, dropped.id, 'wav') + '.pin', '0');
 eq('st-20 过期 inactive 清 1 条', localAudioStore.cleanup(ACC), 1);
 eq('st-21 清后取不到', localAudioStore.getItem(ACC, dropped.id), null);
 
@@ -476,14 +477,15 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id, 'wav
   // dr-17：设备回复槽的 staging 条目豁免 14 天清理（等 APK 期间 SHA 不能变）
   const ACC2 = 'device-BJP00326060100200098';
   mk('greeting.normal', 'eeeeeeeeeeeeeee1', 1000);
-  localAudioStore.insertItem(ACC2, { slot: 'device_reply.already', id: 'fffffffffffffff1', text: '现在就是这样啦', sha256: 'f'.repeat(64), bytes: 1000, duration_ms: 1000, format: 'wav' });
-  localAudioStore.insertItem(ACC2, { slot: 'greeting.normal', id: 'fffffffffffffff2', text: 'x', sha256: 'e'.repeat(64), bytes: 1000, duration_ms: 1000, format: 'wav' });
+  stageFixture(ACC2, 'device_reply.already', 'fffffffffffffff1', '现在就是这样啦');
+  stageFixture(ACC2, 'greeting.normal', 'fffffffffffffff2', '我在呢');
   {
     const { DatabaseSync } = await import('node:sqlite');
     const db = new DatabaseSync(process.env.PROFILE_DB_PATH!);
     db.prepare(`UPDATE local_audio_item SET created_at = ? WHERE account_id = ? AND active = 0`).run(Date.now() - 15 * 86_400_000, ACC2);
     db.close();
   }
+  writeFileSync(localAudioStore.audioPath(ACC2, 'fffffffffffffff2', 'wav') + '.pin', '0');
   eq('dr-17 过期 staging 只清人格槽，设备回复槽豁免', localAudioStore.cleanup(ACC2), 1);
   ok('dr-18 设备回复 staging 条目仍在', localAudioStore.getItem(ACC2, 'fffffffffffffff1') !== null && localAudioStore.getItem(ACC2, 'fffffffffffffff2') === null);
 }
@@ -556,7 +558,7 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id, 'wav
   const rows1 = stageG1SettingsClips([A1, A2], r1.clips);
   const idsA1 = rows1.filter((r) => r.account_id === A1).map((r) => r.id);
   const idsA2 = rows1.filter((r) => r.account_id === A2).map((r) => r.id);
-  eq('gs-6 扇出：两账号同槽同 id（同字节同 id）且 id=sha 前 16 位', { same: JSON.stringify(idsA1) === JSON.stringify(idsA2), hex: idsA1.every((id) => /^[0-9a-f]{16}$/.test(id)), pref: rows1.every((r) => r.sha256.startsWith(r.id)) }, { same: true, hex: true, pref: true });
+  eq('gs-6 扇出：两账号同槽同 id（同场景同元信息同 id）且 ID 与字节SHA独立', { same: JSON.stringify(idsA1) === JSON.stringify(idsA2), hex: idsA1.every((id) => /^[0-9a-f]{16}$/.test(id)), pref: rows1.every((r) => r.sha256.startsWith(r.id)) }, { same: true, hex: true, pref: false });
   eq('gs-7 staging 不进 manifest / 不进搬运 / report 可见', { m: Object.keys(localAudioStore.buildManifest(A1).slots).filter((k) => k.startsWith('g1.settings.')).length, keep: activeG1SettingsKeep(A1).length, cur: currentG1SettingsRows(A1).map((r) => r.origin) }, { m: 0, keep: 0, cur: ['staged', 'staged', 'staged'] });
   synthCalls = 0;
   const r2 = await resolveG1SettingsClips([A1], { synthesize: fakeSynth });

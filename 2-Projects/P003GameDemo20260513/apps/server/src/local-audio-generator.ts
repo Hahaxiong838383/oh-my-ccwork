@@ -1,5 +1,4 @@
 import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
-import crypto from 'node:crypto';
 import { callExtractionLlm } from './llm-extract.js';
 import { isCrisisContent } from './memory-safety-filter.js';
 import { relationStateStore, familiarityTier, personaLocalAudioEnabled } from './relation-state-store.js';
@@ -469,6 +468,7 @@ export async function buildSlot(
     for (const st of localAudioStore.listStagedBySlot(accountId, slot)) {
       if (keep.length >= target) break;
       if (seenTexts.has(st.text)) continue;
+      localAudioStore.retainCandidate(accountId, st.id);
       seenTexts.add(st.text);
       keep.push({ slot, id: st.id, text: st.text });
     }
@@ -492,6 +492,7 @@ export async function buildSlot(
     // J4 复用：同 slot 同 text 直接复活旧条目，不重合成（TTS 非确定性，重合成=白换 id）
     const existing = localAudioStore.findByText(accountId, slot, gated.text);
     if (existing) {
+      localAudioStore.retainCandidate(accountId, existing.id);
       keep.push({ slot, id: existing.id, text: existing.text });
       continue;
     }
@@ -510,18 +511,10 @@ export async function buildSlot(
       rejected.file_too_big = (rejected.file_too_big ?? 0) + 1;
       continue;
     }
-    const sha256 = crypto.createHash('sha256').update(tts.audio).digest('hex');
-    const id = sha256.slice(0, 16);
-    localAudioStore.writeAudio(accountId, id, tts.audio, 'wav');
-    localAudioStore.insertItem(accountId, {
-      slot,
-      id,
-      text: gated.text,
-      sha256,
-      bytes: tts.audio.length,
-      duration_ms: tts.durationMs,
-      format: 'wav',
+    const item = localAudioStore.stageClipImmutable(accountId, {
+      slot, text: gated.text, audio: tts.audio, durationMs: tts.durationMs, format: 'wav',
     });
+    const id = item.id;
     keep.push({ slot, id, text: gated.text });
   }
 
@@ -533,6 +526,7 @@ export async function buildSlot(
       .filter((s) => !keep.some((k) => k.id === s.id) && !seenTexts.has(s.text));
     for (const s of staged) {
       if (keep.length >= target) break;
+      localAudioStore.retainCandidate(accountId, s.id);
       keep.push({ slot, id: s.id, text: s.text });
       seenTexts.add(s.text);
     }
@@ -544,6 +538,7 @@ export async function buildSlot(
 
   // 仍不够保底 → 该 slot 沿用旧 active 条目（合同 §4：保持上一版不切换）
   if (keep.length < MIN_ITEMS_PER_SLOT && oldActive.length >= MIN_ITEMS_PER_SLOT) {
+    for (const item of oldActive.slice(0, target)) localAudioStore.retainCandidate(accountId, item.id);
     return {
       slot,
       keep: oldActive.slice(0, target).map((i) => ({ slot, id: i.id, text: i.text })),
@@ -595,10 +590,14 @@ export function kickoffLocalAudioOnce(
   return 'started';
 }
 
+const generationInFlight = new Set<string>();
+
 export async function runLocalAudioForAccount(
   accountId: string,
   opts?: { force?: boolean; reuseStagingFirst?: boolean },
 ): Promise<{ ok: boolean; skipped?: string; trigger?: string; revision?: number | null; detail?: string }> {
+  if (generationInFlight.has(accountId)) return { ok: true, skipped: 'generation_in_flight' };
+  generationInFlight.add(accountId);
   try {
     if (process.env.LOCAL_AUDIO_WRITES_PAUSED === '1') return { ok: true, skipped: 'writes_paused' };
     const rel = relationStateStore.getState(accountId);
@@ -686,7 +685,7 @@ export async function runLocalAudioForAccount(
       // 成长账本：每个内容变化的 slot 记一条（因果白盒，合同 §6）
       for (const r of results) {
         const oldTexts = oldActive.filter((i) => i.slot === r.slot).map((i) => i.text);
-        const newTexts = r.keep.map((k) => k.text);
+        const newTexts = localAudioStore.listActive(accountId).filter(i => i.slot === r.slot).map(i => i.text);
         if (JSON.stringify([...oldTexts].sort()) === JSON.stringify([...newTexts].sort())) continue;
         growthLedgerStore.record(accountId, {
           module: 'local_audio',
@@ -708,5 +707,5 @@ export async function runLocalAudioForAccount(
   } catch (err) {
     console.log(`[local-audio] gen error account=${accountId}:`, String((err as Error)?.message ?? err));
     return { ok: false, detail: String((err as Error)?.message ?? err) };
-  }
+  } finally { generationInFlight.delete(accountId); }
 }
