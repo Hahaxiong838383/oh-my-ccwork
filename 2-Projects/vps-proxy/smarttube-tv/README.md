@@ -1,0 +1,43 @@
+# SmartTube 与电视代理源码发布快照
+
+本目录保存`~/home-lan/4-Assets/Code/`两项目的可校验快照，发布到私有仓`Hahaxiong838383/oh-my-ccwork`。实现真源仍在home-lan，不在两处分别演化；更新时先修改、测试并提交真源，再同步快照和清单。
+
+- `video-proxy-boot/`：基础版开机校时、实际DNS就绪、系统与应用DNS缓存恢复。
+- `youtube-failover/`：四级视频出口、两HY2独立worker、真实正文/DoT守护、配置生成与集成启动脚本。
+- `SOURCE-MANIFEST.json`：35份源码/测试/文档的SHA256、大小、权限和真源commit。
+
+本次真源commit：`5b11001a7bf41bdc2e4ce22242e0f2a84c41d795`。发布与验收背景见[复盘](../2026-10-18-SmartTube与四级代理复盘.md)。生产配置、节点凭据、API密钥、账号数据、原始日志及APK/DEX/二进制不入本快照。
+
+## 版本与运行状态
+
+2026-10-18 22:41记录：四级代理已启用，顺序Rack HY2 → Rack Reality → ZGO Reality → ZGO HY2；两HY2各自独立重连，DNS独立走两Reality候选。正式目录`/data/adb/video-proxy/youtube-failover`，release为`e6d3398ba0764d85730533c6475d5fa6ec98341b085b37b2fbbf3271ad10395f`。本次归档不改变现网。
+
+基础版`video-proxy-boot/video-boot-start.sh`已验断电恢复；当前集成版是`youtube-failover/video-boot-start.next.sh`，其新冷启动仍待验。已验四出口正文、两HY2公网UDP、两Reality DoT、同UID生产TUN正文与备用ZGO自动重建；新版实际播放主出口故障迁移、Netflix实播回归和长期稳定性仍待验。源码可构建不等于这些现场验收已完成。
+
+## 发布复现
+
+2026-10-18在独立`/tmp`源码副本完成以下361条断言，未操作电视。依赖沿用现有JDK21、Android SDK34、NDK26、sing-box1.14.3及固定SHA的JSON测试jar；依赖路径和覆盖变量见各项目README及脚本，二进制不随源码附送。
+
+| 目录 / 测试入口 | 断言数 |
+|---|---:|
+| video-proxy-boot / test-net.sh | 60 |
+| video-proxy-boot / test_boot_flow.py | 101 |
+| video-proxy-boot / test_dns_cache.py | 24 |
+| youtube-failover / test.sh（传输） | 15 |
+| youtube-failover / test.sh（守护） | 63 |
+| youtube-failover / test_runtime.py | 61 |
+| youtube-failover / test_integration.py | 15 |
+| youtube-failover / test_socks_chain.py | 15 |
+| youtube-failover / ip-identity-test/run.sh | 7 |
+
+两目录的`build.sh`重新构建通过，产物与此前部署记录完全一致：
+
+| 产物 | SHA256 |
+|---|---|
+| video-boot-net | `07f8649cbe7b70547800e6b71368f5dba344476772d64136643dab5e9c92047c` |
+| video-dns-cache.dex | `2331981fc2c377f67952d0373a32747ce98fb08ae774a1795131aa564f78f376` |
+| guard.dex | `c0424ae04b41f92775bbc6ba32683c680f5b3829b808cde1bf51fcb6deef71ed` |
+
+建议先将快照复制至独立`/tmp`目录再测试。YouTube测试先`build.sh`，再`test.sh`，最后IP专项；三个命令使用同一`TASK_BUILD_DIR`。`test_socks_chain.py`会在脚本同目录生成配置/日志，必须在临时副本运行。真实依赖缺失或测试失败应明确报告，不跳过后声称通过。
+
+重新部署前从设备受保护配置生成runtime，不重用旧stage或提交生产JSON。历史备份、release摘要、实际进程加载和逐文件SHA须分别核验；本目录不是一键覆盖现网的安装包。

@@ -1,0 +1,56 @@
+{
+  "secret_file": "/data/adb/video-proxy/youtube-failover/api-secret",
+  "state_file": "/data/adb/video-proxy/youtube-failover/guard-state.json",
+  "enabled_marker": "/data/adb/video-proxy/youtube-failover/enabled",
+  "boot_guard_file": "/data/adb/video-proxy/youtube-failover/authorized-boot-id",
+  "boot_id_file": "/proc/sys/kernel/random/boot_id",
+  "release_id_file": "/data/adb/video-proxy/youtube-failover/release-id",
+  "workerctl": "/data/adb/video-proxy/youtube-failover/workerctl.sh",
+  "dry_run": true,
+  "api_port": 19090,
+  "selector": "youtube-video",
+  "interval_ms": 30000,
+  "retry_ms": 2000,
+  "probe_timeout_ms": 12000,
+  "api_timeout_ms": 12000,
+  "foreground_timeout_ms": 4000,
+  "recovery_interval_ms": 60000,
+  "recovery_successes": 3,
+  "recovery_hold_ms": 300000,
+  "candidates": [
+    {
+      "tag": "yt-rack-hy2",
+      "socks_port": 19101,
+      "worker": "rack"
+    },
+    {
+      "tag": "yt-rack-reality",
+      "socks_port": 19102
+    },
+    {
+      "tag": "yt-zgo-reality",
+      "socks_port": 19103
+    },
+    {
+      "tag": "yt-zgo-hy2",
+      "socks_port": 19104,
+      "worker": "zgo"
+    }
+  ],
+  "dns": {
+    "selector": "dns-uplink",
+    "server_ip": "1.1.1.1",
+    "server_name": "1.1.1.1",
+    "query_host": "www.youtube.com",
+    "candidates": [
+      {
+        "tag": "dns-rack-reality",
+        "socks_port": 19111
+      },
+      {
+        "tag": "dns-zgo-reality",
+        "socks_port": 19112
+      }
+    ]
+  }
+}
