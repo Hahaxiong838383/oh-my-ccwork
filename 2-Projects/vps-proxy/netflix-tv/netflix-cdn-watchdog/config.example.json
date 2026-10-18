@@ -1,0 +1,18 @@
+{
+  "secret_file": "/data/local/tmp/netflix-cdn-watchdog/api-secret",
+  "state_file": "/data/local/tmp/netflix-cdn-watchdog/watchdog-state.json",
+  "socks_port": 1081,
+  "api_port": 19090,
+  "selector": "zgo-video",
+  "hy2": "zgo-hy2",
+  "reality": "zgo-netflix",
+  "interval_ms": 30000,
+  "connect_timeout_ms": 6000,
+  "read_timeout_ms": 6000,
+  "probe_timeout_ms": 12000,
+  "api_timeout_ms": 12000,
+  "foreground_timeout_ms": 4000,
+  "fallback_failures": 2,
+  "recovery_successes": 3,
+  "recovery_hold_ms": 180000
+}

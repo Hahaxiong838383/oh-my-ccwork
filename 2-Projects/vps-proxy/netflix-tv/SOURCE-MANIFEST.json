@@ -1,0 +1,190 @@
+{
+  "created": "2026-10-18 13:11 CST",
+  "source_root": "~/home-lan/4-Assets/Code",
+  "files": [
+    {
+      "path": "netflix-remote-bridge/.gitignore",
+      "sha256": "4f1111b41120bbfd9d857c187e87f9a9b78ea6daea3045596a4262b7ba751238"
+    },
+    {
+      "path": "netflix-remote-bridge/AndroidManifest.xml",
+      "sha256": "8e20be4ea1d179eb5cfcdbfd16bcde0423ed149afaf9cadea312a18912cdb4f7"
+    },
+    {
+      "path": "netflix-remote-bridge/DEPLOYED.md",
+      "sha256": "d848ccf1553eea37b312b315fd772a12db076d1cb7016985c4ecca2305698b9e"
+    },
+    {
+      "path": "netflix-remote-bridge/README.md",
+      "sha256": "918311f8559d9946b2767d9f67e09fb0d27f58f76939cf47891f4d4ad11ef019"
+    },
+    {
+      "path": "netflix-remote-bridge/build.sh",
+      "sha256": "522f430c078834b6ec31d1a661210d210063beaf2807d0321ce158a5c56c08a6"
+    },
+    {
+      "path": "netflix-remote-bridge/res/values/strings.xml",
+      "sha256": "71288f1c2a5081157d077ae67a559b510b66ace61eafbc893feeba457686d02e"
+    },
+    {
+      "path": "netflix-remote-bridge/res/xml/bridge_service.xml",
+      "sha256": "76861c2deb888cc6f23941e2959c51635a96ee962c9ddfbd59ad3ecf43eb41f0"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/BridgeService.java",
+      "sha256": "10865e5c04de8ed9149a64dd7ae67be377b7e427c7df7bd7a0d63f13df836797"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/CandidateTree.java",
+      "sha256": "139fb852d9c86692fe99ac0c804c44dd7d178ace0bab98b19e66ef8f8ec2f579"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/FeedNavigator.java",
+      "sha256": "9e230758b1cbc9f90d285d42d60da2e06d03aca65a9fcfe3092db03f61f31f8b"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/FeedPolicy.java",
+      "sha256": "8e8a6be4f6e5e8a1d1f7ff5a2ce78de2f9b2cf0bf75b67e9600d51b77683ec3b"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/KeyState.java",
+      "sha256": "ce1ab23ee216042c56db7132554dc702f5407af954eaca1b704693136ef3bd95"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/LocalFeedInput.java",
+      "sha256": "275983e8912c3243dbc7a861942be719f43e2a6fc1b228c3235a10bc8caeb477"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/MainActivity.java",
+      "sha256": "2a5d847413c12459bfacc045db5d36f0201390c0acf9c138f2e6b2aa46c93327"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/NavCore.java",
+      "sha256": "e0f66bd58f5e1f8b0f6d4ee5885b81ec62ab190feda73e21c3e5a4f929878f80"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/NodePolicy.java",
+      "sha256": "3782410aa612db708ad3859ae722452fe6d0842b30a2f98520925862778123eb"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/PlayerPolicy.java",
+      "sha256": "cc239b3e790313d009107a4de11f130d432d6f7e3d7e5202d0875affdd958b8e"
+    },
+    {
+      "path": "netflix-remote-bridge/src/cn/hahaxiong/netflixremote/SeekPolicy.java",
+      "sha256": "2544ce4c03d1538d4c4f13aa3fc065f9b8d8525aca1f660d4152aa07847e537d"
+    },
+    {
+      "path": "netflix-remote-bridge/test/CandidateTreeTest.java",
+      "sha256": "2df6320ab8a93c8557f760ea4bb280dde3251dce675f3b8332ffd7295d3af6cd"
+    },
+    {
+      "path": "netflix-remote-bridge/test/FeedPolicyTest.java",
+      "sha256": "c482b6b092b147eb45d2aa2f63e23f0a10b1aa590fe42894252610c9367d29af"
+    },
+    {
+      "path": "netflix-remote-bridge/test/KeyStateTest.java",
+      "sha256": "550b704b052f4e25313c4efa33b37410cff3b4a98558a7c3841a672b4c9f6607"
+    },
+    {
+      "path": "netflix-remote-bridge/test/LocalFeedInputTest.java",
+      "sha256": "8f88e6c51366ca18ca612d997b980c6c3998fcc8a6848eb995ccedac5b482bc1"
+    },
+    {
+      "path": "netflix-remote-bridge/test/NavCoreTest.java",
+      "sha256": "fba44b5edd7b291a49fac4ae866eec552e7e2c8c97972e33b2be91a7e5bea0c5"
+    },
+    {
+      "path": "netflix-remote-bridge/test/PlayerPolicyTest.java",
+      "sha256": "0f91f67fd7ebb614778d75ea9ca91196c8cc97bfd3391ce649e29b1e57ec0742"
+    },
+    {
+      "path": "netflix-remote-bridge/test/SeekPolicyTest.java",
+      "sha256": "fa472164f616156c1d6c43cd557247b069d2dfc8a75aeb56851c738dda22bea7"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/README.md",
+      "sha256": "31e5eed9b8dec025c76b63f7ab453fd64abdb866e6f1eeec007641a37f95f28a"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/cw-nodes.txt",
+      "sha256": "a28728e1efce6a866aa71b5c1a4fbd1924ab3d5230183e54945597ba4e1ce8ed"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/feed-after-touch.txt",
+      "sha256": "1a77bcf1afbe1936f2501be62643c94aa3b3ce572b0c44f1bffa3a09441cdfd3"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/feed-before.txt",
+      "sha256": "987317dae8cd0aae747a95b63d52d46a2bac9a28e823c0c9a5249fd2a364feda"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/feed-top10.txt",
+      "sha256": "7462a4a8b46f1a7f0f17dfe1dbd9660f4ab4acc67452e1a9d48dd74f20b3d828"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/player-range-nodes.txt",
+      "sha256": "53e7fea71e25404a1b617d24afa81ceb4fda4ab73e2c0252d7010caae23f570a"
+    },
+    {
+      "path": "netflix-remote-bridge/test/fixtures/subtitle-choices.tsv",
+      "sha256": "4980077a71c8aea5dd4504bce9f5562b77867c2867cb151eb28d4d1dd527ac55"
+    },
+    {
+      "path": "netflix-cdn-watchdog/.gitignore",
+      "sha256": "3990b320a592dabe6e1725e4e62e268b61d701b446b841429a8b716cddbd6aaa"
+    },
+    {
+      "path": "netflix-cdn-watchdog/DEPLOYED.md",
+      "sha256": "1ab3c5ac5e7c435aca077822f8669b46b681969c48da4622be3f19853159cd4d"
+    },
+    {
+      "path": "netflix-cdn-watchdog/NetflixCdnWatchdog.java",
+      "sha256": "da617cb30050e47122ce7a770d02b6dc11ec66ce4083028c721cec2faac0949d"
+    },
+    {
+      "path": "netflix-cdn-watchdog/README.md",
+      "sha256": "a086b904ebedff813a490a53b84351ff5ec1336f995d843978d81901c62d3a73"
+    },
+    {
+      "path": "netflix-cdn-watchdog/WatchdogApiTest.java",
+      "sha256": "3555f895570b6b6359b1926085f82a2ff712cbb66129546d8807265eb8fa975d"
+    },
+    {
+      "path": "netflix-cdn-watchdog/WatchdogSelfTest.java",
+      "sha256": "cb8bc2c57aa41ca0a7aa66baa1461c455f17df0edb3571ca6d1de30328126a25"
+    },
+    {
+      "path": "netflix-cdn-watchdog/build.sh",
+      "sha256": "4920eab9b39ffcdb5a78a33fc28e80abc8b761b3e79ff90228a1883b8f771617"
+    },
+    {
+      "path": "netflix-cdn-watchdog/config.example.json",
+      "sha256": "7b1e8324e245b3cb4d5b47ac1b442c56aa7aca8d7326985d584a54dada1da3ff"
+    },
+    {
+      "path": "netflix-cdn-watchdog/netflix-cdn-watchdog.sh",
+      "sha256": "97fd2bb48db48827b2c894570b5389b16ab52e46843043903912c7900c69920b"
+    },
+    {
+      "path": "netflix-cdn-watchdog/rollback-hybrid.sh",
+      "sha256": "bd27ee2975c71bfba739332a6dd253f9773463999f96a64b007215805d247680"
+    },
+    {
+      "path": "netflix-cdn-watchdog/test-api.sh",
+      "sha256": "0a5d3b02a61d07090eac1864ce691c92e9821ab8dc657e322a93eca38de6c58e"
+    },
+    {
+      "path": "netflix-cdn-watchdog/test.sh",
+      "sha256": "60cd7ac80e3cfbbfa850ab9be1f7ca63dac26a6c73e87e284d96d22fde9a27df"
+    },
+    {
+      "path": "netflix-cdn-watchdog/trial-guard.sh",
+      "sha256": "24052889d97914b2765d4512838c4b94ddc6c4f982d65d5764c9a45ac44cb26f"
+    },
+    {
+      "path": "netflix-cdn-watchdog/watchdog-run.sh",
+      "sha256": "73434b1b0c1387f0c2e60594a27a2e6365906bab17f9b6fc18bf5e451b784300"
+    }
+  ]
+}
