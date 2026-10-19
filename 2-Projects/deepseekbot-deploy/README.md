@@ -13,14 +13,11 @@
 ## 访问
 
 - 日常入口：https://cli4.hahaxiong.cc/deepseekbot/
-- **Air 首次登录：双击 `~/Documents/DeepSeekBot/首次登录.webloc`，使用该默认浏览器完成授权后再收藏日常入口。**
-- Studio 备用首次登录：打开 Studio 本机 `~/.local/share/deepseekbot/access.html`，或 `~/.local/share/deepseekbot/首次登录.md` 中的链接。文件含私密启动链接，只供本人使用，不进 Git。
-- 新浏览器没有登录状态时，直接访问日常入口会返回 401，这是认证保护。
-- 服务重启后原浏览器的有效 Cookie 仍可用；首次登录文件中的旧启动令牌会失效。重新生成：
-
-```bash
-python3 /Users/fu-121/mycc/2-Projects/deepseekbot-deploy/ops/refresh-access.py --air
-```
+- 直接打开日常入口，输入 Air 指定 RTF 中的密码即可登录；默认勾选“记住登录（30 天）”。
+- 浏览器提示保存密码时可选择保存；表单支持密码管理器，网页不在 localStorage 保存明文密码。
+- Air 的 `~/Documents/DeepSeekBot/日常入口.webloc` 可继续使用；已有有效登录保持不变。
+- 私密启动链接仍是本机运维备用入口，通常不再需要更新。密码登录由服务端换取原生 Cookie，浏览器 URL 不携带启动 token。
+- 密码部署、验证、更换及回滚见 [密码登录记录](PASSWORD-LOGIN-20261019.md)。
 
 日常入口现默认进入「Bot 模式」的幕僚长私聊。左侧消息列表可滚动查看 15 个 Bot 和 2 个群，群右侧同时显示成员与会话。已部署保留 1.4.0 原生经典组件的可回滚界面补丁，见 [界面恢复记录](UI-RESTORE-20261019.md)。小深与总管「托布」均配置为 `deepseek-official / deepseek-flash / high`。专用 API Key 已从用户指定的 Air RTF 读取，并通过 SSH stdin 写入 DSH 私有凭据文件；密钥不进入 argv、项目文档或工具输出。
 
@@ -37,20 +34,21 @@ python3 /Users/fu-121/mycc/2-Projects/deepseekbot-deploy/ops/refresh-access.py -
 | 安装目录 | `/Users/rayman.chen/local/deepseekbot` |
 | 独立 DSH_HOME | 安装目录下 `data/` |
 | 工作目录 | 安装目录下 `workspace/` |
-| 本机监听 | `127.0.0.1:31980` |
+| 本机监听 | 登录网关 `127.0.0.1:31981` → DSH `127.0.0.1:31980` |
 | 香港回环入口 | `127.0.0.1:13980` |
 | Host LaunchAgent | `com.mycc.deepseekbot` |
+| 登录网关 LaunchAgent | `com.mycc.deepseekbot-auth` |
 | 隧道 LaunchAgent | `com.mycc.deepseekbot-tunnel` |
 | 公网代理 | aliyun-hk Nginx，既有 cli4.hahaxiong.cc 站点新增独立路径 |
 | 默认权限 | `workspace-write`，保留审批；不是完全独立的虚拟机 |
 
-链路：浏览器 HTTPS → 香港 Nginx → 受限 SSH 反向隧道（当前经 Studio 雷电中转）→ Mac mini DSH。
+链路：浏览器 HTTPS → 香港 Nginx → 受限 SSH 反向隧道（当前经 Studio 雷电中转）→ Mac mini 登录网关 → DSH。
 
 2026-10-19 迁移复验遇到 Mini 直连香港超时与服务端旧隧道占端口，已仅对本项目添加服务器 ClientAliveInterval=30 / ClientAliveCountMax=3，并采用 `start-tunnel.py`。当前 LaunchAgent 指定 `DEEPSEEKBOT_TUNNEL_ROUTE=studio`，使用 Mini→Studio 雷电 SSH→香港，依赖 Studio 在线；`auto`/`direct` 模式保留待直连链路稳定后评估，不能把 TCP/SSH banner 探测成功等同完整转发可用。未改公网域名、Nginx或 Mini 全局网络，长期稳定性仍待观察。
 
-依赖在本项目内安装并固定版本；未更改现有其他应用的依赖。两个 LaunchAgent 在该用户登录时自动运行、异常退出自动恢复。当前 Mini 系统 sleep=0；未做整机断电/重启验证，登录前自动运行不在本次承诺范围。
+依赖在本项目内安装并固定版本；未更改现有其他应用的依赖。三个 LaunchAgent 在该用户登录时自动运行、异常退出自动恢复。当前 Mini 系统 sleep=0；未做整机断电/重启验证，登录前自动运行不在本次承诺范围。
 
-认证使用 DSH 启动令牌换取签名 Cookie，Nginx 将 Cookie 限定到 `/deepseekbot/` 并添加 Secure。API/WebSocket 均需认证。该路径没有套用原站 Basic Auth，原站 `/` 仍保留其 Basic Auth。启动令牌不写入普通访问日志；Host 日志和凭据文件仅限本机用户读取。
+密码先经 Mini 登录网关校验加盐 scrypt 哈希，再由服务端使用 DSH 启动令牌换取原生签名 Cookie，Nginx 将 Cookie 限定到 `/deepseekbot/` 并添加 Secure。API/WebSocket 均需认证。该路径没有套用原站 Basic Auth，原站 `/` 仍保留其 Basic Auth。启动令牌不写入普通访问日志；Host 日志和凭据文件仅限本机用户读取。
 
 关闭额外 Session Log 上传、会话遥测、插件清单上传、桌面产品遥测及 Bot 遥测。正常模型请求仍会发送对话上下文至选定服务商。
 
@@ -63,6 +61,7 @@ ssh mini-tb '~/local/deepseekbot/dsb list'
 # 状态
 ssh mini-tb 'launchctl print gui/501/com.mycc.deepseekbot'
 ssh mini-tb 'launchctl print gui/501/com.mycc.deepseekbot-tunnel'
+ssh mini-tb 'launchctl print gui/501/com.mycc.deepseekbot-auth'
 
 # 仅重启本项目
 ssh mini-tb 'launchctl kickstart -k gui/501/com.mycc.deepseekbot'
@@ -75,10 +74,11 @@ Host stderr：`~/local/deepseekbot/logs/host.err.log`；隧道 stderr：同目�
 
 ## 回滚
 
-先停两个专用 LaunchAgent，保留安装和数据目录：
+先停三个专用 LaunchAgent，保留安装和数据目录：
 
 ```bash
 ssh mini-tb 'launchctl bootout gui/501/com.mycc.deepseekbot-tunnel'
+ssh mini-tb 'launchctl bootout gui/501/com.mycc.deepseekbot-auth'
 ssh mini-tb 'launchctl bootout gui/501/com.mycc.deepseekbot'
 ```
 

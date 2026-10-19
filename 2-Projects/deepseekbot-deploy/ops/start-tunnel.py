@@ -31,5 +31,5 @@ else:
              '-o StrictHostKeyChecking=yes -o ConnectTimeout=8 '
              '-o ServerAliveInterval=30 -o ServerAliveCountMax=3 '
              '-W %h:%p fu-121@192.168.100.2']
-args += ['-R', '127.0.0.1:13980:127.0.0.1:31980', 'deepseekbot-tunnel@' + SERVER]
+args += ['-R', '127.0.0.1:13980:127.0.0.1:31981', 'deepseekbot-tunnel@' + SERVER]
 os.execv(args[0], args)

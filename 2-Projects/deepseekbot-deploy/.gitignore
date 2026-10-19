@@ -10,3 +10,6 @@ private-backups/
 .credentials.yaml
 access.html
 首次登录.md
+
+# Password hashes stay on Mini only
+auth/credential*.json

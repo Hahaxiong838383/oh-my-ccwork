@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.mycc.deepseekbot-auth</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/rayman.chen/.hermes/node/bin/node</string>
+		<string>/Users/rayman.chen/local/deepseekbot/auth/gateway.mjs</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/rayman.chen/local/deepseekbot/logs/auth.err.log</string>
+	<key>StandardOutPath</key>
+	<string>/Users/rayman.chen/local/deepseekbot/logs/auth.log</string>
+	<key>ThrottleInterval</key>
+	<integer>15</integer>
+	<key>Umask</key>
+	<integer>63</integer>
+	<key>WorkingDirectory</key>
+	<string>/Users/rayman.chen/local/deepseekbot</string>
+</dict>
+</plist>
