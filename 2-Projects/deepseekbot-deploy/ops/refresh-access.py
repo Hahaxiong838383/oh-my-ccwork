@@ -16,7 +16,7 @@ log = subprocess.check_output(['ssh', '-o', 'BatchMode=yes', 'mini-tb', 'cat ~/l
 urls = re.findall(r'dsh web: (https://[^\s]+\?token=[^\s]+)', log)
 if not urls:
     raise SystemExit('未找到启动地址，请检查 Mac mini 服务状态。')
-url = urls[-1]
+url = urls[-1].split('#', 1)[0] + '#botharness-open=dm:bot-50008695e5904fb8b843578655ff992c'
 html = '<!doctype html><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>DeepSeekBot 入口</title><p>正在打开 DeepSeekBot…</p><script>location.replace(' + json.dumps(url) + ')</script>'
 p = out / 'access.html'
 p.write_text(html)

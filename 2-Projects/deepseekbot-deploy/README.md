@@ -6,6 +6,10 @@
 
 归档入口：[验收记录](ACCEPTANCE.md) · [决策与经验复盘](04-决策记录.md)。本目录归档部署脚本、LaunchAgent 和脱敏记录；运行数据、依赖、私钥、首次登录文件与截图不随代码提交，不能仅凭此目录完整还原实例。
 
+## Grok 备份恢复
+
+2026-10-19 已迁入 13 个 Bot、2 个群组、8 套技能及 4,940 个解包工作文件；原小深/Tob 保留。模型与资料已可用，缺失的原记忆/聊天/凭据和业务依赖仍待补齐，3 条恢复定时配置保持禁用。详见 [迁移记录与边界](GROK-RESTORE-20261019.md)。
+
 ## 访问
 
 - 日常入口：https://cli4.hahaxiong.cc/deepseekbot/
@@ -18,7 +22,7 @@
 python3 /Users/fu-121/mycc/2-Projects/deepseekbot-deploy/ops/refresh-access.py --air
 ```
 
-进入侧栏「Bot 模式」，选择「小深」即可聊天。小深与总管「托布」均配置为 `deepseek-official / deepseek-flash / high`。专用 API Key 已从用户指定的 Air RTF 读取，并通过 SSH stdin 写入 DSH 私有凭据文件；密钥不进入 argv、项目文档或工具输出。
+日常入口现默认进入「Bot 模式」的幕僚长私聊。左侧消息列表可滚动查看 15 个 Bot 和 2 个群，群右侧同时显示成员与会话。已部署保留 1.4.0 原生经典组件的可回滚界面补丁，见 [界面恢复记录](UI-RESTORE-20261019.md)。小深与总管「托布」均配置为 `deepseek-official / deepseek-flash / high`。专用 API Key 已从用户指定的 Air RTF 读取，并通过 SSH stdin 写入 DSH 私有凭据文件；密钥不进入 argv、项目文档或工具输出。
 
 ## 部署真值
 
@@ -40,7 +44,9 @@ python3 /Users/fu-121/mycc/2-Projects/deepseekbot-deploy/ops/refresh-access.py -
 | 公网代理 | aliyun-hk Nginx，既有 cli4.hahaxiong.cc 站点新增独立路径 |
 | 默认权限 | `workspace-write`，保留审批；不是完全独立的虚拟机 |
 
-链路：浏览器 HTTPS → 香港 Nginx → 受限 SSH 反向隧道 → Mac mini DSH。
+链路：浏览器 HTTPS → 香港 Nginx → 受限 SSH 反向隧道（当前经 Studio 雷电中转）→ Mac mini DSH。
+
+2026-10-19 迁移复验遇到 Mini 直连香港超时与服务端旧隧道占端口，已仅对本项目添加服务器 ClientAliveInterval=30 / ClientAliveCountMax=3，并采用 `start-tunnel.py`。当前 LaunchAgent 指定 `DEEPSEEKBOT_TUNNEL_ROUTE=studio`，使用 Mini→Studio 雷电 SSH→香港，依赖 Studio 在线；`auto`/`direct` 模式保留待直连链路稳定后评估，不能把 TCP/SSH banner 探测成功等同完整转发可用。未改公网域名、Nginx或 Mini 全局网络，长期稳定性仍待观察。
 
 依赖在本项目内安装并固定版本；未更改现有其他应用的依赖。两个 LaunchAgent 在该用户登录时自动运行、异常退出自动恢复。当前 Mini 系统 sleep=0；未做整机断电/重启验证，登录前自动运行不在本次承诺范围。
 
