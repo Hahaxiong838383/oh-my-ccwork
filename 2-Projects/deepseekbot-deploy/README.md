@@ -46,6 +46,8 @@
 
 2026-10-19 迁移复验遇到 Mini 直连香港超时与服务端旧隧道占端口，已仅对本项目添加服务器 ClientAliveInterval=30 / ClientAliveCountMax=3，并采用 `start-tunnel.py`。当前 LaunchAgent 指定 `DEEPSEEKBOT_TUNNEL_ROUTE=studio`，使用 Mini→Studio 雷电 SSH→香港，依赖 Studio 在线；`auto`/`direct` 模式保留待直连链路稳定后评估，不能把 TCP/SSH banner 探测成功等同完整转发可用。未改公网域名、Nginx或 Mini 全局网络，长期稳定性仍待观察。
 
+2026-10-19 11:33 稳定性复验：Studio公网10分钟59/59成功、真实WebSocket零断开；公司VM六分钟36次有31次TCP连接超时，Mini直连香港也复现。当前中转链路保留，不能认定所有网络均稳定；见 [稳定性检查与线路故障证据](STABILITY-20261019.md)。本轮未重启或改线上配置。
+
 依赖在本项目内安装并固定版本；未更改现有其他应用的依赖。三个 LaunchAgent 在该用户登录时自动运行、异常退出自动恢复。当前 Mini 系统 sleep=0；未做整机断电/重启验证，登录前自动运行不在本次承诺范围。
 
 密码先经 Mini 登录网关校验加盐 scrypt 哈希，再由服务端使用 DSH 启动令牌换取原生签名 Cookie，Nginx 将 Cookie 限定到 `/deepseekbot/` 并添加 Secure。API/WebSocket 均需认证。该路径没有套用原站 Basic Auth，原站 `/` 仍保留其 Basic Auth。启动令牌不写入普通访问日志；Host 日志和凭据文件仅限本机用户读取。
