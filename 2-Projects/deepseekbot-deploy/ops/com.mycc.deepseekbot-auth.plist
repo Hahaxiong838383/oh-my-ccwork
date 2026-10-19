@@ -8,8 +8,8 @@
 	<string>com.mycc.deepseekbot-auth</string>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/rayman.chen/.hermes/node/bin/node</string>
-		<string>/Users/rayman.chen/local/deepseekbot/auth/gateway.mjs</string>
+		<string>/bin/sh</string>
+		<string>/Users/rayman.chen/local/deepseekbot/start-auth.sh</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
