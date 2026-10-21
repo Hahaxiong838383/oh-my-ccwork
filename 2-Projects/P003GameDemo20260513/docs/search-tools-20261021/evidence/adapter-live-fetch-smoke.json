@@ -1,0 +1,27 @@
+{
+  "synthetic": true,
+  "ok": true,
+  "elapsed_ms": 6161,
+  "trace": [
+    {
+      "path": "/v1/chat/completions",
+      "status": 200
+    },
+    {
+      "path": "/v1/tools/search",
+      "status": 200
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 200
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 200
+    }
+  ],
+  "fetch_exercised": false,
+  "source_count": 2,
+  "answer_chars": 84,
+  "answer": "刚查了DeepSeek API工具调用的官方文档。文档显示支持function工具，web_search仅限deepseek-v4-pro，但页面未标日期，需留意时效。"
+}

@@ -1,6 +1,7 @@
 import type { ChatHistoryTurn } from './gemini-llm.js';
 
 export interface DeepseekLlmClient {
+  abort(): void;
   streamChat(opts: {
     systemPrompt: string;
     userText: string;

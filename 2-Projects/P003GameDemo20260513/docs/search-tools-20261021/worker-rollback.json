@@ -1,0 +1,53 @@
+{
+  "captured_at": "2026-10-21T08:54:04.707080+00:00",
+  "hostname": "voice-worker-hk2",
+  "backup": "/root/rust-worker/backups/search-tools-20261021-before",
+  "archive_sha256": "570128844cdd391fc0efef98e7785348d7d564c16794d7abe44c517996190af7",
+  "binary_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+  "systemd": {
+    "MainPID": "839",
+    "NRestarts": "0",
+    "ActiveState": "active",
+    "FragmentPath": "/etc/systemd/system/voice-worker-rust.service"
+  },
+  "no_restart": true,
+  "build_evidence": [
+    {
+      "file": "d21_deploy.sh",
+      "git_hashes": [],
+      "binary_hashes": []
+    },
+    {
+      "file": "d21_deploy.log",
+      "git_hashes": [],
+      "binary_hashes": []
+    },
+    {
+      "file": "d2_deploy.log",
+      "git_hashes": [],
+      "binary_hashes": []
+    },
+    {
+      "file": "d2_deploy.sh",
+      "git_hashes": [],
+      "binary_hashes": []
+    },
+    {
+      "file": "deploy-worker-bin.sh",
+      "git_hashes": [],
+      "binary_hashes": []
+    }
+  ],
+  "later_provenance": {
+    "live_md5": "80475d393128efc56c60908e92f9478a",
+    "deployment_record_commit": "4984e0278",
+    "air_source_baseline": "491e068a9f5e5e5538dd6188eb202255787dc2bc",
+    "worker_directory_diff_empty": true,
+    "evidence": [
+      "hk2 d21_deploy.sh/log",
+      "Air RECENT_EVENTS.md 2026-09-23 11:25 CST entry",
+      "Air task-log.md matching entry"
+    ],
+    "reproducible_build_proven": false
+  }
+}

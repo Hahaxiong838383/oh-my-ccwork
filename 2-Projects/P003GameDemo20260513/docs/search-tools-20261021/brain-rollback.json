@@ -1,0 +1,21 @@
+{
+  "captured_at": "2026-10-21T08:53:29.491066+00:00",
+  "backup": "/opt/p003/server/backups/search-tools-20261021-before",
+  "archive_sha256": "4aa268940f3731668e3d589342f9df2d6ee0a168277f2da1bc0e9dd55a14d281",
+  "services": [
+    {
+      "name": "p003-voice",
+      "pid": 3873258,
+      "status": "online",
+      "restarts": 24
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "status": "online",
+      "restarts": 5
+    }
+  ],
+  "config_saved_privately": true,
+  "no_restart": true
+}

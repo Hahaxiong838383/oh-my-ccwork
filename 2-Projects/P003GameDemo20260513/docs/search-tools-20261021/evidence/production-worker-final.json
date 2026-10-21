@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-10-21T09:33:18.724037+00:00",
+  "systemd": {
+    "MainPID": "839",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "binary_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+  "binary_md5": "80475d393128efc56c60908e92f9478a",
+  "no_deployment_performed": true
+}

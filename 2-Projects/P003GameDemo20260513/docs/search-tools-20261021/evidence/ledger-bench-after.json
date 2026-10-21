@@ -1,0 +1,9 @@
+{
+  "scope": "isolated_local_ledger_only",
+  "rows": 1000,
+  "ticks": 200,
+  "p50_ms": 0.5240409999998974,
+  "p95_ms": 0.9155829999999696,
+  "max_ms": 2.7033330000000433,
+  "production_rtc_proven": false
+}

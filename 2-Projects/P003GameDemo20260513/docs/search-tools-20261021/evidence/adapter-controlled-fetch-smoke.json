@@ -1,0 +1,32 @@
+{
+  "synthetic": true,
+  "planner_second_choice_forced_by_test": true,
+  "ok": true,
+  "elapsed_ms": 4012,
+  "trace": [
+    {
+      "path": "/v1/chat/completions",
+      "status": 200
+    },
+    {
+      "path": "/v1/tools/search",
+      "status": 200
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 200
+    },
+    {
+      "path": "/v1/tools/fetch",
+      "status": 200
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 200
+    }
+  ],
+  "fetch_exercised": true,
+  "source_count": 2,
+  "answer_chars": 113,
+  "answer": "刚查了DeepSeek API工具调用的官方文档。文档显示，工具调用走Responses接口，支持function和custom工具，web_search仅deepseek-v4-pro可用；页面未标日期，请以官网最新版为准。"
+}

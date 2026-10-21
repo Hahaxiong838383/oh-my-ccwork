@@ -1,0 +1,30 @@
+{
+  "synthetic": true,
+  "production_routes_used": false,
+  "results": [
+    {
+      "mode": "P1",
+      "ok": true,
+      "elapsed_ms": 1476,
+      "source_count": 2,
+      "source_urls": [
+        "https://api-docs.deepseek.com/zh-cn/api/create-response/",
+        "https://api-docs.deepseek.com/api/create-response/"
+      ],
+      "answer_chars": 75,
+      "answer": "刚查了DeepSeek API工具调用官方文档，函数调用用function类型，参数按JSON Schema描述。文档未标日期，具体以官网最新版为准。"
+    },
+    {
+      "mode": "P2",
+      "ok": true,
+      "elapsed_ms": 3057,
+      "source_count": 2,
+      "source_urls": [
+        "https://api-docs.deepseek.com/zh-cn/api/create-response/",
+        "https://api-docs.deepseek.com/api/create-response/"
+      ],
+      "answer_chars": 76,
+      "answer": "刚查了DeepSeek API工具调用官方文档，页面未标日期。文档称支持function工具，web_search仅deepseek-v4-pro可用。"
+    }
+  ]
+}

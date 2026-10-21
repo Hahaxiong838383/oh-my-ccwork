@@ -1,0 +1,52 @@
+{
+  "captured_at": "2026-10-21T09:33:42.515255+00:00",
+  "node_search": {
+    "command": "node --import tsx --test scripts/search-*.test.ts",
+    "exit": 0,
+    "passed": 22
+  },
+  "node_regression": {
+    "command": "node --import tsx --test scripts/{expression-filter,exit-intent,device-intent-protocol,local-audio-integrity,race-llm}.test.ts",
+    "exit": 0,
+    "test_files_passed": 5
+  },
+  "typecheck": {
+    "command": "pnpm exec tsc --noEmit",
+    "exit": 0
+  },
+  "rust": {
+    "command": "cargo test --locked",
+    "exit": 0,
+    "passed": 352,
+    "baseline_passed": 343
+  },
+  "linux_release": {
+    "command": "bash scripts/build-local.sh",
+    "exit": 0,
+    "glibc_max": "2.39",
+    "glibcxx_max": "3.4.31",
+    "gate_negative_controls_passed": true
+  },
+  "browser": {
+    "engine": "WebKit",
+    "environment": "127.0.0.1 synthetic administrator and temporary DB",
+    "tested": [
+      "logged_out_disabled",
+      "save_allowlist_enable_readback",
+      "master_off_readback",
+      "desktop_and_390px_layout"
+    ],
+    "console_errors": 0,
+    "console_warnings": 0
+  },
+  "not_verified": [
+    "production_RTC_audio_transcript_metrics",
+    "true_audio_three_conversational_turns_during_search",
+    "real_speech_barge_in_pause_branch",
+    "exact_interruption_resume_progress",
+    "network_loss_revocation_latency",
+    "single_device_soak",
+    "content_quality_safety_corpus"
+  ],
+  "production_deployed": false
+}

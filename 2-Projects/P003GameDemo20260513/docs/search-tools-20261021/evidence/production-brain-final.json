@@ -1,0 +1,20 @@
+{
+  "captured_at": "2026-10-21T09:33:14.819666+00:00",
+  "services": [
+    {
+      "name": "p003-voice",
+      "pid": 3873258,
+      "status": "online",
+      "restarts": 24
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "status": "online",
+      "restarts": 5
+    }
+  ],
+  "backup_members_checked": 128,
+  "changed_members": [],
+  "no_deployment_performed": true
+}

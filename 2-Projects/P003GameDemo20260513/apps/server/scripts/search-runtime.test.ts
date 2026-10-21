@@ -1,0 +1,39 @@
+process.env.SEARCH_WORKER_ACCOUNT_ID='worker';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { SignJWT } from 'jose';
+const dir = mkdtempSync(join(tmpdir(), 'search-runtime-'));
+for (const key of ['CONFIG','PROFILE','DEVICES','ACCOUNTS','CONVERSATION','FEEDBACK']) process.env[`${key}_DB_PATH`] = join(dir, `${key}.db`);
+process.env.AUTH_JWT_SECRET = 'only-synthetic-test-secret';
+process.env.SEARCH_TASK_DB_PATH = join(dir, 'search.db');
+process.env.SEARCH_ENABLED = '1';
+process.env.SEARCH_ALLOWED_DOMAINS = 'cstm.org.cn';
+process.env.DEEPSEEK_API_KEY = 'not-a-real-key';
+const { searchTaskRoute, closeSearchRuntime } = await import('../src/tools/search-runtime.js');
+const { configStore } = await import('../src/config-store.js');
+const { deviceRegistryStore } = await import('../src/device-registry-store.js');
+const sn = 'BJP00326070803800006';
+deviceRegistryStore.add(sn, 'synthetic'); deviceRegistryStore.setAccountId(sn, 'synthetic-device-account');
+const token = (role: string, accountId = 'worker') => new SignJWT({ accountId, role }).setProtectedHeader({ alg: 'HS256' }).setIssuer('p003').setAudience('kidshub').setExpirationTime('5m').sign(new TextEncoder().encode(process.env.AUTH_JWT_SECRET));
+test('生产鉴权拒绝parent/坏token/未知房间，默认关闭不建库；热关闸无需重启', async () => {
+  const url = `/?room=sn-${sn}-1`;
+  try {
+    assert.equal((await searchTaskRoute.request(url, { headers: { 'x-p003-worker-token': await token('parent') } })).status, 401);
+    assert.equal((await searchTaskRoute.request(url, { headers: { 'x-p003-worker-token': 'invalid' } })).status, 401);
+    assert.equal((await searchTaskRoute.request(url, { headers: { 'x-p003-worker-token': await token('device', 'another-device-account') } })).status, 401);
+    const headers = { 'x-p003-worker-token': await token('device') };
+    assert.equal((await searchTaskRoute.request('/?room=probe', { headers })).status, 401);
+    assert.equal((await searchTaskRoute.request(url, { headers })).status, 503);
+    assert.equal(existsSync(process.env.SEARCH_TASK_DB_PATH!), false);
+    configStore.setFlag('p003.search.allowlist', JSON.stringify([sn]), 'test');
+    configStore.setFlag('p003.search.enabled', '1', 'test');
+    assert.equal((await searchTaskRoute.request(url, { headers })).status, 200);
+    configStore.setFlag('p003.search.enabled', '0', 'test');
+    assert.equal((await searchTaskRoute.request(url, { headers })).status, 503);
+    deviceRegistryStore.setStatus(sn, 'disabled');
+    assert.equal((await searchTaskRoute.request(url, { headers })).status, 401);
+  } finally { closeSearchRuntime(); }
+});

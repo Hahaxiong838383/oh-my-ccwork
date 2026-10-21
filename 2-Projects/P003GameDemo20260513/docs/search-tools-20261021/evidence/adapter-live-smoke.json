@@ -1,0 +1,21 @@
+{
+  "synthetic": true,
+  "production_routes_used": false,
+  "results": [
+    {
+      "mode": "P1",
+      "ok": false,
+      "elapsed_ms": 1527,
+      "error": "invalid_answer"
+    },
+    {
+      "mode": "P2",
+      "ok": true,
+      "elapsed_ms": 1807,
+      "source_count": 0,
+      "source_urls": [],
+      "answer_chars": 26,
+      "answer": "刚才的搜索没有找到足够可靠的资料，这次我还不能确认。"
+    }
+  ]
+}

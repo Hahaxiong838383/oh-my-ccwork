@@ -27,6 +27,8 @@ import { devItemsRoute } from './routes/dev-items.js';
 import { themesRoute } from './routes/themes.js';
 import { checkAndCount, getClientIp } from './guard.js';
 import { verifyAuthToken, type AuthContext } from './auth-jwt.js';
+import { searchTaskRoute } from './tools/search-runtime.js';
+import { searchAdminRoute } from './routes/search-admin.js';
 
 const app = new Hono();
 const port = Number(process.env.PORT ?? 8787);
@@ -41,6 +43,7 @@ app.route('/api/vision', visionRoute);
 app.route('/api/profile', profileRoute);
 app.route('/api/memory', memoryRoute);
 app.route('/api/admin', adminDataRoute);
+app.route('/api/admin/search', searchAdminRoute);
 app.route('/api/rtc', rtcRoute);
 app.route('/api/dev-items', devItemsRoute);
 app.route('/api/feedback-themes', themesRoute);
@@ -61,6 +64,8 @@ app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);
 app.route('/api/parent/pairing', parentPairingRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
+// Default-off independent background jobs; ordinary chat never awaits these requests.
+app.route('/v1/internal/search-tasks', searchTaskRoute);
 
 // admin 静态兜底（本地 dev 同源 E2E 用；生产 nginx 直接 serve public/admin，不会走到这里）。
 app.use('/admin/*', serveStatic({ root: '../web/public' }));
