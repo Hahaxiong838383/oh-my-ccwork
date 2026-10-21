@@ -358,6 +358,8 @@ enum InputPhase {
 
 enum TurnKind {
     Say(String),
+    // Web evidence must not enter the ordinary chat history / downstream memory extractor.
+    BackgroundSay(String),
     Reply {
         user_text: String,
         pending_amend: Option<String>,
@@ -410,6 +412,9 @@ struct ExitSignalPending {
 }
 
 struct Orchestrator {
+    search: Option<crate::search_tasks::SearchSession>,
+    search_turn: bool,
+    search_user_speaking: bool,
     /// One-shot v0.3:有序 PCM 代次(Some=实验模式;None=现役 RTC,本字段零参与)
     ordered: Option<crate::ordered_pcm::Session>,
     /// B23：输入相位（见 `InputPhase`）
@@ -921,7 +926,11 @@ pub async fn run_pipeline(
         info!(room = %room_name, "local-audio opening-overlap gate skipped for this SN (v237 full-prompt-then-mic)");
     }
     let input_phase0 = if ordered_session.is_some() { InputPhase::FirstTurn } else { InputPhase::NotOrdered };
+    let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1));
     let mut orch = Orchestrator {
+        search,
+        search_turn: false,
+        search_user_speaking: false,
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
         device_commands_on,
@@ -1731,6 +1740,7 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        if self.search.is_some() && crate::search_policy::intent(&text).is_some() { return; }
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
         // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
         if crate::textproc::is_stop_only(&self.cfg.hotwords, &text)
@@ -1788,6 +1798,7 @@ impl Orchestrator {
         active_frame: bool,
         eot_ring: &VecDeque<i16>,
     ) {
+        self.search_user_speaking = gate.speaking() || active_frame;
         let now = Instant::now();
         match ev {
             VadEvent::SpeechStart => {
@@ -2600,6 +2611,7 @@ impl Orchestrator {
         let Some(turn) = self.agent_turn.take() else {
             return;
         };
+        let was_search = std::mem::take(&mut self.search_turn);
         // B34-B:在这里把「abort 之前在播什么」抄一份。普通 commit 与 STOP/EXIT 都是
         // **先 abort 再登记**,等登记时 turn 已被 take 走,现算只会得到 none/turn_id=0,
         // 恰好在 B31「是的」那类新轮上失真。**只抄不改**,中断执行顺序一行没动。
@@ -2634,7 +2646,11 @@ impl Orchestrator {
         // 回声对撞:被打断时只有 spoken 部分出了喇叭(截断文本),连同 filler 进对撞缓冲
         self.echo_tts_text = format!("{}{spoken}", self.echo_cur_filler);
         self.echo_playout_end = Some(Instant::now());
-        self.pending_amend = Some(spoken);
+        if was_search {
+            if let Some(search) = &mut self.search { search.finish(true, spoken.chars().count()); }
+        } else {
+            self.pending_amend = Some(spoken);
+        }
         self.paused = None;
         self.false_deadline = None;
         self.set_state(AgentState::Listening);
@@ -2772,6 +2788,11 @@ impl Orchestrator {
                     return;
                 }
                 self.tr_finish_turn(); // 字幕:剩余句补 final(先于清 turn)
+                if std::mem::take(&mut self.search_turn) {
+                    let spoken = self.agent_turn.as_ref().filter(|t| t.ctl.played_samples() > 0)
+                        .and_then(|t| t.synth_text.lock().ok().map(|s| s.chars().count())).unwrap_or(0);
+                    if let Some(search) = &mut self.search { search.finish(false, spoken); }
+                }
                 // 回声对撞:自然播完=filler+全文都出了喇叭,整段进对撞缓冲(必须在清 turn 前取)
                 if let Some(turn) = &self.agent_turn {
                     let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
@@ -2803,6 +2824,14 @@ impl Orchestrator {
     async fn on_tick(&mut self) {
         self.on_tick_inner().await;
         self.flush_caption_finals();
+        let safe = self.agent_turn.is_none() && self.state == AgentState::Listening
+            && !self.search_user_speaking && self.turn_gate.pending().is_empty()
+            && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active();
+        let speech = self.search.as_mut().and_then(|s| s.poll(safe));
+        if self.search.as_mut().map(|s| s.take_revoked()).unwrap_or(false) && self.search_turn {
+            self.hard_abort_current();
+        }
+        if let Some(text) = speech { self.start_turn(TurnKind::BackgroundSay(text)); }
     }
 
     /// B52 §6.2:回声门判掉一条 commit 时的**唯一**字幕落点。控制出口(急停/退出/设备命令)
@@ -3096,6 +3125,7 @@ impl Orchestrator {
                 }
                 // v140 §4.1:三路命中(exact/tail/fragment)任一 → 发 session_exit_detected。
                 // 纪律:envelope 不带转写正文;trace 缺失=不发(受信通道没建立,fail-closed)。
+                if kind == "session_exit" { self.search.take(); }
                 if kind == "session_exit" && self.exit_signal_on {
                     if let Some(trace) = self.device_trace.clone() {
                         self.exit_seq += 1;
@@ -3369,6 +3399,17 @@ impl Orchestrator {
                 sp.on_turn();
             }
             let amend = self.pending_amend.take();
+            if let Some(search) = &mut self.search {
+                search.on_commit();
+                if let Some(action) = crate::search_policy::intent(&user_text) {
+                    // Preserve any prior ordinary-turn history amendment for the next ordinary reply.
+                    self.pending_amend = amend;
+                    if let Some(old) = self.spec.take() { old.task.abort(); }
+                    search.command(action);
+                    self.set_state(AgentState::Listening);
+                    return;
+                }
+            }
             // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废。
             // try_lock 同 start_speculation 的死锁红线:锁被回复流持着(上一轮孙任务
             // 尚未退出)时当 miss 丢投机,绝不阻塞主循环。
@@ -3462,6 +3503,8 @@ impl Orchestrator {
     }
 
     fn start_turn(&mut self, kind: TurnKind) {
+        let record_history = !matches!(&kind, TurnKind::BackgroundSay(_));
+        self.search_turn = !record_history;
         // 回声对撞:记录本 turn 的 filler 文案(Say/无 filler 轮清空)——synth_text 只有 TTS 正文,
         // filler 是预合成 pcm 直接入轨,不经它,得单独暂存才能参与对撞
         self.echo_cur_filler = match &kind {
@@ -3569,7 +3612,7 @@ impl Orchestrator {
                 }
             };
             match kind {
-                TurnKind::Say(text) => {
+                TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
                     match tts_cfg
                         .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
                         .await
@@ -3585,7 +3628,7 @@ impl Orchestrator {
                     let _ = playout_task.await;
                     watcher.abort();
                     // 自然播完:固定句全文入历史(say add_to_chat_ctx 语义)
-                    llm.lock().await.push_assistant(&text);
+                    if record_history { llm.lock().await.push_assistant(&text); }
                     let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
                 TurnKind::Reply {

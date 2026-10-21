@@ -7,6 +7,8 @@ mod config;
 mod contract;
 mod candidate;
 mod say_defer;
+mod search_policy;
+mod search_tasks;
 mod control;
 mod device_grammar;
 mod device_intent;
