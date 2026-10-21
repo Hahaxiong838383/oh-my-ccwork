@@ -47,3 +47,13 @@ EOT socket固定`/run/p003-search-canary/eot.sock`，独立sidecar脚本/VAD副�
 先完成现场前置，再创建新2小时窗口，最后开生产单SN派单；立即发实际起止回执。P1真机通过后才开P2，不自动扩面/24小时。总账与设备回执位于Brain分支`2-Projects/P003GameDemo20260513/docs/search-tools-20261021/CANARY_ACCEPTANCE_20261021.md`及同目录`P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261021.md`。
 
 署名：codex（OpenAI）| 2026-10-21 北京时间
+
+## R3：用户明确授权的明日全天窗口
+
+2026-10-21 20:27:30 CST已开启03800006 P1，固定截止2026-10-22 23:59 CST，P2关闭，待真机验收。用户确认现场v353/1.2.2-canary.339，并将普通聊天对照改为其他设备；原同机30轮先行与首轮两小时限制不再作为本次体验前置。
+
+Worker提交3a86e0b7；三侧最长36小时，真实截止不滚动延长。Linux355测试及release/ABI门禁通过，43输入核同。新二进制SHA1875dbf2abc979ebeec7f41830dd6e7c677cf305ea8348aeb34a8524e6ed4f08，72980816B；候选PID715225/重启0，现役PID839/产物不变。低速SSH传输未完成文件未安装；差分恢复后断言完整新SHA与已测产物一致才切版。
+
+R3备份/root/rust-worker/backups/search-canary-R3-20261021T122000Z/worker-R3.tar.gz，SHA104fc00d5a33d20bef7b01610333eb5ecd457c806848ff306fb3d682485f34e3。两端持久timer p003-search-expire-20261022.timer固定到期清配置；Worker每秒独立核截止关房。短窗20:24:40截止，20:24:40.522触发、20:24:41.052删房，合成客户端已断开。P1真实任务completed、合成客户端音频10.12s/字幕/metrics通过，不等于设备实际听到；真人插话/续讲/并行聊天等仍待验。
+
+先热关三侧再回滚，已有候选会话结束后设备重进回现役；不能只关新派单。详细回执、17项用例和R3技术总账在Brain分支docs/search-tools-20261021。
