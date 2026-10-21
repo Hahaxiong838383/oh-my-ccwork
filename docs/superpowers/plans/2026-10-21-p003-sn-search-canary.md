@@ -10,7 +10,7 @@
 
 **依据：** [候选交付](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/README.md)、[协议](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/PROTOCOL.md)、[验收边界](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/ACCEPTANCE.md)。
 
-**执行更新：独立候选、HTTPS、隔离/期限代码及生产最小签发补丁已部署；正式两小时设备窗口未开，待真机验收。**
+**执行更新（R3）：按用户最新授权，已于2026-10-21 20:27:30 CST开启03800006单机P1，固定截止10月22日23:59 CST；P2未开，待真机验收。参见 [R3记录](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/R3_FULL_DAY_CANARY_20261021.md)。**
 
 当前事实见 [R1部署与验收记录](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/CANARY_ACCEPTANCE_20261021.md)。下文“现状”表和旧冻结点是实施前快照；本轮执行前SHA、当前PID/哈希与测试证据均在R1记录。
 

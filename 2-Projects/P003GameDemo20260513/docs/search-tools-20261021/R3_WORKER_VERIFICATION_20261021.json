@@ -1,0 +1,149 @@
+{
+  "window": {
+    "enabled": true,
+    "sn": "BJP00326070803800006",
+    "expires_at_ms": 1792684740000,
+    "generation": "R3-20261021-full-day"
+  },
+  "health": {
+    "agent": "p003-search-canary-20261021",
+    "at_ms": 1792585727306,
+    "generation": "R3-20261021-full-day",
+    "jobs": 0,
+    "ordered_pcm_v1": true,
+    "registered": true
+  },
+  "binary_sha256": "1875dbf2abc979ebeec7f41830dd6e7c677cf305ea8348aeb34a8524e6ed4f08",
+  "production_binary_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+  "units": {
+    "voice-worker-rust": "MainPID=839\nNRestarts=0\nMemoryCurrent=1174941696\nActiveState=active\n",
+    "p003-search-worker": "MainPID=715225\nNRestarts=0\nMemoryCurrent=430829568\nActiveState=active\n"
+  },
+  "timer": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nActiveState=active\n",
+  "probes": {
+    "expiry-result.json": {
+      "mode": "expiry",
+      "room": "sn-BJP00326070803800006-1792585409",
+      "trace": "search-probe-1792585409",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 11,
+        "user_transcripts": 1,
+        "metrics": 13,
+        "audio_voiced_ms": 41270.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 1537
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 5991,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 10886,
+          "chars": 12
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 14584,
+          "chars": 17
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 26284,
+          "chars": 58
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 29238,
+          "chars": 13
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 35886,
+          "chars": 28
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 41331,
+          "chars": 26
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 45283,
+          "chars": 18
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 53192,
+          "chars": 36
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 57037,
+          "chars": 21
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 59840,
+          "chars": 14
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 62248,
+          "chars": 10
+        }
+      ],
+      "disconnected": true,
+      "elapsed_s": 71.5,
+      "device_heard_verified": false
+    },
+    "idle-result.json": {
+      "mode": "idle",
+      "room": "sn-BJP00326070803800006-1792585544",
+      "trace": "search-probe-1792585544",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 2,
+        "user_transcripts": 1,
+        "metrics": 3,
+        "audio_voiced_ms": 10120.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 2953
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 6641,
+          "chars": 12
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 11225,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 23876,
+          "chars": 47
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 79.9,
+      "device_heard_verified": false
+    }
+  },
+  "panic_count": 0
+}

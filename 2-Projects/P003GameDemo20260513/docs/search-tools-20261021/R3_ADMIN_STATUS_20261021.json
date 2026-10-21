@@ -1,0 +1,51 @@
+{
+  "observed_at_ms": 1792585733712,
+  "summary": {
+    "state": "p1",
+    "health_ok": true,
+    "lease_ok": true,
+    "scope_ok": true,
+    "dispatch_requested": true,
+    "expires_at_ms": 1792684740000,
+    "configured_devices": [
+      "BJP00326070803800006"
+    ],
+    "selected_prepared": true
+  },
+  "operator_confirmation": {
+    "sn": "BJP00326070803800006",
+    "version_code": 353,
+    "version_name": "1.2.2-canary.339",
+    "at_ms": 1792584660000
+  },
+  "release": {
+    "verified_at_ms": 1792585543407,
+    "brain_commit": "f5f1d1e1 + 36272071（灰度边界）",
+    "worker_commit": "3a86e0b7c0dc0c58e96364fd14ab27097ba5028b",
+    "worker_sha256": "1875dbf2abc979ebeec7f41830dd6e7c677cf305ea8348aeb34a8524e6ed4f08",
+    "worker_tests": 355
+  },
+  "issues": [
+    {
+      "title": "设备身份与版本已由持有人确认",
+      "detail": "完整SN及v353（1.2.2-canary.339）已确认；云端后续上报另显示时间。",
+      "status": "已确认"
+    },
+    {
+      "title": "普通聊天对照改由其他设备提供",
+      "detail": "按持有人授权，目标设备直接体验搜索；其他设备对照单列，不能充当严格同机性能结论。",
+      "status": "待对照"
+    },
+    {
+      "title": "首句、插话与本地回复语需现场回归",
+      "detail": "候选关闭搜索时回归普通对话；随后P1验证补播、续讲、取消、改查和退出重连。",
+      "status": "待真机"
+    },
+    {
+      "title": "P2与全天稳定性未验收",
+      "detail": "本次已授权单机测试至明确截止；先验P1，P1通过后另行开放P2，不扩大设备范围。",
+      "status": "未验证"
+    }
+  ],
+  "page_errors": []
+}
