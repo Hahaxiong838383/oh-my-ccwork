@@ -1,0 +1,66 @@
+[
+  {
+    "test": "search-admin.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-availability.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-boundaries.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-isolation.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-policy.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-process.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-executor.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-route.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-runtime.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-tasks.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "device-session.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "expression-filter.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "exit-intent.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "device-intent.test.ts",
+    "exit": 1
+  },
+  {
+    "test": "local-audio-integrity.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "race-llm.test.ts",
+    "exit": 0
+  }
+]

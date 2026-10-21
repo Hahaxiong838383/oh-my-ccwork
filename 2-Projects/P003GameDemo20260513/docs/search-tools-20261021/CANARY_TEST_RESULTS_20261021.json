@@ -1,0 +1,140 @@
+{
+  "formal_window_opened": false,
+  "target_sn": "BJP00326070803800006",
+  "phase": "closed; P1/P2 pending real-device acceptance",
+  "brain_initial": [
+    {
+      "test": "search-admin.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-availability.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-boundaries.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-canary-isolation.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-canary-policy.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-canary-process.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-executor.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-route.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-runtime.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-tasks.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "device-session.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "expression-filter.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "exit-intent.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "device-intent.test.ts",
+      "exit": 1
+    },
+    {
+      "test": "local-audio-integrity.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "race-llm.test.ts",
+      "exit": 0
+    }
+  ],
+  "brain_final_changed_tests": [
+    {
+      "test": "search-canary-isolation.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-canary-process.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-canary-policy.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "device-session.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "search-runtime.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "device-intent-protocol.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "tsc --noEmit",
+      "exit": 0
+    }
+  ],
+  "brain_ttl_final": [
+    {
+      "test": "search-canary-policy.test.ts",
+      "exit": 0
+    },
+    {
+      "test": "device-session.test.ts",
+      "exit": 0
+    }
+  ],
+  "worker": {
+    "tests_passed": 354,
+    "tests_failed": 0,
+    "build_exit": 0,
+    "sha256": "435caa275f1504a6c8c4b583acd670ed3ad28068b615dc3f24d6e96b3a3205ae",
+    "source_files_matched": 43
+  },
+  "synthetic_probe_failures": [
+    {
+      "case": "idle_before_readiness",
+      "audio_ms": 0,
+      "agent_final": 0,
+      "user_final": 0,
+      "fixed_in_probe": true
+    },
+    {
+      "case": "partial_artifact_activation_attempt",
+      "accepted_as_release": false,
+      "final_sha_verified_before_restart": true
+    }
+  ],
+  "pending": [
+    "current APK and holder confirmation",
+    "same-device 30/30/30 baseline comparison",
+    "ordered first-turn and commands real device",
+    "interruption/resume/cancel/replace/disconnect real audio",
+    "P1 quality and 2h stability",
+    "P2 real-device Tools and Fetch"
+  ]
+}

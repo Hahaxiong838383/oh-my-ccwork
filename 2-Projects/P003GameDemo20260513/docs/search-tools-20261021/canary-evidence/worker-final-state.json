@@ -1,0 +1,264 @@
+{
+  "captured_at_ms": 1792578227455,
+  "r1": {
+    "path": "/root/rust-worker/backups/search-canary-R1-20261021T095400Z",
+    "sha256": "2257d09ffc38d7fa7df5885344b6c788493e78472de19a76a00099869452c174"
+  },
+  "binary_sha256": "435caa275f1504a6c8c4b583acd670ed3ad28068b615dc3f24d6e96b3a3205ae",
+  "production_binary_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+  "voice-worker-rust": {
+    "MainPID": "839",
+    "NRestarts": "0",
+    "ExecMainStatus": "0",
+    "MemoryCurrent": "1172729856",
+    "ActiveState": "active"
+  },
+  "p003-search-worker": {
+    "MainPID": "708735",
+    "NRestarts": "0",
+    "ExecMainStatus": "0",
+    "MemoryCurrent": "295714816",
+    "ActiveState": "active"
+  },
+  "candidate_effective_config": {
+    "AGENT_NAME": "p003-search-canary-20261021",
+    "WORKER_MAX_JOBS": "1",
+    "P003_SEARCH_ENABLED": "0",
+    "P003_SEARCH_DEVICE_ALLOWLIST": "BJP00326070803800006",
+    "P003_SEARCH_CANARY_GENERATION": "R1-20261021",
+    "EOT_SOCK": "/run/p003-search-canary/eot.sock"
+  },
+  "window": {
+    "enabled": false,
+    "sn": "BJP00326070803800006",
+    "expires_at_ms": 0,
+    "generation": "R1-20261021"
+  },
+  "health": {
+    "agent": "p003-search-canary-20261021",
+    "at_ms": 1792578225580,
+    "generation": "R1-20261021",
+    "jobs": 0,
+    "ordered_pcm_v1": true,
+    "registered": true
+  },
+  "synthetic_probes": {
+    "normal-result.json": {
+      "mode": "normal",
+      "room": "sn-BJP00326070803800006-1792577035",
+      "trace": "search-probe-1792577035",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 3,
+        "user_transcripts": 1,
+        "metrics": 5,
+        "audio_voiced_ms": 13680.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 4001
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 8256,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 14203,
+          "chars": 15
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 20154,
+          "chars": 31
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 24902,
+          "chars": 23
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 27.7,
+      "device_heard_verified": false
+    },
+    "search-result.json": {
+      "mode": "search",
+      "room": "sn-BJP00326070803800006-1792577115",
+      "trace": "search-probe-1792577115",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 3,
+        "user_transcripts": 4,
+        "metrics": 10,
+        "audio_voiced_ms": 12540.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 3409
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 6949,
+          "chars": 12
+        },
+        {
+          "event": "synthetic_input",
+          "index": 1,
+          "ms": 7743
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 10398,
+          "chars": 9
+        },
+        {
+          "event": "synthetic_input",
+          "index": 2,
+          "ms": 11143
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 14397,
+          "chars": 9
+        },
+        {
+          "event": "synthetic_input",
+          "index": 3,
+          "ms": 14813
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 17798,
+          "chars": 11
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 24397,
+          "chars": 26
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 26848,
+          "chars": 14
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 32622,
+          "chars": 29
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 37.0,
+      "device_heard_verified": false
+    },
+    "idle-result.json": {
+      "mode": "idle",
+      "room": "sn-BJP00326070803800006-1792577859",
+      "trace": "search-probe-1792577859",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 2,
+        "user_transcripts": 1,
+        "metrics": 3,
+        "audio_voiced_ms": 7740.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 1986
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 5370,
+          "chars": 12
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 9931,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 19864,
+          "chars": 37
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 75.8,
+      "device_heard_verified": false
+    },
+    "expiry-result.json": {
+      "mode": "expiry",
+      "room": "sn-BJP00326070803800006-1792577710",
+      "trace": "search-probe-1792577710",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 4,
+        "user_transcripts": 1,
+        "metrics": 6,
+        "audio_voiced_ms": 14530.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 1964
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 6167,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 10912,
+          "chars": 10
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 19861,
+          "chars": 44
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 22011,
+          "chars": 9
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 26786,
+          "chars": 25
+        }
+      ],
+      "disconnected": true,
+      "elapsed_s": 58.9,
+      "device_heard_verified": false
+    }
+  },
+  "events": [
+    "2026-10-21T10:16:11.434194Z  INFO canary window closed: closing room, reconnect returns baseline room=sn-BJP00326070803800006-1792577710",
+    "2026-10-21T10:16:11.847924Z  INFO room deleted (delete_room_on_close) room=sn-BJP00326070803800006-1792577710",
+    "2026-10-21T10:17:45.841730Z  INFO background search speech scheduled (not audio proof) task_id=\"ack\" delivery_id= session_ms=5201",
+    "2026-10-21T10:17:46.391256Z  INFO background search first audio published (device hearing unverified) room=\"sn-BJP00326070803800006-1792577859\" turn_id=1 task_id=\"ack\" delivery_id= session_ms=5751",
+    "2026-10-21T10:17:49.556052Z  INFO background search speech finished (device hearing unverified) task_id=\"ack\" delivery_id= session_ms=8916 interrupted=false spoken_chars=16",
+    "2026-10-21T10:17:50.441773Z  INFO background search speech scheduled (not audio proof) task_id=\"55846b45-1888-4583-b48c-e90eb4c6f3b1\" delivery_id=81a82974-391d-4ab6-9fe9-760ca8ee6bc6 session_ms=9801",
+    "2026-10-21T10:17:51.041121Z  INFO background search first audio published (device hearing unverified) room=\"sn-BJP00326070803800006-1792577859\" turn_id=2 task_id=\"55846b45-1888-4583-b48c-e90eb4c6f3b1\" delivery_id=81a82974-391d-4ab6-9fe9-760ca8ee6bc6 session_ms=10401",
+    "2026-10-21T10:17:59.487221Z  INFO background search speech finished (device hearing unverified) task_id=\"55846b45-1888-4583-b48c-e90eb4c6f3b1\" delivery_id=81a82974-391d-4ab6-9fe9-760ca8ee6bc6 session_ms=18847 interrupted=false spoken_chars=37",
+    "2026-10-21T10:18:56.493109Z  INFO room deleted (delete_room_on_close) room=sn-BJP00326070803800006-1792577859"
+  ]
+}

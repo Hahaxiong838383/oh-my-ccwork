@@ -1,6 +1,6 @@
 # 指定 SN 灰度运行说明
 
-本目录为候选运行模板，是否已部署/开窗以 `docs/search-tools-20261021/CANARY_ACCEPTANCE_20261021.md` 实际记录为准。
+本目录为候选运行模板，是否已部署/开窗以 [R1验收记录](../../../../docs/search-tools-20261021/CANARY_ACCEPTANCE_20261021.md) 实际记录为准。
 
 - 独立入口 `src/search-canary-main.ts`，仅 loopback 3007；导入 store 前校验全部数据库、音频路径，拒绝越界/未知 DB 键/数据符号链接与硬链接；systemd 再限制写权限。
 - 不导入普通 index.ts，不挂载设备签发/OTA/遥测/Analytics/人格日批。关闭记忆提取及音频生成。仅复制目标设备必要人格配置/回声文本快照，不回灌生产。
@@ -11,3 +11,5 @@
 - 截止时生产派单自动回原路径，候选搜索拒新/取消待播，Worker watchdog 在下一秒关闭候选房间；设备结束旧会话重连即签原 agent。不是会话内无缝迁移。
 - 提前关窗顺序：生产 `p003.search.canary.enabled=0` → 候选 `p003.search.enabled=0` → Worker window.enabled=false → 确认 active jobs=0 → 停候选。
 - 恢复共享签发补丁只还原 R1 对应文件/配置；Nginx只撤本次location，先 `nginx -t` 再reload。禁止整库回灌。保持原子替换、关闭失败默认拒绝。
+
+更新纪律：等待上传进程成功退出，核候选产物字节数和SHA与构建清单相等，才可stop/替换/start；禁止传输未完成先改名或安装。截止前不足6秒的新票据回原路径，避免违背现有最短TTL。

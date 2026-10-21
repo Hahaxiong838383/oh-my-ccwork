@@ -1,0 +1,83 @@
+{
+  "captured_at_ms": 1792578230023,
+  "pm2": [
+    {
+      "name": "p003-voice",
+      "pid": 1123377,
+      "restarts": 26,
+      "status": "online"
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "restarts": 0,
+      "status": "online"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "restarts": 5,
+      "status": "online"
+    }
+  ],
+  "signer_hashes": {
+    "src/routes/device-session.ts": "6f6fdf418a60fa13e5720ef09866b1db50cab8390ad256ad24a94e10648d03ab",
+    "src/search-canary-policy.ts": "94d0d485926bc9748b70535ca6a0db6033c394e6d3b3047c5ceddad889425d3e",
+    "src/search-canary-runtime.ts": "5a376d65875403615f2bd27931ada708153b5d445afa998c2991733005e6698d"
+  },
+  "other_production_sources_unchanged": true,
+  "r1": {
+    "path": "/opt/p003/server/backups/search-canary-R1-20261021T095400Z",
+    "sha256": "1f601177e907476b0272799d76ec197e2a240aa1982a91f86923c2f713dc70f5"
+  },
+  "active_nginx_sha256": "91ddad43e804bbfe1641e931ab07f03f1866b889de8354d8885e22963b566b0a",
+  "production_search_flags": {},
+  "candidate_search_flags": {
+    "p003.search.tools": "0",
+    "p003.search.allowlist": "[\"BJP00326070803800006\"]",
+    "p003.search.canary.expires_at_ms": "0",
+    "p003.search.enabled": "0"
+  },
+  "production_health": {
+    "http": 200,
+    "status": "ok"
+  },
+  "candidate_health": {
+    "http": 200,
+    "status": "ok",
+    "agent": "p003-search-canary-20261021",
+    "generation": "R1-20261021",
+    "search": false,
+    "tools": false
+  },
+  "last_reported_client": {
+    "code": 353,
+    "name": "1.2.2-canary.339",
+    "at_ms": 1792576432980,
+    "installation_independently_verified": false
+  },
+  "last_real_successful_session_at_ms": 1792576451101,
+  "synthetic_tasks": [
+    {
+      "id": "965105be-451a-4593-bd50-b443acb8cb58",
+      "created_at_ms": 1792577127734,
+      "status": "expired",
+      "delivery": "unknown",
+      "ready_at_ms": 1792577129032
+    },
+    {
+      "id": "1ee18097-c387-4b37-846d-b715ec4906a4",
+      "created_at_ms": 1792577460869,
+      "status": "cancelled",
+      "delivery": "completed",
+      "ready_at_ms": 1792577462207
+    },
+    {
+      "id": "55846b45-1888-4583-b48c-e90eb4c6f3b1",
+      "created_at_ms": 1792577865137,
+      "status": "cancelled",
+      "delivery": "completed",
+      "ready_at_ms": 1792577866221
+    }
+  ]
+}

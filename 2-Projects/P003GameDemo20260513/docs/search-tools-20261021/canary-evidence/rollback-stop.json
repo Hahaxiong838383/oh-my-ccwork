@@ -1,0 +1,1 @@
+{"at_ms": 1792577957641, "candidate_stopped": true, "checks": [{"path": "/health", "expected": 200, "actual": 200}, {"path": "/v1/device/session", "expected": 401, "actual": 401}, {"path": "/_canary/search-20261021/v1/chat/completions", "expected": 502, "actual": 502}]}

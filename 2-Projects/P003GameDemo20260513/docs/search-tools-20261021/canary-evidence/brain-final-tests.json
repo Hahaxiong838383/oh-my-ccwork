@@ -1,0 +1,30 @@
+[
+  {
+    "test": "search-canary-isolation.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-process.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-policy.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "device-session.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "search-runtime.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "device-intent-protocol.test.ts",
+    "exit": 0
+  },
+  {
+    "test": "tsc --noEmit",
+    "exit": 0
+  }
+]

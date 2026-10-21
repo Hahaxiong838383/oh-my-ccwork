@@ -10,7 +10,9 @@
 
 **依据：** [候选交付](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/README.md)、[协议](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/PROTOCOL.md)、[验收边界](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/ACCEPTANCE.md)。
 
-**本轮状态：只规划并登记 Codeg 会话。没有部署灰度、开启搜索、修改生产路由或向设备下发配置。**
+**执行更新：独立候选、HTTPS、隔离/期限代码及生产最小签发补丁已部署；正式两小时设备窗口未开，待真机验收。**
+
+当前事实见 [R1部署与验收记录](../../../2-Projects/P003GameDemo20260513/docs/search-tools-20261021/CANARY_ACCEPTANCE_20261021.md)。下文“现状”表和旧冻结点是实施前快照；本轮执行前SHA、当前PID/哈希与测试证据均在R1记录。
 
 ## 1. 分支安排：继续现有两条，不新建第三条
 
@@ -65,9 +67,9 @@ SN 灰度是当前搜索功能的上线验收阶段，直接依赖这两个候�
 
 文件：新增 `server/src/search-canary-policy.ts`、`server/scripts/search-canary-policy.test.ts`；修改 `server/src/routes/device-session.ts`；扩展 `server/scripts/device-session.test.ts`。
 
-- [ ] 定义纯函数 `selectSearchCanaryAgent(input)`，输入 `sn, baselineAgent, nowMs, enabled, allowlist, expiresAtMs, leaseUntilMs, canaryAgent, contractCompatible`，输出唯一 agent 名称；异常配置一律返回 baselineAgent。
-- [ ] 新增热配置 `p003.search.canary.enabled/allowlist/expires_at_ms/agent`，默认关闭、名单空拒绝。健康租约由本机受控探测更新、有效期 15 秒、每 5 秒续约；请求路径只读内存状态，不等待联网探活。
-- [ ] 先写并执行以下决策表测试：默认关、名单空、错 SN、过期、租约过期、兼容性不符都返回 baseline；命中全部条件才返回候选；baseline 为旧首句专用 agent 时仍保留该回退值。
+- [x] 定义纯函数 `selectSearchCanaryAgent(input)`，输入 `sn, baselineAgent, nowMs, enabled, allowlist, expiresAtMs, leaseUntilMs, canaryAgent, contractCompatible`，输出唯一 agent 名称；异常配置一律返回 baselineAgent。
+- [x] 新增热配置 `p003.search.canary.enabled/allowlist/expires_at_ms/agent`，默认关闭、名单空拒绝。健康租约由本机受控探测更新、有效期 15 秒、每 5 秒续约；请求路径只读内存状态，不等待联网探活。
+- [x] 先写并执行以下决策表测试：默认关、名单空、错 SN、过期、租约过期、兼容性不符都返回 baseline；命中全部条件才返回候选；baseline 为旧首句专用 agent 时仍保留该回退值。
 
 ```ts
 import assert from 'node:assert/strict';
@@ -84,8 +86,8 @@ for (const delta of [
 ]) assert.equal(selectSearchCanaryAgent({...input,...delta}), input.baselineAgent);
 ```
 
-- [ ] 测试先失败后实现；集成用 `Hono app.request()` 与合成 Device Bearer，覆盖 body SN 伪造为 403、未命中设备保持原响应语义、JWT/expected_agent_name/contract 三方一致。
-- [ ] 执行 `node --experimental-sqlite --import tsx scripts/search-canary-policy.test.ts` 与 `node --experimental-sqlite --import tsx scripts/device-session.test.ts`；测试只用临时 DB。通过后独立提交。
+- [x] 测试先失败后实现；集成用 `Hono app.request()` 与合成 Device Bearer，覆盖 body SN 伪造为 403、未命中设备保持原响应语义、JWT/expected_agent_name/contract 三方一致。
+- [x] 执行 `node --experimental-sqlite --import tsx scripts/search-canary-policy.test.ts` 与 `node --experimental-sqlite --import tsx scripts/device-session.test.ts`；测试只用临时 DB。通过后独立提交。
 
 ### 任务 B：Brain 隔离启动与 HTTPS 路由
 
@@ -156,7 +158,7 @@ for (const delta of [
 4. 保留候选账本及证据，不把候选 DB 回灌生产，不回退人格 revision、不改 Analytics 开关。
 5. 收口输出实际开始/结束、SN后8位、APK版本、两端部署SHA、每项样本/通过/失败/未测、回滚状态；记录“单机通过”与“可全量发布”是不同结论。
 
-## 8. 当前可承诺范围
+## 8. 实施前范围快照（现状见R1记录）
 
 两条分支与历史会话入口已就绪。本文件给出实施顺序、实机操作、通过门槛和回滚路径；具体候选路由、隔离启动、健康租约与新测试尚待实现。下一步在这两条分支亲自编码，测试通过后再安排单机窗口。没有自动扩大至其他内测设备的授权。
 
