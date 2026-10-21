@@ -462,7 +462,9 @@
     .analytics-panel .an-catalog-search { max-width:360px;flex:1; }.analytics-panel .an-hour { font-variant-numeric:tabular-nums; }
     @media(max-width:1200px) { .analytics-panel .an-stats,.analytics-panel .an-groups { grid-template-columns:repeat(2,minmax(0,1fr)); }.analytics-panel .an-grid { grid-template-columns:1fr; } }
     @media(max-width:700px) { .analytics-panel .an-heading { align-items:flex-start; }.analytics-panel .an-stats,.analytics-panel .an-groups { grid-template-columns:1fr; } }
-  </style>
+      .canary-panel{width:100%;min-width:0;padding:24px;box-sizing:border-box}.canary-panel .kh-card{padding:20px;margin-bottom:16px}.canary-panel h3{margin:0 0 14px}.canary-panel p{line-height:1.7}.canary-panel code{overflow-wrap:anywhere}.canary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}.canary-warning{background:#fff7e8;border:1px solid #f2d399;border-radius:10px;padding:15px;margin:16px 0;line-height:1.7;color:#72521c}.canary-warning div{font-size:12px}.canary-device-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}.canary-device-row select{max-width:100%;padding:10px;border:1px solid #dcdfe6;border-radius:7px;background:white;font:inherit}.canary-issue{padding:12px 0;border-top:1px solid #eef1f5}.canary-issue span{font-size:12px;color:#805d23;margin-left:12px}.canary-issue p{margin:6px 0;color:#6b7785;font-size:13px}.canary-panel li{line-height:1.9}
+  @media(max-width:760px){.canary-layout .app-aside{width:64px}.canary-layout .app-content{padding:10px}.canary-layout .app-header{padding:0 10px}.canary-layout .app-header .right{display:none}.canary-layout .kh-wrap{flex-direction:column}.canary-layout .kh-nav{width:auto;flex-direction:row;overflow-x:auto;padding:8px}.canary-layout .kh-nav button{white-space:nowrap}.canary-layout .kh-nav .kh-logo,.canary-layout .kh-nav .kh-back{display:none}.canary-layout .canary-panel{padding:12px}.canary-layout .an-heading{flex-wrap:wrap;gap:12px}.canary-layout .canary-panel .kh-card{padding:12px}}
+</style>
 </head>
 <body>
   <div id="app">
@@ -495,7 +497,7 @@
     </div>
 
     <!-- ==================== MAIN LAYOUT ==================== -->
-    <div v-else class="app-layout">
+    <div v-else class="app-layout" :class="{'canary-layout':currentPage==='worker' && khNav==='search-canary'}">
       <!-- Sidebar -->
       <div class="app-aside" :class="{ collapsed: asideCollapsed }">
         <div class="aside-logo">
@@ -555,7 +557,7 @@
             </el-breadcrumb>
           </div>
           <div class="right">
-            <el-tag :type="currentPage==='worker' && khNav==='analytics' ? 'info' : 'warning'" size="small">{{ currentPage==='worker' && khNav==='analytics' ? '数据埋点真实数据 · 管理员只读' : '用户反馈真实数据 · 其余看板演示' }}</el-tag>
+            <el-tag :type="currentPage==='worker' && khNav==='analytics' ? 'info' : 'warning'" size="small">{{ currentPage==='worker' && khNav==='search-canary' ? '搜索灰度真实状态 · 管理员专属' : currentPage==='worker' && khNav==='analytics' ? '数据埋点真实数据 · 管理员只读' : '用户反馈真实数据 · 其余看板演示' }}</el-tag>
             <el-tag :type="currentUser.role === 'admin' ? 'danger' : (currentUser.role === 'editor' ? 'warning' : 'info')" size="small">{{ currentUser.role === 'admin' ? '管理员' : (currentUser.role === 'editor' ? '编辑员' : '游客 · 只读') }}</el-tag>
             <el-dropdown @command="handleDropdown">
               <span style="cursor:pointer;display:flex;align-items:center;gap:6px">
@@ -1239,6 +1241,21 @@
                 <button class="kh-back" @click="handleMenuSelect('dashboard')">⇠ 数据看板</button>
               </div>
               <div class="kh-main" style="display:flex;gap:0;padding:0">
+                <section v-if="currentPage==='worker' && khNav==='search-canary' && canManageInvites" class="canary-panel" aria-label="搜索灰度">
+                  <div class="an-heading"><div><div class="kh-h1">搜索灰度</div><div class="kh-sub">单设备体验验收 · 搜索在后台执行，普通聊天继续</div></div><el-button :loading="canary.loading" @click="loadCanary">刷新状态</el-button></div>
+                  <div v-if="canary.error" role="alert" class="canary-warning">{{ canary.error }}。当前状态未知，请勿依据旧数据开窗。</div>
+                  <div v-if="!canary.data && !canary.error" class="kh-sub">正在核对灰度状态…</div>
+                  <template v-if="canary.data">
+                    <div class="canary-warning"><b>{{ canaryStateLabel(canary.data.summary.state) }}</b> · {{ canary.data.acceptance }}<div>实时检查：{{ analyticsTime(canary.data.observed_at_ms) }}（北京时间）；每15秒刷新。服务端已发送不代表设备实际听到。</div></div>
+                    <div class="canary-grid">
+                      <div class="kh-card"><h3>窗口与健康</h3><p>候选 Brain：<b>{{ canary.data.summary.health_ok ? '本次探测正常' : '未确认 / 不可用' }}</b></p><p>新会话派单租约：{{ canary.data.summary.lease_ok ? '有效' : '不可用（可能满载或心跳过期）' }}</p><p>实际派单名单：{{ canary.data.summary.configured_devices.join('、') || '未配置，关闭' }}</p><p>开始：{{ analyticsTime(canary.data.window_started_at_ms) }}<br>截止：{{ analyticsTime(canary.data.summary.expires_at_ms) }}</p><div class="kh-sub">到期结束测试会话，返回主界面重新进入后恢复现役链路。</div></div>
+                      <div class="kh-card"><h3>灰度版本</h3><template v-if="canary.data.release"><p>Brain：<code>{{ canary.data.release.brain_commit }}</code></p><p>Worker：<code>{{ canary.data.release.worker_commit }}</code></p><p>产物 SHA256：<code>{{ canary.data.release.worker_sha256 }}</code></p><p>部署核验：{{ analyticsTime(canary.data.release.verified_at_ms) }}</p><div class="kh-sub">部署核验记录，不冒充实时二进制校验。{{ canary.data.release.worker_tests }} 项 Worker 测试通过；真实设备体验仍需验收。</div></template><p v-else>部署核验记录缺失，版本未知。</p></div>
+                    </div>
+                    <div class="kh-card"><h3>灰度设备</h3><label for="canary-device">待测设备（手动选择）</label><div class="canary-device-row"><select id="canary-device" v-model="canary.selected" @change="canary.dirty=true" :disabled="canary.saving || canary.data.summary.dispatch_requested"><option v-for="d in canary.data.devices" :key="d.sn" :value="d.sn" :disabled="!d.eligible">{{ d.sn }}{{ d.eligible ? '' : '（不可用）' }}</option></select><el-button type="primary" :loading="canary.saving" :disabled="!canary.dirty || canary.loading || canary.data.summary.dispatch_requested" @click="saveCanaryDevice">保存待测设备</el-button></div><p class="kh-sub">保存选择不会开窗或改变派单。当前完成隔离准备的设备：{{ canary.data.prepared_sn }}。选择其他设备后需重新准备并验收。</p><p>已保存：<code>{{ canary.data.selected_sn }}</code></p><p v-if="canarySelectedDevice">云端最近自报版本：<b>{{ canarySelectedDevice.version_code == null ? '未知' : 'v'+canarySelectedDevice.version_code }}</b> / {{ canarySelectedDevice.version_name || '未知' }}<br>上报时间：{{ analyticsTime(canarySelectedDevice.version_reported_at_ms) }}；现场安装版本待确认。</p></div>
+                    <div class="kh-card"><h3>问题与待验项目</h3><div v-for="issue in canary.data.issues" :key="issue.title" class="canary-issue"><b>{{ issue.title }}</b><span>{{ issue.status }}</span><p>{{ issue.detail }}</p></div></div>
+                    <div class="kh-card"><h3>你需要完成什么</h3><ol><li>设备开机联网，核对SN和“关于”页版本，告知可以现场听音的时间。</li><li>配合现役链路30轮普通聊天基线；无需自行统计日志或修改服务器。</li><li>收到实际起止时间通知后结束旧会话、重新进入；先做普通聊天回归，再按话术测P1搜索。</li></ol><p>话术：先说“帮我查一下今天北京的天气”，继续聊画猫；安静等待补播。播报时说“先停一下”，随后“继续刚才的搜索结果”；再分别测“取消搜索”“改查上海的天气”和退出重连。</p><p class="kh-sub">服务端负责核对、开窗、日志对账和到期关闭。首轮2小时，仅一台；P1真机通过后再开放P2。</p></div>
+                  </template>
+                </section>
                 <section v-if="currentPage==='worker' && khNav==='analytics' && canManageInvites" class="analytics-panel" aria-label="数据埋点">
                   <div class="an-heading"><div><div class="kh-h1">数据埋点</div><div class="kh-sub">设备上传、业务事件与结算 · 管理员只读</div></div><el-button size="small" @click="analyticsRefresh">刷新当前页</el-button></div>
                   <nav class="an-tabs" aria-label="数据埋点页签"><button v-for="tab in analyticsTabs" :key="tab.k" :class="{on:analytics.tab===tab.k}" :aria-current="analytics.tab===tab.k ? 'page' : null" @click="analyticsSetTab(tab.k)">{{ tab.l }}</button></nav>
@@ -4616,10 +4633,29 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'servers', l: '🖥 服务器状态' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }, { k: 'diaglog', l: '🧾 诊断日志' }, { k: 'analytics', l: '数据埋点' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'search-canary', l: '搜索灰度' }, { k: 'servers', l: '🖥 服务器状态' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }, { k: 'diaglog', l: '🧾 诊断日志' }, { k: 'analytics', l: '数据埋点' }];
+
+        var canary = reactive({loading:false,saving:false,error:'',data:null,selected:'BJP00326070803800006',dirty:false,seq:0});
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){canary.seq++;canary.data=null;canary.dirty=false;canary.loading=false;canary.error='';}});
+        var canarySelectedDevice = computed(function(){return canary.data && canary.data.devices.find(function(d){return d.sn===canary.selected;});});
+        function canaryStateLabel(s){return {closed:'正式窗口未开启',expired:'窗口已到期',blocked:'窗口已配置，暂不可新派单',regression:'关搜索回归窗口',p1:'P1 已配置，端到端待验',p2:'P2 已配置，端到端待验'}[s] || '状态未知';}
+        async function loadCanary(){
+          if(!canManageInvites.value || canary.loading)return;
+          var epoch=authSessionEpoch,token=getToken(),seq=++canary.seq;canary.loading=true;canary.error='';
+          try{var j=await deviceApi('/api/admin/search-canary',{method:'GET'});if(seq!==canary.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'加载失败');canary.data=j;if(!canary.dirty)canary.selected=j.selected_sn;}
+          catch(e){if(seq===canary.seq&&epoch===authSessionEpoch){canary.error=String(e.message||e);canary.data=null;}}
+          finally{if(seq===canary.seq)canary.loading=false;}
+        }
+        async function saveCanaryDevice(){
+          if(!canary.dirty||canary.saving)return;canary.saving=true;
+          var epoch=authSessionEpoch,token=getToken();
+          try{var j=await deviceApi('/api/admin/search-canary/device',{method:'PUT',body:JSON.stringify({sn:canary.selected})});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'保存失败');canary.dirty=false;ElementPlus.ElMessage.success('已保存待测设备，未开启窗口');await loadCanary();}
+          catch(e){if(epoch===authSessionEpoch)ElementPlus.ElMessage.error(String(e.message||e));}finally{canary.saving=false;}
+        }
+        setInterval(function(){if(!canary.saving&&!document.hidden&&canManageInvites.value&&currentPage.value==='worker'&&khNav.value==='search-canary')loadCanary();},15000);
 
         // ── 数据埋点：admin 专属、GET-only、安全摘要 ──
-        var visibleWorkerNavs = computed(function () { return canManageInvites.value ? WORKER_NAVS : WORKER_NAVS.filter(function (n) { return n.k !== 'analytics'; }); });
+        var visibleWorkerNavs = computed(function () { return canManageInvites.value ? WORKER_NAVS : WORKER_NAVS.filter(function (n) { return n.k !== 'analytics' && n.k !== 'search-canary'; }); });
         function analyticsSection() { return { loading:false, error:'', stale:false, data:null, seq:0 }; }
         function analyticsDay(ms) { return new Date(ms + 8 * 3600000).toISOString().slice(0,10); }
         var analyticsFilters = reactive({ from:analyticsDay(Date.now()-13*86400000), to:analyticsDay(Date.now()), dimension:'occurred', alias:'' });
@@ -6509,6 +6545,8 @@
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
         function khSelectNav(k) {
+          if (k === 'search-canary' && (!canManageInvites.value || currentPage.value !== 'worker')) return;
+          if (k === 'search-canary') nextTick(loadCanary);
           if (k === 'analytics' && (!canManageInvites.value || currentPage.value !== 'worker')) return;
           khNav.value = k;
           if (k === 'analytics') nextTick(analyticsRefresh);
@@ -7594,6 +7632,7 @@
         }
 
         return {
+          canary:canary,canarySelectedDevice:canarySelectedDevice,canaryStateLabel:canaryStateLabel,loadCanary:loadCanary,saveCanaryDevice:saveCanaryDevice,
           visibleWorkerNavs: visibleWorkerNavs,
           analytics: analytics,
           analyticsFilters: analyticsFilters,

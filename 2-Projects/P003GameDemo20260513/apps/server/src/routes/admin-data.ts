@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { canaryAdminRoute } from '../search-canary-status.js';
 import { analyticsAdminGateway } from '../analytics/admin-query.js';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
@@ -63,7 +64,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot|analytics)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot|analytics|search-canary)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -73,6 +74,8 @@ adminDataRoute.use('*', async (c, next) => {
   }
   await next();
 });
+
+adminDataRoute.route('/search-canary', canaryAdminRoute);
 
 // 列所有孩子档案 + 关联设备（按账号聚合）
 adminDataRoute.get('/profiles', (c) => {
