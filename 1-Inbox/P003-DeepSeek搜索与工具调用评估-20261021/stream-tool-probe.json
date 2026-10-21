@@ -1,0 +1,13 @@
+{
+  "captured_at": "2026-10-21T08:33:49.781Z",
+  "requested_model": "deepseek-v4-flash",
+  "status": 200,
+  "total_ms": 1020,
+  "stream_chunks": 16,
+  "argument_fragments": 13,
+  "tool_call_valid": true,
+  "response_model": "deepseek-flash",
+  "finish_reason": "tool_calls",
+  "done_seen": true,
+  "call_count": 1
+}

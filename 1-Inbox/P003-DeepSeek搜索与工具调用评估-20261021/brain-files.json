@@ -1,0 +1,50 @@
+[
+  {
+    "path": "src/routes/custom-llm.ts",
+    "bytes": 16962,
+    "sha256": "4333ef9385931cb52fc299481f40f4b0720b78aa3751e684988c9143ae1f468f",
+    "main_equal": false
+  },
+  {
+    "path": "src/providers/deepseek-llm.ts",
+    "bytes": 4794,
+    "sha256": "217628afd4df66e376d6739214ea5ff59aa20d46f340fcaf07849e5bb0a5e9d7",
+    "main_equal": true
+  },
+  {
+    "path": "src/providers/race-llm.ts",
+    "bytes": 4233,
+    "sha256": "d6be76204b59640c62b56142c78976aab51943b683d4ace6d438640330165c65",
+    "main_equal": true
+  },
+  {
+    "path": "src/providers/volc-llm.ts",
+    "bytes": 4567,
+    "sha256": "2c94eb50bc0e97b3ed9d05fae17c2dc7106345f7e49b9c5f9275a81535fcbd78",
+    "main_equal": true
+  },
+  {
+    "path": "src/providers/gemini-llm.ts",
+    "bytes": 6087,
+    "sha256": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140",
+    "main_equal": true
+  },
+  {
+    "path": "src/device-brain-prompt.ts",
+    "bytes": 12667,
+    "sha256": "6f701c6d341d0ad1c80aa1dca3bf65c2e94b438d899b68f63704dc46b712bd4e",
+    "main_equal": false
+  },
+  {
+    "path": "src/prompt-orchestrator.ts",
+    "bytes": 29973,
+    "sha256": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f",
+    "main_equal": false
+  },
+  {
+    "path": "src/index.ts",
+    "bytes": 11262,
+    "sha256": "5746e26103a4960c4693cc9ad7d72437e04a12a2ee23883c04e51e600f4e7eb3",
+    "main_equal": false
+  }
+]

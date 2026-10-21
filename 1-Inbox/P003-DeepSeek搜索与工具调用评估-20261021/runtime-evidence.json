@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-21",
+  "brain": {
+    "host_alias": "aliyun-hk",
+    "service": "p003-voice",
+    "pid": 3873258,
+    "restarts": 24,
+    "provider": "race",
+    "main_model_config": "deepseek-v4-flash",
+    "fallback_model_config": "doubao-seed-2.0-lite",
+    "source_matches_worktree_commit": "6c2cc932713199968337d45641c3286d66c1fbfe",
+    "matched_files": 8
+  },
+  "worker": {
+    "hostname": "voice-worker-hk2",
+    "service": "voice-worker-rust",
+    "pid": 839,
+    "restarts": 0,
+    "main_endpoint": "https://kidshub-ai.hahaxiong.cc/v1",
+    "main_model_label": "xiaoke-device",
+    "fallback_endpoint": "https://ark.cn-beijing.volces.com/api/plan/v3",
+    "fallback_model": "doubao-seed-2.0-mini",
+    "main_grace_ms": 800,
+    "max_jobs": 20,
+    "tts_provider": "xfyun",
+    "binary_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+    "air_source_branch": "p003/story-truncation-20260914",
+    "air_source_head": "491e068a9f5e5e5538dd6188eb202255787dc2bc",
+    "air_scoped_dirty": false,
+    "binary_to_source_build_provenance_verified": false
+  },
+  "worker_source_sha256": {
+    "src/llm.rs": "aabf748b1a69963a2b2198ebe6e13d88661ced897db7b36e52d59c79ac715b31",
+    "src/job.rs": "717fdac7a22fc5608adbf222dcc8a34510694ce5e47ab8d170c5bfe320c1b891",
+    "src/config.rs": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218",
+    "src/pipeline.rs": "9d330dfbf14f6d511eaa64c34e30088cf172b71fd2838ddfa57544c87d8c7b3f"
+  }
+}

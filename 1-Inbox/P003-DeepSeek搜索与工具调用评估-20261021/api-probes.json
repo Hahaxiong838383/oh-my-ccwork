@@ -1,0 +1,73 @@
+{
+  "captured_at": "2026-10-21T08:33:11.996Z",
+  "synthetic_only": true,
+  "probes": [
+    {
+      "kind": "search",
+      "status": 200,
+      "ms": 465,
+      "result_count": 3,
+      "items": [
+        {
+          "title": "预约购票",
+          "url": "https://www.cstm.org.cn/ykfw/yygp/index.html",
+          "score": 2.476604461669922,
+          "authority": 4,
+          "date": "2026-02-02T16:00:00+00:00",
+          "summary_chars": 264,
+          "content_chars": 0
+        },
+        {
+          "title": "票务信息",
+          "url": "https://www.cstm.org.cn/fwxx/pwxx/art/2024/art_85cff4a4a5ba463294d09921ce62a885.html",
+          "score": 1.842631220817566,
+          "authority": 4,
+          "date": "2024-01-30T16:00:00+00:00",
+          "summary_chars": 240,
+          "content_chars": 0
+        },
+        {
+          "title": "开放时间",
+          "url": "https://www.cstm.org.cn/fwxx/cgzn/kfsj/art/2022/art_ca36cb2f1cab430bab45ad3c172cf81e.html",
+          "score": 1.7032105922698977,
+          "authority": 4,
+          "date": "2023-02-27T16:00:00+00:00",
+          "summary_chars": 92,
+          "content_chars": 0
+        }
+      ]
+    },
+    {
+      "kind": "fetch",
+      "status": 200,
+      "ms": 160,
+      "title": "网页搜索与抓取",
+      "content_chars": 6405
+    },
+    {
+      "kind": "tool_call",
+      "status": 200,
+      "ms": 1199,
+      "model": "deepseek-flash",
+      "finish_reason": "tool_calls",
+      "tool_names": [
+        "probe_add"
+      ]
+    },
+    {
+      "kind": "tool_result_followup",
+      "status": 200,
+      "ms": 607,
+      "model": "deepseek-flash",
+      "finish_reason": "stop",
+      "answer_is_5": true
+    }
+  ],
+  "models": {
+    "status": 200,
+    "ids": [
+      "deepseek-flash",
+      "deepseek-v4-pro"
+    ]
+  }
+}
