@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-21T17:56:44.229141+08:00",
+  "markdown_files": 10,
+  "links_checked": 21,
+  "skill_frontmatters": 6,
+  "wrapper_descriptions_match": true,
+  "reference_cases": [
+    {
+      "case": "Codeg入口与迁移",
+      "passed": true,
+      "kind": "reference-retrieval-check"
+    },
+    {
+      "case": "搜索单机边界",
+      "passed": true,
+      "kind": "reference-retrieval-check"
+    }
+  ],
+  "observed_failure_then_fix": "真实用户指出暂无会话；历史操作回读两副本各2152展示记录，原会话保留",
+  "new_agent_pressure_test": false,
+  "new_production_tests": false,
+  "validation_scope": "参考文档检索、路径与结构、敏感模式、差异检查；不等同模型行为或RTC验收"
+}
