@@ -15,6 +15,7 @@ process.env.LIVEKIT_API_SECRET = '0123456789abcdef0123456789abcdef';
 process.env.DEVICE_SN_ALLOW = 'BJP00326060100200003,BJP00326060100200005';
 process.env.DEVICE_SESSION_RPM = '100';
 // B89：后台覆盖开关存 config.db；测试用临时库，绝不碰 ./data/config.db
+process.env.DEVICES_DB_PATH = `${(await import('node:os')).tmpdir()}/p003-device-session-registry-${process.pid}.db`;
 process.env.CONFIG_DB_PATH = `${(await import('node:os')).tmpdir()}/p003-device-session-test-${process.pid}.db`;
 
 const { deviceSessionRoute, assertTokenMatchesResponse } = await import(
@@ -680,6 +681,35 @@ await t('B91 capability 下旧端（无 supports）：contract 键显式 null + 
   } finally {
     clearPolicy();
   }
+});
+
+await t('搜索灰度：完整SN、首句合同、JWT派单、到期回退', async () => {
+  const { writeFileSync, unlinkSync } = await import('node:fs');
+  const { refreshSearchCanaryLease } = await import('../src/search-canary-runtime.js');
+  const { configStore } = await import('../src/config-store.js');
+  const health = process.env.CONFIG_DB_PATH + '.health';
+  process.env.SEARCH_CANARY_HEALTH_FILE = health;
+  const flag = (k: string, v: string) => configStore.setFlag('p003.search.canary.' + k, v, 'test');
+  flag('enabled', '1'); flag('allowlist', JSON.stringify([SN]));
+  flag('agent', 'p003-search-canary-20261021');
+  const expires = Date.now() + 60000; flag('expires_at_ms', String(expires));
+  writeFileSync(health, JSON.stringify({agent:'p003-search-canary-20261021', until_ms:Date.now()+14000,ordered_pcm_v1:true,generation:'test'}));
+  await refreshSearchCanaryLease();
+  withPolicy('capability', '', FT_AGENT);
+  try {
+    const j:any = await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
+    assert.equal(j.expected_agent_name,'p003-search-canary-20261021');
+    assert.equal(j.contract.input_mode,'ordered_pcm'); assertTokenMatchesResponse(j.token,j);
+    assert.equal(metaOf(j).search_canary.sn,SN);
+    assert.equal(metaOf(j).search_canary.expires_at_ms,expires);
+    assert.ok(j.expires_at_ms <= expires);
+    const other:any = await (await callSession({cred:await deviceCred(SN2),sn:SN2,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
+    assert.equal(other.expected_agent_name,FT_AGENT);
+    assert.equal((await callSession({cred:await deviceCred(SN2),sn:SN})).status,403);
+    flag('expires_at_ms',String(Date.now()-1));
+    const closed:any = await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
+    assert.equal(closed.expected_agent_name,FT_AGENT); assert.equal(closed.contract.input_mode,'ordered_pcm');
+  } finally { flag('enabled','0'); clearPolicy(); unlinkSync(health); }
 });
 
 console.log = origLog;

@@ -5,6 +5,7 @@ import { verifyDeviceCredential as verifyPureDeviceCredential } from '../device-
 import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
 import { configStore, type RuntimeFlag } from '../config-store.js';
+import { searchCanarySelection } from '../search-canary-runtime.js';
 
 /**
  * P003 S2-B1 设备 Session API（codex 联调合同：CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
@@ -316,13 +317,16 @@ deviceSessionRoute.post('/session', async (c) => {
   const firstTurnEligible = firstTurnEligibleBy(conf.firstTurnPolicy, conf.firstTurnAllow, sn as string, supports);
   const firstTurn = firstTurnEligible && conf.firstTurnAgent !== '';
   // 本次派单目标：签了新合同 → 专用 agent；否则旧 agent。**JWT / 响应 / 自检三处同用这一个值。**
-  const agentName = firstTurn ? conf.firstTurnAgent : AGENT_NAME;
+  const canary = searchCanarySelection(sn as string, firstTurn ? conf.firstTurnAgent : AGENT_NAME, firstTurn);
+  const agentName = canary.agent;
   const contract = firstTurn ? { ...FIRST_TURN_CONTRACT, worker_capabilities: [...FIRST_TURN_CONTRACT.worker_capabilities] } : null;
 
   const roomSec = nextRoomSecond();
   const roomName = `sn-${sn}-${roomSec}`;
   const identity = `dev-${sn}`;
-  const expSec = Math.floor(Date.now() / 1000) + conf.ttlS;
+  const expSec = canary.canary
+    ? Math.min(Math.floor(Date.now() / 1000) + conf.ttlS, Math.floor(canary.expiresAtMs / 1000))
+    : Math.floor(Date.now() / 1000) + conf.ttlS;
   const sessionId = randomUUID();
   const prefetchId = typeof body.prefetch_id === 'string' ? body.prefetch_id : undefined;
 
@@ -347,6 +351,7 @@ deviceSessionRoute.post('/session', async (c) => {
             trace_id: traceId,
             session_id: sessionId,
             issue_ts_ms: Date.now(),
+            ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),
             // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
             ...(contract
               ? { input_mode: contract.input_mode, oneshot_first_turn: contract.oneshot_first_turn, local_receipt: contract.local_receipt }
