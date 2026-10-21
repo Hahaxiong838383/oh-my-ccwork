@@ -1,0 +1,37 @@
+device-intent-protocol: 5/5 全过
+✔ scripts/device-intent-protocol.test.ts (835.786333ms)
+
+exit-intent.test: 58 passed, 0 failed
+✔ scripts/exit-intent.test.ts (623.353083ms)
+PASS=37 FAIL=0
+✔ scripts/expression-filter.test.ts (866.269917ms)
+local-audio-integrity: immutable staging / real publication / CAS / maintenance / forward recovery PASS
+[local-audio] manifest sn=BJP00326060100009991 revision=1 applied=-
+[local-audio] file sn=BJP00326060100009991 id=4fbef7e40addc05c 200 bytes=48044 format=wav
+[local-audio] file sn=BJP00326060100009991 id=4fbef7e40addc05c 304
+local-audio-integrity: HTTP auth / owner / legacy ID / SHA / ETag / read during maintenance PASS
+local-audio-integrity: namespaced IDs / cross-slot shared bytes / legacy reuse PASS
+✔ scripts/local-audio-integrity.test.ts (1757.531834ms)
+[race] won_by=main ttft_ms=10
+✓ main 快则 main 胜且全量透传
+✓ 败者 fb 被 abort
+[race] won_by=fallback ttft_ms=11
+✓ fb 快则 fb 胜
+✓ 败者 main 被 abort
+[race] won_by=fallback ttft_ms=32
+✓ 单路挂另一路无感接管
+[race] 双路全败: b
+✓ 双败单次 onError
+[race] won_by=fallback ttft_ms=32
+✓ 空流不抢胜
+✓ 双空以 onDone("") 收尾
+ALL PASS
+✔ scripts/race-llm.test.ts (1088.379333ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1807.184083
