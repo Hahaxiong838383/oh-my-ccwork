@@ -5,6 +5,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 # P003 三端部署 + 邀请码运营 SOP · V1
 
+## 限时搜索灰度后台与验收
+
+先读 [限时语音灰度操作与交接](../voice-agent-ops/references/bounded-canary-handoff.md)：后台待测选择不等于启用派单，实际名单/窗口/健康/最近自报版本分开展示；只发布本次文件，回执与项目主入口同步，旧记录保留时间范围。
+
 > 2026-06-16 沉淀。配套项目记忆 `project_p003_3end_integration`。场景美术化另见 `p003-scene-art`（主题不同）。
 > 项目根:`/Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/`
 

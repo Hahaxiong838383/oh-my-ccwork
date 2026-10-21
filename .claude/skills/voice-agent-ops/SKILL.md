@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## 限时搜索灰度与延窗交接
+
+先读 [限时语音灰度操作与交接](references/bounded-canary-handoff.md)：核最新授权与完整SN，逐层校验截止，完整产物SHA通过才安装，到期关闭已有会话；开窗、服务端发送、真人实听分别验收。
+
 项目:`~/mycc/2-Projects/realtime-voice-agent/`(mycc 仓内)。
 生产:阿里云 HK ECS `47.239.204.68`(2核2G,专用),`https://voice-hk.hahaxiong.cc/voice-test.html`。
 备用一套在 dev198(公司内网经 frp,改动未必同步,同步前先 diff)。
