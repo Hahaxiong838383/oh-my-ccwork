@@ -62,7 +62,9 @@ pub async fn run(config: Config) -> Result<()> {
         active_jobs: AtomicUsize::new(0),
         reconnect_failures: AtomicU32::new(0),
     });
+    tokio::spawn(crate::search_canary::health_loop(config.agent_name.clone(),state.clone()));
     loop {
+        crate::search_canary::signal(false);
         match run_connection(&config, state.clone()).await {
             Ok(()) => {
                 info!("worker connection closed");
@@ -143,6 +145,7 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
         server = ?reg.server_info.as_ref().map(|s| s.version.clone()),
         "registered worker"
     );
+    crate::search_canary::signal(true);
     let recovered_after = note_registered(&state);
     if recovered_after > 0 {
         info!(failures_before = recovered_after, "reconnected & registered, consecutive failure count reset");
@@ -209,7 +212,7 @@ fn handle_server_message(
             let job = req.job.unwrap_or_default();
             let room_name = job.room.as_ref().map(|r| r.name.clone()).unwrap_or_default();
             let active = state.active_jobs.load(Ordering::SeqCst);
-            let available = active < config.max_jobs;
+            let available = active < config.max_jobs && crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata);
             if !available {
                 warn!(job_id = %job.id, room = %room_name, active, "at full capacity, declining job");
             } else {
@@ -268,7 +271,8 @@ fn handle_server_message(
             // P2 骨架:job 靠 participant disconnect 自然收尾;termination 仅记录。
             warn!(job_id = %term.job_id, "job termination requested (P2: relying on room close)");
         }
-        Some(Message::Pong(_)) | Some(Message::Register(_)) | None => {}
+        Some(Message::Pong(_)) => crate::search_canary::signal(true),
+        Some(Message::Register(_)) | None => {}
     }
 }
 

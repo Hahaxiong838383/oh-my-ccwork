@@ -7,6 +7,7 @@ mod config;
 mod contract;
 mod candidate;
 mod say_defer;
+mod search_canary;
 mod search_policy;
 mod search_tasks;
 mod control;
@@ -57,6 +58,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cfg = config::Config::from_env()?;
+    search_canary::validate_startup(&cfg.agent_name,cfg.max_jobs)?;
     tracing::info!(
         agent_name = %cfg.agent_name,
         url = %cfg.ws_url,

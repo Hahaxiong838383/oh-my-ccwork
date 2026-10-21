@@ -572,6 +572,7 @@ pub struct Llm {
 
 fn build_client() -> reqwest::Client {
     reqwest::Client::builder()
+        .redirect(if std::env::var("AGENT_NAME").ok().as_deref()==Some(crate::search_canary::AGENT) { reqwest::redirect::Policy::none() } else { reqwest::redirect::Policy::default() })
         .connect_timeout(std::time::Duration::from_secs(10))
         .timeout(std::time::Duration::from_secs(30))
         .build()
@@ -734,11 +735,12 @@ pub async fn fetch_local_audio_texts(cfg: &LlmConfig, room: &str) -> Option<Vec<
     url.push('?');
     url.push_str(&parts.join("&"));
     let client = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(std::time::Duration::from_secs(2))
         .timeout(std::time::Duration::from_secs(3))
         .build()
         .ok()?;
-    let resp = client.get(&url).send().await.ok()?;
+    let resp = client.get(&url).bearer_auth(&cfg.api_key).send().await.ok()?;
     if !resp.status().is_success() {
         return None;
     }

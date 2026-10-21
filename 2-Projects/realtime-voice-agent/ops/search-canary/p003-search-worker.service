@@ -1,0 +1,24 @@
+[Unit]
+Description=P003 isolated single-device search Worker
+After=network-online.target
+[Service]
+Type=simple
+WorkingDirectory=/opt/p003-search-canary-20261021
+EnvironmentFile=/opt/p003-search-canary-20261021/canary.env
+ExecStart=/opt/p003-search-canary-20261021/voice-rust-worker
+Restart=on-failure
+RestartSec=5
+MemoryHigh=1100M
+MemoryMax=1400M
+CPUQuota=150%
+TasksMax=128
+RuntimeDirectory=p003-search-canary
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/p003-search-canary-20261021 /run/p003-search-canary
+PrivateTmp=true
+KillMode=control-group
+TimeoutStopSec=15
+[Install]
+WantedBy=multi-user.target

@@ -77,6 +77,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         .as_ref()
         .map(|r| r.name.clone())
         .unwrap_or_default();
+    anyhow::ensure!(crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata), "canary_job_rejected");
     let t0 = Instant::now();
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
     let issue_ms = issue_to_assignment_ms(&room_name, meta.issue_ts_ms);
@@ -176,6 +177,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 None => break,
             },
             _ = watchdog.tick() => {
+                if !crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata) {
+                    info!(room=%room_name,"canary window closed: closing room, reconnect returns baseline");
+                    break;
+                }
                 if let Some(t) = &pipeline_task
                     && !t.is_finished()
                 {

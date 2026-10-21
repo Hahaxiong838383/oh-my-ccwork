@@ -27,6 +27,8 @@ impl Api {
             || url.host_str() != Some("kidshub-ai.hahaxiong.cc")
             || url.username() != ""
             || url.password().is_some()
+            || !["/v1/internal/search-tasks", "/_canary/search-20261021/v1/internal/search-tasks"].contains(&url.path())
+            || url.fragment().is_some()
         {
             return None;
         }
@@ -377,16 +379,24 @@ impl SearchSession {
         }
         let speech = self.speech.pop_front()?;
         let text = speech.text.clone();
-        tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), "background search speech starting");
+        tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, "background search speech scheduled (not audio proof)");
         self.active = Some(speech);
         Some(text)
     }
     pub fn take_revoked(&mut self) -> bool {
         std::mem::take(&mut self.revoked)
     }
+    /// Called only once by the playout first-frame observation, never per audio frame.
+    pub fn log_audio_started(&self, room: &str, turn_id: u64) {
+        if let Some(speech) = &self.active {
+            tracing::info!(room, turn_id, task_id = speech.task.as_deref().unwrap_or("ack"),
+                delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64,
+                "background search first audio published (device hearing unverified)");
+        }
+    }
     pub fn finish(&mut self, interrupted: bool, spoken_chars: usize) {
         if let Some(speech) = self.active.take() {
-            tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), interrupted, spoken_chars, "background search speech finished");
+            tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, interrupted, spoken_chars, "background search speech finished (device hearing unverified)");
             if speech.result_until.is_some() {
                 let mut remainder = speech.clone();
                 if interrupted {

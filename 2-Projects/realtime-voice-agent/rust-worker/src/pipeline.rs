@@ -2693,6 +2693,9 @@ impl Orchestrator {
         if turn.filler_samples == 0 {
             // B12：无垫句（跳过或未选中）时，首帧即正文首帧——这是「跳垫句后静默多久」的真值口径。
             turn.seg_stage = 2;
+            if self.search_turn {
+                if let Some(search) = &self.search { search.log_audio_started(&room, turn.id); }
+            }
             info!(room = %room, turn_id = turn.id, since_turn_ms = turn.started.elapsed().as_millis() as u64,
                   "body first frame published (no filler)");
             return;
@@ -2705,6 +2708,9 @@ impl Orchestrator {
         }
         if turn.seg_stage == 1 && played > turn.filler_samples {
             turn.seg_stage = 2;
+            if self.search_turn {
+                if let Some(search) = &self.search { search.log_audio_started(&room, turn.id); }
+            }
             info!(room = %room, turn_id = turn.id, played_samples = played,
                   since_turn_ms = turn.started.elapsed().as_millis() as u64, "body first frame published");
         }
