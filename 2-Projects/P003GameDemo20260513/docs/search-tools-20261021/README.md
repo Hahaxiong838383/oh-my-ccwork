@@ -8,6 +8,7 @@
 4. [机器可读测试结果](TEST_RESULTS.json)
 5. [Worker构建源码与产物锚点](worker-build-manifest.json)
 6. [后台桌面截图](evidence/search-admin-desktop.png) · [手机截图](evidence/search-admin-mobile.png)（均为本机隔离预览）
+7. [指定 SN 灰度实施与实机验收规划](../../../../docs/superpowers/plans/2026-10-21-p003-sn-search-canary.md)：沿用 Brain/Worker 两分支；Codeg 历史快照入口分别为会话 24/25，原会话 13 保留。当前只是规划，灰度尚未部署。
 
 冻结完整方案位于本分支`1-Inbox/P003-DeepSeek搜索与工具调用评估-20261021/`，方案提交8aa4ca2dae58269df93cafd5ab2086b5b6bc5d74。
 
