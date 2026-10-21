@@ -706,6 +706,16 @@ await t('搜索灰度：完整SN、首句合同、JWT派单、到期回退', asy
     const other:any = await (await callSession({cred:await deviceCred(SN2),sn:SN2,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
     assert.equal(other.expected_agent_name,FT_AGENT);
     assert.equal((await callSession({cred:await deviceCred(SN2),sn:SN})).status,403);
+    for (const invalidLease of [
+      JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()-1,ordered_pcm_v1:true,generation:'test'}),
+      JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()+14000,ordered_pcm_v1:false,generation:'test'}),
+      JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()+14000,ordered_pcm_v1:true,generation:''}),
+      'invalid-json',
+    ]) {
+      writeFileSync(health, invalidLease); await refreshSearchCanaryLease();
+      const fallback:any=await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
+      assert.equal(fallback.expected_agent_name,FT_AGENT); assertTokenMatchesResponse(fallback.token,fallback);
+    }
     flag('expires_at_ms',String(Date.now()-1));
     const closed:any = await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
     assert.equal(closed.expected_agent_name,FT_AGENT); assert.equal(closed.contract.input_mode,'ordered_pcm');

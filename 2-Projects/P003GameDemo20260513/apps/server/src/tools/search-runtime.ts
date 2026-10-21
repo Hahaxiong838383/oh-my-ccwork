@@ -16,7 +16,7 @@ export function searchSettings() {
   let allowed: string[] = [];
   try { const v = JSON.parse(configStore.getFlag('p003.search.allowlist')?.value ?? '[]'); if (Array.isArray(v)) allowed = v.filter((s: unknown) => typeof s === 'string' && /^BJP003\d{14}$/.test(s)); } catch { /* fail closed */ }
   const configured = process.env.SEARCH_ENABLED === '1' && Boolean(process.env.SEARCH_TASK_DB_PATH && process.env.DEEPSEEK_API_KEY && process.env.AUTH_JWT_SECRET && process.env.SEARCH_WORKER_ACCOUNT_ID?.trim() && domains().length);
-  return { configured, enabled: configured && configStore.getFlag('p003.search.enabled')?.value === '1', allowed,
+  return { configured, enabled: configured && configStore.getFlag('p003.search.enabled')?.value === '1' && (!process.env.SEARCH_CANARY_ROOT || Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value) > Date.now()), allowed,
     tools: configStore.getFlag('p003.search.tools')?.value === '1', upstream: availability.state() };
 }
 export function getSearchTasks(): SearchTasks | null {

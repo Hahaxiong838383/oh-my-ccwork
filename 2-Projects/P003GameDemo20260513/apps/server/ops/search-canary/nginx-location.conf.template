@@ -1,0 +1,13 @@
+# Inside the existing kidshub-ai HTTPS server; do not replace the server block.
+location ^~ /_canary/search-20261021/v1/ {
+    access_log off; # existing worker chat credentials use query parameters
+    client_max_body_size 128k;
+    proxy_pass http://127.0.0.1:3007/v1/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Connection "";
+    proxy_buffering off;
+    proxy_read_timeout 65s;
+    proxy_send_timeout 15s;
+}
+location ^~ /_canary/ { return 404; }

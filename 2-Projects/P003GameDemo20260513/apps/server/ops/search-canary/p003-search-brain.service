@@ -1,0 +1,20 @@
+[Unit]
+Description=P003 isolated search canary Brain
+After=network-online.target
+[Service]
+Type=simple
+WorkingDirectory=/opt/p003/search-canary-20261021/brain
+EnvironmentFile=/opt/p003/search-canary-20261021/brain/canary.env
+ExecStart=/usr/bin/node --experimental-sqlite --import tsx src/search-canary-main.ts
+Restart=on-failure
+RestartSec=5
+MemoryMax=600M
+CPUQuota=100%
+TasksMax=128
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/p003/search-canary-20261021/brain
+PrivateTmp=true
+[Install]
+WantedBy=multi-user.target

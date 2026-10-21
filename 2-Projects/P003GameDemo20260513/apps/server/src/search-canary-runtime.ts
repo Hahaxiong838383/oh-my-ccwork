@@ -11,7 +11,7 @@ export async function refreshSearchCanaryLease() {
     const raw = await readFile(path, 'utf8');
     if (raw.length > 2048) throw new Error('oversize');
     const v = JSON.parse(raw);
-    if (v.agent !== SEARCH_CANARY_AGENT || !Number.isFinite(v.until_ms) || typeof v.generation !== 'string') throw new Error('invalid');
+    if (v.agent !== SEARCH_CANARY_AGENT || !Number.isFinite(v.until_ms) || typeof v.generation !== 'string' || !v.generation || v.generation.length > 128) throw new Error('invalid');
     lease = v;
   } catch { lease = null; }
 }
