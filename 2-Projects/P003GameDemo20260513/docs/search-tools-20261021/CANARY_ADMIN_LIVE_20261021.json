@@ -1,0 +1,33 @@
+{
+  "checked_at_ms": 1792579224257,
+  "default_sn": "BJP00326070803800006",
+  "selected_sn": "BJP00326070803800006",
+  "summary": {
+    "state": "closed",
+    "health_ok": true,
+    "lease_ok": true,
+    "scope_ok": false,
+    "dispatch_requested": false,
+    "expires_at_ms": null,
+    "configured_devices": [],
+    "selected_prepared": true
+  },
+  "device": {
+    "sn": "BJP00326070803800006",
+    "eligible": true,
+    "status": "active",
+    "version_code": 353,
+    "version_name": "1.2.2-canary.339",
+    "version_reported_at_ms": 1792576432980
+  },
+  "release": {
+    "verified_at_ms": 1792579128533,
+    "brain_commit": "f5f1d1e161b6fd8f9d72e47cd25a003e4734010c",
+    "worker_commit": "d6c05051",
+    "worker_sha256": "435caa275f1504a6c8c4b583acd670ed3ad28068b615dc3f24d6e96b3a3205ae",
+    "worker_tests": 354
+  },
+  "page_errors": [],
+  "manual_default_save": true,
+  "desktop_and_narrow": true
+}
