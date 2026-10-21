@@ -1,0 +1,4 @@
+interface:
+  display_name: "OK笔记 NAS 维护"
+  short_description: "核查飞牛上的 OK笔记功能、配置依赖、备份恢复与运行时验收"
+  default_prompt: "使用 $oknote-nas-maintenance 核查飞牛上的 OK笔记，并按本次授权配置和验收所需功能。"

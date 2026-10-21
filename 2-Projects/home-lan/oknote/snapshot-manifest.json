@@ -1,0 +1,31 @@
+{
+  "created_date": "2026-10-21",
+  "source_repository": "~/home-lan",
+  "source_commit": "27b91ac875e93ce90fe6051709ff3f936515e7cf",
+  "files": {
+    "05-OK笔记安装概览.md": {
+      "source_path": "2-Projects/P01-家里局域网与飞牛/05-OK笔记安装概览.md",
+      "bytes": 6464,
+      "sha256": "7c1f1a6390d32a2f3137c8930e1cc0566f86f3f58c7d4cf1c1bc56518264b508"
+    },
+    "06-OK笔记功能分析与开启记录.md": {
+      "source_path": "2-Projects/P01-家里局域网与飞牛/06-OK笔记功能分析与开启记录.md",
+      "bytes": 14638,
+      "sha256": "049c1caedf479ca728b1c47e1a962644fa5e0f9d04f254142d0e40ddc79ad633"
+    },
+    "07-OK笔记复盘与维护经验.md": {
+      "source_path": "2-Projects/P01-家里局域网与飞牛/07-OK笔记复盘与维护经验.md",
+      "bytes": 5728,
+      "sha256": "73c4b3f9547f4457ff59f2521d6ded839afd95f9c80c8d67bf67961e6ea57bd2"
+    }
+  },
+  "scope": "sanitized_reports_only",
+  "excluded": [
+    "credentials",
+    "user_database",
+    "note_contents",
+    "nas_backup",
+    "raw_proprietary_artifacts",
+    "unrelated_worktree_changes"
+  ]
+}
