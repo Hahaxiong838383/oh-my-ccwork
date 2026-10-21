@@ -10,7 +10,7 @@ pub fn accepts(w: &Window, room: &str, metadata: &str, now: u64) -> bool {
  let Ok(m)=serde_json::from_str::<serde_json::Value>(metadata) else{return false};
  let c=&m["search_canary"];
  w.enabled && w.sn=="BJP00326070803800006" && !suffix.is_empty() && suffix.len()<=20
- && suffix.bytes().all(|b|b.is_ascii_digit()) && w.expires_at_ms>now && w.expires_at_ms-now<=7_200_000
+ && suffix.bytes().all(|b|b.is_ascii_digit()) && w.expires_at_ms>now && w.expires_at_ms-now<=36*3600_000
  && c["sn"].as_str()==Some(w.sn.as_str()) && c["expires_at_ms"].as_u64()==Some(w.expires_at_ms)
  && c["generation"].as_str()==Some(w.generation.as_str()) && !w.generation.is_empty()
 }
@@ -57,6 +57,14 @@ mod tests {
  #[test] fn exact_https_prefix_only() {
   assert!(valid_base(BASE)); assert!(valid_base(&(BASE.to_owned()+"/")));
   for s in ["http://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://evil.test/v1","https://kidshub-ai.hahaxiong.cc:444/_canary/search-20261021/v1","https://a:b@kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v10","https://kidshub-ai.hahaxiong.cc/v1"] {assert!(!valid_base(s));}
+ }
+ #[test] fn explicitly_bounded_full_day_window() {
+  let mut w=Window{enabled:true,sn:"BJP00326070803800006".into(),expires_at_ms:1000+36*3600_000,generation:"test".into()};
+  let meta=|w:&Window|serde_json::json!({"search_canary":{"sn":w.sn,"expires_at_ms":w.expires_at_ms,"generation":w.generation}}).to_string();
+  let room="sn-BJP00326070803800006-123";
+  assert!(accepts(&w,room,&meta(&w),1000));
+  w.expires_at_ms+=1;assert!(!accepts(&w,room,&meta(&w),1000));
+  assert!(!accepts(&w,room,&meta(&w),w.expires_at_ms));
  }
  #[test] fn trusted_metadata_deadline_and_exact_sn() {
   let w=Window{enabled:true,sn:"BJP00326070803800006".into(),expires_at_ms:9000,generation:"test".into()};
