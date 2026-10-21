@@ -9,7 +9,8 @@ assert.equal(selectSearchCanaryAgent(input), input.canaryAgent);
 for (const delta of [
   {enabled:false}, {allowlist:[]}, {sn:'BJP00326060100200003'}, {sn:'03800006'},
   {expiresAtMs:1000}, {leaseUntilMs:1000}, {contractCompatible:false},
+  {expiresAtMs:6500},
   {expiresAtMs:NaN}, {leaseUntilMs:Infinity}, {leaseUntilMs:100_000},
   {expiresAtMs:1000+7200001}, {canaryAgent:'rust-worker'},
 ]) assert.equal(selectSearchCanaryAgent({...input,...delta}), input.baselineAgent, JSON.stringify(delta));
-console.log('canary policy: positive + 12 fail-closed cases passed');
+console.log('canary policy: positive + 13 fail-closed cases passed');
