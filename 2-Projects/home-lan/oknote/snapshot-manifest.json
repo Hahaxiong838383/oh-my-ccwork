@@ -1,7 +1,7 @@
 {
   "created_date": "2026-10-21",
   "source_repository": "~/home-lan",
-  "source_commit": "27b91ac875e93ce90fe6051709ff3f936515e7cf",
+  "source_commit": "96023b2ccf885ac7ea6e9cb2b63e9185b649bc96",
   "files": {
     "05-OK笔记安装概览.md": {
       "source_path": "2-Projects/P01-家里局域网与飞牛/05-OK笔记安装概览.md",
@@ -17,6 +17,11 @@
       "source_path": "2-Projects/P01-家里局域网与飞牛/07-OK笔记复盘与维护经验.md",
       "bytes": 5728,
       "sha256": "73c4b3f9547f4457ff59f2521d6ded839afd95f9c80c8d67bf67961e6ea57bd2"
+    },
+    "08-笔记迁移盘点与计划.md": {
+      "source_path": "2-Projects/P01-家里局域网与飞牛/08-笔记迁移盘点与计划.md",
+      "bytes": 8798,
+      "sha256": "a6e9d5e0d1119cf754b7a776a9a4a6dff51b2140e1b690d2ad360d407178a63a"
     }
   },
   "scope": "sanitized_reports_only",
