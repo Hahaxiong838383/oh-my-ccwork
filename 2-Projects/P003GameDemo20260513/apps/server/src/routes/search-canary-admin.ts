@@ -6,7 +6,7 @@ export function summarizeCanary(i:SnapshotInput){
   const health_ok=i.health?.status==='ok';
   const lease_ok=i.lease?.agent==='p003-search-canary-20261021' && typeof i.lease?.generation==='string' && i.lease.generation.length>0 && Number.isFinite(i.lease.until_ms) && i.lease.until_ms>i.now && i.lease.until_ms-i.now<=15000;
   const scope_ok=i.allowlist.length===1 && i.allowlist[0]===DEFAULT_CANARY_SN && i.settings?.allowlist?.length===1 && i.settings.allowlist[0]===DEFAULT_CANARY_SN;
-  const state=!i.enabled?'closed':i.expires<=i.now?'expired':!health_ok||!lease_ok||!scope_ok||i.expires-i.now>7200000?'blocked':!i.health.search?'regression':i.health.tools?'p2':'p1';
+  const state=!i.enabled?'closed':i.expires<=i.now?'expired':!health_ok||!lease_ok||!scope_ok||i.expires-i.now>36*3600_000?'blocked':!i.health.search?'regression':i.health.tools?'p2':'p1';
   return {state,health_ok,lease_ok,scope_ok,dispatch_requested:i.enabled,expires_at_ms:i.expires||null,configured_devices:i.allowlist,selected_prepared:i.selected===DEFAULT_CANARY_SN};
 }
 type Deps={read:()=>Promise<unknown>;eligible:(sn:string)=>boolean;isOpen:()=>boolean;save:(sn:string,who:string)=>void};

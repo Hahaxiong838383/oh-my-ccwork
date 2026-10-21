@@ -17,6 +17,8 @@ try {
  assert.throws(()=>prepareCanaryEnvironment({...env,PROFILE_DB_PATH:join(root,'escape/profile.db')}));
  const base={path:'/v1/chat/completions',room:'sn-BJP00326070803800006-123',sn:'BJP00326070803800006',account:'search-canary-worker',expectedAccount:'search-canary-worker',role:'device',expires:2000,now:1000};
  assert.equal(canaryRequestAllowed(base),true);
+ assert.equal(canaryRequestAllowed({...base,expires:base.now+36*3600_000}),true);
+ assert.equal(canaryRequestAllowed({...base,expires:base.now+36*3600_000+1}),false);
  for(const delta of [{room:'sn-BJP00326060100200003-123'},{account:'worker-service'},{role:'parent'},{expires:1000},{path:'/v1/admin'},{path:'/v1/internal/search-tasks/../secret'}]) assert.equal(canaryRequestAllowed({...base,...delta}),false);
  assert.equal(readFileSync(join(prod,'sentinel'),'utf8'),'unchanged');
  console.log('canary isolation: paths/symlink/identity/expiry passed');

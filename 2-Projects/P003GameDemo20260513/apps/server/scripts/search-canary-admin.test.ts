@@ -23,4 +23,6 @@ assert.equal(summarizeCanary({...base,enabled:true,lease:null}).state,'blocked')
 assert.equal(summarizeCanary({...base,enabled:true,health:null}).state,'blocked');
 assert.equal(summarizeCanary({...base,enabled:true,health:{...base.health,search:true},settings:{allowlist:[other]}}).state,'blocked');
 assert.equal(summarizeCanary({...base,enabled:false,health:null}).health_ok,false);
+assert.equal(summarizeCanary({...base,enabled:true,expires:base.now+36*3600_000,health:{...base.health,search:true}}).state,'p1');
+assert.equal(summarizeCanary({...base,enabled:true,expires:base.now+36*3600_000+1}).state,'blocked');
 console.log('canary admin: auth, scope, no activation, expiry and unavailable checks passed');
