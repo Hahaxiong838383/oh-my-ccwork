@@ -61,3 +61,14 @@ test('R11 第一篇已删除仅有限尝试下一篇；不引入索引摘要作�
  const n=new CctvNews({now:()=>now,fetch:(async(u:any)=>{calls++;return String(u).includes('.jsonp')?new Response('china('+JSON.stringify({data:{list:[item,second]}})+')'):String(u)===url?new Response('',{status:404}):new Response(body());})as typeof fetch});
  const rows=await n.run('央视今天国内新闻',AbortSignal.timeout(2000));assert.equal(rows.length,1);assert.equal(rows[0].url,second.url);assert.equal(calls,3);
 });
+test('R11 航天查询不接受仅在背景提到火箭的无关标题；正文HTML实体可正确对齐',async()=>{
+ const incidental={...item,title:'一见·感悟长征之喻',brief:'长征火箭累计发射次数增长。',keywords:'长征 航天'};
+ assert.equal((await fixture([incidental],body(incidental)).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,0);
+ const quoted={...item,title:'我国“试验卫星”成功发射'};
+ assert.equal((await fixture([quoted],body(quoted).replace('“试验卫星”','&ldquo;试验卫星&rdquo;')).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,1);
+});
+test('R11 央视动态模板仅解码正文字符串，绝不执行脚本或拼接表达式',async()=>{
+ const html=body().replace(/<div id="text_area">[\s\S]*<\/div><script>/,'<div id="text_area"></div><script>var contentdate = \'<p>央视网消息：我国成功发射试验卫星，卫星顺利进入预定轨道，飞行试验任务取得成功。</p>\';</script><script>');
+ assert.equal((await fixture([item],html).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,1);
+ assert.equal((await fixture([item],html.replace("</p>';","</p>' + evil();")).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,0);
+});

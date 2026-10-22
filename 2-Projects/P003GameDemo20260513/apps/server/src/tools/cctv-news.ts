@@ -3,6 +3,13 @@ export type NewsEvidence={id:number;title:string;url:string;date:string;text:str
 type Request={today:boolean;space:boolean};
 type Article={title:string;url:string;date:string;brief:string;keywords:string};
 const day=(ms:number)=>new Date(ms+28_800_000).toISOString().slice(0,10);
+const entities:Record<string,string>={ldquo:'“',rdquo:'”',lsquo:'‘',rsquo:'’',mdash:'—',ndash:'–',middot:'·',hellip:'…'};
+function decodeEntities(s:string):string {
+ return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,(raw,key:string)=>{
+  if(key.startsWith('#')){const n=key[1].toLowerCase()==='x'?parseInt(key.slice(2),16):Number(key.slice(1));return n>0&&n<=0x10ffff&&!(n>=0xd800&&n<=0xdfff)?String.fromCodePoint(n):raw;}
+  return entities[key]??raw;
+ });
+}
 const clean=(s:string)=>s.replace(/<script\b[^>]*>[\s\S]*?<\/script\s*>/gi,'').replace(/<(?:style|noscript|iframe)\b[^>]*>[\s\S]*?<\/(?:style|noscript|iframe)\s*>/gi,'').replace(/<[^>]*>/g,' ').replace(/&nbsp;|&#160;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
 const unsafe=(s:string)=>/\[\[DEV:|忽略.{0,8}(指令|规则)|ignore.{0,12}instructions/i.test(s);
 function request(q:string):Request|null {
@@ -20,18 +27,37 @@ function article(row:any,now:number,q:Request):Article|null {
  if(!Number.isFinite(ms)||new Date(ms+28_800_000).toISOString().slice(0,19)!==row.focus_date.replace(' ','T')||ms>now||now-ms>7*86400000||q.today&&day(ms)!==day(now)||!row.url.includes('/'+day(ms).replace(/-/g,'/')+'/'))return null;
  const title=clean(row.title),brief=clean(row.brief),keywords=clean(row.keywords);
  if(!title||title.length>160||unsafe(title+brief+keywords))return null;
- if(q.space&&!/航天|空间站|火箭|卫星|神舟|天舟|探月/.test(title+' '+brief+' '+keywords))return null;
+ if(q.space&&!/航天|空间站|火箭|卫星|神舟|天舟|探月/.test(title))return null;
  return {title,url:row.url,date,brief,keywords};
 }
+/** Decode only a single quoted data literal in CCTV's dynamic article template. No eval. */
+function literalBody(html:string):string|null {
+ const m=/\bvar\s+contentdate\s*=\s*(['"])/.exec(html);if(!m)return null;
+ const quote=m[1];let out='';
+ for(let i=m.index+m[0].length;i<html.length;i++){
+  const c=html[i];
+  if(c===quote)return /^\s*;/.test(html.slice(i+1))?out:null;
+  if(c!=='\\'){out+=c;continue;}
+  const escaped=html[++i];const simple:Record<string,string>={"'":"'",'"':'"','\\':'\\','/':'/',n:'\n',r:'\r',t:'\t',b:'\b',f:'\f'};
+  if(escaped in simple){out+=simple[escaped];continue;}
+  const size=escaped==='u'?4:escaped==='x'?2:0;if(!size)return null;
+  const hex=html.slice(i+1,i+1+size);if(!new RegExp('^[0-9a-fA-F]{'+size+'}$').test(hex))return null;
+  out+=String.fromCharCode(parseInt(hex,16));i+=size;
+ }return null;
+}
 function content(html:string,a:Article,q:Request):string|null {
- const title=clean(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(html)?.[1]??'');
+ const title=decodeEntities(clean(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i.exec(html)?.[1]??''));
  const info=/<div\b[^>]*class=["'][^"']*\binfo\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i.exec(html)?.[1]??'';
  const stamp=/(20\d{2})年(\d{2})月(\d{2})日\s+(\d{2}:\d{2})/.exec(clean(info));
  if(title.replace(/\s/g,'')!==a.title.replace(/\s/g,'')||!stamp||`${stamp[1]}-${stamp[2]}-${stamp[3]}T${stamp[4]}`!==a.date.slice(0,16))return null;
  const start=/<div\b[^>]*\bid=["']text_area["'][^>]*>/i.exec(html);if(!start)return null;
  const after=html.slice(start.index+start[0].length);let depth=1,end=-1;
  for(const m of after.matchAll(/<\/?div\b[^>]*>/gi)){depth+=m[0].startsWith('</')?-1:1;if(depth===0){end=m.index!;break;}}
- if(end<0)return null;const text=clean(after.slice(0,end));
+ if(end<0)return null;
+ const staticBody=after.slice(0,end);
+ const raw=clean(staticBody).length>=30?staticBody:literalBody(html);
+ if(!raw)return null;
+ const text=decodeEntities(clean(raw.replace(/\[!--begin:htmlVideoCode--\][\s\S]*?\[!--end:htmlVideoCode--\]/g,'')));
  if(text.length<30||unsafe(text)||q.space&&!/航天|空间站|火箭|卫星|神舟|天舟|探月/.test(text))return null;
  return [...text].slice(0,3500).join('');
 }
