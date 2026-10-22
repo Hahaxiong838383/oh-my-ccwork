@@ -1,0 +1,1607 @@
+{
+  "schema": "p003-r9-acceptance-v1",
+  "scope": "two-device P1 extension and synthetic retest; Baidu research only",
+  "tests": {
+    "brain": [
+      {
+        "name": "device-brain.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "device-config.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "device-intent-protocol.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "device-registry.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "device-session.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "moji-weather.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-admin.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-availability.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-boundaries.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-canary-admin.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-canary-isolation.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-canary-policy.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-canary-process.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-canary-status.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-chat-policy.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-executor.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-route.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-routing-admin.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-routing-store.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-runtime.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "search-tasks.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "device-location.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "device-location-runtime.test.ts",
+        "rc": 0
+      },
+      {
+        "name": "tsc",
+        "rc": 0
+      }
+    ],
+    "linux_build": {
+      "r9-test.log": [
+        "    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.77s",
+        "test result: ok. 380 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.47s"
+      ],
+      "r9-preview-test.log": [
+        "    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s",
+        "test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+      ],
+      "r9-build.log": [
+        "   \u001b[32m✓\u001b[0m 本机 libstdc++ 供给: GLIBCXX_3.4.33   门禁上限 GLIBCXX_3.4.33",
+        "    Finished `release` profile [optimized] target(s) in 20.58s",
+        "   glibc 需求: GLIBC_2.2 GLIBC_2.3 GLIBC_2.4 GLIBC_2.6 GLIBC_2.7 GLIBC_2.9 GLIBC_2.14 GLIBC_2.15 GLIBC_2.16 GLIBC_2.17 GLIBC_2.18 GLIBC_2.25 GLIBC_2.27 GLIBC_2.28 GLIBC_2.29 GLIBC_2.30 GLIBC_2.32 GLIBC_2.33 GLIBC_2.34 GLIBC_2.35 GLIBC_2.38 GLIBC_2.39",
+        "   libstdc++ 需求最高: GLIBCXX_3.4.31",
+        "   \u001b[32m✓\u001b[0m libstdc++ 全部 ≤ GLIBCXX_3.4.33"
+      ],
+      "r9-preview-build.log": [
+        "    Finished `release` profile [optimized] target(s) in 0.01s"
+      ]
+    },
+    "fixed_deadline_regression": {
+      "pass": true,
+      "observed_stdout": "PASS fixed deadline: no early close, idempotent expiry, newer window untouched, three switches closed",
+      "future_production_deadline_observed": false
+    },
+    "historical_route_replay": {
+      "revision_unchanged": true,
+      "revision": 15,
+      "cases": [
+        {
+          "text": "今天北京的天气",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": {
+            "city_id": 2,
+            "city_name": "北京市",
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "reason": "命中路由"
+        },
+        {
+          "text": "天气",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": null,
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "reason": "后台按本轮设备网络定位城市，不等待前台聊天"
+        },
+        {
+          "text": "帮我查",
+          "expected": "clarify",
+          "actual": "clarify",
+          "pass": true,
+          "weather": null,
+          "reason": "命中路由"
+        },
+        {
+          "text": "啊今天北京的天气",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": {
+            "city_id": 2,
+            "city_name": "北京市",
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "reason": "命中路由"
+        },
+        {
+          "text": "我查一下今天北京的天气",
+          "expected": "clarify",
+          "actual": "clarify",
+          "pass": true,
+          "weather": null,
+          "reason": "命中路由"
+        },
+        {
+          "text": "帮我查查火星为什么是红色的",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": null,
+          "reason": "命中路由"
+        },
+        {
+          "text": "今天成都的天气怎么样",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": null,
+          "reason": "城市或日期未由天气适配器支持，使用通用搜索"
+        },
+        {
+          "text": "朝阳明天天气",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": null,
+          "reason": "城市或日期未由天气适配器支持，使用通用搜索"
+        },
+        {
+          "text": "查询中国第一颗人造卫星叫什么",
+          "expected": "search",
+          "actual": "search",
+          "pass": true,
+          "weather": null,
+          "reason": "命中路由"
+        },
+        {
+          "text": "天气为什么变化",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true,
+          "weather": null,
+          "reason": "未命中查询规则"
+        },
+        {
+          "text": "三角形的内角多少度",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true,
+          "weather": null,
+          "reason": "未命中查询规则"
+        },
+        {
+          "text": "我发烧了体温多少度",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true,
+          "weather": null,
+          "reason": "未命中查询规则"
+        },
+        {
+          "text": "烤箱温度怎么调",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true,
+          "weather": null,
+          "reason": "未命中查询规则"
+        },
+        {
+          "text": "我觉得北京天气真好",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true,
+          "weather": null,
+          "reason": "未命中查询规则"
+        },
+        {
+          "text": "不要查北京天气我们聊小猫",
+          "expected": "chat",
+          "actual": "chat",
+          "pass": true,
+          "weather": null,
+          "reason": "普通聊天或保护表达"
+        },
+        {
+          "text": "取消刚才的查询",
+          "expected": "cancel",
+          "actual": "cancel",
+          "pass": true,
+          "weather": null,
+          "reason": "命中路由"
+        },
+        {
+          "text": "继续刚才的搜索结果",
+          "expected": "resume",
+          "actual": "resume",
+          "pass": true,
+          "weather": null,
+          "reason": "命中路由"
+        },
+        {
+          "text": "改查上海明天天气",
+          "expected": "replace",
+          "actual": "replace",
+          "pass": true,
+          "weather": {
+            "city_id": 39,
+            "city_name": "上海市",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "reason": "命中路由"
+        }
+      ]
+    },
+    "real_admin_ui": {
+      "at_ms": 1792661920377,
+      "actual_ui": true,
+      "preview_no_write": true,
+      "targets": [
+        {
+          "sn": "BJP00326070803800006",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "at": 1792660011234
+        },
+        {
+          "sn": "BJP00326060100100004",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "at": 1792660011234
+        }
+      ],
+      "revision": 15,
+      "desktop_and_narrow": true,
+      "page_errors": []
+    }
+  },
+  "synthetic_rtc": {
+    "collected_at_ms": 1792662701776,
+    "modes": {
+      "matrix": {
+        "mode": "matrix",
+        "room": "sn-BJP00326060100100004-1792661917",
+        "trace": "search-probe-1792661917",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 19,
+          "user_transcripts": 11,
+          "metrics": 33,
+          "audio_voiced_ms": 58490.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 3037
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5353,
+            "chars": 7
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 9939,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 21397,
+            "chars": 42
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 34130
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 36076,
+            "chars": 3
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 37820
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 40928,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 40940,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 45470,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 57176,
+            "chars": 44
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 78725
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 81331,
+            "chars": 5
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 82135,
+            "chars": 3
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 89275,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 94524,
+            "chars": 25
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 95091
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 100275,
+            "chars": 18
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 104775,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 115267,
+            "chars": 38
+          },
+          {
+            "event": "synthetic_input",
+            "index": 5,
+            "ms": 133577
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 136283,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 142426,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 148276,
+            "chars": 27
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 153374,
+            "chars": 28
+          },
+          {
+            "event": "synthetic_input",
+            "index": 6,
+            "ms": 153607
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 156724,
+            "chars": 11
+          },
+          {
+            "event": "synthetic_input",
+            "index": 7,
+            "ms": 157751
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 160774,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 160777,
+            "chars": 3
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 164825,
+            "chars": 10
+          },
+          {
+            "event": "synthetic_input",
+            "index": 8,
+            "ms": 173355
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 175675,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 179182,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 180775,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 183274,
+            "chars": 13
+          },
+          {
+            "event": "synthetic_input",
+            "index": 9,
+            "ms": 195645
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 198926,
+            "chars": 12
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 203476,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 210024,
+            "chars": 26
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 237.0,
+        "device_heard_verified": false,
+        "news_response_excerpt": "刚才的搜索没有找到足够可靠的资料，这次我还不能确认。",
+        "content_assertions": {
+          "bare_beijing_weather": true,
+          "split_shanghai_weather": true,
+          "satellite_named": true,
+          "ordinary_triangle_answer": true,
+          "smalltalk_present": true,
+          "no_grow_up_denial": true
+        },
+        "captions_sha256": "f71a578e5e7b7e697d2206248f40a5f8ae238f9632de233d09343906caa0bc97"
+      },
+      "cancel": {
+        "mode": "cancel",
+        "room": "sn-BJP00326060100100004-1792662330",
+        "trace": "search-probe-1792662330",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 4300.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2442
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 7006,
+            "chars": 15
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 12607,
+            "chars": 16
+          },
+          {
+            "event": "result_first_audio_server",
+            "ms": 15349
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 15381
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 17856,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 21956,
+            "chars": 10
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 67.0,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "5e4a518b9117264f8d27733cd87da95325c4f7b736760a2139128b60e8e65d99"
+      },
+      "geo": {
+        "mode": "geo",
+        "room": "sn-BJP00326060100100004-1792661744",
+        "trace": "synthetic-r9-public-1792661744",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 22200.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1599
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 3580,
+            "chars": 7
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 4570
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 7030,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 12078,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 15079,
+            "chars": 13
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 28000,
+            "chars": 50
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 39676
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 42481,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 47128,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 58866,
+            "chars": 44
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 76.2,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "network_city_disclosed": true,
+          "beijing_weather": true,
+          "shanghai_override": true,
+          "chat_before_weather": true
+        },
+        "captions_sha256": "ab2a63d772f0d337e579c35bd1468b983792eee24e69f45e6b999bb3004a14b7"
+      },
+      "resume": {
+        "mode": "resume",
+        "room": "sn-BJP00326060100100004-1792662204",
+        "trace": "search-probe-1792662204",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 7,
+          "audio_voiced_ms": 17420.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1662
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6440,
+            "chars": 15
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 12005,
+            "chars": 16
+          },
+          {
+            "event": "result_first_audio_server",
+            "ms": 13737
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 15969
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 18388,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 25039,
+            "chars": 23
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 40283
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 43189,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 55989,
+            "chars": 49
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 91.7,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "mars_topic_present": true,
+          "smalltalk_present": true
+        },
+        "captions_sha256": "8b750ec13526543a06bec134ad9679bc19cc40e1bbd325a064358e58206196f4"
+      },
+      "replace": {
+        "mode": "replace",
+        "room": "sn-BJP00326060100100004-1792662431",
+        "trace": "search-probe-1792662431",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 8980.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2672
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 7455,
+            "chars": 15
+          },
+          {
+            "event": "task_accepted_server",
+            "ms": 7821
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 7829
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 10856,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 15407,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 27381,
+            "chars": 44
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 60.3,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "ebfe52ce99a482e86d4c6164fa5f7eafa8100295fe414e7526a606556e247328"
+      }
+    },
+    "tasks": [
+      {
+        "id": "63f662a8-f5b8-47cf-8059-d1930036f606",
+        "session": "sn-BJP00326060100100004-1792661744",
+        "createdAt": 1792661784502,
+        "readyAt": 1792661785255,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "natural-weather",
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 753,
+        "active_state_observations": [
+          {
+            "at_ms": 1792661854385,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 0,
+        "result_observed_while_active": false
+      },
+      {
+        "id": "5f58614d-018c-435f-a573-c828dbb102d7",
+        "session": "sn-BJP00326060100100004-1792661744",
+        "createdAt": 1792661823411,
+        "readyAt": 1792661823949,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-control",
+          "weather": {
+            "city_id": 39,
+            "city_name": "上海市",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 2,
+        "ready_ms": 538,
+        "active_state_observations": [
+          {
+            "at_ms": 1792661854385,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792661858387,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 2
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "dfb6b54d-b202-4e49-9a41-b4c49cc4ae25",
+        "session": "sn-BJP00326060100100004-1792661917",
+        "createdAt": 1792661942423,
+        "readyAt": 1792661942439,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "natural-weather",
+          "weather": {
+            "city_id": 2,
+            "city_name": "北京市",
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 16,
+        "active_state_observations": [
+          {
+            "at_ms": 1792661944412,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792661960417,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662174499,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "f2609e00-fc6f-470f-89e3-439e8a95bf86",
+        "session": "sn-BJP00326060100100004-1792661917",
+        "createdAt": 1792661978005,
+        "readyAt": 1792661978020,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather": {
+            "city_id": 39,
+            "city_name": "上海市",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 15,
+        "active_state_observations": [
+          {
+            "at_ms": 1792661978423,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792661980424,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792661994428,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662174499,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "e9753927-b2f7-48bc-9330-4adac3579cb7",
+        "session": "sn-BJP00326060100100004-1792661917",
+        "createdAt": 1792662037350,
+        "readyAt": 1792662038580,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1230,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662038443,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662040444,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662044445,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662052449,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662174499,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "90dab21b-3e01-41e8-b970-b846975ec5da",
+        "session": "sn-BJP00326060100100004-1792661917",
+        "createdAt": 1792662093807,
+        "readyAt": 1792662095150,
+        "status": "cancelled",
+        "delivery": null,
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1343,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662094467,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662096468,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662098469,
+            "status": "cancelled",
+            "delivery": null,
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "3d889a5f-bc72-4869-82b5-77f8386b0a09",
+        "session": "sn-BJP00326060100100004-1792661917",
+        "createdAt": 1792662136001,
+        "readyAt": 1792662136442,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 441,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662136484,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662138485,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662148489,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662174499,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 0,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "7470f679-619d-420b-801a-833b8e8936ca",
+        "session": "sn-BJP00326060100100004-1792662204",
+        "createdAt": 1792662215458,
+        "readyAt": 1792662217066,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": [
+          {
+            "previous": "501df881-4c61-47b4-a5fa-ab42fe34bba9",
+            "delivery": "9f762c3b-748d-4493-a72c-d8f5b75ca5ce",
+            "automatic": false,
+            "at": 1792662252207
+          }
+        ],
+        "revision": 1,
+        "ready_ms": 1608,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662216515,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662218516,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662222517,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662228520,
+            "status": "delivered",
+            "delivery": "interrupted",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662252530,
+            "status": "delivered",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662266535,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662302549,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "6610512f-4130-4d99-a264-1c1f492d0005",
+        "session": "sn-BJP00326060100100004-1792662330",
+        "createdAt": 1792662341161,
+        "readyAt": 1792662343124,
+        "status": "cancelled",
+        "delivery": "interrupted",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1963,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662342565,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662344565,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662348567,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662352569,
+            "status": "cancelled",
+            "delivery": "interrupted",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "ff26bd11-a94b-42c2-ac6f-f455563524f9",
+        "session": "sn-BJP00326060100100004-1792662431",
+        "createdAt": 1792662442139,
+        "readyAt": 1792662443768,
+        "status": "cancelled",
+        "delivery": null,
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1629,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662442604,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662444605,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792662446606,
+            "status": "cancelled",
+            "delivery": null,
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "43ae05b8-8d21-46ff-9dfd-caf2cb63bf54",
+        "session": "sn-BJP00326060100100004-1792662431",
+        "createdAt": 1792662445547,
+        "readyAt": 1792662445816,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "rule_id": "builtin-control",
+          "weather": {
+            "city_id": 39,
+            "city_name": "上海市",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true
+        },
+        "replays": null,
+        "revision": 2,
+        "ready_ms": 269,
+        "active_state_observations": [
+          {
+            "at_ms": 1792662446606,
+            "status": "ready",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792662452609,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792662462613,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792662496627,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 2
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      }
+    ],
+    "weather_evidence": [
+      {
+        "task_id": "63f662a8-f5b8-47cf-8059-d1930036f606",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "city_source": "device_ip",
+        "location_provider": "ip9",
+        "location_observed_at": 1792661746935,
+        "provider": "moji-public-web",
+        "city_id": 2,
+        "city_name": "北京市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:27:00+08:00",
+        "fetched_at": "2026-10-22T09:36:25.253Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "5f58614d-018c-435f-a573-c828dbb102d7",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T15:27:00+08:00",
+        "fetched_at": "2026-10-22T09:37:03.947Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "dfb6b54d-b202-4e49-9a41-b4c49cc4ae25",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "provider": "moji-public-web",
+        "city_id": 2,
+        "city_name": "北京市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:27:00+08:00",
+        "fetched_at": "2026-10-22T09:36:25.254Z",
+        "cache_hit": true,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "f2609e00-fc6f-470f-89e3-439e8a95bf86",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T15:27:00+08:00",
+        "fetched_at": "2026-10-22T09:37:03.948Z",
+        "cache_hit": true,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "43ae05b8-8d21-46ff-9dfd-caf2cb63bf54",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T15:27:00+08:00",
+        "fetched_at": "2026-10-22T09:47:25.815Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      }
+    ],
+    "closed_sessions": [
+      [
+        "BJP00326060100100004",
+        "sn-BJP00326060100100004-1792661744",
+        1792661857153
+      ],
+      [
+        "BJP00326060100100004",
+        "sn-BJP00326060100100004-1792661917",
+        1792662174052
+      ],
+      [
+        "BJP00326060100100004",
+        "sn-BJP00326060100100004-1792662204",
+        1792662300699
+      ],
+      [
+        "BJP00326060100100004",
+        "sn-BJP00326060100100004-1792662330",
+        1792662401224
+      ],
+      [
+        "BJP00326060100100004",
+        "sn-BJP00326060100100004-1792662431",
+        1792662494972
+      ]
+    ]
+  },
+  "control_evidence": {
+    "cancel": {
+      "task_id": "6610512f-4130-4d99-a264-1c1f492d0005",
+      "cancel_observed_at_ms": 1792662352569,
+      "room_closed_at_ms": 1792662401224,
+      "cancel_before_exit": true,
+      "no_replay": true,
+      "cancel_ack_in_synthetic_caption": true,
+      "no_result_caption_after_cancel_ack": true,
+      "note": "触发点是首段音频，可能为接单提示；不冒称已听到火星正文后再取消。观察至退出。"
+    },
+    "replace": {
+      "old_task_id": "ff26bd11-a94b-42c2-ac6f-f455563524f9",
+      "new_task_id": "43ae05b8-8d21-46ff-9dfd-caf2cb63bf54",
+      "old_cancel_at_ms": 1792662446606,
+      "new_completed_at_ms": 1792662462613,
+      "room_closed_at_ms": 1792662494972,
+      "old_cancel_before_exit": true,
+      "new_completed_before_exit": true,
+      "new_revision_2": true,
+      "new_city_shanghai": true,
+      "shanghai_in_synthetic_caption": true
+    },
+    "resume": {
+      "task_id": "7470f679-619d-420b-801a-833b8e8936ca",
+      "interrupted_at_ms": 1792662228520,
+      "replay_at_ms": 1792662252207,
+      "completed_at_ms": 1792662266535,
+      "room_closed_at_ms": 1792662300699,
+      "manual_replay": true,
+      "ordered_before_exit": true
+    },
+    "matrix_cancel": {
+      "task_id": "90dab21b-3e01-41e8-b970-b846975ec5da",
+      "cancel_at_ms": 1792662098469,
+      "room_closed_at_ms": 1792662174052,
+      "before_exit": true,
+      "chengdu_weather_answer_verified": false
+    }
+  },
+  "outcome_counts": {
+    "sessions": 5,
+    "tasks": 11,
+    "delivery_completed": 8,
+    "substantive_result_completed": 7,
+    "insufficient_evidence_notice_completed": 1,
+    "explicit_cancel": 2,
+    "replaced_old_task": 1,
+    "physical_device_heard_verified": false
+  },
+  "probe_location_cleanup": {
+    "at_ms": 1792662094595,
+    "synthetic_room": "sn-BJP00326060100100004-1792661744",
+    "deleted_probe_rows": 1,
+    "other_rows_before": 0,
+    "other_rows_after": 0,
+    "remaining_synthetic_rows": 0
+  },
+  "final_readonly_verification": {
+    "worker": {
+      "at_ms": 1792662707906,
+      "units": {
+        "voice-worker-rust": {
+          "MainPID": "839",
+          "NRestarts": "0",
+          "ExecMainStartTimestamp": "Mon 2026-09-28 15:30:06 UTC",
+          "ActiveState": "active",
+          "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+        },
+        "p003-search-worker": {
+          "MainPID": "774264",
+          "NRestarts": "0",
+          "ExecMainStartTimestamp": "Thu 2026-10-22 09:33:50 UTC",
+          "ActiveState": "active",
+          "sha256": "8f4cc35724d5fa75e961d1357d2b12e2f6712cd14142d8ae86b835119cb82bb1"
+        }
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792662701205,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792857540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "timer": "NextElapseUSecRealtime=Sat 2026-10-24 15:59:00 UTC\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+      "https_unauthenticated": {
+        "/routing": 401,
+        "/routing/ack": 401
+      },
+      "resources": {
+        "memory_available_kb": "6223448",
+        "disk_available_bytes": 73324015616
+      }
+    },
+    "brain": {
+      "at_ms": 1792662709536,
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 1408861,
+          "restarts": 32,
+          "status": "online"
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0,
+          "status": "online"
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5,
+          "status": "online"
+        }
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "candidate_sources_verified": 129,
+      "production_sources_verified": 122,
+      "target_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts": "916f9151cf51970f7b004b3e39605cc2dbd472555ce56ba3ca812b0fa4448d56",
+        "/opt/p003/server/src/search-canary-policy.ts": "676583e98ba979ebeac045840f04d35a39205f97a1d9e94095b174c252a91d18",
+        "/opt/p003/server/src/routes/search-canary-admin.ts": "c5601a27cde834d3ee27073a89a9dde985f4826735b6ac1f21861d1ff08a2204"
+      },
+      "versions": [
+        {
+          "sn": "BJP00326060100100004",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792645636237
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version_code": 356,
+          "version_name": "1.2.2-canary.342",
+          "last_check_at": 1792654114522
+        }
+      ],
+      "routing_targets": [
+        {
+          "sn": "BJP00326070803800006",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "at": 1792660011234
+        },
+        {
+          "sn": "BJP00326060100100004",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "at": 1792660011234
+        }
+      ],
+      "isolated_accounts": true,
+      "daily_task_counts_including_probes": {
+        "BJP00326060100100004": 76,
+        "BJP00326070803800006": 1
+      },
+      "timer": "NextElapseUSecRealtime=Sat 2026-10-24 23:59:00 CST\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+      "resources": {
+        "memory_available_kb": "2460124",
+        "disk_available_bytes": 11758194688
+      }
+    },
+    "p1": true,
+    "p2": false,
+    "three_deadlines_match": true,
+    "production_dispatch_open": true,
+    "production_worker_unchanged": true
+  },
+  "unresolved": [
+    "Android wake-to-RTC initial words",
+    "approximately five-second client exit",
+    "cold-start initial routing fetch",
+    "reliable recent news",
+    "physical listening and long-running stability",
+    "Baidu adapter not implemented or deployed"
+  ]
+}

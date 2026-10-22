@@ -1,0 +1,39 @@
+{
+  "actually_reopened": true,
+  "resumed_at_ms": 1792661732168,
+  "expires_at_ms": 1792857540000,
+  "allowlist": [
+    "BJP00326070803800006",
+    "BJP00326060100100004"
+  ],
+  "p1": true,
+  "p2": false,
+  "routing_version": "r7-b4b722c50d1efbf635a1e06d",
+  "real_device_acceptance": "pending",
+  "revision": "R9-48h-extension",
+  "supersedes": "R8 deadline 2026-10-22 23:59 CST by explicit user instruction",
+  "extension_hours": 48,
+  "previous_expires_at_ms": 1792684740000,
+  "start_cst": "2026-10-22 17:35:32",
+  "end_cst": "2026-10-24 23:59:00",
+  "timers": [
+    {
+      "host": "worker",
+      "at_ms": 1792661694017,
+      "old_deadline_ms": 1792684740000,
+      "new_deadline_ms": 1792857540000,
+      "timer": "NextElapseUSecRealtime=Sat 2026-10-24 15:59:00 UTC\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+      "old_timer_active": "inactive",
+      "dispatch_still_closed": true
+    },
+    {
+      "host": "brain",
+      "at_ms": 1792661697201,
+      "old_deadline_ms": 1792684740000,
+      "new_deadline_ms": 1792857540000,
+      "timer": "NextElapseUSecRealtime=Sat 2026-10-24 23:59:00 CST\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+      "old_timer_active": "inactive",
+      "dispatch_still_closed": true
+    }
+  ]
+}
