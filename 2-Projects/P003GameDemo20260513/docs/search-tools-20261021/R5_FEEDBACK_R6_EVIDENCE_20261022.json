@@ -1,0 +1,1041 @@
+{
+  "scope": "R5反馈8轮历史对照＋R6当前服务两次受控合成RTC；不是持有人真人验收",
+  "observed_at_cst": "2026-10-22T14:53:25.211+08:00",
+  "feedback_sha256": "79641b27c9040f5a1def83b42efe198f34b3a2d5db2b75a24ae395b59a5c6cd1",
+  "current": {
+    "candidate_worker_sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+    "candidate_worker_pid": "754785",
+    "candidate_worker_restarts": "0",
+    "production_worker_pid": "839",
+    "production_worker_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+    "production_brain_sources_unchanged_during_verification": true,
+    "candidate_sources_unchanged_during_verification": true,
+    "candidate_source_hashes": {
+      "src/tools/search-executor.ts": "aac96e8131fb8e2f269f2e0a9b1301168a29e32ef8cdba02d0b023e9eff27766",
+      "src/tools/search-chat-policy.ts": "c1279654ee8052207b6f441559c45759c122cb7b5195c26348f6743d467a4733",
+      "src/routes/custom-llm.ts": "518adb20062af812e6923fcdd647def5c7f261fd1ada055aadabbdea51d4fb3e"
+    },
+    "versions_recently_reported": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1792645636237
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 354,
+        "version_name": "1.2.2-canary.340",
+        "last_check_at": 1792642528878
+      }
+    ],
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1792684740000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "p1": true,
+    "p2": false,
+    "candidate_jobs_after_probes": 0,
+    "daily_task_count_including_synthetic": {
+      "BJP00326060100100004": 47
+    },
+    "real_device_success_auth_since_r6_reopen": 0,
+    "timers_active": true,
+    "production_brain_pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 1204589,
+        "restarts": 29,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ]
+  },
+  "historical_task_count": 5,
+  "historical_tasks": [
+    {
+      "id": "4385c72c-b20c-434d-97ec-6438c4f03ced",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792647963",
+      "createdAt": 1792647971744,
+      "readyAt": 1792647973464,
+      "delivery": "completed",
+      "status": "cancelled",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": [
+        {
+          "previous": "bb61f1b0-dded-41e2-8c91-d9660259fb81",
+          "delivery": "fe9076dc-689c-4084-9495-26576e140100",
+          "automatic": true,
+          "at": 1792648000016
+        }
+      ],
+      "created_cst": "2026-10-22T13:46:11.744+08:00",
+      "ready_cst": "2026-10-22T13:46:13.464+08:00",
+      "events": [
+        {
+          "at_cst": "2026-10-22T13:46:16.691+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:46:17.541+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:46:19.240+08:00",
+          "kind": "speech_finished",
+          "interrupted": true
+        },
+        {
+          "at_cst": "2026-10-22T13:46:19.240+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": true,
+          "segment_complete": false,
+          "played_ms": 820
+        },
+        {
+          "at_cst": "2026-10-22T13:46:40.041+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:46:40.691+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:46:53.031+08:00",
+          "kind": "speech_finished",
+          "interrupted": false
+        },
+        {
+          "at_cst": "2026-10-22T13:46:53.031+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": false,
+          "segment_complete": true
+        }
+      ]
+    },
+    {
+      "id": "0b50677c-a049-4d5d-891e-6a64e183901c",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648050",
+      "createdAt": 1792648056487,
+      "readyAt": 1792648057902,
+      "delivery": "interrupted",
+      "status": "cancelled",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": [
+        {
+          "previous": "6e4f71a4-bbe7-4026-83dc-f9dda075a6b0",
+          "delivery": "4663cd29-0dcd-49fa-9ada-d90ccb0a9a82",
+          "automatic": true,
+          "at": 1792648071438
+        }
+      ],
+      "created_cst": "2026-10-22T13:47:36.487+08:00",
+      "ready_cst": "2026-10-22T13:47:37.902+08:00",
+      "events": [
+        {
+          "at_cst": "2026-10-22T13:47:41.559+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:47:42.160+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:47:43.759+08:00",
+          "kind": "speech_finished",
+          "interrupted": true
+        },
+        {
+          "at_cst": "2026-10-22T13:47:43.759+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": true,
+          "segment_complete": false,
+          "played_ms": 610
+        },
+        {
+          "at_cst": "2026-10-22T13:47:51.460+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:47:52.059+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:47:54.210+08:00",
+          "kind": "speech_finished",
+          "interrupted": true
+        },
+        {
+          "at_cst": "2026-10-22T13:47:54.210+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": false,
+          "segment_complete": false,
+          "played_ms": 2161
+        }
+      ]
+    },
+    {
+      "id": "3494f1e5-2272-421e-aa45-78bc93810035",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648157",
+      "createdAt": 1792648162486,
+      "readyAt": 1792648162852,
+      "delivery": "completed",
+      "status": "cancelled",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 0,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 10,
+        "duplicate": 0,
+        "outcome": "filtered"
+      },
+      "replays": [
+        {
+          "previous": "e729dd8a-a152-4c60-89f3-04d56639684a",
+          "delivery": "d1ff22d3-6150-48f4-a1cc-635b8bd4960c",
+          "automatic": true,
+          "at": 1792648180515
+        }
+      ],
+      "created_cst": "2026-10-22T13:49:22.486+08:00",
+      "ready_cst": "2026-10-22T13:49:22.852+08:00",
+      "events": [
+        {
+          "at_cst": "2026-10-22T13:49:27.685+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:49:28.234+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:49:30.034+08:00",
+          "kind": "speech_finished",
+          "interrupted": true
+        },
+        {
+          "at_cst": "2026-10-22T13:49:30.034+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": true,
+          "segment_complete": false,
+          "played_ms": 830
+        },
+        {
+          "at_cst": "2026-10-22T13:49:40.534+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:49:41.083+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:49:46.296+08:00",
+          "kind": "speech_finished",
+          "interrupted": false
+        },
+        {
+          "at_cst": "2026-10-22T13:49:46.296+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": false,
+          "segment_complete": true
+        }
+      ]
+    },
+    {
+      "id": "471e8ff0-756f-4d92-a3d6-0c1c9ca42c3e",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648232",
+      "createdAt": 1792648239009,
+      "readyAt": 1792648240157,
+      "delivery": "completed",
+      "status": "cancelled",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": null,
+      "created_cst": "2026-10-22T13:50:39.009+08:00",
+      "ready_cst": "2026-10-22T13:50:40.157+08:00",
+      "events": [
+        {
+          "at_cst": "2026-10-22T13:50:53.078+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:50:53.677+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:51:05.375+08:00",
+          "kind": "speech_finished",
+          "interrupted": false
+        },
+        {
+          "at_cst": "2026-10-22T13:51:05.375+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": false,
+          "segment_complete": true
+        }
+      ]
+    },
+    {
+      "id": "d4735833-c205-481d-b8d5-b515e1d93202",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648232",
+      "createdAt": 1792648269712,
+      "readyAt": 1792648271032,
+      "delivery": "interrupted",
+      "status": "cancelled",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": null,
+      "created_cst": "2026-10-22T13:51:09.712+08:00",
+      "ready_cst": "2026-10-22T13:51:11.032+08:00",
+      "events": [
+        {
+          "at_cst": "2026-10-22T13:51:15.177+08:00",
+          "kind": "speech_scheduled"
+        },
+        {
+          "at_cst": "2026-10-22T13:51:15.778+08:00",
+          "kind": "first_audio_published"
+        },
+        {
+          "at_cst": "2026-10-22T13:51:21.379+08:00",
+          "kind": "speech_finished",
+          "interrupted": true
+        },
+        {
+          "at_cst": "2026-10-22T13:51:21.379+08:00",
+          "kind": "interruption_decision",
+          "automatic_requeue": false,
+          "segment_complete": false,
+          "played_ms": 5632
+        }
+      ]
+    }
+  ],
+  "fresh_synthetic": {
+    "r5verify": {
+      "result": {
+        "mode": "r5verify",
+        "room": "sn-BJP00326060100100004-1792651783",
+        "trace": "search-probe-1792651783",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 9,
+          "user_transcripts": 6,
+          "metrics": 17,
+          "audio_voiced_ms": 38830.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1607
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5011,
+            "chars": 12
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 5934
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 8361,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 12665,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 16516,
+            "chars": 17
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 30096,
+            "chars": 51
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 36195
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 39563,
+            "chars": 13
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 44111,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 57157,
+            "chars": 52
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 66726
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 68415,
+            "chars": 3
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 69191
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 72026,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 72026,
+            "chars": 3
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 78211,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 92162,
+            "chars": 53
+          },
+          {
+            "event": "synthetic_input",
+            "index": 5,
+            "ms": 99880
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 102512,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 108684,
+            "chars": 21
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 115.4,
+        "device_heard_verified": false
+      },
+      "captions": [
+        {
+          "speaker": "合成测试输入",
+          "text": "帮我查一下今天北京的天气",
+          "received_final_caption_ms": 5011
+        },
+        {
+          "speaker": "合成测试输入",
+          "text": "我今天画了一只小猫",
+          "received_final_caption_ms": 8361
+        },
+        {
+          "speaker": "小可",
+          "text": "哇，画了一只小猫呀！",
+          "received_final_caption_ms": 12665
+        },
+        {
+          "speaker": "小可",
+          "text": "它长什么样呢，是白色的还是花花的？",
+          "received_final_caption_ms": 16516
+        },
+        {
+          "speaker": "小可",
+          "text": "刚查了北京天气：今天10月22日晴间多云，最高18℃，最低5℃，昼夜温差大，午后有阵风，记得适时添衣。",
+          "received_final_caption_ms": 30096
+        },
+        {
+          "speaker": "合成测试输入",
+          "text": "帮我查查火星为什么是红色的",
+          "received_final_caption_ms": 39563
+        },
+        {
+          "speaker": "小可",
+          "text": "好，我查一下，你可以继续和我聊。",
+          "received_final_caption_ms": 44111
+        },
+        {
+          "speaker": "小可",
+          "text": "刚查了火星为啥是红的。火星土壤里的氧化铁像铁锈一样，把整颗星球染红了，2025年的研究认为主要是水铁矿。",
+          "received_final_caption_ms": 57157
+        },
+        {
+          "speaker": "合成测试输入",
+          "text": "帮我查",
+          "received_final_caption_ms": 68415
+        },
+        {
+          "speaker": "合成测试输入",
+          "text": "啊今天北京的天气",
+          "received_final_caption_ms": 72026
+        },
+        {
+          "speaker": "小可",
+          "text": "你想查",
+          "received_final_caption_ms": 72026
+        },
+        {
+          "speaker": "小可",
+          "text": "好，我查一下，你可以继续和我聊。",
+          "received_final_caption_ms": 78211
+        },
+        {
+          "speaker": "小可",
+          "text": "刚查了北京今天天气：晴间多云，最高18℃，最低5℃，昼夜温差大。午后到傍晚有5级阵风，出门记得防风保暖哦。",
+          "received_final_caption_ms": 92162
+        },
+        {
+          "speaker": "合成测试输入",
+          "text": "我查一下今天北京的天气",
+          "received_final_caption_ms": 102512
+        },
+        {
+          "speaker": "小可",
+          "text": "你想查什么？请说出具体主题，我再帮你查询。",
+          "received_final_caption_ms": 108684
+        }
+      ],
+      "tasks": [
+        {
+          "id": "20b2c02d-1766-45a2-acfe-f61bc76b09ea",
+          "subject": "BJP00326060100100004",
+          "session": "sn-BJP00326060100100004-1792651783",
+          "createdAt": 1792651796809,
+          "readyAt": 1792651798312,
+          "delivery": "completed",
+          "status": "cancelled",
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 1,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 9,
+            "duplicate": 0,
+            "outcome": "evidence"
+          },
+          "replays": null,
+          "created_cst": "2026-10-22T14:49:56.809+08:00",
+          "ready_cst": "2026-10-22T14:49:58.312+08:00",
+          "events": [
+            {
+              "at_cst": "2026-10-22T14:50:08.897+08:00",
+              "kind": "speech_scheduled"
+            },
+            {
+              "at_cst": "2026-10-22T14:50:09.497+08:00",
+              "kind": "first_audio_published"
+            },
+            {
+              "at_cst": "2026-10-22T14:50:21.531+08:00",
+              "kind": "speech_finished",
+              "interrupted": false
+            },
+            {
+              "at_cst": "2026-10-22T14:50:21.531+08:00",
+              "kind": "interruption_decision",
+              "automatic_requeue": false,
+              "segment_complete": true
+            }
+          ]
+        },
+        {
+          "id": "a64dc352-ac7b-41ce-82e3-b3e3b6627d95",
+          "subject": "BJP00326060100100004",
+          "session": "sn-BJP00326060100100004-1792651783",
+          "createdAt": 1792651830997,
+          "readyAt": 1792651832376,
+          "delivery": "completed",
+          "status": "cancelled",
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          },
+          "replays": null,
+          "created_cst": "2026-10-22T14:50:30.997+08:00",
+          "ready_cst": "2026-10-22T14:50:32.376+08:00",
+          "events": [
+            {
+              "at_cst": "2026-10-22T14:50:36.447+08:00",
+              "kind": "speech_scheduled"
+            },
+            {
+              "at_cst": "2026-10-22T14:50:37.048+08:00",
+              "kind": "first_audio_published"
+            },
+            {
+              "at_cst": "2026-10-22T14:50:48.591+08:00",
+              "kind": "speech_finished",
+              "interrupted": false
+            },
+            {
+              "at_cst": "2026-10-22T14:50:48.591+08:00",
+              "kind": "interruption_decision",
+              "automatic_requeue": false,
+              "segment_complete": true
+            }
+          ]
+        },
+        {
+          "id": "31da338c-2f01-40dd-b217-be21a2172152",
+          "subject": "BJP00326060100100004",
+          "session": "sn-BJP00326060100100004-1792651783",
+          "createdAt": 1792651863456,
+          "readyAt": 1792651864881,
+          "delivery": "completed",
+          "status": "cancelled",
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 1,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 9,
+            "duplicate": 0,
+            "outcome": "evidence"
+          },
+          "replays": null,
+          "created_cst": "2026-10-22T14:51:03.456+08:00",
+          "ready_cst": "2026-10-22T14:51:04.881+08:00",
+          "events": [
+            {
+              "at_cst": "2026-10-22T14:51:10.548+08:00",
+              "kind": "speech_scheduled"
+            },
+            {
+              "at_cst": "2026-10-22T14:51:11.248+08:00",
+              "kind": "first_audio_published"
+            },
+            {
+              "at_cst": "2026-10-22T14:51:23.611+08:00",
+              "kind": "speech_finished",
+              "interrupted": false
+            },
+            {
+              "at_cst": "2026-10-22T14:51:23.611+08:00",
+              "kind": "interruption_decision",
+              "automatic_requeue": false,
+              "segment_complete": true
+            }
+          ]
+        }
+      ]
+    },
+    "r5bare": {
+      "result": {
+        "mode": "r5bare",
+        "room": "sn-BJP00326060100100004-1792651939",
+        "trace": "search-probe-1792651939",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 7,
+          "user_transcripts": 2,
+          "metrics": 11,
+          "audio_voiced_ms": 22820.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2547
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4827,
+            "chars": 7
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 9822,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 14974,
+            "chars": 27
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 20123,
+            "chars": 27
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 22222,
+            "chars": 11
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 26678
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 28474,
+            "chars": 2
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 33375,
+            "chars": 17
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 40534,
+            "chars": 31
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 43223,
+            "chars": 11
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 44.9,
+        "device_heard_verified": false
+      },
+      "captions": [
+        {
+          "speaker": "合成测试输入",
+          "text": "今天北京的天气",
+          "received_final_caption_ms": 4827
+        },
+        {
+          "speaker": "小可",
+          "text": "哇，[称呼]想知道北京今天天气呀！",
+          "received_final_caption_ms": 9822
+        },
+        {
+          "speaker": "小可",
+          "text": "不过小可这会儿还查不到实时天气呢，等我长大一些试试看！",
+          "received_final_caption_ms": 14974
+        },
+        {
+          "speaker": "小可",
+          "text": "你可以看看窗外的天空，或者问问爸爸妈妈手机上的天气哦。",
+          "received_final_caption_ms": 20123
+        },
+        {
+          "speaker": "小可",
+          "text": "北京今天是要出去玩吗？",
+          "received_final_caption_ms": 22222
+        },
+        {
+          "speaker": "合成测试输入",
+          "text": "天气",
+          "received_final_caption_ms": 28474
+        },
+        {
+          "speaker": "小可",
+          "text": "小可还没法查到实时天气呢，[称呼]。",
+          "received_final_caption_ms": 33375
+        },
+        {
+          "speaker": "小可",
+          "text": "不过你可以自己当小小气象员呀——看看窗外是晴天、阴天还是下雨？",
+          "received_final_caption_ms": 40534
+        },
+        {
+          "speaker": "小可",
+          "text": "这样猜天气也超好玩的！",
+          "received_final_caption_ms": 43223
+        }
+      ],
+      "tasks": []
+    },
+    "audio_files": [
+      {
+        "name": "r5verify-1792651792-received-synthetic.wav",
+        "sha256": "c98f9c0400a38677af4be3b50ef934be169540569c41bdf2b921e7c77dd10e9a",
+        "bytes": 11001644
+      },
+      {
+        "name": "r5bare-1792651943-received-synthetic.wav",
+        "sha256": "88ece40c8ba2cb06d83f5b0e4a3b726611ad274ed2aff84e6cec059e44dcb196",
+        "bytes": 4144364
+      }
+    ]
+  },
+  "limits": [
+    "未收到附件提及的MOV录像；真人实听引用测试人报告而非独立观看。",
+    "合成RTC未模拟Android唤醒到ordered_pcm/RTC的首句交接。",
+    "字幕和服务端completed不等于设备扬声器实听。",
+    "失败接单后的提示截断已有R6回归修复，但本轮未对线上服务做故障注入复测。",
+    "天气/科普答案作为实际输出证据，未在本轮独立查证全部事实。"
+  ],
+  "prompt_audit": {
+    "at_ms": 1792652114467,
+    "device_active": true,
+    "isolated_account": true,
+    "worldview_override_present": false,
+    "effective_base_has_old_denial": true,
+    "addendum_has_old_denial": false,
+    "files": {
+      "src/prompts.ts": {
+        "mtime_ms": 1792572736226,
+        "sha256": "a3f9fcab5405085a9608c578e932b1bac4a2309beec9c03600c5db66608941b2"
+      },
+      "src/routes/custom-llm.ts": {
+        "mtime_ms": 1792649787564,
+        "sha256": "518adb20062af812e6923fcdd647def5c7f261fd1ada055aadabbdea51d4fb3e"
+      },
+      "src/tools/search-chat-policy.ts": {
+        "mtime_ms": 1792649787564,
+        "sha256": "c1279654ee8052207b6f441559c45759c122cb7b5195c26348f6743d467a4733"
+      },
+      "src/tools/search-executor.ts": {
+        "mtime_ms": 1792649787563,
+        "sha256": "aac96e8131fb8e2f269f2e0a9b1301168a29e32ef8cdba02d0b023e9eff27766"
+      }
+    },
+    "unit": "MainPID=1327260\nActiveEnterTimestamp=Thu 2026-10-22 14:16:27 CST\n"
+  },
+  "historical_rounds": [
+    {
+      "round": 1,
+      "room": "sn-BJP00326060100100004-1792647855",
+      "auth_status": "ok",
+      "trace": "1c294160-9a7c-4538-b005-0fb1b5bde124",
+      "task_ids": [],
+      "finding": "unresolved_input_prefix_loss"
+    },
+    {
+      "round": 2,
+      "room": "sn-BJP00326060100100004-1792647887",
+      "auth_status": "ok",
+      "trace": "32bfdd91-167e-4776-aa5e-f6a0b18f33fb",
+      "task_ids": [],
+      "finding": "clarification_only_not_search_completion"
+    },
+    {
+      "round": 3,
+      "room": "sn-BJP00326060100100004-1792647943",
+      "auth_status": "ok",
+      "trace": "d4331c56-1efe-4aa1-afb7-5c24d9c0bb21",
+      "task_ids": [],
+      "finding": "submit_unconfirmed_notice_aborted_fault_path_not_reverified"
+    },
+    {
+      "round": 4,
+      "room": "sn-BJP00326060100100004-1792647963",
+      "auth_status": "ok",
+      "trace": "33ee49e2-32ab-45b0-b62a-90d516f3ab16",
+      "task_ids": [
+        "4385c72c-b20c-434d-97ec-6438c4f03ced"
+      ],
+      "finding": "first_completed_second_chacha_missed"
+    },
+    {
+      "round": 5,
+      "room": "sn-BJP00326060100100004-1792648050",
+      "auth_status": "ok",
+      "trace": "ebb2dfbe-71e0-4c6e-bf7a-ea85a7983981",
+      "task_ids": [
+        "0b50677c-a049-4d5d-891e-6a64e183901c"
+      ],
+      "finding": "automatic_replay_once_then_second_interruption"
+    },
+    {
+      "round": 6,
+      "room": "sn-BJP00326060100100004-1792648157",
+      "auth_status": "ok",
+      "trace": "8dde5cc8-2ee7-48ca-a330-bc76f562b191",
+      "task_ids": [
+        "3494f1e5-2272-421e-aa45-78bc93810035"
+      ],
+      "finding": "insufficient_evidence_notice_completed"
+    },
+    {
+      "round": 7,
+      "room": "sn-BJP00326060100100004-1792648232",
+      "auth_status": "ok",
+      "trace": "00afaaf5-ab48-4613-bd64-fb50bf89d0d1",
+      "task_ids": [
+        "471e8ff0-756f-4d92-a3d6-0c1c9ca42c3e",
+        "d4735833-c205-481d-b8d5-b515e1d93202"
+      ],
+      "finding": "beijing_completed_shanghai_interrupted"
+    },
+    {
+      "round": 8,
+      "room": "sn-BJP00326060100100004-1792649139",
+      "auth_status": "ok",
+      "trace": "e65e5395-6e1a-4ee9-97b4-02e0a1d663cb",
+      "task_ids": [],
+      "finding": "unresolved_bare_topic_and_r6_split_recovered"
+    }
+  ],
+  "deterministic_replay": {
+    "synthetic_public_inputs": true,
+    "runtime_source_reused_without_changes": true,
+    "routes": [
+      {
+        "input": "帮我查一下今天北京的天气",
+        "action": "Search"
+      },
+      {
+        "input": "我查一下今天北京的天气",
+        "action": "Clarify"
+      },
+      {
+        "input": "帮我查查北京今天的天气",
+        "action": "Search"
+      },
+      {
+        "input": "天气",
+        "action": null
+      },
+      {
+        "input": "今天北京的天气",
+        "action": null
+      },
+      {
+        "input": "看一下今天北京的天气",
+        "action": null
+      },
+      {
+        "input": "帮我查",
+        "action": "Clarify"
+      },
+      {
+        "input": "啊今天北京的天气",
+        "action": null
+      }
+    ],
+    "split_sequence": {
+      "inputs": [
+        "帮我查",
+        "啊今天北京的天气"
+      ],
+      "interval_ms": 1547,
+      "actions": [
+        "Clarify",
+        "Search"
+      ]
+    },
+    "output_filter": {
+      "artificial_response": "我这就帮你查一下今天北京的天气。稍等一下哦！",
+      "bare_topic_filter_enabled": false,
+      "bare_topic_response_preserved": true,
+      "input_containing_查_filter_enabled": true,
+      "input_containing_查_response_replaced": true,
+      "is_actual_llm_response": false
+    }
+  },
+  "raw_evidence_manifest": [
+    {
+      "name": "observe-20261022-145323/brain-state.json",
+      "sha256": "865354c677b2b5cc8d691ff6a11995552c431951e9db41c41a371dc77f15e9c7",
+      "bytes": 53089,
+      "private_not_committed": true
+    },
+    {
+      "name": "observe-20261022-145323/worker-state.json",
+      "sha256": "001c4e2a092b17f0bc188d932e568d71a64d890c24e47ffaa35b681295a366e6",
+      "bytes": 2164,
+      "private_not_committed": true
+    },
+    {
+      "name": "observe-20261022-145323/worker-journal.log",
+      "sha256": "4327bdec5aa7ed72a032626b51dcc2976c218d993bece5a5a153dc710a2c74a4",
+      "bytes": 1736849,
+      "private_not_committed": true
+    },
+    {
+      "name": "observe-20261022-145323/brain-journal.log",
+      "sha256": "4fac49debaf5cd985d5170a2b118424961c17bac16f146e873c9ec9d2c3df094",
+      "bytes": 17746,
+      "private_not_committed": true
+    },
+    {
+      "name": "r5-feedback-fresh-probes-private.json",
+      "sha256": "05aa4a7df5549b73d7e04c1a48bd282b424dd4f51167ff1579f9e3502cf104e9",
+      "bytes": 5691,
+      "private_not_committed": true
+    }
+  ]
+}

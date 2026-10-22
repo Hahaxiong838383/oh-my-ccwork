@@ -1,0 +1,17 @@
+{
+  "files": [
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R5_FEEDBACK_R6_VERIFICATION_20261022.md",
+      "bytes": 14667,
+      "sha256": "024e4185f05e08cff6a616e9f41cd7a1eb643bd9a3e82621117a3596cbdd19ed",
+      "verified": true
+    },
+    {
+      "path": "/Users/rayman.chen/Downloads/R5_FEEDBACK_R6_EVIDENCE_20261022.json",
+      "bytes": 31009,
+      "sha256": "d208784e47f01f4728a72f692d01bebe173ad098c1d691f6235d63fadc4e4b05",
+      "verified": true
+    }
+  ],
+  "transferred_at": "2026-10-22T15:00:03.227417+08:00"
+}
