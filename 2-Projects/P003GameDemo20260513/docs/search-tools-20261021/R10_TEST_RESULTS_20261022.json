@@ -1,0 +1,1610 @@
+{
+  "revision": "R10",
+  "checks": [
+    {
+      "name": "device-brain.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-config.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-intent-protocol.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-registry.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-session.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "moji-weather.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-availability.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-boundaries.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-isolation.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-process.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-status.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-chat-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-executor.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-route.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-routing-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-routing-store.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-tasks.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-location.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-location-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "baidu-weather.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "fixed-weather.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-weather-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "tsc",
+      "rc": 0
+    }
+  ],
+  "worker_tests": 381,
+  "preview_tests": 22,
+  "linux_build": true,
+  "live_ui": {
+    "at_ms": 1792666879327,
+    "actual_ui": true,
+    "preview_no_write": true,
+    "targets": [
+      {
+        "sn": "BJP00326070803800006",
+        "version": "r7-5bd970f225036a447233316e",
+        "at": 1792666766674
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "version": "r7-5bd970f225036a447233316e",
+        "at": 1792666766674
+      }
+    ],
+    "revision": 19,
+    "desktop_and_narrow": true,
+    "page_errors": []
+  },
+  "rtc": {
+    "collected_at_ms": 1792667714581,
+    "modes": {
+      "replace": {
+        "mode": "replace",
+        "room": "sn-BJP00326070803800006-1792667413",
+        "trace": "search-probe-1792667413",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 9820.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1312
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5908,
+            "chars": 15
+          },
+          {
+            "event": "task_accepted_server",
+            "ms": 6252
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 6297
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 9857,
+            "chars": 14
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 14389,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 26755,
+            "chars": 49
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 58.3,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "new_satellite_answer": true,
+          "old_mars_result_absent": true
+        },
+        "captions_sha256": "e11e609b08f114c51a4627d52c03436fa12fd5cbdfabbe3eeea1ace920b0a479"
+      },
+      "resume": {
+        "mode": "resume",
+        "room": "sn-BJP00326070803800006-1792667287",
+        "trace": "search-probe-1792667287",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 17750.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1580
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5923,
+            "chars": 15
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 10474,
+            "chars": 16
+          },
+          {
+            "event": "result_first_audio_server",
+            "ms": 13658
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 15909
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 18273,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 22224,
+            "chars": 13
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 24273,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 26302,
+            "chars": 7
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 39760
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 42473,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 54741,
+            "chars": 50
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 91.0,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "mars_topic_present": true,
+          "smalltalk_present": true,
+          "explicit_replay_record": true
+        },
+        "captions_sha256": "70e4efb6287916cdbeef69c9ca0d1387058f1f3e3d20704ea7a187a4c7cc3ca5"
+      },
+      "geo": {
+        "mode": "geo",
+        "room": "sn-BJP00326070803800006-1792667576",
+        "trace": "synthetic-r10-public-1792667576",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 11,
+          "audio_voiced_ms": 24290.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1985
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 3963,
+            "chars": 7
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 4926
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 7263,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 11711,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 14762,
+            "chars": 15
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 19512,
+            "chars": 22
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 32162,
+            "chars": 49
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 39769
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 43014,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 47552,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 58562,
+            "chars": 44
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 75.4,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "network_city_disclosed": true,
+          "explicit_xian": true,
+          "smalltalk_present": true,
+          "network_location_disclosed": true,
+          "explicit_xian_answer": true
+        },
+        "captions_sha256": "9338474e574ad080e4813bce4a89d56df66cd54127a19737f7637fbd47bf3064"
+      },
+      "search": {
+        "mode": "search",
+        "room": "sn-BJP00326070803800006-1792667191",
+        "trace": "search-probe-1792667191",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 4,
+          "metrics": 11,
+          "audio_voiced_ms": 16190.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1736
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6263,
+            "chars": 15
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 7139
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 9563,
+            "chars": 9
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 10506
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 13161,
+            "chars": 9
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 14203
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 17163,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 17164,
+            "chars": 1
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 23163,
+            "chars": 25
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 25262,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 38736,
+            "chars": 52
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 60.2,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "smalltalk_before_search_result": true
+        },
+        "captions_sha256": "1de4ec35e642ee6e1750566bd14be0cdd9fd1206684e4d940d1e7d857c89ff6b"
+      },
+      "cancel": {
+        "mode": "cancel",
+        "room": "sn-BJP00326070803800006-1792667505",
+        "trace": "search-probe-1792667505",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 4400.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1495
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6151,
+            "chars": 15
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 10702,
+            "chars": 16
+          },
+          {
+            "event": "result_first_audio_server",
+            "ms": 12652
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 12680
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 15202,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 19301,
+            "chars": 10
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 63.4,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "cancellation_acknowledgement": true,
+          "no_mars_answer_after_cancel_utterance": true,
+          "cancel_utterance_end_ms": 15202
+        },
+        "captions_sha256": "3ff26755c061858fb35106025156772117ecdbb9945c4ff0382b0473345e7fc1"
+      },
+      "matrix": {
+        "mode": "matrix",
+        "room": "sn-BJP00326070803800006-1792666814",
+        "trace": "search-probe-1792666814",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 22,
+          "user_transcripts": 11,
+          "metrics": 36,
+          "audio_voiced_ms": 94680.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1888
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4361,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 9010,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 12339,
+            "chars": 15
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 21771
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 25160,
+            "chars": 12
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 29709,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 41126,
+            "chars": 44
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 63295
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 67359,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 71887,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 82958,
+            "chars": 40
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 104941
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 108110,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 112759,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 119645,
+            "chars": 32
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 126959
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 130060,
+            "chars": 7
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 130660,
+            "chars": 5
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 135136,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 149387,
+            "chars": 61
+          },
+          {
+            "event": "synthetic_input",
+            "index": 5,
+            "ms": 168029
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 171159,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 175709,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 191808,
+            "chars": 66
+          },
+          {
+            "event": "synthetic_input",
+            "index": 6,
+            "ms": 208673
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 211959,
+            "chars": 12
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 216426,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 223096,
+            "chars": 26
+          },
+          {
+            "event": "synthetic_input",
+            "index": 7,
+            "ms": 249601
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 252361,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 256609,
+            "chars": 7
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 264658,
+            "chars": 40
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 270710,
+            "chars": 27
+          },
+          {
+            "event": "synthetic_input",
+            "index": 8,
+            "ms": 271543
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 272663,
+            "chars": 10
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 274411,
+            "chars": 7
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 278948,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 290315,
+            "chars": 44
+          },
+          {
+            "event": "synthetic_input",
+            "index": 9,
+            "ms": 301270
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 304710,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 309238,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 320486,
+            "chars": 44
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 331.6,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "dinosaur_topic": true,
+          "satellite_named": true,
+          "palace_topic": true,
+          "tides_topic": true,
+          "chengdu_weather": true,
+          "chaoyang_weather": true,
+          "smalltalk_present": true,
+          "no_grow_up_denial": true
+        },
+        "captions_sha256": "d5e897de9c4cad06a598203410d27809cd14fcaabc34fedb5df988c2013e535b"
+      }
+    },
+    "tasks": [
+      {
+        "id": "4dea7009-5032-4963-9fa9-6e425cc7a99e",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792666855013,
+        "readyAt": 1792666856621,
+        "status": "expired",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1608,
+        "active_state_observations": [
+          {
+            "at_ms": 1792666856274,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666858275,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666862277,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666872280,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667158389,
+            "status": "expired",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "d3067bf7-3291-460b-b6d4-e50888bff221",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792666897211,
+        "readyAt": 1792666898541,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1330,
+        "active_state_observations": [
+          {
+            "at_ms": 1792666898287,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666900288,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666904290,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666914293,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667162391,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "95f11e6a-f0ce-4770-9eac-19f016483037",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792666960510,
+        "readyAt": 1792666961935,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1425,
+        "active_state_observations": [
+          {
+            "at_ms": 1792666962308,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666966310,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792666980315,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667162391,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "673123db-2372-4b57-8192-09273a54732f",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792667001010,
+        "readyAt": 1792667002445,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1435,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667002323,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667004323,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667008325,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667022330,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667162391,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "19213d00-6429-450b-8cca-cc786cca5b23",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792667041809,
+        "readyAt": 1792667042328,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 519,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667042338,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667048341,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667054343,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667162391,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 0,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "4d751005-2dab-4f29-8987-7d80ecc47571",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792667104259,
+        "readyAt": 1792667104551,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "place_weather": {
+            "place": "成都",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 292,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667104364,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667106365,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667120371,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667162392,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "096745c7-a1bc-4ec8-af61-bee93c0ebcbb",
+        "session": "sn-BJP00326070803800006-1792666814",
+        "createdAt": 1792667134558,
+        "readyAt": 1792667134728,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "place_weather": {
+            "place": "北京市朝阳区",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 170,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667136378,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667140380,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667150385,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667162392,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "c4adc0b9-2ab4-4e4a-991c-743f3005bd96",
+        "session": "sn-BJP00326070803800006-1792667191",
+        "createdAt": 1792667204051,
+        "readyAt": 1792667205410,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1359,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667204408,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667206408,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667224416,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667238422,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667258430,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "7bfdd4e8-4335-4f6e-aa73-54c9d6d55ec3",
+        "session": "sn-BJP00326070803800006-1792667287",
+        "createdAt": 1792667298505,
+        "readyAt": 1792667299887,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": [
+          {
+            "previous": "4c144f48-cd1d-4900-9b01-9879e76bea57",
+            "delivery": "9b3a2366-7118-44f6-a7e8-303d4096c7d1",
+            "automatic": false,
+            "at": 1792667335054
+          }
+        ],
+        "revision": 1,
+        "ready_ms": 1382,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667300447,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667304448,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667312452,
+            "status": "delivered",
+            "delivery": "interrupted",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667336462,
+            "status": "delivered",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667348468,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667384483,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "764508ff-c42d-4c6f-9fb2-eff12df8dad8",
+        "session": "sn-BJP00326070803800006-1792667413",
+        "createdAt": 1792667423394,
+        "readyAt": 1792667425193,
+        "status": "cancelled",
+        "delivery": null,
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1799,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667424503,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667426504,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667428504,
+            "status": "cancelled",
+            "delivery": null,
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "bf03cd4d-6b29-4ba9-8741-91e314637c35",
+        "session": "sn-BJP00326070803800006-1792667413",
+        "createdAt": 1792667427349,
+        "readyAt": 1792667428782,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-control",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 2,
+        "ready_ms": 1433,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667428505,
+            "status": "running",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667430505,
+            "status": "ready",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667434508,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667444512,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667476529,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 2
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "b91193be-160b-4584-a249-c6a1f1adfaff",
+        "session": "sn-BJP00326070803800006-1792667505",
+        "createdAt": 1792667515488,
+        "readyAt": 1792667516992,
+        "status": "cancelled",
+        "delivery": "interrupted",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1504,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667516547,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667518548,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667522550,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667524551,
+            "status": "delivered",
+            "delivery": "interrupted",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667526552,
+            "status": "cancelled",
+            "delivery": "interrupted",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "345c1e96-1d3c-4a16-8c89-4445e77cfc5e",
+        "session": "sn-BJP00326070803800006-1792667576",
+        "createdAt": 1792667615489,
+        "readyAt": 1792667615721,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 232,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667616591,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667632600,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667644605,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792667654610,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "62b360e0-7ff3-4fce-860c-4dfe68096b31",
+        "session": "sn-BJP00326070803800006-1792667576",
+        "createdAt": 1792667654547,
+        "readyAt": 1792667654713,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-control",
+          "place_weather": {
+            "place": "陕西西安",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 2,
+        "ready_ms": 166,
+        "active_state_observations": [
+          {
+            "at_ms": 1792667654610,
+            "status": "running",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667656613,
+            "status": "ready",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667660615,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667670619,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792667688628,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 2
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      }
+    ],
+    "weather_evidence": [
+      {
+        "task_id": "4d751005-2dab-4f29-8987-7d80ecc47571",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "四川成都",
+        "station_id": "101270101",
+        "province": "四川",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T19:00:00+08:00",
+        "fetched_at": "2026-10-22T11:05:04.549Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "096745c7-a1bc-4ec8-af61-bee93c0ebcbb",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "北京朝阳",
+        "station_id": "101010300",
+        "province": "北京",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T19:00:00+08:00",
+        "fetched_at": "2026-10-22T11:05:34.727Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "345c1e96-1d3c-4a16-8c89-4445e77cfc5e",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "device_ip",
+        "location_provider": "ip9",
+        "location_observed_at": 1792667577967,
+        "provider": "baidu-public-web",
+        "city_name": "北京",
+        "station_id": "101010100",
+        "province": "北京",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T19:10:00+08:00",
+        "fetched_at": "2026-10-22T11:13:35.719Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "62b360e0-7ff3-4fce-860c-4dfe68096b31",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "陕西西安",
+        "station_id": "101110101",
+        "province": "陕西",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T19:10:00+08:00",
+        "fetched_at": "2026-10-22T11:14:14.712Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      }
+    ],
+    "closed_sessions": [
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792666814",
+        1792667161514
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792667191",
+        1792667257971
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792667287",
+        1792667383600
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792667413",
+        1792667475820
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792667505",
+        1792667572779
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792667576",
+        1792667686930
+      ]
+    ],
+    "known_failures": [
+      {
+        "case": "recent_space_news",
+        "task_id": "19213d00-6429-450b-8cca-cc786cca5b23",
+        "effective_answer": false,
+        "diagnostics": {
+          "returned": 10,
+          "accepted": 0,
+          "rejected_url": 1,
+          "rejected_date": 9
+        },
+        "note": "Safe insufficient-evidence response; not a successful news answer."
+      },
+      {
+        "case": "suffix_query_then_oven_chat",
+        "room": "sn-BJP00326070803800006-1792666814",
+        "passed": false,
+        "observed": "After completed Palace search, oven chat repeated an old Palace answer. Split commits were 600ms apart; foreground history settlement remains unresolved."
+      },
+      {
+        "case": "tides_child_readability",
+        "passed": false,
+        "observed": "Relevant sourced answer, but jargon and an unrequested 2.17x ratio remain too technical for child-oriented spoken output."
+      }
+    ],
+    "synthetic_utterances": 24,
+    "physical_device_acceptance": "pending",
+    "test_process_exit_zero_is_not_semantic_acceptance": true
+  },
+  "probe_location_cleanup": {
+    "at_ms": 1792667717076,
+    "synthetic_room": "sn-BJP00326070803800006-1792667576",
+    "deleted_probe_rows": 1,
+    "other_rows_before": 7,
+    "other_rows_after": 7,
+    "remaining_synthetic_rows": 0
+  },
+  "private_evidence_sha256": {
+    "r10-rtc-captions-private.json": "34b002a225bca1d0c7e51531f66c43ead1a3cf0a56fc4b510c3b71d04cfc3559",
+    "r10-ledger-private.json": "ed03a609c51aba9fc7ebe323519222995ae30e3529a84f6e13cf202facad6737",
+    "r10-matrix-history-investigation.log": "bc3d1affb80fc355ad22549989b509fba7be21d94b566e34b3a6f00009d83882"
+  }
+}

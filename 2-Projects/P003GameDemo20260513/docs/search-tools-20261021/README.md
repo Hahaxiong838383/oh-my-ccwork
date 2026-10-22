@@ -1,10 +1,12 @@
-> 最新入口：2026-10-22 [R9延窗/部署/回滚](R9_ACCEPTANCE_20261022.md)、[新测试回执](P003_SEARCH_CANARY_48H_TEST_RECEIPT_20261022.md)、[对话与任务复核](R9_DIALOGUE_RETEST_20261022.md)、[百度天气REA扩城研究](BAIDU_WEATHER_REA_FEASIBILITY_20261022.md)、[Air交付](R9_AIR_TRANSFER_20261022.json)。17:35:32延窗生效，原两台P1截止改为10月24日23:59，P2关；百度未接入，待真机验收。以下R8及更早截止均为历史，接手重核线上。
+> 最新入口：2026-10-22 [R10百度天气/部署/回滚](R10_ACCEPTANCE_20261022.md)、[24项混合真机用例](P003_SEARCH_R10_MIXED_DEVICE_TEST_CASES_20261022.md)、[测试证据](R10_TEST_RESULTS_20261022.json)、[央视REA评估](CCTV_NEWS_REA_ASSESSMENT_20261022.md)、[Air交付](R10_AIR_TRANSFER_20261022.json)。18:59:57百度天气对原两台P1生效，截止仍10/24 23:59，P2关。待真机验收；近期新闻资料不足、后置查询后旧问题补答和科普口语质量未收口。以下R9及更早均为历史，接手重核现场。
+
+> R9历史入口：2026-10-22 [R9延窗/部署/回滚](R9_ACCEPTANCE_20261022.md)、[新测试回执](P003_SEARCH_CANARY_48H_TEST_RECEIPT_20261022.md)、[对话与任务复核](R9_DIALOGUE_RETEST_20261022.md)、[百度天气REA扩城研究](BAIDU_WEATHER_REA_FEASIBILITY_20261022.md)、[Air交付](R9_AIR_TRANSFER_20261022.json)。17:35:32延窗生效，原两台P1截止改为10月24日23:59，P2关；百度未接入，待真机验收。以下R8及更早截止均为历史，接手重核线上。
 
 > R8历史入口：2026-10-22 [R8设备IP城市定位验收](R8_ACCEPTANCE_20261022.md)、[11项真机用例](P003_SEARCH_IP_LOCATION_DEVICE_TEST_20261022.md)、[IP网站REA分析](IP_LOCATION_REA_ANALYSIS_20261022.md)、[实际规则](R8_ROUTING_PROFILE_20261022.json)和[Air交付](R8_AIR_TRANSFER_20261022.json)。17:09:32恢复原两台P1，固定23:59截止，P2关闭，待真机验收。接手重新核实时状态；R7为此前路由/天气实现记录。
 
 # 小可后台搜索候选交付 · 2026-10-21
 
-**历史归档：R4于北京时间2026-10-22 09:23:52加入00100004。** [R4技术与回滚](R4_TWO_DEVICE_CANARY_20261022.md) · [新增设备回执](P003_SEARCH_CANARY_00100004_RECEIPT_20261022.md)。后续变更以R9为准；历史R4版本与测试不能当当前状态。
+**历史归档：R4于北京时间2026-10-22 09:23:52加入00100004。** [R4技术与回滚](R4_TWO_DEVICE_CANARY_20261022.md) · [新增设备回执](P003_SEARCH_CANARY_00100004_RECEIPT_20261022.md)。后续变更以R10为准；历史R4版本与测试不能当当前状态。
 
 - [接续记忆](MEMORY.md) · [实施经验](RETROSPECTIVE_R3_20261021.md)
 - [R3实际部署、窗口与回滚](R3_FULL_DAY_CANARY_20261021.md)
@@ -14,7 +16,7 @@
 - [可转发设备回执（R3已开P1，待真机）](P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261021.md)
 - [历史 R1 机器可读结果](CANARY_TEST_RESULTS_20261021.json)
 
-下列首版材料与R1—R7均为历史快照；本次有效交接以R9及项目MEMORY为准，历史测试JSON不覆盖后续结果。
+下列首版材料与R1—R7均为历史快照；本次有效交接以R10及项目MEMORY为准，历史测试JSON不覆盖后续结果。
 
 1. [实施、验证与回滚记录](IMPLEMENTATION.md)
 2. [双端协议与配置合同](PROTOCOL.md)

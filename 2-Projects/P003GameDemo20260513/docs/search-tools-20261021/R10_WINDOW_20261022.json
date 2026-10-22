@@ -1,0 +1,83 @@
+{
+  "actually_reopened": true,
+  "resumed_at_ms": 1792666797233,
+  "expires_at_ms": 1792857540000,
+  "allowlist": [
+    "BJP00326070803800006",
+    "BJP00326060100100004"
+  ],
+  "p1": true,
+  "p2": false,
+  "routing_version": "r7-5bd970f225036a447233316e",
+  "real_device_acceptance": "pending",
+  "revision": "R10-baidu-weather",
+  "final_verified_at_ms": 1792667725335,
+  "worker_units": {
+    "voice-worker-rust": {
+      "MainPID": "839",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Mon 2026-09-28 15:30:06 UTC",
+      "ActiveState": "active",
+      "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+    },
+    "p003-search-worker": {
+      "MainPID": "780505",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Thu 2026-10-22 10:58:05 UTC",
+      "ActiveState": "active",
+      "sha256": "baf5e2998be9c5845e16a7f1055bcd5d4de98b9db39670dbc8838ae498a5071a"
+    }
+  },
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1792645636237
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 356,
+      "version_name": "1.2.2-canary.342",
+      "last_check_at": 1792654114522
+    }
+  ],
+  "daily_task_counts_including_probes": {
+    "BJP00326060100100004": 76,
+    "BJP00326070803800006": 15
+  },
+  "brain_timer": "NextElapseUSecRealtime=Sat 2026-10-24 23:59:00 CST\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+  "worker_timer": "NextElapseUSecRealtime=Sat 2026-10-24 15:59:00 UTC\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+  "resources": {
+    "brain": {
+      "memory_available_kb": "2433552",
+      "disk_available_bytes": 11653636096
+    },
+    "worker": {
+      "memory_available_kb": "6212588",
+      "disk_available_bytes": 73180274688
+    }
+  },
+  "production_sources_verified": 122,
+  "production_pm2": [
+    {
+      "name": "p003-voice",
+      "pid": 1457259,
+      "restarts": 34,
+      "status": "online"
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "restarts": 0,
+      "status": "online"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "restarts": 5,
+      "status": "online"
+    }
+  ],
+  "scope_and_isolation_verified": true
+}

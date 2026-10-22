@@ -1,0 +1,1015 @@
+{
+  "variants": [
+    {
+      "query": "陕西西安天气",
+      "city": {
+        "city": "西安",
+        "country": "中国"
+      },
+      "station": "http://moji.com/101110101",
+      "bytes": 107750
+    },
+    {
+      "query": "吉林省长春市朝阳区天气",
+      "city": {
+        "city": "朝阳",
+        "country": "中国"
+      },
+      "station": "http://moji.com/101060110",
+      "bytes": 107983
+    },
+    {
+      "query": "长春朝阳天气",
+      "city": {
+        "city": "朝阳",
+        "country": "中国"
+      },
+      "station": "http://moji.com/101060110",
+      "bytes": 107983
+    },
+    {
+      "query": "长春市朝阳区天气",
+      "city": {
+        "city": "朝阳",
+        "country": "中国"
+      },
+      "station": "http://moji.com/101060110",
+      "bytes": 107983
+    }
+  ],
+  "matrix": [
+    {
+      "place": "北京",
+      "at_ms": 1792665791617,
+      "expected_station": "101010100",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "北京",
+        "station_id": "101010100",
+        "province": "北京",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:12.001Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 41,
+      "elapsed_ms": 386
+    },
+    {
+      "place": "上海",
+      "at_ms": 1792665793716,
+      "expected_station": "101020100",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "上海",
+        "station_id": "101020100",
+        "province": "上海",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:13.893Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 177
+    },
+    {
+      "place": "天津",
+      "at_ms": 1792665795817,
+      "expected_station": "101030100",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "天津",
+        "station_id": "101030100",
+        "province": "天津",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:15.982Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 166
+    },
+    {
+      "place": "重庆",
+      "at_ms": 1792665797919,
+      "expected_station": "101040100",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "重庆",
+        "station_id": "101040100",
+        "province": "重庆",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:18.047Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 41,
+      "elapsed_ms": 129
+    },
+    {
+      "place": "石家庄",
+      "at_ms": 1792665800018,
+      "expected_station": "101090101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "河北石家庄",
+        "station_id": "101090101",
+        "province": "河北",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:20.154Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 137
+    },
+    {
+      "place": "太原",
+      "at_ms": 1792665802118,
+      "expected_station": "101100101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "山西太原",
+        "station_id": "101100101",
+        "province": "山西",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:22.273Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 156
+    },
+    {
+      "place": "呼和浩特",
+      "at_ms": 1792665804217,
+      "expected_station": "101080101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "内蒙古呼和浩特",
+        "station_id": "101080101",
+        "province": "内蒙古",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:24.337Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 46,
+      "elapsed_ms": 120
+    },
+    {
+      "place": "沈阳",
+      "at_ms": 1792665806317,
+      "expected_station": "101070101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "辽宁沈阳",
+        "station_id": "101070101",
+        "province": "辽宁",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:26.448Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 131
+    },
+    {
+      "place": "长春",
+      "at_ms": 1792665808417,
+      "expected_station": "101060101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "吉林长春",
+        "station_id": "101060101",
+        "province": "吉林",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:28.545Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 129
+    },
+    {
+      "place": "哈尔滨",
+      "at_ms": 1792665810517,
+      "expected_station": "101050101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "黑龙江哈尔滨",
+        "station_id": "101050101",
+        "province": "黑龙江",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:30.639Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 46,
+      "elapsed_ms": 124
+    },
+    {
+      "place": "南京",
+      "at_ms": 1792665812617,
+      "expected_station": "101190101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "江苏南京",
+        "station_id": "101190101",
+        "province": "江苏",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:32.746Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 129
+    },
+    {
+      "place": "杭州",
+      "at_ms": 1792665814716,
+      "expected_station": "101210101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "浙江杭州",
+        "station_id": "101210101",
+        "province": "浙江",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:34.858Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 143
+    },
+    {
+      "place": "合肥",
+      "at_ms": 1792665816816,
+      "expected_station": "101220101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "安徽合肥",
+        "station_id": "101220101",
+        "province": "安徽",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:36.957Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 141
+    },
+    {
+      "place": "福州",
+      "at_ms": 1792665818916,
+      "expected_station": "101230101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "福建福州",
+        "station_id": "101230101",
+        "province": "福建",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:39.046Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 130
+    },
+    {
+      "place": "南昌",
+      "at_ms": 1792665821016,
+      "expected_station": "101240101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "江西南昌",
+        "station_id": "101240101",
+        "province": "江西",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:41.141Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 125
+    },
+    {
+      "place": "济南",
+      "at_ms": 1792665823115,
+      "expected_station": "101120101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "山东济南",
+        "station_id": "101120101",
+        "province": "山东",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:43.264Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 149
+    },
+    {
+      "place": "郑州",
+      "at_ms": 1792665825216,
+      "expected_station": "101180101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "河南郑州",
+        "station_id": "101180101",
+        "province": "河南",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:45.332Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 117
+    },
+    {
+      "place": "武汉",
+      "at_ms": 1792665827315,
+      "expected_station": "101200101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "湖北武汉",
+        "station_id": "101200101",
+        "province": "湖北",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:47.492Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 177
+    },
+    {
+      "place": "长沙",
+      "at_ms": 1792665829414,
+      "expected_station": "101250101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "湖南长沙",
+        "station_id": "101250101",
+        "province": "湖南",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:49.555Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 142
+    },
+    {
+      "place": "广州",
+      "at_ms": 1792665831515,
+      "expected_station": "101280101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "广东广州",
+        "station_id": "101280101",
+        "province": "广东",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:51.641Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 126
+    },
+    {
+      "place": "南宁",
+      "at_ms": 1792665833614,
+      "expected_station": "101300101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "广西南宁",
+        "station_id": "101300101",
+        "province": "广西",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:53.736Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 122
+    },
+    {
+      "place": "海口",
+      "at_ms": 1792665835715,
+      "expected_station": "101310101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "海南海口",
+        "station_id": "101310101",
+        "province": "海南",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:55.840Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 125
+    },
+    {
+      "place": "成都",
+      "at_ms": 1792665837816,
+      "expected_station": "101270101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "四川成都",
+        "station_id": "101270101",
+        "province": "四川",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:43:57.998Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 182
+    },
+    {
+      "place": "贵阳",
+      "at_ms": 1792665839916,
+      "expected_station": "101260101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "贵州贵阳",
+        "station_id": "101260101",
+        "province": "贵州",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:00.039Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 123
+    },
+    {
+      "place": "昆明",
+      "at_ms": 1792665842015,
+      "expected_station": "101290101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "云南昆明",
+        "station_id": "101290101",
+        "province": "云南",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:02.133Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 118
+    },
+    {
+      "place": "拉萨",
+      "at_ms": 1792665844114,
+      "expected_station": "101140101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "西藏拉萨",
+        "station_id": "101140101",
+        "province": "西藏",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:04.263Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 150
+    },
+    {
+      "place": "西安",
+      "at_ms": 1792665846213,
+      "error": "weather_place_ambiguous",
+      "elapsed_ms": 0
+    },
+    {
+      "place": "兰州",
+      "at_ms": 1792665848312,
+      "expected_station": "101160101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "甘肃兰州",
+        "station_id": "101160101",
+        "province": "甘肃",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:08.556Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 244
+    },
+    {
+      "place": "西宁",
+      "at_ms": 1792665850413,
+      "expected_station": "101150101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "青海西宁",
+        "station_id": "101150101",
+        "province": "青海",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:10.546Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 133
+    },
+    {
+      "place": "银川",
+      "at_ms": 1792665852514,
+      "expected_station": "101170101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "宁夏银川",
+        "station_id": "101170101",
+        "province": "宁夏",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:12.646Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 132
+    },
+    {
+      "place": "乌鲁木齐",
+      "at_ms": 1792665854614,
+      "expected_station": "101130101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "新疆乌鲁木齐",
+        "station_id": "101130101",
+        "province": "新疆",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:14.742Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 46,
+      "elapsed_ms": 128
+    },
+    {
+      "place": "香港",
+      "at_ms": 1792665856713,
+      "expected_station": "101320101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "香港",
+        "station_id": "101320101",
+        "province": "香港",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:16.837Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 124
+    },
+    {
+      "place": "澳门",
+      "at_ms": 1792665858813,
+      "expected_station": "101330101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "澳门",
+        "station_id": "101330101",
+        "province": "澳门",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:18.947Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 134
+    },
+    {
+      "place": "台北",
+      "at_ms": 1792665860913,
+      "expected_station": "101340101",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "台湾台北",
+        "station_id": "101340101",
+        "province": "台湾",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:21.032Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 47,
+      "elapsed_ms": 120
+    },
+    {
+      "place": "泉州",
+      "at_ms": 1792665863012,
+      "expected_station": "101230501",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "福建泉州",
+        "station_id": "101230501",
+        "province": "福建",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:23.145Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 133
+    },
+    {
+      "place": "洛阳",
+      "at_ms": 1792665865111,
+      "expected_station": "101180901",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "河南洛阳",
+        "station_id": "101180901",
+        "province": "河南",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:25.237Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 126
+    },
+    {
+      "place": "宜昌",
+      "at_ms": 1792665867211,
+      "expected_station": "101200901",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "湖北宜昌",
+        "station_id": "101200901",
+        "province": "湖北",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:27.340Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 129
+    },
+    {
+      "place": "喀什",
+      "at_ms": 1792665869310,
+      "expected_station": "101130901",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "新疆喀什",
+        "station_id": "101130901",
+        "province": "新疆",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:29.432Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 123
+    },
+    {
+      "place": "延吉",
+      "at_ms": 1792665871411,
+      "expected_station": "101060301",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "吉林延边延吉",
+        "station_id": "101060301",
+        "province": "吉林",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:31.572Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 46,
+      "elapsed_ms": 161
+    },
+    {
+      "place": "大理",
+      "at_ms": 1792665873510,
+      "expected_station": "101290201",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "云南大理",
+        "station_id": "101290201",
+        "province": "云南",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:33.638Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 43,
+      "elapsed_ms": 128
+    },
+    {
+      "place": "义乌",
+      "at_ms": 1792665875610,
+      "expected_station": "101210904",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "浙江金华义乌",
+        "station_id": "101210904",
+        "province": "浙江",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:35.753Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 47,
+      "elapsed_ms": 143
+    },
+    {
+      "place": "昆山",
+      "at_ms": 1792665877710,
+      "expected_station": "101190404",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "江苏苏州昆山",
+        "station_id": "101190404",
+        "province": "江苏",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:37.839Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 47,
+      "elapsed_ms": 129
+    },
+    {
+      "place": "北京朝阳",
+      "at_ms": 1792665879810,
+      "expected_station": "101010300",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "北京朝阳",
+        "station_id": "101010300",
+        "province": "北京",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:39.966Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 44,
+      "elapsed_ms": 156
+    },
+    {
+      "place": "辽宁朝阳",
+      "at_ms": 1792665881910,
+      "expected_station": "101071201",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "辽宁朝阳",
+        "station_id": "101071201",
+        "province": "辽宁",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:42.022Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 42,
+      "elapsed_ms": 112
+    },
+    {
+      "place": "吉林长春朝阳",
+      "at_ms": 1792665884009,
+      "expected_station": "101060110",
+      "error": "weather_payload",
+      "elapsed_ms": 101
+    },
+    {
+      "place": "江苏南京鼓楼",
+      "at_ms": 1792665886108,
+      "expected_station": "101190111",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "江苏南京鼓楼",
+        "station_id": "101190111",
+        "province": "江苏",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:46.250Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 46,
+      "elapsed_ms": 142
+    },
+    {
+      "place": "江苏徐州鼓楼",
+      "at_ms": 1792665888209,
+      "expected_station": "101190808",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "江苏徐州鼓楼",
+        "station_id": "101190808",
+        "province": "江苏",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:40:00+08:00",
+        "fetched_at": "2026-10-22T10:44:48.318Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "valid": true,
+      "result_chars": 45,
+      "elapsed_ms": 110
+    }
+  ],
+  "retest": [
+    {
+      "place": "陕西西安",
+      "metric": "forecast",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "陕西西安",
+        "station_id": "101110101",
+        "province": "陕西",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:45:00+08:00",
+        "fetched_at": "2026-10-22T10:49:12.444Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "source_url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+      "ok": true
+    },
+    {
+      "place": "吉林长春朝阳",
+      "metric": "forecast",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "吉林长春朝阳",
+        "station_id": "101060110",
+        "province": "吉林",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:45:00+08:00",
+        "fetched_at": "2026-10-22T10:49:14.850Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "source_url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%95%BF%E6%98%A5%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+      "ok": true
+    },
+    {
+      "place": "北京市朝阳区",
+      "metric": "forecast",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "北京朝阳",
+        "station_id": "101010300",
+        "province": "北京",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:45:00+08:00",
+        "fetched_at": "2026-10-22T10:49:17.190Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "source_url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+      "ok": true
+    },
+    {
+      "place": "辽宁朝阳",
+      "metric": "forecast",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "辽宁朝阳",
+        "station_id": "101071201",
+        "province": "辽宁",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T18:45:00+08:00",
+        "fetched_at": "2026-10-22T10:49:19.520Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      "source_url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+      "ok": true
+    },
+    {
+      "place": "成都",
+      "metric": "current",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "四川成都",
+        "station_id": "101270101",
+        "province": "四川",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T18:45:00+08:00",
+        "fetched_at": "2026-10-22T10:49:21.874Z",
+        "cache_hit": false,
+        "metric": "current"
+      },
+      "source_url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+      "ok": true
+    },
+    {
+      "place": "大理白族自治州",
+      "metric": "current",
+      "weather": {
+        "provider": "baidu-public-web",
+        "city_name": "云南大理",
+        "station_id": "101290201",
+        "province": "云南",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T18:45:00+08:00",
+        "fetched_at": "2026-10-22T10:49:24.222Z",
+        "cache_hit": false,
+        "metric": "current"
+      },
+      "source_url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E4%BA%91%E5%8D%97%E5%A4%A7%E7%90%86%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+      "ok": true
+    }
+  ],
+  "scope_note": "3220-entry dictionary is not full-location validation. Initial 45/47 passed; bare 西安 is ambiguous, explicit 陕西西安 passes. 长春朝阳 uses bounded alternative query with the same verified station. This is a server provider probe, not a physical-device hearing test."
+}
