@@ -11,6 +11,8 @@ for(const args of [['8.8.8.8','kidshub-ai.hahaxiong.cc',sample],['127.0.0.1','ot
 for(const ip of ['127.0.0.1','10.0.0.1','192.168.1.1','172.16.0.1','100.64.0.1','169.254.1.2','192.0.2.3','198.18.0.1','224.1.1.1','::1','fc00::1','fe80::1','2001:db8::1','::ffff:8.8.8.8','garbage'])assert.equal(m.publicIp(ip),null,ip);
 assert.equal(m.publicIp('240E:001F:0001::1'),'240e:1f:1::1');
 const payload=(ip=sample)=>({ret:200,data:{ip,country:'中国',country_code:'cn',prov:'北京',city:'北京'}});
+const prefecture=new m.Ip9Location({fetch:async()=>new Response(JSON.stringify({ret:200,data:{...payload().data,prov:'云南',city:'大理白族自治州'}}))});
+assert.equal((await prefecture.lookup(sample)).city,'大理白族自治州','prefecture must not gain a fake 市 suffix');
 let calls=0,now=10000;
 const provider=new m.Ip9Location({now:()=>now,fetch:async(url:string,options:any)=>{calls++;assert.equal(new URL(url).searchParams.get('ip'),sample);assert.equal(options.redirect,'error');return new Response(JSON.stringify(payload()));}});
 const [a,b]=await Promise.all([provider.lookup(sample),provider.lookup(sample)]);assert.equal(a.city,'北京市');assert.deepEqual(a,b);assert.equal(calls,1);

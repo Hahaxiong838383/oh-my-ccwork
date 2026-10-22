@@ -25,7 +25,7 @@ function parseCity(raw:any,ip:string):DeviceCity {
  if(typeof d.city!=='string'||typeof d.prov!=='string'||!/^[\u4e00-\u9fff]{2,24}$/.test(d.city)||!/^[\u4e00-\u9fff]{2,24}$/.test(d.prov))return failure('location_city_missing');
  const city=d.city.replace(/市$/,''),province=d.prov.replace(/[省市]$/,'');
  if((provinces[city]&&provinces[city]!==province)||(municipalities.includes(province)&&city!==province))return failure('location_city_mismatch');
- return {provider:'ip9',city:city+'市',province};
+ return {provider:'ip9',city:/(?:自治州|地区|盟|区|县)$/.test(city)?city:city+'市',province};
 }
 export class Ip9Location {
  private cache=new Map<string,{until:number;city?:DeviceCity}>();private flights=new Map<string,Promise<DeviceCity>>();private hits:number[]=[];

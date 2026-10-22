@@ -1,7 +1,8 @@
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
 import {weatherRequestSchema,autoWeatherSchema} from '../tools/moji-weather.js';
-const routingClaim=z.object({version:z.string().regex(/^r7-[a-f0-9]{24}$/),rule_id:z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),weather:weatherRequestSchema.optional(),auto_weather:autoWeatherSchema.optional()}).strict().refine(v=>!(v.weather&&v.auto_weather));
+import {placeWeatherSchema} from '../tools/baidu-weather.js';
+const routingClaim=z.object({version:z.string().regex(/^r7-[a-f0-9]{24}$/),rule_id:z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),weather:weatherRequestSchema.optional(),auto_weather:autoWeatherSchema.optional(),place_weather:placeWeatherSchema.optional()}).strict().refine(v=>[v.weather,v.auto_weather,v.place_weather].filter(Boolean).length<=1);
 import type { SearchTasks, SearchOwner, SearchTask } from '../tools/search-tasks.js';
 
 const submit = z.object({ protocol: z.literal(1), phase: z.literal('committed'), turn: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), query: z.string(), replace: z.string().uuid().optional(), routing:routingClaim.optional() }).strict();

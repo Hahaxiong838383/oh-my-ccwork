@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 const phrase=z.string().min(1).refine(s=>s.trim()===s&&[...s].length<=32&&!/[\x00-\x1f\x7f]/.test(s));
-export const routingConfigSchema=z.object({schema:z.literal(1),weather_enabled:z.boolean(),auto_location_enabled:z.boolean().optional(),rules:z.array(z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),enabled:z.boolean(),priority:z.number().int().min(0).max(1000),action:z.enum(['search','weather','chat']),mode:z.enum(['prefix','contains_any','contains_all']),triggers:z.array(phrase).min(1).max(32),exclude:z.array(phrase).max(32)}).strict()).max(32)}).strict().refine(c=>new Set(c.rules.map(r=>r.id)).size===c.rules.length);
+export const routingConfigSchema=z.object({schema:z.literal(1),weather_enabled:z.boolean(),auto_location_enabled:z.boolean().optional(),baidu_weather_enabled:z.boolean().optional(),rules:z.array(z.object({id:z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),enabled:z.boolean(),priority:z.number().int().min(0).max(1000),action:z.enum(['search','weather','chat']),mode:z.enum(['prefix','contains_any','contains_all']),triggers:z.array(phrase).min(1).max(32),exclude:z.array(phrase).max(32)}).strict()).max(32)}).strict().refine(c=>new Set(c.rules.map(r=>r.id)).size===c.rules.length);
 export type RoutingConfig=z.infer<typeof routingConfigSchema>;
 export const defaultRoutingConfig=():RoutingConfig=>routingConfigSchema.parse(JSON.parse(readFileSync(new URL('./search-routing-defaults.json',import.meta.url),'utf8')));
 export type RouteUtterance={text:string;at_ms:number;reset?:boolean};

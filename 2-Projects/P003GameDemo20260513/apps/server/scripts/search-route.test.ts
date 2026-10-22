@@ -7,6 +7,20 @@ import { createSearchRoute } from '../src/routes/search-tasks.js';
 import { SearchTasks } from '../src/tools/search-tasks.js';
 import { Hono } from 'hono';
 
+test('expanded weather uses exclusive bounded claim and never accepts a URL as a place',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'weather-route-'));const owner={subject:'BJP00326070803800006',session:'sn-BJP00326070803800006-1'};
+ const tasks=new SearchTasks({dbPath:join(dir,'tasks.db'),enabled:()=>true,allowed:()=>true,resolveRouting:(_o,c)=>({...c,weather_enabled:true,baidu_weather_enabled:true}),execute:async()=>({text:'合成结果',sources:[]})});
+ const route=createSearchRoute({owner:async()=>owner,tasks:()=>tasks});
+ const body={protocol:1,phase:'committed',turn:'weather',query:'成都明天天气',routing:{version:'r7-'+ 'a'.repeat(24),rule_id:'builtin-explicit',place_weather:{place:'成都',day_offset:1,metric:'forecast'}}};
+ const post=(b:unknown)=>route.request('/',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b)});
+ try{
+  assert.equal((await post(body)).status,202);
+  for(const place_weather of [{...body.routing.place_weather,place:'https://example.com'},{...body.routing.place_weather,day_offset:3},{...body.routing.place_weather,metric:'aqi'},{...body.routing.place_weather,url:'https://example.com'}])assert.equal((await post({...body,routing:{...body.routing,place_weather}})).status,400);
+  assert.equal((await post({...body,routing:{...body.routing,auto_weather:{day_offset:0,metric:'forecast'}}})).status,400);
+  assert.equal(tasks.get(owner,(await(await route.request('/')).json() as any).tasks[0].id).routing?.place_weather?.place,'成都');
+ }finally{tasks.close();rmSync(dir,{recursive:true,force:true});}
+});
+
 test('HTTP接单、查询、领取、回执闭环；拒绝未授权/阶段伪造/超大及额外字段', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'search-http-'));
   const owner = { subject: 'BJP00326070803800006', session: 'sn-BJP00326070803800006-1' };
