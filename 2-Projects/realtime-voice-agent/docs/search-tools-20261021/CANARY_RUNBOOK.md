@@ -1,3 +1,5 @@
+> 2026-10-22 R6最新入口：[验收与回滚](R6_ACCEPTANCE_20261022.md)、[产物清单](R6_DEPLOYED_SOURCE_MANIFEST_20261022.json)。以下旧记录仅供历史参考，使用前重核线上开关、截止和运行SHA。
+
 # 指定 SN 搜索候选 Worker 运维记录
 
 **2026-10-21：独立候选已部署，正式设备窗口未开；当前搜索env=0、window.enabled=false、截止=0，待真机验收。**
