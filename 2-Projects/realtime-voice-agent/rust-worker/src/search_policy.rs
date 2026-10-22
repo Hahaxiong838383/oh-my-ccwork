@@ -14,7 +14,7 @@ pub fn intent(text: &str) -> Option<Intent> {
     let t = text
         .trim()
         .trim_end_matches(|c: char| "。！!？?，,. ".contains(c));
-    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "取消刚才的搜索"].contains(&t) {
+    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索"].contains(&t) {
         return Some(Intent::Cancel);
     }
     if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢"].contains(&t)
@@ -134,6 +134,7 @@ mod tests {
     fn natural_search_and_cancel_phrases_route_without_claiming_quotes_or_negations() {
         assert_eq!(intent("查找今天北京天气"), Some(Intent::Search("今天北京天气".into())));
         assert_eq!(intent("不用查了，取消刚才的搜索。"), Some(Intent::Cancel));
+        assert_eq!(intent("不用查了取消刚才的搜索"), Some(Intent::Cancel));
         assert_eq!(intent("不要查找北京天气"), None);
         assert_eq!(intent("我说查找天气是什么意思"), None);
     }
