@@ -1,0 +1,466 @@
+{
+  "admin_browser": {
+    "observed_at_ms": 1792632251167,
+    "summary": {
+      "state": "p1",
+      "health_ok": true,
+      "lease_ok": true,
+      "scope_ok": true,
+      "dispatch_requested": true,
+      "expires_at_ms": 1792684740000,
+      "configured_devices": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "selected_prepared": true
+    },
+    "operator_confirmation": {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "at_ms": 1792632232079
+    },
+    "release": {
+      "verified_at_ms": 1792632232079,
+      "brain_commit": "f5f1d1e1 baseline + 36272071 + 25514f4f selected canary files",
+      "worker_commit": "16769e98",
+      "worker_sha256": "83ee21cbf5a6ba6c551d1f2351c31b5582254456d5f0c0197de7093ef0b4f9ef",
+      "worker_tests": 357
+    },
+    "issues": [
+      {
+        "title": "设备身份与版本已由持有人确认",
+        "detail": "完整SN及v319（1.2.2-canary.305）已在记录时间确认；云端后续上报另显示时间。",
+        "status": "已确认"
+      },
+      {
+        "title": "普通聊天对照改由其他设备提供",
+        "detail": "按持有人授权，目标设备直接体验搜索；其他设备对照单列，不能充当严格同机性能结论。",
+        "status": "待对照"
+      },
+      {
+        "title": "首句、插话与本地回复语需现场回归",
+        "detail": "候选关闭搜索时回归普通对话；随后P1验证补播、续讲、取消、改查和退出重连。",
+        "status": "待真机"
+      },
+      {
+        "title": "P2与全天稳定性未验收",
+        "detail": "本次仅授权名单内设备测试至明确截止；先验P1，P1通过后另行开放P2，不自动扩大设备范围。",
+        "status": "未验证"
+      }
+    ],
+    "page_errors": []
+  },
+  "scope": "two-device P1, actual device acceptance pending",
+  "identity_before": {
+    "at_ms": 1792631438313,
+    "versions": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1792631235960
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 354,
+        "version_name": "1.2.2-canary.340",
+        "last_check_at": 1792630808811
+      }
+    ],
+    "auth": [
+      {
+        "sn": "BJP00326060100100004",
+        "last_success_ms": 1792631241062
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "last_success_ms": 1792587665701
+      }
+    ],
+    "resources": {
+      "mem": {
+        "MemTotal": "3583212 kB",
+        "MemAvailable": "2427416 kB"
+      },
+      "disk": "/dev/vda3      41882943488 27940388864 12006817792  70% /"
+    }
+  },
+  "backups": {
+    "brain": {
+      "at_ms": 1792631555282,
+      "backup": "/opt/p003/server/backups/search-canary-R4-20261022T011234Z",
+      "sha256": "e7316e7a0e0074adf69c796b1d7739303d67bceab04c7fc1836527cb725f9d46",
+      "new_device": {
+        "sn": "BJP00326060100100004",
+        "status": "active",
+        "has_account": 1
+      },
+      "candidate_accounts_distinct": true,
+      "candidate_count": 1
+    },
+    "worker": {
+      "at_ms": 1792631569132,
+      "backup": "/root/rust-worker/backups/search-canary-R4-20261022T011234Z",
+      "sha256": "6893af12088ebce69efc75915ebe4e56eac7a3140f1ac09eb119219194406a81"
+    }
+  },
+  "brain": {
+    "at_ms": 1792632254693,
+    "other_production_sources_unchanged": true,
+    "deployed_hashes_match": true,
+    "production_flags": {
+      "p003.search.canary.selected_sn": "BJP00326060100100004",
+      "p003.search.canary.enabled": "1",
+      "p003.search.canary.expires_at_ms": "1792684740000",
+      "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.agent": "p003-search-canary-20261021",
+      "p003.search.canary.started_at_ms": "1792585650087",
+      "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+    },
+    "candidate_flags": {
+      "p003.search.tools": "0",
+      "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.expires_at_ms": "1792684740000",
+      "p003.search.enabled": "1"
+    },
+    "health": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": false
+    },
+    "lease": {
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "until_ms": 1792632265085,
+      "ordered_pcm_v1": true
+    },
+    "versions": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "reported_at_ms": 1792631235960
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 354,
+        "version_name": "1.2.2-canary.340",
+        "reported_at_ms": 1792630808811
+      }
+    ],
+    "isolated_device_count": 2,
+    "distinct_candidate_account_count": 2,
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 1204589,
+        "restarts": 29,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ],
+    "timer": "NextElapseUSecRealtime=Thu 2026-10-22 23:59:00 CST\nActiveState=active\n"
+  },
+  "worker": {
+    "at_ms": 1792632256124,
+    "voice-worker-rust": {
+      "MainPID": "839",
+      "NRestarts": "0",
+      "MemoryCurrent": "1175351296",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Mon 2026-09-28 15:30:06 UTC"
+    },
+    "p003-search-worker": {
+      "MainPID": "730818",
+      "NRestarts": "0",
+      "MemoryCurrent": "451788800",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Thu 2026-10-22 01:15:04 UTC"
+    },
+    "config": {
+      "AGENT_NAME": "p003-search-canary-20261021",
+      "WORKER_MAX_JOBS": "2",
+      "P003_SEARCH_ENABLED": "1",
+      "P003_SEARCH_DEVICE_ALLOWLIST": "BJP00326070803800006,BJP00326060100100004",
+      "P003_SEARCH_CANARY_GENERATION": "R4-20261022-two-devices"
+    },
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1792684740000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792632254841,
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "candidate_sha": "83ee21cbf5a6ba6c551d1f2351c31b5582254456d5f0c0197de7093ef0b4f9ef",
+    "production_sha": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+    "timer": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nActiveState=active\n"
+  },
+  "tests": {
+    "linux_unit_tests": 357,
+    "linux_build_and_abi": "passed",
+    "source_input_files": 43,
+    "typescript": "passed",
+    "brain_canary_suites": [
+      "policy",
+      "isolation",
+      "process",
+      "admin"
+    ],
+    "device_session_regression": 44,
+    "search_runtime": 1,
+    "search_route": 3,
+    "search_tasks": 7,
+    "expiry_temporary_file": "not-due/closed/idempotent/newer-window all passed"
+  },
+  "expiry_live": {
+    "two_concurrent_jobs_verified": true,
+    "both_disconnected": true,
+    "jobs_after": 0,
+    "window_closed": true,
+    "results": [
+      {
+        "mode": "expiry",
+        "room": "sn-BJP00326070803800006-1792631941",
+        "trace": "search-probe-1792631941",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 1,
+          "metrics": 8,
+          "audio_voiced_ms": 30270.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2424
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6620,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 11896,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 23042,
+            "chars": 50
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 32544,
+            "chars": 48
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 39593,
+            "chars": 34
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 44743,
+            "chars": 25
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 47022,
+            "chars": 12
+          }
+        ],
+        "disconnected": true,
+        "elapsed_s": 83.6,
+        "device_heard_verified": false
+      },
+      {
+        "mode": "expiry",
+        "room": "sn-BJP00326060100100004-1792631941",
+        "trace": "search-probe-1792631941",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 5,
+          "audio_voiced_ms": 14760.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2441
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6599,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 17841,
+            "chars": 40
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 21943,
+            "chars": 22
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 26892,
+            "chars": 25
+          }
+        ],
+        "disconnected": true,
+        "elapsed_s": 84.6,
+        "device_heard_verified": false
+      }
+    ]
+  },
+  "synthetic_search": {
+    "mode": "idle",
+    "room": "sn-BJP00326060100100004-1792632079",
+    "trace": "search-probe-1792632079",
+    "synthetic": true,
+    "counts": {
+      "agent_transcripts": 2,
+      "user_transcripts": 1,
+      "metrics": 3,
+      "audio_voiced_ms": 5540.0,
+      "input_ready": 1,
+      "output_ready": 1
+    },
+    "events": [
+      {
+        "event": "synthetic_input",
+        "index": 0,
+        "ms": 1249
+      },
+      {
+        "event": "user_subtitle",
+        "ms": 4677,
+        "chars": 12
+      },
+      {
+        "event": "agent_subtitle",
+        "ms": 9276,
+        "chars": 16
+      },
+      {
+        "event": "agent_subtitle",
+        "ms": 15847,
+        "chars": 26
+      }
+    ],
+    "disconnected": false,
+    "elapsed_s": 75.1,
+    "device_heard_verified": false
+  },
+  "positive_search_source_check": {
+    "id": "28f151b2-4e0d-43b0-b3a9-9de0636e097a",
+    "status": "ready",
+    "source_count": 2,
+    "source_domains": [
+      "www.cma.gov.cn",
+      "www.cma.gov.cn"
+    ],
+    "text_length": 71,
+    "no_result_fallback": false,
+    "audio_test": false
+  },
+  "search_ledger": {
+    "room": "sn-BJP00326060100100004-1792632079",
+    "tasks": [
+      {
+        "id": "3edb7686-273f-4e8c-8f1b-95912f9ddd9a",
+        "subject": "BJP00326060100100004",
+        "session": "sn-BJP00326060100100004-1792632079",
+        "status": "cancelled",
+        "delivery": "completed",
+        "error": null,
+        "createdAt": 1792632084226,
+        "readyAt": 1792632084572
+      }
+    ]
+  },
+  "public_signing": {
+    "phase": "after",
+    "targets": [
+      {
+        "sn": "BJP00326070803800006",
+        "status": 200,
+        "agent": "p003-search-canary-20261021",
+        "contract": {
+          "input_mode": "ordered_pcm",
+          "oneshot_first_turn": "v1",
+          "local_receipt": "v1",
+          "history_topic": "p003.audio.history.v1",
+          "worker_capabilities": [
+            "android_local_receipt_v1",
+            "oneshot_first_turn_v1"
+          ]
+        },
+        "canary": {
+          "sn": "BJP00326070803800006",
+          "expires_at_ms": 1792684740000,
+          "generation": "R4-20261022-two-devices"
+        }
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "status": 200,
+        "agent": "p003-search-canary-20261021",
+        "contract": {
+          "input_mode": "ordered_pcm",
+          "oneshot_first_turn": "v1",
+          "local_receipt": "v1",
+          "history_topic": "p003.audio.history.v1",
+          "worker_capabilities": [
+            "android_local_receipt_v1",
+            "oneshot_first_turn_v1"
+          ]
+        },
+        "canary": {
+          "sn": "BJP00326060100100004",
+          "expires_at_ms": 1792684740000,
+          "generation": "R4-20261022-two-devices"
+        }
+      }
+    ],
+    "non_target_unchanged": true,
+    "non_target_agent": "rust-worker",
+    "forged_status": 403
+  },
+  "probe_failures": "Two template errors before RTC execution; first completed RTC expiry run had client teardown FFI abort, corrected probe stream/source cleanup and rerun with both processes exiting 0. Worker had no restart. No failed run counted as clean pass.",
+  "device_heard_verified": false
+}

@@ -1,0 +1,30 @@
+[
+  {
+    "path": "/opt/p003/server/src/search-canary-policy.ts",
+    "sha256": "ed55d1b36c026088442bbe6390f147e321429422f69266130e9242f3f3bfee00"
+  },
+  {
+    "path": "/opt/p003/server/src/routes/search-canary-admin.ts",
+    "sha256": "6dc294a2a15c23557b669e3df086d948f3a136947381668ae4c8dc56df1c98a7"
+  },
+  {
+    "path": "/opt/p003/server/src/search-canary-status.ts",
+    "sha256": "e338a11b32b0b5efe2cef3b67bbeefc8ed61dc2ab851b0826f3390e1918af528"
+  },
+  {
+    "path": "/opt/p003/web/dist/admin/index.html",
+    "sha256": "3909e424eb3bdebe9a754ec4417f2d05ea573c339057b78e35d812b0bd14194a"
+  },
+  {
+    "path": "/opt/p003/search-canary-20261021/brain/src/search-canary-policy.ts",
+    "sha256": "ed55d1b36c026088442bbe6390f147e321429422f69266130e9242f3f3bfee00"
+  },
+  {
+    "path": "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts",
+    "sha256": "fc32ff6dcbedbfa9596edd0f3fc3a0fff90cca7724a0daf667684982ac393149"
+  },
+  {
+    "path": "/opt/p003/search-canary-20261021/brain/src/search-canary-main.ts",
+    "sha256": "6207edef46f36d000f8c801ac6ae5c7d2e4a9e2b064af44138c1425eed9a2ee5"
+  }
+]

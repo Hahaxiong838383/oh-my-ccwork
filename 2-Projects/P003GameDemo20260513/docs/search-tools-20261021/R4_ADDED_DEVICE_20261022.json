@@ -1,0 +1,20 @@
+{
+  "opened": true,
+  "added_sn": "BJP00326060100100004",
+  "allowlist": [
+    "BJP00326070803800006",
+    "BJP00326060100100004"
+  ],
+  "added_at_ms": 1792632232079,
+  "expires_at_ms": 1792684740000,
+  "phase": "P1",
+  "p2_enabled": false,
+  "max_concurrent_sessions": 2,
+  "client_version": {
+    "code": 319,
+    "name": "1.2.2-canary.305",
+    "cloud_reported_at_ms": 1792631235960,
+    "user_confirmed": true
+  },
+  "device_acceptance": "待真机验收"
+}
