@@ -154,3 +154,17 @@ test('R6 what-is wording must not bypass freshness for a current weather/rate qu
   assert.equal((await e.run(query,new AbortController().signal,'')).sources.length,expected,query);
  }
 });
+
+test('R11 预约制度不按七天新闻过滤，但优先官方馆站且保留生效日期限制',async()=>{
+ const requests:any[]=[];
+ const museum={...page,title:'国家博物馆参观预约须知',url:'https://www.chnmuseum.cn/cg/ck/202401/t20240101_123.html',summary:'参观实行实名预约；最新安排以官网为准。',date:'2024-01-01T00:00:00Z'};
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['weather.com.cn','gov.cn','chnmuseum.cn'],fetch:(async(url:any,init:any)=>{requests.push(JSON.parse(init.body));return String(url).endsWith('/search')?Response.json({results:[museum]}):new Response(final());})as typeof fetch});
+ const r=await e.run('中国国家博物馆最新预约方式',AbortSignal.timeout(2000),'');
+ assert.equal(r.sources.length,1);assert.match(requests[0].query,/site:chnmuseum.cn/);assert.doesNotMatch(requests[0].query,/site:weather/);
+ assert.match(requests.at(-1).messages.at(-1).content,/生效日期/);
+});
+test('R11 今日新闻不能将无日期和昨日条目当当天来源',async()=>{
+ const yesterday=new Date(Date.now()-86400000).toISOString();
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:null},{...page,date:yesterday}]}):new Response(final()))as typeof fetch});
+ assert.equal((await e.run('今天国内新闻',AbortSignal.timeout(2000),'')).sources.length,0);
+});

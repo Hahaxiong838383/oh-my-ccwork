@@ -1,0 +1,69 @@
+{
+  "revision": "R11",
+  "purpose": "24项用例自测与已知缺陷收口",
+  "before_at_ms": 1792668434425,
+  "before_worker": {
+    "voice-worker-rust": {
+      "MainPID": "839",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Mon 2026-09-28 15:30:06 UTC",
+      "ActiveState": "active",
+      "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+    },
+    "p003-search-worker": {
+      "MainPID": "780505",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Thu 2026-10-22 10:58:05 UTC",
+      "ActiveState": "active",
+      "sha256": "baf5e2998be9c5845e16a7f1055bcd5d4de98b9db39670dbc8838ae498a5071a"
+    }
+  },
+  "before_pm2": [
+    {
+      "name": "p003-voice",
+      "pid": 1457259,
+      "restarts": 34,
+      "status": "online"
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "restarts": 0,
+      "status": "online"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "restarts": 5,
+      "status": "online"
+    }
+  ],
+  "scope": [
+    "BJP00326060100100004",
+    "BJP00326070803800006"
+  ],
+  "expires_at_ms": 1792857540000,
+  "p2": false,
+  "backups": {
+    "brain": {
+      "backup": "/opt/p003/server/backups/search-canary-R11-20261022T112736Z",
+      "sha256": "f3668721fa815bc24f290b5116db5915367fcda67497bf3a1f68994a8715526f",
+      "at_ms": 1792668459290
+    },
+    "worker": {
+      "backup": "/root/rust-worker/backups/search-canary-R11-20261022T112736Z",
+      "sha256": "fb11e4a89ecd4b22cb95c5ee88de343642798537b3078b3edd8ccd0847e9d503",
+      "at_ms": 1792668475016
+    }
+  },
+  "planned_candidate_files": [
+    "src/tools/search-executor.ts",
+    "src/tools/cctv-news.ts",
+    "bin/search-route-preview",
+    "canary.env"
+  ],
+  "planned_env_keys": [
+    "SEARCH_ALLOWED_DOMAINS"
+  ],
+  "production_code_changes": false
+}
