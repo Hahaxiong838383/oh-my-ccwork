@@ -22,7 +22,7 @@ pub fn accepts(w: &Window, room: &str, metadata: &str, now: u64) -> bool {
  if !allowed(w).iter().any(|s|s==sn){return false}
  let Some(suffix)=room.strip_prefix(&format!("sn-{}-",sn)) else{return false};
  w.enabled && !suffix.is_empty() && suffix.len()<=20
- && suffix.bytes().all(|b|b.is_ascii_digit()) && w.expires_at_ms>now && w.expires_at_ms-now<=36*3600_000
+ && suffix.bytes().all(|b|b.is_ascii_digit()) && w.expires_at_ms>now && w.expires_at_ms-now<=72*3600_000
  && c["expires_at_ms"].as_u64()==Some(w.expires_at_ms)
  && c["generation"].as_str()==Some(w.generation.as_str()) && !w.generation.is_empty()
 }
@@ -71,7 +71,7 @@ mod tests {
   for s in ["http://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://evil.test/v1","https://kidshub-ai.hahaxiong.cc:444/_canary/search-20261021/v1","https://a:b@kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v10","https://kidshub-ai.hahaxiong.cc/v1"] {assert!(!valid_base(s));}
  }
  #[test] fn explicitly_bounded_full_day_window() {
-  let mut w=Window{allowlist:vec![],enabled:true,sn:"BJP00326070803800006".into(),expires_at_ms:1000+36*3600_000,generation:"test".into()};
+  let mut w=Window{allowlist:vec![],enabled:true,sn:"BJP00326070803800006".into(),expires_at_ms:1000+72*3600_000,generation:"test".into()};
   let meta=|w:&Window|serde_json::json!({"search_canary":{"sn":w.sn,"expires_at_ms":w.expires_at_ms,"generation":w.generation}}).to_string();
   let room="sn-BJP00326070803800006-123";
   assert!(accepts(&w,room,&meta(&w),1000));
