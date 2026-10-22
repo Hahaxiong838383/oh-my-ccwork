@@ -172,3 +172,28 @@ test('R11 旧预约制度生成遗漏时服务端补上当前公告限制，不�
  const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:'2020-01-01T00:00:00Z'}]}):new Response(sse(chunk({content:JSON.stringify({text:'刚才查了预约方式，可以通过官方小程序预约参观。',source_ids:[1]})},'stop'))))as typeof fetch});
  assert.match((await e.run('科技馆最新预约方式',AbortSignal.timeout(2000),'')).text,/当前公告为准/);
 });
+test('R11 科普不能擅添次数/周期；只允许一次有界简化且不重复搜索',async()=>{
+ let chats=0,searches=0;
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any,init:any)=>{
+  if(String(url).endsWith('/search')){searches++;return Response.json({results:[page]});}
+  chats++;const body=JSON.parse(init.body);assert.equal(body.tool_choice,undefined);
+  const text=chats===1?'刚才查了潮汐：地球转一圈，海边就涨落一次。':'刚才查了潮汐，月亮和太阳的拉力使海水涨落。';
+  return new Response(sse(chunk({content:JSON.stringify({text,source_ids:[1]})},'stop')));
+ })as typeof fetch});
+ const result=await e.run('潮汐是怎么形成的',AbortSignal.timeout(2000),'');assert.doesNotMatch(result.text,/一圈|一次/);assert.equal(searches,1);assert.equal(chats,2);
+});
+test('R11 简化仍带未问定量时拒绝，不无限重试；明确问数值和正式名称保留',async()=>{
+ for(const [query,text,accepted]of [['潮汐的形成原因','刚查到地球转一圈，海边就涨落一次。',false],['为什么一年有四季','刚查了四季，一年有四季是因为地轴倾斜。',true],['中国第一颗人造卫星是什么','刚查了中国第一颗人造卫星，它叫东方红一号。',true]]as const){
+  let chats=0;const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>{if(String(url).endsWith('/search'))return Response.json({results:[page]});chats++;return new Response(sse(chunk({content:JSON.stringify({text,source_ids:[1]})},'stop')));})as typeof fetch});
+  const run=e.run(query,AbortSignal.timeout(2000),'');if(accepted)assert.equal((await run).text,text);else await assert.rejects(run,/unasked_quantity/);assert.equal(chats,accepted?1:2);
+ }
+});
+test('R11 简化阶段取消会终止请求，不继续搜索或播报',async()=>{
+ const abort=new AbortController();let calls=0;
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any,init:any)=>{
+  calls++;if(String(url).endsWith('/search'))return Response.json({results:[page]});
+  if(calls===2)return new Response(sse(chunk({content:JSON.stringify({text:'地球转一圈，海边涨落一次。',source_ids:[1]})},'stop')));
+  return await new Promise<Response>((_,reject)=>{init.signal.addEventListener('abort',()=>reject(init.signal.reason),{once:true});abort.abort(new Error('synthetic_cancel'));});
+ })as typeof fetch});
+ await assert.rejects(e.run('潮汐的形成原因',abort.signal,''),/synthetic_cancel/);assert.equal(calls,3);
+});
