@@ -168,3 +168,7 @@ test('R11 今日新闻不能将无日期和昨日条目当当天来源',async()=
  const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:null},{...page,date:yesterday}]}):new Response(final()))as typeof fetch});
  assert.equal((await e.run('今天国内新闻',AbortSignal.timeout(2000),'')).sources.length,0);
 });
+test('R11 旧预约制度生成遗漏时服务端补上当前公告限制，不把旧规则冒充最新确认',async()=>{
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:'2020-01-01T00:00:00Z'}]}):new Response(sse(chunk({content:JSON.stringify({text:'刚才查了预约方式，可以通过官方小程序预约参观。',source_ids:[1]})},'stop'))))as typeof fetch});
+ assert.match((await e.run('科技馆最新预约方式',AbortSignal.timeout(2000),'')).text,/当前公告为准/);
+});
