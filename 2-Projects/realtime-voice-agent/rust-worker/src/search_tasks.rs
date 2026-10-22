@@ -64,7 +64,7 @@ impl Api {
             .bearer_auth(&self.key)
             .send()
             .await
-            .map_err(|_| anyhow!("search_transport"))?;
+            .map_err(|e| anyhow!(if e.is_timeout() { "search_timeout" } else if e.is_connect() { "search_connect" } else { "search_transport" }))?;
         if !response.status().is_success() {
             return Err(anyhow!("search_http_{}", response.status().as_u16()));
         }
@@ -218,6 +218,7 @@ impl SearchSession {
     }
     pub fn command(&mut self, action: Intent) {
         match action {
+            Intent::Clarify => self.notice("你想查什么？请说出具体主题，我再帮你查询。"),
             Intent::Search(query) => {
                 // One active query per session in v1.
                 if self.busy {
@@ -529,16 +530,32 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                         if !replace { current = None; }
                         let mut body = json!({"protocol":1,"phase":"committed","query":query,"turn":turn});
                         if replace { if let Some(id) = &current { body["replace"] = json!(id); } }
-                        let mut response = tokio::time::timeout(Duration::from_millis(1500), api.request("", Some(body.clone()))).await;
-                        let retry = match &response { Err(_) => true, Ok(Err(e)) => !e.to_string().starts_with("search_http_"), _ => false };
-                        if retry { response = tokio::time::timeout(Duration::from_millis(1500), api.request("", Some(body))).await; }
+                        let mut attempt = 0;
+                        let response = loop {
+                            let budget_ms = if attempt == 0 { 1500 } else { 3000 };
+                            attempt += 1;
+                            let started = Instant::now();
+                            let response = tokio::time::timeout(Duration::from_millis(budget_ms), api.request("", Some(body.clone()))).await;
+                            let class = match &response {
+                                Err(_) => "search_deadline".to_string(),
+                                Ok(Err(e)) => e.to_string(),
+                                Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => "accepted".to_string(),
+                                _ => "search_invalid_ack".to_string(),
+                            };
+                            // Whitelist classes only: no URL/query/body/provider error strings.
+                            let safe_class = if class.starts_with("search_http_") || ["accepted","search_deadline","search_timeout","search_connect","search_transport","search_body","search_body_limit","search_invalid_ack"].contains(&class.as_str()) {class.as_str()} else {"search_invalid_response"};
+                            tracing::info!(turn_id=%turn, attempt, elapsed_ms=started.elapsed().as_millis() as u64, outcome=safe_class, "background search submit attempt");
+                            let retry = matches!(safe_class,"search_deadline"|"search_timeout"|"search_connect"|"search_transport"|"search_body");
+                            if !retry || attempt >= 2 {break response;}
+                        };
                         let rejected = matches!(&response, Ok(Err(e)) if e.to_string().starts_with("search_http_"));
                         let text = match response {
                             Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下，你可以继续和我聊。" },
                             _ if rejected => "这次搜索没有接单，你可以继续和我聊。",
                             _ => "暂时没能确认搜索是否接单，你可以继续和我聊。",
                         };
-                        polling = !rejected || current.is_some(); poll_until = Instant::now() + Duration::from_secs(80);
+                        // A rejected replacement must not revive the superseded query.
+                        polling = !rejected; poll_until = Instant::now() + Duration::from_secs(80);
                         let _ = events.send(Event::Ack { text, epoch, generation }).await;
                         if !polling { let _ = events.send(Event::Finished { epoch }).await; }
                     }
@@ -608,6 +625,8 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                         if tasks.is_empty() { polling = false; let _ = events.send(Event::Revoked { epoch }).await; }
                         for task in tasks {
                             if let (Some(id),Some(text)) = (task["id"].as_str(),result_text(task)) {
+                                // A lost POST acknowledgement can be recovered by the owned ledger.
+                                if current.is_none() { current = Some(id.to_owned()); }
                                 let _ = events.send(Event::Ready { id: id.into(),text,epoch }).await;
                             }
                         }
@@ -970,4 +989,79 @@ mod tests {
         actor.abort();
         server.abort();
     }
+    #[tokio::test]
+    async fn slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use std::sync::{Arc,Mutex};
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let bodies=Arc::new(Mutex::new(Vec::<Value>::new()));let seen=bodies.clone();
+        let server=tokio::spawn(async move {
+            loop {
+                let (mut socket,_)=listener.accept().await.unwrap();let seen=seen.clone();
+                tokio::spawn(async move {
+                    let mut bytes=Vec::new();let mut buf=[0;4096];
+                    loop {
+                        let n=socket.read(&mut buf).await.unwrap();if n==0{return;}bytes.extend_from_slice(&buf[..n]);
+                        if let Some(end)=bytes.windows(4).position(|w|w==b"\r\n\r\n") {
+                            let head=String::from_utf8_lossy(&bytes[..end]);
+                            let len=head.lines().find_map(|l|l.to_lowercase().strip_prefix("content-length: ").and_then(|v|v.parse::<usize>().ok())).unwrap_or(0);
+                            if bytes.len()<end+4+len {continue;}
+                            let post=head.starts_with("POST");
+                            if post {seen.lock().unwrap().push(serde_json::from_slice(&bytes[end+4..end+4+len]).unwrap());}
+                            if post {tokio::time::sleep(Duration::from_millis(1900)).await;}
+                            let body=if post {json!({"task":{"id":"slow-task"}})} else {json!({"tasks":[]})}.to_string();
+                            let wire=format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body);
+                            let _=socket.write_all(wire.as_bytes()).await;return;
+                        }
+                    }
+                });
+            }
+        });
+        let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/v1/internal/search-tasks?room=synthetic").parse().unwrap(),token:"synthetic".into(),key:"synthetic".into()};
+        let (tx,commands)=mpsc::channel(4);let(events,mut rx)=mpsc::channel(8);let actor=tokio::spawn(run(api,commands,events));
+        tx.send(Command::Submit{query:"火星为什么是红色".into(),turn:"same-turn".into(),replace:false,epoch:1,generation:1}).await.unwrap();
+        let started=Instant::now();let mut ticks=0;
+        while started.elapsed()<Duration::from_millis(500) {tokio::time::sleep(Duration::from_millis(20)).await;ticks+=1;}
+        assert!(ticks>=20,"foreground scheduling must remain available during HTTPS delay");
+        let event=tokio::time::timeout(Duration::from_secs(5),rx.recv()).await.unwrap().unwrap();
+        let Event::Ack{text,..}=event else {panic!("expected acknowledgement")};
+        assert_eq!(text,"好，我查一下，你可以继续和我聊。");
+        let requests=bodies.lock().unwrap();assert_eq!(requests.len(),2);assert_eq!(requests[0],requests[1]);assert_eq!(requests[0]["turn"],"same-turn");
+        actor.abort();server.abort();
+    }
+
+    #[tokio::test]
+    async fn rejected_replacement_must_not_resume_the_previous_query() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        use tokio::io::{AsyncReadExt,AsyncWriteExt};
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let addr=listener.local_addr().unwrap();
+        let server=tokio::spawn(async move {
+            let mut posts=0;
+            loop {
+                let(mut socket,_)=listener.accept().await.unwrap();let mut bytes=Vec::new();let mut buf=[0;4096];
+                loop {
+                    let n=socket.read(&mut buf).await.unwrap();if n==0{break;}bytes.extend_from_slice(&buf[..n]);
+                    if let Some(end)=bytes.windows(4).position(|w|w==b"\r\n\r\n") {
+                        let head=String::from_utf8_lossy(&bytes[..end]);let len=head.lines().find_map(|l|l.to_lowercase().strip_prefix("content-length: ").and_then(|v|v.parse::<usize>().ok())).unwrap_or(0);if bytes.len()<end+4+len{continue;}
+                        let post=head.starts_with("POST");if post{posts+=1;}
+                        let rejected=post && posts>1;
+                        let body=if rejected{json!({"error":"disabled"})}else if post{json!({"task":{"id":"old-task"}})}else{json!({"tasks":[{"id":"old-task","status":"ready","result":{"text":"旧搜索结果。"}}]})}.to_string();
+                        let status=if rejected{"403 Forbidden"}else{"200 OK"};let wire=format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body);socket.write_all(wire.as_bytes()).await.unwrap();break;
+                    }
+                }
+            }
+        });
+        let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/tasks").parse().unwrap(),token:"synthetic".into(),key:"synthetic".into()};
+        let(tx,commands)=mpsc::channel(4);let(events,mut rx)=mpsc::channel(8);let actor=tokio::spawn(run(api,commands,events));
+        tx.send(Command::Submit{query:"火星".into(),turn:"first".into(),replace:false,epoch:0,generation:1}).await.unwrap();
+        while !matches!(rx.recv().await,Some(Event::Ack{epoch:0,..})){}
+        tx.send(Command::Submit{query:"恐龙".into(),turn:"second".into(),replace:true,epoch:1,generation:2}).await.unwrap();
+        while !matches!(rx.recv().await,Some(Event::Ack{epoch:1,..})){}
+        let next=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();
+        assert!(matches!(next,Event::Finished{epoch:1}),"rejected replacement must release busy and not replay old result");
+        actor.abort();server.abort();
+    }
+
 }

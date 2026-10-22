@@ -1,74 +1,102 @@
-//! Pure search routing / playback gate. No network, LLM lock or audio side effects.
-
+//! Pure, bounded search intent routing. No network or foreground model calls.
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum Intent {
-    Search(String),
-    Replace(String),
-    Cancel,
-    Resume,
-}
+pub enum Intent { Search(String), Replace(String), Cancel, Resume, Clarify }
 
+fn trim_outer(text: &str) -> &str {
+    text.trim().trim_end_matches(|c: char| "。！!？?，,.；; ".contains(c))
+}
+fn addressed(text: &str) -> &str {
+    let mut t = trim_outer(text);
+    // Only leading address/filler words. Never remove quoting or negation.
+    for _ in 0..4 {
+        if let Some(rest) = ["小可小可", "小可", "嗯，", "嗯,", "那个，", "那个,"].iter().find_map(|p| t.strip_prefix(p)) {
+            t = rest.trim_start_matches(|c: char| "，,:： ".contains(c));
+        } else { break; }
+    }
+    t
+}
+fn trim_polite(query: &str) -> &str {
+    let q = trim_outer(query);
+    for suffix in ["，好不好", ",好不好", "，可以吗", ",可以吗", "，行吗", ",行吗", "，好吗", ",好吗"] {
+        if let Some(t) = q.strip_suffix(suffix) { return trim_outer(t); }
+    }
+    q
+}
+fn task_query(query: &str, replace: bool) -> Option<Intent> {
+    let q = trim_polite(query.trim_start_matches(|c: char| "，,:： ".contains(c)));
+    // An explanation/quotation of the command is ordinary conversation.
+    if ["是什么意思", "什么意思", "这个词是什么意思", "这句话是什么意思"].contains(&q) { return None; }
+    if q.is_empty() || q.chars().count() > 128 || ["吧", "一下", "那个", "这个", "刚才那个", "它", "他", "她", "那件事"].contains(&q) {
+        return Some(Intent::Clarify);
+    }
+    Some(if replace { Intent::Replace(q.into()) } else { Intent::Search(q.into()) })
+}
 pub fn intent(text: &str) -> Option<Intent> {
-    let t = text
-        .trim()
-        .trim_end_matches(|c: char| "。！!？?，,. ".contains(c));
-    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索"].contains(&t) {
+    let t = addressed(text);
+    if ["，不要真的查", ",不要真的查", "，但不用搜索", ",但不用搜索"].iter().any(|p| t.contains(p)) { return None; }
+    if ["搜索引擎", "搜索算法", "搜索功能", "查询功能"].iter().any(|p| t.starts_with(p)) { return None; }
+    // Scoped, explicit replacement can supersede a preceding cancellation.
+    if let Some((old, new)) = t.split_once('，') {
+        if (old.starts_with("不查") || old.starts_with("先别查")) && old.ends_with('了') {
+            if let Some(q) = new.trim().strip_prefix("改查") { return task_query(q, true); }
+        }
+    }
+    let control = t.strip_suffix('吧').unwrap_or(t);
+    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
+        || ["不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p)) {
         return Some(Intent::Cancel);
     }
-    if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢"].contains(&t)
-    {
-        return Some(Intent::Resume);
+    if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢", "继续播刚才的搜索结果", "刚才查的结果呢", "查好了吗", "搜到了吗", "接着说刚才查到的", "刚才查到什么了", "搜索结果呢"].contains(&control) { return Some(Intent::Resume); }
+    if ["不要", "不用", "别", "我自己", "我说", "他说", "她说", "你说", "“", "‘", "\"", "'"].iter().any(|p| t.starts_with(p)) { return None; }
+    if let Some(q) = t.strip_prefix("我查一下") {
+        return if q.contains("就回来") || q.contains("再告诉") { None } else { Some(Intent::Clarify) };
     }
-    let prefixes = [
-        "请帮我查找",
-        "帮我查找",
-        "查找",
-        "请帮我搜索一下",
-        "帮我搜索一下",
-        "请帮我查一下",
-        "帮我查一下",
-        "请搜索一下",
-        "搜索一下",
-        "帮我搜一下",
-        "查一下",
-        "改查",
-    ];
-    for prefix in prefixes {
-        if let Some(query) = t.strip_prefix(prefix) {
-            let query = query
-                .trim()
-                .trim_start_matches(|c: char| "，,:： ".contains(c));
-            if query.is_empty() || query.chars().count() > 128 {
-                return None;
-            }
-            return Some(if prefix == "改查" {
-                Intent::Replace(query.into())
-            } else {
-                Intent::Search(query.into())
-            });
-        }
+    // Topic first is accepted only with a complete, explicit trailing request.
+    for suffix in ["，帮我查一下", ",帮我查一下", "，帮我查查", ",帮我查查", "，请帮我查一下"] {
+        if let Some(q) = t.strip_suffix(suffix) { return task_query(q, false); }
+    }
+    let mut t = t;
+    for _ in 0..3 {
+        if let Some(rest) = ["我想请你", "我想让你", "请你", "你能不能", "你可以", "你能", "能不能", "可不可以", "可以", "能", "麻烦你", "麻烦", "请"].iter().find_map(|p| t.strip_prefix(p)) {
+            t = rest.trim_start_matches(|c: char| "，, ".contains(c));
+        } else { break; }
+    }
+    for prefix in ["改为查询", "换查", "改查"] {
+        if let Some(q) = t.strip_prefix(prefix) { return task_query(q, true); }
+    }
+    let mut explicit_helper = false;
+    for prefix in ["帮我在网上", "帮我上网", "帮忙", "帮我", "在网上", "上网", "联网"] {
+        if let Some(rest) = t.strip_prefix(prefix) { t = rest.trim_start(); explicit_helper = true; break; }
+    }
+    for prefix in ["搜索一下", "查询一下", "查找一下", "搜索", "查询", "查找", "查一下", "查一查", "查查", "搜一下", "搜一搜", "搜搜"] {
+        if let Some(q) = t.strip_prefix(prefix) { return task_query(q, false); }
+    }
+    if explicit_helper {
+        if let Some(q) = t.strip_prefix('查').or_else(|| t.strip_prefix('搜')) { return task_query(q, false); }
     }
     None
 }
 
 #[derive(Default)]
-pub struct QueryIntent { pending_at: Option<u64> }
+pub struct QueryIntent { pending_at: Option<(u64, bool)> }
 impl QueryIntent {
     pub fn clear(&mut self) { self.pending_at = None; }
     pub fn route(&mut self, text: &str, now_ms: u64) -> Option<Intent> {
         let previous = self.pending_at.take();
-        if let Some(action) = intent(text) { return Some(action); }
-        let text = text.trim().trim_end_matches(|c: char| "。！!？?，,. ".contains(c));
-        if ["帮我查一下", "请帮我查一下", "查一下", "搜索一下", "帮我搜索一下", "查找"].contains(&text) {
-            self.pending_at = Some(now_ms); return None;
+        if let Some(action) = intent(text) {
+            if action == Intent::Clarify {
+                self.pending_at = Some((now_ms, addressed(text).starts_with("改查") || addressed(text).starts_with("换查")));
+            }
+            return Some(action);
         }
-        // Narrow fragment completion only; never attach arbitrary following conversation.
-        let public_topic = ["天气", "开放时间", "开放安排", "新闻", "定义"].iter().any(|topic| text.ends_with(topic));
-        let personal = ["我", "你", "他", "小猫", "不要", "不用", "别查", "取消"].iter().any(|word| text.contains(word));
-        if previous.is_some_and(|at| now_ms.saturating_sub(at) <= 3000) && public_topic && !personal && text.chars().count() <= 128 {
-            return Some(Intent::Search(text.into()));
+        let text = trim_outer(text);
+        // Only the very next committed utterance, after a real clarification.
+        // Do not concatenate personal chat, negations, quotes or commands.
+        let unrelated = ["我", "你", "他", "她", "我们", "不要", "不用", "别", "取消", "停", "算了", "继续", "讲", "聊", "好的", "好", "嗯", "“", "\""].iter().any(|p| text.starts_with(p) && !text.starts_with("我国"));
+        if previous.is_some_and(|(at,_)| now_ms.saturating_sub(at) <= 10_000) && !unrelated && text.chars().count() >= 2 {
+            return task_query(text, previous.unwrap().1);
         }
         None
     }
@@ -119,13 +147,13 @@ mod tests {
     #[test]
     fn split_intent_only_accepts_prompt_public_topic_and_expires() {
         let mut router=QueryIntent::default();
-        assert_eq!(router.route("帮我查一下",0),None);
+        assert_eq!(router.route("帮我查一下",0),Some(Intent::Clarify));
         assert_eq!(router.route("今天北京的天气",1000),Some(Intent::Search("今天北京的天气".into())));
         router.route("帮我查一下",2000);
         assert_eq!(router.route("我今天画了一只猫",2500),None);
         assert_eq!(router.route("北京天气",2600),None);
         router.route("帮我查一下",3000);
-        assert_eq!(router.route("北京天气",7001),None);
+        assert_eq!(router.route("北京天气",14001),None);
         router.route("帮我查一下",8000);
         assert_eq!(router.route("取消搜索",8100),Some(Intent::Cancel));
         assert_eq!(router.route("北京天气",8200),None);
@@ -189,3 +217,7 @@ mod tests {
         assert!(gate.take_ready(62000, true).is_none());
     }
 }
+
+#[cfg(test)]
+#[path = "search_policy_cases.rs"]
+mod robustness_cases;
