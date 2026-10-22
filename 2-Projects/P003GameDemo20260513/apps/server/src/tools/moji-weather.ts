@@ -17,8 +17,8 @@ function time(value:unknown,now:number,maxAge:number):string {
 }
 const number=(v:unknown,min:number,max:number)=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max?v:fail('weather_number');
 const wording=(v:unknown)=>typeof v==='string'&&/^[\u4e00-\u9fff]{1,12}$/.test(v)?v:fail('weather_wording');
-export function parseWeather(data:any,raw:WeatherRequest,now:number):WeatherResult {
-  const q=weatherRequestSchema.parse(raw),target=day(now+q.day_offset*86_400_000);
+export function parseWeather(data:any,raw:WeatherRequest,now:number,requestedAt=now):WeatherResult {
+  const q=weatherRequestSchema.parse(raw),target=day((q.metric==='forecast'?requestedAt:now)+q.day_offset*86_400_000);
   let updated:string,text:string;
   if(q.metric==='current') {
     const d=data?.current;updated=time(d?.obs_time,now,2*3600_000);
@@ -31,7 +31,8 @@ export function parseWeather(data:any,raw:WeatherRequest,now:number):WeatherResu
     const d=Array.isArray(data?.daily)?data.daily.find((v:any)=>v?.predict_date===target):null;
     if(!d)return fail('weather_target_date');updated=time(d.update_time,now,24*3600_000);
     const low=number(d.temp_low,-70,60),high=number(d.temp_high,-70,60);if(low>high)return fail('weather_temperature_range');
-    text=`墨迹天气预报，${q.city_name}${['今天','明天','后天'][q.day_offset]}${target.slice(5).replace('-','月')}日，白天${wording(d.weather_day)}，夜间${wording(d.weather_night)}，${low}到${high}摄氏度。预报会变化。`;
+    const relative=Math.round((Date.parse(target)-Date.parse(day(now)))/86_400_000);
+    text=`墨迹天气预报，${q.city_name}${['今天','明天','后天'][relative]??''}${target.slice(5).replace('-','月')}日，白天${wording(d.weather_day)}，夜间${wording(d.weather_night)}，${low}到${high}摄氏度。预报会变化。`;
   }
   return {text,sources:[{title:`墨迹天气 · ${q.city_name}`,url:'https://www.moji.com/zh-CN',date:updated}],weather:{provider:'moji-public-web',city_id:q.city_id,city_name:q.city_name,target_date:target,updated_at:updated,fetched_at:new Date(now).toISOString(),cache_hit:false,metric:q.metric}};
 }
@@ -53,11 +54,11 @@ export class MojiWeather {
     const v=JSON.parse(Buffer.concat(chunks).toString('utf8'));
     if(v?.code!==0||!v.data)return fail('weather_payload');return v.data;
   }
-  async run(raw:WeatherRequest,signal:AbortSignal):Promise<WeatherResult> {
+  async run(raw:WeatherRequest,signal:AbortSignal,requestedAt=this.now()):Promise<WeatherResult> {
     signal.throwIfAborted();const q=weatherRequestSchema.parse(raw),now=this.now();
-    const key=JSON.stringify([q.city_id,day(now+q.day_offset*86_400_000),q.metric]);
+    const key=JSON.stringify([q.city_id,day((q.metric==='forecast'?requestedAt:now)+q.day_offset*86_400_000),q.metric]);
     const cached=this.cache.get(key);
-    if(cached&&now-cached.at<300_000){try{const v=parseWeather(cached.data,q,now);v.weather.cache_hit=true;v.weather.fetched_at=new Date(cached.at).toISOString();return v;}catch{this.cache.delete(key);}}
+    if(cached&&now-cached.at<300_000){try{const v=parseWeather(cached.data,q,now,requestedAt);v.weather.cache_hit=true;v.weather.fetched_at=new Date(cached.at).toISOString();return v;}catch{this.cache.delete(key);}}
     if((this.cooldown.get(key)??0)>now)return fail('weather_cooldown');
     let f=this.flights.get(key);
     if(!f) {
@@ -68,7 +69,7 @@ export class MojiWeather {
         const identity=await this.get('getCityData',q.city_id,budget);
         if(identity.city?.id!==q.city_id||identity.city?.name!==q.city_name||identity.city?.time_zone_name!=='Asia/Shanghai')return fail('weather_city_mismatch');
         const data=await this.get('getCityWeatherAndIndex',q.city_id,budget);budget.throwIfAborted();
-        const result=parseWeather(data,q,this.now());
+        const result=parseWeather(data,q,this.now(),requestedAt);
         this.cache.set(key,{at:this.now(),data});if(this.cache.size>64)this.cache.delete(this.cache.keys().next().value!);
         return result;
       })().catch(e=>{if(!controller.signal.aborted)this.cooldown.set(key,this.now()+30_000);if(this.cooldown.size>64)this.cooldown.delete(this.cooldown.keys().next().value!);throw e;}).finally(()=>{if(this.flights.get(key)===flight)this.flights.delete(key);});

@@ -43,7 +43,7 @@ export function getSearchTasks(): SearchTasks | null {
         const record = deviceRegistryStore.get(owner.subject);
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
         if(owner.routing?.weather_enabled&&owner.routing.weather){
-          try {const result=await weather.run(owner.routing.weather,signal);console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,...result.weather}));return result;}
+          try {const result=await weather.run(owner.routing.weather,signal,owner.createdAt);console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,...result.weather}));return result;}
           catch{console.warn('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,outcome:'unavailable'}));throw new Error('weather_unavailable');}
         }
         const cfg = getDevicePromptConfig(record.account_id);

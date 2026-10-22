@@ -14,6 +14,15 @@ for(const patch of [{current:{...data.data.current,obs_time:'2026-10-21 14:55:08
 assert.throws(()=>mod.parseWeather({...data.data,daily:[{...data.data.daily[0],predict_date:'2026-10-22'}]},request,now));
 assert.throws(()=>mod.parseWeather({...data.data,daily:[{...data.data.daily[0],update_time:'2026-10-20 13:00:00'}]},request,now));
 assert.throws(()=>mod.parseWeather(data.data,{...request,city_id:39},now));
+const submitted=Date.parse('2026-10-22T23:59:59+08:00'),afterMidnight=submitted+3000;
+const midnightData={...data.data,daily:[{...data.data.daily[0],update_time:'2026-10-22 23:50:00'},{...data.data.daily[0],predict_date:'2026-10-24',update_time:'2026-10-22 23:50:00'}]};
+const anchored=mod.parseWeather(midnightData,request,afterMidnight,submitted);
+assert.equal(anchored.weather.target_date,'2026-10-23','relative day is anchored when task is accepted');assert.match(anchored.text,/今天10月23日/);
+let midnightClock=submitted,midnightCalls=0;
+const crossing=new mod.MojiWeather({now:()=>midnightClock,fetch:async(url:string)=>{midnightCalls++;return new Response(JSON.stringify(url.includes('getCityData')?{code:0,data:{city:{id:2,name:'北京市',time_zone_name:'Asia/Shanghai'}}}:{code:0,data:midnightData}));}});
+await crossing.run(request,new AbortController().signal,submitted);midnightClock=afterMidnight;
+assert.equal((await crossing.run(request,new AbortController().signal,submitted)).weather.target_date,'2026-10-23');assert.equal(midnightCalls,2);
+assert.equal((await crossing.run(request,new AbortController().signal,afterMidnight)).weather.target_date,'2026-10-24');assert.equal(midnightCalls,4,'a new next-day request must not borrow the old target date cache');
 const march=Date.parse('2026-03-02T01:00:00+08:00');
 assert.throws(()=>mod.parseWeather({...data.data,current:{...data.data.current,obs_time:'2026-02-30 00:30:00'}},{...request,day_offset:0,metric:'current'},march),'calendar overflow must not become a valid observation');
 let clock=now,refreshCalls=0;
