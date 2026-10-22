@@ -340,8 +340,12 @@ impl SearchSession {
                     self.gate.cancel();
                     self.speech.retain(|s| s.result_until.is_none());
                     self.remainder = None;
-                    self.active = None;
-                    self.revoked = true;
+                    // An empty ledger after submit timeout invalidates results,
+                    // not the explanation that no acknowledgement was received.
+                    // Otherwise the next poll cuts that notice before its first audio.
+                    let active_result = self.active.as_ref().is_some_and(|s| s.task.is_some());
+                    if active_result { self.active = None; self.revoked = true; }
+                    tracing::info!(active_result, "background search results revoked; diagnostic notices preserved");
                     self.auto_pending = false;
                 }
                 Event::Claimed { speech, .. } => {
@@ -1032,6 +1036,19 @@ mod tests {
         actor.abort();server.abort();
     }
 
+    #[tokio::test]
+    async fn empty_ledger_must_not_abort_the_unconfirmed_submit_notice() {
+        let (mut s, events, _commands) = test_session();
+        s.notice("暂时没能确认搜索是否接单，你可以继续和我聊。");
+        s.idle_since = Some(Instant::now() - Duration::from_millis(801));
+        assert!(s.poll(true).unwrap().contains("暂时没能确认"));
+        events.send(Event::Revoked { epoch: 0 }).await.unwrap();
+        s.poll(false);
+        assert!(!s.take_revoked(), "empty poll may revoke results, never the failure explanation");
+        assert!(s.active.as_ref().is_some_and(|a| a.task.is_none()));
+        s.finish(false, 28);
+        assert!(s.active.is_none() && s.remainder.is_none());
+    }
     #[tokio::test]
     async fn rejected_replacement_must_not_resume_the_previous_query() {
         let _ = rustls::crypto::ring::default_provider().install_default();
