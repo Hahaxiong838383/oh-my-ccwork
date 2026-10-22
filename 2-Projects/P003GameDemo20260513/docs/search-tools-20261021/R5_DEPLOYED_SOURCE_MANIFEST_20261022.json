@@ -1,0 +1,21 @@
+{
+  "at_cst": "2026-10-22 12:02:54",
+  "source_commits": {
+    "brain": "df737aacefc8cd2268b76dc5bf6b26c955b148b0",
+    "worker": "d65a662155d4b76c3e1cb9c12a23e8a005fa3487"
+  },
+  "brain_selected_files": {
+    "src/tools/search-executor.ts": "61d6bf81d573366ecb06950b932044983b81fee39c401913ca4eae76b0cbe8c0",
+    "src/tools/search-tasks.ts": "fedd27c85264dee3dc44b9fe10b655cdad0fc18a6c73fca4b3a47c708d63c0e7",
+    "src/tools/search-runtime.ts": "e06278fb0b13e2ac4ab4491bb928a0e29f5a3d45b3911599ce83fa9d6142bc76",
+    "src/tools/search-chat-policy.ts": "d2220d9cb923006b92e63752a6db633af8652ac0ca8b7b1c2017f2d360f61c8c",
+    "src/routes/search-tasks.ts": "8d6b62575df6cf3c5f4cbacad0254ae6e6392c611f8660df57846eb5c5a25fb6",
+    "src/routes/custom-llm.ts": "95cb8821620499717136f48e9541eb98cac611cb57e842920a19dc273be360b3",
+    "src/search-canary-guard.ts": "9a079e28b9691d79d8f37275f7b1379ff3ba7327186af87af4e51c2cc061d088"
+  },
+  "worker_binary_sha256": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24",
+  "worker_bytes": 72991064,
+  "production_brain_unchanged": true,
+  "production_worker_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+  "shared_contract_sha256": "7c3d30bd97df3df2341d105644372dad9587a33f40e541acf5b7f7993bfec7fc"
+}

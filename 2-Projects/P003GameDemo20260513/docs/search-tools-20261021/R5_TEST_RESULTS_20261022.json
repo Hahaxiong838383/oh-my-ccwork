@@ -1,0 +1,435 @@
+{
+  "verified_at_cst": "2026-10-22 12:02:54",
+  "scope": {
+    "actually_reopened": true,
+    "resumed_at_ms": 1792641774596,
+    "expires_at_ms": 1792684740000,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "p1": true,
+    "p2": false,
+    "real_device_acceptance": "pending"
+  },
+  "source_commits": {
+    "brain": "df737aacefc8cd2268b76dc5bf6b26c955b148b0",
+    "worker": "d65a662155d4b76c3e1cb9c12a23e8a005fa3487"
+  },
+  "worker_build": {
+    "compressed": {
+      "sha256": "66099dbf29cb86c757e8b418b397eb4a654f4e85b5138174a1fe078e15eb7cfe",
+      "bytes": 24514370
+    },
+    "target": {
+      "staged": true,
+      "bytes": 72991064,
+      "sha256": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24"
+    }
+  },
+  "worker_build_inputs": {
+    "src/audit_capture.rs": "4b59e228dc3c4fe68efcdc902a413da6893f0bec10ca6d25d74090724acfde85",
+    "src/backchannel.rs": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "src/candidate.rs": "4b3a3d489db169c9f8ee95e8e01ce79a9ccc577a89e8223d79a39fd584c73c8e",
+    "src/caption_gate.rs": "33b73e3eb96ebcb21ec9644b8ed6f0a89ea9f004ecb57aab689e32573feb81e8",
+    "src/config.rs": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218",
+    "src/contract.rs": "fd57e2ecd11d523d9f44263d381ed94e4da6b2b82ec466fc7b879aafd9974ec4",
+    "src/control.rs": "17e659e03beef5f81fe732e40f2bfcb9a6bb86733b5d667709779a2bc971cff7",
+    "src/device_grammar.rs": "beb2a6adc33e4b2f932aacd1c348c6e42b427a51576283dc382e34220a7592c8",
+    "src/device_grammar_slot_matrix.rs": "3e92cfc577cd058276076f82c5a273d732157cf6d763797d6b1a43eadedccbf6",
+    "src/device_grammar_testdata.rs": "46e3d5411d664bdaf19d63d4506218c006c3ea0e9fbc8ced5483f4f667c17be3",
+    "src/device_intent.rs": "b45b98b03df87370cc28e2d3febb7a931a4d308d46294509c88d9194585023dc",
+    "src/device_ledger.rs": "7defc258595513afd15434f5e78f232076a9c9d4c9845d5da562636b42f94929",
+    "src/eot.rs": "0c6ca211e120145d986b4d950a5accb4dde243804659d9d4ac18778ea41dfbfe",
+    "src/eot_snapshot.rs": "0ffdcd2b28233c2b9552b8aa02363f5860db579a7357cd721e988d19260f0259",
+    "src/filler.rs": "0a3a5d49529d21c21a5f0452109c1ff3d60fb3a6083d20bfd6c59ddd892cf569",
+    "src/gate.rs": "bcfabf259a70d961cb1a777394429471defc7efabf1f7c53dd3762423a73541f",
+    "src/job.rs": "e821ff7e3bfe4dc4b6630127a3a45e53c0ebefadf54444e20ca9695ae06165d0",
+    "src/llm.rs": "cd2d7d010d8be99d5db14dfc4b3829f7c3b54a086a930681e28e8087032631c6",
+    "src/main.rs": "569f1d80252ee70c7bc8dd915142570cb71822695635092d87a6c51659a7fed3",
+    "src/ordered_pcm.rs": "1781914dad34a0981ca81b3ddc5390acdd46318243bd569b73d1192f1d41f85a",
+    "src/pipeline.rs": "4c339605a27120910a14d697fe362ffc7d709b99e89c0e742c7d74d76bad12e4",
+    "src/playout.rs": "fc8fb62d08dee2496b891d166036be287cfae703ac7afe67995c8a7c89a03510",
+    "src/preflight.rs": "950bb416101f68868b3bc19440affc5e2e372f80669f35155d8218e7fc2e2f63",
+    "src/ready_confirm.rs": "a0fa66795ea21c21d40f671d2e781776647735da34cf6b70c0c59b2ddb527f70",
+    "src/say_defer.rs": "bbdafa12d8040ae4ebac8fab8bb74b2d0725e6071cd48b45e17b136dc6b4e6af",
+    "src/search_canary.rs": "2cb39a0611d9521d92ddc8222f5590cf34a7f544065431f0c5a6f61f5ccbf865",
+    "src/search_policy.rs": "121a03e2956c1acd75d82f6d9c87c46e669aeb18296aeae0500b974593daa2d2",
+    "src/search_tasks.rs": "dc9e4ac9d4e0e74edf6c642e257e8b05ee1ce47b28c8274d08e9fa26d10ebc23",
+    "src/segmenter.rs": "a044798a0afb58f33ef272bb622bd3764442be84a3958c66af02894d30571199",
+    "src/speaker_id.rs": "450f01eb5f18ab33ae805562deda12e0933d9d2fdb7e4a8de19f72eacb6670d0",
+    "src/stt_volc.rs": "8e622b2361e904747b9e47ad831db4a212aa5ce41cf4c5c62c5709585c86ab3d",
+    "src/textproc.rs": "55f462363e82e38a712b27f374fdd0344e79d61ce061fc945fe3630dc8caed7c",
+    "src/token.rs": "9e5c7d3d0d5c18e6c5218c86e03e6aba8bfd3b9e186e623c1ac47d1f576b1b22",
+    "src/transcript_pub.rs": "e6ca31d914a16934d020048f04f50e192a6c1e583cfa511afe7563804f94ae66",
+    "src/tts.rs": "331ab5a50f63d43adeb7c00d12fa6347e715ddb668c19b6b8224f6a238ace386",
+    "src/tts_volc.rs": "6a333e155efd0757890271329bbfbb35cc810a6fae71a8ef5cceb933fd6b3600",
+    "src/tts_xfyun.rs": "001d5669f6353ae20e799da430f36ebf29c84b702b29cd77b889ce12e18b5f0d",
+    "src/turn.rs": "537376f6301a2718a40d2797f67565ef7850a589704f6b03c589168232f5b977",
+    "src/vad.rs": "3cf2bca4621e5dacc7efcf7766cac88e0a2ad9d7db0a3f08348957eaf301c7ab",
+    "src/volc.rs": "c58ab6604c65f1c3107307318c7478ae6aa7edf1b489f0626ef9a601423810e3",
+    "src/worker.rs": "fe198a5666092abc4472014b4f5f4b6882908d42bb2c26f45287d4826af5b2b3",
+    "Cargo.toml": "4e229eef4f4b75dad8fbac6ff6d9da5726fc0273948ecaf793f6fca0ab889824",
+    "Cargo.lock": "6e9da0052d2c477166c8b2e148f537cbdd22844cae01bf620a0cadf322bd394d",
+    "../../../4-Assets/contracts/p003-search-task-v1.json": "7c3d30bd97df3df2341d105644372dad9587a33f40e541acf5b7f7993bfec7fc"
+  },
+  "worker_test_count": 360,
+  "text_environment_tests": 2,
+  "brain_tests": {
+    "search_exe": 11,
+    "search_tasks": 9,
+    "search_route": 3,
+    "search_chat_policy": 1,
+    "device_session": 44,
+    "exit_intent": 58,
+    "device_intent_protocol": 5,
+    "other_search_and_isolation_suites": "passed; see acceptance record",
+    "tsc_no_emit": true
+  },
+  "controlled_quality": {
+    "questions": 20,
+    "with_sources": 17,
+    "fallback": 3,
+    "format_or_upstream_errors": 0,
+    "not_full_factual_accuracy_certification": true
+  },
+  "rtc": {
+    "synthetic_only": true,
+    "device_hearing_verified": false,
+    "early": {
+      "room": "sn-BJP00326060100100004-1792641595",
+      "task_id": "690735ac-5805-4114-8633-55708d0c4f5a",
+      "played_ms": 930,
+      "automatic_replays": 1,
+      "delivery": "completed",
+      "ordinary_finish_to_replay_first_audio_s": 1.543,
+      "counts": {
+        "agent_transcripts": 5,
+        "user_transcripts": 2,
+        "metrics": 8,
+        "audio_voiced_ms": 18950.0,
+        "input_ready": 1,
+        "output_ready": 1
+      }
+    },
+    "cancel_before_disconnect": {
+      "id": "95cc807c-2f8b-472e-b908-4fa4c8ebd120",
+      "session": "sn-BJP00326060100100004-1792641520",
+      "status": "cancelled",
+      "closed_session": false,
+      "verified_before_disconnect": true
+    },
+    "manual_resume": {
+      "room": "sn-BJP00326060100100004-1792641226",
+      "task_id": "810bed99-d64d-45e8-96d6-d8fcab5d7c9f",
+      "attempts": 1,
+      "delivery": "completed"
+    },
+    "stop_long": {
+      "room": "sn-BJP00326060100100004-1792641022",
+      "recognized_stop_only": true,
+      "automatic_replays": 0
+    },
+    "controlled_delays": {
+      "3": {
+        "room": "sn-BJP00326060100100004-1792640475",
+        "execution_ms": 3014,
+        "delivery": "completed",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 4,
+          "metrics": 11,
+          "audio_voiced_ms": 11620.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "synthetic_fixture": true
+      },
+      "10": {
+        "room": "sn-BJP00326060100100004-1792640687",
+        "execution_ms": 10014,
+        "delivery": "completed",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 4,
+          "metrics": 14,
+          "audio_voiced_ms": 16370.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "synthetic_fixture": true
+      }
+    },
+    "ordinary_reconnect": {
+      "mode": "normal",
+      "room": "sn-BJP00326060100100004-1792641666",
+      "trace": "search-probe-1792641666",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 3,
+        "user_transcripts": 1,
+        "metrics": 4,
+        "audio_voiced_ms": 12710.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 2920
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 7076,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 11877,
+          "chars": 9
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 15525,
+          "chars": 15
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 25925,
+          "chars": 47
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 26.5,
+      "device_heard_verified": false
+    }
+  },
+  "state_before_reopening": {
+    "worker": {
+      "pid": "747363",
+      "sha256": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24",
+      "production_pid": "839",
+      "production_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792641729845,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792684740000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nActiveState=active\n",
+      "resources": {
+        "memory_available_kb": "6145996",
+        "disk_available_bytes": 73895510016
+      },
+      "escaped_text_keys": []
+    },
+    "brain": {
+      "resources": {
+        "memory_available_kb": "2480472",
+        "disk_available_bytes": 11898425344
+      },
+      "at_ms": 1792641737859,
+      "hashes": {
+        "src/tools/search-executor.ts": "61d6bf81d573366ecb06950b932044983b81fee39c401913ca4eae76b0cbe8c0",
+        "src/tools/search-tasks.ts": "fedd27c85264dee3dc44b9fe10b655cdad0fc18a6c73fca4b3a47c708d63c0e7",
+        "src/tools/search-runtime.ts": "e06278fb0b13e2ac4ab4491bb928a0e29f5a3d45b3911599ce83fa9d6142bc76",
+        "src/tools/search-chat-policy.ts": "d2220d9cb923006b92e63752a6db633af8652ac0ca8b7b1c2017f2d360f61c8c",
+        "src/routes/search-tasks.ts": "8d6b62575df6cf3c5f4cbacad0254ae6e6392c611f8660df57846eb5c5a25fb6",
+        "src/routes/custom-llm.ts": "95cb8821620499717136f48e9541eb98cac611cb57e842920a19dc273be360b3",
+        "src/search-canary-guard.ts": "9a079e28b9691d79d8f37275f7b1379ff3ba7327186af87af4e51c2cc061d088"
+      },
+      "production_source_unchanged": true,
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 1204589,
+          "restarts": 29,
+          "status": "online"
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0,
+          "status": "online"
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5,
+          "status": "online"
+        }
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "versions": [
+        {
+          "sn": "BJP00326060100100004",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792631235960
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792641719019
+        }
+      ],
+      "flags": {
+        "candidate": {
+          "p003.search.tools": "0",
+          "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.enabled": "1"
+        },
+        "production": {
+          "p003.search.canary.selected_sn": "BJP00326060100100004",
+          "p003.search.canary.enabled": "0",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.agent": "p003-search-canary-20261021",
+          "p003.search.canary.started_at_ms": "1792585650087",
+          "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+        }
+      },
+      "lease": {
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "until_ms": 1792641749874,
+        "ordered_pcm_v1": true
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 23:59:00 CST\nActiveState=active\n"
+    }
+  },
+  "rollback_backups": {
+    "brain": {
+      "at_ms": 1792638142191,
+      "backup": "/opt/p003/server/backups/search-canary-R5-20261022T030220Z",
+      "sha256": "511f617be4d85ea993a8fb2cbbcb019392117398bf51e5d686bbac8541577c73",
+      "new_device": {
+        "sn": "BJP00326060100100004",
+        "status": "active",
+        "has_account": 1
+      },
+      "candidate_accounts_distinct": true,
+      "candidate_count": 2
+    },
+    "worker": {
+      "at_ms": 1792638156386,
+      "backup": "/root/rust-worker/backups/search-canary-R5-20261022T030220Z",
+      "sha256": "02f89309004dc118c5a6ddfbb8af55be86a36f124e3715853c9616a259568b8b"
+    }
+  },
+  "rollback_drill": {
+    "forward": {
+      "sha": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792641410408,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "747322"
+    },
+    "rollback": {
+      "sha": "fa5d45b34262f945f81bff3babcbeb0966f4ac99df64214a9ab5eee7c881717d",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792641417461,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "747342"
+    },
+    "final": {
+      "sha": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792641424846,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "747363"
+    },
+    "at_ms": 1792641426479
+  },
+  "guard_rollback": {
+    "path": "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts",
+    "before_sha": "fc32ff6dcbedbfa9596edd0f3fc3a0fff90cca7724a0daf667684982ac393149",
+    "sha256": "9a079e28b9691d79d8f37275f7b1379ff3ba7327186af87af4e51c2cc061d088",
+    "backup": "/opt/p003/server/backups/search-canary-R5-20261022T030220Z/search-canary-guard.ts",
+    "forward": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": false
+    },
+    "rollback": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": false
+    },
+    "final": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": false
+    }
+  },
+  "text_environment_fix": {
+    "keys": [
+      "AGENT_GREETING",
+      "AGENT_INSTRUCTIONS",
+      "BACKCHANNEL_HOTWORDS",
+      "EXIT_SWALLOW_HOTWORDS",
+      "INTERRUPT_HOTWORDS",
+      "P003_DEVICE_ASR_HOTWORDS",
+      "VOLC_ASR_HOTWORDS"
+    ],
+    "before_sha256": "f33b09d6811b3352bb823dc617a4c11c88ed2bace26ed783c314358572493b34",
+    "after_sha256": "4aad426a3bb4573bfa6f74d17533dc8784135b5072276bf6bb389410fbccf4f5",
+    "binary_sha256": "fa5d45b34262f945f81bff3babcbeb0966f4ac99df64214a9ab5eee7c881717d",
+    "matches_production_text": true,
+    "other_environment_unchanged": true,
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792640999089,
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "at_ms": 1792641000139
+  },
+  "brain_escaped_text_check": {
+    "escaped_keys": []
+  },
+  "real_device_acceptance": "pending"
+}
