@@ -66,3 +66,9 @@ R3备份/root/rust-worker/backups/search-canary-R3-20261021T122000Z/worker-R3.ta
 Linux357测试/构建/ABI、43输入核同；新产物SHA256 83ee21cbf5a6ba6c551d1f2351c31b5582254456d5f0c0197de7093ef0b4f9ef，72986512字节。传输后完整SHA断言再安装。R4备份目录/root/rust-worker/backups/search-canary-R4-20261022T011234Z，包SHA 6893af12088ebce69efc75915ebe4e56eac7a3140f1ac09eb119219194406a81。
 
 到期关闭通过双RTC短窗实测：两房间均断开，jobs回0；仍不代表真人实听。故障先三侧关闸再退出重进；若要缩回单台，需同步环境名单与窗口并在空闲时加载，不能仅改window导致两台都被拒。正式实际加入时间和最终状态以Brain分支2-Projects/P003GameDemo20260513/docs/search-tools-20261021/R4_TWO_DEVICE_CANARY_20261022.md及JSON为准，不从旧R3快照推断当前。
+
+## R5 运行中文配置门禁（2026-10-22）
+
+systemd EnvironmentFile不等同JSON解析器：`json.dumps`默认ASCII转义会让中文热词在进程里变成字面`\uXXXX`，导致停止/退出/ASR热词失效。仅对已核实的公共文本配置使用UTF-8值（Python `ensure_ascii=False`），其余凭据和隔离参数保留原字节；重启后运行 `python3 ops/search-canary/verify_text_environment.py --pid <候选PID>`。该脚本只输出键名与状态。额外逐项核对候选公共文本与本次读取的现役文本相等，不输出值。
+
+不能仅凭env文件能被JSON解析、unit active或RTC有声音判通过。部署后实际测试“停一下”、明确取消、显式续讲、极早打断；从ASR最终文字核对标点省略变体。新HTTP路径必须同时通过候选入口guard和业务路由。失败与修复后证据分开保存，不抹去旧失败。
