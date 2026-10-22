@@ -1,0 +1,5131 @@
+{
+  "revision": "R11",
+  "scope": "synthetic RTC through real candidate and upstream; physical P003 hearing pending",
+  "verified_at_ms": 1792672342014,
+  "code": {
+    "brain": "429f35caac9f5c463aa0cc0cf4e266725a553bb2",
+    "worker": "c396d6bcf0c58e7f33ebf51a62dbccdcd541297a"
+  },
+  "brain_checks": {
+    "at_ms": 1792671001713,
+    "git_sha": "429f35caac9f5c463aa0cc0cf4e266725a553bb2",
+    "checks": [
+      {
+        "test": "baidu-weather.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.72,
+        "log_sha256": "57768fbc69dd522f2edb1e0b20dded81ed11dae58fa43bb7b098702b0fc68543"
+      },
+      {
+        "test": "cctv-news.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.67,
+        "log_sha256": "bd00cbf1e77042dd1b84c953d2d32438189cc399a0acf18486bd5c751d7bad3c"
+      },
+      {
+        "test": "device-brain.test.ts",
+        "rc": 0,
+        "elapsed_s": 1.31,
+        "log_sha256": "c1c3a7576e38e31fbd77187e8a5ca357a5a37971d523dec66fbceb01a667249f"
+      },
+      {
+        "test": "device-config.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.8,
+        "log_sha256": "138e8bba1e36003a99877dafc6accf98097ca0d71e70cb6bb1a0caa665b2a53a"
+      },
+      {
+        "test": "device-intent-protocol.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.4,
+        "log_sha256": "b49016787407220adb25ff841152d2401d3ab249a771238ae0cd1cfeb016bef4"
+      },
+      {
+        "test": "device-location-runtime.test.ts",
+        "rc": 0,
+        "elapsed_s": 1.35,
+        "log_sha256": "c8cd92020d683a408ab5949688d736617c187f59117376405d05e38949e36636"
+      },
+      {
+        "test": "device-location.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.45,
+        "log_sha256": "f441f2ab71f417ee3298c0e80499d0831c6aaf2a328beda9fac7be9ed8963975"
+      },
+      {
+        "test": "device-registry.test.ts",
+        "rc": 0,
+        "elapsed_s": 2.22,
+        "log_sha256": "3173eb557a8603c0f1a5e2b682d2a00d0d5f2568cb020a3ef1711c075173cea1"
+      },
+      {
+        "test": "device-session.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.91,
+        "log_sha256": "8d190afec9d0392c506387abf6968950153064513f7d4607d080b38032d975dc"
+      },
+      {
+        "test": "fixed-weather.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.6,
+        "log_sha256": "5322f83097d9cc13a828085394f58cb27b8619762d2fe68f8c737d7c2657af87"
+      },
+      {
+        "test": "moji-weather.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.48,
+        "log_sha256": "cbc1081557dc6e42218b9640703533ce3c196a8344d53150aa1f8f40214e4500"
+      },
+      {
+        "test": "search-admin.test.ts",
+        "rc": 0,
+        "elapsed_s": 1.05,
+        "log_sha256": "94ba8b5818f90d94749cd9276b66785cf11da60e564676f70ed63c9c05811d94"
+      },
+      {
+        "test": "search-availability.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.36,
+        "log_sha256": "39fa53bb167a7b6486b43dadbc27db3330a15bec470c4231e215b6a622051c3c"
+      },
+      {
+        "test": "search-boundaries.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.39,
+        "log_sha256": "e5479ca0dcc1754194ad7384686a4405c02bd9523d7c1eb47ad6e7892e87f721"
+      },
+      {
+        "test": "search-canary-admin.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.49,
+        "log_sha256": "5af95979013c19794cd8728636c4b8d329652195af1b9a88846b2630e72c253a"
+      },
+      {
+        "test": "search-canary-isolation.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.34,
+        "log_sha256": "9aa9439184b7f7805458ba56de5c4d7917d41e99e00c240a1c61f29dcbc6b021"
+      },
+      {
+        "test": "search-canary-policy.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.31,
+        "log_sha256": "b71a92f19f5828e3b77f780cfcd563e2e3431e6840beb5c64fb5c02ac3e5d600"
+      },
+      {
+        "test": "search-canary-process.test.ts",
+        "rc": 0,
+        "elapsed_s": 2.13,
+        "log_sha256": "82652245a2bb629c936b16fc9d7b0ac7d38e817a688ea6765dca911aa4352cbe"
+      },
+      {
+        "test": "search-canary-status.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.67,
+        "log_sha256": "a48ad6d9cf3e200f77fe5c629dba05b401cba06850cbcfd7f3a111d7261f2452"
+      },
+      {
+        "test": "search-chat-policy.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.36,
+        "log_sha256": "5bcfc549240dfa18ff3932c5a98e219abd9537e56b10fd60c78e0d8cb1f576c7"
+      },
+      {
+        "test": "search-executor.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.68,
+        "log_sha256": "74aea463289c58361c28caf9ae219463ad0df041b5a82f4a0e27a5f8f97260f0"
+      },
+      {
+        "test": "search-route.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.86,
+        "log_sha256": "2cec351252ed29e032385ec8919f42df2d708794c69536499dac53a7247a2dee"
+      },
+      {
+        "test": "search-routing-admin.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.57,
+        "log_sha256": "5b8c3fd9087838cb9d1e34e2634601211bca24345cbe0e89180a6af0ba7005c8"
+      },
+      {
+        "test": "search-routing-store.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.46,
+        "log_sha256": "e8f9f2661a0d9661f62e0fc1205a1d0849bf785bf50342b7627bd95dbc3e52c8"
+      },
+      {
+        "test": "search-runtime.test.ts",
+        "rc": 0,
+        "elapsed_s": 1.16,
+        "log_sha256": "edb15bca4c18a61690ae7c278284460619ac21df7143763ba39e44c5025e353c"
+      },
+      {
+        "test": "search-tasks.test.ts",
+        "rc": 0,
+        "elapsed_s": 0.68,
+        "log_sha256": "dbf5aecd125f55322dd2e8b6b67eea9e71648dd8e63982434cbb9b8cd15a4e20"
+      },
+      {
+        "test": "search-weather-runtime.test.ts",
+        "rc": 0,
+        "elapsed_s": 1.12,
+        "log_sha256": "080d3e5126126021b31e7c88f8b881ca57db2779efb3c9256eb90df2f021a741"
+      },
+      {
+        "test": "tsc --noEmit",
+        "rc": 0,
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "linux_worker": {
+    "worker": {
+      "sha256": "92dea929b8034b4e20fc2507a5d45e0ffaa13ee83017e09c5c54374ebd06cd51",
+      "bytes": 73352040
+    },
+    "preview": {
+      "sha256": "f2334a92a436dc2a3461110fb4283dac219ae061b69fdbda2a0077b225a8d393",
+      "bytes": 967360
+    },
+    "test_tail": [
+      "test device_grammar::tests::never_panics_on_random_input ... ok",
+      "test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok",
+      "",
+      "test result: ok. 384 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.49s",
+      ""
+    ]
+  },
+  "preview_test_count": 23,
+  "source_hashes": {
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "d19bcc06fd30f876413905ca8e79dd357e0e11269cfdd6e4d2ac3c6ff5e6c98c",
+    "/opt/p003/search-canary-20261021/brain/src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f"
+  },
+  "candidate_env_sha256": "379e2e7b6ed776b3fe8ef3e8abd6b0a2859198b3e06be66b0be320506862c798",
+  "production": {
+    "unchanged_source_count": 122,
+    "unchanged_pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 1457259,
+        "restarts": 34,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ],
+    "unchanged_worker": {
+      "MainPID": "839",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Mon 2026-09-28 15:30:06 UTC",
+      "ActiveState": "active",
+      "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+    }
+  },
+  "cases": [
+    {
+      "id": "C01",
+      "group": "knowledge",
+      "input_indices": [
+        0
+      ],
+      "topic": "恐龙为什么会灭绝",
+      "expected": "小行星/撞击相关原因，不添加未问定量",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670486"
+      ],
+      "rtc_counts": {
+        "knowledge": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 9905,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 27217,
+          "text": "你问的是恐龙为什么灭绝。科学家认为，大约在很久以前，一颗很大的小行星撞上地球，扬起很多灰尘遮住阳光，植物长不好，恐龙找不到吃的，就慢慢消失了。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "3b9206cf-36b2-413a-8e29-c4f8fd08b6de",
+          "created_at_ms": 1792670492274,
+          "ready_at_ms": 1792670495229,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "你问的是恐龙为什么灭绝。科学家认为，大约在很久以前，一颗很大的小行星撞上地球，扬起很多灰尘遮住阳光，植物长不好，恐龙找不到吃的，就慢慢消失了。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence",
+              "answer_rewrites": 1
+            },
+            "sources": [
+              {
+                "title": "恐龙到底是被谁“灭门”的？有了新证据",
+                "url": "https://scicn.casad.cas.cn/wz/202407/t20240712_5025181.html",
+                "date": "2024-07-11T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670493672,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670495673,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670497678,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670515688,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670737824,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "核读因果：小行星撞击、尘埃遮光、食物链受损；无旁枝年代或次数。对非鸟恐龙灭绝的儿童化简述，鸟类演化扩展不在本题验收范围。"
+    },
+    {
+      "id": "C02",
+      "group": "knowledge",
+      "input_indices": [
+        1
+      ],
+      "topic": "中国第一颗人造卫星是什么",
+      "expected": "东方红一号",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670486"
+      ],
+      "rtc_counts": {
+        "knowledge": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 52245,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 64219,
+          "text": "刚才查的是中国第一颗人造卫星。它叫东方红一号，1970年4月24日坐着长征一号火箭飞上太空。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "23970ab5-d12c-43fc-afe0-af12341117c1",
+          "created_at_ms": 1792670534271,
+          "ready_at_ms": 1792670535734,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "刚才查的是中国第一颗人造卫星。它叫东方红一号，1970年4月24日坐着长征一号火箭飞上太空。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "浩瀚星空的东方回响",
+                "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+                "date": "2023-12-10T16:00:00+00:00"
+              },
+              {
+                "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+                "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+                "date": "2017-04-23T16:00:00+00:00"
+              },
+              {
+                "title": "从“东方红一号”到神舟十八号——看航空航天发展",
+                "url": "http://kpzg.people.com.cn/n1/2024/0911/c404214-40317511.html",
+                "date": "2024-09-10T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670535697,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670537698,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670541701,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670551706,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670737824,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "东方红一号、1970-04-24及长征一号一致；正式名称与题目相关日期保留。"
+    },
+    {
+      "id": "C03",
+      "group": "knowledge",
+      "input_indices": [
+        2
+      ],
+      "topic": "潮汐是怎么形成的",
+      "expected": "月亮/太阳/海水，不泛化每日一次等频率",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670486"
+      ],
+      "rtc_counts": {
+        "knowledge": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 93134,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 103755,
+          "text": "刚才查了潮汐怎么形成。主要是月亮和太阳的引力拉着海水，月亮作用更大，海水就一涨一落。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "f80c675c-3d38-4057-a39f-879c64b2b5ab",
+          "created_at_ms": 1792670575221,
+          "ready_at_ms": 1792670576571,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "刚才查了潮汐怎么形成。主要是月亮和太阳的引力拉着海水，月亮作用更大，海水就一涨一落。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "人类没有想到，拯救苏伊士运河的，竟然是它----科学智慧火花",
+                "url": "https://idea.cas.cn/xyx/xyx_lxzwpx/xyx_2021/info/2021/522469.html",
+                "date": null
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670575721,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670577722,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670581724,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670591730,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670737824,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "月亮/太阳引力与海水涨落，未再出现地球一圈导致当地一次潮汐的错误。"
+    },
+    {
+      "id": "C04",
+      "group": "knowledge",
+      "input_indices": [
+        3
+      ],
+      "topic": "火星为什么是红色的",
+      "expected": "含铁矿物氧化/铁锈相关原因",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670486"
+      ],
+      "rtc_counts": {
+        "knowledge": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 134217,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 146905,
+          "text": "刚才查了火星为什么是红色的。火星土里的铁生了锈，变成细细的红色尘土，被风吹满整个星球，所以看起来红红的。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "2b82ae75-66d0-4062-b5af-b93099ce7b0c",
+          "created_at_ms": 1792670616670,
+          "ready_at_ms": 1792670617991,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "刚才查了火星为什么是红色的。火星土里的铁生了锈，变成细细的红色尘土，被风吹满整个星球，所以看起来红红的。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "红色星球为何这么“红”",
+                "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+                "date": "2025-02-25T16:00:00+00:00"
+              },
+              {
+                "title": "中国科学院院刊-国家科学思想库核心媒体",
+                "url": "http://old2022.bulletin.cas.cn/zgkxyyk/ch/reader/view_news.aspx?id=20231227134349001",
+                "date": "2023-12-26T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670617744,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670619745,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670623748,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670635757,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670737824,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "含铁物质氧化成红色尘土的核心原因正确。"
+    },
+    {
+      "id": "C05",
+      "group": "knowledge",
+      "input_indices": [
+        4
+      ],
+      "topic": "熊猫主要吃什么",
+      "expected": "竹子",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670486"
+      ],
+      "rtc_counts": {
+        "knowledge": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 174617,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 184486,
+          "text": "我刚查了熊猫吃什么。熊猫几乎只吃竹子，竹笋、竹叶、竹茎都吃，偶尔也吃点别的。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "e40d89d4-ee90-4f4a-a2fc-7250c0bac5dd",
+          "created_at_ms": 1792670657020,
+          "ready_at_ms": 1792670658750,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "我刚查了熊猫吃什么。熊猫几乎只吃竹子，竹笋、竹叶、竹茎都吃，偶尔也吃点别的。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "【中国科学报】大熊猫为啥吃素也能变“滚滚”",
+                "url": "https://www.cas.cn/cm/202201/t20220119_4822781.shtml",
+                "date": "2022-01-18T16:00:00+00:00"
+              },
+              {
+                "title": "大熊猫野外生态观测站样地监测和生态修复成效显著",
+                "url": "https://www.forestry.gov.cn/c/www/zhzs/670443.jhtml",
+                "date": "2026-06-03T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670657770,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670659771,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670663773,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670671778,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670737824,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "以竹子为主，区分几乎与全部。"
+    },
+    {
+      "id": "C06",
+      "group": "knowledge",
+      "input_indices": [
+        5
+      ],
+      "topic": "含羞草为什么会合上叶子",
+      "expected": "触碰后细胞失水/叶枕变化",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670486"
+      ],
+      "rtc_counts": {
+        "knowledge": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 216455,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 227906,
+          "text": "我查了含羞草合叶的原因：叶子基部有个鼓鼓的叶枕，一被碰到，里面的细胞就失水变软，叶子便合拢下垂。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "5ad35a9a-f4ff-4ed7-a7b1-33b9700a3d79",
+          "created_at_ms": 1792670698668,
+          "ready_at_ms": 1792670700043,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "我查了含羞草合叶的原因：叶子基部有个鼓鼓的叶枕，一被碰到，里面的细胞就失水变软，叶子便合拢下垂。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "湖南省森林植物园举办科普讲座 讲述植物名字里的故事",
+                "url": "http://lyj.hunan.gov.cn/xxgk_71167/gzdt/mtkl/201607/t20160722_3098633.html",
+                "date": "2024-01-29T16:00:00+00:00"
+              },
+              {
+                "title": "520活动“最强大脑—十万个为什么，植物知识趣味有奖问答”答案及解析----中国科学院昆明植物研究所",
+                "url": "http://kbg.kib.cas.cn/tzgg/201912/t20191217_598155.html",
+                "date": "2018-05-20T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670699801,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670701803,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670705805,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670715811,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670737824,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "触碰、叶枕细胞失水与叶子合拢因果对应。"
+    },
+    {
+      "id": "C07",
+      "group": "venues",
+      "input_indices": [
+        0,
+        1
+      ],
+      "topic": "故宫明天开放吗，帮我查一下；随后问烤箱",
+      "expected": "后置分句接管后不在普通聊天补答故宫",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670766"
+      ],
+      "rtc_counts": {
+        "venues": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 19,
+          "audio_voiced_ms": 62630.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 9826,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 27877,
+          "text": "我刚查了故宫的开放时间：故宫周二到周日开门，周一闭馆，法定节假日除外。明天是10月23日星期五，按这个规律应该开放，但临时变动要看官方最新公告。"
+        },
+        {
+          "ms": 49376,
+          "text": "哇，烤箱呀！"
+        },
+        {
+          "ms": 57280,
+          "text": "这个得看看你家烤箱的旋钮哦——一般上面会有温度刻度，转到你想的那个数字就行。"
+        },
+        {
+          "ms": 63877,
+          "text": "不过烤箱是家里的大件，第一次用最好叫上爸爸妈妈一起，安全第一呀。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "0666c03e-6bad-4887-8239-5ca2c65ceaa2",
+          "created_at_ms": 1792670772063,
+          "ready_at_ms": 1792670773211,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "我刚查了故宫的开放时间：故宫周二到周日开门，周一闭馆，法定节假日除外。明天是10月23日星期五，按这个规律应该开放，但临时变动要看官方最新公告。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "參觀_故宮博物院_故宮博物院",
+                "url": "https://intl.dpm.org.cn/visit.html?l=tc",
+                "date": null
+              },
+              {
+                "title": "Visit_The Palace Museum_Visit",
+                "url": "https://intl.dpm.org.cn/visit.html?l=zh",
+                "date": null
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670773844,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670777847,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670795858,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670957965,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "ASR真实拆成问题与帮我查一下；故宫答复明确10/23周五只是按一般开放规律推测，保留临时公告限制。随后烤箱回答仅谈旋钮和成人协助，未再补故宫。"
+    },
+    {
+      "id": "C08",
+      "group": "venues",
+      "input_indices": [
+        2
+      ],
+      "topic": "国家博物馆最新预约方式",
+      "expected": "官方预约方式并保留当前公告限制",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670766"
+      ],
+      "rtc_counts": {
+        "venues": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 19,
+          "audio_voiced_ms": 62630.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 66709,
+          "text": "你是想烤点什么好吃的呢？"
+        },
+        {
+          "ms": 80677,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 98449,
+          "text": "我查了中国国家博物馆的预约方式：用官网或“国家博物馆”微信小程序免费预约，最多提前7天，每天17点放票。小朋友要大人帮忙预约哦。具体安排以官网当前公告为准。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "27b4bfb0-ef45-4505-9dc8-509e150a1703",
+          "created_at_ms": 1792670837912,
+          "ready_at_ms": 1792670839392,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "我查了中国国家博物馆的预约方式：用官网或“国家博物馆”微信小程序免费预约，最多提前7天，每天17点放票。小朋友要大人帮忙预约哦。具体安排以官网当前公告为准。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "参观预约",
+                "url": "https://www.chnmuseum.cn/cg/cgyy/202511/t20251109_277547.shtml",
+                "date": "2025-11-08T16:00:00+00:00"
+              },
+              {
+                "title": "服务_中国国家博物馆官方网站",
+                "url": "https://www.chnmuseum.cn/cg/?eqid=b5f0ceb4001c2485000000026434136d",
+                "date": "2025-11-08T16:00:00+00:00"
+              },
+              {
+                "title": "参观国博实用攻略，请您查收！",
+                "url": "https://www.chnmuseum.cn/zx/gbxw/202609/t20260923_282658.shtml",
+                "date": "2026-09-21T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670839886,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670849892,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670865902,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670957965,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "核读官网/官方小程序、免费预约、提前7日/17点及当前公告限制；不代表已核实时余票或替用户预约。"
+    },
+    {
+      "id": "C09",
+      "group": "venues",
+      "input_indices": [
+        3
+      ],
+      "topic": "最近中国航天新闻",
+      "expected": "近七天符合话题的具体报道",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670766"
+      ],
+      "rtc_counts": {
+        "venues": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 19,
+          "audio_voiced_ms": 62630.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 116259,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 127660,
+          "text": "刚查了中国航天新闻：10月21日，我国在山东日照附近海域用火箭把一颗遥感卫星送上天，发射成功啦。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "f7599340-5985-4617-8130-ab17215bf8ed",
+          "created_at_ms": 1792670878511,
+          "ready_at_ms": 1792670880727,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "刚查了中国航天新闻：10月21日，我国在山东日照附近海域用火箭把一颗遥感卫星送上天，发射成功啦。",
+            "diagnostics": {
+              "returned": 1,
+              "accepted": 1,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence",
+              "provider": "cctv-public-web"
+            },
+            "sources": [
+              {
+                "title": "依托区位优势打造特色IP 航天主题游“圈粉”成文旅新亮点",
+                "url": "https://news.cctv.com/2026/10/21/ARTIs1ERp23XJw1CmgeyXZRm261021.shtml",
+                "date": "2026-10-21T20:35:10+08:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670879911,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670881912,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670883913,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670895921,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670957965,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "具体10/21山东日照海域遥感卫星发射，标题/正文/日期均来自固定央视读取器；未用周年背景替代最新事件。"
+    },
+    {
+      "id": "C10",
+      "group": "venues",
+      "input_indices": [
+        4
+      ],
+      "topic": "央视今天国内新闻",
+      "expected": "当日央视文章正文支持",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792670766"
+      ],
+      "rtc_counts": {
+        "venues": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 19,
+          "audio_voiced_ms": 62630.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 157450,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 167760,
+          "text": "我查了央视今天的国内新闻。10月22日上午，北京举行了纪念红军长征胜利90周年大会。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "980e0d38-efb2-4a46-bca8-ae0e198921c6",
+          "created_at_ms": 1792670919660,
+          "ready_at_ms": 1792670920769,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "我查了央视今天的国内新闻。10月22日上午，北京举行了纪念红军长征胜利90周年大会。",
+            "diagnostics": {
+              "returned": 2,
+              "accepted": 2,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence",
+              "provider": "cctv-public-web"
+            },
+            "sources": [
+              {
+                "title": "习近平出席纪念中国工农红军长征胜利90周年大会并发表重要讲话",
+                "url": "https://news.cctv.com/2026/10/22/ARTI1QeRF5s1rsVsFuk0sxJJ261022.shtml",
+                "date": "2026-10-22T19:45:20+08:00"
+              },
+              {
+                "title": "独家视频丨习近平：在新的长征路上奋力创造新的辉煌",
+                "url": "https://news.cctv.com/2026/10/22/ARTI5uBrhNzRV4fk1c2XU4K3261022.shtml",
+                "date": "2026-10-22T19:29:48+08:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792670919938,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670921940,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792670925942,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792670935950,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792670957965,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "2026-10-22长征纪念大会，来自当日央视两篇正文，与当日日期一致。"
+    },
+    {
+      "id": "C11",
+      "group": "chatcheck",
+      "input_indices": [
+        0
+      ],
+      "topic": "我今天画了一只小猫",
+      "expected": "正常聊天，零搜索",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671888"
+      ],
+      "rtc_counts": {
+        "chatcheck": {
+          "agent_transcripts": 16,
+          "user_transcripts": 7,
+          "metrics": 27,
+          "audio_voiced_ms": 61550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 8587,
+          "text": "哇，画了只小猫呀！"
+        },
+        {
+          "ms": 11538,
+          "text": "它长什么样，是橘色的还是花的？"
+        }
+      ],
+      "tasks": [],
+      "mechanical_assertions": "passed",
+      "semantic_review": "按独立用例重测，正常回应小猫颜色，没有搜索任务。"
+    },
+    {
+      "id": "C12",
+      "group": "chatcheck",
+      "input_indices": [
+        1
+      ],
+      "topic": "天气为什么会变化",
+      "expected": "知识聊天，零固定天气任务",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671888"
+      ],
+      "rtc_counts": {
+        "chatcheck": {
+          "agent_transcripts": 16,
+          "user_transcripts": 7,
+          "metrics": 27,
+          "audio_voiced_ms": 61550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 62687,
+          "text": "哇，这个问题好棒！"
+        },
+        {
+          "ms": 66436,
+          "text": "简单说，是因为太阳晒得不均匀呀。"
+        },
+        {
+          "ms": 72587,
+          "text": "太阳把地面晒热，热空气往上跑，冷空气挤过来，就形成了风。"
+        },
+        {
+          "ms": 80990,
+          "text": "水被晒成水蒸气升上天，碰到冷空气变成小水滴，聚多了就是云，云太重就下雨啦。"
+        },
+        {
+          "ms": 86287,
+          "text": "风、云、雨一起动来动去，天气就一直在变呢。"
+        },
+        {
+          "ms": 90988,
+          "text": "想不想听小可讲一个关于小雨滴旅行的小故事？"
+        }
+      ],
+      "tasks": [],
+      "mechanical_assertions": "passed",
+      "semantic_review": "等上一轮结束后问天气原理，回答太阳加热不均、空气和水循环；未创建地点天气或通用搜索任务。"
+    },
+    {
+      "id": "C13",
+      "group": "chatcheck",
+      "input_indices": [
+        2
+      ],
+      "topic": "烤箱的温度怎么调",
+      "expected": "生活问答，零天气任务",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671888"
+      ],
+      "rtc_counts": {
+        "chatcheck": {
+          "agent_transcripts": 16,
+          "user_transcripts": 7,
+          "metrics": 27,
+          "audio_voiced_ms": 61550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 117487,
+          "text": "烤箱的温度要看它上面的旋钮哦，一般拧到刻度线就是对应的温度，具体得看家里那台的说明书呢。"
+        },
+        {
+          "ms": 123287,
+          "text": "调温度这个事，最好和爸爸妈妈一起动手，热热的地方要小心呀。"
+        },
+        {
+          "ms": 127776,
+          "text": "对了，你刚才说画了小猫，它叫什么名字呀？"
+        }
+      ],
+      "tasks": [],
+      "mechanical_assertions": "passed",
+      "semantic_review": "按独立用例重测，回答烤箱旋钮、刻度及说明书并提示成人协助；没有天气播报/搜索任务。额外连续打断失败另列，未用此通过覆盖。"
+    },
+    {
+      "id": "C14",
+      "group": "chatcheck",
+      "input_indices": [
+        3
+      ],
+      "topic": "不要查北京天气，我们聊小猫",
+      "expected": "否定保护，零搜索",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671888"
+      ],
+      "rtc_counts": {
+        "chatcheck": {
+          "agent_transcripts": 16,
+          "user_transcripts": 7,
+          "metrics": 27,
+          "audio_voiced_ms": 61550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 161987,
+          "text": "不查天气，我们说小猫！"
+        },
+        {
+          "ms": 166036,
+          "text": "它叫什么名字呀，是小可给它起名还是你早想好啦？"
+        }
+      ],
+      "tasks": [],
+      "mechanical_assertions": "passed",
+      "semantic_review": "ASR拆成不要查北京天气与我们聊小猫，明确不查并聊小猫，未创建任务。"
+    },
+    {
+      "id": "C15",
+      "group": "chatcheck",
+      "input_indices": [
+        4,
+        5
+      ],
+      "topic": "帮我查一下；三角龙主要吃什么",
+      "expected": "先澄清后准确查询",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671888"
+      ],
+      "rtc_counts": {
+        "chatcheck": {
+          "agent_transcripts": 16,
+          "user_transcripts": 7,
+          "metrics": 27,
+          "audio_voiced_ms": 61550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 214232,
+          "text": "你想查什么？请说出具体主题，我再帮你查询。"
+        },
+        {
+          "ms": 222315,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 231987,
+          "text": "你问的是三角龙吃什么呀。它是吃植物的恐龙，嘴巴能把硬硬的植物茎切碎来吃。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "a5088a37-0687-4662-86ee-3f120f8ea295",
+          "created_at_ms": 1792672105873,
+          "ready_at_ms": 1792672107013,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "你问的是三角龙吃什么呀。它是吃植物的恐龙，嘴巴能把硬硬的植物茎切碎来吃。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "植食恐龙--三角龙",
+                "url": "http://www.igeo.cgs.gov.cn/bllm/klz/201608/t20160811_352051.html",
+                "date": "2024-04-23T16:00:00+00:00"
+              },
+              {
+                "title": "【科普】霸王龙的“死对头”——三角龙",
+                "url": "https://zrzyt.hlj.gov.cn/zrzyt/C11094/202404/c00_31726993.shtml",
+                "date": "2024-04-17T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792672106774,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792672108776,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792672112779,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792672120784,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792672150809,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "先问具体主题，再接收三角龙问题；本组唯一搜索任务返回植食及咀嚼特点，不误用先前天气或烤箱主题。"
+    },
+    {
+      "id": "C16",
+      "group": "concurrent",
+      "input_indices": [
+        0,
+        1,
+        2
+      ],
+      "topic": "查询火星时继续聊小猫",
+      "expected": "普通聊天与后台任务共存，结果空闲补播",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671162"
+      ],
+      "rtc_counts": {
+        "concurrent": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 8,
+          "audio_voiced_ms": 15260.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 16149,
+          "text": "还有帽子呀，太可爱了！"
+        },
+        {
+          "ms": 20448,
+          "text": "是那种尖尖的魔法帽，还是圆圆的毛线帽呢？"
+        },
+        {
+          "ms": 33548,
+          "text": "我查了火星为什么是红色的。火星土里的铁生了锈，变成氧化铁尘埃，被风吹满整个星球，所以看上去红红的。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "abb7312c-205c-4509-b510-ec6013682c0b",
+          "created_at_ms": 1792671172970,
+          "ready_at_ms": 1792671174693,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "我查了火星为什么是红色的。火星土里的铁生了锈，变成氧化铁尘埃，被风吹满整个星球，所以看上去红红的。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "红色星球为何这么“红”",
+                "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+                "date": "2025-02-25T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792671174113,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671176114,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671190124,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671202131,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671218141,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "真实语音查询火星后接连聊小猫帽子；16149ms已回应帽子，33548ms才播火星结果。聊天没有等待搜索结果，之后有具体检索答案及来源。"
+    },
+    {
+      "id": "C17",
+      "group": "idle",
+      "input_indices": [
+        0
+      ],
+      "topic": "中国第一颗人造卫星叫什么；保持安静",
+      "expected": "无需追问，主动播结果",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671246"
+      ],
+      "rtc_counts": {
+        "idle": {
+          "agent_transcripts": 2,
+          "user_transcripts": 1,
+          "metrics": 3,
+          "audio_voiced_ms": 8390.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 10889,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 20990,
+          "text": "刚才查的是中国第一颗人造卫星。它叫东方红一号，1970年4月24日飞上太空。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "95932774-eb9f-4291-879a-da34a597d029",
+          "created_at_ms": 1792671254955,
+          "ready_at_ms": 1792671256216,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "刚才查的是中国第一颗人造卫星。它叫东方红一号，1970年4月24日飞上太空。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+                "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+                "date": "2017-04-23T16:00:00+00:00"
+              },
+              {
+                "title": "浩瀚星空的东方回响",
+                "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+                "date": "2023-12-10T16:00:00+00:00"
+              },
+              {
+                "title": "从“东方红一号”到神舟十八号——看航空航天发展",
+                "url": "http://kpzg.people.com.cn/n1/2024/0911/c404214-40317511.html",
+                "date": "2024-09-10T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792671256166,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671258167,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671262170,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671270175,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671326210,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "只问一次卫星后保持安静；20990ms主动返回东方红一号及正确发射日期，未靠追问触发。"
+    },
+    {
+      "id": "C18",
+      "group": "resume",
+      "input_indices": [
+        0,
+        1,
+        2
+      ],
+      "topic": "火星结果插话小猫帽子；继续刚才的搜索结果",
+      "expected": "聊天优先，明确续讲属于同一任务",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671355"
+      ],
+      "rtc_counts": {
+        "resume": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 14440.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 10330,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 16941,
+          "text": "我查了火星为什么是红色的。火"
+        },
+        {
+          "ms": 20389,
+          "text": "哇，给小猫画帽子呀！"
+        },
+        {
+          "ms": 22788,
+          "text": "你想要什么样的帽子呢？"
+        },
+        {
+          "ms": 26570,
+          "text": "尖尖的巫师帽，还是软软的毛线帽？"
+        },
+        {
+          "ms": 47686,
+          "text": "星土里有很多铁锈一样的氧化铁，把整颗星球染红了。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "27968b65-6c2b-4936-9a63-27aca9430046",
+          "created_at_ms": 1792671364979,
+          "ready_at_ms": 1792671366384,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [
+            {
+              "previous": "d3fb4fb1-104a-4c53-9333-edd68533f0da",
+              "delivery": "d4b1e2c0-3ef9-4f0d-96d9-053f0aae85f4",
+              "automatic": false,
+              "at": 1792671400329
+            }
+          ],
+          "result": {
+            "text": "我查了火星为什么是红色的。火星土里有很多铁锈一样的氧化铁，把整颗星球染红了。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "红色星球为何这么“红”",
+                "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+                "date": "2025-02-25T16:00:00+00:00"
+              },
+              {
+                "title": "中国科学院院刊-国家科学思想库核心媒体",
+                "url": "http://old2022.bulletin.cas.cn/zgkxyyk/ch/reader/view_news.aspx?id=20231227134349001",
+                "date": "2023-12-26T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792671366235,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671368236,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671372239,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671376241,
+              "status": "delivered",
+              "delivery": "interrupted"
+            },
+            {
+              "at_ms": 1792671402259,
+              "status": "delivered",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671408263,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671450290,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "结果首音频后插话，字幕从原火星结果截断，先回应小猫帽子；明确要求续讲后同一task产生automatic=false重播记录并完成剩余段。按已播放位置续接，断句/听感仍需真机确认。"
+    },
+    {
+      "id": "C19",
+      "group": "cancel",
+      "input_indices": [
+        0,
+        1
+      ],
+      "topic": "查恐龙；不用查了，我们聊别的",
+      "expected": "在途取消生效，之后不播旧结果",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671478"
+      ],
+      "rtc_counts": {
+        "cancel": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 7,
+          "audio_voiced_ms": 5400.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 12280,
+          "text": "我们换个话题聊～"
+        },
+        {
+          "ms": 13980,
+          "text": "你想聊点什么呀？"
+        },
+        {
+          "ms": 18615,
+          "text": "恐龙、星星，还是我给你讲个小故事？"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "128f582b-98a3-4880-8fb8-55ac68e9717e",
+          "created_at_ms": 1792671486258,
+          "ready_at_ms": 1792671488683,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": null,
+          "replays": [],
+          "result": null,
+          "observations": [
+            {
+              "at_ms": 1792671486313,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671490316,
+              "status": "cancelled",
+              "delivery": null
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "服务器实际接单后立即说不用查了/我们聊别的（ASR拆句）；任务在会话关闭前已取消，之后只换话题，无恐龙灭绝搜索结果补播。"
+    },
+    {
+      "id": "C20",
+      "group": "replace",
+      "input_indices": [
+        0,
+        1
+      ],
+      "topic": "查火星；改查第一颗卫星",
+      "expected": "旧任务取消，新任务返回卫星",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671567"
+      ],
+      "rtc_counts": {
+        "replace": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 8550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 15790,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 26500,
+          "text": "你问的是中国第一颗人造卫星的名字，它叫东方红一号，1970年4月24日飞上太空。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "230a37cb-7c17-4826-b7ab-966ec63fdf65",
+          "created_at_ms": 1792671578662,
+          "ready_at_ms": 1792671580031,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": null,
+          "replays": [],
+          "result": {
+            "text": "刚才查了火星为什么是红色的。火星土里含铁的矿物生锈了，变成细细的红尘，被风吹满整个星球，所以看上去红红的。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "红色星球为何这么“红”",
+                "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+                "date": "2025-02-25T16:00:00+00:00"
+              },
+              {
+                "title": "中国科学院院刊-国家科学思想库核心媒体",
+                "url": "http://old2022.bulletin.cas.cn/zgkxyyk/ch/reader/view_news.aspx?id=20231227134349001",
+                "date": "2023-12-26T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792671580375,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671584377,
+              "status": "cancelled",
+              "delivery": null
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        },
+        {
+          "id": "982c2a6d-461a-4baf-bde6-bc68244e0376",
+          "created_at_ms": 1792671583019,
+          "ready_at_ms": 1792671584272,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "你问的是中国第一颗人造卫星的名字，它叫东方红一号，1970年4月24日飞上太空。",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "sources": [
+              {
+                "title": "浩瀚星空的东方回响",
+                "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+                "date": "2023-12-10T16:00:00+00:00"
+              },
+              {
+                "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+                "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+                "date": "2017-04-23T16:00:00+00:00"
+              },
+              {
+                "title": "百年瞬间丨中国第一颗人造地球卫星“东方红一号”",
+                "url": "http://m.news.cctv.com/2021/04/23/ARTI9PXrOvgfWgDpnTlbBcdc210423.shtml",
+                "date": "2021-04-23T16:00:00+00:00"
+              }
+            ]
+          },
+          "observations": [
+            {
+              "at_ms": 1792671584377,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671588380,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671598387,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671632409,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-control",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "火星查询接单后改查卫星，旧task在退出前取消、新task完成，实际只播东方红一号，没有火星旧结果混播。"
+    },
+    {
+      "id": "C21",
+      "group": "geo",
+      "input_indices": [
+        0
+      ],
+      "topic": "今天天气怎么样",
+      "expected": "认证HTTPS入口按网络城市查询；模拟入口来自Air",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "weather_evidence": [
+        {
+          "task_id": "42e2d831-4d9e-43a2-a794-33f8671f1739",
+          "version": "r7-5bd970f225036a447233316e",
+          "city_source": "device_ip",
+          "location_provider": "ip9",
+          "location_observed_at": 1792672193202,
+          "provider": "baidu-public-web",
+          "city_name": "北京",
+          "station_id": "101010100",
+          "province": "北京",
+          "target_date": "2026-10-22",
+          "updated_at": "2026-10-22T20:25:00+08:00",
+          "fetched_at": "2026-10-22T12:30:17.994Z",
+          "cache_hit": false,
+          "metric": "forecast"
+        },
+        {
+          "task_id": "5badd0b6-8458-4ca3-8659-0e26cd795e24",
+          "version": "r7-5bd970f225036a447233316e",
+          "city_source": "explicit",
+          "provider": "baidu-public-web",
+          "city_name": "陕西西安",
+          "station_id": "101110101",
+          "province": "陕西",
+          "target_date": "2026-10-23",
+          "updated_at": "2026-10-22T20:25:00+08:00",
+          "fetched_at": "2026-10-22T12:30:57.194Z",
+          "cache_hit": false,
+          "metric": "forecast"
+        }
+      ],
+      "rooms": [
+        "sn-BJP00326070803800006-1792672193"
+      ],
+      "rtc_counts": {
+        "geo": {
+          "agent_transcripts": 5,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 20250.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [],
+      "tasks": [
+        {
+          "id": "42e2d831-4d9e-43a2-a794-33f8671f1739",
+          "created_at_ms": 1792672217818,
+          "ready_at_ms": 1792672217995,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "按设备网络定位，百度天气预报，北京今天10月22日，白天晴，夜间多云，6到16摄氏度。预报会变化。",
+            "sources": [
+              {
+                "title": "百度天气 · 北京",
+                "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+                "date": "2026-10-22T20:25:00+08:00"
+              }
+            ],
+            "weather": {
+              "provider": "baidu-public-web",
+              "city_name": "北京",
+              "station_id": "101010100",
+              "province": "北京",
+              "target_date": "2026-10-22",
+              "updated_at": "2026-10-22T20:25:00+08:00",
+              "fetched_at": "2026-10-22T12:30:17.994Z",
+              "cache_hit": false,
+              "metric": "forecast"
+            }
+          },
+          "observations": [
+            {
+              "at_ms": 1792672218860,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792672228867,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792672240877,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792672258891,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "natural-weather",
+            "auto_weather": {
+              "day_offset": 0,
+              "metric": "forecast"
+            },
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        },
+        {
+          "id": "5badd0b6-8458-4ca3-8659-0e26cd795e24",
+          "created_at_ms": 1792672257027,
+          "ready_at_ms": 1792672257195,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "百度天气预报，陕西西安明天10月23日，白天多云，夜间晴，10到19摄氏度。预报会变化。",
+            "sources": [
+              {
+                "title": "百度天气 · 陕西西安",
+                "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+                "date": "2026-10-22T20:25:00+08:00"
+              }
+            ],
+            "weather": {
+              "provider": "baidu-public-web",
+              "city_name": "陕西西安",
+              "station_id": "101110101",
+              "province": "陕西",
+              "target_date": "2026-10-23",
+              "updated_at": "2026-10-22T20:25:00+08:00",
+              "fetched_at": "2026-10-22T12:30:57.194Z",
+              "cache_hit": false,
+              "metric": "forecast"
+            }
+          },
+          "observations": [
+            {
+              "at_ms": 1792672258891,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792672262894,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792672272902,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792672290916,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-control",
+            "place_weather": {
+              "place": "陕西西安",
+              "day_offset": 1,
+              "metric": "forecast"
+            },
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "Air直连HTTPS通过认证签票207ms；IP9网络城市北京、百度101010100/10月22日，先聊小猫再播自动天气。明确改查陕西西安后使用101110101/10月23日，优先于网络城市。非实体设备定位/扬声器验收。"
+    },
+    {
+      "id": "C22",
+      "group": "locations",
+      "input_indices": [
+        0
+      ],
+      "topic": "成都明天的天气",
+      "expected": "成都正确地点/目标日",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "weather_evidence": [
+        {
+          "task_id": "9af97418-85f6-42d8-9d5d-7922c4a85123",
+          "version": "r7-5bd970f225036a447233316e",
+          "city_source": "explicit",
+          "provider": "baidu-public-web",
+          "city_name": "四川成都",
+          "station_id": "101270101",
+          "province": "四川",
+          "target_date": "2026-10-23",
+          "updated_at": "2026-10-22T20:20:00+08:00",
+          "fetched_at": "2026-10-22T12:21:10.595Z",
+          "cache_hit": false,
+          "metric": "forecast"
+        }
+      ],
+      "rooms": [
+        "sn-BJP00326070803800006-1792671661"
+      ],
+      "rtc_counts": {
+        "locations": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 26300.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 8995,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 20086,
+          "text": "百度天气预报，四川成都明天10月23日，白天多云，夜间多云，15到21摄氏度。预报会变化。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "9af97418-85f6-42d8-9d5d-7922c4a85123",
+          "created_at_ms": 1792671670369,
+          "ready_at_ms": 1792671670597,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "百度天气预报，四川成都明天10月23日，白天多云，夜间多云，15到21摄氏度。预报会变化。",
+            "sources": [
+              {
+                "title": "百度天气 · 四川成都",
+                "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+                "date": "2026-10-22T20:20:00+08:00"
+              }
+            ],
+            "weather": {
+              "provider": "baidu-public-web",
+              "city_name": "四川成都",
+              "station_id": "101270101",
+              "province": "四川",
+              "target_date": "2026-10-23",
+              "updated_at": "2026-10-22T20:20:00+08:00",
+              "fetched_at": "2026-10-22T12:21:10.595Z",
+              "cache_hit": false,
+              "metric": "forecast"
+            }
+          },
+          "observations": [
+            {
+              "at_ms": 1792671670437,
+              "status": "running",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671672438,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671686448,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671758501,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "natural-weather",
+            "place_weather": {
+              "place": "成都",
+              "day_offset": 1,
+              "metric": "forecast"
+            },
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "四川成都站101270101，目标2026-10-23，20:20更新；实际播15–21℃及白天/夜间多云，保留预报变化提示。"
+    },
+    {
+      "id": "C23",
+      "group": "locations",
+      "input_indices": [
+        1,
+        2
+      ],
+      "topic": "北京市朝阳区；辽宁朝阳市明天天气",
+      "expected": "不同正确站点，不能混用",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "weather_evidence": [
+        {
+          "task_id": "ae50d516-ed69-498e-84e1-7c6b5631e192",
+          "version": "r7-5bd970f225036a447233316e",
+          "city_source": "explicit",
+          "provider": "baidu-public-web",
+          "city_name": "北京朝阳",
+          "station_id": "101010300",
+          "province": "北京",
+          "target_date": "2026-10-23",
+          "updated_at": "2026-10-22T20:20:00+08:00",
+          "fetched_at": "2026-10-22T12:21:41.062Z",
+          "cache_hit": false,
+          "metric": "forecast"
+        },
+        {
+          "task_id": "fcf906f3-fd82-4540-9e13-6ab9a68b5686",
+          "version": "r7-5bd970f225036a447233316e",
+          "city_source": "explicit",
+          "provider": "baidu-public-web",
+          "city_name": "辽宁朝阳",
+          "station_id": "101071201",
+          "province": "辽宁",
+          "target_date": "2026-10-23",
+          "updated_at": "2026-10-22T20:20:00+08:00",
+          "fetched_at": "2026-10-22T12:22:11.088Z",
+          "cache_hit": false,
+          "metric": "forecast"
+        }
+      ],
+      "rooms": [
+        "sn-BJP00326070803800006-1792671661"
+      ],
+      "rtc_counts": {
+        "locations": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 26300.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 39397,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 50294,
+          "text": "百度天气预报，北京朝阳明天10月23日，白天多云，夜间晴，7到17摄氏度。预报会变化。"
+        },
+        {
+          "ms": 69547,
+          "text": "好，我查一下，你可以继续和我聊。"
+        },
+        {
+          "ms": 81474,
+          "text": "百度天气预报，辽宁朝阳明天10月23日，白天晴，夜间晴，6到19摄氏度。预报会变化。"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "ae50d516-ed69-498e-84e1-7c6b5631e192",
+          "created_at_ms": 1792671700773,
+          "ready_at_ms": 1792671701064,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "百度天气预报，北京朝阳明天10月23日，白天多云，夜间晴，7到17摄氏度。预报会变化。",
+            "sources": [
+              {
+                "title": "百度天气 · 北京朝阳",
+                "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+                "date": "2026-10-22T20:20:00+08:00"
+              }
+            ],
+            "weather": {
+              "provider": "baidu-public-web",
+              "city_name": "北京朝阳",
+              "station_id": "101010300",
+              "province": "北京",
+              "target_date": "2026-10-23",
+              "updated_at": "2026-10-22T20:20:00+08:00",
+              "fetched_at": "2026-10-22T12:21:41.062Z",
+              "cache_hit": false,
+              "metric": "forecast"
+            }
+          },
+          "observations": [
+            {
+              "at_ms": 1792671702460,
+              "status": "ready",
+              "delivery": null
+            },
+            {
+              "at_ms": 1792671706463,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671716470,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671758501,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "natural-weather",
+            "place_weather": {
+              "place": "北京市朝阳区",
+              "day_offset": 1,
+              "metric": "forecast"
+            },
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        },
+        {
+          "id": "fcf906f3-fd82-4540-9e13-6ab9a68b5686",
+          "created_at_ms": 1792671730926,
+          "ready_at_ms": 1792671731090,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": "completed",
+          "replays": [],
+          "result": {
+            "text": "百度天气预报，辽宁朝阳明天10月23日，白天晴，夜间晴，6到19摄氏度。预报会变化。",
+            "sources": [
+              {
+                "title": "百度天气 · 辽宁朝阳",
+                "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+                "date": "2026-10-22T20:20:00+08:00"
+              }
+            ],
+            "weather": {
+              "provider": "baidu-public-web",
+              "city_name": "辽宁朝阳",
+              "station_id": "101071201",
+              "province": "辽宁",
+              "target_date": "2026-10-23",
+              "updated_at": "2026-10-22T20:20:00+08:00",
+              "fetched_at": "2026-10-22T12:22:11.088Z",
+              "cache_hit": false,
+              "metric": "forecast"
+            }
+          },
+          "observations": [
+            {
+              "at_ms": 1792671732483,
+              "status": "ready",
+              "delivery": "claimed"
+            },
+            {
+              "at_ms": 1792671748494,
+              "status": "delivered",
+              "delivery": "completed"
+            },
+            {
+              "at_ms": 1792671758501,
+              "status": "cancelled",
+              "delivery": "completed"
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "natural-weather",
+            "place_weather": {
+              "place": "辽宁朝阳市",
+              "day_offset": 1,
+              "metric": "forecast"
+            },
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "北京市朝阳区101010300与辽宁朝阳市101071201是两个站点；均对应10/23但温度分别7–17℃与6–19℃，省份、站点、实际字幕一致。"
+    },
+    {
+      "id": "C24",
+      "group": "disconnect+reconnect",
+      "input_indices": [
+        0
+      ],
+      "topic": "在途查询断连后新房间聊小猫",
+      "expected": "旧任务终止，新房间不串结果；安卓按钮待真机验",
+      "physical_device_hearing": "pending",
+      "status": "passed",
+      "rooms": [
+        "sn-BJP00326070803800006-1792671787",
+        "sn-BJP00326070803800006-1792671824"
+      ],
+      "rtc_counts": {
+        "disconnect": {
+          "agent_transcripts": 0,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "reconnect": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 5,
+          "audio_voiced_ms": 7740.0,
+          "input_ready": 1,
+          "output_ready": 1
+        }
+      },
+      "agent_captions": [
+        {
+          "ms": 5028,
+          "text": "我画的小猫有一顶蓝帽子"
+        },
+        {
+          "ms": 8979,
+          "text": "哇，蓝帽子的小猫！"
+        },
+        {
+          "ms": 11377,
+          "text": "听起来就好可爱呀。"
+        },
+        {
+          "ms": 16330,
+          "text": "它是戴的那种小尖帽，还是软软的毛线帽呢？"
+        }
+      ],
+      "tasks": [
+        {
+          "id": "a689ef9e-b23a-4fd1-ab4f-3bd5668d849e",
+          "created_at_ms": 1792671794303,
+          "ready_at_ms": null,
+          "final_status_after_session_closed": "cancelled",
+          "delivery": null,
+          "replays": [],
+          "result": null,
+          "observations": [
+            {
+              "at_ms": 1792671794533,
+              "status": "cancelled",
+              "delivery": null
+            }
+          ],
+          "routing": {
+            "version": "r7-5bd970f225036a447233316e",
+            "rule_id": "builtin-explicit",
+            "weather_enabled": true,
+            "auto_location_enabled": true,
+            "baidu_weather_enabled": true
+          }
+        }
+      ],
+      "mechanical_assertions": "passed",
+      "semantic_review": "查询确认接单后主动断开RTC，旧任务在关闭记录中取消；新room只聊蓝帽子小猫且0搜索，未带入旧恐龙结果。result.disconnected是在finally主动断连前采样的服务端断开事件标志；实际关闭由closed_sessions、任务取消和最终jobs0证实。安卓返回按钮仍待真机。"
+    }
+  ],
+  "case_counts": {
+    "passed": 24
+  },
+  "rtc": {
+    "collected_at_ms": 1792672306007,
+    "modes": {
+      "venues": {
+        "mode": "venues",
+        "room": "sn-BJP00326070803800006-1792670766",
+        "trace": "search-probe-1792670766",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 19,
+          "audio_voiced_ms": 62630.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1654
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4728,
+            "chars": 7
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5327,
+            "chars": 5
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 9826,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 27877,
+            "chars": 72
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 42534
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 45127,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 49376,
+            "chars": 6
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 57280,
+            "chars": 38
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 63877,
+            "chars": 32
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 66661
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 66709,
+            "chars": 12
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 71177,
+            "chars": 18
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 80677,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 98449,
+            "chars": 78
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 108618
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 111776,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 116259,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 127660,
+            "chars": 48
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 149404
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 152926,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 157450,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 167760,
+            "chars": 42
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 190.3,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "a89dc768955a1302620cc83a33bd189d868058306504795741e78ecef17e529c"
+      },
+      "replace": {
+        "mode": "replace",
+        "room": "sn-BJP00326070803800006-1792671567",
+        "trace": "search-probe-1792671567",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 8550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2451
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6950,
+            "chars": 15
+          },
+          {
+            "event": "task_accepted_server",
+            "ms": 7249
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 7303
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 11300,
+            "chars": 14
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 15790,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 26500,
+            "chars": 40
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 59.5,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "7a66af47e679152f4e841aba1059a4b31931fb6eceab6c4c4eb555b6d842f7b8"
+      },
+      "resume": {
+        "mode": "resume",
+        "room": "sn-BJP00326070803800006-1792671355",
+        "trace": "search-probe-1792671355",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 14440.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2244
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5787,
+            "chars": 12
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 10330,
+            "chars": 16
+          },
+          {
+            "event": "result_first_audio_server",
+            "ms": 11732
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 13933
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 16939,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 16941,
+            "chars": 14
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 20389,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 22788,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 26570,
+            "chars": 16
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 38189
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 41137,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 47686,
+            "chars": 24
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 89.3,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "mars_topic_present": true,
+          "smalltalk_present": true
+        },
+        "captions_sha256": "09a11be07a7df8a44ebc1c2d03e013f3f66afaa4ab6b8fe7db605c7989b3a4bc"
+      },
+      "concurrent": {
+        "mode": "concurrent",
+        "room": "sn-BJP00326070803800006-1792671162",
+        "trace": "search-probe-1792671162",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 8,
+          "audio_voiced_ms": 15260.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1838
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6099,
+            "chars": 16
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 6338
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 8799,
+            "chars": 9
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 9687
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 12399,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 16149,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 20448,
+            "chars": 20
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 33548,
+            "chars": 49
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 49.8,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "fbad618ce0d23b9623a2dc24f53c898ccc39d70280f273741a4b63eab1d2462e"
+      },
+      "geo": {
+        "mode": "geo",
+        "room": "sn-BJP00326070803800006-1792672193",
+        "trace": "synthetic-r11-public-1792672192",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 20250.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 4681
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6655,
+            "chars": 7
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 7643
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 10156,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 13606,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 16405,
+            "chars": 14
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 29033,
+            "chars": 49
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 42492
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 45856,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 50393,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 61373,
+            "chars": 44
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 78.4,
+        "device_heard_verified": false,
+        "content_assertions": {
+          "network_city_disclosed": true,
+          "explicit_xian": true,
+          "smalltalk_present": true
+        },
+        "captions_sha256": "33b2fc17a77b3a2e85b1219e162f07c6c03d40b9a7d44585fa99a14e9a7a810d"
+      },
+      "chatcheck": {
+        "mode": "chatcheck",
+        "room": "sn-BJP00326070803800006-1792671888",
+        "trace": "search-probe-1792671888",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 16,
+          "user_transcripts": 7,
+          "metrics": 27,
+          "audio_voiced_ms": 61550.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1212
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 3638,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 8588,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 11538,
+            "chars": 15
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 52310
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 54938,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 62687,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 66436,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 72587,
+            "chars": 28
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 80990,
+            "chars": 37
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 86287,
+            "chars": 21
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 90988,
+            "chars": 21
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 103157
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 105838,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 117487,
+            "chars": 44
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 123287,
+            "chars": 29
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 127776,
+            "chars": 20
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 154180
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 157388,
+            "chars": 7
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 158037,
+            "chars": 5
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 161987,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 166036,
+            "chars": 23
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 206302
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 208088,
+            "chars": 5
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 214232,
+            "chars": 21
+          },
+          {
+            "event": "synthetic_input",
+            "index": 5,
+            "ms": 215421
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 217837,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 222315,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 231987,
+            "chars": 36
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 260.9,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "980943ecb670023f9e18ba4d0761db63c028b5e41611cca93fe26b93ccc26f28"
+      },
+      "knowledge": {
+        "mode": "knowledge",
+        "room": "sn-BJP00326070803800006-1792670486",
+        "trace": "search-probe-1792670486",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 12,
+          "user_transcripts": 6,
+          "metrics": 18,
+          "audio_voiced_ms": 59210.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2348
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5318,
+            "chars": 13
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 9905,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 27217,
+            "chars": 71
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 43206
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 47318,
+            "chars": 17
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 52245,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 64219,
+            "chars": 46
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 85074
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 88662,
+            "chars": 13
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 93134,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 103755,
+            "chars": 42
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 126008
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 129718,
+            "chars": 14
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 134217,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 146905,
+            "chars": 52
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 167108
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 170068,
+            "chars": 12
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 174617,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 184486,
+            "chars": 38
+          },
+          {
+            "event": "synthetic_input",
+            "index": 5,
+            "ms": 207718
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 211718,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 216455,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 227906,
+            "chars": 48
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 249.8,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "53d26524d0ec6ecad0690134da4c9f8f6e635b819723e08bc5bd1c6b0278a19f"
+      },
+      "locations": {
+        "mode": "locations",
+        "room": "sn-BJP00326070803800006-1792671661",
+        "trace": "search-probe-1792671661",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 26300.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1857
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4447,
+            "chars": 7
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 8995,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 20086,
+            "chars": 45
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 31326
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 34848,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 39397,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 50294,
+            "chars": 43
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 61591
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 64998,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 69547,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 81474,
+            "chars": 42
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 91.9,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "91c8a3e65d7183cff7b1d5c08ae917a01751814425fc6f03bc0b3770141ddbc6"
+      },
+      "disconnect": {
+        "mode": "disconnect",
+        "room": "sn-BJP00326070803800006-1792671787",
+        "trace": "search-probe-1792671787",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 0,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1772
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4909,
+            "chars": 13
+          },
+          {
+            "event": "disconnect_after_submit",
+            "ms": 5029
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 5.0,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "f4fd3a7a8ae0ff69fdf3cfb78bd3800dabad77e1265744c63ee72e1826845f69"
+      },
+      "reconnect": {
+        "mode": "reconnect",
+        "room": "sn-BJP00326070803800006-1792671824",
+        "trace": "search-probe-1792671824",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 5,
+          "audio_voiced_ms": 7740.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1787
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5028,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 8979,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 11377,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 16330,
+            "chars": 20
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 31.8,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "e5b1aeaa3c61bb95263e6a7d3402c8910d755bdd4382e8f52e1519ab2c28d1f0"
+      },
+      "idle": {
+        "mode": "idle",
+        "room": "sn-BJP00326070803800006-1792671246",
+        "trace": "search-probe-1792671246",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 1,
+          "metrics": 3,
+          "audio_voiced_ms": 8390.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2346
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 6350,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 10889,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 20990,
+            "chars": 38
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 76.4,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "64c743bf5f1e48687dde3ef68ddf8f2ff588e0560445201422c3e26fe1dc7a22"
+      },
+      "cancel": {
+        "mode": "cancel",
+        "room": "sn-BJP00326070803800006-1792671478",
+        "trace": "search-probe-1792671478",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 7,
+          "audio_voiced_ms": 5400.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1841
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4881,
+            "chars": 13
+          },
+          {
+            "event": "task_accepted_server",
+            "ms": 5334
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 5408
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 7931,
+            "chars": 4
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 8632,
+            "chars": 5
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 12280,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 13980,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 18615,
+            "chars": 17
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 56.5,
+        "device_heard_verified": false,
+        "content_assertions": {},
+        "captions_sha256": "16c05ad697b3388a2a0076a4b83c77c1157a505b47cbca43e5ad8e0f4b0774d7"
+      }
+    },
+    "tasks": [
+      {
+        "id": "3b9206cf-36b2-413a-8e29-c4f8fd08b6de",
+        "session": "sn-BJP00326070803800006-1792670486",
+        "createdAt": 1792670492274,
+        "readyAt": 1792670495229,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 2955,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670493672,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670495673,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670497678,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670515688,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670737824,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "23970ab5-d12c-43fc-afe0-af12341117c1",
+        "session": "sn-BJP00326070803800006-1792670486",
+        "createdAt": 1792670534271,
+        "readyAt": 1792670535734,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1463,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670535697,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670537698,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670541701,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670551706,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670737824,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "f80c675c-3d38-4057-a39f-879c64b2b5ab",
+        "session": "sn-BJP00326070803800006-1792670486",
+        "createdAt": 1792670575221,
+        "readyAt": 1792670576571,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1350,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670575721,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670577722,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670581724,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670591730,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670737824,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "2b82ae75-66d0-4062-b5af-b93099ce7b0c",
+        "session": "sn-BJP00326070803800006-1792670486",
+        "createdAt": 1792670616670,
+        "readyAt": 1792670617991,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1321,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670617744,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670619745,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670623748,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670635757,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670737824,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "e40d89d4-ee90-4f4a-a2fc-7250c0bac5dd",
+        "session": "sn-BJP00326070803800006-1792670486",
+        "createdAt": 1792670657020,
+        "readyAt": 1792670658750,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1730,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670657770,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670659771,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670663773,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670671778,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670737824,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "5ad35a9a-f4ff-4ed7-a7b1-33b9700a3d79",
+        "session": "sn-BJP00326070803800006-1792670486",
+        "createdAt": 1792670698668,
+        "readyAt": 1792670700043,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1375,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670699801,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670701803,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670705805,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670715811,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670737824,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "0666c03e-6bad-4887-8239-5ca2c65ceaa2",
+        "session": "sn-BJP00326070803800006-1792670766",
+        "createdAt": 1792670772063,
+        "readyAt": 1792670773211,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1148,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670773844,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670777847,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670795858,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670957965,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "27b4bfb0-ef45-4505-9dc8-509e150a1703",
+        "session": "sn-BJP00326070803800006-1792670766",
+        "createdAt": 1792670837912,
+        "readyAt": 1792670839392,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1480,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670839886,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670849892,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670865902,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670957965,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "f7599340-5985-4617-8130-ab17215bf8ed",
+        "session": "sn-BJP00326070803800006-1792670766",
+        "createdAt": 1792670878511,
+        "readyAt": 1792670880727,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 2216,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670879911,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670881912,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670883913,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670895921,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670957965,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "980e0d38-efb2-4a46-bca8-ae0e198921c6",
+        "session": "sn-BJP00326070803800006-1792670766",
+        "createdAt": 1792670919660,
+        "readyAt": 1792670920769,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1109,
+        "active_state_observations": [
+          {
+            "at_ms": 1792670919938,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670921940,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670925942,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670935950,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792670957965,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "abb7312c-205c-4509-b510-ec6013682c0b",
+        "session": "sn-BJP00326070803800006-1792671162",
+        "createdAt": 1792671172970,
+        "readyAt": 1792671174693,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1723,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671174113,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671176114,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671190124,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671202131,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671218141,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "95932774-eb9f-4291-879a-da34a597d029",
+        "session": "sn-BJP00326070803800006-1792671246",
+        "createdAt": 1792671254955,
+        "readyAt": 1792671256216,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1261,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671256166,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671258167,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671262170,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671270175,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671326210,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "27968b65-6c2b-4936-9a63-27aca9430046",
+        "session": "sn-BJP00326070803800006-1792671355",
+        "createdAt": 1792671364979,
+        "readyAt": 1792671366384,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": [
+          {
+            "previous": "d3fb4fb1-104a-4c53-9333-edd68533f0da",
+            "delivery": "d4b1e2c0-3ef9-4f0d-96d9-053f0aae85f4",
+            "automatic": false,
+            "at": 1792671400329
+          }
+        ],
+        "revision": 1,
+        "ready_ms": 1405,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671366235,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671368236,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671372239,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671376241,
+            "status": "delivered",
+            "delivery": "interrupted",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671402259,
+            "status": "delivered",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671408263,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671450290,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "128f582b-98a3-4880-8fb8-55ac68e9717e",
+        "session": "sn-BJP00326070803800006-1792671478",
+        "createdAt": 1792671486258,
+        "readyAt": 1792671488683,
+        "status": "cancelled",
+        "delivery": null,
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 2425,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671486313,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671490316,
+            "status": "cancelled",
+            "delivery": null,
+            "revision": 1
+          }
+        ],
+        "source_count_max": 0,
+        "result_observed_while_active": false
+      },
+      {
+        "id": "230a37cb-7c17-4826-b7ab-966ec63fdf65",
+        "session": "sn-BJP00326070803800006-1792671567",
+        "createdAt": 1792671578662,
+        "readyAt": 1792671580031,
+        "status": "cancelled",
+        "delivery": null,
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1369,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671580375,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671584377,
+            "status": "cancelled",
+            "delivery": null,
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "982c2a6d-461a-4baf-bde6-bc68244e0376",
+        "session": "sn-BJP00326070803800006-1792671567",
+        "createdAt": 1792671583019,
+        "readyAt": 1792671584272,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-control",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 2,
+        "ready_ms": 1253,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671584377,
+            "status": "ready",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792671588380,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792671598387,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792671632409,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 2
+          }
+        ],
+        "source_count_max": 3,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "9af97418-85f6-42d8-9d5d-7922c4a85123",
+        "session": "sn-BJP00326070803800006-1792671661",
+        "createdAt": 1792671670369,
+        "readyAt": 1792671670597,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "place_weather": {
+            "place": "成都",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 228,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671670437,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671672438,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671686448,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671758501,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "ae50d516-ed69-498e-84e1-7c6b5631e192",
+        "session": "sn-BJP00326070803800006-1792671661",
+        "createdAt": 1792671700773,
+        "readyAt": 1792671701064,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "place_weather": {
+            "place": "北京市朝阳区",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 291,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671702460,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671706463,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671716470,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671758501,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "fcf906f3-fd82-4540-9e13-6ab9a68b5686",
+        "session": "sn-BJP00326070803800006-1792671661",
+        "createdAt": 1792671730926,
+        "readyAt": 1792671731090,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "place_weather": {
+            "place": "辽宁朝阳市",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 164,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671732483,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671748494,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792671758501,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "a689ef9e-b23a-4fd1-ab4f-3bd5668d849e",
+        "session": "sn-BJP00326070803800006-1792671787",
+        "createdAt": 1792671794303,
+        "readyAt": null,
+        "status": "cancelled",
+        "delivery": null,
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": null,
+        "active_state_observations": [
+          {
+            "at_ms": 1792671794533,
+            "status": "cancelled",
+            "delivery": null,
+            "revision": 1
+          }
+        ],
+        "source_count_max": 0,
+        "result_observed_while_active": false
+      },
+      {
+        "id": "a5088a37-0687-4662-86ee-3f120f8ea295",
+        "session": "sn-BJP00326070803800006-1792671888",
+        "createdAt": 1792672105873,
+        "readyAt": 1792672107013,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-explicit",
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 1140,
+        "active_state_observations": [
+          {
+            "at_ms": 1792672106774,
+            "status": "running",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672108776,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672112779,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672120784,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672150809,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 2,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "42e2d831-4d9e-43a2-a794-33f8671f1739",
+        "session": "sn-BJP00326070803800006-1792672193",
+        "createdAt": 1792672217818,
+        "readyAt": 1792672217995,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "natural-weather",
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 1,
+        "ready_ms": 177,
+        "active_state_observations": [
+          {
+            "at_ms": 1792672218860,
+            "status": "ready",
+            "delivery": null,
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672228867,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672240877,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 1
+          },
+          {
+            "at_ms": 1792672258891,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 1
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      },
+      {
+        "id": "5badd0b6-8458-4ca3-8659-0e26cd795e24",
+        "session": "sn-BJP00326070803800006-1792672193",
+        "createdAt": 1792672257027,
+        "readyAt": 1792672257195,
+        "status": "cancelled",
+        "delivery": "completed",
+        "routing": {
+          "version": "r7-5bd970f225036a447233316e",
+          "rule_id": "builtin-control",
+          "place_weather": {
+            "place": "陕西西安",
+            "day_offset": 1,
+            "metric": "forecast"
+          },
+          "weather_enabled": true,
+          "auto_location_enabled": true,
+          "baidu_weather_enabled": true
+        },
+        "replays": null,
+        "revision": 2,
+        "ready_ms": 168,
+        "active_state_observations": [
+          {
+            "at_ms": 1792672258891,
+            "status": "ready",
+            "delivery": null,
+            "revision": 2
+          },
+          {
+            "at_ms": 1792672262894,
+            "status": "ready",
+            "delivery": "claimed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792672272902,
+            "status": "delivered",
+            "delivery": "completed",
+            "revision": 2
+          },
+          {
+            "at_ms": 1792672290916,
+            "status": "cancelled",
+            "delivery": "completed",
+            "revision": 2
+          }
+        ],
+        "source_count_max": 1,
+        "result_observed_while_active": true
+      }
+    ],
+    "weather_evidence": [
+      {
+        "task_id": "9af97418-85f6-42d8-9d5d-7922c4a85123",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "四川成都",
+        "station_id": "101270101",
+        "province": "四川",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T20:20:00+08:00",
+        "fetched_at": "2026-10-22T12:21:10.595Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "ae50d516-ed69-498e-84e1-7c6b5631e192",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "北京朝阳",
+        "station_id": "101010300",
+        "province": "北京",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T20:20:00+08:00",
+        "fetched_at": "2026-10-22T12:21:41.062Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "fcf906f3-fd82-4540-9e13-6ab9a68b5686",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "辽宁朝阳",
+        "station_id": "101071201",
+        "province": "辽宁",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T20:20:00+08:00",
+        "fetched_at": "2026-10-22T12:22:11.088Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "42e2d831-4d9e-43a2-a794-33f8671f1739",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "device_ip",
+        "location_provider": "ip9",
+        "location_observed_at": 1792672193202,
+        "provider": "baidu-public-web",
+        "city_name": "北京",
+        "station_id": "101010100",
+        "province": "北京",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T20:25:00+08:00",
+        "fetched_at": "2026-10-22T12:30:17.994Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "5badd0b6-8458-4ca3-8659-0e26cd795e24",
+        "version": "r7-5bd970f225036a447233316e",
+        "city_source": "explicit",
+        "provider": "baidu-public-web",
+        "city_name": "陕西西安",
+        "station_id": "101110101",
+        "province": "陕西",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T20:25:00+08:00",
+        "fetched_at": "2026-10-22T12:30:57.194Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      }
+    ],
+    "closed_sessions": [
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792670486",
+        1792670736717
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792670766",
+        1792670957086
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671162",
+        1792671216709
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671246",
+        1792671325054
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671355",
+        1792671448513
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671478",
+        1792671537874
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671567",
+        1792671631422
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671661",
+        1792671757813
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671787",
+        1792671794448
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671824",
+        1792671858004
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792671888",
+        1792672148956
+      ],
+      [
+        "BJP00326070803800006",
+        "sn-BJP00326070803800006-1792672193",
+        1792672289623
+      ]
+    ]
+  },
+  "first_round_failure": {
+    "room": "sn-BJP00326070803800006-1792669842",
+    "text": "刚查了潮汐怎么形成：主要是月亮和太阳的引力拉着海水，月亮的作用更大。海水被拉得鼓起来，地球转一圈，海边就涨落一次。",
+    "verdict": "failed_content_despite_delivery_completed",
+    "excluded_from_final_passes": true,
+    "fixed_by": "bounded same-evidence rewrite plus strict unsolicited-quantity rejection; full final-version RTC rerun"
+  },
+  "rollback_drill": [
+    {
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "candidate_env_sha256": "379e2e7b6ed776b3fe8ef3e8abd6b0a2859198b3e06be66b0be320506862c798",
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "d19bcc06fd30f876413905ca8e79dd357e0e11269cfdd6e4d2ac3c6ff5e6c98c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f",
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "f2334a92a436dc2a3461110fb4283dac219ae061b69fdbda2a0077b225a8d393"
+      }
+    },
+    {
+      "restored": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "candidate_env_sha256": "c405af967282ae5ca93ce82879600de9612deae05350aa3f189917721953f925",
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "aac96e8131fb8e2f269f2e0a9b1301168a29e32ef8cdba02d0b023e9eff27766",
+        "/opt/p003/search-canary-20261021/brain/src/tools/cctv-news.ts": null,
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "e691d89141cd42607c9de44858f5227941270816ec2ee6cb94954f119d7f9b9d"
+      }
+    },
+    {
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "candidate_env_sha256": "379e2e7b6ed776b3fe8ef3e8abd6b0a2859198b3e06be66b0be320506862c798",
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "d19bcc06fd30f876413905ca8e79dd357e0e11269cfdd6e4d2ac3c6ff5e6c98c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f",
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "f2334a92a436dc2a3461110fb4283dac219ae061b69fdbda2a0077b225a8d393"
+      }
+    }
+  ],
+  "window": {
+    "actually_reopened": true,
+    "resumed_at_ms": 1792672186643,
+    "expires_at_ms": 1792857540000,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "p1": true,
+    "p2": false,
+    "routing_version": "r7-5bd970f225036a447233316e",
+    "real_device_acceptance": "pending",
+    "revision": "R11-mixed-self-test"
+  },
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1792645636237
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 356,
+      "version_name": "1.2.2-canary.342",
+      "last_check_at": 1792669128862
+    }
+  ],
+  "daily_task_counts_including_probes": {
+    "BJP00326060100100004": 76,
+    "BJP00326070803800006": 49
+  },
+  "timers": {
+    "brain": "NextElapseUSecRealtime=Sat 2026-10-24 23:59:00 CST\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+    "worker": "NextElapseUSecRealtime=Sat 2026-10-24 15:59:00 UTC\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+    "future_deadline_has_not_occurred": true
+  },
+  "public_ingress": {
+    "room": "sn-BJP00326070803800006-1792672193",
+    "source": "Air direct HTTPS; not physical P003",
+    "forged_forward_headers_sent": true,
+    "http_ms": 207,
+    "at_ms": 1792672193136
+  },
+  "probe_location_cleanup": {
+    "at_ms": 1792672324259,
+    "synthetic_room": "sn-BJP00326070803800006-1792672193",
+    "deleted_probe_rows": 1,
+    "other_rows_before": 7,
+    "other_rows_after": 7,
+    "remaining_synthetic_rows": 0
+  },
+  "history_handoff": [
+    {
+      "at_ms": 1792670811895,
+      "event": "search history handoff settled",
+      "transferred": true
+    }
+  ],
+  "additional_stress_case": {
+    "status": "unresolved",
+    "scope": "ordinary chat before any search task",
+    "room": "sn-BJP00326070803800006-1792670987",
+    "symptom": "18-second spacing interrupted weather explanation; subsequent oven question was not directly answered and old weather topic resumed",
+    "not_counted_as_independent_case_pass": true,
+    "production_baseline_comparison": "not_performed",
+    "fix_status": "not_modified_this_round"
+  },
+  "physical_device_acceptance": "pending"
+}
