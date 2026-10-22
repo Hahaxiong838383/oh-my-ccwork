@@ -1,8 +1,8 @@
-> 最新入口：2026-10-22 [R7任务路由/墨迹天气验收](R7_ACCEPTANCE_20261022.md)、[16项真机用例](P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261022.md)、[REA分析](MOJI_REA_ANALYSIS_20261022.md)、[实际规则](R7_ROUTING_PROFILE_20261022.json)和[Air交付](R7_AIR_TRANSFER_20261022.json)。16:20:25恢复原两台P1，固定23:59截止，P2关闭，待真机验收。接手重新核实时状态。
+> 最新入口：2026-10-22 [R8设备IP城市定位验收](R8_ACCEPTANCE_20261022.md)、[11项真机用例](P003_SEARCH_IP_LOCATION_DEVICE_TEST_20261022.md)、[IP网站REA分析](IP_LOCATION_REA_ANALYSIS_20261022.md)、[实际规则](R8_ROUTING_PROFILE_20261022.json)和[Air交付](R8_AIR_TRANSFER_20261022.json)。17:09:32恢复原两台P1，固定23:59截止，P2关闭，待真机验收。接手重新核实时状态；R7为此前路由/天气实现记录。
 
 # 小可后台搜索候选交付 · 2026-10-21
 
-**历史归档：R4于北京时间2026-10-22 09:23:52加入00100004。** [R4技术与回滚](R4_TWO_DEVICE_CANARY_20261022.md) · [新增设备回执](P003_SEARCH_CANARY_00100004_RECEIPT_20261022.md)。后续变更以R7为准；历史R4版本与测试不能当当前状态。
+**历史归档：R4于北京时间2026-10-22 09:23:52加入00100004。** [R4技术与回滚](R4_TWO_DEVICE_CANARY_20261022.md) · [新增设备回执](P003_SEARCH_CANARY_00100004_RECEIPT_20261022.md)。后续变更以R8为准；历史R4版本与测试不能当当前状态。
 
 - [接续记忆](MEMORY.md) · [实施经验](RETROSPECTIVE_R3_20261021.md)
 - [R3实际部署、窗口与回滚](R3_FULL_DAY_CANARY_20261021.md)
@@ -12,7 +12,7 @@
 - [可转发设备回执（R3已开P1，待真机）](P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261021.md)
 - [历史 R1 机器可读结果](CANARY_TEST_RESULTS_20261021.json)
 
-下列首版材料与R1—R6均为历史快照；本次有效交接以R7及项目MEMORY为准，历史测试JSON不覆盖后续结果。
+下列首版材料与R1—R7均为历史快照；本次有效交接以R8及项目MEMORY为准，历史测试JSON不覆盖后续结果。
 
 1. [实施、验证与回滚记录](IMPLEMENTATION.md)
 2. [双端协议与配置合同](PROTOCOL.md)
