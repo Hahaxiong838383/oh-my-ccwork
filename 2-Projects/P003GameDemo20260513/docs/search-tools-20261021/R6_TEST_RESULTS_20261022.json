@@ -1,0 +1,1434 @@
+{
+  "window": {
+    "actually_reopened": true,
+    "resumed_at_ms": 1792651341646,
+    "expires_at_ms": 1792684740000,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "p1": true,
+    "p2": false,
+    "real_device_acceptance": "pending",
+    "revision": "R6-search-robustness"
+  },
+  "pre_reopen_server_state": {
+    "worker": {
+      "https_unauthenticated": {
+        "/internal/search-tasks": 401,
+        "/internal/search-tasks/not-an-id/playback": 401
+      },
+      "pid": "754785",
+      "sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+      "production_pid": "839",
+      "production_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792651312584,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792684740000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nActiveState=active\n",
+      "resources": {
+        "memory_available_kb": "6194716",
+        "disk_available_bytes": 73744044032
+      },
+      "escaped_text_keys": []
+    },
+    "brain": {
+      "resources": {
+        "memory_available_kb": "2449624",
+        "disk_available_bytes": 11870470144
+      },
+      "at_ms": 1792651320380,
+      "hashes": {
+        "src/tools/search-executor.ts": "aac96e8131fb8e2f269f2e0a9b1301168a29e32ef8cdba02d0b023e9eff27766",
+        "src/tools/search-tasks.ts": "fedd27c85264dee3dc44b9fe10b655cdad0fc18a6c73fca4b3a47c708d63c0e7",
+        "src/tools/search-runtime.ts": "e06278fb0b13e2ac4ab4491bb928a0e29f5a3d45b3911599ce83fa9d6142bc76",
+        "src/tools/search-chat-policy.ts": "c1279654ee8052207b6f441559c45759c122cb7b5195c26348f6743d467a4733",
+        "src/routes/search-tasks.ts": "8d6b62575df6cf3c5f4cbacad0254ae6e6392c611f8660df57846eb5c5a25fb6",
+        "src/routes/custom-llm.ts": "518adb20062af812e6923fcdd647def5c7f261fd1ada055aadabbdea51d4fb3e",
+        "src/search-canary-guard.ts": "9a079e28b9691d79d8f37275f7b1379ff3ba7327186af87af4e51c2cc061d088"
+      },
+      "production_source_unchanged": true,
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 1204589,
+          "restarts": 29,
+          "status": "online"
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0,
+          "status": "online"
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5,
+          "status": "online"
+        }
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "versions": [
+        {
+          "sn": "BJP00326060100100004",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792645636237
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version_code": 354,
+          "version_name": "1.2.2-canary.340",
+          "last_check_at": 1792642528878
+        }
+      ],
+      "daily_task_counts_including_probes": {
+        "BJP00326060100100004": 44
+      },
+      "flags": {
+        "candidate": {
+          "p003.search.tools": "0",
+          "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.enabled": "1"
+        },
+        "production": {
+          "p003.search.canary.selected_sn": "BJP00326060100100004",
+          "p003.search.canary.enabled": "0",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.agent": "p003-search-canary-20261021",
+          "p003.search.canary.started_at_ms": "1792585650087",
+          "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+        }
+      },
+      "lease": {
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "until_ms": 1792651332561,
+        "ordered_pcm_v1": true
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 23:59:00 CST\nActiveState=active\n"
+    }
+  },
+  "post_reopen_server_state": {
+    "worker": {
+      "https_unauthenticated": {
+        "/internal/search-tasks": 401,
+        "/internal/search-tasks/not-an-id/playback": 401
+      },
+      "pid": "754785",
+      "sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+      "production_pid": "839",
+      "production_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792651352584,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792684740000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nActiveState=active\n",
+      "resources": {
+        "memory_available_kb": "6171652",
+        "disk_available_bytes": 73744035840
+      },
+      "escaped_text_keys": []
+    },
+    "brain": {
+      "resources": {
+        "memory_available_kb": "2448632",
+        "disk_available_bytes": 11870449664
+      },
+      "at_ms": 1792651358300,
+      "hashes": {
+        "src/tools/search-executor.ts": "aac96e8131fb8e2f269f2e0a9b1301168a29e32ef8cdba02d0b023e9eff27766",
+        "src/tools/search-tasks.ts": "fedd27c85264dee3dc44b9fe10b655cdad0fc18a6c73fca4b3a47c708d63c0e7",
+        "src/tools/search-runtime.ts": "e06278fb0b13e2ac4ab4491bb928a0e29f5a3d45b3911599ce83fa9d6142bc76",
+        "src/tools/search-chat-policy.ts": "c1279654ee8052207b6f441559c45759c122cb7b5195c26348f6743d467a4733",
+        "src/routes/search-tasks.ts": "8d6b62575df6cf3c5f4cbacad0254ae6e6392c611f8660df57846eb5c5a25fb6",
+        "src/routes/custom-llm.ts": "518adb20062af812e6923fcdd647def5c7f261fd1ada055aadabbdea51d4fb3e",
+        "src/search-canary-guard.ts": "9a079e28b9691d79d8f37275f7b1379ff3ba7327186af87af4e51c2cc061d088"
+      },
+      "production_source_unchanged": true,
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 1204589,
+          "restarts": 29,
+          "status": "online"
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0,
+          "status": "online"
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5,
+          "status": "online"
+        }
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "versions": [
+        {
+          "sn": "BJP00326060100100004",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792645636237
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version_code": 354,
+          "version_name": "1.2.2-canary.340",
+          "last_check_at": 1792642528878
+        }
+      ],
+      "daily_task_counts_including_probes": {
+        "BJP00326060100100004": 44
+      },
+      "flags": {
+        "candidate": {
+          "p003.search.tools": "0",
+          "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.enabled": "1"
+        },
+        "production": {
+          "p003.search.canary.selected_sn": "BJP00326060100100004",
+          "p003.search.canary.enabled": "1",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.agent": "p003-search-canary-20261021",
+          "p003.search.canary.started_at_ms": "1792585650087",
+          "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+        }
+      },
+      "lease": {
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "until_ms": 1792651372564,
+        "ordered_pcm_v1": true
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 23:59:00 CST\nActiveState=active\n"
+    }
+  },
+  "brain_tests": [
+    {
+      "file": "search-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-availability.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-boundaries.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-canary-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-canary-isolation.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-canary-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-canary-process.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-canary-status.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-chat-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-executor.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-route.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "search-tasks.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "device-session.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "exit-intent.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "device-intent-protocol.test.ts",
+      "rc": 0
+    },
+    {
+      "file": "tsc",
+      "rc": 0
+    }
+  ],
+  "final_executor_tests": 14,
+  "worker_build": {
+    "sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+    "bytes": 72998152,
+    "source_count": 45,
+    "test_tail": [
+      "test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok",
+      "",
+      "test result: ok. 372 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.46s",
+      ""
+    ]
+  },
+  "https_auth": {
+    "responses": {
+      "/internal/search-tasks": 401,
+      "/internal/search-tasks/not-an-id/playback": 401
+    },
+    "running_sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa"
+  },
+  "rtc": {
+    "final_worker_sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+    "synthetic_only": true,
+    "device_heard_verified": false,
+    "modes": {
+      "suffix": {
+        "mode": "suffix",
+        "room": "sn-BJP00326060100100004-1792650873",
+        "trace": "search-probe-1792650873",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 10920.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2093
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5231,
+            "chars": 7
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 5829,
+            "chars": 5
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 10504,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 23200,
+            "chars": 53
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 39.0,
+        "device_heard_verified": false,
+        "tasks": [
+          {
+            "id": "24ffa427-ab73-4682-8441-0fc7ef107aa2",
+            "createdAt": 1792650879801,
+            "readyAt": 1792650881093,
+            "status": "cancelled",
+            "delivery": "completed",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          }
+        ]
+      },
+      "matrix": {
+        "mode": "matrix",
+        "room": "sn-BJP00326060100100004-1792650918",
+        "trace": "search-probe-1792650918",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 17,
+          "user_transcripts": 11,
+          "metrics": 32,
+          "audio_voiced_ms": 63580.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 1316
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 4027,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 9081,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 10829,
+            "chars": 7
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 13326,
+            "chars": 10
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 16842
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 21479,
+            "chars": 15
+          },
+          {
+            "event": "synthetic_input",
+            "index": 2,
+            "ms": 22410
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 25278,
+            "chars": 10
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 29127,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 33129,
+            "chars": 17
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 45777,
+            "chars": 54
+          },
+          {
+            "event": "synthetic_input",
+            "index": 3,
+            "ms": 52839
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 57928,
+            "chars": 21
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 62455,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 73632,
+            "chars": 40
+          },
+          {
+            "event": "synthetic_input",
+            "index": 4,
+            "ms": 85018
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 88927,
+            "chars": 12
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 92828,
+            "chars": 6
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 98978,
+            "chars": 28
+          },
+          {
+            "event": "synthetic_input",
+            "index": 5,
+            "ms": 101940
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 103987,
+            "chars": 5
+          },
+          {
+            "event": "synthetic_input",
+            "index": 6,
+            "ms": 107255
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 109827,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 109828,
+            "chars": 13
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 114429,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 124327,
+            "chars": 36
+          },
+          {
+            "event": "synthetic_input",
+            "index": 7,
+            "ms": 137375
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 140478,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 145056,
+            "chars": 16
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 160529,
+            "chars": 72
+          },
+          {
+            "event": "synthetic_input",
+            "index": 8,
+            "ms": 168241
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 171428,
+            "chars": 2
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 172028,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 176116,
+            "chars": 10
+          },
+          {
+            "event": "synthetic_input",
+            "index": 9,
+            "ms": 180395
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 183227,
+            "chars": 11
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 189445,
+            "chars": 21
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 199.4,
+        "device_heard_verified": false,
+        "tasks": [
+          {
+            "id": "51651264-bfe0-496a-bda8-ada0a4e35842",
+            "createdAt": 1792650940200,
+            "readyAt": 1792650941834,
+            "status": "cancelled",
+            "delivery": "completed",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          },
+          {
+            "id": "e33338c0-8f8f-4a00-ad40-2aaba6ed5259",
+            "createdAt": 1792650976634,
+            "readyAt": 1792650977719,
+            "status": "cancelled",
+            "delivery": "completed",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          },
+          {
+            "id": "de1b3498-33cd-43ea-98c3-25ba111ee172",
+            "createdAt": 1792651028534,
+            "readyAt": 1792651029877,
+            "status": "cancelled",
+            "delivery": "completed",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          },
+          {
+            "id": "efc8a71b-0b8d-4ae4-856f-cd0f8c9cf6f8",
+            "createdAt": 1792651059190,
+            "readyAt": 1792651060579,
+            "status": "cancelled",
+            "delivery": "completed",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          }
+        ]
+      },
+      "early": {
+        "mode": "early",
+        "room": "sn-BJP00326060100100004-1792651234",
+        "trace": "search-probe-1792651234",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 2,
+          "metrics": 8,
+          "audio_voiced_ms": 12230.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "events": [
+          {
+            "event": "synthetic_input",
+            "index": 0,
+            "ms": 2399
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 7011,
+            "chars": 15
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 11662,
+            "chars": 16
+          },
+          {
+            "event": "result_scheduled_server",
+            "ms": 13048
+          },
+          {
+            "event": "synthetic_input",
+            "index": 1,
+            "ms": 13067
+          },
+          {
+            "event": "user_subtitle",
+            "ms": 15711,
+            "chars": 9
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 20069,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 21661,
+            "chars": 8
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 23013,
+            "chars": 6
+          },
+          {
+            "event": "agent_subtitle",
+            "ms": 32409,
+            "chars": 36
+          }
+        ],
+        "disconnected": false,
+        "elapsed_s": 66.6,
+        "device_heard_verified": false,
+        "tasks": [
+          {
+            "id": "2eb718dc-8140-4a4d-9d24-2aecd8380603",
+            "createdAt": 1792651241955,
+            "readyAt": 1792651243455,
+            "status": "cancelled",
+            "delivery": "completed",
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": [
+              {
+                "previous": "95d0b3ee-033e-4f5f-922d-d443f330aaa9",
+                "delivery": "07f48e39-147a-467c-a7e2-bcee6e31b2eb",
+                "automatic": true,
+                "at": 1792651258797
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "matrix_cancel_before_disconnect": {
+      "verified_before_disconnect": true,
+      "at_ms": 1792651092817,
+      "session": "sn-BJP00326060100100004-1792650918",
+      "closed": false,
+      "tasks": [
+        {
+          "id": "51651264-bfe0-496a-bda8-ada0a4e35842",
+          "createdAt": 1792650940200,
+          "readyAt": 1792650941834,
+          "status": "delivered",
+          "delivery": "completed",
+          "replays": null
+        },
+        {
+          "id": "e33338c0-8f8f-4a00-ad40-2aaba6ed5259",
+          "createdAt": 1792650976634,
+          "readyAt": 1792650977719,
+          "status": "delivered",
+          "delivery": "completed",
+          "replays": null
+        },
+        {
+          "id": "de1b3498-33cd-43ea-98c3-25ba111ee172",
+          "createdAt": 1792651028534,
+          "readyAt": 1792651029877,
+          "status": "cancelled",
+          "delivery": "completed",
+          "replays": null
+        },
+        {
+          "id": "efc8a71b-0b8d-4ae4-856f-cd0f8c9cf6f8",
+          "createdAt": 1792651059190,
+          "readyAt": 1792651060579,
+          "status": "cancelled",
+          "delivery": "completed",
+          "replays": null
+        }
+      ]
+    },
+    "intermediate_e7e8_controls": {
+      "worker_sha256": "e7e8b5e6afa0736c93aeba559c0288a139ca6ec6a64ff968600123e3edfc9729",
+      "manual_resume_completed": true,
+      "manual_replay_count": 1,
+      "cancel_verified_before_disconnect": true,
+      "cancel_observed_at_ms": 1792650340365,
+      "sessions": [
+        "sn-BJP00326060100100004-1792650186",
+        "sn-BJP00326060100100004-1792650287"
+      ]
+    },
+    "failures_retained": [
+      "initial e7e8 suffix ASR split clarified instead of searched",
+      "2a5ab7 suffix submit deadlines then empty ledger aborted diagnostic notice; fixed by final f801be8"
+    ],
+    "early_probe_outside_threshold": {
+      "task_id": "3e9a4f22-098c-488f-9684-e04f65078a5b",
+      "played_ms": 1020,
+      "automatic_replay": false,
+      "expected_for_this_timing": true,
+      "eligible_early_replay_test": false
+    },
+    "early_played_ms": 900,
+    "passed": true
+  },
+  "quality": {
+    "r6-quality": {
+      "requests": 22,
+      "categories": {
+        "science": 8,
+        "history": 3,
+        "technology": 2,
+        "culture": 1,
+        "opening": 1,
+        "price": 1,
+        "news": 2,
+        "weather": 2,
+        "finance": 1,
+        "unknown": 1
+      },
+      "outcomes": {
+        "evidence": 19,
+        "filtered": 2,
+        "empty": 1
+      },
+      "rows": [
+        {
+          "category": "science",
+          "elapsed_ms": 1454,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1427,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1442,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1481,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1564,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1293,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1346,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1739,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "history",
+          "elapsed_ms": 1358,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "history",
+          "elapsed_ms": 1270,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 1,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "history",
+          "elapsed_ms": 1578,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "technology",
+          "elapsed_ms": 1535,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "technology",
+          "elapsed_ms": 1529,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "culture",
+          "elapsed_ms": 1393,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "opening",
+          "elapsed_ms": 1385,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "price",
+          "elapsed_ms": 1591,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "news",
+          "elapsed_ms": 468,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 0,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 10,
+            "duplicate": 0,
+            "outcome": "filtered"
+          }
+        },
+        {
+          "category": "news",
+          "elapsed_ms": 1387,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "weather",
+          "elapsed_ms": 1374,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 1,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 9,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "weather",
+          "elapsed_ms": 341,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 0,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 10,
+            "duplicate": 0,
+            "outcome": "filtered"
+          }
+        },
+        {
+          "category": "finance",
+          "elapsed_ms": 1715,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 2,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 8,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "unknown",
+          "elapsed_ms": 337,
+          "diagnostics": {
+            "returned": 0,
+            "accepted": 0,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "empty"
+          }
+        }
+      ]
+    },
+    "r6-quality-refined": {
+      "requests": 12,
+      "categories": {
+        "science": 4,
+        "technology": 3,
+        "history": 2,
+        "culture": 1,
+        "opening": 1,
+        "price": 1
+      },
+      "outcomes": {
+        "evidence": 12
+      },
+      "rows": [
+        {
+          "category": "science",
+          "elapsed_ms": 2812,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "technology",
+          "elapsed_ms": 1428,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "technology",
+          "elapsed_ms": 1652,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "history",
+          "elapsed_ms": 1514,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 2052,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1458,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "science",
+          "elapsed_ms": 1424,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "technology",
+          "elapsed_ms": 3548,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "culture",
+          "elapsed_ms": 1445,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "history",
+          "elapsed_ms": 1574,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "opening",
+          "elapsed_ms": 1665,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        },
+        {
+          "category": "price",
+          "elapsed_ms": 1730,
+          "diagnostics": {
+            "returned": 10,
+            "accepted": 3,
+            "rejected_schema": 0,
+            "rejected_url": 0,
+            "rejected_text": 0,
+            "rejected_date": 0,
+            "duplicate": 0,
+            "outcome": "evidence"
+          }
+        }
+      ]
+    }
+  },
+  "backups": {
+    "brain": {
+      "at_ms": 1792649021020,
+      "backup": "/opt/p003/server/backups/search-canary-R6-20261022T060339Z",
+      "sha256": "8140aec2cca54b58a3150159665a3ffcca6a49d27c724e0698890b2d49373fc0",
+      "new_device": {
+        "sn": "BJP00326060100100004",
+        "status": "active",
+        "has_account": 1
+      },
+      "candidate_accounts_distinct": true,
+      "candidate_count": 2
+    },
+    "worker": {
+      "at_ms": 1792649037287,
+      "backup": "/root/rust-worker/backups/search-canary-R6-20261022T060339Z",
+      "sha256": "86e51f09f50a7a596cbfab044a03cee94d1967ca78b55eb4800eef4b88e0f2ab"
+    }
+  },
+  "final_worker_rollback_drill": {
+    "forward": {
+      "pid": "754745",
+      "sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792650846392,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "rollback": {
+      "pid": "754765",
+      "sha256": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792650855226,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "final": {
+      "pid": "754785",
+      "sha256": "f801be8c5782c7d24efb066ab4548ba63ed044d8f8a3e0fc21468480843facaa",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792650862583,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "at_ms": 1792650863670
+  },
+  "real_device_acceptance": "pending",
+  "no_client_exit_fix": true,
+  "user_transcripts_or_credentials_included": false
+}

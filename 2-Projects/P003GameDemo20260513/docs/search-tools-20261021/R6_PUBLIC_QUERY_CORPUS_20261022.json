@@ -1,0 +1,130 @@
+{
+  "origin": "hand-authored synthetic public queries, not user transcripts",
+  "distinct_queries": 29,
+  "network_runs_across_iterations": 34,
+  "manual_review_required": [
+    "topic relevance",
+    "source validity and freshness",
+    "dates/numbers/statistical scope",
+    "no unsupported extra facts",
+    "explicit uncertainty when evidence is insufficient"
+  ],
+  "queries": [
+    {
+      "category": "science",
+      "query": "水的三态是什么"
+    },
+    {
+      "category": "science",
+      "query": "火星为什么是红色的"
+    },
+    {
+      "category": "science",
+      "query": "月球为什么影响潮汐"
+    },
+    {
+      "category": "science",
+      "query": "三角龙主要吃什么"
+    },
+    {
+      "category": "science",
+      "query": "蜜蜂怎样帮助植物传粉"
+    },
+    {
+      "category": "science",
+      "query": "太阳是恒星还是行星"
+    },
+    {
+      "category": "science",
+      "query": "植物光合作用需要什么"
+    },
+    {
+      "category": "science",
+      "query": "气温变化的原理"
+    },
+    {
+      "category": "history",
+      "query": "中华人民共和国成立的时间"
+    },
+    {
+      "category": "history",
+      "query": "北京2008年奥运会开幕日期"
+    },
+    {
+      "category": "history",
+      "query": "2020年中国人口普查结果"
+    },
+    {
+      "category": "technology",
+      "query": "C++是什么"
+    },
+    {
+      "category": "technology",
+      "query": "互联网路由器有什么作用"
+    },
+    {
+      "category": "culture",
+      "query": "故宫为什么又叫紫禁城"
+    },
+    {
+      "category": "opening",
+      "query": "今天故宫开放吗"
+    },
+    {
+      "category": "price",
+      "query": "上海科技馆门票价格"
+    },
+    {
+      "category": "news",
+      "query": "最近的航天新闻"
+    },
+    {
+      "category": "news",
+      "query": "今年诺贝尔物理学奖"
+    },
+    {
+      "category": "weather",
+      "query": "今天北京的天气"
+    },
+    {
+      "category": "weather",
+      "query": "明天上海会下雨吗"
+    },
+    {
+      "category": "finance",
+      "query": "人民币和美元的汇率"
+    },
+    {
+      "category": "unknown",
+      "query": "不存在的紫色月亮动物园开放时间"
+    },
+    {
+      "category": "science",
+      "query": "天空为什么是蓝色的"
+    },
+    {
+      "category": "science",
+      "query": "企鹅为什么不会飞"
+    },
+    {
+      "category": "technology",
+      "query": "GPS为什么能定位"
+    },
+    {
+      "category": "culture",
+      "query": "端午节有什么传统习俗"
+    },
+    {
+      "category": "history",
+      "query": "中国第一颗人造卫星叫什么"
+    },
+    {
+      "category": "opening",
+      "query": "故宫明天开放吗"
+    },
+    {
+      "category": "price",
+      "query": "上海科技馆现在门票多少钱"
+    }
+  ]
+}
