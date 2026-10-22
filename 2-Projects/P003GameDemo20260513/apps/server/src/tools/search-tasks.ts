@@ -4,13 +4,15 @@ import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export type SearchOwner = { subject: string; session: string };
-export type SearchResult = { text: string; sources: { title: string; url: string; date: string | null }[] };
+export type SearchResult = { diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
 export type SearchTask = SearchOwner & {
   id: string; key: string; turn: string; revision: number;
   status: 'queued' | 'running' | 'ready' | 'delivered' | 'failed' | 'cancelled' | 'expired';
   createdAt: number; deadline: number; readyAt?: number;
   result?: SearchResult; error?: string; claim?: string;
   delivery?: 'claimed' | 'completed' | 'interrupted' | 'dropped' | 'unknown';
+  diagnostics?: import('./search-executor.js').SearchDiagnostics;
+  replays?: { previous: string; delivery: string; automatic: boolean; at: number }[];
 };
 type Options = {
   dbPath: string; execute: (query: string, signal: AbortSignal, owner: SearchOwner) => Promise<SearchResult>;
@@ -129,7 +131,7 @@ export class SearchTasks {
       const current = this.get(t, t.id);
       if (current.status !== 'running' || controller.signal.aborted) return;
       if (!result.text.trim() || [...result.text].length > 150 || /\[\[|\]\]|https?:\/\//i.test(result.text) || result.sources.length > 3) throw new Error('invalid_result');
-      current.result = result; current.status = 'ready'; current.readyAt = this.now(); this.save(current);
+      current.result = result; current.diagnostics = result.diagnostics; current.status = 'ready'; current.readyAt = this.now(); this.save(current);
     } catch (e) {
       if (!this.closed) {
         const current = this.get(t, t.id);
@@ -190,6 +192,31 @@ export class SearchTasks {
     if (t.status !== 'delivered' || !['completed', 'interrupted'].includes(t.delivery ?? '') || !t.result) return fail('not_ready');
     return t;
   }
+  playback(owner: SearchOwner, id: string): SearchTask {
+    if (this.closed || !this.opts.enabled() || !this.opts.allowed(owner.subject)) return fail('disabled');
+    this.tick();
+    const t = this.get(owner, id);
+    if (!t.result || !t.claim || !['ready', 'delivered'].includes(t.status)) return fail('not_ready');
+    return t;
+  }
+  replay(owner: SearchOwner, id: string, previous: string, delivery: string, automatic: boolean): SearchTask {
+    const t = this.playback(owner, id);
+    if (!/^[A-Za-z0-9_-]{1,80}$/.test(delivery) || delivery === previous) return fail('invalid_request');
+    // A lost response may repeat the same attempt, but never spend another attempt.
+    const attempts = t.replays ?? [];
+    const prior = attempts.find(a => a.delivery === delivery);
+    if (prior) {
+      if (prior.previous === previous && prior.automatic === automatic && t.claim === delivery && t.delivery === 'claimed' &&
+          (!automatic || this.now() < t.readyAt! + 60_000)) return t;
+      return fail('not_ready');
+    }
+    if (t.claim !== previous) return fail('claim_mismatch');
+    if (t.status !== 'delivered' || !['completed', 'interrupted'].includes(t.delivery ?? '') || attempts.length >= 8 ||
+        automatic && (t.delivery !== 'interrupted' || attempts.some(a => a.automatic) || this.now() >= t.readyAt! + 60_000)) return fail('not_ready');
+    t.replays = [...attempts, { previous, delivery, automatic, at: this.now() }];
+    t.claim = delivery; t.delivery = 'claimed';
+    this.save(t); return t;
+  }
   receipt(owner: SearchOwner, id: string, delivery: string, outcome: 'completed' | 'interrupted' | 'dropped') {
     const t = this.get(owner, id);
     if (t.claim !== delivery) return fail('claim_mismatch');
@@ -207,7 +234,7 @@ export class SearchTasks {
   }
   audit() {
     return this.all().slice(-100).reverse().map(t => ({ id: t.id, device_suffix: t.subject.slice(-8), turn: t.turn,
-      revision: t.revision, status: t.status, delivery: t.delivery ?? 'pending', error: t.error,
+      revision: t.revision, diagnostics: t.diagnostics, replays: t.replays?.length ?? 0, status: t.status, delivery: t.delivery ?? 'pending', error: t.error,
       created_at: t.createdAt, ready_at: t.readyAt, execution_ms: t.readyAt === undefined ? null : t.readyAt - t.createdAt,
       source_count: t.result?.sources.length ?? 0, sources: t.result?.sources.map(s => ({ url: s.url, date: s.date })) ?? [] }));
   }

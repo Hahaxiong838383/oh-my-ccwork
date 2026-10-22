@@ -1,3 +1,5 @@
+import { searchChatPolicy } from '../tools/search-chat-policy.js';
+import { searchSettings } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
@@ -117,7 +119,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
       if (applied.policyLine) voiceStylePolicy = applied.policyLine;
     }
   }
-  const inOnboarding = !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
+  const searchConfig = searchSettings();
+  const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),enabled:searchConfig.enabled,role:authContext?.role ?? '',room:c.req.query('room') ?? '',allowed:searchConfig.allowed});
+  const inOnboarding = !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
   const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(userText);
@@ -135,6 +139,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
+  if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
   const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';

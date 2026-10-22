@@ -30,7 +30,7 @@ export function getSearchTasks(): SearchTasks | null {
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
         const cfg = getDevicePromptConfig(record.account_id);
         try {
-          const result = await new SearchExecutor({ apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools: searchSettings().tools })
+          const result = await new SearchExecutor({ apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools: searchSettings().tools, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
             .run(query, signal, buildDeviceBase(cfg) + '\n' + (deviceAddendum(cfg) ?? ''));
           availability.success(); return result;
         } catch (e) {

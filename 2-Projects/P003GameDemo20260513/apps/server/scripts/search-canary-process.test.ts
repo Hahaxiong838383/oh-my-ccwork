@@ -34,6 +34,11 @@ try {
  // Auth passed to route; unseeded device is denied, proving no production identity fallback.
  assert.equal((await fetch(base+url,{headers})).status,401);
  assert.equal((await fetch(base+'/v1/internal/search-tasks?room='+room,{headers:{...headers,'x-p003-worker-token':token}})).status,401);
+ for(const action of ['replay','playback']) {
+  const path='/v1/internal/search-tasks/11e0532a-b4a0-48b0-9da6-925b9a7f9e76/'+action+'?room='+room;
+  const options={method:action==='replay'?'POST':'GET',headers:{...headers,'x-p003-worker-token':token}};
+  assert.equal((await fetch(base+path,options)).status,401,'guard must reach route identity check for '+action);
+ }
  assert.equal((await fetch(base+'/v1/admin?room='+room+'&token='+token,{headers})).status,403);
  assert.equal((await fetch(base+'/v1/internal/local-audio-texts?room=sn-BJP00326060100100004-123&token='+token,{headers})).status,401);
  assert.equal((await fetch(base+'/v1/internal/local-audio-texts?room=sn-BJP00326060100200003-123&token='+token,{headers})).status,403);

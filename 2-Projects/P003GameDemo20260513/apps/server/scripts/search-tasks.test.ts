@@ -8,6 +8,37 @@ import { SearchTasks, type SearchResult } from '../src/tools/search-tasks.js';
 const owner = { subject: 'BJP00326070803800006', session: 'sn-BJP00326070803800006-1' };
 const result: SearchResult = { text: '刚才查的开放安排，官网没有说明本周临时调整，请再核对当天公告。', sources: [{ title: '开放安排', url: 'https://www.cstm.org.cn/open', date: null }] };
 const flush = () => new Promise<void>(r => setImmediate(r));
+test('R5 replay uses distinct idempotent claims, one automatic retry and immutable deadlines', async () => {
+  const f = fixture(async () => result);
+  try {
+    const a = f.tasks.submit(owner, request()); await flush();
+    f.tasks.claim(owner, a.id, 'first'); f.tasks.receipt(owner, a.id, 'first', 'interrupted');
+    const retry = f.tasks.replay(owner, a.id, 'first', 'second', true);
+    assert.equal(retry.claim, 'second'); assert.equal(retry.delivery, 'claimed');
+    assert.equal(f.tasks.replay(owner, a.id, 'first', 'second', true).claim, 'second');
+    assert.throws(() => f.tasks.receipt(owner, a.id, 'first', 'completed'), /claim_mismatch/);
+    f.tasks.receipt(owner, a.id, 'second', 'interrupted');
+    assert.throws(() => f.tasks.replay(owner, a.id, 'second', 'third', true), /not_ready/);
+    f.advance(60_000);
+    const manual = f.tasks.replay(owner, a.id, 'second', 'third', false);
+    assert.equal(manual.readyAt, retry.readyAt);
+    f.tasks.receipt(owner, a.id, 'third', 'completed'); f.advance(240_000);
+    assert.throws(() => f.tasks.replay(owner, a.id, 'third', 'fourth', false), /not_ready/);
+  } finally { f.close(); }
+});
+test('R5 automatic replay cannot resurrect expired, cancelled, disabled or foreign tasks', async () => {
+ for (const action of ['timeout','cancel','disable','foreign'] as const) {
+  const f=fixture(async()=>result);
+  try {
+   const a=f.tasks.submit(owner,request()); await flush();
+   f.tasks.claim(owner,a.id,'first'); f.tasks.receipt(owner,a.id,'first','interrupted');
+   if(action==='timeout') f.advance(60_000);
+   if(action==='cancel') f.tasks.cancelSession(owner);
+   if(action==='disable') f.disable();
+   assert.throws(()=>f.tasks.replay(action==='foreign'?{...owner,session:owner.session+'x'}:owner,a.id,'first','second',true), /not_ready|disabled|not_found/);
+  } finally {f.close();}
+ }
+});
 function fixture(execute: (q: string, s: AbortSignal) => Promise<SearchResult>, limits = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'p003-search-'));
   let time = 1_800_000_000_000;

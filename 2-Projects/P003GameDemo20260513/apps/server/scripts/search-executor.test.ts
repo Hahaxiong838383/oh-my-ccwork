@@ -34,7 +34,7 @@ test('P1只Search并单路整理；不外发完整上下文/身份，拒绝无�
   const r = await executor.run('科技馆开放时间', new AbortController().signal, '你叫小可。');
   assert.equal(requests.length, 2);
   assert.equal(requests[0].url, 'https://api.deepseek.com/v1/tools/search');
-  assert.deepEqual(requests[0].body, { query: '科技馆开放时间', count: 3, need_content: false });
+  assert.deepEqual(requests[0].body, { query: '科技馆开放时间 site:cstm.org.cn', count: 10, need_content: false });
   assert.equal(r.sources[0].url, page.url);
   assert.equal(requests[1].body.thinking.type, 'disabled');
   assert.equal(requests[1].body.tools, undefined);
@@ -91,9 +91,46 @@ test('未知工具、换查询、任意Fetch来源不外发；工具失败仍对
   assert.equal(JSON.parse(requests[1].messages.at(-1).content).error,'tool_request_rejected_or_unavailable');
  }
 });
-test('最终回答缺来源或引用不存在时拒绝',async()=>{
- for(const ids of [[],[99]]){
+test('最终回答引用不存在时拒绝',async()=>{
+ for(const ids of [[99]]){
   const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[page]}):new Response(sse(chunk({content:JSON.stringify({text:'开放。',source_ids:ids})},'stop')))) as typeof fetch});
   await assert.rejects(e.run('科技馆开放时间',new AbortController().signal,''),/invalid_answer/);
  }
+});
+
+
+test('R5 scans beyond rejected top three and records bounded filter counts', async () => {
+ const audit: any[]=[]; const bodies:any[]=[];
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],audit:a=>audit.push(a),fetch:(async(url:any,init:any)=>{
+  bodies.push(JSON.parse(init.body));
+  return String(url).endsWith('/search')?Response.json({results:[...Array(3).fill({...page,url:'https://outside.example/a'}),page]}):new Response(final());
+ }) as typeof fetch});
+ const r=await e.run('科技馆开放时间',new AbortController().signal,'');
+ assert.equal(r.sources.length,1);
+ assert.equal(bodies[0].count,10); assert.match(bodies[0].query,/site:cstm.org.cn/);
+ assert.equal(audit[0].rejected_url,3);assert.equal(audit[0].accepted,1);
+ assert.equal(JSON.stringify(audit).includes('科技馆'),false);
+});
+test('R5 today query does not present undated or stale weather as current',async()=>{
+ let calls=0;
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>{calls++;return String(url).endsWith('/search')?Response.json({results:[{...page,date:null},{...page,date:'2000-01-01T00:00:00Z'}]}):new Response(final());})as typeof fetch});
+ const r=await e.run('今天北京的天气',new AbortController().signal,'');
+ assert.equal(r.sources.length,0);assert.equal(calls,1);
+});
+
+test('R5 public HTTP citation is evidence only; it never enables HTTP fetch',async()=>{
+ const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,url:'http://www.cstm.org.cn/open'}]}):new Response(final()))as typeof fetch});
+ const r=await e.run('科技馆开放时间',new AbortController().signal,'');
+ assert.equal(r.sources[0]?.url,'http://www.cstm.org.cn/open');
+ assert.throws(()=>publicUrl('http://www.cstm.org.cn/open',['cstm.org.cn']),/unsafe_url/);
+});
+
+test('R5 explicit historical dates reject current weather and model abstention returns honest no-result',async()=>{
+ let sent:any;
+ const now=new Date().toISOString();
+ const historical=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any,init:any)=>{sent=JSON.parse(init.body);return String(url).endsWith('/search')?Response.json({results:[{...page,date:now}]}):new Response(final());})as typeof fetch});
+ assert.equal((await historical.run('北京2000年1月1日天气',new AbortController().signal,'')).sources.length,0);
+ assert.match(sent.query,/2000年1月1日/);
+ const abstain=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[page]}):new Response(sse(chunk({content:JSON.stringify({text:'资料不支持这个结论。',source_ids:[]})},'stop'))))as typeof fetch});
+ assert.equal((await abstain.run('科技馆开放时间',new AbortController().signal,'')).sources.length,0);
 });

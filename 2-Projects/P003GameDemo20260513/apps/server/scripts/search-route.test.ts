@@ -29,7 +29,13 @@ test('HTTP接单、查询、领取、回执闭环；拒绝未授权/阶段伪造
     const poll = await (await req('/')).json() as any; assert.equal(poll.tasks.length, 1);
     assert.equal(poll.tasks[0].subject, undefined, '响应不额外暴露设备身份');
     assert.equal((await req('/' + task.id + '/claim', { delivery: 'd1' })).status, 200);
-    assert.equal((await req('/' + task.id + '/receipt', { delivery: 'd1', outcome: 'completed' })).status, 200);
+    assert.equal((await req('/' + task.id + '/receipt', { delivery: 'd1', outcome: 'interrupted' })).status, 200);
+    assert.equal((await req('/' + task.id + '/replay', {previous:'d1',delivery:'d2',automatic:true},false)).status,401);
+    assert.equal((await req('/' + task.id + '/replay', {previous:'d1',delivery:'d2',automatic:true,extra:1})).status,400);
+    assert.equal((await req('/' + task.id + '/replay', {previous:'d1',delivery:'d2',automatic:true})).status,200);
+    assert.equal((await req('/' + task.id + '/playback')).status,200);
+    assert.equal((await req('/' + task.id + '/receipt', {delivery:'d1',outcome:'completed'})).status,409);
+    assert.equal((await req('/' + task.id + '/receipt', {delivery:'d2',outcome:'completed'})).status,200);
     assert.equal(((await (await req('/')).json()) as any).tasks.length, 0);
     assert.equal((await req('/session/cancel', {})).status, 200);
     assert.equal((await req('/', { ...input, turn: '2' })).status, 409);
@@ -60,5 +66,11 @@ test('共享v1合同夹具能通过HTTP接单并回传Worker所需字段',async(
   for(const key of Object.keys(fixture.ready))assert.ok(key in body.tasks[0],key);
   assert.ok(body.tasks[0].valid_for_ms>0&&body.tasks[0].valid_for_ms<=fixture.limits.ready_ttl_ms);
   assert.equal(body.tasks[0].result.text,fixture.ready.result.text);
+  const id=body.tasks[0].id;
+  const post=(path:string,value:unknown)=>route.request(path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(value)});
+  assert.equal((await post('/'+id+'/claim',{delivery:fixture.replay.previous})).status,200);
+  assert.equal((await post('/'+id+'/receipt',{delivery:fixture.replay.previous,outcome:'interrupted'})).status,200);
+  assert.equal((await post(fixture.replay_path.replace(':id',id),fixture.replay)).status,200);
+  assert.equal((await route.request(fixture.playback_path.replace(':id',id))).status,200);
  }finally{tasks.close();rmSync(dir,{recursive:true,force:true});}
 });

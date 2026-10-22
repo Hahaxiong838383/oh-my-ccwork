@@ -31,11 +31,21 @@
     "ready_ttl_ms": 300000,
     "automatic_window_ms": 60000,
     "idle_ms": 800,
-    "body_bytes": 8192
+    "body_bytes": 8192,
+    "early_interruption_ms": 1000,
+    "automatic_replays": 1,
+    "replays": 8
   },
   "delivery_outcomes": [
     "completed",
     "interrupted",
     "dropped"
-  ]
+  ],
+  "replay": {
+    "previous": "fixture-attempt-1",
+    "delivery": "fixture-attempt-2",
+    "automatic": true
+  },
+  "playback_path": "/:id/playback",
+  "replay_path": "/:id/replay"
 }

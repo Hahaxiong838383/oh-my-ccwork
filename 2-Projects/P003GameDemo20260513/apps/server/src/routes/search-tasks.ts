@@ -5,6 +5,7 @@ import type { SearchTasks, SearchOwner, SearchTask } from '../tools/search-tasks
 const submit = z.object({ protocol: z.literal(1), phase: z.literal('committed'), turn: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), query: z.string(), replace: z.string().uuid().optional() }).strict();
 const claim = z.object({ delivery: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/) }).strict();
 const receipt = claim.extend({ outcome: z.enum(['completed', 'interrupted', 'dropped']) }).strict();
+const replay = claim.extend({ previous: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), automatic: z.boolean() }).strict();
 const view = (t: SearchTask) => ({ id: t.id, turn: t.turn, revision: t.revision, status: t.status,
   created_at: t.createdAt, deadline: t.deadline, ready_at: t.readyAt, result: t.result,
   delivery: t.delivery, error: t.error,
@@ -51,6 +52,11 @@ export function createSearchRoute(deps: { owner: (c: Context) => Promise<SearchO
     c.get('tasks').cancelSession(c.get('owner')); return c.json({ ok: true });
   });
   route.get('/:id', c => c.json({ task: view(c.get('tasks').resumable(c.get('owner'), c.req.param('id'))) }));
+  route.get('/:id/playback', c => c.json({ task: view(c.get('tasks').playback(c.get('owner'), c.req.param('id'))) }));
+  route.post('/:id/replay', async c => {
+    const input = replay.parse(await boundedSearchBody(c));
+    return c.json({ task: view(c.get('tasks').replay(c.get('owner'), c.req.param('id'), input.previous, input.delivery, input.automatic)) });
+  });
   route.post('/:id/cancel', async c => {
     z.object({}).strict().parse(await boundedSearchBody(c));
     return c.json({ task: view(c.get('tasks').cancel(c.get('owner'), c.req.param('id'))) });

@@ -39,5 +39,5 @@ export function canaryRequestAllowed(i:CanaryRequest) {
     && i.expectedAccount==='search-canary-worker' && i.account===i.expectedAccount
     && Number.isFinite(i.expires) && i.expires>i.now && i.expires-i.now<=36*3600_000
     && (['/v1/chat/completions','/v1/internal/local-audio-texts'].includes(i.path)
-      || /^\/v1\/internal\/search-tasks(?:\/(?:session\/cancel|[a-f0-9-]{36}(?:\/(?:claim|receipt|cancel))?))?$/.test(i.path));
+      || /^\/v1\/internal\/search-tasks(?:\/(?:session\/cancel|[a-f0-9-]{36}(?:\/(?:claim|receipt|cancel|replay|playback))?))?$/.test(i.path));
 }

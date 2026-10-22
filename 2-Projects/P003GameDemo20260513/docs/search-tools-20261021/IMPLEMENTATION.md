@@ -86,3 +86,8 @@ Worker候选源码提交：928dd9fdfee3de4a90130e9d6a64bffe4e8c8f1f。候选产�
 更多执行参数见[协议与启用合同](PROTOCOL.md)，验证步骤见[灰度验收清单](ACCEPTANCE.md)。
 
 署名：codex（OpenAI）| 2026-10-21 北京时间
+
+
+## R5 S04 修复增量
+
+以 `docs/superpowers/plans/2026-10-22-p003-s04-search-followup.md` 与本目录 R5 验收记录为准：补播采用独立播放尝试；不足1000ms且无完整语音段的极早打断最多自动补播一次，保留原期限及空闲门。审核域HTTP搜索引用只作元数据，抓取仍HTTPS-only。P2保持关闭，设备范围和截止不延长。合成RTC只证明链路，S04十次真机复验、实际听觉和端侧退出reason须单列待验。

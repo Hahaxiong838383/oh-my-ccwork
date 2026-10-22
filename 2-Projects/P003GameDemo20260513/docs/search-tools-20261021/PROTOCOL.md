@@ -25,7 +25,7 @@ Worker不为prewarm/speculative提交搜索。常规轮次变化只使旧承接�
 | 方法/后缀 | 输入/用途 | 成功 |
 |---|---|---|
 | POST 空 | `{protocol:1,phase:"committed",turn,query,replace?:旧任务UUID}` | 202 + protocol/task |
-| GET 空 | 查当前会话待处理/待播任务；已完成/打断不会自动回列 | 200 + protocol/tasks |
+| GET 空 | 查当前会话待处理/待播任务；已完成/打断不会由列表重复领取；R5 极早打断通过独立 replay 尝试恢复 | 200 + protocol/tasks |
 | GET /:id | 显式续讲前重新授权、验原结果期限；仅已completed/interrupted | 200 + task |
 | POST /:id/claim | `{delivery}`，原子领取；不同delivery重复领409 | 200 + task |
 | POST /:id/receipt | `{delivery,outcome:"completed"或"interrupted"或"dropped"}` | 200 + task |
@@ -42,7 +42,7 @@ Worker不为prewarm/speculative提交搜索。常规轮次变化只使旧承接�
 - 从创建起20秒含排队；ready起60秒内可自动领取，结果总有效期5分钟。自动领取最多一次。已领取但未得到播出回执而过期，delivery=unknown。
 - 网络不确定的提交仅用同一turn/query/replace重试一次；确定HTTP拒绝不盲重试。不能在未确认时说“已接单/已取消”。
 - Worker连续空闲800ms，且无VAD说话/待ASR裁决/当前回复或TTS/设备命令/首句输入，才可起播。已领取仍持续查状态，最近验证超过1.5秒暂停起播。
-- 插话后不自动整段重播；显式续讲回云端查权限/状态，按既有played_samples/文本进度映射估计余文，不延长原5分钟期限。不是字级语音对齐；极早打断发生在首段TTS进度登记前时，续讲可能重读该短段，需在真机验收中量测。
+- R5：不足1000ms且未完整播完一个语音段的极早插话，在原ready后60秒内最多自动回队一次；超过阈值、第二次打断仍仅显式续讲。普通停、取消、改查、退出和关闸阻止自动回队。显式续讲回云端查权限/状态，按既有played_samples/文本进度映射估计余文，不延长原5分钟期限。不是字级语音对齐；极早打断发生在首段TTS进度登记前时，续讲可能重读该短段，需在真机验收中量测。
 - 大脑重启不重放外网；在途任务记process_interrupted，已领取未结算记unknown，避免重复音频。查询正文只留进程内，账本保存摘要键、状态、公开结果和来源，24小时保留。
 - 关闸/退出销毁待播与可续讲内容。已开始播音的实时撤销受网络和媒体缓冲影响，须真机量测，不能承诺零延迟。
 
@@ -52,7 +52,7 @@ Worker不为prewarm/speculative提交搜索。常规轮次变化只使旧承接�
 |---|---|---|
 | 大脑env | SEARCH_ENABLED=1 | 部署能力前置；缺失默认关闭 |
 | 大脑env | SEARCH_TASK_DB_PATH | 独立SQLite绝对路径，禁止复用人格/埋点数据库 |
-| 大脑env | SEARCH_ALLOWED_DOMAINS | 经审核公开域名CSV；拒绝内网、userinfo、非HTTPS和任意非默认端口 |
+| 大脑env | SEARCH_ALLOWED_DOMAINS | 经审核公开域名CSV；抓取仍拒绝内网、userinfo、非HTTPS和任意非默认端口。R5仅允许搜索HTTPS响应中的审核域HTTP引用元数据，不发HTTP抓取请求 |
 | 大脑env | SEARCH_WORKER_ACCOUNT_ID | 从有效Worker通行证安全核对accountId，不猜值、不记录token；签发脚本当前使用worker-service，现役旧票仍需读回核对 |
 | 大脑env | DEEPSEEK_API_KEY/AUTH_JWT_SECRET | 沿用服务端私有凭据，不进仓库/文档 |
 | configStore热标记 | p003.search.enabled | 仅'1'开启；默认关闭 |
@@ -77,3 +77,16 @@ Worker不为prewarm/speculative提交搜索。常规轮次变化只使旧承接�
 两端开关均需检查，不能只见后台“总闸开启”就宣告功能上线。回滚先热关新任务，再按IMPLEMENTATION.md恢复对应代码/产物，保留账本审计。
 
 署名：codex（OpenAI）| 2026-10-21 北京时间
+
+
+## R5 增量合同（2026-10-22）
+
+protocol 保持1，旧端点保留；候选 Worker 与 Brain 成对升级。
+
+- `POST /:id/replay`：严格字段 `{previous, delivery, automatic}`，均为当前认证会话所属任务；新 delivery 不得等于 previous。同一尝试幂等，旧尝试回执不覆盖新尝试。
+- `GET /:id/playback`：每次续讲/自动补播前及播放中重新检查开关、名单、任务期限；取消/到期拒绝。原 GET /:id 保留旧可续讲语义。
+- 每任务自动补播最多一次、全部续讲尝试最多8次；ready 60秒自动窗口及5分钟保留期限均不刷新。进程丢失的 claimed 标记 unknown，不自动重播。
+- 极早判据使用服务端播放进度和完整语音段；这不是设备实听证明。继续聊天仍走普通对话通道，待完整空闲800ms后才补播。
+- P1每次请求最多10条候选、选最多3条审核来源；确定性附加有界site约束。今天/当前天气按北京时间日期过滤，历史显式日期保留。证据不足返回明确兜底，不能将HTTP200、ready或带来源等同事实验收通过。
+- 诊断仅记录返回/采纳/过滤计数、任务ID和尝试编号，不保存搜索原文。独立候选的能力说明与开关一致，不导入生产个人记忆。
+- 未引入Android pending/terminal新协议；v319约5秒退出仍待端侧原因取证，不宣称兼容性问题已修复。
