@@ -462,6 +462,7 @@
     .analytics-panel .an-catalog-search { max-width:360px;flex:1; }.analytics-panel .an-hour { font-variant-numeric:tabular-nums; }
     @media(max-width:1200px) { .analytics-panel .an-stats,.analytics-panel .an-groups { grid-template-columns:repeat(2,minmax(0,1fr)); }.analytics-panel .an-grid { grid-template-columns:1fr; } }
     @media(max-width:700px) { .analytics-panel .an-heading { align-items:flex-start; }.analytics-panel .an-stats,.analytics-panel .an-groups { grid-template-columns:1fr; } }
+      .routing-fields{border:0;padding:0;min-width:0}.routing-rule{border:1px solid #e2e7ed;border-radius:8px;padding:14px;margin:14px 0}.routing-panel textarea{display:block;width:100%;box-sizing:border-box;padding:9px;border:1px solid #dcdfe6;border-radius:6px;font:inherit;margin:6px 0 12px;resize:vertical}.routing-panel select{max-width:100%;padding:8px;border:1px solid #dcdfe6;border-radius:6px;background:white;font:inherit}.routing-panel .canary-grid label{display:flex;flex-direction:column;gap:6px}.routing-panel input[type=number]{width:65px}.routing-preview{background:#f3f6fa;border-radius:8px;padding:12px;margin-top:12px}.routing-panel fieldset:disabled{opacity:.7}
       .canary-panel{width:100%;min-width:0;padding:24px;box-sizing:border-box}.canary-panel .kh-card{padding:20px;margin-bottom:16px}.canary-panel h3{margin:0 0 14px}.canary-panel p{line-height:1.7}.canary-panel code{overflow-wrap:anywhere}.canary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}.canary-warning{background:#fff7e8;border:1px solid #f2d399;border-radius:10px;padding:15px;margin:16px 0;line-height:1.7;color:#72521c}.canary-warning div{font-size:12px}.canary-device-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}.canary-device-row select{max-width:100%;padding:10px;border:1px solid #dcdfe6;border-radius:7px;background:white;font:inherit}.canary-issue{padding:12px 0;border-top:1px solid #eef1f5}.canary-issue span{font-size:12px;color:#805d23;margin-left:12px}.canary-issue p{margin:6px 0;color:#6b7785;font-size:13px}.canary-panel li{line-height:1.9}
   @media(max-width:760px){.canary-layout .app-aside{width:64px}.canary-layout .app-content{padding:10px}.canary-layout .app-header{padding:0 10px}.canary-layout .app-header .right{display:none}.canary-layout .kh-wrap{flex-direction:column}.canary-layout .kh-nav{width:auto;flex-direction:row;overflow-x:auto;padding:8px}.canary-layout .kh-nav button{white-space:nowrap}.canary-layout .kh-nav .kh-logo,.canary-layout .kh-nav .kh-back{display:none}.canary-layout .canary-panel{padding:12px}.canary-layout .an-heading{flex-wrap:wrap;gap:12px}.canary-layout .canary-panel .kh-card{padding:12px}}
 </style>
@@ -1242,7 +1243,7 @@
               </div>
               <div class="kh-main" style="display:flex;gap:0;padding:0">
                 <section v-if="currentPage==='worker' && khNav==='search-canary' && canManageInvites" class="canary-panel" aria-label="搜索灰度">
-                  <div class="an-heading"><div><div class="kh-h1">搜索灰度</div><div class="kh-sub">单设备体验验收 · 搜索在后台执行，普通聊天继续</div></div><el-button :loading="canary.loading" @click="loadCanary">刷新状态</el-button></div>
+                  <div class="an-heading"><div><div class="kh-h1">搜索灰度</div><div class="kh-sub">按设备灰度验收 · 搜索在后台执行，普通聊天继续</div></div><el-button :loading="canary.loading" @click="loadCanary">刷新状态</el-button></div>
                   <div v-if="canary.error" role="alert" class="canary-warning">{{ canary.error }}。当前状态未知，请勿依据旧数据开窗。</div>
                   <div v-if="!canary.data && !canary.error" class="kh-sub">正在核对灰度状态…</div>
                   <template v-if="canary.data">
@@ -1253,8 +1254,32 @@
                     </div>
                     <div class="kh-card"><h3>灰度设备</h3><label for="canary-device">待测设备（手动选择）</label><div class="canary-device-row"><select id="canary-device" v-model="canary.selected" @change="canary.dirty=true" :disabled="canary.saving || canary.data.summary.dispatch_requested"><option v-for="d in canary.data.devices" :key="d.sn" :value="d.sn" :disabled="!d.eligible">{{ d.sn }}{{ d.eligible ? '' : '（不可用）' }}</option></select><el-button type="primary" :loading="canary.saving" :disabled="!canary.dirty || canary.loading || canary.data.summary.dispatch_requested" @click="saveCanaryDevice">保存待测设备</el-button></div><p class="kh-sub">保存选择不会开窗或改变派单。当前完成隔离准备的设备：{{ canary.data.prepared_sn }}。选择其他设备后需重新准备并验收。</p><p>已保存：<code>{{ canary.data.selected_sn }}</code></p><p v-if="canarySelectedDevice">云端最近自报版本：<b>{{ canarySelectedDevice.version_code == null ? '未知' : 'v'+canarySelectedDevice.version_code }}</b> / {{ canarySelectedDevice.version_name || '未知' }}<br>上报时间：{{ analyticsTime(canarySelectedDevice.version_reported_at_ms) }}；云端上报记录。</p><p v-if="canary.data.operator_confirmation" class="kh-sub">持有人已于 {{ analyticsTime(canary.data.operator_confirmation.at_ms) }} 确认完整SN及 v{{ canary.data.operator_confirmation.version_code }}（{{ canary.data.operator_confirmation.version_name }}）。</p></div>
                     <div class="kh-card"><h3>问题与待验项目</h3><div v-for="issue in canary.data.issues" :key="issue.title" class="canary-issue"><b>{{ issue.title }}</b><span>{{ issue.status }}</span><p>{{ issue.detail }}</p></div></div>
-                    <div class="kh-card"><h3>你需要完成什么</h3><ol><li>保持目标设备开机联网；本次持有人已确认SN与v353，其他待测设备需单独确认。</li><li>目标设备直接体验叠加搜索的效果；其他设备做普通聊天对照，服务端负责统计。</li><li>按实际起止时间结束旧会话并重新进入，按话术测P1搜索、继续聊天及插话；记录实际听到的表现。</li></ol><p>话术：先说“帮我查一下今天北京的天气”，继续聊画猫；安静等待补播。播报时说“先停一下”，随后“继续刚才的搜索结果”；再分别测“取消搜索”“改查上海的天气”和退出重连。</p><p class="kh-sub">服务端负责核对、开窗、日志对账和到期关闭。本次仅一台，截止后自动关闭；P1真机通过后再开放P2。</p></div>
+                    <div class="kh-card"><h3>你需要完成什么</h3><ol><li>保持目标设备开机联网；以本页最近上报时间和现场安装版本核对设备。</li><li>目标设备直接体验叠加搜索的效果；其他设备做普通聊天对照，服务端负责统计。</li><li>按实际起止时间结束旧会话并重新进入，按话术测P1搜索、继续聊天及插话；记录实际听到的表现。</li></ol><p>话术：先说“帮我查一下今天北京的天气”，继续聊画猫；安静等待补播。播报时说“先停一下”，随后“继续刚才的搜索结果”；再分别测“取消搜索”“改查上海的天气”和退出重连。</p><p class="kh-sub">服务端负责核对、开窗、日志对账和到期关闭。仅实际名单中的设备进入候选，截止后自动关闭；P1真机通过后再开放P2。</p></div>
                   </template>
+                  <div class="kh-card routing-panel" aria-label="任务路由配置">
+                    <div class="an-section-head"><h3>任务路由 · 热配置</h3><el-button :loading="routing.loading" :disabled="routing.busy" @click="loadRouting">刷新路由状态</el-button></div>
+                    <p class="kh-sub">草稿不会改变运行。发布后在线候选会话约5～10秒加载；任务执行中仍可正常聊天。身份、窗口及取消指令不由关键词配置覆盖。</p>
+                    <div v-if="routing.error" role="alert" class="canary-warning">{{ routing.error }}</div>
+                    <template v-if="routing.data && routing.draft">
+                      <div class="canary-issue" v-for="t in routing.data.targets" :key="t.sn"><b>{{ t.sn }}</b><p>已发布：<code>{{ t.version }}</code><br>{{ routingLoadLabel(t) }}</p></div>
+                      <p v-if="!routing.data.targets.length" class="kh-sub">尚未发布，Worker 使用保守内置路由。</p>
+                      <fieldset class="routing-fields" :disabled="routing.busy">
+                        <label class="routing-source"><input type="checkbox" v-model="routing.draft.weather_enabled" @change="routingDirty"> 使用墨迹公开天气源（个人测试）</label>
+                        <p class="kh-sub">当前天气、今明后天预报、当前AQI；北京、上海、沈阳、大连、广州、深圳、杭州。缺城市先追问，日期或来源不可靠则说明无法确认。此开关不会开启 P2。</p>
+                        <div v-for="r in routing.draft.rules" :key="r.id" class="routing-rule">
+                          <div class="canary-device-row"><label><input type="checkbox" v-model="r.enabled" @change="routingDirty"> {{ r.id }}</label><label>优先级 <input type="number" min="0" max="1000" v-model.number="r.priority" @input="routingDirty" :aria-label="'优先级 '+r.id"></label><el-button link @click="routingRemove(r.id)">删除规则</el-button></div>
+                          <div class="canary-grid"><label>处理方式<select v-model="r.action" @change="routingDirty" :aria-label="'处理方式 '+r.id"><option value="search">后台搜索</option><option value="weather">天气查询</option><option value="chat">普通聊天</option></select></label><label>匹配方式<select v-model="r.mode" @change="routingDirty" :aria-label="'匹配方式 '+r.id"><option value="prefix">句首表达</option><option value="contains_any">含任意触发词</option><option value="contains_all">含全部触发词</option></select></label></div>
+                          <div class="canary-grid"><label>触发表达（用顿号或换行分隔）<textarea rows="2" :value="r.triggers.join('、')" :aria-label="'触发表达 '+r.id" @input="routingPhrases(r,'triggers',$event)"></textarea></label><label>排除表达<textarea rows="2" :value="r.exclude.join('、')" :aria-label="'排除表达 '+r.id" @input="routingPhrases(r,'exclude',$event)"></textarea></label></div>
+                        </div>
+                        <div class="canary-device-row"><el-button :disabled="routing.draft.rules.length>=32" @click="routingAdd">增加规则</el-button><el-button :disabled="!routing.dirty" @click="saveRoutingDraft">保存路由草稿</el-button><span class="kh-sub">{{ routing.dirty ? '有未保存修改' : '草稿已同步' }} · 修订 {{ routing.editRevision }}</span></div>
+                        <h3 style="margin-top:24px">话术预览</h3><label for="routing-utterances">每行一句，可验证“明天天气 → 北京”的追问承接</label><textarea id="routing-utterances" rows="3" v-model="routing.utterances" @input="routing.preview=null" placeholder="今天北京的天气&#10;我今天画了一只猫"></textarea><el-button @click="previewRoutingDraft">预览路由（不执行搜索）</el-button>
+                        <div v-if="routing.preview" class="routing-preview"><p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : '' }}</span></p></div>
+                        <h3 style="margin-top:24px">发布与回滚</h3><div class="canary-device-row"><label v-for="sn in routing.data.eligible_sns" :key="sn"><input type="checkbox" :value="sn" v-model="routing.sns"> {{ sn }}</label></div><p class="kh-sub">只影响已准备设备的路由，不开窗、不延窗、不改变其他设备。发布前自动执行固定正反例回归。</p>
+                        <div class="canary-device-row"><el-button type="primary" :disabled="routing.dirty || !routing.sns.length" @click="publishRouting">校验并发布路由</el-button><select v-model="routing.rollbackVersion" aria-label="历史路由版本"><option value="">选择历史版本</option><option v-for="v in routing.data.versions" :key="v.version" :value="v.version">{{ v.version }}</option></select><el-button :disabled="!routing.rollbackVersion || !routing.sns.length" @click="rollbackRouting">回滚所选设备</el-button></div>
+                      </fieldset>
+                      <p v-if="routing.notice" role="status">{{ routing.notice }}</p>
+                    </template>
+                  </div>
                 </section>
                 <section v-if="currentPage==='worker' && khNav==='analytics' && canManageInvites" class="analytics-panel" aria-label="数据埋点">
                   <div class="an-heading"><div><div class="kh-h1">数据埋点</div><div class="kh-sub">设备上传、业务事件与结算 · 管理员只读</div></div><el-button size="small" @click="analyticsRefresh">刷新当前页</el-button></div>
@@ -4642,7 +4667,7 @@
         async function loadCanary(){
           if(!canManageInvites.value || canary.loading)return;
           var epoch=authSessionEpoch,token=getToken(),seq=++canary.seq;canary.loading=true;canary.error='';
-          try{var j=await deviceApi('/api/admin/search-canary',{method:'GET'});if(seq!==canary.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'加载失败');canary.data=j;if(!canary.dirty)canary.selected=j.selected_sn;}
+          try{var j=await deviceApi('/api/admin/search-canary',{method:'GET'});if(seq!==canary.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'加载失败');canary.data=j;if(!canary.dirty)canary.selected=j.selected_sn;void loadRouting();}
           catch(e){if(seq===canary.seq&&epoch===authSessionEpoch){canary.error=String(e.message||e);canary.data=null;}}
           finally{if(seq===canary.seq)canary.loading=false;}
         }
@@ -4653,6 +4678,33 @@
           catch(e){if(epoch===authSessionEpoch)ElementPlus.ElMessage.error(String(e.message||e));}finally{canary.saving=false;}
         }
         setInterval(function(){if(!canary.saving&&!document.hidden&&canManageInvites.value&&currentPage.value==='worker'&&khNav.value==='search-canary')loadCanary();},15000);
+
+        var routing=reactive({data:null,draft:null,loading:false,busy:false,dirty:false,error:'',notice:'',seq:0,editRevision:0,sns:[],rollbackVersion:'',utterances:'今天北京的天气\n我今天画了一只猫',preview:null});
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){routing.seq++;routing.data=null;routing.draft=null;routing.loading=false;routing.busy=false;routing.error='';routing.notice='';routing.preview=null;routing.dirty=false;routing.sns=[];}});
+        function routingDirty(){routing.dirty=true;routing.preview=null;routing.notice='';}
+        function routingPhrases(r,k,e){r[k]=e.target.value.split(/[、，,\n]/).map(function(t){return t.trim();}).filter(Boolean);routingDirty();}
+        function routingAdd(){routing.draft.rules.push({id:'custom-'+Date.now(),enabled:true,priority:100,action:'search',mode:'prefix',triggers:['帮我打听一下'],exclude:[]});routingDirty();}
+        function routingRemove(id){routing.draft.rules=routing.draft.rules.filter(function(r){return r.id!==id;});routingDirty();}
+        function routingActionLabel(a){return {search:'后台查询',replace:'替换查询',cancel:'取消查询',resume:'续讲结果',clarify:'追问主题',clarify_city:'追问城市',chat:'继续聊天'}[a]||a;}
+        function routingLoadLabel(t){var l=routing.data.loads.find(function(v){return v.sn===t.sn;});if(!l)return '待设备会话加载，尚无 Worker 确认';return (l.version===t.version?'Worker 已加载此版本':'Worker 仍为 '+l.version)+' · 确认时间 '+analyticsTime(l.at)+(Date.now()-l.at>15000?'（非当前在线证明）':'');}
+        function routingError(e){var s=String(e.message||e);return ({revision_conflict:'草稿被其他操作修改，请刷新核对后重试',outside_canary_scope:'所选设备已不在准备范围',routing_regression_failed:'固定话术回归未通过，未发布',preview_unavailable:'预览程序暂不可用，未发布',preview_timeout:'预览超时，未发布',invalid_request:'配置格式不合法，请检查规则与表达长度'})[s]||s;}
+        function routingAccept(j,replaceDraft){if(!j.ok||!j.draft||!Number.isInteger(j.revision))throw new Error(j.error||'路由状态暂不可用');routing.data=j;if(replaceDraft){routing.draft=JSON.parse(JSON.stringify(j.draft));routing.editRevision=j.revision;routing.dirty=false;}if(j.eligible_sns)routing.sns=routing.sns.filter(function(sn){return j.eligible_sns.includes(sn);});}
+        async function loadRouting(){
+          if(!canManageInvites.value||routing.loading||routing.busy)return;var seq=++routing.seq,epoch=authSessionEpoch,token=getToken();routing.loading=true;routing.error='';
+          try{var j=await deviceApi('/api/admin/search-canary/routing',{method:'GET'});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;routingAccept(j,!routing.dirty);if(!routing.sns.length&&j.eligible_sns.includes(canary.selected))routing.sns=[canary.selected];}
+          catch(e){if(seq===routing.seq&&epoch===authSessionEpoch){routing.error=routingError(e);routing.data=null;}}
+          finally{if(seq===routing.seq)routing.loading=false;}
+        }
+        async function routingMutation(path,method,body,onSuccess){
+          if(routing.busy||!canManageInvites.value)return;var seq=++routing.seq,epoch=authSessionEpoch,token=getToken();routing.loading=false;routing.busy=true;routing.error='';routing.notice='';
+          try{var j=await deviceApi('/api/admin/search-canary/routing'+path,{method:method,body:JSON.stringify(body)});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok){var details=j.regression&&j.regression.failures?j.regression.failures.map(function(f){return f.text+'：应为'+routingActionLabel(f.expected)+'，实际'+routingActionLabel(f.actual);}).join('；'):'';throw new Error(details||j.error||'操作失败');}onSuccess(j);}
+          catch(e){if(seq===routing.seq&&epoch===authSessionEpoch)routing.error=routingError(e);}
+          finally{if(seq===routing.seq)routing.busy=false;}
+        }
+        function saveRoutingDraft(){return routingMutation('/draft','PUT',{expected_revision:routing.editRevision,config:routing.draft},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='草稿已保存，运行版本未改变';});}
+        function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.notice='预览完成，没有执行搜索';});}
+        function publishRouting(){return routingMutation('/publish','POST',{expected_revision:routing.data.revision,sns:routing.sns},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='路由已发布；等待 Worker 加载确认，不等于真机实听通过';});}
+        function rollbackRouting(){return routingMutation('/rollback','POST',{expected_revision:routing.data.revision,sns:routing.sns,version:routing.rollbackVersion},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,!routing.dirty);routing.notice='所选设备已回滚发布，等待 Worker 确认';});}
 
         // ── 数据埋点：admin 专属、GET-only、安全摘要 ──
         var visibleWorkerNavs = computed(function () { return canManageInvites.value ? WORKER_NAVS : WORKER_NAVS.filter(function (n) { return n.k !== 'analytics' && n.k !== 'search-canary'; }); });
@@ -7632,6 +7684,7 @@
         }
 
         return {
+          routing:routing,loadRouting:loadRouting,routingDirty:routingDirty,routingPhrases:routingPhrases,routingAdd:routingAdd,routingRemove:routingRemove,routingLoadLabel:routingLoadLabel,routingActionLabel:routingActionLabel,saveRoutingDraft:saveRoutingDraft,previewRoutingDraft:previewRoutingDraft,publishRouting:publishRouting,rollbackRouting:rollbackRouting,
           canary:canary,canarySelectedDevice:canarySelectedDevice,canaryStateLabel:canaryStateLabel,loadCanary:loadCanary,saveCanaryDevice:saveCanaryDevice,
           visibleWorkerNavs: visibleWorkerNavs,
           analytics: analytics,

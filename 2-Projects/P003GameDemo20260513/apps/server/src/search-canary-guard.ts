@@ -1,7 +1,7 @@
 import { validCanaryAllowlist } from './search-canary-policy.js';
 import { existsSync, realpathSync, readdirSync, lstatSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, relative, isAbsolute, join } from 'node:path';
-const stores = {ACCOUNTS_DB_PATH:'accounts.db',PROFILE_DB_PATH:'profile.db',DEVICES_DB_PATH:'devices.db',CONFIG_DB_PATH:'config.db',CONVERSATION_DB_PATH:'conversation.db',FEEDBACK_DB_PATH:'feedback.db',TELEMETRY_DB_PATH:'telemetry.db',DIAGNOSTICS_DB_PATH:'diagnostics.db',OTA_DB_PATH:'ota.db',PAIRING_DB_PATH:'pairing.db',SMS_DB_PATH:'sms.db',SEARCH_TASK_DB_PATH:'search.db'};
+const stores = {ACCOUNTS_DB_PATH:'accounts.db',PROFILE_DB_PATH:'profile.db',DEVICES_DB_PATH:'devices.db',CONFIG_DB_PATH:'config.db',CONVERSATION_DB_PATH:'conversation.db',FEEDBACK_DB_PATH:'feedback.db',TELEMETRY_DB_PATH:'telemetry.db',DIAGNOSTICS_DB_PATH:'diagnostics.db',OTA_DB_PATH:'ota.db',PAIRING_DB_PATH:'pairing.db',SMS_DB_PATH:'sms.db',SEARCH_TASK_DB_PATH:'search.db',SEARCH_ROUTING_DB_PATH:'search-routing.db'};
 export function canarySns(raw:string|undefined):string[] { const list=(raw||'').split(','); return validCanaryAllowlist(list)?list:[]; }
 export function canaryMaxJobs(raw:string|undefined):number { return raw===undefined||raw==='1'?1:raw==='2'?2:0; }
 function canonical(path:string):string {
@@ -38,6 +38,6 @@ export function canaryRequestAllowed(i:CanaryRequest) {
     && /^sn-BJP003\d{14}-\d{1,20}$/.test(i.room) && i.role==='device'
     && i.expectedAccount==='search-canary-worker' && i.account===i.expectedAccount
     && Number.isFinite(i.expires) && i.expires>i.now && i.expires-i.now<=36*3600_000
-    && (['/v1/chat/completions','/v1/internal/local-audio-texts'].includes(i.path)
+    && (['/v1/chat/completions','/v1/internal/local-audio-texts','/v1/internal/search-tasks/routing','/v1/internal/search-tasks/routing/ack'].includes(i.path)
       || /^\/v1\/internal\/search-tasks(?:\/(?:session\/cancel|[a-f0-9-]{36}(?:\/(?:claim|receipt|cancel|replay|playback))?))?$/.test(i.path));
 }

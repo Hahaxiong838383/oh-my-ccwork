@@ -1,4 +1,4 @@
-import { searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
+import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
 import { searchSettings } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
@@ -134,7 +134,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // override（工作台调的 prompt）优先：直接用它（自带完整内容）；否则走固定大脑组装。
   let systemPrompt = overridePrompt
     ? overridePrompt
-    : assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
+    : assembleSystemPrompt(searchCapabilityBase(base,searchPolicy.suppressOnboarding), null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
@@ -244,7 +244,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
-    const searchClaimFilter = createSearchClaimFilter(searchPolicy.suppressOnboarding && /查|搜|上网|联网/.test(userText));
+    const searchClaimFilter = createSearchClaimFilter(searchPolicy.suppressOnboarding && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText));
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));

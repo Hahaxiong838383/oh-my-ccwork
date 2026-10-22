@@ -17,6 +17,14 @@ try {
  assert.throws(()=>prepareCanaryEnvironment({...env,PROFILE_DB_PATH:join(root,'escape/profile.db')}));
  const base={path:'/v1/chat/completions',room:'sn-BJP00326070803800006-123',sn:'BJP00326070803800006',account:'search-canary-worker',expectedAccount:'search-canary-worker',role:'device',expires:2000,now:1000};
  assert.equal(canaryRequestAllowed(base),true);
+ for(const path of ['/v1/internal/search-tasks/routing','/v1/internal/search-tasks/routing/ack']) {
+  assert.equal(canaryRequestAllowed({...base,path}),true);
+  assert.equal(canaryRequestAllowed({...base,path,expires:1000}),false);
+  assert.equal(canaryRequestAllowed({...base,path,room:'sn-BJP00326060100100004-123'}),false);
+  assert.equal(canaryRequestAllowed({...base,path:path+'/extra'}),false);
+ }
+ assert.ok(env.SEARCH_ROUTING_DB_PATH?.startsWith(realpathSync(root)+'/'));
+ assert.throws(()=>prepareCanaryEnvironment({...env,SEARCH_ROUTING_DB_PATH:join(prod,'routing.db')}));
  for(const action of ['replay','playback']) {
   const path='/v1/internal/search-tasks/11e0532a-b4a0-48b0-9da6-925b9a7f9e76/'+action;
   assert.equal(canaryRequestAllowed({...base,path}),true,action+' must pass candidate guard');

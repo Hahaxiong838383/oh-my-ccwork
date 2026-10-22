@@ -1,3 +1,7 @@
+export function searchCapabilityBase(base:string,enabled:boolean):string {
+ if(!enabled)return base;
+ return base.replaceAll('小可还查不到呢，等我长大一些试试看！','这件事我还不能确认。');
+}
 /** Candidate-only capability description. No user profile copying or search execution. */
 export function searchChatPolicy(input: {candidate:boolean;enabled:boolean;role:string;room:string;allowed:string[]}) {
  const sn=/^sn-(BJP003\d{14})-\d+$/.exec(input.room)?.[1];
@@ -25,7 +29,8 @@ export function createSearchClaimFilter(enabled: boolean) {
    || /(?:搜索|查询)(?:已经|已|正在|还没|没有)?(?:完成|开始|接单|取消|结束|失败)/.test(t)
    || /(?:我|小可)(?:来|会)?帮你看看/.test(t)
    || /^(?:稍等|请稍等|等我)[一下会儿哦呀啦]*[。！!？?]?$/.test(t);
-  return claim ? fallback() : sentence;
+  const denial=/(?:我|小可)[^。！？!?]{0,18}(?:还查不到|还没法查|不能查|无法查|没有搜索能力)|等我长大/.test(t);
+  return claim||denial ? fallback() : sentence;
  };
  return {
   feed(delta: string): string {

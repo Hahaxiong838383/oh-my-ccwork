@@ -170,3 +170,12 @@ test('持久日配额与上游熔断只拦新单，已接单幂等查询仍可�
     try{assert.equal(reopened.submit(owner,request()).id,a.id);assert.throws(()=>reopened.submit(owner,request('2')),/daily_limit/);}finally{reopened.close();}
   }finally{f.close();}
 });
+
+test('R7 route version is frozen at admission and retries do not re-resolve it',async()=>{
+ const dir=mkdtempSync(join(tmpdir(),'routing-task-'));let enabled=false,calls=0;
+ const t=new SearchTasks({dbPath:join(dir,'tasks.db'),enabled:()=>true,allowed:()=>true,resolveRouting:()=>{calls++;return {version:'old',rule_id:'natural-weather',weather_enabled:enabled};},execute:async()=>result} as any);
+ try {const input={...request('r7'),routing:{version:'old',rule_id:'natural-weather'}};
+  const a=t.submit(owner,input as any);assert.equal((a as any).routing.weather_enabled,false);enabled=true;
+  assert.equal(t.submit(owner,input as any).id,a.id);assert.equal(calls,1);assert.equal((t.get(owner,a.id) as any).routing.weather_enabled,false);
+ }finally{t.close();rmSync(dir,{recursive:true,force:true});}
+});

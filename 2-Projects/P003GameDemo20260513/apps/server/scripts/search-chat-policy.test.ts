@@ -33,3 +33,10 @@ test('claim guard is bounded and suppresses repeated false confirmations',()=>{
  const guard=factory(true);const out=guard.feed('我帮你查查新闻。正在搜索。')+guard.flush();assert.equal(out.split('具体问题').length-1,1);
  const long=factory(true);const text='我'.repeat(513);assert.ok(long.feed(text).length>0,'never buffer an unbounded model sentence');
 });
+
+test('R7 capability sanitizer removes only the obsolete denial inside active candidate',()=>{
+ const fn=(policy as any).searchCapabilityBase;assert.equal(typeof fn,'function');
+ const base='【真实性】只引用真实状态，查不到就说"小可还查不到呢，等我长大一些试试看！"。不要编造。';
+ assert.equal(fn(base,false),base);assert.ok(!fn(base,true).includes('等我长大'));assert.ok(fn(base,true).includes('不要编造'));
+ for(const t of ['小可这会儿还查不到实时天气呢，等我长大一些试试看！','我还没法查到实时天气。']){const f=(policy as any).createSearchClaimFilter(true);const out=f.feed(t)+f.flush();assert.ok(!out.includes('长大')&&!out.includes('没法'),out);}
+});

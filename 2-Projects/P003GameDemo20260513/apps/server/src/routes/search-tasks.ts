@@ -1,14 +1,16 @@
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
+import {weatherRequestSchema} from '../tools/moji-weather.js';
+const routingClaim=z.object({version:z.string().regex(/^r7-[a-f0-9]{24}$/),rule_id:z.string().regex(/^[A-Za-z0-9_-]{1,40}$/),weather:weatherRequestSchema.optional()}).strict();
 import type { SearchTasks, SearchOwner, SearchTask } from '../tools/search-tasks.js';
 
-const submit = z.object({ protocol: z.literal(1), phase: z.literal('committed'), turn: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), query: z.string(), replace: z.string().uuid().optional() }).strict();
+const submit = z.object({ protocol: z.literal(1), phase: z.literal('committed'), turn: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), query: z.string(), replace: z.string().uuid().optional(), routing:routingClaim.optional() }).strict();
 const claim = z.object({ delivery: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/) }).strict();
 const receipt = claim.extend({ outcome: z.enum(['completed', 'interrupted', 'dropped']) }).strict();
 const replay = claim.extend({ previous: z.string().regex(/^[A-Za-z0-9_-]{1,80}$/), automatic: z.boolean() }).strict();
 const view = (t: SearchTask) => ({ id: t.id, turn: t.turn, revision: t.revision, status: t.status,
   created_at: t.createdAt, deadline: t.deadline, ready_at: t.readyAt, result: t.result,
-  delivery: t.delivery, error: t.error,
+  delivery: t.delivery, error: t.error, routing_version:t.routing?.version, rule_id:t.routing?.rule_id,
   valid_for_ms: t.readyAt === undefined ? 0 : Math.max(0, t.readyAt + 300_000 - Date.now()),
   automatic_for_ms: t.readyAt === undefined ? 0 : Math.max(0, t.readyAt + 60_000 - Date.now()) });
 
@@ -25,7 +27,7 @@ export async function boundedSearchBody(c: Context) {
   } finally { await reader.cancel().catch(() => {}); reader.releaseLock(); }
 }
 
-export function createSearchRoute(deps: { owner: (c: Context) => Promise<SearchOwner | null>; tasks: () => SearchTasks | null }) {
+export function createSearchRoute(deps: { owner: (c: Context) => Promise<SearchOwner | null>; tasks: () => SearchTasks | null; routing?: {get:(o:SearchOwner)=>unknown;ack:(o:SearchOwner,version:string)=>void} }) {
   const route = new Hono<{ Variables: { owner: SearchOwner; tasks: SearchTasks } }>();
   route.use('*', async (c, next) => {
     c.header('Cache-Control', 'no-store');
@@ -37,11 +39,13 @@ export function createSearchRoute(deps: { owner: (c: Context) => Promise<SearchO
   route.onError((err, c) => {
     const code = err instanceof z.ZodError || err instanceof SyntaxError ? 'invalid_request' : err.message;
     const statuses = { invalid_request: 400, private_query: 400, unsafe_query: 400, body_too_large: 413, disabled: 503,
-      upstream_paused: 503, not_found: 404, queue_full: 429, daily_limit: 429, session_closed: 409, already_claimed: 409, not_ready: 409, claim_mismatch: 409 } as const;
+      routing_version_unknown:409, routing_version_stale:409, routing_version_scope:403, upstream_paused: 503, not_found: 404, queue_full: 429, daily_limit: 429, session_closed: 409, already_claimed: 409, not_ready: 409, claim_mismatch: 409 } as const;
     const status = statuses[code as keyof typeof statuses];
     if (status === 429 || status === 503) c.header('Retry-After', '30');
     return c.json({ error: status ? code : 'search_unavailable' }, status ?? 503);
   });
+  route.get('/routing', c=>c.json({protocol:1,snapshot:deps.routing?.get(c.get('owner'))??null}));
+  route.post('/routing/ack',async c=>{const v=z.object({version:z.string().regex(/^r7-[a-f0-9]{24}$/)}).strict().parse(await boundedSearchBody(c));if(!deps.routing)throw new Error('disabled');deps.routing.ack(c.get('owner'),v.version);return c.json({ok:true});});
   route.get('/', c => c.json({ protocol: 1, tasks: c.get('tasks').list(c.get('owner')).map(view) }));
   route.post('/', async c => {
     const input = submit.parse(await boundedSearchBody(c));

@@ -3,10 +3,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest };
+export type TaskRouting = RoutingClaim & { weather_enabled: boolean };
 export type SearchOwner = { subject: string; session: string };
-export type SearchResult = { diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
+export type SearchResult = { weather?: import('./moji-weather.js').WeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
 export type SearchTask = SearchOwner & {
-  id: string; key: string; turn: string; revision: number;
+  id: string; key: string; turn: string; revision: number; routing?: TaskRouting;
   status: 'queued' | 'running' | 'ready' | 'delivered' | 'failed' | 'cancelled' | 'expired';
   createdAt: number; deadline: number; readyAt?: number;
   result?: SearchResult; error?: string; claim?: string;
@@ -15,9 +17,10 @@ export type SearchTask = SearchOwner & {
   replays?: { previous: string; delivery: string; automatic: boolean; at: number }[];
 };
 type Options = {
-  dbPath: string; execute: (query: string, signal: AbortSignal, owner: SearchOwner) => Promise<SearchResult>;
+  dbPath: string; execute: (query: string, signal: AbortSignal, owner: SearchTask) => Promise<SearchResult>;
   enabled: () => boolean; allowed: (subject: string) => boolean; now?: () => number;
-  canSubmit?: () => boolean;
+  canSubmit?: (routing?: TaskRouting) => boolean;
+  resolveRouting?: (owner: SearchOwner, claim: RoutingClaim) => TaskRouting;
   concurrency?: number; queueLimit?: number; dailyDeviceLimit?: number; dailyGlobalLimit?: number;
 };
 const LIVE = new Set(['queued', 'running', 'ready', 'failed']);
@@ -78,16 +81,17 @@ export class SearchTasks {
     const t = this.records.get(id);
     return t && t.subject === owner.subject && t.session === owner.session ? structuredClone(t) : fail('not_found');
   }
-  submit(owner: SearchOwner, input: { turn: string; query: string; phase: string; protocol: number; replace?: string }): SearchTask {
+  submit(owner: SearchOwner, input: { turn: string; query: string; phase: string; protocol: number; replace?: string; routing?: RoutingClaim }): SearchTask {
     if (this.closed || !this.opts.enabled() || !this.opts.allowed(owner.subject)) return fail('disabled');
     if (input.protocol !== 1 || input.phase !== 'committed' || !/^[A-Za-z0-9_-]{1,80}$/.test(input.turn)) return fail('invalid_request');
     if (!/^BJP003\d{14}$/.test(owner.subject) || !owner.session.startsWith(`sn-${owner.subject}-`)) return fail('invalid_request');
     if (this.db.prepare('SELECT 1 FROM closed_sessions WHERE subject=? AND session=?').get(owner.subject, owner.session)) return fail('session_closed');
     const query = validateQuery(input.query);
-    const key = digest(JSON.stringify([owner.subject, owner.session, input.turn, query, input.replace ?? '']));
+    const key = digest(JSON.stringify([owner.subject, owner.session, input.turn, query, input.replace ?? '', input.routing ?? null]));
     const prior = this.db.prepare('SELECT body FROM tasks WHERE dedupe=?').get(key) as { body: string } | undefined;
     if (prior) return JSON.parse(prior.body);
-    if (this.opts.canSubmit && !this.opts.canSubmit()) return fail('upstream_paused');
+    const routing = input.routing ? this.opts.resolveRouting?.(owner, input.routing) ?? fail('routing_version_unknown') : undefined;
+    if (this.opts.canSubmit && !this.opts.canSubmit(routing)) return fail('upstream_paused');
     this.tick();
     const all = this.all();
     // Bound paid work even after restarts; CST calendar day.
@@ -102,7 +106,7 @@ export class SearchTasks {
         pendingAfterReplace >= (this.opts.queueLimit ?? 8)) return fail('queue_full');
     // Validate admission before cancelling an existing query. A rejected replacement keeps it intact.
     if (old) this.cancel(owner, old.id);
-    const t: SearchTask = { ...owner, id: randomUUID(), key, turn: input.turn, revision, status: 'queued', createdAt: this.now(), deadline: this.now() + 20_000 };
+    const t: SearchTask = { ...owner, id: randomUUID(), key, turn: input.turn, revision, ...(routing ? {routing:structuredClone(routing)} : {}), status: 'queued', createdAt: this.now(), deadline: this.now() + 20_000 };
     this.save(t); this.pending.set(t.id, query); this.pump();
     return this.get(owner, t.id);
   }

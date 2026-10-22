@@ -1,3 +1,6 @@
+import {RoutingStore} from './tools/search-routing-store.js';
+import {previewRouting} from './tools/search-routing-config.js';
+import {createRoutingAdminRoute} from './routes/search-routing-admin.js';
 // Admin-only observation. No search executor import, SSH or runtime activation.
 import {readFile} from 'node:fs/promises';
 import {DatabaseSync} from 'node:sqlite';
@@ -43,3 +46,6 @@ async function status(){
     note:'保存待测设备不会开窗或修改实际派单。部署核验记录与本次实时健康检查分开显示。'};
 }
 export const canaryAdminRoute=createCanaryAdminRoute({read:status,eligible:sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);},isOpen:()=>flag('enabled')==='1',save:(sn,who)=>configStore.setFlag('p003.search.canary.selected_sn',sn,who,'后台待测设备选择；不激活派单')});
+
+let routes:RoutingStore|null=null;
+canaryAdminRoute.route('/routing',createRoutingAdminRoute({store:()=>routes??=new RoutingStore(root()+'/data/search-routing.db'),scope:()=>array(flag('allowlist')).filter(sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);}),preview:(c,u)=>previewRouting(c,u,root()+'/bin/search-route-preview')}));
