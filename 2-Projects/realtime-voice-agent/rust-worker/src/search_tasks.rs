@@ -1,6 +1,12 @@
 //! Session-owned background search. Networking is never awaited by the audio loop.
 use crate::llm::LlmConfig;
 use crate::search_policy::{DeliveryGate, Intent};
+use crate::search_routing::{RoutingConfig,RoutingSession,Decision};
+use serde::Deserialize;
+#[derive(Clone,Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RoutingSnapshot {version:String,config:RoutingConfig}
+
 use anyhow::{Result, anyhow};
 use serde_json::{Value, json};
 use std::collections::{HashMap, VecDeque};
@@ -80,7 +86,9 @@ impl Api {
 }
 
 enum Command {
+    RoutingAck {version:String},
     Submit {
+        routing: Option<Value>,
         query: String,
         turn: String,
         replace: bool,
@@ -109,6 +117,7 @@ enum Command {
     },
 }
 enum Event {
+    Routing { snapshot:Option<RoutingSnapshot> },
     Ack {
         text: &'static str,
         epoch: u64,
@@ -158,7 +167,10 @@ pub struct SearchSession {
     revoked: bool,
     auto_pending: bool,
     suppress_auto: bool,
-    query_intent: crate::search_policy::QueryIntent,
+    query_intent: RoutingSession,
+    routing: Option<RoutingSnapshot>,
+    last_route: Option<(String,Decision)>,
+    routing_task: Option<JoinHandle<()>>,
 }
 pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
     let Some(rest) = room.strip_prefix("sn-") else {
@@ -187,6 +199,7 @@ impl SearchSession {
         let api = Api::new(cfg)?;
         let (tx, commands) = mpsc::channel(16);
         let (events, rx) = mpsc::channel(16);
+        let routing_task=Some(tokio::spawn(pull_routing(api.clone(),events.clone())));
         let task = tokio::spawn(run(api.clone(), commands, events));
         Some(Self {
             api,
@@ -206,11 +219,17 @@ impl SearchSession {
             revoked: false,
             auto_pending: false,
             suppress_auto: false,
-            query_intent: crate::search_policy::QueryIntent::default(),
+            query_intent: RoutingSession::default(),
+            routing:None,last_route:None,routing_task,
         })
     }
     pub fn interpret(&mut self, text: &str) -> Option<Intent> {
-        self.query_intent.route(text, self.started.elapsed().as_millis() as u64)
+        let version=self.routing.as_ref().map(|r|r.version.as_str()).unwrap_or("");
+        let decision=self.query_intent.route(text,self.started.elapsed().as_millis() as u64,self.routing.as_ref().map(|r|&r.config),version);
+        let action=decision.intent();
+        tracing::info!(version,rule_id=%decision.rule_id,action=%decision.action,"background task route");
+        self.last_route=Some((version.to_owned(),decision));
+        action
     }
     pub fn on_commit(&mut self) {
         self.generation += 1;
@@ -218,7 +237,10 @@ impl SearchSession {
     }
     pub fn command(&mut self, action: Intent) {
         match action {
-            Intent::Clarify => self.notice("你想查什么？请说出具体主题，我再帮你查询。"),
+            Intent::Clarify => {
+                if self.last_route.as_ref().is_some_and(|(_,d)|d.action=="clarify_city") {self.notice("想查哪个城市的天气？请告诉我城市名。");}
+                else {self.notice("你想查什么？请说出具体主题，我再帮你查询。");}
+            },
             Intent::Search(query) => {
                 // One active query per session in v1.
                 if self.busy {
@@ -289,7 +311,13 @@ impl SearchSession {
     }
     fn submit(&mut self, query: String, replace: bool) {
         self.epoch += 1;
+        let routing=self.last_route.as_ref().and_then(|(version,d)|{
+            if version.is_empty(){return None;}
+            let mut claim=json!({"version":version,"rule_id":d.rule_id});
+            if let Some(w)=&d.weather {claim["weather"]=json!(w);}Some(claim)
+        });
         let cmd = Command::Submit {
+            routing,
             query,
             turn: uuid::Uuid::new_v4().to_string(),
             replace,
@@ -318,6 +346,11 @@ impl SearchSession {
     pub fn poll(&mut self, safe: bool) -> Option<String> {
         while let Ok(event) = self.rx.try_recv() {
             match event {
+                Event::Routing {snapshot} => {
+                    if self.routing.as_ref().map(|r|&r.version)!=snapshot.as_ref().map(|r|&r.version) {self.query_intent.clear();}
+                    self.routing=snapshot;
+                    if let Some(r)=&self.routing {let _=self.tx.try_send(Command::RoutingAck{version:r.version.clone()});}
+                },
                 Event::Ack {
                     text,
                     epoch,
@@ -477,6 +510,7 @@ impl SearchSession {
 impl Drop for SearchSession {
     fn drop(&mut self) {
         self.task.abort();
+        if let Some(task)=&self.routing_task {task.abort();}
         let api = self.api.clone();
         if let Ok(rt) = tokio::runtime::Handle::try_current() {
             rt.spawn(async move {
@@ -517,6 +551,22 @@ fn claimed_speech(task: &Value, id: String, delivery: String) -> Option<Speech> 
         auto_replayed: false,
     })
 }
+// Separate from the submit actor: a slow config GET cannot delay cancellation or audio.
+async fn pull_routing(api:Api,events:mpsc::Sender<Event>) {
+    let mut tick=tokio::time::interval(Duration::from_secs(5));
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        tick.tick().await;
+        let Ok(value)=api.request("/routing",None).await else {continue;};
+        if value["protocol"]!=1 || value.get("snapshot").is_none(){continue;}
+        let snapshot=if value["snapshot"].is_null(){None}else{
+            let Ok(s)=serde_json::from_value::<RoutingSnapshot>(value["snapshot"].clone()) else {continue;};
+            if s.version.len()!=27 || !s.version.starts_with("r7-") || !s.version[3..].bytes().all(|b|b.is_ascii_hexdigit()) || s.config.validate().is_err(){continue;}
+            Some(s)
+        };
+        if events.send(Event::Routing{snapshot}).await.is_err(){break;}
+    }
+}
 async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>) {
     let mut current: Option<String> = None;
     let mut epoch = 0;
@@ -529,10 +579,12 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
             command = commands.recv() => {
                 let Some(command) = command else { break; };
                 match command {
-                    Command::Submit { query, turn, replace, epoch: e, generation } => {
+                    Command::RoutingAck {version}=>{let ack_api=api.clone();tokio::spawn(async move {let _=ack_api.request("/routing/ack",Some(json!({"version":version}))).await;});},
+                    Command::Submit { routing, query, turn, replace, epoch: e, generation } => {
                         epoch = e; replaying = false;
                         if !replace { current = None; }
                         let mut body = json!({"protocol":1,"phase":"committed","query":query,"turn":turn});
+                        if let Some(routing)=routing {body["routing"]=routing;}
                         if replace { if let Some(id) = &current { body["replace"] = json!(id); } }
                         let mut attempt = 0;
                         let response = loop {
@@ -714,11 +766,26 @@ mod tests {
                 revoked: false,
             auto_pending: false,
             suppress_auto: false,
-            query_intent: crate::search_policy::QueryIntent::default(),
+            query_intent: RoutingSession::default(),
+            routing:None,last_route:None,routing_task:None,
             },
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn routing_applies_on_audio_tick_and_snapshots_actual_applied_version() {
+        let (mut s,events,mut commands)=test_session();
+        assert!(s.interpret("今天北京的天气").is_none());
+        let version="r7-aaaaaaaaaaaaaaaaaaaaaaaa".to_string();
+        events.send(Event::Routing{snapshot:Some(RoutingSnapshot{version:version.clone(),config:RoutingConfig::default()})}).await.unwrap();
+        assert!(commands.try_recv().is_err(),"received is not applied");
+        s.poll(false);
+        assert!(matches!(commands.recv().await,Some(Command::RoutingAck{version:v}) if v==version));
+        let action=s.interpret("今天北京的天气").unwrap();s.command(action);
+        match commands.recv().await.unwrap(){Command::Submit{routing:Some(r),..}=>{assert_eq!(r["version"],version);assert_eq!(r["weather"]["city_id"],2);},_=>panic!("missing immutable route claim")}
+        events.send(Event::Routing{snapshot:None}).await.unwrap();s.poll(false);
+        assert!(s.interpret("今天北京的天气").is_none(),"explicit removal returns to built-in fallback");
     }
     #[tokio::test]
     async fn early_interruption_returns_once_after_idle_but_stop_and_expiry_suppress_it() {
@@ -897,6 +964,7 @@ mod tests {
         let (events, mut rx) = mpsc::channel(16);
         let actor = tokio::spawn(run(api, commands, events));
         tx.send(Command::Submit {
+            routing:None,
             query: "科技馆开放时间".into(),
             turn: "t1".into(),
             replace: false,
@@ -1025,7 +1093,7 @@ mod tests {
         });
         let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/v1/internal/search-tasks?room=synthetic").parse().unwrap(),token:"synthetic".into(),key:"synthetic".into()};
         let (tx,commands)=mpsc::channel(4);let(events,mut rx)=mpsc::channel(8);let actor=tokio::spawn(run(api,commands,events));
-        tx.send(Command::Submit{query:"火星为什么是红色".into(),turn:"same-turn".into(),replace:false,epoch:1,generation:1}).await.unwrap();
+        tx.send(Command::Submit{routing:None,query:"火星为什么是红色".into(),turn:"same-turn".into(),replace:false,epoch:1,generation:1}).await.unwrap();
         let started=Instant::now();let mut ticks=0;
         while started.elapsed()<Duration::from_millis(500) {tokio::time::sleep(Duration::from_millis(20)).await;ticks+=1;}
         assert!(ticks>=20,"foreground scheduling must remain available during HTTPS delay");
@@ -1072,9 +1140,9 @@ mod tests {
         });
         let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/tasks").parse().unwrap(),token:"synthetic".into(),key:"synthetic".into()};
         let(tx,commands)=mpsc::channel(4);let(events,mut rx)=mpsc::channel(8);let actor=tokio::spawn(run(api,commands,events));
-        tx.send(Command::Submit{query:"火星".into(),turn:"first".into(),replace:false,epoch:0,generation:1}).await.unwrap();
+        tx.send(Command::Submit{routing:None,query:"火星".into(),turn:"first".into(),replace:false,epoch:0,generation:1}).await.unwrap();
         while !matches!(rx.recv().await,Some(Event::Ack{epoch:0,..})){}
-        tx.send(Command::Submit{query:"恐龙".into(),turn:"second".into(),replace:true,epoch:1,generation:2}).await.unwrap();
+        tx.send(Command::Submit{routing:None,query:"恐龙".into(),turn:"second".into(),replace:true,epoch:1,generation:2}).await.unwrap();
         while !matches!(rx.recv().await,Some(Event::Ack{epoch:1,..})){}
         let next=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();
         assert!(matches!(next,Event::Finished{epoch:1}),"rejected replacement must release busy and not replay old result");

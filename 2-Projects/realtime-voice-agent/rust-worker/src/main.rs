@@ -9,6 +9,7 @@ mod candidate;
 mod say_defer;
 mod search_canary;
 mod search_policy;
+mod search_routing;
 mod search_tasks;
 mod control;
 mod device_grammar;
