@@ -1,0 +1,138 @@
+{
+  "revision": "R10-baidu-weather",
+  "code_commits": {
+    "brain": "6fb9287a8815b83b5283f4a4d40dbde3f22b4dea",
+    "worker": "29a7cf10792629897d6b818803da545fac21c401"
+  },
+  "binary": {
+    "worker": {
+      "staged": true,
+      "bytes": 73347088,
+      "sha256": "baf5e2998be9c5845e16a7f1055bcd5d4de98b9db39670dbc8838ae498a5071a"
+    },
+    "preview": {
+      "staged": true,
+      "bytes": 966768,
+      "sha256": "e691d89141cd42607c9de44858f5227941270816ec2ee6cb94954f119d7f9b9d"
+    }
+  },
+  "deployed_source_sha256": {
+    "/opt/p003/search-canary-20261021/brain/src/tools/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "/opt/p003/search-canary-20261021/brain/src/tools/weather-places.ts": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+    "/opt/p003/search-canary-20261021/brain/src/tools/baidu-weather.ts": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97",
+    "/opt/p003/search-canary-20261021/brain/src/tools/fixed-weather.ts": "7063e076eea7713139305f2ee567424c5b2e9217c79e14cb44ccee552ebe216f",
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-routing-config.ts": "8227004a560cde10c0d66a78bd8471fa3dce2297132efff767878ef8d892d4ff",
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "aa3e2a74f685b75e8013b41762d6472746d50c0c6001a50c1a5f65f0bd45fda0",
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-runtime.ts": "258de1b04d71945a32b9f6bc90fadff476b4d0de966a02eedf4a015ca6eb891c",
+    "/opt/p003/search-canary-20261021/brain/src/tools/device-location.ts": "8eccbc3f897ff27ea7495d0608475b3d712e5126c878c83f8ad09b318cf34447",
+    "/opt/p003/search-canary-20261021/brain/src/routes/search-tasks.ts": "1004260f1828fbe5ce38ae72ddc72a13ee8acdc0302183c3f15e734bce134fe6",
+    "/opt/p003/server/src/tools/device-location.ts": "8eccbc3f897ff27ea7495d0608475b3d712e5126c878c83f8ad09b318cf34447",
+    "/opt/p003/web/dist/admin/index.html": "a5c0f9ed424f407ad4a27dd561668fbb5f5d9d6bd4e8a58576de48b1da21ebe8",
+    "/opt/p003/server/src/tools/search-routing-config.ts": "8227004a560cde10c0d66a78bd8471fa3dce2297132efff767878ef8d892d4ff"
+  },
+  "backups": {
+    "brain": {
+      "directory": "/opt/p003/server/backups/search-canary-R10-20261022T103635Z",
+      "archive_sha256": "3de31a24822665358bf397b85fef9065e12d55f388bed6c230237e1d32b4440a"
+    },
+    "worker": {
+      "directory": "/root/rust-worker/backups/search-canary-R10-20261022T103635Z",
+      "archive_sha256": "cf04e1b5a8e0f8d1686b9fa08f485daee436459079821198a7414e5303e7f40b"
+    }
+  },
+  "production_schema_addon_backup": {
+    "file": "/opt/p003/server/src/tools/search-routing-config.ts",
+    "backup": "/opt/p003/server/backups/search-canary-R10-20261022T103635Z/production-search-routing-config.ts",
+    "before_sha256": "85e13b343790c25d09f6167f0ad6e0bdfddedb53a384e44fabecf03828d5d8b2",
+    "after_sha256": "8227004a560cde10c0d66a78bd8471fa3dce2297132efff767878ef8d892d4ff"
+  },
+  "candidate_upgrade_rollback_forward": [
+    {
+      "step": "r10-install-brain",
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      }
+    },
+    {
+      "step": "r10-install-worker",
+      "restored": false,
+      "sha256": "baf5e2998be9c5845e16a7f1055bcd5d4de98b9db39670dbc8838ae498a5071a",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792666658329,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "step": "r10-rollback-brain",
+      "restored": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      }
+    },
+    {
+      "step": "r10-rollback-worker",
+      "restored": true,
+      "sha256": "8f4cc35724d5fa75e961d1357d2b12e2f6712cd14142d8ae86b835119cb82bb1",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792666671782,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "step": "r10-forward-brain",
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      }
+    },
+    {
+      "step": "r10-forward-worker",
+      "restored": false,
+      "sha256": "baf5e2998be9c5845e16a7f1055bcd5d4de98b9db39670dbc8838ae498a5071a",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792666690515,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    }
+  ],
+  "routing": {
+    "previous_version": "r7-b4b722c50d1efbf635a1e06d",
+    "previous_revision": 15,
+    "on_version": "r7-5bd970f225036a447233316e",
+    "revision": 19,
+    "rollback_and_forward": true
+  },
+  "rollback_notes": [
+    "Close dispatch before rollback; do not interrupt active jobs",
+    "Restore both draft (remove baidu_weather_enabled, not merely false) and target snapshot r7-b4b722c50d1efbf635a1e06d before old Worker: it rejects new unknown fields",
+    "Then restore only listed candidate files/binaries; remove four new Baidu/place files absent from R9",
+    "Production schema backup is separate file alongside immutable original tar archive",
+    "No full database/env/tree restore; keep current 2026-10-24 23:59 deadline and timers when rolling back to R9",
+    "Shared admin restart performed twice at zero RTC rooms; production Worker and other pm2 apps unchanged"
+  ]
+}

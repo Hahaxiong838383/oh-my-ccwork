@@ -1,0 +1,43 @@
+{
+  "scope": "read-only REA feasibility, not a deployed news adapter",
+  "index_url": "https://news.cctv.com/china/",
+  "provider": {
+    "id": "rea-playwright-browser-scenario",
+    "name": "REA Playwright browser scenario capture provider",
+    "version": "1"
+  },
+  "index_complete": {
+    "status": "complete",
+    "equality_eligible": true,
+    "missing_sections": [],
+    "truncated_sections": []
+  },
+  "index_cleanup": "terminated-owned-process",
+  "index_dom_sha256": "d2bae211992d884262aa0e3fb3969e2e82d6088c6f4221b817488e6d580db67f",
+  "public_feed": {
+    "url": "https://news.cctv.com/2019/07/gaiban/cmsdatainterface/page/china_1.jsonp?cb=china",
+    "entries_observed": 80,
+    "advertised_total": 500,
+    "min_publication": "2026-10-21 18:03:14",
+    "max_publication": "2026-10-22 17:52:20",
+    "sha256": "d9ec1c9ceabcb8a2ea5fd09e0d3cef6fcd92900157b8318b207ff071c1994135"
+  },
+  "article": {
+    "rc": 0,
+    "url": "https://news.cctv.com/2026/10/22/ARTIqOUaDZMPOFSjENAm2O5x261022.shtml",
+    "complete": {
+      "status": "complete",
+      "equality_eligible": true,
+      "missing_sections": [],
+      "truncated_sections": []
+    },
+    "steps": [
+      "completed",
+      "completed"
+    ],
+    "cleanup": "terminated-owned-process",
+    "evidence_sha256": "217aae665e4687cfb73b3b448b21557269eba1171ab69d6e6a139843cded3679"
+  },
+  "article_publication_matches_feed": true,
+  "deployed": false
+}
