@@ -1,3 +1,4 @@
+import {validCanaryAllowlist} from '../search-canary-policy.js';
 import {Hono} from 'hono';
 import {isValidToken,isAdminRole,getTokenUser} from './auth.js';
 export const DEFAULT_CANARY_SN='BJP00326070803800006';
@@ -5,9 +6,9 @@ type SnapshotInput={now:number;enabled:boolean;expires:number;allowlist:string[]
 export function summarizeCanary(i:SnapshotInput){
   const health_ok=i.health?.status==='ok';
   const lease_ok=i.lease?.agent==='p003-search-canary-20261021' && typeof i.lease?.generation==='string' && i.lease.generation.length>0 && Number.isFinite(i.lease.until_ms) && i.lease.until_ms>i.now && i.lease.until_ms-i.now<=15000;
-  const scope_ok=i.allowlist.length===1 && i.allowlist[0]===DEFAULT_CANARY_SN && i.settings?.allowlist?.length===1 && i.settings.allowlist[0]===DEFAULT_CANARY_SN;
+  const scope_ok=validCanaryAllowlist(i.allowlist) && Array.isArray(i.settings?.allowlist) && validCanaryAllowlist(i.settings.allowlist) && i.settings.allowlist.length===i.allowlist.length && i.allowlist.every(sn=>i.settings.allowlist.includes(sn));
   const state=!i.enabled?'closed':i.expires<=i.now?'expired':!health_ok||!lease_ok||!scope_ok||i.expires-i.now>36*3600_000?'blocked':!i.health.search?'regression':i.health.tools?'p2':'p1';
-  return {state,health_ok,lease_ok,scope_ok,dispatch_requested:i.enabled,expires_at_ms:i.expires||null,configured_devices:i.allowlist,selected_prepared:i.selected===DEFAULT_CANARY_SN};
+  return {state,health_ok,lease_ok,scope_ok,dispatch_requested:i.enabled,expires_at_ms:i.expires||null,configured_devices:i.allowlist,selected_prepared:scope_ok && i.allowlist.includes(i.selected)};
 }
 type Deps={read:()=>Promise<unknown>;eligible:(sn:string)=>boolean;isOpen:()=>boolean;save:(sn:string,who:string)=>void};
 export function createCanaryAdminRoute(deps:Deps){

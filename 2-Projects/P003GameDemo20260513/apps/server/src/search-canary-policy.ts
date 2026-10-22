@@ -3,9 +3,12 @@ export type CanaryInput = {
   expiresAtMs: number; leaseUntilMs: number; canaryAgent: string; contractCompatible: boolean;
 };
 export const SEARCH_CANARY_AGENT = 'p003-search-canary-20261021';
+export function validCanaryAllowlist(list: readonly string[]): boolean {
+  return list.length>=1 && list.length<=2 && new Set(list).size===list.length && list.every(sn=>/^BJP003\d{14}$/.test(sn));
+}
 export function selectSearchCanaryAgent(i: CanaryInput): string {
   const valid = i.enabled === true && /^BJP003\d{14}$/.test(i.sn)
-    && i.allowlist.length === 1 && i.allowlist[0] === i.sn
+    && validCanaryAllowlist(i.allowlist) && i.allowlist.includes(i.sn)
     && i.canaryAgent === SEARCH_CANARY_AGENT && i.contractCompatible === true
     && Number.isFinite(i.nowMs) && Number.isFinite(i.expiresAtMs) && Number.isFinite(i.leaseUntilMs)
     // 2026-10-21: explicitly authorized next-day single-device window; fixed cutoff, no renewal.

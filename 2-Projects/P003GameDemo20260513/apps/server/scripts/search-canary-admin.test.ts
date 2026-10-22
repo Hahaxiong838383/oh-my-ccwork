@@ -26,3 +26,10 @@ assert.equal(summarizeCanary({...base,enabled:false,health:null}).health_ok,fals
 assert.equal(summarizeCanary({...base,enabled:true,expires:base.now+36*3600_000,health:{...base.health,search:true}}).state,'p1');
 assert.equal(summarizeCanary({...base,enabled:true,expires:base.now+36*3600_000+1}).state,'blocked');
 console.log('canary admin: auth, scope, no activation, expiry and unavailable checks passed');
+
+const second='BJP00326060100100004';
+const pair={...base,enabled:true,selected:second,allowlist:[sn,second],settings:{allowlist:[second,sn]},health:{...base.health,search:true}};
+assert.equal(summarizeCanary(pair).state,'p1');assert.equal(summarizeCanary(pair).selected_prepared,true);
+assert.equal(summarizeCanary({...pair,settings:{allowlist:[sn]}}).state,'blocked');
+assert.equal(summarizeCanary({...pair,allowlist:[sn,sn],settings:{allowlist:[sn,sn]}}).state,'blocked');
+assert.equal(summarizeCanary({...pair,selected:other}).selected_prepared,false);

@@ -1,6 +1,7 @@
 // Validate isolation BEFORE dynamically importing any singleton stores.
-import { prepareCanaryEnvironment, canaryRequestAllowed } from './search-canary-guard.js';
+import { prepareCanaryEnvironment, canaryRequestAllowed, canarySns, canaryMaxJobs } from './search-canary-guard.js';
 prepareCanaryEnvironment(process.env);
+const allowedSns=canarySns(process.env.SEARCH_CANARY_SN),maxJobs=canaryMaxJobs(process.env.SEARCH_CANARY_MAX_JOBS);
 const {serve}=await import('@hono/node-server');
 const {Hono}=await import('hono');
 const {timingSafeEqual}=await import('node:crypto');
@@ -20,14 +21,14 @@ app.use('/v1/*',async(c,next)=>{
    if(auth?.role!=='device'||auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID) return c.json({error:'unauthorized'},401);
    const raw=await c.req.text(); if(raw.length>2048)return c.json({error:'oversize'},413);
    let v;try{v=JSON.parse(raw)}catch{return c.json({error:'invalid'},400)}
-   if(v.agent!=='p003-search-canary-20261021'||v.generation!==process.env.SEARCH_CANARY_GENERATION||typeof v.registered!=='boolean'||!Number.isInteger(v.jobs)||v.jobs<0||v.jobs>1||v.ordered_pcm_v1!==true) return c.json({error:'invalid'},400);
+   if(v.agent!=='p003-search-canary-20261021'||v.generation!==process.env.SEARCH_CANARY_GENERATION||typeof v.registered!=='boolean'||!Number.isInteger(v.jobs)||v.jobs<0||v.jobs>maxJobs||v.ordered_pcm_v1!==true) return c.json({error:'invalid'},400);
    const path=process.env.SEARCH_CANARY_HEALTH_FILE;
    if(!path)return c.json({error:'unconfigured'},503);
-   const lease={agent:v.agent,generation:v.generation,until_ms:v.registered&&v.jobs===0?Date.now()+15000:0,ordered_pcm_v1:true};
+   const lease={agent:v.agent,generation:v.generation,until_ms:v.registered&&v.jobs<maxJobs?Date.now()+15000:0,ordered_pcm_v1:true};
    await writeFile(path+'.tmp',JSON.stringify(lease),{mode:0o600});await rename(path+'.tmp',path);
    return c.json({ok:true});
  }
- const allowed=canaryRequestAllowed({path:c.req.path,room:c.req.query('room')||'',sn:process.env.SEARCH_CANARY_SN!,account:auth?.accountId||'',expectedAccount:process.env.SEARCH_WORKER_ACCOUNT_ID!,role:auth?.role||'',expires:Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value),now:Date.now()});
+ const allowed=canaryRequestAllowed({path:c.req.path,room:c.req.query('room')||'',sn:/^sn-(BJP003\d{14})-/.exec(c.req.query('room')||'')?.[1]||'',allowedSns,account:auth?.accountId||'',expectedAccount:process.env.SEARCH_WORKER_ACCOUNT_ID!,role:auth?.role||'',expires:Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value),now:Date.now()});
  if(!allowed) return c.json({error:'canary_unavailable'},403);
  await next();
 });

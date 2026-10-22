@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, realpathSync, mkdirSync, writeFileSync, readFileSync, symlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { prepareCanaryEnvironment, canaryRequestAllowed } from '../src/search-canary-guard.js';
+import { prepareCanaryEnvironment, canaryRequestAllowed, canarySns, canaryMaxJobs } from '../src/search-canary-guard.js';
 const root=mkdtempSync(join(tmpdir(),'p003-canary-')); const prod=mkdtempSync(join(tmpdir(),'p003-production-'));
 writeFileSync(join(prod,'sentinel'),'unchanged');
 try {
@@ -23,3 +23,12 @@ try {
  assert.equal(readFileSync(join(prod,'sentinel'),'utf8'),'unchanged');
  console.log('canary isolation: paths/symlink/identity/expiry passed');
 } finally {rmSync(root,{recursive:true,force:true});rmSync(prod,{recursive:true,force:true});}
+
+const a='BJP00326070803800006',b='BJP00326060100100004';
+assert.deepEqual(canarySns(a+','+b),[a,b]);
+for(const raw of ['',a+','+a,a+',00100004',a+','+b+',BJP00326060100200003']) assert.deepEqual(canarySns(raw),[]);
+assert.equal(canaryMaxJobs('2'),2);assert.equal(canaryMaxJobs('3'),0);
+const pair={path:'/v1/chat/completions',room:'sn-'+b+'-123',sn:b,allowedSns:[a,b],account:'search-canary-worker',expectedAccount:'search-canary-worker',role:'device',expires:2000,now:1000};
+assert.equal(canaryRequestAllowed(pair),true);
+assert.equal(canaryRequestAllowed({...pair,allowedSns:[a]}),false);
+assert.equal(canaryRequestAllowed({...pair,sn:a}),false);

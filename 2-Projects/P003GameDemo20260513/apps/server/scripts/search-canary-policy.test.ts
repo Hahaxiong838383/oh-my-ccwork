@@ -15,3 +15,8 @@ for (const delta of [
 ]) assert.equal(selectSearchCanaryAgent({...input,...delta}), input.baselineAgent, JSON.stringify(delta));
 assert.equal(selectSearchCanaryAgent({...input,expiresAtMs:input.nowMs+36*3600_000}), input.canaryAgent);
 console.log('canary policy: positive + 13 fail-closed cases passed');
+
+const second='BJP00326060100100004';
+for(const sn of [input.sn,second]) assert.equal(selectSearchCanaryAgent({...input,sn,allowlist:[input.sn,second]}),input.canaryAgent);
+for(const allowlist of [[input.sn,input.sn],[input.sn,second,'BJP00326060100200003'],[input.sn,'00100004']]) assert.equal(selectSearchCanaryAgent({...input,allowlist}),input.baselineAgent);
+console.log('two-device scope: both targets pass; duplicate/third/malformed fail closed');

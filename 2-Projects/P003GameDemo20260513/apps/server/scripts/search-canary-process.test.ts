@@ -7,7 +7,7 @@ const root=mkdtempSync(join(tmpdir(),'canary-process-'));const sentinel=join(roo
 const canary=join(root,'candidate');(await import('node:fs')).mkdirSync(canary);
 const listener=createServer();await new Promise<void>(r=>listener.listen(0,'127.0.0.1',r));const port=(listener.address() as any).port;await new Promise<void>(r=>listener.close(()=>r()));
 const app=resolve('src/search-canary-main.ts'),loader=resolve('node_modules/tsx/dist/loader.mjs');let log='';
-const child=spawn(process.execPath,['--experimental-sqlite','--import',loader,app],{cwd:canary,env:{PATH:process.env.PATH,SEARCH_CANARY_ROOT:canary,SEARCH_CANARY_SN:'BJP00326070803800006',SEARCH_WORKER_ACCOUNT_ID:'search-canary-worker',CUSTOM_LLM_API_KEY:'test-key',AUTH_JWT_SECRET:'synthetic-secret',SEARCH_CANARY_GENERATION:'test',SEARCH_CANARY_HEALTH_FILE:join(canary,'health.json'),PORT:String(port),SEARCH_ENABLED:'1',DEEPSEEK_API_KEY:'synthetic',SEARCH_ALLOWED_DOMAINS:'weather.com.cn'}});
+const child=spawn(process.execPath,['--experimental-sqlite','--import',loader,app],{cwd:canary,env:{PATH:process.env.PATH,SEARCH_CANARY_ROOT:canary,SEARCH_CANARY_SN:'BJP00326070803800006,BJP00326060100100004',SEARCH_CANARY_MAX_JOBS:'2',SEARCH_WORKER_ACCOUNT_ID:'search-canary-worker',CUSTOM_LLM_API_KEY:'test-key',AUTH_JWT_SECRET:'synthetic-secret',SEARCH_CANARY_GENERATION:'test',SEARCH_CANARY_HEALTH_FILE:join(canary,'health.json'),PORT:String(port),SEARCH_ENABLED:'1',DEEPSEEK_API_KEY:'synthetic',SEARCH_ALLOWED_DOMAINS:'weather.com.cn'}});
 child.stdout.on('data',b=>log+=b);child.stderr.on('data',b=>log+=b);
 const base='http://127.0.0.1:'+port;
 try {
@@ -17,12 +17,15 @@ try {
  const hb={method:'POST',headers:{authorization:'Bearer test-key','x-p003-worker-token':token,'content-type':'application/json'},body:JSON.stringify({agent:'p003-search-canary-20261021',generation:'test',registered:true,jobs:0,ordered_pcm_v1:true})};
  assert.equal((await fetch(base+'/v1/internal/canary-health',hb)).status,200);
  assert.ok(JSON.parse(readFileSync(join(canary,'health.json'),'utf8')).until_ms>Date.now());
- for(const delta of [{jobs:1},{registered:false}]) {
+ for(const delta of [{jobs:2},{registered:false}]) {
   const body=JSON.stringify({...JSON.parse(hb.body),...delta});
   assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body})).status,200);
   assert.equal(JSON.parse(readFileSync(join(canary,'health.json'),'utf8')).until_ms,0);
  }
  assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body:JSON.stringify({...JSON.parse(hb.body),generation:'wrong'})})).status,400);
+ assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body:JSON.stringify({...JSON.parse(hb.body),jobs:1})})).status,200);
+ assert.ok(JSON.parse(readFileSync(join(canary,'health.json'),'utf8')).until_ms>Date.now());
+ assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body:JSON.stringify({...JSON.parse(hb.body),jobs:3})})).status,400);
  const room='sn-BJP00326070803800006-123'; const url='/v1/internal/local-audio-texts?room='+room+'&token='+token;
  assert.equal((await fetch(base+url)).status,401);
  const headers={authorization:'Bearer test-key'};
@@ -32,6 +35,8 @@ try {
  assert.equal((await fetch(base+url,{headers})).status,401);
  assert.equal((await fetch(base+'/v1/internal/search-tasks?room='+room,{headers:{...headers,'x-p003-worker-token':token}})).status,401);
  assert.equal((await fetch(base+'/v1/admin?room='+room+'&token='+token,{headers})).status,403);
+ assert.equal((await fetch(base+'/v1/internal/local-audio-texts?room=sn-BJP00326060100100004-123&token='+token,{headers})).status,401);
+ assert.equal((await fetch(base+'/v1/internal/local-audio-texts?room=sn-BJP00326060100200003-123&token='+token,{headers})).status,403);
  flag('p003.search.canary.expires_at_ms',String(Date.now()-1));
  assert.equal((await fetch(base+url,{headers})).status,403);
  db.close();assert.equal(statSync(sentinel).mtimeMs,before);assert.equal(readFileSync(sentinel,'utf8'),'production sentinel');
