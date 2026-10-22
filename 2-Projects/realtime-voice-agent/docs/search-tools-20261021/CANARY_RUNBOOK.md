@@ -1,6 +1,6 @@
-> 最新归档：2026-10-22 [R7任务路由和墨迹天气验收](R7_ACCEPTANCE_20261022.md)、[当前发布配置](R7_ROUTING_PROFILE_20261022.json)、[真机用例](P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261022.md)。16:20:25恢复原两机P1，23:59固定截止，P2关，待真机。接手先重新读取线上状态，以下旧记录不是当前部署证明。
+> 最新归档：2026-10-22 [R8设备IP城市定位验收](R8_ACCEPTANCE_20261022.md)、[当前发布配置](R8_ROUTING_PROFILE_20261022.json)、[11项真机用例](P003_SEARCH_IP_LOCATION_DEVICE_TEST_20261022.md)、[REA选型](IP_LOCATION_REA_ANALYSIS_20261022.md)、[部署回滚清单](R8_DEPLOYED_SOURCE_MANIFEST_20261022.json)。17:09:32恢复原两机P1，23:59固定截止，P2关，待真机。代码3ef381af、运行SHA0c2b23a3，380项/预览21项通过；后台自动定位配置r7-b4b722c50d1efbf635a1e06d/修订15。旧Worker回滚前先撤销含auto_location_enabled的新配置；不能用新配置配旧deny_unknown_fields二进制。Air探针位置已精确清理，不是真机位置。接手先重新读取线上状态，以下旧记录不是当前部署证明。
 
-> 2026-10-22最新结论：**未完全解决，不可收口**。先读[R5反馈与R6复验](P003_SEARCH_R5_FEEDBACK_R6_VERIFICATION_20261022.md)：三项新合成搜索完成，但裸主题仍否认搜索能力，首句前缀缺失/失败提示故障语音/约5秒退出未闭环。本次未改部署或窗口。R6[验收与回滚](R6_ACCEPTANCE_20261022.md)、[产物清单](R6_DEPLOYED_SOURCE_MANIFEST_20261022.json)保留历史发布范围。使用前重核线上开关、截止和运行SHA。
+> 2026-10-22 R6历史结论：**未完全解决，不可收口**。[R5反馈与R6复验](P003_SEARCH_R5_FEEDBACK_R6_VERIFICATION_20261022.md)：三项新合成搜索完成，但当时裸主题仍否认搜索能力，首句前缀缺失/失败提示故障语音/约5秒退出未闭环；该次复验未改部署或窗口。R6[验收与回滚](R6_ACCEPTANCE_20261022.md)、[产物清单](R6_DEPLOYED_SOURCE_MANIFEST_20261022.json)保留历史发布范围。后续以R8为最新归档。
 
 # 指定 SN 搜索候选 Worker 运维记录
 

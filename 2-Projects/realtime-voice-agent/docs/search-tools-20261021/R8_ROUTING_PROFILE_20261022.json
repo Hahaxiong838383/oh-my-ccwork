@@ -1,0 +1,215 @@
+{
+  "configured_at_ms": 1792660011239,
+  "on_version": "r7-b4b722c50d1efbf635a1e06d",
+  "revision": 15,
+  "config": {
+    "schema": 1,
+    "weather_enabled": true,
+    "auto_location_enabled": true,
+    "rules": [
+      {
+        "id": "natural-weather",
+        "enabled": true,
+        "priority": 100,
+        "action": "weather",
+        "mode": "contains_any",
+        "triggers": [
+          "天气",
+          "气温",
+          "温度",
+          "下雨",
+          "降雨",
+          "空气质量",
+          "带伞",
+          "多少度"
+        ],
+        "exclude": [
+          "为什么",
+          "原理",
+          "形成",
+          "心情",
+          "故事",
+          "是什么意思",
+          "什么是",
+          "作文",
+          "比喻",
+          "内角",
+          "角度",
+          "几何",
+          "沸点",
+          "熔点",
+          "水温",
+          "体温",
+          "发烧",
+          "烤箱",
+          "冰箱",
+          "空调",
+          "室温",
+          "不错",
+          "真好",
+          "我觉得",
+          "我感觉",
+          "听说"
+        ]
+      },
+      {
+        "id": "current-public-facts",
+        "enabled": true,
+        "priority": 50,
+        "action": "search",
+        "mode": "contains_any",
+        "triggers": [
+          "最新消息",
+          "最新新闻",
+          "最新进展",
+          "今日新闻",
+          "今日汇率",
+          "现在的汇率"
+        ],
+        "exclude": [
+          "故事",
+          "是什么",
+          "为什么"
+        ]
+      },
+      {
+        "id": "extra-explicit",
+        "enabled": true,
+        "priority": 80,
+        "action": "search",
+        "mode": "prefix",
+        "triggers": [
+          "帮我了解一下",
+          "帮我检索一下",
+          "检索一下"
+        ],
+        "exclude": []
+      }
+    ]
+  },
+  "targets": [
+    {
+      "sn": "BJP00326070803800006",
+      "version": "r7-b4b722c50d1efbf635a1e06d",
+      "at": 1792660011234
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "version": "r7-b4b722c50d1efbf635a1e06d",
+      "at": 1792660011234
+    }
+  ],
+  "regression": {
+    "passed": true,
+    "total": 20,
+    "failures": []
+  },
+  "preview": [
+    {
+      "text": "今天天气怎么样",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 0,
+        "metric": "forecast"
+      },
+      "weather": null
+    },
+    {
+      "text": "明天会下雨吗",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 1,
+        "metric": "forecast"
+      },
+      "weather": null
+    },
+    {
+      "text": "这里后天天气怎么样",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 2,
+        "metric": "forecast"
+      },
+      "weather": null
+    },
+    {
+      "text": "现在多少度",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 0,
+        "metric": "current"
+      },
+      "weather": null
+    },
+    {
+      "text": "空气质量怎么样",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 0,
+        "metric": "aqi"
+      },
+      "weather": null
+    },
+    {
+      "text": "改查上海明天天气",
+      "action": "replace",
+      "weather": {
+        "city_id": 39,
+        "city_name": "上海市",
+        "day_offset": 1,
+        "metric": "forecast"
+      }
+    },
+    {
+      "text": "取消搜索",
+      "action": "cancel",
+      "weather": null
+    },
+    {
+      "text": "我今天画了一只小猫",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "三角形的内角多少度",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "水的沸点温度是多少",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "我发烧了体温多少度",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "烤箱的温度怎么调",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "家里空调温度怎么调",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "我觉得北京天气真好",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "北京天气不错",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "听说上海天气真好",
+      "action": "chat",
+      "weather": null
+    }
+  ],
+  "rollback_and_forward": true
+}

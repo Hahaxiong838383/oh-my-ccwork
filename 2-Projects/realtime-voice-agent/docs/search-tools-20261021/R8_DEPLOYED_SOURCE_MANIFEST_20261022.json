@@ -1,0 +1,328 @@
+{
+  "recorded_at_cst": "2026-10-22 17:16:57",
+  "code_commits": {
+    "brain": "2b1b98a575210475f49ca860744644099a481e44",
+    "worker": "3ef381afb37786563341124493d5ab3f0e346d36"
+  },
+  "branches": {
+    "brain": "codex/p003-brain-search-tools-20261021",
+    "worker": "codex/p003-worker-tool-lifecycle-20261021"
+  },
+  "exact_file_deployment": true,
+  "merged_main": false,
+  "code_delegated": false,
+  "backups": {
+    "brain": {
+      "at_ms": 1792659814062,
+      "backup": "/opt/p003/server/backups/search-canary-R8-20261022T090332Z",
+      "sha256": "dbf4b2cc6e44a019ab8e1e92bbb4ab8f63b3410946a867e1a2c535f1a064fa34",
+      "files": {
+        "/opt/p003/server/src/routes/device-session.ts": "6f6fdf418a60fa13e5720ef09866b1db50cab8390ad256ad24a94e10648d03ab",
+        "/opt/p003/server/src/search-canary-status.ts": "2c27fd4c99b233cdc6b4d08830e7e2737a1373e875b963ab2705872fffbe10c2",
+        "/opt/p003/server/src/routes/search-routing-admin.ts": "28c04a1ce1a0186e14847d0ed8e595a17180b50928060a61426ea92c6010ab6f",
+        "/opt/p003/server/src/tools/search-routing-config.ts": "ea5987475dec9bcd356e8db4abdd4bf20597fb908cf83f651ea0fa978d664d46",
+        "/opt/p003/server/src/tools/device-location.ts": null,
+        "/opt/p003/server/src/tools/device-location-runtime.ts": null,
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location.ts": null,
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location-runtime.ts": null,
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-runtime.ts": "5f60dffbfc822540c37b5def95e8e51c46ebc36eb8f3285f832304bd1bb15a9c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "bfb2499e368fb242554a00c1bb9637fa908f2e2dcb9d1e8396d7d1554464afbd",
+        "/opt/p003/search-canary-20261021/brain/src/routes/search-tasks.ts": "68b22e0b21788bd1f9a50b905e2a24938d069e0720f7903da7d7ecd229e7217f",
+        "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts": "9886ca4849710fe0f78f5edec4cf4d1ffa6de1590bacc618b6056d8f382284a9",
+        "/opt/p003/search-canary-20261021/brain/src/tools/moji-weather.ts": "a60fa73b3273cfe0e11c97a4b7d5e6e4258dccfdf5e64a6244916ac93bd2a472",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-routing-config.ts": "ea5987475dec9bcd356e8db4abdd4bf20597fb908cf83f651ea0fa978d664d46",
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "b752700ccb979bf850e16adcfaa1bbd3afe9dfac01655537008ed088c544e14a",
+        "/opt/p003/web/dist/admin/index.html": "b9ea5da98f4fb84f06ad722e1d68f1ab65147e1eb29303a592a655b7f8bb20a7",
+        "/opt/p003/search-canary-20261021/brain/canary.env": "c405af967282ae5ca93ce82879600de9612deae05350aa3f189917721953f925",
+        "/opt/p003/search-canary-20261021/brain/release-status.json": "8c0a8608089184ca57c8e6c07d1c90dcdeafc12166c308f453cbcbb58fc4d71b",
+        "/opt/p003/server/.env.local": "dc6301b32448751d0f292c479357e5198487284b8e4f50b2075f9ffbce58473f"
+      }
+    },
+    "worker": {
+      "at_ms": 1792659831071,
+      "backup": "/root/rust-worker/backups/search-canary-R8-20261022T090332Z",
+      "sha256": "849252936c7f79b4ccfcbaaee1097b7caa6b07d55b5c0c6d7c48a725eb632571",
+      "files": {
+        "/opt/p003-search-canary-20261021/voice-rust-worker": "82ba5e83b80b7e4bb02011988fe0d447d38c4a25567896a1ab578863b3959960",
+        "/opt/p003-search-canary-20261021/canary.env": "4aad426a3bb4573bfa6f74d17533dc8784135b5072276bf6bb389410fbccf4f5",
+        "/opt/p003-search-canary-20261021/window.json": "faeadafec54260ef50fa6a444edbc1844b2cb07919265f307f235671d3933864"
+      }
+    }
+  },
+  "installed_source_hashes": {
+    "/opt/p003/search-canary-20261021/brain/src/tools/device-location.ts": "7f43b8132572c8cf134c01164585ef03bceedc06482fbadc28cfdcabfbd45011",
+    "/opt/p003/search-canary-20261021/brain/src/tools/device-location-runtime.ts": "0f45d235204db912f52fc72049d47f1c95ba7375241b9cc80eb4c3802af2b18c",
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-runtime.ts": "653367fb0a23ce02ba9525beddc698a0f0c334ec4a9f0abb760bb524264c2852",
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "3246ed6d83b3482dd4e9db4dc523434c65b59db3b6216f36ea13128a0faf6e44",
+    "/opt/p003/search-canary-20261021/brain/src/routes/search-tasks.ts": "6caf729c3a8bb51fe0b1a7f01ec41418da513d8ec033a5bf5a29773f919eba75",
+    "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts": "2bf70eb47360c5f418805fac125693eb473f0cec9cde5878269096c14d70dd66",
+    "/opt/p003/search-canary-20261021/brain/src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-routing-config.ts": "85e13b343790c25d09f6167f0ad6e0bdfddedb53a384e44fabecf03828d5d8b2",
+    "/opt/p003/server/src/routes/device-session.ts": "3759d274bb3997f0930b18f43eba085d5a9c615a381f6a05c1488fdc7a3f662d",
+    "/opt/p003/server/src/search-canary-status.ts": "2df1766b60f2672be5bd6c71bf95ae1da09456b74f88d3dada6377784d0b9101",
+    "/opt/p003/server/src/routes/search-routing-admin.ts": "b98f1efa16ef6870aee3bd1efcb6c6e3b0b680e110908570cad26170b168ac8b",
+    "/opt/p003/server/src/tools/search-routing-config.ts": "85e13b343790c25d09f6167f0ad6e0bdfddedb53a384e44fabecf03828d5d8b2",
+    "/opt/p003/server/src/tools/device-location.ts": "7f43b8132572c8cf134c01164585ef03bceedc06482fbadc28cfdcabfbd45011",
+    "/opt/p003/server/src/tools/device-location-runtime.ts": "0f45d235204db912f52fc72049d47f1c95ba7375241b9cc80eb4c3802af2b18c",
+    "/opt/p003/web/dist/admin/index.html": "af0d732ba0023584f6a1146307d96aa3f6288cbccd0f2cdd42c78da3e80ea0de"
+  },
+  "worker_build_source_hashes": {
+    "src/audit_capture.rs": "4b59e228dc3c4fe68efcdc902a413da6893f0bec10ca6d25d74090724acfde85",
+    "src/backchannel.rs": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "src/candidate.rs": "4b3a3d489db169c9f8ee95e8e01ce79a9ccc577a89e8223d79a39fd584c73c8e",
+    "src/caption_gate.rs": "33b73e3eb96ebcb21ec9644b8ed6f0a89ea9f004ecb57aab689e32573feb81e8",
+    "src/config.rs": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218",
+    "src/contract.rs": "fd57e2ecd11d523d9f44263d381ed94e4da6b2b82ec466fc7b879aafd9974ec4",
+    "src/control.rs": "17e659e03beef5f81fe732e40f2bfcb9a6bb86733b5d667709779a2bc971cff7",
+    "src/device_grammar.rs": "beb2a6adc33e4b2f932aacd1c348c6e42b427a51576283dc382e34220a7592c8",
+    "src/device_grammar_slot_matrix.rs": "3e92cfc577cd058276076f82c5a273d732157cf6d763797d6b1a43eadedccbf6",
+    "src/device_grammar_testdata.rs": "46e3d5411d664bdaf19d63d4506218c006c3ea0e9fbc8ced5483f4f667c17be3",
+    "src/device_intent.rs": "b45b98b03df87370cc28e2d3febb7a931a4d308d46294509c88d9194585023dc",
+    "src/device_ledger.rs": "7defc258595513afd15434f5e78f232076a9c9d4c9845d5da562636b42f94929",
+    "src/eot.rs": "0c6ca211e120145d986b4d950a5accb4dde243804659d9d4ac18778ea41dfbfe",
+    "src/eot_snapshot.rs": "0ffdcd2b28233c2b9552b8aa02363f5860db579a7357cd721e988d19260f0259",
+    "src/filler.rs": "0a3a5d49529d21c21a5f0452109c1ff3d60fb3a6083d20bfd6c59ddd892cf569",
+    "src/gate.rs": "bcfabf259a70d961cb1a777394429471defc7efabf1f7c53dd3762423a73541f",
+    "src/job.rs": "e821ff7e3bfe4dc4b6630127a3a45e53c0ebefadf54444e20ca9695ae06165d0",
+    "src/llm.rs": "cd2d7d010d8be99d5db14dfc4b3829f7c3b54a086a930681e28e8087032631c6",
+    "src/main.rs": "68d165a29d8de4b809719a4af67ec458bc21a275fed5c86d85be6e5c4be9c40e",
+    "src/ordered_pcm.rs": "1781914dad34a0981ca81b3ddc5390acdd46318243bd569b73d1192f1d41f85a",
+    "src/pipeline.rs": "4c339605a27120910a14d697fe362ffc7d709b99e89c0e742c7d74d76bad12e4",
+    "src/playout.rs": "fc8fb62d08dee2496b891d166036be287cfae703ac7afe67995c8a7c89a03510",
+    "src/preflight.rs": "950bb416101f68868b3bc19440affc5e2e372f80669f35155d8218e7fc2e2f63",
+    "src/ready_confirm.rs": "a0fa66795ea21c21d40f671d2e781776647735da34cf6b70c0c59b2ddb527f70",
+    "src/say_defer.rs": "bbdafa12d8040ae4ebac8fab8bb74b2d0725e6071cd48b45e17b136dc6b4e6af",
+    "src/search_canary.rs": "2cb39a0611d9521d92ddc8222f5590cf34a7f544065431f0c5a6f61f5ccbf865",
+    "src/search_policy.rs": "e4f1698760ee3d0f8011aeae766bf712130087e5aae89178a31b678b8a259a9a",
+    "src/search_tasks.rs": "ddf30a4fd0441c0e1bb56231ba93bb6b768d0f716c4c84c5e075e4cd97a79f28",
+    "src/segmenter.rs": "a044798a0afb58f33ef272bb622bd3764442be84a3958c66af02894d30571199",
+    "src/speaker_id.rs": "450f01eb5f18ab33ae805562deda12e0933d9d2fdb7e4a8de19f72eacb6670d0",
+    "src/stt_volc.rs": "8e622b2361e904747b9e47ad831db4a212aa5ce41cf4c5c62c5709585c86ab3d",
+    "src/textproc.rs": "55f462363e82e38a712b27f374fdd0344e79d61ce061fc945fe3630dc8caed7c",
+    "src/token.rs": "9e5c7d3d0d5c18e6c5218c86e03e6aba8bfd3b9e186e623c1ac47d1f576b1b22",
+    "src/transcript_pub.rs": "e6ca31d914a16934d020048f04f50e192a6c1e583cfa511afe7563804f94ae66",
+    "src/tts.rs": "331ab5a50f63d43adeb7c00d12fa6347e715ddb668c19b6b8224f6a238ace386",
+    "src/tts_volc.rs": "6a333e155efd0757890271329bbfbb35cc810a6fae71a8ef5cceb933fd6b3600",
+    "src/tts_xfyun.rs": "001d5669f6353ae20e799da430f36ebf29c84b702b29cd77b889ce12e18b5f0d",
+    "src/turn.rs": "537376f6301a2718a40d2797f67565ef7850a589704f6b03c589168232f5b977",
+    "src/vad.rs": "3cf2bca4621e5dacc7efcf7766cac88e0a2ad9d7db0a3f08348957eaf301c7ab",
+    "src/volc.rs": "c58ab6604c65f1c3107307318c7478ae6aa7edf1b489f0626ef9a601423810e3",
+    "src/worker.rs": "fe198a5666092abc4472014b4f5f4b6882908d42bb2c26f45287d4826af5b2b3",
+    "Cargo.toml": "4e229eef4f4b75dad8fbac6ff6d9da5726fc0273948ecaf793f6fca0ab889824",
+    "Cargo.lock": "6e9da0052d2c477166c8b2e148f537cbdd22844cae01bf620a0cadf322bd394d",
+    "../../../4-Assets/contracts/p003-search-task-v1.json": "7c3d30bd97df3df2341d105644372dad9587a33f40e541acf5b7f7993bfec7fc",
+    "src/search_policy_cases.rs": "41dfa3d016a46592bb1ac2e12841f37fa1771d4b5e9f447a04a3359f6ad97bdf",
+    "src/search_routing.rs": "6d830cc43da637d8a9711aa46dc164104b68de44bfef881b2bcf0e59c2e1a261",
+    "src/search-routing-defaults.json": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+    "tools/search-route-preview/Cargo.toml": "0385627127c0757ab95cdfd6dfe72ecb050b2f8bfca51ba58ec0c278df221d94",
+    "tools/search-route-preview/Cargo.lock": "a0627208a2bcf9d1d94a2891822a3d11ae196810d845c455c411f2ed8ae950dd",
+    "tools/search-route-preview/src/main.rs": "483099c3e941b8ee9d489d7dafea450c193ae235a0840792c5cc205db96702dc"
+  },
+  "artifacts": {
+    "worker": {
+      "staged": true,
+      "bytes": 73162360,
+      "sha256": "0c2b23a31fce3d1c613afec8ddcbe0ff988b2ab782c16aacec07335840eda9c8"
+    },
+    "preview": {
+      "staged": true,
+      "bytes": 785136,
+      "sha256": "524dd7f0475d9101777187d0477dcc71a583a8ee082e42841b3e2b6ba986f183"
+    }
+  },
+  "candidate_rollback_and_forward": [
+    {
+      "step": "r8-preflight-worker",
+      "jobs": 0,
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792684740000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "staged_sha": "0c2b23a31fce3d1c613afec8ddcbe0ff988b2ab782c16aacec07335840eda9c8"
+    },
+    {
+      "step": "r8-close-dispatch",
+      "new_canary_dispatch": false,
+      "at_ms": 1792659861670
+    },
+    {
+      "step": "r8-stop-worker",
+      "candidate_stopped": true,
+      "jobs_before_stop": 0
+    },
+    {
+      "step": "r8-install-brain",
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location.ts": "7f43b8132572c8cf134c01164585ef03bceedc06482fbadc28cfdcabfbd45011",
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location-runtime.ts": "0f45d235204db912f52fc72049d47f1c95ba7375241b9cc80eb4c3802af2b18c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-runtime.ts": "653367fb0a23ce02ba9525beddc698a0f0c334ec4a9f0abb760bb524264c2852",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "3246ed6d83b3482dd4e9db4dc523434c65b59db3b6216f36ea13128a0faf6e44",
+        "/opt/p003/search-canary-20261021/brain/src/routes/search-tasks.ts": "6caf729c3a8bb51fe0b1a7f01ec41418da513d8ec033a5bf5a29773f919eba75",
+        "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts": "2bf70eb47360c5f418805fac125693eb473f0cec9cde5878269096c14d70dd66",
+        "/opt/p003/search-canary-20261021/brain/src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-routing-config.ts": "85e13b343790c25d09f6167f0ad6e0bdfddedb53a384e44fabecf03828d5d8b2",
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "524dd7f0475d9101777187d0477dcc71a583a8ee082e42841b3e2b6ba986f183"
+      }
+    },
+    {
+      "step": "r8-install-worker",
+      "restored": false,
+      "sha256": "0c2b23a31fce3d1c613afec8ddcbe0ff988b2ab782c16aacec07335840eda9c8",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792659886283,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "step": "r8-rollback-brain",
+      "restored": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location.ts": null,
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location-runtime.ts": null,
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-runtime.ts": "5f60dffbfc822540c37b5def95e8e51c46ebc36eb8f3285f832304bd1bb15a9c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "bfb2499e368fb242554a00c1bb9637fa908f2e2dcb9d1e8396d7d1554464afbd",
+        "/opt/p003/search-canary-20261021/brain/src/routes/search-tasks.ts": "68b22e0b21788bd1f9a50b905e2a24938d069e0720f7903da7d7ecd229e7217f",
+        "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts": "9886ca4849710fe0f78f5edec4cf4d1ffa6de1590bacc618b6056d8f382284a9",
+        "/opt/p003/search-canary-20261021/brain/src/tools/moji-weather.ts": "a60fa73b3273cfe0e11c97a4b7d5e6e4258dccfdf5e64a6244916ac93bd2a472",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-routing-config.ts": "ea5987475dec9bcd356e8db4abdd4bf20597fb908cf83f651ea0fa978d664d46",
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "b752700ccb979bf850e16adcfaa1bbd3afe9dfac01655537008ed088c544e14a"
+      }
+    },
+    {
+      "step": "r8-rollback-worker",
+      "restored": true,
+      "sha256": "82ba5e83b80b7e4bb02011988fe0d447d38c4a25567896a1ab578863b3959960",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792659900959,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "step": "r8-forward-brain",
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location.ts": "7f43b8132572c8cf134c01164585ef03bceedc06482fbadc28cfdcabfbd45011",
+        "/opt/p003/search-canary-20261021/brain/src/tools/device-location-runtime.ts": "0f45d235204db912f52fc72049d47f1c95ba7375241b9cc80eb4c3802af2b18c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-runtime.ts": "653367fb0a23ce02ba9525beddc698a0f0c334ec4a9f0abb760bb524264c2852",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "3246ed6d83b3482dd4e9db4dc523434c65b59db3b6216f36ea13128a0faf6e44",
+        "/opt/p003/search-canary-20261021/brain/src/routes/search-tasks.ts": "6caf729c3a8bb51fe0b1a7f01ec41418da513d8ec033a5bf5a29773f919eba75",
+        "/opt/p003/search-canary-20261021/brain/src/search-canary-guard.ts": "2bf70eb47360c5f418805fac125693eb473f0cec9cde5878269096c14d70dd66",
+        "/opt/p003/search-canary-20261021/brain/src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-routing-config.ts": "85e13b343790c25d09f6167f0ad6e0bdfddedb53a384e44fabecf03828d5d8b2",
+        "/opt/p003/search-canary-20261021/brain/bin/search-route-preview": "524dd7f0475d9101777187d0477dcc71a583a8ee082e42841b3e2b6ba986f183"
+      }
+    },
+    {
+      "step": "r8-forward-worker",
+      "restored": false,
+      "sha256": "0c2b23a31fce3d1c613afec8ddcbe0ff988b2ab782c16aacec07335840eda9c8",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792659916276,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    }
+  ],
+  "production_admin_change": {
+    "installed": true,
+    "location_env_keys": [
+      "SEARCH_DEVICE_LOCATION_DB_PATH",
+      "SEARCH_DEVICE_ROUTING_DB_PATH"
+    ],
+    "rtc_room_count_before": 0,
+    "at_ms": 1792659961100,
+    "hashes": {
+      "/opt/p003/server/src/routes/device-session.ts": "3759d274bb3997f0930b18f43eba085d5a9c615a381f6a05c1488fdc7a3f662d",
+      "/opt/p003/server/src/search-canary-status.ts": "2df1766b60f2672be5bd6c71bf95ae1da09456b74f88d3dada6377784d0b9101",
+      "/opt/p003/server/src/routes/search-routing-admin.ts": "b98f1efa16ef6870aee3bd1efcb6c6e3b0b680e110908570cad26170b168ac8b",
+      "/opt/p003/server/src/tools/search-routing-config.ts": "85e13b343790c25d09f6167f0ad6e0bdfddedb53a384e44fabecf03828d5d8b2",
+      "/opt/p003/server/src/tools/device-location.ts": "7f43b8132572c8cf134c01164585ef03bceedc06482fbadc28cfdcabfbd45011",
+      "/opt/p003/server/src/tools/device-location-runtime.ts": "0f45d235204db912f52fc72049d47f1c95ba7375241b9cc80eb4c3802af2b18c",
+      "/opt/p003/web/dist/admin/index.html": "af0d732ba0023584f6a1146307d96aa3f6288cbccd0f2cdd42c78da3e80ea0de"
+    },
+    "before": [
+      {
+        "name": "p003-voice",
+        "pid": 1386533,
+        "restarts": 30,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ],
+    "after": [
+      {
+        "name": "p003-voice",
+        "pid": 1404935,
+        "restarts": 31,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ],
+    "admin_unauthorized": 401,
+    "health": {
+      "status": "ok"
+    }
+  },
+  "rollback_config_version": "r7-e2042f8fde4e5d35ab5cb3f5",
+  "rollback_note": "Close candidate dispatch and gates; revert routing to R7 without auto_location_enabled before restoring old Worker. Restore only manifest files, remove only added files/env keys, retain current business databases. Production admin rollback was backed up but not executed."
+}

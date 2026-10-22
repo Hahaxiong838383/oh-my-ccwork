@@ -1,0 +1,785 @@
+{
+  "recorded_at_cst": "2026-10-22 17:16:57",
+  "conclusion": "deployed_P1_pending_physical_device_acceptance",
+  "window": {
+    "actually_reopened": true,
+    "resumed_at_ms": 1792660172270,
+    "expires_at_ms": 1792684740000,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "p1": true,
+    "p2": false,
+    "routing_version": "r7-b4b722c50d1efbf635a1e06d",
+    "real_device_acceptance": "pending",
+    "revision": "R8-device-ip-weather"
+  },
+  "brain_test_commands": [
+    {
+      "name": "device-brain.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-config.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-intent-protocol.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-registry.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-session.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "moji-weather.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-availability.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-boundaries.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-isolation.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-process.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-status.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-chat-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-executor.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-route.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-routing-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-routing-store.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-tasks.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-location.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-location-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "tsc",
+      "rc": 0
+    }
+  ],
+  "worker_linux": {
+    "tests_passed": 380,
+    "tests_failed": 0,
+    "preview_tests_passed": 21,
+    "build_passed": true,
+    "artifacts": {
+      "worker": {
+        "staged": true,
+        "bytes": 73162360,
+        "sha256": "0c2b23a31fce3d1c613afec8ddcbe0ff988b2ab782c16aacec07335840eda9c8"
+      },
+      "preview": {
+        "staged": true,
+        "bytes": 785136,
+        "sha256": "524dd7f0475d9101777187d0477dcc71a583a8ee082e42841b3e2b6ba986f183"
+      }
+    }
+  },
+  "published_regression": {
+    "passed": true,
+    "total": 20,
+    "failures": []
+  },
+  "extra_live_previews": [
+    {
+      "text": "今天天气怎么样",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 0,
+        "metric": "forecast"
+      },
+      "weather": null
+    },
+    {
+      "text": "明天会下雨吗",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 1,
+        "metric": "forecast"
+      },
+      "weather": null
+    },
+    {
+      "text": "这里后天天气怎么样",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 2,
+        "metric": "forecast"
+      },
+      "weather": null
+    },
+    {
+      "text": "现在多少度",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 0,
+        "metric": "current"
+      },
+      "weather": null
+    },
+    {
+      "text": "空气质量怎么样",
+      "action": "search",
+      "auto_weather": {
+        "day_offset": 0,
+        "metric": "aqi"
+      },
+      "weather": null
+    },
+    {
+      "text": "改查上海明天天气",
+      "action": "replace",
+      "weather": {
+        "city_id": 39,
+        "city_name": "上海市",
+        "day_offset": 1,
+        "metric": "forecast"
+      }
+    },
+    {
+      "text": "取消搜索",
+      "action": "cancel",
+      "weather": null
+    },
+    {
+      "text": "我今天画了一只小猫",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "三角形的内角多少度",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "水的沸点温度是多少",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "我发烧了体温多少度",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "烤箱的温度怎么调",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "家里空调温度怎么调",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "我觉得北京天气真好",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "北京天气不错",
+      "action": "chat",
+      "weather": null
+    },
+    {
+      "text": "听说上海天气真好",
+      "action": "chat",
+      "weather": null
+    }
+  ],
+  "configuration_rollback_and_forward": true,
+  "browser_live": {
+    "at_ms": 1792660037991,
+    "actual_ui": true,
+    "preview_no_write": true,
+    "targets": [
+      {
+        "sn": "BJP00326070803800006",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "at": 1792660011234
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "at": 1792660011234
+      }
+    ],
+    "revision": 15,
+    "desktop_and_narrow": true,
+    "page_errors": []
+  },
+  "rea_scenarios": [
+    {
+      "site": "tool-lu",
+      "completeness": {
+        "status": "complete",
+        "equality_eligible": true,
+        "missing_sections": [],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "step_id": "scenario_start",
+          "action": "goto_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "settle",
+          "action": "wait_for_timeout",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "browser": {
+        "version": "152.0.7977.8",
+        "cleanup": "terminated-owned-process",
+        "cleanup_outcome": null
+      }
+    },
+    {
+      "site": "ip9",
+      "completeness": {
+        "status": "complete",
+        "equality_eligible": true,
+        "missing_sections": [],
+        "truncated_sections": []
+      },
+      "steps": [
+        {
+          "step_id": "scenario_start",
+          "action": "goto_start",
+          "status": "completed",
+          "error": null
+        },
+        {
+          "step_id": "settle",
+          "action": "wait_for_timeout",
+          "status": "completed",
+          "error": null
+        }
+      ],
+      "browser": {
+        "version": "152.0.7977.8",
+        "cleanup": "terminated-owned-process",
+        "cleanup_outcome": null
+      }
+    }
+  ],
+  "public_device_session_probe": {
+    "synthetic_air_ingress": true,
+    "physical_device_verified": false,
+    "http_status": 200,
+    "response_ms": 243,
+    "location_completed_after_response_ms": 659,
+    "forged_forwarding_headers_overwritten": true,
+    "location": {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792660174",
+      "state": "ready",
+      "city": "北京市",
+      "province": "北京",
+      "observed": 1792660175408,
+      "expires": 1792663774000,
+      "reason": null
+    }
+  },
+  "synthetic_rtc": {
+    "geo_missing": {
+      "mode": "geo_missing",
+      "room": "sn-BJP00326060100100004-1792660032",
+      "trace": "search-probe-1792660032",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 4,
+        "user_transcripts": 3,
+        "metrics": 7,
+        "audio_voiced_ms": 16210.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 2956
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 5218,
+          "chars": 7
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 9982,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 19018,
+          "chars": 32
+        },
+        {
+          "event": "synthetic_input",
+          "index": 1,
+          "ms": 40212
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 43973,
+          "chars": 2
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 44366,
+          "chars": 7
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 49095,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 60365,
+          "chars": 40
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 75.8,
+      "device_heard_verified": false,
+      "assertions": {
+        "location_unavailable_disclosed": true,
+        "explicit_shanghai_works": true,
+        "no_implicit_server_city": true
+      },
+      "captions_sha256": "90c3ad7487772ff4487950a0328d7a79f5ee8d8e1e0b99a0370f3fed9638144e"
+    },
+    "geo": {
+      "mode": "geo",
+      "room": "sn-BJP00326060100100004-1792660174",
+      "trace": "synthetic-r8-public-1792660174",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 6,
+        "user_transcripts": 3,
+        "metrics": 10,
+        "audio_voiced_ms": 23110.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 2506
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 4609,
+          "chars": 7
+        },
+        {
+          "event": "synthetic_input",
+          "index": 1,
+          "ms": 5717
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 8158,
+          "chars": 9
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 8160,
+          "chars": 3
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 11662,
+          "chars": 8
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 16698,
+          "chars": 21
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 29545,
+          "chars": 50
+        },
+        {
+          "event": "synthetic_input",
+          "index": 2,
+          "ms": 44097
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 46859,
+          "chars": 9
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 51446,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 63189,
+          "chars": 44
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 79.6,
+      "device_heard_verified": false,
+      "assertions": {
+        "reported_network_location": true,
+        "automatic_beijing": true,
+        "explicit_shanghai_override": true,
+        "smalltalk_received": true,
+        "smalltalk_before_weather": true
+      },
+      "captions_sha256": "ba3748ef2164e5887e27531b3adc6b2c405da13e1273ce537a35879064366db2"
+    },
+    "collected_at_ms": 1792660450460
+  },
+  "tasks": [
+    {
+      "id": "c5cb59a8-cd1b-4061-9b56-34fb6fadd84c",
+      "session": "sn-BJP00326060100100004-1792660032",
+      "createdAt": 1792660040169,
+      "readyAt": 1792660040185,
+      "status": "cancelled",
+      "delivery": "completed",
+      "routing": {
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "rule_id": "natural-weather",
+        "auto_weather": {
+          "day_offset": 0,
+          "metric": "forecast"
+        },
+        "weather_enabled": true,
+        "auto_location_enabled": true
+      }
+    },
+    {
+      "id": "e1d96301-f5d6-4b0c-97fa-a3e164d283b3",
+      "session": "sn-BJP00326060100100004-1792660032",
+      "createdAt": 1792660079323,
+      "readyAt": 1792660080660,
+      "status": "cancelled",
+      "delivery": "completed",
+      "routing": {
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "rule_id": "natural-weather",
+        "weather": {
+          "city_id": 39,
+          "city_name": "上海市",
+          "day_offset": 0,
+          "metric": "current"
+        },
+        "weather_enabled": true,
+        "auto_location_enabled": true
+      }
+    },
+    {
+      "id": "fff45291-f42b-473c-93c3-5f579076c5de",
+      "session": "sn-BJP00326060100100004-1792660174",
+      "createdAt": 1792660219292,
+      "readyAt": 1792660219582,
+      "status": "cancelled",
+      "delivery": "completed",
+      "routing": {
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "rule_id": "natural-weather",
+        "auto_weather": {
+          "day_offset": 0,
+          "metric": "forecast"
+        },
+        "weather_enabled": true,
+        "auto_location_enabled": true
+      }
+    },
+    {
+      "id": "0f5532ff-9726-4382-b5d6-29ea3ba107ad",
+      "session": "sn-BJP00326060100100004-1792660174",
+      "createdAt": 1792660261546,
+      "readyAt": 1792660261850,
+      "status": "cancelled",
+      "delivery": "completed",
+      "routing": {
+        "version": "r7-b4b722c50d1efbf635a1e06d",
+        "rule_id": "builtin-control",
+        "weather": {
+          "city_id": 39,
+          "city_name": "上海市",
+          "day_offset": 1,
+          "metric": "forecast"
+        },
+        "weather_enabled": true,
+        "auto_location_enabled": true
+      }
+    }
+  ],
+  "weather_evidence": [
+    {
+      "task_id": "e1d96301-f5d6-4b0c-97fa-a3e164d283b3",
+      "version": "r7-b4b722c50d1efbf635a1e06d",
+      "provider": "moji-public-web",
+      "city_id": 39,
+      "city_name": "上海市",
+      "target_date": "2026-10-22",
+      "updated_at": "2026-10-22T16:55:08+08:00",
+      "fetched_at": "2026-10-22T09:08:00.658Z",
+      "cache_hit": false,
+      "metric": "current"
+    },
+    {
+      "task_id": "fff45291-f42b-473c-93c3-5f579076c5de",
+      "version": "r7-b4b722c50d1efbf635a1e06d",
+      "city_source": "device_ip",
+      "location_provider": "ip9",
+      "location_observed_at": 1792660175408,
+      "provider": "moji-public-web",
+      "city_id": 2,
+      "city_name": "北京市",
+      "target_date": "2026-10-22",
+      "updated_at": "2026-10-22T15:27:00+08:00",
+      "fetched_at": "2026-10-22T09:10:19.581Z",
+      "cache_hit": false,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "0f5532ff-9726-4382-b5d6-29ea3ba107ad",
+      "version": "r7-b4b722c50d1efbf635a1e06d",
+      "provider": "moji-public-web",
+      "city_id": 39,
+      "city_name": "上海市",
+      "target_date": "2026-10-23",
+      "updated_at": "2026-10-22T15:27:00+08:00",
+      "fetched_at": "2026-10-22T09:11:01.849Z",
+      "cache_hit": false,
+      "metric": "forecast"
+    }
+  ],
+  "probe_location_cleanup": {
+    "at_ms": 1792660479787,
+    "synthetic_room": "sn-BJP00326060100100004-1792660174",
+    "deleted_probe_rows": 1,
+    "other_rows_before": 0,
+    "other_rows_after": 0,
+    "remaining_synthetic_rows": 0
+  },
+  "final_read_only_checks": {
+    "worker": {
+      "at_ms": 1792660433241,
+      "units": {
+        "voice-worker-rust": {
+          "MainPID": "839",
+          "NRestarts": "0",
+          "ExecMainStartTimestamp": "Mon 2026-09-28 15:30:06 UTC",
+          "ActiveState": "active",
+          "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+        },
+        "p003-search-worker": {
+          "MainPID": "770897",
+          "NRestarts": "0",
+          "ExecMainStartTimestamp": "Thu 2026-10-22 09:05:10 UTC",
+          "ActiveState": "active",
+          "sha256": "0c2b23a31fce3d1c613afec8ddcbe0ff988b2ab782c16aacec07335840eda9c8"
+        }
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792660431276,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792684740000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+      "https_unauthenticated": {
+        "/routing": 401,
+        "/routing/ack": 401
+      },
+      "resources": {
+        "memory_available_kb": "6268764",
+        "disk_available_bytes": 73455075328
+      }
+    },
+    "brain": {
+      "at_ms": 1792660434932,
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 1404935,
+          "restarts": 31,
+          "status": "online"
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0,
+          "status": "online"
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5,
+          "status": "online"
+        }
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "candidate_sources_verified": 127,
+      "production_sources_verified": 120,
+      "versions": [
+        {
+          "sn": "BJP00326060100100004",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792645636237
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version_code": 356,
+          "version_name": "1.2.2-canary.342",
+          "last_check_at": 1792654114522
+        }
+      ],
+      "flags": {
+        "candidate": {
+          "p003.search.tools": "0",
+          "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.enabled": "1"
+        },
+        "production": {
+          "p003.search.canary.selected_sn": "BJP00326060100100004",
+          "p003.search.canary.enabled": "1",
+          "p003.search.canary.expires_at_ms": "1792684740000",
+          "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.agent": "p003-search-canary-20261021",
+          "p003.search.canary.started_at_ms": "1792585650087",
+          "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+        }
+      },
+      "routing_targets": [
+        {
+          "sn": "BJP00326070803800006",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "at": 1792660011234
+        },
+        {
+          "sn": "BJP00326060100100004",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "at": 1792660011234
+        }
+      ],
+      "loads": [
+        {
+          "sn": "BJP00326060100100004",
+          "version": "r7-b4b722c50d1efbf635a1e06d",
+          "session_digest": "a983b655686c3493",
+          "at": 1792660291336
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version": "r7-fe6cfd739036f2e0d5b0ac44",
+          "session_digest": "91174e38e2b08475",
+          "at": 1792656153585
+        }
+      ],
+      "isolated_accounts": true,
+      "daily_task_counts_including_probes": {
+        "BJP00326060100100004": 65,
+        "BJP00326070803800006": 1
+      },
+      "timer": "NextElapseUSecRealtime=Thu 2026-10-22 23:59:00 CST\nAccuracyUSec=1s\nPersistent=yes\nActiveState=active\n",
+      "resources": {
+        "memory_available_kb": "2436376",
+        "disk_available_bytes": 11765731328
+      }
+    }
+  },
+  "evidence_boundaries": [
+    "Synthetic RTC and completed delivery are not physical-device speaker acceptance.",
+    "Completed tasks were later cancelled and result bodies cleared by session cleanup.",
+    "The Air probe city is not the physical P003 location; its exact synthetic location row has been deleted.",
+    "Routing load ACK on S04 belongs to synthetic probe; S38 latest ACK still predates R8.",
+    "Tonight actual 23:59 expiry and return to production remain pending; timers and automated tests passed.",
+    "No P95 latency claim; the 243ms session response is one probe.",
+    "No raw device IP, credentials, source audio or real-user transcript is included."
+  ]
+}
