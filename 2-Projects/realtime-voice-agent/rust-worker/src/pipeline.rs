@@ -515,6 +515,7 @@ struct Orchestrator {
     eot_gap_gen: u64,
     eot_requested: bool,
     pending_amend: Option<String>,
+    search_history_handoff: Arc<StdMutex<Option<(u64, String)>>>,
     bank: Option<FillerBank>,
     pf: PreflightGate,
     spec: Option<Speculation>,
@@ -982,6 +983,7 @@ pub async fn run_pipeline(
         eot_gap_gen: 0,
         eot_requested: false,
         pending_amend: None,
+        search_history_handoff: Arc::new(std::sync::Mutex::new(None)),
         bank,
         pf: PreflightGate::new(PreflightConfig::from_env()),
         spec: None,
@@ -1740,6 +1742,7 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
         if self.search.is_some() && crate::search_policy::intent(&text).is_some() { return; }
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
         // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
@@ -3413,7 +3416,12 @@ impl Orchestrator {
                     // Preserve any prior ordinary-turn history amendment for the next ordinary reply.
                     self.pending_amend = amend;
                     if let Some(old) = self.spec.take() { old.task.abort(); }
-                    search.command(action);
+                    let handoff=search.take_history_handoff();
+                    if search.command(action) {
+                        if let Some(question)=handoff {
+                            *self.search_history_handoff.lock().unwrap_or_else(|e|e.into_inner())=Some((self.next_turn_id,question));
+                        }
+                    }
                     self.set_state(AgentState::Listening);
                     return;
                 }
@@ -3576,6 +3584,7 @@ impl Orchestrator {
 
         let tts_cfg = self.tts_cfg.clone();
         let llm = self.llm.clone();
+        let search_history_handoff = self.search_history_handoff.clone();
         let room_name = self.room_name.clone();
         let ev_tx = self.turn_ev_tx.clone();
         let min_len = self.cfg.tts_min_sentence_len;
@@ -3656,7 +3665,12 @@ impl Orchestrator {
                         Some(sp) => {
                             {
                                 let mut g = llm.lock().await;
-                                if let Some(spoken) = pending_amend {
+                                if let Some((_, question)) = search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).take_if(|(after, _)| id > *after) {
+                                    // A handoff owns the entire prior pair, including its partial reply.
+                                    // If that reply never entered history, do not amend an unrelated assistant.
+                                    let transferred = g.transfer_last_question_to_search(&question);
+                                    info!(transferred, "search history handoff settled");
+                                } else if let Some(spoken) = pending_amend {
                                     g.set_last_assistant(&spoken);
                                 }
                                 g.push_user(&user_text);
@@ -3667,10 +3681,17 @@ impl Orchestrator {
                             let (delta_tx, delta_rx) = mpsc::channel::<String>(64);
                             let llm2 = llm.clone();
                             let ut = user_text.clone();
+                            let llm_ctl = ctl_tts.clone();
                             let h = tokio::spawn(async move {
                                 let mut g = llm2.lock().await;
+                                if llm_ctl.aborted() { return Err(anyhow::anyhow!("turn_aborted_before_llm")); }
                                 // 上一轮被打断的历史修正在同一把锁内先落账,保证消息顺序
-                                if let Some(spoken) = pending_amend {
+                                if let Some((_, question)) = search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).take_if(|(after, _)| id > *after) {
+                                    // A handoff owns the entire prior pair, including its partial reply.
+                                    // If that reply never entered history, do not amend an unrelated assistant.
+                                    let transferred = g.transfer_last_question_to_search(&question);
+                                    info!(transferred, "search history handoff settled");
+                                } else if let Some(spoken) = pending_amend {
                                     g.set_last_assistant(&spoken);
                                 }
                                 g.chat(&ut, delta_tx).await

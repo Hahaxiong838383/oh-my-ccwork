@@ -116,8 +116,10 @@ fn known_weather_place(t:&str)->bool {
 #[derive(Default)]
 pub struct RoutingSession { legacy: QueryIntent, pending_weather: Option<(u64,String,bool)>, version: String }
 impl RoutingSession {
+    pub fn take_handoff(&mut self)->Option<String>{self.legacy.take_handoff()}
     pub fn clear(&mut self) {self.legacy.clear();self.pending_weather=None;}
     pub fn route(&mut self,text:&str,now:u64,config:Option<&RoutingConfig>,version:&str) -> Decision {
+        self.legacy.take_handoff();
         if self.version!=version {self.clear();self.version=version.into();}
         let pending=self.pending_weather.take();
         let Some(config)=config else {return self.legacy_decision(text,now,None);};

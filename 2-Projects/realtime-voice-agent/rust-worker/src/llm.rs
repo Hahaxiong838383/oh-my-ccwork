@@ -666,6 +666,18 @@ impl Llm {
         }
     }
 
+    /// A split ASR suffix explicitly transferred the immediately preceding public question.
+    /// Remove only that trailing pair; web evidence and task outcomes stay outside chat memory.
+    pub fn transfer_last_question_to_search(&mut self, question: &str) -> bool {
+        let normalize = |s: &str| s.trim().trim_end_matches(|c: char| "。！!？?，,.；; ".contains(c)).to_owned();
+        let question=normalize(question);
+        if question.is_empty() { return false; }
+        let Some(index)=self.history.iter().rposition(|m|m["role"]=="user") else { return false; };
+        if normalize(self.history[index]["content"].as_str().unwrap_or(""))!=question
+            || self.history[index+1..].iter().any(|m|m["role"]!="assistant") { return false; }
+        self.history.truncate(index); self.version+=1; true
+    }
+
     /// 固定句(greeting/say)入历史(对齐 session.say add_to_chat_ctx=True)。
     pub fn push_assistant(&mut self, text: &str) {
         if !text.is_empty() {
@@ -961,6 +973,33 @@ mod tests {
         llm.settle(&ChatOutcome { full: String::new(), ttft_ms: 0, duration_ms: 0, interrupted: false, dev_labels: vec![] });
         assert_eq!(llm.history.len(), 4);
     }
+    #[test]
+    fn search_handoff_removes_only_the_exact_trailing_question_and_reply() {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let cfg = LlmConfig { base_url:"http://x".into(),api_key:"k".into(),model:"m".into(),instructions:"i".into(),thinking:"off".into(),strip_leading_filler:false,url_query:String::new(),room:String::new() };
+        for spoken in ["", "故宫通常", "完整回复"] {
+            let mut llm=Llm::new(cfg.clone());
+            llm.push_user("我喜欢小猫"); llm.push_assistant("小猫很可爱");
+            let preserved=llm.history.clone();
+            llm.push_user("故宫明天开放吗？"); llm.push_assistant("还在生成的回复");
+            llm.set_last_assistant(spoken);
+            let version=llm.history_version();
+            assert!(llm.transfer_last_question_to_search("故宫明天开放吗"));
+            assert_eq!(llm.history,preserved,"spoken={spoken}");
+            assert!(llm.history_version()>version);
+            assert!(!llm.transfer_last_question_to_search("故宫明天开放吗"));
+            let messages=llm.build_messages("烤箱的温度怎么调");
+            assert!(!messages.iter().any(|m|m["content"].as_str().unwrap_or("").contains("故宫")));
+        }
+        let mut llm=Llm::new(cfg);
+        llm.push_user("故宫明天开放吗"); llm.push_assistant("旧的完整回答");
+        llm.push_user("我喜欢小猫");
+        let before=llm.history.clone();let version=llm.history_version();
+        assert!(!llm.transfer_last_question_to_search("故宫明天开放吗"));
+        assert_eq!(llm.history,before);assert_eq!(llm.history_version(),version);
+        assert!(!llm.transfer_last_question_to_search(""));
+    }
+
 }
 
 #[cfg(test)]

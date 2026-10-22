@@ -89,10 +89,12 @@ pub fn intent(text: &str) -> Option<Intent> {
 }
 
 #[derive(Default)]
-pub struct QueryIntent { pending_at: Option<(u64, bool)>, recent_question: Option<(u64, String)> }
+pub struct QueryIntent { pending_at: Option<(u64, bool)>, recent_question: Option<(u64, String)>, handoff: Option<String> }
 impl QueryIntent {
-    pub fn clear(&mut self) { self.pending_at = None; self.recent_question = None; }
+    pub fn take_handoff(&mut self) -> Option<String> { self.handoff.take() }
+    pub fn clear(&mut self) { self.pending_at = None; self.recent_question = None; self.handoff=None; }
     pub fn route(&mut self, text: &str, now_ms: u64) -> Option<Intent> {
+        self.handoff=None;
         let previous = self.pending_at.take();
         let recent = self.recent_question.take();
         if let Some(action) = intent(text) {
@@ -102,7 +104,7 @@ impl QueryIntent {
                 // empty request to the immediately preceding public question.
                 if ["帮我查一下", "帮我查查", "帮我搜一下", "请帮我查一下"].contains(&addressed(text)) {
                     if let Some((at, question)) = recent {
-                        if now_ms.saturating_sub(at) <= 1500 { return Some(Intent::Search(question)); }
+                        if now_ms.saturating_sub(at) <= 1500 { self.handoff=Some(question.clone()); return Some(Intent::Search(question)); }
                     }
                 }
                 self.pending_at = Some((now_ms, addressed(text).starts_with("改查") || addressed(text).starts_with("换查")));
@@ -169,6 +171,21 @@ impl DeliveryGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn search_handoff_is_only_immediate_suffix_binding() {
+        let mut router=QueryIntent::default();
+        assert_eq!(router.route("故宫明天开放吗？",100),None);
+        assert_eq!(router.route("帮我查一下",900),Some(Intent::Search("故宫明天开放吗".into())));
+        assert_eq!(router.take_handoff(),Some("故宫明天开放吗".into()));
+        assert_eq!(router.take_handoff(),None);
+        for (question,command,delay) in [("故宫明天开放吗","帮我查一下",2000),("我喜欢小猫吗","帮我查一下",100),("故宫明天开放吗","帮我查一下火星",100),("故宫明天开放吗","取消搜索",100)] {
+            let mut router=QueryIntent::default();router.route(question,100);router.route(command,100+delay);
+            assert_eq!(router.take_handoff(),None);
+        }
+        router.route("卫星是什么",1000);router.route("帮我查一下",1100);router.clear();
+        assert_eq!(router.take_handoff(),None);
+    }
+
     #[test]
     fn split_intent_only_accepts_prompt_public_topic_and_expires() {
         let mut router=QueryIntent::default();

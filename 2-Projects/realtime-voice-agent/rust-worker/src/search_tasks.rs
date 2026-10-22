@@ -231,11 +231,12 @@ impl SearchSession {
         self.last_route=Some((version.to_owned(),decision));
         action
     }
+    pub fn take_history_handoff(&mut self)->Option<String>{self.query_intent.take_handoff()}
     pub fn on_commit(&mut self) {
         self.generation += 1;
         self.speech.retain(|s| s.task.is_some());
     }
-    pub fn command(&mut self, action: Intent) {
+    pub fn command(&mut self, action: Intent) -> bool {
         match action {
             Intent::Clarify => {
                 if self.last_route.as_ref().is_some_and(|(_,d)|d.action=="clarify_city") {self.notice("想查哪个城市的天气？请告诉我城市名。");}
@@ -245,11 +246,11 @@ impl SearchSession {
                 // One active query per session in v1.
                 if self.busy {
                     self.notice("我还在查刚才的问题；要换一个，可以说“改查”。");
-                    return;
+                    return false;
                 }
-                self.submit(query, false);
+                return self.submit(query, false);
             }
-            Intent::Replace(query) => self.replace_query(query),
+            Intent::Replace(query) => { return self.replace_query(query); },
             Intent::Cancel => {
                 self.suppress_auto_replay();
                 self.epoch += 1;
@@ -271,7 +272,7 @@ impl SearchSession {
                 self.auto_pending = false;
                 if self.busy {
                     self.notice("还在查或准备播报，查到后我会告诉你。");
-                    return;
+                    return false;
                 }
                 if let Some(speech) = &self.remainder {
                     if speech
@@ -294,22 +295,23 @@ impl SearchSession {
                         } else {
                             self.notice("暂时没能确认这条结果是否仍有效。");
                         }
-                        return;
+                        return false;
                     }
                 }
                 self.notice("暂时没有可继续的搜索结果，可以重新查一下。");
             }
         }
+        false
     }
-    pub fn replace_query(&mut self, query: String) {
+    pub fn replace_query(&mut self, query: String) -> bool {
         self.suppress_auto_replay();
         self.epoch += 1;
         self.gate.cancel();
         self.speech.clear();
         self.remainder = None;
-        self.submit(query, true);
+        self.submit(query, true)
     }
-    fn submit(&mut self, query: String, replace: bool) {
+    fn submit(&mut self, query: String, replace: bool) -> bool {
         self.epoch += 1;
         let routing=self.last_route.as_ref().and_then(|(version,d)|{
             if version.is_empty(){return None;}
@@ -326,8 +328,10 @@ impl SearchSession {
         };
         if self.tx.try_send(cmd).is_ok() {
             self.busy = true;
+            true
         } else {
             self.notice("这次搜索没能接单，你可以继续和我聊。");
+            false
         }
     }
     fn notice(&mut self, text: &str) {
@@ -773,6 +777,19 @@ mod tests {
             commands,
         )
     }
+    #[tokio::test]
+    async fn search_handoff_queue_acceptance_and_busy_rejection() {
+        let (mut s,_,mut commands)=test_session();
+        assert!(s.interpret("故宫明天开放吗").is_none());
+        let action=s.interpret("帮我查一下").unwrap();
+        assert_eq!(s.take_history_handoff(),Some("故宫明天开放吗".into()));
+        assert!(s.command(action));
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{..})));
+        assert!(!s.command(Intent::Search("另一个问题".into())));
+        s.busy=false;drop(commands);
+        assert!(!s.command(Intent::Search("无法接单".into())));
+    }
+
     #[tokio::test]
     async fn routing_applies_on_audio_tick_and_snapshots_actual_applied_version() {
         let (mut s,events,mut commands)=test_session();
