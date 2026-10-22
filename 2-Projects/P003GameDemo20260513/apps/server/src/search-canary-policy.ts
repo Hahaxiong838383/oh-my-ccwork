@@ -11,9 +11,9 @@ export function selectSearchCanaryAgent(i: CanaryInput): string {
     && validCanaryAllowlist(i.allowlist) && i.allowlist.includes(i.sn)
     && i.canaryAgent === SEARCH_CANARY_AGENT && i.contractCompatible === true
     && Number.isFinite(i.nowMs) && Number.isFinite(i.expiresAtMs) && Number.isFinite(i.leaseUntilMs)
-    // 2026-10-21: explicitly authorized next-day single-device window; fixed cutoff, no renewal.
+    // 2026-10-22: authorized +48h extension within a 72h horizon; fixed cutoff, no renewal.
     // Existing ticket contract requires >=5s after second-level JWT rounding.
-    && i.expiresAtMs - i.nowMs >= 6000 && i.expiresAtMs - i.nowMs <= 36 * 3600_000
+    && i.expiresAtMs - i.nowMs >= 6000 && i.expiresAtMs - i.nowMs <= 72 * 3600_000
     && i.leaseUntilMs > i.nowMs && i.leaseUntilMs - i.nowMs <= 15_000;
   return valid ? i.canaryAgent : i.baselineAgent;
 }
