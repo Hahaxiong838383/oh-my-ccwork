@@ -14,7 +14,7 @@ pub fn intent(text: &str) -> Option<Intent> {
     let t = text
         .trim()
         .trim_end_matches(|c: char| "。！!？?，,. ".contains(c));
-    if ["别查了", "不用查了", "取消搜索", "停止搜索"].contains(&t) {
+    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "取消刚才的搜索"].contains(&t) {
         return Some(Intent::Cancel);
     }
     if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢"].contains(&t)
@@ -22,6 +22,9 @@ pub fn intent(text: &str) -> Option<Intent> {
         return Some(Intent::Resume);
     }
     let prefixes = [
+        "请帮我查找",
+        "帮我查找",
+        "查找",
         "请帮我搜索一下",
         "帮我搜索一下",
         "请帮我查一下",
@@ -48,6 +51,27 @@ pub fn intent(text: &str) -> Option<Intent> {
         }
     }
     None
+}
+
+#[derive(Default)]
+pub struct QueryIntent { pending_at: Option<u64> }
+impl QueryIntent {
+    pub fn clear(&mut self) { self.pending_at = None; }
+    pub fn route(&mut self, text: &str, now_ms: u64) -> Option<Intent> {
+        let previous = self.pending_at.take();
+        if let Some(action) = intent(text) { return Some(action); }
+        let text = text.trim().trim_end_matches(|c: char| "。！!？?，,. ".contains(c));
+        if ["帮我查一下", "请帮我查一下", "查一下", "搜索一下", "帮我搜索一下", "查找"].contains(&text) {
+            self.pending_at = Some(now_ms); return None;
+        }
+        // Narrow fragment completion only; never attach arbitrary following conversation.
+        let public_topic = ["天气", "开放时间", "开放安排", "新闻", "定义"].iter().any(|topic| text.ends_with(topic));
+        let personal = ["我", "你", "他", "小猫", "不要", "不用", "别查", "取消"].iter().any(|word| text.contains(word));
+        if previous.is_some_and(|at| now_ms.saturating_sub(at) <= 3000) && public_topic && !personal && text.chars().count() <= 128 {
+            return Some(Intent::Search(text.into()));
+        }
+        None
+    }
 }
 
 #[derive(Default)]
@@ -92,6 +116,27 @@ impl DeliveryGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn split_intent_only_accepts_prompt_public_topic_and_expires() {
+        let mut router=QueryIntent::default();
+        assert_eq!(router.route("帮我查一下",0),None);
+        assert_eq!(router.route("今天北京的天气",1000),Some(Intent::Search("今天北京的天气".into())));
+        router.route("帮我查一下",2000);
+        assert_eq!(router.route("我今天画了一只猫",2500),None);
+        assert_eq!(router.route("北京天气",2600),None);
+        router.route("帮我查一下",3000);
+        assert_eq!(router.route("北京天气",7001),None);
+        router.route("帮我查一下",8000);
+        assert_eq!(router.route("取消搜索",8100),Some(Intent::Cancel));
+        assert_eq!(router.route("北京天气",8200),None);
+    }
+    #[test]
+    fn natural_search_and_cancel_phrases_route_without_claiming_quotes_or_negations() {
+        assert_eq!(intent("查找今天北京天气"), Some(Intent::Search("今天北京天气".into())));
+        assert_eq!(intent("不用查了，取消刚才的搜索。"), Some(Intent::Cancel));
+        assert_eq!(intent("不要查找北京天气"), None);
+        assert_eq!(intent("我说查找天气是什么意思"), None);
+    }
     #[test]
     fn explicit_search_only_and_cancel_are_separate_from_barge_in() {
         assert_eq!(

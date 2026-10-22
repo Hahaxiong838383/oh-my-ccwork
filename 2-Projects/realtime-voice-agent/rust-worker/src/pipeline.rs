@@ -2445,6 +2445,7 @@ impl Orchestrator {
                       budget_left = self.ready_confirm.budget_left(), "input_ready.request");
             }
             control::Inbound::Cancel => {
+                if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
                 if self.ordered.is_some() {
                     let acts = self.ordered.as_mut().map(|o| o.fail(crate::ordered_pcm::FailReason::Cancelled)).unwrap_or_default();
@@ -2647,7 +2648,7 @@ impl Orchestrator {
         self.echo_tts_text = format!("{}{spoken}", self.echo_cur_filler);
         self.echo_playout_end = Some(Instant::now());
         if was_search {
-            if let Some(search) = &mut self.search { search.finish(true, spoken.chars().count()); }
+            if let Some(search) = &mut self.search { search.finish_with_progress(true, spoken.chars().count(), played as u64 / 24, sentence_spans(&synth, &progress).iter().any(|s| played >= s.end_samples)); }
         } else {
             self.pending_amend = Some(spoken);
         }
@@ -3122,6 +3123,7 @@ impl Orchestrator {
                 None
             };
             if let Some((kind, path)) = swallow_kind {
+                if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 info!(room = %self.room_name, path, "{kind} utterance swallowed: '{user_text}'");
                 // B48 §3:停 vs 退出的分水岭。stop_only=只打断,补确认能力不变;
                 // session_exit=会话终态,此后迟到的补确认查询一律 Closed(不登记 pending、不重述)。
@@ -3407,7 +3409,7 @@ impl Orchestrator {
             let amend = self.pending_amend.take();
             if let Some(search) = &mut self.search {
                 search.on_commit();
-                if let Some(action) = crate::search_policy::intent(&user_text) {
+                if let Some(action) = search.interpret(&user_text) {
                     // Preserve any prior ordinary-turn history amendment for the next ordinary reply.
                     self.pending_amend = amend;
                     if let Some(old) = self.spec.take() { old.task.abort(); }

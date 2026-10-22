@@ -93,6 +93,7 @@ enum Command {
     },
     Resume {
         speech: Speech,
+        automatic: bool,
         epoch: u64,
         generation: u64,
     },
@@ -136,6 +137,7 @@ pub struct Speech {
     delivery: String,
     expires: Instant,
     result_until: Option<Instant>,
+    auto_replayed: bool,
 }
 
 pub struct SearchSession {
@@ -154,6 +156,9 @@ pub struct SearchSession {
     idle_since: Option<Instant>,
     verified: HashMap<String, Instant>,
     revoked: bool,
+    auto_pending: bool,
+    suppress_auto: bool,
+    query_intent: crate::search_policy::QueryIntent,
 }
 pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
     let Some(rest) = room.strip_prefix("sn-") else {
@@ -199,7 +204,13 @@ impl SearchSession {
             idle_since: None,
             verified: HashMap::new(),
             revoked: false,
+            auto_pending: false,
+            suppress_auto: false,
+            query_intent: crate::search_policy::QueryIntent::default(),
         })
+    }
+    pub fn interpret(&mut self, text: &str) -> Option<Intent> {
+        self.query_intent.route(text, self.started.elapsed().as_millis() as u64)
     }
     pub fn on_commit(&mut self) {
         self.generation += 1;
@@ -217,6 +228,7 @@ impl SearchSession {
             }
             Intent::Replace(query) => self.replace_query(query),
             Intent::Cancel => {
+                self.suppress_auto_replay();
                 self.epoch += 1;
                 self.gate.cancel();
                 self.speech.clear();
@@ -233,6 +245,7 @@ impl SearchSession {
                 }
             }
             Intent::Resume => {
+                self.auto_pending = false;
                 if self.busy {
                     self.notice("还在查或准备播报，查到后我会告诉你。");
                     return;
@@ -248,6 +261,7 @@ impl SearchSession {
                             .tx
                             .try_send(Command::Resume {
                                 speech: speech.clone(),
+                                automatic: false,
                                 epoch: self.epoch,
                                 generation: self.generation,
                             })
@@ -265,6 +279,7 @@ impl SearchSession {
         }
     }
     pub fn replace_query(&mut self, query: String) {
+        self.suppress_auto_replay();
         self.epoch += 1;
         self.gate.cancel();
         self.speech.clear();
@@ -294,6 +309,7 @@ impl SearchSession {
                 delivery: String::new(),
                 expires: Instant::now() + Duration::from_secs(10),
                 result_until: None,
+                auto_replayed: false,
             });
         }
     }
@@ -325,6 +341,12 @@ impl SearchSession {
                     self.remainder = None;
                     self.active = None;
                     self.revoked = true;
+                    self.auto_pending = false;
+                }
+                Event::Claimed { speech, .. } => {
+                    if let Some(id) = speech.task {
+                        let _ = self.tx.try_send(Command::Receipt { id, delivery: speech.delivery, outcome: "dropped" });
+                    }
                 }
                 _ => {}
             }
@@ -367,6 +389,16 @@ impl SearchSession {
         if self.idle_since.map(|t| t.elapsed()).unwrap_or_default() < Duration::from_millis(800) {
             return None;
         }
+        if self.auto_pending && !self.busy {
+            self.auto_pending = false;
+            if let Some(mut speech) = self.remainder.clone().filter(|s| now < s.expires && !s.auto_replayed) {
+                speech.auto_replayed = true;
+                self.epoch += 1;
+                if self.tx.try_send(Command::Resume { speech, automatic: true, epoch: self.epoch, generation: self.generation }).is_ok() {
+                    self.busy = true;
+                }
+            }
+        }
         if let Some(id) = self.speech.front().and_then(|s| s.task.as_ref()) {
             if self
                 .verified
@@ -380,6 +412,7 @@ impl SearchSession {
         let speech = self.speech.pop_front()?;
         let text = speech.text.clone();
         tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, "background search speech scheduled (not audio proof)");
+        self.suppress_auto = false;
         self.active = Some(speech);
         Some(text)
     }
@@ -394,10 +427,25 @@ impl SearchSession {
                 "background search first audio published (device hearing unverified)");
         }
     }
+    pub fn suppress_auto_replay(&mut self) {
+        self.suppress_auto = true;
+        self.query_intent.clear();
+        self.auto_pending = false;
+        // Invalidate an automatic revalidation already in flight without blocking ordinary speech.
+        if self.busy && self.remainder.is_some() { self.epoch += 1; self.busy = false; }
+        self.speech.retain(|s| !s.auto_replayed);
+    }
     pub fn finish(&mut self, interrupted: bool, spoken_chars: usize) {
+        self.finish_with_progress(interrupted, spoken_chars, u64::MAX, true);
+    }
+    pub fn finish_with_progress(&mut self, interrupted: bool, spoken_chars: usize, played_ms: u64, segment_complete: bool) {
         if let Some(speech) = self.active.take() {
             tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, interrupted, spoken_chars, "background search speech finished (device hearing unverified)");
             if speech.result_until.is_some() {
+                self.auto_pending = interrupted && played_ms < 1000 && !segment_complete
+                    && !speech.auto_replayed && !self.suppress_auto && Instant::now() < speech.expires;
+                tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), played_ms, segment_complete,
+                    automatic_requeue = self.auto_pending, "background search interruption decision");
                 let mut remainder = speech.clone();
                 if interrupted {
                     remainder.text = speech.text.chars().skip(spoken_chars).collect();
@@ -461,6 +509,7 @@ fn claimed_speech(task: &Value, id: String, delivery: String) -> Option<Speech> 
         delivery,
         expires: now + Duration::from_millis(automatic),
         result_until: Some(now + Duration::from_millis(valid)),
+        auto_replayed: false,
     })
 }
 async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>) {
@@ -512,15 +561,27 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                             if let Some(speech) = claimed_speech(&v["task"], id, delivery) { let _ = events.send(Event::Claimed { epoch, speech }).await; }
                         }
                     }
-                    Command::Resume { mut speech, epoch: e, generation } => {
+                    Command::Resume { mut speech, epoch: e, generation, automatic } => {
                         epoch = e;
                         let Some(id) = speech.task.clone() else { continue; };
-                        let response = api.request(&format!("/{id}"), None).await;
+                        let delivery = uuid::Uuid::new_v4().to_string();
+                        let body = json!({"previous": speech.delivery, "delivery": delivery, "automatic": automatic});
+                        let response = api.request(&format!("/{id}/replay"), Some(body)).await;
                         if let Ok(v) = response {
                             let valid = v["task"]["valid_for_ms"].as_u64().unwrap_or(0).min(300_000);
-                            if valid > 0 && v["task"]["status"] == "delivered" && speech.result_until.is_some_and(|until| Instant::now() < until) {
+                            if valid > 0 && v["task"]["delivery"] == "claimed" && speech.result_until.is_some_and(|until| Instant::now() < until) {
+                                if automatic && Instant::now() >= speech.expires {
+                                    let _ = api.request(&format!("/{id}/receipt"), Some(json!({"delivery":delivery,"outcome":"dropped"}))).await;
+                                    current = None; polling = false;
+                                    let _ = events.send(Event::Finished { epoch }).await;
+                                    continue;
+                                }
+                                speech.auto_replayed = true;
+                                speech.delivery = delivery;
+                                let original_automatic = speech.expires;
                                 speech.expires = speech.result_until.unwrap().min(Instant::now() + Duration::from_millis(valid));
                                 speech.result_until = Some(speech.expires);
+                                if automatic { speech.expires = speech.expires.min(original_automatic); }
                                 current = Some(id); replaying = true; polling = true; poll_until = speech.expires;
                                 let _ = events.send(Event::Claimed { speech, epoch }).await;
                                 continue;
@@ -537,7 +598,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
             }
             _ = tick.tick(), if polling => {
                 if Instant::now() >= poll_until { polling = false; let _ = events.send(Event::Finished { epoch }).await; continue; }
-                let suffix = if replaying { current.as_ref().map(|id| format!("/{id}")).unwrap_or_default() } else { String::new() };
+                let suffix = if replaying { current.as_ref().map(|id| format!("/{id}/playback")).unwrap_or_default() } else { String::new() };
                 let response = api.request(&suffix, None).await;
                 if let Ok(mut v) = response {
                     if replaying { v = json!({ "tasks": [v["task"].clone()] }); }
@@ -626,10 +687,43 @@ mod tests {
                 idle_since: None,
                 verified: HashMap::new(),
                 revoked: false,
+            auto_pending: false,
+            suppress_auto: false,
+            query_intent: crate::search_policy::QueryIntent::default(),
             },
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn early_interruption_returns_once_after_idle_but_stop_and_expiry_suppress_it() {
+        for played_ms in [0, 600] {
+            let (mut s, _events, mut commands) = test_session();
+            let speech=claimed_speech(&json!({"status":"ready","valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"查询结果。"}}),"task-1".into(),"d1".into()).unwrap();
+            s.active=Some(speech);
+            s.finish_with_progress(true, 0, played_ms, false);
+            assert!(matches!(commands.try_recv(),Ok(Command::Receipt{outcome:"interrupted",..})));
+            s.on_commit();
+            assert!(s.poll(false).is_none()); assert!(commands.try_recv().is_err());
+            s.idle_since=Some(Instant::now()-Duration::from_millis(801));
+            assert!(s.poll(true).is_none());
+            let Command::Resume{speech,automatic:true,..}=commands.try_recv().unwrap() else {panic!("early result must revalidate and replay")};
+            s.active=Some(speech); s.finish_with_progress(true,0,100,false);
+            commands.try_recv().unwrap();
+            s.idle_since=Some(Instant::now()-Duration::from_millis(801)); s.poll(true);
+            assert!(commands.try_recv().is_err(),"no second automatic replay");
+        }
+        for cause in ["stop","long","segment","expired"] {
+            let (mut s,_events,mut commands)=test_session();
+            let mut speech=claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"查询结果。"}}),"t".into(),"d".into()).unwrap();
+            if cause=="expired" {speech.expires=Instant::now();}
+            s.active=Some(speech);
+            if cause=="stop" {s.suppress_auto_replay();}
+            s.finish_with_progress(true,0,if cause=="long" {1000}else{600},cause=="segment");
+            commands.try_recv().unwrap();
+            s.idle_since=Some(Instant::now()-Duration::from_millis(801));s.poll(true);
+            assert!(commands.try_recv().is_err(),"{cause} must not automatically replay");
+        }
     }
     #[tokio::test]
     async fn repeated_interruption_retains_progress_without_extending_expiry() {
@@ -741,6 +835,13 @@ mod tests {
                 observed.lock().unwrap().push(first.clone());
                 let body = if first.contains("/claim?") {
                     json!({"task":{"id":"task-1","status":"ready","valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"刚才查到了。"}}})
+                } else if first.contains("/replay?") {
+                    let request: Value = serde_json::from_str(raw.split("\r\n\r\n").nth(1).unwrap()).unwrap();
+                    assert_eq!(request["previous"], "d1"); assert_ne!(request["delivery"], "d1");
+                    assert_eq!(request["automatic"], true);
+                    json!({"task":{"id":"task-1","status":"delivered","delivery":"claimed","valid_for_ms":299000,"automatic_for_ms":59000,"result":{"text":"刚才查到了。"}}})
+                } else if first.contains("/playback?") {
+                    json!({"task":{"id":"task-1","status":"delivered","delivery":"claimed","valid_for_ms":299000,"automatic_for_ms":59000,"result":{"text":"刚才查到了。"}}})
                 } else if first.contains("/receipt?") || first.contains("/cancel?") {
                     json!({"ok":true})
                 } else if first.starts_with("POST") {
@@ -831,6 +932,24 @@ mod tests {
                 .iter()
                 .any(|p| p.contains("/receipt?"))
         );
+        let replay = claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"刚才查到了。"}}),"task-1".into(),"d1".into()).unwrap();
+        let deadline = replay.expires;
+        tx.send(Command::Resume { speech: replay, automatic: true, epoch: 1, generation: 1 }).await.unwrap();
+        let mut replayed=false;
+        for _ in 0..6 {
+            if let Some(Event::Claimed {speech,epoch:1}) = tokio::time::timeout(Duration::from_secs(3),rx.recv()).await.unwrap() {
+                assert_ne!(speech.delivery,"d1"); assert!(speech.expires <= deadline); replayed=true;break;
+            }
+        }
+        assert!(replayed, "automatic replay must obtain a new server claim");
+        let mut expired = claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"刚才查到了。"}}),"task-1".into(),"d1".into()).unwrap();
+        expired.expires = Instant::now();
+        tx.send(Command::Resume {speech:expired,automatic:true,epoch:2,generation:1}).await.unwrap();
+        let mut released=false;
+        for _ in 0..6 {
+            if matches!(tokio::time::timeout(Duration::from_secs(3),rx.recv()).await.unwrap(),Some(Event::Finished{epoch:2})) {released=true;break;}
+        }
+        assert!(released,"expiry during claim must release busy state instead of wedging future searches");
         actor.abort();
         server.abort();
     }
