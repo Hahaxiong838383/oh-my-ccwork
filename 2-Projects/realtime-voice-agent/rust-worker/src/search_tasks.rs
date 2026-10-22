@@ -592,7 +592,9 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                     }
                     Command::Receipt { id, delivery, outcome } => {
                         let _ = api.request(&format!("/{id}/receipt"),Some(json!({"delivery":delivery,"outcome":outcome}))).await;
-                        if current.as_deref() == Some(id.as_str()) { current=None; polling=false; }
+                        // Keep the known delivered task for a subsequent explicit cancel/replace.
+                        // A fresh Submit clears it; stopping polling must not forget task ownership.
+                        if current.as_deref() == Some(id.as_str()) { polling=false; }
                     }
                 }
             }
@@ -800,6 +802,7 @@ mod tests {
         let paths = Arc::new(Mutex::new(Vec::new()));
         let observed = paths.clone();
         let server = tokio::spawn(async move {
+            let mut receipted = false;
             loop {
                 let (mut stream, _) = listener.accept().await.unwrap();
                 let mut bytes = Vec::new();
@@ -833,6 +836,7 @@ mod tests {
                 );
                 assert!(!first.contains("synthetic-worker"));
                 observed.lock().unwrap().push(first.clone());
+                if first.contains("/receipt?") { receipted = true; }
                 let body = if first.contains("/claim?") {
                     json!({"task":{"id":"task-1","status":"ready","valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"刚才查到了。"}}})
                 } else if first.contains("/replay?") {
@@ -851,6 +855,8 @@ mod tests {
                     assert_eq!(request["protocol"], 1);
                     blocked.notified().await;
                     json!({"task":{"id":"task-1","status":"running"}})
+                } else if receipted {
+                    json!({"tasks":[]})
                 } else {
                     json!({"tasks":[{"id":"task-1","status":"ready","valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"刚才查到了。"}}]})
                 };
@@ -932,6 +938,17 @@ mod tests {
                 .iter()
                 .any(|p| p.contains("/receipt?"))
         );
+        // The pending-task list omits delivered/interrupted results. Cancellation
+        // must still use the actor's known task instead of claiming nothing exists.
+        tx.send(Command::Cancel { epoch: 1, generation: 1 }).await.unwrap();
+        let mut cancelled=false;
+        for _ in 0..6 {
+            if let Some(Event::Ack {text,epoch:1,..})=tokio::time::timeout(Duration::from_secs(3),rx.recv()).await.unwrap() {
+                assert_eq!(text,"好，已取消这次搜索。");cancelled=true;break;
+            }
+        }
+        assert!(cancelled);
+        assert!(paths.lock().unwrap().iter().any(|path|path.contains("/task-1/cancel?")));
         let replay = claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"刚才查到了。"}}),"task-1".into(),"d1".into()).unwrap();
         let deadline = replay.expires;
         tx.send(Command::Resume { speech: replay, automatic: true, epoch: 1, generation: 1 }).await.unwrap();
