@@ -1,4 +1,4 @@
-import { searchChatPolicy } from '../tools/search-chat-policy.js';
+import { searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
 import { searchSettings } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
@@ -244,6 +244,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
+    const searchClaimFilter = createSearchClaimFilter(searchPolicy.suppressOnboarding && /查|搜|上网|联网/.test(userText));
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
@@ -253,14 +254,14 @@ customLlmRoute.post('/chat/completions', async (c) => {
         userText,
         history,
         onDelta: (delta) => {
-          const clean = parenFilter.feed(exitStripper.feed(delta).text); // EXIT → 括号 两级串联
+          const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(delta).text)); // EXIT → 括号 两级串联
           if (!clean) return; // 整个 delta 都在过滤器扣留中
           assistantText += clean;
           enqueue(chunk({ content: clean }, null));
         },
         onDone: () => {
           // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
-          const tail = parenFilter.feed(exitStripper.flush().text) + parenFilter.flush();
+          const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
           if (tail) {
             assistantText += tail;
             enqueue(chunk({ content: tail }, null));

@@ -134,3 +134,23 @@ test('R5 explicit historical dates reject current weather and model abstention r
  const abstain=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[page]}):new Response(sse(chunk({content:JSON.stringify({text:'资料不支持这个结论。',source_ids:[]})},'stop'))))as typeof fetch});
  assert.equal((await abstain.run('科技馆开放时间',new AbortController().signal,'')).sources.length,0);
 });
+
+test('R6 evergreen knowledge and opening rules do not inherit today-weather publication filter',async()=>{
+ for(const query of ['今天想了解水为什么会结冰','今天故宫开放吗','现在的博物馆门票规则','天气为什么会变化','气温变化的原理']) {
+  const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:'2020-01-01T00:00:00Z'}]}):new Response(final()))as typeof fetch});
+  assert.equal((await e.run(query,new AbortController().signal,'')).sources.length,1,query);
+ }
+});
+test('R6 latest news and live exchange rates still reject stale and unknown-date evidence',async()=>{
+ for(const query of ['最新航天新闻','今天美元人民币汇率','人民币和美元的汇率']) {
+  const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:null},{...page,date:'2000-01-01T00:00:00Z'}]}):new Response(final()))as typeof fetch});
+  assert.equal((await e.run(query,new AbortController().signal,'')).sources.length,0,query);
+ }
+});
+
+test('R6 what-is wording must not bypass freshness for a current weather/rate question',async()=>{
+ for(const [query,expected] of [['今天北京天气是什么情况',0],['当前人民币汇率是什么',0],['汇率是什么',1],['什么是天气',1]] as const){
+  const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>String(url).endsWith('/search')?Response.json({results:[{...page,date:'2000-01-01T00:00:00Z'}]}):new Response(final()))as typeof fetch});
+  assert.equal((await e.run(query,new AbortController().signal,'')).sources.length,expected,query);
+ }
+});

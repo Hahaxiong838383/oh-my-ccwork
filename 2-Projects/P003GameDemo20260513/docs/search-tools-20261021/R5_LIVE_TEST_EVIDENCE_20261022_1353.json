@@ -1,0 +1,459 @@
+{
+  "scope": "read-only; after R5 production dispatch reopened; no new synthetic probes",
+  "collected_brain_at_ms": 1792648417059,
+  "collected_worker_at_ms": 1792648418173,
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1792645636237
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 354,
+      "version_name": "1.2.2-canary.340",
+      "last_check_at": 1792642528878
+    }
+  ],
+  "production_flags": {
+    "p003.search.canary.selected_sn": "BJP00326060100100004",
+    "p003.search.canary.enabled": "1",
+    "p003.search.canary.expires_at_ms": "1792684740000",
+    "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+    "p003.search.canary.agent": "p003-search-canary-20261021",
+    "p003.search.canary.started_at_ms": "1792585650087",
+    "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+  },
+  "candidate_flags": {
+    "p003.search.tools": "0",
+    "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+    "p003.search.canary.expires_at_ms": "1792684740000",
+    "p003.search.enabled": "1"
+  },
+  "worker_window": {
+    "enabled": true,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "expires_at_ms": 1792684740000,
+    "generation": "R4-20261022-two-devices"
+  },
+  "worker_health": {
+    "agent": "p003-search-canary-20261021",
+    "at_ms": 1792648414845,
+    "generation": "R4-20261022-two-devices",
+    "jobs": 0,
+    "ordered_pcm_v1": true,
+    "registered": true
+  },
+  "worker_candidate_sha256": "58f72e2c0a5a3d51e5a82dda5ce60f56039f555b39844a9eb7388deb9fc6cb24",
+  "worker_production_sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d",
+  "brain_selected_sha256": {
+    "src/tools/search-executor.ts": "61d6bf81d573366ecb06950b932044983b81fee39c401913ca4eae76b0cbe8c0",
+    "src/tools/search-tasks.ts": "fedd27c85264dee3dc44b9fe10b655cdad0fc18a6c73fca4b3a47c708d63c0e7",
+    "src/tools/search-runtime.ts": "e06278fb0b13e2ac4ab4491bb928a0e29f5a3d45b3911599ce83fa9d6142bc76",
+    "src/tools/search-chat-policy.ts": "d2220d9cb923006b92e63752a6db633af8652ac0ca8b7b1c2017f2d360f61c8c",
+    "src/routes/search-tasks.ts": "8d6b62575df6cf3c5f4cbacad0254ae6e6392c611f8660df57846eb5c5a25fb6",
+    "src/routes/custom-llm.ts": "95cb8821620499717136f48e9541eb98cac611cb57e842920a19dc273be360b3",
+    "src/search-canary-guard.ts": "9a079e28b9691d79d8f37275f7b1379ff3ba7327186af87af4e51c2cc061d088"
+  },
+  "candidate_brain_health": {
+    "status": "ok",
+    "agent": "p003-search-canary-20261021",
+    "generation": "R4-20261022-two-devices",
+    "search": true,
+    "tools": false
+  },
+  "production_pm2": [
+    {
+      "name": "p003-voice",
+      "pid": 1204589,
+      "restarts": 29,
+      "status": "online"
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "restarts": 0,
+      "status": "online"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "restarts": 5,
+      "status": "online"
+    }
+  ],
+  "resources": {
+    "brain": {
+      "mem": {
+        "MemTotal": "3583212 kB",
+        "MemAvailable": "2455156 kB"
+      },
+      "disk": "/dev/vda3      41882943488 28063440896 11883765760  71% /"
+    },
+    "worker": {
+      "mem": {
+        "MemTotal": "8130372 kB",
+        "MemAvailable": "6267060 kB"
+      },
+      "disk": "/dev/vda1      83053432832 9146392576 73890263040  12% /"
+    }
+  },
+  "timers": {
+    "brain": "NextElapseUSecRealtime=Thu 2026-10-22 23:59:00 CST\nActiveState=active\n",
+    "worker": "NextElapseUSecRealtime=Thu 2026-10-22 15:59:00 UTC\nActiveState=active\n"
+  },
+  "auth_ok_sessions": [
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792648232",
+      "trace_id": "00afaaf5-ab48-4613-bd64-fb50bf89d0d1",
+      "created_at": 1792648232855
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792648157",
+      "trace_id": "8dde5cc8-2ee7-48ca-a330-bc76f562b191",
+      "created_at": 1792648157525
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792648050",
+      "trace_id": "ebb2dfbe-71e0-4c6e-bf7a-ea85a7983981",
+      "created_at": 1792648050552
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792647963",
+      "trace_id": "33ee49e2-32ab-45b0-b62a-90d516f3ab16",
+      "created_at": 1792647963992
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792647943",
+      "trace_id": "d4331c56-1efe-4aa1-afb7-5c24d9c0bb21",
+      "created_at": 1792647943778
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792647887",
+      "trace_id": "32bfdd91-167e-4776-aa5e-f6a0b18f33fb",
+      "created_at": 1792647887828
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792647855",
+      "trace_id": "1c294160-9a7c-4538-b005-0fb1b5bde124",
+      "created_at": 1792647855460
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792647242",
+      "trace_id": "d81bae45-e812-4685-beef-88930c8b8100",
+      "created_at": 1792647242898
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "room": "sn-BJP00326060100100004-1792647208",
+      "trace_id": "35259614-6d21-474c-b983-5ab31e605cbf",
+      "created_at": 1792647208027
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "room": "sn-BJP00326070803800006-1792641848",
+      "trace_id": "fe1c1c5c-1f11-4667-bb04-0535da35bc68",
+      "created_at": 1792641848330
+    }
+  ],
+  "tasks": [
+    {
+      "id": "7530e8b0-053b-4b0b-8e79-4467bf007c03",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792647242",
+      "createdAt": 1792647248239,
+      "readyAt": 1792647249700,
+      "status": "cancelled",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": [
+        {
+          "previous": "c45bca4c-afc6-45f8-88f1-c01fa82a7c43",
+          "delivery": "3ee3491a-b7b8-45fd-b377-f6acc2a238ca",
+          "automatic": true,
+          "at": 1792647264927
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "4385c72c-b20c-434d-97ec-6438c4f03ced",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792647963",
+      "createdAt": 1792647971744,
+      "readyAt": 1792647973464,
+      "status": "cancelled",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": [
+        {
+          "previous": "bb61f1b0-dded-41e2-8c91-d9660259fb81",
+          "delivery": "fe9076dc-689c-4084-9495-26576e140100",
+          "automatic": true,
+          "at": 1792648000016
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "0b50677c-a049-4d5d-891e-6a64e183901c",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648050",
+      "createdAt": 1792648056487,
+      "readyAt": 1792648057902,
+      "status": "cancelled",
+      "delivery": "interrupted",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": [
+        {
+          "previous": "6e4f71a4-bbe7-4026-83dc-f9dda075a6b0",
+          "delivery": "4663cd29-0dcd-49fa-9ada-d90ccb0a9a82",
+          "automatic": true,
+          "at": 1792648071438
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "3494f1e5-2272-421e-aa45-78bc93810035",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648157",
+      "createdAt": 1792648162486,
+      "readyAt": 1792648162852,
+      "status": "cancelled",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 0,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 10,
+        "duplicate": 0,
+        "outcome": "filtered"
+      },
+      "replays": [
+        {
+          "previous": "e729dd8a-a152-4c60-89f3-04d56639684a",
+          "delivery": "d1ff22d3-6150-48f4-a1cc-635b8bd4960c",
+          "automatic": true,
+          "at": 1792648180515
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "471e8ff0-756f-4d92-a3d6-0c1c9ca42c3e",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648232",
+      "createdAt": 1792648239009,
+      "readyAt": 1792648240157,
+      "status": "cancelled",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": null,
+      "error": null
+    },
+    {
+      "id": "d4735833-c205-481d-b8d5-b515e1d93202",
+      "subject": "BJP00326060100100004",
+      "session": "sn-BJP00326060100100004-1792648232",
+      "createdAt": 1792648269712,
+      "readyAt": 1792648271032,
+      "status": "cancelled",
+      "delivery": "interrupted",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 1,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 9,
+        "duplicate": 0,
+        "outcome": "evidence"
+      },
+      "replays": null,
+      "error": null
+    }
+  ],
+  "closed_sessions": [
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792647208",
+      1792647214736
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792647242",
+      1792647283424
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792647855",
+      1792647869794
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792647887",
+      1792647921328
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792647943",
+      1792647960838
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792647963",
+      1792648030948
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792648050",
+      1792648088513
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792648157",
+      1792648192612
+    ],
+    [
+      "BJP00326060100100004",
+      "sn-BJP00326060100100004-1792648232",
+      1792648295035
+    ]
+  ],
+  "day_counts_including_prior_probes": [
+    [
+      "BJP00326060100100004",
+      31
+    ]
+  ],
+  "exit_intervals": [
+    {
+      "at_cst": "2026-10-22T13:33:34.118480+08:00",
+      "room": "sn-BJP00326060100100004-1792647208",
+      "last_speech_stop_to_cancel_s": null,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:34:43.261930+08:00",
+      "room": "sn-BJP00326060100100004-1792647242",
+      "last_speech_stop_to_cancel_s": 5.303837,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:44:28.595453+08:00",
+      "room": "sn-BJP00326060100100004-1792647855",
+      "last_speech_stop_to_cancel_s": 2.3e-05,
+      "had_turn": "true"
+    },
+    {
+      "at_cst": "2026-10-22T13:45:20.124925+08:00",
+      "room": "sn-BJP00326060100100004-1792647887",
+      "last_speech_stop_to_cancel_s": 5.270384,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:46:00.647661+08:00",
+      "room": "sn-BJP00326060100100004-1792647943",
+      "last_speech_stop_to_cancel_s": 5.891954,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:47:10.754642+08:00",
+      "room": "sn-BJP00326060100100004-1792647963",
+      "last_speech_stop_to_cancel_s": 5.26215,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:48:08.348624+08:00",
+      "room": "sn-BJP00326060100100004-1792648050",
+      "last_speech_stop_to_cancel_s": 5.15652,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:49:52.425507+08:00",
+      "room": "sn-BJP00326060100100004-1792648157",
+      "last_speech_stop_to_cancel_s": 6.128989,
+      "had_turn": "false"
+    },
+    {
+      "at_cst": "2026-10-22T13:51:34.818598+08:00",
+      "room": "sn-BJP00326060100100004-1792648232",
+      "last_speech_stop_to_cancel_s": 5.263783,
+      "had_turn": "false"
+    }
+  ],
+  "local_route_verification": {
+    "compile_exit": 0,
+    "run_exit": 0,
+    "omitted_prefixes": [
+      "我查一下",
+      "帮我查查"
+    ],
+    "standard_prefix": "帮我查一下",
+    "project_source_modified": false
+  },
+  "private_capture_sha256": {
+    "brain-state.json": "141e2cdddad69a41805a1774aa1ddc34b84e9f2690ebb4a8a2daa92acfe4e41b",
+    "worker-state.json": "1834292cb4b3b7ae5d24ac181d42d951990354a420902d632a58916213ad8b47",
+    "brain-journal.log": "63d001d7cfd6049382abf10fc2927bc3f6bc13c9ed49778a50bbe67c4b6a38bc",
+    "worker-journal.log": "9f8a5527b41423068cd5e4b9f3e9fdf682b1a46d346ef4f8b29db3d392df5722"
+  },
+  "limitations": [
+    "server delivery is not proof of device hearing",
+    "source acceptance is not factual verification",
+    "Android exit_reason unavailable",
+    "transport root cause not proven",
+    "window expiry has not yet occurred"
+  ]
+}
