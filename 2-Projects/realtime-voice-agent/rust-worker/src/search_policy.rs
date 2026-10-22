@@ -89,13 +89,22 @@ pub fn intent(text: &str) -> Option<Intent> {
 }
 
 #[derive(Default)]
-pub struct QueryIntent { pending_at: Option<(u64, bool)> }
+pub struct QueryIntent { pending_at: Option<(u64, bool)>, recent_question: Option<(u64, String)> }
 impl QueryIntent {
-    pub fn clear(&mut self) { self.pending_at = None; }
+    pub fn clear(&mut self) { self.pending_at = None; self.recent_question = None; }
     pub fn route(&mut self, text: &str, now_ms: u64) -> Option<Intent> {
         let previous = self.pending_at.take();
+        let recent = self.recent_question.take();
         if let Some(action) = intent(text) {
             if action == Intent::Clarify {
+                // ASR can commit "故宫明天开放吗" and "帮我查一下"
+                // separately, within the same breath. Bind only an explicit,
+                // empty request to the immediately preceding public question.
+                if ["帮我查一下", "帮我查查", "帮我搜一下", "请帮我查一下"].contains(&addressed(text)) {
+                    if let Some((at, question)) = recent {
+                        if now_ms.saturating_sub(at) <= 1500 { return Some(Intent::Search(question)); }
+                    }
+                }
                 self.pending_at = Some((now_ms, addressed(text).starts_with("改查") || addressed(text).starts_with("换查")));
             }
             return Some(action);
@@ -106,6 +115,13 @@ impl QueryIntent {
         let unrelated = ["我", "你", "他", "她", "我们", "不要", "不用", "别", "取消", "停", "算了", "继续", "讲", "聊", "好的", "好", "嗯", "“", "\""].iter().any(|p| text.starts_with(p) && !text.starts_with("我国"));
         if previous.is_some_and(|(at,_)| now_ms.saturating_sub(at) <= 10_000) && !unrelated && text.chars().count() >= 2 {
             return task_query(text, previous.unwrap().1);
+        }
+        let quoted_or_conditional = ["如果", "假如", "例如", "比如", "‘", "'"].iter().any(|p| text.starts_with(p));
+        let question = ["吗", "什么", "为什么", "多少", "怎么", "哪里", "哪年", "何时"].iter().any(|p| text.contains(p));
+        if previous.is_none() && !unrelated && !quoted_or_conditional && question
+            && (2..=128).contains(&text.chars().count())
+            && !text.contains('查') && !text.contains('搜') {
+            self.recent_question = Some((now_ms, text.into()));
         }
         None
     }

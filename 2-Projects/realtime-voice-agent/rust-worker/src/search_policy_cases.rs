@@ -67,3 +67,22 @@ fn asr_missing_delimiters_keeps_suffix_cancel_and_replace_intents() {
  assert_eq!(intent("不查北京了改查上海的天气"),Some(Intent::Replace("上海的天气".into())));
  for text in ["如果我说故宫明天开放吗帮我查一下", "比如火星为什么红帮我查一下", "不用查了是什么意思"] {assert_eq!(intent(text),None,"{text}");}
 }
+#[test]
+fn asr_split_topic_first_binds_only_an_immediate_public_question() {
+ let mut r=QueryIntent::default();
+ assert_eq!(r.route("故宫明天开放吗",1000),None);
+ assert_eq!(r.route("帮我查一下",1449),Some(Intent::Search("故宫明天开放吗".into())));
+ assert_eq!(r.route("帮我查一下",1500),Some(Intent::Clarify));
+ for topic in ["我今天开心吗", "你叫什么", "不要查故宫开放吗", "如果故宫开放吗", "他说故宫开放吗", "我今天画了小猫", "“故宫开放吗”", "我们聊什么", "故宫开放吗帮我查一下是什么意思"] {
+  let mut r=QueryIntent::default();r.route(topic,1000);
+  assert_eq!(r.route("帮我查一下",1400),Some(Intent::Clarify),"{topic}");
+ }
+ let mut r=QueryIntent::default();r.route("火星为什么是红色的",1000);
+ assert_eq!(r.route("帮我查一下",2501),Some(Intent::Clarify));
+ let mut r=QueryIntent::default();r.route("故宫明天开放吗",1000);r.route("我今天画了小猫",1100);
+ assert_eq!(r.route("帮我查一下",1400),Some(Intent::Clarify));
+ let mut r=QueryIntent::default();r.route("故宫明天开放吗",1000);
+ assert_eq!(r.route("改查",1400),Some(Intent::Clarify));
+ let mut r=QueryIntent::default();r.route("故宫明天开放吗",1000);r.clear();
+ assert_eq!(r.route("帮我查一下",1400),Some(Intent::Clarify));
+}
