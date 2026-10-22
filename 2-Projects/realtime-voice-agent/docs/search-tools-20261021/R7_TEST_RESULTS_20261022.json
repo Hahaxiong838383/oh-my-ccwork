@@ -1,0 +1,857 @@
+{
+  "recorded_at": "2026-10-22T16:24:19.959354+08:00",
+  "status": "deployed_p1_real_device_pending",
+  "commits": {
+    "brain": "2f544730ed61969493338e437a4301ceaa6797cb",
+    "worker": "f331c57d051978cb7b9ed7c39f128cc6f9fb2f74"
+  },
+  "window": {
+    "actually_reopened": true,
+    "resumed_at_ms": 1792657225857,
+    "expires_at_ms": 1792684740000,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "p1": true,
+    "p2": false,
+    "routing_version": "r7-e2042f8fde4e5d35ab5cb3f5",
+    "real_device_acceptance": "pending",
+    "revision": "R7-routing-moji"
+  },
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1792645636237
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 356,
+      "version_name": "1.2.2-canary.342",
+      "last_check_at": 1792654114522
+    }
+  ],
+  "brain_tests": [
+    {
+      "name": "device-brain.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-config.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-intent-protocol.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-registry.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "device-session.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "moji-weather.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-availability.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-boundaries.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-isolation.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-process.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-canary-status.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-chat-policy.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-executor.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-route.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-routing-admin.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-routing-store.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-runtime.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "search-tasks.test.ts",
+      "rc": 0
+    },
+    {
+      "name": "tsc",
+      "rc": 0
+    }
+  ],
+  "midnight_tests": {
+    "code_commit": "2f544730",
+    "red_observed": "forecast target shifted from 2026-10-23 to 2026-10-24 across midnight before fix",
+    "passed": [
+      "moji-weather.test.ts including task-time anchor and cache-day isolation",
+      "search-runtime.test.ts",
+      "search-tasks.test.ts (10 tests)",
+      "tsc --noEmit"
+    ],
+    "observed_date": "2026-10-22",
+    "recorded_at": "2026-10-22T16:14:01.386796+08:00"
+  },
+  "worker_tests": 379,
+  "preview_tests": 20,
+  "initial_preview_regression": 20,
+  "refined_negative_preview": [
+    {
+      "text": "三角形的内角多少度",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "水的沸点温度是多少",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "我发烧了体温多少度",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "烤箱的温度怎么调",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "家里空调温度怎么调",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "我觉得北京天气真好",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "北京天气不错",
+      "before": "search",
+      "after": "chat"
+    },
+    {
+      "text": "听说上海天气真好",
+      "before": "search",
+      "after": "chat"
+    }
+  ],
+  "synthetic_rtc": {
+    "synthetic_only": true,
+    "device_heard_verified": false,
+    "worker_sha256": "82ba5e83b80b7e4bb02011988fe0d447d38c4a25567896a1ab578863b3959960",
+    "final_routing_version": "r7-e2042f8fde4e5d35ab5cb3f5",
+    "modes": {
+      "matrix": {
+        "room": "sn-BJP00326060100100004-1792655722",
+        "counts": {
+          "agent_transcripts": 24,
+          "user_transcripts": 14,
+          "metrics": 42,
+          "audio_voiced_ms": 90890.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 237.5,
+        "tasks": [
+          {
+            "id": "93afe9d0-2e2e-4426-9b34-3a286c6af93a",
+            "revision": 1,
+            "createdAt": 1792655758021,
+            "readyAt": 1792655758317,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "natural-weather",
+              "weather": {
+                "city_id": 2,
+                "city_name": "北京市",
+                "day_offset": 0,
+                "metric": "forecast"
+              },
+              "weather_enabled": true
+            },
+            "diagnostics": null,
+            "replays": null
+          },
+          {
+            "id": "b795d713-ada1-4a3b-b419-c62d16dba70a",
+            "revision": 1,
+            "createdAt": 1792655790768,
+            "readyAt": 1792655792355,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "weather-city-followup",
+              "weather": {
+                "city_id": 39,
+                "city_name": "上海市",
+                "day_offset": 1,
+                "metric": "forecast"
+              },
+              "weather_enabled": true
+            },
+            "diagnostics": null,
+            "replays": null
+          },
+          {
+            "id": "d29f95e0-1699-44a3-b5c6-31daf7dd03d0",
+            "revision": 1,
+            "createdAt": 1792655836821,
+            "readyAt": 1792655838452,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "builtin-explicit",
+              "weather_enabled": true
+            },
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          },
+          {
+            "id": "beb4dbe5-2e63-44ee-9dd1-0c73f3575160",
+            "revision": 1,
+            "createdAt": 1792655884281,
+            "readyAt": 1792655884801,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "builtin-explicit",
+              "weather_enabled": true
+            },
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 0,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 10,
+              "duplicate": 0,
+              "outcome": "filtered"
+            },
+            "replays": null
+          },
+          {
+            "id": "f723ee12-279b-4ea7-97bd-d78072217c04",
+            "revision": 1,
+            "createdAt": 1792655941322,
+            "readyAt": 1792655942827,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "builtin-explicit",
+              "weather_enabled": true
+            },
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          }
+        ],
+        "closed_session_recorded": true
+      },
+      "hot": {
+        "room": "sn-BJP00326070803800006-1792656069",
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 18240.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 84.6,
+        "tasks": [
+          {
+            "id": "5db813db-4949-490e-8fa8-17039ce8bffa",
+            "revision": 1,
+            "createdAt": 1792656119138,
+            "readyAt": 1792656120422,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-fe6cfd739036f2e0d5b0ac44",
+              "rule_id": "extra-explicit",
+              "weather_enabled": true
+            },
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          }
+        ],
+        "closed_session_recorded": true
+      },
+      "resume": {
+        "room": "sn-BJP00326060100100004-1792656187",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 3,
+          "metrics": 8,
+          "audio_voiced_ms": 17700.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 91.1,
+        "tasks": [
+          {
+            "id": "0ad369b6-b9bb-4ecd-bdea-6a2c217f444f",
+            "revision": 1,
+            "createdAt": 1792656198067,
+            "readyAt": 1792656199835,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "builtin-explicit",
+              "weather_enabled": true
+            },
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": [
+              {
+                "previous": "74bf218c-d492-48a4-a7cd-fea1cb199b78",
+                "delivery": "d9d851c8-c6fc-4d98-8538-7325557f78f4",
+                "automatic": false,
+                "at": 1792656234121
+              }
+            ]
+          }
+        ],
+        "closed_session_recorded": true
+      },
+      "cancel": {
+        "room": "sn-BJP00326060100100004-1792656349",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 4330.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 64.4,
+        "tasks": [
+          {
+            "id": "5fc42849-8cab-4a52-b30d-99083879c10e",
+            "revision": 1,
+            "createdAt": 1792656360339,
+            "readyAt": 1792656361955,
+            "status": "cancelled",
+            "delivery": "interrupted",
+            "routing": null,
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          }
+        ],
+        "closed_session_recorded": true
+      },
+      "replace": {
+        "room": "sn-BJP00326060100100004-1792656574",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 8890.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 66.3,
+        "tasks": [
+          {
+            "id": "ad9b1970-7fb9-4a0c-815b-943f46fb1567",
+            "revision": 1,
+            "createdAt": 1792656597011,
+            "readyAt": 1792656598491,
+            "status": "cancelled",
+            "delivery": null,
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "builtin-explicit",
+              "weather_enabled": true
+            },
+            "diagnostics": {
+              "returned": 10,
+              "accepted": 3,
+              "rejected_schema": 0,
+              "rejected_url": 0,
+              "rejected_text": 0,
+              "rejected_date": 0,
+              "duplicate": 0,
+              "outcome": "evidence"
+            },
+            "replays": null
+          },
+          {
+            "id": "2ad09107-17c1-4be4-be55-3f107175ecdd",
+            "revision": 2,
+            "createdAt": 1792656600067,
+            "readyAt": 1792656600353,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "builtin-control",
+              "weather": {
+                "city_id": 39,
+                "city_name": "上海市",
+                "day_offset": 1,
+                "metric": "forecast"
+              },
+              "weather_enabled": true
+            },
+            "diagnostics": null,
+            "replays": null
+          }
+        ],
+        "closed_session_recorded": true
+      },
+      "weather": {
+        "room": "sn-BJP00326060100100004-1792656845",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 3,
+          "metrics": 7,
+          "audio_voiced_ms": 15030.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 61.8,
+        "tasks": [
+          {
+            "id": "273cf0c2-a540-4423-bc0e-8346540fe14e",
+            "revision": 1,
+            "createdAt": 1792656850515,
+            "readyAt": 1792656851104,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "natural-weather",
+              "weather": {
+                "city_id": 39,
+                "city_name": "上海市",
+                "day_offset": 0,
+                "metric": "current"
+              },
+              "weather_enabled": true
+            },
+            "diagnostics": null,
+            "replays": null
+          },
+          {
+            "id": "52a1e56a-3fce-46f6-bc4c-b5baf0974fcd",
+            "revision": 1,
+            "createdAt": 1792656879923,
+            "readyAt": 1792656880186,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-cef47574d1b2d9f201a986af",
+              "rule_id": "natural-weather",
+              "weather": {
+                "city_id": 2,
+                "city_name": "北京市",
+                "day_offset": 0,
+                "metric": "aqi"
+              },
+              "weather_enabled": true
+            },
+            "diagnostics": null,
+            "replays": null
+          }
+        ],
+        "closed_session_recorded": true
+      },
+      "negative": {
+        "room": "sn-BJP00326060100100004-1792657069",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 21020.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "elapsed_s": 67.5,
+        "tasks": [
+          {
+            "id": "68b9f228-7ba1-4b51-91d6-95b7ad994252",
+            "revision": 1,
+            "createdAt": 1792657112803,
+            "readyAt": 1792657112817,
+            "status": "cancelled",
+            "delivery": "completed",
+            "routing": {
+              "version": "r7-e2042f8fde4e5d35ab5cb3f5",
+              "rule_id": "natural-weather",
+              "weather": {
+                "city_id": 39,
+                "city_name": "上海市",
+                "day_offset": 0,
+                "metric": "current"
+              },
+              "weather_enabled": true
+            },
+            "diagnostics": null,
+            "replays": null
+          }
+        ],
+        "closed_session_recorded": true
+      }
+    },
+    "weather_evidence": [
+      {
+        "task_id": "93afe9d0-2e2e-4426-9b34-3a286c6af93a",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 2,
+        "city_name": "北京市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T13:00:00+08:00",
+        "fetched_at": "2026-10-22T07:55:58.315Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "b795d713-ada1-4a3b-b419-c62d16dba70a",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T13:00:00+08:00",
+        "fetched_at": "2026-10-22T07:56:32.353Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "2ad09107-17c1-4be4-be55-3f107175ecdd",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-23",
+        "updated_at": "2026-10-22T13:00:00+08:00",
+        "fetched_at": "2026-10-22T08:10:00.352Z",
+        "cache_hit": false,
+        "metric": "forecast"
+      },
+      {
+        "task_id": "58398d47-6558-4278-98ea-cb2e33afddb5",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:55:08+08:00",
+        "fetched_at": "2026-10-22T08:11:59.056Z",
+        "cache_hit": false,
+        "metric": "current"
+      },
+      {
+        "task_id": "db1694a4-c636-44a9-80e8-d24b4427880d",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 2,
+        "city_name": "北京市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:00:00+08:00",
+        "fetched_at": "2026-10-22T08:12:27.459Z",
+        "cache_hit": false,
+        "metric": "aqi"
+      },
+      {
+        "task_id": "273cf0c2-a540-4423-bc0e-8346540fe14e",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:55:08+08:00",
+        "fetched_at": "2026-10-22T08:14:11.102Z",
+        "cache_hit": false,
+        "metric": "current"
+      },
+      {
+        "task_id": "52a1e56a-3fce-46f6-bc4c-b5baf0974fcd",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "provider": "moji-public-web",
+        "city_id": 2,
+        "city_name": "北京市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:00:00+08:00",
+        "fetched_at": "2026-10-22T08:14:40.185Z",
+        "cache_hit": false,
+        "metric": "aqi"
+      },
+      {
+        "task_id": "68b9f228-7ba1-4b51-91d6-95b7ad994252",
+        "version": "r7-e2042f8fde4e5d35ab5cb3f5",
+        "provider": "moji-public-web",
+        "city_id": 39,
+        "city_name": "上海市",
+        "target_date": "2026-10-22",
+        "updated_at": "2026-10-22T15:55:08+08:00",
+        "fetched_at": "2026-10-22T08:14:11.102Z",
+        "cache_hit": true,
+        "metric": "current"
+      }
+    ],
+    "hot_config_regression": [
+      {
+        "text": "三角形的内角多少度",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "水的沸点温度是多少",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "我发烧了体温多少度",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "烤箱的温度怎么调",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "家里空调温度怎么调",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "我觉得北京天气真好",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "北京天气不错",
+        "before": "search",
+        "after": "chat"
+      },
+      {
+        "text": "听说上海天气真好",
+        "before": "search",
+        "after": "chat"
+      }
+    ],
+    "news_effectiveness_passed": false,
+    "news_safe_fallback_passed": true,
+    "passed": true
+  },
+  "live_weather_adapter": [
+    {
+      "provider": "moji-public-web",
+      "city_id": 2,
+      "city_name": "北京市",
+      "target_date": "2026-10-22",
+      "updated_at": "2026-10-22T15:55:08+08:00",
+      "fetched_at": "2026-10-22T08:02:41.933Z",
+      "cache_hit": false,
+      "metric": "current",
+      "elapsed_ms": 397,
+      "text_valid": true
+    },
+    {
+      "provider": "moji-public-web",
+      "city_id": 39,
+      "city_name": "上海市",
+      "target_date": "2026-10-22",
+      "updated_at": "2026-10-22T15:00:00+08:00",
+      "fetched_at": "2026-10-22T08:02:42.112Z",
+      "cache_hit": false,
+      "metric": "aqi",
+      "elapsed_ms": 179,
+      "text_valid": true
+    },
+    {
+      "provider": "moji-public-web",
+      "city_id": 1185,
+      "city_name": "杭州市",
+      "target_date": "2026-10-24",
+      "updated_at": "2026-10-22T13:00:00+08:00",
+      "fetched_at": "2026-10-22T08:02:42.303Z",
+      "cache_hit": false,
+      "metric": "forecast",
+      "elapsed_ms": 191,
+      "text_valid": true
+    }
+  ],
+  "routing_scope_https": {
+    "canary_https_scope": [
+      {
+        "sn": "BJP00326070803800006",
+        "status": 200
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "status": 200
+      },
+      {
+        "sn": "BJP00326060100200003",
+        "status": 403
+      }
+    ]
+  },
+  "live_admin_ui": {
+    "at_ms": 1792655720495,
+    "actual_ui": true,
+    "preview_no_write": true,
+    "targets": [
+      {
+        "sn": "BJP00326070803800006",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "at": 1792655675150
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "version": "r7-cef47574d1b2d9f201a986af",
+        "at": 1792655675150
+      }
+    ],
+    "revision": 5,
+    "desktop_and_narrow": true,
+    "page_errors": []
+  },
+  "fixed_deadline_test": "no early close; idempotent expiry; newer window untouched; all three switches closed",
+  "final_deadline_observed": false,
+  "first_cold_routing_limit": "No valid snapshot => conservative explicit-search fallback; no foreground wait",
+  "production": {
+    "source_files_checked": 117,
+    "worker": {
+      "MainPID": "839",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Mon 2026-09-28 15:30:06 UTC",
+      "ActiveState": "active",
+      "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+    },
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 1386533,
+        "restarts": 30,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ]
+  },
+  "post_deploy_pre_open_resources": {
+    "brain": {
+      "memory_available_kb": "2440404",
+      "disk_available_bytes": 11772399616
+    },
+    "worker": {
+      "memory_available_kb": "6195760",
+      "disk_available_bytes": 73582653440
+    }
+  },
+  "daily_task_counts_including_probes": {
+    "BJP00326060100100004": 61,
+    "BJP00326070803800006": 1
+  }
+}
