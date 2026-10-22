@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct RoutingConfig { pub schema: u8, pub weather_enabled: bool, #[serde(default)] pub auto_location_enabled: bool, pub rules: Vec<Rule> }
+pub struct RoutingConfig { pub schema: u8, pub weather_enabled: bool, #[serde(default)] pub auto_location_enabled: bool, #[serde(default)] pub baidu_weather_enabled: bool, pub rules: Vec<Rule> }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Rule {
@@ -37,14 +37,18 @@ pub struct WeatherRequest { pub city_id: u32, pub city_name: String, pub day_off
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct AutoWeatherRequest {pub day_offset:u8,pub metric:String}
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceWeatherRequest {pub place:String,pub day_offset:u8,pub metric:String}
 #[derive(Clone, Debug, Serialize)]
 pub struct Decision {
     pub action: String, pub rule_id: String, pub reason: String,
     pub query: Option<String>, pub weather: Option<WeatherRequest>,
     #[serde(skip_serializing_if="Option::is_none")] pub auto_weather: Option<AutoWeatherRequest>,
+    #[serde(skip_serializing_if="Option::is_none")] pub place_weather: Option<PlaceWeatherRequest>,
 }
 impl Decision {
-    fn new(action: &str, rule: &str, reason: &str) -> Self { Self {action:action.into(),rule_id:rule.into(),reason:reason.into(),query:None,weather:None,auto_weather:None} }
+    fn new(action: &str, rule: &str, reason: &str) -> Self { Self {action:action.into(),rule_id:rule.into(),reason:reason.into(),query:None,weather:None,auto_weather:None,place_weather:None} }
     pub fn intent(&self) -> Option<Intent> {
         match self.action.as_str() {
             "search" => self.query.clone().map(Intent::Search), "replace" => self.query.clone().map(Intent::Replace),
@@ -67,7 +71,7 @@ fn protected(t: &str) -> bool {
 }
 fn weather_topic(q: &str) -> bool {
     ["天气","气温","温度","下雨","降雨","空气质量","带伞","多少度"].iter().any(|p|q.contains(p))
-        && !["为什么","原理","形成","是什么意思","什么是","心情","故事"].iter().any(|p|q.contains(p))
+        && !["为什么","原理","形成","是什么意思","什么是","心情","故事","烤箱","体温","发烧","开水","水温","空调","冰箱","显卡","电脑"].iter().any(|p|q.contains(p))
 }
 fn weather_parameters(q: &str) -> Option<AutoWeatherRequest> {
     if !weather_topic(q) || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
@@ -86,9 +90,28 @@ fn supported_weather(q: &str) -> Option<WeatherRequest> {
     Some(WeatherRequest{city_id:*id,city_name:format!("{name}市"),day_offset:params.day_offset,metric:params.metric})
 }
 fn weather_without_place(q: &str) -> bool {
+    weather_place_words(q).is_empty()
+}
+fn weather_place_words(q: &str) -> String {
     let mut rest=q.to_string();
     for word in ["这里","这边","本地","当地","怎么样","会不会","是多少","多少度","空气质量","实时","现在","今天","明天","后天","天气","气温","温度","下雨","降雨","带伞","需要","怎么","如何","好不好","不会","一下","小可","啊","的","会","吗","呢","呀","好","不","冷","热","有","没","？","?","。","，"," "] {rest=rest.replace(word,"");}
-    rest.is_empty()
+    rest
+}
+fn expanded_weather(q:&str)->Option<PlaceWeatherRequest>{
+    let p=weather_parameters(q)?;let place=weather_place_words(q);
+    if place.is_empty()||place.chars().count()>40||!place.chars().all(|c|('\u{4e00}'..='\u{9fff}').contains(&c)){return None;}
+    Some(PlaceWeatherRequest{place,day_offset:p.day_offset,metric:p.metric})
+}
+fn known_weather_place(t:&str)->bool {
+    static NAMES:std::sync::OnceLock<HashSet<String>>=std::sync::OnceLock::new();
+    NAMES.get_or_init(||{
+        let catalog:serde_json::Value=serde_json::from_str(include_str!("weather-places.json")).expect("weather catalog");let mut names=HashSet::new();
+        for row in catalog["places"].as_array().expect("weather places"){
+            let p=row[0].as_str().unwrap();let c=row[1].as_str().unwrap();let n=row[2].as_str().unwrap();
+            for s in [n.to_string(),format!("{n}市"),format!("{p}{n}"),format!("{c}{n}"),format!("{p}{c}{n}")]{names.insert(s);}
+            for alias in row[4].as_array().unwrap(){names.insert(alias.as_str().unwrap().to_string());}
+        }names
+    }).contains(t.strip_prefix('啊').unwrap_or(t))
 }
 #[derive(Default)]
 pub struct RoutingSession { legacy: QueryIntent, pending_weather: Option<(u64,String,bool)>, version: String }
@@ -111,6 +134,7 @@ impl RoutingSession {
                     let q=format!("{name}{question}");
                     return self.from_intent(if replace{Intent::Replace(q)}else{Intent::Search(q)},"weather-city-followup",now,Some(config));
                 }
+                if config.baidu_weather_enabled&&known_weather_place(t){let q=format!("{}{question}",t.strip_prefix('啊').unwrap_or(t));return self.from_intent(if replace{Intent::Replace(q)}else{Intent::Search(q)},"weather-city-followup",now,Some(config));}
             }
         }
         if let Some(action)=self.legacy.route(text,now) {return self.from_intent(action,"builtin-explicit",now,Some(config));}
@@ -122,6 +146,7 @@ impl RoutingSession {
             if !hit {continue;}
             if r.action=="chat" {return Decision::new("chat",&r.id,"命中普通聊天规则");}
             let q=if r.mode=="prefix" {r.triggers.iter().filter_map(|p|t.strip_prefix(p).map(|rest|(p.len(),rest))).max_by_key(|(len,_)|*len).map(|(_,s)|trim(s)).unwrap_or(t)} else {t};
+            if r.action=="weather"&&!weather_topic(q){continue;}
             if q.is_empty() {self.legacy.route("帮我查一下",now);return Decision::new("clarify",&r.id,"缺少具体查询主题");}
             return self.from_intent(Intent::Search(q.into()),&r.id,now,Some(config));
         }
@@ -140,6 +165,7 @@ impl RoutingSession {
                     if automatic {d.auto_weather=weather_parameters(q);d.reason="后台按本轮设备网络定位城市，不等待前台聊天".into();}
                     if d.auto_weather.is_none(){self.pending_weather=Some((now,q.clone(),name=="replace"));d.action="clarify_city".into();d.reason="天气查询缺少城市".into();d.query=None;}
                 }
+                else if config.is_some_and(|c|c.baidu_weather_enabled&&c.weather_enabled){d.place_weather=expanded_weather(q);if d.place_weather.is_some(){d.reason="后台校验省市与天气站后查询百度天气".into();}else{d.reason="日期或指标未由天气适配器支持，使用通用搜索".into();}}
                 else {d.weather=supported_weather(q);if d.weather.is_none(){d.reason="城市或日期未由天气适配器支持，使用通用搜索".into();}}
             }
         } d
@@ -149,6 +175,22 @@ impl RoutingSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn r10_expanded_weather_preserves_places_and_control_without_stealing_chat(){
+        let mut value=serde_json::to_value(RoutingConfig::default()).unwrap();value["baidu_weather_enabled"]=serde_json::json!(true);value["weather_enabled"]=serde_json::json!(true);
+        let config:Result<RoutingConfig,_>=serde_json::from_value(value);
+        assert!(config.is_ok(),"new source switch must be accepted by the actual routing engine");let config=config.unwrap();
+        for (text,place,day) in [("成都明天天气","成都",1),("北京市朝阳区后天天气","北京市朝阳区",2),("辽宁朝阳今天天气","辽宁朝阳",0),("泉州现在多少度","泉州",0)] {
+            let d=RoutingSession::default().route(text,0,Some(&config),"r10");let j=serde_json::to_value(d).unwrap();
+            assert_eq!(j["action"],"search","{text}");assert_eq!(j["place_weather"]["place"],place,"{text}");assert_eq!(j["place_weather"]["day_offset"],day);
+        }
+        let mut s=RoutingSession::default();assert_eq!(s.route("明天天气",0,Some(&config),"r10").action,"clarify_city");
+        assert_eq!(serde_json::to_value(s.route("成都",1000,Some(&config),"r10")).unwrap()["place_weather"]["place"],"成都");
+        for t in ["天气为什么变化","烤箱温度怎么调","我今天画了一只猫","我今天看了新闻"]{assert_eq!(RoutingSession::default().route(t,0,Some(&config),"r10").action,"chat","{t}");}
+        assert_eq!(RoutingSession::default().route("改查成都明天天气",0,Some(&config),"r10").action,"replace");
+        assert!(serde_json::to_value(RoutingSession::default().route("成都明天天气",0,Some(&RoutingConfig::default()),"old")).unwrap()["place_weather"].is_null());
+        let mut disabled=config.clone();disabled.weather_enabled=false;
+        assert!(serde_json::to_value(RoutingSession::default().route("成都明天天气",0,Some(&disabled),"off")).unwrap()["place_weather"].is_null());
+    }
     #[test] fn r8_implicit_city_uses_background_device_location_and_explicit_city_wins(){
         let mut value=serde_json::to_value(RoutingConfig::default()).unwrap();value["auto_location_enabled"]=serde_json::json!(true);value["weather_enabled"]=serde_json::json!(true);
         let c:RoutingConfig=serde_json::from_value(value).expect("R8 auto location configuration");
