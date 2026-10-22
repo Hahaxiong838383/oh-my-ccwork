@@ -57,3 +57,12 @@ Worker提交3a86e0b7；三侧最长36小时，真实截止不滚动延长。Linu
 R3备份/root/rust-worker/backups/search-canary-R3-20261021T122000Z/worker-R3.tar.gz，SHA104fc00d5a33d20bef7b01610333eb5ecd457c806848ff306fb3d682485f34e3。两端持久timer p003-search-expire-20261022.timer固定到期清配置；Worker每秒独立核截止关房。短窗20:24:40截止，20:24:40.522触发、20:24:41.052删房，合成客户端已断开。P1真实任务completed、合成客户端音频10.12s/字幕/metrics通过，不等于设备实际听到；真人插话/续讲/并行聊天等仍待验。
 
 先热关三侧再回滚，已有候选会话结束后设备重进回现役；不能只关新派单。详细回执、17项用例和R3技术总账在Brain分支docs/search-tools-20261021。
+
+
+## R4 双设备增量（2026-10-22）
+
+用户明确新增BJP00326060100100004（v319），保留BJP00326070803800006；同一截止2026-10-22 23:59 CST，P2关闭。Worker代码16769e98：完整SN严格1至2台，重复/非法/超范围拒绝，旧单sn窗口兼容；新窗口allowlist数组与env名单必须相同，两者冲突失败关闭。WORKER_MAX_JOBS=2与候选Brain容量匹配，健康租约满载回退，不改现役Worker。
+
+Linux357测试/构建/ABI、43输入核同；新产物SHA256 83ee21cbf5a6ba6c551d1f2351c31b5582254456d5f0c0197de7093ef0b4f9ef，72986512字节。传输后完整SHA断言再安装。R4备份目录/root/rust-worker/backups/search-canary-R4-20261022T011234Z，包SHA 6893af12088ebce69efc75915ebe4e56eac7a3140f1ac09eb119219194406a81。
+
+到期关闭通过双RTC短窗实测：两房间均断开，jobs回0；仍不代表真人实听。故障先三侧关闸再退出重进；若要缩回单台，需同步环境名单与窗口并在空闲时加载，不能仅改window导致两台都被拒。正式实际加入时间和最终状态以Brain分支2-Projects/P003GameDemo20260513/docs/search-tools-20261021/R4_TWO_DEVICE_CANARY_20261022.md及JSON为准，不从旧R3快照推断当前。
