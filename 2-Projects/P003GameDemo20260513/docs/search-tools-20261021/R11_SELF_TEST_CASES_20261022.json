@@ -1,0 +1,254 @@
+{
+  "scope": "synthetic RTC + real canary backend; not physical P003 hearing",
+  "cases": [
+    {
+      "id": "C01",
+      "group": "knowledge",
+      "input_indices": [
+        0
+      ],
+      "topic": "恐龙为什么会灭绝",
+      "expected": "小行星/撞击相关原因，不添加未问定量",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C02",
+      "group": "knowledge",
+      "input_indices": [
+        1
+      ],
+      "topic": "中国第一颗人造卫星是什么",
+      "expected": "东方红一号",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C03",
+      "group": "knowledge",
+      "input_indices": [
+        2
+      ],
+      "topic": "潮汐是怎么形成的",
+      "expected": "月亮/太阳/海水，不泛化每日一次等频率",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C04",
+      "group": "knowledge",
+      "input_indices": [
+        3
+      ],
+      "topic": "火星为什么是红色的",
+      "expected": "含铁矿物氧化/铁锈相关原因",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C05",
+      "group": "knowledge",
+      "input_indices": [
+        4
+      ],
+      "topic": "熊猫主要吃什么",
+      "expected": "竹子",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C06",
+      "group": "knowledge",
+      "input_indices": [
+        5
+      ],
+      "topic": "含羞草为什么会合上叶子",
+      "expected": "触碰后细胞失水/叶枕变化",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C07",
+      "group": "venues",
+      "input_indices": [
+        0,
+        1
+      ],
+      "topic": "故宫明天开放吗，帮我查一下；随后问烤箱",
+      "expected": "后置分句接管后不在普通聊天补答故宫",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C08",
+      "group": "venues",
+      "input_indices": [
+        2
+      ],
+      "topic": "国家博物馆最新预约方式",
+      "expected": "官方预约方式并保留当前公告限制",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C09",
+      "group": "venues",
+      "input_indices": [
+        3
+      ],
+      "topic": "最近中国航天新闻",
+      "expected": "近七天符合话题的具体报道",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C10",
+      "group": "venues",
+      "input_indices": [
+        4
+      ],
+      "topic": "央视今天国内新闻",
+      "expected": "当日央视文章正文支持",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C11",
+      "group": "chatcheck",
+      "input_indices": [
+        0
+      ],
+      "topic": "我今天画了一只小猫",
+      "expected": "正常聊天，零搜索",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C12",
+      "group": "chatcheck",
+      "input_indices": [
+        1
+      ],
+      "topic": "天气为什么会变化",
+      "expected": "知识聊天，零固定天气任务",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C13",
+      "group": "chatcheck",
+      "input_indices": [
+        2
+      ],
+      "topic": "烤箱的温度怎么调",
+      "expected": "生活问答，零天气任务",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C14",
+      "group": "chatcheck",
+      "input_indices": [
+        3
+      ],
+      "topic": "不要查北京天气，我们聊小猫",
+      "expected": "否定保护，零搜索",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C15",
+      "group": "chatcheck",
+      "input_indices": [
+        4,
+        5
+      ],
+      "topic": "帮我查一下；三角龙主要吃什么",
+      "expected": "先澄清后准确查询",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C16",
+      "group": "concurrent",
+      "input_indices": [
+        0,
+        1,
+        2
+      ],
+      "topic": "查询火星时继续聊小猫",
+      "expected": "普通聊天与后台任务共存，结果空闲补播",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C17",
+      "group": "idle",
+      "input_indices": [
+        0
+      ],
+      "topic": "中国第一颗人造卫星叫什么；保持安静",
+      "expected": "无需追问，主动播结果",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C18",
+      "group": "resume",
+      "input_indices": [
+        0,
+        1,
+        2
+      ],
+      "topic": "火星结果插话小猫帽子；继续刚才的搜索结果",
+      "expected": "聊天优先，明确续讲属于同一任务",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C19",
+      "group": "cancel",
+      "input_indices": [
+        0,
+        1
+      ],
+      "topic": "查恐龙；不用查了，我们聊别的",
+      "expected": "在途取消生效，之后不播旧结果",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C20",
+      "group": "replace",
+      "input_indices": [
+        0,
+        1
+      ],
+      "topic": "查火星；改查第一颗卫星",
+      "expected": "旧任务取消，新任务返回卫星",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C21",
+      "group": "geo",
+      "input_indices": [
+        0
+      ],
+      "topic": "今天天气怎么样",
+      "expected": "认证HTTPS入口按网络城市查询；模拟入口来自Air",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C22",
+      "group": "locations",
+      "input_indices": [
+        0
+      ],
+      "topic": "成都明天的天气",
+      "expected": "成都正确地点/目标日",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C23",
+      "group": "locations",
+      "input_indices": [
+        1,
+        2
+      ],
+      "topic": "北京市朝阳区；辽宁朝阳市明天天气",
+      "expected": "不同正确站点，不能混用",
+      "physical_device_hearing": "pending"
+    },
+    {
+      "id": "C24",
+      "group": "disconnect+reconnect",
+      "input_indices": [
+        0
+      ],
+      "topic": "在途查询断连后新房间聊小猫",
+      "expected": "旧任务终止，新房间不串结果；安卓按钮待真机验",
+      "physical_device_hearing": "pending"
+    }
+  ]
+}

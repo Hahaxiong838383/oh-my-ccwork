@@ -1,0 +1,37 @@
+{
+  "revision": "R11",
+  "brain_code_commit": "429f35caac9f5c463aa0cc0cf4e266725a553bb2",
+  "worker_code_commit": "c396d6bcf0c58e7f33ebf51a62dbccdcd541297a",
+  "worker_artifacts": {
+    "worker": {
+      "sha256": "92dea929b8034b4e20fc2507a5d45e0ffaa13ee83017e09c5c54374ebd06cd51",
+      "bytes": 73352040
+    },
+    "preview": {
+      "sha256": "f2334a92a436dc2a3461110fb4283dac219ae061b69fdbda2a0077b225a8d393",
+      "bytes": 967360
+    },
+    "test_tail": [
+      "test device_grammar::tests::never_panics_on_random_input ... ok",
+      "test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok",
+      "",
+      "test result: ok. 384 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.49s",
+      ""
+    ]
+  },
+  "source_hashes": {
+    "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "d19bcc06fd30f876413905ca8e79dd357e0e11269cfdd6e4d2ac3c6ff5e6c98c",
+    "/opt/p003/search-canary-20261021/brain/src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f"
+  },
+  "environment_changed_keys": [
+    "SEARCH_ALLOWED_DOMAINS"
+  ],
+  "added_domains": [
+    "cctv.com",
+    "chnmuseum.cn",
+    "dpm.org.cn"
+  ],
+  "candidate_env_sha256": "379e2e7b6ed776b3fe8ef3e8abd6b0a2859198b3e06be66b0be320506862c798",
+  "production_code_changes": false,
+  "rollback": "R11_ROLLBACK_20261022.json"
+}
