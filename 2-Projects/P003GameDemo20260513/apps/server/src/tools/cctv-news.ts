@@ -36,7 +36,7 @@ function literalBody(html:string):string|null {
  const quote=m[1];let out='';
  for(let i=m.index+m[0].length;i<html.length;i++){
   const c=html[i];
-  if(c===quote)return /^\s*;/.test(html.slice(i+1))?out:null;
+  if(c===quote)return /^\s*(?:;|<\/script\s*>)/i.test(html.slice(i+1))?out:null;
   if(c!=='\\'){out+=c;continue;}
   const escaped=html[++i];const simple:Record<string,string>={"'":"'",'"':'"','\\':'\\','/':'/',n:'\n',r:'\r',t:'\t',b:'\b',f:'\f'};
   if(escaped in simple){out+=simple[escaped];continue;}

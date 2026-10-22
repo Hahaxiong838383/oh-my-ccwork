@@ -72,3 +72,7 @@ test('R11 央视动态模板仅解码正文字符串，绝不执行脚本或拼�
  assert.equal((await fixture([item],html).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,1);
  assert.equal((await fixture([item],html.replace("</p>';","</p>' + evil();")).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,0);
 });
+test('R11 真实动态模板允许字符串后直接结束script（无分号），仍拒绝表达式',async()=>{
+ const html=body().replace(/<div id="text_area">[\s\S]*<\/div><script>/,'<div id="text_area"></div><script>var contentdate = \'<p>央视网消息：我国成功发射试验卫星，卫星顺利进入预定轨道，飞行试验任务取得成功。</p>\'\n</script><script>');
+ assert.equal((await fixture([item],html).reader.run('最近中国航天新闻',AbortSignal.timeout(2000))).length,1);
+});
