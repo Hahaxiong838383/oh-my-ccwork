@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct RoutingConfig { pub schema: u8, pub weather_enabled: bool, pub rules: Vec<Rule> }
+pub struct RoutingConfig { pub schema: u8, pub weather_enabled: bool, #[serde(default)] pub auto_location_enabled: bool, pub rules: Vec<Rule> }
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Rule {
@@ -34,13 +34,17 @@ impl RoutingConfig {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct WeatherRequest { pub city_id: u32, pub city_name: String, pub day_offset: u8, pub metric: String }
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct AutoWeatherRequest {pub day_offset:u8,pub metric:String}
 #[derive(Clone, Debug, Serialize)]
 pub struct Decision {
     pub action: String, pub rule_id: String, pub reason: String,
     pub query: Option<String>, pub weather: Option<WeatherRequest>,
+    #[serde(skip_serializing_if="Option::is_none")] pub auto_weather: Option<AutoWeatherRequest>,
 }
 impl Decision {
-    fn new(action: &str, rule: &str, reason: &str) -> Self { Self {action:action.into(),rule_id:rule.into(),reason:reason.into(),query:None,weather:None} }
+    fn new(action: &str, rule: &str, reason: &str) -> Self { Self {action:action.into(),rule_id:rule.into(),reason:reason.into(),query:None,weather:None,auto_weather:None} }
     pub fn intent(&self) -> Option<Intent> {
         match self.action.as_str() {
             "search" => self.query.clone().map(Intent::Search), "replace" => self.query.clone().map(Intent::Replace),
@@ -65,21 +69,25 @@ fn weather_topic(q: &str) -> bool {
     ["天气","气温","温度","下雨","降雨","空气质量","带伞","多少度"].iter().any(|p|q.contains(p))
         && !["为什么","原理","形成","是什么意思","什么是","心情","故事"].iter().any(|p|q.contains(p))
 }
-fn supported_weather(q: &str) -> Option<WeatherRequest> {
+fn weather_parameters(q: &str) -> Option<AutoWeatherRequest> {
     if !weather_topic(q) || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
+    let day=if q.contains("后天"){2}else if q.contains("明天"){1}else{0};
+    let metric=if q.contains("空气质量") {if day!=0{return None;} "aqi"}else if q.contains("现在")||q.contains("实时"){if day!=0{return None;} "current"}else{"forecast"};
+    Some(AutoWeatherRequest{day_offset:day,metric:metric.into()})
+}
+fn supported_weather(q: &str) -> Option<WeatherRequest> {
+    let params=weather_parameters(q)?;
     let found: Vec<_>=CITIES.iter().filter(|(_,name)|q.contains(name)).collect();
     if found.len()!=1 {return None;}
     let (id,name)=found[0];
     // A known city name inside a district/foreign place is not an exact city match.
     let remainder=q.replace(&format!("{name}市"),"").replace(name,"");
     if !weather_without_place(&remainder) {return None;}
-    let day=if q.contains("后天"){2}else if q.contains("明天"){1}else{0};
-    let metric=if q.contains("空气质量") {if day!=0{return None;} "aqi"}else if q.contains("现在")||q.contains("实时"){if day!=0{return None;} "current"}else{"forecast"};
-    Some(WeatherRequest{city_id:*id,city_name:format!("{name}市"),day_offset:day,metric:metric.into()})
+    Some(WeatherRequest{city_id:*id,city_name:format!("{name}市"),day_offset:params.day_offset,metric:params.metric})
 }
 fn weather_without_place(q: &str) -> bool {
     let mut rest=q.to_string();
-    for word in ["怎么样","会不会","是多少","多少度","空气质量","实时","现在","今天","明天","后天","天气","气温","温度","下雨","降雨","带伞","需要","怎么","如何","好不好","不会","一下","小可","啊","的","会","吗","呢","呀","好","不","冷","热","有","没","？","?","。","，"," "] {rest=rest.replace(word,"");}
+    for word in ["这里","这边","本地","当地","怎么样","会不会","是多少","多少度","空气质量","实时","现在","今天","明天","后天","天气","气温","温度","下雨","降雨","带伞","需要","怎么","如何","好不好","不会","一下","小可","啊","的","会","吗","呢","呀","好","不","冷","热","有","没","？","?","。","，"," "] {rest=rest.replace(word,"");}
     rest.is_empty()
 }
 #[derive(Default)]
@@ -127,7 +135,11 @@ impl RoutingSession {
         let mut d=Decision::new(name,rule,"命中路由");d.query=query;
         if let Some(q)=d.query.as_ref() {
             if config.is_some() && weather_topic(q) {
-                if weather_without_place(q) {self.pending_weather=Some((now,q.clone(),name=="replace"));d.action="clarify_city".into();d.reason="天气查询缺少城市".into();d.query=None;}
+                if weather_without_place(q) {
+                    let automatic=config.is_some_and(|c|c.weather_enabled&&c.auto_location_enabled);
+                    if automatic {d.auto_weather=weather_parameters(q);d.reason="后台按本轮设备网络定位城市，不等待前台聊天".into();}
+                    if d.auto_weather.is_none(){self.pending_weather=Some((now,q.clone(),name=="replace"));d.action="clarify_city".into();d.reason="天气查询缺少城市".into();d.query=None;}
+                }
                 else {d.weather=supported_weather(q);if d.weather.is_none(){d.reason="城市或日期未由天气适配器支持，使用通用搜索".into();}}
             }
         } d
@@ -137,6 +149,17 @@ impl RoutingSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn r8_implicit_city_uses_background_device_location_and_explicit_city_wins(){
+        let mut value=serde_json::to_value(RoutingConfig::default()).unwrap();value["auto_location_enabled"]=serde_json::json!(true);value["weather_enabled"]=serde_json::json!(true);
+        let c:RoutingConfig=serde_json::from_value(value).expect("R8 auto location configuration");
+        for (text,day) in [("今天天气怎么样",0),("明天会下雨吗",1),("这里后天天气怎么样",2)] {
+            let d=RoutingSession::default().route(text,0,Some(&c),"r8");assert_eq!(d.action,"search","{text}");assert!(d.weather.is_none());
+            assert_eq!(serde_json::to_value(d).unwrap()["auto_weather"]["day_offset"],day);
+        }
+        let explicit=RoutingSession::default().route("改查上海明天天气",0,Some(&c),"r8");assert_eq!(explicit.action,"replace");assert_eq!(explicit.weather.as_ref().unwrap().city_id,39);assert!(serde_json::to_value(explicit).unwrap()["auto_weather"].is_null());
+        for text in ["天气为什么会变化","不要查天气","我今天心情像阴天"] {assert_eq!(RoutingSession::default().route(text,0,Some(&c),"r8").action,"chat");}
+        assert_eq!(RoutingSession::default().route("取消搜索",0,Some(&c),"r8").action,"cancel");
+    }
     fn route(t:&str)->Decision{RoutingSession::default().route(t,0,Some(&RoutingConfig::default()),"v1")}
     #[test] fn r7_natural_weather_must_create_task_without_explicit_search_verb(){
         for text in ["今天北京的天气","北京明天会下雨吗","小可，上海现在多少度","杭州的空气质量"] {

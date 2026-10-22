@@ -314,7 +314,7 @@ impl SearchSession {
         let routing=self.last_route.as_ref().and_then(|(version,d)|{
             if version.is_empty(){return None;}
             let mut claim=json!({"version":version,"rule_id":d.rule_id});
-            if let Some(w)=&d.weather {claim["weather"]=json!(w);}Some(claim)
+            if let Some(w)=&d.weather {claim["weather"]=json!(w);}if let Some(w)=&d.auto_weather {claim["auto_weather"]=json!(w);}Some(claim)
         });
         let cmd = Command::Submit {
             routing,
