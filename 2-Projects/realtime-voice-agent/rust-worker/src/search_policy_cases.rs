@@ -60,3 +60,10 @@ fn held_out_requests_and_contradictions_do_not_depend_on_weather_words() {
  for (text,q) in [("麻烦你帮我查故宫的开放安排","故宫的开放安排"),("小可，帮我搜火星探测的最新进展","火星探测的最新进展"),("我想请你查一下三角龙吃什么","三角龙吃什么"),("请你帮忙查询上海科技馆门票","上海科技馆门票")] {assert_eq!(intent(text),Some(Intent::Search(q.into())),"{text}");}
  for text in ["帮我查一下新闻，不要真的查", "帮我搜一下新闻，但不用搜索", "查理和巧克力工厂讲什么", "搜救队是什么", "查询功能是怎么实现的"] {assert_eq!(intent(text),None,"{text}");}
 }
+#[test]
+fn asr_missing_delimiters_keeps_suffix_cancel_and_replace_intents() {
+ assert_eq!(intent("故宫明天开放吗帮我查一下"),Some(Intent::Search("故宫明天开放吗".into())));
+ assert_eq!(intent("不用查了我们聊别的"),Some(Intent::Cancel));
+ assert_eq!(intent("不查北京了改查上海的天气"),Some(Intent::Replace("上海的天气".into())));
+ for text in ["如果我说故宫明天开放吗帮我查一下", "比如火星为什么红帮我查一下", "不用查了是什么意思"] {assert_eq!(intent(text),None,"{text}");}
+}

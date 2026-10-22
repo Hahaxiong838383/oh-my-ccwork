@@ -35,6 +35,7 @@ fn task_query(query: &str, replace: bool) -> Option<Intent> {
 }
 pub fn intent(text: &str) -> Option<Intent> {
     let t = addressed(text);
+    if ["如果", "假如", "例如", "比如"].iter().any(|p| t.starts_with(p)) { return None; }
     if ["，不要真的查", ",不要真的查", "，但不用搜索", ",但不用搜索"].iter().any(|p| t.contains(p)) { return None; }
     if ["搜索引擎", "搜索算法", "搜索功能", "查询功能"].iter().any(|p| t.starts_with(p)) { return None; }
     // Scoped, explicit replacement can supersede a preceding cancellation.
@@ -43,9 +44,12 @@ pub fn intent(text: &str) -> Option<Intent> {
             if let Some(q) = new.trim().strip_prefix("改查") { return task_query(q, true); }
         }
     }
+    if let Some((old, new)) = t.split_once("改查") {
+        if (old.starts_with("不查") || old.starts_with("先别查")) && old.ends_with('了') { return task_query(new, true); }
+    }
     let control = t.strip_suffix('吧').unwrap_or(t);
     if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
-        || ["不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p)) {
+        || ["不用查了，", "不用查了,", "别查了，", "别查了,", "不用查了我们聊", "不用查了聊", "别查了我们聊"].iter().any(|p| control.starts_with(p)) {
         return Some(Intent::Cancel);
     }
     if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢", "继续播刚才的搜索结果", "刚才查的结果呢", "查好了吗", "搜到了吗", "接着说刚才查到的", "刚才查到什么了", "搜索结果呢"].contains(&control) { return Some(Intent::Resume); }
@@ -56,6 +60,11 @@ pub fn intent(text: &str) -> Option<Intent> {
     // Topic first is accepted only with a complete, explicit trailing request.
     for suffix in ["，帮我查一下", ",帮我查一下", "，帮我查查", ",帮我查查", "，请帮我查一下"] {
         if let Some(q) = t.strip_suffix(suffix) { return task_query(q, false); }
+    }
+    for suffix in ["帮我查一下", "帮我查查"] {
+        if let Some(q) = t.strip_suffix(suffix) {
+            if !q.is_empty() && !["请", "请你", "能不能", "能", "你能", "你能不能", "你可以", "可以", "可不可以", "麻烦", "麻烦你", "我想请你", "我想让你"].contains(&q) { return task_query(q, false); }
+        }
     }
     let mut t = t;
     for _ in 0..3 {
