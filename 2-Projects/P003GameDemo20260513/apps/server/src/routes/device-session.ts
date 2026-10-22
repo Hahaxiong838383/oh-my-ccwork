@@ -6,6 +6,7 @@ import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
 import { configStore, type RuntimeFlag } from '../config-store.js';
 import { searchCanarySelection } from '../search-canary-runtime.js';
+import { captureDeviceLocation } from '../tools/device-location-runtime.js';
 
 /**
  * P003 S2-B1 设备 Session API（codex 联调合同：CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
@@ -391,6 +392,7 @@ deviceSessionRoute.post('/session', async (c) => {
     return c.json({ status: 'error', code: 500, message: '签发自检失败，拒绝交付' }, 500);
   }
 
+  if(canary.canary) captureDeviceLocation(c,sn as string,roomName,expSec*1000);
   console.log(
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
       // B84：policy 与 supports 进日志——旧/新客户端各走哪条路径、为什么，事后能从这一行对账

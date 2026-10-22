@@ -7,7 +7,8 @@ import { createSearchRoute } from '../routes/search-tasks.js';
 import { SearchTasks } from './search-tasks.js';
 import { SearchAvailability } from './search-availability.js';
 import { RoutingStore } from './search-routing-store.js';
-import { MojiWeather,weatherRequestSchema } from './moji-weather.js';
+import { MojiWeather,weatherRequestSchema,autoWeatherSchema,MOJI_CITIES } from './moji-weather.js';
+import {getDeviceLocationStore,closeDeviceLocationRuntime} from './device-location-runtime.js';
 import { searchCapabilityBase } from './search-chat-policy.js';
 import { SearchExecutor } from './search-executor.js';
 
@@ -32,16 +33,26 @@ export function getSearchTasks(): SearchTasks | null {
   const settings = searchSettings();
   if (!settings.enabled) { instance?.tick(); return null; }
   if (!instance) {
-    instance = new SearchTasks({ canSubmit: r => Boolean(r?.weather_enabled&&r.weather)||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
+    instance = new SearchTasks({ canSubmit: r => Boolean(r?.weather_enabled&&(r.weather||r.auto_location_enabled&&r.auto_weather))||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
       resolveRouting:(owner,claim)=>{
         const snapshot=getSearchRoutingStore()?.resolve(owner.subject,claim.version);if(!snapshot)throw new Error('routing_version_unknown');
         if(!['builtin-explicit','builtin-control','weather-city-followup','builtin-fallback'].includes(claim.rule_id)&&!snapshot.config.rules.some(r=>r.id===claim.rule_id&&r.enabled))throw new Error('routing_version_scope');
-        return {...claim,weather:claim.weather?weatherRequestSchema.parse(claim.weather):undefined,weather_enabled:snapshot.config.weather_enabled};
+        if(claim.auto_weather&&(!snapshot.config.auto_location_enabled||!snapshot.config.weather_enabled))throw new Error('routing_version_scope');
+        return {...claim,weather:claim.weather?weatherRequestSchema.parse(claim.weather):undefined,auto_weather:claim.auto_weather?autoWeatherSchema.parse(claim.auto_weather):undefined,weather_enabled:snapshot.config.weather_enabled,auto_location_enabled:snapshot.config.auto_location_enabled===true};
       },
       allowed: s => searchSettings().allowed.includes(s) && deviceRegistryStore.statusOf(s) === 'active',
       execute: async (query, signal, owner) => {
         const record = deviceRegistryStore.get(owner.subject);
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
+        if(owner.routing?.weather_enabled&&owner.routing.auto_location_enabled&&owner.routing.auto_weather){
+          const location=await getDeviceLocationStore()?.wait(owner.subject,owner.session,signal);signal.throwIfAborted();
+          if(location?.state!=='ready') {console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:location?.state??'unknown',reason:location?.reason??'location_no_session'}));return {text:'暂时没能根据设备网络确定所在城市，这次先不报天气，稍后可以再试。',sources:[]};}
+          const city=MOJI_CITIES.find(c=>c.name===location.city);
+          if(!city){console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:'unsupported_city',city:location.city}));return {text:`设备网络定位到${location.city}，目前还不能可靠查询这个城市的天气。`,sources:[]};}
+          const result=await weather.run({...owner.routing.auto_weather,city_id:city.id,city_name:city.name},signal,owner.createdAt);
+          result.text='按设备网络定位，'+result.text;
+          console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,city_source:'device_ip',location_provider:'ip9',location_observed_at:location.observed_at,...result.weather}));return result;
+        }
         if(owner.routing?.weather_enabled&&owner.routing.weather){
           try {const result=await weather.run(owner.routing.weather,signal,owner.createdAt);console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,...result.weather}));return result;}
           catch{console.warn('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,outcome:'unavailable'}));throw new Error('weather_unavailable');}
@@ -63,7 +74,7 @@ export function getSearchTasks(): SearchTasks | null {
   }
   return instance;
 }
-export function closeSearchRuntime() { if (timer) clearInterval(timer); timer = null; instance?.close(); instance = null; routingStore?.close();routingStore=null; }
+export function closeSearchRuntime() { if (timer) clearInterval(timer); timer = null; instance?.close(); instance = null; routingStore?.close();routingStore=null; closeDeviceLocationRuntime(); }
 export function searchAudit() { return { loaded: instance !== null, tasks: instance?.audit() ?? [] }; }
 
 export const searchTaskRoute = createSearchRoute({ tasks: getSearchTasks, routing:{get:o=>{if(!searchSettings().allowed.includes(o.subject))throw new Error('disabled');return getSearchRoutingStore()?.snapshot(o.subject)??null;},ack:(o,v)=>{if(!searchSettings().allowed.includes(o.subject))throw new Error('disabled');const store=getSearchRoutingStore();if(!store)throw new Error('disabled');store.ack(o.subject,v,o.session);}}, owner: async c => {

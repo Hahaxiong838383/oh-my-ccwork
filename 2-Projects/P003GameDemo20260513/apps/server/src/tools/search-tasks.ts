@@ -3,8 +3,8 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest };
-export type TaskRouting = RoutingClaim & { weather_enabled: boolean };
+export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest; auto_weather?: import('./moji-weather.js').AutoWeatherRequest };
+export type TaskRouting = RoutingClaim & { weather_enabled: boolean; auto_location_enabled?: boolean };
 export type SearchOwner = { subject: string; session: string };
 export type SearchResult = { weather?: import('./moji-weather.js').WeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
 export type SearchTask = SearchOwner & {

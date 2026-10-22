@@ -1,3 +1,4 @@
+import {DeviceLocationStore} from './tools/device-location.js';
 import {RoutingStore} from './tools/search-routing-store.js';
 import {previewRouting} from './tools/search-routing-config.js';
 import {createRoutingAdminRoute} from './routes/search-routing-admin.js';
@@ -48,4 +49,5 @@ async function status(){
 export const canaryAdminRoute=createCanaryAdminRoute({read:status,eligible:sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);},isOpen:()=>flag('enabled')==='1',save:(sn,who)=>configStore.setFlag('p003.search.canary.selected_sn',sn,who,'后台待测设备选择；不激活派单')});
 
 let routes:RoutingStore|null=null;
-canaryAdminRoute.route('/routing',createRoutingAdminRoute({store:()=>routes??=new RoutingStore(root()+'/data/search-routing.db'),scope:()=>array(flag('allowlist')).filter(sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);}),preview:(c,u)=>previewRouting(c,u,root()+'/bin/search-route-preview')}));
+let locationStore:DeviceLocationStore|null=null;
+canaryAdminRoute.route('/routing',createRoutingAdminRoute({store:()=>routes??=new RoutingStore(root()+'/data/search-routing.db'),scope:()=>array(flag('allowlist')).filter(sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);}),locations:()=>{locationStore??=new DeviceLocationStore(root()+'/data/device-location.db');return locationStore.summary(array(flag('allowlist')));},preview:(c,u)=>previewRouting(c,u,root()+'/bin/search-route-preview')}));

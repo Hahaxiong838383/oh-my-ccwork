@@ -4,6 +4,8 @@ import type { SearchResult } from './search-tasks.js';
 export const MOJI_CITIES = [{id:2,name:'北京市'},{id:39,name:'上海市'},{id:94,name:'沈阳市'},{id:104,name:'大连市'},{id:886,name:'广州市'},{id:892,name:'深圳市'},{id:1185,name:'杭州市'}] as const;
 export const weatherRequestSchema = z.object({city_id:z.number().int(),city_name:z.string(),day_offset:z.number().int().min(0).max(2),metric:z.enum(['forecast','current','aqi'])}).strict().refine(v=>MOJI_CITIES.some(c=>c.id===v.city_id&&c.name===v.city_name)&& (v.metric==='forecast'||v.day_offset===0));
 export type WeatherRequest=z.infer<typeof weatherRequestSchema>;
+export const autoWeatherSchema=z.object({day_offset:z.number().int().min(0).max(2),metric:z.enum(['forecast','current','aqi'])}).strict().refine(v=>v.metric==='forecast'||v.day_offset===0);
+export type AutoWeatherRequest=z.infer<typeof autoWeatherSchema>;
 export type WeatherEvidence={provider:'moji-public-web';city_id:number;city_name:string;target_date:string;updated_at:string;fetched_at:string;cache_hit:boolean;metric:string};
 export type WeatherResult=SearchResult & {weather:WeatherEvidence};
 const day=(ms:number)=>new Date(ms+28_800_000).toISOString().slice(0,10);

@@ -7,7 +7,7 @@ const defaults=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../server/s
  const browser=await webkit.launch({headless:true});
  try{
   const ctx=await browser.newContext({viewport:{width:1450,height:1050}});await ctx.addInitScript(()=>{localStorage.setItem('kidshub_admin_token','synthetic');localStorage.setItem('kidshub_admin_role','admin');});
-  let state={ok:true,revision:0,draft:defaults,eligible_sns:[sn],versions:[],targets:[],loads:[],history:[]},writes=[],fail=false;
+  let state={ok:true,revision:0,draft:defaults,eligible_sns:[sn],versions:[],targets:[],loads:[],history:[],locations:[{sn,state:'ready',city:'北京市',provider:'ip9',observed_at:Date.now(),expires_at:Date.now()+60000}]},writes=[],fail=false;
   await ctx.route('**/api/**',async route=>{
    const u=new URL(route.request().url()),method=route.request().method();
    if(u.pathname==='/api/auth/check')return route.fulfill({json:{ok:true,role:'admin',username:'合成验收'}});
@@ -28,10 +28,12 @@ const defaults=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../../server/s
   const page=await ctx.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('http://127.0.0.1:'+server.address().port+'/admin/');await page.waitForFunction(()=>document.querySelector('#app').__vue_app__);
   await page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('search-canary');});
   await page.getByText('尚未发布，Worker 使用保守内置路由。',{exact:true}).waitFor();
+  await page.getByText(/已定位（城市级估计）.*北京市/).waitFor();
+  await page.getByLabel('未指定城市时按设备网络自动定位（IP9）',{exact:true}).check();
   await page.getByLabel('触发表达 extra-explicit',{exact:true}).fill('帮我了解一下、帮我打听一下');
   assert.equal(await page.getByRole('button',{name:'校验并发布路由',exact:true}).isDisabled(),true);
   await page.getByRole('button',{name:'预览路由（不执行搜索）',exact:true}).click();await page.getByText('预览完成，没有执行搜索',{exact:true}).waitFor();assert.equal(state.revision,0);
-  await page.getByRole('button',{name:'保存路由草稿',exact:true}).click();await page.getByText('草稿已保存，运行版本未改变',{exact:true}).waitFor();assert.equal(state.revision,1);
+  await page.getByRole('button',{name:'保存路由草稿',exact:true}).click();await page.getByText('草稿已保存，运行版本未改变',{exact:true}).waitFor();assert.equal(state.revision,1);assert.equal(state.draft.auto_location_enabled,true);
   await page.getByRole('button',{name:'校验并发布路由',exact:true}).click();await page.getByText('路由已发布；等待 Worker 加载确认，不等于真机实听通过',{exact:true}).waitFor();assert.equal(state.revision,2);
   await page.getByLabel('历史路由版本',{exact:true}).selectOption(state.versions[0].version);await page.getByRole('button',{name:'回滚所选设备',exact:true}).click();await page.getByText('所选设备已回滚发布，等待 Worker 确认',{exact:true}).waitFor();assert.equal(state.revision,3);
   if(process.env.SCREENSHOT)await page.locator('.routing-panel').screenshot({path:process.env.SCREENSHOT});
