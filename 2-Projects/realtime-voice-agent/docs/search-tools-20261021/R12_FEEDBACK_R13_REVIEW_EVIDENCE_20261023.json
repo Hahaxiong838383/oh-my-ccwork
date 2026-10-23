@@ -1,0 +1,1349 @@
+{
+  "verdict": "跨会话显式续讲未实现，R13实测仍复现；同会话续讲和预置提示有效",
+  "cross_session_product_acceptance": "failed",
+  "failure_reproduced": true,
+  "physical_r13_acceptance": "pending",
+  "tester_report": {
+    "version": "R12",
+    "device_suffix": "00100004",
+    "version_code": 319,
+    "version_name": "1.2.2-canary.305",
+    "only_reported_failure": "resume after exit and reawakening",
+    "other_cases": "passed per tester confirmation; not independently video-reviewed",
+    "source_file": "P003_SEARCH_R12_真机测试反馈_20261023.md",
+    "source_sha256": "e1fc4fdd35943f2087b7d038c151ecd9a95a946b1f5d9f423cae4ea4e5c2a68f",
+    "videos_available_locally": false
+  },
+  "historical_correlations": [
+    {
+      "at_cst": "10-23 15:15:42.630",
+      "room": "sn-BJP00326060100100004-1792739717",
+      "room_task_count": 0,
+      "no_result_notice_in_logs": true,
+      "prior_task": {
+        "id": "fa8bc10d-316e-4c59-b274-7c92d860e4ea",
+        "session": "sn-BJP00326060100100004-1792737896",
+        "createdAt": 1792737928974,
+        "readyAt": 1792737930540,
+        "status": "cancelled",
+        "delivery": "interrupted"
+      },
+      "age_since_prior_ready_ms": 1812091,
+      "tasks_before_resume_in_current_room": 0
+    },
+    {
+      "at_cst": "10-23 15:15:59.219",
+      "room": "sn-BJP00326060100100004-1792739754",
+      "room_task_count": 0,
+      "no_result_notice_in_logs": true,
+      "prior_task": {
+        "id": "fa8bc10d-316e-4c59-b274-7c92d860e4ea",
+        "session": "sn-BJP00326060100100004-1792737896",
+        "createdAt": 1792737928974,
+        "readyAt": 1792737930540,
+        "status": "cancelled",
+        "delivery": "interrupted"
+      },
+      "age_since_prior_ready_ms": 1828680,
+      "tasks_before_resume_in_current_room": 0
+    },
+    {
+      "at_cst": "10-23 15:17:11.638",
+      "room": "sn-BJP00326060100100004-1792739826",
+      "room_task_count": 1,
+      "no_result_notice_in_logs": true,
+      "prior_task": {
+        "id": "2ea2b051-5a4a-4964-92c5-a362db34441b",
+        "session": "sn-BJP00326060100100004-1792739799",
+        "createdAt": 1792739806349,
+        "readyAt": 1792739807572,
+        "status": "cancelled",
+        "delivery": "interrupted"
+      },
+      "age_since_prior_ready_ms": 24066,
+      "tasks_before_resume_in_current_room": 0
+    },
+    {
+      "at_cst": "10-23 15:17:40.498",
+      "room": "sn-BJP00326060100100004-1792739855",
+      "room_task_count": 1,
+      "no_result_notice_in_logs": true,
+      "prior_task": {
+        "id": "f7298430-d9db-4b93-8eb5-0d5b192ee067",
+        "session": "sn-BJP00326060100100004-1792739826",
+        "createdAt": 1792739843254,
+        "readyAt": 1792739843447,
+        "status": "cancelled",
+        "delivery": "claimed"
+      },
+      "age_since_prior_ready_ms": 17051,
+      "tasks_before_resume_in_current_room": 0
+    }
+  ],
+  "current_probe_evidence": {
+    "measure": "Worker commit to actual body first frame; not device heard",
+    "physical_acceptance": "pending",
+    "modes": {
+      "resume": {
+        "room": "sn-BJP00326060100100004-1792746344",
+        "trace": "search-probe-1792746344",
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 3,
+          "metrics": 8,
+          "audio_voiced_ms": 17050.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1349.2,
+          "median": 1349.2,
+          "p95_descriptive": 1349.2,
+          "max": 1349.2
+        },
+        "route": {
+          "n": 3,
+          "min": 0.2,
+          "median": 0.3,
+          "p95_descriptive": 0.4,
+          "max": 0.4
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792746344",
+            "t": 1792746354098.876,
+            "time": "10-23 17:05:54.098",
+            "eou_ms": 815,
+            "stt_ms": 778,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.163,
+            "claim_filter_trigger": true,
+            "chars": 12,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 13901,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792746344",
+            "t": 1792746367999.378,
+            "time": "10-23 17:06:07.999",
+            "eou_ms": 791,
+            "stt_ms": 778,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.362,
+            "claim_filter_trigger": false,
+            "chars": 11,
+            "turn_id": "3",
+            "commit_to_body_ms": 1349.2,
+            "stop_to_body_estimate_ms": 2140.2,
+            "turn_start_gap_ms": 1.24,
+            "tts_ttfb_ms": 291,
+            "body_ready_since_turn_ms": 1315,
+            "before_tts_ms": 1024,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 351,
+            "spec_lead_ms": null,
+            "spec_miss": true,
+            "next_commit_ms": 24200,
+            "filler": true
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792746344",
+            "t": 1792746392199.306,
+            "time": "10-23 17:06:32.199",
+            "eou_ms": 804,
+            "stt_ms": 757,
+            "action": "resume",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.315,
+            "claim_filter_trigger": true,
+            "chars": 9,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792746354098.876,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.2,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "resume2.wav": "dbf189f2cceee3167c4412970222106e3a9f579ce8e7332fd47d7300bd90bde1",
+          "resume0.wav": "930571b8ba7742a9f24abacedd69b15e2fa76b53434f4b87069d2f754de536fb",
+          "resume1.wav": "d9ce5e6b387a7515c5c6e64e86320e5b50b7a2cdd3df52654e26152a86f0cdf5"
+        },
+        "caption_sha256": "6fc79eae678c8121e52f230e18207d0ab792750ab7bf0e11372cf280ebe44fc8",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "715c0169-147c-45d0-87c9-3373f662021c",
+            "turn_id": "2",
+            "delivery_id": "c2a55aac-ad9c-41ab-9570-d0d93c289ca8",
+            "at_ms": 1792746362297.986
+          },
+          {
+            "task_id": "715c0169-147c-45d0-87c9-3373f662021c",
+            "turn_id": "4",
+            "delivery_id": "361efd80-45eb-4883-9248-2b4289474e88",
+            "at_ms": 1792746393598.368
+          }
+        ]
+      },
+      "cross_resume": {
+        "room": "sn-BJP00326060100100004-1792746476",
+        "trace": "search-probe-1792746476",
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 2,
+          "audio_voiced_ms": 3200.0,
+          "input_ready": 1,
+          "output_ready": 1
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.4,
+          "median": 0.4,
+          "p95_descriptive": 0.4,
+          "max": 0.4
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792746476",
+            "t": 1792746481746.104,
+            "time": "10-23 17:08:01.746",
+            "eou_ms": 739,
+            "stt_ms": 724,
+            "action": "resume",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.406,
+            "claim_filter_trigger": true,
+            "chars": 9,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [],
+        "wav_sha256": {
+          "cross_resume0.wav": "02db6229abcbb3dff56efa559eb39851e5bf6ca4d9de003f99c8007622ae29d8"
+        },
+        "caption_sha256": "e99982f7e126743564ab38653f7620fa4f0f8ad05847d87437b11aa935c42f13",
+        "disconnected": false,
+        "result_first_frames": []
+      }
+    },
+    "tasks": [
+      {
+        "id": "715c0169-147c-45d0-87c9-3373f662021c",
+        "session": "sn-BJP00326060100100004-1792746344",
+        "createdAt": 1792746354106,
+        "readyAt": 1792746355701,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1
+      }
+    ]
+  },
+  "current_checks": [
+    {
+      "check": "exactly_current_two_probe_modes",
+      "passed": true
+    },
+    {
+      "check": "same_session_replay_one_task_two_playbacks",
+      "passed": true
+    },
+    {
+      "check": "prepared_receipt_observed",
+      "passed": true
+    },
+    {
+      "check": "ordinary_chat_still_responds",
+      "passed": true
+    },
+    {
+      "check": "cross_session_limitation_reproduced",
+      "passed": true
+    },
+    {
+      "check": "failure_is_before_original_five_minute_expiry",
+      "passed": true
+    },
+    {
+      "check": "old_session_cleanup_removed_result",
+      "passed": true
+    },
+    {
+      "check": "resume_rtc_received_audio_captions_and_ready",
+      "passed": true
+    },
+    {
+      "check": "cross_resume_rtc_received_audio_captions_and_ready",
+      "passed": true
+    },
+    {
+      "check": "production_and_candidate_runtime_unchanged",
+      "passed": true
+    },
+    {
+      "check": "brain_sources_flags_and_pm2_unchanged",
+      "passed": true
+    },
+    {
+      "check": "final_candidate_idle_and_healthy",
+      "passed": true
+    },
+    {
+      "check": "existing_boundary_tests_passed",
+      "passed": true
+    }
+  ],
+  "same_session_status": "passed by synthetic RTC",
+  "cross_session_age_since_ready_ms": 126045,
+  "search_result_tts_tail": {
+    "task_id": "715c0169-147c-45d0-87c9-3373f662021c",
+    "query_commit_at_ms": 1792746354098.876,
+    "ready_at_ms": 1792746355701,
+    "playback_scheduled_at_ms": 1792746356448.6958,
+    "tts_synth_log_at_ms": 1792746361959.819,
+    "result_first_frame_at_ms": 1792746362297.986,
+    "commit_to_result_first_frame_ms": 8199.1,
+    "ready_to_result_first_frame_ms": 6597.0,
+    "playback_scheduled_to_synth_log_ms": 5511.1,
+    "bounded_spare_started": true,
+    "interpretation": "scheduled-to-synth gap includes awaiting TTS preconnect per code; interrupted turn lacks completed dispatch timing metric, so do not substitute this gap for a precise provider TTFB"
+  },
+  "previous_r13_comparison_reused": {
+    "receipt_before": {
+      "room": "sn-BJP00326060100100004-1792741724",
+      "trace": "search-probe-1792741724",
+      "counts": {
+        "agent_transcripts": 9,
+        "user_transcripts": 5,
+        "metrics": 14,
+        "audio_voiced_ms": 34140.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "ordinary_commits": 0,
+      "body_first_frame": {
+        "n": 0
+      },
+      "route": {
+        "n": 5,
+        "min": 0.2,
+        "median": 0.2,
+        "p95_descriptive": 0.2,
+        "max": 0.2
+      },
+      "ordinary_missing_first_frame": 0,
+      "turns": [
+        {
+          "room": "sn-BJP00326060100100004-1792741724",
+          "t": 1792741736274.241,
+          "time": "10-23 15:48:56.274",
+          "eou_ms": 774,
+          "stt_ms": 748,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.24,
+          "claim_filter_trigger": true,
+          "chars": 12,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 27001,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741724",
+          "t": 1792741763274.947,
+          "time": "10-23 15:49:23.274",
+          "eou_ms": 704,
+          "stt_ms": 692,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.242,
+          "claim_filter_trigger": true,
+          "chars": 14,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 30000,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741724",
+          "t": 1792741793274.978,
+          "time": "10-23 15:49:53.274",
+          "eou_ms": 625,
+          "stt_ms": 616,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.25,
+          "claim_filter_trigger": true,
+          "chars": 12,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 33950,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741724",
+          "t": 1792741827224.8599,
+          "time": "10-23 15:50:27.224",
+          "eou_ms": 755,
+          "stt_ms": 712,
+          "action": "clarify",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.189,
+          "claim_filter_trigger": true,
+          "chars": 5,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 7599,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741724",
+          "t": 1792741834824.1702,
+          "time": "10-23 15:50:34.824",
+          "eou_ms": 675,
+          "stt_ms": 670,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.203,
+          "claim_filter_trigger": false,
+          "chars": 8,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": null,
+          "filler": false
+        }
+      ],
+      "receipts": [
+        {
+          "commit_at_ms": 1792741736274.241,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 1399.9,
+          "clip_ids": []
+        },
+        {
+          "commit_at_ms": 1792741763274.947,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 1349.8,
+          "clip_ids": []
+        },
+        {
+          "commit_at_ms": 1792741793274.978,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 1399.2,
+          "clip_ids": []
+        },
+        {
+          "commit_at_ms": 1792741827224.8599,
+          "action": "clarify",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 1399.5,
+          "clip_ids": []
+        },
+        {
+          "commit_at_ms": 1792741834824.1702,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 1400.6,
+          "clip_ids": []
+        }
+      ],
+      "wav_sha256": {
+        "receipt_before4.wav": "705bdfa79b793f09705da3236619ef8417914e672420162ef49604949a756dd2",
+        "receipt_before2.wav": "d2c7b21330ab55349e02ee214f0a628f5b91c488297bd6925a630ee09a3afc6f",
+        "receipt_before3.wav": "4743f2f3133280c0d4510a07c6e09ba696e09e31707f77d8f207350a5dc3c9ad",
+        "receipt_before0.wav": "101486a0d4afa235d31f7a1a066c54aaa299267972af22d912db884f8e377658",
+        "receipt_before1.wav": "3463621baa615af1da586e09295cb49d259267e2451b70d99b9b58a79995091b"
+      },
+      "caption_sha256": "bdf4424c9944a31acae1062e8f97e25124539541e23ae2d952d95ad83223926a",
+      "disconnected": false,
+      "result_first_frames": [
+        {
+          "task_id": "272b6a90-7e9b-4fb9-932d-8db429fd418f",
+          "turn_id": "2",
+          "delivery_id": "d067c457-37da-4b7c-9370-ff330983dbd3",
+          "at_ms": 1792741740724.869
+        },
+        {
+          "task_id": "cb18b05f-9549-4cee-b05b-58a58ff8f4c6",
+          "turn_id": "4",
+          "delivery_id": "b1a56aab-ddc7-45e3-807d-baa6d8a527bf",
+          "at_ms": 1792741767674.4558
+        },
+        {
+          "task_id": "b8238066-a088-4e5c-9bd4-bc4484c1c18c",
+          "turn_id": "6",
+          "delivery_id": "8e34e899-84fa-419d-9e6f-051070bb356a",
+          "at_ms": 1792741797674.722
+        },
+        {
+          "task_id": "bdf12945-3c7b-4ff9-a6d1-8872bcb4552a",
+          "turn_id": "9",
+          "delivery_id": "42f60725-f7a1-47f4-8ad8-5385015ea90b",
+          "at_ms": 1792741839874.781
+        }
+      ]
+    },
+    "receipt_after": {
+      "room": "sn-BJP00326060100100004-1792741936",
+      "trace": "search-probe-1792741936",
+      "counts": {
+        "agent_transcripts": 9,
+        "user_transcripts": 5,
+        "metrics": 9,
+        "audio_voiced_ms": 34460.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "ordinary_commits": 0,
+      "body_first_frame": {
+        "n": 0
+      },
+      "route": {
+        "n": 5,
+        "min": 0.1,
+        "median": 0.2,
+        "p95_descriptive": 0.3,
+        "max": 0.3
+      },
+      "ordinary_missing_first_frame": 0,
+      "turns": [
+        {
+          "room": "sn-BJP00326060100100004-1792741936",
+          "t": 1792741941490.418,
+          "time": "10-23 15:52:21.490",
+          "eou_ms": 655,
+          "stt_ms": 646,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.287,
+          "claim_filter_trigger": true,
+          "chars": 12,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 27249,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741936",
+          "t": 1792741968739.6108,
+          "time": "10-23 15:52:48.739",
+          "eou_ms": 765,
+          "stt_ms": 748,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.281,
+          "claim_filter_trigger": true,
+          "chars": 14,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 29950,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741936",
+          "t": 1792741998689.7422,
+          "time": "10-23 15:53:18.689",
+          "eou_ms": 606,
+          "stt_ms": 577,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.149,
+          "claim_filter_trigger": true,
+          "chars": 12,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 33950,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741936",
+          "t": 1792742032640.1702,
+          "time": "10-23 15:53:52.640",
+          "eou_ms": 870,
+          "stt_ms": 849,
+          "action": "clarify",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.195,
+          "claim_filter_trigger": true,
+          "chars": 5,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 7500,
+          "filler": false
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741936",
+          "t": 1792742040139.8188,
+          "time": "10-23 15:54:00.139",
+          "eou_ms": 716,
+          "stt_ms": 700,
+          "action": "search",
+          "rule": "builtin-explicit",
+          "route_gap_ms": 0.132,
+          "claim_filter_trigger": false,
+          "chars": 8,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": null,
+          "filler": false
+        }
+      ],
+      "receipts": [
+        {
+          "commit_at_ms": 1792741941490.418,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 49.4,
+          "clip_ids": [
+            "weather"
+          ]
+        },
+        {
+          "commit_at_ms": 1792741968739.6108,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 50.5,
+          "clip_ids": [
+            "find"
+          ]
+        },
+        {
+          "commit_at_ms": 1792741998689.7422,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 49.4,
+          "clip_ids": [
+            "news"
+          ]
+        },
+        {
+          "commit_at_ms": 1792742032640.1702,
+          "action": "clarify",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 49.8,
+          "clip_ids": [
+            "clarify"
+          ]
+        },
+        {
+          "commit_at_ms": 1792742040139.8188,
+          "action": "search",
+          "ack_frames": 1,
+          "commit_to_ack_ms": 50.2,
+          "clip_ids": [
+            "find"
+          ]
+        }
+      ],
+      "wav_sha256": {
+        "receipt_after1.wav": "3463621baa615af1da586e09295cb49d259267e2451b70d99b9b58a79995091b",
+        "receipt_after2.wav": "d2c7b21330ab55349e02ee214f0a628f5b91c488297bd6925a630ee09a3afc6f",
+        "receipt_after4.wav": "705bdfa79b793f09705da3236619ef8417914e672420162ef49604949a756dd2",
+        "receipt_after0.wav": "101486a0d4afa235d31f7a1a066c54aaa299267972af22d912db884f8e377658",
+        "receipt_after3.wav": "4743f2f3133280c0d4510a07c6e09ba696e09e31707f77d8f207350a5dc3c9ad"
+      },
+      "caption_sha256": "26b9b505a1c30e4841634cda6f5ce5dc3cf9470bcab9091377ba806ad889587b",
+      "disconnected": false,
+      "result_first_frames": [
+        {
+          "task_id": "145bb1f0-5140-4641-bc2b-77a4751db765",
+          "turn_id": "2",
+          "delivery_id": "1b086dbc-f86e-42f5-a0fe-5209aaa66103",
+          "at_ms": 1792741944439.2021
+        },
+        {
+          "task_id": "a3389e72-975d-40c4-9242-f209ce3713d8",
+          "turn_id": "4",
+          "delivery_id": "0cdcf5d1-ca47-4aa4-982a-8bb82cb95261",
+          "at_ms": 1792741971339.616
+        },
+        {
+          "task_id": "3ddbe7d8-4e09-4db8-ae85-b72bfe049361",
+          "turn_id": "6",
+          "delivery_id": "1227ebd3-8eb9-4580-9cf6-807b0b3ac334",
+          "at_ms": 1792742001389.4702
+        },
+        {
+          "task_id": "cd3ded1d-4b84-4c10-83b8-9b59470a6549",
+          "turn_id": "9",
+          "delivery_id": "941ab1ff-596b-40a3-bba3-7699e5797e42",
+          "at_ms": 1792742042990.032
+        }
+      ]
+    },
+    "latency_before": {
+      "room": "sn-BJP00326060100100004-1792741304",
+      "trace": "search-probe-1792741304",
+      "counts": {
+        "agent_transcripts": 21,
+        "user_transcripts": 9,
+        "metrics": 38,
+        "audio_voiced_ms": 63000.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "ordinary_commits": 9,
+      "body_first_frame": {
+        "n": 8,
+        "min": 948.8,
+        "median": 1300.0,
+        "p95_descriptive": 9849.4,
+        "max": 9849.4
+      },
+      "route": {
+        "n": 9,
+        "min": 0.0,
+        "median": 0.2,
+        "p95_descriptive": 0.2,
+        "max": 0.2
+      },
+      "ordinary_missing_first_frame": 1,
+      "turns": [
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741320301.196,
+          "time": "10-23 15:42:00.301",
+          "eou_ms": 681,
+          "stt_ms": 637,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.171,
+          "claim_filter_trigger": false,
+          "chars": 9,
+          "turn_id": "1",
+          "commit_to_body_ms": 948.8,
+          "stop_to_body_estimate_ms": 1629.8,
+          "turn_start_gap_ms": 0.84,
+          "tts_ttfb_ms": 271,
+          "body_ready_since_turn_ms": 930,
+          "before_tts_ms": 659,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 194,
+          "spec_miss": false,
+          "next_commit_ms": 22199,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741342500.18,
+          "time": "10-23 15:42:22.500",
+          "eou_ms": 913,
+          "stt_ms": 903,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.127,
+          "claim_filter_trigger": true,
+          "chars": 8,
+          "turn_id": "2",
+          "commit_to_body_ms": 5550.4,
+          "stop_to_body_estimate_ms": 6463.4,
+          "turn_start_gap_ms": 0.44,
+          "tts_ttfb_ms": 4641,
+          "body_ready_since_turn_ms": 5518,
+          "before_tts_ms": 877,
+          "playout_exit": "Aborted",
+          "underrun_ms": 4519,
+          "spec_lead_ms": null,
+          "spec_miss": true,
+          "next_commit_ms": 21600,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741364100.172,
+          "time": "10-23 15:42:44.100",
+          "eou_ms": 700,
+          "stt_ms": 666,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.113,
+          "claim_filter_trigger": true,
+          "chars": 8,
+          "turn_id": "3",
+          "commit_to_body_ms": 1700.3,
+          "stop_to_body_estimate_ms": 2400.3,
+          "turn_start_gap_ms": 0.32,
+          "tts_ttfb_ms": 300,
+          "body_ready_since_turn_ms": 1664,
+          "before_tts_ms": 1364,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 543,
+          "spec_lead_ms": 241,
+          "spec_miss": false,
+          "next_commit_ms": 22550,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741386650.532,
+          "time": "10-23 15:43:06.650",
+          "eou_ms": 441,
+          "stt_ms": 0,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.243,
+          "claim_filter_trigger": true,
+          "chars": 7,
+          "spec_lead_ms": null,
+          "spec_miss": true,
+          "next_commit_ms": 701,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741387351.1692,
+          "time": "10-23 15:43:07.351",
+          "eou_ms": 429,
+          "stt_ms": 0,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.029,
+          "claim_filter_trigger": false,
+          "chars": 5,
+          "turn_id": "5",
+          "commit_to_body_ms": 9849.4,
+          "stop_to_body_estimate_ms": 10278.4,
+          "turn_start_gap_ms": 0.41,
+          "tts_ttfb_ms": 8399,
+          "body_ready_since_turn_ms": 9831,
+          "before_tts_ms": 1432,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 8750,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 23200,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741410550.793,
+          "time": "10-23 15:43:30.550",
+          "eou_ms": 1011,
+          "stt_ms": 987,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.203,
+          "claim_filter_trigger": false,
+          "chars": 16,
+          "turn_id": "6",
+          "commit_to_body_ms": 1400.0,
+          "stop_to_body_estimate_ms": 2411.0,
+          "turn_start_gap_ms": 1.0,
+          "tts_ttfb_ms": 266,
+          "body_ready_since_turn_ms": 1350,
+          "before_tts_ms": 1084,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 350,
+          "spec_lead_ms": 672,
+          "spec_miss": false,
+          "next_commit_ms": 21400,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741431950.314,
+          "time": "10-23 15:43:51.950",
+          "eou_ms": 710,
+          "stt_ms": 664,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.211,
+          "claim_filter_trigger": false,
+          "chars": 7,
+          "turn_id": "7",
+          "commit_to_body_ms": 1100.3,
+          "stop_to_body_estimate_ms": 1810.3,
+          "turn_start_gap_ms": 1.28,
+          "tts_ttfb_ms": 295,
+          "body_ready_since_turn_ms": 1081,
+          "before_tts_ms": 786,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 81,
+          "spec_lead_ms": 252,
+          "spec_miss": false,
+          "next_commit_ms": 21601,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741453550.843,
+          "time": "10-23 15:44:13.550",
+          "eou_ms": 711,
+          "stt_ms": 708,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.237,
+          "claim_filter_trigger": false,
+          "chars": 10,
+          "turn_id": "8",
+          "commit_to_body_ms": 1199.9,
+          "stop_to_body_estimate_ms": 1910.9,
+          "turn_start_gap_ms": 0.91,
+          "tts_ttfb_ms": 288,
+          "body_ready_since_turn_ms": 930,
+          "before_tts_ms": 642,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 162,
+          "spec_miss": false,
+          "next_commit_ms": 21300,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792741304",
+          "t": 1792741474850.77,
+          "time": "10-23 15:44:34.850",
+          "eou_ms": 861,
+          "stt_ms": 845,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.125,
+          "claim_filter_trigger": false,
+          "chars": 6,
+          "turn_id": "9",
+          "commit_to_body_ms": 1150.1,
+          "stop_to_body_estimate_ms": 2011.1,
+          "turn_start_gap_ms": 1.05,
+          "tts_ttfb_ms": 275,
+          "body_ready_since_turn_ms": 1132,
+          "before_tts_ms": 857,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 171,
+          "spec_lead_ms": 622,
+          "spec_miss": false,
+          "next_commit_ms": null,
+          "filler": true
+        }
+      ],
+      "receipts": [],
+      "wav_sha256": {
+        "latency_before2.wav": "a2c6885894bdc641e9ab813da4be4a2b4646301908331dc42ae55e7d3258fd06",
+        "latency_before1.wav": "233e370e1a54c003cffb6fe0e30c4f8af5e6c6f556c737d17999373ed9772868",
+        "latency_before3.wav": "99449cd2e10e2114bb4ee5591ddbe0ac2e3d9d626fd750b2a7eb57107244172e",
+        "latency_before4.wav": "2393fb2778ad8dbcfdb1d9fe1946c7d70bc9813f8551a966062c0b6acf3a19f2",
+        "latency_before5.wav": "9871dffeb72f01d6fcadf7a28b40f9d34ba0b6874a7fc51eb1eb632ffb32ee01",
+        "latency_before6.wav": "04051c5207a5ef835ed8a6020393d7544872e28209e5895d4736337dcee2e859",
+        "latency_before7.wav": "17ffa34afa3a0ca4e2e7beb7ae00fef49cfc518c29090d18c95e0e8cc745e460",
+        "latency_before0.wav": "69cbb02cb54af8715de450037299514c958b0c6bb0087d4ad0766b89fe4ac658"
+      },
+      "caption_sha256": "893517212ccc1cd0ccd3573294fd4eb2354025a673981d693d5529f38122b316",
+      "disconnected": false,
+      "result_first_frames": []
+    },
+    "latency_after": {
+      "room": "sn-BJP00326060100100004-1792742121",
+      "trace": "search-probe-1792742121",
+      "counts": {
+        "agent_transcripts": 23,
+        "user_transcripts": 9,
+        "metrics": 39,
+        "audio_voiced_ms": 77710.0,
+        "input_ready": 1,
+        "output_ready": 1
+      },
+      "ordinary_commits": 9,
+      "body_first_frame": {
+        "n": 8,
+        "min": 949.5,
+        "median": 1049.8,
+        "p95_descriptive": 2049.9,
+        "max": 2049.9
+      },
+      "route": {
+        "n": 9,
+        "min": 0.0,
+        "median": 0.2,
+        "p95_descriptive": 0.2,
+        "max": 0.2
+      },
+      "ordinary_missing_first_frame": 1,
+      "turns": [
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742125825.9102,
+          "time": "10-23 15:55:25.825",
+          "eou_ms": 954,
+          "stt_ms": 909,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.189,
+          "claim_filter_trigger": false,
+          "chars": 9,
+          "turn_id": "1",
+          "commit_to_body_ms": 949.5,
+          "stop_to_body_estimate_ms": 1903.5,
+          "turn_start_gap_ms": 0.46,
+          "tts_ttfb_ms": 265,
+          "body_ready_since_turn_ms": 676,
+          "before_tts_ms": 411,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 473,
+          "spec_miss": false,
+          "next_commit_ms": 21800,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742147625.719,
+          "time": "10-23 15:55:47.625",
+          "eou_ms": 902,
+          "stt_ms": 863,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.233,
+          "claim_filter_trigger": true,
+          "chars": 8,
+          "turn_id": "2",
+          "commit_to_body_ms": 1049.7,
+          "stop_to_body_estimate_ms": 1951.7,
+          "turn_start_gap_ms": 0.74,
+          "tts_ttfb_ms": 263,
+          "body_ready_since_turn_ms": 698,
+          "before_tts_ms": 435,
+          "playout_exit": "Aborted",
+          "underrun_ms": 0,
+          "spec_lead_ms": 533,
+          "spec_miss": false,
+          "next_commit_ms": 21650,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742169275.392,
+          "time": "10-23 15:56:09.275",
+          "eou_ms": 705,
+          "stt_ms": 703,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.223,
+          "claim_filter_trigger": true,
+          "chars": 8,
+          "turn_id": "3",
+          "commit_to_body_ms": 2049.9,
+          "stop_to_body_estimate_ms": 2754.9,
+          "turn_start_gap_ms": 0.87,
+          "tts_ttfb_ms": 272,
+          "body_ready_since_turn_ms": 2031,
+          "before_tts_ms": 1759,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 910,
+          "spec_lead_ms": null,
+          "spec_miss": true,
+          "next_commit_ms": 22400,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742191675.645,
+          "time": "10-23 15:56:31.675",
+          "eou_ms": 412,
+          "stt_ms": 0,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.196,
+          "claim_filter_trigger": true,
+          "chars": 7,
+          "spec_lead_ms": null,
+          "spec_miss": true,
+          "next_commit_ms": 801,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742192476.271,
+          "time": "10-23 15:56:32.476",
+          "eou_ms": 425,
+          "stt_ms": 0,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.036,
+          "claim_filter_trigger": false,
+          "chars": 5,
+          "turn_id": "5",
+          "commit_to_body_ms": 1298.8,
+          "stop_to_body_estimate_ms": 1723.8,
+          "turn_start_gap_ms": 0.83,
+          "tts_ttfb_ms": 268,
+          "body_ready_since_turn_ms": 1271,
+          "before_tts_ms": 1003,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 351,
+          "spec_lead_ms": null,
+          "spec_miss": false,
+          "next_commit_ms": 22900,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742215376.163,
+          "time": "10-23 15:56:55.376",
+          "eou_ms": 852,
+          "stt_ms": 842,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.211,
+          "claim_filter_trigger": false,
+          "chars": 16,
+          "turn_id": "6",
+          "commit_to_body_ms": 1049.4,
+          "stop_to_body_estimate_ms": 1901.4,
+          "turn_start_gap_ms": 0.41,
+          "tts_ttfb_ms": 296,
+          "body_ready_since_turn_ms": 891,
+          "before_tts_ms": 595,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 464,
+          "spec_miss": false,
+          "next_commit_ms": 21650,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742237026.0562,
+          "time": "10-23 15:57:17.026",
+          "eou_ms": 702,
+          "stt_ms": 682,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.133,
+          "claim_filter_trigger": false,
+          "chars": 7,
+          "turn_id": "7",
+          "commit_to_body_ms": 1050.0,
+          "stop_to_body_estimate_ms": 1752.0,
+          "turn_start_gap_ms": 1.03,
+          "tts_ttfb_ms": 274,
+          "body_ready_since_turn_ms": 767,
+          "before_tts_ms": 493,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 303,
+          "spec_miss": false,
+          "next_commit_ms": 21650,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742258676.172,
+          "time": "10-23 15:57:38.676",
+          "eou_ms": 806,
+          "stt_ms": 784,
+          "action": "chat",
+          "rule": "default-chat",
+          "route_gap_ms": 0.174,
+          "claim_filter_trigger": false,
+          "chars": 10,
+          "turn_id": "8",
+          "commit_to_body_ms": 1199.5,
+          "stop_to_body_estimate_ms": 2005.5,
+          "turn_start_gap_ms": 0.5,
+          "tts_ttfb_ms": 304,
+          "body_ready_since_turn_ms": 1176,
+          "before_tts_ms": 872,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 363,
+          "spec_miss": false,
+          "next_commit_ms": 20900,
+          "filler": true
+        },
+        {
+          "room": "sn-BJP00326060100100004-1792742121",
+          "t": 1792742279576.18,
+          "time": "10-23 15:57:59.576",
+          "eou_ms": 606,
+          "stt_ms": 576,
+          "action": "chat",
+          "rule": "protected",
+          "route_gap_ms": 0.168,
+          "claim_filter_trigger": false,
+          "chars": 6,
+          "turn_id": "9",
+          "commit_to_body_ms": 999.3,
+          "stop_to_body_estimate_ms": 1605.3,
+          "turn_start_gap_ms": 1.3,
+          "tts_ttfb_ms": 264,
+          "body_ready_since_turn_ms": 876,
+          "before_tts_ms": 612,
+          "playout_exit": "SourceDrained",
+          "underrun_ms": 0,
+          "spec_lead_ms": 433,
+          "spec_miss": false,
+          "next_commit_ms": null,
+          "filler": true
+        }
+      ],
+      "receipts": [],
+      "wav_sha256": {
+        "latency_after2.wav": "a2c6885894bdc641e9ab813da4be4a2b4646301908331dc42ae55e7d3258fd06",
+        "latency_after6.wav": "04051c5207a5ef835ed8a6020393d7544872e28209e5895d4736337dcee2e859",
+        "latency_after4.wav": "2393fb2778ad8dbcfdb1d9fe1946c7d70bc9813f8551a966062c0b6acf3a19f2",
+        "latency_after1.wav": "233e370e1a54c003cffb6fe0e30c4f8af5e6c6f556c737d17999373ed9772868",
+        "latency_after5.wav": "9871dffeb72f01d6fcadf7a28b40f9d34ba0b6874a7fc51eb1eb632ffb32ee01",
+        "latency_after3.wav": "99449cd2e10e2114bb4ee5591ddbe0ac2e3d9d626fd750b2a7eb57107244172e",
+        "latency_after0.wav": "69cbb02cb54af8715de450037299514c958b0c6bb0087d4ad0766b89fe4ac658",
+        "latency_after7.wav": "17ffa34afa3a0ca4e2e7beb7ae00fef49cfc518c29090d18c95e0e8cc745e460"
+      },
+      "caption_sha256": "f316ab4d834cd8fe45ad3da11f3b60e0a89e105d32086dad906f9c1c09ca81dc",
+      "disconnected": false,
+      "result_first_frames": []
+    }
+  },
+  "local_targeted_tests": {
+    "passed": 16,
+    "failed": 0,
+    "log_sha256": "049d3e075568827ce2b558247930455170209ada5971d07d9d92cb128371ac13"
+  },
+  "before_after": {
+    "sample_before_ms": 1792746265659,
+    "sample_after_ms": 1792746755947,
+    "units": {
+      "voice-worker-rust": {
+        "MainPID": "839",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+      },
+      "p003-search-worker": {
+        "MainPID": "847013",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b"
+      }
+    },
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1792857540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792746751895,
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "brain_sources_unchanged": {
+      "candidate": 142,
+      "production": 136
+    },
+    "flags": {
+      "candidate": {
+        "p003.search.tools": "0",
+        "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.expires_at_ms": "1792857540000",
+        "p003.search.enabled": "1"
+      },
+      "production": {
+        "p003.search.canary.selected_sn": "BJP00326060100100004",
+        "p003.search.canary.enabled": "1",
+        "p003.search.canary.expires_at_ms": "1792857540000",
+        "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.agent": "p003-search-canary-20261021",
+        "p003.search.canary.started_at_ms": "1792585650087",
+        "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+      }
+    },
+    "versions": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1792738945974
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 359,
+        "version_name": "1.2.2-canary.345",
+        "last_check_at": 1792745829044
+      }
+    ],
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 1457259,
+        "restarts": 34,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ]
+  },
+  "code_locations": {
+    "worker": "search_tasks.rs:235 initial empty remainder; :339 resume uses current session remainder; :615 Drop cancels session",
+    "brain": "tools/search-tasks.ts:82 checks subject+session; :177 cancels and deletes result; :181 cancelSession closes owner",
+    "contract": "PROTOCOL.md:47 exit destroys queued and resumable result"
+  },
+  "operations": {
+    "business_code_changed": false,
+    "services_restarted": false,
+    "gates_or_expiry_changed": false,
+    "synthetic_sessions": 2,
+    "synthetic_inputs": 4,
+    "new_search_tasks": 1,
+    "main_merged": false
+  },
+  "invalid_collection_excluded": {
+    "issue": "collector initially read the R13 deployment probe directory instead of this review probe directory",
+    "product_regression": false,
+    "invalid_evidence_excluded": true,
+    "rerun_probes_needed": false
+  },
+  "private_evidence_sha256": {
+    "worker-before-private.json": "e2d7d16932adc1a4c40b62774b1241caeaf0156e2ec831a27eac7c201bd292d3",
+    "brain-before-private.json": "f4d989382b2e79202878b5c5ac75bb17035e0e7f772177f8f18b9adc33be08b1",
+    "worker-after-private.json": "3c4a41ef2844541940680e7a8fe7151906d692909f314bb62d4a6f88f88cd63d",
+    "brain-after-private.json": "1215ae78f05cde30102bc1b71c52f104cff4d86725a8396cf184c437eee02c87",
+    "probe-evidence/rtc-private.json": "e9d5851b710d67b7797a4e07c9fc1e64d1247d4d00e2fcfece6a978796d0a3a6",
+    "probe-evidence/ledger-private.json": "e5bba09306ae025f201d1c7ff1c7b82bd90bd9a74b45a5667cceb130227965e4",
+    "probe-evidence/p003-search-worker-full-private.json": "c0750afe8a6c82e06804635a9de747d36709248d59c5a2b500a4679b87d03d12"
+  }
+}

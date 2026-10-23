@@ -1,3 +1,5 @@
+> 最新反馈复盘：[R12真机反馈对照R13](P003_SEARCH_R12_FEEDBACK_R13_REVIEW_20261023.md) · [证据](R12_FEEDBACK_R13_REVIEW_EVIDENCE_20261023.json)。同会话续讲通过，退出后主动续讲仍未实现；当前R13复现，下一步方案尚未实施。本轮仅复盘和补测，未修改部署或开窗。
+
 # 小可后台搜索 Worker 候选交付
 
 最新：[R13部署与验收](R13_ACCEPTANCE_20261023.md) · [真人用例](P003_SEARCH_R13_RECEIPTS_AND_DEVICE_TEST_20261023.md) · [测试证据](R13_TEST_RESULTS_20261023.json) · [回滚](R13_ROLLBACK_20261023.md) · [接续记忆](MEMORY.md)。
