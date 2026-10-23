@@ -2836,6 +2836,9 @@ impl Orchestrator {
     async fn on_tick(&mut self) {
         self.on_tick_inner().await;
         self.flush_caption_finals();
+        let input_pending = self.search_user_speaking || !self.turn_gate.pending().is_empty()
+            || !self.latest_interim.is_empty();
+        if let Some(search) = &mut self.search { search.observe_input(input_pending); }
         let safe = self.agent_turn.is_none() && self.state == AgentState::Listening
             && !self.search_user_speaking && self.turn_gate.pending().is_empty()
             && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active();

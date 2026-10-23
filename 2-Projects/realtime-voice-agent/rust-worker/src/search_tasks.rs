@@ -153,8 +153,15 @@ struct PendingTopic {
     query: String,
     since: Instant,
     route: Option<(String, Decision)>,
+    tail_observed: bool,
 }
 const TOPIC_TAIL_MS: u64 = 1200;
+const TOPIC_ACTIVE_TAIL_MS: u64 = 5000;
+impl PendingTopic {
+    fn deadline_ms(&self) -> u64 {
+        if self.tail_observed { TOPIC_ACTIVE_TAIL_MS } else { TOPIC_TAIL_MS }
+    }
+}
 fn bare_topic(q: &str) -> bool {
     (2..=24).contains(&q.chars().count()) &&
         !["什么","为什么","怎么","多少","哪里","哪年","何时","如何","吗","天气","气温","下雨"].iter().any(|p|q.contains(p))
@@ -247,7 +254,7 @@ impl SearchSession {
         let mut deferred = None;
         if let Some(pending) = self.pending_topic.take() {
             let tail=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
-            if pending.since.elapsed() <= Duration::from_millis(TOPIC_TAIL_MS) && question_tail(tail) {
+            if pending.since.elapsed() <= Duration::from_millis(pending.deadline_ms()) && question_tail(tail) {
                 joined=Some(format!("帮我查一下{}{}",pending.query,tail));
                 self.clarified_at=None;
                 tracing::info!("background search clarification fragments joined");
@@ -274,6 +281,15 @@ impl SearchSession {
         action
     }
     pub fn take_history_handoff(&mut self)->Option<String>{self.query_intent.take_handoff()}
+    /// Only the unsent search fragment may wait for audio/ASR already in flight.
+    /// This never delays an ordinary commit or refreshes an absolute deadline.
+    pub fn observe_input(&mut self, active: bool) {
+        if let Some(p) = &mut self.pending_topic {
+            if active && p.since.elapsed() <= Duration::from_millis(TOPIC_TAIL_MS) {
+                p.tail_observed = true;
+            }
+        }
+    }
     pub fn on_commit(&mut self) {
         self.generation += 1;
         self.speech.retain(|s| s.task.is_some());
@@ -291,7 +307,7 @@ impl SearchSession {
                     return false;
                 }
                 if self.clarified_at.take().is_some_and(|at|at.elapsed()<=Duration::from_secs(10)) && bare_topic(&query) {
-                    self.pending_topic=Some(PendingTopic{query,since:Instant::now(),route:self.last_route.clone()});
+                    self.pending_topic=Some(PendingTopic{query,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
                     return true;
                 }
                 return self.submit(query, false);
@@ -394,9 +410,6 @@ impl SearchSession {
     }
     /// Called on the existing audio tick; drains messages only, never awaits a lock or HTTP.
     pub fn poll(&mut self, safe: bool) -> Option<String> {
-        if self.pending_topic.as_ref().is_some_and(|p|p.since.elapsed()>=Duration::from_millis(TOPIC_TAIL_MS)) {
-            let p=self.pending_topic.take().unwrap();self.last_route=p.route;self.submit(p.query,false);
-        }
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::Routing {snapshot} => {
@@ -441,6 +454,9 @@ impl SearchSession {
                 }
                 _ => {}
             }
+        }
+        if self.pending_topic.as_ref().is_some_and(|p|p.since.elapsed()>=Duration::from_millis(p.deadline_ms())) {
+            let p=self.pending_topic.take().unwrap();self.last_route=p.route;self.submit(p.query,false);
         }
         let now = Instant::now();
         if safe {
@@ -864,6 +880,35 @@ mod tests {
         let ask=s.interpret("帮我查一下").unwrap();s.command(ask);
         let question=s.interpret("三角龙主要吃什么").unwrap();s.command(question);
         assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="三角龙主要吃什么"));
+    }
+    #[tokio::test]
+    async fn ongoing_asr_tail_survives_soft_deadline_but_never_holds_normal_chat() {
+        for next in ["主要吃什么","我今天画了小猫"] {
+            let (mut s,_,mut commands)=test_session();
+            let a=s.interpret("帮我查一下").unwrap();s.command(a);
+            let a=s.interpret("三角龙").unwrap();s.command(a);
+            s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(600);
+            s.observe_input(true);
+            s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(1851);
+            s.poll(false);
+            assert!(commands.try_recv().is_err(),"do not submit the topic while its observed tail is still being recognized");
+            let a=s.interpret(next);
+            if next=="主要吃什么" {
+                assert_eq!(a,Some(Intent::Search("三角龙主要吃什么".into())));s.command(a.unwrap());
+            } else {assert!(a.is_none(),"normal chat is never buffered");}
+            assert!(matches!(commands.try_recv(),Ok(Command::Submit{..})));
+            assert!(commands.try_recv().is_err());
+        }
+    }
+    #[tokio::test]
+    async fn noisy_or_missing_tail_cannot_hold_search_indefinitely() {
+        let (mut s,_,mut commands)=test_session();
+        let a=s.interpret("帮我查一下").unwrap();s.command(a);
+        let a=s.interpret("三角龙").unwrap();s.command(a);s.observe_input(true);
+        s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(5001);
+        s.poll(false);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..})if query=="三角龙"));
+        s.poll(false);assert!(commands.try_recv().is_err());
     }
     #[tokio::test]
     async fn hot_configured_weather_supersedes_unsent_clarification_topic() {
