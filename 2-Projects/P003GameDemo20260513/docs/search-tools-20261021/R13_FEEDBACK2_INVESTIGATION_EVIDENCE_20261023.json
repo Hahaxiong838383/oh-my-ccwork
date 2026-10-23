@@ -1,0 +1,355 @@
+{
+  "status": "investigated_and_planned_not_fixed",
+  "source_attachment": "P003_SEARCH_R12_真机测试反馈_20261023(1).md",
+  "attachment_sha256": "efb834e447c1f015ab02a24ef5f9619ddfa9fb6e4863d76f584f827def3e1080",
+  "actual_runtime": "R13 binary matched; same PID and Brain source set as previous R13 verification",
+  "case5": {
+    "task": {
+      "id": "75894f50-cb95-42f5-8eec-1bb061ee30b5",
+      "session": "sn-BJP00326060100100004-1792749231",
+      "turn": "63117745-d6af-4718-a71b-8ea3597d7278",
+      "status": "cancelled",
+      "createdAt": 1792749342706,
+      "readyAt": 1792749344281,
+      "delivery": "interrupted",
+      "revision": 1
+    },
+    "query_joined": true,
+    "query_to_ack_pcm_ms": 50,
+    "query_to_result_pcm_ms": 2850,
+    "result_interruption_played_ms": 3980,
+    "spoken_chars_estimate": 16,
+    "new_chat_trigger": "one-character non-control ASR commit",
+    "acoustic_origin": "unverified; no video file or acoustic inspection",
+    "late_old_tts_hypothesis": "not supported; a fresh chat turn 13 followed the ASR commit"
+  },
+  "case10": {
+    "task": {
+      "id": "b1d51172-0913-47d6-8c45-bcacccc6d957",
+      "session": "sn-BJP00326060100100004-1792749424",
+      "turn": "5f233d10-f1a4-4d17-9967-e675ce06219a",
+      "status": "cancelled",
+      "createdAt": 1792749451073,
+      "readyAt": 1792749452574,
+      "delivery": "interrupted",
+      "revision": 1
+    },
+    "old_session": "sn-BJP00326060100100004-1792749424",
+    "new_session": "sn-BJP00326060100100004-1792749476",
+    "resume_age_since_ready_ms": 28785,
+    "progress_before_interrupt": {
+      "published_audio_ms": 5390,
+      "synth_chars": 0,
+      "spoken_chars": 0
+    },
+    "partial_input_commit_count": 2,
+    "client_sent_cancel_before_disconnect": true,
+    "cross_session_product_acceptance": "failed"
+  },
+  "slow_ordinary_chat": {
+    "body_first_frame_ms": 6700,
+    "llm_ttft_ms": 6257,
+    "tts_prewarm_wait_ms": 0,
+    "tts_provider_ttfb_ms": 277,
+    "claim": "This sample is dominated by the LLM stream wait, not TTS prewarm; it does not establish that search added this latency."
+  },
+  "events": {
+    "c5_fragments_joined": {
+      "at_ms": 1792749342667,
+      "at_cst": "2026-10-23T17:55:42.667+08:00",
+      "log_sha256": "a9e5c48bfb0e996ef6bee426c82b742e8523be7f863b33e46620f8d14c1a4657"
+    },
+    "c5_query_commit": {
+      "at_ms": 1792749342667,
+      "at_cst": "2026-10-23T17:55:42.667+08:00",
+      "log_sha256": "2831994cd293290aa520511798be23b1f6e922c3f9fa09a4569b2c2e76f416d4"
+    },
+    "c5_query_ack_pcm": {
+      "at_ms": 1792749342717,
+      "at_cst": "2026-10-23T17:55:42.717+08:00",
+      "log_sha256": "1ee3613a9418e5eef00e50b5e414f65a08c7ead402868b8e81230bf2dfc620a7"
+    },
+    "c5_result_pcm": {
+      "at_ms": 1792749345517,
+      "at_cst": "2026-10-23T17:55:45.517+08:00",
+      "log_sha256": "0e243ac9392cc3538c1cce5089a70dbc21e60d91cd2e9d451ca198236fed8883"
+    },
+    "c5_one_char_final": {
+      "at_ms": 1792749349045,
+      "at_cst": "2026-10-23T17:55:49.045+08:00",
+      "log_sha256": "55536c71400ab37a5336f0821ba2656e00a7a1b3667971992b440da6c595d143"
+    },
+    "c5_aborted": {
+      "at_ms": 1792749349468,
+      "at_cst": "2026-10-23T17:55:49.468+08:00",
+      "log_sha256": "f16615c203bf93216f7370d3006beb6e8bd4099f3ea23133c9847eded573878e"
+    },
+    "c5_one_char_commit": {
+      "at_ms": 1792749349468,
+      "at_cst": "2026-10-23T17:55:49.468+08:00",
+      "log_sha256": "424eeb628cbfdf8de1eab675426f27c1cc941e02d192e41c48bac8e6ec0ad772"
+    },
+    "c5_new_chat_body": {
+      "at_ms": 1792749350617,
+      "at_cst": "2026-10-23T17:55:50.617+08:00",
+      "log_sha256": "9aa4b16f4e0c127547203d26acf60dde3c64f4d6dc450039d6c29e0d9237d3c7"
+    },
+    "c5_new_cat_tts": {
+      "at_ms": 1792749350265,
+      "at_cst": "2026-10-23T17:55:50.265+08:00",
+      "log_sha256": "9c89386b6cfc3ca2cc7315b029e40105ee844a13af4eed9524523b7155c9911d"
+    },
+    "c10_result_pcm": {
+      "at_ms": 1792749453581,
+      "at_cst": "2026-10-23T17:57:33.581+08:00",
+      "log_sha256": "48e395c52aa3bb80d823b14d18087a62a056437455a701484f3d4f300b800394"
+    },
+    "c10_zero_text_progress": {
+      "at_ms": 1792749460081,
+      "at_cst": "2026-10-23T17:57:40.081+08:00",
+      "log_sha256": "05a11e9f5f7605057c058cf7a0391d5177557055ed7022cb1df1907aa4b2e72b"
+    },
+    "c10_first_partial_commit": {
+      "at_ms": 1792749460082,
+      "at_cst": "2026-10-23T17:57:40.082+08:00",
+      "log_sha256": "ac9b9f155ac0a59581b04fdb7dcd8e714c538c9780da9b7a85dd1d413536ab98"
+    },
+    "c10_second_partial_commit": {
+      "at_ms": 1792749460885,
+      "at_cst": "2026-10-23T17:57:40.885+08:00",
+      "log_sha256": "4ba3db3b9ed46909e668549a6d0dfdf746f610a210aa7de9e64ef648e98dfec7"
+    },
+    "c10_client_cancel": {
+      "at_ms": 1792749474384,
+      "at_cst": "2026-10-23T17:57:54.384+08:00",
+      "log_sha256": "5b8900674ee7d4ea2ac3f6f4d522dd5f004efca17318e9bfc9698b82e14ac011"
+    },
+    "c10_old_disconnected": {
+      "at_ms": 1792749474539,
+      "at_cst": "2026-10-23T17:57:54.539+08:00",
+      "log_sha256": "6f9a4f3b6a5d9fc91de0ca8d844d0b66173f5d556cbbd54d5ee6a283a78a3ba4"
+    },
+    "c10_new_room_commit": {
+      "at_ms": 1792749481359,
+      "at_cst": "2026-10-23T17:58:01.359+08:00",
+      "log_sha256": "94ac4149de5f55710449e63270adf9cc6fe65275240692b28fb35f04abfddf2c"
+    },
+    "c10_new_notice_pcm": {
+      "at_ms": 1792749482909,
+      "at_cst": "2026-10-23T17:58:02.909+08:00",
+      "log_sha256": "0a00b11f2527ebc206b1b673b6f30f9560240033e80976459e231e51e3176951"
+    },
+    "slow_chat_commit": {
+      "at_ms": 1792749264017,
+      "at_cst": "2026-10-23T17:54:24.017+08:00",
+      "log_sha256": "0b721274bc535c7472f405982235a434468e91536cac03c1fb61f10811b05f27"
+    },
+    "slow_chat_body_pcm": {
+      "at_ms": 1792749270717,
+      "at_cst": "2026-10-23T17:54:30.717+08:00",
+      "log_sha256": "98f4f5e2b5da444d61023e13d9ce40b7307b719e68744f46ff02fef289db0557"
+    },
+    "slow_chat_llm_done": {
+      "at_ms": 1792749270567,
+      "at_cst": "2026-10-23T17:54:30.567+08:00",
+      "log_sha256": "13abeff97e162c4a6655cc9fb7f3a3eec787e97b00961fb90a1a2fe275310809"
+    },
+    "slow_chat_tts_timing": {
+      "at_ms": 1792749271546,
+      "at_cst": "2026-10-23T17:54:31.546+08:00",
+      "log_sha256": "e2752ad5e9df327af3b3c447318ae19a4180c6fcffe19d1577273f0b620c6680"
+    }
+  },
+  "runtime": {
+    "at_ms": 1792765511927,
+    "units": {
+      "voice-worker-rust": {
+        "MainPID": "839",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+      },
+      "p003-search-worker": {
+        "MainPID": "847013",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b"
+      }
+    },
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792765511895,
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1792857540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "memory_available_kb": "6123200",
+    "disk_free": 72544215040
+  },
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1792738945974
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 359,
+      "version_name": "1.2.2-canary.345",
+      "last_check_at": 1792760587306
+    }
+  ],
+  "flags": {
+    "candidate_flags": {
+      "p003.search.tools": "0",
+      "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.expires_at_ms": "1792857540000",
+      "p003.search.enabled": "1"
+    },
+    "production_flags": {
+      "p003.search.canary.selected_sn": "BJP00326060100100004",
+      "p003.search.canary.enabled": "1",
+      "p003.search.canary.expires_at_ms": "1792857540000",
+      "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.agent": "p003-search-canary-20261021",
+      "p003.search.canary.started_at_ms": "1792585650087",
+      "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+    }
+  },
+  "backchannel_runtime": {
+    "voice-worker-rust": {
+      "BACKCHANNEL_MODE": null,
+      "BACKCHANNEL_HOTWORDS": "嗯,嗯嗯,嗯哼,哦,哦哦,噢,唔,对,对对,对呀,对啊,是,是的,是呀,是啊,好,好的,好呀,好啊,好嘞,行,可以,啊,哈,哈哈,哇,哇塞",
+      "BACKCHANNEL_MIN_REPLY_CHARS": null,
+      "P003_TTS_LATENCY_V1": null,
+      "MIN_INTERRUPTION_WORDS": "0",
+      "MIN_INTERRUPTION_DURATION": null,
+      "EOT_SNAPSHOT_DIR": "/root/eot-snapshots",
+      "INTERRUPT_SNAPSHOT_DIR": null
+    },
+    "p003-search-worker": {
+      "BACKCHANNEL_MODE": null,
+      "BACKCHANNEL_HOTWORDS": "嗯,嗯嗯,嗯哼,哦,哦哦,噢,唔,对,对对,对呀,对啊,是,是的,是呀,是啊,好,好的,好呀,好啊,好嘞,行,可以,啊,哈,哈哈,哇,哇塞",
+      "BACKCHANNEL_MIN_REPLY_CHARS": null,
+      "P003_TTS_LATENCY_V1": "1",
+      "MIN_INTERRUPTION_WORDS": "0",
+      "MIN_INTERRUPTION_DURATION": null,
+      "EOT_SNAPSHOT_DIR": "/root/eot-snapshots",
+      "INTERRUPT_SNAPSHOT_DIR": null
+    }
+  },
+  "binding_store": {
+    "candidate": {
+      "resolved_path": "/opt/p003/search-canary-20261021/brain/data/devices.db",
+      "is_symlink": false,
+      "device_inode": [
+        64771,
+        415034
+      ],
+      "bindings": [
+        {
+          "sn": "BJP00326060100100004",
+          "status": "active",
+          "account_sha256": "6c477791db6312a408c748d33d1873bc558bc7628b13cee344876297ef654479",
+          "parent_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "updated_at": 1792631699107
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "status": "active",
+          "account_sha256": "31c62351d52c993af8893f07651af799e29041503666f4313481ca5a1287f5a7",
+          "parent_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "updated_at": 1790132163975
+        }
+      ]
+    },
+    "production": {
+      "resolved_path": "/opt/p003/server/data/devices.db",
+      "is_symlink": false,
+      "device_inode": [
+        64771,
+        261639
+      ],
+      "bindings": [
+        {
+          "sn": "BJP00326060100100004",
+          "status": "active",
+          "account_sha256": "0a88e9ccda1076362f4c591b115c166b580f9d6988bf16a7782e106fc5d0f2b8",
+          "parent_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "updated_at": 1787193103030
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "status": "active",
+          "account_sha256": "31c62351d52c993af8893f07651af799e29041503666f4313481ca5a1287f5a7",
+          "parent_sha256": "b65293b8d2e734f66d950dc35b4e029d4662fc388e50ea03b58202c1740af36e",
+          "updated_at": 1792580581502
+        }
+      ]
+    }
+  },
+  "offline_rust": {
+    "scope": "Current backchannel module plus exact source-extracted normalizer; no audio or pipeline integration replay; harness edition 2021 only (local compiler cannot build product edition 2024)",
+    "source_sha256": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "normalizer_sha256": "ab38cd9143e242344e6533f1bbee3f93d0dd28be1d92e3228476ac3e2887e69c",
+    "results": [
+      {
+        "label": "current-characterization",
+        "exit_code": 0,
+        "expected_exit_code": 0,
+        "test_summary": "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s"
+      },
+      {
+        "label": "desired-behavior-red",
+        "exit_code": 101,
+        "expected_exit_code": 101,
+        "test_summary": "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s"
+      }
+    ]
+  },
+  "offline_node": {
+    "scope": "Current SearchTasks in a temporary SQLite database; synthetic result; no provider or live service calls",
+    "checks": 6,
+    "age_at_close_ms": 28000,
+    "same_session_resume_before_exit": true,
+    "new_session_read_before_exit": "not_found",
+    "result_deleted_by_exit": true,
+    "old_session_after_exit": "not_ready",
+    "new_session_after_exit": "not_found",
+    "closed_session_rejects_late_submit": true,
+    "cross_session_product_acceptance": "failed"
+  },
+  "source_sha256": {
+    "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021/2-Projects/realtime-voice-agent/rust-worker/src/backchannel.rs": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021/2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs": "f6844ab4e55335231fb1ed46e5a06aca11c488d74f8ad3ca52570896c2108c3b",
+    "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021/2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs": "cbccb922cbd7d6a17b93875c1743d4d8b97827b9e000fc3e34cce8dfc713290b",
+    "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021/2-Projects/realtime-voice-agent/rust-worker/src/llm.rs": "da13444266f7a70c19320785e2f0379405657b569bb3546bbed107358ad51153",
+    "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-tasks.ts": "aa3e2a74f685b75e8013b41762d6472746d50c0c6001a50c1a5f65f0bd45fda0",
+    "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-runtime.ts": "258de1b04d71945a32b9f6bc90fadff476b4d0de966a02eedf4a015ca6eb891c",
+    "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/src/routes/custom-llm.ts": "b76384fa056a8e25df243f6ad00ae3dfdc83227b5219caf3dfcbb219d10fb202"
+  },
+  "operations": {
+    "business_code_changed": false,
+    "deployment": false,
+    "restarted": false,
+    "gate_or_expiry_changed": false,
+    "new_live_rtc_probes": 0,
+    "new_external_search_tasks": 0
+  },
+  "private_evidence_sha256": {
+    "worker-before-private.json": "dae64cb3f997cd2a266ebdb921c7bb13352c127203ecd549cf6f8ad619212061",
+    "brain-before-private.json": "81524a31c9c20f4ac6a1807f1b1f7fcb438a14097e03578813cb15f6eac5e0de",
+    "p003-search-worker-full-private.json": "0f43808908b7dd1128ed8c5cbbed5900517ed689ccd583922a7c3e6148b079cf"
+  }
+}
