@@ -40,3 +40,26 @@ test('R7 capability sanitizer removes only the obsolete denial inside active can
  assert.equal(fn(base,false),base);assert.ok(!fn(base,true).includes('等我长大'));assert.ok(fn(base,true).includes('不要编造'));
  for(const t of ['小可这会儿还查不到实时天气呢，等我长大一些试试看！','我还没法查到实时天气。']){const f=(policy as any).createSearchClaimFilter(true);const out=f.feed(t)+f.flush();assert.ok(!out.includes('长大')&&!out.includes('没法'),out);}
 });
+
+test('safe ordinary clauses reach TTS at its existing sentence boundaries',()=>{
+ for(const end of ['；',';','…','~','～']) {
+  const f=policy.createSearchClaimFilter(true);
+  const first=`调节温度要先看刻度${end}`;
+  assert.equal(f.feed(first),first,`must not delay a speakable ${end} clause`);
+  assert.equal(f.feed('再按说明书操作。'),'再按说明书操作。');
+ }
+});
+
+test('early clause release retains split-token execution protection',()=>{
+ for(const end of ['；',';','…','~','～']) {
+  const sentence=`我帮你查询${end}`;
+  for(let i=0;i<=sentence.length;i++) {
+   const f=policy.createSearchClaimFilter(true);
+   const out=f.feed(sentence.slice(0,i))+f.feed(sentence.slice(i))+f.flush();
+   assert.ok(!out.includes('我帮你查询'));
+  }
+ }
+ const f=policy.createSearchClaimFilter(true);
+ assert.equal(f.feed('我，帮你'),'');
+ assert.ok(!f.feed('查询。').includes('我，帮你查询'));
+});

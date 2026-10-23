@@ -28,7 +28,7 @@ export function createSearchClaimFilter(enabled: boolean) {
    || /^(?:好[的呀]?|嗯|刚才)?(?:查到|搜到|查完|搜完)/.test(t)
    || /(?:搜索|查询)(?:已经|已|正在|还没|没有)?(?:完成|开始|接单|取消|结束|失败)/.test(t)
    || /(?:我|小可)(?:来|会)?帮你看看/.test(t)
-   || /^(?:稍等|请稍等|等我)[一下会儿哦呀啦]*[。！!？?]?$/.test(t);
+   || /^(?:稍等|请稍等|等我)[一下会儿哦呀啦]*[。！!？?；;…~～]?$/.test(t);
   const denial=/(?:我|小可)[^。！？!?]{0,18}(?:还查不到|还没法查|不能查|无法查|没有搜索能力)|等我长大/.test(t);
   return claim||denial ? fallback() : sentence;
  };
@@ -38,7 +38,9 @@ export function createSearchClaimFilter(enabled: boolean) {
    let out = '';
    for (const char of delta) {
     if (!dropping) pending += char;
-    if (/[。！？!?\n]/.test(char)) {
+    // Match the Worker's existing TTS sentence boundaries. Commas stay buffered:
+    // "我，帮你查询" must still be checked as one execution claim.
+    if (/[。！？!?；;…~～\n]/.test(char)) {
      if (!dropping) out += inspect(pending);
      pending = ''; dropping = false;
     } else if (pending.length > 512) {
