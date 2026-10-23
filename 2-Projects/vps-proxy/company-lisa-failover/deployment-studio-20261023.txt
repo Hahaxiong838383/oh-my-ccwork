@@ -1,0 +1,3 @@
+{"installed": true, "selected": "dmit", "actual_entry_successes": 3, "backup": "/Users/fu-121/xray/company-lisa-failover/backup-config.json", "codeg_restarted": false}
+
+INSTALL_RC 0

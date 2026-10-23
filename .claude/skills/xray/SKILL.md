@@ -52,6 +52,18 @@ Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xr
 
 遇到 Cloudflare 403，不直接认定节点断连或 IP 被封。核对响应标记和真实浏览器页面；登录态页面只核对加载/错误状态，不复制密钥或账号凭据。2026-10-16 TypeSafe 控制台与 GPT 的新日志均命中 `admin-LISA-DMIT-11443`，curl 返回 403，但 Brave 刷新密钥管理页正常；未因此改路由。节点标签是当日观察，后续仍须现查。
 
+## Codeg / ChatGPT 重连与公司 Lisa 自动容灾
+
+遇到 `Reconnecting`、`workspace routing discovery timed out` 或DMIT/ZGO/home备用切换时，先读项目交付入口：`2-Projects/vps-proxy/company-lisa-failover/README.md`、`DEPLOYMENT.md`。若当前checkout尚无这些文件，查询本任务所附工作树，不把缺文件误判为未部署。部署日期、PID、选路均须实时复核。
+
+- **分开四层**：Air→Studio SSH/鉴权GET `/health`、远端回环HTTP/文件权限、ACP/原生模型请求、模型上游出站。UI重连文字和同名节点不证明是哪段断了；workspace routing超时不能直接归咎公司→DMIT。WS回落后仍查HTTPS/SSE；200响应头不等于流完整完成。
+- **对照要同条件**：同设备/同时间/同目标/真实HTTP mixed与SOCKS入口，多轮采样；固定路径探针绕过自动选路以免自证。401只证到站，最终补现有账号隔离短推理及真实长任务结果，不动原auth/session。历史长流断开仍不能由短canary排除。
+- **容灾不扩范围**：精确替换已授权Lisa规则，保留GitHub balancer、X/Grok和其他分流；dev198没有Lisa规则时先确认业务域名，不整体替换main-balancer。日常API改新连接出口；首次重载须授权和任务空闲门，旧连接不能迁移。
+- **状态正确解读**：以state更新时间和进程启动时间解释累计计数；`ALL_DOWN`是本轮三路探测均失败，一轮容忍期间selected仍可能是旧出口，不等于已切block。连续失败门槛后才block；`CONTROL_ERROR`是控制面异常，不能伪装为节点失败；日志读回/配置哈希冲突须停止变更。
+- **家中备用隔离**：Studio mesh10810与Air SSH→home loopback10811是不同服务。Air曾在home被观察为改写后的来源IP；先核对两端socket实际源地址，不盲目扩大ACL。SSH使用既有授权密钥、严格hostkey校验、仅loopback本地转发和独立SOCKS认证；不能绕过权限或重启家中原代理。
+- **失败留证与可恢复**：每次验收保存无凭据exit/http/耗时/路径回执。未达标恢复原配置，并核对原始字节和服务；回滚必须支持“文件已恢复、重载未完成”的再次执行。禁止遇未知失败反复上线，先隔离复测。只操作本次拥有的进程/目录；配置漂移不强覆盖。
+- **验证与告警边界**：三路最终都依赖Lisa，不能覆盖Lisa整体故障、物理断网、账号权益或TCC权限；短时全失败后自恢复与持续故障分开报告。只读观察不自动改生产，健康不刷屏；部署完成不等于一个工作日或长SSE观察已通过。
+
 ## 可用命令
 
 ### /xray switch — 从 v2rayN 切换到 xray（最常用）

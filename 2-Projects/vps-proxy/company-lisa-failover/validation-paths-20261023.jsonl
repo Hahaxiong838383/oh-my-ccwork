@@ -1,0 +1,19 @@
+{"candidate_valid": true, "replaced_rule_count": 1, "production_config_unchanged": true}
+{"stage": "repeat_baseline", "round": 0, "ok": {"dmit": true, "zgo": true, "home": true}, "detail": {"dmit": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}, "zgo": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}, "home": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}}}
+{"stage": "repeat_real_route", "round": 0, "selected": "dmit", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 0, "selected": "zgo", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 0, "selected": "home", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_baseline", "round": 1, "ok": {"dmit": true, "zgo": false, "home": true}, "detail": {"dmit": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}, "zgo": {"https": {"ok": false, "http": "000", "exit": 28, "kind": "transport"}, "codex": {"ok": false, "http": "000", "exit": 28, "kind": "transport"}}, "home": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}}}
+{"stage": "repeat_real_route", "round": 1, "selected": "dmit", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 1, "selected": "zgo", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 1, "selected": "home", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_baseline", "round": 2, "ok": {"dmit": true, "zgo": true, "home": true}, "detail": {"dmit": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}, "zgo": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}, "home": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}}}
+{"stage": "repeat_real_route", "round": 2, "selected": "dmit", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 2, "selected": "zgo", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 2, "selected": "home", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_baseline", "round": 3, "ok": {"dmit": true, "zgo": false, "home": true}, "detail": {"dmit": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}, "zgo": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": false, "http": "000", "exit": 28, "kind": "transport"}}, "home": {"https": {"ok": true, "http": "204", "exit": 0, "kind": "ok"}, "codex": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}}}
+{"stage": "repeat_real_route", "round": 3, "selected": "dmit", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"stage": "repeat_real_route", "round": 3, "selected": "zgo", "probe": {"ok": false, "http": "000", "exit": 28, "kind": "transport"}}
+{"stage": "repeat_real_route", "round": 3, "selected": "home", "probe": {"ok": true, "http": "401", "exit": 0, "kind": "ok"}}
+{"relay_rejects_no_auth": true}
+{"production_config_unchanged": true, "own_canary_stopped": true}
