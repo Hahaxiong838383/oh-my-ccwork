@@ -1,5 +1,6 @@
 //! Session-owned background search. Networking is never awaited by the audio loop.
 use crate::llm::LlmConfig;
+use crate::search_receipts::{Bank as ReceiptBank, Clip as ReceiptClip, Kind as ReceiptKind};
 use crate::search_policy::{DeliveryGate, Intent};
 use crate::search_routing::{RoutingConfig,RoutingSession,Decision};
 use serde::Deserialize;
@@ -117,6 +118,7 @@ enum Command {
     },
 }
 enum Event {
+    Accepted { epoch: u64, generation: u64 },
     Routing { snapshot:Option<RoutingSnapshot> },
     Ack {
         text: &'static str,
@@ -141,6 +143,7 @@ enum Event {
 }
 #[derive(Clone)]
 pub struct Speech {
+    receipt: Option<ReceiptClip>,
     pub text: String,
     task: Option<String>,
     delivery: String,
@@ -173,6 +176,8 @@ fn question_tail(t: &str) -> bool {
         !["帮我","改查","不用","不要","我们","你","我","；",";"].iter().any(|p|t.contains(p))
 }
 pub struct SearchSession {
+    receipts: Option<ReceiptBank>,
+    receipt_epoch: Option<u64>,
     api: Api,
     tx: mpsc::Sender<Command>,
     rx: mpsc::Receiver<Event>,
@@ -213,7 +218,7 @@ pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
         && allowlist.split(',').any(|s| s.trim() == sn)
 }
 impl SearchSession {
-    pub fn from_config(cfg: &LlmConfig) -> Option<Self> {
+    pub fn from_config(cfg: &LlmConfig, provider: &str, voice: &str) -> Option<Self> {
         if !enabled(
             &std::env::var("P003_SEARCH_ENABLED").unwrap_or_default(),
             &std::env::var("P003_SEARCH_DEVICE_ALLOWLIST").unwrap_or_default(),
@@ -227,6 +232,7 @@ impl SearchSession {
         let routing_task=Some(tokio::spawn(pull_routing(api.clone(),events.clone())));
         let task = tokio::spawn(run(api.clone(), commands, events));
         Some(Self {
+            receipts: ReceiptBank::from_env(provider, voice), receipt_epoch: None,
             api,
             tx,
             rx,
@@ -298,7 +304,7 @@ impl SearchSession {
         match action {
             Intent::Clarify => {
                 if self.last_route.as_ref().is_some_and(|(_,d)|d.action=="clarify_city") {self.notice("想查哪个城市的天气？请告诉我城市名。");}
-                else {self.clarified_at=Some(Instant::now());self.notice("想查什么？");}
+                else {self.clarified_at=Some(Instant::now());if !self.receipt(ReceiptKind::Clarify) {self.notice("想查什么？");}}
             },
             Intent::Search(query) => {
                 // One active query per session in v1.
@@ -380,6 +386,9 @@ impl SearchSession {
             let mut claim=json!({"version":version,"rule_id":d.rule_id});
             if let Some(w)=&d.weather {claim["weather"]=json!(w);}if let Some(w)=&d.auto_weather {claim["auto_weather"]=json!(w);}if let Some(w)=&d.place_weather {claim["place_weather"]=json!(w);}Some(claim)
         });
+        let receipt_kind = if self.last_route.as_ref().is_some_and(|(_,d)|d.weather.is_some()||d.auto_weather.is_some()||d.place_weather.is_some()) || query.contains("天气") {
+            ReceiptKind::Weather
+        } else if query.contains("新闻") {ReceiptKind::News} else {ReceiptKind::Search};
         let cmd = Command::Submit {
             routing,
             query,
@@ -390,15 +399,29 @@ impl SearchSession {
         };
         if self.tx.try_send(cmd).is_ok() {
             self.busy = true;
+            if self.receipt(receipt_kind) { self.receipt_epoch = Some(self.epoch); }
             true
         } else {
             self.notice("这次搜索没能接单，你可以继续和我聊。");
             false
         }
     }
+    fn receipt(&mut self, kind: ReceiptKind) -> bool {
+        let Some(bank)=&mut self.receipts else {return false;};
+        let clip=bank.pick(kind);
+        // Never leave an earlier preparation/clarification cue ahead of a new query.
+        self.speech.retain(|s|s.receipt.is_none());
+        self.speech.push_back(Speech{text:clip.text.clone(),receipt:Some(clip),task:None,
+            delivery:String::new(),expires:Instant::now()+Duration::from_secs(2),result_until:None,auto_replayed:false});
+        true
+    }
+    pub fn active_receipt_pcm(&self) -> Option<Vec<u8>> {
+        self.active.as_ref()?.receipt.as_ref().map(|c|c.pcm.clone())
+    }
     fn notice(&mut self, text: &str) {
         if self.speech.len() < 3 {
             self.speech.push_back(Speech {
+                receipt: None,
                 text: text.into(),
                 task: None,
                 delivery: String::new(),
@@ -412,6 +435,9 @@ impl SearchSession {
     pub fn poll(&mut self, safe: bool) -> Option<String> {
         while let Ok(event) = self.rx.try_recv() {
             match event {
+                Event::Accepted {epoch,generation} if epoch==self.epoch && generation==self.generation => {
+                    if self.receipt_epoch!=Some(epoch) { self.notice("好，我查一下。"); }
+                }
                 Event::Routing {snapshot} => {
                     if self.routing.as_ref().map(|r|&r.version)!=snapshot.as_ref().map(|r|&r.version) {self.query_intent.clear();self.pending_topic=None;self.clarified_at=None;}
                     self.routing=snapshot;
@@ -421,13 +447,19 @@ impl SearchSession {
                     text,
                     epoch,
                     generation,
-                } if epoch == self.epoch && generation == self.generation => self.notice(text),
+                } if epoch == self.epoch && generation == self.generation => {
+                    self.speech.retain(|s|s.receipt.is_none());
+                    self.notice(text);
+                },
                 Event::Ready { id, text, epoch } if epoch == self.epoch => {
+                    // A ready answer outranks a not-yet-spoken preparation cue.
+                    self.speech.retain(|s|s.receipt.is_none());
                     self.verified.insert(id.clone(), Instant::now());
                     self.gate
                         .offer(id, text, self.started.elapsed().as_millis() as u64);
                 }
                 Event::Claimed { speech, epoch } if epoch == self.epoch => {
+                    self.speech.retain(|s|s.receipt.is_none());
                     if let Some(id) = &speech.task {
                         self.verified.insert(id.clone(), Instant::now());
                     }
@@ -492,8 +524,10 @@ impl SearchSession {
         if !safe || self.active.is_some() {
             return None;
         }
-        // Acknowledgements also wait for a full quiet interval.
-        if self.idle_since.map(|t| t.elapsed()).unwrap_or_default() < Duration::from_millis(800) {
+        // Prepared intent receipts can start at the committed-turn boundary.
+        // Results and diagnostic notices keep the existing quiet-interval contract.
+        let prepared_receipt=self.speech.front().is_some_and(|s|s.receipt.is_some());
+        if !prepared_receipt && self.idle_since.map(|t| t.elapsed()).unwrap_or_default() < Duration::from_millis(800) {
             return None;
         }
         if self.auto_pending && !self.busy {
@@ -520,6 +554,7 @@ impl SearchSession {
         let text = speech.text.clone();
         tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, "background search speech scheduled (not audio proof)");
         self.suppress_auto = false;
+        if let Some(clip)=&speech.receipt {tracing::info!(clip=%clip.id,pcm_ms=clip.pcm.len()/48,"background search prepared receipt scheduled");}
         self.active = Some(speech);
         Some(text)
     }
@@ -541,7 +576,7 @@ impl SearchSession {
         self.auto_pending = false;
         // Invalidate an automatic revalidation already in flight without blocking ordinary speech.
         if self.busy && self.remainder.is_some() { self.epoch += 1; self.busy = false; }
-        self.speech.retain(|s| !s.auto_replayed);
+        self.speech.retain(|s| !s.auto_replayed && s.receipt.is_none());
     }
     pub fn finish(&mut self, interrupted: bool, spoken_chars: usize) {
         self.finish_with_progress(interrupted, spoken_chars, u64::MAX, true);
@@ -613,6 +648,7 @@ fn claimed_speech(task: &Value, id: String, delivery: String) -> Option<Speech> 
     }
     let now = Instant::now();
     Some(Speech {
+        receipt: None,
         text: result_text(task)?,
         task: Some(id),
         delivery,
@@ -675,14 +711,16 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                             if !retry || attempt >= 2 {break response;}
                         };
                         let rejected = matches!(&response, Ok(Err(e)) if e.to_string().starts_with("search_http_"));
+                        let mut accepted=false;
                         let text = match response {
-                            Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下。" },
+                            Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { accepted=true; current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下。" },
                             _ if rejected => "这次搜索没有接单，你可以继续和我聊。",
                             _ => "暂时没能确认搜索是否接单，你可以继续和我聊。",
                         };
                         // A rejected replacement must not revive the superseded query.
                         polling = !rejected; poll_until = Instant::now() + Duration::from_secs(80);
-                        let _ = events.send(Event::Ack { text, epoch, generation }).await;
+                        let event=if accepted {Event::Accepted{epoch,generation}} else {Event::Ack{text,epoch,generation}};
+                        let _ = events.send(event).await;
                         if !polling { let _ = events.send(Event::Finished { epoch }).await; }
                     }
                     Command::Cancel { epoch: e, generation } => {
@@ -819,6 +857,7 @@ mod tests {
         let task = tokio::spawn(std::future::pending());
         (
             SearchSession {
+                receipts: None, receipt_epoch: None,
                 api,
                 tx,
                 rx,
@@ -844,6 +883,75 @@ mod tests {
             commands,
         )
     }
+    #[tokio::test]
+    async fn r13_receipt_is_ready_after_queue_acceptance_without_http_or_idle_wait() {
+        let (mut s, _events, mut commands) = test_session();
+        s.receipts=Some(ReceiptBank::synthetic());
+        assert!(s.command(Intent::Search("火星为什么是红色".into())));
+        assert!(matches!(commands.try_recv(), Ok(Command::Submit { .. })));
+        // No HTTP acknowledgement and no 800ms idle timer: queue acceptance
+        // is enough for an intent receipt, never a claim of completed search.
+        assert!(s.poll(true).is_some(), "search should give a prepared intent receipt immediately");
+    }
+
+    #[tokio::test]
+    async fn r13_receipt_success_ack_is_not_spoken_twice() {
+        let (mut s, events, _commands) = test_session(); s.receipts=Some(ReceiptBank::synthetic());
+        assert!(s.command(Intent::Search("火星为什么是红色".into())));
+        assert!(s.poll(true).is_some()); assert!(s.active_receipt_pcm().is_some());s.finish(false,4);
+        events.send(Event::Accepted{epoch:s.epoch,generation:s.generation}).await.unwrap();
+        s.idle_since=Some(Instant::now()-Duration::from_secs(1));
+        assert!(s.poll(true).is_none());assert!(s.speech.is_empty());
+    }
+    #[tokio::test]
+    async fn r13_receipt_ready_answer_skips_unspoken_receipt_and_keeps_result_gate() {
+        let (mut s, events, mut commands) = test_session();s.receipts=Some(ReceiptBank::synthetic());
+        assert!(s.command(Intent::Search("北京天气".into())));commands.try_recv().unwrap();
+        events.send(Event::Accepted{epoch:s.epoch,generation:s.generation}).await.unwrap();
+        events.send(Event::Ready{id:"task".into(),text:"搜索结果。".into(),epoch:s.epoch}).await.unwrap();
+        assert!(s.poll(false).is_none());assert!(s.speech.is_empty(),"ready must discard queued intent audio");
+        let speech=claimed_speech(&json!({"valid_for_ms":10000,"automatic_for_ms":10000,"result":{"text":"搜索结果。"}}),"task".into(),"d".into()).unwrap();
+        events.send(Event::Claimed{speech,epoch:s.epoch}).await.unwrap();
+        assert!(s.poll(true).is_none(),"results retain the quiet safety gate");
+        s.idle_since=Some(Instant::now()-Duration::from_secs(1));
+        assert_eq!(s.poll(true),Some("搜索结果。".into()));assert!(s.active_receipt_pcm().is_none());
+    }
+    #[tokio::test]
+    async fn r13_receipt_user_speech_cancel_replace_and_deadline_remove_stale_cues() {
+        for action in ["speech","commit","cancel","replace","expiry"] {
+            let (mut s, events, _commands) = test_session();s.receipts=Some(ReceiptBank::synthetic());
+            assert!(s.command(Intent::Search("火星为什么是红色".into())));
+            let old_epoch=s.epoch;let old_generation=s.generation;
+            match action {
+                "speech"=>s.suppress_auto_replay(),
+                "commit"=>s.on_commit(),
+                "cancel"=>{s.command(Intent::Cancel);},
+                "replace"=>{s.command(Intent::Replace("北京天气".into()));},
+                _=>s.speech.front_mut().unwrap().expires=Instant::now()-Duration::from_millis(1),
+            }
+            events.send(Event::Accepted{epoch:old_epoch,generation:old_generation}).await.unwrap();
+            let out=s.poll(true);
+            if action=="replace" {assert_eq!(out,Some("查查天气。".into()));}
+            else {assert!(out.is_none(),"stale receipt after {action}");}
+        }
+    }
+    #[tokio::test]
+    async fn r13_receipt_does_not_claim_queue_rejection_or_unfinished_topic() {
+        let (mut s, _, _commands) = test_session();s.receipts=Some(ReceiptBank::synthetic());
+        for _ in 0..16 {s.tx.try_send(Command::RoutingAck{version:"v".into()}).unwrap();}
+        assert!(!s.command(Intent::Search("火星".into())));assert!(s.speech.iter().all(|s|s.receipt.is_none()));
+        let (mut s, _, mut commands)=test_session();s.receipts=Some(ReceiptBank::synthetic());
+        s.command(Intent::Clarify);assert_eq!(s.poll(true),Some("想查什么？".into()));s.finish(false,5);
+        s.command(Intent::Search("三角龙".into()));assert!(s.poll(true).is_none());assert!(commands.try_recv().is_err());
+    }
+    #[tokio::test]
+    async fn r13_receipt_disabled_preserves_legacy_acceptance_and_idle_gate() {
+        let (mut s,events, _commands)=test_session();s.command(Intent::Search("北京天气".into()));
+        assert!(s.poll(true).is_none());events.send(Event::Accepted{epoch:s.epoch,generation:s.generation}).await.unwrap();
+        assert!(s.poll(true).is_none());s.idle_since=Some(Instant::now()-Duration::from_secs(1));
+        assert_eq!(s.poll(true),Some("好，我查一下。".into()));assert!(s.active_receipt_pcm().is_none());
+    }
+
     #[tokio::test]
     async fn clarified_topic_split_by_asr_is_one_complete_search_not_foreground_chat() {
         let (mut s,_,mut commands)=test_session();
@@ -1276,8 +1384,7 @@ mod tests {
         while started.elapsed()<Duration::from_millis(500) {tokio::time::sleep(Duration::from_millis(20)).await;ticks+=1;}
         assert!(ticks>=20,"foreground scheduling must remain available during HTTPS delay");
         let event=tokio::time::timeout(Duration::from_secs(5),rx.recv()).await.unwrap().unwrap();
-        let Event::Ack{text,..}=event else {panic!("expected acknowledgement")};
-        assert_eq!(text,"好，我查一下。");
+        assert!(matches!(event,Event::Accepted{..}),"expected acceptance acknowledgement");
         let requests=bodies.lock().unwrap();assert_eq!(requests.len(),2);assert_eq!(requests[0],requests[1]);assert_eq!(requests[0]["turn"],"same-turn");
         actor.abort();server.abort();
     }
@@ -1319,7 +1426,7 @@ mod tests {
         let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/tasks").parse().unwrap(),token:"synthetic".into(),key:"synthetic".into()};
         let(tx,commands)=mpsc::channel(4);let(events,mut rx)=mpsc::channel(8);let actor=tokio::spawn(run(api,commands,events));
         tx.send(Command::Submit{routing:None,query:"火星".into(),turn:"first".into(),replace:false,epoch:0,generation:1}).await.unwrap();
-        while !matches!(rx.recv().await,Some(Event::Ack{epoch:0,..})){}
+        while !matches!(rx.recv().await,Some(Event::Accepted{epoch:0,..})){}
         tx.send(Command::Submit{routing:None,query:"恐龙".into(),turn:"second".into(),replace:true,epoch:1,generation:2}).await.unwrap();
         while !matches!(rx.recv().await,Some(Event::Ack{epoch:1,..})){}
         let next=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();

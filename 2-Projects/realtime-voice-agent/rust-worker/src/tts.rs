@@ -151,7 +151,7 @@ impl Prewarm {
     }
 
     /// 关闭态(火山线,或 `XFYUN_TTS_PRECONNECT=0`)
-    const fn off() -> Self {
+    pub(crate) const fn off() -> Self {
         Self(None)
     }
 

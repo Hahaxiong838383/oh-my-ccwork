@@ -362,6 +362,7 @@ enum TurnKind {
     Say(String),
     // Web evidence must not enter the ordinary chat history / downstream memory extractor.
     BackgroundSay(String),
+    BackgroundClip(String, Vec<u8>),
     Reply {
         user_text: String,
         pending_amend: Option<String>,
@@ -929,7 +930,7 @@ pub async fn run_pipeline(
         info!(room = %room_name, "local-audio opening-overlap gate skipped for this SN (v237 full-prompt-then-mic)");
     }
     let input_phase0 = if ordered_session.is_some() { InputPhase::FirstTurn } else { InputPhase::NotOrdered };
-    let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1));
+    let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1, tts_cfg.provider_name(), tts_cfg.voice()));
     let mut orch = Orchestrator {
         search,
         search_turn: false,
@@ -2846,7 +2847,10 @@ impl Orchestrator {
         if self.search.as_mut().map(|s| s.take_revoked()).unwrap_or(false) && self.search_turn {
             self.hard_abort_current();
         }
-        if let Some(text) = speech { self.start_turn(TurnKind::BackgroundSay(text)); }
+        if let Some(text) = speech {
+            let pcm=self.search.as_ref().and_then(|s|s.active_receipt_pcm());
+            self.start_turn(match pcm {Some(pcm)=>TurnKind::BackgroundClip(text,pcm),None=>TurnKind::BackgroundSay(text)});
+        }
     }
 
     /// B52 §6.2:回声门判掉一条 commit 时的**唯一**字幕落点。控制出口(急停/退出/设备命令)
@@ -3525,7 +3529,7 @@ impl Orchestrator {
     }
 
     fn start_turn(&mut self, kind: TurnKind) {
-        let record_history = !matches!(&kind, TurnKind::BackgroundSay(_));
+        let record_history = !matches!(&kind, TurnKind::BackgroundSay(_) | TurnKind::BackgroundClip(..));
         self.search_turn = !record_history;
         // 回声对撞:记录本 turn 的 filler 文案(Say/无 filler 轮清空)——synth_text 只有 TTS 正文,
         // filler 是预合成 pcm 直接入轨,不经它,得单独暂存才能参与对撞
@@ -3606,7 +3610,11 @@ impl Orchestrator {
         // 等第一句文本出来时握手早已完成 → 首句省掉 ~220ms 建连。
         // (火山线返回关闭态,行为不变)
         // B12：held final 时已预热的连接优先；没有就按原样现起。
-        let mut warm = self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm());
+        let mut warm = if matches!(&kind,TurnKind::BackgroundClip(..)) {
+            // Prepared PCM needs no provider connection. Drop any unused prewarm.
+            self.pending_tts_warm.take();
+            crate::tts::Prewarm::off()
+        } else {self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm())};
 
         let task = tokio::spawn(async move {
             let publish = |v: Value| {
@@ -3635,6 +3643,14 @@ impl Orchestrator {
                 }
             };
             match kind {
+                TurnKind::BackgroundClip(text, pcm) => {
+                    track(&text,pcm.len());
+                    let _ = pcm_tx.send(pcm).await;
+                    drop(pcm_tx);
+                    let _ = playout_task.await;
+                    watcher.abort();
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                }
                 TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
                     match tts_cfg
                         .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
