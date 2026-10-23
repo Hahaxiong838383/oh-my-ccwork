@@ -1,6 +1,8 @@
+> 最新R13：[2026-10-23 16:09:02衔接音部署/验收](R13_ACCEPTANCE_20261023.md) · [测试证据](R13_TEST_RESULTS_20261023.json) · [真人回执](P003_SEARCH_R13_RECEIPTS_AND_DEVICE_TEST_20261023.md) · [回滚](R13_ROLLBACK_20261023.md)。原两台P1/10月24日23:59截止不变，待真机验收；提示更快，TTS长尾/安卓退出未解。下列R12及更早为历史，接手重核现场。
+
 > 2026-10-23复盘与真人验收接续：[经验教训](RETROSPECTIVE_R12_20261023.md) · [项目记忆](MEMORY.md) · [知识核验](R12_KNOWLEDGE_VERIFICATION_20261023.json)。用户安排真人测试；本次仅归档，不改线上。
 
-> 最新入口：2026-10-23 [R12反馈/延迟验收](R12_ACCEPTANCE_20261023.md)、[测试证据](R12_TEST_RESULTS_20261023.json)、[可转发回执](P003_SEARCH_R12_FEEDBACK_AND_DEVICE_TEST_20261023.md)、[回滚](R12_ROLLBACK_20261023.json)、[Air传输](R12_AIR_TRANSFER_20261023.json)。14:18:56恢复原两台P1、10/24 23:59截止；待真机验收，安卓自动退出未解决。普通聊天延迟优先；8样本R11→R12中位1.82→1.40秒不等于长期P95或现役严格A/B。接手重核现场。
+> R12历史入口：2026-10-23 [R12反馈/延迟验收](R12_ACCEPTANCE_20261023.md)、[测试证据](R12_TEST_RESULTS_20261023.json)、[可转发回执](P003_SEARCH_R12_FEEDBACK_AND_DEVICE_TEST_20261023.md)、[回滚](R12_ROLLBACK_20261023.json)、[Air传输](R12_AIR_TRANSFER_20261023.json)。14:18:56恢复原两台P1、10/24 23:59截止；待真机验收，安卓自动退出未解决。普通聊天延迟优先；8样本R11→R12中位1.82→1.40秒不等于长期P95或现役严格A/B。接手重核现场。
 
 > R11历史入口：2026-10-22 [R11完整自测验收](R11_ACCEPTANCE_20261022.md)、[24项结果与证据](R11_TEST_RESULTS_20261022.json)、[可转发测试文档](P003_SEARCH_R11_SELF_TEST_AND_DEVICE_CASES_20261022.md)、[Air交付](R11_AIR_TRANSFER_20261022.json)。24/24合成RTC通过，待真机验收；原两台P1、10/24 23:59截止、P2关闭。历史快照不代表当前状态。
 
@@ -12,7 +14,7 @@
 
 # 小可后台搜索候选交付 · 2026-10-21
 
-**历史归档：R4于北京时间2026-10-22 09:23:52加入00100004。** [R4技术与回滚](R4_TWO_DEVICE_CANARY_20261022.md) · [新增设备回执](P003_SEARCH_CANARY_00100004_RECEIPT_20261022.md)。后续变更以R12为准；历史R4版本与测试不能当当前状态。
+**历史归档：R4于北京时间2026-10-22 09:23:52加入00100004。** [R4技术与回滚](R4_TWO_DEVICE_CANARY_20261022.md) · [新增设备回执](P003_SEARCH_CANARY_00100004_RECEIPT_20261022.md)。后续变更以R13为准；历史R4版本与测试不能当当前状态。
 
 - [接续记忆](MEMORY.md) · [实施经验](RETROSPECTIVE_R3_20261021.md)
 - [R3实际部署、窗口与回滚](R3_FULL_DAY_CANARY_20261021.md)
@@ -22,7 +24,7 @@
 - [可转发设备回执（R3已开P1，待真机）](P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261021.md)
 - [历史 R1 机器可读结果](CANARY_TEST_RESULTS_20261021.json)
 
-下列首版材料与R1—R7均为历史快照；本次有效交接以R12及项目MEMORY为准，历史测试JSON不覆盖后续结果。
+下列首版材料与R1—R7均为历史快照；本次有效交接以R13及项目MEMORY为准，历史测试JSON不覆盖后续结果。
 
 1. [实施、验证与回滚记录](IMPLEMENTATION.md)
 2. [双端协议与配置合同](PROTOCOL.md)

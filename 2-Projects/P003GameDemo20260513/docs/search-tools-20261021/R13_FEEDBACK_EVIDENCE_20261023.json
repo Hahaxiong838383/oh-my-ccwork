@@ -1,0 +1,185 @@
+{
+  "observed_at_ms": 1792740635543,
+  "period_cst": "2026-10-23 14:39–15:22",
+  "task_count": 17,
+  "delivery_counts": {
+    "completed": 7,
+    "interrupted": 7,
+    "claimed": 3
+  },
+  "task_records": [
+    {
+      "id": "b4911b3d-3a28-4513-9261-8099baa20e88",
+      "session": "sn-BJP00326060100100004-1792737535",
+      "createdAt": 1792737646082,
+      "readyAt": 1792737647700,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "762abdb0-f295-4967-999b-d602e7eac3cb",
+      "session": "sn-BJP00326060100100004-1792737535",
+      "createdAt": 1792737673082,
+      "readyAt": 1792737674663,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "fb6c8020-c815-48e2-8560-06b8b2d6435c",
+      "session": "sn-BJP00326060100100004-1792737535",
+      "createdAt": 1792737695980,
+      "readyAt": 1792737697604,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "319962cd-167b-4609-b2a4-8463d9c13314",
+      "session": "sn-BJP00326060100100004-1792737535",
+      "createdAt": 1792737712093,
+      "readyAt": 1792737713816,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "401a5a14-e912-466c-bb86-769cbd5e261e",
+      "session": "sn-BJP00326060100100004-1792737535",
+      "createdAt": 1792737754133,
+      "readyAt": 1792737755956,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "7030ac23-f9fc-4052-b5f1-31f634ba47f7",
+      "session": "sn-BJP00326060100100004-1792737896",
+      "createdAt": 1792737903978,
+      "readyAt": 1792737905875,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "fa8bc10d-316e-4c59-b274-7c92d860e4ea",
+      "session": "sn-BJP00326060100100004-1792737896",
+      "createdAt": 1792737928974,
+      "readyAt": 1792737930540,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "2ea2b051-5a4a-4964-92c5-a362db34441b",
+      "session": "sn-BJP00326060100100004-1792739799",
+      "createdAt": 1792739806349,
+      "readyAt": 1792739807572,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "f7298430-d9db-4b93-8eb5-0d5b192ee067",
+      "session": "sn-BJP00326060100100004-1792739826",
+      "createdAt": 1792739843254,
+      "readyAt": 1792739843447,
+      "status": "cancelled",
+      "delivery": "claimed"
+    },
+    {
+      "id": "e91b2e5f-a82e-4601-a892-39e5c950bacd",
+      "session": "sn-BJP00326060100100004-1792739855",
+      "createdAt": 1792739872564,
+      "readyAt": 1792739872579,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "490ec257-5435-4997-9d20-741e1becb29c",
+      "session": "sn-BJP00326060100100004-1792739916",
+      "createdAt": 1792739944369,
+      "readyAt": 1792739944400,
+      "status": "cancelled",
+      "delivery": "claimed"
+    },
+    {
+      "id": "d600165d-69db-49fa-8e12-53e75217e2ed",
+      "session": "sn-BJP00326060100100004-1792739916",
+      "createdAt": 1792739950476,
+      "readyAt": 1792739951930,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "4b446438-5534-427f-a635-ee62355cd179",
+      "session": "sn-BJP00326060100100004-1792739981",
+      "createdAt": 1792739989024,
+      "readyAt": 1792739989039,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "40397ec0-eac7-48cc-b999-3874632b1ebe",
+      "session": "sn-BJP00326060100100004-1792739981",
+      "createdAt": 1792740020473,
+      "readyAt": 1792740020715,
+      "status": "cancelled",
+      "delivery": "interrupted"
+    },
+    {
+      "id": "949bf5f0-fa16-451c-aaf2-b04137e335ab",
+      "session": "sn-BJP00326060100100004-1792740032",
+      "createdAt": 1792740051373,
+      "readyAt": 1792740051388,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "139ec721-d9f0-4963-a6e3-f982e087b8d8",
+      "session": "sn-BJP00326060100100004-1792740032",
+      "createdAt": 1792740070774,
+      "readyAt": 1792740070960,
+      "status": "cancelled",
+      "delivery": "completed"
+    },
+    {
+      "id": "d0e834f1-08b7-4c57-a4fa-bdce70dd4c4e",
+      "session": "sn-BJP00326060100100004-1792740032",
+      "createdAt": 1792740089974,
+      "readyAt": 1792740091676,
+      "status": "cancelled",
+      "delivery": "claimed"
+    }
+  ],
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1792738945974
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 359,
+      "version_name": "1.2.2-canary.345",
+      "last_check_at": 1792737892328
+    }
+  ],
+  "caveat": "Final cancelled status includes session cleanup. Delivery completed is not physical device hearing.",
+  "ordinary_tts_tail": {
+    "commit_at_cst": "2026-10-23 14:41:53.478",
+    "body_first_frame_at_cst": "2026-10-23 14:41:59.028",
+    "commit_to_body_ms": 5549.5,
+    "prewarm_wait_ms": 3388,
+    "provider_ms": 284,
+    "full_tts_wait_ms": 3672,
+    "connection_warm_ms": 4600,
+    "resolved_by_r13": false
+  },
+  "fast_search_delayed_ack": {
+    "task": "949bf5f0-fa16-451c-aaf2-b04137e335ab",
+    "created_cst": "2026-10-23 15:20:51.373",
+    "ready_cst": "2026-10-23 15:20:51.388",
+    "old_ack_first_frame_cst": "2026-10-23 15:20:52.655",
+    "result_first_frame_cst": "2026-10-23 15:20:55.705"
+  },
+  "raw_evidence_sha256": {
+    "worker-before-private.json": "0e3bd8dc2752d457227e9e14046b75fb21affd0bef10a5c5d3cace729c642376",
+    "brain-before-private.json": "0087a7524a260765c550238f07c995f633f8fd264d05e0aafa270af682887378",
+    "p003-search-worker-full-private.json": "4d2d9a78e2d9dfd2b49cf32498b6b04d7a439dd0d058185074cd3acef9be99c2"
+  }
+}
