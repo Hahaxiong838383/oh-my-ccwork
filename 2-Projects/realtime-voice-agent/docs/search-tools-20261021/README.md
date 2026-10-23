@@ -1,3 +1,5 @@
+> 最新（10月23日晚）：[R13用例5/10深度排查](P003_SEARCH_R13_FEEDBACK2_ANALYSIS_AND_REPAIR_PLAN_20261023.md) · [R14实施规划](../../../../docs/superpowers/plans/2026-10-23-p003-search-r14-dialogue-resume.md)。两项未修；当前R13，调查规划不等于部署。
+
 > 最新反馈复盘：[R12真机反馈对照R13](P003_SEARCH_R12_FEEDBACK_R13_REVIEW_20261023.md) · [证据](R12_FEEDBACK_R13_REVIEW_EVIDENCE_20261023.json)。同会话续讲通过，退出后主动续讲仍未实现；当前R13复现，下一步方案尚未实施。本轮仅复盘和补测，未修改部署或开窗。
 
 # 小可后台搜索 Worker 候选交付

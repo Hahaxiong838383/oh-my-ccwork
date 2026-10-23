@@ -1,0 +1,18 @@
+[
+  {
+    "at_ms": 1792766736852,
+    "host": "Air",
+    "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R13_FEEDBACK2_ANALYSIS_AND_REPAIR_PLAN_20261023.md",
+    "bytes": 10424,
+    "sha256": "e3f1f902c63e6cfdd533677b57a6c7b7db8889c377a8196ebc8dfa56fd6a2ed4",
+    "verified": true
+  },
+  {
+    "at_ms": 1792766736853,
+    "host": "Air",
+    "path": "/Users/rayman.chen/Downloads/2026-10-23-p003-search-r14-dialogue-resume.md",
+    "bytes": 20344,
+    "sha256": "e5ddb53a4399c73ed1c16139b29c2cc21cf52a145e9b56a3e46e084e49ac0ae2",
+    "verified": true
+  }
+]
