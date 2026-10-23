@@ -1,0 +1,199 @@
+{
+  "created_at": "2026-10-23T13:20:39+08:00",
+  "scope": "candidate only; no database rollback",
+  "original": {
+    "brain": {
+      "backup": "/opt/p003/server/backups/search-canary-R12-20261023T052039Z",
+      "sha256": "5cce78ff91a84aadf52fb6ed8cd3cebba09c73a9f97bf8b594225107163a2b50"
+    },
+    "worker": {
+      "backup": "/root/rust-worker/backups/search-canary-R12-20261023T052039Z",
+      "sha256": "63ccde1057b6d7f9079a786186fa3121f17ab35fe38629575dacfd2742186d06"
+    }
+  },
+  "old_worker_sha256": "92dea929b8034b4e20fc2507a5d45e0ffaa13ee83017e09c5c54374ebd06cd51",
+  "brain_file_old_sha256": "f80673a68bfe7c97e0f8f96809632a2e4417a72a2ca95cf4186bfe7201daf8e2",
+  "original_rehearsal": [
+    {
+      "step": "r12-preflight-worker",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792733757690,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792857540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "staged_verified": true
+    },
+    {
+      "step": "r12-close-dispatch",
+      "dispatch_open": false,
+      "at_ms": 1792733776420
+    },
+    {
+      "step": "r12-stop-worker",
+      "candidate_stopped": true,
+      "jobs_before_stop": 0
+    },
+    {
+      "step": "r12-install-brain",
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-chat-policy.ts": "4d21f9a60e5d94bfaefc4e5d60129e137e753b3764467e83e1bd9795a8ab8fa4"
+      }
+    },
+    {
+      "step": "r12-install-worker",
+      "restored": false,
+      "sha256": "c7c9cda4e2eb0634b737104a63a4957c11b2474398559c79c79aa6cd34fcf017",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792733802797,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "latency_v1": "1",
+      "candidate_env_sha256": "c1ae5577bb187fc9bdf37172b8f9b55bd09c17d7cdf790c1576707900eb74f0d"
+    },
+    {
+      "step": "r12-rollback-worker",
+      "restored": true,
+      "sha256": "92dea929b8034b4e20fc2507a5d45e0ffaa13ee83017e09c5c54374ebd06cd51",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792733814389,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "latency_v1": null,
+      "candidate_env_sha256": "4aad426a3bb4573bfa6f74d17533dc8784135b5072276bf6bb389410fbccf4f5"
+    },
+    {
+      "step": "r12-rollback-brain",
+      "restored": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-chat-policy.ts": "f80673a68bfe7c97e0f8f96809632a2e4417a72a2ca95cf4186bfe7201daf8e2"
+      }
+    },
+    {
+      "step": "r12-forward-brain",
+      "restored": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-chat-policy.ts": "4d21f9a60e5d94bfaefc4e5d60129e137e753b3764467e83e1bd9795a8ab8fa4"
+      }
+    },
+    {
+      "step": "r12-forward-worker",
+      "restored": false,
+      "sha256": "c7c9cda4e2eb0634b737104a63a4957c11b2474398559c79c79aa6cd34fcf017",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792733831526,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "latency_v1": "1",
+      "candidate_env_sha256": "c1ae5577bb187fc9bdf37172b8f9b55bd09c17d7cdf790c1576707900eb74f0d"
+    }
+  ],
+  "recovery_steps": [
+    "Close new canary dispatch; end affected candidate sessions if urgent; reconnect routes to live service.",
+    "At jobs=0 restore only candidate search-chat-policy.ts and worker binary from R12 backup; remove only the newly added P003_TTS_LATENCY_V1 key, preserving other settings.",
+    "Do not restore databases, replace credentials or restart production units.",
+    "Verify hashes, authentication, existing deadline, candidate health and production unchanged before any reopening."
+  ],
+  "sensitive_backups": "Remote restricted archives only; no environment values committed.",
+  "correction_rehearsal": [
+    {
+      "step": "correction-gate",
+      "dispatch_closed": true
+    },
+    {
+      "step": "correction-backup",
+      "backup": "/opt/p003-search-canary-20261021/voice-rust-worker.r12-initial",
+      "sha256": "c7c9cda4e2eb0634b737104a63a4957c11b2474398559c79c79aa6cd34fcf017",
+      "jobs": 0
+    },
+    {
+      "step": "correction-install",
+      "restored_initial_candidate": false,
+      "sha256": "b7dc862e68709ea2ebc5b0d69595821112effc75152d690fed548bad37cf5711",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792734679604,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "env_unchanged": true
+    },
+    {
+      "step": "correction-rollback",
+      "restored_initial_candidate": true,
+      "sha256": "c7c9cda4e2eb0634b737104a63a4957c11b2474398559c79c79aa6cd34fcf017",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792734688704,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "env_unchanged": true
+    },
+    {
+      "step": "correction-forward",
+      "restored_initial_candidate": false,
+      "sha256": "b7dc862e68709ea2ebc5b0d69595821112effc75152d690fed548bad37cf5711",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792734697318,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "env_unchanged": true
+    }
+  ],
+  "current_worker_sha256": "b7dc862e68709ea2ebc5b0d69595821112effc75152d690fed548bad37cf5711",
+  "reopened_at": "2026-10-23 14:18:56"
+}
