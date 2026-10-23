@@ -1,6 +1,6 @@
 {
   "source_repository": "local home-lan",
-  "source_commit": "cb3164c59c8d8d8ccb7f5826d40d60fd185ffe64",
+  "source_commit": "584dd12d20551db95fbcc3fcd1e3190d68748bfe",
   "files": [
     {
       "path": ".gitignore",
@@ -10,7 +10,7 @@
     {
       "path": "README.md",
       "source": "4-Assets/Code/trilium-maintenance/README.md",
-      "sha256": "9d34c3a2fb5c7b31f59d2a8fd216f5f3fdb2e60e11ae4fe81a642bf2e2ef66e4"
+      "sha256": "0e4a2ea4a83b21adf39500baf134a4d8f0ebb68da240eff762f81441f17be73b"
     },
     {
       "path": "check-upstream.py",

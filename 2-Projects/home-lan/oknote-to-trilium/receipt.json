@@ -1,0 +1,153 @@
+{
+  "backup.json": {
+    "complete": true,
+    "files": 10093,
+    "bytes": 4062117366,
+    "archive_sha256": "f9ef8e889f0caaa1f62a711fed7b9e1e48aa190025ca1cccd71c3a7c345a7a5d",
+    "archive_bytes": 4103246546,
+    "trilium_backup_sha256": "c76729ff38335ee2ad1686241ef7240e0e214f3568bea6bfc9d04169816a2747",
+    "image_archive_sha256": "40a74ef6480f4f7294cbf19a2839220ee7cd552a1518c682fc499b0684522460",
+    "source_db_integrity": "ok",
+    "archive_members_verified": true,
+    "source_restarted": true
+  },
+  "conversion-preflight.json": {
+    "notes_converted": 405,
+    "internal_links": 321,
+    "external_images": 4,
+    "unique_referenced_attachments": 2743,
+    "dangling_source_note_ids": 0,
+    "source_orphan_attachments": 0
+  },
+  "verification.json": {
+    "complete": true,
+    "source_notes": 405,
+    "active_source_notes": 404,
+    "source_attachments": 2743,
+    "total_verified_attachments": 3155,
+    "historical_versions": 6,
+    "source_shelves": 4,
+    "source_notebooks": 88,
+    "source_tags": 27,
+    "tag_assignments": 67,
+    "internal_links": 321,
+    "original_target_notes_preserved": 402,
+    "trilium_config_preserved": true,
+    "changed_option_names": [],
+    "source_unchanged": true,
+    "source_files_rehashed": 3154,
+    "trilium_database_integrity": "ok"
+  },
+  "source-restore.json": {
+    "isolated_network": "none",
+    "restored_from_archive": true,
+    "application_healthy": true,
+    "body_samples": 3,
+    "attachment_samples": 3
+  },
+  "target-restore.json": {
+    "restored_application_healthy": true,
+    "network": "none",
+    "verified_payloads": 3566,
+    "backup_bytes": 281047040,
+    "backup_sha256": "58290dc327f5a47f0b9f96f33e303a7ba7fca460e4728bd9c07c1fce6c97825f",
+    "database_integrity": "ok"
+  },
+  "browser-result.json": {
+    "login": true,
+    "readOnly": true,
+    "samples": [
+      {
+        "tables": 0,
+        "images": 168,
+        "localImages": 168,
+        "loadedLocalImages": 168,
+        "tasks": 0,
+        "math": 0,
+        "nonempty": true,
+        "internalLinks": 0,
+        "expectedTables": 0,
+        "expectedImages": 168,
+        "expectedTasks": 0,
+        "expectedMath": 0,
+        "passed": true
+      },
+      {
+        "tables": 54,
+        "images": 0,
+        "localImages": 0,
+        "loadedLocalImages": 0,
+        "tasks": 0,
+        "math": 0,
+        "nonempty": true,
+        "internalLinks": 2,
+        "expectedTables": 54,
+        "expectedImages": 0,
+        "expectedTasks": 0,
+        "expectedMath": 0,
+        "passed": true
+      },
+      {
+        "tables": 1,
+        "images": 0,
+        "localImages": 0,
+        "loadedLocalImages": 0,
+        "tasks": 33,
+        "math": 0,
+        "nonempty": true,
+        "internalLinks": 0,
+        "expectedTables": 1,
+        "expectedImages": 0,
+        "expectedTasks": 33,
+        "expectedMath": 0,
+        "passed": true
+      },
+      {
+        "tables": 1,
+        "images": 1,
+        "localImages": 1,
+        "loadedLocalImages": 1,
+        "tasks": 2,
+        "math": 2,
+        "nonempty": true,
+        "internalLinks": 2,
+        "expectedTables": 1,
+        "expectedImages": 1,
+        "expectedTasks": 2,
+        "expectedMath": 2,
+        "passed": true
+      }
+    ],
+    "complete": true
+  },
+  "retirement.json": {
+    "uninstalled": true,
+    "app_registry_absent": true,
+    "container_absent": true,
+    "runtime_data_removed": true,
+    "port_38080_closed": true,
+    "other_containers_preserved": 21,
+    "trilium_healthy": true,
+    "unused_image_removed": true,
+    "backup_directory": "/vol1/1000/docker/trilium/migrations/20261023-oknote",
+    "package_directory_absent": true,
+    "app_entry_absent": true
+  },
+  "post-uninstall-check.json": {
+    "post_uninstall_target_healthy": true,
+    "imported_tree_nodes_present": 506,
+    "imported_attachments_present": 3155,
+    "post_uninstall_note_payload_samples": 4,
+    "post_uninstall_attachment_payload_samples": 3,
+    "database_integrity": "ok",
+    "temporary_restore_copies_removed": true
+  },
+  "residue-check.json": {
+    "remaining_native_directories_removed": [
+      "@appmeta",
+      "@apphome",
+      "@appconf"
+    ],
+    "all_native_directories_absent": true
+  }
+}

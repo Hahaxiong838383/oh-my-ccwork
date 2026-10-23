@@ -4,6 +4,7 @@
 
 | 目录 | 内容 |
 |---|---|
+| [oknote-to-trilium](oknote-to-trilium/README.md) | 全量迁移、两端恢复验收与OK笔记卸载（2026-10-23） |
 | [trilium](trilium/README.md) | TriliumNext部署、版本锁与每周维护PR |
 | [oknote](oknote/README.md) | 飞牛 2 OK笔记安装、功能分析与开启、维护复盘 |
 
