@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "checked_at": "2026-10-23T14:38:50+08:00",
+  "scope": "仅文档、项目记忆和仓内skill；未执行线上变更或新增业务测试",
+  "source_heads_before_closeout": {
+    "p003-brain-search-tools-20261021": "2481c27891325ace7fc1527e26b5a684e0911077",
+    "p003-worker-tool-lifecycle-20261021": "1391d8250a8e1417f6a0a425a1a497e376801539"
+  },
+  "source_evidence_sha256": {
+    "R12_ACCEPTANCE_20261023.md": "e5e065cc159e0398b90ef3d6d1becf435b39dd1f9bec29ef9e7f7dc676dbbb7f",
+    "R12_TEST_RESULTS_20261023.json": "1f0569d04cf907d076627b142f6a818641887af5d10e782556feeef4fc4275a4",
+    "R12_ROLLBACK_20261023.json": "65decc7cff141e13554cb39411e5fa8da513ec88304a8599e99eb08c816673d3",
+    "R12_DEPLOYED_SOURCE_MANIFEST_20261023.json": "550a1a895483288e941e2a5184d26e4223ee4779c4d3c62bb0cfae82df72511d",
+    "R12_AIR_TRANSFER_20261023.json": "91bbef3496b7a3e7580943c7b10eba71a641dbf2a97fa969c8d350c0a254e2b8",
+    "P003_SEARCH_R12_FEEDBACK_AND_DEVICE_TEST_20261023.md": "40c5ce89a2e690fea0678cadd2b2c860b132f2445c28c4cf3fd66648c0b55b18"
+  },
+  "evidence_assertions": {
+    "branch_evidence_identical": true,
+    "initial_1851ms_failure_preserved": true,
+    "final_single_task_no_chat": true,
+    "physical_acceptance_pending": true,
+    "eight_identical_wavs": true,
+    "median_delta_ms": -425.5,
+    "stable_population_p95_verified": false,
+    "residual_tts_long_tail_preserved": true,
+    "linux_tests_from_previous_execution": {
+      "worker": 396,
+      "preview": 23,
+      "release_and_abi": true
+    },
+    "function_checks_from_previous_execution": true
+  },
+  "manual_scenario_review": [
+    {
+      "case": "固定1200ms单测成功，RTC1851ms失败且进程exit0",
+      "decision": "保留失败；按在途输入与硬截止修订，未通过不恢复灰度"
+    },
+    {
+      "case": "旧body-ready很快，预连接等待5.262秒",
+      "decision": "不能称为快速正文；统一正文首帧并计入预连接等待"
+    },
+    {
+      "case": "两个候选前后各8份相同WAV改善",
+      "decision": "仅小样本候选对照；不宣称稳定P95或相对现役零开销"
+    },
+    {
+      "case": "单搜索任务但两次回答",
+      "decision": "核同room前台chat与后续搜索；不能仅按任务计数验收"
+    },
+    {
+      "case": "先端侧cancel再MUTED/离房",
+      "decision": "定位至边界，保留未解决；收集端侧同trace原因，不改退出权威"
+    },
+    {
+      "case": "主动断连后没有音频",
+      "decision": "按接单后断连/取消预期验；不以缺音频自动判失败"
+    },
+    {
+      "case": "窗口开启时用户退出重进",
+      "decision": "仍进候选；恢复现役需先关闭灰度；不假定重连已回现役"
+    },
+    {
+      "case": "真人准备测试，状态查询显示活跃job",
+      "decision": "不为归档重启/发探针；jobs非0不等于故障"
+    }
+  ],
+  "validation_kind": "已有真实失败/通过证据对账及人工场景审查；不是新业务测试或独立智能体压力测试",
+  "independent_agent_pressure_test_performed": false,
+  "runtime_mutation_performed": false,
+  "global_memory_modified": false,
+  "main_merged": false,
+  "skill_reference_sha256": "38bfa71a85cd6015b10dbbc72797341c10eb55c0cf2fe8912496d78903210c2f",
+  "knowledge_backup_receipt": "~/.local/state/p003-sn-search-canary-20261021/r12-knowledge-closeout/receipt.json",
+  "git_delivery": "本文件随本次分支提交推送；最终commit和远端SHA由交付后独立核验，不将旧HEAD充当新提交",
+  "knowledge_checks": {
+    "checked_at": "2026-10-23T14:40:05+08:00",
+    "relative_links_checked": 121,
+    "links_resolve": true,
+    "skill_validator_both_branches": "passed",
+    "skill_wrappers_resolve": true,
+    "new_reference_bytes_identical": true,
+    "git_diff_check_both_branches": "passed",
+    "manual_review": "完成；实际失败、限界、已知未解和真人验收分开",
+    "credential_pattern_scan": "passed; changed/new Markdown/JSON only",
+    "runtime_source_files_changed": false
+  }
+}
