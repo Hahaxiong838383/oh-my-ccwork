@@ -1,0 +1,10 @@
+[Unit]
+Description=Check TriliumNext upstream and open a maintenance PR
+
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=yes
+TimeoutStartSec=600
+Environment=GIT_TERMINAL_PROMPT=0
+ExecStart=/usr/bin/python3 /home/hahaxiong83/home-lan/4-Assets/Code/trilium-maintenance/check-upstream.py --publish

@@ -1,0 +1,21 @@
+name: trilium
+services:
+  trilium:
+    image: triliumnext/trilium:v0.106.0@sha256:be93e82699b12950ac4e2e7b565ce092fe215b8dd6ddfc47921e37b49e6a0e8b
+    container_name: trilium
+    restart: unless-stopped
+    stop_grace_period: 60s
+    environment:
+      TRILIUM_DATA_DIR: /home/node/trilium-data
+      TRILIUM_BACKUP_DIR: /home/node/trilium-backups
+      TZ: Asia/Shanghai
+    ports:
+      - "192.168.1.115:38081:8080"
+    volumes:
+      - ./data:/home/node/trilium-data
+      - ./backups:/home/node/trilium-backups
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

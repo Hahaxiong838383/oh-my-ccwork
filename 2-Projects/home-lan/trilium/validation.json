@@ -1,0 +1,50 @@
+{
+  "validated_at": "2026-10-23",
+  "scope": "new_empty_instance_with_synthetic_notes",
+  "app_info": {
+    "appVersion": "0.106.0",
+    "dbVersion": 240,
+    "syncVersion": 39,
+    "buildDate": "2026-09-25T18:09:29Z",
+    "buildRevision": "c0fdceba3b59af8a4473c6944b4f176121bb9788",
+    "clipperProtocolVersion": "1.0",
+    "utcDateTime": "2026-10-23T00:21:44.099Z",
+    "nodeVersion": "v24.21.0",
+    "dataDirectory": "/home/node/trilium-data"
+  },
+  "anonymous_api_rejected": true,
+  "markdown_roundtrip": true,
+  "attachment_sha256": "45de8dce5e6b90df5b4b22cd57c4cb21d72837b10ead85cfaaa071ebfb356936",
+  "backup_integrity": "ok",
+  "backup_bytes": 1572864,
+  "automatic_backups": {
+    "dailyBackupEnabled": "true",
+    "monthlyBackupEnabled": "true",
+    "weeklyBackupEnabled": "true"
+  },
+  "restore": {
+    "restored_app_version": "0.106.0",
+    "restored_note_hash_match": true,
+    "restored_attachment_hash_match": true
+  },
+  "real_phone_tested": false,
+  "existing_notes_imported": false,
+  "browser": {
+    "browser_edit_saved": true,
+    "persisted_after_reload": true,
+    "errors": [],
+    "locale": "cn"
+  },
+  "mobile_browser_emulation": {
+    "login": true,
+    "welcome_note_visible": true
+  },
+  "restart": {
+    "restart_persistence": true,
+    "welcome_sha256": "360852140d13e568d2e7c37e3308d3ce0ead2f09800921869d5c3b5359d864fa",
+    "synthetic_note_deleted": true,
+    "running": true,
+    "image": "triliumnext/trilium:v0.106.0@sha256:be93e82699b12950ac4e2e7b565ce092fe215b8dd6ddfc47921e37b49e6a0e8b",
+    "initial_backup_bytes": 1593344
+  }
+}

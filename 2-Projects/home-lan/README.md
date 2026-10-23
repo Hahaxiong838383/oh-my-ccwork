@@ -4,6 +4,7 @@
 
 | 目录 | 内容 |
 |---|---|
+| [trilium](trilium/README.md) | TriliumNext部署、版本锁与每周维护PR |
 | [oknote](oknote/README.md) | 飞牛 2 OK笔记安装、功能分析与开启、维护复盘 |
 
 更新顺序：先改 home-lan 并提交，再按快照清单同步本仓。不要独立修改快照或把 runtime 原始程序证据、NAS 备份、私人笔记与凭据加入 Git。

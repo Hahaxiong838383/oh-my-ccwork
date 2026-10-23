@@ -1,0 +1,66 @@
+{
+  "source_repository": "local home-lan",
+  "source_commit": "1f7265338377d870b8121061b8b8bf61c7d2f878",
+  "files": [
+    {
+      "path": ".gitignore",
+      "source": "4-Assets/Code/trilium-maintenance/.gitignore",
+      "sha256": "862263fa1f46c20f0d1e4dac5ffcc75abd55c08211b2c3864c5f8764b9d87793"
+    },
+    {
+      "path": "README.md",
+      "source": "4-Assets/Code/trilium-maintenance/README.md",
+      "sha256": "7bc7f800017164d7a48c091e02e3968573fad2f8a5f09a38e2c1b1fc1a5ac328"
+    },
+    {
+      "path": "check-upstream.py",
+      "source": "4-Assets/Code/trilium-maintenance/check-upstream.py",
+      "sha256": "0df03c8b7dc50435d2e29de189f6333bb17b65068d05f76abed39a592c995fa9"
+    },
+    {
+      "path": "compose.yaml",
+      "source": "4-Assets/Code/trilium-maintenance/compose.yaml",
+      "sha256": "9e3537a08b7bf6e1368c6cf106998caadffdcd0cf4cdbe14ae7f7898986a6cd6"
+    },
+    {
+      "path": "deployed.json",
+      "source": "4-Assets/Code/trilium-maintenance/deployed.json",
+      "sha256": "1d96993f9b48532d6ae364d5841c4963f03e29bd048131f8d85549f36d4daf3c"
+    },
+    {
+      "path": "desired.json",
+      "source": "4-Assets/Code/trilium-maintenance/desired.json",
+      "sha256": "00dee2ad7c0acbb7a248d2c42525ae0984cdf311ac93a18a58651c27d431d4ae"
+    },
+    {
+      "path": "test_upstream.py",
+      "source": "4-Assets/Code/trilium-maintenance/test_upstream.py",
+      "sha256": "34b0ae84b4c7fde3ddde4280477b6282ecdfd60663a1fc3aeb4504599ba950e6"
+    },
+    {
+      "path": "trilium-upstream-check.service",
+      "source": "4-Assets/Code/trilium-maintenance/trilium-upstream-check.service",
+      "sha256": "962c3b340dce6ffca11c8540abc29ee5e38070229f59526fa8a9b6c60579b8c3"
+    },
+    {
+      "path": "trilium-upstream-check.timer",
+      "source": "4-Assets/Code/trilium-maintenance/trilium-upstream-check.timer",
+      "sha256": "0319792f587b26232892e8c277e883389510f76fd140b70eb48f41cf5c1a8792"
+    },
+    {
+      "path": "upstream.json",
+      "source": "4-Assets/Code/trilium-maintenance/upstream.json",
+      "sha256": "32ea22ea0c2d15540b283527b47a2cb57686d16ec742945dc9540781c22c3840"
+    },
+    {
+      "path": "validation.json",
+      "source": "4-Assets/Code/trilium-maintenance/validation.json",
+      "sha256": "9a9dd4af6d51b3ad5a2778e2135257fc8e7493c3531b1a293b78edca6218eb11"
+    },
+    {
+      "path": "DEPLOYMENT.md",
+      "source": "2-Projects/P01-家里局域网与飞牛/10-TriliumNext部署与上游跟踪.md",
+      "sha256": "9ae6c5148717360f8973937aaae072c97213e667c4379020697475e8b0726b4a"
+    }
+  ]
+}

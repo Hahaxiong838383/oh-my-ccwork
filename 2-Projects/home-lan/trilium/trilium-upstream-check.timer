@@ -1,0 +1,10 @@
+[Unit]
+Description=Track TriliumNext every Monday at 09:20 China time
+
+[Timer]
+OnCalendar=Mon *-*-* 09:20:00 Asia/Shanghai
+Persistent=true
+Unit=trilium-upstream-check.service
+
+[Install]
+WantedBy=timers.target

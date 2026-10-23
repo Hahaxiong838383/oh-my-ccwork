@@ -1,0 +1,8 @@
+{
+  "version": "v0.106.0",
+  "source_commit": "c0fdceba3b59af8a4473c6944b4f176121bb9788",
+  "image": "triliumnext/trilium:v0.106.0@sha256:be93e82699b12950ac4e2e7b565ce092fe215b8dd6ddfc47921e37b49e6a0e8b",
+  "container": "trilium",
+  "host": "FNOS-2",
+  "port": 38081
+}
