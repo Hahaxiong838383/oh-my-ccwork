@@ -149,6 +149,22 @@ pub struct Speech {
     auto_replayed: bool,
 }
 
+struct PendingTopic {
+    query: String,
+    since: Instant,
+    route: Option<(String, Decision)>,
+}
+const TOPIC_TAIL_MS: u64 = 1200;
+fn bare_topic(q: &str) -> bool {
+    (2..=24).contains(&q.chars().count()) &&
+        !["什么","为什么","怎么","多少","哪里","哪年","何时","如何","吗","天气","气温","下雨"].iter().any(|p|q.contains(p))
+}
+fn question_tail(t: &str) -> bool {
+    // Only an immediately adjacent predicate, never a new named topic or personal chat.
+    t.chars().count()<=40 &&
+        ["主要吃","吃什么","是什么","是怎么","是如何","为什么","怎么","有多","有几","多少","在哪里","什么时候","能不能","会不会"].iter().any(|p|t.starts_with(p)) &&
+        !["帮我","改查","不用","不要","我们","你","我","；",";"].iter().any(|p|t.contains(p))
+}
 pub struct SearchSession {
     api: Api,
     tx: mpsc::Sender<Command>,
@@ -171,6 +187,8 @@ pub struct SearchSession {
     routing: Option<RoutingSnapshot>,
     last_route: Option<(String,Decision)>,
     routing_task: Option<JoinHandle<()>>,
+    clarified_at: Option<Instant>,
+    pending_topic: Option<PendingTopic>,
 }
 pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
     let Some(rest) = room.strip_prefix("sn-") else {
@@ -221,12 +239,36 @@ impl SearchSession {
             suppress_auto: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task,
+            clarified_at:None,pending_topic:None,
         })
     }
     pub fn interpret(&mut self, text: &str) -> Option<Intent> {
-        let version=self.routing.as_ref().map(|r|r.version.as_str()).unwrap_or("");
-        let decision=self.query_intent.route(text,self.started.elapsed().as_millis() as u64,self.routing.as_ref().map(|r|&r.config),version);
+        let mut joined = None;
+        let mut deferred = None;
+        if let Some(pending) = self.pending_topic.take() {
+            let tail=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
+            if pending.since.elapsed() <= Duration::from_millis(TOPIC_TAIL_MS) && question_tail(tail) {
+                joined=Some(format!("帮我查一下{}{}",pending.query,tail));
+                self.clarified_at=None;
+                tracing::info!("background search clarification fragments joined");
+            } else {
+                deferred=Some(pending);
+            }
+            // New explicit search/control supersedes the unsent fragment.
+        }
+        let text=joined.as_deref().unwrap_or(text);
+        let version=self.routing.as_ref().map(|r|r.version.clone()).unwrap_or_default();
+        let decision=self.query_intent.route(text,self.started.elapsed().as_millis() as u64,self.routing.as_ref().map(|r|&r.config),&version);
         let action=decision.intent();
+        if action.is_none(){
+            self.clarified_at=None;
+            // Use the actual hot-configured route, including natural weather.
+            // Unrelated chat continues immediately; new searches supersede the fragment.
+            if let Some(pending)=deferred {
+                self.last_route=pending.route;
+                self.submit(pending.query,false);
+            }
+        }
         tracing::info!(version,rule_id=%decision.rule_id,action=%decision.action,"background task route");
         self.last_route=Some((version.to_owned(),decision));
         action
@@ -240,13 +282,17 @@ impl SearchSession {
         match action {
             Intent::Clarify => {
                 if self.last_route.as_ref().is_some_and(|(_,d)|d.action=="clarify_city") {self.notice("想查哪个城市的天气？请告诉我城市名。");}
-                else {self.notice("你想查什么？请说出具体主题，我再帮你查询。");}
+                else {self.clarified_at=Some(Instant::now());self.notice("想查什么？");}
             },
             Intent::Search(query) => {
                 // One active query per session in v1.
                 if self.busy {
                     self.notice("我还在查刚才的问题；要换一个，可以说“改查”。");
                     return false;
+                }
+                if self.clarified_at.take().is_some_and(|at|at.elapsed()<=Duration::from_secs(10)) && bare_topic(&query) {
+                    self.pending_topic=Some(PendingTopic{query,since:Instant::now(),route:self.last_route.clone()});
+                    return true;
                 }
                 return self.submit(query, false);
             }
@@ -348,10 +394,13 @@ impl SearchSession {
     }
     /// Called on the existing audio tick; drains messages only, never awaits a lock or HTTP.
     pub fn poll(&mut self, safe: bool) -> Option<String> {
+        if self.pending_topic.as_ref().is_some_and(|p|p.since.elapsed()>=Duration::from_millis(TOPIC_TAIL_MS)) {
+            let p=self.pending_topic.take().unwrap();self.last_route=p.route;self.submit(p.query,false);
+        }
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::Routing {snapshot} => {
-                    if self.routing.as_ref().map(|r|&r.version)!=snapshot.as_ref().map(|r|&r.version) {self.query_intent.clear();}
+                    if self.routing.as_ref().map(|r|&r.version)!=snapshot.as_ref().map(|r|&r.version) {self.query_intent.clear();self.pending_topic=None;self.clarified_at=None;}
                     self.routing=snapshot;
                     if let Some(r)=&self.routing {let _=self.tx.try_send(Command::RoutingAck{version:r.version.clone()});}
                 },
@@ -471,6 +520,7 @@ impl SearchSession {
     }
     pub fn suppress_auto_replay(&mut self) {
         self.suppress_auto = true;
+        self.pending_topic=None;self.clarified_at=None;
         self.query_intent.clear();
         self.auto_pending = false;
         // Invalidate an automatic revalidation already in flight without blocking ordinary speech.
@@ -610,7 +660,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                         };
                         let rejected = matches!(&response, Ok(Err(e)) if e.to_string().starts_with("search_http_"));
                         let text = match response {
-                            Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下，你可以继续和我聊。" },
+                            Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下。" },
                             _ if rejected => "这次搜索没有接单，你可以继续和我聊。",
                             _ => "暂时没能确认搜索是否接单，你可以继续和我聊。",
                         };
@@ -772,10 +822,76 @@ mod tests {
             suppress_auto: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task:None,
+            clarified_at:None,pending_topic:None,
             },
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn clarified_topic_split_by_asr_is_one_complete_search_not_foreground_chat() {
+        let (mut s,_,mut commands)=test_session();
+        let ask=s.interpret("帮我查一下").unwrap();s.command(ask);
+        let topic=s.interpret("三角龙。").unwrap();s.command(topic);
+        assert!(commands.try_recv().is_err(),"bare clarification topic needs a bounded tail window");
+        s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(600);
+        let tail=s.interpret("主要吃什么？");
+        assert_eq!(tail,Some(Intent::Search("三角龙主要吃什么".into())));
+        s.command(tail.unwrap());
+        match commands.try_recv().unwrap(){Command::Submit{query,..}=>assert_eq!(query,"三角龙主要吃什么"),_=>panic!("one query")}
+        assert!(commands.try_recv().is_err(),"do not create then replace an incomplete task");
+    }
+    #[tokio::test]
+    async fn clarification_topic_never_waits_unrelated_chat_or_survives_cancel() {
+        for next in ["我今天画了小猫","不用查了，我们聊别的","帮我查火星为什么是红色"] {
+            let (mut s,_,mut commands)=test_session();
+            let ask=s.interpret("帮我查一下").unwrap();s.command(ask);
+            let topic=s.interpret("三角龙").unwrap();s.command(topic);
+            assert!(commands.try_recv().is_err());
+            let action=s.interpret(next);
+            if next.starts_with("我今天") {
+                assert!(action.is_none(),"unrelated chat goes straight to foreground");
+                assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="三角龙"));
+            } else {
+                s.command(action.unwrap());
+                while let Ok(c)=commands.try_recv(){if let Command::Submit{query,..}=c{assert!(!query.contains("三角龙"));}}
+            }
+        }
+    }
+    #[tokio::test]
+    async fn complete_clarification_question_is_submitted_without_tail_wait() {
+        let (mut s,_,mut commands)=test_session();
+        let ask=s.interpret("帮我查一下").unwrap();s.command(ask);
+        let question=s.interpret("三角龙主要吃什么").unwrap();s.command(question);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="三角龙主要吃什么"));
+    }
+    #[tokio::test]
+    async fn hot_configured_weather_supersedes_unsent_clarification_topic() {
+        let (mut s,_,mut commands)=test_session();
+        s.routing=Some(RoutingSnapshot{version:"r7-aaaaaaaaaaaaaaaaaaaaaaaa".into(),config:RoutingConfig::default()});
+        let ask=s.interpret("帮我查一下").unwrap();s.command(ask);
+        let topic=s.interpret("三角龙").unwrap();s.command(topic);
+        let weather=s.interpret("今天北京的天气").unwrap();
+        assert!(commands.try_recv().is_err(),"natural weather must not submit the old topic first");
+        s.command(weather);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query.contains("北京")&&!query.contains("三角龙")));
+        assert!(commands.try_recv().is_err());
+    }
+    #[tokio::test]
+    async fn bare_topic_times_out_into_one_search_and_same_words_without_clarify_stay_chat() {
+        let (mut s,_,_)=test_session();
+        assert!(s.interpret("三角龙").is_none());
+        assert!(s.interpret("主要吃什么").is_none());
+        // A fresh session has no recent question eligible for a search handoff.
+        let (mut s,_,mut commands)=test_session();
+        let ask=s.interpret("帮我查一下").unwrap();s.command(ask);
+        let topic=s.interpret("三角龙").unwrap();s.command(topic);
+        assert!(commands.try_recv().is_err(),"a partial topic must not be submitted early");
+        assert!(s.pending_topic.is_some(),"expected unsent topic");
+        s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(TOPIC_TAIL_MS+1);
+        s.poll(false);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="三角龙"));
+        s.poll(false);assert!(commands.try_recv().is_err());
     }
     #[tokio::test]
     async fn search_handoff_queue_acceptance_and_busy_rejection() {
@@ -1116,7 +1232,7 @@ mod tests {
         assert!(ticks>=20,"foreground scheduling must remain available during HTTPS delay");
         let event=tokio::time::timeout(Duration::from_secs(5),rx.recv()).await.unwrap().unwrap();
         let Event::Ack{text,..}=event else {panic!("expected acknowledgement")};
-        assert_eq!(text,"好，我查一下，你可以继续和我聊。");
+        assert_eq!(text,"好，我查一下。");
         let requests=bodies.lock().unwrap();assert_eq!(requests.len(),2);assert_eq!(requests[0],requests[1]);assert_eq!(requests[0]["turn"],"same-turn");
         actor.abort();server.abort();
     }

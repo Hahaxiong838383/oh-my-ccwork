@@ -105,6 +105,7 @@ pub struct PipelineConfig {
     pub tts_first_clause_min: usize,
     /// B23：首句逗号切默认只对 ordered 首句轮生效（env `TTS_FIRST_CLAUSE_ORDERED_ONLY`，默认 1）；0 = 所有轮次含未签设备——上产前拍板。
     pub tts_first_clause_ordered_only: bool,
+    pub tts_latency_v1: bool,
     /// B23 产品首句 v1：input_ready 后这么久没有 begin → 视为端侧没走首句，切回 RTC（env `ORDERED_BEGIN_TIMEOUT_MS`，默认 2500）。
     pub ordered_begin_timeout_ms: u64,
     /// B25（codex §3.4 回声反例）：首句→RTC 切换时回灌多少毫秒的 RTC 追补音频（env `ORDERED_RTC_CATCHUP_MS`）。
@@ -214,6 +215,7 @@ impl PipelineConfig {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
             tts_first_clause_ordered_only: std::env::var("TTS_FIRST_CLAUSE_ORDERED_ONLY").map(|v| v != "0").unwrap_or(true),
+            tts_latency_v1: crate::tts::latency_mode(),
             ordered_begin_timeout_ms: std::env::var("ORDERED_BEGIN_TIMEOUT_MS")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -3468,7 +3470,8 @@ impl Orchestrator {
             let next_turn = self.next_turn_id + 1; // picked 的轮紧接 start_turn 用此 id
             // B(2026-09-09):ordered 首句 + 隔离开关 → 语义桶最短完整条;打断轮/普通轮/开关关 → 原策略。
             // ordered 来源随 CommitInfo 带出(gate 的标记在 poll_commit 返回前已复位,此处不能再读它)。
-            let shortest = self.cfg.ordered_filler_shortest && commit.input_ended && !boost;
+            let shortest = (self.cfg.ordered_filler_shortest && commit.input_ended
+                || self.cfg.tts_latency_v1 && self.search.is_some()) && !boost;
             // B11：投机命中 = LLM 已在流、TTS 首块 ≈0.3 s 内到——垫句反而成了唯一等待（真机 …1683：正文 +297 ms 就绪等到 +999）。
             let spec_lead_ms = spec.as_ref().map(|sp| sp.started.elapsed().as_millis() as u64).unwrap_or(0);
             // B12：投机「跑了多久」≠ 正文就绪（真机 …1684 跳了垫句仍静默 1.04 s）。改为三条件：

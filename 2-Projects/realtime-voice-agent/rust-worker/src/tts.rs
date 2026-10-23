@@ -107,9 +107,16 @@ impl TtsCfg {
         match self {
             Self::Volc(c) => tts_volc::synthesize(c, text, audio_tx).await,
             Self::Xfyun(c) => {
+                let waiting = std::time::Instant::now();
                 let conn = warm.take().await;
+                let wait_ms = waiting.elapsed().as_millis() as u64;
                 *warm = self.start_prewarm(); // 先为下一句排队,再开始本句合成
-                tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await
+                let (provider_ms, bytes) = tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await?;
+                // The caller starts its timer before take(): include the handshake
+                // wait that used to disappear from body_ready_since_turn_ms.
+                let first_pcm_ms = wait_ms.saturating_add(provider_ms);
+                tracing::info!(prewarm_wait_ms=wait_ms,provider_ttfb_ms=provider_ms,first_pcm_ms,"tts dispatch timing");
+                Ok((first_pcm_ms, bytes))
             }
         }
     }
@@ -120,6 +127,10 @@ impl TtsCfg {
 /// 不用换二进制。默认开。
 fn preconnect_enabled() -> bool {
     preconnect_from(std::env::var("XFYUN_TTS_PRECONNECT").ok().as_deref())
+}
+
+pub fn latency_mode() -> bool {
+    std::env::var("P003_TTS_LATENCY_V1").is_ok_and(|v|v=="1")
 }
 
 /// 纯函数版,单测走这条(进程级 env 会被并行测试互相污染)。
@@ -145,13 +156,20 @@ impl Prewarm {
     }
 
     fn arm(cfg: tts_xfyun::XfyunTtsConfig) -> Self {
-        Self(Some(tokio::spawn(async move { tts_xfyun::connect_warm(&cfg).await })))
+        Self(Some(tokio::spawn(async move {
+            static HEDGES: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+            if latency_mode() {
+                connect_hedged(||tts_xfyun::connect_warm(&cfg),std::time::Duration::from_millis(650),&HEDGES).await
+            } else { tts_xfyun::connect_warm(&cfg).await }
+        })))
     }
 
     /// 取走已建好的连接。建连失败/被取消**不算错误**——
     /// 返回 None,调用方现连即可,预热失败绝不能让整句合成失败。
     async fn take(&mut self) -> Option<tts_xfyun::Warm> {
-        match self.0.take() {
+        // Keep ownership while awaiting. Cancelling this future must run Drop
+        // on the handle instead of detaching an in-flight socket handshake.
+        let result = match self.0.as_mut() {
             None => None,
             Some(h) => match h.await {
                 Ok(Ok(w)) => Some(w),
@@ -161,7 +179,9 @@ impl Prewarm {
                 }
                 Err(_) => None, // task 被 abort(turn 结束)
             },
-        }
+        };
+        self.0.take();
+        result
     }
 }
 
@@ -174,9 +194,100 @@ impl Drop for Prewarm {
     }
 }
 
+// Connector seam for deterministic latency/cancellation regression tests.
+async fn connect_hedged<T, F, Fut>(connect: F, delay: std::time::Duration, limit: &tokio::sync::Semaphore) -> Result<T>
+where F: Fn() -> Fut, Fut: std::future::Future<Output=Result<T>> {
+    let primary=connect();tokio::pin!(primary);
+    tokio::select! {
+        result=&mut primary=>return result,
+        _=tokio::time::sleep(delay)=>{}
+    }
+    // Never queue for a spare: at most two extra handshakes process-wide.
+    let Ok(_permit)=limit.try_acquire() else {return primary.await;};
+    tracing::info!("tts slow preconnect: one bounded spare started");
+    let spare=connect();tokio::pin!(spare);
+    // Losing futures drop their sockets; failures cannot cancel a healthy peer.
+    tokio::select! {
+        result=&mut primary=>match result {Ok(w)=>Ok(w),Err(_)=>spare.await},
+        result=&mut spare=>match result {Ok(w)=>Ok(w),Err(_)=>primary.await},
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn cancelled_warm_wait_drops_the_underlying_connection_task() {
+        let (started,ready)=tokio::sync::oneshot::channel();
+        let (dropped,done)=tokio::sync::oneshot::channel();
+        struct Notify(Option<tokio::sync::oneshot::Sender<()>>);
+        impl Drop for Notify {fn drop(&mut self){if let Some(s)=self.0.take(){let _=s.send(());}}}
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _guard=Notify(Some(dropped));let _=started.send(());
+            std::future::pending::<Result<tts_xfyun::Warm>>().await
+        })));
+        let outer=tokio::spawn(async move {warm.take().await;});
+        ready.await.unwrap();tokio::task::yield_now().await;outer.abort();let _=outer.await;
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(150),done).await.is_ok(),"cancelled turn must not detach its in-flight preconnect");
+    }
+
+    #[tokio::test]
+    async fn slow_preconnect_is_hedged_without_waiting_for_the_slow_socket() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(1);
+        let t=std::time::Instant::now();
+        let got=connect_hedged(||{
+            let n=calls.fetch_add(1,Ordering::SeqCst);
+            async move{tokio::time::sleep(std::time::Duration::from_millis(if n==0{600}else{15})).await;Ok(n)}
+        },std::time::Duration::from_millis(40),&limit).await.unwrap();
+        assert_eq!(got,1,"the one delayed spare must beat the slow initial handshake");
+        assert!(t.elapsed()<std::time::Duration::from_millis(300));
+        assert_eq!(calls.load(Ordering::SeqCst),2);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn healthy_preconnect_uses_one_socket_and_zero_extra_wait() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(1);
+        let got=connect_hedged(||{calls.fetch_add(1,Ordering::SeqCst);async {Ok(7)}},std::time::Duration::from_millis(40),&limit).await.unwrap();
+        assert_eq!(got,7);assert_eq!(calls.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn spare_failure_keeps_primary_and_capacity_limit_never_queues() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        for available in [0,1] {
+            let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(available);
+            let value=connect_hedged(|| {
+                let n=calls.fetch_add(1,Ordering::SeqCst);
+                async move {if n==1{anyhow::bail!("synthetic spare failure");}
+                    tokio::time::sleep(std::time::Duration::from_millis(40)).await;Ok(42)}
+            },std::time::Duration::from_millis(5),&limit).await.unwrap();
+            assert_eq!(value,42);assert_eq!(calls.load(Ordering::SeqCst),available+1);
+            assert_eq!(limit.available_permits(),available);
+        }
+    }
+
+    #[tokio::test]
+    async fn cancelling_hedged_connect_drops_both_attempts_and_releases_permit() {
+        use std::sync::{Arc,atomic::{AtomicUsize,Ordering}};
+        struct Count(Arc<AtomicUsize>);
+        impl Drop for Count{fn drop(&mut self){self.0.fetch_sub(1,Ordering::SeqCst);}}
+        let active=Arc::new(AtomicUsize::new(0));let limit=Arc::new(tokio::sync::Semaphore::new(1));
+        let a=active.clone();let l=limit.clone();
+        let task=tokio::spawn(async move {
+            connect_hedged(||{let a=a.clone();async move {
+                a.fetch_add(1,Ordering::SeqCst);let _count=Count(a);
+                std::future::pending::<Result<usize>>().await
+            }},std::time::Duration::from_millis(5),&l).await
+        });
+        tokio::time::timeout(std::time::Duration::from_secs(1),async {
+            while active.load(Ordering::SeqCst)!=2 {tokio::task::yield_now().await;}
+        }).await.unwrap();
+        task.abort();let _=task.await;
+        assert_eq!(active.load(Ordering::SeqCst),0);assert_eq!(limit.available_permits(),1);
+    }
 
     #[test]
     fn sample_rate_is_uniform_across_providers() {
@@ -272,4 +383,3 @@ mod tests {
         assert_eq!(x.voice(), "x6_lingxiaoxuan_pro");
     }
 }
-
