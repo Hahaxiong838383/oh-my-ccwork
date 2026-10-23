@@ -21,6 +21,8 @@ SOURCE = Path.home() / "home-lan/runtime/trilium-upstream"
 STATE = Path.home() / ".local/state/trilium"
 PROXY = "http://127.0.0.1:10808"
 GIT_PROXY = "socks5h://127.0.0.1:10808"
+# Existing vault item "GitHub token - 大权限"; the other token cannot access PRs.
+GITHUB_VAULT_ID = "6f33610c-87c2-401c-b9c4-8b8419cf577f"
 
 
 def version(value):
@@ -43,13 +45,14 @@ def save(value):
 class Github:
     def __init__(self):
         result = subprocess.run(
-            ["git", "-C", str(Path.home() / "mycc"), "credential", "fill"],
-            input="protocol=https\nhost=github.com\n\n", capture_output=True,
-            text=True, timeout=30, env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})
-        values = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
-        if result.returncode or not values.get("password"):
-            raise RuntimeError("github_credential_unavailable")
-        self.token = values["password"]
+            [str(Path.home() / ".local/bin/vw"), "get", "item", GITHUB_VAULT_ID],
+            capture_output=True, text=True, timeout=60)
+        if result.returncode:
+            raise RuntimeError("github_vault_lookup_failed")
+        item = json.loads(result.stdout)
+        self.token = (item.get("login") or {}).get("password")
+        if not self.token:
+            raise RuntimeError("github_vault_token_missing")
         self.opener = urllib.request.build_opener(
             urllib.request.ProxyHandler({"https": PROXY, "http": PROXY}))
 
@@ -210,6 +213,13 @@ def main():
             result = {"status": "error", "error_type": type(error).__name__, "production_changed": False}
             if isinstance(error, RuntimeError):
                 result["reason"] = str(error)
+            if isinstance(error, urllib.error.HTTPError):
+                result["http_status"] = error.code
+                result["endpoint"] = urllib.parse.urlsplit(error.url).path
+                try:
+                    result["message"] = json.loads(error.read()).get("message", "")[:250]
+                except (ValueError, UnicodeDecodeError):
+                    pass
         result.update(checked_at=dt.datetime.now(dt.timezone.utc).isoformat(), started_at=start)
         save(result)
         print(dump(result), end="")

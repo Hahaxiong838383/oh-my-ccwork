@@ -33,3 +33,10 @@
 用户本轮明确指定Docker，优先于本仓一般“应用中心优先”建议。trim-cli fnos2读取Compose再次报OAuth refresh client mismatch，未反复刷新或代办OAuth；通过已有授权SSH公钥和密码库sudo通道部署。首次初始化只绑定loopback，设置并入库密码后才绑定NAS局域网地址。
 
 部署与恢复验证明细见维护目录的 validation.json 和 README.md。
+
+## 实际接线验收
+
+- systemd后台真实创建草稿PR https://github.com/Hahaxiong838383/oh-my-ccwork/pull/2 ；仅上游跟踪基线与评审说明两文件，生产版本未改。再次运行exit0、pr_pending_review，PR head保持。下次2026-10-26 09:20 CST。
+- 后台不能使用本轮会话的Codeg credential helper；普通GitHub token缺PR权限（403）。最终读取密码库既有「GitHub token - 大权限」条目，仅内存使用，无新建/轮换GitHub凭据。
+- 重启容器后欢迎文档哈希保持；临时验收笔记已删除；原有21容器名称、镜像和端口与部署前一致。
+- 自动周期备份未到首个周期；已创建initial备份并验证，不能把开关启用写成已观察到定时备份。

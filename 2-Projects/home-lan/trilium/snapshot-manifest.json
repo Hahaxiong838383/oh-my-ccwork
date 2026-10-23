@@ -1,6 +1,6 @@
 {
   "source_repository": "local home-lan",
-  "source_commit": "1f7265338377d870b8121061b8b8bf61c7d2f878",
+  "source_commit": "cb3164c59c8d8d8ccb7f5826d40d60fd185ffe64",
   "files": [
     {
       "path": ".gitignore",
@@ -10,12 +10,12 @@
     {
       "path": "README.md",
       "source": "4-Assets/Code/trilium-maintenance/README.md",
-      "sha256": "7bc7f800017164d7a48c091e02e3968573fad2f8a5f09a38e2c1b1fc1a5ac328"
+      "sha256": "9d34c3a2fb5c7b31f59d2a8fd216f5f3fdb2e60e11ae4fe81a642bf2e2ef66e4"
     },
     {
       "path": "check-upstream.py",
       "source": "4-Assets/Code/trilium-maintenance/check-upstream.py",
-      "sha256": "0df03c8b7dc50435d2e29de189f6333bb17b65068d05f76abed39a592c995fa9"
+      "sha256": "a4a970966bf725a5fb4f84684509a35456e06e0c15f53cd732da5f83ee4ca374"
     },
     {
       "path": "compose.yaml",
@@ -55,12 +55,17 @@
     {
       "path": "validation.json",
       "source": "4-Assets/Code/trilium-maintenance/validation.json",
-      "sha256": "9a9dd4af6d51b3ad5a2778e2135257fc8e7493c3531b1a293b78edca6218eb11"
+      "sha256": "4d0394a93018609580792fff9b7fd8d4f19bff4cedc7abe968d587b153e96c3a"
+    },
+    {
+      "path": "weekly-validation.json",
+      "source": "4-Assets/Code/trilium-maintenance/weekly-validation.json",
+      "sha256": "d09ce744d018f180232b5751fea8f7b2fdd7a13e27e76b1197b5bce7435d7ecd"
     },
     {
       "path": "DEPLOYMENT.md",
       "source": "2-Projects/P01-家里局域网与飞牛/10-TriliumNext部署与上游跟踪.md",
-      "sha256": "9ae6c5148717360f8973937aaae072c97213e667c4379020697475e8b0726b4a"
+      "sha256": "2db5f5c63dadfcb81cc9e463b04c413460e36589a3f84f46946450d44aed2b77"
     }
   ]
 }

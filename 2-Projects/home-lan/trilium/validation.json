@@ -46,5 +46,23 @@
     "running": true,
     "image": "triliumnext/trilium:v0.106.0@sha256:be93e82699b12950ac4e2e7b565ce092fe215b8dd6ddfc47921e37b49e6a0e8b",
     "initial_backup_bytes": 1593344
-  }
+  },
+  "final_runtime": {
+    "backups": [
+      {
+        "name": "backup-deployment-validation-20261023.db",
+        "bytes": 1572864,
+        "quick_check": "ok"
+      },
+      {
+        "name": "backup-initial-20261023.db",
+        "bytes": 1593344,
+        "quick_check": "ok"
+      }
+    ],
+    "healthy": true,
+    "original_containers_unchanged": true
+  },
+  "automatic_backup_cycle_due": false,
+  "automatic_backup_note": "新库初始化时设置lastDaily/Weekly/MonthlyBackupDate；首个周期尚未到，已有两份主动创建并校验的备份。"
 }
