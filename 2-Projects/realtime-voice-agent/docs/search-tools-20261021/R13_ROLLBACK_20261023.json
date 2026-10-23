@@ -1,0 +1,123 @@
+{
+  "before": {
+    "worker": {
+      "at_ms": 1792741231449,
+      "backup": "/root/rust-worker/backups/search-canary-R13-20261023T074019Z",
+      "archive_sha256": "b24592f3f96fd017fe0b72a144ea5fb5e15b28f8d35b65bb3b90c9106ede4281",
+      "files": {
+        "/opt/p003-search-canary-20261021/voice-rust-worker": "b7dc862e68709ea2ebc5b0d69595821112effc75152d690fed548bad37cf5711",
+        "/opt/p003-search-canary-20261021/canary.env": "c1ae5577bb187fc9bdf37172b8f9b55bd09c17d7cdf790c1576707900eb74f0d",
+        "/opt/p003-search-canary-20261021/window.json": "97094338e93fb17a46bd17400698df25c9d3564dd570765db293f5bcce48c20a",
+        "/etc/systemd/system/p003-search-worker.service": "d576a1fd7d0b0bf1c60c7b3e9f222237b7bd520c857a04f4d7e6eaae5e764835"
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792857540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792741217318,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "brain": {
+      "at_ms": 1792741233961,
+      "backup": "/opt/p003/server/backups/search-canary-R13-20261023T074033Z",
+      "flags": {
+        "p003.search.canary.selected_sn": "BJP00326060100100004",
+        "p003.search.canary.enabled": "1",
+        "p003.search.canary.expires_at_ms": "1792857540000",
+        "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.agent": "p003-search-canary-20261021",
+        "p003.search.canary.started_at_ms": "1792585650087",
+        "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792585650087, \"BJP00326060100100004\": 1792632232079}"
+      },
+      "sha256": "082e5d76092d1beddb32ed552f7955dfe668a25e219196e16e6dc59879b7e9db",
+      "restore_scope": "only canary.enabled; never restore whole database"
+    }
+  },
+  "dispatch_closed": {
+    "at_ms": 1792741237726,
+    "dispatch_enabled": false
+  },
+  "rehearsal": [
+    {
+      "step": "deploy-preflight-brain",
+      "dispatch_closed": true,
+      "at_ms": 1792741886718
+    },
+    {
+      "step": "install-r13",
+      "at_ms": 1792741898364,
+      "restored": false,
+      "sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792741897276,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "846864",
+      "receipts_v1": "1",
+      "env_sha256": "85d7e7acdbd207cd598e9196de06413c0c27f8b75527a6ed2bb5586b40815654",
+      "assets_manifest_sha256": "246f34ebbf6c3d620b126a74ec9a1a32e882103d8dcf8ec41c37d4f2b84edc1c"
+    },
+    {
+      "step": "rollback-r12",
+      "at_ms": 1792741911380,
+      "restored": true,
+      "sha256": "b7dc862e68709ea2ebc5b0d69595821112effc75152d690fed548bad37cf5711",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792741910291,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "846935",
+      "receipts_v1": null,
+      "env_sha256": "c1ae5577bb187fc9bdf37172b8f9b55bd09c17d7cdf790c1576707900eb74f0d",
+      "assets_manifest_sha256": "246f34ebbf6c3d620b126a74ec9a1a32e882103d8dcf8ec41c37d4f2b84edc1c"
+    },
+    {
+      "step": "forward-r13",
+      "at_ms": 1792741923152,
+      "restored": false,
+      "sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792741921896,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "847013",
+      "receipts_v1": "1",
+      "env_sha256": "85d7e7acdbd207cd598e9196de06413c0c27f8b75527a6ed2bb5586b40815654",
+      "assets_manifest_sha256": "246f34ebbf6c3d620b126a74ec9a1a32e882103d8dcf8ec41c37d4f2b84edc1c"
+    }
+  ],
+  "dispatch_reopened": {
+    "at_ms": 1792742942777,
+    "dispatch_enabled": true,
+    "scope": [
+      "BJP00326060100100004",
+      "BJP00326070803800006"
+    ],
+    "expires_at_ms": 1792857540000,
+    "p2_open": false
+  },
+  "scope": "candidate binary and only two added environment keys; never restore entire database"
+}

@@ -1,0 +1,5 @@
+# 小可后台搜索 Worker 候选交付
+
+最新：[R13部署与验收](R13_ACCEPTANCE_20261023.md) · [真人用例](P003_SEARCH_R13_RECEIPTS_AND_DEVICE_TEST_20261023.md) · [测试证据](R13_TEST_RESULTS_20261023.json) · [回滚](R13_ROLLBACK_20261023.md) · [接续记忆](MEMORY.md)。
+
+R13于2026-10-23 16:09:02恢复原两台P1；截止仍10月24日23:59、P2关，待真机验收。接手重核线上状态，不拿快照当永久开窗。历史：[R12验收](R12_ACCEPTANCE_20261023.md)。

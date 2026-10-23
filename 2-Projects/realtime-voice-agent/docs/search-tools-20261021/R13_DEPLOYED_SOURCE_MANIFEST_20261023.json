@@ -1,0 +1,153 @@
+{
+  "worker_code_commit": "0001ed600e48d9bc4a26c5fe8d08e88c573264e5",
+  "worker_binary": {
+    "staged": true,
+    "bytes": 73461464,
+    "sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b"
+  },
+  "tested_build_inputs": {
+    "src/audit_capture.rs": "4b59e228dc3c4fe68efcdc902a413da6893f0bec10ca6d25d74090724acfde85",
+    "src/backchannel.rs": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "src/candidate.rs": "4b3a3d489db169c9f8ee95e8e01ce79a9ccc577a89e8223d79a39fd584c73c8e",
+    "src/caption_gate.rs": "33b73e3eb96ebcb21ec9644b8ed6f0a89ea9f004ecb57aab689e32573feb81e8",
+    "src/config.rs": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218",
+    "src/contract.rs": "fd57e2ecd11d523d9f44263d381ed94e4da6b2b82ec466fc7b879aafd9974ec4",
+    "src/control.rs": "17e659e03beef5f81fe732e40f2bfcb9a6bb86733b5d667709779a2bc971cff7",
+    "src/device_grammar.rs": "beb2a6adc33e4b2f932aacd1c348c6e42b427a51576283dc382e34220a7592c8",
+    "src/device_grammar_slot_matrix.rs": "3e92cfc577cd058276076f82c5a273d732157cf6d763797d6b1a43eadedccbf6",
+    "src/device_grammar_testdata.rs": "46e3d5411d664bdaf19d63d4506218c006c3ea0e9fbc8ced5483f4f667c17be3",
+    "src/device_intent.rs": "b45b98b03df87370cc28e2d3febb7a931a4d308d46294509c88d9194585023dc",
+    "src/device_ledger.rs": "7defc258595513afd15434f5e78f232076a9c9d4c9845d5da562636b42f94929",
+    "src/eot.rs": "0c6ca211e120145d986b4d950a5accb4dde243804659d9d4ac18778ea41dfbfe",
+    "src/eot_snapshot.rs": "0ffdcd2b28233c2b9552b8aa02363f5860db579a7357cd721e988d19260f0259",
+    "src/filler.rs": "0a3a5d49529d21c21a5f0452109c1ff3d60fb3a6083d20bfd6c59ddd892cf569",
+    "src/gate.rs": "bcfabf259a70d961cb1a777394429471defc7efabf1f7c53dd3762423a73541f",
+    "src/job.rs": "e821ff7e3bfe4dc4b6630127a3a45e53c0ebefadf54444e20ca9695ae06165d0",
+    "src/llm.rs": "da13444266f7a70c19320785e2f0379405657b569bb3546bbed107358ad51153",
+    "src/main.rs": "49dd2c33a305ac2d82fd2252c9030b8b7d57d5b7f7f13226aedb0b865e1af71d",
+    "src/ordered_pcm.rs": "1781914dad34a0981ca81b3ddc5390acdd46318243bd569b73d1192f1d41f85a",
+    "src/pipeline.rs": "f6844ab4e55335231fb1ed46e5a06aca11c488d74f8ad3ca52570896c2108c3b",
+    "src/playout.rs": "fc8fb62d08dee2496b891d166036be287cfae703ac7afe67995c8a7c89a03510",
+    "src/preflight.rs": "950bb416101f68868b3bc19440affc5e2e372f80669f35155d8218e7fc2e2f63",
+    "src/ready_confirm.rs": "a0fa66795ea21c21d40f671d2e781776647735da34cf6b70c0c59b2ddb527f70",
+    "src/say_defer.rs": "bbdafa12d8040ae4ebac8fab8bb74b2d0725e6071cd48b45e17b136dc6b4e6af",
+    "src/search_canary.rs": "4c9f5c79f1974c72a556ded6492f31662f7986ae18029b7826467fce53bce399",
+    "src/search_policy.rs": "4aa48ee22345056357f83a2225d5ba855297fa61aa2a2a5eb2980ab55d93d29b",
+    "src/search_tasks.rs": "cbccb922cbd7d6a17b93875c1743d4d8b97827b9e000fc3e34cce8dfc713290b",
+    "src/segmenter.rs": "a044798a0afb58f33ef272bb622bd3764442be84a3958c66af02894d30571199",
+    "src/speaker_id.rs": "450f01eb5f18ab33ae805562deda12e0933d9d2fdb7e4a8de19f72eacb6670d0",
+    "src/stt_volc.rs": "8e622b2361e904747b9e47ad831db4a212aa5ce41cf4c5c62c5709585c86ab3d",
+    "src/textproc.rs": "55f462363e82e38a712b27f374fdd0344e79d61ce061fc945fe3630dc8caed7c",
+    "src/token.rs": "9e5c7d3d0d5c18e6c5218c86e03e6aba8bfd3b9e186e623c1ac47d1f576b1b22",
+    "src/transcript_pub.rs": "e6ca31d914a16934d020048f04f50e192a6c1e583cfa511afe7563804f94ae66",
+    "src/tts.rs": "ae8987afde3e72ebef3d894f7ff5accd3879e51bc3ea5e1c02d59fd0979645a7",
+    "src/tts_volc.rs": "6a333e155efd0757890271329bbfbb35cc810a6fae71a8ef5cceb933fd6b3600",
+    "src/tts_xfyun.rs": "001d5669f6353ae20e799da430f36ebf29c84b702b29cd77b889ce12e18b5f0d",
+    "src/turn.rs": "537376f6301a2718a40d2797f67565ef7850a589704f6b03c589168232f5b977",
+    "src/vad.rs": "3cf2bca4621e5dacc7efcf7766cac88e0a2ad9d7db0a3f08348957eaf301c7ab",
+    "src/volc.rs": "c58ab6604c65f1c3107307318c7478ae6aa7edf1b489f0626ef9a601423810e3",
+    "src/worker.rs": "fe198a5666092abc4472014b4f5f4b6882908d42bb2c26f45287d4826af5b2b3",
+    "Cargo.toml": "4e229eef4f4b75dad8fbac6ff6d9da5726fc0273948ecaf793f6fca0ab889824",
+    "Cargo.lock": "6e9da0052d2c477166c8b2e148f537cbdd22844cae01bf620a0cadf322bd394d",
+    "../../../4-Assets/contracts/p003-search-task-v1.json": "7c3d30bd97df3df2341d105644372dad9587a33f40e541acf5b7f7993bfec7fc",
+    "src/search_policy_cases.rs": "41dfa3d016a46592bb1ac2e12841f37fa1771d4b5e9f447a04a3359f6ad97bdf",
+    "src/search_routing.rs": "315072cabc172e4dcc545e7fc9cb28d048073ea93885679265b7d298c381faaa",
+    "src/search-routing-defaults.json": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+    "tools/search-route-preview/Cargo.toml": "0385627127c0757ab95cdfd6dfe72ecb050b2f8bfca51ba58ec0c278df221d94",
+    "tools/search-route-preview/Cargo.lock": "a0627208a2bcf9d1d94a2891822a3d11ae196810d845c455c411f2ed8ae950dd",
+    "tools/search-route-preview/src/main.rs": "483099c3e941b8ee9d489d7dafea450c193ae235a0840792c5cc205db96702dc",
+    "src/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "src/search_receipts.rs": "ad9b1aa0c73439b7c4eb9e3612922645424c623f3fa405364c4a350a7ab387dd"
+  },
+  "generator_sha256": "2c11079f558bdbab5ec414b0d82b8398888fd5cb95640ad339f0a349b02aa7f8",
+  "audio": {
+    "provider": "xfyun",
+    "voice": "x6_lingxiaoxuan_pro",
+    "durations_ms": {
+      "lookup": 1400.0,
+      "find": 1120.0,
+      "search": 1240.0,
+      "weather": 1480.0,
+      "news": 1280.0,
+      "clarify": 1560.0
+    },
+    "manifest_sha256": "246f34ebbf6c3d620b126a74ec9a1a32e882103d8dcf8ec41c37d4f2b84edc1c",
+    "path": "/opt/p003-search-canary-20261021/search-receipts-r13",
+    "at_ms": 1792741063126,
+    "manifest": {
+      "version": 1,
+      "provider": "xfyun",
+      "voice": "x6_lingxiaoxuan_pro",
+      "clips": [
+        {
+          "id": "lookup",
+          "file": "lookup.wav",
+          "text": "我查查。",
+          "sha256": "c87fd6f450631eba320acd22717ab9a6b05bc7a1ccd400f8d7349ddde14b652b"
+        },
+        {
+          "id": "find",
+          "file": "find.wav",
+          "text": "我找找。",
+          "sha256": "ed8ce1ef80f084e11d1297daf28bca17f658dde303f0da1546d8c8268e37dd80"
+        },
+        {
+          "id": "search",
+          "file": "search.wav",
+          "text": "我搜搜。",
+          "sha256": "8f51eec631a75d8b0fd53d33fa8d964d2700722e9b0f685b1f71f356e63eeffe"
+        },
+        {
+          "id": "weather",
+          "file": "weather.wav",
+          "text": "查查天气。",
+          "sha256": "bcdb1f56dfbc3a6352ef3aa76dc1e6c1e49e1b97117baff9f58b1abd42a238be"
+        },
+        {
+          "id": "news",
+          "file": "news.wav",
+          "text": "看看新闻。",
+          "sha256": "2c1538827343553c777c7e243402d03aeeed452fd1ff0f047150d6d6cbe02331"
+        },
+        {
+          "id": "clarify",
+          "file": "clarify.wav",
+          "text": "想查什么？",
+          "sha256": "24424f6c7023b9216ee6a572bee685a0b539bce1865677a06884d60020d6943e"
+        }
+      ]
+    }
+  },
+  "audio_energy": {
+    "lookup": {
+      "first_energy_frame_ms": 60.0,
+      "duration_ms": 1400.0
+    },
+    "find": {
+      "first_energy_frame_ms": 60.0,
+      "duration_ms": 1120.0
+    },
+    "search": {
+      "first_energy_frame_ms": 60.0,
+      "duration_ms": 1240.0
+    },
+    "weather": {
+      "first_energy_frame_ms": 80.0,
+      "duration_ms": 1480.0
+    },
+    "news": {
+      "first_energy_frame_ms": 80.0,
+      "duration_ms": 1280.0
+    },
+    "clarify": {
+      "first_energy_frame_ms": 120.0,
+      "duration_ms": 1560.0
+    }
+  },
+  "log_sha256": {
+    "build-red.log": "a28358a870ac205b4d95c015c3386c986fa3f1bd6286edc8160b3c74e6dd2c9f",
+    "build-release.log": "d13e49c17aa05ad050de7e93f90d61ec8b64121cfc99c2945d1ae22efc04260c"
+  },
+  "brain_source_changed": false,
+  "production_worker_changed": false
+}
