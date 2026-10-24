@@ -1,0 +1,34 @@
+{
+  "frozen_before_first_mixed_attempt": true,
+  "brain_commit": "6b6143c16fff2e96803fd9a509a2600dc97e1427",
+  "worker_candidate_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+  "worker_baseline_sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b",
+  "normal_attempts_remaining": [
+    8,
+    29
+  ],
+  "max_attempts_per_group": 30,
+  "minimum_valid_pairs_per_group": 20,
+  "median_limit_ms": 100,
+  "p90_limit_ms": 300,
+  "both_arms_res_options": "timeout:1 attempts:2",
+  "matrix_sha256": "ca538db45fc7f7da34100714afe15caa536c005432fb739e703479d0d0bd8e0a",
+  "mixed_probe_sha256": "befd79b0f6c75153d81d3585fc46834901de61386d8bf5d5839510f40d6de8a5",
+  "mixed_sequence": [
+    "new room / readiness / real outgoing packets",
+    "one real search, wait for accepted; start frozen chat WAV immediately",
+    "receive search result, interrupt with stop after first PCM",
+    "explicit resume, begin the same chat WAV immediately after server resume route",
+    "retain every ASR, missing body and slow sample; 30s gap before next room"
+  ],
+  "mixed_eligibility": [
+    "same WAV/normalized recognized chat in paired arms",
+    "search task running at ordinary input start (ledger createdAt/readyAt), otherwise not valid search-load sample",
+    "resume route observed and ordinary input starts before resumed result first PCM; record actual timing; this is playback lifecycle load, not proof API stayed pending at commit",
+    "exactly one comparable chat commit and first body per group, real input_ready and RTP increase"
+  ],
+  "sn_assignment": "indices 15..19 use S38, others S04; full-SN existing scope only",
+  "budget": "100/day/SN and 1000/day unchanged; quota exhaustion stops the batch, never raises limits; one query per arm supports both mixed profiles",
+  "pilot_policy": "first pair counts as planned attempt0; verify harness at boundary, continue from1 only without replacing failed records",
+  "ordinary_off_on_busy": "not covered by old-vs-new pairing; separate conclusion and evidence required"
+}

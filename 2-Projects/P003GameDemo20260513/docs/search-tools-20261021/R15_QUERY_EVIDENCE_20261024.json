@@ -1,0 +1,1965 @@
+{
+  "schema": 1,
+  "final_brain_source_commit": "6b6143c16fff2e96803fd9a509a2600dc97e1427",
+  "final_version": "R15d",
+  "transport_and_answered_count": 20,
+  "fixed_query_count": 20,
+  "content_gate_passed": false,
+  "content_review": {
+    "Q03": "R15c曾省略主要共同成因并使用不准确比喻；R15d保留月球/太阳引力，满足冻结条目。",
+    "Q04": "R15d仍把小叶闭合与复叶叶柄下垂的部位混在一起，不通过。无论来源或模型整理，最终答案仍需独立验收。",
+    "Q07": "命名问题仍追加未问的发射日期；命名正确，但简洁/旁枝约束有缺口。",
+    "Q11": "R15d保留周一闭馆的法定节假日例外和官网确认限制。",
+    "other_rows": "按固定条目复核主题、来源及地点/日期；不声称所有原始网页每个事实都独立校验，也不声称真人已听到。"
+  },
+  "versions": {
+    "R15a": {
+      "private_evidence_sha256": "82a6b64c520ac879e85d251e1d5e9aef7de5b6dbfc99f768b7bba042531f078c",
+      "rows": [
+        {
+          "id": "Q01",
+          "task_id": "6bac8416-6da7-4442-8de2-db7722bd4c92",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833112283,
+          "elapsed_ms": 3128,
+          "result_sha256": "66e986bdb9068d807320e5ae98ab5703ded7139e41595db1bab22b05aa69f08d",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "恐龙到底是被谁“灭门”的？有了新证据",
+              "url": "https://scicn.casad.cas.cn/wz/202407/t20240712_5025181.html",
+              "date": "2024-07-11T16:00:00+00:00"
+            },
+            {
+              "title": "恐龙缘何灭绝? 火山活动和小行星撞击\"连环出击\"",
+              "url": "http://kpzg.people.com.cn/n1/2016/0707/c404214-28534150.html",
+              "date": "2016-07-06T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q02",
+          "task_id": "ea9bd246-a652-49eb-9591-39a67a44ae8e",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833115928,
+          "elapsed_ms": 1460,
+          "result_sha256": "22591a8591556749005a1b304b9d513451c9ac22b18271d86c8c96c730be2370",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "红色星球为何这么“红”",
+              "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+              "date": "2025-02-25T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q03",
+          "task_id": "e3c22554-907f-4808-9919-405c8795d9da",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833117904,
+          "elapsed_ms": 1651,
+          "result_sha256": "069bcc3ebb6a9effc100dc5e030d24634e5b28cd4cfc2cbdf960261ac420a5f7",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "人类没有想到，拯救苏伊士运河的，竟然是它----科学智慧火花",
+              "url": "https://idea.cas.cn/xyx/xyx_lxzwpx/xyx_2021/info/2021/522469.html",
+              "date": null
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q04",
+          "task_id": "89fa9102-e9a1-44fd-bdad-0af6423d5409",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833120070,
+          "elapsed_ms": 1446,
+          "result_sha256": "50e90bde21e36e23fb212d74c916f0238b4ca7621cf0e821ad02b8263014836f",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "湖南省森林植物园举办科普讲座 讲述植物名字里的故事",
+              "url": "http://lyj.hunan.gov.cn/xxgk_71167/gzdt/mtkl/201607/t20160722_3098633.html",
+              "date": "2024-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "520活动“最强大脑—十万个为什么，植物知识趣味有奖问答”答案及解析----中国科学院昆明植物研究所",
+              "url": "http://kbg.kib.cas.cn/tzgg/201912/t20191217_598155.html",
+              "date": "2018-05-20T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q05",
+          "task_id": "d64d24d9-0707-4f90-ab88-ccdb2edb9cb4",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833122032,
+          "elapsed_ms": 1446,
+          "result_sha256": "d13a1a8f75bf0578b842ab31e7508f1bef5af31bf3093776bf0f266becf998eb",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【中国科学报】大熊猫为啥吃素也能变“滚滚”",
+              "url": "https://www.cas.cn/cm/202201/t20220119_4822781.shtml",
+              "date": "2022-01-18T16:00:00+00:00"
+            },
+            {
+              "title": "大熊猫野外生态观测站样地监测和生态修复成效显著 - 大熊猫野外生态观测站样地监测和生态修复成效显著",
+              "url": "https://www.forestry.gov.cn/search/670443",
+              "date": "2026-06-03T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q06",
+          "task_id": "692f408a-055b-4c5d-b0b3-e66b1fe74297",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833123994,
+          "elapsed_ms": 2051,
+          "result_sha256": "a7df8324dfca9cae71d0215753e8351696cd9ca75aceb97f2511d7aca9c6bd35",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "什么是彩虹？ -- 地理科学与资源研究所",
+              "url": "http://igsnrr.cas.cn/cbkx/kpyd/dlzs/climate/202009/t20200910_5692604.html",
+              "date": "2020-09-09T16:00:00+00:00"
+            },
+            {
+              "title": "为什么气象局没有去预报彩虹？-资讯-中国天气网 - 为什么气象局没有去预报彩虹",
+              "url": "http://news.weather.com.cn/2016/05/2521905.shtml",
+              "date": "2016-05-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q07",
+          "task_id": "0d6c6859-f8df-482e-adf9-17b60ec2438c",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833126560,
+          "elapsed_ms": 1856,
+          "result_sha256": "b5c9d7a03bb6a5e769150281452b795a7470deb9345ba4f355aa4bd22b9a4892",
+          "source_count": 3,
+          "sources": [
+            {
+              "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+              "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+              "date": "2017-04-23T16:00:00+00:00"
+            },
+            {
+              "title": "浩瀚星空的东方回响",
+              "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+              "date": "2023-12-10T16:00:00+00:00"
+            },
+            {
+              "title": "从“东方红一号”到神舟十八号——看航空航天发展",
+              "url": "http://kpzg.people.com.cn/n1/2024/0911/c404214-40317511.html",
+              "date": "2024-09-10T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q08",
+          "task_id": "a9dc0fd4-a640-4952-99ff-df6403a228e3",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833128935,
+          "elapsed_ms": 1651,
+          "result_sha256": "f4369bc878854b3635baf5ede39866f3ccfe9868fc38d47fb4f87e9cd081cebc",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 安徽省宣城市泾县中国宣纸小镇夜景",
+              "url": "http://paper.people.com.cn/rmrbhwb/pad/content/202601/30/content_30136821.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 造纸术——",
+              "url": "http://ent.people.com.cn/n1/2026/0130/c1012-40655690.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q09",
+          "task_id": "4b320283-654c-4f58-ab0c-7b966a2e654b",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833131103,
+          "elapsed_ms": 1874,
+          "result_sha256": "b33f4ef056f93c7aa7d095c490e24bc2990ba8b97048e891123b3ff25e50e5b6",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "长城，长城 - 长城，长城",
+              "url": "http://www.mod.gov.cn/gfbw/gfjy_index/16303751.html",
+              "date": "2024-04-24T16:00:00+00:00"
+            },
+            {
+              "title": "专家“把脉”！ 长城文化保护发展研讨会在北戴河举行",
+              "url": "http://css.hebei.gov.cn/2019-09/28/content_7482746.htm",
+              "date": "2019-09-27T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q10",
+          "task_id": "0b98c02c-4e53-4ec5-b485-2f8764bd9fe3",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833133493,
+          "elapsed_ms": 1651,
+          "result_sha256": "e61dfe672b688ccb295dd0d344aba14e12dccc73e66737e460943feec6da48e7",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【科学世界】手机定向，微中有妙",
+              "url": "https://nimte.cas.cn/news/media/201409/t20140901_4194647.html",
+              "date": "2014-08-31T16:00:00+00:00"
+            },
+            {
+              "title": "科普专栏- 浙江省磁性材料及其应用技术重点实验室",
+              "url": "http://mag-lab.nimte.cas.cn/kepu/201602/t20160224_620414.html",
+              "date": "2016-02-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q11",
+          "task_id": "c4fde611-8da4-4f96-9da6-fdb42f9b3ad1",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833135659,
+          "elapsed_ms": 1649,
+          "result_sha256": "f9f4556264384df1ee7126c2fe181077b0c42fe4ce4eee24c81c2f5f6f6e6312",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "导览 - 故宫博物院 - 开放时间",
+              "url": "https://www.dpm.org.cn/Visit.html?u=http:////www.dpm.org.cn/Visit.html",
+              "date": null
+            },
+            {
+              "title": "故宫博物院",
+              "url": "https://www.dpm.org.cn/",
+              "date": "2026-07-19T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q12",
+          "task_id": "5b757184-387e-40a9-a5c5-50a2bdf05b00",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833137827,
+          "elapsed_ms": 1453,
+          "result_sha256": "83f40eb4a1d707e9f4f278da3f95840494308db5182a1164cb08e3d40ea06094",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "参观预约",
+              "url": "https://www.chnmuseum.cn/cg/cgyy/202511/t20251109_277547.shtml",
+              "date": "2025-11-08T16:00:00+00:00"
+            },
+            {
+              "title": "参观国博实用攻略，请您查收！",
+              "url": "https://www.chnmuseum.cn/zx/gbxw/202609/t20260923_282658.shtml",
+              "date": "2026-09-21T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q13",
+          "task_id": "62282b21-822d-44d9-beae-107a8d3821e7",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833139796,
+          "elapsed_ms": 2047,
+          "result_sha256": "5b232305123f3358216cf12f65d0ebffe878edec9d11b34a62159d9350247428",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "China Science and Technology Museum",
+              "url": "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html?v%3Djt",
+              "date": "2026-03-22T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q14",
+          "task_id": "4e53cfd1-bf2b-4883-b072-764df22127db",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833142359,
+          "elapsed_ms": 1444,
+          "result_sha256": "e0d0d9553b451bd44e3393b3c870d3c1c6c3d3c4a2a7e5dad1fbf8928f422d08",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "不漏一户、不落一人 各路救援力量开展多轮全覆盖排查",
+              "url": "https://news.cctv.com/2026/10/24/ARTIw63SdD615uXCGMUPpXaC261024.shtml",
+              "date": "2026-10-24T17:01:53+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q15",
+          "task_id": "0142bf32-566e-4fd2-b314-acb1cedb2e23",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833144321,
+          "elapsed_ms": 1056,
+          "result_sha256": "596601f4a99c1ba1080854441f0431f441b9fca2bf559847a9cd750c91dfb58f",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "我国“卫星天团”闻令而动开展监测 为救灾救助提供“硬核”支持",
+              "url": "https://news.cctv.com/2026/10/24/ARTIxQjc9K3KwCFaG5TO5whf261024.shtml",
+              "date": "2026-10-24T10:33:35+08:00"
+            },
+            {
+              "title": "自然资源部为西藏那曲地震救援提供卫星遥感图像",
+              "url": "https://news.cctv.com/2026/10/24/ARTIDYhzoewUeuLeNSau1bFk261024.shtml",
+              "date": "2026-10-24T09:25:58+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q16",
+          "task_id": "2e98e514-a6f0-4e35-bb2d-a5708bce6a56",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833145894,
+          "elapsed_ms": 236,
+          "result_sha256": "b8f7823fab33a6901dfedc0888e50a19dc870e279193e94ead6184dfd45e4313",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 北京",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q17",
+          "task_id": "c7e63ba0-9025-46b7-aad5-b1d09d8f8cce",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833146646,
+          "elapsed_ms": 338,
+          "result_sha256": "de137e818daf18cefaaaff58ac667b81c47a80fe7437439faad4b18381f9696f",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 上海",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E4%B8%8A%E6%B5%B7%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q18",
+          "task_id": "fa929e8d-bd6b-4614-a71e-655cd065f756",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833147501,
+          "elapsed_ms": 637,
+          "result_sha256": "15b7308e5acece54effa2ac58e0fc92434bc4dede63b735037c2856d29b4135b",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 四川成都",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q19",
+          "task_id": "0faccdf0-aed3-4b6e-9e85-030f1ac4ce39",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833148655,
+          "elapsed_ms": 226,
+          "result_sha256": "254a36295176a20895cf084bd1186fb2f860b485835e03813987f5e3f4c221bb",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 辽宁朝阳",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q20",
+          "task_id": "3a742f4a-2cd7-45cf-b362-67e8bbe190d8",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792833149398,
+          "elapsed_ms": 225,
+          "result_sha256": "023c0e808e03240863016185d5ec6a85077d97a5a6a46b5ff4e85cbd1a45fb4e",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 陕西西安",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        }
+      ]
+    },
+    "R15b": {
+      "private_evidence_sha256": "a8f66b37df341516ea5fb84ea3bc05a2433f6af9a0d03419e15e7363debcd8a0",
+      "rows": [
+        {
+          "id": "Q01",
+          "task_id": "37e56b7a-c2d5-47b8-aba3-55f354539425",
+          "status": "failed",
+          "outcome": "failed",
+          "failure": {
+            "stage": "answer",
+            "reason": "unasked_quantity"
+          },
+          "error": "search_unavailable",
+          "start_ms": 1792834568075,
+          "elapsed_ms": 2760,
+          "result_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source_count": 0,
+          "sources": [],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q02",
+          "task_id": "26542bc3-baaa-46e0-808c-8a23ac6a90b3",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834571355,
+          "elapsed_ms": 2262,
+          "result_sha256": "68a3d3ddad899165c7e09a848e28dee2fbf595b933252ad436ed2e56f5845157",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "红色星球为何这么“红”",
+              "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+              "date": "2025-02-25T16:00:00+00:00"
+            },
+            {
+              "title": "中国科学院院刊-国家科学思想库核心媒体",
+              "url": "http://old2022.bulletin.cas.cn/zgkxyyk/ch/reader/view_news.aspx?id=20231227134349001",
+              "date": "2023-12-26T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q03",
+          "task_id": "cd460513-4e67-4c20-bf11-06d8157c5879",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834574134,
+          "elapsed_ms": 2870,
+          "result_sha256": "af321ca0cf486cdff5f75819aa156d3ad8b164f61d87c977ed476980f0794111",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "人类没有想到，拯救苏伊士运河的，竟然是它----科学智慧火花",
+              "url": "https://idea.cas.cn/xyx/xyx_lxzwpx/xyx_2021/info/2021/522469.html",
+              "date": null
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q04",
+          "task_id": "a807e039-11d7-4bc8-ab9f-4a7a7f81f56f",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834577520,
+          "elapsed_ms": 2064,
+          "result_sha256": "9b76a5af7508bea440ffa337260a976f90fd6e596dbc1f0104b957f779d0b32b",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "湖南省森林植物园举办科普讲座 讲述植物名字里的故事",
+              "url": "http://lyj.hunan.gov.cn/xxgk_71167/gzdt/mtkl/201607/t20160722_3098633.html",
+              "date": "2024-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "520活动“最强大脑—十万个为什么，植物知识趣味有奖问答”答案及解析----中国科学院昆明植物研究所",
+              "url": "http://kbg.kib.cas.cn/tzgg/201912/t20191217_598155.html",
+              "date": "2018-05-20T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q05",
+          "task_id": "aa817a26-abce-493e-8986-af201547769b",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834580099,
+          "elapsed_ms": 1648,
+          "result_sha256": "b79c4b623c977b121e079dc779860a0076c51c31fd5c5b208c0207acbff3eb41",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【中国科学报】大熊猫为啥吃素也能变“滚滚”",
+              "url": "https://www.cas.cn/cm/202201/t20220119_4822781.shtml",
+              "date": "2022-01-18T16:00:00+00:00"
+            },
+            {
+              "title": "大熊猫野外生态观测站样地监测和生态修复成效显著 - 大熊猫野外生态观测站样地监测和生态修复成效显著",
+              "url": "https://www.forestry.gov.cn/search/670443",
+              "date": "2026-06-03T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q06",
+          "task_id": "824376e6-15d5-4981-bfed-762cb59f5af0",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834582264,
+          "elapsed_ms": 2257,
+          "result_sha256": "717c1860909803270bfcdf1bf6f19235643f6b255c0d055f21e96fdffb3cc5e5",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "什么是彩虹？ -- 地理科学与资源研究所",
+              "url": "http://igsnrr.cas.cn/cbkx/kpyd/dlzs/climate/202009/t20200910_5692604.html",
+              "date": "2020-09-09T16:00:00+00:00"
+            },
+            {
+              "title": "为什么气象局没有去预报彩虹？-资讯-中国天气网 - 为什么气象局没有去预报彩虹",
+              "url": "http://news.weather.com.cn/2016/05/2521905.shtml",
+              "date": "2016-05-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q07",
+          "task_id": "82ebe336-f826-4f4f-8c42-51f18644e7f2",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834585038,
+          "elapsed_ms": 1242,
+          "result_sha256": "b2468935f2351e8959bf2ad25548196c6c97fe08eeb6ee17ca909ebbbce616e6",
+          "source_count": 3,
+          "sources": [
+            {
+              "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+              "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+              "date": "2017-04-23T16:00:00+00:00"
+            },
+            {
+              "title": "浩瀚星空的东方回响",
+              "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+              "date": "2023-12-10T16:00:00+00:00"
+            },
+            {
+              "title": "从“东方红一号”到神舟十八号——看航空航天发展",
+              "url": "http://kpzg.people.com.cn/n1/2024/0911/c404214-40317511.html",
+              "date": "2024-09-10T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q08",
+          "task_id": "9497ff7c-1617-47a4-ad83-5e46339644f2",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834586795,
+          "elapsed_ms": 2461,
+          "result_sha256": "c41acd101ee1e1a3d82a5a0f2011d75aaddf3798c04bb1e60cbb8e44589223c7",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 安徽省宣城市泾县中国宣纸小镇夜景",
+              "url": "http://paper.people.com.cn/rmrbhwb/pad/content/202601/30/content_30136821.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 造纸术——",
+              "url": "http://ent.people.com.cn/n1/2026/0130/c1012-40655690.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q09",
+          "task_id": "11a3b5f4-e98d-4861-8547-f00613d46cea",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834589773,
+          "elapsed_ms": 1653,
+          "result_sha256": "dd0a4e9d005b1b41ef159fe37b1f347ff4d83ead6954c6b20090b2056d314374",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "长城，长城 - 长城，长城",
+              "url": "http://www.mod.gov.cn/gfbw/gfjy_index/16303751.html",
+              "date": "2024-04-24T16:00:00+00:00"
+            },
+            {
+              "title": "专家“把脉”！ 长城文化保护发展研讨会在北戴河举行",
+              "url": "http://css.hebei.gov.cn/2019-09/28/content_7482746.htm",
+              "date": "2019-09-27T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q10",
+          "task_id": "3f5fbfb7-4c6d-45c5-b059-e9b148c07d3a",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834591943,
+          "elapsed_ms": 2870,
+          "result_sha256": "c9e9d7354ff61bc0b72a6876576e718cfa3a54a3f53f4b23d99ffffa94d1b734",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【科学世界】手机定向，微中有妙",
+              "url": "https://nimte.cas.cn/news/media/201409/t20140901_4194647.html",
+              "date": "2014-08-31T16:00:00+00:00"
+            },
+            {
+              "title": "科普专栏- 浙江省磁性材料及其应用技术重点实验室",
+              "url": "http://mag-lab.nimte.cas.cn/kepu/201602/t20160224_620414.html",
+              "date": "2016-02-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q11",
+          "task_id": "bd041bfb-a343-4bcb-a5c7-fc6768414cc8",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834595328,
+          "elapsed_ms": 2263,
+          "result_sha256": "2e80c98dff342bcd8db543384d1662678d41393f1cbec36f07f03a2c53b07c21",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "导览 - 故宫博物院 - 开放时间",
+              "url": "https://www.dpm.org.cn/Visit.html?u=http:////www.dpm.org.cn/Visit.html",
+              "date": null
+            },
+            {
+              "title": "故宫博物院",
+              "url": "https://www.dpm.org.cn/",
+              "date": "2026-07-19T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q12",
+          "task_id": "4bb12619-a6a4-4cec-8131-82ac1acfe929",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834598107,
+          "elapsed_ms": 2258,
+          "result_sha256": "07bf284c7884bfa41e838a3210a268fd9db12da4076279b477e18acce91266ad",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "参观预约",
+              "url": "https://www.chnmuseum.cn/cg/cgyy/202511/t20251109_277547.shtml",
+              "date": "2025-11-08T16:00:00+00:00"
+            },
+            {
+              "title": "参观国博实用攻略，请您查收！",
+              "url": "https://www.chnmuseum.cn/zx/gbxw/202609/t20260923_282658.shtml",
+              "date": "2026-09-21T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q13",
+          "task_id": "6e8ffe07-acc1-4a05-bdb3-e405ec72c26b",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834600882,
+          "elapsed_ms": 2259,
+          "result_sha256": "5b232305123f3358216cf12f65d0ebffe878edec9d11b34a62159d9350247428",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "China Science and Technology Museum",
+              "url": "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html?v%3Djt",
+              "date": "2026-03-22T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q14",
+          "task_id": "d6001ee4-428e-4923-b90d-b0da9f778af4",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834603657,
+          "elapsed_ms": 1469,
+          "result_sha256": "4117e0c198eba57b10e6cdff5d9ddfcb3f798055348d7e8b80bf995647f46e28",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "不漏一户、不落一人 各路救援力量开展多轮全覆盖排查",
+              "url": "https://news.cctv.com/2026/10/24/ARTIw63SdD615uXCGMUPpXaC261024.shtml",
+              "date": "2026-10-24T17:01:53+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q15",
+          "task_id": "f9c36278-cdc8-460e-abed-0544a377b64b",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834605654,
+          "elapsed_ms": 1045,
+          "result_sha256": "b2c18c27e2b0f36de168d6c7077b20a6f394eb8ba8d23bbbc8995ef29a72082f",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "我国“卫星天团”闻令而动开展监测 为救灾救助提供“硬核”支持",
+              "url": "https://news.cctv.com/2026/10/24/ARTIxQjc9K3KwCFaG5TO5whf261024.shtml",
+              "date": "2026-10-24T10:33:35+08:00"
+            },
+            {
+              "title": "自然资源部为西藏那曲地震救援提供卫星遥感图像",
+              "url": "https://news.cctv.com/2026/10/24/ARTIDYhzoewUeuLeNSau1bFk261024.shtml",
+              "date": "2026-10-24T09:25:58+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q16",
+          "task_id": "b24389a6-bfb9-4185-823d-097b552a65b3",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834607224,
+          "elapsed_ms": 243,
+          "result_sha256": "b8f7823fab33a6901dfedc0888e50a19dc870e279193e94ead6184dfd45e4313",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 北京",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:35:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q17",
+          "task_id": "8daac120-988b-46ed-903e-563359a0c8af",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834607984,
+          "elapsed_ms": 228,
+          "result_sha256": "de137e818daf18cefaaaff58ac667b81c47a80fe7437439faad4b18381f9696f",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 上海",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E4%B8%8A%E6%B5%B7%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:35:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q18",
+          "task_id": "e764f4fb-8171-45b8-870c-69cef06c6ef4",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834608729,
+          "elapsed_ms": 227,
+          "result_sha256": "15b7308e5acece54effa2ac58e0fc92434bc4dede63b735037c2856d29b4135b",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 四川成都",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:35:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q19",
+          "task_id": "28822137-3f04-428a-9474-a6320ca1a9a8",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834609472,
+          "elapsed_ms": 233,
+          "result_sha256": "254a36295176a20895cf084bd1186fb2f860b485835e03813987f5e3f4c221bb",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 辽宁朝阳",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:35:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q20",
+          "task_id": "5e5ee6c4-970b-4fd9-92a3-297b582d391a",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834610221,
+          "elapsed_ms": 227,
+          "result_sha256": "023c0e808e03240863016185d5ec6a85077d97a5a6a46b5ff4e85cbd1a45fb4e",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 陕西西安",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:35:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        }
+      ]
+    },
+    "R15c": {
+      "private_evidence_sha256": "8f9ffc0773c1bd2a6f9e28484c23fffc01153b0b46b9964adfeba7b7f1ad03f6",
+      "rows": [
+        {
+          "id": "Q01",
+          "task_id": "1f59171b-b751-40bc-a855-ac433a8f67e7",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834963177,
+          "elapsed_ms": 2970,
+          "result_sha256": "616e0d82209ad0afeaec7c1227fedcab0af7bdb89e06975dabf3a2f154fab722",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "恐龙到底是被谁“灭门”的？有了新证据",
+              "url": "https://scicn.casad.cas.cn/wz/202407/t20240712_5025181.html",
+              "date": "2024-07-11T16:00:00+00:00"
+            },
+            {
+              "title": "恐龙缘何灭绝? 火山活动和小行星撞击\"连环出击\"",
+              "url": "http://kpzg.people.com.cn/n1/2016/0707/c404214-28534150.html",
+              "date": "2016-07-06T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q02",
+          "task_id": "6c3b07f9-8921-43b0-a32b-e6cc70e8c705",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834966667,
+          "elapsed_ms": 2279,
+          "result_sha256": "ffbf7b16c6689def3629cc89384c145c6241edbf8eb6fc21c00e845feb973f51",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "红色星球为何这么“红”",
+              "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+              "date": "2025-02-25T16:00:00+00:00"
+            },
+            {
+              "title": "中国科学院院刊-国家科学思想库核心媒体",
+              "url": "http://old2022.bulletin.cas.cn/zgkxyyk/ch/reader/view_news.aspx?id=20231227134349001",
+              "date": "2023-12-26T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q03",
+          "task_id": "a7503190-d318-419b-88b5-a683ccbfbb0d",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834969462,
+          "elapsed_ms": 2477,
+          "result_sha256": "f601b26135355d24c6560cfec991c987763e67ac69361080fb6329269d05013e",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "人类没有想到，拯救苏伊士运河的，竟然是它----科学智慧火花",
+              "url": "https://idea.cas.cn/xyx/xyx_lxzwpx/xyx_2021/info/2021/522469.html",
+              "date": null
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q04",
+          "task_id": "dd21b0cd-af03-49a5-b663-856a42872ae7",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834972457,
+          "elapsed_ms": 2265,
+          "result_sha256": "1b86101a4ad8b983f49f14ccd92e6c2577a6299599bb0ec0cab1040e25c4c236",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "湖南省森林植物园举办科普讲座 讲述植物名字里的故事",
+              "url": "http://lyj.hunan.gov.cn/xxgk_71167/gzdt/mtkl/201607/t20160722_3098633.html",
+              "date": "2024-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "520活动“最强大脑—十万个为什么，植物知识趣味有奖问答”答案及解析----中国科学院昆明植物研究所",
+              "url": "http://kbg.kib.cas.cn/tzgg/201912/t20191217_598155.html",
+              "date": "2018-05-20T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q05",
+          "task_id": "b2ea73d3-dc73-486e-9d36-409541df9b35",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834975241,
+          "elapsed_ms": 1660,
+          "result_sha256": "5d8b222274da1ec1566837a92fecf1d0c4b7e68cdcf222320b60f287fafd2351",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【中国科学报】大熊猫为啥吃素也能变“滚滚”",
+              "url": "https://www.cas.cn/cm/202201/t20220119_4822781.shtml",
+              "date": "2022-01-18T16:00:00+00:00"
+            },
+            {
+              "title": "大熊猫野外生态观测站样地监测和生态修复成效显著 - 大熊猫野外生态观测站样地监测和生态修复成效显著",
+              "url": "https://www.forestry.gov.cn/search/670443",
+              "date": "2026-06-03T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q06",
+          "task_id": "c0da96d3-09ff-4696-96c0-4f535d3af148",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834977418,
+          "elapsed_ms": 2669,
+          "result_sha256": "33cc7aaf9c19a24c7edc7eafee629b68fcad2ef8d9b555cf344d14d201410bba",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "什么是彩虹？ -- 地理科学与资源研究所",
+              "url": "http://igsnrr.cas.cn/cbkx/kpyd/dlzs/climate/202009/t20200910_5692604.html",
+              "date": "2020-09-09T16:00:00+00:00"
+            },
+            {
+              "title": "为什么气象局没有去预报彩虹？-资讯-中国天气网 - 为什么气象局没有去预报彩虹",
+              "url": "http://news.weather.com.cn/2016/05/2521905.shtml",
+              "date": "2016-05-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q07",
+          "task_id": "b7875405-12df-4100-95b7-573d7400b9a4",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834980603,
+          "elapsed_ms": 1445,
+          "result_sha256": "a776045ccaa54e4d0e4811cd79c9095ab9318f4c235d35bf177a5545527d3d93",
+          "source_count": 3,
+          "sources": [
+            {
+              "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+              "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+              "date": "2017-04-23T16:00:00+00:00"
+            },
+            {
+              "title": "浩瀚星空的东方回响",
+              "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+              "date": "2023-12-10T16:00:00+00:00"
+            },
+            {
+              "title": "从“东方红一号”到神舟十八号——看航空航天发展",
+              "url": "http://kpzg.people.com.cn/n1/2024/0911/c404214-40317511.html",
+              "date": "2024-09-10T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q08",
+          "task_id": "d2cab57b-f101-426f-835c-31b12cd8788d",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834982563,
+          "elapsed_ms": 2661,
+          "result_sha256": "91903fa8b3195dbbace795f8953b537458caa2f18697a263a630e8074371e000",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 安徽省宣城市泾县中国宣纸小镇夜景",
+              "url": "http://paper.people.com.cn/rmrbhwb/pad/content/202601/30/content_30136821.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 造纸术——",
+              "url": "http://ent.people.com.cn/n1/2026/0130/c1012-40655690.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q09",
+          "task_id": "3677d47a-0e5b-4e48-9543-45f853b4e718",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834985742,
+          "elapsed_ms": 2258,
+          "result_sha256": "a70a73ec1b5df663e4ca27e42742b7f439b400025cd8c2e23fe029b6cf919915",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "长城，长城 - 长城，长城",
+              "url": "http://www.mod.gov.cn/gfbw/gfjy_index/16303751.html",
+              "date": "2024-04-24T16:00:00+00:00"
+            },
+            {
+              "title": "专家“把脉”！ 长城文化保护发展研讨会在北戴河举行",
+              "url": "http://css.hebei.gov.cn/2019-09/28/content_7482746.htm",
+              "date": "2019-09-27T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q10",
+          "task_id": "c1a78638-1ba4-4066-8419-5cae5b82c1dd",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834988515,
+          "elapsed_ms": 2661,
+          "result_sha256": "54ad64b749c7187fc24dbee6472e8d3e51f1b1b785c5bb6830fbea0bb521367c",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【科学世界】手机定向，微中有妙",
+              "url": "https://nimte.cas.cn/news/media/201409/t20140901_4194647.html",
+              "date": "2014-08-31T16:00:00+00:00"
+            },
+            {
+              "title": "科普专栏- 浙江省磁性材料及其应用技术重点实验室",
+              "url": "http://mag-lab.nimte.cas.cn/kepu/201602/t20160224_620414.html",
+              "date": "2016-02-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q11",
+          "task_id": "f5f5174b-92f5-4beb-aa69-2d1e49f2a42c",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834991692,
+          "elapsed_ms": 2259,
+          "result_sha256": "9899471f7fe0a6c81709044b5720cd9396d241157a177f660bbe53f74b5a371a",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "导览 - 故宫博物院 - 开放时间",
+              "url": "https://www.dpm.org.cn/Visit.html?u=http:////www.dpm.org.cn/Visit.html",
+              "date": null
+            },
+            {
+              "title": "故宫博物院",
+              "url": "https://www.dpm.org.cn/",
+              "date": "2026-07-19T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q12",
+          "task_id": "780e8936-9f69-43c8-bd5a-b6da4f909627",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834994468,
+          "elapsed_ms": 2259,
+          "result_sha256": "a07e5896c58259d95733775b4353b42206179351905f3961a24da0f30dd2c8a2",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "参观预约",
+              "url": "https://www.chnmuseum.cn/cg/cgyy/202511/t20251109_277547.shtml",
+              "date": "2025-11-08T16:00:00+00:00"
+            },
+            {
+              "title": "参观国博实用攻略，请您查收！",
+              "url": "https://www.chnmuseum.cn/zx/gbxw/202609/t20260923_282658.shtml",
+              "date": "2026-09-21T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q13",
+          "task_id": "45e69dc5-51ed-41de-8be6-5b0b91b03da5",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792834997247,
+          "elapsed_ms": 2479,
+          "result_sha256": "2d0bd8e113b6d30134d7e2803a6176e67d63d1ef16b70eb1c22bcba75fe458db",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "China Science and Technology Museum",
+              "url": "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html?v%3Djt",
+              "date": "2026-03-22T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q14",
+          "task_id": "eb2275ab-6b44-417c-b1d0-0fedea55e65f",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835000243,
+          "elapsed_ms": 5909,
+          "result_sha256": "8bf6dc42d27a8b6b459d21df7cad5a13b5a9d4976dcf412f12d4e694f7f2b541",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "不漏一户、不落一人 各路救援力量开展多轮全覆盖排查",
+              "url": "https://news.cctv.com/2026/10/24/ARTIw63SdD615uXCGMUPpXaC261024.shtml",
+              "date": "2026-10-24T17:01:53+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q15",
+          "task_id": "197e250c-095a-49a9-82fe-131e5e4d8705",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835006669,
+          "elapsed_ms": 1054,
+          "result_sha256": "ceae36aedcbd1f557b9b4d13faa8cf7a31041d0c436c0efbfb4a2d8d986137af",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "我国“卫星天团”闻令而动开展监测 为救灾救助提供“硬核”支持",
+              "url": "https://news.cctv.com/2026/10/24/ARTIxQjc9K3KwCFaG5TO5whf261024.shtml",
+              "date": "2026-10-24T10:33:35+08:00"
+            },
+            {
+              "title": "自然资源部为西藏那曲地震救援提供卫星遥感图像",
+              "url": "https://news.cctv.com/2026/10/24/ARTIDYhzoewUeuLeNSau1bFk261024.shtml",
+              "date": "2026-10-24T09:25:58+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q16",
+          "task_id": "662ca01e-fed8-4ea7-ad7c-c1263a52f7f9",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835008241,
+          "elapsed_ms": 233,
+          "result_sha256": "b8f7823fab33a6901dfedc0888e50a19dc870e279193e94ead6184dfd45e4313",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 北京",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:40:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q17",
+          "task_id": "b1d7738d-5e0b-492f-93d0-5a28203e1993",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835008990,
+          "elapsed_ms": 227,
+          "result_sha256": "de137e818daf18cefaaaff58ac667b81c47a80fe7437439faad4b18381f9696f",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 上海",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E4%B8%8A%E6%B5%B7%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:40:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q18",
+          "task_id": "74b4fe44-f41f-4409-b9cc-96c8b2e74a83",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835009733,
+          "elapsed_ms": 233,
+          "result_sha256": "15b7308e5acece54effa2ac58e0fc92434bc4dede63b735037c2856d29b4135b",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 四川成都",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:40:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q19",
+          "task_id": "1d8d2c85-e483-4c81-8c61-58575e6c9a7e",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835010480,
+          "elapsed_ms": 227,
+          "result_sha256": "254a36295176a20895cf084bd1186fb2f860b485835e03813987f5e3f4c221bb",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 辽宁朝阳",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:40:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q20",
+          "task_id": "2d470f2c-1505-4287-a985-8f2b009d296c",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792835011224,
+          "elapsed_ms": 230,
+          "result_sha256": "023c0e808e03240863016185d5ec6a85077d97a5a6a46b5ff4e85cbd1a45fb4e",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 陕西西安",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T17:40:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        }
+      ]
+    },
+    "R15d": {
+      "private_evidence_sha256": "2579f8b2c553fa25d0ba166df8b97250b479013e25b08c8de5ba925ac9aaf783",
+      "rows": [
+        {
+          "id": "Q01",
+          "task_id": "b22e5097-50c0-4905-bf2f-1815f7a37f25",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836883494,
+          "elapsed_ms": 2970,
+          "result_sha256": "6a5e5cbd77b58b90de6146a606b0e0c971d10c834079756f631515c8cdeaadc0",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "恐龙到底是被谁“灭门”的？有了新证据",
+              "url": "https://scicn.casad.cas.cn/wz/202407/t20240712_5025181.html",
+              "date": "2024-07-11T16:00:00+00:00"
+            },
+            {
+              "title": "恐龙缘何灭绝? 火山活动和小行星撞击\"连环出击\"",
+              "url": "http://kpzg.people.com.cn/n1/2016/0707/c404214-28534150.html",
+              "date": "2016-07-06T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q02",
+          "task_id": "d52ec06e-9b3b-4c90-a4ef-594b68d2ed4c",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836886982,
+          "elapsed_ms": 3077,
+          "result_sha256": "f5d8c554b4d2a4b6c2d182f3bca6468f8532075a3a49b913a9716e50019e3ba8",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "红色星球为何这么“红”",
+              "url": "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html",
+              "date": "2025-02-25T16:00:00+00:00"
+            },
+            {
+              "title": "中国科学院院刊-国家科学思想库核心媒体",
+              "url": "http://old2022.bulletin.cas.cn/zgkxyyk/ch/reader/view_news.aspx?id=20231227134349001",
+              "date": "2023-12-26T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q03",
+          "task_id": "44f08283-d646-4247-b002-68f1385f49fe",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836890576,
+          "elapsed_ms": 3079,
+          "result_sha256": "ba486de6d852bcd275b6642d5420fa35e93a28c81f46816792b18d16633c9648",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "人类没有想到，拯救苏伊士运河的，竟然是它----科学智慧火花",
+              "url": "https://idea.cas.cn/xyx/xyx_lxzwpx/xyx_2021/info/2021/522469.html",
+              "date": null
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q04",
+          "task_id": "97c0431b-048f-488b-87ae-e9f5d7eddbdd",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836894172,
+          "elapsed_ms": 2273,
+          "result_sha256": "456ee1bdbf18e60106e238c13ff1deb1a60b85d4adf7f038c6e395dcaf41b7b3",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "湖南省森林植物园举办科普讲座 讲述植物名字里的故事",
+              "url": "http://lyj.hunan.gov.cn/xxgk_71167/gzdt/mtkl/201607/t20160722_3098633.html",
+              "date": "2024-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "520活动“最强大脑—十万个为什么，植物知识趣味有奖问答”答案及解析----中国科学院昆明植物研究所",
+              "url": "http://kbg.kib.cas.cn/tzgg/201912/t20191217_598155.html",
+              "date": "2018-05-20T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q05",
+          "task_id": "3a69bd16-64ea-47c4-9b6f-a9ada9e6629e",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836896962,
+          "elapsed_ms": 1449,
+          "result_sha256": "236a4322c11bfbe35cd0e850c2e8217b4e673e7de236d199776bd672bff39645",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "大熊猫野外生态观测站样地监测和生态修复成效显著 - 大熊猫野外生态观测站样地监测和生态修复成效显著",
+              "url": "https://www.forestry.gov.cn/search/670443",
+              "date": "2026-06-03T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q06",
+          "task_id": "982be344-9aae-47e6-9943-2f4f05463eb9",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836898927,
+          "elapsed_ms": 2273,
+          "result_sha256": "12e5ebcbc515fbc642eb3d46f53f3d2487afc17e89d817dc5f98f57d04922c3a",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "什么是彩虹？ -- 地理科学与资源研究所",
+              "url": "http://igsnrr.cas.cn/cbkx/kpyd/dlzs/climate/202009/t20200910_5692604.html",
+              "date": "2020-09-09T16:00:00+00:00"
+            },
+            {
+              "title": "为什么气象局没有去预报彩虹？-资讯-中国天气网 - 为什么气象局没有去预报彩虹",
+              "url": "http://news.weather.com.cn/2016/05/2521905.shtml",
+              "date": "2016-05-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q07",
+          "task_id": "f07b3a85-2753-4f52-86b1-965bfd6c5961",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836901720,
+          "elapsed_ms": 1245,
+          "result_sha256": "03f9f44b420e845d848ad1d0578ac792334a327657b7560077d382a898c679c5",
+          "source_count": 3,
+          "sources": [
+            {
+              "title": "1970年4月24日，长征一号运载火箭成功将我国第一颗人造卫星东方红一号送入预定轨道",
+              "url": "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+              "date": "2017-04-23T16:00:00+00:00"
+            },
+            {
+              "title": "浩瀚星空的东方回响",
+              "url": "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html",
+              "date": "2023-12-10T16:00:00+00:00"
+            },
+            {
+              "title": "从“东方红一号”到神舟十八号——看航空航天发展",
+              "url": "http://kpzg.people.com.cn/n1/2024/0911/c404214-40317511.html",
+              "date": "2024-09-10T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q08",
+          "task_id": "52e05a71-36d8-4abc-9e78-98ed8485c62b",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836903481,
+          "elapsed_ms": 2670,
+          "result_sha256": "1f7655ff08caf183992fd2db300a39180e0338f39b22a23821262fa439fca54d",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 安徽省宣城市泾县中国宣纸小镇夜景",
+              "url": "http://paper.people.com.cn/rmrbhwb/pad/content/202601/30/content_30136821.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            },
+            {
+              "title": "重塑纤维，造就文明传承载体（字载匠心·惊艳时光的中国智慧） - 造纸术——",
+              "url": "http://ent.people.com.cn/n1/2026/0130/c1012-40655690.html",
+              "date": "2026-01-29T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q09",
+          "task_id": "92c553dc-7862-4bbf-9743-1b556d246289",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836906667,
+          "elapsed_ms": 2667,
+          "result_sha256": "dfe420f16aa7edfc6fc9438555d3145de2fbe525343e42285512b732910e4424",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "长城，长城 - 长城，长城",
+              "url": "http://www.mod.gov.cn/gfbw/gfjy_index/16303751.html",
+              "date": "2024-04-24T16:00:00+00:00"
+            },
+            {
+              "title": "专家“把脉”！ 长城文化保护发展研讨会在北戴河举行",
+              "url": "http://css.hebei.gov.cn/2019-09/28/content_7482746.htm",
+              "date": "2019-09-27T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q10",
+          "task_id": "7863ae73-9655-488a-9788-972ee2f31fd2",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836909852,
+          "elapsed_ms": 2865,
+          "result_sha256": "9f823094f968e4bf6b24a4c678af6736b03568acee3bbbb5084fb6fa2ee65391",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "【科学世界】手机定向，微中有妙",
+              "url": "https://nimte.cas.cn/news/media/201409/t20140901_4194647.html",
+              "date": "2014-08-31T16:00:00+00:00"
+            },
+            {
+              "title": "科普专栏- 浙江省磁性材料及其应用技术重点实验室",
+              "url": "http://mag-lab.nimte.cas.cn/kepu/201602/t20160224_620414.html",
+              "date": "2016-02-23T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q11",
+          "task_id": "c840fa5f-cbb5-4f89-b255-18c0e43a00ce",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836913234,
+          "elapsed_ms": 2461,
+          "result_sha256": "8fedf19f8bb1ed1438462b839bae196e6636111d045957da4c02e3a6dddb6706",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "导览 - 故宫博物院 - 开放时间",
+              "url": "https://www.dpm.org.cn/Visit.html?u=http:////www.dpm.org.cn/Visit.html",
+              "date": null
+            },
+            {
+              "title": "故宫博物院",
+              "url": "https://www.dpm.org.cn/",
+              "date": "2026-07-19T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q12",
+          "task_id": "61bf6e87-b70f-4828-b5b0-a641f8bec9d6",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836916210,
+          "elapsed_ms": 2460,
+          "result_sha256": "55c8ad84cd2e6a39324b4ad6b0f861cd9b99984bfdb89f45a5debea2ee9e0325",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "参观预约",
+              "url": "https://www.chnmuseum.cn/cg/cgyy/202511/t20251109_277547.shtml",
+              "date": "2025-11-08T16:00:00+00:00"
+            },
+            {
+              "title": "参观国博实用攻略，请您查收！",
+              "url": "https://www.chnmuseum.cn/zx/gbxw/202609/t20260923_282658.shtml",
+              "date": "2026-09-21T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q13",
+          "task_id": "c1fa4350-9d49-44db-a92b-fe19180b4bfc",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836919186,
+          "elapsed_ms": 2073,
+          "result_sha256": "5b232305123f3358216cf12f65d0ebffe878edec9d11b34a62159d9350247428",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "China Science and Technology Museum",
+              "url": "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html?v%3Djt",
+              "date": "2026-03-22T16:00:00+00:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q14",
+          "task_id": "ab596ede-d811-43da-b122-be36066abaa4",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836921774,
+          "elapsed_ms": 2059,
+          "result_sha256": "9eb2f092d4be6b5a491056dbd325ee9907a4c6996224ddc9973f4e937a10f284",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "多地特色农产品迎来收获季 山野变“金山”助力乡村振兴",
+              "url": "https://news.cctv.com/2026/10/24/ARTI1RgbRNP5yD78mOnMIxzW261024.shtml",
+              "date": "2026-10-24T18:08:39+08:00"
+            },
+            {
+              "title": "十年间，辽宁舰完成三步走！",
+              "url": "https://news.cctv.com/2026/10/24/ARTIJBWOUVOkTHdxZGaWLIfH261024.shtml",
+              "date": "2026-10-24T17:38:07+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q15",
+          "task_id": "4019df0b-4c9f-4630-9c57-7069133fdf8d",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836924348,
+          "elapsed_ms": 1041,
+          "result_sha256": "d770ad1849582401af0aacaa9413efa47944ccc1ea06bdc4029764cdd59dc6a2",
+          "source_count": 2,
+          "sources": [
+            {
+              "title": "我国“卫星天团”闻令而动开展监测 为救灾救助提供“硬核”支持",
+              "url": "https://news.cctv.com/2026/10/24/ARTIxQjc9K3KwCFaG5TO5whf261024.shtml",
+              "date": "2026-10-24T10:33:35+08:00"
+            },
+            {
+              "title": "自然资源部为西藏那曲地震救援提供卫星遥感图像",
+              "url": "https://news.cctv.com/2026/10/24/ARTIDYhzoewUeuLeNSau1bFk261024.shtml",
+              "date": "2026-10-24T09:25:58+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q16",
+          "task_id": "0d663465-4bc9-4fcb-8ed0-7da1db6c3a3e",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836925904,
+          "elapsed_ms": 232,
+          "result_sha256": "b8f7823fab33a6901dfedc0888e50a19dc870e279193e94ead6184dfd45e4313",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 北京",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T18:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q17",
+          "task_id": "f5cd5d50-6fbc-46d1-9223-82b3399b5905",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836926652,
+          "elapsed_ms": 231,
+          "result_sha256": "de137e818daf18cefaaaff58ac667b81c47a80fe7437439faad4b18381f9696f",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 上海",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E4%B8%8A%E6%B5%B7%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T18:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q18",
+          "task_id": "ec8d92d1-c68c-489a-9a0c-0af2074384b4",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836927398,
+          "elapsed_ms": 229,
+          "result_sha256": "15b7308e5acece54effa2ac58e0fc92434bc4dede63b735037c2856d29b4135b",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 四川成都",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T18:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q19",
+          "task_id": "43c620bb-eea2-4e72-ba94-b463b5e56b22",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836928142,
+          "elapsed_ms": 228,
+          "result_sha256": "254a36295176a20895cf084bd1186fb2f860b485835e03813987f5e3f4c221bb",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 辽宁朝阳",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T18:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        },
+        {
+          "id": "Q20",
+          "task_id": "cacb49ce-c194-452c-87ac-a93266ae8948",
+          "status": "ready",
+          "outcome": "answered",
+          "failure": null,
+          "error": null,
+          "start_ms": 1792836928887,
+          "elapsed_ms": 228,
+          "result_sha256": "023c0e808e03240863016185d5ec6a85077d97a5a6a46b5ff4e85cbd1a45fb4e",
+          "source_count": 1,
+          "sources": [
+            {
+              "title": "百度天气 · 陕西西安",
+              "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+              "date": "2026-10-24T18:10:00+08:00"
+            }
+          ],
+          "synthetic_query_only": true,
+          "physical_hearing": false
+        }
+      ]
+    }
+  },
+  "diagnostic_costs_note": "另有2次真实检索+8次模型调用用于独立诊断/同证据反馈重放，不计入20条验收分子；不修改生产或候选配额。"
+}
