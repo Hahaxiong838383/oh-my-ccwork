@@ -4,17 +4,32 @@
 
 - `video-proxy-boot/`：基础版开机校时、实际DNS就绪、系统与应用DNS缓存恢复。
 - `youtube-failover/`：四级视频出口、两HY2独立worker、真实正文/DoT守护、配置生成与集成启动脚本。
-- `SOURCE-MANIFEST.json`：35份源码/测试/文档的SHA256、大小、权限和真源commit。
+- `SOURCE-MANIFEST.json`：46份源码/测试/文档的SHA256、大小、Git可执行位和真源commit。
+- `ACCEPTANCE-20261024.json`：脱敏启动时序、实播及缓存验收摘要，不含生产配置或原始日志。
 
-本次真源commit：`5b11001a7bf41bdc2e4ce22242e0f2a84c41d795`。发布与验收背景见[复盘](../2026-10-18-SmartTube与四级代理复盘.md)。生产配置、节点凭据、API密钥、账号数据、原始日志及APK/DEX/二进制不入本快照。
+本次真源commit：`ce3f0e9a5d3e60cbf11b83ae7570df4f31ff9347`。本次背景见[DNS与断电恢复复盘](../2026-10-24-电视DNS与断电恢复复盘.md)，旧版背景见[四级代理复盘](../2026-10-18-SmartTube与四级代理复盘.md)。生产配置、节点凭据、API密钥、账号数据、原始日志及APK/DEX/二进制不入本快照。
 
-## 版本与运行状态
+## 2026-10-24 当前发布
+
+系统DNS、Magisk早期双栈保护、现有sing-box1.14.3持久DNS缓存与5分钟optimistic已启用。
+SmartTube32.68使用原生“禁用自动网络错误修复”阻止长缓冲自动改DNS；账号与画质不清改。
+软件重启及用户断电启动均验证通过：8.26秒保护、78.89秒完整DNS就绪、79.64秒启动审计结束；
+最后SmartTube2560×1440连续帧增长，drop/软硬解码错误0，系统DNS设置保持。
+生产release40801839/config e74294d3的完整摘要见验收JSON；外部boot脚本查设备boot-assets-current.json。
+
+本批实现已通过66项保护/boot断言、26项真实缓存断言、17项事务测试、15项集成断言、6项接线测试，
+以及Android独立netns/合成事务和实际启动。归档时逐文件核对已提交真源，不重复操作电视或重跑无关测试。
+缓存真实写入和断电后文件使用已验，跨启动查询命中未独立证明；长期实播及主出口故障迁移仍待验。
+新增复现入口为youtube-failover下test_dns_guard.py/test_dns_persistence.py/test_dns_upgrade_apply.py/test_dns_wiring.py，
+在临时副本运行；依赖与边界见该目录README。SOURCE-MANIFEST v2记录Git模式，避免把本机umask生成的权限当成clone必须复现的权限。
+
+## 2026-10-18 历史版本与运行状态
 
 2026-10-18 22:41记录：四级代理已启用，顺序Rack HY2 → Rack Reality → ZGO Reality → ZGO HY2；两HY2各自独立重连，DNS独立走两Reality候选。正式目录`/data/adb/video-proxy/youtube-failover`，release为`e6d3398ba0764d85730533c6475d5fa6ec98341b085b37b2fbbf3271ad10395f`。本次归档不改变现网。
 
 基础版`video-proxy-boot/video-boot-start.sh`已验断电恢复；当前集成版是`youtube-failover/video-boot-start.next.sh`，其新冷启动仍待验。已验四出口正文、两HY2公网UDP、两Reality DoT、同UID生产TUN正文与备用ZGO自动重建；新版实际播放主出口故障迁移、Netflix实播回归和长期稳定性仍待验。源码可构建不等于这些现场验收已完成。
 
-## 发布复现
+## 2026-10-18 历史发布复现
 
 2026-10-18在独立`/tmp`源码副本完成以下361条断言，未操作电视。依赖沿用现有JDK21、Android SDK34、NDK26、sing-box1.14.3及固定SHA的JSON测试jar；依赖路径和覆盖变量见各项目README及脚本，二进制不随源码附送。
 

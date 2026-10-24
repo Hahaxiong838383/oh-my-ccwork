@@ -1,217 +1,285 @@
 {
-  "created": "2026-10-18 23:09 CST",
+  "schema_version": 2,
+  "created": "2026-10-24 19:39 CST",
   "source_root": "~/home-lan/4-Assets/Code",
-  "source_commit": "5b11001a7bf41bdc2e4ce22242e0f2a84c41d795",
+  "source_commit": "ce3f0e9a5d3e60cbf11b83ae7570df4f31ff9347",
+  "mode_note": "git_mode preserves executable bit; clone permissions depend on umask",
   "files": [
     {
       "path": "video-proxy-boot/BUILD-DEPENDENCIES.sha256",
       "sha256": "ec5d3a34ef9550bba79da0f03261b6d68b503632fa560b956fe74ba458e38022",
       "bytes": 830,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/README.md",
       "sha256": "05e38a5ba9bdf1017d2106124e397a10296b764a96b333caaa65fecec9399e6e",
       "bytes": 9122,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/VideoDnsCache.java",
       "sha256": "ef0e2a4793259fe99ae0e3c654b2b24042d6a821be846b9c8cb96f09419d6c66",
       "bytes": 3292,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/build.sh",
       "sha256": "bc1d3a1ffab5ac323b88d9305ca09b0985f577ccaabe33010fff260269f88f20",
       "bytes": 1430,
-      "mode": "0o755"
+      "git_mode": "100755"
     },
     {
       "path": "video-proxy-boot/rollback-boot-clock.sh",
       "sha256": "28194fe64addf8674cdd4e650be85770fdeed6c16f9332fa1046128f99e1d88b",
       "bytes": 1171,
-      "mode": "0o755"
+      "git_mode": "100755"
     },
     {
       "path": "video-proxy-boot/test-mark-overwrite.c",
       "sha256": "e0b7a47627949b6ba02ca71d62916a6522248a907215dc578136163be67be59c",
       "bytes": 4414,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/test-net.sh",
       "sha256": "4271762a092dc995348f00270d2d9f4648635de0bff916775de3c28917dc5bed",
       "bytes": 736,
-      "mode": "0o755"
+      "git_mode": "100755"
     },
     {
       "path": "video-proxy-boot/test-video-boot-net.c",
       "sha256": "551d35b6810274103ade765be3d159250257ce14bb16d4dd8e35b12bf0286b53",
       "bytes": 10912,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/test_boot_flow.py",
       "sha256": "240fa0284378dba80f46670ce007b9765d8648cfd6a3e4abfd60b0ce7e66711a",
       "bytes": 30663,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/test_dns_cache.py",
       "sha256": "4ba2146657dbf9da69a1c3b9f75b2eda5f14ad90a620504ed85a5355243656c3",
       "bytes": 6367,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/video-boot-net.c",
       "sha256": "926e9eb6a5a66d155bd3274a3179d1c4d716af63a9a6da683aafb9d4d3158952",
       "bytes": 17727,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "video-proxy-boot/video-boot-start.sh",
       "sha256": "3618e009afee53863abd752e763749b1aa07c746a43ad9b5013e8d9efdd17693",
       "bytes": 7385,
-      "mode": "0o755"
+      "git_mode": "100755"
     },
     {
       "path": "video-proxy-boot/video-proxy.sh",
       "sha256": "fba318fd39f6b369ac08536bed5fe22be611b28897a8184a271ef224bd0beeca",
       "bytes": 481,
-      "mode": "0o755"
+      "git_mode": "100755"
     },
     {
       "path": "youtube-failover/.gitignore",
       "sha256": "d6ae9cd4b0336630aad4d7286d6e445b68ea5831a737c319759642a02feb8a07",
       "bytes": 59,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/GUARD-DESIGN.md",
       "sha256": "28ac880d079df8c7091650ed3905fd7bf4e93266e225af2e50af6b701be50951",
       "bytes": 6899,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/GuardTest.java",
       "sha256": "4fe3b63f17576be17a4f7c8b0590c1fe2edb811a2b286107636fca9e17be040d",
       "bytes": 21403,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/README.md",
-      "sha256": "ef0e2cc738919a634f30a95e16b114c3d07f03fd9a020e1bfff9e74bf34bc552",
-      "bytes": 9442,
-      "mode": "0o664"
+      "sha256": "6b70e324ad52ffeddfdffcd8260b846f2a641e2d9ea3abec6f35d63908ee906e",
+      "bytes": 18465,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/TransportTest.java",
       "sha256": "96f7e385be82ef1165fee8f00ca15d7e04d64deb271ad91b57eb867bb66fc6ca",
       "bytes": 8173,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/YoutubeFailover.java",
       "sha256": "bd75b87fcc1f0da4f101e9e14af9a38d784484ff132e5c362fe766016056476b",
       "bytes": 45605,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/build.sh",
       "sha256": "7facce488b403efb7a9027ab8e73e17fd8f98f41a50caec02914908e10b8cc21",
       "bytes": 965,
-      "mode": "0o700"
+      "git_mode": "100755"
     },
     {
       "path": "youtube-failover/config.example.json",
       "sha256": "cea230dc5fa7e30e5ad9b4275c052a306a004d59f428dd56d9d5a4b8c0414424",
       "bytes": 1459,
-      "mode": "0o664"
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/dns-upgrade-apply.sh",
+      "sha256": "35ae20ff335f12b4d573fc481d630ff31a44c56219b48f5e5460785d007da8c7",
+      "bytes": 7112,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/generate.py",
       "sha256": "2bea175cc46caf6c63992112ee9baa21970c77e3c5c238da080f6461ea38e50f",
       "bytes": 12136,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/guard-run.sh",
       "sha256": "3643c93e8ad8c79a50604326adc24325f7e503f83ac702f492db01c9184e7ea4",
       "bytes": 1033,
-      "mode": "0o755"
+      "git_mode": "100755"
+    },
+    {
+      "path": "youtube-failover/install_dns_wiring.py",
+      "sha256": "2e9f1be03a2e3eec47eabbf8493ad57d149abc08ad0255ff1da46200b1e934ed",
+      "bytes": 4934,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/ip-identity-test/IpIdentityTest.java",
       "sha256": "dc1e720839ba3d08d7487e9d63b0178384ee145e7558ca96f9f15e530ddfc2df",
       "bytes": 5119,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/ip-identity-test/README.md",
       "sha256": "3b7140dfcc8a8dc14655954f04cf085b14893ca263f5ea65cf1b96176d6e7fb1",
       "bytes": 2502,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/ip-identity-test/run.sh",
       "sha256": "f3f440272dae3f7613c9b367e8f8f7bbc2f9903132490d039fb8a6d069adb488",
       "bytes": 1679,
-      "mode": "0o700"
+      "git_mode": "100755"
     },
     {
       "path": "youtube-failover/service.sh",
       "sha256": "302dba7ed75bfdca562863f837fd2be002d8a2f1e90ed4eac33ba8c1735cb3c0",
       "bytes": 2261,
-      "mode": "0o755"
+      "git_mode": "100755"
+    },
+    {
+      "path": "youtube-failover/stage_dns_upgrade.py",
+      "sha256": "8e61cdf84e5d4e87d6131707311303add98c1d16b387302e6d30ba63d923fd13",
+      "bytes": 6679,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/stage_release.py",
       "sha256": "60f70cdabe470ef315d48563b83c3cb03ef9ff00e06b9916682bb0a7f2560e1f",
       "bytes": 6605,
-      "mode": "0o700"
+      "git_mode": "100755"
     },
     {
       "path": "youtube-failover/test.sh",
       "sha256": "1fdd1b6371d27d28decdfc1ccceaac2e1371bc0de0752397394c618819446e98",
       "bytes": 2412,
-      "mode": "0o700"
+      "git_mode": "100755"
+    },
+    {
+      "path": "youtube-failover/test_dns_guard.py",
+      "sha256": "3b754b0ccb15c994b676ff6ad5957216205d24bbbc0f1b5dadbd2942e0743cdb",
+      "bytes": 19046,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/test_dns_persistence.py",
+      "sha256": "c435219f3682440338d51dca0174ddd7066713af03885ba049dc4e2150f87f9c",
+      "bytes": 15362,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/test_dns_upgrade_apply.py",
+      "sha256": "bdd90e23df9dfffbbbba45bd9b2bfa2258ce9dec2fecae4fea044ddd2a5e96cf",
+      "bytes": 14019,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/test_dns_wiring.py",
+      "sha256": "c7442e228757c8c21f3c90137685dd5d6d9aa6a1c537dc5c97557d16262189a6",
+      "bytes": 5427,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/test_integration.py",
-      "sha256": "a08d447c86456ac2ed6ea85e951b7c06b58763fc3db6adad80d83d150bdcea78",
-      "bytes": 3913,
-      "mode": "0o664"
+      "sha256": "ca1fab0a23ccbc4a67500a61b835ab54432874d03c2d4b2c4f66ca72b9fdc644",
+      "bytes": 3942,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/test_runtime.py",
       "sha256": "d6fd43e2c99a0b155b981070dce7028f48692d40cf8365d2717061756f686e0c",
       "bytes": 21369,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/test_socks_chain.py",
       "sha256": "585317ba0a5bc62167ff24ba129baef160a47014e1414f59a3b59357748b28dd",
       "bytes": 11207,
-      "mode": "0o664"
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/video-boot-start.next.sh",
-      "sha256": "d3ef80ede9373523e094719ec9411b3056c83a290f0ea38aebd979754a6e7a5e",
-      "bytes": 8048,
-      "mode": "0o755"
+      "sha256": "ef698356b7b4705643d3389a99da5386e09eb55bfa7a914cb1e7dc4209746cea",
+      "bytes": 8556,
+      "git_mode": "100755"
+    },
+    {
+      "path": "youtube-failover/video-dns-guard.sh",
+      "sha256": "79808bef5532521e62d489f17662fcf3842353a09ee6a447cb941fe4b303d7c2",
+      "bytes": 5527,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/video-dns-post-fs-data.sh",
+      "sha256": "fdaa9f12954f2a51ab3d8dfac43cac24009ddbdeb96cf03eb18daef84ff3594c",
+      "bytes": 750,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/video-dns-service-entry.sh",
+      "sha256": "98b513bcabe46a67a67d4e14577ea3d042d4cb62c96314156d8c1274eba92c46",
+      "bytes": 492,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/video-dns-service-start.sh",
+      "sha256": "e042094305886955b2564572e671143c341acfae9ec1ccf86013b11121bfb1f1",
+      "bytes": 1024,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/worker-safe-check.sh",
       "sha256": "0bf2bdc7912105db7920e642e0e200106f6183954f09ec2544a97c3f1a13f3ba",
       "bytes": 375,
-      "mode": "0o700"
+      "git_mode": "100755"
     },
     {
       "path": "youtube-failover/workerctl.sh",
       "sha256": "64cf4d3811e6c722bb1d296edc049046e909f5c93deb375d45baaa5a4d48d9b6",
       "bytes": 11329,
-      "mode": "0o700"
+      "git_mode": "100755"
     }
   ]
 }

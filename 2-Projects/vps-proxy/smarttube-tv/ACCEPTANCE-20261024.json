@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-24",
+  "scope": "X96 Android11 / SmartTube Beta32.68 code2458 / sing-box1.14.3",
+  "source_commit": "ce3f0e9a5d3e60cbf11b83ae7570df4f31ff9347",
+  "release_id": "40801839b020a05fdc7c7e49ed4702e39831033564ec4ddfaaab460d6ac9f82b",
+  "main_config_sha256": "e74294d370dfd088e92703505bcf003c02f7ceef443bf6744c7d37ced924a551",
+  "boot_assets": {
+    "guard_sha256": "79808bef5532521e62d489f17662fcf3842353a09ee6a447cb941fe4b303d7c2",
+    "post_fs_data_sha256": "fdaa9f12954f2a51ab3d8dfac43cac24009ddbdeb96cf03eb18daef84ff3594c",
+    "current_manifest": "/data/adb/video-proxy/boot-assets-current.json"
+  },
+  "tests": {
+    "dns_guard_and_boot_assertions": 66,
+    "real_linux_singbox_cache_assertions": 26,
+    "upgrade_transaction_tests": 17,
+    "existing_integration_assertions": 15,
+    "startup_wiring_tests": 6,
+    "android_checks": [
+      "isolated network namespace packet counters",
+      "synthetic nine-file apply and rollback",
+      "installed post-fs-data child with invalid PATH"
+    ]
+  },
+  "software_restart": {
+    "boot": "495ff7a2-b163-4451-b5e9-b2eb444b0c79",
+    "dns_guard_uptime_s": 7.65,
+    "dns_ready_uptime_s": 67.67,
+    "production_cache_open_fd": 7,
+    "new_domain_query_changed_db": true,
+    "cache_hit_after_restart_proven": false
+  },
+  "user_power_cycle": {
+    "boot": "310f7f71-50e7-4c96-8a06-75a2ab20b26a",
+    "dns_guard_uptime_s": 8.26,
+    "smarttube_start_ticks": 2967,
+    "clock_ticks_per_second": 100,
+    "smarttube_start_uptime_s": 29.67,
+    "clock_verified_uptime_s": 52.66,
+    "dns_queries_verified_uptime_s": 75.6,
+    "dns_ready_uptime_s": 78.89,
+    "startup_audit_ready_uptime_s": 79.64,
+    "transient_observations": [
+      "one early iptables unavailable check recovered automatically",
+      "one time-source retry before clock verification"
+    ],
+    "unique_processes": {
+      "main": 7551,
+      "guardian": 7593,
+      "rack_worker": 8180,
+      "zgo_worker": 8685
+    },
+    "dns_queries_success": true,
+    "cache_file_open_fd": 7,
+    "cache_file_bytes": 131072,
+    "cache_file_mode": "600",
+    "preferred_dns_type": 1,
+    "network_error_fixing_disabled": true
+  },
+  "playback": {
+    "application": "org.smarttube.beta",
+    "pid": 4657,
+    "sample_local_times": [
+      "19:31:17",
+      "19:31:28",
+      "19:31:38"
+    ],
+    "timezone": "Asia/Shanghai",
+    "codec": "VP9",
+    "width": 2560,
+    "height": 1440,
+    "decoded_frames": [
+      2369,
+      3018,
+      3664
+    ],
+    "dropped_frames": [
+      0,
+      0,
+      0
+    ],
+    "software_decode_errors": [
+      0,
+      0,
+      0
+    ],
+    "hardware_decode_errors": [
+      0,
+      0,
+      0
+    ],
+    "retained_logcat_lines": 1935,
+    "error_counts": {
+      "UnknownHostException": 0,
+      "SSLHandshakeException": 0,
+      "ConnectException": 0,
+      "SocketTimeoutException": 0,
+      "PlaybackException": 0,
+      "ExoPlaybackException": 0,
+      "CertPathValidatorException": 0,
+      "CertificateNotYetValidException": 0
+    }
+  },
+  "limits": [
+    "short observation is not long-term playback assurance",
+    "production cache lookup hit across restart not independently proven",
+    "no measured speedup percentage",
+    "no live-primary-route fault injection or Netflix playback regression in this DNS task",
+    "manual choice cannot be excluded as cause of prior DNS2 reset; installed source contains automatic reset path"
+  ],
+  "local_raw_evidence": [
+    "/tmp/tv-dns-reboot-20261024",
+    "/tmp/tv-dns-powercycle-20261024",
+    "/tmp/tv-dns-powercycle-review-20261024"
+  ]
+}

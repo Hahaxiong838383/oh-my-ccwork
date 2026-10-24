@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 代理管理。管理 Xray 代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"
+description: Xray 客户端与 REALITY 服务端运维，以及 Android 电视盒 sing-box、SmartTube/YouTube DNS 和断电启动恢复。用于代理状态、分流、网络不通与电视 DNS 排障；电视模式不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray - Xray 代理管理
@@ -11,6 +11,14 @@ description: Xray 代理管理。管理 Xray 代理引擎：启动/停止/切换
 
 - 用户说"切换代理"、"关 v2ray"、"启动 xray"、"代理不通"、"网络不行"
 - 需要检查或修复代理配置时
+
+## 电视盒 sing-box / SmartTube 模式
+
+电视盒 Android 上的 SmartTube / YouTube DNS、断电后代理恢复或开机缓存问题，先读
+[电视 DNS 与冷启动维护](references/tv-dns-coldboot.md)。该模式维护设备上的 sing-box、
+Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xray/` 客户端命令不用于电视。
+先核当前前台与用户允许的中断范围，再选择只读取证、下次启动部署或已授权的重启验收。
+
 
 ## 可用命令
 

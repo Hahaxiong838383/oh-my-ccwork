@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 代理管理。管理 Xray 代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"
+description: Xray 客户端与 REALITY 服务端运维，以及 Android 电视盒 sing-box、SmartTube/YouTube DNS 和断电启动恢复。用于代理状态、分流、网络不通与电视 DNS 排障；电视模式不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray（多引擎入口）

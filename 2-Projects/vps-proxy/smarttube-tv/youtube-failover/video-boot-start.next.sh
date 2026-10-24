@@ -50,6 +50,14 @@ fi
 [ -x "$D/video-boot-net" ] || fail missing_network_helper
 [ -x "$D/sing-box" ] || fail missing_proxy_binary
 [ -r "$D/video-dns-cache.dex" ] || fail missing_dns_cache_helper
+[ -r "$D/video-dns-guard.sh" ] || fail missing_early_dns_guard
+ensure_dns_guard() {
+  sh "$D/video-dns-guard.sh" --install >> "$D/boot-start.log" 2>&1 &&
+    sh "$D/video-dns-guard.sh" --verify >> "$D/boot-start.log" 2>&1
+}
+# post-fs-data installed these before apps. Recheck after Android/netd startup
+# too; missing rules must not be mistaken for an already protected boot.
+ensure_dns_guard || retry early_dns_guard_unavailable
 
 # Android's early startup may replace the RTC's 1970 time with the build date.
 # Wait until that phase is over before setting time ourselves.
@@ -60,6 +68,7 @@ while [ "$(getprop sys.boot_completed)" != 1 ]; do
   sleep 2
 done
 log android_boot_complete
+ensure_dns_guard || retry android_boot_dns_guard_unavailable
 
 i=0
 epoch=
@@ -90,7 +99,21 @@ delta=$((now-epoch)); [ "$delta" -ge 0 ] || delta=$((-delta))
 [ "$delta" -le 3 ] || fail clock_readback_failed
 log clock_verified
 
-"$D/sing-box" check -c "$D/config.json" >> "$D/boot-start.log" 2>&1 || fail config_check_failed
+if ! "$D/sing-box" check -c "$D/config.json" >> "$D/boot-start.log" 2>&1; then
+  # Only the next-boot transaction that actually applied in this boot may undo
+  # its config. Network or upstream DNS failures never trigger this rollback.
+  upgrade="$D/dns-upgrade-20261024"
+  if [ "$(cat "$upgrade/applied-boot-id" 2>/dev/null)" = "$boot" ] &&
+     [ -r "$upgrade/dns-upgrade-apply.sh" ] && ! production_proxy_running; then
+    if sh "$upgrade/dns-upgrade-apply.sh" --rollback >> "$D/boot-start.log" 2>&1; then
+      log config_check_failed_upgrade_rolled_back
+      # The transaction has restored the previous worker at this same pathname.
+      exec sh "$0" --locked
+    fi
+    fail config_check_failed_upgrade_rollback_failed
+  fi
+  fail config_check_failed
+fi
 # Recheck under the same lock immediately before creating the process.
 production_proxy_running && fail proxy_appeared_preserved
 if [ -f "$D/sing-box-zgo.log" ] && [ "$(wc -c < "$D/sing-box-zgo.log")" -gt 5000000 ]; then
@@ -128,32 +151,20 @@ if [ "$ready" -ne 1 ]; then
 fi
 log dns_queries_verified
 
-undo_dns() {
-  while iptables -t nat -D OUTPUT -j VIDEO_DNS 2>/dev/null; do :; done
-  while ip6tables -D OUTPUT -j VIDEO_DNS6 2>/dev/null; do :; done
-}
 dns_failed() {
-  undo_dns
+  # The early rejection/redirect chains stay installed on every failure path.
+  # Removing them would reopen exactly the polluted path we are protecting.
   stop_owned_proxy
-  fail dns_rule_install_failed
+  retry dns_rule_install_failed_protection_retained
 }
-iptables -t nat -N VIDEO_DNS 2>/dev/null || :
-iptables -t nat -F VIDEO_DNS || dns_failed
-iptables -t nat -A VIDEO_DNS -m mark --mark 255 -j RETURN || dns_failed
-iptables -t nat -A VIDEO_DNS -p udp --dport 53 -j REDIRECT --to-ports 5354 || dns_failed
-iptables -t nat -A VIDEO_DNS -p tcp --dport 53 -j REDIRECT --to-ports 5354 || dns_failed
-ip6tables -N VIDEO_DNS6 2>/dev/null || :
-ip6tables -F VIDEO_DNS6 || dns_failed
-ip6tables -A VIDEO_DNS6 -p udp --dport 53 -j REJECT || dns_failed
-ip6tables -A VIDEO_DNS6 -p tcp --dport 53 -j REJECT || dns_failed
-iptables -t nat -C OUTPUT -j VIDEO_DNS 2>/dev/null || iptables -t nat -A OUTPUT -j VIDEO_DNS || dns_failed
-ip6tables -C OUTPUT -j VIDEO_DNS6 2>/dev/null || ip6tables -A OUTPUT -j VIDEO_DNS6 || dns_failed
+ensure_dns_guard || dns_failed
 settings put global private_dns_mode off || dns_failed
 ip rule del pref 8999 2>/dev/null || :
 # Validate again after activating the rules, before declaring this boot ready.
 "$D/video-boot-net" dns www.youtube.com 127.0.0.1 5354 >/dev/null 2>&1 || dns_failed
 
 flush_dns_caches() {
+  ensure_dns_guard || return 1
   # Apps may have resolved through the ISP before the proxy was ready. Derive
   # every live network ID, and use the platform interface rather than guessed
   # Binder transaction numbers. Re-read IDs on every retry (networks can change).
@@ -195,6 +206,7 @@ while ! flush_dns_caches; do
   sleep 10
 done
 log dns_caches_flushed
+ensure_dns_guard || dns_failed
 printf '%s\n' "$boot" > "$D/boot-ready-boot-id.new" || dns_failed
 mv "$D/boot-ready-boot-id.new" "$D/boot-ready-boot-id" || dns_failed
 log dns_takeover_ready

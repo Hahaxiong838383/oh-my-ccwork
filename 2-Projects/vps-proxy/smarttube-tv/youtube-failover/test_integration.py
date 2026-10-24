@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='yt-integration-fixture-') as td:
   check(not detect(),'worker remains yet main is absent after stop')
  finally:worker.terminate();worker.wait()
  check(s.index('log clock_verified')<s.index('owned_pid=$!')<s.index('service.sh" boot-start')<s.index('dns_not_ready'),'DNS guard starts after validated clock/main and before DNS ready gate')
- check(s.count('production_proxy_running')==3 and 'pidof sing-box' not in s,'both old global-pid checks replaced')
+ check(s.count('production_proxy_running')==4 and 'pidof sing-box' not in s,'main checks including config rollback use exact process identity')
  for name in ['service.sh','guard-run.sh']:shutil.copyfile(S/name,r/name)
  (r/'release-id').write_text('test-release\n');(r/'release-id').chmod(0o600);(r/'guard.dex').write_text('fixture');(r/'guard-config.json').write_text('{}')
  w=r/'workerctl.sh';w.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$(dirname "$0")/calls"\n');w.chmod(0o700)

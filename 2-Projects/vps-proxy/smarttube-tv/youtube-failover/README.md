@@ -1,5 +1,113 @@
 # YouTube / SmartTube 四级代理兜底
 
+## 2026-10-24 19:32 断电启动观察通过
+
+用户执行断电重启后，ADB从offline恢复，新boot`310f7f71-50e7-4c96-8a06-75a2ab20b26a`。
+全程仅后台读取及两次小DNS查询，没有启动APP、发按键、重启代理或改设备。
+release/config仍为下节的40801839/e74294d3；9文件状态标记、两外部脚本SHA均正确。
+主代理7551、guardian7593、worker8180/8685各唯一且自动启动。
+
+- DNS保护8.26秒安装。SmartTube进程启动时间由`/proc/4657/stat`第22字段2967、
+  实测`CLK_TCK=100`得到29.67秒，保护提前21.41秒。校时前logcat的monotonic显示负数，不用它计算时序。
+- 8.32秒后台审计遇一次`/system/bin/iptables: not found`，已有保护不撤；后续自动恢复。
+  设备时钟从2024年校正，一次时间源重试后52.66秒校时成功，78.89秒完整DNS就绪，
+  79.64秒自动写出`startup_audit_ready`。这次闭合了上轮watcher补丁的实际启动验证，无手工补跑。
+- DNS5354真实YouTube/NTP查询成功，耗时0.101/0.085秒（含ADB开销）。缓存文件131072B/600，主进程fd7打开。
+  旧`www.iana.org`字节此时未找到，不能据此认定跨启动命中或失败；旧查询早已超过5分钟窗口。
+- SmartTube DNS1与禁自动网络修复true保持。先720p，后VP9 2560×1440实播；
+  19:31:17→19:31:38帧2369→3018→3664，drop/软硬解码错误均0。
+  PID4657保留1935行日志中八类网络/证书/播放异常为0；这是观察窗口，不承诺长期绝不卡顿。
+
+证据`/tmp/tv-dns-powercycle-20261024/`、`/tmp/tv-dns-powercycle-review-20261024/`。
+本轮只更新验收记录与共享记忆，未commit/push。下节“未再次重启/断电未验”是19:25历史状态，已由本节推进；
+生产缓存跨启动的真实查询命中仍未独立证明。
+
+## 2026-10-24 软件重启验收与追加修正
+
+用户明确授权重启后，新 boot `495ff7a2-b163-4451-b5e9-b2eb444b0c79` 已应用新配置。
+当前 release 为 `40801839b020a05fdc7c7e49ed4702e39831033564ec4ddfaaab460d6ac9f82b`，
+config SHA 为 `e74294d370dfd088e92703505bcf003c02f7ceef443bf6744c7d37ced924a551`。
+9文件新SHA/权限、applied/ready、唯一主代理6353、guardian6395、worker6880/7303均通过。
+DNS保护uptime7.65秒安装，早于哔哩20.640秒、官方YouTube27.704秒、SmartTube88.808秒启动；
+完整DNS/系统缓存就绪67.67秒，等待期间保持保护。不是把DNS恢复到7秒，也不是证明轮询间绝无缺口。
+
+生产主进程fd7实际打开600权限的`dns-cache.db`；新域名`www.iana.org`查询后DB SHA/mtime变化，
+该域名由不存在变为存在，证明缓存文件实际写入。尚未实测生产DB跨下一次重启的命中。
+
+本次发现并修复两处运行时问题：
+
+- post-fs-data异步watcher解析`dirname`为不存在的`/vendor/bin/dirname`而退出。
+  改纯shell路径计算、绝对BusyBox与`/system/bin/iptables`，在真机以`PATH=/nonexistent`
+  执行**已安装post-fs-data入口**，后台实际写出`startup_audit_ready`（uptime593.63）。
+  代理PID和防火墙规则保持，播放帧5447→5587、错误0。扩展后共66项guard断言/6项接线测试通过。
+  此补丁尚未再重启验证，当前是实际入口及后台子进程验证；不可误记为第二次冷启动。
+- SmartTube32.68播放后发现DNS1回到2。pinned源码`ffa164…`的`ErrorFixerController.onLongBuffering`
+  存在强制Google DNS并restartEngine的路径；未捕获本次对应分支日志，不能排除手动改动。
+  为阻止该自动改写，已启用原生
+  “禁用自动网络错误修复”（官方说明VPN环境可启用），再将DNS设回1并重开SmartTube。
+  实际`multi_profiles=false`；仅改`files/app_prefs/video_player_tweaks_data`中`%OB%`分隔的
+  第52字段（index51）false→true和全局DNS字段，其他字段、owner/mode/SELinux保持。
+  该选项还停止两类自动换播放引擎，保留client切换/重载/SABR与解码恢复；不是禁用全部自愈。
+  备份`/data/adb/video-proxy/backup-dns-autofix-20261024`。别读取当前仓HEAD当32.68：新版才restartTheApp。
+
+最终设置下实播：SmartTube PID12673，19:19:14→19:19:45，VP9 1280×720/30fps，
+帧103→413→722→1030，drop/软硬解码错误均0；DNS持续1、禁自动网络修复持续true。
+后三次前台为画质等对话框，解码仍持续；此前1080p/4K样本属于较早设置阶段，不能混作最终设置的画质验收。
+19:22:51→19:23:22继续只读观察，同PID的AV1帧11575→13616、drop/软硬解码错误0，两设置仍保持。
+该驱动的宽高读数为0，无法据此判断分辨率；未改用户画质。当前PID保留的1835行logcat中，
+DNS/TLS/连接/超时/播放异常六类计数均0，仅代表保留日志窗口。主代理及worker PID、boot和两脚本SHA保持。
+
+早期脚本属于release目录之外的追加修正，**当前SHA真源为设备
+`/data/adb/video-proxy/boot-assets-current.json`**，覆盖首发manifest的`boot_assets`快照。
+guard SHA `79808bef5532521e62d489f17662fcf3842353a09ee6a447cb941fe4b303d7c2`；
+post-fs-data SHA `fdaa9f12954f2a51ab3d8dfac43cac24009ddbdeb96cf03eb18daef84ff3594c`。
+事务不覆盖这两个外部文件，后续不得拿首发stage中的旧guard覆盖当前修正。
+9文件迁移事务在后续每次启动仍预检old/new SHA；以后合法修改其中任何文件时，
+须同步更新该事务的基线与回退组，或在完整接替启动链后显式退役事务。
+只改config及active-main会让下次启动因未知漂移拒绝执行，不能以当次热运行正常作为交付判据。
+证据`/tmp/tv-dns-reboot-20261024/`；软件重启不等同实际断电启动，长期不卡顿仍需观察。
+
+## 2026-10-24 19:01 安装阶段记录（已被上方重启结果推进）
+
+用户授权三项：SmartTube 使用系统受保护 DNS、应用启动前双栈 DNS 保护、现有
+sing-box 1.14.3 持久 DNS 缓存及 5 分钟 optimistic 窗口。当前前台哔哩哔哩播放保留；
+未重启盒子、主代理或 guardian。
+
+- SmartTube Beta 的 `preferred_dns_type` 从 2 改为 1（系统 DNS、IPv4 优先）。
+  确认无媒体会话且前台为哔哩后，仅 force-stop SmartTube，防进程缓存回写。
+  XML 其他字段、owner/group/mode/SELinux 不变，备份在设备
+  `/data/adb/video-proxy/backup-dns-smarttube-20261024`；下次实际打开仍待验收。
+- `video-dns-post-fs-data.sh` 在 Magisk post-fs-data 阶段安装保护，只有有界本地规则操作；
+  IPv4 NAT 接管 53→5354，额外 IPv4 filter 拒绝漏网 53，IPv6 拒绝 53。
+  双栈 TCP/UDP 和 mark 255 校时绕过均覆盖。规则按有序前缀验收、不 flush，失败不撤保护。
+  后台启动审计最多 240 秒，boot worker 多阶段复核。不能以轮询证明 netd 从不造成瞬间缺口。
+- service.d 异步入口先运行 9 文件事务，再启动原有开机校时/代理流程。
+  新配置只增加 `dns.optimistic={enabled:true,timeout:"5m"}` 和
+  `experimental.cache_file={enabled:true,path:"/data/adb/video-proxy/dns-cache.db",store_dns:true}`。
+  保留四级节点、Netflix、DoT 和 API 配置；发布副本、SHA、release、enabled、manifest 一起更新。
+
+安装屏障绑定 boot `35c9236d-6904-481f-8515-e30d910c7d46`，本 boot 所有新入口实测零动作。
+正式配置仍为下文原 SHA/release；下一次启动目标：
+
+- release：`40801839b020a05fdc7c7e49ed4702e39831033564ec4ddfaaab460d6ac9f82b`
+- config SHA：`e74294d370dfd088e92703505bcf003c02f7ceef443bf6744c7d37ced924a551`
+- 事务及完整备份：`/data/adb/video-proxy/dns-upgrade-20261024`
+
+代码：`stage_dns_upgrade.py` 只暂存；`install_dns_wiring.py` 安装下一 boot 接线；
+`dns-upgrade-apply.sh` 只接受 old/new SHA，未知漂移拒绝覆盖，进程已运行则拒绝激活。
+失败回滚整组，事务中断可重放（SIGKILL已测，真实断电待验），回退标记防止坏包自动再次激活；配置校验失败自动回退，
+外网暂时失败保留保护并重试。凭据只在内存与设备 root 私有目录，启用接线前后已 sync。
+
+验证：61 项保护/生产 boot 隔离断言、26 项真实 Linux sing-box 缓存断言、17 项事务测试、
+15 项原集成断言、5 项启动接线测试均通过。Android 独立网络命名空间真实验证规则与数据包
+计数；Android 合成文件事务实测 apply/rollback 并逐 9 文件回读通过。实际 Magisk BusyBox
+只用 pathname+command `flock -n`，不支持 `-w` 或数字 FD 模式。
+
+安装后主代理 3510、两 worker 4757/5442、guardian 3595、双栈规则和路由保持；
+前台哔哩 720p30 帧 71285→71477，drop/软硬解码错误 0。当前冷启动时序、生产缓存文件
+实际打开及 SmartTube 登录首页/实播仍待用户重启窗口，不能将隔离验证写为已经冷启动修复。
+完整记录：mycc/vps-proxy `2026-10-24-电视DNS三项加固实施与待重启验收.md`。
+
 本目录维护电视独立HY2 worker、真实正文与DNS守护、配置生成和授权后启动接线。
 当前状态（2026-10-18 22:37 CST）：用户已明确授权重载，**正式目录已启用，主代理PID25241、guardian及两HY2 worker在线**。没有重启盒子或切前台应用。四出口完整正文、两HY2公网UDP、两Reality真实DoT与同UID生产TUN正文验证均通过；后续冷启动及长期SmartTube实播仍待验证。
 
