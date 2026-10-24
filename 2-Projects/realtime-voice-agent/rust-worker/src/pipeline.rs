@@ -3033,7 +3033,14 @@ impl Orchestrator {
                 // 字幕发了、在途播放不停,假打断超时后还会续播。
                 let hit = {
                     let bank = self.echo_local_texts.lock().unwrap();
-                    crate::textproc::opening_echo_verdict(&nu, &bank, control_outlet).map(str::to_string)
+                    // R15: a real result can start before the greeting echo window
+                    // expires. Exact, ended result acknowledgments must reach the
+                    // search-only continue branch below; ordinary input keeps the
+                    // original echo verdict and controls keep their priority.
+                    crate::textproc::opening_echo_with_search_ack(
+                        &nu, &bank, control_outlet,
+                        self.search_ack(&user_text, self.search_user_speaking),
+                    ).map(str::to_string)
                 };
                 if let Some(slot) = hit {
                     info!(room = %self.room_name, slot = %slot,

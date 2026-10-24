@@ -292,6 +292,21 @@ pub fn opening_echo_verdict<'a>(
     local_audio_echo_hit(commit_norm, bank)
 }
 
+/// Search result acknowledgments may arrive inside the local greeting window.
+/// The caller supplies the session-scoped decision (result active + first PCM +
+/// exact acknowledgment + input ended), never a word-only exemption.
+pub fn opening_echo_with_search_ack<'a>(
+    commit_norm: &str,
+    bank: &'a [(String, String)],
+    control_outlet: Option<&'static str>,
+    search_ack: bool,
+) -> Option<&'a str> {
+    if search_ack {
+        return None;
+    }
+    opening_echo_verdict(commit_norm, bank, control_outlet)
+}
+
 pub fn lcs_char_ratio(needle: &str, hay: &str) -> f32 {
     let a: Vec<char> = needle.chars().collect();
     let b: Vec<char> = hay.chars().collect();
@@ -694,6 +709,27 @@ mod opening_echo_verdict_tests {
             ("greeting.wait".into(), "嘿我在这儿等你呢".into()),
             ("greeting.story".into(), "你来了故事继续".into()),
         ]
+    }
+
+    #[test]
+    fn r15_search_result_ack_survives_opening_single_char_echo_gate() {
+        use crate::search_dialogue::{classify_search_ack, SearchAckDecision, SearchPlaybackContext};
+        for (active, pcm, speaking) in [(true,true,false),(false,true,false),(true,false,false),(true,true,true)] {
+            let ctx = SearchPlaybackContext { result_active: active, first_pcm_seen: pcm, input_continues: speaking };
+            for text in ["对", "哦", "嗯"] {
+                let ack = classify_search_ack(true,text,&ctx)==SearchAckDecision::ContinueResult;
+                let expected = if active && pcm && !speaking { None } else { Some("single-char") };
+                assert_eq!(opening_echo_with_search_ack(text,&greeting_bank(),None,ack),expected,
+                    "text={text}, active={active}, pcm={pcm}, speaking={speaking}");
+            }
+        }
+        let ctx = SearchPlaybackContext { result_active:true, first_pcm_seen:true, input_continues:false };
+        for text in ["那", "停", "退出", "取消搜索", "改查火星", "我想聊", "嗯我想聊小猫"] {
+            let ack = classify_search_ack(true,text,&ctx)==SearchAckDecision::ContinueResult;
+            assert!(!ack,"controls and complete new topics must keep their normal path");
+            assert_eq!(opening_echo_with_search_ack(text,&greeting_bank(),outlet(text),ack),
+                opening_echo_verdict(text,&greeting_bank(),outlet(text)));
+        }
     }
 
     /// B61 提过的形态:日后若把 farewell.* 放进库,「再见」就是这条的精确子串。
