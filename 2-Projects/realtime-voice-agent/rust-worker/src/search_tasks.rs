@@ -165,6 +165,7 @@ pub struct Speech {
 
 struct PendingTopic {
     query: String,
+    replace: bool,
     since: Instant,
     route: Option<(String, Decision)>,
     tail_observed: bool,
@@ -185,6 +186,16 @@ fn question_tail(t: &str) -> bool {
     t.chars().count()<=40 &&
         ["主要吃","吃什么","是什么","是怎么","是如何","为什么","怎么","有多","有几","多少","在哪里","什么时候","能不能","会不会"].iter().any(|p|t.starts_with(p)) &&
         !["帮我","改查","不用","不要","我们","你","我","；",";"].iter().any(|p|t.contains(p))
+}
+fn missing_predicate(q: &str) -> bool {
+    let q=q.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
+    ["为什么","为什么会","怎么","怎么会","如何"].iter().any(|p|q.ends_with(p))
+}
+fn predicate_tail(t: &str) -> bool {
+    // A narrow adjacent ASR continuation, not a buffer for arbitrary chat.
+    (2..=24).contains(&t.chars().count()) &&
+        ["灭绝","会","能","要","是","不","没有","变","发","形成","出现","产生","生长","消失","吃","飞","转","掉","亮"].iter().any(|p|t.starts_with(p)) &&
+        !["帮我","查","搜","取消","不用","不要","停","退出","聊","我们","你","我","天气","；",";"].iter().any(|p|t.contains(p))
 }
 pub struct SearchSession {
     resume_v1: bool,
@@ -279,8 +290,9 @@ impl SearchSession {
         let mut deferred = None;
         if let Some(pending) = self.pending_topic.take() {
             let tail=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
-            if pending.since.elapsed() <= Duration::from_millis(pending.deadline_ms()) && question_tail(tail) {
-                joined=Some(format!("帮我查一下{}{}",pending.query,tail));
+            let continues=if missing_predicate(&pending.query){predicate_tail(tail)}else{question_tail(tail)};
+            if pending.since.elapsed() <= Duration::from_millis(pending.deadline_ms()) && continues {
+                joined=Some(format!("{}{}{}",if pending.replace{"改查"}else{"帮我查一下"},pending.query,tail));
                 self.clarified_at=None;
                 tracing::info!("background search clarification fragments joined");
             } else {
@@ -296,7 +308,7 @@ impl SearchSession {
             self.clarified_at=None;
             // Use the actual hot-configured route, including natural weather.
             // Unrelated chat continues immediately; new searches supersede the fragment.
-            if let Some(pending)=deferred {
+            if let Some(pending)=deferred.filter(|p|!missing_predicate(&p.query)) {
                 self.last_route=pending.route;
                 self.submit(pending.query,false);
             }
@@ -331,14 +343,16 @@ impl SearchSession {
                     self.notice("我还在查刚才的问题；要换一个，可以说“改查”。");
                     return false;
                 }
-                if self.clarified_at.take().is_some_and(|at|at.elapsed()<=Duration::from_secs(10)) && bare_topic(&query) {
-                    self.pending_topic=Some(PendingTopic{query,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
+                let clarified=self.clarified_at.take().is_some_and(|at|at.elapsed()<=Duration::from_secs(10));
+                if missing_predicate(&query) || (clarified && bare_topic(&query)) {
+                    self.pending_topic=Some(PendingTopic{query,replace:false,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
                     return true;
                 }
                 return self.submit(query, false);
             }
             Intent::Replace(query) => { return self.replace_query(query); },
             Intent::Cancel => {
+                self.pending_topic=None;self.clarified_at=None;
                 self.suppress_auto_replay();
                 self.epoch += 1;
                 self.gate.cancel();
@@ -395,6 +409,12 @@ impl SearchSession {
         false
     }
     pub fn replace_query(&mut self, query: String) -> bool {
+        self.pending_topic=None;
+        if missing_predicate(&query) {
+            self.command(Intent::Cancel);
+            self.pending_topic=Some(PendingTopic{query,replace:true,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
+            return true;
+        }
         self.suppress_auto_replay();
         self.epoch += 1;
         self.gate.cancel();
@@ -513,7 +533,11 @@ impl SearchSession {
             }
         }
         if self.pending_topic.as_ref().is_some_and(|p|p.since.elapsed()>=Duration::from_millis(p.deadline_ms())) {
-            let p=self.pending_topic.take().unwrap();self.last_route=p.route;self.submit(p.query,false);
+            let p=self.pending_topic.take().unwrap();self.last_route=p.route;
+            if missing_predicate(&p.query) {
+                self.clarified_at=Some(Instant::now());
+                if !self.receipt(ReceiptKind::Clarify){self.notice("刚才的问题还没说完整，你想查什么？");}
+            } else {self.submit(p.query,false);}
         }
         let now = Instant::now();
         if safe {
@@ -1134,6 +1158,58 @@ mod tests {
         assert_eq!(s.poll(true),Some("好，我查一下。".into()));assert!(s.active_receipt_pcm().is_none());
     }
 
+    #[tokio::test]
+    async fn r14_incomplete_explicit_question_waits_for_adjacent_predicate_only() {
+        for (head,tail,query) in [("帮我查一下恐龙为什么","灭绝","恐龙为什么灭绝"),("帮我查一下月亮为什么会","发光","月亮为什么会发光")] {
+            let (mut s,_,mut commands)=test_session();
+            let a=s.interpret(head).unwrap();s.command(a);
+            assert!(commands.try_recv().is_err(),"incomplete question must not be dispatched");
+            s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(879);
+            let a=s.interpret(tail).unwrap();s.command(a);
+            assert!(matches!(commands.try_recv(),Ok(Command::Submit{query:q,..})if q==query));
+            assert!(commands.try_recv().is_err());
+        }
+    }
+    #[tokio::test]
+    async fn r14_missing_predicate_expires_into_clarification_never_search() {
+        let (mut s,_,mut commands)=test_session();
+        let a=s.interpret("帮我查一下恐龙为什么").unwrap();s.command(a);
+        s.observe_input(true);
+        s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_millis(5001);
+        s.poll(false);
+        assert!(commands.try_recv().is_err());assert!(s.pending_topic.is_none());
+        assert!(s.speech.iter().any(|s|s.text.contains("想查什么")));
+        assert!(!s.busy);
+    }
+    #[tokio::test]
+    async fn r14_incomplete_question_cannot_swallow_new_topic_or_control() {
+        for next in ["我今天画了小猫","不用查了，我们聊别的","帮我查火星为什么是红色","今天北京的天气","停一下"] {
+            let (mut s,_,mut commands)=test_session();
+            s.routing=Some(RoutingSnapshot{version:"r7-aaaaaaaaaaaaaaaaaaaaaaaa".into(),config:RoutingConfig::default()});
+            let a=s.interpret("帮我查一下恐龙为什么").unwrap();s.command(a);
+            let action=s.interpret(next);
+            if next.starts_with("我今天") {assert!(action.is_none());}
+            if let Some(a)=action{s.command(a);}
+            while let Ok(c)=commands.try_recv(){if let Command::Submit{query,..}=c{assert!(!query.contains("恐龙"));}}
+            assert!(s.pending_topic.is_none());
+        }
+    }
+    #[tokio::test]
+    async fn r14_incomplete_replace_cancels_old_and_submits_complete_replacement_while_busy() {
+        let (mut s,_,mut commands)=test_session();s.busy=true;
+        let a=s.interpret("改查恐龙为什么").unwrap();s.command(a);
+        assert!(matches!(commands.try_recv(),Ok(Command::Cancel{..})));
+        assert!(commands.try_recv().is_err());
+        let a=s.interpret("会灭绝").unwrap();s.command(a);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,replace:true,..})if query=="恐龙为什么会灭绝"));
+    }
+    #[tokio::test]
+    async fn r14_complete_explicit_question_has_no_new_tail_wait() {
+        let (mut s,_,mut commands)=test_session();
+        let a=s.interpret("帮我查一下恐龙为什么会灭绝").unwrap();s.command(a);
+        assert!(s.pending_topic.is_none());
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..})if query=="恐龙为什么会灭绝"));
+    }
     #[tokio::test]
     async fn clarified_topic_split_by_asr_is_one_complete_search_not_foreground_chat() {
         let (mut s,_,mut commands)=test_session();
