@@ -234,6 +234,7 @@ pub struct Warm {
     ws: Ws,
     opened: std::time::Instant,
     connect_ms: u64,
+    connect_id: u64,
 }
 
 impl Warm {
@@ -252,22 +253,76 @@ fn warm_is_fresh(age: Duration) -> bool {
 #[cfg(test)]
 const PROTOCOL_IDLE_LIMIT: Duration = Duration::from_secs(14);
 
+async fn connect_observed(url: String) -> Result<Warm> {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static NEXT: AtomicU64 = AtomicU64::new(1);
+    let mut trace = ConnectTiming {
+        id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
+        stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled",
+    };
+    // Match tokio-tungstenite 0.30's connector: same address order, OS resolver,
+    // TCP defaults, TLS/SNI/certificate validation and one overall 10s budget.
+    // TLS and WebSocket stay one measured stage; do not invent separate timings.
+    let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
+        let request = url.into_client_request().map_err(|_| anyhow::anyhow!("invalid_request"))?;
+        let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
+        let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str() == Some("wss") {443} else {80});
+        trace.stage = "dns"; let t = std::time::Instant::now();
+        let addresses: Vec<_> = tokio::net::lookup_host((host.as_str(), port)).await
+            .map_err(|_| anyhow::anyhow!("resolve_failed"))?.collect();
+        trace.dns_ms = Some(t.elapsed().as_millis() as u64);
+        trace.stage = "tcp"; let t = std::time::Instant::now();
+        let socket = tokio::net::TcpStream::connect(addresses.as_slice()).await
+            .map_err(|_| anyhow::anyhow!("connect_failed"))?;
+        trace.tcp_ms = Some(t.elapsed().as_millis() as u64);
+        trace.stage = "tls_ws"; let t = std::time::Instant::now();
+        let (ws, _) = tokio_tungstenite::client_async_tls_with_config(request, socket, None, None).await
+            .map_err(|e| {
+                use tokio_tungstenite::tungstenite::Error;
+                match e {
+                    Error::Http(response) => anyhow::anyhow!("http_{}", response.status().as_u16()),
+                    Error::Tls(_) => anyhow::anyhow!("tls_failed"),
+                    Error::Io(_) => anyhow::anyhow!("io_failed"),
+                    _ => anyhow::anyhow!("handshake_failed"),
+                }
+            })?;
+        trace.tls_ws_ms = Some(t.elapsed().as_millis() as u64);
+        Ok::<_, anyhow::Error>(ws)
+    }).await;
+    match result {
+        Ok(Ok(ws)) => {
+            trace.outcome = "connected";
+            Ok(Warm { ws, opened: trace.start, connect_ms: trace.start.elapsed().as_millis() as u64, connect_id: trace.id })
+        }
+        other => {
+            trace.outcome = if other.is_err() {"timeout"} else {"failed"};
+            let reason = match other {Ok(Err(e)) => e.to_string(), _ => "timeout".into()};
+            bail!("xfyun connect stage={} reason={}", trace.stage, reason)
+        }
+    }
+}
+
+struct ConnectTiming {
+    id: u64, start: std::time::Instant, stage: &'static str,
+    dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>, outcome: &'static str,
+}
+impl Drop for ConnectTiming {
+    fn drop(&mut self) {
+        info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,
+            elapsed_ms=self.start.elapsed().as_millis() as u64,
+            dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms,
+            "tts connection timing");
+    }
+}
+
 /// 只握手,不发文本。给 turn 开始时/上一句合成期间的后台预建连用。
 pub async fn connect_warm(cfg: &XfyunTtsConfig) -> Result<Warm> {
     let missing = cfg.missing_keys();
     if !missing.is_empty() {
         bail!("xfyun TTS 凭据缺失 {missing:?}");
     }
-    let t0 = std::time::Instant::now();
     let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
-    let (ws, _) = tokio::time::timeout(
-        CONNECT_TIMEOUT,
-        tokio_tungstenite::connect_async(url.into_client_request()?),
-    )
-    .await
-    .context("xfyun tts 预建连超时")?
-    .context("xfyun tts 预建连(检查 api_key/api_secret)")?;
-    Ok(Warm { ws, opened: t0, connect_ms: t0.elapsed().as_millis() as u64 })
+    connect_observed(url).await
 }
 
 /// 打断时把音频交给下游:**不能裸 `send().await`**。
@@ -329,23 +384,19 @@ pub async fn synthesize(
     let warm_connect_ms = usable.as_ref().map(|w| w.connect_ms).unwrap_or(0);
     let used_warm = usable.is_some();
     let t0 = std::time::Instant::now();
-    let (mut ws, connect_ms) = match usable {
-        Some(w) => (w.ws, 0),
+    let (mut ws, connect_ms, connect_id) = match usable {
+        Some(w) => (w.ws, 0, w.connect_id),
         None => {
             let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
-            let (ws, _) = tokio::time::timeout(
-                CONNECT_TIMEOUT,
-                tokio_tungstenite::connect_async(url.into_client_request()?),
-            )
-            .await
-            .context("xfyun tts connect timeout")?
-            .context("xfyun tts connect(检查 api_key/api_secret)")?;
-            let ms = t0.elapsed().as_millis() as u64;
-            (ws, ms)
+            let w = connect_observed(url).await?;
+            (w.ws, w.connect_ms, w.connect_id)
         }
     };
-
+    let (room,turn_id)=ctl.trace_identity();
+    info!(room,turn_id,connect_id,used_warm,warm_connect_ms,connect_ms,"tts connection assigned");
+    let send_start=std::time::Instant::now();
     ws.send(WsMessage::Text(build_request(cfg, text).to_string().into())).await?;
+    info!(room,turn_id,connect_id,send_ms=send_start.elapsed().as_millis() as u64,"tts request sent");
 
     let mut ttfb_ms: Option<u64> = None;
     let mut total = 0usize;
@@ -433,6 +484,57 @@ fn emit_metrics(m: M) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn r15_connect_failure_reports_stage_without_response_headers_or_signed_url() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut input = [0; 2048]; socket.read(&mut input).await.unwrap();
+            socket.write_all(b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nX-Private: DO_NOT_LOG\r\n\r\n").await.unwrap();
+        });
+        let error = match connect_observed(format!("ws://{addr}/?authorization=DO_NOT_LOG")).await {
+            Ok(_) => panic!("403 must reject the socket"), Err(e) => e,
+        };
+        server.await.unwrap();
+        assert!(error.to_string().contains("stage=tls_ws"), "missing failure stage");
+        assert!(error.to_string().contains("http_403"), "missing bounded status code");
+        assert!(!format!("{error:?}").contains("DO_NOT_LOG"), "raw response or signed URL retained");
+    }
+
+    #[tokio::test]
+    async fn r15_cancelled_handshake_releases_the_socket_without_detached_retry() {
+        use tokio::io::AsyncReadExt;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (sent, received) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut input = [0; 2048]; socket.read(&mut input).await.unwrap();
+            sent.send(()).unwrap();
+            assert_eq!(socket.read(&mut input).await.unwrap(), 0, "cancelled handshake socket must close");
+        });
+        let attempt = tokio::spawn(connect_observed(format!("ws://{addr}/")));
+        received.await.unwrap(); attempt.abort(); let _ = attempt.await;
+        tokio::time::timeout(Duration::from_secs(1), server).await.unwrap().unwrap();
+    }
+
+    #[tokio::test]
+    async fn r15_measured_connector_preserves_websocket_payload_and_freshness() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            assert_eq!(ws.next().await.unwrap().unwrap().into_text().unwrap(), "synthetic");
+        });
+        let mut warm = connect_observed(format!("ws://{addr}/")).await.unwrap();
+        assert!(warm.fresh()); assert!(warm.connect_id > 0);
+        warm.ws.send(WsMessage::Text("synthetic".into())).await.unwrap();
+        server.await.unwrap();
+    }
 
     fn cfg() -> XfyunTtsConfig {
         XfyunTtsConfig {
