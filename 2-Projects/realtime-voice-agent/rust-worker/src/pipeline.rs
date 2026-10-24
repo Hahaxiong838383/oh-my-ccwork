@@ -375,6 +375,7 @@ enum TurnKind {
 
 /// 投机生成(preflight 触发的提前 LLM 流;命中=提交文本全等+历史版本未变)。
 struct Speculation {
+    search_context: Option<Value>,
     text: String,
     version: u64,
     started: Instant,
@@ -383,6 +384,7 @@ struct Speculation {
 }
 
 struct AgentTurn {
+    search_progress: Option<Arc<StdMutex<crate::search_progress::SearchProgress>>>,
     id: u64,
     task: JoinHandle<()>,
     ctl: PlayoutControl,
@@ -845,6 +847,7 @@ pub async fn run_pipeline(
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
+    mut shutdown:Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<()> {
     // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
     // 回声库拉取/ASR 预连)此处直接接管;无预组装路径(web 调试直连)原地组装,行为一致。
@@ -1136,6 +1139,7 @@ pub async fn run_pipeline(
                   stt2_spawned_ms_ago = spawned_at.elapsed().as_millis() as u64, "ordered_pcm input phase → rtc");
         }
         tokio::select! {
+            _ = async {if let Some(rx)=&mut shutdown {let _=rx.await;}else{std::future::pending::<()>().await;}} => {break;},
             // 输出门 fail-closed(冻结 2026-08-18):首个待播 PCM 起 5s Android 仍未订阅
             // agent 轨 → 整 job 收摊关房,绝不带着半聋房间继续跑
             Some(msg) = fatal_rx.recv() => {
@@ -1372,10 +1376,8 @@ pub async fn run_pipeline(
         }
     }
 
-    if let Some(t) = orch.agent_turn.take() {
-        t.ctl.abort();
-        t.task.abort();
-    }
+    orch.hard_abort_current();
+    if let Some(search)=&mut orch.search {search.close();}
     if let Some(sp) = orch.spec.take() {
         sp.task.abort();
     }
@@ -1745,6 +1747,8 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        if self.search_ack(&text,false){return;}
+        let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
         if self.search.is_some() && crate::search_policy::intent(&text).is_some() { return; }
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
@@ -1765,8 +1769,10 @@ impl Orchestrator {
         let (client, cfg, messages, version) = llm_guard.speculation_request(&text);
         drop(llm_guard);
         let (tx, rx) = mpsc::channel::<String>(1024);
-        let task = tokio::spawn(async move { llm::stream_chat(&client, &cfg, messages, tx).await });
+        let request_context=search_context.clone();
+        let task = tokio::spawn(async move { llm::stream_chat_with_context(&client, &cfg, messages, tx,request_context).await });
         self.spec = Some(Speculation {
+            search_context,
             text,
             version,
             started: Instant::now(),
@@ -2611,6 +2617,9 @@ impl Orchestrator {
         recent
     }
 
+    fn search_ack(&self,text:&str,input_continues:bool)->bool {
+        self.search_turn&&self.agent_turn.as_ref().is_some_and(|t|self.search.as_ref().is_some_and(|s|s.accepts_ack(text,t.ctl.audio_started(),input_continues)))
+    }
     fn hard_abort_current(&mut self) {
         if self.deferred_say.clear_on_abort() {
             info!(room = %self.room_name, "deferred device reply dropped (turn aborted)");
@@ -2654,7 +2663,10 @@ impl Orchestrator {
         self.echo_tts_text = format!("{}{spoken}", self.echo_cur_filler);
         self.echo_playout_end = Some(Instant::now());
         if was_search {
-            if let Some(search) = &mut self.search { search.finish_with_progress(true, spoken.chars().count(), played as u64 / 24, sentence_spans(&synth, &progress).iter().any(|s| played >= s.end_samples)); }
+            if let Some(search) = &mut self.search {
+                if let Some(p)=&turn.search_progress {let complete=p.lock().unwrap_or_else(|e|e.into_inner()).complete(turn.ctl.captured_samples(),false);search.finish_sentences(true,complete,played/24);}
+                else {search.finish_with_progress(true, spoken.chars().count(), played as u64 / 24, sentence_spans(&synth, &progress).iter().any(|s| played >= s.end_samples));}
+            }
         } else {
             self.pending_amend = Some(spoken);
         }
@@ -2668,6 +2680,10 @@ impl Orchestrator {
         let Some(turn) = &self.agent_turn else { return };
         if !turn.ctl.audio_started() {
             return;
+        }
+        if let Some(p)=&turn.search_progress {
+            let complete=p.lock().unwrap_or_else(|e|e.into_inner()).complete(turn.ctl.captured_samples(),false);
+            if let Some(search)=&mut self.search {search.record_sentences(complete,None);}
         }
         let played = turn.ctl.played_samples();
         let turn_id = turn.id;
@@ -2804,7 +2820,12 @@ impl Orchestrator {
                 if std::mem::take(&mut self.search_turn) {
                     let spoken = self.agent_turn.as_ref().filter(|t| t.ctl.played_samples() > 0)
                         .and_then(|t| t.synth_text.lock().ok().map(|s| s.chars().count())).unwrap_or(0);
-                    if let Some(search) = &mut self.search { search.finish(false, spoken); }
+                    if let Some(search) = &mut self.search {
+                        if let Some(turn)=&self.agent_turn {if let Some(p)=&turn.search_progress {
+                            let p=p.lock().unwrap_or_else(|e|e.into_inner());let complete=p.complete(turn.ctl.captured_samples(),true);
+                            search.finish_sentences(complete<p.sentences.len(),complete,turn.ctl.captured_samples()/24);
+                        }else{search.finish(false,spoken);}}
+                    }
                 }
                 // 回声对撞:自然播完=filler+全文都出了喇叭,整段进对撞缓冲(必须在清 turn 前取)
                 if let Some(turn) = &self.agent_turn {
@@ -3145,7 +3166,7 @@ impl Orchestrator {
                 }
                 // v140 §4.1:三路命中(exact/tail/fragment)任一 → 发 session_exit_detected。
                 // 纪律:envelope 不带转写正文;trace 缺失=不发(受信通道没建立,fail-closed)。
-                if kind == "session_exit" { self.search.take(); }
+                if kind == "session_exit" { self.hard_abort_current(); if let Some(mut search)=self.search.take(){search.close();} }
                 if kind == "session_exit" && self.exit_signal_on {
                     if let Some(trace) = self.device_trace.clone() {
                         self.exit_seq += 1;
@@ -3184,6 +3205,14 @@ impl Orchestrator {
                     s.event("swallowed", &[("text", &user_text), ("kind", kind), ("path", path)]);
                 }
                 self.request_interrupt_snapshot("swallowed", format!("{kind}:{path}"));
+                return;
+            }
+            if self.search_ack(&user_text,self.search_user_speaking) {
+                if let Some(sp)=self.spec.take(){sp.task.abort();}
+                if self.paused.take().is_some(){if let Some(t)=&self.agent_turn {t.ctl.resume();}}
+                self.false_deadline=None;self.latest_interim.clear();self.tele_text.clear();
+                info!(room=%self.room_name,"background search acknowledgment continued: no chat or new task");
+                self.request_interrupt_snapshot("swallowed","search_ack:exact".into());
                 return;
             }
             // 播放中附和词(2026-09-14 川哥):小可正在播长文本时,孩子随口「嗯/对/是」是在听不是插话——
@@ -3443,7 +3472,7 @@ impl Orchestrator {
                     Ok(llm_guard) => {
                         let ver_now = llm_guard.history_version();
                         drop(llm_guard);
-                        if sp.text == user_text && sp.version == ver_now {
+                        if sp.text == user_text && sp.version == ver_now && sp.search_context==self.search.as_ref().and_then(|s|s.dialogue_context()) {
                             info!(
                                 room = %self.room_name,
                                 lead_ms = sp.started.elapsed().as_millis() as u64,
@@ -3570,6 +3599,9 @@ impl Orchestrator {
         };
         let (playout_task, ctl) =
             playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
+        let search_progress=if let TurnKind::BackgroundSay(text)=&kind {if self.search.as_ref().is_some_and(|s|s.sentence_progress_enabled()){Some(Arc::new(StdMutex::new(crate::search_progress::SearchProgress::new(text))))}else{None}}else{None};
+        let search_progress_task=search_progress.clone();
+        let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         let synth_text = Arc::new(StdMutex::new(String::new()));
         let progress = Arc::new(StdMutex::new(Vec::new()));
         let llm_chars = Arc::new(AtomicUsize::new(0));
@@ -3651,6 +3683,25 @@ impl Orchestrator {
                     watcher.abort();
                     let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
+                TurnKind::BackgroundSay(text) if search_progress_task.is_some() => {
+                    // Register the entire trusted result before awaiting a socket or any PCM.
+                    if let Ok(mut t)=synth2.lock(){*t=text.clone();}
+                    let tracker=search_progress_task.as_ref().unwrap();
+                    let sentences=tracker.lock().unwrap_or_else(|e|e.into_inner()).sentences.clone();
+                    let mut chars=0usize;let mut samples=0u64;
+                    for sentence in sentences {
+                        if ctl_tts.aborted(){break;}
+                        match tts_cfg.synthesize(&sentence,&pcm_tx,&ctl_tts,&mut warm).await {
+                            Ok((_,bytes)) if !ctl_tts.aborted() && bytes>0 => {
+                                chars+=sentence.chars().count();samples+=(bytes/2) as u64;
+                                tracker.lock().unwrap_or_else(|e|e.into_inner()).synthesized((bytes/2) as u64);
+                                if let Ok(mut p)=prog2.lock(){p.push((chars,samples));}
+                            },
+                            _=>break,
+                        }
+                    }
+                    drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                }
                 TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
                     match tts_cfg
                         .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
@@ -3716,7 +3767,7 @@ impl Orchestrator {
                                 } else if let Some(spoken) = pending_amend {
                                     g.set_last_assistant(&spoken);
                                 }
-                                g.chat(&ut, delta_tx).await
+                                g.chat_with_context(&ut, delta_tx,search_context).await
                             });
                             (delta_rx, h, false)
                         }
@@ -3851,6 +3902,7 @@ impl Orchestrator {
             }
         });
         self.agent_turn = Some(AgentTurn {
+            search_progress,
             id,
             task,
             ctl,
@@ -3863,6 +3915,10 @@ impl Orchestrator {
         });
     }
 }
+
+// Forced job abort/panic is the fallback path: never detach a talking turn or
+// lose the final conservative cursor merely because run_pipeline did not return.
+impl Drop for Orchestrator {fn drop(&mut self){if self.search.is_some(){self.hard_abort_current();if let Some(search)=&mut self.search{search.close();}}}}
 
 /// 已播样本数 → 真实说出的文本(整句边界 + 句内按样本比例折算字符,截断历史用)。
 fn truncate_spoken(synth: &str, progress: &[(usize, u64)], played_samples: u64) -> String {

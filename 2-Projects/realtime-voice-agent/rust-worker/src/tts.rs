@@ -108,12 +108,16 @@ impl TtsCfg {
             Self::Volc(c) => tts_volc::synthesize(c, text, audio_tx).await,
             Self::Xfyun(c) => {
                 let waiting = std::time::Instant::now();
+                let (room,turn)=ctl.trace_identity();
+                let mut timing=DispatchTiming{start:waiting,room:room.into(),turn,prewarm_ms:None,finished:false};
                 let conn = warm.take().await;
                 let wait_ms = waiting.elapsed().as_millis() as u64;
+                timing.prewarm_ms=Some(wait_ms);
                 *warm = self.start_prewarm(); // 先为下一句排队,再开始本句合成
                 let (provider_ms, bytes) = tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await?;
                 // The caller starts its timer before take(): include the handshake
                 // wait that used to disappear from body_ready_since_turn_ms.
+                timing.finished=true;
                 let first_pcm_ms = wait_ms.saturating_add(provider_ms);
                 tracing::info!(prewarm_wait_ms=wait_ms,provider_ttfb_ms=provider_ms,first_pcm_ms,"tts dispatch timing");
                 Ok((first_pcm_ms, bytes))
@@ -121,6 +125,10 @@ impl TtsCfg {
         }
     }
 }
+
+/// Emits even when the synth future is dropped mid-handshake/provider streaming.
+struct DispatchTiming {start:std::time::Instant,room:String,turn:u64,prewarm_ms:Option<u64>,finished:bool}
+impl Drop for DispatchTiming {fn drop(&mut self){tracing::info!(room=%self.room,turn_id=self.turn,elapsed_ms=self.start.elapsed().as_millis() as u64,prewarm_wait_ms=self.prewarm_ms,finished=self.finished,stage=if self.prewarm_ms.is_none(){"prewarm"}else{"provider"},"tts dispatch end (includes aborted futures)");}}
 
 /// `XFYUN_TTS_PRECONNECT=0` 关掉预建连(回到每句现连)。
 /// 留这个开关是因为这条线正在被演示:出问题时改一行 env + 重启即可退回,

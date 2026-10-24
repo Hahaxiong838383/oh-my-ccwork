@@ -367,6 +367,8 @@ pub async fn synthesize(
             Downlink::Audio { pcm, last } => {
                 if ttfb_ms.is_none() {
                     ttfb_ms = Some(t0.elapsed().as_millis() as u64);
+                    let (room,turn_id)=ctl.trace_identity();
+                    info!(room,turn_id,provider_ttfb_ms=ttfb_ms,connect_ms,used_warm,"tts provider first PCM observed");
                 }
                 total += pcm.len();
                 frames += 1;

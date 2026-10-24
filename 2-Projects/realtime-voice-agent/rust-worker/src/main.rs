@@ -11,6 +11,8 @@ mod search_canary;
 mod search_policy;
 mod search_routing;
 mod search_tasks;
+mod search_dialogue;
+mod search_progress;
 mod search_receipts;
 mod control;
 mod device_grammar;

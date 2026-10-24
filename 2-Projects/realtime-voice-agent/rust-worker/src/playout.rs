@@ -19,6 +19,8 @@ use crate::tts_volc::TTS_SAMPLE_RATE;
 
 #[derive(Clone)]
 pub struct PlayoutControl {
+    room: String,
+    turn_id: u64,
     pause_tx: watch::Sender<bool>,
     abort_tx: watch::Sender<bool>,
     captured: Arc<AtomicU64>,       // 已喂 RTC 的样本数
@@ -41,6 +43,7 @@ pub fn test_control() -> (
     let (pause_tx, pause_rx) = watch::channel(false);
     let (abort_tx, abort_rx) = watch::channel(false);
     let ctl = PlayoutControl {
+        room:"unit-test".into(),turn_id:0,
         pause_tx,
         abort_tx,
         captured: Arc::new(AtomicU64::new(0)),
@@ -54,6 +57,7 @@ pub fn test_control() -> (
 }
 
 impl PlayoutControl {
+    pub fn trace_identity(&self)->(&str,u64){(&self.room,self.turn_id)}
     /// 终态槽的共享句柄(pipeline 存进 CanaryPending,播完/取消后读)。
     pub fn final_stats_handle(&self) -> Arc<Mutex<Option<FinalStats>>> {
         self.final_stats.clone()
@@ -85,6 +89,8 @@ impl PlayoutControl {
     pub fn audio_started(&self) -> bool {
         self.first_frame_us.load(Ordering::SeqCst) != 0
     }
+
+    pub fn captured_samples(&self)->u64 {self.captured.load(Ordering::SeqCst)}
 
     /// 估算已播出的样本数(24k):首帧起 wall-clock 与已喂样本取小。
     pub fn played_samples(&self) -> u64 {
@@ -347,6 +353,7 @@ pub fn spawn_playout(
     let (pause_tx, mut pause_rx) = watch::channel(false);
     let (abort_tx, mut abort_rx) = watch::channel(false);
     let ctl = PlayoutControl {
+        room:room.clone(),turn_id,
         pause_tx,
         abort_tx,
         captured: Arc::new(AtomicU64::new(0)),

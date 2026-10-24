@@ -142,6 +142,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 字幕路由:用户侧 (identity, 麦克风轨 sid),订阅到轨时采集
     let mut user_info: Option<(String, String)> = None;
     let mut pipeline_task: Option<JoinHandle<()>> = None;
+    let (close_tx,close_rx)=tokio::sync::oneshot::channel();
+    let mut pipeline_close_tx=Some(close_tx);let mut pipeline_close_rx=Some(close_rx);
+    let graceful_search_close=std::env::var("P003_SEARCH_RESUME_V1").is_ok_and(|v|v=="1");
     // 入站控制通道(S2-B1):设备 → worker 的 cancel/旁路事件。容量给足,
     // 满了宁可丢新包也不能阻塞 room 事件循环(那会连带卡住音频轨事件)。
     let (ctrl_tx, ctrl_rx) =
@@ -374,9 +377,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 None => None,
             };
             let octx = ordered_ctx.clone();
+            let shutdown=if graceful_search_close{pipeline_close_rx.take()}else{None};
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, shutdown)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
@@ -386,7 +390,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     }
 
     if let Some(t) = pipeline_task.take() {
-        t.abort();
+        close_pipeline(t,if graceful_search_close{pipeline_close_tx.take()}else{None}).await;
     }
     room.close().await.ok();
     // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
@@ -394,6 +398,15 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     delete_room(&config, &url, &room_name).await;
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
+}
+
+/// Give an exiting candidate one bounded opportunity to freeze playback progress.
+/// Ordinary jobs preserve their immediate-abort behavior.
+async fn close_pipeline(mut task:JoinHandle<()>,shutdown:Option<tokio::sync::oneshot::Sender<()>>){
+    let Some(tx)=shutdown else {task.abort();return;};
+    let _=tx.send(());
+    if tokio::time::timeout(std::time::Duration::from_millis(500),&mut task).await.is_ok(){return;}
+    task.abort();let _=task.await;
 }
 
 /// control topic 出站(reliable):session.output_ready 等 job 层事件。
@@ -460,6 +473,14 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
 #[cfg(test)]
 mod tests {
     use super::issue_to_assignment_ms;
+    #[tokio::test]
+    async fn r14_job_close_notifies_cleanup_and_still_bounds_a_stuck_pipeline(){
+        let(tx,rx)=tokio::sync::oneshot::channel();let(done,proof)=tokio::sync::oneshot::channel();
+        let task=tokio::spawn(async move{rx.await.unwrap();let _=done.send(());});
+        super::close_pipeline(task,Some(tx)).await;assert!(proof.await.is_ok());
+        let(tx,_rx)=tokio::sync::oneshot::channel();let task=tokio::spawn(std::future::pending());let at=std::time::Instant::now();
+        super::close_pipeline(task,Some(tx)).await;assert!(at.elapsed()<std::time::Duration::from_secs(1));
+    }
 
     fn now_ms() -> i64 {
         std::time::SystemTime::now()

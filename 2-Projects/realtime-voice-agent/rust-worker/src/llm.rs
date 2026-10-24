@@ -333,11 +333,15 @@ impl ChatOutcome {
 }
 
 /// SSE 流式补全:deltas(剥承接词后)经 `tx` 发出,全文返回。**不碰历史**。
-pub async fn stream_chat(
+pub async fn stream_chat(client:&reqwest::Client,cfg:&LlmConfig,messages:Vec<Value>,tx:mpsc::Sender<String>)->Result<ChatOutcome>{
+    stream_chat_with_context(client,cfg,messages,tx,None).await
+}
+pub async fn stream_chat_with_context(
     client: &reqwest::Client,
     cfg: &LlmConfig,
     messages: Vec<Value>,
     tx: mpsc::Sender<String>,
+    search_context: Option<Value>,
 ) -> Result<ChatOutcome> {
     let mut body = json!({
         "model": cfg.model,
@@ -345,6 +349,7 @@ pub async fn stream_chat(
         "stream": true,
         "temperature": 0.7,
     });
+    if let Some(context)=search_context {body["search_dialogue_context"]=context;}
     if matches!(cfg.thinking.as_str(), "disabled" | "enabled" | "adaptive") {
         body["thinking"] = json!({"type": cfg.thinking});
     }
@@ -466,9 +471,10 @@ pub async fn stream_chat_race(
     fallback: Option<(&reqwest::Client, &LlmConfig)>,
     messages: Vec<Value>,
     tx: mpsc::Sender<String>,
+    search_context:Option<Value>,
 ) -> Result<ChatOutcome> {
     let Some((fb_client, fb_cfg)) = fallback else {
-        return stream_chat(main.0, main.1, messages, tx).await;
+        return stream_chat_with_context(main.0, main.1, messages, tx,search_context).await;
     };
     // 主路让步窗(2026-08-17 P1 接大脑):兜底先出首 delta 时再等主路至多 grace_ms,
     // 主路窗内出 token 则主路胜。默认 0=公平赛马(裸模互备场景);主路=大脑(带人设
@@ -483,7 +489,8 @@ pub async fn stream_chat_race(
     let (f_tx, mut f_rx) = mpsc::channel::<String>(1024);
     let m_task = {
         let (c, cfg, msgs) = (main.0.clone(), main.1.clone(), messages.clone());
-        tokio::spawn(async move { stream_chat(&c, &cfg, msgs, m_tx).await })
+        let context=search_context.clone();
+        tokio::spawn(async move { stream_chat_with_context(&c, &cfg, msgs, m_tx,context).await })
     };
     let f_task = {
         let (c, cfg) = (fb_client.clone(), fb_cfg.clone());
@@ -633,7 +640,8 @@ impl Llm {
     /// 追加 user turn 并流式取回复(常规路,走赛马;兜底未配=单路)。
     /// 被打断时历史留给 set_last_assistant。投机(speculation_request)保持主路单发:
     /// 投机 miss 时常规轮的 race 自然兜底,不为预生成双倍烧钱。
-    pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {
+    pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_text,tx,None).await}
+    pub async fn chat_with_context(&mut self,user_text:&str,tx:mpsc::Sender<String>,search_context:Option<Value>)->Result<ChatOutcome> {
         let messages = self.build_messages(user_text);
         self.push_user(user_text);
         let outcome = stream_chat_race(
@@ -641,6 +649,7 @@ impl Llm {
             self.fb.as_ref().map(|(c, f)| (c, f)),
             messages,
             tx,
+            search_context,
         )
         .await?;
         self.settle(&outcome);

@@ -87,6 +87,9 @@ impl Api {
 }
 
 enum Command {
+    ResumeLatest { epoch:u64, generation:u64, request:String },
+    Progress { speech:Speech, final_outcome:Option<&'static str> },
+    Close { resume:bool,done:tokio::sync::oneshot::Sender<()> },
     RoutingAck {version:String},
     Submit {
         routing: Option<Value>,
@@ -118,6 +121,8 @@ enum Command {
     },
 }
 enum Event {
+    Context {id:String,revision:u64,epoch:u64},
+    Verified {id:String,epoch:u64},
     Accepted { epoch: u64, generation: u64 },
     Routing { snapshot:Option<RoutingSnapshot> },
     Ack {
@@ -144,6 +149,12 @@ enum Event {
 #[derive(Clone)]
 pub struct Speech {
     receipt: Option<ReceiptClip>,
+    grant: Option<String>,
+    revision: u64,
+    digest: String,
+    cursor: usize,
+    sequence: u64,
+    reported_cursor: usize,
     pub text: String,
     task: Option<String>,
     delivery: String,
@@ -176,6 +187,12 @@ fn question_tail(t: &str) -> bool {
         !["帮我","改查","不用","不要","我们","你","我","；",";"].iter().any(|p|t.contains(p))
 }
 pub struct SearchSession {
+    resume_v1: bool,
+    context_v1: bool,
+    ack_v1: bool,
+    closing: bool,
+    dialogue: Option<Value>,
+    dialogue_changed: Instant,
     receipts: Option<ReceiptBank>,
     receipt_epoch: Option<u64>,
     api: Api,
@@ -232,6 +249,8 @@ impl SearchSession {
         let routing_task=Some(tokio::spawn(pull_routing(api.clone(),events.clone())));
         let task = tokio::spawn(run(api.clone(), commands, events));
         Some(Self {
+            resume_v1: flag("P003_SEARCH_RESUME_V1"),context_v1:flag("P003_SEARCH_CONTEXT_V1"),ack_v1:flag("P003_SEARCH_ACK_V1"),
+            closing:false,dialogue:None,dialogue_changed:Instant::now(),
             receipts: ReceiptBank::from_env(provider, voice), receipt_epoch: None,
             api,
             tx,
@@ -324,7 +343,7 @@ impl SearchSession {
                 self.epoch += 1;
                 self.gate.cancel();
                 self.speech.clear();
-                self.remainder = None;
+                self.remainder = None; self.dialogue=None;
                 if self
                     .tx
                     .try_send(Command::Cancel {
@@ -366,7 +385,11 @@ impl SearchSession {
                         return false;
                     }
                 }
-                self.notice("暂时没有可继续的搜索结果，可以重新查一下。");
+                if self.resume_v1 {
+                    self.epoch+=1;
+                    if self.tx.try_send(Command::ResumeLatest{epoch:self.epoch,generation:self.generation,request:uuid::Uuid::new_v4().to_string()}).is_ok(){self.busy=true;}
+                    else {self.notice("暂时没能确认这条结果是否仍有效。");}
+                }else{self.notice("暂时没有可继续的搜索结果，可以重新查一下。");}
             }
         }
         false
@@ -380,7 +403,7 @@ impl SearchSession {
         self.submit(query, true)
     }
     fn submit(&mut self, query: String, replace: bool) -> bool {
-        self.epoch += 1;
+        self.epoch += 1; self.dialogue=None;
         let routing=self.last_route.as_ref().and_then(|(version,d)|{
             if version.is_empty(){return None;}
             let mut claim=json!({"version":version,"rule_id":d.rule_id});
@@ -411,7 +434,7 @@ impl SearchSession {
         let clip=bank.pick(kind);
         // Never leave an earlier preparation/clarification cue ahead of a new query.
         self.speech.retain(|s|s.receipt.is_none());
-        self.speech.push_back(Speech{text:clip.text.clone(),receipt:Some(clip),task:None,
+        self.speech.push_back(Speech{grant:None,revision:1,digest:String::new(),cursor:0,sequence:0,reported_cursor:0,text:clip.text.clone(),receipt:Some(clip),task:None,
             delivery:String::new(),expires:Instant::now()+Duration::from_secs(2),result_until:None,auto_replayed:false});
         true
     }
@@ -421,7 +444,7 @@ impl SearchSession {
     fn notice(&mut self, text: &str) {
         if self.speech.len() < 3 {
             self.speech.push_back(Speech {
-                receipt: None,
+                receipt: None,grant:None,revision:1,digest:String::new(),cursor:0,sequence:0,reported_cursor:0,
                 text: text.into(),
                 task: None,
                 delivery: String::new(),
@@ -435,6 +458,8 @@ impl SearchSession {
     pub fn poll(&mut self, safe: bool) -> Option<String> {
         while let Ok(event) = self.rx.try_recv() {
             match event {
+                Event::Context{id,revision,epoch} if epoch==self.epoch => {self.dialogue=Some(json!({"protocol":1,"task_id":id,"revision":revision,"phase":"running","dialogue_epoch":epoch}));self.dialogue_changed=Instant::now();},
+                Event::Verified{id,epoch} if epoch==self.epoch => {self.verified.insert(id,Instant::now());},
                 Event::Accepted {epoch,generation} if epoch==self.epoch && generation==self.generation => {
                     if self.receipt_epoch!=Some(epoch) { self.notice("好，我查一下。"); }
                 }
@@ -455,6 +480,7 @@ impl SearchSession {
                     // A ready answer outranks a not-yet-spoken preparation cue.
                     self.speech.retain(|s|s.receipt.is_none());
                     self.verified.insert(id.clone(), Instant::now());
+                    self.set_phase("ready");
                     self.gate
                         .offer(id, text, self.started.elapsed().as_millis() as u64);
                 }
@@ -470,7 +496,7 @@ impl SearchSession {
                     self.busy = false;
                     self.gate.cancel();
                     self.speech.retain(|s| s.result_until.is_none());
-                    self.remainder = None;
+                    self.remainder = None; self.dialogue=None;
                     // An empty ledger after submit timeout invalidates results,
                     // not the explanation that no acknowledgement was received.
                     // Otherwise the next poll cuts that notice before its first audio.
@@ -480,9 +506,8 @@ impl SearchSession {
                     self.auto_pending = false;
                 }
                 Event::Claimed { speech, .. } => {
-                    if let Some(id) = speech.task {
-                        let _ = self.tx.try_send(Command::Receipt { id, delivery: speech.delivery, outcome: "dropped" });
-                    }
+                    if self.resume_v1 && !speech.digest.is_empty(){let mut s=speech;s.sequence+=1;let _=self.tx.try_send(Command::Progress{speech:s,final_outcome:Some("dropped")});}
+                    else if let Some(id) = speech.task {let _ = self.tx.try_send(Command::Receipt { id, delivery: speech.delivery, outcome: "dropped" });}
                 }
                 _ => {}
             }
@@ -500,6 +525,7 @@ impl SearchSession {
         while let Some(speech) = self.speech.pop_front() {
             if now < speech.expires {
                 kept.push_back(speech);
+            } else if self.resume_v1 && !speech.digest.is_empty(){self.busy=false;let mut s=speech;s.sequence+=1;let _=self.tx.try_send(Command::Progress{speech:s,final_outcome:Some("dropped")});
             } else if let Some(id) = speech.task {
                 self.busy = false;
                 let _ = self.tx.try_send(Command::Receipt {
@@ -555,6 +581,7 @@ impl SearchSession {
         tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, "background search speech scheduled (not audio proof)");
         self.suppress_auto = false;
         if let Some(clip)=&speech.receipt {tracing::info!(clip=%clip.id,pcm_ms=clip.pcm.len()/48,"background search prepared receipt scheduled");}
+        if let Some(id)=&speech.task {self.dialogue=Some(json!({"protocol":1,"task_id":id,"revision":speech.revision,"phase":"playing","dialogue_epoch":self.epoch}));if let Some(grant)=&speech.grant {self.dialogue.as_mut().unwrap()["resume_grant"]=json!(grant);}self.dialogue_changed=Instant::now();}
         self.active = Some(speech);
         Some(text)
     }
@@ -578,11 +605,54 @@ impl SearchSession {
         if self.busy && self.remainder.is_some() { self.epoch += 1; self.busy = false; }
         self.speech.retain(|s| !s.auto_replayed && s.receipt.is_none());
     }
+    pub fn is_result_active(&self)->bool {self.active.as_ref().is_some_and(|s|s.task.is_some()&&!s.digest.is_empty())}
+    pub fn accepts_ack(&self,text:&str,first_pcm:bool,input_continues:bool)->bool {
+        crate::search_dialogue::classify_search_ack(self.ack_v1,text,&crate::search_dialogue::SearchPlaybackContext{result_active:self.is_result_active(),first_pcm_seen:first_pcm,input_continues})==crate::search_dialogue::SearchAckDecision::ContinueResult
+    }
+    pub fn dialogue_context(&self)->Option<Value>{
+        if self.context_v1 && self.dialogue_changed.elapsed()<Duration::from_secs(300) {self.dialogue.clone()}else{None}
+    }
+    fn set_phase(&mut self,phase:&str){if let Some(d)=&mut self.dialogue {if d["phase"]!=phase{d["phase"]=json!(phase);self.dialogue_changed=Instant::now();}}}
+    pub fn sentence_progress_enabled(&self)->bool{self.resume_v1 && self.is_result_active()}
+    pub fn record_sentences(&mut self,complete:usize,final_outcome:Option<&'static str>){
+        if !self.resume_v1{return;}
+        if let Some(s)=&mut self.active {
+            if s.task.is_none()||s.digest.is_empty(){return;}
+            let total=s.cursor+complete.min(crate::search_progress::sentences(&s.text).len());
+            // Sequence is also a monotonic count of reports; repeated audio ticks do not emit HTTP.
+            if final_outcome.is_none() && total<=s.reported_cursor{return;}
+            s.reported_cursor=total;s.sequence+=1;
+            let _=self.tx.try_send(Command::Progress{speech:s.clone(),final_outcome});
+        }
+    }
+    pub fn finish_sentences(&mut self,interrupted:bool,complete:usize,played_ms:u64){
+        self.record_sentences(complete,Some(if interrupted{"interrupted"}else{"completed"}));
+        let Some(mut s)=self.active.take() else{return;};
+        self.set_phase(if interrupted{"interrupted"}else{"ready"});self.busy=false;
+        self.auto_pending=interrupted && played_ms<1000 && complete==0
+            && !s.auto_replayed && !self.suppress_auto && Instant::now()<s.expires;
+        let parts=crate::search_progress::sentences(&s.text);
+        if interrupted {s.text=parts.iter().skip(complete).cloned().collect();s.cursor=s.reported_cursor;}
+        else {s.cursor=0;s.reported_cursor=0;}
+        tracing::info!(task_id=s.task.as_deref().unwrap_or("ack"),delivery_id=%s.delivery,complete_sentences=complete,played_ms,interrupted,"background search sentence delivery finished (device hearing unverified)");
+        self.remainder=Some(s);
+    }
+    pub fn close(&mut self){
+        if self.closing{return;} self.closing=true;
+        if let Some(task)=&self.routing_task {task.abort();}
+        let api=self.api.clone();let tx=self.tx.clone();let abort=self.task.abort_handle();let resume=self.resume_v1;
+        if let Ok(rt)=tokio::runtime::Handle::try_current(){rt.spawn(async move{
+            let (done,wait)=tokio::sync::oneshot::channel();
+            let graceful=async {tx.send(Command::Close{resume,done}).await.map_err(|_|())?;wait.await.map_err(|_|())};
+            if !matches!(tokio::time::timeout(Duration::from_secs(5),graceful).await,Ok(Ok(()))){abort.abort();let _=api.request(if resume{"/session/close"}else{"/session/cancel"},Some(json!({}))).await;}
+        });}else{abort.abort();}
+    }
     pub fn finish(&mut self, interrupted: bool, spoken_chars: usize) {
         self.finish_with_progress(interrupted, spoken_chars, u64::MAX, true);
     }
     pub fn finish_with_progress(&mut self, interrupted: bool, spoken_chars: usize, played_ms: u64, segment_complete: bool) {
         if let Some(speech) = self.active.take() {
+            self.set_phase("interrupted");
             tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, interrupted, spoken_chars, "background search speech finished (device hearing unverified)");
             if speech.result_until.is_some() {
                 self.auto_pending = interrupted && played_ms < 1000 && !segment_complete
@@ -612,17 +682,25 @@ impl SearchSession {
         }
     }
 }
-impl Drop for SearchSession {
-    fn drop(&mut self) {
-        self.task.abort();
-        if let Some(task)=&self.routing_task {task.abort();}
-        let api = self.api.clone();
-        if let Ok(rt) = tokio::runtime::Handle::try_current() {
-            rt.spawn(async move {
-                let _ = api.request("/session/cancel", Some(json!({}))).await;
-            });
-        }
-    }
+impl Drop for SearchSession {fn drop(&mut self){self.close();}}
+fn flag(name:&str)->bool{std::env::var(name).is_ok_and(|v|v=="1")}
+fn text_digest(text:&str)->String{use sha2::{Digest,Sha256};format!("{:x}",Sha256::digest(text.as_bytes()))}
+fn resumed_speech(v:&Value)->Option<Speech>{
+    let valid=v["valid_for_ms"].as_u64()?.min(300_000);if valid==0{return None;}
+    let text=result_text(&json!({"result":{"text":v["text"]}}))?;
+    let grant=v["grant"].as_str()?;uuid::Uuid::parse_str(grant).ok()?;
+    let id=v["task_id"].as_str()?;uuid::Uuid::parse_str(id).ok()?;
+    let digest=v["text_digest"].as_str()?;if digest.len()!=64||!digest.bytes().all(|c|c.is_ascii_hexdigit()){return None;}
+    let cursor=v["complete_sentences"].as_u64()? as usize;if cursor>150{return None;}
+    Some(Speech{receipt:None,grant:Some(grant.into()),revision:v["revision"].as_u64()?,digest:digest.into(),cursor,reported_cursor:cursor,sequence:0,text,task:Some(id.into()),delivery:grant.into(),expires:Instant::now()+Duration::from_millis(valid),result_until:Some(Instant::now()+Duration::from_millis(valid)),auto_replayed:true})
+}
+async fn report_progress(api:&Api,speech:&Speech,outcome:Option<&str>){
+    let Some(id)=&speech.task else{return;};
+    let progress=json!({"protocol":1,"text_digest":speech.digest,"complete_sentences":speech.reported_cursor,"sequence":speech.sequence});
+    let (suffix,body)=if let Some(grant)=&speech.grant {(format!("/resume/{grant}/receipt"),json!({"outcome":outcome.unwrap_or("progress"),"progress":progress}))}
+    else if let Some(outcome)=outcome {(format!("/{id}/receipt"),json!({"delivery":speech.delivery,"outcome":outcome,"progress":progress}))}
+    else {(format!("/{id}/progress"),json!({"delivery":speech.delivery,"progress":progress}))};
+    let _=api.request(&suffix,Some(body)).await;
 }
 
 fn result_text(task: &Value) -> Option<String> {
@@ -648,7 +726,7 @@ fn claimed_speech(task: &Value, id: String, delivery: String) -> Option<Speech> 
     }
     let now = Instant::now();
     Some(Speech {
-        receipt: None,
+        receipt: None,grant:None,revision:task["revision"].as_u64().unwrap_or(1),digest:task["result"]["text"].as_str().map(text_digest).unwrap_or_default(),cursor:0,sequence:0,reported_cursor:0,
         text: result_text(task)?,
         task: Some(id),
         delivery,
@@ -675,6 +753,9 @@ async fn pull_routing(api:Api,events:mpsc::Sender<Event>) {
 }
 async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>) {
     let mut current: Option<String> = None;
+    let mut current_grant:Option<String>=None;
+    let mut current_delivery:Option<String>=None;
+    let mut progress_jobs=tokio::task::JoinSet::new();
     let mut epoch = 0;
     let mut polling = false;
     let mut replaying = false;
@@ -682,16 +763,40 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
     let mut tick = tokio::time::interval(Duration::from_secs(1));
     loop {
         tokio::select! {
+            Some(_) = progress_jobs.join_next(), if !progress_jobs.is_empty()=>{},
             command = commands.recv() => {
                 let Some(command) = command else { break; };
                 match command {
+                    Command::Close{resume,done}=>{let _=tokio::time::timeout(Duration::from_secs(2),async{while progress_jobs.join_next().await.is_some(){}}).await;progress_jobs.abort_all();let _=api.request(if resume{"/session/close"}else{"/session/cancel"},Some(json!({}))).await;let _=done.send(());break;},
+                    Command::Progress{speech,final_outcome}=>{
+                        // Cursor packets are best effort and monotonic. A slow receipt must not
+                        // hold cancellation/replacement behind a queue of sentence updates.
+                        if final_outcome.is_some()||progress_jobs.len()<2 {
+                            if progress_jobs.len()>=4 {progress_jobs.abort_all();}
+                            let api=api.clone();let packet=speech.clone();
+                            progress_jobs.spawn(async move {let _=tokio::time::timeout(Duration::from_secs(1),report_progress(&api,&packet,final_outcome)).await;});
+                        }
+                        if final_outcome.is_some()&&current==speech.task&&current_grant==speech.grant&&current_delivery.as_deref()==Some(speech.delivery.as_str()){polling=false;}},
+                    Command::ResumeLatest{epoch:e,generation,request}=>{
+                        epoch=e;
+                        let response=tokio::time::timeout(Duration::from_secs(2),async {
+                            let body=json!({"protocol":1,"request_id":request});
+                            let mut r=api.request("/resume/latest",Some(body.clone())).await;
+                            if r.as_ref().err().is_some_and(|e|e.to_string()=="search_http_409"){tokio::time::sleep(Duration::from_millis(500)).await;r=api.request("/resume/latest",Some(body)).await;}
+                            r
+                        }).await;
+                        if let Ok(Ok(v))=response {if let Some(speech)=resumed_speech(&v["resume"]){current=speech.task.clone();current_grant=speech.grant.clone();current_delivery=Some(speech.delivery.clone());replaying=true;polling=true;poll_until=speech.expires;let _=events.send(Event::Claimed{speech,epoch}).await;continue;}}
+                        let _=events.send(Event::Finished{epoch}).await;
+                        let _=events.send(Event::Ack{text:"暂时没有可继续的搜索结果，可以重新查一下。",epoch,generation}).await;
+                    },
                     Command::RoutingAck {version}=>{let ack_api=api.clone();tokio::spawn(async move {let _=ack_api.request("/routing/ack",Some(json!({"version":version}))).await;});},
                     Command::Submit { routing, query, turn, replace, epoch: e, generation } => {
                         epoch = e; replaying = false;
-                        if !replace { current = None; }
+                        let resumed=current_grant.take().is_some();
+                        if !replace || resumed { current = None; }
                         let mut body = json!({"protocol":1,"phase":"committed","query":query,"turn":turn});
                         if let Some(routing)=routing {body["routing"]=routing;}
-                        if replace { if let Some(id) = &current { body["replace"] = json!(id); } }
+                        if replace && !resumed { if let Some(id) = &current { body["replace"] = json!(id); } }
                         let mut attempt = 0;
                         let response = loop {
                             let budget_ms = if attempt == 0 { 1500 } else { 3000 };
@@ -711,9 +816,9 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                             if !retry || attempt >= 2 {break response;}
                         };
                         let rejected = matches!(&response, Ok(Err(e)) if e.to_string().starts_with("search_http_"));
-                        let mut accepted=false;
+                        let mut accepted=false;let mut task_meta=None;
                         let text = match response {
-                            Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { accepted=true; current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下。" },
+                            Ok(Ok(v)) if v["task"]["id"].as_str().is_some() => { task_meta=Some((v["task"]["id"].as_str().unwrap().to_owned(),v["task"]["revision"].as_u64().unwrap_or(1))); accepted=true; current = v["task"]["id"].as_str().map(str::to_owned); "好，我查一下。" },
                             _ if rejected => "这次搜索没有接单，你可以继续和我聊。",
                             _ => "暂时没能确认搜索是否接单，你可以继续和我聊。",
                         };
@@ -721,10 +826,15 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                         polling = !rejected; poll_until = Instant::now() + Duration::from_secs(80);
                         let event=if accepted {Event::Accepted{epoch,generation}} else {Event::Ack{text,epoch,generation}};
                         let _ = events.send(event).await;
+                        if let Some((id,revision))=task_meta {let _=events.send(Event::Context{id,revision,epoch}).await;}
                         if !polling { let _ = events.send(Event::Finished { epoch }).await; }
                     }
                     Command::Cancel { epoch: e, generation } => {
                         epoch = e; replaying = false;
+                        if current_grant.take().is_some(){
+                            let ok=api.request("/resume/cancel",Some(json!({}))).await.is_ok();current=None;polling=false;
+                            let _=events.send(Event::Ack{text:if ok{"好，已取消这次搜索。"}else{"暂时没能确认取消，请稍后再试。"},epoch,generation}).await;let _=events.send(Event::Finished{epoch}).await;continue;
+                        }
                         let status = api.request("", None).await;
                         let mut ids: Vec<String> = status.as_ref().ok().and_then(|v| v["tasks"].as_array()).into_iter().flatten().filter_map(|t|t["id"].as_str().map(str::to_owned)).collect();
                         if let Some(id) = &current { if !ids.contains(id) { ids.push(id.clone()); } }
@@ -732,19 +842,23 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                             else if let Some(id) = ids.first() {
                                 if api.request(&format!("/{id}/cancel"),Some(json!({}))).await.is_ok() { current = None; polling = false; "好，已取消这次搜索。" }
                                 else { "暂时没能确认取消，请稍后再试。" }
-                            } else if status.is_ok() { polling = false; "当前没有进行中的搜索。" } else { "暂时没能确认取消，请稍后再试。" };
+                            } else if status.is_ok() { polling = false; if flag("P003_SEARCH_RESUME_V1")&&api.request("/resume/cancel",Some(json!({}))).await.is_ok(){"好，已取消这次搜索。"}else{"当前没有进行中的搜索。"} } else { "暂时没能确认取消，请稍后再试。" };
                         let _ = events.send(Event::Ack { text, epoch, generation }).await;
                         if !polling { let _ = events.send(Event::Finished { epoch }).await; }
                     }
                     Command::Claim { id, delivery, epoch: e } => {
                         if e != epoch { continue; }
                         if let Ok(v) = api.request(&format!("/{id}/claim"),Some(json!({"delivery":delivery}))).await {
-                            if let Some(speech) = claimed_speech(&v["task"], id, delivery) { let _ = events.send(Event::Claimed { epoch, speech }).await; }
+                            if let Some(speech) = claimed_speech(&v["task"], id, delivery) { current_delivery=Some(speech.delivery.clone());let _ = events.send(Event::Claimed { epoch, speech }).await; }
                         }
                     }
                     Command::Resume { mut speech, epoch: e, generation, automatic } => {
                         epoch = e;
                         let Some(id) = speech.task.clone() else { continue; };
+                        if speech.grant.is_some(){
+                            if let Ok(v)=api.request("/resume/latest",Some(json!({"protocol":1,"request_id":uuid::Uuid::new_v4().to_string()}))).await {if let Some(s)=resumed_speech(&v["resume"]){current=s.task.clone();current_grant=s.grant.clone();current_delivery=Some(s.delivery.clone());polling=true;replaying=true;poll_until=s.expires;let _=events.send(Event::Claimed{speech:s,epoch}).await;continue;}}
+                            let _=events.send(Event::Revoked{epoch}).await;continue;
+                        }
                         let delivery = uuid::Uuid::new_v4().to_string();
                         let body = json!({"previous": speech.delivery, "delivery": delivery, "automatic": automatic});
                         let response = api.request(&format!("/{id}/replay"), Some(body)).await;
@@ -758,7 +872,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                                     continue;
                                 }
                                 speech.auto_replayed = true;
-                                speech.delivery = delivery;
+                                speech.delivery = delivery;current_delivery=Some(speech.delivery.clone());
                                 let original_automatic = speech.expires;
                                 speech.expires = speech.result_until.unwrap().min(Instant::now() + Duration::from_millis(valid));
                                 speech.result_until = Some(speech.expires);
@@ -775,15 +889,16 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                         let _ = api.request(&format!("/{id}/receipt"),Some(json!({"delivery":delivery,"outcome":outcome}))).await;
                         // Keep the known delivered task for a subsequent explicit cancel/replace.
                         // A fresh Submit clears it; stopping polling must not forget task ownership.
-                        if current.as_deref() == Some(id.as_str()) { polling=false; }
+                        if current.as_deref() == Some(id.as_str()) && current_delivery.as_deref()==Some(delivery.as_str()) { polling=false; }
                     }
                 }
             }
             _ = tick.tick(), if polling => {
                 if Instant::now() >= poll_until { polling = false; let _ = events.send(Event::Finished { epoch }).await; continue; }
-                let suffix = if replaying { current.as_ref().map(|id| format!("/{id}/playback")).unwrap_or_default() } else { String::new() };
+                let suffix = if let Some(grant)=&current_grant {format!("/resume/{grant}/playback")} else if replaying { current.as_ref().map(|id| format!("/{id}/playback")).unwrap_or_default() } else { String::new() };
                 let response = api.request(&suffix, None).await;
                 if let Ok(mut v) = response {
+                    if current_grant.is_some(){if v["resume"]["valid_for_ms"].as_u64().unwrap_or(0)>0 {if let Some(id)=&current{let _=events.send(Event::Verified{id:id.clone(),epoch}).await;}}else{polling=false;let _=events.send(Event::Revoked{epoch}).await;}continue;}
                     if replaying { v = json!({ "tasks": [v["task"].clone()] }); }
                     if let Some(tasks) = v["tasks"].as_array() {
                         if tasks.is_empty() { polling = false; let _ = events.send(Event::Revoked { epoch }).await; }
@@ -806,6 +921,61 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn r14_sentence_progress_keeps_the_existing_bounded_early_replay_contract(){
+        for (played_ms,complete,already_replayed,suppressed,expected) in [(200,0,false,false,true),(1200,0,false,false,false),(200,1,false,false,false),(200,0,true,false,false),(200,0,false,true,false)]{
+            let(mut s,_,_)=test_session();s.resume_v1=true;s.suppress_auto=suppressed;
+            let mut speech=claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"第一句。第二句。"}}),"task".into(),"d".into()).unwrap();
+            speech.auto_replayed=already_replayed;s.active=Some(speech);
+            s.finish_sentences(true,complete,played_ms);assert_eq!(s.auto_pending,expected,"early replay must remain bounded: played={played_ms}, complete={complete}");
+        }
+    }
+    #[tokio::test]
+    async fn r14_ack_and_sentence_cursor_are_scoped_to_real_active_result(){
+        let(mut s,events,mut commands)=test_session();s.ack_v1=true;s.resume_v1=true;s.context_v1=true;
+        s.notice("好，我查一下。");s.idle_since=Some(Instant::now()-Duration::from_secs(1));s.poll(true);
+        assert!(!s.accepts_ack("嗯",true,false),"preparation cues must never swallow input");s.finish(false,4);
+        let speech=claimed_speech(&json!({"id":"task","revision":2,"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"火星呈现红色。表面有氧化铁。"}}),"task".into(),"d1".into()).unwrap();
+        events.send(Event::Claimed{speech,epoch:0}).await.unwrap();s.idle_since=Some(Instant::now()-Duration::from_secs(1));assert!(s.poll(true).is_some());
+        assert!(!s.accepts_ack("嗯",false,false));assert!(s.accepts_ack("嗯",true,false));assert!(!s.accepts_ack("嗯我想聊猫",true,false));
+        s.record_sentences(1,None);assert!(matches!(commands.try_recv(),Ok(Command::Progress{final_outcome:None,..})));
+        s.record_sentences(1,None);assert!(commands.try_recv().is_err(),"repeated audio ticks do not create HTTP");
+        s.finish_sentences(true,1,5390);assert_eq!(s.remainder.as_ref().unwrap().text,"表面有氧化铁。");
+        assert_eq!(s.dialogue_context().unwrap()["phase"],"interrupted");assert!(!s.accepts_ack("嗯",true,false));
+        assert!(matches!(commands.try_recv(),Ok(Command::Progress{final_outcome:Some("interrupted"),..})));
+        s.command(Intent::Cancel);assert!(s.dialogue_context().is_none());assert!(s.remainder.is_none());
+    }
+    #[tokio::test]
+    async fn r14_reconnect_is_silent_until_explicit_resume_and_late_grants_cannot_restart_audio(){
+        let(mut s,events,mut commands)=test_session();s.resume_v1=true;
+        assert!(s.poll(true).is_none());assert!(commands.try_recv().is_err());
+        s.command(Intent::Resume);assert!(matches!(commands.try_recv(),Ok(Command::ResumeLatest{..})));
+        let epoch=s.epoch;s.command(Intent::Cancel);commands.try_recv().unwrap();
+        let v=json!({"valid_for_ms":270000,"text":"表面有氧化铁。","grant":"00000000-0000-4000-8000-000000000002","task_id":"00000000-0000-4000-8000-000000000001","revision":1,"text_digest":"a".repeat(64),"complete_sentences":1});
+        let speech=resumed_speech(&v).unwrap();assert_eq!(speech.cursor,1);
+        events.send(Event::Claimed{speech,epoch}).await.unwrap();assert!(s.poll(true).is_none());assert!(s.speech.is_empty());
+        assert!(matches!(commands.try_recv(),Ok(Command::Progress{final_outcome:Some("dropped"),..})));
+        assert!(resumed_speech(&json!({"valid_for_ms":0})).is_none());
+    }
+    #[tokio::test]
+    async fn r14_slow_progress_http_does_not_queue_a_cancel_behind_sentence_reports(){
+        use tokio::io::{AsyncReadExt,AsyncWriteExt};
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let addr=listener.local_addr().unwrap();
+        let (seen,mut requests)=mpsc::channel(8);
+        let server=tokio::spawn(async move {loop{let(mut socket,_)=listener.accept().await.unwrap();let seen=seen.clone();tokio::spawn(async move{
+            let mut buf=[0u8;4096];let n=socket.read(&mut buf).await.unwrap();let raw=String::from_utf8_lossy(&buf[..n]);let first=raw.lines().next().unwrap().to_owned();let slow=first.contains("/progress?");let _=seen.send(first).await;
+            if slow{tokio::time::sleep(Duration::from_secs(2)).await;}
+            let body=if slow{"{}"}else{"{\"tasks\":[]}"};let _=socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",body.len(),body).as_bytes()).await;
+        });}});
+        let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/tasks?room=synthetic").parse().unwrap(),token:"synthetic".into(),key:"synthetic".into()};
+        let(tx,commands)=mpsc::channel(8);let(events,_)=mpsc::channel(8);let actor=tokio::spawn(run(api,commands,events));
+        let mut speech=claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"第一句。第二句。"}}),"task".into(),"d".into()).unwrap();speech.sequence=1;
+        tx.send(Command::Progress{speech,final_outcome:None}).await.unwrap();assert!(requests.recv().await.unwrap().contains("/progress?"));
+        tx.send(Command::Cancel{epoch:1,generation:1}).await.unwrap();
+        let request=tokio::time::timeout(Duration::from_millis(200),requests.recv()).await.expect("cancel must bypass slow progress").unwrap();assert!(request.starts_with("GET"));
+        actor.abort();server.abort();
+    }
     #[test]
     fn shared_v1_contract_deserializes_into_playable_result() {
         let fixture: Value = serde_json::from_str(include_str!(
@@ -857,6 +1027,7 @@ mod tests {
         let task = tokio::spawn(std::future::pending());
         (
             SearchSession {
+                resume_v1:false,context_v1:false,ack_v1:false,closing:false,dialogue:None,dialogue_changed:Instant::now(),
                 receipts: None, receipt_epoch: None,
                 api,
                 tx,
