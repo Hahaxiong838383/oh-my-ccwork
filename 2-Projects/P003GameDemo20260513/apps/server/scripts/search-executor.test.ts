@@ -7,6 +7,23 @@ const sse = (...frames: object[]) => frames.map(x => 'data: ' + JSON.stringify(x
 const chunk = (delta: object, finish_reason: string | null = null) => ({ choices: [{ index: 0, delta, finish_reason }] });
 const final = () => sse(chunk({ content: JSON.stringify({ text: '刚才查到，科技馆公告说周末开放，出发前再确认当天公告哦。', source_ids: [1] }) }, 'stop'));
 
+test('R15 reviews causal scope and opening exceptions using the same evidence and bounded budget', async () => {
+  for (const c of [
+    {query:'含羞草为什么合叶', evidence:'小叶闭合与复叶叶柄下垂分别发生在不同部位的叶枕。受到刺激后，细胞水分变化使叶枕发生运动。', draft:'叶枕上部细胞失水，叶片就合拢下垂。', corrected:'刚才查了含羞草合叶的原因。触碰会让叶子基部细胞里的水分发生变化，叶子就合起来啦。'},
+    {query:'科技馆开放时间', evidence:'周二至周日9:00至17:00开放，周一闭馆，法定节假日除外。', draft:'科技馆周一闭馆。', corrected:'科技馆通常周一闭馆，法定节假日除外。具体安排以官网当前公告为准。'},
+  ]) {
+    let searches=0, answers=0;
+    const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any,init:any)=>{
+      if(String(url).endsWith('/search')){searches++;return Response.json({results:[{...page,summary:c.evidence}]});}
+      answers++;const body=JSON.parse(init.body);
+      if(answers===2){assert(body.messages.some((m:any)=>m.role==='assistant'&&m.content.includes(c.draft)));assert(body.messages.some((m:any)=>m.content?.includes(c.evidence)));}
+      return new Response(sse(chunk({content:JSON.stringify({text:answers===1?c.draft:c.corrected,source_ids:[1]})},'stop')));
+    })as typeof fetch});
+    const result=await e.run(c.query,AbortSignal.timeout(2000),'');
+    assert.equal(result.text,c.corrected);assert.equal(searches,1);assert.equal(answers,2);
+  }
+});
+
 test('R15 preserves the failing stage without retaining provider body or credentials', async () => {
   const cases = [
     { stage: 'search', reason: 'transport', response: () => { throw new TypeError('https://private.invalid/?token=DO_NOT_LOG'); } },
@@ -30,6 +47,23 @@ test('R15 preserves the failing stage without retaining provider body or credent
   }
 });
 
+test('R15 evidence review abstains or fails within two answers, without a new search', async () => {
+  for (const mode of ['first_abstains','review_abstains','review_fails'] as const) {
+    let searches=0,answers=0;
+    const executor=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>{
+      if(String(url).endsWith('/search')){searches++;return Response.json({results:[page]});}
+      answers++;
+      if(mode==='review_fails'&&answers===2)return new Response('private upstream body',{status:503});
+      const abstain=mode==='first_abstains'||mode==='review_abstains'&&answers===2;
+      return new Response(sse(chunk({content:JSON.stringify({text:'刚才查询的资料还不足以确认开放安排。',source_ids:abstain?[]:[1]})},'stop')));
+    })as typeof fetch});
+    const result=executor.run('科技馆开放时间',AbortSignal.timeout(2000),'');
+    if(mode==='review_fails')await assert.rejects(result,(e:any)=>e.failure.stage==='answer'&&e.failure.reason==='http'&&e.failure.status_code===503);
+    else assert.equal((await result).sources.length,0);
+    assert.equal(searches,1);assert.equal(answers,mode==='first_abstains'?1:2);
+  }
+});
+
 test('跨帧工具参数只在完整结束后产生合法调用，截断和重复ID拒绝', () => {
   const raw = sse(chunk({ tool_calls: [{ index: 0, id: 'call-1', type: 'function', function: { name: 'search_web', arguments: '{"que' } }] }),
     chunk({ tool_calls: [{ index: 0, function: { arguments: 'ry":"科技馆"}' } }] }, 'tool_calls'));
@@ -47,7 +81,7 @@ test('URL仅允许配置的公开HTTPS域名，拒绝内网、凭据、任意端
   }
 });
 
-test('P1只Search并单路整理；不外发完整上下文/身份，拒绝无引用和控制标记', async () => {
+test('P1只Search并有界整理复核；不外发完整上下文/身份，拒绝无引用和控制标记', async () => {
   const requests: { url: string; body: any }[] = [];
   const fake = async (url: string | URL | Request, init?: RequestInit) => {
     requests.push({ url: String(url), body: JSON.parse(String(init?.body)) });
@@ -55,7 +89,7 @@ test('P1只Search并单路整理；不外发完整上下文/身份，拒绝无�
   };
   const executor = new SearchExecutor({ apiKey: 'synthetic-key', fetch: fake as typeof fetch, domains: ['cstm.org.cn'] });
   const r = await executor.run('科技馆开放时间', new AbortController().signal, '你叫小可。');
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 3);
   assert.equal(requests[0].url, 'https://api.deepseek.com/v1/tools/search');
   assert.deepEqual(requests[0].body, { query: '科技馆开放时间 site:cstm.org.cn', count: 10, need_content: false });
   assert.equal(r.sources[0].url, page.url);
@@ -73,7 +107,7 @@ test('P2模拟上游验证Search→Fetch→tool结果回填→最终答案', asy
     if (String(url).endsWith('/search')) return Response.json({ results: [page] });
     if (String(url).endsWith('/fetch')) return Response.json({ title: page.title, content: '本周末开放，临时调整以当天公告为准。' });
     sent.push(body); chats++;
-    if (chats === 3) return new Response(final());
+    if (chats >= 3) return new Response(final());
     const name = chats === 1 ? 'search_web' : 'fetch_page';
     const args = chats === 1 ? { query: '科技馆开放时间' } : { url: page.url };
     return new Response(sse(chunk({ tool_calls: [{ index: 0, id: 'call-' + chats, type: 'function', function: { name, arguments: JSON.stringify(args) } }] }, 'tool_calls')));
@@ -86,6 +120,8 @@ test('P2模拟上游验证Search→Fetch→tool结果回填→最终答案', asy
   assert.equal(sent[1].messages.at(-1).tool_call_id, 'call-1');
   assert.equal(sent[2].messages.at(-2).tool_call_id, 'call-2');
   assert.deepEqual(sent[0].tool_choice,{type:'function',function:{name:'search_web'}});
+  assert.equal(chats,4);
+  assert.equal(sent[3].tool_choice,'none');
   assert.equal(sent[2].tool_choice, 'none');
 });
 
@@ -184,7 +220,7 @@ test('R11 预约制度不按七天新闻过滤，但优先官方馆站且保留�
  const e=new SearchExecutor({apiKey:'synthetic',domains:['weather.com.cn','gov.cn','chnmuseum.cn'],fetch:(async(url:any,init:any)=>{requests.push(JSON.parse(init.body));return String(url).endsWith('/search')?Response.json({results:[museum]}):new Response(final());})as typeof fetch});
  const r=await e.run('中国国家博物馆最新预约方式',AbortSignal.timeout(2000),'');
  assert.equal(r.sources.length,1);assert.match(requests[0].query,/site:chnmuseum.cn/);assert.doesNotMatch(requests[0].query,/site:weather/);
- assert.match(requests.at(-1).messages.at(-1).content,/生效日期/);
+ assert(requests.at(-1).messages.some((m:any)=>m.content?.includes('生效日期')));
 });
 test('R11 今日新闻不能将无日期和昨日条目当当天来源',async()=>{
  const yesterday=new Date(Date.now()-86400000).toISOString();
@@ -208,7 +244,7 @@ test('R11 科普不能擅添次数/周期；只允许一次有界简化且不重
 test('R11 简化仍带未问定量时拒绝，不无限重试；明确问数值和正式名称保留',async()=>{
  for(const [query,text,accepted]of [['潮汐的形成原因','刚查到地球转一圈，海边就涨落一次。',false],['为什么一年有四季','刚查了四季，一年有四季是因为地轴倾斜。',true],['中国第一颗人造卫星是什么','刚查了中国第一颗人造卫星，它叫东方红一号。',true]]as const){
   let chats=0;const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any)=>{if(String(url).endsWith('/search'))return Response.json({results:[page]});chats++;return new Response(sse(chunk({content:JSON.stringify({text,source_ids:[1]})},'stop')));})as typeof fetch});
-  const run=e.run(query,AbortSignal.timeout(2000),'');if(accepted)assert.equal((await run).text,text);else await assert.rejects(run,/unasked_quantity/);assert.equal(chats,accepted?1:2);
+  const run=e.run(query,AbortSignal.timeout(2000),'');if(accepted)assert.equal((await run).text,text);else await assert.rejects(run,/unasked_quantity/);assert.equal(chats,2);
  }
 });
 test('R11 简化阶段取消会终止请求，不继续搜索或播报',async()=>{
