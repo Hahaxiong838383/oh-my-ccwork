@@ -218,7 +218,7 @@ export class SearchExecutor {
     if(parsed.source_ids.length && (needsEvidenceReview(query)||extraQuantities.length)){
       if(this.diagnostics)this.diagnostics.answer_rewrites=1;
       messages.push({role:'assistant',content:JSON.stringify(parsed)});
-      messages.push({role:'user',content:JSON.stringify({instruction:'请对候选答案做一次证据复核，返回修订后的同格式JSON。先找来源里直接回答原问题的依据，再只解释用户所问现象的核心原因。不要在简短口语里扩展到没问的相邻现象、部位或细胞上下左右的细节，也不要把它们合并；不能省略适用范围而把特例说成普遍规律。作用或用途问题应概括来源支持的主要作用，不把一种用途描述成全部。开放、预约等规则必须保留来源中影响使用的例外条件，发布日期不等于生效日期。删除下面列出的未问数值及其附加表述，不得换成中文数字继续保留；只用日常词解释核心原因，简化不能改变因果。不再搜索，不引入新事实；证据不足则source_ids为空。',original_question:query,remove_unasked_quantities:extraQuantities})});
+      messages.push({role:'user',content:JSON.stringify({instruction:'请对候选答案做一次证据复核，返回修订后的同格式JSON。先找来源里直接回答原问题的原句，逐项对照候选答案中的因果陈述，再只解释用户所问现象的核心原因。来源中的主要共同成因不能被压缩成单一原因；每个解释动作都要有来源依据，不能用“晃动”等想象替代真实机制。字数不足时删开场套话和旁枝，不删关键成因、关系或适用条件。不要在简短口语里扩展到没问的相邻现象、部位或细胞上下左右的细节，也不要把它们合并；不能省略适用范围而把特例说成普遍规律。作用或用途问题应概括来源支持的主要作用，不把一种用途描述成全部。开放、预约等规则必须保留来源中影响使用的例外条件，发布日期不等于生效日期。删除下面列出的未问数值及其附加表述，不得换成中文数字继续保留；只用日常词解释核心原因，简化不能改变因果。不再搜索，不引入新事实；证据不足则source_ids为空。',original_question:query,remove_unasked_quantities:extraQuantities})});
       parsed=decode((await this.model(messages,budget,Boolean(this.opts.tools),true)).content);
       if(unaskedQuantities(query,parsed.text).length)throw new Error('unasked_quantity');
     }
