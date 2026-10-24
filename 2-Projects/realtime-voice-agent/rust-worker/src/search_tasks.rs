@@ -652,7 +652,9 @@ impl SearchSession {
     }
     pub fn finish_with_progress(&mut self, interrupted: bool, spoken_chars: usize, played_ms: u64, segment_complete: bool) {
         if let Some(speech) = self.active.take() {
-            self.set_phase("interrupted");
+            if speech.task.is_some() && !speech.digest.is_empty() {
+                self.set_phase(if interrupted {"interrupted"} else {"ready"});
+            }
             tracing::info!(task_id = speech.task.as_deref().unwrap_or("ack"), delivery_id = %speech.delivery, session_ms = self.started.elapsed().as_millis() as u64, interrupted, spoken_chars, "background search speech finished (device hearing unverified)");
             if speech.result_until.is_some() {
                 self.auto_pending = interrupted && played_ms < 1000 && !segment_complete
@@ -921,6 +923,15 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn r14_preparation_cue_does_not_change_running_query_to_interrupted(){
+        let(mut s,_,_)=test_session();s.context_v1=true;
+        s.dialogue=Some(json!({"protocol":1,"task_id":"task","revision":1,"phase":"running","dialogue_epoch":0}));
+        s.notice("好，我查一下。");s.idle_since=Some(Instant::now()-Duration::from_secs(1));s.poll(true);s.finish(false,4);
+        assert_eq!(s.dialogue_context().unwrap()["phase"],"running","a receipt is not a result interruption");
+        s.active=claimed_speech(&json!({"valid_for_ms":300000,"automatic_for_ms":60000,"result":{"text":"第一句。第二句。"}}),"task".into(),"d".into());
+        s.finish(false,8);assert_eq!(s.dialogue_context().unwrap()["phase"],"ready","context-only rollout keeps a completed result truthful");
+    }
     #[tokio::test]
     async fn r14_sentence_progress_keeps_the_existing_bounded_early_replay_contract(){
         for (played_ms,complete,already_replayed,suppressed,expected) in [(200,0,false,false,true),(1200,0,false,false,false),(200,1,false,false,false),(200,0,true,false,false),(200,0,false,true,false)]{
