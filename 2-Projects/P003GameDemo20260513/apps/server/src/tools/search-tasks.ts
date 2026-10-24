@@ -1,3 +1,4 @@
+import { SearchResume, validateProgress, type SearchProgress } from './search-resume.js';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
@@ -21,6 +22,7 @@ type Options = {
   enabled: () => boolean; allowed: (subject: string) => boolean; now?: () => number;
   canSubmit?: (routing?: TaskRouting) => boolean;
   resolveRouting?: (owner: SearchOwner, claim: RoutingClaim) => TaskRouting;
+  resumeEnabled?: () => boolean; resumeScope?: (o:SearchOwner) => string|null; windowDeadline?: () => number;
   concurrency?: number; queueLimit?: number; dailyDeviceLimit?: number; dailyGlobalLimit?: number;
 };
 const LIVE = new Set(['queued', 'running', 'ready', 'failed']);
@@ -40,6 +42,8 @@ export function validateQuery(value: unknown): string {
 /** Owns a separate ledger. No imports from conversation, memory or device control. */
 export class SearchTasks {
   private db: DatabaseSync;
+  private resume: SearchResume;
+  private progressByDelivery = new Map<string, SearchProgress>();
   private records = new Map<string, SearchTask>();
   private nextPurge = 0;
   private pending = new Map<string, string>();
@@ -49,6 +53,7 @@ export class SearchTasks {
   private now: () => number;
   constructor(private opts: Options) {
     this.now = opts.now ?? Date.now;
+    this.resume = new SearchResume({enabled:()=>!this.closed && this.opts.enabled() && this.opts.resumeEnabled?.()===true,scope:o=>this.opts.allowed(o.subject)?this.opts.resumeScope?.(o)??null:null,now:this.now,deadline:()=>this.opts.windowDeadline?.()??Infinity,get:id=>this.records.get(id)});
     mkdirSync(dirname(opts.dbPath), { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(opts.dbPath);
     chmodSync(opts.dbPath, 0o600);
@@ -107,7 +112,7 @@ export class SearchTasks {
     // Validate admission before cancelling an existing query. A rejected replacement keeps it intact.
     if (old) this.cancel(owner, old.id);
     const t: SearchTask = { ...owner, id: randomUUID(), key, turn: input.turn, revision, ...(routing ? {routing:structuredClone(routing)} : {}), status: 'queued', createdAt: this.now(), deadline: this.now() + 20_000 };
-    this.save(t); this.pending.set(t.id, query); this.pump();
+    this.save(t); this.resume.admit(t); this.pending.set(t.id, query); this.pump();
     return this.get(owner, t.id);
   }
   private pump() {
@@ -167,6 +172,7 @@ export class SearchTasks {
   }
   list(owner: SearchOwner): SearchTask[] {
     this.tick();
+    if(this.sessionClosed(owner))return [];
     return this.all().filter(t => t.subject === owner.subject && t.session === owner.session &&
       (t.status === 'queued' || t.status === 'running' || (t.status === 'ready' || t.status === 'failed') &&
         (Boolean(t.claim) || this.now() - (t.readyAt ?? 0) < 60_000))).map(t => structuredClone(t));
@@ -174,6 +180,7 @@ export class SearchTasks {
   cancel(owner: SearchOwner, id: string) {
     const t = this.get(owner, id);
     if (!LIVE.has(t.status) && t.status !== 'delivered') return t;
+    this.resume.invalidate(t);
     t.status = 'cancelled'; delete t.result; this.save(t);
     this.pending.delete(id); this.active.get(id)?.abort();
     return t;
@@ -182,7 +189,37 @@ export class SearchTasks {
     this.db.prepare('INSERT OR IGNORE INTO closed_sessions VALUES(?,?,?)').run(owner.subject, owner.session, this.now());
     for (const t of this.all()) if (t.subject === owner.subject && t.session === owner.session) this.cancel(owner, t.id);
   }
+  private sessionClosed(owner:SearchOwner){return Boolean(this.db.prepare('SELECT 1 FROM closed_sessions WHERE subject=? AND session=?').get(owner.subject,owner.session));}
+  closeSession(owner: SearchOwner) {
+    if (!this.opts.resumeEnabled?.()) return this.cancelSession(owner);
+    this.db.prepare('INSERT OR IGNORE INTO closed_sessions VALUES(?,?,?)').run(owner.subject,owner.session,this.now());
+    this.resume.close(owner);
+    console.info('[search-resume]',JSON.stringify({event:'session_closed',session:owner.session,at_ms:this.now()}));
+    for (const t of this.all()) if(t.subject===owner.subject&&t.session===owner.session&&['queued','running','failed'].includes(t.status)) this.cancel(owner,t.id);
+  }
+  progress(owner:SearchOwner,id:string,delivery:string,p:SearchProgress) {
+    this.tick();const t=this.get(owner,id);
+    if(this.db.prepare('SELECT 1 FROM closed_sessions WHERE subject=? AND session=?').get(owner.subject,owner.session))return fail('session_closed');
+    if(t.claim!==delivery)return fail('claim_mismatch');
+    if(!t.result||!['ready','delivered'].includes(t.status))return fail('not_ready');
+    validateProgress(t,p);const prior=this.progressByDelivery.get(delivery);
+    if(prior&&p.sequence<=prior.sequence)return t;
+    if(prior&&p.complete_sentences<prior.complete_sentences)return fail('invalid_progress');
+    this.resume.update(t,delivery,p);console.info('[search-resume]',JSON.stringify({event:'progress',task_id:t.id,session:owner.session,complete_sentences:p.complete_sentences,sequence:p.sequence,at_ms:this.now()}));this.progressByDelivery.set(delivery,{...p});if(this.progressByDelivery.size>10000)this.progressByDelivery.delete(this.progressByDelivery.keys().next().value!);return t;
+  }
+  resumeLatest(owner:SearchOwner,request:string){this.tick();return this.resume.latest(owner,request);}
+  resumePlayback(owner:SearchOwner,grant:string){this.tick();return this.resume.playback(owner,grant);}
+  resumeReceipt(owner:SearchOwner,grant:string,outcome:string,p?:SearchProgress){this.tick();return this.resume.receipt(owner,grant,outcome,p);}
+  resumeCancel(owner:SearchOwner){this.tick();const t=this.resume.cancelLatest(owner);return this.cancel(t,t.id);}
+  dialogueContext(owner:SearchOwner,id:string,revision:number,grant?:string){
+    if(!this.opts.enabled()||!this.opts.allowed(owner.subject))return false;
+    if(grant)return this.resume.context(owner,id,revision,grant);
+    const t=this.records.get(id);
+    return !!(t&&t.subject===owner.subject&&t.session===owner.session&&t.revision===revision&&
+      ['queued','running','ready','delivered'].includes(t.status)&&this.now()<(t.readyAt===undefined?t.deadline:t.readyAt+300_000));
+  }
   claim(owner: SearchOwner, id: string, delivery: string): SearchTask {
+    if(this.sessionClosed(owner))return fail('not_ready');
     this.tick();
     const t = this.get(owner, id);
     if (t.claim && t.claim !== delivery) return fail('already_claimed');
@@ -190,6 +227,7 @@ export class SearchTasks {
     t.claim = delivery; t.delivery = 'claimed'; this.save(t); return t;
   }
   resumable(owner: SearchOwner, id: string): SearchTask {
+    if(this.sessionClosed(owner))return fail('not_ready');
     if (this.closed || !this.opts.enabled() || !this.opts.allowed(owner.subject)) return fail('disabled');
     this.tick();
     const t = this.get(owner, id);
@@ -197,6 +235,7 @@ export class SearchTasks {
     return t;
   }
   playback(owner: SearchOwner, id: string): SearchTask {
+    if(this.sessionClosed(owner))return fail('not_ready');
     if (this.closed || !this.opts.enabled() || !this.opts.allowed(owner.subject)) return fail('disabled');
     this.tick();
     const t = this.get(owner, id);
@@ -217,12 +256,14 @@ export class SearchTasks {
     if (t.claim !== previous) return fail('claim_mismatch');
     if (t.status !== 'delivered' || !['completed', 'interrupted'].includes(t.delivery ?? '') || attempts.length >= 8 ||
         automatic && (t.delivery !== 'interrupted' || attempts.some(a => a.automatic) || this.now() >= t.readyAt! + 60_000)) return fail('not_ready');
+    this.resume.resetReplay(t);
     t.replays = [...attempts, { previous, delivery, automatic, at: this.now() }];
     t.claim = delivery; t.delivery = 'claimed';
     this.save(t); return t;
   }
   receipt(owner: SearchOwner, id: string, delivery: string, outcome: 'completed' | 'interrupted' | 'dropped') {
     const t = this.get(owner, id);
+    if(this.sessionClosed(owner))return fail('session_closed');
     if (t.claim !== delivery) return fail('claim_mismatch');
     if (!['completed', 'interrupted', 'dropped'].includes(outcome)) return fail('invalid_request');
     if (t.delivery !== 'claimed') return t;

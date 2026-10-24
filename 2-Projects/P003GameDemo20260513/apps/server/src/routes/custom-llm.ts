@@ -1,5 +1,6 @@
+import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
 import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
-import { searchSettings } from '../tools/search-runtime.js';
+import { searchSettings, currentSearchDialogue } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
@@ -71,7 +72,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     }
   }
 
-  let body: { messages?: OpenAiMessage[]; model?: string };
+  let body: { messages?: OpenAiMessage[]; model?: string; search_dialogue_context?: unknown };
   try {
     body = (await c.req.json()) as typeof body;
   } catch {
@@ -93,8 +94,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 从回调 Url 的 ?token= 拿登录态 → accountId → 注入这个孩子的 profile 记忆（昵称/年龄/兴趣/近况/方舟经历）。
   // 无 token / 无效 token → authContext=null → 降级匿名（仅世界观，无个性化记忆）。
   // ?room=sn-<SN>-<ts>（rust worker 传）→ per-device 身份路由：按 SN 反查该设备 brain 账号（多设备防串号）。
+  const workerAuth = await verifyAuthToken(c.req.query('token'));
   const authContext = resolveDeviceIdentity(
-    await verifyAuthToken(c.req.query('token')),
+    workerAuth,
     c.req.query('room'),
   );
   // per-device prompt 配置（Worker Brain 编辑 tab）：设备账号可 override 世界观 / 追加规则；
@@ -140,6 +142,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
+  const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
+  if(temporarySearch)systemPrompt+='\n\n'+temporarySearch;
+  const searchClarification=temporarySearch?searchDialogueClarification(userText):null;
+  if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),local_clarification:Boolean(searchClarification)}));
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
   const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
@@ -237,6 +243,11 @@ customLlmRoute.post('/chat/completions', async (c) => {
         void extractAndPersist(authContext.accountId, full.slice(-decision.windowMessages), 'rtc', { reason: decision.reason });
       }
     };
+
+    if(searchClarification){
+      assistantText=searchClarification;
+      enqueue(chunk({role:'assistant',content:searchClarification},null));enqueue(chunk({},'stop'));persistTurn();enqueue('[DONE]');await chain;return;
+    }
 
     // 括号旁白硬防线(paren-filter,2026-07-03):LLM 输出"（挠了挠头）"类状态机旁白会被火山
     // TTS 原样念出——prompt 禁令压不死,这里在流上剥净(字幕/TTS/记忆抽取都吃干净文本)。

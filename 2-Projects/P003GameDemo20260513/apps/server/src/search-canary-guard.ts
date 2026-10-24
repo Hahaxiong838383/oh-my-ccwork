@@ -24,8 +24,14 @@ export function prepareCanaryEnvironment(env:NodeJS.ProcessEnv) {
     if(!contained(path)) throw new Error('canary_path_'+k);
     env[k]=path;
   }
-  // Reject future/unreviewed store overrides instead of silently sharing production data.
-  for(const k of Object.keys(env)) if(k.endsWith('_DB_PATH') && !(k in stores)) throw new Error('canary_unknown_store');
+  // One reviewed read-only authority source. It is never a singleton store override.
+  // SearchResume opens this exact file with DatabaseSync({readOnly:true}); all writes stay isolated.
+  const authority=env.SEARCH_RESUME_AUTHORITY_DB_PATH;
+  if(authority!==undefined || env.SEARCH_RESUME_V1==='1') {
+    if(authority!=='/opt/p003/server/data/devices.db' || existsSync(authority) && (realpathSync(authority)!==authority || !lstatSync(authority).isFile())) throw new Error('canary_resume_authority');
+  }
+  // Reject all other future/unreviewed store overrides.
+  for(const k of Object.keys(env)) if(k.endsWith('_DB_PATH') && !(k in stores) && k!=='SEARCH_RESUME_AUTHORITY_DB_PATH') throw new Error('canary_unknown_store');
   const data=join(root,'data');mkdirSync(data,{recursive:true});
   const scan=(p:string)=>{for(const e of readdirSync(p,{withFileTypes:true})){const q=join(p,e.name);if(e.isSymbolicLink()||lstatSync(q).nlink>1&&!e.isDirectory())throw new Error('canary_link');if(e.isDirectory())scan(q);}};scan(data);
   if(!canarySns(env.SEARCH_CANARY_SN).length || !canaryMaxJobs(env.SEARCH_CANARY_MAX_JOBS) || env.SEARCH_WORKER_ACCOUNT_ID!=='search-canary-worker' || !env.CUSTOM_LLM_API_KEY || !env.AUTH_JWT_SECRET) throw new Error('canary_identity');
@@ -39,5 +45,5 @@ export function canaryRequestAllowed(i:CanaryRequest) {
     && i.expectedAccount==='search-canary-worker' && i.account===i.expectedAccount
     && Number.isFinite(i.expires) && i.expires>i.now && i.expires-i.now<=72*3600_000
     && (['/v1/chat/completions','/v1/internal/local-audio-texts','/v1/internal/search-tasks/routing','/v1/internal/search-tasks/routing/ack'].includes(i.path)
-      || /^\/v1\/internal\/search-tasks(?:\/(?:session\/cancel|[a-f0-9-]{36}(?:\/(?:claim|receipt|cancel|replay|playback))?))?$/.test(i.path));
+      || /^\/v1\/internal\/search-tasks(?:\/(?:session\/(?:cancel|close)|resume\/(?:latest|cancel|[a-f0-9-]{36}\/(?:playback|receipt))|[a-f0-9-]{36}(?:\/(?:claim|receipt|cancel|replay|playback|progress))?))?$/.test(i.path));
 }

@@ -23,6 +23,12 @@ try {
   assert.equal(canaryRequestAllowed({...base,path,room:'sn-BJP00326060100100004-123'}),false);
   assert.equal(canaryRequestAllowed({...base,path:path+'/extra'}),false);
  }
+ for(const path of ['/v1/internal/search-tasks/session/close','/v1/internal/search-tasks/resume/latest','/v1/internal/search-tasks/resume/cancel','/v1/internal/search-tasks/resume/11e0532a-b4a0-48b0-9da6-925b9a7f9e76/playback','/v1/internal/search-tasks/resume/11e0532a-b4a0-48b0-9da6-925b9a7f9e76/receipt','/v1/internal/search-tasks/11e0532a-b4a0-48b0-9da6-925b9a7f9e76/progress']){
+  assert.equal(canaryRequestAllowed({...base,path}),true,'R14 endpoint must pass full candidate guard');
+  assert.equal(canaryRequestAllowed({...base,path,expires:1000}),false);assert.equal(canaryRequestAllowed({...base,path,role:'parent'}),false);assert.equal(canaryRequestAllowed({...base,path:path+'/extra'}),false);
+ }
+ prepareCanaryEnvironment({...env,SEARCH_RESUME_V1:'1',SEARCH_RESUME_AUTHORITY_DB_PATH:'/opt/p003/server/data/devices.db'});
+ for(const path of [join(prod,'devices.db'),'/opt/p003/server/data/profile.db',join(root,'data/devices.db')])assert.throws(()=>prepareCanaryEnvironment({...env,SEARCH_RESUME_V1:'1',SEARCH_RESUME_AUTHORITY_DB_PATH:path}),/canary_resume_authority/);
  assert.ok(env.SEARCH_ROUTING_DB_PATH?.startsWith(realpathSync(root)+'/'));
  assert.throws(()=>prepareCanaryEnvironment({...env,SEARCH_ROUTING_DB_PATH:join(prod,'routing.db')}));
  for(const action of ['replay','playback']) {

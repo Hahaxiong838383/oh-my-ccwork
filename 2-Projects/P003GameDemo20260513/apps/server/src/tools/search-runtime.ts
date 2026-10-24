@@ -1,3 +1,5 @@
+import { readResumeAuthority } from './search-resume-scope.js';
+import { searchDialogueInstruction } from './search-dialogue-context.js';
 import { timingSafeEqual } from 'node:crypto';
 import { configStore } from '../config-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
@@ -42,7 +44,11 @@ export function getSearchTasks(): SearchTasks | null {
   const settings = searchSettings();
   if (!settings.enabled) { instance?.tick(); return null; }
   if (!instance) {
-    instance = new SearchTasks({ canSubmit: r => Boolean(r?.weather_enabled&&(r.weather||r.baidu_weather_enabled&&r.place_weather||r.auto_location_enabled&&r.auto_weather))||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
+    instance = new SearchTasks({
+      resumeEnabled:()=>Boolean(process.env.SEARCH_CANARY_ROOT)&&process.env.SEARCH_RESUME_V1==='1',
+      resumeScope:o=>readResumeAuthority(process.env.SEARCH_RESUME_AUTHORITY_DB_PATH,o.subject,deviceRegistryStore.get(o.subject)?.account_id??null),
+      windowDeadline:()=>Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value)||0,
+      canSubmit: r => Boolean(r?.weather_enabled&&(r.weather||r.baidu_weather_enabled&&r.place_weather||r.auto_location_enabled&&r.auto_weather))||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
       resolveRouting:(owner,claim)=>{
         const snapshot=getSearchRoutingStore()?.resolve(owner.subject,claim.version);if(!snapshot)throw new Error('routing_version_unknown');
         if(!['builtin-explicit','builtin-control','weather-city-followup','builtin-fallback'].includes(claim.rule_id)&&!snapshot.config.rules.some(r=>r.id===claim.rule_id&&r.enabled))throw new Error('routing_version_scope');
@@ -116,3 +122,10 @@ export const searchTaskRoute = createSearchRoute({ tasks: getSearchTasks, routin
     return device?.status === 'active' && device.account_id ? { subject: sn, session: room } : null;
   } catch { return null; }
 } });
+
+export function currentSearchDialogue(value:unknown,auth:{role:string;accountId:string}|null,room:string){
+ if(process.env.P003_SEARCH_CONTEXT_V1!=='1'||!process.env.SEARCH_CANARY_ROOT||!instance||auth?.role!=='device'||auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID?.trim())return '';
+ const subject=/^sn-(BJP003\d{14})-\d{1,20}$/.exec(room)?.[1];
+ if(!subject)return '';
+ return searchDialogueInstruction(value,{subject,session:room},(o,id,rev,grant)=>instance!.dialogueContext(o,id,rev,grant));
+}
