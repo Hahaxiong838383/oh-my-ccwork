@@ -11,6 +11,7 @@ test('R15 reviews causal scope and opening exceptions using the same evidence an
   for (const c of [
     {query:'含羞草为什么合叶', evidence:'小叶闭合与复叶叶柄下垂分别发生在不同部位的叶枕。受到刺激后，细胞水分变化使叶枕发生运动。', draft:'叶枕上部细胞失水，叶片就合拢下垂。', corrected:'刚才查了含羞草合叶的原因。触碰会让叶子基部细胞里的水分发生变化，叶子就合起来啦。'},
     {query:'科技馆开放时间', evidence:'周二至周日9:00至17:00开放，周一闭馆，法定节假日除外。', draft:'科技馆周一闭馆。', corrected:'科技馆通常周一闭馆，法定节假日除外。具体安排以官网当前公告为准。'},
+    {query:'长城过去有什么作用',evidence:'长城防御体系用于阻挡敌军并传递军事信息。',draft:'长城只是用来挡敌人的墙。',corrected:'刚才查了长城的作用。它过去用来防御敌人，也能借烽火传递军事消息。'},
   ]) {
     let searches=0, answers=0;
     const e=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any,init:any)=>{
@@ -62,6 +63,18 @@ test('R15 evidence review abstains or fails within two answers, without a new se
     else assert.equal((await result).sources.length,0);
     assert.equal(searches,1);assert.equal(answers,mode==='first_abstains'?1:2);
   }
+});
+
+test('R15 names the concrete unwanted quantity so a valid causal answer can be repaired',async()=>{
+  let answers=0;
+  const executor=new SearchExecutor({apiKey:'synthetic',domains:['cstm.org.cn'],fetch:(async(url:any,init:any)=>{
+    if(String(url).endsWith('/search'))return Response.json({results:[page]});
+    answers++;
+    if(answers===2)assert.match(JSON.parse(init.body).messages.at(-1).content,/6600万年/);
+    return new Response(sse(chunk({content:JSON.stringify({text:answers===1?'刚才查了恐龙灭绝的资料。大约6600万年前，小行星撞击地球，让生存环境剧变。':'刚才查了恐龙灭绝的资料。小行星撞击地球，让生存环境剧变。',source_ids:[1]})},'stop')));
+  })as typeof fetch});
+  const result=await executor.run('恐龙为什么会灭绝',AbortSignal.timeout(2000),'');
+  assert.doesNotMatch(result.text,/6600/);assert.equal(answers,2);
 });
 
 test('跨帧工具参数只在完整结束后产生合法调用，截断和重复ID拒绝', () => {

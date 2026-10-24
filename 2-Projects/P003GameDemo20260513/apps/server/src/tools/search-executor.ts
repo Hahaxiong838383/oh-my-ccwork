@@ -11,11 +11,11 @@ type Options = { audit?: (value: SearchDiagnostics) => void; apiKey: string; dom
 const cut = (s: string, n: number) => [...s].slice(0, n).join('');
 const object = (x: unknown): x is Record<string, any> => x !== null && typeof x === 'object' && !Array.isArray(x);
 const standingPolicy=(q:string)=>/预约|门票|入馆|参观|开放时间|开放安排|开放吗|开门/.test(q)&&!/新闻|消息|报道|进展/.test(q);
-const needsEvidenceReview=(q:string)=>standingPolicy(q)||/为什么|怎么|如何|形成|原理|成因|原因|是什么|什么是/.test(q);
-function unaskedQuantity(query:string,text:string):boolean {
-  if(!/为什么|形成|原理|成因|原因/.test(query)||/多少|几次|频率|周期|多久|几天|几年|百分比|比例|倍数|数据|数字/.test(query))return false;
+const needsEvidenceReview=(q:string)=>standingPolicy(q)||/为什么|怎么|如何|形成|原理|成因|原因|是什么|什么是|作用|用途|用处/.test(q);
+function unaskedQuantities(query:string,text:string):string[] {
+  if(!/为什么|形成|原理|成因|原因/.test(query)||/多少|几次|频率|周期|多久|几天|几年|百分比|比例|倍数|数据|数字/.test(query))return [];
   const quantities=text.match(/(?:\d+(?:\.\d+)?|[零一二两三四五六七八九十百千万亿半]+)(?:万|亿|千)?(?:摄氏度|纳米|公里|千米|毫米|厘米|小时|分钟|秒钟|年|天|次|圈|倍|度|米|%|％)/g)??[];
-  return quantities.some(value=>!query.includes(value));
+  return [...new Set(quantities.filter(value=>!query.includes(value)))];
 }
 const NO_RESULT: SearchResult = { text: '刚才的搜索没有找到足够可靠的资料，这次我还不能确认。', sources: [] };
 const TOOLS = [
@@ -214,12 +214,13 @@ export class SearchExecutor {
     // Simplification can lose causal scope or a rule's exceptions even without
     // adding a number. Share the existing single rewrite budget for these risks;
     // no further search, retry loop, or extension of the task deadline.
-    if(parsed.source_ids.length && (needsEvidenceReview(query)||unaskedQuantity(query,parsed.text))){
+    const extraQuantities=unaskedQuantities(query,parsed.text);
+    if(parsed.source_ids.length && (needsEvidenceReview(query)||extraQuantities.length)){
       if(this.diagnostics)this.diagnostics.answer_rewrites=1;
       messages.push({role:'assistant',content:JSON.stringify(parsed)});
-      messages.push({role:'user',content:'请对这份候选答案做一次证据复核并返回修订后的JSON。逐个事实与前面的来源核对：不能合并不同对象或部位的机制，不能省略适用范围而把特例说成普遍规律；开放、预约等规则必须保留来源中影响使用的例外条件，发布日期不等于生效日期。删除用户没问的数值、次数、周期与旁枝细节；只用日常词解释核心原因，简化不能改变因果。无需修改的正确内容保留。不再搜索，不引入新事实。仍返回同格式JSON和已有来源编号；证据不足则source_ids为空。'});
+      messages.push({role:'user',content:JSON.stringify({instruction:'请对候选答案做一次证据复核，返回修订后的同格式JSON。先找来源里直接回答原问题的依据，再只解释用户所问现象的核心原因。不要在简短口语里扩展到没问的相邻现象、部位或细胞上下左右的细节，也不要把它们合并；不能省略适用范围而把特例说成普遍规律。作用或用途问题应概括来源支持的主要作用，不把一种用途描述成全部。开放、预约等规则必须保留来源中影响使用的例外条件，发布日期不等于生效日期。删除下面列出的未问数值及其附加表述，不得换成中文数字继续保留；只用日常词解释核心原因，简化不能改变因果。不再搜索，不引入新事实；证据不足则source_ids为空。',original_question:query,remove_unasked_quantities:extraQuantities})});
       parsed=decode((await this.model(messages,budget,Boolean(this.opts.tools),true)).content);
-      if(unaskedQuantity(query,parsed.text))throw new Error('unasked_quantity');
+      if(unaskedQuantities(query,parsed.text).length)throw new Error('unasked_quantity');
     }
     if (!parsed.source_ids.length) return { ...NO_RESULT, sources: [], diagnostics: this.diagnostics };
     let text=parsed.text.trim();
