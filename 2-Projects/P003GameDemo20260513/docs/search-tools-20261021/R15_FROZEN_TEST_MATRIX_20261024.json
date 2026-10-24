@@ -1,0 +1,351 @@
+{
+  "frozen_at": "2026-10-24T08:59:12.599463+00:00",
+  "status": "pre_sampling",
+  "gate": {
+    "groups": [
+      "normal_chat",
+      "search_running",
+      "resume_running"
+    ],
+    "min_valid_pairs_per_group": 20,
+    "max_planned_pairs_per_group": 30,
+    "median_delta_ms_max": 100,
+    "empirical_p90_delta_ms_max": 300,
+    "missing_body_increase_allowed": false
+  },
+  "latency_inputs": [
+    {
+      "id": "C01",
+      "text": "我今天画了一只小猫。"
+    },
+    {
+      "id": "C02",
+      "text": "天气为什么会变化。"
+    },
+    {
+      "id": "C03",
+      "text": "烤箱的温度怎么调。"
+    },
+    {
+      "id": "C04",
+      "text": "不要查北京天气，我们聊小猫。"
+    },
+    {
+      "id": "C05",
+      "text": "请你简单说说小猫为什么喜欢晒太阳。"
+    },
+    {
+      "id": "C06",
+      "text": "水为什么会结冰。"
+    },
+    {
+      "id": "C07",
+      "text": "给我讲一个很短的笑话。"
+    },
+    {
+      "id": "C08",
+      "text": "我们聊聊恐龙。"
+    },
+    {
+      "id": "C09",
+      "text": "为什么树叶是绿色的。"
+    },
+    {
+      "id": "C10",
+      "text": "你最喜欢什么颜色。"
+    }
+  ],
+  "attempt_sequence": [
+    {
+      "attempt": 1,
+      "input_id": "C01",
+      "order": "AB"
+    },
+    {
+      "attempt": 2,
+      "input_id": "C02",
+      "order": "BA"
+    },
+    {
+      "attempt": 3,
+      "input_id": "C03",
+      "order": "AB"
+    },
+    {
+      "attempt": 4,
+      "input_id": "C04",
+      "order": "BA"
+    },
+    {
+      "attempt": 5,
+      "input_id": "C05",
+      "order": "AB"
+    },
+    {
+      "attempt": 6,
+      "input_id": "C06",
+      "order": "BA"
+    },
+    {
+      "attempt": 7,
+      "input_id": "C07",
+      "order": "AB"
+    },
+    {
+      "attempt": 8,
+      "input_id": "C08",
+      "order": "BA"
+    },
+    {
+      "attempt": 9,
+      "input_id": "C09",
+      "order": "AB"
+    },
+    {
+      "attempt": 10,
+      "input_id": "C10",
+      "order": "BA"
+    },
+    {
+      "attempt": 11,
+      "input_id": "C01",
+      "order": "AB"
+    },
+    {
+      "attempt": 12,
+      "input_id": "C02",
+      "order": "BA"
+    },
+    {
+      "attempt": 13,
+      "input_id": "C03",
+      "order": "AB"
+    },
+    {
+      "attempt": 14,
+      "input_id": "C04",
+      "order": "BA"
+    },
+    {
+      "attempt": 15,
+      "input_id": "C05",
+      "order": "AB"
+    },
+    {
+      "attempt": 16,
+      "input_id": "C06",
+      "order": "BA"
+    },
+    {
+      "attempt": 17,
+      "input_id": "C07",
+      "order": "AB"
+    },
+    {
+      "attempt": 18,
+      "input_id": "C08",
+      "order": "BA"
+    },
+    {
+      "attempt": 19,
+      "input_id": "C09",
+      "order": "AB"
+    },
+    {
+      "attempt": 20,
+      "input_id": "C10",
+      "order": "BA"
+    },
+    {
+      "attempt": 21,
+      "input_id": "C01",
+      "order": "AB"
+    },
+    {
+      "attempt": 22,
+      "input_id": "C02",
+      "order": "BA"
+    },
+    {
+      "attempt": 23,
+      "input_id": "C03",
+      "order": "AB"
+    },
+    {
+      "attempt": 24,
+      "input_id": "C04",
+      "order": "BA"
+    },
+    {
+      "attempt": 25,
+      "input_id": "C05",
+      "order": "AB"
+    },
+    {
+      "attempt": 26,
+      "input_id": "C06",
+      "order": "BA"
+    },
+    {
+      "attempt": 27,
+      "input_id": "C07",
+      "order": "AB"
+    },
+    {
+      "attempt": 28,
+      "input_id": "C08",
+      "order": "BA"
+    },
+    {
+      "attempt": 29,
+      "input_id": "C09",
+      "order": "AB"
+    },
+    {
+      "attempt": 30,
+      "input_id": "C10",
+      "order": "BA"
+    }
+  ],
+  "comparison": "R13 Worker vs final R15 Worker with the same final Brain and fresh per-pair context; separate final-R15 search off/on contrasts required for search-overhead claims",
+  "protocol": [
+    "One room at a time; at least 30s between rooms; fresh sessions with matching account/context snapshot and immutable WAV hash",
+    "Source/dtx/frame/queue parameters identical in paired arms; record every readiness/ASR/missing-body failure",
+    "Count paired latency only when actual chat commit and body PCM both match the declared input; keep all attempts and >3s slow rounds",
+    "Record whether search/resume actually overlapped the chat; absent overlap is uncovered, not mixed-load pass",
+    "Never replace failure speech with answer success; reviewed content and references required"
+  ],
+  "queries": [
+    {
+      "id": "Q01",
+      "text": "帮我查一下恐龙为什么会灭绝。",
+      "answer_criterion": "说明主要灭绝机制，不回答如何躲过灾难"
+    },
+    {
+      "id": "Q02",
+      "text": "帮我查一下火星为什么是红色的。",
+      "answer_criterion": "表面含铁物质氧化"
+    },
+    {
+      "id": "Q03",
+      "text": "帮我查一下潮汐是怎么形成的。",
+      "answer_criterion": "月球和太阳引力作用，不能说地球转一圈就只有一次"
+    },
+    {
+      "id": "Q04",
+      "text": "帮我查一下含羞草为什么会合上叶子。",
+      "answer_criterion": "触碰引起叶枕细胞水分变化"
+    },
+    {
+      "id": "Q05",
+      "text": "帮我查一下熊猫主要吃什么。",
+      "answer_criterion": "主要竹子，不说只吃竹子"
+    },
+    {
+      "id": "Q06",
+      "text": "帮我查一下彩虹为什么会有不同颜色。",
+      "answer_criterion": "阳光经水滴折射分散"
+    },
+    {
+      "id": "Q07",
+      "text": "帮我查一下中国第一颗人造卫星叫什么。",
+      "answer_criterion": "东方红一号"
+    },
+    {
+      "id": "Q08",
+      "text": "帮我查一下造纸术是什么。",
+      "answer_criterion": "将植物纤维加工成纸，不夹带无依据发明年份"
+    },
+    {
+      "id": "Q09",
+      "text": "帮我查一下长城过去有什么作用。",
+      "answer_criterion": "防御和传递军事信息，不以单一用途概括全部"
+    },
+    {
+      "id": "Q10",
+      "text": "帮我查一下指南针为什么能指方向。",
+      "answer_criterion": "磁针受地球磁场作用"
+    },
+    {
+      "id": "Q11",
+      "text": "帮我查一下故宫开放时间。",
+      "answer_criterion": "官方来源，一般安排和临时变化分开"
+    },
+    {
+      "id": "Q12",
+      "text": "帮我查一下中国国家博物馆最新预约方式。",
+      "answer_criterion": "官方来源，不能承诺有余票"
+    },
+    {
+      "id": "Q13",
+      "text": "帮我查一下中国科学技术馆开放时间。",
+      "answer_criterion": "官方信息，临时调整需确认"
+    },
+    {
+      "id": "Q14",
+      "text": "帮我查一下央视今天国内新闻。",
+      "answer_criterion": "当日报道日期和具体事件"
+    },
+    {
+      "id": "Q15",
+      "text": "帮我查一下最近中国航天新闻。",
+      "answer_criterion": "报道日期与最近进展"
+    },
+    {
+      "id": "Q16",
+      "text": "帮我查一下北京明天的天气。",
+      "answer_criterion": "地点日期一致"
+    },
+    {
+      "id": "Q17",
+      "text": "帮我查一下上海明天的天气。",
+      "answer_criterion": "地点日期一致"
+    },
+    {
+      "id": "Q18",
+      "text": "帮我查一下成都明天的天气。",
+      "answer_criterion": "地点日期一致"
+    },
+    {
+      "id": "Q19",
+      "text": "帮我查一下辽宁朝阳市明天的天气。",
+      "answer_criterion": "不混北京朝阳区"
+    },
+    {
+      "id": "Q20",
+      "text": "帮我查一下陕西西安明天的天气。",
+      "answer_criterion": "不混同名地名"
+    }
+  ],
+  "faults": [
+    "search HTTP 402/429/503",
+    "search network failure/timeout",
+    "invalid search JSON/schema",
+    "answer incomplete SSE/invalid JSON/citation",
+    "no usable evidence",
+    "cancel while search/model pending; no retry or late result",
+    "revoke/expiry/session close; no resurrection"
+  ],
+  "ack_inputs": [
+    "嗯嗯",
+    "哦",
+    "对"
+  ],
+  "ack_repeats": 2,
+  "negative_controls": [
+    "停",
+    "退出聊天",
+    "不用查了",
+    "改查火星为什么是红色的",
+    "我今天画了一只小猫",
+    "我想聊恐龙"
+  ],
+  "resume_paths": [
+    "same room",
+    "stop then exit then explicit resume",
+    "direct exit then explicit resume"
+  ],
+  "deadline_cst": "2026-10-24T23:59:00+08:00",
+  "p2_enabled": false,
+  "human_hearing": "not verified by synthetic tests"
+}

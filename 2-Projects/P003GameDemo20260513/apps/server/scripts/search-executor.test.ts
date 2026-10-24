@@ -7,6 +7,29 @@ const sse = (...frames: object[]) => frames.map(x => 'data: ' + JSON.stringify(x
 const chunk = (delta: object, finish_reason: string | null = null) => ({ choices: [{ index: 0, delta, finish_reason }] });
 const final = () => sse(chunk({ content: JSON.stringify({ text: '刚才查到，科技馆公告说周末开放，出发前再确认当天公告哦。', source_ids: [1] }) }, 'stop'));
 
+test('R15 preserves the failing stage without retaining provider body or credentials', async () => {
+  const cases = [
+    { stage: 'search', reason: 'transport', response: () => { throw new TypeError('https://private.invalid/?token=DO_NOT_LOG'); } },
+    { stage: 'search', reason: 'timeout', response: () => { throw new DOMException('private body', 'TimeoutError'); } },
+    { stage: 'search', reason: 'http', response: () => new Response('private body', { status: 429 }) },
+    { stage: 'search', reason: 'invalid_json', response: () => new Response('private body') },
+    { stage: 'search', reason: 'invalid_response', response: () => Response.json({ results: null }) },
+    { stage: 'answer', reason: 'invalid_stream', response: () => new Response('data: [DONE]\n\n') },
+    { stage: 'answer', reason: 'invalid_answer', response: () => new Response(sse(chunk({content: '{"text":"bad","source_ids":[99]}'}, 'stop'))) },
+  ];
+  for (const c of cases) {
+    const e = new SearchExecutor({ apiKey: 'synthetic', domains: ['cstm.org.cn'], fetch: (async (url: any) =>
+      c.stage === 'answer' && String(url).endsWith('/search') ? Response.json({results: [page]}) : c.response()) as typeof fetch });
+    await assert.rejects(e.run('科技馆开放时间', new AbortController().signal, ''), (error: any) => {
+      assert.equal(error.failure?.stage, c.stage);
+      assert.equal(error.failure?.reason, c.reason);
+      assert.doesNotMatch(JSON.stringify(error) + error.message, /DO_NOT_LOG|private body|private\.invalid/);
+      if (c.reason === 'http') assert.equal(error.failure.status_code, 429);
+      return true;
+    });
+  }
+});
+
 test('跨帧工具参数只在完整结束后产生合法调用，截断和重复ID拒绝', () => {
   const raw = sse(chunk({ tool_calls: [{ index: 0, id: 'call-1', type: 'function', function: { name: 'search_web', arguments: '{"que' } }] }),
     chunk({ tool_calls: [{ index: 0, function: { arguments: 'ry":"科技馆"}' } }] }, 'tool_calls'));
@@ -195,5 +218,5 @@ test('R11 简化阶段取消会终止请求，不继续搜索或播报',async()=
   if(calls===2)return new Response(sse(chunk({content:JSON.stringify({text:'地球转一圈，海边涨落一次。',source_ids:[1]})},'stop')));
   return await new Promise<Response>((_,reject)=>{init.signal.addEventListener('abort',()=>reject(init.signal.reason),{once:true});abort.abort(new Error('synthetic_cancel'));});
  })as typeof fetch});
- await assert.rejects(e.run('潮汐的形成原因',abort.signal,''),/synthetic_cancel/);assert.equal(calls,3);
+ await assert.rejects(e.run('潮汐的形成原因',abort.signal,''),/search_aborted/);assert.equal(calls,3);
 });

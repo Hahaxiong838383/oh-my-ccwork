@@ -8,6 +8,26 @@ import { SearchTasks, type SearchResult } from '../src/tools/search-tasks.js';
 const owner = { subject: 'BJP00326070803800006', session: 'sn-BJP00326070803800006-1' };
 const result: SearchResult = { text: '刚才查的开放安排，官网没有说明本周临时调整，请再核对当天公告。', sources: [{ title: '开放安排', url: 'https://www.cstm.org.cn/open', date: null }] };
 const flush = () => new Promise<void>(r => setImmediate(r));
+
+test('R15 delivery completed does not turn a failure or empty evidence into a successful answer', async () => {
+  for (const kind of ['answer', 'empty', 'invalid', 'unknown'] as const) {
+    const f = fixture(async () => {
+      if (kind === 'invalid') throw new Error('invalid_answer');
+      if (kind === 'unknown') throw new Error('https://private.invalid/?token=DO_NOT_LOG');
+      return kind === 'empty' ? { text: '这次没有找到可靠的资料。', sources: [] } : result;
+    });
+    try {
+      const t = f.tasks.submit(owner, request()); await flush();
+      f.tasks.claim(owner, t.id, 'delivery'); f.tasks.receipt(owner, t.id, 'delivery', 'completed');
+      const a: any = f.tasks.audit()[0];
+      assert.equal(a.delivery, 'completed');
+      assert.equal(a.outcome, kind === 'answer' ? 'answered' : kind === 'empty' ? 'no_evidence' : 'failed');
+      if (kind === 'invalid') assert.deepEqual(a.failure, {stage: 'answer', reason: 'invalid_answer'});
+      if (kind === 'unknown') assert.deepEqual(a.failure, {stage: 'task', reason: 'unknown'});
+      assert.doesNotMatch(readFileSync(f.dbPath).toString(), /DO_NOT_LOG|private\.invalid/);
+    } finally { f.close(); }
+  }
+});
 test('R5 replay uses distinct idempotent claims, one automatic retry and immutable deadlines', async () => {
   const f = fixture(async () => result);
   try {

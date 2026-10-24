@@ -3,6 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { searchFailure, type SearchFailureInfo } from './search-failure.js';
 
 export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest; auto_weather?: import('./moji-weather.js').AutoWeatherRequest; place_weather?: import('./baidu-weather.js').PlaceWeatherRequest };
 export type TaskRouting = RoutingClaim & { weather_enabled: boolean; auto_location_enabled?: boolean; baidu_weather_enabled?: boolean };
@@ -13,6 +14,7 @@ export type SearchTask = SearchOwner & {
   status: 'queued' | 'running' | 'ready' | 'delivered' | 'failed' | 'cancelled' | 'expired';
   createdAt: number; deadline: number; readyAt?: number;
   result?: SearchResult; error?: string; claim?: string;
+  outcome?: 'answered' | 'no_evidence' | 'failed'; failure?: SearchFailureInfo;
   delivery?: 'claimed' | 'completed' | 'interrupted' | 'dropped' | 'unknown';
   diagnostics?: import('./search-executor.js').SearchDiagnostics;
   replays?: { previous: string; delivery: string; automatic: boolean; at: number }[];
@@ -140,11 +142,19 @@ export class SearchTasks {
       const current = this.get(t, t.id);
       if (current.status !== 'running' || controller.signal.aborted) return;
       if (!result.text.trim() || [...result.text].length > 150 || /\[\[|\]\]|https?:\/\//i.test(result.text) || result.sources.length > 3) throw new Error('invalid_result');
-      current.result = result; current.diagnostics = result.diagnostics; current.status = 'ready'; current.readyAt = this.now(); this.save(current);
+      current.result = result; current.diagnostics = result.diagnostics;
+      current.outcome = result.sources.length ? 'answered' : 'no_evidence';
+      current.status = 'ready'; current.readyAt = this.now(); this.save(current);
     } catch (e) {
       if (!this.closed) {
         const current = this.get(t, t.id);
-        if (current.status === 'running') { current.status = 'failed'; current.error = e instanceof Error && /^upstream_(402|429|5\d\d)$/.test(e.message) ? e.message : 'search_unavailable'; current.readyAt = this.now(); this.save(current); }
+        if (current.status === 'running') {
+          const failure = searchFailure(e);
+          current.status = 'failed'; current.outcome = 'failed'; current.failure = failure.failure;
+          // Keep the device protocol stable; the audit now carries the safe cause.
+          current.error = /^upstream_(402|429|5\d\d)$/.test(failure.message) ? failure.message : 'search_unavailable';
+          current.readyAt = this.now(); this.save(current);
+        }
       }
     } finally { this.active.delete(t.id); if (!this.closed) this.pump(); }
   }
@@ -280,6 +290,7 @@ export class SearchTasks {
   audit() {
     return this.all().slice(-100).reverse().map(t => ({ id: t.id, device_suffix: t.subject.slice(-8), turn: t.turn,
       revision: t.revision, diagnostics: t.diagnostics, replays: t.replays?.length ?? 0, status: t.status, delivery: t.delivery ?? 'pending', error: t.error,
+      outcome: t.outcome ?? 'unknown', failure: t.failure,
       created_at: t.createdAt, ready_at: t.readyAt, execution_ms: t.readyAt === undefined ? null : t.readyAt - t.createdAt,
       source_count: t.result?.sources.length ?? 0, sources: t.result?.sources.map(s => ({ url: s.url, date: s.date })) ?? [] }));
   }
