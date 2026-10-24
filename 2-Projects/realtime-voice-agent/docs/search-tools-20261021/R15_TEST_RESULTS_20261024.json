@@ -1,0 +1,5352 @@
+{
+  "schema": 1,
+  "recorded_at_ms": 1792842174101,
+  "status": "blocked_not_open",
+  "physical_acceptance": "pending",
+  "deployed": {
+    "brain_source_commit": "6b6143c16fff2e96803fd9a509a2600dc97e1427",
+    "worker_source_commit": "0e5192f03711cd9580379d41a6040c563efa6fe5",
+    "worker_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72"
+  },
+  "regression": {
+    "brain_passed": 83,
+    "tsc_passed": true,
+    "rust_passed": 422,
+    "preview_passed": 23,
+    "linux_release_and_abi_passed": true,
+    "log_hashes": {
+      "brain-r15d-final-all.log": "5e1eb612ece0d604e18eb75cde35f655a6a2f411b451266acea6482fd1100b2a",
+      "tsc-r15d-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "build-release.log": "6b06671747ad956abd085b4208408dd5ce65902e86580339cf541842e075d460"
+    }
+  },
+  "normal_latency": {
+    "samples": 44,
+    "paired": 22,
+    "median_delta_ms": 25.5,
+    "empirical_p90_delta_ms": 600,
+    "body_missing": {
+      "A": 0,
+      "B": 0
+    },
+    "input_missing": {
+      "A": 0,
+      "B": 0
+    },
+    "slow_gt3000_ms": [
+      {
+        "index": 13,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837676",
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1164,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 3549,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 7260
+      },
+      {
+        "index": 15,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837852",
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "input_ready": 1,
+        "packets_before": 80,
+        "packets_after": 1193,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 5599,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 10770
+      },
+      {
+        "index": 29,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839495",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1136,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 3049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 8700
+      }
+    ],
+    "batch": "Result=success\nActiveState=inactive\nSubState=dead\n"
+  },
+  "mixed_latency": "not_executed_after_normal_and_content_gates_failed",
+  "content_gate": {
+    "fixed_queries": 20,
+    "ready_answered": 20,
+    "passed": false,
+    "details": "R15_QUERY_EVIDENCE_20261024.json"
+  },
+  "functional": {
+    "physical_hearing": "pending",
+    "modes": {
+      "ack1": {
+        "room": "sn-BJP00326060100100004-1792839666",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 9680.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1696
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "929a210675b1cefa9c010c80df1e158009e1359c5973e15b747fbe085b53a714"
+        ],
+        "actions": [
+          "search",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "ee281252-cd4b-4d4b-a578-ff93c1c97317",
+            "turn_id": "2",
+            "delivery_id": "2a16d274-41f2-4924-914d-766479898d62",
+            "at_ms": 1792839675188.8398
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "expected_ack_recognized": false,
+        "ordinary_commits_after_ack": 0,
+        "pre_ack_ordinary_commits": 1,
+        "passes_actual_asr_ack_path": false
+      },
+      "ack4": {
+        "room": "sn-BJP00326060100100004-1792839860",
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 2,
+          "metrics": 6,
+          "audio_voiced_ms": 10730.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1729
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "929a210675b1cefa9c010c80df1e158009e1359c5973e15b747fbe085b53a714"
+        ],
+        "actions": [
+          "search",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "d0cd1fe2-2b5e-42d5-98e5-3042422508fc",
+            "turn_id": "2",
+            "delivery_id": "e8d413b3-7dba-44e2-8a27-2bee26fd8941",
+            "at_ms": 1792839869772.1382
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "expected_ack_recognized": false,
+        "ordinary_commits_after_ack": 0,
+        "pre_ack_ordinary_commits": 1,
+        "passes_actual_asr_ack_path": false
+      },
+      "cross_disconnect": {
+        "room": "sn-BJP00326060100100004-1792840323",
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 2900.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 548
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458"
+        ],
+        "actions": [
+          "search"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+            "turn_id": "2",
+            "delivery_id": "64378e1e-73cb-4ac8-9a95-b71b01342ebb",
+            "at_ms": 1792840331988.4082
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "exit": {
+        "room": "sn-BJP00326060100100004-1792840765",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 2330.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 106,
+          "packets_after": 2078
+        },
+        "user_caption_hashes": [
+          "6475ce1a214f564bb71f078c7485dd4aa1de728da37bf08bde6d253419dd6e4f",
+          "5bfeda8b49809d8878fa36c77c48cd897d64143cb5e10c873c3a4deacd2f653d"
+        ],
+        "actions": [
+          "search"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+            "turn_id": "2",
+            "delivery_id": "5ade1855-7fa1-4bf1-8676-565f9da2a542",
+            "at_ms": 1792840784770.8582
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "ack2": {
+        "room": "sn-BJP00326060100100004-1792839731",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 10330.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1685
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "74570c72706a38b1dcaef58d6236a48457feee467acf65acae3604fa64c02a89"
+        ],
+        "actions": [
+          "search"
+        ],
+        "ack_continue": 1,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+            "turn_id": "2",
+            "delivery_id": "c9b9359a-dfb3-4e43-88b2-88915e4012ee",
+            "at_ms": 1792839740020.4402
+          }
+        ],
+        "signals": {
+          "ack_continue": 1,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "expected_ack_recognized": true,
+        "ordinary_commits_after_ack": 0,
+        "pre_ack_ordinary_commits": 0,
+        "passes_actual_asr_ack_path": true
+      },
+      "stop": {
+        "room": "sn-BJP00326060100100004-1792840690",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 1780.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 107,
+          "packets_after": 1790
+        },
+        "user_caption_hashes": [
+          "6475ce1a214f564bb71f078c7485dd4aa1de728da37bf08bde6d253419dd6e4f",
+          "16833aa2becf6e948a0c19ecc16e175589a43bcc6fe78fce92cbcbb5728f0562"
+        ],
+        "actions": [
+          "search"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+            "turn_id": "2",
+            "delivery_id": "9cdb1a78-94e7-4f52-afcb-d3d7cc1744cb",
+            "at_ms": 1792840710172.876
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 1,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "ack0": {
+        "room": "sn-BJP00326060100100004-1792839599",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 2,
+          "audio_voiced_ms": 11000.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 81,
+          "packets_after": 1813
+        },
+        "user_caption_hashes": [
+          "0131dfb8a78bf836a0dadcafef07a7be18f0bec2e8e61b676f76e1b6bea8c855",
+          "50a1c49c0b0aff895b42fba4095b7b46a5793e93046ef87598cb307aabbc5037",
+          "63aff16927ed7802af4ae7e472589bff3d2a53d0340ad6b93881228b85bf97d4"
+        ],
+        "actions": [
+          "chat",
+          "search"
+        ],
+        "ack_continue": 1,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 1,
+        "result_first_frames": [
+          {
+            "task_id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+            "turn_id": "3",
+            "delivery_id": "a44f5085-2f34-4591-a75d-efac3b14e61b",
+            "at_ms": 1792839609865.7651
+          }
+        ],
+        "signals": {
+          "ack_continue": 1,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "expected_ack_recognized": true,
+        "ordinary_commits_after_ack": 0,
+        "pre_ack_ordinary_commits": 1,
+        "passes_actual_asr_ack_path": true
+      },
+      "cross_prepare": {
+        "room": "sn-BJP00326060100100004-1792840194",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 3650.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 79,
+          "packets_after": 703
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "16833aa2becf6e948a0c19ecc16e175589a43bcc6fe78fce92cbcbb5728f0562"
+        ],
+        "actions": [
+          "search"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+            "turn_id": "2",
+            "delivery_id": "20ebae61-3b16-4de3-9c0c-5bc2832d77cb",
+            "at_ms": 1792840203341.636
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 1,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "ack3": {
+        "room": "sn-BJP00326060100100004-1792839795",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 9220.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1710
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "223f783175feadc8e54d6e202e32c498acefa39073210fef8055498e6ef1e7b3"
+        ],
+        "actions": [
+          "search",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "56abd02e-33f3-4075-92b2-f808eb1385a1",
+            "turn_id": "2",
+            "delivery_id": "ed9b5152-7e22-4b43-b6f9-996602ff2b20",
+            "at_ms": 1792839804609.0059
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "expected_ack_recognized": false,
+        "ordinary_commits_after_ack": 0,
+        "pre_ack_ordinary_commits": 1,
+        "passes_actual_asr_ack_path": false
+      },
+      "case5": {
+        "room": "sn-BJP00326060100100004-1792839989",
+        "counts": {
+          "agent_transcripts": 7,
+          "user_transcripts": 4,
+          "metrics": 12,
+          "audio_voiced_ms": 15470.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 4084
+        },
+        "user_caption_hashes": [
+          "6ac3ec9baf9f8f52108c3f08462ecbd0815d63ad0eff6641d836c24efbe0fe5b",
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "7ba9a4977bbc646914e0993ab8bc95c0ae68901668325ca8fc202d00613a1897",
+          "a9e25c4b88c24f6c5cac509d264fe941cbd083afa457b67a60bfcbdf992e81e0"
+        ],
+        "actions": [
+          "chat",
+          "search",
+          "chat",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 3,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "ad721c3e-c160-4720-93e0-914e6ad277d8",
+            "turn_id": "3",
+            "delivery_id": "8d8dd437-0868-4257-b325-500d6d6f7c8b",
+            "at_ms": 1792840022680.8828
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "predicate": {
+        "room": "sn-BJP00326060100100004-1792840447",
+        "counts": {
+          "agent_transcripts": 9,
+          "user_transcripts": 5,
+          "metrics": 8,
+          "audio_voiced_ms": 27930.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 107,
+          "packets_after": 0
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "64240dcf395f7e8d1ab977e51f5432bf7c21a18e775aa7c8ed9a90ed2df942e8",
+          "623b287c006ecdfa704fc22a8bc3c8b4753e8440f843cbc8112740c8b8c5f355",
+          "64240dcf395f7e8d1ab977e51f5432bf7c21a18e775aa7c8ed9a90ed2df942e8",
+          "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89"
+        ],
+        "actions": [
+          "search",
+          "search",
+          "search",
+          "search",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+            "turn_id": "2",
+            "delivery_id": "86dcedc7-17ca-4735-bfb6-13fc6f8f2a05",
+            "at_ms": 1792840462207.624
+          },
+          {
+            "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+            "turn_id": "4",
+            "delivery_id": "9501adce-1e71-4138-9ab2-fb6faabb247b",
+            "at_ms": 1792840504157.205
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "cross_resume_disconnect": {
+        "room": "sn-BJP00326060100100004-1792840364",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 9150.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 2634
+        },
+        "user_caption_hashes": [
+          "0348ba821656ccebfd9add898a3a3a7fa29c36d30f86f2679712ecf0c6799831"
+        ],
+        "actions": [
+          "resume"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+            "turn_id": "1",
+            "delivery_id": "1d3b50bf-4444-4563-afe7-e7311f7ab38f",
+            "at_ms": 1792840384495.101
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "quiet_before_explicit_resume": [
+          {
+            "event": "quiet_before_explicit_resume",
+            "ms": 12335,
+            "audio_voiced_ms": 0
+          }
+        ]
+      },
+      "cancel": {
+        "room": "sn-BJP00326060100100004-1792840840",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 6,
+          "audio_voiced_ms": 4570.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1581
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "5bb23f4dfb40ef09d1b85b282a86c7f44ed87daba7115ba5c856c0f6add05bb4",
+          "57dec07f83f2a2efc8503372a5edb753fc32fa9e451044bb4357294a981b52a5"
+        ],
+        "actions": [
+          "search",
+          "cancel",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "resume": {
+        "room": "sn-BJP00326060100100004-1792840101",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 3,
+          "metrics": 5,
+          "audio_voiced_ms": 13330.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 3104
+        },
+        "user_caption_hashes": [
+          "34bcbffbe9790d32bba786e994d3a80ee9231cc1b7145ad5abf00b04a4ad6b95",
+          "fed9e185e566a0290f472934b6c4d4871634e74c09f93366761e402979fa806e",
+          "0348ba821656ccebfd9add898a3a3a7fa29c36d30f86f2679712ecf0c6799831"
+        ],
+        "actions": [
+          "search",
+          "chat",
+          "resume"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+            "turn_id": "2",
+            "delivery_id": "3092f69c-458a-4c14-949c-6c124b4c76d6",
+            "at_ms": 1792840111338.655
+          },
+          {
+            "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+            "turn_id": "4",
+            "delivery_id": "516bc5c0-4c46-4940-89e0-d83fd44bcd88",
+            "at_ms": 1792840142637.816
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "early": {
+        "room": "sn-BJP00326060100100004-1792840973",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 16450.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1758
+        },
+        "user_caption_hashes": [
+          "6475ce1a214f564bb71f078c7485dd4aa1de728da37bf08bde6d253419dd6e4f",
+          "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89"
+        ],
+        "actions": [
+          "search",
+          "chat"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 1,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+            "turn_id": "2",
+            "delivery_id": "94627b12-0149-4e76-97b5-b2b3fd7a31e9",
+            "at_ms": 1792840987364.1292
+          },
+          {
+            "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+            "turn_id": "4",
+            "delivery_id": "af698026-2214-4ab3-8661-2152fb1095a2",
+            "at_ms": 1792841000814.122
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      },
+      "cross_resume": {
+        "room": "sn-BJP00326060100100004-1792840239",
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 7750.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 2642
+        },
+        "user_caption_hashes": [
+          "0348ba821656ccebfd9add898a3a3a7fa29c36d30f86f2679712ecf0c6799831"
+        ],
+        "actions": [
+          "resume"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+            "turn_id": "1",
+            "delivery_id": "99635966-62da-4cba-8d35-52fe593f1c6e",
+            "at_ms": 1792840256645.7578
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "quiet_before_explicit_resume": [
+          {
+            "event": "quiet_before_explicit_resume",
+            "ms": 12934,
+            "audio_voiced_ms": 0
+          }
+        ]
+      },
+      "ack5": {
+        "room": "sn-BJP00326060100100004-1792839925",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 9760.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1675
+        },
+        "user_caption_hashes": [
+          "db7f9f6910940b219b8a47e5fbc1681c72df690184f55eb18bafef583617f458",
+          "74570c72706a38b1dcaef58d6236a48457feee467acf65acae3604fa64c02a89"
+        ],
+        "actions": [
+          "search"
+        ],
+        "ack_continue": 1,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+            "turn_id": "2",
+            "delivery_id": "1bac26db-4833-4518-912d-d443fcad0c4d",
+            "at_ms": 1792839933721.938
+          }
+        ],
+        "signals": {
+          "ack_continue": 1,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending",
+        "expected_ack_recognized": true,
+        "ordinary_commits_after_ack": 0,
+        "pre_ack_ordinary_commits": 0,
+        "passes_actual_asr_ack_path": true
+      },
+      "replace": {
+        "room": "sn-BJP00326060100100004-1792840905",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 2,
+          "audio_voiced_ms": 9710.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 87,
+          "packets_after": 1708
+        },
+        "user_caption_hashes": [
+          "6475ce1a214f564bb71f078c7485dd4aa1de728da37bf08bde6d253419dd6e4f",
+          "723373ac98f98fe17171bda549f0652e15721bb652ff1a3f05bb31ac40e46b90"
+        ],
+        "actions": [
+          "search",
+          "replace"
+        ],
+        "ack_continue": 0,
+        "ordinary_commits": 0,
+        "ordinary_missing_first_frame": 0,
+        "result_first_frames": [
+          {
+            "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+            "turn_id": "3",
+            "delivery_id": "bed91a8d-433f-476c-8a9a-401c5cdab4c3",
+            "at_ms": 1792840922251.6812
+          }
+        ],
+        "signals": {
+          "ack_continue": 0,
+          "echo_dropped": 0,
+          "stop": 0,
+          "search_abort": 0,
+          "predicate_buffer": 0,
+          "resume_route": 0,
+          "cancel_route": 0,
+          "replace_route": 0
+        },
+        "physical_hearing": "pending"
+      }
+    },
+    "resume_events": [
+      {
+        "event": "progress",
+        "task_id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792839612720
+      },
+      {
+        "event": "progress",
+        "task_id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792839622615
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "at_ms": 1792839635932
+      },
+      {
+        "event": "progress",
+        "task_id": "ee281252-cd4b-4d4b-a578-ff93c1c97317",
+        "session": "sn-BJP00326060100100004-1792839666",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792839677447
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839666",
+        "at_ms": 1792839701252
+      },
+      {
+        "event": "progress",
+        "task_id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792839742872
+      },
+      {
+        "event": "progress",
+        "task_id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792839753024
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "at_ms": 1792839765701
+      },
+      {
+        "event": "progress",
+        "task_id": "56abd02e-33f3-4075-92b2-f808eb1385a1",
+        "session": "sn-BJP00326060100100004-1792839795",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792839807015
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839795",
+        "at_ms": 1792839830500
+      },
+      {
+        "event": "progress",
+        "task_id": "d0cd1fe2-2b5e-42d5-98e5-3042422508fc",
+        "session": "sn-BJP00326060100100004-1792839860",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792839872176
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839860",
+        "at_ms": 1792839895554
+      },
+      {
+        "event": "progress",
+        "task_id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792839936574
+      },
+      {
+        "event": "progress",
+        "task_id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792839945753
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "at_ms": 1792839959351
+      },
+      {
+        "event": "progress",
+        "task_id": "ad721c3e-c160-4720-93e0-914e6ad277d8",
+        "session": "sn-BJP00326060100100004-1792839989",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840024886
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839989",
+        "at_ms": 1792840071513
+      },
+      {
+        "event": "progress",
+        "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840114440
+      },
+      {
+        "event": "progress",
+        "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "complete_sentences": 1,
+        "sequence": 2,
+        "at_ms": 1792840116944
+      },
+      {
+        "event": "progress",
+        "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "complete_sentences": 2,
+        "sequence": 3,
+        "at_ms": 1792840152274
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "at_ms": 1792840164976
+      },
+      {
+        "event": "progress",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840206243
+      },
+      {
+        "event": "progress",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "complete_sentences": 1,
+        "sequence": 2,
+        "at_ms": 1792840207078
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "at_ms": 1792840209373
+      },
+      {
+        "event": "grant",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "revision": 1,
+        "source_session": "sn-BJP00326060100100004-1792840194",
+        "session": "sn-BJP00326060100100004-1792840239",
+        "complete_sentences": 1,
+        "at_ms": 1792840255250,
+        "expires_at_ms": 1792840502291
+      },
+      {
+        "event": "receipt",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840239",
+        "outcome": "completed",
+        "complete_sentences": 2,
+        "sequence": 1,
+        "at_ms": 1792840266979
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840239",
+        "at_ms": 1792840293103
+      },
+      {
+        "event": "progress",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840323",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840334501
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840323",
+        "at_ms": 1792840334518
+      },
+      {
+        "event": "grant",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "revision": 1,
+        "source_session": "sn-BJP00326060100100004-1792840323",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "complete_sentences": 0,
+        "at_ms": 1792840379798,
+        "expires_at_ms": 1792840631300
+      },
+      {
+        "event": "receipt",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "outcome": "progress",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840387348
+      },
+      {
+        "event": "receipt",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "outcome": "completed",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840396313
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "at_ms": 1792840417668
+      },
+      {
+        "event": "progress",
+        "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840465060
+      },
+      {
+        "event": "progress",
+        "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840476900
+      },
+      {
+        "event": "progress",
+        "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840507416
+      },
+      {
+        "event": "progress",
+        "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840518249
+      },
+      {
+        "event": "progress",
+        "task_id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+        "session": "sn-BJP00326060100100004-1792840690",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840711322
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840690",
+        "at_ms": 1792840735306
+      },
+      {
+        "event": "progress",
+        "task_id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+        "session": "sn-BJP00326060100100004-1792840765",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840786427
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840765",
+        "at_ms": 1792840786451
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840840",
+        "at_ms": 1792840875169
+      },
+      {
+        "event": "progress",
+        "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840927409
+      },
+      {
+        "event": "progress",
+        "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840933178
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "at_ms": 1792840943638
+      },
+      {
+        "event": "progress",
+        "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840989518
+      },
+      {
+        "event": "progress",
+        "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "complete_sentences": 1,
+        "sequence": 2,
+        "at_ms": 1792841003917
+      },
+      {
+        "event": "progress",
+        "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "complete_sentences": 2,
+        "sequence": 3,
+        "at_ms": 1792841012731
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "at_ms": 1792841013618
+      }
+    ],
+    "tasks": [
+      {
+        "id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "createdAt": 1792839605471,
+        "readyAt": 1792839608666,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "ee281252-cd4b-4d4b-a578-ff93c1c97317",
+        "session": "sn-BJP00326060100100004-1792839666",
+        "createdAt": 1792839671894,
+        "readyAt": 1792839674249,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "createdAt": 1792839736126,
+        "readyAt": 1792839738977,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "56abd02e-33f3-4075-92b2-f808eb1385a1",
+        "session": "sn-BJP00326060100100004-1792839795",
+        "createdAt": 1792839800964,
+        "readyAt": 1792839803479,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "d0cd1fe2-2b5e-42d5-98e5-3042422508fc",
+        "session": "sn-BJP00326060100100004-1792839860",
+        "createdAt": 1792839865126,
+        "readyAt": 1792839868387,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "createdAt": 1792839930077,
+        "readyAt": 1792839932736,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "ad721c3e-c160-4720-93e0-914e6ad277d8",
+        "session": "sn-BJP00326060100100004-1792839989",
+        "createdAt": 1792840019636,
+        "readyAt": 1792840022018,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "createdAt": 1792840107343,
+        "readyAt": 1792840110102,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "createdAt": 1792840199844,
+        "readyAt": 1792840202291,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840323",
+        "createdAt": 1792840328442,
+        "readyAt": 1792840331300,
+        "status": "cancelled",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "createdAt": 1792840458311,
+        "readyAt": 1792840461069,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "createdAt": 1792840500812,
+        "readyAt": 1792840503231,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+        "session": "sn-BJP00326060100100004-1792840690",
+        "createdAt": 1792840706179,
+        "readyAt": 1792840708570,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+        "session": "sn-BJP00326060100100004-1792840765",
+        "createdAt": 1792840775525,
+        "readyAt": 1792840778659,
+        "status": "cancelled",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "03fe7ce0-0084-43ad-8a8e-d285d0d9673c",
+        "session": "sn-BJP00326060100100004-1792840840",
+        "createdAt": 1792840848208,
+        "readyAt": 1792840850983,
+        "status": "cancelled",
+        "delivery": null,
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "cc97ade1-46c9-40f0-83b7-ecebe592c698",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "createdAt": 1792840915811,
+        "readyAt": 1792840918477,
+        "status": "cancelled",
+        "delivery": null,
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "createdAt": 1792840919712,
+        "readyAt": 1792840921046,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 2,
+        "error": null
+      },
+      {
+        "id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "createdAt": 1792840984119,
+        "readyAt": 1792840986569,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      }
+    ],
+    "ack_pairs_pass": false
+  },
+  "functional_semantic_review": {
+    "predicate": {
+      "room": "sn-BJP00326060100100004-1792840447",
+      "actions": [
+        "search",
+        "search",
+        "search",
+        "search",
+        "chat"
+      ],
+      "task_ids": [
+        "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "8e9653a8-6238-40cb-be5b-cdec63ea5c37"
+      ],
+      "result_first_frames": [
+        {
+          "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+          "turn_id": "2",
+          "delivery_id": "86dcedc7-17ca-4735-bfb6-13fc6f8f2a05",
+          "at_ms": 1792840462207.624
+        },
+        {
+          "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+          "turn_id": "4",
+          "delivery_id": "9501adce-1e71-4138-9ab2-fb6faabb247b",
+          "at_ms": 1792840504157.205
+        }
+      ],
+      "physical_hearing": "pending",
+      "task_count": 2,
+      "complete_and_completed_predicate_each_one_task": true,
+      "uncompleted_query_clarified": true,
+      "complete_chat_returned": true,
+      "runner_exit_code_unknown_due_transport": true
+    },
+    "stop": {
+      "room": "sn-BJP00326060100100004-1792840690",
+      "actions": [
+        "search"
+      ],
+      "task_ids": [
+        "17094ef1-a71f-4efa-8f8d-18e20efd34d2"
+      ],
+      "result_first_frames": [
+        {
+          "task_id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+          "turn_id": "2",
+          "delivery_id": "9cdb1a78-94e7-4f52-afcb-d3d7cc1744cb",
+          "at_ms": 1792840710172.876
+        }
+      ],
+      "physical_hearing": "pending",
+      "stop_swallowed_and_delivery_interrupted": true
+    },
+    "exit": {
+      "room": "sn-BJP00326060100100004-1792840765",
+      "actions": [
+        "search"
+      ],
+      "task_ids": [
+        "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f"
+      ],
+      "result_first_frames": [
+        {
+          "task_id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+          "turn_id": "2",
+          "delivery_id": "5ade1855-7fa1-4bf1-8676-565f9da2a542",
+          "at_ms": 1792840784770.8582
+        }
+      ],
+      "physical_hearing": "pending",
+      "exit_signal_sent": true,
+      "synthetic_receiver_did_not_ack_terminal": true,
+      "actual_android_exit_verified": false
+    },
+    "cancel": {
+      "room": "sn-BJP00326060100100004-1792840840",
+      "actions": [
+        "search",
+        "cancel",
+        "chat"
+      ],
+      "task_ids": [
+        "03fe7ce0-0084-43ad-8a8e-d285d0d9673c"
+      ],
+      "result_first_frames": [],
+      "physical_hearing": "pending",
+      "old_result_not_published": true,
+      "asr_split_cancel_and_following_chat": true
+    },
+    "replace": {
+      "room": "sn-BJP00326060100100004-1792840905",
+      "actions": [
+        "search",
+        "replace"
+      ],
+      "task_ids": [
+        "cc97ade1-46c9-40f0-83b7-ecebe592c698",
+        "290cae89-51d6-44f9-ad92-ea31902dfb8b"
+      ],
+      "result_first_frames": [
+        {
+          "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+          "turn_id": "3",
+          "delivery_id": "bed91a8d-433f-476c-8a9a-401c5cdab4c3",
+          "at_ms": 1792840922251.6812
+        }
+      ],
+      "physical_hearing": "pending",
+      "only_replacement_result_published": true,
+      "unasked_date_in_answer": "retained content defect; transport/control success does not pass answer quality"
+    },
+    "early": {
+      "room": "sn-BJP00326060100100004-1792840973",
+      "actions": [
+        "search",
+        "chat"
+      ],
+      "task_ids": [
+        "365e7554-289e-4022-b078-35a9c62472a2"
+      ],
+      "result_first_frames": [
+        {
+          "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+          "turn_id": "2",
+          "delivery_id": "94627b12-0149-4e76-97b5-b2b3fd7a31e9",
+          "at_ms": 1792840987364.1292
+        },
+        {
+          "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+          "turn_id": "4",
+          "delivery_id": "af698026-2214-4ab3-8661-2152fb1095a2",
+          "at_ms": 1792841000814.122
+        }
+      ],
+      "physical_hearing": "pending",
+      "chat_then_same_task_auto_replay": true,
+      "limitation": "input began at schedule observation; actual first PCM preceded committed interruption, so not strict pre-PCM cancellation proof",
+      "replays": [
+        {
+          "previous": "94627b12-0149-4e76-97b5-b2b3fd7a31e9",
+          "delivery": "af698026-2214-4ab3-8661-2152fb1095a2",
+          "automatic": true,
+          "at": 1792841000216
+        }
+      ]
+    },
+    "case5": {
+      "room": "sn-BJP00326060100100004-1792839989",
+      "overall_passed": false,
+      "ack_transcribed_en_en_routed_to_chat_and_old_topic": true,
+      "later_incomplete_chat_clarified": true,
+      "followup_source_fix": "32a5c35f; not deployed"
+    }
+  },
+  "resume_path_assertions": [
+    {
+      "path": "same_session_resume",
+      "room": "sn-BJP00326060100100004-1792840101",
+      "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+      "first_frame_count": 2,
+      "passes_server_and_synthetic_check": true,
+      "physical_hearing": "pending"
+    },
+    {
+      "path": "cross_prepare -> cross_resume",
+      "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+      "source_room": "sn-BJP00326060100100004-1792840194",
+      "destination_room": "sn-BJP00326060100100004-1792840239",
+      "grant_cursor": 1,
+      "completed_cursor": 2,
+      "expiry_is_original_ready_plus_300000": true,
+      "quiet_audio_voiced_ms": 0,
+      "passes_server_and_synthetic_check": true,
+      "physical_hearing": "pending"
+    },
+    {
+      "path": "cross_disconnect -> cross_resume_disconnect",
+      "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+      "source_room": "sn-BJP00326060100100004-1792840323",
+      "destination_room": "sn-BJP00326060100100004-1792840364",
+      "grant_cursor": 0,
+      "completed_cursor": 2,
+      "expiry_is_original_ready_plus_300000": true,
+      "quiet_audio_voiced_ms": 0,
+      "passes_server_and_synthetic_check": true,
+      "physical_hearing": "pending"
+    }
+  ],
+  "functional_details": {
+    "measure": "Worker commit to actual body first frame; not device heard",
+    "physical_acceptance": "pending",
+    "modes": {
+      "ack1": {
+        "room": "sn-BJP00326060100100004-1792839666",
+        "trace": "search-probe-1792839666",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 9680.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1696
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1449.4,
+          "median": 1449.4,
+          "p95_descriptive": 1449.4,
+          "max": 1449.4
+        },
+        "route": {
+          "n": 2,
+          "min": 0.3,
+          "median": 0.4,
+          "p95_descriptive": 0.4,
+          "max": 0.4
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839666",
+            "t": 1792839671889.8188,
+            "time": "10-24 19:01:11.889",
+            "eou_ms": 515,
+            "stt_ms": 497,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.346,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 5550,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839666",
+            "t": 1792839677439.964,
+            "time": "10-24 19:01:17.439",
+            "eou_ms": 1076,
+            "stt_ms": 1048,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.407,
+            "claim_filter_trigger": false,
+            "chars": 9,
+            "turn_id": "3",
+            "commit_to_body_ms": 1449.4,
+            "stop_to_body_estimate_ms": 2525.4,
+            "turn_start_gap_ms": 1.44,
+            "tts_ttfb_ms": 297,
+            "body_ready_since_turn_ms": 1421,
+            "before_tts_ms": 1124,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 395,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792839671889.8188,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.0,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "ack11.wav": "7f6ed4cc86aada03019fe76b7461cc51f98739153741d4feb1eb65b6d31f1cf8",
+          "ack10.wav": "afaeb5dc94e06ad819fddaadd3bbe7d1da8350763a708e2adcc0be0b87ec122a"
+        },
+        "caption_sha256": "af7ee532fa4a5da4ad6505e359947849ae2b99cde8eb0088389f09976766ded0",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "ee281252-cd4b-4d4b-a578-ff93c1c97317",
+            "turn_id": "2",
+            "delivery_id": "2a16d274-41f2-4924-914d-766479898d62",
+            "at_ms": 1792839675188.8398
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "ack4": {
+        "room": "sn-BJP00326060100100004-1792839860",
+        "trace": "search-probe-1792839860",
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 2,
+          "metrics": 6,
+          "audio_voiced_ms": 10730.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1729
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1100.2,
+          "median": 1100.2,
+          "p95_descriptive": 1100.2,
+          "max": 1100.2
+        },
+        "route": {
+          "n": 2,
+          "min": 0.1,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839860",
+            "t": 1792839865122.159,
+            "time": "10-24 19:04:25.122",
+            "eou_ms": 664,
+            "stt_ms": 639,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.213,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 7050,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839860",
+            "t": 1792839872172.2961,
+            "time": "10-24 19:04:32.172",
+            "eou_ms": 1314,
+            "stt_ms": 1267,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.111,
+            "claim_filter_trigger": false,
+            "chars": 9,
+            "turn_id": "3",
+            "commit_to_body_ms": 1100.2,
+            "stop_to_body_estimate_ms": 2414.2,
+            "turn_start_gap_ms": 1.16,
+            "tts_ttfb_ms": 273,
+            "body_ready_since_turn_ms": 974,
+            "before_tts_ms": 701,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 0,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792839865122.159,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.9,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "ack40.wav": "afaeb5dc94e06ad819fddaadd3bbe7d1da8350763a708e2adcc0be0b87ec122a",
+          "ack41.wav": "7f6ed4cc86aada03019fe76b7461cc51f98739153741d4feb1eb65b6d31f1cf8"
+        },
+        "caption_sha256": "e4520ef7e52240f192a968f404d71221273743a337c55cd3c0a29e64ccd0b082",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "d0cd1fe2-2b5e-42d5-98e5-3042422508fc",
+            "turn_id": "2",
+            "delivery_id": "e8d413b3-7dba-44e2-8a27-2bee26fd8941",
+            "at_ms": 1792839869772.1382
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "cross_disconnect": {
+        "room": "sn-BJP00326060100100004-1792840323",
+        "trace": "search-probe-1792840323",
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 2900.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 548
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840323",
+            "t": 1792840328438.689,
+            "time": "10-24 19:12:08.438",
+            "eou_ms": 880,
+            "stt_ms": 862,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.24,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840328438.689,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.3,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "cross_disconnect0.wav": "075899df3e27d816c4dd0aa1e9ab561c6fcbdecb5eef789b07219d66aec8da48"
+        },
+        "caption_sha256": "cd7ae5a3f5daf4f3cfa4d58b15a7ea06ad54b88eed5f5a05917f0b672c0e7cdc",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+            "turn_id": "2",
+            "delivery_id": "64378e1e-73cb-4ac8-9a95-b71b01342ebb",
+            "at_ms": 1792840331988.4082
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "exit": {
+        "room": "sn-BJP00326060100100004-1792840765",
+        "trace": "search-probe-1792840765",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 2330.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 106,
+          "packets_after": 2078
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840765",
+            "t": 1792840775521.447,
+            "time": "10-24 19:19:35.521",
+            "eou_ms": 1148,
+            "stt_ms": 1100,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.194,
+            "claim_filter_trigger": true,
+            "chars": 15,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840775521.447,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.5,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "exit1.wav": "905dc931c3e4631a7e1f2d9f38b442f65019d21c0328c964a09fbd8ebd194278",
+          "exit0.wav": "9181bf542d119338e1b42a1747ea144cf2d5b9ab110ead76305ecd498d15165f"
+        },
+        "caption_sha256": "708447f6c47094eb9d620da8f0c4e2090dd2bbeb201a1bb8811fb4bcc6b15c15",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+            "turn_id": "2",
+            "delivery_id": "5ade1855-7fa1-4bf1-8676-565f9da2a542",
+            "at_ms": 1792840784770.8582
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "ack2": {
+        "room": "sn-BJP00326060100100004-1792839731",
+        "trace": "search-probe-1792839731",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 10330.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1685
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.4,
+          "median": 0.4,
+          "p95_descriptive": 0.4,
+          "max": 0.4
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839731",
+            "t": 1792839736120.7932,
+            "time": "10-24 19:02:16.120",
+            "eou_ms": 605,
+            "stt_ms": 565,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.366,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792839736120.7932,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.9,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "ack21.wav": "929111656eaa1df9b1243e1b53cfe6faefbe1572662c530a98ae25c0adbbd5a6",
+          "ack20.wav": "afaeb5dc94e06ad819fddaadd3bbe7d1da8350763a708e2adcc0be0b87ec122a"
+        },
+        "caption_sha256": "d303dcbf4b112a457ae4da4de249451208a3c7e61f6d322a909a23bb27d9f1c8",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+            "turn_id": "2",
+            "delivery_id": "c9b9359a-dfb3-4e43-88b2-88915e4012ee",
+            "at_ms": 1792839740020.4402
+          }
+        ],
+        "ack_continue_events": [
+          {
+            "at_ms": 1792839741820
+          }
+        ]
+      },
+      "stop": {
+        "room": "sn-BJP00326060100100004-1792840690",
+        "trace": "search-probe-1792840690",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 1780.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 107,
+          "packets_after": 1790
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840690",
+            "t": 1792840706173.792,
+            "time": "10-24 19:18:26.173",
+            "eou_ms": 714,
+            "stt_ms": 687,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.237,
+            "claim_filter_trigger": true,
+            "chars": 15,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840706173.792,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.1,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "stop1.wav": "b844751e79c5028a6d65d8ba90ff83755cdfe0e5f3b30f88057b322906fb9e59",
+          "stop0.wav": "e3e50001282fd1f5686bdeb30317121dfd59583a66eb8912c261fbd7a82e76e4"
+        },
+        "caption_sha256": "44633e857b13133180c8f87631983ce3633c9584b52c4b4bd1936719fd5e16c3",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+            "turn_id": "2",
+            "delivery_id": "9cdb1a78-94e7-4f52-afcb-d3d7cc1744cb",
+            "at_ms": 1792840710172.876
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "ack0": {
+        "room": "sn-BJP00326060100100004-1792839599",
+        "trace": "search-probe-1792839599",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 2,
+          "audio_voiced_ms": 11000.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 81,
+          "packets_after": 1813
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 2,
+          "min": 0.1,
+          "median": 0.3,
+          "p95_descriptive": 0.6,
+          "max": 0.6
+        },
+        "ordinary_missing_first_frame": 1,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839599",
+            "t": 1792839604681.8572,
+            "time": "10-24 19:00:04.681",
+            "eou_ms": 411,
+            "stt_ms": 0,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.574,
+            "claim_filter_trigger": false,
+            "chars": 2,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 785,
+            "filler": true
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839599",
+            "t": 1792839605466.7139,
+            "time": "10-24 19:00:05.466",
+            "eou_ms": 425,
+            "stt_ms": 0,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.083,
+            "claim_filter_trigger": true,
+            "chars": 11,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792839605466.7139,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.4,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "ack01.wav": "8338d95868c9ab4367c210f592e3ee09928111dc89adba777c0bf815884cae38",
+          "ack00.wav": "afaeb5dc94e06ad819fddaadd3bbe7d1da8350763a708e2adcc0be0b87ec122a"
+        },
+        "caption_sha256": "4d5b649a0479a04778e0a189c98e2dbb3e68991afdc9dcf2a89c6984856cc38a",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+            "turn_id": "3",
+            "delivery_id": "a44f5085-2f34-4591-a75d-efac3b14e61b",
+            "at_ms": 1792839609865.7651
+          }
+        ],
+        "ack_continue_events": [
+          {
+            "at_ms": 1792839612166
+          }
+        ]
+      },
+      "cross_prepare": {
+        "room": "sn-BJP00326060100100004-1792840194",
+        "trace": "search-probe-1792840194",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 3650.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 79,
+          "packets_after": 703
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840194",
+            "t": 1792840199841.496,
+            "time": "10-24 19:09:59.841",
+            "eou_ms": 547,
+            "stt_ms": 507,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.214,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840199841.496,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.4,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "cross_prepare1.wav": "74a9b7f1356065f5c7b516e4aa7b7a00845542e8387759898ab8a3cd5279233c",
+          "cross_prepare0.wav": "075899df3e27d816c4dd0aa1e9ab561c6fcbdecb5eef789b07219d66aec8da48"
+        },
+        "caption_sha256": "e82760970e299df9fff683203d5215cc913fc3b573bd8d2f1b8af7afc1257286",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+            "turn_id": "2",
+            "delivery_id": "20ebae61-3b16-4de3-9c0c-5bc2832d77cb",
+            "at_ms": 1792840203341.636
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "ack3": {
+        "room": "sn-BJP00326060100100004-1792839795",
+        "trace": "search-probe-1792839795",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 9220.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1710
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1149.8,
+          "median": 1149.8,
+          "p95_descriptive": 1149.8,
+          "max": 1149.8
+        },
+        "route": {
+          "n": 2,
+          "min": 0.1,
+          "median": 0.3,
+          "p95_descriptive": 0.4,
+          "max": 0.4
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839795",
+            "t": 1792839800959.394,
+            "time": "10-24 19:03:20.959",
+            "eou_ms": 600,
+            "stt_ms": 557,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.415,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 6050,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839795",
+            "t": 1792839807009.7449,
+            "time": "10-24 19:03:27.009",
+            "eou_ms": 1027,
+            "stt_ms": 1014,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.1,
+            "claim_filter_trigger": false,
+            "chars": 4,
+            "turn_id": "3",
+            "commit_to_body_ms": 1149.8,
+            "stop_to_body_estimate_ms": 2176.8,
+            "turn_start_gap_ms": 0.8,
+            "tts_ttfb_ms": 301,
+            "body_ready_since_turn_ms": 1106,
+            "before_tts_ms": 805,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 24,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792839800959.394,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.7,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "ack31.wav": "8338d95868c9ab4367c210f592e3ee09928111dc89adba777c0bf815884cae38",
+          "ack30.wav": "afaeb5dc94e06ad819fddaadd3bbe7d1da8350763a708e2adcc0be0b87ec122a"
+        },
+        "caption_sha256": "2a136fb6e5a7c2450c3aa682df667041c86428a46a8a65ca1529518bfb5d6c2a",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "56abd02e-33f3-4075-92b2-f808eb1385a1",
+            "turn_id": "2",
+            "delivery_id": "ed9b5152-7e22-4b43-b6f9-996602ff2b20",
+            "at_ms": 1792839804609.0059
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "case5": {
+        "room": "sn-BJP00326060100100004-1792839989",
+        "trace": "search-probe-1792839989",
+        "counts": {
+          "agent_transcripts": 7,
+          "user_transcripts": 4,
+          "metrics": 12,
+          "audio_voiced_ms": 15470.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 4084
+        },
+        "ordinary_commits": 3,
+        "body_first_frame": {
+          "n": 3,
+          "min": 998.9,
+          "median": 999.9,
+          "p95_descriptive": 1299.5,
+          "max": 1299.5
+        },
+        "route": {
+          "n": 4,
+          "min": 0.1,
+          "median": 0.3,
+          "p95_descriptive": 0.5,
+          "max": 0.5
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839989",
+            "t": 1792839994981.199,
+            "time": "10-24 19:06:34.981",
+            "eou_ms": 817,
+            "stt_ms": 814,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.339,
+            "claim_filter_trigger": false,
+            "chars": 17,
+            "turn_id": "1",
+            "commit_to_body_ms": 999.9,
+            "stop_to_body_estimate_ms": 1816.9,
+            "turn_start_gap_ms": 0.85,
+            "tts_ttfb_ms": 629,
+            "body_ready_since_turn_ms": 904,
+            "before_tts_ms": 275,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 0,
+            "spec_lead_ms": 589,
+            "spec_miss": false,
+            "next_commit_ms": 24651,
+            "filler": true
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839989",
+            "t": 1792840019631.757,
+            "time": "10-24 19:06:59.631",
+            "eou_ms": 668,
+            "stt_ms": 638,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.467,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 5250,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839989",
+            "t": 1792840024881.685,
+            "time": "10-24 19:07:04.881",
+            "eou_ms": 824,
+            "stt_ms": 795,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.193,
+            "claim_filter_trigger": false,
+            "chars": 2,
+            "turn_id": "4",
+            "commit_to_body_ms": 1299.5,
+            "stop_to_body_estimate_ms": 2123.5,
+            "turn_start_gap_ms": 0.52,
+            "tts_ttfb_ms": 251,
+            "body_ready_since_turn_ms": 1267,
+            "before_tts_ms": 1016,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 184,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 24901,
+            "filler": true
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792839989",
+            "t": 1792840049782.379,
+            "time": "10-24 19:07:29.782",
+            "eou_ms": 670,
+            "stt_ms": 629,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.139,
+            "claim_filter_trigger": false,
+            "chars": 3,
+            "turn_id": "5",
+            "commit_to_body_ms": 998.9,
+            "stop_to_body_estimate_ms": 1668.9,
+            "turn_start_gap_ms": 0.93,
+            "tts_ttfb_ms": 341,
+            "body_ready_since_turn_ms": 552,
+            "before_tts_ms": 211,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 0,
+            "spec_lead_ms": null,
+            "spec_miss": true,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840019631.757,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.8,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "case52.wav": "8338d95868c9ab4367c210f592e3ee09928111dc89adba777c0bf815884cae38",
+          "case50.wav": "91b9c08df3920f83f2699e9e9273a753bb5d2bbb8bb888a2bf342531aeb2f759",
+          "case53.wav": "1e3a10d6298faf2e17c106e6865801758031531e6547ef3800e347889b540ab8",
+          "case51.wav": "668bafa8269fb0a235eab299268f5f5b7975739a5549300b40b41a715c646607"
+        },
+        "caption_sha256": "34eb82b2eaae9714a8a5a5bcb643a4c2ade3f0713e2870ae81965aac7bde0159",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "ad721c3e-c160-4720-93e0-914e6ad277d8",
+            "turn_id": "3",
+            "delivery_id": "8d8dd437-0868-4257-b325-500d6d6f7c8b",
+            "at_ms": 1792840022680.8828
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "predicate": {
+        "room": "sn-BJP00326060100100004-1792840447",
+        "trace": "search-probe-1792840447",
+        "counts": {
+          "agent_transcripts": 9,
+          "user_transcripts": 5,
+          "metrics": 8,
+          "audio_voiced_ms": 27930.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 107,
+          "packets_after": 0
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1049.2,
+          "median": 1049.2,
+          "p95_descriptive": 1049.2,
+          "max": 1049.2
+        },
+        "route": {
+          "n": 5,
+          "min": 0.2,
+          "median": 0.3,
+          "p95_descriptive": 0.3,
+          "max": 0.3
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840447",
+            "t": 1792840458307.689,
+            "time": "10-24 19:14:18.307",
+            "eou_ms": 634,
+            "stt_ms": 616,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.154,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 40850,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840447",
+            "t": 1792840499157.778,
+            "time": "10-24 19:14:59.157",
+            "eou_ms": 999,
+            "stt_ms": 996,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.303,
+            "claim_filter_trigger": true,
+            "chars": 10,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 1650,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840447",
+            "t": 1792840500807.641,
+            "time": "10-24 19:15:00.807",
+            "eou_ms": 846,
+            "stt_ms": 469,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.245,
+            "claim_filter_trigger": false,
+            "chars": 3,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 40300,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840447",
+            "t": 1792840541107.34,
+            "time": "10-24 19:15:41.107",
+            "eou_ms": 842,
+            "stt_ms": 822,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.29,
+            "claim_filter_trigger": true,
+            "chars": 10,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 7601,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840447",
+            "t": 1792840548707.959,
+            "time": "10-24 19:15:48.707",
+            "eou_ms": 735,
+            "stt_ms": 688,
+            "action": "chat",
+            "rule": "protected",
+            "route_gap_ms": 0.301,
+            "claim_filter_trigger": false,
+            "chars": 9,
+            "turn_id": "6",
+            "commit_to_body_ms": 1049.2,
+            "stop_to_body_estimate_ms": 1784.2,
+            "turn_start_gap_ms": 1.23,
+            "tts_ttfb_ms": 285,
+            "body_ready_since_turn_ms": 1000,
+            "before_tts_ms": 715,
+            "playout_exit": "Aborted",
+            "underrun_ms": 78,
+            "spec_lead_ms": null,
+            "spec_miss": true,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840458307.689,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.6,
+            "clip_ids": [
+              "lookup"
+            ]
+          },
+          {
+            "commit_at_ms": 1792840499157.778,
+            "action": "search",
+            "ack_frames": 0,
+            "commit_to_ack_ms": null,
+            "clip_ids": []
+          },
+          {
+            "commit_at_ms": 1792840500807.641,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 50.0,
+            "clip_ids": [
+              "find"
+            ]
+          },
+          {
+            "commit_at_ms": 1792840541107.34,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 1299.7,
+            "clip_ids": [
+              "clarify"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "predicate0.wav": "fe05d880f0b1e5d938c39914836d78a9b0705bff4838ae437f5e8eadd1173c31",
+          "predicate2.wav": "379bcfacd5d63afaaa30fd5a15f1385905d9aa8a01e3d040668b6498e3a319aa",
+          "predicate3.wav": "dd8e01cfbbb8d27d9ff048a6bef847be555753acd483dd6bf45b49cdb22e2fdf",
+          "predicate1.wav": "dd8e01cfbbb8d27d9ff048a6bef847be555753acd483dd6bf45b49cdb22e2fdf",
+          "predicate4.wav": "4d410f0ba96f635df21148c787c52fccb0d621312c5d7d5bff9f02b8f054ddf8"
+        },
+        "caption_sha256": "115b1f4a27d56a89427266af18574885810fb013bf5b0e623051ebcfb32eefc5",
+        "disconnected": true,
+        "result_first_frames": [
+          {
+            "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+            "turn_id": "2",
+            "delivery_id": "86dcedc7-17ca-4735-bfb6-13fc6f8f2a05",
+            "at_ms": 1792840462207.624
+          },
+          {
+            "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+            "turn_id": "4",
+            "delivery_id": "9501adce-1e71-4138-9ab2-fb6faabb247b",
+            "at_ms": 1792840504157.205
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "cross_resume_disconnect": {
+        "room": "sn-BJP00326060100100004-1792840364",
+        "trace": "search-probe-1792840364",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 9150.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 2634
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840364",
+            "t": 1792840379795.428,
+            "time": "10-24 19:12:59.795",
+            "eou_ms": 803,
+            "stt_ms": 801,
+            "action": "resume",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.182,
+            "claim_filter_trigger": true,
+            "chars": 9,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [],
+        "wav_sha256": {
+          "cross_resume_disconnect0.wav": "c9e80891f2199c07655772f596c5f4edceaad274615a07b4104254433729524c"
+        },
+        "caption_sha256": "4b6fa697cfedf19439885a274923d28b72ba139c7d86e9bf0587899d90b815fa",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+            "turn_id": "1",
+            "delivery_id": "1d3b50bf-4444-4563-afe7-e7311f7ab38f",
+            "at_ms": 1792840384495.101
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "cancel": {
+        "room": "sn-BJP00326060100100004-1792840840",
+        "trace": "search-probe-1792840840",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 3,
+          "metrics": 6,
+          "audio_voiced_ms": 4570.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1581
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1299.8,
+          "median": 1299.8,
+          "p95_descriptive": 1299.8,
+          "max": 1299.8
+        },
+        "route": {
+          "n": 3,
+          "min": 0.1,
+          "median": 0.2,
+          "p95_descriptive": 0.4,
+          "max": 0.4
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840840",
+            "t": 1792840848199.3352,
+            "time": "10-24 19:20:48.199",
+            "eou_ms": 596,
+            "stt_ms": 595,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.391,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 2950,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840840",
+            "t": 1792840851149.7349,
+            "time": "10-24 19:20:51.149",
+            "eou_ms": 447,
+            "stt_ms": 0,
+            "action": "cancel",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.188,
+            "claim_filter_trigger": true,
+            "chars": 4,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 850,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840840",
+            "t": 1792840851999.8691,
+            "time": "10-24 19:20:51.999",
+            "eou_ms": 449,
+            "stt_ms": 0,
+            "action": "chat",
+            "rule": "protected",
+            "route_gap_ms": 0.057,
+            "claim_filter_trigger": false,
+            "chars": 5,
+            "turn_id": "2",
+            "commit_to_body_ms": 1299.8,
+            "stop_to_body_estimate_ms": 1748.8,
+            "turn_start_gap_ms": 0.77,
+            "tts_ttfb_ms": 276,
+            "body_ready_since_turn_ms": 1285,
+            "before_tts_ms": 1009,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 285,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840848199.3352,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.7,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "cancel1.wav": "41c1d050ccb3f9ea9260395f752ae1cc721f30c53c066dca40e0b33e845c7f9f",
+          "cancel0.wav": "907f464b15ab021ce4a73c32ef787714cae2b475e263a88e1aa92b2e7a1aea18"
+        },
+        "caption_sha256": "14bf8d1d4ad58d33bf62d2c74b027c112b04229ccfde3ddcb16d9fbe283c14fa",
+        "disconnected": false,
+        "result_first_frames": [],
+        "ack_continue_events": []
+      },
+      "resume": {
+        "room": "sn-BJP00326060100100004-1792840101",
+        "trace": "search-probe-1792840101",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 3,
+          "metrics": 5,
+          "audio_voiced_ms": 13330.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 3104
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 999.5,
+          "median": 999.5,
+          "p95_descriptive": 999.5,
+          "max": 999.5
+        },
+        "route": {
+          "n": 3,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.3,
+          "max": 0.3
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840101",
+            "t": 1792840107339.056,
+            "time": "10-24 19:08:27.339",
+            "eou_ms": 646,
+            "stt_ms": 611,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.213,
+            "claim_filter_trigger": true,
+            "chars": 12,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 9600,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840101",
+            "t": 1792840116938.954,
+            "time": "10-24 19:08:36.938",
+            "eou_ms": 865,
+            "stt_ms": 859,
+            "action": "chat",
+            "rule": "default-chat",
+            "route_gap_ms": 0.188,
+            "claim_filter_trigger": false,
+            "chars": 11,
+            "turn_id": "3",
+            "commit_to_body_ms": 999.5,
+            "stop_to_body_estimate_ms": 1864.5,
+            "turn_start_gap_ms": 0.53,
+            "tts_ttfb_ms": 296,
+            "body_ready_since_turn_ms": 916,
+            "before_tts_ms": 620,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 0,
+            "spec_lead_ms": null,
+            "spec_miss": true,
+            "next_commit_ms": 24349,
+            "filler": true
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840101",
+            "t": 1792840141288.411,
+            "time": "10-24 19:09:01.288",
+            "eou_ms": 729,
+            "stt_ms": 702,
+            "action": "resume",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.301,
+            "claim_filter_trigger": true,
+            "chars": 9,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840107339.056,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.6,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "resume2.wav": "02db6229abcbb3dff56efa559eb39851e5bf6ca4d9de003f99c8007622ae29d8",
+          "resume0.wav": "29183572ef117182b77470c485aebb44f88c04bc10b2485e799d289b77d32276",
+          "resume1.wav": "9b1dbb699fdf811f733854c81c2b8c959a576e5ff37535d81879ac1b71d32cc6"
+        },
+        "caption_sha256": "e92c0ebfbcf404e10bbb17a30aa8302d2a3f0689ed7e85f0be28faf7fb6409aa",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+            "turn_id": "2",
+            "delivery_id": "3092f69c-458a-4c14-949c-6c124b4c76d6",
+            "at_ms": 1792840111338.655
+          },
+          {
+            "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+            "turn_id": "4",
+            "delivery_id": "516bc5c0-4c46-4940-89e0-d83fd44bcd88",
+            "at_ms": 1792840142637.816
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "early": {
+        "room": "sn-BJP00326060100100004-1792840973",
+        "trace": "search-probe-1792840973",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 16450.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1758
+        },
+        "ordinary_commits": 1,
+        "body_first_frame": {
+          "n": 1,
+          "min": 1250.1,
+          "median": 1250.1,
+          "p95_descriptive": 1250.1,
+          "max": 1250.1
+        },
+        "route": {
+          "n": 2,
+          "min": 0.3,
+          "median": 0.6,
+          "p95_descriptive": 0.9,
+          "max": 0.9
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840973",
+            "t": 1792840984114.237,
+            "time": "10-24 19:23:04.114",
+            "eou_ms": 711,
+            "stt_ms": 688,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.865,
+            "claim_filter_trigger": true,
+            "chars": 15,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 5400,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840973",
+            "t": 1792840989514.136,
+            "time": "10-24 19:23:09.514",
+            "eou_ms": 655,
+            "stt_ms": 654,
+            "action": "chat",
+            "rule": "protected",
+            "route_gap_ms": 0.319,
+            "claim_filter_trigger": false,
+            "chars": 9,
+            "turn_id": "3",
+            "commit_to_body_ms": 1250.1,
+            "stop_to_body_estimate_ms": 1905.1,
+            "turn_start_gap_ms": 1.08,
+            "tts_ttfb_ms": 278,
+            "body_ready_since_turn_ms": 1224,
+            "before_tts_ms": 946,
+            "playout_exit": "SourceDrained",
+            "underrun_ms": 302,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": true
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840984114.237,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.5,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "early1.wav": "1350c6904e5cd98b2639d02bd08bcf1e17e37b0e4f66efdbfff0d23fc3b429f7",
+          "early0.wav": "b02f6ed373215785b68c0fe01e1e1f5f17c1e33fad119515a3416e07cf509b50"
+        },
+        "caption_sha256": "52225ac1ed974410180b6f01bfb85bc61c4248f87b34cc51ffc02c68d3f023d3",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+            "turn_id": "2",
+            "delivery_id": "94627b12-0149-4e76-97b5-b2b3fd7a31e9",
+            "at_ms": 1792840987364.1292
+          },
+          {
+            "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+            "turn_id": "4",
+            "delivery_id": "af698026-2214-4ab3-8661-2152fb1095a2",
+            "at_ms": 1792841000814.122
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "cross_resume": {
+        "room": "sn-BJP00326060100100004-1792840239",
+        "trace": "search-probe-1792840239",
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 7750.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 2642
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.2,
+          "median": 0.2,
+          "p95_descriptive": 0.2,
+          "max": 0.2
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840239",
+            "t": 1792840255245.224,
+            "time": "10-24 19:10:55.245",
+            "eou_ms": 751,
+            "stt_ms": 718,
+            "action": "resume",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.239,
+            "claim_filter_trigger": true,
+            "chars": 9,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [],
+        "wav_sha256": {
+          "cross_resume_disconnect0.wav": "c9e80891f2199c07655772f596c5f4edceaad274615a07b4104254433729524c",
+          "cross_resume0.wav": "11fd10d9ad56a4992032625fef92d508e3d0412acdab68f0c483634890bc40d9"
+        },
+        "caption_sha256": "5f520f9796a9ce700218443ddea2f2f9ceb94beb458e8f853b14d3c7e2729cee",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+            "turn_id": "1",
+            "delivery_id": "99635966-62da-4cba-8d35-52fe593f1c6e",
+            "at_ms": 1792840256645.7578
+          }
+        ],
+        "ack_continue_events": []
+      },
+      "ack5": {
+        "room": "sn-BJP00326060100100004-1792839925",
+        "trace": "search-probe-1792839925",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 9760.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1675
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 1,
+          "min": 0.3,
+          "median": 0.3,
+          "p95_descriptive": 0.3,
+          "max": 0.3
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792839925",
+            "t": 1792839930072.9512,
+            "time": "10-24 19:05:30.072",
+            "eou_ms": 715,
+            "stt_ms": 687,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.296,
+            "claim_filter_trigger": true,
+            "chars": 13,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792839930072.9512,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.7,
+            "clip_ids": [
+              "lookup"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "ack50.wav": "afaeb5dc94e06ad819fddaadd3bbe7d1da8350763a708e2adcc0be0b87ec122a",
+          "ack51.wav": "929111656eaa1df9b1243e1b53cfe6faefbe1572662c530a98ae25c0adbbd5a6"
+        },
+        "caption_sha256": "e6456658e007327486382f2674ea1f5316d369fe2c79f16dddc91b5696c91410",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+            "turn_id": "2",
+            "delivery_id": "1bac26db-4833-4518-912d-d443fcad0c4d",
+            "at_ms": 1792839933721.938
+          }
+        ],
+        "ack_continue_events": [
+          {
+            "at_ms": 1792839935621
+          }
+        ]
+      },
+      "replace": {
+        "room": "sn-BJP00326060100100004-1792840905",
+        "trace": "search-probe-1792840905",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 2,
+          "audio_voiced_ms": 9710.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 87,
+          "packets_after": 1708
+        },
+        "ordinary_commits": 0,
+        "body_first_frame": {
+          "n": 0
+        },
+        "route": {
+          "n": 2,
+          "min": 0.2,
+          "median": 0.3,
+          "p95_descriptive": 0.5,
+          "max": 0.5
+        },
+        "ordinary_missing_first_frame": 0,
+        "turns": [
+          {
+            "room": "sn-BJP00326060100100004-1792840905",
+            "t": 1792840915803.355,
+            "time": "10-24 19:21:55.803",
+            "eou_ms": 840,
+            "stt_ms": 790,
+            "action": "search",
+            "rule": "builtin-explicit",
+            "route_gap_ms": 0.472,
+            "claim_filter_trigger": true,
+            "chars": 15,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": 3899,
+            "filler": false
+          },
+          {
+            "room": "sn-BJP00326060100100004-1792840905",
+            "t": 1792840919702.163,
+            "time": "10-24 19:21:59.702",
+            "eou_ms": 799,
+            "stt_ms": 773,
+            "action": "replace",
+            "rule": "builtin-control",
+            "route_gap_ms": 0.162,
+            "claim_filter_trigger": true,
+            "chars": 14,
+            "spec_lead_ms": null,
+            "spec_miss": false,
+            "next_commit_ms": null,
+            "filler": false
+          }
+        ],
+        "receipts": [
+          {
+            "commit_at_ms": 1792840915803.355,
+            "action": "search",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 49.1,
+            "clip_ids": [
+              "lookup"
+            ]
+          },
+          {
+            "commit_at_ms": 1792840919702.163,
+            "action": "replace",
+            "ack_frames": 1,
+            "commit_to_ack_ms": 50.1,
+            "clip_ids": [
+              "find"
+            ]
+          }
+        ],
+        "wav_sha256": {
+          "replace1.wav": "d47c7dcad9b68fd20e4c99fde1e4fb256f2ee40a723020895cae2753474be7f9",
+          "replace0.wav": "5dda12a72a000b25c3186114e414c9a5cac4c4e770fbb6ae7542d71e5006beee"
+        },
+        "caption_sha256": "fa2d51818c131366cfb7eb85172068850145b4d891f8baf53cb808c1278c88d2",
+        "disconnected": false,
+        "result_first_frames": [
+          {
+            "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+            "turn_id": "3",
+            "delivery_id": "bed91a8d-433f-476c-8a9a-401c5cdab4c3",
+            "at_ms": 1792840922251.6812
+          }
+        ],
+        "ack_continue_events": []
+      }
+    },
+    "tasks": [
+      {
+        "id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "createdAt": 1792839605471,
+        "readyAt": 1792839608666,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "ee281252-cd4b-4d4b-a578-ff93c1c97317",
+        "session": "sn-BJP00326060100100004-1792839666",
+        "createdAt": 1792839671894,
+        "readyAt": 1792839674249,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "createdAt": 1792839736126,
+        "readyAt": 1792839738977,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "56abd02e-33f3-4075-92b2-f808eb1385a1",
+        "session": "sn-BJP00326060100100004-1792839795",
+        "createdAt": 1792839800964,
+        "readyAt": 1792839803479,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "d0cd1fe2-2b5e-42d5-98e5-3042422508fc",
+        "session": "sn-BJP00326060100100004-1792839860",
+        "createdAt": 1792839865126,
+        "readyAt": 1792839868387,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "createdAt": 1792839930077,
+        "readyAt": 1792839932736,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "ad721c3e-c160-4720-93e0-914e6ad277d8",
+        "session": "sn-BJP00326060100100004-1792839989",
+        "createdAt": 1792840019636,
+        "readyAt": 1792840022018,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "createdAt": 1792840107343,
+        "readyAt": 1792840110102,
+        "status": "expired",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "createdAt": 1792840199844,
+        "readyAt": 1792840202291,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840323",
+        "createdAt": 1792840328442,
+        "readyAt": 1792840331300,
+        "status": "cancelled",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "createdAt": 1792840458311,
+        "readyAt": 1792840461069,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "createdAt": 1792840500812,
+        "readyAt": 1792840503231,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+        "session": "sn-BJP00326060100100004-1792840690",
+        "createdAt": 1792840706179,
+        "readyAt": 1792840708570,
+        "status": "expired",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+        "session": "sn-BJP00326060100100004-1792840765",
+        "createdAt": 1792840775525,
+        "readyAt": 1792840778659,
+        "status": "cancelled",
+        "delivery": "interrupted",
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "03fe7ce0-0084-43ad-8a8e-d285d0d9673c",
+        "session": "sn-BJP00326060100100004-1792840840",
+        "createdAt": 1792840848208,
+        "readyAt": 1792840850983,
+        "status": "cancelled",
+        "delivery": null,
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "cc97ade1-46c9-40f0-83b7-ecebe592c698",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "createdAt": 1792840915811,
+        "readyAt": 1792840918477,
+        "status": "cancelled",
+        "delivery": null,
+        "revision": 1,
+        "error": null
+      },
+      {
+        "id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "createdAt": 1792840919712,
+        "readyAt": 1792840921046,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 2,
+        "error": null
+      },
+      {
+        "id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "createdAt": 1792840984119,
+        "readyAt": 1792840986569,
+        "status": "cancelled",
+        "delivery": "completed",
+        "revision": 1,
+        "error": null
+      }
+    ],
+    "resume_events": [
+      {
+        "event": "progress",
+        "task_id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792839612720
+      },
+      {
+        "event": "progress",
+        "task_id": "fec71610-e118-44b5-9be8-d1c6aeef0c2b",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792839622615
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839599",
+        "at_ms": 1792839635932
+      },
+      {
+        "event": "progress",
+        "task_id": "ee281252-cd4b-4d4b-a578-ff93c1c97317",
+        "session": "sn-BJP00326060100100004-1792839666",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792839677447
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839666",
+        "at_ms": 1792839701252
+      },
+      {
+        "event": "progress",
+        "task_id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792839742872
+      },
+      {
+        "event": "progress",
+        "task_id": "0b67ec09-5725-40b0-a17f-9490e702032e",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792839753024
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839731",
+        "at_ms": 1792839765701
+      },
+      {
+        "event": "progress",
+        "task_id": "56abd02e-33f3-4075-92b2-f808eb1385a1",
+        "session": "sn-BJP00326060100100004-1792839795",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792839807015
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839795",
+        "at_ms": 1792839830500
+      },
+      {
+        "event": "progress",
+        "task_id": "d0cd1fe2-2b5e-42d5-98e5-3042422508fc",
+        "session": "sn-BJP00326060100100004-1792839860",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792839872176
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839860",
+        "at_ms": 1792839895554
+      },
+      {
+        "event": "progress",
+        "task_id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792839936574
+      },
+      {
+        "event": "progress",
+        "task_id": "db8330e8-dd41-4dc6-9267-32412764cc97",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792839945753
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839925",
+        "at_ms": 1792839959351
+      },
+      {
+        "event": "progress",
+        "task_id": "ad721c3e-c160-4720-93e0-914e6ad277d8",
+        "session": "sn-BJP00326060100100004-1792839989",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840024886
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792839989",
+        "at_ms": 1792840071513
+      },
+      {
+        "event": "progress",
+        "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840114440
+      },
+      {
+        "event": "progress",
+        "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "complete_sentences": 1,
+        "sequence": 2,
+        "at_ms": 1792840116944
+      },
+      {
+        "event": "progress",
+        "task_id": "83db41cd-df09-4a14-98a8-ea52eb3fa1f9",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "complete_sentences": 2,
+        "sequence": 3,
+        "at_ms": 1792840152274
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840101",
+        "at_ms": 1792840164976
+      },
+      {
+        "event": "progress",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840206243
+      },
+      {
+        "event": "progress",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "complete_sentences": 1,
+        "sequence": 2,
+        "at_ms": 1792840207078
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840194",
+        "at_ms": 1792840209373
+      },
+      {
+        "event": "grant",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "revision": 1,
+        "source_session": "sn-BJP00326060100100004-1792840194",
+        "session": "sn-BJP00326060100100004-1792840239",
+        "complete_sentences": 1,
+        "at_ms": 1792840255250,
+        "expires_at_ms": 1792840502291
+      },
+      {
+        "event": "receipt",
+        "task_id": "626cc6d8-cf04-4601-84e8-5df0ad8c1422",
+        "session": "sn-BJP00326060100100004-1792840239",
+        "outcome": "completed",
+        "complete_sentences": 2,
+        "sequence": 1,
+        "at_ms": 1792840266979
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840239",
+        "at_ms": 1792840293103
+      },
+      {
+        "event": "progress",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840323",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840334501
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840323",
+        "at_ms": 1792840334518
+      },
+      {
+        "event": "grant",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "revision": 1,
+        "source_session": "sn-BJP00326060100100004-1792840323",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "complete_sentences": 0,
+        "at_ms": 1792840379798,
+        "expires_at_ms": 1792840631300
+      },
+      {
+        "event": "receipt",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "outcome": "progress",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840387348
+      },
+      {
+        "event": "receipt",
+        "task_id": "c1f05c34-e332-4344-a263-cbcbc34efc50",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "outcome": "completed",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840396313
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840364",
+        "at_ms": 1792840417668
+      },
+      {
+        "event": "progress",
+        "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840465060
+      },
+      {
+        "event": "progress",
+        "task_id": "0396fbec-4f6b-466e-b7f1-40deafd08591",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840476900
+      },
+      {
+        "event": "progress",
+        "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840507416
+      },
+      {
+        "event": "progress",
+        "task_id": "8e9653a8-6238-40cb-be5b-cdec63ea5c37",
+        "session": "sn-BJP00326060100100004-1792840447",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840518249
+      },
+      {
+        "event": "progress",
+        "task_id": "17094ef1-a71f-4efa-8f8d-18e20efd34d2",
+        "session": "sn-BJP00326060100100004-1792840690",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840711322
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840690",
+        "at_ms": 1792840735306
+      },
+      {
+        "event": "progress",
+        "task_id": "0eb5a1a1-82df-4689-9633-2e6aae2ffd8f",
+        "session": "sn-BJP00326060100100004-1792840765",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840786427
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840765",
+        "at_ms": 1792840786451
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840840",
+        "at_ms": 1792840875169
+      },
+      {
+        "event": "progress",
+        "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1792840927409
+      },
+      {
+        "event": "progress",
+        "task_id": "290cae89-51d6-44f9-ad92-ea31902dfb8b",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1792840933178
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840905",
+        "at_ms": 1792840943638
+      },
+      {
+        "event": "progress",
+        "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1792840989518
+      },
+      {
+        "event": "progress",
+        "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "complete_sentences": 1,
+        "sequence": 2,
+        "at_ms": 1792841003917
+      },
+      {
+        "event": "progress",
+        "task_id": "365e7554-289e-4022-b078-35a9c62472a2",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "complete_sentences": 2,
+        "sequence": 3,
+        "at_ms": 1792841012731
+      },
+      {
+        "event": "session_closed",
+        "session": "sn-BJP00326060100100004-1792840973",
+        "at_ms": 1792841013618
+      }
+    ],
+    "dialogue_events": [
+      {
+        "room": "sn-BJP00326060100100004-1792839666",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792839795",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792839860",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792839989",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792839989",
+        "context_valid": true,
+        "local_clarification": true
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792839989",
+        "context_valid": true,
+        "local_clarification": true
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840101",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840101",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840101",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840447",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840447",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840447",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840840",
+        "context_valid": true,
+        "local_clarification": false
+      },
+      {
+        "room": "sn-BJP00326060100100004-1792840973",
+        "context_valid": true,
+        "local_clarification": false
+      }
+    ]
+  },
+  "runtime_provenance": {
+    "first": {
+      "worker": {
+        "MainPID": "897143",
+        "NRestarts": "0",
+        "ExecMainStartTimestamp": "Sat 2026-10-24 10:59:42 UTC",
+        "ActiveState": "active",
+        "running_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+        "file_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+        "at_ms": 1792839972017
+      },
+      "brain": {
+        "MainPID": "2152726",
+        "NRestarts": "0",
+        "ExecMainStartTimestamp": "Sat 2026-10-24 18:13:22 CST",
+        "ActiveState": "active",
+        "files": {
+          "src/tools/search-executor.ts": {
+            "sha256": "b6a5d860850d740fc55af36771c9931fc3848bc932816e6fea55bf6240b6a53b",
+            "mtime_ms": 1792836802269
+          },
+          "src/tools/search-tasks.ts": {
+            "sha256": "b403b1a84d816a4ff750bc1f97eb022782ccbbeafe56753d96a27280fd225e93",
+            "mtime_ms": 1792832545817
+          },
+          "src/tools/search-failure.ts": {
+            "sha256": "f3d61ed12a2502e4410b128b49874e020e9fd42b47e0b2d0d17d0e6bd2313004",
+            "mtime_ms": 1792832545817
+          }
+        },
+        "at_ms": 1792839970901
+      }
+    },
+    "last": {
+      "worker": {
+        "MainPID": "897143",
+        "NRestarts": "0",
+        "ExecMainStartTimestamp": "Sat 2026-10-24 10:59:42 UTC",
+        "ActiveState": "active",
+        "running_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+        "file_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+        "at_ms": 1792841023654
+      },
+      "brain": {
+        "MainPID": "2152726",
+        "NRestarts": "0",
+        "ExecMainStartTimestamp": "Sat 2026-10-24 18:13:22 CST",
+        "ActiveState": "active",
+        "files": {
+          "src/tools/search-executor.ts": {
+            "sha256": "b6a5d860850d740fc55af36771c9931fc3848bc932816e6fea55bf6240b6a53b",
+            "mtime_ms": 1792836802269
+          },
+          "src/tools/search-tasks.ts": {
+            "sha256": "b403b1a84d816a4ff750bc1f97eb022782ccbbeafe56753d96a27280fd225e93",
+            "mtime_ms": 1792832545817
+          },
+          "src/tools/search-failure.ts": {
+            "sha256": "f3d61ed12a2502e4410b128b49874e020e9fd42b47e0b2d0d17d0e6bd2313004",
+            "mtime_ms": 1792832545817
+          }
+        },
+        "at_ms": 1792841022301
+      }
+    },
+    "producer_label_error": "Raw probe fields retained obsolete R15c constants. They are not canonical; actual runtime anchors and source hashes above cover this batch. Raw evidence unchanged.",
+    "predicate_transport_error": "Server result recovered, all planned steps present and no traceback. Original process exit code lost; no rerun or forged zero."
+  },
+  "rollback": [
+    {
+      "step": "final-rollback-r14-brain",
+      "at_ms": 1792841107162,
+      "restore": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": false,
+        "tools": false
+      },
+      "pid": "2217876",
+      "files": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "d19bcc06fd30f876413905ca8e79dd357e0e11269cfdd6e4d2ac3c6ff5e6c98c",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "05ddb79cd3d9959be5feae91a6a91e646dc4f9dbc78abac7bea592ea9ee208a0",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-failure.ts": null
+      }
+    },
+    {
+      "step": "final-rollback-r14-worker",
+      "at_ms": 1792841118460,
+      "restore": true,
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792841117187,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "901356",
+      "files": {
+        "/opt/p003-search-canary-20261021/voice-rust-worker": "89ad5bf204dd056b51f523e948e75a5fa512d7d5f0fde6535bead76408623e9c",
+        "/etc/systemd/system/p003-search-worker.service.d/90-r15-resolver.conf": null
+      }
+    },
+    {
+      "step": "final-forward-r15d-brain",
+      "at_ms": 1792841121658,
+      "restore": false,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": false,
+        "tools": false
+      },
+      "pid": "2218170",
+      "files": {
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-executor.ts": "b6a5d860850d740fc55af36771c9931fc3848bc932816e6fea55bf6240b6a53b",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-tasks.ts": "b403b1a84d816a4ff750bc1f97eb022782ccbbeafe56753d96a27280fd225e93",
+        "/opt/p003/search-canary-20261021/brain/src/tools/search-failure.ts": "f3d61ed12a2502e4410b128b49874e020e9fd42b47e0b2d0d17d0e6bd2313004"
+      }
+    },
+    {
+      "step": "final-forward-r15d-worker",
+      "at_ms": 1792841132453,
+      "restore": false,
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792841131142,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "pid": "901423",
+      "files": {
+        "/opt/p003-search-canary-20261021/voice-rust-worker": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+        "/etc/systemd/system/p003-search-worker.service.d/90-r15-resolver.conf": "6a5442a6366b6e3c8fb39d49fe539d953ba8938a7bdc2f90d4ee58271e17b4bb"
+      }
+    }
+  ],
+  "expiry": [
+    {
+      "step": "expiry-idle",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792841366142,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "step": "expiry-brain-short-window",
+      "at_ms": 1792841373048,
+      "deadline": 1792841550392,
+      "closed": false
+    },
+    {
+      "step": "expiry-worker-short-window",
+      "at_ms": 1792841375584,
+      "window": {
+        "enabled": false,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792841550392,
+        "generation": "R4-20261022-two-devices"
+      }
+    },
+    {
+      "step": "expiry-restore-closed-brain",
+      "at_ms": 1792841599315,
+      "deadline": 1792857540000,
+      "closed": true
+    },
+    {
+      "step": "expiry-restore-closed-worker",
+      "at_ms": 1792841602467,
+      "window": {
+        "enabled": false,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792857540000,
+        "generation": "R4-20261022-two-devices"
+      }
+    }
+  ],
+  "expiry_runtime_evidence": {
+    "status": "failed_partial_expiry",
+    "controlled_deadline_ms": 1792841550392,
+    "room": "sn-BJP00326060100100004-1792841379",
+    "worker_closure_lag_ms": 845,
+    "worker_guard_closed_at_ms": 1792841551237,
+    "pipeline_closed_at_ms": 1792841551302,
+    "delete_room_transport_failed_at_ms": 1792841555341,
+    "job_closed_at_ms": 1792841555342,
+    "synthetic_client_disconnected_before_timeout": false,
+    "probe_error": "TimeoutError: ",
+    "probe_counts": {
+      "agent_transcripts": 6,
+      "user_transcripts": 1,
+      "metrics": 8,
+      "audio_voiced_ms": 26020.0,
+      "input_ready": 1,
+      "output_ready": 1
+    },
+    "actual_android_exit_verified": false,
+    "runtime_backstop_executed": false,
+    "original_deadline_restore_steps": [
+      {
+        "step": "expiry-restore-closed-brain",
+        "at_ms": 1792841599315,
+        "deadline": 1792857540000,
+        "closed": true
+      },
+      {
+        "step": "expiry-restore-closed-worker",
+        "at_ms": 1792841602467,
+        "window": {
+          "enabled": false,
+          "allowlist": [
+            "BJP00326070803800006",
+            "BJP00326060100100004"
+          ],
+          "expires_at_ms": 1792857540000,
+          "generation": "R4-20261022-two-devices"
+        }
+      }
+    ],
+    "notes": "Worker stopped on deadline; DeleteRoom transport failed; no successful client-disconnect evidence. No third RTC attempt; gates closed. Exact transport cause not determined."
+  },
+  "expiry_first_attempt_failed": [
+    {
+      "step": "expiry-idle",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792841131142,
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "step": "expiry-brain-short-window",
+      "at_ms": 1792841134447,
+      "deadline": 1792841253832,
+      "closed": false
+    },
+    {
+      "step": "expiry-worker-short-window",
+      "at_ms": 1792841135360,
+      "window": {
+        "enabled": false,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792841253832,
+        "generation": "R4-20261022-two-devices"
+      }
+    },
+    {
+      "step": "expiry-restore-closed-brain",
+      "at_ms": 1792841203187,
+      "deadline": 1792857540000,
+      "closed": true
+    },
+    {
+      "step": "expiry-restore-closed-worker",
+      "at_ms": 1792841205813,
+      "window": {
+        "enabled": false,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1792857540000,
+        "generation": "R4-20261022-two-devices"
+      }
+    }
+  ],
+  "expiry_stale_child_repair": {
+    "at_ms": 1792841349720,
+    "previous_deadline": 1792841253832,
+    "window": {
+      "enabled": false,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1792857540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "jobs": 0
+  },
+  "dns_transport": {
+    "at_ms": 1792841103897,
+    "read_only": true,
+    "production_dns_unchanged": true,
+    "target": "configured TTS host A record",
+    "rows": [
+      {
+        "index": 0,
+        "profile": "google_tcp",
+        "start_ms": 1792841089121,
+        "elapsed_ms": 67.08,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 0,
+        "profile": "stub_udp",
+        "start_ms": 1792841089288,
+        "elapsed_ms": 371.95,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 0,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841089761,
+        "elapsed_ms": 55.45,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 0,
+        "profile": "google_udp",
+        "start_ms": 1792841089916,
+        "elapsed_ms": 32.29,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 0,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841090049,
+        "elapsed_ms": 31.62,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 1,
+        "profile": "google_udp",
+        "start_ms": 1792841090181,
+        "elapsed_ms": 28.55,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 1,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841090309,
+        "elapsed_ms": 30.3,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 1,
+        "profile": "google_tcp",
+        "start_ms": 1792841090440,
+        "elapsed_ms": 38.45,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 1,
+        "profile": "stub_udp",
+        "start_ms": 1792841090579,
+        "elapsed_ms": 37.3,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 1,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841090716,
+        "elapsed_ms": 38.47,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 2,
+        "profile": "google_tcp",
+        "start_ms": 1792841090855,
+        "elapsed_ms": 42.7,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 2,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841090997,
+        "elapsed_ms": 37.96,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 2,
+        "profile": "google_udp",
+        "start_ms": 1792841091136,
+        "elapsed_ms": 36.36,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 2,
+        "profile": "stub_udp",
+        "start_ms": 1792841091272,
+        "elapsed_ms": 23.22,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 2,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841091395,
+        "elapsed_ms": 36.14,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 3,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841091532,
+        "elapsed_ms": 41.14,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 3,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841091673,
+        "elapsed_ms": 34.57,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 3,
+        "profile": "stub_udp",
+        "start_ms": 1792841091808,
+        "elapsed_ms": 31.44,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 3,
+        "profile": "google_udp",
+        "start_ms": 1792841091939,
+        "elapsed_ms": 45.58,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 3,
+        "profile": "google_tcp",
+        "start_ms": 1792841092085,
+        "elapsed_ms": 41.03,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 4,
+        "profile": "stub_udp",
+        "start_ms": 1792841092226,
+        "elapsed_ms": 26.88,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 4,
+        "profile": "google_udp",
+        "start_ms": 1792841092353,
+        "elapsed_ms": 42.78,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 4,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841092496,
+        "elapsed_ms": 38.3,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 4,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841092635,
+        "elapsed_ms": 33.81,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 4,
+        "profile": "google_tcp",
+        "start_ms": 1792841092769,
+        "elapsed_ms": 40.68,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 5,
+        "profile": "stub_udp",
+        "start_ms": 1792841092910,
+        "elapsed_ms": 40.69,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 5,
+        "profile": "google_tcp",
+        "start_ms": 1792841093051,
+        "elapsed_ms": 42.46,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 5,
+        "profile": "google_udp",
+        "start_ms": 1792841093194,
+        "elapsed_ms": 37.76,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 5,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841093333,
+        "elapsed_ms": 54.09,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 5,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841093488,
+        "elapsed_ms": 46.79,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 6,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841093635,
+        "elapsed_ms": 55.62,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 6,
+        "profile": "google_tcp",
+        "start_ms": 1792841093790,
+        "elapsed_ms": 43.81,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 6,
+        "profile": "google_udp",
+        "start_ms": 1792841093934,
+        "elapsed_ms": 46.06,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 6,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841094081,
+        "elapsed_ms": 33.62,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 6,
+        "profile": "stub_udp",
+        "start_ms": 1792841094214,
+        "elapsed_ms": 26.43,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 7,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841094341,
+        "elapsed_ms": 58.43,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 7,
+        "profile": "stub_udp",
+        "start_ms": 1792841094500,
+        "elapsed_ms": 40.84,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 7,
+        "profile": "google_tcp",
+        "start_ms": 1792841094641,
+        "elapsed_ms": 48.39,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 7,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841094789,
+        "elapsed_ms": 41.04,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 7,
+        "profile": "google_udp",
+        "start_ms": 1792841094931,
+        "elapsed_ms": 40.92,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 8,
+        "profile": "google_tcp",
+        "start_ms": 1792841095072,
+        "elapsed_ms": 33.7,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 8,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841095206,
+        "elapsed_ms": 39.3,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 8,
+        "profile": "stub_udp",
+        "start_ms": 1792841095345,
+        "elapsed_ms": 38.23,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 8,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841095484,
+        "elapsed_ms": 51.13,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 8,
+        "profile": "google_udp",
+        "start_ms": 1792841095636,
+        "elapsed_ms": 45.48,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 9,
+        "profile": "google_tcp",
+        "start_ms": 1792841095781,
+        "elapsed_ms": 46.94,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 9,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841095929,
+        "elapsed_ms": 78.77,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 9,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841096107,
+        "elapsed_ms": 39.72,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 9,
+        "profile": "stub_udp",
+        "start_ms": 1792841096247,
+        "elapsed_ms": 28.27,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 9,
+        "profile": "google_udp",
+        "start_ms": 1792841096376,
+        "elapsed_ms": 47.99,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 10,
+        "profile": "google_udp",
+        "start_ms": 1792841096525,
+        "elapsed_ms": 44.83,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 10,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841096670,
+        "elapsed_ms": 50.63,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 10,
+        "profile": "stub_udp",
+        "start_ms": 1792841096821,
+        "elapsed_ms": 36.77,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 10,
+        "profile": "google_tcp",
+        "start_ms": 1792841096957,
+        "elapsed_ms": 51.34,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 10,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841097109,
+        "elapsed_ms": 47.41,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 11,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841097257,
+        "elapsed_ms": 53.1,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 11,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841097412,
+        "elapsed_ms": 64.69,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 11,
+        "profile": "stub_udp",
+        "start_ms": 1792841097577,
+        "elapsed_ms": 49.85,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 11,
+        "profile": "google_udp",
+        "start_ms": 1792841097727,
+        "elapsed_ms": 39.49,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 11,
+        "profile": "google_tcp",
+        "start_ms": 1792841097867,
+        "elapsed_ms": 53.58,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 12,
+        "profile": "google_udp",
+        "start_ms": 1792841098021,
+        "elapsed_ms": 79.35,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 12,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841098200,
+        "elapsed_ms": 37.17,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 12,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841098338,
+        "elapsed_ms": 47.14,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 12,
+        "profile": "stub_udp",
+        "start_ms": 1792841098485,
+        "elapsed_ms": 56.42,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 12,
+        "profile": "google_tcp",
+        "start_ms": 1792841098642,
+        "elapsed_ms": 53.59,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 13,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841098796,
+        "elapsed_ms": 41.91,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 13,
+        "profile": "stub_udp",
+        "start_ms": 1792841098938,
+        "elapsed_ms": 46.35,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 13,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841099084,
+        "elapsed_ms": 56.86,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 13,
+        "profile": "google_udp",
+        "start_ms": 1792841099241,
+        "elapsed_ms": 50.33,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 13,
+        "profile": "google_tcp",
+        "start_ms": 1792841099392,
+        "elapsed_ms": 37.49,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 14,
+        "profile": "google_udp",
+        "start_ms": 1792841099530,
+        "elapsed_ms": 43.38,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 14,
+        "profile": "google_tcp",
+        "start_ms": 1792841099673,
+        "elapsed_ms": 37.85,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 14,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841099811,
+        "elapsed_ms": 36.2,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 14,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841099948,
+        "elapsed_ms": 40.31,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 14,
+        "profile": "stub_udp",
+        "start_ms": 1792841100088,
+        "elapsed_ms": 34.97,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 15,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841100224,
+        "elapsed_ms": 49.29,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 15,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841100373,
+        "elapsed_ms": 38.75,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 15,
+        "profile": "google_udp",
+        "start_ms": 1792841100512,
+        "elapsed_ms": 48.54,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 15,
+        "profile": "stub_udp",
+        "start_ms": 1792841100661,
+        "elapsed_ms": 42.27,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 15,
+        "profile": "google_tcp",
+        "start_ms": 1792841100804,
+        "elapsed_ms": 35.75,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 16,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841100940,
+        "elapsed_ms": 51.64,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 16,
+        "profile": "google_tcp",
+        "start_ms": 1792841101091,
+        "elapsed_ms": 36.1,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 16,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841101228,
+        "elapsed_ms": 60.72,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 16,
+        "profile": "stub_udp",
+        "start_ms": 1792841101389,
+        "elapsed_ms": 43.6,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 16,
+        "profile": "google_udp",
+        "start_ms": 1792841101536,
+        "elapsed_ms": 88.62,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 17,
+        "profile": "stub_udp",
+        "start_ms": 1792841101725,
+        "elapsed_ms": 49.04,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 17,
+        "profile": "google_udp",
+        "start_ms": 1792841101874,
+        "elapsed_ms": 59.86,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 17,
+        "profile": "google_tcp",
+        "start_ms": 1792841102034,
+        "elapsed_ms": 51.47,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 17,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841102186,
+        "elapsed_ms": 29.02,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 17,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841102315,
+        "elapsed_ms": 44.81,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 18,
+        "profile": "google_udp",
+        "start_ms": 1792841102461,
+        "elapsed_ms": 42.52,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 18,
+        "profile": "google_tcp",
+        "start_ms": 1792841102603,
+        "elapsed_ms": 44.13,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 18,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841102748,
+        "elapsed_ms": 50.2,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 18,
+        "profile": "stub_udp",
+        "start_ms": 1792841102898,
+        "elapsed_ms": 48.77,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 18,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841103047,
+        "elapsed_ms": 42.82,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 19,
+        "profile": "google_tcp",
+        "start_ms": 1792841103190,
+        "elapsed_ms": 43.93,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 19,
+        "profile": "stub_udp",
+        "start_ms": 1792841103334,
+        "elapsed_ms": 33.9,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 19,
+        "profile": "cloudflare_tcp",
+        "start_ms": 1792841103468,
+        "elapsed_ms": 36.51,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 19,
+        "profile": "google_udp",
+        "start_ms": 1792841103605,
+        "elapsed_ms": 37.98,
+        "success": true,
+        "error": null,
+        "rc": 0
+      },
+      {
+        "index": 19,
+        "profile": "cloudflare_udp",
+        "start_ms": 1792841103743,
+        "elapsed_ms": 52.77,
+        "success": true,
+        "error": null,
+        "rc": 0
+      }
+    ],
+    "summary": {
+      "stub_udp": {
+        "attempts": 20,
+        "success": 20,
+        "failures": 0,
+        "median_success_ms": 39.459999999999994,
+        "p90_success_ms": 49.85,
+        "max_attempt_ms": 371.95
+      },
+      "google_udp": {
+        "attempts": 20,
+        "success": 20,
+        "failures": 0,
+        "median_success_ms": 44.105000000000004,
+        "p90_success_ms": 59.86,
+        "max_attempt_ms": 88.62
+      },
+      "cloudflare_udp": {
+        "attempts": 20,
+        "success": 20,
+        "failures": 0,
+        "median_success_ms": 46.965,
+        "p90_success_ms": 53.1,
+        "max_attempt_ms": 55.62
+      },
+      "google_tcp": {
+        "attempts": 20,
+        "success": 20,
+        "failures": 0,
+        "median_success_ms": 43.255,
+        "p90_success_ms": 53.58,
+        "max_attempt_ms": 67.08
+      },
+      "cloudflare_tcp": {
+        "attempts": 20,
+        "success": 20,
+        "failures": 0,
+        "median_success_ms": 39.805,
+        "p90_success_ms": 60.72,
+        "max_attempt_ms": 78.77
+      }
+    }
+  },
+  "dns_harness_guard": {
+    "guard_rejected_unisolated_execution": true,
+    "resolv_conf_unchanged": true,
+    "harness_sha256": "f72d2def18861005672b1b068c8bcc4fd5117eb05587167b44da7d350b3aec2e"
+  },
+  "final_site": {
+    "at_ms": 1792842110116,
+    "production_worker_unchanged": {
+      "MainPID": "839",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "deea58bf0a594a9a86a0d422fec2e36289b1f7c97b3c4857aa0e313ba5d9163d"
+    },
+    "production_brain_sources_unchanged": 136,
+    "production_pm2_unchanged": [
+      {
+        "name": "p003-voice",
+        "pid": 1457259,
+        "restarts": 34,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5,
+        "status": "online"
+      }
+    ],
+    "candidate_source_files_checked": 146,
+    "candidate_worker_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+    "closed": true,
+    "p2_enabled": false,
+    "authorized_deadline_ms": 1792857540000,
+    "versions": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1792738945974
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 360,
+        "version_name": "1.2.2-canary.346",
+        "last_check_at": 1792841116700
+      }
+    ],
+    "memory_available_kb": "6174252",
+    "disk_free": 72400416768,
+    "candidate_health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792841756143,
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "window": {
+      "enabled": false,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1792857540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "worker_extra": {
+      "at_ms": 1792842115102,
+      "https_unauthenticated": {
+        "/routing": 401,
+        "/routing/ack": 401
+      },
+      "res_options": "timeout:1 attempts:2",
+      "timer": "NextElapseUSecRealtime=Sat 2026-10-24 15:59:00 UTC\nPersistent=yes\nActiveState=active\n"
+    },
+    "brain_extra": {
+      "at_ms": 1792842117412,
+      "isolated_stores": {
+        "devices.db": true,
+        "config.db": true,
+        "conversation.db": true,
+        "search.db": true,
+        "search-routing.db": true,
+        "profile.db": true,
+        "feedback.db": true,
+        "device-location.db": true
+      },
+      "accounts_db": "not_created_in_candidate",
+      "isolated_distinct_accounts": true,
+      "daily_counts": {
+        "BJP00326070803800006": 90,
+        "BJP00326060100100004": 57
+      },
+      "timer": "NextElapseUSecRealtime=Sat 2026-10-24 23:59:00 CST\nPersistent=yes\nActiveState=active\n"
+    },
+    "snapshot_at_ms": {
+      "worker": 1792841758708,
+      "brain": 1792841756164
+    },
+    "verifier_correction": "Initial verifier assumed accounts.db already existed and failed. Candidate inventory showed accounts.db not yet created; final check covers all eight actual stores, no symlink/hardlink, and two distinct active device account bindings. No server database was created or altered."
+  },
+  "release_metadata": {
+    "at_ms": 1792842130645,
+    "old_sha256": "34d19ab74f2afc0658cb62ca4bd359f77429ed444ea7c1208927e47675bac3c8",
+    "new_sha256": "09ff7c215fe3ba4b3a7cb70fabf1fb75a0ad93da7802a34e8dd4e027a31ee104",
+    "backup": "/opt/p003/search-canary-20261021/brain/backups/R15-release-status-before.json",
+    "updated_fields": [
+      "verified_at_ms",
+      "brain_commit",
+      "worker_commit",
+      "worker_sha256",
+      "worker_tests"
+    ],
+    "operator_confirmations_preserved": true,
+    "dispatch_open": false,
+    "ui_acceptance_remains_pending": true
+  },
+  "followup_not_deployed": {
+    "commit": "32a5c35f2389870a8b58a1bfe4c3b360eaabdc9d",
+    "tests": 423,
+    "preview_tests": 23,
+    "sha256": "590600a3ce64bc220d61b5edd9a40b87e00587266af27875ed21400748015bf5",
+    "deployment": "not_deployed",
+    "red_log_sha256": "dfeef12d7755e02341ab06f3f28e857e8d0cb02dc51c9c1f6ec2b9b5c01e131d",
+    "green_log_sha256": "37c7a6f85efdcb643043a7ec294a60a54b1caa6e9b836364989247b78919d5cf",
+    "build_log_sha256": "5edf396c1e4dc3d15925645f5231a4ea814b4addc73e427ee5e3b61e30290f30",
+    "changed_source_files": {
+      "src/search_dialogue.rs": {
+        "old": "f974b02e536d3e1ac322fec344325b924936c2a95deff853f7de034f9a84667e",
+        "new": "e9749ef9305da869cb7edc90a92e8251931966b84302814363f5150a429cf778"
+      }
+    },
+    "all_other_build_source_hashes_unchanged": true
+  },
+  "raw_private_artifact_hashes": {
+    "r15d-proof-evidence/rtc-private.json": "38766e2645653b205b05c176123e59b29aaf9361154988bad9875d5650bc504d",
+    "r15d-proof-evidence/ledger-private.json": "5da6188e14d56c827ac1c763d2fd9dd27f61e0b46950f6bd17a922f15f3d38cf",
+    "r15d-proof-evidence/p003-search-worker-full-private.json": "434e711df0b8522366ab90091be025517204a57e71e774bea47168e7cde14343",
+    "r15d-proof-evidence/brain-full-private.json": "0a851e2e0cbebc7b2c3c91d9bbf44cd6bb3a72b9f78158ad2ea58206cec21810"
+  }
+}

@@ -1,0 +1,1641 @@
+{
+  "schema": 1,
+  "final_version": "R15d",
+  "worker_candidate_sha256": "6914e1b3feff0916d9e1cd496a9bf279fb4d8beec1c2e489aeb2646c4be67b72",
+  "worker_baseline_sha256": "2fe12165dde501ef5cff86763b7d32d14302d04045300d22bba1b6c3e4cac17b",
+  "brain_source_commit": "6b6143c16fff2e96803fd9a509a2600dc97e1427",
+  "measure": "Worker commit to body first PCM; excludes search wait receipt; not physical hearing",
+  "gate_passed": false,
+  "limits": {
+    "minimum_valid_pairs": 20,
+    "max_planned_attempts": 30,
+    "median_delta_ms": 100,
+    "empirical_p90_delta_ms": 300
+  },
+  "normal_final": {
+    "summary": {
+      "samples": 44,
+      "paired": 22,
+      "median_delta_ms": 25.5,
+      "empirical_p90_delta_ms": 600,
+      "body_missing": {
+        "A": 0,
+        "B": 0
+      },
+      "input_missing": {
+        "A": 0,
+        "B": 0
+      },
+      "slow_gt3000_ms": [
+        {
+          "index": 13,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792837676",
+          "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+          "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+          "input_ready": 1,
+          "packets_before": 26,
+          "packets_after": 1164,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 3549,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 7260
+        },
+        {
+          "index": 15,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792837852",
+          "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+          "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+          "input_ready": 1,
+          "packets_before": 80,
+          "packets_after": 1193,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 5599,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 10770
+        },
+        {
+          "index": 29,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792839495",
+          "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+          "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+          "input_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1136,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 3049,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 8700
+        }
+      ],
+      "batch": "Result=success\nActiveState=inactive\nSubState=dead\n"
+    },
+    "samples": [
+      {
+        "index": 8,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837030",
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "recognized_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1115,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1048,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 12100
+      },
+      {
+        "index": 8,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837091",
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "recognized_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1146,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1048,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 14550
+      },
+      {
+        "index": 9,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837208",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 54,
+        "packets_after": 1134,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 12720
+      },
+      {
+        "index": 9,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837147",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1135,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1100,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 9240
+      },
+      {
+        "index": 10,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837263",
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "recognized_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1149,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1399,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 4250
+      },
+      {
+        "index": 10,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837325",
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "recognized_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1140,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1499,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 5300
+      },
+      {
+        "index": 11,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837441",
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "recognized_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "input_ready": 1,
+        "packets_before": 55,
+        "packets_after": 1148,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1048,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13320
+      },
+      {
+        "index": 11,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837380",
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "recognized_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1123,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 12830
+      },
+      {
+        "index": 12,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837496",
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1147,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1250,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 14070
+      },
+      {
+        "index": 12,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837558",
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "input_ready": 1,
+        "packets_before": 27,
+        "packets_after": 1117,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1149,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 14000
+      },
+      {
+        "index": 13,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837676",
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1164,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 3549,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 7260
+      },
+      {
+        "index": 13,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837612",
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "input_ready": 1,
+        "packets_before": 54,
+        "packets_after": 1235,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1299,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 7600
+      },
+      {
+        "index": 14,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837732",
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "recognized_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1213,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1300,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13960
+      },
+      {
+        "index": 14,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837795",
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "recognized_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1231,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1900,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13770
+      },
+      {
+        "index": 15,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837916",
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "input_ready": 1,
+        "packets_before": 56,
+        "packets_after": 1145,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13170
+      },
+      {
+        "index": 15,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837852",
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "input_ready": 1,
+        "packets_before": 80,
+        "packets_after": 1193,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 5599,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 10770
+      },
+      {
+        "index": 16,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792837971",
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "recognized_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1141,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1199,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 9970
+      },
+      {
+        "index": 16,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838033",
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "recognized_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1114,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1199,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 12370
+      },
+      {
+        "index": 17,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838148",
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "recognized_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1100,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1000,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 6400
+      },
+      {
+        "index": 17,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838087",
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "recognized_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1092,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 999,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 6990
+      },
+      {
+        "index": 18,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838202",
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "recognized_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1117,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1050,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 14180
+      },
+      {
+        "index": 18,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838263",
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "recognized_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1116,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 14320
+      },
+      {
+        "index": 19,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838379",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 79,
+        "packets_after": 1184,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1097,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 9680
+      },
+      {
+        "index": 19,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838318",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1110,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1050,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 9640
+      },
+      {
+        "index": 20,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838436",
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "recognized_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "input_ready": 1,
+        "packets_before": 186,
+        "packets_after": 1299,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1150,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 6390
+      },
+      {
+        "index": 20,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838500",
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "recognized_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1121,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1749,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 4960
+      },
+      {
+        "index": 21,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838618",
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "recognized_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1123,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13260
+      },
+      {
+        "index": 21,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838556",
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "recognized_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1148,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1098,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13580
+      },
+      {
+        "index": 22,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838672",
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1110,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1099,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13760
+      },
+      {
+        "index": 22,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838733",
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1137,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1449,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13460
+      },
+      {
+        "index": 23,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838850",
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "input_ready": 1,
+        "packets_before": 54,
+        "packets_after": 1202,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1000,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 4870
+      },
+      {
+        "index": 23,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838788",
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1161,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1050,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 6950
+      },
+      {
+        "index": 24,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792838907",
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "recognized_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "input_ready": 1,
+        "packets_before": 81,
+        "packets_after": 1255,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13960
+      },
+      {
+        "index": 24,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838972",
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "recognized_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "input_ready": 1,
+        "packets_before": 54,
+        "packets_after": 1232,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1549,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13240
+      },
+      {
+        "index": 25,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792839091",
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "input_ready": 1,
+        "packets_before": 54,
+        "packets_after": 1141,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1199,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13430
+      },
+      {
+        "index": 25,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839029",
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1120,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13540
+      },
+      {
+        "index": 26,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792839145",
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "recognized_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1116,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1200,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 9300
+      },
+      {
+        "index": 26,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839208",
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "recognized_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "input_ready": 1,
+        "packets_before": 27,
+        "packets_after": 1114,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1199,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13160
+      },
+      {
+        "index": 27,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792839324",
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "recognized_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1121,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 998,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 8030
+      },
+      {
+        "index": 27,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839263",
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "recognized_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1115,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1000,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 6610
+      },
+      {
+        "index": 28,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792839379",
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "recognized_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1142,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1149,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13410
+      },
+      {
+        "index": 28,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839440",
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "recognized_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1140,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1250,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 13810
+      },
+      {
+        "index": 29,
+        "arm": "A",
+        "room": "sn-BJP00326060100100004-1792839557",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 26,
+        "packets_after": 1111,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 1049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 10370
+      },
+      {
+        "index": 29,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839495",
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "recognized_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "input_ready": 1,
+        "packets_before": 53,
+        "packets_after": 1136,
+        "commit_count": 1,
+        "body_count": 1,
+        "commit_to_body_ms": 3049,
+        "eligible": true,
+        "runner_error": null,
+        "voiced_ms": 8700
+      }
+    ],
+    "pairs": [
+      {
+        "index": 8,
+        "paired": true,
+        "delta_ms": 0
+      },
+      {
+        "index": 9,
+        "paired": true,
+        "delta_ms": 51
+      },
+      {
+        "index": 10,
+        "paired": true,
+        "delta_ms": 100
+      },
+      {
+        "index": 11,
+        "paired": true,
+        "delta_ms": 1
+      },
+      {
+        "index": 12,
+        "paired": true,
+        "delta_ms": -101
+      },
+      {
+        "index": 13,
+        "paired": true,
+        "delta_ms": -2250
+      },
+      {
+        "index": 14,
+        "paired": true,
+        "delta_ms": 600
+      },
+      {
+        "index": 15,
+        "paired": true,
+        "delta_ms": 4550
+      },
+      {
+        "index": 16,
+        "paired": true,
+        "delta_ms": 0
+      },
+      {
+        "index": 17,
+        "paired": true,
+        "delta_ms": -1
+      },
+      {
+        "index": 18,
+        "paired": true,
+        "delta_ms": -1
+      },
+      {
+        "index": 19,
+        "paired": true,
+        "delta_ms": -47
+      },
+      {
+        "index": 20,
+        "paired": true,
+        "delta_ms": 599
+      },
+      {
+        "index": 21,
+        "paired": true,
+        "delta_ms": 49
+      },
+      {
+        "index": 22,
+        "paired": true,
+        "delta_ms": 350
+      },
+      {
+        "index": 23,
+        "paired": true,
+        "delta_ms": 50
+      },
+      {
+        "index": 24,
+        "paired": true,
+        "delta_ms": 500
+      },
+      {
+        "index": 25,
+        "paired": true,
+        "delta_ms": -150
+      },
+      {
+        "index": 26,
+        "paired": true,
+        "delta_ms": -1
+      },
+      {
+        "index": 27,
+        "paired": true,
+        "delta_ms": 2
+      },
+      {
+        "index": 28,
+        "paired": true,
+        "delta_ms": 101
+      },
+      {
+        "index": 29,
+        "paired": true,
+        "delta_ms": 2000
+      }
+    ]
+  },
+  "stage_review": {
+    "definition": "B arm decomposition for paired increases >=300ms; old R13 has no matching DNS instrumentation. No causal claim that search code caused each increase.",
+    "slow_increase_stages": [
+      {
+        "index": 14,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837795",
+        "delta_ms": 600,
+        "connections": [
+          {
+            "at_ms": 1792837801025,
+            "connect_id": "1",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "257",
+            "dns_ms": "16",
+            "tcp_ms": "56",
+            "tls_ws_ms": "184"
+          },
+          {
+            "at_ms": 1792837802954,
+            "connect_id": "3",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "243",
+            "dns_ms": "7",
+            "tcp_ms": "54",
+            "tls_ws_ms": "180"
+          },
+          {
+            "at_ms": 1792837802954,
+            "connect_id": "2",
+            "stage": "tcp",
+            "outcome": "cancelled",
+            "elapsed_ms": "895",
+            "dns_ms": "5"
+          }
+        ],
+        "ttfb_ms": 575,
+        "body_ready_since_turn_ms": 1866,
+        "before_tts_estimate_ms": 1291,
+        "prewarm_wait_ms": 0,
+        "provider_ttfb_ms": 575,
+        "first_pcm_ms": 575
+      },
+      {
+        "index": 15,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792837852",
+        "delta_ms": 4550,
+        "connections": [
+          {
+            "at_ms": 1792837861464,
+            "connect_id": "7",
+            "stage": "dns",
+            "outcome": "failed",
+            "elapsed_ms": "4005"
+          },
+          {
+            "at_ms": 1792837862117,
+            "connect_id": "8",
+            "stage": "dns",
+            "outcome": "failed",
+            "elapsed_ms": "4004"
+          },
+          {
+            "at_ms": 1792837862756,
+            "connect_id": "10",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "639",
+            "dns_ms": "398",
+            "tcp_ms": "72",
+            "tls_ws_ms": "168"
+          },
+          {
+            "at_ms": 1792837862757,
+            "connect_id": "9",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "643",
+            "dns_ms": "399",
+            "tcp_ms": "55",
+            "tls_ws_ms": "188"
+          }
+        ],
+        "ttfb_ms": 4985,
+        "body_ready_since_turn_ms": 5578,
+        "before_tts_estimate_ms": 593,
+        "prewarm_wait_ms": 4065,
+        "provider_ttfb_ms": 920,
+        "first_pcm_ms": 4985
+      },
+      {
+        "index": 20,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838500",
+        "delta_ms": 599,
+        "connections": [
+          {
+            "at_ms": 1792838504937,
+            "connect_id": "1",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "331",
+            "dns_ms": "104",
+            "tcp_ms": "52",
+            "tls_ws_ms": "174"
+          },
+          {
+            "at_ms": 1792838505686,
+            "connect_id": "2",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "295",
+            "dns_ms": "7",
+            "tcp_ms": "50",
+            "tls_ws_ms": "237"
+          }
+        ],
+        "ttfb_ms": 927,
+        "body_ready_since_turn_ms": 1714,
+        "before_tts_estimate_ms": 787,
+        "prewarm_wait_ms": 0,
+        "provider_ttfb_ms": 927,
+        "first_pcm_ms": 927
+      },
+      {
+        "index": 22,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838733",
+        "delta_ms": 350,
+        "connections": [
+          {
+            "at_ms": 1792838738044,
+            "connect_id": "1",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "432",
+            "dns_ms": "195",
+            "tcp_ms": "54",
+            "tls_ws_ms": "182"
+          },
+          {
+            "at_ms": 1792838738994,
+            "connect_id": "2",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "236",
+            "dns_ms": "5",
+            "tcp_ms": "52",
+            "tls_ws_ms": "178"
+          }
+        ],
+        "ttfb_ms": 288,
+        "body_ready_since_turn_ms": 1435,
+        "before_tts_estimate_ms": 1147,
+        "prewarm_wait_ms": 0,
+        "provider_ttfb_ms": 288,
+        "first_pcm_ms": 288
+      },
+      {
+        "index": 24,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792838972",
+        "delta_ms": 500,
+        "connections": [
+          {
+            "at_ms": 1792838979046,
+            "connect_id": "1",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "520",
+            "dns_ms": "11",
+            "tcp_ms": "57",
+            "tls_ws_ms": "451"
+          },
+          {
+            "at_ms": 1792838980242,
+            "connect_id": "2",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "504",
+            "dns_ms": "4",
+            "tcp_ms": "55",
+            "tls_ws_ms": "444"
+          }
+        ],
+        "ttfb_ms": 312,
+        "body_ready_since_turn_ms": 1524,
+        "before_tts_estimate_ms": 1212,
+        "prewarm_wait_ms": 0,
+        "provider_ttfb_ms": 312,
+        "first_pcm_ms": 312
+      },
+      {
+        "index": 29,
+        "arm": "B",
+        "room": "sn-BJP00326060100100004-1792839495",
+        "delta_ms": 2000,
+        "connections": [
+          {
+            "at_ms": 1792839499794,
+            "connect_id": "7",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "222",
+            "dns_ms": "12",
+            "tcp_ms": "48",
+            "tls_ws_ms": "161"
+          },
+          {
+            "at_ms": 1792839502559,
+            "connect_id": "8",
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "elapsed_ms": "217",
+            "dns_ms": "9",
+            "tcp_ms": "51",
+            "tls_ws_ms": "155"
+          }
+        ],
+        "ttfb_ms": 268,
+        "body_ready_since_turn_ms": 3039,
+        "before_tts_estimate_ms": 2771,
+        "prewarm_wait_ms": 0,
+        "provider_ttfb_ms": 268,
+        "first_pcm_ms": 268
+      }
+    ],
+    "same_version_repeats_diagnostic_only": [
+      {
+        "arm": "A",
+        "indices": [
+          8,
+          18
+        ],
+        "same_version_repeat_delta_ms": 2
+      },
+      {
+        "arm": "A",
+        "indices": [
+          9,
+          19
+        ],
+        "same_version_repeat_delta_ms": 48
+      },
+      {
+        "arm": "A",
+        "indices": [
+          10,
+          20
+        ],
+        "same_version_repeat_delta_ms": -249
+      },
+      {
+        "arm": "A",
+        "indices": [
+          11,
+          21
+        ],
+        "same_version_repeat_delta_ms": 1
+      },
+      {
+        "arm": "A",
+        "indices": [
+          12,
+          22
+        ],
+        "same_version_repeat_delta_ms": -151
+      },
+      {
+        "arm": "A",
+        "indices": [
+          13,
+          23
+        ],
+        "same_version_repeat_delta_ms": -2549
+      },
+      {
+        "arm": "A",
+        "indices": [
+          14,
+          24
+        ],
+        "same_version_repeat_delta_ms": -251
+      },
+      {
+        "arm": "A",
+        "indices": [
+          15,
+          25
+        ],
+        "same_version_repeat_delta_ms": 150
+      },
+      {
+        "arm": "A",
+        "indices": [
+          16,
+          26
+        ],
+        "same_version_repeat_delta_ms": 1
+      },
+      {
+        "arm": "A",
+        "indices": [
+          17,
+          27
+        ],
+        "same_version_repeat_delta_ms": -2
+      },
+      {
+        "arm": "A",
+        "indices": [
+          18,
+          28
+        ],
+        "same_version_repeat_delta_ms": 99
+      },
+      {
+        "arm": "A",
+        "indices": [
+          19,
+          29
+        ],
+        "same_version_repeat_delta_ms": -48
+      },
+      {
+        "arm": "B",
+        "indices": [
+          8,
+          18
+        ],
+        "same_version_repeat_delta_ms": 1
+      },
+      {
+        "arm": "B",
+        "indices": [
+          9,
+          19
+        ],
+        "same_version_repeat_delta_ms": -50
+      },
+      {
+        "arm": "B",
+        "indices": [
+          10,
+          20
+        ],
+        "same_version_repeat_delta_ms": 250
+      },
+      {
+        "arm": "B",
+        "indices": [
+          11,
+          21
+        ],
+        "same_version_repeat_delta_ms": 49
+      },
+      {
+        "arm": "B",
+        "indices": [
+          12,
+          22
+        ],
+        "same_version_repeat_delta_ms": 300
+      },
+      {
+        "arm": "B",
+        "indices": [
+          13,
+          23
+        ],
+        "same_version_repeat_delta_ms": -249
+      },
+      {
+        "arm": "B",
+        "indices": [
+          14,
+          24
+        ],
+        "same_version_repeat_delta_ms": -351
+      },
+      {
+        "arm": "B",
+        "indices": [
+          15,
+          25
+        ],
+        "same_version_repeat_delta_ms": -4550
+      },
+      {
+        "arm": "B",
+        "indices": [
+          16,
+          26
+        ],
+        "same_version_repeat_delta_ms": 0
+      },
+      {
+        "arm": "B",
+        "indices": [
+          17,
+          27
+        ],
+        "same_version_repeat_delta_ms": 1
+      },
+      {
+        "arm": "B",
+        "indices": [
+          18,
+          28
+        ],
+        "same_version_repeat_delta_ms": 201
+      },
+      {
+        "arm": "B",
+        "indices": [
+          19,
+          29
+        ],
+        "same_version_repeat_delta_ms": 1999
+      }
+    ],
+    "raw_sha256": "e97e643a9658d274fd68565b548b11c56efbd8f6d594c6951b4724190fa819b2"
+  },
+  "historical_attempts": {
+    "0": {
+      "outcome": "batch startup failed while health file absent; no usable pair",
+      "private_log_sha256": "2dfc12ec8712b06c424018546bd072063c510f2dd9dd690962ef1b9fee312554"
+    },
+    "1..4": {
+      "summary": {
+        "samples": 7,
+        "paired": 2,
+        "median_delta_ms": -979.0,
+        "empirical_p90_delta_ms": 145,
+        "body_missing": {
+          "A": 0,
+          "B": 0
+        },
+        "input_missing": {
+          "A": 0,
+          "B": 0
+        },
+        "slow_gt3000_ms": [
+          {
+            "index": 2,
+            "arm": "A",
+            "room": "sn-BJP00326060100100004-1792833935",
+            "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+            "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+            "input_ready": 1,
+            "packets_before": 27,
+            "packets_after": 1124,
+            "commit_count": 1,
+            "body_count": 1,
+            "commit_to_body_ms": 3451,
+            "eligible": true,
+            "runner_error": null,
+            "voiced_ms": 12650
+          }
+        ],
+        "batch": "Result=exit-code\nActiveState=failed\nSubState=failed\n"
+      },
+      "samples": [
+        {
+          "index": 1,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792833878",
+          "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+          "recognized_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+          "input_ready": 1,
+          "packets_before": 83,
+          "packets_after": 1229,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1004,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 13810
+        },
+        {
+          "index": 1,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792833815",
+          "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+          "recognized_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+          "input_ready": 1,
+          "packets_before": 26,
+          "packets_after": 1118,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1149,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 14070
+        },
+        {
+          "index": 2,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792833935",
+          "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+          "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+          "input_ready": 1,
+          "packets_before": 27,
+          "packets_after": 1124,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 3451,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 12650
+        },
+        {
+          "index": 2,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792833999",
+          "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+          "recognized_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+          "input_ready": 1,
+          "packets_before": 52,
+          "packets_after": 1145,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1348,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 13150
+        },
+        {
+          "index": 3,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792834117",
+          "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+          "recognized_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+          "input_ready": 1,
+          "packets_before": 84,
+          "packets_after": 1255,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 999,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 7090
+        },
+        {
+          "index": 3,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792834054",
+          "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+          "recognized_sha256": "2e74f0ac4eef4023d4a227da9d27ee3fdc32c36d7791798c414c08d562dcf9e0",
+          "input_ready": 1,
+          "packets_before": 26,
+          "packets_after": 1172,
+          "commit_count": 2,
+          "body_count": 1,
+          "commit_to_body_ms": null,
+          "eligible": false,
+          "runner_error": null,
+          "voiced_ms": 7280
+        },
+        {
+          "index": 4,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792834174",
+          "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+          "recognized_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+          "input_ready": 1,
+          "packets_before": 26,
+          "packets_after": 1225,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1050,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 14270
+        }
+      ],
+      "pairs": [
+        {
+          "index": 1,
+          "paired": true,
+          "delta_ms": 145
+        },
+        {
+          "index": 2,
+          "paired": true,
+          "delta_ms": -2103
+        },
+        {
+          "index": 3,
+          "paired": false,
+          "delta_ms": null
+        }
+      ]
+    },
+    "5..7": {
+      "summary": {
+        "samples": 6,
+        "paired": 3,
+        "median_delta_ms": 300,
+        "empirical_p90_delta_ms": 1300,
+        "body_missing": {
+          "A": 0,
+          "B": 0
+        },
+        "input_missing": {
+          "A": 0,
+          "B": 0
+        },
+        "slow_gt3000_ms": [],
+        "batch": "Result=exit-code\nActiveState=failed\nSubState=failed\n"
+      },
+      "samples": [
+        {
+          "index": 5,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792835134",
+          "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+          "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+          "input_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1149,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1048,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 14090
+        },
+        {
+          "index": 5,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792835071",
+          "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+          "recognized_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+          "input_ready": 1,
+          "packets_before": 79,
+          "packets_after": 1173,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1348,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 10910
+        },
+        {
+          "index": 6,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792835190",
+          "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+          "recognized_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+          "input_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1155,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1199,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 12350
+        },
+        {
+          "index": 6,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792835253",
+          "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+          "recognized_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+          "input_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1158,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 2499,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 12270
+        },
+        {
+          "index": 7,
+          "arm": "A",
+          "room": "sn-BJP00326060100100004-1792835371",
+          "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+          "recognized_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+          "input_ready": 1,
+          "packets_before": 26,
+          "packets_after": 1101,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1148,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 6610
+        },
+        {
+          "index": 7,
+          "arm": "B",
+          "room": "sn-BJP00326060100100004-1792835308",
+          "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+          "recognized_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+          "input_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1156,
+          "commit_count": 1,
+          "body_count": 1,
+          "commit_to_body_ms": 1298,
+          "eligible": true,
+          "runner_error": null,
+          "voiced_ms": 8280
+        }
+      ],
+      "pairs": [
+        {
+          "index": 5,
+          "paired": true,
+          "delta_ms": 300
+        },
+        {
+          "index": 6,
+          "paired": true,
+          "delta_ms": 1300
+        },
+        {
+          "index": 7,
+          "paired": true,
+          "delta_ms": 150
+        }
+      ]
+    }
+  },
+  "search_load": {
+    "status": "not_executed",
+    "reason": "normal latency and fixed-answer gates failed; preserved frozen profile, no expanded performance campaign this round"
+  },
+  "resume_load": {
+    "status": "not_executed",
+    "reason": "normal latency and fixed-answer gates failed; preserved frozen profile, no expanded performance campaign this round"
+  },
+  "off_on_busy_baseline": "not_covered; old-vs-new candidate is not live no-search comparison",
+  "physical_hearing": "pending"
+}
