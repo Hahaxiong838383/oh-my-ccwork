@@ -62,6 +62,7 @@ function extractText(content: unknown): string {
 }
 
 customLlmRoute.post('/chat/completions', async (c) => {
+  const requestStarted = performance.now();
   // 可选鉴权：配了 CUSTOM_LLM_API_KEY 就校验 Bearer（须与火山 CustomLLM.APIKey 一致）；未配则放行（本地验证方便）。
   const requiredKey = process.env.CUSTOM_LLM_API_KEY?.trim();
   if (requiredKey) {
@@ -255,7 +256,26 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
-    const searchClaimFilter = createSearchClaimFilter(searchPolicy.suppressOnboarding && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText));
+    const claimGuardEnabled = searchPolicy.suppressOnboarding && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText);
+    const searchClaimFilter = createSearchClaimFilter(claimGuardEnabled);
+    const modelStarted = performance.now();
+    let firstUpstreamAt: number | null = null;
+    let firstForwarded = false;
+    const observeFirstForwarded = (clean: string) => {
+      if (!clean || firstForwarded) return;
+      firstForwarded = true;
+      if (!process.env.SEARCH_CANARY_ROOT) return;
+      const now = performance.now();
+      console.info('[search-chat-timing]', JSON.stringify({
+        room: c.req.query('room'), response_id: id, claim_guard_enabled: claimGuardEnabled,
+        before_model_ms: Math.round(modelStarted - requestStarted),
+        upstream_first_delta_ms: firstUpstreamAt === null ? null : Math.round(firstUpstreamAt - modelStarted),
+        output_filter_hold_ms: firstUpstreamAt === null ? null : Math.round(now - firstUpstreamAt),
+        first_content_enqueued_ms: Math.round(now - requestStarted),
+        // SSE enqueue is not PCM publication or device playback. No content or credential is logged.
+        first_content_chars: clean.length,
+      }));
+    };
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
@@ -265,8 +285,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
         userText,
         history,
         onDelta: (delta) => {
+          if (delta && firstUpstreamAt === null) firstUpstreamAt = performance.now();
           const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(delta).text)); // EXIT → 括号 两级串联
           if (!clean) return; // 整个 delta 都在过滤器扣留中
+          observeFirstForwarded(clean);
           assistantText += clean;
           enqueue(chunk({ content: clean }, null));
         },
@@ -274,6 +296,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
           // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
           const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
           if (tail) {
+            observeFirstForwarded(tail);
             assistantText += tail;
             enqueue(chunk({ content: tail }, null));
           }

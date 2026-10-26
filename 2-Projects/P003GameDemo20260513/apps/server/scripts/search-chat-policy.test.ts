@@ -63,3 +63,54 @@ test('early clause release retains split-token execution protection',()=>{
  assert.equal(f.feed('我，帮你'),'');
  assert.ok(!f.feed('查询。').includes('我，帮你查询'));
 });
+
+test('R17 ordinary content streams before sentence end even when the input contains weather or temperature',()=>{
+ for(const chunks of [
+  ['烤箱温度要看食谱，','先找对应的温度刻度。'],
+  ['天气变化和空气流动有关，','冷热空气会影响天气。'],
+  ['树叶中有叶绿素，','它能帮助植物利用阳光。'],
+ ]){
+  const f=policy.createSearchClaimFilter(true);
+  assert.equal(f.feed(chunks[0]),chunks[0],'safe first clause must reach the existing Worker segmenter immediately');
+  assert.equal(f.feed(chunks[1])+f.flush(),chunks[1]);
+ }
+});
+
+test('R17 a later execution claim is withheld without withholding an earlier safe clause',()=>{
+ for(const claim of ['我，帮你查询天气。','小可已经搜索到了。','搜索已经完成了。','我现在暂时没有搜索能力。','等我长大再说。']){
+  for(let split=0;split<=claim.length;split++){
+   const f=policy.createSearchClaimFilter(true);const safe='先聊聊可爱的小猫，';assert.equal(f.feed(safe),safe);
+   const out=f.feed(claim.slice(0,split))+f.feed(claim.slice(split))+f.flush();
+   assert.ok(out.includes('具体问题'),claim);assert.ok(!out.includes('查询天气')&&!out.includes('搜索到了')&&!out.includes('搜索能力')&&!out.includes('长大'),out);
+  }
+ }
+});
+
+test('R17 safe streaming and filtering are independent of provider chunk sizes',()=>{
+ const safe=['你可以在官网查询开放时间。','恐龙生活在很久以前。','“我帮你查询”是一个例句。','大家喜欢小猫，当然也喜欢小狗。','我们继续聊你画的小猫吧。','小孩子喜欢画画。'];
+ const claims=['我帮你查天气。','我现在帮你在网上查询。','我暂时还没法查到天气。','稍等一下哦。','请稍等。','等我长大一些。','正在帮你搜索。','查询已经失败。'];
+ for(const text of [...safe,...claims]){
+  const full=policy.createSearchClaimFilter(true);const expected=full.feed(text)+full.flush();
+  for(let size=1;size<=5;size++){
+   const f=policy.createSearchClaimFilter(true);let out='';for(let i=0;i<text.length;i+=size)out+=f.feed(text.slice(i,i+size));out+=f.flush();assert.equal(out,expected,text);
+  }
+  if(safe.includes(text))assert.equal(expected,text);else assert.ok(expected.includes('具体问题'),text);
+ }
+});
+
+test('R17 bounded denial lookahead and overlapping modifier tokens retain the existing claim grammar',()=>{
+ for(const mods of ['','已经','刚刚','还没有','帮你在网上','马上'.repeat(6)]){
+  for(const actor of ['我','小可']){
+   const text=actor+mods+'查询天气。';const f=policy.createSearchClaimFilter(true);
+   let out='';for(const char of text)out+=f.feed(char);out+=f.flush();assert.ok(out.includes('具体问题'),text);assert.ok(!out.includes('查询天气'),text);
+  }
+ }
+ for(const gap of [0,1,17,18]){
+  const text='我'+'很'.repeat(gap)+'没有搜索能力。';const f=policy.createSearchClaimFilter(true);
+  let out='';for(const char of text)out+=f.feed(char);out+=f.flush();assert.ok(out.includes('具体问题'),text);assert.ok(!out.includes('没有搜索能力'),text);
+ }
+ const beyond='我'+'很'.repeat(19)+'没有搜索能力。';const g=policy.createSearchClaimFilter(true);
+ assert.equal(g.feed(beyond)+g.flush(),beyond,'do not broaden the original bounded denial rule');
+ const padded=policy.createSearchClaimFilter(true);const result=padded.feed('我'+' '.repeat(513)+'帮你查询天气。')+padded.flush();
+ assert.ok(result.includes('具体问题'));assert.ok(!result.includes('查询天气'));
+});
