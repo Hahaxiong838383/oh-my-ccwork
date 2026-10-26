@@ -63,6 +63,26 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual(self.api.calls, [])
         self.assertTrue(self.path.exists())
 
+    def test_verification_cannot_query_or_delete_a_real_device_record(self):
+        result = m.reconcile(self.path, {}, self.api, 90000, lambda *_: False,
+                             only_subject='BJP00399999999999901')
+        self.assertEqual(result['status'], 'invalid')
+        self.assertEqual(self.api.calls, [])
+        self.assertTrue(self.path.exists())
+
+    def test_verification_own_record_still_reconciles(self):
+        self.record['room'] = 'sn-BJP00399999999999901-123'
+        self.save()
+        class AbsentAPI:
+            def post(inner, method, data):
+                self.assertEqual(method, 'ListRooms')
+                self.assertEqual(data, {'names': [self.record['room']]})
+                return {'rooms': []}
+        result = m.reconcile(self.path, {}, AbsentAPI(), 90000, lambda *_: False,
+                             only_subject='BJP00399999999999901')
+        self.assertEqual(result['status'], 'absent')
+        self.assertFalse(self.path.exists())
+
     def test_deadline_deletes_and_confirms_absence(self):
         self.assertEqual(self.run_case(now=90000)['status'], 'deleted')
         self.assertFalse(self.path.exists())

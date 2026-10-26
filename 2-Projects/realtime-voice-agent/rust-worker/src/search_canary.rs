@@ -2,6 +2,19 @@
 use serde::Deserialize;
 pub const AGENT: &str = "p003-search-canary-20261021";
 pub const BASE: &str = "https://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1";
+pub const VERIFICATION_AGENT: &str = "p003-search-verification-20261026";
+const VERIFICATION_SN: &str = "BJP00399999999999901";
+const VERIFICATION_BASE: &str = "https://kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v1";
+#[derive(Clone, Copy)]
+struct Profile { base: &'static str, eot: &'static str, max_jobs: usize, verification: bool }
+fn profile(agent: &str) -> Option<Profile> {
+ match agent {
+  AGENT=>Some(Profile{base:BASE,eot:"/run/p003-search-canary/eot.sock",max_jobs:2,verification:false}),
+  VERIFICATION_AGENT=>Some(Profile{base:VERIFICATION_BASE,eot:"/run/p003-search-verification/eot.sock",max_jobs:1,verification:true}),
+  _=>None,
+ }
+}
+pub fn is_candidate(agent: &str) -> bool { profile(agent).is_some() }
 #[derive(Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Window { pub enabled: bool, #[serde(default)] pub sn: String, #[serde(default)] pub allowlist: Vec<String>, pub expires_at_ms: u64, pub generation: String }
@@ -15,6 +28,9 @@ fn allowed(w:&Window)->Vec<String> {
 fn matches_environment(w:&Window,raw:&str)->bool {
  let mut configured:Vec<String>=raw.split(',').map(str::to_owned).collect(); let mut list=allowed(w);
  if !valid_list(&configured) || list.is_empty(){return false};configured.sort();list.sort();configured==list
+}
+fn matches_profile(p:Profile,w:&Window,raw:&str)->bool {
+ matches_environment(w,raw) && (!p.verification || allowed(w)==[VERIFICATION_SN])
 }
 pub fn accepts(w: &Window, room: &str, metadata: &str, now: u64) -> bool {
  let Ok(m)=serde_json::from_str::<serde_json::Value>(metadata) else{return false};
@@ -32,21 +48,34 @@ pub fn window()->Option<Window> {
  let bytes=std::fs::read(p).ok()?;if bytes.len()>2048{return None};serde_json::from_slice(&bytes).ok()
 }
 pub fn job_allowed(agent:&str,room:&str,metadata:&str)->bool {
- agent!=AGENT || window().is_some_and(|w| matches_environment(&w,&std::env::var("P003_SEARCH_DEVICE_ALLOWLIST").unwrap_or_default()) && accepts(&w,room,metadata,now_ms()))
+ let Some(p)=profile(agent)else{return !agent.starts_with("p003-search-")};
+ window().is_some_and(|w| matches_profile(p,&w,&std::env::var("P003_SEARCH_DEVICE_ALLOWLIST").unwrap_or_default()) && accepts(&w,room,metadata,now_ms()))
 }
 pub fn validate_startup(agent:&str,max:usize)->anyhow::Result<()> {
- if agent!=AGENT{return Ok(())}
  let get=|k:&str|std::env::var(k).unwrap_or_default();
- anyhow::ensure!((1..=2).contains(&max) && valid_base(&get("LLM_BASE_URL")),"canary_config");
- anyhow::ensure!(window().is_some_and(|w| matches_environment(&w,&get("P003_SEARCH_DEVICE_ALLOWLIST"))),"canary_window");
- anyhow::ensure!(get("EOT_SOCK")=="/run/p003-search-canary/eot.sock","canary_sidecar_isolation");
+ validate_config(agent,max,&get,window().as_ref())
+}
+fn validate_config(agent:&str,max:usize,get:&impl Fn(&str)->String,w:Option<&Window>)->anyhow::Result<()> {
+ let Some(p)=profile(agent)else{anyhow::ensure!(!agent.starts_with("p003-search-"),"canary_agent");return Ok(())};
+ anyhow::ensure!((1..=p.max_jobs).contains(&max) && get("LLM_BASE_URL").trim_end_matches('/')==p.base,"canary_config");
+ anyhow::ensure!(w.is_some_and(|w| matches_profile(p,w,&get("P003_SEARCH_DEVICE_ALLOWLIST"))),"canary_window");
+ anyhow::ensure!(get("EOT_SOCK")==p.eot,"canary_sidecar_isolation");
  anyhow::ensure!(get("LLM_FALLBACK_BASE_URL").is_empty(),"canary_fallback_must_be_disabled");
+ if p.verification {
+  for (key,expected) in [
+   ("P003_SEARCH_CANARY_WINDOW_FILE","/opt/p003-search-verification-20261026/window.json"),
+   ("P003_SEARCH_CANARY_HEALTH_FILE","/run/p003-search-verification/health.json"),
+   ("P003_ROOM_CLEANUP_DIR","/opt/p003-search-verification-20261026/room-cleanup"),
+   ("P003_ROOM_CLEANUP_STATUS_FILE","/opt/p003-search-verification-20261026/cleanup-status.json"),
+   ("P003_ROOM_CLEANUP_V1","1"),
+  ] {anyhow::ensure!(get(key)==expected,"canary_verification_isolation");}
+ }
  Ok(())
 }
 static LAST_SIGNAL:std::sync::atomic::AtomicU64=std::sync::atomic::AtomicU64::new(0);
 pub fn signal(connected:bool){LAST_SIGNAL.store(if connected {now_ms()}else{0},std::sync::atomic::Ordering::Relaxed);}
 pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::WorkerState>) {
- if agent!=AGENT{return}
+ let Some(profile)=profile(&agent)else{return};
  let Ok(path)=std::env::var("P003_SEARCH_CANARY_HEALTH_FILE")else{return};
  let client=reqwest::Client::builder().timeout(std::time::Duration::from_secs(2)).redirect(reqwest::redirect::Policy::none()).build().expect("canary health client");
  let query=std::env::var("LLM_URL_QUERY").unwrap_or_default();
@@ -64,7 +93,7 @@ pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::Worker
    };
    payload["cleanup"]=crate::room_cleanup::health(&raw,now);
   }
-  let _=client.post(format!("{}/internal/canary-health",BASE)).header("x-p003-worker-token",&token).bearer_auth(&key).json(&payload).send().await;
+  let _=client.post(format!("{}/internal/canary-health",profile.base)).header("x-p003-worker-token",&token).bearer_auth(&key).json(&payload).send().await;
   let temp=format!("{}.tmp",path);
   if tokio::fs::write(&temp,payload.to_string()).await.is_ok(){let _=tokio::fs::rename(&temp,&path).await;}
  }
@@ -72,6 +101,43 @@ pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::Worker
 #[cfg(test)]
 mod tests {
  use super::*;
+ #[test] fn r17_verifier_cannot_bypass_device_and_window_guards() {
+  let agent="p003-search-verification-20261026";
+  assert!(!job_allowed(agent,"sn-BJP00326060100100004-123","{}"));
+  assert!(validate_startup(agent,3).is_err());
+ }
+ #[test] fn r17_unknown_reserved_agent_is_not_an_ordinary_worker() {
+  assert!(validate_startup("p003-search-verification-typo",1).is_err());
+  assert!(!job_allowed("p003-search-verification-typo","sn-BJP00326070803800006-123","{}"));
+  assert!(validate_startup("rust-worker",1).is_ok());
+  assert!(job_allowed("rust-worker","ordinary-room","{}"));
+ }
+ #[test] fn r17_verification_keeps_candidate_features_with_separate_identity_and_paths() {
+  assert!(is_candidate(AGENT));assert!(is_candidate(VERIFICATION_AGENT));assert!(!is_candidate("rust-worker"));
+  let w=Window{enabled:true,sn:VERIFICATION_SN.into(),allowlist:vec![],expires_at_ms:9000,generation:"verify".into()};
+  let env=std::collections::HashMap::from([
+   ("LLM_BASE_URL",VERIFICATION_BASE),("EOT_SOCK","/run/p003-search-verification/eot.sock"),
+   ("P003_SEARCH_DEVICE_ALLOWLIST",VERIFICATION_SN),
+   ("P003_SEARCH_CANARY_WINDOW_FILE","/opt/p003-search-verification-20261026/window.json"),
+   ("P003_SEARCH_CANARY_HEALTH_FILE","/run/p003-search-verification/health.json"),
+   ("P003_ROOM_CLEANUP_DIR","/opt/p003-search-verification-20261026/room-cleanup"),
+   ("P003_ROOM_CLEANUP_STATUS_FILE","/opt/p003-search-verification-20261026/cleanup-status.json"),
+   ("P003_ROOM_CLEANUP_V1","1"),
+  ]);
+  let get=|key:&str|env.get(key).copied().unwrap_or_default().to_owned();
+  assert!(validate_config(VERIFICATION_AGENT,1,&get,Some(&w)).is_ok());
+  assert!(validate_config(VERIFICATION_AGENT,2,&get,Some(&w)).is_err());
+  assert!(validate_config(AGENT,1,&get,Some(&w)).is_err());
+  for key in env.keys() {
+   let mixed=|k:&str|if k==*key {"wrong".into()}else{get(k)};
+   assert!(validate_config(VERIFICATION_AGENT,1,&mixed,Some(&w)).is_err(),"{key}");
+  }
+  let real=Window{sn:"BJP00326060100100004".into(),..w.clone()};
+  assert!(!matches_profile(profile(VERIFICATION_AGENT).unwrap(),&real,"BJP00326060100100004"));
+  let meta=serde_json::json!({"search_canary":{"sn":w.sn,"expires_at_ms":9000,"generation":"verify"}}).to_string();
+  assert!(accepts(&w,&format!("sn-{VERIFICATION_SN}-123"),&meta,1000));
+  assert!(!accepts(&w,&format!("sn-{VERIFICATION_SN}-123"),&meta,9000));
+ }
  #[test] fn exact_https_prefix_only() {
   assert!(valid_base(BASE)); assert!(valid_base(&(BASE.to_owned()+"/")));
   for s in ["http://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://evil.test/v1","https://kidshub-ai.hahaxiong.cc:444/_canary/search-20261021/v1","https://a:b@kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v10","https://kidshub-ai.hahaxiong.cc/v1"] {assert!(!valid_base(s));}

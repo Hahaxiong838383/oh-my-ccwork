@@ -469,7 +469,7 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) -> bool {
     // A candidate must not strand an otherwise healthy RTC client after one
     // transient control-plane failure. Reuse the client and bound the whole
     // attempt, including DNS; ordinary workers retain their single 5s attempt.
-    let candidate = config.agent_name == crate::search_canary::AGENT;
+    let candidate = crate::search_canary::is_candidate(&config.agent_name);
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     let client = CLIENT.get_or_init(|| reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())

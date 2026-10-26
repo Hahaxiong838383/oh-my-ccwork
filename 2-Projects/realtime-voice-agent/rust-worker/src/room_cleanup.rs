@@ -59,7 +59,7 @@ impl CloseIntent {
     }
 
     pub fn begin(agent: &str, room: &str, sid: &str, metadata: &str) -> Result<Option<Self>> {
-        if agent != crate::search_canary::AGENT
+        if !crate::search_canary::is_candidate(agent)
             || !std::env::var("P003_ROOM_CLEANUP_V1").is_ok_and(|v| v == "1") { return Ok(None); }
         let dir = PathBuf::from(std::env::var("P003_ROOM_CLEANUP_DIR")?);
         let m: serde_json::Value = serde_json::from_str(metadata)?;

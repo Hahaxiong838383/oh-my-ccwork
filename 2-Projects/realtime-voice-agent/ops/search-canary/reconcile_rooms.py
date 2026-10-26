@@ -61,7 +61,7 @@ def listed_room(api, name):
     return room['sid']
 
 
-def reconcile(path, window, api, now_ms, owner_alive):
+def reconcile(path, window, api, now_ms, owner_alive, only_subject=None):
     try:
         raw, record = read_record(path)
     except FileNotFoundError:
@@ -69,6 +69,8 @@ def reconcile(path, window, api, now_ms, owner_alive):
     except (ValueError, TypeError, OSError):
         return {'status': 'invalid'}
     sn = record['room'].split('-')[1]
+    if only_subject is not None and sn != only_subject:
+        return {'status': 'invalid'}
     allowed = window.get('allowlist') or [window.get('sn')]
     authorized = (window.get('enabled') is True and sn in allowed
                   and window.get('generation') == record['generation']
@@ -159,7 +161,16 @@ def main():
     p.add_argument('--window', type=Path, required=True)
     p.add_argument('--status', type=Path, required=True)
     args = p.parse_args()
-    if os.environ.get('AGENT_NAME') != 'p003-search-canary-20261021':
+    agent = os.environ.get('AGENT_NAME')
+    only_subject = None
+    if agent == 'p003-search-verification-20261026':
+        root = Path('/opt/p003-search-verification-20261026')
+        if ((args.queue, args.window, args.status) !=
+                (root / 'room-cleanup', root / 'window.json', root / 'cleanup-status.json')
+                or any(p.resolve() != p for p in (args.queue, args.window, args.status))):
+            raise ValueError('verification_paths')
+        only_subject = 'BJP00399999999999901'
+    elif agent != 'p003-search-canary-20261021':
         raise ValueError('candidate_only')
     if not args.queue.is_absolute() or args.queue.resolve() != args.queue:
         raise ValueError('invalid_queue_directory')
@@ -181,7 +192,7 @@ def main():
         # One request stream, bounded records per tick. Jobs never wait on it.
         records = sorted(args.queue.glob('*.json'), key=lambda f: f.lstat().st_mtime)
         for path in records[:8]:
-            result = reconcile(path, window, api, now, process_alive)
+            result = reconcile(path, window, api, now, process_alive, only_subject=only_subject)
             key = result['status']
             counts[key] = counts.get(key, 0) + 1
             # Rotate unresolved and live records, so a quiet old room cannot

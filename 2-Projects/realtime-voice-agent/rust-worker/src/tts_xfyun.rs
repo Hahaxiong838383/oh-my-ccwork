@@ -268,7 +268,7 @@ async fn connect_observed(url: String) -> Result<Warm> {
         let request = url.into_client_request().map_err(|_| anyhow::anyhow!("invalid_request"))?;
         let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
         let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str() == Some("wss") {443} else {80});
-        let socket = if std::env::var("AGENT_NAME").is_ok_and(|v|v==crate::search_canary::AGENT)
+        let socket = if std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v))
             && std::env::var("P003_ASYNC_DNS_V1").is_ok_and(|v|v=="1") {
             trace.stage="resolve_tcp";
             let connected=crate::voice_connect::connect(&host,port).await?;

@@ -659,7 +659,7 @@ pub struct SttPre {
 pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
     let mut stt_cfg = SttConfig::from_env();
     stt_cfg.preserve_search_ack(
-        std::env::var("AGENT_NAME").is_ok_and(|v|v==crate::search_canary::AGENT),
+        std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v)),
         std::env::var("P003_SEARCH_ACK_ASR_V1").is_ok_and(|v|v=="1"));
     if crate::device_intent::asr_nonstream_enabled_for(room_name) {
         stt_cfg.nonstream = true;

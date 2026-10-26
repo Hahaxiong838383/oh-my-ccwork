@@ -34,7 +34,8 @@ impl Api {
             || url.host_str() != Some("kidshub-ai.hahaxiong.cc")
             || url.username() != ""
             || url.password().is_some()
-            || !["/v1/internal/search-tasks", "/_canary/search-20261021/v1/internal/search-tasks"].contains(&url.path())
+            || !["/v1/internal/search-tasks", "/_canary/search-20261021/v1/internal/search-tasks",
+                "/_canary/search-verification-20261026/v1/internal/search-tasks"].contains(&url.path())
             || url.fragment().is_some()
         {
             return None;
@@ -947,6 +948,26 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    async fn r17_verification_task_client_uses_the_real_background_path() {
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let mut cfg=LlmConfig{base_url:"https://kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v1".into(),
+            api_key:"test".into(),model:"test".into(),instructions:String::new(),thinking:"off".into(),strip_leading_filler:false,
+            url_query:"token=synthetic".into(),room:"sn-BJP00399999999999901-123".into()};
+        let api=Api::new(&cfg).expect("verification must exercise search, not silently fall back to ordinary chat");
+        assert_eq!(api.url.path(),"/_canary/search-verification-20261026/v1/internal/search-tasks");
+        assert_eq!(api.url.query_pairs().find(|(k,_)|k=="room").unwrap().1,cfg.room);
+        for base in ["https://kidshub-ai.hahaxiong.cc/v1",crate::search_canary::BASE] {
+            cfg.base_url=base.into();assert!(Api::new(&cfg).is_some());
+        }
+        for base in ["http://kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v1",
+            "https://kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v10",
+            "https://kidshub-ai.hahaxiong.cc:444/_canary/search-verification-20261026/v1",
+            "https://test:secret@kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v1",
+            "https://evil.test/_canary/search-verification-20261026/v1"] {
+            cfg.base_url=base.into();assert!(Api::new(&cfg).is_none());
+        }
+    }
     #[tokio::test]
     async fn r14_preparation_cue_does_not_change_running_query_to_interrupted(){
         let(mut s,_,_)=test_session();s.context_v1=true;
