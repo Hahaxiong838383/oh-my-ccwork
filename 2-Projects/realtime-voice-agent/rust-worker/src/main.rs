@@ -23,6 +23,8 @@ mod eot_snapshot;
 mod filler;
 mod gate;
 mod job;
+mod room_cleanup;
+mod voice_connect;
 mod llm;
 mod ordered_pcm;
 mod pipeline;

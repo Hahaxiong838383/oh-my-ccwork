@@ -78,6 +78,14 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         .map(|r| r.name.clone())
         .unwrap_or_default();
     anyhow::ensure!(crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata), "canary_job_rejected");
+    let sid = job.room.as_ref().map(|r| r.sid.as_str()).unwrap_or_default();
+    let mut close_intent = match crate::room_cleanup::CloseIntent::begin(&config.agent_name, &room_name, sid, &job.metadata) {
+        Ok(intent) => intent,
+        Err(_) => {
+            let _ = delete_room(&config, &url, &room_name).await;
+            anyhow::bail!("candidate room cleanup registration failed");
+        }
+    };
     let t0 = Instant::now();
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
     let issue_ms = issue_to_assignment_ms(&room_name, meta.issue_ts_ms);
@@ -392,10 +400,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     if let Some(t) = pipeline_task.take() {
         close_pipeline(t,if graceful_search_close{pipeline_close_tx.take()}else{None}).await;
     }
+    if let Some(intent) = close_intent.as_mut() {
+        if intent.closing().is_err() {
+            tracing::error!(room=%room_name, "room cleanup closing record failed");
+        }
+    }
     room.close().await.ok();
     // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
     // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
-    delete_room(&config, &url, &room_name).await;
+    let _ = delete_room(&config, &url, &room_name).await;
+    // A 2xx is not the device's disconnect receipt. Keep the durable intent
+    // until the independent reconciler verifies that this exact SID is gone.
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
 }
@@ -433,9 +448,9 @@ fn unix_ms() -> i64 {
         .unwrap_or(0)
 }
 
-async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
+async fn delete_room(config: &Config, ws_url: &str, room_name: &str) -> bool {
     if room_name.is_empty() {
-        return;
+        return false;
     }
     let http_url = ws_url
         .replacen("wss://", "https://", 1)
@@ -444,35 +459,118 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) {
         Ok(t) => t,
         Err(e) => {
             tracing::warn!(error = %e, "delete room: 签发 server token 失败");
-            return;
+            return false;
         }
     };
     let url = format!(
         "{}/twirp/livekit.RoomService/DeleteRoom",
         http_url.trim_end_matches('/')
     );
-    let client = reqwest::Client::new();
-    match client
+    // A candidate must not strand an otherwise healthy RTC client after one
+    // transient control-plane failure. Reuse the client and bound the whole
+    // attempt, including DNS; ordinary workers retain their single 5s attempt.
+    let candidate = config.agent_name == crate::search_canary::AGENT;
+    static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
+    let client = CLIENT.get_or_init(|| reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .retry(reqwest::retry::never())
+        .build().expect("room cleanup HTTP client"));
+    let attempts = if candidate { 3 } else { 1 };
+    for attempt in 1..=attempts {
+    let result = client
         .post(&url)
-        .bearer_auth(jwt)
+        .bearer_auth(&jwt)
         .json(&serde_json::json!({"room": room_name}))
-        .timeout(std::time::Duration::from_secs(5))
+        .timeout(std::time::Duration::from_secs(if candidate { 2 } else { 5 }))
         .send()
-        .await
-    {
+        .await;
+    let retryable = match result {
         Ok(resp) if resp.status().is_success() => {
-            info!(room = %room_name, "room deleted (delete_room_on_close)");
+            info!(room = %room_name, attempt, "room deleted (delete_room_on_close)");
+            return true;
         }
         Ok(resp) => {
-            tracing::warn!(room = %room_name, status = %resp.status(), "delete room 非 2xx");
+            let status = resp.status();
+            tracing::warn!(room = %room_name, attempt, status = %status, "delete room 非 2xx");
+            status.is_server_error() || status.as_u16() == 429 || status.as_u16() == 408
         }
-        Err(e) => tracing::warn!(room = %room_name, error = %e, "delete room 请求失败"),
+        Err(e) => {
+            // Never log the request or error chain: either can contain secrets.
+            tracing::warn!(room = %room_name, attempt, timeout = e.is_timeout(),
+                connect = e.is_connect(), "delete room 请求失败");
+            !e.is_builder()
+        }
+    };
+    if !retryable || attempt == attempts { break; }
+    tokio::time::sleep(std::time::Duration::from_millis(250 * attempt)).await;
     }
+    tracing::error!(room = %room_name, "room cleanup incomplete; client disconnect not confirmed");
+    false
 }
 
 #[cfg(test)]
 mod tests {
     use super::issue_to_assignment_ms;
+
+    // Real HTTP boundary: keep transport/status behavior in the production path.
+    async fn cleanup_responses(statuses: &[u16], candidate: bool) -> (usize, bool) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("ws://{}", listener.local_addr().unwrap());
+        let attempts = Arc::new(AtomicUsize::new(0));
+        let observed = attempts.clone();
+        let statuses = statuses.to_vec();
+        let server = tokio::spawn(async move {
+            loop {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                loop {
+                    let mut chunk = [0; 2048];
+                    let n = socket.read(&mut chunk).await.unwrap();
+                    assert!(n > 0 && request.len() + n <= 8192);
+                    request.extend_from_slice(&chunk[..n]);
+                    let text = String::from_utf8_lossy(&request);
+                    if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                        let len = head.lines().find_map(|line| line.to_ascii_lowercase().strip_prefix("content-length: ").and_then(|v| v.parse::<usize>().ok())).unwrap();
+                        if body.len() >= len { break; }
+                    }
+                }
+                let request = String::from_utf8_lossy(&request);
+                assert!(request.starts_with("POST /twirp/livekit.RoomService/DeleteRoom "));
+                assert!(request.contains("\"room\":\"r16-test-room\""));
+                let i = observed.fetch_add(1, Ordering::SeqCst);
+                let status = statuses[i.min(statuses.len() - 1)];
+                if status == 0 { continue; } // peer drops the connection
+                let response = format!("HTTP/1.1 {status} Test\r\nContent-Length: 2\r\nConnection: close\r\nLocation: /unexpected\r\n\r\n{{}}");
+                socket.write_all(response.as_bytes()).await.unwrap();
+            }
+        });
+        let cfg = crate::config::Config { ws_url: url.clone(), api_key: "test-key".into(),
+            api_secret: "test-secret".into(), agent_name: if candidate {crate::search_canary::AGENT} else {"rust-worker"}.into(), max_jobs: 1 };
+        let success = super::delete_room(&cfg, &url, "r16-test-room").await;
+        server.abort();
+        let end = server.await;
+        assert!(end.is_err_and(|e| e.is_cancelled()));
+        (attempts.load(Ordering::SeqCst), success)
+    }
+    #[tokio::test]
+    async fn r16_delete_room_recovers_transient_http_failure() {
+        assert_eq!(cleanup_responses(&[503, 503, 200], true).await, (3, true));
+        assert_eq!(cleanup_responses(&[0, 200], true).await, (2, true));
+    }
+    #[tokio::test]
+    async fn r16_delete_room_bounds_failure_and_never_retries_auth_or_redirect() {
+        assert_eq!(cleanup_responses(&[503], true).await, (3, false));
+        assert_eq!(cleanup_responses(&[401], true).await, (1, false));
+        assert_eq!(cleanup_responses(&[403], true).await, (1, false));
+        assert_eq!(cleanup_responses(&[302], true).await, (1, false));
+    }
+    #[tokio::test]
+    async fn r16_ordinary_worker_keeps_single_attempt() {
+        assert_eq!(cleanup_responses(&[503, 200], false).await, (1, false));
+    }
     #[tokio::test]
     async fn r14_job_close_notifies_cleanup_and_still_bounds_a_stuck_pipeline(){
         let(tx,rx)=tokio::sync::oneshot::channel();let(done,proof)=tokio::sync::oneshot::channel();

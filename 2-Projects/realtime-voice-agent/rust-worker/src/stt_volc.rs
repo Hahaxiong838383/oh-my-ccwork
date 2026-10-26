@@ -61,6 +61,11 @@ pub struct SttConfig {
 pub const ASYNC_ASR_URL: &str = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async";
 
 impl SttConfig {
+    /// Candidate-only: retain short backchannels instead of asking DDC to
+    /// delete them. Does not change model, endpoint, endpointing or hotwords.
+    pub fn preserve_search_ack(&mut self, candidate: bool, enabled: bool) {
+        if candidate && enabled { self.enable_ddc=false; }
+    }
     pub fn from_env() -> Self {
         Self {
             app_id: std::env::var("VOLC_APP_ID").unwrap_or_default(),
@@ -357,6 +362,16 @@ mod tests {
     }
 
     /// 二遍识别开关进 init payload(灰度命中时 pipeline 置 true+切 async 端点)。
+    #[test]
+    fn r16_search_ack_preservation_keeps_ordinary_asr_configuration() {
+        for (candidate, enabled) in [(false,false),(false,true),(true,false),(true,true)] {
+            let mut c=cfg(vec!["停".into(),"对".into()]);c.enable_ddc=true;
+            let before=build_init_payload(&c,"test");c.preserve_search_ack(candidate,enabled);
+            let after=build_init_payload(&c,"test");let mut expected=before;
+            if candidate&&enabled {expected["request"]["enable_ddc"]=false.into();}
+            assert_eq!(after,expected);
+        }
+    }
     #[test]
     fn init_payload_nonstream_flag() {
         let c = cfg(vec![]);

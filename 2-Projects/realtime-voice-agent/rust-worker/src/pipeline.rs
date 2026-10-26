@@ -658,6 +658,9 @@ pub struct SttPre {
 /// 老 bigmodel 静默忽略此参数)。非命中房间零变化。
 pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
     let mut stt_cfg = SttConfig::from_env();
+    stt_cfg.preserve_search_ack(
+        std::env::var("AGENT_NAME").is_ok_and(|v|v==crate::search_canary::AGENT),
+        std::env::var("P003_SEARCH_ACK_ASR_V1").is_ok_and(|v|v=="1"));
     if crate::device_intent::asr_nonstream_enabled_for(room_name) {
         stt_cfg.nonstream = true;
         stt_cfg.url = stt_volc::ASYNC_ASR_URL.to_string();
@@ -2986,7 +2989,10 @@ impl Orchestrator {
                     turn.ctl.resume();
                     self.resume_grace = Some(now + Duration::from_millis(250));
                     self.set_state(AgentState::Speaking);
-                    info!(room = %self.room_name, "resumed false interrupted speech");
+                    info!(room = %self.room_name, search_result=self.search_turn,
+                        pending_chars=self.turn_gate.pending().chars().count(),
+                        interim_chars=self.latest_interim.chars().count(),
+                        "resumed false interrupted speech");
                 }
                 self.contract.false_interruption();
             }

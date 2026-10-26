@@ -22,7 +22,7 @@ pub fn accepts(w: &Window, room: &str, metadata: &str, now: u64) -> bool {
  if !allowed(w).iter().any(|s|s==sn){return false}
  let Some(suffix)=room.strip_prefix(&format!("sn-{}-",sn)) else{return false};
  w.enabled && !suffix.is_empty() && suffix.len()<=20
- && suffix.bytes().all(|b|b.is_ascii_digit()) && w.expires_at_ms>now && w.expires_at_ms-now<=72*3600_000
+ && suffix.bytes().all(|b|b.is_ascii_digit()) && w.expires_at_ms>now && w.expires_at_ms-now<=168*3600_000
  && c["expires_at_ms"].as_u64()==Some(w.expires_at_ms)
  && c["generation"].as_str()==Some(w.generation.as_str()) && !w.generation.is_empty()
 }
@@ -57,7 +57,13 @@ pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::Worker
  loop {
   timer.tick().await;
   let now=now_ms();let last=LAST_SIGNAL.load(std::sync::atomic::Ordering::Relaxed);
-  let payload=serde_json::json!({"agent":agent,"at_ms":now,"registered":last>0&&now.saturating_sub(last)<45000,"jobs":state.active_jobs.load(std::sync::atomic::Ordering::Relaxed),"ordered_pcm_v1":true,"generation":generation});
+  let mut payload=serde_json::json!({"agent":agent,"at_ms":now,"registered":last>0&&now.saturating_sub(last)<45000,"jobs":state.active_jobs.load(std::sync::atomic::Ordering::Relaxed),"ordered_pcm_v1":true,"generation":generation});
+  if std::env::var("P003_ROOM_CLEANUP_V1").is_ok_and(|v|v=="1") {
+   let raw=match std::env::var("P003_ROOM_CLEANUP_STATUS_FILE") {
+    Ok(path)=>tokio::fs::read_to_string(path).await.unwrap_or_default(),Err(_)=>String::new(),
+   };
+   payload["cleanup"]=crate::room_cleanup::health(&raw,now);
+  }
   let _=client.post(format!("{}/internal/canary-health",BASE)).header("x-p003-worker-token",&token).bearer_auth(&key).json(&payload).send().await;
   let temp=format!("{}.tmp",path);
   if tokio::fs::write(&temp,payload.to_string()).await.is_ok(){let _=tokio::fs::rename(&temp,&path).await;}
@@ -70,8 +76,8 @@ mod tests {
   assert!(valid_base(BASE)); assert!(valid_base(&(BASE.to_owned()+"/")));
   for s in ["http://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://evil.test/v1","https://kidshub-ai.hahaxiong.cc:444/_canary/search-20261021/v1","https://a:b@kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1","https://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v10","https://kidshub-ai.hahaxiong.cc/v1"] {assert!(!valid_base(s));}
  }
- #[test] fn explicitly_bounded_full_day_window() {
-  let mut w=Window{allowlist:vec![],enabled:true,sn:"BJP00326070803800006".into(),expires_at_ms:1000+72*3600_000,generation:"test".into()};
+ #[test] fn r16_explicitly_bounded_week_window() {
+  let mut w=Window{allowlist:vec![],enabled:true,sn:"BJP00326070803800006".into(),expires_at_ms:1000+168*3600_000,generation:"test".into()};
   let meta=|w:&Window|serde_json::json!({"search_canary":{"sn":w.sn,"expires_at_ms":w.expires_at_ms,"generation":w.generation}}).to_string();
   let room="sn-BJP00326070803800006-123";
   assert!(accepts(&w,room,&meta(&w),1000));

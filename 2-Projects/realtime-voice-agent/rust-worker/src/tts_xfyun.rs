@@ -260,21 +260,31 @@ async fn connect_observed(url: String) -> Result<Warm> {
         id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
         stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled",
     };
-    // Match tokio-tungstenite 0.30's connector: same address order, OS resolver,
+    // Ordinary workers retain the OS connector; candidate DNS racing is gated.
+    // Both retain
     // TCP defaults, TLS/SNI/certificate validation and one overall 10s budget.
     // TLS and WebSocket stay one measured stage; do not invent separate timings.
     let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
         let request = url.into_client_request().map_err(|_| anyhow::anyhow!("invalid_request"))?;
         let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
         let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str() == Some("wss") {443} else {80});
-        trace.stage = "dns"; let t = std::time::Instant::now();
-        let addresses: Vec<_> = tokio::net::lookup_host((host.as_str(), port)).await
-            .map_err(|_| anyhow::anyhow!("resolve_failed"))?.collect();
-        trace.dns_ms = Some(t.elapsed().as_millis() as u64);
-        trace.stage = "tcp"; let t = std::time::Instant::now();
-        let socket = tokio::net::TcpStream::connect(addresses.as_slice()).await
-            .map_err(|_| anyhow::anyhow!("connect_failed"))?;
-        trace.tcp_ms = Some(t.elapsed().as_millis() as u64);
+        let socket = if std::env::var("AGENT_NAME").is_ok_and(|v|v==crate::search_canary::AGENT)
+            && std::env::var("P003_ASYNC_DNS_V1").is_ok_and(|v|v=="1") {
+            trace.stage="resolve_tcp";
+            let connected=crate::voice_connect::connect(&host,port).await?;
+            trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
+            connected.socket
+        } else {
+            trace.stage = "dns"; let t = std::time::Instant::now();
+            let addresses: Vec<_> = tokio::net::lookup_host((host.as_str(), port)).await
+                .map_err(|_| anyhow::anyhow!("resolve_failed"))?.collect();
+            trace.dns_ms = Some(t.elapsed().as_millis() as u64);
+            trace.stage = "tcp"; let t = std::time::Instant::now();
+            let socket = tokio::net::TcpStream::connect(addresses.as_slice()).await
+                .map_err(|_| anyhow::anyhow!("connect_failed"))?;
+            trace.tcp_ms = Some(t.elapsed().as_millis() as u64);
+            socket
+        };
         trace.stage = "tls_ws"; let t = std::time::Instant::now();
         let (ws, _) = tokio_tungstenite::client_async_tls_with_config(request, socket, None, None).await
             .map_err(|e| {

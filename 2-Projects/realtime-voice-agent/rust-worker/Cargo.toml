@@ -10,6 +10,7 @@ bytes = "1.12.1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 flate2 = "1.1.9"
 hmac = "0.12.1"
+hickory-resolver = { version = "=0.26.3", default-features = false, features = ["system-config", "tokio"] }
 futures-util = "0.3.34"
 hound = "3.5.1"
 jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
