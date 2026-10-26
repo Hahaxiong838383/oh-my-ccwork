@@ -1,0 +1,14 @@
+{
+  "seed": "0x260326",
+  "inputs": 2660,
+  "chunk_schedules": 6,
+  "attempts": 15960,
+  "blocked_inputs": 1523,
+  "ordinary_inputs": 1137,
+  "failures": [],
+  "source_commit": "d52da9182222127b3e618fe1812397cb82ddae32",
+  "baseline_commit": "b6ed0f46a2a8adc7479b206af8c21d9f7a55b674",
+  "script_sha256": "a59b00a2aa7482f6125ade36deb061812f101fdd77a0741cf8799b05dca0a69f",
+  "scope": "offline generated text with six SSE chunk schedules; preserves ordinary text and detects original claim grammar; no cloud/RTC latency claim",
+  "cloud_deployed": false
+}

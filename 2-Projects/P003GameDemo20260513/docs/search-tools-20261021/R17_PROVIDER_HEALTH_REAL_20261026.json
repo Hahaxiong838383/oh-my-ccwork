@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "stdout": "[race] won_by=main ttft_ms=733\nSAFE_RESULT {\"preflight\":{\"http_status\":400,\"code\":\"InvalidSubscription\",\"public_message\":\"模型服务暂时不可用\"},\"chars\":3,\"done\":true,\"error\":null,\"health\":{\"main\":{\"at_ms\":1792988814448,\"outcome\":\"content\",\"http_status\":null,\"code\":null,\"stale\":false},\"fallback\":{\"at_ms\":1792988813790,\"outcome\":\"failure\",\"http_status\":400,\"code\":\"InvalidSubscription\",\"stale\":false},\"degraded\":true}}\n",
+  "stderr": "[race-provider] {\"route\":\"fallback\",\"at_ms\":1792988813790,\"outcome\":\"failure\",\"http_status\":400,\"code\":\"InvalidSubscription\"}\n",
+  "code_commit": "2c1dfc13b03d0e230f5c6e6b284fe9d5889c9b7a"
+}

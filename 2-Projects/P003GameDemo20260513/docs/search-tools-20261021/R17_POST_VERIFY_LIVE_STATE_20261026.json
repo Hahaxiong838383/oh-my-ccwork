@@ -1,0 +1,84 @@
+{
+  "brain": {
+    "at_ms": 1792988664196,
+    "candidate": {
+      "p003.search.tools": "0",
+      "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.expires_at_ms": "1793589540000",
+      "p003.search.enabled": "1"
+    },
+    "primary": {
+      "p003.search.canary.selected_sn": "BJP00326060100100004",
+      "p003.search.canary.enabled": "1",
+      "p003.search.canary.expires_at_ms": "1793589540000",
+      "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.agent": "p003-search-canary-20261021",
+      "p003.search.canary.started_at_ms": "1792984740000",
+      "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}"
+    },
+    "versions": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1792738945974
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 360,
+        "version_name": "1.2.2-canary.346",
+        "last_check_at": 1792981468479
+      }
+    ],
+    "today_task_counts": {
+      "BJP00326060100100004": 66,
+      "BJP00326070803800006": 91
+    },
+    "health": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": false
+    },
+    "file_hashes": {
+      "src/search-canary-guard.ts": "9e8cb60e76393cb1c6dd8eee442d037c53459ceda675c3fa35a18fadc6bde1e3",
+      "src/search-canary-main.ts": "36009feabc1b99d10952479bf85ec65866f136aa51c949ed8cd110de90a08939",
+      "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+      "src/tools/search-executor.ts": "b12d796fd75df41c4e56804fc940837b6659171624aca1ad88470809a013b6a8",
+      "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+      "src/tools/search-runtime.ts": "18d3d0956707cf82810a6ae1b243ea28b580380311935227344960933417a740",
+      "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed"
+    },
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\nUnitFileState=enabled\n"
+  },
+  "worker": {
+    "at_ms": 1792988664316,
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792988664123,
+      "cleanup": {
+        "at_ms": 1792988659849,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "binary_sha256": "c052c798e405b3cb31b6d0fe90da4b7c04e8d78e87dfb481733ddb9262a555a9",
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\nUnitFileState=enabled\n"
+  },
+  "r16p_brain_files_match": true
+}
