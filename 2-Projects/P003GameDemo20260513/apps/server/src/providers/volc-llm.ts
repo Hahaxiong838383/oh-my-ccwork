@@ -1,5 +1,6 @@
 import type { ChatHistoryTurn } from './gemini-llm.js';
 import type { DeepseekLlmClient } from './deepseek-llm.js';
+import { ProviderHttpError } from './provider-health.js';
 
 /**
  * 火山方舟 Coding 网关 LLM（doubao-seed-2.0-lite，2026-08-17 P1 接入）：
@@ -71,7 +72,7 @@ class VolcLlmClientImpl implements DeepseekLlmClient {
 
       if (!res.ok) {
         const errText = await res.text();
-        throw new Error(`火山 LLM 请求失败 status=${res.status} ${errText.slice(0, 200)}`);
+        throw new ProviderHttpError(res.status, errText);
       }
 
       if (!res.body) {

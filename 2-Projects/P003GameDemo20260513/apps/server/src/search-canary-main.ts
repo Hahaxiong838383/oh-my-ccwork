@@ -11,8 +11,10 @@ const {configStore}=await import('./config-store.js');
 const {customLlmRoute}=await import('./routes/custom-llm.js');
 const {searchTaskRoute,searchSettings}=await import('./tools/search-runtime.js');
 const {searchAdminRoute}=await import('./routes/search-admin.js');
+const {raceProviderHealth}=await import('./providers/provider-health.js');
 const app=new Hono();
-app.get('/health',c=>c.json({status:'ok',agent:'p003-search-canary-20261021',generation:process.env.SEARCH_CANARY_GENERATION,search:searchSettings().enabled,tools:searchSettings().tools}));
+app.get('/health',c=>c.json({status:'ok',agent:'p003-search-canary-20261021',generation:process.env.SEARCH_CANARY_GENERATION,search:searchSettings().enabled,tools:searchSettings().tools,
+ llm:process.env.LLM_PROVIDER==='race'?{mode:'race',...raceProviderHealth()}:undefined}));
 app.use('/v1/*',async(c,next)=>{
  const auth=await verifyAuthToken(c.req.header('x-p003-worker-token')||c.req.query('token'));
  const got=c.req.header('authorization')||'', want='Bearer '+process.env.CUSTOM_LLM_API_KEY;
