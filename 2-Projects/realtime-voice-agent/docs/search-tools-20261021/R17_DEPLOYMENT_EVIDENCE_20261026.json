@@ -1,0 +1,542 @@
+{
+  "schema": "p003-r17-deployment-v1",
+  "result": "deployed_p1_pending_real_device_acceptance",
+  "release_opened_at_ms": 1793010481140,
+  "deadline_ms": 1793589540000,
+  "source": {
+    "candidate": {
+      "src/search-canary-main.ts": "b774090811620d8c125de5b85b40860a6a548f500f3d94fc3332407b7a1e142d",
+      "src/search-canary-policy.ts": "ed47ebd021e7a0b2a9170f3baa80ba9d51037afed9f07aa2ea2f397a663fab23",
+      "src/search-canary-guard.ts": "7d4f7887b4e27d0c941be5f7bdb3ee9e774e6f18686a0e9c397dd10a9e5de749",
+      "src/search-canary-runtime.ts": "39e86ff3809fe4406760ec204cad62e9a4158849710caf8f9285d27565563e89",
+      "src/tools/search-chat-policy.ts": "9a873a8d23102728bd4dfe6542ce5af5a468a9c5640fd187f39fcc5498b50120",
+      "src/tools/search-runtime.ts": "33b081d9d02ea3e759d64d5fa7b73147c1b20c3c16c937b7798064b45116a7c4",
+      "src/tools/search-executor.ts": "5403166b184ce1c33d1f51c2c74ddbd8a7bb7b8b0388cd2c1e9c7e000b6b31a0",
+      "src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+      "src/providers/volc-llm.ts": "563f16013137e0b2b5b9dd138ebc2d6eac8d8b0d7805326686f6ec9ffd1afc8f",
+      "src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+      "src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+      "src/routes/device-session.ts": "1734998fc72790f07ee22d71d3290c82b3828a72f4be2d5d78668975fae2d87c",
+      "src/routes/custom-llm.ts": "7c2d48978d7e59de42f7e85d6307c330369920c7f7b24c32829f28e126ce1a4f"
+    },
+    "shared": {
+      "src/search-canary-policy.ts": "ed47ebd021e7a0b2a9170f3baa80ba9d51037afed9f07aa2ea2f397a663fab23",
+      "src/search-canary-runtime.ts": "39e86ff3809fe4406760ec204cad62e9a4158849710caf8f9285d27565563e89",
+      "src/routes/device-session.ts": "1734998fc72790f07ee22d71d3290c82b3828a72f4be2d5d78668975fae2d87c"
+    },
+    "worker_sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+    "worker_bytes": 75635408,
+    "brain_commit": "cd0df630c744d11dbfa1c0166afb7a3fbe30df4b",
+    "worker_commit": "136971a6c66b35b4c333354f396b696fbb74a42c"
+  },
+  "preview": {
+    "at_ms": 1793009807676,
+    "old_sha256": "f2334a92a436dc2a3461110fb4283dac219ae061b69fdbda2a0077b225a8d393",
+    "new_sha256": "9e5a98e1a4c468056355185464f82bc6484f0a40e27057c8945093a02d28e2f1",
+    "bytes": 974280,
+    "libc": "glibc 2.39",
+    "staged": true
+  },
+  "runtime": {
+    "brain": {
+      "at_ms": 1793010643157,
+      "admin": {
+        "observed_at_ms": 1793010643073,
+        "summary": {
+          "state": "p1",
+          "health_ok": true,
+          "lease_ok": true,
+          "scope_ok": true,
+          "dispatch_requested": true,
+          "expires_at_ms": 1793589540000,
+          "configured_devices": [
+            "BJP00326070803800006",
+            "BJP00326060100100004"
+          ],
+          "selected_prepared": true
+        },
+        "release": {
+          "verified_at_ms": 1793010481458,
+          "brain_commit": "cd0df630c744d11dbfa1c0166afb7a3fbe30df4b",
+          "worker_commit": "136971a6c66b35b4c333354f396b696fbb74a42c",
+          "worker_sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+          "worker_tests": 440
+        },
+        "devices": [
+          {
+            "sn": "BJP00326070803800006",
+            "eligible": true,
+            "status": "active",
+            "version_code": 361,
+            "version_name": "1.2.2-canary.347",
+            "version_reported_at_ms": 1792997357510
+          },
+          {
+            "sn": "BJP00326060100100004",
+            "eligible": true,
+            "status": "active",
+            "version_code": 319,
+            "version_name": "1.2.2-canary.305",
+            "version_reported_at_ms": 1792992582050
+          }
+        ],
+        "acceptance": "待真机验收"
+      },
+      "anonymous_checks": [
+        {
+          "path": "/_canary/search-20261021/v1/internal/search-tasks",
+          "anonymous_status": 401
+        },
+        {
+          "path": "/v1/device/session",
+          "anonymous_status": 401
+        }
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown"
+          },
+          "degraded": false
+        }
+      },
+      "lease": {
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "until_ms": 1793010653448,
+        "ordered_pcm_v1": true,
+        "at_ms": 1793010638448,
+        "jobs": 0,
+        "max_jobs": 2,
+        "registered": true,
+        "cleanup": {
+          "healthy": true,
+          "at_ms": 1793010636770,
+          "pending": 0
+        }
+      },
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 2551176,
+          "restarts": 38,
+          "status": "online"
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0,
+          "status": "online"
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5,
+          "status": "online"
+        }
+      ],
+      "candidate_service": "MainPID=2550182\nNRestarts=0\nActiveState=active\n",
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n",
+      "preview_sha256": "9e5a98e1a4c468056355185464f82bc6484f0a40e27057c8945093a02d28e2f1"
+    },
+    "worker": {
+      "at_ms": 1793010566303,
+      "pid": "1036310",
+      "sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793010563420,
+        "cleanup": {
+          "at_ms": 1793010556792,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "rooms": {
+        "rooms": []
+      },
+      "services": {
+        "voice-worker-rust": "MainPID=839\nNRestarts=0\nActiveState=active\n",
+        "p003-search-worker": "MainPID=1036310\nNRestarts=0\nActiveState=active\n",
+        "p003-search-verification-worker": "MainPID=0\nNRestarts=0\nActiveState=inactive\n"
+      },
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n",
+      "panic_lines": 0,
+      "error_lines": 0,
+      "registered_lines": 1
+    }
+  },
+  "tests": {
+    "brain": 124,
+    "brain_tsc_exit": 0,
+    "worker": 440,
+    "preview": 26,
+    "rtc": {
+      "pass": true,
+      "at_ms": 1793009926301,
+      "worker_sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+      "attempts": 6,
+      "setup_failure_before_rtc": 1,
+      "cases": {
+        "cross_resume": {
+          "room": "sn-BJP00399999999999901-1793009475",
+          "counts": {
+            "agent_transcripts": 1,
+            "user_transcripts": 1,
+            "metrics": 1,
+            "audio_voiced_ms": 5060.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 57,
+            "packets_after": 2734
+          },
+          "client_audio_received": true,
+          "device_heard_verified": false
+        },
+        "cancel": {
+          "room": "sn-BJP00399999999999901-1793009561",
+          "counts": {
+            "agent_transcripts": 2,
+            "user_transcripts": 2,
+            "metrics": 3,
+            "audio_voiced_ms": 2200.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 55,
+            "packets_after": 1587
+          },
+          "client_audio_received": true,
+          "device_heard_verified": false
+        },
+        "cross_prepare": {
+          "room": "sn-BJP00399999999999901-1793009428",
+          "counts": {
+            "agent_transcripts": 2,
+            "user_transcripts": 2,
+            "metrics": 1,
+            "audio_voiced_ms": 6290.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 54,
+            "packets_after": 831
+          },
+          "client_audio_received": true,
+          "device_heard_verified": false
+        },
+        "concurrent": {
+          "room": "sn-BJP00399999999999901-1793009626",
+          "counts": {
+            "agent_transcripts": 6,
+            "user_transcripts": 3,
+            "metrics": 9,
+            "audio_voiced_ms": 13990.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 81,
+            "packets_after": 2536
+          },
+          "client_audio_received": true,
+          "device_heard_verified": false
+        },
+        "normal": {
+          "room": "sn-BJP00399999999999901-1793009298",
+          "counts": {
+            "agent_transcripts": 2,
+            "user_transcripts": 1,
+            "metrics": 4,
+            "audio_voiced_ms": 14220.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 79,
+            "packets_after": 1266
+          },
+          "client_audio_received": true,
+          "device_heard_verified": false
+        },
+        "date_name_alt": {
+          "room": "sn-BJP00399999999999901-1793009356",
+          "counts": {
+            "agent_transcripts": 3,
+            "user_transcripts": 1,
+            "metrics": 1,
+            "audio_voiced_ms": 8060.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 86,
+            "packets_after": 1976
+          },
+          "client_audio_received": true,
+          "device_heard_verified": false
+        }
+      },
+      "cross_resume": {
+        "task_id": "5161b4ad-5016-4c57-b988-c6e8d0da44e8",
+        "grant": {
+          "event": "grant",
+          "task_id": "5161b4ad-5016-4c57-b988-c6e8d0da44e8",
+          "revision": 1,
+          "source_session": "sn-BJP00399999999999901-1793009428",
+          "session": "sn-BJP00399999999999901-1793009475",
+          "complete_sentences": 1,
+          "at_ms": 1793009492909,
+          "expires_at_ms": 1793009737186
+        },
+        "receipt": {
+          "event": "receipt",
+          "task_id": "5161b4ad-5016-4c57-b988-c6e8d0da44e8",
+          "session": "sn-BJP00399999999999901-1793009475",
+          "outcome": "completed",
+          "complete_sentences": 2,
+          "sequence": 1,
+          "at_ms": 1793009501102
+        },
+        "actual_asr_matched_prefix": true,
+        "quiet_audio_ms": 0,
+        "new_query_created": false
+      },
+      "cancel": {
+        "task_id": "e86c3223-0cd1-4cb5-bf4b-bdba999cc295",
+        "status": "cancelled",
+        "result_pcm_after_cancel": false
+      },
+      "concurrent": {
+        "task_id": "a6576f06-ec82-4648-9e44-887bc3878ef3",
+        "outcome": "answered",
+        "delivery": "completed",
+        "chat_and_idle_result_received": true,
+        "formal_inflight_latency_not_measured": true
+      },
+      "limitations": [
+        "停止单字输入本轮没有非空转写；证明退出重连和变体续讲，不计停止关键词识别通过。",
+        "合成收音不等于设备扬声器实听。",
+        "未完成正式延迟配对/全历史训练和回归；备用模型仍InvalidSubscription。"
+      ],
+      "raw_sha256": {
+        "smoke-latest.json": "70de7f36b03c8c0a968f2a93dcce358623dd910f21539e0020fcc8b944d768ff",
+        "smoke-tasks-latest.json": "3807a7da8e489bc84812f91cf2fcf075816ebae8906bcaba652077715ab89384"
+      }
+    },
+    "expiry": {
+      "pass": true,
+      "deadline_ms": 1793009967000,
+      "closed_at_ms": 1793009967693.289,
+      "deleted_at_ms": 1793009967987.962,
+      "client_disconnected": true,
+      "rooms_remaining": 0,
+      "worker_sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+      "real_window_untouched": true
+    },
+    "drill_brain": {
+      "at_ms": 1793009786062,
+      "rows": [
+        {
+          "direction": "previous",
+          "health": {
+            "status": "ok",
+            "agent": "p003-search-verification-20261026",
+            "generation": "R17-isolated-rtc-20261026",
+            "search": true,
+            "tools": false,
+            "llm": {
+              "mode": "race",
+              "main": {
+                "outcome": "unknown"
+              },
+              "fallback": {
+                "outcome": "unknown"
+              },
+              "degraded": false
+            }
+          },
+          "files": {
+            "src/search-canary-main.ts": "61e8af41aebe0ec164cfe573ac9083d96e5298dca70316344a081e084dafc3e8",
+            "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+            "src/search-canary-runtime.ts": "5a376d65875403615f2bd27931ada708153b5d445afa998c2991733005e6698d",
+            "src/routes/device-session.ts": "3759d274bb3997f0930b18f43eba085d5a9c615a381f6a05c1488fdc7a3f662d"
+          }
+        },
+        {
+          "direction": "candidate",
+          "health": {
+            "status": "ok",
+            "agent": "p003-search-verification-20261026",
+            "generation": "R17-isolated-rtc-20261026",
+            "search": true,
+            "tools": false,
+            "llm": {
+              "mode": "race",
+              "main": {
+                "outcome": "unknown"
+              },
+              "fallback": {
+                "outcome": "unknown"
+              },
+              "degraded": false
+            }
+          },
+          "files": {
+            "src/search-canary-main.ts": "b774090811620d8c125de5b85b40860a6a548f500f3d94fc3332407b7a1e142d",
+            "src/search-canary-policy.ts": "ed47ebd021e7a0b2a9170f3baa80ba9d51037afed9f07aa2ea2f397a663fab23",
+            "src/search-canary-runtime.ts": "39e86ff3809fe4406760ec204cad62e9a4158849710caf8f9285d27565563e89",
+            "src/routes/device-session.ts": "1734998fc72790f07ee22d71d3290c82b3828a72f4be2d5d78668975fae2d87c"
+          }
+        }
+      ],
+      "scope": "isolated previous verifier, not production rollback"
+    },
+    "drill_worker": {
+      "at_ms": 1793009803579,
+      "rows": [
+        {
+          "direction": "previous",
+          "sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+          "pid": "1034850",
+          "health": {
+            "agent": "p003-search-verification-20261026",
+            "at_ms": 1793009794863,
+            "cleanup": {
+              "at_ms": 1793009792876,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R17-isolated-rtc-20261026",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          }
+        },
+        {
+          "direction": "candidate",
+          "sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+          "pid": "1034877",
+          "health": {
+            "agent": "p003-search-verification-20261026",
+            "at_ms": 1793009802451,
+            "cleanup": {
+              "at_ms": 1793009799817,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R17-isolated-rtc-20261026",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          }
+        }
+      ]
+    }
+  },
+  "rollback": {
+    "brain": {
+      "at_ms": 1793009362762,
+      "backup": "/opt/p003/search-canary-20261021/brain/backups/R17-release-20261026",
+      "files": {
+        "candidate": {
+          "src/search-canary-main.ts": "36009feabc1b99d10952479bf85ec65866f136aa51c949ed8cd110de90a08939",
+          "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+          "src/search-canary-guard.ts": "9e8cb60e76393cb1c6dd8eee442d037c53459ceda675c3fa35a18fadc6bde1e3",
+          "src/search-canary-runtime.ts": "5a376d65875403615f2bd27931ada708153b5d445afa998c2991733005e6698d",
+          "src/tools/search-chat-policy.ts": "4d21f9a60e5d94bfaefc4e5d60129e137e753b3764467e83e1bd9795a8ab8fa4",
+          "src/tools/search-runtime.ts": "18d3d0956707cf82810a6ae1b243ea28b580380311935227344960933417a740",
+          "src/tools/search-executor.ts": "b12d796fd75df41c4e56804fc940837b6659171624aca1ad88470809a013b6a8",
+          "src/tools/search-claim-stream.ts": null,
+          "src/providers/volc-llm.ts": "2c94eb50bc0e97b3ed9d05fae17c2dc7106345f7e49b9c5f9275a81535fcbd78",
+          "src/providers/provider-health.ts": null,
+          "src/providers/race-llm.ts": "d6be76204b59640c62b56142c78976aab51943b683d4ace6d438640330165c65",
+          "src/routes/device-session.ts": "6f6fdf418a60fa13e5720ef09866b1db50cab8390ad256ad24a94e10648d03ab",
+          "src/routes/custom-llm.ts": "7bcba91e6b2e4fa615a11fcb26a810be408ea1b627a33b1c6d33d849a520779a"
+        },
+        "shared": {
+          "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+          "src/search-canary-runtime.ts": "5a376d65875403615f2bd27931ada708153b5d445afa998c2991733005e6698d",
+          "src/routes/device-session.ts": "3759d274bb3997f0930b18f43eba085d5a9c615a381f6a05c1488fdc7a3f662d"
+        }
+      },
+      "flags": {
+        "candidate": {
+          "p003.search.tools": "0",
+          "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.expires_at_ms": "1793589540000",
+          "p003.search.enabled": "1"
+        },
+        "shared": {
+          "p003.search.canary.selected_sn": "BJP00326060100100004",
+          "p003.search.canary.enabled": "1",
+          "p003.search.canary.expires_at_ms": "1793589540000",
+          "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.agent": "p003-search-canary-20261021",
+          "p003.search.canary.started_at_ms": "1792984740000",
+          "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}"
+        }
+      },
+      "pm2": [
+        {
+          "name": "p003-voice",
+          "pid": 2475874,
+          "restarts": 35
+        },
+        {
+          "name": "kidshub-voice",
+          "pid": 1626403,
+          "restarts": 0
+        },
+        {
+          "name": "p003-analytics",
+          "pid": 3192914,
+          "restarts": 5
+        }
+      ],
+      "candidate_service": "MainPID=2500486\nNRestarts=0\n"
+    },
+    "worker": {
+      "at_ms": 1793009366831,
+      "backup": "/opt/p003-search-canary-20261021/backups/R17-release-20261026",
+      "old_binary_sha256": "c052c798e405b3cb31b6d0fe90da4b7c04e8d78e87dfb481733ddb9262a555a9",
+      "staged_binary_sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "services": {
+        "voice-worker-rust": "MainPID=839\nNRestarts=0\n",
+        "p003-search-worker": "MainPID=951941\nNRestarts=0\n"
+      }
+    }
+  },
+  "first_setup_failure_preserved": true,
+  "shared_install_failure_and_health_port_correction": true,
+  "admin_check_trailing_slash_corrected": true,
+  "performance_accepted": false,
+  "model_training_deployed": false,
+  "raw_artifacts_in_git": false
+}
