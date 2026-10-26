@@ -397,6 +397,10 @@ deviceSessionRoute.post('/session', async (c) => {
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
       // B84：policy 与 supports 进日志——旧/新客户端各走哪条路径、为什么，事后能从这一行对账
       ` policy=${conf.firstTurnPolicy} policy_src=${conf.firstTurnPolicySource} supports=${supportsForLog(supports)}` +
+      ` selected_agent=${JSON.stringify(agentName)} canary_reason=${canary.reason}` +
+      ` lease_remaining_ms=${canary.leaseRemainingMs} lease_age_ms=${canary.leaseAgeMs}` +
+      ` lease_jobs=${canary.leaseJobs} lease_max_jobs=${canary.leaseMaxJobs} lease_registered=${canary.leaseRegistered}` +
+      ` canary_generation=${JSON.stringify(canary.generation)}` +
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });

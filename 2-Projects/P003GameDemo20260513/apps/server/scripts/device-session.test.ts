@@ -95,6 +95,9 @@ await t('合法 SN 返回 200 且 claims 与响应一致', async () => {
   assert.equal(j.expected_agent_name, 'rust-worker');
   assert.equal(j.trace_id, 'trace-test-1');
   assert.ok(j.session_id && j.expires_at_ms > Date.now());
+  const dispatchLine=logLines.find(l=>l.includes(`room=${j.room_name} `));
+  assert.ok(dispatchLine?.includes('selected_agent="rust-worker"'));
+  assert.ok(dispatchLine?.includes('canary_reason=disabled'));
   assertTokenMatchesResponse(j.token, j); // 不 throw 即一致
   const c = decodeJwt(j.token) as Record<string, any>;
   assert.equal(c.iss, 'voicekey');
@@ -703,22 +706,33 @@ await t('搜索灰度：完整SN、首句合同、JWT派单、到期回退', asy
     assert.equal(metaOf(j).search_canary.sn,SN);
     assert.equal(metaOf(j).search_canary.expires_at_ms,expires);
     assert.ok(j.expires_at_ms <= expires);
+    const selectedLog=logLines.find(l=>l.includes(`room=${j.room_name} `));
+    assert.ok(selectedLog?.includes(`selected_agent=${JSON.stringify(j.expected_agent_name)}`));
+    assert.ok(selectedLog?.includes('canary_reason=selected'));
     const other:any = await (await callSession({cred:await deviceCred(SN2),sn:SN2,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
     assert.equal(other.expected_agent_name,FT_AGENT);
+    assert.ok(logLines.find(l=>l.includes(`room=${other.room_name} `))?.includes('canary_reason=not_target'));
     assert.equal((await callSession({cred:await deviceCred(SN2),sn:SN})).status,403);
-    for (const invalidLease of [
-      JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()-1,ordered_pcm_v1:true,generation:'test'}),
-      JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()+14000,ordered_pcm_v1:false,generation:'test'}),
-      JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()+14000,ordered_pcm_v1:true,generation:''}),
-      'invalid-json',
+    for (const [invalidLease,reason] of [
+      [JSON.stringify({agent:'p003-search-canary-20261021',until_ms:0,ordered_pcm_v1:true,generation:'test',jobs:2,max_jobs:2,registered:true,at_ms:Date.now()}),'lease_invalid'],
+      [JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()-1,ordered_pcm_v1:true,generation:'test'}),'lease_invalid'],
+      [JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()+14000,ordered_pcm_v1:false,generation:'test'}),'contract_incompatible'],
+      [JSON.stringify({agent:'p003-search-canary-20261021',until_ms:Date.now()+14000,ordered_pcm_v1:true,generation:''}),'lease_invalid'],
+      ['invalid-json','lease_invalid'],
     ]) {
       writeFileSync(health, invalidLease); await refreshSearchCanaryLease();
       const fallback:any=await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
       assert.equal(fallback.expected_agent_name,FT_AGENT); assertTokenMatchesResponse(fallback.token,fallback);
+      const line=logLines.find(l=>l.includes(`room=${fallback.room_name} `));
+      assert.ok(line?.includes(`selected_agent=${JSON.stringify(fallback.expected_agent_name)}`));
+      assert.ok(line?.includes(`canary_reason=${reason}`));
+      if(invalidLease.includes('"jobs":2'))assert.ok(line?.includes('lease_jobs=2 lease_max_jobs=2 lease_registered=true'));
     }
     flag('expires_at_ms',String(Date.now()-1));
     const closed:any = await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
     assert.equal(closed.expected_agent_name,FT_AGENT); assert.equal(closed.contract.input_mode,'ordered_pcm');
+    assert.ok(logLines.find(l=>l.includes(`room=${closed.room_name} `))?.includes('canary_reason=window_invalid'));
+    assert.equal(logLines.filter(l=>/eyJ[A-Za-z0-9_-]{10,}/.test(l)).length,0);
   } finally { flag('enabled','0'); clearPolicy(); unlinkSync(health); }
 });
 

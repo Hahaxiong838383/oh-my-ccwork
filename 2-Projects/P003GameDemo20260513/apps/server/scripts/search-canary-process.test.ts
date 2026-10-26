@@ -17,10 +17,16 @@ try {
  const hb={method:'POST',headers:{authorization:'Bearer test-key','x-p003-worker-token':token,'content-type':'application/json'},body:JSON.stringify({agent:'p003-search-canary-20261021',generation:'test',registered:true,jobs:0,ordered_pcm_v1:true,cleanup:{healthy:true,at_ms:Date.now(),pending:0,remaining:0}})};
  assert.equal((await fetch(base+'/v1/internal/canary-health',hb)).status,200);
  assert.ok(JSON.parse(readFileSync(join(canary,'health.json'),'utf8')).until_ms>Date.now());
+ const firstLease=JSON.parse(readFileSync(join(canary,'health.json'),'utf8'));
+ assert.equal(firstLease.jobs,0);assert.equal(firstLease.max_jobs,2);assert.equal(firstLease.registered,true);
+ assert.ok(firstLease.at_ms<=Date.now()&&Date.now()-firstLease.at_ms<5000);
  for(const delta of [{jobs:2},{registered:false}]) {
   const body=JSON.stringify({...JSON.parse(hb.body),...delta});
   assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body})).status,200);
   assert.equal(JSON.parse(readFileSync(join(canary,'health.json'),'utf8')).until_ms,0);
+  const lease=JSON.parse(readFileSync(join(canary,'health.json'),'utf8'));
+  assert.equal(lease.jobs,'jobs'in delta?delta.jobs:0);
+  assert.equal(lease.registered,'registered'in delta?delta.registered:true);
  }
  assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body:JSON.stringify({...JSON.parse(hb.body),generation:'wrong'})})).status,400);
  assert.equal((await fetch(base+'/v1/internal/canary-health',{...hb,body:JSON.stringify({...JSON.parse(hb.body),jobs:1})})).status,200);

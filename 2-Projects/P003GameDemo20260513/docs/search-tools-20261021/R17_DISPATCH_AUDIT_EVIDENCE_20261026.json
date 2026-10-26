@@ -1,0 +1,19 @@
+{
+  "linux_tests": 124,
+  "linux_pass": 124,
+  "linux_fail": 0,
+  "test_exit": 0,
+  "typecheck_exit": 0,
+  "source_manifest_match_local": true,
+  "local_groups_pass": 5,
+  "preserved_initial_failure": "runtime reason absent; later missing lease reason prioritized over unknown capabilities",
+  "private_linux_capture_sha256": "9c33d6c6a915958900ddf7db446479f9b00512977663fb649fd170d79358d2c5",
+  "test_log_sha256": "3bf84c135820892e146a0d9be41948f6e2e1dfecf28a71886500a9aed58a090b",
+  "production_deployed": false,
+  "changed_sources": {
+    "src/search-canary-policy.ts": "ed47ebd021e7a0b2a9170f3baa80ba9d51037afed9f07aa2ea2f397a663fab23",
+    "src/search-canary-runtime.ts": "39e86ff3809fe4406760ec204cad62e9a4158849710caf8f9285d27565563e89",
+    "src/search-canary-main.ts": "b774090811620d8c125de5b85b40860a6a548f500f3d94fc3332407b7a1e142d",
+    "src/routes/device-session.ts": "1734998fc72790f07ee22d71d3290c82b3828a72f4be2d5d78668975fae2d87c"
+  }
+}
