@@ -1,0 +1,57 @@
+{
+  "recorded_date": "2026-10-27",
+  "source_report": "../2026-10-27-RackNerd手机节点连接排查与备用入口.md",
+  "unit_sha256": "f7a242c6bbabef38a645113ffc395da75ec8ae13c557e1b6d8710cee0e4610f8",
+  "original_service": {
+    "name": "sing-box",
+    "pid_before_and_after": 2984761,
+    "config_sha256_before_and_after": "1cfa7b5aa32755aac2e362369df0d6dc75a5639683927d78db3167f39d7fdeed",
+    "restarted": false
+  },
+  "alternate_ingress": {
+    "tcp_port": 14443,
+    "backend": "127.0.0.1:2443",
+    "active": true,
+    "enabled": true,
+    "cold_boot_verified": false
+  },
+  "home_client_e2e": {
+    "time": "2026-10-27 00:19:09+0800",
+    "client": "Xray 26.3.27",
+    "port": 14443,
+    "fetches": [
+      {
+        "url": "https://www.cloudflare.com/cdn-cgi/trace",
+        "rc": 0,
+        "seconds": 1.31,
+        "bytes": 208,
+        "exit_ip": "23.226.135.149",
+        "location": "US",
+        "trace_fields": 16
+      },
+      {
+        "url": "https://www.iana.org/",
+        "rc": 0,
+        "seconds": 1.441,
+        "bytes": 6253,
+        "iana_title": true
+      }
+    ]
+  },
+  "phone": {
+    "recovered": true,
+    "evidence": "用户随后明确确认手机正常",
+    "automated_test_on_phone": false
+  },
+  "tv": {
+    "checked_live": false,
+    "reason": "用户确认关机并要求跳过",
+    "configuration_changed": false
+  },
+  "limits": [
+    "未确定具体丢包设备或突然触发原因",
+    "未验证VPS冷启动",
+    "未做持续吞吐或本次电视播放验收",
+    "未新增手机自动切换或电视端口迁移"
+  ]
+}

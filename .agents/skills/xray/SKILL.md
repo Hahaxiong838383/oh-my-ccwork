@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 REALITY 服务端运维，以及 Android 电视盒 sing-box、SmartTube/YouTube DNS 和断电启动恢复。用于代理状态、分流、网络不通与电视 DNS 排障；电视模式不处理 Netflix 登录、遥控适配或 DRM。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点端口不可达排查，以及 Android 电视盒 sing-box、SmartTube/YouTube DNS 和断电启动恢复；电视模式不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray（多引擎入口）

@@ -1,0 +1,22 @@
+[Unit]
+Description=RackNerd Reality alternate TCP ingress 14443 to 2443
+Wants=network-online.target
+After=network-online.target sing-box.service
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+ExecStart=/usr/bin/socat TCP4-LISTEN:14443,bind=0.0.0.0,reuseaddr,fork,keepalive,nodelay TCP4:127.0.0.1:2443,keepalive,nodelay
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+LimitNOFILE=4096
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_INET AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
