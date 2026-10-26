@@ -18,11 +18,11 @@ export function searchFailure(error: unknown, stage: SearchStage = 'task'): Sear
   const known: Record<string, SearchFailureInfo['reason']> = {
     invalid_search_response: 'invalid_response', empty_response: 'invalid_response', response_too_large: 'invalid_response',
     invalid_fetch: 'invalid_response', invalid_tool_stream: 'invalid_stream', incomplete_tool_stream: 'invalid_stream',
-    invalid_answer: 'invalid_answer', invalid_result: 'invalid_result', unasked_quantity: 'unasked_quantity',
+    invalid_answer: 'invalid_answer', invalid_grounding: 'invalid_answer', invalid_result: 'invalid_result', unasked_quantity: 'unasked_quantity',
     search_unconfigured: 'configuration',
   };
   if (Object.hasOwn(known, message)) {
-    if (stage === 'task' && ['invalid_answer', 'unasked_quantity'].includes(message)) stage = 'answer';
+    if (stage === 'task' && ['invalid_answer', 'invalid_grounding', 'unasked_quantity'].includes(message)) stage = 'answer';
     return new SearchFailure(message, { stage, reason: known[message] });
   }
   const reason = error instanceof Error && error.name === 'TimeoutError' ? 'timeout'

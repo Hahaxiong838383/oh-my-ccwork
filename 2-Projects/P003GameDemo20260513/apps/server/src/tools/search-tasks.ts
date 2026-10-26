@@ -8,7 +8,7 @@ import { searchFailure, type SearchFailureInfo } from './search-failure.js';
 export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest; auto_weather?: import('./moji-weather.js').AutoWeatherRequest; place_weather?: import('./baidu-weather.js').PlaceWeatherRequest };
 export type TaskRouting = RoutingClaim & { weather_enabled: boolean; auto_location_enabled?: boolean; baidu_weather_enabled?: boolean };
 export type SearchOwner = { subject: string; session: string };
-export type SearchResult = { weather?: import('./moji-weather.js').WeatherEvidence | import('./baidu-weather.js').BaiduWeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
+export type SearchResult = { grounding?: {version:2;notice?:string;claims:{text:string;evidence:{source_id:number;quote:string}[]}[]}; weather?: import('./moji-weather.js').WeatherEvidence | import('./baidu-weather.js').BaiduWeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
 export type SearchTask = SearchOwner & {
   id: string; key: string; turn: string; revision: number; routing?: TaskRouting;
   status: 'queued' | 'running' | 'ready' | 'delivered' | 'failed' | 'cancelled' | 'expired';

@@ -37,6 +37,7 @@ async function status(){
     {title:'首句、插话与本地回复语需现场回归',detail:'候选关闭搜索时回归普通对话；随后P1验证补播、续讲、取消、改查和退出重连。',status:'待真机'},
     {title:'P2与全天稳定性未验收',detail:'本次仅授权名单内设备测试至明确截止；先验P1，P1通过后另行开放P2，不自动扩大设备范围。',status:'未验证'},
   ];
+  if(lease?.cleanup?.healthy===false)issues.unshift({title:'候选关房补偿未就绪',detail:'关房控制请求待补偿，或补偿心跳缺失/过期；已停止新增灰度派单。',status:'阻塞'});
   if(!summary.health_ok)issues.unshift({title:'候选健康检查未通过',detail:'当前无法确认候选在线，请勿依据历史部署记录开窗。',status:'阻塞'});
   if(!summary.lease_ok)issues.unshift({title:'当前无可用派单租约',detail:'可能满载、心跳过期或未注册；不等同于设备离线。',status:'阻塞'});
   if(!summary.selected_prepared)issues.unshift({title:'所选设备尚未完成隔离准备',detail:'已保存待测选择，实际派单未改变；需为该设备准备独立数据与三侧一致名单。',status:'待准备'});

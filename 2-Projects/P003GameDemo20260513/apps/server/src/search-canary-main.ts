@@ -24,7 +24,12 @@ app.use('/v1/*',async(c,next)=>{
    if(v.agent!=='p003-search-canary-20261021'||v.generation!==process.env.SEARCH_CANARY_GENERATION||typeof v.registered!=='boolean'||!Number.isInteger(v.jobs)||v.jobs<0||v.jobs>maxJobs||v.ordered_pcm_v1!==true) return c.json({error:'invalid'},400);
    const path=process.env.SEARCH_CANARY_HEALTH_FILE;
    if(!path)return c.json({error:'unconfigured'},503);
-   const lease={agent:v.agent,generation:v.generation,until_ms:v.registered&&v.jobs<maxJobs?Date.now()+15000:0,ordered_pcm_v1:true};
+   const cleanup=v.cleanup;
+   const cleanupOk=process.env.SEARCH_REQUIRE_CLEANUP_HEALTH!=='1'||cleanup?.healthy===true
+     &&Number.isFinite(cleanup.at_ms)&&cleanup.at_ms<=Date.now()&&Date.now()-cleanup.at_ms<=120000
+     &&cleanup.pending===0&&Number.isInteger(cleanup.remaining)&&cleanup.remaining>=0&&cleanup.remaining<=512;
+   const lease={agent:v.agent,generation:v.generation,until_ms:v.registered&&v.jobs<maxJobs&&cleanupOk?Date.now()+15000:0,ordered_pcm_v1:true,
+     cleanup:{healthy:cleanupOk,at_ms:Number.isFinite(cleanup?.at_ms)?cleanup.at_ms:0,pending:Number.isInteger(cleanup?.pending)?cleanup.pending:null}};
    await writeFile(path+'.tmp',JSON.stringify(lease),{mode:0o600});await rename(path+'.tmp',path);
    return c.json({ok:true});
  }
