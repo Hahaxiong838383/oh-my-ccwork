@@ -7,7 +7,16 @@ type Call = { id: string; type: 'function'; function: { name: string; arguments:
 type Message = { role: string; content: string | null; tool_calls?: Call[]; tool_call_id?: string };
 type Evidence = { id: number; title: string; url: string; date: string | null; text: string };
 export type SearchDiagnostics = { returned: number; accepted: number; rejected_schema: number; rejected_url: number; rejected_text: number; rejected_date: number; duplicate: number; outcome: 'evidence' | 'empty' | 'filtered'; provider?: 'cctv-public-web'; answer_rewrites?: number; answer_review_rejected?: boolean; evidence_claims?: number; };
-type Options = { grounding?: boolean; audit?: (value: SearchDiagnostics) => void; apiKey: string; domains: string[]; tools?: boolean; fetch?: typeof fetch; model?: string };
+export type SearchValidationAudit = {phase:'draft'|'repair'|'review'|'final';codes:string[]};
+const validationCodes=new Set(['schema','fact_reference','source_reference','answer_length','unsafe_text','json','causal_source_scope','unquoted_clock','unquoted_number','unquoted_scope','age_inclusion_lost','age_scope_missing','missing_closure_exception','closure_exception_polarity','unasked_date','grounding']);
+class AnswerValidationError extends Error {
+ constructor(message:string,readonly codes:string[]){super(message);}
+}
+function groundingError(issues:string[]):AnswerValidationError {
+ const codes=issues.map(s=>s.startsWith('claim_')?s.split(':')[1]:s.split(':')[0]);
+ return new AnswerValidationError('invalid_grounding',[...new Set(codes.map(c=>validationCodes.has(c)?c:'grounding'))].slice(0,8));
+}
+type Options = { validationAudit?: (value:SearchValidationAudit)=>void; grounding?: boolean; audit?: (value: SearchDiagnostics) => void; apiKey: string; domains: string[]; tools?: boolean; fetch?: typeof fetch; model?: string };
 const cut = (s: string, n: number) => [...s].slice(0, n).join('');
 const object = (x: unknown): x is Record<string, any> => x !== null && typeof x === 'object' && !Array.isArray(x);
 const standingPolicy=(q:string)=>/预约|门票|入馆|参观|开放时间|开放安排|开放吗|开门/.test(q)&&!/新闻|消息|报道|进展/.test(q);
@@ -159,6 +168,12 @@ export class SearchExecutor {
   private diagnostics?: SearchDiagnostics;
   private news: CctvNews;
   constructor(private opts: Options) { this.fetcher = opts.fetch ?? fetch; this.news=opts.fetch?new CctvNews({fetch:opts.fetch}):cctvNews; }
+  private validation(phase:SearchValidationAudit['phase'],error:unknown) {
+    const codes=error instanceof AnswerValidationError?error.codes:error instanceof SyntaxError?['json']:['grounding'];
+    // Only fixed categories leave this boundary, never model content, parser
+    // excerpts, quote fragments or actual numeric values. Logging is not control.
+    try{this.opts.validationAudit?.({phase,codes:[...new Set(codes)].slice(0,8)});}catch{}
+  }
   private async post(path: string, body: object, signal: AbortSignal, timeout = 3000, stage: SearchStage = path === 'tools/search' ? 'search' : 'fetch'): Promise<string> {
     const deadline = AbortSignal.any([signal, AbortSignal.timeout(timeout)]);
     return searchStage(stage, () => this.postInner(path, body, deadline), deadline);
@@ -299,14 +314,15 @@ export class SearchExecutor {
     const decode=(content:string)=>{
       let parsed=JSON.parse(content);
       if(this.opts.grounding){
-        const bad=()=>{throw new Error('invalid_grounding');};
+        const bad=(code='schema'):never=>{throw new AnswerValidationError('invalid_grounding',[code]);};
         if(!object(parsed)||Object.keys(parsed).sort().join()!=='abstain,claims'||typeof parsed.abstain!=='boolean'||!Array.isArray(parsed.claims))bad();
         if(parsed.abstain){if(parsed.claims.length)bad();return {text:NO_RESULT.text,source_ids:[],claims:[]};}
         if(parsed.claims.length<1||parsed.claims.length>4)bad();
         const claims=parsed.claims.map((c:any)=>{
           if(!object(c)||Object.keys(c).sort().join()!=='fact_ids,text'||typeof c.text!=='string'||!c.text.trim()
             ||!Array.isArray(c.fact_ids)||c.fact_ids.length<1||c.fact_ids.length>8
-            ||new Set(c.fact_ids).size!==c.fact_ids.length||c.fact_ids.some((id:any)=>!Number.isInteger(id)||id<1||id>facts.length))bad();
+            ||new Set(c.fact_ids).size!==c.fact_ids.length)bad();
+          if(c.fact_ids.some((id:any)=>!Number.isInteger(id)||id<1||id>facts.length))bad('fact_reference');
           return {text:c.text,evidence:c.fact_ids.map((id:number)=>facts[id-1])};
         });
         parsed={text:claims.map((c:any)=>c.text).join(''),source_ids:[...new Set(claims.flatMap((c:any)=>c.evidence.map((e:any)=>e.source_id)))],claims};
@@ -326,21 +342,24 @@ export class SearchExecutor {
           parsed.text=parsed.claims.map((c:any)=>c.text).join('');
         }
       }
-      if (!object(parsed) || typeof parsed.text !== 'string' || !parsed.text.trim() || [...parsed.text].length > 150 ||
-        /\[\[|\]\]|https?:\/\/|[<>]/i.test(parsed.text) || !Array.isArray(parsed.source_ids) ||
-        parsed.source_ids.some((id: unknown) => !Number.isInteger(id) || !evidence.some(e => e.id === id))) throw new Error('invalid_answer');
+      const invalid=(code:string):never=>{throw new AnswerValidationError('invalid_answer',[code]);};
+      if(!object(parsed)||typeof parsed.text!=='string'||!parsed.text.trim()||!Array.isArray(parsed.source_ids))invalid('schema');
+      if([...parsed.text].length>150)invalid('answer_length');
+      if(/\[\[|\]\]|https?:\/\/|[<>]/i.test(parsed.text))invalid('unsafe_text');
+      if(parsed.source_ids.some((id:unknown)=>!Number.isInteger(id)||!evidence.some(e=>e.id===id)))invalid('source_reference');
       return parsed;
     };
     let draft=(await this.model(messages,budget,Boolean(this.opts.tools),true)).content;
     let parsed;let answersUsed=1;
     try{parsed=decode(draft);}catch(error){
+      this.validation('draft',error);
       if(!this.opts.grounding)throw error;
       // Spend the existing second generation on format repair, never a third
       // generation or another search. No invalid draft can be delivered.
       messages.push({role:'assistant',content:draft});
       messages.push({role:'user',content:'候选JSON格式或事实编号无效。最后一次修正：只返回abstain和claims；每个claim只含text及fact_ids，编号必须来自已有facts，不能返回或改写quote。每句话的全部数字、部位与因果关系都必须由选中原句支持。只答问题本身，不加未问日期、细胞方向或旁枝事实；依据不足则abstain=true、claims=[]。'});
       draft=(await this.model(messages,budget,Boolean(this.opts.tools),true)).content;
-      answersUsed=2;parsed=decode(draft);
+      answersUsed=2;try{parsed=decode(draft);}catch(error){this.validation('repair',error);throw error;}
       if(this.diagnostics)this.diagnostics.answer_rewrites=1;
     }
     // Simplification can lose causal scope or a rule's exceptions even without
@@ -369,9 +388,10 @@ export class SearchExecutor {
         // factual answer into an outage solely because the rewrite kept one.
         // Unsupported numbers, scope, calendar rules and schema still fail.
         if(!this.opts.grounding&&unaskedQuantities(query,candidate.text).length)throw new Error('unasked_quantity');
-        if(this.opts.grounding&&candidate.source_ids.length&&groundingIssues(query,candidate).length)throw new Error('invalid_grounding');
+        if(this.opts.grounding&&candidate.source_ids.length){const issues=groundingIssues(query,candidate);if(issues.length)throw groundingError(issues);}
         parsed=candidate;
       } catch(error) {
+        this.validation('review',error);
         // A review is another untrusted generation, not an authority. It may
         // introduce a new number or break the schema. Retain the first draft
         // only if it already passed these same checks; never rescue a bad draft
@@ -381,12 +401,12 @@ export class SearchExecutor {
       }
     }
     if(this.opts.grounding&&parsed.source_ids.length){
-      if(groundingIssues(query,parsed).length)throw new Error('invalid_grounding');
+      const issues=groundingIssues(query,parsed);if(issues.length){const error=groundingError(issues);this.validation('final',error);throw error;}
     }
     if (!parsed.source_ids.length) return { ...NO_RESULT, sources: [], diagnostics: this.diagnostics };
     let text=parsed.text.trim();
     if(standingPolicy(query)&&!(/公告/.test(text)&&/确认|为准|变动/.test(text)))text+='具体安排以官网当前公告为准。';
-    if([...text].length>150)throw new Error('invalid_answer');
+    if([...text].length>150){const error=new AnswerValidationError('invalid_answer',['answer_length']);this.validation('final',error);throw error;}
     if(this.opts.grounding && this.diagnostics)this.diagnostics.evidence_claims=parsed.claims.length;
     return { text, ...(this.opts.grounding?{grounding:{version:2 as const,claims:parsed.claims,...(text!==parsed.text.trim()?{notice:text.slice(parsed.text.trim().length)}:{})}}:{}), diagnostics: this.diagnostics, sources: evidence.filter(e => parsed.source_ids.includes(e.id)).map(({ title, url, date }) => ({ title, url, date })) };
   }
