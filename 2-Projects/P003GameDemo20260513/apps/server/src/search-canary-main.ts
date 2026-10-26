@@ -1,7 +1,8 @@
 // Validate isolation BEFORE dynamically importing any singleton stores.
-import { prepareCanaryEnvironment, canaryRequestAllowed, canarySns, canaryMaxJobs } from './search-canary-guard.js';
+import { prepareCanaryEnvironment, canaryRequestAllowed, canarySns, canaryMaxJobs, canaryAgent } from './search-canary-guard.js';
 prepareCanaryEnvironment(process.env);
 const allowedSns=canarySns(process.env.SEARCH_CANARY_SN),maxJobs=canaryMaxJobs(process.env.SEARCH_CANARY_MAX_JOBS);
+const agent=canaryAgent(process.env.SEARCH_CANARY_AGENT);
 const {serve}=await import('@hono/node-server');
 const {Hono}=await import('hono');
 const {timingSafeEqual}=await import('node:crypto');
@@ -13,7 +14,7 @@ const {searchTaskRoute,searchSettings}=await import('./tools/search-runtime.js')
 const {searchAdminRoute}=await import('./routes/search-admin.js');
 const {raceProviderHealth}=await import('./providers/provider-health.js');
 const app=new Hono();
-app.get('/health',c=>c.json({status:'ok',agent:'p003-search-canary-20261021',generation:process.env.SEARCH_CANARY_GENERATION,search:searchSettings().enabled,tools:searchSettings().tools,
+app.get('/health',c=>c.json({status:'ok',agent,generation:process.env.SEARCH_CANARY_GENERATION,search:searchSettings().enabled,tools:searchSettings().tools,
  llm:process.env.LLM_PROVIDER==='race'?{mode:'race',...raceProviderHealth()}:undefined}));
 app.use('/v1/*',async(c,next)=>{
  const auth=await verifyAuthToken(c.req.header('x-p003-worker-token')||c.req.query('token'));
@@ -23,7 +24,7 @@ app.use('/v1/*',async(c,next)=>{
    if(auth?.role!=='device'||auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID) return c.json({error:'unauthorized'},401);
    const raw=await c.req.text(); if(raw.length>2048)return c.json({error:'oversize'},413);
    let v;try{v=JSON.parse(raw)}catch{return c.json({error:'invalid'},400)}
-   if(v.agent!=='p003-search-canary-20261021'||v.generation!==process.env.SEARCH_CANARY_GENERATION||typeof v.registered!=='boolean'||!Number.isInteger(v.jobs)||v.jobs<0||v.jobs>maxJobs||v.ordered_pcm_v1!==true) return c.json({error:'invalid'},400);
+   if(v.agent!==agent||v.generation!==process.env.SEARCH_CANARY_GENERATION||typeof v.registered!=='boolean'||!Number.isInteger(v.jobs)||v.jobs<0||v.jobs>maxJobs||v.ordered_pcm_v1!==true) return c.json({error:'invalid'},400);
    const path=process.env.SEARCH_CANARY_HEALTH_FILE;
    if(!path)return c.json({error:'unconfigured'},503);
    const cleanup=v.cleanup;
