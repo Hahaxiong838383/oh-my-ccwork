@@ -1,0 +1,32 @@
+{
+  "linux_tests": 112,
+  "pass": 112,
+  "fail": 0,
+  "source_files_match_local": true,
+  "tsc_exit": 0,
+  "production_deployed": false,
+  "source_files": {
+    "2-Projects/P003GameDemo20260513/apps/server/src/search-canary-main.ts": "eb8569a01bf4c1836a57b2356835aa411c28676be7a3d663ab8552b48fa4abe1",
+    "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-chat-policy.ts": "9a873a8d23102728bd4dfe6542ce5af5a468a9c5640fd187f39fcc5498b50120",
+    "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+    "2-Projects/P003GameDemo20260513/apps/server/src/providers/volc-llm.ts": "563f16013137e0b2b5b9dd138ebc2d6eac8d8b0d7805326686f6ec9ffd1afc8f",
+    "2-Projects/P003GameDemo20260513/apps/server/src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+    "2-Projects/P003GameDemo20260513/apps/server/src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/custom-llm.ts": "7c2d48978d7e59de42f7e85d6307c330369920c7f7b24c32829f28e126ce1a4f",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/race-llm.test.ts": "d7ff71cc930f45b81ac99320edc7fc2be1cf159a8c66ecd008364f30f8e3e328",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/race-provider-health.test.ts": "5b7f6d228ea4d63955a4523a718c4f1aed363c28ee119ebab758a6f80a2a762f",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/search-chat-policy.test.ts": "149867bc223ae5bd156cc08215ed8e6cbdc8ceb0301e07281646da0409b9ef33",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/search-chat-stream.test.ts": "a593d0504f932a3c21bcbea0a45b04b009183e50aef1f886b81265f8a276dca5"
+  },
+  "artifacts": {
+    "log": "dc9721b407828ccf43244c6769c3334c07c5ad6c65926eeb380472c3a9a0a1d6",
+    "first_packaging_failure_log": "b691a5851ca808715f3fac8a00c690d4f840b448b2ca8f4f3d7c1b8472fb0c5f",
+    "tsc_log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "live_hashes": {
+    "src/routes/custom-llm.ts": "7bcba91e6b2e4fa615a11fcb26a810be408ea1b627a33b1c6d33d849a520779a",
+    "src/tools/search-claim-stream.ts": null,
+    "src/providers/provider-health.ts": null
+  },
+  "code_commit": "2c1dfc13b03d0e230f5c6e6b284fe9d5889c9b7a"
+}
