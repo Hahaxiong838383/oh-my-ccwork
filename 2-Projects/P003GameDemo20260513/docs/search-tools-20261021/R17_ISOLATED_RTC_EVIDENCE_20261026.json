@@ -1,0 +1,604 @@
+{
+  "recorded_at_cst": "2026-10-26 13:18",
+  "status": "isolated_verification_checkpoint_not_release_acceptance",
+  "code_commits": {
+    "brain": "eb6ac4e1c299cba95d264db766e4f2446665d0d7",
+    "worker": "8f76a4837631536386c31da2912b43fca8149d2c"
+  },
+  "real_deployment": {
+    "brain_commit": "b6ed0f46a2a8adc7479b206af8c21d9f7a55b674",
+    "worker_commit": "8cf6a53aac626743e1cae36ffc6361a55b61915b",
+    "readonly_snapshot": {
+      "brain": {
+        "at_ms": 1792991567121,
+        "candidate": {
+          "p003.search.tools": "0",
+          "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.expires_at_ms": "1793589540000",
+          "p003.search.enabled": "1"
+        },
+        "primary": {
+          "p003.search.canary.selected_sn": "BJP00326060100100004",
+          "p003.search.canary.enabled": "1",
+          "p003.search.canary.expires_at_ms": "1793589540000",
+          "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+          "p003.search.canary.agent": "p003-search-canary-20261021",
+          "p003.search.canary.started_at_ms": "1792984740000",
+          "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}"
+        },
+        "versions": [
+          {
+            "sn": "BJP00326060100100004",
+            "version_code": 319,
+            "version_name": "1.2.2-canary.305",
+            "last_check_at": 1792738945974
+          },
+          {
+            "sn": "BJP00326070803800006",
+            "version_code": 360,
+            "version_name": "1.2.2-canary.346",
+            "last_check_at": 1792981468479
+          }
+        ],
+        "today_task_counts": {
+          "BJP00326060100100004": 66,
+          "BJP00326070803800006": 91
+        },
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-canary-20261021",
+          "generation": "R4-20261022-two-devices",
+          "search": true,
+          "tools": false
+        },
+        "file_hashes": {
+          "src/search-canary-guard.ts": "9e8cb60e76393cb1c6dd8eee442d037c53459ceda675c3fa35a18fadc6bde1e3",
+          "src/search-canary-main.ts": "36009feabc1b99d10952479bf85ec65866f136aa51c949ed8cd110de90a08939",
+          "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+          "src/tools/search-executor.ts": "b12d796fd75df41c4e56804fc940837b6659171624aca1ad88470809a013b6a8",
+          "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+          "src/tools/search-runtime.ts": "18d3d0956707cf82810a6ae1b243ea28b580380311935227344960933417a740",
+          "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed"
+        },
+        "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\nUnitFileState=enabled\n"
+      },
+      "worker": {
+        "at_ms": 1792991566894,
+        "window": {
+          "enabled": true,
+          "allowlist": [
+            "BJP00326070803800006",
+            "BJP00326060100100004"
+          ],
+          "expires_at_ms": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        },
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1792991564123,
+          "cleanup": {
+            "at_ms": 1792991563657,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "binary_sha256": "c052c798e405b3cb31b6d0fe90da4b7c04e8d78e87dfb481733ddb9262a555a9",
+        "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\nUnitFileState=enabled\n"
+      },
+      "r16p_brain_files_match": true
+    },
+    "unchanged_during_verifier_stop": {
+      "brain": "MainPID=2500486\nNRestarts=0\n",
+      "workers": {
+        "voice-worker-rust": "MainPID=839\nNRestarts=0\n",
+        "p003-search-worker": "MainPID=951941\nNRestarts=0\n"
+      },
+      "worker_window_bytes_unchanged": true
+    }
+  },
+  "verification": {
+    "agent": "p003-search-verification-20261026",
+    "synthetic_sn": "BJP00399999999999901",
+    "worker_sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+    "worker_bytes": 75631896,
+    "installed": {
+      "at_ms": 1792991361921,
+      "new_pid": "976085",
+      "sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+      "health": {
+        "agent": "p003-search-verification-20261026",
+        "at_ms": 1792991360576,
+        "cleanup": {
+          "at_ms": 1792991359667,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R17-isolated-rtc-20261026",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "live_units_unchanged": {
+        "voice-worker-rust": "MainPID=839\nNRestarts=0\n",
+        "p003-search-worker": "MainPID=951941\nNRestarts=0\n"
+      },
+      "live_window_unchanged": true,
+      "rollback_private": "/opt/p003-search-verification-20261026/results/verifier-v2-rollback",
+      "synthetic_window_enabled": true
+    },
+    "closed": {
+      "worker": {
+        "at_ms": 1792991702163,
+        "synthetic_window": {
+          "enabled": false,
+          "allowlist": [
+            "BJP00399999999999901"
+          ],
+          "expires_at_ms": 1793011747157,
+          "generation": "R17-isolated-rtc-20261026"
+        },
+        "synthetic_rooms_remaining": 0,
+        "cleanup": {
+          "at_ms": 1792991697535,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "final_binary_sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+        "stopped": true,
+        "real_units_unchanged": {
+          "voice-worker-rust": "MainPID=839\nNRestarts=0\n",
+          "p003-search-worker": "MainPID=951941\nNRestarts=0\n"
+        },
+        "real_window_unchanged": true
+      },
+      "brain": {
+        "at_ms": 1792991704176,
+        "synthetic_gate_closed": true,
+        "stopped": true,
+        "last_health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": false,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "at_ms": 1792990872089,
+              "outcome": "content",
+              "http_status": null,
+              "code": null,
+              "stale": true
+            },
+            "fallback": {
+              "at_ms": 1792990871599,
+              "outcome": "failure",
+              "http_status": 400,
+              "code": "InvalidSubscription",
+              "stale": true
+            },
+            "degraded": true
+          }
+        },
+        "real_brain_unchanged": "MainPID=2500486\nNRestarts=0\n",
+        "nginx_verification_location_retained": true
+      }
+    },
+    "brain_source_manifest": {
+      "src/extract-scheduler.ts": "3a04e12030b3417ae9f14afbea13328dae11d4344a6091fc24ee9e3cae65b5e4",
+      "src/ai-literacy.ts": "6b735ac3202f44bb7ff695dd017878c284beedc4a82570faffc5f9a13b9f11e6",
+      "src/memory-safety-filter.ts": "e368b74ebbe1432415344cadb3ef84380bf76e6b48f669b8c12bd2f626f70204",
+      "src/relation-state-store.ts": "1532f998499153fb4af576004d1cf2b825bf8b83f5fac25bb7b71ae371286c12",
+      "src/guard.ts": "bc220333b41c376cd17c6c49731333dfb3c280e9b5cc839eef04b5e87a102c94",
+      "src/memory-item-store.ts": "c668e926d7d4fb78d68aaf946f13e7922c1b19b0384a158a7a27334891ff552a",
+      "src/trait-store.ts": "ca0a09c9eada173ee986d193952f8f731c69adb0099fd2a241307298072aada4",
+      "src/themes-types.ts": "5eccd8950d7afe6382454ad8cfc796efb5337eacb937d5debe5acde853bd7523",
+      "src/exit-intent.ts": "f04b9cb3b9d15900742981bc528995b87484c8774410787c3b70a20b5a372517",
+      "src/local-audio-store.ts": "84039446eba147816abd3d5f74535377b53fd4eb92af19f65889a5e97e482e1a",
+      "src/extraction-log-store.ts": "8940cb3302f3bbe0f645d9074f7185ea42a269cab805c3ca7111035fcefb7448",
+      "src/pairing-store.ts": "7606b020b8929bafd778e5ec9b06367d68917c2ba43e242cbaf3521a6628dff3",
+      "src/pairing-crypto.ts": "0d9e7dfabf898d0871463e9cd3c5b29f2ea8d7cff7b0337052f2d86b47111a4c",
+      "src/local-audio-generator.ts": "b8a3cfaa68c44ae9c5201e7c65791874f25f08de48371dd9940a7e4c778ff8e6",
+      "src/pipeline.ts": "35894191c7ab807074b1218530285a370407eb31a92bff872ff6a78274d29822",
+      "src/device-brain-prompt.ts": "6f701c6d341d0ad1c80aa1dca3bf65c2e94b438d899b68f63704dc46b712bd4e",
+      "src/apk-inspect.ts": "a64939a96547c3ca7e7198d66e8a755a3f345a4ad96f29f4e3c2c23f97cda271",
+      "src/feedback-arm.ts": "4f9cf6fd12ce56531d3420d45484e97a3512b56bcd6e8385d3e0756b80d2c1b7",
+      "src/aliyun-sms.ts": "8fc59e63dd8502f38df644b9d9fc214a3804d3b7e4c82cb2a7b3cfd0bd20e7ab",
+      "src/verify-code-store.ts": "c0991de5ef67deb7ab3c947c2e60de4628a954935069d0fb7588d069e482eb3b",
+      "src/search-canary-main.ts": "61e8af41aebe0ec164cfe573ac9083d96e5298dca70316344a081e084dafc3e8",
+      "src/expression-filter.ts": "dc7e9acaab5142859c581e01c9c88e8338b47477942348bdb714ec43259e052d",
+      "src/pck-store.ts": "2e1f2f5c99b10029fb738dc46fb465d7431e9033d129a2ea2ccf7b4bdacc9f83",
+      "src/auth-jwt.ts": "621f9bee6f6886af691e7795473102fecc5b7b6c85ba67875cc8592d61fa67f7",
+      "src/hotword-channel.ts": "81f0bb1883777cf877aff9cd4d3bb09559e0f66355bf06cb2644b15048849dd2",
+      "src/job-run-store.ts": "6afcee639fa1b7a8c17da21c7bb96e840a175345139bfc9e8676ead13d2681d7",
+      "src/feedback-store.ts": "994e67a86ae0d2320588fa70ac5a786bfad8f10e5c97050c434487fcee49622f",
+      "src/onboarding-extractor.ts": "f44e7cc3604a8c3819721b62c25a30d2250f1ac819f0e5c75ce99e74c7c5b283",
+      "src/memory-extractor.ts": "391164b3a28f2ca516bed753d44c5ea36051e5751284b028a5b9a0965f815fe1",
+      "src/filler-generator.ts": "65d328eeafc1bf770885c45631bf48dba9e2fe64598fadb25a3f57a3130e4f5a",
+      "src/local-audio-g1-settings.ts": "1be77f0774bdeeaa144413f68f5310afa230d0e3c4b51b2e6ebfef9778039f35",
+      "src/hotword-store.ts.bak-20260818-pre-500": "6a46d5f0cd46618a417ce2cbaf9a9f4ffe70b65088910fe82262607b03b36bae",
+      "src/companion-kg.ts": "91bc094ff32bb4e7c68eb0c636582ad4ffa7666bc5cba0b82ff186c07a96d0c5",
+      "src/sms-limit-store.ts": "b9d9b57f6c195207e4db1e341a62028436a6f15c353eccf1203aff729f797e3d",
+      "src/account-store.ts": "5f911e190edade38ddea14aefddca2bcbd02d3b3a41ae5413f8eee6ea46dfa43",
+      "src/curriculum-kg.ts": "4c570387ac70d1c409a5f9820ef8b00f5aff25c532fa6384cd5522bd38820016",
+      "src/style-pool-store.ts": "f230ca882c22f1e284378c4026d618fb55f5b98f74808af7c10f30ec2d4ab357",
+      "src/diagnostics-store.ts": "b4ce364fa833214ae5fd51b7d72569cb5320d6374c9d91e231a7f9b67e22155f",
+      "src/dislike-undo.ts": "0a01f8fd5de935977998dbcc592fbec6774f71ee7e4c75aa977c7b4bed6c95d3",
+      "src/style-intent.ts": "a126f2383af0757ad42d86b43e5d664bff074a2a3ab09af38016faa10b01ad86",
+      "src/search-canary-status.ts": "136049092f0defbc43a2e2ec340e74bbb3d920c68a6781978bdafac24f879fac",
+      "src/paren-filter.ts": "2b91fb020c5e30268d19e51faa6446d8db004e6c4d5a2ad65609c6b82054294c",
+      "src/curriculum-aliases.ts": "35ea7091aa90833f18ca7f31759b34a79e69d8269bdb47b9d114358aea915276",
+      "src/prompt-orchestrator.ts": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f",
+      "src/dev-items-store.ts": "ec8e9f14fbcd81a0cf70d4b77f245a13223e97e74ab3a5c1eebd42267fbe8fbe",
+      "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+      "src/rename-gate.ts": "ddc2ba983599a20f3ec8d0a592971f88d8d481321973aa9f54f7882d13b93dbd",
+      "src/growth-ledger-store.ts": "77a6e83e958c2f0bfdd2c5748b05e2e8876eac0c902d86b299eb0d444b86d93b",
+      "src/dev-items-types.ts": "13a322c12f6a3e38dc075733f59b5af14792b209fd66813a9e936f9fb31b52e3",
+      "src/device-credential.ts": "0024a71fa6fcc18da31fb1690a005e6d056082a0cddaf6689f19d7913e82fb4f",
+      "src/extract-llm-store.ts": "52fcfdbf1db612b0838def0a3b53fee67fa70c5060809d4da9059389e352f37b",
+      "src/xiaoke-kb.ts": "964995255f5f61e7616a097b18b634eb2a98c9e844baa73c017fb8d379a40a30",
+      "src/config-store.ts": "1ad730b60ea5a72430c3f8ff2ba2470880aa81046772b9dc57c973b97860a591",
+      "src/hotword-store.ts": "1ef7b9291d5ece8e8b9dd72586f2c67f387ff446267bfc657499f0e427c99ff6",
+      "src/index.ts": "9fba6febc3941c0dd34a27a29be8059cac31aa872950cbf78f5baa7ccf5e0642",
+      "src/pck-inspect.ts": "7e840ed7a78fb16840064c2966a35b762b18d7d0bf4f5d3378ba9e2e519a11eb",
+      "src/ota-store.ts": "946fd00d6cbbaf44c949fd895bdd02c728e8f578dff28f7caa772fa97b707018",
+      "src/search-canary-runtime.ts": "5a376d65875403615f2bd27931ada708153b5d445afa998c2991733005e6698d",
+      "src/llm-extract.ts": "d34eecc5476dda7706a4400abec0319f741c24a039f43203c0844074fbbe07aa",
+      "src/diagnostics-redact.ts": "37bab25d8b73c09267cd9474d004b29b67ac7799a8a8a519c2cbce34fbced270",
+      "src/hosts-status.ts": "fa145a7eebcc344bf025bbf449fdaaebd6665eacb3c4f5b3ef23865ebf2a1239",
+      "src/device-registry-store.ts": "9032e1a6669aae0d9bd10877f862a9eaf6a35a5f0725d50e317ef40aa4236d0f",
+      "src/themes-store.ts": "f8baab760fb23c25420f7c27d7186458f71444e6fad2df5fd5460cd8706ebc74",
+      "src/search-canary-guard.ts": "7d4f7887b4e27d0c941be5f7bdb3ee9e774e6f18686a0e9c397dd10a9e5de749",
+      "src/local-audio-device-reply.ts": "b9c850d70905ba40348c88325d4dd4912d54846db891ea601aa96c23aa618b16",
+      "src/rtc-prompt-override.ts": "deeb3e0a4d54275a40e4251bff386b0f38af9858fbbda4283f464319981e034b",
+      "src/prompts.ts": "a3f9fcab5405085a9608c578e932b1bac4a2309beec9c03600c5db66608941b2",
+      "src/insight-runner.ts": "3b9a019960d7add37765684a4de4f2e59e6d1770c875d2ba6318e5d34a21fa5b",
+      "src/rtc-token.cjs": "b3fdb35b0e528e6e6307c3af8753d1e84fccf73bde02e6d1ea9d9897d13b45c3",
+      "src/conversation-store.ts": "6c1eabf9f5eb760914a9e1ae33215af72fb606911bdde311ae5bb26711058594",
+      "src/profile-store.ts": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e",
+      "src/device-sn.ts": "d0c70449a96fa81dbd778e3623757257b6737903c0abe295e7d8cff15cb6ef5e",
+      "src/spug-sms.ts": "e82bbc942349525ed154e45d6655fc166e52554d8b49e6dc50f40b78dfcf8bdf",
+      "src/telemetry-store.ts": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+      "src/child-insight-store.ts": "f50f2ab901f90a5829d2fe2ec91a7b88e90538605911680294e053556f56ea09",
+      "src/local-audio-integrity.ts": "f06e84f12b29a4049fbcc60d3720fa2bfcf334f5c0a59e4f6f9341aaacdd545f",
+      "src/style-template.ts": "b434df4bfa8703dc18f4d753a3de940f7b91fd526eceb57fb11aa6cdd1225c21",
+      "src/routes/conversation.ts": "ea245fcc7a2d70d30c13dbab6217840f540562b66e59ea8fc3ec3129c725b551",
+      "src/routes/search-admin.ts": "66764cd8dc123c00e84cb716be64295b43e952272f3f69d4a4296dccea04e8de",
+      "src/routes/search-tasks.ts": "3b0c59ce09922601d882fa364c4477dbd0351d06e34b30a16da730360ce557af",
+      "src/routes/local-audio.ts": "918cee86103dbec71bbd96e1450ddc9f3916e46bbf5ce83962768b81758e0456",
+      "src/routes/custom-llm.ts": "7c2d48978d7e59de42f7e85d6307c330369920c7f7b24c32829f28e126ce1a4f",
+      "src/routes/pairing.ts": "b9e38d1e627b98b987fc0b1bc4da915e3fcc4297145c2de5b90b18d995a50de5",
+      "src/routes/sms-auth.ts": "a05e29a5eacaf18326049355a591517f735c4af72e7c4e95a3e96a3442a72999",
+      "src/routes/search-routing-admin.ts": "b98f1efa16ef6870aee3bd1efcb6c6e3b0b680e110908570cad26170b168ac8b",
+      "src/routes/invite-auth.ts": "d0768e7fce917965154d80939c085e95dfaab63e2fdfc25dad2f3df21ff4ddb9",
+      "src/routes/device-session.ts": "3759d274bb3997f0930b18f43eba085d5a9c615a381f6a05c1488fdc7a3f662d",
+      "src/routes/device-session.ts.bak-20260818-pre-issuets": "c9c1b2801554683188d6c6d7679c980f19fd1066aa71908f1973d0b303f9ebad",
+      "src/routes/device-config.ts": "e906255ca7c397ceaafab470c49af9115d7bb7c3814be6e5206dfab514944773",
+      "src/routes/telemetry.ts": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+      "src/routes/rtc.ts": "024263a263c08612d3c8ce705d3ea4120d14debe9d670afaf2963e84600b2d74",
+      "src/routes/memory.ts": "733c3313a4006e76022e3932140e31e2a9ee7f06a6f3e59a036f41c61d032568",
+      "src/routes/vision.ts": "61cc73271877d54afe5269d63c92ba78c7d1e8a58d03f907bb638aa76a882d27",
+      "src/routes/diagnostics.ts": "58c91f3272a2670b7693fc19df51c0487914a0364b1d0b274ddad4dd9f148017",
+      "src/routes/search-canary-admin.ts": "069c8de6798612df0b3ae0a172b7af1ceee427a48cf3572403e084fc8570041d",
+      "src/routes/ota-pck.ts": "e6f76ea48feaab85b9f9253f62baebd1b5a6bbe9c38d15623dd913e53142dc15",
+      "src/routes/profile.ts": "91521cee210277b8233b9fe96ec5a2abd7231ec789d218f5990816bb33d66f74",
+      "src/routes/admin-data.ts": "b3034e4dd4049cc2fb2872d0867f010c4a0c636e9071b390454127e496742898",
+      "src/routes/feedback.ts": "b9e49b1479dfce9287af87574860647c77a87afad428de947f52787b4710635a",
+      "src/routes/auth.ts": "d49dba7c3685e00fde51c87e6d1ec53df5e6fe82b73edc77273d34377d00bee5",
+      "src/routes/dev-items.ts": "167fa55df086a1bf400af7e03cd2e73092a9eaceed5baa0686411d9bd20f53ce",
+      "src/routes/themes.ts": "0dc9e3a1df0b5a8dfd2d9d3866dcba73b65705f3282dadd42a888225ea5eaf60",
+      "src/routes/ota.ts": "9fd9894558d52688ffb7d10e52de16fa82cae9ca2e2c20ad75ce39653f44bee8",
+      "src/tools/baidu-weather.ts": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97",
+      "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+      "src/tools/weather-places.ts": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+      "src/tools/search-chat-policy.ts": "9a873a8d23102728bd4dfe6542ce5af5a468a9c5640fd187f39fcc5498b50120",
+      "src/tools/search-runtime.ts": "18d3d0956707cf82810a6ae1b243ea28b580380311935227344960933417a740",
+      "src/tools/device-location-runtime.ts": "0f45d235204db912f52fc72049d47f1c95ba7375241b9cc80eb4c3802af2b18c",
+      "src/tools/search-resume-scope.ts": "203077cb9baedfe760dce95d70ef6ca1d0375d03e020be6f7d34bd30714125ef",
+      "src/tools/device-location.ts": "8eccbc3f897ff27ea7495d0608475b3d712e5126c878c83f8ad09b318cf34447",
+      "src/tools/search-routing-config.ts": "8227004a560cde10c0d66a78bd8471fa3dce2297132efff767878ef8d892d4ff",
+      "src/tools/search-dialogue-context.ts": "5ac631693385fc64848e69c124a33bebec8e695eeefe06af2497d1022b7dffad",
+      "src/tools/search-routing-defaults.json": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+      "src/tools/search-routing-store.ts": "462ade40ef6a5f75d88174b54b7a27aafec1a50fe74c2b402251a822f802f55c",
+      "src/tools/search-availability.ts": "e25ceda0627dd6f239e832bf2ba7f76bf5e5c979d19551f6e7b1c97cf78a6427",
+      "src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f",
+      "src/tools/search-executor.ts": "b12d796fd75df41c4e56804fc940837b6659171624aca1ad88470809a013b6a8",
+      "src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+      "src/tools/search-resume.ts": "1d5ba20593819ddd6653b6ea45d8131e3c16036ebfa1639a4bcaa57ab852fa85",
+      "src/tools/fixed-weather.ts": "7063e076eea7713139305f2ee567424c5b2e9217c79e14cb44ccee552ebe216f",
+      "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+      "src/tools/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+      "src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+      "src/analytics/fact-layout.ts": "cd30d56700424fb68bba06c5e78b446007edb76deeca7dc3b6069cc462c8b6cf",
+      "src/analytics/checkpointer.ts": "37009b9a4ef00ddbdec81f870914f7fa0daf89cb9ac46ea5fecf42f1a9db41c5",
+      "src/analytics/sqlite-policy.mjs": "06b4215ad1311d88282864fb54e7119dccdc69dfb9e0fd329c19de7cc6e0a415",
+      "src/analytics/event-property-schema-v1.json": "7050d0be830669b63d444245f26fff2407fc3daf4d4b0866e4b2b309be06b1bc",
+      "src/analytics/event-registry-v1.ts": "8c58786dc86a14c21b65ad7f64ad834b1943f2452650a7aa71feb58cc22c94e7",
+      "src/analytics/device-context.ts": "4da0459cac708e3b3d2dbd12a8be4cfaf2ff1dbd7956fc1050fcf6433df6b45b",
+      "src/analytics/store.ts": "4d4a62a787cf986bc40de8eac49f5dd54eb59a84386f409361e073826503365c",
+      "src/analytics/rollup.ts": "77b3c9ff85b6682ffec321f6fb447d67fe656f69c089870f9f336d90e57434ee",
+      "src/analytics/structure.ts": "9e3e04133dbf88e0e3c9dca0baa26e58a820469b3c8d55484139ae439ce3a90b",
+      "src/analytics/index.ts": "60117f6dc9667a4002d04afc6c1385b60ad4d791f644c01951c376f8fef8ac50",
+      "src/analytics/writer.ts": "b798afc0c74ed761382db73212da35f929dbf55ec81cbcb8280329aa13c0ee07",
+      "src/analytics/admin-query.ts": "a4fe2ae3ab57d619c808d26c5273a9ef3221cdfddd2045860276f64eb725e629",
+      "src/analytics/sqlite-policy.d.mts": "fdea41079daec7e2a7922311cac45b22bee5ac2d915cb59bea9c4bf21200ad50",
+      "src/analytics/ingest.ts": "f4047d950e556e542a79c809a405b76a053520c97ae313554205ba1c7cad381b",
+      "src/analytics/contracts.ts": "52b9fe94b6a835af2ba196c64ead9de0ba6db85f53885afdd95127b37fac8bb1",
+      "src/analytics/writer-bootstrap.mjs": "2c412c6ad1afbdf9ce8beea7579dda397e78a3d4871c1cc15837a902d24eeb72",
+      "src/analytics/writer-thread.ts": "79c7b334baa2e5b056cfcaaf282393761f35daf60316a8d41dbf5ede3e7950aa",
+      "src/providers/deepseek-llm.ts": "520b4ce881429b24563b4b8e338dddab5fe142489e84c17d0e60b27c48dd3ca1",
+      "src/providers/gemini-vision.ts": "177ed041fcb67e3c722da9a329b89df7c852f21de43d9e46704e6ed762238553",
+      "src/providers/volc-tts.ts": "de0c02b6003681cc13a3d5c745bd74e442759dde03812fb7c6c45af4654bd2bb",
+      "src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+      "src/providers/volc-asr.ts": "0de314cf5a7c2f09db569fedfbe62fc89e70b9f6294f0528d3e4ffc08a3e90e7",
+      "src/providers/xfyun-tts.ts": "f28e6b6bd63cd3f5bf32af82dbe0e806c3a5672c651403b6affef808b17ce4e5",
+      "src/providers/volc-llm.ts": "563f16013137e0b2b5b9dd138ebc2d6eac8d8b0d7805326686f6ec9ffd1afc8f",
+      "src/providers/minimax-llm.ts": "175ccc97309246e9c6283694d05ee204a8d388f3aa94f94b58649c1a2be20d01",
+      "src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+      "src/providers/gemini-llm.ts": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140"
+    }
+  },
+  "checks": {
+    "brain_linux": {
+      "tests": 115,
+      "passed": 115,
+      "failed": 0,
+      "typescript_exit": 0,
+      "source_files_match": true,
+      "artifacts": {
+        "log": "262e2f2a88a7d9f22d15e00527b669afa36fe2ad008c7e7d4223e2240f8b46b9",
+        "first_packaging_failure_log": "b691a5851ca808715f3fac8a00c690d4f840b448b2ca8f4f3d7c1b8472fb0c5f",
+        "tsc_log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "worker_linux": {
+      "tests": 437,
+      "passed": 437,
+      "failed": 0,
+      "preview_tests": 23,
+      "preview_passed": 23,
+      "release_exit": 0,
+      "abi_passed": true
+    },
+    "python_cleanup": {
+      "tests": 17,
+      "passed": 17,
+      "failed": 0
+    },
+    "http_isolation": {
+      "no_auth": 401,
+      "authenticated_real_device": 403,
+      "authenticated_registered_synthetic": 200
+    }
+  },
+  "rtc": {
+    "normal_pilot_search_off": {
+      "state": "missing",
+      "pid": "973984",
+      "health": {
+        "agent": "p003-search-verification-20261026",
+        "at_ms": 1792990563199,
+        "cleanup": {
+          "at_ms": 1792990557615,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 1
+        },
+        "generation": "R17-isolated-rtc-20261026",
+        "jobs": 1,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "file_exists": true,
+      "safe_result": {
+        "room": "sn-BJP00399999999999901-1792990543",
+        "input_ready": 1,
+        "output_ready": 1,
+        "voiced_ms": 4940.0,
+        "start_ms": 1792990543708,
+        "end_ms": 1792990567067,
+        "runner_error": null
+      },
+      "caption_roles": [
+        "user",
+        "agent",
+        "agent"
+      ],
+      "metrics": [
+        {
+          "at_ms": 1792990547405,
+          "metric": {
+            "eou_ms": 479,
+            "k": "eou",
+            "stt_ms": 474
+          }
+        },
+        {
+          "at_ms": 1792990549460,
+          "metric": {
+            "k": "tts",
+            "ttfb_ms": 295
+          }
+        },
+        {
+          "at_ms": 1792990550980,
+          "metric": {
+            "k": "llm",
+            "tps": 22.2,
+            "ttft_ms": 886
+          }
+        },
+        {
+          "at_ms": 1792990550982,
+          "metric": {
+            "k": "tts",
+            "ttfb_ms": 295
+          }
+        }
+      ]
+    },
+    "v1_failed_search_setup_attempts": 4,
+    "v1_root_cause": "Api::new rejected the separate HTTPS path; search never exercised",
+    "v2_smoke": {
+      "probe_dtx": false,
+      "mode": "ack0_final",
+      "room": "sn-BJP00399999999999901-1792991371",
+      "trace": "search-probe-1792991371",
+      "synthetic": true,
+      "counts": {
+        "agent_transcripts": 3,
+        "user_transcripts": 1,
+        "metrics": 1,
+        "audio_voiced_ms": 8910.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 134,
+        "packets_after": 1874
+      },
+      "events": [
+        {
+          "event": "synthetic_input",
+          "index": 0,
+          "ms": 3036
+        },
+        {
+          "event": "metrics",
+          "ms": 5867,
+          "data": {
+            "eou_ms": 434,
+            "k": "eou",
+            "stt_ms": 429
+          }
+        },
+        {
+          "event": "user_subtitle",
+          "ms": 6643,
+          "chars": 13
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 7288,
+          "chars": 4
+        },
+        {
+          "event": "result_first_audio_server",
+          "ms": 10208
+        },
+        {
+          "event": "sourced_task_verified",
+          "ms": 11501,
+          "task_id": "c1688181-02b7-4fff-b8fc-00f6c74dbcff",
+          "status": "ready",
+          "sources": 2
+        },
+        {
+          "event": "synthetic_input",
+          "index": 1,
+          "ms": 11836
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 13766,
+          "chars": 16
+        },
+        {
+          "event": "agent_subtitle",
+          "ms": 20317,
+          "chars": 29
+        }
+      ],
+      "disconnected": false,
+      "elapsed_s": 37.8,
+      "device_heard_verified": false,
+      "runtime_manifest": {
+        "worker_sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+        "worker_pid": "976085",
+        "at_ms": 1792991371791,
+        "asr_nonstream": "0",
+        "asr_ack_preservation": "1"
+      }
+    },
+    "v2_short_ack_asr_observed": false,
+    "v2_ack_matrix": {
+      "planned": 9,
+      "attempted": 1,
+      "unexecuted": 8,
+      "stopped_on_failed_search_precondition": true,
+      "failure_stage": "answer",
+      "failure_reason": "invalid_answer",
+      "ack_input_not_sent": true
+    },
+    "tasks": [
+      {
+        "id": "c1688181-02b7-4fff-b8fc-00f6c74dbcff",
+        "session": "sn-BJP00399999999999901-1792991371",
+        "createdAt": 1792991377692,
+        "readyAt": 1792991380051,
+        "status": "delivered",
+        "outcome": "answered",
+        "delivery": "completed",
+        "error": null,
+        "failure": null,
+        "diagnostics": {
+          "returned": 10,
+          "accepted": 3,
+          "rejected_schema": 0,
+          "rejected_url": 0,
+          "rejected_text": 0,
+          "rejected_date": 0,
+          "duplicate": 0,
+          "outcome": "evidence",
+          "answer_rewrites": 1,
+          "evidence_claims": 2
+        },
+        "sources": 2
+      },
+      {
+        "id": "7c329aaf-bf1a-4438-99be-59de46a19f25",
+        "session": "sn-BJP00399999999999901-1792991469",
+        "createdAt": 1792991474796,
+        "readyAt": 1792991477385,
+        "status": "delivered",
+        "outcome": "failed",
+        "delivery": "interrupted",
+        "error": "search_unavailable",
+        "failure": {
+          "stage": "answer",
+          "reason": "invalid_answer"
+        },
+        "diagnostics": null,
+        "sources": 0
+      }
+    ],
+    "device_heard_verified": false,
+    "performance_gate_passed": false,
+    "answer_correctness_acceptance": false
+  },
+  "private_artifact_hashes": {
+    "build-verifier-v2-console.log": "169fc1f8ee216dc391864aba407a105b9cfbcba9b8ea1b16b985efcc25e9a274",
+    "linux-final-v4-verifier-safe.json": "ab035f4147b8291ef6dd9d8005150d646c08c1bc852633bb343b5326ed24e82f",
+    "rtc-verifier-isolation-http.json": "a1c13d03cad6e45163fae26d91c472cff5f20714ed59d7b2dfbfeca712cfafb3",
+    "rtc-pilot-readback.json": "1c0a8f3f0a176a636235dd52b5f64e116dcb37fcb6d2a2f6b3815d02d308d24a",
+    "functional-ack-aborted.json": "673e7c2a916ccc33daca85ee6d3d3846de8c6f108547dd0c40616b3bc6e3156d",
+    "verifier-v2-installed.json": "045ec44beff0fa3e3972d6f12e460f08ae09d23e4093229f4a20731f808d05ef",
+    "verifier-v2-smoke-private.json": "836800c0bec8593ee50d567ab3ae233253e605174b9349d5f14af6b1e815728c",
+    "verifier-v2-ack1-failure-private.json": "3bdfd4b46f1baa2fcc548c56744be76f2b1b78157001f0fdffbc4f8c4ca0618e",
+    "verifier-v2-ledger-private.json": "9d6c1d89d0204bc9804f558ea30633cffe34b6394ed2ba627b56ed104d5a938f",
+    "verifier-checkpoint-closed.json": "191e7ed6b9e01f8f1501e9ee3357dde2f4c9e596303d3442e8af0258565731f9",
+    "verifier-final-live-readonly.json": "18052c24476ddc39955d16d9e9bb282533434e70e426b355bd9207096584e9b0"
+  },
+  "safety": {
+    "raw_transcripts_audio_credentials_in_git": false,
+    "main_merged": false,
+    "real_device_scope_expanded": false,
+    "real_ledger_reset": false,
+    "old_latency_controller_resumed": false
+  }
+}
