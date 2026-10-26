@@ -1,0 +1,139 @@
+{
+  "scope": "R16p first device feedback; R17 bounded resume source patch",
+  "collected_range_cst": [
+    "2026-10-26T13:41:00+08:00",
+    "2026-10-26T14:15:30+08:00"
+  ],
+  "attachment_sha256": "2086db4b21bcc9436111e16e269792f472da9f02fcf1f7188e4a0499c8f8e8f9",
+  "original_videos_reviewed": false,
+  "private_evidence_sha256": {
+    "worker-private.json": "dbc769219b3202d3a81dcccc9377b923c6113ed4b5ef4ac106ecb4f9fe60449d",
+    "brain-private.json": "71d395a29d2e973530c0fe3f3134a1cc5b250705dbc20a34f4564b1213c2c65e",
+    "main-worker-subwindow-private.json": "47e0603f0a5e6994c7c4155d5e2b7c90efe3671dc7651489c2e153691b285954",
+    "device-dispatch-private.json": "8f815fae548be8a3d0e76db1ed2649778ec3ec58ae051036eb5559e73f0e748c"
+  },
+  "worker_log_rows": 4557,
+  "brain_log_rows": 314,
+  "tasks": {
+    "total": 25,
+    "answered": 21,
+    "failed": 2,
+    "no_evidence": 2,
+    "collected_status_expired": 23,
+    "collected_status_cancelled": 2
+  },
+  "history_inventory": {
+    "at_cst": "2026-10-26T16:20:42.563+08:00",
+    "main_registered_devices": 16,
+    "main_all_messages": 26808,
+    "main_current_device_accounts_messages": 26292,
+    "main_unmapped_messages": 516,
+    "canary_devices": 2,
+    "canary_messages_before_cross_store_dedupe": 1924,
+    "dedupe_completed": false,
+    "private_counts_sha256": "a347b126c824cb94a8a510a56ece25e3f4af0a081399ccb9de4b6646d14722ff",
+    "all_text_exported": false,
+    "model_weights_trained": false,
+    "all_history_replayed": false
+  },
+  "resume_patch": {
+    "old_code_red": {
+      "passed": 16,
+      "failed": 1,
+      "exit": 101,
+      "log_sha256": "80cb90d0c973e6a9e50f05981ffb7c9bfc47d7c262d711c007a336db1a7937f9"
+    },
+    "linux_final": {
+      "worker_tests": 440,
+      "preview_tests": 26,
+      "failures": 0,
+      "release_exit": 0,
+      "abi_pass": true,
+      "binary_sha256": "7000e190f882d0bc13fd4b9c8f1c91485736fdc6c547d5f181ccaa7c9b01766f",
+      "binary_bytes": 75635408,
+      "log_sha256": "862e3b51006a0bc828c5a3b5db669505333eb363cfe9134feb003f614c05526c"
+    },
+    "source_sha256": {
+      "src/search_policy.rs": "12beeb5a9892cfcc46f0cdb439c8b9668fd3072f2b35907ca8d75c2cc844ca31",
+      "src/search_policy_cases.rs": "1d50026ae40560412ed198a7dabdf654888bdc8d9c87397595c8f747d6939562",
+      "src/search_routing.rs": "dcf3ed7fb3116fd77d4e14291462cea0cfe7f8e435707827a6f87ad7c865a671"
+    },
+    "new_patch_rtc_tested": false,
+    "deployed_to_real_canary": false
+  },
+  "live_mutations_this_feedback_review": [],
+  "live_window_reference": {
+    "at_cst": "2026-10-26T15:58:29+08:00",
+    "expires_cst": "2026-11-02T11:19:00+08:00",
+    "p1": true,
+    "p2": false,
+    "note": "time-specific read-only snapshot, not future live state"
+  },
+  "known_unfinished": [
+    "dispatch fallback exact cause not captured",
+    "actual ASR robustness and fragments",
+    "new version RTC/latency/rollback/expiry acceptance",
+    "all-history corpus/training/regression",
+    "device physical playback and exit trace"
+  ],
+  "verification_cleanup": {
+    "worker": {
+      "at_ms": 1793003877347,
+      "synthetic_window": {
+        "enabled": false,
+        "allowlist": [
+          "BJP00399999999999901"
+        ],
+        "expires_at_ms": 1793011747157,
+        "generation": "R17-isolated-rtc-20261026"
+      },
+      "synthetic_rooms_remaining": 0,
+      "cleanup": {
+        "at_ms": 1793003875837,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "final_binary_sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+      "stopped": true,
+      "real_units_unchanged": {
+        "voice-worker-rust": "MainPID=839\nNRestarts=0\n",
+        "p003-search-worker": "MainPID=951941\nNRestarts=0\n"
+      },
+      "real_window_unchanged": true
+    },
+    "brain": {
+      "at_ms": 1793003879402,
+      "synthetic_gate_closed": true,
+      "synthetic_account_restored": true,
+      "stopped": true,
+      "last_health": {
+        "status": "ok",
+        "agent": "p003-search-verification-20261026",
+        "generation": "R17-isolated-rtc-20261026",
+        "search": false,
+        "tools": false,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "at_ms": 1793001007174,
+            "outcome": "content",
+            "http_status": null,
+            "code": null,
+            "stale": true
+          },
+          "fallback": {
+            "at_ms": 1793001007127,
+            "outcome": "failure",
+            "http_status": 400,
+            "code": "InvalidSubscription",
+            "stale": true
+          },
+          "degraded": true
+        }
+      },
+      "real_brain_unchanged": "MainPID=2500486\nNRestarts=0\n",
+      "nginx_verification_location_retained": true
+    }
+  }
+}

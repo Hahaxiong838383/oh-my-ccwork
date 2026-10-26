@@ -33,6 +33,38 @@ fn task_query(query: &str, replace: bool) -> Option<Intent> {
     }
     Some(if replace { Intent::Replace(q.into()) } else { Intent::Search(q.into()) })
 }
+
+/// Match a whole request to resume a search result, never a substring or a
+/// phonetic guess about the query. Authorization/expiry stay with SearchResume.
+fn result_resume(text: &str) -> bool {
+    let mut t = text;
+    for _ in 0..2 {
+        if let Some(rest) = ["麻烦你", "麻烦", "请你", "请", "帮我", "能不能", "嗯"]
+            .iter().find_map(|p| t.strip_prefix(p)) {
+            t = rest.trim_start_matches(|c: char| "，, ".contains(c));
+        } else { break; }
+    }
+    if let Some(rest) = ["好吗", "可以吗", "吧"].iter().find_map(|s| t.strip_suffix(s)) {
+        t = trim_outer(rest);
+    }
+    // Observed ASR prefix: "从继续…". Also allow one repeated "继续".
+    // This is deliberately not a global filler/negation removal rule.
+    if let Some(rest) = t.strip_prefix("从继续").or_else(|| t.strip_prefix("继续继续")) {
+        return resume_object(rest);
+    }
+    if let Some(rest) = t.strip_prefix('把') {
+        return ["继续说", "继续讲", "继续播", "继续播报", "接着说", "接着讲", "接着播"]
+            .iter().any(|s| rest.strip_suffix(s).is_some_and(resume_object));
+    }
+    ["继续", "继续说", "继续讲", "继续播", "继续播报", "接着说", "接着讲", "接着播"]
+        .iter().any(|p| t.strip_prefix(p).is_some_and(resume_object))
+}
+
+fn resume_object(text: &str) -> bool {
+    ["刚才的搜索结果", "刚才的查询结果", "刚才查到的结果", "刚刚查到的结果", "刚才查的结果"]
+        .contains(&text)
+}
+
 pub fn intent(text: &str) -> Option<Intent> {
     let t = addressed(text);
     if ["如果", "假如", "例如", "比如"].iter().any(|p| t.starts_with(p)) { return None; }
@@ -52,7 +84,8 @@ pub fn intent(text: &str) -> Option<Intent> {
         || ["不用查了，", "不用查了,", "别查了，", "别查了,", "不用查了我们聊", "不用查了聊", "别查了我们聊"].iter().any(|p| control.starts_with(p)) {
         return Some(Intent::Cancel);
     }
-    if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢", "继续播刚才的搜索结果", "刚才查的结果呢", "查好了吗", "搜到了吗", "接着说刚才查到的", "刚才查到什么了", "搜索结果呢"].contains(&control) { return Some(Intent::Resume); }
+    if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢", "继续播刚才的搜索结果", "刚才查的结果呢", "查好了吗", "搜到了吗", "接着说刚才查到的", "刚才查到什么了", "搜索结果呢"].contains(&control)
+        || result_resume(control) { return Some(Intent::Resume); }
     if ["不要", "不用", "别", "我自己", "我说", "他说", "她说", "你说", "“", "‘", "\"", "'"].iter().any(|p| t.starts_with(p)) { return None; }
     if let Some(q) = t.strip_prefix("我查一下") {
         return if q.contains("就回来") || q.contains("再告诉") { None } else { Some(Intent::Clarify) };

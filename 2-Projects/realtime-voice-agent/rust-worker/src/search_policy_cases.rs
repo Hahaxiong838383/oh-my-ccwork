@@ -86,3 +86,35 @@ fn asr_split_topic_first_binds_only_an_immediate_public_question() {
  let mut r=QueryIntent::default();r.route("故宫明天开放吗",1000);r.clear();
  assert_eq!(r.route("帮我查一下",1400),Some(Intent::Clarify));
 }
+
+#[test]
+fn explicit_result_resume_accepts_politeness_and_bounded_asr_stutters() {
+ for text in [
+  "从继续刚才的搜索结果", "小可，从继续刚才的搜索结果。",
+  "请继续刚才的搜索结果", "麻烦你继续播报刚才的查询结果",
+  "帮我接着讲刚才查到的结果", "能不能继续讲刚刚查到的结果",
+  "把刚才的搜索结果接着说", "请把刚才查的结果继续播报",
+  "嗯继续刚才的搜索结果", "继续继续刚才的搜索结果",
+  "继续说刚才的搜索结果吧", "请你继续刚才的搜索结果好吗",
+ ] {
+  assert_eq!(intent(text),Some(Intent::Resume),"explicit result resume: {text}");
+ }
+}
+
+#[test]
+fn resume_tolerance_never_rewrites_negation_quotation_or_unrelated_chat() {
+ for text in [
+  "不要继续刚才的搜索结果", "请不要继续刚才的搜索结果",
+  "我说从继续刚才的搜索结果", "他说继续刚才的搜索结果",
+  "如果继续刚才的搜索结果", "从继续刚才的搜索结果是什么意思",
+  "继续刚才的搜索结果是什么意思", "把刚才的搜索结果改成故事",
+  "继续讲故事", "继续刚才的话题", "从头讲小猫的故事",
+  "嗯我想聊小猫", "继续刚才的搜索结果然后取消搜索",
+  "从从继续刚才的搜索结果", "继续继续继续刚才的搜索结果",
+  "奶茶中国", "加微信叫什么", "中国第一个人的微信叫什么",
+ ] {
+  assert_eq!(intent(text),None,"must not invent a control/query: {text}");
+ }
+ assert_eq!(intent("帮我查一下继续刚才的搜索结果是什么意思"),
+  Some(Intent::Search("继续刚才的搜索结果是什么意思".into())));
+}

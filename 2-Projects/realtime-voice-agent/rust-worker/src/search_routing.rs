@@ -177,6 +177,21 @@ impl RoutingSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn r17_result_resume_survives_reconnect_config_and_pending_clarification(){
+        let mut c=RoutingConfig::default();
+        c.rules=vec![Rule{id:"broad-chat".into(),enabled:true,priority:1000,action:"chat".into(),mode:"contains_any".into(),triggers:vec!["继续".into()],exclude:vec![]}];
+        let mut r=RoutingSession::default();
+        assert_eq!(r.route("明天天气",0,Some(&RoutingConfig::default()),"old").action,"clarify_city");
+        r.clear(); // A new room must not need old in-memory routing state.
+        let d=r.route("从继续刚才的搜索结果",1000,Some(&c),"new");
+        assert_eq!(d.action,"resume");assert_eq!(d.rule_id,"builtin-control");
+        assert_eq!(d.intent(),Some(Intent::Resume));assert!(d.query.is_none());
+        assert_eq!(r.route("请把刚才查的结果继续播报",1100,None,"fallback").action,"resume");
+        for t in ["请不要继续刚才的搜索结果","他说继续刚才的搜索结果","继续刚才的小猫故事","奶茶中国","加微信叫什么"] {
+            assert_eq!(r.route(t,1200,Some(&c),"new").action,"chat","{t}");
+        }
+        assert_eq!(r.route("北京",1300,Some(&c),"new").action,"chat");
+    }
     #[test] fn r10_expanded_weather_preserves_places_and_control_without_stealing_chat(){
         let mut value=serde_json::to_value(RoutingConfig::default()).unwrap();value["baidu_weather_enabled"]=serde_json::json!(true);value["weather_enabled"]=serde_json::json!(true);
         let config:Result<RoutingConfig,_>=serde_json::from_value(value);
