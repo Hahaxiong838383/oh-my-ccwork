@@ -1,0 +1,486 @@
+{
+  "recorded_at_cst": "2026-10-26 13:50",
+  "status": "diagnostic_checkpoint_not_release_acceptance",
+  "brain_code_commit": "c5e00d53f7dd991db2f9f7b952616a1c7da6cf3a",
+  "code_files": {
+    "src/tools/search-executor.ts": "c02484ed6c12927ad1c57df26c05aca9a71be5c6313ae382ec1190e50b3f687d",
+    "src/tools/search-runtime.ts": "33b081d9d02ea3e759d64d5fa7b73147c1b20c3c16c937b7798064b45116a7c4",
+    "scripts/search-validation-audit.test.ts": "3192a2ba68ce59700151b8d2d4a2d8a41765705457efe45eb65f57561d86d218"
+  },
+  "checks": {
+    "local_focused": {
+      "tests": 43,
+      "passed": 43,
+      "failed": 0,
+      "tsc_exit": 0
+    },
+    "linux": {
+      "tests": 119,
+      "passed": 119,
+      "failed": 0,
+      "tsc_exit": 0,
+      "source_manifest_matches": true,
+      "log_hashes": {
+        "log": "0378397a7777096af3f2b195eefb23c165de2a7d2fb0b1a24c765b96359e58ee",
+        "first_packaging_failure_log": "b691a5851ca808715f3fac8a00c690d4f840b448b2ca8f4f3d7c1b8472fb0c5f",
+        "tsc_log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  "rtc": {
+    "planned_remaining": 8,
+    "attempted": 5,
+    "unexecuted": [
+      "ack_late1_final",
+      "ack_late2_final",
+      "case5_final"
+    ],
+    "rows": [
+      {
+        "mode": "ack2_final",
+        "start_ms": 1792993051067,
+        "end_ms": 1792993096442,
+        "rc": 0,
+        "room": "sn-BJP00399999999999901-1792993052",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 8160.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 83,
+          "packets_after": 1841
+        },
+        "search_setup_ok": true,
+        "evidence_review_pending": true,
+        "expected_synthetic_ack": "对",
+        "ack_asr_observed": true,
+        "dedicated_ack_route": true,
+        "task": {
+          "id": "19d6eba1-2ece-4e0b-be4a-7c1e1b917ab3",
+          "status": "expired",
+          "outcome": "answered",
+          "delivery": "completed",
+          "failure": null
+        },
+        "sources_at_ready": 2,
+        "physical_device_heard": false
+      },
+      {
+        "mode": "ack3_final",
+        "start_ms": 1792993114450,
+        "end_ms": 1792993161716,
+        "rc": 0,
+        "room": "sn-BJP00399999999999901-1792993125",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 9090.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 67,
+          "packets_after": 1732
+        },
+        "search_setup_ok": true,
+        "evidence_review_pending": true,
+        "expected_synthetic_ack": "嗯嗯",
+        "ack_asr_observed": false,
+        "dedicated_ack_route": false,
+        "task": {
+          "id": "9ab9ac81-df57-4f66-a903-29112aaac61f",
+          "status": "expired",
+          "outcome": "answered",
+          "delivery": "completed",
+          "failure": null
+        },
+        "sources_at_ready": 2,
+        "physical_device_heard": false
+      },
+      {
+        "mode": "ack4_final",
+        "start_ms": 1792993176723,
+        "end_ms": 1792993227878,
+        "rc": 0,
+        "room": "sn-BJP00399999999999901-1792993190",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 9160.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1775
+        },
+        "search_setup_ok": true,
+        "evidence_review_pending": true,
+        "expected_synthetic_ack": "哦",
+        "ack_asr_observed": false,
+        "dedicated_ack_route": false,
+        "task": {
+          "id": "bd4e1681-e23c-4d1d-8608-18b76564b066",
+          "status": "expired",
+          "outcome": "answered",
+          "delivery": "completed",
+          "failure": null
+        },
+        "sources_at_ready": 2,
+        "physical_device_heard": false
+      },
+      {
+        "mode": "ack5_final",
+        "start_ms": 1792993245886,
+        "end_ms": 1792993293477,
+        "rc": 0,
+        "room": "sn-BJP00399999999999901-1792993256",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 1,
+          "audio_voiced_ms": 9410.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 1726
+        },
+        "search_setup_ok": true,
+        "evidence_review_pending": true,
+        "expected_synthetic_ack": "对",
+        "ack_asr_observed": true,
+        "dedicated_ack_route": true,
+        "task": {
+          "id": "4c7ed19c-f397-4552-8fe9-92216bb29b81",
+          "status": "delivered",
+          "outcome": "answered",
+          "delivery": "completed",
+          "failure": null
+        },
+        "sources_at_ready": 2,
+        "physical_device_heard": false
+      },
+      {
+        "mode": "ack_late0_final",
+        "start_ms": 1792993311487,
+        "end_ms": 1792993364020,
+        "rc": -6,
+        "room": "sn-BJP00399999999999901-1792993322",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 8660.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 85,
+          "packets_after": 1819
+        },
+        "search_setup_ok": true,
+        "evidence_review_pending": true,
+        "expected_synthetic_ack": "嗯嗯",
+        "ack_asr_observed": false,
+        "dedicated_ack_route": false,
+        "task": {
+          "id": "7c09681d-1f2a-444d-879d-e5501089557d",
+          "status": "delivered",
+          "outcome": "answered",
+          "delivery": "completed",
+          "failure": null
+        },
+        "sources_at_ready": 2,
+        "physical_device_heard": false
+      }
+    ],
+    "stop_reason": "probe_non_unwinding_panic_after_result_rc_minus6",
+    "root_cause_confirmed": false,
+    "prior_failures_retained": true
+  },
+  "validation_events": [
+    {
+      "task_id": "19d6eba1-2ece-4e0b-be4a-7c1e1b917ab3",
+      "phase": "review",
+      "codes": [
+        "unquoted_number"
+      ]
+    },
+    {
+      "task_id": "7c09681d-1f2a-444d-879d-e5501089557d",
+      "phase": "review",
+      "codes": [
+        "causal_source_scope"
+      ]
+    }
+  ],
+  "model_diagnostic": {
+    "fixed_attempts": 4,
+    "successes": 4,
+    "prior_invalid_answer_reproduced": false,
+    "all_five_rtc_attempts_have_answer": true,
+    "semantic_acceptance": false
+  },
+  "asr_endpoint_matrix": [
+    {
+      "mode": "150",
+      "clip": "ack01.wav",
+      "wav_sha256": "8338d95868c9ab4367c210f592e3ee09928111dc89adba777c0bf815884cae38",
+      "expected": "嗯嗯",
+      "recognized": true,
+      "nonstream": false
+    },
+    {
+      "mode": "300",
+      "clip": "ack01.wav",
+      "wav_sha256": "8338d95868c9ab4367c210f592e3ee09928111dc89adba777c0bf815884cae38",
+      "expected": "嗯嗯",
+      "recognized": true,
+      "nonstream": false
+    },
+    {
+      "mode": "800",
+      "clip": "ack01.wav",
+      "wav_sha256": "8338d95868c9ab4367c210f592e3ee09928111dc89adba777c0bf815884cae38",
+      "expected": "嗯嗯",
+      "recognized": true,
+      "nonstream": false
+    },
+    {
+      "mode": "150",
+      "clip": "ack11.wav",
+      "wav_sha256": "7f6ed4cc86aada03019fe76b7461cc51f98739153741d4feb1eb65b6d31f1cf8",
+      "expected": "哦",
+      "recognized": false,
+      "nonstream": false
+    },
+    {
+      "mode": "300",
+      "clip": "ack11.wav",
+      "wav_sha256": "7f6ed4cc86aada03019fe76b7461cc51f98739153741d4feb1eb65b6d31f1cf8",
+      "expected": "哦",
+      "recognized": false,
+      "nonstream": false
+    },
+    {
+      "mode": "800",
+      "clip": "ack11.wav",
+      "wav_sha256": "7f6ed4cc86aada03019fe76b7461cc51f98739153741d4feb1eb65b6d31f1cf8",
+      "expected": "哦",
+      "recognized": false,
+      "nonstream": false
+    },
+    {
+      "mode": "150",
+      "clip": "ack21.wav",
+      "wav_sha256": "929111656eaa1df9b1243e1b53cfe6faefbe1572662c530a98ae25c0adbbd5a6",
+      "expected": "对",
+      "recognized": true,
+      "nonstream": false
+    },
+    {
+      "mode": "300",
+      "clip": "ack21.wav",
+      "wav_sha256": "929111656eaa1df9b1243e1b53cfe6faefbe1572662c530a98ae25c0adbbd5a6",
+      "expected": "对",
+      "recognized": true,
+      "nonstream": false
+    },
+    {
+      "mode": "800",
+      "clip": "ack21.wav",
+      "wav_sha256": "929111656eaa1df9b1243e1b53cfe6faefbe1572662c530a98ae25c0adbbd5a6",
+      "expected": "对",
+      "recognized": true,
+      "nonstream": false
+    }
+  ],
+  "rtc_codec_asr_replay": {
+    "attempts": 1,
+    "input_sha256": "3997e0b5b749ff6eded2b2fc18d793ed8574ffd5a794644a7789a7af2a68e845",
+    "observed_short_words": [
+      "对"
+    ],
+    "missing_short_words": [
+      "嗯嗯",
+      "哦"
+    ],
+    "legacy_recognized_field_excluded": true,
+    "causal_codec_claim": false
+  },
+  "closed": {
+    "worker": {
+      "at_ms": 1792993559654,
+      "synthetic_window": {
+        "enabled": false,
+        "allowlist": [
+          "BJP00399999999999901"
+        ],
+        "expires_at_ms": 1793011747157,
+        "generation": "R17-isolated-rtc-20261026"
+      },
+      "synthetic_rooms_remaining": 0,
+      "cleanup": {
+        "at_ms": 1792993550620,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "final_binary_sha256": "d450531b6f2aa0168c87f53b310c11038892d43cc8837d0d2ee0726d44f637e2",
+      "stopped": true,
+      "real_units_unchanged": {
+        "voice-worker-rust": "MainPID=839\nNRestarts=0\n",
+        "p003-search-worker": "MainPID=951941\nNRestarts=0\n"
+      },
+      "real_window_unchanged": true
+    },
+    "brain": {
+      "at_ms": 1792993561665,
+      "synthetic_gate_closed": true,
+      "stopped": true,
+      "temporary_trace_entrypoint_removed": true,
+      "last_health": {
+        "status": "ok",
+        "agent": "p003-search-verification-20261026",
+        "generation": "R17-isolated-rtc-20261026",
+        "search": true,
+        "tools": false,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown"
+          },
+          "degraded": false
+        }
+      },
+      "real_brain_unchanged": "MainPID=2500486\nNRestarts=0\n",
+      "nginx_verification_location_retained": true
+    }
+  },
+  "real_deployment_snapshot": {
+    "brain": {
+      "at_ms": 1792993599903,
+      "candidate": {
+        "p003.search.tools": "0",
+        "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.enabled": "1"
+      },
+      "primary": {
+        "p003.search.canary.selected_sn": "BJP00326060100100004",
+        "p003.search.canary.enabled": "1",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.agent": "p003-search-canary-20261021",
+        "p003.search.canary.started_at_ms": "1792984740000",
+        "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}"
+      },
+      "versions": [
+        {
+          "sn": "BJP00326060100100004",
+          "version_code": 319,
+          "version_name": "1.2.2-canary.305",
+          "last_check_at": 1792992582050
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "version_code": 360,
+          "version_name": "1.2.2-canary.346",
+          "last_check_at": 1792981468479
+        }
+      ],
+      "today_task_counts": {
+        "BJP00326060100100004": 70,
+        "BJP00326070803800006": 91
+      },
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": false
+      },
+      "file_hashes": {
+        "src/search-canary-guard.ts": "9e8cb60e76393cb1c6dd8eee442d037c53459ceda675c3fa35a18fadc6bde1e3",
+        "src/search-canary-main.ts": "36009feabc1b99d10952479bf85ec65866f136aa51c949ed8cd110de90a08939",
+        "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+        "src/tools/search-executor.ts": "b12d796fd75df41c4e56804fc940837b6659171624aca1ad88470809a013b6a8",
+        "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+        "src/tools/search-runtime.ts": "18d3d0956707cf82810a6ae1b243ea28b580380311935227344960933417a740",
+        "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed"
+      },
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\nUnitFileState=enabled\n"
+    },
+    "worker": {
+      "at_ms": 1792993599841,
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1792993599124,
+        "cleanup": {
+          "at_ms": 1792993593077,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 1
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "binary_sha256": "c052c798e405b3cb31b6d0fe90da4b7c04e8d78e87dfb481733ddb9262a555a9",
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\nUnitFileState=enabled\n"
+    },
+    "r16p_brain_files_match": true
+  },
+  "real_room_followup": {
+    "at_ms": 1792993645142,
+    "rooms": [
+      "sn-BJP00326060100100004-1792993641"
+    ],
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1792993644123,
+      "cleanup": {
+        "at_ms": 1792993642298,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 1
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 1,
+      "ordered_pcm_v1": true,
+      "registered": true
+    }
+  },
+  "private_artifact_hashes": {
+    "validation-audit-red.log": "e15609285fb8dc711d10e50a3aa4acfa7ef5acdb652697d395acd04d8ef64ce4",
+    "validation-regression-local.log": "d49df54c56ae40fa2f6bfb1177e7ea9c570dfe7c4230b35d35b70ce1b77947bb",
+    "linux-final-v5-validation-safe.json": "1d85e76fa8c1d96dab282485408bcddd5288f1f5995676edffa0c68e8feb744e",
+    "answer-capture-private.json": "d6f27896d1ed595f05c59cbfbf466ccf5db9ea2f257b55f41f56c3ef5006b294",
+    "asr-endpoint-matrix-private.json": "cfe087d97a7fc110821c25da898180ddf1b29c1a86f5b9819e979ceaebc0e569",
+    "v3-checkpoint-private.json": "5e606ffc6cb4597e4b61f068801d704bf0724e78c303240b4b23b37c219c2394",
+    "v3-worker-private.json": "70c38d68470043fa2a442bbe3081d2c6dea1e1f9b476135beeb1bda39be66275",
+    "v3-brain-private.json": "161a37ed1cb8043e2debf97374cb4a61a7cef15fc03b5ca24cfdfeb539278d0f",
+    "v3-ledger-private.json": "b8edf595bc5feb257d081a9d3624a74943c07de30e0df9b789622910eef6d9d9",
+    "verifier-validation-closed.json": "26fcb7c9e16180935b863df8f5eea6671a0837caccd132218ad4e88303a3f8c0",
+    "validation-final-live-readonly.json": "8a44d6cf9cf60bb168e928d6ad524a0bb09639ad957c1c7901aaf1295f65f605",
+    "validation-real-rooms-readonly.json": "99d72602edf89a062191bcfabc8b7b41b630d95b41683b054287b92142529088"
+  },
+  "limits": {
+    "real_deployment_changed": false,
+    "real_gate_or_ledger_changed": false,
+    "formal_latency_gate_passed": false,
+    "physical_acceptance_passed": false,
+    "raw_audio_transcripts_credentials_in_git": false
+  }
+}
