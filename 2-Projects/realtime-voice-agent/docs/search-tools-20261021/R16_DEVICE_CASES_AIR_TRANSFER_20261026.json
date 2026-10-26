@@ -1,0 +1,17 @@
+{
+  "at_ms": 1792986029422,
+  "file": "P003_SEARCH_R16_DEVICE_TEST_CASES_20261026.md",
+  "local_sha256": "a73c8fb07d804bc83cc59cee2fbb9e2673bdca836fb749f2ca26e8cebd3de02a",
+  "write": {
+    "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R16_DEVICE_TEST_CASES_20261026.md",
+    "sha256": "a73c8fb07d804bc83cc59cee2fbb9e2673bdca836fb749f2ca26e8cebd3de02a",
+    "bytes": 6346
+  },
+  "separate_readback": {
+    "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R16_DEVICE_TEST_CASES_20261026.md",
+    "sha256": "a73c8fb07d804bc83cc59cee2fbb9e2673bdca836fb749f2ca26e8cebd3de02a",
+    "bytes": 6346,
+    "opened_and_validated": true
+  },
+  "source_deleted": false
+}

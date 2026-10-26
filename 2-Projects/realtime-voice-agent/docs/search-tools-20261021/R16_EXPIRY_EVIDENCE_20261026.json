@@ -1,0 +1,27 @@
+{
+  "revision": "R16p",
+  "deadline_ms": 1792980630927,
+  "server_events": [
+    {
+      "event": "window_expiry_observed",
+      "at_ms": 1792980631880.629
+    },
+    {
+      "event": "room_delete_confirmed",
+      "at_ms": 1792980632067.929
+    }
+  ],
+  "client_disconnected_at_ms": 1792980632076,
+  "after_deadline_ms": 1149,
+  "cleanup_healthy": true,
+  "remaining_rooms": 0,
+  "active_jobs": 0,
+  "synthetic_rtc": true,
+  "physical_device": false,
+  "future_week_timer_executed": false,
+  "weekly_deadline_restored_ms": 1793548740000,
+  "source_sha256": {
+    "expiry-r16p-final-private.json": "97b0c0d764f8f263203d74f72af959a007b61c473266f09fb56c9333a066ec03",
+    "expiry-r16p-final-causal-private.json": "42007cc7de12bf60042cfcb6403cca8e395e66d5d04e1300501e85874b2825ba"
+  }
+}

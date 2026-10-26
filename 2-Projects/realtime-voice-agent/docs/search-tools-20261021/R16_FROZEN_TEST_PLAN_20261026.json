@@ -1,0 +1,134 @@
+{
+  "revision": "R16p",
+  "brain_commit": "b6ed0f46a2a8adc7479b206af8c21d9f7a55b674",
+  "worker_commit": "8cf6a53aac626743e1cae36ffc6361a55b61915b",
+  "worker_binary_sha256": "c052c798e405b3cb31b6d0fe90da4b7c04e8d78e87dfb481733ddb9262a555a9",
+  "functional": {
+    "modes": [
+      "ack0",
+      "ack1",
+      "ack2",
+      "ack3",
+      "ack4",
+      "ack5",
+      "ack_late0",
+      "ack_late1",
+      "ack_late2",
+      "case5",
+      "device_controls",
+      "stop",
+      "stop_long",
+      "cancel",
+      "replace",
+      "exit",
+      "early",
+      "resume",
+      "cross_prepare",
+      "cross_resume",
+      "cross_disconnect",
+      "cross_resume_disconnect",
+      "predicate",
+      "split",
+      "concurrent",
+      "idle"
+    ],
+    "required_evidence": [
+      "actual_asr",
+      "task_id",
+      "source_success",
+      "dialogue_route",
+      "delivery",
+      "synthetic_audio"
+    ],
+    "physical_hearing": false,
+    "no_failure_rerun_without_root_cause": true
+  },
+  "functional_harness_amendment": {
+    "at_ms": 1792979218424,
+    "failed_attempt": "cancel/room sn-BJP00326060100100004-1792978961",
+    "failure": "observer required room on submit log; actual log only turn UUID, so cancellation input was never sent; timeout cleanup also failed to finish before outer 210s limit",
+    "retained_failure": "cancel-diagnostic-private.json",
+    "restored_state": "cancel-harness-postclose-private.json: jobs0, cleanup remaining0, no probe, worker window false",
+    "product_changed": false,
+    "probe_old_sha256": "43a9282809b8062fc9bbffd4fa17d1a68f7a1e5d597066f0fa09a581e056dca3",
+    "probe_new_sha256": "27a9c85a2e085120b998c094b0de743046462e9820600eb67fa923bfbde047c9",
+    "correction": "match accepted turn UUID against authenticated room ledger; cancel pending reader and bound teardown",
+    "retry_name": "cancel_verified",
+    "prior_attempt_still_counted": true,
+    "additional_same_cause": "early scheduled logger also has task ID but no room; verify that ID against authenticated room list"
+  },
+  "content": {
+    "fixed_queries": 20,
+    "review": "R16_QUERY_REVIEW_20261026.json",
+    "ready_is_not_correctness": true
+  },
+  "latency": {
+    "pilot_separate": true,
+    "groups": [
+      "normal",
+      "search",
+      "resume"
+    ],
+    "planned_pairs_per_group": 30,
+    "minimum_eligible_pairs_per_group": 20,
+    "between_rooms_seconds": 30,
+    "order": "AB on even pair index, BA on odd index",
+    "baseline": "same final binary and environment, P1 disabled",
+    "treatment": "same final binary and environment, P1 enabled; actual search/resume for the mixed groups",
+    "devices": {
+      "normal": "00100004",
+      "pilot_mixed": "00100004",
+      "final_mixed": "03800006"
+    },
+    "main_metric": "ASR commit to first substantive response PCM publication; search acknowledgments and results excluded from ordinary-chat measurement",
+    "secondary_metrics": [
+      "sender WAV end to ASR commit",
+      "sender WAV end to substantive response PCM"
+    ],
+    "secondary_limitations": "WAV trailing silence is not a physical speaker end-of-speech timestamp",
+    "required_pair_match": [
+      "WAV SHA256",
+      "ASR text SHA256 after punctuation normalization",
+      "runtime environment SHA256",
+      "final runtime source/binary manifest"
+    ],
+    "required_mixed_overlap": [
+      "search accepted and not ready at ordinary input start; outcome answered",
+      "explicit resume follows stop; same-session successful task replay exists near input start"
+    ],
+    "thresholds": {
+      "median_paired_increment_ms_max": 100,
+      "empirical_p90_paired_increment_ms_max": 300,
+      "new_missing_substantive_response": 0
+    },
+    "all_attempts_retained": true,
+    "no_extra_samples_to_reach_pass": true,
+    "quotas_unchanged": true
+  },
+  "release_gates": [
+    "full functional semantic review",
+    "fixed query evidence review",
+    "all three latency groups",
+    "final artifact rollback roundtrip",
+    "short-window RTC disconnect and new public session back to production",
+    "isolation and HTTPS authentication",
+    "fresh production/resource/deadline/OTA report review",
+    "restore original real ledger configuration before opening"
+  ],
+  "physical_hearing": false,
+  "test_result": "not_passed_partial_interrupted_by_user_window_request",
+  "interruption": {
+    "completed_rooms": 48,
+    "planned_rooms": 120,
+    "normal_valid_pairs": 22,
+    "normal_p90_delta_ms": 549.68,
+    "remaining_groups_not_executed": [
+      "search",
+      "resume"
+    ],
+    "all_failures_retained": true,
+    "open_window_owner": "session13",
+    "current_expires_at_ms": 1793589540000,
+    "user_requested_early_window_does_not_mean_acceptance_passed": true
+  }
+}
