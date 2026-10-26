@@ -1,0 +1,16 @@
+{
+  "at_ms": 1792987047521,
+  "local_sha256": "36433c85d9f95504698d24b6ce6a995392c1788754467112ed8b46cb3ba0b388",
+  "write": {
+    "path": "/Users/rayman.chen/Downloads/P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261026.md",
+    "sha256": "36433c85d9f95504698d24b6ce6a995392c1788754467112ed8b46cb3ba0b388",
+    "bytes": 9634
+  },
+  "independent_readback": {
+    "path": "/Users/rayman.chen/Downloads/P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261026.md",
+    "sha256": "36433c85d9f95504698d24b6ce6a995392c1788754467112ed8b46cb3ba0b388",
+    "bytes": 9634,
+    "opened_and_validated": true
+  },
+  "source_deleted": false
+}
