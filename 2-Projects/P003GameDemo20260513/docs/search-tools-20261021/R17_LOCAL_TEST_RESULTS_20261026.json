@@ -1,0 +1,34 @@
+{
+  "r17-first-clause-red.log": {
+    "sha256": "6514d24c4db1fb0312329957268003208d93fbe75c6fb5d2472fc16fa196edc8",
+    "bytes": 780
+  },
+  "r17-brain-all-local-v2.log": {
+    "sha256": "e08dcef5eb2509daaaa70d0d02945df7899cea658a9886aa9dd09fae3332ede3",
+    "bytes": 20185
+  },
+  "r17-reader-regression.log": {
+    "sha256": "10546dd47a3fac611bb619677e3baf7a47305f9ff5358bfc44ac528cacfddaca",
+    "bytes": 2562
+  },
+  "r17-tsc.log": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "bytes": 0
+  },
+  "tests": 106,
+  "deployed": false,
+  "at": "2026-10-26T11:34:03.800728+08:00",
+  "code_commit": "d52da9182222127b3e618fe1812397cb82ddae32",
+  "local_source_manifest": {
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/search-chat-policy.test.ts": "149867bc223ae5bd156cc08215ed8e6cbdc8ceb0301e07281646da0409b9ef33",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/search-chat-stream.test.ts": "a593d0504f932a3c21bcbea0a45b04b009183e50aef1f886b81265f8a276dca5",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/custom-llm.ts": "7c2d48978d7e59de42f7e85d6307c330369920c7f7b24c32829f28e126ce1a4f",
+    "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-chat-policy.ts": "9a873a8d23102728bd4dfe6542ce5af5a468a9c5640fd187f39fcc5498b50120",
+    "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192"
+  },
+  "scope": "local Brain checks 90 + fixed reader/location checks16; TypeScript; no new Linux Worker build, no live RTC, no deployment",
+  "retained_failed_fixture_log": "r17-brain-all-local.log",
+  "retained_fixture_failure_sha256": "0a4d1c2df1eaf7dd0c55eeed11f67e9e92bf90676db093cc18023ef829725571",
+  "cloud_runtime_remains": "R16p",
+  "all_cloud_release_gates_passed": false
+}

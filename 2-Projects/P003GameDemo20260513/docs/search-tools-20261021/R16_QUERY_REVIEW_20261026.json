@@ -1,0 +1,351 @@
+{
+  "version": "R16p",
+  "reviewed_at": "2026-10-26T01:27:49.229499+00:00",
+  "candidate_files": {
+    "src/search-canary-guard.ts": "9e8cb60e76393cb1c6dd8eee442d037c53459ceda675c3fa35a18fadc6bde1e3",
+    "src/search-canary-main.ts": "36009feabc1b99d10952479bf85ec65866f136aa51c949ed8cd110de90a08939",
+    "src/search-canary-policy.ts": "60735553035c38bb1a0eaaafde5d6eebce69c70b4245132121a0ca43d1aec026",
+    "src/tools/search-executor.ts": "b12d796fd75df41c4e56804fc940837b6659171624aca1ad88470809a013b6a8",
+    "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+    "src/tools/search-runtime.ts": "18d3d0956707cf82810a6ae1b243ea28b580380311935227344960933417a740",
+    "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed"
+  },
+  "private_evidence_sha256": "13c8a2ce36dc374b6a43aa90ac324b5d7a036ab54c1267f29fd95cca13f8d007",
+  "core_answer_supported": 20,
+  "total": 20,
+  "scope": "固定20题当次回答与所引检索摘录核对；不宣称任意问题无幻觉、搜索摘要等于网页全文、儿童听懂或真人听到。",
+  "earlier_attempts_retained": true,
+  "earlier_content_failures": [
+    "L:Q13英文规则前缀未识别，19/20ready",
+    "M:Q12年龄范围泛化，20ready不算内容通过",
+    "N:小朋友同义写法漏检，20ready不算内容通过",
+    "O:Q04跨来源部位拼接，20ready不算内容通过"
+  ],
+  "items": [
+    {
+      "id": "Q01",
+      "task_id": "f3eb475d-0ce1-4a26-b7ec-7ba8b4a86ef7",
+      "device_suffix": "00100004",
+      "start_ms": 1792977958608,
+      "end_ms": 1792977961794,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://scicn.casad.cas.cn/wz/202407/t20240712_5025181.html",
+        "http://kpzg.people.com.cn/n1/2016/0707/c404214-28534150.html"
+      ],
+      "answer_sha256": "1483974e6a2e1740b71f3ed9e3e0761bd2bed4668f9dec8fbead04b97b7c4b41",
+      "proof_sha256": "d80a0fd632ed612c0b394e5c5a21288a315359ec1c97724d2f662930afadc30a",
+      "review": "core_answer_supported",
+      "notes": "共同成因有原句支持；保留了来源支持但非必需的年代，属于简洁性待观察项。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q02",
+      "task_id": "f0b3364e-3893-4a45-b21c-f9837c427349",
+      "device_suffix": "03800006",
+      "start_ms": 1792977962311,
+      "end_ms": 1792977964990,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "http://kpzg.people.com.cn/n1/2025/0226/c404214-40426210.html"
+      ],
+      "answer_sha256": "f86edc59a0f4c9449a1a8cd380d1d399619153a5017edb5979c6f77bd52d1b51",
+      "proof_sha256": "3e3d8dde71a42ed32bf08e7c4fbb631dc167abfc48d1e1af738a02ebd6e14d80",
+      "review": "core_answer_supported",
+      "notes": "氧化铁与尘埃传播有原句支持。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q03",
+      "task_id": "22f3b331-8292-4937-a0f9-4d66434ae0e1",
+      "device_suffix": "00100004",
+      "start_ms": 1792977965508,
+      "end_ms": 1792977968386,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://idea.cas.cn/xyx/xyx_lxzwpx/xyx_2021/info/2021/522469.html"
+      ],
+      "answer_sha256": "23d72ddf4a407c3b2496de8eaedc6b62a1517173f6b584bba98d891f2e6081ed",
+      "proof_sha256": "70c5bceaef06894743cf37e9f1c882a2da410bb8a24e8d314133460c34193716",
+      "review": "core_answer_supported",
+      "notes": "引潮力与总引力未混同，方向和两侧海水运动有原句；术语偏专业，儿童可理解性待真机观察。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q04",
+      "task_id": "0b7ffa3c-cb52-43ea-8fb0-e59cef215c04",
+      "device_suffix": "03800006",
+      "start_ms": 1792977968904,
+      "end_ms": 1792977971164,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "http://lyj.hunan.gov.cn/xxgk_71167/gzdt/mtkl/201607/t20160722_3098633.html"
+      ],
+      "answer_sha256": "100158919474a16e3a00d2772ee537f11d782edb6f0604bd4bff6920fa9f1d4e",
+      "proof_sha256": "7c77311aee5914f98f5843e940c112f5670e1935214f9301bff763ae810dd55b",
+      "review": "core_answer_supported",
+      "notes": "叶枕位置与细胞变化来自同一来源，未再把叶柄下垂和小叶闭合拼成同一机制。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q05",
+      "task_id": "d0a1bc44-9abe-4a84-9c82-c519ca8e9f8c",
+      "device_suffix": "00100004",
+      "start_ms": 1792977971681,
+      "end_ms": 1792977974354,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://www.cas.cn/cm/202201/t20220119_4822781.shtml",
+        "https://www.forestry.gov.cn/search/670443"
+      ],
+      "answer_sha256": "0052e4a81f9c9d0eb71cc7105233f110e8168d5758f22052598b242d83767dff",
+      "proof_sha256": "ff6ed1f641081aeb44501ebfb89490385d3ec31be44bad2d6d5e4577d134e7d6",
+      "review": "core_answer_supported",
+      "notes": "主要食物与季节差别均有来源；99%为来源支持的补充数字。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q06",
+      "task_id": "92d3283c-1758-4821-b5d7-5cd75ac4349f",
+      "device_suffix": "03800006",
+      "start_ms": 1792977974877,
+      "end_ms": 1792977977340,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://www.cma.gov.cn/kppd/kppdsytj/201512/t20151222_300307.html",
+        "http://news.weather.com.cn/2016/05/2521905.shtml"
+      ],
+      "answer_sha256": "261ae7669ce0fd8c1eb768c5d62dcf9f33391a148f4e7b64ff5517f6d69525c7",
+      "proof_sha256": "01d90e113b7da30028e9bdb03338bec83b810446780ba0be7243853bb43c4113",
+      "review": "core_answer_supported",
+      "notes": "折射/反射与不同颜色偏折有共同来源支持。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q07",
+      "task_id": "67ec8aa5-3a1e-415a-ac9f-694478b7fd07",
+      "device_suffix": "00100004",
+      "start_ms": 1792977977856,
+      "end_ms": 1792977980316,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://www.cnsa.gov.cn/n6758968/n6758972/c6798659/content.html",
+        "http://cpc.people.com.cn/n1/2023/1211/c164113-40136098.html"
+      ],
+      "answer_sha256": "2320caa4631753ce775a29bb2e6eb4426a2e81988a8ffe1752b7d5ae94fec0b1",
+      "proof_sha256": "d2b250ce9d87389d00aea319a43d829cb3800bf457badcd0fb405ed1b61a8508",
+      "review": "core_answer_supported",
+      "notes": "只答正式名称，没有附加未问发射日期。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q08",
+      "task_id": "a089a588-6ab7-490d-b0ab-629207c7a993",
+      "device_suffix": "03800006",
+      "start_ms": 1792977980833,
+      "end_ms": 1792977983498,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "http://paper.people.com.cn/rmrbhwb/pad/content/202601/30/content_30136821.html"
+      ],
+      "answer_sha256": "d76cf3511853552618c10e183a5f84a23c48bdc372f000047064e6c71cdd7b4c",
+      "proof_sha256": "799916933bf418bdd465652719194180e1c151ec8eb1895ca14c18a28cc6de38",
+      "review": "core_answer_supported",
+      "notes": "定义和用途有来源支持。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q09",
+      "task_id": "40e67fc8-427e-43bc-9e77-29f344b585ab",
+      "device_suffix": "00100004",
+      "start_ms": 1792977984014,
+      "end_ms": 1792977986884,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "http://www.mod.gov.cn/gfbw/gfjy_index/16303751.html",
+        "http://css.hebei.gov.cn/2019-09/28/content_7482746.htm"
+      ],
+      "answer_sha256": "70b0d319c730ace75e0b642b0ff32cae399644e3dec08be2aa46eccdb2693731",
+      "proof_sha256": "662d094914340842e13b2a012f05baeab795943785411e89a71e96e7783cc0bd",
+      "review": "core_answer_supported",
+      "notes": "防御用途及减缓进攻有来源支持。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q10",
+      "task_id": "56d91304-94f2-4d82-8434-a5897eef2c35",
+      "device_suffix": "03800006",
+      "start_ms": 1792977987402,
+      "end_ms": 1792977990272,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://nimte.cas.cn/news/media/201409/t20140901_4194647.html"
+      ],
+      "answer_sha256": "12b7ec017527ea75ff0ff915e71c432dea9a42707bcc8d123dda04d432a71ca8",
+      "proof_sha256": "f4b0277f246d3e3073d960dba2f6183761452254b40c48bb426a9a79913d490f",
+      "review": "core_answer_supported",
+      "notes": "地磁与磁针偏转有来源支持。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q11",
+      "task_id": "3fbdbb11-7dcd-4ec5-97cf-7383374c8a3d",
+      "device_suffix": "00100004",
+      "start_ms": 1792977990787,
+      "end_ms": 1792977993658,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://www.dpm.org.cn/Visit.html?u=http:////www.dpm.org.cn/Visit.html"
+      ],
+      "answer_sha256": "c33c63183c7dfabd688c38b9570cad9ab39ae8b728bb2389a96e440f1f10bf04",
+      "proof_sha256": "d53678e278e0296dad3b62d69b29d1cb96e1f53b0367b7152f7255759354a3da",
+      "review": "core_answer_supported",
+      "notes": "季节日期、停止入馆、闭馆时间及周一例外可核对；当前摘录未明确给出淡季开门时刻，未补造。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q12",
+      "task_id": "3e85d04d-bf87-4434-83b0-e3879182585c",
+      "device_suffix": "03800006",
+      "start_ms": 1792977994174,
+      "end_ms": 1792977996634,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://www.chnmuseum.cn/cg/cgyy/202511/t20251109_277547.shtml"
+      ],
+      "answer_sha256": "1a9ad35531b4c25769162f5a93923e93cf9a5a8ab67e26289e53fc4900c7b3a6",
+      "proof_sha256": "a7ea24a95d5dcdd18e815461579bbfa3f7c6ecf61f7b87c858ed571a79f3149a",
+      "review": "core_answer_supported",
+      "notes": "渠道、放票时间及年龄限定可核对；来源本身写“未满14周岁（含）”，保留原限定，不认定已解决原文边界歧义。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q13",
+      "task_id": "2b224736-1adc-4d16-af69-a153c998324a",
+      "device_suffix": "00100004",
+      "start_ms": 1792977997150,
+      "end_ms": 1792978000020,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://english.beijing.gov.cn/travellinginbeijing/museums/202603/t20260323_4563774.html?v%3Djt"
+      ],
+      "answer_sha256": "f70de5b0d5bc114ba6baeee8bcffeef1d31a35a1ab97ed5a2238f157491999cc",
+      "proof_sha256": "e506145eb236e20e8c85c5d82edacb46425016781e37cb7666113d06526db13a",
+      "review": "core_answer_supported",
+      "notes": "周一、法定节假日、除夕及农历初一初二关系正确；个人票时限保留个人范围。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q14",
+      "task_id": "f0f08a86-060a-495a-a067-17d28204d5f9",
+      "device_suffix": "03800006",
+      "start_ms": 1792978000536,
+      "end_ms": 1792978003002,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://news.cctv.com/2026/10/26/ARTIIXTo9odyRCgadPYH9TnB261026.shtml"
+      ],
+      "answer_sha256": "1084369adc67fab7d7e64bba754adae6f3e0f0b6fd8112fb5d96cca0e9c44b0a",
+      "proof_sha256": "f4fbc151532213aec76bc11cabbde8b3077c7a0772cb126778a74c45023016a9",
+      "review": "core_answer_supported",
+      "notes": "报道日期、余震统计截止时刻和台站原因可核对，未将报道日直接断言为发震日。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q15",
+      "task_id": "0dd35639-a4de-4e59-853e-be8c88006a2c",
+      "device_suffix": "00100004",
+      "start_ms": 1792978003518,
+      "end_ms": 1792978008830,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://news.cctv.com/2026/10/24/ARTI2t1gbXM22aU1dBxz7Q9X261024.shtml"
+      ],
+      "answer_sha256": "a509ed9dbff8f220211a4b29b2c18960f9c73d46ef46b06e6bc80abe80936e2d",
+      "proof_sha256": "ee7e8126ad80de26cdd846d2a14111fb10490a9e954b6753814de4390d943bc7",
+      "review": "core_answer_supported",
+      "notes": "发射日期、地点、型号、载荷与入轨有原句；火箭云为报道中的背景说明。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q16",
+      "task_id": "e7f15fac-39af-40e2-b88e-7d0fdb5f4b77",
+      "device_suffix": "03800006",
+      "start_ms": 1792978009346,
+      "end_ms": 1792978009581,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+      ],
+      "answer_sha256": "32971ff3a818742ee2e74be50e3738aadc87b2f4a238320ae7eb3426e7540522",
+      "proof_sha256": "36ee719710e37f2b729af765a5332086b16246a0f508bff9ab189791d67e591b",
+      "review": "core_answer_supported",
+      "notes": "固定天气来源的城市、站点、目标日期、更新时间及预报范围已核；不代表未来天气已发生。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q17",
+      "task_id": "14d4045b-b7f1-45e8-a764-12e4c6973207",
+      "device_suffix": "00100004",
+      "start_ms": 1792978010097,
+      "end_ms": 1792978010326,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://weathernew.pae.baidu.com/weathernew/pc?query=%E4%B8%8A%E6%B5%B7%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+      ],
+      "answer_sha256": "315c6452c408f72b391d4af2042e776440898d3f1b3bf6494603dde10c951d6b",
+      "proof_sha256": "ca1bf1839fdd4292fb8d510d666036d4f7d521d8671d5c1d9fbbe18fafae1edf",
+      "review": "core_answer_supported",
+      "notes": "固定天气来源的城市、站点、目标日期、更新时间及预报范围已核；不代表未来天气已发生。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q18",
+      "task_id": "7bb94460-89da-4536-be13-a359a05355c9",
+      "device_suffix": "03800006",
+      "start_ms": 1792978010844,
+      "end_ms": 1792978011071,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%9B%9B%E5%B7%9D%E6%88%90%E9%83%BD%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+      ],
+      "answer_sha256": "ed1adf52bda4d32052cccc6816dc91d3d427a08919163d795ce9f617b99a5de3",
+      "proof_sha256": "01c21041eca1841cd1b0f4c39e708112414883d84e545f0da03d21b90fb768d8",
+      "review": "core_answer_supported",
+      "notes": "固定天气来源的城市、站点、目标日期、更新时间及预报范围已核；不代表未来天气已发生。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q19",
+      "task_id": "ad3c25dd-4c01-43f0-9163-7d6572f1d392",
+      "device_suffix": "00100004",
+      "start_ms": 1792978011588,
+      "end_ms": 1792978011823,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://weathernew.pae.baidu.com/weathernew/pc?query=%E8%BE%BD%E5%AE%81%E6%9C%9D%E9%98%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+      ],
+      "answer_sha256": "18a01f73fdffa37011b022caf3b81581d080fbad9b6d0ed3bce60f7e80c05ab4",
+      "proof_sha256": "3a6fd0b9e8650e21e3e3ff0630e1f1a05ff3561a7eb4b95c3c6c691b933aac2a",
+      "review": "core_answer_supported",
+      "notes": "固定天气来源的城市、站点、目标日期、更新时间及预报范围已核；不代表未来天气已发生。",
+      "physical_hearing": false
+    },
+    {
+      "id": "Q20",
+      "task_id": "75108138-a22d-4276-a389-d75f46f8c924",
+      "device_suffix": "03800006",
+      "start_ms": 1792978012340,
+      "end_ms": 1792978012570,
+      "status_at_observation": "ready",
+      "source_urls": [
+        "https://weathernew.pae.baidu.com/weathernew/pc?query=%E9%99%95%E8%A5%BF%E8%A5%BF%E5%AE%89%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+      ],
+      "answer_sha256": "eb112e68ea9591d9067f6ba20639a3fde47e010ef789e1a3eff297ad1814aed8",
+      "proof_sha256": "a1c6a9eb5450253ecd9ad8137aba96e2177612ed9e0ce96ce17205b2f99ec9d7",
+      "review": "core_answer_supported",
+      "notes": "固定天气来源的城市、站点、目标日期、更新时间及预报范围已核；不代表未来天气已发生。",
+      "physical_hearing": false
+    }
+  ]
+}
