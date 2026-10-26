@@ -7,7 +7,7 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 ## 后台搜索、拆句与TTS延迟验收
 
-遇到搜索后聊天变慢、重复回答、取消/退出归因或准备真人验收，读[搜索与语音延迟验收](references/search-latency-acceptance.md)。普通聊天延迟优先；预连接等待、正文首帧和承接音分开计时，服务端完成与真人听到分开取证。具体部署/开窗看最新项目记录，以下历史快照不能当当前状态。
+遇到搜索后聊天变慢、重复回答、跨会话续讲、取消/退出归因、备用模型失效或准备真人验收，读[搜索与语音延迟验收](references/search-latency-acceptance.md)。普通聊天延迟优先；预连接等待、正文首帧和承接音分开计时，服务端完成与真人听到分开取证。具体部署/开窗看最新项目记录，以下历史快照不能当当前状态。
 
 项目:`~/mycc/2-Projects/realtime-voice-agent/`(mycc 仓内)。
 生产:阿里云 HK ECS `47.239.204.68`(2核2G,专用),`https://voice-hk.hahaxiong.cc/voice-test.html`。
