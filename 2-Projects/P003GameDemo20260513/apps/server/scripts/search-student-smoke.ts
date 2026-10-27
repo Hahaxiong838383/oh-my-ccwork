@@ -20,6 +20,12 @@ const cases = [
   ['game_mechanism','读取我的世界基岩版官网介绍，查红石中继器有什么用'],
   ['sport_natural','帮我查一下羽毛球双打发球的底线在哪'],
   ['game_natural','帮我查一下我的世界基岩版红石中继器有什么用'],
+  ['r20_redstone','我的世界里红石中继器主要有什么用'],
+  ['r20_music','大鱼海棠里大鱼是谁唱的'],
+  ['r20_sport','羽毛球双打发球后面的线到底算哪个'],
+  ['r20_sport_asr','毛球双打发球后面的线到底算哪一步'],
+  ['r20_space','最近中国航天新闻'],
+  ['r20_dinosaur','恐龙为什么会灭绝'],
 ] as const;
 const selection = process.env.SEARCH_STUDENT_SMOKE_CASES?.split(',');
 if(selection?.some(id=>!cases.some(([name])=>name===id)))throw Error('unknown_smoke_case');
@@ -33,6 +39,11 @@ for (const [id,query] of cases.filter(([id])=>!selection||selection.includes(id)
     toolAudit: e => events.push(e), validationAudit: e => validation.push(e),
     fetch: async (url,init) => {
       const response = await fetch(url,init);
+      if(process.env.SEARCH_STUDENT_SMOKE_CAPTURE==='1'){
+        const file=join(output,`${id}-frames.jsonl`);
+        const {appendFileSync}=await import('node:fs');
+        appendFileSync(file,JSON.stringify({path:new URL(String(url)).pathname,request:init?.body?JSON.parse(String(init.body)):null,status:response.status,raw:await response.clone().text()})+'\n',{mode:0o600});
+      }
       if (String(url).endsWith('/search')) {
         const body = JSON.parse(String(init?.body));
         const result = await response.clone().json() as any;

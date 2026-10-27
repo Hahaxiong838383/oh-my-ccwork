@@ -85,7 +85,7 @@ export class SearchResume {
  cancelLatest(o:SearchOwner){const {e,t}=this.owned(o);if(e.grant&&e.grant.session!==o.session||!e.closed)return fail('not_found');this.entries.delete(o.subject);return t;}
  context(o:SearchOwner,id:string,revision:number,grant:string){
   const e=this.entries.get(o.subject);const t=e&&this.deps.get(e.task);
-  return !!(t&&t.id===id&&t.revision===revision&&e?.grant?.id===grant&&e.grant.session===o.session&&!e.grant.closed&&
+  return !!(this.deps.enabled()&&e&&e.scope===this.deps.scope(o)&&t&&t.id===id&&t.revision===revision&&e.grant?.id===grant&&e.grant.session===o.session&&!e.grant.closed&&
    t.result&&['ready','delivered'].includes(t.status)&&this.deps.now()<this.expires(t));
  }
 }

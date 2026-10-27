@@ -1,5 +1,5 @@
 import { readResumeAuthority } from './search-resume-scope.js';
-import { searchDialogueInstruction } from './search-dialogue-context.js';
+import { searchDialogueInstruction, searchDialogueAnswer } from './search-dialogue-context.js';
 import { timingSafeEqual } from 'node:crypto';
 import { configStore } from '../config-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
@@ -132,9 +132,10 @@ export const searchTaskRoute = createSearchRoute({ tasks: getSearchTasks, routin
   } catch { return null; }
 } });
 
-export function currentSearchDialogue(value:unknown,auth:{role:string;accountId:string}|null,room:string){
+export function currentSearchDialogue(value:unknown,auth:{role:string;accountId:string}|null,room:string,answer=false){
  if(process.env.P003_SEARCH_CONTEXT_V1!=='1'||!instance||auth?.role!=='device'||auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID?.trim())return '';
  const subject=/^sn-(BJP003\d{14})-\d{1,20}$/.exec(room)?.[1];
  if(!subject)return '';
+ if(answer)return searchDialogueAnswer(value,{subject,session:room},(o,id,rev,grant)=>instance!.dialogueAnswer(o,id,rev,grant));
  return searchDialogueInstruction(value,{subject,session:room},(o,id,rev,grant)=>instance!.dialogueContext(o,id,rev,grant));
 }

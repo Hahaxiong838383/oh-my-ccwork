@@ -30,10 +30,14 @@ export function p2SourceScope(query: string, allowed: string[]): string {
     if(!/官网|官方|羽联|\bbwf\b/i.test(query))preferred.push('kepuchina.cn','baike.baidu.com');
   }
   else if (/\bnba\b|库里|勇士队/i.test(query)) preferred = ['nba.com'];
+  else if (/谁唱|演唱|歌手|歌曲|这首歌|主题曲|片尾曲/.test(query)) preferred = ['y.qq.com','baike.baidu.com','zh.wikipedia.org'];
+  else if (/新闻|消息|进展/.test(query)) preferred = ['cctv.com','xinhuanet.com','people.com.cn','gov.cn'];
+  else preferred = ['kepuchina.cn','cas.cn','baike.baidu.com','zh.wikipedia.org'];
   const selected = preferred.filter(d => domains.includes(d));
   const scope = selected.length ? selected : domains;
-  const scoped = query + scope.map((d,i) => (i ? ' OR site:' : ' site:') + d).join('');
-  // An incomplete OR-list silently starves later sources. When it does not fit,
-  // search the original question and enforce the full allowlist on the results.
-  return [...scoped].length <= 128 ? scoped : query;
+  // Keep complete clauses in relevance order. Overflow must not remove every
+  // hint and leave all ten results outside the configured evidence allowlist.
+  let scoped=query,first=true;
+  for(const d of scope){const next=scoped+(first?' site:':' OR site:')+d;if([...next].length<=128){scoped=next;first=false;}}
+  return scoped;
 }

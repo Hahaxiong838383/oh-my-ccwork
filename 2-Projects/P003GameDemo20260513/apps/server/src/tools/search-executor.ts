@@ -228,7 +228,11 @@ export class SearchExecutor {
     if (this.opts.domains.some(d=>d==='cctv.com'||d==='news.cctv.com') && this.news.supports(query)) {
       const evidence=await this.news.run(query,signal);
       const stats:SearchDiagnostics={returned:evidence.length,accepted:evidence.length,rejected_schema:0,rejected_url:0,rejected_text:0,rejected_date:0,duplicate:0,outcome:evidence.length?'evidence':'empty',provider:'cctv-public-web'};
-      this.diagnostics=stats;this.opts.audit?.(stats);return evidence;
+      this.diagnostics=stats;this.opts.audit?.(stats);
+      // The recent bulletin is not a complete archive. P2 may spend its one
+      // existing search call on approved web sources when this index is empty.
+      if(evidence.length||!this.opts.tools)return evidence;
+      signal.throwIfAborted();
     }
     const today = new Date(Date.now() + 28_800_000).toISOString().slice(0, 10);
     const explicitDate = /(20\d{2})[年-](\d{1,2})[月-](\d{1,2})(?:日|\b)/.exec(query);

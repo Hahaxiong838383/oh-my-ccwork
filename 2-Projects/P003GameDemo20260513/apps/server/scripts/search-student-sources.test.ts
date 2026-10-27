@@ -45,7 +45,7 @@ test('ordinary sports questions may use approved reference sources while officia
 
 test('P2 never drops late configured sites just because the full site clause exceeds the query budget', async () => {
   const query='查一份关于深海发光动物为什么会发光以及光对它们有什么作用的公开资料';
-  assert.equal(await request(query,oldDomains),query);
+  const scoped=await request(query,oldDomains);assert.match(scoped,/site:/);assert.ok([...scoped].length<=128);
 });
 
 test('source hints cannot expand the allowed domains and P1 keeps its existing scope', async () => {

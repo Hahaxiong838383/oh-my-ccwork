@@ -1,4 +1,4 @@
-import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
+import { searchDialogueClarification, searchDialogueHistory } from '../tools/search-dialogue-context.js';
 import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
 import { searchSettings, searchDeviceAllowed, currentSearchDialogue } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
@@ -146,8 +146,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
   const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
   if(temporarySearch)systemPrompt+='\n\n'+temporarySearch;
+  const searchAnswer=temporarySearch?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??'',true):'';
   const searchClarification=temporarySearch?searchDialogueClarification(userText):null;
-  if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),local_clarification:Boolean(searchClarification)}));
+  if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),answer_context:Boolean(searchAnswer),local_clarification:Boolean(searchClarification)}));
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
   const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
@@ -284,7 +285,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
       await llm.streamChat({
         systemPrompt,
         userText,
-        history,
+        history: searchDialogueHistory(history,searchAnswer,userText),
         onDelta: (delta) => {
           if (delta && firstUpstreamAt === null) firstUpstreamAt = performance.now();
           const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(delta).text)); // EXIT → 括号 两级串联
