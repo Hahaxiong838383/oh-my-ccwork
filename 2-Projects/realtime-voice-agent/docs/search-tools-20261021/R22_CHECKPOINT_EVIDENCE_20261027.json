@@ -1,0 +1,165 @@
+{
+  "status": "R22_business_release_not_deployed; R21_UTF8_configuration_hotfix_deployed",
+  "checkpoint_at_cst": "2026-10-27 22:45",
+  "candidate_text_deployment": {
+    "at_ms": 1793112108299,
+    "backup": "/opt/p003-search-canary-20261021/backups/R22-text-20261027T144139Z",
+    "pid": "1175023",
+    "binary_unchanged": true,
+    "main_unchanged": true,
+    "other_env_lines_unchanged": true,
+    "text_keys_count": 7,
+    "live_text_audit": {
+      "ok": true,
+      "escaped_text_keys": [],
+      "checked_keys": [
+        "AGENT_GREETING",
+        "AGENT_INSTRUCTIONS",
+        "BACKCHANNEL_HOTWORDS",
+        "EXIT_SWALLOW_HOTWORDS",
+        "INTERRUPT_HOTWORDS",
+        "P003_DEVICE_ASR_HOTWORDS",
+        "VOLC_ASR_HOTWORDS"
+      ]
+    },
+    "env_sha256": "f7690fee0960eff102051a6fcebeb3bb29231f4814d3a7cc89dc2e853bc98713",
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793112107296,
+      "cleanup": {
+        "at_ms": 1793112101539,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "release": "R21 plus UTF-8 configuration repair; R22 binary not deployed"
+  },
+  "linux_brain": {
+    "tests_passed": 165,
+    "tsc_exit": 0
+  },
+  "linux_worker": {
+    "tests_passed": 457,
+    "preview_tests_passed": 31,
+    "binary_sha256": "08ba563732b25eb0eb38d4a6d5434d4e1c7b11824214053f6cbbae9ea9d73c3b"
+  },
+  "ops_tests_passed": 18,
+  "pilot_original_terminal": {
+    "reason": "controller_stopped",
+    "error_type": "RuntimeError",
+    "detail": "probe failed; preserve attempt and stop",
+    "samples": 4,
+    "at_ms": 1793111012390
+  },
+  "pilot_corrected_terminal": {
+    "reason": "fixed_budget_complete",
+    "samples": 4,
+    "at_ms": 1793112076701
+  },
+  "pilot_corrected_summary": {
+    "normal": {
+      "samples": 2,
+      "pairs": 1,
+      "median_delta_ms": -363.13,
+      "empirical_p90_delta_ms": -363.13,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": -134.74,
+          "empirical_p90_ms": -134.74
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": -497.87,
+          "empirical_p90_ms": -497.87
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": false
+    },
+    "search": {
+      "samples": 2,
+      "pairs": 1,
+      "median_delta_ms": -951.4,
+      "empirical_p90_delta_ms": -951.4,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": -27.06,
+          "empirical_p90_ms": -27.06
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": -978.47,
+          "empirical_p90_ms": -978.47
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": false
+    },
+    "resume": {
+      "samples": 2,
+      "pairs": 1,
+      "median_delta_ms": 99.86,
+      "empirical_p90_delta_ms": 99.86,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": -99.43,
+          "empirical_p90_ms": -99.43
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": 0.42,
+          "empirical_p90_ms": 0.42
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": false
+    }
+  },
+  "dns_diagnostic": {
+    "cold_ms": 12,
+    "cached_ms": [
+      0,
+      0,
+      0
+    ],
+    "old_5018ms_tail_resolved": false
+  },
+  "fallback_verified": false,
+  "formal_performance_passed": false,
+  "physical_hearing_verified": false,
+  "private_evidence_sha256": {
+    "candidate-text-deployment.json": "71b87d6d1bd6af00ade54ca038d6daea1941d5f91988376b11a73b2e75ec3dd8",
+    "dns-probe-run.json": "5d7c738d36c2de1f9b5318a172f31178a6b430a2023670b2a848ee7f8c50a589",
+    "word_after-private.json": "792fcc5ac4b8c97dd8d7aae5aad3aee6effcc5082d05c8925c3ddb9149937ad8",
+    "verifier-text-fix-v2.json": "3811e139155c1899b22e25349b8503cd4b18b42c00c2339cd1658a735f1b5648",
+    "isolation.json": "a5e408dc1a6776c315f43ce5ce650b5428cd3f365818997d3cd2d651564ff670",
+    "brain-rollback.json": "248fa8efbd98600d2bf5625514dbba8ec85ab0d6341af79ba48a645b09d1b3c4",
+    "verifier-worker-drill.json": "9ebaf043de8b9d2fda4546cb33bbe9d1a298c88a87279a83893120155690d2f3"
+  }
+}
