@@ -8,6 +8,7 @@ mod contract;
 mod candidate;
 mod say_defer;
 mod search_canary;
+mod search_enrollment;
 mod search_policy;
 mod search_routing;
 mod search_tasks;

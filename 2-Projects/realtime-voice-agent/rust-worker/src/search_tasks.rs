@@ -232,27 +232,11 @@ pub struct SearchSession {
     pending_topic: Option<PendingTopic>,
 }
 pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
-    let Some(rest) = room.strip_prefix("sn-") else {
-        return false;
-    };
-    let Some((sn, suffix)) = rest.split_once('-') else {
-        return false;
-    };
-    enabled == "1"
-        && sn.starts_with("BJP003")
-        && sn.len() == 20
-        && sn[6..].bytes().all(|b| b.is_ascii_digit())
-        && !suffix.is_empty()
-        && suffix.bytes().all(|b| b.is_ascii_digit())
-        && allowlist.split(',').any(|s| s.trim() == sn)
+    crate::search_enrollment::enabled(enabled, "allowlist", allowlist, room, "")
 }
 impl SearchSession {
     pub fn from_config(cfg: &LlmConfig, provider: &str, voice: &str) -> Option<Self> {
-        if !enabled(
-            &std::env::var("P003_SEARCH_ENABLED").unwrap_or_default(),
-            &std::env::var("P003_SEARCH_DEVICE_ALLOWLIST").unwrap_or_default(),
-            &cfg.room,
-        ) {
+        if !crate::search_enrollment::for_room(&cfg.room) {
             return None;
         }
         let api = Api::new(cfg)?;
