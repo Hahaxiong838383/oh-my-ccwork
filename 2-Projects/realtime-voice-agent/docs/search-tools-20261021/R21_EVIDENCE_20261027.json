@@ -1,0 +1,707 @@
+{
+  "revision": "R21",
+  "status": "deployed_pending_real_device_acceptance",
+  "timezone": "Asia/Shanghai",
+  "review_window": "2026-10-27 14:00:00–19:23:00",
+  "afternoon_effective_runtime": "R19",
+  "r20_effective_target_utterances_after_18_07_until_19_23": 0,
+  "afternoon_tasks": [
+    {
+      "id": "511b12c5-2120-4fbd-9bef-2ac0a582d5b8",
+      "created_at_ms": 1793088432074,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "bd6598e7-daf8-4226-989a-ab66ecbfb1ce",
+      "created_at_ms": 1793090602630,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "7543335c-fe61-492e-8546-d5b7b64d5cf1",
+      "created_at_ms": 1793090664810,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "ccd3f85b-1de7-41c0-93a5-ad86957af564",
+      "created_at_ms": 1793090721428,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "0428eede-0a75-4c46-ab79-694f18c7d749",
+      "created_at_ms": 1793090789309,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "f5dd5879-872c-4e87-b31c-268980e9a95c",
+      "created_at_ms": 1793090864018,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "649bff22-695a-4de4-9be1-4c93f5759e3b",
+      "created_at_ms": 1793090934055,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "e4b6c046-63b8-496e-bdfa-47f12a902849",
+      "created_at_ms": 1793091003122,
+      "outcome": "no_evidence",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "e794bfa2-2619-49ed-bcb3-1581706ef181",
+      "created_at_ms": 1793091071836,
+      "outcome": "no_evidence",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "8dbdbc89-ea72-4ac4-899b-13d0b61f5ab2",
+      "created_at_ms": 1793091140414,
+      "outcome": "answered",
+      "delivery": "interrupted",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "c5a72177-9438-40bc-8039-18f26684c827",
+      "created_at_ms": 1793091209614,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "2caa2ed9-259d-49cd-945b-b49b72dd9f19",
+      "created_at_ms": 1793091393557,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "443f0bc9-fd94-42e2-983c-ef99b19eecb5",
+      "created_at_ms": 1793091473645,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "1f95e5e7-2352-4b81-80d0-950a699b1de1",
+      "created_at_ms": 1793091644760,
+      "outcome": "answered",
+      "delivery": "interrupted",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "8f7f1252-ff45-4bc2-aca9-1df3863a8c2e",
+      "created_at_ms": 1793093523183,
+      "outcome": "answered",
+      "delivery": "interrupted",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "41ea94ba-e990-4307-9ac7-9318a9c4f06e",
+      "created_at_ms": 1793093616820,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "6003503e-2d7f-41ce-887b-808eed7d5769",
+      "created_at_ms": 1793093744121,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "ef67d58e-42cb-45fe-8d7d-7ac79939fc61",
+      "created_at_ms": 1793094653642,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "be697ed4-6b8d-4c2b-af4e-b9f338799049",
+      "created_at_ms": 1793094818859,
+      "outcome": "failed",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "010b3dc4-0442-4128-9a3c-a6aa874e731a",
+      "created_at_ms": 1793094988262,
+      "outcome": null,
+      "delivery": null,
+      "status_at_read": "cancelled"
+    },
+    {
+      "id": "e0aefd89-7a23-456b-a6a3-e67b0493551d",
+      "created_at_ms": 1793095078368,
+      "outcome": "no_evidence",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "90e44dc2-68d3-456f-bbe1-7b511d187197",
+      "created_at_ms": 1793095390510,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "716d1580-2c8f-4f92-abb4-7f320fdf962d",
+      "created_at_ms": 1793095428000,
+      "outcome": "answered",
+      "delivery": "completed",
+      "status_at_read": "expired"
+    },
+    {
+      "id": "5e13c63b-841b-4b12-889d-f83ebfc190ac",
+      "created_at_ms": 1793095489240,
+      "outcome": "no_evidence",
+      "delivery": "interrupted",
+      "status_at_read": "expired"
+    }
+  ],
+  "afternoon_counts": {
+    "total": 24,
+    "answered": 18,
+    "answered_completed": 15,
+    "answered_interrupted": 3,
+    "no_evidence": 4,
+    "failed_validation": 1,
+    "cancelled": 1
+  },
+  "worker_source_commit": "72229d71ebe2483b3f004f6ffef0d4f498beca36",
+  "brain_business_source_unchanged": "d35086e7b5929d601e5fe802c735d22684acada1",
+  "worker_sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+  "preview_sha256": "48e0ed5b673bc9340345c25a38cdd12b2853685f7b41463ae8c3e76fe62b2d4a",
+  "tests": {
+    "linux_worker": 451,
+    "linux_preview": 31,
+    "linux_release_abi": true,
+    "new_tests_red_before_fix": 3,
+    "brain_suite_rerun": false,
+    "brain_business_sources_changed": false
+  },
+  "preview_ab": {
+    "at_ms": 1793101221001,
+    "preview_ab": [
+      {
+        "revision": "r20",
+        "cases": [
+          {
+            "case": "exact",
+            "action": "search"
+          },
+          {
+            "case": "explanation",
+            "action": "chat"
+          },
+          {
+            "case": "named_query",
+            "action": "search"
+          },
+          {
+            "case": "ordinary_chat",
+            "action": "chat"
+          },
+          {
+            "case": "cancel",
+            "action": "cancel"
+          },
+          {
+            "case": "resume",
+            "action": "resume"
+          }
+        ]
+      },
+      {
+        "revision": "r21",
+        "cases": [
+          {
+            "case": "exact",
+            "action": "chat"
+          },
+          {
+            "case": "explanation",
+            "action": "chat"
+          },
+          {
+            "case": "named_query",
+            "action": "search"
+          },
+          {
+            "case": "ordinary_chat",
+            "action": "chat"
+          },
+          {
+            "case": "cancel",
+            "action": "cancel"
+          },
+          {
+            "case": "resume",
+            "action": "resume"
+          }
+        ]
+      }
+    ],
+    "production_files_unchanged": true
+  },
+  "worker_roundtrip": {
+    "roundtrip": [
+      {
+        "phase": "candidate",
+        "sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793101155833,
+          "cleanup": {
+            "at_ms": 1793101149642,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "pid": "1156645"
+      },
+      {
+        "phase": "rollback",
+        "sha256": "d07024f145990e047b99776a342472260680fb1104b49ed0536eec3af715c6b1",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793101163740,
+          "cleanup": {
+            "at_ms": 1793101163417,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "pid": "1156673"
+      },
+      {
+        "phase": "candidate_final",
+        "sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793101171579,
+          "cleanup": {
+            "at_ms": 1793101169516,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "pid": "1156702"
+      }
+    ],
+    "production_unchanged": true,
+    "window_unchanged": true
+  },
+  "rtc_tasks": [
+    {
+      "id": "7ade41e5-da40-400e-b797-5cfeb616fe6f",
+      "session": "sn-BJP00399999999999901-1793100691",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "ee41c9a5-ed77-44b1-8e58-cacba44f5570",
+      "session": "sn-BJP00399999999999901-1793101181",
+      "outcome": "answered",
+      "delivery": "completed"
+    }
+  ],
+  "rtc_before_limit": "same WAV transcribed incorrectly; invalid for defect A/B",
+  "rtc_after_result": "target ASR correct; chat route; original task answered/completed; awkward procedural answer retained",
+  "rtc_device_heard_verified": false,
+  "first_deploy_attempt": {
+    "stopped_at": "worker precheck idle assertion",
+    "production_mutations": false,
+    "failed_health_snapshot_unavailable": true,
+    "subsequent_readonly": {
+      "at_ms": 1793101444553,
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793101441168,
+        "cleanup": {
+          "at_ms": 1793101440758,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "steps": [],
+      "units": "MainPID=1150061\nNRestarts=0\n"
+    }
+  },
+  "deployment": {
+    "status": "deployed",
+    "worker_commit": "72229d71ebe2483b3f004f6ffef0d4f498beca36",
+    "brain_source_unchanged": true,
+    "steps": [
+      {
+        "step": "precheck",
+        "at_ms": 1793101477395,
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1793101476169,
+          "cleanup": {
+            "at_ms": 1793101471865,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "main_unchanged": true
+      },
+      {
+        "step": "pause",
+        "at_ms": 1793101479624,
+        "worker_commit": "72229d71ebe2483b3f004f6ffef0d4f498beca36",
+        "idle": true,
+        "brain_processes_unchanged": true
+      },
+      {
+        "step": "install",
+        "at_ms": 1793101487795,
+        "sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+        "pid": "1157870",
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1793101496839,
+          "cleanup": {
+            "at_ms": 1793101490666,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "main_unchanged": true
+      },
+      {
+        "step": "install",
+        "at_ms": 1793101499172,
+        "worker_commit": "72229d71ebe2483b3f004f6ffef0d4f498beca36",
+        "preview_sha256": "48e0ed5b673bc9340345c25a38cdd12b2853685f7b41463ae8c3e76fe62b2d4a",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-canary-20261021",
+          "generation": "R4-20261022-two-devices",
+          "search": true,
+          "tools": true,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown"
+            },
+            "degraded": false
+          }
+        },
+        "brain_processes_unchanged": true
+      },
+      {
+        "step": "open",
+        "at_ms": 1793101501122,
+        "window": {
+          "enabled": true,
+          "allowlist": [
+            "BJP00326070803800006",
+            "BJP00326060100100004"
+          ],
+          "expires_at_ms": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        },
+        "main_unchanged": true
+      },
+      {
+        "step": "open",
+        "at_ms": 1793101509172,
+        "worker_commit": "72229d71ebe2483b3f004f6ffef0d4f498beca36",
+        "reopened_at_ms": 1793101509204,
+        "brain_processes_unchanged": true
+      }
+    ],
+    "at_ms": 1793101509309
+  },
+  "https": {
+    "at_ms": 1793101520981,
+    "https": true,
+    "worker_token_role": "device",
+    "worker_token_valid": true,
+    "routes": [
+      {
+        "sn_suffix": "03800006",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "00100004",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "99999902",
+        "authenticated": true,
+        "status": 403,
+        "routing_version": null,
+        "error": "canary_unavailable"
+      },
+      {
+        "sn_suffix": "03800006",
+        "authenticated": false,
+        "status": 401,
+        "routing_version": null,
+        "error": "unauthorized"
+      }
+    ],
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793101516839,
+      "cleanup": {
+        "at_ms": 1793101516585,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+  },
+  "selection": {
+    "at_ms": 1793101518716,
+    "selection": {
+      "selected": [
+        {
+          "sn": "BJP00326070803800006",
+          "agent": "p003-search-canary-20261021",
+          "canary": true,
+          "reason": "selected",
+          "leaseRemainingMs": 13137,
+          "leaseAgeMs": 1863,
+          "leaseJobs": 0,
+          "leaseMaxJobs": 2,
+          "leaseRegistered": true,
+          "expiresAtMs": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        },
+        {
+          "sn": "BJP00326060100100004",
+          "agent": "p003-search-canary-20261021",
+          "canary": true,
+          "reason": "selected",
+          "leaseRemainingMs": 13136,
+          "leaseAgeMs": 1864,
+          "leaseJobs": 0,
+          "leaseMaxJobs": 2,
+          "leaseRegistered": true,
+          "expiresAtMs": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        }
+      ],
+      "negative": {
+        "agent": "rust-worker",
+        "canary": false,
+        "reason": "not_target",
+        "leaseRemainingMs": 13136,
+        "leaseAgeMs": 1864,
+        "leaseJobs": 0,
+        "leaseMaxJobs": 2,
+        "leaseRegistered": true,
+        "expiresAtMs": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      }
+    },
+    "flags": {
+      "main": {
+        "p003.search.canary.selected_sn": "BJP00326060100100004",
+        "p003.search.canary.enabled": "1",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.agent": "p003-search-canary-20261021",
+        "p003.search.canary.started_at_ms": "1793065558897",
+        "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}",
+        "p003.search.scope": "all_registered",
+        "p003.search.exclusions": "[]",
+        "p003.search.enabled": "1",
+        "p003.search.tools": "0"
+      },
+      "candidate": {
+        "p003.search.tools": "1",
+        "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.enabled": "1"
+      }
+    },
+    "versions": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1793092612368
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 365,
+        "version_name": "1.2.2-canary.351",
+        "last_check_at": 1793100252918
+      }
+    ],
+    "release": {
+      "revision": "R21-search-word-routing-20261027",
+      "verified_at_ms": 1793101499182,
+      "brain_commit": "d35086e7b5929d601e5fe802c735d22684acada1",
+      "worker_commit": "72229d71ebe2483b3f004f6ffef0d4f498beca36",
+      "worker_sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+      "worker_tests": 451,
+      "brain_tests": 159,
+      "real_device_acceptance": "pending",
+      "r21_deployed_at_ms": 1793101499182,
+      "p1": true,
+      "p2": true
+    },
+    "main_health": {
+      "status": "ok"
+    },
+    "candidate_health": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": true,
+      "llm": {
+        "mode": "race",
+        "main": {
+          "outcome": "unknown"
+        },
+        "fallback": {
+          "outcome": "unknown"
+        },
+        "degraded": false
+      }
+    },
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 2636558,
+        "restarts": 39
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5
+      }
+    ],
+    "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n"
+  },
+  "verification_closed": {
+    "brain": {
+      "at_ms": 1793101361882,
+      "synthetic_disabled": true,
+      "unit": "MainPID=0\nActiveState=inactive\n",
+      "verifier_executor_sha256": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "production_executor_sha256": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "production_health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown"
+          },
+          "degraded": false
+        }
+      }
+    },
+    "worker": {
+      "at_ms": 1793101360227,
+      "synthetic_disabled": true,
+      "rooms": 0,
+      "cleanup_remaining": 0,
+      "production_window_unchanged": true,
+      "unit": "MainPID=0\nActiveState=inactive\n"
+    }
+  },
+  "rollback": {
+    "brain": "/opt/p003/backups/R21-20261027T113419Z",
+    "worker": "/opt/p003-search-canary-20261021/backups/R21-20261027T113419Z",
+    "old_worker_sha256": "d07024f145990e047b99776a342472260680fb1104b49ed0536eec3af715c6b1"
+  },
+  "limits": [
+    "pending real device acceptance",
+    "word explanation still procedural/awkward",
+    "formal latency gate remains failed/unaccepted",
+    "existing TTS DNS tail and fallback 404 unresolved",
+    "ASR omissions cannot be reconstructed as user intent",
+    "no new expiry drill; existing R18 drill retained",
+    "no history training or full history regression"
+  ],
+  "private_evidence_hashes": {
+    "brain-evidence-private.json": "bbea23703aca0650e5d79a88f8ff4b6bcc8673b743e80f06501242a34a8fbb8b",
+    "worker-evidence-private.json": "4ccd3eb125a2a4a06da3feb87cd713917ceda3ee4ce0f1e8c58457c01925b57d",
+    "word_before-private.json": "439bea9a00019770ed2b93e117104f4b74140fe526485d2841b29fd38a6e407d",
+    "word_after-private.json": "f43f85c4756ca266ad1ccc055e25a78b153e1fb80a6039fba65586628ef57847",
+    "rtc-brain-private.json": "e1cf6ff95f219a6884d4a7e8c97b5b6bf84765ffecf554a64d0c5e4d71822cac",
+    "linux-red-console.log": "c70323af9fdd209c5d9b67fa1990470c41601a31276dad62d3ab076de3edc13a",
+    "linux-release-console.log": "125aef70df9dbe6749653ec1acac670b6621b1561417d0c88c47ba74aa0fdb28",
+    "build-source-current.json": "ee1fab628fcd382dd9fda3fbae38864d6b70f65d541259bc147f1b38fb07687f"
+  }
+}
