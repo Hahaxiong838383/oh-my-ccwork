@@ -38,6 +38,16 @@ LAUNCHD_LABEL = "com.xray.proxy"
 LAUNCHD_PLIST = Path.home() / "Library" / "LaunchAgents" / (LAUNCHD_LABEL + ".plist")
 WIN_TASK_NAME = "XrayProxy"
 SYSTEMD_SERVICE = "xray-proxy"
+_routing_publisher = None
+
+
+def get_routing_publisher():
+    """One process-local publisher owns previews; importing the UI has no side effects."""
+    global _routing_publisher
+    if _routing_publisher is None:
+        from routing_publish import RoutingPublisher
+        _routing_publisher = RoutingPublisher(XRAY_HOME)
+    return _routing_publisher
 
 # ==================== 工具函数 ====================
 
@@ -910,6 +920,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
   <!-- 路由规则 -->
   <div class="tab-content" id="tab-routes">
     <div class="card">
+      <div class="card-header"><h2>规则检查与整理</h2><button class="btn small" id="normalizePreviewBtn" disabled onclick="previewNormalize()">预览整理</button></div>
+      <div class="card-body">
+        <p id="routingAuditSummary">正在读取规则检查…</p>
+        <p class="managed-note" id="routingPublicationText">运行状态未确认</p>
+        <p class="managed-note">规则按顺序匹配。整理与均衡组启停先生成预览，确认后才发布；应用会重载主代理并短暂中断连接。</p>
+        <div id="routingAuditList" style="margin-top:12px;"></div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-header">
         <h2>路由规则</h2>
         <button data-config-write disabled class="btn small primary" onclick="showRouteModal()">编辑规则</button>
@@ -920,6 +939,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <!-- 均衡组 -->
   <div class="tab-content" id="tab-balancers">
+    <p class="managed-note" id="balancerPublicationText" style="margin-bottom:12px;">运行状态未确认</p>
     <div class="card">
       <div class="card-header">
         <h2>均衡组与自动切换</h2>
@@ -940,6 +960,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="log-area" id="logArea">加载中...</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 受控路由发布：生成预览与确认应用为两个独立动作 -->
+<div class="modal-overlay" id="routingToggleModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="routingToggleTitle">预览均衡组变更</h3><button class="btn small" onclick="closeModal('routingToggleModal')">&times;</button></div>
+    <div class="modal-body">
+      <p id="routingToggleDescription" style="line-height:1.7;margin-bottom:12px;"></p>
+      <div class="form-group" id="routingFallbackField"><label>停用后的显式备用出口</label><select id="routingFallback"></select><p class="managed-note">保留组定义和原规则位置，只将关联规则明确转向此出口；不会删除规则后任其落到后续规则。</p></div>
+      <p class="managed-note">启用时恢复保存的原规则条件和位置。实际影响和冲突将在下一步预览中显示。</p>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('routingToggleModal')">取消</button><button class="btn primary" id="groupPreviewBtn" onclick="previewGroupToggle()">生成预览</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="routingPreviewModal">
+  <div class="modal">
+    <div class="modal-header"><h3>确认路由变更</h3><button class="btn small" onclick="closeModal('routingPreviewModal')">&times;</button></div>
+    <div class="modal-body">
+      <p id="routingPreviewSummary" style="line-height:1.7;margin-bottom:12px;"></p>
+      <div id="routingPreviewChanges"></div>
+      <div id="routingPreviewIssues" style="margin-top:12px;"></div>
+      <p class="managed-note" style="margin-top:14px;">确认应用会重载主代理并短暂中断现有连接。服务恢复后验证发布结果；此预览不会自动应用。</p>
+      <p id="routingPreviewValidity" class="managed-note"></p>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('routingPreviewModal')">取消</button><button class="btn primary" id="routingApplyBtn" disabled onclick="applyRoutingPreview()">确认应用（短暂断网）</button></div>
   </div>
 </div>
 
@@ -1203,6 +1249,41 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 let currentConfig = null;
 let editingNodeTag = null;
 let editingRouteIdx = null;
+let configReadEpoch = 0;
+let configReadsSuspended = false;
+const configViewReads = {nodes:0,routes:0,balancers:0};
+const configViewData = {nodes:null,routes:null,balancers:null};
+const configViewFailures = {nodes:false,routes:false,balancers:false};
+
+function clearConfigView(view) {
+  const names = {nodes:['nodeList','节点'],routes:['routeList','路由规则'],balancers:['balancerList','均衡组']};
+  const [id,label] = names[view];
+  configViewData[view] = null;
+  configViewFailures[view] = true;
+  document.getElementById(id).innerHTML = `<p class="managed-note">${label}刷新失败，旧列表已清除。请切换页面或刷新重试。</p>`;
+  if (view === 'nodes') document.getElementById('portInfo').innerHTML = '';
+}
+async function readConfigView(view, publicationRefresh=false) {
+  if (configReadsSuspended && !publicationRefresh) return null;
+  const epoch = configReadEpoch, sequence = ++configViewReads[view];
+  const current = () => epoch === configReadEpoch && sequence === configViewReads[view] && (!configReadsSuspended || publicationRefresh);
+  try {
+    if (view === 'balancers') await loadRoutingPolicy();
+    if (!current()) return null;
+    const data = await api('/config', 'GET', null, true);
+    if (!current()) return null;
+    currentConfig = data;
+    configViewData[view] = data;
+    configViewFailures[view] = false;
+    return {data,current};
+  } catch (_) {
+    if (current()) {
+      clearConfigView(view);
+      showToast('配置列表刷新失败，旧值已清除，请刷新重试。', 'error');
+    }
+    return null;
+  }
+}
 
 // ========== API ==========
 async function api(path, method='GET', body=null, quiet=false) {
@@ -1223,20 +1304,27 @@ async function api(path, method='GET', body=null, quiet=false) {
 
 // ========== 状态 ==========
 async function checkStatus() {
+  const epoch = networkEpoch;
   const dot = document.getElementById('statusDot');
   const text = document.getElementById('statusText');
   try {
     const data = await api('/status', 'GET', null, true);
+    if (epoch !== networkEpoch) return;
     if (data.error || typeof data.running !== 'boolean') throw new Error('status_unavailable');
     processLastReadAt = Date.now();
+    primaryObservedRunning = data.running;
     if (data.running) {
       dot.className = 'dot on';
       text.textContent = `主代理进程运行中 (PID: ${data.pid})`;
     } else {
       dot.className = 'dot off';
       text.textContent = '主代理进程已停止';
+      invalidateManagedStatus();
     }
   } catch (_) {
+    if (epoch !== networkEpoch) return;
+    primaryObservedRunning = null;
+    invalidateManagedStatus();
     dot.className = 'dot unknown';
     text.textContent = '主代理进程状态未确认';
   }
@@ -1280,31 +1368,38 @@ async function toggleSysProxy() {
 
 async function restartXray() {
   if (!confirm('重启主代理会中断现有连接，不是热重载。重启后自动切换服务需要重新确认出口。确定继续？')) return;
-  showToast('正在重启...', 'success');
-  const data = await api('/restart', 'POST');
-  if (data.success) {
-    showToast('主代理进程已重启，网络恢复情况见状态区', 'success');
-  } else {
-    showToast('重启失败: ' + (data.error || ''), 'error');
+  beginNetworkOperation();
+  try {
+    showToast('正在重启...', 'success');
+    const data = await api('/restart', 'POST');
+    if (data.success) showToast('主代理进程已重启，网络恢复情况见状态区', 'success');
+    else showToast('重启失败: ' + (data.error || ''), 'error');
+  } finally {
+    await finishNetworkOperation();
   }
-  checkStatus();
-  refreshManagedStatus();
 }
 
 async function stopXray() {
   if (!confirm('停止主代理会中断现有连接，依赖此代理的应用将无法联网。确定继续？')) return;
-  const data = await api('/stop', 'POST');
-  if (data.success) showToast('已停止', 'success');
-  else showToast('停止失败: ' + (data.error || ''), 'error');
-  checkStatus();
-  refreshManagedStatus();
+  beginNetworkOperation();
+  try {
+    const data = await api('/stop', 'POST');
+    if (data.success) showToast('已停止', 'success');
+    else showToast('停止失败: ' + (data.error || ''), 'error');
+  } finally {
+    await finishNetworkOperation();
+  }
 }
 
 // ========== 受管状态（只读） ==========
 let managedMode = null;
-let managedInFlight = false;
+let managedInFlight = null;
 let managedLastReadAt = 0;
+let managedSampleExpiresAt = 0;
 let processLastReadAt = 0;
+let networkEpoch = 0;
+let primaryObservedRunning = null;
+let networkOperationBusy = false;
 const routeNames = {dmit:'DMIT',zgo:'ZGO',home:'家庭中继',block:'阻断',auto:'自动',unknown:'未确认',none:'无 override'};
 function routeName(route) { return routeNames[route] || '未确认'; }
 function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -1325,8 +1420,9 @@ function renderManagedStatus(data) {
   applyManagedLocks();
   document.getElementById('managedCard').hidden = managedMode === false;
   const overall = data.overall || {}, controller = data.controller || {}, routing = data.routing || {}, pin = data.pin || {}, updater = data.updater || {};
+  managedSampleExpiresAt = controller.fresh && Number.isFinite(controller.age_seconds) ? Date.now() + Math.max(0, 45000 - Math.max(0, controller.age_seconds) * 1000) : 0;
   const labels = {healthy:'最近一轮服务探测正常',degraded:'服务探测降级 · 请查看各线路结果',blocked:'当前实际出口为阻断',error:'控制器异常 · 网络状态未确认',stale:'状态已过期 · 不能确认当前网络',unavailable:'网络状态未确认'};
-  const status = Object.prototype.hasOwnProperty.call(labels, overall.status) ? overall.status : 'unavailable';
+  const status = controller.fresh && controller.age_seconds > 45 ? 'stale' : Object.prototype.hasOwnProperty.call(labels, overall.status) ? overall.status : 'unavailable';
   document.getElementById('managedHealthText').textContent = labels[status];
   document.getElementById('managedHealthDot').className = 'dot ' + (status === 'healthy' ? 'on' : status === 'blocked' || status === 'error' ? 'off' : status === 'degraded' ? 'warn' : 'unknown');
   const actual = routing.effective_route;
@@ -1349,24 +1445,46 @@ function renderManagedStatus(data) {
     }).join('<br>');
     return `<div class="managed-probe"><strong>${escapeHtml(routeName(r.id))}</strong><div class="${fresh && r.service_ok === true ? 'probe-pass' : 'probe-warn'}">${escapeHtml(summary)}</div>${probes}</div>`;
   }).join('');
-  document.getElementById('managedModeText').textContent = managedMode === true ? '受管配置：节点、路由、均衡组与端口仅供查看；变更需统一校验后发布。TCP 测试和日志仍可用。' : '管理状态未确认，配置编辑暂不可用。';
+  document.getElementById('managedModeText').textContent = managedMode === true ? '受管配置：普通编辑已锁定；规则整理和均衡组启停请使用下方的预览发布。TCP 测试和日志仍可用。' : '管理状态未确认，配置编辑暂不可用。';
 }
 function showManagedUnavailable() {
   renderManagedStatus({managed:null,overall:{status:'unavailable'},controller:{process:'unknown'},routing:{},pin:{error_code:'status_unavailable'},updater:{}});
 }
+function invalidateManagedStatus() {
+  networkEpoch += 1;
+  managedInFlight = null;
+  managedSampleExpiresAt = 0;
+  showManagedUnavailable();
+}
+function beginNetworkOperation() {
+  networkOperationBusy = true;
+  primaryObservedRunning = null;
+  invalidateManagedStatus();
+  document.getElementById('statusDot').className = 'dot unknown';
+  document.getElementById('statusText').textContent = '主代理状态待重新确认（操作进行中）';
+}
+async function finishNetworkOperation() {
+  networkOperationBusy = false;
+  invalidateManagedStatus();
+  await checkStatus();
+  await refreshManagedStatus();
+}
 async function refreshManagedStatus() {
-  if (managedInFlight) return;
-  managedInFlight = true;
+  if (managedInFlight || networkOperationBusy) return;
+  const request = {epoch:networkEpoch};
+  managedInFlight = request;
   try {
     const data = await api('/managed-status', 'GET', null, true);
+    if (request.epoch !== networkEpoch || managedInFlight !== request) return;
     if (!data || data.schema_version !== 1) throw new Error('unknown_status_schema');
     managedLastReadAt = Date.now();
-    renderManagedStatus(data);
-  } catch (_) { showManagedUnavailable(); }
-  finally { managedInFlight = false; }
+    if (primaryObservedRunning === false) showManagedUnavailable();
+    else renderManagedStatus(data);
+  } catch (_) { if (request.epoch === networkEpoch) showManagedUnavailable(); }
+  finally { if (managedInFlight === request) managedInFlight = null; }
 }
 function expireManagedStatus() {
-  if (managedLastReadAt && Date.now() - managedLastReadAt > 45000) showManagedUnavailable();
+  if ((managedSampleExpiresAt && Date.now() >= managedSampleExpiresAt) || (managedLastReadAt && Date.now() - managedLastReadAt > 45000)) showManagedUnavailable();
   if (processLastReadAt && Date.now() - processLastReadAt > 45000) {
     document.getElementById('statusDot').className = 'dot unknown';
     document.getElementById('statusText').textContent = '主代理进程状态已过期';
@@ -1461,9 +1579,10 @@ async function savePorts() {
 }
 
 // ========== 节点管理 ==========
-async function loadNodes() {
-  const data = await api('/config');
-  currentConfig = data;
+async function loadNodes(publicationRefresh=false) {
+  const read = await readConfigView('nodes', publicationRefresh);
+  if (!read || !read.current()) return;
+  const data = read.data;
   renderPorts(data.inbounds || []);
   const nodes = data.nodes || [];
   const list = document.getElementById('nodeList');
@@ -1622,29 +1741,194 @@ async function importVless() {
 
 // ========== 均衡组 ==========
 let editingBalancerTag = null;
+let routingPolicyState = null;
+let routingFetchPromise = null;
+let routingReadEpoch = 0;
+let routingBusy = false;
+let routingPreview = null;
+let routingToggle = null;
 
-async function loadBalancers() {
-  const data = await api('/config');
-  currentConfig = data;
-  const balancers = data.balancers || [];
+function routingTime(value) {
+  const millis = typeof value === 'number' ? (value < 1e12 ? value * 1000 : value) : Date.parse(value);
+  return Number.isFinite(millis) ? millis : null;
+}
+function routingPublicationText(publication) {
+  const p = publication || {};
+  const labels = {unverified:'运行状态未确认',applied:'最近发布已验证',rolled_back:'已回滚并验证旧版本',applying:'正在应用配置',recovery_required:'需要恢复处理，请勿继续变更'};
+  const label = labels[p.state] || '运行状态未确认';
+  const verified = routingTime(p.verified_at);
+  return label + (verified !== null ? ' · ' + new Date(verified).toLocaleString() : '') + '；不代表每条规则当前都有实际流量命中。';
+}
+function renderRoutingIssues(audit) {
+  const issues = audit && Array.isArray(audit.issues) ? audit.issues : [];
+  if (!issues.length) return '<p class="managed-note">本次检查未发现已知冲突；不能替代实际业务验证。</p>';
+  return issues.map(issue => {
+    const severity = {error:'阻断',warning:'警告',info:'提示'}[issue.severity] || '提示';
+    const rules = (issue.rules || []).filter(Number.isInteger).map(i => i + 1);
+    return `<div class="route-item"><strong>${escapeHtml(severity)}</strong> · ${escapeHtml(issue.message || issue.code || '待检查')}${rules.length ? `<div class="managed-note">规则 ${rules.join('、')}</div>` : ''}${issue.balancer ? `<div class="managed-note">均衡组 ${escapeHtml(issue.balancer)}</div>` : ''}</div>`;
+  }).join('');
+}
+function updateRoutingControls() {
+  const locked = routingBusy || !routingPolicyState || !routingPolicyState.revision || ['applying','recovery_required'].includes((routingPolicyState.publication || {}).state);
+  document.getElementById('normalizePreviewBtn').disabled = locked;
+  document.getElementById('groupPreviewBtn').disabled = locked || !routingToggle;
+  document.querySelectorAll('[data-policy-toggle]').forEach(button => {
+    button.disabled = locked || button.dataset.protected === 'true';
+  });
+  updateRoutingPreviewValidity();
+}
+function updateRoutingPreviewValidity() {
+  const expires = routingPreview ? routingTime(routingPreview.expires_at) : null;
+  const expired = expires === null || Date.now() >= expires;
+  const drift = routingPreview && routingPolicyState && routingPreview.revision !== routingPolicyState.revision;
+  const allowed = routingPreview && routingPreview.can_apply === true && typeof routingPreview.preview_id === 'string' && !expired && !drift && !routingBusy;
+  document.getElementById('routingApplyBtn').disabled = !allowed;
+  document.getElementById('routingPreviewValidity').textContent = !routingPreview ? '请先生成预览。' : drift ? '配置已变化，请重新生成预览。' : expired ? '预览已过期，请重新生成。' : routingPreview.can_apply !== true ? '存在阻断问题或没有可应用变更，不能确认应用。' : '预览有效至 ' + new Date(expires).toLocaleTimeString() + '；发布时仍会再次核对配置版本。';
+}
+async function loadRoutingPolicy() {
+  if (routingFetchPromise) return routingFetchPromise;
+  const epoch = routingReadEpoch;
+  routingFetchPromise = (async () => {
+    try {
+      const data = await api('/routing-policy', 'GET', null, true);
+      if (epoch !== routingReadEpoch) return null;
+      if (!data || data.schema_version !== 1 || !Array.isArray(data.groups)) throw new Error('invalid_policy_schema');
+      routingPolicyState = data;
+      const issues = (data.audit || {}).issues || [];
+      const count = level => issues.filter(x => x.severity === level).length;
+      document.getElementById('routingAuditSummary').textContent = `${data.groups.length} 个均衡组 · ${count('error')} 项阻断 · ${count('warning')} 项警告 · ${count('info')} 项提示`;
+      document.getElementById('routingAuditList').innerHTML = renderRoutingIssues(data.audit);
+      const text = routingPublicationText(data.publication);
+      document.getElementById('routingPublicationText').textContent = text;
+      document.getElementById('balancerPublicationText').textContent = text;
+    } catch (_) {
+      if (epoch !== routingReadEpoch) return null;
+      routingPolicyState = null;
+      document.getElementById('routingAuditSummary').textContent = '规则状态读取失败，预览暂不可用。';
+      document.getElementById('routingAuditList').innerHTML = '';
+      document.getElementById('routingPublicationText').textContent = '运行状态未确认';
+      document.getElementById('balancerPublicationText').textContent = '运行状态未确认';
+    } finally {
+      if (epoch === routingReadEpoch) {
+        updateRoutingControls();
+        if (configViewData.balancers) renderBalancerList(configViewData.balancers.balancers || []);
+        routingFetchPromise = null;
+      }
+    }
+    return routingPolicyState;
+  })();
+  return routingFetchPromise;
+}
+function showGroupToggle(index) {
+  const group = routingPolicyState && routingPolicyState.groups[index];
+  if (!group || routingBusy || group.protected || group.tag === 'cf-lisa' || typeof group.enabled !== 'boolean') return;
+  routingToggle = {tag:group.tag,enabled:!group.enabled};
+  document.getElementById('routingToggleTitle').textContent = (group.enabled ? '停用' : '启用') + '均衡组 ' + group.tag;
+  const rules = (group.rule_indices || []).map(i => i + 1).join('、') || '无';
+  document.getElementById('routingToggleDescription').textContent = `关联规则：${rules}。当前磁盘配置为${group.enabled ? '启用' : '停用'}；此信息不代表当前运行版本已验证。`;
+  document.getElementById('routingFallbackField').hidden = !group.enabled;
+  const choices = Array.isArray(routingPolicyState.fallbacks) ? routingPolicyState.fallbacks : [];
+  document.getElementById('routingFallback').innerHTML = '<option value="">请选择明确的备用出口</option>' + choices.map(x => `<option value="${escapeHtml(x.tag)}">${escapeHtml(x.tag)} · ${escapeHtml(x.protocol)}</option>`).join('');
+  document.getElementById('routingFallback').value = choices.some(x => x.tag === group.fallback) ? group.fallback : '';
+  document.getElementById('routingToggleModal').classList.add('show');
+  updateRoutingControls();
+}
+async function previewGroupToggle() {
+  if (!routingToggle || routingBusy || !routingPolicyState) return;
+  const request = {...routingToggle};
+  if (!request.enabled) {
+    const fallback = document.getElementById('routingFallback').value;
+    if (!(routingPolicyState.fallbacks || []).some(x => x.tag === fallback)) { showToast('请先选择明确的备用出口。', 'error'); return; }
+    request.fallback = fallback;
+  }
+  await requestRoutingPreview(request);
+}
+async function previewNormalize() {
+  if (routingBusy || !routingPolicyState || !routingPolicyState.revision) return;
+  await requestRoutingPreview({action:'normalize'});
+}
+async function requestRoutingPreview(request) {
+  if (routingBusy) return;
+  routingBusy = true; routingPreview = null; updateRoutingControls();
+  try {
+    const data = await api('/routing-policy/preview', 'POST', request.action ? request : {action:'toggle',...request});
+    if (!data.success || typeof data.preview_id !== 'string') throw new Error(data.error || '未能生成预览，请刷新后重试。');
+    routingPreview = data;
+    document.getElementById('routingPreviewSummary').textContent = `${(data.changes || []).length} 项变更 · 基线版本 ${String(data.revision || '').slice(0,12)}。以下内容尚未应用。`;
+    document.getElementById('routingPreviewChanges').innerHTML = (data.changes || []).map(change => `<div class="route-item">${Number.isInteger(change.rule) ? '规则 ' + (change.rule + 1) + ' · ' : ''}${escapeHtml(change.message || change.kind)}</div>`).join('') || '<p class="managed-note">没有变更。</p>';
+    document.getElementById('routingPreviewIssues').innerHTML = renderRoutingIssues(data.audit);
+    closeModal('routingToggleModal');
+    document.getElementById('routingPreviewModal').classList.add('show');
+  } catch (error) { showToast(error.message || '预览失败，请刷新后重试。', 'error'); }
+  finally { routingBusy = false; updateRoutingControls(); }
+}
+async function applyRoutingPreview() {
+  updateRoutingPreviewValidity();
+  if (document.getElementById('routingApplyBtn').disabled || !routingPreview || routingBusy) return;
+  const previewId = routingPreview.preview_id;
+  routingBusy = true; routingPreview = null; updateRoutingControls();
+  beginNetworkOperation();
+  configReadEpoch += 1; configReadsSuspended = true;
+  currentConfig = null;
+  Object.keys(configViewData).forEach(view => { configViewData[view] = null; });
+  routingReadEpoch += 1; routingFetchPromise = null;
+  document.getElementById('routingPublicationText').textContent = '正在应用配置 · 等待恢复验证';
+  document.getElementById('balancerPublicationText').textContent = '正在应用配置 · 等待恢复验证';
+  try {
+    const result = await api('/routing-policy/apply', 'POST', {preview_id:previewId});
+    showToast(result.message || (result.state === 'applied' ? '发布已完成' : '发布未完成，请检查状态'), result.success && result.state === 'applied' ? 'success' : 'error');
+    closeModal('routingPreviewModal');
+  } catch (error) { showToast(error.message || '应用失败，请检查发布状态。', 'error'); }
+  finally {
+    routingReadEpoch += 1; routingFetchPromise = null;
+    configReadEpoch += 1;
+    try {
+      await finishNetworkOperation();
+      const refreshed = await Promise.allSettled([loadRoutingPolicy(),loadNodes(true),loadRoutes(true),loadBalancers(true)]);
+      ['nodes','routes','balancers'].forEach((view,index) => {
+        if (refreshed[index + 1].status === 'rejected') clearConfigView(view);
+      });
+      if (Object.values(configViewFailures).some(Boolean)) showToast('发布结果已返回，但部分配置列表刷新失败，旧值已清除，请刷新重试。', 'error');
+    } finally {
+      configReadsSuspended = false;
+      routingBusy = false; updateRoutingControls();
+    }
+  }
+}
+
+async function loadBalancers(publicationRefresh=false) {
+  const read = await readConfigView('balancers', publicationRefresh);
+  if (!read || !read.current()) return;
+  const data = read.data;
+  renderBalancerList(data.balancers || []);
+}
+function renderBalancerList(balancers) {
   const list = document.getElementById('balancerList');
   if (balancers.length === 0) {
     list.innerHTML = '<div style="color:#8b949e;text-align:center;padding:20px;">暂无均衡组。各组按其配置策略选择节点。</div>';
     return;
   }
-  list.innerHTML = balancers.map(b => `
+  list.innerHTML = balancers.map(b => {
+    const groupIndex = routingPolicyState ? routingPolicyState.groups.findIndex(g => g.tag === b.tag) : -1;
+    const group = groupIndex >= 0 ? routingPolicyState.groups[groupIndex] : null;
+    const protectedGroup = b.tag === 'cf-lisa' || (group && group.protected);
+    const toggleUnavailable = protectedGroup || !group || typeof group.enabled !== 'boolean';
+    const configured = group && typeof group.enabled === 'boolean' ? (group.enabled ? '已配置：启用' : '已配置：停用') : '配置启停状态未确认';
+    return `
     <div class="node-item" style="flex-direction:column;align-items:flex-start;gap:8px;">
       <div style="display:flex;align-items:center;justify-content:space-between;width:100%;">
         <div>
           <span style="font-size:11px;padding:1px 6px;border-radius:3px;margin-right:6px;background:#d2992233;color:#d29922;">BALANCER</span>
-          <span class="node-tag">${b.tag}</span>
+          <span class="node-tag">${escapeHtml(b.tag)}</span>
           <span style="color:#484f58;font-size:12px;margin-left:6px;">${b.tag === 'cf-lisa' ? '外部控制器管理 · 当前出口见上方' : escapeHtml(b.strategy) + '（磁盘配置）'}</span>
         </div>
         <div class="node-actions">
+          <button class="btn small" data-policy-toggle data-protected="${toggleUnavailable ? 'true' : 'false'}" ${toggleUnavailable || routingBusy ? 'disabled' : ''} onclick="showGroupToggle(${groupIndex})">${protectedGroup ? '受保护' : group && group.enabled ? '停用…' : '启用…'}</button>
           <button data-config-write disabled class="btn small" onclick="editBalancer('${b.tag}')">编辑</button>
           <button data-config-write disabled class="btn small danger" onclick="deleteBalancer('${b.tag}')">删除</button>
         </div>
       </div>
+      <div class="managed-note">${escapeHtml(configured)}${group && !group.enabled && group.fallback ? ' · 显式备用：' + escapeHtml(group.fallback) : ''}${protectedGroup ? ' · 由自动切换服务管理，不能普通启停' : ''}；运行验证见上方发布状态。</div>
       <div style="font-size:12px;color:#8b949e;padding-left:4px;">
         <span style="color:#8b949e;">${b.tag === 'cf-lisa' ? '静态启动选择（非实际出口）' : '配置候选'}(${b.nodeTags.length}):</span> ${b.nodeTags.map(t => '<span style="background:#21262d;padding:1px 6px;border-radius:3px;margin:0 2px;">'+t+'</span>').join('')}
       </div>
@@ -1652,8 +1936,9 @@ async function loadBalancers() {
         <span style="color:#58a6ff;">域名(${b.domains.length}):</span> <span class="route-domains">${b.domains.slice(0,5).join(', ')}${b.domains.length>5?' +' +(b.domains.length-5):''}</span>
       </div>
     </div>
-  `).join('');
+  `; }).join('');
   applyManagedLocks();
+  updateRoutingControls();
 }
 
 function showBalancerModal(tag) {
@@ -1775,9 +2060,10 @@ async function importSub() {
 }
 
 // ========== 路由规则 ==========
-async function loadRoutes() {
-  const data = await api('/config');
-  currentConfig = data;
+async function loadRoutes(publicationRefresh=false) {
+  const read = await readConfigView('routes', publicationRefresh);
+  if (!read || !read.current()) return;
+  const data = read.data;
   const routes = data.routes || [];
   const list = document.getElementById('routeList');
   if (routes.length === 0) {
@@ -1858,6 +2144,7 @@ function switchTab(name) {
   event.target.classList.add('active');
   document.getElementById('tab-' + name).classList.add('active');
   if (name === 'logs') loadLogs();
+  if (name === 'routes') { loadRoutingPolicy(); loadRoutes(); }
   if (name === 'balancers') loadBalancers();
 }
 
@@ -1873,6 +2160,7 @@ function showToast(msg, type) {
 // ========== 初始化 ==========
 applyManagedLocks();
 refreshManagedStatus();
+loadRoutingPolicy();
 checkStatus();
 checkSysProxy();
 loadNodes();
@@ -1881,6 +2169,8 @@ setInterval(checkStatus, 10000);
 setInterval(checkSysProxy, 10000);
 setInterval(refreshManagedStatus, 15000);
 setInterval(expireManagedStatus, 5000);
+setInterval(loadRoutingPolicy, 15000);
+setInterval(updateRoutingPreviewValidity, 1000);
 </script>
 </body>
 </html>"""
@@ -1913,6 +2203,84 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html.encode())
 
+    def _routing_allowed(self, write=False):
+        hosts = self.headers.get_all("Host", [])
+        if len(hosts) != 1 or self.client_address[0] not in ("127.0.0.1", "::1"):
+            return False
+        host = hosts[0]
+        if host not in (f"localhost:{self.server.server_port}", f"127.0.0.1:{self.server.server_port}"):
+            return False
+        origins = self.headers.get_all("Origin", [])
+        if len(origins) > 1 or (write and len(origins) != 1):
+            return False
+        if origins and origins[0] != "http://" + host:
+            return False
+        return self.headers.get("Sec-Fetch-Site", "") != "cross-site"
+
+    def _routing_call(self, action, payload=None):
+        try:
+            publisher = get_routing_publisher()
+            result = getattr(publisher, action)(payload) if action != "status" else publisher.status()
+            self._json(result)
+        except Exception as exc:
+            # PublisherError fields are deliberately sanitized by the publisher.
+            try:
+                from routing_publish import PublisherError
+            except ImportError:
+                PublisherError = ()
+            if isinstance(exc, PublisherError):
+                code = exc.status_code if exc.status_code in (400, 409, 422, 423, 503) else 500
+                self._json({"success": False, "code": exc.code, "error": exc.message}, code)
+            else:
+                self._json({"success": False, "code": "routing_internal_error", "error": "路由管理暂不可用，请刷新状态后重试"}, 500)
+
+    def _routing_post(self, path):
+        if not self._routing_allowed(write=True):
+            return self._json({"success": False, "code": "origin_denied", "error": "仅允许本机同源请求"}, 403)
+        if path not in ("/api/routing-policy/preview", "/api/routing-policy/apply"):
+            return self._json({"success": False, "code": "not_found", "error": "接口不存在"}, 404)
+        try:
+            lengths = self.headers.get_all("Content-Length", [])
+            if len(lengths) != 1 or self.headers.get("Transfer-Encoding") or len(self.headers.get_all("Content-Type", [])) != 1 or self.headers.get_content_type() != "application/json":
+                raise ValueError()
+            length = int(lengths[0])
+            if not 1 <= length <= 4096:
+                raise ValueError()
+            self.connection.settimeout(3)
+            raw = self.rfile.read(length)
+            if len(raw) != length:
+                raise ValueError()
+            def unique_object(pairs):
+                data = {}
+                for key, value in pairs:
+                    if key in data:
+                        raise ValueError()
+                    data[key] = value
+                return data
+            body = json.loads(raw, object_pairs_hook=unique_object)
+            if not isinstance(body, dict):
+                raise ValueError()
+            if path.endswith("/apply"):
+                if set(body) != {"preview_id"} or not isinstance(body["preview_id"], str) or not 1 <= len(body["preview_id"]) <= 256:
+                    raise ValueError()
+                return self._routing_call("apply", body["preview_id"])
+            if body.get("action") == "normalize":
+                if set(body) != {"action"}:
+                    raise ValueError()
+            elif body.get("action") == "toggle":
+                if (not {"action", "tag", "enabled"} <= set(body)
+                        or not set(body) <= {"action", "tag", "enabled", "fallback"}
+                        or type(body["enabled"]) is not bool
+                        or not isinstance(body["tag"], str) or not 1 <= len(body["tag"]) <= 128
+                        or (not body["enabled"] and "fallback" not in body)
+                        or ("fallback" in body and (not isinstance(body["fallback"], str) or not 1 <= len(body["fallback"]) <= 128))):
+                    raise ValueError()
+            else:
+                raise ValueError()
+        except (ValueError, UnicodeError, OSError, RecursionError):
+            return self._json({"success": False, "code": "invalid_request", "error": "请求格式不正确，请重新预览"}, 400)
+        self._routing_call("preview", body)
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
@@ -1922,6 +2290,10 @@ class Handler(BaseHTTPRequestHandler):
             self._html(HTML_PAGE)
         elif path == "/api/status":
             self._json(get_xray_status())
+        elif path == "/api/routing-policy":
+            if not self._routing_allowed():
+                return self._json({"success": False, "code": "origin_denied", "error": "仅允许本机同源请求"}, 403)
+            self._routing_call("status")
         elif path == "/api/managed-status":
             from managed_status import collect_managed_status
             self._json(collect_managed_status(XRAY_HOME))
@@ -1966,6 +2338,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
     def do_POST(self):
+        path = urllib.parse.urlparse(self.path).path
+        if path.startswith("/api/routing-policy"):
+            return self._routing_post(path)
         content_len = int(self.headers.get("Content-Length", 0))
         body = json.loads(self.rfile.read(content_len)) if content_len > 0 else {}
         path = urllib.parse.urlparse(self.path).path
