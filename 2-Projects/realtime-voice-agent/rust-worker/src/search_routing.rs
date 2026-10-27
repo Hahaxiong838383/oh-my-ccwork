@@ -1,5 +1,5 @@
 //! One bounded routing engine for the Worker and the offline admin preview.
-use crate::search_policy::{Intent, QueryIntent, intent};
+use crate::search_policy::{Intent, QueryIntent, intent, search_term_question};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -65,7 +65,7 @@ fn addressed(t: &str) -> &str {
     } t
 }
 fn protected(t: &str) -> bool {
-    ["如果","假如","例如","比如","不要","不用","别","我自己","我说","他说","她说","你说","我今天","我现在","我们","“","‘","\"","'"].iter().any(|p| t.starts_with(p))
+    search_term_question(t) || ["如果","假如","例如","比如","不要","不用","别","我自己","我说","他说","她说","你说","我今天","我现在","我们","“","‘","\"","'"].iter().any(|p| t.starts_with(p))
         || ["不要真的查","但不用搜索","心情","编一个","讲个故事"].iter().any(|p|t.contains(p))
         || ["搜索引擎","搜索算法","搜索功能","查询功能"].iter().any(|p|t.starts_with(p))
 }
@@ -178,6 +178,20 @@ impl RoutingSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn r21_word_explanations_override_editable_search_keywords(){
+        let mut c=RoutingConfig::default();
+        c.rules.push(Rule{id:"broad-search".into(),enabled:true,priority:1000,action:"search".into(),mode:"contains_any".into(),triggers:vec!["查查".into(),"搜索".into()],exclude:vec![]});
+        for config in [None,Some(&c)] {
+            for text in ["查查是啥","搜索是什么意思","小可，查查这个词啥意思？"] {
+                let mut r=RoutingSession::default();
+                r.route("帮我查一下",0,config,"v1");
+                let d=r.route(text,500,config,"v1");
+                assert_eq!(d.action,"chat","{text}");assert!(d.query.is_none());
+                assert_eq!(r.route("恐龙",700,config,"v1").action,"chat");
+            }
+            assert_eq!(RoutingSession::default().route("帮我查查光合作用是啥",0,config,"v1").action,"search");
+        }
+    }
     #[test] fn r17_result_resume_survives_reconnect_config_and_pending_clarification(){
         let mut c=RoutingConfig::default();
         c.rules=vec![Rule{id:"broad-chat".into(),enabled:true,priority:1000,action:"chat".into(),mode:"contains_any".into(),triggers:vec!["继续".into()],exclude:vec![]}];

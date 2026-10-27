@@ -1116,6 +1116,16 @@ mod tests {
         )
     }
     #[tokio::test]
+    async fn r21_word_explanation_does_not_submit_or_mutate_running_search() {
+        let (mut s,_events,mut commands)=test_session();
+        s.context_v1=true;s.dialogue=Some(json!({"phase":"running"}));s.dialogue_changed=Instant::now();s.busy=true;
+        let epoch=s.epoch;let generation=s.generation;
+        assert!(s.interpret("查查是啥").is_none());
+        assert!(commands.try_recv().is_err());assert!(s.speech.is_empty());
+        assert!(s.busy);assert_eq!(s.epoch,epoch);assert_eq!(s.generation,generation);
+        assert_eq!(s.dialogue.as_ref().unwrap()["phase"],"running");
+    }
+    #[tokio::test]
     async fn r20_asr_replace_is_scoped_and_split_resume_is_idempotent() {
         let (mut s,_events,mut commands)=test_session();
         let query="改茶大鱼海棠里大鱼这首歌是谁唱的";

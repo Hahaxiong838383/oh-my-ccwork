@@ -24,10 +24,23 @@ fn trim_polite(query: &str) -> &str {
     }
     q
 }
+fn explanation_tail(text: &str) -> bool {
+    ["是什么意思", "什么意思", "是什么", "是啥", "啥意思", "是啥意思", "是干什么的", "这个词是什么意思", "这个词啥意思", "这个词是啥意思", "这句话是什么意思"].contains(&text.trim())
+}
+/// A question about the command itself is chat, including after a pending
+/// clarification or an editable keyword rule. A named query still searches.
+pub fn search_term_question(text: &str) -> bool {
+    let mut t=addressed(text);
+    for prefix in ["请帮我", "请", "帮我", "帮忙"] {
+        if let Some(rest)=t.strip_prefix(prefix) {t=rest.trim_start();break;}
+    }
+    ["搜索一下", "查询一下", "查找一下", "搜索", "查询", "查找", "查一下", "查一查", "查查", "搜一下", "搜一搜", "搜搜"]
+        .iter().any(|prefix|t.strip_prefix(prefix).is_some_and(explanation_tail))
+}
 fn task_query(query: &str, replace: bool) -> Option<Intent> {
     let q = trim_polite(query.trim_start_matches(|c: char| "，,:： ".contains(c)));
     // An explanation/quotation of the command is ordinary conversation.
-    if ["是什么意思", "什么意思", "这个词是什么意思", "这句话是什么意思"].contains(&q) { return None; }
+    if explanation_tail(q) { return None; }
     if q.is_empty() || q.chars().count() > 128 || ["吧", "一下", "那个", "这个", "刚才那个", "它", "他", "她", "那件事", "为什么会灭绝", "为什么灭绝"].contains(&q) {
         return Some(Intent::Clarify);
     }
@@ -66,6 +79,7 @@ fn resume_object(text: &str) -> bool {
 }
 
 pub fn intent(text: &str) -> Option<Intent> {
+    if search_term_question(text) {return None;}
     let t = addressed(text);
     if ["如果", "假如", "例如", "比如"].iter().any(|p| t.starts_with(p)) { return None; }
     if ["，不要真的查", ",不要真的查", "，但不用搜索", ",但不用搜索"].iter().any(|p| t.contains(p)) { return None; }
@@ -131,6 +145,7 @@ impl QueryIntent {
     pub fn take_handoff(&mut self) -> Option<String> { self.handoff.take() }
     pub fn clear(&mut self) { self.pending_at = None; self.recent_question = None; self.handoff=None; self.resume_at=None; }
     pub fn route(&mut self, text: &str, now_ms: u64) -> Option<Intent> {
+        if search_term_question(text) {self.clear();return None;}
         self.handoff=None;
         let resume=self.resume_at.take();
         if trim_outer(text)=="结果" && resume.is_some_and(|at|now_ms.saturating_sub(at)<=1500) { return Some(Intent::Resume); }
@@ -212,6 +227,19 @@ impl DeliveryGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn r21_search_word_questions_are_chat_even_after_a_clarification() {
+        for text in ["查查是啥", "查查是什么", "搜索啥意思", "查一下是啥意思", "查询是干什么的", "小可，查查这个词啥意思？", "请帮我查一下是什么意思"] {
+            assert_eq!(intent(text),None,"{text}");
+            let mut router=QueryIntent::default();
+            router.route("帮我查一下",0);
+            assert_eq!(router.route(text,500),None,"{text}");
+            assert_eq!(router.route("恐龙",700),None,"an explanation must clear stale clarification");
+        }
+        for (text,query) in [("帮我查查光合作用是啥","光合作用是啥"),("搜索深空探测是干什么的","深空探测是干什么的"),("查查宝可梦主角是谁","宝可梦主角是谁")] {
+            assert_eq!(intent(text),Some(Intent::Search(query.into())),"{text}");
+        }
+    }
     #[test]
     fn r20_observed_resume_and_suffix_fragments_keep_the_search_route() {
         for text in ["继续搜刚才的搜索结果", "继续刚才的搜索", "请继续刚才的查询"] {
