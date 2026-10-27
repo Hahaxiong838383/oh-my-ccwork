@@ -312,7 +312,7 @@ fn publish_fail_class(raw: &str) -> &'static str {
 #[derive(Debug)]
 enum TurnEvent {
     AudioStarted(u64),
-    PlayedOut(u64),
+    PlayedOut(u64, bool), // bool: first-PCM deadline failed; never retry this turn
     /// 2b:LLM task 剥出的 [[DEV:N]] 意图回主循环(执行需 &mut self:pending_cmd/trace/publish)
     /// v3.1(codex 复核 §2):带创建时捕获的 turn id 与说话轮次,消费前过 device_ledger::l2_event_gate
     DevIntent { label: u32, text: String, turn_id: u64, utterance: u64 },
@@ -2815,7 +2815,7 @@ impl Orchestrator {
                         self.cfg.aec_warmup_duration.as_secs_f32());
                 }
             }
-            TurnEvent::PlayedOut(id) => {
+            TurnEvent::PlayedOut(id,tts_budget_failed) => {
                 if self.agent_turn.as_ref().map(|t| t.id) != Some(id) {
                     return;
                 }
@@ -2847,6 +2847,9 @@ impl Orchestrator {
                 // boost,barge 桶文案落在非打断语境(2026-08-16「先你的。」实证)
                 self.tele_text.clear();
                 self.set_state(AgentState::Listening);
+                // Settle cursor first, then suppress automatic retry and queue
+                // one local cue atomically before the next background poll.
+                if tts_budget_failed {if let Some(search)=&mut self.search {search.tts_unavailable();}}
                 // 2b §3.4:回复播完 → 追加设备短句(若 result 已到而当时回复在播)
                 if let Some(t) = self.deferred_say.take_on_played_out() {
                     info!(room = %self.room_name, "device reply appended after turn played out");
@@ -3662,6 +3665,7 @@ impl Orchestrator {
         } else {self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm())};
 
         let task = tokio::spawn(async move {
+            let mut tts_budget_failed=false;
             let publish = |v: Value| {
                 let p = lp.clone();
                 tokio::spawn(async move {
@@ -3694,7 +3698,7 @@ impl Orchestrator {
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();
-                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id,false)).await;
                 }
                 TurnKind::BackgroundSay(text) if search_progress_task.is_some() => {
                     // Register the entire trusted result before awaiting a socket or any PCM.
@@ -3710,10 +3714,11 @@ impl Orchestrator {
                                 tracker.lock().unwrap_or_else(|e|e.into_inner()).synthesized((bytes/2) as u64);
                                 if let Ok(mut p)=prog2.lock(){p.push((chars,samples));}
                             },
+                            Err(e)=>{tts_budget_failed=crate::tts_xfyun::first_audio_timed_out(&e);warn!(room=%room_name,error=%e,"background tts failed");break;},
                             _=>break,
                         }
                     }
-                    drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id,tts_budget_failed)).await;
                 }
                 TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
                     match tts_cfg
@@ -3725,14 +3730,14 @@ impl Orchestrator {
                             publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                             track(&text, bytes);
                         }
-                        Err(e) => warn!(room = %room_name, error = %e, "say tts failed"),
+                        Err(e) => {tts_budget_failed=crate::tts_xfyun::first_audio_timed_out(&e);warn!(room = %room_name, error = %e, "say tts failed");},
                     }
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();
                     // 自然播完:固定句全文入历史(say add_to_chat_ctx 语义)
                     if record_history { llm.lock().await.push_assistant(&text); }
-                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id,tts_budget_failed)).await;
                 }
                 TurnKind::Reply {
                     user_text,
@@ -3791,7 +3796,7 @@ impl Orchestrator {
                     let mut l2_sent = false;
                     // B 观测:正文首段 ready(TTS 首块)只记一次;tail 路径同样覆盖。
                     let mut body_ready_logged = false;
-                    while let Some(delta) = delta_rx.recv().await {
+                    'deltas: while let Some(delta) = delta_rx.recv().await {
                         let (early_labels, delta) = crate::llm::split_dev_inband(&delta);
                         for label in early_labels {
                             if label == crate::device_intent::SESSION_EXIT_LABEL {
@@ -3842,11 +3847,12 @@ impl Orchestrator {
                                 }
                                 Err(e) => {
                                     warn!(room = %room_name, error = %e, "tts synthesize failed");
+                                    if crate::tts_xfyun::first_audio_timed_out(&e) {tts_budget_failed=true;llm_join.abort();break 'deltas;}
                                 }
                             }
                         }
                     }
-                    if let Some(tail) = seg.flush() {
+                    if let Some(tail) = seg.flush().filter(|_|!tts_budget_failed) {
                         let tail = crate::textproc::strip_stage_directions(&tail);
                         if !tail.trim().is_empty() {
                             let synth_t0 = Instant::now();
@@ -3864,7 +3870,9 @@ impl Orchestrator {
                                     track(&tail, bytes);
                                 }
                                 Err(e) => {
-                                    warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
+                                    tts_budget_failed=crate::tts_xfyun::first_audio_timed_out(&e);
+                                    if tts_budget_failed {llm_join.abort();}
+                                    warn!(room = %room_name, error = %e, "tts synthesize failed (tail)");
                                 }
                             }
                         }
@@ -3910,7 +3918,7 @@ impl Orchestrator {
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();
-                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id,tts_budget_failed)).await;
                 }
             }
         });

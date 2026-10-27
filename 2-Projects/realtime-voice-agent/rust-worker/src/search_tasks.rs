@@ -457,13 +457,15 @@ impl SearchSession {
     }
     fn receipt(&mut self, kind: ReceiptKind) -> bool {
         let Some(bank)=&mut self.receipts else {return false;};
-        let clip=bank.pick(kind);
+        let Some(clip)=bank.try_pick(kind) else {return false;};
         // Never leave an earlier preparation/clarification cue ahead of a new query.
         self.speech.retain(|s|s.receipt.is_none());
         self.speech.push_back(Speech{grant:None,revision:1,digest:String::new(),cursor:0,sequence:0,reported_cursor:0,text:clip.text.clone(),receipt:Some(clip),task:None,
             delivery:String::new(),expires:Instant::now()+Duration::from_secs(2),result_until:None,auto_replayed:false});
         true
     }
+    /// Prepared, interruptible cue only; never retry the failing TTS provider.
+    pub fn tts_unavailable(&mut self)->bool { self.auto_pending=false;self.receipt(ReceiptKind::Unavailable) }
     pub fn active_receipt_pcm(&self) -> Option<Vec<u8>> {
         self.active.as_ref()?.receipt.as_ref().map(|c|c.pcm.clone())
     }
@@ -1157,6 +1159,17 @@ mod tests {
         let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
         assert!(s.interpret("我今天打球赢了").is_none());
         assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版"));
+    }
+    #[tokio::test]
+    async fn r22_tts_failure_notice_is_local_cancellable_and_never_submits_or_completes_search(){
+        let (mut s,_events,mut commands)=test_session();
+        assert!(!s.tts_unavailable());assert!(s.speech.is_empty());
+        s.receipts=Some(ReceiptBank::synthetic());
+        s.auto_pending=true;
+        assert!(s.tts_unavailable());assert!(!s.auto_pending);assert!(commands.try_recv().is_err());assert!(!s.busy);
+        assert_eq!(s.poll(true).unwrap(),"这次没播出来，等会儿再试。");
+        assert!(s.active_receipt_pcm().is_some());s.finish(false,15);assert!(commands.try_recv().is_err());
+        assert!(s.tts_unavailable());s.on_commit();assert!(s.poll(true).is_none(),"new speech supersedes failure cue");
     }
     #[tokio::test]
     async fn r13_receipt_is_ready_after_queue_acceptance_without_http_or_idle_wait() {

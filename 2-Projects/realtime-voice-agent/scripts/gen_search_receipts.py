@@ -22,6 +22,7 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--generator", type=Path, default=Path(__file__).with_name("gen_fillers.py"))
+    parser.add_argument("--include-failure", action="store_true", help="include the optional R22 local TTS failure cue")
     args = parser.parse_args()
     if args.out.exists():
         raise RuntimeError("output directory already exists; choose a fresh staging directory")
@@ -37,14 +38,16 @@ async def main():
     spec.loader.exec_module(gen)
     args.out.mkdir(parents=True, mode=0o700)
     entries, durations = [], {}
-    for clip_id, text in CATALOG:
+    catalog = CATALOG + ([("unavailable", "这次没播出来，等会儿再试。")] if args.include_failure else [])
+    for clip_id, text in catalog:
         name = clip_id + ".wav"
         await gen._synth_one_xfyun(args.out, name, text, creds, voice)
         path = args.out / name
         with wave.open(str(path), "rb") as wav:
             assert (wav.getnchannels(), wav.getframerate(), wav.getsampwidth()) == (1, 24000, 2)
             duration = wav.getnframes() * 1000 / 24000
-            assert 100 <= duration <= 1800, f"{clip_id}: duration outside 100..1800ms"
+            maximum = 4000 if clip_id == "unavailable" else 1800
+            assert 100 <= duration <= maximum, f"{clip_id}: duration outside allowed range"
         durations[clip_id] = duration
         entries.append({"id": clip_id, "file": name, "text": text,
                         "sha256": hashlib.sha256(path.read_bytes()).hexdigest()})

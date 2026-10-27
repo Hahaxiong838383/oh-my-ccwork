@@ -63,6 +63,33 @@ pub const DEFAULT_VCN: &str = "x6_lingxiaoxuan_pro";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const RECV_TIMEOUT: Duration = Duration::from_secs(30);
 
+/// One absolute deadline, starting when speakable text is ready. Once PCM has
+/// arrived, the existing inter-frame timeout owns long-answer liveness instead.
+pub(crate) struct FirstAudioBudget(Option<tokio::time::Instant>);
+#[derive(Debug)]
+struct FirstAudioTimeout(&'static str);
+impl std::fmt::Display for FirstAudioTimeout {
+    fn fmt(&self,f:&mut std::fmt::Formatter<'_>)->std::fmt::Result {write!(f,"xfyun first PCM budget exhausted at {}",self.0)}
+}
+impl std::error::Error for FirstAudioTimeout {}
+pub(crate) fn first_audio_timed_out(error:&anyhow::Error)->bool {error.is::<FirstAudioTimeout>()}
+impl FirstAudioBudget {
+    pub(crate) fn new(duration: Option<Duration>) -> Self {
+        Self(duration.map(|d|tokio::time::Instant::now()+d))
+    }
+    pub(crate) async fn wait<F: std::future::Future>(&self, stage: &'static str, future: F) -> Result<F::Output> {
+        match self.0 {
+            None => Ok(future.await),
+            Some(deadline) => {
+                if tokio::time::Instant::now()>=deadline {return Err(FirstAudioTimeout(stage).into());}
+                tokio::time::timeout_at(deadline,future).await
+                    .map_err(|_|FirstAudioTimeout(stage).into())
+            }
+        }
+    }
+    fn received_pcm(&mut self) {self.0=None;}
+}
+
 #[derive(Clone)]
 pub struct XfyunTtsConfig {
     pub app_id: String,
@@ -372,12 +399,9 @@ async fn send_or_abort(
 /// `warm` = 上一句合成期间后台建好的连接。给了就直接用(建连不在关键路径上),
 /// 没给或已超龄就现连。**首包口径随之改变**:用了预建连时 `tts_ttft_ms`
 /// 从发文本起算、`tts_connect_ms=0`,日志里 `warm=true` 标明,别把两种口径混着比。
-pub async fn synthesize(
-    cfg: &XfyunTtsConfig,
-    text: &str,
-    audio_tx: &mpsc::Sender<Vec<u8>>,
-    ctl: &PlayoutControl,
-    warm: Option<Warm>,
+pub(crate) async fn synthesize_budgeted(
+    cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl, warm: Option<Warm>, mut budget: FirstAudioBudget,
 ) -> Result<(u64, usize)> {
     // 证据日志:只落前 24 字+字数,不落全文(S2B1 canary 合同:完整文本不得进 journal;
     // 生产回复同策——排障按开头辨认句子,运维仍按 "tts synth" 关键词捞两条线)
@@ -398,14 +422,14 @@ pub async fn synthesize(
         Some(w) => (w.ws, 0, w.connect_id),
         None => {
             let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
-            let w = connect_observed(url).await?;
+            let w = budget.wait("connect",connect_observed(url)).await??;
             (w.ws, w.connect_ms, w.connect_id)
         }
     };
     let (room,turn_id)=ctl.trace_identity();
     info!(room,turn_id,connect_id,used_warm,warm_connect_ms,connect_ms,"tts connection assigned");
     let send_start=std::time::Instant::now();
-    ws.send(WsMessage::Text(build_request(cfg, text).to_string().into())).await?;
+    budget.wait("send",ws.send(WsMessage::Text(build_request(cfg, text).to_string().into()))).await??;
     info!(room,turn_id,connect_id,send_ms=send_start.elapsed().as_millis() as u64,"tts request sent");
 
     let mut ttfb_ms: Option<u64> = None;
@@ -413,8 +437,8 @@ pub async fn synthesize(
     let mut frames = 0usize;
     let mut cancelled = false;
     loop {
-        let msg = tokio::time::timeout(RECV_TIMEOUT, ws.next())
-            .await
+        let msg = budget.wait("receive",tokio::time::timeout(RECV_TIMEOUT, ws.next()))
+            .await?
             .context("xfyun tts recv timeout")?;
         let raw = match msg {
             Some(Ok(WsMessage::Text(t))) => t,
@@ -426,6 +450,7 @@ pub async fn synthesize(
         match parse_frame(&raw) {
             Downlink::Error(e) => bail!("xfyun tts 错误帧 {e}"),
             Downlink::Audio { pcm, last } => {
+                if !pcm.is_empty() {budget.received_pcm();}
                 if ttfb_ms.is_none() {
                     ttfb_ms = Some(t0.elapsed().as_millis() as u64);
                     let (room,turn_id)=ctl.trace_identity();
@@ -494,6 +519,42 @@ fn emit_metrics(m: M) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn r22_first_pcm_deadline_is_shared_by_prewarm_connect_and_receive() {
+        let b = FirstAudioBudget::new(Some(Duration::from_millis(100)));
+        b.wait("prewarm",tokio::time::sleep(Duration::from_millis(60))).await.unwrap();
+        let start=std::time::Instant::now();
+        assert!(b.wait("connect",tokio::time::sleep(Duration::from_millis(80))).await.is_err());
+        assert!(start.elapsed()<Duration::from_millis(75),"second stage cannot get a new budget");
+    }
+
+    #[tokio::test]
+    async fn r22_status_frames_cannot_extend_first_pcm_but_long_audio_continues() {
+        for delay_first in [true,false] {
+            let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address=listener.local_addr().unwrap();
+            let server=tokio::spawn(async move {
+                let (socket,_)=listener.accept().await.unwrap();
+                let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+                ws.next().await.unwrap().unwrap();
+                let frame=|last|WsMessage::Text(json!({"payload":{"audio":{"status":if last{2}else{1},"audio":B64.encode([0,1,0,2])}}}).to_string().into());
+                if !delay_first {ws.send(frame(false)).await.unwrap();}
+                for _ in 0..6 {
+                    tokio::time::sleep(Duration::from_millis(40)).await;
+                    if ws.send(WsMessage::Text("{}".into())).await.is_err(){return;}
+                }
+                let _=ws.send(frame(true)).await;
+                let _=ws.next().await;
+            });
+            let warm=connect_observed(format!("ws://{address}/")).await.unwrap();
+            let (_rx,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(4);
+            let result=synthesize_budgeted(&cfg(),"合成测试",&tx,&ctl,Some(warm),FirstAudioBudget::new(Some(Duration::from_millis(120)))).await;
+            if delay_first {assert!(result.is_err());assert!(rx.try_recv().is_err());}
+            else {assert_eq!(result.unwrap().1,8);assert_eq!(rx.try_recv().unwrap().len(),4);assert_eq!(rx.try_recv().unwrap().len(),4);}
+            tokio::time::timeout(Duration::from_secs(1),server).await.unwrap().unwrap();
+        }
+    }
 
     #[tokio::test]
     async fn r15_connect_failure_reports_stage_without_response_headers_or_signed_url() {
