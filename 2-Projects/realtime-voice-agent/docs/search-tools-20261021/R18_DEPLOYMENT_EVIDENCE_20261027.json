@@ -1,0 +1,584 @@
+{
+  "recorded_at_ms": 1793065981456,
+  "artifact": {
+    "worker_sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606",
+    "worker_bytes": 75583744,
+    "preview_sha256": "6e34c0eb7406b469727105e17a1c4f46e8c6137657915fe04bd80ef85bbe029d",
+    "brain_commit": "0b946fda5d38b1217bbe98644298c46e0df63489",
+    "worker_commit": "8d8738215ccc589df3f499373f52e542290e472e"
+  },
+  "source_manifest": {
+    "main": {
+      "src/search-canary-status.ts": "db6979cc0f773c0c2f6310ac4672c674948682ae63f0b6d81959521cb3450db2",
+      "src/index.ts": "9fba6febc3941c0dd34a27a29be8059cac31aa872950cbf78f5baa7ccf5e0642",
+      "src/tools/search-routing-config.ts": "f9f93d93732eca39ad03bb3eed6e7903c1d27980a90ff9a2626853fe0367dc73",
+      "src/tools/search-chat-policy.ts": "c681f8e54c394c9266d71cd026a39e2083b4fb6cf58349e9634e257f5d3d8ca7",
+      "src/tools/search-availability.ts": "e25ceda0627dd6f239e832bf2ba7f76bf5e5c979d19551f6e7b1c97cf78a6427",
+      "src/tools/search-runtime.ts": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+      "src/tools/search-resume.ts": "1d5ba20593819ddd6653b6ea45d8131e3c16036ebfa1639a4bcaa57ab852fa85",
+      "src/tools/search-enrollment.ts": "3b2c45cd43860d29ec6bcc84e940be6bffd79f8943444ab4d0e6a4ccb63199bd",
+      "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+      "src/tools/fixed-weather.ts": "7063e076eea7713139305f2ee567424c5b2e9217c79e14cb44ccee552ebe216f",
+      "src/tools/search-resume-scope.ts": "203077cb9baedfe760dce95d70ef6ca1d0375d03e020be6f7d34bd30714125ef",
+      "src/tools/weather-places.ts": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+      "src/tools/device-location-runtime.ts": "fe8387ff7b0a88dbed345b68a7aaeeead8fa777c205afcca1697d07d1a2fa8f1",
+      "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+      "src/tools/search-executor.ts": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+      "src/tools/baidu-weather.ts": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97",
+      "src/tools/search-dialogue-context.ts": "5ac631693385fc64848e69c124a33bebec8e695eeefe06af2497d1022b7dffad",
+      "src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+      "src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f",
+      "src/tools/search-routing-store.ts": "67828960a3a9393b358eea3bede2653db8308a17b28b977bb9ef9d3b31ae7ca7",
+      "src/tools/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+      "src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+      "src/providers/volc-llm.ts": "563f16013137e0b2b5b9dd138ebc2d6eac8d8b0d7805326686f6ec9ffd1afc8f",
+      "src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+      "src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+      "src/providers/deepseek-llm.ts": "520b4ce881429b24563b4b8e338dddab5fe142489e84c17d0e60b27c48dd3ca1",
+      "src/routes/search-tasks.ts": "3b0c59ce09922601d882fa364c4477dbd0351d06e34b30a16da730360ce557af",
+      "src/routes/search-p1-admin.ts": "4711e5d9fbb8adb61f673e67fddf5a568e3bcd99ed806a911fea18dcf054232c",
+      "src/routes/search-routing-admin.ts": "04601d584d361000808b32e0d550153b3009f8185c24b94a0118efde5d063369",
+      "src/routes/search-admin.ts": "66764cd8dc123c00e84cb716be64295b43e952272f3f69d4a4296dccea04e8de",
+      "src/routes/device-session.ts": "802563c7ed899401d579c279eca19e683c77ae66d53fc71e69856fafe9558f83",
+      "src/routes/custom-llm.ts": "54d8bbfa536fea936a4043c561be474f4606f8e7ef45138f952bc0aaf442c1d2"
+    },
+    "candidate": {
+      "src/tools/search-routing-config.ts": "f9f93d93732eca39ad03bb3eed6e7903c1d27980a90ff9a2626853fe0367dc73",
+      "src/tools/search-chat-policy.ts": "c681f8e54c394c9266d71cd026a39e2083b4fb6cf58349e9634e257f5d3d8ca7",
+      "src/tools/search-runtime.ts": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+      "src/tools/search-enrollment.ts": "3b2c45cd43860d29ec6bcc84e940be6bffd79f8943444ab4d0e6a4ccb63199bd",
+      "src/tools/device-location-runtime.ts": "fe8387ff7b0a88dbed345b68a7aaeeead8fa777c205afcca1697d07d1a2fa8f1",
+      "src/tools/search-executor.ts": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+      "src/tools/search-routing-store.ts": "67828960a3a9393b358eea3bede2653db8308a17b28b977bb9ef9d3b31ae7ca7",
+      "src/routes/device-session.ts": "802563c7ed899401d579c279eca19e683c77ae66d53fc71e69856fafe9558f83",
+      "src/routes/custom-llm.ts": "54d8bbfa536fea936a4043c561be474f4606f8e7ef45138f952bc0aaf442c1d2"
+    }
+  },
+  "p1": {
+    "opened_at_ms": 1793065397273,
+    "eligible": 16,
+    "allowed": 16,
+    "settings": {
+      "configured": true,
+      "enabled": true,
+      "scope": "all_registered",
+      "scope_valid": true,
+      "allowed": [],
+      "excluded": [],
+      "tools": false,
+      "upstream": {
+        "available": true,
+        "retry_at": null,
+        "reason": null
+      }
+    }
+  },
+  "p2": {
+    "opened_at_ms": 1793065558897,
+    "expires_at_ms": 1793589540000,
+    "selection": {
+      "selected": [
+        {
+          "sn": "BJP00326070803800006",
+          "agent": "p003-search-canary-20261021",
+          "canary": true,
+          "reason": "selected",
+          "leaseRemainingMs": 11349,
+          "leaseAgeMs": 3651,
+          "leaseJobs": 0,
+          "leaseMaxJobs": 2,
+          "leaseRegistered": true,
+          "expiresAtMs": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        },
+        {
+          "sn": "BJP00326060100100004",
+          "agent": "p003-search-canary-20261021",
+          "canary": true,
+          "reason": "selected",
+          "leaseRemainingMs": 11349,
+          "leaseAgeMs": 3651,
+          "leaseJobs": 0,
+          "leaseMaxJobs": 2,
+          "leaseRegistered": true,
+          "expiresAtMs": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        }
+      ],
+      "negative": {
+        "agent": "rust-worker",
+        "canary": false,
+        "reason": "not_target",
+        "leaseRemainingMs": 11348,
+        "leaseAgeMs": 3652,
+        "leaseJobs": 0,
+        "leaseMaxJobs": 2,
+        "leaseRegistered": true,
+        "expiresAtMs": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      }
+    },
+    "health": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": true,
+      "llm": {
+        "mode": "race",
+        "main": {
+          "outcome": "unknown"
+        },
+        "fallback": {
+          "outcome": "unknown"
+        },
+        "degraded": false
+      }
+    },
+    "p1_preserved": true,
+    "p2": true
+  },
+  "versions": [
+    {
+      "sn": "BJP00326070803800006",
+      "eligible": true,
+      "status": "active",
+      "version_code": 361,
+      "version_name": "1.2.2-canary.347",
+      "version_reported_at_ms": 1793054958759
+    },
+    {
+      "sn": "BJP00326060100100004",
+      "eligible": true,
+      "status": "active",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "version_reported_at_ms": 1792992582050
+    }
+  ],
+  "tests": {
+    "approved_by_checks": true,
+    "at_ms": 1793065313651,
+    "scope": "P1 all active registered; P2 original two only",
+    "unit_tests": {
+      "brain_linux": 132,
+      "worker_linux": 444,
+      "routing_preview": 27,
+      "published_routing_regression": 24
+    },
+    "p1_smoke": "normal/concurrent, cancellation ledger and client review passed",
+    "p2_smoke": "tool calls and audio delivery; fetch failed, used search snippets; direct upstream separate fetch HTTP200",
+    "limits": [
+      "not formal latency acceptance",
+      "not physical device acceptance",
+      "P2 compound ASR question partial coverage",
+      "no historical training"
+    ],
+    "expiry": {
+      "pass": true,
+      "deadline_ms": 1793065162000,
+      "closed_at_ms": 1793065162817.7,
+      "deleted_at_ms": 1793065163351.613,
+      "client_disconnected": true,
+      "rooms_remaining": 0,
+      "worker_sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606",
+      "real_window_untouched": true,
+      "first_attempt_failed": "harness listener timeout 150s shorter than 180s window; not product expiry failure"
+    }
+  },
+  "p1_runtime": {
+    "cancel": {
+      "task_id": "8168fcaa-4636-46b4-8a3f-6f2991868490",
+      "status": "cancelled",
+      "delivery": null,
+      "client_audio_ms": 4710.0,
+      "agent_transcripts": 4,
+      "metrics": 7,
+      "harness_exit": 1,
+      "harness_error": "asserted cancelled task in active-only list; reviewed using exact-room persisted ledger and received captions",
+      "semantic_check": true,
+      "device_heard_verified": false
+    },
+    "normal_concurrent": [
+      {
+        "mode": "normal",
+        "rc": 0,
+        "room": "sn-BJP00399999999999901-1793064438",
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 1,
+          "metrics": 5,
+          "audio_voiced_ms": 14080.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 53,
+          "packets_after": 1227
+        }
+      },
+      {
+        "mode": "concurrent",
+        "rc": 0,
+        "room": "sn-BJP00399999999999901-1793064495",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 7,
+          "audio_voiced_ms": 15590.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 2492
+        }
+      }
+    ],
+    "source_worker_sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606"
+  },
+  "p2_runtime": {
+    "tasks": [
+      {
+        "id": "dbde6cbe-8289-49f3-a768-968f3426903c",
+        "session": "sn-BJP00399999999999901-1793064681",
+        "status": "delivered",
+        "outcome": "answered",
+        "delivery": "completed",
+        "error": null,
+        "failure": null,
+        "createdAt": 1793064695515,
+        "readyAt": 1793064702615,
+        "diagnostics": {
+          "returned": 10,
+          "accepted": 3,
+          "rejected_schema": 0,
+          "rejected_url": 0,
+          "rejected_text": 0,
+          "rejected_date": 0,
+          "duplicate": 0,
+          "outcome": "evidence",
+          "answer_rewrites": 1,
+          "evidence_claims": 2,
+          "mode": "p2",
+          "tool_calls": [
+            {
+              "name": "search_web",
+              "outcome": "succeeded"
+            },
+            {
+              "name": "fetch_page",
+              "outcome": "failed"
+            }
+          ]
+        },
+        "sources": 1
+      }
+    ]
+  },
+  "upstream": [
+    {
+      "name": "museum",
+      "ok": true,
+      "events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "failed"
+        }
+      ],
+      "ms": 7514
+    },
+    {
+      "name": "gov",
+      "ok": true,
+      "events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "succeeded"
+        }
+      ],
+      "ms": 4249
+    },
+    {
+      "name": "science",
+      "ok": true,
+      "events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "rejected"
+        }
+      ],
+      "ms": 4486
+    }
+  ],
+  "ui": {
+    "at_ms": 1793065782823,
+    "p1": {
+      "settings": {
+        "configured": true,
+        "enabled": true,
+        "scope": "all_registered",
+        "scope_valid": true,
+        "allowed": [],
+        "excluded": [],
+        "tools": false,
+        "upstream": {
+          "available": true,
+          "retry_at": null,
+          "reason": null
+        }
+      },
+      "devices": 16,
+      "allowed": 16,
+      "release": true,
+      "error": ""
+    },
+    "p2": {
+      "summary": {
+        "state": "p2",
+        "health_ok": true,
+        "lease_ok": true,
+        "scope_ok": true,
+        "dispatch_requested": true,
+        "expires_at_ms": 1793589540000,
+        "configured_devices": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "selected_prepared": true
+      },
+      "error": "",
+      "release": true
+    },
+    "page_errors": 0,
+    "mobile_overflow_px": 0,
+    "read_only": true
+  },
+  "ui_style_deployment": {
+    "at_ms": 1793065734874,
+    "old_sha256": "267ad4a636e1cdf330e254736e7a692e83720d704c9d3382794687ef203665de",
+    "sha256": "49d6b8728729fc7255f731bc560c678f028b652881a40b8263984c17b842a8ff",
+    "service_restart": false
+  },
+  "worker": {
+    "voice-worker-rust": {
+      "pid": "1101301",
+      "sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606",
+      "capacity": "20",
+      "scope": "all_registered",
+      "token_exp": 1818513315,
+      "auth_checks": [
+        {
+          "sn": "BJP00326060100100004",
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e"
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e"
+        },
+        {
+          "sn": "BJP00326060100200003",
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e"
+        },
+        {
+          "sn": "BJP00399999999999901",
+          "status": 401,
+          "routing_version": null
+        }
+      ],
+      "registered_lines": 1,
+      "panic_lines": 0,
+      "error_lines": 0,
+      "state": "NRestarts=0\nActiveState=active\n"
+    },
+    "p003-search-worker": {
+      "pid": "1101723",
+      "sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606",
+      "capacity": "2",
+      "scope": "allowlist",
+      "token_exp": 1793589540,
+      "auth_checks": [
+        {
+          "sn": "BJP00326060100100004",
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e"
+        },
+        {
+          "sn": "BJP00326070803800006",
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e"
+        },
+        {
+          "sn": "BJP00326060100200003",
+          "status": 403,
+          "routing_version": null
+        },
+        {
+          "sn": "BJP00399999999999901",
+          "status": 403,
+          "routing_version": null
+        }
+      ],
+      "registered_lines": 1,
+      "panic_lines": 0,
+      "error_lines": 0,
+      "state": "NRestarts=0\nActiveState=active\n"
+    },
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "candidate_health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793065595522,
+      "cleanup": {
+        "at_ms": 1793065594507,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "resources": "               total        used        free      shared  buff/cache   available\nMem:            7939        1275        1177           2        5796        6664\nSwap:           2047           0        2047\n",
+    "at_ms": 1793065600141,
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+  },
+  "brain": {
+    "at_ms": 1793065597215,
+    "health": {
+      "status": "ok"
+    },
+    "p2_health": {
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices",
+      "search": true,
+      "tools": true,
+      "llm": {
+        "mode": "race",
+        "main": {
+          "outcome": "unknown"
+        },
+        "fallback": {
+          "outcome": "unknown"
+        },
+        "degraded": false
+      }
+    },
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 2636558,
+        "restarts": 39
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3192914,
+        "restarts": 5
+      }
+    ],
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n",
+    "sources_verified": {
+      "main": 32,
+      "candidate": 9
+    },
+    "resources": "               total        used        free      shared  buff/cache   available\nMem:            3499        1118         671          13        2011        2380\nSwap:              0           0           0\n"
+  },
+  "permission_checks": [
+    {
+      "path": "/api/admin/search-canary/p1",
+      "role": "anonymous",
+      "status": 401
+    },
+    {
+      "path": "/api/admin/search-canary",
+      "role": "anonymous",
+      "status": 401
+    },
+    {
+      "path": "/api/admin/search-canary/p1/routing",
+      "role": "anonymous",
+      "status": 401
+    },
+    {
+      "path": "/api/admin/search-canary/p1",
+      "role": "editor",
+      "status": 403
+    },
+    {
+      "path": "/api/admin/search-canary",
+      "role": "editor",
+      "status": 403
+    }
+  ],
+  "routing": {
+    "p1": {
+      "ok": true,
+      "revision": 2,
+      "targets": [
+        {
+          "sn": "*",
+          "version": "r7-5bd970f225036a447233316e",
+          "at": 1793065339144
+        }
+      ]
+    },
+    "p2": {
+      "ok": true,
+      "revision": 19,
+      "targets": [
+        {
+          "sn": "BJP00326070803800006",
+          "version": "r7-5bd970f225036a447233316e",
+          "at": 1792666766674
+        },
+        {
+          "sn": "BJP00326060100100004",
+          "version": "r7-5bd970f225036a447233316e",
+          "at": 1792666766674
+        }
+      ]
+    }
+  },
+  "expiry": {
+    "pass": true,
+    "deadline_ms": 1793065162000,
+    "closed_at_ms": 1793065162817.7,
+    "deleted_at_ms": 1793065163351.613,
+    "client_disconnected": true,
+    "rooms_remaining": 0,
+    "worker_sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606",
+    "real_window_untouched": true,
+    "first_attempt_failed": "harness listener timeout 150s shorter than 180s window; not product expiry failure"
+  },
+  "r1": {
+    "brain": "/opt/p003/backups/R18-20261027T003215Z",
+    "worker": "/opt/p003-search-canary-20261021/backups/R18-20261027T003215Z"
+  },
+  "physical_device_acceptance": "pending",
+  "formal_latency_acceptance": "not_completed"
+}
