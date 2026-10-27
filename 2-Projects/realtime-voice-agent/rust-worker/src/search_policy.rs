@@ -81,7 +81,11 @@ pub fn intent(text: &str) -> Option<Intent> {
     }
     let control = t.strip_suffix('吧').unwrap_or(t);
     if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
-        || ["不用查了，", "不用查了,", "别查了，", "别查了,", "不用查了我们聊", "不用查了聊", "别查了我们聊"].iter().any(|p| control.starts_with(p)) {
+        || ["不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p))
+        // ASR joins clause finals with spaces. Match the explicit cancel clause
+        // and a bounded chat handoff, without stripping negation or quotations.
+        || ["不用查了", "别查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail|
+            ["我们聊", "聊"].iter().any(|next|tail.trim_start().starts_with(next)))) {
         return Some(Intent::Cancel);
     }
     if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢", "继续播刚才的搜索结果", "刚才查的结果呢", "查好了吗", "搜到了吗", "接着说刚才查到的", "刚才查到什么了", "搜索结果呢"].contains(&control)
@@ -204,6 +208,15 @@ impl DeliveryGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn r18_cancel_compound_survives_asr_space_between_clauses() {
+        for text in ["不用查了 我们聊别的", "不用查了　我们聊小猫", "别查了 聊别的吧", "不用查了我们聊别的"] {
+            assert_eq!(intent(text),Some(Intent::Cancel),"{text}");
+        }
+        for text in ["他说不用查了 我们聊别的", "如果我说不用查了 我们聊什么", "不用查了是什么意思", "不用查北京天气 我们聊小猫"] {
+            assert_eq!(intent(text),None,"{text}");
+        }
+    }
     #[test]
     fn search_handoff_is_only_immediate_suffix_binding() {
         let mut router=QueryIntent::default();
