@@ -1,0 +1,412 @@
+{
+  "status": "predeploy_verified_pending_real_device",
+  "source_manifest": {
+    "src/tools/search-executor.ts": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514",
+    "src/tools/search-tasks.ts": "67859db59a235fab1071b4bb4b9892eb3c1dfe8150a058f32def44f9ab3c5aac",
+    "src/tools/search-source-scope.ts": "27518fe03d3a793b3d0129b7d3f643adc36603557de13ed00d98a58903171f00"
+  },
+  "linux": {
+    "terminal": {
+      "test_exit": 0,
+      "tsc_exit": 0
+    },
+    "tail": ":false,\"metric\":\"forecast\"}\n# weather runtime: actual authenticated route → frozen config → fixed provider → ledger; source gate enforced\n# Subtest: scripts/search-weather-runtime.test.ts\nok 46 - scripts/search-weather-runtime.test.ts\n  ---\n  duration_ms: 915.573292\n  type: 'test'\n  ...\n1..153\n# tests 153\n# suites 0\n# pass 153\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 30823.031005\n",
+    "tsc": "",
+    "executor_sha256": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514"
+  },
+  "real_provider_cases": [
+    {
+      "case": "game",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 2,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "failed"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    },
+    {
+      "case": "anime",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 1,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "failed"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    },
+    {
+      "case": "music",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 2,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    },
+    {
+      "case": "animal",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 1,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    },
+    {
+      "case": "space",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 1,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    },
+    {
+      "case": "sport_natural",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 1,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    },
+    {
+      "case": "game_natural",
+      "synthetic": true,
+      "api_ok": true,
+      "source_count": 1,
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "validations": [],
+      "elapsed_ms": null
+    }
+  ],
+  "fetch_warm": {
+    "succeeded": true,
+    "calls": 6,
+    "source_sha256": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514",
+    "tools": [
+      {
+        "name": "search_web",
+        "outcome": "succeeded"
+      },
+      {
+        "name": "fetch_page",
+        "outcome": "succeeded"
+      }
+    ],
+    "first_attempt_failed_preserved": true,
+    "availability_not_guaranteed": true
+  },
+  "normal_chat": {
+    "audio_identical": true,
+    "groups": [
+      {
+        "mode": "interest_before",
+        "samples": [
+          {
+            "index": 0,
+            "commit_to_body_ms": 1348.5,
+            "since_turn_ms": 1348,
+            "body_events": 1
+          },
+          {
+            "index": 1,
+            "commit_to_body_ms": 1706.4,
+            "since_turn_ms": 1706,
+            "body_events": 1
+          },
+          {
+            "index": 2,
+            "commit_to_body_ms": 1749.5,
+            "since_turn_ms": 1749,
+            "body_events": 1
+          },
+          {
+            "index": 3,
+            "commit_to_body_ms": 1194.3,
+            "since_turn_ms": 1197,
+            "body_events": 1
+          }
+        ],
+        "search_events": 0
+      },
+      {
+        "mode": "interest_after",
+        "samples": [
+          {
+            "index": 0,
+            "commit_to_body_ms": 1200.0,
+            "since_turn_ms": 1199,
+            "body_events": 1
+          },
+          {
+            "index": 1,
+            "commit_to_body_ms": 1449.7,
+            "since_turn_ms": 1449,
+            "body_events": 1
+          },
+          {
+            "index": 2,
+            "commit_to_body_ms": 1499.6,
+            "since_turn_ms": 1499,
+            "body_events": 1
+          },
+          {
+            "index": 3,
+            "commit_to_body_ms": 1199.0,
+            "since_turn_ms": 1199,
+            "body_events": 1
+          }
+        ],
+        "search_events": 0
+      }
+    ],
+    "delta_ms": [
+      -148.5,
+      -256.7,
+      -249.9,
+      4.7
+    ],
+    "median_delta_ms": -199.2,
+    "scope": "4 paired synthetic ordinary-chat samples; descriptive, not stable P95 or physical hearing"
+  },
+  "tasks": {
+    "at_ms": 1793075583832,
+    "cancel_cases": [
+      {
+        "id": "e2389d41-3957-4593-b579-dbd76a0d840f",
+        "status": "cancelled",
+        "delivery": null,
+        "createdAt": 1793075128723,
+        "readyAt": null,
+        "revision": 1,
+        "source_count": 0,
+        "diagnostics": null
+      },
+      {
+        "id": "189609b7-7214-4293-b6bc-1e1e969ff60f",
+        "status": "cancelled",
+        "delivery": null,
+        "createdAt": 1793075298377,
+        "readyAt": null,
+        "revision": 1,
+        "source_count": 0,
+        "diagnostics": null
+      }
+    ],
+    "student_search": {
+      "id": "a9f88d2f-f872-4e9e-9c17-eabe9fb2dc6b",
+      "status": "expired",
+      "delivery": "completed",
+      "createdAt": 1793074910108,
+      "readyAt": 1793074915525,
+      "revision": 1,
+      "source_count": 0,
+      "diagnostics": null
+    },
+    "devices": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 319,
+        "version_name": "1.2.2-canary.305",
+        "last_check_at": 1792992582050,
+        "updated_at": 1792992582050
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 361,
+        "version_name": "1.2.2-canary.347",
+        "last_check_at": 1793069358990,
+        "updated_at": 1793069358990
+      }
+    ],
+    "cancel_probe_limit": "Two probe assertions failed: active-only list omits cancelled tasks; GET/:id calls resumable and returns409 for cancelled. Persistent exact task IDs independently confirm both cancelled, without completed delivery."
+  },
+  "cross_resume": [
+    {
+      "event": "progress",
+      "task_id": "50a9ce34-cd05-4e4c-b18e-9af0c4c03353",
+      "session": "sn-BJP00399999999999901-1793075575",
+      "complete_sentences": 0,
+      "sequence": 1,
+      "at_ms": 1793075603103
+    },
+    {
+      "event": "session_closed",
+      "session": "sn-BJP00399999999999901-1793075575",
+      "at_ms": 1793075603129
+    },
+    {
+      "event": "grant",
+      "task_id": "50a9ce34-cd05-4e4c-b18e-9af0c4c03353",
+      "revision": 1,
+      "source_session": "sn-BJP00399999999999901-1793075575",
+      "session": "sn-BJP00399999999999901-1793075633",
+      "complete_sentences": 0,
+      "at_ms": 1793075656681,
+      "expires_at_ms": 1793075893817
+    },
+    {
+      "event": "receipt",
+      "task_id": "50a9ce34-cd05-4e4c-b18e-9af0c4c03353",
+      "session": "sn-BJP00399999999999901-1793075633",
+      "outcome": "progress",
+      "complete_sentences": 1,
+      "sequence": 1,
+      "at_ms": 1793075666043
+    },
+    {
+      "event": "receipt",
+      "task_id": "50a9ce34-cd05-4e4c-b18e-9af0c4c03353",
+      "session": "sn-BJP00399999999999901-1793075633",
+      "outcome": "completed",
+      "complete_sentences": 2,
+      "sequence": 2,
+      "at_ms": 1793075673890
+    },
+    {
+      "event": "session_closed",
+      "session": "sn-BJP00399999999999901-1793075633",
+      "at_ms": 1793075694689
+    }
+  ],
+  "rollback_roundtrip": {
+    "roundtrip": [
+      {
+        "phase": "candidate",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown"
+            },
+            "degraded": false
+          }
+        },
+        "files": {
+          "src/tools/search-executor.ts": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514",
+          "src/tools/search-tasks.ts": "67859db59a235fab1071b4bb4b9892eb3c1dfe8150a058f32def44f9ab3c5aac",
+          "src/tools/search-source-scope.ts": "27518fe03d3a793b3d0129b7d3f643adc36603557de13ed00d98a58903171f00"
+        },
+        "at_ms": 1793074615783
+      },
+      {
+        "phase": "rollback",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown"
+            },
+            "degraded": false
+          }
+        },
+        "files": {
+          "src/tools/search-executor.ts": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+          "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+          "src/tools/search-source-scope.ts": null
+        },
+        "at_ms": 1793074617869
+      },
+      {
+        "phase": "candidate_final",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown"
+            },
+            "degraded": false
+          }
+        },
+        "files": {
+          "src/tools/search-executor.ts": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514",
+          "src/tools/search-tasks.ts": "67859db59a235fab1071b4bb4b9892eb3c1dfe8150a058f32def44f9ab3c5aac",
+          "src/tools/search-source-scope.ts": "27518fe03d3a793b3d0129b7d3f643adc36603557de13ed00d98a58903171f00"
+        },
+        "at_ms": 1793074619928
+      }
+    ],
+    "deadline_preserved": true,
+    "production_untouched": true
+  },
+  "r1": "/opt/p003/backups/R19-20261027T042602Z",
+  "synthetic_closed": {
+    "brain": true,
+    "worker": true
+  },
+  "limits": [
+    "待两台真人扬声器听感、首词、插话验证。",
+    "4对普通聊天样本未见回退；不替代正式P95，旧R16/R18性能限制保留。",
+    "搜索摘要和正文摘录不代表全文或实时最新；Fetch失败仍可能发生，首次失败已保留。",
+    "两次取消探针断言失败；按原task ID查持久账本均已取消，不将探针exit1改为exit0。",
+    "航天回答仍出现带报道日的“上周”；需继续观察相对时间表述。",
+    "本轮没有全量历史对话训练，也未导出用户正文。"
+  ]
+}
