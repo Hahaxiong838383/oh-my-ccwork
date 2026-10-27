@@ -23,6 +23,7 @@ export function previewRouting(config:RoutingConfig,utterances:RouteUtterance[],
 export const ROUTING_REGRESSION=[
  ['今天北京的天气','search'],['明天上海会下雨吗','search'],['天气','clarify_city'],['帮我查一下','clarify'],
  ['帮我查恐龙灭绝的原因','search'],['帮我查故宫明天开放吗','search'],['帮我查今天汇率','search'],['取消搜索','cancel'],['改查上海天气','replace'],['继续刚才的搜索结果','resume'],
+ ['不用查了 我们聊别的','cancel'],['别查了 聊别的吧','cancel'],['他说不用查了 我们聊别的','chat'],['不用查了是什么意思','chat'],
  ['我今天画了一只猫','chat'],['天气为什么会变化','chat'],['我今天心情像阴天','chat'],['不要查北京天气','chat'],['他说查北京天气','chat'],['如果北京下雨怎么办','chat'],['查询功能怎么实现','chat'],['帮我查一下天气，不要真的查','chat'],['讲个故事','chat'],['我今天看了最新新闻','chat'],
 ] as const;
 export async function validateRoutingRegression(config:RoutingConfig,preview:(c:RoutingConfig,u:RouteUtterance[])=>Promise<any>) {
