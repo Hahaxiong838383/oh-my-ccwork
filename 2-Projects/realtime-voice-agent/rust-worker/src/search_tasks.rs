@@ -185,17 +185,28 @@ fn bare_topic(q: &str) -> bool {
 fn question_tail(t: &str) -> bool {
     // Only an immediately adjacent predicate, never a new named topic or personal chat.
     t.chars().count()<=40 &&
-        ["主要吃","吃什么","是什么","是怎么","是如何","为什么","怎么","有多","有几","多少","在哪里","什么时候","能不能","会不会"].iter().any(|p|t.starts_with(p)) &&
+        (["主要吃","吃什么","是什么","是怎么","是如何","为什么","怎么","有多","有几","多少","在哪里","什么时候","能不能","会不会","最近","最新","正式更新"].iter().any(|p|t.starts_with(p)) || t.contains("这首歌")&&t.contains("谁唱")) &&
         !["帮我","改查","不用","不要","我们","你","我","；",";"].iter().any(|p|t.contains(p))
 }
 fn missing_predicate(q: &str) -> bool {
     let q=q.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
-    ["为什么","为什么会","怎么","怎么会","如何"].iter().any(|p|q.ends_with(p))
+    ["为什么","为什么会","怎么","怎么会","如何","最近","最新"].iter().any(|p|q.ends_with(p))
+}
+fn incomplete_title(q: &str) -> bool {
+    // Short edition/title fragments observed before the predicate arrives.
+    // This changes only explicit search admission, never ordinary chat timing.
+    ["基岩版","Java版","中国版","国际版","网易版"].iter().any(|s|q.ends_with(s))&&q.starts_with("我的世界")
+}
+fn repaired_replace(text: &str, active: bool) -> Option<String> {
+    if !active {return None;}
+    let q=text.trim().strip_prefix("改茶")?;
+    if q.chars().count()<2 || ["具","叶","杯","壶","的","味","色","馆","水"].iter().any(|s|q.starts_with(s)) {return None;}
+    Some(format!("改查{q}"))
 }
 fn predicate_tail(t: &str) -> bool {
     // A narrow adjacent ASR continuation, not a buffer for arbitrary chat.
     (2..=24).contains(&t.chars().count()) &&
-        ["灭绝","会","能","要","是","不","没有","变","发","形成","出现","产生","生长","消失","吃","飞","转","掉","亮"].iter().any(|p|t.starts_with(p)) &&
+        ["灭绝","会","能","要","是","不","没有","变","发","形成","出现","产生","生长","消失","吃","飞","转","掉","亮","正式更新","更新","有什么"].iter().any(|p|t.starts_with(p)) &&
         !["帮我","查","搜","取消","不用","不要","停","退出","聊","我们","你","我","天气","；",";"].iter().any(|p|t.contains(p))
 }
 pub struct SearchSession {
@@ -230,6 +241,8 @@ pub struct SearchSession {
     routing_task: Option<JoinHandle<()>>,
     clarified_at: Option<Instant>,
     pending_topic: Option<PendingTopic>,
+    last_resume_at: Option<Instant>,
+    fragment_since: Option<Instant>,
 }
 pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
     crate::search_enrollment::enabled(enabled, "allowlist", allowlist, room, "")
@@ -267,16 +280,20 @@ impl SearchSession {
             suppress_auto: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task,
-            clarified_at:None,pending_topic:None,
+            clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
         })
     }
     pub fn interpret(&mut self, text: &str) -> Option<Intent> {
+        self.fragment_since=None;
+        let repaired=repaired_replace(text,self.dialogue_context().is_some());
+        let text=repaired.as_deref().unwrap_or(text);
         let mut joined = None;
         let mut deferred = None;
         if let Some(pending) = self.pending_topic.take() {
             let tail=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
             let continues=if missing_predicate(&pending.query){predicate_tail(tail)}else{question_tail(tail)};
             if pending.since.elapsed() <= Duration::from_millis(pending.deadline_ms()) && continues {
+                self.fragment_since=Some(pending.since);
                 joined=Some(format!("{}{}{}",if pending.replace{"改查"}else{"帮我查一下"},pending.query,tail));
                 self.clarified_at=None;
                 tracing::info!("background search clarification fragments joined");
@@ -329,8 +346,9 @@ impl SearchSession {
                     return false;
                 }
                 let clarified=self.clarified_at.take().is_some_and(|at|at.elapsed()<=Duration::from_secs(10));
-                if missing_predicate(&query) || (clarified && bare_topic(&query)) {
-                    self.pending_topic=Some(PendingTopic{query,replace:false,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
+                if missing_predicate(&query) || incomplete_title(&query) || (clarified && bare_topic(&query)) {
+                    let origin=self.fragment_since.take();
+                    self.pending_topic=Some(PendingTopic{query,replace:false,since:origin.unwrap_or_else(Instant::now),route:self.last_route.clone(),tail_observed:origin.is_some()});
                     return true;
                 }
                 return self.submit(query, false);
@@ -355,6 +373,8 @@ impl SearchSession {
                 }
             }
             Intent::Resume => {
+                if self.last_resume_at.is_some_and(|at|at.elapsed()<=Duration::from_millis(1500)){return false;}
+                self.last_resume_at=Some(Instant::now());
                 self.auto_pending = false;
                 if self.busy {
                     self.notice("还在查或准备播报，查到后我会告诉你。");
@@ -395,9 +415,10 @@ impl SearchSession {
     }
     pub fn replace_query(&mut self, query: String) -> bool {
         self.pending_topic=None;
-        if missing_predicate(&query) {
+        if missing_predicate(&query) || bare_topic(&query) {
             self.command(Intent::Cancel);
-            self.pending_topic=Some(PendingTopic{query,replace:true,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
+            let origin=self.fragment_since.take();
+            self.pending_topic=Some(PendingTopic{query,replace:true,since:origin.unwrap_or_else(Instant::now),route:self.last_route.clone(),tail_observed:origin.is_some()});
             return true;
         }
         self.suppress_auto_replay();
@@ -1088,11 +1109,44 @@ mod tests {
             suppress_auto: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task:None,
-            clarified_at:None,pending_topic:None,
+            clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
             },
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn r20_asr_replace_is_scoped_and_split_resume_is_idempotent() {
+        let (mut s,_events,mut commands)=test_session();
+        let query="改茶大鱼海棠里大鱼这首歌是谁唱的";
+        assert!(s.interpret(query).is_none());
+        s.context_v1=true;s.dialogue=Some(json!({"phase":"running"}));s.dialogue_changed=Instant::now();
+        assert_eq!(s.interpret(query),Some(Intent::Replace("大鱼海棠里大鱼这首歌是谁唱的".into())));
+        for text in ["改茶具的颜色", "改茶叶品种", "改茶的口味", "他说改茶大鱼", "不要改茶大鱼", "我想喝茶"] { assert!(s.interpret(text).is_none(),"{text}"); }
+        s.resume_v1=true;
+        let action=s.interpret("继续刚才的搜索").unwrap();s.command(action);
+        assert!(matches!(commands.try_recv(),Ok(Command::ResumeLatest{..})));
+        let action=s.interpret("结果").unwrap();s.command(action);
+        assert!(commands.try_recv().is_err());assert!(s.speech.is_empty(),"split tail must not add a second notice");
+    }
+    #[tokio::test]
+    async fn r20_incomplete_public_title_waits_only_in_search_lane() {
+        let (mut s,_events,mut commands)=test_session();
+        let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
+        assert!(commands.try_recv().is_err());
+        let action=s.interpret("最近正式更新了什么").unwrap();s.command(action);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版最近正式更新了什么"));
+        let (mut s,_events,mut commands)=test_session();
+        let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
+        let since=s.pending_topic.as_ref().unwrap().since;
+        let action=s.interpret("最近").unwrap();s.command(action);
+        assert!(commands.try_recv().is_err());assert_eq!(s.pending_topic.as_ref().unwrap().since,since);
+        let action=s.interpret("正式更新了什么").unwrap();s.command(action);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版最近正式更新了什么"));
+        let (mut s,_events,mut commands)=test_session();
+        let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
+        assert!(s.interpret("我今天打球赢了").is_none());
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版"));
     }
     #[tokio::test]
     async fn r13_receipt_is_ready_after_queue_acceptance_without_http_or_idle_wait() {

@@ -126,7 +126,8 @@ impl RoutingSession {
         let t=addressed(text);
         // Control commands retain authority even if all editable rules are disabled.
         if let Some(control @ (Intent::Cancel|Intent::Resume|Intent::Replace(_)))=intent(t) {
-            self.legacy.clear();return self.from_intent(control,"builtin-control",now,Some(config));
+            self.legacy.clear();let control=self.legacy.route(text,now).unwrap_or(control);
+            return self.from_intent(control,"builtin-control",now,Some(config));
         }
         if t.is_empty() || t.chars().count()>128 || t.chars().any(char::is_control) || protected(t) {self.clear();return Decision::new("chat","protected","普通聊天或保护表达");}
         if let Some((at,question,replace))=pending {
@@ -252,6 +253,12 @@ mod tests {
         let d=RoutingSession::default().route("打听一下故宫开放时间",0,Some(&c),"v2");assert_eq!(d.query.unwrap(),"故宫开放时间");
         c.rules[0].mode="regex".into();assert!(c.validate().is_err());
         c=RoutingConfig::default();c.rules[0].triggers=vec![" ".into()];assert!(c.validate().is_err());
+    }
+    #[test] fn r20_configured_router_keeps_adjacent_resume_tail(){
+        let c=RoutingConfig::default();let mut r=RoutingSession::default();
+        assert_eq!(r.route("继续刚才的搜索",0,Some(&c),"v1").action,"resume");
+        assert_eq!(r.route("结果",700,Some(&c),"v1").action,"resume");
+        assert_eq!(r.route("结果",900,Some(&c),"v1").action,"chat");
     }
     #[test] fn no_config_keeps_old_contract_and_does_not_enable_natural_route(){
         let mut r=RoutingSession::default();assert_eq!(r.route("北京天气",0,None,"").action,"chat");assert_eq!(r.route("帮我查北京天气",1,None,"").action,"search");
