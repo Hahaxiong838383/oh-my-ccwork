@@ -79,8 +79,8 @@ function normalized(raw: string): { text: string; offsets: number[] } {
  * is discarded. Original quoted sentences and disabled/production passthrough
  * retain their prior behavior. No user text or provider text is logged here. */
 export function createSearchClaimFilter(enabled: boolean) {
-  let pending = ''; let emitted = 0; let quoteEnd = ''; let context = ''; let dropping = false; let warned = false;
-  const reset = () => { pending = ''; emitted = 0; quoteEnd = ''; context = ''; dropping = false; };
+  let pending = ''; let emitted = 0; let quoteEnd = ''; let closingAfterEnd = ''; let context = ''; let dropping = false; let warned = false;
+  const reset = () => { pending = ''; emitted = 0; quoteEnd = ''; closingAfterEnd = ''; context = ''; dropping = false; };
   const remember = (text: string) => { context = (context + text).slice(-96); };
   const fallback = () => {
     if (warned) return '';
@@ -99,11 +99,18 @@ export function createSearchClaimFilter(enabled: boolean) {
       let out = '';
       for (const char of delta) {
         if (dropping) { if (END.test(char)) reset(); continue; }
+        if (closingAfterEnd) {
+          // A sentence-ending quote is a closer, even for symmetric ASCII
+          // quotes. It must not open a new exemption for the following claim.
+          if (/\s/.test(char)) {out += char; remember(char); continue;}
+          const closes=char===closingAfterEnd;closingAfterEnd='';
+          if (closes) {out += char; emitted++; remember(char); continue;}
+        }
         if (quoteEnd) {
           out += char; emitted++; remember(char);
           if (char === quoteEnd) quoteEnd = '';
           // An unclosed quote cannot disable the rest of a multi-sentence reply.
-          if (END.test(char)) reset();
+          if (END.test(char)) {const close=quoteEnd;reset();closingAfterEnd=close;}
           continue;
         }
         if (QUOTES[char]) {

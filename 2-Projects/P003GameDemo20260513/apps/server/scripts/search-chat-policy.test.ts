@@ -12,7 +12,7 @@ test('R22 explanation questions and inline quotes retain their meaning across st
  }
 });
 test('R22 a quote or question does not exempt a later execution claim',()=>{
- for(const prefix of ['你说“我去查一下”是什么意思？','你想让我查资料吗？','“我去查一下”，']){
+ for(const prefix of ['你说“我去查一下”是什么意思？','你想让我查资料吗？','“我去查一下”，','"我去查一下。"']){
   const f=policy.createSearchClaimFilter(true);let out='';
   for(const c of prefix+'我已经查到了最新消息。')out+=f.feed(c);
   out+=f.flush();assert.ok(out.startsWith(prefix),out);assert.ok(!out.includes('查到了最新消息'),out);
