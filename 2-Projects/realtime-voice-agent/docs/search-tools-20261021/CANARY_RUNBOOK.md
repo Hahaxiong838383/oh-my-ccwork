@@ -78,3 +78,5 @@ Linux357测试/构建/ABI、43输入核同；新产物SHA256 83ee21cbf5a6ba6c551
 systemd EnvironmentFile不等同JSON解析器：`json.dumps`默认ASCII转义会让中文热词在进程里变成字面`\uXXXX`，导致停止/退出/ASR热词失效。仅对已核实的公共文本配置使用UTF-8值（Python `ensure_ascii=False`），其余凭据和隔离参数保留原字节；重启后运行 `python3 ops/search-canary/verify_text_environment.py --pid <候选PID>`。该脚本只输出键名与状态。额外逐项核对候选公共文本与本次读取的现役文本相等，不输出值。
 
 不能仅凭env文件能被JSON解析、unit active或RTC有声音判通过。部署后实际测试“停一下”、明确取消、显式续讲、极早打断；从ASR最终文字核对标点省略变体。新HTTP路径必须同时通过候选入口guard和业务路由。失败与修复后证据分开保存，不抹去旧失败。
+
+R22补充：R5已有的检查未被部署流程强制调用，后续整份env重序列化再次引入了此故障。候选Worker服务新增`ExecStartPre=/usr/bin/python3 /opt/p003-search-canary-20261021/verify_text_environment.py --current-env`，必须先安装审计脚本再安装unit/drop-in；失败会阻止候选启动，不能绕过检查改成忽略退出码。独立验证副本使用自己的绝对路径。仅查看env文件经JSON解码的结果不能替代进程核验。更新单个配置项时保留其余行原字节，禁止读全文件后用默认`json.dumps`重写全部值。回滚业务代码时保留已修复的UTF-8文本与启动检查。

@@ -5,6 +5,7 @@ After=network-online.target
 Type=simple
 WorkingDirectory=/opt/p003-search-canary-20261021
 EnvironmentFile=/opt/p003-search-canary-20261021/canary.env
+ExecStartPre=/usr/bin/python3 /opt/p003-search-canary-20261021/verify_text_environment.py --current-env
 ExecStart=/opt/p003-search-canary-20261021/voice-rust-worker
 Restart=on-failure
 RestartSec=5

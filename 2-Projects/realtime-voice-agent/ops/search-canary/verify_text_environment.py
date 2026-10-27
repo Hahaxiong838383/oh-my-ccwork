@@ -2,6 +2,7 @@
 """Audit live candidate UTF-8 text configuration without printing configuration values."""
 import argparse
 import json
+import os
 import pathlib
 import re
 
@@ -21,13 +22,19 @@ def escaped_text_keys(environment):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--pid', required=True, type=int)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--pid', type=int)
+    source.add_argument('--current-env', action='store_true',
+                        help='Check inherited EnvironmentFile values in ExecStartPre')
     args = parser.parse_args()
-    if args.pid <= 0:
-        parser.error('pid must be positive')
-    raw = pathlib.Path(f'/proc/{args.pid}/environ').read_bytes()
-    environment = dict(item.decode('utf-8').split('=', 1)
-                       for item in raw.split(b'\0') if b'=' in item)
+    if args.current_env:
+        environment = os.environ
+    else:
+        if args.pid <= 0:
+            parser.error('pid must be positive')
+        raw = pathlib.Path(f'/proc/{args.pid}/environ').read_bytes()
+        environment = dict(item.decode('utf-8').split('=', 1)
+                           for item in raw.split(b'\0') if b'=' in item)
     bad = escaped_text_keys(environment)
     print(json.dumps({'ok': not bad, 'escaped_text_keys': bad,
                       'checked_keys': [k for k in TEXT_KEYS if k in environment]}))
