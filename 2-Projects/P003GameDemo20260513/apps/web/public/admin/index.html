@@ -1243,7 +1243,23 @@
               </div>
               <div class="kh-main" style="display:flex;gap:0;padding:0">
                 <section v-if="currentPage==='worker' && khNav==='search-canary' && canManageInvites" class="canary-panel" aria-label="搜索灰度">
-                  <div class="an-heading"><div><div class="kh-h1">搜索灰度</div><div class="kh-sub">按设备灰度验收 · 搜索在后台执行，普通聊天继续</div></div><el-button :loading="canary.loading" @click="loadCanary">刷新状态</el-button></div>
+                  <div class="an-heading"><div><div class="kh-h1">搜索灰度</div><div class="kh-sub">P1 全量内测 · P2 双设备灰度 · 搜索在后台执行，普通聊天继续</div></div><el-button :loading="searchLane==='p1' ? p1.loading : canary.loading" @click="loadCanary">刷新状态</el-button></div>
+                  <nav class="an-tabs" aria-label="搜索功能页面"><button :class="{on:searchLane==='p1'}" :aria-current="searchLane==='p1' ? 'page' : null" :disabled="routing.busy || p1.saving || canary.saving" @click="setSearchLane('p1')">P1 全量内测</button><button :class="{on:searchLane==='p2'}" :aria-current="searchLane==='p2' ? 'page' : null" :disabled="routing.busy || p1.saving || canary.saving" @click="setSearchLane('p2')">P2 双设备灰度</button></nav>
+                  <template v-if="searchLane==='p1'">
+                    <div v-if="p1.error" role="alert" class="canary-warning">{{ p1.error }}。当前 P1 状态未知。</div>
+                    <div v-if="!p1.data && !p1.error" class="kh-sub">正在读取 P1 全量内测状态…</div>
+                    <template v-if="p1.data">
+                      <div class="canary-warning"><b>{{ p1.data.settings.enabled ? 'P1 服务端已开启 · 待设备体验核验' : 'P1 搜索未开启' }}</b><div>实时读取：{{ analyticsTime(p1.data.observed_at_ms) }}（北京时间）。实际设备体验以测试反馈为准。</div></div>
+                      <div class="canary-grid">
+                        <div class="kh-card"><h3>P1 开放范围</h3><p>{{ p1.data.settings.scope==='all_registered' ? '全部已注册、启用并开通服务的内测设备；新增设备自动纳入。' : '当前仍为指定设备名单模式。' }}</p><p>符合准入 {{ p1.data.devices.filter(d=>d.eligible).length }} 台 · 当前允许搜索 {{ p1.data.devices.filter(d=>d.search_allowed).length }} 台</p><p>沿用设备原有身份、人格、记忆及聊天历史。单机排除只影响搜索。</p><el-button :loading="p1.saving" :type="p1.data.settings.enabled ? 'warning' : 'primary'" :disabled="!p1.data.settings.configured" @click="setP1Enabled(!p1.data.settings.enabled)">{{ p1.data.settings.enabled ? '关闭 P1 搜索' : '开启 P1 全量内测' }}</el-button><p class="kh-sub">持续内测，不继承 P2 的到期时间。总闸关闭后停止接收新搜索，普通聊天继续。</p></div>
+                        <div class="kh-card"><h3>P1 部署核验</h3><template v-if="p1.data.release"><p>Brain：<code>{{ p1.data.release.brain_commit }}</code></p><p>Worker：<code>{{ p1.data.release.worker_commit }}</code></p><p>核验时间：{{ analyticsTime(p1.data.release.verified_at_ms) }}</p></template><p v-else>暂无本轮部署核验记录，不能仅凭开关认定已上线。</p><p class="kh-sub">P1 只做后台搜索。Tool Calls 与受控网页抓取仅在 P2 页面所示两台设备开放。</p></div>
+                      </div>
+                      <div class="kh-card"><h3>内测设备</h3><div style="overflow-x:auto"><table class="an-table"><thead><tr><th>完整 SN</th><th>最近自报版本</th><th>搜索状态</th><th>操作</th></tr></thead><tbody><tr v-for="d in p1.data.devices" :key="d.sn"><td>{{ d.sn }}</td><td>{{ d.version_code == null ? '未知' : 'v'+d.version_code }} / {{ d.version_name || '未知' }}<div class="kh-sub">{{ analyticsTime(d.version_reported_at_ms) }}</div></td><td>{{ !d.eligible ? '尚未开通或已停用' : d.excluded ? '单机已排除' : d.search_allowed ? 'P1 已允许' : '总闸关闭' }}</td><td><el-button size="small" :disabled="p1.saving || !d.eligible" @click="setP1Excluded(d.sn,!d.excluded)">{{ d.excluded ? '恢复搜索' : '排除搜索' }}</el-button></td></tr></tbody></table></div></div>
+                      <div class="kh-card"><h3>问题与待验项目</h3><p v-for="issue in p1.data.issues" :key="issue">{{ issue }}</p></div>
+                      <div class="kh-card"><h3>近期搜索任务</h3><p v-if="!p1.data.tasks.loaded" class="kh-sub">当前进程尚未加载任务账本；不表示历史没有任务。</p><p v-else-if="!p1.data.tasks.recent.length" class="kh-sub">当前账本暂无记录。</p><div class="canary-issue" v-for="task in p1.data.tasks.recent.slice(0,20)" :key="task.id"><b>{{ task.device_suffix }}</b><span>{{ task.status }} · {{ task.outcome }}</span><p>{{ analyticsTime(task.created_at) }} · 播放回执 {{ task.delivery }}<span v-if="task.error"> · {{ task.error }}</span></p></div><p class="kh-sub">服务端已发送或已完成不等于扬声器已被真人听到。</p></div>
+                    </template>
+                  </template>
+                  <template v-if="searchLane==='p2'">
                   <div v-if="canary.error" role="alert" class="canary-warning">{{ canary.error }}。当前状态未知，请勿依据旧数据开窗。</div>
                   <div v-if="!canary.data && !canary.error" class="kh-sub">正在核对灰度状态…</div>
                   <template v-if="canary.data">
@@ -1254,14 +1270,16 @@
                     </div>
                     <div class="kh-card"><h3>灰度设备</h3><label for="canary-device">待测设备（手动选择）</label><div class="canary-device-row"><select id="canary-device" v-model="canary.selected" @change="canary.dirty=true" :disabled="canary.saving || canary.data.summary.dispatch_requested"><option v-for="d in canary.data.devices" :key="d.sn" :value="d.sn" :disabled="!d.eligible">{{ d.sn }}{{ d.eligible ? '' : '（不可用）' }}</option></select><el-button type="primary" :loading="canary.saving" :disabled="!canary.dirty || canary.loading || canary.data.summary.dispatch_requested" @click="saveCanaryDevice">保存待测设备</el-button></div><p class="kh-sub">保存选择不会开窗或改变派单。当前完成隔离准备的设备：{{ canary.data.prepared_sn }}。选择其他设备后需重新准备并验收。</p><p>已保存：<code>{{ canary.data.selected_sn }}</code></p><p v-if="canarySelectedDevice">云端最近自报版本：<b>{{ canarySelectedDevice.version_code == null ? '未知' : 'v'+canarySelectedDevice.version_code }}</b> / {{ canarySelectedDevice.version_name || '未知' }}<br>上报时间：{{ analyticsTime(canarySelectedDevice.version_reported_at_ms) }}；云端上报记录。</p><p v-if="canary.data.operator_confirmation" class="kh-sub">持有人已于 {{ analyticsTime(canary.data.operator_confirmation.at_ms) }} 确认完整SN及 v{{ canary.data.operator_confirmation.version_code }}（{{ canary.data.operator_confirmation.version_name }}）。</p></div>
                     <div class="kh-card"><h3>问题与待验项目</h3><div v-for="issue in canary.data.issues" :key="issue.title" class="canary-issue"><b>{{ issue.title }}</b><span>{{ issue.status }}</span><p>{{ issue.detail }}</p></div></div>
-                    <div class="kh-card"><h3>你需要完成什么</h3><ol><li>保持目标设备开机联网；以本页最近上报时间和现场安装版本核对设备。</li><li>目标设备直接体验叠加搜索的效果；其他设备做普通聊天对照，服务端负责统计。</li><li>按实际起止时间结束旧会话并重新进入，按话术测P1搜索、继续聊天及插话；记录实际听到的表现。</li></ol><p>话术：先说“帮我查一下今天北京的天气”，继续聊画猫；安静等待补播。播报时说“先停一下”，随后“继续刚才的搜索结果”；再分别测“取消搜索”“改查上海的天气”和退出重连。</p><p class="kh-sub">服务端负责核对、开窗、日志对账和到期关闭。仅实际名单中的设备进入候选，截止后自动关闭；P1真机通过后再开放P2。</p></div>
+                    <div class="kh-card"><h3>P2 工具执行记录</h3><p class="kh-sub">只有实际调用记录才证明执行了工具。天气固定查询和普通聊天不一定调用 Tool Calls。</p><p v-if="!canary.data.recent_tasks" class="kh-sub">任务账本暂不可读，执行情况未知。</p><div class="canary-issue" v-for="task in (canary.data.recent_tasks || [])" :key="task.id"><b>{{ task.device_suffix }} · {{ task.mode }}</b><span>{{ task.status }} · {{ task.outcome || '未结算' }}</span><p>{{ analyticsTime(task.created_at) }} · 播放回执 {{ task.delivery || '待播' }}</p><p v-if="task.failure">失败环节：{{ ({search:'搜索',answer:'答案生成',tools:'工具规划',fetch:'网页抓取',weather:'天气',task:'任务'})[task.failure.stage] || '未知' }} · {{ ({timeout:'超时',transport:'网络异常',http:'上游拒绝',invalid_answer:'答案校验未通过',aborted:'已终止'})[task.failure.reason] || '返回内容未通过校验' }}</p><p v-for="(tool,i) in task.tools" :key="i">{{ ({search_web:'网页搜索',fetch_page:'正文抓取',unknown:'未知工具'})[tool.name] }}：{{ ({succeeded:'已执行成功',rejected:'已拒绝',failed:'执行失败'})[tool.outcome] }}</p></div></div>
+                    <div class="kh-card"><h3>你需要完成什么</h3><ol><li>保持目标设备开机联网；以本页最近上报时间和现场安装版本核对设备。</li><li>仅本页实际名单中的两台设备测试 Tool Calls 与受控网页抓取；其他内测设备使用 P1。</li><li>按实际起止时间结束旧会话并重新进入，按话术测 P2 搜索、正文抓取、继续聊天及插话；记录实际听到的表现。</li></ol><p>话术：先说“帮我查一下今天北京的天气”，继续聊画猫；安静等待补播。播报时说“先停一下”，随后“继续刚才的搜索结果”；再分别测“取消搜索”“改查上海的天气”和退出重连。</p><p class="kh-sub">服务端负责核对、开窗、日志对账和到期关闭。仅实际名单中的设备进入候选，截止后退出重进回到 P1；P2 是否开放以本页实时状态为准。</p></div>
+                  </template>
                   </template>
                   <div class="kh-card routing-panel" aria-label="任务路由配置">
-                    <div class="an-section-head"><h3>任务路由 · 热配置</h3><el-button :loading="routing.loading" :disabled="routing.busy" @click="loadRouting">刷新路由状态</el-button></div>
-                    <p class="kh-sub">草稿不会改变运行。发布后在线候选会话约5～10秒加载；任务执行中仍可正常聊天。身份、窗口及取消指令不由关键词配置覆盖。</p>
+                    <div class="an-section-head"><h3>{{ searchLane==='p1' ? 'P1 全量任务路由' : 'P2 双设备任务路由' }} · 热配置</h3><el-button :loading="routing.loading" :disabled="routing.busy" @click="loadRouting">刷新路由状态</el-button></div>
+                    <p class="kh-sub">草稿不会改变运行。发布后对应会话约5～10秒加载；任务执行中仍可正常聊天。身份、窗口及取消指令不由关键词配置覆盖。</p>
                     <div v-if="routing.error" role="alert" class="canary-warning">{{ routing.error }}</div>
                     <template v-if="routing.data && routing.draft">
-                      <div class="canary-issue" v-for="t in routing.data.targets" :key="t.sn"><b>{{ t.sn }}</b><p>已发布：<code>{{ t.version }}</code><br>{{ routingLoadLabel(t) }}</p></div>
+                      <div class="canary-issue" v-for="t in routing.data.targets" :key="t.sn"><b>{{ t.sn==='*' ? '全部现有及新增内测设备' : t.sn }}</b><p>已发布：<code>{{ t.version }}</code><br>{{ routingLoadLabel(t) }}</p></div>
                       <p v-if="!routing.data.targets.length" class="kh-sub">尚未发布，Worker 使用保守内置路由。</p>
                       <fieldset class="routing-fields" :disabled="routing.busy">
                         <label class="routing-source"><input type="checkbox" v-model="routing.draft.weather_enabled" @change="routingDirty"> 启用固定天气查询（个人测试）</label>
@@ -1277,8 +1295,8 @@
                         <div class="canary-device-row"><el-button :disabled="routing.draft.rules.length>=32" @click="routingAdd">增加规则</el-button><el-button :disabled="!routing.dirty" @click="saveRoutingDraft">保存路由草稿</el-button><span class="kh-sub">{{ routing.dirty ? '有未保存修改' : '草稿已同步' }} · 修订 {{ routing.editRevision }}</span></div>
                         <h3 style="margin-top:24px">话术预览</h3><label for="routing-utterances">每行一句，可验证自动定位或指定城市；预览不读取设备位置</label><textarea id="routing-utterances" rows="3" v-model="routing.utterances" @input="routing.preview=null" placeholder="查查恐龙灭绝的原因&#10;成都明天天气&#10;我今天画了一只猫"></textarea><el-button @click="previewRoutingDraft">预览路由（不执行搜索）</el-button>
                         <div v-if="routing.preview" class="routing-preview"><p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : (d.auto_weather ? ' · 按设备网络定位 · '+['今天','明天','后天'][d.auto_weather.day_offset] : '') }}</span></p></div>
-                        <h3 style="margin-top:24px">发布与回滚</h3><div class="canary-device-row"><label v-for="sn in routing.data.eligible_sns" :key="sn"><input type="checkbox" :value="sn" v-model="routing.sns"> {{ sn }}</label></div><p class="kh-sub">只影响已准备设备的路由，不开窗、不延窗、不改变其他设备。发布前自动执行固定正反例回归。</p>
-                        <div class="canary-device-row"><el-button type="primary" :disabled="routing.dirty || !routing.sns.length" @click="publishRouting">校验并发布路由</el-button><select v-model="routing.rollbackVersion" aria-label="历史路由版本"><option value="">选择历史版本</option><option v-for="v in routing.data.versions" :key="v.version" :value="v.version">{{ v.version }}</option></select><el-button :disabled="!routing.rollbackVersion || !routing.sns.length" @click="rollbackRouting">回滚所选设备</el-button></div>
+                        <h3 style="margin-top:24px">发布与回滚</h3><div v-if="searchLane==='p2'" class="canary-device-row"><label v-for="sn in routing.data.eligible_sns" :key="sn"><input type="checkbox" :value="sn" v-model="routing.sns"> {{ sn }}</label></div><p class="kh-sub">{{ searchLane==='p1' ? '发布全量默认路由，存量及新增内测设备自动使用；不改变 P2。' : '只影响所选灰度设备，不开窗、不延窗、不改变 P1。' }} 发布前自动执行固定正反例回归。</p>
+                        <div class="canary-device-row"><el-button type="primary" :disabled="routing.dirty || (searchLane==='p2' && !routing.sns.length)" @click="publishRouting">校验并发布路由</el-button><select v-model="routing.rollbackVersion" aria-label="历史路由版本"><option value="">选择历史版本</option><option v-for="v in routing.data.versions" :key="v.version" :value="v.version">{{ v.version }}</option></select><el-button :disabled="!routing.rollbackVersion || (searchLane==='p2' && !routing.sns.length)" @click="rollbackRouting">{{ searchLane==='p1' ? '回滚全量路由' : '回滚所选设备' }}</el-button></div>
                       </fieldset>
                       <p v-if="routing.notice" role="status">{{ routing.notice }}</p>
                     </template>
@@ -4663,14 +4681,39 @@
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
         var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'search-canary', l: '搜索灰度' }, { k: 'servers', l: '🖥 服务器状态' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }, { k: 'diaglog', l: '🧾 诊断日志' }, { k: 'analytics', l: '数据埋点' }];
 
+        var searchLane=ref('p1');
+        var p1=reactive({data:null,loading:false,saving:false,error:'',seq:0});
+        var routingLaneCache={p1:null,p2:null};
+        function setSearchLane(lane){
+          if(!['p1','p2'].includes(lane)||lane===searchLane.value||routing.busy||p1.saving||canary.saving)return;
+          routingLaneCache[searchLane.value]={data:routing.data,draft:routing.draft,dirty:routing.dirty,editRevision:routing.editRevision,sns:routing.sns,rollbackVersion:routing.rollbackVersion};
+          searchLane.value=lane;routing.seq++;routing.loading=false;routing.error='';routing.notice='';routing.preview=null;
+          Object.assign(routing,routingLaneCache[lane]||{data:null,draft:null,dirty:false,editRevision:0,sns:[],rollbackVersion:''});
+          void loadCanary();
+        }
+        async function loadP1(){
+          if(!canManageInvites.value||p1.loading)return;var seq=++p1.seq,epoch=authSessionEpoch,token=getToken();p1.loading=true;p1.error='';
+          try{var j=await deviceApi('/api/admin/search-canary/p1',{method:'GET'});if(seq!==p1.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'P1 状态不可用');p1.data=j;if(searchLane.value==='p1')void loadRouting();}
+          catch(e){if(seq===p1.seq&&epoch===authSessionEpoch){p1.error=String(e.message||e);p1.data=null;}}
+          finally{if(seq===p1.seq)p1.loading=false;}
+        }
+        async function mutateP1(path,body){
+          if(p1.saving||!canManageInvites.value)return;p1.saving=true;p1.error='';var epoch=authSessionEpoch,token=getToken();
+          try{var j=await deviceApi('/api/admin/search-canary/p1'+path,{method:'PUT',body:JSON.stringify(body)});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'P1 操作失败');p1.seq++;p1.loading=false;await loadP1();}
+          catch(e){if(epoch===authSessionEpoch){p1.error=String(e.message||e);p1.data=null;}}finally{p1.saving=false;}
+        }
+        function setP1Enabled(enabled){return mutateP1('/enabled',{enabled:enabled});}
+        function setP1Excluded(sn,excluded){return mutateP1('/devices/'+encodeURIComponent(sn),{excluded:excluded});}
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){p1.seq++;p1.data=null;p1.loading=false;p1.error='';routingLaneCache={p1:null,p2:null};}});
         var canary = reactive({loading:false,saving:false,error:'',data:null,selected:'BJP00326070803800006',dirty:false,seq:0});
         watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){canary.seq++;canary.data=null;canary.dirty=false;canary.loading=false;canary.error='';}});
         var canarySelectedDevice = computed(function(){return canary.data && canary.data.devices.find(function(d){return d.sn===canary.selected;});});
-        function canaryStateLabel(s){return {closed:'正式窗口未开启',expired:'窗口已到期',blocked:'窗口已配置，暂不可新派单',regression:'关搜索回归窗口',p1:'P1 已配置，端到端待验',p2:'P2 已配置，端到端待验'}[s] || '状态未知';}
+        function canaryStateLabel(s){return {closed:'正式窗口未开启',expired:'窗口已到期',blocked:'窗口已配置，暂不可新派单',regression:'关搜索回归窗口',p1:'候选目前仅 P1，P2 尚未开启',p2:'P2 已配置，端到端待验'}[s] || '状态未知';}
         async function loadCanary(){
+          if(searchLane.value==='p1')return loadP1();
           if(!canManageInvites.value || canary.loading)return;
           var epoch=authSessionEpoch,token=getToken(),seq=++canary.seq;canary.loading=true;canary.error='';
-          try{var j=await deviceApi('/api/admin/search-canary',{method:'GET'});if(seq!==canary.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'加载失败');canary.data=j;if(!canary.dirty)canary.selected=j.selected_sn;void loadRouting();}
+          try{var j=await deviceApi('/api/admin/search-canary',{method:'GET'});if(seq!==canary.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'加载失败');canary.data=j;if(!canary.dirty)canary.selected=j.selected_sn;if(searchLane.value==='p2')void loadRouting();}
           catch(e){if(seq===canary.seq&&epoch===authSessionEpoch){canary.error=String(e.message||e);canary.data=null;}}
           finally{if(seq===canary.seq)canary.loading=false;}
         }
@@ -4689,25 +4732,26 @@
         function routingAdd(){routing.draft.rules.push({id:'custom-'+Date.now(),enabled:true,priority:100,action:'search',mode:'prefix',triggers:['帮我打听一下'],exclude:[]});routingDirty();}
         function routingRemove(id){routing.draft.rules=routing.draft.rules.filter(function(r){return r.id!==id;});routingDirty();}
         function routingActionLabel(a){return {search:'后台查询',replace:'替换查询',cancel:'取消查询',resume:'续讲结果',clarify:'追问主题',clarify_city:'追问城市',chat:'继续聊天'}[a]||a;}
-        function routingLoadLabel(t){var l=routing.data.loads.find(function(v){return v.sn===t.sn;});if(!l)return '待设备会话加载，尚无 Worker 确认';return (l.version===t.version?'Worker 已加载此版本':'Worker 仍为 '+l.version)+' · 确认时间 '+analyticsTime(l.at)+(Date.now()-l.at>15000?'（非当前在线证明）':'');}
+        function routingLoadLabel(t){if(t.sn==='*')return '已有 '+routing.data.loads.filter(function(v){return v.version===t.version;}).length+' 台设备会话确认加载（非当前在线证明）';var l=routing.data.loads.find(function(v){return v.sn===t.sn;});if(!l)return '待设备会话加载，尚无 Worker 确认';return (l.version===t.version?'Worker 已加载此版本':'Worker 仍为 '+l.version)+' · 确认时间 '+analyticsTime(l.at)+(Date.now()-l.at>15000?'（非当前在线证明）':'');}
         function routingError(e){var s=String(e.message||e);return ({revision_conflict:'草稿被其他操作修改，请刷新核对后重试',outside_canary_scope:'所选设备已不在准备范围',routing_regression_failed:'固定话术回归未通过，未发布',preview_unavailable:'预览程序暂不可用，未发布',preview_timeout:'预览超时，未发布',invalid_request:'配置格式不合法，请检查规则与表达长度'})[s]||s;}
+        function routingEndpoint(){return searchLane.value==='p1'?'/api/admin/search-canary/p1/routing':'/api/admin/search-canary/routing';}
         function routingAccept(j,replaceDraft){if(!j.ok||!j.draft||!Number.isInteger(j.revision))throw new Error(j.error||'路由状态暂不可用');routing.data=j;if(replaceDraft){routing.draft=JSON.parse(JSON.stringify(j.draft));routing.editRevision=j.revision;routing.dirty=false;}if(j.eligible_sns)routing.sns=routing.sns.filter(function(sn){return j.eligible_sns.includes(sn);});}
         async function loadRouting(){
           if(!canManageInvites.value||routing.loading||routing.busy)return;var seq=++routing.seq,epoch=authSessionEpoch,token=getToken();routing.loading=true;routing.error='';
-          try{var j=await deviceApi('/api/admin/search-canary/routing',{method:'GET'});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;routingAccept(j,!routing.dirty);if(!routing.sns.length&&j.eligible_sns.includes(canary.selected))routing.sns=[canary.selected];}
+          try{var j=await deviceApi(routingEndpoint(),{method:'GET'});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;routingAccept(j,!routing.dirty);if(!routing.sns.length&&j.eligible_sns.includes(canary.selected))routing.sns=[canary.selected];}
           catch(e){if(seq===routing.seq&&epoch===authSessionEpoch){routing.error=routingError(e);routing.data=null;}}
           finally{if(seq===routing.seq)routing.loading=false;}
         }
         async function routingMutation(path,method,body,onSuccess){
           if(routing.busy||!canManageInvites.value)return;var seq=++routing.seq,epoch=authSessionEpoch,token=getToken();routing.loading=false;routing.busy=true;routing.error='';routing.notice='';
-          try{var j=await deviceApi('/api/admin/search-canary/routing'+path,{method:method,body:JSON.stringify(body)});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok){var details=j.regression&&j.regression.failures?j.regression.failures.map(function(f){return f.text+'：应为'+routingActionLabel(f.expected)+'，实际'+routingActionLabel(f.actual);}).join('；'):'';throw new Error(details||j.error||'操作失败');}onSuccess(j);}
+          try{var j=await deviceApi(routingEndpoint()+path,{method:method,body:JSON.stringify(body)});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok){var details=j.regression&&j.regression.failures?j.regression.failures.map(function(f){return f.text+'：应为'+routingActionLabel(f.expected)+'，实际'+routingActionLabel(f.actual);}).join('；'):'';throw new Error(details||j.error||'操作失败');}onSuccess(j);}
           catch(e){if(seq===routing.seq&&epoch===authSessionEpoch)routing.error=routingError(e);}
           finally{if(seq===routing.seq)routing.busy=false;}
         }
         function saveRoutingDraft(){return routingMutation('/draft','PUT',{expected_revision:routing.editRevision,config:routing.draft},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='草稿已保存，运行版本未改变';});}
         function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.notice='预览完成，没有执行搜索';});}
-        function publishRouting(){return routingMutation('/publish','POST',{expected_revision:routing.data.revision,sns:routing.sns},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='路由已发布；等待 Worker 加载确认，不等于真机实听通过';});}
-        function rollbackRouting(){return routingMutation('/rollback','POST',{expected_revision:routing.data.revision,sns:routing.sns,version:routing.rollbackVersion},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,!routing.dirty);routing.notice='所选设备已回滚发布，等待 Worker 确认';});}
+        function publishRouting(){return routingMutation(searchLane.value==='p1'?'/publish-all':'/publish','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision}:{expected_revision:routing.data.revision,sns:routing.sns},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='路由已发布；等待 Worker 加载确认，不等于真机实听通过';});}
+        function rollbackRouting(){return routingMutation(searchLane.value==='p1'?'/rollback-all':'/rollback','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision,version:routing.rollbackVersion}:{expected_revision:routing.data.revision,sns:routing.sns,version:routing.rollbackVersion},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,!routing.dirty);routing.notice=searchLane.value==='p1'?'全量路由已回滚发布，等待 Worker 确认':'所选设备已回滚发布，等待 Worker 确认';});}
 
         // ── 数据埋点：admin 专属、GET-only、安全摘要 ──
         var visibleWorkerNavs = computed(function () { return canManageInvites.value ? WORKER_NAVS : WORKER_NAVS.filter(function (n) { return n.k !== 'analytics' && n.k !== 'search-canary'; }); });
@@ -7688,6 +7732,7 @@
 
         return {
           routing:routing,loadRouting:loadRouting,routingDirty:routingDirty,routingPhrases:routingPhrases,routingAdd:routingAdd,routingRemove:routingRemove,routingLoadLabel:routingLoadLabel,routingActionLabel:routingActionLabel,saveRoutingDraft:saveRoutingDraft,previewRoutingDraft:previewRoutingDraft,publishRouting:publishRouting,rollbackRouting:rollbackRouting,
+          searchLane:searchLane,setSearchLane:setSearchLane,p1:p1,setP1Enabled:setP1Enabled,setP1Excluded:setP1Excluded,
           canary:canary,canarySelectedDevice:canarySelectedDevice,canaryStateLabel:canaryStateLabel,loadCanary:loadCanary,saveCanaryDevice:saveCanaryDevice,
           visibleWorkerNavs: visibleWorkerNavs,
           analytics: analytics,

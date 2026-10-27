@@ -2,6 +2,7 @@ import {DeviceLocationStore} from './tools/device-location.js';
 import {RoutingStore} from './tools/search-routing-store.js';
 import {previewRouting} from './tools/search-routing-config.js';
 import {createRoutingAdminRoute} from './routes/search-routing-admin.js';
+import {searchP1AdminRoute} from './routes/search-p1-admin.js';
 // Admin-only observation. No search executor import, SSH or runtime activation.
 import {readFile} from 'node:fs/promises';
 import {DatabaseSync} from 'node:sqlite';
@@ -24,6 +25,10 @@ async function status(){
     const get=(k:string)=>(db.prepare('SELECT value FROM runtime_flag WHERE key=?').get('p003.search.'+k) as {value:string}|undefined)?.value;
     settings={allowlist:array(get('allowlist')),enabled:get('enabled')==='1',tools:get('tools')==='1'};
   }finally{db.close();}}catch{}
+  let recent_tasks:unknown[]|null=null;
+  try{const db=new DatabaseSync(root()+'/data/search.db',{readOnly:true});try{
+    recent_tasks=db.prepare("SELECT json_extract(body,'$.id') id,substr(subject,-8) device_suffix,json_extract(body,'$.status') status,json_extract(body,'$.outcome') outcome,json_extract(body,'$.delivery') delivery,json_extract(body,'$.createdAt') created_at,json_extract(body,'$.failure') failure,json_extract(body,'$.diagnostics') diagnostics FROM tasks ORDER BY json_extract(body,'$.createdAt') DESC LIMIT 20").all().map((r:any)=>{let d,f;try{d=JSON.parse(r.diagnostics??'null');f=JSON.parse(r.failure??'null');}catch{}return {id:r.id,device_suffix:r.device_suffix,status:r.status,outcome:r.outcome,delivery:r.delivery,created_at:r.created_at,failure:f&&['search','answer','tools','fetch','weather','task'].includes(f.stage)&&['transport','timeout','aborted','http','invalid_json','invalid_response','invalid_stream','invalid_answer','invalid_result','unasked_quantity','configuration','unknown'].includes(f.reason)?{stage:f.stage,reason:f.reason}:null,mode:d?.mode??'unknown',tools:Array.isArray(d?.tool_calls)?d.tool_calls.filter((t:any)=>['search_web','fetch_page','unknown'].includes(t?.name)&&['succeeded','rejected','failed'].includes(t?.outcome)).slice(0,8).map((t:any)=>({name:t.name,outcome:t.outcome})):[]};});
+  }finally{db.close();}}catch{}
   const versions=new Map(otaStore.listDeviceStatus().map(d=>[d.sn,d]));
   const devices=deviceRegistryStore.list().map(d=>{const v=versions.get(d.sn);return {sn:d.sn,eligible:d.status==='active'&&Boolean(d.account_id),status:d.status,version_code:v?.version_code??null,version_name:v?.version_name??null,version_reported_at_ms:v?.last_check_at??null};});
   const summary=summarizeCanary({now,selected,enabled:flag('enabled')==='1',expires:Number(flag('expires_at_ms')||0),allowlist:array(flag('allowlist')),lease,health,settings});
@@ -33,9 +38,9 @@ async function status(){
     && Number.isFinite(confirmation.at_ms);
   const issues=[
     ...(confirmed ? [{title:'设备身份与版本已由持有人确认',detail:`完整SN及v${confirmation.version_code}（${confirmation.version_name}）已在记录时间确认；云端后续上报另显示时间。`,status:'已确认'}] : [{title:'所选设备现场身份与版本待确认',detail:'云端自报版本带时间显示；需核对现场SN与安装版本。',status:'待确认'}]),
-    {title:'普通聊天对照改由其他设备提供',detail:'按持有人授权，目标设备直接体验搜索；其他设备对照单列，不能充当严格同机性能结论。',status:'待对照'},
+    {title:'P1与P2分开发布',detail:'P1是否开启及全量范围请看P1页；本页仅观察独立P2候选。P2未开启时，状态会明确显示仅P1。',status:'范围说明'},
     {title:'首句、插话与本地回复语需现场回归',detail:'候选关闭搜索时回归普通对话；随后P1验证补播、续讲、取消、改查和退出重连。',status:'待真机'},
-    {title:'P2与全天稳定性未验收',detail:'本次仅授权名单内设备测试至明确截止；先验P1，P1通过后另行开放P2，不自动扩大设备范围。',status:'未验证'},
+    {title:'P2真人体验待验收',detail:'仅原两台灰度设备测试Tool Calls与受控网页抓取，截止时间不因P1全量而延长；到期退出重进回P1。',status:'待真机'},
   ];
   if(lease?.cleanup?.healthy===false)issues.unshift({title:'候选关房补偿未就绪',detail:'关房控制请求待补偿，或补偿心跳缺失/过期；已停止新增灰度派单。',status:'阻塞'});
   if(!summary.health_ok)issues.unshift({title:'候选健康检查未通过',detail:'当前无法确认候选在线，请勿依据历史部署记录开窗。',status:'阻塞'});
@@ -44,10 +49,11 @@ async function status(){
   return {observed_at_ms:now,selected_sn:selected,prepared_sn:summary.scope_ok?summary.configured_devices.join('、'):'待核对',devices,summary,
     release:release?{verified_at_ms:release.verified_at_ms,brain_commit:release.brain_commit,worker_commit:release.worker_commit,worker_sha256:release.worker_sha256,worker_tests:release.worker_tests}:null,
     operator_confirmation:confirmed?{sn:selected,version_code:confirmation.version_code,version_name:confirmation.version_name,at_ms:confirmation.at_ms}:null,
-    issues,acceptance:'待真机验收',window_started_at_ms:Number(flag('started_at_ms'))||null,
+    recent_tasks,issues,acceptance:'待真机验收',window_started_at_ms:Number(flag('started_at_ms'))||null,
     note:'保存待测设备不会开窗或修改实际派单。部署核验记录与本次实时健康检查分开显示。'};
 }
 export const canaryAdminRoute=createCanaryAdminRoute({read:status,eligible:sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);},isOpen:()=>flag('enabled')==='1',save:(sn,who)=>configStore.setFlag('p003.search.canary.selected_sn',sn,who,'后台待测设备选择；不激活派单')});
+canaryAdminRoute.route('/p1',searchP1AdminRoute);
 
 let routes:RoutingStore|null=null;
 let locationStore:DeviceLocationStore|null=null;

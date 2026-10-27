@@ -1,6 +1,6 @@
 import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
 import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
-import { searchSettings, currentSearchDialogue } from '../tools/search-runtime.js';
+import { searchSettings, searchDeviceAllowed, currentSearchDialogue } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
@@ -123,7 +123,8 @@ customLlmRoute.post('/chat/completions', async (c) => {
     }
   }
   const searchConfig = searchSettings();
-  const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),enabled:searchConfig.enabled,role:authContext?.role ?? '',room:c.req.query('room') ?? '',allowed:searchConfig.allowed});
+  const searchRoom=c.req.query('room')??'',searchSn=/^sn-(BJP003\d{14})-\d+$/.exec(searchRoom)?.[1];
+  const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),live:!process.env.SEARCH_CANARY_ROOT,enabled:searchConfig.enabled,role:authContext?.role ?? '',room:searchRoom,allowed:searchSn&&searchDeviceAllowed(searchSn)?[searchSn]:[]});
   const inOnboarding = !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
@@ -137,7 +138,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // override（工作台调的 prompt）优先：直接用它（自带完整内容）；否则走固定大脑组装。
   let systemPrompt = overridePrompt
     ? overridePrompt
-    : assembleSystemPrompt(searchCapabilityBase(base,searchPolicy.suppressOnboarding), null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
+    : assembleSystemPrompt(searchCapabilityBase(base,Boolean(searchPolicy.instruction)), null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
@@ -256,7 +257,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
-    const claimGuardEnabled = searchPolicy.suppressOnboarding && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText);
+    const claimGuardEnabled = Boolean(searchPolicy.instruction) && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText);
     const searchClaimFilter = createSearchClaimFilter(claimGuardEnabled);
     const modelStarted = performance.now();
     let firstUpstreamAt: number | null = null;

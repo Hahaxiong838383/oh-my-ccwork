@@ -15,6 +15,7 @@ import {FixedWeather} from './fixed-weather.js';
 import {getDeviceLocationStore,closeDeviceLocationRuntime} from './device-location-runtime.js';
 import { searchCapabilityBase } from './search-chat-policy.js';
 import { SearchExecutor } from './search-executor.js';
+import {searchEnrollment} from './search-enrollment.js';
 
 let instance: SearchTasks | null = null;
 let routingStore:RoutingStore|null=null;
@@ -27,27 +28,35 @@ async function expandedResult(q:PlaceWeatherRequest,signal:AbortSignal,owner:imp
  }
 }
 export function getSearchRoutingStore(){
- if(!process.env.SEARCH_CANARY_ROOT||!process.env.SEARCH_ROUTING_DB_PATH)return null;
- return routingStore??=new RoutingStore(process.env.SEARCH_ROUTING_DB_PATH);
+ if(!process.env.SEARCH_ROUTING_DB_PATH)return null;
+ return routingStore??=new RoutingStore(process.env.SEARCH_ROUTING_DB_PATH,Date.now,{allowGlobal:!process.env.SEARCH_CANARY_ROOT});
 }
 const availability = new SearchAvailability();
 let timer: ReturnType<typeof setInterval> | null = null;
 const domains = () => (process.env.SEARCH_ALLOWED_DOMAINS ?? '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
 export function searchSettings() {
-  let allowed: string[] = [];
-  try { const v = JSON.parse(configStore.getFlag('p003.search.allowlist')?.value ?? '[]'); if (Array.isArray(v)) allowed = v.filter((s: unknown) => typeof s === 'string' && /^BJP003\d{14}$/.test(s)); } catch { /* fail closed */ }
+  const candidate=Boolean(process.env.SEARCH_CANARY_ROOT);
+  const flag=(key:string)=>configStore.getFlag('p003.search.'+key)?.value;
+  const enrollment=searchEnrollment(candidate,flag('scope'),flag('allowlist'),flag('exclusions'));
   const configured = process.env.SEARCH_ENABLED === '1' && Boolean(process.env.SEARCH_TASK_DB_PATH && process.env.DEEPSEEK_API_KEY && process.env.AUTH_JWT_SECRET && process.env.SEARCH_WORKER_ACCOUNT_ID?.trim() && domains().length);
-  return { configured, enabled: configured && configStore.getFlag('p003.search.enabled')?.value === '1' && (!process.env.SEARCH_CANARY_ROOT || Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value) > Date.now()), allowed,
-    tools: configStore.getFlag('p003.search.tools')?.value === '1', upstream: availability.state() };
+  const enabled=configured&&enrollment.scope_valid&&flag('enabled')==='1'&&(!candidate||Number(flag('canary.expires_at_ms'))>Date.now());
+  const candidateDevices=(process.env.SEARCH_CANARY_SN??'').split(',');
+  const toolScope=candidateDevices.length===enrollment.allowed.length&&enrollment.allowed.every(sn=>candidateDevices.includes(sn));
+  return {configured,enabled,...enrollment,tools:enabled&&candidate&&toolScope&&flag('tools')==='1',upstream:availability.state()};
+}
+export function searchDeviceAllowed(sn:string):boolean {
+ const s=searchSettings();if(!s.enabled||!/^BJP003\d{14}$/.test(sn)||s.excluded.includes(sn))return false;
+ if(s.scope!=='all_registered'&&!s.allowed.includes(sn))return false;
+ const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);
 }
 export function getSearchTasks(): SearchTasks | null {
   const settings = searchSettings();
   if (!settings.enabled) { instance?.tick(); return null; }
   if (!instance) {
     instance = new SearchTasks({
-      resumeEnabled:()=>Boolean(process.env.SEARCH_CANARY_ROOT)&&process.env.SEARCH_RESUME_V1==='1',
+      resumeEnabled:()=>process.env.SEARCH_RESUME_V1==='1',
       resumeScope:o=>readResumeAuthority(process.env.SEARCH_RESUME_AUTHORITY_DB_PATH,o.subject,deviceRegistryStore.get(o.subject)?.account_id??null),
-      windowDeadline:()=>Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value)||0,
+      windowDeadline:()=>process.env.SEARCH_CANARY_ROOT?Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value)||0:Infinity,
       canSubmit: r => Boolean(r?.weather_enabled&&(r.weather||r.baidu_weather_enabled&&r.place_weather||r.auto_location_enabled&&r.auto_weather))||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
       resolveRouting:(owner,claim)=>{
         const snapshot=getSearchRoutingStore()?.resolve(owner.subject,claim.version);if(!snapshot)throw new Error('routing_version_unknown');
@@ -56,7 +65,7 @@ export function getSearchTasks(): SearchTasks | null {
         if(claim.place_weather&&(!snapshot.config.baidu_weather_enabled||!snapshot.config.weather_enabled))throw new Error('routing_version_scope');
         return {...claim,weather:claim.weather?weatherRequestSchema.parse(claim.weather):undefined,auto_weather:claim.auto_weather?autoWeatherSchema.parse(claim.auto_weather):undefined,place_weather:claim.place_weather?placeWeatherSchema.parse(claim.place_weather):undefined,weather_enabled:snapshot.config.weather_enabled,auto_location_enabled:snapshot.config.auto_location_enabled===true,baidu_weather_enabled:snapshot.config.baidu_weather_enabled===true};
       },
-      allowed: s => searchSettings().allowed.includes(s) && deviceRegistryStore.statusOf(s) === 'active',
+      allowed: searchDeviceAllowed,
       execute: async (query, signal, owner) => {
         const record = deviceRegistryStore.get(owner.subject);
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
@@ -85,8 +94,8 @@ export function getSearchTasks(): SearchTasks | null {
         }
         const cfg = getDevicePromptConfig(record.account_id);
         try {
-          const result = await new SearchExecutor({ validationAudit: value => console.info('[search-validation]',JSON.stringify({task_id:'id'in owner?owner.id:undefined,...value})), grounding: Boolean(process.env.SEARCH_CANARY_ROOT), apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools: searchSettings().tools, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
-            .run(query, signal, searchCapabilityBase(buildDeviceBase(cfg),Boolean(process.env.SEARCH_CANARY_ROOT)) + '\n' + (deviceAddendum(cfg) ?? ''));
+          const result = await new SearchExecutor({ toolAudit: event=>console.info('[search-tool]',JSON.stringify({task_id:owner.id,...event})), validationAudit: value => console.info('[search-validation]',JSON.stringify({task_id:'id'in owner?owner.id:undefined,...value})), grounding: true, apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools: searchSettings().tools, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
+            .run(query, signal, searchCapabilityBase(buildDeviceBase(cfg),true) + '\n' + (deviceAddendum(cfg) ?? ''));
           availability.success(); return result;
         } catch (e) {
           const code = e instanceof Error ? e.message : 'search_unavailable';
@@ -103,7 +112,7 @@ export function getSearchTasks(): SearchTasks | null {
 export function closeSearchRuntime() { if (timer) clearInterval(timer); timer = null; instance?.close(); instance = null; routingStore?.close();routingStore=null; closeDeviceLocationRuntime(); }
 export function searchAudit() { return { loaded: instance !== null, tasks: instance?.audit() ?? [] }; }
 
-export const searchTaskRoute = createSearchRoute({ tasks: getSearchTasks, routing:{get:o=>{if(!searchSettings().allowed.includes(o.subject))throw new Error('disabled');return getSearchRoutingStore()?.snapshot(o.subject)??null;},ack:(o,v)=>{if(!searchSettings().allowed.includes(o.subject))throw new Error('disabled');const store=getSearchRoutingStore();if(!store)throw new Error('disabled');store.ack(o.subject,v,o.session);}}, owner: async c => {
+export const searchTaskRoute = createSearchRoute({ tasks: getSearchTasks, routing:{get:o=>{if(!searchDeviceAllowed(o.subject))throw new Error('disabled');return getSearchRoutingStore()?.snapshot(o.subject)??null;},ack:(o,v)=>{if(!searchDeviceAllowed(o.subject))throw new Error('disabled');const store=getSearchRoutingStore();if(!store)throw new Error('disabled');store.ack(o.subject,v,o.session);}}, owner: async c => {
   // Worker JWT stays in a header, not a URL/access log. No anonymous or parent fallback.
   if (!process.env.AUTH_JWT_SECRET) return null;
   const auth = await verifyAuthToken(c.req.header('x-p003-worker-token'));
@@ -124,7 +133,7 @@ export const searchTaskRoute = createSearchRoute({ tasks: getSearchTasks, routin
 } });
 
 export function currentSearchDialogue(value:unknown,auth:{role:string;accountId:string}|null,room:string){
- if(process.env.P003_SEARCH_CONTEXT_V1!=='1'||!process.env.SEARCH_CANARY_ROOT||!instance||auth?.role!=='device'||auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID?.trim())return '';
+ if(process.env.P003_SEARCH_CONTEXT_V1!=='1'||!instance||auth?.role!=='device'||auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID?.trim())return '';
  const subject=/^sn-(BJP003\d{14})-\d{1,20}$/.exec(room)?.[1];
  if(!subject)return '';
  return searchDialogueInstruction(value,{subject,session:room},(o,id,rev,grant)=>instance!.dialogueContext(o,id,rev,grant));

@@ -11,6 +11,8 @@ const sn='BJP00326070803800006',other='BJP00326060100200003';
 const originalFetch=globalThis.fetch;
 try{
  mkdirSync(dir+'/candidate/data',{recursive:true});
+ const ledger=new DatabaseSync(dir+'/candidate/data/search.db');ledger.exec('CREATE TABLE tasks(id TEXT,subject TEXT,body TEXT)');
+ ledger.prepare('INSERT INTO tasks VALUES(?,?,?)').run('synthetic-tool-task',sn,JSON.stringify({id:'synthetic-tool-task',status:'failed',outcome:'failed',failure:{stage:'answer',reason:'invalid_answer',raw:'PRIVATE_FAILURE'},createdAt:Date.now(),query:'PRIVATE_QUERY',result:{text:'PRIVATE_BODY'},diagnostics:{mode:'p2',tool_calls:[{name:'search_web',outcome:'succeeded',url:'PRIVATE_URL'},{name:'fetch_page',outcome:'failed'},{name:'PRIVATE_TOOL',outcome:'succeeded'}]}}));ledger.close();
  const candidate=new DatabaseSync(dir+'/candidate/data/config.db');candidate.exec('CREATE TABLE runtime_flag(key TEXT,value TEXT)');candidate.prepare('INSERT INTO runtime_flag VALUES (?,?)').run('p003.search.allowlist',JSON.stringify([sn]));candidate.close();
  writeFileSync(dir+'/candidate/health.json',JSON.stringify({agent:'p003-search-canary-20261021',generation:'g',until_ms:Date.now()+14000}));
  globalThis.fetch=async()=>new Response(JSON.stringify({status:'ok',search:false,tools:false}));
@@ -27,6 +29,7 @@ try{
  assert.equal(initial.selected_sn,sn);assert.equal(initial.summary.state,'closed');assert.equal(initial.summary.health_ok,true);assert.equal(initial.summary.lease_ok,true);
  assert.equal(initial.devices.find((d:any)=>d.sn===sn).version_code,353);assert(initial.devices.some((d:any)=>d.version_reported_at_ms));
  assert(!JSON.stringify(initial).includes('PRIVATE_'));
+ assert.deepEqual(initial.recent_tasks[0].tools,[{name:'search_web',outcome:'succeeded'},{name:'fetch_page',outcome:'failed'}]);assert.equal(initial.recent_tasks[0].mode,'p2');assert.deepEqual(initial.recent_tasks[0].failure,{stage:'answer',reason:'invalid_answer'});assert.equal(initial.recent_tasks[0].device_suffix,'03800006');
  assert.equal((await canaryAdminRoute.request('/device',{method:'PUT',headers,body:JSON.stringify({sn:other})})).status,200);
  const check=new DatabaseSync(dir+'/config.db',{readOnly:true});const flags=check.prepare('SELECT key,value FROM runtime_flag').all().map(r=>({...r}));assert.deepEqual(flags,[{key:'p003.search.canary.selected_sn',value:other}]);check.close();
  const second=await(await canaryAdminRoute.request('/',{headers})).json();assert.equal(second.selected_sn,other);assert.equal(second.summary.selected_prepared,false);assert.equal(second.summary.state,'closed');

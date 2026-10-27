@@ -6,6 +6,7 @@ import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
 import { configStore, type RuntimeFlag } from '../config-store.js';
 import { searchCanarySelection } from '../search-canary-runtime.js';
+import { searchDeviceAllowed } from '../tools/search-runtime.js';
 import { captureDeviceLocation } from '../tools/device-location-runtime.js';
 
 /**
@@ -393,6 +394,7 @@ deviceSessionRoute.post('/session', async (c) => {
   }
 
   if(canary.canary) captureDeviceLocation(c,sn as string,roomName,expSec*1000);
+  else if(searchDeviceAllowed(sn as string)) captureDeviceLocation(c,sn as string,roomName,expSec*1000,'p1');
   console.log(
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
       // B84：policy 与 supports 进日志——旧/新客户端各走哪条路径、为什么，事后能从这一行对账

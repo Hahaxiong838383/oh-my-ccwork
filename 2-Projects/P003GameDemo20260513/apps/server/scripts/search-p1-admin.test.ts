@@ -1,0 +1,28 @@
+import {test}from'node:test';import assert from'node:assert/strict';import {Hono}from'hono';
+import{mkdtempSync,rmSync}from'node:fs';import{join}from'node:path';import{tmpdir}from'node:os';
+const root=mkdtempSync(join(tmpdir(),'p003-p1-admin-'));
+for(const key of ['CONFIG','DEVICES','ACCOUNTS','PROFILE','CONVERSATION','FEEDBACK','OTA'])process.env[`${key}_DB_PATH`]=join(root,key+'.db');
+Object.assign(process.env,{SEARCH_ENABLED:'1',SEARCH_TASK_DB_PATH:join(root,'search.db'),SEARCH_ROUTING_DB_PATH:join(root,'routing.db'),SEARCH_ALLOWED_DOMAINS:'cstm.org.cn',DEEPSEEK_API_KEY:'synthetic',AUTH_JWT_SECRET:'synthetic',SEARCH_WORKER_ACCOUNT_ID:'worker',STUDIO_USER:'p1-admin',STUDIO_PASS:'synthetic',STUDIO_EDITOR_USERS:'p1-editor',STUDIO_EDITOR_PASS:'synthetic'});
+const {authRoute}=await import('../src/routes/auth.js');
+const {configStore}=await import('../src/config-store.js');const{deviceRegistryStore}=await import('../src/device-registry-store.js');
+const app=new Hono();app.route('/auth',authRoute);
+const mod:any=await import('../src/routes/search-p1-admin.js').catch(()=>({}));
+const sn='BJP00326070803800006';deviceRegistryStore.add(sn,'synthetic');deviceRegistryStore.setAccountId(sn,'synthetic-account');
+test('P1 admin has separate status, strict mutations and no P2 side effects',async()=>{
+ assert.ok(mod.searchP1AdminRoute,'P1 needs its own real endpoint');app.route('/p1',mod.searchP1AdminRoute);
+ const token=async(username:string)=>(await(await app.request('/auth/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username,password:'synthetic'})})).json()).token;
+ const admin=await token('p1-admin'),editor=await token('p1-editor');
+ const req=(path:string,method='GET',body?:any,t=admin)=>app.request('/p1'+path,{method,headers:{authorization:'Bearer '+t,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+ assert.equal((await req('','GET',undefined,'bad')).status,401);assert.equal((await req('','GET',undefined,editor)).status,403);
+ assert.equal((await req('/enabled','PUT',{enabled:true,tools:true})).status,400);
+ assert.equal((await req('/enabled','PUT',{enabled:true})).status,200);
+ const state=await(await req('')).json();assert.equal(state.lane,'p1');assert.equal(state.settings.scope,'all_registered');assert.equal(state.settings.tools,false);assert.equal(state.devices.find((d:any)=>d.sn===sn).search_allowed,true);
+ assert.equal((await req('/devices/'+sn,'PUT',{excluded:true})).status,200);
+ assert.equal((await(await req('')).json()).devices.find((d:any)=>d.sn===sn).search_allowed,false);
+ assert.equal((await req('/devices/'+sn,'PUT',{excluded:false},editor)).status,403);
+ assert.equal((await req('/devices/03800006','PUT',{excluded:true})).status,400);
+ assert.equal((await req('/enabled','PUT',{enabled:false})).status,200);
+ assert.equal(configStore.getFlag('p003.search.canary.enabled'),null);
+ assert.equal(configStore.getFlag('p003.search.tools'),null);
+});
+process.on('exit',()=>rmSync(root,{recursive:true,force:true}));
