@@ -36,7 +36,11 @@ export function validateQuery(value: unknown): string {
   if (typeof value !== 'string') return fail('invalid_request');
   const q = value.normalize('NFKC').trim();
   if (!q || [...q].length > 128 || /[\x00-\x1f\x7f]/.test(q)) return fail('invalid_request');
-  if (/(?:https?:|www\.|@|\b\d{7,}\b|BJP003|Bearer|密钥|密码|手机号|电话|身份证|家庭|住址|我家|我的|我们|学校|班级|同学|孩子|儿子|女儿)/i.test(q)) return fail('private_query');
+  // Only mask a public title for the pronoun check. Keep the original query and
+  // every other privacy check; a game title must never hide an account or person.
+  // Unquoted “我的世界观” is still personal, not the Minecraft title.
+  const privacyText = q.replace(/《我的世界》|我的世界(?=基岩版|Java版|中国版|国际版|网易版|游戏|最近|最新|更新|版本|官网|红石|村民|苦力怕|生存模式|创造模式|$)/gi, 'Minecraft');
+  if (/(?:https?:|www\.|@|\b\d{7,}\b|BJP003|Bearer|密钥|密码|手机号|电话|身份证|家庭|住址|我家|我的|我们|学校|班级|同学|孩子|儿子|女儿)/i.test(privacyText)) return fail('private_query');
   if (/(?:色情|裸照|自杀|自残|制毒|炸弹|杀人|人肉|开盒)/.test(q)) return fail('unsafe_query');
   return q;
 }

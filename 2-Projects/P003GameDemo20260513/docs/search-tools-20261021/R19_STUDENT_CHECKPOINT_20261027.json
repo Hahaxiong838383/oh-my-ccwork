@@ -1,0 +1,242 @@
+{
+  "status": "not_released_incomplete",
+  "production": "R18 unchanged by this task",
+  "candidate_source_sha256": {
+    "src/tools/search-executor.ts": "57f584e69f3d74af02695a968463bf61839fd98ff97dd28575afab284379ed4d",
+    "src/tools/search-tasks.ts": "67859db59a235fab1071b4bb4b9892eb3c1dfe8150a058f32def44f9ab3c5aac",
+    "src/tools/search-source-scope.ts": "27518fe03d3a793b3d0129b7d3f643adc36603557de13ed00d98a58903171f00"
+  },
+  "linux": {
+    "tests": 147,
+    "passed": 147,
+    "test_exit": 0,
+    "tsc_exit": 0,
+    "payload_sha256": "735d5f6ebd28825a9e1f6619827a2e9c6fe8908ef807f6f8f20b8d1fafc4241a"
+  },
+  "final_real_provider_cases": [
+    {
+      "case": "game",
+      "synthetic": true,
+      "effective_answer": false,
+      "failure": {
+        "stage": "answer",
+        "reason": "invalid_answer"
+      },
+      "validation": [
+        {
+          "phase": "review",
+          "codes": [
+            "unquoted_number"
+          ]
+        }
+      ],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "failed"
+        }
+      ],
+      "elapsed_ms": 9859
+    },
+    {
+      "case": "anime",
+      "synthetic": true,
+      "effective_answer": true,
+      "failure": null,
+      "validation": [],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "succeeded"
+        }
+      ],
+      "elapsed_ms": 3952
+    },
+    {
+      "case": "music",
+      "synthetic": true,
+      "effective_answer": true,
+      "failure": null,
+      "validation": [],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "elapsed_ms": 4184
+    },
+    {
+      "case": "animal",
+      "synthetic": true,
+      "effective_answer": true,
+      "failure": null,
+      "validation": [],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "elapsed_ms": 5281
+    },
+    {
+      "case": "space",
+      "synthetic": true,
+      "effective_answer": true,
+      "failure": null,
+      "validation": [],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "elapsed_ms": 4222
+    },
+    {
+      "case": "sport_natural",
+      "synthetic": true,
+      "effective_answer": true,
+      "failure": null,
+      "validation": [],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ],
+      "elapsed_ms": 4425
+    },
+    {
+      "case": "game_natural",
+      "synthetic": true,
+      "effective_answer": true,
+      "failure": null,
+      "validation": [],
+      "tools": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "succeeded"
+        }
+      ],
+      "elapsed_ms": 5882
+    }
+  ],
+  "same_capture_replay": [
+    {
+      "same_captured_responses": true,
+      "count": 2,
+      "results": [
+        {
+          "original_rejected": true,
+          "corrected_accepted": true,
+          "unsupported_version_rejected": true
+        },
+        {
+          "original_rejected": true,
+          "corrected_accepted": true,
+          "unsupported_version_rejected": true
+        }
+      ]
+    },
+    {
+      "same_captured_responses": true,
+      "count": 4,
+      "results": [
+        {
+          "case": "game",
+          "original_rejected": true,
+          "corrected_accepted": true,
+          "unsupported_number_rejected": true
+        },
+        {
+          "case": "game",
+          "original_rejected": true,
+          "corrected_accepted": true,
+          "unsupported_number_rejected": true
+        },
+        {
+          "case": "space",
+          "original_rejected": true,
+          "corrected_accepted": true,
+          "unsupported_number_rejected": true
+        },
+        {
+          "case": "space",
+          "original_rejected": true,
+          "corrected_accepted": true,
+          "unsupported_number_rejected": true
+        }
+      ]
+    }
+  ],
+  "replay_limit": "numeric membership does not validate semantic roles; date 24 can collide with mission identifier 24 in the same selected facts",
+  "rtc": {
+    "baseline": "R18",
+    "inputs": 4,
+    "user_transcripts": 4,
+    "probe_exit": 0,
+    "candidate_comparison": "not_run",
+    "candidate_search_and_chat": "not_run",
+    "human_heard": "not_verified"
+  },
+  "shutdown": {
+    "worker": {
+      "at_ms": 1793072392670,
+      "synthetic_disabled": true,
+      "rooms": 0,
+      "cleanup_remaining": 0,
+      "production_window_unchanged": true,
+      "unit": "MainPID=0\nActiveState=inactive\n"
+    },
+    "brain": {
+      "at_ms": 1793072395015,
+      "synthetic_disabled": true,
+      "unit": "MainPID=0\nActiveState=inactive\n",
+      "verifier_executor_sha256": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+      "production_executor_sha256": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+      "production_health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown"
+          },
+          "degraded": false
+        }
+      }
+    }
+  },
+  "rollback_roundtrip": "not_run",
+  "air_topic_document": {
+    "at_ms": 1793072648735,
+    "path": "/Users/rayman.chen/Downloads/P003_STUDENT_INTEREST_TOPICS_20261027.md",
+    "bytes": 5980,
+    "sha256": "6a7190d8a5eba54d8b1028328f790cd8d49607f6476f10909bbf6d378cf1de03",
+    "hash_verified": true,
+    "host": "Rayman的MacBook Air"
+  },
+  "contains_user_transcripts": false,
+  "contains_audio": false,
+  "contains_credentials": false
+}
