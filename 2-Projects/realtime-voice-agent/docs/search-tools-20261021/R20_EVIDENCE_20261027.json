@@ -1,0 +1,1053 @@
+{
+  "status": "R20 deployed to original two P2 devices; physical acceptance pending",
+  "at_ms": 1793095631318,
+  "release": {
+    "revision": "R20-real-feedback-p2-20261027",
+    "verified_at_ms": 1793095609505,
+    "brain_commit": "d35086e7b5929d601e5fe802c735d22684acada1",
+    "worker_commit": "bdfb140295195cc83a90e4b025cdff538c5e8d28",
+    "worker_sha256": "d07024f145990e047b99776a342472260680fb1104b49ed0536eec3af715c6b1",
+    "worker_tests": 448,
+    "brain_tests": 159,
+    "real_device_acceptance": "pending",
+    "r20_deployed_at_ms": 1793095609505,
+    "p1": true,
+    "p2": true
+  },
+  "deployment": {
+    "status": "deployed",
+    "brain_commit": "d35086e7b5929d601e5fe802c735d22684acada1",
+    "worker_commit": "bdfb140295195cc83a90e4b025cdff538c5e8d28",
+    "source_manifest": {
+      "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "src/tools/search-tasks.ts": "01f52ab5af3bef44a3b59920c7888565444bf5a36ecc0d161ab5028815af6669",
+      "src/tools/search-source-scope.ts": "890b03dedd8899e6e0a269643aee3cafe2cf689a24210571b96f5fdd1c51bf1d",
+      "src/tools/search-resume.ts": "77950a8e1e807395a236e5ff5232c7391447497496a5438e98657e48864056e2",
+      "src/tools/search-runtime.ts": "62aebfc7d138347958a1e667a2d21248140172450ea1d1c79b2435a30019ceae",
+      "src/tools/search-dialogue-context.ts": "ab6e51e38633afb45d5d5559479dd1076af48e6e8b2819153651217dbc79932e",
+      "src/routes/custom-llm.ts": "fdc7f94f49647ca88dd37ad767fbd891eb7ff15b3a97ebcbbbcf1db3dbb19d33",
+      "bin/search-route-preview": "98517b290cc9ead3e4cb1e5e9f5bd0aea3087fe3e31e9a1fed9139eed6a88aeb"
+    },
+    "steps": [
+      {
+        "step": "precheck",
+        "at_ms": 1793095586464,
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1793095585522,
+          "cleanup": {
+            "at_ms": 1793095583479,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "main_unchanged": true
+      },
+      {
+        "step": "pause",
+        "at_ms": 1793095589241,
+        "brain_commit": "d35086e7b5929d601e5fe802c735d22684acada1",
+        "worker_commit": "bdfb140295195cc83a90e4b025cdff538c5e8d28",
+        "idle": true
+      },
+      {
+        "step": "install",
+        "at_ms": 1793095596932,
+        "sha256": "d07024f145990e047b99776a342472260680fb1104b49ed0536eec3af715c6b1",
+        "pid": "1150061",
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1793095606168,
+          "cleanup": {
+            "at_ms": 1793095601550,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "main_unchanged": true
+      },
+      {
+        "step": "install",
+        "at_ms": 1793095609289,
+        "brain_commit": "d35086e7b5929d601e5fe802c735d22684acada1",
+        "worker_commit": "bdfb140295195cc83a90e4b025cdff538c5e8d28",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-canary-20261021",
+          "generation": "R4-20261022-two-devices",
+          "search": true,
+          "tools": true,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown"
+            },
+            "degraded": false
+          }
+        },
+        "files": {
+          "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+          "src/tools/search-tasks.ts": "01f52ab5af3bef44a3b59920c7888565444bf5a36ecc0d161ab5028815af6669",
+          "src/tools/search-source-scope.ts": "890b03dedd8899e6e0a269643aee3cafe2cf689a24210571b96f5fdd1c51bf1d",
+          "src/tools/search-resume.ts": "77950a8e1e807395a236e5ff5232c7391447497496a5438e98657e48864056e2",
+          "src/tools/search-runtime.ts": "62aebfc7d138347958a1e667a2d21248140172450ea1d1c79b2435a30019ceae",
+          "src/tools/search-dialogue-context.ts": "ab6e51e38633afb45d5d5559479dd1076af48e6e8b2819153651217dbc79932e",
+          "src/routes/custom-llm.ts": "fdc7f94f49647ca88dd37ad767fbd891eb7ff15b3a97ebcbbbcf1db3dbb19d33",
+          "bin/search-route-preview": "98517b290cc9ead3e4cb1e5e9f5bd0aea3087fe3e31e9a1fed9139eed6a88aeb"
+        },
+        "main_processes_unchanged": true
+      },
+      {
+        "step": "open",
+        "at_ms": 1793095612745,
+        "window": {
+          "enabled": true,
+          "allowlist": [
+            "BJP00326070803800006",
+            "BJP00326060100100004"
+          ],
+          "expires_at_ms": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        },
+        "main_unchanged": true
+      },
+      {
+        "step": "open",
+        "at_ms": 1793095621379,
+        "brain_commit": "d35086e7b5929d601e5fe802c735d22684acada1",
+        "worker_commit": "bdfb140295195cc83a90e4b025cdff538c5e8d28",
+        "reopened_at_ms": 1793095621420
+      }
+    ],
+    "at_ms": 1793095621388
+  },
+  "selection": {
+    "selected": [
+      {
+        "sn": "BJP00326070803800006",
+        "agent": "p003-search-canary-20261021",
+        "canary": true,
+        "reason": "selected",
+        "leaseRemainingMs": 14863,
+        "leaseAgeMs": 137,
+        "leaseJobs": 0,
+        "leaseMaxJobs": 2,
+        "leaseRegistered": true,
+        "expiresAtMs": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "agent": "p003-search-canary-20261021",
+        "canary": true,
+        "reason": "selected",
+        "leaseRemainingMs": 14862,
+        "leaseAgeMs": 138,
+        "leaseJobs": 0,
+        "leaseMaxJobs": 2,
+        "leaseRegistered": true,
+        "expiresAtMs": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      }
+    ],
+    "negative": {
+      "agent": "rust-worker",
+      "canary": false,
+      "reason": "not_target",
+      "leaseRemainingMs": 14862,
+      "leaseAgeMs": 138,
+      "leaseJobs": 0,
+      "leaseMaxJobs": 2,
+      "leaseRegistered": true,
+      "expiresAtMs": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    }
+  },
+  "flags": {
+    "main": {
+      "p003.search.canary.selected_sn": "BJP00326060100100004",
+      "p003.search.canary.enabled": "1",
+      "p003.search.canary.expires_at_ms": "1793589540000",
+      "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.agent": "p003-search-canary-20261021",
+      "p003.search.canary.started_at_ms": "1793065558897",
+      "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}",
+      "p003.search.scope": "all_registered",
+      "p003.search.exclusions": "[]",
+      "p003.search.enabled": "1",
+      "p003.search.tools": "0"
+    },
+    "candidate": {
+      "p003.search.tools": "1",
+      "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+      "p003.search.canary.expires_at_ms": "1793589540000",
+      "p003.search.enabled": "1"
+    }
+  },
+  "latest_reported_versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 319,
+      "version_name": "1.2.2-canary.305",
+      "last_check_at": 1793092612368
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 364,
+      "version_name": "1.2.2-canary.350",
+      "last_check_at": 1793090252240
+    }
+  ],
+  "authentication": {
+    "https": true,
+    "worker_token_valid": true,
+    "routes": [
+      {
+        "sn_suffix": "03800006",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "00100004",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "99999902",
+        "authenticated": true,
+        "status": 403,
+        "routing_version": null,
+        "error": "canary_unavailable"
+      },
+      {
+        "sn_suffix": "03800006",
+        "authenticated": false,
+        "status": 401,
+        "routing_version": null,
+        "error": "unauthorized"
+      }
+    ]
+  },
+  "expiry": {
+    "at_ms": 1793589540000,
+    "brain_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n",
+    "worker_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n",
+    "new_expiry_drill_this_round": false,
+    "previous_drill": "R18_DEPLOYMENT_ACCEPTANCE_20261027.md"
+  },
+  "main_processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2636558,
+      "restarts": 39
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "restarts": 0
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "restarts": 5
+    }
+  ],
+  "tests": {
+    "brain": 159,
+    "tsc": true,
+    "worker": 448,
+    "preview": 29,
+    "linux_release_and_abi": true
+  },
+  "api_public_smoke": [
+    {
+      "case": "game",
+      "ok": true,
+      "ms": 5193,
+      "sources": 1,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 3,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          },
+          {
+            "name": "fetch_page",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        },
+        {
+          "name": "fetch_page",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    {
+      "case": "r20_redstone",
+      "ok": true,
+      "ms": 4591,
+      "sources": 1,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 3,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    {
+      "case": "r20_music",
+      "ok": true,
+      "ms": 3803,
+      "sources": 2,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 1,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    {
+      "case": "r20_sport",
+      "ok": true,
+      "ms": 4005,
+      "sources": 1,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    {
+      "case": "r20_sport_asr",
+      "ok": true,
+      "ms": 4503,
+      "sources": 1,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    {
+      "case": "r20_space",
+      "ok": true,
+      "ms": 4996,
+      "sources": 1,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 2,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    {
+      "case": "r20_dinosaur",
+      "ok": true,
+      "ms": 4640,
+      "sources": 2,
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      },
+      "tool_events": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    }
+  ],
+  "normal_chat": {
+    "audio_identical": true,
+    "samples": [
+      {
+        "arm": "interest_before_v2",
+        "room": "sn-BJP00399999999999901-1793092858",
+        "first_frame_since_commit_ms": [
+          1449,
+          1699,
+          1149,
+          1199
+        ],
+        "routes": [
+          "chat",
+          "chat",
+          "chat",
+          "chat"
+        ]
+      },
+      {
+        "arm": "interest_after_v2",
+        "room": "sn-BJP00399999999999901-1793093360",
+        "first_frame_since_commit_ms": [
+          1549,
+          1399,
+          1800,
+          1199
+        ],
+        "routes": [
+          "chat",
+          "chat",
+          "chat",
+          "chat"
+        ]
+      }
+    ],
+    "physical_hearing": false,
+    "deltas_ms": [
+      100,
+      -300,
+      651,
+      0
+    ],
+    "mean_delta_ms": 112.75,
+    "limits": "四对同音频，非P95；不同生成文本造成成句时间差异。最后上下文聚焦修订未改变无搜索资料的普通聊天路径。"
+  },
+  "rtc": {
+    "terminals": {
+      "r20-followup_sport": {
+        "mode": "followup_sport",
+        "exit_code": 0,
+        "at_ms": 1793093573831,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-interest_after_v2": {
+        "mode": "interest_after_v2",
+        "exit_code": 0,
+        "at_ms": 1793093452684,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-followup_sport_v2": {
+        "mode": "followup_sport_v2",
+        "exit_code": 0,
+        "at_ms": 1793094751373,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-interest_before": {
+        "exit_code": 1,
+        "at_ms": 1793092472327,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-cross_disconnect": {
+        "mode": "cross_disconnect",
+        "exit_code": 1,
+        "at_ms": 1793093807941,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-cross_disconnect_v2": {
+        "mode": "cross_disconnect_v2",
+        "exit_code": 0,
+        "at_ms": 1793094928894,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-replace_asr": {
+        "mode": "replace_asr",
+        "exit_code": 0,
+        "at_ms": 1793093767300,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-followup_dino": {
+        "mode": "followup_dino",
+        "exit_code": 0,
+        "at_ms": 1793093686695,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-followup_dino_v2": {
+        "mode": "followup_dino_v2",
+        "exit_code": 0,
+        "at_ms": 1793094883982,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-cross_resume_disconnect_v2": {
+        "mode": "cross_resume_disconnect_v2",
+        "exit_code": 0,
+        "at_ms": 1793095014240,
+        "attempts": 1,
+        "max_attempts": 1
+      },
+      "r20-interest_before_v2": {
+        "exit_code": 0,
+        "at_ms": 1793092956081,
+        "attempts": 1,
+        "max_attempts": 1
+      }
+    },
+    "probes": [
+      {
+        "case": "cross_disconnect_v2-99999901-result.json",
+        "mode": "cross_disconnect_v2",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 2690.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 81,
+          "packets_after": 718
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "interest_before_v2-99999901-result.json",
+        "mode": "interest_before_v2",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 10,
+          "user_transcripts": 4,
+          "metrics": 18,
+          "audio_voiced_ms": 22860.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 84,
+          "packets_after": 4487
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "followup_sport_v2-99999901-result.json",
+        "mode": "followup_sport_v2",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 9,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 32240.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 5217
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "interest_after_v2-99999901-result.json",
+        "mode": "interest_after_v2",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 9,
+          "user_transcripts": 4,
+          "metrics": 18,
+          "audio_voiced_ms": 28100.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 83,
+          "packets_after": 4532
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "followup_dino-99999901-result.json",
+        "mode": "followup_dino",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 30550.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 3912
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "cross_resume_disconnect_v2-99999901-result.json",
+        "mode": "cross_resume_disconnect_v2",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 12090.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 81,
+          "packets_after": 2672
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "replace_asr-99999901-result.json",
+        "mode": "replace_asr",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 3,
+          "user_transcripts": 2,
+          "metrics": 3,
+          "audio_voiced_ms": 5980.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 2340
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "followup_dino_v2-99999901-result.json",
+        "mode": "followup_dino_v2",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 7,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 35580.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 80,
+          "packets_after": 5129
+        },
+        "device_heard_verified": false
+      },
+      {
+        "case": "followup_sport-99999901-result.json",
+        "mode": "followup_sport",
+        "synthetic": true,
+        "counts": {
+          "agent_transcripts": 9,
+          "user_transcripts": 3,
+          "metrics": 10,
+          "audio_voiced_ms": 34350.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 81,
+          "packets_after": 4019
+        },
+        "device_heard_verified": false
+      }
+    ],
+    "tasks": [
+      {
+        "id": "75e1eb61-466f-4efd-a88d-d48614ce1131",
+        "revision": 1,
+        "status": "cancelled",
+        "createdAt": 1793093724373
+      },
+      {
+        "id": "87f98246-0bcb-487c-bf67-e9d235b19487",
+        "revision": 1,
+        "status": "expired",
+        "createdAt": 1793093729571,
+        "outcome": "answered",
+        "readyAt": 1793093733139,
+        "delivery": "completed"
+      },
+      {
+        "id": "2c70eac9-f08d-4b6e-be46-74131d964f4c",
+        "revision": 1,
+        "status": "expired",
+        "createdAt": 1793093800535,
+        "outcome": "failed",
+        "failure": {
+          "stage": "answer",
+          "reason": "invalid_answer"
+        },
+        "error": "search_unavailable",
+        "readyAt": 1793093804988,
+        "delivery": "interrupted"
+      },
+      {
+        "id": "fb52bb76-505d-4391-9378-5ac19d0864cb",
+        "revision": 1,
+        "status": "delivered",
+        "createdAt": 1793094917996,
+        "outcome": "answered",
+        "readyAt": 1793094923368,
+        "delivery": "interrupted"
+      }
+    ],
+    "resume_events": [
+      {
+        "event": "progress",
+        "task_id": "fb52bb76-505d-4391-9378-5ac19d0864cb",
+        "session": "sn-BJP00399999999999901-1793094912",
+        "complete_sentences": 0,
+        "sequence": 1,
+        "at_ms": 1793094927875
+      },
+      {
+        "event": "grant",
+        "task_id": "fb52bb76-505d-4391-9378-5ac19d0864cb",
+        "revision": 1,
+        "source_session": "sn-BJP00399999999999901-1793094912",
+        "session": "sn-BJP00399999999999901-1793094957",
+        "complete_sentences": 0,
+        "at_ms": 1793094975214,
+        "expires_at_ms": 1793095223368
+      },
+      {
+        "event": "receipt",
+        "task_id": "fb52bb76-505d-4391-9378-5ac19d0864cb",
+        "session": "sn-BJP00399999999999901-1793094957",
+        "outcome": "progress",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1793094986365
+      },
+      {
+        "event": "receipt",
+        "task_id": "fb52bb76-505d-4391-9378-5ac19d0864cb",
+        "session": "sn-BJP00399999999999901-1793094957",
+        "outcome": "completed",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1793094992489
+      }
+    ],
+    "real_device_acceptance": "pending"
+  },
+  "rollback_roundtrips": {
+    "brain": {
+      "roundtrip": [
+        {
+          "phase": "rollback",
+          "health": {
+            "status": "ok",
+            "agent": "p003-search-verification-20261026",
+            "generation": "R17-isolated-rtc-20261026",
+            "search": true,
+            "tools": true,
+            "llm": {
+              "mode": "race",
+              "main": {
+                "outcome": "unknown"
+              },
+              "fallback": {
+                "outcome": "unknown"
+              },
+              "degraded": false
+            }
+          },
+          "files": {
+            "src/tools/search-executor.ts": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514",
+            "src/tools/search-tasks.ts": "67859db59a235fab1071b4bb4b9892eb3c1dfe8150a058f32def44f9ab3c5aac",
+            "src/tools/search-source-scope.ts": "27518fe03d3a793b3d0129b7d3f643adc36603557de13ed00d98a58903171f00",
+            "src/tools/search-resume.ts": "1d5ba20593819ddd6653b6ea45d8131e3c16036ebfa1639a4bcaa57ab852fa85",
+            "src/tools/search-runtime.ts": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+            "src/tools/search-dialogue-context.ts": "5ac631693385fc64848e69c124a33bebec8e695eeefe06af2497d1022b7dffad",
+            "src/routes/custom-llm.ts": "54d8bbfa536fea936a4043c561be474f4606f8e7ef45138f952bc0aaf442c1d2"
+          },
+          "at_ms": 1793095481129
+        },
+        {
+          "phase": "final",
+          "health": {
+            "status": "ok",
+            "agent": "p003-search-verification-20261026",
+            "generation": "R17-isolated-rtc-20261026",
+            "search": true,
+            "tools": true,
+            "llm": {
+              "mode": "race",
+              "main": {
+                "outcome": "unknown"
+              },
+              "fallback": {
+                "outcome": "unknown"
+              },
+              "degraded": false
+            }
+          },
+          "files": {
+            "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+            "src/tools/search-tasks.ts": "01f52ab5af3bef44a3b59920c7888565444bf5a36ecc0d161ab5028815af6669",
+            "src/tools/search-source-scope.ts": "890b03dedd8899e6e0a269643aee3cafe2cf689a24210571b96f5fdd1c51bf1d",
+            "src/tools/search-resume.ts": "77950a8e1e807395a236e5ff5232c7391447497496a5438e98657e48864056e2",
+            "src/tools/search-runtime.ts": "62aebfc7d138347958a1e667a2d21248140172450ea1d1c79b2435a30019ceae",
+            "src/tools/search-dialogue-context.ts": "ab6e51e38633afb45d5d5559479dd1076af48e6e8b2819153651217dbc79932e",
+            "src/routes/custom-llm.ts": "fdc7f94f49647ca88dd37ad767fbd891eb7ff15b3a97ebcbbbcf1db3dbb19d33"
+          },
+          "at_ms": 1793095483189
+        }
+      ],
+      "env_unchanged": true,
+      "preview_actions": [
+        "resume",
+        "resume",
+        "resume",
+        "chat",
+        "search"
+      ]
+    },
+    "worker": {
+      "roundtrip": [
+        {
+          "phase": "candidate",
+          "sha256": "d07024f145990e047b99776a342472260680fb1104b49ed0536eec3af715c6b1",
+          "health": {
+            "agent": "p003-search-verification-20261026",
+            "at_ms": 1793093307329,
+            "cleanup": {
+              "at_ms": 1793093305707,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R17-isolated-rtc-20261026",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "pid": "1142702"
+        },
+        {
+          "phase": "rollback",
+          "sha256": "d6f63a3af626baa50cdb09ddcb5c7e16b7c1277f13788a3cf7fbb2e704eda606",
+          "health": {
+            "agent": "p003-search-verification-20261026",
+            "at_ms": 1793093315590,
+            "cleanup": {
+              "at_ms": 1793093312300,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R17-isolated-rtc-20261026",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "pid": "1142731"
+        },
+        {
+          "phase": "candidate_final",
+          "sha256": "d07024f145990e047b99776a342472260680fb1104b49ed0536eec3af715c6b1",
+          "health": {
+            "agent": "p003-search-verification-20261026",
+            "at_ms": 1793093323553,
+            "cleanup": {
+              "at_ms": 1793093318740,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R17-isolated-rtc-20261026",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "pid": "1142761"
+        }
+      ],
+      "production_unchanged": true,
+      "window_unchanged": true
+    }
+  },
+  "verifier_closed": {
+    "brain": {
+      "at_ms": 1793095567300,
+      "synthetic_disabled": true,
+      "unit": "MainPID=0\nActiveState=inactive\n",
+      "verifier_executor_sha256": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "production_executor_sha256": "c2f73a7e55e2be24416ccc7c24ec74184101eb43a5020484224295524f9ad514",
+      "production_health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "at_ms": 1793095507028,
+            "outcome": "content",
+            "http_status": null,
+            "code": null,
+            "stale": false
+          },
+          "fallback": {
+            "at_ms": 1793095506701,
+            "outcome": "failure",
+            "http_status": 404,
+            "code": "UpstreamError",
+            "stale": false
+          },
+          "degraded": true
+        }
+      }
+    },
+    "worker": {
+      "at_ms": 1793095564491,
+      "synthetic_disabled": true,
+      "rooms": 0,
+      "cleanup_remaining": 0,
+      "production_window_unchanged": true,
+      "unit": "MainPID=0\nActiveState=inactive\n"
+    }
+  },
+  "limits": [
+    "Four paired normal-chat samples are not a formal P95 acceptance",
+    "One TTS DNS 5016ms outlier remains unresolved",
+    "One real API answer was rejected as invalid_answer/unquoted_number before cross-room test; the later success does not erase it",
+    "Fallback model 404 UpstreamError observed before deploy; restart unknown health does not mean recovered",
+    "No full-history training or complete history replay",
+    "ASR omissions, actual speaker hearing, device exit behavior require human verification"
+  ],
+  "private_evidence_sha256": {
+    "rtc-worker-final-private.json": "add25af44ca4f9fabc34f7783329fc1c31a666bf9142fe40735a3212ade2f0a9",
+    "rtc-brain-final-private.json": "bb559e2b172a754b6b826282bab105966a953dc0b87448a2d3ae11a8cdeb62ea",
+    "normal-logs-private-v3.json": "1882efcfa8251fe525be833e50b7c6cfdb59500900a730433db0a8fd4dfcb5a1",
+    "smoke-private.json": "fce673fc429eacd476f20bf13115a2b3d979fb9ee29247731a2ff48397fea948",
+    "followup-dialogue-private.json": "ef1d5a7b0289c6b8acbc35f74ce2d277d5a37e87d10c33e1efe3a89d73c9bb2f",
+    "followup-worker-private.json": "9ed18f887e28bfc5324375ec45414bef5a96cec221efe78ad84fdb1c5852ec7f",
+    "linux-brain-final.json": "4f1786f9871237bec64e4ad7556198d73a352ee00e6a5889009d29ae74a69d2f",
+    "linux-worker-frozen-console.log": "e9d72ffd9c586380dac54c1b2d030bfc13dbc8da0c45725db7ee26b1e9643b88"
+  }
+}
