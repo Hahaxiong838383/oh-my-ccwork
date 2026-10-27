@@ -1,5 +1,5 @@
 import { searchDialogueClarification, searchDialogueHistory } from '../tools/search-dialogue-context.js';
-import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
+import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter, searchTermExplanation } from '../tools/search-chat-policy.js';
 import { searchSettings, searchDeviceAllowed, currentSearchDialogue } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
@@ -125,13 +125,14 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const searchConfig = searchSettings();
   const searchRoom=c.req.query('room')??'',searchSn=/^sn-(BJP003\d{14})-\d+$/.exec(searchRoom)?.[1];
   const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),live:!process.env.SEARCH_CANARY_ROOT,enabled:searchConfig.enabled,role:authContext?.role ?? '',room:searchRoom,allowed:searchSn&&searchDeviceAllowed(searchSn)?[searchSn]:[]});
+  const searchExplanation = !overridePrompt && !isFeedback && searchPolicy.instruction ? searchTermExplanation(userText) : null;
   const inOnboarding = !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
   const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(userText);
   // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
   // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
-  const companionGuardrail = (overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
+  const companionGuardrail = (overridePrompt || isFeedback || searchExplanation || curriculumGuardrail || aiLiteracyGuide)
     ? null
     : await companionKG.buildGuardrail(userText, true);
   console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${overridePrompt ? ' [override]' : ''}${isFeedback ? ' [feedback]' : ''}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
@@ -247,9 +248,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
       }
     };
 
-    if(searchClarification){
-      assistantText=searchClarification;
-      enqueue(chunk({role:'assistant',content:searchClarification},null));enqueue(chunk({},'stop'));persistTurn();enqueue('[DONE]');await chain;return;
+    const localSearchReply=searchExplanation??searchClarification;
+    if(localSearchReply){
+      assistantText=localSearchReply;
+      enqueue(chunk({role:'assistant',content:localSearchReply},null));enqueue(chunk({},'stop'));persistTurn();enqueue('[DONE]');await chain;return;
     }
 
     // 括号旁白硬防线(paren-filter,2026-07-03):LLM 输出"（挠了挠头）"类状态机旁白会被火山

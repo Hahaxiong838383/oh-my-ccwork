@@ -2,6 +2,29 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { searchChatPolicy } from '../src/tools/search-chat-policy.js';
 const input={candidate:true,enabled:true,role:'device',room:'sn-BJP00326060100100004-1',allowed:['BJP00326060100100004']};
+test('R22 explanation questions and inline quotes retain their meaning across stream chunks',()=>{
+ for(const text of ['你想让我查资料吗？','你希望小可帮你查询什么？','如果我查到相关资料，你希望听哪部分？','你说“我去查一下”是什么意思？','比如“我正在查询”是一种说法。']){
+  for(let size=1;size<=text.length;size++){
+   const f=policy.createSearchClaimFilter(true);let out='';
+   for(let i=0;i<text.length;i+=size)out+=f.feed(text.slice(i,i+size));
+   assert.equal(out+f.flush(),text,`chunk ${size}: ${text}`);
+  }
+ }
+});
+test('R22 a quote or question does not exempt a later execution claim',()=>{
+ for(const prefix of ['你说“我去查一下”是什么意思？','你想让我查资料吗？','“我去查一下”，']){
+  const f=policy.createSearchClaimFilter(true);let out='';
+  for(const c of prefix+'我已经查到了最新消息。')out+=f.feed(c);
+  out+=f.flush();assert.ok(out.startsWith(prefix),out);assert.ok(!out.includes('查到了最新消息'),out);
+ }
+});
+test('R22 search-term explanations are bounded and do not consume named queries',()=>{
+ const explain=(policy as any).searchTermExplanation;assert.equal(typeof explain,'function');
+ for(const text of ['查查是啥','搜索是什么意思','小可，查查这个词啥意思？','请帮我查一下是什么意思']){
+  const reply=explain(text);assert.equal(typeof reply,'string');assert.match(reply,/资料/);assert.ok(reply.length<50);assert.doesNotMatch(reply,/请说|具体问题|正在|已经/);
+ }
+ for(const text of ['帮我查查光合作用是啥','搜索深空探测是干什么的','我想查个东西','不要查查是啥','如果我说查查是啥呢'])assert.equal(explain(text),null,text);
+});
 test('search chat capabilities and onboarding suppression apply only to active candidate device',()=>{
  assert.equal(searchChatPolicy(input).suppressOnboarding,true);
  assert.ok(searchChatPolicy(input).instruction.length>0);

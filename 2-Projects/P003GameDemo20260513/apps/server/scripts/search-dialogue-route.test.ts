@@ -38,6 +38,10 @@ test('R14 actual CustomLLM provider receives temporary stage but conversation st
  const db=new DatabaseSync(process.env.CONVERSATION_DB_PATH!,{readOnly:true});
  const rows=db.prepare('SELECT text FROM conversation').all();db.close();
  assert.deepEqual(rows.map(r=>r.text),['我想聊一个新话题','想聊什么呢？','我想聊','我在听，你想聊什么？']);
+ const definition=await customLlmRoute.request(`/chat/completions?room=${room}&token=${token}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'查查是啥'}],search_dialogue_context:{protocol:1,task_id:t.id,revision:t.revision,phase:'running',dialogue_epoch:3}})});
+ const definitionReply=await definition.text();assert.equal(definition.status,200);assert.match(definitionReply,/资料/);assert.doesNotMatch(definitionReply,/具体问题|想聊什么/);
+ assert.equal(requests.length,1,'definition must not add a model call while search is running');
+ assert.equal(getSearchTasks()!.get({subject:sn,session:room},t.id)?.status,'running','definition must not cancel or replace the running search');
  // Complete an authorized server task, then prove only the inference history
  // receives the data; neither system instructions nor stored dialogue do.
  const tasks=getSearchTasks()!;
