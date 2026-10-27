@@ -2,9 +2,17 @@
 
 > Xray 分流代理管理工具（macOS / Linux / Windows）。零依赖，单文件 Python Web UI + 系统服务开机自启。
 >
-> **V1.5**: 路由拆分（搜索/GitHub→亚洲 | AI→美国）+ 系统代理 API + balancer 均衡组
+> **历史 V1.5（2026年3月）**: 路由拆分（搜索/GitHub→亚洲 | AI→美国）+ 系统代理 API + balancer 均衡组
 
-## 项目背景
+## Air 受管安装维护入口（2026-10-27）
+
+Air 使用 `cf-lisa` 自动切换控制器，维护真源见 [`maintenance-20261027/README.md`](maintenance-20261027/README.md)。该维护版由 `xray-manager.py` 和 `managed_status.py` 两文件配合工作；上级同名 manager 是独立跨平台主源码，不能直接覆盖 Air。本文下方的3月部署、通用安装、切换和编辑命令均不是现有 Air 的操作指南。
+
+维护版8888页面通过只读 `/api/managed-status` 查询实际 RoutingService override、控制器进程和45秒状态新鲜度，区分探测正常、部分可达、阻断、过期、控制异常及无法确认；规则资产pending单独显示为“待确认应用”。静态 `cf-block` 不等于当前出站，TCP测试也不代表目标业务成功。节点、导入、端口、均衡组和路由编辑入口在受管或状态未知时锁定，后端409保护仍须保留。
+
+通用 `install.sh` 检测到controller配置或LaunchAgent即在下载、写文件或改服务前退出。部署是否完成、两文件SHA与线上验收以当次回执为准，不能仅凭仓库存在维护包认定已上线。
+
+## 历史项目背景（2026年3月）
 
 川哥在 Windows 和 macOS 两台电脑上使用 V2RayN + 自定义分流配置（Google 系走线路 A，Claude/GPT 走线路 B）。Windows 正常，macOS 出问题。
 
@@ -26,9 +34,9 @@
 
 不用 V2RayN，直接用 xray-core + 系统服务（macOS launchd / Linux systemd）+ Python Web UI 管理。
 
-## 当前部署状态（MacBook Air）
+## 历史部署快照（MacBook Air，2026-03-23）
 
-已于 2026-03-23 部署完成：
+以下为当时部署记录，不代表当前节点、路由或运行态：
 
 ```
 ~/xray/
@@ -77,7 +85,9 @@ Google 搜索和 GitHub 从美国节点拆分到亚洲节点（`asia-fast-balanc
 └── README.md                    # 本文件
 ```
 
-## 安装（新电脑 / 重新部署）
+## 通用安装（未受管新电脑）
+
+现有Air受管安装走上方维护入口，不执行以下重装流程。
 
 ```bash
 cd ~/mycc/2-Projects/xray-manager
@@ -92,7 +102,9 @@ cd ~/mycc/2-Projects/xray-manager
 5. 注册系统服务（macOS: launchd / Linux: systemd user service）
 6. 添加 shell 快捷命令到 `~/.zshrc`（macOS）或 `~/.bashrc`（Linux）
 
-## 从 v2rayN 迁移到 xray-manager
+## 通用迁移：从 v2rayN 到 xray-manager
+
+仅适用于明确授权迁移且未受管的安装；现有Air不要调用历史批量清理脚本。
 
 如果之前使用 v2rayN，迁移步骤：
 
@@ -117,7 +129,9 @@ cd ~/mycc/2-Projects/xray-manager
 - **Chrome 如有代理扩展**需移除，否则会覆盖系统代理
 - v2rayN 可以卸载，本工具完全替代其在 macOS 上的功能
 
-## 日常使用
+## 通用版本日常使用
+
+以下快捷命令和编辑功能适用于未受管版本；Air受管页面以维护说明为准。
 
 ### 终端快捷命令
 
@@ -152,7 +166,9 @@ xray-config      # 终端编辑配置文件
 - **单节点测速**：测试各节点延迟
 - **日志查看**：查看 xray 运行日志
 
-## 换节点 / 改配置
+## 通用版本换节点 / 改配置
+
+受管Air必须协调配置与controller guard发布，不能直接按以下两种方式独立保存。
 
 两种方式：
 1. **Web UI**：`xray-ui` → 编辑节点 → 保存并重启
@@ -202,7 +218,9 @@ xray-config      # 终端编辑配置文件
 | V1.2 | 2026-03-22 | 跨平台支持（macOS + Linux + Windows）、离线部署包、VMess 协议、订阅导入、均衡组 |
 | V1.0 | 2026-03-22 | 初始版本：VLESS 节点管理、路由分流、Web UI |
 
-## 卸载
+## 通用版本卸载
+
+以下不是受管Air的卸载清单；现有安装含独立代理、controller和维护状态，须按实际服务范围处理。
 
 **macOS:**
 ```bash

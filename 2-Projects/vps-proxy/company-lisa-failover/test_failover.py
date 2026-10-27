@@ -87,11 +87,12 @@ class PolicyTests(OfflineTest):
         self.step(p, 15, ("zgo", "home"))
         self.assertEqual(self.step(p, 30, ("home",)), "home")
 
-    def test_all_down_blocks_after_two_failures_and_stays_blocked(self):
+    def test_all_down_blocks_after_three_fully_down_rounds_and_stays_blocked(self):
         p = controller.Policy()
         self.step(p, 0, ("dmit",))
         self.assertEqual(self.step(p, 15, ()), "dmit")
-        for t in (30, 45, 60):
+        self.assertEqual(self.step(p, 30, ()), "dmit")
+        for t in (45, 60):
             self.assertEqual(self.step(p, t, ()), "block")
         self.assertEqual(self.step(p, 75, ("home",)), "home")
 
@@ -313,8 +314,9 @@ class ProbeTests(OfflineTest):
             def result(curl, port, target):
                 return {"ok": not (port == builder.PORTS["dmit"] and target["name"] == missing_name)}
             with self.subTest(failed_target=missing_name), patch.object(controller, "probe", side_effect=result) as mock:
-                results, detail = controller.probe_all(cfg)
+                results, reachable, detail = controller.probe_all(cfg)
                 self.assertEqual(results, health("zgo", "home"))
+                self.assertEqual(reachable, health("dmit", "zgo", "home"))
                 self.assertEqual(mock.call_count, 6)
                 self.assertEqual(set(detail["dmit"]), {"https", "codex"})
 
@@ -322,7 +324,7 @@ class ProbeTests(OfflineTest):
         cfg = self.cfg()
         cfg["targets"] = []
         try:
-            results, _ = controller.probe_all(cfg)
+            results, reachable, _ = controller.probe_all(cfg)
         except ValueError:
             return  # Rejecting invalid configuration is also safe.
         self.assertFalse(any(results.values()), "zero probes cannot be healthy evidence")
@@ -709,7 +711,7 @@ class InstallerTests(OfflineTest):
                      patch.object(controller.logging, "getLogger"), \
                      patch.object(controller, "atomic_json", side_effect=lambda path, data: snapshots.append(copy.deepcopy(data))), \
                      patch.object(controller, "api", return_value="Selecting Override:\n  1 cf-dmit\n") as api, \
-                     patch.object(controller, "probe_all", return_value=(health("dmit"), {})) as probes, \
+                     patch.object(controller, "probe_all", return_value=(health("dmit"), health("dmit"), {})) as probes, \
                      patch.object(controller, "read_pin", return_value=None) as pin, \
                      patch.object(controller, "set_choice") as choose, \
                      patch.object(controller.time, "sleep", side_effect=between_rounds):
@@ -719,10 +721,11 @@ class InstallerTests(OfflineTest):
                     self.assertEqual([s["status"] for s in snapshots],
                                      ["OK", "CONTROL_ERROR"] if initially_matching else
                                      ["CONTROL_ERROR", "CONTROL_ERROR"])
-                    self.assertEqual(api.call_count, int(initially_matching),
+                    self.assertEqual(api.call_count, 2 * int(initially_matching),
                                      "no RoutingService call may occur in a drifted round")
                     if initially_matching:
-                        api.assert_called_once_with(cfg, "bi", cfg["balancer"])
+                        self.assertEqual(api.call_args_list, [unittest.mock.call(cfg, "bi", cfg["balancer"])] * 2,
+                                         "read override both before and after probes; no write")
                     self.assertEqual(probes.call_count, int(initially_matching))
                     self.assertEqual(pin.call_count, int(initially_matching))
                     choose.assert_not_called()

@@ -2,6 +2,16 @@
 # Xray Manager 一键安装脚本 (Linux / macOS 自适应)
 set -e
 
+# Managed cf-lisa deployments have reviewed runtime patches and strict config guards.
+# Check before dirname/uname, downloads, file writes, service changes or cron setup.
+if [ -e "$HOME/xray/company-lisa-failover/controller.json" ] || \
+   [ -L "$HOME/xray/company-lisa-failover/controller.json" ] || \
+   [ -e "$HOME/Library/LaunchAgents/com.company.lisa-failover.plist" ] || \
+   [ -L "$HOME/Library/LaunchAgents/com.company.lisa-failover.plist" ]; then
+    echo "检测到受管 cf-lisa 安装：停止通用安装，避免覆盖运行态补丁或重启代理。请按 maintenance-20261027/README.md 的增量维护说明处理。" >&2
+    exit 78
+fi
+
 XRAY_HOME="$HOME/xray"
 XRAY_BIN="$XRAY_HOME/xray"
 CONFIG_PATH="$XRAY_HOME/config.json"

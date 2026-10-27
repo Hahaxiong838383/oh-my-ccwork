@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "date": "2026-10-27",
+  "baseline_runtime_sha256": {
+    "xray-manager.py": "533521b169fffd07488a082991db94dcf5098048cafe17bd12f40d451d3bb1da",
+    "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030"
+  },
+  "deployed_at": "2026-10-27 12:20:36 +0800",
+  "deployed_sha256": {
+    "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+    "xray-manager.py": "353aeb6733acb8175a83dbaefc8385fa3547327c2b8477ce44a05a0eccffcecf",
+    "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030"
+  },
+  "verification": {
+    "failover_python": 110,
+    "maintenance_python": 82,
+    "installer_python": 4,
+    "managed_ui_js": 22,
+    "rejected_write_js": 1,
+    "browser_fixture": "passed",
+    "air_browser_read_only": "passed",
+    "main_proxy_and_grok_not_restarted": true,
+    "core_config_unchanged": true,
+    "long_sse_verified": false
+  },
+  "files_sha256": {
+    "README.md": "4e70c3de0b5d1411eed6ea711589da11147694b5d6c755b405c08870d06719c3",
+    "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+    "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
+    "test_browser_ui.cjs": "5550b1735ceadb78491986a4ab12959401928787de34eac5d0c2d13a5ab042bd",
+    "test_managed_handler.py": "a93f73323b81a0fa94b3aac96fe50a08595338243c803412408ea9d4c6a1055f",
+    "test_managed_status.py": "62828b0bdc34ddf4b4694f0861e78d71001ca840273be905838acc6521773177",
+    "test_managed_ui.js": "1d3b6d0693e7a35fee2981322b726d4dd1d011874d253713ff3719b574f54a4f",
+    "test_manager.py": "4ec7805e20c683461576b3389c3be3e691380db3588fb6c5bf3d62cfbec5c512",
+    "test_manager_lifecycle.py": "bdf0891f9e3d587e4356b4d676abf3a5713eb046a89b6f088b4d4284da09e482",
+    "test_manager_ui.js": "762d88754220b7e0c1b5619da21587d02f6b1882df52a9f4288846b11fb67cdf",
+    "test_updater.py": "47a416e0935d752913c110b255391fd6ca0f6962c2c864318379fc3ef7e151a0",
+    "xray-manager.py": "353aeb6733acb8175a83dbaefc8385fa3547327c2b8477ce44a05a0eccffcecf",
+    "复盘与防复发.md": "0497b1311c049942b823d54ba650a4a15fc8d5f1f9b318483fded726a2cafc0a"
+  },
+  "live_config_included": false,
+  "credentials_included": false
+}

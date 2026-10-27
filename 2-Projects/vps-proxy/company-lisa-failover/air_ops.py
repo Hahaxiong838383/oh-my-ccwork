@@ -29,6 +29,7 @@ def write(path,data,mode=0o600):
 
 def prepare():
     from build_config import client_config,controller_config
+    from controller import canonical_config_sha256
     if RUNTIME.exists() or PLIST.exists() or TUNNEL_PLIST.exists():raise RuntimeError('already_installed')
     raw=CONFIG.read_bytes();base=json.loads(raw);nodes={}
     for n,t in [('dmit','admin-LISA-DMIT-11443'),('zgo','admin-LISA-ZGO-12443')]:
@@ -38,7 +39,8 @@ def prepare():
     candidate,count=client_config(base,nodes,{'admin-LISA-DMIT-11443'})
     stage=pathlib.Path(tempfile.mkdtemp(prefix='company-lisa-air-stage-',dir=HOME/'xray'));os.chmod(stage,0o700)
     data=(json.dumps(candidate,ensure_ascii=False,indent=2)+'\n').encode();write(stage/'candidate.json',data)
-    cfg=controller_config(str(HOME/'xray/xray'),str(RUNTIME));cfg.update(guard_config_path=str(CONFIG),guard_config_sha256=sha(data))
+    cfg=controller_config(str(HOME/'xray/xray'),str(RUNTIME));cfg.update(guard_config_path=str(CONFIG),guard_config_sha256=sha(data),
+        guard_config_semantic_sha256=canonical_config_sha256(data))
     write(stage/'controller.json',json.dumps(cfg,indent=2).encode())
     for name in ['controller.py','air_ops.py']:write(stage/name,pathlib.Path(__file__).with_name(name).read_bytes())
     manifest={'baseline_sha256':sha(raw),'candidate_sha256':sha(data),'replaced_rules':count,
