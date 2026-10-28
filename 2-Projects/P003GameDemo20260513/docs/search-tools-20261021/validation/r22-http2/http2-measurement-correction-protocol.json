@@ -1,0 +1,15 @@
+{
+  "at_ms": 1793163413822,
+  "scope": "Measurement correction only; no runtime source/config/probe/attempt-count/latency-threshold changes",
+  "observed_completed_rooms": 93,
+  "original_analysis_retained": true,
+  "fixed_attempt_budget": 120,
+  "minimum_valid_pairs": 20,
+  "median_limit_ms": 100,
+  "empirical_p90_limit_ms": 300,
+  "missing_body_allowed": 0,
+  "association": "Use exact paired ordinary ASR input to locate its unique commit. Match unique non-background body whose since_turn-derived start lies in this commit interval, with 1ms integer-clock tolerance. Do not impose a 5ms start-delay cutoff. Preserve all output and unmatched bodies separately; ambiguous or absent ordinary body counts as missing, not an exclusion that can hide slow work.",
+  "input_exclusions": "Keep ASR mismatch/split actual ordinary input, failed readiness/cleanup, changed runtime/persona/WAV, missing true search/resume overlap. Do not count prior query captions or body whose start precedes the target commit as current ordinary-chat output.",
+  "no_pass_claim": "Original formal gate stays separate. Corrected release decision requires evaluator fixture verification, unchanged gates and full raw evidence; no pilot/old-version samples.",
+  "why_finish_fixed_budget": "Existing fixed batch provides useful actual-search/resume evidence even if the old time-bin method cannot reach enough comparable pairs; no extra rooms or retries added."
+}
