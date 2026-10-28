@@ -203,6 +203,20 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const model = body.model ?? 'xiaoke-ark';
 
   return streamSSE(c, async (stream) => {
+    let cancelled = false;
+    if (process.env.SEARCH_CANARY_ROOT) {
+      const cancel = () => {
+        if (cancelled) return;
+        cancelled = true;
+        llm.abort();
+        console.info('[search-chat-abort]', JSON.stringify({
+          room: c.req.query('room'), response_id: id,
+          elapsed_ms: Math.round(performance.now() - requestStarted),
+        }));
+      };
+      stream.onAbort(cancel);
+      if (stream.aborted) cancel();
+    }
     const chunk = (delta: Record<string, unknown>, finish: string | null): string =>
       JSON.stringify({
         id,
@@ -215,14 +229,15 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // 串行写出，保证 SSE chunk 顺序（writeSSE 是 async，并发写会乱序）。
     let chain: Promise<unknown> = Promise.resolve();
     const enqueue = (data: string): void => {
-      chain = chain.then(() => stream.writeSSE({ data }));
+      if (cancelled) return;
+      chain = chain.then(() => cancelled ? undefined : stream.writeSSE({ data }));
     };
 
     // Phase 1(docs/43 §8 F1):RTC 链路补齐对话落库 + 画像/情景记忆抽取——此前只有 WS 链路有,
     // 手机端 /m 的对话既无审计历史也无记忆抽取。累积 assistant 全文,onDone 后 fire-and-forget。
     let assistantText = '';
     const persistTurn = (): void => {
-      if (!authContext || overridePrompt || isFeedback) return; // override/吐槽不落库不抽取(不污染真实 profile)
+      if (cancelled || !authContext || overridePrompt || isFeedback) return; // 取消的未完成投机回复不当作完整对话落库
       const finalAssistant = assistantText.trim();
       // R2 证据链（2026-09-03）：本轮两条消息的 conversation.id 随快照传给抽取器（窗口内旧消息由抽取器按原话反查）
       let userMsgId: string | undefined;
@@ -283,12 +298,14 @@ customLlmRoute.post('/chat/completions', async (c) => {
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
+    if (cancelled) return;
     try {
       await llm.streamChat({
         systemPrompt,
         userText,
         history: searchDialogueHistory(history,searchAnswer,userText),
         onDelta: (delta) => {
+          if (cancelled) return;
           if (delta && firstUpstreamAt === null) firstUpstreamAt = performance.now();
           const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(delta).text)); // EXIT → 括号 两级串联
           if (!clean) return; // 整个 delta 都在过滤器扣留中
@@ -297,6 +314,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
           enqueue(chunk({ content: clean }, null));
         },
         onDone: () => {
+          if (cancelled) return;
           // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
           const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
           if (tail) {
