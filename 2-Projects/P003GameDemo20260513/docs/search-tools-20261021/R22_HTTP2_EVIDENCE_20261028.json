@@ -1467,5 +1467,296 @@
     "normal_turn_persisted": true,
     "synthetic_only": true,
     "shared_h2_connection_survived_cancel": true
+  },
+  "completed_normal_group": {
+    "label": "r22-http2-final",
+    "summary": {
+      "samples": 60,
+      "pairs": 27,
+      "median_delta_ms": 0.15,
+      "empirical_p90_delta_ms": 150.81,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": 15.87,
+          "empirical_p90_ms": 763.52
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": 23.85,
+          "empirical_p90_ms": 1012.27
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": true
+    },
+    "all_attempts_retained": true,
+    "sample_evidence_sha256": "9649b962a2c40c95abf06c5a85c47ca074bfafec99fe2afe673e447f7533acc5",
+    "excluded_pair_indices": [
+      3,
+      13,
+      23
+    ],
+    "scope": "Only normal 60 rooms completed; not a whole-batch pass."
+  },
+  "normal_arm_distributions": {
+    "matched_pairs": 27,
+    "arms": {
+      "A": {
+        "commit_to_body_ms": {
+          "n": 27,
+          "median_ms": 1049.83,
+          "empirical_p90_ms": 1249.83,
+          "max_ms": 5599.28
+        },
+        "sender_end_to_commit_ms": {
+          "n": 27,
+          "median_ms": 8.9,
+          "empirical_p90_ms": 178.6,
+          "max_ms": 797.93
+        },
+        "sender_end_to_body_ms": {
+          "n": 27,
+          "median_ms": 1076.76,
+          "empirical_p90_ms": 1667.01,
+          "max_ms": 5592.9
+        }
+      },
+      "B": {
+        "commit_to_body_ms": {
+          "n": 27,
+          "median_ms": 1049.89,
+          "empirical_p90_ms": 1249.35,
+          "max_ms": 1400.34
+        },
+        "sender_end_to_commit_ms": {
+          "n": 27,
+          "median_ms": 30.82,
+          "empirical_p90_ms": 827.52,
+          "max_ms": 3440.95
+        },
+        "sender_end_to_body_ms": {
+          "n": 27,
+          "median_ms": 1131.17,
+          "empirical_p90_ms": 2026.69,
+          "max_ms": 4490.67
+        }
+      }
+    },
+    "not_physical_speech_end": true,
+    "not_paired_delta_p90": true
+  },
+  "precommit_diagnosis": {
+    "rows": [
+      {
+        "index": 2,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793158079",
+        "input_end_to_commit_ms": -62.36,
+        "eou_ms": 402,
+        "stt_ms": 397
+      },
+      {
+        "index": 2,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793158131",
+        "input_end_to_commit_ms": 3440.95,
+        "eou_ms": 3886,
+        "stt_ms": 3879
+      },
+      {
+        "index": 9,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793158799",
+        "input_end_to_commit_ms": 135.12,
+        "eou_ms": 580,
+        "stt_ms": 547
+      },
+      {
+        "index": 9,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793158755",
+        "input_end_to_commit_ms": 1389.23,
+        "eou_ms": 1861,
+        "stt_ms": 1836
+      },
+      {
+        "index": 10,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793158852",
+        "input_end_to_commit_ms": 64.0,
+        "eou_ms": 602,
+        "stt_ms": 561
+      },
+      {
+        "index": 10,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793158897",
+        "input_end_to_commit_ms": 827.52,
+        "eou_ms": 1377,
+        "stt_ms": 1338
+      }
+    ],
+    "not_raw_speech_end": true
+  },
+  "normal_slowest_stage_diagnosis": {
+    "room": "sn-BJP00399999999999901-1793159733",
+    "index": 19,
+    "arm": "A",
+    "body_ms": 5599.28,
+    "rows": [
+      {
+        "after_input_end_ms": -3058.85,
+        "tags": [
+          "prewarm"
+        ],
+        "fields": {},
+        "room_matches": false
+      },
+      {
+        "after_input_end_ms": 398.24,
+        "tags": [
+          "candidate llm response timing"
+        ],
+        "fields": {
+          "response_id": "chatcmpl-qxfn3j75jd",
+          "headers_ms": "10",
+          "http_version": "HTTP/2.0",
+          "first_content_ms": "402"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 5578.27,
+        "tags": [
+          "tts provider first PCM observed"
+        ],
+        "fields": {
+          "turn_id": "1",
+          "provider_ttfb_ms": "301",
+          "connect_ms": "0",
+          "used_warm": "true"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 5593.04,
+        "tags": [
+          "body first frame published"
+        ],
+        "fields": {
+          "turn_id": "1"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 6729.11,
+        "tags": [
+          "prewarm"
+        ],
+        "fields": {
+          "prewarm_wait_ms": "4752",
+          "provider_ttfb_ms": "301",
+          "first_pcm_ms": "5053"
+        },
+        "room_matches": false
+      },
+      {
+        "after_input_end_ms": 6729.11,
+        "tags": [
+          "tts dispatch end",
+          "prewarm"
+        ],
+        "fields": {
+          "turn_id": "1",
+          "elapsed_ms": "6204",
+          "prewarm_wait_ms": "4752",
+          "stage": "provider"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 7034.01,
+        "tags": [
+          "tts provider first PCM observed"
+        ],
+        "fields": {
+          "turn_id": "1",
+          "provider_ttfb_ms": "305",
+          "connect_ms": "0",
+          "used_warm": "true"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 12694.48,
+        "tags": [
+          "prewarm"
+        ],
+        "fields": {
+          "prewarm_wait_ms": "0",
+          "provider_ttfb_ms": "305",
+          "first_pcm_ms": "305"
+        },
+        "room_matches": false
+      },
+      {
+        "after_input_end_ms": 12694.48,
+        "tags": [
+          "tts dispatch end",
+          "prewarm"
+        ],
+        "fields": {
+          "turn_id": "1",
+          "elapsed_ms": "5964",
+          "prewarm_wait_ms": "0",
+          "stage": "provider"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 12976.17,
+        "tags": [
+          "tts provider first PCM observed"
+        ],
+        "fields": {
+          "turn_id": "1",
+          "provider_ttfb_ms": "281",
+          "connect_ms": "0",
+          "used_warm": "true"
+        },
+        "room_matches": true
+      },
+      {
+        "after_input_end_ms": 15653.41,
+        "tags": [
+          "prewarm"
+        ],
+        "fields": {
+          "prewarm_wait_ms": "0",
+          "provider_ttfb_ms": "281",
+          "first_pcm_ms": "281"
+        },
+        "room_matches": false
+      },
+      {
+        "after_input_end_ms": 15653.41,
+        "tags": [
+          "tts dispatch end",
+          "prewarm"
+        ],
+        "fields": {
+          "turn_id": "1",
+          "elapsed_ms": "2959",
+          "prewarm_wait_ms": "0",
+          "stage": "provider"
+        },
+        "room_matches": true
+      }
+    ],
+    "synthetic_single_job_interval_only": true
   }
 }
