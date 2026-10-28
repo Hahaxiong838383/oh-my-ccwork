@@ -23,6 +23,7 @@ const policy = {
   audit:{issues:[{severity:'warning',code:'partial_overlap',message:'合成规则部分条件重叠',rules:[1,2]}],counts:{error:0,warning:1,info:0}},
   publication:{state:'unverified',verified_at:null},fallbacks:[{tag:'backup-fixture',protocol:'vless'}]
 };
+policy.chatgpt_route={enabled:false,outbound:null,domains:['domain:chatgpt.com'],rule_indices:[],outbounds:[{tag:'us-fixture',protocol:'vless'}]};
 const config = {
   nodes:[],inbounds:[{tag:'socks',protocol:'mixed',listen:'127.0.0.1',port:10808}],
   routes:[
@@ -85,6 +86,13 @@ const config = {
           if(!group||group.protected){unexpected.push('protected or unknown group applied');return route.fulfill({status:422,json:{error:'fixture_protected'}});}
           group.enabled=plan.request.enabled;group.fallback=group.enabled?null:plan.request.fallback;
           config.routes[1]={...config.routes[1],outboundTag:group.enabled?'':group.fallback,balancerTag:group.enabled?group.tag:''};
+        }
+        if(plan.request.action==='domain_route'){
+          policy.chatgpt_route.enabled=plan.request.enabled;
+          policy.chatgpt_route.outbound=plan.request.enabled?plan.request.outbound:null;
+          policy.chatgpt_route.rule_indices=plan.request.enabled?[2]:[];
+          if(plan.request.enabled)config.routes[2]={outboundTag:plan.request.outbound,balancerTag:'',domains:['domain:chatgpt.com'],ips:[],inboundTags:[],sources:[]};
+          else config.routes.splice(2,1);
         }
         policy.revision='revision-'+(++nextRevision);policy.publication={state:'applied',verified_at:Date.now()/1000};
         return route.fulfill({json:{success:true,state:'applied',message:'合成发布已验证',applied_at:Date.now()/1000,revision:policy.revision}});
@@ -166,7 +174,31 @@ const config = {
     policy.revision='external-fixture-revision';await page.evaluate(()=>loadRoutingPolicy());
     assert.equal(await page.locator('#routingApplyBtn').isDisabled(),true);assert.match(await page.locator('#routingPreviewValidity').innerText(),/配置已变化/);
     assert.equal(countApply(),2);assert.equal(await page.locator('[data-config-write]:not([disabled])').count(),0);
+    await closePreview();
+    assert.match(await page.locator('#managedCard').innerText(),/cf-lisa 受管组实际出口/);
+    assert.match(await page.locator('#chatgptRouteStatus').innerText(),/未配置/);
+    assert.equal(await page.locator('#chatgptDisablePreviewBtn').isDisabled(),true);
+    const domainStart=posts.length;await page.locator('#chatgptEnablePreviewBtn').click();
+    assert.equal(posts.length,domainStart);
+    await page.locator('#chatgptOutbound').selectOption('us-fixture');
+    await page.locator('#chatgptEnablePreviewBtn').click();await page.locator('#routingPreviewModal.show').waitFor();await waitSettled();
+    assert.deepEqual(posts.at(-1).body,{action:'domain_route',enabled:true,outbound:'us-fixture'});
+    assert.equal(countApply(),2);assert.match(await page.locator('#chatgptRouteStatus').innerText(),/未配置/);
+    await page.locator('#routingApplyBtn').click();await waitSettled();
+    assert.equal(countApply(),3);assert.match(await page.locator('#chatgptRouteStatus').innerText(),/已配置.*us-fixture/);
+    assert.match(await page.locator('#chatgptRouteStatus').innerText(),/不代表.*实际/);
+    assert.doesNotMatch(await page.locator('#chatgptRouteStatus').innerText(),/DMIT|实时正常|已连通/);
+    assert.match(await page.locator('#routeList').innerText(),/us-fixture/);
+    await page.locator('#chatgptDisablePreviewBtn').click();await page.locator('#routingPreviewModal.show').waitFor();await waitSettled();
+    assert.deepEqual(posts.at(-1).body,{action:'domain_route',enabled:false});assert.equal(countApply(),3);
+    await page.locator('#routingApplyBtn').click();await waitSettled();
+    assert.equal(countApply(),4);assert.match(await page.locator('#chatgptRouteStatus').innerText(),/未配置/);
+    delete policy.chatgpt_route;await page.evaluate(()=>loadRoutingPolicy());
+    assert.match(await page.locator('#chatgptRouteStatus').innerText(),/未确认/);
+    assert.equal(await page.locator('#chatgptEnablePreviewBtn').isDisabled(),true);
+    assert.equal(await page.locator('#chatgptDisablePreviewBtn').isDisabled(),true);
+    assert.equal(await page.locator('[data-config-write]:not([disabled])').count(),0);
     assert.deepEqual(unexpected,[]);assert.deepEqual(errors,[]);
-    console.log('PASS: Chromium click flow preserves protected routing, ignores pre-publication responses, locks through delayed refreshes, clears failed lists and recovers on retry; two fixture-only applies, zero unexpected writes/page errors');
+    console.log('PASS: Chromium group and ChatGPT routing previews/apply/revert preserve protected routing, reject stale responses and distinguish configuration from runtime; four fixture-only applies, zero unexpected writes/page errors');
   } finally {await browser.close();}
 })().catch(error=>{console.error(error);process.exitCode=1;});

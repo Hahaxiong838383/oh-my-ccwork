@@ -1,0 +1,164 @@
+{
+  "schema_version": 1,
+  "scope": "Air managed ChatGPT domain route publication and read-only manager UI verification",
+  "recorded_at": "2026-10-28T17:01:01+08:00",
+  "publication": {
+    "state": "applied",
+    "applied_at": "2026-10-28T16:49:51+08:00",
+    "preview_id": "VHCT6Ge2s8wRDnlMZCOoljkBbGPLtmyQ",
+    "revision": "750acc2b4c86bd69204de5f2c0f3ae7ab6aaffcd452764e4df2b954bffc30240",
+    "rules_before": 26,
+    "rules_after": 27,
+    "inserted_rule_index_zero_based": 3,
+    "domains": [
+      "domain:chatgpt.com"
+    ],
+    "outbound_tag": "Gemini专用-US2-VLESS-Reality-IP",
+    "original_rules_content_and_relative_order_preserved": true,
+    "protected_rule_indices_zero_based": [
+      0,
+      1,
+      2
+    ],
+    "controller_guard_synchronized": true,
+    "processes_after": {
+      "manager": 60409,
+      "main_xray": 60542,
+      "controller": 60550,
+      "grok": 76341
+    },
+    "grok_preserved": true,
+    "manager_deployment_and_main_routing_restart_are_separate_steps": true
+  },
+  "independent_read_only_verification": {
+    "checked_at": "2026-10-28T16:52:36+08:00",
+    "checks_passed": 21,
+    "original_config_exact_after_removing_own_rule": true,
+    "protected_indices_unchanged": true,
+    "byte_and_semantic_guard_valid": true,
+    "metadata_candidate_plan_dependencies_and_journal_consistent": true,
+    "pure_undo_restores_config_and_metadata": true,
+    "production_undo_executed": false,
+    "processes_match_journal": true,
+    "cf_lisa_actual_route": "zgo",
+    "controller_fresh_seconds": 9.1,
+    "controller_health": "healthy",
+    "all_three_probes_http": [
+      "204",
+      "401"
+    ],
+    "pin": "auto",
+    "geosite_pending_preserved": true,
+    "private_receipt_sha256": "8d4c10ebb5aafb60ca6ca1b5acabc9ade2188a2ef4bf448d607557ef04abc8d9"
+  },
+  "browser_fixture": {
+    "result": "passed",
+    "production_access": false,
+    "synthetic_apply_count": 4,
+    "unexpected_writes": 0,
+    "pageerrors": 0,
+    "coverage": [
+      "ordinary group preview/apply",
+      "ChatGPT enable preview/apply and removal",
+      "protected write locks",
+      "stale response rejection",
+      "configuration distinct from runtime"
+    ]
+  },
+  "live_browser": {
+    "checked_at": "2026-10-28T08:54:44.629Z",
+    "http_status": 200,
+    "revision": "750acc2b4c86bd69204de5f2c0f3ae7ab6aaffcd452764e4df2b954bffc30240",
+    "publication_state": "applied",
+    "rendered_rules": 27,
+    "chatgpt_config_text": "已配置：Gemini专用-US2-VLESS-Reality-IP；不代表当前实际流量出口。",
+    "chatgpt_scope_text": "固定范围：domain:chatgpt.com",
+    "cf_lisa_scope_label": "cf-lisa 受管组实际出口",
+    "cf_lisa_runtime_text": "ZGO（本次读取 Xray 运行态）",
+    "managed_health_text": "最近一轮服务探测正常",
+    "normalizer_disabled": true,
+    "legacy_write_controls": 126,
+    "legacy_write_controls_enabled": 0,
+    "protected_toggles": 1,
+    "protected_toggles_enabled": 0,
+    "ordinary_toggles": 1,
+    "ordinary_toggles_enabled": 1,
+    "easytier_tabs_preserved": [
+      "EasyTier 组网",
+      "EasyTier 组网速查"
+    ],
+    "easytier_functionality_verified": false,
+    "blocked_read_paths": [
+      "/api/easytier/status"
+    ],
+    "pageerrors": 0,
+    "attempted_write_requests": 0,
+    "production_write_requests": 0,
+    "ssh_forward_closed": true,
+    "private_receipt_sha256": "33e62b695eb01ff2c66e5dcbe447601a68ff7c0b28edc7f6b6be1dce6a804292"
+  },
+  "offline_validation": {
+    "python_checks_passed": 196,
+    "javascript_checks_passed": 56,
+    "publisher_targeted_checks_after_message_change": 36
+  },
+  "source_snapshot": {
+    "scope": "repository files at record time; runtime hash equality is not asserted",
+    "files": {
+      "xray-manager.py": {
+        "sha256": "0d8cd075e695c976e35e108804869e6cedb9ff73db0cd9f9bf49bb081368a360",
+        "bytes": 131448
+      },
+      "managed_status.py": {
+        "sha256": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+        "bytes": 14831
+      },
+      "routing_policy.py": {
+        "sha256": "5cb8717bb7cc77006417a892588a28d6eb7d968f5b46726df871381b9bb0307f",
+        "bytes": 26539
+      },
+      "routing_publish.py": {
+        "sha256": "78135c8732c36ae8a36a0576a93c650bfe640d4382f96ad466b5fec5a235afe2",
+        "bytes": 39822
+      }
+    }
+  },
+  "limits": [
+    "Final default-startup App dot UI observation is pending; network, history and manager UI evidence are recorded separately.",
+    "cf-lisa runtime override is group-specific; ChatGPT outbound shown by this UI is disk configuration.",
+    "Selectable node tags do not prove geography, independent egress, or service health.",
+    "Pure undo and fixture apply were not production failure or rollback drills.",
+    "No long-session or long-term stability claim is made."
+  ],
+  "runtime_source_verification": {
+    "checked_at": "2026-10-28T17:03:22+08:00",
+    "deployed_at": "2026-10-28T16:49:09+08:00",
+    "files_sha256": {
+      "xray-manager.py": "0d8cd075e695c976e35e108804869e6cedb9ff73db0cd9f9bf49bb081368a360",
+      "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+      "routing_policy.py": "5cb8717bb7cc77006417a892588a28d6eb7d968f5b46726df871381b9bb0307f",
+      "routing_publish.py": "78135c8732c36ae8a36a0576a93c650bfe640d4382f96ad466b5fec5a235afe2"
+    },
+    "all_four_match_repository": true,
+    "config_sha256": "34a89827f82d67141cfe1880867a7867290b1faca57cc765c9cefaf1374dd100"
+  },
+  "temporary_listener_cleanup": {
+    "checked_at": "2026-10-28T17:00:18+08:00",
+    "temporary_listener_port": 10848,
+    "temporary_listener_closed": true,
+    "owned_processes_exited": true,
+    "lease_and_credential_directory_removed": true,
+    "app_pid": 60839,
+    "app_without_temporary_proxy_argument": true,
+    "app_network_connections_to_default_10808": 16,
+    "app_network_connections_to_temporary_10848": 0,
+    "production_processes_and_config_unchanged_during_cleanup": true
+  },
+  "final_app_ui": {
+    "status": "awaiting_user_observation",
+    "ax_windows_returns_application_itself": true,
+    "ax_temporary_setting_restored": true,
+    "initial_independent_egress_dot_user_confirmed_at": "2026-10-28T16:13:00+08:00",
+    "initial_dot_confirmation_is_not_final_default_startup_verification": true
+  }
+}

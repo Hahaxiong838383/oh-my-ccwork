@@ -44,6 +44,11 @@ class PolicyDouble:
                  'protected': False, 'rule_indices': [3], 'fallback': None,
                  'nodeTags': ['proxy-a'], 'strategy': 'random'}]
 
+    @staticmethod
+    def chatgpt_route_state(config, metadata=None):
+        return {'enabled': False, 'outbound': None, 'domains': ['domain:chatgpt.com'],
+                'rule_indices': [], 'outbounds': [{'tag': 'proxy-a', 'protocol': 'socks'}]}
+
     @classmethod
     def plan_change(cls, config, metadata, request):
         if request.get('tag') == 'cf-lisa':
@@ -433,6 +438,45 @@ class RoutingPublisherTests(unittest.TestCase):
             restored = self.publisher.apply(self.publisher.preview(request)['preview_id'])
             self.assertTrue(restored['success'])
             self.assertEqual(json.loads((self.home / 'config.json').read_text()), self.config)
+
+    def test_status_exposes_domain_configuration_without_claiming_live_health(self):
+        with patch.object(rp, 'policy', importlib.import_module('routing_policy')):
+            status = self.publisher.status()
+            self.assertIn('chatgpt_route', status)
+            self.assertFalse(status['chatgpt_route']['enabled'])
+            self.assertEqual(status['chatgpt_route']['domains'], ['domain:chatgpt.com'])
+            self.assertNotIn('healthy', status['chatgpt_route'])
+
+    def test_domain_route_publication_and_removal_restore_original_rules(self):
+        with patch.object(rp, 'policy', importlib.import_module('routing_policy')):
+            request = {'action': 'domain_route', 'enabled': True, 'outbound': 'proxy-a'}
+            preview = self.publisher.preview(request)
+            self.assertEqual(json.loads((self.home / 'config.json').read_text()), self.config)
+            result = self.publisher.apply(preview['preview_id'])
+            self.assertTrue(result['success'])
+            status = self.publisher.status()
+            self.assertIn('chatgpt_route', status)
+            self.assertEqual(status['chatgpt_route']['outbound'], 'proxy-a')
+            self.assertTrue(status['chatgpt_route']['enabled'])
+            changed = json.loads((self.home / 'config.json').read_text())
+            self.assertEqual(changed['routing']['rules'][:3], self.config['routing']['rules'][:3])
+            self.assertEqual(changed['outbounds'], self.config['outbounds'])
+            undo = self.publisher.preview({'action': 'domain_route', 'enabled': False})
+            self.assertTrue(self.publisher.apply(undo['preview_id'])['success'])
+            self.assertEqual(json.loads((self.home / 'config.json').read_text()), self.config)
+            self.assertFalse(self.publisher.status()['chatgpt_route']['enabled'])
+            self.assertEqual(self.fake.services['com.mycc.grok-bot.proxy'], 300)
+
+    def test_domain_route_failed_restart_rolls_back_config_guard_and_metadata(self):
+        with patch.object(rp, 'policy', importlib.import_module('routing_policy')):
+            original = self.originals()
+            preview = self.publisher.preview({'action': 'domain_route', 'enabled': True, 'outbound': 'proxy-a'})
+            self.fake.fail_restart = 1
+            result = self.publisher.apply(preview['preview_id'])
+            self.assertEqual(result['state'], 'rolled_back')
+            self.assert_originals(original)
+            self.assertFalse((self.home / 'routing-policy.json').exists())
+            self.assertFalse(self.publisher.status()['chatgpt_route']['enabled'])
 
     def test_corrupt_active_journal_shows_recovery_required_not_unverified(self):
         self.preview()

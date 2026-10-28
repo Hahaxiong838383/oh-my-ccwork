@@ -8,7 +8,7 @@
 |---|---|---|
 | `~/xray/config.json` 中 `cf-lisa` 的 selector/fallback 为 `cf-block` | 没有运行时覆盖时的静态默认值 | 当前出站；先读 RoutingService `bi` |
 | `~/xray/company-lisa-failover/controller.json` 与控制器 state | 受管范围、探针、控制器最后一次决策 | 实时引擎状态；核更新时间、进程启动时间及 `stale` |
-| `bi` 的 Selecting Override + 同期目标域名 access.log | 实际覆盖与该请求选用的出站 | 业务响应、完整流结束与界面可用 |
+| `bi` 的 Selecting Override + 同期目标域名 access.log | 前者只证明 cf-lisa 组覆盖，后者证明该请求出站 | 定向规则可能绕开该组；两者均不代替业务响应、完整流结束与界面可用 |
 | HTTP 204/401、应用日志和真实页面 | 分别证明到站、初始化与功能恢复 | 单次401不能证明完整推理或长SSE稳定 |
 
 只输出所需标签、状态码、退出码和时间；不回显整份出站配置、账号对象、Cookie或聊天内容。通用IP探针只代表该探针的路由，必须用目标请求日志核对。ChatGPT语言/功能配置拉取失败可能使界面回退英文或入口缺失；重复安装只是待验证因素，不能直接认定两个版本互相抢配置。
@@ -34,6 +34,7 @@
 
 - 维护版 `xray-manager.py` 依赖同目录 `managed_status.py`；第三阶段还依赖 `routing_policy.py`、`routing_publish.py`，相关文件一起核SHA和发布；跨平台主源码不能覆盖Air维护版。只重载manager后验证API/真实页面，不能提前把候选写成已部署。
 - `/api/managed-status`核实际`bi`、精确controller进程与45秒新鲜度，区分正常/部分可达/阻断/过期/错误/无法确认。pending单独按持久marker显示；无marker不等于已应用。过期、控制异常或未知实际出口不得沿用旧绿灯。
+- 顶部运行态明确限定为`cf-lisa`组；ChatGPT卡只报告磁盘定向配置。目标节点的名字、静态可选列表、组探针通过都不能冒充ChatGPT实际请求成功或美国出口实测。
 - 第二阶段的普通配置写入口在受管或状态未知时锁定，后端409仍须兜底。后续只有经过下述预览/协调发布的专用入口可以产生规则变更，不能放开原独立写接口。路由列表显示balancer/inbound限制。TCP测试只证明端点连接，不能替代业务请求。
 - 实测`bi`标题是`  - Selecting Override:`，后面另有`  - Selects:`静态候选段；测试必须保留真实缩进/前缀，覆盖CRLF、空override和重复标题，不能把Selects当实际覆盖。只有手造无前缀fixture通过仍可能线上全报格式错误。
 
@@ -55,6 +56,14 @@ Air于12:58:33部署，12:59:28真实页面应用29→26条整理，13:00:44独�
 
 安装版26.3.27的`adrules` replace先清rules/balancers再重建，失败不具备原子回退且会重置override；append又在catch-all之后。不能用它省掉协调发布和重启验收，也不能因CLI支持动态API就推断安全启停均衡组。
 
+### ChatGPT 受管定向（2026-10-28）
+
+- 固定范围仅`domain:chatgpt.com`，包含其子域。`domain_route`只接受启用/撤销及既有合格代理tag，不能注入任意域名、整份配置、直连、受管出口或有代理依赖的节点。合格列表仅是静态约束；地域、独立性和业务可用须另测。
+- 规则置于控制/API/探针之后、所有可能抢先匹配的普通规则之前；控制规则及索引完全不变。保留原26条规则，自有ruleTag和私有元数据记录位置、原规则摘要、目标节点摘要及控制规则摘要。撤销只删精确自有规则；外来漂移拒绝覆盖。
+- 有定向规则时禁止normalize，避免清掉被它遮蔽的原规则而破坏撤销语义。普通组toggle可共存并更新获准变更后的摘要；有停用组记录时禁止定向规则增删，允许原位换目标。
+- 必须复用preview/apply、guard和发布journal，不能手改生产config或控制器哈希。发布成功只包含主服务及cf-lisa探针验证；另用默认App启动、真实目标出站、主窗口日志、中文和dot功能验收定向效果。
+- 本次选用经独立探测的US2 VLESS节点，属于固定单节点定向，**没有自动故障转移**。若后续失效，先预览换到经实测的候选或撤销定向；不自动转直连，也不把三条共享Lisa末段的入口当三个独立出口。
+
 ## 规则资产更新与日志轮转
 
 - 受管安装的rule-updater只更新磁盘geo资产，不发送SIGHUP、不自动重启Xray；保留 `rule-updater.pending.json`，状态为 `pending_until_verified`，区别“下载/写盘成功”和“已被运行实例加载”。
@@ -74,13 +83,33 @@ Skill有设备间差异时，只追加本任务入口和独立reference；薄 `.
 
 先分开“新版首次初始化失败”和“升级覆盖设置”。当日唯一现役26.1023.50603(22391)签名正常、语言仍zh-CN、旧Codex仍隔离；失败进程Statsig bootstrap六次超时，随后持续features_unavailable。新版enable_i18n缺省false，dot导航检查orbit.navigation能力，两者可随同一次功能配置失败一起退回。昨日没有改包/强开flag，不能解释成补丁被更新覆盖。
 
-此时先核当前代理和同期请求日志：当日没有切block，ZGO曾单轮抖动；网络后来健康不能倒推旧进程初始化成功，也不能把远程SSH初始化的connect timeout误作OpenAI失败。两轮当前路径失败有健康候选时会绕过hold切换，不为App恢复缺口盲降全局防抖阈值。
+此时先核当前代理和同期请求日志：22391那轮没有切block，ZGO曾单轮抖动；同日随后22530手动升级复发时三路各20轮小探针全通过，不能把短时抖动当复发通因。网络后来健康不能倒推旧进程初始化成功，也不能把远程SSH初始化的connect timeout误作OpenAI失败。两轮当前路径失败有健康候选时会绕过hold切换，不为App恢复缺口盲降全局防抖阈值。
 
-确认网络健康后，备份必要配置/偏好，正常退出并按完整路径重开一次，保登录态/自动更新/官方签名；不清用户缓存、不强开能力、不安装无限自动重启守护。必须核新PID的statsig-layer、插件加载和dot history成功，并实际验证中文设置、语言选项、dot页面与启用的输入框；单次未认证401/405不足以证明恢复。
+确认初始化失败后，备份必要配置/偏好，可正常退出并按完整路径重开一次，保登录态/自动更新/官方签名；常规首轮不清缓存，用户授权重装时按下文可逆隔离，不强开能力、不安装无限自动重启守护。`source=statsig-layer`也会来自备用SDK，不是成功门槛。必须关联现役PID与primary窗口，再验实际中文设置、语言选项、dot页面、启用输入框及history结果；单次未认证401/405不足以证明恢复。菜单实际有“新建窗口”时可重建root，最后主窗口点红叉通常只是隐藏；prod未开放的Reload Window快捷键不能照抄。
 
 入口可能为“你的 Dot”“你的 dot”或用户昵称，不能只匹配exact dot。Electron AX窗口为空时先核AXEnhancedUserInterface；临时开启后恢复原值，不改系统安全权限。App重开会同步部分运行字段，比较具体键，不把配置摘要变化直接当成用户偏好丢失。
 
-主bootstrap重试耗尽后的自动恢复不足仍需上游修复；正常重开恢复不代表已永久消除此类复发。详见仓内`2-Projects/xray-manager/maintenance-20261027/ChatGPT升级后初始化恢复-20261028.md`。
+若CGWindowList显示真实主窗，但AXWindows元素等于应用自身，属于辅助功能树异常，不证明App没有窗口或dot。遍历按元素去重并设上限；不能把菜单中文、历史成功或旧进程的dot验收拼成当前完整UI证据。恢复临时AX属性并请用户补充实际观察，不为截屏修改安全权限。
+
+主bootstrap重试耗尽后的自动恢复不足仍需上游修复；正常重开恢复不代表已永久消除此类复发。22391历史验收见仓内`2-Projects/xray-manager/maintenance-20261027/ChatGPT升级后初始化恢复-20261028.md`；22530复发的最新分层证据见同目录`ChatGPT手动升级复发与初始化超时-20261028.md`。
+
+#### 官方服务的custom别名也会影响功能判断
+
+22530能力源码在服务门控开启且能力要求`requiresFirstPartyInference`时，严格比较local配置的`model_provider`是否为`openai`；dot的`orbit.navigation`命中这一要求。`custom.name=OpenAI`、`requires_openai_auth=true`、无base_url都不能替代规范ID；配置未变化也不能排除新版兼容问题。排查时同时看认证、提供方ID和主bootstrap，不把其中一个当全部原因。
+
+可先用官方CLI的`--ignore-user-config --ephemeral`在空目录、禁工具条件下发极短测试，保原登录但不发用户业务内容。需要修正时备份后仅切顶层`model_provider=openai`，保旧custom表作回退，验真实dot页面；不要复制`[model_providers.openai]`冒充等效覆盖，官方内置传输行为可能与原`supports_websockets=false`不同。未取得主窗口成功初始化前，不能用失败现场宣布provider A/B成功或无效，也不强开服务flag。
+
+干净重装要从同产品正式feed拿full包、验Sparkle/代码签名/Gatekeeper，防旧Downloads安装包或Classic混用。应用数据含worktrees/产物/浏览器Partitions，按实际白名单可逆隔离状态而非删除整个目录；共享`~/.codex`、SSH和Keychain保留，后续确有配置证据再单键修改。只清本bundle的LaunchServices旧登记。重装成功与功能恢复分别验收。
+
+#### 收到HTTP200仍超时：22530的新增判据
+
+- 本版bootstrap走Electron `net.fetch`，不是Node fetch，也没有走DeviceCheck附加认证。外层硬编码10秒包括RPC、认证、请求、读body和返回；未找到受支持的配置可调大。不要把这个超时直接当作TCP连接超时。
+- 临时debug的 `Fetch timing stream-open/200`只证明响应头；按requestId关联 `completed` 与body计数。现场auth0–2ms却多次读取部分body后被10秒取消。metrics缺失时的默认hasToken=false不证明token缺失；本地取消记录499不等于上游返回499。
+- bodyBytes可能是解压后字节，不等于公网传输量。三路7.39MB静态CDN完整下载通过，只是旁证，不能代替登录态bootstrap；也不能凭它调整全局选路或宣布Xray无责。
+- 同PID包含primary/detached/avatarOverlay多个root。隐藏overlay曾完整读取7.39MB，但primary仍六次失败；不能跨窗口拼接成功证据。`statsig-state.json`只存stable ID，主bootstrap成功写内存不代表跨重启持久缓存。
+- `open --env CODEX_MAX_LOG_LEVEL=debug`仅临时用于定位。完整debug日志会合并敏感字段，私有保存并设0600；只输出白名单计时与规范化目标，结束正常重开恢复info并核实际参数。原始日志、token、headers、body不入Git。
+- App级临时`--proxy-server`对照要核NetworkService连接与access实际入口；保留旧代理env的appserver可能同时走其他出口。没有请求级证据时不强行归属每次bootstrap。测试后移除临时参数，不将专用探测入口变成永久绕开自动策略的配置。
+- 临时代理的到期清理必须先完成接管：保留当前正常入口到正式路由和默认App启动均验收，再按完整命令、启动时间与父子关系停止精确实例。租约必须能被运行监护动态读回，提前续期；不能只改磁盘截止时间便假定旧监护会续期。临时入口收回与正式受管定向是两件事。
 
 至少覆盖：误判样本回归、重启期间override变化、guard前后漂移、pending不误清、拒绝修改不触发重启、精确服务操作、日志继续写入，以及生产部署后带时间的状态/页面读回。真实页面应显示受管状态、实际出口、状态新鲜度和待应用资源；快照不能冒充实时值。
 

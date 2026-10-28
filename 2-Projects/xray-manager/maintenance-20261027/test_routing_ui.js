@@ -14,6 +14,7 @@ const groups=[{tag:'cf-lisa',enabled:true,protected:true,rule_indices:[3],nodeTa
  {tag:'fixture',enabled:true,protected:false,rule_indices:[4,8],nodeTags:['backup'],strategy:'leastPing'},
  {tag:'disabled',enabled:false,protected:false,rule_indices:[5],fallback:'backup',nodeTags:['backup'],strategy:'leastPing'}];
 const policy={schema_version:1,revision:'baseline',groups,audit:{issues:[{severity:'warning',code:'overlap',message:'部分条件重叠',rules:[4,8]}]},publication:{state:'unverified'},fallbacks:[{tag:'backup',protocol:'vless'}]};
+policy.chatgpt_route={enabled:false,outbound:null,domains:['domain:chatgpt.com'],rule_indices:[],outbounds:[{tag:'us-fixture',protocol:'vless'}]};
 const config={inbounds:[],nodes:[],routes:[],balancers:groups.map(g=>({...g,domains:[],ips:[],probeInterval:'60s'}))};
 function preview(extra={}){return {success:true,preview_id:'server-preview',revision:'baseline',expires_at:clock/1000+60,changes:[{kind:'toggle',rule:4,message:'保留条件，改为显式备用'}],audit:{issues:[]},can_apply:true,requires_restart:true,...extra};}
 function health(age=0){return {schema_version:1,managed:true,overall:{status:'healthy'},controller:{process:'running',state_status:'OK',fresh:true,age_seconds:age},routing:{effective_route:'dmit',override:'dmit',static_default:'block'},routes:[],pin:{active:false},updater:{pending:false}};}
@@ -23,6 +24,20 @@ let checks=0;function ok(name,fn){fn();checks++;console.log('PASS '+name);}
 (async()=>{
  installRequest(standard);await run('loadRoutingPolicy()');
  ok('audit keeps rule positions and separates publication evidence',()=>{assert.match(el('routingAuditList').innerHTML,/规则 5、9/);assert.match(el('routingPublicationText').textContent,/运行状态未确认/);});
+ ok('ChatGPT status describes configuration without claiming active traffic',()=>{assert.match(el('chatgptRouteStatus').textContent,/未配置/);assert.match(el('chatgptRouteScope').textContent,/chatgpt.com/);assert.equal(el('chatgptDisablePreviewBtn').disabled,true);});
+ calls=[];await run('previewChatgptRoute(true)');ok('ChatGPT requires a server-approved explicit outbound',()=>assert.equal(calls.length,0));
+ el('chatgptOutbound').value='cf-block';await run('previewChatgptRoute(true)');ok('ChatGPT cannot borrow a group fallback or arbitrary node',()=>assert.equal(calls.length,0));
+ el('chatgptOutbound').value='us-fixture';await run('previewChatgptRoute(true)');
+ ok('ChatGPT enable sends only fixed-action target and remains preview-only',()=>{assert.deepEqual(JSON.parse(JSON.stringify(calls[0][2])),{action:'domain_route',enabled:true,outbound:'us-fixture'});assert(!calls.some(x=>x[0].endsWith('/apply')));});
+ policy.chatgpt_route.enabled=true;policy.chatgpt_route.outbound='us-fixture';policy.chatgpt_route.rule_indices=[4];await run('loadRoutingPolicy()');
+ ok('ChatGPT configured target does not inherit cf-lisa runtime or publication green',()=>{assert.match(el('chatgptRouteStatus').textContent,/已配置.*us-fixture/);assert.match(el('chatgptRouteStatus').textContent,/不代表.*实际/);assert.doesNotMatch(el('chatgptRouteStatus').textContent,/DMIT|实时正常|已连通/);});
+ policy.chatgpt_route.outbounds.push({tag:'other-fixture',protocol:'vless'});el('chatgptOutbound').value='other-fixture';await run('loadRoutingPolicy()');
+ ok('periodic status refresh preserves an unsubmitted target selection',()=>assert.equal(el('chatgptOutbound').value,'other-fixture'));
+ calls=[];await run('previewNormalize()');ok('active ChatGPT route pauses normalization without blocking ordinary group preview',()=>{assert(el('normalizePreviewBtn').disabled);assert.equal(calls.length,0);run('showGroupToggle(1)');assert.equal(run('routingToggle.tag'),'fixture');assert.equal(el('groupPreviewBtn').disabled,false);});
+ calls=[];await run('previewChatgptRoute(false)');ok('ChatGPT removal uses saved server state without client rules',()=>assert.deepEqual(JSON.parse(JSON.stringify(calls[0][2])),{action:'domain_route',enabled:false}));
+ delete policy.chatgpt_route;await run('loadRoutingPolicy()');calls=[];await run('previewChatgptRoute(true)');
+ ok('missing ChatGPT schema clears stale target and locks both actions',()=>{assert.match(el('chatgptRouteStatus').textContent,/未确认/);assert.doesNotMatch(el('chatgptRouteStatus').textContent,/us-fixture/);assert(el('chatgptEnablePreviewBtn').disabled);assert(el('chatgptDisablePreviewBtn').disabled);assert.equal(calls.length,0);});
+ policy.chatgpt_route={enabled:false,outbound:null,domains:['domain:chatgpt.com'],rule_indices:[],outbounds:[{tag:'us-fixture',protocol:'vless'}]};await run('loadRoutingPolicy()');
  sandbox.configFixture=config;run('currentConfig=configFixture;renderBalancerList(configFixture.balancers)');
  ok('protected group has no ordinary toggle and disabled group retains definition',()=>{assert(el('balancerList').innerHTML.includes('受保护'));assert(el('balancerList').innerHTML.includes('已配置：停用'));assert(el('balancerList').innerHTML.includes('显式备用：backup'));});
  run('routingToggle=null;showGroupToggle(0)');ok('cf-lisa cannot open generic toggle',()=>assert.equal(run('routingToggle'),null));
@@ -36,7 +51,7 @@ let checks=0;function ok(name,fn){fn();checks++;console.log('PASS '+name);}
  calls=[];clock+=61000;await run('applyRoutingPreview()');ok('expired preview cannot apply',()=>assert.equal(calls.length,0));
  installRequest(p=>p.endsWith('/preview')?preview({can_apply:false}):standard(p));await run('previewNormalize()');calls=[];await run('applyRoutingPreview()');ok('blocked preview cannot apply',()=>assert.equal(calls.length,0));
  installRequest(standard);run('showGroupToggle(2)');calls=[];await run('previewGroupToggle()');ok('enable restores stored rules without inventing fallback',()=>assert.deepEqual(JSON.parse(JSON.stringify(calls[0][2])),{action:'toggle',tag:'disabled',enabled:true}));
- installRequest(()=>{throw Error('status unavailable');});await run('loadRoutingPolicy()');ok('status failure locks controlled preview',()=>{assert(el('normalizePreviewBtn').disabled);assert.match(el('routingPublicationText').textContent,/未确认/);});
+ installRequest(()=>{throw Error('status unavailable');});await run('loadRoutingPolicy()');ok('status failure locks controlled preview and any prior apply',()=>{assert(el('normalizePreviewBtn').disabled);assert(el('routingApplyBtn').disabled);assert.match(el('routingPublicationText').textContent,/未确认/);assert.match(el('chatgptRouteStatus').textContent,/未确认/);});
  sandbox.h=health(40);run('managedLastReadAt=Date.now();renderManagedStatus(h)');clock+=6000;run('expireManagedStatus()');ok('sample age is not reset by a fresh HTTP read',()=>assert(!el('managedHealthDot').className.includes('on')));
  sandbox.h=health();run('renderManagedStatus(h)');installRequest(()=>({running:false}));await run('checkStatus()');ok('known stopped main process invalidates network green immediately',()=>assert(!el('managedHealthDot').className.includes('on')));
  let release;
@@ -63,11 +78,13 @@ let checks=0;function ok(name,fn){fn();checks++;console.log('PASS '+name);}
  const applyResponse=deferred(),refreshes=[];
  installRequest(p=>p==='/routing-policy/apply'?applyResponse.promise:p==='/config'?(()=>{const d=deferred();refreshes.push(d);return d.promise;})():standard(p));
  const applying=run('applyRoutingPreview()');await tick();
+ const policyReads=calls.filter(x=>x[0]==='/routing-policy').length;await run('loadRoutingPolicy()');
+ ok('periodic policy read cannot repaint an in-progress publication',()=>{assert.equal(calls.filter(x=>x[0]==='/routing-policy').length,policyReads);assert.match(el('chatgptRouteStatus').textContent,/正在发布/);});
  for(const d of beforeApply)d.resolve(marked('before-publish-config'));await Promise.all(staleReads);
  ok('all pre-publish responses are ignored while apply is pending',()=>{for(const id of ['nodeList','routeList','balancerList'])assert.doesNotMatch(el(id).innerHTML,/before-publish-config/);});
  applyResponse.resolve({success:true,state:'applied',message:'fixture applied'});await tick();
  assert.equal(refreshes.length,3);
- ok('routing controls remain locked until every config list finishes refreshing',()=>{assert.equal(run('routingBusy'),true);assert.equal(el('normalizePreviewBtn').disabled,true);});
+ ok('routing controls remain locked until every config list finishes refreshing',()=>{assert.equal(run('routingBusy'),true);assert.equal(el('normalizePreviewBtn').disabled,true);assert(el('chatgptOutbound').disabled);assert(el('chatgptEnablePreviewBtn').disabled);assert(el('chatgptDisablePreviewBtn').disabled);});
  refreshes[0].resolve(marked('after-publish-config'));refreshes[1].resolve(marked('after-publish-config'));await tick();
  ok('the last unfinished list still keeps routing controls locked',()=>assert.equal(run('routingBusy'),true));
  refreshes[2].resolve(marked('after-publish-config'));await applying;

@@ -883,14 +883,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     </div>
     <div class="card-body">
       <div class="status" style="margin-bottom:14px;"><span class="dot unknown" id="managedHealthDot"></span><strong id="managedHealthText">正在读取状态…</strong></div>
-      <div class="managed-row"><span>当前实际出口</span><span id="managedRouteText">未确认</span></div>
+      <div class="managed-row"><span>cf-lisa 受管组实际出口</span><span id="managedRouteText">未确认</span></div>
+      <div class="managed-row"><span>ChatGPT 定向配置</span><span id="chatgptRouteSummary">未确认</span></div>
       <div class="managed-row"><span>静态启动默认</span><span id="managedDefaultText">未确认</span></div>
       <div class="managed-row"><span>控制器</span><span id="managedControllerText">未确认</span></div>
       <div class="managed-row"><span>手动固定</span><span id="managedPinText">未确认</span></div>
       <div class="managed-row"><span>规则资源</span><span id="managedUpdaterText">未确认</span></div>
       <div class="managed-probes" id="managedProbeList"></div>
       <p class="managed-note" id="managedModeText">正在检查配置管理方式，编辑暂不可用。</p>
-      <p class="managed-note">探测只代表最近一轮目标连通情况；HTTP 401 不代表账号或长对话可用。重启或停止主代理会中断现有连接。</p>
+      <p class="managed-note">上方实际出口与探测仅属于 cf-lisa 受管组，不代表所有应用选路。HTTP 401 不代表账号或长对话可用。重启或停止主代理会中断现有连接。</p>
     </div>
   </div>
   <div id="portInfo" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;"></div>
@@ -919,6 +920,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 
   <!-- 路由规则 -->
   <div class="tab-content" id="tab-routes">
+    <div class="card">
+      <div class="card-header"><h2>ChatGPT 定向路由</h2></div>
+      <div class="card-body">
+        <p id="chatgptRouteStatus">配置状态未确认。</p>
+        <p class="managed-note" id="chatgptRouteScope">正在读取固定域名范围…</p>
+        <div class="form-group" style="margin-top:12px;"><label for="chatgptOutbound">可选代理节点</label><select id="chatgptOutbound" disabled><option value="">正在读取可选节点</option></select></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn primary" id="chatgptEnablePreviewBtn" disabled onclick="previewChatgptRoute(true)">预览启用 / 更换出口</button><button class="btn" id="chatgptDisablePreviewBtn" disabled onclick="previewChatgptRoute(false)">预览撤销定向</button></div>
+        <p class="managed-note" style="margin-top:12px;">此处显示磁盘配置；可选节点不代表已验证的独立出口。实际选路须核对目标连接日志，再验收 App 的初始化与功能。其他流量沿原规则；撤销恢复原规则。定向启用期间暂停规则整理；有停用组时，先恢复启用后再新增或撤销定向。</p>
+      </div>
+    </div>
     <div class="card">
       <div class="card-header"><h2>规则检查与整理</h2><button class="btn small" id="normalizePreviewBtn" disabled onclick="previewNormalize()">预览整理</button></div>
       <div class="card-body">
@@ -1768,10 +1779,31 @@ function renderRoutingIssues(audit) {
     return `<div class="route-item"><strong>${escapeHtml(severity)}</strong> · ${escapeHtml(issue.message || issue.code || '待检查')}${rules.length ? `<div class="managed-note">规则 ${rules.join('、')}</div>` : ''}${issue.balancer ? `<div class="managed-note">均衡组 ${escapeHtml(issue.balancer)}</div>` : ''}</div>`;
   }).join('');
 }
+function chatgptRouteState() {
+  const route = routingPolicyState && routingPolicyState.chatgpt_route;
+  if (!route || typeof route.enabled !== 'boolean' || !Array.isArray(route.domains) || !route.domains.length || !route.domains.every(x => typeof x === 'string') || !Array.isArray(route.outbounds) || !route.outbounds.every(x => x && typeof x.tag === 'string' && typeof x.protocol === 'string') || (route.enabled && (typeof route.outbound !== 'string' || !route.outbound))) return null;
+  return route;
+}
+function renderChatgptRoute() {
+  const route = chatgptRouteState();
+  const select = document.getElementById('chatgptOutbound');
+  const previous = select.value;
+  const message = !route ? '配置状态未确认，定向预览暂不可用。' : route.enabled ? '已配置：' + route.outbound + '；不代表当前实际流量出口。' : '未配置专用定向；按现有规则匹配。';
+  document.getElementById('chatgptRouteStatus').textContent = message;
+  document.getElementById('chatgptRouteSummary').textContent = message;
+  document.getElementById('chatgptRouteScope').textContent = route ? '固定范围：' + route.domains.join('、') : '固定域名范围未确认。';
+  select.innerHTML = '<option value="">请选择明确的定向出口</option>' + (route ? route.outbounds.map(x => `<option value="${escapeHtml(x.tag)}">${escapeHtml(x.tag)} · ${escapeHtml(x.protocol)}</option>`).join('') : '');
+  select.value = route && route.outbounds.some(x => x.tag === previous) ? previous : route && route.outbounds.some(x => x.tag === route.outbound) ? route.outbound : '';
+}
 function updateRoutingControls() {
   const locked = routingBusy || !routingPolicyState || !routingPolicyState.revision || ['applying','recovery_required'].includes((routingPolicyState.publication || {}).state);
-  document.getElementById('normalizePreviewBtn').disabled = locked;
+  const route = chatgptRouteState();
+  const directed = route && route.enabled;
+  document.getElementById('normalizePreviewBtn').disabled = locked || directed;
   document.getElementById('groupPreviewBtn').disabled = locked || !routingToggle;
+  document.getElementById('chatgptOutbound').disabled = locked || !route || !route.outbounds.length;
+  document.getElementById('chatgptEnablePreviewBtn').disabled = locked || !route || !route.outbounds.length;
+  document.getElementById('chatgptDisablePreviewBtn').disabled = locked || !route || !route.enabled;
   document.querySelectorAll('[data-policy-toggle]').forEach(button => {
     button.disabled = locked || button.dataset.protected === 'true';
   });
@@ -1781,11 +1813,13 @@ function updateRoutingPreviewValidity() {
   const expires = routingPreview ? routingTime(routingPreview.expires_at) : null;
   const expired = expires === null || Date.now() >= expires;
   const drift = routingPreview && routingPolicyState && routingPreview.revision !== routingPolicyState.revision;
-  const allowed = routingPreview && routingPreview.can_apply === true && typeof routingPreview.preview_id === 'string' && !expired && !drift && !routingBusy;
+  const stateKnown = routingPolicyState && routingPolicyState.revision && !['applying','recovery_required'].includes((routingPolicyState.publication || {}).state);
+  const allowed = stateKnown && routingPreview && routingPreview.can_apply === true && typeof routingPreview.preview_id === 'string' && !expired && !drift && !routingBusy;
   document.getElementById('routingApplyBtn').disabled = !allowed;
-  document.getElementById('routingPreviewValidity').textContent = !routingPreview ? '请先生成预览。' : drift ? '配置已变化，请重新生成预览。' : expired ? '预览已过期，请重新生成。' : routingPreview.can_apply !== true ? '存在阻断问题或没有可应用变更，不能确认应用。' : '预览有效至 ' + new Date(expires).toLocaleTimeString() + '；发布时仍会再次核对配置版本。';
+  document.getElementById('routingPreviewValidity').textContent = !routingPreview ? '请先生成预览。' : !stateKnown ? '发布状态未确认或需要恢复，不能确认应用。' : drift ? '配置已变化，请重新生成预览。' : expired ? '预览已过期，请重新生成。' : routingPreview.can_apply !== true ? '存在阻断问题或没有可应用变更，不能确认应用。' : '预览有效至 ' + new Date(expires).toLocaleTimeString() + '；发布时仍会再次核对配置版本。';
 }
-async function loadRoutingPolicy() {
+async function loadRoutingPolicy(publicationRefresh=false) {
+  if (configReadsSuspended && publicationRefresh !== true) return null;
   if (routingFetchPromise) return routingFetchPromise;
   const epoch = routingReadEpoch;
   routingFetchPromise = (async () => {
@@ -1810,6 +1844,7 @@ async function loadRoutingPolicy() {
       document.getElementById('balancerPublicationText').textContent = '运行状态未确认';
     } finally {
       if (epoch === routingReadEpoch) {
+        renderChatgptRoute();
         updateRoutingControls();
         if (configViewData.balancers) renderBalancerList(configViewData.balancers.balancers || []);
         routingFetchPromise = null;
@@ -1844,8 +1879,20 @@ async function previewGroupToggle() {
   await requestRoutingPreview(request);
 }
 async function previewNormalize() {
-  if (routingBusy || !routingPolicyState || !routingPolicyState.revision) return;
+  if (routingBusy || !routingPolicyState || !routingPolicyState.revision || (chatgptRouteState() || {}).enabled) return;
   await requestRoutingPreview({action:'normalize'});
+}
+async function previewChatgptRoute(enabled) {
+  updateRoutingControls();
+  const route = chatgptRouteState();
+  if (typeof enabled !== 'boolean' || !route || document.getElementById(enabled ? 'chatgptEnablePreviewBtn' : 'chatgptDisablePreviewBtn').disabled) return;
+  const request = {action:'domain_route',enabled};
+  if (enabled) {
+    const outbound = document.getElementById('chatgptOutbound').value;
+    if (!route.outbounds.some(x => x.tag === outbound)) { showToast('请先选择明确的定向出口。', 'error'); return; }
+    request.outbound = outbound;
+  }
+  await requestRoutingPreview(request);
 }
 async function requestRoutingPreview(request) {
   if (routingBusy) return;
@@ -1874,6 +1921,8 @@ async function applyRoutingPreview() {
   routingReadEpoch += 1; routingFetchPromise = null;
   document.getElementById('routingPublicationText').textContent = '正在应用配置 · 等待恢复验证';
   document.getElementById('balancerPublicationText').textContent = '正在应用配置 · 等待恢复验证';
+  document.getElementById('chatgptRouteStatus').textContent = '正在发布，等待配置读回；实际选路尚未确认。';
+  document.getElementById('chatgptRouteSummary').textContent = '正在发布，等待配置读回；实际选路尚未确认。';
   try {
     const result = await api('/routing-policy/apply', 'POST', {preview_id:previewId});
     showToast(result.message || (result.state === 'applied' ? '发布已完成' : '发布未完成，请检查状态'), result.success && result.state === 'applied' ? 'success' : 'error');
@@ -1884,7 +1933,7 @@ async function applyRoutingPreview() {
     configReadEpoch += 1;
     try {
       await finishNetworkOperation();
-      const refreshed = await Promise.allSettled([loadRoutingPolicy(),loadNodes(true),loadRoutes(true),loadBalancers(true)]);
+      const refreshed = await Promise.allSettled([loadRoutingPolicy(true),loadNodes(true),loadRoutes(true),loadBalancers(true)]);
       ['nodes','routes','balancers'].forEach((view,index) => {
         if (refreshed[index + 1].status === 'rejected') clearConfigView(view);
       });
@@ -2274,6 +2323,15 @@ class Handler(BaseHTTPRequestHandler):
                         or not isinstance(body["tag"], str) or not 1 <= len(body["tag"]) <= 128
                         or (not body["enabled"] and "fallback" not in body)
                         or ("fallback" in body and (not isinstance(body["fallback"], str) or not 1 <= len(body["fallback"]) <= 128))):
+                    raise ValueError()
+            elif body.get("action") == "domain_route":
+                if type(body.get("enabled")) is not bool:
+                    raise ValueError()
+                if body["enabled"]:
+                    if (set(body) != {"action", "enabled", "outbound"}
+                            or not isinstance(body["outbound"], str) or not 1 <= len(body["outbound"]) <= 128):
+                        raise ValueError()
+                elif set(body) != {"action", "enabled"}:
                     raise ValueError()
             else:
                 raise ValueError()

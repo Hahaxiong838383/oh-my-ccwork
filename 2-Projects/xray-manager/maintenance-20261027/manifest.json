@@ -1,47 +1,26 @@
 {
-  "schema_version": 3,
-  "date": "2026-10-27",
-  "baseline_runtime_sha256": {
-    "xray-manager.py": "533521b169fffd07488a082991db94dcf5098048cafe17bd12f40d451d3bb1da",
-    "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030"
-  },
-  "deployed_at": "2026-10-27 13:23:58 +0800",
+  "schema_version": 4,
+  "date": "2026-10-28",
+  "deployed_at": "2026-10-28 16:49:09 +0800",
+  "runtime_source_verified_at": "2026-10-28 17:03:22 +0800",
   "deployed_sha256": {
+    "xray-manager.py": "0d8cd075e695c976e35e108804869e6cedb9ff73db0cd9f9bf49bb081368a360",
     "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
-    "xray-manager.py": "5fdfa6b3b2ca97dd39a9327e9c01f61d8a2d200b7c7cb9d9cb01a122e1688437",
-    "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
-    "routing_policy.py": "3715082f275fce75975b7fd6daf65e698191f9ad67b2ab4cf65b6266adaf5825",
-    "routing_publish.py": "900f66da18d13c40035d0521ebe1620b8017db50b69ed89ba8152eeda012530d"
+    "routing_policy.py": "5cb8717bb7cc77006417a892588a28d6eb7d968f5b46726df871381b9bb0307f",
+    "routing_publish.py": "78135c8732c36ae8a36a0576a93c650bfe640d4382f96ad466b5fec5a235afe2"
   },
   "verification": {
-    "maintenance_python": 168,
-    "manager_js": 1,
-    "managed_ui_js": 22,
-    "routing_ui_js": 23,
-    "browser_fixture": "passed",
-    "routing_browser_fixture": "passed",
-    "air_browser_preview_and_normalize_apply": "passed",
-    "air_normalize_again_changes": 0,
-    "routing_config_test": [
-      "normalize",
-      "disable",
-      "enable_exact_restore"
-    ],
-    "production_toggle_applied": false,
-    "main_proxy_restarted_once": true,
-    "grok_not_restarted": true,
-    "long_sse_verified": false,
-    "production_failure_injection": false,
-    "first_match_samples": {
-      "proven_equal": 16684,
-      "opaque_uncovered": 1536
-    }
+    "python_checks_passed": 196,
+    "javascript_checks_passed": 56,
+    "publisher_targeted_checks_after_message_change": 36
   },
+  "routing_release_receipt": "chatgpt-domain-route-receipt-20261028.json",
+  "final_app_ui_status": "awaiting_user_observation_after_default_startup",
   "files_sha256": {
-    "README.md": "0d480e17bc823a56e1744662bf8b662a1d45c4ae7c1244996e721687cad520e5",
+    "README.md": "be138a2e6c70fb3f5c3bfa8fcd330450ea4bf4fb1579a18c57c7e9cd848964da",
     "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
-    "routing_policy.py": "3715082f275fce75975b7fd6daf65e698191f9ad67b2ab4cf65b6266adaf5825",
-    "routing_publish.py": "900f66da18d13c40035d0521ebe1620b8017db50b69ed89ba8152eeda012530d",
+    "routing_policy.py": "5cb8717bb7cc77006417a892588a28d6eb7d968f5b46726df871381b9bb0307f",
+    "routing_publish.py": "78135c8732c36ae8a36a0576a93c650bfe640d4382f96ad466b5fec5a235afe2",
     "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
     "test_browser_ui.cjs": "5550b1735ceadb78491986a4ab12959401928787de34eac5d0c2d13a5ab042bd",
     "test_managed_handler.py": "a93f73323b81a0fa94b3aac96fe50a08595338243c803412408ea9d4c6a1055f",
@@ -50,73 +29,143 @@
     "test_manager.py": "4ec7805e20c683461576b3389c3be3e691380db3588fb6c5bf3d62cfbec5c512",
     "test_manager_lifecycle.py": "bdf0891f9e3d587e4356b4d676abf3a5713eb046a89b6f088b4d4284da09e482",
     "test_manager_ui.js": "762d88754220b7e0c1b5619da21587d02f6b1882df52a9f4288846b11fb67cdf",
-    "test_routing_browser.cjs": "5bc6c7648e1794d4dfa63f15bd69a45597e4a35a97143783d2b2d51aa14c85b1",
-    "test_routing_http.py": "142d172e421497b85283a34369a5edb505892f7484bfcae88e9a311658b3e79e",
-    "test_routing_policy.py": "36c9466b683f6a92fe7d193e9b933391252eb64d7b3946ae2f25c91e56e2c60d",
+    "test_routing_browser.cjs": "3cfb7acbb6fa54a669435b536ccd3d9e82fa66221695f75f8eba4eba755a88d4",
+    "test_routing_http.py": "60319c1dc6f5e48c881626ef8be666863f0c12f69f1d516af0a281f1642cf58b",
+    "test_routing_policy.py": "e5779583c6f1bd9fbeaf476e65e6b680039d9cb23e7f5545464fe02420a9bc70",
     "test_routing_policy_review.py": "94316586aaee8f78bc3c2831e9a91f179a451923461065fc7ac61efc6bedeaa2",
-    "test_routing_publish.py": "06590f3d4f8e5ad069b0dd925620dff91ef6915ef51a00b2f9afc413c719ebf7",
-    "test_routing_ui.js": "6dcacf5b8289281027aa02579791aa24818f8d62966a2252d13b5af9e859cad6",
+    "test_routing_publish.py": "5d997163c8ff308151e0413362a69e3ae921b7f47bc0c43b3d2387b6f9528aea",
+    "test_routing_ui.js": "905c5eb31b8aacace71b7d62e5f6db9f973fc4e55156d3ce9a2379bf87e62480",
     "test_updater.py": "47a416e0935d752913c110b255391fd6ca0f6962c2c864318379fc3ef7e151a0",
-    "xray-manager.py": "5fdfa6b3b2ca97dd39a9327e9c01f61d8a2d200b7c7cb9d9cb01a122e1688437",
-    "复盘与防复发.md": "2dd67c46153dc0b99ca486235d6ae9be5f9a899d4914c2ef3ebe8603dbd07c5f"
+    "xray-manager.py": "0d8cd075e695c976e35e108804869e6cedb9ff73db0cd9f9bf49bb081368a360",
+    "复盘与防复发.md": "2dd67c46153dc0b99ca486235d6ae9be5f9a899d4914c2ef3ebe8603dbd07c5f",
+    "ChatGPT升级后初始化恢复-20261028.md": "1290c7429c7181bbbeac7f1f4fdbba3fad1abaca47a6fa8f940462f55e4090dc",
+    "ChatGPT手动升级复发与初始化超时-20261028.md": "d9d5bcc8ea17c5581ab574800669795f4f8e395100c8bb33a13a9c26388b0cae",
+    "chatgpt-domain-route-receipt-20261028.json": "a7e7e0397dbc5d1e96deabf102c79a5d54d26bbb93579069256f846f371faa45"
   },
   "live_config_included": false,
   "credentials_included": false,
-  "prior_release": {
-    "deployed_at": "2026-10-27 12:20:36 +0800",
-    "deployed_sha256": {
-      "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
-      "xray-manager.py": "5fdfa6b3b2ca97dd39a9327e9c01f61d8a2d200b7c7cb9d9cb01a122e1688437",
-      "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
-      "routing_policy.py": "3715082f275fce75975b7fd6daf65e698191f9ad67b2ab4cf65b6266adaf5825",
-      "routing_publish.py": "900f66da18d13c40035d0521ebe1620b8017db50b69ed89ba8152eeda012530d"
-    },
-    "verification": {
-      "failover_python": 110,
-      "maintenance_python": 82,
-      "installer_python": 4,
-      "managed_ui_js": 22,
-      "rejected_write_js": 1,
-      "browser_fixture": "passed",
-      "air_browser_read_only": "passed",
-      "main_proxy_and_grok_not_restarted": true,
-      "core_config_unchanged": true,
-      "long_sse_verified": false
-    }
-  },
-  "routing_release": {
-    "applied_at": "2026-10-27 12:59:28 +0800",
-    "verified_at": "2026-10-27 13:23:01 +0800",
-    "rules_before": 29,
-    "rules_after": 26,
-    "config_sha256": "22d659681abf2a8c991cccbdc014aa0b7374889206de3d7892b0343861184e8f",
-    "controller_sha256": "2324319a8b1aa7233cc45fa9c4c8ead38901cfea14a28060f9bd57017eaffee4",
-    "metadata_sha256": "e6db298569549979d0cb5647e642af8bc4f9ea864e5042b6c38b8e522d455011",
-    "revision": "628b5be7f8dcb8744029356479d3ac2138c1728c1e94d86fa47377d4a75c3034",
-    "main_pid": 8084,
-    "controller_pid": 8092,
-    "grok_pid": 76341,
-    "override": "cf-dmit",
-    "probes": {
-      "google": {
-        "exit": 0,
-        "http": "204"
+  "historical_release_manifests": [
+    {
+      "schema_version": 3,
+      "date": "2026-10-27",
+      "baseline_runtime_sha256": {
+        "xray-manager.py": "533521b169fffd07488a082991db94dcf5098048cafe17bd12f40d451d3bb1da",
+        "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030"
       },
-      "codex": {
-        "exit": 0,
-        "http": "401"
+      "deployed_at": "2026-10-27 13:23:58 +0800",
+      "deployed_sha256": {
+        "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+        "xray-manager.py": "5fdfa6b3b2ca97dd39a9327e9c01f61d8a2d200b7c7cb9d9cb01a122e1688437",
+        "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
+        "routing_policy.py": "3715082f275fce75975b7fd6daf65e698191f9ad67b2ab4cf65b6266adaf5825",
+        "routing_publish.py": "900f66da18d13c40035d0521ebe1620b8017db50b69ed89ba8152eeda012530d"
+      },
+      "verification": {
+        "maintenance_python": 168,
+        "manager_js": 1,
+        "managed_ui_js": 22,
+        "routing_ui_js": 23,
+        "browser_fixture": "passed",
+        "routing_browser_fixture": "passed",
+        "air_browser_preview_and_normalize_apply": "passed",
+        "air_normalize_again_changes": 0,
+        "routing_config_test": [
+          "normalize",
+          "disable",
+          "enable_exact_restore"
+        ],
+        "production_toggle_applied": false,
+        "main_proxy_restarted_once": true,
+        "grok_not_restarted": true,
+        "long_sse_verified": false,
+        "production_failure_injection": false,
+        "first_match_samples": {
+          "proven_equal": 16684,
+          "opaque_uncovered": 1536
+        }
+      },
+      "files_sha256": {
+        "README.md": "0d480e17bc823a56e1744662bf8b662a1d45c4ae7c1244996e721687cad520e5",
+        "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+        "routing_policy.py": "3715082f275fce75975b7fd6daf65e698191f9ad67b2ab4cf65b6266adaf5825",
+        "routing_publish.py": "900f66da18d13c40035d0521ebe1620b8017db50b69ed89ba8152eeda012530d",
+        "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
+        "test_browser_ui.cjs": "5550b1735ceadb78491986a4ab12959401928787de34eac5d0c2d13a5ab042bd",
+        "test_managed_handler.py": "a93f73323b81a0fa94b3aac96fe50a08595338243c803412408ea9d4c6a1055f",
+        "test_managed_status.py": "62828b0bdc34ddf4b4694f0861e78d71001ca840273be905838acc6521773177",
+        "test_managed_ui.js": "1d3b6d0693e7a35fee2981322b726d4dd1d011874d253713ff3719b574f54a4f",
+        "test_manager.py": "4ec7805e20c683461576b3389c3be3e691380db3588fb6c5bf3d62cfbec5c512",
+        "test_manager_lifecycle.py": "bdf0891f9e3d587e4356b4d676abf3a5713eb046a89b6f088b4d4284da09e482",
+        "test_manager_ui.js": "762d88754220b7e0c1b5619da21587d02f6b1882df52a9f4288846b11fb67cdf",
+        "test_routing_browser.cjs": "5bc6c7648e1794d4dfa63f15bd69a45597e4a35a97143783d2b2d51aa14c85b1",
+        "test_routing_http.py": "142d172e421497b85283a34369a5edb505892f7484bfcae88e9a311658b3e79e",
+        "test_routing_policy.py": "36c9466b683f6a92fe7d193e9b933391252eb64d7b3946ae2f25c91e56e2c60d",
+        "test_routing_policy_review.py": "94316586aaee8f78bc3c2831e9a91f179a451923461065fc7ac61efc6bedeaa2",
+        "test_routing_publish.py": "06590f3d4f8e5ad069b0dd925620dff91ef6915ef51a00b2f9afc413c719ebf7",
+        "test_routing_ui.js": "6dcacf5b8289281027aa02579791aa24818f8d62966a2252d13b5af9e859cad6",
+        "test_updater.py": "47a416e0935d752913c110b255391fd6ca0f6962c2c864318379fc3ef7e151a0",
+        "xray-manager.py": "5fdfa6b3b2ca97dd39a9327e9c01f61d8a2d200b7c7cb9d9cb01a122e1688437",
+        "复盘与防复发.md": "2dd67c46153dc0b99ca486235d6ae9be5f9a899d4914c2ef3ebe8603dbd07c5f"
+      },
+      "live_config_included": false,
+      "credentials_included": false,
+      "prior_release": {
+        "deployed_at": "2026-10-27 12:20:36 +0800",
+        "deployed_sha256": {
+          "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
+          "xray-manager.py": "5fdfa6b3b2ca97dd39a9327e9c01f61d8a2d200b7c7cb9d9cb01a122e1688437",
+          "rule-updater.py": "b1866c1a4319e78b75025cc102b51d2bc109d2c65a61f34a7df53530d83ac030",
+          "routing_policy.py": "3715082f275fce75975b7fd6daf65e698191f9ad67b2ab4cf65b6266adaf5825",
+          "routing_publish.py": "900f66da18d13c40035d0521ebe1620b8017db50b69ed89ba8152eeda012530d"
+        },
+        "verification": {
+          "failover_python": 110,
+          "maintenance_python": 82,
+          "installer_python": 4,
+          "managed_ui_js": 22,
+          "rejected_write_js": 1,
+          "browser_fixture": "passed",
+          "air_browser_read_only": "passed",
+          "main_proxy_and_grok_not_restarted": true,
+          "core_config_unchanged": true,
+          "long_sse_verified": false
+        }
+      },
+      "routing_release": {
+        "applied_at": "2026-10-27 12:59:28 +0800",
+        "verified_at": "2026-10-27 13:23:01 +0800",
+        "rules_before": 29,
+        "rules_after": 26,
+        "config_sha256": "22d659681abf2a8c991cccbdc014aa0b7374889206de3d7892b0343861184e8f",
+        "controller_sha256": "2324319a8b1aa7233cc45fa9c4c8ead38901cfea14a28060f9bd57017eaffee4",
+        "metadata_sha256": "e6db298569549979d0cb5647e642af8bc4f9ea864e5042b6c38b8e522d455011",
+        "revision": "628b5be7f8dcb8744029356479d3ac2138c1728c1e94d86fa47377d4a75c3034",
+        "main_pid": 8084,
+        "controller_pid": 8092,
+        "grok_pid": 76341,
+        "override": "cf-dmit",
+        "probes": {
+          "google": {
+            "exit": 0,
+            "http": "204"
+          },
+          "codex": {
+            "exit": 0,
+            "http": "401"
+          }
+        },
+        "audit_counts": {
+          "error": 0,
+          "warning": 2,
+          "info": 1,
+          "rules": 26,
+          "balancers": 2
+        },
+        "pending_marker_sha256": null,
+        "backup": "~/.local/state/chatgpt-repair/routing-ui-20261027-125741/",
+        "publication_journal": "~/xray/.routing-publish/active.json",
+        "final_ui_backup": "/Users/rayman.chen/.local/state/chatgpt-repair/routing-ui-refresh-20261027-132352"
       }
-    },
-    "audit_counts": {
-      "error": 0,
-      "warning": 2,
-      "info": 1,
-      "rules": 26,
-      "balancers": 2
-    },
-    "pending_marker_sha256": null,
-    "backup": "~/.local/state/chatgpt-repair/routing-ui-20261027-125741/",
-    "publication_journal": "~/xray/.routing-publish/active.json",
-    "final_ui_backup": "/Users/rayman.chen/.local/state/chatgpt-repair/routing-ui-refresh-20261027-132352"
-  }
+    }
+  ]
 }

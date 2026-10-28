@@ -2,6 +2,7 @@
 from email.message import Message
 import importlib.util
 import io
+import json
 from pathlib import Path
 import sys
 import types
@@ -48,6 +49,27 @@ class RoutingHttpTests(unittest.TestCase):
         h = self.handler(); p = self.invoke(h)
         p.preview.assert_called_once_with({'action': 'normalize'})
         p.apply.assert_not_called()
+
+    def test_chatgpt_enable_and_remove_are_preview_only(self):
+        for request in ({'action': 'domain_route', 'enabled': True, 'outbound': 'us-fixture'},
+                        {'action': 'domain_route', 'enabled': False}):
+            with self.subTest(request=request):
+                h = self.handler(body=json.dumps(request).encode()); p = self.invoke(h)
+                p.preview.assert_called_once_with(request)
+                p.apply.assert_not_called()
+
+    def test_chatgpt_request_cannot_supply_domains_config_or_ambiguous_target(self):
+        valid = {'action': 'domain_route', 'enabled': True, 'outbound': 'us-fixture'}
+        cases = [dict(valid, domains=['domain:foreign.invalid']), dict(valid, config={}),
+                 dict(valid, tag='cf-lisa'), dict(valid, enabled=1), dict(valid, outbound=''),
+                 dict(valid, outbound='x' * 129), dict(valid, outbound=[]),
+                 {'action': 'domain_route', 'enabled': True},
+                 {'action': 'domain_route'}, dict(valid, enabled=False)]
+        for request in cases:
+            with self.subTest(request=request):
+                h = self.handler(body=json.dumps(request).encode()); p = self.invoke(h)
+                self.assertEqual(h._json.call_args.args[1], 400)
+                self.assertFalse(p.mock_calls)
 
     def test_apply_accepts_only_preview_id(self):
         h = self.handler('/api/routing-policy/apply', b'{"preview_id":"fixture"}')

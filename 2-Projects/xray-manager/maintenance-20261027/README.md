@@ -2,6 +2,8 @@
 
 本目录是本次Air维护版的源码入口，含无凭据脚本与离线回归；不含生产config/controller配置、节点凭据或个人日志。仓库中的候选、生产部署和线上验收是不同状态；是否已部署以对应回执与manifest为准，不凭文件日期推断。
 
+2026-10-28新增固定ChatGPT域名定向发布，路由和8888页面已独立核验，详见[本轮脱敏回执](chatgpt-domain-route-receipt-20261028.json)及下方增量记录。临时入口已清理，App最终dot交互仍待用户观察，不能用路由发布成功替代。
+
 ## 源码与部署文件
 
 | 文件 | Air目标 | 用途 |
@@ -9,7 +11,7 @@
 | `xray-manager.py` | `~/xray/xray-manager.py` | Air历史功能、受管界面、配置写保护和精确launchd操作 |
 | `managed_status.py` | `~/xray/managed_status.py` | 界面的只读、脱敏状态采集模块；必须与manager同目录 |
 | `rule-updater.py` | `~/xray/rule-updater.py` | 受管资产pending与保inode日志轮转；不是界面升级的重启入口 |
-| `routing_policy.py` | `~/xray/routing_policy.py` | 纯函数审计、保首匹配整理、普通均衡组启停计划 |
+| `routing_policy.py` | `~/xray/routing_policy.py` | 纯函数审计、保首匹配整理、普通均衡组启停及固定ChatGPT域名定向计划 |
 | `routing_publish.py` | `~/xray/routing_publish.py` | 版本绑定预览、协调guard发布、精确重启与失败回执 |
 
 **Air界面发布须一起核对manager及其三个同目录模块（managed_status、routing_policy、routing_publish）。** 上级 `../xray-manager.py` 是独立跨平台主版本，没有整文件回填Air历史差异；不能拿它覆盖本包或生产文件。保留Air既有 `easytier_manager.py` 扩展及其他服务，不在本包复制凭据配置。
@@ -66,6 +68,22 @@ Air管理页于12:58:33部署，真实页面于12:59:28通过受控apply将规�
 13:00:44现场回执记录主Xray PID8084、controller PID8092、独立Grok PID76341保持，实际override为`cf-dmit`，Google204/Codex401均exit0；再次整理预览为0项变更并禁止应用。配置SHA为`22d659681abf2a8c991cccbdc014aa0b7374889206de3d7892b0343861184e8f`，资源pending保持。部署备份在Air `~/.local/state/chatgpt-repair/routing-ui-20261027-125741/`，发布journal在`~/xray/.routing-publish/previews/2ohWAMWvZXq3h925-oBCtoWVk9vrDR7U/`；原件含敏感配置，只留Air私有目录。PID和摘要是该时刻回执，不是永久设备常量。
 
 最终刷新修复阻止发布前旧请求与同类乱序响应覆盖新列表，所有列表刷新结束才解锁；刷新失败清除旧列表并提示重试。最终168项Python、46项JS、两套Chromium fixture通过，13:23真实页面渲染26条、零pageerror。最终仅管理页重载时间见manifest。
+
+## ChatGPT固定域名定向发布（2026-10-28）
+
+本轮仅为`domain:chatgpt.com`（包含`ab.chatgpt.com`）增加显式出口`Gemini专用-US2-VLESS-Reality-IP`，不扩大到OpenAI其他域或CDN。配置由26条变为27条，新增规则位于从0开始的索引3；原26条规则内容和相对顺序保留，API/探针基础规则仍在索引0、1、2。节点名称不是地域、独立出口或实时健康的证据；该次出口选择基于另行完成的临时线路对照。
+
+受限接口`domain_route`只接受启用状态及现有代理节点标签，固定域名由服务端生成，不接收任意域名或整份config。新增、换出口和撤销均先预览，再使用原有协调发布事务。撤销核对专用规则及恢复记录，不能顺便删除其他规则。定向启用时暂停整理；普通组启停仍可用。有停用组时禁止定向规则新增或删除，已存在定向的原位换出口不改变恢复索引。普通独立配置写接口仍受锁定和409保护。
+
+界面模块部署仅重载manager，PID60409；随后正式预览`VHCT6Ge2s8wRDnlMZCOoljkBbGPLtmyQ`于16:49:51应用成功，revision为`750acc2b4c86bd69204de5f2c0f3ae7ab6aaffcd452764e4df2b954bffc30240`。这次路由发布才按受管流程同步guard并重启主Xray、恢复controller；完成后的PID分别为60542、60550，独立Grok PID76341保持。主代理旧连接会中断；没有以界面升级或日志轮转为由重启专用Grok。
+
+16:52:36独立只读核验21项全部通过：移除本次专用规则后，整份config与发布前完全相同；基础规则索引、byte/semantic guard、metadata、候选/计划、依赖及journal一致；在内存中计算撤销可准确恢复config和metadata，未在生产执行撤销。主服务和controller身份与journal一致，cf-lisa为新鲜健康状态、实际ZGO，三路探针均取得204/401，pin为自动，geosite待应用标记保留。以上是该时刻证据，不代表长流量或长期稳定性证明。
+
+16:54:44真实Chromium经独立SSH转发读取Air8888，Host明确指向远端管理端口，GET白名单禁止任何生产写请求。页面HTTP200、显示27条规则，ChatGPT栏显示US2磁盘配置并明确“不代表当前实际流量出口”；cf-lisa组运行态单独显示ZGO。整理按钮锁定，1个受保护组禁用，1个普通组启停入口保留，当前126个普通配置写控件全部禁用。两个EasyTier标签保留，但本次未验证其功能，状态请求在本地验收层拦截。零pageerror、零写请求；验收后转发已关闭。不能把较早页面控件计数当成本轮固定值。
+
+离线Python196项、JS56项通过；随后publisher成功提示文案调整，又通过36项针对性回归。真实Chromium fixture覆盖启用/撤销及四次合成apply，零意外写请求、零页面错误；fixture没有接触生产，与上述真实页面只读验收分别记录。发布期间暂停定时策略读取，最终回读结束才解锁，避免旧配置覆盖发布中状态。
+
+App于16:51:23按默认参数启动，PID60839，未带临时代理参数；已观察到history成功609.3ms、零bootstrap耗尽。AX窗口树异常下，最终dot交互验收仍待用户观察。17:00:18临时对照入口、进程、租约和凭据目录已清理，App保持16条默认10808连接、无10848连接，生产身份保持。17:03:22独立读回现役4模块SHA与本维护包一致。本节不宣称全部症状已经解决。[脱敏回执](chatgpt-domain-route-receipt-20261028.json)分别记录路由/UI、源码与现役SHA核验及清理结果，完整复盘见[手动升级复发报告](ChatGPT手动升级复发与初始化超时-20261028.md)。
 
 ## 离线验证
 

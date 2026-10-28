@@ -11,6 +11,9 @@ import re
 
 PROTECTED_GROUPS = frozenset(('cf-lisa',))
 SAFE_FALLBACK_PROTOCOLS = frozenset(('vless','vmess','socks','http','shadowsocks','trojan','wireguard','blackhole'))
+CHATGPT_DOMAINS = ('domain:chatgpt.com',)
+CHATGPT_RULE_TAG = 'managed-chatgpt-domain-route-v1'
+DOMAIN_PROXY_PROTOCOLS = SAFE_FALLBACK_PROTOCOLS - {'blackhole'}
 MATCH_FIELDS = frozenset(('domain','ip','inboundTag','source','sourcePort','port','network','protocol','user'))
 META_FIELDS = frozenset(('type','outboundTag','balancerTag','ruleTag','tag'))
 
@@ -54,7 +57,7 @@ def _protected(rule, config):
     inbound=rule.get('inboundTag',[])
     if not isinstance(inbound,list):return True
     api_tag=config.get('api',{}).get('tag','api') if isinstance(config.get('api',{}),dict) else 'api'
-    return any(isinstance(t,str) and t.startswith('cf-probe-') for t in inbound) or rule.get('outboundTag') in ('api',api_tag)
+    return any(isinstance(t,str) and (t.startswith('cf-probe-') or t in ('cf-api',api_tag)) for t in inbound) or rule.get('outboundTag') in ('api','cf-api',api_tag)
 
 
 def _domain(value):
@@ -136,6 +139,106 @@ def _metadata_check(config, metadata):
             seen.add(index)
         if any(r.get('balancerTag')==tag for r in rules):
             raise PolicyError('metadata_drift','停用组出现新的关联规则，请先核对。')
+    _domain_metadata_check(config,metadata)
+
+
+def _domain_outbounds(config):
+    """Static eligible proxies only; this does not attest location or reachability."""
+    rules,groups,nodes=_sections(config)
+    protected={r.get('outboundTag') for r in rules if _protected(r,config)}
+    managed=[g for g in groups if g.get('tag') in PROTECTED_GROUPS]
+    result=[]
+    for node in nodes:
+        tag=node['tag']
+        if (tag.startswith('cf-') or tag in protected or node.get('protocol') not in DOMAIN_PROXY_PROTOCOLS
+                or sum(n.get('tag')==tag for n in nodes)!=1):continue
+        if any(tag==g.get('fallbackTag') or (isinstance(g.get('selector'),list)
+                and any(isinstance(s,str) and tag.startswith(s) for s in g['selector'])) for g in managed):continue
+        proxy=node.get('proxySettings',{});stream=node.get('streamSettings',{})
+        if not isinstance(proxy,dict) or proxy.get('tag') or not isinstance(stream,dict):continue
+        sockopt=stream.get('sockopt',{})
+        if not isinstance(sockopt,dict) or sockopt.get('dialerProxy'):continue
+        result.append(node)
+    return result
+
+
+def _chatgpt_rule(outbound):
+    return {'type':'field','ruleTag':CHATGPT_RULE_TAG,'domain':list(CHATGPT_DOMAINS),'outboundTag':outbound}
+
+
+def _protected_rules(config):
+    return [(i,r) for i,r in enumerate(config['routing'].get('rules',[])) if _protected(r,config)]
+
+
+def _domain_metadata_check(config,metadata):
+    rules,_,_=_sections(config);records=metadata.get('domain_routes',{})
+    marked=[i for i,r in enumerate(rules) if r.get('ruleTag')==CHATGPT_RULE_TAG]
+    if not isinstance(records,dict) or set(records)-{'chatgpt'}:
+        raise PolicyError('metadata_drift','域名定向记录不明确，禁止覆盖。')
+    entry=records.get('chatgpt')
+    if entry is None:
+        if records or marked:raise PolicyError('metadata_drift','存在未关联的域名定向标记，请先核对恢复记录。')
+        return
+    fields={'version','index','outbound','rule_sha256','outbound_sha256','other_rules_sha256','protected_sha256'}
+    if not isinstance(entry,dict) or set(entry)!=fields or type(entry.get('version')) is not int or entry['version']!=1:
+        raise PolicyError('metadata_drift','域名定向恢复记录损坏。')
+    index=entry['index'];outbound=entry['outbound']
+    if type(index) is not int or index<0 or index>=len(rules) or marked!=[index] or not isinstance(outbound,str):
+        raise PolicyError('metadata_drift','域名定向规则位置或唯一标记已变化。')
+    node=next((n for n in _domain_outbounds(config) if n['tag']==outbound),None)
+    if (rules[index]!=_chatgpt_rule(outbound) or entry['rule_sha256']!=digest(rules[index])
+            or node is None or entry['outbound_sha256']!=digest(node)
+            or entry['other_rules_sha256']!=digest(rules[:index]+rules[index+1:])
+            or entry['protected_sha256']!=digest(_protected_rules(config))):
+        raise PolicyError('metadata_drift','域名定向或原有规则已在外部变化，不能直接覆盖或撤销。')
+
+
+def chatgpt_route_state(config,metadata=None):
+    meta=_meta(metadata);_metadata_check(config,meta)
+    entry=meta.get('domain_routes',{}).get('chatgpt')
+    return {'enabled':entry is not None,'outbound':entry['outbound'] if entry else None,
+            'domains':list(CHATGPT_DOMAINS),'rule_indices':[entry['index']] if entry else [],
+            'outbounds':[{'tag':n['tag'],'protocol':n['protocol']} for n in _domain_outbounds(config)]}
+
+
+def _may_match_chatgpt(rule):
+    # Unknown/opaque domains may overlap. Other fields can restrict traffic but
+    # cannot prove that no ChatGPT request will match this preceding rule.
+    domains=rule.get('domain')
+    if not isinstance(domains,list) or not domains:return True
+    for value in domains:
+        parsed=_domain(value)
+        if parsed is None:return True
+        if any(_covers('domain',value,target) or _covers('domain',target,value) for target in CHATGPT_DOMAINS):return True
+    return False
+
+
+def _plan_domain_route(config,meta,request):
+    enabled=request.get('enabled')
+    if type(enabled) is not bool or set(request)!=({'action','enabled','outbound'} if enabled else {'action','enabled'}):
+        raise PolicyError('invalid_request','仅支持预定义 ChatGPT 域名组及明确的启停、代理节点。')
+    rules=config['routing']['rules'];entry=meta.get('domain_routes',{}).get('chatgpt')
+    if not enabled:
+        if entry is None:return []
+        if meta['disabled']:raise PolicyError('disabled_groups','请先恢复已停用均衡组，再撤销定向规则，以保持恢复索引。')
+        index=entry['index'];rules.pop(index);meta.pop('domain_routes',None)
+        return [{'kind':'remove_domain_route','rule':index,'message':'撤销 ChatGPT 专用定向规则；原有规则、条件和顺序完整恢复。'}]
+    outbound=request.get('outbound')
+    node=next((n for n in _domain_outbounds(config) if isinstance(outbound,str) and n['tag']==outbound),None)
+    if node is None:raise PolicyError('invalid_domain_outbound','必须选择现有、非受管且无代理链依赖的代理节点；不允许直连或阻断出口。')
+    if entry and entry['outbound']==outbound:return []
+    if entry:
+        index=entry['index'];rules[index]=_chatgpt_rule(outbound);kind='replace_domain_route'
+    else:
+        if meta['disabled']:raise PolicyError('disabled_groups','请先恢复已停用均衡组，再新增定向规则，以保持恢复索引。')
+        index=max((i for i,_ in _protected_rules(config)),default=-1)+1
+        if any(not _protected(r,config) and _may_match_chatgpt(r) for r in rules[:index]):
+            raise PolicyError('unsafe_domain_position','前序目标或不透明规则与控制规则交错，不能在保持控制规则位置的同时保证定向优先。')
+        rules.insert(index,_chatgpt_rule(outbound));kind='insert_domain_route'
+    meta['domain_routes']={'chatgpt':{'version':1,'index':index,'outbound':outbound,
+        'rule_sha256':digest(rules[index]),'outbound_sha256':digest(node),
+        'other_rules_sha256':digest(rules[:index]+rules[index+1:]),'protected_sha256':digest(_protected_rules(config))}}
+    return [{'kind':kind,'rule':index,'message':'ChatGPT 预定义域名定向至 {}；保留原有规则，可单独撤销。此为配置目标，未声称出口位置或实时可达。'.format(outbound)}]
 
 
 def group_states(config, metadata=None):
@@ -257,6 +360,7 @@ def plan_change(config, metadata, request):
     action=request.get('action');candidate=copy.deepcopy(config);changes=[]
     if action=='normalize':
         if meta['disabled']:raise PolicyError('disabled_groups','请先启用已停用均衡组，再整理规则，以保留准确恢复位置。')
+        if meta.get('domain_routes'):raise PolicyError('domain_route_active','请先撤销 ChatGPT 定向规则，再整理原规则，以保留准确恢复语义。')
         candidate,changes=_normalize(config)
     elif action=='toggle':
         tag=request.get('tag');enabled=request.get('enabled')
@@ -285,6 +389,17 @@ def plan_change(config, metadata, request):
             entry.update(rule_count=len(entry['rules']),rules_sha256=digest(entry['rules']))
             meta['disabled'][tag]=entry
         if meta!=_meta(metadata) and not changes:changes.append({'kind':'group_state','message':'更新无关联规则的均衡组状态。'})
+        # Toggle only changes rule targets, never count/order. Accept only this
+        # authorized update to the other-rule fingerprint, so external drift
+        # remains blocked while normal group enable/disable keeps working.
+        entry=meta.get('domain_routes',{}).get('chatgpt')
+        if entry:
+            current=candidate['routing']['rules'];index=entry['index']
+            entry['other_rules_sha256']=digest(current[:index]+current[index+1:])
+    elif action=='domain_route':
+        changes=_plan_domain_route(candidate,meta,request)
+        if _protected_rules(config)!=_protected_rules(candidate):
+            raise PolicyError('protected_rule','基础控制规则及索引必须完全保持。')
     else:raise PolicyError('unknown_action','不支持的路由操作。')
     audit=audit_config(candidate,meta)
     if audit['counts']['error']:raise PolicyError('candidate_conflict','候选配置存在阻断级冲突。')

@@ -392,6 +392,7 @@ class RoutingPublisher:
             p = self._policy()
             audit = p.audit_config(s['config'], s['metadata'])
             groups = p.group_states(s['config'], s['metadata'])
+            chatgpt_route = p.chatgpt_route_state(s['config'], s['metadata'])
             if active and active.get('complete') and active.get('state') in TERMINAL and active.get('revision') == s['revision']:
                 observed = self._observe(s['controller'])
                 current_dependencies = self._dependencies()
@@ -408,18 +409,19 @@ class RoutingPublisher:
                          and not o['tag'].startswith('cf-') and o.get('tag') != 'api'
                          and o.get('protocol') in SAFE_FALLBACK_PROTOCOLS]
             return {'schema_version': 1, 'revision': s['revision'], 'groups': groups,
-                    'audit': audit, 'publication': publication, 'fallbacks': fallbacks}
+                    'audit': audit, 'publication': publication, 'fallbacks': fallbacks,
+                    'chatgpt_route': chatgpt_route}
         except PublisherError as exc:
             if not active_checked and (self.root / 'active.json').exists():
                 publication = {'state': 'recovery_required', 'verified_at': None,
                                'message': '发布记录损坏或不可读，需核对私有回执后恢复'}
             if publication['state'] not in ('applying', 'recovery_required'):
                 publication['message'] = exc.message
-            return {'schema_version': 1, 'revision': None, 'groups': [], 'fallbacks': [],
+            return {'schema_version': 1, 'revision': None, 'groups': [], 'fallbacks': [], 'chatgpt_route': None,
                     'audit': {'issues': [{'severity': 'error', 'code': exc.code, 'message': exc.message, 'rules': []}],
                               'counts': {'error': 1, 'warning': 0, 'info': 0}}, 'publication': publication}
         except Exception:
-            return {'schema_version': 1, 'revision': None, 'groups': [], 'fallbacks': [],
+            return {'schema_version': 1, 'revision': None, 'groups': [], 'fallbacks': [], 'chatgpt_route': None,
                     'audit': {'issues': [{'severity': 'error', 'code': 'status_unavailable',
                                          'message': '发布状态无法确认', 'rules': []}],
                               'counts': {'error': 1, 'warning': 0, 'info': 0}}, 'publication': publication}
@@ -684,7 +686,7 @@ class RoutingPublisher:
                     _fail('post_publish_dependency_drift', '发布窗口资源或运行依赖已改变，不能确认此次发布')
                 journal.update(state='applied', complete=True, revision=final['revision'], **verified)
                 self._journal(stage, journal)
-                return {'success': True, 'state': 'applied', 'message': '路由已发布，主服务、实际出口和探针验证通过',
+                return {'success': True, 'state': 'applied', 'message': '路由已发布，主服务及 cf-lisa 受管组的出口与探针验证通过；ChatGPT 定向效果需另行验收',
                         'applied_at': verified['verified_at'], 'revision': final['revision']}
             except Exception as exc:
                 journal['failure_code'] = exc.code if isinstance(exc, PublisherError) else 'publication_failed'
