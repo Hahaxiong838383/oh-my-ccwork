@@ -1,3 +1,4 @@
+- 2026-10-28 10:29：R22仍不可发真人。4房诊断终态/闸关/清理0；7个SSE已同room＋response_id对齐。一次普通慢轮正文5.5s由TTS连接DNS5017ms主导，模型首字758ms；已通过room/turn/connect_id归属，具体DNS机制仍未知，不泛化成全部mixed回退根因。原两台R21/P2/11月2日11:19保持，PID实时复核未重启；继续隔离定位，旧性能门不变。
 - 2026-10-28 10:08：R22正式r22-plan-final因续讲P90已不可能达标，在89房间受控停止；normal29对−0.69/+49.93ms通过，search10对+50.51/+499.54、resume14对+149.38/+699.73未过，0缺正文，14任务answered/显式replay。原两台R21未变，隔离闸实关/清理0；详见R22_PERFORMANCE_GATE_20261028.md。后续候选SSE加room/response_id及header/首byte/首content观测，禁止把旧未关联llm日志硬配对。
 > **2026-10-28 08:35：最终Agent Plan配置的pilot已完成，正式 r22-plan-final 已实启动，尚未验收通过。** 三组各固定30对，原20有效/median100ms/P90 300ms门不变；Worker285ab377…81fdeb、Brain新取消修复与Agent Plan 2.1-lite配置冻结。真实TTS隔离故障验证10001ms终止等待、一次本地提示及合成PCM通过，临时网络规则已查空。测试期间不再改版本/配置；终态结算后才决定原两台候选发布和Air真人回执。当前真人仍R21＋UTF8热修复，P2窗口不变。
 

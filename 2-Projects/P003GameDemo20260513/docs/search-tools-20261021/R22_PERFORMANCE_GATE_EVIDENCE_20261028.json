@@ -4167,5 +4167,224 @@
     ],
     "all_attempts_retained": true
   },
-  "not_deployed": true
+  "not_deployed": true,
+  "http_diagnosis": {
+    "label": "r22-httpdiag-pilot",
+    "purpose": "diagnosis_only_not_release_gate",
+    "samples": 4,
+    "response_id_joined": 7,
+    "joined_requests": [
+      {
+        "room": "sn-BJP00399999999999901-1793153515",
+        "response_id": "chatcmpl-tkyhz3ql6r",
+        "headers_ms": 13,
+        "first_body_byte_ms": 13,
+        "first_content_ms": 617,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153515",
+          "response_id": "chatcmpl-tkyhz3ql6r",
+          "claim_guard_enabled": false,
+          "before_model_ms": 2,
+          "upstream_first_delta_ms": 606,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 608,
+          "first_content_chars": 1
+        }
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793153561",
+        "response_id": "chatcmpl-tv4ve43rka",
+        "headers_ms": 227,
+        "first_body_byte_ms": 227,
+        "first_content_ms": 758,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153561",
+          "response_id": "chatcmpl-tv4ve43rka",
+          "claim_guard_enabled": false,
+          "before_model_ms": 2,
+          "upstream_first_delta_ms": 531,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 533,
+          "first_content_chars": 1
+        }
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793153608",
+        "response_id": "chatcmpl-usfhk68bf8",
+        "headers_ms": 51,
+        "first_body_byte_ms": 51,
+        "first_content_ms": 607,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153608",
+          "response_id": "chatcmpl-usfhk68bf8",
+          "claim_guard_enabled": false,
+          "before_model_ms": 2,
+          "upstream_first_delta_ms": 558,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 560,
+          "first_content_chars": 1
+        }
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793153608",
+        "response_id": "chatcmpl-5x3n9f51a4",
+        "headers_ms": 329,
+        "first_body_byte_ms": 330,
+        "first_content_ms": 779,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153608",
+          "response_id": "chatcmpl-5x3n9f51a4",
+          "claim_guard_enabled": false,
+          "before_model_ms": 4,
+          "upstream_first_delta_ms": 455,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 459,
+          "first_content_chars": 2
+        }
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793153680",
+        "response_id": "chatcmpl-4h6lf9hzea",
+        "headers_ms": 8,
+        "first_body_byte_ms": 8,
+        "first_content_ms": 698,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153680",
+          "response_id": "chatcmpl-4h6lf9hzea",
+          "claim_guard_enabled": false,
+          "before_model_ms": 3,
+          "upstream_first_delta_ms": 692,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 695,
+          "first_content_chars": 2
+        }
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793153680",
+        "response_id": "chatcmpl-hp6f8kkw7g",
+        "headers_ms": 52,
+        "first_body_byte_ms": 52,
+        "first_content_ms": 627,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153680",
+          "response_id": "chatcmpl-hp6f8kkw7g",
+          "claim_guard_enabled": false,
+          "before_model_ms": 4,
+          "upstream_first_delta_ms": 576,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 580,
+          "first_content_chars": 1
+        }
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793153680",
+        "response_id": "chatcmpl-vac4xdpc1e",
+        "headers_ms": 201,
+        "first_body_byte_ms": 201,
+        "first_content_ms": 863,
+        "brain": {
+          "room": "sn-BJP00399999999999901-1793153680",
+          "response_id": "chatcmpl-vac4xdpc1e",
+          "claim_guard_enabled": false,
+          "before_model_ms": 8,
+          "upstream_first_delta_ms": 664,
+          "output_filter_hold_ms": 0,
+          "first_content_enqueued_ms": 672,
+          "first_content_chars": 1
+        }
+      }
+    ],
+    "slow_tts_connection": [
+      {
+        "connect_id": "5",
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "elapsed_ms": "5219",
+        "dns_ms": "5017",
+        "tcp_ms": "52",
+        "tls_ws_ms": "148"
+      }
+    ],
+    "status": "R22 remains unreleased; formal performance gate failed; mixed regression cause unresolved",
+    "service_readback": {
+      "brain": {
+        "at_ms": 1793154530729,
+        "real": {
+          "flags": {
+            "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+            "p003.search.canary.expires_at_ms": "1793589540000",
+            "p003.search.enabled": "1",
+            "p003.search.tools": "1"
+          },
+          "service": "MainPID=2694550\nNRestarts=0\nActiveState=active\n"
+        },
+        "isolated": {
+          "flags": {
+            "p003.search.allowlist": "[\"BJP00399999999999901\"]",
+            "p003.search.canary.expires_at_ms": "1793157353000",
+            "p003.search.enabled": "0",
+            "p003.search.tools": "1"
+          },
+          "service": "MainPID=2780580\nNRestarts=0\nActiveState=active\n"
+        }
+      },
+      "worker": {
+        "at_ms": 1793154531779,
+        "real": {
+          "window": {
+            "enabled": true,
+            "allowlist": [
+              "BJP00326070803800006",
+              "BJP00326060100100004"
+            ],
+            "expires_at_ms": 1793589540000,
+            "generation": "R4-20261022-two-devices"
+          },
+          "health": {
+            "agent": "p003-search-canary-20261021",
+            "at_ms": 1793154527297,
+            "cleanup": {
+              "at_ms": 1793154526478,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R4-20261022-two-devices",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "binary_sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+          "service": "MainPID=1175023\nNRestarts=0\nActiveState=active\n"
+        },
+        "isolated": {
+          "window": {
+            "enabled": false,
+            "allowlist": [
+              "BJP00399999999999901"
+            ],
+            "expires_at_ms": 1793157353000,
+            "generation": "R17-isolated-rtc-20261026"
+          },
+          "health": {
+            "agent": "p003-search-verification-20261026",
+            "at_ms": 1793154528254,
+            "cleanup": {
+              "at_ms": 1793154525572,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R17-isolated-rtc-20261026",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "binary_sha256": "0e849843c170b1384833155fbc1af386fcb37ef57fab97fcc139c1400eb918c1",
+          "service": "MainPID=1282782\nNRestarts=0\nActiveState=active\n"
+        },
+        "main": "MainPID=1101301\nNRestarts=0\nActiveState=active\n"
+      }
+    }
+  }
 }
