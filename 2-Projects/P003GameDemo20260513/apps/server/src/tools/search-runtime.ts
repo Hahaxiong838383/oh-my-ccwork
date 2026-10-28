@@ -87,6 +87,7 @@ export function getSearchTasks(): SearchTasks | null {
         let fallbackQuery:string|null=query;
         const primary=async(signal:AbortSignal)=>{
         if(owner.routing?.weather_enabled&&owner.routing.auto_location_enabled&&owner.routing.auto_weather){
+          fallbackQuery=null; // Even a location-store exception must not search an unlocated “here”.
           const location=await getDeviceLocationStore()?.wait(owner.subject,owner.session,signal);signal.throwIfAborted();
           if(location?.state!=='ready') {fallbackQuery=null;console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:location?.state??'unknown',reason:location?.reason??'location_no_session'}));return {text:'暂时没能根据设备网络确定所在城市，这次先不报天气，稍后可以再试。',sources:[]};}
           fallbackQuery=[...(location.city+' '+query)].slice(0,128).join('');
