@@ -355,6 +355,10 @@ pub async fn stream_chat_with_context(
     }
     let url = cfg.chat_url();
     let t0 = std::time::Instant::now();
+    // Candidate diagnostics only: correlate the same SSE response with Brain
+    // timing, without logging URLs, headers, prompts or returned content.
+    let trace_candidate = std::env::var("AGENT_NAME")
+        .is_ok_and(|v| crate::search_canary::is_candidate(&v));
     let resp = client
         .post(&url)
         .bearer_auth(&cfg.api_key)
@@ -362,6 +366,7 @@ pub async fn stream_chat_with_context(
         .send()
         .await
         .context("llm request")?;
+    let headers_ms = t0.elapsed().as_millis() as u64;
     anyhow::ensure!(
         resp.status().is_success(),
         "llm http {}: {}",
@@ -380,9 +385,13 @@ pub async fn stream_chat_with_context(
     let mut n_chunks: u64 = 0;
     let mut interrupted = false;
     let mut stream = resp.bytes_stream();
+    let mut first_body_byte_ms = None;
     let mut pending = String::new();
     'outer: while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("llm sse read")?;
+        if !chunk.is_empty() && first_body_byte_ms.is_none() {
+            first_body_byte_ms = Some(t0.elapsed().as_millis() as u64);
+        }
         pending.push_str(&String::from_utf8_lossy(&chunk));
         // SSE 事件以空行分隔;逐个完整事件消费,残段留 pending
         while let Some(pos) = pending.find("\n\n") {
@@ -401,6 +410,16 @@ pub async fn stream_chat_with_context(
                     }
                     if ttft_ms.is_none() {
                         ttft_ms = Some(t0.elapsed().as_millis() as u64);
+                        if trace_candidate {
+                            let response_id = v["id"].as_str().filter(|id|
+                                id.starts_with("chatcmpl-") && id.len() <= 80
+                                && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+                            ).unwrap_or("unavailable");
+                            info!(room = %cfg.room, response_id, headers_ms,
+                                first_body_byte_ms = first_body_byte_ms.unwrap_or(0),
+                                first_content_ms = ttft_ms.unwrap_or(0),
+                                "candidate llm response timing");
+                        }
                     }
                     n_chunks += 1;
                     let out = match stripper.as_mut() {
