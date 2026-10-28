@@ -1,0 +1,565 @@
+{
+  "status": "deployed_to_existing_two_P2_devices",
+  "effective_at_cst": "2026-10-28 17:47:39",
+  "expires_at_cst": "2026-11-02 11:19:00",
+  "code_commits": {
+    "brain": {
+      "branch": "codex/p003-brain-search-tools-20261021",
+      "sha": "dd429043f85ca201fc2d1be74a069df916b242c5",
+      "remote_sha": "dd429043f85ca201fc2d1be74a069df916b242c5"
+    },
+    "worker": {
+      "branch": "codex/p003-worker-tool-lifecycle-20261021",
+      "sha": "e95775f238568e7176475a575ea347c61f7649db",
+      "remote_sha": "e95775f238568e7176475a575ea347c61f7649db"
+    }
+  },
+  "artifact_spec": {
+    "source": {
+      "src/tools/amap-weather.ts": "e096a5e98a70c5a1674ffd14c3c4ea0691bf60a0f653829f5572392aa1d2cc57",
+      "src/tools/search-simple-fallback.ts": "bd3a8452f8ae4ca6850033bd0e24aeaea0c03b40ea0b022ba1dca7f26622e808",
+      "src/tools/fixed-weather.ts": "581a849b3d15bf5f8827efcb6c18b689053f8717ee407394cf12cfef051963d2",
+      "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2",
+      "src/tools/search-tasks.ts": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144"
+    },
+    "old_source": {
+      "src/tools/amap-weather.ts": null,
+      "src/tools/search-simple-fallback.ts": null,
+      "src/tools/fixed-weather.ts": "7063e076eea7713139305f2ee567424c5b2e9217c79e14cb44ccee552ebe216f",
+      "src/tools/search-runtime.ts": "62aebfc7d138347958a1e667a2d21248140172450ea1d1c79b2435a30019ceae",
+      "src/tools/search-tasks.ts": "01f52ab5af3bef44a3b59920c7888565444bf5a36ecc0d161ab5028815af6669"
+    },
+    "preview_sha256": "541fcddf8d5d69598de16e332284cd308f51ee445b8246ba2a13f96a6ba7c87b",
+    "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea"
+  },
+  "amap": {
+    "enabled": false,
+    "reason": "Web service key not yet available",
+    "real_api_validation": "not_run"
+  },
+  "fallback_enabled": true,
+  "tests": {
+    "brain": 156,
+    "worker": 466,
+    "route": 33,
+    "typecheck": "passed",
+    "linux_release_and_abi": "passed",
+    "measurement_association_fixtures": 5
+  },
+  "latency": {
+    "pilot": {
+      "rows": {
+        "r23_before": [
+          {
+            "index": 0,
+            "commit_to_body_ms": 948.6,
+            "body_since_turn_ms": 948
+          },
+          {
+            "index": 1,
+            "commit_to_body_ms": 999.8,
+            "body_since_turn_ms": 999
+          },
+          {
+            "index": 2,
+            "commit_to_body_ms": 999.6,
+            "body_since_turn_ms": 999
+          }
+        ],
+        "r23_after": [
+          {
+            "index": 0,
+            "commit_to_body_ms": 2648.1,
+            "body_since_turn_ms": 2647
+          },
+          {
+            "index": 1,
+            "commit_to_body_ms": 999.4,
+            "body_since_turn_ms": 999
+          },
+          {
+            "index": 2,
+            "commit_to_body_ms": 1349.9,
+            "body_since_turn_ms": 1349
+          }
+        ],
+        "r23_after_v2": [
+          {
+            "index": 0,
+            "commit_to_body_ms": 1650.0,
+            "body_since_turn_ms": 1649
+          },
+          {
+            "index": 1,
+            "commit_to_body_ms": 999.6,
+            "body_since_turn_ms": 999
+          },
+          {
+            "index": 2,
+            "commit_to_body_ms": 1299.9,
+            "body_since_turn_ms": 1299
+          }
+        ],
+        "r23_before_v2": [
+          {
+            "index": 0,
+            "commit_to_body_ms": 948.2,
+            "body_since_turn_ms": 947
+          },
+          {
+            "index": 1,
+            "commit_to_body_ms": 1249.3,
+            "body_since_turn_ms": 1248
+          },
+          {
+            "index": 2,
+            "commit_to_body_ms": 1200.1,
+            "body_since_turn_ms": 1199
+          }
+        ]
+      },
+      "errors": []
+    },
+    "original_fixed_report": {
+      "samples": 40,
+      "eligible_pairs": 18,
+      "median_delta_ms": 69.293,
+      "p90_delta_ms": 249.286,
+      "new_missing_body": 2,
+      "gate_pass": false
+    },
+    "corrected_fixed_report": {
+      "samples": 40,
+      "eligible_pairs": 20,
+      "median_delta_ms": 69.293,
+      "p90_delta_ms": 249.286,
+      "new_missing_body": 0,
+      "gate_pass": true
+    },
+    "correction": "ASR split segments were incorrectly counted as absent output; all 40 samples and thresholds retained, no rerun; original report preserved",
+    "measured_brain_commit": "17e215458dc18eda16fba5a0f4af156b2acb7cea",
+    "final_background_guard_commit": "dd429043f85ca201fc2d1be74a069df916b242c5",
+    "guard_scope": "one assignment inside automatic weather execution, never on normal-chat path; all 156 Brain tests and typecheck rerun"
+  },
+  "https": {
+    "at_ms": 1793180931013,
+    "https": true,
+    "worker_token_role": "device",
+    "worker_token_valid": true,
+    "routes": [
+      {
+        "sn_suffix": "03800006",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "00100004",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "99999902",
+        "authenticated": true,
+        "status": 403,
+        "routing_version": null,
+        "error": "canary_unavailable"
+      },
+      {
+        "sn_suffix": "03800006",
+        "authenticated": false,
+        "status": 401,
+        "routing_version": null,
+        "error": "unauthorized"
+      }
+    ],
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793180927915,
+      "cleanup": {
+        "at_ms": 1793180922669,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+  },
+  "final_state": {
+    "brain": {
+      "host": "brain",
+      "at_ms": 1793180930369,
+      "r23_deployed": true,
+      "unit": "MainPID=2917780\nNRestarts=0\nActiveState=active\n",
+      "source_verified": {
+        "src/tools/amap-weather.ts": "e096a5e98a70c5a1674ffd14c3c4ea0691bf60a0f653829f5572392aa1d2cc57",
+        "src/tools/search-simple-fallback.ts": "bd3a8452f8ae4ca6850033bd0e24aeaea0c03b40ea0b022ba1dca7f26622e808",
+        "src/tools/fixed-weather.ts": "581a849b3d15bf5f8827efcb6c18b689053f8717ee407394cf12cfef051963d2",
+        "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2",
+        "src/tools/search-tasks.ts": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144"
+      },
+      "main_flags": {
+        "p003.search.canary.selected_sn": "BJP00326060100100004",
+        "p003.search.canary.enabled": "1",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.agent": "p003-search-canary-20261021",
+        "p003.search.canary.started_at_ms": "1793065558897",
+        "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}",
+        "p003.search.scope": "all_registered",
+        "p003.search.exclusions": "[]",
+        "p003.search.enabled": "1",
+        "p003.search.tools": "0"
+      },
+      "candidate_flags": {
+        "p003.search.tools": "1",
+        "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.enabled": "1"
+      },
+      "versions": [
+        [
+          "BJP00326060100100004",
+          367,
+          "1.2.2-canary.353",
+          1793180673441
+        ],
+        [
+          "BJP00326070803800006",
+          369,
+          "1.2.2-canary.355",
+          1793177133793
+        ]
+      ],
+      "selection": {
+        "selected": [
+          {
+            "sn": "BJP00326070803800006",
+            "agent": "p003-search-canary-20261021",
+            "canary": true,
+            "reason": "selected",
+            "leaseRemainingMs": 12260,
+            "leaseAgeMs": 2740,
+            "leaseJobs": 0,
+            "leaseMaxJobs": 2,
+            "leaseRegistered": true,
+            "expiresAtMs": 1793589540000,
+            "generation": "R4-20261022-two-devices"
+          },
+          {
+            "sn": "BJP00326060100100004",
+            "agent": "p003-search-canary-20261021",
+            "canary": true,
+            "reason": "selected",
+            "leaseRemainingMs": 12260,
+            "leaseAgeMs": 2740,
+            "leaseJobs": 0,
+            "leaseMaxJobs": 2,
+            "leaseRegistered": true,
+            "expiresAtMs": 1793589540000,
+            "generation": "R4-20261022-two-devices"
+          }
+        ],
+        "negative": {
+          "agent": "rust-worker",
+          "canary": false,
+          "reason": "not_target",
+          "leaseRemainingMs": 12260,
+          "leaseAgeMs": 2740,
+          "leaseJobs": 0,
+          "leaseMaxJobs": 2,
+          "leaseRegistered": true,
+          "expiresAtMs": 1793589540000,
+          "generation": "R4-20261022-two-devices"
+        },
+        "identities": [
+          {
+            "sn": "BJP00326070803800006",
+            "status": "active",
+            "account_linked": true
+          },
+          {
+            "sn": "BJP00326060100100004",
+            "status": "active",
+            "account_linked": true
+          }
+        ]
+      },
+      "release": {
+        "revision": "R23-weather-fallback-20261028",
+        "brain_commit": "dd429043f85ca201fc2d1be74a069df916b242c5",
+        "worker_commit": "e95775f238568e7176475a575ea347c61f7649db",
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "r23_amap_status": "implemented-disabled-missing-key",
+        "r23_simple_fallback_enabled": true,
+        "r23_deployed_at_ms": 1793180746501
+      },
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown",
+            "circuit": {
+              "state": "closed",
+              "retry_at_ms": null
+            }
+          },
+          "verified": false,
+          "degraded": false
+        }
+      },
+      "main_health": {
+        "status": "ok"
+      },
+      "verifier_pid": "0",
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n"
+    },
+    "worker": {
+      "host": "worker",
+      "at_ms": 1793180932227,
+      "r23_deployed": true,
+      "unit": "MainPID=1401316\nNRestarts=0\nActiveState=active\n",
+      "binary_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793180927915,
+        "cleanup": {
+          "at_ms": 1793180922669,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "verifier_pid": "0",
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+    }
+  },
+  "release_steps": {
+    "brain-preflight": {
+      "host": "brain",
+      "step": "preflight",
+      "at_ms": 1793180615231,
+      "mem_available_kb": 2383692,
+      "loadavg": "0.38 0.26 0.14 1/322 2915935",
+      "main_processes": [
+        [
+          "p003-voice",
+          2636558,
+          39
+        ],
+        [
+          "kidshub-voice",
+          1626403,
+          0
+        ],
+        [
+          "p003-analytics",
+          3192914,
+          5
+        ]
+      ],
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "at_ms": 1793179028031,
+            "outcome": "content",
+            "http_status": null,
+            "code": null,
+            "stale": true
+          },
+          "fallback": {
+            "outcome": "unknown",
+            "circuit": {
+              "state": "closed",
+              "retry_at_ms": null
+            }
+          },
+          "verified": false,
+          "degraded": false
+        }
+      },
+      "env_sha256": "dfb7263fe3b491747673d0488cf6e8a3470d70e09fa7e317694421d56c8dd132",
+      "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n",
+      "disk_free_bytes": 10880999424
+    },
+    "brain-pause": {
+      "host": "brain",
+      "step": "pause",
+      "at_ms": 1793180703670,
+      "mem_available_kb": 2353428,
+      "loadavg": "0.44 0.31 0.17 4/321 2917431",
+      "gate_closed": true,
+      "main_unchanged": true
+    },
+    "brain-install": {
+      "host": "brain",
+      "step": "install",
+      "at_ms": 1793180746278,
+      "mem_available_kb": 2342704,
+      "loadavg": "0.29 0.28 0.16 1/324 2917766",
+      "pid": "2917780",
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown",
+            "circuit": {
+              "state": "closed",
+              "retry_at_ms": null
+            }
+          },
+          "verified": false,
+          "degraded": false
+        }
+      },
+      "runtime_env_verified": true,
+      "env_sha256": "55a6c385dff2214c9ab4a730852aebd04d6e530dbabca22fcdb6ec91791351cc",
+      "source_or_binary": {
+        "src/tools/amap-weather.ts": "e096a5e98a70c5a1674ffd14c3c4ea0691bf60a0f653829f5572392aa1d2cc57",
+        "src/tools/search-simple-fallback.ts": "bd3a8452f8ae4ca6850033bd0e24aeaea0c03b40ea0b022ba1dca7f26622e808",
+        "src/tools/fixed-weather.ts": "581a849b3d15bf5f8827efcb6c18b689053f8717ee407394cf12cfef051963d2",
+        "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2",
+        "src/tools/search-tasks.ts": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144"
+      },
+      "main_unchanged": true
+    },
+    "brain-open": {
+      "host": "brain",
+      "step": "open",
+      "at_ms": 1793180859360,
+      "mem_available_kb": 2416976,
+      "loadavg": "0.08 0.21 0.15 1/308 2918060",
+      "reopened_at_ms": 1793180859586,
+      "expires_at_ms": 1793589540000,
+      "main_unchanged": true
+    },
+    "worker-preflight": {
+      "host": "worker",
+      "step": "preflight",
+      "at_ms": 1793180542342,
+      "main_processes": "MainPID=1101301\nNRestarts=0\nActiveState=active\n",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793180541927,
+        "cleanup": {
+          "at_ms": 1793180537733,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "env_sha256": "a8ec39d7d360ebfcd020b3100dc0a962339d2a34aeed6bc4fd6027b5409e74ce",
+      "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n",
+      "disk_free_bytes": 68827230208
+    },
+    "worker-pause": {
+      "host": "worker",
+      "step": "pause",
+      "at_ms": 1793180717419,
+      "mem_available_kb": 6558868,
+      "loadavg": "0.17 0.22 0.29 1/224 1401081",
+      "gate_closed": true,
+      "main_unchanged": true
+    },
+    "worker-install": {
+      "host": "worker",
+      "step": "install",
+      "at_ms": 1793180800088,
+      "mem_available_kb": 6557864,
+      "loadavg": "0.10 0.19 0.27 4/228 1401304",
+      "pid": "1401316",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793180807915,
+        "cleanup": {
+          "at_ms": 1793180807782,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "runtime_env_verified": true,
+      "env_sha256": "a8ec39d7d360ebfcd020b3100dc0a962339d2a34aeed6bc4fd6027b5409e74ce",
+      "source_or_binary": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+      "main_unchanged": true
+    },
+    "worker-open": {
+      "host": "worker",
+      "step": "open",
+      "at_ms": 1793180843290,
+      "mem_available_kb": 6742660,
+      "loadavg": "0.05 0.16 0.26 1/213 1401427",
+      "reopened_at_ms": 1793180843757,
+      "expires_at_ms": 1793589540000,
+      "main_unchanged": true
+    }
+  },
+  "rollback": {
+    "backups": {
+      "brain": "/opt/p003/backups/R23-weather-20261028T074510Z",
+      "worker": "/opt/p003-search-canary-20261021/backups/R23-weather-20261028T074510Z"
+    },
+    "worker_before_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+    "isolated_restore_verified": true,
+    "business_db_and_credentials_not_restored": true
+  },
+  "real_device_hearing": "pending",
+  "private_evidence_sha256": {
+    "task-proof-private.json": "05e542a1c29ce3e631df1eb4d6f59c94a439fb3ff9ac43ed93060b5582d2d3e1",
+    "rtc-private.json": "8a90eac86c14613cff8251c0d7f80238c086b1a16e2759ef50b45f5acdfb6c0e",
+    "fixed-latency-private.json": "94fe138526d2d7858aa027fe54e487231d6f947804e976240b8a2ca861fc3bf0",
+    "brain-regression-final.log": "7e24b7dffd9368e5ceed4d3ac28f09e1c0e4aa0c418528b0e16423224d892c26",
+    "worker-full.json": "36c325cce7419d3c1bcc60be5b5e137fd7a32dfc550ec2775aa12daa1ae48936",
+    "preview-replay.json": "2378b6a7853dd9be07e18e9a3b9d3aabb3766379f36018ba3c1f7cf3e8767f9f"
+  }
+}
