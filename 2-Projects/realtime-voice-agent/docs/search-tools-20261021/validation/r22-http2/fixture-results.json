@@ -1,0 +1,11 @@
+{
+  "tests": 7,
+  "exit_code": 0,
+  "source_sha256": {
+    "http2_turn_association.py": "569fcd543c159e81ae8156cfdec2b60a1ff251315902c3db053e18cb4a0a2f18",
+    "test_http2_turn_association.py": "0da9168f4147a9791455cf2296020125ed7df02e688b9067f584347f523febcb",
+    "analyze_http2_corrected.py": "4d18701df633795e0797aef9629bc17bd8f82d2ec0e5ef3b6e92df389093b140",
+    "http2-measurement-correction-protocol.json": "fe7a3936c91875dca2a36476e7a0f83f65f3ea28e0609a17a4a508307d5cbb96"
+  },
+  "scope": "measurement fixtures, not product acceptance"
+}
