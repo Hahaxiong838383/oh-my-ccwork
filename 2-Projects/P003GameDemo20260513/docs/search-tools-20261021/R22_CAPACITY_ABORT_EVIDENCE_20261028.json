@@ -1,0 +1,607 @@
+{
+  "status": "incomplete_isolated_validation_only",
+  "brain_code_sha": "c341425ec7759f02bd1ad4bae4353baf89ba0cff",
+  "worker_code_sha": "bdc51abd79f04f8703e1cdcc4211986fc1608237",
+  "linux_brain_tests": 168,
+  "linux_brain_tsc_exit": 0,
+  "linux_worker_tests": 461,
+  "route_preview_tests": 31,
+  "linux_release_exit": 0,
+  "worker_binary_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+  "prior_formal_batch": {
+    "label": "r22-final",
+    "terminal": "controller_stopped",
+    "room_attempts": 14,
+    "valid_normal_pairs": 6,
+    "median_delta_ms": 88.015,
+    "p90_delta_ms": 594.76,
+    "passes": false,
+    "search_resume_groups_not_run": true
+  },
+  "brain_install": {
+    "at_ms": 1793146393456,
+    "backup": "/opt/p003/search-verification-r17-20261026/rtc-brain/backups/R22-abort-20261028T001307Z",
+    "phases": [
+      {
+        "phase": "new",
+        "source": {
+          "src/routes/custom-llm.ts": "ffbd434fa14ca44f14cc375abcc7eeda101b330be4b75510e81e1b9322d85bf9",
+          "src/providers/gemini-llm.ts": "7ad2cd86c0692ec348a6b175baf58b8045484e6615c98214b0b6ad6a8b6b4735",
+          "src/providers/minimax-llm.ts": "6da2296e4cb5b5e6dae743099cef76cda9cb1bd297b273bf6db05f6819dc53a9"
+        },
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": false,
+          "tools": false,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        }
+      },
+      {
+        "phase": "rollback",
+        "source": {
+          "src/routes/custom-llm.ts": "fdddb013c206c2f5b5718fe4ba7aa8fcb7fa3365d4e009b36e7469f30742c20e",
+          "src/providers/gemini-llm.ts": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140",
+          "src/providers/minimax-llm.ts": "175ccc97309246e9c6283694d05ee204a8d388f3aa94f94b58649c1a2be20d01"
+        },
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": false,
+          "tools": false,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        }
+      },
+      {
+        "phase": "restored_new",
+        "source": {
+          "src/routes/custom-llm.ts": "ffbd434fa14ca44f14cc375abcc7eeda101b330be4b75510e81e1b9322d85bf9",
+          "src/providers/gemini-llm.ts": "7ad2cd86c0692ec348a6b175baf58b8045484e6615c98214b0b6ad6a8b6b4735",
+          "src/providers/minimax-llm.ts": "6da2296e4cb5b5e6dae743099cef76cda9cb1bd297b273bf6db05f6819dc53a9"
+        },
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": false,
+          "tools": false,
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        }
+      }
+    ],
+    "production_unchanged": true,
+    "gates_unchanged": true,
+    "env_unchanged": true
+  },
+  "worker_install": {
+    "at_ms": 1793146583341,
+    "end_ms": 1793157353000,
+    "backup": "/opt/p003-search-verification-20261026/backups/R22-capacity-20261028T001601Z",
+    "roundtrip": [
+      {
+        "phase": "new",
+        "sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+        "pid": "1231886",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793146567340,
+          "cleanup": {
+            "at_ms": 1793146566603,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "text_audit": {
+          "ok": true,
+          "escaped_text_keys": [],
+          "checked_keys": [
+            "AGENT_GREETING",
+            "AGENT_INSTRUCTIONS",
+            "BACKCHANNEL_HOTWORDS",
+            "EXIT_SWALLOW_HOTWORDS",
+            "INTERRUPT_HOTWORDS",
+            "P003_DEVICE_ASR_HOTWORDS",
+            "VOLC_ASR_HOTWORDS"
+          ]
+        }
+      },
+      {
+        "phase": "rollback",
+        "sha256": "08ba563732b25eb0eb38d4a6d5434d4e1c7b11824214053f6cbbae9ea9d73c3b",
+        "pid": "1231917",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793146575174,
+          "cleanup": {
+            "at_ms": 1793146572581,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "text_audit": {
+          "ok": true,
+          "escaped_text_keys": [],
+          "checked_keys": [
+            "AGENT_GREETING",
+            "AGENT_INSTRUCTIONS",
+            "BACKCHANNEL_HOTWORDS",
+            "EXIT_SWALLOW_HOTWORDS",
+            "INTERRUPT_HOTWORDS",
+            "P003_DEVICE_ASR_HOTWORDS",
+            "VOLC_ASR_HOTWORDS"
+          ]
+        }
+      },
+      {
+        "phase": "restored_new",
+        "sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+        "pid": "1231947",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793146582090,
+          "cleanup": {
+            "at_ms": 1793146578614,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "text_audit": {
+          "ok": true,
+          "escaped_text_keys": [],
+          "checked_keys": [
+            "AGENT_GREETING",
+            "AGENT_INSTRUCTIONS",
+            "BACKCHANNEL_HOTWORDS",
+            "EXIT_SWALLOW_HOTWORDS",
+            "INTERRUPT_HOTWORDS",
+            "P003_DEVICE_ASR_HOTWORDS",
+            "VOLC_ASR_HOTWORDS"
+          ]
+        }
+      }
+    ],
+    "production_unchanged": true,
+    "verification_gate_closed": true
+  },
+  "quick_reentry_first_attempt": {
+    "rc": 1,
+    "results": {
+      "worker_pid": "1231947",
+      "rows": [
+        {
+          "room": "sn-BJP00399999999999901-1793146656806",
+          "start_ms": 1793146656806,
+          "reentry_gap_ms": null,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146657858,
+          "ready_latency_ms": 1052,
+          "end_ms": 1793146658068
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146658569",
+          "start_ms": 1793146658569,
+          "reentry_gap_ms": 501,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146659512,
+          "ready_latency_ms": 943,
+          "end_ms": 1793146659723
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146660224",
+          "start_ms": 1793146660224,
+          "reentry_gap_ms": 501,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146661065,
+          "ready_latency_ms": 841,
+          "end_ms": 1793146661276
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146661777",
+          "start_ms": 1793146661777,
+          "reentry_gap_ms": 501,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146662668,
+          "ready_latency_ms": 891,
+          "end_ms": 1793146662879
+        }
+      ],
+      "physical_hearing": false
+    },
+    "cleanup": {
+      "checks_passed": false,
+      "python_finalization_bypassed": true,
+      "error_type": "AssertionError",
+      "at_ms": 1793146675464,
+      "exit_status": 1
+    }
+  },
+  "quick_reentry_corrected_probe": {
+    "rc": 0,
+    "results": {
+      "worker_pid": "1231947",
+      "rows": [
+        {
+          "room": "sn-BJP00399999999999901-1793146726551",
+          "start_ms": 1793146726551,
+          "reentry_gap_ms": null,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146727335,
+          "ready_latency_ms": 784,
+          "end_ms": 1793146727552
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146728076",
+          "start_ms": 1793146728076,
+          "reentry_gap_ms": 524,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146728629,
+          "ready_latency_ms": 553,
+          "end_ms": 1793146728839
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146729361",
+          "start_ms": 1793146729361,
+          "reentry_gap_ms": 522,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146729940,
+          "ready_latency_ms": 579,
+          "end_ms": 1793146730154
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146730682",
+          "start_ms": 1793146730682,
+          "reentry_gap_ms": 528,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146731277,
+          "ready_latency_ms": 595,
+          "end_ms": 1793146731490
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146732014",
+          "start_ms": 1793146732014,
+          "reentry_gap_ms": 524,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146732609,
+          "ready_latency_ms": 595,
+          "end_ms": 1793146732820
+        },
+        {
+          "room": "sn-BJP00399999999999901-1793146733343",
+          "start_ms": 1793146733343,
+          "reentry_gap_ms": 523,
+          "input_ready": true,
+          "output_ready": true,
+          "ready_ms": 1793146733929,
+          "ready_latency_ms": 586,
+          "end_ms": 1793146734139
+        }
+      ],
+      "failure": null,
+      "physical_hearing": false
+    },
+    "cleanup": {
+      "checks_passed": true,
+      "python_finalization_bypassed": true,
+      "cleanup": {
+        "rooms_created": 6,
+        "rooms_disconnected": 6,
+        "streams_created": 0,
+        "streams_closed": 0,
+        "sources_created": 6,
+        "sources_closed": 6
+      },
+      "at_ms": 1793146747282,
+      "exit_status": 0
+    }
+  },
+  "real_abort": {
+    "checks": [
+      {
+        "room": "sn-BJP00399999999999901-1793146780222",
+        "cancelled": true,
+        "conversation_rows": 0,
+        "stored_roles": [],
+        "abort_events": 1,
+        "storage_session": "rtc",
+        "start_ms": 1793146779762,
+        "end_ms": 1793146783139
+      },
+      {
+        "room": "sn-BJP00399999999999901-1793146783599",
+        "cancelled": false,
+        "conversation_rows": 2,
+        "stored_roles": [
+          "user",
+          "assistant"
+        ],
+        "abort_events": 0,
+        "storage_session": "rtc",
+        "start_ms": 1793146783139,
+        "end_ms": 1793146785589
+      }
+    ],
+    "real_provider_content_received": true,
+    "cancelled_turn_not_persisted": true,
+    "normal_turn_persisted": true,
+    "scope": "isolated provider probe with exclusive request interval; no raw body returned"
+  },
+  "real_abort_first_analysis_error": "Used room as session_id; actual persistence uses session_id=rtc. Corrected read-only query on the same original attempt; requests not rerun.",
+  "real_devices_release": "R21 plus UTF8 environment hotfix; R22 code not published",
+  "real_window_unchanged": {
+    "devices": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "expires_at_ms": 1793589540000
+  },
+  "physical_hearing": false,
+  "pilot_before_agent_plan": {
+    "normal": {
+      "samples": 2,
+      "pairs": 1,
+      "median_delta_ms": 1.62,
+      "empirical_p90_delta_ms": 1.62,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": -523.67,
+          "empirical_p90_ms": -523.67
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": -522.03,
+          "empirical_p90_ms": -522.03
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": false
+    },
+    "search": {
+      "samples": 2,
+      "pairs": 1,
+      "median_delta_ms": -149.6,
+      "empirical_p90_delta_ms": -149.6,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": -44.1,
+          "empirical_p90_ms": -44.1
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": -193.7,
+          "empirical_p90_ms": -193.7
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": false
+    },
+    "resume": {
+      "samples": 2,
+      "pairs": 1,
+      "median_delta_ms": -201.05,
+      "empirical_p90_delta_ms": -201.05,
+      "missing_body": {
+        "A": 0,
+        "B": 0
+      },
+      "new_missing_body_pair_indices": [],
+      "additional_timing": {
+        "sender_end_to_commit_delta_ms": {
+          "median_ms": -52.52,
+          "empirical_p90_ms": -52.52
+        },
+        "sender_end_to_body_delta_ms": {
+          "median_ms": -253.57,
+          "empirical_p90_ms": -253.57
+        }
+      },
+      "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+      "passes_final_threshold": false
+    }
+  },
+  "agent_plan_stream_probe": {
+    "rows": [
+      {
+        "credential_slot": 1,
+        "status": 200,
+        "code": null,
+        "chars": 3,
+        "first_text_ms": 794,
+        "elapsed_ms": 947,
+        "valid_content": true,
+        "done": true,
+        "model": "doubao-seed-2.1-lite",
+        "base": "https://ark.cn-beijing.volces.com/api/plan/v3"
+      }
+    ],
+    "selected_index": 0
+  },
+  "agent_plan_install": {
+    "at_ms": 1793147250616,
+    "backup": "/opt/p003/search-verification-r17-20261026/rtc-brain/backups/R22-agent-plan-20261028T002728Z",
+    "changed_keys": [
+      "VOLC_LLM_API_KEY",
+      "VOLC_LLM_BASE_URL",
+      "VOLC_LLM_MODEL"
+    ],
+    "model": "doubao-seed-2.1-lite",
+    "base": "https://ark.cn-beijing.volces.com/api/plan/v3",
+    "pid": "2780580",
+    "env_sha256": "afb37a6734e5adb926d4e074ef4c16d5769e2de0fbd1fdb32ea86a7c324d9f36",
+    "runtime_values_verified": true,
+    "unrelated_values_preserved": true,
+    "production_unchanged": true,
+    "health": {
+      "status": "ok",
+      "agent": "p003-search-verification-20261026",
+      "generation": "R17-isolated-rtc-20261026",
+      "search": false,
+      "tools": false,
+      "llm": {
+        "mode": "race",
+        "main": {
+          "outcome": "unknown"
+        },
+        "fallback": {
+          "outcome": "unknown",
+          "circuit": {
+            "state": "closed",
+            "retry_at_ms": null
+          }
+        },
+        "verified": false,
+        "degraded": false
+      }
+    }
+  },
+  "agent_plan_runtime": {
+    "checks": [
+      {
+        "mode": "main",
+        "chars": 23,
+        "first_text_ms": 425,
+        "elapsed_ms": 636,
+        "done_callbacks": 1,
+        "error_callbacks": 0,
+        "persona_ok": true,
+        "real_provider": true
+      },
+      {
+        "mode": "fallback",
+        "chars": 24,
+        "first_text_ms": 1802,
+        "elapsed_ms": 2200,
+        "done_callbacks": 1,
+        "error_callbacks": 0,
+        "persona_ok": true,
+        "real_provider": true
+      },
+      {
+        "mode": "takeover",
+        "chars": 24,
+        "first_text_ms": 885,
+        "elapsed_ms": 1295,
+        "done_callbacks": 1,
+        "error_callbacks": 0,
+        "persona_ok": true,
+        "real_provider": true
+      },
+      {
+        "mode": "cancel",
+        "chars": 3,
+        "first_text_ms": 518,
+        "elapsed_ms": 521,
+        "done_callbacks": 0,
+        "error_callbacks": 0,
+        "persona_ok": null,
+        "real_provider": true
+      },
+      {
+        "mode": "race",
+        "chars": 24,
+        "first_text_ms": 565,
+        "elapsed_ms": 742,
+        "done_callbacks": 1,
+        "error_callbacks": 0,
+        "persona_ok": true,
+        "real_provider": true
+      }
+    ],
+    "main_failure_in_child_process_only": true,
+    "cancelled_stream_no_done": true
+  },
+  "tts_fault_rtc": {
+    "scope": "only p003-search-verification-worker service cgroup; TTS destination TCP443",
+    "independent_expiry_seconds": 70,
+    "probe_rc": 0,
+    "fault_removed": true,
+    "production_processes_unchanged": true,
+    "input_ready": 1,
+    "output_ready": 1,
+    "received_synthetic_voiced_ms": 1910.0,
+    "failure_caption_count": 1,
+    "cleanup_passed": true,
+    "reviewed_stage_logs": [
+      "2026-10-28T00:29:51.306789Z  INFO tts dispatch end (includes aborted futures) room=sn-BJP00399999999999901-1793147377 turn_id=1 elapsed_ms=10001 finished=false stage=\"prewarm\"",
+      "2026-10-28T00:29:51.306858Z  WARN tts synthesize failed room=sn-BJP00399999999999901-1793147377 error=xfyun first PCM budget exhausted at prewarm",
+      "2026-10-28T00:29:51.306993Z  INFO tts connection timing connect_id=29 stage=\"resolve_tcp\" outcome=\"cancelled\" elapsed_ms=9895",
+      "2026-10-28T00:29:51.559571Z  INFO background search prepared receipt scheduled clip=unavailable pcm_ms=2640"
+    ],
+    "physical_hearing": false
+  }
+}
