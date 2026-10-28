@@ -13,3 +13,8 @@ const aborted=new AbortController();aborted.abort();await assert.rejects(p.run({
 await p.run({place:'上海',day_offset:0,metric:'aqi'},signal,Date.now());assert.equal(primary,3,'unverified AQI fields must not use Baidu');
 await assert.rejects(p.run({place:'成都',day_offset:0,metric:'aqi'},signal,Date.now()),/metric/);
 console.log('fixed weather: precise fallback, scope, AQI boundary and cancellation passed');
+let amapCalls=0,baiduCalls=0;
+const official=new m.FixedWeather({amap:{run:async()=>{amapCalls++;return {text:'高德成都大致天气',sources:[{title:'天气',url:'https://www.amap.com/',date:null}]};}},baidu:{run:async()=>{baiduCalls++;throw Error('not_expected');}},moji});
+assert.match((await official.run({place:'成都',day_offset:0,metric:'forecast'},signal,Date.now())).text,/高德/);assert.equal(amapCalls,1);assert.equal(baiduCalls,0);
+const fallback=new m.FixedWeather({amap:{run:async()=>{throw Error('weather_amap_quota');}},baidu:{run:async()=>({text:'百度成都天气',sources:[{title:'百度天气',url:'https://weathernew.pae.baidu.com/',date:null}]})},moji});
+assert.match((await fallback.run({place:'成都',day_offset:0,metric:'forecast'},signal,Date.now())).text,/百度/);

@@ -1,0 +1,391 @@
+{
+  "schema": 1,
+  "purpose": "R22 read-only weather diagnosis; not a deployment or end-to-end acceptance",
+  "observed_at_ms": {
+    "brain": 1793171883501,
+    "worker": 1793171884874,
+    "route_preview": 1793172540332
+  },
+  "log_window_cst": [
+    "2026-10-28T14:15:00+08:00",
+    "2026-10-28T14:55:00+08:00"
+  ],
+  "target_sn_suffix": "00100004",
+  "current_ota_report": [
+    {
+      "version_code": 367,
+      "version_name": "1.2.2-canary.353",
+      "reported_at_ms": 1793167939843
+    }
+  ],
+  "actual_worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+  "current_brain_source_sha256": {
+    "src/tools/weather-places.ts": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+    "src/tools/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "src/tools/baidu-weather.ts": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97",
+    "src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+    "src/tools/fixed-weather.ts": "7063e076eea7713139305f2ee567424c5b2e9217c79e14cb44ccee552ebe216f",
+    "src/tools/device-location.ts": "8eccbc3f897ff27ea7495d0608475b3d712e5126c878c83f8ad09b318cf34447",
+    "src/tools/device-location-runtime.ts": "fe8387ff7b0a88dbed345b68a7aaeeead8fa777c205afcca1697d07d1a2fa8f1",
+    "src/tools/search-runtime.ts": "62aebfc7d138347958a1e667a2d21248140172450ea1d1c79b2435a30019ceae",
+    "src/tools/search-routing-config.ts": "f9f93d93732eca39ad03bb3eed6e7903c1d27980a90ff9a2626853fe0367dc73"
+  },
+  "local_weather_sources_match_deployed": true,
+  "task_outcomes": {
+    "answered": 16,
+    "cancelled": 1,
+    "no_evidence": 7,
+    "failed": 1
+  },
+  "weather_failures": [
+    {
+      "task_id": "acdd6290-001f-4bc7-872a-10ec81bacf3d",
+      "created_at_ms": 1793168967440,
+      "outcome": "no_evidence",
+      "parsed_place": "下",
+      "error": "weather_place_unknown",
+      "error_at_ms": 1793168967454.467,
+      "location": [
+        {
+          "state": "ready",
+          "city": "北京市",
+          "province": "北京",
+          "observed_at_ms": 1793168955920,
+          "expires_at_ms": 1793172555000
+        }
+      ],
+      "upstream_not_reached": "FixedWeather.run calls resolveWeatherPlace before either provider"
+    },
+    {
+      "task_id": "b3d904ec-d4fd-474c-9cdf-cb7f2e8506f7",
+      "created_at_ms": 1793169937273,
+      "outcome": "no_evidence",
+      "parsed_place": "下放学适合打球",
+      "error": "weather_place_unknown",
+      "error_at_ms": 1793169937289.457,
+      "location": [
+        {
+          "state": "ready",
+          "city": "北京市",
+          "province": "北京",
+          "observed_at_ms": 1793169926131,
+          "expires_at_ms": 1793173526000
+        }
+      ],
+      "upstream_not_reached": "FixedWeather.run calls resolveWeatherPlace before either provider"
+    },
+    {
+      "task_id": "270f8886-d450-4427-b616-47afaa2f4095",
+      "created_at_ms": 1793169950070,
+      "outcome": "no_evidence",
+      "parsed_place": "该插成都",
+      "error": "weather_place_unknown",
+      "error_at_ms": 1793169950084.386,
+      "location": [
+        {
+          "state": "ready",
+          "city": "北京市",
+          "province": "北京",
+          "observed_at_ms": 1793169926131,
+          "expires_at_ms": 1793173526000
+        }
+      ],
+      "upstream_not_reached": "FixedWeather.run calls resolveWeatherPlace before either provider"
+    }
+  ],
+  "route_preview": {
+    "observed_at_ms": 1793172540332,
+    "routing_version": "r7-5bd970f225036a447233316e",
+    "binary_sha256": "48e0ed5b673bc9340345c25a38cdd12b2853685f7b41463ae8c3e76fe62b2d4a",
+    "switches": {
+      "weather_enabled": true,
+      "auto_location_enabled": true,
+      "baidu_weather_enabled": true
+    },
+    "cases": [
+      {
+        "text": "帮我查一下今天这里下不下雨",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "下"
+          },
+          "query": "今天这里下不下雨",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-explicit",
+          "weather": null
+        }
+      },
+      {
+        "text": "帮我查一下今天这里下不下雨，放学适合打球吗",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "下放学适合打球"
+          },
+          "query": "今天这里下不下雨，放学适合打球吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-explicit",
+          "weather": null
+        }
+      },
+      {
+        "text": "该插成都今天的天气",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "该插成都"
+          },
+          "query": "该插成都今天的天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      },
+      {
+        "text": "改查成都今天的天气",
+        "decision": {
+          "action": "replace",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "成都"
+          },
+          "query": "成都今天的天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-control",
+          "weather": null
+        }
+      },
+      {
+        "text": "帮我查一下成都今天的天气",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "成都"
+          },
+          "query": "成都今天的天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-explicit",
+          "weather": null
+        }
+      },
+      {
+        "text": "今天天气怎么样",
+        "decision": {
+          "action": "search",
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "query": "今天天气怎么样",
+          "reason": "后台按本轮设备网络定位城市，不等待前台聊天",
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      },
+      {
+        "text": "这里今天会下雨吗",
+        "decision": {
+          "action": "search",
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "query": "这里今天会下雨吗",
+          "reason": "后台按本轮设备网络定位城市，不等待前台聊天",
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      },
+      {
+        "text": "今天这里下不下雨",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "下"
+          },
+          "query": "今天这里下不下雨",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      },
+      {
+        "text": "今天本地适合打球吗",
+        "decision": {
+          "action": "chat",
+          "query": null,
+          "reason": "未命中查询规则",
+          "rule_id": "default-chat",
+          "weather": null
+        }
+      },
+      {
+        "text": "明天北京会下雨吗",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "北京"
+          },
+          "query": "明天北京会下雨吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      },
+      {
+        "text": "帮我查今天这里天气，放学适合打球吗",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "放学适合打球"
+          },
+          "query": "今天这里天气，放学适合打球吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-explicit",
+          "weather": null
+        }
+      },
+      {
+        "text": "天气为什么会变化",
+        "decision": {
+          "action": "chat",
+          "query": null,
+          "reason": "未命中查询规则",
+          "rule_id": "default-chat",
+          "weather": null
+        }
+      },
+      {
+        "text": "不要查北京天气",
+        "decision": {
+          "action": "chat",
+          "query": null,
+          "reason": "普通聊天或保护表达",
+          "rule_id": "protected",
+          "weather": null
+        }
+      },
+      {
+        "text": "改查朝阳今天的天气",
+        "decision": {
+          "action": "replace",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "朝阳"
+          },
+          "query": "朝阳今天的天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-control",
+          "weather": null
+        }
+      },
+      {
+        "text": "帮我查巴黎今天天气",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "巴黎"
+          },
+          "query": "巴黎今天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-explicit",
+          "weather": null
+        }
+      },
+      {
+        "text": "帮我查河北今天天气",
+        "decision": {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "河北"
+          },
+          "query": "河北今天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "rule_id": "builtin-explicit",
+          "weather": null
+        }
+      }
+    ]
+  },
+  "raw_private_evidence_sha256": {
+    "brain-private.json": "96c42aa6635ee72130f11cbc7abc09bb5c88e5cd4dc55b6d17a67b8ef08b28c0",
+    "worker-private.json": "18e3e716a26570587d13f0b9ae1e222d3c73aed224db02504fa09e9bdd1f3112"
+  },
+  "explicit_rate_error_matches": {
+    "brain": 0,
+    "worker": 0
+  },
+  "research_repos": [
+    {
+      "repo": "ACAne0320/amap-weather-mcp-server",
+      "sha": "44143e43e48a5d1a1efd62876672fbd35d7faef3",
+      "pushed_at": "2025-04-08T13:11:29Z",
+      "commit_at": "2025-04-08T13:11:25Z",
+      "stars": 17,
+      "license": null
+    },
+    {
+      "repo": "kenera/weather-zh",
+      "sha": "521e7e16b3be8558943f4f602a3c2e6796d3f1d1",
+      "pushed_at": "2026-02-25T07:41:13Z",
+      "commit_at": "2026-02-25T07:41:08Z",
+      "stars": 1,
+      "license": null
+    },
+    {
+      "repo": "marcusbai/caiyun-weather-mcp",
+      "sha": "0ee2f51d7cf83294ce72bb028226ad3791327a53",
+      "pushed_at": "2025-11-07T05:41:01Z",
+      "commit_at": "2025-11-07T05:40:52Z",
+      "stars": 10,
+      "license": null
+    },
+    {
+      "repo": "whitejoce/Get_Weather",
+      "sha": "ddf77160582f9ae6982329967c18d3e8992f279f",
+      "pushed_at": "2026-10-08T06:57:51Z",
+      "commit_at": "2026-10-08T06:49:54Z",
+      "stars": 15,
+      "license": {
+        "key": "mit",
+        "name": "MIT License",
+        "spdx_id": "MIT",
+        "url": "https://api.github.com/licenses/mit",
+        "node_id": "MDc6TGljZW5zZTEz"
+      }
+    }
+  ],
+  "changes": {
+    "production_code": false,
+    "deployment": false,
+    "window": false,
+    "new_credentials": false
+  },
+  "limitations": [
+    "Only the specified log window and candidate database were examined; not all provider traffic",
+    "No new weather provider API credential or connectivity test",
+    "Route preview is pure parsing, not a real voice conversation",
+    "No device-speaker listening or latency acceptance in this review"
+  ]
+}

@@ -15,6 +15,7 @@ import {FixedWeather} from './fixed-weather.js';
 import {getDeviceLocationStore,closeDeviceLocationRuntime} from './device-location-runtime.js';
 import { searchCapabilityBase } from './search-chat-policy.js';
 import { SearchExecutor } from './search-executor.js';
+import {runSearchFallback} from './search-simple-fallback.js';
 import {searchEnrollment} from './search-enrollment.js';
 
 let instance: SearchTasks | null = null;
@@ -69,9 +70,26 @@ export function getSearchTasks(): SearchTasks | null {
       execute: async (query, signal, owner) => {
         const record = deviceRegistryStore.get(owner.subject);
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
+        const accountId = record.account_id;
+        const general = async (query:string,signal:AbortSignal,tools=searchSettings().tools) => {
+        const cfg = getDevicePromptConfig(accountId);
+        try {
+          const result = await new SearchExecutor({ toolAudit: event=>console.info('[search-tool]',JSON.stringify({task_id:owner.id,...event})), validationAudit: value => console.info('[search-validation]',JSON.stringify({task_id:'id'in owner?owner.id:undefined,...value})), grounding: true, apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
+            .run(query, signal, searchCapabilityBase(buildDeviceBase(cfg),true) + '\n' + (deviceAddendum(cfg) ?? ''));
+          availability.success(); return result;
+        } catch (e) {
+          const code = e instanceof Error ? e.message : 'search_unavailable';
+          availability.failure(code);
+          if (/^upstream_(402|429|5\d\d)$/.test(code)) console.warn('[search] ' + code);
+          throw e;
+        }
+        };
+        let fallbackQuery:string|null=query;
+        const primary=async(signal:AbortSignal)=>{
         if(owner.routing?.weather_enabled&&owner.routing.auto_location_enabled&&owner.routing.auto_weather){
           const location=await getDeviceLocationStore()?.wait(owner.subject,owner.session,signal);signal.throwIfAborted();
-          if(location?.state!=='ready') {console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:location?.state??'unknown',reason:location?.reason??'location_no_session'}));return {text:'暂时没能根据设备网络确定所在城市，这次先不报天气，稍后可以再试。',sources:[]};}
+          if(location?.state!=='ready') {fallbackQuery=null;console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:location?.state??'unknown',reason:location?.reason??'location_no_session'}));return {text:'暂时没能根据设备网络确定所在城市，这次先不报天气，稍后可以再试。',sources:[]};}
+          fallbackQuery=[...(location.city+' '+query)].slice(0,128).join('');
           if(owner.routing.baidu_weather_enabled){
             const result=await expandedResult({...owner.routing.auto_weather,place:location.city!},signal,owner,{province:location.province});
             result.text='按设备网络定位，'+result.text;
@@ -92,17 +110,11 @@ export function getSearchTasks(): SearchTasks | null {
           try {const result=await weather.run(owner.routing.weather,signal,owner.createdAt);console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,...result.weather}));return result;}
           catch{console.warn('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,outcome:'unavailable'}));throw new Error('weather_unavailable');}
         }
-        const cfg = getDevicePromptConfig(record.account_id);
-        try {
-          const result = await new SearchExecutor({ toolAudit: event=>console.info('[search-tool]',JSON.stringify({task_id:owner.id,...event})), validationAudit: value => console.info('[search-validation]',JSON.stringify({task_id:'id'in owner?owner.id:undefined,...value})), grounding: true, apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools: searchSettings().tools, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
-            .run(query, signal, searchCapabilityBase(buildDeviceBase(cfg),true) + '\n' + (deviceAddendum(cfg) ?? ''));
-          availability.success(); return result;
-        } catch (e) {
-          const code = e instanceof Error ? e.message : 'search_unavailable';
-          availability.failure(code);
-          if (/^upstream_(402|429|5\d\d)$/.test(code)) console.warn('[search] ' + code);
-          throw e;
-        }
+        return general(query,signal);
+        };
+        if(process.env.P003_SEARCH_SIMPLE_FALLBACK!=='1')return primary(signal);
+        const isWeather=Boolean(owner.routing?.auto_weather||owner.routing?.place_weather||owner.routing?.weather);
+        return runSearchFallback({signal,primary,primaryMs:isWeather?5000:10000,fallbackMs:isWeather?12000:7000,fallback:async s=>{if(fallbackQuery===null)throw new Error('weather_location_required');return general(fallbackQuery,s,false);},audit:(stage,outcome)=>console.info('[search-fallback]',JSON.stringify({task_id:owner.id,stage,outcome}))});
       } });
     timer = setInterval(() => { try { instance?.tick(); } catch { console.error('[search] ledger_tick_failed'); } }, 250);
     timer.unref();
