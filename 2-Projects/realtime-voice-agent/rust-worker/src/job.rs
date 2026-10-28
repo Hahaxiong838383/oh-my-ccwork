@@ -472,6 +472,7 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) -> bool {
     let candidate = crate::search_canary::is_candidate(&config.agent_name);
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     let client = CLIENT.get_or_init(|| reqwest::Client::builder()
+        .http1_only()
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
         .build().expect("room cleanup HTTP client"));

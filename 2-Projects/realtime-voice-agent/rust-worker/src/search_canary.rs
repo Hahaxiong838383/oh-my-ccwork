@@ -77,7 +77,7 @@ pub fn signal(connected:bool){LAST_SIGNAL.store(if connected {now_ms()}else{0},s
 pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::WorkerState>) {
  let Some(profile)=profile(&agent)else{return};
  let Ok(path)=std::env::var("P003_SEARCH_CANARY_HEALTH_FILE")else{return};
- let client=reqwest::Client::builder().timeout(std::time::Duration::from_secs(2)).redirect(reqwest::redirect::Policy::none()).build().expect("canary health client");
+ let client=reqwest::Client::builder().http1_only().timeout(std::time::Duration::from_secs(2)).redirect(reqwest::redirect::Policy::none()).build().expect("canary health client");
  let query=std::env::var("LLM_URL_QUERY").unwrap_or_default();
  let token=reqwest::Url::parse(&format!("https://localhost/?{}",query)).ok().and_then(|u|u.query_pairs().find(|(k,_)|k=="token").map(|(_,v)|v.to_string())).unwrap_or_default();
  let key=std::env::var("LLM_API_KEY").unwrap_or_default();

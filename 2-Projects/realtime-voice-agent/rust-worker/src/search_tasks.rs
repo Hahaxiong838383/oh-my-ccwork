@@ -50,6 +50,7 @@ impl Api {
         url.query_pairs_mut().append_pair("room", &cfg.room);
         Some(Self {
             client: reqwest::Client::builder()
+                .http1_only()
                 .timeout(Duration::from_secs(3))
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
