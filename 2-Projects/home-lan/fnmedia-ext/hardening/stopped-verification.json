@@ -1,0 +1,59 @@
+{
+  "unit": [
+    "MainPID=0",
+    "Result=success",
+    "ActiveState=inactive",
+    "SubState=dead"
+  ],
+  "probes": {
+    "/v/": {
+      "http": 200,
+      "bytes": 4303,
+      "html_script": true
+    },
+    "/v/api/ext/status": {
+      "http": 501,
+      "bytes": 45,
+      "html_script": false,
+      "code": null
+    },
+    "/v/online-admin": {
+      "http": 200,
+      "bytes": 4303,
+      "html_script": true
+    },
+    "/_ext/healthz": {
+      "http": 200,
+      "bytes": 4303,
+      "html_script": true
+    },
+    "/v/api/v1/user/info": {
+      "http": 200,
+      "bytes": 46,
+      "html_script": false,
+      "code": 5000
+    }
+  },
+  "sockets": {
+    "/var/run/trim_media.sock": {
+      "exists": true,
+      "pid": 7511,
+      "uid": 0,
+      "exe": "/usr/local/apps/@appcenter/trim.media/trim-media",
+      "caps": {
+        "CapPrm": "000001ffffffffff",
+        "CapEff": "000001ffffffffff",
+        "NoNewPrivs": "0"
+      },
+      "inode": 3051
+    },
+    "/var/run/trim_media_upstream.sock": {
+      "exists": false
+    }
+  },
+  "official_files_unchanged": {
+    "/usr/local/apps/@appcenter/trim.media/trim-media": true,
+    "/var/apps/trim.media/manifest": true,
+    "/usr/trim/nginx/conf/conf.d/trim_media.conf": true
+  }
+}

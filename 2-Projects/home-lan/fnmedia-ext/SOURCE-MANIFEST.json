@@ -1,13 +1,61 @@
 {
   "source_repository": "~/home-lan",
-  "source_commit": "6120641e3ddc0b7d24ada2e816abbd98e40e7673",
+  "source_commit": "7d5dd8a4e9495511a1133190b975a6fb25537776",
   "date": "2026-10-28",
   "files": [
     {
       "source": "2-Projects/P01-家里局域网与飞牛/12-fnmedia-ext安装前评估.md",
       "snapshot": "12-fnmedia-ext安装前评估.md",
-      "bytes": 7135,
-      "sha256": "07225e1014975a42729f60aa96e73a879cad3dc2ed949a4097ff16783064ee88"
+      "bytes": 7339,
+      "sha256": "e8ab8f06629d36754df40f99ada8a1fd474fa3a21d337fe2f7472d31ed9221f7"
+    },
+    {
+      "source": "2-Projects/P01-家里局域网与飞牛/13-fnmedia-ext加固部署与升级保护.md",
+      "snapshot": "13-fnmedia-ext加固部署与升级保护.md",
+      "bytes": 5829,
+      "sha256": "d0c1d84b437fc4b13a32742c1fd65f92df5f28d1832da8b044aa50f174ba042a"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/BUILD-MANIFEST.json",
+      "snapshot": "hardening/BUILD-MANIFEST.json",
+      "bytes": 574,
+      "sha256": "8bb89b6ce631fd81c702e1f4168be5bf998285186703884fc86b2b8fb244a4f6"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/README.md",
+      "snapshot": "hardening/README.md",
+      "bytes": 4599,
+      "sha256": "19ab659b0943fa5d508c52de491b29777435fb0b23f8e1bf02d654121c479ff1"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/build.py",
+      "snapshot": "hardening/build.py",
+      "bytes": 2215,
+      "sha256": "988738b60fbc4d1727855def743b8926b1eea34b4a7f562ad98fb6d792adbd82"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/crash-verification.json",
+      "snapshot": "hardening/crash-verification.json",
+      "bytes": 553,
+      "sha256": "8c618a9525fd9dfd110bf291fd02ba34fe10cbe7af4cd049de9229d7413a58d8"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/final-verification.json",
+      "snapshot": "hardening/final-verification.json",
+      "bytes": 1947,
+      "sha256": "c4b8359d8a2e8061c2d0a633fdd3860e6c2e4b28ebb122716a008417b54b1e69"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/hardening.patch",
+      "snapshot": "hardening/hardening.patch",
+      "bytes": 340122,
+      "sha256": "bf44621c5a8b8f41f3212aee27e514eb0f01de2ca1607b2b904f473bad0b6fe3"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/stopped-verification.json",
+      "snapshot": "hardening/stopped-verification.json",
+      "bytes": 1244,
+      "sha256": "8b2d85cecd9eaaf5f290c67ee4165dc461d5e949686c4be6b277f8d8644ebe19"
     }
   ]
 }

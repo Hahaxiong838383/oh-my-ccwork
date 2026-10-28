@@ -1,0 +1,32 @@
+{
+  "before": {
+    "MainPID": "1085617",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "after": {
+    "MainPID": "1085733",
+    "NRestarts": "1",
+    "ActiveState": "active"
+  },
+  "transitions": [
+    {
+      "elapsed": 0.0,
+      "peer": "proxy",
+      "pid": 1085619
+    },
+    {
+      "elapsed": 0.12,
+      "peer": "official",
+      "pid": 7511
+    },
+    {
+      "elapsed": 4.24,
+      "peer": "proxy",
+      "pid": 1085737
+    }
+  ],
+  "official_restored_before_restart": true,
+  "restarted": true,
+  "official_pid_unchanged": true
+}

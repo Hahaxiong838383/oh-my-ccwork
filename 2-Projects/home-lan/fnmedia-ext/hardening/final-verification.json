@@ -1,0 +1,88 @@
+{
+  "unit": [
+    "MainPID=1085733",
+    "Result=success",
+    "ActiveState=active",
+    "SubState=running"
+  ],
+  "probes": {
+    "/v/": {
+      "http": 200,
+      "bytes": 4303,
+      "html_script": true
+    },
+    "/v/api/ext/status": {
+      "http": 401,
+      "bytes": 45,
+      "html_script": false,
+      "code": 401
+    },
+    "/v/online-admin": {
+      "http": 401,
+      "bytes": 199,
+      "html_script": false
+    },
+    "/_ext/healthz": {
+      "http": 200,
+      "bytes": 56,
+      "html_script": false,
+      "code": null
+    },
+    "/v/api/v1/user/info": {
+      "http": 200,
+      "bytes": 46,
+      "html_script": false,
+      "code": 5000
+    }
+  },
+  "sockets": {
+    "/var/run/trim_media.sock": {
+      "exists": true,
+      "pid": 1085737,
+      "uid": 0,
+      "exe": "/usr/bin/python3.11",
+      "caps": {
+        "CapPrm": "0000000000000000",
+        "CapEff": "0000000000000000",
+        "NoNewPrivs": "1"
+      },
+      "inode": 98453
+    },
+    "/var/run/trim_media_upstream.sock": {
+      "exists": true,
+      "pid": 7511,
+      "uid": 0,
+      "exe": "/usr/local/apps/@appcenter/trim.media/trim-media",
+      "caps": {
+        "CapPrm": "000001ffffffffff",
+        "CapEff": "000001ffffffffff",
+        "NoNewPrivs": "0"
+      },
+      "inode": 3051
+    }
+  },
+  "official_files_unchanged": {
+    "/usr/local/apps/@appcenter/trim.media/trim-media": true,
+    "/var/apps/trim.media/manifest": true,
+    "/usr/trim/nginx/conf/conf.d/trim_media.conf": true
+  },
+  "nginx_actual_route": {
+    "/v/": {
+      "http": 200,
+      "bytes": 4303,
+      "html_script": true
+    },
+    "/v/online-admin": {
+      "http": 401,
+      "bytes": 199,
+      "html_script": false
+    },
+    "/v/api/ext/status": {
+      "http": 401,
+      "bytes": 45,
+      "html_script": false
+    }
+  },
+  "rebuild_payload_files_identical": 101,
+  "rebuild_normalization": "Exclude only fnpack-generated manifest checksum; tar timestamps differ"
+}
