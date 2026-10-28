@@ -1,0 +1,66 @@
+{
+  "revision": "R22-chat-fallback-tts-http2-20261028",
+  "brain_code_commit": "c341425ec7759f02bd1ad4bae4353baf89ba0cff",
+  "worker_code_commit": "c889cc70fd78ef0b8ef100caf703f69a935b26a4",
+  "source": {
+    "src/tools/search-chat-policy.ts": "ed7614a945d76889734a79fdd7f239d6fdc4b5073ccfdb1d3b5f0487a6886884",
+    "src/tools/search-claim-stream.ts": "2568f4e4b71da2350dda248deb5f5c5607f68ea15bce55ac89940d2f84b8427f",
+    "src/routes/custom-llm.ts": "ffbd434fa14ca44f14cc375abcc7eeda101b330be4b75510e81e1b9322d85bf9",
+    "src/providers/race-llm.ts": "c7c0f7549d3b4f92d72c98388f38205055abbd62a9ea0941497c46b2a8c7fa2e",
+    "src/providers/provider-health.ts": "bc32fbd53f2947860ee3245313ca9d90c1ad21af1913cb1e45f72c54ec609406",
+    "src/providers/gemini-llm.ts": "7ad2cd86c0692ec348a6b175baf58b8045484e6615c98214b0b6ad6a8b6b4735",
+    "src/providers/minimax-llm.ts": "6da2296e4cb5b5e6dae743099cef76cda9cb1bd297b273bf6db05f6819dc53a9"
+  },
+  "old_source": {
+    "src/tools/search-chat-policy.ts": "c681f8e54c394c9266d71cd026a39e2083b4fb6cf58349e9634e257f5d3d8ca7",
+    "src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+    "src/routes/custom-llm.ts": "fdc7f94f49647ca88dd37ad767fbd891eb7ff15b3a97ebcbbbcf1db3dbb19d33",
+    "src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+    "src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+    "src/providers/gemini-llm.ts": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140",
+    "src/providers/minimax-llm.ts": "175ccc97309246e9c6283694d05ee204a8d388f3aa94f94b58649c1a2be20d01"
+  },
+  "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+  "worker_old_sha256": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+  "preview_sha256": "48e0ed5b673bc9340345c25a38cdd12b2853685f7b41463ae8c3e76fe62b2d4a",
+  "assets": {
+    "news.wav": "86c8ed9c075d65fa52caf64536c7c4fa7812a3c60846fcdd30a1f5f87be63517",
+    "weather.wav": "f7bd1ecd59ccb69fff3a1ade8031f3a6542bf394b9a976a3f264b691950f6c07",
+    "lookup.wav": "71e337732ca1d3bf504c2c561e28b98e12931359a1b73a2344582c9be1e533f0",
+    "search.wav": "41e6ae88533d0677cc71b1ac0ecedd22711c647a1d497d769cc1184c1ddcef30",
+    "clarify.wav": "87a364e03590e4461972ac00b4eb1b56d1e88330108fa3d8f7750b4de1366530",
+    "manifest.json": "653e00533f461d2da3de16fabaaaa03fa404a23590bc700856a6fbe8171850ca",
+    "find.wav": "fb4b5000a36412dc84797bbfa02eaa61e14aae618c6e721eec631d9e338103ac",
+    "unavailable.wav": "046c2626f67aba01ef5c9c8ac0d0b20965a6684ff1be4c023ebab98ea315d689"
+  },
+  "brain_env_keys": [
+    "VOLC_LLM_API_KEY",
+    "VOLC_LLM_BASE_URL",
+    "VOLC_LLM_MODEL"
+  ],
+  "worker_env_changes": {
+    "P003_LLM_HTTP2_V1": "1",
+    "P003_TTS_FIRST_PCM_BUDGET_MS": "10000",
+    "P003_SEARCH_RECEIPTS_DIR": "/opt/p003-search-canary-20261021/assets-r22"
+  },
+  "target_sns": [
+    "BJP00326070803800006",
+    "BJP00326060100100004"
+  ],
+  "expires_at_ms": 1793589540000,
+  "required_batch": "r22-http2-final",
+  "required_complete_samples": 120,
+  "minimum_valid_pairs": 20,
+  "median_delta_ms_limit": 100,
+  "empirical_p90_delta_ms_limit": 300,
+  "real_device_acceptance": "pending",
+  "worker_tests": 464,
+  "brain_tests": 168,
+  "preview_tests": 31,
+  "known_limits": [
+    "真实设备扬声器、自然表达及网络环境待真人验收",
+    "DNS约5秒历史长尾根因未定位，首音总预算只限制持续等待",
+    "固定样本性能结果不代表长期P95或SLA"
+  ],
+  "not_deployed": true
+}

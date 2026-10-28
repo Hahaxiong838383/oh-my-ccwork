@@ -1,0 +1,686 @@
+{
+  "revision": "R22-chat-fallback-tts-http2-20261028",
+  "deployed": true,
+  "deployed_at_ms": 1793166010439,
+  "target_sns": [
+    "BJP00326070803800006",
+    "BJP00326060100100004"
+  ],
+  "expires_at_ms": 1793589540000,
+  "physical_acceptance": "pending",
+  "code": {
+    "brain_code_commit": "c341425ec7759f02bd1ad4bae4353baf89ba0cff",
+    "worker_code_commit": "c889cc70fd78ef0b8ef100caf703f69a935b26a4",
+    "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510"
+  },
+  "source": {
+    "src/tools/search-chat-policy.ts": "ed7614a945d76889734a79fdd7f239d6fdc4b5073ccfdb1d3b5f0487a6886884",
+    "src/tools/search-claim-stream.ts": "2568f4e4b71da2350dda248deb5f5c5607f68ea15bce55ac89940d2f84b8427f",
+    "src/routes/custom-llm.ts": "ffbd434fa14ca44f14cc375abcc7eeda101b330be4b75510e81e1b9322d85bf9",
+    "src/providers/race-llm.ts": "c7c0f7549d3b4f92d72c98388f38205055abbd62a9ea0941497c46b2a8c7fa2e",
+    "src/providers/provider-health.ts": "bc32fbd53f2947860ee3245313ca9d90c1ad21af1913cb1e45f72c54ec609406",
+    "src/providers/gemini-llm.ts": "7ad2cd86c0692ec348a6b175baf58b8045484e6615c98214b0b6ad6a8b6b4735",
+    "src/providers/minimax-llm.ts": "6da2296e4cb5b5e6dae743099cef76cda9cb1bd297b273bf6db05f6819dc53a9"
+  },
+  "tests": {
+    "brain": 168,
+    "worker_linux": 464,
+    "preview": 31,
+    "association_fixtures": 7,
+    "linux_release_and_abi": true
+  },
+  "formal": {
+    "label": "r22-http2-final",
+    "rooms": 120,
+    "fixed_attempts": true,
+    "original_summary": {
+      "normal": {
+        "samples": 60,
+        "pairs": 27,
+        "median_delta_ms": 0.15,
+        "empirical_p90_delta_ms": 150.81,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "additional_timing": {
+          "sender_end_to_commit_delta_ms": {
+            "median_ms": 15.87,
+            "empirical_p90_ms": 763.52
+          },
+          "sender_end_to_body_delta_ms": {
+            "median_ms": 23.85,
+            "empirical_p90_ms": 1012.27
+          }
+        },
+        "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+        "passes_final_threshold": true
+      },
+      "search": {
+        "samples": 60,
+        "pairs": 15,
+        "median_delta_ms": 50.17,
+        "empirical_p90_delta_ms": 200.0,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "additional_timing": {
+          "sender_end_to_commit_delta_ms": {
+            "median_ms": -20.9,
+            "empirical_p90_ms": 78.6
+          },
+          "sender_end_to_body_delta_ms": {
+            "median_ms": 27.16,
+            "empirical_p90_ms": 223.19
+          }
+        },
+        "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+        "passes_final_threshold": false
+      },
+      "resume": {
+        "samples": 60,
+        "pairs": 25,
+        "median_delta_ms": 24.16,
+        "empirical_p90_delta_ms": 199.74,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "additional_timing": {
+          "sender_end_to_commit_delta_ms": {
+            "median_ms": 14.61,
+            "empirical_p90_ms": 188.47
+          },
+          "sender_end_to_body_delta_ms": {
+            "median_ms": 70.6,
+            "empirical_p90_ms": 175.62
+          }
+        },
+        "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+        "passes_final_threshold": true
+      }
+    },
+    "original_gate_rc": 1,
+    "corrected_summary": {
+      "normal": {
+        "samples": 60,
+        "pairs": 27,
+        "median_delta_ms": 0.15,
+        "empirical_p90_delta_ms": 150.81,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "passes_threshold": true
+      },
+      "search": {
+        "samples": 60,
+        "pairs": 24,
+        "median_delta_ms": 75.1225,
+        "empirical_p90_delta_ms": 200.442,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "passes_threshold": true
+      },
+      "resume": {
+        "samples": 60,
+        "pairs": 25,
+        "median_delta_ms": 24.162,
+        "empirical_p90_delta_ms": 199.744,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "passes_threshold": true
+      }
+    },
+    "corrected_gate_ready": true,
+    "correction_frozen_after_rooms": 93,
+    "thresholds_unchanged": true,
+    "protocol_sha256": "fe7a3936c91875dca2a36476e7a0f83f65f3ea28e0609a17a4a508307d5cbb96",
+    "raw_evidence_sha256": "13f1de23af9b610ff9353ec5e1aba3d2ebdad7a4827b8f201688d5b341094d2a",
+    "corrected_report_sha256": "1f805bf1053ceb12490f7db211c322fe0e8ae4511170f3adcb1ab160495f1d51",
+    "task_outcomes": {
+      "answered": 25,
+      "failed": 5
+    },
+    "failures": [
+      {
+        "stage": "answer",
+        "reason": "invalid_answer"
+      },
+      {
+        "stage": "answer",
+        "reason": "invalid_answer"
+      },
+      {
+        "stage": "answer",
+        "reason": "invalid_answer"
+      },
+      {
+        "stage": "search",
+        "reason": "http",
+        "status_code": 500
+      },
+      {
+        "stage": "answer",
+        "reason": "invalid_answer"
+      }
+    ]
+  },
+  "cross_session": {
+    "passed": true,
+    "at_ms": 1793165661911,
+    "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+    "rooms": [
+      "sn-BJP00399999999999901-1793165536",
+      "sn-BJP00399999999999901-1793165581"
+    ],
+    "task_id": "a03b8c9c-064b-46d4-81ee-089567563e83",
+    "revision": 1,
+    "grant_cursor": 0,
+    "receipts": [
+      {
+        "event": "receipt",
+        "task_id": "a03b8c9c-064b-46d4-81ee-089567563e83",
+        "session": "sn-BJP00399999999999901-1793165581",
+        "outcome": "progress",
+        "complete_sentences": 1,
+        "sequence": 1,
+        "at_ms": 1793165606360
+      },
+      {
+        "event": "receipt",
+        "task_id": "a03b8c9c-064b-46d4-81ee-089567563e83",
+        "session": "sn-BJP00399999999999901-1793165581",
+        "outcome": "completed",
+        "complete_sentences": 2,
+        "sequence": 2,
+        "at_ms": 1793165616879
+      }
+    ],
+    "quiet_voiced_ms": 0,
+    "replay_voiced_ms": 13100.0,
+    "new_query_count": 0,
+    "actual_probe_rc": [
+      0,
+      0
+    ],
+    "cleanup_passed": true,
+    "private_evidence_sha256": "b151e6b48f37eeb51d5dec18165678bf2787e0b811490af65e3796c8dfd2fdf8",
+    "physical_hearing": false
+  },
+  "expiry": {
+    "passed": true,
+    "at_ms": 1793165880388,
+    "room": "sn-BJP00399999999999901-1793165669",
+    "deadline_ms": 1793165815000,
+    "disconnected_at_ms": 1793165815712,
+    "disconnect_after_expiry_ms": 712,
+    "manual_cleanup_started_ms": 1793165815755,
+    "watchdog_at_ms": 1793165815573.681,
+    "expired_api_status": 403,
+    "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+    "voiced_ms": 15370.0,
+    "cleanup_passed": true,
+    "physical_hearing": false,
+    "real_window_unchanged": true,
+    "future_real_deadline_not_exercised": true
+  },
+  "https": {
+    "at_ms": 1793166040554,
+    "https": true,
+    "worker_token_role": "device",
+    "worker_token_valid": true,
+    "routes": [
+      {
+        "sn_suffix": "03800006",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "00100004",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "99999902",
+        "authenticated": true,
+        "status": 403,
+        "routing_version": null,
+        "error": "canary_unavailable"
+      },
+      {
+        "sn_suffix": "03800006",
+        "authenticated": false,
+        "status": 401,
+        "routing_version": null,
+        "error": "unauthorized"
+      }
+    ],
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793166036926,
+      "cleanup": {
+        "at_ms": 1793166032608,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+  },
+  "selection": {
+    "selected": [
+      {
+        "sn": "BJP00326070803800006",
+        "agent": "p003-search-canary-20261021",
+        "canary": true,
+        "reason": "selected",
+        "leaseRemainingMs": 13366,
+        "leaseAgeMs": 1634,
+        "leaseJobs": 0,
+        "leaseMaxJobs": 2,
+        "leaseRegistered": true,
+        "expiresAtMs": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "agent": "p003-search-canary-20261021",
+        "canary": true,
+        "reason": "selected",
+        "leaseRemainingMs": 13366,
+        "leaseAgeMs": 1634,
+        "leaseJobs": 0,
+        "leaseMaxJobs": 2,
+        "leaseRegistered": true,
+        "expiresAtMs": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      }
+    ],
+    "negative": {
+      "agent": "rust-worker",
+      "canary": false,
+      "reason": "not_target",
+      "leaseRemainingMs": 13366,
+      "leaseAgeMs": 1634,
+      "leaseJobs": 0,
+      "leaseMaxJobs": 2,
+      "leaseRegistered": true,
+      "expiresAtMs": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "identities": [
+      {
+        "sn": "BJP00326070803800006",
+        "registered": true,
+        "status": "active",
+        "account_linked": true
+      },
+      {
+        "sn": "BJP00326060100100004",
+        "registered": true,
+        "status": "active",
+        "account_linked": true
+      }
+    ]
+  },
+  "versions": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 367,
+      "version_name": "1.2.2-canary.353",
+      "last_check_at": 1793154368150
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 367,
+      "version_name": "1.2.2-canary.353",
+      "last_check_at": 1793154717400
+    }
+  ],
+  "release": {
+    "revision": "R22-chat-fallback-tts-http2-20261028",
+    "verified_at_ms": 1793165957204,
+    "brain_commit": "c341425ec7759f02bd1ad4bae4353baf89ba0cff",
+    "worker_commit": "c889cc70fd78ef0b8ef100caf703f69a935b26a4",
+    "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+    "worker_tests": 464,
+    "brain_tests": 168,
+    "real_device_acceptance": "pending",
+    "r22_deployed_at_ms": 1793165957204,
+    "p1": true,
+    "p2": true
+  },
+  "initial_observation": {
+    "worker": {
+      "at_ms": 1793166035277,
+      "unit": "MainPID=1361647\nNRestarts=0\nActiveState=active\n",
+      "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+      "main_process_unchanged": true,
+      "runtime_env_verified": true,
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793166031927,
+        "cleanup": {
+          "at_ms": 1793166026583,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "brain": {
+      "at_ms": 1793166036798,
+      "unit": "MainPID=2841123\nNRestarts=0\nActiveState=active\n",
+      "main_processes_unchanged": true,
+      "source_verified": true,
+      "scope_and_deadline_unchanged": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown",
+            "circuit": {
+              "state": "closed",
+              "retry_at_ms": null
+            }
+          },
+          "verified": false,
+          "degraded": false
+        }
+      },
+      "revision": "R22-chat-fallback-tts-http2-20261028"
+    }
+  },
+  "final_observation": {
+    "worker": {
+      "at_ms": 1793166283277,
+      "unit": "MainPID=1361647\nNRestarts=0\nActiveState=active\n",
+      "worker_sha256": "0794f27c610d98d28a8e7ddf44a5b9b41b33d2f5948837a0b9408073344dd510",
+      "main_process_unchanged": true,
+      "runtime_env_verified": true,
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793166281926,
+        "cleanup": {
+          "at_ms": 1793166281457,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "brain": {
+      "at_ms": 1793166284702,
+      "unit": "MainPID=2841123\nNRestarts=0\nActiveState=active\n",
+      "main_processes_unchanged": true,
+      "source_verified": true,
+      "scope_and_deadline_unchanged": true,
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown",
+            "circuit": {
+              "state": "closed",
+              "retry_at_ms": null
+            }
+          },
+          "verified": false,
+          "degraded": false
+        }
+      },
+      "revision": "R22-chat-fallback-tts-http2-20261028"
+    }
+  },
+  "r1": {
+    "label": "R22-http2-20261028T053812Z",
+    "worker": {
+      "step": "r1",
+      "at_ms": 1793165897499,
+      "backup": "/opt/p003-search-canary-20261021/backups/R22-http2-20261028T053812Z",
+      "files": {
+        "voice-rust-worker": "981ab80611e6ce97eaf9e5152cbce8b6a7bdf94f979ef04255af91af97cc90be",
+        "canary.env": "f7690fee0960eff102051a6fcebeb3bb29231f4814d3a7cc89dc2e853bc98713",
+        "window.json": "ca222d61d796576b1fdeb73d2d2e180e704c4b369e6262bc07c4cdc28ccb1331"
+      },
+      "window": {
+        "enabled": true,
+        "allowlist": [
+          "BJP00326070803800006",
+          "BJP00326060100100004"
+        ],
+        "expires_at_ms": 1793589540000,
+        "generation": "R4-20261022-two-devices"
+      },
+      "units": {
+        "voice-worker-rust": "MainPID=1101301\nNRestarts=0\nActiveState=active\n",
+        "p003-search-worker": "MainPID=1175023\nNRestarts=0\nActiveState=active\n"
+      },
+      "audit_sha256": "aff2a46e33619dc16792a460ff22e4877266701c6a15afeddb378665a51619fd",
+      "resources": {
+        "memory": "               total        used        free      shared  buff/cache   available\nMem:            7939        1990         278           2        5988        5949\nSwap:           2047           0        2047\n",
+        "load": "0.41 0.49 0.56 2/243 1361511\n",
+        "disk_free_bytes": 69146636288
+      },
+      "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n",
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793165897297,
+        "cleanup": {
+          "at_ms": 1793165896524,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    "brain": {
+      "step": "r1",
+      "at_ms": 1793165911596,
+      "backup": "/opt/p003/backups/R22-http2-20261028T053812Z",
+      "files": {
+        "src/tools/search-chat-policy.ts": "c681f8e54c394c9266d71cd026a39e2083b4fb6cf58349e9634e257f5d3d8ca7",
+        "src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+        "src/routes/custom-llm.ts": "fdc7f94f49647ca88dd37ad767fbd891eb7ff15b3a97ebcbbbcf1db3dbb19d33",
+        "src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+        "src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+        "src/providers/gemini-llm.ts": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140",
+        "src/providers/minimax-llm.ts": "175ccc97309246e9c6283694d05ee204a8d388f3aa94f94b58649c1a2be20d01",
+        "canary.env": "40f7ade568724a8f1c690b6f700d5b03aa2b4f14e9f8d68aa728c3ccc461c3d0",
+        "release-status.json": "5306018eab70bd6c45e1da000bca61de0d1ec08e49513a46f720ab66cc792300",
+        "bin/search-route-preview": "48e0ed5b673bc9340345c25a38cdd12b2853685f7b41463ae8c3e76fe62b2d4a"
+      },
+      "main_flags": {
+        "p003.search.canary.selected_sn": "BJP00326060100100004",
+        "p003.search.canary.enabled": "1",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.agent": "p003-search-canary-20261021",
+        "p003.search.canary.started_at_ms": "1793065558897",
+        "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000}",
+        "p003.search.scope": "all_registered",
+        "p003.search.exclusions": "[]",
+        "p003.search.enabled": "1",
+        "p003.search.tools": "0"
+      },
+      "candidate_flags": {
+        "p003.search.tools": "1",
+        "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\"]",
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.enabled": "1"
+      },
+      "main_processes": [
+        [
+          "p003-voice",
+          2636558,
+          39
+        ],
+        [
+          "kidshub-voice",
+          1626403,
+          0
+        ],
+        [
+          "p003-analytics",
+          3192914,
+          5
+        ]
+      ],
+      "main_executor_sha256": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+      "candidate_unit": "MainPID=2694550\nNRestarts=0\nActiveState=active\n",
+      "resources": {
+        "memory": "               total        used        free      shared  buff/cache   available\nMem:            3499        1337         173          13        2282        2162\nSwap:              0           0           0\n",
+        "load": "0.79 0.56 0.26 1/343 2840925\n",
+        "disk_free_bytes": 10906996736
+      },
+      "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n",
+      "health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "at_ms": 1793154443846,
+            "outcome": "content",
+            "http_status": null,
+            "code": null,
+            "stale": true
+          },
+          "fallback": {
+            "at_ms": 1793154443794,
+            "outcome": "failure",
+            "http_status": 404,
+            "code": "UpstreamError",
+            "stale": true
+          },
+          "degraded": true
+        }
+      }
+    }
+  },
+  "verifier_closed": {
+    "worker": {
+      "at_ms": 1793166069635,
+      "synthetic_disabled": true,
+      "rooms": 0,
+      "cleanup_remaining": 0,
+      "production_window_unchanged": true,
+      "unit": "MainPID=0\nActiveState=inactive\n"
+    },
+    "brain": {
+      "at_ms": 1793166070786,
+      "synthetic_disabled": true,
+      "unit": "MainPID=0\nActiveState=inactive\n",
+      "verifier_executor_sha256": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "production_executor_sha256": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "production_health": {
+        "status": "ok",
+        "agent": "p003-search-canary-20261021",
+        "generation": "R4-20261022-two-devices",
+        "search": true,
+        "tools": true,
+        "llm": {
+          "mode": "race",
+          "main": {
+            "outcome": "unknown"
+          },
+          "fallback": {
+            "outcome": "unknown",
+            "circuit": {
+              "state": "closed",
+              "retry_at_ms": null
+            }
+          },
+          "verified": false,
+          "degraded": false
+        }
+      }
+    }
+  },
+  "air_transfer": {
+    "path": "/Users/rayman.chen/Downloads/P003_SEARCH_CANARY_DEVICE_TEST_RECEIPT_20261028.md",
+    "sha256": "2ba7a35b281a0f9a271d7570439701fae2d8f5df0428bc599ae48e4aa335ce77",
+    "bytes": 6216,
+    "backup": null,
+    "verified": true,
+    "local_sha256": "2ba7a35b281a0f9a271d7570439701fae2d8f5df0428bc599ae48e4aa335ce77"
+  },
+  "limits": [
+    "physical speakers and installed APK not independently checked",
+    "latency gate is commit-to-body PCM, not full speech-end-to-heard latency",
+    "25 answered and 5 failed queries, not a 100% successful-search claim",
+    "candidate provider health is unknown immediately after restart until real traffic; copied runtime configuration was checked against isolated verified provider",
+    "historical DNS/TTS/ASR tails not resolved; no full-history model training performed"
+  ],
+  "signature": "codex（OpenAI）",
+  "recorded_at_cst": "2026-10-28 13:45"
+}
