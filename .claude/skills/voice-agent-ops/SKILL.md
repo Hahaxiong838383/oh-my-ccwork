@@ -9,6 +9,8 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 遇到搜索后聊天变慢、重复回答、跨会话续讲、取消/退出归因、备用模型失效、搭建独立语音验证副本或准备真人验收，读[搜索与语音延迟验收](references/search-latency-acceptance.md)。普通聊天延迟优先；预连接等待、正文首帧和承接音分开计时，服务端完成与真人听到分开取证。具体部署/开窗看最新项目记录，以下历史快照不能当当前状态。
 
+遇到计时归属纠正、候选HTTP/2、首音预算或安装后回滚，读[计时归属与发布收尾](references/voice-canary-release-evidence.md)。
+
 ## 限时搜索灰度与延窗交接
 
 先读 [限时语音灰度操作与交接](references/bounded-canary-handoff.md)：核最新授权与完整SN，逐层校验截止，完整产物SHA通过才安装，到期关闭已有会话；开窗、服务端发送、真人实听分别验收。
