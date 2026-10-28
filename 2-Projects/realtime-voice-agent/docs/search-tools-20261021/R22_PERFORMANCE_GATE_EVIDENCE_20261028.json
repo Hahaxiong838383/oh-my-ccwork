@@ -1,0 +1,4171 @@
+{
+  "terminal": {
+    "reason": "controller_stopped",
+    "error_type": "RuntimeError",
+    "detail": "isolated_controller_stop_requested",
+    "samples": 89,
+    "at_ms": 1793152763732
+  },
+  "early_stop_proof": {
+    "valid_resume_pairs_observed": 10,
+    "over_300ms_pairs": [
+      {
+        "group": "resume",
+        "index": 0,
+        "eligible": true,
+        "delta_ms": 650.67,
+        "sender_end_to_commit_delta_ms": -62.37,
+        "sender_end_to_body_delta_ms": 588.31,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 2,
+        "eligible": true,
+        "delta_ms": 449.42,
+        "sender_end_to_commit_delta_ms": 35.93,
+        "sender_end_to_body_delta_ms": 485.34,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 3,
+        "eligible": true,
+        "delta_ms": 449.38,
+        "sender_end_to_commit_delta_ms": -121.27,
+        "sender_end_to_body_delta_ms": 328.12,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 4,
+        "eligible": true,
+        "delta_ms": 400.2,
+        "sender_end_to_commit_delta_ms": -168.49,
+        "sender_end_to_body_delta_ms": 231.7,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 5,
+        "eligible": true,
+        "delta_ms": 751.58,
+        "sender_end_to_commit_delta_ms": -43.57,
+        "sender_end_to_body_delta_ms": 708.0,
+        "asr_equal": true
+      }
+    ],
+    "maximum_final_valid_pairs": 30,
+    "maximum_over_300ms_allowed_at_maximum_n": 3,
+    "can_final_p90_pass_with_remaining_samples": false
+  },
+  "final_over_300ms_resume_pairs": [
+    {
+      "group": "resume",
+      "index": 0,
+      "eligible": true,
+      "delta_ms": 650.67,
+      "sender_end_to_commit_delta_ms": -62.37,
+      "sender_end_to_body_delta_ms": 588.31,
+      "asr_equal": true
+    },
+    {
+      "group": "resume",
+      "index": 2,
+      "eligible": true,
+      "delta_ms": 449.42,
+      "sender_end_to_commit_delta_ms": 35.93,
+      "sender_end_to_body_delta_ms": 485.34,
+      "asr_equal": true
+    },
+    {
+      "group": "resume",
+      "index": 3,
+      "eligible": true,
+      "delta_ms": 449.38,
+      "sender_end_to_commit_delta_ms": -121.27,
+      "sender_end_to_body_delta_ms": 328.12,
+      "asr_equal": true
+    },
+    {
+      "group": "resume",
+      "index": 4,
+      "eligible": true,
+      "delta_ms": 400.2,
+      "sender_end_to_commit_delta_ms": -168.49,
+      "sender_end_to_body_delta_ms": 231.7,
+      "asr_equal": true
+    },
+    {
+      "group": "resume",
+      "index": 5,
+      "eligible": true,
+      "delta_ms": 751.58,
+      "sender_end_to_commit_delta_ms": -43.57,
+      "sender_end_to_body_delta_ms": 708.0,
+      "asr_equal": true
+    },
+    {
+      "group": "resume",
+      "index": 12,
+      "eligible": true,
+      "delta_ms": 699.73,
+      "sender_end_to_commit_delta_ms": 62.04,
+      "sender_end_to_body_delta_ms": 761.76,
+      "asr_equal": true
+    }
+  ],
+  "report": {
+    "label": "r22-plan-final",
+    "summary": {
+      "normal": {
+        "samples": 60,
+        "pairs": 29,
+        "median_delta_ms": -0.69,
+        "empirical_p90_delta_ms": 49.93,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "additional_timing": {
+          "sender_end_to_commit_delta_ms": {
+            "median_ms": 3.73,
+            "empirical_p90_ms": 135.42
+          },
+          "sender_end_to_body_delta_ms": {
+            "median_ms": -18.12,
+            "empirical_p90_ms": 206.51
+          }
+        },
+        "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+        "passes_final_threshold": true
+      },
+      "search": {
+        "samples": 29,
+        "pairs": 10,
+        "median_delta_ms": 50.510000000000005,
+        "empirical_p90_delta_ms": 499.54,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "additional_timing": {
+          "sender_end_to_commit_delta_ms": {
+            "median_ms": -84.025,
+            "empirical_p90_ms": 38.16
+          },
+          "sender_end_to_body_delta_ms": {
+            "median_ms": -60.165,
+            "empirical_p90_ms": 439.84
+          }
+        },
+        "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+        "passes_final_threshold": false
+      },
+      "resume": {
+        "samples": 29,
+        "pairs": 14,
+        "median_delta_ms": 149.38,
+        "empirical_p90_delta_ms": 699.73,
+        "missing_body": {
+          "A": 0,
+          "B": 0
+        },
+        "new_missing_body_pair_indices": [],
+        "additional_timing": {
+          "sender_end_to_commit_delta_ms": {
+            "median_ms": -33.925,
+            "empirical_p90_ms": 107.41
+          },
+          "sender_end_to_body_delta_ms": {
+            "median_ms": 178.60999999999999,
+            "empirical_p90_ms": 708.0
+          }
+        },
+        "input_end_caveat": "sender WAV end, includes its fixed trailing silence; not physical user speech end",
+        "passes_final_threshold": false
+      }
+    },
+    "samples": [
+      {
+        "group": "normal",
+        "index": 0,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793147722",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 949.95,
+        "sender_end_to_commit_ms": -169.1,
+        "sender_end_to_body_ms": 780.85,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 0,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793147766",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1099.86,
+        "sender_end_to_commit_ms": -53.19,
+        "sender_end_to_body_ms": 1046.67,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 1,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793147862",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.81,
+        "sender_end_to_commit_ms": -54.92,
+        "sender_end_to_body_ms": 994.89,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 1,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793147817",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1399.1,
+        "sender_end_to_commit_ms": 4.37,
+        "sender_end_to_body_ms": 1403.47,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 2,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793147912",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.58,
+        "sender_end_to_commit_ms": 1.79,
+        "sender_end_to_body_ms": 1051.37,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 2,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793147963",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.35,
+        "sender_end_to_commit_ms": 88.94,
+        "sender_end_to_body_ms": 1138.29,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 3,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148059",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1099.47,
+        "sender_end_to_commit_ms": -105.63,
+        "sender_end_to_body_ms": 993.84,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 3,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148008",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.83,
+        "sender_end_to_commit_ms": 17.72,
+        "sender_end_to_body_ms": 1017.55,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 4,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148111",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.56,
+        "sender_end_to_commit_ms": 20.29,
+        "sender_end_to_body_ms": 1069.85,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 4,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148158",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.9,
+        "sender_end_to_commit_ms": 1.82,
+        "sender_end_to_body_ms": 1051.73,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 5,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148246",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.47,
+        "sender_end_to_commit_ms": 379.62,
+        "sender_end_to_body_ms": 1430.09,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 5,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148203",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.12,
+        "sender_end_to_commit_ms": 44.35,
+        "sender_end_to_body_ms": 1093.47,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 6,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148289",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1200.08,
+        "sender_end_to_commit_ms": 11.61,
+        "sender_end_to_body_ms": 1211.69,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 6,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148333",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1198.45,
+        "sender_end_to_commit_ms": -8.2,
+        "sender_end_to_body_ms": 1190.25,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 7,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148426",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.3,
+        "sender_end_to_commit_ms": -64.82,
+        "sender_end_to_body_ms": 984.49,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 7,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148376",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1000.52,
+        "sender_end_to_commit_ms": -29.81,
+        "sender_end_to_body_ms": 970.71,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 8,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148476",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.33,
+        "sender_end_to_commit_ms": 113.63,
+        "sender_end_to_body_ms": 1163.95,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 8,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148525",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.95,
+        "sender_end_to_commit_ms": 228.93,
+        "sender_end_to_body_ms": 1278.87,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 9,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148613",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1381.86,
+        "sender_end_to_commit_ms": -19.5,
+        "sender_end_to_body_ms": 1362.36,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 9,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148570",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.01,
+        "sender_end_to_commit_ms": -18.3,
+        "sender_end_to_body_ms": 1031.7,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 10,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148657",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.67,
+        "sender_end_to_commit_ms": -32.64,
+        "sender_end_to_body_ms": 1267.03,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 10,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148707",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.34,
+        "sender_end_to_commit_ms": -19.33,
+        "sender_end_to_body_ms": 1031.0,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 11,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148802",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.24,
+        "sender_end_to_commit_ms": -57.93,
+        "sender_end_to_body_ms": 992.31,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 11,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148758",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.82,
+        "sender_end_to_commit_ms": 77.49,
+        "sender_end_to_body_ms": 1128.31,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 12,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148853",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1850.28,
+        "sender_end_to_commit_ms": 21.49,
+        "sender_end_to_body_ms": 1871.76,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 12,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148896",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.75,
+        "sender_end_to_commit_ms": 25.22,
+        "sender_end_to_body_ms": 1174.97,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 13,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793148992",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.8,
+        "sender_end_to_commit_ms": -91.05,
+        "sender_end_to_body_ms": 908.75,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 13,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793148947",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.7,
+        "sender_end_to_commit_ms": 44.23,
+        "sender_end_to_body_ms": 1043.93,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 14,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149037",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.48,
+        "sender_end_to_commit_ms": -105.03,
+        "sender_end_to_body_ms": 944.45,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 14,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149083",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.08,
+        "sender_end_to_commit_ms": -126.96,
+        "sender_end_to_body_ms": 923.12,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 15,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149188",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.32,
+        "sender_end_to_commit_ms": 98.47,
+        "sender_end_to_body_ms": 1148.79,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 15,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149137",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.92,
+        "sender_end_to_commit_ms": -19.15,
+        "sender_end_to_body_ms": 1030.77,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 16,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149233",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.74,
+        "sender_end_to_commit_ms": 216.49,
+        "sender_end_to_body_ms": 1516.24,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 16,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149277",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1199.6,
+        "sender_end_to_commit_ms": -21.77,
+        "sender_end_to_body_ms": 1177.83,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 17,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149367",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.76,
+        "sender_end_to_commit_ms": 8.56,
+        "sender_end_to_body_ms": 1008.32,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 17,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149322",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.57,
+        "sender_end_to_commit_ms": 11.84,
+        "sender_end_to_body_ms": 1011.41,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 18,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149410",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.38,
+        "sender_end_to_commit_ms": 3.56,
+        "sender_end_to_body_ms": 1053.94,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 18,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149455",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.4,
+        "sender_end_to_commit_ms": 210.05,
+        "sender_end_to_body_ms": 1260.45,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 19,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149544",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.11,
+        "sender_end_to_commit_ms": -20.65,
+        "sender_end_to_body_ms": 1128.46,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 19,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149500",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.49,
+        "sender_end_to_commit_ms": 4.61,
+        "sender_end_to_body_ms": 1054.1,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 20,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149588",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1499.4,
+        "sender_end_to_commit_ms": 20.45,
+        "sender_end_to_body_ms": 1519.84,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 20,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149633",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 949.76,
+        "sender_end_to_commit_ms": -187.27,
+        "sender_end_to_body_ms": 762.49,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 21,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149723",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1499.43,
+        "sender_end_to_commit_ms": -74.01,
+        "sender_end_to_body_ms": 1425.43,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 21,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149677",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.31,
+        "sender_end_to_commit_ms": 178.01,
+        "sender_end_to_body_ms": 1228.32,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 22,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149768",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1699.62,
+        "sender_end_to_commit_ms": 78.41,
+        "sender_end_to_body_ms": 1778.03,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 22,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149811",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.63,
+        "sender_end_to_commit_ms": 41.63,
+        "sender_end_to_body_ms": 1341.26,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 23,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149902",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "2e74f0ac4eef4023d4a227da9d27ee3fdc32c36d7791798c414c08d562dcf9e0",
+        "commits": 2,
+        "bodies": 1,
+        "commit_to_body_ms": null,
+        "sender_end_to_commit_ms": null,
+        "sender_end_to_body_ms": 2093.0,
+        "eligible": false,
+        "exclusions": [
+          "commit_count_2",
+          "user_caption_count_2"
+        ],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 23,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149857",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1098.93,
+        "sender_end_to_commit_ms": -105.65,
+        "sender_end_to_body_ms": 993.28,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 24,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793149947",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.21,
+        "sender_end_to_commit_ms": -93.27,
+        "sender_end_to_body_ms": 956.94,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 24,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793149993",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1048.86,
+        "sender_end_to_commit_ms": -52.65,
+        "sender_end_to_body_ms": 996.2,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 25,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150084",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.45,
+        "sender_end_to_commit_ms": 71.71,
+        "sender_end_to_body_ms": 1122.16,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 25,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150039",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.76,
+        "sender_end_to_commit_ms": 119.18,
+        "sender_end_to_body_ms": 1168.93,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 26,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150128",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1199.72,
+        "sender_end_to_commit_ms": 739.35,
+        "sender_end_to_body_ms": 1939.07,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 26,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150173",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1199.84,
+        "sender_end_to_commit_ms": -67.72,
+        "sender_end_to_body_ms": 1132.13,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 27,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150261",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.91,
+        "sender_end_to_commit_ms": -43.38,
+        "sender_end_to_body_ms": 956.53,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 27,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150218",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1000.46,
+        "sender_end_to_commit_ms": -40.15,
+        "sender_end_to_body_ms": 960.31,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 28,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150312",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.53,
+        "sender_end_to_commit_ms": 96.95,
+        "sender_end_to_body_ms": 1146.48,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 28,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150362",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1099.46,
+        "sender_end_to_commit_ms": 51.75,
+        "sender_end_to_body_ms": 1151.2,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 29,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150465",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1100.21,
+        "sender_end_to_commit_ms": -29.36,
+        "sender_end_to_body_ms": 1070.85,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "normal",
+        "index": 29,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150414",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1048.97,
+        "sender_end_to_commit_ms": -35.64,
+        "sender_end_to_body_ms": 1013.33,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 0,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150509",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.61,
+        "sender_end_to_commit_ms": 88.21,
+        "sender_end_to_body_ms": 1237.82,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 0,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150509",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.59,
+        "sender_end_to_commit_ms": -93.75,
+        "sender_end_to_body_ms": 905.83,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 0,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150579",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.68,
+        "sender_end_to_commit_ms": -133.01,
+        "sender_end_to_body_ms": 1016.67,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -690,
+              3370
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 0,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150579",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1650.26,
+        "sender_end_to_commit_ms": -156.12,
+        "sender_end_to_body_ms": 1494.14,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 51,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -151
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 1,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150735",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1050.16,
+        "sender_end_to_commit_ms": -47.02,
+        "sender_end_to_body_ms": 1003.14,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 1,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150735",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1399.52,
+        "sender_end_to_commit_ms": -8.34,
+        "sender_end_to_body_ms": 1391.18,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 1,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150651",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "cf851402e35563bd39db5c4da38fb33c9dd913cb0d07dc6f25caa67fd446c2c1",
+        "commits": 2,
+        "bodies": 1,
+        "commit_to_body_ms": null,
+        "sender_end_to_commit_ms": null,
+        "sender_end_to_body_ms": 1077.73,
+        "eligible": false,
+        "exclusions": [
+          "commit_count_2",
+          "user_caption_count_2"
+        ],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -394,
+              4136
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 1,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150651",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1400.1,
+        "sender_end_to_commit_ms": -61.48,
+        "sender_end_to_body_ms": 1338.62,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 28,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -328
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 2,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150813",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.52,
+        "sender_end_to_commit_ms": 45.78,
+        "sender_end_to_body_ms": 1345.31,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 2,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793150813",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.67,
+        "sender_end_to_commit_ms": 70.28,
+        "sender_end_to_body_ms": 1119.95,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 2,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150877",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.3,
+        "sender_end_to_commit_ms": 83.94,
+        "sender_end_to_body_ms": 1233.23,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -444,
+              2850
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 2,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150877",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1499.09,
+        "sender_end_to_commit_ms": 106.21,
+        "sender_end_to_body_ms": 1605.29,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 58,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -362
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 3,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151063",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1357.78,
+        "sender_end_to_commit_ms": -138.5,
+        "sender_end_to_body_ms": 1219.28,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 3,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151063",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1199.68,
+        "sender_end_to_commit_ms": 192.66,
+        "sender_end_to_body_ms": 1392.33,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 3,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150970",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "c0365263d8e22ed28fbe3a9da50fd0e1b9ae3c61da5c53d6eaf2b1ac94d396ce",
+        "commits": 2,
+        "bodies": 2,
+        "commit_to_body_ms": null,
+        "sender_end_to_commit_ms": null,
+        "sender_end_to_body_ms": null,
+        "eligible": false,
+        "exclusions": [
+          "commit_count_2",
+          "body_count_2",
+          "user_caption_count_2"
+        ],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -428,
+              3499
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 3,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793150970",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1649.06,
+        "sender_end_to_commit_ms": 71.39,
+        "sender_end_to_body_ms": 1720.45,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 4,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -189
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 4,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151143",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.56,
+        "sender_end_to_commit_ms": 94.97,
+        "sender_end_to_body_ms": 1144.54,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 4,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151143",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 949.58,
+        "sender_end_to_commit_ms": 65.8,
+        "sender_end_to_body_ms": 1015.38,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 4,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151215",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1100.27,
+        "sender_end_to_commit_ms": -97.38,
+        "sender_end_to_body_ms": 1002.89,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -678,
+              8251
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 4,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151215",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1349.78,
+        "sender_end_to_commit_ms": -102.69,
+        "sender_end_to_body_ms": 1247.08,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 52,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -483
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 5,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151408",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.54,
+        "sender_end_to_commit_ms": 224.96,
+        "sender_end_to_body_ms": 1274.5,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 5,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151408",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1148.84,
+        "sender_end_to_commit_ms": 28.49,
+        "sender_end_to_body_ms": 1177.33,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 5,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151310",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1549.73,
+        "sender_end_to_commit_ms": 81.21,
+        "sender_end_to_body_ms": 1630.94,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -549,
+              3510
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 5,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151310",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+        "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1900.42,
+        "sender_end_to_commit_ms": -15.08,
+        "sender_end_to_body_ms": 1885.33,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 27,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -311
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 6,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151486",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1200.07,
+        "sender_end_to_commit_ms": -43.76,
+        "sender_end_to_body_ms": 1156.31,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 6,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151486",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.27,
+        "sender_end_to_commit_ms": -46.06,
+        "sender_end_to_body_ms": 1253.21,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 6,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151556",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.65,
+        "sender_end_to_commit_ms": -68.21,
+        "sender_end_to_body_ms": 981.44,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -430,
+              8865
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 6,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151556",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+        "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1200.68,
+        "sender_end_to_commit_ms": 6.38,
+        "sender_end_to_body_ms": 1207.06,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 46,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -110
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 7,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151711",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.78,
+        "sender_end_to_commit_ms": -36.17,
+        "sender_end_to_body_ms": 1013.61,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 7,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151711",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 6298.98,
+        "sender_end_to_commit_ms": -70.67,
+        "sender_end_to_body_ms": 6228.32,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 7,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151638",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.88,
+        "sender_end_to_commit_ms": -144.52,
+        "sender_end_to_body_ms": 1005.36,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -465,
+              4049
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 7,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151638",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+        "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1650.46,
+        "sender_end_to_commit_ms": 36.74,
+        "sender_end_to_body_ms": 1687.19,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 65,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -330
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 8,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151787",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.72,
+        "sender_end_to_commit_ms": 98.34,
+        "sender_end_to_body_ms": 1248.05,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 8,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793151787",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1200.43,
+        "sender_end_to_commit_ms": -6.46,
+        "sender_end_to_body_ms": 1193.97,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 8,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151857",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1348.95,
+        "sender_end_to_commit_ms": 701.51,
+        "sender_end_to_body_ms": 2050.47,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -498,
+              3309
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 8,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151857",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+        "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1099.32,
+        "sender_end_to_commit_ms": 704.14,
+        "sender_end_to_body_ms": 1803.45,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 18,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -427
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 9,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152018",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1279.92,
+        "sender_end_to_commit_ms": -22.5,
+        "sender_end_to_body_ms": 1257.41,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 9,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152018",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1399.76,
+        "sender_end_to_commit_ms": -7.5,
+        "sender_end_to_body_ms": 1392.25,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 9,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151941",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "93fc9d342912ce0b4ba1a4c393d677e44cfc9201692f53052a3db6c7ef7308f9",
+        "commits": 2,
+        "bodies": 1,
+        "commit_to_body_ms": null,
+        "sender_end_to_commit_ms": null,
+        "sender_end_to_body_ms": 1504.43,
+        "eligible": false,
+        "exclusions": [
+          "commit_count_2",
+          "user_caption_count_2"
+        ],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -450,
+              4173
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 9,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793151941",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+        "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.58,
+        "sender_end_to_commit_ms": 72.17,
+        "sender_end_to_body_ms": 1371.75,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 49,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -307
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 10,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152091",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1099.9,
+        "sender_end_to_commit_ms": 1152.24,
+        "sender_end_to_body_ms": 2252.14,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 10,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152091",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1299.15,
+        "sender_end_to_commit_ms": 1707.31,
+        "sender_end_to_body_ms": 3006.46,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 10,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152168",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1150.21,
+        "sender_end_to_commit_ms": -55.48,
+        "sender_end_to_body_ms": 1094.73,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -468,
+              4172
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 10,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152168",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+        "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1101.02,
+        "sender_end_to_commit_ms": -140.58,
+        "sender_end_to_body_ms": 960.44,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 25,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -320
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 11,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152324",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.73,
+        "sender_end_to_commit_ms": 43.23,
+        "sender_end_to_body_ms": 1192.95,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 11,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152324",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1249.96,
+        "sender_end_to_commit_ms": -27.93,
+        "sender_end_to_body_ms": 1222.03,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 11,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152238",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1150.21,
+        "sender_end_to_commit_ms": 50.54,
+        "sender_end_to_body_ms": 1200.75,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -242,
+              4287
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 11,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152238",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+        "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1398.91,
+        "sender_end_to_commit_ms": -79.55,
+        "sender_end_to_body_ms": 1319.36,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 51,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -222
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 12,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152402",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1149.68,
+        "sender_end_to_commit_ms": 133.48,
+        "sender_end_to_body_ms": 1283.17,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 12,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152402",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1049.93,
+        "sender_end_to_commit_ms": 33.57,
+        "sender_end_to_body_ms": 1083.5,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 12,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152478",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "d5f03767e0094a529a9843f98f6ba3ede5e2c3264f2e790ccfd1ebc80ace617b",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1249.29,
+        "sender_end_to_commit_ms": 61.13,
+        "sender_end_to_body_ms": 1310.42,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -785,
+              4179
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 12,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152478",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+        "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1749.66,
+        "sender_end_to_commit_ms": 95.61,
+        "sender_end_to_body_ms": 1845.26,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 23,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -39
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 13,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152633",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 999.61,
+        "sender_end_to_commit_ms": 8.22,
+        "sender_end_to_body_ms": 1007.83,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 13,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152633",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1099.6,
+        "sender_end_to_commit_ms": 45.19,
+        "sender_end_to_body_ms": 1144.79,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 13,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152558",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1499.15,
+        "sender_end_to_commit_ms": -51.48,
+        "sender_end_to_body_ms": 1447.67,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "task_count": 1,
+          "task_outcomes": [
+            "answered"
+          ],
+          "created_ready_offsets_ms": [
+            [
+              -345,
+              3700
+            ]
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 13,
+        "arm": "B",
+        "room": "sn-BJP00399999999999901-1793152558",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+        "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1249.41,
+        "sender_end_to_commit_ms": 20.91,
+        "sender_end_to_body_ms": 1270.31,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": true,
+        "overlap_markers": {
+          "resume_to_input_ms": 18,
+          "stop_observed": true,
+          "same_task_replay_count": 1,
+          "replay_offsets_from_chat_start_ms": [
+            -365
+          ]
+        },
+        "physical_hearing": false
+      },
+      {
+        "group": "search",
+        "index": 14,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152711",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1102.78,
+        "sender_end_to_commit_ms": -122.82,
+        "sender_end_to_body_ms": 979.96,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      },
+      {
+        "group": "resume",
+        "index": 14,
+        "arm": "A",
+        "room": "sn-BJP00399999999999901-1793152711",
+        "runtime_manifest": {
+          "worker_sha256": "285ab377eed858b070947142787b8286beff02c11d9d3008daf31672a681fdeb",
+          "worker_pid": "1231947",
+          "env_sha256": "2248c5ac409bd1947b650f7a7f78dc75a70e30bd9508f7c19385a83fdbe3ed37",
+          "asr_nonstream": false,
+          "brain_manifest_sha256": "0df23136b4ef58c7828e577a4c9ef6ce746e7f8189676c8c6debcb113c7971e8",
+          "initial_prompt_sha256": "7c3fbd0a46a1856d259196908d25748ed796ccc32da4efb0b89a8c78d72c1627"
+        },
+        "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+        "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+        "commits": 1,
+        "bodies": 1,
+        "commit_to_body_ms": 1249.48,
+        "sender_end_to_commit_ms": 489.8,
+        "sender_end_to_body_ms": 1739.28,
+        "eligible": true,
+        "exclusions": [],
+        "runner_error": null,
+        "overlap": null,
+        "overlap_markers": {},
+        "physical_hearing": false
+      }
+    ],
+    "pairs": [
+      {
+        "group": "normal",
+        "index": 0,
+        "eligible": true,
+        "delta_ms": 149.91,
+        "sender_end_to_commit_delta_ms": 115.91,
+        "sender_end_to_body_delta_ms": 265.82,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 1,
+        "eligible": true,
+        "delta_ms": 349.29,
+        "sender_end_to_commit_delta_ms": 59.29,
+        "sender_end_to_body_delta_ms": 408.58,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 2,
+        "eligible": true,
+        "delta_ms": -0.23,
+        "sender_end_to_commit_delta_ms": 87.15,
+        "sender_end_to_body_delta_ms": 86.92,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 3,
+        "eligible": true,
+        "delta_ms": -99.64,
+        "sender_end_to_commit_delta_ms": 123.35,
+        "sender_end_to_body_delta_ms": 23.71,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 4,
+        "eligible": true,
+        "delta_ms": 0.34,
+        "sender_end_to_commit_delta_ms": -18.47,
+        "sender_end_to_body_delta_ms": -18.12,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 5,
+        "eligible": true,
+        "delta_ms": -1.35,
+        "sender_end_to_commit_delta_ms": -335.27,
+        "sender_end_to_body_delta_ms": -336.62,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 6,
+        "eligible": true,
+        "delta_ms": -1.63,
+        "sender_end_to_commit_delta_ms": -19.81,
+        "sender_end_to_body_delta_ms": -21.44,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 7,
+        "eligible": true,
+        "delta_ms": -48.78,
+        "sender_end_to_commit_delta_ms": 35.01,
+        "sender_end_to_body_delta_ms": -13.78,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 8,
+        "eligible": true,
+        "delta_ms": -0.38,
+        "sender_end_to_commit_delta_ms": 115.3,
+        "sender_end_to_body_delta_ms": 114.92,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 9,
+        "eligible": true,
+        "delta_ms": -331.85,
+        "sender_end_to_commit_delta_ms": 1.2,
+        "sender_end_to_body_delta_ms": -330.66,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 10,
+        "eligible": true,
+        "delta_ms": -249.33,
+        "sender_end_to_commit_delta_ms": 13.31,
+        "sender_end_to_body_delta_ms": -236.03,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 11,
+        "eligible": true,
+        "delta_ms": 0.58,
+        "sender_end_to_commit_delta_ms": 135.42,
+        "sender_end_to_body_delta_ms": 136.0,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 12,
+        "eligible": true,
+        "delta_ms": -700.53,
+        "sender_end_to_commit_delta_ms": 3.73,
+        "sender_end_to_body_delta_ms": -696.79,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 13,
+        "eligible": true,
+        "delta_ms": -0.1,
+        "sender_end_to_commit_delta_ms": 135.28,
+        "sender_end_to_body_delta_ms": 135.18,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 14,
+        "eligible": true,
+        "delta_ms": 0.6,
+        "sender_end_to_commit_delta_ms": -21.93,
+        "sender_end_to_body_delta_ms": -21.33,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 15,
+        "eligible": true,
+        "delta_ms": -0.4,
+        "sender_end_to_commit_delta_ms": -117.62,
+        "sender_end_to_body_delta_ms": -118.02,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 16,
+        "eligible": true,
+        "delta_ms": -100.14,
+        "sender_end_to_commit_delta_ms": -238.26,
+        "sender_end_to_body_delta_ms": -338.41,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 17,
+        "eligible": true,
+        "delta_ms": -0.19,
+        "sender_end_to_commit_delta_ms": 3.28,
+        "sender_end_to_body_delta_ms": 3.09,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 18,
+        "eligible": true,
+        "delta_ms": 0.02,
+        "sender_end_to_commit_delta_ms": 206.49,
+        "sender_end_to_body_delta_ms": 206.51,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 19,
+        "eligible": true,
+        "delta_ms": -99.62,
+        "sender_end_to_commit_delta_ms": 25.26,
+        "sender_end_to_body_delta_ms": -74.36,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 20,
+        "eligible": true,
+        "delta_ms": -549.64,
+        "sender_end_to_commit_delta_ms": -207.72,
+        "sender_end_to_body_delta_ms": -757.35,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 21,
+        "eligible": true,
+        "delta_ms": -449.12,
+        "sender_end_to_commit_delta_ms": 252.02,
+        "sender_end_to_body_delta_ms": -197.11,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 22,
+        "eligible": true,
+        "delta_ms": -399.99,
+        "sender_end_to_commit_delta_ms": -36.78,
+        "sender_end_to_body_delta_ms": -436.77,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 23,
+        "eligible": false,
+        "delta_ms": null,
+        "sender_end_to_commit_delta_ms": null,
+        "sender_end_to_body_delta_ms": null,
+        "asr_equal": false
+      },
+      {
+        "group": "normal",
+        "index": 24,
+        "eligible": true,
+        "delta_ms": -1.35,
+        "sender_end_to_commit_delta_ms": 40.62,
+        "sender_end_to_body_delta_ms": 39.26,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 25,
+        "eligible": true,
+        "delta_ms": -0.69,
+        "sender_end_to_commit_delta_ms": 47.47,
+        "sender_end_to_body_delta_ms": 46.77,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 26,
+        "eligible": true,
+        "delta_ms": 0.12,
+        "sender_end_to_commit_delta_ms": -807.07,
+        "sender_end_to_body_delta_ms": -806.94,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 27,
+        "eligible": true,
+        "delta_ms": 0.55,
+        "sender_end_to_commit_delta_ms": 3.23,
+        "sender_end_to_body_delta_ms": 3.78,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 28,
+        "eligible": true,
+        "delta_ms": 49.93,
+        "sender_end_to_commit_delta_ms": -45.2,
+        "sender_end_to_body_delta_ms": 4.72,
+        "asr_equal": true
+      },
+      {
+        "group": "normal",
+        "index": 29,
+        "eligible": true,
+        "delta_ms": -51.24,
+        "sender_end_to_commit_delta_ms": -6.28,
+        "sender_end_to_body_delta_ms": -57.52,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 0,
+        "eligible": true,
+        "delta_ms": 0.07,
+        "sender_end_to_commit_delta_ms": -221.22,
+        "sender_end_to_body_delta_ms": -221.15,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 1,
+        "eligible": false,
+        "delta_ms": null,
+        "sender_end_to_commit_delta_ms": null,
+        "sender_end_to_body_delta_ms": null,
+        "asr_equal": false
+      },
+      {
+        "group": "search",
+        "index": 2,
+        "eligible": true,
+        "delta_ms": -150.22,
+        "sender_end_to_commit_delta_ms": 38.16,
+        "sender_end_to_body_delta_ms": -112.08,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 3,
+        "eligible": false,
+        "delta_ms": null,
+        "sender_end_to_commit_delta_ms": null,
+        "sender_end_to_body_delta_ms": null,
+        "asr_equal": false
+      },
+      {
+        "group": "search",
+        "index": 4,
+        "eligible": true,
+        "delta_ms": 50.71,
+        "sender_end_to_commit_delta_ms": -192.35,
+        "sender_end_to_body_delta_ms": -141.65,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 5,
+        "eligible": true,
+        "delta_ms": 500.19,
+        "sender_end_to_commit_delta_ms": -143.75,
+        "sender_end_to_body_delta_ms": 356.44,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 6,
+        "eligible": true,
+        "delta_ms": -150.42,
+        "sender_end_to_commit_delta_ms": -24.45,
+        "sender_end_to_body_delta_ms": -174.87,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 7,
+        "eligible": true,
+        "delta_ms": 100.1,
+        "sender_end_to_commit_delta_ms": -108.35,
+        "sender_end_to_body_delta_ms": -8.25,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 8,
+        "eligible": true,
+        "delta_ms": 199.23,
+        "sender_end_to_commit_delta_ms": 603.17,
+        "sender_end_to_body_delta_ms": 802.42,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 9,
+        "eligible": false,
+        "delta_ms": null,
+        "sender_end_to_commit_delta_ms": null,
+        "sender_end_to_body_delta_ms": null,
+        "asr_equal": false
+      },
+      {
+        "group": "search",
+        "index": 10,
+        "eligible": true,
+        "delta_ms": 50.31,
+        "sender_end_to_commit_delta_ms": -1207.72,
+        "sender_end_to_body_delta_ms": -1157.41,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 11,
+        "eligible": true,
+        "delta_ms": 0.48,
+        "sender_end_to_commit_delta_ms": 7.31,
+        "sender_end_to_body_delta_ms": 7.8,
+        "asr_equal": true
+      },
+      {
+        "group": "search",
+        "index": 12,
+        "eligible": false,
+        "delta_ms": null,
+        "sender_end_to_commit_delta_ms": null,
+        "sender_end_to_body_delta_ms": null,
+        "asr_equal": false
+      },
+      {
+        "group": "search",
+        "index": 13,
+        "eligible": true,
+        "delta_ms": 499.54,
+        "sender_end_to_commit_delta_ms": -59.7,
+        "sender_end_to_body_delta_ms": 439.84,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 0,
+        "eligible": true,
+        "delta_ms": 650.67,
+        "sender_end_to_commit_delta_ms": -62.37,
+        "sender_end_to_body_delta_ms": 588.31,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 1,
+        "eligible": true,
+        "delta_ms": 0.58,
+        "sender_end_to_commit_delta_ms": -53.14,
+        "sender_end_to_body_delta_ms": -52.56,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 2,
+        "eligible": true,
+        "delta_ms": 449.42,
+        "sender_end_to_commit_delta_ms": 35.93,
+        "sender_end_to_body_delta_ms": 485.34,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 3,
+        "eligible": true,
+        "delta_ms": 449.38,
+        "sender_end_to_commit_delta_ms": -121.27,
+        "sender_end_to_body_delta_ms": 328.12,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 4,
+        "eligible": true,
+        "delta_ms": 400.2,
+        "sender_end_to_commit_delta_ms": -168.49,
+        "sender_end_to_body_delta_ms": 231.7,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 5,
+        "eligible": true,
+        "delta_ms": 751.58,
+        "sender_end_to_commit_delta_ms": -43.57,
+        "sender_end_to_body_delta_ms": 708.0,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 6,
+        "eligible": true,
+        "delta_ms": -98.59,
+        "sender_end_to_commit_delta_ms": 52.44,
+        "sender_end_to_body_delta_ms": -46.15,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 7,
+        "eligible": true,
+        "delta_ms": -4648.52,
+        "sender_end_to_commit_delta_ms": 107.41,
+        "sender_end_to_body_delta_ms": -4541.13,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 8,
+        "eligible": true,
+        "delta_ms": -101.11,
+        "sender_end_to_commit_delta_ms": 710.6,
+        "sender_end_to_body_delta_ms": 609.48,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 9,
+        "eligible": true,
+        "delta_ms": -100.18,
+        "sender_end_to_commit_delta_ms": 79.67,
+        "sender_end_to_body_delta_ms": -20.5,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 10,
+        "eligible": true,
+        "delta_ms": -198.13,
+        "sender_end_to_commit_delta_ms": -1847.89,
+        "sender_end_to_body_delta_ms": -2046.02,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 11,
+        "eligible": true,
+        "delta_ms": 148.95,
+        "sender_end_to_commit_delta_ms": -51.62,
+        "sender_end_to_body_delta_ms": 97.33,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 12,
+        "eligible": true,
+        "delta_ms": 699.73,
+        "sender_end_to_commit_delta_ms": 62.04,
+        "sender_end_to_body_delta_ms": 761.76,
+        "asr_equal": true
+      },
+      {
+        "group": "resume",
+        "index": 13,
+        "eligible": true,
+        "delta_ms": 149.81,
+        "sender_end_to_commit_delta_ms": -24.28,
+        "sender_end_to_body_delta_ms": 125.52,
+        "asr_equal": true
+      }
+    ],
+    "all_attempts_retained": true
+  },
+  "not_deployed": true
+}
