@@ -1,0 +1,541 @@
+{
+  "purpose": "read_only_feedback_assessment_not_release_acceptance",
+  "at_ms": 1793245022286,
+  "feedback_sha256": "070a827c197dbe6b4113c35acb06107504e698e3879199ffecafdc3e25815612",
+  "subject_suffix": "00100004",
+  "client_report": {
+    "version_code": 367,
+    "version_name": "1.2.2-canary.353",
+    "last_check_at": 1793238607540
+  },
+  "revision": "R24-amap-usage-20261029",
+  "brain_code_commit": "2b7c02d1b19a2d883ec8d5b6ba331643af383c53",
+  "worker_code_commit": "e95775f238568e7176475a575ea347c61f7649db",
+  "worker_binary_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+  "source_verification": {
+    "files": {
+      "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2",
+      "src/tools/search-resume.ts": "77950a8e1e807395a236e5ff5232c7391447497496a5438e98657e48864056e2",
+      "src/tools/amap-weather.ts": "5e8834abee94f8debaea782ff25bebde5a2a718b9950f63315b6025693c395a8",
+      "src/tools/search-simple-fallback.ts": "bd3a8452f8ae4ca6850033bd0e24aeaea0c03b40ea0b022ba1dca7f26622e808"
+    },
+    "all_match": true,
+    "weather_used": 9,
+    "weather_remaining_estimate": 4991
+  },
+  "units": {
+    "brain": "MainPID=3062440\nNRestarts=0\nActiveState=active\nActiveEnterTimestamp=Thu 2026-10-29 08:47:45 CST\n",
+    "worker": "MainPID=1401316\nNRestarts=0\nActiveState=active\nActiveEnterTimestamp=Wed 2026-10-28 09:46:42 UTC\n"
+  },
+  "window_deadline_ms": 1793589540000,
+  "tasks": [
+    {
+      "id": "e0721e09-7b1e-4d8e-9c3b-6f37c30cc042",
+      "session": "sn-BJP00326060100100004-1793239184",
+      "revision": 1,
+      "createdAt": 1793239192914,
+      "readyAt": 1793239193602,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "3fe6a474-3d57-4007-975e-514190698764",
+      "session": "sn-BJP00326060100100004-1793239251",
+      "revision": 1,
+      "createdAt": 1793239261922,
+      "readyAt": 1793239261936,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "f2b30891-1c67-4ced-bd34-fd756579e093",
+      "session": "sn-BJP00326060100100004-1793239306",
+      "revision": 1,
+      "createdAt": 1793239320761,
+      "readyAt": 1793239320776,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "777d10d8-9417-4645-a3c8-35ff7f6500d4",
+      "session": "sn-BJP00326060100100004-1793239344",
+      "revision": 1,
+      "createdAt": 1793239358405,
+      "readyAt": 1793239358420,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "c803cef3-a238-439c-bdbe-c21740cc6e77",
+      "session": "sn-BJP00326060100100004-1793239381",
+      "revision": 1,
+      "createdAt": 1793239390741,
+      "readyAt": 1793239390756,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "7601bea1-75e8-4db3-a801-6428d57a11e8",
+      "session": "sn-BJP00326060100100004-1793239430",
+      "revision": 1,
+      "createdAt": 1793239446254,
+      "readyAt": 1793239451090,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "session": "sn-BJP00326060100100004-1793239481",
+      "revision": 1,
+      "createdAt": 1793239496259,
+      "readyAt": 1793239501145,
+      "status": "expired",
+      "outcome": "no_evidence",
+      "delivery": "completed"
+    },
+    {
+      "id": "0470e5fb-3fbc-4a55-858b-bc052f2c631a",
+      "session": "sn-BJP00326060100100004-1793239530",
+      "revision": 1,
+      "createdAt": 1793239544939,
+      "readyAt": 1793239550113,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 0,
+        "answer_review_rejected": true,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "id": "356bee74-8492-4a4f-8f0c-5878a3a69d23",
+      "session": "sn-BJP00326060100100004-1793239598",
+      "revision": 1,
+      "createdAt": 1793239613102,
+      "readyAt": 1793239613490,
+      "status": "expired",
+      "outcome": "answered"
+    },
+    {
+      "id": "2470ed59-18fc-4563-aa92-c8a3533eaad2",
+      "session": "sn-BJP00326060100100004-1793239645",
+      "revision": 1,
+      "createdAt": 1793239654602,
+      "readyAt": 1793239659420,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "interrupted",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "id": "8c67e9a7-e79a-4abc-b7d7-cdfc1352781d",
+      "session": "sn-BJP00326060100100004-1793239688",
+      "revision": 1,
+      "createdAt": 1793239702799,
+      "readyAt": 1793239707396,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "interrupted",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ba899a7c-25d8-4892-9640-e854cd8e9c58",
+      "session": "sn-BJP00326060100100004-1793239747",
+      "revision": 1,
+      "createdAt": 1793239754375,
+      "readyAt": 1793239759628,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fdb6ca39-986e-4d5f-b2bd-8f3d7beea2a4",
+      "session": "sn-BJP00326060100100004-1793239812",
+      "revision": 1,
+      "createdAt": 1793239821670,
+      "readyAt": 1793239821685,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "c2495e7b-cac5-487e-965c-10829e5e082d",
+      "session": "sn-BJP00326060100100004-1793239855",
+      "revision": 1,
+      "createdAt": 1793239863509,
+      "readyAt": 1793239863531,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "31a097b9-c043-4c9f-8bd9-71c4c0115664",
+      "session": "sn-BJP00326060100100004-1793239907",
+      "revision": 1,
+      "createdAt": 1793239915187,
+      "readyAt": 1793239915585,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "6156783f-af62-4afd-b1a5-6a936d0d6453",
+      "session": "sn-BJP00326060100100004-1793240148",
+      "revision": 1,
+      "createdAt": 1793240156721,
+      "readyAt": 1793240162396,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "interrupted",
+      "diagnostics": {
+        "returned": 10,
+        "accepted": 3,
+        "rejected_schema": 0,
+        "rejected_url": 0,
+        "rejected_text": 0,
+        "rejected_date": 0,
+        "duplicate": 0,
+        "outcome": "evidence",
+        "answer_rewrites": 1,
+        "evidence_claims": 2,
+        "mode": "p2",
+        "tool_calls": [
+          {
+            "name": "search_web",
+            "outcome": "succeeded"
+          }
+        ]
+      }
+    },
+    {
+      "id": "366946fd-b884-4a16-b984-ee1cbf4c7f42",
+      "session": "sn-BJP00326060100100004-1793241859",
+      "revision": 1,
+      "createdAt": 1793241870335,
+      "readyAt": 1793241870732,
+      "status": "cancelled",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "27443ff3-094e-4a22-b37c-dd1d3f9a4cfa",
+      "session": "sn-BJP00326060100100004-1793241859",
+      "revision": 2,
+      "createdAt": 1793241887492,
+      "readyAt": 1793241888154,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "completed"
+    },
+    {
+      "id": "b552aa69-47e1-48ce-99ee-af52e0cdfcba",
+      "session": "sn-BJP00326060100100004-1793241921",
+      "revision": 1,
+      "createdAt": 1793241931015,
+      "readyAt": 1793241931030,
+      "status": "expired",
+      "outcome": "answered",
+      "delivery": "interrupted"
+    }
+  ],
+  "weather_events": [
+    {
+      "task_id": "e0721e09-7b1e-4d8e-9c3b-6f37c30cc042",
+      "provider": "amap",
+      "cache_hit": false,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "3fe6a474-3d57-4007-975e-514190698764",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "f2b30891-1c67-4ced-bd34-fd756579e093",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "777d10d8-9417-4645-a3c8-35ff7f6500d4",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "c803cef3-a238-439c-bdbe-c21740cc6e77",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "356bee74-8492-4a4f-8f0c-5878a3a69d23",
+      "provider": "amap",
+      "cache_hit": false,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "fdb6ca39-986e-4d5f-b2bd-8f3d7beea2a4",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "c2495e7b-cac5-487e-965c-10829e5e082d",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "31a097b9-c043-4c9f-8bd9-71c4c0115664",
+      "provider": "amap",
+      "cache_hit": false,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "366946fd-b884-4a16-b984-ee1cbf4c7f42",
+      "provider": "amap",
+      "cache_hit": false,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "27443ff3-094e-4a22-b37c-dd1d3f9a4cfa",
+      "provider": "amap",
+      "cache_hit": false,
+      "metric": "forecast"
+    },
+    {
+      "task_id": "b552aa69-47e1-48ce-99ee-af52e0cdfcba",
+      "provider": "amap",
+      "cache_hit": true,
+      "metric": "forecast"
+    }
+  ],
+  "game_events": [
+    {
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "returned": 10,
+      "accepted": 3,
+      "rejected_schema": 0,
+      "rejected_url": 0,
+      "rejected_text": 0,
+      "rejected_date": 0,
+      "duplicate": 0,
+      "outcome": "evidence"
+    },
+    {
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "phase": "review",
+      "codes": [
+        "unquoted_number"
+      ]
+    },
+    {
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "stage": "primary",
+      "outcome": "failed"
+    },
+    {
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "returned": 5,
+      "accepted": 0,
+      "rejected_schema": 0,
+      "rejected_url": 0,
+      "rejected_text": 0,
+      "rejected_date": 5,
+      "duplicate": 0,
+      "outcome": "filtered"
+    },
+    {
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "stage": "fallback",
+      "outcome": "empty"
+    },
+    {
+      "event": "progress",
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "session": "sn-BJP00326060100100004-1793239481",
+      "complete_sentences": 1,
+      "sequence": 1,
+      "at_ms": 1793239506718
+    },
+    {
+      "event": "progress",
+      "task_id": "5a85947d-a9d8-4d64-a697-eb01cd434aa9",
+      "session": "sn-BJP00326060100100004-1793239481",
+      "complete_sentences": 2,
+      "sequence": 2,
+      "at_ms": 1793239508514
+    }
+  ],
+  "resume_events": [
+    {
+      "event": "progress",
+      "task_id": "b552aa69-47e1-48ce-99ee-af52e0cdfcba",
+      "session": "sn-BJP00326060100100004-1793241921",
+      "complete_sentences": 0,
+      "sequence": 1,
+      "at_ms": 1793241941690
+    },
+    {
+      "event": "grant",
+      "task_id": "b552aa69-47e1-48ce-99ee-af52e0cdfcba",
+      "revision": 1,
+      "source_session": "sn-BJP00326060100100004-1793241921",
+      "session": "sn-BJP00326060100100004-1793241951",
+      "complete_sentences": 0,
+      "at_ms": 1793241959367,
+      "expires_at_ms": 1793242231030
+    },
+    {
+      "event": "receipt",
+      "task_id": "b552aa69-47e1-48ce-99ee-af52e0cdfcba",
+      "session": "sn-BJP00326060100100004-1793241951",
+      "outcome": "progress",
+      "complete_sentences": 1,
+      "sequence": 1,
+      "at_ms": 1793241969222
+    },
+    {
+      "event": "receipt",
+      "task_id": "b552aa69-47e1-48ce-99ee-af52e0cdfcba",
+      "session": "sn-BJP00326060100100004-1793241951",
+      "outcome": "completed",
+      "complete_sentences": 2,
+      "sequence": 2,
+      "at_ms": 1793241971215
+    }
+  ],
+  "diagnostic_fixture": {
+    "diagnostic": "same old catalog source accepted in P2 but rejected by tool-disabled fallback",
+    "network_calls": 0,
+    "rows": [
+      {
+        "tool_mode": true,
+        "accepted": 1,
+        "rejected_date": 0,
+        "mock_requests": 4
+      },
+      {
+        "tool_mode": false,
+        "accepted": 0,
+        "rejected_date": 1,
+        "mock_requests": 1
+      }
+    ]
+  },
+  "private_capture_sha256": {
+    "brain-journal.jsonl": "063407712ac86540904b632be8e09558d4ef707d8a7b3f82808b569cde6f4423",
+    "worker-journal.jsonl": "da87130f39e70deac045dce6de5fff06a7436b9e7c7a934af8b805363b19c82c",
+    "brain-snapshot-private.json": "506521cb2bea2ab6029ef063561c97d1a61e38cfda725f3a0d56ae36af4cc9e0",
+    "worker-snapshot-private.json": "cd748481a8d42f5912732c9d54f9acbcd8b64e72292286d8608592448a5f6152",
+    "catalog-diagnostic.mts": "f36d4b66073451614443f585a050ebb2fd007f1e6ddfd0f0e9bf146ce107878e"
+  },
+  "limits": [
+    "only feedback markdown reviewed; microphone WAV not independently inspected in this review",
+    "delivered PCM is not proof of device hearing",
+    "weather tasks were ready before concurrent chat commits",
+    "ASR input-loss layer remains undetermined",
+    "no root cause assertion for specific unquoted number; original generated answer unavailable",
+    "no business code changes, live probes, provider calls, deployments or flag changes"
+  ],
+  "decision": "partial closure; focused follow-up on cancellation/session-exit conflict, missing in-progress ASR and catalog fallback policy"
+}
