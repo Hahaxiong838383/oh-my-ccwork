@@ -1,0 +1,176 @@
+{
+  "status": "deployed_existing_two_P2",
+  "effective_at_cst": "2026-10-29 08:47:49",
+  "deadline_cst": "2026-11-02 11:19:00",
+  "code_commit": "2b7c02d1b19a2d883ec8d5b6ba331643af383c53",
+  "remote_sha": "2b7c02d1b19a2d883ec8d5b6ba331643af383c53",
+  "source_sha256": {
+    "src/tools/amap-weather.ts": "5e8834abee94f8debaea782ff25bebde5a2a718b9950f63315b6025693c395a8",
+    "src/tools/amap-usage.ts": "6c30de0f0f000b8454e842fd759d11f5d1b1beb9a34f5f70a9ebd2df42ec64c3",
+    "src/routes/amap-usage-admin.ts": "23d6c58ba3547b3520d8b268271d9e9eb574e4a6d4837e5bf607e14255447f7b",
+    "src/search-canary-status.ts": "820030f1a255f1b292b787d466005d6acba4757f10077e3df0952daf2b85b0b3",
+    "src/search-canary-main.ts": "2eea13501243004d59afdf138a4bca9cdaa89a23808403123a39a3889a131c49",
+    "src/search-canary-guard.ts": "e621d3cf596df2bb02436c1502a80ae456f4515bbfe97d34fcc35c3d10aad2c9",
+    "admin/index.html": "17304be076d8916f6cc0b7cbe51b0f6fb200babf003b9b1876699470ae92b291"
+  },
+  "credential_source": "Air 用户指定 RTF；值只在私有运行环境使用",
+  "quota_basis": {
+    "user_registered": 5000,
+    "estimate_not_official": true,
+    "weather_attempts": 4,
+    "geocode_attempts_separate": 4,
+    "remaining_at_observation": 4996,
+    "at_cst": "2026-10-29 08:52:23",
+    "auto_period_reset": false
+  },
+  "validation": {
+    "brain_files": 51,
+    "brain_tests": 167,
+    "typecheck": "passed",
+    "linux_focused_tests": 10,
+    "browser_mock_tests": "passed",
+    "browser_live": {
+      "ok": true,
+      "https": true,
+      "remaining": 4996,
+      "weather_requests": 4,
+      "geocode_requests": 4,
+      "runtime": {
+        "enabled": true,
+        "key_configured": true
+      },
+      "browser_errors": [],
+      "at_ms": 1793235063367
+    },
+    "real_provider_tests": [
+      {
+        "ok": true,
+        "ms": 800,
+        "weather": {
+          "provider": "amap",
+          "city_name": "四川成都",
+          "adcode": "510100",
+          "target_date": "2026-10-29",
+          "updated_at": "2026-10-29T08:36:36+08:00",
+          "fetched_at": "2026-10-29T00:44:52.223Z",
+          "cache_hit": false,
+          "metric": "forecast",
+          "precision": "city"
+        }
+      },
+      {
+        "ok": true,
+        "ms": 191,
+        "weather": {
+          "provider": "amap",
+          "city_name": "北京",
+          "adcode": "110000",
+          "target_date": "2026-10-29",
+          "updated_at": "2026-10-29T08:39:23+08:00",
+          "fetched_at": "2026-10-29T00:44:53.518Z",
+          "cache_hit": false,
+          "metric": "current",
+          "precision": "city"
+        }
+      }
+    ],
+    "https": {
+      "at_ms": 1793234933044,
+      "https": true,
+      "worker_token_role": "device",
+      "worker_token_valid": true,
+      "routes": [
+        {
+          "sn_suffix": "03800006",
+          "authenticated": true,
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e",
+          "error": null
+        },
+        {
+          "sn_suffix": "00100004",
+          "authenticated": true,
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e",
+          "error": null
+        },
+        {
+          "sn_suffix": "99999902",
+          "authenticated": true,
+          "status": 403,
+          "routing_version": null,
+          "error": "canary_unavailable"
+        },
+        {
+          "sn_suffix": "03800006",
+          "authenticated": false,
+          "status": 401,
+          "routing_version": null,
+          "error": "unauthorized"
+        }
+      ],
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793234932915,
+        "cleanup": {
+          "at_ms": 1793234928107,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+    },
+    "rollback_drill": {
+      "at_ms": 1793235098133,
+      "isolated_file_roundtrip": [
+        "main/src/search-canary-status.ts",
+        "main/src/routes/amap-usage-admin.ts",
+        "main/src/tools/amap-usage.ts",
+        "candidate/src/tools/amap-weather.ts",
+        "candidate/src/tools/amap-usage.ts",
+        "candidate/src/search-canary-main.ts",
+        "candidate/src/search-canary-guard.ts",
+        "web/admin/index.html"
+      ],
+      "old_adapter_tests": 4,
+      "new_adapter_and_accounting_tests": 10,
+      "live_services_untouched": true,
+      "live_db_untouched": true
+    }
+  },
+  "deployment": {
+    "backup": "/opt/p003/backups/R24-amap-20261029T004120Z",
+    "candidate_unit": "MainPID=3062440\nNRestarts=0\nActiveState=active\n",
+    "main_processes": [
+      [
+        "p003-voice",
+        3062468,
+        40
+      ],
+      [
+        "kidshub-voice",
+        1626403,
+        0
+      ],
+      [
+        "p003-analytics",
+        3192914,
+        5
+      ]
+    ],
+    "worker_restart": false,
+    "normal_chat_code_changed": false,
+    "real_device_hearing": "pending"
+  },
+  "evidence_sha256": {
+    "regression-final.log": "ff161210e5e9c3eb7aa25d3a23507969fa9e295fb804f5f4c436bf311ec00e1f",
+    "typecheck.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "quota-ui-live.png": "cfc1ad6c30d760ca0bffeab1554aab096c99a988225b8b0227fadb44421d1ac4",
+    "quota-ui-live-mobile.png": "7e2ab5df5cef573e21d064d8cb8f240216557f1823323f33a83b73ebfe9d3dee"
+  }
+}

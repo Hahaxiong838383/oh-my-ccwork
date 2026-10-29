@@ -11,6 +11,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 遇到计时归属纠正、候选HTTP/2、首音预算或安装后回滚，读[计时归属与发布收尾](references/voice-canary-release-evidence.md)。
 
+## 天气数据源与调用额度
+
+接入天气 Key、展示剩余调用量、补额/校准或回退带计量版本时，读[天气接口与调用额度](references/weather-quota-operations.md)。
+
 项目:`~/mycc/2-Projects/realtime-voice-agent/`(mycc 仓内)。
 生产:阿里云 HK ECS `47.239.204.68`(2核2G,专用),`https://voice-hk.hahaxiong.cc/voice-test.html`。
 备用一套在 dev198(公司内网经 frp,改动未必同步,同步前先 diff)。

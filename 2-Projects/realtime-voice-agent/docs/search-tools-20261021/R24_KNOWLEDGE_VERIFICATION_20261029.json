@@ -1,0 +1,32 @@
+{
+  "status": "passed",
+  "scope": "knowledge-only",
+  "checks": [
+    {
+      "branch": "brain",
+      "write_receipts_verified": 9,
+      "new_reference_links_verified": 7,
+      "skill_frontmatter_valid": true,
+      "deployment_facts_match": true
+    },
+    {
+      "branch": "worker",
+      "write_receipts_verified": 10,
+      "new_reference_links_verified": 7,
+      "skill_frontmatter_valid": true,
+      "deployment_facts_match": true
+    }
+  ],
+  "shared_memory_lines": {
+    "status": 49,
+    "recent_events": 79
+  },
+  "shared_memory_storage": "local outside source repositories; excluded from git",
+  "skills_validation": "structure, linked resources, actual R23/R24 failure evidence; no independent agent behavior test",
+  "business_tests_rerun": false,
+  "server_access_or_mutation": false,
+  "backups": [
+    "~/.local/state/p003-sn-search-canary-20261021/r24/knowledge-closeout",
+    "~/.local/state/p003-sn-search-canary-20261021/r24/knowledge-closeout-worker"
+  ]
+}
