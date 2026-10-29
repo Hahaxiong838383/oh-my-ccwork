@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## 衔接概率、方舟知识与多版本修复
+
+遇到衔接太密/重复、按风格配置、资源用途误答或普通与候选两池同时修复，读[衔接概率与本地知识](references/style-filler-and-local-knowledge.md)。旧章节的1.0/boost等是历史快照；当前策略以可信会话快照和最新上线回执为准，倾听模式另行设计。
+
 ## 后台搜索、拆句与TTS延迟验收
 
 遇到搜索后聊天变慢、重复回答、跨会话续讲、取消/退出归因、备用模型失效、搭建独立语音验证副本或准备真人验收，读[搜索与语音延迟验收](references/search-latency-acceptance.md)。普通聊天延迟优先；预连接等待、正文首帧和承接音分开计时，服务端完成与真人听到分开取证。具体部署/开窗看最新项目记录，以下历史快照不能当当前状态。
