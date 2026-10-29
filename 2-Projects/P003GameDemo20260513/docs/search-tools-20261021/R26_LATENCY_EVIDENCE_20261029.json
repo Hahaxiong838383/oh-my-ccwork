@@ -1,0 +1,979 @@
+{
+  "method": "既有ASR分段关联算法；固定40样本；只允许恢复和DNS后备开关差异；不剔除失败",
+  "protocol_sha256": "ecc6bddfda0db235925049e8103538aab61e5a3aa5607849fd807a445f7f0fbd",
+  "summary": {
+    "samples": 40,
+    "eligible_pairs": 20,
+    "median_delta_ms": -51.0155,
+    "p90_delta_ms": 148.884,
+    "new_missing_body": 0,
+    "gate_pass": true
+  },
+  "samples": [
+    {
+      "index": 12,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262803",
+      "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+      "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1499.235,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 7,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261443",
+      "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+      "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1399.207,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 9,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261502",
+      "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+      "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1981.758,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 0,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261214",
+      "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+      "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1544.039,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 12,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262369",
+      "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+      "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1250.414,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 1,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793261939",
+      "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+      "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.631,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 2,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261277",
+      "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+      "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 5549.416,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 16,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262495",
+      "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+      "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1699.785,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 8,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262174",
+      "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+      "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1149.101,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 4,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262044",
+      "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+      "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1098.969,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 8,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261473",
+      "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+      "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1200.081,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 14,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262434",
+      "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+      "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.838,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 3,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262009",
+      "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+      "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 2,
+      "bodies": 1,
+      "commit_to_body_ms": 1449.723,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 1,
+      "errors": []
+    },
+    {
+      "index": 10,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262738",
+      "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+      "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1343.919,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 3,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261308",
+      "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+      "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1450.249,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 19,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793263033",
+      "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+      "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.632,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 15,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262898",
+      "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+      "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1050.147,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 9,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262209",
+      "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+      "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1299.908,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 10,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262299",
+      "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+      "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1200.109,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 5,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262079",
+      "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+      "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.829,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 0,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793261909",
+      "wav_sha256": "05957471dcb28e7d37385077343a62fd50f6d698cee7721a121b015940234eac",
+      "asr_sha256": "97b67f265c99d0eac6c025d1a47ac8eb6a026a2e35c4b1c586cd9b79099d0b89",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1248.404,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 6,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261412",
+      "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+      "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1203.396,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 17,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262524",
+      "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+      "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 999.039,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 1,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261247",
+      "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+      "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1350.355,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 15,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262464",
+      "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+      "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1199.031,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 2,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793261975",
+      "wav_sha256": "25058c3b9ab7067a120449db6fd0acfcc91e81bb6f2ebd66be8b3a255efbc584",
+      "asr_sha256": "3029dfdc9727d243a401bde14cad43ddc38b933340f94aca63b241dc2be9ed5e",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1349.564,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 4,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261343",
+      "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+      "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.854,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 17,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262963",
+      "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+      "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1050.09,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 19,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262589",
+      "wav_sha256": "04cf99488fa7d2229fe01a80e68b322ad49ccbaafb1d3a3dee0d2b23781ed16c",
+      "asr_sha256": "326d3157fb523b5aba9abf96ae98a49164aff85d3080f6f8bd6db52dd841b8e5",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1122.171,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 6,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262110",
+      "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+      "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1199.699,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 7,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262144",
+      "wav_sha256": "e8d50b953e2bb09c21c5258536ddeccf9be69f16caed22c4e6549864ada166e2",
+      "asr_sha256": "09f434646adf28dcf3da074359769ee70ad0b64caf323ad0da97bd4bc0e9c1cf",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1200.451,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 16,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262933",
+      "wav_sha256": "8d06bd223084769d9e9c6805b77beb65a6ef5b9c19e70fa1218321aa2c73e7fe",
+      "asr_sha256": "60b42e1ac58674e5515e1b77fa587ca76a5c401dd01641bf93768ab6fc36f9f8",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1250.417,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 18,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262997",
+      "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+      "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1199.153,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 13,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262833",
+      "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+      "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.531,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 5,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793261377",
+      "wav_sha256": "43b3d1c325d3f817b2b7c784e320d5d96752a2efada847f2cc80e9034f589cdb",
+      "asr_sha256": "812b763ad60030d1dbaf827d80647b989bd06467e866aed6d654417b9c0b9a4f",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1496611",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1199.581,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 18,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262554",
+      "wav_sha256": "8e4806d1af66dd25b21ba2d03d81a56a7d8ca405f0cbbebe3b9fc9a6fddc7fe5",
+      "asr_sha256": "76010b09a9cf32c64e33bd3170b2f37dca4ba7ad57bcb3dff8cbaf22ba7d7ff8",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1049.091,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 11,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262768",
+      "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+      "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1099.188,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 13,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262399",
+      "wav_sha256": "360ddb99871da86215990eb8abce4f663db753b54932461ce862b5c14bb861b8",
+      "asr_sha256": "bef65adac0bf450d684a9e10a9a056eed8e2a4f710e3671ef0142f2a1c6b7d68",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1249.575,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 14,
+      "arm": "A",
+      "room": "sn-BJP00399999999999901-1793262868",
+      "wav_sha256": "bdc020b1291d790adfb4179100494921d8e747788449a7bbd376f01d241b42d7",
+      "asr_sha256": "13469f5363a45d58501b7ff79650b567cf4cad81c6480ed1571c234c5cfc63ed",
+      "runtime_manifest": {
+        "worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+        "worker_pid": "1504231",
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r24-baseline"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1099.947,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    },
+    {
+      "index": 11,
+      "arm": "B",
+      "room": "sn-BJP00399999999999901-1793262335",
+      "wav_sha256": "31fd841e09cff170efdcb6e1d7edb4ff4c5f31cdefe10060ad06442d7101f2e0",
+      "asr_sha256": "da1c9068b5c79b45d4ab05e64cbf60eac8ab8e9f4fba61d2989f56101b153876",
+      "runtime_manifest": {
+        "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "worker_pid": "1500111",
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "asr_nonstream": false,
+        "brain_manifest_sha256": "r26-artifact-spec"
+      },
+      "audio_subscriber_received": true,
+      "commits": 1,
+      "bodies": 1,
+      "commit_to_body_ms": 1099.59,
+      "association": "final_commit_of_complete_input",
+      "superseded_without_body": 0,
+      "errors": []
+    }
+  ],
+  "pairs": [
+    {
+      "index": 0,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -295.635
+    },
+    {
+      "index": 1,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -300.724
+    },
+    {
+      "index": 2,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -4199.852
+    },
+    {
+      "index": 3,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -0.526
+    },
+    {
+      "index": 4,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": 49.115
+    },
+    {
+      "index": 5,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -149.752
+    },
+    {
+      "index": 6,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -3.697
+    },
+    {
+      "index": 7,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -198.756
+    },
+    {
+      "index": 8,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -50.98
+    },
+    {
+      "index": 9,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -681.85
+    },
+    {
+      "index": 10,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -143.81
+    },
+    {
+      "index": 11,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": 0.402
+    },
+    {
+      "index": 12,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -248.821
+    },
+    {
+      "index": 13,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": 200.044
+    },
+    {
+      "index": 14,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -50.109
+    },
+    {
+      "index": 15,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": 148.884
+    },
+    {
+      "index": 16,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": 449.368
+    },
+    {
+      "index": 17,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -51.051
+    },
+    {
+      "index": 18,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": -150.062
+    },
+    {
+      "index": 19,
+      "eligible": true,
+      "errors": [],
+      "delta_ms": 72.539
+    }
+  ],
+  "physical_hearing": false,
+  "all_attempts_retained": true,
+  "runtime_binding_note": "Original brain_manifest_sha256 values are labels, not digests. Actual Brain file SHA and environment are bound by switch-finalA/finalB observations in the acceptance evidence; every Worker sample checks the running executable hash."
+}

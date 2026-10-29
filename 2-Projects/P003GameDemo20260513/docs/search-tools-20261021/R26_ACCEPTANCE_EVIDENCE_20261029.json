@@ -1,0 +1,3988 @@
+{
+  "revision": "R26",
+  "decision": "DEPLOYED_ORIGINAL_TWO_P2_PENDING_REAL_DEVICE_ACCEPTANCE",
+  "effective_at_ms": 1793263866150,
+  "effective_at_cst": "2026-10-29 16:51:06",
+  "expires_at_ms": 1793589540000,
+  "code_commits": {
+    "brain": "7a19fb170311b6a7f183d31d4944e2df5e235934",
+    "worker": "7338a68120293e41f15da319c995463c2803b306"
+  },
+  "artifacts": {
+    "source": {
+      "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+      "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+    },
+    "old_source": {
+      "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2"
+    },
+    "preview_sha256": "6014e67c248242cbd5e26e1f2465ad0eac96d789a3766fb73d85843f491b4c85",
+    "worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854"
+  },
+  "tests": {
+    "fresh_worker_linux": {
+      "passed": 477,
+      "failed": 0
+    },
+    "fresh_linux_release_abi": "passed",
+    "fresh_fixed_normal_rtc": {
+      "samples": 40,
+      "eligible_pairs": 20,
+      "median_delta_ms": -51.0155,
+      "p90_delta_ms": 148.884,
+      "new_missing_body": 0,
+      "gate_pass": true
+    },
+    "fresh_functional_rtc": {
+      "cases": [
+        {
+          "case": "replay_verified",
+          "room": "sn-BJP00399999999999901-1793263149",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 4,
+            "user_transcripts": 2,
+            "metrics": 2,
+            "audio_voiced_ms": 8610.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 110,
+            "packets_after": 2117
+          },
+          "checks": {
+            "old_cancelled": true,
+            "new_answered": true,
+            "new_city_chengdu": true,
+            "chengdu_subtitle": true,
+            "no_beijing_after_replace": true,
+            "recovery_accepted": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "03618b89-8cb4-4bcc-9ca5-ed85629f1b4b",
+              "session": "sn-BJP00399999999999901-1793263149",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": "answered",
+              "delivery": null,
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            },
+            {
+              "id": "a553f66d-544e-45fa-8116-b241b2987ab9",
+              "session": "sn-BJP00399999999999901-1793263149",
+              "revision": 2,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": "四川成都",
+              "result_sha256": "4f0e97d086bc3877631d943a7d7648eb19716746b5fac24d5d2fb2956cd58b71"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "catalog_final",
+          "room": "sn-BJP00399999999999901-1793263221",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 6,
+            "user_transcripts": 2,
+            "metrics": 6,
+            "audio_voiced_ms": 14200.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 55,
+            "packets_after": 3164
+          },
+          "checks": {
+            "answered_with_sources": true,
+            "p2_semantics": true,
+            "freshness_limitation": true,
+            "chat_before_search_result": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "6cfe082d-36f7-48de-96e4-781721f7c63a",
+              "session": "sn-BJP00399999999999901-1793263221",
+              "revision": 1,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": null,
+              "result_sha256": "f5ae6b1b42de7e408f24d4260971e6a6eebb212b6006aed5facce6f02d879bbe"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "cancel_verified",
+          "room": "sn-BJP00399999999999901-1793263318",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 5,
+            "user_transcripts": 3,
+            "metrics": 8,
+            "audio_voiced_ms": 10260.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 54,
+            "packets_after": 2609
+          },
+          "checks": {
+            "task_cancelled": true,
+            "same_session_continues": true,
+            "cancel_subtitle": true,
+            "no_late_dinosaur_result": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "84cbbafd-3b6d-4f9a-b585-91f3de7d536f",
+              "session": "sn-BJP00399999999999901-1793263318",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": null,
+              "delivery": null,
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "replace_wait_final",
+          "room": "sn-BJP00399999999999901-1793263404",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 5,
+            "user_transcripts": 2,
+            "metrics": 2,
+            "audio_voiced_ms": 11300.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 53,
+            "packets_after": 1789
+          },
+          "checks": {
+            "old_cancelled": true,
+            "new_answered": true,
+            "new_city_chengdu": true,
+            "chengdu_subtitle": true,
+            "no_beijing_after_replace": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "3f0dfc84-d7a8-4434-bf8b-33e125dbc6c9",
+              "session": "sn-BJP00399999999999901-1793263404",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": "answered",
+              "delivery": "claimed",
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            },
+            {
+              "id": "f5b63283-b96d-46b5-a599-f24a5b8ca41d",
+              "session": "sn-BJP00399999999999901-1793263404",
+              "revision": 2,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": "四川成都",
+              "result_sha256": "86d86dc9d863dc5a3f86633711f7446c0e964af00b7b48c8b21537e03724384b"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "replace_result_final",
+          "room": "sn-BJP00399999999999901-1793263473",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 6,
+            "user_transcripts": 2,
+            "metrics": 2,
+            "audio_voiced_ms": 15000.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 81,
+            "packets_after": 3234
+          },
+          "checks": {
+            "old_cancelled": true,
+            "new_answered": true,
+            "new_city_chengdu": true,
+            "chengdu_subtitle": true,
+            "no_beijing_after_replace": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "8c264386-5088-46e4-b676-5c8cae4e1504",
+              "session": "sn-BJP00399999999999901-1793263473",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            },
+            {
+              "id": "099c27f2-39fe-4cb7-a828-ade435d7b735",
+              "session": "sn-BJP00399999999999901-1793263473",
+              "revision": 2,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": "四川成都",
+              "result_sha256": "bc29605dd03b53a442b42f1ccbdd3672b433ef029211b99850c91cc471a577dd"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "device_controls_final",
+          "room": "sn-BJP00399999999999901-1793263572",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 0,
+            "user_transcripts": 4,
+            "metrics": 0,
+            "audio_voiced_ms": 0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 55,
+            "packets_after": 1799
+          },
+          "checks": {
+            "expected_actions": true,
+            "cleanup": true
+          },
+          "task_observations": [],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "cross_disconnect_final",
+          "room": "sn-BJP00399999999999901-1793263643",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 1,
+            "user_transcripts": 1,
+            "metrics": 1,
+            "audio_voiced_ms": 3340.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 54,
+            "packets_after": 653
+          },
+          "checks": {
+            "sourced_task_interrupted": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "cbcbdf1a-a656-4a6e-b956-024693a65933",
+              "session": "sn-BJP00399999999999901-1793263643",
+              "revision": 1,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "interrupted",
+              "sources": 2,
+              "weather_city": null,
+              "result_sha256": "2ec0617fcd22f3d1e62f28ca89f3813a05d2c5f79eb5a7b7018b37a7fa408051"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "cross_resume_disconnect_final",
+          "room": "sn-BJP00399999999999901-1793263686",
+          "runtime_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "counts": {
+            "agent_transcripts": 2,
+            "user_transcripts": 1,
+            "metrics": 1,
+            "audio_voiced_ms": 10620.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 56,
+            "packets_after": 2728
+          },
+          "checks": {
+            "same_task_granted": true,
+            "same_task_completed": true,
+            "quiet_before_explicit_resume": true,
+            "two_result_subtitles": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        }
+      ],
+      "all_pass": true,
+      "real_device_heard": false
+    },
+    "unchanged_brain_prior_evidence": {
+      "passed": 172,
+      "typescript": "passed",
+      "source": "R25 final, exact same two runtime source hashes; not rerun in R26"
+    },
+    "unchanged_preview_prior_evidence": {
+      "passed": 33,
+      "sha256": "6014e67c248242cbd5e26e1f2465ad0eac96d789a3766fb73d85843f491b4c85",
+      "source": "R25 same artifact, R26 rebuilt with identical hash; test not rerun"
+    }
+  },
+  "test_log_sha256": {
+    "build-red-1793260482303887000.log": "a49d2535d57534a0f6708697062b06bc96e4fffff116b6a3c16e14920720c160",
+    "build-full-1793260831271614000.log": "73f108d10fd2b4d8db8ed1537fab20c63d36a102ee33ebcec7ec9d57a091e841",
+    "build-full-1793260938304997000.log": "662eae909a4266591637ec6082507d61fc4d4b62de14172d787b9b051e37ffbf",
+    "build-full-1793261019879737000.log": "93665936c83868da0e47d343586e3c28467a926080e57db0aa93bbf1b257e3de",
+    "build-release-1793261156051856000.log": "8ea1f794f7a7a7c3f96d89d33a45220b974a26defbb2995dd2e34739e97421c5"
+  },
+  "dns_stages": {
+    "method": "All connection timing records within each sequential isolated room lifetime; may include prewarm and spare. These are stage diagnostics, not independent latency pairs and not proof of physical hearing. Failed connection records retained. A predates dns_path instrumentation.",
+    "summary": {
+      "A": {
+        "samples": 20,
+        "connection_outcomes": {
+          "connected": 86,
+          "failed": 1,
+          "timeout": 0,
+          "cancelled": 0
+        },
+        "connected_records": 86,
+        "dns_max_ms": 5023,
+        "dns_median_ms": 0.0,
+        "dns_over_1000ms": 1,
+        "upstream_successes": 0,
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      "B": {
+        "samples": 20,
+        "connection_outcomes": {
+          "connected": 81,
+          "failed": 0,
+          "timeout": 0,
+          "cancelled": 3
+        },
+        "connected_records": 81,
+        "dns_max_ms": 212,
+        "dns_median_ms": 0,
+        "dns_over_1000ms": 0,
+        "upstream_successes": 1,
+        "hedge_starts": 2,
+        "search_control_recoveries": 0
+      }
+    },
+    "samples": [
+      {
+        "arm": "A",
+        "index": 0,
+        "timings": [
+          {
+            "at_ms": 1793261219211.775,
+            "connect_id": 1,
+            "elapsed_ms": 261,
+            "dns_ms": 17,
+            "tcp_ms": 57,
+            "tls_ws_ms": 185,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261220378.717,
+            "connect_id": 2,
+            "elapsed_ms": 196,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 143,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261221546.446,
+            "connect_id": 3,
+            "elapsed_ms": 236,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 179,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261222366.386,
+            "connect_id": 4,
+            "elapsed_ms": 232,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 172,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 1,
+        "timings": [
+          {
+            "at_ms": 1793261250919.979,
+            "connect_id": 5,
+            "elapsed_ms": 241,
+            "dns_ms": 7,
+            "tcp_ms": 54,
+            "tls_ws_ms": 179,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261251969.972,
+            "connect_id": 6,
+            "elapsed_ms": 242,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 186,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261253425.149,
+            "connect_id": 7,
+            "elapsed_ms": 250,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 195,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261261644.698,
+            "connect_id": 8,
+            "elapsed_ms": 279,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 221,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 2,
+        "timings": [
+          {
+            "at_ms": 1793261282083.259,
+            "connect_id": 10,
+            "elapsed_ms": 351,
+            "stage": "resolve_tcp",
+            "outcome": "failed"
+          },
+          {
+            "at_ms": 1793261286343.592,
+            "connect_id": 9,
+            "elapsed_ms": 5263,
+            "dns_ms": 5023,
+            "tcp_ms": 55,
+            "tls_ws_ms": 184,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261286579.418,
+            "connect_id": 11,
+            "elapsed_ms": 235,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261287634.386,
+            "connect_id": 12,
+            "elapsed_ms": 222,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261291053.376,
+            "connect_id": 13,
+            "elapsed_ms": 217,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 167,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 3,
+        "timings": [
+          {
+            "at_ms": 1793261313467.993,
+            "connect_id": 14,
+            "elapsed_ms": 227,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 173,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261314599.678,
+            "connect_id": 15,
+            "elapsed_ms": 227,
+            "dns_ms": 0,
+            "tcp_ms": 51,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261315778.125,
+            "connect_id": 16,
+            "elapsed_ms": 249,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 191,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261317359.486,
+            "connect_id": 17,
+            "elapsed_ms": 216,
+            "dns_ms": 9,
+            "tcp_ms": 55,
+            "tls_ws_ms": 151,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 4,
+        "timings": [
+          {
+            "at_ms": 1793261348839.319,
+            "connect_id": 18,
+            "elapsed_ms": 237,
+            "dns_ms": 9,
+            "tcp_ms": 54,
+            "tls_ws_ms": 173,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261349523.598,
+            "connect_id": 19,
+            "elapsed_ms": 236,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 179,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261351259.78,
+            "connect_id": 20,
+            "elapsed_ms": 208,
+            "dns_ms": 0,
+            "tcp_ms": 51,
+            "tls_ws_ms": 156,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261355907.201,
+            "connect_id": 21,
+            "elapsed_ms": 226,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 173,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 5,
+        "timings": [
+          {
+            "at_ms": 1793261381807.619,
+            "connect_id": 22,
+            "elapsed_ms": 248,
+            "dns_ms": 11,
+            "tcp_ms": 55,
+            "tls_ws_ms": 181,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261382626.075,
+            "connect_id": 23,
+            "elapsed_ms": 233,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261386993.211,
+            "connect_id": 24,
+            "elapsed_ms": 223,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 170,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 6,
+        "timings": [
+          {
+            "at_ms": 1793261416848.606,
+            "connect_id": 25,
+            "elapsed_ms": 227,
+            "dns_ms": 12,
+            "tcp_ms": 54,
+            "tls_ws_ms": 160,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261417163.001,
+            "connect_id": 26,
+            "elapsed_ms": 239,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 183,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261417984.822,
+            "connect_id": 27,
+            "elapsed_ms": 236,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261420338.428,
+            "connect_id": 28,
+            "elapsed_ms": 253,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 198,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261421328.813,
+            "connect_id": 29,
+            "elapsed_ms": 224,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 170,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261423664.059,
+            "connect_id": 30,
+            "elapsed_ms": 201,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 145,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261426032.181,
+            "connect_id": 31,
+            "elapsed_ms": 489,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 432,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 7,
+        "timings": [
+          {
+            "at_ms": 1793261446267.153,
+            "connect_id": 32,
+            "elapsed_ms": 261,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 209,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261447385.468,
+            "connect_id": 33,
+            "elapsed_ms": 298,
+            "dns_ms": 10,
+            "tcp_ms": 60,
+            "tls_ws_ms": 227,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 8,
+        "timings": [
+          {
+            "at_ms": 1793261477125.647,
+            "connect_id": 34,
+            "elapsed_ms": 244,
+            "dns_ms": 0,
+            "tcp_ms": 58,
+            "tls_ws_ms": 186,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261477994.932,
+            "connect_id": 35,
+            "elapsed_ms": 242,
+            "dns_ms": 7,
+            "tcp_ms": 55,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261479173.932,
+            "connect_id": 36,
+            "elapsed_ms": 231,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 177,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261482257.828,
+            "connect_id": 37,
+            "elapsed_ms": 234,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 177,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261485748.674,
+            "connect_id": 38,
+            "elapsed_ms": 190,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 137,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 9,
+        "timings": [
+          {
+            "at_ms": 1793261506572.513,
+            "connect_id": 39,
+            "elapsed_ms": 232,
+            "dns_ms": 10,
+            "tcp_ms": 52,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261508138.146,
+            "connect_id": 40,
+            "elapsed_ms": 213,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 156,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261509483.74,
+            "connect_id": 41,
+            "elapsed_ms": 230,
+            "dns_ms": 0,
+            "tcp_ms": 61,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793261512211.094,
+            "connect_id": 42,
+            "elapsed_ms": 230,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 0,
+        "timings": [
+          {
+            "at_ms": 1793261912561.631,
+            "connect_id": 1,
+            "elapsed_ms": 236,
+            "dns_ms": 11,
+            "tcp_ms": 54,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261913487.78,
+            "connect_id": 2,
+            "elapsed_ms": 219,
+            "dns_ms": 0,
+            "tcp_ms": 51,
+            "tls_ws_ms": 167,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261914737.833,
+            "connect_id": 3,
+            "elapsed_ms": 208,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 158,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 1,
+        "timings": [
+          {
+            "at_ms": 1793261943043.768,
+            "connect_id": 4,
+            "elapsed_ms": 233,
+            "dns_ms": 8,
+            "tcp_ms": 52,
+            "tls_ws_ms": 171,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261943363.783,
+            "connect_id": 5,
+            "elapsed_ms": 234,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261944448.379,
+            "connect_id": 6,
+            "elapsed_ms": 199,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 143,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 2,
+        "timings": [
+          {
+            "at_ms": 1793261978804.614,
+            "connect_id": 7,
+            "elapsed_ms": 239,
+            "dns_ms": 9,
+            "tcp_ms": 54,
+            "tls_ws_ms": 174,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261979766.62,
+            "connect_id": 8,
+            "elapsed_ms": 200,
+            "dns_ms": 0,
+            "tcp_ms": 51,
+            "tls_ws_ms": 148,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261980782.45,
+            "connect_id": 9,
+            "elapsed_ms": 238,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793261986143.8,
+            "connect_id": 10,
+            "elapsed_ms": 204,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 150,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 3,
+        "timings": [
+          {
+            "at_ms": 1793262014261.544,
+            "connect_id": 11,
+            "elapsed_ms": 233,
+            "dns_ms": 9,
+            "tcp_ms": 52,
+            "tls_ws_ms": 170,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262014784.624,
+            "connect_id": 12,
+            "elapsed_ms": 208,
+            "dns_ms": 0,
+            "tcp_ms": 48,
+            "tls_ws_ms": 159,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262015946.957,
+            "connect_id": 13,
+            "elapsed_ms": 219,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 166,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262016832.188,
+            "connect_id": 14,
+            "elapsed_ms": 213,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 163,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 4,
+        "timings": [
+          {
+            "at_ms": 1793262050648.354,
+            "connect_id": 15,
+            "elapsed_ms": 226,
+            "dns_ms": 8,
+            "tcp_ms": 55,
+            "tls_ws_ms": 161,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262051723.426,
+            "connect_id": 16,
+            "elapsed_ms": 504,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 447,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262052640.164,
+            "connect_id": 17,
+            "elapsed_ms": 212,
+            "dns_ms": 0,
+            "tcp_ms": 58,
+            "tls_ws_ms": 153,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262056342.167,
+            "connect_id": 18,
+            "elapsed_ms": 246,
+            "dns_ms": 0,
+            "tcp_ms": 63,
+            "tls_ws_ms": 181,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 5,
+        "timings": [
+          {
+            "at_ms": 1793262088538.288,
+            "connect_id": 19,
+            "elapsed_ms": 312,
+            "dns_ms": 92,
+            "tcp_ms": 58,
+            "tls_ws_ms": 162,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262089199.853,
+            "connect_id": 20,
+            "elapsed_ms": 224,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 167,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262090317.938,
+            "connect_id": 21,
+            "elapsed_ms": 232,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 6,
+        "timings": [
+          {
+            "at_ms": 1793262114718.117,
+            "connect_id": 22,
+            "elapsed_ms": 215,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 159,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262115919.154,
+            "connect_id": 23,
+            "elapsed_ms": 701,
+            "dns_ms": 0,
+            "tcp_ms": 303,
+            "tls_ws_ms": 397,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262115919.154,
+            "connect_id": 24,
+            "elapsed_ms": 50,
+            "stage": "resolve_tcp",
+            "outcome": "cancelled"
+          },
+          {
+            "at_ms": 1793262117056.824,
+            "connect_id": 25,
+            "elapsed_ms": 228,
+            "dns_ms": 0,
+            "tcp_ms": 60,
+            "tls_ws_ms": 168,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262120581.678,
+            "connect_id": 26,
+            "elapsed_ms": 236,
+            "dns_ms": 9,
+            "tcp_ms": 52,
+            "tls_ws_ms": 174,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 7,
+        "timings": [
+          {
+            "at_ms": 1793262147416.132,
+            "connect_id": 27,
+            "elapsed_ms": 260,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 207,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262148240.974,
+            "connect_id": 28,
+            "elapsed_ms": 202,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 147,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262150406.999,
+            "connect_id": 29,
+            "elapsed_ms": 270,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 216,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262151534.096,
+            "connect_id": 30,
+            "elapsed_ms": 303,
+            "dns_ms": 9,
+            "tcp_ms": 56,
+            "tls_ws_ms": 237,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 8,
+        "timings": [
+          {
+            "at_ms": 1793262177721.207,
+            "connect_id": 31,
+            "elapsed_ms": 229,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 172,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262178593.883,
+            "connect_id": 32,
+            "elapsed_ms": 262,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 204,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262180151.783,
+            "connect_id": 33,
+            "elapsed_ms": 477,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 426,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262181821.726,
+            "connect_id": 34,
+            "elapsed_ms": 233,
+            "dns_ms": 10,
+            "tcp_ms": 54,
+            "tls_ws_ms": 167,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262183913.254,
+            "connect_id": 35,
+            "elapsed_ms": 236,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 9,
+        "timings": [
+          {
+            "at_ms": 1793262213108.321,
+            "connect_id": 36,
+            "elapsed_ms": 233,
+            "dns_ms": 8,
+            "tcp_ms": 53,
+            "tls_ws_ms": 170,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262214118.877,
+            "connect_id": 37,
+            "elapsed_ms": 236,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262215380.112,
+            "connect_id": 38,
+            "elapsed_ms": 223,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262216148.652,
+            "connect_id": 39,
+            "elapsed_ms": 207,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 150,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262218913.32,
+            "connect_id": 40,
+            "elapsed_ms": 241,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 183,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 10,
+        "timings": [
+          {
+            "at_ms": 1793262303105.125,
+            "connect_id": 41,
+            "elapsed_ms": 242,
+            "dns_ms": 8,
+            "tcp_ms": 55,
+            "tls_ws_ms": 177,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262304001.152,
+            "connect_id": 42,
+            "elapsed_ms": 235,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 179,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262305085.573,
+            "connect_id": 43,
+            "elapsed_ms": 194,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 140,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 11,
+        "timings": [
+          {
+            "at_ms": 1793262338511.569,
+            "connect_id": 44,
+            "elapsed_ms": 233,
+            "dns_ms": 9,
+            "tcp_ms": 53,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262339286.029,
+            "connect_id": 45,
+            "elapsed_ms": 218,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 165,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262340434.363,
+            "connect_id": 46,
+            "elapsed_ms": 245,
+            "dns_ms": 0,
+            "tcp_ms": 49,
+            "tls_ws_ms": 196,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262342673.794,
+            "connect_id": 48,
+            "elapsed_ms": 249,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 191,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262342673.794,
+            "connect_id": 47,
+            "elapsed_ms": 901,
+            "stage": "resolve_tcp",
+            "outcome": "cancelled"
+          },
+          {
+            "at_ms": 1793262348095.428,
+            "connect_id": 49,
+            "elapsed_ms": 231,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 177,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 1,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 12,
+        "timings": [
+          {
+            "at_ms": 1793262372518.321,
+            "connect_id": 50,
+            "elapsed_ms": 239,
+            "dns_ms": 7,
+            "tcp_ms": 59,
+            "tls_ws_ms": 171,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262373420.966,
+            "connect_id": 51,
+            "elapsed_ms": 190,
+            "dns_ms": 0,
+            "tcp_ms": 51,
+            "tls_ws_ms": 138,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262374418.53,
+            "connect_id": 52,
+            "elapsed_ms": 228,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 173,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262375231.403,
+            "connect_id": 53,
+            "elapsed_ms": 214,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 157,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262383122.608,
+            "connect_id": 54,
+            "elapsed_ms": 220,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 161,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 13,
+        "timings": [
+          {
+            "at_ms": 1793262404324.306,
+            "connect_id": 55,
+            "elapsed_ms": 210,
+            "dns_ms": 8,
+            "tcp_ms": 52,
+            "tls_ws_ms": 150,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262405309.913,
+            "connect_id": 56,
+            "elapsed_ms": 236,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262406090.469,
+            "connect_id": 57,
+            "elapsed_ms": 245,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 187,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 14,
+        "timings": [
+          {
+            "at_ms": 1793262439370.759,
+            "connect_id": 58,
+            "elapsed_ms": 300,
+            "dns_ms": 6,
+            "tcp_ms": 70,
+            "tls_ws_ms": 223,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262439939.92,
+            "connect_id": 59,
+            "elapsed_ms": 303,
+            "dns_ms": 0,
+            "tcp_ms": 67,
+            "tls_ws_ms": 236,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262441004.608,
+            "connect_id": 60,
+            "elapsed_ms": 266,
+            "dns_ms": 0,
+            "tcp_ms": 66,
+            "tls_ws_ms": 199,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262444024.727,
+            "connect_id": 61,
+            "elapsed_ms": 224,
+            "dns_ms": 0,
+            "tcp_ms": 49,
+            "tls_ws_ms": 174,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262446600.518,
+            "connect_id": 62,
+            "elapsed_ms": 213,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 162,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 15,
+        "timings": [
+          {
+            "at_ms": 1793262467222.215,
+            "connect_id": 63,
+            "elapsed_ms": 211,
+            "dns_ms": 9,
+            "tcp_ms": 51,
+            "tls_ws_ms": 149,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262468124.433,
+            "connect_id": 64,
+            "elapsed_ms": 233,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262469250.836,
+            "connect_id": 65,
+            "elapsed_ms": 204,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 151,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262472170.063,
+            "connect_id": 66,
+            "elapsed_ms": 234,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 177,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262477855.748,
+            "connect_id": 67,
+            "elapsed_ms": 183,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "stage": "tls_ws",
+            "outcome": "cancelled",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 16,
+        "timings": [
+          {
+            "at_ms": 1793262498934.872,
+            "connect_id": 68,
+            "elapsed_ms": 248,
+            "dns_ms": 8,
+            "tcp_ms": 64,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262500283.125,
+            "connect_id": 69,
+            "elapsed_ms": 248,
+            "dns_ms": 0,
+            "tcp_ms": 60,
+            "tls_ws_ms": 187,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262501716.843,
+            "connect_id": 70,
+            "elapsed_ms": 238,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262505929.789,
+            "connect_id": 71,
+            "elapsed_ms": 254,
+            "dns_ms": 0,
+            "tcp_ms": 61,
+            "tls_ws_ms": 191,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262507354.388,
+            "connect_id": 72,
+            "elapsed_ms": 222,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 168,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 17,
+        "timings": [
+          {
+            "at_ms": 1793262527655.417,
+            "connect_id": 73,
+            "elapsed_ms": 228,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262528143.535,
+            "connect_id": 74,
+            "elapsed_ms": 227,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 176,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262530289.342,
+            "connect_id": 75,
+            "elapsed_ms": 443,
+            "dns_ms": 212,
+            "tcp_ms": 54,
+            "tls_ws_ms": 176,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "configured_upstream"
+          }
+        ],
+        "hedge_starts": 1,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 18,
+        "timings": [
+          {
+            "at_ms": 1793262558098.995,
+            "connect_id": 76,
+            "elapsed_ms": 215,
+            "dns_ms": 2,
+            "tcp_ms": 53,
+            "tls_ws_ms": 160,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262558869.518,
+            "connect_id": 77,
+            "elapsed_ms": 240,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 180,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262559945.407,
+            "connect_id": 78,
+            "elapsed_ms": 271,
+            "dns_ms": 0,
+            "tcp_ms": 51,
+            "tls_ws_ms": 220,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262562290.76,
+            "connect_id": 79,
+            "elapsed_ms": 218,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 165,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262567589.53,
+            "connect_id": 80,
+            "elapsed_ms": 270,
+            "dns_ms": 0,
+            "tcp_ms": 61,
+            "tls_ws_ms": 208,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "B",
+        "index": 19,
+        "timings": [
+          {
+            "at_ms": 1793262592432.054,
+            "connect_id": 81,
+            "elapsed_ms": 232,
+            "dns_ms": 11,
+            "tcp_ms": 49,
+            "tls_ws_ms": 171,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262593234.456,
+            "connect_id": 82,
+            "elapsed_ms": 224,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 167,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262594393.077,
+            "connect_id": 83,
+            "elapsed_ms": 242,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 188,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          },
+          {
+            "at_ms": 1793262598502.262,
+            "connect_id": 84,
+            "elapsed_ms": 260,
+            "dns_ms": 0,
+            "tcp_ms": 60,
+            "tls_ws_ms": 199,
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "dns_path": "system_resolver"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 10,
+        "timings": [
+          {
+            "at_ms": 1793262741961.859,
+            "connect_id": 1,
+            "elapsed_ms": 321,
+            "dns_ms": 17,
+            "tcp_ms": 86,
+            "tls_ws_ms": 216,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262742892.017,
+            "connect_id": 2,
+            "elapsed_ms": 242,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 188,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262744112.235,
+            "connect_id": 3,
+            "elapsed_ms": 271,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 211,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 11,
+        "timings": [
+          {
+            "at_ms": 1793262772093.601,
+            "connect_id": 4,
+            "elapsed_ms": 242,
+            "dns_ms": 13,
+            "tcp_ms": 53,
+            "tls_ws_ms": 176,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262772899.54,
+            "connect_id": 5,
+            "elapsed_ms": 249,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 190,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262773968.797,
+            "connect_id": 6,
+            "elapsed_ms": 202,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 147,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262775842.889,
+            "connect_id": 7,
+            "elapsed_ms": 218,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 163,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 12,
+        "timings": [
+          {
+            "at_ms": 1793262807528.361,
+            "connect_id": 8,
+            "elapsed_ms": 236,
+            "dns_ms": 8,
+            "tcp_ms": 52,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262808679.5,
+            "connect_id": 9,
+            "elapsed_ms": 241,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 183,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262810992.664,
+            "connect_id": 10,
+            "elapsed_ms": 210,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 155,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262812621.217,
+            "connect_id": 11,
+            "elapsed_ms": 228,
+            "dns_ms": 0,
+            "tcp_ms": 56,
+            "tls_ws_ms": 171,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262814400.62,
+            "connect_id": 12,
+            "elapsed_ms": 221,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 163,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 13,
+        "timings": [
+          {
+            "at_ms": 1793262839093.237,
+            "connect_id": 13,
+            "elapsed_ms": 264,
+            "dns_ms": 5,
+            "tcp_ms": 51,
+            "tls_ws_ms": 206,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262839796.955,
+            "connect_id": 14,
+            "elapsed_ms": 247,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 187,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262841066.31,
+            "connect_id": 15,
+            "elapsed_ms": 234,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262842789.85,
+            "connect_id": 16,
+            "elapsed_ms": 212,
+            "dns_ms": 0,
+            "tcp_ms": 50,
+            "tls_ws_ms": 161,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262845014.174,
+            "connect_id": 17,
+            "elapsed_ms": 212,
+            "dns_ms": 0,
+            "tcp_ms": 47,
+            "tls_ws_ms": 164,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 14,
+        "timings": [
+          {
+            "at_ms": 1793262873547.548,
+            "connect_id": 18,
+            "elapsed_ms": 227,
+            "dns_ms": 13,
+            "tcp_ms": 55,
+            "tls_ws_ms": 158,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262874349.042,
+            "connect_id": 19,
+            "elapsed_ms": 207,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 152,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262876124.761,
+            "connect_id": 20,
+            "elapsed_ms": 234,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262879658.834,
+            "connect_id": 21,
+            "elapsed_ms": 207,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 149,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262883837.723,
+            "connect_id": 22,
+            "elapsed_ms": 225,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 15,
+        "timings": [
+          {
+            "at_ms": 1793262903498.843,
+            "connect_id": 23,
+            "elapsed_ms": 231,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262904219.456,
+            "connect_id": 24,
+            "elapsed_ms": 243,
+            "dns_ms": 12,
+            "tcp_ms": 54,
+            "tls_ws_ms": 176,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262905525.411,
+            "connect_id": 25,
+            "elapsed_ms": 447,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 393,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262910690.3,
+            "connect_id": 26,
+            "elapsed_ms": 227,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 173,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 16,
+        "timings": [
+          {
+            "at_ms": 1793262937775.645,
+            "connect_id": 27,
+            "elapsed_ms": 237,
+            "dns_ms": 12,
+            "tcp_ms": 52,
+            "tls_ws_ms": 172,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262938753.533,
+            "connect_id": 28,
+            "elapsed_ms": 252,
+            "dns_ms": 0,
+            "tcp_ms": 59,
+            "tls_ws_ms": 192,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262939510.324,
+            "connect_id": 29,
+            "elapsed_ms": 218,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 166,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262942097.488,
+            "connect_id": 30,
+            "elapsed_ms": 229,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 174,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262943412.073,
+            "connect_id": 31,
+            "elapsed_ms": 213,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 157,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262947089.544,
+            "connect_id": 32,
+            "elapsed_ms": 239,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 182,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 17,
+        "timings": [
+          {
+            "at_ms": 1793262966709.328,
+            "connect_id": 33,
+            "elapsed_ms": 229,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 175,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262967417.091,
+            "connect_id": 34,
+            "elapsed_ms": 243,
+            "dns_ms": 0,
+            "tcp_ms": 57,
+            "tls_ws_ms": 186,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262969530.549,
+            "connect_id": 35,
+            "elapsed_ms": 248,
+            "dns_ms": 9,
+            "tcp_ms": 56,
+            "tls_ws_ms": 182,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793262970928.584,
+            "connect_id": 36,
+            "elapsed_ms": 224,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 170,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 18,
+        "timings": [
+          {
+            "at_ms": 1793263001968.199,
+            "connect_id": 37,
+            "elapsed_ms": 416,
+            "dns_ms": 169,
+            "tcp_ms": 52,
+            "tls_ws_ms": 193,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263002693.647,
+            "connect_id": 38,
+            "elapsed_ms": 233,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 178,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263003804.277,
+            "connect_id": 39,
+            "elapsed_ms": 190,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 135,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263006745.322,
+            "connect_id": 40,
+            "elapsed_ms": 222,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      },
+      {
+        "arm": "A",
+        "index": 19,
+        "timings": [
+          {
+            "at_ms": 1793263038202.344,
+            "connect_id": 41,
+            "elapsed_ms": 231,
+            "dns_ms": 9,
+            "tcp_ms": 50,
+            "tls_ws_ms": 170,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263038947.668,
+            "connect_id": 42,
+            "elapsed_ms": 226,
+            "dns_ms": 0,
+            "tcp_ms": 55,
+            "tls_ws_ms": 171,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263040228.297,
+            "connect_id": 43,
+            "elapsed_ms": 266,
+            "dns_ms": 0,
+            "tcp_ms": 60,
+            "tls_ws_ms": 204,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263041228.243,
+            "connect_id": 44,
+            "elapsed_ms": 224,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 169,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          },
+          {
+            "at_ms": 1793263042673.15,
+            "connect_id": 45,
+            "elapsed_ms": 210,
+            "dns_ms": 0,
+            "tcp_ms": 49,
+            "tls_ws_ms": 161,
+            "stage": "tls_ws",
+            "outcome": "connected"
+          }
+        ],
+        "hedge_starts": 0,
+        "search_control_recoveries": 0
+      }
+    ]
+  },
+  "dns_config_final": {
+    "brain": {
+      "at_ms": 1793263886864,
+      "resolv_path": "/run/systemd/resolve/stub-resolv.conf",
+      "stub_sha256": "ebdf560272a77357195c39e98340b77e18c8a8ce2025ee950e9e0c7b01467ab8",
+      "upstream_servers": [
+        "100.100.2.136",
+        "100.100.2.138"
+      ],
+      "current_dns_lines": [
+        "Current DNS Server: 100.100.2.136"
+      ],
+      "configuration_unchanged": true
+    },
+    "worker": {
+      "at_ms": 1793263887937,
+      "resolv_path": "/run/systemd/resolve/stub-resolv.conf",
+      "stub_sha256": "ebdf560272a77357195c39e98340b77e18c8a8ce2025ee950e9e0c7b01467ab8",
+      "upstream_servers": [
+        "8.8.8.8",
+        "1.1.1.1"
+      ],
+      "current_dns_lines": [
+        "Current DNS Server: 8.8.8.8"
+      ],
+      "configuration_unchanged": true
+    }
+  },
+  "public_dns_comparison": {
+    "at_ms": 1793263114836,
+    "method": "fixed 5 rounds, four resolvers, A + verified TLS; supplementary AAAA and TCP DNS; no credentials, no DNS configuration mutation",
+    "rows": [
+      {
+        "round": 0,
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 40.911,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 7,
+        "success": true,
+        "tcp_ms": 64.662,
+        "tls_ms": 64.463,
+        "tls_verified": true
+      },
+      {
+        "round": 0,
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 39.839,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 7,
+        "success": true,
+        "tcp_ms": 52.603,
+        "tls_ms": 59.141,
+        "tls_verified": true
+      },
+      {
+        "round": 0,
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 160.04,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 125,
+        "success": true,
+        "tcp_ms": 54.826,
+        "tls_ms": 59.36,
+        "tls_verified": true
+      },
+      {
+        "round": 0,
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 1069.063,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 1045,
+        "success": true,
+        "tcp_ms": 54.431,
+        "tls_ms": 57.944,
+        "tls_verified": true
+      },
+      {
+        "round": 1,
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 41.276,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 9,
+        "success": true,
+        "tcp_ms": 53.102,
+        "tls_ms": 46.129,
+        "tls_verified": true
+      },
+      {
+        "round": 1,
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 41.252,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 6,
+        "success": true,
+        "tcp_ms": 58.126,
+        "tls_ms": 61.038,
+        "tls_verified": true
+      },
+      {
+        "round": 1,
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 120.837,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 87,
+        "success": true,
+        "tcp_ms": 49.189,
+        "tls_ms": 54.299,
+        "tls_verified": true
+      },
+      {
+        "round": 1,
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 2022.309,
+        "rc": 9,
+        "status": null,
+        "dns_ms": null,
+        "success": false
+      },
+      {
+        "round": 2,
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 290.453,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 258,
+        "success": true,
+        "tcp_ms": 51.55,
+        "tls_ms": 46.094,
+        "tls_verified": true
+      },
+      {
+        "round": 2,
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 39.005,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 10,
+        "success": true,
+        "tcp_ms": 51.604,
+        "tls_ms": 55.182,
+        "tls_verified": true
+      },
+      {
+        "round": 2,
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 88.682,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 59,
+        "success": true,
+        "tcp_ms": 56.271,
+        "tls_ms": 51.275,
+        "tls_verified": true
+      },
+      {
+        "round": 2,
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 72.484,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 42,
+        "success": true,
+        "tcp_ms": 55.934,
+        "tls_ms": 60.598,
+        "tls_verified": true
+      },
+      {
+        "round": 3,
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 38.072,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 8,
+        "success": true,
+        "tcp_ms": 52.46,
+        "tls_ms": 57.78,
+        "tls_verified": true
+      },
+      {
+        "round": 3,
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 29.985,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 4,
+        "success": true,
+        "tcp_ms": 53.819,
+        "tls_ms": 49.458,
+        "tls_verified": true
+      },
+      {
+        "round": 3,
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 42.917,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 1,
+        "success": true,
+        "tcp_ms": 51.811,
+        "tls_ms": 57.887,
+        "tls_verified": true
+      },
+      {
+        "round": 3,
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 107.184,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 71,
+        "success": true,
+        "tcp_ms": 53.367,
+        "tls_ms": 58.279,
+        "tls_verified": true
+      },
+      {
+        "round": 4,
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 28.501,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 3,
+        "success": true,
+        "tcp_ms": 55.37,
+        "tls_ms": 48.835,
+        "tls_verified": true
+      },
+      {
+        "round": 4,
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 31.101,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 9,
+        "success": true,
+        "tcp_ms": 60.093,
+        "tls_ms": 60.123,
+        "tls_verified": true
+      },
+      {
+        "round": 4,
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 98.301,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 62,
+        "success": true,
+        "tcp_ms": 50.411,
+        "tls_ms": 54.221,
+        "tls_verified": true
+      },
+      {
+        "round": 4,
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "A",
+        "transport": "udp",
+        "wall_ms": 81.757,
+        "rc": 0,
+        "status": "NOERROR",
+        "dns_ms": 51,
+        "success": true,
+        "tcp_ms": 54.491,
+        "tls_ms": 48.901,
+        "tls_verified": true
+      },
+      {
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "AAAA",
+        "transport": "udp",
+        "rc": 0,
+        "wall_ms": 36.702,
+        "status": "NOERROR",
+        "dns_ms": 6,
+        "answer_count": 0
+      },
+      {
+        "resolver": "configured_google",
+        "server": "8.8.8.8",
+        "query_type": "A",
+        "transport": "tcp",
+        "rc": 0,
+        "wall_ms": 37.589,
+        "status": "NOERROR",
+        "dns_ms": 4,
+        "answer_count": 6
+      },
+      {
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "AAAA",
+        "transport": "udp",
+        "rc": 0,
+        "wall_ms": 37.618,
+        "status": "NOERROR",
+        "dns_ms": 10,
+        "answer_count": 0
+      },
+      {
+        "resolver": "configured_cloudflare",
+        "server": "1.1.1.1",
+        "query_type": "A",
+        "transport": "tcp",
+        "rc": 0,
+        "wall_ms": 20.976,
+        "status": "NOERROR",
+        "dns_ms": 2,
+        "answer_count": 6
+      },
+      {
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "AAAA",
+        "transport": "udp",
+        "rc": 0,
+        "wall_ms": 105.726,
+        "status": "NOERROR",
+        "dns_ms": 79,
+        "answer_count": 0
+      },
+      {
+        "resolver": "alidns_primary",
+        "server": "223.5.5.5",
+        "query_type": "A",
+        "transport": "tcp",
+        "rc": 0,
+        "wall_ms": 57.148,
+        "status": "NOERROR",
+        "dns_ms": 4,
+        "answer_count": 6
+      },
+      {
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "AAAA",
+        "transport": "udp",
+        "rc": 0,
+        "wall_ms": 177.888,
+        "status": "NOERROR",
+        "dns_ms": 144,
+        "answer_count": 0
+      },
+      {
+        "resolver": "alidns_secondary",
+        "server": "223.6.6.6",
+        "query_type": "A",
+        "transport": "tcp",
+        "rc": 0,
+        "wall_ms": 89.184,
+        "status": "NOERROR",
+        "dns_ms": 21,
+        "answer_count": 6
+      }
+    ]
+  },
+  "r1": {
+    "brain": {
+      "at_ms": 1793260903451,
+      "backup": "/opt/p003/backups/R26-dns-20261029T080139Z",
+      "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+      "affected_file_sha256": {
+        "canary.env": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+        "release-status.json": "29dcdb21deeffb77bf94adb073a990c70024b18cb15d3cf9d4f789c17c3909c0",
+        "bin/search-route-preview": "541fcddf8d5d69598de16e332284cd308f51ee445b8246ba2a13f96a6ba7c87b",
+        "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2",
+        "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49"
+      }
+    },
+    "worker": {
+      "at_ms": 1793260903856,
+      "backup": "/opt/p003-search-canary-20261021/backups/R26-dns-20261029T080139Z",
+      "env_sha256": "a8ec39d7d360ebfcd020b3100dc0a962339d2a34aeed6bc4fd6027b5409e74ce",
+      "affected_file_sha256": {
+        "canary.env": "a8ec39d7d360ebfcd020b3100dc0a962339d2a34aeed6bc4fd6027b5409e74ce",
+        "voice-rust-worker": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea"
+      }
+    }
+  },
+  "rollback_rehearsal": {
+    "A": {
+      "brain": {
+        "arm": "A",
+        "host": "brain",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": false,
+            "key_configured": false,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "288dd237958ae3672254dbecab7159d57a600105b83f97b104ff396fcc2c6159",
+        "comparable_env_sha256": "523c7dbb38f138849606b53091002b1f185fd526e89da40c04d2ab215ca08ae5",
+        "main_unchanged": true,
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+          "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2"
+        }
+      },
+      "worker": {
+        "arm": "A",
+        "host": "worker",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793263784802,
+          "cleanup": {
+            "at_ms": 1793263782775,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "comparable_env_sha256": "fe37217406f1e0729593424939b96b9c8d392658daa28bacd5f89986b440792b",
+        "main_unchanged": true,
+        "source_or_binary": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea"
+      }
+    },
+    "B": {
+      "brain": {
+        "arm": "B",
+        "host": "brain",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": false,
+            "key_configured": false,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "288dd237958ae3672254dbecab7159d57a600105b83f97b104ff396fcc2c6159",
+        "comparable_env_sha256": "523c7dbb38f138849606b53091002b1f185fd526e89da40c04d2ab215ca08ae5",
+        "main_unchanged": true,
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        }
+      },
+      "worker": {
+        "arm": "B",
+        "host": "worker",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793263798326,
+          "cleanup": {
+            "at_ms": 1793263796949,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "comparable_env_sha256": "fe37217406f1e0729593424939b96b9c8d392658daa28bacd5f89986b440792b",
+        "main_unchanged": true,
+        "source_or_binary": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854"
+      }
+    }
+  },
+  "verifier_closed": {
+    "brain": {
+      "host": "brain",
+      "closed": true,
+      "at_ms": 1793263807469
+    },
+    "worker": {
+      "host": "worker",
+      "closed": true,
+      "at_ms": 1793263805336
+    }
+  },
+  "latency_version_binding": {
+    "A": {
+      "brain": {
+        "arm": "A",
+        "host": "brain",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": false,
+            "key_configured": false,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "288dd237958ae3672254dbecab7159d57a600105b83f97b104ff396fcc2c6159",
+        "comparable_env_sha256": "523c7dbb38f138849606b53091002b1f185fd526e89da40c04d2ab215ca08ae5",
+        "main_unchanged": true,
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+          "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2"
+        }
+      },
+      "worker": {
+        "arm": "A",
+        "host": "worker",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793262716505,
+          "cleanup": {
+            "at_ms": 1793262711919,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "92938340daaa3d341e7c44c48df91b59963f3d8f56b17bd36fd4b21775b316aa",
+        "comparable_env_sha256": "fe37217406f1e0729593424939b96b9c8d392658daa28bacd5f89986b440792b",
+        "main_unchanged": true,
+        "source_or_binary": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea"
+      }
+    },
+    "B": {
+      "brain": {
+        "arm": "B",
+        "host": "brain",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": false,
+            "key_configured": false,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "288dd237958ae3672254dbecab7159d57a600105b83f97b104ff396fcc2c6159",
+        "comparable_env_sha256": "523c7dbb38f138849606b53091002b1f185fd526e89da40c04d2ab215ca08ae5",
+        "main_unchanged": true,
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        }
+      },
+      "worker": {
+        "arm": "B",
+        "host": "worker",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793261887999,
+          "cleanup": {
+            "at_ms": 1793261883510,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "c1fe7634dcdeab3079392964b35bd8088cef7c92b8cffafeffef04e958124230",
+        "comparable_env_sha256": "fe37217406f1e0729593424939b96b9c8d392658daa28bacd5f89986b440792b",
+        "main_unchanged": true,
+        "source_or_binary": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854"
+      }
+    }
+  },
+  "before_release_production_unchanged": {
+    "brain": {
+      "host": "brain",
+      "at_ms": 1793263809786,
+      "changed_files": [],
+      "candidate_process_unchanged": true,
+      "env_unchanged": true,
+      "release_revision": "R24-amap-usage-20261029",
+      "flag_scope_unchanged": {
+        "main": true,
+        "candidate": true
+      },
+      "health": {
+        "main": {
+          "status": 200,
+          "body": {
+            "status": "ok"
+          }
+        },
+        "candidate": {
+          "status": 200,
+          "body": {
+            "status": "ok",
+            "agent": "p003-search-canary-20261021",
+            "generation": "R4-20261022-two-devices",
+            "search": true,
+            "tools": true,
+            "amap": {
+              "enabled": true,
+              "key_configured": true,
+              "metered": true
+            },
+            "llm": {
+              "mode": "race",
+              "main": {
+                "at_ms": 1793241953704,
+                "outcome": "content",
+                "http_status": null,
+                "code": null,
+                "stale": true
+              },
+              "fallback": {
+                "outcome": "unknown",
+                "circuit": {
+                  "state": "closed",
+                  "retry_at_ms": null
+                }
+              },
+              "verified": false,
+              "degraded": false
+            }
+          }
+        }
+      },
+      "versions": [
+        [
+          "BJP00326060100100004",
+          367,
+          "1.2.2-canary.353",
+          1793258736532
+        ],
+        [
+          "BJP00326070803800006",
+          371,
+          "1.2.2-canary.357-miniapp-ble",
+          1793260743101
+        ]
+      ]
+    },
+    "worker": {
+      "host": "worker",
+      "at_ms": 1793263811352,
+      "changed_files": [],
+      "candidate_process_unchanged": true,
+      "env_unchanged": true,
+      "window_unchanged": true,
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793263807915,
+        "cleanup": {
+          "at_ms": 1793263803157,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "running_worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+      "main_worker_active": true
+    }
+  },
+  "release": {
+    "brain": {
+      "preflight": {
+        "host": "brain",
+        "step": "preflight",
+        "at_ms": 1793263837010,
+        "mem_available_kb": 2366252,
+        "loadavg": "0.14 0.04 0.01 4/322 3121283",
+        "main_processes": [
+          [
+            "p003-voice",
+            3062468,
+            40
+          ],
+          [
+            "kidshub-voice",
+            1626403,
+            0
+          ],
+          [
+            "p003-analytics",
+            3192914,
+            5
+          ]
+        ],
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-canary-20261021",
+          "generation": "R4-20261022-two-devices",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": true,
+            "key_configured": true,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "at_ms": 1793241953704,
+              "outcome": "content",
+              "http_status": null,
+              "code": null,
+              "stale": true
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+        "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n",
+        "disk_free_bytes": 10785464320
+      },
+      "pause": {
+        "host": "brain",
+        "step": "pause",
+        "at_ms": 1793263841669,
+        "mem_available_kb": 2383800,
+        "loadavg": "0.13 0.04 0.01 1/322 3121344",
+        "gate_closed": true,
+        "main_unchanged": true
+      },
+      "install": {
+        "host": "brain",
+        "step": "install",
+        "at_ms": 1793263848027,
+        "mem_available_kb": 2386892,
+        "loadavg": "0.12 0.04 0.01 1/322 3121429",
+        "pid": "3121443",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-canary-20261021",
+          "generation": "R4-20261022-two-devices",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": true,
+            "key_configured": true,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "runtime_env_verified": true,
+        "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        },
+        "main_unchanged": true
+      },
+      "open": {
+        "host": "brain",
+        "step": "open",
+        "at_ms": 1793263865936,
+        "mem_available_kb": 2410692,
+        "loadavg": "0.58 0.17 0.05 1/322 3121545",
+        "reopened_at_ms": 1793263866150,
+        "expires_at_ms": 1793589540000,
+        "main_unchanged": true
+      }
+    },
+    "worker": {
+      "preflight": {
+        "host": "worker",
+        "step": "preflight",
+        "at_ms": 1793263839011,
+        "mem_available_kb": 6557032,
+        "loadavg": "0.38 0.44 0.36 1/222 1510251",
+        "main_processes": "MainPID=1101301\nNRestarts=0\nActiveState=active\n",
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1793263837915,
+          "cleanup": {
+            "at_ms": 1793263836684,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "a8ec39d7d360ebfcd020b3100dc0a962339d2a34aeed6bc4fd6027b5409e74ce",
+        "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n",
+        "disk_free_bytes": 68002881536
+      },
+      "pause": {
+        "host": "worker",
+        "step": "pause",
+        "at_ms": 1793263843703,
+        "mem_available_kb": 6542208,
+        "loadavg": "0.35 0.43 0.35 2/223 1510307",
+        "gate_closed": true,
+        "main_unchanged": true
+      },
+      "install": {
+        "host": "worker",
+        "step": "install",
+        "at_ms": 1793263852174,
+        "mem_available_kb": 6546144,
+        "loadavg": "0.29 0.42 0.35 1/224 1510365",
+        "pid": "1510375",
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1793263860136,
+          "cleanup": {
+            "at_ms": 1793263856403,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "runtime_env_verified": true,
+        "env_sha256": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa",
+        "source_or_binary": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+        "main_unchanged": true
+      },
+      "open": {
+        "host": "worker",
+        "step": "open",
+        "at_ms": 1793263863446,
+        "mem_available_kb": 6648004,
+        "loadavg": "0.25 0.41 0.35 1/212 1510446",
+        "reopened_at_ms": 1793263864062,
+        "expires_at_ms": 1793589540000,
+        "main_unchanged": true
+      }
+    }
+  },
+  "post_deploy_stability": [
+    {
+      "index": 0,
+      "hosts": {
+        "brain": {
+          "host": "brain",
+          "at_ms": 1793263886631,
+          "unit": "MainPID=3121443\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+          "release_revision": "R26-tts-dns-20261029",
+          "source": {
+            "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+            "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+          },
+          "flags_unchanged": {
+            "main": true,
+            "candidate": true
+          },
+          "health": {
+            "main": {
+              "status": 200,
+              "body": {
+                "status": "ok"
+              }
+            },
+            "candidate": {
+              "status": 200,
+              "body": {
+                "status": "ok",
+                "agent": "p003-search-canary-20261021",
+                "generation": "R4-20261022-two-devices",
+                "search": true,
+                "tools": true,
+                "amap": {
+                  "enabled": true,
+                  "key_configured": true,
+                  "metered": true
+                },
+                "llm": {
+                  "mode": "race",
+                  "main": {
+                    "outcome": "unknown"
+                  },
+                  "fallback": {
+                    "outcome": "unknown",
+                    "circuit": {
+                      "state": "closed",
+                      "retry_at_ms": null
+                    }
+                  },
+                  "verified": false,
+                  "degraded": false
+                }
+              }
+            }
+          },
+          "versions": [
+            [
+              "BJP00326060100100004",
+              367,
+              "1.2.2-canary.353",
+              1793258736532
+            ],
+            [
+              "BJP00326070803800006",
+              371,
+              "1.2.2-canary.357-miniapp-ble",
+              1793260743101
+            ]
+          ],
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n"
+        },
+        "worker": {
+          "host": "worker",
+          "at_ms": 1793263887795,
+          "unit": "MainPID=1510375\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa",
+          "running_worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "window_unchanged": true,
+          "health": {
+            "agent": "p003-search-canary-20261021",
+            "at_ms": 1793263885137,
+            "cleanup": {
+              "at_ms": 1793263883965,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R4-20261022-two-devices",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+        }
+      }
+    },
+    {
+      "index": 1,
+      "hosts": {
+        "brain": {
+          "host": "brain",
+          "at_ms": 1793263951266,
+          "unit": "MainPID=3121443\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+          "release_revision": "R26-tts-dns-20261029",
+          "source": {
+            "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+            "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+          },
+          "flags_unchanged": {
+            "main": true,
+            "candidate": true
+          },
+          "health": {
+            "main": {
+              "status": 200,
+              "body": {
+                "status": "ok"
+              }
+            },
+            "candidate": {
+              "status": 200,
+              "body": {
+                "status": "ok",
+                "agent": "p003-search-canary-20261021",
+                "generation": "R4-20261022-two-devices",
+                "search": true,
+                "tools": true,
+                "amap": {
+                  "enabled": true,
+                  "key_configured": true,
+                  "metered": true
+                },
+                "llm": {
+                  "mode": "race",
+                  "main": {
+                    "outcome": "unknown"
+                  },
+                  "fallback": {
+                    "outcome": "unknown",
+                    "circuit": {
+                      "state": "closed",
+                      "retry_at_ms": null
+                    }
+                  },
+                  "verified": false,
+                  "degraded": false
+                }
+              }
+            }
+          },
+          "versions": [
+            [
+              "BJP00326060100100004",
+              367,
+              "1.2.2-canary.353",
+              1793258736532
+            ],
+            [
+              "BJP00326070803800006",
+              371,
+              "1.2.2-canary.357-miniapp-ble",
+              1793260743101
+            ]
+          ],
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n"
+        },
+        "worker": {
+          "host": "worker",
+          "at_ms": 1793263951582,
+          "unit": "MainPID=1510375\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa",
+          "running_worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "window_unchanged": true,
+          "health": {
+            "agent": "p003-search-canary-20261021",
+            "at_ms": 1793263950136,
+            "cleanup": {
+              "at_ms": 1793263946675,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R4-20261022-two-devices",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+        }
+      }
+    },
+    {
+      "index": 2,
+      "hosts": {
+        "brain": {
+          "host": "brain",
+          "at_ms": 1793264014928,
+          "unit": "MainPID=3121443\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+          "release_revision": "R26-tts-dns-20261029",
+          "source": {
+            "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+            "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+          },
+          "flags_unchanged": {
+            "main": true,
+            "candidate": true
+          },
+          "health": {
+            "main": {
+              "status": 200,
+              "body": {
+                "status": "ok"
+              }
+            },
+            "candidate": {
+              "status": 200,
+              "body": {
+                "status": "ok",
+                "agent": "p003-search-canary-20261021",
+                "generation": "R4-20261022-two-devices",
+                "search": true,
+                "tools": true,
+                "amap": {
+                  "enabled": true,
+                  "key_configured": true,
+                  "metered": true
+                },
+                "llm": {
+                  "mode": "race",
+                  "main": {
+                    "outcome": "unknown"
+                  },
+                  "fallback": {
+                    "outcome": "unknown",
+                    "circuit": {
+                      "state": "closed",
+                      "retry_at_ms": null
+                    }
+                  },
+                  "verified": false,
+                  "degraded": false
+                }
+              }
+            }
+          },
+          "versions": [
+            [
+              "BJP00326060100100004",
+              367,
+              "1.2.2-canary.353",
+              1793258736532
+            ],
+            [
+              "BJP00326070803800006",
+              371,
+              "1.2.2-canary.357-miniapp-ble",
+              1793260743101
+            ]
+          ],
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n"
+        },
+        "worker": {
+          "host": "worker",
+          "at_ms": 1793264014976,
+          "unit": "MainPID=1510375\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa",
+          "running_worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "window_unchanged": true,
+          "health": {
+            "agent": "p003-search-canary-20261021",
+            "at_ms": 1793264015137,
+            "cleanup": {
+              "at_ms": 1793264012383,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R4-20261022-two-devices",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+        }
+      }
+    },
+    {
+      "index": 3,
+      "hosts": {
+        "brain": {
+          "host": "brain",
+          "at_ms": 1793264078132,
+          "unit": "MainPID=3121443\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+          "release_revision": "R26-tts-dns-20261029",
+          "source": {
+            "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+            "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+          },
+          "flags_unchanged": {
+            "main": true,
+            "candidate": true
+          },
+          "health": {
+            "main": {
+              "status": 200,
+              "body": {
+                "status": "ok"
+              }
+            },
+            "candidate": {
+              "status": 200,
+              "body": {
+                "status": "ok",
+                "agent": "p003-search-canary-20261021",
+                "generation": "R4-20261022-two-devices",
+                "search": true,
+                "tools": true,
+                "amap": {
+                  "enabled": true,
+                  "key_configured": true,
+                  "metered": true
+                },
+                "llm": {
+                  "mode": "race",
+                  "main": {
+                    "outcome": "unknown"
+                  },
+                  "fallback": {
+                    "outcome": "unknown",
+                    "circuit": {
+                      "state": "closed",
+                      "retry_at_ms": null
+                    }
+                  },
+                  "verified": false,
+                  "degraded": false
+                }
+              }
+            }
+          },
+          "versions": [
+            [
+              "BJP00326060100100004",
+              367,
+              "1.2.2-canary.353",
+              1793258736532
+            ],
+            [
+              "BJP00326070803800006",
+              371,
+              "1.2.2-canary.357-miniapp-ble",
+              1793260743101
+            ]
+          ],
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 11:19:00 CST\nActiveState=active\n"
+        },
+        "worker": {
+          "host": "worker",
+          "at_ms": 1793264078597,
+          "unit": "MainPID=1510375\nNRestarts=0\nActiveState=active\n",
+          "main_processes_unchanged": true,
+          "unexpected_file_changes": [],
+          "env_only_expected_changes": true,
+          "runtime_env_verified": true,
+          "env_sha256": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa",
+          "running_worker_sha256": "4f45d8c8c26b025908822fcaf7ff97eeedd79153603eccc6789be6b7dfe46854",
+          "window_unchanged": true,
+          "health": {
+            "agent": "p003-search-canary-20261021",
+            "at_ms": 1793264075140,
+            "cleanup": {
+              "at_ms": 1793264073702,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R4-20261022-two-devices",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+        }
+      }
+    }
+  ],
+  "https": {
+    "at_ms": 1793263889278,
+    "https": true,
+    "worker_token_role": "device",
+    "worker_token_valid": true,
+    "routes": [
+      {
+        "sn_suffix": "03800006",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "00100004",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "99999902",
+        "authenticated": true,
+        "status": 403,
+        "routing_version": null,
+        "error": "canary_unavailable"
+      },
+      {
+        "sn_suffix": "03800006",
+        "authenticated": false,
+        "status": 401,
+        "routing_version": null,
+        "error": "unauthorized"
+      }
+    ],
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793263885137,
+      "cleanup": {
+        "at_ms": 1793263883965,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+  },
+  "retained_failures_and_limits": [
+    "R25 +4301.477ms P90 remains a failed older-artifact batch; never overwritten.",
+    "R26 deterministic red test failed before implementation; first full-suite liveness guard exceeded 750ms, fixture separated and liveness guard changed to 2s; exact first-failure cause not established. Final full suite 477 passed; fast fallback 300ms and RTC 100/300ms gates unchanged.",
+    "First finalA switch rejected a non-idle/stale cleanup snapshot before any mutation; original stderr retained, next idle check passed.",
+    "Catalog timing association now matches received captions to actual ledger result text; English source title did not include old hardcoded Chinese title keyword. Same input/output, no rerun or product edit.",
+    "AliDNS secondary one UDP timeout retained; not proof of provider outage or throttling.",
+    "DNS failure position outside application still not proven. A2 and B17 are different events, not a strict fault counterfactual.",
+    "Real device speaker hearing, long-term tails and physical device actuator execution pending."
+  ],
+  "privacy": "No credentials, original audio or original user utterances committed; synthetic task identifiers and aggregate timings only.",
+  "documented_at_cst": "2026-10-29 16:58",
+  "final_server_observation_cst": "2026-10-29 16:54:38"
+}
