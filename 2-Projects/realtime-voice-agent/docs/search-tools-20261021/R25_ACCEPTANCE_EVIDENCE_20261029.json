@@ -1,0 +1,686 @@
+{
+  "revision": "R25",
+  "decision": "NOT_DEPLOYED_LATENCY_GATE_FAILED",
+  "at": "2026-10-29 14:28 CST",
+  "code_commits": {
+    "brain": "3f1b87ace72cf62220eee7b8b635a1ffa8125580",
+    "worker": "0b6e3382156519ebd4fcec0bc0e8d88b13f448ff"
+  },
+  "artifacts": {
+    "source": {
+      "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+      "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+    },
+    "old_source": {
+      "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+      "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2"
+    },
+    "preview_sha256": "6014e67c248242cbd5e26e1f2465ad0eac96d789a3766fb73d85843f491b4c85",
+    "worker_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60"
+  },
+  "tests": {
+    "brain": {
+      "passed": 172,
+      "failed": 0
+    },
+    "worker_linux": {
+      "passed": 471,
+      "failed": 0
+    },
+    "route_preview": {
+      "passed": 33,
+      "failed": 0
+    },
+    "typescript": "pass",
+    "linux_release_abi": "pass"
+  },
+  "test_log_sha256": {
+    "brain-regression-final2.log": "802189f716ecf34fd1876b1e8d7ad32e56aff97ae408f4128338838f6a49ddf9",
+    "build-full-1793253893618104000.log": "26849a1e313c9c76538bb0e428ed5dbf1579831402c6fb5fb24428bdc9c5c500",
+    "build-release-1793253983813709000.log": "14505bc49129fe60c38692c614a1ae6a9b59b40e95a70f3205be8014f9fd759c",
+    "preview-tests.log": "78a14e912dcef5ed0e2f3c0015a112797bf08432205675c02b1324dec2df4164",
+    "catalog-title-red.log": "45c044d899927343be73cae1792e14ae9b588392cad53b171a5e9ab188abc267",
+    "catalog-title-green.log": "29776e96415a7f21041bc2308ea519b8225e29cc980a77b794c40686d3172620"
+  },
+  "functional": [
+    {
+      "case": "replay_verified",
+      "room": "sn-BJP00399999999999901-1793254441",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 4,
+        "user_transcripts": 2,
+        "metrics": 2,
+        "audio_voiced_ms": 8660.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 82,
+        "packets_after": 2081
+      },
+      "checks": {
+        "old_cancelled": true,
+        "new_answered": true,
+        "new_city_chengdu": true,
+        "chengdu_subtitle": true,
+        "no_beijing_after_replace": true,
+        "recovery_accepted": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [
+        {
+          "id": "fa47ced9-f7f6-4d93-ac88-e5168f6105ef",
+          "session": "sn-BJP00399999999999901-1793254441",
+          "revision": 1,
+          "status": "cancelled",
+          "outcome": "answered",
+          "delivery": null,
+          "sources": 0,
+          "weather_city": null,
+          "result_sha256": null
+        },
+        {
+          "id": "c2dd49de-fe5a-4836-871f-ac4c4bbd68d0",
+          "session": "sn-BJP00399999999999901-1793254441",
+          "revision": 2,
+          "status": "delivered",
+          "outcome": "answered",
+          "delivery": "completed",
+          "sources": 1,
+          "weather_city": "四川成都",
+          "result_sha256": "2e75c7ef18e8e60c4ffbc674c2e7baf46311de6e5ed9e0a09de4e4fb9ea2b5fb"
+        }
+      ],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "catalog_final",
+      "room": "sn-BJP00399999999999901-1793254513",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 6,
+        "user_transcripts": 2,
+        "metrics": 5,
+        "audio_voiced_ms": 18440.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 55,
+        "packets_after": 3069
+      },
+      "checks": {
+        "answered_with_sources": true,
+        "p2_semantics": true,
+        "freshness_limitation": true,
+        "chat_before_search_result": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [
+        {
+          "id": "a240af16-e703-4dc3-8155-7a0fab3b11c7",
+          "session": "sn-BJP00399999999999901-1793254513",
+          "revision": 1,
+          "status": "delivered",
+          "outcome": "answered",
+          "delivery": "completed",
+          "sources": 1,
+          "weather_city": null,
+          "result_sha256": "6f36e889fc83734d3403d31b94c08fea8e6bf6093c2b604734584f16d4f1d59a"
+        }
+      ],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "cancel_verified",
+      "room": "sn-BJP00399999999999901-1793254608",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 4,
+        "user_transcripts": 3,
+        "metrics": 7,
+        "audio_voiced_ms": 8700.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 80,
+        "packets_after": 2615
+      },
+      "checks": {
+        "task_cancelled": true,
+        "same_session_continues": true,
+        "cancel_subtitle": true,
+        "no_late_dinosaur_result": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [
+        {
+          "id": "ecbac13c-7994-4172-80db-9a6a89326182",
+          "session": "sn-BJP00399999999999901-1793254608",
+          "revision": 1,
+          "status": "cancelled",
+          "outcome": null,
+          "delivery": null,
+          "sources": 0,
+          "weather_city": null,
+          "result_sha256": null
+        }
+      ],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "replace_wait_final",
+      "room": "sn-BJP00399999999999901-1793254696",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 4,
+        "user_transcripts": 2,
+        "metrics": 2,
+        "audio_voiced_ms": 8680.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 82,
+        "packets_after": 1624
+      },
+      "checks": {
+        "old_cancelled": true,
+        "new_answered": true,
+        "new_city_chengdu": true,
+        "chengdu_subtitle": true,
+        "no_beijing_after_replace": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [
+        {
+          "id": "bb770c29-2b1a-4a85-bb94-9adee7888346",
+          "session": "sn-BJP00399999999999901-1793254696",
+          "revision": 1,
+          "status": "cancelled",
+          "outcome": "answered",
+          "delivery": null,
+          "sources": 0,
+          "weather_city": null,
+          "result_sha256": null
+        },
+        {
+          "id": "5651331f-9ec6-48b4-88c7-f1ae7bb648e4",
+          "session": "sn-BJP00399999999999901-1793254696",
+          "revision": 2,
+          "status": "expired",
+          "outcome": "answered",
+          "delivery": "completed",
+          "sources": 0,
+          "weather_city": null,
+          "result_sha256": null
+        }
+      ],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "replace_result_final",
+      "room": "sn-BJP00399999999999901-1793254762",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 6,
+        "user_transcripts": 2,
+        "metrics": 2,
+        "audio_voiced_ms": 15000.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 54,
+        "packets_after": 3257
+      },
+      "checks": {
+        "old_cancelled": true,
+        "new_answered": true,
+        "new_city_chengdu": true,
+        "chengdu_subtitle": true,
+        "no_beijing_after_replace": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [
+        {
+          "id": "4de1dd45-bb5c-444e-8546-68ac4b6eecbb",
+          "session": "sn-BJP00399999999999901-1793254762",
+          "revision": 1,
+          "status": "cancelled",
+          "outcome": "answered",
+          "delivery": "completed",
+          "sources": 0,
+          "weather_city": null,
+          "result_sha256": null
+        },
+        {
+          "id": "68e65910-6801-407d-b545-36c95b0c386c",
+          "session": "sn-BJP00399999999999901-1793254762",
+          "revision": 2,
+          "status": "delivered",
+          "outcome": "answered",
+          "delivery": "completed",
+          "sources": 1,
+          "weather_city": "四川成都",
+          "result_sha256": "c94da27d92ca2cf472f8d18193fd8ea17d4a9f322e4f527530a84af690143c97"
+        }
+      ],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "device_controls_final",
+      "room": "sn-BJP00399999999999901-1793254860",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 0,
+        "user_transcripts": 4,
+        "metrics": 0,
+        "audio_voiced_ms": 0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 60,
+        "packets_after": 1826
+      },
+      "checks": {
+        "expected_actions": true,
+        "cleanup": true
+      },
+      "task_observations": [],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "cross_disconnect_final",
+      "room": "sn-BJP00399999999999901-1793254927",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 1,
+        "user_transcripts": 1,
+        "metrics": 1,
+        "audio_voiced_ms": 3490.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 54,
+        "packets_after": 664
+      },
+      "checks": {
+        "sourced_task_interrupted": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [
+        {
+          "id": "924178a2-1790-4c64-8d50-23ca4d79bab6",
+          "session": "sn-BJP00399999999999901-1793254927",
+          "revision": 1,
+          "status": "delivered",
+          "outcome": "answered",
+          "delivery": "interrupted",
+          "sources": 2,
+          "weather_city": null,
+          "result_sha256": "49085ae0a3480e471e94b1b57d9bf82de72ff4be6303ad8e14ceac43adf33c8a"
+        }
+      ],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    },
+    {
+      "case": "cross_resume_disconnect_final",
+      "room": "sn-BJP00399999999999901-1793254971",
+      "runtime_sha256": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60",
+      "counts": {
+        "agent_transcripts": 2,
+        "user_transcripts": 1,
+        "metrics": 1,
+        "audio_voiced_ms": 11590.0,
+        "input_ready": 1,
+        "output_ready": 1,
+        "packets_before": 58,
+        "packets_after": 2724
+      },
+      "checks": {
+        "same_task_granted": true,
+        "same_task_completed": true,
+        "quiet_before_explicit_resume": true,
+        "two_result_subtitles": true,
+        "cleanup": true,
+        "subscriber_audio_received": true
+      },
+      "task_observations": [],
+      "device_heard_verified": false,
+      "physical_execution_verified": false
+    }
+  ],
+  "latency": {
+    "protocol_sha256": "f3ce76b094ebc30166c2479ec15dec2ec10043d466078a9f92bc5f013a89a706",
+    "summary": {
+      "samples": 40,
+      "eligible_pairs": 20,
+      "median_delta_ms": 0.5825,
+      "p90_delta_ms": 4301.477,
+      "new_missing_body": 0,
+      "gate_pass": false
+    },
+    "sampled_old_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+    "sampled_new_sha256": "b011c254e928c32df2f4cfd2ac2d5858345aa1f1bde3a4be9871b52259c8c3be",
+    "final_artifact_latency_passed": false,
+    "diagnosis": "Slow examples spent about 5s resolving the TTS host; cause not proven. No search recovery ran in normal-chat samples. No failure removed or thresholds changed."
+  },
+  "rollback": {
+    "A": {
+      "brain": {
+        "arm": "A",
+        "host": "brain",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": false,
+            "key_configured": false,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "b9343b9b7ab1fa6ac0e58637f655b0867cf0e88f6da2273e2593244f7807b723",
+        "comparable_env_sha256": "fe31fcc98799c5f9a9ed828951f57533ec6851848caa848c5fe68507511810a9",
+        "main_unchanged": true,
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "a26df4d6bd7ade089b1cd7f681ec3bb2e6815dc2d39d88301f87eb3756a54a49",
+          "src/tools/search-runtime.ts": "de2524c66be7e3ffbd7d83b6abba69984797332fe6a694101229f9cdb14852c2"
+        }
+      },
+      "worker": {
+        "arm": "A",
+        "host": "worker",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793255141185,
+          "cleanup": {
+            "at_ms": 1793255138995,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "c1d91b80613597803af6904c49f56616eac17d9cfb3fdbf64d309286eb5b65f5",
+        "comparable_env_sha256": "f20bfd1f364cc3d5e59fc1536edfece5fa83af69ed00b7dd3bf411d021a7ab37",
+        "main_unchanged": true,
+        "source_or_binary": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea"
+      }
+    },
+    "B": {
+      "brain": {
+        "arm": "B",
+        "host": "brain",
+        "health": {
+          "status": "ok",
+          "agent": "p003-search-verification-20261026",
+          "generation": "R17-isolated-rtc-20261026",
+          "search": true,
+          "tools": true,
+          "amap": {
+            "enabled": false,
+            "key_configured": false,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        },
+        "env_sha256": "b9343b9b7ab1fa6ac0e58637f655b0867cf0e88f6da2273e2593244f7807b723",
+        "comparable_env_sha256": "fe31fcc98799c5f9a9ed828951f57533ec6851848caa848c5fe68507511810a9",
+        "main_unchanged": true,
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        }
+      },
+      "worker": {
+        "arm": "B",
+        "host": "worker",
+        "health": {
+          "agent": "p003-search-verification-20261026",
+          "at_ms": 1793255167012,
+          "cleanup": {
+            "at_ms": 1793255165771,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R17-isolated-rtc-20261026",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "env_sha256": "a006072af355273ef5f1807c735d14b79566e85e9f7d710708cca38fbfbada9a",
+        "comparable_env_sha256": "f20bfd1f364cc3d5e59fc1536edfece5fa83af69ed00b7dd3bf411d021a7ab37",
+        "main_unchanged": true,
+        "source_or_binary": "78cb7e46f5f2ba9550f9d82cac0853809b309c96ece128fa01f4d113b8f65e60"
+      }
+    }
+  },
+  "verifier_closed": {
+    "brain": {
+      "host": "brain",
+      "closed": true,
+      "at_ms": 1793255194416
+    },
+    "worker": {
+      "host": "worker",
+      "closed": true,
+      "at_ms": 1793255192651
+    }
+  },
+  "production": {
+    "brain": {
+      "host": "brain",
+      "at_ms": 1793255052167,
+      "changed_files": [],
+      "candidate_process_unchanged": true,
+      "env_unchanged": true,
+      "release_revision": "R24-amap-usage-20261029",
+      "flag_scope_unchanged": {
+        "main": true,
+        "candidate": true
+      },
+      "health": {
+        "main": {
+          "status": 200,
+          "body": {
+            "status": "ok"
+          }
+        },
+        "candidate": {
+          "status": 200,
+          "body": {
+            "status": "ok",
+            "agent": "p003-search-canary-20261021",
+            "generation": "R4-20261022-two-devices",
+            "search": true,
+            "tools": true,
+            "amap": {
+              "enabled": true,
+              "key_configured": true,
+              "metered": true
+            },
+            "llm": {
+              "mode": "race",
+              "main": {
+                "at_ms": 1793241953704,
+                "outcome": "content",
+                "http_status": null,
+                "code": null,
+                "stale": true
+              },
+              "fallback": {
+                "outcome": "unknown",
+                "circuit": {
+                  "state": "closed",
+                  "retry_at_ms": null
+                }
+              },
+              "verified": false,
+              "degraded": false
+            }
+          }
+        }
+      },
+      "versions": [
+        [
+          "BJP00326060100100004",
+          367,
+          "1.2.2-canary.353",
+          1793238607540
+        ],
+        [
+          "BJP00326070803800006",
+          370,
+          "1.2.2-canary.356-miniapp-ble",
+          1793244891073
+        ]
+      ]
+    },
+    "worker": {
+      "host": "worker",
+      "at_ms": 1793255054004,
+      "changed_files": [],
+      "candidate_process_unchanged": true,
+      "env_unchanged": true,
+      "window_unchanged": true,
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793255052915,
+        "cleanup": {
+          "at_ms": 1793255047799,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "running_worker_sha256": "788a5bab485dd291b21700e360af3cf0f4f5884038137998ffcc68fb8a241bea",
+      "main_worker_active": true
+    }
+  },
+  "https": {
+    "at_ms": 1793255095881,
+    "https": true,
+    "worker_token_role": "device",
+    "worker_token_valid": true,
+    "routes": [
+      {
+        "sn_suffix": "03800006",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "00100004",
+        "authenticated": true,
+        "status": 200,
+        "routing_version": "r7-5bd970f225036a447233316e",
+        "error": null
+      },
+      {
+        "sn_suffix": "99999902",
+        "authenticated": true,
+        "status": 403,
+        "routing_version": null,
+        "error": "canary_unavailable"
+      },
+      {
+        "sn_suffix": "03800006",
+        "authenticated": false,
+        "status": 401,
+        "routing_version": null,
+        "error": "unauthorized"
+      }
+    ],
+    "health": {
+      "agent": "p003-search-canary-20261021",
+      "at_ms": 1793255092916,
+      "cleanup": {
+        "at_ms": 1793255089989,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "R4-20261022-two-devices",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+  },
+  "retained_failures": [
+    {
+      "case": "replay_final",
+      "result": "Short 300ms pre-roll lost leading control syllable; accepted=false; fixed to 800ms and replay_verified passed."
+    },
+    {
+      "case": "catalog",
+      "result": "Old announcement accepted but repeated unverified_freshness caused honest no_evidence; added attributed-title-only fallback; unit and real query passed."
+    },
+    {
+      "case": "latency_40_samples",
+      "result": "Failed; blocks release. Final artifact has functional validation, not a new latency pass."
+    },
+    {
+      "case": "cancel probe status endpoint",
+      "result": "409 from resumable endpoint was a test assertion error; changed to read-only ledger evidence."
+    },
+    {
+      "case": "first replay harness",
+      "result": "ffmpeg not installed; failed before room creation; changed local audio resampling."
+    },
+    {
+      "case": "restoreB switch",
+      "result": "Precheck correctly rejected non-idle verifier; no switch applied; waited for cleanup before restoreB2."
+    },
+    {
+      "case": "cancel_verified connect",
+      "result": "Initial v0 signal handshake timed out and recovered on built-in retry; final room completed; retry retained."
+    }
+  ],
+  "privacy": "No credentials, original audio, or original user utterances. Task IDs are synthetic verification records. Raw evidence remains restricted."
+}
