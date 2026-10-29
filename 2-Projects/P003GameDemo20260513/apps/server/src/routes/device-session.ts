@@ -1,3 +1,4 @@
+import { buildFillerPolicy } from '../filler-policy.js';
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt } from 'jose';
@@ -24,6 +25,12 @@ import { captureDeviceLocation } from '../tools/device-location-runtime.js';
 
 // 旧路径（= 现役生产 worker）的 agent 名。B29：产品首句 v1 不能派给它——它没有 ordered_pcm
 // 代次状态机，设备发了 begin 也没人接。新能力走 cfg().firstTurnAgent 指定的独立 agent。
+// Optional voice UX must never break an otherwise valid device-session ticket.
+function fillerPolicyFor(sn: string) {
+  try { return buildFillerPolicy(deviceRegistryStore.get(sn)?.account_id); }
+  catch { console.warn('[device-session] filler policy unavailable; legacy worker fallback'); return undefined; }
+}
+
 const AGENT_NAME = 'rust-worker';
 
 // ── env 全部请求时读取（不在模块顶层快照）：测试注入与生产热调参都靠这个 ──
@@ -353,6 +360,7 @@ deviceSessionRoute.post('/session', async (c) => {
             trace_id: traceId,
             session_id: sessionId,
             issue_ts_ms: Date.now(),
+            filler_policy: fillerPolicyFor(sn),
             ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),
             // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
             ...(contract

@@ -23,14 +23,20 @@ const REALITY_REDLINE =
 const KB_ENTRIES: KbEntry[] = [
   {
     key: 'economy',
-    keywords: ['星尘', '家族币', '宝箱', '开箱', '开宝箱', '换装', '皮肤', '攒了', '攒到', '多少币', '奖励', '收益', '倍率', '福利', '兑换', '盲盒', '专注奖励', '投入产出', '怎么得到', '品级', '稀有', '约定', '现实奖励', '买玩具', '能买吗'],
+    keywords: ['星尘', '家族币', '金币', '星辰', '宝箱', '开箱', '换装', '皮肤', '多少币', '奖励', '兑换', '专注奖励'],
     content:
-      '【经济·投入产出循环（设计 1.2 V2.0）】核心循环：孩子专注阅读/写作=投入（给方舟充能）→ 产出宝箱 → 开宝箱得资源 → 消耗资源建设 → 反馈激励 → 继续专注。' +
-      '🎁 宝箱是统一的中间物：专注奖励（白天用读写台越久越多）、夜航离线奖励、夜航额外奖励——所有奖励都先产出宝箱，开宝箱才得到里面的藏品 / 生态缸资源 / 星尘 / 家族币；新手福利按系数倍率多产出。' +
-      '宝箱有价值品级（如普通 / 稀有 / 史诗 / 传说，越高越好），开出的藏品品级随宝箱品级——宝箱品级越高、开出的藏品越稀有（新手光环能把宝箱升品；藏品具体品类见「藏品」）。' +
-      '四种资源用途：· 家族币——和家长兑换现实奖励、与小程序的家族币和任务功能互动形成闭环；· 星尘——购买/兑换小可的皮肤实现换装；· 藏品——盲盒收集、分品级；· 生态缸资源——升级生态缸（小可的家）。' +
-      '消耗：升级生态缸耗生态缸部件；小可换装耗星尘。你暂时不知道 ta 的实时数量和宝箱品级，绝不编造具体数字。' +
-      '★星尘是只属于方舟的小魔法，留在船里、带不回现实世界；绝不把方舟世界说成能兑换现实金钱或物品。想要现实里的小奖励，要用和爸爸妈妈之间的「约定」去和最爱孩子的他们好好商量一个暖洋洋的承诺（家族币才是和家长兑现实奖励的那条线）。',
+      '【方舟资源·正式双钱包】先直接用一两句介绍用途，不以“哇、好呀”等感叹开头，不逐项展开说明书，孩子追问再展开；已知用途直接说明，不回答“不知道，问爸爸妈妈”。' +
+      '星尘与家族币是两种独立资源，不能混为一谈。星尘用于方舟里的小可换装；家族币记录家长与孩子约定的奖励，约定可由家长在现实中兑现，但不是平台自动兑换商品，不能说家族币不能获得任何现实奖励；具体约定由家长设置，不代表真实货币，不能承诺提现或固定兑换比。' +
+      '“星辰”在游戏资源提问里按“星尘”的常见口语或识别写法解释；“金币”可能指旧版界面的家族币，先简短说明两类用途，再确认孩子指哪一种，不能把金币断言成星尘，也不能凭颜色推断是哪种资源。金币问句可简答：“星尘能给小可换装；家族币用来记录和爸妈约好的奖励。你说的是哪一种呀？”' +
+      '专注与游戏任务可以带来游戏奖励，具体以当前设备页面为准，不承诺某项奖励数量、商店商品已上架或购买已完成。' +
+      '你目前查不到孩子的实时余额、库存、兑换价格和可用商品；仅这些实时状态说明暂时查不到，建议看设备资源页面，不承诺稍后就能查到、也不声称自己能读取屏幕，不把已知用途一并推给家长。星尘不能兑换现实金钱或物品。',
+  },
+  {
+    key: 'props',
+    keywords: ['道具', '补勤卡', '补签卡', '装饰', '生态缸部件'],
+    content:
+      '【方舟资源·道具】先直接用一两句讲清用途，不加感叹开场或无必要的追问：装饰用于装扮小可或方舟；生态缸部件用于建设、升级生态缸；补勤卡用于符合条件的历史航线节点补签，补签后的奖励仍需按页面领取，不会自动到账。' +
+      '孩子说“补签卡”可以理解为补勤卡。实际可使用的节点、库存、具体消耗以设备页面为准；不承诺所有日期都可补、不编造价格、不声称已替孩子使用道具。',
   },
   {
     key: 'origin',
@@ -135,10 +141,21 @@ const KB_ENTRIES: KbEntry[] = [
   },
 ];
 
+// Generic coin/star/prop words need context guards; other world entries keep their existing recall behavior.
+function entryMatches(entry: KbEntry, text: string): boolean {
+  if (entry.key === 'economy' || entry.key === 'props') {
+    // A wake-word is not a game topic. Explicit external subjects win over generic aliases.
+    if (/哆啦|原神|王者荣耀|我的世界|天上的|星空|天文|恒星/.test(text)) return false;
+    if (/黄金|金价|金店|人民币|比特币/.test(text) && !/方舟|星尘|家族币/.test(text)) return false;
+    if (entry.key === 'props' && !/道具|补勤卡|补签卡|生态缸部件/.test(text) && !/方舟|装扮小可|小可的/.test(text)) return false;
+  }
+  return entry.keywords.some(k => text.includes(k));
+}
+
 /** 仅供测试/监控：本轮是否命中任何知识条目。 */
 export function matchesKnowledge(text: string): boolean {
   if (!text) return false;
-  return KB_ENTRIES.some((e) => e.keywords.some((k) => text.includes(k)));
+  return KB_ENTRIES.some((e) => entryMatches(e, text));
 }
 
 /**
@@ -148,7 +165,7 @@ export function matchesKnowledge(text: string): boolean {
 export function buildKnowledgeRecall(text: string): string | null {
   try {
     if (!text) return null;
-    const hits = KB_ENTRIES.filter((e) => e.keywords.some((k) => text.includes(k)));
+    const hits = KB_ENTRIES.filter((e) => entryMatches(e, text));
     if (!hits.length) return null;
     const picked = hits.slice(0, MAX_RECALL); // 多命中防爆长
     return [

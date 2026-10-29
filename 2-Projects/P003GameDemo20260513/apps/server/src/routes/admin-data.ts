@@ -1,3 +1,4 @@
+import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
 import { Hono } from 'hono';
 import { canaryAdminRoute } from '../search-canary-status.js';
 import { analyticsAdminGateway } from '../analytics/admin-query.js';
@@ -1230,6 +1231,16 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
   } catch (error) {
     return c.json({ ok: false, error: '重置失败，请稍后重试' }, 500);
   }
+});
+
+// Global per-style settings, guarded by the existing admin-only worker-voice namespace.
+adminDataRoute.get('/worker-voice/filler-probabilities', (c) => c.json({ ok: true, ...getFillerStyleSettings() }));
+adminDataRoute.put('/worker-voice/filler-probabilities', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || Object.keys(body).length !== 1 || !validFillerProbabilities(body.probabilities)) {
+    return c.json({ ok: false, error: '请完整填写四种风格的概率（0–100%）' }, 400);
+  }
+  return c.json({ ok: true, ...saveFillerStyleSettings(body.probabilities, opUser(c)) });
 });
 
 // ── 说话风格模板（P0 2026-09-01 风格系统方案 §四）──

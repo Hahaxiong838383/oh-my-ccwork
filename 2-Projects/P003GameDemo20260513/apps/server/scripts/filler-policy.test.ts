@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Hono } from 'hono';
+const dir = mkdtempSync(join(tmpdir(), 'p003-filler-policy-'));
+// Some older stores use relative defaults. Isolate those as well as all configured stores.
+process.chdir(dir);
+for (const key of ['CONFIG','DEVICES','ACCOUNTS','PROFILE','CONVERSATION','FEEDBACK','SMS','PAIRING','OTA','DIAGNOSTICS','TELEMETRY']) process.env[key+'_DB_PATH'] = join(dir,key+'.db');
+Object.assign(process.env, {STUDIO_USER:'fake-admin', STUDIO_PASS:'fake-password', STUDIO_EDITOR_USERS:'fake-editor', STUDIO_EDITOR_PASS:'fake-password', STUDIO_GUEST_USER:'fake-guest', STUDIO_GUEST_PASS:'fake-password'});
+const { authRoute } = await import('../src/routes/auth.js');
+const { adminDataRoute } = await import('../src/routes/admin-data.js');
+const { configStore } = await import('../src/config-store.js');
+const { traitStore } = await import('../src/trait-store.js');
+const { getFillerStyleSettings, buildFillerPolicy, FILLER_POLICY_KEY } = await import('../src/filler-policy.js');
+const app = new Hono(); app.route('/api/auth', authRoute); app.route('/api/admin', adminDataRoute);
+const path = '/api/admin/worker-voice/filler-probabilities';
+assert.equal((await app.request(path)).status,401);
+let admin = '';
+for (const role of ['admin','editor','guest']) {
+  const login = await app.request('/api/auth/login', {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({username:'fake-'+role,password:'fake-password'})});
+  assert.equal(login.status,200); const token = (await login.json()).token;
+  if (role === 'admin') admin = token;
+  for (const method of ['GET','PUT']) assert.equal((await app.request(path,{method,headers:{Authorization:'Bearer '+token,'content-type':'application/json'},...(method==='PUT'?{body:JSON.stringify({probabilities:{default:.25,chatty:.45,quiet:.1,funny:.35}})}:{})})).status,role==='admin'?200:403);
+}
+const put = (value:unknown) => app.request(path,{method:'PUT',headers:{Authorization:'Bearer '+admin,'content-type':'application/json'},body:JSON.stringify(value)});
+const valid = {default:0,chatty:1,quiet:.1,funny:.35};
+for (const bad of [null,{}, {probabilities:{...valid,quiet:-.1}}, {probabilities:{...valid,quiet:1.01}}, {probabilities:{...valid,quiet:'0'}}, {probabilities:{...valid,quiet:null}}, {probabilities:{...valid,alien:.2}}, {probabilities:{default:0}}, {probabilities:valid,extra:true}]) assert.equal((await put(bad)).status,400,JSON.stringify(bad));
+assert.equal((await put({probabilities:valid})).status,200);
+assert.deepEqual(getFillerStyleSettings().probabilities,valid);
+assert.equal(configStore.getFlag(FILLER_POLICY_KEY)?.updated_by,'fake-admin');
+traitStore.setTemplate('account-a','quiet',{source:'parent'});
+traitStore.setTemplate('account-b','chatty',{source:'parent'});
+assert.deepEqual(buildFillerPolicy('account-a'),{version:1,style:'quiet',probability:.1});
+assert.deepEqual(buildFillerPolicy('account-b'),{version:1,style:'chatty',probability:1});
+assert.equal(buildFillerPolicy().probability,0);
+const snapshot = buildFillerPolicy('account-a');
+await put({probabilities:{...valid,quiet:0}});
+assert.equal(snapshot.probability,.1); assert.equal(buildFillerPolicy('account-a').probability,0);
+configStore.setFlag(FILLER_POLICY_KEY,'{"quiet":2}','test');
+assert.equal(buildFillerPolicy('account-a').probability,.1);
+configStore.setFlag(FILLER_POLICY_KEY,'bad-json','test');
+assert.equal(getFillerStyleSettings().source,'default');
+console.log('filler policy: auth, validation, persistence, account isolation, session snapshot, corrupt-config fallback PASS');
+rmSync(dir,{recursive:true,force:true}); process.exit(0);

@@ -8,6 +8,8 @@ import assert from 'node:assert';
 import { Hono } from 'hono';
 import { SignJWT } from 'jose';
 
+process.env.PROFILE_DB_PATH = `/tmp/p003-style-session-profile-${process.pid}.db`;
+
 // env 必须在业务模块加载前就位（虽然路由是请求时读 env，这里仍统一先设，杜绝顺序坑）
 process.env.AUTH_JWT_SECRET = 'test-auth-secret';
 process.env.LIVEKIT_API_KEY = 'voicekey';
@@ -102,6 +104,22 @@ await t('合法 SN 返回 200 且 claims 与响应一致', async () => {
   const c = decodeJwt(j.token) as Record<string, any>;
   assert.equal(c.iss, 'voicekey');
   assert.equal(c.video.roomJoin, true);
+  assert.deepEqual(JSON.parse(c.roomConfig.agents[0].metadata).filler_policy, {version: 1, style: 'default', probability: 0.25});
+});
+
+await t('衔接配置读取异常不阻断票据；设备不能伪造策略', async () => {
+  const { configStore } = await import('../src/config-store.js');
+  const original = configStore.getFlag.bind(configStore);
+  configStore.getFlag = (key: string) => { if (key === 'xiaoke.filler_style_probability') throw new Error('test read failure'); return original(key); };
+  try {
+    const r = await callSession({ cred }); assert.equal(r.status,200);
+    const c = decodeJwt((await r.json()).token) as any;
+    assert.equal(JSON.parse(c.roomConfig.agents[0].metadata).filler_policy,undefined);
+  } finally { configStore.getFlag = original; }
+  const r = await callSession({cred,raw:JSON.stringify({device_sn:SN,trace_id:'test-forged-policy',filler_policy:{version:1,style:'chatty',probability:1}})});
+  assert.equal(r.status,200);
+  const c = decodeJwt((await r.json()).token) as any;
+  assert.deepEqual(JSON.parse(c.roomConfig.agents[0].metadata).filler_policy,{version:1,style:'default',probability:.25});
 });
 
 // 2. ADB serial → 400（身份红线）
@@ -698,12 +716,19 @@ await t('搜索灰度：完整SN、首句合同、JWT派单、到期回退', asy
   const expires = Date.now() + 60000; flag('expires_at_ms', String(expires));
   writeFileSync(health, JSON.stringify({agent:'p003-search-canary-20261021', until_ms:Date.now()+14000,ordered_pcm_v1:true,generation:'test'}));
   await refreshSearchCanaryLease();
+  const { deviceRegistryStore } = await import('../src/device-registry-store.js');
+  const { traitStore } = await import('../src/trait-store.js');
+  for (const [sn, account, style] of [[SN,'style-a','quiet'],[SN2,'style-b','chatty']] as const) {
+    if (!deviceRegistryStore.get(sn)) deviceRegistryStore.add(sn,'filler-test');
+    deviceRegistryStore.setAccountId(sn,account); traitStore.setTemplate(account,style,{source:'parent'});
+  }
   withPolicy('capability', '', FT_AGENT);
   try {
     const j:any = await (await callSession({cred,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
     assert.equal(j.expected_agent_name,'p003-search-canary-20261021');
     assert.equal(j.contract.input_mode,'ordered_pcm'); assertTokenMatchesResponse(j.token,j);
     assert.equal(metaOf(j).search_canary.sn,SN);
+    assert.deepEqual(metaOf(j).filler_policy,{version:1,style:'quiet',probability:.1});
     assert.equal(metaOf(j).search_canary.expires_at_ms,expires);
     assert.ok(j.expires_at_ms <= expires);
     const selectedLog=logLines.find(l=>l.includes(`room=${j.room_name} `));
@@ -711,6 +736,7 @@ await t('搜索灰度：完整SN、首句合同、JWT派单、到期回退', asy
     assert.ok(selectedLog?.includes('canary_reason=selected'));
     const other:any = await (await callSession({cred:await deviceCred(SN2),sn:SN2,supports:['oneshot_first_turn_v1','local_receipt_v1']})).json();
     assert.equal(other.expected_agent_name,FT_AGENT);
+    assert.deepEqual(metaOf(other).filler_policy,{version:1,style:'chatty',probability:.45});
     assert.ok(logLines.find(l=>l.includes(`room=${other.room_name} `))?.includes('canary_reason=not_target'));
     assert.equal((await callSession({cred:await deviceCred(SN2),sn:SN})).status,403);
     for (const [invalidLease,reason] of [

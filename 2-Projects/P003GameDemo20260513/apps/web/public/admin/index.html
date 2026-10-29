@@ -3291,6 +3291,16 @@
                                   </el-radio>
                                 </el-radio-group>
                                 <div style="font-size:11px;color:#B0B8C1;margin-top:8px">切档后特质五维立即置为模板值并记入成长账本；人格成长继续在模板附近漂移（每日向模板回落）。温柔度地板 0.5 恒成立。</div>
+                                <div style="border-top:1px solid #F0F2F5;margin-top:12px;padding-top:12px">
+                                  <div style="font-weight:600;margin-bottom:8px">衔接短语触发概率</div>
+                                  <div style="font-size:12px;color:#6B7785;margin-bottom:10px">全局按风格设置，影响使用该风格的所有设备。0% 关闭普通衔接语，100% 每次触发；搜索任务确认、设备操作结果仍正常播报。保存或切换风格后，退出并重新进入语音生效。</div>
+                                  <div v-for="t in growth.styleAvailable" :key="'filler-'+t.key" style="display:flex;gap:10px;align-items:center;margin:6px 0">
+                                    <label :for="'filler-'+t.key" style="width:120px">{{ t.name }}</label>
+                                    <input :id="'filler-'+t.key" v-model.number="growth.fillerPercent[t.key]" type="number" min="0" max="100" step="1" :disabled="!growth.fillerLoaded || growth.fillerSaving" :aria-label="t.name + '衔接短语触发百分比'" style="width:90px;padding:6px 10px;border:1px solid #D6DCE5;border-radius:5px;font:inherit"><span>%</span>
+                                  </div>
+                                  <div v-if="growth.fillerError" role="alert" style="color:#B42318;margin:8px 0">{{ growth.fillerError }}</div>
+                                  <el-button size="small" :disabled="!growth.fillerLoaded" :loading="growth.fillerSaving" @click="saveFillerProbabilities">保存各风格概率</el-button>
+                                </div>
                                 <!-- P2 风格白盒：偏移摘要（相对当前档基线）+ 变化归因时间线 -->
                                 <div style="border-top:1px solid #F0F2F5;margin-top:10px;padding-top:10px">
                                   <div style="font-weight:600;font-size:12.5px;margin-bottom:6px">📈 风格成长白盒 <span style="color:#B0B8C1;font-weight:400;font-size:11px">当前档为锚：偏了多少 / 为什么变 / 什么时候变</span></div>
@@ -5986,7 +5996,7 @@
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
         var brainState = reactive({ whitebox: null, selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
+        var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, fillerPercent: {}, fillerLoaded: false, fillerSaving: false, fillerError: '', styleSetAt: null, styleSource: null, styleEvents: [] });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -6040,6 +6050,7 @@
         }
         // 说话风格模板（P0 2026-09-01）：家长/运营选风格档——特质值立即置为模板五维，成长在模板附近继续。
         function loadStyleTemplate(sn) {
+          loadFillerProbabilities();
           if (!sn) return;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template')
             .then(function (data) {
@@ -6050,6 +6061,31 @@
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/growth-events?module=trait&limit=8')
             .then(function (data) { if (data && data.ok) growth.styleEvents = data.events || []; })
             .catch(function () {});
+        }
+        function loadFillerProbabilities() {
+          growth.fillerLoaded = false; growth.fillerError = '';
+          deviceApi('/api/admin/worker-voice/filler-probabilities').then(function (data) {
+            if (!data || !data.ok) throw new Error('读取失败');
+            ['default', 'chatty', 'quiet', 'funny'].forEach(function (key) { growth.fillerPercent[key] = Math.round(data.probabilities[key] * 100); });
+            growth.fillerLoaded = true;
+          }).catch(function () { growth.fillerError = '衔接概率读取失败，请重新打开此设备'; });
+        }
+        function saveFillerProbabilities() {
+          if (!growth.fillerLoaded || growth.fillerSaving) return;
+          var probabilities = {}; var valid = true;
+          ['default', 'chatty', 'quiet', 'funny'].forEach(function (key) {
+            var value = growth.fillerPercent[key];
+            if (!Number.isInteger(value) || value < 0 || value > 100) valid = false;
+            probabilities[key] = value / 100;
+          });
+          if (!valid) { growth.fillerError = '请完整填写 0–100 的整数百分比'; return; }
+          growth.fillerSaving = true; growth.fillerError = '';
+          deviceApi('/api/admin/worker-voice/filler-probabilities', { method: 'PUT', body: JSON.stringify({ probabilities: probabilities }) })
+            .then(function (data) {
+              if (!data || !data.ok) throw new Error((data && data.error) || '保存失败');
+              ElementPlus.ElMessage.success('各风格概率已保存，设备重新进入语音后生效');
+            }).catch(function (e) { growth.fillerError = e.message || '保存失败，请重试'; })
+            .finally(function () { growth.fillerSaving = false; });
         }
         function styleTplName(key) {
           var hit = growth.styleAvailable.filter(function (t) { return t.key === key; })[0];
@@ -6074,7 +6110,7 @@
           growth.styleSaving = true;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template', { method: 'PUT', body: JSON.stringify({ template: growth.stylePicked }) })
             .then(function (data) {
-              if (data && data.ok) { ElementPlus.ElMessage.success('风格已切换为「' + (growth.styleAvailable.filter(function (t) { return t.key === data.template; })[0] || {}).name + '」，语音下一轮生效'); loadGrowth(sn); }
+              if (data && data.ok) { ElementPlus.ElMessage.success('风格已切换为「' + (growth.styleAvailable.filter(function (t) { return t.key === data.template; })[0] || {}).name + '」，衔接概率在重新进入语音后生效'); loadGrowth(sn); }
               else ElementPlus.ElMessage.warning((data && data.error) || '设置失败');
             })
             .catch(function () { ElementPlus.ElMessage.error('无法连接设备服务'); })
@@ -7903,7 +7939,7 @@
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
           snInRegistry: snInRegistry, loadDevices: loadDevices, loadPairingPending: loadPairingPending, confirmPairing: confirmPairing, openPreauth: openPreauth, cancelPreauth: cancelPreauth, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
-          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
+          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, saveFillerProbabilities: saveFillerProbabilities, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,
