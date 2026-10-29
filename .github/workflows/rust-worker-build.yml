@@ -22,8 +22,15 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-dev pkg-config
       - name: toolchain
         run: rustc -V && cargo -V
-      - name: build release
-        run: cargo build --release
+      - name: regression tests
+        run: cargo test --locked
+      - name: build release with ABI gates
+        run: bash scripts/build-local.sh
+      - name: routing preview
+        run: |
+          cargo test --locked --manifest-path tools/search-route-preview/Cargo.toml
+          cargo build --release --locked --manifest-path tools/search-route-preview/Cargo.toml
+          sha256sum target/release/voice-rust-worker tools/search-route-preview/target/release/search-route-preview > style-ark-sha256.txt
       - name: glibc symbol ceiling (must be <= 2.39)
         run: |
           syms=$(objdump -T target/release/voice-rust-worker | grep -o 'GLIBC_2\.[0-9]*' | sort -t. -k2 -n -u)
@@ -38,5 +45,5 @@ jobs:
           gh release create "$tag" --title "$tag" \
             --notes "voice-rust-worker ubuntu-24.04 (run ${{ github.run_id }}, sha ${{ github.sha }})" \
             --target "${{ github.sha }}"
-          gh release upload "$tag" target/release/voice-rust-worker
+          gh release upload "$tag" target/release/voice-rust-worker tools/search-route-preview/target/release/search-route-preview style-ark-sha256.txt
           echo "release=$tag"
