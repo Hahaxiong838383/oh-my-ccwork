@@ -30,3 +30,9 @@ test('P2 fallback still rejects old news and unsupported numbers',async()=>{
  const news=await scenario('查今天的科技新闻','p2');assert.equal(news.result.sources.length,0);assert.equal(news.audits[0].rejected_date,1);
  const madeUp=await scenario('查蓝星游戏最近的正式更新','p2','正式版本增加了99个新玩法。');assert.equal(madeUp.result.sources.length,0);
 });
+test('repeated unverified freshness degrades to an attributed source title, never a model claim',async()=>{
+ const r=await scenario('查蓝星游戏最近的正式更新','p2','当前最新版本增加了滑翔玩法。');
+ assert.equal(r.result.sources.length,1);assert.match(r.result.text,/来源页面标题.*蓝星游戏正式版本公告/);
+ assert.match(r.result.text,/是否为最新版本.*不能确认/);assert.doesNotMatch(r.result.text,/增加了滑翔|当前最新版本/);
+ assert.equal(r.result.diagnostics?.catalog_title_fallback,true);
+});

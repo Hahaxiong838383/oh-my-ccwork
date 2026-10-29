@@ -33,5 +33,10 @@ test('a latest-release question can describe an older official release with an e
 });
 
 test('older catalog evidence cannot support an unqualified latest-version assertion',async()=>{
-  await assert.rejects(scenario('查蓝星游戏最新正式版本更新了什么','最新版本增加了滑翔玩法。'),/invalid_answer/);
+  const r=await scenario('查蓝星游戏最新正式版本更新了什么','最新版本增加了滑翔玩法。');
+  assert.equal(r.diagnostics?.catalog_title_fallback,true);
+  assert.match(r.text,/来源页面标题是“合成游戏正式版公告”/);
+  assert.match(r.text,/是否为最新版本.*不能确认/);
+  assert.doesNotMatch(r.text,/最新版本增加了|滑翔玩法/);
+  assert.equal(r.grounding?.claims[0].evidence[0].quote,'来源页面标题：合成游戏正式版公告');
 });

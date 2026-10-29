@@ -8,7 +8,7 @@ type Call = { id: string; type: 'function'; function: { name: string; arguments:
 type Message = { role: string; content: string | null; tool_calls?: Call[]; tool_call_id?: string };
 type Evidence = { id: number; title: string; url: string; date: string | null; text: string; coverage?: 'search_summary' | 'fetched_excerpt' };
 const COVERAGE_GUIDANCE = 'sources.coverage说明资料覆盖范围：search_summary是搜索摘要，fetched_excerpt是网页正文摘录，provider_excerpt是专门来源摘录，都不保证包含全文。摘要或摘录没提到，不代表网页或版本没有，不能据此断言没有新玩法或不支持某功能。只说明确证据；仅取得摘要时可说查到的摘要或部分内容，不冒称已读完整正文。';
-export type SearchDiagnostics = { mode?:'p1'|'p2';tool_calls?:ToolAudit[]; returned: number; accepted: number; rejected_schema: number; rejected_url: number; rejected_text: number; rejected_date: number; duplicate: number; outcome: 'evidence' | 'empty' | 'filtered'; provider?: 'cctv-public-web'; answer_rewrites?: number; answer_review_rejected?: boolean; evidence_claims?: number; };
+export type SearchDiagnostics = { catalog_title_fallback?:boolean; mode?:'p1'|'p2';tool_calls?:ToolAudit[]; returned: number; accepted: number; rejected_schema: number; rejected_url: number; rejected_text: number; rejected_date: number; duplicate: number; outcome: 'evidence' | 'empty' | 'filtered'; provider?: 'cctv-public-web'; answer_rewrites?: number; answer_review_rejected?: boolean; evidence_claims?: number; };
 export type SearchValidationAudit = {phase:'draft'|'repair'|'review'|'final';codes:string[]};
 const validationCodes=new Set(['schema','fact_reference','source_reference','answer_length','unsafe_text','json','causal_source_scope','unquoted_clock','unquoted_number','unquoted_scope','age_inclusion_lost','age_scope_missing','missing_closure_exception','closure_exception_polarity','unverified_freshness','grounding']);
 class AnswerValidationError extends Error {
@@ -431,7 +431,22 @@ export class SearchExecutor {
       messages.push({role:'assistant',content:draft});
       messages.push({role:'user',content:this.p2?'候选JSON格式或事实编号无效。最后一次修正，必须重写而非照抄：顶层只含abstain和claims；有据时abstain=false、claims为1至4项，每项只含text及fact_ids。每项fact_ids必须为1至8个互不重复的有效整数编号；超过8个时删去多余细节，只选足够支持剩下句子的原句，不能机械截断引用而保留无依据的说法。所有text连接总长不超过150字。编号来自已有facts，不能返回或改写quote。每句话的全部数字、部位与因果关系都必须由选中原句支持。只答问题本身，不加未问日期、细胞方向或旁枝事实；依据不足则abstain=true、claims=[]。' + COVERAGE_GUIDANCE+'不能用摘要未提及推断整体不存在；缺少所问信息时只说明当前摘要不足以判断。':'候选JSON格式或事实编号无效。最后一次修正：只返回abstain和claims；每个claim只含text及fact_ids，编号必须来自已有facts，不能返回或改写quote。每句话的全部数字、部位与因果关系都必须由选中原句支持。只答问题本身，不加未问日期、细胞方向或旁枝事实；依据不足则abstain=true、claims=[]。'});
       draft=(await this.model(messages,budget,false,true)).content;
-      answersUsed=2;try{parsed=decode(draft);}catch(error){this.validation('repair',error);throw error;}
+      answersUsed=2;try{parsed=decode(draft);}catch(error){
+        this.validation('repair',error);
+        // A model repeatedly asserting freshness must not discard an already
+        // validated catalog page. Attribute only its title; use no model prose
+        // and make no claim that it is the newest release or proves gameplay.
+        if(catalog && error instanceof AnswerValidationError && error.codes.length===1 && error.codes[0]==='unverified_freshness'){
+          const source=evidence.find(e=>e.title.trim()&&!/https?:|[\[\]<>\p{Cc}]|忽略.{0,8}(指令|规则)|ignore.{0,12}instructions/iu.test(e.title));
+          if(source){
+            const text=`查到的来源页面标题是“${cut(source.title,80)}”。`;
+            if(this.diagnostics){this.diagnostics.catalog_title_fallback=true;this.diagnostics.answer_rewrites=1;this.diagnostics.evidence_claims=1;}
+            return {text:text+CATALOG_NOTICE,sources:[{title:source.title,url:source.url,date:source.date}],
+              grounding:{version:2,notice:CATALOG_NOTICE,claims:[{text,evidence:[{source_id:1,quote:`来源页面标题：${source.title}`}]}]},diagnostics:this.resultDiagnostics()};
+          }
+        }
+        throw error;
+      }
       if(this.diagnostics)this.diagnostics.answer_rewrites=1;
     }
     // Simplification can lose causal scope or a rule's exceptions even without
