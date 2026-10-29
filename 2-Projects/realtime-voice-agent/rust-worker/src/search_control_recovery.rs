@@ -19,7 +19,9 @@ impl Recovery {
         let duration=now.saturating_sub(self.onset.take()?);
         if !(700..=6000).contains(&duration) || self.attempts>=3
             || self.last_attempt.is_some_and(|t|now.saturating_sub(t)<5000){return None;}
-        self.attempts+=1;self.last_attempt=Some(now);Some(duration+300)
+        // VAD may start after a weak leading control syllable. Keep 800ms of
+        // pre-roll (still <7s total), verified against the original missing-input clip.
+        self.attempts+=1;self.last_attempt=Some(now);Some(duration+800)
     }
     pub fn start(&mut self,future:impl Future<Output=Option<String>>+Send+'static){
         self.cancel();let(tx,rx)=oneshot::channel();self.result=Some(rx);
@@ -73,7 +75,7 @@ mod tests {
         let mut r=Recovery::default();r.speech_start(0,false);assert_eq!(r.speech_end(2000),None);
         r.speech_start(3000,true);assert!(r.primary_text("改查成都今天的天气"));assert_eq!(r.speech_end(5000),None);
         r.speech_start(6000,true);assert_eq!(r.speech_end(6200),None);
-        r.speech_start(7000,true);assert_eq!(r.speech_end(9000),Some(2300));
+        r.speech_start(7000,true);assert_eq!(r.speech_end(9000),Some(2800));
         r.speech_start(10000,true);assert_eq!(r.speech_end(12000),None);
         for (start,end)in [(15000,17000),(23000,25000)]{r.speech_start(start,true);assert!(r.speech_end(end).is_some());}
         r.speech_start(31000,true);assert_eq!(r.speech_end(33000),None);
