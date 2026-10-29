@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点端口不可达排查，以及 Android 电视盒 sing-box、SmartTube/YouTube DNS 和断电启动恢复；电视模式不处理 Netflix 登录、遥控适配或 DRM。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS 和断电启动恢复；不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray - Xray 代理管理
@@ -17,6 +17,12 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点端�
 手机 v2rayNG 或其他客户端旧节点突然超时、服务器其他端口仍可达时，先读
 [端口路径取证与备用入口](references/reality-port-path.md)。通过双侧包头、正对照和原认证真实请求区分路径与服务故障；
 不要把服务监听、新端口成功或手机恢复等同于全部客户端及冷启动已通过。
+
+## VPS 迁移、双栈节点与电视后台测试
+
+迁移机房或 IP、交付 IPv4/IPv6 节点，或要求不影响电视前台验证新线路时，读
+[迁移与双栈验收](references/migration-dualstack.md)。先核备份与主机身份，再处理运行时引用；
+从实际交付 URI 验证两种地址，电视使用独立有界探针，保留初次失败与正式切换的边界。
 
 ## 电视盒 sing-box / SmartTube 模式
 

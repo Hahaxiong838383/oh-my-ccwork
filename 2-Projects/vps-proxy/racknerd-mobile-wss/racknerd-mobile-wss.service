@@ -1,0 +1,25 @@
+[Unit]
+Description=RackNerd mobile VLESS WebSocket TLS ingress via Cloudflare
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sing-box run -c /etc/racknerd-mobile-wss/config.json
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+LimitNOFILE=8192
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

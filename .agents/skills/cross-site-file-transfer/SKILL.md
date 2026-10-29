@@ -7,7 +7,7 @@ description: 家↔公司通过 EasyTier、SSH、rsync 或 rclone 传输大文�
 
 本 Skill 的单一真源是：
 
-`../../../claude/skills/cross-site-file-transfer/SKILL.md`
+`../../../.claude/skills/cross-site-file-transfer/SKILL.md`
 
 执行相关工作前，先完整读取该文件，并按其中的流程、约束与验收口径执行。
 不要在本入口复制正文，避免多引擎版本漂移。

@@ -1,0 +1,207 @@
+{
+  "evidence_window": "2026-10-29 22:30–22:40 CST",
+  "server": {
+    "ipv4": "142.11.225.39",
+    "ipv6": "2607:9d00:2000:28b::2f70:e3d",
+    "port": 24443,
+    "sni": "r.chenchuan.cc",
+    "listen": "::",
+    "bindv6only": 0,
+    "service": "racknerd-reality-r.service",
+    "active": true,
+    "enabled": true,
+    "pid": 16381,
+    "restarts": 0,
+    "unit_sha256": "1ba64eebdcfd5c1d7057730e73a0a1d23e40dad751fbd173b1eb4b3389c6f18b",
+    "config_sha256": "524793f727ecdaf21dfd0d5210fd47e65e1394d95a4ffdddd589a6f334c002df",
+    "old_proxy_pids_unchanged": true,
+    "credentials_rotated": false
+  },
+  "home_requests": [
+    {
+      "family": "ipv4",
+      "target": "trace",
+      "rc": 0,
+      "status_bytes_seconds": "200 212 1.892642",
+      "payload_valid": true
+    },
+    {
+      "family": "ipv4",
+      "target": "iana",
+      "rc": 0,
+      "status_bytes_seconds": "200 6253 0.812895",
+      "payload_valid": true
+    },
+    {
+      "family": "ipv4",
+      "target": "payload1m",
+      "rc": 0,
+      "status_bytes_seconds": "200 1048576 7.045563",
+      "payload_valid": true
+    },
+    {
+      "family": "ipv6",
+      "target": "trace",
+      "rc": 0,
+      "status_bytes_seconds": "200 213 4.162709",
+      "payload_valid": true
+    },
+    {
+      "family": "ipv6",
+      "target": "iana",
+      "rc": 0,
+      "status_bytes_seconds": "200 6253 2.950413",
+      "payload_valid": true
+    },
+    {
+      "family": "ipv6",
+      "target": "payload1m",
+      "rc": 0,
+      "status_bytes_seconds": "200 1048576 8.378798",
+      "payload_valid": true
+    }
+  ],
+  "authentication_negative": {
+    "client_ready": true,
+    "wrong_uuid_rc": 35,
+    "http_code": "000",
+    "blocked": true
+  },
+  "television_initial": {
+    "results": [
+      {
+        "family": "ipv4",
+        "target": "trace",
+        "rc": 0,
+        "status_bytes_seconds": "200 212 1.376431",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv4",
+        "target": "youtube",
+        "rc": 0,
+        "status_bytes_seconds": "200 959873 7.939962",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv4",
+        "target": "payload1m",
+        "rc": 0,
+        "status_bytes_seconds": "200 1048576 7.178018",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv6",
+        "target": "trace",
+        "rc": 0,
+        "status_bytes_seconds": "200 212 2.648992",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv6",
+        "target": "youtube",
+        "rc": 0,
+        "status_bytes_seconds": "200 959828 8.006869",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv6",
+        "target": "payload1m",
+        "rc": 28,
+        "status_bytes_seconds": "200 822967 30.000414",
+        "payload_valid": false
+      }
+    ],
+    "production_unchanged": true,
+    "frames_delta": 1516,
+    "temp_directory_absent": true,
+    "probe_ports_absent": true,
+    "decoder_before": {
+      "frame count": 54140,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0,
+      "frame width": 1920,
+      "frame height": 1080
+    },
+    "decoder_after": {
+      "frame count": 55656,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0,
+      "frame width": 1920,
+      "frame height": 1080
+    },
+    "foreground_package": "com.zentraedi.zspace.tv",
+    "production_config_hashes_unchanged": true,
+    "production_process_identities_unchanged": true
+  },
+  "television_retest": {
+    "results": [
+      {
+        "family": "ipv6-retry1",
+        "target": "payload1m",
+        "rc": 0,
+        "status_bytes_seconds": "200 1048576 9.955700",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv4-control",
+        "target": "payload1m",
+        "rc": 0,
+        "status_bytes_seconds": "200 1048576 7.248329",
+        "payload_valid": true
+      },
+      {
+        "family": "ipv6-retry2",
+        "target": "payload1m",
+        "rc": 0,
+        "status_bytes_seconds": "200 1048576 7.311043",
+        "payload_valid": true
+      }
+    ],
+    "production_unchanged": true,
+    "frames_delta": 654,
+    "temp_directory_absent": true,
+    "probe_ports_absent": true,
+    "decoder_before": {
+      "frame count": 57916,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0,
+      "frame width": 1920,
+      "frame height": 1080
+    },
+    "decoder_after": {
+      "frame count": 58570,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0,
+      "frame width": 1920,
+      "frame height": 1080
+    },
+    "foreground_package": "com.zentraedi.zspace.tv",
+    "production_config_hashes_unchanged": true,
+    "production_process_identities_unchanged": true
+  },
+  "television_current_selectors": {
+    "youtube-video": {
+      "type": "Selector",
+      "now": "yt-zgo-reality"
+    },
+    "dns-uplink": {
+      "type": "Selector",
+      "now": "dns-zgo-reality"
+    }
+  },
+  "download_limit_bytes_per_second": 131072,
+  "limitations": {
+    "phone_cellular_verified": false,
+    "vps_new_service_coldboot_verified": false,
+    "television_production_migrated": false,
+    "smarttube_real_playback_on_new_node_verified": false,
+    "ipv6_interruption_root_cause_known": false,
+    "cloudflare_domain_maintenance": "deferred_by_user",
+    "hy2_tested_in_this_round": false
+  }
+}

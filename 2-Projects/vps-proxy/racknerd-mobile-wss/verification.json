@@ -1,0 +1,206 @@
+{
+  "time": "2026-10-29 Asia/Shanghai",
+  "wss": {
+    "positive": {
+      "mode": "wss",
+      "client_pid": 1286743,
+      "time": "2026-10-29 07:51:09+0800",
+      "fetches": [
+        {
+          "url": "https://www.cloudflare.com/cdn-cgi/trace",
+          "rc": 0,
+          "seconds": 1.19,
+          "bytes": 209,
+          "error": "",
+          "exit_ip": "23.226.135.149",
+          "location": "US",
+          "trace_fields": 16
+        },
+        {
+          "url": "https://www.iana.org/",
+          "rc": 0,
+          "seconds": 1.26,
+          "bytes": 6253,
+          "error": "",
+          "iana_title": true
+        },
+        {
+          "url": "https://speed.cloudflare.com/__down?bytes=1048576",
+          "rc": 0,
+          "seconds": 2.066,
+          "bytes": 1048576,
+          "error": "",
+          "exact_1mib": true
+        }
+      ],
+      "client_cleaned_up": true
+    },
+    "negative": {
+      "mode": "wss-invalid",
+      "client_pid": 1286784,
+      "time": "2026-10-29 07:51:12+0800",
+      "fetches": [
+        {
+          "url": "https://www.cloudflare.com/cdn-cgi/trace",
+          "rc": 35,
+          "seconds": 0.946,
+          "bytes": 0,
+          "error": "curl: (35) OpenSSL SSL_connect: SSL_ERROR_SYSCALL in connection to www.cloudflare.com:443 \n",
+          "exit_ip": null,
+          "location": null,
+          "trace_fields": 0
+        }
+      ],
+      "client_cleaned_up": true
+    }
+  },
+  "zgo": {
+    "started": "2026-10-29T07:54:45.764040+08:00",
+    "endpoint": {
+      "address": "38.49.38.237",
+      "port": 443,
+      "protocol": "vless-reality"
+    },
+    "source_scope": "existing local Xray ZGO 443 Reality outbound; distinct from television-specific 11447",
+    "configuration_valid": true,
+    "temporary_pid": 1291605,
+    "requests": [
+      {
+        "url": "https://www.cloudflare.com/cdn-cgi/trace",
+        "rc": 0,
+        "bytes": 211,
+        "seconds": 0.991,
+        "error": "",
+        "exit_ip": "38.49.38.237",
+        "location": "US",
+        "trace_fields": 16,
+        "valid_payload": true
+      },
+      {
+        "url": "https://www.iana.org/",
+        "rc": 0,
+        "bytes": 6253,
+        "seconds": 1.136,
+        "error": "",
+        "iana_title": true,
+        "valid_payload": true
+      }
+    ],
+    "e2e_passed": true,
+    "uri_file": "/tmp/racknerd-diag-20261029/zgo-backup-vless.txt",
+    "uri_fields_verified": true,
+    "temporary_client_cleaned_up": true
+  },
+  "service": "MainPID=1987152\nNRestarts=0\nActiveState=active\nSubState=running\nUnitFileState=enabled\n",
+  "old_services_unchanged": true,
+  "phone_verified": false,
+  "coldboot_verified": false,
+  "certificate_renewal_verified": false,
+  "deployment_at_start_before_enable": {
+    "new_service_state": "MainPID=1987152\nNRestarts=0\nActiveState=active\nSubState=running\n",
+    "original_pid": "2984761",
+    "original_config_sha256": "1cfa7b5aa32755aac2e362369df0d6dc75a5639683927d78db3167f39d7fdeed",
+    "unit_sha256": "c56774fea4f3ad96a9f1ddd58ad7806a97172a9ac2d3697c47f6a30808e369f5",
+    "new_config_sha256": "113e8554956c19edf6ba30c9e474863fc92b863a4022c79952ac93b5a39120e1",
+    "config_check": true,
+    "unit_check": true,
+    "public_port": 8443,
+    "transport": "vless-ws-tls",
+    "original_unchanged": true,
+    "enabled": false
+  },
+  "wrong_uuid_scope": "client negative returned curl35 and zero bytes; no synchronized server-auth-log assertion",
+  "home_interface_capture": {
+    "utc": "2026-10-29T00:00:39.223079+00:00",
+    "interface": "eno1",
+    "duration_s": 12,
+    "capture_ready": true,
+    "counts": {
+      "rack_out_syn": 10,
+      "zgo_out_syn": 2,
+      "zgo_in_synack": 2
+    },
+    "per_port": {
+      "rack_14443_out_syn": 5,
+      "rack_22_out_syn": 5,
+      "zgo_443_out_syn": 2,
+      "zgo_443_in_synack": 2
+    },
+    "unparsed": 0,
+    "probes": [
+      {
+        "target": "rack",
+        "port": 22,
+        "ok": false,
+        "error": "TimeoutError",
+        "seconds": 5.006
+      },
+      {
+        "target": "rack",
+        "port": 14443,
+        "ok": false,
+        "error": "TimeoutError",
+        "seconds": 5.006
+      },
+      {
+        "target": "zgo",
+        "port": 443,
+        "ok": true,
+        "seconds": 0.195
+      }
+    ],
+    "capture_wrapper_pid": 1301925,
+    "capture_wrapper_exited": true,
+    "capture_rc": 124
+  },
+  "latest_phone_feedback": "connected but slow, unstable, then disconnected; not resolved",
+  "recommendation": "ZGO Reality 443 first; CF WSS emergency only; phone switch not performed",
+  "followup_home_quality": {
+    "cf-wss": {
+      "requests": 10,
+      "passed": 10,
+      "max_seconds": 2.631,
+      "download_mbps": [
+        12.76,
+        13.55
+      ]
+    },
+    "zgo-reality": {
+      "requests": 10,
+      "passed": 10,
+      "max_seconds": 2.698,
+      "download_mbps": [
+        12.45,
+        12.44
+      ]
+    }
+  },
+  "quality_test_scope": "two clients concurrent, about 56 seconds, home network only; not dedicated throughput or phone verification",
+  "followup_server": {
+    "sing-box": "MainPID=2984761\nNRestarts=0\nActiveState=active\nUnitFileState=enabled\n",
+    "racknerd-reality-altport": "MainPID=526926\nNRestarts=0\nActiveState=active\nUnitFileState=enabled\n",
+    "racknerd-mobile-wss": "MainPID=1987152\nNRestarts=0\nActiveState=active\nUnitFileState=enabled\n",
+    "wss_log_categories": {
+      "tls": 1,
+      "error": 16,
+      "eof": 14
+    },
+    "latest_category_utc": {
+      "tls": "2026-10-28T23:47:02.989610+00:00",
+      "error": "2026-10-29T00:30:22.415713+00:00",
+      "eof": "2026-10-29T00:30:22.415713+00:00"
+    },
+    "error_subtypes": {},
+    "binary_messages": 16,
+    "journal_rc": 0,
+    "config_sha256": "1cfa7b5aa32755aac2e362369df0d6dc75a5639683927d78db3167f39d7fdeed",
+    "memory": "               total        used        free      shared  buff/cache   available\nMem:            1967        1237         107           2         803         730\nSwap:           1023         373         650\n"
+  },
+  "later_state": {
+    "as_of": "2026-10-29T22:40:00+08:00",
+    "domain_maintenance": "deferred_by_user",
+    "public_domain_http": 522,
+    "public_wss_reverified_after_migration": false,
+    "prior_results_scope": "historical_pre_migration_home_network"
+  }
+}

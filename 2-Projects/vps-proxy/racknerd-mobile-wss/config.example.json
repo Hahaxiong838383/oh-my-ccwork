@@ -1,0 +1,39 @@
+{
+  "log": {
+    "level": "warn",
+    "timestamp": true
+  },
+  "inbounds": [
+    {
+      "type": "vless",
+      "tag": "mobile-wss",
+      "listen": "0.0.0.0",
+      "listen_port": 8443,
+      "users": [
+        {
+          "name": "mobile-existing-account",
+          "uuid": "REDACTED_USE_EXISTING_SERVER_UUID"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "server_name": "ops.hahaxiong.top",
+        "certificate_path": "/var/lib/docker/volumes/ai-ops-cockpit_caddy_data/_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/ops.hahaxiong.top/ops.hahaxiong.top.crt",
+        "key_path": "/var/lib/docker/volumes/ai-ops-cockpit_caddy_data/_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/ops.hahaxiong.top/ops.hahaxiong.top.key"
+      },
+      "transport": {
+        "type": "ws",
+        "path": "/racknerd-mobile"
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "final": "direct"
+  }
+}

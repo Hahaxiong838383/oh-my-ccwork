@@ -26,7 +26,7 @@
         icon: n8n.png
 - 主机状态:
     - RackNerd VPS:
-        href: http://23.226.135.149/
+        href: http://142.11.225.39/
         description: racknerd-54aa08d / Ubuntu 24.04 / root 免密 SSH
     - 个人站:
         href: https://my.chenchuan.cc/

@@ -1,0 +1,24 @@
+[Unit]
+Description=RackNerd independent mobile Reality r.chenchuan.cc ingress
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/sing-box run -c /etc/racknerd-reality-r/config.json
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=8192
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateDevices=true
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

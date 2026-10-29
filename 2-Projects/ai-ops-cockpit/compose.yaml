@@ -35,7 +35,7 @@ services:
     container_name: ops-homepage
     restart: unless-stopped
     environment:
-      HOMEPAGE_ALLOWED_HOSTS: "23.226.135.149,localhost,127.0.0.1,ops.hahaxiong.top"
+      HOMEPAGE_ALLOWED_HOSTS: "142.11.225.39,localhost,127.0.0.1,ops.hahaxiong.top"
     volumes:
       - ./homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
