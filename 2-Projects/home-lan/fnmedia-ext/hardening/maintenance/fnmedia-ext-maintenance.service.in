@@ -1,0 +1,32 @@
+[Unit]
+Description=fnmedia-ext 维护 runner（oneshot；由 fnmedia-ext-maintenance.timer 每分钟触发）
+# 只依赖网络可达 NAS（ssh 固定目标 hahaxiong83@192.168.1.43）。
+# 刻意不写 After=/Requires=fnmedia-ext.service：升级过程中该单元会被 stop/start，
+# 维护 runner 必须能在它停机期间继续工作（安装由 appcenter 负责）。
+After=network-online.target
+Wants=network-online.target
+# 失败时不要无限抖动：timer 每分钟会再次触发（本单元是 oneshot）。
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=oneshot
+# home-studio 用户服务：复用该用户的 SSH key 和 fnos1 OAuth profile。
+# @...@ 占位符由部署脚本替换；所有路径都来自本地配置，绝不来自 NAS 队列。
+# 缺省 --last-good-fpk 时删掉该参数（没有 previous good FPK 就无法自动回退）。
+ExecStart=@PYTHON@ @RUNNER@ --trusted-tree @TRUSTED_TREE@ --work-root @WORK_ROOT@ --state-dir @STATE_DIR@ --baseline @BASELINE@ --prepare-script @PREPARE_SCRIPT@ --fnpack @FNPACK@ --wheelhouse @WHEELHOUSE@ --trim-cli @TRIM_CLI@ --app-dir @APP_DIR@ --last-good-fpk @LAST_GOOD_FPK@ --check-interval 3600
+# 单轮上限必须大于"准备 + 构建 + 上传 + 两次安装 + 验证 + 回退"的分步上限之和，
+# 否则 systemd 会在 appcenter 安装中途杀进程。runner 自身每步仍有独立超时。
+TimeoutStartSec=10800
+Environment=PYTHONUNBUFFERED=1
+# 运行期间持续写心跳（update-status.json 的 heartbeat 字段）。
+Nice=10
+IOSchedulingClass=best-effort
+UMask=0077
+NoNewPrivileges=true
+Environment=HTTPS_PROXY=http://127.0.0.1:10808
+Environment=HTTP_PROXY=http://127.0.0.1:10808
+Environment=NO_PROXY=192.168.1.43,127.0.0.1,localhost
+
+[Install]
+WantedBy=multi-user.target

@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 
 UPSTREAM = 'https://github.com/yujian0815/fnmedia-ext.git'
-COMMIT = 'bb714a796107745de366e25f3c2f3cc96f54474e'
+COMMIT = '93a781b1813eaaa83723765f38e6e4dddd60a651'
 FNPACK_URL = 'https://static2.fnnas.com/fnpack/fnpack-1.2.3-linux-amd64'
 FNPACK_SHA = '54b97fa7b70968c4d05c79840f5daeff508957d0bb2062fdb0376d00d9615c93'
 

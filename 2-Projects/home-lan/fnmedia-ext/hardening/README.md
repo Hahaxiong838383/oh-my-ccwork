@@ -1,41 +1,36 @@
 # fnmedia-ext 飞牛1加固维护
 
-基于公开 Lite 源码 `yujian0815/fnmedia-ext@bb714a796107745de366e25f3c2f3cc96f54474e`，本地版本 `0.2.17.1`。只维护差异补丁，不复制上游公开协议签名常量或任何用户凭据。保留上游署名；不是上游官方发布。
+当前版本 **0.2.19.1**（2026-10-29），上游 Lite `yujian0815/fnmedia-ext@93a781b1813eaaa83723765f38e6e4dddd60a651`。保留上游署名，只归档差异补丁，不复制公开协议常量或用户凭据。不是上游官方发布。
 
-## 当前部署
+## 部署与入口
 
-飞牛1 `192.168.1.43`；应用中心手动 FPK；`/vol3/@appcenter/fnmedia-ext/repo`；systemd `fnmedia-ext.service`。兼容锁：fnOS `1.2.0800`、官方影视 `0.9.8-1`，程序 SHA256 在补丁的 `compatibility.json`。独立插件临时重命名 Unix socket，不修改官方程序、数据库或 nginx 配置。
+飞牛1 `192.168.1.43`，应用中心手动 FPK，`/vol3/@appcenter/fnmedia-ext/repo`，systemd `fnmedia-ext.service`。管理页 `https://192.168.1.43:5667/v/online-admin`，沿用影视管理员会话与 CSRF；无新增管理密码。不改官方程序、数据库、nginx；仅独立插件可逆接管 Unix socket。
 
-管理入口：`https://192.168.1.43:5667/v/online-admin`。使用官方影视管理员登录，桌面入口重定向到同一路径，避免 Cookie 的 Path 范围不匹配。没有新增管理密码。真实管理员页面与第三方播放尚待用户验证，不能把匿名401或集成fixture当作正例。
+## 更新行为
 
-## 构建
+- 管理页“检查更新 / 检查并更新”只向 `/var/lib/fnmedia-ext-maintenance` 排队。HTTP 工作进程不下载、不执行更新代码。
+- home-studio 用户 timer `fnmedia-ext-maintenance.timer` 每分钟消费队列、续心跳，每小时查 GitHub 稳定版。执行器为本目录 `maintenance/runner.py`，运行态在 `~/home-lan/runtime/fnmedia-ext-managed/`；登录复用本机 `trim-cli --profile fnos1` OAuth，SSH 复用本用户 key，**不向 NAS 复制 OAuth 凭据**。
+- `update_prepare.py` 仅接受根 VERSION/CHANGELOG.md/文档.md 的变动，保留全部加固源码，版本加 `.1`。Python、shell、依赖、清单等变动显示 `needs_review`，必须适配后再发包。定时任务只检查；管理员随时点更新。
+- 安装前校验官方三文件可读、打包、NAS 文件 SHA 回读、App Center dry-run 的 `canUpgrade=true`。升级后验版本、服务、socket、匿名管理拒绝与三 SHA。失败尝试旧 FPK，但 fnOS 可拒绝降级，故**不承诺自动回滚一定成功**；失败状态保留且停止重复安装，恢复点保留供维护。
+- **trim-cli 0.1.1 缺口**：install-fpk 对已装应用即使 canUpgrade=true，install/task 仍报10236；app update 又先走 cloud 下载。本目录 `local_upgrade.py` 用短时 loopback TLS CONNECT 代理，只把 fnmedia-ext 的下载来源改为固定 NAS FPK，随后由原 CLI 跑正式 update 检查和任务。目标只允许飞牛1；不记录 HTTP 头、body、token，不读/解密 session 文件。它复用该 profile 已启用的自签 TLS 策略；临时证书/私钥随进程删除。CLI 修复后应移除此适配层。
+- 包留在飞牛1 `/vol3/1000/软件安装/fnmedia-ext-managed-packages/`；根目录归 Administrators。NAS 私有备份 `/var/lib/fnmedia-ext-backups/` 仅 root 可读，不入 Git。
 
-在 Linux x86_64 工作机运行 `python3 build.py --work-dir /tmp/fnmedia-rebuild --proxy http://127.0.0.1:10808`。脚本固定上游提交、应用补丁、校验离线依赖及 fnpack SHA，构建 FPK；不安装、不改 NAS。需要 git、pip3、rsync、curl。依赖 wheel 固定为 NAS Python 3.11 / manylinux2014_x86_64，不能直接用于 ARM NAS。
+## 自动复连
 
-上游许可证保留在生成的源码和包中。补丁包含测试，FPK不携带测试、运行态、凭据或`.git`。包留存于飞牛1 `/vol3/1000/软件安装/fnmedia-ext-maintenance-20261028/`；安装时不联网下载Python依赖。
+已核版本/摘要保持原锁。监听者必须匹配完整 exe 路径、运行摘要和磁盘摘要。官方版本变化后，先恢复官方入口，再检查公开版本接口、公开签名配置接口和未登录鉴权行为；通过后标为 **probation 试运行**。每60秒复查上游，异常还原官方入口。systemd 失败后15秒重试，不耗尽启动额度；手动停止仍保持停止。
 
-## 官方影视升级
+公开检查不等于登录、搜索、播放的全协议验证。未知接口变化仍需适配；没有升级真实官方影视来证明未来版本兼容。服务中仅监督/恢复进程保留 CAP_SYS_PTRACE（读 /proc 身份需要），HTTP/桌面子进程 capability 全0、no_new_privs=1。
 
-1. 官方 CLI 使用有效 `fnos1` OAuth profile。先 `trim-cli --profile fnos1 app stop fnmedia-ext --yes`，确认服务停止、upstream socket消失、原socket由官方进程监听。
-2. 正常通过应用中心升级官方影视。不要编辑官方程序、数据库、nginx，也不要修改插件兼容锁来强行启动。
-3. 新官方版本下，重新验证会话接口、搜索/播放协议及恢复流程，随后构建新的加固FPK。兼容锁不匹配时插件拒绝接管；运行时检测官方文件变化会主动退出并恢复入口，但不是与官方升级事务原子同步，所以仍需先停插件。
-4. 插件自身也通过应用中心升级；不装上游未经加固的同名FPK覆盖本版本。该应用不在商店，没有开启自动升级或自动部署上游代码。
+## 内容更新
 
-## 停用、恢复、卸载
+用户热榜/海量库启用状态原样保留。热榜6小时，海量库24小时：重建分类并强制抓取可用分类的影片首页，深页按需读取，避免整库爬取。管理页显示真实成功/失败/下次计划，可手动刷新。
 
-常规停止/启动均用官方CLI `app stop/start fnmedia-ext --yes`。停止后回读真实socket归属；不能只看CLI成功消息。异常时保留现场，不手动删除官方socket，不重启整台NAS。
+手动与后台共用一次运行；部分分类失败不算全部成功；失败保留旧榜/首页、5分钟起指数退避。首页影片本身及分类路由落盘，重启后仍能回退旧内容。调度在 NAS 内运行，不依赖 home-studio 在线；home-studio 离线只影响版本检查/升级。
 
-应急恢复由维护agent通过SSH执行：先停 `fnmedia-ext.service`，再运行 `/var/apps/fnmedia-ext/target/repo/deploy/uninstall.sh --stop-only`；该脚本复用带归属校验的 `recover.py`。`--verify-only`只核查，成功清理后才能通过应用中心卸载。恢复失败不会静默删除独立服务单元。脚本不重启官方影视。
+## 构建与验证
 
-监督/恢复进程仅保留 `CAP_SYS_PTRACE`，用于读取官方 `/proc/<pid>/exe`（完全清空在真机确实 PermissionError）；HTTP及桌面子进程在exec前清空所有有效/允许/可继承capability，并设置`no_new_privs`。systemd将官方程序和数据目录挂为只读。
+`python3 build.py --work-dir /tmp/fnmedia-rebuild --proxy http://127.0.0.1:10808`：固定上游提交、补丁、fnpack SHA、Python3.11 x86_64 离线依赖，生成 FPK，不安装。构建目录必须不存在。
 
-## 验证边界
+插件108项回归通过；更新准备器27项、维护执行器31项通过。首次真实官方 update/task 升级成功；官方 PID7511和三SHA保持，配置/历史验摘要一致，自动首页刷新78条（18/20/20/20）且状态成功。真实管理员页面由用户反馈已使用；本轮未重新验证登录后第三方播放、TV、冷启动或官方真实升级。详见项目14号报告及 managed-*.json。
 
-- 69项隔离测试：真实Unix socket/进程终止、用户历史/收藏隔离、DNS固定拨号/逐跳重定向/TLS验证、管理鉴权/CSRF与搜索/分片fixture、版本变化拒绝接管、桌面重定向。
-- NAS Python 3.11离线依赖校验与11项网络护栏测试通过。
-- 真机应用中心安装、停止/启动、SIGKILL后官方入口恢复和自动重启通过；官方进程未重启，程序/清单/nginx SHA不变，原socket inode保持。
-- 未做真实管理员正例、第三方影片实际播放、TV/移动端或NAS冷启动测试。原生播放器若不带官方登录凭据会被拒绝，需要以后增加受签名约束的播放票据，不能放开匿名路径。
-- 登录用户仍可用公网站点图片/分片代理；私网、loopback、链路本地目标被阻断。未实现URL签名及带宽配额，不宣称消除所有滥用风险。
-- `FNMEDIA_STATE_DIR`仍被用户持久化与恢复测试共同使用；生产unit不设置它，持久数据默认在repo/state，恢复状态在/run/fnmedia-ext；不要自行设置该变量把用户数据改到/run。
-
-现场报告见 `2-Projects/P01-家里局域网与飞牛/13-fnmedia-ext加固部署与升级保护.md`；验收JSON只含状态、PID、哈希，不含用户媒体清单或凭据。
+正常停启/卸载用 `trim-cli --profile fnos1 app stop/start/uninstall fnmedia-ext --yes`。异常恢复用插件同源 `recover.py` 或 `deploy/uninstall.sh --stop-only`，必须回读 socket 归属；不手动删除官方 socket。不要设置生产 FNMEDIA_STATE_DIR 把用户数据指向 /run。

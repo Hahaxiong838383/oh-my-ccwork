@@ -1,13 +1,8 @@
 {
-  "date": "2026-10-28",
-  "upstream": "https://github.com/yujian0815/fnmedia-ext",
-  "upstream_commit": "bb714a796107745de366e25f3c2f3cc96f54474e",
-  "hardened_commit": "e7b6980704c08091066c2889b5182b830662a786",
-  "version": "0.2.17.1",
-  "fpk_sha256": "fe52dcc6d9ac8ad3eed4c39edc71b0042dcdc9b69c58a440aa01aa9317ca8b07",
-  "private_patch_sha256": "bf44621c5a8b8f41f3212aee27e514eb0f01de2ca1607b2b904f473bad0b6fe3",
-  "official_version": "0.9.8-1",
-  "real_admin_session_test": "pending_user",
-  "third_party_playback_test": "not_run",
-  "nas_cold_boot_test": "not_run"
+  "version": "0.2.19.1",
+  "upstream_commit": "93a781b1813eaaa83723765f38e6e4dddd60a651",
+  "hardened_source_commit": "39577bdec8e20b7e75b1b24c61dc6caacb6b9101",
+  "patch_sha256": "beb120af90736cb418aa1c24e3498db17714ded5b5ca4ea0f4df1aa2ca94fd59",
+  "fpk_sha256": "9f03f21e9a108aaf9aba7f47f4a27dfdc2f2fd02ec69ce286182339d715df4a4",
+  "fnpack_sha256": "54b97fa7b70968c4d05c79840f5daeff508957d0bb2062fdb0376d00d9615c93"
 }

@@ -1,0 +1,19 @@
+[Unit]
+Description=每分钟触发 fnmedia-ext 维护 runner（读队列 / 心跳 / 每小时检查上游）
+# 安装：systemctl --user enable --now fnmedia-ext-maintenance.timer
+# 说明：oneshot 单元正在运行时，systemd 不会因本 timer 再启动一份；
+# runner 自己也用 flock（$STATE_DIR/runner.lock）串行，双重保险。
+
+[Timer]
+# 开机稍等网络与 appcenter 就绪
+OnBootSec=45s
+# 上一次触发后再等 60s（oneshot 完成后计时，不会堆积）
+OnUnitInactiveSec=60s
+AccuracySec=10s
+RandomizedDelaySec=5s
+Unit=fnmedia-ext-maintenance.service
+# 不持久化：错过的触发不补跑（下一分钟自然会来）
+Persistent=false
+
+[Install]
+WantedBy=timers.target
