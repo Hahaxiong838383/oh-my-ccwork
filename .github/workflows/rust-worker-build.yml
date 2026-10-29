@@ -18,6 +18,10 @@ jobs:
         working-directory: 2-Projects/realtime-voice-agent/rust-worker
     steps:
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            2-Projects/realtime-voice-agent/rust-worker
+            2-Projects/realtime-voice-agent/tests/fixtures
       - name: system deps (webrtc-sys 构建需 glib 头)
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libglib2.0-dev pkg-config
       - name: toolchain
