@@ -36,6 +36,7 @@ use crate::tts_volc::TTS_SAMPLE_RATE;
 /// 全 None,ready 事件降级不发(fail-visible,error 日志),Android 走超时兜底。
 #[derive(serde::Deserialize, Default)]
 struct JobMeta {
+    filler_policy: Option<serde_json::Value>,
     trace_id: Option<String>,
     #[allow(dead_code)] // 回交对账用,当前事件只带 trace
     session_id: Option<String>,
@@ -88,6 +89,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     };
     let t0 = Instant::now();
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
+    let filler_policy = crate::filler::FillerPolicy::from_metadata(meta.filler_policy.as_ref(), &room_name);
+    if meta.filler_policy.is_some() && filler_policy.is_none() { warn!(room = %room_name, "invalid filler policy ignored; legacy fallback"); }
     let issue_ms = issue_to_assignment_ms(&room_name, meta.issue_ts_ms);
     info!(
         job_id = %job.id,
@@ -388,7 +391,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             let shutdown=if graceful_search_close{pipeline_close_rx.take()}else{None};
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, shutdown)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, shutdown)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
@@ -602,5 +605,17 @@ mod tests {
         // 两口径全无效 → None(web 房自定义名)
         assert_eq!(issue_to_assignment_ms("web-room", None), None);
         assert_eq!(issue_to_assignment_ms("web-room", Some(t - 700_000)), None);
+    }
+}
+
+#[cfg(test)]
+mod style_ark_metadata_tests {
+    use super::*;
+    #[test]
+    fn style_ark_invalid_policy_keeps_other_metadata() {
+        let meta: JobMeta = serde_json::from_str(r#"{"trace_id":"trace-test","input_mode":"ordered_pcm","filler_policy":"bad"}"#).unwrap();
+        assert_eq!(meta.trace_id.as_deref(),Some("trace-test"));
+        assert_eq!(meta.input_mode.as_deref(),Some("ordered_pcm"));
+        assert!(crate::filler::FillerPolicy::from_metadata(meta.filler_policy.as_ref(),"sn-BJP00326070803800006-123").is_none());
     }
 }
