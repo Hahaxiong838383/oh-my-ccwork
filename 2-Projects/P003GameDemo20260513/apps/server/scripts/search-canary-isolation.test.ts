@@ -10,11 +10,14 @@ try {
  prepareCanaryEnvironment(env);
  assert.equal(env.MEMORY_EXTRACT_ENABLED,'0'); assert.equal(env.MEMORY_EXTRACT_MODE,'turn');
  assert.ok(env.PROFILE_DB_PATH?.startsWith(realpathSync(root)+'/'));
+ assert.equal(env.AMAP_USAGE_DB_PATH,join(realpathSync(root),'data','amap-usage.db'));
+ assert.throws(()=>prepareCanaryEnvironment({...env,AMAP_USAGE_DB_PATH:join(prod,'amap-usage.db')}));
  assert.throws(()=>prepareCanaryEnvironment({...env,PROFILE_DB_PATH:join(prod,'profile.db')}));
  assert.throws(()=>prepareCanaryEnvironment({...env,UNKNOWN_DB_PATH:join(prod,'other.db')}));
  assert.throws(()=>prepareCanaryEnvironment({...env,SEARCH_CANARY_HEALTH_FILE:join(prod,'health.json')}));
  mkdirSync(join(root,'data'),{recursive:true});symlinkSync(prod,join(root,'escape'));
  assert.throws(()=>prepareCanaryEnvironment({...env,PROFILE_DB_PATH:join(root,'escape/profile.db')}));
+ assert.throws(()=>prepareCanaryEnvironment({...env,AMAP_USAGE_DB_PATH:join(root,'escape/amap-usage.db')}));
  const base={path:'/v1/chat/completions',room:'sn-BJP00326070803800006-123',sn:'BJP00326070803800006',account:'search-canary-worker',expectedAccount:'search-canary-worker',role:'device',expires:2000,now:1000};
  assert.equal(canaryRequestAllowed(base),true);
  for(const path of ['/v1/internal/search-tasks/routing','/v1/internal/search-tasks/routing/ack']) {

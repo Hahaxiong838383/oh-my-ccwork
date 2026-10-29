@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
+import {AmapUsageStore} from '../src/tools/amap-usage.js';
+import {randomUUID} from 'node:crypto';
 const module:any=await import('../src/tools/amap-weather.js').catch(()=>({}));
 const now=Date.parse('2026-10-28T16:00:00+08:00'),q={place:'成都',day_offset:0,metric:'forecast'};
 const geo={status:'1',infocode:'10000',geocodes:[{country:'中国',province:'四川省',city:'成都市',district:[],adcode:'510100',level:'市'}]};
@@ -26,4 +28,28 @@ test('R23 municipality geocoding may return an empty city array without losing t
  const municipality={status:'1',infocode:'10000',geocodes:[{country:'中国',province:'北京市',city:[],district:[],adcode:'110000',level:'省'}]};
  const bj={...data,forecasts:[{...data.forecasts[0],province:'北京',city:'北京市',adcode:'110000'}]};
  assert.match((await make(bj,municipality).run({...q,place:'北京'},new AbortController().signal,now)).text,/北京/);
+});
+test('R24 weather attempts are persistent; cache/coalescing do not deduct, zero budget never calls upstream',async()=>{
+ const usage=new AmapUsageStore(':memory:');let calls=0;
+ usage.adjust({request_id:randomUUID(),mode:'add',amount:1,expected_revision:0},'test');
+ const p=new module.AmapWeather({apiKey:'synthetic',usage,now:()=>now,fetch:async(url:any)=>{calls++;return Response.json(String(url).includes('/geocode/')?geo:data);}});
+ try{
+  await Promise.all([p.run(q,new AbortController().signal,now),p.run(q,new AbortController().signal,now)]);
+  assert.equal(usage.snapshot().weather_requests,1);assert.equal(usage.snapshot().geocode_requests,1);assert.equal(usage.snapshot().weather_successes,1);
+  assert.equal((await p.run(q,new AbortController().signal,now)).weather.cache_hit,true);assert.equal(calls,2);
+  await assert.rejects(p.run({...q,place:'北京'},new AbortController().signal,now),/quota_exhausted/);assert.equal(calls,2);
+ }finally{usage.close();}
+});
+test('R24 an upstream timeout/rejection counts once and cannot leak credentials',async()=>{
+ for(const rejection of [false,true]){
+  const usage=new AmapUsageStore(':memory:');usage.adjust({request_id:randomUUID(),mode:'add',amount:3,expected_revision:0},'test');
+  const p=new module.AmapWeather({apiKey:'never-print-this',usage,now:()=>now,fetch:async(url:any)=>{if(String(url).includes('/geocode/'))return Response.json(geo);if(rejection)return Response.json({status:'0',infocode:'10003'});throw new Error(String(url));}});
+  try{await assert.rejects(p.run(q,new AbortController().signal,now),e=>e instanceof Error&&!e.message.includes('never-print-this'));assert.equal(usage.snapshot().weather_requests,1);assert.equal(usage.snapshot().remaining,2);assert.equal(rejection?usage.snapshot().weather_rejected:usage.snapshot().weather_unconfirmed,1);}finally{usage.close();}
+ }
+});
+test('R24 a second subscriber shares the already paid final request even when remaining becomes zero',async()=>{
+ const usage=new AmapUsageStore(':memory:');usage.adjust({request_id:randomUUID(),mode:'add',amount:1,expected_revision:0},'test');
+ let started!:()=>void,release!:()=>void;const sent=new Promise<void>(r=>started=r),wait=new Promise<void>(r=>release=r);
+ const p=new module.AmapWeather({apiKey:'synthetic',usage,now:()=>now,fetch:async(url:any)=>{if(String(url).includes('/geocode/'))return Response.json(geo);started();await wait;return Response.json(data);}});
+ try{const first=p.run(q,new AbortController().signal,now);await sent;assert.equal(usage.snapshot().remaining,0);const second=p.run(q,new AbortController().signal,now);release();const both=await Promise.all([first,second]);assert.equal(both.length,2);assert.equal(usage.snapshot().weather_requests,1);}finally{usage.close();}
 });

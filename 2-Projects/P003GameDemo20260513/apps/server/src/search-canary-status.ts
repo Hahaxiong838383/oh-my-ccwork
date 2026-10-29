@@ -3,6 +3,8 @@ import {RoutingStore} from './tools/search-routing-store.js';
 import {previewRouting} from './tools/search-routing-config.js';
 import {createRoutingAdminRoute} from './routes/search-routing-admin.js';
 import {searchP1AdminRoute} from './routes/search-p1-admin.js';
+import {AmapUsageStore} from './tools/amap-usage.js';
+import {createAmapUsageAdminRoute} from './routes/amap-usage-admin.js';
 // Admin-only observation. No search executor import, SSH or runtime activation.
 import {readFile} from 'node:fs/promises';
 import {DatabaseSync} from 'node:sqlite';
@@ -54,6 +56,11 @@ async function status(){
 }
 export const canaryAdminRoute=createCanaryAdminRoute({read:status,eligible:sn=>{const d=deviceRegistryStore.get(sn);return d?.status==='active'&&Boolean(d.account_id);},isOpen:()=>flag('enabled')==='1',save:(sn,who)=>configStore.setFlag('p003.search.canary.selected_sn',sn,who,'后台待测设备选择；不激活派单')});
 canaryAdminRoute.route('/p1',searchP1AdminRoute);
+let amapUsage:AmapUsageStore|null=null;
+canaryAdminRoute.route('/amap-usage',createAmapUsageAdminRoute({
+ store:()=>amapUsage??=new AmapUsageStore(root()+'/data/amap-usage.db'),
+ runtime:async()=>{try{const r=await fetch('http://127.0.0.1:3007/health',{signal:AbortSignal.timeout(1200),redirect:'error'});if(!r.ok)return null;const h=await r.json() as any;return typeof h.amap?.enabled==='boolean'&&typeof h.amap?.key_configured==='boolean'?{enabled:h.amap.enabled,key_configured:h.amap.key_configured}:null;}catch{return null;}},
+}));
 
 let routes:RoutingStore|null=null;
 let locationStore:DeviceLocationStore|null=null;

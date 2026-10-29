@@ -1,7 +1,7 @@
 import { validCanaryAllowlist } from './search-canary-policy.js';
 import { existsSync, realpathSync, readdirSync, lstatSync, mkdirSync } from 'node:fs';
 import { resolve, dirname, relative, isAbsolute, join } from 'node:path';
-const stores = {ACCOUNTS_DB_PATH:'accounts.db',PROFILE_DB_PATH:'profile.db',DEVICES_DB_PATH:'devices.db',CONFIG_DB_PATH:'config.db',CONVERSATION_DB_PATH:'conversation.db',FEEDBACK_DB_PATH:'feedback.db',TELEMETRY_DB_PATH:'telemetry.db',DIAGNOSTICS_DB_PATH:'diagnostics.db',OTA_DB_PATH:'ota.db',PAIRING_DB_PATH:'pairing.db',SMS_DB_PATH:'sms.db',SEARCH_TASK_DB_PATH:'search.db',SEARCH_ROUTING_DB_PATH:'search-routing.db',SEARCH_DEVICE_LOCATION_DB_PATH:'device-location.db'};
+const stores = {ACCOUNTS_DB_PATH:'accounts.db',PROFILE_DB_PATH:'profile.db',DEVICES_DB_PATH:'devices.db',CONFIG_DB_PATH:'config.db',CONVERSATION_DB_PATH:'conversation.db',FEEDBACK_DB_PATH:'feedback.db',TELEMETRY_DB_PATH:'telemetry.db',DIAGNOSTICS_DB_PATH:'diagnostics.db',OTA_DB_PATH:'ota.db',PAIRING_DB_PATH:'pairing.db',SMS_DB_PATH:'sms.db',SEARCH_TASK_DB_PATH:'search.db',SEARCH_ROUTING_DB_PATH:'search-routing.db',SEARCH_DEVICE_LOCATION_DB_PATH:'device-location.db',AMAP_USAGE_DB_PATH:'amap-usage.db'};
 export const CANARY_AGENT='p003-search-canary-20261021';
 export const VERIFICATION_AGENT='p003-search-verification-20261026';
 export const VERIFICATION_SN='BJP00399999999999901';

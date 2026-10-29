@@ -15,6 +15,7 @@ const {searchAdminRoute}=await import('./routes/search-admin.js');
 const {raceProviderHealth}=await import('./providers/provider-health.js');
 const app=new Hono();
 app.get('/health',c=>c.json({status:'ok',agent,generation:process.env.SEARCH_CANARY_GENERATION,search:searchSettings().enabled,tools:searchSettings().tools,
+ amap:{enabled:process.env.P003_AMAP_WEATHER_ENABLED==='1',key_configured:Boolean(process.env.AMAP_WEATHER_API_KEY),metered:Boolean(process.env.AMAP_USAGE_DB_PATH)},
  llm:process.env.LLM_PROVIDER==='race'?{mode:'race',...raceProviderHealth()}:undefined}));
 app.use('/v1/*',async(c,next)=>{
  const auth=await verifyAuthToken(c.req.header('x-p003-worker-token')||c.req.query('token'));
