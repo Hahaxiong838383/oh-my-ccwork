@@ -15,6 +15,7 @@ mod search_tasks;
 mod search_dialogue;
 mod search_progress;
 mod search_receipts;
+mod search_control_recovery;
 mod control;
 mod device_grammar;
 mod device_intent;

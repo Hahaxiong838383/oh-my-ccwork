@@ -94,11 +94,11 @@ pub fn intent(text: &str) -> Option<Intent> {
         if (old.starts_with("不查") || old.starts_with("先别查")) && old.ends_with('了') { return task_query(new, true); }
     }
     let control = t.strip_suffix('吧').unwrap_or(t);
-    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
-        || ["不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p))
+    if ["别查了", "不用查了", "不要查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
+        || ["不要查了，", "不要查了,", "不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p))
         // ASR joins clause finals with spaces. Match the explicit cancel clause
         // and a bounded chat handoff, without stripping negation or quotations.
-        || ["不用查了", "别查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail|
+        || ["不用查了", "别查了", "不要查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail|
             ["我们聊", "聊"].iter().any(|next|tail.trim_start().starts_with(next)))) {
         return Some(Intent::Cancel);
     }

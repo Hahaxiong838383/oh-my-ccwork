@@ -285,6 +285,7 @@ impl SearchSession {
         })
     }
     pub fn interpret(&mut self, text: &str) -> Option<Intent> {
+        if self.cancel_before_exit(text) { return Some(Intent::Cancel); }
         self.fragment_since=None;
         let repaired=repaired_replace(text,self.dialogue_context().is_some());
         let text=repaired.as_deref().unwrap_or(text);
@@ -639,6 +640,44 @@ impl SearchSession {
         self.speech.retain(|s| !s.auto_replayed && s.receipt.is_none());
     }
     pub fn is_result_active(&self)->bool {self.active.as_ref().is_some_and(|s|s.task.is_some()&&!s.digest.is_empty())}
+    pub fn has_pending_search(&self)->bool {
+        !self.closing && (self.busy || self.pending_topic.is_some() || self.active.as_ref().is_some_and(|s|s.task.is_some())
+            || self.auto_pending || self.speech.iter().any(|s|s.task.is_some()))
+    }
+    /// Resolve only a whole ambiguous refusal while a search is active. Explicit
+    /// exits, quotations, and ordinary conversation keep their existing meaning.
+    pub fn cancel_before_exit(&self,text:&str)->bool {
+        if !self.has_pending_search(){return false;}
+        let t=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
+        let t=t.strip_prefix("小可").map(|s|s.trim_start_matches(|c:char|"，, ".contains(c))).unwrap_or(t);
+        t=="不用了" || t.strip_prefix("不用了").is_some_and(|tail| {
+            let tail=tail.trim_start_matches(|c:char|"，, ".contains(c));
+            (tail.starts_with("我们聊")||tail.starts_with("聊"))
+                && crate::textproc::session_exit_tail_hit(tail).is_none()
+        })
+    }
+    pub fn recovered_text(&self,text:&str)->Option<String>{
+        if self.recovered_control(text){return Some(text.to_owned());}
+        if !self.has_pending_search(){return None;}
+        // Actual R24 replay retained “查成都今天的天气” but lost “改”. Only
+        // a bare imperative with a concrete weather location may repair that
+        // missing syllable; chat, echoes, generic searches and bare weather cannot.
+        let t=text.trim();
+        if !t.starts_with('查') || t.starts_with("查查"){return None;}
+        let candidate=format!("改{t}");
+        let decision=RoutingSession::default().route(&candidate,0,self.routing.as_ref().map(|r|&r.config),"");
+        if decision.weather.is_none() && decision.place_weather.is_none(){return None;}
+        match decision.intent(){Some(Intent::Replace(q)) if !missing_predicate(&q)&&!bare_topic(&q)=>Some(candidate),_=>None}
+    }
+    pub fn recovered_control(&self,text:&str)->bool {
+        if !self.has_pending_search(){return false;}
+        if self.cancel_before_exit(text){return true;}
+        let repaired=repaired_replace(text,true);
+        let decision=RoutingSession::default().route(repaired.as_deref().unwrap_or(text),0,
+            self.routing.as_ref().map(|r|&r.config),"");
+        matches!(decision.intent(),
+            Some(Intent::Replace(_)|Intent::Cancel|Intent::Resume))
+    }
     pub fn accepts_ack(&self,text:&str,first_pcm:bool,input_continues:bool)->bool {
         crate::search_dialogue::classify_search_ack(self.ack_v1,text,&crate::search_dialogue::SearchPlaybackContext{result_active:self.is_result_active(),first_pcm_seen:first_pcm,input_continues})==crate::search_dialogue::SearchAckDecision::ContinueResult
     }
@@ -1117,6 +1156,48 @@ mod tests {
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn r25_active_search_cancel_is_not_session_exit_and_rejects_late_results() {
+        let (mut s,events,mut commands)=test_session();
+        s.command(Intent::Search("北京今天的天气".into()));
+        let epoch=s.epoch;
+        assert!(matches!(commands.recv().await,Some(Command::Submit{..})));
+        assert_eq!(s.interpret("不用了"),Some(Intent::Cancel));
+        s.command(Intent::Cancel);
+        assert!(matches!(commands.recv().await,Some(Command::Cancel{..})));
+        events.send(Event::Ready{id:"old".into(),text:"旧北京天气。".into(),epoch}).await.unwrap();
+        s.poll(false);
+        assert!(s.speech.is_empty());
+        assert!(!s.closing);
+        assert_eq!(s.interpret("我们聊别的"),None);
+    }
+    #[tokio::test]
+    async fn r25_ambiguous_cancel_is_bounded_to_active_search() {
+        for text in ["不用了","不用了。","小可，不用了","不用了，聊小猫吧"] {
+            let(mut s,_,_)=test_session();assert_eq!(s.interpret(text),None);
+            s.busy=true;assert_eq!(s.interpret(text),Some(Intent::Cancel),"{text}");
+        }
+        for text in ["退出聊天","不聊了","我今天不用了","他说不用了","不用了是什么意思","不要取消搜索","不用了，退出聊天"] {
+            let(mut s,_,_)=test_session();s.busy=true;
+            assert!(!matches!(s.interpret(text),Some(Intent::Cancel)),"{text}");
+        }
+    }
+    #[tokio::test]
+    async fn r25_recovery_never_promotes_echo_or_chat_into_a_command() {
+        let(mut s,_,_)=test_session();s.busy=true;
+        s.routing=Some(RoutingSnapshot{version:"synthetic".into(),config:RoutingConfig{weather_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()}});
+        for text in ["改查成都今天的天气","该插成都今天的天气","不用了","不要查了，我们聊别的","继续刚才的搜索结果"] {
+            assert!(s.recovered_control(text),"{text}");
+        }
+        for text in ["查查天气","我今天画了一只小猫","帮我查北京天气","不要改查成都","他说改查成都","退出聊天"] {
+            assert!(!s.recovered_control(text),"{text}");
+        }
+        assert_eq!(s.recovered_text("查成都今天的天气").as_deref(),Some("改查成都今天的天气"));
+        for text in ["查查天气","查天气","成都今天的天气","我查成都今天的天气","查火星为什么是红色的"] {
+            assert_eq!(s.recovered_text(text),None,"{text}");
+        }
+        s.busy=false;assert!(!s.recovered_control("改查成都今天的天气"));
     }
     #[tokio::test]
     async fn r21_word_explanation_does_not_submit_or_mutate_running_search() {

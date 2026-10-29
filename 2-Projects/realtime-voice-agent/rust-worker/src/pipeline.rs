@@ -418,6 +418,7 @@ struct ExitSignalPending {
 
 struct Orchestrator {
     search: Option<crate::search_tasks::SearchSession>,
+    search_recovery: Option<crate::search_control_recovery::Recovery>,
     search_turn: bool,
     search_user_speaking: bool,
     /// One-shot v0.3:有序 PCM 代次(Some=实验模式;None=现役 RTC,本字段零参与)
@@ -938,6 +939,8 @@ pub async fn run_pipeline(
     let input_phase0 = if ordered_session.is_some() { InputPhase::FirstTurn } else { InputPhase::NotOrdered };
     let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1, tts_cfg.provider_name(), tts_cfg.voice()));
     let mut orch = Orchestrator {
+        search_recovery: (search.is_some() && std::env::var("P003_SEARCH_CONTROL_RECOVERY_V1").is_ok_and(|v|v=="1"))
+            .then(crate::search_control_recovery::Recovery::default),
         search,
         search_turn: false,
         search_user_speaking: false,
@@ -1033,7 +1036,7 @@ pub async fn run_pipeline(
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
     // predict 仍只取尾 1.2s,判停行为不变)
-    let ring_keep = crate::eot_snapshot::SnapshotSink::ring_keep(orch.snap.is_some(), EOT_MAX_SAMPLES);
+    let ring_keep = crate::eot_snapshot::SnapshotSink::ring_keep(orch.snap.is_some() || orch.search_recovery.is_some(), EOT_MAX_SAMPLES);
     let mut eot_ring: VecDeque<i16> = VecDeque::with_capacity(ring_keep + WINDOW);
     let mut vad_buf: Vec<i16> = Vec::with_capacity(WINDOW * 2);
     // 火山按段消化音频:攒 200ms(3200 样本)一发,对齐 Python segment_duration_ms=200。
@@ -1290,7 +1293,7 @@ pub async fn run_pipeline(
                 Some(SttEvent::Interim(t)) => {
                     if orch.ordered_first_turn_active() {
                         if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); }
-                    } else {
+                    } else if orch.search_recovery.as_mut().is_none_or(|r|r.primary_text(&t)) {
                         orch.on_interim(t)
                     }
                 }
@@ -1299,7 +1302,7 @@ pub async fn run_pipeline(
                         let acts = orch.ordered.as_mut().map(|o| o.on_stt_final(t, unix_ms_now())).unwrap_or_default();
                         orch.apply_ordered_actions(acts);
                         orch.on_ordered_final_held().await;
-                    } else {
+                    } else if orch.search_recovery.as_mut().is_none_or(|r|r.primary_text(&t)) {
                         orch.on_final(t)
                     }
                 }
@@ -1380,6 +1383,7 @@ pub async fn run_pipeline(
     }
 
     orch.hard_abort_current();
+    if let Some(r)=&mut orch.search_recovery {r.cancel();}
     if let Some(search)=&mut orch.search {search.close();}
     if let Some(sp) = orch.spec.take() {
         sp.task.abort();
@@ -1817,6 +1821,9 @@ impl Orchestrator {
         let now = Instant::now();
         match ev {
             VadEvent::SpeechStart => {
+                let active=self.search.as_ref().is_some_and(|s|s.has_pending_search());
+                let now_ms=self.now_ms() as u64;
+                if let Some(r)=&mut self.search_recovery {r.speech_start(now_ms,active);}
                 self.first_speech_onset_at.get_or_insert(now);
                 self.turn_gate.on_speech_start();
                 // v3.1 账本:停说 ≥ NEW_UTTERANCE_GAP 后再开口 = 新句;上一句若从未 commit(ASR 缺失),其芯片观测作孤儿(只诊断)
@@ -1843,6 +1850,16 @@ impl Orchestrator {
                 }
             }
             VadEvent::SpeechEnd => {
+                let now_ms=self.now_ms() as u64;
+                let active=self.search.as_ref().is_some_and(|s|s.has_pending_search());
+                let retry=self.search_recovery.as_mut().and_then(|r|r.speech_end(now_ms));
+                if let Some(ms)=retry.filter(|_|active && self.turn_gate.pending().is_empty() && self.latest_interim.is_empty()) {
+                    let size=((ms as usize)*16).min(eot_ring.len());
+                    let pcm=eot_ring.iter().skip(eot_ring.len()-size).copied().collect();
+                    let cfg=stt_cfg_for_room(&self.room_name);
+                    if let Some(r)=&mut self.search_recovery {r.start(crate::search_control_recovery::recognize(cfg,pcm));}
+                    info!(room=%self.room_name,captured_ms=size/16,"search control recovery scheduled: no primary transcript");
+                }
                 self.turn_gate
                     .on_speech_end(now, Duration::from_secs_f32(gate.min_silence_s()));
                 self.ledger
@@ -2460,6 +2477,7 @@ impl Orchestrator {
                       budget_left = self.ready_confirm.budget_left(), "input_ready.request");
             }
             control::Inbound::Cancel => {
+                if let Some(r)=&mut self.search_recovery {r.cancel();}
                 if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
                 if self.ordered.is_some() {
@@ -2862,12 +2880,19 @@ impl Orchestrator {
     /// tick 唯一出口包装(B50 §4):`on_tick_inner` 有 8 条 return,把字幕裁决的落地放在这里,
     /// 任何一条 return 都绕不过去——将来新增 return 分支自动继承默认判决 Publish。
     async fn on_tick(&mut self) {
+        if let Some(text)=self.search_recovery.as_mut().and_then(|r|r.poll()) {
+            let control=self.search.as_ref().and_then(|s|s.recovered_text(&text));
+            info!(room=%self.room_name,accepted=control.is_some(),"search control recovery completed");
+            if let Some(text)=control {if let Some(r)=&mut self.search_recovery {r.delivered_as(&text);}self.on_final(text);}
+            else if let Some(r)=&mut self.search_recovery {r.reject_result();}
+        }
         self.on_tick_inner().await;
         self.flush_caption_finals();
         let input_pending = self.search_user_speaking || !self.turn_gate.pending().is_empty()
             || !self.latest_interim.is_empty();
         if let Some(search) = &mut self.search { search.observe_input(input_pending); }
         let safe = self.agent_turn.is_none() && self.state == AgentState::Listening
+            && !self.search_recovery.as_ref().is_some_and(|r|r.blocked())
             && !self.search_user_speaking && self.turn_gate.pending().is_empty()
             && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active();
         let speech = self.search.as_mut().and_then(|s| s.poll(safe));
@@ -2983,6 +3008,7 @@ impl Orchestrator {
         // 假打断定时:超时无 turn → resume 续播(渐起由 playout 配置)+ 契约 FalseInterruption
         if let Some(dl) = self.false_deadline
             && now >= dl
+            && !(self.search_turn && self.search_recovery.as_ref().is_some_and(|r|r.blocked()))
         {
             self.false_deadline = None;
             if self.paused.take().is_some() {
@@ -3149,7 +3175,8 @@ impl Orchestrator {
             // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
-            let swallow_kind = if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
+            let search_cancel = self.search.as_ref().is_some_and(|s|s.cancel_before_exit(&user_text));
+            let swallow_kind = if search_cancel { None } else if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
                 Some(("stop_only", "exact"))
             } else if crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &user_text) {
                 // 退出词吞句(2026-08-17 川哥拍板):trace 88185b1e 实证「退出」被 commit
@@ -3466,7 +3493,7 @@ impl Orchestrator {
             let amend = self.pending_amend.take();
             if let Some(search) = &mut self.search {
                 search.on_commit();
-                if let Some(action) = search.interpret(&user_text) {
+                if let Some(action) = if search_cancel {Some(crate::search_policy::Intent::Cancel)}else{search.interpret(&user_text)} {
                     // Preserve any prior ordinary-turn history amendment for the next ordinary reply.
                     self.pending_amend = amend;
                     if let Some(old) = self.spec.take() { old.task.abort(); }
