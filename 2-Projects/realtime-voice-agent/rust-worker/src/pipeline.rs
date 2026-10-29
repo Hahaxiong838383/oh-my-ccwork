@@ -850,14 +850,18 @@ pub async fn run_pipeline(
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
+    filler_policy: Option<crate::filler::FillerPolicy>,
     mut shutdown:Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<()> {
     // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
     // 回声库拉取/ASR 预连)此处直接接管;无预组装路径(web 调试直连)原地组装,行为一致。
-    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, bank, stt, started_at: prebuilt_at } = match prebuilt {
+    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, mut bank, stt, started_at: prebuilt_at } = match prebuilt {
         Some(p) => p,
         None => prebuild(room_name.clone()).await?,
     };
+    if let (Some(bank), Some(policy)) = (bank.as_mut(), filler_policy) {
+        bank.apply_policy(policy, &room_name);
+    }
     // B46:cfg 随后整体 move 进 orch 字面量(字段按源码顺序求值),开关先取成局部值
     let ready_confirm_enabled = cfg.ready_confirm_enabled;
     let caption_defer_enabled = cfg.caption_defer_enabled;

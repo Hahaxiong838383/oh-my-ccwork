@@ -64,6 +64,12 @@ fn addressed(t: &str) -> &str {
         if let Some(rest)=["小可小可","小可","嗯，","嗯,","那个，","那个,"].iter().find_map(|p|t.strip_prefix(p)) {t=rest.trim_start_matches(|c:char|"，,:： ".contains(c));} else {break;}
     } t
 }
+fn ark_resource_question(t: &str) -> bool {
+    let domain = ["方舟", "星尘", "家族币", "补勤卡", "补签卡"].iter().any(|w| t.contains(w));
+    let usage = ["什么用", "作用", "干嘛", "怎么用", "用来", "用途"].iter().any(|w| t.contains(w));
+    domain && usage && !["取消", "继续", "改查", "原神", "我的世界", "哆啦", "王者荣耀", "天文", "恒星", "星空", "天上的", "黄金", "金价", "金店", "比特币"].iter().any(|w| t.contains(w))
+}
+
 fn protected(t: &str) -> bool {
     ["如果","假如","例如","比如","不要","不用","别","我自己","我说","他说","她说","你说","我今天","我现在","我们","“","‘","\"","'"].iter().any(|p| t.starts_with(p))
         || ["不要真的查","但不用搜索","心情","编一个","讲个故事"].iter().any(|p|t.contains(p))
@@ -122,6 +128,8 @@ impl RoutingSession {
         self.legacy.take_handoff();
         if self.version!=version {self.clear();self.version=version.into();}
         let pending=self.pending_weather.take();
+        // Known first-party game mechanics use the local Brain knowledge; no web task needed.
+        if ark_resource_question(text) && !matches!(intent(addressed(text)), Some(Intent::Cancel | Intent::Resume | Intent::Replace(_))) { self.clear(); return Decision::new("chat", "ark-local-knowledge", "方舟资源用途由本地知识回答"); }
         let Some(config)=config else {return self.legacy_decision(text,now,None);};
         let t=addressed(text);
         // Control commands retain authority even if all editable rules are disabled.
@@ -171,6 +179,27 @@ impl RoutingSession {
                 else {d.weather=supported_weather(q);if d.weather.is_none(){d.reason="城市或日期未由天气适配器支持，使用通用搜索".into();}}
             }
         } d
+    }
+}
+
+#[cfg(test)]
+mod style_ark_tests {
+    use super::*;
+    #[test]
+    fn style_ark_resource_usage_never_starts_web_search() {
+        for config in [None, Some(RoutingConfig::default())] {
+            for text in ["帮我查方舟里的星尘有什么用", "搜索补勤卡怎么用", "家族币有什么作用"] {
+                let d = RoutingSession::default().route(text, 0, config.as_ref(), "test");
+                assert_eq!(d.action, "chat", "{text}");
+                assert!(d.query.is_none());
+            }
+            for text in ["不要查了，聊聊星尘有什么用", "不用查了 我们聊星尘有什么用", "换查星尘有什么用", "改为查询星尘有什么用"] {
+                let expected = RoutingSession::default().legacy_decision(text,0,config.as_ref()).action;
+                assert_eq!(RoutingSession::default().route(text,0,config.as_ref(),"test").action,expected,"{text}");
+            }
+            assert_eq!(RoutingSession::default().route("帮我查天文学里星尘有什么作用",0,config.as_ref(),"test").action,"search");
+            assert_eq!(RoutingSession::default().route("帮我查火星为什么是红色的",0,config.as_ref(),"test").action,"search");
+        }
     }
 }
 
