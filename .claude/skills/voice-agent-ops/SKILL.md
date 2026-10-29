@@ -11,6 +11,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 遇到计时归属纠正、候选HTTP/2、首音预算或安装后回滚，读[计时归属与发布收尾](references/voice-canary-release-evidence.md)。
 
+## 天气数据源与调用额度
+
+接入天气 Key、展示剩余调用量、补额/校准或回退带计量版本时，读[天气接口与调用额度](references/weather-quota-operations.md)。
+
 ## 限时搜索灰度与延窗交接
 
 先读 [限时语音灰度操作与交接](references/bounded-canary-handoff.md)：核最新授权与完整SN，逐层校验截止，完整产物SHA通过才安装，到期关闭已有会话；开窗、服务端发送、真人实听分别验收。
