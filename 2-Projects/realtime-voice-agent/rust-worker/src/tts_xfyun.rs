@@ -285,7 +285,7 @@ async fn connect_observed(url: String) -> Result<Warm> {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let mut trace = ConnectTiming {
         id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
-        stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled",
+        stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled", dns_path: None,
     };
     // Ordinary workers retain the OS connector; candidate DNS racing is gated.
     // Both retain
@@ -300,12 +300,14 @@ async fn connect_observed(url: String) -> Result<Warm> {
             trace.stage="resolve_tcp";
             let connected=crate::voice_connect::connect(&host,port).await?;
             trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
+            trace.dns_path=Some(connected.dns_path);
             connected.socket
         } else {
             trace.stage = "dns"; let t = std::time::Instant::now();
             let addresses: Vec<_> = tokio::net::lookup_host((host.as_str(), port)).await
                 .map_err(|_| anyhow::anyhow!("resolve_failed"))?.collect();
             trace.dns_ms = Some(t.elapsed().as_millis() as u64);
+            trace.dns_path=Some("system_os");
             trace.stage = "tcp"; let t = std::time::Instant::now();
             let socket = tokio::net::TcpStream::connect(addresses.as_slice()).await
                 .map_err(|_| anyhow::anyhow!("connect_failed"))?;
@@ -342,12 +344,13 @@ async fn connect_observed(url: String) -> Result<Warm> {
 struct ConnectTiming {
     id: u64, start: std::time::Instant, stage: &'static str,
     dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>, outcome: &'static str,
+    dns_path: Option<&'static str>,
 }
 impl Drop for ConnectTiming {
     fn drop(&mut self) {
         info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,
             elapsed_ms=self.start.elapsed().as_millis() as u64,
-            dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms,
+            dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms, dns_path=self.dns_path,
             "tts connection timing");
     }
 }
