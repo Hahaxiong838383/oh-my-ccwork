@@ -1,7 +1,7 @@
 //! 语义分桶承接音库(逐行为对齐 engines/fillers.py C1 v2):
 //! turn 提交后按用户文本选桶,预解码 wav(24k mono s16,与播放通道同率直喂)零合成
 //! 延迟先出声,盖住 LLM+TTS 首音窗口。greet/thanks 桶级概率 0.5,其余走全局(默认
-//! 0.9);打断轮(5s 窗)boost 必播且优先专用 barge 桶;滑窗 3 防重复;资产缺失静默降级 None。
+//! 0.9);打断轮(5s 窗)旧票据 boost 必播；风格票据优先概率门控，barge 桶;滑窗 3 防重复;资产缺失静默降级 None。
 
 use std::collections::VecDeque;
 use std::path::{Path, PathBuf};
@@ -106,9 +106,27 @@ pub struct FillerClip {
     pub duration_ms: u64,
 }
 
+/// Only server-signed device-session metadata may override the legacy environment.
+#[derive(Clone, Copy, Debug, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FillerStyle { Default, Chatty, Quiet, Funny }
+#[derive(Clone, Copy, Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FillerPolicy { version: u8, style: FillerStyle, probability: f64 }
+impl FillerPolicy {
+    pub fn from_metadata(value: Option<&serde_json::Value>, room: &str) -> Option<Self> {
+        let (sn, suffix) = room.strip_prefix("sn-")?.rsplit_once('-')?;
+        if sn.len() != 20 || !sn.starts_with("BJP003") || !sn.as_bytes()[6..].iter().all(u8::is_ascii_digit)
+            || suffix.is_empty() || !suffix.bytes().all(|c| c.is_ascii_digit()) { return None; }
+        let policy: Self = serde_json::from_value(value?.clone()).ok()?;
+        (policy.version == 1 && policy.probability.is_finite() && (0.0..=1.0).contains(&policy.probability)).then_some(policy)
+    }
+}
+
 pub struct FillerBank {
     clips: std::collections::HashMap<String, Vec<FillerClip>>,
     probability: f64,
+    style_probability: Option<f64>,
     /// 打断轮短条上限(ms):boost 时只从池内 ≤此时长 的条里选(专用 barge 桶同样过滤,
     /// 当合成超长的保险丝),没有才回退全池。打断后用户要的是"快点接上",慢悠悠的
     /// 长承接火上浇油(2026-08-16 川哥定;生产 env 1500)。
@@ -195,7 +213,15 @@ impl FillerBank {
         let mut buckets: Vec<&String> = clips.keys().collect();
         buckets.sort();
         info!("filler bank loaded: {total} clips buckets={buckets:?}");
-        Ok(Some(Self { clips, probability, barge_max_ms, recent: VecDeque::with_capacity(3) }))
+        Ok(Some(Self { clips, probability, style_probability: None, barge_max_ms, recent: VecDeque::with_capacity(3) }))
+    }
+
+    pub fn apply_policy(&mut self, policy: FillerPolicy, room: &str) {
+        self.style_probability = Some(policy.probability);
+        info!(room = room, style = ?policy.style, probability = policy.probability, version = policy.version, "filler_policy_applied");
+    }
+    fn effective_probability(&self, bucket: &str, boost: bool) -> f64 {
+        self.style_probability.unwrap_or_else(|| if boost { 1.0 } else { self.bucket_prob(bucket) })
     }
 
     /// 桶级概率覆盖(greet/thanks 0.5,结构性重复场景降频;device 1.0=设备句必出承接音(D1);其余全局)。
@@ -207,13 +233,13 @@ impl FillerBank {
         }
     }
 
-    /// 语义桶(空桶回退 gen)+ 概率门控 + 滑窗防重复;boost=打断轮必播。
+    /// 语义桶(空桶回退 gen)+ 概率门控 + 滑窗防重复;boost=打断轮优先短资产，新风格策略不强制播。
     /// 返回 (文案, pcm 24k bytes)。room 只用于日志——picked/skip 行历史上不带 room,
     /// 按房 grep 数它们必得 0,两次误判(2026-08-16/17)后补上;skip 结构化日志为
     /// codex trace 对撞要求(无它则"没看到 picked"区分不了概率跳过/资产缺/功能关)。
     pub fn pick(&mut self, user_text: &str, boost: bool, room: &str, turn_id: u64) -> Option<(String, Vec<u8>)> {
         let bucket = pick_bucket_with(user_text, crate::device_intent::device_filler_enabled_for(room));
-        let prob = if boost { 1.0 } else { self.bucket_prob(bucket) };
+        let prob = self.effective_probability(bucket, boost);
         if rand::rng().random::<f64>() >= prob {
             info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost={boost} reason=probability");
             return None;
@@ -261,11 +287,11 @@ impl FillerBank {
     }
 
     /// B(2026-09-09 codex GO):ordered 首句专用——语义桶(空回退 gen)取时长最短的完整条;
-    /// 概率门与普通轮相同(本来不播的不强补),忽略滑窗防重复,不碰 barge/greet 语义,不裁不截。
+    /// 概率门与普通轮相同(本来不播的不强补),遵守滑窗防重复,不碰 barge/greet 语义,不裁不截。
     /// 只在 ORDERED_FILLER_SHORTEST=1 且 commit 来自 ordered 终局时由 pipeline 调用。
     pub fn pick_shortest(&mut self, user_text: &str, room: &str, turn_id: u64) -> Option<(String, Vec<u8>)> {
         let bucket = pick_bucket_with(user_text, crate::device_intent::device_filler_enabled_for(room));
-        let prob = self.bucket_prob(bucket);
+        let prob = self.effective_probability(bucket, false);
         if rand::rng().random::<f64>() >= prob {
             info!("filler skip room={room} turn_id={turn_id} bucket={bucket} prob={prob} boost=false policy=shortest reason=probability");
             return None;
@@ -280,7 +306,8 @@ impl FillerBank {
                 }
             },
         };
-        let clip = pool.iter().min_by_key(|c| c.duration_ms)?;
+        let clip = pool.iter().filter(|c| !self.recent.contains(&c.text)).min_by_key(|c| c.duration_ms)
+            .or_else(|| pool.iter().min_by_key(|c| (self.recent.iter().rposition(|t| t == &c.text).unwrap_or(0), c.duration_ms)))?;
         if self.recent.len() == 3 {
             self.recent.pop_front();
         }
@@ -297,6 +324,49 @@ impl FillerBank {
 mod tests {
     use super::*;
 
+    const DEVICE_ROOM: &str = "sn-BJP00326070803800006-123";
+    #[test]
+    fn style_ark_metadata_validation_and_room_boundary() {
+        let valid = serde_json::json!({"version":1,"style":"quiet","probability":0.1});
+        assert!(FillerPolicy::from_metadata(Some(&valid), DEVICE_ROOM).is_some());
+        assert!(FillerPolicy::from_metadata(Some(&valid), "web-room").is_none());
+        for v in [serde_json::json!({"version":2,"style":"quiet","probability":0.1}),
+            serde_json::json!({"version":1,"style":"other","probability":0.1}),
+            serde_json::json!({"version":1,"style":"quiet","probability":1.1}),
+            serde_json::json!({"version":1,"style":"quiet","probability":-0.1}),
+            serde_json::json!({"version":1,"style":"quiet","probability":"0"}),
+            serde_json::json!({"version":1,"style":"quiet","probability":null}), serde_json::json!(false)] {
+            assert!(FillerPolicy::from_metadata(Some(&v), DEVICE_ROOM).is_none(), "{v}");
+        }
+        assert!(FillerPolicy::from_metadata(None, DEVICE_ROOM).is_none());
+    }
+    #[test]
+    fn style_ark_zero_blocks_boost_and_all_buckets() {
+        let mut b = bank_with(vec![clip("好呀", 200)]);
+        b.apply_policy(FillerPolicy { version:1, style:FillerStyle::Quiet, probability:0.0 }, DEVICE_ROOM);
+        for bucket in ["greet","thanks","device","gen"] { assert_eq!(b.effective_probability(bucket,true),0.0); }
+        for i in 0..20 {
+            assert!(b.pick("你好",true,DEVICE_ROOM,i).is_none());
+            assert!(b.pick_shortest("谢谢",DEVICE_ROOM,i).is_none());
+        }
+        b.apply_policy(FillerPolicy { version:1, style:FillerStyle::Chatty, probability:1.0 }, DEVICE_ROOM);
+        assert!(b.pick("你好",false,DEVICE_ROOM,30).is_some());
+        assert!(b.pick_shortest("谢谢",DEVICE_ROOM,31).is_some());
+    }
+    #[test]
+    fn style_ark_legacy_and_probabilities_are_preserved() {
+        let mut b = bank_with(vec![clip("好呀",200)]);
+        assert_eq!(b.effective_probability("greet",false),0.5);
+        assert_eq!(b.effective_probability("gen",true),1.0);
+        for p in [0.1,0.25,0.35,0.45] {
+            b.apply_policy(FillerPolicy {version:1,style:FillerStyle::Default,probability:p}, DEVICE_ROOM);
+            for bucket in ["greet","thanks","device","gen"] {
+                assert_eq!(b.effective_probability(bucket,false),p);
+                assert_eq!(b.effective_probability(bucket,true),p);
+            }
+        }
+    }
+
     fn clip(text: &str, ms: u64) -> FillerClip {
         // pcm 长度按 48B/ms 反推,与加载路径的换算共用同一常数
         FillerClip { text: text.into(), pcm: vec![0u8; (ms * 48) as usize], duration_ms: ms }
@@ -305,17 +375,29 @@ mod tests {
     fn bank_with(clips: Vec<FillerClip>) -> FillerBank {
         let mut m = std::collections::HashMap::new();
         m.insert("gen".to_string(), clips);
-        FillerBank { clips: m, probability: 1.0, barge_max_ms: 1200, recent: VecDeque::new() }
+        FillerBank { clips: m, probability: 1.0, style_probability: None, barge_max_ms: 1200, recent: VecDeque::new() }
     }
 
-    /// B:ordered 首句只取最短完整条,且不受滑窗防重复影响(连选 5 次都是它)。
     #[test]
-    fn shortest_policy_picks_min_duration_and_ignores_recent() {
+    fn style_ark_shortest_avoids_consecutive_repeat() {
         let mut b = bank_with(vec![clip("长条", 2000), clip("短条", 960), clip("中条", 1480)]);
-        for _ in 0..5 {
-            let (t, _) = b.pick_shortest("随便聊聊", "t", 1).expect("prob=1 必播");
-            assert_eq!(t, "短条");
+        let first = b.pick_shortest("随便聊聊", "t", 1).unwrap().0;
+        let second = b.pick_shortest("随便聊聊", "t", 2).unwrap().0;
+        assert_eq!(first, "短条");
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn style_ark_two_clips_alternate_after_recent_window_fills() {
+        let mut b = bank_with(vec![clip("短条", 200), clip("中条", 300)]);
+        let mut last = String::new();
+        for i in 0..12 {
+            let chosen = b.pick_shortest("随便聊聊", "t", i).unwrap().0;
+            assert_ne!(chosen, last);
+            last = chosen;
         }
+        let mut one = bank_with(vec![clip("唯一",200)]);
+        for i in 0..6 { assert_eq!(one.pick_shortest("随便聊聊","t",i).unwrap().0,"唯一"); }
     }
 
     /// B:语义桶优先(问句→ask 最短),无命中回退 gen 最短;普通 pick 不受影响。
@@ -324,7 +406,7 @@ mod tests {
         let mut m = std::collections::HashMap::new();
         m.insert("gen".to_string(), vec![clip("gen短", 960), clip("gen长", 2000)]);
         m.insert("ask".to_string(), vec![clip("ask长", 2200), clip("ask短", 1000)]);
-        let mut b = FillerBank { clips: m, probability: 1.0, barge_max_ms: 1500, recent: VecDeque::new() };
+        let mut b = FillerBank { clips: m, probability: 1.0, style_probability: None, barge_max_ms: 1500, recent: VecDeque::new() };
         let (t, _) = b.pick_shortest("一加一等于几", "t", 1).unwrap();
         assert_eq!(t, "ask短", "问句走 ask 桶最短");
         let (t2, _) = b.pick_shortest("随便聊聊", "t", 2).unwrap();
@@ -373,7 +455,7 @@ mod tests {
         let mut m = std::collections::HashMap::new();
         m.insert("gen".to_string(), sem);
         m.insert("barge".to_string(), barge);
-        FillerBank { clips: m, probability: 1.0, barge_max_ms: 1500, recent: VecDeque::new() }
+        FillerBank { clips: m, probability: 1.0, style_probability: None, barge_max_ms: 1500, recent: VecDeque::new() }
     }
 
     #[test]
@@ -459,6 +541,7 @@ mod tests {
         let b = FillerBank {
             clips: std::collections::HashMap::new(),
             probability: 0.1,
+            style_probability: None,
             barge_max_ms: 1500,
             recent: VecDeque::new(),
         };
