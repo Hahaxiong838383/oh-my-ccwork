@@ -71,10 +71,11 @@ export function getSearchTasks(): SearchTasks | null {
         const record = deviceRegistryStore.get(owner.subject);
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
         const accountId = record.account_id;
-        const general = async (query:string,signal:AbortSignal,tools=searchSettings().tools) => {
+        const profile=searchSettings().tools?'p2':'p1';
+        const general = async (query:string,signal:AbortSignal,tools=profile==='p2') => {
         const cfg = getDevicePromptConfig(accountId);
         try {
-          const result = await new SearchExecutor({ toolAudit: event=>console.info('[search-tool]',JSON.stringify({task_id:owner.id,...event})), validationAudit: value => console.info('[search-validation]',JSON.stringify({task_id:'id'in owner?owner.id:undefined,...value})), grounding: true, apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
+          const result = await new SearchExecutor({ toolAudit: event=>console.info('[search-tool]',JSON.stringify({task_id:owner.id,...event})), validationAudit: value => console.info('[search-validation]',JSON.stringify({task_id:'id'in owner?owner.id:undefined,...value})), grounding: true, apiKey: process.env.DEEPSEEK_API_KEY!, domains: domains(), tools, profile, audit: stats => console.info('[search-filter]', JSON.stringify({task_id: 'id' in owner ? owner.id : undefined, ...stats})) })
             .run(query, signal, searchCapabilityBase(buildDeviceBase(cfg),true) + '\n' + (deviceAddendum(cfg) ?? ''));
           availability.success(); return result;
         } catch (e) {
