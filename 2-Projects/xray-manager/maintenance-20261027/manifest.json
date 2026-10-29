@@ -15,9 +15,9 @@
     "publisher_targeted_checks_after_message_change": 36
   },
   "routing_release_receipt": "chatgpt-domain-route-receipt-20261028.json",
-  "final_app_ui_status": "awaiting_user_observation_after_default_startup",
+  "final_app_ui_status": "user_confirmed_working",
   "files_sha256": {
-    "README.md": "be138a2e6c70fb3f5c3bfa8fcd330450ea4bf4fb1579a18c57c7e9cd848964da",
+    "README.md": "84198fa5e19f725008a03c640713c8dc862af432d9ae854ac19abf0ece190370",
     "managed_status.py": "518352a2780ae38629275c29f440f7075dd27121f35a0b2cd6b4896584d53090",
     "routing_policy.py": "5cb8717bb7cc77006417a892588a28d6eb7d968f5b46726df871381b9bb0307f",
     "routing_publish.py": "78135c8732c36ae8a36a0576a93c650bfe640d4382f96ad466b5fec5a235afe2",
@@ -39,8 +39,8 @@
     "xray-manager.py": "0d8cd075e695c976e35e108804869e6cedb9ff73db0cd9f9bf49bb081368a360",
     "复盘与防复发.md": "2dd67c46153dc0b99ca486235d6ae9be5f9a899d4914c2ef3ebe8603dbd07c5f",
     "ChatGPT升级后初始化恢复-20261028.md": "1290c7429c7181bbbeac7f1f4fdbba3fad1abaca47a6fa8f940462f55e4090dc",
-    "ChatGPT手动升级复发与初始化超时-20261028.md": "d9d5bcc8ea17c5581ab574800669795f4f8e395100c8bb33a13a9c26388b0cae",
-    "chatgpt-domain-route-receipt-20261028.json": "a7e7e0397dbc5d1e96deabf102c79a5d54d26bbb93579069256f846f371faa45"
+    "ChatGPT手动升级复发与初始化超时-20261028.md": "a0407ad3abd83b5e739476939fe52dd1dfe1b82c920d342e56e2dec9090d1456",
+    "chatgpt-domain-route-receipt-20261028.json": "77ef539a35c76acd3a66f945460edddb32d42548f014003c5c265c098970ab42"
   },
   "live_config_included": false,
   "credentials_included": false,
@@ -167,5 +167,6 @@
         "final_ui_backup": "/Users/rayman.chen/.local/state/chatgpt-repair/routing-ui-refresh-20261027-132352"
       }
     }
-  ]
+  ],
+  "user_acceptance_date": "2026-10-29"
 }

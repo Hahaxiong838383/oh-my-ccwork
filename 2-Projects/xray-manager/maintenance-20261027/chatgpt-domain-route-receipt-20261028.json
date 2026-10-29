@@ -124,7 +124,7 @@
     }
   },
   "limits": [
-    "Final default-startup App dot UI observation is pending; network, history and manager UI evidence are recorded separately.",
+    "The user confirmed current usability on 2026-10-29. Historical automated checks remain dated 2026-10-28; no new item-by-item UI, upgrade or long-session test is asserted.",
     "cf-lisa runtime override is group-specific; ChatGPT outbound shown by this UI is disk configuration.",
     "Selectable node tags do not prove geography, independent egress, or service health.",
     "Pure undo and fixture apply were not production failure or rollback drills.",
@@ -155,10 +155,15 @@
     "production_processes_and_config_unchanged_during_cleanup": true
   },
   "final_app_ui": {
-    "status": "awaiting_user_observation",
+    "status": "user_confirmed_working",
     "ax_windows_returns_application_itself": true,
     "ax_temporary_setting_restored": true,
     "initial_independent_egress_dot_user_confirmed_at": "2026-10-28T16:13:00+08:00",
-    "initial_dot_confirmation_is_not_final_default_startup_verification": true
+    "initial_dot_confirmation_is_not_final_default_startup_verification": true,
+    "previous_status": "awaiting_user_observation",
+    "user_confirmation_date": "2026-10-29",
+    "evidence_source": "user_message",
+    "user_statement": "OK，目前可以了",
+    "acceptance_scope": "Current usability after the production routing fix; no new item-by-item automated UI or upgrade regression run."
   }
 }
