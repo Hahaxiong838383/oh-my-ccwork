@@ -56,4 +56,8 @@
 
 技能在 `.claude/skills/voice-agent-ops/references/style-filler-and-local-knowledge.md`，由同目录上级SKILL入口发现；主工作区只合入本次新入口和reference，保留其他并行脏改。
 
+本次知识归档提交 `fb39b7b70959fd6c0663fb08f34b291960a3dd92` 已push并独立核远端同SHA。共享三记忆本地更新，status49行、Recent79行；原件/候选/逐文件回执在私有 `knowledge-closeout/memory/`，未推送独立全局记忆目录。
+
+后续[倾听模式设计](P003_LISTENING_MODE_DESIGN_20261029.md)已结合当前源码及官方资料完成：复用Rust栈、显式开口许可、故事/唱歌区分、端云联调、有界会话摘要；只交方案，尚未实施。技术评审提出的许可生命周期、进入ACK、摘要修订、积压搜索、活跃撤权五个合同缺口已写入方案；产品/研究评审未发现实质阻塞。文档/技能校验不等于倾听功能测试通过。
+
 署名：codex（OpenAI）| 2026-10-29（北京时间）
