@@ -36,3 +36,13 @@ Brain严格unknown解析补了自有字段/稀疏名单检查；先复现继承�
 两树协议已解析并核对示例request_id/epoch，字节一致SHA256：`8c2264161fe7bf3270c99517d6c952ee7cdd912c38f6be389a5d1acbbf43923b`。Rust代码通过现有远端rustfmt stdin/stdout格式化，未落远端业务文件；纯测试在格式化后重跑通过。
 
 最终独立上下文评审已重跑Worker29/Brain10，两树合同cmp一致，未发现阻塞性底座代码缺陷；评审指出的旧测试数量已同步。原device-session签票回归45/45通过（临时数据库与合成凭据），只证明旧签发路径回归，不代表新倾听签票已经接入。
+
+## 源码交付锚
+
+2026-10-30 08:26 CST，首批代码与冻结tag已atomic push至既有origin，并通过独立`git ls-remote`核同：
+
+- Brain代码：`43bdebdc1ffda98b2c8bea419da9dad23f3c5de6`，分支`codex/p003-listening-brain-20261030`。
+- Worker代码：`53727c3fb367f5a4f692a81511d5ac8303eb728a`，分支`codex/p003-listening-worker-20261030`。
+- 冻结tag：Brain→`e4bf06324553850ce28b9d1bcdaa70bef974eb46`，Worker→`ef92ee1aa30e6ef869f6270de22173ce51617f30`。
+
+本节后续归档提交不改变代码锚。推送仅完成源码交付，没有自动部署倾听模式。共享记忆在独立本地目录，不把本仓push等同其已推送。
