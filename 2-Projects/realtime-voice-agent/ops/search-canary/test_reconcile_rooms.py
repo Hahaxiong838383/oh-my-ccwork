@@ -207,5 +207,16 @@ class CleanupTests(unittest.TestCase):
             thread.join()
 
 
+class ListeningCandidatePaths(unittest.TestCase):
+    def test_exact_candidate_paths_and_no_shared_queue(self):
+        root=Path('/opt/p003-listening-canary-20261030')
+        paths=(root/'room-cleanup',root/'window.json',root/'cleanup-status.json')
+        self.assertIsNone(m.candidate_scope('p003-search-listening-20261030',*paths))
+        for i in range(3):
+            wrong=list(paths);wrong[i]=Path('/opt/p003-search-canary-20261021')/paths[i].name
+            with self.assertRaises(ValueError):m.candidate_scope('p003-search-listening-20261030',*wrong)
+        with self.assertRaises(ValueError):m.candidate_scope('p003-search-listening-typo',*paths)
+
+
 if __name__ == '__main__':
     unittest.main()

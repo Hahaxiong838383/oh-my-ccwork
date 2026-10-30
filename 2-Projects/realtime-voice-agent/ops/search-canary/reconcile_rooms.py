@@ -155,23 +155,33 @@ class RoomAPI:
         return value
 
 
+def candidate_scope(agent, queue, window, status):
+    only_subject = None
+    if agent == 'p003-search-verification-20261026':
+        root = Path('/opt/p003-search-verification-20261026')
+        if ((queue, window, status) !=
+                (root / 'room-cleanup', root / 'window.json', root / 'cleanup-status.json')
+                or any(p.resolve() != p for p in (queue, window, status))):
+            raise ValueError('verification_paths')
+        only_subject = 'BJP00399999999999901'
+    elif agent == 'p003-search-listening-20261030':
+        root = Path('/opt/p003-listening-canary-20261030')
+        if ((queue, window, status) !=
+                (root / 'room-cleanup', root / 'window.json', root / 'cleanup-status.json')
+                or any(p.resolve() != p for p in (queue, window, status))):
+            raise ValueError('listening_paths')
+    elif agent != 'p003-search-canary-20261021':
+        raise ValueError('candidate_only')
+    return only_subject
+
+
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--queue', type=Path, required=True)
     p.add_argument('--window', type=Path, required=True)
     p.add_argument('--status', type=Path, required=True)
     args = p.parse_args()
-    agent = os.environ.get('AGENT_NAME')
-    only_subject = None
-    if agent == 'p003-search-verification-20261026':
-        root = Path('/opt/p003-search-verification-20261026')
-        if ((args.queue, args.window, args.status) !=
-                (root / 'room-cleanup', root / 'window.json', root / 'cleanup-status.json')
-                or any(p.resolve() != p for p in (args.queue, args.window, args.status))):
-            raise ValueError('verification_paths')
-        only_subject = 'BJP00399999999999901'
-    elif agent != 'p003-search-canary-20261021':
-        raise ValueError('candidate_only')
+    only_subject = candidate_scope(os.environ.get('AGENT_NAME'),args.queue,args.window,args.status)
     if not args.queue.is_absolute() or args.queue.resolve() != args.queue:
         raise ValueError('invalid_queue_directory')
     args.queue.mkdir(mode=0o700, parents=False, exist_ok=True)
