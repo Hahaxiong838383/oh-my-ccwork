@@ -1,0 +1,1032 @@
+{
+  "date": "2026-10-30",
+  "source_commit": "77400ea7829e13e201cad4e3c04ba49bafde3d09",
+  "status": "deployed; final version passed two software reboots",
+  "previous_ready_seconds": 77.3,
+  "intermediate_ready_seconds": 51.15,
+  "final_ready_seconds": [
+    46.6,
+    45.07
+  ],
+  "final_audit_seconds": [
+    47.82,
+    46.31
+  ],
+  "stage": "/data/adb/video-proxy/boot-fast-20261030-workers",
+  "release": "496aee8b509dbc0b735bd5307a9ca1cb2cdc2ca9cfb300b678c0c110a1f9d924",
+  "config_unchanged": true,
+  "helper_sha": "279a372e0e4ddbd0e8304f2b2c123b19401ed2e60708d1118926f5b3358e2357",
+  "staging": {
+    "stage": "/data/adb/video-proxy/boot-fast-20261030-workers",
+    "release": "496aee8b509dbc0b735bd5307a9ca1cb2cdc2ca9cfb300b678c0c110a1f9d924",
+    "files": 16,
+    "helper_sha": "279a372e0e4ddbd0e8304f2b2c123b19401ed2e60708d1118926f5b3358e2357",
+    "config_unchanged": true,
+    "dependencies": {
+      "video-proc-scan": {
+        "sha256": "279a372e0e4ddbd0e8304f2b2c123b19401ed2e60708d1118926f5b3358e2357",
+        "mode": "700"
+      },
+      "dns-upgrade-apply.sh": {
+        "sha256": "54f7c8b7a9a39ff04d14e828a8632fca29d9460db47bf0f6996f634eb27270e6",
+        "mode": "700"
+      },
+      "service-start-entry.sh": {
+        "sha256": "1efd24f3cdb27c8dd0d060d61808f45c46ac6ba5a75ccead4414cd873d43a81e",
+        "mode": "700"
+      }
+    },
+    "transaction_verify": "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=312.57 preflight_start locked=\ndns_upgrade_verified_read_only",
+    "same_boot_apply": "dns_upgrade_deferred_same_boot",
+    "before": {
+      "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+      "foreground": "mResumedActivity: ActivityRecord{4b200c1 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5096}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 6592,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3415,
+          "startticks": "2718"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3612,
+          "startticks": "2833"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 4837,
+          "startticks": "3585"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 6178,
+          "startticks": "4509"
+        }
+      }
+    },
+    "after": {
+      "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+      "foreground": "mResumedActivity: ActivityRecord{4b200c1 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5096}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 6998,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3415,
+          "startticks": "2718"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3612,
+          "startticks": "2833"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 4837,
+          "startticks": "3585"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 6178,
+          "startticks": "4509"
+        }
+      }
+    },
+    "next_boot_wired": true
+  },
+  "boots": [
+    {
+      "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+      "uptime": "52.22",
+      "logs": {
+        "boot-start.log": [
+          "2026-10-30T02:24:38Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=13.22 initial_process_scan_start",
+          "2026-10-30T02:24:38Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=13.31 initial_process_scan_absent",
+          "2026-10-30T02:24:38Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=13.63 android_boot_wait_start",
+          "2026-10-30T02:24:48Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=23.82 android_boot_complete",
+          "2026-10-30T02:24:54Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=24.55 clock_verified",
+          "2026-10-30T02:24:54Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=24.64 config_check_start",
+          "2026-10-30T02:24:56Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=26.84 final_process_scan_start",
+          "2026-10-30T02:24:56Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=27.03 final_process_scan_absent",
+          "2026-10-30T02:24:56Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=27.30 main_launched pid=3415",
+          "2026-10-30T02:24:56Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=27.39 guardian_workers_start",
+          "2026-10-30T02:25:15Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=45.72 guardian_workers_finished",
+          "2026-10-30T02:25:17Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=47.69 dns_queries_verified",
+          "2026-10-30T02:25:20Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=50.74 dns_caches_flushed",
+          "2026-10-30T02:25:20Z boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=51.15 dns_takeover_ready"
+        ],
+        "dns-guard.log": [
+          "boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=8.13 rules_installed",
+          "boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=8.31 rules_installed",
+          "boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=51.74 startup_audit_ready"
+        ],
+        "dns-upgrade.log": [
+          "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=9.90 preflight_start locked=",
+          "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=10.95 scan_start locked=",
+          "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=10.99 scan_absent locked=",
+          "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=11.08 preflight_start locked=--locked",
+          "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=11.72 scan_start locked=--locked",
+          "dns_upgrade_phase boot=e3f5aac8-9f11-4b7e-b822-84c89b892202 uptime=11.78 scan_absent locked=--locked"
+        ]
+      },
+      "ready": true,
+      "sys_boot_completed": "1",
+      "snapshot": {
+        "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+        "foreground": "mResumedActivity: ActivityRecord{4b200c1 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5096}",
+        "decoders": [
+          {
+            "frame width": 1920,
+            "frame height": 1080,
+            "frame count": 287,
+            "drop count": 0,
+            "fra err count": 0,
+            "hw err count": 0
+          }
+        ],
+        "processes": {
+          "sing-box run -c /data/adb/video-proxy/config.json": {
+            "pid": 3415,
+            "startticks": "2718"
+          },
+          "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+            "pid": 3612,
+            "startticks": "2833"
+          },
+          "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+            "pid": 4837,
+            "startticks": "3585"
+          },
+          "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+            "pid": 6178,
+            "startticks": "4509"
+          }
+        }
+      },
+      "observations": [
+        {
+          "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+          "uptime": "34.41",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+          "uptime": "38.79",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+          "uptime": "43.33",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+          "uptime": "47.77",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+          "uptime": "52.22",
+          "ready": true,
+          "sys_boot_completed": "1"
+        }
+      ],
+      "boot_animation_events": "--------- beginning of events\nI/boot_progress_enable_screen( 1265): 16459\nI/wm_boot_animation_done( 1265): 23477\n"
+    },
+    {
+      "boot": "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+      "uptime": "48.77",
+      "logs": {
+        "boot-start.log": [
+          "2026-10-30T02:30:39Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=13.73 initial_process_scan_start",
+          "2026-10-30T02:30:39Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=13.82 initial_process_scan_absent",
+          "2026-10-30T02:30:40Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=14.22 android_boot_wait_start",
+          "2026-10-30T02:30:50Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=24.50 android_boot_complete",
+          "2026-10-30T02:30:56Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=25.68 clock_verified",
+          "2026-10-30T02:30:56Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=25.84 config_check_start",
+          "2026-10-30T02:30:58Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=27.78 final_process_scan_start",
+          "2026-10-30T02:30:58Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=27.92 final_process_scan_absent",
+          "2026-10-30T02:30:58Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=28.07 main_launched pid=3625",
+          "2026-10-30T02:30:58Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=28.17 guardian_workers_start",
+          "2026-10-30T02:31:03Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=33.10 guardian_workers_finished",
+          "2026-10-30T02:31:03Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=33.24 dns_queries_verified",
+          "2026-10-30T02:31:16Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=46.10 dns_caches_flushed",
+          "2026-10-30T02:31:17Z boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=46.60 dns_takeover_ready"
+        ],
+        "dns-guard.log": [
+          "boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=8.04 rules_installed",
+          "boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=8.22 rules_installed",
+          "boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=47.82 startup_audit_ready"
+        ],
+        "dns-upgrade.log": [
+          "dns_upgrade_phase boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=10.07 preflight_start locked=",
+          "dns_upgrade_phase boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=11.17 scan_start locked=",
+          "dns_upgrade_phase boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=11.23 scan_absent locked=",
+          "dns_upgrade_phase boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=11.35 preflight_start locked=--locked",
+          "dns_upgrade_phase boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=12.01 scan_start locked=--locked",
+          "dns_upgrade_phase boot=2dcd94f4-5834-46ca-aef3-03ba0885da90 uptime=12.07 scan_absent locked=--locked"
+        ]
+      },
+      "ready": true,
+      "sys_boot_completed": "1",
+      "snapshot": {
+        "boot": "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+        "foreground": "mResumedActivity: ActivityRecord{476d2eb u0 com.player.diyp2020/com.player.activity.PlayerActivity t5098}",
+        "decoders": [
+          {
+            "frame width": 1920,
+            "frame height": 1080,
+            "frame count": 227,
+            "drop count": 0,
+            "fra err count": 0,
+            "hw err count": 0
+          }
+        ],
+        "processes": {
+          "sing-box run -c /data/adb/video-proxy/config.json": {
+            "pid": 3625,
+            "startticks": "2798"
+          },
+          "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+            "pid": 3766,
+            "startticks": "2878"
+          },
+          "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+            "pid": 4065,
+            "startticks": "3062"
+          },
+          "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+            "pid": 4405,
+            "startticks": "3216"
+          }
+        }
+      },
+      "observations": [
+        {
+          "boot": "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+          "uptime": "34.39",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+          "uptime": "39.14",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+          "uptime": "43.88",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+          "uptime": "48.77",
+          "ready": true,
+          "sys_boot_completed": "1"
+        }
+      ],
+      "boot_animation_events": "--------- beginning of events\nI/boot_progress_enable_screen( 1181): 16405\nI/wm_boot_animation_done( 1181): 23368\n"
+    },
+    {
+      "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+      "uptime": "48.64",
+      "logs": {
+        "boot-start.log": [
+          "2026-10-30T02:34:51Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=13.03 initial_process_scan_start",
+          "2026-10-30T02:34:51Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=13.09 initial_process_scan_absent",
+          "2026-10-30T02:34:51Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=13.50 android_boot_wait_start",
+          "2026-10-30T02:35:01Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=23.69 android_boot_complete",
+          "2026-10-30T02:35:06Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=24.33 clock_verified",
+          "2026-10-30T02:35:06Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=24.37 config_check_start",
+          "2026-10-30T02:35:08Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=26.59 final_process_scan_start",
+          "2026-10-30T02:35:08Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=26.80 final_process_scan_absent",
+          "2026-10-30T02:35:08Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=27.05 main_launched pid=3344",
+          "2026-10-30T02:35:08Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=27.14 guardian_workers_start",
+          "2026-10-30T02:35:14Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=32.65 guardian_workers_finished",
+          "2026-10-30T02:35:14Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=32.87 dns_queries_verified",
+          "2026-10-30T02:35:26Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=44.64 dns_caches_flushed",
+          "2026-10-30T02:35:26Z boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=45.07 dns_takeover_ready"
+        ],
+        "dns-guard.log": [
+          "boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=8.13 rules_installed",
+          "boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=8.32 rules_installed",
+          "boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=46.31 startup_audit_ready"
+        ],
+        "dns-upgrade.log": [
+          "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=9.95 preflight_start locked=",
+          "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=11.06 scan_start locked=",
+          "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=11.12 scan_absent locked=",
+          "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=11.22 preflight_start locked=--locked",
+          "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=11.88 scan_start locked=--locked",
+          "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=11.92 scan_absent locked=--locked"
+        ]
+      },
+      "ready": true,
+      "sys_boot_completed": "1",
+      "snapshot": {
+        "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+        "foreground": "mResumedActivity: ActivityRecord{96aa4e3 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5100}",
+        "decoders": [
+          {
+            "frame width": 1920,
+            "frame height": 1080,
+            "frame count": 192,
+            "drop count": 0,
+            "fra err count": 0,
+            "hw err count": 0
+          }
+        ],
+        "processes": {
+          "sing-box run -c /data/adb/video-proxy/config.json": {
+            "pid": 3344,
+            "startticks": "2693"
+          },
+          "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+            "pid": 3554,
+            "startticks": "2811"
+          },
+          "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+            "pid": 3846,
+            "startticks": "3014"
+          },
+          "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+            "pid": 4140,
+            "startticks": "3171"
+          }
+        }
+      },
+      "observations": [
+        {
+          "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+          "uptime": "34.60",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+          "uptime": "39.19",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+          "uptime": "43.85",
+          "ready": false,
+          "sys_boot_completed": "1"
+        },
+        {
+          "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+          "uptime": "48.64",
+          "ready": true,
+          "sys_boot_completed": "1"
+        }
+      ],
+      "boot_animation_events": "--------- beginning of events\nI/boot_progress_enable_screen( 1262): 16586\nI/wm_boot_animation_done( 1262): 23581\n"
+    }
+  ],
+  "production": {
+    "results": [
+      {
+        "family": "v4",
+        "port": 19102,
+        "target": "egress",
+        "rc": 0,
+        "response": "200 13 2.672545",
+        "valid": true
+      },
+      {
+        "family": "v4",
+        "port": 19102,
+        "target": "youtube",
+        "rc": 0,
+        "response": "200 958135 13.175500",
+        "valid": true
+      },
+      {
+        "family": "v4",
+        "port": 19102,
+        "target": "payload1m",
+        "rc": 0,
+        "response": "200 1048576 7.247464",
+        "valid": true
+      },
+      {
+        "family": "v4",
+        "port": 19111,
+        "target": "production-dot",
+        "valid": true,
+        "answer_count": 8,
+        "seconds": 1.934
+      },
+      {
+        "family": "v6",
+        "port": 19105,
+        "target": "egress",
+        "rc": 0,
+        "response": "200 13 0.933916",
+        "valid": true
+      },
+      {
+        "family": "v6",
+        "port": 19105,
+        "target": "youtube",
+        "rc": 0,
+        "response": "200 959857 8.175514",
+        "valid": true
+      },
+      {
+        "family": "v6",
+        "port": 19105,
+        "target": "payload1m",
+        "rc": 0,
+        "response": "200 1048576 7.626820",
+        "valid": true
+      },
+      {
+        "family": "v6",
+        "port": 19113,
+        "target": "production-dot",
+        "valid": true,
+        "answer_count": 8,
+        "seconds": 1.016
+      }
+    ],
+    "all_requests_passed": true,
+    "files": [
+      {
+        "path": "config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "video-boot-start.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/main-config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/active-main.sha256",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/release-id",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/enabled",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/manifest.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/service.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/video-boot-start.next.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/guard.dex",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/guard-config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/guard-observe.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/workers/rack/config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/workers/rack/config.sha256",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "video-dns-service-start.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/workerctl.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      }
+    ],
+    "external_assets": {
+      "/data/adb/service.d/video-proxy.sh": true,
+      "/data/adb/video-proxy/video-dns-guard.sh": true,
+      "/data/adb/post-fs-data.d/video-dns-guard.sh": true
+    },
+    "before": {
+      "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+      "foreground": "mResumedActivity: ActivityRecord{96aa4e3 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5100}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 1131,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3344,
+          "startticks": "2693"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3554,
+          "startticks": "2811"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 3846,
+          "startticks": "3014"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 4140,
+          "startticks": "3171"
+        }
+      }
+    },
+    "after": {
+      "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+      "foreground": "mResumedActivity: ActivityRecord{96aa4e3 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5100}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 2272,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3344,
+          "startticks": "2693"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3554,
+          "startticks": "2811"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 3846,
+          "startticks": "3014"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 4140,
+          "startticks": "3171"
+        }
+      }
+    },
+    "selected": {
+      "youtube-video": "yt-rack-hy2",
+      "dns-uplink": "dns-rack-reality",
+      "zgo-video": "zgo-hy2"
+    },
+    "guard_check": {
+      "config_valid": true,
+      "candidate_count": 5,
+      "dns_candidate_count": 3,
+      "authorized": true,
+      "dry_run": false,
+      "markers": {
+        "enabled": "valid_permissions",
+        "boot_guard": "valid_permissions",
+        "release_id": "valid_permissions"
+      }
+    },
+    "dns_guard": "",
+    "dns5354": "DNS_OK 142.251.156.4",
+    "transaction": "dns_upgrade_phase boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=132.81 preflight_start locked=\ndns_upgrade_verified_read_only",
+    "maintenance_lock": "0",
+    "app_pid": "3733",
+    "zgo_worker_unchanged": true,
+    "boot_unchanged": true
+  },
+  "dependencies_and_preferences": {
+    "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+    "dependencies": {
+      "video-proc-scan": {
+        "sha_ok": true,
+        "mode_ok": true
+      },
+      "dns-upgrade-apply.sh": {
+        "sha_ok": true,
+        "mode_ok": true
+      },
+      "service-start-entry.sh": {
+        "sha_ok": true,
+        "mode_ok": true
+      }
+    },
+    "unique_process_counts": {
+      "sing-box run -c /data/adb/video-proxy/config.json": 1,
+      "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": 1,
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": 1,
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": 1
+    },
+    "smarttube_preferences": {
+      "preferred_dns_type": "1",
+      "disable_auto_network_repair": "true"
+    },
+    "snapshot": {
+      "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+      "foreground": "mResumedActivity: ActivityRecord{96aa4e3 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5100}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 3072,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3344,
+          "startticks": "2693"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3554,
+          "startticks": "2811"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 3846,
+          "startticks": "3014"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 4140,
+          "startticks": "3171"
+        }
+      }
+    }
+  },
+  "worker_traffic": {
+    "rows": [
+      {
+        "lane": "yt-rack-hy2",
+        "port": 19101,
+        "target": "youtube",
+        "rc": 0,
+        "response": "200 957231 7.744406",
+        "valid": true
+      },
+      {
+        "lane": "yt-rack-hy2",
+        "port": 19101,
+        "target": "payload1m",
+        "rc": 0,
+        "response": "200 1048576 7.278623",
+        "valid": true
+      },
+      {
+        "lane": "yt-zgo-hy2",
+        "port": 19104,
+        "target": "youtube",
+        "rc": 0,
+        "response": "200 959803 8.323140",
+        "valid": true
+      },
+      {
+        "lane": "yt-zgo-hy2",
+        "port": 19104,
+        "target": "payload1m",
+        "rc": 0,
+        "response": "200 1048576 6.999938",
+        "valid": true
+      }
+    ],
+    "all_passed": true,
+    "before": {
+      "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+      "foreground": "mResumedActivity: ActivityRecord{96aa4e3 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5100}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 3980,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3344,
+          "startticks": "2693"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3554,
+          "startticks": "2811"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 3846,
+          "startticks": "3014"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 4140,
+          "startticks": "3171"
+        }
+      }
+    },
+    "after": {
+      "boot": "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c",
+      "foreground": "mResumedActivity: ActivityRecord{96aa4e3 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5100}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 4755,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3344,
+          "startticks": "2693"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3554,
+          "startticks": "2811"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 3846,
+          "startticks": "3014"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 4140,
+          "startticks": "3171"
+        }
+      }
+    },
+    "selected_before": {
+      "youtube-video": "yt-rack-hy2",
+      "dns-uplink": "dns-rack-reality",
+      "zgo-video": "zgo-hy2"
+    },
+    "selected_after": {
+      "youtube-video": "yt-rack-hy2",
+      "dns-uplink": "dns-rack-reality",
+      "zgo-video": "zgo-hy2"
+    }
+  },
+  "current_boot_assets": {
+    "amendment": "Pinned native process scanner; next-boot stage entry",
+    "parent_release": "40801839b020a05fdc7c7e49ed4702e39831033564ec4ddfaaab460d6ac9f82b",
+    "files": {
+      "/data/adb/video-proxy/video-dns-guard.sh": "1d6095450accfb5b1dd4fd64d45e6bce87a9cff418b9242cb68e6541f7aeb5a4",
+      "/data/adb/post-fs-data.d/video-dns-guard.sh": "fdaa9f12954f2a51ab3d8dfac43cac24009ddbdeb96cf03eb18daef84ff3594c",
+      "/data/adb/service.d/video-proxy.sh": "5ffc9f4bd251d67ea7966ff60c74785fdd64e9d1dca76740cb1fe0582cc3099f"
+    },
+    "backup": "/data/adb/video-proxy/backup-dns-lock-20261030",
+    "verification": "Two software reboots: full DNS/cache ready 46.60s and 45.07s; final IPv4/IPv6 and both HY2 complete payloads, DoT, 5354, sixteen files, dependency hashes/modes and unique processes passed",
+    "note": "Overrides initial release manifest boot_assets snapshot for these external boot scripts.",
+    "stage": "/data/adb/video-proxy/boot-fast-20261030-workers",
+    "dependency_manifest": "/data/adb/video-proxy/boot-fast-20261030-workers/dependency-manifest.json",
+    "source_commit": "77400ea7829e13e201cad4e3c04ba49bafde3d09",
+    "verified_boots": [
+      "2dcd94f4-5834-46ca-aef3-03ba0885da90",
+      "5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c"
+    ]
+  },
+  "native_probe": {
+    "helper_sha": "efe742da8fc2bb56457dde337e283826908ef37b9b15046691067ac339600af2",
+    "rows": [
+      {
+        "mode": "main",
+        "positive": true,
+        "rc": 0,
+        "seconds": 0.0582
+      },
+      {
+        "mode": "main",
+        "positive": false,
+        "rc": 1,
+        "seconds": 0.0577
+      },
+      {
+        "mode": "transaction",
+        "positive": true,
+        "rc": 0,
+        "seconds": 0.0612
+      },
+      {
+        "mode": "transaction",
+        "positive": false,
+        "rc": 1,
+        "seconds": 0.0659
+      }
+    ],
+    "before": {
+      "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+      "foreground": "mResumedActivity: ActivityRecord{9e9a12c u0 com.player.diyp2020/com.player.activity.PlayerActivity t5094}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 57821,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 8491,
+          "startticks": "5951"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 8533,
+          "startticks": "5985"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 9089,
+          "startticks": "6620"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 9654,
+          "startticks": "7171"
+        }
+      }
+    },
+    "after": {
+      "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+      "foreground": "mResumedActivity: ActivityRecord{9e9a12c u0 com.player.diyp2020/com.player.activity.PlayerActivity t5094}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 57848,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 8491,
+          "startticks": "5951"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 8533,
+          "startticks": "5985"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 9089,
+          "startticks": "6620"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 9654,
+          "startticks": "7171"
+        }
+      }
+    }
+  },
+  "native_worker_probe": {
+    "sha": "279a372e0e4ddbd0e8304f2b2c123b19401ed2e60708d1118926f5b3358e2357",
+    "rows": [
+      {
+        "worker": "rack",
+        "rc": 0,
+        "seconds": 0.0623
+      },
+      {
+        "worker": "zgo",
+        "rc": 0,
+        "seconds": 0.0625
+      },
+      {
+        "worker": "absent",
+        "rc": 1,
+        "seconds": 0.055
+      }
+    ],
+    "before": {
+      "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+      "foreground": "mResumedActivity: ActivityRecord{4b200c1 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5096}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 6554,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3415,
+          "startticks": "2718"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3612,
+          "startticks": "2833"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 4837,
+          "startticks": "3585"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 6178,
+          "startticks": "4509"
+        }
+      }
+    },
+    "after": {
+      "boot": "e3f5aac8-9f11-4b7e-b822-84c89b892202",
+      "foreground": "mResumedActivity: ActivityRecord{4b200c1 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5096}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 6579,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 3415,
+          "startticks": "2718"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 3612,
+          "startticks": "2833"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 4837,
+          "startticks": "3585"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 6178,
+          "startticks": "4509"
+        }
+      }
+    }
+  },
+  "tests": {
+    "scanner_transaction_stage_wiring_unittest": 93,
+    "dns_guard_boot_assertions": 69,
+    "worker_native_assertions": 61,
+    "worker_fallback_assertions": 61,
+    "integration_assertions": 15,
+    "activation_recovery_unittest": 6
+  },
+  "boundaries": [
+    "software reboot only; final-version physical power loss not tested",
+    "DIYP playback verified; SmartTube actual playback not exercised",
+    "no long-term outage/failover or benchmark throughput claim; traffic checks rate-limited at 128KiB/s"
+  ],
+  "grok_review": {
+    "final_task": "8ad4d868-bfd8-4684-b755-d6d59770345f",
+    "session": 306,
+    "result": "no blocking implementation bug found in final v2 delta",
+    "scope": "read-only source review; no device access or rerun of final acceptance"
+  }
+}

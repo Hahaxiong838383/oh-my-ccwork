@@ -1,0 +1,175 @@
+{
+  "status": "Research only; no production change or reboot this turn",
+  "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+  "measurements": [
+    {
+      "probe": "shell_fullscan_main_absent",
+      "seconds": 3.903,
+      "result": "result=1",
+      "boundary": "warm live system read-only; full-scan absence simulated, not actual boot stage timing"
+    },
+    {
+      "probe": "shell_fullscan_transaction_absent",
+      "seconds": 12.406,
+      "result": "result=1",
+      "boundary": "warm live system read-only; full-scan absence simulated, not actual boot stage timing"
+    },
+    {
+      "probe": "shell_fullscan_worker_absent",
+      "seconds": 3.732,
+      "result": "result=1",
+      "boundary": "warm live system read-only; full-scan absence simulated, not actual boot stage timing"
+    },
+    {
+      "probe": "native_pgrep_cmdline",
+      "seconds": 0.062,
+      "result": "8491\n9089\n9654\nresult=0",
+      "boundary": "warm live system read-only; full-scan absence simulated, not actual boot stage timing"
+    },
+    {
+      "probe": "proc_count",
+      "seconds": 0.043,
+      "result": "count=270",
+      "boundary": "warm live system read-only; full-scan absence simulated, not actual boot stage timing"
+    }
+  ],
+  "filter_comparison": [
+    {
+      "name": "original_live_presence",
+      "seconds": 3.637,
+      "result": "result=0"
+    },
+    {
+      "name": "native_filter_same_exact_checks",
+      "seconds": 0.103,
+      "result": "result=0"
+    }
+  ],
+  "dns_path": {
+    "dns": {
+      "rules": [],
+      "final": "zgo-dns",
+      "strategy": "ipv4_only",
+      "reverse_mapping": true,
+      "optimistic": {
+        "enabled": true,
+        "timeout": "5m"
+      }
+    },
+    "dns_servers": [
+      {
+        "type": "tls",
+        "tag": "zgo-dns",
+        "server": "1.1.1.1",
+        "server_port": 853,
+        "detour": "dns-uplink"
+      },
+      {
+        "type": "tls",
+        "tag": "remote",
+        "server": "1.1.1.1",
+        "server_port": 853,
+        "detour": "auto"
+      },
+      {
+        "type": "udp",
+        "tag": "domestic",
+        "server": "223.5.5.5",
+        "server_port": null,
+        "detour": null
+      }
+    ],
+    "dns_outbounds": [
+      {
+        "type": "vless",
+        "tag": "dns-rack-reality",
+        "outbounds": null,
+        "default": null,
+        "detour": null,
+        "server": "142.11.225.39",
+        "server_port": 24443
+      },
+      {
+        "type": "vless",
+        "tag": "dns-zgo-reality",
+        "outbounds": null,
+        "default": null,
+        "detour": null,
+        "server": "38.49.38.237",
+        "server_port": 11447
+      },
+      {
+        "type": "selector",
+        "tag": "dns-uplink",
+        "outbounds": [
+          "dns-rack-reality",
+          "dns-rack-reality-ipv6",
+          "dns-zgo-reality"
+        ],
+        "default": "dns-zgo-reality",
+        "detour": null,
+        "server": null,
+        "server_port": null
+      },
+      {
+        "type": "vless",
+        "tag": "dns-rack-reality-ipv6",
+        "outbounds": null,
+        "default": null,
+        "detour": null,
+        "server": "2607:9d00:2000:28b::2f70:e3d",
+        "server_port": 24443
+      }
+    ],
+    "dns_routes": [
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "inbound": [
+          "probe-dns-rack-reality"
+        ],
+        "action": "route",
+        "outbound": "dns-rack-reality"
+      },
+      {
+        "inbound": [
+          "probe-dns-rack-reality-ipv6"
+        ],
+        "action": "route",
+        "outbound": "dns-rack-reality-ipv6"
+      },
+      {
+        "inbound": [
+          "probe-dns-zgo-reality"
+        ],
+        "action": "route",
+        "outbound": "dns-zgo-reality"
+      }
+    ]
+  },
+  "android_event_payloads": [
+    "I/boot_progress_start(  505): 8895",
+    "I/boot_progress_system_run( 1105): 11928",
+    "I/boot_progress_pms_start( 1105): 12683",
+    "I/boot_progress_pms_system_scan_start( 1105): 12866",
+    "I/boot_progress_pms_data_scan_start( 1105): 13430",
+    "I/boot_progress_pms_scan_end( 1105): 13521",
+    "I/boot_progress_pms_ready( 1105): 13734",
+    "I/boot_progress_ams_ready( 1105): 15652",
+    "I/boot_progress_enable_screen( 1105): 17147",
+    "I/sf_stop_bootanim(  567): 23485",
+    "I/wm_boot_animation_done( 1105): 23485"
+  ],
+  "sources": [
+    "https://topjohnwu.github.io/Magisk/guides.html#boot-scripts",
+    "https://android.googlesource.com/platform/frameworks/base/+/refs/tags/android-11.0.0_r48/services/core/java/com/android/server/wm/WindowManagerService.java"
+  ],
+  "boundaries": [
+    "Warm state microbenchmarks include ADB overhead; not exact cold-start stage timings",
+    "Animation done is not proof of sys.boot_completed property transition",
+    "Candidate-only native filtering is an exploratory comparison; full safety regression required",
+    "40-50 seconds is a proposed target, not a measured result"
+  ]
+}

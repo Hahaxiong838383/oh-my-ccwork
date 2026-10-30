@@ -11,6 +11,7 @@ import signal
 import socket
 import stat
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -56,17 +57,24 @@ def source():
         'experimental':{'clash_api':{'external_controller':'127.0.0.1:19090','secret':'SYNTHETIC_API_SECRET'}}}
 
 class Tests:
-    def __init__(self):
+    def __init__(self, native_scan=False):
         self.tmp=Path(tempfile.mkdtemp(prefix='youtube-runtime-tests-'));self.count=0;self.roots=[];self.pids=set()
         self.fake=self.tmp/'fake-sing-box';c=self.tmp/'fake.c';c.write_text(FAKE_C)
         subprocess.run(['cc','-O2','-Wall','-Wextra','-o',str(self.fake),str(c)],check=True)
         bb=self.tmp/'busybox';bb.write_text('#!/bin/sh\nexec "$@"\n');bb.chmod(0o700);self.bb=bb
+        self.scan=None
+        if native_scan:
+            scan_dir=self.tmp/'native-scan';scan_dir.mkdir(mode=0o700)
+            self.scan=scan_dir/'video-proc-scan'
+            subprocess.run(['cc','-std=c11','-O2','-Wall','-Wextra','-Werror',str(HERE/'video-proc-scan.c'),'-o',str(self.scan)],check=True)
     def check(self,condition,message):
         if not condition:raise AssertionError(message)
         self.count+=1;print('PASS '+message,flush=True)
     def fixture(self,name):
         root=self.tmp/name
         scripts={n:(HERE/n).read_bytes() for n in ['workerctl.sh','worker-safe-check.sh']}
+        if self.scan:
+            scripts['workerctl.sh']=scripts['workerctl.sh'].replace(b'UNSTAGED_PROC_SCAN_STAGE',b'native-scan').replace(b'UNSTAGED_PROC_SCAN_SHA256',hashlib.sha256(self.scan.read_bytes()).hexdigest().encode())
         contents=gen.assemble(source(),{'youtube':10076,'smarttube':10082},str(root),scripts)
         gen.write_release(root,contents);self.roots.append(root)
         # The fake read-only API checker is an explicit test replacement; it
@@ -230,6 +238,6 @@ class Tests:
         print('PASS all '+str(self.count)+' explicit runtime assertions',flush=True)
 
 if __name__=='__main__':
-    tests=Tests()
+    tests=Tests(native_scan='--native-scan' in sys.argv)
     try:tests.test()
     finally:tests.close()

@@ -9,7 +9,7 @@ R=$D/youtube-failover
 P=${0%/*}
 BB=/data/adb/magisk/busybox
 boot=$(cat /proc/sys/kernel/random/boot_id) || exit 1
-[ "$(cat "$P/transaction-profile")" = rack-dualstack-v1 ] || exit 2
+case "$(cat "$P/transaction-profile")" in rack-dualstack-v1|rack-dualstack-v2) ;; *) exit 2 ;; esac
 [ "$(cat "$P/authorized-current-boot-id")" = "$boot" ] || exit 3
 [ "$("$BB" stat -c %a "$P/authorized-current-boot-id")" = 600 ] || exit 4
 if [ "${1:-}" != --locked ]; then

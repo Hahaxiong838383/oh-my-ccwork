@@ -2,7 +2,8 @@
 # Local next-boot transaction only: no network, service start, or process kill.
 # transaction.tsv is immutable after staging. All secret bytes stay on device.
 # No transaction-profile file keeps the original nine-file DNS transaction.
-# rack-dualstack-v1 adds exactly six paths. Same-boot changes require
+# rack-dualstack-v1 adds six paths; v2 adds the existing workerctl.sh as well.
+# Same-boot changes require
 # --apply-authorized or --rollback-authorized; plain actions still defer.
 set -u
 umask 077
@@ -34,6 +35,7 @@ hexhash() { [ "${#1}" -eq 64 ] && case "$1" in *[!0-9a-f]*) return 1;; esac; }
 load_profile() {
   # Absence is the legacy transaction. Any other file must be exactly one name.
   profile=dns9
+  include_workerctl=no
   if [ ! -e "$P/transaction-profile" ] && [ ! -L "$P/transaction-profile" ]; then
     return 0
   fi
@@ -41,6 +43,7 @@ load_profile() {
   profile_name=$(cat "$P/transaction-profile" 2>/dev/null) || return 1
   case "$profile_name" in
     rack-dualstack-v1) profile=rack ;;
+    rack-dualstack-v2) profile=rack; include_workerctl=yes ;;
     *) return 1 ;;
   esac
 }
@@ -70,6 +73,7 @@ safe_parents() {
 }
 allowed() {
   case "$1" in
+    youtube-failover/workerctl.sh) [ "$include_workerctl" = yes ]; return $? ;;
     config.json|video-boot-start.sh|youtube-failover/main-config.json|youtube-failover/active-main.sha256|youtube-failover/release-id|youtube-failover/enabled|youtube-failover/manifest.json|youtube-failover/service.sh|youtube-failover/video-boot-start.next.sh)
       return 0 ;;
     youtube-failover/guard.dex|youtube-failover/guard-config.json|youtube-failover/guard-observe.json|youtube-failover/workers/rack/config.json|youtube-failover/workers/rack/config.sha256|video-dns-service-start.sh)
@@ -80,6 +84,15 @@ allowed() {
   esac
 }
 running() {
+  # Stager pins this digest. Missing/corrupt/uncertain helpers retain the full
+  # original predicate; only 0/1 mean a completed native decision.
+  scan="$P/video-proc-scan"
+  scan_sha=UNSTAGED_PROC_SCAN_SHA256
+  if regular "$scan" && [ -x "$scan" ] && [ "$(digest "$scan")" = "$scan_sha" ]; then
+    "$scan" "$PROC" transaction "$D" "$profile"
+    scan_rc=$?
+    case "$scan_rc" in 0|1) return "$scan_rc" ;; esac
+  fi
   for proc in "$PROC"/[0-9]*; do
     [ -r "$proc/cmdline" ] || continue
     cmd=$("$BB" tr '\000' '\n' < "$proc/cmdline" 2>/dev/null) || {
@@ -136,6 +149,7 @@ preflight() {
   done < "$P/transaction.tsv"
   need=9
   if [ "$profile" = rack ]; then need=15; fi
+  if [ "$include_workerctl" = yes ]; then need=16; fi
   [ "$count" -eq "$need" ] && anchors "$P/backup" && anchors "$P/payload"
 }
 verify_set() {
@@ -195,9 +209,12 @@ case "$action" in
     ;;
 esac
 load_profile || fail unknown_profile
+printf 'dns_upgrade_phase boot=%s uptime=%s preflight_start locked=%s\n' "$boot" "$(cut -d ' ' -f 1 /proc/uptime)" "$locked"
 preflight || fail preflight
 if [ "$action" = --verify ]; then echo dns_upgrade_verified_read_only; exit 0; fi
+printf 'dns_upgrade_phase boot=%s uptime=%s scan_start locked=%s\n' "$boot" "$(cut -d ' ' -f 1 /proc/uptime)" "$locked"
 running && fail production_process_running
+printf 'dns_upgrade_phase boot=%s uptime=%s scan_absent locked=%s\n' "$boot" "$(cut -d ' ' -f 1 /proc/uptime)" "$locked"
 # Magisk BusyBox supports pathname+command flock, not numeric descriptors or
 # -w. Only successful preflight may create this separate 0600 lock file.
 # The child keeps the caller's action, so --locked cannot drop authorization

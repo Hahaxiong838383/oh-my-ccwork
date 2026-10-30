@@ -1,5 +1,38 @@
 # YouTube / SmartTube 代理兜底
 
+## 2026-10-30 第二阶段启动优化（最终版本两次软件重启通过）
+
+完整DNS/系统缓存就绪从77.30秒降至46.60秒、45.07秒；对应后台审计47.82秒、46.31秒。
+只加速事务和主代理扫描的第一版实测51.15秒，因此继续优化两个HY2的跨boot进程扫描。
+最终guardian/两worker串行阶段约4.93/5.51秒，未改成并行；DNS查询33.24/32.87秒完成，
+缓存验证之后才写ready。设备实际Android完成检查24.50/23.69秒，不再把旧脚本53.57秒检查点当成系统启动耗时。
+
+`video-proc-scan.c`在一个原生进程中枚举完整/proc，保留原exe与完整cmdline谓词，
+不依赖comm或PID文件。返回0=命中、1=确认无、2=不确定；调用方仅采用0/1，缺失、
+摘要不符、符号链接或异常均回退原shell。锁前/锁后检查、worker PID/startticks/端口和停止检查均保留。
+只读Android正负锚约0.06秒；原事务无匹配扫描12.406秒。
+
+当前stage `/data/adb/video-proxy/boot-fast-20261030-workers`，release
+`496aee8b509dbc0b735bd5307a9ca1cb2cdc2ca9cfb300b678c0c110a1f9d924`。
+`rack-dualstack-v2`只比v1增加已有`youtube-failover/workerctl.sh`，恰16文件；v1仍15、旧DNS事务仍9。
+helper/事务引擎/独立入口置于不可变stage，700权限与SHA回读，调用方钉住helper摘要。
+service.d指向新stage入口，安装当次boot零动作；跨boot先完成事务再执行root boot脚本。
+整组回滚后该入口仍调用同一事务的`rolled_back_preserved`，然后执行恢复的旧boot；旧stage必须保留。
+`applied-boot-id`继续每boot记录，不以文件没变为由跳过校验或取消坏配置回退。
+
+构建：`bash build-proc-scan.sh`，沿用已有NDK26/ARMv7 Android30编译器；输出默认
+`/tmp/video-proc-scan-build/`，可用`TASK_ANDROID_CC`/`TASK_BUILD_DIR`覆盖。使用
+`stage_boot_fast.py --serial ... --stage-name boot-fast-YYYYMMDD[-suffix] --helper ... --evidence /tmp/... --wire-next-boot`
+先从live核manifest并生成完整备份，再接线；不直接重跑旧Rack IP迁移stager。
+原生扫描二进制与生产配置不入Git，ARM产物SHA
+`279a372e0e4ddbd0e8304f2b2c123b19401ed2e60708d1118926f5b3358e2357`。
+
+本轮验证：scanner/事务/新入口/接线93个unittest；DNS/当前boot69断言；
+worker原生和fallback各61断言；集成15断言；activation恢复6测试。
+16文件/依赖/外部资产SHA权限、唯一进程、双栈真实YouTube正文/完整1MiB/DoT/5354通过。
+DIYP1080p直播自动恢复，SmartTube保存DNS1及禁自动网络修复true保持。
+这轮未操作SmartTube前台，不用DIYP冒充其实际影片验收；物理拔电、长期稳定性另验。
+
 ## 2026-10-30 启动锁竞争优化（软件重启已验）
 
 用户手动开机后的新boot4915630e自动恢复耗时204.19秒；规则已有效时，两个启动检查入口并发执行`--install`，非阻塞flock失败可触发boot停主代理并等待30秒重试。真机对照：持锁4秒，旧版verify=0而install=1，释放后install=0。故障不是凭节点握手/下载速度推断。

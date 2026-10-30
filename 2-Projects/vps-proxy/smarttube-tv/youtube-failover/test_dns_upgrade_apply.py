@@ -4,7 +4,7 @@
 No ADB, network or production paths. Fault injection replaces only mv in PATH;
 the deployed script has no failure-injection command or test-only branch.
 A missing transaction-profile keeps the nine-file DNS transaction.
-rack-dualstack-v1 is the only other profile, and it is exactly fifteen files.
+rack-dualstack-v1 has fifteen files; v2 adds exactly workerctl.sh.
 """
 import hashlib
 import json
@@ -131,6 +131,45 @@ class Transaction(unittest.TestCase):
         path.write_text(self.boot.read_text() if text is None else text)
         path.chmod(mode)
         return path
+
+    def enable_rack_v2(self):
+        self.enable_rack()
+        name = 'youtube-failover/workerctl.sh'
+        self.paths.append(name)
+        for label, files, bases in [('old',self.old,[self.root,self.stage/'backup']),('new',self.new,[self.stage/'payload'])]:
+            files[name] = ('#!/bin/sh\n# '+label+' worker\n').encode()
+            for base in bases:
+                (base/name).write_bytes(files[name]); (base/name).chmod(0o700)
+        (self.stage/'transaction-profile').write_text('rack-dualstack-v2\n')
+        self.write_transaction()
+
+    def test_rack_v2_applies_and_rolls_back_workerctl(self):
+        self.enable_rack_v2()
+        self.assertEqual(self.run_apply().returncode,0)
+        self.assert_live(self.new)
+        self.assertEqual(self.run_apply('--rollback').returncode,0)
+        self.assert_live(self.old)
+        self.boot.write_text('future-boot\n')
+        self.assertEqual(self.run_apply().returncode,0)
+        self.assert_live(self.old)
+
+    def test_rack_v2_requires_exact_extra_member(self):
+        self.enable_rack_v2()
+        self.write_transaction(self.paths[:-1])
+        self.assert_refused_unchanged()
+        self.write_transaction()
+        (self.stage/'transaction-profile').write_text('rack-dualstack-v1\n')
+        self.assert_refused_unchanged()
+        (self.stage/'transaction-profile').write_text('rack-dualstack-v2\n')
+        (self.stage/'payload/youtube-failover/workerctl.sh').write_text('drift')
+        self.assert_refused_unchanged()
+
+    def test_rack_v2_rename_failure_restores_workerctl(self):
+        self.enable_rack_v2()
+        env=self.injected('fail', 16)
+        result=self.run_apply(env=env)
+        self.assertNotEqual(result.returncode,0)
+        self.assert_live(self.old)
 
     def run_raw(self, args, env=None):
         return subprocess.run(['busybox', 'ash', str(self.script), *args],

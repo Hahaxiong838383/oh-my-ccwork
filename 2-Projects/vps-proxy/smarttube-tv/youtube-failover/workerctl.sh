@@ -120,6 +120,14 @@ acquire_lock() {
   printf '%s|%s|%s\n' "$boot" "$$" "$(start_time $$)" > "$LOCK/owner"
 }
 any_worker_process() {
+  scan="${ROOT%/*}/UNSTAGED_PROC_SCAN_STAGE/video-proc-scan"
+  scan_sha=UNSTAGED_PROC_SCAN_SHA256
+  if [ -f "$scan" ] && [ ! -L "$scan" ] && [ -x "$scan" ] &&
+     [ "$("$BB" sha256sum "$scan" | "$BB" awk '{print $1}')" = "$scan_sha" ]; then
+    "$scan" /proc worker "$BIN" "$CFG"
+    scan_rc=$?
+    case "$scan_rc" in 0|1) return "$scan_rc" ;; esac
+  fi
   for proc in /proc/[0-9]*; do
     candidate=${proc#/proc/}
     exact_process "$candidate" && return 0

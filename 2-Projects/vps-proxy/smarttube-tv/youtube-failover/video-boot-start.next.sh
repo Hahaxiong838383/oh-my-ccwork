@@ -15,6 +15,14 @@ fi
 
 # HY2 workers share the binary. Only the production config owns the TUN.
 production_proxy_running() {
+  scan="$D/UNSTAGED_PROC_SCAN_STAGE/video-proc-scan"
+  scan_sha=UNSTAGED_PROC_SCAN_SHA256
+  if [ -f "$scan" ] && [ ! -L "$scan" ] && [ -x "$scan" ] &&
+     [ "$("$BB" sha256sum "$scan" | "$BB" awk '{print $1}')" = "$scan_sha" ]; then
+    "$scan" /proc main "$D" dns9
+    scan_rc=$?
+    case "$scan_rc" in 0|1) return "$scan_rc" ;; esac
+  fi
   for proc in /proc/[0-9]*; do
     [ "$(readlink "$proc/exe" 2>/dev/null)" = "$D/sing-box" ] || continue
     cmd=$(tr '\000' ' ' < "$proc/cmdline" 2>/dev/null) || continue
@@ -41,9 +49,11 @@ if [ "$(cat "$D/boot-ready-boot-id" 2>/dev/null)" = "$boot" ]; then
   exit 0
 fi
 # Never kill or replace an existing service from the boot path.
+log initial_process_scan_start
 if production_proxy_running; then
   fail existing_proxy_preserved
 fi
+log initial_process_scan_absent
 if [ -f "$D/hybrid-pending" ]; then
   fail pending_legacy_trial_requires_recovery
 fi
@@ -61,6 +71,7 @@ ensure_dns_guard || retry early_dns_guard_unavailable
 
 # Android's early startup may replace the RTC's 1970 time with the build date.
 # Wait until that phase is over before setting time ourselves.
+log android_boot_wait_start
 i=0
 while [ "$(getprop sys.boot_completed)" != 1 ]; do
   i=$((i+1))
@@ -99,6 +110,7 @@ delta=$((now-epoch)); [ "$delta" -ge 0 ] || delta=$((-delta))
 [ "$delta" -le 3 ] || fail clock_readback_failed
 log clock_verified
 
+log config_check_start
 if ! "$D/sing-box" check -c "$D/config.json" >> "$D/boot-start.log" 2>&1; then
   # Only the next-boot transaction that actually applied in this boot may undo
   # its config. Network or upstream DNS failures never trigger this rollback.
@@ -115,16 +127,21 @@ if ! "$D/sing-box" check -c "$D/config.json" >> "$D/boot-start.log" 2>&1; then
   fail config_check_failed
 fi
 # Recheck under the same lock immediately before creating the process.
+log final_process_scan_start
 production_proxy_running && fail proxy_appeared_preserved
+log final_process_scan_absent
 if [ -f "$D/sing-box-zgo.log" ] && [ "$(wc -c < "$D/sing-box-zgo.log")" -gt 5000000 ]; then
   mv "$D/sing-box-zgo.log" "$D/sing-box-zgo.log.1" || fail log_rotation_failed
 fi
 "$BB" nohup "$D/sing-box" run -c "$D/config.json" >> "$D/run.log" 2>&1 </dev/null &
 owned_pid=$!
+log "main_launched pid=$owned_pid"
 # Start only an explicitly activated release, after time validation and main
 # launch but BEFORE the DNS gate. The DNS selector must be recoverable here.
 if [ -f "$D/youtube-failover/enabled" ]; then
+  log guardian_workers_start
   sh "$D/youtube-failover/service.sh" boot-start >> "$D/boot-start.log" 2>&1 || log youtube_guard_start_failed
+  log guardian_workers_finished
 fi
 stop_owned_proxy() {
   # Only a process created by this invocation, with the expected executable.
