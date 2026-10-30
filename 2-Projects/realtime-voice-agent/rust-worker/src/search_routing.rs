@@ -114,6 +114,10 @@ fn weather_place_words(q: &str) -> String {
         if known_weather_place(rest) {break;}
         if let Some(next)=WORDS.iter().find_map(|w|rest.strip_suffix(w)){rest=next;continue;}
         if let Some(next)=WORDS.iter().find_map(|w|rest.strip_prefix(w)){rest=next;continue;}
+        // Natural-weather rules can retain the imperative (e.g. 查北京今天的天气).
+        // Peel only leading request grammar; preserve the original query and
+        // still require an exact catalog place before selecting a weather tool.
+        if let Some(next)=["请查一下","请查查","请查询","请查","查一下","查一查","查查","查询","查"].iter().find_map(|w|rest.strip_prefix(w)){rest=next;continue;}
         break;
     }
     rest.into()
@@ -234,6 +238,23 @@ mod style_ark_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn r26_continued_weather_imperative_keeps_verified_place() {
+        let c=RoutingConfig{weather_enabled:true,auto_location_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()};
+        for (text,place) in [("查北京今天的天气","北京"),("查成都今天的天气","成都"),("请查一下北京市明天天气","北京市"),("小可，查深圳现在多少度","深圳")] {
+            let d=RoutingSession::default().route(text,0,Some(&c),"r26-continued");
+            assert_eq!(d.action,"search","{text}");
+            assert_eq!(d.place_weather.as_ref().map(|w|w.place.as_str()),Some(place),"{text}: {d:?}");
+            assert!(d.auto_weather.is_none(),"explicit place must not become device location");
+        }
+        for text in ["查我家附近今天的天气","查北京大学今天的天气","查北京下周的天气","查北京和上海今天的天气"] {
+            let d=RoutingSession::default().route(text,0,Some(&c),"r26-continued");
+            assert!(d.place_weather.is_none(),"{text}: {d:?}");
+            assert!(d.auto_weather.is_none(),"unsupported explicit place/date must not become local");
+        }
+        for text in ["不要查北京今天的天气","如果查北京今天的天气会怎样","我今天查北京天气","查是什么意思"] {
+            assert_eq!(RoutingSession::default().route(text,0,Some(&c),"r26-continued").action,"chat","{text}");
+        }
+    }
     #[test] fn r23_weather_question_and_activity_tail_do_not_become_places() {
         let c=RoutingConfig{weather_enabled:true,auto_location_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()};
         for text in ["帮我查一下今天这里下不下雨", "帮我查一下今天这里下不下雨，放学适合打球吗", "今天这里下不下雨放学适合打球吗", "这里明天会不会下雨，出门要带伞吗", "帮我查今天这里天气，放学适合打球吗", "今天这里要不要带伞"] {
