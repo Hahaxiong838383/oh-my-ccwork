@@ -1,7 +1,7 @@
 {
   "id": "p003-listening-mode-v1",
   "version": 1,
-  "status": "implementation-contract-not-released",
+  "status": "frozen_for_integration",
   "topic": "control",
   "delivery": "reliable-ordered",
   "capability": "listening_mode_v1",
@@ -75,7 +75,7 @@
       "failed",
       "interrupted"
     ],
-    "singing_trigger": "button only in P0",
+    "singing_trigger": "button; or voice_command only with negotiated listening_voice_control_v1 and frozen voice_invitation_enabled=true; voice_invitation remains forbidden for singing",
     "user_speaking": "reject request while input active; new speech revokes reserved/active permit; speech_end never resumes cancelled output"
   },
   "lease": {
@@ -171,5 +171,271 @@
     "older_than_ledger": "conservative summary invalidation and explicit context gap",
     "summary_reply": "bound to authenticated room/session/trace/listening_id plus retained ticket and buffer instance; stale reply rejected",
     "gap": "true for source loss OR unsummarized prefix omitted from recent context; never infer uninterrupted complete recall"
-  }
+  },
+  "voice_extension_revision": 1,
+  "voice_control": {
+    "version": 1,
+    "capability": "listening_voice_control_v1",
+    "default": "not granted unless all negotiation conditions hold; does not expand gate/allowlist/scenes",
+    "negotiation": [
+      "Android POST /v1/device/session supports includes BOTH listening_mode_v1 and listening_voice_control_v1.",
+      "Approved release agent capabilities AND fresh authenticated worker-ready capabilities both include listening_voice_control_v1 in addition to the original five; same approved build and applied config ack remain required.",
+      "Existing tuning.voice_invitation_enabled=true at session issue. No new setting/schema; old config/hash unchanged. Brain includes optional voice_control:{version:1,capability:listening_voice_control_v1} in signed job listening metadata AND Android listening_contract only after negotiation; absence means unsupported.",
+      "Brain persists only negotiated capability for internal voice_command authorization. New entry consumes frozen tuning; turning voice invitations off applies to new entries, existing entry keeps its snapshot. Safe explicit exit is not blocked by the invitation flag. Gate/lease/registry revocation still closes old RTC, never bypassed."
+    ],
+    "proposal": {
+      "type": "listening.proposal",
+      "src": "worker",
+      "topic": "control",
+      "reliable": true,
+      "android_seq": "ABSENT; Worker never allocates Android seq",
+      "payload": {
+        "version": 1,
+        "proposal_id": "trace-test-1:voice:1",
+        "session_id": "test-session-1",
+        "participant": "dev-BJP00326070803800006",
+        "mode_epoch": 0,
+        "action": "enter",
+        "scene": "story",
+        "ttl_ms": 3000
+      },
+      "actions": "enter requires scene; exit omits scene; no feedback proposal needed (existing Worker single permit). No raw command text in control payload.",
+      "trust": "Android checks actual publishing Worker participant matches current expected agent/room, current trace/session and target dev-SN. Worker checks actual returning participant equals bound dev-SN, trace, epoch, original action/scene, current authority and live pending proposal. src string alone is never authentication."
+    },
+    "android_echo": {
+      "field": "proposal_id",
+      "commands": [
+        "listening.enter",
+        "listening.exit"
+      ],
+      "optional": true,
+      "rule": "Only negotiated clients may echo proposal_id. Android allocates its usual next seq/request_id and copies proposal epoch/action/scene exactly; Worker consumes live proposal once. Identical Android retransmission uses same seq/body and returns existing ACK; never consumes another proposal. local_ready stays unchanged. Missing proposal_id is the old manual/button flow, not a voice source."
+    },
+    "lifecycle": [
+      "At most one pending proposal per job; proposal_id trace:voice:counter is Worker-local, never an Android seq. Retransmit only the same proposal; never reset its deadline. Worker uses monotonic 3000ms since creation; Android drops after <=3000ms since receipt and never extends on duplicate. Worker deadline is authoritative against delayed delivery; no clock sync assumption.",
+      "Enter recognition immediately suppresses ordinary chat/speculation/filler and cancels pending ordinary output; receipt is not success. Android automatically stops local prompts/queued playout, keeps microphone and idle policy active, sends enter, then local_ready at received epoch. No spoken confirmation in v1.",
+      "Completed entry ACK still needs BOTH Worker output drain and Android local_ready; echoes original enter seq/request_id. Never label proposal delivery or received ACK as listening success.",
+      "Keep STT/capture alive on wake FIRST utterance and throughout pending/entering. Strip command prefix only; same-utterance tail and subsequent narrative enter bounded pending story buffer, then listening buffer on completed. Never send command/tail to ordinary chat/memory. On overflow/gap report context gap; do not claim complete recall.",
+      "Expired/rejected/conflicting proposal, entry timeout or authority loss keeps output silent; query state using new Android seq, then close/rebuild RTC if state untrusted or paused. Do not replay narrative through ordinary chat or auto-retry entry after expiry. Duplicates do not create new proposals or feedback turns.",
+      "Explicit valid exit cancels feedback, discards pending output, closes old entry through existing flow; completed ACK state normal means ordinary chat may handle NEXT new speech. No catch-up replay of story/lyrics. Exit failure/lease expiry stays paused and requires new RTC; voice does not recover revoked authority."
+    ],
+    "feedback": {
+      "http_trigger": "voice_command",
+      "source": "Worker explicit called-name end-of-story/end-of-song command, not Android button",
+      "requires": "negotiated voice capability + frozen voice_invitation_enabled + current lease and existing one-turn permit/cooldown/VAD/epoch gates",
+      "singing": "Only standalone called-name after-song phrase after input end; no generic invitation, punctuation, lyrics question, goodbye or just 讲完了. No button spoof. No acoustic evaluation from STT.",
+      "privacy": "Strip control phrase from story/summary/ordinary chat/long-term memory; question may contain sanitized intent description, not raw voice command. One feedback then listening; speech revokes permission as before."
+    },
+    "legacy": "No new capability => no proposal, no singing voice_command; old manual Android controls/button and enabled story/sharing voice_invitation remain unchanged. Never imply full voice mode exists on old APK.",
+    "recognition": {
+      "kind": "finite explicit STT phrase rules; no LLM classifier; not zero-false-trigger",
+      "enter": {
+        "story": [
+          "小可先听我讲个故事",
+          "小可先听我讲故事"
+        ],
+        "sharing": [
+          "小可先听我说一会儿",
+          "小可先听我分享一下"
+        ],
+        "singing": [
+          "小可听我唱首歌",
+          "小可先听我唱歌"
+        ]
+      },
+      "feedback_story": [
+        "小可我讲完了请说说你的看法",
+        "小可我说完了请给我反馈"
+      ],
+      "feedback_singing": [
+        "小可我唱完了请给我反馈"
+      ],
+      "exit": [
+        "小可结束倾听恢复聊天",
+        "小可退出倾听模式"
+      ],
+      "normalization": "Whitespace and Chinese/ASCII punctuation only; require called-name at start; enter may have trailing story text, feedback/exit must be standalone. Reject quotation/reporting prefixes and incomplete ASR prefixes; final STT commits only. Singing feedback only after speech_end, no new song classifier.",
+      "negative_examples": [
+        "讲完了",
+        "你觉得呢？",
+        "我唱完了",
+        "歌词里唱：小可我唱完了请给我反馈",
+        "他说小可先听我讲个故事",
+        "小可先听我讲个故事吗",
+        "小可结束倾听恢复聊天这是台词",
+        "再见"
+      ]
+    }
+  },
+  "voice_examples": [
+    {
+      "name": "enter proposal",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "worker",
+        "type": "listening.proposal",
+        "payload": {
+          "version": 1,
+          "proposal_id": "trace-test-1:voice:1",
+          "session_id": "test-session-1",
+          "participant": "dev-BJP00326070803800006",
+          "mode_epoch": 0,
+          "action": "enter",
+          "scene": "story",
+          "ttl_ms": 3000
+        }
+      }
+    },
+    {
+      "name": "Android automatic enter",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "android",
+        "type": "listening.enter",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:1",
+          "mode_epoch": 0,
+          "scene": "story",
+          "proposal_id": "trace-test-1:voice:1"
+        },
+        "seq": 1
+      }
+    },
+    {
+      "name": "received is not listening",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "worker",
+        "type": "listening.ack",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:1",
+          "command_seq": 1,
+          "stage": "received",
+          "state": "entering",
+          "mode_epoch": 1,
+          "scene": "story",
+          "listening_id": "trace-test-1:1",
+          "duplicate": false,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "Android local stop completed, microphone stays active",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "android",
+        "type": "listening.local_ready",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:2",
+          "mode_epoch": 1
+        },
+        "seq": 2
+      }
+    },
+    {
+      "name": "drained and local_ready completed",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "worker",
+        "type": "listening.ack",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:1",
+          "command_seq": 1,
+          "stage": "completed",
+          "state": "listening",
+          "mode_epoch": 1,
+          "scene": "story",
+          "listening_id": "trace-test-1:1",
+          "duplicate": false,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "exit proposal",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "worker",
+        "type": "listening.proposal",
+        "payload": {
+          "version": 1,
+          "proposal_id": "trace-test-1:voice:2",
+          "session_id": "test-session-1",
+          "participant": "dev-BJP00326070803800006",
+          "mode_epoch": 1,
+          "action": "exit",
+          "ttl_ms": 3000
+        }
+      }
+    },
+    {
+      "name": "Android automatic exit",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "android",
+        "type": "listening.exit",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:3",
+          "mode_epoch": 1,
+          "proposal_id": "trace-test-1:voice:2"
+        },
+        "seq": 3
+      }
+    },
+    {
+      "name": "resume NEXT chat only",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "worker",
+        "type": "listening.ack",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:3",
+          "command_seq": 3,
+          "stage": "completed",
+          "state": "normal",
+          "mode_epoch": 2,
+          "scene": null,
+          "listening_id": null,
+          "duplicate": false,
+          "reason": null
+        }
+      }
+    },
+    {
+      "name": "late proposal rejected, no automatic chat",
+      "message": {
+        "trace_id": "trace-test-1",
+        "ts_ms": 1800000000000,
+        "src": "worker",
+        "type": "listening.ack",
+        "payload": {
+          "version": 1,
+          "request_id": "trace-test-1:4",
+          "command_seq": 4,
+          "stage": "rejected",
+          "state": "paused",
+          "mode_epoch": 2,
+          "scene": null,
+          "listening_id": null,
+          "duplicate": false,
+          "reason": "proposal_expired"
+        }
+      }
+    }
+  ]
 }

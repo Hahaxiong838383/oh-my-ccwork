@@ -69,7 +69,13 @@
         "applied_config_sha256": null
       },
       "response": "{version,ok,ready,policy_revision,config_sha256,config:{scenes,tuning,limits}}; first ack null offers current config; ready needs approved release + fresh matching application ack; registered=false withdraws instance",
-      "body_bytes": 4096
+      "body_bytes": 4096,
+      "optional_capabilities": [
+        "listening_voice_control_v1"
+      ],
+      "rules": [
+        "Original five required; optional sixth listening_voice_control_v1 only; no unknown/duplicate capabilities. Optional capability needs intersection of approved manifest and fresh worker ack; old five-capability builds stay compatible."
+      ]
     },
     "POST /lease": {
       "request": {
@@ -176,7 +182,7 @@
       },
       "response": "{version,request_id,listening_id,mode_epoch,policy_revision,snapshot_revision,text,max_chars,max_duration_ms}",
       "rules": [
-        "trigger button|voice_invitation; singing only button; voice_invitation_enabled checked.",
+        "trigger button|voice_invitation|voice_command. voice_invitation remains story/sharing only; voice_command needs negotiated session capability listening_voice_control_v1 and frozen voice_invitation_enabled=true, including singing explicit called-name after-song phrase. Never relabel voice as button.",
         "recent <=4000 chars, summary <=1200, question <=500. One request per epoch; cooldown enforced.",
         "Text <=snapshot feedback_max_chars, generation budget <=min(8s, feedback_max_duration_sec); no tool/ordinary chat/onboarding/feedback-arm/style/long-term memory writes.",
         "Current personality may be read without inject receipts. Lyrics/fiction never become autobiographical claims; no pitch/rhythm assessment.",
@@ -263,7 +269,10 @@
     },
     "heartbeat_ttl_ms": 15000,
     "runtime": "No manifest+fresh matching Worker/config ack => ready=false; truthful active/applied state only, no environment boolean override",
-    "config_ack": "applied_config_sha256 equals snapshot hash of current global configuration; approved build + fresh matching ack needed. Entry lease separately acknowledges its frozen snapshot."
+    "config_ack": "applied_config_sha256 equals snapshot hash of current global configuration; approved build + fresh matching ack needed. Entry lease separately acknowledges its frozen snapshot.",
+    "optional_capabilities": [
+      "listening_voice_control_v1"
+    ]
   },
   "fixtures": "p003-listening-http-v1.fixtures.json; synthetic values only; authorization/model doubles in offline tests do not certify production readiness",
   "hashing": "SHA256 of UTF8 canonical JSON: lexicographically sorted object keys recursively, array order retained, compact separators, Unicode unescaped. Snapshot sha256 hashes {revision,scenes,tuning,limits} without its sha256 field. source_sha256 hashes {base_summary_version,previous_summary,has_gap,segments}.",
@@ -310,6 +319,15 @@
         "sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3"
       }
     },
-    "android_response": "listening_contract contains version,capability,scenes,tuning,policy_revision,expires_at_ms only; grant/account never handed to client"
-  }
+    "android_response": "listening_contract contains version,capability,scenes,tuning,policy_revision,expires_at_ms; optional negotiated voice_control only; grant/account never handed to client",
+    "voice_control": {
+      "optional": true,
+      "shape": {
+        "version": 1,
+        "capability": "listening_voice_control_v1"
+      },
+      "rule": "Only on three-way Android/approved Worker/fresh ack negotiation AND voice_invitation_enabled. Same optional object in signed listening metadata and client listening_contract; absent means unavailable. No grant/account sent to client."
+    }
+  },
+  "voice_extension_revision": 1
 }
