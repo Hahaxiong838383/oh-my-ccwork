@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+const dir=mkdtempSync(join(tmpdir(),'listening-profile-'));
+process.env.CONFIG_DB_PATH=join(dir,'config.db');
+delete process.env.SEARCH_CANARY_HEALTH_FILE;delete process.env.LISTENING_CANARY_HEALTH_FILE;
+const {configStore}=await import('../src/config-store.js');
+const {refreshSearchCanaryLease,searchCanarySelection}=await import('../src/search-canary-runtime.js');
+const {prepareCanaryEnvironment,canaryRequestAllowed,canaryRootIsolated}=await import('../src/search-canary-guard.js');
+const old='p003-search-canary-20261021',candidate='p003-search-listening-20261030',sn='BJP00326070803800006',baseline='baseline';
+const at=Date.now();
+const put=(key:string,value:string)=>configStore.setFlag('p003.search.canary.'+key,value,'synthetic-profile-test');
+try {
+ for(const [k,v]of Object.entries({enabled:'1',allowlist:JSON.stringify([sn]),expires_at_ms:String(at+3600000),agent:old}))put(k,v);
+ process.env.SEARCH_CANARY_HEALTH_FILE=join(dir,'old.json');process.env.LISTENING_CANARY_HEALTH_FILE=join(dir,'new.json');
+ const lease=(agent:string)=>({agent,until_ms:Date.now()+14000,generation:agent,ordered_pcm_v1:true});
+ writeFileSync(process.env.SEARCH_CANARY_HEALTH_FILE,JSON.stringify(lease(old)));await refreshSearchCanaryLease();assert.equal(searchCanarySelection(sn,baseline,true).agent,old);
+ put('agent',candidate);assert.equal(searchCanarySelection(sn,baseline,true).agent,baseline,'cached old lease cannot authorize new agent');
+ await refreshSearchCanaryLease();assert.equal(searchCanarySelection(sn,baseline,true).agent,baseline);
+ writeFileSync(process.env.LISTENING_CANARY_HEALTH_FILE,JSON.stringify(lease(old)));await refreshSearchCanaryLease();assert.equal(searchCanarySelection(sn,baseline,true).agent,baseline,'old identity in new file rejected');
+ writeFileSync(process.env.LISTENING_CANARY_HEALTH_FILE,JSON.stringify(lease(candidate)));await refreshSearchCanaryLease();
+ const selected=searchCanarySelection(sn,baseline,true);assert.equal(selected.agent,candidate);assert.equal(selected.canary,true);assert.equal(selected.generation,candidate);
+ assert.equal(searchCanarySelection('BJP00399999999999999',baseline,true).agent,baseline);
+ put('agent',old);assert.equal(searchCanarySelection(sn,baseline,true).agent,baseline,'no cross-profile stale cache');await refreshSearchCanaryLease();assert.equal(searchCanarySelection(sn,baseline,true).agent,old);
+ for(const bad of ['/','/opt','/opt/p003','/opt/p003/server','/opt/p003/server/data','/opt/p003/search-canary-20261021','/opt/p003/search-verification-20261026'])assert.equal(canaryRootIsolated(bad,candidate),false,bad);
+ assert.equal(canaryRootIsolated('/opt/p003/listening-canary-20261030',candidate),true);
+ assert.equal(canaryRootIsolated('/opt/p003/search-canary-20261021',old),true);
+ const env={SEARCH_CANARY_AGENT:candidate,SEARCH_CANARY_ROOT:dir,SEARCH_CANARY_SN:sn,SEARCH_WORKER_ACCOUNT_ID:'listening-canary-worker',CUSTOM_LLM_API_KEY:'synthetic-key',AUTH_JWT_SECRET:'synthetic-secret'};
+ prepareCanaryEnvironment({...env});assert.throws(()=>prepareCanaryEnvironment({...env,SEARCH_WORKER_ACCOUNT_ID:'search-canary-worker'}));
+ const q={path:'/v1/chat/completions',room:`sn-${sn}-123`,sn,account:'listening-canary-worker',expectedAccount:'listening-canary-worker',role:'device',expires:at+3600000,now:at};
+ assert.equal(canaryRequestAllowed(q),true);assert.equal(canaryRequestAllowed({...q,account:'search-canary-worker'}),false);
+ console.log('listening profile: isolated lease, cached cross-agent rejection, real-source routing and unique service identity passed');
+}finally{rmSync(dir,{recursive:true,force:true});}

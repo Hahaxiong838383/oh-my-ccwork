@@ -3,6 +3,8 @@ export type CanaryInput = {
   expiresAtMs: number; leaseUntilMs: number; canaryAgent: string; contractCompatible: boolean;
 };
 export const SEARCH_CANARY_AGENT = 'p003-search-canary-20261021';
+export const LISTENING_CANARY_AGENT = 'p003-search-listening-20261030';
+export function isSearchCanaryAgent(agent:string):boolean {return agent===SEARCH_CANARY_AGENT||agent===LISTENING_CANARY_AGENT;}
 export function validCanaryAllowlist(list: readonly string[]): boolean {
   return list.length>=1 && list.length<=2 && new Set(list).size===list.length && list.every(sn=>/^BJP003\d{14}$/.test(sn));
 }
@@ -15,7 +17,7 @@ export function explainSearchCanarySelection(i: CanaryInput): {agent:string;reas
   if(i.enabled!==true)return fallback('disabled');
   if(!/^BJP003\d{14}$/.test(i.sn)||!validCanaryAllowlist(i.allowlist))return fallback('invalid_scope');
   if(!i.allowlist.includes(i.sn))return fallback('not_target');
-  if(i.canaryAgent!==SEARCH_CANARY_AGENT)return fallback('wrong_agent');
+  if(!isSearchCanaryAgent(i.canaryAgent))return fallback('wrong_agent');
     // 2026-10-26: authorized one-week window within a 168h horizon; fixed cutoff, no renewal.
     // Existing ticket contract requires >=5s after second-level JWT rounding.
   if(!Number.isFinite(i.nowMs)||!Number.isFinite(i.expiresAtMs)
