@@ -131,7 +131,9 @@ node --experimental-sqlite --import tsx scripts/listening-release-check.ts "$STA
 
 39于17:16导出的实际隔离启动bundle SHA与上表一致，`39-rtc-brain-verified.json`另核65个输入与提交365dd76c完全一致；真实SFU/ASR/讯飞TTS、合成账号/Android软件端/文本模型的边界已记录。初轮normal缺完整字幕正锚、部分情形input_ready超时并需要测试方收房；缺ready/撤权/断连有探针局部通过，但**不等于全链路验收**。39已修探针时序并确认max_jobs=1存在真实容量通告缺陷；max_jobs=2绕过已撤回，修复提交7e75a73f已通过其Linux回归并在max_jobs=1重跑矩阵，17:37仍观测到一次收房失败，最终RTC未判绿。最终同构建RTC、实际Worker注册/配置ACK及provider marker证据以其后续交付为准，本回执不提前判绿。
 
-最小下一步：39用相同冻结bundle+最终实际build SHA，先取得普通聊天audio+完整字幕+metrics正锚；再同trace做首句进入→立即续讲尾句marker→State在途→local_ready→反馈→播放中打断→退出恢复聊天，并导出Brain真实注册/ACK与provider观测。缺ready、过期、撤权、断网和自动收房分别保留失败记录。无真实pending-tail和有界停止时序，不认定打断通过。
+**17:40增量实际证据已收到并核对**：`STATE/39-brain-authority-evidence.json`（SHA `b3d4d8a9eaac84a1691736402f079bfa0e2a26fb5f1b32678531e6e43bf37d17`），绑定Brain365dd76c、Worker7e75a73f与上表同一bundle。61次真实worker-ready观测中，初次200/ready=false（revision2），约5秒后确认配置200/ready=true，随后持续刷新并应用revision4；隔离实例runtime=evidence_ready、applied_revision=4。两条`listening_feedback` provider观测均为168字符输入，`紫色风筝=true`，具有各自room/session/trace/request/epoch及SHA；一条trace为`p0-39-245923b5-20e4-48a8-be5b-b3c903bb4205`。这补齐实际Worker注册/配置应用和合成尾句进入反馈输入的Brain侧证据，未冒充HTTP预检。该ready/effective_enabled仅指私有合成实例，生产总闸仍关闭。该轮normal收房失败、lease探针SDK teardown rc=-6仍保留，不能把这些局部证据等同最终RTC矩阵通过。
+
+最小下一步：39用相同冻结bundle+最终实际build SHA，先取得普通聊天audio+完整字幕+metrics正锚；再同trace做首句进入→立即续讲尾句marker→State在途→local_ready→反馈→播放中打断→退出恢复聊天，并在最终同构建轮继续导出Brain真实注册/ACK与provider观测，复核已有证据而非跨轮拼接。缺ready、过期、撤权、断网和自动收房分别保留失败记录。无真实pending-tail和有界停止时序，不认定打断通过。
 
 仍待：上述最终RTC链、生产服务切换/恢复验证、真实Android麦克风/本地停音/真人听感、真实模型理解质量。后两项不在本批伪造通过；不等安卓即可继续云端隔离联调。主会话验收后再统一给安卓配合回执。
 
