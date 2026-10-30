@@ -1,0 +1,19 @@
+{
+  "candidate_sha256": "830823de3acf43f4692dc19d4e436e6c881a05349bcc78a4f945f19f2570d873",
+  "candidate_bytes": 76297088,
+  "source_compile_sha": "b7c942201d45a6fe92a26488448f4dfb0c1db4b0",
+  "features": [],
+  "target_glibcxx_supply": "GLIBCXX_3.4.33",
+  "ldd": "\tlinux-vdso.so.1 (0x00007ffe827cf000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x000076ca55200000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000076ca590a8000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x000076ca5907a000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000076ca54e00000)\n\t/lib64/ld-linux-x86-64.so.2 (0x000076ca59198000)\n",
+  "isolated_loader_check": {
+    "exit": 1,
+    "reason": "missing LiveKit env fail-fast; no registration attempted"
+  },
+  "isolated_path_restore": {
+    "passed": true,
+    "restored_sha256": "a00744bfb55478e9d549d19f8712e643e2d9234901aa81e3cb93855c4b5ceb2d",
+    "directory": "/opt/p003-listening-p0-20261030-session39/file-restore-b7"
+  },
+  "production_binary_unchanged": true,
+  "production_service_restarted": false
+}

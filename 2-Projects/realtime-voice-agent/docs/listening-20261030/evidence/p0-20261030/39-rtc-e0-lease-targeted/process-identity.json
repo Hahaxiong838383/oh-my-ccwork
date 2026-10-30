@@ -1,0 +1,1 @@
+{"worker": {"pid": 1676140, "executable": "/opt/p003-listening-p0-20261030-session39/rtc-test-worker", "running_sha256": "849717cbfb5adfcd9225b9e794c00061882154fe8467ef33fb01b418393bfe24"}, "brain": {"pid": 1676120, "executable": "/opt/p003-listening-p0-20261030-session39/node", "running_sha256": "1abce2374a485bddae3c27b17a3e3143e2780232026e627c4fe74ddde3f380a1"}}

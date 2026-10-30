@@ -1,0 +1,18 @@
+[
+  {
+    "request_id": "feedback-13",
+    "trace_id": "p0-39-d97710cb-1d1d-49d0-88a9-3e0b812265af",
+    "room": "sn-BJP00326103099999938-1793354899",
+    "session_id": "32c06040-d2d0-4ab8-abe1-552863e1a2a3",
+    "listening_id": "p0-39-d97710cb-1d1d-49d0-88a9-3e0b812265af:2",
+    "mode_epoch": 2,
+    "at": 1793354929038,
+    "purpose": "listening_feedback",
+    "synthetic_only": true,
+    "chars": 168,
+    "sha256": "72ac22b94285d978f477748be60424b29272597ceeeb01d24017b4dbd21a44d0",
+    "markers": {
+      "紫色风筝": true
+    }
+  }
+]

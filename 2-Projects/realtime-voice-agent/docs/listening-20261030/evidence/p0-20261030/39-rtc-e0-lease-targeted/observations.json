@@ -1,0 +1,1104 @@
+[
+  {
+    "at": 1793353674763,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": false,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353679786,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353684804,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353689821,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353694840,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353699855,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353704870,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353704926,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-1",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353704951,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-2",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353705706,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-3",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353707996,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-4",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353709884,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353709908,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-5",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353711396,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-6",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353714900,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353715448,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-7",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353716346,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-8",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353717604,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-9",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353719447,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-10",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353719499,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-11",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353719565,
+    "path": "/v1/internal/listening/feedback",
+    "status": 200,
+    "request_id": "feedback-12",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353719912,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353724516,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-13",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353724925,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353729500,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-14",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353729934,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353731964,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-15",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353733106,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-16",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353734445,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-17",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353734942,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353735914,
+    "path": "/v1/internal/listening/close",
+    "status": 200,
+    "request_id": "close-18"
+  },
+  {
+    "at": 1793353739953,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353744965,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353749977,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353750030,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-1",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353750072,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-2",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353750168,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-3",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353751320,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-4",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353753570,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-5",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353754991,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353755521,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-6",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353756971,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-7",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353760001,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353761021,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-8",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353761920,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-9",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353763121,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-10",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353765013,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353765223,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-11",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353765279,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-12",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353765329,
+    "path": "/v1/internal/listening/feedback",
+    "status": 200,
+    "request_id": "feedback-13",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353767322,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-14",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353768773,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-15",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353770028,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353773770,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-16",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353774670,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-17",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353775036,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353775818,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-18",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353777122,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-19",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353778933,
+    "path": "/v1/internal/listening/close",
+    "status": 200,
+    "request_id": "close-20"
+  },
+  {
+    "at": 1793353780052,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353785066,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353790084,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353792943,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-1",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353793050,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-2",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353793112,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-3",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353794007,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-4",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353795097,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353796300,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-5",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353798163,
+    "path": "/v1/internal/listening/close",
+    "status": 200,
+    "request_id": "close-6"
+  },
+  {
+    "at": 1793353800122,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353805134,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353810151,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353815163,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353820203,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353825228,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353830249,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353835267,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353840277,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353845288,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353850298,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353853722,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-1",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353853756,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-2",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353854555,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-3",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353855306,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353856811,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-4",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353858809,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-5",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353860264,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-6",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353860317,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353865332,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353870345,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353875357,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353880371,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353885382,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353890391,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353895399,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353900412,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353905421,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353910432,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353911757,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-1",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353911799,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-2",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353911899,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-3",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353913602,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-4",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353915443,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353915902,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-5",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353917852,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-6",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353919201,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-7",
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353920456,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 2
+  },
+  {
+    "at": 1793353924252,
+    "path": "/v1/internal/listening/lease",
+    "status": 403
+  },
+  {
+    "at": 1793353925467,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": false,
+    "policy_revision": 3
+  },
+  {
+    "at": 1793353929248,
+    "path": "/v1/internal/listening/lease",
+    "status": 403
+  },
+  {
+    "at": 1793353930479,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 3
+  },
+  {
+    "at": 1793353934259,
+    "path": "/v1/internal/listening/close",
+    "status": 200,
+    "request_id": "close-10"
+  },
+  {
+    "at": 1793353935492,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": false,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353940504,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353945524,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353950537,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353955549,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353960561,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353965572,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353970584,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353975599,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353980613,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353985627,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353990640,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793353995657,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354000672,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354005687,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354010705,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354015718,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354020729,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354025744,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354030755,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354035769,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354040784,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354045795,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354050806,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354055817,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354060828,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354065839,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354070850,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354073253,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-1",
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354073293,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-2",
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354074395,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-3",
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354075861,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354076749,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-4",
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354078698,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-5",
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354080146,
+    "path": "/v1/internal/listening/lease",
+    "status": 200,
+    "request_id": "lease-6",
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354080871,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354095345,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354095355,
+    "path": "/v1/internal/listening/lease",
+    "status": 403
+  },
+  {
+    "at": 1793354095366,
+    "path": "/v1/internal/listening/close",
+    "status": 200,
+    "request_id": "close-9"
+  },
+  {
+    "at": 1793354097890,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354102905,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354107923,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354112937,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354117951,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354122963,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354127978,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  },
+  {
+    "at": 1793354132992,
+    "path": "/v1/internal/listening/worker-ready",
+    "status": 200,
+    "ready": true,
+    "policy_revision": 4
+  }
+]

@@ -1,0 +1,287 @@
+{
+  "brain_commit": "365dd76c8c62bec30b04a7cc87638626e4906f4e",
+  "bundle_sha256": "05752431e4cb9fcdca06021ee4654525434f6e2cf7ed9d1ae26e6b6e03d776f5",
+  "entry": "scripts/listening-rtc-brain.ts",
+  "kind": "isolated_rtc_real_authority_synthetic_provider_not_production_artifact",
+  "clock": "Date.now",
+  "readiness": "external_worker_registration_and_config_ack_only",
+  "inputs": [
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/device-registry-store.ts",
+      "sha256": "9032e1a6669aae0d9bd10877f862a9eaf6a35a5f0725d50e317ef40aa4236d0f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/device-sn.ts",
+      "sha256": "d0c70449a96fa81dbd778e3623757257b6737903c0abe295e7d8cff15cb6ef5e"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-settings.ts",
+      "sha256": "a48e2da1d9d653180b61d2c1232d014bb91d0bb82bbab5d2cdafd8b7c693a290"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-settings-store.ts",
+      "sha256": "ff7e93870450e476ff4fa4b5ce0226605fcbca3e0700a666b44eb78c05d5778f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts",
+      "sha256": "1ad730b60ea5a72430c3f8ff2ba2470880aa81046772b9dc57c973b97860a591"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-policy.ts",
+      "sha256": "a60126c853f4365323af568b65726956da69ab3e90b75daeb0c1c9c7cc3e158a"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-grant.ts",
+      "sha256": "5ed655ecaf996cf7772012f09b67a5679c48434c3901e91f0287771d272fb0e6"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-http-contract.ts",
+      "sha256": "e190d8ef1d1c567bf099184fc4972c48ecd1076d67f6f48c8408d14760f7fa6a"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-authority-store.ts",
+      "sha256": "b3ad0514258e60a73ac472e92460733bf35b6e441ec0a6811dc848bf1ee8743f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-authority.ts",
+      "sha256": "2c3509e5ca549c3adf361c382ce027565a9603f847ab19b2862a36141111fe34"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-runtime.ts",
+      "sha256": "d3ed750c365e08b6ce00dd93217e24cf3e64156223e5fcdb2f74bd84e21c194d"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/memory-safety-filter.ts",
+      "sha256": "e368b74ebbe1432415344cadb3ef84380bf76e6b48f669b8c12bd2f626f70204"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/growth-ledger-store.ts",
+      "sha256": "77a6e83e958c2f0bfdd2c5748b05e2e8876eac0c902d86b299eb0d444b86d93b"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/style-template.ts",
+      "sha256": "b434df4bfa8703dc18f4d753a3de940f7b91fd526eceb57fb11aa6cdd1225c21"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/trait-store.ts",
+      "sha256": "ca0a09c9eada173ee986d193952f8f731c69adb0099fd2a241307298072aada4"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/filler-policy.ts",
+      "sha256": "90b7e4ada344276220a29b73b48df6859d45e2df3e7d67d089d083b92f1dbc31"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/device-credential.ts",
+      "sha256": "0024a71fa6fcc18da31fb1690a005e6d056082a0cddaf6689f19d7913e82fb4f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/search-canary-policy.ts",
+      "sha256": "ed47ebd021e7a0b2a9170f3baa80ba9d51037afed9f07aa2ea2f397a663fab23"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/search-canary-runtime.ts",
+      "sha256": "39e86ff3809fe4406760ec204cad62e9a4158849710caf8f9285d27565563e89"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-resume-scope.ts",
+      "sha256": "203077cb9baedfe760dce95d70ef6ca1d0375d03e020be6f7d34bd30714125ef"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-dialogue-context.ts",
+      "sha256": "ab6e51e38633afb45d5d5559479dd1076af48e6e8b2819153651217dbc79932e"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/auth-jwt.ts",
+      "sha256": "621f9bee6f6886af691e7795473102fecc5b7b6c85ba67875cc8592d61fa67f7"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/profile-store.ts",
+      "sha256": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/memory-item-store.ts",
+      "sha256": "c668e926d7d4fb78d68aaf946f13e7922c1b19b0384a158a7a27334891ff552a"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/relation-state-store.ts",
+      "sha256": "1532f998499153fb4af576004d1cf2b825bf8b83f5fac25bb7b71ae371286c12"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/conversation-store.ts",
+      "sha256": "6c1eabf9f5eb760914a9e1ae33215af72fb606911bdde311ae5bb26711058594"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/style-pool-store.ts",
+      "sha256": "f230ca882c22f1e284378c4026d618fb55f5b98f74808af7c10f30ec2d4ab357"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/child-insight-store.ts",
+      "sha256": "f50f2ab901f90a5829d2fe2ec91a7b88e90538605911680294e053556f56ea09"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/prompt-orchestrator.ts",
+      "sha256": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/prompts.ts",
+      "sha256": "80d1901a01be454c86ef758d95b4dd001000f6034d04da8c30612549b1c5dc63"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/ai-literacy.ts",
+      "sha256": "6b735ac3202f44bb7ff695dd017878c284beedc4a82570faffc5f9a13b9f11e6"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/device-brain-prompt.ts",
+      "sha256": "6f701c6d341d0ad1c80aa1dca3bf65c2e94b438d899b68f63704dc46b712bd4e"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/moji-weather.ts",
+      "sha256": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/weather-places.ts",
+      "sha256": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/baidu-weather.ts",
+      "sha256": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/routes/search-tasks.ts",
+      "sha256": "3b0c59ce09922601d882fa364c4477dbd0351d06e34b30a16da730360ce557af"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-resume.ts",
+      "sha256": "77950a8e1e807395a236e5ff5232c7391447497496a5438e98657e48864056e2"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-failure.ts",
+      "sha256": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-tasks.ts",
+      "sha256": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-availability.ts",
+      "sha256": "e25ceda0627dd6f239e832bf2ba7f76bf5e5c979d19551f6e7b1c97cf78a6427"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-routing-config.ts",
+      "sha256": "f9f93d93732eca39ad03bb3eed6e7903c1d27980a90ff9a2626853fe0367dc73"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-routing-store.ts",
+      "sha256": "67828960a3a9393b358eea3bede2653db8308a17b28b977bb9ef9d3b31ae7ca7"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/amap-usage.ts",
+      "sha256": "6c30de0f0f000b8454e842fd759d11f5d1b1beb9a34f5f70a9ebd2df42ec64c3"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/amap-weather.ts",
+      "sha256": "5e8834abee94f8debaea782ff25bebde5a2a718b9950f63315b6025693c395a8"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/fixed-weather.ts",
+      "sha256": "581a849b3d15bf5f8827efcb6c18b689053f8717ee407394cf12cfef051963d2"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/device-location.ts",
+      "sha256": "8eccbc3f897ff27ea7495d0608475b3d712e5126c878c83f8ad09b318cf34447"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/device-location-runtime.ts",
+      "sha256": "fe8387ff7b0a88dbed345b68a7aaeeead8fa777c205afcca1697d07d1a2fa8f1"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-claim-stream.ts",
+      "sha256": "2568f4e4b71da2350dda248deb5f5c5607f68ea15bce55ac89940d2f84b8427f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-chat-policy.ts",
+      "sha256": "ed7614a945d76889734a79fdd7f239d6fdc4b5073ccfdb1d3b5f0487a6886884"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/cctv-news.ts",
+      "sha256": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-source-scope.ts",
+      "sha256": "890b03dedd8899e6e0a269643aee3cafe2cf689a24210571b96f5fdd1c51bf1d"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-executor.ts",
+      "sha256": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-simple-fallback.ts",
+      "sha256": "bd3a8452f8ae4ca6850033bd0e24aeaea0c03b40ea0b022ba1dca7f26622e808"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-enrollment.ts",
+      "sha256": "3b2c45cd43860d29ec6bcc84e940be6bffd79f8943444ab4d0e6a4ccb63199bd"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-runtime.ts",
+      "sha256": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/routes/device-session.ts",
+      "sha256": "80909ac2d4c3dbaa0ff78cebf7d0e2a13d2f3d1c9af8bb4b2a873d199bbd7fdd"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/providers/deepseek-llm.ts",
+      "sha256": "520b4ce881429b24563b4b8e338dddab5fe142489e84c17d0e60b27c48dd3ca1"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/providers/provider-health.ts",
+      "sha256": "bc32fbd53f2947860ee3245313ca9d90c1ad21af1913cb1e45f72c54ec609406"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/providers/volc-llm.ts",
+      "sha256": "563f16013137e0b2b5b9dd138ebc2d6eac8d8b0d7805326686f6ec9ffd1afc8f"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/providers/race-llm.ts",
+      "sha256": "c7c0f7549d3b4f92d72c98388f38205055abbd62a9ea0941497c46b2a8c7fa2e"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/providers/minimax-llm.ts",
+      "sha256": "6da2296e4cb5b5e6dae743099cef76cda9cb1bd297b273bf6db05f6819dc53a9"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/providers/gemini-llm.ts",
+      "sha256": "7ad2cd86c0692ec348a6b175baf58b8045484e6615c98214b0b6ad6a8b6b4735"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/listening-content.ts",
+      "sha256": "32bc94b8bcffd065a15b114a23a4b70fe8567b30f567f3cc948165510a70628a"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/routes/listening.ts",
+      "sha256": "a268c9fd7521b6e404f099f963594081fc4d8a1f215c6e6b9a019da475f301ae"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/scripts/listening-rtc-brain.ts",
+      "sha256": "328b9085d5f0c84aeede310e812f7d7b5ae1e02251134e49a09e9d53ad819817"
+    }
+  ],
+  "assets": [
+    {
+      "name": "weather-places.json",
+      "source": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/weather-places.json",
+      "sha256": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b"
+    },
+    {
+      "name": "search-routing-defaults.json",
+      "source": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030/2-Projects/P003GameDemo20260513/apps/server/src/tools/search-routing-defaults.json",
+      "sha256": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5"
+    }
+  ],
+  "contracts": {
+    "p003-listening-mode-v1.json": "c055866fad0e9b69cdd75c526eeb2fee6ad97899641d792be63037a064bf2411",
+    "p003-listening-http-v1.json": "86825d6281da13fdf17c32b04d5c9dcb4edf71ceb69257d839aacb9df0a99f1e",
+    "p003-listening-http-v1.fixtures.json": "c58dd98ade3329d04e5c9b7622e7e4668c33483b38cd804f37257e5baa6d415b"
+  }
+}

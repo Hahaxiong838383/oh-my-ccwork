@@ -1,0 +1,44 @@
+FF.
+======================================================================
+FAIL: test_actual_artifact_and_compile_sha (__main__.BuildBinding.test_actual_artifact_and_compile_sha)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/fu-121/.codex/worktrees/p003-listening-worker-20261030/2-Projects/realtime-voice-agent/rust-worker/scripts/test_build_local.py", line 53, in test_actual_artifact_and_compile_sha
+    self.assertEqual(r.returncode, 0, r.stdout+r.stderr)
+AssertionError: 1 != 0 :
+[1;36m== 1/4 系统依赖[0m
+   [32m✓[0m libglib2.0-dev
+   [32m✓[0m pkg-config
+
+[1;36m== 2/4 工具链[0m
+   [32m✓[0m rustc-test
+   [32m✓[0m cargo-test
+   [32m✓[0m 本机 glibc: 2.39   门禁上限 2.39
+   [32m✓[0m 本机 libstdc++ 供给: GLIBCXX_3.4.30   门禁上限 GLIBCXX_3.4.33
+
+[1;36m== 门禁自检（负向验证）[0m
+   [32m✓[0m glibc  喂 2.43 → 正确变红
+   [32m✓[0m glibc  喂 2.39/2.17 → 正确放行
+   [32m✓[0m libstdc++ 喂 3.4.99 → 正确变红
+   [32m✓[0m libstdc++ 喂 3.4.9/3.4.31 → 正确放行（顺带验了 3.4.9 不被误当成最大）
+   [32m✓[0m libstdc++ 喂 3.4.33（正好等于上限）→ 正确放行
+
+[1;36m== 3/4 编译 release[0m
+{"reason":"compiler-artifact","target":{"name":"voice-rust-worker","kind":["bin"]},"executable":"/tmp/codeg-acp/66120-63fe7b1d/tmpoer0_oka/custom-target/release/voice-rust-worker"}
+
+[1;36m== 4/4 符号天花板（glibc + libstdc++）[0m
+   [31m✗[0m 产物不存在: target/release/voice-rust-worker
+
+
+======================================================================
+FAIL: test_invalid_build_sha_fails_before_cargo (__main__.BuildBinding.test_invalid_build_sha_fails_before_cargo)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/fu-121/.codex/worktrees/p003-listening-worker-20261030/2-Projects/realtime-voice-agent/rust-worker/scripts/test_build_local.py", line 66, in test_invalid_build_sha_fails_before_cargo
+    self.assertIsNone(sha)
+AssertionError: 'not-a-commit' is not None
+
+----------------------------------------------------------------------
+Ran 3 tests in 9.148s
+
+FAILED (failures=2)

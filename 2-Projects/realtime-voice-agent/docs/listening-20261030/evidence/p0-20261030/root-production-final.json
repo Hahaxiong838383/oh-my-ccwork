@@ -1,0 +1,68 @@
+{
+  "at_ns": 1793355021530991808,
+  "hostname": "voice-worker-hk2",
+  "glibc": [
+    "glibc",
+    "2.39"
+  ],
+  "units": {
+    "voice-worker-rust.service": {
+      "MainPID": "1546073",
+      "ExecMainStartTimestamp": "Thu 2026-10-29 14:20:03 UTC",
+      "EnvironmentFiles": "/root/realtime-voice-agent/.env (ignore_errors=no) /root/realtime-voice-agent/poc-eou.env (ignore_errors=no) /root/rust-worker/rust-worker.env (ignore_errors=no)",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/voice-worker-rust.service",
+      "DropInPaths": "",
+      "running_executable": "/root/rust-worker/voice-rust-worker",
+      "running_sha256": "a00744bfb55478e9d549d19f8712e643e2d9234901aa81e3cb93855c4b5ceb2d",
+      "file_sha256": {
+        "/etc/systemd/system/voice-worker-rust.service": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0"
+      },
+      "environment_file_sha256": {
+        "/root/realtime-voice-agent/.env": "d91de1c729ff6148ae1286fa9af098dabf285cccb72adceefdacab1221e12c75",
+        "/root/realtime-voice-agent/poc-eou.env": "ea97f8e533bd6163200af71d92602e9aadff893778268484063f728e285ba0c4",
+        "/root/rust-worker/rust-worker.env": "717fa7d34431bf252e3cc5160fa6aacccc35ccb14597db89ddba6aeb3b0ef210"
+      }
+    },
+    "p003-search-worker.service": {
+      "MainPID": "1652015",
+      "ExecMainStartTimestamp": "Fri 2026-10-30 06:12:19 UTC",
+      "EnvironmentFiles": "/opt/p003-search-canary-20261021/canary.env (ignore_errors=no)",
+      "ActiveState": "active",
+      "SubState": "running",
+      "FragmentPath": "/etc/systemd/system/p003-search-worker.service",
+      "DropInPaths": "/etc/systemd/system/p003-search-worker.service.d/22-text-audit.conf /etc/systemd/system/p003-search-worker.service.d/90-r15-resolver.conf",
+      "running_executable": "/opt/p003-search-canary-20261021/voice-rust-worker",
+      "running_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+      "file_sha256": {
+        "/etc/systemd/system/p003-search-worker.service": "d576a1fd7d0b0bf1c60c7b3e9f222237b7bd520c857a04f4d7e6eaae5e764835",
+        "/etc/systemd/system/p003-search-worker.service.d/22-text-audit.conf": "aff2a46e33619dc16792a460ff22e4877266701c6a15afeddb378665a51619fd",
+        "/etc/systemd/system/p003-search-worker.service.d/90-r15-resolver.conf": "6a5442a6366b6e3c8fb39d49fe539d953ba8938a7bdc2f90d4ee58271e17b4bb"
+      },
+      "environment_file_sha256": {
+        "/opt/p003-search-canary-20261021/canary.env": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa"
+      }
+    },
+    "p003-search-verification-worker.service": {
+      "MainPID": "0",
+      "ExecMainStartTimestamp": "",
+      "EnvironmentFiles": "/opt/p003-search-verification-20261026/canary.env (ignore_errors=no)",
+      "ActiveState": "inactive",
+      "SubState": "dead",
+      "FragmentPath": "/etc/systemd/system/p003-search-verification-worker.service",
+      "DropInPaths": "/etc/systemd/system/p003-search-verification-worker.service.d/22-text-audit.conf",
+      "file_sha256": {
+        "/etc/systemd/system/p003-search-verification-worker.service": "1bd2194969449834c35719b9f12e463acbdefde3ee2f5134600b8ecd32013a03",
+        "/etc/systemd/system/p003-search-verification-worker.service.d/22-text-audit.conf": "5b922c49f7acf723c6898f35fabc092b9f52dfdc5d910f5f260acbeb75aaed20"
+      },
+      "environment_file_sha256": {
+        "/opt/p003-search-verification-20261026/canary.env": "c6d032e7faf1a7bc124e71a57e0f0e121cc1b39e45aa26a7802381ae4806e830"
+      }
+    }
+  },
+  "search_window": {
+    "sha256": "ca222d61d796576b1fdeb73d2d2e180e704c4b369e6262bc07c4cdc28ccb1331",
+    "expires_at_ms": 1793589540000
+  }
+}

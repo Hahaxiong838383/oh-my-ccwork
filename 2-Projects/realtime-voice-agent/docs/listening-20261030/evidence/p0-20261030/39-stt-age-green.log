@@ -1,0 +1,468 @@
+INPUTS_MATCH 83
+
+running 3 tests
+test pipeline::stt_preconnect_tests::interrupted_reconnecting_preconnect_is_not_reused_when_young ... ok
+test pipeline::stt_preconnect_tests::delayed_rtc_replaces_idle_preconnect_and_preserves_first_pcm ... ok
+test pipeline::stt_preconnect_tests::fresh_preconnect_is_reused_but_closed_young_preconnect_is_not ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 502 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s
+
+   Compiling voice-rust-worker v0.1.0 (/data/p003-listening-worker-check-20261030-session39/voice/2-Projects/realtime-voice-agent/rust-worker)
+warning: method `revoke` is never used
+   --> src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ method in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `text` is never used
+  --> src/listening_buffer.rs:43:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ method in this implementation
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: variant `Device` is never constructed
+  --> src/listening_runtime.rs:19:5
+   |
+15 | pub enum OutputPurpose {
+   |          ------------- variant in this enum
+...
+19 |     Device,
+   |     ^^^^^^
+   |
+   = note: `OutputPurpose` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `is_some` is never used
+  --> src/say_defer.rs:30:12
+   |
+ 9 | impl DeferredSay {
+   | ---------------- method in this implementation
+...
+30 |     pub fn is_some(&self) -> bool {
+   |            ^^^^^^^
+
+warning: function `valid_base` is never used
+  --> src/search_canary.rs:21:8
+   |
+21 | pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
+   |        ^^^^^^^^^^
+
+warning: function `enabled` is never used
+   --> src/search_tasks.rs:235:8
+    |
+235 | pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
+    |        ^^^^^^^
+
+warning: method `remaining` is never used
+  --> src/search_progress.rs:14:8
+   |
+10 | impl SearchProgress {
+   | ------------------- method in this implementation
+...
+14 | pub fn remaining(&self,complete:usize)->String{self.sentences.iter().skip(complete).cloned().collect()}
+   |        ^^^^^^^^^
+
+warning: method `chat` is never used
+   --> src/llm.rs:643:18
+    |
+589 | impl Llm {
+    | -------- method in this implementation
+...
+643 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: method `is_on` is never used
+  --> src/backchannel.rs:84:12
+   |
+53 | impl BackchannelCfg {
+   | ------------------- method in this implementation
+...
+84 |     pub fn is_on(&self) -> bool {
+   |            ^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> src/textproc.rs:151:8
+    |
+151 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker") generated 10 warnings
+warning: struct `SummaryTicket` is never constructed
+  --> tests/../src/listening_buffer.rs:20:12
+   |
+20 | pub struct SummaryTicket {
+   |            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `base_version`, `coverage`, `segments`, and `text` are never used
+  --> tests/../src/listening_buffer.rs:28:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ methods in this implementation
+27 |     /// Private summarizer input. Never log this text.
+28 |     pub fn base_version(&self) -> u64 {
+   |            ^^^^^^^^^^^^
+...
+31 |     pub fn coverage(&self) -> Vec<(u64, u64)> {
+   |            ^^^^^^^^
+...
+37 |     pub fn segments(&self) -> Vec<(u64, u64, String)> {
+   |            ^^^^^^^^
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: fields `summary` and `has_gap` are never read
+  --> tests/../src/listening_buffer.rs:52:9
+   |
+51 | pub struct Context {
+   |            ------- fields in this struct
+52 |     pub summary: Option<String>,
+   |         ^^^^^^^
+53 |     pub recent: String,
+54 |     pub has_gap: bool,
+   |         ^^^^^^^
+
+warning: fields `buffer_id` and `summary_limit` are never read
+  --> tests/../src/listening_buffer.rs:68:5
+   |
+66 | pub struct ListeningBuffer {
+   |            --------------- fields in this struct
+67 |     // Instance identity also rejects a late reply when a caller reuses a session label.
+68 |     buffer_id: u64,
+   |     ^^^^^^^^^
+...
+73 |     summary_limit: usize,
+   |     ^^^^^^^^^^^^^
+
+warning: methods `summary_ticket` and `apply_summary` are never used
+   --> tests/../src/listening_buffer.rs:199:12
+    |
+103 | impl ListeningBuffer {
+    | -------------------- methods in this implementation
+...
+199 |     pub fn summary_ticket(&self) -> Option<SummaryTicket> {
+    |            ^^^^^^^^^^^^^^
+...
+219 |     pub fn apply_summary(&mut self, ticket: SummaryTicket, text: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: variants `Sharing` and `Singing` are never constructed
+  --> tests/../src/listening_mode.rs:13:5
+   |
+11 | pub enum Scene {
+   |          ----- variants in this enum
+12 |     Story,
+13 |     Sharing,
+   |     ^^^^^^^
+14 |     Singing,
+   |     ^^^^^^^
+   |
+   = note: `Scene` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: variants `Exit` and `State` are never constructed
+  --> tests/../src/listening_mode.rs:30:5
+   |
+26 | pub enum Action {
+   |          ------ variants in this enum
+...
+30 |     Exit { epoch: u64 },
+   |     ^^^^
+31 |     State,
+   |     ^^^^^
+   |
+   = note: `Action` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: methods `revoke`, `input_active`, `reserve_voice_feedback`, and `cancel_feedback` are never used
+   --> tests/../src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ methods in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: method `as_str` is never used
+   --> tests/../src/listening_mode.rs:379:12
+    |
+378 | impl Scene {
+    | ---------- method in this implementation
+379 |     pub fn as_str(self) -> &'static str {
+    |            ^^^^^^
+
+warning: field `anchor` is never read
+  --> tests/../src/listening_runtime.rs:33:5
+   |
+28 | pub struct AudioPermit {
+   |            ----------- field in this struct
+...
+33 |     anchor: Instant,
+   |     ^^^^^^
+   |
+   = note: `AudioPermit` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: methods `allowed` and `begin_capture` are never used
+  --> tests/../src/listening_runtime.rs:60:12
+   |
+59 | impl AudioPermit {
+   | ---------------- methods in this implementation
+60 |     pub fn allowed(&self) -> bool {
+   |            ^^^^^^^
+...
+63 |     pub fn begin_capture(&self) -> Option<CaptureTicket> {
+   |            ^^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> tests/../src/listening_runtime.rs:141:12
+    |
+100 | impl ListeningSession {
+    | --------------------- methods in this implementation
+...
+141 |     pub fn advance_clock(&mut self, ms: u64) {
+    |            ^^^^^^^^^^^^^
+...
+144 |     pub fn now_ms(&self) -> u64 {
+    |            ^^^^^^
+...
+154 |     pub fn precheck(&self, c: &Command) -> Result<Option<Snapshot>, Reject> {
+    |            ^^^^^^^^
+...
+161 |     pub fn authenticated(&self, participant: Option<&str>, trace: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+...
+169 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+176 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+...
+181 |     pub fn summary_ticket(&self) -> Option<crate::listening_buffer::SummaryTicket> {
+    |            ^^^^^^^^^^^^^^
+...
+184 |     pub fn apply_summary(&mut self, t: crate::listening_buffer::SummaryTicket, text: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+...
+187 |     pub fn raw_chars(&self) -> usize {
+    |            ^^^^^^^^^
+...
+299 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (test "listening_runtime") generated 12 warnings
+warning: methods `base_version`, `coverage`, and `segments` are never used
+  --> tests/../src/listening_buffer.rs:28:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ methods in this implementation
+27 |     /// Private summarizer input. Never log this text.
+28 |     pub fn base_version(&self) -> u64 {
+   |            ^^^^^^^^^^^^
+...
+31 |     pub fn coverage(&self) -> Vec<(u64, u64)> {
+   |            ^^^^^^^^
+...
+37 |     pub fn segments(&self) -> Vec<(u64, u64, String)> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `input_active`, `pause_pending_entry`, `pause_unavailable`, `configure`, `reserve_voice_feedback`, and `cancel_feedback` are never used
+   --> tests/../src/listening_mode.rs:304:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ methods in this implementation
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+318 |     pub fn pause_pending_entry(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+321 |     pub fn pause_unavailable(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+326 |     pub fn configure(&mut self, session_ms: u64, duration_ms: u64, cooldown_ms: u64) {
+    |            ^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (test "listening_core") generated 3 warnings (1 duplicate)
+warning: constant `LEASE_TTL_MS` is never used
+ --> tests/../src/listening_mode.rs:6:11
+  |
+6 | pub const LEASE_TTL_MS: u64 = 15_000;
+  |           ^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `MAX_SESSION_MS` is never used
+ --> tests/../src/listening_mode.rs:7:11
+  |
+7 | pub const MAX_SESSION_MS: u64 = 1_800_000;
+  |           ^^^^^^^^^^^^^^
+
+warning: constant `MAX_SEQUENCE` is never used
+ --> tests/../src/listening_mode.rs:8:7
+  |
+8 | const MAX_SEQUENCE: u64 = 9_007_199_254_740_991;
+  |       ^^^^^^^^^^^^
+
+warning: constant `RECENT_COMMANDS` is never used
+ --> tests/../src/listening_mode.rs:9:7
+  |
+9 | const RECENT_COMMANDS: usize = 32;
+  |       ^^^^^^^^^^^^^^^
+
+warning: enum `Phase` is never used
+  --> tests/../src/listening_mode.rs:17:10
+   |
+17 | pub enum Phase {
+   |          ^^^^^
+
+warning: enum `Action` is never used
+  --> tests/../src/listening_mode.rs:26:10
+   |
+26 | pub enum Action {
+   |          ^^^^^^
+
+warning: struct `Command` is never constructed
+  --> tests/../src/listening_mode.rs:34:12
+   |
+34 | pub struct Command {
+   |            ^^^^^^^
+
+warning: struct `Snapshot` is never constructed
+  --> tests/../src/listening_mode.rs:41:12
+   |
+41 | pub struct Snapshot {
+   |            ^^^^^^^^
+
+warning: enum `Reject` is never used
+  --> tests/../src/listening_mode.rs:49:10
+   |
+49 | pub enum Reject {
+   |          ^^^^^^
+
+warning: struct `ListeningMode` is never constructed
+  --> tests/../src/listening_mode.rs:62:12
+   |
+62 | pub struct ListeningMode {
+   |            ^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> tests/../src/listening_mode.rs:85:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ associated items in this implementation
+ 85 |     pub fn new(trace: &str) -> Result<Self, Reject> {
+    |            ^^^
+...
+117 |     pub fn snapshot(&self) -> Snapshot {
+    |            ^^^^^^^^
+...
+126 |     pub fn renew_lease(&mut self, version: u64, until: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+...
+153 |     fn authorized(&self, now: u64) -> bool {
+    |        ^^^^^^^^^^
+...
+156 |     fn change_phase(&mut self, phase: Phase) {
+    |        ^^^^^^^^^^^^
+...
+161 |     fn pause(&mut self) {
+    |        ^^^^^
+...
+166 |     fn finish_entry(&mut self) {
+    |        ^^^^^^^^^^^^
+...
+172 |     pub fn precheck(&self, cmd: &Command) -> Result<Option<Snapshot>, Reject> {
+    |            ^^^^^^^^
+...
+192 |     pub fn handle(&mut self, cmd: Command, now: u64) -> Result<Snapshot, Reject> {
+    |            ^^^^^^
+...
+268 |     pub fn capture_drained(&mut self, epoch: u64, now: u64) -> Result<Snapshot, Reject> {
+    |            ^^^^^^^^^^^^^^^
+...
+280 |     pub fn begin_feedback(&mut self, epoch: u64, turn: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^
+...
+296 |     pub fn feedback_done(&mut self, turn: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+307 |     pub fn user_speech(&mut self, now: u64) {
+    |            ^^^^^^^^^^^
+...
+314 |     pub fn user_speech_ended(&mut self, now: u64) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+318 |     pub fn pause_pending_entry(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+321 |     pub fn pause_unavailable(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+326 |     pub fn configure(&mut self, session_ms: u64, duration_ms: u64, cooldown_ms: u64) {
+    |            ^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+...
+351 |     pub fn tick(&mut self, now: u64) {
+    |            ^^^^
+...
+362 |     pub fn permits_audio(&self, epoch: u64, turn: u64, now: u64) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (test "listening_voice") generated 12 warnings (1 duplicate)
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 4 warnings (4 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 23.26s
+     Running unittests src/main.rs (/data/p003-listening-worker-check-20261030-session39/target/debug/deps/voice_rust_worker-595a24a3d3c9ed0c)
+     Running tests/listening_core.rs (/data/p003-listening-worker-check-20261030-session39/target/debug/deps/listening_core-75c1ed87a87e63fd)
+     Running tests/listening_runtime.rs (/data/p003-listening-worker-check-20261030-session39/target/debug/deps/listening_runtime-64452b0a1ae787fe)
+     Running tests/listening_voice.rs (/data/p003-listening-worker-check-20261030-session39/target/debug/deps/listening_voice-ba6a0e75ca6404f1)

@@ -1,0 +1,110 @@
+{
+  "at": "2026-10-30T18:16:02.936659+08:00",
+  "source_commit": "b7c942201d45a6fe92a26488448f4dfb0c1db4b0",
+  "final_linux_passed": 545,
+  "final_http_joint_passed": 2,
+  "transport_feature_passed": 2,
+  "original_e0_matrix": {
+    "passed": 6,
+    "failed": 1,
+    "preserved_failure": "lease_timeout before injection: stale ASR preconnect"
+  },
+  "final_b7_directed": [
+    {
+      "scenario": "normal",
+      "rc": 0,
+      "passed": true,
+      "signed_binding": {
+        "room_name": "sn-BJP00326103099999938-1793354899",
+        "session_id": "32c06040-d2d0-4ab8-abe1-552863e1a2a3",
+        "trace_id": "p0-39-d97710cb-1d1d-49d0-88a9-3e0b812265af",
+        "expected_agent_name": "p003-listening-p0-session39"
+      },
+      "assertions": [
+        "real input_ready",
+        "enter double-confirm completed",
+        "narration silent, State nonconflicting, duplicate accepted",
+        "real feedback audio received",
+        "uninterrupted feedback finished",
+        "voice exit normal",
+        "ordinary chat audible after voice exit",
+        "ordinary final subtitle",
+        "ordinary chat audio/subtitles/metrics positive anchor",
+        "one feedback includes immediate synthetic tail marker"
+      ],
+      "summary": [
+        {
+          "mono_ns": 2745565798580687,
+          "t_ms": 55689,
+          "event": "summary",
+          "scenario": "normal",
+          "audio_nonzero_frames": 1157,
+          "caption_events": 61,
+          "uplink_frames": 2002,
+          "control_types": [
+            "session.output_ready",
+            "session.input_ready",
+            "listening.proposal",
+            "session.input_phase",
+            "listening.ack",
+            "listening.ack",
+            "listening.ack",
+            "listening.ack",
+            "listening.proposal",
+            "listening.ack",
+            "listening.ack",
+            "listening.ack"
+          ],
+          "server_disconnected": false
+        }
+      ],
+      "room_api_absent": true
+    },
+    {
+      "scenario": "lease_timeout",
+      "rc": 0,
+      "passed": true,
+      "signed_binding": {
+        "room_name": "sn-BJP00326103099999938-1793354957",
+        "session_id": "b0dda4e3-c5d9-45c7-b8c6-711dbb4de298",
+        "trace_id": "p0-39-5eff48f8-3aba-48af-a7fe-927be0df98b6",
+        "expected_agent_name": "p003-listening-p0-session39"
+      },
+      "assertions": [
+        "real input_ready",
+        "enter double-confirm completed",
+        "narration silent, State nonconflicting, duplicate accepted",
+        "client observes lease/revocation disconnect",
+        "no output under failed authorization"
+      ],
+      "summary": [
+        {
+          "mono_ns": 2745604118355710,
+          "t_ms": 35934,
+          "event": "summary",
+          "scenario": "lease_timeout",
+          "audio_nonzero_frames": 0,
+          "caption_events": 40,
+          "uplink_frames": 1129,
+          "control_types": [
+            "session.output_ready",
+            "session.input_ready",
+            "listening.proposal",
+            "session.input_phase",
+            "listening.ack",
+            "listening.ack",
+            "listening.ack",
+            "listening.ack"
+          ],
+          "server_disconnected": true
+        }
+      ],
+      "room_api_absent": true
+    }
+  ],
+  "NOT_claimed": "b7 full-seven RTC rerun, Android, human singing or production deployment",
+  "production_summaries_equal": true,
+  "exact_own_rooms_checked": 26,
+  "remaining_own_rooms": 0,
+  "test_processes_stopped": true
+}

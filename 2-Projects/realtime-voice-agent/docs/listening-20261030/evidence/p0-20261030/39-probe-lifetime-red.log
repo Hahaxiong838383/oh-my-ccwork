@@ -1,0 +1,25 @@
+..F
+======================================================================
+FAIL: test_cancelled_pull_disposes_native_stream_before_loop_exits (__main__.AudioLifetime.test_cancelled_pull_disposes_native_stream_before_loop_exits)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/async_case.py", line 90, in _callTestMethod
+    if self._callMaybeAsync(method) is not None:
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/unittest/async_case.py", line 112, in _callMaybeAsync
+    return self._asyncioRunner.run(
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/asyncio/base_events.py", line 654, in run_until_complete
+    return future.result()
+           ^^^^^^^^^^^^^^^
+  File "/Users/fu-121/.codex/worktrees/p003-listening-worker-20261030/2-Projects/realtime-voice-agent/rust-worker/scripts/listening/test_rtc_probe.py", line 51, in test_cancelled_pull_disposes_native_stream_before_loop_exits
+    self.assertTrue(Stream.closed, 'FFI subscriber must not survive asyncio loop')
+AssertionError: False is not true : FFI subscriber must not survive asyncio loop
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.021s
+
+FAILED (failures=1)

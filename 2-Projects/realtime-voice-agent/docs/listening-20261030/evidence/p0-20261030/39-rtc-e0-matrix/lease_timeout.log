@@ -1,0 +1,79 @@
+{"mono_ns": 2744490234971198, "t_ms": 62, "event": "session_issued", "room": "sn-BJP00326103099999938-1793353879", "session": "c5ef06cc-41fa-4b20-a311-3bb1ddde6a86", "trace": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165", "agent": "p003-listening-p0-session39"}
+{"mono_ns": 2744500794167680, "t_ms": 10621, "event": "agent_bound", "identity": "agent-AJ_pw9JDqhH6cNd", "sid": "PA_FRretbBQux8z", "kind": 4, "agent": "p003-listening-p0-session39"}
+{"mono_ns": 2744500794501698, "t_ms": 10621, "event": "audio_subscribed", "sid": "TR_AMcQByd5XX6V5G"}
+{"mono_ns": 2744500801936809, "t_ms": 10629, "event": "data_received", "topic": "control", "value": {"lane": "L2", "payload": {"agent_track_subscribed": true, "room": "sn-BJP00326103099999938-1793353879"}, "src": "worker", "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165", "ts_ms": 1793353890198, "type": "session.output_ready"}}
+{"mono_ns": 2744500822396072, "t_ms": 10649, "event": "data_received", "topic": "control", "value": {"lane": "L2", "payload": {"input_loop_started": true, "output_ready": true, "room": "sn-BJP00326103099999938-1793353879", "timings_ms": {"issue_to_assignment": 295, "job_room_connect": 10183, "track_to_input_loop": 70}, "user_track_subscribed": true}, "src": "worker", "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165", "ts_ms": 1793353890218, "type": "session.input_ready"}}
+{"mono_ns": 2744500832402509, "t_ms": 10659, "event": "assertion", "name": "real input_ready", "passed": true}
+{"mono_ns": 2744500843893158, "t_ms": 10671, "event": "ordered_received", "chunks_received": 0, "credit_samples": 128000, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 0, "received_next": 0, "t": "ack"}
+{"mono_ns": 2744500845452935, "t_ms": 10672, "event": "ordered_received", "chunks_received": 0, "credit_samples": 128000, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 0, "received_next": 0, "t": "ack"}
+{"mono_ns": 2744500847047959, "t_ms": 10674, "event": "ordered_received", "chunks_received": 1, "credit_samples": 127360, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 0, "received_next": 640, "t": "ack"}
+{"mono_ns": 2744500857089478, "t_ms": 10684, "event": "ordered_received", "chunks_received": 2, "credit_samples": 126720, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 0, "received_next": 1280, "t": "ack"}
+{"mono_ns": 2744500865042415, "t_ms": 10692, "event": "ordered_received", "chunks_received": 3, "credit_samples": 126080, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 0, "received_next": 1920, "t": "ack"}
+{"mono_ns": 2744500873194171, "t_ms": 10700, "event": "ordered_received", "chunks_received": 4, "credit_samples": 125440, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 0, "received_next": 2560, "t": "ack"}
+{"mono_ns": 2744500882799182, "t_ms": 10710, "event": "ordered_received", "chunks_received": 5, "credit_samples": 128000, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 3200, "received_next": 3200, "t": "ack"}
+{"mono_ns": 2744500891222298, "t_ms": 10718, "event": "ordered_received", "chunks_received": 6, "credit_samples": 127360, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 3200, "received_next": 3840, "t": "ack"}
+{"mono_ns": 2744500899857561, "t_ms": 10727, "event": "ordered_received", "chunks_received": 7, "credit_samples": 126720, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 3200, "received_next": 4480, "t": "ack"}
+{"mono_ns": 2744500908564643, "t_ms": 10735, "event": "ordered_received", "chunks_received": 8, "credit_samples": 126080, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 3200, "received_next": 5120, "t": "ack"}
+{"mono_ns": 2744500916326205, "t_ms": 10743, "event": "ordered_received", "chunks_received": 9, "credit_samples": 125440, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 3200, "received_next": 5760, "t": "ack"}
+{"mono_ns": 2744500924714562, "t_ms": 10752, "event": "ordered_received", "chunks_received": 10, "credit_samples": 128000, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 6400, "received_next": 6400, "t": "ack"}
+{"mono_ns": 2744500932403205, "t_ms": 10759, "event": "ordered_received", "chunks_received": 11, "credit_samples": 127360, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 6400, "received_next": 7040, "t": "ack"}
+{"mono_ns": 2744500940338724, "t_ms": 10767, "event": "ordered_received", "chunks_received": 12, "credit_samples": 126720, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "phase": "receiving", "queued_next": 6400, "received_next": 7680, "t": "ack"}
+{"mono_ns": 2744500942352477, "t_ms": 10769, "event": "ordered_received", "action": "repeat_prompt", "finals_held": 0, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "next": "rtc", "outcome": "failed", "queued_next": 6400, "reason": "asr_unavailable", "received_next": 7680, "status": "failed", "t": "result"}
+{"mono_ns": 2744500943281399, "t_ms": 10770, "event": "data_received", "topic": "control", "value": {"lane": "L2", "payload": {"catchup": {"samples": 0, "skipped": "disabled"}, "ordered": {"end_sample": null, "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a", "no_task_reason": null, "outcome": "asr_unavailable", "session_id": "c5ef06cc-41fa-4b20-a311-3bb1ddde6a86"}, "phase": "rtc", "reason": "first_turn_failed:asr_unavailable", "room": "sn-BJP00326103099999938-1793353879", "stt_spawned_ms_ago": 0}, "src": "worker", "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165", "ts_ms": 1793353890338, "type": "session.input_phase"}}
+{"mono_ns": 2744501383339876, "t_ms": 11210, "event": "ordered_end", "samples": 41686}
+{"mono_ns": 2744501385658212, "t_ms": 11213, "event": "synthetic_uplink", "fixture": "story", "sha256": "c8f4aef5513ccfc4ffe1a0f1079ae2f4a54cd0265dc94902eeda8f5d4e342794", "samples": 141132}
+{"mono_ns": 2744501395782044, "t_ms": 11223, "event": "uplink_fixture_start", "fixture": "story"}
+{"mono_ns": 2744503348166557, "t_ms": 13175, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄", "final": false}
+{"mono_ns": 2744503430240041, "t_ms": 13257, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄", "final": false}
+{"mono_ns": 2744503764740889, "t_ms": 13592, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进", "final": false}
+{"mono_ns": 2744503972240209, "t_ms": 13799, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林", "final": false}
+{"mono_ns": 2744504029803848, "t_ms": 13857, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林", "final": false}
+{"mono_ns": 2744504343302919, "t_ms": 14170, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林", "final": false}
+{"mono_ns": 2744504508826836, "t_ms": 14336, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林", "final": false}
+{"mono_ns": 2744504625763847, "t_ms": 14453, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林", "final": false}
+{"mono_ns": 2744504973236103, "t_ms": 14800, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现", "final": false}
+{"mono_ns": 2744505023582360, "t_ms": 14850, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现", "final": false}
+{"mono_ns": 2744505307143925, "t_ms": 15134, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一", "final": false}
+{"mono_ns": 2744505569281413, "t_ms": 15396, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的", "final": false}
+{"mono_ns": 2744505628501691, "t_ms": 15455, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的", "final": false}
+{"mono_ns": 2744505916202207, "t_ms": 15743, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的苹果", "final": false}
+{"mono_ns": 2744506122865106, "t_ms": 15950, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的苹果", "final": false}
+{"mono_ns": 2744506225148074, "t_ms": 16052, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的苹果", "final": false}
+{"mono_ns": 2744506518732905, "t_ms": 16346, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的苹果", "final": false}
+{"mono_ns": 2744506678784438, "t_ms": 16506, "event": "data_received", "topic": "metrics", "value": {"eou_ms": 1123, "k": "eou", "stt_ms": 1105}}
+{"mono_ns": 2744506679088595, "t_ms": 16506, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_70e977a92767", "text": "小兄今天走进森林发现一颗金色的苹果", "final": true}
+{"mono_ns": 2744507547019063, "t_ms": 17374, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把", "final": false}
+{"mono_ns": 2744507771121633, "t_ms": 17598, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分", "final": false}
+{"mono_ns": 2744507829891669, "t_ms": 17657, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分", "final": false}
+{"mono_ns": 2744508355232212, "t_ms": 18182, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友", "final": false}
+{"mono_ns": 2744508389324429, "t_ms": 18216, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友", "final": false}
+{"mono_ns": 2744508390761393, "t_ms": 18218, "event": "data_received", "topic": "metrics", "value": {"k": "llm", "tps": 7000.0, "ttft_ms": 2}}
+{"mono_ns": 2744508391329739, "t_ms": 18218, "event": "data_received", "topic": "metrics", "value": {"k": "tts", "ttfb_ms": 547}}
+{"mono_ns": 2744508518223836, "t_ms": 18345, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友", "final": false}
+{"mono_ns": 2744508716514191, "t_ms": 18543, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友", "final": false}
+{"mono_ns": 2744508926416075, "t_ms": 18753, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友", "final": false}
+{"mono_ns": 2744509101223273, "t_ms": 18928, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后", "final": false}
+{"mono_ns": 2744509452769891, "t_ms": 19280, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一", "final": false}
+{"mono_ns": 2744509491305130, "t_ms": 19318, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一", "final": false}
+{"mono_ns": 2744509752934884, "t_ms": 19580, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物", "final": false}
+{"mono_ns": 2744509841074088, "t_ms": 19668, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物", "final": false}
+{"mono_ns": 2744510121129714, "t_ms": 19948, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物", "final": false}
+{"mono_ns": 2744510532074740, "t_ms": 20359, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是", "final": false}
+{"mono_ns": 2744510564406928, "t_ms": 20391, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是", "final": false}
+{"mono_ns": 2744510744755470, "t_ms": 20572, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一", "final": false}
+{"mono_ns": 2744510980947612, "t_ms": 20808, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色", "final": false}
+{"mono_ns": 2744511235153518, "t_ms": 21062, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色", "final": false}
+{"mono_ns": 2744511411983402, "t_ms": 21239, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝", "final": false}
+{"mono_ns": 2744511444619896, "t_ms": 21271, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝", "final": false}
+{"mono_ns": 2744511698206830, "t_ms": 21525, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝", "final": false}
+{"mono_ns": 2744511909989348, "t_ms": 21737, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝", "final": false}
+{"mono_ns": 2744512074681986, "t_ms": 21902, "event": "data_received", "topic": "metrics", "value": {"eou_ms": 1142, "k": "eou", "stt_ms": 1125}}
+{"mono_ns": 2744512074933216, "t_ms": 21902, "event": "transcription", "identity": "dev-BJP00326103099999938", "id": "SG_3d5c761c6be8", "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝", "final": true}
+{"mono_ns": 2744512609998520, "t_ms": 22437, "event": "data_received", "topic": "state", "value": {"k": "speaking", "speaking": true}}
+{"mono_ns": 2744512770108587, "t_ms": 22597, "event": "first_nonzero_audio", "peak": 982}
+{"mono_ns": 2744513766532788, "t_ms": 23593, "event": "data_received", "topic": "metrics", "value": {"k": "llm", "tps": 7000.0, "ttft_ms": 2}}
+{"mono_ns": 2744513767035800, "t_ms": 23594, "event": "data_received", "topic": "metrics", "value": {"k": "tts", "ttfb_ms": 528}}
+{"mono_ns": 2744513773983866, "t_ms": 23601, "event": "transcription", "identity": "agent-AJ_pw9JDqhH6cNd", "id": "SG_a2_0", "text": "这是隔离联调的合成聊天回复。", "final": false}
+{"mono_ns": 2744516397495626, "t_ms": 26224, "event": "failure", "error": "timeout: enter double-confirm completed"}
+{"mono_ns": 2744516409951536, "t_ms": 26237, "event": "disconnected", "reason": "1"}
+{"mono_ns": 2744516438337589, "t_ms": 26265, "event": "room_api_absent", "room": "sn-BJP00326103099999938-1793353879"}

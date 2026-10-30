@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-30T18:06:59.483610+08:00",
+  "exit_code": 0,
+  "inputs": 83,
+  "bundle_inputs": 33,
+  "worker_head": "b7c942201d45a6fe92a26488448f4dfb0c1db4b0",
+  "brain_head": "2496ac4334eb4de373f7e83fc9ad89517fd64726",
+  "bundle_sha256": "f8c0b92ec702c2c8eee414c81b266794d8d527d84503f6a51ec4833270ff9889",
+  "default_tests_passed": 545,
+  "default_tests_ignored": 2,
+  "explicit_http_joint_passed": 2,
+  "lock_released": true
+}

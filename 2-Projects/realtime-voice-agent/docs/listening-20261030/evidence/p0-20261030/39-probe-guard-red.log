@@ -1,0 +1,21 @@
+FF
+======================================================================
+FAIL: test_local_ready_is_not_original_enter_completion (__main__.AckBinding.test_local_ready_is_not_original_enter_completion)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/codeg-acp/66120-63fe7b1d/tmpinu4erwf/test_rtc_probe.py", line 28, in test_local_ready_is_not_original_enter_completion
+    self.assertFalse(probe.ack('listening'))
+AssertionError: True is not false
+
+======================================================================
+FAIL: test_normal_state_query_cannot_complete_later_exit (__main__.AckBinding.test_normal_state_query_cannot_complete_later_exit)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/codeg-acp/66120-63fe7b1d/tmpinu4erwf/test_rtc_probe.py", line 18, in test_normal_state_query_cannot_complete_later_exit
+    self.assertFalse(probe.ack('normal'))
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.002s
+
+FAILED (failures=2)

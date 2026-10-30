@@ -1,0 +1,2538 @@
+{
+  "scenario": "lease_timeout",
+  "passed": false,
+  "boundaries": {
+    "RTC": "real shared SFU unique agent/room",
+    "job_orchestrator": "real candidate test-feature binary",
+    "Brain_authority": "real isolated SQLite/clock/routes/registration",
+    "text_provider": "deterministic synthetic",
+    "ASR_TTS": "real provider, synthetic WAV input",
+    "Android": "software substitute"
+  },
+  "error": "timeout: enter double-confirm completed",
+  "events": [
+    {
+      "mono_ns": 2744490234971198,
+      "t_ms": 62,
+      "event": "session_issued",
+      "room": "sn-BJP00326103099999938-1793353879",
+      "session": "c5ef06cc-41fa-4b20-a311-3bb1ddde6a86",
+      "trace": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165",
+      "agent": "p003-listening-p0-session39"
+    },
+    {
+      "mono_ns": 2744500794167680,
+      "t_ms": 10621,
+      "event": "agent_bound",
+      "identity": "agent-AJ_pw9JDqhH6cNd",
+      "sid": "PA_FRretbBQux8z",
+      "kind": 4,
+      "agent": "p003-listening-p0-session39"
+    },
+    {
+      "mono_ns": 2744500794501698,
+      "t_ms": 10621,
+      "event": "audio_subscribed",
+      "sid": "TR_AMcQByd5XX6V5G"
+    },
+    {
+      "mono_ns": 2744500801936809,
+      "t_ms": 10629,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "agent_track_subscribed": true,
+          "room": "sn-BJP00326103099999938-1793353879"
+        },
+        "src": "worker",
+        "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165",
+        "ts_ms": 1793353890198,
+        "type": "session.output_ready"
+      }
+    },
+    {
+      "mono_ns": 2744500822396072,
+      "t_ms": 10649,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "input_loop_started": true,
+          "output_ready": true,
+          "room": "sn-BJP00326103099999938-1793353879",
+          "timings_ms": {
+            "issue_to_assignment": 295,
+            "job_room_connect": 10183,
+            "track_to_input_loop": 70
+          },
+          "user_track_subscribed": true
+        },
+        "src": "worker",
+        "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165",
+        "ts_ms": 1793353890218,
+        "type": "session.input_ready"
+      }
+    },
+    {
+      "mono_ns": 2744500832402509,
+      "t_ms": 10659,
+      "event": "assertion",
+      "name": "real input_ready",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744500843893158,
+      "t_ms": 10671,
+      "event": "ordered_received",
+      "chunks_received": 0,
+      "credit_samples": 128000,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 0,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500845452935,
+      "t_ms": 10672,
+      "event": "ordered_received",
+      "chunks_received": 0,
+      "credit_samples": 128000,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 0,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500847047959,
+      "t_ms": 10674,
+      "event": "ordered_received",
+      "chunks_received": 1,
+      "credit_samples": 127360,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500857089478,
+      "t_ms": 10684,
+      "event": "ordered_received",
+      "chunks_received": 2,
+      "credit_samples": 126720,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 1280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500865042415,
+      "t_ms": 10692,
+      "event": "ordered_received",
+      "chunks_received": 3,
+      "credit_samples": 126080,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 1920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500873194171,
+      "t_ms": 10700,
+      "event": "ordered_received",
+      "chunks_received": 4,
+      "credit_samples": 125440,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 2560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500882799182,
+      "t_ms": 10710,
+      "event": "ordered_received",
+      "chunks_received": 5,
+      "credit_samples": 128000,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 3200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500891222298,
+      "t_ms": 10718,
+      "event": "ordered_received",
+      "chunks_received": 6,
+      "credit_samples": 127360,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 3840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500899857561,
+      "t_ms": 10727,
+      "event": "ordered_received",
+      "chunks_received": 7,
+      "credit_samples": 126720,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 4480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500908564643,
+      "t_ms": 10735,
+      "event": "ordered_received",
+      "chunks_received": 8,
+      "credit_samples": 126080,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 5120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500916326205,
+      "t_ms": 10743,
+      "event": "ordered_received",
+      "chunks_received": 9,
+      "credit_samples": 125440,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 5760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500924714562,
+      "t_ms": 10752,
+      "event": "ordered_received",
+      "chunks_received": 10,
+      "credit_samples": 128000,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 6400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500932403205,
+      "t_ms": 10759,
+      "event": "ordered_received",
+      "chunks_received": 11,
+      "credit_samples": 127360,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 7040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500940338724,
+      "t_ms": 10767,
+      "event": "ordered_received",
+      "chunks_received": 12,
+      "credit_samples": 126720,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 7680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744500942352477,
+      "t_ms": 10769,
+      "event": "ordered_received",
+      "action": "repeat_prompt",
+      "finals_held": 0,
+      "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+      "next": "rtc",
+      "outcome": "failed",
+      "queued_next": 6400,
+      "reason": "asr_unavailable",
+      "received_next": 7680,
+      "status": "failed",
+      "t": "result"
+    },
+    {
+      "mono_ns": 2744500943281399,
+      "t_ms": 10770,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "catchup": {
+            "samples": 0,
+            "skipped": "disabled"
+          },
+          "ordered": {
+            "end_sample": null,
+            "input_id": "p0-input-55619a14-bf9f-4d80-b2de-bb918220565a",
+            "no_task_reason": null,
+            "outcome": "asr_unavailable",
+            "session_id": "c5ef06cc-41fa-4b20-a311-3bb1ddde6a86"
+          },
+          "phase": "rtc",
+          "reason": "first_turn_failed:asr_unavailable",
+          "room": "sn-BJP00326103099999938-1793353879",
+          "stt_spawned_ms_ago": 0
+        },
+        "src": "worker",
+        "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165",
+        "ts_ms": 1793353890338,
+        "type": "session.input_phase"
+      }
+    },
+    {
+      "mono_ns": 2744501383339876,
+      "t_ms": 11210,
+      "event": "ordered_end",
+      "samples": 41686
+    },
+    {
+      "mono_ns": 2744501385658212,
+      "t_ms": 11213,
+      "event": "synthetic_uplink",
+      "fixture": "story",
+      "sha256": "c8f4aef5513ccfc4ffe1a0f1079ae2f4a54cd0265dc94902eeda8f5d4e342794",
+      "samples": 141132
+    },
+    {
+      "mono_ns": 2744501395782044,
+      "t_ms": 11223,
+      "event": "uplink_fixture_start",
+      "fixture": "story"
+    },
+    {
+      "mono_ns": 2744503348166557,
+      "t_ms": 13175,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄",
+      "final": false
+    },
+    {
+      "mono_ns": 2744503430240041,
+      "t_ms": 13257,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄",
+      "final": false
+    },
+    {
+      "mono_ns": 2744503764740889,
+      "t_ms": 13592,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进",
+      "final": false
+    },
+    {
+      "mono_ns": 2744503972240209,
+      "t_ms": 13799,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744504029803848,
+      "t_ms": 13857,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744504343302919,
+      "t_ms": 14170,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744504508826836,
+      "t_ms": 14336,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744504625763847,
+      "t_ms": 14453,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744504973236103,
+      "t_ms": 14800,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现",
+      "final": false
+    },
+    {
+      "mono_ns": 2744505023582360,
+      "t_ms": 14850,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现",
+      "final": false
+    },
+    {
+      "mono_ns": 2744505307143925,
+      "t_ms": 15134,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744505569281413,
+      "t_ms": 15396,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744505628501691,
+      "t_ms": 15455,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744505916202207,
+      "t_ms": 15743,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744506122865106,
+      "t_ms": 15950,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744506225148074,
+      "t_ms": 16052,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744506518732905,
+      "t_ms": 16346,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744506678784438,
+      "t_ms": 16506,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "eou_ms": 1123,
+        "k": "eou",
+        "stt_ms": 1105
+      }
+    },
+    {
+      "mono_ns": 2744506679088595,
+      "t_ms": 16506,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": true
+    },
+    {
+      "mono_ns": 2744507547019063,
+      "t_ms": 17374,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把",
+      "final": false
+    },
+    {
+      "mono_ns": 2744507771121633,
+      "t_ms": 17598,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分",
+      "final": false
+    },
+    {
+      "mono_ns": 2744507829891669,
+      "t_ms": 17657,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分",
+      "final": false
+    },
+    {
+      "mono_ns": 2744508355232212,
+      "t_ms": 18182,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744508389324429,
+      "t_ms": 18216,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744508390761393,
+      "t_ms": 18218,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "k": "llm",
+        "tps": 7000.0,
+        "ttft_ms": 2
+      }
+    },
+    {
+      "mono_ns": 2744508391329739,
+      "t_ms": 18218,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "k": "tts",
+        "ttfb_ms": 547
+      }
+    },
+    {
+      "mono_ns": 2744508518223836,
+      "t_ms": 18345,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744508716514191,
+      "t_ms": 18543,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744508926416075,
+      "t_ms": 18753,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744509101223273,
+      "t_ms": 18928,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后",
+      "final": false
+    },
+    {
+      "mono_ns": 2744509452769891,
+      "t_ms": 19280,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744509491305130,
+      "t_ms": 19318,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744509752934884,
+      "t_ms": 19580,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744509841074088,
+      "t_ms": 19668,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744510121129714,
+      "t_ms": 19948,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744510532074740,
+      "t_ms": 20359,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false
+    },
+    {
+      "mono_ns": 2744510564406928,
+      "t_ms": 20391,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false
+    },
+    {
+      "mono_ns": 2744510744755470,
+      "t_ms": 20572,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744510980947612,
+      "t_ms": 20808,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744511235153518,
+      "t_ms": 21062,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744511411983402,
+      "t_ms": 21239,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744511444619896,
+      "t_ms": 21271,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744511698206830,
+      "t_ms": 21525,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744511909989348,
+      "t_ms": 21737,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744512074681986,
+      "t_ms": 21902,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "eou_ms": 1142,
+        "k": "eou",
+        "stt_ms": 1125
+      }
+    },
+    {
+      "mono_ns": 2744512074933216,
+      "t_ms": 21902,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": true
+    },
+    {
+      "mono_ns": 2744512609998520,
+      "t_ms": 22437,
+      "event": "data_received",
+      "topic": "state",
+      "value": {
+        "k": "speaking",
+        "speaking": true
+      }
+    },
+    {
+      "mono_ns": 2744512770108587,
+      "t_ms": 22597,
+      "event": "first_nonzero_audio",
+      "peak": 982
+    },
+    {
+      "mono_ns": 2744513766532788,
+      "t_ms": 23593,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "k": "llm",
+        "tps": 7000.0,
+        "ttft_ms": 2
+      }
+    },
+    {
+      "mono_ns": 2744513767035800,
+      "t_ms": 23594,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "k": "tts",
+        "ttfb_ms": 528
+      }
+    },
+    {
+      "mono_ns": 2744513773983866,
+      "t_ms": 23601,
+      "event": "transcription",
+      "identity": "agent-AJ_pw9JDqhH6cNd",
+      "id": "SG_a2_0",
+      "text": "这是隔离联调的合成聊天回复。",
+      "final": false
+    },
+    {
+      "mono_ns": 2744516397495626,
+      "t_ms": 26224,
+      "event": "failure",
+      "error": "timeout: enter double-confirm completed"
+    },
+    {
+      "mono_ns": 2744516409951536,
+      "t_ms": 26237,
+      "event": "disconnected",
+      "reason": "1"
+    },
+    {
+      "mono_ns": 2744516438337589,
+      "t_ms": 26265,
+      "event": "room_api_absent",
+      "room": "sn-BJP00326103099999938-1793353879"
+    }
+  ],
+  "captions": [
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄",
+      "final": false,
+      "t_ms": 13175
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄",
+      "final": false,
+      "t_ms": 13257
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进",
+      "final": false,
+      "t_ms": 13592
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 13799
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 13857
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 14170
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 14336
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 14453
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现",
+      "final": false,
+      "t_ms": 14800
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现",
+      "final": false,
+      "t_ms": 14850
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一",
+      "final": false,
+      "t_ms": 15134
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false,
+      "t_ms": 15396
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false,
+      "t_ms": 15455
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 15743
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 15950
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 16052
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 16346
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_70e977a92767",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": true,
+      "t_ms": 16506
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把",
+      "final": false,
+      "t_ms": 17374
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分",
+      "final": false,
+      "t_ms": 17598
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分",
+      "final": false,
+      "t_ms": 17657
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 18182
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 18216
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 18345
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 18543
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 18753
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后",
+      "final": false,
+      "t_ms": 18928
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false,
+      "t_ms": 19280
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false,
+      "t_ms": 19318
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 19580
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 19668
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 19948
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false,
+      "t_ms": 20359
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false,
+      "t_ms": 20391
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false,
+      "t_ms": 20572
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false,
+      "t_ms": 20808
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false,
+      "t_ms": 21062
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 21239
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 21271
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 21525
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 21737
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_3d5c761c6be8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": true,
+      "t_ms": 21902
+    },
+    {
+      "identity": "agent-AJ_pw9JDqhH6cNd",
+      "id": "SG_a2_0",
+      "text": "这是隔离联调的合成聊天回复。",
+      "final": false,
+      "t_ms": 23601
+    }
+  ],
+  "audio": [
+    {
+      "mono_ns": 2744512770092876,
+      "t_ms": 22597,
+      "peak": 982,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512780249344,
+      "t_ms": 22607,
+      "peak": 1327,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512790135345,
+      "t_ms": 22617,
+      "peak": 2971,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512800867108,
+      "t_ms": 22628,
+      "peak": 5270,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512810567547,
+      "t_ms": 22637,
+      "peak": 3476,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512820330550,
+      "t_ms": 22647,
+      "peak": 7314,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512830489287,
+      "t_ms": 22657,
+      "peak": 9970,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512840725414,
+      "t_ms": 22668,
+      "peak": 9748,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512850155562,
+      "t_ms": 22677,
+      "peak": 10050,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512860139469,
+      "t_ms": 22687,
+      "peak": 10617,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512870419472,
+      "t_ms": 22697,
+      "peak": 9861,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512879782162,
+      "t_ms": 22707,
+      "peak": 9598,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512889981144,
+      "t_ms": 22717,
+      "peak": 4785,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512900180820,
+      "t_ms": 22727,
+      "peak": 6106,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512910553408,
+      "t_ms": 22737,
+      "peak": 6838,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512920654371,
+      "t_ms": 22748,
+      "peak": 5462,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512930241974,
+      "t_ms": 22757,
+      "peak": 5008,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512942201789,
+      "t_ms": 22769,
+      "peak": 5323,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512950202683,
+      "t_ms": 22777,
+      "peak": 3937,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512960286832,
+      "t_ms": 22787,
+      "peak": 5034,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512970440719,
+      "t_ms": 22797,
+      "peak": 3298,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512981094835,
+      "t_ms": 22808,
+      "peak": 6726,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744512989974557,
+      "t_ms": 22817,
+      "peak": 9960,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513000445174,
+      "t_ms": 22827,
+      "peak": 10294,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513010294634,
+      "t_ms": 22837,
+      "peak": 9256,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513019790806,
+      "t_ms": 22847,
+      "peak": 7436,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513029584610,
+      "t_ms": 22856,
+      "peak": 3531,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513040149215,
+      "t_ms": 22867,
+      "peak": 2569,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513050514316,
+      "t_ms": 22877,
+      "peak": 963,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513060454754,
+      "t_ms": 22887,
+      "peak": 538,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513069681007,
+      "t_ms": 22897,
+      "peak": 405,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513079916684,
+      "t_ms": 22907,
+      "peak": 263,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513090240174,
+      "t_ms": 22917,
+      "peak": 230,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513100345147,
+      "t_ms": 22927,
+      "peak": 182,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513110361857,
+      "t_ms": 22937,
+      "peak": 109,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513139849733,
+      "t_ms": 22967,
+      "peak": 2512,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513150344407,
+      "t_ms": 22977,
+      "peak": 3519,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513160270486,
+      "t_ms": 22987,
+      "peak": 946,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513169551109,
+      "t_ms": 22996,
+      "peak": 869,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513179939119,
+      "t_ms": 23007,
+      "peak": 3694,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513190381251,
+      "t_ms": 23017,
+      "peak": 10201,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513200740131,
+      "t_ms": 23028,
+      "peak": 15861,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513209766588,
+      "t_ms": 23037,
+      "peak": 20574,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513219940237,
+      "t_ms": 23047,
+      "peak": 21399,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513230053477,
+      "t_ms": 23057,
+      "peak": 20769,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513240450241,
+      "t_ms": 23067,
+      "peak": 20657,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513249646625,
+      "t_ms": 23077,
+      "peak": 20086,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513259920664,
+      "t_ms": 23087,
+      "peak": 14120,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513270207485,
+      "t_ms": 23097,
+      "peak": 6945,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513280463174,
+      "t_ms": 23107,
+      "peak": 7000,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513290530395,
+      "t_ms": 23117,
+      "peak": 6433,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513299897267,
+      "t_ms": 23127,
+      "peak": 7167,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513310204316,
+      "t_ms": 23137,
+      "peak": 8443,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513320442912,
+      "t_ms": 23147,
+      "peak": 8066,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513330944833,
+      "t_ms": 23158,
+      "peak": 8143,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513340277638,
+      "t_ms": 23167,
+      "peak": 7388,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513350541086,
+      "t_ms": 23177,
+      "peak": 7436,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513360602781,
+      "t_ms": 23187,
+      "peak": 8170,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513369792817,
+      "t_ms": 23197,
+      "peak": 8023,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513380203602,
+      "t_ms": 23207,
+      "peak": 5647,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513390185683,
+      "t_ms": 23217,
+      "peak": 4989,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513400531149,
+      "t_ms": 23227,
+      "peak": 5762,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513410820006,
+      "t_ms": 23238,
+      "peak": 6037,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513420062095,
+      "t_ms": 23247,
+      "peak": 5765,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513430394912,
+      "t_ms": 23257,
+      "peak": 8558,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513440697411,
+      "t_ms": 23268,
+      "peak": 11510,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513450862611,
+      "t_ms": 23278,
+      "peak": 13834,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513463643445,
+      "t_ms": 23291,
+      "peak": 17876,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513470299541,
+      "t_ms": 23297,
+      "peak": 16877,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513480813939,
+      "t_ms": 23308,
+      "peak": 14117,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513489769213,
+      "t_ms": 23317,
+      "peak": 12905,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513500443572,
+      "t_ms": 23327,
+      "peak": 13629,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513510260975,
+      "t_ms": 23337,
+      "peak": 13525,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513520894955,
+      "t_ms": 23348,
+      "peak": 13155,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513530143680,
+      "t_ms": 23357,
+      "peak": 11507,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513540636602,
+      "t_ms": 23367,
+      "peak": 8238,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513550394561,
+      "t_ms": 23377,
+      "peak": 5225,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513560270131,
+      "t_ms": 23387,
+      "peak": 5606,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513570482685,
+      "t_ms": 23397,
+      "peak": 5033,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513581148484,
+      "t_ms": 23408,
+      "peak": 5064,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513590233732,
+      "t_ms": 23417,
+      "peak": 4433,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513600929726,
+      "t_ms": 23428,
+      "peak": 2796,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513610115439,
+      "t_ms": 23437,
+      "peak": 1851,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513619884226,
+      "t_ms": 23447,
+      "peak": 2474,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513631324866,
+      "t_ms": 23458,
+      "peak": 2208,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513641312387,
+      "t_ms": 23468,
+      "peak": 2500,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513649888532,
+      "t_ms": 23477,
+      "peak": 1932,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513660372333,
+      "t_ms": 23487,
+      "peak": 1385,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513670830942,
+      "t_ms": 23498,
+      "peak": 1260,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513679570859,
+      "t_ms": 23506,
+      "peak": 1258,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513690112609,
+      "t_ms": 23517,
+      "peak": 1625,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513700222086,
+      "t_ms": 23527,
+      "peak": 1707,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513710314573,
+      "t_ms": 23537,
+      "peak": 2769,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513719681909,
+      "t_ms": 23547,
+      "peak": 3041,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513729702796,
+      "t_ms": 23557,
+      "peak": 2614,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513740126827,
+      "t_ms": 23567,
+      "peak": 2683,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513750817137,
+      "t_ms": 23578,
+      "peak": 2233,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513760501711,
+      "t_ms": 23587,
+      "peak": 2133,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513769863822,
+      "t_ms": 23597,
+      "peak": 3018,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513780057399,
+      "t_ms": 23607,
+      "peak": 4763,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513790429306,
+      "t_ms": 23617,
+      "peak": 8435,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513800415288,
+      "t_ms": 23627,
+      "peak": 11711,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513809647597,
+      "t_ms": 23637,
+      "peak": 12886,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513819769749,
+      "t_ms": 23647,
+      "peak": 11543,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513830180125,
+      "t_ms": 23657,
+      "peak": 10784,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513840226077,
+      "t_ms": 23667,
+      "peak": 10395,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513850824849,
+      "t_ms": 23678,
+      "peak": 10820,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513859547950,
+      "t_ms": 23686,
+      "peak": 8482,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513869986439,
+      "t_ms": 23697,
+      "peak": 2435,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513880402581,
+      "t_ms": 23707,
+      "peak": 2184,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513890438150,
+      "t_ms": 23717,
+      "peak": 1700,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513899737977,
+      "t_ms": 23727,
+      "peak": 1665,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513909901330,
+      "t_ms": 23737,
+      "peak": 5688,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513919993438,
+      "t_ms": 23747,
+      "peak": 12704,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513930405306,
+      "t_ms": 23757,
+      "peak": 15029,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513940805816,
+      "t_ms": 23768,
+      "peak": 17334,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513949833161,
+      "t_ms": 23777,
+      "peak": 18714,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513959976026,
+      "t_ms": 23787,
+      "peak": 19161,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513970387295,
+      "t_ms": 23797,
+      "peak": 18894,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513980607251,
+      "t_ms": 23807,
+      "peak": 16522,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744513989990986,
+      "t_ms": 23817,
+      "peak": 15658,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514000273625,
+      "t_ms": 23827,
+      "peak": 12897,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514010125512,
+      "t_ms": 23837,
+      "peak": 11837,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514020685710,
+      "t_ms": 23848,
+      "peak": 7256,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514030440943,
+      "t_ms": 23857,
+      "peak": 5054,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514040074742,
+      "t_ms": 23867,
+      "peak": 1887,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514050563639,
+      "t_ms": 23877,
+      "peak": 1689,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514059854979,
+      "t_ms": 23887,
+      "peak": 1613,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514070098255,
+      "t_ms": 23897,
+      "peak": 1838,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514080049243,
+      "t_ms": 23907,
+      "peak": 1539,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514090237427,
+      "t_ms": 23917,
+      "peak": 1426,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514100452480,
+      "t_ms": 23927,
+      "peak": 1024,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514109735990,
+      "t_ms": 23937,
+      "peak": 1257,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514119921518,
+      "t_ms": 23947,
+      "peak": 1642,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514130341152,
+      "t_ms": 23957,
+      "peak": 1534,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514140270390,
+      "t_ms": 23967,
+      "peak": 1265,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514151053097,
+      "t_ms": 23978,
+      "peak": 4687,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514160042159,
+      "t_ms": 23987,
+      "peak": 11885,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514170380457,
+      "t_ms": 23997,
+      "peak": 12408,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514180920511,
+      "t_ms": 24008,
+      "peak": 13686,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514189837828,
+      "t_ms": 24017,
+      "peak": 13838,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514200202263,
+      "t_ms": 24027,
+      "peak": 15907,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514210480665,
+      "t_ms": 24037,
+      "peak": 16376,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514220637785,
+      "t_ms": 24047,
+      "peak": 12441,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514229802941,
+      "t_ms": 24057,
+      "peak": 3474,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514240434334,
+      "t_ms": 24067,
+      "peak": 2434,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514250599599,
+      "t_ms": 24077,
+      "peak": 5280,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514259787026,
+      "t_ms": 24087,
+      "peak": 6871,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514270046550,
+      "t_ms": 24097,
+      "peak": 7565,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514280576917,
+      "t_ms": 24107,
+      "peak": 7595,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514290465251,
+      "t_ms": 24117,
+      "peak": 2233,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514300163021,
+      "t_ms": 24127,
+      "peak": 2411,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514310296856,
+      "t_ms": 24137,
+      "peak": 3951,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514320477720,
+      "t_ms": 24147,
+      "peak": 7424,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514329776340,
+      "t_ms": 24157,
+      "peak": 10026,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514339861344,
+      "t_ms": 24167,
+      "peak": 10794,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514350113471,
+      "t_ms": 24177,
+      "peak": 10080,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514360211626,
+      "t_ms": 24187,
+      "peak": 9897,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514370573586,
+      "t_ms": 24197,
+      "peak": 10542,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514379649303,
+      "t_ms": 24207,
+      "peak": 10313,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514389933683,
+      "t_ms": 24217,
+      "peak": 10899,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514400028870,
+      "t_ms": 24227,
+      "peak": 12220,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514410413539,
+      "t_ms": 24237,
+      "peak": 13426,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514419396153,
+      "t_ms": 24246,
+      "peak": 12627,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514430047408,
+      "t_ms": 24257,
+      "peak": 12830,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514440318397,
+      "t_ms": 24267,
+      "peak": 13655,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514450328048,
+      "t_ms": 24277,
+      "peak": 13671,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514461025628,
+      "t_ms": 24288,
+      "peak": 12694,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514470282053,
+      "t_ms": 24297,
+      "peak": 12082,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514480464506,
+      "t_ms": 24307,
+      "peak": 10247,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514490803697,
+      "t_ms": 24318,
+      "peak": 9110,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514500334855,
+      "t_ms": 24327,
+      "peak": 7524,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514510247277,
+      "t_ms": 24337,
+      "peak": 1783,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514520485330,
+      "t_ms": 24347,
+      "peak": 1369,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514530841277,
+      "t_ms": 24358,
+      "peak": 1646,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514540249373,
+      "t_ms": 24367,
+      "peak": 1722,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514550046454,
+      "t_ms": 24377,
+      "peak": 1424,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514560641338,
+      "t_ms": 24387,
+      "peak": 1180,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514570677694,
+      "t_ms": 24398,
+      "peak": 1756,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514580211973,
+      "t_ms": 24407,
+      "peak": 6934,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514591051124,
+      "t_ms": 24418,
+      "peak": 8309,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514600858991,
+      "t_ms": 24428,
+      "peak": 9211,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514610238856,
+      "t_ms": 24437,
+      "peak": 9096,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514620205201,
+      "t_ms": 24447,
+      "peak": 8948,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514630445044,
+      "t_ms": 24457,
+      "peak": 8120,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514640711934,
+      "t_ms": 24468,
+      "peak": 7778,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514650126785,
+      "t_ms": 24477,
+      "peak": 7268,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514660125404,
+      "t_ms": 24487,
+      "peak": 3704,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514670580530,
+      "t_ms": 24497,
+      "peak": 1312,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514679665474,
+      "t_ms": 24507,
+      "peak": 880,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514690122851,
+      "t_ms": 24517,
+      "peak": 466,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514700785571,
+      "t_ms": 24528,
+      "peak": 556,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514710424053,
+      "t_ms": 24537,
+      "peak": 430,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514719527542,
+      "t_ms": 24546,
+      "peak": 563,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514729873265,
+      "t_ms": 24557,
+      "peak": 1437,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514740353283,
+      "t_ms": 24567,
+      "peak": 8566,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514750665356,
+      "t_ms": 24578,
+      "peak": 7986,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514759547330,
+      "t_ms": 24586,
+      "peak": 8597,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514769725656,
+      "t_ms": 24597,
+      "peak": 8923,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514780582564,
+      "t_ms": 24607,
+      "peak": 8507,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514790411461,
+      "t_ms": 24617,
+      "peak": 7752,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514800993106,
+      "t_ms": 24628,
+      "peak": 7092,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514810753401,
+      "t_ms": 24638,
+      "peak": 6099,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514820572520,
+      "t_ms": 24647,
+      "peak": 5553,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514830793839,
+      "t_ms": 24658,
+      "peak": 5250,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514840448039,
+      "t_ms": 24667,
+      "peak": 4779,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514850788836,
+      "t_ms": 24678,
+      "peak": 3588,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514859953514,
+      "t_ms": 24687,
+      "peak": 2030,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514870541658,
+      "t_ms": 24697,
+      "peak": 976,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514880751380,
+      "t_ms": 24708,
+      "peak": 737,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514890055896,
+      "t_ms": 24717,
+      "peak": 636,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514900199031,
+      "t_ms": 24727,
+      "peak": 1033,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514910761041,
+      "t_ms": 24738,
+      "peak": 816,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514920340525,
+      "t_ms": 24747,
+      "peak": 679,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514930138387,
+      "t_ms": 24757,
+      "peak": 760,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514940380479,
+      "t_ms": 24767,
+      "peak": 722,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514950561923,
+      "t_ms": 24777,
+      "peak": 813,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514959886449,
+      "t_ms": 24787,
+      "peak": 783,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514970219028,
+      "t_ms": 24797,
+      "peak": 625,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514980355317,
+      "t_ms": 24807,
+      "peak": 548,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744514990378860,
+      "t_ms": 24817,
+      "peak": 1327,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515000897107,
+      "t_ms": 24828,
+      "peak": 4100,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515010204096,
+      "t_ms": 24837,
+      "peak": 6840,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515020646383,
+      "t_ms": 24848,
+      "peak": 7934,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515030301297,
+      "t_ms": 24857,
+      "peak": 9823,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515039771600,
+      "t_ms": 24867,
+      "peak": 12825,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515050411388,
+      "t_ms": 24877,
+      "peak": 11533,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515060463024,
+      "t_ms": 24887,
+      "peak": 8134,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515070497573,
+      "t_ms": 24897,
+      "peak": 11951,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515079826170,
+      "t_ms": 24907,
+      "peak": 6273,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515090056282,
+      "t_ms": 24917,
+      "peak": 3969,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515100848338,
+      "t_ms": 24928,
+      "peak": 676,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515110726939,
+      "t_ms": 24938,
+      "peak": 301,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515119996191,
+      "t_ms": 24947,
+      "peak": 248,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515130135623,
+      "t_ms": 24957,
+      "peak": 384,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515140436522,
+      "t_ms": 24967,
+      "peak": 232,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744515150783977,
+      "t_ms": 24978,
+      "peak": 156,
+      "samples": 240
+    }
+  ],
+  "signed_binding": {
+    "room_name": "sn-BJP00326103099999938-1793353879",
+    "session_id": "c5ef06cc-41fa-4b20-a311-3bb1ddde6a86",
+    "trace_id": "p0-39-6a4cdb8d-2817-4a7f-940a-3e7503128165",
+    "expected_agent_name": "p003-listening-p0-session39"
+  }
+}

@@ -1,0 +1,4885 @@
+{
+  "scenario": "barge",
+  "passed": true,
+  "boundaries": {
+    "RTC": "real shared SFU unique agent/room",
+    "job_orchestrator": "real candidate test-feature binary",
+    "Brain_authority": "real isolated SQLite/clock/routes/registration",
+    "text_provider": "deterministic synthetic",
+    "ASR_TTS": "real provider, synthetic WAV input",
+    "Android": "software substitute"
+  },
+  "events": [
+    {
+      "mono_ns": 2744357600972485,
+      "t_ms": 81,
+      "event": "session_issued",
+      "room": "sn-BJP00326103099999938-1793353746",
+      "session": "c0e601d4-8d24-4fd1-9d03-e401c7efe016",
+      "trace": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+      "agent": "p003-listening-p0-session39"
+    },
+    {
+      "mono_ns": 2744358202456035,
+      "t_ms": 683,
+      "event": "agent_bound",
+      "identity": "agent-AJ_YamzDCbHdNRE",
+      "sid": "PA_rs2Faqm3G9wD",
+      "kind": 4,
+      "agent": "p003-listening-p0-session39"
+    },
+    {
+      "mono_ns": 2744358202594920,
+      "t_ms": 683,
+      "event": "audio_subscribed",
+      "sid": "TR_AMZPtpqJCx8g6A"
+    },
+    {
+      "mono_ns": 2744358212201238,
+      "t_ms": 693,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "agent_track_subscribed": true,
+          "room": "sn-BJP00326103099999938-1793353746"
+        },
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353747608,
+        "type": "session.output_ready"
+      }
+    },
+    {
+      "mono_ns": 2744358212797653,
+      "t_ms": 693,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "input_loop_started": true,
+          "output_ready": true,
+          "room": "sn-BJP00326103099999938-1793353746",
+          "timings_ms": {
+            "issue_to_assignment": 293,
+            "job_room_connect": 175,
+            "track_to_input_loop": 53
+          },
+          "user_track_subscribed": true
+        },
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353747608,
+        "type": "session.input_ready"
+      }
+    },
+    {
+      "mono_ns": 2744358215130984,
+      "t_ms": 696,
+      "event": "assertion",
+      "name": "real input_ready",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744358229457296,
+      "t_ms": 710,
+      "event": "ordered_received",
+      "chunks_received": 0,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 0,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358231531146,
+      "t_ms": 712,
+      "event": "ordered_received",
+      "chunks_received": 0,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 0,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358232058051,
+      "t_ms": 713,
+      "event": "ordered_received",
+      "chunks_received": 1,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358238366521,
+      "t_ms": 719,
+      "event": "ordered_received",
+      "chunks_received": 2,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 1280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358248167477,
+      "t_ms": 729,
+      "event": "ordered_received",
+      "chunks_received": 3,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 1920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358255590542,
+      "t_ms": 736,
+      "event": "ordered_received",
+      "chunks_received": 4,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 2560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358264668667,
+      "t_ms": 745,
+      "event": "ordered_received",
+      "chunks_received": 5,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 3200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358272246877,
+      "t_ms": 753,
+      "event": "ordered_received",
+      "chunks_received": 6,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 3840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358281189940,
+      "t_ms": 762,
+      "event": "ordered_received",
+      "chunks_received": 7,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 4480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358290257030,
+      "t_ms": 771,
+      "event": "ordered_received",
+      "chunks_received": 8,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 5120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358297424421,
+      "t_ms": 778,
+      "event": "ordered_received",
+      "chunks_received": 9,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 5760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358305099342,
+      "t_ms": 786,
+      "event": "ordered_received",
+      "chunks_received": 10,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 6400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358313760773,
+      "t_ms": 794,
+      "event": "ordered_received",
+      "chunks_received": 11,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 7040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358323738250,
+      "t_ms": 804,
+      "event": "ordered_received",
+      "chunks_received": 12,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 7680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358330514357,
+      "t_ms": 811,
+      "event": "ordered_received",
+      "chunks_received": 13,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 8320,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358340837111,
+      "t_ms": 821,
+      "event": "ordered_received",
+      "chunks_received": 14,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 8960,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358347686913,
+      "t_ms": 828,
+      "event": "ordered_received",
+      "chunks_received": 15,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 9600,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358356948512,
+      "t_ms": 837,
+      "event": "ordered_received",
+      "chunks_received": 16,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 10240,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358367065674,
+      "t_ms": 848,
+      "event": "ordered_received",
+      "chunks_received": 17,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 10880,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358375036924,
+      "t_ms": 856,
+      "event": "ordered_received",
+      "chunks_received": 18,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 11520,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358384096742,
+      "t_ms": 865,
+      "event": "ordered_received",
+      "chunks_received": 19,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 12160,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358392322767,
+      "t_ms": 873,
+      "event": "ordered_received",
+      "chunks_received": 20,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 12800,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358400656216,
+      "t_ms": 881,
+      "event": "ordered_received",
+      "chunks_received": 21,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 13440,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358408142058,
+      "t_ms": 889,
+      "event": "ordered_received",
+      "chunks_received": 22,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 14080,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358418157943,
+      "t_ms": 899,
+      "event": "ordered_received",
+      "chunks_received": 23,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 14720,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358425994949,
+      "t_ms": 906,
+      "event": "ordered_received",
+      "chunks_received": 24,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 15360,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358435405160,
+      "t_ms": 916,
+      "event": "ordered_received",
+      "chunks_received": 25,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 16000,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358446695184,
+      "t_ms": 927,
+      "event": "ordered_received",
+      "chunks_received": 26,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 16640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358453355971,
+      "t_ms": 934,
+      "event": "ordered_received",
+      "chunks_received": 27,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 17280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358463252363,
+      "t_ms": 944,
+      "event": "ordered_received",
+      "chunks_received": 28,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 17920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358473232634,
+      "t_ms": 954,
+      "event": "ordered_received",
+      "chunks_received": 29,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 18560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358485849709,
+      "t_ms": 966,
+      "event": "ordered_received",
+      "chunks_received": 30,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 19200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358492119980,
+      "t_ms": 973,
+      "event": "ordered_received",
+      "chunks_received": 31,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 19840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358502500388,
+      "t_ms": 983,
+      "event": "ordered_received",
+      "chunks_received": 32,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 20480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358512452369,
+      "t_ms": 993,
+      "event": "ordered_received",
+      "chunks_received": 33,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 21120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358520953724,
+      "t_ms": 1001,
+      "event": "ordered_received",
+      "chunks_received": 34,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 21760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358530217352,
+      "t_ms": 1011,
+      "event": "ordered_received",
+      "chunks_received": 35,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 22400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358538906890,
+      "t_ms": 1019,
+      "event": "ordered_received",
+      "chunks_received": 36,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 23040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358546473780,
+      "t_ms": 1027,
+      "event": "ordered_received",
+      "chunks_received": 37,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 23680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358554826806,
+      "t_ms": 1035,
+      "event": "ordered_received",
+      "chunks_received": 38,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 24320,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358564781559,
+      "t_ms": 1045,
+      "event": "ordered_received",
+      "chunks_received": 39,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 24960,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358573770045,
+      "t_ms": 1054,
+      "event": "ordered_received",
+      "chunks_received": 40,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 25600,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358584939375,
+      "t_ms": 1065,
+      "event": "ordered_received",
+      "chunks_received": 41,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 26240,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358598953868,
+      "t_ms": 1079,
+      "event": "ordered_received",
+      "chunks_received": 42,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 26880,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358622964750,
+      "t_ms": 1103,
+      "event": "ordered_received",
+      "chunks_received": 43,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 27520,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358633220147,
+      "t_ms": 1114,
+      "event": "ordered_received",
+      "chunks_received": 44,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 28160,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358634702037,
+      "t_ms": 1115,
+      "event": "ordered_received",
+      "chunks_received": 45,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 28800,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744358805302539,
+      "t_ms": 1286,
+      "event": "ordered_end",
+      "samples": 41686
+    },
+    {
+      "mono_ns": 2744358807377498,
+      "t_ms": 1288,
+      "event": "synthetic_uplink",
+      "fixture": "story",
+      "sha256": "c8f4aef5513ccfc4ffe1a0f1079ae2f4a54cd0265dc94902eeda8f5d4e342794",
+      "samples": 141132
+    },
+    {
+      "mono_ns": 2744358826450122,
+      "t_ms": 1307,
+      "event": "uplink_fixture_start",
+      "fixture": "story"
+    },
+    {
+      "mono_ns": 2744359628859722,
+      "t_ms": 2109,
+      "event": "ordered_received",
+      "chunks_received": 46,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 29440,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359631456760,
+      "t_ms": 2112,
+      "event": "ordered_received",
+      "chunks_received": 47,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 30080,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359631821571,
+      "t_ms": 2112,
+      "event": "ordered_received",
+      "chunks_received": 48,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 30720,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359635312791,
+      "t_ms": 2116,
+      "event": "ordered_received",
+      "chunks_received": 49,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 31360,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359635702571,
+      "t_ms": 2116,
+      "event": "ordered_received",
+      "chunks_received": 50,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 32000,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359635871177,
+      "t_ms": 2116,
+      "event": "ordered_received",
+      "chunks_received": 51,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 32640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359648016342,
+      "t_ms": 2128,
+      "event": "ordered_received",
+      "chunks_received": 52,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 33280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359648643182,
+      "t_ms": 2129,
+      "event": "ordered_received",
+      "chunks_received": 53,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 33920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359650052973,
+      "t_ms": 2131,
+      "event": "ordered_received",
+      "chunks_received": 54,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 34560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359650731180,
+      "t_ms": 2131,
+      "event": "ordered_received",
+      "chunks_received": 55,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 35200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359650908906,
+      "t_ms": 2131,
+      "event": "ordered_received",
+      "chunks_received": 56,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 35840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359651345660,
+      "t_ms": 2132,
+      "event": "ordered_received",
+      "chunks_received": 57,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 36480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359652390341,
+      "t_ms": 2133,
+      "event": "ordered_received",
+      "chunks_received": 58,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 37120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359652959853,
+      "t_ms": 2133,
+      "event": "ordered_received",
+      "chunks_received": 59,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 37760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359653421896,
+      "t_ms": 2134,
+      "event": "ordered_received",
+      "chunks_received": 60,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 38400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359653623045,
+      "t_ms": 2134,
+      "event": "ordered_received",
+      "chunks_received": 61,
+      "credit_samples": 127360,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 39040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359653919465,
+      "t_ms": 2134,
+      "event": "ordered_received",
+      "chunks_received": 62,
+      "credit_samples": 126720,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 39680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359654286154,
+      "t_ms": 2135,
+      "event": "ordered_received",
+      "chunks_received": 63,
+      "credit_samples": 126080,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 40320,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359654506866,
+      "t_ms": 2135,
+      "event": "ordered_received",
+      "chunks_received": 64,
+      "credit_samples": 125440,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 40960,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359654752030,
+      "t_ms": 2135,
+      "event": "ordered_received",
+      "chunks_received": 65,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 41600,
+      "received_next": 41600,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359655046495,
+      "t_ms": 2136,
+      "event": "ordered_received",
+      "chunks_received": 66,
+      "credit_samples": 127914,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "receiving",
+      "queued_next": 41600,
+      "received_next": 41686,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744359655355719,
+      "t_ms": 2136,
+      "event": "ordered_received",
+      "chunks_received": 66,
+      "credit_samples": 128000,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "phase": "draining",
+      "queued_next": 41686,
+      "received_next": 41686,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744360572948627,
+      "t_ms": 3053,
+      "event": "ordered_received",
+      "finals": 1,
+      "finals_held": 1,
+      "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+      "next": "rtc",
+      "outcome": "task",
+      "queued_next": 41686,
+      "reason": null,
+      "received_next": 41686,
+      "samples_queued": 41686,
+      "status": "complete",
+      "t": "result",
+      "text_chars": 9
+    },
+    {
+      "mono_ns": 2744360573923845,
+      "t_ms": 3054,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f76c41fde9e0",
+      "text": "",
+      "final": true
+    },
+    {
+      "mono_ns": 2744360575104066,
+      "t_ms": 3056,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "action": "enter",
+          "mode_epoch": 0,
+          "participant": "dev-BJP00326103099999938",
+          "proposal_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:voice:1",
+          "scene": "story",
+          "session_id": "c0e601d4-8d24-4fd1-9d03-e401c7efe016",
+          "ttl_ms": 3000,
+          "version": 1
+        },
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353749968,
+        "type": "listening.proposal"
+      }
+    },
+    {
+      "mono_ns": 2744360576095763,
+      "t_ms": 3057,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "catchup": {
+            "samples": 14720,
+            "skipped": null
+          },
+          "ordered": {
+            "end_sample": 41686,
+            "input_id": "p0-input-43e81816-708c-40bb-ab52-c927f3f2e0e9",
+            "no_task_reason": null,
+            "outcome": "committed",
+            "session_id": "c0e601d4-8d24-4fd1-9d03-e401c7efe016"
+          },
+          "phase": "rtc",
+          "reason": "first_turn_listening_command",
+          "room": "sn-BJP00326103099999938-1793353746",
+          "stt_spawned_ms_ago": 921
+        },
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353749968,
+        "type": "session.input_phase"
+      }
+    },
+    {
+      "mono_ns": 2744360577797036,
+      "t_ms": 3058,
+      "event": "control_sent",
+      "type": "listening.state",
+      "seq": 1,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:1"
+      }
+    },
+    {
+      "mono_ns": 2744360579861207,
+      "t_ms": 3060,
+      "event": "control_sent",
+      "type": "listening.enter",
+      "seq": 2,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+        "mode_epoch": 0,
+        "proposal_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:voice:1",
+        "scene": "story"
+      }
+    },
+    {
+      "mono_ns": 2744360581312850,
+      "t_ms": 3062,
+      "event": "control_sent",
+      "type": "listening.enter",
+      "seq": 2,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+        "mode_epoch": 0,
+        "proposal_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:voice:1",
+        "scene": "story"
+      }
+    },
+    {
+      "mono_ns": 2744360986358288,
+      "t_ms": 3467,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 1,
+          "duplicate": false,
+          "listening_id": null,
+          "mode_epoch": 0,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:1",
+          "scene": null,
+          "stage": "completed",
+          "state": "normal",
+          "version": 1
+        },
+        "seq": 1,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353749982,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744360987406406,
+      "t_ms": 3468,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 2,
+          "duplicate": false,
+          "listening_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+          "mode_epoch": 1,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+          "scene": "story",
+          "stage": "received",
+          "state": "entering",
+          "version": 1
+        },
+        "seq": 2,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353750108,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744360989234779,
+      "t_ms": 3470,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天",
+      "final": false
+    },
+    {
+      "mono_ns": 2744360989782735,
+      "t_ms": 3470,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天",
+      "final": false
+    },
+    {
+      "mono_ns": 2744360990834577,
+      "t_ms": 3471,
+      "event": "control_sent",
+      "type": "listening.local_ready",
+      "seq": 3,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:3",
+        "mode_epoch": 1
+      }
+    },
+    {
+      "mono_ns": 2744361000669770,
+      "t_ms": 3481,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 3,
+          "duplicate": false,
+          "listening_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+          "mode_epoch": 1,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:3",
+          "scene": "story",
+          "stage": "completed",
+          "state": "listening",
+          "version": 1
+        },
+        "seq": 3,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353750395,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744361000956110,
+      "t_ms": 3481,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 2,
+          "duplicate": false,
+          "listening_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+          "mode_epoch": 1,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+          "scene": "story",
+          "stage": "completed",
+          "state": "listening",
+          "version": 1
+        },
+        "seq": 2,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353750395,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744361019724482,
+      "t_ms": 3500,
+      "event": "assertion",
+      "name": "enter double-confirm completed",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744361181723695,
+      "t_ms": 3662,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进",
+      "final": false
+    },
+    {
+      "mono_ns": 2744361411564881,
+      "t_ms": 3892,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744361466120556,
+      "t_ms": 3947,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744361729996202,
+      "t_ms": 4210,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744361935658940,
+      "t_ms": 4416,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744362271774864,
+      "t_ms": 4752,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744362401855819,
+      "t_ms": 4882,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现",
+      "final": false
+    },
+    {
+      "mono_ns": 2744362466692489,
+      "t_ms": 4947,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现",
+      "final": false
+    },
+    {
+      "mono_ns": 2744362769345335,
+      "t_ms": 5250,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744363201740750,
+      "t_ms": 5682,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744363480960669,
+      "t_ms": 5961,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744363600522162,
+      "t_ms": 6081,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744363729029128,
+      "t_ms": 6209,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744363756656291,
+      "t_ms": 6237,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744363947707435,
+      "t_ms": 6428,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744364085359204,
+      "t_ms": 6566,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": true
+    },
+    {
+      "mono_ns": 2744364983408682,
+      "t_ms": 7464,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把",
+      "final": false
+    },
+    {
+      "mono_ns": 2744365149668027,
+      "t_ms": 7630,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分",
+      "final": false
+    },
+    {
+      "mono_ns": 2744365268775935,
+      "t_ms": 7749,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分",
+      "final": false
+    },
+    {
+      "mono_ns": 2744365560435013,
+      "t_ms": 8041,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744365667159751,
+      "t_ms": 8148,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744365975193128,
+      "t_ms": 8456,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744366123030437,
+      "t_ms": 8603,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744366305140429,
+      "t_ms": 8786,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744366585307769,
+      "t_ms": 9066,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后",
+      "final": false
+    },
+    {
+      "mono_ns": 2744366742298183,
+      "t_ms": 9223,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744366874796200,
+      "t_ms": 9355,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744367186271916,
+      "t_ms": 9667,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744367476047299,
+      "t_ms": 9956,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744367778273330,
+      "t_ms": 10259,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744367926252217,
+      "t_ms": 10407,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false
+    },
+    {
+      "mono_ns": 2744368066504818,
+      "t_ms": 10547,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false
+    },
+    {
+      "mono_ns": 2744368223798291,
+      "t_ms": 10704,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744368350083768,
+      "t_ms": 10831,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744368720815683,
+      "t_ms": 11201,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744368870645231,
+      "t_ms": 11351,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744368912163849,
+      "t_ms": 11393,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744369342114858,
+      "t_ms": 11823,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744369590848688,
+      "t_ms": 12071,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744369640385191,
+      "t_ms": 12121,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": true
+    },
+    {
+      "mono_ns": 2744370409158490,
+      "t_ms": 12890,
+      "event": "assertion",
+      "name": "narration silent, State nonconflicting, duplicate accepted",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744370411091120,
+      "t_ms": 12892,
+      "event": "synthetic_uplink",
+      "fixture": "feedback",
+      "sha256": "8563ff6a0043f99f62233dbde3a9d1e38c02b8382262c3cd0826bb39837ab13a",
+      "samples": 61895
+    },
+    {
+      "mono_ns": 2744370418216240,
+      "t_ms": 12899,
+      "event": "uplink_fixture_start",
+      "fixture": "feedback"
+    },
+    {
+      "mono_ns": 2744375764420180,
+      "t_ms": 18245,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_cfb2435087bd",
+      "text": "",
+      "final": true
+    },
+    {
+      "mono_ns": 2744376571195221,
+      "t_ms": 19052,
+      "event": "data_received",
+      "topic": "state",
+      "value": {
+        "k": "speaking",
+        "speaking": true
+      }
+    },
+    {
+      "mono_ns": 2744376689250954,
+      "t_ms": 19170,
+      "event": "first_nonzero_audio",
+      "peak": 5163
+    },
+    {
+      "mono_ns": 2744376714438508,
+      "t_ms": 19195,
+      "event": "assertion",
+      "name": "real feedback audio received",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744376715457329,
+      "t_ms": 19196,
+      "event": "synthetic_uplink",
+      "fixture": "barge",
+      "sha256": "e4c7258b5cd801614cff15562d9da7e4aed3408acd4d788f18d60cbca43cd8ff",
+      "samples": 51042
+    },
+    {
+      "mono_ns": 2744376723332409,
+      "t_ms": 19204,
+      "event": "uplink_fixture_start",
+      "fixture": "barge"
+    },
+    {
+      "mono_ns": 2744377890372158,
+      "t_ms": 20371,
+      "event": "data_received",
+      "topic": "state",
+      "value": {
+        "k": "speaking",
+        "speaking": false
+      }
+    },
+    {
+      "mono_ns": 2744378246710270,
+      "t_ms": 20727,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我",
+      "final": false
+    },
+    {
+      "mono_ns": 2744378281473424,
+      "t_ms": 20762,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我",
+      "final": false
+    },
+    {
+      "mono_ns": 2744378634436377,
+      "t_ms": 21115,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还",
+      "final": false
+    },
+    {
+      "mono_ns": 2744378664140749,
+      "t_ms": 21145,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还",
+      "final": false
+    },
+    {
+      "mono_ns": 2744378974134220,
+      "t_ms": 21455,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false
+    },
+    {
+      "mono_ns": 2744379184616847,
+      "t_ms": 21665,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false
+    },
+    {
+      "mono_ns": 2744379459610165,
+      "t_ms": 21940,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false
+    },
+    {
+      "mono_ns": 2744379576372879,
+      "t_ms": 22057,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380221268459,
+      "t_ms": 22702,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380221693340,
+      "t_ms": 22702,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380221969181,
+      "t_ms": 22702,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380463229452,
+      "t_ms": 22944,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380648729131,
+      "t_ms": 23129,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380776304217,
+      "t_ms": 23257,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": false
+    },
+    {
+      "mono_ns": 2744380858305075,
+      "t_ms": 23339,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": false
+    },
+    {
+      "mono_ns": 2744381153100723,
+      "t_ms": 23634,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": true
+    },
+    {
+      "mono_ns": 2744384220866615,
+      "t_ms": 26701,
+      "event": "assertion",
+      "name": "acoustic interruption bounded stop and no resumed audio",
+      "passed": true,
+      "stop_from_uplink_ms": 1167.403637,
+      "last_audio_mono_ns": 2744377890722313,
+      "uplink_start_mono_ns": 2744376723318676
+    },
+    {
+      "mono_ns": 2744384222250117,
+      "t_ms": 26703,
+      "event": "synthetic_uplink",
+      "fixture": "exit",
+      "sha256": "4ad7414b48baec8736bf359148e78806ef4b44f7846ea3d947e69833229eb1fa",
+      "samples": 57542
+    },
+    {
+      "mono_ns": 2744384222840023,
+      "t_ms": 26703,
+      "event": "uplink_fixture_start",
+      "fixture": "exit"
+    },
+    {
+      "mono_ns": 2744389107173807,
+      "t_ms": 31588,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "action": "exit",
+          "mode_epoch": 3,
+          "participant": "dev-BJP00326103099999938",
+          "proposal_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:voice:2",
+          "session_id": "c0e601d4-8d24-4fd1-9d03-e401c7efe016",
+          "ttl_ms": 3000,
+          "version": 1
+        },
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353778502,
+        "type": "listening.proposal"
+      }
+    },
+    {
+      "mono_ns": 2744389109219109,
+      "t_ms": 31590,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_fa4491f84e6c",
+      "text": "",
+      "final": true
+    },
+    {
+      "mono_ns": 2744389110068430,
+      "t_ms": 31591,
+      "event": "control_sent",
+      "type": "listening.state",
+      "seq": 4,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:4"
+      }
+    },
+    {
+      "mono_ns": 2744389111707827,
+      "t_ms": 31592,
+      "event": "control_sent",
+      "type": "listening.exit",
+      "seq": 5,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:5",
+        "mode_epoch": 3,
+        "proposal_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:voice:2"
+      }
+    },
+    {
+      "mono_ns": 2744389113477018,
+      "t_ms": 31594,
+      "event": "control_sent",
+      "type": "listening.exit",
+      "seq": 5,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:5",
+        "mode_epoch": 3,
+        "proposal_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:voice:2"
+      }
+    },
+    {
+      "mono_ns": 2744389121202443,
+      "t_ms": 31602,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 4,
+          "duplicate": false,
+          "listening_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+          "mode_epoch": 3,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:4",
+          "scene": "story",
+          "stage": "completed",
+          "state": "listening",
+          "version": 1
+        },
+        "seq": 4,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353778517,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744389521864808,
+      "t_ms": 32002,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 5,
+          "duplicate": false,
+          "listening_id": null,
+          "mode_epoch": 4,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:5",
+          "scene": null,
+          "stage": "completed",
+          "state": "normal",
+          "version": 1
+        },
+        "seq": 5,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353778917,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744389523424280,
+      "t_ms": 32004,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 5,
+          "duplicate": true,
+          "listening_id": null,
+          "mode_epoch": 4,
+          "reason": null,
+          "request_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:5",
+          "scene": null,
+          "stage": "completed",
+          "state": "normal",
+          "version": 1
+        },
+        "seq": 5,
+        "src": "worker",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "ts_ms": 1793353778918,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744389532842876,
+      "t_ms": 32013,
+      "event": "assertion",
+      "name": "voice exit normal",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744390734865924,
+      "t_ms": 33215,
+      "event": "synthetic_uplink",
+      "fixture": "chat",
+      "sha256": "2850b9b0daf099c7262e00d5f18edd85adfd239ae8047b1198603f77b7fab522",
+      "samples": 41602
+    },
+    {
+      "mono_ns": 2744390735269773,
+      "t_ms": 33216,
+      "event": "uplink_fixture_start",
+      "fixture": "chat"
+    },
+    {
+      "mono_ns": 2744392398252193,
+      "t_ms": 34879,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉",
+      "final": false
+    },
+    {
+      "mono_ns": 2744392498395879,
+      "t_ms": 34979,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉",
+      "final": false
+    },
+    {
+      "mono_ns": 2744392771297956,
+      "t_ms": 35252,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空",
+      "final": false
+    },
+    {
+      "mono_ns": 2744392993687645,
+      "t_ms": 35474,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空",
+      "final": false
+    },
+    {
+      "mono_ns": 2744393070972372,
+      "t_ms": 35551,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空",
+      "final": false
+    },
+    {
+      "mono_ns": 2744393360026183,
+      "t_ms": 35840,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是",
+      "final": false
+    },
+    {
+      "mono_ns": 2744393586202273,
+      "t_ms": 36067,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744393660356684,
+      "t_ms": 36141,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744394030073919,
+      "t_ms": 36511,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744394057509011,
+      "t_ms": 36538,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744394347430087,
+      "t_ms": 36828,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744394563841785,
+      "t_ms": 37044,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "eou_ms": 1093,
+        "k": "eou",
+        "stt_ms": 1076
+      }
+    },
+    {
+      "mono_ns": 2744394565108947,
+      "t_ms": 37046,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": true
+    },
+    {
+      "mono_ns": 2744395089722509,
+      "t_ms": 37570,
+      "event": "data_received",
+      "topic": "state",
+      "value": {
+        "k": "speaking",
+        "speaking": true
+      }
+    },
+    {
+      "mono_ns": 2744395268044125,
+      "t_ms": 37749,
+      "event": "assertion",
+      "name": "ordinary chat audible after voice exit",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744396244494168,
+      "t_ms": 38725,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "k": "llm",
+        "tps": 4666.7,
+        "ttft_ms": 3
+      }
+    },
+    {
+      "mono_ns": 2744396245971545,
+      "t_ms": 38726,
+      "event": "data_received",
+      "topic": "metrics",
+      "value": {
+        "k": "tts",
+        "ttfb_ms": 512
+      }
+    },
+    {
+      "mono_ns": 2744396261196418,
+      "t_ms": 38742,
+      "event": "transcription",
+      "identity": "agent-AJ_YamzDCbHdNRE",
+      "id": "SG_a2_0",
+      "text": "这是隔离联调的合成聊天回复。",
+      "final": false
+    },
+    {
+      "mono_ns": 2744398099437392,
+      "t_ms": 40580,
+      "event": "data_received",
+      "topic": "state",
+      "value": {
+        "k": "speaking",
+        "speaking": false
+      }
+    },
+    {
+      "mono_ns": 2744398100124856,
+      "t_ms": 40581,
+      "event": "transcription",
+      "identity": "agent-AJ_YamzDCbHdNRE",
+      "id": "SG_a2_0",
+      "text": "这是隔离联调的合成聊天回复。",
+      "final": true
+    },
+    {
+      "mono_ns": 2744398104736668,
+      "t_ms": 40585,
+      "event": "assertion",
+      "name": "ordinary final subtitle",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744398104851756,
+      "t_ms": 40585,
+      "event": "assertion",
+      "name": "ordinary chat audio/subtitles/metrics positive anchor",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744398105378658,
+      "t_ms": 40586,
+      "event": "assertion",
+      "name": "one feedback includes immediate synthetic tail marker",
+      "passed": true,
+      "observation": {
+        "request_id": "feedback-13",
+        "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+        "room": "sn-BJP00326103099999938-1793353746",
+        "session_id": "c0e601d4-8d24-4fd1-9d03-e401c7efe016",
+        "listening_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625:2",
+        "mode_epoch": 2,
+        "at": 1793353765320,
+        "purpose": "listening_feedback",
+        "synthetic_only": true,
+        "chars": 168,
+        "sha256": "c203bfced02f200b1dec877e27a8104fba2e5752103110a6174e0d78341fde5d",
+        "markers": {
+          "紫色风筝": true
+        }
+      }
+    },
+    {
+      "mono_ns": 2744398105463325,
+      "t_ms": 40586,
+      "event": "summary",
+      "scenario": "barge",
+      "audio_nonzero_frames": 356,
+      "caption_events": 75,
+      "uplink_frames": 1850,
+      "control_types": [
+        "session.output_ready",
+        "session.input_ready",
+        "listening.proposal",
+        "session.input_phase",
+        "listening.ack",
+        "listening.ack",
+        "listening.ack",
+        "listening.ack",
+        "listening.proposal",
+        "listening.ack",
+        "listening.ack",
+        "listening.ack"
+      ],
+      "server_disconnected": false
+    },
+    {
+      "mono_ns": 2744398120343094,
+      "t_ms": 40601,
+      "event": "disconnected",
+      "reason": "1"
+    },
+    {
+      "mono_ns": 2744398154693887,
+      "t_ms": 40635,
+      "event": "room_api_absent",
+      "room": "sn-BJP00326103099999938-1793353746"
+    }
+  ],
+  "captions": [
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f76c41fde9e0",
+      "text": "",
+      "final": true,
+      "t_ms": 3054
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天",
+      "final": false,
+      "t_ms": 3470
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天",
+      "final": false,
+      "t_ms": 3470
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进",
+      "final": false,
+      "t_ms": 3662
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false,
+      "t_ms": 3892
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false,
+      "t_ms": 3947
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false,
+      "t_ms": 4210
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false,
+      "t_ms": 4416
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林",
+      "final": false,
+      "t_ms": 4752
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现",
+      "final": false,
+      "t_ms": 4882
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现",
+      "final": false,
+      "t_ms": 4947
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一",
+      "final": false,
+      "t_ms": 5250
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的",
+      "final": false,
+      "t_ms": 5682
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的",
+      "final": false,
+      "t_ms": 5961
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 6081
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 6209
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 6237
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 6428
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_c51c8d89c2fd",
+      "text": "俏兄今天走进森林发现一颗金色的苹果",
+      "final": true,
+      "t_ms": 6566
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把",
+      "final": false,
+      "t_ms": 7464
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分",
+      "final": false,
+      "t_ms": 7630
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分",
+      "final": false,
+      "t_ms": 7749
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8041
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8148
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8456
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8603
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8786
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后",
+      "final": false,
+      "t_ms": 9066
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false,
+      "t_ms": 9223
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false,
+      "t_ms": 9355
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 9667
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 9956
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 10259
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false,
+      "t_ms": 10407
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false,
+      "t_ms": 10547
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false,
+      "t_ms": 10704
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false,
+      "t_ms": 10831
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false,
+      "t_ms": 11201
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 11351
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 11393
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 11823
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 12071
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_02d67a89ce43",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": true,
+      "t_ms": 12121
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_cfb2435087bd",
+      "text": "",
+      "final": true,
+      "t_ms": 18245
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我",
+      "final": false,
+      "t_ms": 20727
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我",
+      "final": false,
+      "t_ms": 20762
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还",
+      "final": false,
+      "t_ms": 21115
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还",
+      "final": false,
+      "t_ms": 21145
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false,
+      "t_ms": 21455
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false,
+      "t_ms": 21665
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false,
+      "t_ms": 21940
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完",
+      "final": false,
+      "t_ms": 22057
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先",
+      "final": false,
+      "t_ms": 22702
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先",
+      "final": false,
+      "t_ms": 22702
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我",
+      "final": false,
+      "t_ms": 22702
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我",
+      "final": false,
+      "t_ms": 22944
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": false,
+      "t_ms": 23129
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": false,
+      "t_ms": 23257
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": false,
+      "t_ms": 23339
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_b11084754ea7",
+      "text": "我还没有讲完请先听我继续说",
+      "final": true,
+      "t_ms": 23634
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_fa4491f84e6c",
+      "text": "",
+      "final": true,
+      "t_ms": 31590
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉",
+      "final": false,
+      "t_ms": 34879
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉",
+      "final": false,
+      "t_ms": 34979
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空",
+      "final": false,
+      "t_ms": 35252
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空",
+      "final": false,
+      "t_ms": 35474
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空",
+      "final": false,
+      "t_ms": 35551
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是",
+      "final": false,
+      "t_ms": 35840
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色",
+      "final": false,
+      "t_ms": 36067
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色",
+      "final": false,
+      "t_ms": 36141
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": false,
+      "t_ms": 36511
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": false,
+      "t_ms": 36538
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": false,
+      "t_ms": 36828
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_ed544013f00e",
+      "text": "请告诉我天空为什么是蓝色的",
+      "final": true,
+      "t_ms": 37046
+    },
+    {
+      "identity": "agent-AJ_YamzDCbHdNRE",
+      "id": "SG_a2_0",
+      "text": "这是隔离联调的合成聊天回复。",
+      "final": false,
+      "t_ms": 38742
+    },
+    {
+      "identity": "agent-AJ_YamzDCbHdNRE",
+      "id": "SG_a2_0",
+      "text": "这是隔离联调的合成聊天回复。",
+      "final": true,
+      "t_ms": 40581
+    }
+  ],
+  "audio": [
+    {
+      "mono_ns": 2744376689235436,
+      "t_ms": 19170,
+      "peak": 5163,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376699358632,
+      "t_ms": 19180,
+      "peak": 4946,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376710194546,
+      "t_ms": 19191,
+      "peak": 8487,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376719849492,
+      "t_ms": 19200,
+      "peak": 9629,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376729236483,
+      "t_ms": 19210,
+      "peak": 10830,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376739979604,
+      "t_ms": 19220,
+      "peak": 10794,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376749985687,
+      "t_ms": 19230,
+      "peak": 11335,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376760193581,
+      "t_ms": 19241,
+      "peak": 16413,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376769463762,
+      "t_ms": 19250,
+      "peak": 15960,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376779927568,
+      "t_ms": 19260,
+      "peak": 15626,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376790216370,
+      "t_ms": 19271,
+      "peak": 13323,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376799433288,
+      "t_ms": 19280,
+      "peak": 10770,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376809982945,
+      "t_ms": 19290,
+      "peak": 9682,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376820592235,
+      "t_ms": 19301,
+      "peak": 2495,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376829412875,
+      "t_ms": 19310,
+      "peak": 1053,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376840285832,
+      "t_ms": 19321,
+      "peak": 449,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376850387448,
+      "t_ms": 19331,
+      "peak": 451,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376859305190,
+      "t_ms": 19340,
+      "peak": 369,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376870425148,
+      "t_ms": 19351,
+      "peak": 1995,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376879274798,
+      "t_ms": 19360,
+      "peak": 3797,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376889607309,
+      "t_ms": 19370,
+      "peak": 4621,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376899323806,
+      "t_ms": 19380,
+      "peak": 2498,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376910048529,
+      "t_ms": 19391,
+      "peak": 3160,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376919670771,
+      "t_ms": 19400,
+      "peak": 3384,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376929708008,
+      "t_ms": 19410,
+      "peak": 2884,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376939821758,
+      "t_ms": 19420,
+      "peak": 2544,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376949977593,
+      "t_ms": 19430,
+      "peak": 2115,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376959317091,
+      "t_ms": 19440,
+      "peak": 1990,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376969520511,
+      "t_ms": 19450,
+      "peak": 1299,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376979716043,
+      "t_ms": 19460,
+      "peak": 1350,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376989990528,
+      "t_ms": 19470,
+      "peak": 7250,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744376999041779,
+      "t_ms": 19480,
+      "peak": 7119,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377009279060,
+      "t_ms": 19490,
+      "peak": 5636,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377019760085,
+      "t_ms": 19500,
+      "peak": 5189,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377029783062,
+      "t_ms": 19510,
+      "peak": 5048,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377039308973,
+      "t_ms": 19520,
+      "peak": 5245,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377049236939,
+      "t_ms": 19530,
+      "peak": 5142,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377060201282,
+      "t_ms": 19541,
+      "peak": 4994,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377070375079,
+      "t_ms": 19551,
+      "peak": 4910,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377080230526,
+      "t_ms": 19561,
+      "peak": 5007,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377089309616,
+      "t_ms": 19570,
+      "peak": 4874,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377099713649,
+      "t_ms": 19580,
+      "peak": 4521,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377109607847,
+      "t_ms": 19590,
+      "peak": 11230,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377120100145,
+      "t_ms": 19601,
+      "peak": 15643,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377129285344,
+      "t_ms": 19610,
+      "peak": 17419,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377139316419,
+      "t_ms": 19620,
+      "peak": 20197,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377149598544,
+      "t_ms": 19630,
+      "peak": 19548,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377159448756,
+      "t_ms": 19640,
+      "peak": 16051,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377169816691,
+      "t_ms": 19650,
+      "peak": 14676,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377179167515,
+      "t_ms": 19660,
+      "peak": 14751,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377189781965,
+      "t_ms": 19670,
+      "peak": 15635,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377199769543,
+      "t_ms": 19680,
+      "peak": 14267,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377209959944,
+      "t_ms": 19690,
+      "peak": 14378,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377219229904,
+      "t_ms": 19700,
+      "peak": 12984,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377229657606,
+      "t_ms": 19710,
+      "peak": 10202,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377240390007,
+      "t_ms": 19721,
+      "peak": 9291,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377250299842,
+      "t_ms": 19731,
+      "peak": 8383,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377260067204,
+      "t_ms": 19741,
+      "peak": 8958,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377270183372,
+      "t_ms": 19751,
+      "peak": 11106,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377280738623,
+      "t_ms": 19761,
+      "peak": 10926,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377289930123,
+      "t_ms": 19770,
+      "peak": 10992,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377300359807,
+      "t_ms": 19781,
+      "peak": 9560,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377309932225,
+      "t_ms": 19790,
+      "peak": 9455,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377319890152,
+      "t_ms": 19800,
+      "peak": 9817,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377330225651,
+      "t_ms": 19811,
+      "peak": 9174,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377340482390,
+      "t_ms": 19821,
+      "peak": 9432,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377349730921,
+      "t_ms": 19830,
+      "peak": 9235,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377359781182,
+      "t_ms": 19840,
+      "peak": 8786,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377370015135,
+      "t_ms": 19850,
+      "peak": 7885,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377379571084,
+      "t_ms": 19860,
+      "peak": 7307,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377389773909,
+      "t_ms": 19870,
+      "peak": 6144,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377399565795,
+      "t_ms": 19880,
+      "peak": 5157,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377409975826,
+      "t_ms": 19890,
+      "peak": 4276,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377419645444,
+      "t_ms": 19900,
+      "peak": 4218,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377429423102,
+      "t_ms": 19910,
+      "peak": 4882,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377440219308,
+      "t_ms": 19921,
+      "peak": 5077,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377449992474,
+      "t_ms": 19930,
+      "peak": 5342,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377459449435,
+      "t_ms": 19940,
+      "peak": 4525,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377469672380,
+      "t_ms": 19950,
+      "peak": 4988,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377479923280,
+      "t_ms": 19960,
+      "peak": 5455,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377489201693,
+      "t_ms": 19970,
+      "peak": 4591,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377500078484,
+      "t_ms": 19981,
+      "peak": 3813,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377509885494,
+      "t_ms": 19990,
+      "peak": 5277,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377519368705,
+      "t_ms": 20000,
+      "peak": 3132,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377529806547,
+      "t_ms": 20010,
+      "peak": 4904,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377540384646,
+      "t_ms": 20021,
+      "peak": 3397,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377551103729,
+      "t_ms": 20032,
+      "peak": 2256,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377560058449,
+      "t_ms": 20041,
+      "peak": 5748,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377570838613,
+      "t_ms": 20051,
+      "peak": 8241,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377580324623,
+      "t_ms": 20061,
+      "peak": 13671,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377590706040,
+      "t_ms": 20071,
+      "peak": 16280,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377600140050,
+      "t_ms": 20081,
+      "peak": 18468,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377610402615,
+      "t_ms": 20091,
+      "peak": 18161,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377619253372,
+      "t_ms": 20100,
+      "peak": 18010,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377629675487,
+      "t_ms": 20110,
+      "peak": 16634,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377640135698,
+      "t_ms": 20121,
+      "peak": 16728,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377650354551,
+      "t_ms": 20131,
+      "peak": 16112,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377660526839,
+      "t_ms": 20141,
+      "peak": 16365,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377671801328,
+      "t_ms": 20152,
+      "peak": 15905,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377680079386,
+      "t_ms": 20161,
+      "peak": 14715,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377689973044,
+      "t_ms": 20170,
+      "peak": 11289,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377700645282,
+      "t_ms": 20181,
+      "peak": 9123,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377709977251,
+      "t_ms": 20190,
+      "peak": 6977,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377720384545,
+      "t_ms": 20201,
+      "peak": 4547,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377730984841,
+      "t_ms": 20211,
+      "peak": 2312,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377739683276,
+      "t_ms": 20220,
+      "peak": 1511,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377749845235,
+      "t_ms": 20230,
+      "peak": 688,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377760614049,
+      "t_ms": 20241,
+      "peak": 312,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377769497363,
+      "t_ms": 20250,
+      "peak": 263,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377780042189,
+      "t_ms": 20261,
+      "peak": 243,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377789264309,
+      "t_ms": 20270,
+      "peak": 769,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377799455572,
+      "t_ms": 20280,
+      "peak": 720,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377809782321,
+      "t_ms": 20290,
+      "peak": 559,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377819960372,
+      "t_ms": 20300,
+      "peak": 763,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377829192111,
+      "t_ms": 20310,
+      "peak": 707,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377839307283,
+      "t_ms": 20320,
+      "peak": 455,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377850194073,
+      "t_ms": 20331,
+      "peak": 423,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377860467926,
+      "t_ms": 20341,
+      "peak": 298,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377869183694,
+      "t_ms": 20350,
+      "peak": 279,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377880032565,
+      "t_ms": 20360,
+      "peak": 212,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744377890722313,
+      "t_ms": 20371,
+      "peak": 110,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395249892876,
+      "t_ms": 37730,
+      "peak": 827,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395259377513,
+      "t_ms": 37740,
+      "peak": 2731,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395269380714,
+      "t_ms": 37750,
+      "peak": 3966,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395279997985,
+      "t_ms": 37760,
+      "peak": 5071,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395290135357,
+      "t_ms": 37771,
+      "peak": 3573,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395299158112,
+      "t_ms": 37780,
+      "peak": 9121,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395309631602,
+      "t_ms": 37790,
+      "peak": 9961,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395319716942,
+      "t_ms": 37800,
+      "peak": 10041,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395329705730,
+      "t_ms": 37810,
+      "peak": 9472,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395340204778,
+      "t_ms": 37821,
+      "peak": 10863,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395349404240,
+      "t_ms": 37830,
+      "peak": 8959,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395359557373,
+      "t_ms": 37840,
+      "peak": 4245,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395369353925,
+      "t_ms": 37850,
+      "peak": 6560,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395380079566,
+      "t_ms": 37861,
+      "peak": 6132,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395389658797,
+      "t_ms": 37870,
+      "peak": 4989,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395399295322,
+      "t_ms": 37880,
+      "peak": 6885,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395409943229,
+      "t_ms": 37890,
+      "peak": 5177,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395419634629,
+      "t_ms": 37900,
+      "peak": 5275,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395429837147,
+      "t_ms": 37910,
+      "peak": 5067,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395440044925,
+      "t_ms": 37921,
+      "peak": 4271,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395449108261,
+      "t_ms": 37930,
+      "peak": 3817,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395459784352,
+      "t_ms": 37940,
+      "peak": 7980,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395469943654,
+      "t_ms": 37950,
+      "peak": 10004,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395480493261,
+      "t_ms": 37961,
+      "peak": 9917,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395489697912,
+      "t_ms": 37970,
+      "peak": 7986,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395499702292,
+      "t_ms": 37980,
+      "peak": 5346,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395510076186,
+      "t_ms": 37991,
+      "peak": 3619,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395519985150,
+      "t_ms": 38000,
+      "peak": 1241,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395529711337,
+      "t_ms": 38010,
+      "peak": 990,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395540703550,
+      "t_ms": 38021,
+      "peak": 517,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395549320304,
+      "t_ms": 38030,
+      "peak": 338,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395560015561,
+      "t_ms": 38040,
+      "peak": 259,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395569885452,
+      "t_ms": 38050,
+      "peak": 199,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395579358043,
+      "t_ms": 38060,
+      "peak": 171,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395609195416,
+      "t_ms": 38090,
+      "peak": 137,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395619882188,
+      "t_ms": 38100,
+      "peak": 3293,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395631139895,
+      "t_ms": 38112,
+      "peak": 1655,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395640492852,
+      "t_ms": 38121,
+      "peak": 984,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395649397972,
+      "t_ms": 38130,
+      "peak": 2271,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395659943755,
+      "t_ms": 38140,
+      "peak": 7606,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395669777003,
+      "t_ms": 38150,
+      "peak": 12384,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395680825694,
+      "t_ms": 38161,
+      "peak": 19666,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395689701330,
+      "t_ms": 38170,
+      "peak": 21499,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395699340853,
+      "t_ms": 38180,
+      "peak": 20794,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395709793194,
+      "t_ms": 38190,
+      "peak": 20763,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395720211739,
+      "t_ms": 38201,
+      "peak": 20077,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395729354900,
+      "t_ms": 38210,
+      "peak": 18480,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395740240572,
+      "t_ms": 38221,
+      "peak": 10403,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395749675065,
+      "t_ms": 38230,
+      "peak": 6959,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395760042000,
+      "t_ms": 38241,
+      "peak": 6852,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395769367419,
+      "t_ms": 38250,
+      "peak": 6203,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395780050814,
+      "t_ms": 38261,
+      "peak": 8077,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395790477115,
+      "t_ms": 38271,
+      "peak": 8208,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395799829473,
+      "t_ms": 38280,
+      "peak": 7863,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395809633199,
+      "t_ms": 38290,
+      "peak": 8193,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395820272341,
+      "t_ms": 38301,
+      "peak": 7520,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395829323411,
+      "t_ms": 38310,
+      "peak": 7501,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395839811048,
+      "t_ms": 38320,
+      "peak": 8186,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395849897033,
+      "t_ms": 38330,
+      "peak": 7006,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395860278843,
+      "t_ms": 38341,
+      "peak": 4734,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395869405121,
+      "t_ms": 38350,
+      "peak": 5238,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395880219321,
+      "t_ms": 38361,
+      "peak": 5727,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395890207574,
+      "t_ms": 38371,
+      "peak": 6053,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395899357667,
+      "t_ms": 38380,
+      "peak": 6826,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395909753890,
+      "t_ms": 38390,
+      "peak": 10230,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395919670187,
+      "t_ms": 38400,
+      "peak": 12172,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395929367460,
+      "t_ms": 38410,
+      "peak": 17910,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395939412995,
+      "t_ms": 38420,
+      "peak": 17603,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395949271738,
+      "t_ms": 38430,
+      "peak": 14577,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395959952072,
+      "t_ms": 38440,
+      "peak": 13016,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395970146806,
+      "t_ms": 38451,
+      "peak": 13478,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395979501598,
+      "t_ms": 38460,
+      "peak": 13535,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744395990290197,
+      "t_ms": 38471,
+      "peak": 13207,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396000492125,
+      "t_ms": 38481,
+      "peak": 12590,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396009442084,
+      "t_ms": 38490,
+      "peak": 9947,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396020140735,
+      "t_ms": 38501,
+      "peak": 6830,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396029555096,
+      "t_ms": 38510,
+      "peak": 5480,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396039755991,
+      "t_ms": 38520,
+      "peak": 5473,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396050361692,
+      "t_ms": 38531,
+      "peak": 5069,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396060246089,
+      "t_ms": 38541,
+      "peak": 4807,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396069436741,
+      "t_ms": 38550,
+      "peak": 4100,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396079978722,
+      "t_ms": 38560,
+      "peak": 1818,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396090169382,
+      "t_ms": 38571,
+      "peak": 1403,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396099464721,
+      "t_ms": 38580,
+      "peak": 2015,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396109787800,
+      "t_ms": 38590,
+      "peak": 1847,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396120380839,
+      "t_ms": 38601,
+      "peak": 1923,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396129868392,
+      "t_ms": 38610,
+      "peak": 1512,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396140080401,
+      "t_ms": 38621,
+      "peak": 1634,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396148994367,
+      "t_ms": 38629,
+      "peak": 1230,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396159536393,
+      "t_ms": 38640,
+      "peak": 1740,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396169737344,
+      "t_ms": 38650,
+      "peak": 1725,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396180133277,
+      "t_ms": 38661,
+      "peak": 2857,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396189300835,
+      "t_ms": 38670,
+      "peak": 2787,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396200230870,
+      "t_ms": 38681,
+      "peak": 2335,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396210133212,
+      "t_ms": 38691,
+      "peak": 2214,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396220593656,
+      "t_ms": 38701,
+      "peak": 2048,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396229838365,
+      "t_ms": 38710,
+      "peak": 2688,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396240472745,
+      "t_ms": 38721,
+      "peak": 4992,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396249081220,
+      "t_ms": 38730,
+      "peak": 8371,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396259451489,
+      "t_ms": 38740,
+      "peak": 11600,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396269347762,
+      "t_ms": 38750,
+      "peak": 12960,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396279937910,
+      "t_ms": 38760,
+      "peak": 12911,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396290204509,
+      "t_ms": 38771,
+      "peak": 10750,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396299429190,
+      "t_ms": 38780,
+      "peak": 10272,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396309496373,
+      "t_ms": 38790,
+      "peak": 10399,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396319854602,
+      "t_ms": 38800,
+      "peak": 10789,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396329956137,
+      "t_ms": 38810,
+      "peak": 5502,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396339229364,
+      "t_ms": 38820,
+      "peak": 2450,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396349749501,
+      "t_ms": 38830,
+      "peak": 1748,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396359816843,
+      "t_ms": 38840,
+      "peak": 1147,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396370079618,
+      "t_ms": 38851,
+      "peak": 3384,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396379130536,
+      "t_ms": 38860,
+      "peak": 12928,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396389576680,
+      "t_ms": 38870,
+      "peak": 15295,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396399607809,
+      "t_ms": 38880,
+      "peak": 16194,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396409833532,
+      "t_ms": 38890,
+      "peak": 17446,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396419298839,
+      "t_ms": 38900,
+      "peak": 18776,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396429364923,
+      "t_ms": 38910,
+      "peak": 17608,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396440191322,
+      "t_ms": 38921,
+      "peak": 16580,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396449878429,
+      "t_ms": 38930,
+      "peak": 16237,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396460117974,
+      "t_ms": 38941,
+      "peak": 16008,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396469301855,
+      "t_ms": 38950,
+      "peak": 11357,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396480153296,
+      "t_ms": 38961,
+      "peak": 8540,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396489117406,
+      "t_ms": 38970,
+      "peak": 6202,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396499673330,
+      "t_ms": 38980,
+      "peak": 2949,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396509510966,
+      "t_ms": 38990,
+      "peak": 2013,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396520161743,
+      "t_ms": 39001,
+      "peak": 1589,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396529213182,
+      "t_ms": 39010,
+      "peak": 1911,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396539617633,
+      "t_ms": 39020,
+      "peak": 1544,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396549782226,
+      "t_ms": 39030,
+      "peak": 1361,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396560281481,
+      "t_ms": 39041,
+      "peak": 951,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396569703466,
+      "t_ms": 39050,
+      "peak": 1286,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396580116344,
+      "t_ms": 39061,
+      "peak": 1627,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396589502754,
+      "t_ms": 39070,
+      "peak": 1563,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396600309901,
+      "t_ms": 39081,
+      "peak": 1282,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396610353559,
+      "t_ms": 39091,
+      "peak": 1253,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396620312375,
+      "t_ms": 39101,
+      "peak": 10380,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396629767407,
+      "t_ms": 39110,
+      "peak": 12408,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396640092901,
+      "t_ms": 39121,
+      "peak": 13084,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396649923044,
+      "t_ms": 39130,
+      "peak": 14152,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396659247300,
+      "t_ms": 39140,
+      "peak": 15095,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396669299687,
+      "t_ms": 39150,
+      "peak": 16782,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396679755950,
+      "t_ms": 39160,
+      "peak": 15761,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396690068817,
+      "t_ms": 39171,
+      "peak": 4446,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396699234240,
+      "t_ms": 39180,
+      "peak": 1898,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396709431519,
+      "t_ms": 39190,
+      "peak": 3462,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396720161321,
+      "t_ms": 39201,
+      "peak": 5565,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396729509785,
+      "t_ms": 39210,
+      "peak": 6674,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396739989102,
+      "t_ms": 39220,
+      "peak": 6855,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396749696340,
+      "t_ms": 39230,
+      "peak": 2611,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396760113839,
+      "t_ms": 39241,
+      "peak": 1789,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396769182634,
+      "t_ms": 39250,
+      "peak": 2866,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396779379693,
+      "t_ms": 39260,
+      "peak": 6162,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396789572509,
+      "t_ms": 39270,
+      "peak": 9017,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396799945325,
+      "t_ms": 39280,
+      "peak": 10914,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396809463728,
+      "t_ms": 39290,
+      "peak": 10356,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396819756667,
+      "t_ms": 39300,
+      "peak": 10019,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396829890028,
+      "t_ms": 39310,
+      "peak": 10520,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396839921162,
+      "t_ms": 39320,
+      "peak": 10213,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396849262325,
+      "t_ms": 39330,
+      "peak": 10738,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396859409702,
+      "t_ms": 39340,
+      "peak": 12402,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396869664200,
+      "t_ms": 39350,
+      "peak": 13978,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396880167311,
+      "t_ms": 39361,
+      "peak": 14211,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396889636640,
+      "t_ms": 39370,
+      "peak": 12921,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396899310623,
+      "t_ms": 39380,
+      "peak": 12706,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396909626490,
+      "t_ms": 39390,
+      "peak": 13854,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396920155718,
+      "t_ms": 39401,
+      "peak": 12321,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396930589406,
+      "t_ms": 39411,
+      "peak": 12478,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396939412263,
+      "t_ms": 39420,
+      "peak": 10772,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396949842844,
+      "t_ms": 39430,
+      "peak": 9062,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396960416879,
+      "t_ms": 39441,
+      "peak": 7570,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396969255031,
+      "t_ms": 39450,
+      "peak": 3285,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396979477188,
+      "t_ms": 39460,
+      "peak": 1159,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396989982105,
+      "t_ms": 39470,
+      "peak": 1279,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744396999975614,
+      "t_ms": 39480,
+      "peak": 1704,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397009104861,
+      "t_ms": 39490,
+      "peak": 1418,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397019471299,
+      "t_ms": 39500,
+      "peak": 1170,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397029657507,
+      "t_ms": 39510,
+      "peak": 1221,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397040123279,
+      "t_ms": 39521,
+      "peak": 4669,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397049314667,
+      "t_ms": 39530,
+      "peak": 7818,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397059773541,
+      "t_ms": 39540,
+      "peak": 8797,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397069916534,
+      "t_ms": 39550,
+      "peak": 9193,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397080759945,
+      "t_ms": 39561,
+      "peak": 9107,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397089626158,
+      "t_ms": 39570,
+      "peak": 8356,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397100123698,
+      "t_ms": 39581,
+      "peak": 8053,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397109115787,
+      "t_ms": 39590,
+      "peak": 7322,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397119263781,
+      "t_ms": 39600,
+      "peak": 4870,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397129874967,
+      "t_ms": 39610,
+      "peak": 1789,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397139577999,
+      "t_ms": 39620,
+      "peak": 856,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397150118939,
+      "t_ms": 39631,
+      "peak": 417,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397159789704,
+      "t_ms": 39640,
+      "peak": 516,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397169928974,
+      "t_ms": 39650,
+      "peak": 475,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397180108415,
+      "t_ms": 39661,
+      "peak": 542,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397189261293,
+      "t_ms": 39670,
+      "peak": 730,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397199551989,
+      "t_ms": 39680,
+      "peak": 8575,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397209923902,
+      "t_ms": 39690,
+      "peak": 8299,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397220282666,
+      "t_ms": 39701,
+      "peak": 8478,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397229300044,
+      "t_ms": 39710,
+      "peak": 9135,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397240168245,
+      "t_ms": 39721,
+      "peak": 8402,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397249836305,
+      "t_ms": 39730,
+      "peak": 8122,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397259249709,
+      "t_ms": 39740,
+      "peak": 7238,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397270211579,
+      "t_ms": 39751,
+      "peak": 6825,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397279835443,
+      "t_ms": 39760,
+      "peak": 5558,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397289984199,
+      "t_ms": 39770,
+      "peak": 4969,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397300308135,
+      "t_ms": 39781,
+      "peak": 4819,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397309372648,
+      "t_ms": 39790,
+      "peak": 4088,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397320469214,
+      "t_ms": 39801,
+      "peak": 3112,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397329211988,
+      "t_ms": 39810,
+      "peak": 1585,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397339432248,
+      "t_ms": 39820,
+      "peak": 789,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397350151513,
+      "t_ms": 39831,
+      "peak": 868,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397359896645,
+      "t_ms": 39840,
+      "peak": 1190,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397369509114,
+      "t_ms": 39850,
+      "peak": 752,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397379743089,
+      "t_ms": 39860,
+      "peak": 821,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397390320915,
+      "t_ms": 39871,
+      "peak": 789,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397400748552,
+      "t_ms": 39881,
+      "peak": 921,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397409370079,
+      "t_ms": 39890,
+      "peak": 837,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397419682414,
+      "t_ms": 39900,
+      "peak": 842,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397429830614,
+      "t_ms": 39910,
+      "peak": 727,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397440172580,
+      "t_ms": 39921,
+      "peak": 503,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397448983615,
+      "t_ms": 39929,
+      "peak": 665,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397459478374,
+      "t_ms": 39940,
+      "peak": 2901,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397469582707,
+      "t_ms": 39950,
+      "peak": 5987,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397479914049,
+      "t_ms": 39960,
+      "peak": 7471,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397488870187,
+      "t_ms": 39969,
+      "peak": 9070,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397499481183,
+      "t_ms": 39980,
+      "peak": 11298,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397509291289,
+      "t_ms": 39990,
+      "peak": 13337,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397519975114,
+      "t_ms": 40000,
+      "peak": 10583,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397529440659,
+      "t_ms": 40010,
+      "peak": 11893,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397539619587,
+      "t_ms": 40020,
+      "peak": 4517,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397549787149,
+      "t_ms": 40030,
+      "peak": 6374,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397560243112,
+      "t_ms": 40041,
+      "peak": 878,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397569749022,
+      "t_ms": 40050,
+      "peak": 419,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397579597083,
+      "t_ms": 40060,
+      "peak": 281,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397589790391,
+      "t_ms": 40070,
+      "peak": 348,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397600725633,
+      "t_ms": 40081,
+      "peak": 231,
+      "samples": 240
+    },
+    {
+      "mono_ns": 2744397609539592,
+      "t_ms": 40090,
+      "peak": 156,
+      "samples": 240
+    }
+  ],
+  "signed_binding": {
+    "room_name": "sn-BJP00326103099999938-1793353746",
+    "session_id": "c0e601d4-8d24-4fd1-9d03-e401c7efe016",
+    "trace_id": "p0-39-96536c94-31ac-4ad8-907e-a5668cd4b625",
+    "expected_agent_name": "p003-listening-p0-session39"
+  }
+}

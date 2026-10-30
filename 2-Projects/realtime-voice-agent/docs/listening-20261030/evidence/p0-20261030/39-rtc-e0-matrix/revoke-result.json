@@ -1,0 +1,1909 @@
+{
+  "scenario": "revoke",
+  "passed": true,
+  "boundaries": {
+    "RTC": "real shared SFU unique agent/room",
+    "job_orchestrator": "real candidate test-feature binary",
+    "Brain_authority": "real isolated SQLite/clock/routes/registration",
+    "text_provider": "deterministic synthetic",
+    "ASR_TTS": "real provider, synthetic WAV input",
+    "Android": "software substitute"
+  },
+  "events": [
+    {
+      "mono_ns": 2744519974907170,
+      "t_ms": 64,
+      "event": "session_issued",
+      "room": "sn-BJP00326103099999938-1793353909",
+      "session": "542d4f9c-28bc-4734-ac28-1fca223e510f",
+      "trace": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+      "agent": "p003-listening-p0-session39"
+    },
+    {
+      "mono_ns": 2744520534923052,
+      "t_ms": 624,
+      "event": "agent_bound",
+      "identity": "agent-AJ_b9dALAknRgJ6",
+      "sid": "PA_BsVdcAdTkyBf",
+      "kind": 4,
+      "agent": "p003-listening-p0-session39"
+    },
+    {
+      "mono_ns": 2744520535186108,
+      "t_ms": 625,
+      "event": "audio_subscribed",
+      "sid": "TR_AMrjXYZ8rQkAmk"
+    },
+    {
+      "mono_ns": 2744520544269625,
+      "t_ms": 634,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "agent_track_subscribed": true,
+          "room": "sn-BJP00326103099999938-1793353909"
+        },
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353909939,
+        "type": "session.output_ready"
+      }
+    },
+    {
+      "mono_ns": 2744520545076588,
+      "t_ms": 635,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "input_loop_started": true,
+          "output_ready": true,
+          "room": "sn-BJP00326103099999938-1793353909",
+          "timings_ms": {
+            "issue_to_assignment": 292,
+            "job_room_connect": 181,
+            "track_to_input_loop": 57
+          },
+          "user_track_subscribed": true
+        },
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353909940,
+        "type": "session.input_ready"
+      }
+    },
+    {
+      "mono_ns": 2744520559212009,
+      "t_ms": 649,
+      "event": "assertion",
+      "name": "real input_ready",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744520576941315,
+      "t_ms": 666,
+      "event": "ordered_received",
+      "chunks_received": 0,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 0,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520577261782,
+      "t_ms": 667,
+      "event": "ordered_received",
+      "chunks_received": 0,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 0,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520578073739,
+      "t_ms": 668,
+      "event": "ordered_received",
+      "chunks_received": 1,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520583965061,
+      "t_ms": 674,
+      "event": "ordered_received",
+      "chunks_received": 2,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 1280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520595328504,
+      "t_ms": 685,
+      "event": "ordered_received",
+      "chunks_received": 3,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 1920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520623673374,
+      "t_ms": 713,
+      "event": "ordered_received",
+      "chunks_received": 4,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 0,
+      "received_next": 2560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520630261776,
+      "t_ms": 720,
+      "event": "ordered_received",
+      "chunks_received": 6,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 3840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520630979926,
+      "t_ms": 721,
+      "event": "ordered_received",
+      "chunks_received": 5,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 3200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520633252533,
+      "t_ms": 723,
+      "event": "ordered_received",
+      "chunks_received": 7,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 4480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520637187187,
+      "t_ms": 727,
+      "event": "ordered_received",
+      "chunks_received": 8,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 5120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520648290932,
+      "t_ms": 738,
+      "event": "ordered_received",
+      "chunks_received": 9,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 3200,
+      "received_next": 5760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520657191111,
+      "t_ms": 747,
+      "event": "ordered_received",
+      "chunks_received": 10,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 6400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520669260388,
+      "t_ms": 759,
+      "event": "ordered_received",
+      "chunks_received": 11,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 7040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520678067515,
+      "t_ms": 768,
+      "event": "ordered_received",
+      "chunks_received": 12,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 7680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520685354291,
+      "t_ms": 775,
+      "event": "ordered_received",
+      "chunks_received": 13,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 8320,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520693199112,
+      "t_ms": 783,
+      "event": "ordered_received",
+      "chunks_received": 14,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 6400,
+      "received_next": 8960,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520702721801,
+      "t_ms": 792,
+      "event": "ordered_received",
+      "chunks_received": 15,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 9600,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520711521696,
+      "t_ms": 801,
+      "event": "ordered_received",
+      "chunks_received": 16,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 10240,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520755851870,
+      "t_ms": 845,
+      "event": "ordered_received",
+      "chunks_received": 17,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 10880,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520756211790,
+      "t_ms": 846,
+      "event": "ordered_received",
+      "chunks_received": 18,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 11520,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520763141122,
+      "t_ms": 853,
+      "event": "ordered_received",
+      "chunks_received": 19,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 9600,
+      "received_next": 12160,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520763664489,
+      "t_ms": 853,
+      "event": "ordered_received",
+      "chunks_received": 20,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 12800,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520764581810,
+      "t_ms": 854,
+      "event": "ordered_received",
+      "chunks_received": 21,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 13440,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520764888330,
+      "t_ms": 854,
+      "event": "ordered_received",
+      "chunks_received": 22,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 14080,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520788166909,
+      "t_ms": 878,
+      "event": "ordered_received",
+      "chunks_received": 23,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 14720,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520796483400,
+      "t_ms": 886,
+      "event": "ordered_received",
+      "chunks_received": 24,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 12800,
+      "received_next": 15360,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520797278845,
+      "t_ms": 887,
+      "event": "ordered_received",
+      "chunks_received": 25,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 16000,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520797492183,
+      "t_ms": 887,
+      "event": "ordered_received",
+      "chunks_received": 26,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 16640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520802748097,
+      "t_ms": 892,
+      "event": "ordered_received",
+      "chunks_received": 27,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 17280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520811847243,
+      "t_ms": 901,
+      "event": "ordered_received",
+      "chunks_received": 28,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 17920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520818913529,
+      "t_ms": 908,
+      "event": "ordered_received",
+      "chunks_received": 29,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 16000,
+      "received_next": 18560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520828767006,
+      "t_ms": 918,
+      "event": "ordered_received",
+      "chunks_received": 30,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 19200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520837160894,
+      "t_ms": 927,
+      "event": "ordered_received",
+      "chunks_received": 31,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 19840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520845992439,
+      "t_ms": 936,
+      "event": "ordered_received",
+      "chunks_received": 32,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 20480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520857490227,
+      "t_ms": 947,
+      "event": "ordered_received",
+      "chunks_received": 33,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 21120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520863261385,
+      "t_ms": 953,
+      "event": "ordered_received",
+      "chunks_received": 34,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 19200,
+      "received_next": 21760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520874716432,
+      "t_ms": 964,
+      "event": "ordered_received",
+      "chunks_received": 35,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 22400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520882342049,
+      "t_ms": 972,
+      "event": "ordered_received",
+      "chunks_received": 36,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 23040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520892151539,
+      "t_ms": 982,
+      "event": "ordered_received",
+      "chunks_received": 37,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 23680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520903056003,
+      "t_ms": 993,
+      "event": "ordered_received",
+      "chunks_received": 38,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 24320,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520911556859,
+      "t_ms": 1001,
+      "event": "ordered_received",
+      "chunks_received": 39,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 22400,
+      "received_next": 24960,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520920447430,
+      "t_ms": 1010,
+      "event": "ordered_received",
+      "chunks_received": 40,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 25600,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520931427274,
+      "t_ms": 1021,
+      "event": "ordered_received",
+      "chunks_received": 41,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 26240,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520941845306,
+      "t_ms": 1031,
+      "event": "ordered_received",
+      "chunks_received": 42,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 26880,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520949508015,
+      "t_ms": 1039,
+      "event": "ordered_received",
+      "chunks_received": 43,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 27520,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520958984642,
+      "t_ms": 1049,
+      "event": "ordered_received",
+      "chunks_received": 44,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 25600,
+      "received_next": 28160,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520968741580,
+      "t_ms": 1058,
+      "event": "ordered_received",
+      "chunks_received": 45,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 28800,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520977941256,
+      "t_ms": 1067,
+      "event": "ordered_received",
+      "chunks_received": 46,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 29440,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520984681869,
+      "t_ms": 1074,
+      "event": "ordered_received",
+      "chunks_received": 47,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 30080,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744520994078752,
+      "t_ms": 1084,
+      "event": "ordered_received",
+      "chunks_received": 48,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 30720,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521001748914,
+      "t_ms": 1091,
+      "event": "ordered_received",
+      "chunks_received": 49,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 28800,
+      "received_next": 31360,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521009472752,
+      "t_ms": 1099,
+      "event": "ordered_received",
+      "chunks_received": 50,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 32000,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521019694308,
+      "t_ms": 1109,
+      "event": "ordered_received",
+      "chunks_received": 51,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 32640,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521028133050,
+      "t_ms": 1118,
+      "event": "ordered_received",
+      "chunks_received": 52,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 33280,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521037643269,
+      "t_ms": 1127,
+      "event": "ordered_received",
+      "chunks_received": 53,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 33920,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521045571818,
+      "t_ms": 1135,
+      "event": "ordered_received",
+      "chunks_received": 54,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 32000,
+      "received_next": 34560,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521055793680,
+      "t_ms": 1145,
+      "event": "ordered_received",
+      "chunks_received": 55,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 35200,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521064792510,
+      "t_ms": 1154,
+      "event": "ordered_received",
+      "chunks_received": 56,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 35840,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521072075228,
+      "t_ms": 1162,
+      "event": "ordered_received",
+      "chunks_received": 57,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 36480,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521081784769,
+      "t_ms": 1171,
+      "event": "ordered_received",
+      "chunks_received": 58,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 37120,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521088981335,
+      "t_ms": 1179,
+      "event": "ordered_received",
+      "chunks_received": 59,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 35200,
+      "received_next": 37760,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521098696630,
+      "t_ms": 1188,
+      "event": "ordered_received",
+      "chunks_received": 60,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 38400,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521106130105,
+      "t_ms": 1196,
+      "event": "ordered_received",
+      "chunks_received": 61,
+      "credit_samples": 127360,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 39040,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521115501742,
+      "t_ms": 1205,
+      "event": "ordered_received",
+      "chunks_received": 62,
+      "credit_samples": 126720,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 39680,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521125938239,
+      "t_ms": 1215,
+      "event": "ordered_received",
+      "chunks_received": 63,
+      "credit_samples": 126080,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 40320,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521136500541,
+      "t_ms": 1226,
+      "event": "ordered_received",
+      "chunks_received": 64,
+      "credit_samples": 125440,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 38400,
+      "received_next": 40960,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521143822438,
+      "t_ms": 1233,
+      "event": "ordered_received",
+      "chunks_received": 65,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 41600,
+      "received_next": 41600,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521150247272,
+      "t_ms": 1240,
+      "event": "ordered_received",
+      "chunks_received": 66,
+      "credit_samples": 127914,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "receiving",
+      "queued_next": 41600,
+      "received_next": 41686,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744521150612722,
+      "t_ms": 1240,
+      "event": "ordered_end",
+      "samples": 41686
+    },
+    {
+      "mono_ns": 2744521153328468,
+      "t_ms": 1243,
+      "event": "synthetic_uplink",
+      "fixture": "story",
+      "sha256": "c8f4aef5513ccfc4ffe1a0f1079ae2f4a54cd0265dc94902eeda8f5d4e342794",
+      "samples": 141132
+    },
+    {
+      "mono_ns": 2744521154925337,
+      "t_ms": 1244,
+      "event": "uplink_fixture_start",
+      "fixture": "story"
+    },
+    {
+      "mono_ns": 2744521160278630,
+      "t_ms": 1250,
+      "event": "ordered_received",
+      "chunks_received": 66,
+      "credit_samples": 128000,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "phase": "draining",
+      "queued_next": 41686,
+      "received_next": 41686,
+      "t": "ack"
+    },
+    {
+      "mono_ns": 2744522331202003,
+      "t_ms": 2421,
+      "event": "ordered_received",
+      "finals": 1,
+      "finals_held": 1,
+      "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+      "next": "rtc",
+      "outcome": "task",
+      "queued_next": 41686,
+      "reason": null,
+      "received_next": 41686,
+      "samples_queued": 41686,
+      "status": "complete",
+      "t": "result",
+      "text_chars": 9
+    },
+    {
+      "mono_ns": 2744522332514448,
+      "t_ms": 2422,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_2e1de5d05cbb",
+      "text": "",
+      "final": true
+    },
+    {
+      "mono_ns": 2744522333177253,
+      "t_ms": 2423,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "action": "enter",
+          "mode_epoch": 0,
+          "participant": "dev-BJP00326103099999938",
+          "proposal_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:voice:1",
+          "scene": "story",
+          "session_id": "542d4f9c-28bc-4734-ac28-1fca223e510f",
+          "ttl_ms": 3000,
+          "version": 1
+        },
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353911727,
+        "type": "listening.proposal"
+      }
+    },
+    {
+      "mono_ns": 2744522334258721,
+      "t_ms": 2424,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "lane": "L2",
+        "payload": {
+          "catchup": {
+            "samples": 18880,
+            "skipped": null
+          },
+          "ordered": {
+            "end_sample": 41686,
+            "input_id": "p0-input-972a8537-64f4-4ed9-a0a7-966314b9acd0",
+            "no_task_reason": null,
+            "outcome": "committed",
+            "session_id": "542d4f9c-28bc-4734-ac28-1fca223e510f"
+          },
+          "phase": "rtc",
+          "reason": "first_turn_listening_command",
+          "room": "sn-BJP00326103099999938-1793353909",
+          "stt_spawned_ms_ago": 1172
+        },
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353911727,
+        "type": "session.input_phase"
+      }
+    },
+    {
+      "mono_ns": 2744522334876146,
+      "t_ms": 2424,
+      "event": "control_sent",
+      "type": "listening.state",
+      "seq": 1,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:1"
+      }
+    },
+    {
+      "mono_ns": 2744522336053061,
+      "t_ms": 2426,
+      "event": "control_sent",
+      "type": "listening.enter",
+      "seq": 2,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+        "mode_epoch": 0,
+        "proposal_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:voice:1",
+        "scene": "story"
+      }
+    },
+    {
+      "mono_ns": 2744522336947266,
+      "t_ms": 2426,
+      "event": "control_sent",
+      "type": "listening.enter",
+      "seq": 2,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+        "mode_epoch": 0,
+        "proposal_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:voice:1",
+        "scene": "story"
+      }
+    },
+    {
+      "mono_ns": 2744522342250004,
+      "t_ms": 2432,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 1,
+          "duplicate": false,
+          "listening_id": null,
+          "mode_epoch": 0,
+          "reason": null,
+          "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:1",
+          "scene": null,
+          "stage": "completed",
+          "state": "normal",
+          "version": 1
+        },
+        "seq": 1,
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353911739,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744522444328365,
+      "t_ms": 2534,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 2,
+          "duplicate": false,
+          "listening_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+          "mode_epoch": 1,
+          "reason": null,
+          "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+          "scene": "story",
+          "stage": "received",
+          "state": "entering",
+          "version": 1
+        },
+        "seq": 2,
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353911841,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744522446029889,
+      "t_ms": 2536,
+      "event": "control_sent",
+      "type": "listening.local_ready",
+      "seq": 3,
+      "payload": {
+        "version": 1,
+        "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:3",
+        "mode_epoch": 1
+      }
+    },
+    {
+      "mono_ns": 2744522454125786,
+      "t_ms": 2544,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 2,
+          "duplicate": false,
+          "listening_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+          "mode_epoch": 1,
+          "reason": null,
+          "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+          "scene": "story",
+          "stage": "completed",
+          "state": "listening",
+          "version": 1
+        },
+        "seq": 2,
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353911851,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744522454506639,
+      "t_ms": 2544,
+      "event": "data_received",
+      "topic": "control",
+      "value": {
+        "payload": {
+          "command_seq": 3,
+          "duplicate": false,
+          "listening_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:2",
+          "mode_epoch": 1,
+          "reason": null,
+          "request_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc:3",
+          "scene": "story",
+          "stage": "completed",
+          "state": "listening",
+          "version": 1
+        },
+        "seq": 3,
+        "src": "worker",
+        "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+        "ts_ms": 1793353911850,
+        "type": "listening.ack"
+      }
+    },
+    {
+      "mono_ns": 2744522463104245,
+      "t_ms": 2553,
+      "event": "assertion",
+      "name": "enter double-confirm completed",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744523179641914,
+      "t_ms": 3269,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天",
+      "final": false
+    },
+    {
+      "mono_ns": 2744523212694988,
+      "t_ms": 3302,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天",
+      "final": false
+    },
+    {
+      "mono_ns": 2744523556391842,
+      "t_ms": 3646,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进",
+      "final": false
+    },
+    {
+      "mono_ns": 2744523711359766,
+      "t_ms": 3801,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744523820542707,
+      "t_ms": 3910,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744524124506483,
+      "t_ms": 4214,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744524286233620,
+      "t_ms": 4376,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744524437025861,
+      "t_ms": 4527,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false
+    },
+    {
+      "mono_ns": 2744524742474796,
+      "t_ms": 4832,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744524815468660,
+      "t_ms": 4905,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744525118220445,
+      "t_ms": 5208,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗",
+      "final": false
+    },
+    {
+      "mono_ns": 2744525363895126,
+      "t_ms": 5453,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744525415171304,
+      "t_ms": 5505,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false
+    },
+    {
+      "mono_ns": 2744525691256395,
+      "t_ms": 5781,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744525853979520,
+      "t_ms": 5944,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744526017560339,
+      "t_ms": 6107,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false
+    },
+    {
+      "mono_ns": 2744526337375134,
+      "t_ms": 6427,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": true
+    },
+    {
+      "mono_ns": 2744527171551867,
+      "t_ms": 7261,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把",
+      "final": false
+    },
+    {
+      "mono_ns": 2744527218412723,
+      "t_ms": 7308,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把",
+      "final": false
+    },
+    {
+      "mono_ns": 2744527525496291,
+      "t_ms": 7615,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了",
+      "final": false
+    },
+    {
+      "mono_ns": 2744527611726576,
+      "t_ms": 7701,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了",
+      "final": false
+    },
+    {
+      "mono_ns": 2744527937536298,
+      "t_ms": 8027,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744528083577749,
+      "t_ms": 8173,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744528211955420,
+      "t_ms": 8301,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744529936839765,
+      "t_ms": 10026,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530074090724,
+      "t_ms": 10164,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530104553920,
+      "t_ms": 10194,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530228775505,
+      "t_ms": 10318,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530262997621,
+      "t_ms": 10353,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530412339386,
+      "t_ms": 10502,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530526236236,
+      "t_ms": 10616,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530554273297,
+      "t_ms": 10644,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530666481027,
+      "t_ms": 10756,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530764665122,
+      "t_ms": 10854,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530795725582,
+      "t_ms": 10885,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530950478036,
+      "t_ms": 11040,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744530988187343,
+      "t_ms": 11078,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false
+    },
+    {
+      "mono_ns": 2744531132171106,
+      "t_ms": 11222,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744531278971143,
+      "t_ms": 11368,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744531429315607,
+      "t_ms": 11519,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false
+    },
+    {
+      "mono_ns": 2744531768458612,
+      "t_ms": 11858,
+      "event": "transcription",
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": true
+    },
+    {
+      "mono_ns": 2744532708179010,
+      "t_ms": 12798,
+      "event": "assertion",
+      "name": "narration silent, State nonconflicting, duplicate accepted",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744532720965697,
+      "t_ms": 12811,
+      "event": "isolated_config_changed",
+      "enabled": false,
+      "revision": 3
+    },
+    {
+      "mono_ns": 2744545158195751,
+      "t_ms": 25248,
+      "event": "disconnected",
+      "reason": "5"
+    },
+    {
+      "mono_ns": 2744545175292134,
+      "t_ms": 25265,
+      "event": "assertion",
+      "name": "client observes lease/revocation disconnect",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744545175500877,
+      "t_ms": 25265,
+      "event": "assertion",
+      "name": "no output under failed authorization",
+      "passed": true
+    },
+    {
+      "mono_ns": 2744545175555089,
+      "t_ms": 25265,
+      "event": "summary",
+      "scenario": "revoke",
+      "audio_nonzero_frames": 0,
+      "caption_events": 42,
+      "uplink_frames": 1148,
+      "control_types": [
+        "session.output_ready",
+        "session.input_ready",
+        "listening.proposal",
+        "session.input_phase",
+        "listening.ack",
+        "listening.ack",
+        "listening.ack",
+        "listening.ack"
+      ],
+      "server_disconnected": true
+    },
+    {
+      "mono_ns": 2744545180585419,
+      "t_ms": 25270,
+      "event": "isolated_config_changed",
+      "enabled": true,
+      "revision": 4
+    },
+    {
+      "mono_ns": 2744545221063198,
+      "t_ms": 25311,
+      "event": "room_api_absent",
+      "room": "sn-BJP00326103099999938-1793353909"
+    }
+  ],
+  "captions": [
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_2e1de5d05cbb",
+      "text": "",
+      "final": true,
+      "t_ms": 2422
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天",
+      "final": false,
+      "t_ms": 3269
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天",
+      "final": false,
+      "t_ms": 3302
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进",
+      "final": false,
+      "t_ms": 3646
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 3801
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 3910
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 4214
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 4376
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林",
+      "final": false,
+      "t_ms": 4527
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一",
+      "final": false,
+      "t_ms": 4832
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一",
+      "final": false,
+      "t_ms": 4905
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗",
+      "final": false,
+      "t_ms": 5208
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false,
+      "t_ms": 5453
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的",
+      "final": false,
+      "t_ms": 5505
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 5781
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 5944
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": false,
+      "t_ms": 6107
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_f925b5309661",
+      "text": "小兄今天走进森林发现一颗金色的苹果",
+      "final": true,
+      "t_ms": 6427
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把",
+      "final": false,
+      "t_ms": 7261
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把",
+      "final": false,
+      "t_ms": 7308
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了",
+      "final": false,
+      "t_ms": 7615
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了",
+      "final": false,
+      "t_ms": 7701
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8027
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8173
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 8301
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友",
+      "final": false,
+      "t_ms": 10026
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后",
+      "final": false,
+      "t_ms": 10164
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后",
+      "final": false,
+      "t_ms": 10194
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false,
+      "t_ms": 10318
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一",
+      "final": false,
+      "t_ms": 10353
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 10502
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 10616
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物",
+      "final": false,
+      "t_ms": 10644
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是",
+      "final": false,
+      "t_ms": 10756
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false,
+      "t_ms": 10854
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一",
+      "final": false,
+      "t_ms": 10885
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false,
+      "t_ms": 11040
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色",
+      "final": false,
+      "t_ms": 11078
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 11222
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 11368
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": false,
+      "t_ms": 11519
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_eae705fdf1d8",
+      "text": "他把苹果分给了朋友最后一件礼物是一只紫色风筝",
+      "final": true,
+      "t_ms": 11858
+    }
+  ],
+  "audio": [],
+  "signed_binding": {
+    "room_name": "sn-BJP00326103099999938-1793353909",
+    "session_id": "542d4f9c-28bc-4734-ac28-1fca223e510f",
+    "trace_id": "p0-39-f276127b-360f-4ee6-bb49-fd05c8db2dcc",
+    "expected_agent_name": "p003-listening-p0-session39"
+  }
+}

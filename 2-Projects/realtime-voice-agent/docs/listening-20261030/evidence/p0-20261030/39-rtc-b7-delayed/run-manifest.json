@@ -1,0 +1,51 @@
+{
+  "run_id": "rtc-run-1793354897591398945",
+  "started_at_ns": 1793354897591398945,
+  "source_compile_sha": "b7c942201d45a6fe92a26488448f4dfb0c1db4b0",
+  "max_jobs": 1,
+  "mic_publish_delay_ms": 11000,
+  "artifact_sha256": {
+    "rtc-test-worker": "d74855a8110fa2623942255ab7d07d8a4c2e0fb13dc40870280118e866b38929",
+    "release-candidate": "830823de3acf43f4692dc19d4e436e6c881a05349bcc78a4f945f19f2570d873",
+    "brain.mjs": "05752431e4cb9fcdca06021ee4654525434f6e2cf7ed9d1ae26e6b6e03d776f5",
+    "brain.manifest.json": "be0406c78e28498f9885776b21907a51010d0a16d6171d8c808bd12220c07c75",
+    "rtc-probe.py": "ca006304d1b0eaf208cbb166c00aa5cca6d69b26fd7699b7140ffaeaf36729eb"
+  },
+  "synthetic_fixture_sha256": {
+    "enter": "643a9dac79db74f5c08b4c03c1294197023ead16d88c5b349281dc58182d345a",
+    "story": "683a6b22766a1b1effc2719898cc272ac3d8f9f53a01aba66cf7cac37e3512ab",
+    "feedback": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+    "barge": "26113634d08beb987c740e2e127a2908f55fed4e52d5039081e09cb5172ef7ed",
+    "exit": "02464cf1d4fa32e851c73c020fc06630832c8b4f17889bb4a2174a743f3169b2",
+    "chat": "575acbdf667178d28c5773081c151ed004a17f350c5343dbaa30ab2b42139e4e"
+  },
+  "scenarios": [
+    {
+      "scenario": "normal",
+      "rc": 0,
+      "passed": true,
+      "signed_binding": {
+        "room_name": "sn-BJP00326103099999938-1793354899",
+        "session_id": "32c06040-d2d0-4ab8-abe1-552863e1a2a3",
+        "trace_id": "p0-39-d97710cb-1d1d-49d0-88a9-3e0b812265af",
+        "expected_agent_name": "p003-listening-p0-session39"
+      },
+      "started_at_ns": 1793354898681886012,
+      "ended_at_ns": 1793354955749011946
+    },
+    {
+      "scenario": "lease_timeout",
+      "rc": 0,
+      "passed": true,
+      "signed_binding": {
+        "room_name": "sn-BJP00326103099999938-1793354957",
+        "session_id": "b0dda4e3-c5d9-45c7-b8c6-711dbb4de298",
+        "trace_id": "p0-39-5eff48f8-3aba-48af-a7fe-927be0df98b6",
+        "expected_agent_name": "p003-listening-p0-session39"
+      },
+      "started_at_ns": 1793354956871387585,
+      "ended_at_ns": 1793354993882408168
+    }
+  ],
+  "ended_at_ns": 1793354994850257641
+}

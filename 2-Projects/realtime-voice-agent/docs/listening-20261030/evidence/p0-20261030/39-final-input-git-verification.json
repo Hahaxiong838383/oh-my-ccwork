@@ -1,0 +1,12 @@
+{
+  "worker_commit": "b7c942201d45a6fe92a26488448f4dfb0c1db4b0",
+  "worker_inputs_verified": 83,
+  "worker_manifest_sha256": "f3f8d7459e178f4d35fd7c34bcff082b09a2e48327608c1e4e34092ab4f351ee",
+  "rtc_brain_commit": "365dd76c8c62bec30b04a7cc87638626e4906f4e",
+  "rtc_brain_inputs": 65,
+  "rtc_bundle_sha256": "05752431e4cb9fcdca06021ee4654525434f6e2cf7ed9d1ae26e6b6e03d776f5",
+  "HTTP_joint_brain_commit": "2496ac4334eb4de373f7e83fc9ad89517fd64726",
+  "HTTP_joint_inputs": 33,
+  "HTTP_joint_bundle_sha256": "f8c0b92ec702c2c8eee414c81b266794d8d527d84503f6a51ec4833270ff9889",
+  "verified": true
+}
