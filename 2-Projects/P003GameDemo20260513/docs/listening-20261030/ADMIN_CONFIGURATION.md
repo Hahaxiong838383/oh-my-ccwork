@@ -61,3 +61,7 @@
 运行：在apps/server目录，使用既有Node/tsx依赖；浏览器测试传入已安装工具的`P003_PLAYWRIGHT_MODULE`和`P003_CHROME_BIN`，可选`P003_LISTENING_SCREENSHOT`。fixture不加载.env，退出后删除本次临时数据库，不接生产服务。
 
 署名：codex（OpenAI）| 2026-10-30
+
+本批功能代码提交：`22505d8b5fc0bbdb41e2b78577f35ac3769d9024`；冻结标签`rollback/p003-listening-admin-20261030`→`5426e78e`。以下为临时库/合成账号的真实浏览器截图：
+
+![Worker Brain 倾听配置本地预览](admin-listening-preview.png)
