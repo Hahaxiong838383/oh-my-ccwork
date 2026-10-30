@@ -113,7 +113,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let mut close_intent = match crate::room_cleanup::CloseIntent::begin(&config.agent_name, &room_name, sid, &job.metadata) {
         Ok(intent) => intent,
         Err(_) => {
-            let _ = delete_room(&config, &url, &room_name).await;
+            let _ = delete_room(&config, &url, &room_name, false).await;
             anyhow::bail!("candidate room cleanup registration failed");
         }
     };
@@ -445,7 +445,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
     let _ = close_room_and_delete(&room_name,
         async { room.close().await.map_err(anyhow::Error::from) },
-        delete_room(&config, &url, &room_name)).await;
+        delete_room(&config, &url, &room_name, meta.listening.is_some())).await;
     // A 2xx is not the device's disconnect receipt. Keep the durable intent
     // until the independent reconciler verifies that this exact SID is gone.
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
@@ -504,7 +504,7 @@ fn unix_ms() -> i64 {
         .unwrap_or(0)
 }
 
-async fn delete_room(config: &Config, ws_url: &str, room_name: &str) -> bool {
+async fn delete_room(config: &Config, ws_url: &str, room_name: &str, listening: bool) -> bool {
     if room_name.is_empty() {
         return false;
     }
@@ -524,20 +524,22 @@ async fn delete_room(config: &Config, ws_url: &str, room_name: &str) -> bool {
     );
     // A candidate must not strand an otherwise healthy RTC client after one
     // transient control-plane failure. Reuse the client and bound the whole
-    // attempt, including DNS; ordinary workers retain their single 5s attempt.
+    // attempt, including DNS; signed listening sessions get two 2s attempts
+    // (4.25s total), within the previous single 5s budget. Other ordinary
+    // sessions retain their existing policy; search candidates retain R16.
     let candidate = crate::search_canary::is_candidate(&config.agent_name);
     static CLIENT: std::sync::OnceLock<reqwest::Client> = std::sync::OnceLock::new();
     let client = CLIENT.get_or_init(|| reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
         .build().expect("room cleanup HTTP client"));
-    let attempts = if candidate { 3 } else { 1 };
+    let attempts = if candidate { 3 } else if listening { 2 } else { 1 };
     for attempt in 1..=attempts {
     let result = client
         .post(&url)
         .bearer_auth(&jwt)
         .json(&serde_json::json!({"room": room_name}))
-        .timeout(std::time::Duration::from_secs(if candidate { 2 } else { 5 }))
+        .timeout(std::time::Duration::from_secs(if candidate || listening { 2 } else { 5 }))
         .send()
         .await;
     let retryable = match result {
@@ -570,6 +572,9 @@ mod tests {
 
     // Real HTTP boundary: keep transport/status behavior in the production path.
     async fn cleanup_responses(statuses: &[u16], candidate: bool) -> (usize, bool) {
+        cleanup_listening_responses(statuses, candidate, false).await
+    }
+    async fn cleanup_listening_responses(statuses: &[u16], candidate: bool, listening: bool) -> (usize, bool) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
         let _ = rustls::crypto::ring::default_provider().install_default();
@@ -599,17 +604,44 @@ mod tests {
                 let i = observed.fetch_add(1, Ordering::SeqCst);
                 let status = statuses[i.min(statuses.len() - 1)];
                 if status == 0 { continue; } // peer drops the connection
+                if status == 1 {
+                    // A real unresponsive peer: keep its socket alive beyond the
+                    // per-attempt deadline while accepting a retry independently.
+                    tokio::spawn(async move {
+                        tokio::time::sleep(std::time::Duration::from_secs(6)).await;
+                        drop(socket);
+                    });
+                    continue;
+                }
                 let response = format!("HTTP/1.1 {status} Test\r\nContent-Length: 2\r\nConnection: close\r\nLocation: /unexpected\r\n\r\n{{}}");
                 socket.write_all(response.as_bytes()).await.unwrap();
             }
         });
         let cfg = crate::config::Config { ws_url: url.clone(), api_key: "test-key".into(),
             api_secret: "test-secret".into(), agent_name: if candidate {crate::search_canary::AGENT} else {"rust-worker"}.into(), max_jobs: 1 };
-        let success = super::delete_room(&cfg, &url, "r16-test-room").await;
+        let success = super::delete_room(&cfg, &url, "r16-test-room", listening).await;
         server.abort();
         let end = server.await;
         assert!(end.is_err_and(|e| e.is_cancelled()));
         (attempts.load(Ordering::SeqCst), success)
+    }
+    #[tokio::test]
+    async fn listening_delete_room_retries_transient_but_keeps_auth_fail_closed() {
+        assert_eq!(cleanup_listening_responses(&[503, 200], false, true).await, (2, true));
+        assert_eq!(cleanup_listening_responses(&[0, 200], false, true).await, (2, true));
+        assert_eq!(cleanup_listening_responses(&[503], false, true).await, (2, false));
+        for status in [401, 403, 302] {
+            assert_eq!(cleanup_listening_responses(&[status], false, true).await, (1, false));
+        }
+    }
+    #[tokio::test]
+    async fn listening_delete_room_timeout_retries_within_original_budget() {
+        let at = std::time::Instant::now();
+        assert_eq!(cleanup_listening_responses(&[1, 200], false, true).await, (2, true));
+        assert!(at.elapsed() < std::time::Duration::from_secs(5));
+        let at = std::time::Instant::now();
+        assert_eq!(cleanup_listening_responses(&[1], false, true).await, (2, false));
+        assert!(at.elapsed() < std::time::Duration::from_secs(5));
     }
     #[tokio::test]
     async fn r16_delete_room_recovers_transient_http_failure() {

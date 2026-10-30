@@ -132,13 +132,17 @@ class Probe:
             await self.send_control('listening.local_ready', {'mode_epoch': p['mode_epoch']})
 
     async def pull(self, track):
-        async for event in rtc.AudioStream(track, sample_rate=24000, num_channels=1):
-            values = array.array('h', bytes(event.frame.data))
-            peak = max((abs(x) for x in values), default=0)
-            if peak > 100:
-                self.audio.append({'mono_ns':time.monotonic_ns(), 't_ms': round((time.monotonic()-self.started)*1000), 'peak': peak, 'samples': len(values)})
-                if len(self.audio) == 1:
-                    self.log('first_nonzero_audio', peak=peak)
+        stream = rtc.AudioStream(track, sample_rate=24000, num_channels=1)
+        try:
+            async for event in stream:
+                values = array.array('h', bytes(event.frame.data))
+                peak = max((abs(x) for x in values), default=0)
+                if peak > 100:
+                    self.audio.append({'mono_ns':time.monotonic_ns(), 't_ms': round((time.monotonic()-self.started)*1000), 'peak': peak, 'samples': len(values)})
+                    if len(self.audio) == 1:
+                        self.log('first_nonzero_audio', peak=peak)
+        finally:
+            await stream.aclose()
 
     async def pump(self):
         frame_bytes = SR//50*2
@@ -199,6 +203,8 @@ class Probe:
         self.log('session_issued', room=session['room_name'], session=session['session_id'], trace=self.trace, agent=session['expected_agent_name'])
         @self.room.on('data_received')
         def on_data(packet):
+            if getattr(self, 'closing', False):
+                return
             if not self.trusted(packet.participant):
                 self.log('untrusted_packet', topic=packet.topic)
                 return
@@ -329,6 +335,7 @@ class Probe:
             db.close()
 
     async def close(self):
+        self.closing = True
         if hasattr(self,'paused_brain'):
             os.kill(self.paused_brain,signal.SIGCONT)
             self.log('isolated_authority_resumed',pid=self.paused_brain)
@@ -339,6 +346,8 @@ class Probe:
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
+        if self.mic is not None:
+            await self.mic.aclose()
         await self.room.disconnect()
         # Query only this signed synthetic room. A log line 'closed' is insufficient.
         if self.signed:
