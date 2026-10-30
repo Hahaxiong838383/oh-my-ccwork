@@ -73,6 +73,35 @@ fn issue_to_assignment_ms(room_name: &str, issue_ts_ms: Option<i64>) -> Option<i
     valid(now_ms - sec * 1000)
 }
 
+// Keep the event wait shared with job-layer tests; RTC transport remains outside it.
+enum JobWake<E> {
+    Room(Option<E>),
+    Pipeline(std::result::Result<Result<()>, tokio::task::JoinError>),
+    Watchdog,
+}
+async fn next_job_wake<E>(
+    room_event: impl std::future::Future<Output = Option<E>>,
+    pipeline: &mut Option<JoinHandle<Result<()>>>,
+    watchdog: &mut tokio::time::Interval,
+) -> JobWake<E> {
+    tokio::select! {
+        // Prioritize completion over a queued room packet: an ended pipeline must
+        // not consume more control/audio or be mistaken for an idle healthy job.
+        biased;
+        result = async {
+            match pipeline.as_mut() {
+                Some(task) => task.await,
+                None => std::future::pending().await,
+            }
+        } => {
+            pipeline.take(); // already joined; never poll it twice in close_pipeline
+            JobWake::Pipeline(result)
+        },
+        _ = watchdog.tick() => JobWake::Watchdog,
+        event = room_event => JobWake::Room(event),
+    }
+}
+
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
     let room_name = job
         .room
@@ -153,7 +182,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let mut mic_stream: Option<NativeAudioStream> = None;
     // 字幕路由:用户侧 (identity, 麦克风轨 sid),订阅到轨时采集
     let mut user_info: Option<(String, String)> = None;
-    let mut pipeline_task: Option<JoinHandle<()>> = None;
+    let mut pipeline_task: Option<JoinHandle<Result<()>>> = None;
     let (close_tx,close_rx)=tokio::sync::oneshot::channel();
     let mut pipeline_close_tx=Some(close_tx);let mut pipeline_close_rx=Some(close_rx);
     let graceful_search_close=std::env::var("P003_SEARCH_RESUME_V1").is_ok_and(|v|v=="1");
@@ -186,12 +215,18 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     watchdog.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
-        let ev = tokio::select! {
-            ev = events.recv() => match ev {
-                Some(ev) => ev,
-                None => break,
-            },
-            _ = watchdog.tick() => {
+        let ev = match next_job_wake(events.recv(), &mut pipeline_task, &mut watchdog).await {
+            JobWake::Room(Some(ev)) => ev,
+            JobWake::Room(None) => break,
+            JobWake::Pipeline(result) => {
+                match result {
+                    Ok(Ok(())) => info!(room = %room_name, "pipeline ended → closing job"),
+                    Ok(Err(e)) => warn!(room = %room_name, error = %e, "pipeline failed → closing job"),
+                    Err(e) => warn!(room = %room_name, panic = e.is_panic(), cancelled = e.is_cancelled(), "pipeline join failed → closing job"),
+                }
+                break;
+            }
+            JobWake::Watchdog => {
                 if !crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata) {
                     info!(room=%room_name,"canary window closed: closing room, reconnect returns baseline");
                     break;
@@ -392,12 +427,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             let shutdown=if graceful_search_close{pipeline_close_rx.take()}else{None};
             let listening_metadata = meta.listening.clone();
             pipeline_task = Some(tokio::spawn(async move {
-                if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, listening_metadata, shutdown)
+                pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, listening_metadata, shutdown)
                         .await
-                {
-                    tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
-                }
             }));
         }
     }
@@ -410,10 +441,11 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             tracing::error!(room=%room_name, "room cleanup closing record failed");
         }
     }
-    room.close().await.ok();
     // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
     // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
-    let _ = delete_room(&config, &url, &room_name).await;
+    let _ = close_room_and_delete(&room_name,
+        async { room.close().await.map_err(anyhow::Error::from) },
+        delete_room(&config, &url, &room_name)).await;
     // A 2xx is not the device's disconnect receipt. Keep the durable intent
     // until the independent reconciler verifies that this exact SID is gone.
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
@@ -422,11 +454,30 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
 
 /// Give an exiting candidate one bounded opportunity to freeze playback progress.
 /// Ordinary jobs preserve their immediate-abort behavior.
-async fn close_pipeline(mut task:JoinHandle<()>,shutdown:Option<tokio::sync::oneshot::Sender<()>>){
-    let Some(tx)=shutdown else {task.abort();return;};
-    let _=tx.send(());
-    if tokio::time::timeout(std::time::Duration::from_millis(500),&mut task).await.is_ok(){return;}
-    task.abort();let _=task.await;
+async fn close_pipeline(mut task: JoinHandle<Result<()>>, shutdown: Option<tokio::sync::oneshot::Sender<()>>) {
+    if let Some(tx) = shutdown {
+        let _ = tx.send(());
+        if tokio::time::timeout(std::time::Duration::from_millis(500), &mut task).await.is_ok() { return; }
+    }
+    task.abort();
+    // A non-cooperative dependency must not prevent RTC close/DeleteRoom. Wait
+    // for cooperative owners to release resources, but retain a hard deadline.
+    if tokio::time::timeout(std::time::Duration::from_millis(500), &mut task).await.is_err() {
+        warn!("pipeline abort acknowledgement timed out; proceeding with room cleanup");
+    }
+}
+
+// Only the RTC/network boundary is replaceable in job tests; ordering is shared
+// with run_job. DeleteRoom already bounds every HTTP attempt in delete_room.
+async fn close_room_and_delete(
+    room_name: &str,
+    close: impl std::future::Future<Output = Result<()>>,
+    delete: impl std::future::Future<Output = bool>,
+) -> (bool, bool) {
+    let closed = matches!(tokio::time::timeout(std::time::Duration::from_secs(3), close).await, Ok(Ok(())));
+    if !closed { warn!(room = %room_name, "room close failed or timed out; still attempting DeleteRoom"); }
+    let deleted = delete.await;
+    (closed, deleted)
 }
 
 /// control topic 出站(reliable):session.output_ready 等 job 层事件。
@@ -579,10 +630,185 @@ mod tests {
     #[tokio::test]
     async fn r14_job_close_notifies_cleanup_and_still_bounds_a_stuck_pipeline(){
         let(tx,rx)=tokio::sync::oneshot::channel();let(done,proof)=tokio::sync::oneshot::channel();
-        let task=tokio::spawn(async move{rx.await.unwrap();let _=done.send(());});
+        let task=tokio::spawn(async move{rx.await.unwrap();let _=done.send(());Ok(())});
         super::close_pipeline(task,Some(tx)).await;assert!(proof.await.is_ok());
-        let(tx,_rx)=tokio::sync::oneshot::channel();let task=tokio::spawn(std::future::pending());let at=std::time::Instant::now();
+        let(tx,_rx)=tokio::sync::oneshot::channel();let task=tokio::spawn(std::future::pending::<anyhow::Result<()>>());let at=std::time::Instant::now();
         super::close_pipeline(task,Some(tx)).await;assert!(at.elapsed()<std::time::Duration::from_secs(1));
+    }
+
+    // Regression: even with a connected/silent participant and a fresh heartbeat,
+    // finished pipeline tasks must wake the actual job selector before watchdog.
+    #[tokio::test]
+    async fn listening_job_pipeline_completion_wakes_without_room_events() {
+        for outcome in ["normal", "error", "panic"] {
+            let mut task = Some(tokio::spawn(async move {
+                match outcome {
+                    "normal" => Ok(()),
+                    "error" => Err(anyhow::anyhow!("listening_session_paused_close_required")),
+                    _ => panic!("synthetic pipeline panic"),
+                }
+            }));
+            let mut watchdog = tokio::time::interval_at(
+                tokio::time::Instant::now() + std::time::Duration::from_secs(60),
+                std::time::Duration::from_secs(1),
+            );
+            let wake = tokio::time::timeout(std::time::Duration::from_millis(200),
+                super::next_job_wake(std::future::pending::<Option<()>>(), &mut task, &mut watchdog)).await;
+            assert!(wake.is_ok(), "{outcome}: completed pipeline must wake job cleanup");
+            let super::JobWake::Pipeline(result) = wake.unwrap() else { panic!("wrong wake"); };
+            match outcome {
+                "normal" => assert!(result.unwrap().is_ok()),
+                "error" => assert!(result.unwrap().is_err()),
+                _ => assert!(result.unwrap_err().is_panic()),
+            }
+            assert!(task.is_none(), "joined task must not be polled a second time during cleanup");
+        }
+    }
+
+    #[tokio::test]
+    async fn listening_job_abort_waits_for_owned_resources_to_drop() {
+        use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+        struct Owned(Arc<AtomicBool>);
+        impl Drop for Owned { fn drop(&mut self) { self.0.store(true, Ordering::SeqCst); } }
+        let dropped = Arc::new(AtomicBool::new(false));
+        let owned = Owned(dropped.clone());
+        let (started, ready) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(async move {
+            let _owned = owned;
+            let _ = started.send(());
+            std::future::pending::<anyhow::Result<()>>().await
+        });
+        ready.await.unwrap();
+        super::close_pipeline(task, None).await;
+        assert!(dropped.load(Ordering::SeqCst), "room cleanup must not race a live aborted pipeline");
+    }
+
+
+    #[tokio::test]
+    async fn listening_job_stuck_room_close_still_attempts_delete() {
+        use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+        let deleted = Arc::new(AtomicBool::new(false));
+        let proof = deleted.clone();
+        let result = tokio::time::timeout(std::time::Duration::from_secs(4),
+            super::close_room_and_delete("synthetic-room",
+                std::future::pending::<anyhow::Result<()>>(),
+                async move { proof.store(true, Ordering::SeqCst); true })).await;
+        assert!(result.is_ok(), "stuck Room::close must not prevent bounded DeleteRoom");
+        assert_eq!(result.unwrap(), (false, true));
+        assert!(deleted.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn listening_job_close_error_still_deletes_and_keeps_failure_visible() {
+        let result = super::close_room_and_delete("synthetic-room",
+            async { anyhow::bail!("synthetic RTC close failure") }, async { true }).await;
+        assert_eq!(result, (false, true));
+        let result = super::close_room_and_delete("synthetic-room",
+            async { Ok(()) }, async { false }).await;
+        assert_eq!(result, (true, false));
+    }
+
+
+    #[tokio::test]
+    async fn listening_job_paused_session_closes_double_and_reconnects_without_replay() {
+        use crate::listening_mode::{Action, Command, Phase, Scene};
+        use crate::listening_runtime::{Binding, ListeningSession, OutputPurpose};
+        use std::sync::{Arc, Mutex};
+        for reason in ["lease_expired", "local_ready_missing", "capture_not_drained", "authority_timeout"] {
+            let binding = Binding { room: "sn-BJP00326070803800006-123".into(),
+                session: "old-session".into(), trace: "trace-1".into() };
+            let mut old = ListeningSession::new(binding.clone()).unwrap();
+            let old_output = old.output_permit(OutputPurpose::Ordinary, 7, 0).unwrap();
+            let mut capture = None;
+            if reason == "authority_timeout" {
+                // Adapter's real pending-authority timer is covered separately by
+                // listening_authority_timeout_during_entry_pauses_instead_of_chat.
+                old.pause_pending_entry();
+            } else {
+                if reason == "capture_not_drained" { capture = old_output.begin_capture_at(0); }
+                old.renew_lease(3, 15000, 0).unwrap();
+                old.control(Some("dev-BJP00326070803800006"), "trace-1", Command {
+                    seq: 1, request_id: "trace-1:1".into(),
+                    action: Action::Enter { epoch: 0, scene: Scene::Story } }, 0).unwrap();
+                if reason != "capture_not_drained" { old.capture_drained(1, 0).unwrap(); }
+                if reason != "local_ready_missing" {
+                    old.control(Some("dev-BJP00326070803800006"), "trace-1", Command {
+                        seq: 2, request_id: "trace-1:2".into(), action: Action::LocalReady { epoch: 1 } }, 0).unwrap();
+                }
+                old.tick(if reason == "lease_expired" { 15001 } else { 5001 });
+            }
+            assert_eq!(old.snapshot().phase, Phase::Paused, "{reason}");
+            assert!(old.output_permit(OutputPurpose::Ordinary, 8, 15001).is_none());
+            let (control, receiver) = tokio::sync::mpsc::channel::<()>(1);
+            let mut task = Some(tokio::spawn(async move {
+                let (_old, _capture, _receiver) = (old, capture, receiver);
+                Err(anyhow::anyhow!("listening_session_paused_close_required"))
+            }));
+            let mut watchdog = tokio::time::interval_at(tokio::time::Instant::now()
+                + std::time::Duration::from_secs(60), std::time::Duration::from_secs(1));
+            let wake = tokio::time::timeout(std::time::Duration::from_secs(1),
+                super::next_job_wake(std::future::pending::<Option<()>>(), &mut task, &mut watchdog)).await.unwrap();
+            assert!(matches!(wake, super::JobWake::Pipeline(Ok(Err(_)))));
+            assert!(control.send(()).await.is_err(), "old task must no longer consume input");
+
+            // Replace only RTC/network effects. A worker Room::close alone does
+            // not prove the remote device disconnected: the delete boundary does
+            // that in this double, and real device receipts remain a separate gate.
+            let effects = Arc::new(Mutex::new(Vec::new()));
+            let closing = effects.clone(); let deleting = effects.clone();
+            let result = super::close_room_and_delete(&binding.room,
+                async move { closing.lock().unwrap().push("worker_closed"); Ok(()) },
+                async move { let mut v = deleting.lock().unwrap();
+                    assert_eq!(*v, vec!["worker_closed"]); v.push("room_deleted"); true }).await;
+            assert_eq!(result, (true, true));
+            assert_eq!(*effects.lock().unwrap(), vec!["worker_closed", "room_deleted"]);
+            assert!(!old_output.allowed_at(16000), "old output must not resume after close");
+            let mut fresh = binding; fresh.room = "sn-BJP00326070803800006-124".into();
+            fresh.session = "new-session".into(); fresh.trace = "trace-2".into();
+            let new = ListeningSession::new(fresh).unwrap();
+            assert!(new.output_permit(OutputPurpose::Ordinary, 1, 0).is_some());
+            assert!(!old_output.allowed_at(16001), "new session must not revive old permit");
+        }
+    }
+
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn listening_job_uncooperative_abort_cannot_block_room_cleanup() {
+        let (release, blocked) = std::sync::mpsc::channel();
+        let (started, ready) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(async move {
+            let _ = started.send(());
+            // Synthetic non-cooperative dependency, released by the test itself.
+            let _ = blocked.recv_timeout(std::time::Duration::from_secs(2));
+            Ok(())
+        });
+        ready.await.unwrap();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(900),
+            super::close_pipeline(task, None)).await;
+        let _ = release.send(());
+        assert!(result.is_ok(), "abort acknowledgement must be bounded before room cleanup");
+    }
+
+
+    #[tokio::test]
+    async fn listening_job_wait_preserves_room_events_and_watchdog() {
+        use super::{JobWake, next_job_wake};
+        let mut watchdog = tokio::time::interval_at(tokio::time::Instant::now()
+            + std::time::Duration::from_secs(60), std::time::Duration::from_secs(1));
+        let mut task = None;
+        assert!(matches!(next_job_wake(async { Some(17) }, &mut task, &mut watchdog).await,
+            JobWake::Room(Some(17))));
+        task = Some(tokio::spawn(std::future::pending::<anyhow::Result<()>>()));
+        assert!(matches!(next_job_wake(async { Some(18) }, &mut task, &mut watchdog).await,
+            JobWake::Room(Some(18))));
+        assert!(task.is_some());
+        // Tokio timers round to milliseconds; a newly created "now" interval
+        // need not be ready on its first poll. Use an unambiguously elapsed tick.
+        let mut due = tokio::time::interval_at(tokio::time::Instant::now()
+            - std::time::Duration::from_secs(1), std::time::Duration::from_secs(1));
+        assert!(matches!(next_job_wake(async { Some(19) }, &mut task, &mut due).await,
+            JobWake::Watchdog), "queued room traffic must not starve the canary/heartbeat watchdog");
+        super::close_pipeline(task.take().unwrap(), None).await;
     }
 
     fn now_ms() -> i64 {

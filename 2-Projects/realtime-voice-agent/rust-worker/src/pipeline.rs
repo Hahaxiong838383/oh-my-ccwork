@@ -659,6 +659,21 @@ pub struct SttPre {
     pub task: tokio::task::JoinHandle<()>,
 }
 
+// Pipeline owns every primary/preconnected STT task. Keep only abort handles
+// here so panic/forced cancellation cannot detach an STT reconnect loop.
+#[derive(Default)]
+struct SttTaskCleanup(Vec<tokio::task::AbortHandle>);
+impl SttTaskCleanup {
+    fn track(&mut self, pre: SttPre) -> SttPre {
+        self.0.push(pre.task.abort_handle());
+        pre
+    }
+}
+
+impl Drop for SttTaskCleanup {
+    fn drop(&mut self) { for task in &self.0 { task.abort(); } }
+}
+
 /// 该房的 ASR 配置:env 基线 + 二遍识别 per-SN 灰度(命中即切 bigmodel_async + enable_nonstream,必须同调:
 /// 老 bigmodel 静默忽略此参数)。非命中房间零变化。
 pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
@@ -905,7 +920,8 @@ pub async fn run_pipeline(
     );
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
-    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt;
+    let mut stt_cleanup = SttTaskCleanup::default();
+    let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt_cleanup.track(stt);
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
     let mut stt_pcm_tx = Some(stt_pcm_tx);
     let mut stt_closed = false;
@@ -917,7 +933,7 @@ pub async fn run_pipeline(
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
 
     let participant2 = participant.clone();
-    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 主循环 return Err
+    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 主循环统一收尾后返回 Err
     // → job 收尾(关房删房),设备走既有重连路径。容量 1:一次 fatal 就收摊。
     let (fatal_tx, mut fatal_rx) = mpsc::channel::<String>(1);
 
@@ -1083,13 +1099,14 @@ pub async fn run_pipeline(
     // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
     // 生产实证 2026-08-18 06:20 同 job 每 10s 重发一次 input_ready——Android 幂等兜住但脏)
     let mut input_ready_fired = false;
+    let mut exit_error = None;
 
     loop {
         // B23 产品首句 v1:执行输入相位切换(代次终态 / begin 超时后置位,每 job 一次):换 STT、回灌追补环、发 session.input_phase。
         if let Some(reason) = orch.pending_phase_switch.take() {
             let (pre, spawned_at) = match stt2.take() {
                 Some(x) => x,
-                None => (spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()),
+                None => (stt_cleanup.track(spawn_stt(stt_cfg_for_room(&room_name), &room_name)), Instant::now()),
             };
             let SttPre { pcm_tx, ev_rx, task } = pre;
             // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
@@ -1163,7 +1180,8 @@ pub async fn run_pipeline(
             // 输出门 fail-closed(冻结 2026-08-18):首个待播 PCM 起 5s Android 仍未订阅
             // agent 轨 → 整 job 收摊关房,绝不带着半聋房间继续跑
             Some(msg) = fatal_rx.recv() => {
-                return Err(anyhow::anyhow!("output gate fail-closed: {msg}"));
+                exit_error = Some(anyhow::anyhow!("pipeline fail-closed: {msg}"));
+                break; // fatal still traverses ordered/STT/output cleanup below
             }
             // 入站控制包(设备 → worker)。放在最前面:cancel 的时效性高于音频帧处理。
             ctrl = ctrl_rx.recv() => {
@@ -1299,7 +1317,7 @@ pub async fn run_pipeline(
                     stt_pcm_tx.take(); // 主动收流:供应商回 LastNoSeq → Closed → 裁决
                     // B23:首句已收流 → 立即预连第二条 STT(与首答 final/LLM/TTS/本地承接并行),切 RTC 时直接接管
                     if stt2.is_none() && orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false) {
-                        stt2 = Some((spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()));
+                        stt2 = Some((stt_cleanup.track(spawn_stt(stt_cfg_for_room(&room_name), &room_name)), Instant::now()));
                     }
                 }
             }
@@ -1382,7 +1400,7 @@ pub async fn run_pipeline(
                     orch.ordered_end_stream_pending = false;
                     stt_pcm_tx.take();
                     if stt2.is_none() && orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false) {
-                        stt2 = Some((spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()));
+                        stt2 = Some((stt_cleanup.track(spawn_stt(stt_cfg_for_room(&room_name), &room_name)), Instant::now()));
                     }
                 }
             }
@@ -1409,9 +1427,11 @@ pub async fn run_pipeline(
     drop(stt_pcm_tx);
     for t in stt_tasks_done { t.abort(); }
     if let Some((pre, _)) = stt2.take() { pre.task.abort(); }
-    let _ = tokio::time::timeout(Duration::from_secs(3), stt_task).await;
+    if tokio::time::timeout(Duration::from_secs(3), &mut stt_task).await.is_err() {
+        stt_task.abort(); // do not detach a reconnect loop when the deadline expires
+    }
     info!(room = %room_name, "pipeline closed");
-    Ok(())
+    match exit_error { Some(error) => Err(error), None => Ok(()) }
 }
 
 impl Orchestrator {
@@ -4317,5 +4337,37 @@ mod publish_result_tests {
         assert_eq!(publish_fail_class("data channel closed"), "closed");
         assert_eq!(publish_fail_class("payload too large"), "payload");
         assert_eq!(publish_fail_class("某个没见过的错"), "other");
+    }
+}
+
+#[cfg(test)]
+mod listening_lifecycle_tests {
+    use super::*;
+
+    // Removing the pipeline-owned STT cancellation guard must leave this
+    // pending child alive and fail the timeout, including an unwinding owner.
+    #[tokio::test]
+    async fn listening_stt_owned_tasks_cancel_on_error_or_panic() {
+        for panic_owner in [false, true] {
+            let (pcm_tx, _) = mpsc::channel(1);
+            let (_, ev_rx) = mpsc::channel(1);
+            let child = tokio::spawn(std::future::pending::<()>());
+            let (started, ready) = tokio::sync::oneshot::channel();
+            let owner = tokio::spawn(async move {
+                let mut cleanup = SttTaskCleanup::default();
+                let pre = cleanup.track(SttPre { pcm_tx, ev_rx, task: child });
+                let _ = started.send(pre.task);
+                if panic_owner { panic!("synthetic pipeline panic"); }
+                Err::<(), anyhow::Error>(anyhow::anyhow!("listening_session_paused_close_required"))
+            });
+            let mut child = ready.await.unwrap();
+            let ended = owner.await;
+            if panic_owner { assert!(ended.unwrap_err().is_panic()); }
+            else { assert!(ended.unwrap().is_err()); }
+            let stopped = tokio::time::timeout(Duration::from_millis(200), &mut child).await;
+            if stopped.is_err() { child.abort(); let _ = child.await; }
+            assert!(stopped.is_ok_and(|r| r.is_err_and(|e| e.is_cancelled())),
+                "STT child must not survive its failed/panicked pipeline owner");
+        }
     }
 }
