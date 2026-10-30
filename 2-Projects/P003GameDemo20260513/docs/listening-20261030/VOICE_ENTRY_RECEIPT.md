@@ -1,6 +1,6 @@
 # P003 倾听语音入口：Brain 38 开发回执
 
-结论：**本会话Brain职责已完成并提交，可交主会话独立复核；整个产品尚未端到端验收或上线。** 未部署、未开倾听总闸、未扩设备、未改搜索窗口/生产音频/Android/Worker树。现役顶部标签布局保留，只有倾听开关说明文字更新。
+结论：**本会话Brain职责已完成并提交，主会话已验收核心源码及复测（HEAD `3756c0cf`）；本次仅补交接规则，整个产品尚未端到端验收或上线。** 未部署、未开倾听总闸、未扩设备、未改搜索窗口/生产音频/Android/Worker树。现役顶部标签布局保留，只有倾听开关说明文字更新。
 
 | 代码锚 | 内容 |
 |---|---|
@@ -16,15 +16,15 @@
 
 ## 合同精确版本
 
-control/HTTP主version均为1、status=frozen_for_integration。mode的voice_extension_revision=2；HTTP/fixtures扩展修订1（字段未因修订2变化）。修订2仅澄清口令前安静边界和元语言问句负例，已在`contract-ready.json.changes_after_freeze`登记，未静默漂移。
+control/HTTP主version均为1、status=frozen_for_integration。mode的voice_extension_revision=3；HTTP/fixtures扩展修订1（修订2/3均未变wire）。修订2澄清口令前安静边界和元语言问句负例；修订3补实际sender映射/首次锁定、TTL首次消费和pending只读state规则。每次原因/前SHA均在`contract-ready.json.changes_after_freeze`登记；消息字段、JSON样例、HTTP/fixtures未变。
 
 ```text
-p003-listening-mode-v1.json          9711a8fabc04dc99c718b09a8d8287ccaed8ad7ed0da92370c2df843d46bf5e3
+p003-listening-mode-v1.json          c055866fad0e9b69cdd75c526eeb2fee6ad97899641d792be63037a064bf2411
 p003-listening-http-v1.json          86825d6281da13fdf17c32b04d5c9dcb4edf71ceb69257d839aacb9df0a99f1e
 p003-listening-http-v1.fixtures.json c58dd98ade3329d04e5c9b7622e7e4668c33483b38cd804f37257e5baa6d415b
 ```
 
-位置：本树`4-Assets/contracts/`。39按`/Users/fu-121/.local/state/p003-listening-voice-20261030/contract-ready.json`复制逐字节版本。接线说明在同目录`38-contract-notes.md`，明确唱歌用`voice_command`，不可误沿39早期建议的旧`voice_invitation`。本轮已只读核对39工作文件：三份合同SHA均一致（Worker HEAD仍9156bf94，其本轮实现未由38代提交/代验）；最终仍需39交付commit/测试核同，不把本地文件一致当线上就绪。
+位置：本树`4-Assets/contracts/`。39按`/Users/fu-121/.local/state/p003-listening-voice-20261030/contract-ready.json`复制逐字节版本。接线说明在同目录`38-contract-notes.md`，明确唱歌用`voice_command`，不可误沿39早期建议的旧`voice_invitation`。前批曾核同39的修订2工作文件；本次修订3只写38树，39须从就绪记录精确同步新mode SHA，未核同前不能沿用先前三文件一致结论。HTTP/fixtures不变；不把文件一致当线上就绪。
 
 ## 真实测试与边界
 
@@ -51,10 +51,17 @@ node scripts/brain-tabs-ui.cjs --local
 
 39本轮首句ordered→RTC、实际Orchestrator普通LLM/filler隔离、过渡buffer、回声/引语/歌词负例、安静阈值及故障收房需其自身证据；本回执不代验。新合同的Rust→Brain联合、真实注册/租约墙钟、Android/RTC/扬声器、真人唱歌和普通聊天体验、回滚演练均未由38本轮证明。文本规则不能保证零误触；MacTTS/替身也不是实机通过。
 
-最小下一步：39最终commit/合同SHA与本回执核同，复用既有`listening-joint-prepare.mjs`和39 joint harness隔离复跑，再由主会话验收汇总给安卓；无需新服务/新分支/审批框架。真实设备测试按后续实际证据推进，本轮不部署或自动开窗。
+最小下一步：39最终commit/合同SHA与本回执核同，复用既有`listening-joint-prepare.mjs`和39 joint harness隔离复跑，再由主会话汇总给安卓；无需新服务/新分支/审批框架。真实设备测试按后续实际证据推进，本轮不部署或自动开窗。
 
 ## 精确恢复点
 
 本轮尚未部署。要撤开发源码，在原分支撤`5fb0c0b0c41705dff12978d17f356eb9842e64b2`再撤`6235bbaa`，返回基线语义；保留`aa667364`已合入的顶部标签。无需恢复整库，现有session JSON新可选标记可由旧代码忽略。跨端降级时新voice能力不再声明，Worker恢复原五项能力/旧HTTP触发枚举，不能对旧Brain发送第六项或`voice_command`。不自动执行这些操作；不触碰已发布09:50管理后端和10:17静态页。
 
 署名：codex（OpenAI）| 2026-10-30 14:02 CST
+
+## C1交接补记（2026-10-30T14:21:51.350909+08:00）
+
+- 源码基线/已通过测试锚仍为`3756c0cf`，实现`5fb0c0b0`；本次不改生产源码/UI，不部署，按主会话指令不重跑源码全套，仅做JSON、wire不变、SHA与改动范围检查。
+- Android按服务端AGENT kind + `lk.agent.name=expected_agent_name` + 当前room核sender，首次锁定真实identity=`agent-<job_id>`后同会话一致；调度名取签票API顶层返回，不与identity直接相等。缺可信信息失败关闭。
+- 提议3秒只限制首次消费，enter接受后沿原进入超时；已接受同seq/body重传先回ACK。pending时合法state新seq查询不消费/取消/延期提议，也不解除音频隔离。
+- 仅撤本次文档提交即可恢复修订2合同，生产源码和前批测试锚不动；跨树不能一方留修订2、一方宣称已核同修订3。

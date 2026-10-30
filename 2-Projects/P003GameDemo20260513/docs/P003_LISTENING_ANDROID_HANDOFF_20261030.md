@@ -2,7 +2,7 @@
 
 状态：2026-10-30语音优先接续。**Brain新语音协商/反馈授权已实现并隔离验证，Worker语音管线由39交付，Android尚需实现下面的自动控制流程；未部署、未开总闸、未验真机。** 09:50:48只发布管理后端，10:17:32发布顶部标签静态页。历史双方真实HTTP隔离对撞1项不等于本轮语音或真实Android/RTC通过。当前代码/合同SHA/证据与回滚见 [VOICE_ENTRY_RECEIPT.md](listening-20261030/VOICE_ENTRY_RECEIPT.md)。
 
-新语音扩展：control/HTTP仍version=1，mode合同voice_extension_revision=2（HTTP/fixtures扩展修订1）。精确JSON样例在根目录 `4-Assets/contracts/p003-listening-mode-v1.json` 的 `voice_examples`；不另造控制通道。日常进入、反馈、退出均以语音为目标，旧按钮仅兼容/调试，不是使用前提。
+新语音扩展：control/HTTP仍version=1，mode合同voice_extension_revision=3（HTTP/fixtures扩展修订1）。精确JSON样例在根目录 `4-Assets/contracts/p003-listening-mode-v1.json` 的 `voice_examples`；不另造控制通道。日常进入、反馈、退出均以语音为目标，旧按钮仅兼容/调试，不是使用前提。
 
 目标：用户讲故事、分享或唱歌时，小可持续听，普通停顿不抢话；用户邀请后回复一次，再回到倾听。复用现有LiveKit/Rust/STT链路。
 
@@ -91,13 +91,15 @@ reason建议映射：`invalid_request / unauthorized / sequence_conflict / stale
 | 项目 | 必须落实 |
 |---|---|
 | 能力 | 请求同时声明两项能力；响应无`voice_control:{version:1,capability:"listening_voice_control_v1"}`即降级，不假报全语音可用。此对象不包含新凭据。 |
-| 信任绑定 | 收`control`可靠有序`src=worker,type=listening.proposal`，核RTC实际发布者为当前预期Worker、当前room/trace/session、目标participant=`dev-完整SN`和epoch；JSON的src不能代替身份校验。 |
+| 信任绑定 | 从当前RTC Room SDK提供的实际sender participant核**服务端kind=AGENT**、`attributes["lk.agent.name"] === 本会话expected_agent_name`、当前room等于签票`room_name`；首次全部通过后锁定非空实际identity，同会话后续消息还须与锁定identity一致并重复上述校验。当前trace/session/epoch与目标`dev-完整SN`另核；缺可信sender/kind/attribute/room/identity/expected_agent_name即失败关闭。不能只认`agent-`前缀、显示名、src或payload.participant，不静默换绑其他Agent。 |
 | 自动回包 | proposal action=enter/exit，enter有scene；Android用原分配器取下一个seq/request_id，echo原`proposal_id`和epoch/scene；不得复用提议计数作Android seq。local_ready保持原格式。 |
-| 幂等/到期 | 缓存proposal_id与原内容；同提议不重复分配seq或进入，控制重传沿用同seq/同payload。同ID改内容、跨房/代次丢弃。Android接收后最多3秒，不因重复延期；Worker创建后的3秒单调deadline是最终准据，不依赖端云时钟一致。 |
+| 幂等/到期 | 缓存proposal_id与原内容；同提议不重复分配seq或进入，控制重传沿用同seq/同payload。同ID改内容、跨房/代次丢弃。Android接收后最多3秒，不因重复延期；Worker创建后的3秒单调deadline只限**首次消费提议**，不依赖端云时钟一致；enter已接受后local_ready/进入完成沿原3秒received、5秒completed超时，不能被旧提议到期误杀。已接受seq/同payload重传先回原ACK，再考虑提议状态，不重复执行。 |
 | 首句/连续收音 | 全新唤醒后的第一句即可进入；提议→enter→received→local_ready→completed全过程保持麦克风/RTC和idle策略；先停本地衔接语/所有队列再发local_ready。无额外确认音，不插入“好呀”。紧接叙述交Worker有限缓冲，不能回普通聊天。 |
-| 完成/失败 | proposal到达≠received≠completed；原两阶段ACK仍有效。3秒未received/5秒未completed用新seq查状态，仍不可信则关闭并重建；paused/失效租约不能靠语音恢复旧会话。 |
+| 完成/失败 | pending期间合法`listening.state`使用新seq只读当前快照，不消费/撤销提议、不重置TTL、不解除音频隔离；无须echo proposal_id，normal快照也不表示可恢复本地声音。proposal到达≠received≠completed；原两阶段ACK仍有效。3秒未received/5秒未completed用新seq查状态，仍不可信则关闭并重建；paused/失效租约不能靠语音恢复旧会话。 |
 | 反馈/退出 | 反馈由Worker原单次许可执行，不伪造Android按钮；新来源`voice_command`。退出自动发送原exit，completed/normal后仅处理下一句普通话题，不补播故事/旧反馈。 |
 | 取证 | APK版本、设备、trace/session、提议ID、Android seq、received/local_ready/completed顺序、麦克风续流、本地清队列、实听结果。不得附Bearer、用户故事原文；先与39和主会话在隔离环境核同合同/commit，再单机实测。 |
+
+**sender字段从哪里取**：Android读取本次`POST /v1/device/session`成功响应的**顶层**`expected_agent_name`、`room_name`、`trace_id`、`session_id`；不要从`listening_contract`内找调度名，也不要硬编码`rust-worker`（实际派单可能是其他候选名）。Brain在`apps/server/src/routes/device-session.ts`先取`agentName=canary.agent`，同值写入响应`expected_agent_name`和签票`roomConfig.agents[0].agentName`，并自检二者一致。Worker `rust-worker/src/worker.rs:293–295`设置真实identity=`agent-<job_id>`；name及`lk.agent.name`才是调度名。因此合法例`identity=agent-AJ123, kind=AGENT, lk.agent.name=rust-worker`可匹配响应`expected_agent_name=rust-worker`，绝不能把两个字符串直接相等比较；普通participant即使自称rust-worker或src=worker仍拒绝。SDK暂未提供可信信息时保持关闭，不能退化为仅前缀匹配。锁定随旧RTC会话结束清除，新签会话重新核验。
 
 最小实测顺序：新唤醒首句“小可先听我讲个故事”后立刻续讲→一次明确反馈→“小可结束倾听恢复聊天”→普通问题；再测唱歌/唱后口令、重复/迟到提议、引用对白/歌词、回声、断网。口令前的安静边界与口令后的讲话结束要分别取证；文本规则存在误识别风险，不能承诺零误触。Worker替身、MacTTS或HTTP成功均不能代替真机实听。
 

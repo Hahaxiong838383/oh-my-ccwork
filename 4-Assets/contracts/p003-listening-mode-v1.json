@@ -172,7 +172,7 @@
     "summary_reply": "bound to authenticated room/session/trace/listening_id plus retained ticket and buffer instance; stale reply rejected",
     "gap": "true for source loss OR unsummarized prefix omitted from recent context; never infer uninterrupted complete recall"
   },
-  "voice_extension_revision": 2,
+  "voice_extension_revision": 3,
   "voice_control": {
     "version": 1,
     "capability": "listening_voice_control_v1",
@@ -200,7 +200,7 @@
         "ttl_ms": 3000
       },
       "actions": "enter requires scene; exit omits scene; no feedback proposal needed (existing Worker single permit). No raw command text in control payload.",
-      "trust": "Android checks actual publishing Worker participant matches current expected agent/room, current trace/session and target dev-SN. Worker checks actual returning participant equals bound dev-SN, trace, epoch, original action/scene, current authority and live pending proposal. src string alone is never authentication."
+      "trust": "Android uses the current Room SDK/server participant object for the actual data sender: require server-reported kind=AGENT, attributes[lk.agent.name] exactly equal to the current POST /v1/device/session response TOP-LEVEL expected_agent_name, and current joined room equal to that response room_name. This scheduling name is also signed at roomConfig.agents[0].agentName; it is NOT participant identity. Worker availability sets identity=agent-<job_id>, name=agent_name, lk.agent.name=agent_name (rust-worker or the actual selected agent). After all checks first succeed, pin the nonempty actual sender identity for this RTC session; every later trusted message must satisfy the same kind/attribute/room checks AND that pinned identity. Do not silently replace the pin on another participant joining; clear it only for a new authenticated RTC session. Missing trusted sender/kind/attribute/room/identity/expected_agent_name fails closed. Never authenticate by identity prefix, display name, payload.src or payload.participant alone. Independently bind current trace/session/epoch and target dev-SN. Worker checks actual returning participant equals bound dev-SN, trace, epoch, original action/scene, current authority and pending proposal on FIRST consumption. src string alone is never authentication."
     },
     "android_echo": {
       "field": "proposal_id",
@@ -209,15 +209,16 @@
         "listening.exit"
       ],
       "optional": true,
-      "rule": "Only negotiated clients may echo proposal_id. Android allocates its usual next seq/request_id and copies proposal epoch/action/scene exactly; Worker consumes live proposal once. Identical Android retransmission uses same seq/body and returns existing ACK; never consumes another proposal. local_ready stays unchanged. Missing proposal_id is the old manual/button flow, not a voice source."
+      "rule": "Only negotiated clients may echo proposal_id. Android allocates its usual next seq/request_id and copies proposal epoch/action/scene exactly; Worker consumes a live proposal once. Check identical previously accepted Android seq/body retransmissions BEFORE checking whether the proposal was consumed or expired: return existing ACK, never re-execute. After enter is accepted, its local_ready and completion follow the original entry timeouts, NOT the proposal TTL. local_ready stays unchanged. Missing proposal_id is the old manual/button flow, not a voice source."
     },
     "lifecycle": [
-      "At most one pending proposal per job; proposal_id trace:voice:counter is Worker-local, never an Android seq. Retransmit only the same proposal; never reset its deadline. Worker uses monotonic 3000ms since creation; Android drops after <=3000ms since receipt and never extends on duplicate. Worker deadline is authoritative against delayed delivery; no clock sync assumption.",
+      "At most one pending proposal per job; proposal_id trace:voice:counter is Worker-local, never an Android seq. Retransmit only the same proposal; never reset its deadline. The 3000ms TTL limits FIRST consumption only: Worker uses monotonic 3000ms since proposal creation, Android accepts a new proposal for <=3000ms since receipt and never extends on duplicate. Worker deadline is authoritative against delayed delivery; no clock sync assumption. Once enter is accepted, do not apply proposal expiry to local_ready, accepted-command replay or entry completion; use original entry timeouts (received 3000ms/completed 5000ms as defined in ack), with current authority/lease checks unchanged.",
       "Enter recognition immediately suppresses ordinary chat/speculation/filler and cancels pending ordinary output; receipt is not success. Android automatically stops local prompts/queued playout, keeps microphone and idle policy active, sends enter, then local_ready at received epoch. No spoken confirmation in v1.",
       "Completed entry ACK still needs BOTH Worker output drain and Android local_ready; echoes original enter seq/request_id. Never label proposal delivery or received ACK as listening success.",
       "Keep STT/capture alive on wake FIRST utterance and throughout pending/entering. Strip command prefix only; same-utterance tail and subsequent narrative enter bounded pending story buffer, then listening buffer on completed. Never send command/tail to ordinary chat/memory. On overflow/gap report context gap; do not claim complete recall.",
       "Expired/rejected/conflicting proposal, entry timeout or authority loss keeps output silent; query state using new Android seq, then close/rebuild RTC if state untrusted or paused. Do not replay narrative through ordinary chat or auto-retry entry after expiry. Duplicates do not create new proposals or feedback turns.",
-      "Explicit valid exit cancels feedback, discards pending output, closes old entry through existing flow; completed ACK state normal means ordinary chat may handle NEXT new speech. No catch-up replay of story/lyrics. Exit failure/lease expiry stays paused and requires new RTC; voice does not recover revoked authority."
+      "Explicit valid exit cancels feedback, discards pending output, closes old entry through existing flow; completed ACK state normal means ordinary chat may handle NEXT new speech. No catch-up replay of story/lyrics. Exit failure/lease expiry stays paused and requires new RTC; voice does not recover revoked authority.",
+      "A valid authenticated listening.state query using a new Android seq while a proposal is pending is read-only: return the current real state snapshot, do not consume/cancel the proposal, reset its TTL, clear transition suppression/buffer, or grant output permission. It does not need to echo proposal_id. Android must not interpret a normal snapshot during pending as proposal cancellation or permission to resume local audio. Proposal first-consumption deadline still runs; an expired unconsumed proposal follows the existing silent pause/close path."
     ],
     "feedback": {
       "http_trigger": "voice_command",
