@@ -1,0 +1,87 @@
+{
+  "at_ms": 1793341350103,
+  "host_identity_verified": true,
+  "files": [
+    {
+      "name": "P003_R26_DEVICE_DIAGNOSTIC_HANDOFF_20261030.zip",
+      "path": "/Users/rayman.chen/Downloads/P003_R26_DEVICE_DIAGNOSTIC_HANDOFF_20261030.zip",
+      "sha256": "8ce0607bfb07a999bd0d873f9a7d5e0fe6abcd434e9a91cf5b5a39f307094498",
+      "bytes": 16815,
+      "verified": true
+    },
+    {
+      "name": "P003_SEARCH_R26_DEVICE_TEST_STATUS_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_DEVICE_TEST_STATUS_20261030.md",
+      "sha256": "cf3a152d8aaf4739185b87c5a5428f7f4506627b03595d93b920336bf2f3bc21",
+      "bytes": 3376,
+      "verified": true
+    },
+    {
+      "name": "R26_ROOTCAUSE_FIX_VERIFICATION_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_FIX_VERIFICATION_20261030.md",
+      "sha256": "d1290d32bb68b170efd4341e5ea97f1784a33b5e013ada98bc3c00d5689908f4",
+      "bytes": 10484,
+      "verified": true
+    },
+    {
+      "name": "R26_ROOTCAUSE_ROLLBACK_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_ROLLBACK_20261030.md",
+      "sha256": "31fa521d5cbd5dbe039d344956efceb9df49ccff97d717e2f7e8e2945c376e43",
+      "bytes": 2804,
+      "verified": true
+    },
+    {
+      "name": "R26_ROOTCAUSE_FIX_EVIDENCE_20261030.json",
+      "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_FIX_EVIDENCE_20261030.json",
+      "sha256": "f6946307082c7de8490dd5723e5c0feb126cff4e2f31d14243f0c9e7dec9a42f",
+      "bytes": 46818,
+      "verified": true
+    },
+    {
+      "name": "R26_ROOTCAUSE_FIX_LATENCY_20261030.json",
+      "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_FIX_LATENCY_20261030.json",
+      "sha256": "9faa790638c561b4d9d129f1e85bd6aa0d04e19b0daa35ac9941033724abc5e8",
+      "bytes": 38118,
+      "verified": true
+    }
+  ],
+  "sent_to_colleague": false,
+  "independent_ssh_verification": {
+    "at_ms": 1793341350653,
+    "files": [
+      {
+        "path": "/Users/rayman.chen/Downloads/P003_R26_DEVICE_DIAGNOSTIC_HANDOFF_20261030.zip",
+        "sha256": "8ce0607bfb07a999bd0d873f9a7d5e0fe6abcd434e9a91cf5b5a39f307094498",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_DEVICE_TEST_STATUS_20261030.md",
+        "sha256": "cf3a152d8aaf4739185b87c5a5428f7f4506627b03595d93b920336bf2f3bc21",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_FIX_VERIFICATION_20261030.md",
+        "sha256": "d1290d32bb68b170efd4341e5ea97f1784a33b5e013ada98bc3c00d5689908f4",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_ROLLBACK_20261030.md",
+        "sha256": "31fa521d5cbd5dbe039d344956efceb9df49ccff97d717e2f7e8e2945c376e43",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_FIX_EVIDENCE_20261030.json",
+        "sha256": "f6946307082c7de8490dd5723e5c0feb126cff4e2f31d14243f0c9e7dec9a42f",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/R26_ROOTCAUSE_FIX_LATENCY_20261030.json",
+        "sha256": "9faa790638c561b4d9d129f1e85bd6aa0d04e19b0daa35ac9941033724abc5e8",
+        "verified": true
+      }
+    ]
+  },
+  "original_two_failures_closed": false,
+  "current_device_physical_retest": "pending",
+  "signature": "codex（OpenAI）"
+}
