@@ -1,0 +1,25 @@
+{
+  "description": "真实物理桌面截屏的1920x1080缩放副本，JPEG压缩归档；未添加或重绘浮窗。时长取同boot日志，不取截图传输时间。",
+  "screenshots": [
+    {
+      "file": "SCREENSHOT-20261030-READY.jpg",
+      "sha256": "b1c2414561dcdfd2bcd7d038c37e23ec73ea710ea52494c017abe9ff0b908aea",
+      "bytes": 569010,
+      "width": 1920,
+      "height": 1080,
+      "local_png": "电视联网-20261030-连接成功.png",
+      "local_png_sha256": "4dd868b26b0ae9f5993f2abd743d2d3ca4872601b782d0c0c77dccd70fb96a46",
+      "raw_4k_sha256": "2ca050d5870fb4ae1aab68492b38c2f2c935a78a0c90629961394a5d06008747"
+    },
+    {
+      "file": "SCREENSHOT-20261030-HIDDEN.jpg",
+      "sha256": "a8d86ff170b5074a268781389e77c78dba86ef3250108953b7076d6a9acbc9df",
+      "bytes": 571440,
+      "width": 1920,
+      "height": 1080,
+      "local_png": "电视联网-20261030-提示消失.png",
+      "local_png_sha256": "408f0be64afddf5e6e92450fbeb1ad79db4eacb5ecbaee57885bd6a46c6ff3eb",
+      "raw_4k_sha256": "801bd768f8ceabf0d12b9bdccd9cb1f0b51d14dfd8a4c7b5bf6b994c204c1c01"
+    }
+  ]
+}

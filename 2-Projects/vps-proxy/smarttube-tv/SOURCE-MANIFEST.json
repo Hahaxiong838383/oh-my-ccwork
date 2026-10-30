@@ -2,7 +2,7 @@
   "schema_version": 2,
   "created": "2026-10-30",
   "source_root": "~/home-lan/4-Assets/Code",
-  "source_commit": "77400ea7829e13e201cad4e3c04ba49bafde3d09",
+  "source_commit": "c15f0b693f919caa0ee2870102cc722d22f21445",
   "mode_note": "git_mode preserves executable bit; clone permissions depend on umask",
   "files": [
     {
@@ -340,6 +340,96 @@
       "sha256": "a8edfc2e78e23703707659e1d0af7ba29ee7a55d6a61388e5b75f1bae482b0b7",
       "bytes": 11684,
       "git_mode": "100755"
+    },
+    {
+      "path": "tv-network-status/98-tv-network-status.sh",
+      "sha256": "fbd3e590230c15c0ce81f685e0427f710fcccaa7aac71e8e9e45663cec7b801d",
+      "bytes": 240,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/ACCEPTANCE-20261030-REBOOT.json",
+      "sha256": "a7c5f7133cc0949d32ba8312bf0b4b6055088f3b5f972d37a7d7a0e2cdcf7945",
+      "bytes": 1688,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/ACCEPTANCE-20261030.json",
+      "sha256": "bd0d1271fe62ac96508a03d080bb77da907c1c4844e5419a96d1802acea77e86",
+      "bytes": 2174,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/AndroidManifest.xml",
+      "sha256": "e3b56c50c6808a64d586b13cf9b3fb8fbdc661e319f7d4b25c2197534d884af3",
+      "bytes": 624,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/README.md",
+      "sha256": "5a89ddcc33c78a40886ef6024d8cb5801662aba375a9b5759551911d5df92de0",
+      "bytes": 4368,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/build.sh",
+      "sha256": "8863590c91971dfd0af708893d86a9988c4e07f422c71656d679bff7c8daa811",
+      "bytes": 1866,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/deploy.py",
+      "sha256": "fd16f0f84bd97080c6631049f1770884f3ff1b9c0f7aa025b1d36f0d6b52a75a",
+      "bytes": 4054,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/signing.py",
+      "sha256": "823f4d201ccfb0ada63e794fd669e918c73cd614af179796652b7b68cd516617",
+      "bytes": 2298,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/src/cn/hahaxiong/tvnetstatus/StatusModel.java",
+      "sha256": "f4a3ee71d2ff4a748e0e5ba65f7b8a298ad2d7e5510081a2e20599bc7975fdaf",
+      "bytes": 1865,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/src/cn/hahaxiong/tvnetstatus/StatusService.java",
+      "sha256": "0bba3ebdd49ae863bcad8eee774d212a06d08c1649590f0180706106b1134ce2",
+      "bytes": 10972,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/state.sh",
+      "sha256": "e0b17561569f1c03ad19a0d939be27da075b48736c922dfb3d9d17a24929092c",
+      "bytes": 1087,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/test/StatusModelTest.java",
+      "sha256": "e95facc8afcb00bab3f87f452ca5cfdde513c343e4a07609a1e1da95d65a48b6",
+      "bytes": 2298,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/test/device_watcher.py",
+      "sha256": "57a76b023466a0753003c0b74effe046f960c4de92c26646da1c883880ae640b",
+      "bytes": 3429,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/test/test_source.py",
+      "sha256": "cb8b555c73521b87c216d27ffd162d02aae4bfa018c072066f6e697f5dde6322",
+      "bytes": 2715,
+      "git_mode": "100644"
+    },
+    {
+      "path": "tv-network-status/watch.sh",
+      "sha256": "bed7650850ee3f9b00119943f9af7ffc5f0f37826222c1007c82c95393fccc05",
+      "bytes": 3238,
+      "git_mode": "100644"
     }
   ],
   "release_status": "Native process scans active; final software reboots 46.60s and 45.07s; sixteen-file transaction; physical power loss and SmartTube playback pending"

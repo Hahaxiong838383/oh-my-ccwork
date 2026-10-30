@@ -13,7 +13,9 @@ Netflix 登录、遥控适配、DRM 不走本流程。
   不在快照和实现仓分别演化。
 - 运行真源：设备 `/data/adb/video-proxy/` 的实际配置、完整 argv、release、manifest 与授权标记。
   修改前从 live 逐文件核 SHA，保留已上线的 DoT/TLS、worker 等修正；旧 stage 不是覆盖源。
-- **事务也有生命周期**：现有 `dns-upgrade-20261024` 的九文件事务每次 boot 仍预检 old/new SHA。
+- **事务也有生命周期**：先读实际 service.d 指向的 stage、profile、manifest 和 old/new SHA，
+  不把旧 stage 名或文件数当当前真值。2026-10-30 部署 `rack-dualstack-v2` 为 16 文件（含 workerctl）；
+  v1 为 15、legacy 为 9，均是各自闭集，不混用。
   以后合法修改受管文件，须同步更新或显式退役该事务并验证新启动链；只改 `config.json` 和
   `active-main.sha256` 会让下次启动因漂移拒绝。使用现有 staging/transaction 工具先读其契约，
   不把一次迁移脚本当成永久无条件重放器。
@@ -21,8 +23,10 @@ Netflix 登录、遥控适配、DRM 不走本流程。
   `boot-assets-current.json` 为准；旧 release manifest 的 `boot_assets` 是首发快照。
   运行修正、仓库源码、发布快照、当前资产清单要对应，不能只验其中一处。
 
-现场说明见[2026-10-24 实施与断电验收](../../../../2-Projects/vps-proxy/2026-10-24-电视DNS三项加固实施与待重启验收.md)。
-报告前部有安装阶段历史状态，以末尾最新实际验收为准；不要把旧“待重启”结论再次当现状。
+当前启动与浮窗经验见[启动耗时与联网提示](tv-startup-status.md)及
+[2026-10-30 复盘](../../../../2-Projects/vps-proxy/2026-10-30-电视启动与联网浮窗复盘.md)。
+[2026-10-24 实施与断电验收](../../../../2-Projects/vps-proxy/2026-10-24-电视DNS三项加固实施与待重启验收.md)
+保留为旧版基线；报告内“待重启”等阶段状态不能覆盖后续实测，新版也不能继承旧版断电通过结论。
 
 ## 只读取证与播放归属
 
@@ -85,8 +89,9 @@ DNS 是全局设置，禁自动修复按 profile 保存；切换或新增 profil
 
 ## DNS 持久缓存：分层证明
 
-当前 1.14.3 已支持 `experimental.cache_file.store_dns=true` 与
+2026-10-24 验证的 sing-box 1.14.3 已支持 `experimental.cache_file.store_dns=true` 与
 `dns.optimistic={enabled:true,timeout:"5m"}`，不为此默认升级内核。
+2026-10-30 只复核相关配置保持，没有重新取版本号；后续仍须现场核版本。
 保留既有 `experimental` 的 API 等字段，勿用新对象覆盖。缓存有界不是 CDN 地址永久正确的保证。
 
 | 证据 | 能证明的范围 |
@@ -113,5 +118,6 @@ Android 可能先以旧日期启动再校时；不要用墙钟或校时前异常
 取 `/proc/<pid>/stat` 第 22 字段 starttime，除以当机 `getconf CLK_TCK` 得启动 uptime，
 解析时注意 comm 字段括号/空格，再与同 boot 保护日志 uptime 对齐。
 
-2026-10-24 已观察一次实际断电后自动恢复与 SmartTube 1440p 持续帧增长、drop/error 为 0；
-该历史样本不承诺下一版本或长期稳定性。验收后仍区分“已启用”“自动冷启动通过”“缓存命中已验”和“长期性能未验”。
+历史验收不承诺下一版本或长期稳定性。2026-10-24 已观察一次实际断电后自动恢复与
+SmartTube 1440p 持续帧增长、drop/error 为 0；2026-10-30 最终版本仅软件重启已验，
+该版物理拔电与 SmartTube 实际影片仍未验。验收后仍区分“已启用”“自动冷启动通过”“缓存命中已验”和“长期性能未验”。

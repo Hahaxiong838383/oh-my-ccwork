@@ -1,0 +1,43 @@
+{
+  "date": "2026-10-30T11:15:11.748983+08:00",
+  "package": "cn.hahaxiong.tvnetstatus",
+  "apk_sha256": "c2db4a549fd22facf3577f57fd4c1518e7a63f764830f1f2927a1633b8d52fec",
+  "installed_script_hashes": {
+    "/data/adb/tv-network-status/watch.sh": "bed7650850ee3f9b00119943f9af7ffc5f0f37826222c1007c82c95393fccc05",
+    "/data/adb/tv-network-status/state.sh": "e0b17561569f1c03ad19a0d939be27da075b48736c922dfb3d9d17a24929092c",
+    "/data/adb/service.d/98-tv-network-status.sh": "fbd3e590230c15c0ce81f685e0427f710fcccaa7aac71e8e9e45663cec7b801d"
+  },
+  "real_android_private_display_test": {
+    "display_id": 1,
+    "success_visible_ms": 2000,
+    "private_display": true
+  },
+  "window_bounds_virtual_1280x720": [
+    980,
+    628,
+    1256,
+    696
+  ],
+  "actual_window_flags": [
+    "NOT_FOCUSABLE",
+    "NOT_TOUCHABLE",
+    "NOT_TOUCH_MODAL",
+    "LAYOUT_IN_SCREEN"
+  ],
+  "waiting_ready_rendered": true,
+  "ordinary_app_uid_10065_denied_DUMP": true,
+  "source_replay": "boot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2338.34 watcher_started\nboot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2338.59 state=clock/true\nboot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2339.75 state=dns/false\nboot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2340.37 state=dns/true\nboot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2340.97 state=cache/true\nboot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2341.56 state=ready/true\nboot=5221cafe-ca9c-4f1d-ad1d-4bf399d87d7c uptime=2344.38 watcher_completed\n",
+  "physical_foreground_unchanged": true,
+  "proxy_processes_unchanged": true,
+  "decoded_frames_start": 52479,
+  "decoded_frames_end": 60862,
+  "drop_and_decode_errors": 0,
+  "remaining_window": false,
+  "remaining_service": false,
+  "current_boot_consumed_silently": true,
+  "full_next_boot_visual_flow_verified": false,
+  "rebooted": false,
+  "limitations": [
+    "\u5f53\u524d\u524d\u53f0\u76f4\u64ad\u672a\u5207\u8d70\uff0c\u771f\u5b9e\u684c\u9762\u4e0e\u4e0b\u4e00\u6b21\u7269\u7406\u5f00\u673a\u5b8c\u6574\u6d41\u7a0b\u5f85\u81ea\u7136\u5f00\u673a\u89c2\u5bdf\uff1b\u9694\u79bb\u663e\u793a\u4e0e\u771f\u5b9eAndroid watcher\u56de\u653e\u5df2\u9a8c\u8bc1\u3002"
+  ]
+}

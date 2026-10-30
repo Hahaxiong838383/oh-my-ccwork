@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-30T11:32:21.007871+08:00",
+  "boot": "2714f7ac-4b17-4e60-86a2-ae54c375f673",
+  "software_reboot": true,
+  "physical_power_cycle": false,
+  "boot_network_ready_uptime": 46.91,
+  "audit_ready_uptime": 48.8,
+  "waiting_shown_elapsed_ms": 25879,
+  "success_drawn_elapsed_ms": 47215,
+  "success_hidden_elapsed_ms": 49296,
+  "success_visible_ms": 2081,
+  "service_finished_elapsed_ms": 49308,
+  "same_boot_ready_and_consumed": true,
+  "no_overlay_or_service_left": true,
+  "manual_home_for_desktop_verification": true,
+  "playback_restored": true,
+  "playback": [
+    {
+      "frame width": 1920,
+      "frame height": 1080,
+      "frame count": 1080,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0
+    }
+  ],
+  "source_and_proxy_release_unchanged": true,
+  "network_dns_probe_passed": true,
+  "screenshots": [
+    {
+      "file": "电视联网-20261030-连接成功.png",
+      "source_sha256": "2ca050d5870fb4ae1aab68492b38c2f2c935a78a0c90629961394a5d06008747"
+    },
+    {
+      "file": "电视联网-20261030-提示消失.png",
+      "source_sha256": "801bd768f8ceabf0d12b9bdccd9cb1f0b51d14dfd8a4c7b5bf6b994c204c1c01"
+    }
+  ],
+  "screenshot_directory": "/home/hahaxiong83/图片/屏幕截图",
+  "capture_limit": "4K PNG编码与传输约6至8秒，首两张截屏超时未留存等待态；保留真实成功态和消失后画面。持续时间取本boot monotonic日志，非截图传输耗时。",
+  "playback_restore_incident": "一次直接启动内部PlayerActivity跳过ForceTV库初始化引发UnsatisfiedLinkError；已改从当贝桌面图标正常进入，1080p帧持续增长、drop/error0。未改播放器数据或配置。"
+}

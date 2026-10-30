@@ -1,0 +1,8 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cn.hahaxiong.tvnetstatus" android:versionCode="1" android:versionName="1.0">
+  <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="34" />
+  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <application android:label="开机网络状态" android:allowBackup="false" android:hasCode="true">
+    <service android:name=".StatusService" android:exported="true" android:permission="android.permission.DUMP" />
+  </application>
+</manifest>

@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS 和断电启动恢复；不处理 Netflix 登录、遥控适配或 DRM。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗；不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray - Xray 代理管理
@@ -30,6 +30,8 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排�
 [电视 DNS 与冷启动维护](references/tv-dns-coldboot.md)。该模式维护设备上的 sing-box、
 Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xray/` 客户端命令不用于电视。
 先核当前前台与用户允许的中断范围，再选择只读取证、下次启动部署或已授权的重启验收。
+启动慢、桌面联网浮窗或重启截图验收，再读
+[启动耗时与联网提示](references/tv-startup-status.md)：按本 boot 的真实就绪门计时，保留播放归属与验收边界。
 
 
 ## 可用命令
