@@ -1,0 +1,66 @@
+{
+  "read_only_checked_at_cst": "2026-10-30T14:28:27.002+08:00",
+  "purpose": "现场可独立执行的联调文档V2；不依赖远程连接测试Mac",
+  "worker_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+  "preview_sha256": "5dbc544ac7d5ce99a31e29d822047718feee5cabcc60aeb7b25af0c154f389ab",
+  "brain_release_anchor": "c1cc0359e1c884e29f76315629a86199c7b04d69",
+  "revision": "R26-catalog-prewarm-20261030",
+  "window": {
+    "enabled": true,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "expires_at_ms": 1793589540000,
+    "generation": "R4-20261022-two-devices"
+  },
+  "brain_canary_dispatch_enabled": true,
+  "candidate_tools_enabled": true,
+  "health": {
+    "brain_main": "ok",
+    "brain_candidate": "ok",
+    "worker_registered": true,
+    "worker_cleanup_healthy": true,
+    "expiry_timer_active": true
+  },
+  "fresh_provider_request_performed": false,
+  "current_physical_apk_read": false,
+  "device_auth_sub_fresh_verified": false,
+  "new_physical_test_performed": false,
+  "original_failures_closed": false,
+  "changes": {
+    "business_code": false,
+    "deployment": false,
+    "service_restart": false,
+    "device_scope": false,
+    "window_deadline": false
+  },
+  "latest_cloud_ota_reports": {
+    "meaning": "自报记录，不能冒充当前活动APK或在线证明",
+    "rows": [
+      {
+        "sn": "BJP00326060100100004",
+        "version_code": 367,
+        "version_name": "1.2.2-canary.353",
+        "last_report_cst": "2026-10-30T14:21:20.862+08:00"
+      },
+      {
+        "sn": "BJP00326070803800006",
+        "version_code": 371,
+        "version_name": "1.2.2-canary.357-miniapp-ble",
+        "last_report_cst": "2026-10-30T11:59:04.168+08:00"
+      }
+    ]
+  },
+  "documents": [
+    {
+      "name": "P003_SEARCH_R26_JOINT_TEST_GUIDE_V2_20261030.md",
+      "sha256": "84c2b52797486672ec826a78bddfa94402308a83367bef833c5c7e30cce74bcb"
+    },
+    {
+      "name": "P003_SEARCH_R26_TEST_FEEDBACK_TEMPLATE_20261030.md",
+      "sha256": "b6b2fe7f2c49e9ca1636e1047d3b6db0f6091ffe2d08d999d26c0296c9f42ad0"
+    }
+  ],
+  "signature": "codex（OpenAI）"
+}

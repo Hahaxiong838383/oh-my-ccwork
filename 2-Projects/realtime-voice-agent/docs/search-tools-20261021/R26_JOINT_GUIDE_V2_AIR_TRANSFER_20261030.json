@@ -1,0 +1,51 @@
+{
+  "at_ms": 1793342081073,
+  "host_identity_verified": true,
+  "files": [
+    {
+      "name": "P003_SEARCH_R26_JOINT_TEST_PACKAGE_V2_20261030.zip",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_JOINT_TEST_PACKAGE_V2_20261030.zip",
+      "sha256": "757ac613c579f4ee461d7392418fe412e6e237295c39317a33dc252474180ed8",
+      "bytes": 11814,
+      "verified": true
+    },
+    {
+      "name": "P003_SEARCH_R26_JOINT_TEST_GUIDE_V2_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_JOINT_TEST_GUIDE_V2_20261030.md",
+      "sha256": "84c2b52797486672ec826a78bddfa94402308a83367bef833c5c7e30cce74bcb",
+      "bytes": 19093,
+      "verified": true
+    },
+    {
+      "name": "P003_SEARCH_R26_TEST_FEEDBACK_TEMPLATE_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_TEST_FEEDBACK_TEMPLATE_20261030.md",
+      "sha256": "b6b2fe7f2c49e9ca1636e1047d3b6db0f6091ffe2d08d999d26c0296c9f42ad0",
+      "bytes": 4305,
+      "verified": true
+    }
+  ],
+  "sent_to_colleague": false,
+  "independent_ssh_verification": {
+    "at_ms": 1793342081521,
+    "files": [
+      {
+        "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_JOINT_TEST_PACKAGE_V2_20261030.zip",
+        "sha256": "757ac613c579f4ee461d7392418fe412e6e237295c39317a33dc252474180ed8",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_JOINT_TEST_GUIDE_V2_20261030.md",
+        "sha256": "84c2b52797486672ec826a78bddfa94402308a83367bef833c5c7e30cce74bcb",
+        "verified": true
+      },
+      {
+        "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R26_TEST_FEEDBACK_TEMPLATE_20261030.md",
+        "sha256": "b6b2fe7f2c49e9ca1636e1047d3b6db0f6091ffe2d08d999d26c0296c9f42ad0",
+        "verified": true
+      }
+    ]
+  },
+  "original_two_failures_closed": false,
+  "current_device_physical_retest": "pending",
+  "signature": "codex（OpenAI）"
+}
