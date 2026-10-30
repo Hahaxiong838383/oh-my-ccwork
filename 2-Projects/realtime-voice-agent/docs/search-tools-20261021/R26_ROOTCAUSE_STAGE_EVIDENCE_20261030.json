@@ -1,0 +1,240 @@
+{
+  "cases": [
+    {
+      "trace_id": "2c448bab-a13c-4ffc-9074-382acc718aa7",
+      "signed_at_ms": 1793324232758,
+      "room_suffix": "1793324232",
+      "validate_matches": [
+        {
+          "at_ms": 1793324243000.0,
+          "peer_hash": "06803f4b1759",
+          "status": 200,
+          "client": {
+            "sdk": [
+              "android"
+            ],
+            "version": [
+              "2.27.0"
+            ],
+            "device_model": [
+              "rockchip rk3562_rc160"
+            ],
+            "os": [
+              "android"
+            ],
+            "os_version": [
+              "15"
+            ],
+            "network": [
+              "wifi"
+            ],
+            "client_protocol": [
+              "1"
+            ]
+          },
+          "after_sign_ms": 10242.0
+        }
+      ]
+    },
+    {
+      "trace_id": "c9467b5f-0e11-4577-85bd-aa0caee29f09",
+      "signed_at_ms": 1793324363898,
+      "room_suffix": "1793324363",
+      "validate_matches": [
+        {
+          "at_ms": 1793324374000.0,
+          "peer_hash": "06803f4b1759",
+          "status": 200,
+          "client": {
+            "sdk": [
+              "android"
+            ],
+            "version": [
+              "2.27.0"
+            ],
+            "device_model": [
+              "rockchip rk3562_rc160"
+            ],
+            "os": [
+              "android"
+            ],
+            "os_version": [
+              "15"
+            ],
+            "network": [
+              "wifi"
+            ],
+            "client_protocol": [
+              "1"
+            ]
+          },
+          "after_sign_ms": 10102.0
+        }
+      ]
+    },
+    {
+      "trace_id": "af144489-c9b0-4006-be7a-bc6a80f90b4f",
+      "signed_at_ms": 1793325055236,
+      "room_suffix": "1793325055",
+      "validate_matches": [
+        {
+          "at_ms": 1793325065000.0,
+          "peer_hash": "06803f4b1759",
+          "status": 200,
+          "client": {
+            "sdk": [
+              "android"
+            ],
+            "version": [
+              "2.27.0"
+            ],
+            "device_model": [
+              "rockchip rk3562_rc160"
+            ],
+            "os": [
+              "android"
+            ],
+            "os_version": [
+              "15"
+            ],
+            "network": [
+              "wifi"
+            ],
+            "client_protocol": [
+              "1"
+            ]
+          },
+          "after_sign_ms": 9764.0
+        }
+      ]
+    },
+    {
+      "trace_id": "7c43bbb9-4248-4b95-b919-e365f487a6ac",
+      "signed_at_ms": 1793325181777,
+      "room_suffix": "1793325181",
+      "validate_matches": [
+        {
+          "at_ms": 1793325192000.0,
+          "peer_hash": "06803f4b1759",
+          "status": 200,
+          "client": {
+            "sdk": [
+              "android"
+            ],
+            "version": [
+              "2.27.0"
+            ],
+            "device_model": [
+              "rockchip rk3562_rc160"
+            ],
+            "os": [
+              "android"
+            ],
+            "os_version": [
+              "15"
+            ],
+            "network": [
+              "wifi"
+            ],
+            "client_protocol": [
+              "1"
+            ]
+          },
+          "after_sign_ms": 10223.0
+        }
+      ]
+    },
+    {
+      "trace_id": "c86ff27a-4e4e-4658-879b-2872a6c6688c",
+      "signed_at_ms": 1793325236990,
+      "room_suffix": "1793325236",
+      "validate_matches": [
+        {
+          "at_ms": 1793325247000.0,
+          "peer_hash": "06803f4b1759",
+          "status": 200,
+          "client": {
+            "sdk": [
+              "android"
+            ],
+            "version": [
+              "2.27.0"
+            ],
+            "device_model": [
+              "rockchip rk3562_rc160"
+            ],
+            "os": [
+              "android"
+            ],
+            "os_version": [
+              "15"
+            ],
+            "network": [
+              "wifi"
+            ],
+            "client_protocol": [
+              "1"
+            ]
+          },
+          "after_sign_ms": 10010.0
+        }
+      ]
+    },
+    {
+      "trace_id": "d18c2e9a-67cb-42c1-9c20-ac97823d67b4",
+      "signed_at_ms": 1793326006455,
+      "room_suffix": "1793326006",
+      "validate_matches": [
+        {
+          "at_ms": 1793326016000.0,
+          "peer_hash": "06803f4b1759",
+          "status": 200,
+          "client": {
+            "sdk": [
+              "android"
+            ],
+            "version": [
+              "2.27.0"
+            ],
+            "device_model": [
+              "rockchip rk3562_rc160"
+            ],
+            "os": [
+              "android"
+            ],
+            "os_version": [
+              "15"
+            ],
+            "network": [
+              "wifi"
+            ],
+            "client_protocol": [
+              "1"
+            ]
+          },
+          "after_sign_ms": 9545.0
+        }
+      ]
+    }
+  ],
+  "inference_not_token_binding": true,
+  "all_validate_same_peer_and_android_params": true,
+  "status": "signal_stage_correlation_only_not_final_root_cause",
+  "sdk_constant_verified_from_cached_aar_ms": 10000,
+  "changes": {
+    "business_fix": false,
+    "deployed": false,
+    "new_code": "read_only_device_evidence_collector",
+    "collector_unit_tests": {
+      "passed": 4,
+      "failed": 0,
+      "real_device": false
+    }
+  },
+  "limits": [
+    "source_and_time_correlation_is_not_token_or_room_binding",
+    "no_connected_ADB_device_detected",
+    "no_device_pre_and_post_APM_PCM",
+    "Mac_TTS_physical_retest_pending"
+  ]
+}
