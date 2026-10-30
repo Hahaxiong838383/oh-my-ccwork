@@ -355,6 +355,10 @@ pub async fn stream_chat_with_context(
     }
     let url = cfg.chat_url();
     let t0 = std::time::Instant::now();
+    // Candidate diagnostics only: correlate the same SSE response with Brain
+    // timing, without logging URLs, headers, prompts or returned content.
+    let trace_candidate = std::env::var("AGENT_NAME")
+        .is_ok_and(|v| crate::search_canary::is_candidate(&v));
     let resp = client
         .post(&url)
         .bearer_auth(&cfg.api_key)
@@ -362,6 +366,8 @@ pub async fn stream_chat_with_context(
         .send()
         .await
         .context("llm request")?;
+    let headers_ms = t0.elapsed().as_millis() as u64;
+    let http_version = resp.version();
     anyhow::ensure!(
         resp.status().is_success(),
         "llm http {}: {}",
@@ -380,9 +386,13 @@ pub async fn stream_chat_with_context(
     let mut n_chunks: u64 = 0;
     let mut interrupted = false;
     let mut stream = resp.bytes_stream();
+    let mut first_body_byte_ms = None;
     let mut pending = String::new();
     'outer: while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("llm sse read")?;
+        if !chunk.is_empty() && first_body_byte_ms.is_none() {
+            first_body_byte_ms = Some(t0.elapsed().as_millis() as u64);
+        }
         pending.push_str(&String::from_utf8_lossy(&chunk));
         // SSE 事件以空行分隔;逐个完整事件消费,残段留 pending
         while let Some(pos) = pending.find("\n\n") {
@@ -401,6 +411,16 @@ pub async fn stream_chat_with_context(
                     }
                     if ttft_ms.is_none() {
                         ttft_ms = Some(t0.elapsed().as_millis() as u64);
+                        if trace_candidate {
+                            let response_id = v["id"].as_str().filter(|id|
+                                id.starts_with("chatcmpl-") && id.len() <= 80
+                                && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
+                            ).unwrap_or("unavailable");
+                            info!(room = %cfg.room, response_id, headers_ms, ?http_version,
+                                first_body_byte_ms = first_body_byte_ms.unwrap_or(0),
+                                first_content_ms = ttft_ms.unwrap_or(0),
+                                "candidate llm response timing");
+                        }
                     }
                     n_chunks += 1;
                     let out = match stripper.as_mut() {
@@ -578,12 +598,27 @@ pub struct Llm {
 }
 
 fn build_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .redirect(if std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v)) { reqwest::redirect::Policy::none() } else { reqwest::redirect::Policy::default() })
-        .connect_timeout(std::time::Duration::from_secs(10))
-        .timeout(std::time::Duration::from_secs(30))
+    let agent = std::env::var("AGENT_NAME").unwrap_or_default();
+    let candidate = crate::search_canary::is_candidate(&agent);
+    client_builder(candidate, http2_enabled(&agent, std::env::var("P003_LLM_HTTP2_V1").ok().as_deref()))
         .build()
         .expect("reqwest client")
+}
+
+fn http2_enabled(agent: &str, setting: Option<&str>) -> bool {
+    crate::search_canary::is_candidate(agent) && setting == Some("1")
+}
+
+fn client_builder(candidate: bool, http2: bool) -> reqwest::ClientBuilder {
+    let builder = reqwest::Client::builder()
+        .redirect(if candidate { reqwest::redirect::Policy::none() } else { reqwest::redirect::Policy::default() })
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30));
+    // ALPN negotiates h2 only for an explicit candidate opt-in. Dropping an
+    // interrupted SSE stream then resets that stream, preserving the shared
+    // connection. HTTP/1-only servers remain supported through negotiation.
+    // Pin the old mode elsewhere: adding a Cargo feature is not a rollout.
+    if candidate && http2 { builder } else { builder.http1_only() }
 }
 
 impl Llm {
@@ -756,6 +791,7 @@ pub async fn fetch_local_audio_texts(cfg: &LlmConfig, room: &str) -> Option<Vec<
     url.push('?');
     url.push_str(&parts.join("&"));
     let client = reqwest::Client::builder()
+        .http1_only()
         .redirect(reqwest::redirect::Policy::none())
         .connect_timeout(std::time::Duration::from_secs(2))
         .timeout(std::time::Duration::from_secs(3))
@@ -831,6 +867,103 @@ mod tests {
             url_query: String::new(),
             room: String::new(),
         }
+    }
+
+    #[test]
+    fn r22_http2_requires_candidate_and_explicit_opt_in() {
+        for agent in ["voice-worker-rust", "rust-worker-dev", "", "p003-search-canary-other"] {
+            assert!(!http2_enabled(agent, Some("1")), "{agent}");
+        }
+        for agent in ["p003-search-canary-20261021", "p003-search-verification-20261026"] {
+            assert!(http2_enabled(agent, Some("1")));
+            for setting in [None, Some("0"), Some("true"), Some(" 1")] {
+                assert!(!http2_enabled(agent, setting));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn r22_http2_cancel_resets_only_one_stream_and_keeps_connection() {
+        use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+        use std::time::Duration;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let connections = Arc::new(AtomicUsize::new(0));
+        let resets = Arc::new(AtomicUsize::new(0));
+        let accepted = connections.clone();
+        let observed_resets = resets.clone();
+        let server = tokio::spawn(async move {
+            let mut handlers = tokio::task::JoinSet::new();
+            loop {
+                let (socket, _) = listener.accept().await.unwrap();
+                accepted.fetch_add(1, Ordering::SeqCst);
+                let observed_resets = observed_resets.clone();
+                handlers.spawn(async move {
+                    let mut connection = h2::server::handshake(socket).await.unwrap();
+                    let mut responses = tokio::task::JoinSet::new();
+                    while let Some(Ok((request, mut responder))) = connection.accept().await {
+                        let slow = request.uri().path().contains("slow");
+                        let observed_resets = observed_resets.clone();
+                        responses.spawn(async move {
+                            let mut body = request.into_body();
+                            while let Some(Ok(bytes)) = body.data().await {
+                                body.flow_control().release_capacity(bytes.len()).unwrap();
+                            }
+                            let response = http::Response::builder().status(200)
+                                .header("content-type", "text/event-stream").body(()).unwrap();
+                            let mut stream = responder.send_response(response, false).unwrap();
+                            let first = format!("data: {}\n\n", json!({"choices":[{"delta":{"content":if slow {"甲"} else {"乙"}}}]}));
+                            stream.send_data(bytes::Bytes::from(first), false).unwrap();
+                            if slow {
+                                if std::future::poll_fn(|cx|stream.poll_reset(cx)).await.is_ok() {
+                                    observed_resets.fetch_add(1, Ordering::SeqCst);
+                                }
+                            } else {
+                                stream.send_data(bytes::Bytes::from_static(b"data: [DONE]\n\n"), true).unwrap();
+                            }
+                        });
+                    }
+                });
+            }
+        });
+        let client = client_builder(true, true).http2_prior_knowledge().build().unwrap();
+        let mut cfg = main_cfg(); cfg.strip_leading_filler = false;
+        cfg.base_url = format!("http://{address}/slow");
+        let (tx, mut rx) = mpsc::channel(4);
+        let c = client.clone(); let slow_cfg = cfg.clone();
+        let pending = tokio::spawn(async move {stream_chat(&c, &slow_cfg, vec![], tx).await});
+        assert_eq!(tokio::time::timeout(Duration::from_secs(2), rx.recv()).await.unwrap().unwrap(), "甲");
+        pending.abort();
+        match pending.await { Err(e) => assert!(e.is_cancelled()), Ok(_) => panic!("cancelled stream unexpectedly completed") }
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while resets.load(Ordering::SeqCst) == 0 {tokio::task::yield_now().await;}
+        }).await.unwrap();
+        cfg.base_url = format!("http://{address}/good");
+        for _ in 0..2 {
+            let (tx, mut rx) = mpsc::channel(4);
+            let result = stream_chat(&client, &cfg, vec![], tx).await.unwrap();
+            assert_eq!(result.full, "乙"); assert_eq!(rx.recv().await.unwrap(), "乙");
+        }
+        assert_eq!(resets.load(Ordering::SeqCst), 1);
+        assert_eq!(connections.load(Ordering::SeqCst), 1, "abort and normal DONE must preserve the HTTP/2 connection");
+        server.abort(); let _ = server.await;
+    }
+
+    #[tokio::test]
+    async fn r22_http2_opt_in_keeps_http1_server_compatibility() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = [0;4096]; let n = socket.read(&mut request).await.unwrap();
+            assert!(std::str::from_utf8(&request[..n]).unwrap().starts_with("GET / HTTP/1.1"));
+            socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok").await.unwrap();
+        });
+        let response = client_builder(true, true).build().unwrap().get(format!("http://{address}/")).send().await.unwrap();
+        assert_eq!(response.version(), reqwest::Version::HTTP_11);
+        assert_eq!(response.text().await.unwrap(), "ok");
+        server.await.unwrap();
     }
 
     #[test]

@@ -125,6 +125,7 @@ impl Client {
         Self {
             service: Service {
                 http: reqwest::Client::builder()
+                .http1_only()
                     .redirect(reqwest::redirect::Policy::none())
                     .build()
                     .unwrap(),
@@ -321,7 +322,7 @@ mod tests {
 // no runtime opt-out of the production HTTPS origin restriction.
 fn approved_transport(base: &reqwest::Url) -> bool {
     #[cfg(not(feature = "listening-rtc-test"))]
-    { base.as_str() == "https://kidshub-ai.hahaxiong.cc/v1/internal/listening/" }
+    { matches!(base.as_str(), "https://kidshub-ai.hahaxiong.cc/v1/internal/listening/" | "https://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1/internal/listening/") }
     #[cfg(feature = "listening-rtc-test")]
     { base.scheme() == "http"
         && matches!(base.host_str(), Some("127.0.0.1" | "[::1]"))
@@ -354,6 +355,7 @@ impl Service {
         }
         Some(Self {
             http: reqwest::Client::builder()
+                .http1_only()
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
                 .ok()?,
@@ -439,4 +441,12 @@ mod transport_tests {
         }
         assert!(Service::new(&cfg("https://kidshub-ai.hahaxiong.cc/v1")).is_none());
     }
+    #[cfg(not(feature="listening-rtc-test"))]
+    #[test]
+    fn listening_candidate_transport_requires_exact_reviewed_https_path() {
+        let base="https://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1";
+        assert!(Service::new(&cfg(base)).is_some());
+        for b in [base.replace("https:","http:"),base.replace(".cc/",".cc:444/"),base.replace("/v1","/v10"),format!("{base}?x=y"),base.replace("https://","https://u:p@"),base.replace("listening-20261030","search-20261021")]{assert!(Service::new(&cfg(&b)).is_none(),"{b}");}
+    }
+
 }

@@ -110,11 +110,15 @@ impl TtsCfg {
                 let waiting = std::time::Instant::now();
                 let (room,turn)=ctl.trace_identity();
                 let mut timing=DispatchTiming{start:waiting,room:room.into(),turn,prewarm_ms:None,finished:false};
-                let conn = warm.take().await;
+                // Explicit candidate-only opt-in. Existing workers keep their
+                // current timeout behavior until the success-rate gate passes.
+                let candidate=std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v));
+                let budget=tts_xfyun::FirstAudioBudget::new(first_pcm_budget(candidate,std::env::var("P003_TTS_FIRST_PCM_BUDGET_MS").ok().as_deref()));
+                let conn = warm.take_before(&budget).await?;
                 let wait_ms = waiting.elapsed().as_millis() as u64;
                 timing.prewarm_ms=Some(wait_ms);
                 *warm = self.start_prewarm(); // 先为下一句排队,再开始本句合成
-                let (provider_ms, bytes) = tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await?;
+                let (provider_ms, bytes) = tts_xfyun::synthesize_budgeted(c, text, audio_tx, ctl, conn, budget).await?;
                 // The caller starts its timer before take(): include the handshake
                 // wait that used to disappear from body_ready_since_turn_ms.
                 timing.finished=true;
@@ -144,6 +148,11 @@ pub fn latency_mode() -> bool {
 /// 纯函数版,单测走这条(进程级 env 会被并行测试互相污染)。
 fn preconnect_from(v: Option<&str>) -> bool {
     v != Some("0")
+}
+
+fn first_pcm_budget(candidate: bool, raw: Option<&str>) -> Option<std::time::Duration> {
+    if !candidate {return None;}
+    raw.and_then(|s|s.parse::<u64>().ok()).filter(|ms|(1000..=15000).contains(ms)).map(std::time::Duration::from_millis)
 }
 
 /// turn 级预建连句柄:后台正在握手的那条连接。
@@ -191,6 +200,13 @@ impl Prewarm {
         self.0.take();
         result
     }
+
+    async fn take_before(&mut self,budget: &tts_xfyun::FirstAudioBudget) -> Result<Option<tts_xfyun::Warm>> {
+        let result=budget.wait("prewarm",self.take()).await;
+        // A timed-out JoinHandle must be aborted, never detached.
+        if result.is_err() {if let Some(task)=self.0.take(){task.abort();}}
+        result
+    }
 }
 
 impl Drop for Prewarm {
@@ -224,6 +240,28 @@ where F: Fn() -> Fut, Fut: std::future::Future<Output=Result<T>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn r22_budget_requires_explicit_candidate_opt_in_and_supports_zero_rollback(){
+        for raw in [None,Some("0"),Some("oops"),Some("999"),Some("15001")] {
+            assert!(first_pcm_budget(true,raw).is_none());
+        }
+        assert!(first_pcm_budget(false,Some("10000")).is_none());
+        assert_eq!(first_pcm_budget(true,Some("10000")),Some(std::time::Duration::from_secs(10)));
+    }
+
+    #[tokio::test]
+    async fn r22_expired_prewarm_budget_aborts_in_flight_handshake() {
+        let (dropped,done)=tokio::sync::oneshot::channel();
+        struct Notify(Option<tokio::sync::oneshot::Sender<()>>);
+        impl Drop for Notify {fn drop(&mut self){if let Some(s)=self.0.take(){let _=s.send(());}}}
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _guard=Notify(Some(dropped));std::future::pending::<Result<tts_xfyun::Warm>>().await
+        })));
+        let budget=tts_xfyun::FirstAudioBudget::new(Some(std::time::Duration::from_millis(50)));
+        assert!(warm.take_before(&budget).await.is_err());assert!(warm.0.is_none());
+        tokio::time::timeout(std::time::Duration::from_millis(150),done).await.unwrap().unwrap();
+    }
 
     #[tokio::test]
     async fn cancelled_warm_wait_drops_the_underlying_connection_task() {

@@ -22,6 +22,7 @@ mod search_tasks;
 mod search_dialogue;
 mod search_progress;
 mod search_receipts;
+mod search_control_recovery;
 mod control;
 mod device_grammar;
 mod device_intent;
@@ -73,6 +74,12 @@ async fn main() -> anyhow::Result<()> {
 
     let cfg = config::Config::from_env()?;
     search_canary::validate_startup(&cfg.agent_name,cfg.max_jobs)?;
+    if search_canary::is_candidate(&cfg.agent_name) {
+        let started = std::time::Instant::now();
+        let names = search_routing::prepare_weather_places();
+        tracing::info!(names, elapsed_ms = started.elapsed().as_millis() as u64,
+            "search weather catalog prepared before worker registration");
+    }
     tracing::info!(
         agent_name = %cfg.agent_name,
         url = %cfg.ws_url,

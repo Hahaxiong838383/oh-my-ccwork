@@ -5,7 +5,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Kind { Search, Weather, News, Clarify }
+pub enum Kind { Search, Weather, News, Clarify, Unavailable }
 #[derive(Clone)]
 pub struct Clip { pub id: String, pub text: String, pub pcm: Vec<u8>, pub kind: Kind }
 pub struct Bank { clips: Vec<Clip>, next: usize }
@@ -18,6 +18,7 @@ pub const CATALOG: &[(&str, &str, Kind)] = &[
     ("news", "看看新闻。", Kind::News),
     ("clarify", "想查什么？", Kind::Clarify),
 ];
+const FAILURE_CLIP: (&str,&str,Kind) = ("unavailable","这次没播出来，等会儿再试。",Kind::Unavailable);
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Manifest { version: u8, provider: String, voice: String, clips: Vec<Entry> }
@@ -37,35 +38,40 @@ impl Bank {
         ensure!(std::fs::metadata(dir.join("manifest.json"))?.len()<=8192,"manifest size");
         let m:Manifest=serde_json::from_slice(&std::fs::read(dir.join("manifest.json"))?)?;
         ensure!(m.version==1 && m.provider==provider && m.voice==voice,"voice/version mismatch");
-        ensure!(m.clips.len()==CATALOG.len(),"incomplete catalog");
+        ensure!((CATALOG.len()..=CATALOG.len()+1).contains(&m.clips.len()),"incomplete catalog");
         let mut clips=Vec::new();
         let mut seen=std::collections::HashSet::new();
         for e in m.clips {
-            let (_,text,kind)=CATALOG.iter().find(|(id,_,_)|*id==e.id).ok_or_else(||anyhow::anyhow!("unknown clip"))?;
+            let (_,text,kind)=CATALOG.iter().chain(std::iter::once(&FAILURE_CLIP)).find(|(id,_,_)|*id==e.id).ok_or_else(||anyhow::anyhow!("unknown clip"))?;
             ensure!(seen.insert(e.id.clone()) && e.file==format!("{}.wav",e.id) && e.text==*text,"clip metadata");
             let path=dir.join(&e.file);
             ensure!(std::fs::symlink_metadata(&path)?.file_type().is_file(),"regular asset required");
-            ensure!(std::fs::metadata(&path)?.len()<=100_000,"asset size");
+            ensure!(std::fs::metadata(&path)?.len()<=if *kind==Kind::Unavailable{200_000}else{100_000},"asset size");
             let bytes=std::fs::read(path)?;
             ensure!(format!("{:x}",Sha256::digest(&bytes))==e.sha256,"asset hash");
             let mut wav=hound::WavReader::new(std::io::Cursor::new(bytes))?;
             let s=wav.spec();
             ensure!(s.channels==1 && s.sample_rate==24000 && s.bits_per_sample==16 && s.sample_format==hound::SampleFormat::Int,"PCM format");
             let samples:Vec<i16>=wav.samples::<i16>().collect::<std::result::Result<_,_>>()?;
-            ensure!((2400..=43200).contains(&samples.len()),"receipt must be 100..1800ms");
+            ensure!((2400..=if *kind==Kind::Unavailable{96000}else{43200}).contains(&samples.len()),"receipt duration");
             ensure!(samples.iter().any(|v|v.unsigned_abs()>200),"silent receipt");
             clips.push(Clip{id:e.id,text:e.text,pcm:samples.into_iter().flat_map(i16::to_le_bytes).collect(),kind:*kind});
         }
+        ensure!(CATALOG.iter().all(|(id,_,_)|seen.contains(*id)),"incomplete catalog");
         Ok(Self{clips,next:0})
     }
     pub fn pick(&mut self,kind:Kind)->Clip {
+        self.try_pick(kind).expect("required receipt catalog verified on load")
+    }
+    pub fn try_pick(&mut self,kind:Kind)->Option<Clip> {
         // Catalog completeness is established before activation; no per-turn disk/network.
         let pool:Vec<_>=self.clips.iter().filter(|c|c.kind==kind).collect();
-        let clip=pool[self.next%pool.len()].clone();self.next=self.next.wrapping_add(1);clip
+        if pool.is_empty(){return None;}
+        let clip=pool[self.next%pool.len()].clone();self.next=self.next.wrapping_add(1);Some(clip)
     }
     #[cfg(test)]
     pub fn synthetic()->Self {
-        Self{clips:CATALOG.iter().map(|(id,text,kind)|Clip{id:(*id).into(),text:(*text).into(),pcm:vec![1,4].repeat(2400),kind:*kind}).collect(),next:0}
+        Self{clips:CATALOG.iter().chain(std::iter::once(&FAILURE_CLIP)).map(|(id,text,kind)|Clip{id:(*id).into(),text:(*text).into(),pcm:vec![1,4].repeat(2400),kind:*kind}).collect(),next:0}
     }
 }
 
@@ -89,6 +95,14 @@ mod tests {
         m["clips"][0]["file"]=serde_json::json!("../escape.wav");save(&dir,&m);assert!(Bank::load(&dir,"xfyun","synthetic-voice").is_err());
         m["clips"][0]["file"]=serde_json::json!("lookup.wav");m["clips"][0]["sha256"]=serde_json::json!("0".repeat(64));save(&dir,&m);assert!(Bank::load(&dir,"xfyun","synthetic-voice").is_err());
         m["clips"].as_array_mut().unwrap().pop();save(&dir,&m);assert!(Bank::load(&dir,"xfyun","synthetic-voice").is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn r22_failure_clip_is_optional_and_does_not_invalidate_existing_receipts(){
+        let (dir,m)=fixture();save(&dir,&m);
+        let mut bank=Bank::load(&dir,"xfyun","synthetic-voice").unwrap();
+        assert!(bank.try_pick(Kind::Unavailable).is_none());
+        assert_eq!(bank.pick(Kind::Weather).id,"weather");
         std::fs::remove_dir_all(dir).unwrap();
     }
     #[test]

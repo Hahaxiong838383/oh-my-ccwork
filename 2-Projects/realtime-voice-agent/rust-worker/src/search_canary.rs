@@ -2,6 +2,7 @@
 use serde::Deserialize;
 pub const AGENT: &str = "p003-search-canary-20261021";
 pub const BASE: &str = "https://kidshub-ai.hahaxiong.cc/_canary/search-20261021/v1";
+pub const LISTENING_AGENT: &str = "p003-search-listening-20261030";
 pub const VERIFICATION_AGENT: &str = "p003-search-verification-20261026";
 const VERIFICATION_SN: &str = "BJP00399999999999901";
 const VERIFICATION_BASE: &str = "https://kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v1";
@@ -10,6 +11,7 @@ struct Profile { base: &'static str, eot: &'static str, max_jobs: usize, verific
 fn profile(agent: &str) -> Option<Profile> {
  match agent {
   AGENT=>Some(Profile{base:BASE,eot:"/run/p003-search-canary/eot.sock",max_jobs:2,verification:false}),
+  LISTENING_AGENT=>Some(Profile{base:"https://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1",eot:"/run/p003-listening-canary/eot.sock",max_jobs:2,verification:false}),
   VERIFICATION_AGENT=>Some(Profile{base:VERIFICATION_BASE,eot:"/run/p003-search-verification/eot.sock",max_jobs:1,verification:true}),
   _=>None,
  }
@@ -61,6 +63,15 @@ fn validate_config(agent:&str,max:usize,get:&impl Fn(&str)->String,w:Option<&Win
  anyhow::ensure!(w.is_some_and(|w| matches_profile(p,w,&get("P003_SEARCH_DEVICE_ALLOWLIST"))),"canary_window");
  anyhow::ensure!(get("EOT_SOCK")==p.eot,"canary_sidecar_isolation");
  anyhow::ensure!(get("LLM_FALLBACK_BASE_URL").is_empty(),"canary_fallback_must_be_disabled");
+ if agent==LISTENING_AGENT {
+  for (key,expected) in [
+   ("P003_SEARCH_CANARY_WINDOW_FILE","/opt/p003-listening-canary-20261030/window.json"),
+   ("P003_SEARCH_CANARY_HEALTH_FILE","/run/p003-listening-canary/health.json"),
+   ("P003_ROOM_CLEANUP_DIR","/opt/p003-listening-canary-20261030/room-cleanup"),
+   ("P003_ROOM_CLEANUP_STATUS_FILE","/opt/p003-listening-canary-20261030/cleanup-status.json"),
+   ("P003_ROOM_CLEANUP_V1","1"),
+  ] {anyhow::ensure!(get(key)==expected,"canary_listening_isolation");}
+ }
  if p.verification {
   for (key,expected) in [
    ("P003_SEARCH_CANARY_WINDOW_FILE","/opt/p003-search-verification-20261026/window.json"),
@@ -77,7 +88,7 @@ pub fn signal(connected:bool){LAST_SIGNAL.store(if connected {now_ms()}else{0},s
 pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::WorkerState>) {
  let Some(profile)=profile(&agent)else{return};
  let Ok(path)=std::env::var("P003_SEARCH_CANARY_HEALTH_FILE")else{return};
- let client=reqwest::Client::builder().timeout(std::time::Duration::from_secs(2)).redirect(reqwest::redirect::Policy::none()).build().expect("canary health client");
+ let client=reqwest::Client::builder().http1_only().timeout(std::time::Duration::from_secs(2)).redirect(reqwest::redirect::Policy::none()).build().expect("canary health client");
  let query=std::env::var("LLM_URL_QUERY").unwrap_or_default();
  let token=reqwest::Url::parse(&format!("https://localhost/?{}",query)).ok().and_then(|u|u.query_pairs().find(|(k,_)|k=="token").map(|(_,v)|v.to_string())).unwrap_or_default();
  let key=std::env::var("LLM_API_KEY").unwrap_or_default();
@@ -177,6 +188,25 @@ mod tests {
   let raw=r#"{"enabled":true,"sn":"BJP00326070803800006","expires_at_ms":9000,"generation":"old"}"#;
   let mut w:Window=serde_json::from_str(raw).unwrap();assert!(matches_environment(&w,"BJP00326070803800006"));
   w.allowlist=vec!["BJP00326060100100004".into()];assert!(allowed(&w).is_empty());
+ }
+
+ #[test] fn listening_candidate_is_bounded_isolated_search_profile() {
+  let agent="p003-search-listening-20261030";assert!(is_candidate(agent));
+  let w=Window{enabled:false,sn:String::new(),allowlist:vec!["BJP00326070803800006".into(),"BJP00326060100100004".into()],expires_at_ms:9000,generation:"listen".into()};
+  let env=std::collections::HashMap::from([
+   ("LLM_BASE_URL","https://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1"),
+   ("EOT_SOCK","/run/p003-listening-canary/eot.sock"),
+   ("P003_SEARCH_DEVICE_ALLOWLIST","BJP00326070803800006,BJP00326060100100004"),
+   ("P003_SEARCH_CANARY_WINDOW_FILE","/opt/p003-listening-canary-20261030/window.json"),
+   ("P003_SEARCH_CANARY_HEALTH_FILE","/run/p003-listening-canary/health.json"),
+   ("P003_ROOM_CLEANUP_DIR","/opt/p003-listening-canary-20261030/room-cleanup"),
+   ("P003_ROOM_CLEANUP_STATUS_FILE","/opt/p003-listening-canary-20261030/cleanup-status.json"),
+   ("P003_ROOM_CLEANUP_V1","1"),
+  ]);
+  let get=|k:&str|env.get(k).copied().unwrap_or_default().to_owned();
+  assert!(validate_config(agent,2,&get,Some(&w)).is_ok());assert!(validate_config(agent,3,&get,Some(&w)).is_err());
+  for key in env.keys(){let wrong=|k:&str|if k==*key {"wrong".into()}else{get(k)};assert!(validate_config(agent,2,&wrong,Some(&w)).is_err(),"{key}");}
+  assert!(!job_allowed("p003-search-listening-typo","room","{}"));
  }
 
 }

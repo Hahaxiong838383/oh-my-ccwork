@@ -312,7 +312,7 @@ fn publish_fail_class(raw: &str) -> &'static str {
 #[derive(Debug)]
 enum TurnEvent {
     AudioStarted(u64),
-    PlayedOut(u64),
+    PlayedOut(u64, bool), // bool: first-PCM deadline failed; never retry this turn
     /// 2b:LLM task 剥出的 [[DEV:N]] 意图回主循环(执行需 &mut self:pending_cmd/trace/publish)
     /// v3.1(codex 复核 §2):带创建时捕获的 turn id 与说话轮次,消费前过 device_ledger::l2_event_gate
     DevIntent { label: u32, text: String, turn_id: u64, utterance: u64 },
@@ -423,6 +423,7 @@ struct Orchestrator {
     listening_deferred_turn: Option<TurnKind>,
     device_reply_suppressed: bool,
     search: Option<crate::search_tasks::SearchSession>,
+    search_recovery: Option<crate::search_control_recovery::Recovery>,
     search_turn: bool,
     search_user_speaking: bool,
     /// One-shot v0.3:有序 PCM 代次(Some=实验模式;None=现役 RTC,本字段零参与)
@@ -994,6 +995,8 @@ pub async fn run_pipeline(
     });
     anyhow::ensure!(!listening_claimed || listening.is_some(),"listening_session_binding_unavailable");
     let mut orch = Orchestrator {
+        search_recovery: (search.is_some() && std::env::var("P003_SEARCH_CONTROL_RECOVERY_V1").is_ok_and(|v|v=="1"))
+            .then(crate::search_control_recovery::Recovery::default),
         listening,feedback_turn:None,listening_deferred_turn:None,device_reply_suppressed:false,
         search,
         search_turn: false,
@@ -1091,7 +1094,7 @@ pub async fn run_pipeline(
 
     // EOT 环形缓冲:采集关=最近 1.2s(原状);采集开=8s(smart-turn 窗,快照落盘用,
     // predict 仍只取尾 1.2s,判停行为不变)
-    let ring_keep = crate::eot_snapshot::SnapshotSink::ring_keep(orch.snap.is_some(), EOT_MAX_SAMPLES);
+    let ring_keep = crate::eot_snapshot::SnapshotSink::ring_keep(orch.snap.is_some() || orch.search_recovery.is_some(), EOT_MAX_SAMPLES);
     let mut eot_ring: VecDeque<i16> = VecDeque::with_capacity(ring_keep + WINDOW);
     let mut vad_buf: Vec<i16> = Vec::with_capacity(WINDOW * 2);
     // 火山按段消化音频:攒 200ms(3200 样本)一发,对齐 Python segment_duration_ms=200。
@@ -1355,7 +1358,7 @@ pub async fn run_pipeline(
                 Some(SttEvent::Interim(t)) => {
                     if orch.ordered_first_turn_active() {
                         if let Some(o) = orch.ordered.as_mut() { o.on_stt_interim(); }
-                    } else {
+                    } else if orch.search_recovery.as_mut().is_none_or(|r|r.primary_text(&t)) {
                         orch.on_interim(t)
                     }
                 }
@@ -1364,7 +1367,7 @@ pub async fn run_pipeline(
                         let acts = orch.ordered.as_mut().map(|o| o.on_stt_final(t, unix_ms_now())).unwrap_or_default();
                         orch.apply_ordered_actions(acts);
                         orch.on_ordered_final_held().await;
-                    } else {
+                    } else if orch.search_recovery.as_mut().is_none_or(|r|r.primary_text(&t)) {
                         orch.on_final(t)
                     }
                 }
@@ -1445,6 +1448,7 @@ pub async fn run_pipeline(
     }
 
     orch.hard_abort_current();
+    if let Some(r)=&mut orch.search_recovery {r.cancel();}
     if let Some(search)=&mut orch.search {search.close();}
     if let Some(sp) = orch.spec.take() {
         sp.task.abort();
@@ -1496,6 +1500,8 @@ impl Orchestrator {
         self.eot_gap_gen+=1;self.eot_requested=false;
     }
     fn apply_listening_effects(&mut self,e:crate::listening_adapter::Effects){
+        let active=self.listening_active();
+        if let Some(recovery)=&mut self.search_recovery {recovery.set_listening(active);}
         if e.stopped {self.hard_abort_current();self.clear_listening_pending();self.source.clear_buffer();
             if self.listening.as_ref().is_some_and(|l|l.runtime.snapshot().phase==crate::listening_mode::Phase::Paused){let _=self.fatal_tx.try_send("listening_session_paused_close_required".into());}
         }
@@ -1955,6 +1961,9 @@ impl Orchestrator {
         let now = Instant::now();
         match ev {
             VadEvent::SpeechStart => {
+                let active=self.search.as_ref().is_some_and(|s|s.has_pending_search());
+                let now_ms=self.now_ms() as u64;
+                if let Some(r)=&mut self.search_recovery {r.speech_start(now_ms,active);}
                 self.first_speech_onset_at.get_or_insert(now);
                 self.turn_gate.on_speech_start();
                 // v3.1 账本:停说 ≥ NEW_UTTERANCE_GAP 后再开口 = 新句;上一句若从未 commit(ASR 缺失),其芯片观测作孤儿(只诊断)
@@ -1981,6 +1990,16 @@ impl Orchestrator {
                 }
             }
             VadEvent::SpeechEnd => {
+                let now_ms=self.now_ms() as u64;
+                let active=self.search.as_ref().is_some_and(|s|s.has_pending_search());
+                let retry=self.search_recovery.as_mut().and_then(|r|r.speech_end(now_ms));
+                if let Some(ms)=retry.filter(|_|active && self.turn_gate.pending().is_empty() && self.latest_interim.is_empty()) {
+                    let size=((ms as usize)*16).min(eot_ring.len());
+                    let pcm=eot_ring.iter().skip(eot_ring.len()-size).copied().collect();
+                    let cfg=stt_cfg_for_room(&self.room_name);
+                    if let Some(r)=&mut self.search_recovery {r.start(crate::search_control_recovery::recognize(cfg,pcm));}
+                    info!(room=%self.room_name,captured_ms=size/16,"search control recovery scheduled: no primary transcript");
+                }
                 self.turn_gate
                     .on_speech_end(now, Duration::from_secs_f32(gate.min_silence_s()));
                 self.ledger
@@ -2631,6 +2650,7 @@ impl Orchestrator {
                       budget_left = self.ready_confirm.budget_left(), "input_ready.request");
             }
             control::Inbound::Cancel => {
+                if let Some(r)=&mut self.search_recovery {r.cancel();}
                 if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
                 if self.ordered.is_some() {
@@ -2990,7 +3010,7 @@ impl Orchestrator {
                         self.cfg.aec_warmup_duration.as_secs_f32());
                 }
             }
-            TurnEvent::PlayedOut(id) => {
+            TurnEvent::PlayedOut(id,tts_budget_failed) => {
                 if self.agent_turn.as_ref().map(|t| t.id) != Some(id) {
                     return;
                 }
@@ -3023,6 +3043,9 @@ impl Orchestrator {
                 // boost,barge 桶文案落在非打断语境(2026-08-16「先你的。」实证)
                 self.tele_text.clear();
                 self.set_state(AgentState::Listening);
+                // Settle cursor first, then suppress automatic retry and queue
+                // one local cue atomically before the next background poll.
+                if tts_budget_failed {if let Some(search)=&mut self.search {search.tts_unavailable();}}
                 // 2b §3.4:回复播完 → 追加设备短句(若 result 已到而当时回复在播)
                 if let Some(t) = self.deferred_say.take_on_played_out().filter(|_|!self.listening_active() && !self.device_reply_suppressed) {
                     info!(room = %self.room_name, "device reply appended after turn played out");
@@ -3036,12 +3059,19 @@ impl Orchestrator {
     /// 任何一条 return 都绕不过去——将来新增 return 分支自动继承默认判决 Publish。
     async fn on_tick(&mut self) {
         self.poll_listening();
+        if let Some(text)=self.search_recovery.as_mut().and_then(|r|r.poll()) {
+            let control=self.search.as_ref().and_then(|s|s.recovered_text(&text));
+            info!(room=%self.room_name,accepted=control.is_some(),"search control recovery completed");
+            if let Some(text)=control {if let Some(r)=&mut self.search_recovery {r.delivered_as(&text);}self.on_final(text);}
+            else if let Some(r)=&mut self.search_recovery {r.reject_result();}
+        }
         self.on_tick_inner().await;
         self.flush_caption_finals();
         let input_pending = self.search_user_speaking || !self.turn_gate.pending().is_empty()
             || !self.latest_interim.is_empty();
         if let Some(search) = &mut self.search { search.observe_input(input_pending); }
         let safe = self.agent_turn.is_none() && self.state == AgentState::Listening
+            && !self.search_recovery.as_ref().is_some_and(|r|r.blocked())
             && !self.search_user_speaking && self.turn_gate.pending().is_empty()
             && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active() && !self.listening_active();
         let speech = self.search.as_mut().and_then(|s| s.poll(safe));
@@ -3158,6 +3188,7 @@ impl Orchestrator {
         // 假打断定时:超时无 turn → resume 续播(渐起由 playout 配置)+ 契约 FalseInterruption
         if let Some(dl) = self.false_deadline
             && now >= dl
+            && !(self.search_turn && self.search_recovery.as_ref().is_some_and(|r|r.blocked()))
         {
             self.false_deadline = None;
             if self.paused.take().is_some() {
@@ -3324,7 +3355,8 @@ impl Orchestrator {
             // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
-            let swallow_kind = if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
+            let search_cancel = self.search.as_ref().is_some_and(|s|s.cancel_before_exit(&user_text));
+            let swallow_kind = if search_cancel { None } else if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
                 Some(("stop_only", "exact"))
             } else if crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &user_text) {
                 // 退出词吞句(2026-08-17 川哥拍板):trace 88185b1e 实证「退出」被 commit
@@ -3641,7 +3673,7 @@ impl Orchestrator {
             let amend = self.pending_amend.take();
             if let Some(search) = &mut self.search {
                 search.on_commit();
-                if let Some(action) = search.interpret(&user_text) {
+                if let Some(action) = if search_cancel {Some(crate::search_policy::Intent::Cancel)}else{search.interpret(&user_text)} {
                     // Preserve any prior ordinary-turn history amendment for the next ordinary reply.
                     self.pending_amend = amend;
                     if let Some(old) = self.spec.take() { old.task.abort(); }
@@ -3853,6 +3885,7 @@ impl Orchestrator {
         } else {self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm())};
 
         let task = tokio::spawn(async move {
+            let mut tts_budget_failed=false;
             let publish = |v: Value| {
                 let p = lp.clone();
                 tokio::spawn(async move {
@@ -3885,7 +3918,7 @@ impl Orchestrator {
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();
-                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id,false)).await;
                 }
                 TurnKind::BackgroundSay(text) if search_progress_task.is_some() => {
                     // Register the entire trusted result before awaiting a socket or any PCM.
@@ -3901,10 +3934,11 @@ impl Orchestrator {
                                 tracker.lock().unwrap_or_else(|e|e.into_inner()).synthesized((bytes/2) as u64);
                                 if let Ok(mut p)=prog2.lock(){p.push((chars,samples));}
                             },
+                            Err(e)=>{tts_budget_failed=crate::tts_xfyun::first_audio_timed_out(&e);warn!(room=%room_name,error=%e,"background tts failed");break;},
                             _=>break,
                         }
                     }
-                    drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id,tts_budget_failed)).await;
                 }
                 TurnKind::Say(text) | TurnKind::BackgroundSay(text) | TurnKind::ListeningFeedback(text) => {
                     match tts_cfg
@@ -3916,14 +3950,14 @@ impl Orchestrator {
                             publish(json!({"k": "tts", "ttfb_ms": ttfb}));
                             track(&text, bytes);
                         }
-                        Err(e) => warn!(room = %room_name, error = %e, "say tts failed"),
+                        Err(e) => {tts_budget_failed=crate::tts_xfyun::first_audio_timed_out(&e);warn!(room = %room_name, error = %e, "say tts failed");},
                     }
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();
                     // 自然播完:固定句全文入历史(say add_to_chat_ctx 语义)
                     if record_history { llm.lock().await.push_assistant(&text); }
-                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id,tts_budget_failed)).await;
                 }
                 TurnKind::Reply {
                     user_text,
@@ -3982,7 +4016,7 @@ impl Orchestrator {
                     let mut l2_sent = false;
                     // B 观测:正文首段 ready(TTS 首块)只记一次;tail 路径同样覆盖。
                     let mut body_ready_logged = false;
-                    while let Some(delta) = delta_rx.recv().await {
+                    'deltas: while let Some(delta) = delta_rx.recv().await {
                         let (early_labels, delta) = crate::llm::split_dev_inband(&delta);
                         for label in early_labels {
                             if label == crate::device_intent::SESSION_EXIT_LABEL {
@@ -4033,11 +4067,12 @@ impl Orchestrator {
                                 }
                                 Err(e) => {
                                     warn!(room = %room_name, error = %e, "tts synthesize failed");
+                                    if crate::tts_xfyun::first_audio_timed_out(&e) {tts_budget_failed=true;llm_join.abort();break 'deltas;}
                                 }
                             }
                         }
                     }
-                    if let Some(tail) = seg.flush() {
+                    if let Some(tail) = seg.flush().filter(|_|!tts_budget_failed) {
                         let tail = crate::textproc::strip_stage_directions(&tail);
                         if !tail.trim().is_empty() {
                             let synth_t0 = Instant::now();
@@ -4055,7 +4090,9 @@ impl Orchestrator {
                                     track(&tail, bytes);
                                 }
                                 Err(e) => {
-                                    warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
+                                    tts_budget_failed=crate::tts_xfyun::first_audio_timed_out(&e);
+                                    if tts_budget_failed {llm_join.abort();}
+                                    warn!(room = %room_name, error = %e, "tts synthesize failed (tail)");
                                 }
                             }
                         }
@@ -4101,7 +4138,7 @@ impl Orchestrator {
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();
-                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id,tts_budget_failed)).await;
                 }
             }
         });

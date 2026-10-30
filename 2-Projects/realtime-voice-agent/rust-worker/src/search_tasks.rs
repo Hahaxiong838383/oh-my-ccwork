@@ -35,6 +35,7 @@ impl Api {
             || url.username() != ""
             || url.password().is_some()
             || !["/v1/internal/search-tasks", "/_canary/search-20261021/v1/internal/search-tasks",
+                "/_canary/listening-20261030/v1/internal/search-tasks",
                 "/_canary/search-verification-20261026/v1/internal/search-tasks"].contains(&url.path())
             || url.fragment().is_some()
         {
@@ -50,6 +51,7 @@ impl Api {
         url.query_pairs_mut().append_pair("room", &cfg.room);
         Some(Self {
             client: reqwest::Client::builder()
+                .http1_only()
                 .timeout(Duration::from_secs(3))
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
@@ -185,17 +187,28 @@ fn bare_topic(q: &str) -> bool {
 fn question_tail(t: &str) -> bool {
     // Only an immediately adjacent predicate, never a new named topic or personal chat.
     t.chars().count()<=40 &&
-        ["主要吃","吃什么","是什么","是怎么","是如何","为什么","怎么","有多","有几","多少","在哪里","什么时候","能不能","会不会"].iter().any(|p|t.starts_with(p)) &&
+        (["主要吃","吃什么","是什么","是怎么","是如何","为什么","怎么","有多","有几","多少","在哪里","什么时候","能不能","会不会","最近","最新","正式更新"].iter().any(|p|t.starts_with(p)) || t.contains("这首歌")&&t.contains("谁唱")) &&
         !["帮我","改查","不用","不要","我们","你","我","；",";"].iter().any(|p|t.contains(p))
 }
 fn missing_predicate(q: &str) -> bool {
     let q=q.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
-    ["为什么","为什么会","怎么","怎么会","如何"].iter().any(|p|q.ends_with(p))
+    ["为什么","为什么会","怎么","怎么会","如何","最近","最新"].iter().any(|p|q.ends_with(p))
+}
+fn incomplete_title(q: &str) -> bool {
+    // Short edition/title fragments observed before the predicate arrives.
+    // This changes only explicit search admission, never ordinary chat timing.
+    ["基岩版","Java版","中国版","国际版","网易版"].iter().any(|s|q.ends_with(s))&&q.starts_with("我的世界")
+}
+fn repaired_replace(text: &str, active: bool) -> Option<String> {
+    if !active {return None;}
+    let q=text.trim().strip_prefix("改茶")?;
+    if q.chars().count()<2 || ["具","叶","杯","壶","的","味","色","馆","水"].iter().any(|s|q.starts_with(s)) {return None;}
+    Some(format!("改查{q}"))
 }
 fn predicate_tail(t: &str) -> bool {
     // A narrow adjacent ASR continuation, not a buffer for arbitrary chat.
     (2..=24).contains(&t.chars().count()) &&
-        ["灭绝","会","能","要","是","不","没有","变","发","形成","出现","产生","生长","消失","吃","飞","转","掉","亮"].iter().any(|p|t.starts_with(p)) &&
+        ["灭绝","会","能","要","是","不","没有","变","发","形成","出现","产生","生长","消失","吃","飞","转","掉","亮","正式更新","更新","有什么"].iter().any(|p|t.starts_with(p)) &&
         !["帮我","查","搜","取消","不用","不要","停","退出","聊","我们","你","我","天气","；",";"].iter().any(|p|t.contains(p))
 }
 pub struct SearchSession {
@@ -231,6 +244,8 @@ pub struct SearchSession {
     routing_task: Option<JoinHandle<()>>,
     clarified_at: Option<Instant>,
     pending_topic: Option<PendingTopic>,
+    last_resume_at: Option<Instant>,
+    fragment_since: Option<Instant>,
 }
 pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
     crate::search_enrollment::enabled(enabled, "allowlist", allowlist, room, "")
@@ -269,16 +284,21 @@ impl SearchSession {
             requires_explicit_play: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task,
-            clarified_at:None,pending_topic:None,
+            clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
         })
     }
     pub fn interpret(&mut self, text: &str) -> Option<Intent> {
+        if self.cancel_before_exit(text) { return Some(Intent::Cancel); }
+        self.fragment_since=None;
+        let repaired=repaired_replace(text,self.dialogue_context().is_some());
+        let text=repaired.as_deref().unwrap_or(text);
         let mut joined = None;
         let mut deferred = None;
         if let Some(pending) = self.pending_topic.take() {
             let tail=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
             let continues=if missing_predicate(&pending.query){predicate_tail(tail)}else{question_tail(tail)};
             if pending.since.elapsed() <= Duration::from_millis(pending.deadline_ms()) && continues {
+                self.fragment_since=Some(pending.since);
                 joined=Some(format!("{}{}{}",if pending.replace{"改查"}else{"帮我查一下"},pending.query,tail));
                 self.clarified_at=None;
                 tracing::info!("background search clarification fragments joined");
@@ -331,8 +351,9 @@ impl SearchSession {
                     return false;
                 }
                 let clarified=self.clarified_at.take().is_some_and(|at|at.elapsed()<=Duration::from_secs(10));
-                if missing_predicate(&query) || (clarified && bare_topic(&query)) {
-                    self.pending_topic=Some(PendingTopic{query,replace:false,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
+                if missing_predicate(&query) || incomplete_title(&query) || (clarified && bare_topic(&query)) {
+                    let origin=self.fragment_since.take();
+                    self.pending_topic=Some(PendingTopic{query,replace:false,since:origin.unwrap_or_else(Instant::now),route:self.last_route.clone(),tail_observed:origin.is_some()});
                     return true;
                 }
                 return self.submit(query, false);
@@ -357,6 +378,8 @@ impl SearchSession {
                 }
             }
             Intent::Resume => {
+                if self.last_resume_at.is_some_and(|at|at.elapsed()<=Duration::from_millis(1500)){return false;}
+                self.last_resume_at=Some(Instant::now());
                 self.requires_explicit_play=false;
                 self.auto_pending = false;
                 if self.busy {
@@ -398,9 +421,10 @@ impl SearchSession {
     }
     pub fn replace_query(&mut self, query: String) -> bool {
         self.pending_topic=None;
-        if missing_predicate(&query) {
+        if missing_predicate(&query) || bare_topic(&query) {
             self.command(Intent::Cancel);
-            self.pending_topic=Some(PendingTopic{query,replace:true,since:Instant::now(),route:self.last_route.clone(),tail_observed:false});
+            let origin=self.fragment_since.take();
+            self.pending_topic=Some(PendingTopic{query,replace:true,since:origin.unwrap_or_else(Instant::now),route:self.last_route.clone(),tail_observed:origin.is_some()});
             return true;
         }
         self.suppress_auto_replay();
@@ -441,13 +465,15 @@ impl SearchSession {
     }
     fn receipt(&mut self, kind: ReceiptKind) -> bool {
         let Some(bank)=&mut self.receipts else {return false;};
-        let clip=bank.pick(kind);
+        let Some(clip)=bank.try_pick(kind) else {return false;};
         // Never leave an earlier preparation/clarification cue ahead of a new query.
         self.speech.retain(|s|s.receipt.is_none());
         self.speech.push_back(Speech{grant:None,revision:1,digest:String::new(),cursor:0,sequence:0,reported_cursor:0,text:clip.text.clone(),receipt:Some(clip),task:None,
             delivery:String::new(),expires:Instant::now()+Duration::from_secs(2),result_until:None,auto_replayed:false});
         true
     }
+    /// Prepared, interruptible cue only; never retry the failing TTS provider.
+    pub fn tts_unavailable(&mut self)->bool { self.auto_pending=false;self.receipt(ReceiptKind::Unavailable) }
     pub fn active_receipt_pcm(&self) -> Option<Vec<u8>> {
         self.active.as_ref()?.receipt.as_ref().map(|c|c.pcm.clone())
     }
@@ -622,6 +648,44 @@ impl SearchSession {
         self.speech.retain(|s| !s.auto_replayed && s.receipt.is_none());
     }
     pub fn is_result_active(&self)->bool {self.active.as_ref().is_some_and(|s|s.task.is_some()&&!s.digest.is_empty())}
+    pub fn has_pending_search(&self)->bool {
+        !self.closing && (self.busy || self.pending_topic.is_some() || self.active.as_ref().is_some_and(|s|s.task.is_some())
+            || self.auto_pending || self.speech.iter().any(|s|s.task.is_some()))
+    }
+    /// Resolve only a whole ambiguous refusal while a search is active. Explicit
+    /// exits, quotations, and ordinary conversation keep their existing meaning.
+    pub fn cancel_before_exit(&self,text:&str)->bool {
+        if !self.has_pending_search(){return false;}
+        let t=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
+        let t=t.strip_prefix("小可").map(|s|s.trim_start_matches(|c:char|"，, ".contains(c))).unwrap_or(t);
+        t=="不用了" || t.strip_prefix("不用了").is_some_and(|tail| {
+            let tail=tail.trim_start_matches(|c:char|"，, ".contains(c));
+            (tail.starts_with("我们聊")||tail.starts_with("聊"))
+                && crate::textproc::session_exit_tail_hit(tail).is_none()
+        })
+    }
+    pub fn recovered_text(&self,text:&str)->Option<String>{
+        if self.recovered_control(text){return Some(text.to_owned());}
+        if !self.has_pending_search(){return None;}
+        // Actual R24 replay retained “查成都今天的天气” but lost “改”. Only
+        // a bare imperative with a concrete weather location may repair that
+        // missing syllable; chat, echoes, generic searches and bare weather cannot.
+        let t=text.trim();
+        if !t.starts_with('查') || t.starts_with("查查"){return None;}
+        let candidate=format!("改{t}");
+        let decision=RoutingSession::default().route(&candidate,0,self.routing.as_ref().map(|r|&r.config),"");
+        if decision.weather.is_none() && decision.place_weather.is_none(){return None;}
+        match decision.intent(){Some(Intent::Replace(q)) if !missing_predicate(&q)&&!bare_topic(&q)=>Some(candidate),_=>None}
+    }
+    pub fn recovered_control(&self,text:&str)->bool {
+        if !self.has_pending_search(){return false;}
+        if self.cancel_before_exit(text){return true;}
+        let repaired=repaired_replace(text,true);
+        let decision=RoutingSession::default().route(repaired.as_deref().unwrap_or(text),0,
+            self.routing.as_ref().map(|r|&r.config),"");
+        matches!(decision.intent(),
+            Some(Intent::Replace(_)|Intent::Cancel|Intent::Resume))
+    }
     pub fn accepts_ack(&self,text:&str,first_pcm:bool,input_continues:bool)->bool {
         crate::search_dialogue::classify_search_ack(self.ack_v1,text,&crate::search_dialogue::SearchPlaybackContext{result_active:self.is_result_active(),first_pcm_seen:first_pcm,input_continues})==crate::search_dialogue::SearchAckDecision::ContinueResult
     }
@@ -960,6 +1024,26 @@ mod tests {
         }
     }
     #[tokio::test]
+    async fn listening_candidate_task_client_uses_the_real_background_path() {
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let mut cfg=LlmConfig{base_url:"https://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1".into(),
+            api_key:"test".into(),model:"test".into(),instructions:String::new(),thinking:"off".into(),strip_leading_filler:false,
+            url_query:"token=synthetic".into(),room:"sn-BJP00399999999999901-123".into()};
+        let api=Api::new(&cfg).expect("listening candidate must exercise search, not silently fall back to ordinary chat");
+        assert_eq!(api.url.path(),"/_canary/listening-20261030/v1/internal/search-tasks");
+        assert_eq!(api.url.query_pairs().find(|(k,_)|k=="room").unwrap().1,cfg.room);
+        for base in ["https://kidshub-ai.hahaxiong.cc/v1",crate::search_canary::BASE] {
+            cfg.base_url=base.into();assert!(Api::new(&cfg).is_some());
+        }
+        for base in ["http://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1",
+            "https://kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v10",
+            "https://kidshub-ai.hahaxiong.cc:444/_canary/listening-20261030/v1",
+            "https://test:secret@kidshub-ai.hahaxiong.cc/_canary/listening-20261030/v1",
+            "https://evil.test/_canary/listening-20261030/v1"] {
+            cfg.base_url=base.into();assert!(Api::new(&cfg).is_none());
+        }
+    }
+    #[tokio::test]
     async fn r14_preparation_cue_does_not_change_running_query_to_interrupted(){
         let(mut s,_,_)=test_session();s.context_v1=true;
         s.dialogue=Some(json!({"protocol":1,"task_id":"task","revision":1,"phase":"running","dialogue_epoch":0}));
@@ -1096,11 +1180,107 @@ mod tests {
             requires_explicit_play: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task:None,
-            clarified_at:None,pending_topic:None,
+            clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
             },
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn r25_active_search_cancel_is_not_session_exit_and_rejects_late_results() {
+        let (mut s,events,mut commands)=test_session();
+        s.command(Intent::Search("北京今天的天气".into()));
+        let epoch=s.epoch;
+        assert!(matches!(commands.recv().await,Some(Command::Submit{..})));
+        assert_eq!(s.interpret("不用了"),Some(Intent::Cancel));
+        s.command(Intent::Cancel);
+        assert!(matches!(commands.recv().await,Some(Command::Cancel{..})));
+        events.send(Event::Ready{id:"old".into(),text:"旧北京天气。".into(),epoch}).await.unwrap();
+        s.poll(false);
+        assert!(s.speech.is_empty());
+        assert!(!s.closing);
+        assert_eq!(s.interpret("我们聊别的"),None);
+    }
+    #[tokio::test]
+    async fn r25_ambiguous_cancel_is_bounded_to_active_search() {
+        for text in ["不用了","不用了。","小可，不用了","不用了，聊小猫吧"] {
+            let(mut s,_,_)=test_session();assert_eq!(s.interpret(text),None);
+            s.busy=true;assert_eq!(s.interpret(text),Some(Intent::Cancel),"{text}");
+        }
+        for text in ["退出聊天","不聊了","我今天不用了","他说不用了","不用了是什么意思","不要取消搜索","不用了，退出聊天"] {
+            let(mut s,_,_)=test_session();s.busy=true;
+            assert!(!matches!(s.interpret(text),Some(Intent::Cancel)),"{text}");
+        }
+    }
+    #[tokio::test]
+    async fn r25_recovery_never_promotes_echo_or_chat_into_a_command() {
+        let(mut s,_,_)=test_session();s.busy=true;
+        s.routing=Some(RoutingSnapshot{version:"synthetic".into(),config:RoutingConfig{weather_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()}});
+        for text in ["改查成都今天的天气","该插成都今天的天气","不用了","不要查了，我们聊别的","继续刚才的搜索结果"] {
+            assert!(s.recovered_control(text),"{text}");
+        }
+        for text in ["查查天气","我今天画了一只小猫","帮我查北京天气","不要改查成都","他说改查成都","退出聊天"] {
+            assert!(!s.recovered_control(text),"{text}");
+        }
+        assert_eq!(s.recovered_text("查成都今天的天气").as_deref(),Some("改查成都今天的天气"));
+        for text in ["查查天气","查天气","成都今天的天气","我查成都今天的天气","查火星为什么是红色的"] {
+            assert_eq!(s.recovered_text(text),None,"{text}");
+        }
+        s.busy=false;assert!(!s.recovered_control("改查成都今天的天气"));
+    }
+    #[tokio::test]
+    async fn r21_word_explanation_does_not_submit_or_mutate_running_search() {
+        let (mut s,_events,mut commands)=test_session();
+        s.context_v1=true;s.dialogue=Some(json!({"phase":"running"}));s.dialogue_changed=Instant::now();s.busy=true;
+        let epoch=s.epoch;let generation=s.generation;
+        assert!(s.interpret("查查是啥").is_none());
+        assert!(commands.try_recv().is_err());assert!(s.speech.is_empty());
+        assert!(s.busy);assert_eq!(s.epoch,epoch);assert_eq!(s.generation,generation);
+        assert_eq!(s.dialogue.as_ref().unwrap()["phase"],"running");
+    }
+    #[tokio::test]
+    async fn r20_asr_replace_is_scoped_and_split_resume_is_idempotent() {
+        let (mut s,_events,mut commands)=test_session();
+        let query="改茶大鱼海棠里大鱼这首歌是谁唱的";
+        assert!(s.interpret(query).is_none());
+        s.context_v1=true;s.dialogue=Some(json!({"phase":"running"}));s.dialogue_changed=Instant::now();
+        assert_eq!(s.interpret(query),Some(Intent::Replace("大鱼海棠里大鱼这首歌是谁唱的".into())));
+        for text in ["改茶具的颜色", "改茶叶品种", "改茶的口味", "他说改茶大鱼", "不要改茶大鱼", "我想喝茶"] { assert!(s.interpret(text).is_none(),"{text}"); }
+        s.resume_v1=true;
+        let action=s.interpret("继续刚才的搜索").unwrap();s.command(action);
+        assert!(matches!(commands.try_recv(),Ok(Command::ResumeLatest{..})));
+        let action=s.interpret("结果").unwrap();s.command(action);
+        assert!(commands.try_recv().is_err());assert!(s.speech.is_empty(),"split tail must not add a second notice");
+    }
+    #[tokio::test]
+    async fn r20_incomplete_public_title_waits_only_in_search_lane() {
+        let (mut s,_events,mut commands)=test_session();
+        let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
+        assert!(commands.try_recv().is_err());
+        let action=s.interpret("最近正式更新了什么").unwrap();s.command(action);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版最近正式更新了什么"));
+        let (mut s,_events,mut commands)=test_session();
+        let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
+        let since=s.pending_topic.as_ref().unwrap().since;
+        let action=s.interpret("最近").unwrap();s.command(action);
+        assert!(commands.try_recv().is_err());assert_eq!(s.pending_topic.as_ref().unwrap().since,since);
+        let action=s.interpret("正式更新了什么").unwrap();s.command(action);
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版最近正式更新了什么"));
+        let (mut s,_events,mut commands)=test_session();
+        let action=s.interpret("帮我查一下我的世界基岩版").unwrap();s.command(action);
+        assert!(s.interpret("我今天打球赢了").is_none());
+        assert!(matches!(commands.try_recv(),Ok(Command::Submit{query,..}) if query=="我的世界基岩版"));
+    }
+    #[tokio::test]
+    async fn r22_tts_failure_notice_is_local_cancellable_and_never_submits_or_completes_search(){
+        let (mut s,_events,mut commands)=test_session();
+        assert!(!s.tts_unavailable());assert!(s.speech.is_empty());
+        s.receipts=Some(ReceiptBank::synthetic());
+        s.auto_pending=true;
+        assert!(s.tts_unavailable());assert!(!s.auto_pending);assert!(commands.try_recv().is_err());assert!(!s.busy);
+        assert_eq!(s.poll(true).unwrap(),"这次没播出来，等会儿再试。");
+        assert!(s.active_receipt_pcm().is_some());s.finish(false,15);assert!(commands.try_recv().is_err());
+        assert!(s.tts_unavailable());s.on_commit();assert!(s.poll(true).is_none(),"new speech supersedes failure cue");
     }
     #[tokio::test]
     async fn listening_search_stays_explicit_across_mode_exit_and_late_result(){

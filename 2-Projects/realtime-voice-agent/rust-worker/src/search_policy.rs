@@ -24,11 +24,24 @@ fn trim_polite(query: &str) -> &str {
     }
     q
 }
+fn explanation_tail(text: &str) -> bool {
+    ["是什么意思", "什么意思", "是什么", "是啥", "啥意思", "是啥意思", "是干什么的", "这个词是什么意思", "这个词啥意思", "这个词是啥意思", "这句话是什么意思"].contains(&text.trim())
+}
+/// A question about the command itself is chat, including after a pending
+/// clarification or an editable keyword rule. A named query still searches.
+pub fn search_term_question(text: &str) -> bool {
+    let mut t=addressed(text);
+    for prefix in ["请帮我", "请", "帮我", "帮忙"] {
+        if let Some(rest)=t.strip_prefix(prefix) {t=rest.trim_start();break;}
+    }
+    ["搜索一下", "查询一下", "查找一下", "搜索", "查询", "查找", "查一下", "查一查", "查查", "搜一下", "搜一搜", "搜搜"]
+        .iter().any(|prefix|t.strip_prefix(prefix).is_some_and(explanation_tail))
+}
 fn task_query(query: &str, replace: bool) -> Option<Intent> {
     let q = trim_polite(query.trim_start_matches(|c: char| "，,:： ".contains(c)));
     // An explanation/quotation of the command is ordinary conversation.
-    if ["是什么意思", "什么意思", "这个词是什么意思", "这句话是什么意思"].contains(&q) { return None; }
-    if q.is_empty() || q.chars().count() > 128 || ["吧", "一下", "那个", "这个", "刚才那个", "它", "他", "她", "那件事"].contains(&q) {
+    if explanation_tail(q) { return None; }
+    if q.is_empty() || q.chars().count() > 128 || ["吧", "一下", "那个", "这个", "刚才那个", "它", "他", "她", "那件事", "为什么会灭绝", "为什么灭绝"].contains(&q) {
         return Some(Intent::Clarify);
     }
     Some(if replace { Intent::Replace(q.into()) } else { Intent::Search(q.into()) })
@@ -56,16 +69,17 @@ fn result_resume(text: &str) -> bool {
         return ["继续说", "继续讲", "继续播", "继续播报", "接着说", "接着讲", "接着播"]
             .iter().any(|s| rest.strip_suffix(s).is_some_and(resume_object));
     }
-    ["继续", "继续说", "继续讲", "继续播", "继续播报", "接着说", "接着讲", "接着播"]
+    ["继续", "继续搜", "继续说", "继续讲", "继续播", "继续播报", "接着说", "接着讲", "接着播"]
         .iter().any(|p| t.strip_prefix(p).is_some_and(resume_object))
 }
 
 fn resume_object(text: &str) -> bool {
-    ["刚才的搜索结果", "刚才的查询结果", "刚才查到的结果", "刚刚查到的结果", "刚才查的结果"]
+    ["刚才的搜索结果", "刚才的查询结果", "刚才查到的结果", "刚刚查到的结果", "刚才查的结果", "刚才的搜索", "刚才的查询"]
         .contains(&text)
 }
 
 pub fn intent(text: &str) -> Option<Intent> {
+    if search_term_question(text) {return None;}
     let t = addressed(text);
     if ["如果", "假如", "例如", "比如"].iter().any(|p| t.starts_with(p)) { return None; }
     if ["，不要真的查", ",不要真的查", "，但不用搜索", ",但不用搜索"].iter().any(|p| t.contains(p)) { return None; }
@@ -80,11 +94,11 @@ pub fn intent(text: &str) -> Option<Intent> {
         if (old.starts_with("不查") || old.starts_with("先别查")) && old.ends_with('了') { return task_query(new, true); }
     }
     let control = t.strip_suffix('吧').unwrap_or(t);
-    if ["别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
-        || ["不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p))
+    if ["别查了", "不用查了", "不要查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
+        || ["不要查了，", "不要查了,", "不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p))
         // ASR joins clause finals with spaces. Match the explicit cancel clause
         // and a bounded chat handoff, without stripping negation or quotations.
-        || ["不用查了", "别查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail|
+        || ["不用查了", "别查了", "不要查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail|
             ["我们聊", "聊"].iter().any(|next|tail.trim_start().starts_with(next)))) {
         return Some(Intent::Cancel);
     }
@@ -98,7 +112,7 @@ pub fn intent(text: &str) -> Option<Intent> {
     for suffix in ["，帮我查一下", ",帮我查一下", "，帮我查查", ",帮我查查", "，请帮我查一下"] {
         if let Some(q) = t.strip_suffix(suffix) { return task_query(q, false); }
     }
-    for suffix in ["帮我查一下", "帮我查查"] {
+    for suffix in ["帮我查一下", "帮我查查", "帮我查一查", "帮我搜一搜", "帮我搜一下"] {
         if let Some(q) = t.strip_suffix(suffix) {
             if !q.is_empty() && !["请", "请你", "能不能", "能", "你能", "你能不能", "你可以", "可以", "可不可以", "麻烦", "麻烦你", "我想请你", "我想让你"].contains(&q) { return task_query(q, false); }
         }
@@ -126,20 +140,24 @@ pub fn intent(text: &str) -> Option<Intent> {
 }
 
 #[derive(Default)]
-pub struct QueryIntent { pending_at: Option<(u64, bool)>, recent_question: Option<(u64, String)>, handoff: Option<String> }
+pub struct QueryIntent { pending_at: Option<(u64, bool)>, recent_question: Option<(u64, String)>, handoff: Option<String>, resume_at: Option<u64> }
 impl QueryIntent {
     pub fn take_handoff(&mut self) -> Option<String> { self.handoff.take() }
-    pub fn clear(&mut self) { self.pending_at = None; self.recent_question = None; self.handoff=None; }
+    pub fn clear(&mut self) { self.pending_at = None; self.recent_question = None; self.handoff=None; self.resume_at=None; }
     pub fn route(&mut self, text: &str, now_ms: u64) -> Option<Intent> {
+        if search_term_question(text) {self.clear();return None;}
         self.handoff=None;
+        let resume=self.resume_at.take();
+        if trim_outer(text)=="结果" && resume.is_some_and(|at|now_ms.saturating_sub(at)<=1500) { return Some(Intent::Resume); }
         let previous = self.pending_at.take();
         let recent = self.recent_question.take();
         if let Some(action) = intent(text) {
+            if action==Intent::Resume { self.resume_at=Some(now_ms); }
             if action == Intent::Clarify {
                 // ASR can commit "故宫明天开放吗" and "帮我查一下"
                 // separately, within the same breath. Bind only an explicit,
                 // empty request to the immediately preceding public question.
-                if ["帮我查一下", "帮我查查", "帮我搜一下", "请帮我查一下"].contains(&addressed(text)) {
+                if ["帮我查一下", "帮我查查", "帮我查一查", "帮我搜一下", "帮我搜一搜", "请帮我查一下"].contains(&addressed(text)) {
                     if let Some((at, question)) = recent {
                         if now_ms.saturating_sub(at) <= 1500 { self.handoff=Some(question.clone()); return Some(Intent::Search(question)); }
                     }
@@ -151,12 +169,13 @@ impl QueryIntent {
         let text = trim_outer(text);
         // Only the very next committed utterance, after a real clarification.
         // Do not concatenate personal chat, negations, quotes or commands.
-        let unrelated = ["我", "你", "他", "她", "我们", "不要", "不用", "别", "取消", "停", "算了", "继续", "讲", "聊", "好的", "好", "嗯", "“", "\""].iter().any(|p| text.starts_with(p) && !text.starts_with("我国"));
+        let public_title=text.starts_with("我的世界")&&!text.starts_with("我的世界观");
+        let unrelated = ["我", "你", "他", "她", "我们", "不要", "不用", "别", "取消", "停", "算了", "继续", "讲", "聊", "好的", "好", "嗯", "“", "\""].iter().any(|p| text.starts_with(p) && !text.starts_with("我国")&&!public_title);
         if previous.is_some_and(|(at,_)| now_ms.saturating_sub(at) <= 10_000) && !unrelated && text.chars().count() >= 2 {
             return task_query(text, previous.unwrap().1);
         }
         let quoted_or_conditional = ["如果", "假如", "例如", "比如", "‘", "'"].iter().any(|p| text.starts_with(p));
-        let question = ["吗", "什么", "为什么", "多少", "怎么", "哪里", "哪年", "何时"].iter().any(|p| text.contains(p));
+        let question = ["吗", "什么", "为什么", "多少", "怎么", "哪里", "哪年", "哪条", "哪个", "何时", "谁"].iter().any(|p| text.contains(p));
         if previous.is_none() && !unrelated && !quoted_or_conditional && question
             && (2..=128).contains(&text.chars().count())
             && !text.contains('查') && !text.contains('搜') {
@@ -208,6 +227,38 @@ impl DeliveryGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn r21_search_word_questions_are_chat_even_after_a_clarification() {
+        for text in ["查查是啥", "查查是什么", "搜索啥意思", "查一下是啥意思", "查询是干什么的", "小可，查查这个词啥意思？", "请帮我查一下是什么意思"] {
+            assert_eq!(intent(text),None,"{text}");
+            let mut router=QueryIntent::default();
+            router.route("帮我查一下",0);
+            assert_eq!(router.route(text,500),None,"{text}");
+            assert_eq!(router.route("恐龙",700),None,"an explanation must clear stale clarification");
+        }
+        for (text,query) in [("帮我查查光合作用是啥","光合作用是啥"),("搜索深空探测是干什么的","深空探测是干什么的"),("查查宝可梦主角是谁","宝可梦主角是谁")] {
+            assert_eq!(intent(text),Some(Intent::Search(query.into())),"{text}");
+        }
+    }
+    #[test]
+    fn r20_observed_resume_and_suffix_fragments_keep_the_search_route() {
+        for text in ["继续搜刚才的搜索结果", "继续刚才的搜索", "请继续刚才的查询"] {
+            assert_eq!(intent(text),Some(Intent::Resume),"{text}");
+        }
+        for text in ["继续搜索恐龙", "继续刚才的故事", "他说继续搜刚才的搜索结果", "不要继续刚才的搜索"] {
+            assert_eq!(intent(text),None,"{text}");
+        }
+        let mut router=QueryIntent::default();
+        assert_eq!(router.route("继续刚才的搜索",0),Some(Intent::Resume));
+        assert_eq!(router.route("结果",800),Some(Intent::Resume));
+        assert_eq!(router.route("结果",900),None);
+        assert_eq!(intent("羽毛球双打后发球线是哪条帮我查一查"),Some(Intent::Search("羽毛球双打后发球线是哪条".into())));
+        assert_eq!(router.route("羽毛球双打后发球线是哪条",1000),None);
+        assert_eq!(router.route("帮我查一下",1500),Some(Intent::Search("羽毛球双打后发球线是哪条".into())));
+        assert_eq!(intent("帮我查一下为什么会灭绝"),Some(Intent::Clarify));
+        router.route("帮我查一下",2000);
+        assert_eq!(router.route("我的世界基岩版最近正式更新了什么",2300),Some(Intent::Search("我的世界基岩版最近正式更新了什么".into())));
+    }
     #[test]
     fn r18_cancel_compound_survives_asr_space_between_clauses() {
         for text in ["不用查了 我们聊别的", "不用查了　我们聊小猫", "别查了 聊别的吧", "不用查了我们聊别的"] {
