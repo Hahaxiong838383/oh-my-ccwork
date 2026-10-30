@@ -1,5 +1,7 @@
 # P003 倾听模式：Android 端云联调合同 v1
 
+**2026-10-31发布补充：独立候选已部署、两SN范围已准备，倾听总闸关闭；待安卓候选包及真机联调。当前部署状态以[服务端部署回执](listening-20261030/P003_LISTENING_CANARY_SERVER_RECEIPT_20261031.md)为准，以下10月30日合同基线及JSON协议保持不变。**
+
 状态：2026-10-30语音优先接续。**Brain新语音协商/反馈授权已实现并隔离验证，Worker语音管线由39交付，Android尚需实现下面的自动控制流程；未部署、未开总闸、未验真机。** 09:50:48只发布管理后端，10:17:32发布顶部标签静态页。历史双方真实HTTP隔离对撞1项不等于本轮语音或真实Android/RTC通过。当前代码/合同SHA/证据与回滚见 [VOICE_ENTRY_RECEIPT.md](listening-20261030/VOICE_ENTRY_RECEIPT.md)。
 
 新语音扩展：control/HTTP仍version=1，mode合同voice_extension_revision=3（HTTP/fixtures扩展修订1）。精确JSON样例在根目录 `4-Assets/contracts/p003-listening-mode-v1.json` 的 `voice_examples`；不另造控制通道。日常进入、反馈、退出均以语音为目标，旧按钮仅兼容/调试，不是使用前提。

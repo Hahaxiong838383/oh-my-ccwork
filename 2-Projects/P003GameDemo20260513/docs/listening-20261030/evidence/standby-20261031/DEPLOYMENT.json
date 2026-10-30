@@ -1,0 +1,454 @@
+{
+  "observed_at": "2026-10-31T00:13:50+08:00",
+  "status": "deployed_standby_awaiting_android",
+  "brain_runtime_commit": "8732c25c",
+  "worker_build": {
+    "build_sha": "985eeedea59beeef01c7821370e086a99005a87a",
+    "binary_sha256": "29c84c8d3d508534faa9c4948b978521a41b5e7cd95cfbd2914324682b141421",
+    "bytes": 77894560
+  },
+  "main_config": {
+    "enabled": false,
+    "allowlist": [
+      "BJP00326070803800006",
+      "BJP00326060100100004"
+    ],
+    "scenes": [
+      "story",
+      "sharing",
+      "singing"
+    ],
+    "tuning": {
+      "max_session_sec": 1800,
+      "feedback_max_chars": 80,
+      "feedback_max_duration_sec": 12,
+      "feedback_cooldown_sec": 5,
+      "summary_interval_sec": 180,
+      "summary_trigger_chars": 6000,
+      "voice_invitation_enabled": true
+    },
+    "schema_version": 1,
+    "revision": 4
+  },
+  "main_runtime": {
+    "status": "evidence_ready",
+    "ready": true,
+    "effective_enabled": false,
+    "applied_revision": 4,
+    "active_sessions": 0,
+    "last_ack_at": 1793376506273,
+    "message": "已核准构建及配置应用确认；授权会话数不代表设备实听验收。",
+    "parameter_effect": "新进入使用参数快照；关闸、移出名单或禁用场景经短租约撤权。"
+  },
+  "main_payload": [
+    {
+      "target": "/opt/p003/server/src/index.ts",
+      "relative": "server/src/index.ts",
+      "before_sha256": "9fba6febc3941c0dd34a27a29be8059cac31aa872950cbf78f5baa7ccf5e0642",
+      "after_sha256": "e58e6e4bf8c48243c31c651893c62c921af7047e23f78d0e5127c91292c73d38",
+      "before_mode": "0o644",
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/index.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/device-session.ts",
+      "relative": "server/src/routes/device-session.ts",
+      "before_sha256": "7a6800e54f46c670abf5e80da4e6db729963ba5367527bb9050dc18d1d343747",
+      "after_sha256": "80909ac2d4c3dbaa0ff78cebf7d0e2a13d2f3d1c9af8bb4b2a873d199bbd7fdd",
+      "before_mode": "0o644",
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/routes/device-session.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/listening-admin.ts",
+      "relative": "server/src/routes/listening-admin.ts",
+      "before_sha256": "f8ff82e3853a27e1d7c9310fdc006fa027ba832f65cfc9f6edf51508b51e098e",
+      "after_sha256": "731efd1b9c7198bd06b9f74d62153a7e8297a0b7e0f58ecd045aab3f4461c00e",
+      "before_mode": "0o644",
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/routes/listening-admin.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/listening.ts",
+      "relative": "server/src/routes/listening.ts",
+      "before_sha256": null,
+      "after_sha256": "a268c9fd7521b6e404f099f963594081fc4d8a1f215c6e6b9a019da475f301ae",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/routes/listening.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-authority-store.ts",
+      "relative": "server/src/listening-authority-store.ts",
+      "before_sha256": null,
+      "after_sha256": "b3ad0514258e60a73ac472e92460733bf35b6e441ec0a6811dc848bf1ee8743f",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-authority-store.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-authority.ts",
+      "relative": "server/src/listening-authority.ts",
+      "before_sha256": null,
+      "after_sha256": "2c3509e5ca549c3adf361c382ce027565a9603f847ab19b2862a36141111fe34",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-authority.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-content.ts",
+      "relative": "server/src/listening-content.ts",
+      "before_sha256": null,
+      "after_sha256": "32bc94b8bcffd065a15b114a23a4b70fe8567b30f567f3cc948165510a70628a",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-content.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-grant.ts",
+      "relative": "server/src/listening-grant.ts",
+      "before_sha256": null,
+      "after_sha256": "5ed655ecaf996cf7772012f09b67a5679c48434c3901e91f0287771d272fb0e6",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-grant.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-http-contract.ts",
+      "relative": "server/src/listening-http-contract.ts",
+      "before_sha256": null,
+      "after_sha256": "e190d8ef1d1c567bf099184fc4972c48ecd1076d67f6f48c8408d14760f7fa6a",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-http-contract.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-runtime.ts",
+      "relative": "server/src/listening-runtime.ts",
+      "before_sha256": null,
+      "after_sha256": "d3ed750c365e08b6ce00dd93217e24cf3e64156223e5fcdb2f74bd84e21c194d",
+      "before_mode": null,
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-runtime.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-settings-store.ts",
+      "relative": "server/src/listening-settings-store.ts",
+      "before_sha256": "b1bcd7c89c287c97ff0bb39d3734e849e66987ad490437c0b13a51a831f671d6",
+      "after_sha256": "ff7e93870450e476ff4fa4b5ce0226605fcbca3e0700a666b44eb78c05d5778f",
+      "before_mode": "0o644",
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-settings-store.ts"
+    },
+    {
+      "target": "/opt/p003/server/src/listening-settings.ts",
+      "relative": "server/src/listening-settings.ts",
+      "before_sha256": "5ea587724afd9b49e4e1ae4616d97ebd1d1e60a43bea5939e7368d9902c7e6ce",
+      "after_sha256": "a48e2da1d9d653180b61d2c1232d014bb91d0bb82bbab5d2cdafd8b7c693a290",
+      "before_mode": "0o644",
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/server/src/listening-settings.ts"
+    },
+    {
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "relative": "web/dist/admin/index.html",
+      "before_sha256": "b508f9b2fe3278d8699e2a7b9e299e167f8795de74fad23c3eac17570ad56b4d",
+      "after_sha256": "2b867756ca13fc52b0b83c56b822aa826dcdebe73fd505bbba810f4be16742e7",
+      "before_mode": "0o644",
+      "after_mode": "0o644",
+      "source": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html"
+    },
+    {
+      "target": "/opt/p003/server/src/search-canary-policy.ts",
+      "before_sha256": "ed47ebd021e7a0b2a9170f3baa80ba9d51037afed9f07aa2ea2f397a663fab23",
+      "after_sha256": "9e6527eb3e9323e048bb82178747f5e76fa05293041affe150b5e52f2ed3e5b4",
+      "before_mode": "0o644",
+      "after_mode": "0o644"
+    },
+    {
+      "target": "/opt/p003/server/src/search-canary-runtime.ts",
+      "before_sha256": "39e86ff3809fe4406760ec204cad62e9a4158849710caf8f9285d27565563e89",
+      "after_sha256": "c2fe1e8708786caf26bffe04292f826782ff7af9715398e947c7f202000bbf31",
+      "before_mode": "0o644",
+      "after_mode": "0o644"
+    }
+  ],
+  "main_services": {
+    "p003-search-brain": [
+      "MainPID=3151603",
+      "NRestarts=0",
+      "ActiveState=active"
+    ],
+    "p003-listening-brain": [
+      "MainPID=3295432",
+      "NRestarts=0",
+      "ActiveState=active"
+    ]
+  },
+  "pm2": [
+    {
+      "name": "p003-voice",
+      "pid": 3296061,
+      "restarts": 41,
+      "status": "online"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 3192914,
+      "restarts": 5,
+      "status": "online"
+    }
+  ],
+  "old_search_flags_unchanged": true,
+  "signer_selection": [
+    {
+      "suffix": "03800006",
+      "agent": "p003-search-canary-20261021",
+      "canary": true,
+      "reason": "selected",
+      "leaseRemainingMs": 10730,
+      "leaseAgeMs": 4270,
+      "leaseJobs": 0,
+      "leaseMaxJobs": 2,
+      "leaseRegistered": true,
+      "expiresAtMs": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    {
+      "suffix": "00100004",
+      "agent": "p003-search-canary-20261021",
+      "canary": true,
+      "reason": "selected",
+      "leaseRemainingMs": 10730,
+      "leaseAgeMs": 4270,
+      "leaseJobs": 0,
+      "leaseMaxJobs": 2,
+      "leaseRegistered": true,
+      "expiresAtMs": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    {
+      "suffix": "99999999",
+      "agent": "rust-worker",
+      "canary": false,
+      "reason": "not_target",
+      "leaseRemainingMs": 10730,
+      "leaseAgeMs": 4270,
+      "leaseJobs": 0,
+      "leaseMaxJobs": 2,
+      "leaseRegistered": true,
+      "expiresAtMs": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    }
+  ],
+  "unauthorized_checks": {
+    "unauth_worker-ready": 401,
+    "unauth_lease": 401,
+    "unauth_close": 401,
+    "unauth_summary": 401,
+    "unauth_feedback": 401
+  },
+  "health": {
+    "health_3001": {
+      "http": 200,
+      "status": "ok",
+      "agent": null
+    },
+    "health_3007": {
+      "http": 200,
+      "status": "ok",
+      "agent": "p003-search-canary-20261021"
+    },
+    "health_3008": {
+      "http": 200,
+      "status": "ok",
+      "agent": "p003-search-listening-20261030"
+    }
+  },
+  "worker": {
+    "at_ms": 1793376510870,
+    "window": {
+      "enabled": false,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1793589540000,
+      "generation": "listening-prepared-20261030"
+    },
+    "health": {
+      "agent": "p003-search-listening-20261030",
+      "at_ms": 1793376510499,
+      "cleanup": {
+        "at_ms": 1793376510438,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "listening-prepared-20261030",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "services": {
+      "p003-search-worker": {
+        "pid": 1652015,
+        "sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+        "restarts": "0"
+      },
+      "voice-worker-rust": {
+        "pid": 1546073,
+        "sha256": "a00744bfb55478e9d549d19f8712e643e2d9234901aa81e3cb93855c4b5ceb2d",
+        "restarts": "0"
+      },
+      "p003-listening-worker": {
+        "pid": 1711812,
+        "sha256": "29c84c8d3d508534faa9c4948b978521a41b5e7cd95cfbd2914324682b141421",
+        "restarts": "0"
+      }
+    },
+    "old_window_sha256": "ca222d61d796576b1fdeb73d2d2e180e704c4b369e6262bc07c4cdc28ccb1331",
+    "candidate_errors": ""
+  },
+  "worker_unit": {
+    "candidate_pid": 1711812,
+    "resolver_budget_preserved": true,
+    "text_audit": {
+      "ok": true,
+      "escaped_text_keys": [],
+      "checked_keys": [
+        "AGENT_GREETING",
+        "AGENT_INSTRUCTIONS",
+        "BACKCHANNEL_HOTWORDS",
+        "EXIT_SWALLOW_HOTWORDS",
+        "INTERRUPT_HOTWORDS",
+        "P003_DEVICE_ASR_HOTWORDS",
+        "VOLC_ASR_HOTWORDS"
+      ]
+    },
+    "audit_sha256": "d06773db5b46c0d22a74f6d978838373bf59ca4ca96cf376a19ef2263b04e133",
+    "binary_sha256": "29c84c8d3d508534faa9c4948b978521a41b5e7cd95cfbd2914324682b141421"
+  },
+  "provider_smoke": {
+    "exit": 0,
+    "results": [
+      {
+        "purpose": "listening_summary",
+        "ok": true,
+        "chars": 12,
+        "elapsed_ms": 1479
+      },
+      {
+        "purpose": "listening_feedback",
+        "ok": true,
+        "chars": 10,
+        "elapsed_ms": 1448
+      }
+    ]
+  },
+  "candidate_smoke": {
+    "chat": {
+      "http": 200,
+      "nonempty": true,
+      "chars": 5
+    },
+    "unauthorized_http": 401,
+    "search_submit_http": 202,
+    "search_task_id": "1fbb7ddd-85d2-4101-86a6-b98ba49c6e4e",
+    "search_final": {
+      "http": 200,
+      "status": "ready",
+      "has_result": true,
+      "error": null
+    },
+    "search_diagnostics": {
+      "returned": 10,
+      "accepted": 3,
+      "rejected_schema": 0,
+      "rejected_url": 0,
+      "rejected_text": 0,
+      "rejected_date": 0,
+      "duplicate": 0,
+      "outcome": "evidence",
+      "answer_rewrites": 1,
+      "evidence_claims": 1,
+      "mode": "p2",
+      "tool_calls": [
+        {
+          "name": "search_web",
+          "outcome": "succeeded"
+        }
+      ]
+    },
+    "search_failure": null,
+    "cancel_http": 200,
+    "close_http": 200
+  },
+  "joint_tests": {
+    "sha256": "9e6e8577243426d920aadc1113638b2e50f0eb87bda01fb837dc9bb456d03625",
+    "test_results": [
+      "test listening_adapter::http_joint_tests::listening_joint_real_brain_http_voice_singing_uses_negotiated_trigger_and_exit ... ok",
+      "test listening_adapter::http_joint_tests::listening_joint_real_brain_http_entry_feedback_and_revocation ... ok",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 539 filtered out; finished in 0.30s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s"
+    ]
+  },
+  "rollback_preflight": {
+    "rollback_preflight": true,
+    "files": 15,
+    "config_revision": 4,
+    "would_restore_legacy_shape_at_new_revision": 5
+  },
+  "rollback_rehearsal": {
+    "restored_exact_bytes": true,
+    "payload_files": 15,
+    "original_files_preserved": 152,
+    "database_restore": false
+  },
+  "rust_passed": 581,
+  "joint_passed": 2,
+  "python_passed": 19,
+  "brain_suites": [
+    {
+      "name": "search-canary-policy",
+      "exit": 0
+    },
+    {
+      "name": "search-canary-runtime",
+      "exit": 0
+    },
+    {
+      "name": "search-canary-isolation",
+      "exit": 0
+    },
+    {
+      "name": "search-canary-process",
+      "exit": 0
+    },
+    {
+      "name": "device-session",
+      "exit": 0
+    },
+    {
+      "name": "listening-authority",
+      "exit": 0
+    },
+    {
+      "name": "listening-integration",
+      "exit": 0
+    },
+    {
+      "name": "listening-admin",
+      "exit": 0
+    },
+    {
+      "name": "listening-canary-profile",
+      "exit": 0
+    }
+  ],
+  "android_device_verified": false,
+  "new_release_real_rtc_verified": false,
+  "fetch_page_exercised": false
+}
