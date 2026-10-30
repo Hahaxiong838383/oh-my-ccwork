@@ -386,6 +386,31 @@
     .kh-nav button.on { background: #E3F0FD; color: #3B7A99; }
     .kh-nav .kh-back { margin-top: auto; border: 1px solid #E4E9EF; background: #F6F8FA; color: #3B7A99; }
     .kh-main { flex: 1; min-width: 0; padding: 20px; overflow: auto; }
+    /* Worker Brain page-local navigation. Hidden panels stay mounted to retain drafts. */
+    .brain-page { flex:1; min-width:0; padding:0 20px 20px; overflow-y:auto; }
+    .brain-topbar { position:sticky; top:0; z-index:20; background:#F8FAFC; margin:0 -20px; padding:20px 20px 0; border-bottom:1px solid #DDE5ED; }
+    .brain-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+    .brain-heading .kh-sub { margin-bottom:14px; }
+    .brain-section-tabs { display:flex; gap:24px; overflow-x:auto; scrollbar-width:thin; }
+    .brain-section-tabs button { position:relative; flex:none; padding:12px 0; border:0; border-bottom:3px solid transparent; background:transparent; color:#536273; font:inherit; font-size:14px; cursor:pointer; white-space:nowrap; }
+    .brain-section-tabs button:hover { color:#2563A5; }
+    .brain-section-tabs button.active { color:#2563A5; border-bottom-color:#2563A5; font-weight:600; }
+    .brain-section-tabs button:focus-visible { outline:2px solid #2563A5; outline-offset:-2px; border-radius:3px; }
+    .brain-section-panel { padding-top:20px; }
+    .brain-section-panel:focus-visible { outline:2px solid #2563A5; outline-offset:3px; }
+    .brain-unsaved { display:inline-block; width:6px; height:6px; margin-left:6px; vertical-align:middle; border-radius:50%; background:#B8741A; }
+    .brain-device-layout { display:flex; gap:16px; align-items:flex-start; }
+    .brain-device-list { width:250px; flex-shrink:0; padding:10px; max-height:calc(100vh - 260px); overflow-y:auto; }
+    .brain-device-empty { padding:40px 24px; text-align:center; color:#536273; }
+    .brain-device-empty h3 { margin:0 0 12px; color:#243746; font-size:16px; }
+    .brain-device-empty p { margin:0; font-size:13px; line-height:1.8; }
+    @media(max-width:1050px) {
+      .brain-page { padding:0 12px 16px; }
+      .brain-topbar { margin:0 -12px; padding:16px 12px 0; }
+      .brain-section-tabs { gap:20px; }
+      .brain-device-layout { flex-direction:column; align-items:stretch; }
+      .brain-device-list { width:auto; max-height:220px; }
+    }
     .kh-h1 { font-size: 18px; font-weight: 700; color: #1F2933; }
     .kh-sub { font-size: 12.5px; color: #6B7785; margin: 4px 0 16px; }
     .kh-card { background: #fff; border-radius: 12px; border: 1px solid #E4E9EF; box-shadow: 0 1px 3px rgba(31,41,51,.06); }
@@ -2467,136 +2492,24 @@
                     </template>
                   </el-dialog>
                 </div>
-                <!-- Worker Brain（每台设备的 prompt/记忆管理，仅 admin） -->
-                <div v-if="khNav==='brain' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
-                    <div>
-                      <div class="kh-h1">Worker Brain</div>
-                      <div class="kh-sub">每台接入设备的小可大脑 —— 画像 / 五类记忆 / System Prompt。数据与体验台同源（账号维度），此处是设备视角入口</div>
+                <!-- Worker Brain: independent global sections, device detail tabs stay scoped to the selected device -->
+                <div id="worker-brain" v-if="khNav==='brain' && canManageInvites" class="brain-page">
+                  <header class="brain-topbar">
+                    <div class="brain-heading">
+                      <div><div class="kh-h1">Worker Brain</div><div class="kh-sub">按功能管理小可大脑 · 全局设置与设备数据分开查看</div></div>
+                      <el-button size="small" :loading="brainSectionLoading" @click="refreshBrainTab">刷新当前模块</el-button>
                     </div>
-                    <el-button size="small" :loading="brainState.loading" @click="refreshBrainTab">刷新</el-button>
-                  </div>
-                  <!-- listening-control-card:start -->
-                  <section id="listening-control-card" class="kh-card" style="padding:18px;margin-bottom:16px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-                      <div><h3 style="margin:0 0 6px">倾听模式</h3><div class="kh-sub">全局策略与设备名单 · 讲故事、分享、唱歌时先听，再由用户邀请回应</div></div>
-                      <el-button size="small" :loading="listeningPanel.loading" :disabled="listeningPanel.saving" @click="reloadListeningConfig">重新载入</el-button>
-                    </div>
-                    <el-alert v-if="listeningPanel.error" :title="listeningPanel.error" type="error" :closable="false" style="margin-top:12px"></el-alert>
-                    <div v-if="listeningPanel.loading && !listeningPanel.data" style="padding:18px;color:#6B7785">正在读取倾听配置…</div>
-                    <template v-if="listeningPanel.data && listeningPanel.draft">
-                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0">
-                        <el-tag :type="listeningPanel.data.runtime.ready ? 'success' : 'warning'">{{ listeningPanel.data.runtime.ready ? '运行链路已就绪' : '运行链路未就绪' }}</el-tag>
-                        <span>已保存 v{{ listeningPanel.data.config.revision }}</span>
-                        <span>已应用版本：{{ listeningPanel.data.runtime.applied_revision === null ? '尚未确认' : 'v' + listeningPanel.data.runtime.applied_revision }}</span>
-                        <span>倾听中会话：{{ listeningPanel.data.runtime.active_sessions === null ? '暂无运行数据' : listeningPanel.data.runtime.active_sessions }}</span>
-                        <span v-if="listeningPanel.dirty" style="color:#B8741A">有未保存修改</span>
-                      </div>
-                      <el-alert :title="listeningPanel.data.runtime.message" :type="listeningPanel.data.runtime.ready ? 'info' : 'warning'" :closable="false" style="margin-bottom:14px"></el-alert>
-                      <fieldset :disabled="listeningPanel.loading || listeningPanel.saving" style="border:0;padding:0;margin:0">
-                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
-                          <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="listening-enabled" type="checkbox" v-model="listeningPanel.draft.enabled" :disabled="!listeningPanel.data.runtime.ready" @change="markListeningDirty">倾听总闸</label>
-                          <span class="kh-sub">{{ listeningPanel.data.config.enabled ? '已保存开启请求' : '已保存关闭' }} · 实际运行 {{ listeningPanel.data.runtime.effective_enabled ? '已启用' : '未启用' }}</span>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
-                          <div>
-                            <label for="listening-allowlist" style="display:block;font-weight:600;margin-bottom:8px">目标设备名单</label>
-                            <textarea id="listening-allowlist" v-model="listeningPanel.allowlistText" @input="markListeningDirty" rows="3" placeholder="每行一个完整 MCU SN，例如 BJP00326070803800006" style="box-sizing:border-box;width:100%;padding:10px;border:1px solid #D5DEE7;border-radius:6px;font:13px monospace;resize:vertical"></textarea>
-                            <div class="kh-sub">空名单不授权任何设备；不接受末8位、ADB序号或通配符。</div>
-                          </div>
-                          <div>
-                            <div style="font-weight:600;margin-bottom:10px">允许的场景</div>
-                            <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
-                              <label v-for="scene in listeningSceneOptions" :key="scene.value"><input type="checkbox" :value="scene.value" v-model="listeningPanel.draft.scenes" @change="markListeningDirty"> {{ scene.label }}</label>
-                            </div>
-                            <label><input id="listening-voice-invitation" type="checkbox" v-model="listeningPanel.draft.tuning.voice_invitation_enabled" @change="markListeningDirty"> 故事 / 分享允许明确的语音邀请</label>
-                            <div class="kh-sub" style="margin-top:6px">关闭后只用按钮请求反馈。唱歌始终使用按钮；歌词疑问句不触发回复。</div>
-                          </div>
-                        </div>
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
-                          <div v-for="field in listeningPanel.data.fields" :key="field.key">
-                            <label :for="'listening-'+field.key" style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">{{ field.label }}</label>
-                            <div style="display:flex;align-items:center;gap:8px"><input :id="'listening-'+field.key" type="number" v-model.number="listeningPanel.draft.tuning[field.key]" :min="field.min" :max="field.max" step="1" @input="markListeningDirty" style="width:110px;padding:8px;border:1px solid #D5DEE7;border-radius:6px;font-size:14px"><span>{{ field.unit }}</span><small style="color:#80909F">{{ field.min }}–{{ field.max }}</small></div>
-                            <div class="kh-sub" style="margin-top:6px">{{ field.hint }}</div>
-                          </div>
-                        </div>
-                      </fieldset>
-                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px">
-                        <el-button type="primary" :loading="listeningPanel.saving" :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.dirty" @click="saveListeningConfig">保存倾听配置</el-button>
-                        <el-button type="danger" plain :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.data.config.enabled" @click="disableListeningMode">关闭总闸</el-button>
-                        <span class="kh-sub">{{ listeningPanel.data.updated_by ? '最近保存：' + listeningPanel.data.updated_by + ' · ' + listeningTime(listeningPanel.data.updated_at) : '尚无保存记录，当前为默认参数' }}</span>
-                      </div>
-                      <div class="kh-sub" style="margin-top:10px">{{ listeningPanel.data.runtime.parameter_effect }}</div>
-                      <details style="margin-top:18px;border-top:1px solid #EDF0F4;padding-top:12px">
-                        <summary style="cursor:pointer;font-weight:600">固定边界与配置历史</summary>
-                        <p class="kh-sub">每帧校验发言许可；一次反馈后回倾听；不播放附和音；不自动写长期画像。租约15秒、每5秒刷新；会话原文/近期/摘要上限12000/4000/1200字。</p>
-                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
-                          <label for="listening-restore-revision">恢复参数版本</label>
-                          <select id="listening-restore-revision" v-model.number="listeningPanel.restoreRevision" :disabled="listeningPanel.saving || listeningPanel.loading" style="padding:7px;border:1px solid #D5DEE7;border-radius:6px"><option value="">请选择</option><option :value="1">v1 · 默认参数</option><option v-for="row in listeningPanel.data.history.filter(function(r){return r.revision !== listeningPanel.data.config.revision;})" :key="row.revision" :value="row.revision">v{{ row.revision }} · {{ row.actor }} · {{ listeningTime(row.at) }}</option></select>
-                          <el-button size="small" :disabled="!listeningPanel.restoreRevision || listeningPanel.saving || listeningPanel.loading" @click="restoreListeningConfig">恢复为新版本</el-button>
-                          <span class="kh-sub">恢复后总闸保持关闭，当前配置与历史记录均保留。</span>
-                        </div>
-                        <table style="width:100%;font-size:12px;border-collapse:collapse;text-align:left"><thead><tr><th>版本</th><th>操作</th><th>操作人</th><th>时间</th></tr></thead><tbody><tr v-for="row in listeningPanel.data.history" :key="row.revision"><td style="padding:7px 0">v{{ row.revision }}</td><td>{{ {save:'保存',disable:'关闭总闸',restore:'恢复参数'}[row.operation] || row.operation }}</td><td>{{ row.actor }}</td><td>{{ listeningTime(row.at) }}</td></tr><tr v-if="!listeningPanel.data.history.length"><td colspan="4" style="padding-top:10px;color:#80909F">暂无修改历史</td></tr></tbody></table>
-                      </details>
-                    </template>
-                  </section>
-                  <!-- listening-control-card:end -->
-                  <!-- 记忆抽取 LLM 配置（全局，2026-08-19）：抽取通道曾钉死 env 静默全灭数周——此卡统一管理，写入即热生效零重启 -->
-                  <div class="kh-card" style="padding:10px 16px;margin-bottom:14px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" @click="extractLlm.open = !extractLlm.open">
-                      <div style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                        <span style="font-weight:700">🔌 记忆抽取 LLM</span>
-                        <template v-if="extractLlm.live">
-                          <el-tag size="small" :type="extractLlm.live.source==='admin' ? 'warning' : 'info'">{{ extractLlm.live.source==='admin' ? '后台配置' : '跟随主对话(env)' }}</el-tag>
-                          <span style="font-family:monospace;font-size:12px;color:#5B6B7B">{{ extractLlm.live.provider }} · {{ extractLlm.live.model }}</span>
-                          <el-tag size="small" :type="extractLlm.live.key_configured ? 'success' : 'danger'" effect="plain">{{ extractLlm.live.key_configured ? 'key 已配 ' + extractLlm.live.api_key_masked : 'key 缺失' }}</el-tag>
-                        </template>
-                      </div>
-                      <el-button size="small" link type="primary">{{ extractLlm.open ? '收起' : '展开配置' }}</el-button>
-                    </div>
-                    <div v-if="extractLlm.open" style="margin-top:12px;padding-top:12px;border-top:1px dashed #E4E9EF">
-                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-                        <el-select v-model="extractLlm.cfg.provider" size="small" style="width:170px">
-                          <el-option label="跟随主对话（env）" value="inherit"></el-option>
-                          <el-option label="DeepSeek 直连" value="deepseek"></el-option>
-                          <el-option label="MiniMax" value="minimax"></el-option>
-                          <el-option label="Gemini 代理" value="gemini-proxy"></el-option>
-                          <el-option label="火山方舟 doubao" value="volc-ark"></el-option>
-                        </el-select>
-                        <el-input v-model="extractLlm.cfg.model" size="small" placeholder="model（空=该渠道默认）" style="width:220px"></el-input>
-                        <el-input v-model="extractLlm.cfg.base_url" size="small" placeholder="base_url（空=该渠道默认）" style="width:280px"></el-input>
-                        <el-input v-model="extractLlm.cfg.api_key" size="small" type="password" show-password :placeholder="extractLlm.masked ? '已配置 ' + extractLlm.masked + '（留空保持）' : 'API Key（空=用 env 里该渠道的 key）'" style="width:250px"></el-input>
-                      </div>
-                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                        <el-button size="small" type="primary" :loading="extractLlm.loading" @click="saveExtractLlm">保存（立即生效）</el-button>
-                        <el-button size="small" :loading="extractLlm.testing" @click="testExtractLlm">测试连通</el-button>
-                        <span v-if="extractLlm.testResult" :style="{fontSize:'12px', fontWeight:600, color: extractLlm.testResult.reachable ? '#10B981' : '#E45649'}">
-                          {{ extractLlm.testResult.reachable ? '✓ 连通' : '✗ 不通' }} · {{ extractLlm.testResult.provider }}/{{ extractLlm.testResult.model }} · {{ extractLlm.testResult.ms }}ms<template v-if="extractLlm.testResult.sample"> · {{ extractLlm.testResult.sample.slice(0, 40) }}</template>
-                        </span>
-                        <span style="font-size:12px;color:#909399;margin-left:auto">影响：情景记忆/画像/昵称引导三条抽取链；不影响主对话。改完点「测试连通」验一下</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div style="display:flex;gap:16px;align-items:flex-start">
-                    <!-- 左：设备列表 -->
-                    <div class="kh-card" style="width:250px;flex-shrink:0;padding:10px">
-                      <div @click="brainState.selectedSn=''; loadOverview()"
-                           :style="{padding:'10px 8px', borderRadius:'8px', cursor:'pointer', marginBottom:'8px', fontWeight:700, fontSize:'13px', background: !brainState.selectedSn ? '#EFF6FF' : 'transparent', border: !brainState.selectedSn ? '1px solid #BFDBFE' : '1px solid #F2F5F8'}">🌐 全局隔离总览</div>
-                      <div style="font-size:12px;font-weight:700;color:#6B7785;padding:4px 8px 8px">台账设备（{{ deviceData.devices.length }}）</div>
-                      <div v-for="d in deviceData.devices" :key="d.sn" @click="selectBrainDevice(d.sn)"
-                           :style="{padding:'10px 8px', borderRadius:'8px', cursor:'pointer', marginBottom:'4px', background: brainState.selectedSn===d.sn ? '#EFF6FF' : 'transparent', border: brainState.selectedSn===d.sn ? '1px solid #BFDBFE' : '1px solid transparent'}">
-                        <div style="font-family:monospace;font-size:12px;font-weight:700">…{{ d.sn.slice(-8) }}</div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-                          <span style="font-size:12px;color:#6B7785">{{ d.note || '无备注' }}</span>
-                          <el-tag size="small" :type="d.account_id ? 'success' : 'info'">{{ d.account_id ? 'brain 已开通' : '未开通' }}</el-tag>
-                        </div>
-                      </div>
-                      <div v-if="!deviceData.devices.length" style="padding:12px;font-size:12px;color:#909399">台账为空——先在「设备接入」添加设备</div>
-                    </div>
-                    <!-- 右：brain 面板 -->
-                    <div style="flex:1;min-width:0">
-                      <!-- ═══ 全局隔离总览（2026-08-19）：未选设备 = 全租户对账视图；选设备 = 单台白盒。不变量原则：0 violations 必须配非零 checked 锚 ═══ -->
-                      <template v-if="!brainState.selectedSn">
+                    <nav class="brain-section-tabs" role="tablist" aria-label="Worker Brain 功能模块">
+                      <button v-for="section in brainSections" :key="section.key" :id="'brain-tab-' + section.key" type="button" role="tab"
+                        :aria-selected="brainSection === section.key" :aria-controls="'brain-panel-' + section.key"
+                        :tabindex="brainSection === section.key ? 0 : -1" :class="{active: brainSection === section.key}"
+                        @click="selectBrainSection(section.key)" @keydown="onBrainTabKey($event, section.key)">
+                        {{ section.label }}<span v-if="section.key==='listening' && listeningPanel.dirty" class="brain-unsaved" aria-label="有未保存修改"></span>
+                      </button>
+                    </nav>
+                  </header>
+                  <section id="brain-panel-overview" class="brain-section-panel" v-show="brainSection==='overview'" role="tabpanel" aria-labelledby="brain-tab-overview" tabindex="0">
+
                         <div v-if="brainState.overviewLoading" class="kh-card" style="padding:40px;text-align:center;color:#909399;font-size:13px">正在对全部租户跑隔离自检…</div>
                         <div v-if="!brainState.overviewLoading && !brainState.overview" class="kh-card" style="padding:40px;text-align:center;color:#909399">
                           <div style="margin-bottom:10px">🌐 全局隔离总览</div>
@@ -2617,7 +2530,7 @@
                               <span>系统账号 <b style="font-size:18px;color:#3B7A99">{{ brainState.overview.accounts_total }}</b></span>
                               <span>24h 签发 <b style="font-size:18px;color:#3DBE78">{{ brainState.overview.traffic_24h.ok }}</b> <span style="color:#909399;font-size:12px">拒绝 {{ brainState.overview.traffic_24h.rejected_403 + brainState.overview.traffic_24h.rejected_429 }} · 预热 {{ brainState.overview.traffic_24h.prefetch }}</span></span>
                             </div>
-                            <div style="font-size:12px;color:#6B7785;margin-top:8px">选左侧任一设备可下钻单台隔离白盒（五跳链 + 配置矩阵）；本页是全租户对账视角。</div>
+                            <div style="font-size:12px;color:#6B7785;margin-top:8px">点击下方租户行可进入「设备与记忆」查看单台隔离白盒；本页展示全部租户。</div>
                           </div>
 
                           <!-- 隔离架构图：五层泳道 + 隔离键流转（静态代码事实，动态数据在下方各卡） -->
@@ -2832,7 +2745,28 @@
                             </div>
                           </div>
                         </template>
-                      </template>
+
+                  </section>
+                  <section id="brain-panel-devices" class="brain-section-panel" v-show="brainSection==='devices'" role="tabpanel" aria-labelledby="brain-tab-devices" tabindex="0">
+                  <div class="brain-device-layout">
+                    <!-- 左：设备列表 -->
+                    <div class="kh-card brain-device-list">
+                      <div style="font-size:12px;font-weight:700;color:#6B7785;padding:4px 8px 8px">台账设备（{{ deviceData.devices.length }}）</div>
+                      <div v-for="d in deviceData.devices" :key="d.sn" @click="selectBrainDevice(d.sn)"
+                           :style="{padding:'10px 8px', borderRadius:'8px', cursor:'pointer', marginBottom:'4px', background: brainState.selectedSn===d.sn ? '#EFF6FF' : 'transparent', border: brainState.selectedSn===d.sn ? '1px solid #BFDBFE' : '1px solid transparent'}">
+                        <div style="font-family:monospace;font-size:12px;font-weight:700">…{{ d.sn.slice(-8) }}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                          <span style="font-size:12px;color:#6B7785">{{ d.note || '无备注' }}</span>
+                          <el-tag size="small" :type="d.account_id ? 'success' : 'info'">{{ d.account_id ? 'brain 已开通' : '未开通' }}</el-tag>
+                        </div>
+                      </div>
+                      <div v-if="!deviceData.devices.length" style="padding:12px;font-size:12px;color:#909399">台账为空——先在「设备接入」添加设备</div>
+                    </div>
+                    <!-- 右：brain 面板 -->
+                    <div style="flex:1;min-width:0">
+                      <div v-if="!brainState.selectedSn" class="kh-card brain-device-empty">
+                        <h3>选择一台设备</h3><p>从设备列表进入，查看这台小可的记忆、人格成长、聊天记录和提示词配置。</p>
+                      </div>
                       <template v-else>
                         <div v-if="!brainState.view || !brainState.view.bound" class="kh-card" style="padding:32px;text-align:center">
                           <div style="font-size:15px;font-weight:700;margin-bottom:8px">该设备尚未开通 brain</div>
@@ -2868,7 +2802,7 @@
                             </div>
                           </div>
                           <!-- 三 sub-tab（复刻体验台 PROMPT 工作区）：编辑 / 拼接可视化 / 小可的记忆 -->
-                          <div class="kh-card" style="padding:8px 12px;margin-bottom:14px;display:flex;gap:6px;align-items:center">
+                          <div class="kh-card" style="padding:8px 12px;margin-bottom:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                             <span style="font-size:11px;letter-spacing:1px;color:#909399;margin-right:6px">PROMPT 工作区</span>
                             <el-button size="small" :type="brainState.subTab==='editor' ? 'primary' : ''" @click="brainState.subTab='editor'">📝 编辑</el-button>
                             <el-button size="small" :type="brainState.subTab==='visual' ? 'primary' : ''" @click="brainState.subTab='visual'">🔬 拼接可视化</el-button>
@@ -3471,6 +3405,114 @@
                   </div>
                   <!-- brain_token 分发已取消（2026-08-20）：多设备架构下身份由房名 SN 自动路由，
                        开通即接入零配置；worker 通行证续签走 scripts/sign-worker-token.ts -->
+
+                  </section>
+                  <section id="brain-panel-listening" class="brain-section-panel" v-show="brainSection==='listening'" role="tabpanel" aria-labelledby="brain-tab-listening" tabindex="0">
+                  <!-- listening-control-card:start -->
+                  <section id="listening-control-card" class="kh-card" style="padding:18px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                      <div><h3 style="margin:0 0 6px">倾听模式</h3><div class="kh-sub">全局策略与设备名单 · 讲故事、分享、唱歌时先听，再由用户邀请回应</div></div>
+                      <el-button size="small" :loading="listeningPanel.loading" :disabled="listeningPanel.saving" @click="reloadListeningConfig">重新载入</el-button>
+                    </div>
+                    <el-alert v-if="listeningPanel.error" :title="listeningPanel.error" type="error" :closable="false" style="margin-top:12px"></el-alert>
+                    <div v-if="listeningPanel.loading && !listeningPanel.data" style="padding:18px;color:#6B7785">正在读取倾听配置…</div>
+                    <template v-if="listeningPanel.data && listeningPanel.draft">
+                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0">
+                        <el-tag :type="listeningPanel.data.runtime.ready ? 'success' : 'warning'">{{ listeningPanel.data.runtime.ready ? '运行链路已就绪' : '运行链路未就绪' }}</el-tag>
+                        <span>已保存 v{{ listeningPanel.data.config.revision }}</span>
+                        <span>已应用版本：{{ listeningPanel.data.runtime.applied_revision === null ? '尚未确认' : 'v' + listeningPanel.data.runtime.applied_revision }}</span>
+                        <span>倾听中会话：{{ listeningPanel.data.runtime.active_sessions === null ? '暂无运行数据' : listeningPanel.data.runtime.active_sessions }}</span>
+                        <span v-if="listeningPanel.dirty" style="color:#B8741A">有未保存修改</span>
+                      </div>
+                      <el-alert :title="listeningPanel.data.runtime.message" :type="listeningPanel.data.runtime.ready ? 'info' : 'warning'" :closable="false" style="margin-bottom:14px"></el-alert>
+                      <fieldset :disabled="listeningPanel.loading || listeningPanel.saving" style="border:0;padding:0;margin:0">
+                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+                          <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="listening-enabled" type="checkbox" v-model="listeningPanel.draft.enabled" :disabled="!listeningPanel.data.runtime.ready" @change="markListeningDirty">倾听总闸</label>
+                          <span class="kh-sub">{{ listeningPanel.data.config.enabled ? '已保存开启请求' : '已保存关闭' }} · 实际运行 {{ listeningPanel.data.runtime.effective_enabled ? '已启用' : '未启用' }}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
+                          <div>
+                            <label for="listening-allowlist" style="display:block;font-weight:600;margin-bottom:8px">目标设备名单</label>
+                            <textarea id="listening-allowlist" v-model="listeningPanel.allowlistText" @input="markListeningDirty" rows="3" placeholder="每行一个完整 MCU SN，例如 BJP00326070803800006" style="box-sizing:border-box;width:100%;padding:10px;border:1px solid #D5DEE7;border-radius:6px;font:13px monospace;resize:vertical"></textarea>
+                            <div class="kh-sub">空名单不授权任何设备；不接受末8位、ADB序号或通配符。</div>
+                          </div>
+                          <div>
+                            <div style="font-weight:600;margin-bottom:10px">允许的场景</div>
+                            <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+                              <label v-for="scene in listeningSceneOptions" :key="scene.value"><input type="checkbox" :value="scene.value" v-model="listeningPanel.draft.scenes" @change="markListeningDirty"> {{ scene.label }}</label>
+                            </div>
+                            <label><input id="listening-voice-invitation" type="checkbox" v-model="listeningPanel.draft.tuning.voice_invitation_enabled" @change="markListeningDirty"> 故事 / 分享允许明确的语音邀请</label>
+                            <div class="kh-sub" style="margin-top:6px">关闭后只用按钮请求反馈。唱歌始终使用按钮；歌词疑问句不触发回复。</div>
+                          </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+                          <div v-for="field in listeningPanel.data.fields" :key="field.key">
+                            <label :for="'listening-'+field.key" style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">{{ field.label }}</label>
+                            <div style="display:flex;align-items:center;gap:8px"><input :id="'listening-'+field.key" type="number" v-model.number="listeningPanel.draft.tuning[field.key]" :min="field.min" :max="field.max" step="1" @input="markListeningDirty" style="width:110px;padding:8px;border:1px solid #D5DEE7;border-radius:6px;font-size:14px"><span>{{ field.unit }}</span><small style="color:#80909F">{{ field.min }}–{{ field.max }}</small></div>
+                            <div class="kh-sub" style="margin-top:6px">{{ field.hint }}</div>
+                          </div>
+                        </div>
+                      </fieldset>
+                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px">
+                        <el-button type="primary" :loading="listeningPanel.saving" :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.dirty" @click="saveListeningConfig">保存倾听配置</el-button>
+                        <el-button type="danger" plain :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.data.config.enabled" @click="disableListeningMode">关闭总闸</el-button>
+                        <span class="kh-sub">{{ listeningPanel.data.updated_by ? '最近保存：' + listeningPanel.data.updated_by + ' · ' + listeningTime(listeningPanel.data.updated_at) : '尚无保存记录，当前为默认参数' }}</span>
+                      </div>
+                      <div class="kh-sub" style="margin-top:10px">{{ listeningPanel.data.runtime.parameter_effect }}</div>
+                      <details style="margin-top:18px;border-top:1px solid #EDF0F4;padding-top:12px">
+                        <summary style="cursor:pointer;font-weight:600">固定边界与配置历史</summary>
+                        <p class="kh-sub">每帧校验发言许可；一次反馈后回倾听；不播放附和音；不自动写长期画像。租约15秒、每5秒刷新；会话原文/近期/摘要上限12000/4000/1200字。</p>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
+                          <label for="listening-restore-revision">恢复参数版本</label>
+                          <select id="listening-restore-revision" v-model.number="listeningPanel.restoreRevision" :disabled="listeningPanel.saving || listeningPanel.loading" style="padding:7px;border:1px solid #D5DEE7;border-radius:6px"><option value="">请选择</option><option :value="1">v1 · 默认参数</option><option v-for="row in listeningPanel.data.history.filter(function(r){return r.revision !== listeningPanel.data.config.revision;})" :key="row.revision" :value="row.revision">v{{ row.revision }} · {{ row.actor }} · {{ listeningTime(row.at) }}</option></select>
+                          <el-button size="small" :disabled="!listeningPanel.restoreRevision || listeningPanel.saving || listeningPanel.loading" @click="restoreListeningConfig">恢复为新版本</el-button>
+                          <span class="kh-sub">恢复后总闸保持关闭，当前配置与历史记录均保留。</span>
+                        </div>
+                        <table style="width:100%;font-size:12px;border-collapse:collapse;text-align:left"><thead><tr><th>版本</th><th>操作</th><th>操作人</th><th>时间</th></tr></thead><tbody><tr v-for="row in listeningPanel.data.history" :key="row.revision"><td style="padding:7px 0">v{{ row.revision }}</td><td>{{ {save:'保存',disable:'关闭总闸',restore:'恢复参数'}[row.operation] || row.operation }}</td><td>{{ row.actor }}</td><td>{{ listeningTime(row.at) }}</td></tr><tr v-if="!listeningPanel.data.history.length"><td colspan="4" style="padding-top:10px;color:#80909F">暂无修改历史</td></tr></tbody></table>
+                      </details>
+                    </template>
+                  </section>
+                  <!-- listening-control-card:end -->
+
+                  </section>
+                  <section id="brain-panel-extract" class="brain-section-panel" v-show="brainSection==='extract'" role="tabpanel" aria-labelledby="brain-tab-extract" tabindex="0">
+                  <!-- 记忆抽取 LLM 配置（全局，2026-08-19）：抽取通道曾钉死 env 静默全灭数周——此卡统一管理，写入即热生效零重启 -->
+                  <div class="kh-card" style="padding:10px 16px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <div style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <span style="font-weight:700">🔌 记忆抽取 LLM</span>
+                        <template v-if="extractLlm.live">
+                          <el-tag size="small" :type="extractLlm.live.source==='admin' ? 'warning' : 'info'">{{ extractLlm.live.source==='admin' ? '后台配置' : '跟随主对话(env)' }}</el-tag>
+                          <span style="font-family:monospace;font-size:12px;color:#5B6B7B">{{ extractLlm.live.provider }} · {{ extractLlm.live.model }}</span>
+                          <el-tag size="small" :type="extractLlm.live.key_configured ? 'success' : 'danger'" effect="plain">{{ extractLlm.live.key_configured ? 'key 已配 ' + extractLlm.live.api_key_masked : 'key 缺失' }}</el-tag>
+                        </template>
+                      </div>
+                    </div>
+                    <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #E4E9EF">
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+                        <el-select v-model="extractLlm.cfg.provider" size="small" style="width:170px">
+                          <el-option label="跟随主对话（env）" value="inherit"></el-option>
+                          <el-option label="DeepSeek 直连" value="deepseek"></el-option>
+                          <el-option label="MiniMax" value="minimax"></el-option>
+                          <el-option label="Gemini 代理" value="gemini-proxy"></el-option>
+                          <el-option label="火山方舟 doubao" value="volc-ark"></el-option>
+                        </el-select>
+                        <el-input v-model="extractLlm.cfg.model" size="small" placeholder="model（空=该渠道默认）" style="width:220px"></el-input>
+                        <el-input v-model="extractLlm.cfg.base_url" size="small" placeholder="base_url（空=该渠道默认）" style="width:280px"></el-input>
+                        <el-input v-model="extractLlm.cfg.api_key" size="small" type="password" show-password :placeholder="extractLlm.masked ? '已配置 ' + extractLlm.masked + '（留空保持）' : 'API Key（空=用 env 里该渠道的 key）'" style="width:250px"></el-input>
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <el-button size="small" type="primary" :loading="extractLlm.loading" @click="saveExtractLlm">保存（立即生效）</el-button>
+                        <el-button size="small" :loading="extractLlm.testing" @click="testExtractLlm">测试连通</el-button>
+                        <span v-if="extractLlm.testResult" :style="{fontSize:'12px', fontWeight:600, color: extractLlm.testResult.reachable ? '#10B981' : '#E45649'}">
+                          {{ extractLlm.testResult.reachable ? '✓ 连通' : '✗ 不通' }} · {{ extractLlm.testResult.provider }}/{{ extractLlm.testResult.model }} · {{ extractLlm.testResult.ms }}ms<template v-if="extractLlm.testResult.sample"> · {{ extractLlm.testResult.sample.slice(0, 40) }}</template>
+                        </span>
+                        <span style="font-size:12px;color:#909399;margin-left:auto">影响：情景记忆/画像/昵称引导三条抽取链；不影响主对话。改完点「测试连通」验一下</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  </section>
                 </div>
                 <!-- 贡献账本 -->
                 <div v-if="khNav==='ledger'" style="flex:1;padding:20px">
@@ -4188,7 +4230,7 @@
                 currentUser.role = data.role || 'guest';
                 isLoggedIn.value = true;
                 saveAuth(data.token, loginForm.username, currentUser.role);
-                if (currentPage.value === 'worker' && khNav.value === 'brain') loadListeningConfig();
+                if (currentPage.value === 'worker' && khNav.value === 'brain') ensureBrainSectionLoaded(true);
                 ElementPlus.ElMessage.success('登录成功');
                 loadThemes();  // 启动加载主题词表（驱动所有 chip 渲染）
                 nextTick(function() { initCharts(); });
@@ -6132,6 +6174,49 @@
           await writeListeningConfig('/restore','POST',{expected_revision:expected,revision:revision});
         }
         // listening-control-state:end
+        // brain-sections:start
+        var brainSection = ref('overview');
+        var brainSections = [
+          { key: 'overview', label: '全局隔离总览' }, { key: 'devices', label: '设备与记忆' },
+          { key: 'listening', label: '倾听模式' }, { key: 'extract', label: '记忆抽取 LLM' }
+        ];
+        var brainSectionLoading = computed(function () {
+          if (brainSection.value === 'overview') return brainState.overviewLoading;
+          if (brainSection.value === 'listening') return listeningPanel.loading;
+          if (brainSection.value === 'extract') return extractLlm.reading || extractLlm.loading;
+          return brainState.loading;
+        });
+        function ensureBrainSectionLoaded(afterLogin) {
+          if (brainSection.value === 'overview' && (afterLogin || !brainState.overview) && !brainState.overviewLoading) loadOverview();
+          if (brainSection.value === 'listening' && (afterLogin || !listeningPanel.data) && !listeningPanel.loading) loadListeningConfig();
+          if (brainSection.value === 'extract' && (afterLogin || !extractLlm.live) && !extractLlm.reading) loadExtractLlm();
+          if (brainSection.value === 'devices') {
+            if (afterLogin || !deviceData.devices.length) loadDevices();
+            if (afterLogin && brainState.selectedSn) {
+              loadBrain(brainState.selectedSn);
+              if (brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
+              if (brainState.subTab === 'growth') loadGrowth(brainState.selectedSn);
+            }
+          }
+        }
+        function selectBrainSection(key) {
+          if (!brainSections.some(function (section) { return section.key === key; })) return;
+          brainSection.value = key;
+          ensureBrainSectionLoaded();
+          nextTick(function () { var page = document.getElementById('worker-brain'); if (page) page.scrollTop = 0; });
+        }
+        function onBrainTabKey(event, key) {
+          var index = brainSections.findIndex(function (section) { return section.key === key; });
+          if (event.key === 'ArrowRight') index = (index + 1) % brainSections.length;
+          else if (event.key === 'ArrowLeft') index = (index + brainSections.length - 1) % brainSections.length;
+          else if (event.key === 'Home') index = 0;
+          else if (event.key === 'End') index = brainSections.length - 1;
+          else return;
+          event.preventDefault();
+          selectBrainSection(brainSections[index].key);
+          nextTick(function () { var tab = document.getElementById('brain-tab-' + brainSections[index].key); if (tab) tab.focus({ preventScroll: true }); });
+        }
+        // brain-sections:end
         var brainState = reactive({ whitebox: null, selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
         var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, fillerPercent: {}, fillerLoaded: false, fillerSaving: false, fillerError: '', styleSetAt: null, styleSource: null, styleEvents: [] });
@@ -6292,8 +6377,9 @@
         var brainProfileDraft = reactive({ nickname: '', birthday: '', gender: '', dirty: false });
         var parentBind = reactive({ input: '' });
         // 记忆抽取 LLM 配置（全局热生效）：api_key 永不回显——GET 只给尾 4 位掩码，输入框留空=保留旧 key
-        var extractLlm = reactive({ open: false, loading: false, testing: false, live: null, masked: '', testResult: null, cfg: { provider: 'inherit', base_url: '', model: '', api_key: '' } });
+        var extractLlm = reactive({ reading: false, open: true, loading: false, testing: false, live: null, masked: '', testResult: null, cfg: { provider: 'inherit', base_url: '', model: '', api_key: '' } });
         function loadExtractLlm() {
+          extractLlm.reading = true;
           deviceApi('/api/admin/extract-llm', { method: 'GET' })
             .then(function (data) {
               if (!data || !data.ok) return;
@@ -6306,7 +6392,8 @@
               }
               extractLlm.cfg.api_key = '';
             })
-            .catch(function () { /* 静默：卡片不阻塞 brain tab */ });
+            .catch(function () { /* 配置读取失败仍可用刷新重试 */ })
+            .finally(function () { extractLlm.reading = false; });
         }
         function saveExtractLlm() {
           extractLlm.loading = true;
@@ -6460,6 +6547,7 @@
         }
         function selectBrainDevice(sn) {
           brainState.selectedSn = sn;
+          selectBrainSection('devices');
           brainState.showPrompt = false;
           brainState.isolation = null; // 换设备必清旧隔离视图——隔离面板自己串台展示旧设备数据是最讽刺的 bug
           resetGrowthView();
@@ -6468,7 +6556,13 @@
           if (brainState.subTab === 'growth') loadGrowth(sn);
         }
         function refreshBrainTab() {
-          loadListeningConfig();
+          if (brainSection.value === 'overview') { loadOverview(); return; }
+          if (brainSection.value === 'listening') { reloadListeningConfig(); return; }
+          if (brainSection.value === 'extract') {
+            ElementPlus.ElMessageBox.confirm('重新载入会放弃当前模块未保存的修改，继续吗？', '重新载入记忆抽取配置', { confirmButtonText: '重新载入', cancelButtonText: '保留修改', type: 'warning' })
+              .then(loadExtractLlm).catch(function () {});
+            return;
+          }
           loadDevices();
           if (brainState.selectedSn) loadBrain(brainState.selectedSn);
           if (brainState.selectedSn && brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
@@ -7911,9 +8005,7 @@
           if (nv === 'dev-board') {
             if (!devItems.items || !devItems.items.length) loadDevItems();
           }
-          if (nv === 'brain') loadListeningConfig();
-          if (nv === 'brain' && !extractLlm.live) loadExtractLlm(); // 记忆抽取 LLM 卡：进 tab 首次拉取
-          if (nv === 'brain' && !brainState.selectedSn && !brainState.overview) loadOverview(); // 全局隔离总览：未选设备时默认视图
+          if (nv === 'brain') ensureBrainSectionLoaded();
         });
         watch(realDrawer, function (nv) {
           if (nv && nv.id) loadRealDrawerLinks(nv.id);
@@ -8084,6 +8176,8 @@
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,
           listeningPanel: listeningPanel, listeningSceneOptions: listeningSceneOptions, listeningTime: listeningTime, markListeningDirty: markListeningDirty, reloadListeningConfig: reloadListeningConfig, saveListeningConfig: saveListeningConfig, disableListeningMode: disableListeningMode, restoreListeningConfig: restoreListeningConfig,
+          brainSection: brainSection, brainSections: brainSections, brainSectionLoading: brainSectionLoading,
+          selectBrainSection: selectBrainSection, onBrainTabKey: onBrainTabKey,
           brainState: brainState, brainAdd: brainAdd, brainGroups: brainGroups,
           brainCfg: brainCfg, BRAIN_TYPE_META: BRAIN_TYPE_META, BRAIN_TYPE_BY_KEY: BRAIN_TYPE_BY_KEY,
           BRAIN_LAYER_COLORS: BRAIN_LAYER_COLORS, BRAIN_LAYER_BORDERS: BRAIN_LAYER_BORDERS,
