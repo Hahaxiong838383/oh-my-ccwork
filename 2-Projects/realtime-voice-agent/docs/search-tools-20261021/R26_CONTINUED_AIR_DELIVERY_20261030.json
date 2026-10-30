@@ -1,0 +1,48 @@
+{
+  "at_ms": 1793334714135,
+  "hostname": "RaymanMacBook-Air.local",
+  "user": "Rayman.Chen",
+  "files": [
+    {
+      "name": "P003_SEARCH_MACBOOK_TTS_JOINT_TEST_GUIDE_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_MACBOOK_TTS_JOINT_TEST_GUIDE_20261030.md",
+      "sha256": "9b862780d151129d20419e43c721aed2f81c5377447779be144e65c0743ea84b",
+      "bytes": 19147,
+      "verified": true
+    },
+    {
+      "name": "R26_CONTINUED_INVESTIGATION_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/R26_CONTINUED_INVESTIGATION_20261030.md",
+      "sha256": "14789d6800d5cd75c6f4dde175342da376e414fee3f328330275532b5b9a5d8e",
+      "bytes": 18804,
+      "verified": true
+    },
+    {
+      "name": "R26_CONTINUED_ROLLBACK_20261030.md",
+      "path": "/Users/rayman.chen/Downloads/R26_CONTINUED_ROLLBACK_20261030.md",
+      "sha256": "5668f7e3627bdffea37a6ba43c9bf0ab5b6272053f5051803f447de09be574cd",
+      "bytes": 3601,
+      "verified": true
+    },
+    {
+      "name": "R26_CONTINUED_EVIDENCE_20261030.json",
+      "path": "/Users/rayman.chen/Downloads/R26_CONTINUED_EVIDENCE_20261030.json",
+      "sha256": "2f913033af68b8b2771b06f929b95ab65703ac687fcb1373130376eda93cf28f",
+      "bytes": 60603,
+      "verified": true
+    },
+    {
+      "name": "R26_CONTINUED_LATENCY_20261030.json",
+      "path": "/Users/rayman.chen/Downloads/R26_CONTINUED_LATENCY_20261030.json",
+      "sha256": "5a91e07ab82648ba643695dd5a83c14bfb9465f52b770a3749ed8f1f31cc0849",
+      "bytes": 36544,
+      "verified": true
+    }
+  ],
+  "sent_to_colleague": false,
+  "independent_remote_hash_recheck": {
+    "at_ms": 1793334748515,
+    "files": 5,
+    "all_match": true
+  }
+}
