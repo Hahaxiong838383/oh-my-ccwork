@@ -4481,25 +4481,24 @@ mod stt_preconnect_tests {
 
     #[tokio::test]
     async fn delayed_rtc_replaces_idle_preconnect_and_preserves_first_pcm() {
-        let dropped = Arc::new(AtomicBool::new(false));
-        let mut old = pending_pre(dropped.clone());
-        // A stale provider event must not poison the replacement's first turn.
-        let (stale_tx, stale_rx) = mpsc::channel(1);
-        stale_tx.send(SttEvent::Interrupted).await.unwrap();old.ev_rx=stale_rx;
-        let old_sender=old.pcm_tx.clone();
-        let (first_tx, first_rx) = tokio::sync::oneshot::channel();
-        let new = usable_stt_preconnect(old, Duration::from_millis(10207), || {
-            assert!(dropped.load(Ordering::SeqCst), "old native task stopped before replacement");
-            let (pcm_tx, mut pcm_rx)=mpsc::channel(4);let (_ev_tx,ev_rx)=mpsc::channel(4);
-            let task=tokio::spawn(async move { let _=first_tx.send(pcm_rx.recv().await); });
-            SttPre { pcm_tx,ev_rx,task }
-        }).await.unwrap();
-        assert!(old_sender.is_closed(), "expired sender cannot consume first PCM");
-        assert!(!new.pcm_tx.same_channel(&old_sender));
-        new.pcm_tx.send(vec![10,20,30]).await.unwrap();
-        assert_eq!(first_rx.await.unwrap(),Some(vec![10,20,30]));
-        assert!(new.ev_rx.is_empty(), "old Interrupted must not cross generations");
-        new.task.await.unwrap();
+        for idle in [Duration::from_millis(5000), Duration::from_millis(10207)] {
+            let dropped = Arc::new(AtomicBool::new(false));
+            let old = pending_pre(dropped.clone());
+            let old_sender=old.pcm_tx.clone();
+            let (first_tx, first_rx) = tokio::sync::oneshot::channel();
+            let new = usable_stt_preconnect(old, idle, || {
+                assert!(dropped.load(Ordering::SeqCst), "old native task stopped before replacement");
+                let (pcm_tx, mut pcm_rx)=mpsc::channel(4);let (_ev_tx,ev_rx)=mpsc::channel(4);
+                let task=tokio::spawn(async move { let _=first_tx.send(pcm_rx.recv().await); });
+                SttPre { pcm_tx,ev_rx,task }
+            }).await.unwrap();
+            assert!(old_sender.is_closed(), "expired sender cannot consume first PCM");
+            assert!(!new.pcm_tx.same_channel(&old_sender));
+            new.pcm_tx.send(vec![10,20,30]).await.unwrap();
+            assert_eq!(first_rx.await.unwrap(),Some(vec![10,20,30]));
+            assert!(new.ev_rx.is_empty(), "old Interrupted must not cross generations");
+            new.task.await.unwrap();
+        }
     }
 
     #[tokio::test]
@@ -4509,13 +4508,14 @@ mod stt_preconnect_tests {
         let sender=old.pcm_tx.clone();
         let current=usable_stt_preconnect(old,Duration::ZERO,||pending_pre(Arc::new(AtomicBool::new(false)))).await.unwrap();
         assert!(!current.pcm_tx.same_channel(&sender),"queued interruption precedes first PCM and must invalidate warm connection");
+        assert!(current.ev_rx.is_empty(),"stale Interrupted must not reach the new first turn");
         current.task.abort();let _=current.task.await;
     }
 
     #[tokio::test]
     async fn fresh_preconnect_is_reused_but_closed_young_preconnect_is_not() {
         let old=pending_pre(Arc::new(AtomicBool::new(false)));let sender=old.pcm_tx.clone();
-        let current=usable_stt_preconnect(old,Duration::from_millis(100),||panic!("fresh preconnect should retain latency benefit")).await.unwrap();
+        let current=usable_stt_preconnect(old,Duration::from_millis(4999),||panic!("fresh preconnect should retain latency benefit")).await.unwrap();
         assert!(current.pcm_tx.same_channel(&sender));current.task.abort();let _=current.task.await;
         let (pcm_tx,pcm_rx)=mpsc::channel(1);drop(pcm_rx);let (_ev_tx,ev_rx)=mpsc::channel(1);
         let old=SttPre {pcm_tx,ev_rx,task:tokio::spawn(async {})};let sender=old.pcm_tx.clone();
