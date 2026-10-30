@@ -128,6 +128,12 @@ fn expanded_weather(q:&str)->Option<PlaceWeatherRequest>{
     Some(PlaceWeatherRequest{place,day_offset:p.day_offset,metric:p.metric})
 }
 fn known_weather_place(t:&str)->bool {
+    weather_place_names().contains(t.strip_prefix('啊').unwrap_or(t))
+}
+// Build the unchanged exact-match catalog before candidate registration, never
+// on the first user's weather commit while the 100 ms microphone queue fills.
+pub fn prepare_weather_places() -> usize { weather_place_names().len() }
+fn weather_place_names() -> &'static HashSet<String> {
     static NAMES:std::sync::OnceLock<HashSet<String>>=std::sync::OnceLock::new();
     NAMES.get_or_init(||{
         let catalog:serde_json::Value=serde_json::from_str(include_str!("weather-places.json")).expect("weather catalog");let mut names=HashSet::new();
@@ -142,7 +148,7 @@ fn known_weather_place(t:&str)->bool {
             }
             for alias in row[4].as_array().unwrap(){names.insert(alias.as_str().unwrap().to_string());}
         }names
-    }).contains(t.strip_prefix('啊').unwrap_or(t))
+    })
 }
 #[derive(Default)]
 pub struct RoutingSession { legacy: QueryIntent, pending_weather: Option<(u64,String,bool)>, version: String }
