@@ -2,6 +2,30 @@
 
 结论：Brain A（权威会话/授权/租约）与 B（独立内容）已实现、测试和只读评审，交付可评审代码。**本批未部署，完整倾听产品尚未验收。**
 
+## 接续修正（2026-10-30 12:27 CST）
+
+本轮起点 `39187a6003f130c7fe73b6bcfb122ae4870c8ca7`，工作树 clean；修正代码 `7fdba6e430c0ab3081b0ff4f83eba220b7f5c312`。从 `2d998cc31982f2c25bf39baeb927965d835a512b` 仅合入必要 HTML/测试，保留倾听配置及原业务；HTML SHA256 为 `b508f9b2fe3278d8699e2a7b9e299e167f8795de74fad23c3eac17570ad56b4d`，与用户已验收的现役静态页同字节。本轮未部署。
+
+- `brain-tabs-ui.cjs --local`：真实完整页面＋现有 Hono/临时 SQLite；顶部切换、总览下钻、设备/子标签保留、倾听可见、倾听/LLM草稿保留、刷新取消、键盘/sticky/1024px、401后原页重登均通过；pageerror=0、业务写=0。未连接真实Worker，观测保持未知。
+- `listening-admin-ui.cjs`：临时 SQLite 下保存/回读、草稿、并发冲突、503、恢复、旧登录响应隔离、实际重登通过。完整 HTML 内联 JS 语法及项目 TypeScript 检查通过。本轮未重复已被主会话复核的52/45/38/12全套。
+- `listening-joint-prepare.mjs` 只校验两树三份冻结合同并调用39既有 `build-joint.mjs`；复用其 bundle/manifest，追加双方 commit、dirty 状态与 harness SHA，不另造服务、发布审批或就绪框架。实际 bundle 冒烟：offer→applied lease→summary/feedback（合成模型2次）→撤权403通过；不是本轮 Rust/RTC 联合测试。
+- 39 后续已实际执行双方代码的 Rust→Brain HTTP 隔离对撞1项（基于 Brain `39187a60`、Worker `9007bfd8` 交付），主会话已核源码/manifest关联；不能继续描述为完全未互通。身份/模型/发布清单为合成值、撤权为模拟时钟，尚不证明真实注册ready、墙钟撤权或房间关闭。
+- 本轮准备时 Worker `9007bfd8ca7c1b34098b60403b43ae47aca97107` 后的 `job.rs` / `pipeline.rs` 正在并行整改；清单保留 dirty，不把该工作文件当已提交/已验收修复。39完成P1后，直接按下方现有入口重新打包并执行一个联合用例，以其新 commit/证据对齐，无需用户转述。
+
+本轮最小复跑（`apps/server`；浏览器沿用已有 `P003_PLAYWRIGHT_MODULE` / `P003_CHROME_BIN`）：
+
+```sh
+node scripts/brain-tabs-ui.cjs --local
+node scripts/listening-admin-ui.cjs
+node scripts/listening-joint-prepare.mjs /path/to/p003-listening-worker-20261030 /tmp/p003-listening-joint.mjs
+# 将 bundle 及其 .manifest.json 放入39的隔离Linux环境后，在对应Worker副本运行既有入口：
+P003_LISTENING_JOINT_BUNDLE=/tmp/p003-listening-joint.mjs sh scripts/listening/run-joint.sh
+```
+
+最后一条 cwd 为 Worker `rust-worker`，需已有 edition2024 工具链；Brain准备命令本身不执行Cargo。manifest中的 `verification=prepared_only` 如实表示尚未执行，不能当成ready。当前各类观测继续读既有runtime；无证据的构建/注册/RTC情况不补假值。
+
+恢复点：撤回本轮源码可在原开发分支 review 后 `git revert 7fdba6e430c0ab3081b0ff4f83eba220b7f5c312`，不会撤掉 `ed3831b1` 倾听运行实现；但会使开发树回到旧HTML，**禁止把该旧静态页整包发布到线上**。生产标签页恢复点仍是 `2d998cc3` / `b508f9b2…`，静态即时备份 `/opt/p003/backups/brain-tabs-20261030T021732Z`；本轮不执行任何线上回滚。
+
 ## 代码与发布边界
 
 | 项目 | 锚点 / 状态 |
@@ -10,7 +34,8 @@
 | 起点 | `2a176888f2404ed33daf5b8dfd7dc4d66d6b14be`，开始时 clean |
 | 冻结合同提交 | `1feaeee56ee71923dd2ea76efdef7f57c17f5e00` |
 | 实现与测试提交 | `ed3831b17e03074d6fe837542a46764522e5eb6c`，15 个文件 |
-| 已有生产发布 | 2026-10-30 09:50:48 CST，业务 `22505d8b`、发布源 `beafc980`；回执见 `ADMIN_RELEASE_20261030.md` |
+| 已有管理后端发布 | 2026-10-30 09:50:48 CST，业务 `22505d8b`、发布源 `beafc980`；见 `ADMIN_RELEASE_20261030.md` |
+| 现役静态标签页 | 2026-10-30 10:17:32 CST，`2d998cc3` / HTML `b508f9b2…`，用户已验收；倾听运行链路未部署 |
 | 本批生产操作 | 无部署、无服务器/环境/服务更改、无线上开闸；未改搜索两 SN 和 11 月 2 日 11:19 窗口、Android、Analytics 或 Worker 工作树 |
 | 实现 / 评审 | Codex 亲写；两轮辅助代理只读评审，未委派代码实现 |
 
@@ -101,14 +126,14 @@ node node_modules/typescript/bin/tsc --noEmit --target ES2022 --module NodeNext 
 
 Worker 必须直连主 Brain，按 frozen HTTP v1 提交已注册构建和配置应用 ack；主 Brain ready 不是当前 Android/真人实听合格证明。租约请求异步、5秒刷新、1秒预算，失效暂停并关闭旧 RTC，不能自动回普通 chat；HTTP200反馈不等于音频许可。
 
-仍待 C 阶段取证：Worker Linux 完整 Cargo、真实双方 HTTP 对撞（本次仅 Brain loopback）、R18/R26 各自音频出口、逐帧/VAD/取消排空/Android local_ready、当前 APK 能力确认、真实模型内容质量与时延、≥60固定产品用例、3×10分钟故事、3首歌、30分钟session、普通聊天≥20有效对及中位/P90首声增量、新→旧→新实机回滚、真人实听。**本次未自动部署或打开线上测试窗口。**
+仍待 C 阶段取证：39的P1生命周期修复及修复后完整Linux/双方HTTP回归（此前508项Cargo＋双方HTTP1项已有隔离证据）、真实RTC音频出口、逐帧/VAD/取消排空/Android local_ready、当前 APK 能力确认、真实模型内容质量与时延、≥60固定产品用例、3×10分钟故事、3首歌、30分钟session、普通聊天≥20有效对及中位/P90首声增量、新→旧→新实机回滚、真人实听。**本次未自动部署或打开线上测试窗口。**
 
 ## 回滚记录
 
-- 当前线上仍以09:50发布回执为准；本批只在开发分支存在，无需线上回滚，禁止覆盖或重新部署该管理发布。
+- 生产边界分别为09:50:48管理后端及10:17:32静态标签页；`ed3831b1`运行链路和本次整合仍只在开发分支，无需线上回滚。不得用09:50的旧HTML覆盖10:17标签页；原6文件回滚脚本会校验后续变动，不能绕过保护。
 - 如撤回本批源码，在对应开发/合并分支 review 后 revert `ed3831b17e03074d6fe837542a46764522e5eb6c`；保留 `2a176888` 的已发布归档和 `1feaeee5` 合同记录，不用 reset/force push，不回退其他团队提交。
 - 未来部署后的业务止血先关倾听总闸，再按既有已验证发布流程回退程序；旧 RTC 必须按租约失效关闭，不自动普通 chat。该生产动作不属于本次授权出口。
 - **数据库只保留惰性新增元数据，不恢复整库、不DROP表**。`devices.db` 的 `listening_*` 表及 registry epoch触发器，`config.db` 的 `listening_source_meta` 与 `listening_source_insert/update/delete` 触发器成套保留；只DROP metadata表会让残留触发器破坏旧版 `configStore.setFlag`。若将来确需移除，另作迁移评审，先移除对应触发器且停止相关写入。
 - 旧版程序不使用这些新增元数据，保留表/触发器不改变原配置值；配置审计、账号、设备、故事以外业务数据均不作回滚覆盖。
 
-署名：codex（OpenAI）| 2026-10-30 11:46 CST
+署名：codex（OpenAI）| 2026-10-30 12:30 CST（接续修正；首批回执11:46归档）

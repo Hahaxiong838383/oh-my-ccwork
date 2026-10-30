@@ -1,6 +1,6 @@
 # P003 倾听模式：Android 端云联调合同 v1
 
-状态：2026-10-30实施协议；底座已开发，生产路由/音频接线与端侧联调尚未完成。**不能据此认为服务器已可调用，也不能在现役包声明能力后直接放量。**
+状态：2026-10-30更新。Brain权威路由/独立内容、Worker控制/音频/异步HTTP已编码，双方真实HTTP隔离对撞1项已通过（合成身份/模型）；39正在修复暂停后的job收房问题。09:50:48只发布管理后端，10:17:32发布顶部标签静态页，**运行链路未部署，真实Android/RTC与当前APK仍待验，不能直接调用生产倾听或放量声明能力。** 本次仅同步进度，不改冻结control/HTTP协议；代码与恢复点见`listening-20261030/NEXT_BATCH_RECEIPT.md`。
 
 目标：用户讲故事、分享或唱歌时，小可持续听，普通停顿不抢话；用户邀请后回复一次，再回到倾听。复用现有LiveKit/Rust/STT链路。
 
@@ -40,11 +40,11 @@
 
 最近32条已接受命令缓存内，同seq同payload返回当前状态且`duplicate=true`；同seq不同payload拒绝。更老seq拒绝，序号高水位不清空。被拒绝的请求不算已执行，用户纠正后以新seq发送。
 
-语音邀请由Worker经模式/场景判断后走内部许可入口，不冒充Android seq。具体语义检测属于后续接线任务，纯状态机测试不证明语音识别已实现。
+语音邀请由Worker经模式/场景判断后走内部许可入口，不冒充Android seq。当前Worker已编码语音邀请判断，真实语音识别/时序仍待当前APK联调；纯状态机测试不能替代该证据。
 
 ## 3. 两阶段ACK
 
-响应拟用`type=listening.ack`，payload包含：`version, request_id, command_seq, stage, state, mode_epoch, scene, listening_id, duplicate, reason`。
+响应使用已冻结的`type=listening.ack`，payload包含：`version, request_id, command_seq, stage, state, mode_epoch, scene, listening_id, duplicate, reason`。
 
 - `stage=received`：Worker已禁止新输出、开始取消和清理旧播放。**不代表扬声器已静音或已进入倾听。**
 - Android停止本地提示、已排队音频及播放缓冲后发送`listening.local_ready`。
@@ -65,7 +65,7 @@ reason建议映射：`invalid_request / unauthorized / sequence_conflict / stale
 - 反馈需当前epoch及唯一turn许可。一次反馈完成、失败、被打断后都回倾听；用户开始讲话立即撤销许可，结束讲话不会恢复已取消音频。
 - 反馈短、贴合实际内容，1–2句为软目标；不是每次都追加问题。没有可靠内容时不编造“我听懂整首歌了”，不据STT评价音准/节奏。
 - 用户故事中的设备指令、金币交易、搜索、人格切换等不自动执行；后台旧搜索结果即使退出倾听仍需显式播放，不能补播打断。
-- 上述是端到端验收要求，当前底座测试只覆盖状态/许可/缓冲逻辑，实际声音总门尚待接线。
+- 上述是端到端验收要求。Worker代码已接输出总门并有隔离测试；真实设备的本地停音、双确认和扬声器听感仍未取证。
 
 ## 5. 上下文与隐私
 

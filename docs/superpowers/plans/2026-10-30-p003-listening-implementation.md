@@ -10,6 +10,12 @@
 
 **Spec:** [已批准的设计基线](../../../2-Projects/P003GameDemo20260513/docs/P003_LISTENING_MODE_DESIGN_20261029.md)。原文“待批准”为10月29日状态；本计划记录10月30日执行GO。新功能上线仍须完成所列测试与端侧验收。
 
+## 当前实施状态（2026-10-30接续）
+
+Brain A/B已编码并由主会话复核52/45/38/12及tsc；Worker已编码真实control/pipeline输出门/异步HTTP，并有Linux508项及双方真实HTTP隔离对撞1项。38本轮整合已验收顶部标签、最小joint准备入口；39负责暂停后job收房P1。当前交付仍未部署或开闸，Android/RTC与真人体验尚待取证。09:50:48管理后端、10:17:32静态页分别记录，不能用本树旧HTML覆盖用户验收布局。最新commit/恢复点及复跑见项目`docs/listening-20261030/NEXT_BATCH_RECEIPT.md`。
+
+下方任务列表及首批检查点保留原规划历史；不能把早期“未接线”当作最新代码状态，也不把工程隔离测试勾成真机/发布完成。本轮不扩展R26、长稳或全量上线范围。
+
 ## Global Constraints
 
 - 普通Worker保R18＋style/ark，候选保R26＋style/ark；不得整树互相覆盖。
@@ -121,7 +127,7 @@ Files：后台`apps/web/public/admin/index.html`；`docs/P003_LISTENING_ANDROID_
 - [ ] 提交push专用分支；回执列代码、测试、实际部署SHA、端侧版本、未验项与精确回滚。
 - [ ] 更新项目记忆和共享记忆；不把源码push描述为已上线。
 
-## 本轮可评审检查点
+## 首批基础模块检查点（历史，当前状态见上方）
 
 任务1协议与端侧合同、任务2独立底座、任务3纯策略/绑定JWT部分已写码；Task3的会话登记/内部HTTP鉴权与Task4–7仍待实施。本轮未接线/未部署，不是完整P0交付。29项Rust纯测试、10组Brain单测通过；缺陷均按复现→修复记录。
 
@@ -131,4 +137,4 @@ Files：后台`apps/web/public/admin/index.html`；`docs/P003_LISTENING_ANDROID_
 
 署名：codex（OpenAI）| 2026-10-30
 
-2026-10-30追加需求已实施到开发树：后台须可调参，详见ADMIN_CONFIGURATION.md。尚未接线/未部署的边界不变；后续必须逐字段验证Worker实际行为，不能只保存配置即算完成。
+早期配置追加归档：后台可调参见ADMIN_CONFIGURATION.md；随后管理后端和顶部静态标签已分别发布，运行接线已编码但未部署。Worker七项参数消费已有隔离测试，真实设备行为仍待验，不能只保存配置即算完成。
