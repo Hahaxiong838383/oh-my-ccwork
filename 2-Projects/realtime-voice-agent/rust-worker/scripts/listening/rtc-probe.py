@@ -246,6 +246,15 @@ class Probe:
             self.disconnected = True
             self.log('disconnected', reason=str(reason))
         await self.room.connect(session['server_url'], session['token'])
+        # Delay only this software client's microphone publication. The actual
+        # job/prebuild is already running: exercises idle ASR takeover without
+        # changing SFU, provider, timeouts or any production service.
+        delay_ms = self.args.mic_publish_delay_ms
+        assert 0 <= delay_ms <= 12000
+        if delay_ms:
+            self.log('delayed_microphone_publication_start', delay_ms=delay_ms)
+            await asyncio.sleep(delay_ms/1000)
+            self.log('delayed_microphone_publication_end', delay_ms=delay_ms)
         self.mic = rtc.AudioSource(SR, 1, queue_size_ms=100)
         await self.room.local_participant.publish_track(rtc.LocalAudioTrack.create_audio_track('p0-synthetic-mic', self.mic), rtc.TrackPublishOptions(source=rtc.TrackSource.SOURCE_MICROPHONE))
         self.tasks.append(asyncio.create_task(self.pump()))
@@ -392,6 +401,7 @@ async def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--credentials', required=True)
+    parser.add_argument('--mic-publish-delay-ms', type=int, default=0)
     parser.add_argument('--base', default='http://127.0.0.1:18738')
     parser.add_argument('--fixtures', required=True)
     parser.add_argument('--output', required=True)

@@ -660,6 +660,25 @@ pub struct SttPre {
     pub task: tokio::task::JoinHandle<()>,
 }
 
+// The provider expires an idle preconnect after about10s. RTC signal retries
+// can consume that entire window before the first ordered PCM reaches it.
+const STT_PRECONNECT_MAX_IDLE: Duration = Duration::from_secs(5);
+async fn usable_stt_preconnect(pre: SttPre, idle: Duration, rebuild: impl FnOnce() -> SttPre) -> Result<SttPre> {
+    // No PCM has been handed over yet. Any queued provider event belongs to
+    // the idle/failed connection and must not invalidate the fresh first turn.
+    if idle < STT_PRECONNECT_MAX_IDLE && !pre.task.is_finished()
+        && !pre.pcm_tx.is_closed() && !pre.ev_rx.is_closed() && pre.ev_rx.is_empty() {
+        return Ok(pre);
+    }
+    let SttPre { pcm_tx, ev_rx, mut task } = pre;
+    task.abort();
+    let stopped = tokio::time::timeout(Duration::from_millis(500), &mut task).await;
+    anyhow::ensure!(stopped.is_ok(), "expired_asr_preconnect_abort_timeout");
+    drop(pcm_tx);
+    drop(ev_rx);
+    Ok(rebuild())
+}
+
 // Pipeline owns every primary/preconnected STT task. Keep only abort handles
 // here so panic/forced cancellation cannot detach an STT reconnect loop.
 #[derive(Default)]
@@ -922,6 +941,10 @@ pub async fn run_pipeline(
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
     let mut stt_cleanup = SttTaskCleanup::default();
+    let stt = usable_stt_preconnect(stt, prebuilt_at.elapsed(), || {
+        info!(room = %room_name, "replacing expired or closed ASR preconnect before first PCM");
+        spawn_stt(stt_cfg_for_room(&room_name), &room_name)
+    }).await?;
     let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt_cleanup.track(stt);
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
     let mut stt_pcm_tx = Some(stt_pcm_tx);
@@ -4434,5 +4457,70 @@ mod listening_voice_pipeline_tests {
             }
         }
         assert!(!voice_command_is_echo("小可先听我讲故事","我在倾听",true));
+    }
+}
+
+#[cfg(test)]
+mod stt_preconnect_tests {
+    use super::*;
+    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+
+    fn pending_pre(dropped: Arc<AtomicBool>) -> SttPre {
+        let (pcm_tx, mut pcm_rx) = mpsc::channel(4);
+        let (ev_tx, ev_rx) = mpsc::channel(4);
+        struct Owned(Arc<AtomicBool>);
+        impl Drop for Owned { fn drop(&mut self) { self.0.store(true, Ordering::SeqCst); } }
+        let owned = Owned(dropped);
+        let task = tokio::spawn(async move {
+            let _owned = owned;
+            let _events = ev_tx;
+            while pcm_rx.recv().await.is_some() {}
+        });
+        SttPre { pcm_tx, ev_rx, task }
+    }
+
+    #[tokio::test]
+    async fn delayed_rtc_replaces_idle_preconnect_and_preserves_first_pcm() {
+        let dropped = Arc::new(AtomicBool::new(false));
+        let mut old = pending_pre(dropped.clone());
+        // A stale provider event must not poison the replacement's first turn.
+        let (stale_tx, stale_rx) = mpsc::channel(1);
+        stale_tx.send(SttEvent::Interrupted).await.unwrap();old.ev_rx=stale_rx;
+        let old_sender=old.pcm_tx.clone();
+        let (first_tx, first_rx) = tokio::sync::oneshot::channel();
+        let new = usable_stt_preconnect(old, Duration::from_millis(10207), || {
+            assert!(dropped.load(Ordering::SeqCst), "old native task stopped before replacement");
+            let (pcm_tx, mut pcm_rx)=mpsc::channel(4);let (_ev_tx,ev_rx)=mpsc::channel(4);
+            let task=tokio::spawn(async move { let _=first_tx.send(pcm_rx.recv().await); });
+            SttPre { pcm_tx,ev_rx,task }
+        }).await.unwrap();
+        assert!(old_sender.is_closed(), "expired sender cannot consume first PCM");
+        assert!(!new.pcm_tx.same_channel(&old_sender));
+        new.pcm_tx.send(vec![10,20,30]).await.unwrap();
+        assert_eq!(first_rx.await.unwrap(),Some(vec![10,20,30]));
+        assert!(new.ev_rx.is_empty(), "old Interrupted must not cross generations");
+        new.task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn interrupted_reconnecting_preconnect_is_not_reused_when_young() {
+        let mut old=pending_pre(Arc::new(AtomicBool::new(false)));
+        let (events,rx)=mpsc::channel(1);events.send(SttEvent::Interrupted).await.unwrap();old.ev_rx=rx;
+        let sender=old.pcm_tx.clone();
+        let current=usable_stt_preconnect(old,Duration::ZERO,||pending_pre(Arc::new(AtomicBool::new(false)))).await.unwrap();
+        assert!(!current.pcm_tx.same_channel(&sender),"queued interruption precedes first PCM and must invalidate warm connection");
+        current.task.abort();let _=current.task.await;
+    }
+
+    #[tokio::test]
+    async fn fresh_preconnect_is_reused_but_closed_young_preconnect_is_not() {
+        let old=pending_pre(Arc::new(AtomicBool::new(false)));let sender=old.pcm_tx.clone();
+        let current=usable_stt_preconnect(old,Duration::from_millis(100),||panic!("fresh preconnect should retain latency benefit")).await.unwrap();
+        assert!(current.pcm_tx.same_channel(&sender));current.task.abort();let _=current.task.await;
+        let (pcm_tx,pcm_rx)=mpsc::channel(1);drop(pcm_rx);let (_ev_tx,ev_rx)=mpsc::channel(1);
+        let old=SttPre {pcm_tx,ev_rx,task:tokio::spawn(async {})};let sender=old.pcm_tx.clone();
+        let current=usable_stt_preconnect(old,Duration::ZERO,||pending_pre(Arc::new(AtomicBool::new(false)))).await.unwrap();
+        assert!(!current.pcm_tx.same_channel(&sender),"closed preconnect cannot be reused even when young");
+        current.task.abort();let _=current.task.await;
     }
 }
