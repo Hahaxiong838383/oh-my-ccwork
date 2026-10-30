@@ -1919,6 +1919,11 @@ impl Orchestrator {
         eot_ring: &VecDeque<i16>,
     ) {
         self.search_user_speaking = gate.speaking() || active_frame;
+        if self.listening_active() && matches!(ev, VadEvent::SpeechStart) {
+            info!(room = %self.room_name, trace = self.device_trace.as_deref().unwrap_or(""),
+                since_pipeline_ms = self.now_ms() as u64, feedback_turn = self.feedback_turn,
+                "listening acoustic speech_start");
+        }
         if let Some(l)=&mut self.listening {match ev {VadEvent::SpeechStart=>l.speech_start(),VadEvent::SpeechEnd=>l.speech_end(),VadEvent::None=>{}}}
         if self.listening_active() {
             if matches!(ev,VadEvent::SpeechStart){self.hard_abort_current();self.clear_listening_pending();}
@@ -2804,6 +2809,9 @@ impl Orchestrator {
             played_samples = played,
             synth_chars = synth.chars().count(),
             spoken_chars = spoken.chars().count(),
+            trace = self.device_trace.as_deref().unwrap_or(""),
+            since_pipeline_ms = self.now_ms() as u64,
+            turn_id = turn.id, was_feedback,
             "agent turn aborted, history truncated to spoken part"
         );
         // 回声对撞:被打断时只有 spoken 部分出了喇叭(截断文本),连同 filler 进对撞缓冲
