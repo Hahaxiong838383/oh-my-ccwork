@@ -1,0 +1,663 @@
+{
+  "kind": "selected-rea-evidence-summary",
+  "date": "2026-10-30",
+  "artifact": {
+    "package": "com.huawei.smarthome",
+    "version": "17.0.3.320",
+    "bytes": 204460020,
+    "sha256": "607a98c0dee77e49d29da335a94f8db47a2d3a3c540dd8e4ed295ea4b3f22455"
+  },
+  "limitations": [
+    "Static decompilation does not establish execution or this TV model's actual control path.",
+    "Selected results only; full original records stay in ignored .local/evidence.",
+    "No TV power command sent; phone UI was locked."
+  ],
+  "records": [
+    {
+      "file": "package.json",
+      "sha256": "1446ade4643c14b0834e7e656410471fc4c5bd67502648a53a98817330426623",
+      "evidence_id": "ev_d8e9be9868e43e95a97435aa8d7483d30dfa618e1aef32a5fc059f832f720373",
+      "operation": "inspect_android_package",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "package_name": "com.huawei.smarthome",
+        "version_name": "17.0.3.320",
+        "version_code": "2021703320",
+        "min_sdk": "26",
+        "target_sdk": "35",
+        "class_count": 32949,
+        "resource_count": 14718,
+        "signature_verification": "not_performed",
+        "engine": {
+          "name": "jadx-headless-mcp",
+          "version": "0.7.1",
+          "artifact_sha256": "6e5eacf500b64292bfb73c49797c1958f6ee44646e43e868039ae7feb573ff75",
+          "source_revision": "5844800a486d2248fa949b74c9896285f5b54de2",
+          "worker_count": 1,
+          "heap_limit_mib": 4096
+        }
+      }
+    },
+    {
+      "file": "classes.json",
+      "sha256": "94ff4eab010b7a2140982cb6e8b011852a3ed71675b023ae5f241a5e10a5660f",
+      "evidence_id": "ev_dcc0a9f6d268011172f43e1dc92d93be4671cf45ff5b5244204ad32a967c9cc2",
+      "operation": "search_android_classes",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "total_classes": 32949,
+        "selection": "Complete inventory is local; see referenced class evidence."
+      }
+    },
+    {
+      "file": "device-control-class.json",
+      "sha256": "6fbff2b049838c24c3881f9f944dcd887a82cec46178f2987e650a79d3ef99a1",
+      "evidence_id": "ev_bc63d6dd7f9cbb109cb3ead77ddc53b13c6700901ccccf936050ad600cd63450",
+      "operation": "inspect_android_class",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.smarthome.homeservice.manager.device.DeviceControlManager",
+        "methods": [
+          {
+            "name": "<clinit>",
+            "reported_signature": "<clinit>(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "<init>",
+            "reported_signature": "<init>(): void",
+            "overload_index": 0,
+            "is_constructor": true,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "a",
+            "reported_signature": "a(cafebabe.fs1, int, java.lang.String, com.huawei.hilink.framework.kit.entity.event.ControlResponse): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcafebabe/fs1;ILjava/lang/String;Lcom/huawei/hilink/framework/kit/entity/event/ControlResponse;)V"
+          },
+          {
+            "name": "access$000",
+            "reported_signature": "access$000(): java.lang.String",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()Ljava/lang/String;"
+          },
+          {
+            "name": "access$100",
+            "reported_signature": "access$100(com.huawei.smarthome.homeservice.manager.device.DeviceControlManager, com.huawei.smarthome.common.entity.device.AiLifeDeviceEntity): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/homeservice/manager/device/DeviceControlManager;Lcom/huawei/smarthome/common/entity/device/AiLifeDeviceEntity;)Z"
+          },
+          {
+            "name": "access$200",
+            "reported_signature": "access$200(com.huawei.smarthome.homeservice.manager.device.DeviceControlManager, com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/homeservice/manager/device/DeviceControlManager;Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "access$300",
+            "reported_signature": "access$300(com.huawei.smarthome.homeservice.manager.device.DeviceControlManager, java.lang.Object, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/homeservice/manager/device/DeviceControlManager;Ljava/lang/Object;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "access$600",
+            "reported_signature": "access$600(java.lang.String): com.huawei.hilink.framework.kit.entity.DeviceInfoEntity",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Lcom/huawei/hilink/framework/kit/entity/DeviceInfoEntity;"
+          },
+          {
+            "name": "access$700",
+            "reported_signature": "access$700(com.huawei.smarthome.homeservice.manager.device.DeviceControlManager, java.lang.String, java.lang.String): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/homeservice/manager/device/DeviceControlManager;Ljava/lang/String;Ljava/lang/String;)Z"
+          },
+          {
+            "name": "checkNetworkType",
+            "reported_signature": "checkNetworkType(int, java.lang.String): int",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(ILjava/lang/String;)I"
+          },
+          {
+            "name": "deviceTableToEntity",
+            "reported_signature": "deviceTableToEntity(com.huawei.smarthome.common.db.dbtable.devicetable.DeviceInfoTable): com.huawei.smarthome.common.entity.device.AiLifeDeviceEntity",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/db/dbtable/devicetable/DeviceInfoTable;)Lcom/huawei/smarthome/common/entity/device/AiLifeDeviceEntity;"
+          },
+          {
+            "name": "getDeviceInfoEntityByDeviceId",
+            "reported_signature": "getDeviceInfoEntityByDeviceId(java.lang.String): com.huawei.hilink.framework.kit.entity.DeviceInfoEntity",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Lcom/huawei/hilink/framework/kit/entity/DeviceInfoEntity;"
+          },
+          {
+            "name": "getDevicePropertyRealTime",
+            "reported_signature": "getDevicePropertyRealTime(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "getDevicePropertyRealTimeWithProId",
+            "reported_signature": "getDevicePropertyRealTimeWithProId(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "getInstance",
+            "reported_signature": "getInstance(): com.huawei.smarthome.homeservice.manager.device.DeviceControlManager",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()Lcom/huawei/smarthome/homeservice/manager/device/DeviceControlManager;"
+          },
+          {
+            "name": "getTrueServiceId",
+            "reported_signature": "getTrueServiceId(java.lang.String): java.lang.String",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Ljava/lang/String;"
+          },
+          {
+            "name": "handleDeviceControlResponse",
+            "reported_signature": "handleDeviceControlResponse(java.lang.Object, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/Object;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "handleUpgradeAction",
+            "reported_signature": "handleUpgradeAction(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, java.lang.String, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Ljava/lang/String;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "isDeviceControlingOrUpdating",
+            "reported_signature": "isDeviceControlingOrUpdating(cafebabe.fs1, com.huawei.smarthome.common.db.dbtable.devicetable.DeviceInfoTable): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcafebabe/fs1;Lcom/huawei/smarthome/common/db/dbtable/devicetable/DeviceInfoTable;)Z"
+          },
+          {
+            "name": "isEcologicDevice",
+            "reported_signature": "isEcologicDevice(java.lang.String): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Z"
+          },
+          {
+            "name": "isHiBeaconDevice",
+            "reported_signature": "isHiBeaconDevice(java.lang.String): java.lang.Boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Ljava/lang/Boolean;"
+          },
+          {
+            "name": "isLocalControl",
+            "reported_signature": "isLocalControl(java.lang.String): java.lang.Boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Ljava/lang/Boolean;"
+          },
+          {
+            "name": "isNeedReportControlBi",
+            "reported_signature": "isNeedReportControlBi(java.lang.String, java.lang.String): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;Ljava/lang/String;)Z"
+          },
+          {
+            "name": "isParameterInvalid",
+            "reported_signature": "isParameterInvalid(java.lang.String, java.lang.String, cafebabe.fs1): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;Ljava/lang/String;Lcafebabe/fs1;)Z"
+          },
+          {
+            "name": "isUpgrading",
+            "reported_signature": "isUpgrading(com.huawei.smarthome.common.entity.device.AiLifeDeviceEntity): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/device/AiLifeDeviceEntity;)Z"
+          },
+          {
+            "name": "lambda$setLampDeviceControlByMqtt$0",
+            "reported_signature": "lambda$setLampDeviceControlByMqtt$0(cafebabe.fs1, int, java.lang.String, com.huawei.hilink.framework.kit.entity.event.ControlResponse): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcafebabe/fs1;ILjava/lang/String;Lcom/huawei/hilink/framework/kit/entity/event/ControlResponse;)V"
+          },
+          {
+            "name": "modifyDeviceProperty",
+            "reported_signature": "modifyDeviceProperty(java.lang.String, java.lang.String, java.lang.String, java.util.Map<java.lang.String, ? extends java.lang.Object>, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "modifyDevicePropertyByAiLifeProxy",
+            "reported_signature": "modifyDevicePropertyByAiLifeProxy(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, com.huawei.smarthome.homeservice.manager.device.DeviceControlManager$DeviceControlCallback): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcom/huawei/smarthome/homeservice/manager/device/DeviceControlManager$DeviceControlCallback;)V"
+          },
+          {
+            "name": "modifyDevicePropertyRetry",
+            "reported_signature": "modifyDevicePropertyRetry(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;)V"
+          },
+          {
+            "name": "modifyDevicePropertyRetry",
+            "reported_signature": "modifyDevicePropertyRetry(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1, int): void",
+            "overload_index": 1,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;I)V"
+          },
+          {
+            "name": "refreshDevice",
+            "reported_signature": "refreshDevice(com.huawei.smarthome.common.db.dbtable.devicetable.DeviceInfoTable): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/db/dbtable/devicetable/DeviceInfoTable;)V"
+          },
+          {
+            "name": "sendUpgradeAction",
+            "reported_signature": "sendUpgradeAction(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, java.lang.String, cafebabe.fs1): boolean",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Ljava/lang/String;Lcafebabe/fs1;)Z"
+          },
+          {
+            "name": "setLampDeviceControlByMqtt",
+            "reported_signature": "setLampDeviceControlByMqtt(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;)V"
+          }
+        ]
+      }
+    },
+    {
+      "file": "modify-property.json",
+      "sha256": "fa8797f82ddd3da8a057ced040d831481051b7398a9211a5a9c1f8e4b101ce2b",
+      "evidence_id": "ev_96cbe9962b85317e35250c55e8195ca16f98633f69be2a98a74f6297cc096a12",
+      "operation": "inspect_android_method",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.smarthome.homeservice.manager.device.DeviceControlManager",
+        "method": {
+          "name": "modifyDeviceProperty",
+          "reported_signature": "modifyDeviceProperty(java.lang.String, java.lang.String, java.lang.String, java.util.Map<java.lang.String, ? extends java.lang.Object>, cafebabe.fs1): void",
+          "overload_index": 0,
+          "is_constructor": false,
+          "dex_descriptor": "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;Lcafebabe/fs1;)V"
+        },
+        "representation": "java",
+        "fell_back": false,
+        "markers": [],
+        "source": {
+          "status": "complete",
+          "text": "    public void modifyDeviceProperty(String str, String str2, String str3, Map<String, ? extends Object> map, fs1 fs1Var) {\n        if (isParameterInvalid(str, str2, fs1Var)) {\n            return;\n        }\n        DeviceInfoTable singleDevice = DataBaseApiBase.getSingleDevice(str);\n        if (singleDevice == null) {\n            k98.warn(true, TAG, \"modifyDeviceProperty deviceInfoTable is null\");\n            fs1Var.onResult(10, ConstantCarousel.MQTT, \"\");\n            return;\n        }\n        if (vj3.isDeviceOffline(str) && !vj3.isSupportOfflineControl(singleDevice.getProductId())) {\n            n2c.info(TAG, 11, \"service_device_control-cloud device offline\");\n            fs1Var.onResult(11, ConstantCarousel.MQTT, \"\");\n            return;\n        }\n        if (isDeviceControlingOrUpdating(fs1Var, singleDevice)) {\n            return;\n        }\n        String trueServiceId = getTrueServiceId(str2);\n        if (!TextUtils.isEmpty(str3)) {\n            trueServiceId = trueServiceId + PRODUCT_ID + str3;\n        }\n        ModifyDevicePropertyEntity modifyDevicePropertyEntity = new ModifyDevicePropertyEntity();\n        modifyDevicePropertyEntity.setProductId(singleDevice.getProductId());\n        modifyDevicePropertyEntity.setGatewayId(singleDevice.getGatewayId());\n        modifyDevicePropertyEntity.setUserId(singleDevice.getUserId());\n        modifyDevicePropertyEntity.setHomeId(singleDevice.getHomeId());\n        modifyDevicePropertyEntity.setUuid(UUID.randomUUID().toString());\n        modifyDevicePropertyEntity.setRetryCount(3);\n        modifyDevicePropertyEntity.setDeviceId(str);\n        modifyDevicePropertyEntity.setServiceId(trueServiceId);\n        modifyDevicePropertyEntity.setMap(map);\n        modifyDevicePropertyEntity.setDeviceType(singleDevice.getDeviceType());\n        modifyDevicePropertyRetry(modifyDevicePropertyEntity, fs1Var);\n    }",
+          "reported_total_bytes": null
+        }
+      }
+    },
+    {
+      "file": "control-routing.json",
+      "sha256": "c2ebf00f22997a56c49a881f6b5b90a5ae400da6f943fbcec8e4e9960f9e5b6e",
+      "evidence_id": "ev_3fc9a62f0bba9ee0930cd8f281deedc110846a34b927b62381942e316342d27f",
+      "operation": "inspect_android_method",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.smarthome.homeservice.manager.device.DeviceControlManager",
+        "method": {
+          "name": "modifyDevicePropertyRetry",
+          "reported_signature": "modifyDevicePropertyRetry(com.huawei.smarthome.common.entity.servicetype.ModifyDevicePropertyEntity, cafebabe.fs1, int): void",
+          "overload_index": 1,
+          "is_constructor": false,
+          "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/ModifyDevicePropertyEntity;Lcafebabe/fs1;I)V"
+        },
+        "representation": "java",
+        "fell_back": false,
+        "markers": [],
+        "source": {
+          "status": "complete",
+          "text": "    private void modifyDevicePropertyRetry(ModifyDevicePropertyEntity modifyDevicePropertyEntity, fs1 fs1Var, int i) {\n        DeviceControlCallback deviceControlCallback = new DeviceControlCallback(modifyDevicePropertyEntity, System.currentTimeMillis(), fs1Var);\n        String str = TAG;\n        k98.info(true, str, \"modifyDeviceProperty start connectType = \", Integer.valueOf(i));\n        if (i == 0) {\n            modifyDevicePropertyByAiLifeProxy(modifyDevicePropertyEntity, deviceControlCallback);\n            return;\n        }\n        if (i != 2) {\n            fs1Var.onResult(-3, \"Error\", modifyDevicePropertyEntity.getUuid());\n            return;\n        }\n        if (CustCommUtil.isGlobalRegion()) {\n            fs1Var.onResult(-1, OVERSEA_NOT_SUPPORT_HILINK, modifyDevicePropertyEntity.getUuid());\n            return;\n        }\n        if (isLocalControl(modifyDevicePropertyEntity.getProductId()).booleanValue()) {\n            modifyDevicePropertyByAiLifeProxy(modifyDevicePropertyEntity, deviceControlCallback);\n            return;\n        }\n        if (!htc.isAuthCodeDevice(modifyDevicePropertyEntity.getDeviceId()) && !htc.isSecurityCenterDevice(modifyDevicePropertyEntity.getDeviceId()) && !isHiBeaconDevice(modifyDevicePropertyEntity.getProductId()).booleanValue()) {\n            HiLinkDeviceControlManager.getInstance().deviceControlByHilink(modifyDevicePropertyEntity, fs1Var, modifyDevicePropertyEntity.getServiceId());\n        } else {\n            k98.info(true, str, \"modifyDeviceProperty center control\");\n            modifyDevicePropertyByAiLifeProxy(modifyDevicePropertyEntity, deviceControlCallback);\n        }\n    }",
+          "reported_total_bytes": null
+        }
+      }
+    },
+    {
+      "file": "host-service.json",
+      "sha256": "237aab7ab29a81101f86039db368d9e6db8cea5392e6e5478733a4d3a1b9686e",
+      "evidence_id": "ev_a5cd6d99506f9f64cf2e182d5af67ce7e82cc30b13790726e161bb43faec6e6b",
+      "operation": "inspect_android_class",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.smarthome.plugin.communicate.HostRemoteControlService",
+        "methods": [
+          {
+            "name": "<clinit>",
+            "reported_signature": "<clinit>(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "<init>",
+            "reported_signature": "<init>(): void",
+            "overload_index": 0,
+            "is_constructor": true,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "dealWithPushMessage",
+            "reported_signature": "dealWithPushMessage(java.lang.String): int",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)I"
+          },
+          {
+            "name": "onBind",
+            "reported_signature": "onBind(android.content.Intent): android.os.IBinder",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Landroid/content/Intent;)Landroid/os/IBinder;"
+          },
+          {
+            "name": "onStartCommand",
+            "reported_signature": "onStartCommand(android.content.Intent, int, int): int",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Landroid/content/Intent;II)I"
+          }
+        ]
+      }
+    },
+    {
+      "file": "ott-class.json",
+      "sha256": "f0ab9ed7975a741f61d6c16fd1bdfba2276a542811345c50eaa33bdff835eb9a",
+      "evidence_id": "ev_51e7f87bcead68208bb3d9835e933ea5f28052caef3fe4dcf26b06acbe605ad3",
+      "operation": "inspect_android_class",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.app.devicecontrol.activity.devices.DeviceOttActivity",
+        "methods": [
+          {
+            "name": "<clinit>",
+            "reported_signature": "<clinit>(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "<init>",
+            "reported_signature": "<init>(): void",
+            "overload_index": 0,
+            "is_constructor": true,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "addButtonToLocation",
+            "reported_signature": "addButtonToLocation(com.huawei.app.devicecontrol.view.dynamicview.BaseControlButton): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/app/devicecontrol/view/dynamicview/BaseControlButton;)V"
+          },
+          {
+            "name": "closeView",
+            "reported_signature": "closeView(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "createEntity",
+            "reported_signature": "createEntity(java.lang.String): com.huawei.smarthome.common.entity.servicetype.BaseServiceTypeEntity",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;)Lcom/huawei/smarthome/common/entity/servicetype/BaseServiceTypeEntity;"
+          },
+          {
+            "name": "getDetectionDataList",
+            "reported_signature": "getDetectionDataList(): java.util.List<com.huawei.smarthome.common.ui.entity.DeviceDetectionTextSwitcherEntity>",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()Ljava/util/List;"
+          },
+          {
+            "name": "getDeviceDetectionTextSwitcherEntities",
+            "reported_signature": "getDeviceDetectionTextSwitcherEntities(androidx.collection.ArrayMap<java.lang.Integer, java.lang.String>): java.util.List<com.huawei.smarthome.common.ui.entity.DeviceDetectionTextSwitcherEntity>",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Landroidx/collection/ArrayMap;)Ljava/util/List;"
+          },
+          {
+            "name": "init",
+            "reported_signature": "init(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "initContentView",
+            "reported_signature": "initContentView(): android.view.View",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()Landroid/view/View;"
+          },
+          {
+            "name": "initDynamicButton",
+            "reported_signature": "initDynamicButton(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "initProfileConfig",
+            "reported_signature": "initProfileConfig(): com.huawei.hilink.framework.kit.entity.deviceprofile.DeviceProfileConfig",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()Lcom/huawei/hilink/framework/kit/entity/deviceprofile/DeviceProfileConfig;"
+          },
+          {
+            "name": "initTitleView",
+            "reported_signature": "initTitleView(): com.huawei.app.devicecontrol.view.NewCustomTitle",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()Lcom/huawei/app/devicecontrol/view/NewCustomTitle;"
+          },
+          {
+            "name": "initView",
+            "reported_signature": "initView(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "modifyFinish",
+            "reported_signature": "modifyFinish(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "onClick",
+            "reported_signature": "onClick(com.huawei.app.devicecontrol.view.dynamicview.BaseControlButton): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/app/devicecontrol/view/dynamicview/BaseControlButton;)V"
+          },
+          {
+            "name": "onClickResult",
+            "reported_signature": "onClickResult(com.huawei.app.devicecontrol.view.dynamicview.BaseControlButton, java.lang.String, java.lang.String, java.lang.Object): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/app/devicecontrol/view/dynamicview/BaseControlButton;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V"
+          },
+          {
+            "name": "openView",
+            "reported_signature": "openView(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "putDetectionData",
+            "reported_signature": "putDetectionData(androidx.collection.ArrayMap<java.lang.Integer, java.lang.String>): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Landroidx/collection/ArrayMap;)V"
+          },
+          {
+            "name": "refreshDeviceProperty",
+            "reported_signature": "refreshDeviceProperty(java.lang.String, com.huawei.smarthome.common.entity.servicetype.BaseServiceTypeEntity): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Ljava/lang/String;Lcom/huawei/smarthome/common/entity/servicetype/BaseServiceTypeEntity;)V"
+          },
+          {
+            "name": "refreshSwitchStatus",
+            "reported_signature": "refreshSwitchStatus(com.huawei.smarthome.common.entity.servicetype.BaseServiceTypeEntity): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "(Lcom/huawei/smarthome/common/entity/servicetype/BaseServiceTypeEntity;)V"
+          },
+          {
+            "name": "refreshTitleStatus",
+            "reported_signature": "refreshTitleStatus(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          },
+          {
+            "name": "release",
+            "reported_signature": "release(): void",
+            "overload_index": 0,
+            "is_constructor": false,
+            "dex_descriptor": "()V"
+          }
+        ]
+      }
+    },
+    {
+      "file": "ott-entity.json",
+      "sha256": "d1af9b526ec8828ce7cd2f5131d9e4f312cbcc296ff1663c362d8f6cdf258577",
+      "evidence_id": "ev_72a003e7038ce4e3f6f65f6d03db89bdc0c55f530380ee0e6d4ee54735764117",
+      "operation": "inspect_android_method",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.app.devicecontrol.activity.devices.DeviceOttActivity",
+        "method": {
+          "name": "createEntity",
+          "reported_signature": "createEntity(java.lang.String): com.huawei.smarthome.common.entity.servicetype.BaseServiceTypeEntity",
+          "overload_index": 0,
+          "is_constructor": false,
+          "dex_descriptor": "(Ljava/lang/String;)Lcom/huawei/smarthome/common/entity/servicetype/BaseServiceTypeEntity;"
+        },
+        "representation": "java",
+        "fell_back": false,
+        "markers": [],
+        "source": {
+          "status": "complete",
+          "text": "    @Override // com.huawei.app.devicecontrol.activity.devices.BaseDeviceActivity, com.huawei.app.devicecontrol.activity.devices.BaseDevicePresenterActivity, cafebabe.i67\n    public BaseServiceTypeEntity createEntity(@NonNull String str) {\n        if (TextUtils.equals(str, \"switch\")) {\n            return new BinarySwitchEntity();\n        }\n        return null;\n    }",
+          "reported_total_bytes": null
+        }
+      }
+    },
+    {
+      "file": "ott-click.json",
+      "sha256": "4bcc76f0ae2b1aa329f43371e5e49ae9dfabd423520b0050f375c76a91efc0f1",
+      "evidence_id": "ev_04fe5e0f2838bbd4659db63843e24ffd1a0c806cec88bb0152a9c8a0fe6c8873",
+      "operation": "inspect_android_method",
+      "limitations": [
+        "Static decompiler observations do not establish runtime behavior; the APK is never executed.",
+        "Method signatures use provider display types; DEX prototypes come from frozen JADX metadata. Display names may be aliases, and overload indices are local to this engine and artifact.",
+        "Class inventories use parsed metadata before code generation, including synthetic members that may be omitted from decompiled source. Source positions remain unknown.",
+        "Incoming reference totals count JADX using nodes. Direct invoke entries within a using method report raw DEX code-unit offsets and method indexes, but coverage is limited to those nodes and directly matched invokes; it does not establish every possible dynamic or reflective call site.",
+        "Manifest summary fields are extracted by the upstream engine; decoded XML is retained for verification. APK signatures, split APKs, native libraries and Android runtime capture are not verified by this provider."
+      ],
+      "selected_result": {
+        "class_name": "com.huawei.app.devicecontrol.activity.devices.DeviceOttActivity",
+        "method": {
+          "name": "onClickResult",
+          "reported_signature": "onClickResult(com.huawei.app.devicecontrol.view.dynamicview.BaseControlButton, java.lang.String, java.lang.String, java.lang.Object): void",
+          "overload_index": 0,
+          "is_constructor": false,
+          "dex_descriptor": "(Lcom/huawei/app/devicecontrol/view/dynamicview/BaseControlButton;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)V"
+        },
+        "representation": "java",
+        "fell_back": false,
+        "markers": [],
+        "source": {
+          "status": "complete",
+          "text": "    @Override // com.huawei.app.devicecontrol.view.dynamicview.BaseControlButton.a\n    public void onClickResult(BaseControlButton baseControlButton, String str, String str2, Object obj) {\n        k98.warn(true, TAG, \"onClickResult()\");\n        if (TextUtils.isEmpty(str) || TextUtils.isEmpty(str2) || obj == null) {\n            return;\n        }\n        if (TextUtils.equals(str, \"switch\") && (obj instanceof Integer) && ((Integer) obj).intValue() == 1) {\n            this.mIsCurrentDeviceSwitchOn = true;\n            openView();\n            this.mSwitchButton.updateButtonView(1);\n        }\n        if (this.mIsExperience) {\n            return;\n        }\n        HashMap map = new HashMap(1);\n        map.put(str2, obj);\n        modifyDeviceProperty(str, map);\n    }",
+          "reported_total_bytes": null
+        }
+      }
+    }
+  ]
+}

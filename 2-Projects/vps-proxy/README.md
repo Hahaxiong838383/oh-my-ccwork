@@ -155,3 +155,7 @@ curl http://localhost:4000/health
 - VPS IP 和凭证信息存放在本地 `.secrets/vps-racknerd.env`（已 gitignore）
 - Codex CLI 的 `auth.json` 含敏感 token，仅存在 VPS 上
 - SSH 连接不稳定时加 `-o ProxyCommand=none` 绕过本地代理
+
+## 智慧生活电视控制调查
+
+2026-10-30：[分析、证据与后续配合步骤](smartlife-tv/README.md)。静态初查已完成，待用户解锁手机确认实际电视插件；未发送电视开关机命令。
