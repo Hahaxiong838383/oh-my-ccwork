@@ -1,6 +1,6 @@
 # fnmedia-ext 飞牛1加固维护
 
-当前版本 **0.2.19.1**（2026-10-29），上游 Lite `yujian0815/fnmedia-ext@93a781b1813eaaa83723765f38e6e4dddd60a651`。保留上游署名，只归档差异补丁，不复制公开协议常量或用户凭据。不是上游官方发布。
+当前版本 **0.2.19.2**（2026-10-30），上游 Lite `yujian0815/fnmedia-ext@93a781b1813eaaa83723765f38e6e4dddd60a651`。保留上游署名，只归档差异补丁，不复制公开协议常量或用户凭据。不是上游官方发布。
 
 ## 部署与入口
 
@@ -31,6 +31,12 @@
 
 `python3 build.py --work-dir /tmp/fnmedia-rebuild --proxy http://127.0.0.1:10808`：固定上游提交、补丁、fnpack SHA、Python3.11 x86_64 离线依赖，生成 FPK，不安装。构建目录必须不存在。
 
-插件108项回归通过；更新准备器27项、维护执行器31项通过。首次真实官方 update/task 升级成功；官方 PID7511和三SHA保持，配置/历史验摘要一致，自动首页刷新78条（18/20/20/20）且状态成功。真实管理员页面由用户反馈已使用；本轮未重新验证登录后第三方播放、TV、冷启动或官方真实升级。详见项目14号报告及 managed-*.json。
+插件113项回归通过（新增搜索总时限、请求取消与错片绑定回归）；更新准备器27项、维护执行器31项通过。首次真实官方 update/task 升级成功；官方 PID7511和三SHA保持，配置/历史验摘要一致，自动首页刷新78条（18/20/20/20）且状态成功。真实管理员页面由用户反馈已使用；本轮未重新验证登录后第三方播放、TV、冷启动或官方真实升级。0.2.19.2播放排障、真机证据与剩余验收见项目15号报告；自动更新机制见14号报告及 managed-*.json。
 
 正常停启/卸载用 `trim-cli --profile fnos1 app stop/start/uninstall fnmedia-ext --yes`。异常恢复用插件同源 `recover.py` 或 `deploy/uninstall.sh --stop-only`，必须回读 socket 归属；不手动删除官方 socket。不要设置生产 FNMEDIA_STATE_DIR 把用户数据指向 /run。
+
+## 0.2.19.2 播放修复
+
+每个搜索源增加12秒总时限，避免快源已找到片源却被慢源拖到整批25秒超时；搜索与榜单共享Future隔离请求取消；无相关匹配时不再绑定第一条无关影片。真机同词搜索12.04秒返回3个精确可播源。电视/手机升级后真实画面声音仍待复测，不承诺第三方每条内容可用。发布包位于 `/data/home-studio/artifacts/fnmedia-tv-20261030/releases/`，维护器可信树及last-good指针已同步。
+
+升级适配器现按NAS真实download/status的 `packageType=path` 调用update；local/file在本轮update/info均返回10100。仅对固定NAS的POST `/oauthapi/refresh`放行原样转发，令牌仍由CLI管理；已实测代理内官方refresh成功。

@@ -1,19 +1,19 @@
 {
   "source_repository": "~/home-lan",
-  "source_commit": "faebbc8ea68894c565bfbd1331c3ae9c1fc74134",
-  "date": "2026-10-29",
+  "source_commit": "6fc81ac4944e32ccce89cc8d4e719ce0902178c5",
+  "date": "2026-10-30",
   "files": [
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/BUILD-MANIFEST.json",
       "snapshot": "hardening/BUILD-MANIFEST.json",
       "bytes": 422,
-      "sha256": "92999fb090386fea7d7fa49885fcdafb59141d9266bd7589c0937812daed4ee1"
+      "sha256": "ff96b2037c90e7028234ed7dfc21d75c9349a1863e68caedf26a0afed3703ef0"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/README.md",
       "snapshot": "hardening/README.md",
-      "bytes": 4764,
-      "sha256": "5ae33da4a020a8a1e21bf129e5a8f5a58a838bbf82cb67dd559e4417bf18d7eb"
+      "bytes": 5675,
+      "sha256": "102cabdb9498db9771f9ed90f11b8ff17d0b27b71392aa0a5b78d88aa4c7c1ce"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/build.py",
@@ -36,8 +36,8 @@
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/hardening.patch",
       "snapshot": "hardening/hardening.patch",
-      "bytes": 523628,
-      "sha256": "beb120af90736cb418aa1c24e3498db17714ded5b5ca4ea0f4df1aa2ca94fd59"
+      "bytes": 531272,
+      "sha256": "b5d5c413d5526b0c846d24425b83ca528f2af97e3158759322b5d2bdf3bf7ed7"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/maintenance/.gitignore",
@@ -48,8 +48,8 @@
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/maintenance/README.md",
       "snapshot": "hardening/maintenance/README.md",
-      "bytes": 1097,
-      "sha256": "9f9d16ac871e87223b51c5d64a62e3fcf0af9f0941f4ecd8c2d1783f12501195"
+      "bytes": 1367,
+      "sha256": "b5e396a48220c080f1569a7652cd70b1c2963b7a3d1a07dd05f3f8bd620c9e1a"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/maintenance/fnmedia-ext-maintenance.service.in",
@@ -66,8 +66,8 @@
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/maintenance/local_upgrade.py",
       "snapshot": "hardening/maintenance/local_upgrade.py",
-      "bytes": 5683,
-      "sha256": "752392fbfc294758d0974e01be6d69107465416af4f7b689c9e3202df8fba1b8"
+      "bytes": 5825,
+      "sha256": "996d9bc47685babe3b5f53ba2cd65a321e07f95f41eddc9482349e205e50def0"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/maintenance/runner.py",
@@ -158,6 +158,12 @@
       "snapshot": "14-fnmedia-ext自动更新与复连.md",
       "bytes": 4010,
       "sha256": "67a5ec4e6acb449e6cd95fb81f7dbc42d77efc901bc4ee755088de5d5937ad55"
+    },
+    {
+      "source": "2-Projects/P01-家里局域网与飞牛/15-fnmedia-ext播放超时修复.md",
+      "snapshot": "15-fnmedia-ext播放超时修复.md",
+      "bytes": 5209,
+      "sha256": "a8e75e24a4094b437e6289c944a3c5daeb9001cb131052821a6ef6c8546402a9"
     }
   ]
 }

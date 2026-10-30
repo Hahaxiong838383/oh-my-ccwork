@@ -11,12 +11,12 @@ index 09b8290..8d82b64 100644
  # Editor/OS
  .DS_Store
 diff --git a/VERSION b/VERSION
-index 6bf5ecb..b690d15 100644
+index 6bf5ecb..b49d92e 100644
 --- a/VERSION
 +++ b/VERSION
 @@ -1 +1 @@
 -0.2.19
-+0.2.19.1
++0.2.19.2
 diff --git a/compatibility.json b/compatibility.json
 new file mode 100644
 index 0000000..0f98118
@@ -1505,7 +1505,7 @@ index d087bef..85916a2 100644
  $("kw").addEventListener("input",()=>{clearTimeout(window._t);window._t=setTimeout(loadOnline,250);});
  init().catch(e=>{const gs=$("globalState");gs.textContent="未接管/接口不可用";gs.className="dot bad";console.error(e);});
 diff --git a/proxy/app.py b/proxy/app.py
-index d338a13..158318d 100644
+index d338a13..0fb53c3 100644
 --- a/proxy/app.py
 +++ b/proxy/app.py
 @@ -26,6 +26,7 @@ import zlib
@@ -1524,7 +1524,26 @@ index d338a13..158318d 100644
  import history as histmod
  from history import history
  import marks as marksmod
-@@ -397,10 +399,14 @@ async def lifespan(app: FastAPI):
+@@ -254,9 +256,6 @@ def start_resolve_chart(guid: str) -> asyncio.Future | None:
+                                         and all(tok in n for tok in want_tokens))):
+                     best = b
+                     break
+-            if best is None and briefs:
+-                # 宽松兜底：取线路最多者（片名归一后高度重叠）
+-                best = briefs[0]
+             if best is not None:
+                 # 关键：把可播放 brief 的身份换成 chart guid，使播放链挂到榜单卡片
+                 bound = dict(best)
+@@ -291,7 +290,7 @@ async def resolve_chart(guid: str) -> dict | None:
+     fut = start_resolve_chart(guid)
+     if fut is None:
+         return store.get_title_by_guid(guid)
+-    return await fut
++    return await asyncio.shield(fut)
+ 
+ 
+ def chart_guid_by_media(mg: str) -> str:
+@@ -397,10 +396,14 @@ async def lifespan(app: FastAPI):
      app.state.up = httpx.AsyncClient(
          transport=httpx.AsyncHTTPTransport(uds=UPSTREAM_SOCK),
          timeout=httpx.Timeout(120), trust_env=False)
@@ -1543,7 +1562,7 @@ index d338a13..158318d 100644
  
  
      # 后台只读检查 GitHub 更新（仅提示，绝不自动安装）
-@@ -412,10 +418,10 @@ async def lifespan(app: FastAPI):
+@@ -412,10 +415,10 @@ async def lifespan(app: FastAPI):
      try:
          yield
      finally:
@@ -1557,7 +1576,7 @@ index d338a13..158318d 100644
          except (asyncio.CancelledError, Exception):
              pass
          try:
-@@ -424,40 +430,13 @@ async def lifespan(app: FastAPI):
+@@ -424,40 +427,13 @@ async def lifespan(app: FastAPI):
              await app.state.update_task
          except (asyncio.CancelledError, Exception):
              pass
@@ -1601,7 +1620,7 @@ index d338a13..158318d 100644
  
  import logging
  _log = logging.getLogger("fnmedia")
-@@ -475,9 +454,9 @@ async def _access(request: Request, call_next):
+@@ -475,9 +451,9 @@ async def _access(request: Request, call_next):
      p = request.url.path
      if "/api/" in p or p.startswith(ONLINE_PREFIX) or p.startswith("/v/media"):
          _log.info("%s %s -> %s", request.method,
@@ -1613,7 +1632,16 @@ index d338a13..158318d 100644
      return resp
  
  
-@@ -3239,6 +3218,8 @@ async def hls_seg(mg: str, request: Request):
+@@ -865,7 +841,7 @@ async def online_search(keyword: str, client: httpx.AsyncClient) -> list:
+                 _search_inflight.pop(keyword, None)
+ 
+         asyncio.create_task(work())
+-    return await fut
++    return await asyncio.shield(fut)
+ 
+ 
+ def _norm_title(t: str) -> str:
+@@ -3239,6 +3215,8 @@ async def hls_seg(mg: str, request: Request):
      try:
          # 分片在播放中途持续拉取，对瞬时抖动必须重试，否则单次失败播放器直接报错
          r = await ext_get_retry(request, src_url, fwd, tries=4, timeout=30.0)
@@ -1622,7 +1650,7 @@ index d338a13..158318d 100644
      except Exception as exc:
          _log.warning("seg fetch fail %s %s", type(exc).__name__,
                       urllib.parse.urlsplit(src_url).netloc)
-@@ -3350,6 +3331,8 @@ async def _serve_online_poster(tok_path: str, request: Request) -> Response:
+@@ -3350,6 +3328,8 @@ async def _serve_online_poster(tok_path: str, request: Request) -> Response:
              sniff = "image/jpeg"
          elif head[:6] in (b"GIF87a", b"GIF89a"):
              sniff = "image/gif"
@@ -1631,7 +1659,7 @@ index d338a13..158318d 100644
          if not (ctype.startswith("image/") or sniff):
              return _poster_fallback()
          ctype = ctype if ctype.startswith("image/") else sniff
-@@ -3416,7 +3399,9 @@ async def ext_status(request: Request):
+@@ -3416,7 +3396,9 @@ async def ext_status(request: Request):
              "cached_titles": len(store._titles),
              "hot": hot_cache.status(),
              "charts": chart_cache.status(),
@@ -1642,7 +1670,7 @@ index d338a13..158318d 100644
  
  
  # --------------------------------------------------------------- 版本更新
-@@ -3426,6 +3411,11 @@ async def ext_update_check(request: Request):
+@@ -3426,6 +3408,11 @@ async def ext_update_check(request: Request):
      return await updater.check(force=force)
  
  
@@ -1654,7 +1682,7 @@ index d338a13..158318d 100644
  @app.get("/v/api/ext/update/status")
  async def ext_update_status(request: Request):
      return updater.status()
-@@ -3493,16 +3483,62 @@ async def ext_lib_pin(request: Request):
+@@ -3493,16 +3480,62 @@ async def ext_lib_pin(request: Request):
              "data": {"pinned_libs": sorted(config.pinned_lib_guids())}}
  
  
@@ -1725,7 +1753,7 @@ index d338a13..158318d 100644
  
  
  @app.get("/v/api/ext/online")
-@@ -3529,11 +3565,10 @@ async def ext_set_config(request: Request):
+@@ -3529,11 +3562,10 @@ async def ext_set_config(request: Request):
          "max_per_keyword", "filter_junk", "junk_keywords", "online_first",
          "hot_library_enabled", "hot_library_title", "hot_limit",
          "hot_per_source", "hot_pages_per_source", "hot_refresh_interval",
@@ -1738,7 +1766,7 @@ index d338a13..158318d 100644
      }
      patch = {k: v for k, v in body.items() if k in allowed}
      if "hot_library_title" in patch:
-@@ -3547,6 +3582,11 @@ async def ext_set_config(request: Request):
+@@ -3547,6 +3579,11 @@ async def ext_set_config(request: Request):
      if "hot_refresh_interval" in patch:
          patch["hot_refresh_interval"] = max(1 * 3600, min(24 * 3600,
                                                            int(patch["hot_refresh_interval"])))
@@ -1750,7 +1778,7 @@ index d338a13..158318d 100644
      if "update_proxy" in patch:
          pu = str(patch["update_proxy"]).strip()[:300]
          patch["update_proxy"] = pu if re.match(r"^(https?|socks5h?)://", pu) else ""
-@@ -3569,10 +3609,24 @@ async def ext_set_config(request: Request):
+@@ -3569,10 +3606,24 @@ async def ext_set_config(request: Request):
                  if isinstance(ch.get("adult"), bool):
                      cur[sid]["adult"] = ch["adult"] and bool(cur[sid].get("standalone"))
          patch["sources"] = list(cur.values())
@@ -1775,7 +1803,7 @@ index d338a13..158318d 100644
      return {"code": 0, "msg": "saved"}
  
  
-@@ -3583,28 +3637,7 @@ async def ext_set_subscription_proxy(request: Request):
+@@ -3583,28 +3634,7 @@ async def ext_set_subscription_proxy(request: Request):
      播放、搜索、CMS 探测不走此代理。body: {"proxy":"http://user:pass@host:port"或""}
      会即时保存并用该代理探测一次（拉一个轻量 URL），返回连通结果。
      """
@@ -1805,7 +1833,7 @@ index d338a13..158318d 100644
  
  
  @app.post("/v/api/ext/junk-keywords")
-@@ -3618,10 +3651,25 @@ async def ext_junk_keywords(request: Request):
+@@ -3618,10 +3648,25 @@ async def ext_junk_keywords(request: Request):
      return {"code": 0, "msg": "saved", "data": {"junk_keywords": kws}}
  
  
@@ -1833,7 +1861,7 @@ index d338a13..158318d 100644
      except Exception:
          pass
  
-@@ -3998,3 +4046,8 @@ async def catch_all(request: Request, full_path: str):
+@@ -3998,3 +4043,8 @@ async def catch_all(request: Request, full_path: str):
      # 本地视频/文件等大响应必须流式透传（不缓冲整文件），避免打满内存拖死系统；
      # 该函数内部对普通 JSON 自动回落到缓冲透传。
      return await forward_upstream_streaming(request)
@@ -4709,10 +4737,17 @@ index 944923c..95dabb9 100644
 +if __name__ == "__main__":
 +    asyncio.run(main())
 diff --git a/proxy/providers.py b/proxy/providers.py
-index 3bfe00e..9c8099f 100644
+index 3bfe00e..beed07d 100644
 --- a/proxy/providers.py
 +++ b/proxy/providers.py
-@@ -14,6 +14,7 @@ import urllib.parse
+@@ -8,12 +8,14 @@ provider 只负责"搜索→条目→播放 URL 列表"，不做转码。
+ """
+ from __future__ import annotations
+ 
++import asyncio
+ import re
+ import time
+ import urllib.parse
  from dataclasses import dataclass, field
  
  import httpx
@@ -4720,7 +4755,7 @@ index 3bfe00e..9c8099f 100644
  
  import features
  
-@@ -34,6 +35,15 @@ DEFAULT_SOURCES: list[dict] = [
+@@ -34,6 +36,15 @@ DEFAULT_SOURCES: list[dict] = [
  
  
  HTTP_TIMEOUT = 12.0
@@ -4736,7 +4771,7 @@ index 3bfe00e..9c8099f 100644
  _DIRECT_RE = re.compile(r"^https?://", re.I)
  _MEDIA_RE = re.compile(r"\.(m3u8|mp4|flv|mkv|ts)(\?|$)", re.I)
  
-@@ -265,8 +275,7 @@ async def probe_source(api: str, keyword: str = "庆余年",
+@@ -265,8 +276,7 @@ async def probe_source(api: str, keyword: str = "庆余年",
          return {"ok": False, "status": 0, "elapsed_ms": 0, "count": 0,
                  "sample": "", "error": "地址需以 http(s):// 开头"}
      try:
@@ -4746,7 +4781,7 @@ index 3bfe00e..9c8099f 100644
              r = await client.get(
                  api, params={"ac": "detail", "wd": keyword},
                  headers={"User-Agent": "Mozilla/5.0"}, timeout=timeout)
-@@ -296,8 +305,7 @@ async def probe_source(api: str, keyword: str = "庆余年",
+@@ -296,8 +306,7 @@ async def probe_source(api: str, keyword: str = "庆余年",
      if not lst:
          # 接口合法但该词无结果，再试分类列表确认源活着
          try:
@@ -4756,7 +4791,7 @@ index 3bfe00e..9c8099f 100644
                  r2 = await client.get(
                      api, params={"ac": "list", "pg": 1},
                      headers={"User-Agent": "Mozilla/5.0"}, timeout=timeout)
-@@ -326,7 +334,7 @@ async def probe_source(api: str, keyword: str = "庆余年",
+@@ -326,11 +335,16 @@ async def probe_source(api: str, keyword: str = "庆余年",
  async def search_all(keyword: str, sources=None) -> list[OnlineTitle]:
      sources = sources or DEFAULT_SOURCES
      enabled = [s for s in sources if s.get("enabled")]
@@ -4764,7 +4799,18 @@ index 3bfe00e..9c8099f 100644
 +    async with SafeAsyncClient(follow_redirects=True) as client:
          tasks = []
          for s in enabled:
-             tasks.append(search_source(client, s, keyword))
+-            tasks.append(search_source(client, s, keyword))
+-        results = await __import__("asyncio").gather(*tasks, return_exceptions=True)
++            # HTTPX's timeout is per network operation. DNS, several address
++            # attempts and redirects can exceed it in total. Bound each source
++            # by wall time so one slow source cannot cause the chart resolver's
++            # outer deadline to discard already successful sources.
++            tasks.append(asyncio.wait_for(
++                search_source(client, s, keyword), timeout=HTTP_TIMEOUT))
++        results = await asyncio.gather(*tasks, return_exceptions=True)
+     titles: list[OnlineTitle] = []
+     for r in results:
+         if isinstance(r, list):
 diff --git a/proxy/recover.py b/proxy/recover.py
 new file mode 100644
 index 0000000..d536498
@@ -11478,6 +11524,149 @@ index 0000000..b4af3ae
 +
 +if __name__ == "__main__":
 +    sys.exit(_main())
+diff --git a/tests/test_search_deadline.py b/tests/test_search_deadline.py
+new file mode 100644
+index 0000000..6566149
+--- /dev/null
++++ b/tests/test_search_deadline.py
+@@ -0,0 +1,71 @@
++"""Fast, playable CMS results survive another source's stalled network path."""
++import asyncio
++import sys
++import unittest
++from pathlib import Path
++from unittest.mock import patch
++
++import httpx
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'proxy'))
++import providers
++
++
++def source(name):
++    return {'id': name, 'api': f'https://{name}.example/api', 'enabled': True}
++
++
++class SearchDeadlineTests(unittest.IsolatedAsyncioTestCase):
++    async def test_completed_result_survives_stalled_source(self):
++        stalled_started = asyncio.Event()
++        stalled_closed = asyncio.Event()
++
++        async def upstream(request):
++            if request.url.host == 'slow.example':
++                stalled_started.set()
++                try:
++                    await asyncio.Event().wait()
++                finally:
++                    stalled_closed.set()
++            await stalled_started.wait()
++            return httpx.Response(200, json={'code': 1, 'list': [{
++                'vod_id': 7, 'vod_name': 'Example film', 'vod_play_from': 'hls',
++                'vod_play_url': 'Full$https://video.example/film.m3u8'}]})
++
++        def client(**kwargs):
++            return httpx.AsyncClient(transport=httpx.MockTransport(upstream), **kwargs)
++
++        with patch.object(providers, 'SafeAsyncClient', client), \
++                patch.object(providers, 'HTTP_TIMEOUT', .1):
++            # The old implementation reaches this independent outer deadline
++            # and loses the successful source, reproducing the real failure.
++            rows = await asyncio.wait_for(
++                providers.search_all('Example film', [source('fast'), source('slow')]), .5)
++        self.assertEqual([r.provider for r in rows], ['fast'])
++        self.assertTrue(rows[0].sources['hls'][0].direct)
++        self.assertTrue(stalled_closed.is_set())
++
++    async def test_caller_cancellation_closes_inflight_sources(self):
++        started, closed = asyncio.Event(), asyncio.Event()
++
++        async def upstream(request):
++            started.set()
++            try:
++                await asyncio.Event().wait()
++            finally:
++                closed.set()
++
++        def client(**kwargs):
++            return httpx.AsyncClient(transport=httpx.MockTransport(upstream), **kwargs)
++
++        with patch.object(providers, 'SafeAsyncClient', client):
++            task = asyncio.create_task(providers.search_all('Example', [source('slow')]))
++            await started.wait()
++            task.cancel()
++            with self.assertRaises(asyncio.CancelledError):
++                await task
++        self.assertTrue(closed.is_set())
++
++
++if __name__ == '__main__':
++    unittest.main()
+diff --git a/tests/test_search_waiters.py b/tests/test_search_waiters.py
+new file mode 100644
+index 0000000..d26b976
+--- /dev/null
++++ b/tests/test_search_waiters.py
+@@ -0,0 +1,60 @@
++"""Request timeout must not cancel shared work or bind an unrelated film."""
++import asyncio
++from pathlib import Path
++import sys
++from unittest.mock import Mock
++
++import pytest
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'proxy'))
++import app as module
++
++
++@pytest.mark.asyncio
++async def test_search_timeout_does_not_poison_next_waiter(monkeypatch):
++    finish = asyncio.Event()
++    monkeypatch.setattr(module, '_search_cache', {})
++    monkeypatch.setattr(module, '_search_inflight', {})
++
++    async def aggregate(keyword):
++        await finish.wait()
++        return [{'title': 'Expected film'}]
++
++    monkeypatch.setattr(module, '_aggregate_briefs', aggregate)
++    monkeypatch.setattr(module.inj, 'search_item', lambda row: row)
++    with pytest.raises(asyncio.TimeoutError):
++        await asyncio.wait_for(module.online_search('Expected film', None), .01)
++    assert not module._search_inflight['Expected film'].cancelled()
++    second = asyncio.create_task(module.online_search('Expected film', None))
++    finish.set()
++    assert await asyncio.wait_for(second, .5) == [{'title': 'Expected film'}]
++    assert 'Expected film' not in module._search_inflight
++
++
++@pytest.mark.asyncio
++async def test_chart_waiter_cancellation_keeps_shared_future(monkeypatch):
++    shared = asyncio.get_running_loop().create_future()
++    monkeypatch.setattr(module.store, 'get_title_by_guid', lambda guid: None)
++    monkeypatch.setattr(module, 'start_resolve_chart', lambda guid: shared)
++    with pytest.raises(asyncio.TimeoutError):
++        await asyncio.wait_for(module.resolve_chart('chart-fixture'), .01)
++    assert not shared.cancelled()
++    shared.set_result({'title': 'Expected film'})
++    assert await module.resolve_chart('chart-fixture') == {'title': 'Expected film'}
++
++
++@pytest.mark.asyncio
++async def test_unrelated_search_hit_is_not_bound_to_chart(monkeypatch):
++    monkeypatch.setattr(module, '_CHART_FAILED_TS', {})
++    monkeypatch.setattr(module, '_chart_resolving', {})
++    monkeypatch.setattr(module.store, 'get_title_by_guid', lambda guid: None)
++    monkeypatch.setattr(module.chart_cache, 'get_guid', lambda guid: {'title': 'Expected film', 'cat': 'movie'})
++    remember = Mock()
++    monkeypatch.setattr(module.store, 'remember_merged', remember)
++
++    async def unrelated(*args):
++        return [{'guid': 'other-fixture', 'title': 'An unrelated film', 'lines': {}}]
++
++    monkeypatch.setattr(module, '_aggregate_briefs', unrelated)
++    assert await module.start_resolve_chart('chart-fixture') is None
++    remember.assert_not_called()
 diff --git a/tests/test_security_integration.py b/tests/test_security_integration.py
 new file mode 100644
 index 0000000..6fe5879

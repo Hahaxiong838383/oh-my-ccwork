@@ -54,7 +54,9 @@ def main(argv=None):
                 self.wfile=self.connection.makefile('wb')
                 self.close_connection=False
             def relay(self):
-                if not self.path.startswith('/ogh/') or self.headers.get('Host') != f'{HOST}:{PORT}':
+                allowed_path = (self.path.startswith('/ogh/') or
+                                (self.command == 'POST' and self.path == '/oauthapi/refresh'))
+                if not allowed_path or self.headers.get('Host') != f'{HOST}:{PORT}':
                     return self.send_error(403)
                 length=int(self.headers.get('Content-Length','0'))
                 if length > 1024*1024: return self.send_error(413)
@@ -94,7 +96,7 @@ def main(argv=None):
         for name in ('HTTPS_PROXY','HTTP_PROXY','https_proxy','http_proxy'): env[name]=proxy
         for name in ('NO_PROXY','no_proxy'): env[name]=''
         command=[args.trim_cli,'--profile','fnos1','app','update','fnmedia-ext',
-                 '--version',args.version,'--package-type','local','--volume-id','3','--yes',
+                 '--version',args.version,'--package-type','path','--volume-id','3','--yes',
                  '--accept-license','--custom-parameters','[{"key":"wizard_agree_terms","value":["agree"]}]']
         if args.dry_run: command.append('--dry-run')
         try:
