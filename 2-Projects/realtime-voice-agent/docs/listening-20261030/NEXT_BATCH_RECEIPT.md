@@ -1,5 +1,60 @@
 # P003 倾听 Worker 下一批开发回执
 
+## 2026-10-30 接续整改（当前结果）
+
+**结论：确定 P1 已在代码与 job 层替身验证中关闭，普通 R18＋style/ark 候选可继续隔离联调。本轮未部署、未开闸；真实 RTC／Android 关房与重连仍待取证。**没有以“closed”日志或替身状态冒充设备断开。
+
+| 项目 | 当前真值 |
+|---|---|
+| 分支 | `codex/p003-listening-worker-20261030`，沿用原工作树 |
+| 开始 HEAD／精确回滚基点 | `9007bfd8ca7c1b34098b60403b43ae47aca97107`；开始时 clean，无并行修改 |
+| P1 实现＋测试证据提交 | `962f2599bc1e6a2eff6c373b87e04958280377c5` |
+| 本轮实际 HTTP 联合测试 Brain 提交 | `7fdba6e430c0ab3081b0ff4f83eba220b7f5c312`，32 个 Brain 输入逐项与该提交 `git show` 字节核同 |
+| HTTP 合同 | version=1、`frozen_for_integration`；SHA256 `c4df5d49bd7addb09adbf6e06441c21b9b4e5e63e084b58a4f5599c66126e531`，未改协议 |
+| fixtures SHA256 | `1c32e52ae65c6d2f0724d033def70e36eb345cc37b9c06f6bbb3a46e7d68ef2d`，未改 |
+| 最终两次运行输入摘要 | 76 文件，SHA256 `7291a1e46756c2cfbc6d71118b5187b53aad61152f6543f234412dd87a2c4487`；本地逐字节核验，Linux 写入后再次核验 |
+
+### P1 如何关闭、代码锚
+
+原根因是 job 只监听房间事件与活跃任务心跳，pipeline 已结束后既无完成通知，又被 `!finished` 排除，无法保证进入原关房收尾。此次仅修改 `src/job.rs` 和 `src/pipeline.rs` 的生命周期接线及测试，没有引入守护进程、消息总线或通用生命周期框架。
+
+- `src/job.rs:82` 的真实 selector 直接等待 pipeline JoinHandle；正常结束、Err、panic 均在 `:221` 退出事件循环，汇入原有统一收尾。已经 join 的 handle 立即取走，避免二次 poll；完成优先、watchdog 次之，房间事件洪泛不能饿死心跳/窗口检查。
+- `src/job.rs:457` 复用 `close_pipeline`：候选合作退出仍最多 500ms，abort 后再给最多 500ms 确认资源释放；不合作任务也不能无限挡住关房。这里没有加长原有退出等待。
+- `src/job.rs:446`、`:472` 统一执行 Room.close 与既有 DeleteRoom。Room.close 最多 3 秒，失败/超时仍尝试删除；删除沿用现有有界请求、错误及重试机制，不因进入倾听而改变搜索窗口。
+- `src/pipeline.rs:1182` 的 fatal 改为记录错误并退出循环，经过原 ordered/STT/output 收尾后在 `:1434` 返回 Err。`src/pipeline.rs:665` 的本地 STT abort-handle 集合只负责该 pipeline 的主/次 STT 任务，Drop 时取消，覆盖错误、panic 和强制取消；主 STT 原有 3 秒等待到期后不再直接丢 handle 脱离。
+- paused、禁止普通聊天/旧输出补播的逻辑未放宽；没有靠重启整个服务掩盖问题。Orchestrator 和搜索原有 Drop 清理保留，本轮不宣称已证明搜索泄漏。
+
+### 本轮实测（与上一批证据分开）
+
+| 验证 | 实际结果／边界 | 证据 |
+|---|---|---|
+| 完整 Linux `cargo test --offline --locked` | binary 480＋core 29＋runtime 7＝**516 通过**，0 失败；joint 默认 ignored 1 项 | [最终完整日志](evidence/lifecycle-linux.txt) |
+| 现有 Rust→Brain HTTP joint，显式 `--ignored` | **1 通过**、0 失败；实际 HTTP／Hono／SQLite，隔离身份、manifest、模型与时钟 | [联合日志](evidence/lifecycle-joint-linux.txt) |
+| 新增针对性用例 | 7 个 job 层用例＋1 个 STT 所有权用例；覆盖正常结束/Err/panic、取消资源释放及非合作上限、关房失败/卡住仍删房、None/live selector 与 watchdog、暂停旧输出及新会话隔离 | `src/job.rs:642` 起、`src/pipeline.rs:4350` 起；最终完整日志 |
+| 暂停来源 | 替身链路覆盖租约过期、缺 local_ready、capture 未排空；授权超时使用真实 adapter 既有计时用例，再验证其 paused 状态的 job 收尾出口 | 同上；不冒充完整 RTC pipeline 集成 |
+| RTC 边界 | 本轮关房／删除／重连为替身；旧许可、任务终止、收尾顺序执行真实 Worker 代码。NativeAudioSource FFI 回归也在完整套件内；均非设备扬声器或真实 Room 验收 | [最终源码清单](evidence/lifecycle-source-manifest.json) |
+| 来源核对 | 76 个传输输入完全匹配；联合 bundle 的 Brain 32 个输入是已提交源码，不使用会话38未完成修改 | [bundle 清单](evidence/lifecycle-brain-http-bundle-manifest.json) |
+| 只读复核 | 辅助评审确认原 P1 关闭，未发现新增 P1/P2；仅静态复核，不替代主实现实测 | 本回执记录；主实现仍由本会话 Codex 亲写 |
+| 差分格式 | 已清理前批 6 份日志 EOF 多余空行；`git diff --check 4c900d9a` 通过 | 没有把之前仅工作树检查写成旧完整提交范围已通过 |
+
+最终实际执行 **516＋1＝517 项通过**。前批 508＋1 及主会话后来只复跑的 29 core＋7 runtime 是历史证据，未混算成本轮执行次数。仍有 dead_code warnings，不称零警告。
+
+失败证据保留：[完成监听／abort 等待 RED](evidence/job-lifecycle-red.txt)、[关房超时 RED](evidence/job-close-timeout-red.txt)、[STT／非合作取消 RED](evidence/job-stt-cancellation-red.txt)。主会话原最小控制流模型仅证明 guard 缺口，本轮新增用例使用真实 job selector／收尾函数，仍不冒称真实 RTC。隔离构建一度缺搜索 fixture、两处测试编译错误、一次 SSH 转发超时，均未算 RED，修正/重试后才运行。首次全套为 479 通过、1 失败、1 ignored，失败来自新 watchdog 用例对 Tokio 首 tick 的取整假设；改用明确过去的 tick 后复验，见[首次全套原日志](evidence/lifecycle-first-full.txt)。未隐藏失败或凑测试数。
+
+构建机预检：根分区约 125MB 可用，`/data` 约 166GB 可用；本轮源码位于 `/data/p003-listening-worker-check-20261030-session39/lifecycle/2-Projects/realtime-voice-agent/rust-worker`，使用本会话已有独立 target，没有整份复制庞大缓存，没有安装/替换系统工具链或碰生产服务。代码、测试与证据已提交；本回执随后单独提交，并推送既有 origin 专用分支，最终以 `ls-remote` 对账。
+
+### 回滚与下一步最小联调动作
+
+精确撤销本次代码修复可另行在开发分支审查后执行 `git revert 962f2599bc1e6a2eff6c373b87e04958280377c5`，回到本轮开始 `9007bfd8` 的功能状态。只记录，不执行。**未部署，因此本轮没有服务器回滚动作。**本轮未打开倾听总闸、扩设备、修改搜索名单/窗口、Android 包或另一工作树。
+
+下一步仅做隔离 RTC＋当前 Android 候选包闭环：记录版本/capability/完整 SN 与同 trace，依次触发租约失效、缺 local_ready 和 pipeline 异常；同时取得端侧真实断开原因、旧 Room SID 消失、新 room/session/trace、旧音频零补播的对应证据。关房 HTTP 成功和“closed”日志不能替代端侧断开。真实模型、自然故事/唱歌、墙钟撤权、体验/长稳及新→旧→新回滚仍分别待验，不要求本轮顺带完成。
+
+R26 仍由会话24稳定其实际基线，之后再从该基线最小整合；本树保持普通 R18＋style/ark，没有整树覆盖搜索分支。
+
+署名：codex（OpenAI）| 2026-10-30 12:35 CST
+
+## 首轮 A／B 交付（历史：HEAD 9007bfd8）
+
 结论：A、B 批次 Worker 接线、异步 HTTP 客户端、测试及只读评审已完成，交付可评审代码与隔离实测证据。完整 Linux Cargo 508 项通过，另行执行真实 Brain HTTP 联合测试 1 项通过。本轮未部署；C 批次的候选适配和发布验收尚未完成，不代表真机倾听功能已上线。
 
 ## 版本与协议
