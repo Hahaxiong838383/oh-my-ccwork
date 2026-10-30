@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import { Hono } from 'hono';
 import { testAuthority } from './lib/listening-test.js';
 import { createListeningRoute } from '../src/routes/listening.js';
-async function setup(generate:any=async()=> '小熊愿意分享最后的苹果，让人感到温暖。'){
- const f=await testAuthority();const offered=await f.authority.lease(f.headers,{...f.base,applied_snapshot_sha256:null});
+async function setup(generate:any=async()=> '小熊愿意分享最后的苹果，让人感到温暖。',options:Parameters<typeof testAuthority>[0]={}){
+ const f=await testAuthority(options);const offered=await f.authority.lease(f.headers,{...f.base,applied_snapshot_sha256:null});
  await f.authority.lease(f.headers,{...f.base,request_id:'applied',applied_snapshot_sha256:offered.snapshot.sha256});
  let personaReads=0,calls=0;const inputs:any[]=[];
  const app=new Hono().route('/v1/internal/listening',createListeningRoute(f.authority,{generate:async(o:any)=>{calls++;inputs.push(o);return generate(o);},personality:async()=>{personaReads++;return '小可：温柔简短的方舟伙伴。';}}));
@@ -49,7 +49,7 @@ test('mode epoch invalidates pending output and old-epoch replay',async()=>{let 
  done('摘要完成');assert.equal((await pending).status,409);
  assert.equal((await f.call('/summary',f.summary)).status,409);
 }finally{f.cleanup();}});
-test('singing allows button only and voice invitation flag is actually consumed',async()=>{for(const scene of ['singing','story']){const f=await setup();try{
+test('legacy singing remains button only and story invitation flag is consumed',async()=>{for(const scene of ['singing','story']){const f=await setup();try{
  await f.authority.close(f.headers,{...f.base,request_id:'close'});
  if(scene==='story'){const cfg=f.settings.read().config;const {schema_version,revision,...editable}=cfg;f.settings.save(revision,{...editable,tuning:{...editable.tuning,voice_invitation_enabled:false}},'synthetic');}
  const next={...f.base,listening_id:f.base.session.trace_id+':2',request_id:'next-offer',scene,mode_epoch:2};
@@ -68,4 +68,47 @@ test('abandoned task cannot revive after durable timeout recovery',async()=>{con
 test('model timeout spends RID and aborts work, without retrying generation',async()=>{let signal:AbortSignal|undefined;const f=await setup((o:any)=>{signal=o.signal;return new Promise(()=>{});});try{
  assert.equal((await f.call('/summary',f.summary)).status,504);assert.equal(signal?.aborted,true);
  assert.equal((await f.call('/summary',f.summary)).status,409);assert.equal(f.counts().calls,1);
+}finally{f.cleanup();}});
+
+// This catches accepting voice as button, trusting unnegotiated supports, or skipping post-model capability checks.
+test('singing explicit voice command uses one permit only after negotiation; legacy invitation stays rejected',async()=>{
+ for(const voice of [false,true]){const f=await setup(undefined,{voiceClient:voice,voiceWorker:true,voiceApproved:true});try{
+  await f.authority.close(f.headers,{...f.base,request_id:'old-close'});
+  const next={...f.base,listening_id:'trace-test-1:2',request_id:'sing-offer',scene:'singing',mode_epoch:2};
+  const offer=await f.authority.lease(f.headers,{...next,applied_snapshot_sha256:null});
+  await f.authority.lease(f.headers,{...next,request_id:'sing-apply',applied_snapshot_sha256:offer.snapshot.sha256});
+  if(!voice){
+   // Pre-extension sessions persisted raw supports. A historic advertised tag is not a negotiated grant.
+   const legacy=f.store.session(f.metadata.session.session_id)!;legacy.supports.push('listening_voice_control_v1');
+   f.db.prepare('UPDATE listening_sessions SET payload_json=? WHERE session_id=?').run(JSON.stringify(legacy),legacy.session_id);
+  }
+  const body={...f.feedback,...next,request_id:'sing-voice',snapshot_revision:offer.snapshot.revision,snapshot_sha256:offer.snapshot.sha256,trigger:'voice_command',question:'请对刚才的分享给一次简短反馈。'};
+  assert.equal((await f.call('/feedback',{...body,request_id:'legacy',trigger:'voice_invitation'})).status,403);
+  const response=await f.call('/feedback',body);assert.equal(response.status,voice?200:403);
+  assert.equal(f.counts().calls,voice?1:0);
+  if(voice){assert.match(f.inputs[0].systemPrompt,/不评价音准/);assert.equal((await f.call('/feedback',{...body,request_id:'again'})).status,409);}
+ }finally{f.cleanup();}}
+});
+test('story legacy voice invitation remains available without new voice capability',async()=>{const f=await setup();try{
+ assert.equal((await f.call('/feedback',{...f.feedback,trigger:'voice_command'})).status,403);
+ assert.equal((await f.call('/feedback',{...f.feedback,trigger:'voice_invitation'})).status,200);
+}finally{f.cleanup();}});
+test('voice flag off on new entry blocks explicit singing command but button still works',async()=>{const f=await setup(undefined,{voiceClient:true,voiceWorker:true,voiceApproved:true});try{
+ await f.authority.close(f.headers,{...f.base,request_id:'close-story'});
+ const {schema_version,revision,...edit}=f.settings.read().config;f.settings.save(revision,{...edit,tuning:{...edit.tuning,voice_invitation_enabled:false}},'synthetic');
+ const next={...f.base,listening_id:'trace-test-1:2',request_id:'off-offer',scene:'singing',mode_epoch:2};
+ const offer=await f.authority.lease(f.headers,{...next,applied_snapshot_sha256:null});
+ await f.authority.lease(f.headers,{...next,request_id:'off-apply',applied_snapshot_sha256:offer.snapshot.sha256});
+ const body={...f.feedback,...next,request_id:'off-voice',snapshot_revision:offer.snapshot.revision,snapshot_sha256:offer.snapshot.sha256,trigger:'voice_command'};
+ assert.equal((await f.call('/feedback',body)).status,403);assert.equal(f.counts().calls,0);
+ assert.equal((await f.call('/feedback',{...body,request_id:'off-button',trigger:'button'})).status,200);
+}finally{f.cleanup();}});
+test('withdrawn voice capability during generation discards response; no same-request regeneration',async()=>{
+ let finish:(s:string)=>void=()=>{};const f=await setup(()=>new Promise<string>(r=>finish=r),{voiceClient:true,voiceWorker:true,voiceApproved:true});try{
+  const pending=f.call('/feedback',{...f.feedback,trigger:'voice_command'});
+  for(let n=0;n<200&&f.counts().calls===0;n++)await new Promise(r=>setTimeout(r,5));
+  assert.equal(f.counts().calls,1,'voice request must reach isolated generator');
+  f.manifest.agents[0].capabilities=f.manifest.agents[0].capabilities.filter(c=>c!=='listening_voice_control_v1');
+  finish('分享故事让人感到温暖。');assert.equal((await pending).status,403);assert.equal(f.counts().calls,1);
+  assert.equal((await f.call('/feedback',{...f.feedback,trigger:'voice_command'})).status,403);
 }finally{f.cleanup();}});

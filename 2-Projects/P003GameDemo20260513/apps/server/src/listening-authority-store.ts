@@ -14,7 +14,7 @@ export function listeningSnapshot(config:ListeningConfig):ListeningSnapshot {
 }
 export interface AuthoritySession extends SessionWire {
  device_epoch:number;worker_account:string;agent:string;build_sha:string;source:'normal'|'search_canary';
- source_cutoff_ms:number;source_generation:number;credential_iat:number;credential_expires_ms:number;expires_at_ms:number;grant_hash:string;supports:string[];
+ source_cutoff_ms:number;source_generation:number;credential_iat:number;credential_expires_ms:number;expires_at_ms:number;grant_hash:string;supports:string[];voice_control?:{version:1;capability:'listening_voice_control_v1'};
 }
 export interface Entry {session_id:string;listening_id:string;seq:number;scene:ListeningScene;mode_epoch:number;started_ms:number;deadline_ms:number;lease_until_ms:number;closed:number;snapshot:ListeningSnapshot;last_feedback_at:number|null}
 export interface RequestRecord {request_id:string;hash:string;kind:string;status:string;created_ms:number;reply_json:string|null}

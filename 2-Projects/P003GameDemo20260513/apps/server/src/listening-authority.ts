@@ -1,14 +1,14 @@
 import { timingSafeEqual } from 'node:crypto';
 import { jwtVerify } from 'jose';
 import { issueListeningGrant,verifyListeningGrant,type ListeningBinding } from './listening-grant.js';
-import { listeningDigest,listeningSessionSchema,parseListeningRequest,LISTENING_WORKER_CAPABILITIES,type SessionWire,type ListeningRequest } from './listening-http-contract.js';
+import { listeningDigest,listeningSessionSchema,parseListeningRequest,validListeningWorkerCapabilities,LISTENING_VOICE_CAPABILITY,type SessionWire,type ListeningRequest } from './listening-http-contract.js';
 import { ListeningAuthorityStore,ListeningError,listeningSnapshot,type AuthoritySession,type ListeningSnapshot } from './listening-authority-store.js';
 import { exactObject,type ListeningConfig } from './listening-settings.js';
 export interface ListeningSecrets {authSecret:string;grantSecret:string;serviceKey:string;workerAccounts:Record<string,string>}
 export interface AuthorityOptions {store:ListeningAuthorityStore;getConfig:()=>ListeningConfig;clock:()=>number;secrets:()=>ListeningSecrets;manifest:()=>unknown;sourceDeadline:(session:AuthoritySession,now:number)=>number;sourceGeneration:()=>number;restrictedSince:(revision:number,sn:string,scene:string)=>boolean}
 export interface IssueInput {sn:string;room:string;session_id:string;trace_id:string;agent:string;supports:string[];source:'normal'|'search_canary';expires_at_ms:number;source_cutoff_ms:number;credential:string}
 export type ListeningHeaders=Record<string,string|undefined>;
-type WorkerEvidence={agent:string;account:string;instance:string;build:string;until:number;revision:number|null;sha:string|null;at:number};
+type WorkerEvidence={agent:string;account:string;instance:string;build:string;until:number;revision:number|null;sha:string|null;at:number;capabilities:string[]};
 const error=(code:string,status=403,retryable=false)=>new ListeningError(code,status,retryable);
 const key=(v:string)=>{if(!v||v!==v.trim()||Buffer.byteLength(v)<32)throw error('authority_unavailable',503,true);return new TextEncoder().encode(v);};
 const same=(a:string,b:string)=>Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
@@ -19,7 +19,7 @@ export class ListeningAuthority {
  get store(){return this.options.store;}
  now(){return this.options.clock();}
  config(){return this.options.getConfig();}
- private release(agent:string,build?:string):{agent:string;build_sha:string}|null{
+ private release(agent:string,build?:string):{agent:string;build_sha:string;capabilities:string[]}|null{
   const value=this.options.manifest();const now=this.now();
   if(!exactObject(value,['version','expires_at_ms','evidence_ref','agents'])||value.version!==1||!Number.isSafeInteger(value.expires_at_ms)
    ||(value.expires_at_ms as number)<=now||typeof value.evidence_ref!=='string'||!value.evidence_ref.trim()||value.evidence_ref.length>512||!Array.isArray(value.agents)||value.agents.length>16)return null;
@@ -27,13 +27,14 @@ export class ListeningAuthority {
   const r=value.agents.find(a=>a?.agent===agent);
   if(!r||!exactObject(r,['agent','build_sha','capabilities'])||typeof r.build_sha!=='string'||!/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/.test(r.build_sha))return null;
   const capabilities=r.capabilities;
-  if(!Array.isArray(capabilities)||capabilities.length!==5||!LISTENING_WORKER_CAPABILITIES.every(c=>capabilities.includes(c))||build&&r.build_sha!==build)return null;
-  return {agent,build_sha:r.build_sha};
+  if(!validListeningWorkerCapabilities(capabilities)||build&&r.build_sha!==build)return null;
+  return {agent,build_sha:r.build_sha,capabilities};
  }
- private readyWorker(agent:string,config:ListeningConfig,applied=true,build?:string):WorkerEvidence|null{
+ private readyWorker(agent:string,config:ListeningConfig,applied=true,build?:string,voice=false):WorkerEvidence|null{
   const snapshot=listeningSnapshot(config);const now=this.now();
   for(const v of this.workers.values())if(v.agent===agent&&this.options.secrets().workerAccounts[agent]===v.account&&v.until>now&&(!build||v.build===build)&&this.release(agent,v.build)
-   &&(!applied||v.revision===config.revision&&v.sha===snapshot.sha256))return v;
+   &&(!applied||v.revision===config.revision&&v.sha===snapshot.sha256)
+   &&(!voice||v.capabilities.includes(LISTENING_VOICE_CAPABILITY)&&this.release(agent,v.build)?.capabilities.includes(LISTENING_VOICE_CAPABILITY)))return v;
   return null;
  }
  private async service(headers:ListeningHeaders):Promise<string>{
@@ -55,7 +56,7 @@ export class ListeningAuthority {
   if(!body.registered)this.workers.delete(id);
   else{
    if(!this.workers.has(id)&&this.workers.size>=128)throw error('capacity_exceeded',429,true);
-   this.workers.set(id,{agent:body.agent,account,instance:body.instance_id,build:body.build_sha,until:now+15000,revision:body.applied_revision,sha:body.applied_config_sha256,at:now});
+   this.workers.set(id,{agent:body.agent,account,instance:body.instance_id,build:body.build_sha,until:now+15000,revision:body.applied_revision,sha:body.applied_config_sha256,at:now,capabilities:[...body.capabilities]});
   }
   const {sha256,...offered}=snapshot;
   return {version:1,ok:true,ready:!!this.readyWorker(body.agent,config),policy_revision:config.revision,config_sha256:sha256,config:offered};
@@ -79,10 +80,15 @@ export class ListeningAuthority {
   if(!Number.isSafeInteger(until)||until<=now)return null;
   const grant=await issueListeningGrant(grantBinding(session),config.revision,secrets.grantSecret,now,until);
   if(this.config().revision!==config.revision||!this.readyWorker(input.agent,config,true,worker.build)||this.now()>=until||input.source==='search_canary'&&this.options.sourceGeneration()!==sourceGeneration)return null;
-  this.store.register({...session,device_epoch:device.epoch,worker_account:secrets.workerAccounts[input.agent],agent:input.agent,build_sha:worker.build,
+  // Only the intersection is authoritative; a client support string alone grants nothing.
+  const voice=!!(config.tuning.voice_invitation_enabled&&input.supports.includes(LISTENING_VOICE_CAPABILITY)
+   &&this.readyWorker(input.agent,config,true,worker.build,true));
+  const voiceControl=voice?{voice_control:{version:1 as const,capability:LISTENING_VOICE_CAPABILITY}}:{};
+  this.store.register({...session,...voiceControl,device_epoch:device.epoch,worker_account:secrets.workerAccounts[input.agent],agent:input.agent,build_sha:worker.build,
    source:input.source,source_cutoff_ms:input.source_cutoff_ms,source_generation:sourceGeneration,credential_iat:credential.iat!,credential_expires_ms:credential.exp!*1000,expires_at_ms:until,
-   grant_hash:listeningDigest(grant),supports:[...input.supports]},this.now());
-  return {version:1,authority:'p003-main-brain',grant,session,grant_expires_at_ms:until,agent:input.agent,worker_build_sha:worker.build,snapshot:listeningSnapshot(config)};
+   grant_hash:listeningDigest(grant),supports:input.supports.filter(c=>c!==LISTENING_VOICE_CAPABILITY||voice)},this.now());
+  return {version:1,authority:'p003-main-brain',grant,session,grant_expires_at_ms:until,agent:input.agent,worker_build_sha:worker.build,snapshot:listeningSnapshot(config),
+   ...voiceControl};
  }
  async authorize(headers:ListeningHeaders,binding:SessionWire,scene:string,checkPolicy=true){
   const worker=await this.service(headers);const session=this.store.session(binding.session_id);if(!session)throw error('not_authorized');
@@ -151,6 +157,9 @@ export class ListeningAuthority {
    throw error('lease_required');
   }
   if(entry.snapshot.sha256!==body.snapshot_sha256||entry.snapshot.revision!==body.snapshot_revision)throw error('snapshot_mismatch',409);
+  if('trigger' in body&&body.trigger==='voice_command'&&(!entry.snapshot.tuning.voice_invitation_enabled
+   ||context.session.voice_control?.version!==1||context.session.voice_control?.capability!==LISTENING_VOICE_CAPABILITY
+   ||!this.readyWorker(context.session.agent,context.config,false,context.session.build_sha,true)))throw error('not_authorized');
   return {...context,entry};
  }
  runtime(){try{

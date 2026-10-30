@@ -7,7 +7,13 @@ const id=z.string().min(1).max(96).regex(/^[A-Za-z0-9_.:-]+$/);
 const label=z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/);
 const chars=(max:number)=>z.string().refine(x=>Array.from(x).length<=max);
 const sha=z.string().regex(/^[a-f0-9]{64}$/);
+export const LISTENING_VOICE_CAPABILITY='listening_voice_control_v1' as const;
 export const LISTENING_WORKER_CAPABILITIES=['listening_mode_v1','listening_http_v1','per_frame_output_permit_v1','capture_drain_v1','local_ready_ack_v1'] as const;
+export function validListeningWorkerCapabilities(value:unknown):value is string[] {
+ return Array.isArray(value)&&value.length>=5&&value.length<=6&&new Set(value).size===value.length
+  &&LISTENING_WORKER_CAPABILITIES.every(c=>value.includes(c))
+  &&value.every(c=>[...LISTENING_WORKER_CAPABILITIES,LISTENING_VOICE_CAPABILITY].includes(c));
+}
 export const listeningSessionSchema=z.object({sn:z.string().refine(x=>validateDeviceSn(x).ok),room:z.string().max(96),session_id:label,
  trace_id:z.string().min(1).max(64).regex(/^[A-Za-z0-9_.-]+$/),account_id:z.string().min(1).max(128).regex(/^[A-Za-z0-9_.:-]+$/)}).strict()
  .refine(x=>new RegExp(`^sn-${x.sn}-\\d{1,20}$`).test(x.room));
@@ -15,13 +21,13 @@ const common={version:z.literal(1),request_id:id,session:listeningSessionSchema,
 const segment=z.object({seq:positive,revision:positive,text:chars(12000).refine(x=>!!x.trim())}).strict();
 const schemas={
  '/worker-ready':z.object({version:z.literal(1),request_id:id,agent:label,instance_id:label,build_sha:z.string().regex(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/),
- registered:z.boolean(),capabilities:z.array(z.enum(LISTENING_WORKER_CAPABILITIES)).length(5).refine(x=>new Set(x).size===5),applied_revision:positive.nullable(),applied_config_sha256:sha.nullable()}).strict(),
+ registered:z.boolean(),capabilities:z.array(z.enum([...LISTENING_WORKER_CAPABILITIES,LISTENING_VOICE_CAPABILITY])).refine(validListeningWorkerCapabilities),applied_revision:positive.nullable(),applied_config_sha256:sha.nullable()}).strict(),
  '/lease':z.object({...common,applied_snapshot_sha256:sha.nullable()}).strict(),
  '/close':z.object(common).strict(),
  '/summary':z.object({...common,snapshot_revision:positive,snapshot_sha256:sha,base_summary_version:integer,previous_summary:chars(1200),has_gap:z.boolean(),
  segments:z.array(segment).min(1).max(128)}).strict().refine(x=>x.segments.every((s,i)=>i===0||s.seq===x.segments[i-1].seq+1)
  &&x.segments.reduce((n,s)=>n+Array.from(s.text).length,0)<=12000),
- '/feedback':z.object({...common,snapshot_revision:positive,snapshot_sha256:sha,summary:chars(1200),recent:chars(4000),question:chars(500),has_gap:z.boolean(),trigger:z.enum(['button','voice_invitation'])}).strict(),
+ '/feedback':z.object({...common,snapshot_revision:positive,snapshot_sha256:sha,summary:chars(1200),recent:chars(4000),question:chars(500),has_gap:z.boolean(),trigger:z.enum(['button','voice_invitation','voice_command'])}).strict(),
 } as const;
 export type ListeningPath=keyof typeof schemas;
 export type SessionWire=z.infer<typeof listeningSessionSchema>;

@@ -172,7 +172,7 @@
     "summary_reply": "bound to authenticated room/session/trace/listening_id plus retained ticket and buffer instance; stale reply rejected",
     "gap": "true for source loss OR unsummarized prefix omitted from recent context; never infer uninterrupted complete recall"
   },
-  "voice_extension_revision": 1,
+  "voice_extension_revision": 2,
   "voice_control": {
     "version": 1,
     "capability": "listening_voice_control_v1",
@@ -223,7 +223,7 @@
       "http_trigger": "voice_command",
       "source": "Worker explicit called-name end-of-story/end-of-song command, not Android button",
       "requires": "negotiated voice capability + frozen voice_invitation_enabled + current lease and existing one-turn permit/cooldown/VAD/epoch gates",
-      "singing": "Only standalone called-name after-song phrase after input end; no generic invitation, punctuation, lyrics question, goodbye or just 讲完了. No button spoof. No acoustic evaluation from STT.",
+      "singing": "Only standalone called-name after-song phrase. Require observed quiet boundary BEFORE command onset and speech_end AFTER command; a final followed by SpeechEnd alone never proves a prior song pause. Worker documents/tests the bounded quiet threshold. No generic invitation, lyrics question, goodbye or just 讲完了. No button spoof; no acoustic evaluation from STT.",
       "privacy": "Strip control phrase from story/summary/ordinary chat/long-term memory; question may contain sanitized intent description, not raw voice command. One feedback then listening; speech revokes permission as before."
     },
     "legacy": "No new capability => no proposal, no singing voice_command; old manual Android controls/button and enabled story/sharing voice_invitation remain unchanged. Never imply full voice mode exists on old APK.",
@@ -254,7 +254,7 @@
         "小可结束倾听恢复聊天",
         "小可退出倾听模式"
       ],
-      "normalization": "Whitespace and Chinese/ASCII punctuation only; require called-name at start; enter may have trailing story text, feedback/exit must be standalone. Reject quotation/reporting prefixes and incomplete ASR prefixes; final STT commits only. Singing feedback only after speech_end, no new song classifier.",
+      "normalization": "Whitespace and Chinese/ASCII punctuation only; require called-name at start; enter may have trailing narrative, but reject metalinguistic questions such as 是什么意思/怎么说/吗. Feedback/exit must be standalone. Reject quotation/reporting prefixes and incomplete ASR prefixes; final STT commits only. Singing feedback needs prior observed quiet boundary AND subsequent speech_end, no new song classifier.",
       "negative_examples": [
         "讲完了",
         "你觉得呢？",
@@ -263,7 +263,8 @@
         "他说小可先听我讲个故事",
         "小可先听我讲个故事吗",
         "小可结束倾听恢复聊天这是台词",
-        "再见"
+        "再见",
+        "小可先听我讲个故事是什么意思"
       ]
     }
   },

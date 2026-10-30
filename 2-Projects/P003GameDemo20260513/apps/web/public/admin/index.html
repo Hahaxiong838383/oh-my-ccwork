@@ -3441,8 +3441,8 @@
                             <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
                               <label v-for="scene in listeningSceneOptions" :key="scene.value"><input type="checkbox" :value="scene.value" v-model="listeningPanel.draft.scenes" @change="markListeningDirty"> {{ scene.label }}</label>
                             </div>
-                            <label><input id="listening-voice-invitation" type="checkbox" v-model="listeningPanel.draft.tuning.voice_invitation_enabled" @change="markListeningDirty"> 故事 / 分享允许明确的语音邀请</label>
-                            <div class="kh-sub" style="margin-top:6px">关闭后只用按钮请求反馈。唱歌始终使用按钮；歌词疑问句不触发回复。</div>
+                            <label><input id="listening-voice-invitation" type="checkbox" v-model="listeningPanel.draft.tuning.voice_invitation_enabled" @change="markListeningDirty"> 允许明确的语音邀请 / 已协商的语音操作</label>
+                            <div class="kh-sub" style="margin-top:6px">关闭后新进入仅用按钮请求反馈。全程语音操作需新版端云共同协商；唱歌仅认明确呼名的唱后口令，歌词疑问句不触发。安全退出始终保留。</div>
                           </div>
                         </div>
                         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">

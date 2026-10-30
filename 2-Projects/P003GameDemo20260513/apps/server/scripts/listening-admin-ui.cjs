@@ -14,10 +14,11 @@ const {chromium}=require(process.env.P003_PLAYWRIGHT_MODULE || 'playwright-core'
   await page.goto(url,{waitUntil:'networkidle'});await page.locator('#listening-max_session_sec').waitFor();
   assert.equal(await page.locator('#listening-max_session_sec').inputValue(),'1800');assert(await page.locator('#listening-enabled').isDisabled());
   await page.getByText('暂无运行数据',{exact:false}).waitFor();
+  await page.locator('#listening-voice-invitation').uncheck();
   await page.locator('#listening-allowlist').fill('BJP00326070803800006');await page.locator('#listening-feedback_max_chars').fill('100');
   await page.getByRole('button',{name:'保存倾听配置',exact:true}).click();await page.getByText('已保存 v2',{exact:true}).waitFor();
   await page.getByText('配置已保存；运行链路尚未接入，当前未生效',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'重新载入',exact:true}).click();assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'100');
+  await page.getByRole('button',{name:'重新载入',exact:true}).click();assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'100');assert.equal(await page.locator('#listening-voice-invitation').isChecked(),false);
   await page.locator('#listening-feedback_max_chars').fill('90');await page.evaluate(()=>window.listeningTest.load());assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'90');
   await page.evaluate(()=>window.listeningTest.concurrentUpdate());await page.getByRole('button',{name:'保存倾听配置',exact:true}).click();
   await page.getByRole('alert').filter({hasText:'配置已被其他管理员修改'}).waitFor();assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'90');
@@ -25,7 +26,7 @@ const {chromium}=require(process.env.P003_PLAYWRIGHT_MODULE || 'playwright-core'
   let fail=true;await page.route('**/api/admin/worker-voice/listening',route=>{if(fail&&route.request().method()==='PUT')return route.fulfill({status:503,json:{ok:false,error:'测试存储暂不可用'}});return route.continue();});
   await page.locator('#listening-feedback_max_chars').fill('95');await page.getByRole('button',{name:'保存倾听配置',exact:true}).click();await page.getByRole('alert').filter({hasText:'测试存储暂不可用'}).waitFor();assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'95');fail=false;
   await page.getByRole('button',{name:'保存倾听配置',exact:true}).click();await page.getByText('已保存 v4',{exact:true}).waitFor();
-  await page.locator('summary').click();await page.locator('#listening-restore-revision').selectOption('1');await page.getByRole('button',{name:'恢复为新版本'}).click();await page.getByRole('dialog').getByRole('button',{name:'恢复参数',exact:true}).click();await page.getByText('已保存 v5',{exact:true}).waitFor();assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'80');
+  await page.locator('summary').click();await page.locator('#listening-restore-revision').selectOption('1');await page.getByRole('button',{name:'恢复为新版本'}).click();await page.getByRole('dialog').getByRole('button',{name:'恢复参数',exact:true}).click();await page.getByText('已保存 v5',{exact:true}).waitFor();assert.equal(await page.locator('#listening-feedback_max_chars').inputValue(),'80');assert.equal(await page.locator('#listening-voice-invitation').isChecked(),true);
   await page.waitForFunction(()=>document.querySelectorAll('.el-message').length===0);
   const screenshot=process.env.P003_LISTENING_SCREENSHOT;if(screenshot)await page.screenshot({path:screenshot,fullPage:true});
   await page.unroute('**/api/admin/worker-voice/listening');

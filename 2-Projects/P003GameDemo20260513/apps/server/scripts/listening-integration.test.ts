@@ -82,6 +82,29 @@ test('real signing→main HTTP→lease→independent SSE content; real ordinary 
   assert.equal(persisted.includes('小熊'),false);assert.equal(persisted.includes(metadata.grant),false);
   const sourceRevision=settings.sourceGeneration();const {configStore}=await import('../src/config-store.js');
   configStore.setFlag('p003.search.canary.enabled','0','synthetic');configStore.setFlag('p003.search.canary.enabled','1','synthetic');assert.ok(settings.sourceGeneration()>sourceRevision);
+  // Real device signing response must match signed metadata; old clients never see the extension.
+  const current=settings.read().config;const {schema_version:_schema,revision:rev,...draft}=current;
+  settings.save(rev,{...draft,tuning:{...draft.tuning,voice_invitation_enabled:true}},'synthetic-voice');
+  const capabilities=[...LISTENING_WORKER_CAPABILITIES,'listening_voice_control_v1'];
+  writeFileSync(process.env.LISTENING_RELEASE_MANIFEST_PATH!,JSON.stringify({version:1,expires_at_ms:Date.now()+600000,evidence_ref:'synthetic/voice-loopback',agents:[{agent:'rust-worker',build_sha:build,capabilities}]}));
+  const voiceReady={...ready,capabilities};const voiceOffer=await(await call('/v1/internal/listening/worker-ready',voiceReady)).json();
+  assert.equal((await(await call('/v1/internal/listening/worker-ready',{...voiceReady,applied_revision:voiceOffer.policy_revision,applied_config_sha256:voiceOffer.config_sha256})).json()).ready,true);
+  const voiceTicket=await(await call('/v1/device/session',{device_sn:sn,trace_id:'voice-trace',supports:['listening_mode_v1','listening_voice_control_v1']},{authorization:'Bearer '+credential,'content-type':'application/json'})).json();
+  const voiceMetadata=JSON.parse((decodeJwt(voiceTicket.token) as any).roomConfig.agents[0].metadata).listening;
+  assert.deepEqual(voiceTicket.listening_contract.voice_control,{version:1,capability:'listening_voice_control_v1'});
+  assert.deepEqual(voiceMetadata.voice_control,voiceTicket.listening_contract.voice_control);
+  const voiceHeaders={...headers,'x-p003-listening-grant':voiceMetadata.grant};
+  const singing={version:1,request_id:'voice-offer',session:voiceMetadata.session,listening_id:'voice-trace:1',scene:'singing',mode_epoch:1};
+  const singingOffer=await(await call('/v1/internal/listening/lease',{...singing,applied_snapshot_sha256:null},voiceHeaders)).json();
+  const singingLease=await(await call('/v1/internal/listening/lease',{...singing,request_id:'voice-apply',applied_snapshot_sha256:singingOffer.snapshot.sha256},voiceHeaders)).json();
+  assert.equal(singingLease.authorized,true);
+  const singingReply=await call('/v1/internal/listening/feedback',{...singing,request_id:'voice-feedback',snapshot_revision:singingLease.snapshot.revision,snapshot_sha256:singingLease.snapshot.sha256,summary:'',recent:'星星在夜空闪亮。',has_gap:false,question:'请对刚才的分享给一次简短反馈。',trigger:'voice_command'},voiceHeaders);
+  assert.equal(singingReply.status,200);assert.equal((await singingReply.json()).max_chars,40);
+  assert.equal(modelBodies.length,4);assert.match(modelBodies[3].messages[0].content,/不评价音准/);assert.deepEqual(snapshot(),before);
+  assert.equal(voiceTicket.listening_contract.grant,undefined);assert.equal(voiceTicket.listening_contract.account_id,undefined);
+  const legacyTicket=await(await call('/v1/device/session',{device_sn:sn,trace_id:'legacy-trace',supports:['listening_mode_v1']},{authorization:'Bearer '+credential,'content-type':'application/json'})).json();
+  assert.equal(legacyTicket.listening_contract.voice_control,undefined);
+  assert.equal(JSON.parse((decodeJwt(legacyTicket.token) as any).roomConfig.agents[0].metadata).listening.voice_control,undefined);
   delete process.env.LISTENING_GRANT_SECRET;assert.equal(listeningRuntimeStatus().ready,false);
  }finally{if(server){if('closeAllConnections' in server)server.closeAllConnections();await new Promise<void>(r=>server!.close(()=>r()));}provider.closeAllConnections();await new Promise<void>(r=>provider.close(()=>r()));process.chdir(originalCwd);rmSync(dir,{recursive:true,force:true});}
 });

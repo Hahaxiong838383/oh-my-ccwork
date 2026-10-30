@@ -16,7 +16,7 @@ export interface ListeningConfig extends ListeningEditable { schema_version: 1; 
 export const LISTENING_FIXED = {
   lease_ttl_sec: 15, lease_refresh_sec: 5, revoke_target_sec: 16,
   raw_chars: 12000, recent_chars: 4000, summary_chars: 1200,
-  singing_trigger: 'button_only', backchannel_enabled: false, auto_long_term_memory: false,
+  singing_trigger: 'button_or_negotiated_voice_command', backchannel_enabled: false, auto_long_term_memory: false,
   per_frame_output_permit: true, feedback_returns_to_listening: true,
 } as const;
 export class ListeningConfigError extends Error {

@@ -103,3 +103,19 @@ test('missing current service key refuses optional signing; short configured ent
  const lease=await f.authority.lease(f.headers,{...f.base,request_id:'near-entry-deadline',applied_snapshot_sha256:offer.snapshot.sha256});assert.equal(lease.lease_expires_at_ms,f.now()+10000);
  f.advance(10000);await f.authority.workerReady(f.serviceHeaders,f.readyAck);await assert.rejects(()=>f.authority.lease(f.headers,{...f.base,request_id:'entry-expired',applied_snapshot_sha256:offer.snapshot.sha256}),code('entry_closed'));
 }finally{f.cleanup();}});
+
+// Missing any negotiation leg must keep old clients/builds on the old controls.
+test('voice capability needs client, approved build, fresh Worker ack and existing config flag',async()=>{
+ for(const [options,expected] of [
+  [{voiceClient:true,voiceWorker:true,voiceApproved:true},true],
+  [{voiceClient:false,voiceWorker:true,voiceApproved:true},false],
+  [{voiceClient:true,voiceWorker:false,voiceApproved:true},false],
+  [{voiceClient:true,voiceWorker:true,voiceApproved:false},false],
+  [{voiceClient:true,voiceWorker:true,voiceApproved:true,voiceEnabled:false},false],
+ ] as const){const f=await testAuthority(options);try{
+  assert.equal(f.authority.runtime().ready,true,'base readiness stays compatible');
+  assert.deepEqual(f.metadata.voice_control,expected?{version:1,capability:'listening_voice_control_v1'}:undefined);
+  assert.equal(f.store.session(f.metadata.session.session_id)?.supports.includes('listening_voice_control_v1'),expected);
+  f.manifest.agents=[];assert.equal(await f.authority.issue({...f.issueInput,session_id:'no-proof'}),null);
+ }finally{f.cleanup();}}
+});

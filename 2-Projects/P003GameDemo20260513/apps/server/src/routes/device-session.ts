@@ -396,7 +396,8 @@ deviceSessionRoute.post('/session', async (c) => {
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,
     ...(listening ? {listening_contract:{version:1,capability:'listening_mode_v1',policy_revision:listening.snapshot.revision,
-      scenes:listening.snapshot.scenes,tuning:listening.snapshot.tuning,expires_at_ms:listening.grant_expires_at_ms}} : {}),
+      scenes:listening.snapshot.scenes,tuning:listening.snapshot.tuning,expires_at_ms:listening.grant_expires_at_ms,
+      ...(listening.voice_control?{voice_control:listening.voice_control}:{})}} : {}),
   };
 
   try {

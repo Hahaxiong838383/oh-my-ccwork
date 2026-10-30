@@ -28,22 +28,23 @@ assert.equal(first.config.enabled,false);assert.deepEqual(first.config.allowlist
 assert.equal(first.runtime.ready,false);assert.equal(first.runtime.effective_enabled,false);assert.equal(first.runtime.applied_revision,null);
 assert.equal(first.config.tuning.max_session_sec,1800);checks++;
 const patch=structuredClone(first.config);delete patch.revision;delete patch.schema_version;
-patch.allowlist=['BJP00326070803800006'];patch.tuning.feedback_max_chars=100;
+patch.allowlist=['BJP00326070803800006'];patch.tuning.feedback_max_chars=100;patch.tuning.voice_invitation_enabled=false;
 let saved=await (await status(request('','PUT',{expected_revision:1,settings:patch}),200)).json();
-assert.equal(saved.config.revision,2);assert.equal(saved.config.tuning.feedback_max_chars,100);
+assert.equal(saved.config.revision,2);assert.equal(saved.config.tuning.feedback_max_chars,100);assert.equal(saved.config.tuning.voice_invitation_enabled,false);
+assert.equal((await (await request()).json()).config.tuning.voice_invitation_enabled,false);
 assert.equal(saved.history[0].actor,'fake-admin');assert.equal(saved.history[0].revision,2);checks++;
 await status(request('','PUT',{expected_revision:1,settings:patch}),409);
 for(const settings of [null,{...patch,extra:true},{...patch,allowlist:['03800006']},{...patch,allowlist:['BJP00326023103800006']},
   {...patch,allowlist:[...patch.allowlist,...patch.allowlist]},{...patch,scenes:[]}, {...patch,scenes:['singing','singing']},
   {...patch,tuning:{...patch.tuning,max_session_sec:1801}},{...patch,tuning:{...patch.tuning,feedback_max_chars:'100'}},
-  {...patch,tuning:{...patch.tuning,summary_interval_sec:0}},{...patch,tuning:{...patch.tuning,lease_ttl_sec:999}}]) {
+  {...patch,tuning:{...patch.tuning,voice_invitation_enabled:'false'}}, {...patch,tuning:{...patch.tuning,summary_interval_sec:0}},{...patch,tuning:{...patch.tuning,lease_ttl_sec:999}}]) {
   await status(request('','PUT',{expected_revision:2,settings}),400);
 }
 await status(request('','PUT',{expected_revision:2,settings:{...patch,enabled:true}}),409);
 await status(request('','PUT',{expected_revision:2,settings:patch,extra:1}),400);
 await status(request('/restore','POST',{expected_revision:2,revision:99}),404);
 const restored=await (await status(request('/restore','POST',{expected_revision:2,revision:1}),200)).json();
-assert.equal(restored.config.revision,3);assert.equal(restored.config.tuning.feedback_max_chars,80);assert.equal(restored.history[0].operation,'restore');checks++;
+assert.equal(restored.config.revision,3);assert.equal(restored.config.tuning.voice_invitation_enabled,true);assert.equal(restored.config.tuning.feedback_max_chars,80);assert.equal(restored.history[0].operation,'restore');checks++;
 await status(request('/restore','POST',{expected_revision:2,revision:1}),409);
 const disabled=await (await status(request('/disable','POST',{}),200)).json();
 assert.equal(disabled.config.enabled,false);assert.equal(disabled.config.revision,4);assert.equal(disabled.history[0].operation,'disable');checks++;
