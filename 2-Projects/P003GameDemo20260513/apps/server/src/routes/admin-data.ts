@@ -1,3 +1,4 @@
+import { listeningAdminRoute } from './listening-admin.js';
 import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
 import { Hono } from 'hono';
 import { canaryAdminRoute } from '../search-canary-status.js';
@@ -77,6 +78,7 @@ adminDataRoute.use('*', async (c, next) => {
 });
 
 adminDataRoute.route('/search-canary', canaryAdminRoute);
+adminDataRoute.route('/worker-voice/listening', listeningAdminRoute);
 
 // 列所有孩子档案 + 关联设备（按账号聚合）
 adminDataRoute.get('/profiles', (c) => {

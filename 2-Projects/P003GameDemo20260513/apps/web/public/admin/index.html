@@ -2476,6 +2476,71 @@
                     </div>
                     <el-button size="small" :loading="brainState.loading" @click="refreshBrainTab">刷新</el-button>
                   </div>
+                  <!-- listening-control-card:start -->
+                  <section id="listening-control-card" class="kh-card" style="padding:18px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                      <div><h3 style="margin:0 0 6px">倾听模式</h3><div class="kh-sub">全局策略与设备名单 · 讲故事、分享、唱歌时先听，再由用户邀请回应</div></div>
+                      <el-button size="small" :loading="listeningPanel.loading" :disabled="listeningPanel.saving" @click="reloadListeningConfig">重新载入</el-button>
+                    </div>
+                    <el-alert v-if="listeningPanel.error" :title="listeningPanel.error" type="error" :closable="false" style="margin-top:12px"></el-alert>
+                    <div v-if="listeningPanel.loading && !listeningPanel.data" style="padding:18px;color:#6B7785">正在读取倾听配置…</div>
+                    <template v-if="listeningPanel.data && listeningPanel.draft">
+                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0">
+                        <el-tag :type="listeningPanel.data.runtime.ready ? 'success' : 'warning'">{{ listeningPanel.data.runtime.ready ? '运行链路已就绪' : '运行链路未就绪' }}</el-tag>
+                        <span>已保存 v{{ listeningPanel.data.config.revision }}</span>
+                        <span>已应用版本：{{ listeningPanel.data.runtime.applied_revision === null ? '尚未确认' : 'v' + listeningPanel.data.runtime.applied_revision }}</span>
+                        <span>倾听中会话：{{ listeningPanel.data.runtime.active_sessions === null ? '暂无运行数据' : listeningPanel.data.runtime.active_sessions }}</span>
+                        <span v-if="listeningPanel.dirty" style="color:#B8741A">有未保存修改</span>
+                      </div>
+                      <el-alert :title="listeningPanel.data.runtime.message" :type="listeningPanel.data.runtime.ready ? 'info' : 'warning'" :closable="false" style="margin-bottom:14px"></el-alert>
+                      <fieldset :disabled="listeningPanel.loading || listeningPanel.saving" style="border:0;padding:0;margin:0">
+                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+                          <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="listening-enabled" type="checkbox" v-model="listeningPanel.draft.enabled" :disabled="!listeningPanel.data.runtime.ready" @change="markListeningDirty">倾听总闸</label>
+                          <span class="kh-sub">{{ listeningPanel.data.config.enabled ? '已保存开启请求' : '已保存关闭' }} · 实际运行 {{ listeningPanel.data.runtime.effective_enabled ? '已启用' : '未启用' }}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
+                          <div>
+                            <label for="listening-allowlist" style="display:block;font-weight:600;margin-bottom:8px">目标设备名单</label>
+                            <textarea id="listening-allowlist" v-model="listeningPanel.allowlistText" @input="markListeningDirty" rows="3" placeholder="每行一个完整 MCU SN，例如 BJP00326070803800006" style="box-sizing:border-box;width:100%;padding:10px;border:1px solid #D5DEE7;border-radius:6px;font:13px monospace;resize:vertical"></textarea>
+                            <div class="kh-sub">空名单不授权任何设备；不接受末8位、ADB序号或通配符。</div>
+                          </div>
+                          <div>
+                            <div style="font-weight:600;margin-bottom:10px">允许的场景</div>
+                            <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+                              <label v-for="scene in listeningSceneOptions" :key="scene.value"><input type="checkbox" :value="scene.value" v-model="listeningPanel.draft.scenes" @change="markListeningDirty"> {{ scene.label }}</label>
+                            </div>
+                            <label><input id="listening-voice-invitation" type="checkbox" v-model="listeningPanel.draft.tuning.voice_invitation_enabled" @change="markListeningDirty"> 故事 / 分享允许明确的语音邀请</label>
+                            <div class="kh-sub" style="margin-top:6px">关闭后只用按钮请求反馈。唱歌始终使用按钮；歌词疑问句不触发回复。</div>
+                          </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+                          <div v-for="field in listeningPanel.data.fields" :key="field.key">
+                            <label :for="'listening-'+field.key" style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">{{ field.label }}</label>
+                            <div style="display:flex;align-items:center;gap:8px"><input :id="'listening-'+field.key" type="number" v-model.number="listeningPanel.draft.tuning[field.key]" :min="field.min" :max="field.max" step="1" @input="markListeningDirty" style="width:110px;padding:8px;border:1px solid #D5DEE7;border-radius:6px;font-size:14px"><span>{{ field.unit }}</span><small style="color:#80909F">{{ field.min }}–{{ field.max }}</small></div>
+                            <div class="kh-sub" style="margin-top:6px">{{ field.hint }}</div>
+                          </div>
+                        </div>
+                      </fieldset>
+                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px">
+                        <el-button type="primary" :loading="listeningPanel.saving" :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.dirty" @click="saveListeningConfig">保存倾听配置</el-button>
+                        <el-button type="danger" plain :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.data.config.enabled" @click="disableListeningMode">关闭总闸</el-button>
+                        <span class="kh-sub">{{ listeningPanel.data.updated_by ? '最近保存：' + listeningPanel.data.updated_by + ' · ' + listeningTime(listeningPanel.data.updated_at) : '尚无保存记录，当前为默认参数' }}</span>
+                      </div>
+                      <div class="kh-sub" style="margin-top:10px">{{ listeningPanel.data.runtime.parameter_effect }}</div>
+                      <details style="margin-top:18px;border-top:1px solid #EDF0F4;padding-top:12px">
+                        <summary style="cursor:pointer;font-weight:600">固定边界与配置历史</summary>
+                        <p class="kh-sub">每帧校验发言许可；一次反馈后回倾听；不播放附和音；不自动写长期画像。租约15秒、每5秒刷新；会话原文/近期/摘要上限12000/4000/1200字。</p>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
+                          <label for="listening-restore-revision">恢复参数版本</label>
+                          <select id="listening-restore-revision" v-model.number="listeningPanel.restoreRevision" :disabled="listeningPanel.saving || listeningPanel.loading" style="padding:7px;border:1px solid #D5DEE7;border-radius:6px"><option value="">请选择</option><option :value="1">v1 · 默认参数</option><option v-for="row in listeningPanel.data.history.filter(function(r){return r.revision !== listeningPanel.data.config.revision;})" :key="row.revision" :value="row.revision">v{{ row.revision }} · {{ row.actor }} · {{ listeningTime(row.at) }}</option></select>
+                          <el-button size="small" :disabled="!listeningPanel.restoreRevision || listeningPanel.saving || listeningPanel.loading" @click="restoreListeningConfig">恢复为新版本</el-button>
+                          <span class="kh-sub">恢复后总闸保持关闭，当前配置与历史记录均保留。</span>
+                        </div>
+                        <table style="width:100%;font-size:12px;border-collapse:collapse;text-align:left"><thead><tr><th>版本</th><th>操作</th><th>操作人</th><th>时间</th></tr></thead><tbody><tr v-for="row in listeningPanel.data.history" :key="row.revision"><td style="padding:7px 0">v{{ row.revision }}</td><td>{{ {save:'保存',disable:'关闭总闸',restore:'恢复参数'}[row.operation] || row.operation }}</td><td>{{ row.actor }}</td><td>{{ listeningTime(row.at) }}</td></tr><tr v-if="!listeningPanel.data.history.length"><td colspan="4" style="padding-top:10px;color:#80909F">暂无修改历史</td></tr></tbody></table>
+                      </details>
+                    </template>
+                  </section>
+                  <!-- listening-control-card:end -->
                   <!-- 记忆抽取 LLM 配置（全局，2026-08-19）：抽取通道曾钉死 env 静默全灭数周——此卡统一管理，写入即热生效零重启 -->
                   <div class="kh-card" style="padding:10px 16px;margin-bottom:14px">
                     <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" @click="extractLlm.open = !extractLlm.open">
@@ -4083,6 +4148,7 @@
 
         function handleAuthError() {
           authSessionEpoch++;
+          resetListeningPanel();
           analyticsReset();
           clearAuth();
           isLoggedIn.value = false;
@@ -4116,11 +4182,13 @@
               // 防后端契约漂移成 {ok:true} 无 token 时误放行
               if (data && data.ok && data.token) {
                 authSessionEpoch++;
+          resetListeningPanel();
                 currentUser.username = loginForm.username;
                 // 用后端返回的真实 role（admin / editor / guest），不再写死 admin。
                 currentUser.role = data.role || 'guest';
                 isLoggedIn.value = true;
                 saveAuth(data.token, loginForm.username, currentUser.role);
+                if (currentPage.value === 'worker' && khNav.value === 'brain') loadListeningConfig();
                 ElementPlus.ElMessage.success('登录成功');
                 loadThemes();  // 启动加载主题词表（驱动所有 chip 渲染）
                 nextTick(function() { initCharts(); });
@@ -4139,6 +4207,7 @@
         function handleDropdown(cmd) {
           if (cmd === 'logout') {
             authSessionEpoch++;
+          resetListeningPanel();
             analyticsReset();
             clearAuth();
             isLoggedIn.value = false;
@@ -5994,6 +6063,75 @@
           } else { fallback(); }
         }
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
+        // listening-control-state:start
+        var listeningSceneOptions = [{value:'story',label:'讲故事'},{value:'sharing',label:'分享'},{value:'singing',label:'唱歌'}];
+        var listeningPanel = reactive({data:null,draft:null,allowlistText:'',loading:false,saving:false,dirty:false,error:'',seq:0,restoreRevision:''});
+        function listeningTime(ts) { return ts ? new Date(ts).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}) : '—'; }
+        function resetListeningPanel() {
+          if (!listeningPanel) return;
+          listeningPanel.seq++;listeningPanel.data=null;listeningPanel.draft=null;listeningPanel.allowlistText='';
+          listeningPanel.loading=false;listeningPanel.saving=false;listeningPanel.dirty=false;listeningPanel.error='';listeningPanel.restoreRevision='';
+        }
+        function markListeningDirty() { listeningPanel.dirty=true; }
+        function acceptListeningConfig(data) {
+          listeningPanel.data=data;listeningPanel.draft=JSON.parse(JSON.stringify(data.config));
+          delete listeningPanel.draft.revision;delete listeningPanel.draft.schema_version;
+          listeningPanel.allowlistText=data.config.allowlist.join('\n');listeningPanel.dirty=false;listeningPanel.restoreRevision='';
+        }
+        async function loadListeningConfig() {
+          if (!canManageInvites.value || listeningPanel.loading || listeningPanel.saving || listeningPanel.dirty) return;
+          var seq=++listeningPanel.seq,epoch=authSessionEpoch,token=getToken();listeningPanel.loading=true;listeningPanel.error='';
+          try {
+            var data=await deviceApi('/api/admin/worker-voice/listening');
+            if(seq!==listeningPanel.seq || epoch!==authSessionEpoch || token!==getToken()) return;
+            if(!data || !data.ok) throw new Error(data && data.error || '配置读取失败');
+            if(!listeningPanel.dirty) acceptListeningConfig(data);
+          } catch(e) {
+            if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) {listeningPanel.error=e.message || '配置读取失败';listeningPanel.data=null;}
+          } finally { if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) listeningPanel.loading=false; }
+        }
+        async function reloadListeningConfig() {
+          if(listeningPanel.loading || listeningPanel.saving) return;
+          var epoch=authSessionEpoch,token=getToken();
+          if(listeningPanel.dirty) {
+            try {await ElementPlus.ElMessageBox.confirm('重新载入会舍弃当前未保存修改。','重新载入倾听配置',{type:'warning',confirmButtonText:'重新载入',cancelButtonText:'保留修改'});} catch(e) {return;}
+          }
+          if(epoch!==authSessionEpoch || token!==getToken()) return;
+          listeningPanel.dirty=false;await loadListeningConfig();
+        }
+        async function writeListeningConfig(suffix,method,body) {
+          if(!canManageInvites.value || listeningPanel.saving || listeningPanel.loading || !listeningPanel.data) return;
+          var seq=++listeningPanel.seq,epoch=authSessionEpoch,token=getToken();listeningPanel.saving=true;listeningPanel.error='';
+          try {
+            var data=await deviceApi('/api/admin/worker-voice/listening'+suffix,{method:method,body:JSON.stringify(body)});
+            if(seq!==listeningPanel.seq || epoch!==authSessionEpoch || token!==getToken()) return;
+            if(!data || !data.ok) throw new Error(data && data.error || '配置保存失败');
+            acceptListeningConfig(data);
+            ElementPlus.ElMessage.success(data.runtime.ready ? '配置已保存，请核对实际应用状态' : '配置已保存；运行链路尚未接入，当前未生效');
+          } catch(e) {
+            if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) listeningPanel.error=e.message || '保存失败，请重试';
+          } finally {if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) listeningPanel.saving=false;}
+        }
+        async function saveListeningConfig() {
+          if(!listeningPanel.draft || !listeningPanel.data || !listeningPanel.dirty) return;
+          var settings=JSON.parse(JSON.stringify(listeningPanel.draft));
+          settings.allowlist=listeningPanel.allowlistText.trim() ? listeningPanel.allowlistText.trim().split(/[\s,，;；]+/) : [];
+          var bad=listeningPanel.data.fields.some(function(f){var n=settings.tuning[f.key];return !Number.isInteger(n)||n<f.min||n>f.max;});
+          if(bad || !settings.scenes.length) {listeningPanel.error='请至少选择一个场景，并按范围填写整数参数';return;}
+          await writeListeningConfig('','PUT',{expected_revision:listeningPanel.data.config.revision,settings:settings});
+        }
+        async function disableListeningMode() {
+          if(!listeningPanel.data || listeningPanel.saving || listeningPanel.loading) return;
+          await writeListeningConfig('/disable','POST',{});
+        }
+        async function restoreListeningConfig() {
+          if(!listeningPanel.restoreRevision || !listeningPanel.data || listeningPanel.saving || listeningPanel.loading) return;
+          var revision=listeningPanel.restoreRevision, expected=listeningPanel.data.config.revision,epoch=authSessionEpoch,token=getToken();
+          try {await ElementPlus.ElMessageBox.confirm('恢复 v'+revision+' 的参数为一个新版本，总闸保持关闭。当前未保存修改会舍弃。','恢复倾听配置',{type:'warning',confirmButtonText:'恢复参数',cancelButtonText:'取消'});} catch(e) {return;}
+          if(epoch!==authSessionEpoch || token!==getToken() || expected!==listeningPanel.data?.config.revision) return;
+          await writeListeningConfig('/restore','POST',{expected_revision:expected,revision:revision});
+        }
+        // listening-control-state:end
         var brainState = reactive({ whitebox: null, selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
         var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, fillerPercent: {}, fillerLoaded: false, fillerSaving: false, fillerError: '', styleSetAt: null, styleSource: null, styleEvents: [] });
@@ -6330,6 +6468,7 @@
           if (brainState.subTab === 'growth') loadGrowth(sn);
         }
         function refreshBrainTab() {
+          loadListeningConfig();
           loadDevices();
           if (brainState.selectedSn) loadBrain(brainState.selectedSn);
           if (brainState.selectedSn && brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
@@ -7772,6 +7911,7 @@
           if (nv === 'dev-board') {
             if (!devItems.items || !devItems.items.length) loadDevItems();
           }
+          if (nv === 'brain') loadListeningConfig();
           if (nv === 'brain' && !extractLlm.live) loadExtractLlm(); // 记忆抽取 LLM 卡：进 tab 首次拉取
           if (nv === 'brain' && !brainState.selectedSn && !brainState.overview) loadOverview(); // 全局隔离总览：未选设备时默认视图
         });
@@ -7943,6 +8083,7 @@
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,
+          listeningPanel: listeningPanel, listeningSceneOptions: listeningSceneOptions, listeningTime: listeningTime, markListeningDirty: markListeningDirty, reloadListeningConfig: reloadListeningConfig, saveListeningConfig: saveListeningConfig, disableListeningMode: disableListeningMode, restoreListeningConfig: restoreListeningConfig,
           brainState: brainState, brainAdd: brainAdd, brainGroups: brainGroups,
           brainCfg: brainCfg, BRAIN_TYPE_META: BRAIN_TYPE_META, BRAIN_TYPE_BY_KEY: BRAIN_TYPE_BY_KEY,
           BRAIN_LAYER_COLORS: BRAIN_LAYER_COLORS, BRAIN_LAYER_BORDERS: BRAIN_LAYER_BORDERS,

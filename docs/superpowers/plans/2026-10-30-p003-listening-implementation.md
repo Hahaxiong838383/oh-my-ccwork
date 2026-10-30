@@ -64,12 +64,12 @@ Interfaces：`ListeningMode::handle(Command, now_ms) -> Result<Snapshot, Reject>
 
 ## Task 3：主Brain策略与严格会话授权
 
-Files：新增`src/listening-policy.ts`、`src/listening-grant.ts`、`src/routes/listening.ts`、`scripts/listening-policy.test.ts`、`scripts/listening-auth.test.ts`；修改`device-session.ts`、路由注册及admin-data。
+Files：新增`src/listening-policy.ts`、`src/listening-grant.ts`、`src/listening-settings.ts`、`src/listening-settings-store.ts`、`src/routes/listening-admin.ts`、`src/routes/listening.ts`、`scripts/listening-policy.test.ts`、`scripts/listening-auth.test.ts`；修改`device-session.ts`、路由注册及admin-data。
 
-Interfaces：`ListeningSettings(version,enabled,allowlist)`严格schema；`eligible(settings,sn,supports)`；签发grant绑定room/session/trace/SN/account/expiry；`POST /v1/internal/listening/lease`返回主权威短租约。鉴权需要严格worker身份＋服务Bearer＋独立grant＋当前registry归属；缺secret拒绝，不用开发默认secret。
+Interfaces：管理配置`ListeningConfig(schema_version,revision,enabled,allowlist,scenes,tuning)`严格schema，通过投影提供`ListeningSettings(version=revision,enabled,allowlist)`；`eligible(settings,sn,supports)`；签发grant绑定room/session/trace/SN/account/expiry；`POST /v1/internal/listening/lease`返回主权威短租约。鉴权需要严格worker身份＋服务Bearer＋独立grant＋当前registry归属；缺secret拒绝，不用开发默认secret。
 
 - [x] 先测试默认关闭/空名单/能力缺失/非法配置/版本回退，再实现纯策略校验。
-- [ ] 临时SQLite/Hono测试管理员GET/PUT、editor/guest拒绝；旧会话签发行为保持。
+- [x] 临时SQLite/Hono管理员GET/PUT、editor/guest拒绝、配置事务CAS/审计/历史恢复；旧会话签发回归保持。实现详见`2-Projects/P003GameDemo20260513/docs/listening-20261030/ADMIN_CONFIGURATION.md`。
 - [ ] 测跨room/session/account、过期、归属变更、匿名、错误worker/服务凭据均拒绝；普通聊天不能伪装倾听。
 - [ ] 运行device-session原45项与新用例；签发异常不误开放。提交此任务。
 
@@ -101,7 +101,8 @@ Interfaces：`purpose=listening_summary|listening_feedback`，严格grant同任�
 
 Files：后台`apps/web/public/admin/index.html`；`docs/P003_LISTENING_ANDROID_HANDOFF_20261030.md`及协议fixture。
 
-- [ ] 后台配置/实际状态/统计和紧急关闭；真实浏览器验证权限、保存、错误反馈。
+- [x] Worker Brain顶部倾听配置卡、保存/版本冲突/历史恢复/关闭总闸接口和真实浏览器验证。运行未就绪时禁止开启；配置修订与结构版本分开。
+- [ ] 接入实际应用版本/会话状态/统计/租约撤权证据；当前null不伪装0，管理界面随整功能测试后发布。
 - [x] 输出安卓端能力/按钮/持续RTC/本地静音/本地命令/idle与重连清单，提供seq与ACK正负样例。
 - [ ] 安卓同事交付当前源码/候选APK能力与回执后，按相同trace联验；旧封存v274不能代表现役端侧。
 - [ ] 端侧没完成或未取证时，服务端保持关闭，记录具体依赖，不能冒充产品可用。
@@ -122,10 +123,12 @@ Files：后台`apps/web/public/admin/index.html`；`docs/P003_LISTENING_ANDROID_
 
 ## 本轮可评审检查点
 
-任务1协议与端侧合同、任务2独立底座、任务3纯策略/绑定JWT部分已写码；Task3的数据库/HTTP鉴权与Task4–7仍待实施。本轮未接线/未部署，不是完整P0交付。29项Rust纯测试、10组Brain单测通过；缺陷均按复现→修复记录。
+任务1协议与端侧合同、任务2独立底座、任务3纯策略/绑定JWT部分已写码；Task3的会话登记/内部HTTP鉴权与Task4–7仍待实施。本轮未接线/未部署，不是完整P0交付。29项Rust纯测试、10组Brain单测通过；缺陷均按复现→修复记录。
 
 ## 进度记录
 
 详见项目`2-Projects/P003GameDemo20260513/docs/listening-20261030/EXECUTION.md`。任务完成仅在代码/测试证据都具备时勾选；端侧与真人验收是明确依赖，不用“开关已写”替代。
 
 署名：codex（OpenAI）| 2026-10-30
+
+2026-10-30追加需求已实施到开发树：后台须可调参，详见ADMIN_CONFIGURATION.md。尚未接线/未部署的边界不变；后续必须逐字段验证Worker实际行为，不能只保存配置即算完成。
