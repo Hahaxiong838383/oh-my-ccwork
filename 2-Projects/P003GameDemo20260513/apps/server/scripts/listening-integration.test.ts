@@ -15,9 +15,10 @@ import { LISTENING_WORKER_CAPABILITIES } from '../src/listening-http-contract.js
 test('real signing→main HTTP→lease→independent SSE content; real ordinary stores stay unchanged',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'listening-loopback-'));const originalCwd=process.cwd();process.chdir(dir);
  for(const key of ['CONFIG','DEVICES','ACCOUNTS','PROFILE','CONVERSATION','FEEDBACK','SMS','PAIRING','OTA','DIAGNOSTICS','TELEMETRY'])process.env[key+'_DB_PATH']=join(dir,key+'.db');
- Object.assign(process.env,{AUTH_JWT_SECRET:'synthetic-auth-listening-integration-32-bytes',LISTENING_GRANT_SECRET:'synthetic-grant-listening-integration-32-bytes',CUSTOM_LLM_API_KEY:'synthetic-worker-service',
+ Object.assign(process.env,{AUTH_JWT_SECRET:'synthetic-auth-listening-integration-32-bytes',LISTENING_GRANT_SECRET:'synthetic-grant-listening-integration-32-bytes',LISTENING_SERVICE_KEY:'synthetic-worker-service',
   LIVEKIT_API_KEY:'synthetic-rtc-key',LIVEKIT_API_SECRET:'synthetic-rtc-secret-at-least-32bytes',LIVEKIT_URL:'wss://not-used.invalid',DEVICE_SESSION_RPM:'100',DEVICE_SN_ALLOW:'',
   LISTENING_WORKER_ACCOUNTS:JSON.stringify({'rust-worker':'worker-service'}),LISTENING_RELEASE_MANIFEST_PATH:join(dir,'release.json'),LLM_PROVIDER:'deepseek',DEEPSEEK_API_KEY:'synthetic-provider-key'});
+ delete process.env.CUSTOM_LLM_API_KEY;
  const sn='BJP00326070803800006',account='synthetic-listening-account',build='a'.repeat(40);const modelBodies:any[]=[];let upstreamCancelled=0;
  const provider=createServer(async(req,res)=>{let raw='';for await(const chunk of req)raw+=chunk;modelBodies.push(JSON.parse(raw));
   res.writeHead(200,{'content-type':'text/event-stream'});res.write('data: '+JSON.stringify({choices:[{delta:{content:'小熊分享了苹果，'}}]})+'\n\n');
@@ -32,6 +33,10 @@ test('real signing→main HTTP→lease→independent SSE content; real ordinary 
   settings.save(revision,{...editable,enabled:true,allowlist:[sn],tuning:{...editable.tuning,max_session_sec:300,feedback_max_chars:40,feedback_max_duration_sec:5,feedback_cooldown_sec:1,summary_interval_sec:60,summary_trigger_chars:1000,voice_invitation_enabled:false}},'synthetic-offline-fixture');
   const {getListeningAuthority,listeningWorkerAccounts,listeningRuntimeStatus}=await import('../src/listening-runtime.js');
   assert.equal(listeningRuntimeStatus().ready,false);
+  const {customLlmRoute}=await import('../src/routes/custom-llm.js');
+  const ordinary=new Hono().route('/v1',customLlmRoute);
+  const invalidOrdinary=()=>ordinary.request('/v1/chat/completions',{method:'POST',headers:{authorization:'Bearer deliberately-wrong','content-type':'application/json'},body:'{'});
+  assert.equal((await invalidOrdinary()).status,400,'independent listening key must not enable ordinary chat bearer');
   assert.deepEqual(listeningWorkerAccounts('{"rust-worker":"worker-service","other":"worker-service"}'),{});
   const {deviceSessionRoute}=await import('../src/routes/device-session.js');const {createListeningRoute,createLazyListeningRoute}=await import('../src/routes/listening.js');
   const {generateListeningContent,readListeningPersonality}=await import('../src/listening-content.js');
@@ -43,7 +48,7 @@ test('real signing→main HTTP→lease→independent SSE content; real ordinary 
   const enc=new TextEncoder().encode(process.env.AUTH_JWT_SECRET);const sec=Math.floor(Date.now()/1000);
   const worker=await new SignJWT({role:'device',accountId:'worker-service'}).setProtectedHeader({alg:'HS256'}).setIssuer('p003').setAudience('kidshub').setIssuedAt(sec-1).setExpirationTime(sec+600).sign(enc);
   const credential=await new SignJWT({kind:'p003-device'}).setProtectedHeader({alg:'HS256'}).setSubject(sn).setIssuedAt(sec-1).setExpirationTime(sec+600).sign(enc);
-  const headers:any={authorization:'Bearer '+process.env.CUSTOM_LLM_API_KEY,'x-p003-worker-token':worker,'content-type':'application/json'};
+  const headers:any={authorization:'Bearer '+process.env.LISTENING_SERVICE_KEY,'x-p003-worker-token':worker,'content-type':'application/json'};
   const call=(path:string,body:unknown,h=headers,signal?:AbortSignal)=>fetch(base+path,{method:'POST',headers:h,body:JSON.stringify(body),signal});
   const ready={version:1,request_id:'ready',agent:'rust-worker',instance_id:'loopback-worker',build_sha:build,registered:true,capabilities:LISTENING_WORKER_CAPABILITIES,applied_revision:null,applied_config_sha256:null};
   assert.equal((await fetch(base+'/v1/internal/listening/worker-ready',{method:'POST',headers,body:JSON.stringify(ready)+' '.repeat(4096)})).status,413);
@@ -105,6 +110,17 @@ test('real signing→main HTTP→lease→independent SSE content; real ordinary 
   const legacyTicket=await(await call('/v1/device/session',{device_sn:sn,trace_id:'legacy-trace',supports:['listening_mode_v1']},{authorization:'Bearer '+credential,'content-type':'application/json'})).json();
   assert.equal(legacyTicket.listening_contract.voice_control,undefined);
   assert.equal(JSON.parse((decodeJwt(legacyTicket.token) as any).roomConfig.agents[0].metadata).listening.voice_control,undefined);
+  // Independent service key wins over a different existing chat key, while legacy deployments still fall back.
+  process.env.CUSTOM_LLM_API_KEY='legacy-other-key';
+  assert.equal((await invalidOrdinary()).status,401);
+  assert.equal((await call('/v1/internal/listening/worker-ready',voiceReady)).status,200);
+  assert.equal((await call('/v1/internal/listening/worker-ready',voiceReady,{...headers,authorization:'Bearer legacy-other-key'})).status,401);
+  delete process.env.LISTENING_SERVICE_KEY;process.env.CUSTOM_LLM_API_KEY='synthetic-worker-service';
+  assert.equal((await call('/v1/internal/listening/worker-ready',voiceReady)).status,200,'legacy shared key fallback');
+  process.env.LISTENING_SERVICE_KEY='';
+  assert.equal((await call('/v1/internal/listening/worker-ready',voiceReady)).status,503,'explicit empty internal key must not fall back');
+  delete process.env.LISTENING_SERVICE_KEY;delete process.env.CUSTOM_LLM_API_KEY;
+  assert.equal((await call('/v1/internal/listening/worker-ready',voiceReady)).status,503,'no service key fails closed');
   delete process.env.LISTENING_GRANT_SECRET;assert.equal(listeningRuntimeStatus().ready,false);
  }finally{if(server){if('closeAllConnections' in server)server.closeAllConnections();await new Promise<void>(r=>server!.close(()=>r()));}provider.closeAllConnections();await new Promise<void>(r=>provider.close(()=>r()));process.chdir(originalCwd);rmSync(dir,{recursive:true,force:true});}
 });

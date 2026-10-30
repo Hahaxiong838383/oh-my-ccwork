@@ -34,7 +34,8 @@ export function getListeningAuthority(){
  if(!instance){void deviceRegistryStore; // Ensure the existing registry/revocation schema owns this database first.
   instance=new ListeningAuthority({store:new ListeningAuthorityStore(resolve(process.env.DEVICES_DB_PATH?.trim()||'./data/devices.db')),
    getConfig:()=>getListeningSettingsStore().read().config,clock:Date.now,
-   secrets:()=>({authSecret:process.env.AUTH_JWT_SECRET??'',grantSecret:process.env.LISTENING_GRANT_SECRET??'',serviceKey:process.env.CUSTOM_LLM_API_KEY??'',workerAccounts:listeningWorkerAccounts()}),
+   // Main ordinary-chat auth may intentionally have no shared key. Internal listening can use its own key.
+   secrets:()=>({authSecret:process.env.AUTH_JWT_SECRET??'',grantSecret:process.env.LISTENING_GRANT_SECRET??'',serviceKey:process.env.LISTENING_SERVICE_KEY??process.env.CUSTOM_LLM_API_KEY??'',workerAccounts:listeningWorkerAccounts()}),
    manifest:releaseManifest,sourceDeadline:listeningSourceDeadline,sourceGeneration:()=>getListeningSettingsStore().sourceGeneration(),
    restrictedSince:(revision,sn,scene)=>getListeningSettingsStore().restrictedSince(revision,sn,scene)});
  }return instance;
