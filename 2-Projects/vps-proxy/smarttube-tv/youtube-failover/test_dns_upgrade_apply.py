@@ -3,6 +3,8 @@
 
 No ADB, network or production paths. Fault injection replaces only mv in PATH;
 the deployed script has no failure-injection command or test-only branch.
+A missing transaction-profile keeps the nine-file DNS transaction.
+rack-dualstack-v1 is the only other profile, and it is exactly fifteen files.
 """
 import hashlib
 import json
@@ -21,6 +23,14 @@ PATHS = [
     'youtube-failover/release-id', 'youtube-failover/enabled',
     'youtube-failover/manifest.json', 'youtube-failover/service.sh',
     'youtube-failover/video-boot-start.next.sh',
+]
+RACK_PATHS = PATHS + [
+    'youtube-failover/guard.dex',
+    'youtube-failover/guard-config.json',
+    'youtube-failover/guard-observe.json',
+    'youtube-failover/workers/rack/config.json',
+    'youtube-failover/workers/rack/config.sha256',
+    'video-dns-service-start.sh',
 ]
 
 
@@ -42,6 +52,7 @@ class Transaction(unittest.TestCase):
         self.busybox = self.base/'busybox-host'
         self.busybox.write_text('#!/bin/sh\nif [ "$1" = flock ]; then\n  shift\n  [ "$1" = -n ] && [ "$#" -ge 3 ] || exit 64\n  case "$2" in /*) ;; *) exit 65 ;; esac\n  exec /usr/bin/flock "$@"\nfi\nexec /usr/bin/busybox "$@"\n')
         self.busybox.chmod(0o700)
+        self.paths = list(PATHS)
         self.script = self.stage / SOURCE.name
         shutil.copyfile(SOURCE, self.script)
         self.script.chmod(0o700)
@@ -72,10 +83,10 @@ class Transaction(unittest.TestCase):
         return 0o700 if path.endswith('.sh') else 0o600
 
     @staticmethod
-    def make_files(label):
+    def make_files(label, paths=PATHS):
         config = (json.dumps({'dns': {'label': label}})+'\n').encode()
         release = sha(label.encode())+'\n'
-        result = {p: ('#!/system/bin/sh\n# '+label+'\n').encode() for p in PATHS if p.endswith('.sh')}
+        result = {p: ('#!/system/bin/sh\n# '+label+'\n').encode() for p in paths if p.endswith('.sh')}
         result.update({
             'config.json': config,
             'youtube-failover/main-config.json': config,
@@ -84,11 +95,46 @@ class Transaction(unittest.TestCase):
             'youtube-failover/enabled': release.encode(),
             'youtube-failover/manifest.json': (json.dumps({'label': label})+'\n').encode(),
         })
+        if 'youtube-failover/workers/rack/config.json' in paths:
+            rack = (json.dumps({'worker': 'rack', 'label': label})+'\n').encode()
+            result.update({
+                'youtube-failover/guard.dex': ('dex:'+label+'\n').encode(),
+                'youtube-failover/guard-config.json': (json.dumps({'guard': label})+'\n').encode(),
+                'youtube-failover/guard-observe.json': (json.dumps({'observe': label})+'\n').encode(),
+                'youtube-failover/workers/rack/config.json': rack,
+                'youtube-failover/workers/rack/config.sha256': (sha(rack)+'\n').encode(),
+            })
         return result
 
-    def write_transaction(self, paths=PATHS):
+    def write_transaction(self, paths=None):
+        paths = self.paths if paths is None else paths
         (self.stage/'transaction.tsv').write_text(''.join(
             f'{p}\t{sha(self.old[p])}\t{sha(self.new[p])}\t{self.mode(p):o}\n' for p in paths))
+
+    def enable_rack(self):
+        self.paths = list(RACK_PATHS)
+        self.old = self.make_files('old', self.paths)
+        self.new = self.make_files('new', self.paths)
+        for directory, files in [(self.root, self.old), (self.stage/'backup', self.old), (self.stage/'payload', self.new)]:
+            for relative, data in files.items():
+                path = directory / relative
+                path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                path.write_bytes(data)
+                path.chmod(self.mode(relative))
+        profile = self.stage/'transaction-profile'
+        profile.write_text('rack-dualstack-v1\n')
+        profile.chmod(0o600)
+        self.write_transaction()
+
+    def authorize(self, text=None, mode=0o600):
+        path = self.stage/'authorized-current-boot-id'
+        path.write_text(self.boot.read_text() if text is None else text)
+        path.chmod(mode)
+        return path
+
+    def run_raw(self, args, env=None):
+        return subprocess.run(['busybox', 'ash', str(self.script), *args],
+                              env=env or self.env, text=True, capture_output=True, timeout=8)
 
     def run_apply(self, action='--apply', env=None):
         start = time.monotonic()
@@ -304,6 +350,282 @@ sys.exit(0)
         with lock.open() as stream:
             fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.assert_refused_unchanged()
+
+    def test_rack_profile_apply_rollback_covers_all_fifteen_files(self):
+        self.enable_rack()
+        self.assertEqual(len(RACK_PATHS), 15)
+        self.assertEqual(len((self.stage/'transaction.tsv').read_text().splitlines()), 15)
+        self.assertNotEqual(self.old['video-dns-service-start.sh'], self.new['video-dns-service-start.sh'])
+        self.assertFalse((self.stage/'authorized-current-boot-id').exists())
+        before = self.snapshot()
+        result = self.run_apply('--verify')
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('verified_read_only', result.stdout)
+        self.assertEqual(self.snapshot(), before)
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_applied', result.stdout)
+        self.assert_live(self.new)
+        self.assertEqual((self.root/'youtube-failover/guard.dex').stat().st_mode & 0o777, 0o600)
+        self.assertEqual((self.root/'video-dns-service-start.sh').read_bytes(), self.new['video-dns-service-start.sh'])
+        self.assertFalse(any('.dns-upgrade-' in path.name for path in self.root.rglob('*')))
+        marker = self.stage/'applied-boot-id'
+        self.assertEqual(marker.read_text(), 'next-boot\n')
+        self.assertEqual(marker.stat().st_mode & 0o777, 0o600)
+        result = self.run_apply('--rollback')
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_rolled_back', result.stdout)
+        self.assert_live(self.old)
+        self.assertFalse((self.stage/'applied-boot-id').exists())
+        self.boot.write_text('later-boot\n')
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('rolled_back_preserved', result.stdout)
+        self.assert_live(self.old)
+
+    def test_rack_same_boot_defers_until_explicit_authorization(self):
+        self.enable_rack()
+        self.boot.write_text('installed-boot\n')
+        for action in ['--apply', '--rollback']:
+            before = self.snapshot()
+            result = self.run_apply(action)
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            self.assertIn('deferred_same_boot', result.stdout)
+            self.assertEqual(self.snapshot(), before)
+        self.assert_live(self.old)
+        self.authorize()
+        result = self.run_apply('--apply-authorized')
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_applied', result.stdout)
+        self.assert_live(self.new)
+        self.assertEqual((self.stage/'applied-boot-id').read_text(), 'installed-boot\n')
+        before = self.snapshot()
+        result = self.run_apply('--apply')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn('deferred_same_boot', result.stdout)
+        self.assertEqual(self.snapshot(), before)
+        result = self.run_apply('--rollback-authorized')
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_rolled_back', result.stdout)
+        self.assert_live(self.old)
+        self.assertFalse((self.stage/'applied-boot-id').exists())
+        self.assertEqual((self.stage/'rolled-back-boot-id').read_text(), 'installed-boot\n')
+        self.boot.write_text('later-boot\n')
+        self.authorize()
+        result = self.run_apply('--apply-authorized')
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('rolled_back_preserved', result.stdout)
+        self.assert_live(self.old)
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('rolled_back_preserved', result.stdout)
+        self.assert_live(self.old)
+
+    def test_rack_authorization_missing_wrong_boot_and_wide_mode_refuse(self):
+        self.enable_rack()
+        for action in ['--apply-authorized', '--rollback-authorized']:
+            result = self.assert_refused_unchanged(action)
+            self.assertIn('authorization_invalid', result.stdout)
+            self.assertNotIn('deferred_same_boot', result.stdout)
+        self.authorize('installed-boot\n')
+        result = self.assert_refused_unchanged('--apply-authorized')
+        self.assertIn('authorization_invalid', result.stdout)
+        for mode in (0o644, 0o640, 0o604, 0o700):
+            self.authorize(mode=mode)
+            result = self.assert_refused_unchanged('--rollback-authorized')
+            self.assertIn('authorization_invalid', result.stdout)
+        link = self.stage/'authorized-current-boot-id'
+        link.unlink()
+        link.symlink_to(self.boot)
+        result = self.assert_refused_unchanged('--apply-authorized')
+        self.assertIn('authorization_invalid', result.stdout)
+        link.unlink()
+        self.authorize()
+        (self.stage/'payload/youtube-failover/guard.dex').unlink()
+        result = self.assert_refused_unchanged('--apply-authorized')
+        self.assertIn('preflight', result.stdout)
+        self.assertNotIn('deferred_same_boot', result.stdout)
+        self.assert_live(self.old)
+
+    def test_old_profile_rejects_authorized_actions(self):
+        self.authorize()
+        before = self.snapshot()
+        for action in ['--apply-authorized', '--rollback-authorized']:
+            result = self.run_apply(action)
+            self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
+            self.assertIn('authorized_profile_rejected', result.stdout)
+            self.assertEqual(self.snapshot(), before)
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_applied', result.stdout)
+        self.assert_live(self.new)
+
+    def test_unknown_profile_refuses_without_changing_same_boot_defer(self):
+        profile = self.stage/'transaction-profile'
+        for text in ['nope\n', 'dns9\n', 'rack-dualstack-v1 \n', '']:
+            profile.write_text(text)
+            profile.chmod(0o600)
+            result = self.assert_refused_unchanged()
+            self.assertIn('unknown_profile', result.stdout)
+        self.boot.write_text('installed-boot\n')
+        profile.write_text('nope\n')
+        before = self.snapshot()
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('deferred_same_boot', result.stdout)
+        self.assertEqual(self.snapshot(), before)
+        result = self.run_apply('--apply-authorized')
+        self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
+        self.assertIn('unknown_profile', result.stdout)
+        self.assertNotIn('deferred_same_boot', result.stdout)
+        self.assertEqual(self.snapshot(), before)
+        self.boot.write_text('next-boot\n')
+        profile.unlink()
+        profile.symlink_to(self.boot)
+        result = self.assert_refused_unchanged('--verify')
+        self.assertIn('unknown_profile', result.stdout)
+
+    def test_rack_drift_symlink_anchor_mode_and_unknown_path_refuse(self):
+        self.enable_rack()
+        for relative in ['video-dns-service-start.sh', 'youtube-failover/workers/rack/config.json', 'youtube-failover/guard.dex']:
+            target = self.root/relative
+            target.write_bytes(b'external edit\n')
+            result = self.assert_refused_unchanged()
+            self.assertIn('preflight', result.stdout)
+            target.write_bytes(self.old[relative])
+            target.chmod(self.mode(relative))
+        rel = 'youtube-failover/workers/rack/config.sha256'
+        original = self.new[rel]
+        self.new[rel] = (b'ab'*32)+b'\n'
+        (self.stage/'payload'/rel).write_bytes(self.new[rel])
+        self.write_transaction()
+        result = self.assert_refused_unchanged()
+        self.assertIn('preflight', result.stdout)
+        self.new[rel] = original
+        (self.stage/'payload'/rel).write_bytes(original)
+        self.write_transaction()
+        lines = []
+        for line in (self.stage/'transaction.tsv').read_text().splitlines():
+            if line.startswith('youtube-failover/guard.dex\t'):
+                parts = line.split('\t')
+                parts[3] = '700'
+                line = '\t'.join(parts)
+            lines.append(line)
+        (self.stage/'transaction.tsv').write_text('\n'.join(lines)+'\n')
+        result = self.assert_refused_unchanged()
+        self.assertIn('preflight', result.stdout)
+        self.write_transaction(PATHS)
+        result = self.assert_refused_unchanged()
+        self.assertIn('preflight', result.stdout)
+        self.write_transaction()
+        extra = (self.stage/'transaction.tsv').read_text()
+        digest = sha(b'nope')
+        extra += f'youtube-failover/workers/zgo/config.json\t{digest}\t{digest}\t600\n'
+        (self.stage/'transaction.tsv').write_text(extra)
+        result = self.assert_refused_unchanged()
+        self.assertIn('preflight', result.stdout)
+        self.write_transaction()
+        for base, relative in [
+            (self.root, 'youtube-failover/workers'),
+            (self.stage/'payload', 'youtube-failover/workers/rack'),
+            (self.stage/'backup', 'youtube-failover/workers'),
+        ]:
+            target = base/relative
+            held = self.base/'held-dir'
+            if held.exists() or held.is_symlink():
+                shutil.rmtree(held)
+            shutil.move(target, held)
+            target.symlink_to(held, target_is_directory=True)
+            result = self.assert_refused_unchanged()
+            self.assertIn('preflight', result.stdout)
+            target.unlink()
+            shutil.move(held, target)
+
+    def test_rack_worker_refuses_but_zgo_main_and_guardian_policy_holds(self):
+        self.enable_rack()
+        self.authorize()
+        binary = str(self.root/'sing-box')
+        rack = str(self.root/'youtube-failover/workers/rack/config.json')
+        self.fake_process([binary, 'run', '-c', str(self.root/'config.json')], binary)
+        result = self.assert_refused_unchanged('--apply-authorized')
+        self.assertIn('production_process_running', result.stdout)
+        (self.proc/'123/cmdline').write_bytes(b'\0'.join(v.encode() for v in [binary, 'run', '-c', rack])+b'\0')
+        result = self.assert_refused_unchanged()
+        self.assertIn('production_process_running', result.stdout)
+        (self.proc/'123/cmdline').write_bytes(b'\0'.join(v.encode() for v in [
+            '/system/bin/app_process', '/system/bin', 'YoutubeFailover',
+            str(self.root/'youtube-failover/guard-config.json')])+b'\0')
+        result = self.assert_refused_unchanged()
+        self.assertIn('production_process_running', result.stdout)
+        (self.proc/'123/cmdline').write_bytes(b'\0'.join(v.encode() for v in [
+            'sh', str(self.root/'youtube-failover/guard-run.sh')])+b'\0')
+        self.assert_refused_unchanged()
+        zgo = str(self.root/'youtube-failover/workers/zgo/config.json')
+        (self.proc/'123/cmdline').write_bytes(b'\0'.join(v.encode() for v in [binary, 'run', '-c', zgo])+b'\0')
+        (self.proc/'123/exe').unlink()
+        (self.proc/'123/exe').symlink_to(binary)
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assert_live(self.new)
+
+    def test_rack_rename_failure_restores_every_file(self):
+        self.enable_rack()
+        result = self.run_apply(env=self.injected('fail'))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('failed_backup_restored', result.stdout)
+        self.assert_live(self.old)
+        self.assertFalse((self.stage/'applied-boot-id').exists())
+        self.assertEqual((self.stage/'rolled-back-boot-id').read_text(), 'next-boot\n')
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('rolled_back_preserved', result.stdout)
+        self.assert_live(self.old)
+
+    def test_rack_sigkill_replay_completes_all_fifteen(self):
+        self.enable_rack()
+        result = self.run_apply(env=self.injected('kill'))
+        self.assertEqual(result.returncode, 137, result.stdout+result.stderr)
+        self.assertEqual((self.root/self.paths[0]).read_bytes(), self.new[self.paths[0]])
+        self.assertEqual((self.root/self.paths[-1]).read_bytes(), self.old[self.paths[-1]])
+        self.assertFalse((self.stage/'applied-boot-id').exists())
+        result = self.run_apply()
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_applied', result.stdout)
+        self.assert_live(self.new)
+
+    def test_locked_reentry_cannot_grant_or_drop_authorization(self):
+        self.enable_rack()
+        before = self.snapshot()
+        result = self.run_raw(['--apply', '--apply-authorized'])
+        self.assertEqual(result.returncode, 2, result.stdout+result.stderr)
+        self.assertEqual(self.snapshot(), before)
+        self.boot.write_text('installed-boot\n')
+        env = dict(self.env, VIDEO_DNS_TRANSACTION_LOCKED=str(self.stage/'transaction.lock'))
+        before = self.snapshot()
+        result = self.run_raw(['--apply', '--locked'], env)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('deferred_same_boot', result.stdout)
+        self.assertEqual(self.snapshot(), before)
+        result = self.run_raw(['--apply-authorized', '--locked'], env)
+        self.assertEqual(result.returncode, 1, result.stdout+result.stderr)
+        self.assertIn('authorization_invalid', result.stdout)
+        self.assertNotIn('deferred_same_boot', result.stdout)
+        self.assertEqual(self.snapshot(), before)
+        self.authorize()
+        before = self.snapshot()
+        result = self.run_raw(['--apply', '--locked'], env)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('deferred_same_boot', result.stdout)
+        self.assert_live(self.old)
+        self.assertEqual(self.snapshot(), before)
+        result = self.run_raw(['--apply-authorized', '--locked'], env)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_applied', result.stdout)
+        self.assert_live(self.new)
+        result = self.run_raw(['--rollback-authorized', '--locked'], env)
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertIn('dns_upgrade_rolled_back', result.stdout)
+        self.assert_live(self.old)
 
 
 if __name__ == '__main__':

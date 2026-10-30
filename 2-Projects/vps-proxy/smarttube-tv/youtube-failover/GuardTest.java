@@ -103,5 +103,44 @@ public final class GuardTest {
             YoutubeFailover.Probe dot=YoutubeFailover.dotProbe(c,lane);check(dot.ok&&dot.bytes>12,"real numeric SOCKS TLS DNS query accepted");fixture.badDns=true;dot=YoutubeFailover.dotProbe(c,lane);check(!dot.ok&&"DnsHeader".equals(dot.error),"real DoT mismatched ID rejected");}
         byte[] request=YoutubeFailover.dnsRequest("www.youtube.com",1);reject(()->YoutubeFailover.validDns(request,1,"www.youtube.com"),"DnsHeader");
     }
-    public static void main(String[] args)throws Exception{Path base=Paths.get(args[0]);switching(base);gatesAndFaults(base);persistenceAndRecovery(base);dualTransport(base);System.out.println("PASS "+checks+" guard integration assertions; real loopback HTTP/SOCKS/TLS plus persisted restart policy");}
+    static JSONArray candidateJson(YoutubeFailover.Candidate[] lanes){
+        JSONArray a=new JSONArray();for(YoutubeFailover.Candidate c:lanes){JSONObject j=new JSONObject().put("tag",c.tag).put("socks_port",c.port);if(c.worker!=null)j.put("worker",c.worker);a.put(j);}return a;
+    }
+    static void dualStack(Path base)throws Exception{
+        YoutubeFailover.Config defaults=new YoutubeFailover.Config();
+        JSONArray v=candidateJson(defaults.candidates),d=candidateJson(defaults.dnsCandidates);
+        v=new JSONArray().put(v.get(0)).put(v.get(1)).put(new JSONObject().put("tag","yt-rack-reality-ipv6").put("socks_port",19105)).put(v.get(2)).put(v.get(3));
+        d=new JSONArray().put(d.get(0)).put(new JSONObject().put("tag","dns-rack-reality-ipv6").put("socks_port",19113)).put(d.get(1));
+        YoutubeFailover.Candidate[] video=YoutubeFailover.Config.parseCandidates(v,defaults.candidates),dns=YoutubeFailover.Config.parseCandidates(d,defaults.dnsCandidates);
+        check(video.length==5&&dns.length==3&&video[2].worker==null,"explicit IPv6 profile retains independent HY2 worker ownership");
+        JSONArray bad=new JSONArray(v.toString());bad.getJSONObject(2).put("worker","rack");final JSONArray wrongWorker=bad;
+        reject(()->YoutubeFailover.Config.parseCandidates(wrongWorker,defaults.candidates),"CandidateOrderOrWorker");
+        bad=new JSONArray(v.toString());bad.getJSONObject(2).put("tag","unmanaged");final JSONArray wrongTag=bad;
+        reject(()->YoutubeFailover.Config.parseCandidates(wrongTag,defaults.candidates),"CandidateOrderOrWorker");
+        reject(()->YoutubeFailover.Config.parseCandidates(new JSONArray(),defaults.candidates),"CandidateCount");
+        try(Fixture f=new Fixture(base)){
+            f.config.candidates=video;f.config.dnsCandidates=dns;
+            for(YoutubeFailover.Candidate c:video){f.primary.put(c.tag,false);f.youtube.put(c.tag,false);}
+            f.primary.put("yt-rack-reality-ipv6",true);f.youtube.put("yt-rack-reality-ipv6",true);
+            f.connections.put("unrelated-netflix",new String[]{"zgo-video","zgo-hy2"});
+            YoutubeFailover g=f.guard();g.channelStep(g.video);
+            check(f.selected.equals("yt-rack-reality-ipv6"),"IPv6 is actually selected when other video candidates fail");
+            check(f.connections.containsKey("unrelated-netflix"),"IPv6 failure switch preserves unrelated Netflix connection");
+            for(YoutubeFailover.Candidate c:dns)f.dot.put(c.tag,false);f.dot.put("dns-rack-reality-ipv6",true);
+            g.channelStep(g.dns);check(f.dnsSelected.equals("dns-rack-reality-ipv6"),"DNS independently fails over to IPv6");
+            f.fail("yt-rack-reality-ipv6");f.primary.put("yt-zgo-reality",true);f.youtube.put("yt-zgo-reality",true);
+            g.channelStep(g.video);check(f.selected.equals("yt-zgo-reality"),"failed IPv6 falls through to healthy ZGO");
+            f.dot.put("dns-rack-reality-ipv6",false);f.dot.put("dns-zgo-reality",true);
+            g.channelStep(g.dns);check(f.dnsSelected.equals("dns-zgo-reality"),"failed IPv6 DNS falls through to ZGO");
+            JSONObject json=new JSONObject().put("secret_file",f.config.secretFile).put("state_file",f.config.stateFile)
+                .put("enabled_marker",f.config.enabledMarker).put("boot_guard_file",f.config.bootGuardFile)
+                .put("boot_id_file",f.config.bootIdFile).put("release_id_file",f.config.releaseIdFile).put("workerctl",f.config.workerctl)
+                .put("candidates",v).put("dns",new JSONObject().put("candidates",d));
+            Path p=f.root.resolve("profile.json");Files.write(p,json.toString().getBytes(StandardCharsets.UTF_8));
+            check(YoutubeFailover.Config.load(p.toString()).candidates.length==5,"real config loader accepts five/three-lane profile");
+            json.getJSONArray("candidates").getJSONObject(2).put("socks_port",19111);
+            Files.write(p,json.toString().getBytes(StandardCharsets.UTF_8));reject(()->YoutubeFailover.Config.load(p.toString()),"DuplicatePort");
+        }
+    }
+    public static void main(String[] args)throws Exception{Path base=Paths.get(args[0]);switching(base);gatesAndFaults(base);persistenceAndRecovery(base);dualTransport(base);dualStack(base);System.out.println("PASS "+checks+" guard integration assertions; real loopback HTTP/SOCKS/TLS plus persisted restart policy");}
 }

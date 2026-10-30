@@ -3,13 +3,13 @@
 本目录保存`~/home-lan/4-Assets/Code/`两项目的可校验快照，发布到私有仓`Hahaxiong838383/oh-my-ccwork`。实现真源仍在home-lan，不在两处分别演化；更新时先修改、测试并提交真源，再同步快照和清单。
 
 - `video-proxy-boot/`：基础版开机校时、实际DNS就绪、系统与应用DNS缓存恢复。
-- `youtube-failover/`：四级视频出口、两HY2独立worker、真实正文/DoT守护、配置生成与集成启动脚本。
-- `SOURCE-MANIFEST.json`：46份源码/测试/文档的SHA256、大小、Git可执行位和真源commit。
+- `youtube-failover/`：五级视频出口、两HY2独立worker、真实正文/DoT守护、配置生成与集成启动脚本。
+- `SOURCE-MANIFEST.json`：51份源码/测试/文档的SHA256、大小、Git可执行位和真源commit。
 - `ACCEPTANCE-20261024.json`：脱敏启动时序、实播及缓存验收摘要，不含生产配置或原始日志。
 
-本次真源commit：`ce3f0e9a5d3e60cbf11b83ae7570df4f31ff9347`。本次背景见[DNS与断电恢复复盘](../2026-10-24-电视DNS与断电恢复复盘.md)，旧版背景见[四级代理复盘](../2026-10-18-SmartTube与四级代理复盘.md)。生产配置、节点凭据、API密钥、账号数据、原始日志及APK/DEX/二进制不入本快照。
+本次真源commit：`0620d3f6839388ade3471e3cebcc8469dc110041`。2026-10-30 09:17 Rack迁移/IPv6已正式激活，生产双栈正文/完整载荷/DoT通过，直播保持；新冷启动和SmartTube实播待验。见[本轮验收](ACCEPTANCE-20261030-ACTIVATED.json)。下方2026-10-24为历史基线。本次背景见[DNS与断电恢复复盘](../2026-10-24-电视DNS与断电恢复复盘.md)，旧版背景见[四级代理复盘](../2026-10-18-SmartTube与四级代理复盘.md)。生产配置、节点凭据、API密钥、账号数据、原始日志及APK/DEX/二进制不入本快照。
 
-## 2026-10-24 当前发布
+## 2026-10-24 正式运行基线
 
 系统DNS、Magisk早期双栈保护、现有sing-box1.14.3持久DNS缓存与5分钟optimistic已启用。
 SmartTube32.68使用原生“禁用自动网络错误修复”阻止长缓冲自动改DNS；账号与画质不清改。

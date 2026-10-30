@@ -213,6 +213,16 @@ public final class YoutubeFailover {
             return c;
         }
         static Candidate[] parseCandidates(JSONArray list,Candidate[] required)throws Exception{
+            // Keep the deployed four/two-lane profile compatible. The only
+            // extension is Rack IPv6 Reality immediately after Rack IPv4;
+            // arbitrary reordering/worker changes remain rejected.
+            if(list.length()==required.length+1){
+                int at=required.length==4?2:1;
+                Candidate extra=new Candidate(required.length==4?"yt-rack-reality-ipv6":"dns-rack-reality-ipv6",required.length==4?19105:19113,null);
+                Candidate[] expanded=new Candidate[required.length+1];
+                System.arraycopy(required,0,expanded,0,at);expanded[at]=extra;
+                System.arraycopy(required,at,expanded,at+1,required.length-at);required=expanded;
+            }
             if(list.length()!=required.length)throw new TypedError("CandidateCount");Candidate[] result=new Candidate[required.length];
             for(int i=0;i<required.length;i++){JSONObject j=list.getJSONObject(i);String tag=tag(j.getString("tag"));
                 String worker=j.has("worker")?j.getString("worker"):null;

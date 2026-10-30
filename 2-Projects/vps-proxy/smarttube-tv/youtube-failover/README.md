@@ -1,4 +1,66 @@
-# YouTube / SmartTube 四级代理兜底
+# YouTube / SmartTube 代理兜底
+
+## 2026-10-30 09:17 已激活 RackNerd 双栈
+
+15文件事务已应用，release `5618bda5a8bfe4f1b15bbf66669801df5df2d226d4a772a74eea3ac0f2b62e65`，
+config SHA `d2fab1002448987d5e8fd2ac647aeb1acfa2330c5dfaa985af1266c8f73a8f6e`。
+正式19102/19105的IPv4/IPv6入口各通过Rack出口、YouTube完整正文与1MiB；19111/19113各通过真实DoT，5354正常。
+两种入口的目标站出口都为Rack IPv4，这是服务器出站选择，不否定客户端通过IPv6连接VPS。
+新guardian5/3候选authorized=true，外部DNS保护SHA保持。DIYP UID10065在TUN外，连接局域网192.168.1.211:4022；
+前台PID4746与ZGO worker8765保持，1080p25持续帧增长，drop/解码错误0；未重启盒子或操作应用。
+重载恢复原ZGO选择，保留三次成功/300秒恢复门；节点可用不等于已强制所有流量切Rack。
+
+首次重载因boot-start.lock被旧守护子进程继承而在任何生产修改前退出。
+维护激活改为独立rack-activation.lock，并验证boot锁只由已知旧代理/guard持有、保留的ZGO worker实际持锁；
+未知持有者或真正boot worker直接拒绝，未删除boot锁。新服务启动前关闭继承的维护锁FD，结束后真机获取维护锁成功。
+前台从单独极空间扩为两种已验证TUN外播放器，并要求600权限authorized-foreground-component与当前组件精确匹配。
+本地6项恢复/前台/真实锁回归通过；Android Magisk BusyBox原始启动锁不释放负锚与修正后释放正锚通过。
+该激活入口仅适用于已核验的此次旧运行结构，不是任意前台/任意锁状态的通用重启器。
+
+正式代理端口验证不等同于新版SmartTube实播或同UID/TUN端到端验证；本次未启动SmartTube。
+新启动链已落盘且15文件/权限一致，真实下一次断电启动仍待用户窗口；HY2未额外测速、Cloudflare仍搁置。
+
+## 历史：2026-10-30 00:23 暂存后离线（已由上方激活结果推进）
+
+基于设备当前 release 增量修改，未用旧 stage 覆盖。新增 IPv6 Reality 视频/DNS候选，
+顺序为 Rack HY2 → Rack Reality IPv4 → Rack Reality IPv6 → ZGO Reality → ZGO HY2；
+DNS 为 Rack Reality IPv4 → Rack Reality IPv6 → ZGO Reality。保留原重试、三次成功/300秒恢复门、
+DNS旧连接回收、Netflix与ZGO配置；初次重载默认选择采用暂存时的真实当前选择，不强制切换。
+
+- `amend_rack_dualstack.py`：纯内存修正现网配置。更新三份Rack Reality地址/端口/SNI、主配置及独立worker的HY2地址，
+  增加19105/19113回环探针、路由与候选；不轮换凭据、不改变DNS缓存或TUN UID。
+- `stage_rack_dualstack.py`：先核live manifest/当前资产/旧事务，备份与payload仅写设备700目录；
+  JSON/DEX/脚本真机校验、逐文件回读、当前boot零动作后输出脱敏收据。
+- `dns-upgrade-apply.sh`：默认保持旧9文件契约；`rack-dualstack-v1` 扩为精确15文件，
+  增加guard DEX/两份守护配置/Rack worker配置和SHA/服务启动脚本。其它路径、漂移与活跃Rack worker拒绝。
+  `--apply-authorized`/`--rollback-authorized` 只接受600普通文件的当前boot授权；普通动作同boot仍延后。
+- `activate-rack-dualstack.sh`：只由明确维护调用，不作开机入口。先核已授权且经现场验证的TUN外前台及worker安全门，
+  先接好新启动事务，再短暂重载主代理/guardian/Rack worker；保留ZGO worker。
+  激活失败按完整15文件回退；不重启盒子，不操作应用。
+
+旧 `dns-upgrade-20261024` 的 payload/backup 保留历史；新事务接管 `video-dns-service-start.sh`
+和两份 boot worker 的apply/rollback路径。早期DNS保护脚本及 `boot-assets-current.json` 保持。
+下一次实际冷启动需要独立验收，不能由同boot重载推出断电恢复已验。
+
+验证：15传输断言、74守护断言（含真实IPv6候选切换及ZGO回退的隔离API测试）、3配置修正测试与实际sing-box check、
+27事务测试（含SIGKILL恢复、权限/漂移/锁/进程边界）通过；Android隔离目录上的15文件apply/rollback逐字节通过。
+电视新v4/v6后台各YouTube有效正文、完整1MiB和真实DoT通过，当前极空间帧增长且drop/error0；这是独立探针证据。
+本轮不额外测速HY2，不处理Cloudflare域名。
+
+00:15前后设备ADB转offline，随后ARP无法解析、TCP5555报No route to host，原因未判定为关机。
+**未运行激活脚本、未写当前boot授权、未改启动接线，仍是旧正式配置；下次开机不会自动启用这份stage。**
+受保护stage为 `/data/adb/video-proxy/rack-dualstack-20261029`；15文件与真机DEX 5/3检查已经通过。
+设备离线后本机补上激活回滚的三项审查修正：应用状态精确读回、未apply时恢复旧启动入口及服务、
+回滚后同boot重试拒绝；并补充重载/回滚均恢复暂存时真实选择器，避免旧配置默认选中失效地址。
+4项恢复分支回归已通过（真实临时文件恢复，进程动作是记录替身，不冒充真机重启验收）。这些激活脚本修改仅在源码，尚未上传/运行；`initial-selections.tsv`尚未写入设备，不能直接运行激活脚本。
+
+恢复操作时须先核新boot/前台/正式15文件与stage旧SHA一致、新节点服务和独立请求可用。
+读取stage manifest的initial_selections，与当前API选路核对；有漂移就重新制作独立stage。
+补齐只含selector/tag的initial-selections.tsv，上传最终激活脚本，重新审查/验证恢复分支后，
+按实际用户使用窗口写本boot授权并激活。部署后从生产19102/19105与19111/19113验证两地址族，
+5354/完整文件SHA/guardian5-3候选/外部DNS保护/播放归属一起验；真实下一次冷启动另记。
+证据 `/tmp/tv-rack-update-20261029/`。
+
 
 ## 2026-10-24 19:32 断电启动观察通过
 

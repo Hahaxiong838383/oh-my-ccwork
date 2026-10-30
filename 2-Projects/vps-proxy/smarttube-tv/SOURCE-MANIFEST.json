@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
-  "created": "2026-10-24 19:39 CST",
+  "created": "2026-10-30",
   "source_root": "~/home-lan/4-Assets/Code",
-  "source_commit": "ce3f0e9a5d3e60cbf11b83ae7570df4f31ff9347",
+  "source_commit": "0620d3f6839388ade3471e3cebcc8469dc110041",
   "mode_note": "git_mode preserves executable bit; clone permissions depend on umask",
   "files": [
     {
@@ -97,14 +97,14 @@
     },
     {
       "path": "youtube-failover/GuardTest.java",
-      "sha256": "4fe3b63f17576be17a4f7c8b0590c1fe2edb811a2b286107636fca9e17be040d",
-      "bytes": 21403,
+      "sha256": "5af84d3c345f997d1e0259815390cf3147ed7494fc51abfac7b04a2afa50efb8",
+      "bytes": 25477,
       "git_mode": "100644"
     },
     {
       "path": "youtube-failover/README.md",
-      "sha256": "6b70e324ad52ffeddfdffcd8260b846f2a641e2d9ea3abec6f35d63908ee906e",
-      "bytes": 18465,
+      "sha256": "63d54a6dd2e5e0cad8f7e5417c4d291e30b5c66949199df0803a3b1c1adf7de2",
+      "bytes": 24342,
       "git_mode": "100644"
     },
     {
@@ -115,8 +115,20 @@
     },
     {
       "path": "youtube-failover/YoutubeFailover.java",
-      "sha256": "bd75b87fcc1f0da4f101e9e14af9a38d784484ff132e5c362fe766016056476b",
-      "bytes": 45605,
+      "sha256": "0abfc3afe160c246a7e82d273f3c6cc3b01109b7d1fde683b8f580e4bb7f5432",
+      "bytes": 46333,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/activate-rack-dualstack.sh",
+      "sha256": "e3acb21beaf55446b544903ead0eda58f55d6d4ea104deb4e646ff9a9e0aa549",
+      "bytes": 11961,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/amend_rack_dualstack.py",
+      "sha256": "0d96882fba82f7068ad25b087057da43f7b71e24aa876fc8737d496d0b45086e",
+      "bytes": 3841,
       "git_mode": "100644"
     },
     {
@@ -133,8 +145,8 @@
     },
     {
       "path": "youtube-failover/dns-upgrade-apply.sh",
-      "sha256": "35ae20ff335f12b4d573fc481d630ff31a44c56219b48f5e5460785d007da8c7",
-      "bytes": 7112,
+      "sha256": "7a98948d08785a9e1683f2148e00fc4956b558a9a048f5991b6ce27eb97ade04",
+      "bytes": 10354,
       "git_mode": "100644"
     },
     {
@@ -186,6 +198,12 @@
       "git_mode": "100644"
     },
     {
+      "path": "youtube-failover/stage_rack_dualstack.py",
+      "sha256": "1afd6f4f58aabb1fd19a11dcdf9f5961ccff66cc2872ee42521a433ce54750d1",
+      "bytes": 10600,
+      "git_mode": "100644"
+    },
+    {
       "path": "youtube-failover/stage_release.py",
       "sha256": "60f70cdabe470ef315d48563b83c3cb03ef9ff00e06b9916682bb0a7f2560e1f",
       "bytes": 6605,
@@ -196,6 +214,12 @@
       "sha256": "1fdd1b6371d27d28decdfc1ccceaac2e1371bc0de0752397394c618819446e98",
       "bytes": 2412,
       "git_mode": "100755"
+    },
+    {
+      "path": "youtube-failover/test_activation_recovery.py",
+      "sha256": "7c3d6e9d93a34c468cf2df5733e1cffc5ab8c2118545edc31fd5c1722d161cba",
+      "bytes": 5969,
+      "git_mode": "100644"
     },
     {
       "path": "youtube-failover/test_dns_guard.py",
@@ -211,8 +235,8 @@
     },
     {
       "path": "youtube-failover/test_dns_upgrade_apply.py",
-      "sha256": "bdd90e23df9dfffbbbba45bd9b2bfa2258ce9dec2fecae4fea044ddd2a5e96cf",
-      "bytes": 14019,
+      "sha256": "994f3c68840a8334392d602d62fd33147846ebb2a360dd20a32b04525aa600c5",
+      "bytes": 30966,
       "git_mode": "100644"
     },
     {
@@ -225,6 +249,12 @@
       "path": "youtube-failover/test_integration.py",
       "sha256": "ca1fab0a23ccbc4a67500a61b835ab54432874d03c2d4b2c4f66ca72b9fdc644",
       "bytes": 3942,
+      "git_mode": "100644"
+    },
+    {
+      "path": "youtube-failover/test_rack_dualstack.py",
+      "sha256": "31c72c52bf7e40b99c9d82799e06d545f4ab0688c3a6f70b30f8513fc781d8b2",
+      "bytes": 4189,
       "git_mode": "100644"
     },
     {
@@ -281,5 +311,6 @@
       "bytes": 11329,
       "git_mode": "100755"
     }
-  ]
+  ],
+  "release_status": "Rack dualstack activated and production IPv4/IPv6/DNS verified; next coldboot and SmartTube playback pending"
 }

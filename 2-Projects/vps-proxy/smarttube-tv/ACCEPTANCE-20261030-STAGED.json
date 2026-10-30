@@ -1,0 +1,130 @@
+{
+  "status": "staged-not-activated-device-offline",
+  "source_commit": "3a4bcf1112f72e3eaebe43998bc6f3d3861bc962",
+  "stage": {
+    "stage": "/data/adb/video-proxy/rack-dualstack-20261029",
+    "old_release": "40801839b020a05fdc7c7e49ed4702e39831033564ec4ddfaaab460d6ac9f82b",
+    "new_release": "5618bda5a8bfe4f1b15bbf66669801df5df2d226d4a772a74eea3ac0f2b62e65",
+    "files": 15,
+    "config_sha": "d2fab1002448987d5e8fd2ac647aeb1acfa2330c5dfaa985af1266c8f73a8f6e",
+    "guard_source_sha": "0abfc3afe160c246a7e82d273f3c6cc3b01109b7d1fde683b8f580e4bb7f5432",
+    "guard_dex_sha": "f5cd26d7c8d2fc6ca3c6fcb37a59bba69454cf73864ff219f86891273e1d4ebf",
+    "transaction_verify": "dns_upgrade_verified_read_only",
+    "same_boot_apply": "dns_upgrade_deferred_same_boot",
+    "dex_check": {
+      "config_valid": true,
+      "candidate_count": 5,
+      "dns_candidate_count": 3,
+      "authorized": false,
+      "dry_run": true,
+      "markers": {
+        "enabled": "valid_permissions",
+        "boot_guard": "valid_permissions",
+        "release_id": "valid_permissions"
+      }
+    }
+  },
+  "isolated_probe": [
+    {
+      "family": "v4",
+      "target": "youtube",
+      "rc": 0,
+      "response": "200 958838 8.313074",
+      "valid": true
+    },
+    {
+      "family": "v4",
+      "target": "payload1m",
+      "rc": 0,
+      "response": "200 1048576 7.873052",
+      "valid": true
+    },
+    {
+      "family": "v4",
+      "target": "real-dot",
+      "valid": true,
+      "answer_count": 8,
+      "seconds": 0.918
+    },
+    {
+      "family": "v6",
+      "target": "youtube",
+      "rc": 0,
+      "response": "200 957883 8.116470",
+      "valid": true
+    },
+    {
+      "family": "v6",
+      "target": "payload1m",
+      "rc": 0,
+      "response": "200 1048576 7.146438",
+      "valid": true
+    },
+    {
+      "family": "v6",
+      "target": "real-dot",
+      "valid": true,
+      "answer_count": 8,
+      "seconds": 1.688
+    }
+  ],
+  "playback_before": [
+    {
+      "frame width": 1920,
+      "frame height": 1088,
+      "frame count": 0,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0
+    },
+    {
+      "frame width": 1920,
+      "frame height": 1080,
+      "frame count": 25461,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0
+    }
+  ],
+  "playback_after": [
+    {
+      "frame width": 1920,
+      "frame height": 1088,
+      "frame count": 0,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0
+    },
+    {
+      "frame width": 1920,
+      "frame height": 1080,
+      "frame count": 26331,
+      "drop count": 0,
+      "fra err count": 0,
+      "hw err count": 0
+    }
+  ],
+  "production_unchanged_during_probe": true,
+  "android_isolated_transaction": {
+    "apply": "dns_upgrade_applied",
+    "rollback": "dns_upgrade_rolled_back",
+    "verified_file_count": 15,
+    "platform": "actual Android shell and Magisk BusyBox, isolated files only",
+    "production_processes_unchanged": true
+  },
+  "tests": {
+    "transport_assertions": 15,
+    "guardian_assertions": 74,
+    "amendment_tests": 3,
+    "transaction_tests": 27,
+    "activation_recovery_tests": 4
+  },
+  "not_done": [
+    "activation script not uploaded or executed",
+    "initial-selections.tsv not uploaded",
+    "current boot authorization absent",
+    "boot wiring not changed",
+    "production probes and real cold start pending"
+  ],
+  "connectivity": "ADB offline then no devices; ping 0/2, ARP FAILED, TCP5555 No route to host; shutdown not independently confirmed"
+}

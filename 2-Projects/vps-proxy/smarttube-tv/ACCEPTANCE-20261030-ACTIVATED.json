@@ -1,0 +1,500 @@
+{
+  "status": "activated and live proxy/DNS ports verified; coldboot and SmartTube app playback not tested",
+  "time": "2026-10-30T09:17:02+08:00",
+  "source_commit": "0620d3f6839388ade3471e3cebcc8469dc110041",
+  "release_id": "5618bda5a8bfe4f1b15bbf66669801df5df2d226d4a772a74eea3ac0f2b62e65",
+  "config_sha256": "d2fab1002448987d5e8fd2ac647aeb1acfa2330c5dfaa985af1266c8f73a8f6e",
+  "results": [
+    {
+      "family": "v4",
+      "port": 19102,
+      "target": "egress",
+      "rc": 0,
+      "response": "200 13 0.934463",
+      "valid": true
+    },
+    {
+      "family": "v4",
+      "port": 19102,
+      "target": "youtube",
+      "rc": 0,
+      "response": "200 957736 8.305785",
+      "valid": true
+    },
+    {
+      "family": "v4",
+      "port": 19102,
+      "target": "payload1m",
+      "rc": 0,
+      "response": "200 1048576 7.128738",
+      "valid": true
+    },
+    {
+      "family": "v4",
+      "port": 19111,
+      "target": "production-dot",
+      "valid": true,
+      "answer_count": 8,
+      "seconds": 0.923
+    },
+    {
+      "family": "v6",
+      "port": 19105,
+      "target": "egress",
+      "rc": 0,
+      "response": "200 13 0.989360",
+      "valid": true
+    },
+    {
+      "family": "v6",
+      "port": 19105,
+      "target": "youtube",
+      "rc": 0,
+      "response": "200 855492 7.354474",
+      "valid": true
+    },
+    {
+      "family": "v6",
+      "port": 19105,
+      "target": "payload1m",
+      "rc": 0,
+      "response": "200 1048576 7.250700",
+      "valid": true
+    },
+    {
+      "family": "v6",
+      "port": 19113,
+      "target": "production-dot",
+      "valid": true,
+      "answer_count": 8,
+      "seconds": 0.9
+    }
+  ],
+  "all_requests_passed": true,
+  "files": [
+    {
+      "path": "config.json",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "video-boot-start.sh",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/main-config.json",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/active-main.sha256",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/release-id",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/enabled",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/manifest.json",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/service.sh",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/video-boot-start.next.sh",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/guard.dex",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/guard-config.json",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/guard-observe.json",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/workers/rack/config.json",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "youtube-failover/workers/rack/config.sha256",
+      "sha_matches": true,
+      "mode_matches": true
+    },
+    {
+      "path": "video-dns-service-start.sh",
+      "sha_matches": true,
+      "mode_matches": true
+    }
+  ],
+  "external_assets": {
+    "/data/adb/video-proxy/video-dns-guard.sh": true,
+    "/data/adb/post-fs-data.d/video-dns-guard.sh": true,
+    "/data/adb/service.d/video-proxy.sh": true
+  },
+  "before": {
+    "boot": "63d7299d-c0c1-49a1-b8e5-fbd947205b06",
+    "foreground": "mResumedActivity: ActivityRecord{b3a402 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5090}",
+    "decoders": [
+      {
+        "frame width": 1920,
+        "frame height": 1080,
+        "frame count": 16344,
+        "drop count": 0,
+        "fra err count": 0,
+        "hw err count": 0
+      }
+    ],
+    "processes": {
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+        "pid": 8765,
+        "startticks": "5884"
+      },
+      "sing-box run -c /data/adb/video-proxy/config.json": {
+        "pid": 22890,
+        "startticks": "65449"
+      },
+      "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+        "pid": 22995,
+        "startticks": "65632"
+      },
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+        "pid": 23087,
+        "startticks": "65789"
+      }
+    }
+  },
+  "after": {
+    "boot": "63d7299d-c0c1-49a1-b8e5-fbd947205b06",
+    "foreground": "mResumedActivity: ActivityRecord{b3a402 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5090}",
+    "decoders": [
+      {
+        "frame width": 1920,
+        "frame height": 1080,
+        "frame count": 17262,
+        "drop count": 0,
+        "fra err count": 0,
+        "hw err count": 0
+      }
+    ],
+    "processes": {
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+        "pid": 8765,
+        "startticks": "5884"
+      },
+      "sing-box run -c /data/adb/video-proxy/config.json": {
+        "pid": 22890,
+        "startticks": "65449"
+      },
+      "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+        "pid": 22995,
+        "startticks": "65632"
+      },
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+        "pid": 23087,
+        "startticks": "65789"
+      }
+    }
+  },
+  "selected": {
+    "youtube-video": "yt-zgo-reality",
+    "dns-uplink": "dns-zgo-reality",
+    "zgo-video": "zgo-hy2"
+  },
+  "guard_check": {
+    "config_valid": true,
+    "candidate_count": 5,
+    "dns_candidate_count": 3,
+    "authorized": true,
+    "dry_run": false,
+    "markers": {
+      "enabled": "valid_permissions",
+      "boot_guard": "valid_permissions",
+      "release_id": "valid_permissions"
+    }
+  },
+  "dns_guard": "",
+  "dns5354": "DNS_OK 142.251.156.4",
+  "transaction": "dns_upgrade_verified_read_only",
+  "maintenance_lock": "0",
+  "app_pid": "4746",
+  "zgo_worker_unchanged": true,
+  "boot_unchanged": true,
+  "final_sample": {
+    "snapshot": {
+      "boot": "63d7299d-c0c1-49a1-b8e5-fbd947205b06",
+      "foreground": "mResumedActivity: ActivityRecord{b3a402 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5090}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 20492,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 8765,
+          "startticks": "5884"
+        },
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 22890,
+          "startticks": "65449"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 22995,
+          "startticks": "65632"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 23087,
+          "startticks": "65789"
+        }
+      }
+    },
+    "selected": {
+      "youtube-video": "yt-zgo-reality",
+      "dns-uplink": "dns-zgo-reality",
+      "zgo-video": "zgo-hy2"
+    },
+    "guardian_recent": [
+      {
+        "time": "2026-10-30T01:16:56.681Z",
+        "event": "started",
+        "target": "youtube-video",
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:16:57.779Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 1046,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:17:27.608Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 876,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:17:28.495Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-rack-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 884,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:17:28.496Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-rack-reality-ipv6",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 870,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:17:57.619Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 883,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:18:27.596Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 862,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:18:57.627Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 885,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:18:58.684Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-rack-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 1055,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:18:58.684Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-rack-reality-ipv6",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 885,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:19:27.514Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 779,
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:19:57.612Z",
+        "event": "probe",
+        "selector": "dns-uplink",
+        "tag": "dns-zgo-reality",
+        "ok": true,
+        "primary_ok": false,
+        "youtube_ok": false,
+        "bytes": 161,
+        "elapsed_ms": 882,
+        "error": null
+      }
+    ],
+    "app_pid": "4746",
+    "activation_log": "dns_upgrade_verified_read_only\n{\"config_valid\":true,\"candidate_count\":5,\"dns_candidate_count\":3,\"authorized\":false,\"dry_run\":true,\"markers\":{\"enabled\":\"valid_permissions\",\"boot_guard\":\"valid_permissions\",\"release_id\":\"valid_permissions\"}}\n2026-10-30T01:16:06Z rack_activation inherited_boot_lock_verified\n{\"time\":\"2026-10-30T01:16:07.174Z\",\"event\":\"worker_safe\",\"target\":\"rack\",\"error\":null}\nworker rack stopped\n2026-10-30T01:16:10Z rack_activation guardian_stopped\n2026-10-30T01:16:15Z rack_activation main_stopped\nworker rack running pid=23087\nworker zgo already running\nguard_started pid=22995\nDNS_OK 142.251.156.4\nDNS_OK 203.107.6.88\n2026-10-30T01:17:01Z rack_activation ready main=22890\ndns_upgrade_verified_read_only\n2026-10-30T01:17:02Z rack_activation completed\n",
+    "boot_entry_references": {
+      "video-dns-service-start.sh": true,
+      "video-boot-start.sh": true,
+      "youtube-failover/video-boot-start.next.sh": true
+    }
+  },
+  "android_lock_regression": [
+    {
+      "fixed": false,
+      "lock_rc": 1
+    },
+    {
+      "fixed": true,
+      "lock_rc": 0
+    }
+  ],
+  "limitations": [
+    "No new coldboot or power-cycle test",
+    "No SmartTube/Netflix app playback or UID/TUN end-to-end test",
+    "No extra HY2 speed test",
+    "Active selections retained pending normal recovery policy",
+    "Test payload rate limited to 128KiB/s, not peak throughput"
+  ],
+  "last_observation": {
+    "snapshot": {
+      "boot": "63d7299d-c0c1-49a1-b8e5-fbd947205b06",
+      "foreground": "mResumedActivity: ActivityRecord{b3a402 u0 com.player.diyp2020/com.player.activity.PlayerActivity t5090}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 23820,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 8765,
+          "startticks": "5884"
+        },
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 22890,
+          "startticks": "65449"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 22995,
+          "startticks": "65632"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 23087,
+          "startticks": "65789"
+        }
+      }
+    },
+    "selected": {
+      "youtube-video": "yt-zgo-reality",
+      "dns-uplink": "dns-rack-reality",
+      "zgo-video": "zgo-hy2"
+    },
+    "recent_decisions": [
+      {
+        "time": "2026-10-30T01:16:56.681Z",
+        "event": "started",
+        "target": "youtube-video",
+        "error": null
+      },
+      {
+        "time": "2026-10-30T01:20:28.533Z",
+        "event": "selection_verified",
+        "target": "dns-uplink:dns-rack-reality",
+        "error": null
+      }
+    ]
+  }
+}
