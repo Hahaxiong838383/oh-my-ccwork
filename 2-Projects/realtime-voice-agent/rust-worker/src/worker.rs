@@ -32,6 +32,7 @@ const RECONNECT_BACKOFF_MAX_SECS: u32 = 10;
 
 pub struct WorkerState {
     pub active_jobs: AtomicUsize,
+    capacity_changed: tokio::sync::Notify,
     /// 自上次注册成功（收到 RegisterWorkerResponse）起的连续 /agent 连接失败数。
     /// 2026-09-16 事故：旧计数只在「服务端干净关闭」时清零、重连成功不清零，09-12 LiveKit 机下电
     /// 25 min 攒下 12 次后一直背着，09-16 nginx 自动升级重启硬切 1 次即凑满 13 次 → 进程退出。
@@ -60,6 +61,7 @@ pub(crate) fn reconnect_backoff(consecutive_failures: u32) -> Duration {
 pub async fn run(config: Config) -> Result<()> {
     let state = Arc::new(WorkerState {
         active_jobs: AtomicUsize::new(0),
+        capacity_changed: tokio::sync::Notify::new(),
         reconnect_failures: AtomicU32::new(0),
     });
     tokio::spawn(crate::search_canary::health_loop(config.agent_name.clone(),state.clone()));
@@ -168,21 +170,12 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
                 }));
                 tx.send(WsMessage::Binary(ping.encode_to_vec().into())).await?;
             }
-            _ = status_timer.tick() => {
-                let active = state.active_jobs.load(Ordering::SeqCst);
-                let load = if active >= config.max_jobs { 1.0 } else { 0.0 };
-                let status = worker_msg(proto::worker_message::Message::UpdateWorker(
-                    proto::UpdateWorkerStatus {
-                        status: Some(if active >= config.max_jobs {
-                            proto::WorkerStatus::WsFull as i32
-                        } else {
-                            proto::WorkerStatus::WsAvailable as i32
-                        }),
-                        load,
-                        job_count: active as u32,
-                    },
-                ));
+            status = next_capacity_update(&state, config.max_jobs, &mut status_timer) => {
                 tx.send(WsMessage::Binary(status.encode_to_vec().into())).await?;
+                if let Some(proto::worker_message::Message::UpdateWorker(update)) = status.message {
+                    info!(job_count = update.job_count, status = update.status,
+                        "worker capacity published");
+                }
             }
             msg = rx.next() => match msg {
                 Some(Ok(WsMessage::Binary(data))) => {
@@ -199,6 +192,33 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
             }
         }
     }
+}
+
+fn job_started(state: &WorkerState) {
+    state.active_jobs.fetch_add(1, Ordering::SeqCst);
+    state.capacity_changed.notify_one();
+}
+fn job_finished(state: &WorkerState) {
+    state.active_jobs.fetch_sub(1, Ordering::SeqCst);
+    state.capacity_changed.notify_one();
+}
+fn capacity_update(state: &WorkerState, max_jobs: usize) -> proto::WorkerMessage {
+    let active = state.active_jobs.load(Ordering::SeqCst);
+    worker_msg(proto::worker_message::Message::UpdateWorker(proto::UpdateWorkerStatus {
+        status: Some(if active >= max_jobs { proto::WorkerStatus::WsFull as i32 } else { proto::WorkerStatus::WsAvailable as i32 }),
+        load: if active >= max_jobs { 1.0 } else { 0.0 },
+        job_count: active as u32,
+    }))
+}
+async fn next_capacity_update(state: &WorkerState, max_jobs: usize, timer: &mut tokio::time::Interval) -> proto::WorkerMessage {
+    // Notify retains one permit across reconnects and coalesces changes. Build
+    // the status at send time, so a queued Full cannot overwrite a later release.
+    tokio::select! {
+        biased;
+        _ = state.capacity_changed.notified() => {},
+        _ = timer.tick() => {},
+    }
+    capacity_update(state, max_jobs)
 }
 
 fn handle_server_message(
@@ -233,7 +253,7 @@ fn handle_server_message(
                 .unwrap_or_else(|| config.ws_url.clone());
             let token = assign.token;
             let job_id = job.id.clone();
-            state.active_jobs.fetch_add(1, Ordering::SeqCst);
+            job_started(state);
             info!(job_id = %job_id, "job assignment received, spawning job task");
             let st = state.clone();
             let tx = msg_tx.clone();
@@ -249,7 +269,7 @@ fn handle_server_message(
                 let _ = tx.send(running).await;
 
                 let result = job::run_job(cfg, job, url, token).await;
-                st.active_jobs.fetch_sub(1, Ordering::SeqCst);
+                job_finished(&st);
                 let (status, err) = match &result {
                     Ok(()) => (proto::JobStatus::JsSuccess, String::new()),
                     Err(e) => {
@@ -334,7 +354,8 @@ mod tests {
     }
 
     fn fresh_state() -> WorkerState {
-        WorkerState { active_jobs: AtomicUsize::new(0), reconnect_failures: AtomicU32::new(0) }
+        WorkerState { active_jobs: AtomicUsize::new(0),
+        capacity_changed: tokio::sync::Notify::new(), reconnect_failures: AtomicU32::new(0) }
     }
 
     /// 2026-09-16 事故回放：09-12 断网 12 次失败 → 第 12 次重连注册成功 → 三天后 nginx 重启再失败 1 次。
@@ -385,4 +406,36 @@ mod tests {
         assert_eq!(reconnect_backoff(5), Duration::from_secs(10));
         assert_eq!(reconnect_backoff(12), Duration::from_secs(10));
     }
+    #[tokio::test]
+    async fn slot_release_is_published_without_waiting_for_status_heartbeat() {
+        let st=Arc::new(fresh_state());
+        let cfg=Config { ws_url:String::new(),api_key:String::new(),api_secret:String::new(),agent_name:"p0-capacity-test".into(),max_jobs:1 };
+        let mut timer=tokio::time::interval(Duration::from_secs(30));
+        timer.tick().await;
+        job_started(&st);
+        let full=tokio::time::timeout(Duration::from_millis(100),next_capacity_update(&st,1,&mut timer)).await.expect("assignment must immediately advertise full");
+        let Some(proto::worker_message::Message::UpdateWorker(full))=full.message else {panic!("wrong status")};
+        assert_eq!(full.status,Some(proto::WorkerStatus::WsFull as i32));assert_eq!(full.job_count,1);
+        let (tx,mut rx)=tokio::sync::mpsc::channel(8);
+        let request=||proto::ServerMessage {message:Some(proto::server_message::Message::Availability(proto::AvailabilityRequest {job:Some(proto::Job{id:"new-job".into(),..Default::default()}),..Default::default()}))};
+        handle_server_message(request(),&cfg,&st,&tx);
+        let Some(proto::worker_message::Message::Availability(no))=rx.recv().await.unwrap().message else {panic!("wrong reply")};
+        assert!(!no.available,"a full single-slot Worker still rejects concurrent work");
+        job_finished(&st);
+        let free=tokio::time::timeout(Duration::from_millis(100),next_capacity_update(&st,1,&mut timer)).await.expect("completion must immediately advertise available");
+        let Some(proto::worker_message::Message::UpdateWorker(free))=free.message else {panic!("wrong status")};
+        assert_eq!(free.status,Some(proto::WorkerStatus::WsAvailable as i32));assert_eq!(free.job_count,0);
+        handle_server_message(request(),&cfg,&st,&tx);
+        let Some(proto::worker_message::Message::Availability(yes))=rx.recv().await.unwrap().message else {panic!("wrong reply")};
+        assert!(yes.available,"release permits the next request without waiting 30s");
+    }
+    #[tokio::test]
+    async fn coalesced_capacity_notifications_use_latest_count() {
+        let st=fresh_state();let mut timer=tokio::time::interval(Duration::from_secs(30));timer.tick().await;
+        job_started(&st);job_finished(&st);
+        let frame=tokio::time::timeout(Duration::from_millis(100),next_capacity_update(&st,1,&mut timer)).await.expect("pending change survives until connection consumes it");
+        let Some(proto::worker_message::Message::UpdateWorker(status))=frame.message else {panic!("wrong status")};
+        assert_eq!(status.status,Some(proto::WorkerStatus::WsAvailable as i32));assert_eq!(status.job_count,0);
+    }
+
 }
