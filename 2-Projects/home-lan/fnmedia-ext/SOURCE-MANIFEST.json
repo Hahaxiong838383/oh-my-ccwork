@@ -1,6 +1,6 @@
 {
   "source_repository": "~/home-lan",
-  "source_commit": "9d6965ba6b4e7aa77b417bf9acdaec6c622ef461",
+  "source_commit": "648f206c606abf180d456181c7046b65f36b2644",
   "date": "2026-10-30",
   "files": [
     {
@@ -164,6 +164,12 @@
       "snapshot": "15-fnmedia-ext播放超时修复.md",
       "bytes": 5728,
       "sha256": "f18114d28df77218ddf2a9f2586ba187cdeeb790a6858181ed2c1425ffd25789"
+    },
+    {
+      "source": "2-Projects/P01-家里局域网与飞牛/16-fnmedia-ext播放卡顿诊断.md",
+      "snapshot": "16-fnmedia-ext播放卡顿诊断.md",
+      "bytes": 4535,
+      "sha256": "1f2edd19f170d5dc787ccddd8f731ac2aabf3f4972c2f7288bb5ebc0177da107"
     }
   ]
 }
