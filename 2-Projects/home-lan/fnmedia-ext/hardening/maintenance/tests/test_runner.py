@@ -603,6 +603,15 @@ class CheckTests(RunnerTestCase):
         self.assertEqual(fx.status()["status"], "up_to_date")
         self.assertEqual(fx.status()["latest_version"], "0.2.19")
 
+    def test_review_required_still_refreshes_installed_version(self):
+        fx = self.fixture(code_change=True)
+        self.assertEqual(fx.run(), 0)
+        fx.set_nas_version("0.2.19.2")
+        self.assertEqual(fx.run("--force-check"), 0)
+        self.assertEqual(fx.status()["status"], "needs_review")
+        self.assertEqual(fx.status()["installed_version"], "0.2.19.2")
+        self.assertEqual(fx.trim_calls(), [])
+
 
 # --------------------------------------------------------------------------- #
 # 升级成功路径：argv 契约 + 真实副作用

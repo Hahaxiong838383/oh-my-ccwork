@@ -5,3 +5,5 @@
 验证：在本目录运行 `FNMEDIA_SOURCE_TREE=~/home-lan/runtime/fnmedia-ext-managed/source python3 -m unittest discover -s tests`。该变量仅供测试查找插件源码，不含凭据。
 
 2026-10-30：本地FPK的download/status实际packageType为path，update必须使用path（local/file返回10100）；loopback代理需允许固定NAS POST /oauthapi/refresh。0.2.19.2正式update成功，安装后代理内官方refresh及同版本dry-run已验证。
+
+手动部署后用同配置 --force-check刷新远端状态；needs_review/error分支也必须更新NAS实测installed_version，不能沿用旧状态。上游0.2.33核心变动当前待适配，已部署仍0.2.19.2。检查流程5项回归通过。

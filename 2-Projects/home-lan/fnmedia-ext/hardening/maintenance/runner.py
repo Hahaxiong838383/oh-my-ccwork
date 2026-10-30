@@ -1279,6 +1279,8 @@ class Runner:
 
     def _publish_check(self, result: Mapping[str, Any], installed: str,
                        writer: StatusWriter) -> None:
+        if installed:
+            writer.set(installed_version=installed)
         latest = str(result.get("latest") or "")
         suffix = self.cfg.version_suffix
         candidate = f"{latest}.{suffix}" if latest and suffix else latest
