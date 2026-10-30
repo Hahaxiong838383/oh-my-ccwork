@@ -1,0 +1,1115 @@
+{
+  "status": "two_original_failures_not_resolved",
+  "artifact_under_test": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+  "baseline_worker": "2832637822bf203f0e8e9597fd77e657384e6c3b7413da939750e35e0eacd071",
+  "unchanged_preview": "5dbc544ac7d5ce99a31e29d822047718feee5cabcc60aeb7b25af0c154f389ab",
+  "source_manifest": {
+    "src/audit_capture.rs": "4b59e228dc3c4fe68efcdc902a413da6893f0bec10ca6d25d74090724acfde85",
+    "src/backchannel.rs": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "src/candidate.rs": "4b3a3d489db169c9f8ee95e8e01ce79a9ccc577a89e8223d79a39fd584c73c8e",
+    "src/caption_gate.rs": "33b73e3eb96ebcb21ec9644b8ed6f0a89ea9f004ecb57aab689e32573feb81e8",
+    "src/config.rs": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218",
+    "src/contract.rs": "fd57e2ecd11d523d9f44263d381ed94e4da6b2b82ec466fc7b879aafd9974ec4",
+    "src/control.rs": "17e659e03beef5f81fe732e40f2bfcb9a6bb86733b5d667709779a2bc971cff7",
+    "src/device_grammar.rs": "beb2a6adc33e4b2f932aacd1c348c6e42b427a51576283dc382e34220a7592c8",
+    "src/device_grammar_slot_matrix.rs": "3e92cfc577cd058276076f82c5a273d732157cf6d763797d6b1a43eadedccbf6",
+    "src/device_grammar_testdata.rs": "46e3d5411d664bdaf19d63d4506218c006c3ea0e9fbc8ced5483f4f667c17be3",
+    "src/device_intent.rs": "b45b98b03df87370cc28e2d3febb7a931a4d308d46294509c88d9194585023dc",
+    "src/device_ledger.rs": "7defc258595513afd15434f5e78f232076a9c9d4c9845d5da562636b42f94929",
+    "src/eot.rs": "0c6ca211e120145d986b4d950a5accb4dde243804659d9d4ac18778ea41dfbfe",
+    "src/eot_snapshot.rs": "0ffdcd2b28233c2b9552b8aa02363f5860db579a7357cd721e988d19260f0259",
+    "src/filler.rs": "90e0816005b2b93fe46352a4703465edc9b211b2ca1fad4b74cae56717a8e112",
+    "src/gate.rs": "bcfabf259a70d961cb1a777394429471defc7efabf1f7c53dd3762423a73541f",
+    "src/job.rs": "8a2e9cd203b7d7b026eeb07845510aae692f077fd7f14c0db5f599d3b301ff69",
+    "src/llm.rs": "b300a739e042aff316f0caafe7331f8e7ffeef69571f9f73fd3bae6873b36fe5",
+    "src/main.rs": "80b06b51cf63af4844a58145adeceed39c3d63e0d9bc7cc42056f0df54579d64",
+    "src/ordered_pcm.rs": "1781914dad34a0981ca81b3ddc5390acdd46318243bd569b73d1192f1d41f85a",
+    "src/pipeline.rs": "ea89afa26375ee63b3a09214e06b33bf8578b1b140f80ab34ed3425e6d092537",
+    "src/playout.rs": "5a804e9b78b8576fb64198d2ec0070fc59aa71e7c20ad64ec240546239495230",
+    "src/preflight.rs": "950bb416101f68868b3bc19440affc5e2e372f80669f35155d8218e7fc2e2f63",
+    "src/ready_confirm.rs": "a0fa66795ea21c21d40f671d2e781776647735da34cf6b70c0c59b2ddb527f70",
+    "src/say_defer.rs": "bbdafa12d8040ae4ebac8fab8bb74b2d0725e6071cd48b45e17b136dc6b4e6af",
+    "src/search_canary.rs": "42c95851a3bae64d8ffc93f3b6c23f1d581580dce1d564d2bdf6cc5a142a4fe6",
+    "src/search_policy.rs": "310f2c69fd5e5f63ecd48f14581c3179bfe8180d82453b0b27f0d7a6f865acbf",
+    "src/search_tasks.rs": "177ee4d1a7a1e2e99d9c419854f1e5bb0a0b8d9af7e619ee070c0475b0857cab",
+    "src/segmenter.rs": "a044798a0afb58f33ef272bb622bd3764442be84a3958c66af02894d30571199",
+    "src/speaker_id.rs": "450f01eb5f18ab33ae805562deda12e0933d9d2fdb7e4a8de19f72eacb6670d0",
+    "src/stt_volc.rs": "422f7629e5c4059c48a60e19a00ff21cccd4967b9110ef020174bddcd89516fb",
+    "src/textproc.rs": "370d7413591454e69af4e049ff803f2a30a347b739058ab35b6cf36655df56e6",
+    "src/token.rs": "9e5c7d3d0d5c18e6c5218c86e03e6aba8bfd3b9e186e623c1ac47d1f576b1b22",
+    "src/transcript_pub.rs": "e6ca31d914a16934d020048f04f50e192a6c1e583cfa511afe7563804f94ae66",
+    "src/tts.rs": "989bd3a007a4ee842ae1a6dd9f3d94b54a3393526d02a9c56a545a85d09c6ed3",
+    "src/tts_volc.rs": "6a333e155efd0757890271329bbfbb35cc810a6fae71a8ef5cceb933fd6b3600",
+    "src/tts_xfyun.rs": "b702c7eb40e4b23cec899ed108349ae13c5d269c16f9771c7cdac63257166ef5",
+    "src/turn.rs": "537376f6301a2718a40d2797f67565ef7850a589704f6b03c589168232f5b977",
+    "src/vad.rs": "3cf2bca4621e5dacc7efcf7766cac88e0a2ad9d7db0a3f08348957eaf301c7ab",
+    "src/volc.rs": "c58ab6604c65f1c3107307318c7478ae6aa7edf1b489f0626ef9a601423810e3",
+    "src/worker.rs": "c93595442e1218eb76b88b42b91e9af3012cb964da581a6b1fb492f9a0530adc",
+    "Cargo.toml": "2f04829caedaff0af2639f0791b5180bee2832d283d39200d93fe80dbf07d4c3",
+    "Cargo.lock": "8249938113ac79e8d76a59cf87512b04a920bb2f5592fcf66e9bd4e29f768262",
+    "../../../4-Assets/contracts/p003-search-task-v1.json": "7c3d30bd97df3df2341d105644372dad9587a33f40e541acf5b7f7993bfec7fc",
+    "src/search_policy_cases.rs": "1d50026ae40560412ed198a7dabdf654888bdc8d9c87397595c8f747d6939562",
+    "src/search_routing.rs": "68b65684a896dc561ec2af031751dbdc0fb6abd202810e6c82565c91d3a1f256",
+    "src/search-routing-defaults.json": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+    "tools/search-route-preview/Cargo.toml": "0385627127c0757ab95cdfd6dfe72ecb050b2f8bfca51ba58ec0c278df221d94",
+    "tools/search-route-preview/Cargo.lock": "a0627208a2bcf9d1d94a2891822a3d11ae196810d845c455c411f2ed8ae950dd",
+    "tools/search-route-preview/src/main.rs": "483099c3e941b8ee9d489d7dafea450c193ae235a0840792c5cc205db96702dc",
+    "src/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "src/search_receipts.rs": "03026c9f27c81c21589ba3830d4ea37b358abf6f318a550a6706138b3a596d45",
+    "src/search_dialogue.rs": "e9749ef9305da869cb7edc90a92e8251931966b84302814363f5150a429cf778",
+    "src/search_progress.rs": "6bc42795174050c5a77860cf11bd4c519fb19c11a95e77bb4c574a10dcca7547",
+    "src/room_cleanup.rs": "e254500d88416cfcf5a74e384b879d50cce5329b06ea1db2dc156213935bfcbc",
+    "src/voice_connect.rs": "5b75154960082f601af9eeb5c8005147da40e5494ee0d87686429ac6151982da",
+    "src/search_enrollment.rs": "d40dd87c6ede13a2f64de37130b94eab3bf2fc449b6f01c7b4b39a76343ad543",
+    "src/search_control_recovery.rs": "af2f8a634f07a5d0e080d55ef4a6df67686d6a74ece3f749686913e2513e2738",
+    "scripts/build-local.sh": "f0073b0335a28a3d0a3eb172a3f226014a55f38b207725439551534f270340fb",
+    ".cargo/config.toml": "33f71a9bdeb3b5108ae295ee9fedf9d903bcd2f6a78baf39da3158541b9d91db",
+    "assets/device_aliases.tsv": "e3fada6296b3767a3c8f57618cf0c99c7d9c60b9a777f47486b141586b6c16cb",
+    "../tests/fixtures/s2b1_canary_control_contract.json": "119e1f15c5fce0e62d968dd2f8a9ca8b240c4d7c7e70dffb2cbb5f741e812253",
+    "tests/fixtures/opcm/00-begin.opcm": "743115080248b978cf81854bc2c8d1cbd132381fd427f4adfa621c4e439eae2f",
+    "tests/fixtures/opcm/03-end.opcm": "84a89ca1d81f3b28e5cfeab282929a611c6d12b64b254f19f0066455ae19c8a6",
+    "tests/fixtures/opcm/02-tail.opcm": "f1d2a66a18805a7efd5f8655eb02d495c9907c188ca30cacd705cd1b6b0ed2e2",
+    "tests/fixtures/opcm/verification.json": "b9b480afe57ae23c58e4a384f12a2b0eaf8515fdb224001f26eeb49458d3d4d8",
+    "tests/fixtures/opcm/01-chunk.opcm": "9bb670656f6fa501125050fb4fab1049448576998e958d3316e779fba779aa84"
+  },
+  "catalog_measurements": {
+    "host": "isolated Linux build host, not production timing",
+    "aliases": 153223,
+    "old_first_route_us": 44616,
+    "old_warm_route_us": [
+      8,
+      3,
+      3,
+      3
+    ],
+    "new_startup_prepare_us": 46152,
+    "new_route_us": [
+      12,
+      3,
+      3,
+      3,
+      3
+    ]
+  },
+  "historical_gap": {
+    "commit_at_ms": 1793324919119.859,
+    "first_overflow_log_at_ms": 1793324919224.438,
+    "route_at_ms": 1793324919333.233,
+    "default_audio_queue_frames": 10,
+    "nominal_frame_ms": 10,
+    "warning_emission": "first drop and every 100; one warning is not exactly one lost frame",
+    "root_cause_limit": "cold preparation is verified synchronous mic-loop work; not sufficient proof for whole 213ms or all short utterance failures"
+  },
+  "verified_ota_apk": {
+    "version_code": 367,
+    "version_name": "1.2.2-canary.353",
+    "sha256": "21801315ba2525aa495f5c67fd9e589b9a233ab1829742b1ef39f301cc62adb0",
+    "matches_morning_field_receipt": true,
+    "current_active_device_rechecked": false,
+    "classes2_sha256": "3dfa5dc5dd613ef6459ed96be46129456c5fe466225efe1edcdab3d04074d47a",
+    "classes4_sha256": "6880fd5bcc50fd5e40b49e3d13197dd24e33e6d82e0f28ba2e0e3f1b23b27c4f",
+    "websocket_eventlistener_disabled_in_actual_dex": true
+  },
+  "cloud_diagnostics": {
+    "sn_suffix": "00100004",
+    "occurred_ms_range": [
+      1793323800000,
+      1793326500000
+    ],
+    "events": 0,
+    "limits": "No uploaded diagnostics found; does not prove device logcat empty."
+  },
+  "grok_readonly_task_ids": [
+    "fe40822d-c8df-4232-99a4-6de9f7fb3efb",
+    "d7e0e5f1-4897-415a-9e46-d047456785cb",
+    "22d1b989-0aba-4cc3-b059-4856a3cb2718",
+    "4dc56779-2e83-4af4-b00c-7dae4828373a"
+  ],
+  "grok_exact_model_verified": false,
+  "physical_device_test_pass": false,
+  "original_failure_evidence_retained": true,
+  "private_evidence_hashes": {
+    "weather-cold-profile-private.log": "3b8986b5380bb5ab0bd2e931abd2714f4c7812499f191dd0ff127b2ea5b3d7eb",
+    "weather-warm-profile-private.log": "b853914cb280766c20e02a5f2658f63a1ce45ea51fcf4971ff6a260cd83275ae",
+    "native-audio-stream-private.json": "31849b148a803c3dde2fadcf40ed797a12eb857fe18cca6ef62672e3de3cc7cc",
+    "rtc-validation-correlation-safe.json": "488ecda5bc66cedecd46cd6882f67cb3c11fb1ed0f429ac3ad514511800cffef",
+    "cloud-diagnostics-private.json": "56b257a12456316a0fa51769f788d3efa78d3c4d8dfde21b3194bdd46081c0e8",
+    "latency_protocol.json": "35a6d8f1df8c27e30253efdf291c62efe4c66a7dfd3fbcb710f9b41e9101737a",
+    "r1-safe.json": "8a494da26ad988103080f5ffce527d2765e56d60968f2b7ed71d631e59708437",
+    "v367-classes2.dex-okhttp-private": "3dfa5dc5dd613ef6459ed96be46129456c5fe466225efe1edcdab3d04074d47a",
+    "cloud-analytics-private.json": "0d792c80444e129c1fed95b668251a1ed5cf8126b06cef16522e123cd72fa0cf",
+    "functional-safe.json": "7daaabfcf15ad9b3b06e877dba38bc09b35fd9bcc72e84de526814a976bddb24",
+    "latency-safe.json": "f8531749da43cb94a3fdf238731743c8cd503703371f04d0116ccd48313a73a0",
+    "latency-tail-safe.json": "81ddcb77a8d211b41ff7450ef7ff723f633030c37a9440b19223ad1282911fc1",
+    "artifact-spec.json": "f81c1ec68485b1c9a117a2f8495992bff838ae7c05445c962e617accc4d37ed0",
+    "candidate-source.json": "6c304194ce212706b2fcd7055fe73e6b4a6ead8e224e5db8a716d113d615f1e8",
+    "tested-candidate-source.json": "6c304194ce212706b2fcd7055fe73e6b4a6ead8e224e5db8a716d113d615f1e8",
+    "predeploy-state-output-private.jsonl": "8dbf5525ac6b045c7f66eb788b9085358b1ee346d3d5d1be1f012c3368f60617",
+    "postdeploy-state-output-private.jsonl": "108119f9bf44a9645fc04fd135691790878d86cad62d551e5adfd5c33fd4c37f",
+    "startup-and-drop-evidence-safe.json": "a8e3e18e015310574e173e9cba7b27e4b12d19ba8281c3f68f54b83cf06cf44a",
+    "overflow-phase-safe.json": "076dae9de46200ff2ae95669ea55afa50118e9418a3d2a8bfcefa2a9b2ba8c79"
+  },
+  "fix_commit": "d3f6f58993d14ddc55da626cdc4c32613ee88d4d",
+  "morning_admitted_stages": {
+    "rooms": [
+      {
+        "room": "sn-BJP00326060100100004-1793324006",
+        "stages": {
+          "agent_track_published": 1793324007019.947,
+          "user_track_subscribed": 1793324007020.067,
+          "input_loop_started": 1793324007122.398,
+          "ordered_pcm begin accepted": 1793324007299.6162,
+          "agent_track_subscribed_by_android": 1793324007947.802,
+          "output_ready": 1793324007947.9138,
+          "input_ready_scheduled": 1793324007122.508
+        },
+        "trace_id": "3bf7263d-3cd4-48b1-9f59-f765c87c9e2b",
+        "signed_at_ms": 1793324006210,
+        "control_results": [
+          {
+            "at_ms": 1793324007147.773,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 912,
+        "sign_to_output_ready_ms": 1738
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793324072",
+        "stages": {
+          "agent_track_published": 1793324073247.728,
+          "user_track_subscribed": 1793324073247.8489,
+          "input_loop_started": 1793324073267.944,
+          "ordered_pcm begin accepted": 1793324073380.6812,
+          "agent_track_subscribed_by_android": 1793324074356.072,
+          "output_ready": 1793324074356.132,
+          "input_ready_scheduled": 1793324073267.977
+        },
+        "trace_id": "f31c02e3-8212-4fd9-a13e-3bbd535ab551",
+        "signed_at_ms": 1793324072443,
+        "control_results": [
+          {
+            "at_ms": 1793324073278.584,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 825,
+        "sign_to_output_ready_ms": 1913
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793324146",
+        "stages": {
+          "agent_track_published": 1793324146945.975,
+          "user_track_subscribed": 1793324146981.153,
+          "input_loop_started": 1793324147000.648,
+          "ordered_pcm begin accepted": 1793324147464.211,
+          "agent_track_subscribed_by_android": 1793324148034.997,
+          "output_ready": 1793324148035.048,
+          "input_ready_scheduled": 1793324147000.7031
+        },
+        "trace_id": "07d3d0ae-dca9-4c15-b6fb-d6cf2dfc2756",
+        "signed_at_ms": 1793324146308,
+        "control_results": [
+          {
+            "at_ms": 1793324147001.301,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 693,
+        "sign_to_output_ready_ms": 1727
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793324283",
+        "stages": {
+          "agent_track_published": 1793324284505.785,
+          "user_track_subscribed": 1793324284505.887,
+          "input_loop_started": 1793324284526.054,
+          "ordered_pcm begin accepted": 1793324284645.515,
+          "agent_track_subscribed_by_android": 1793324285375.6821,
+          "output_ready": 1793324285375.745,
+          "input_ready_scheduled": 1793324284526.092
+        },
+        "trace_id": "40588aa6-a149-4d38-967c-3c64396b2249",
+        "signed_at_ms": 1793324283614,
+        "control_results": [
+          {
+            "at_ms": 1793324284535.903,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 912,
+        "sign_to_output_ready_ms": 1762
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793324910",
+        "stages": {
+          "agent_track_published": 1793324911349.959,
+          "user_track_subscribed": 1793324911393.3042,
+          "input_loop_started": 1793324911418.181,
+          "ordered_pcm begin accepted": 1793324911514.4,
+          "agent_track_subscribed_by_android": 1793324912477.735,
+          "output_ready": 1793324912477.788,
+          "input_ready_scheduled": 1793324911418.246
+        },
+        "trace_id": "55173c0a-d8b3-43de-bf39-3f8a8839d8c0",
+        "signed_at_ms": 1793324910545,
+        "control_results": [
+          {
+            "at_ms": 1793324911419.103,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 873,
+        "sign_to_output_ready_ms": 1933
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793324975",
+        "stages": {
+          "agent_track_published": 1793324976081.064,
+          "user_track_subscribed": 1793324976081.1729,
+          "input_loop_started": 1793324976100.394,
+          "ordered_pcm begin accepted": 1793324976213.749,
+          "agent_track_subscribed_by_android": 1793324977020.4749,
+          "output_ready": 1793324977020.526,
+          "input_ready_scheduled": 1793324976100.427
+        },
+        "trace_id": "d037f353-75fd-4fb3-aed3-24cc69a5b2bd",
+        "signed_at_ms": 1793324975232,
+        "control_results": [
+          {
+            "at_ms": 1793324976123.0781,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 868,
+        "sign_to_output_ready_ms": 1789
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793325090",
+        "stages": {
+          "agent_track_published": 1793325090842.736,
+          "user_track_subscribed": 1793325090882.544,
+          "input_loop_started": 1793325090911.8718,
+          "ordered_pcm begin accepted": 1793325091295.899,
+          "agent_track_subscribed_by_android": 1793325092058.6382,
+          "output_ready": 1793325092058.676,
+          "input_ready_scheduled": 1793325090911.907
+        },
+        "trace_id": "ca216e46-6c53-411f-9c10-b8a29197a8d1",
+        "signed_at_ms": 1793325090183,
+        "control_results": [
+          {
+            "at_ms": 1793325090912.487,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 729,
+        "sign_to_output_ready_ms": 1876
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793325157",
+        "stages": {
+          "agent_track_published": 1793325158585.166,
+          "user_track_subscribed": 1793325158585.311,
+          "input_loop_started": 1793325158608.295,
+          "ordered_pcm begin accepted": 1793325158736.0051,
+          "agent_track_subscribed_by_android": 1793325159532.197,
+          "output_ready": 1793325159532.268,
+          "input_ready_scheduled": 1793325158608.342
+        },
+        "trace_id": "a49d7d4f-c1ab-4ca7-80bf-ab700b12b800",
+        "signed_at_ms": 1793325157739,
+        "control_results": [
+          {
+            "at_ms": 1793325158633.534,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 869,
+        "sign_to_output_ready_ms": 1793
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793325268",
+        "stages": {
+          "agent_track_published": 1793325269383.786,
+          "user_track_subscribed": 1793325269427.366,
+          "input_loop_started": 1793325269448.633,
+          "ordered_pcm begin accepted": 1793325269559.8508,
+          "agent_track_subscribed_by_android": 1793325270492.289,
+          "output_ready": 1793325270492.328,
+          "input_ready_scheduled": 1793325269448.676
+        },
+        "trace_id": "7c751386-aa55-4e97-965b-191c5c9765cd",
+        "signed_at_ms": 1793325268718,
+        "control_results": [
+          {
+            "at_ms": 1793325269449.402,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 731,
+        "sign_to_output_ready_ms": 1774
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793325889",
+        "stages": {
+          "agent_track_published": 1793325890991.323,
+          "user_track_subscribed": 1793325891033.715,
+          "input_loop_started": 1793325891052.072,
+          "ordered_pcm begin accepted": 1793325891118.876,
+          "agent_track_subscribed_by_android": 1793325892063.097,
+          "output_ready": 1793325892063.157,
+          "input_ready_scheduled": 1793325891052.109
+        },
+        "trace_id": "b2a2d450-d14f-4409-8946-e6c00954727e",
+        "signed_at_ms": 1793325889471,
+        "control_results": [
+          {
+            "at_ms": 1793325891052.844,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 1581,
+        "sign_to_output_ready_ms": 2592
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793325943",
+        "stages": {
+          "agent_track_published": 1793325943900.0781,
+          "user_track_subscribed": 1793325943941.162,
+          "input_loop_started": 1793325943967.4958,
+          "ordered_pcm begin accepted": 1793325944059.502,
+          "agent_track_subscribed_by_android": 1793325945051.548,
+          "output_ready": 1793325945051.62,
+          "input_ready_scheduled": 1793325943967.526
+        },
+        "trace_id": "393f14aa-2005-43fa-b2b6-42597b9fda83",
+        "signed_at_ms": 1793325943219,
+        "control_results": [
+          {
+            "at_ms": 1793325943968.389,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 748,
+        "sign_to_output_ready_ms": 1833
+      },
+      {
+        "room": "sn-BJP00326060100100004-1793326147",
+        "stages": {
+          "agent_track_published": 1793326148042.748,
+          "user_track_subscribed": 1793326148080.576,
+          "input_loop_started": 1793326148101.1902,
+          "ordered_pcm begin accepted": 1793326148209.768,
+          "agent_track_subscribed_by_android": 1793326149149.801,
+          "output_ready": 1793326149149.861,
+          "input_ready_scheduled": 1793326148101.2349
+        },
+        "trace_id": "60e200bd-1f4c-44b3-a930-840459332da2",
+        "signed_at_ms": 1793326147345,
+        "control_results": [
+          {
+            "at_ms": 1793326148101.946,
+            "publish_ok": true
+          }
+        ],
+        "sign_to_loop_ms": 756,
+        "sign_to_output_ready_ms": 1805
+      }
+    ],
+    "scope": "12 admitted S04 RTC sessions; absence of no-room attempts here is expected",
+    "cloud_send_not_device_receive": true,
+    "summary": {
+      "admitted_rooms": 12,
+      "ordered_begin_accepted": 12,
+      "ready_scheduled": 12,
+      "ready_publish_ok": 12,
+      "sign_to_loop_ms": [
+        693,
+        1581
+      ],
+      "sign_to_output_ready_ms": [
+        1727,
+        2592
+      ]
+    }
+  },
+  "websocket_diagnostic_reference": "https://raw.githubusercontent.com/square/okhttp/parent-4.12.0/okhttp/src/main/kotlin/okhttp3/internal/ws/RealWebSocket.kt",
+  "setup_issues_not_product_attempts": [
+    "build helper path corrected before preview test",
+    "transfer helper path corrected before reading artifact",
+    "Brain preview source path corrected before verifier mutation",
+    "latency manifest quoting corrected before first product probe"
+  ],
+  "retained_setup_failure_records": [
+    "matrix-progress-setup-failure.json",
+    "latency-block-A0-setup-failure.log"
+  ],
+  "cloud_analytics": {
+    "rows": 0,
+    "scope": "S04 under current configured device-key derivation; morning range queried",
+    "does_not_replace_device_logcat": true
+  },
+  "same_67_source_files_for_tests_build_current_commit": true,
+  "isolation_preliminary_overflow_phases": {
+    "warnings": [
+      {
+        "at_ms": 1793338335650.803,
+        "inferred_phase": "before_input_loop",
+        "offset_from_disconnect_ms": null,
+        "offset_from_subscribe_ms": 101.26,
+        "until_input_loop_ms": 85.45
+      },
+      {
+        "at_ms": 1793338476921.187,
+        "inferred_phase": "near_teardown",
+        "offset_from_disconnect_ms": 106.55,
+        "offset_from_subscribe_ms": null,
+        "until_input_loop_ms": null
+      },
+      {
+        "at_ms": 1793338922770.377,
+        "inferred_phase": "near_teardown",
+        "offset_from_disconnect_ms": 106.5,
+        "offset_from_subscribe_ms": null,
+        "until_input_loop_ms": null
+      },
+      {
+        "at_ms": 1793339105965.35,
+        "inferred_phase": "before_input_loop",
+        "offset_from_disconnect_ms": null,
+        "offset_from_subscribe_ms": 100.39,
+        "until_input_loop_ms": 5.92
+      },
+      {
+        "at_ms": 1793339309215.729,
+        "inferred_phase": "near_teardown",
+        "offset_from_disconnect_ms": 102.62,
+        "offset_from_subscribe_ms": null,
+        "until_input_loop_ms": null
+      },
+      {
+        "at_ms": 1793339438437.05,
+        "inferred_phase": "before_input_loop",
+        "offset_from_disconnect_ms": null,
+        "offset_from_subscribe_ms": 99.61,
+        "until_input_loop_ms": 1.79
+      },
+      {
+        "at_ms": 1793340101286.429,
+        "inferred_phase": "before_input_loop",
+        "offset_from_disconnect_ms": null,
+        "offset_from_subscribe_ms": 109.2,
+        "until_input_loop_ms": 13.16
+      }
+    ],
+    "inference_only": true,
+    "raw_drop_count_not_known": true,
+    "not_discarded_from_tests": true
+  },
+  "verification": {
+    "linux_worker_tests_passed": 484,
+    "preview_tests_passed": 35,
+    "functional": {
+      "cases": [
+        {
+          "case": "replay_verified",
+          "room": "sn-BJP00399999999999901-1793338334",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 4,
+            "user_transcripts": 2,
+            "metrics": 2,
+            "audio_voiced_ms": 8690.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 81,
+            "packets_after": 2083
+          },
+          "checks": {
+            "old_cancelled": true,
+            "new_answered": true,
+            "new_city_chengdu": true,
+            "chengdu_subtitle": true,
+            "no_beijing_after_replace": true,
+            "recovery_accepted": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "f6efd41f-9c55-40de-b0f9-c2f55a19589d",
+              "session": "sn-BJP00399999999999901-1793338334",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": "answered",
+              "delivery": null,
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            },
+            {
+              "id": "ba9686cd-0ed9-4c86-a1b6-23e3ef32bcc2",
+              "session": "sn-BJP00399999999999901-1793338334",
+              "revision": 2,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": "四川成都",
+              "result_sha256": "76cf0b4bf340dc54c5b383f801d73219544aa00bf1f4304926a1a060f44a5817"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "catalog_final",
+          "room": "sn-BJP00399999999999901-1793338406",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 4,
+            "user_transcripts": 2,
+            "metrics": 4,
+            "audio_voiced_ms": 11910.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 80,
+            "packets_after": 3039
+          },
+          "checks": {
+            "answered_with_sources": true,
+            "p2_semantics": true,
+            "freshness_limitation": true,
+            "chat_before_search_result": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "9b6da249-175c-4620-ab38-753028bff908",
+              "session": "sn-BJP00399999999999901-1793338406",
+              "revision": 1,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": null,
+              "result_sha256": "f5ae6b1b42de7e408f24d4260971e6a6eebb212b6006aed5facce6f02d879bbe"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "cancel_verified",
+          "room": "sn-BJP00399999999999901-1793338506",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 5,
+            "user_transcripts": 3,
+            "metrics": 8,
+            "audio_voiced_ms": 10860.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 53,
+            "packets_after": 2542
+          },
+          "checks": {
+            "task_cancelled": true,
+            "same_session_continues": true,
+            "cancel_subtitle": true,
+            "no_late_dinosaur_result": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "3de31c23-76cf-4873-a947-5b455ef84977",
+              "session": "sn-BJP00399999999999901-1793338506",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": null,
+              "delivery": null,
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "replace_wait_final",
+          "room": "sn-BJP00399999999999901-1793338591",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 4,
+            "user_transcripts": 2,
+            "metrics": 2,
+            "audio_voiced_ms": 8730.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 80,
+            "packets_after": 1647
+          },
+          "checks": {
+            "old_cancelled": true,
+            "new_answered": true,
+            "new_city_chengdu": true,
+            "chengdu_subtitle": true,
+            "no_beijing_after_replace": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "c956cc19-ed94-427a-aca2-f25a0c936590",
+              "session": "sn-BJP00399999999999901-1793338591",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": "no_evidence",
+              "delivery": null,
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            },
+            {
+              "id": "992431c5-ed11-4e08-ae94-590bed7f9eed",
+              "session": "sn-BJP00399999999999901-1793338591",
+              "revision": 2,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": "四川成都",
+              "result_sha256": "5d32b93411081a15160fdc4b19e6d4140d2face59232a133086c871d66ae1984"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "replace_result_final",
+          "room": "sn-BJP00399999999999901-1793338657",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 6,
+            "user_transcripts": 2,
+            "metrics": 2,
+            "audio_voiced_ms": 14990.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 53,
+            "packets_after": 3154
+          },
+          "checks": {
+            "old_cancelled": true,
+            "new_answered": true,
+            "new_city_chengdu": true,
+            "chengdu_subtitle": true,
+            "no_beijing_after_replace": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "4c57040b-b2de-4a41-9890-22a6888bd235",
+              "session": "sn-BJP00399999999999901-1793338657",
+              "revision": 1,
+              "status": "cancelled",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 0,
+              "weather_city": null,
+              "result_sha256": null
+            },
+            {
+              "id": "1fb8e387-da1b-4bd7-9844-82141fdae006",
+              "session": "sn-BJP00399999999999901-1793338657",
+              "revision": 2,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "completed",
+              "sources": 1,
+              "weather_city": "四川成都",
+              "result_sha256": "694601eea4eaaa267f0262c2704d9cbebf434a2bcf800c9c33423c0a0c1cda24"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "device_controls_final",
+          "room": "sn-BJP00399999999999901-1793338754",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 0,
+            "user_transcripts": 4,
+            "metrics": 0,
+            "audio_voiced_ms": 0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 53,
+            "packets_after": 1749
+          },
+          "checks": {
+            "expected_actions": true,
+            "cleanup": true
+          },
+          "task_observations": [],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "cross_disconnect_final",
+          "room": "sn-BJP00399999999999901-1793338823",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 1,
+            "user_transcripts": 1,
+            "metrics": 1,
+            "audio_voiced_ms": 3240.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 56,
+            "packets_after": 657
+          },
+          "checks": {
+            "sourced_task_interrupted": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [
+            {
+              "id": "a5f01757-fcd8-455b-99b5-88de82003481",
+              "session": "sn-BJP00399999999999901-1793338823",
+              "revision": 1,
+              "status": "delivered",
+              "outcome": "answered",
+              "delivery": "interrupted",
+              "sources": 2,
+              "weather_city": null,
+              "result_sha256": "5a63b208a9ab334525889a0434fcaa356085eb80d646d0c78fbf42374985a3b5"
+            }
+          ],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        },
+        {
+          "case": "cross_resume_disconnect_final",
+          "room": "sn-BJP00399999999999901-1793338867",
+          "runtime_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+          "counts": {
+            "agent_transcripts": 2,
+            "user_transcripts": 1,
+            "metrics": 1,
+            "audio_voiced_ms": 11100.0,
+            "input_ready": 1,
+            "output_ready": 1,
+            "packets_before": 81,
+            "packets_after": 2669
+          },
+          "checks": {
+            "same_task_granted": true,
+            "same_task_completed": true,
+            "quiet_before_explicit_resume": true,
+            "two_result_subtitles": true,
+            "cleanup": true,
+            "subscriber_audio_received": true
+          },
+          "task_observations": [],
+          "device_heard_verified": false,
+          "physical_execution_verified": false
+        }
+      ],
+      "all_pass": true,
+      "real_device_heard": false
+    },
+    "latency": {
+      "samples": 40,
+      "eligible_pairs": 20,
+      "median_delta_ms": 0.11549999999999999,
+      "p90_delta_ms": 298.958,
+      "new_missing_body": 0,
+      "gate_pass": true
+    },
+    "latency_tail": {
+      "scope": "same fixed 40 samples, no exclusions or retries",
+      "raw_commit_to_body_ms": {
+        "A": {
+          "median_ms": 1101.1264999999999,
+          "p90_ms": 1542.818,
+          "max_ms": 1750.388
+        },
+        "B": {
+          "median_ms": 1174.5430000000001,
+          "p90_ms": 1349.626,
+          "max_ms": 3203.186
+        }
+      },
+      "largest_positive_pair": {
+        "index": 18,
+        "eligible": true,
+        "errors": [],
+        "delta_ms": 2100.88
+      },
+      "slow_candidate_stages": {
+        "index": 18,
+        "headers_ms": 1566,
+        "first_content_ms": 2813,
+        "brain_before_model_ms": 3,
+        "brain_upstream_first_delta_ms": 1249,
+        "tts_warm_connect_ms": 234,
+        "tts_provider_ttfb_ms": 277,
+        "tts_connect_ms_on_dispatch": 0
+      },
+      "inference": "slow sample concentrated before first LLM content; not a reproduced multi-second TTS DNS stall; startup-only patch causality not established",
+      "physical_hearing_verified": false
+    },
+    "exact_env_equal": true,
+    "same_brain_manifest": true,
+    "all_40_samples_retained": true,
+    "real_device_heard": false
+  },
+  "r1": {
+    "brain": {
+      "at_ms": 1793337855963,
+      "host": "brain",
+      "backup": "/opt/p003/search-canary-20261021/brain/backups/R1-r26-rootcause-20261030T052414Z",
+      "files": {
+        "bin/search-route-preview": "5dbc544ac7d5ce99a31e29d822047718feee5cabcc60aeb7b25af0c154f389ab",
+        "canary.env": "e60a66c94e1e4150b3d50e957818a4eb942c826740a5ca931b15881a309591cf",
+        "release-status.json": "2720129d5132a084631f2ee22280045c520114b08075628cfc1d048022018580"
+      },
+      "services": "MainPID=3151603\nNRestarts=0\nActiveState=active\n",
+      "mem_available_kb": "2342712",
+      "disk_free": 10699124736
+    },
+    "worker": {
+      "at_ms": 1793337860377,
+      "host": "worker",
+      "backup": "/opt/p003-search-canary-20261021/backups/R1-r26-rootcause-20261030T052414Z",
+      "files": {
+        "voice-rust-worker": "2832637822bf203f0e8e9597fd77e657384e6c3b7413da939750e35e0eacd071",
+        "canary.env": "53d60a61b9bd5981085ce66a234a6131e61ca59321b293096df09c2aaa2715fa",
+        "window.json": "ca222d61d796576b1fdeb73d2d2e180e704c4b369e6262bc07c4cdc28ccb1331"
+      },
+      "services": "MainPID=1627609\nNRestarts=0\nActiveState=active\n\nMainPID=1546073\nNRestarts=0\nActiveState=active\n",
+      "mem_available_kb": "6759936",
+      "disk_free": 67010695168
+    }
+  },
+  "rollback_drill": {
+    "initialB": {
+      "brain": {
+        "arm": "B",
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        },
+        "env_sha256": "8ebd6c8666ecd8107ac02294469d6e7205e1ce65414549e97e3a1ca9029b3a97",
+        "main_unchanged": true
+      },
+      "worker": {
+        "arm": "B",
+        "source_or_binary": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+        "env_sha256": "c6d032e7faf1a7bc124e71a57e0f0e121cc1b39e45aa26a7802381ae4806e830",
+        "main_unchanged": true
+      }
+    },
+    "finalA": {
+      "brain": {
+        "arm": "A",
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        },
+        "env_sha256": "8ebd6c8666ecd8107ac02294469d6e7205e1ce65414549e97e3a1ca9029b3a97",
+        "main_unchanged": true
+      },
+      "worker": {
+        "arm": "A",
+        "source_or_binary": "2832637822bf203f0e8e9597fd77e657384e6c3b7413da939750e35e0eacd071",
+        "env_sha256": "c6d032e7faf1a7bc124e71a57e0f0e121cc1b39e45aa26a7802381ae4806e830",
+        "main_unchanged": true
+      }
+    },
+    "finalB": {
+      "brain": {
+        "arm": "B",
+        "source_or_binary": {
+          "src/tools/search-executor.ts": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7",
+          "src/tools/search-runtime.ts": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275"
+        },
+        "env_sha256": "8ebd6c8666ecd8107ac02294469d6e7205e1ce65414549e97e3a1ca9029b3a97",
+        "main_unchanged": true
+      },
+      "worker": {
+        "arm": "B",
+        "source_or_binary": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+        "env_sha256": "c6d032e7faf1a7bc124e71a57e0f0e121cc1b39e45aa26a7802381ae4806e830",
+        "main_unchanged": true
+      }
+    }
+  },
+  "verifier_closed": {
+    "brain": {
+      "host": "brain",
+      "closed": true,
+      "at_ms": 1793340519690
+    },
+    "worker": {
+      "host": "worker",
+      "closed": true,
+      "at_ms": 1793340518835
+    }
+  },
+  "deployment": {
+    "actually_published": true,
+    "worker_commit": "d3f6f58993d14ddc55da626cdc4c32613ee88d4d",
+    "worker_sha256": "82a55342af43d0c35bb4b624ff2366394d6cf28aeb81f659233616f4ff11136b",
+    "preview_sha256": "5dbc544ac7d5ce99a31e29d822047718feee5cabcc60aeb7b25af0c154f389ab",
+    "observed_at_cst": "2026-10-30T14:12:38.686+08:00",
+    "gate_reopen_phase_started_cst": "2026-10-30T14:12:32.955+08:00",
+    "current_window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006",
+        "BJP00326060100100004"
+      ],
+      "expires_at_ms": 1793589540000,
+      "generation": "R4-20261022-two-devices"
+    },
+    "original_window_bytes_restored": true,
+    "env_unchanged": true,
+    "worker_pid": "1652015",
+    "protected_main_services_unchanged": true,
+    "main_admin_sha256": "b508f9b2fe3278d8699e2a7b9e299e167f8795de74fad23c3eac17570ad56b4d",
+    "main_routes_sha256": "76e4528d4c3426ca38c4e03015f155e5e0c42899edabb88853bb51dbbe349b7a",
+    "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n",
+    "release_metadata": {
+      "at_ms": 1793340762062,
+      "sha256": "7fcc89d0115411e4d1168914a31cf3c8ccc4013f7e5a1c725c08d75875cfceac",
+      "merged_fields": [
+        "worker_sha256",
+        "worker_commit",
+        "r26_catalog_prewarm_patch"
+      ],
+      "prior_fields_preserved": true
+    },
+    "https": {
+      "at_ms": 1793340760706,
+      "https": true,
+      "worker_token_role": "device",
+      "worker_token_valid": true,
+      "routes": [
+        {
+          "sn_suffix": "03800006",
+          "authenticated": true,
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e",
+          "error": null
+        },
+        {
+          "sn_suffix": "00100004",
+          "authenticated": true,
+          "status": 200,
+          "routing_version": "r7-5bd970f225036a447233316e",
+          "error": null
+        },
+        {
+          "sn_suffix": "99999902",
+          "authenticated": true,
+          "status": 403,
+          "routing_version": null,
+          "error": "canary_unavailable"
+        },
+        {
+          "sn_suffix": "03800006",
+          "authenticated": false,
+          "status": 401,
+          "routing_version": null,
+          "error": "unauthorized"
+        }
+      ],
+      "health": {
+        "agent": "p003-search-canary-20261021",
+        "at_ms": 1793340759945,
+        "cleanup": {
+          "at_ms": 1793340756558,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "R4-20261022-two-devices",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "expiry_timer": "NextElapseUSecRealtime=Mon 2026-11-02 03:19:00 UTC\nActiveState=active\n"
+    },
+    "physical_retest": "pending",
+    "original_failures_closed": false
+  },
+  "latest_ota_reports": {
+    "meaning": "latest cloud self-report only; not freshly read active APK or online proof",
+    "rows": [
+      [
+        "BJP00326060100100004",
+        367,
+        "1.2.2-canary.353",
+        1793323547277
+      ],
+      [
+        "BJP00326070803800006",
+        371,
+        "1.2.2-canary.357-miniapp-ble",
+        1793332744168
+      ]
+    ]
+  },
+  "finalized_at_cst": "2026-10-30T14:17:13+08:00",
+  "operator_source_sha256": {
+    "pull_v367_dex.py": "70f88156023c4972da6155946a4f0dc921de62dd388ad7afb05de45ad807358d",
+    "rtc-device_controls_final.py": "6bd9c0145b34bd244cc8c1f417be7f9e92888d110e2a6323df01e531b6a87ea9",
+    "https_check.py": "866f57976ca57d361bd9333aa6b915afc654481426a4ed7f5a2b5cf0acb5c852",
+    "update_release_metadata.py": "39cbd5913a51891620ac3d0e145253fa7913a9d928f3d7901105e0628a123a4e",
+    "rtc-cancel_verified.py": "19112866ec79765fca054b3303188d6e8a12cbcc71707f49510a277caefc2c78",
+    "rtc_failed_transport.py": "3bfafad007e43af680249888834783e776598b770e56ba4b77f35270a2e18b94",
+    "find_existing_client.py": "ebe071bf2fd2c70e940d04c25d04bad2f52cc7fd715c16f40fd767a5cea7cdf2",
+    "collect_verifier.py": "ff01dcf3327bc9cd8ba535e61756d4049c3d13ef6115364487055f46260a205d",
+    "test_preview.py": "41d95f7bc4afa9a0ddbcb15c7067bd0b8dbf2cf694d14af05091c0218c1990b6",
+    "read_current_state.py": "7a8b86d266f6895d012f1ce13cc9152e797bfd59b4a4d664cbd2b2707c2e228b",
+    "switch_verifier.py": "568d49b04191a4b4cf74d3566b346d4549d186bccca8c9fb3f2d97f0b18433d6",
+    "r1_backup.py": "ce898a48e1c9804fcbeb26e394fdb45a69b2bbc1f68080c6d4d2664b5b13694f",
+    "analyze_latency.py": "36251bacad2feee0ee7ffdef7ade8c42568b69e9bd2449235f9f1acdb6c94467",
+    "pull_okhttp_dex.py": "cc69e884aeb15b0f4c1805ba407a26bdef57784821bdb4aae90c058b0b335c48",
+    "rtc-catalog_final.py": "b5527c9f62a403858c40540453cc311a1b735c953c395a5d62202cada6e15b2c",
+    "close_verifier.py": "6ddd8db5d27824bd430f1fffd1619321179f3f63065a4e8de4c6f7f5c90eb206",
+    "rtc-cross_resume_disconnect_final.py": "ae29b24362177b54b9f1f11db722eaeb102172034e28fc5a7ce0810555e4d69f",
+    "rtc-replay_verified.py": "473f6da77c43ee463dad6cf483ce9fa2f1dde7ad6b48b63f7ff70cf9949a4ff0",
+    "rtc-replace_wait_final.py": "311c4672cda339e1f39bd23a47516434aba71b31b90c2741e115552a446f8421",
+    "analyze_functional.py": "1df39a867b7bb62a4dcae58958b5c5f61b3a4090f4dbb760e76341bc541e1202",
+    "finalize_rootcause_docs.py": "cfc2c4bd3d4e04533c3983dc7dcaa64d609542a7360d4930d7ea1c8432492462",
+    "query_cloud_diag.py": "4826868abb6d25f17114a89044deb77f0a1bc242fa843e3e51e63395fdfeec04",
+    "deploy_minimal.py": "03d3a1a5dbe2638b037537ae997f7dc4feefc1090f3a7b001766b33df38b5d43",
+    "prepare_verifier.py": "b5d8478c59a4dc66f551642a8a5211db517e18568174cf4be71bfedf1e7d201f",
+    "build_worker.py": "05e5c29e05a4ff4ba29e761cf594a58feb9089b7927c766507577efea96926e8",
+    "rtc-replace_result_final.py": "4c6c7669dc7cef6bd223f3b264e2bcf455af411acb08955ff50971fb530eb4de",
+    "read_v367_apk.py": "6f260afa1c0de44db5f50025a3c90dceba8a754e4ee404aa3fbc614374c1c463",
+    "continue_matrix.py": "19766f051cdb0df980eab960901b96dcaa18cc6aa843667292300b5cc2b5afed",
+    "recheck_device_access.py": "6d50ddb1b26b73bc71f440c48f3621723b07a302f2688399c7ba9c86b970ea4d",
+    "rtc_http_stages.py": "6f052699d31df9565f126b9cce2cba5b736b76487b4a4751d8c67731df1f1555",
+    "start_verifier.py": "7bda79853a25f4732e358d0d16a09292fbbd2dac3739a8491017332cd14cbf20",
+    "rtc-cross_disconnect_final.py": "b06fc7aba19d5db48bec53f213c612182c6688d4074c82202479964ed006d17a",
+    "recover_client_evidence.py": "f15f989bb8050d6e16341750ee2d9404227b2ef155e262470129081d0e260912",
+    "run_functional.py": "19e92b13ea84adf17ec334f3018b099fcc38cfce7408c4d597af285452c8a795",
+    "run_functional_final.py": "11ad470efab801380bfa5da9dbd3f116eade61ad5d449a194002e4e5497f54f4",
+    "transfer_worker.py": "0f87208db458a9fd60fb9c0a9ffc3ad5aac727066ca8878506cdd80d58de7d57",
+    "query_cloud_analytics.py": "58f136dbb546976768c8cc28631a2d6438b0d2c0b6c36c67c5a675ea6328c49f",
+    "run_latency_block.py": "60e6666f76aea0821b2cfbfdfcbe1a49e181bb241976df19e3a0ed0e77313208",
+    "latency_normal_r26.py": "3ea1bda50a7bf8ae1fd819367cc62196075a065eca43bdec0d39310ce03fac51",
+    "find_air_run.py": "40fba65cc2cc4b25a88da610a417b278921091a11b6c067e819293975c6008e8"
+  }
+}
