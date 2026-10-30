@@ -1,5 +1,5 @@
 //! Bounded session-only context; no persistence, raw-audio storage or user traits.
-use std::collections::{hash_map::DefaultHasher, VecDeque};
+use std::collections::{VecDeque, hash_map::DefaultHasher};
 use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -25,6 +25,21 @@ pub struct SummaryTicket {
 }
 impl SummaryTicket {
     /// Private summarizer input. Never log this text.
+    pub fn base_version(&self) -> u64 {
+        self.base_version
+    }
+    pub fn coverage(&self) -> Vec<(u64, u64)> {
+        self.segments
+            .iter()
+            .map(|s| (s.source.seq, s.source.revision))
+            .collect()
+    }
+    pub fn segments(&self) -> Vec<(u64, u64, String)> {
+        self.segments
+            .iter()
+            .map(|s| (s.source.seq, s.source.revision, s.text.clone()))
+            .collect()
+    }
     pub fn text(&self) -> String {
         self.segments
             .iter()
@@ -158,7 +173,7 @@ impl ListeningBuffer {
             Update::Added
         };
         self.has_gap |= clipped;
-        while self.raw_chars() > self.raw_limit {
+        while self.raw_chars() > self.raw_limit || self.segments.len() > 128 {
             self.has_gap = true;
             let lost = self.segments.pop_front().expect("bounded nonempty buffer");
             self.retire(lost.source);

@@ -224,6 +224,7 @@ pub struct SearchSession {
     revoked: bool,
     auto_pending: bool,
     suppress_auto: bool,
+    requires_explicit_play: bool,
     query_intent: RoutingSession,
     routing: Option<RoutingSnapshot>,
     last_route: Option<(String,Decision)>,
@@ -265,6 +266,7 @@ impl SearchSession {
             revoked: false,
             auto_pending: false,
             suppress_auto: false,
+            requires_explicit_play: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task,
             clarified_at:None,pending_topic:None,
@@ -355,6 +357,7 @@ impl SearchSession {
                 }
             }
             Intent::Resume => {
+                self.requires_explicit_play=false;
                 self.auto_pending = false;
                 if self.busy {
                     self.notice("还在查或准备播报，查到后我会告诉你。");
@@ -408,6 +411,8 @@ impl SearchSession {
         self.submit(query, true)
     }
     fn submit(&mut self, query: String, replace: bool) -> bool {
+        if self.requires_explicit_play{self.gate.cancel();self.speech.clear();self.remainder=None;}
+        self.requires_explicit_play=false;
         self.epoch += 1; self.dialogue=None;
         let routing=self.last_route.as_ref().and_then(|(version,d)|{
             if version.is_empty(){return None;}
@@ -461,6 +466,7 @@ impl SearchSession {
     }
     /// Called on the existing audio tick; drains messages only, never awaits a lock or HTTP.
     pub fn poll(&mut self, safe: bool) -> Option<String> {
+        let safe=safe && !self.requires_explicit_play;
         while let Ok(event) = self.rx.try_recv() {
             match event {
                 Event::Context{id,revision,epoch} if epoch==self.epoch => {self.dialogue=Some(json!({"protocol":1,"task_id":id,"revision":revision,"phase":"running","dialogue_epoch":epoch}));self.dialogue_changed=Instant::now();},
@@ -605,6 +611,7 @@ impl SearchSession {
                 "background search first audio published (device hearing unverified)");
         }
     }
+    pub fn require_explicit_play(&mut self){self.suppress_auto_replay();self.requires_explicit_play=true;self.idle_since=None;}
     pub fn suppress_auto_replay(&mut self) {
         self.suppress_auto = true;
         self.pending_topic=None;self.clarified_at=None;
@@ -1086,6 +1093,7 @@ mod tests {
                 revoked: false,
             auto_pending: false,
             suppress_auto: false,
+            requires_explicit_play: false,
             query_intent: RoutingSession::default(),
             routing:None,last_route:None,routing_task:None,
             clarified_at:None,pending_topic:None,
@@ -1093,6 +1101,16 @@ mod tests {
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn listening_search_stays_explicit_across_mode_exit_and_late_result(){
+        let (mut s,events,mut commands)=test_session();
+        s.pending_topic=Some(PendingTopic{query:"火星的颜色".into(),replace:false,since:Instant::now()-Duration::from_secs(5),route:None,tail_observed:false});
+        s.require_explicit_play();
+        events.send(Event::Ready{id:"task-1".into(),text:"结果".into(),epoch:s.epoch}).await.unwrap();
+        for _ in 0..3 {s.idle_since=Some(Instant::now()-Duration::from_secs(2));assert!(s.poll(true).is_none());}
+        assert!(commands.try_recv().is_err(),"no timeout submit or automatic claim");
+        assert!(s.requires_explicit_play);s.command(Intent::Resume);assert!(!s.requires_explicit_play);
     }
     #[tokio::test]
     async fn r13_receipt_is_ready_after_queue_acceptance_without_http_or_idle_wait() {

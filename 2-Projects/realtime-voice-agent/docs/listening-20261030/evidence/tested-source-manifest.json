@@ -1,0 +1,38 @@
+{
+  "source_base": "4c900d9a239b4cfa580f592502594f21bcba90c3",
+  "compiler": "rustc 1.98.0 (88d9e12ae1 2026-08-18), Linux",
+  "cargo": [
+    "cargo test --offline --locked",
+    "cargo test --offline --locked listening_joint_real -- --ignored"
+  ],
+  "results": {
+    "binary_passed": 472,
+    "core_passed": 29,
+    "runtime_passed": 7,
+    "joint_passed": 1,
+    "failed": 0,
+    "standard_cargo_ignored": 1
+  },
+  "scope": "ordinary R18 + style-ark; no deployment; RTC NativeAudioSource simulation; synthetic Brain HTTP authority fixture",
+  "files_sha256": {
+    "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/build-joint.mjs": "ae38a12a9501e8ed25faa3880e0644eecd48a1322764dbc10186f93f0f301048",
+    "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/joint-server.ts": "561015b94d38b75aa62f33ec0f22bfeef555bb912206356c7a4484c98a708593",
+    "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/run-joint.sh": "800b0218607c424e286b67abff204f3eed2837629523cd985f3af5e5c8c1a180",
+    "2-Projects/realtime-voice-agent/rust-worker/src/control.rs": "9a9e1d6694e922417280ffe207cea46cc1689aae91c7cdcbffe21060d7472af6",
+    "2-Projects/realtime-voice-agent/rust-worker/src/job.rs": "16e50e5bac4ba5dbda58d28eb04f68d1e6f732e6048dcb01a816d5f9753e5e8c",
+    "2-Projects/realtime-voice-agent/rust-worker/src/listening_adapter.rs": "32c12e4eba08ab8e4b5c716a1dcc36c17c58f3302171b0f81c9bbdff97292517",
+    "2-Projects/realtime-voice-agent/rust-worker/src/listening_buffer.rs": "ca78de682675730d939fe5fff22c5eba2802ce1560d54689f7970b1001a463c8",
+    "2-Projects/realtime-voice-agent/rust-worker/src/listening_http.rs": "4084c1286c697a20eac3cd1aba298a157a7fb2e517761b08857737d2aaa9162e",
+    "2-Projects/realtime-voice-agent/rust-worker/src/listening_mode.rs": "22bca3beef583db2ff6f7f1a5ecb8c802d5e8490113cab3dd5fc1fcec32d7332",
+    "2-Projects/realtime-voice-agent/rust-worker/src/listening_ready.rs": "74e3038714dc8db7b74e3331704591578dfcda2bcd64ade6a035ed30f0d5f12d",
+    "2-Projects/realtime-voice-agent/rust-worker/src/listening_runtime.rs": "10472548de6210bfc234002d00618e86bf7dc71827b18eec2a1b087ef02d24c2",
+    "2-Projects/realtime-voice-agent/rust-worker/src/main.rs": "e7ac92471de0eba510b42940891008a80aae7a7cbe4210a81f4d408b262d5004",
+    "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs": "799d21cf15417514a262290f905b3b7e0b1d7c42727f00e9dfdf20ae7941e20a",
+    "2-Projects/realtime-voice-agent/rust-worker/src/playout.rs": "748e6fe8c5788bcee3277e10c90eb7d030a9999b8b31bb65b44ca0aae86b11bf",
+    "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs": "3ea4cd211128efaf931024102b8b071593e3068591da3e478704e7c58225bc7a",
+    "2-Projects/realtime-voice-agent/rust-worker/src/worker.rs": "5dfef0073b4ee5d241d18fc8a02935ba7a4188e492b575a5f5b9219e098491e4",
+    "2-Projects/realtime-voice-agent/rust-worker/tests/listening_runtime.rs": "5ecafe786eb9820594aeeedabd6e1f955d38c4683baed3965b43d5c867e7b7ab",
+    "4-Assets/contracts/p003-listening-http-v1.fixtures.json": "1c32e52ae65c6d2f0724d033def70e36eb345cc37b9c06f6bbb3a46e7d68ef2d",
+    "4-Assets/contracts/p003-listening-http-v1.json": "c4df5d49bd7addb09adbf6e06441c21b9b4e5e63e084b58a4f5599c66126e531"
+  }
+}

@@ -60,6 +60,11 @@ pub enum Reject {
 }
 pub struct ListeningMode {
     trace: String,
+    max_session_ms: u64,
+    feedback_duration_ms: u64,
+    feedback_cooldown_ms: u64,
+    feedback_deadline: u64,
+    next_feedback_at: u64,
     phase: Phase,
     epoch: u64,
     scene: Option<Scene>,
@@ -87,6 +92,11 @@ impl ListeningMode {
         }
         Ok(Self {
             trace: trace.into(),
+            max_session_ms: MAX_SESSION_MS,
+            feedback_duration_ms: 12000,
+            feedback_cooldown_ms: 0,
+            feedback_deadline: 0,
+            next_feedback_at: 0,
             phase: Phase::Normal,
             epoch: 0,
             scene: None,
@@ -158,8 +168,7 @@ impl ListeningMode {
             self.phase = Phase::Listening;
         }
     }
-    pub fn handle(&mut self, cmd: Command, now: u64) -> Result<Snapshot, Reject> {
-        self.tick(now);
+    pub fn precheck(&self, cmd: &Command) -> Result<Option<Snapshot>, Reject> {
         if cmd.seq == 0
             || cmd.seq > MAX_SEQUENCE
             || cmd.request_id != format!("{}:{}", self.trace, cmd.seq)
@@ -168,14 +177,21 @@ impl ListeningMode {
         }
         if cmd.seq <= self.high_sequence {
             if let Some(previous) = self.recent.iter().find(|c| c.seq == cmd.seq) {
-                if previous != &cmd {
+                if previous != cmd {
                     return Err(Reject::SequenceConflict);
                 }
                 let mut current = self.snapshot();
                 current.duplicate = true;
-                return Ok(current);
+                return Ok(Some(current));
             }
             return Err(Reject::StaleSequence);
+        }
+        Ok(None)
+    }
+    pub fn handle(&mut self, cmd: Command, now: u64) -> Result<Snapshot, Reject> {
+        self.tick(now);
+        if let Some(snapshot) = self.precheck(&cmd)? {
+            return Ok(snapshot);
         }
         match cmd.action {
             Action::State => {}
@@ -189,7 +205,7 @@ impl ListeningMode {
                 if !self.authorized(now) {
                     return Err(Reject::NotAuthorized);
                 }
-                self.session_deadline = now.saturating_add(MAX_SESSION_MS);
+                self.session_deadline = now.saturating_add(self.max_session_ms);
                 self.scene = Some(scene);
                 self.listening_id = Some(cmd.request_id.clone());
                 self.local_ready = false;
@@ -216,6 +232,10 @@ impl ListeningMode {
                 if self.user_speaking {
                     return Err(Reject::UserSpeaking);
                 }
+                if now < self.next_feedback_at {
+                    return Err(Reject::NotReady);
+                }
+                self.next_feedback_at = now.saturating_add(self.feedback_cooldown_ms);
                 // Permission is reserved only after the new epoch is authoritative.
                 self.change_phase(Phase::FeedbackReserved);
             }
@@ -267,6 +287,7 @@ impl ListeningMode {
         if self.phase != Phase::FeedbackReserved || turn == 0 {
             return Err(Reject::NotReady);
         }
+        self.feedback_deadline = now.saturating_add(self.feedback_duration_ms);
         self.phase = Phase::FeedbackActive;
         self.active_turn = Some(turn);
         Ok(())
@@ -279,6 +300,9 @@ impl ListeningMode {
         self.change_phase(Phase::Listening);
         Ok(())
     }
+    pub fn input_active(&self) -> bool {
+        self.user_speaking
+    }
     pub fn user_speech(&mut self, now: u64) {
         self.tick(now);
         self.user_speaking = true;
@@ -290,7 +314,43 @@ impl ListeningMode {
         self.tick(now);
         self.user_speaking = false;
     }
+    pub fn pause_pending_entry(&mut self) {
+        self.pause();
+    }
+    pub fn pause_unavailable(&mut self) {
+        if self.phase != Phase::Normal {
+            self.pause();
+        }
+    }
+    pub fn configure(&mut self, session_ms: u64, duration_ms: u64, cooldown_ms: u64) {
+        self.max_session_ms = session_ms;
+        self.feedback_duration_ms = duration_ms;
+        self.feedback_cooldown_ms = cooldown_ms;
+    }
+    pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+        self.tick(now);
+        if self.epoch != epoch {
+            return Err(Reject::StaleEpoch);
+        }
+        if self.phase != Phase::Listening || now < self.next_feedback_at {
+            return Err(Reject::NotReady);
+        }
+        if self.user_speaking {
+            return Err(Reject::UserSpeaking);
+        }
+        self.next_feedback_at = now.saturating_add(self.feedback_cooldown_ms);
+        self.change_phase(Phase::FeedbackReserved);
+        Ok(())
+    }
+    pub fn cancel_feedback(&mut self) {
+        if matches!(self.phase, Phase::FeedbackReserved | Phase::FeedbackActive) {
+            self.change_phase(Phase::Listening);
+        }
+    }
     pub fn tick(&mut self, now: u64) {
+        if self.phase == Phase::FeedbackActive && now >= self.feedback_deadline {
+            self.change_phase(Phase::Listening);
+        }
         if self.phase != Phase::Normal
             && self.phase != Phase::Paused
             && (!self.authorized(now) || now >= self.session_deadline)
@@ -309,6 +369,17 @@ impl ListeningMode {
             && !self.user_speaking
             && self.active_turn == Some(turn)
             && self.authorized(now)
+            && now < self.feedback_deadline
             && now < self.session_deadline
+    }
+}
+
+impl Scene {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Story => "story",
+            Self::Sharing => "sharing",
+            Self::Singing => "singing",
+        }
     }
 }

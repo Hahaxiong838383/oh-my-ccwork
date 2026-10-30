@@ -1,0 +1,19 @@
+running 1 test
+test listening_adapter::adapter_tests::listening_voice_invitation_preempts_inflight_summary ... FAILED
+
+failures:
+
+---- listening_adapter::adapter_tests::listening_voice_invitation_preempts_inflight_summary stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_invitation_preempts_inflight_summary' (2801780) panicked at src/listening_adapter.rs:1092:9:
+voice feedback must cancel old summary before reserving the next epoch
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    listening_adapter::adapter_tests::listening_voice_invitation_preempts_inflight_summary
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 472 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`
+

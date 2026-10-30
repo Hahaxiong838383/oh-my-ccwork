@@ -48,6 +48,7 @@ pub struct Envelope {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Inbound {
+    Listening { command: Option<crate::listening_mode::Command> },
     /// 停止本轮生成与播放(川哥 2026-08-15 拍板:走硬 abort,不进假打断窗口——
     /// 用户明确按了停,不该再等 1.5s 定时器判断他是不是说错话了)
     Cancel,
@@ -89,6 +90,7 @@ pub fn parse(raw: &[u8]) -> Option<(Envelope, Inbound)> {
         return None; // worker 自己的 ack 也在这个 topic 上,必须挡掉
     }
     let kind = match ev.kind.as_str() {
+        "listening.enter" | "listening.local_ready" | "listening.feedback" | "listening.exit" | "listening.state" => Inbound::Listening { command: parse_listening(&ev) },
         "cancel" => Inbound::Cancel,
         "wake" => match ev.payload.get("device_command_contract_version").and_then(|v| v.as_u64()) {
             Some(v) if v <= u32::MAX as u64 => Inbound::Capability { contract_version: v as u32 },
@@ -858,4 +860,62 @@ mod tests {
         assert_eq!((o.lane.as_str(), o.action.as_str(), o.source.as_str(), o.spoken_locally), ("L1", "", "", None));
         assert_eq!((o.execution_ms, o.mcu_tx_count, o.steps_done), (None, None, None));
     }
+}
+
+#[cfg(test)]
+mod listening_tests {
+    use super::*;
+    #[test]
+    fn listening_control_commands_reach_the_authenticated_pipeline_adapter() {
+        for (kind,payload) in [
+            ("listening.enter",json!({"version":1,"request_id":"trace-1:1","mode_epoch":0,"scene":"story"})),
+            ("listening.local_ready",json!({"version":1,"request_id":"trace-1:1","mode_epoch":1})),
+            ("listening.feedback",json!({"version":1,"request_id":"trace-1:1","mode_epoch":1})),
+            ("listening.exit",json!({"version":1,"request_id":"trace-1:1","mode_epoch":1})),
+            ("listening.state",json!({"version":1,"request_id":"trace-1:1"})),
+        ] {
+            let ev=json!({"trace_id":"trace-1","src":"android","type":kind,"seq":1,"payload":payload});
+            assert!(matches!(parse(ev.to_string().as_bytes()),Some((_,Inbound::Listening{command:Some(_)}))),"missing {kind}");
+        }
+    }
+    #[test]
+    fn listening_control_strict_payload_and_safe_sequence_matrix(){
+        let base=json!({"trace_id":"trace-1","src":"android","type":"listening.enter","seq":1,"payload":{"version":1,"request_id":"trace-1:1","mode_epoch":0,"scene":"story"}});
+        for (field,value) in [("version",json!(2)),("request_id",json!("other:1")),("mode_epoch",json!(-1)),("mode_epoch",json!(9007199254740992u64)),("scene",json!("unknown")),("extra",json!(true))] {
+            let mut v=base.clone();v["payload"][field]=value;assert!(matches!(parse(v.to_string().as_bytes()),Some((_,Inbound::Listening{command:None}))));
+        }
+        for seq in [json!(0),json!(-1),json!(1.5),json!(9007199254740992u64)] {let mut v=base.clone();v["seq"]=seq;assert!(!matches!(parse(v.to_string().as_bytes()),Some((_,Inbound::Listening{command:Some(_)}))));}
+        let mut v=base;v["src"]=json!("worker");assert!(parse(v.to_string().as_bytes()).is_none());
+    }
+
+}
+
+fn parse_listening(ev: &Envelope) -> Option<crate::listening_mode::Command> {
+    use crate::listening_mode::{Action, Command, Scene};
+    const MAX: u64 = 9_007_199_254_740_991;
+    let p=ev.payload.as_object()?;
+    let allowed: &[&str] = match ev.kind.as_str() {
+        "listening.enter" => &["version","request_id","scene","mode_epoch"],
+        "listening.state" => &["version","request_id"],
+        _ => &["version","request_id","mode_epoch"],
+    };
+    if p.len()!=allowed.len() || p.keys().any(|k|!allowed.contains(&k.as_str())) || p.get("version")?.as_u64()!=Some(1) || ev.seq<=0 || ev.seq as u64>MAX {return None;}
+    let request_id=p.get("request_id")?.as_str()?;
+    if request_id!=format!("{}:{}",ev.trace_id,ev.seq) || request_id.len()>96 {return None;}
+    let action=if ev.kind=="listening.state" {Action::State} else {
+        let epoch=p.get("mode_epoch")?.as_u64()?;if epoch>MAX{return None;}
+        match ev.kind.as_str() {
+            "listening.enter" => Action::Enter{epoch,scene:match p.get("scene")?.as_str()? {"story"=>Scene::Story,"sharing"=>Scene::Sharing,"singing"=>Scene::Singing,_=>return None}},
+            "listening.local_ready"=>Action::LocalReady{epoch},"listening.feedback"=>Action::Feedback{epoch},"listening.exit"=>Action::Exit{epoch},_=>return None,
+        }
+    };
+    Some(Command{seq:ev.seq as u64,request_id:request_id.into(),action})
+}
+
+pub fn listening_ack(trace: &str, seq: u64, request: &str, stage: &str, s: &crate::listening_mode::Snapshot, reason: Option<&str>) -> Value {
+    use crate::listening_mode::Phase::*;
+    let state=match s.phase {Normal=>"normal",Entering=>"entering",Listening=>"listening",FeedbackReserved=>"feedback_reserved",FeedbackActive=>"feedback_active",Paused=>"paused"};
+    json!({"trace_id":trace,"ts_ms":std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d|d.as_millis() as u64).unwrap_or(0),"src":"worker","type":"listening.ack","seq":seq,"payload":{
+        "version":1,"request_id":request,"command_seq":seq,"stage":stage,"state":state,"mode_epoch":s.epoch,
+        "scene":s.scene.map(|v|v.as_str()),"listening_id":s.listening_id,"duplicate":s.duplicate,"reason":reason}})
 }

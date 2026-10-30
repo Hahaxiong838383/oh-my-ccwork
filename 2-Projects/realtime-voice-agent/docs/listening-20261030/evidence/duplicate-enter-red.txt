@@ -1,0 +1,21 @@
+running 1 test
+test listening_adapter::adapter_tests::listening_duplicate_enter_never_completes_before_both_confirmations ... FAILED
+
+failures:
+
+---- listening_adapter::adapter_tests::listening_duplicate_enter_never_completes_before_both_confirmations stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_duplicate_enter_never_completes_before_both_confirmations' (2787099) panicked at src/listening_adapter.rs:922:96:
+assertion `left == right` failed
+  left: String("completed")
+ right: "received"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    listening_adapter::adapter_tests::listening_duplicate_enter_never_completes_before_both_confirmations
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 469 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`
+

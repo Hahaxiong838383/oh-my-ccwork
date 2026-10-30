@@ -146,6 +146,7 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
         "registered worker"
     );
     crate::search_canary::signal(true);
+    let _listening_registration=crate::listening_ready::registered(&config.agent_name);
     let recovered_after = note_registered(&state);
     if recovered_after > 0 {
         info!(failures_before = recovered_after, "reconnected & registered, consecutive failure count reset");

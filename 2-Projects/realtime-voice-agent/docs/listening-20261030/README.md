@@ -1,23 +1,39 @@
-# P003 倾听 Worker：首批开发检查点
+# P003 倾听 Worker 开发入口
 
-2026-10-30，分支`codex/p003-listening-worker-20261030`，基点`ef92ee1a`；Codeg“P003 倾听 Worker｜开发”folder29。
+2026-10-30 当前批次已从基础纯模块推进到真实 job/control/pipeline/playout 接线、异步主 Brain HTTP 客户端及隔离联合模拟。当前分支 `codex/p003-listening-worker-20261030`，仍以普通 R18＋style-ark 为基线。
 
-已实现可独立测试的`listening_mode.rs`与`listening_buffer.rs`，覆盖双确认进入、单次反馈许可、用户讲话取消、15秒租约与30分钟会话上限、seq/epoch去重、摘要修订CAS及有界上下文。**尚未import进main/pipeline，未接线上音频、未部署/开闸。**
+本分支没有部署、没有开线上总闸，没有修改 Android 包、搜索名单/窗口或已发布的后台。开发交付、测试证据、候选差分和回滚点见 [NEXT_BATCH_RECEIPT.md](NEXT_BATCH_RECEIPT.md)。
 
-运行：在`rust-worker`执行`bash scripts/test-listening-core.sh`，当前29项通过；仅需std，适配本机rustc1.70/edition2021。不是完整项目edition2024 Cargo或Linux/RTC通过证明。
+主要实现：
 
-先鉴别真实participant、签名metadata和主Brain租约，再调用纯模块。所有时间参数同一单调时钟。记录SpeechStart及SpeechEnd；只触发一次Start后持续讲话也不得获反馈许可。`Action::Enter`与Feedback/Exit/LocalReady均需epoch。`capture_drained`和`local_ready`是独立条件；实际capture取消与队列排空下一批接线。
+- `listening_mode.rs`：持久模式、双确认、单次反馈、讲话撤权、租约和会话上限。
+- `listening_runtime.rs`：真实 participant/签名 job 绑定、逐帧 purpose/epoch/turn 许可、在途 capture 计数。
+- `listening_adapter.rs`：异步授权、状态查询顺序、摘要 CAS、反馈调度及失败退避。
+- `listening_http.rs`：主权威地址/服务头部、冻结快照与 SHA、响应绑定、单调租约余量。
+- `listening_ready.rs`：真实 LiveKit 注册生命周期、编译时 build SHA、配置应用确认；缺少发布证据不宣称 ready。
+- `pipeline.rs` / `playout.rs`：真实输入隔离、取消和排空、NativeAudioSource 全部 PCM 出口。
 
-摘要ticket只匹配创建它的buffer实例/摘要版本/原文前缀；异步HTTP仍需绑定room/session/trace/listening_id，不能用本地实例ID替代网络鉴权。最近256条已压缩片段保留版本/指纹；更老片段重传保守作废摘要并标缺口。近期4000字截出未摘要前文同样标缺口。
+测试（已有依赖，不安装、不部署）：
 
-共享合同`4-Assets/contracts/p003-listening-mode-v1.json`与Brain树字节一致；完整执行计划、Android交接、回滚记录在`codex/p003-listening-brain-20261030`分支：
-- `docs/superpowers/plans/2026-10-30-p003-listening-implementation.md`
-- `2-Projects/P003GameDemo20260513/docs/P003_LISTENING_ANDROID_HANDOFF_20261030.md`
-- `2-Projects/P003GameDemo20260513/docs/listening-20261030/EXECUTION.md`
-- `2-Projects/P003GameDemo20260513/docs/listening-20261030/ROLLBACK.md`
+```sh
+cd 2-Projects/realtime-voice-agent/rust-worker
+bash scripts/test-listening-core.sh
+cargo test --offline --locked
+```
 
-后续需完成主循环输入拦截、所有输出许可、在途capture取消、搜索显式播放标记、独立Brain摘要/反馈客户端、Android当前包与真人测试。搜索候选保持独立R26基线，不从本普通R18树整包覆盖。
+本机 rustc 1.70 只能运行 std 核心测试。完整项目要求 edition 2024 的 Linux 工具链，不能用核心测试代替完整 Cargo。
 
-源码冻结标签`rollback/p003-listening-worker-20261030`。本批没有线上变更，撤回只需revert新增模块提交，不重启服务器、不回灌数据库。
+真实 Brain HTTP 联合模拟使用只读选定 Brain 树中的 authority/router、临时 SQLite 注册表及模拟内容模型。构建 fixture 后在 Linux 运行：
+
+```sh
+node scripts/listening/build-joint.mjs /path/to/brain-worktree /tmp/p003-listening-joint.mjs
+P003_LISTENING_JOINT_BUNDLE=/tmp/p003-listening-joint.mjs sh scripts/listening/run-joint.sh
+```
+
+它只监听回环地址，生成的身份/服务密钥均为合成测试值；测试配置留在临时目录。标准 Cargo 将这一个外部测试标记 ignored，联合命令会显式执行它，回执分别计数。
+
+正式能力声明还要求编译时 `P003_WORKER_BUILD_SHA`、主 Brain 的可信发布 manifest、真实注册、当前全局快照应用确认。不能以运行时布尔值代替这些证据。本轮未创建生产发布 manifest，也没有进行发布构建/上线。
+
+原首批基础提交 `53727c3fb367f5a4f692a81511d5ac8303eb728a`；原冻结标签 `rollback/p003-listening-worker-20261030` 指向 `ef92ee1aa30e6ef869f6270de22173ce51617f30`。本批回滚点为开发开始时的 `4c900d9a239b4cfa580f592502594f21bcba90c3`。
 
 署名：codex（OpenAI）| 2026-10-30

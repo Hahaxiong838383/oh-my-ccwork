@@ -4,6 +4,12 @@
 //! 生产 Python worker 不受影响:本进程用独立 AGENT_NAME 注册,dispatch 按名派单。
 
 mod config;
+mod listening_mode;
+mod listening_buffer;
+mod listening_runtime;
+mod listening_http;
+mod listening_adapter;
+mod listening_ready;
 mod contract;
 mod candidate;
 mod say_defer;

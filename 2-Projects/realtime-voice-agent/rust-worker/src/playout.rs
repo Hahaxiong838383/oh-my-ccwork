@@ -13,7 +13,7 @@ use livekit::webrtc::audio_frame::AudioFrame;
 use livekit::webrtc::audio_source::native::NativeAudioSource;
 use tokio::sync::{mpsc, watch};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::info;
 
 use crate::tts_volc::TTS_SAMPLE_RATE;
 
@@ -30,6 +30,7 @@ pub struct PlayoutControl {
     fade_req: Arc<AtomicU64>, // resume 渐起请求(置 1=下帧起从 0 爬回)
     /// 本轮播放终态(BufferWatch Drop 时写入;None=还没结束)
     final_stats: Arc<Mutex<Option<FinalStats>>>,
+    permit: Option<crate::listening_runtime::AudioPermit>,
 }
 
 /// 单测专用:只造控制句柄,不起播放循环(那需要真的 NativeAudioSource)。
@@ -52,6 +53,7 @@ pub fn test_control() -> (
         fade_ms: 0,
         fade_req: Arc::new(AtomicU64::new(0)),
         final_stats: Arc::new(Mutex::new(None)),
+        permit: None,
     };
     ((pause_rx, abort_rx), ctl)
 }
@@ -82,7 +84,7 @@ impl PlayoutControl {
 
     /// turn 的开播观察者依赖此退出条件:硬打断后未开播的 turn,观察者不得永转。
     pub fn aborted(&self) -> bool {
-        *self.abort_tx.borrow()
+        *self.abort_tx.borrow() || self.permit.as_ref().is_some_and(|p|!p.allowed())
     }
 
     /// 是否已真正开始出声(首帧已 capture)。
@@ -317,29 +319,27 @@ enum ExitWhy {
 const CAPTURE_RETRY_WINDOW: Duration = Duration::from_millis(300);
 const CAPTURE_RETRY_GAP: Duration = Duration::from_millis(20);
 
-async fn capture_with_retry(
-    source: &NativeAudioSource,
-    frame: &AudioFrame<'_>,
-    room: &str,
-    turn_id: u64,
-) -> bool {
-    let first = match source.capture_frame(frame).await {
-        Ok(()) => return true,
-        Err(e) => e,
-    };
-    warn!(room, turn_id, error = %first, "capture_frame 失败,进入重试窗口");
-    let deadline = Instant::now() + CAPTURE_RETRY_WINDOW;
-    let mut tries = 0u32;
-    while Instant::now() < deadline {
+// The production helper is also exercised with an asynchronous fake adapter.
+// Keep the ticket across FFI completion: dropping a Rust future need not cancel native enqueue.
+async fn capture_guarded<F, Fut, C>(mut capture:F, mut clear:C, ctl:&PlayoutControl) -> bool
+where F:FnMut()->Fut, Fut:std::future::Future<Output=bool>, C:FnMut() {
+    let deadline=Instant::now()+CAPTURE_RETRY_WINDOW;
+    loop {
+        if ctl.aborted() {return false;}
+        let ticket=match &ctl.permit {Some(p)=>match p.begin_capture(){Some(t)=>Some(t),None=>return false},None=>None};
+        let ok=capture().await;
+        let revoked=ctl.permit.as_ref().is_some_and(|p|!p.allowed());
+        // Clear while still holding admission; entry completion cannot race this late callback.
+        if revoked || (ticket.is_some() && ctl.aborted()) {clear();}
+        drop(ticket);
+        if revoked || ctl.aborted() {return false;}
+        if ok {return true;}
+        if Instant::now()>=deadline {return false;}
         tokio::time::sleep(CAPTURE_RETRY_GAP).await;
-        tries += 1;
-        if source.capture_frame(frame).await.is_ok() {
-            info!(room, turn_id, tries, "capture_frame 重试成功,本轮保住");
-            return true;
-        }
     }
-    warn!(room, turn_id, tries, error = %first, "capture_frame 持续失败,放弃本轮播放");
-    false
+}
+async fn capture_with_retry(source:&NativeAudioSource, frame:&AudioFrame<'_>, ctl:&PlayoutControl)->bool {
+    capture_guarded(||async {source.capture_frame(frame).await.is_ok()},||source.clear_buffer(),ctl).await
 }
 
 /// PCM(24k i16le bytes)→ 10ms 帧逐帧 capture;暂停门 + 渐起 + 进度计数。
@@ -349,6 +349,7 @@ pub fn spawn_playout(
     mut pcm_rx: mpsc::Receiver<Vec<u8>>,
     room: String,
     turn_id: u64,
+    permit: Option<crate::listening_runtime::AudioPermit>,
 ) -> (JoinHandle<()>, PlayoutControl) {
     let (pause_tx, mut pause_rx) = watch::channel(false);
     let (abort_tx, mut abort_rx) = watch::channel(false);
@@ -365,6 +366,7 @@ pub fn spawn_playout(
             .unwrap_or(0),
         fade_req: Arc::new(AtomicU64::new(0)),
         final_stats: Arc::new(Mutex::new(None)),
+        permit,
     };
     let ctl2 = ctl.clone();
     let task = tokio::spawn(async move {
@@ -379,7 +381,7 @@ pub fn spawn_playout(
             0.0
         };
         loop {
-            if *abort_rx.borrow() {
+            if ctl2.aborted() {
                 watch.exit(ExitWhy::Aborted);
                 return;
             }
@@ -409,7 +411,7 @@ pub fn spawn_playout(
                 .collect();
             residual.append(&mut samples);
             while residual.len() >= FRAME_SAMPLES {
-                if *abort_rx.borrow() {
+                if ctl2.aborted() {
                     watch.exit(ExitWhy::Aborted);
                     return;
                 }
@@ -438,7 +440,7 @@ pub fn spawn_playout(
                     num_channels: 1,
                     samples_per_channel: FRAME_SAMPLES as u32,
                 };
-                if !capture_with_retry(&source, &frame, &watch.room, watch.turn_id).await {
+                if !capture_with_retry(&source, &frame, &ctl2).await {
                     watch.exit(ExitWhy::CaptureFailed);
                     return;
                 }
@@ -463,7 +465,7 @@ pub fn spawn_playout(
                 num_channels: 1,
                 samples_per_channel: n as u32,
             };
-            if capture_with_retry(&source, &frame, &watch.room, watch.turn_id).await {
+            if capture_with_retry(&source, &frame, &ctl2).await {
                 watch.on_frame(Instant::now()); // 末帧可能不足 10ms,但其后不再有等待,不影响欠载判定
                 ctl2.captured.fetch_add(n as u64, Ordering::SeqCst);
             }
@@ -669,4 +671,58 @@ mod tests {
         assert_eq!(s.underrun_count, 1, "开播阶段的卡顿同样可听,必须计");
         assert_eq!(s.buffered_audio_ms, -1, "没灌满过就没有可信低水位,不能报 0");
     }
+}
+
+#[cfg(test)]
+mod listening_audio_tests {
+    use super::*;
+    use crate::listening_mode::*;
+    use crate::listening_runtime::*;
+    use std::sync::atomic::AtomicUsize;
+    fn session()->ListeningSession {ListeningSession::new(Binding {room:"sn-BJP00326070803800006-1800000000".into(),session:"session-1".into(),trace:"trace-1".into()}).unwrap()}
+    #[tokio::test]
+    async fn listening_enter_waits_for_real_capture_completion_then_clears() {
+        let mut s=session();s.renew_lease(1,15000,0).unwrap();
+        let (_guard,mut ctl)=test_control();ctl.permit=s.output_permit(OutputPurpose::Ordinary,1,0);
+        let (started,seen)=tokio::sync::oneshot::channel();let (release,wait)=tokio::sync::oneshot::channel();
+        let cleared=Arc::new(AtomicUsize::new(0));let c=cleared.clone();
+        let task=tokio::spawn(async move {
+            let mut pair=Some((started,wait));
+            capture_guarded(||{let (started,wait)=pair.take().unwrap();async move {let _=started.send(());let _=wait.await;true}},||{c.fetch_add(1,Ordering::SeqCst);},&ctl).await
+        });
+        seen.await.unwrap();
+        s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{seq:1,request_id:"trace-1:1".into(),action:Action::Enter{scene:Scene::Story,epoch:0}},0).unwrap();
+        s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{seq:2,request_id:"trace-1:2".into(),action:Action::LocalReady{epoch:1}},0).unwrap();
+        assert!(!s.capture_is_drained());assert_eq!(s.capture_drained(1,0),Err(Reject::NotReady));
+        release.send(()).unwrap();assert!(!task.await.unwrap());assert_eq!(cleared.load(Ordering::SeqCst),1);
+        assert_eq!(s.capture_drained(1,0).unwrap().phase,Phase::Listening);
+    }
+    #[tokio::test]
+    async fn listening_revocation_stops_retry_and_short_tail_admission() {
+        let mut s=session();s.renew_lease(1,15000,0).unwrap();let (_guard,mut ctl)=test_control();ctl.permit=s.output_permit(OutputPurpose::Ordinary,1,0);
+        let calls=AtomicUsize::new(0);
+        let result=capture_guarded(||{calls.fetch_add(1,Ordering::SeqCst);s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{seq:1,request_id:"trace-1:1".into(),action:Action::Enter{scene:Scene::Story,epoch:0}},0).unwrap();async {false}},||{},&ctl).await;
+        assert!(!result);assert_eq!(calls.load(Ordering::SeqCst),1);
+        assert!(!capture_guarded(||async {panic!("revoked short tail reached native capture")},||{},&ctl).await);
+    }
+}
+#[cfg(test)]
+mod listening_rtc_tests {
+ use super::*;use crate::listening_runtime::*;use crate::listening_mode::*;
+ #[tokio::test]
+ async fn listening_native_rtc_source_obeys_permit_and_entry_drain(){
+  let source=NativeAudioSource::new(Default::default(),TTS_SAMPLE_RATE,1,200);
+  let mut s=ListeningSession::new(Binding{room:"sn-BJP00326070803800006-1800000000".into(),session:"rtc-test".into(),trace:"trace-rtc".into()}).unwrap();
+  s.renew_lease(1,15000,0).unwrap();let (tx,rx)=mpsc::channel(4);
+  let (task,ctl)=spawn_playout(source.clone(),rx,"synthetic-rtc".into(),1,s.output_permit(OutputPurpose::Ordinary,1,0));
+  tx.send(vec![0;2400]).await.unwrap();
+  for _ in 0..100{if ctl.audio_started(){break;}tokio::time::sleep(Duration::from_millis(5)).await;}
+  assert!(ctl.audio_started(),"native RTC capture must actually accept PCM");
+  let enter=s.control(Some("dev-BJP00326070803800006"),"trace-rtc",Command{seq:1,request_id:"trace-rtc:1".into(),action:Action::Enter{epoch:0,scene:Scene::Story}},s.now_ms()).unwrap();ctl.abort();
+  s.control(Some("dev-BJP00326070803800006"),"trace-rtc",Command{seq:2,request_id:"trace-rtc:2".into(),action:Action::LocalReady{epoch:enter.epoch}},s.now_ms()).unwrap();
+  drop(tx);tokio::time::timeout(Duration::from_secs(2),task).await.unwrap().unwrap();
+  assert!(s.capture_is_drained());source.clear_buffer();assert_eq!(s.capture_drained(enter.epoch,s.now_ms()).unwrap().phase,Phase::Listening);
+  let captured=ctl.captured_samples();assert!(ctl.aborted());tokio::time::sleep(Duration::from_millis(30)).await;assert_eq!(ctl.captured_samples(),captured);
+  assert!(s.output_permit(OutputPurpose::Ordinary,2,s.now_ms()).is_none());
+ }
 }

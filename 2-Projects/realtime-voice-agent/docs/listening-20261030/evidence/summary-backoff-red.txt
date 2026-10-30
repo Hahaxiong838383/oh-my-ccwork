@@ -1,0 +1,19 @@
+running 1 test
+test listening_adapter::adapter_tests::listening_summary_failure_cannot_retry_on_every_audio_tick ... FAILED
+
+failures:
+
+---- listening_adapter::adapter_tests::listening_summary_failure_cannot_retry_on_every_audio_tick stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_summary_failure_cannot_retry_on_every_audio_tick' (2800557) panicked at src/listening_adapter.rs:1144:18:
+failed summary must back off even when raw still exceeds threshold
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    listening_adapter::adapter_tests::listening_summary_failure_cannot_retry_on_every_audio_tick
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 471 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`
+

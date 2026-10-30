@@ -37,6 +37,7 @@ use crate::tts_volc::TTS_SAMPLE_RATE;
 #[derive(serde::Deserialize, Default)]
 struct JobMeta {
     filler_policy: Option<serde_json::Value>,
+    listening: Option<serde_json::Value>,
     trace_id: Option<String>,
     #[allow(dead_code)] // 回交对账用,当前事件只带 trace
     session_id: Option<String>,
@@ -389,9 +390,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             };
             let octx = ordered_ctx.clone();
             let shutdown=if graceful_search_close{pipeline_close_rx.take()}else{None};
+            let listening_metadata = meta.listening.clone();
             pipeline_task = Some(tokio::spawn(async move {
                 if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, shutdown)
+                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, listening_metadata, shutdown)
                         .await
                 {
                     tracing::warn!(room = %rn, error = %e, "pipeline exited with error");

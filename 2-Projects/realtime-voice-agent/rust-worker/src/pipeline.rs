@@ -362,6 +362,7 @@ enum TurnKind {
     Say(String),
     // Web evidence must not enter the ordinary chat history / downstream memory extractor.
     BackgroundSay(String),
+    ListeningFeedback(String),
     BackgroundClip(String, Vec<u8>),
     Reply {
         user_text: String,
@@ -417,6 +418,10 @@ struct ExitSignalPending {
 }
 
 struct Orchestrator {
+    listening: Option<crate::listening_adapter::Adapter>,
+    feedback_turn: Option<u64>,
+    listening_deferred_turn: Option<TurnKind>,
+    device_reply_suppressed: bool,
     search: Option<crate::search_tasks::SearchSession>,
     search_turn: bool,
     search_user_speaking: bool,
@@ -851,6 +856,7 @@ pub async fn run_pipeline(
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
     filler_policy: Option<crate::filler::FillerPolicy>,
+    listening_metadata: Option<Value>,
     mut shutdown:Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<()> {
     // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
@@ -941,7 +947,14 @@ pub async fn run_pipeline(
     }
     let input_phase0 = if ordered_session.is_some() { InputPhase::FirstTurn } else { InputPhase::NotOrdered };
     let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1, tts_cfg.provider_name(), tts_cfg.voice()));
+    let listening_claimed=listening_metadata.is_some();
+    let listening = listening_metadata.and_then(|v|serde_json::from_value(v).ok()).and_then(|meta| {
+        let llm=llm.try_lock().ok()?;
+        crate::listening_adapter::Adapter::new(&llm.prewarm_parts().1,meta,&room_name,ready.trace_id.as_deref(),ordered_ctx.session_id.as_deref())
+    });
+    anyhow::ensure!(!listening_claimed || listening.is_some(),"listening_session_binding_unavailable");
     let mut orch = Orchestrator {
+        listening,feedback_turn:None,listening_deferred_turn:None,device_reply_suppressed:false,
         search,
         search_turn: false,
         search_user_speaking: false,
@@ -1402,6 +1415,38 @@ pub async fn run_pipeline(
 }
 
 impl Orchestrator {
+    fn listening_active(&self)->bool {self.listening.as_ref().is_some_and(|l|l.runtime.active())}
+    fn clear_listening_pending(&mut self){
+        if let Some(spec)=self.spec.take(){spec.task.abort();}self.pending_tts_warm.take();self.paused=None;self.false_deadline=None;self.resume_grace=None;
+        self.deferred_say.clear_on_abort();self.listening_deferred_turn=None;self.pending_local_receipt_deadline=None;
+        self.local_receipt_release=None;self.exit_pending=None;self.latest_interim.clear();self.tele_text.clear();self.pending_amend=None;
+        self.pf.reset();self.turn_gate=TurnGate::new(self.cfg.min_endpointing_delay,self.cfg.max_endpointing_delay,self.cfg.unlikely_threshold);
+        self.eot_gap_gen+=1;self.eot_requested=false;
+    }
+    fn apply_listening_effects(&mut self,e:crate::listening_adapter::Effects){
+        if e.stopped {self.hard_abort_current();self.clear_listening_pending();self.source.clear_buffer();
+            if self.listening.as_ref().is_some_and(|l|l.runtime.snapshot().phase==crate::listening_mode::Phase::Paused){let _=self.fatal_tx.try_send("listening_session_paused_close_required".into());}
+        }
+        if e.entered {
+            self.device_reply_suppressed=true;self.audit=None;self.snap=None;self.isnap=None;self.isnap_ring=None;
+            if let Some(search)=&mut self.search{search.require_explicit_play();}
+        }
+        for ack in e.acks {self.publish_json(control::TOPIC,ack);}
+        if let Some(text)=e.feedback{self.start_turn(TurnKind::ListeningFeedback(text));}
+    }
+    fn poll_listening(&mut self){
+        if let Some(e)=self.listening.as_mut().map(|l|l.poll()){self.apply_listening_effects(e);}
+        let invalid_feedback=self.feedback_turn.is_some() && self.listening.as_ref().is_some_and(|l|l.runtime.snapshot().phase!=crate::listening_mode::Phase::FeedbackActive);
+        if invalid_feedback{self.hard_abort_current();}
+        let drained=self.listening.as_ref().is_some_and(|l|l.runtime.capture_is_drained());
+        if drained {
+            if self.listening.as_ref().is_some_and(|l|l.runtime.snapshot().phase==crate::listening_mode::Phase::Entering){
+                self.source.clear_buffer();if let Some(e)=self.listening.as_mut().map(|l|l.drained()){self.apply_listening_effects(e);}
+            }
+            if let Some(kind)=self.listening_deferred_turn.take(){self.start_turn(kind);}
+        }
+    }
+
     /// B23:ordered 首句代次是否仍在消费 OPCM(RTC 帧丢弃)。Rtc 相位后 `ordered` 仍保留(收 receipt_done/证据),但不再吃帧。
     fn ordered_first_turn_active(&self) -> bool {
         self.ordered.is_some() && self.input_phase == InputPhase::FirstTurn
@@ -1718,6 +1763,7 @@ impl Orchestrator {
 
     /// S1v3 触发器逐帧喂音频;fire → 起投机。
     async fn on_pf_frame(&mut self, samples: &[i16]) {
+        if self.listening_active(){return;}
         let now_ms = self.now_ms();
         // B34-C:取证环在这里维护。诊断关 = isnap_ring 为 None = 不分配、不拷贝。
         if let Some(r) = self.isnap_ring.as_mut() {
@@ -1754,6 +1800,7 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        if self.listening_active(){return;}
         if self.search_ack(&text,false){return;}
         let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
@@ -1791,6 +1838,7 @@ impl Orchestrator {
     /// B9 #3：ordered 模式 held final 到达即投机 LLM（RTC 路径的 preflight 在此模式旁路，故显式挂钩）。
     /// 文本 = 已 hold 的 final 拼接（与裁决合并口径同源）；commit 时 sp.text==user_text 且历史版本相同才消费。
     async fn on_ordered_final_held(&mut self) {
+        if self.listening_active(){return;}
         if !self.cfg.ordered_spec_on_final {
             return;
         }
@@ -1818,6 +1866,11 @@ impl Orchestrator {
         eot_ring: &VecDeque<i16>,
     ) {
         self.search_user_speaking = gate.speaking() || active_frame;
+        if let Some(l)=&mut self.listening {match ev {VadEvent::SpeechStart=>l.speech_start(),VadEvent::SpeechEnd=>l.speech_end(),VadEvent::None=>{}}}
+        if self.listening_active() {
+            if matches!(ev,VadEvent::SpeechStart){self.hard_abort_current();self.clear_listening_pending();}
+            return;
+        }
         let now = Instant::now();
         match ev {
             VadEvent::SpeechStart => {
@@ -1900,6 +1953,7 @@ impl Orchestrator {
     }
 
     fn on_interim(&mut self, t: String) {
+        if self.listening_active(){self.tr.user_interim(&t);return;}
         self.contract.user_transcript_interim();
         self.tr.user_interim(&t);
         self.tele_text = t.clone();
@@ -1910,6 +1964,7 @@ impl Orchestrator {
     }
 
     fn on_final(&mut self, t: String) {
+        if self.listening_active(){self.tr.user_final(&t);if let Some(l)=&mut self.listening {l.final_text(&t);}return;}
         self.contract.user_transcript_final();
         // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
         // 门关着或空 final → 原路立即发(空 final 在端侧不启动等待,且 turn_gate 也不收它)。
@@ -2008,6 +2063,8 @@ impl Orchestrator {
         source: &'static str,
         utterance: Option<u64>,
     ) {
+        if self.listening_active(){return;}
+        self.device_reply_suppressed=false;
         let Some(trace) = self.device_trace.clone() else {
             // 无受信 trace(老 token/调试房)不发命令——与 input_ready 同纪律,fail-visible
             warn!(room = %self.room_name, "device command skipped: 无 trace,落回闲聊");
@@ -2074,6 +2131,7 @@ impl Orchestrator {
     /// 2b:LLM 慢路意图落主循环。门序在 device_intent::l2_gate(纯函数);通过则以 L2 lane
     /// 复用快路的 proposal/result/短句链路。EXECUTE=0 时静默(task 内 observed 打点已代表)。
     fn on_l2_intent(&mut self, label: u32, user_text: &str, utterance: u64) {
+        if self.listening_active(){return;}
         if !self.l2_execute_on {
             return;
         }
@@ -2256,6 +2314,7 @@ impl Orchestrator {
     /// 2b 合同 v2 §3.4:设备短句**追加**在 LLM 回复之后——回复在播就压进槽等 PlayedOut,空闲则立刻说。
     /// (M1 实证:回复在播时直接开新 Say 轮会与在播轮抢音频源,`capture_frame InvalidState`,短句丢、回复截)
     fn say_after_current(&mut self, text: String) {
+        if self.listening_active() || self.device_reply_suppressed{return;}
         match self.deferred_say.offer(self.agent_turn.is_some(), text) {
             Some(t) => self.start_turn(TurnKind::Say(t)),
             None => info!(room = %self.room_name, "device reply deferred until current turn plays out"),
@@ -2290,7 +2349,28 @@ impl Orchestrator {
         kind: control::Inbound,
         identity: Option<&str>,
     ) {
+        if self.listening_active() {
+            if matches!(&kind,control::Inbound::CommandWord{..}|control::Inbound::CanarySay){return;}
+            if matches!(&kind,control::Inbound::Cancel){
+                let trusted=self.listening.as_ref().is_some_and(|l|l.runtime.authenticated(identity,&ev.trace_id));
+                if !trusted {return;}
+                if let Some(l)=&mut self.listening{l.cancel_feedback();}
+            }
+        }
         match kind {
+            control::Inbound::Listening{command}=>{
+                let reject=if command.is_none(){Some("invalid_request")}else if self.ordered_first_turn_active() && command.as_ref().is_some_and(|c|matches!(c.action,crate::listening_mode::Action::Enter{..})){Some("not_ready")}else{None};
+                if let Some(reason)=reject {
+                    if let Some(l)=self.listening.as_ref().filter(|l|l.runtime.authenticated(identity,&ev.trace_id)) {
+                        if ev.seq>0 && ev.seq<=9_007_199_254_740_991 {
+                            self.publish_json(control::TOPIC,control::listening_ack(&ev.trace_id,ev.seq as u64,&format!("{}:{}",ev.trace_id,ev.seq),"rejected",&l.runtime.snapshot(),Some(reason)));
+                        }
+                    }
+                    return;
+                }
+                let effects=self.listening.as_mut().map(|l|l.control(identity,&ev.trace_id,command));
+                if let Some(e)=effects{self.apply_listening_effects(e);}
+            },
             control::Inbound::CanarySay => self.on_canary_say(ev, identity),
             // command_word(2026-08-18 晚合同):VAD 芯片 label 经 Android 转发,
             // 补早说空窗——事件可先于 input_ready 到达(control 通道在 job 层缓冲,
@@ -2634,6 +2714,7 @@ impl Orchestrator {
         let Some(turn) = self.agent_turn.take() else {
             return;
         };
+        let was_feedback = self.feedback_turn.take()==Some(turn.id);
         let was_search = std::mem::take(&mut self.search_turn);
         // B34-B:在这里把「abort 之前在播什么」抄一份。普通 commit 与 STOP/EXIT 都是
         // **先 abort 再登记**,等登记时 turn 已被 take 走,现算只会得到 none/turn_id=0,
@@ -2674,7 +2755,7 @@ impl Orchestrator {
                 if let Some(p)=&turn.search_progress {let complete=p.lock().unwrap_or_else(|e|e.into_inner()).complete(turn.ctl.captured_samples(),false);search.finish_sentences(true,complete,played/24);}
                 else {search.finish_with_progress(true, spoken.chars().count(), played as u64 / 24, sentence_spans(&synth, &progress).iter().any(|s| played >= s.end_samples));}
             }
-        } else {
+        } else if !was_feedback {
             self.pending_amend = Some(spoken);
         }
         self.paused = None;
@@ -2840,6 +2921,7 @@ impl Orchestrator {
                     self.echo_tts_text = format!("{}{synth}", self.echo_cur_filler);
                     self.echo_playout_end = Some(Instant::now());
                 }
+                if self.feedback_turn.take()==Some(id) {if let Some(l)=&mut self.listening{let _=l.runtime.feedback_done(id,l.runtime.now_ms());}}
                 self.agent_turn = None; // 任务已自然结束
                 // canary turn:Say 块里 playout_task.await 先于 PlayedOut,终态必已定格
                 self.try_flush_canary_metrics();
@@ -2852,7 +2934,7 @@ impl Orchestrator {
                 self.tele_text.clear();
                 self.set_state(AgentState::Listening);
                 // 2b §3.4:回复播完 → 追加设备短句(若 result 已到而当时回复在播)
-                if let Some(t) = self.deferred_say.take_on_played_out() {
+                if let Some(t) = self.deferred_say.take_on_played_out().filter(|_|!self.listening_active() && !self.device_reply_suppressed) {
                     info!(room = %self.room_name, "device reply appended after turn played out");
                     self.start_turn(TurnKind::Say(t));
                 }
@@ -2863,6 +2945,7 @@ impl Orchestrator {
     /// tick 唯一出口包装(B50 §4):`on_tick_inner` 有 8 条 return,把字幕裁决的落地放在这里,
     /// 任何一条 return 都绕不过去——将来新增 return 分支自动继承默认判决 Publish。
     async fn on_tick(&mut self) {
+        self.poll_listening();
         self.on_tick_inner().await;
         self.flush_caption_finals();
         let input_pending = self.search_user_speaking || !self.turn_gate.pending().is_empty()
@@ -2870,7 +2953,7 @@ impl Orchestrator {
         if let Some(search) = &mut self.search { search.observe_input(input_pending); }
         let safe = self.agent_turn.is_none() && self.state == AgentState::Listening
             && !self.search_user_speaking && self.turn_gate.pending().is_empty()
-            && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active();
+            && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active() && !self.listening_active();
         let speech = self.search.as_mut().and_then(|s| s.poll(safe));
         if self.search.as_mut().map(|s| s.take_revoked()).unwrap_or(false) && self.search_turn {
             self.hard_abort_current();
@@ -2940,6 +3023,7 @@ impl Orchestrator {
     }
 
     async fn on_tick_inner(&mut self) {
+        if self.listening_active(){self.publish_agent_progress();return;}
         // One-shot v0.3:有序 PCM 代次超时(begin 后无 end)→ 整代失败终态
         if self.ordered.is_some() {
             let now_ms = unix_ms_now();
@@ -3575,8 +3659,21 @@ impl Orchestrator {
     }
 
     fn start_turn(&mut self, kind: TurnKind) {
-        let record_history = !matches!(&kind, TurnKind::BackgroundSay(_) | TurnKind::BackgroundClip(..));
-        self.search_turn = !record_history;
+        use crate::listening_runtime::OutputPurpose;
+        let is_feedback=matches!(&kind,TurnKind::ListeningFeedback(_));
+        if self.listening.as_ref().is_some_and(|l|!l.runtime.capture_is_drained()) {
+            self.listening_deferred_turn=Some(kind);return;
+        }
+        if self.listening_active() && !is_feedback{return;}
+        let purpose=if is_feedback{OutputPurpose::Feedback}else if matches!(&kind,TurnKind::BackgroundSay(_)|TurnKind::BackgroundClip(..)){OutputPurpose::Search}else{OutputPurpose::Ordinary};
+        let proposed=self.next_turn_id+1;
+        let permit=if let Some(l)=&mut self.listening {
+            if is_feedback && l.runtime.begin_feedback(l.runtime.snapshot().epoch,proposed,l.runtime.now_ms()).is_err(){return;}
+            let p=l.runtime.output_permit(purpose,proposed,l.runtime.now_ms());if p.is_none(){return;}p
+        }else{if is_feedback{return;}None};
+        if is_feedback {self.feedback_turn=Some(proposed);}
+        let record_history = !matches!(&kind, TurnKind::BackgroundSay(_) | TurnKind::BackgroundClip(..) | TurnKind::ListeningFeedback(_));
+        self.search_turn = matches!(&kind,TurnKind::BackgroundSay(_)|TurnKind::BackgroundClip(..));
         // 回声对撞:记录本 turn 的 filler 文案(Say/无 filler 轮清空)——synth_text 只有 TTS 正文,
         // filler 是预合成 pcm 直接入轨,不经它,得单独暂存才能参与对撞
         self.echo_cur_filler = match &kind {
@@ -3615,7 +3712,7 @@ impl Orchestrator {
             None => pcm_rx,
         };
         let (playout_task, ctl) =
-            playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
+            playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id, permit);
         let search_progress=if let TurnKind::BackgroundSay(text)=&kind {if self.search.as_ref().is_some_and(|s|s.sentence_progress_enabled()){Some(Arc::new(StdMutex::new(crate::search_progress::SearchProgress::new(text))))}else{None}}else{None};
         let search_progress_task=search_progress.clone();
         let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
@@ -3719,7 +3816,7 @@ impl Orchestrator {
                     }
                     drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
-                TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
+                TurnKind::Say(text) | TurnKind::BackgroundSay(text) | TurnKind::ListeningFeedback(text) => {
                     match tts_cfg
                         .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
                         .await
@@ -3935,7 +4032,7 @@ impl Orchestrator {
 
 // Forced job abort/panic is the fallback path: never detach a talking turn or
 // lose the final conservative cursor merely because run_pipeline did not return.
-impl Drop for Orchestrator {fn drop(&mut self){if self.search.is_some(){self.hard_abort_current();if let Some(search)=&mut self.search{search.close();}}}}
+impl Drop for Orchestrator {fn drop(&mut self){if self.listening.is_some(){self.hard_abort_current();self.clear_listening_pending();}if self.search.is_some(){self.hard_abort_current();if let Some(search)=&mut self.search{search.close();}}}}
 
 /// 已播样本数 → 真实说出的文本(整句边界 + 句内按样本比例折算字符,截断历史用)。
 fn truncate_spoken(synth: &str, progress: &[(usize, u64)], played_samples: u64) -> String {

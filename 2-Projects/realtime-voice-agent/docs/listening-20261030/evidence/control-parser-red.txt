@@ -1,0 +1,19 @@
+running 1 test
+test control::listening_tests::listening_control_commands_reach_the_authenticated_pipeline_adapter ... FAILED
+
+failures:
+
+---- control::listening_tests::listening_control_commands_reach_the_authenticated_pipeline_adapter stdout ----
+
+thread 'control::listening_tests::listening_control_commands_reach_the_authenticated_pipeline_adapter' (2770498) panicked at src/control.rs:878:13:
+missing listening.enter
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    control::listening_tests::listening_control_commands_reach_the_authenticated_pipeline_adapter
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 463 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`
+
