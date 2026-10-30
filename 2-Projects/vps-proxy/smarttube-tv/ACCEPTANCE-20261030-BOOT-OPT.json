@@ -1,0 +1,429 @@
+{
+  "status": "Deployed; one authorized software reboot passed with no retry",
+  "source_commit": "90ef15ccebdd069a8c4a42622a73793cc9abc49f",
+  "before_ready_seconds": 204.19,
+  "after_ready_seconds": 77.3,
+  "reduction_percent": 62.14,
+  "lock_regression": {
+    "before": {
+      "verify_rc": 0,
+      "install_rc_while_locked": 1,
+      "install_rc_after_release": 0
+    },
+    "after": {
+      "verify_rc": 0,
+      "install_rc_while_locked": 0,
+      "install_rc_after_release": 0
+    },
+    "device": "Actual Android Magisk BusyBox lock; healthy live firewall; holder sleeps 4s; no firewall changes"
+  },
+  "local_assertions": 69,
+  "deployment": {
+    "before": {
+      "boot": "4915630e-f955-48a0-a4b3-67e711d41194",
+      "foreground": "mResumedActivity: ActivityRecord{2edbd8d u0 com.player.diyp2020/com.player.activity.PlayerActivity t5092}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 19840,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 9821,
+          "startticks": "8882"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 10430,
+          "startticks": "9509"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 11117,
+          "startticks": "10163"
+        },
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 15997,
+          "startticks": "19941"
+        }
+      }
+    },
+    "after": {
+      "boot": "4915630e-f955-48a0-a4b3-67e711d41194",
+      "foreground": "mResumedActivity: ActivityRecord{2edbd8d u0 com.player.diyp2020/com.player.activity.PlayerActivity t5092}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 19909,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 9821,
+          "startticks": "8882"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 10430,
+          "startticks": "9509"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 11117,
+          "startticks": "10163"
+        },
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 15997,
+          "startticks": "19941"
+        }
+      }
+    },
+    "old_sha": "79808bef5532521e62d489f17662fcf3842353a09ee6a447cb941fe4b303d7c2",
+    "new_sha": "1d6095450accfb5b1dd4fd64d45e6bce87a9cff418b9242cb68e6541f7aeb5a4",
+    "backup": "/data/adb/video-proxy/backup-dns-lock-20261030",
+    "firewall_unchanged": true,
+    "proxy_processes_unchanged": true
+  },
+  "reboot": {
+    "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+    "uptime": "80.28",
+    "logs": {
+      "boot-start.log": [
+        "2026-10-30T01:42:33Z boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=53.57 android_boot_complete",
+        "2026-10-30T01:42:38Z boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=54.15 clock_verified",
+        "2026-10-30T01:42:57Z boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=73.98 dns_queries_verified",
+        "2026-10-30T01:43:00Z boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=76.95 dns_caches_flushed",
+        "2026-10-30T01:43:01Z boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=77.30 dns_takeover_ready"
+      ],
+      "dns-guard.log": [
+        "boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=8.17 rules_installed",
+        "boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=8.37 rules_installed",
+        "boot=cc87426c-5bc4-4fb8-a62f-01a6d5f208e4 uptime=77.88 startup_audit_ready"
+      ]
+    },
+    "ready": true,
+    "snapshot": {
+      "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+      "foreground": "mResumedActivity: ActivityRecord{9e9a12c u0 com.player.diyp2020/com.player.activity.PlayerActivity t5094}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 1027,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 8491,
+          "startticks": "5951"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 8533,
+          "startticks": "5985"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 9089,
+          "startticks": "6620"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 9654,
+          "startticks": "7171"
+        }
+      }
+    }
+  },
+  "production": {
+    "results": [
+      {
+        "family": "v4",
+        "port": 19102,
+        "target": "egress",
+        "rc": 0,
+        "response": "200 13 0.966049",
+        "valid": true
+      },
+      {
+        "family": "v4",
+        "port": 19102,
+        "target": "youtube",
+        "rc": 0,
+        "response": "200 957879 8.310040",
+        "valid": true
+      },
+      {
+        "family": "v4",
+        "port": 19102,
+        "target": "payload1m",
+        "rc": 0,
+        "response": "200 1048576 7.500502",
+        "valid": true
+      },
+      {
+        "family": "v4",
+        "port": 19111,
+        "target": "production-dot",
+        "valid": true,
+        "answer_count": 8,
+        "seconds": 0.839
+      },
+      {
+        "family": "v6",
+        "port": 19105,
+        "target": "egress",
+        "rc": 0,
+        "response": "200 13 1.092463",
+        "valid": true
+      },
+      {
+        "family": "v6",
+        "port": 19105,
+        "target": "youtube",
+        "rc": 0,
+        "response": "200 1011865 8.157961",
+        "valid": true
+      },
+      {
+        "family": "v6",
+        "port": 19105,
+        "target": "payload1m",
+        "rc": 0,
+        "response": "200 1048576 7.531613",
+        "valid": true
+      },
+      {
+        "family": "v6",
+        "port": 19113,
+        "target": "production-dot",
+        "valid": true,
+        "answer_count": 8,
+        "seconds": 0.902
+      }
+    ],
+    "all_requests_passed": true,
+    "files": [
+      {
+        "path": "config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "video-boot-start.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/main-config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/active-main.sha256",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/release-id",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/enabled",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/manifest.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/service.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/video-boot-start.next.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/guard.dex",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/guard-config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/guard-observe.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/workers/rack/config.json",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "youtube-failover/workers/rack/config.sha256",
+        "sha_matches": true,
+        "mode_matches": true
+      },
+      {
+        "path": "video-dns-service-start.sh",
+        "sha_matches": true,
+        "mode_matches": true
+      }
+    ],
+    "external_assets": {
+      "/data/adb/video-proxy/video-dns-guard.sh": true,
+      "/data/adb/post-fs-data.d/video-dns-guard.sh": true,
+      "/data/adb/service.d/video-proxy.sh": true
+    },
+    "before": {
+      "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+      "foreground": "mResumedActivity: ActivityRecord{9e9a12c u0 com.player.diyp2020/com.player.activity.PlayerActivity t5094}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 1173,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 8491,
+          "startticks": "5951"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 8533,
+          "startticks": "5985"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 9089,
+          "startticks": "6620"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 9654,
+          "startticks": "7171"
+        }
+      }
+    },
+    "after": {
+      "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+      "foreground": "mResumedActivity: ActivityRecord{9e9a12c u0 com.player.diyp2020/com.player.activity.PlayerActivity t5094}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 2135,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 8491,
+          "startticks": "5951"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 8533,
+          "startticks": "5985"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 9089,
+          "startticks": "6620"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 9654,
+          "startticks": "7171"
+        }
+      }
+    },
+    "selected": {
+      "youtube-video": "yt-zgo-reality",
+      "dns-uplink": "dns-rack-reality",
+      "zgo-video": "zgo-hy2"
+    },
+    "guard_check": {
+      "config_valid": true,
+      "candidate_count": 5,
+      "dns_candidate_count": 3,
+      "authorized": true,
+      "dry_run": false,
+      "markers": {
+        "enabled": "valid_permissions",
+        "boot_guard": "valid_permissions",
+        "release_id": "valid_permissions"
+      }
+    },
+    "dns_guard": "",
+    "dns5354": "DNS_OK 142.251.152.4",
+    "transaction": "dns_upgrade_verified_read_only",
+    "maintenance_lock": "0",
+    "app_pid": "4179",
+    "zgo_worker_unchanged": true,
+    "boot_unchanged": true
+  },
+  "final": {
+    "snapshot": {
+      "boot": "cc87426c-5bc4-4fb8-a62f-01a6d5f208e4",
+      "foreground": "mResumedActivity: ActivityRecord{9e9a12c u0 com.player.diyp2020/com.player.activity.PlayerActivity t5094}",
+      "decoders": [
+        {
+          "frame width": 1920,
+          "frame height": 1080,
+          "frame count": 2027,
+          "drop count": 0,
+          "fra err count": 0,
+          "hw err count": 0
+        }
+      ],
+      "processes": {
+        "sing-box run -c /data/adb/video-proxy/config.json": {
+          "pid": 8491,
+          "startticks": "5951"
+        },
+        "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": {
+          "pid": 8533,
+          "startticks": "5985"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": {
+          "pid": 9089,
+          "startticks": "6620"
+        },
+        "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": {
+          "pid": 9654,
+          "startticks": "7171"
+        }
+      }
+    },
+    "counts": {
+      "sing-box run -c /data/adb/video-proxy/config.json": 1,
+      "app_process /system/bin YoutubeFailover /data/adb/video-proxy/youtube-failover/guard-config.json": 1,
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/rack/config.json": 1,
+      "sing-box run -c /data/adb/video-proxy/youtube-failover/workers/zgo/config.json": 1
+    },
+    "clock_delta_s": 0
+  },
+  "limitations": [
+    "One software reboot, not physical power-cycle endurance",
+    "SmartTube/Netflix actual playback not tested; DIYP live TV automatically restored",
+    "Long-term performance and repeat startup distributions not measured",
+    "128KiB/s test cap, not peak speed"
+  ]
+}

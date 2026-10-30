@@ -6,6 +6,7 @@ missing NAT, lost/reordered netd hooks, installation barriers and startup retrie
 It is not a substitute for cold-boot observation on the actual Android image.
 """
 import importlib.util
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -204,6 +205,17 @@ def standalone(root):
           'ordinary Android netd socket marks do not acquire the explicit 255 bypass')
     before=state(p); count=len(mutations(p))
     check(run(p).returncode==0 and state(p)==before and len(mutations(p))==count,'healthy repeated install performs zero firewall mutations')
+    # Real flock contention, not a fake successful lock command: reproduce the
+    # Android watcher/boot race with protection intact, then with a lost hook.
+    with (p/'device'/'dns-guard.lock').open('a') as held:
+        fcntl.flock(held, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        check(run(p).returncode==0 and state(p)==before and len(mutations(p))==count,
+              'healthy rules pass while another installer holds the real lock')
+        broken=state(p); broken['iptables:nat']['OUTPUT']=[]; save(p,broken)
+        check(run(p).returncode!=0 and state(p)==broken and len(mutations(p))==count,
+              'missing protection with a busy lock fails closed without unlocked mutations')
+    check(run(p).returncode==0 and run(p,'--verify').returncode==0,
+          'missing hook repairs after the competing lock owner releases')
     # A netd rebuild may remove output hooks while custom chains remain.
     s=state(p)
     for chains in s.values(): chains['OUTPUT']=[]

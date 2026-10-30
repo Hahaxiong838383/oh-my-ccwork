@@ -98,8 +98,24 @@ install() {
 case "$mode" in
   --verify) verify ;;
   --install)
+    # A busy installer is not proof of broken protection. The startup watcher
+    # and boot worker call this concurrently; failing flock on already-correct
+    # rules used to make the boot worker kill a healthy proxy and sleep 30s.
+    # Keep the next-boot barrier above, and require the full ordered-rule check.
+    if verify; then exit 0; fi
     # post-fs-data must never block Magisk on network or an xtables lock.
     "$BB" timeout 8 "$BB" flock -n "$D/dns-guard.lock" "$BB" sh "$0" --install-locked
+    rc=$?
+    if [ "$rc" -ne 0 ]; then
+      # Another installer may have finished after our initial check. Never
+      # infer success from the lock result: re-read all hooks and rule prefixes.
+      if verify; then
+        log "concurrent_install_verified rc=$rc"
+        exit 0
+      fi
+      log "install_failed_unverified rc=$rc"
+    fi
+    exit "$rc"
     ;;
   --install-locked)
     if verify; then exit 0; fi

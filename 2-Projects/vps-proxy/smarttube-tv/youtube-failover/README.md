@@ -1,6 +1,16 @@
 # YouTube / SmartTube 代理兜底
 
-## 2026-10-30 09:17 已激活 RackNerd 双栈
+## 2026-10-30 启动锁竞争优化（软件重启已验）
+
+用户手动开机后的新boot4915630e自动恢复耗时204.19秒；规则已有效时，两个启动检查入口并发执行`--install`，非阻塞flock失败可触发boot停主代理并等待30秒重试。真机对照：持锁4秒，旧版verify=0而install=1，释放后install=0。故障不是凭节点握手/下载速度推断。
+
+`video-dns-guard.sh --install`现在先做完整有序规则/首钩校验；有效则只读通过，缺失才进入原互斥修复。锁/timeout失败后再完整校验一次；仍不满足则记录返回码并失败，既不无锁改规则，也不因锁忙放行坏保护。同boot安装屏障保持。外部脚本及`boot-assets-current.json`同步，15文件事务/config/release均不改；回滚备份在设备`/data/adb/video-proxy/backup-dns-lock-20261030`。
+
+69项保护/boot回归通过，新增真实flock竞争的有效规则正锚、缺钩负锚和释放后恢复；Android同一持锁复现修正为verify=0/install=0。授权软件重启boot`cc87426c-5bc4-4fb8-a62f-01a6d5f208e4`：8.17秒保护，54.15秒校时，73.98秒真实DNS查询，77.30秒完整缓存/DNS就绪，77.88秒审计结束，无retry/failure事件。相比204.19秒缩短62.14%；Android启动及既有完整性预检、worker启动仍有耗时，不能承诺每次固定77秒。
+
+主代理/guardian/两worker各唯一；重启后v4/v6生产出口、YouTube有效正文、完整1MiB和真实DoT通过，5354正常，15文件SHA/权限一致。DIYP1080p直播自动恢复且帧持续增长/drop/error0。未操作SmartTube/Netflix，实播仍未验；本次软件重启不能替代新版实际拔电与长期稳定性验证。原始脱敏证据`/tmp/tv-boot-opt-20261030/`，项目归档见mycc的同日启动优化报告。
+
+## 历史：2026-10-30 09:17 已激活 RackNerd 双栈
 
 15文件事务已应用，release `5618bda5a8bfe4f1b15bbf66669801df5df2d226d4a772a74eea3ac0f2b62e65`，
 config SHA `d2fab1002448987d5e8fd2ac647aeb1acfa2330c5dfaa985af1266c8f73a8f6e`。

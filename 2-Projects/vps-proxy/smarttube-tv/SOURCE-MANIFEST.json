@@ -2,7 +2,7 @@
   "schema_version": 2,
   "created": "2026-10-30",
   "source_root": "~/home-lan/4-Assets/Code",
-  "source_commit": "0620d3f6839388ade3471e3cebcc8469dc110041",
+  "source_commit": "90ef15ccebdd069a8c4a42622a73793cc9abc49f",
   "mode_note": "git_mode preserves executable bit; clone permissions depend on umask",
   "files": [
     {
@@ -103,8 +103,8 @@
     },
     {
       "path": "youtube-failover/README.md",
-      "sha256": "63d54a6dd2e5e0cad8f7e5417c4d291e30b5c66949199df0803a3b1c1adf7de2",
-      "bytes": 24342,
+      "sha256": "5c326ae97e920d52fca536429bb6c5fc90e150723fb972ab584c8b8523c35823",
+      "bytes": 26162,
       "git_mode": "100644"
     },
     {
@@ -223,8 +223,8 @@
     },
     {
       "path": "youtube-failover/test_dns_guard.py",
-      "sha256": "3b754b0ccb15c994b676ff6ad5957216205d24bbbc0f1b5dadbd2942e0743cdb",
-      "bytes": 19046,
+      "sha256": "6ffcc334829877af12ac5b18ee7b1adba07a7cdec8076a730f574ee353947657",
+      "bytes": 19896,
       "git_mode": "100644"
     },
     {
@@ -277,8 +277,8 @@
     },
     {
       "path": "youtube-failover/video-dns-guard.sh",
-      "sha256": "79808bef5532521e62d489f17662fcf3842353a09ee6a447cb941fe4b303d7c2",
-      "bytes": 5527,
+      "sha256": "1d6095450accfb5b1dd4fd64d45e6bce87a9cff418b9242cb68e6541f7aeb5a4",
+      "bytes": 6230,
       "git_mode": "100644"
     },
     {
@@ -312,5 +312,5 @@
       "git_mode": "100755"
     }
   ],
-  "release_status": "Rack dualstack activated and production IPv4/IPv6/DNS verified; next coldboot and SmartTube playback pending"
+  "release_status": "Rack dualstack and DNS lock contention fix active; software reboot ready in 77.30s; SmartTube playback and physical power-cycle pending"
 }
