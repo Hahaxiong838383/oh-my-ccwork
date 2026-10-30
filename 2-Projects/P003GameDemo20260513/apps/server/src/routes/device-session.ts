@@ -9,6 +9,7 @@ import { configStore, type RuntimeFlag } from '../config-store.js';
 import { searchCanarySelection } from '../search-canary-runtime.js';
 import { searchDeviceAllowed } from '../tools/search-runtime.js';
 import { captureDeviceLocation } from '../tools/device-location-runtime.js';
+import { issueSessionListening } from '../listening-runtime.js';
 
 /**
  * P003 S2-B1 设备 Session API（codex 联调合同：CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
@@ -338,6 +339,9 @@ deviceSessionRoute.post('/session', async (c) => {
     : Math.floor(Date.now() / 1000) + conf.ttlS;
   const sessionId = randomUUID();
   const prefetchId = typeof body.prefetch_id === 'string' ? body.prefetch_id : undefined;
+  const listening = await issueSessionListening({sn:sn as string,room:roomName,session_id:sessionId,trace_id:traceId,
+    agent:agentName,supports,source:canary.canary?'search_canary':'normal',expires_at_ms:expSec*1000,
+    source_cutoff_ms:canary.canary?canary.expiresAtMs:expSec*1000,credential:c.req.header('authorization')??''});
 
   const token = await new SignJWT({
     video: {
@@ -361,6 +365,7 @@ deviceSessionRoute.post('/session', async (c) => {
             session_id: sessionId,
             issue_ts_ms: Date.now(),
             filler_policy: fillerPolicyFor(sn),
+            ...(listening ? { listening } : {}),
             ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),
             // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
             ...(contract
@@ -390,6 +395,8 @@ deviceSessionRoute.post('/session', async (c) => {
     expected_agent_name: agentName,
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,
+    ...(listening ? {listening_contract:{version:1,capability:'listening_mode_v1',policy_revision:listening.snapshot.revision,
+      scenes:listening.snapshot.scenes,tuning:listening.snapshot.tuning,expires_at_ms:listening.grant_expires_at_ms}} : {}),
   };
 
   try {

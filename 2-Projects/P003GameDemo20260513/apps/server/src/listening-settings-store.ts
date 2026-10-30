@@ -5,6 +5,7 @@ import { defaultListeningConfig, parseListeningConfig, parseListeningEditable, L
 interface Stored { revision: number; value_json: string; updated_at: number; updated_by: string }
 export class ListeningSettingsStore {
   private db: DatabaseSync;
+  private sourceWatch = false;
   constructor(path: string) {
     mkdirSync(dirname(resolve(path)), { recursive: true });
     this.db = new DatabaseSync(path);
@@ -23,6 +24,29 @@ export class ListeningSettingsStore {
   }
   history() {
     return this.db.prepare('SELECT revision,operation,actor,at FROM listening_settings_audit ORDER BY revision DESC LIMIT 20').all();
+  }
+  /** Audit is authoritative even when an off→on edit fits between two lease polls. */
+  restrictedSince(revision:number,sn:string,scene:string) {
+    const rows=this.db.prepare('SELECT revision,after_json FROM listening_settings_audit WHERE revision>? ORDER BY revision').all(revision) as unknown as {revision:number;after_json:string}[];
+    let expected=revision+1;
+    for(const row of rows){let config:ListeningConfig|null=null;try{config=parseListeningConfig(JSON.parse(row.after_json));}catch{/* fail closed */}
+      if(row.revision!==expected++||!config||config.revision!==row.revision)throw new ListeningConfigError('corrupt_config');
+      if(!config.enabled||!config.allowlist.includes(sn)||!config.scenes.includes(scene as any))return true;
+    }
+    if(this.read().config.revision!==expected-1)throw new ListeningConfigError('corrupt_config');return false;
+  }
+  /** Metadata-only generation: any candidate authorization edit requires a fresh RTC grant. */
+  sourceGeneration() {
+    if(!this.sourceWatch){this.db.exec(`CREATE TABLE IF NOT EXISTS listening_source_meta(id INTEGER PRIMARY KEY CHECK(id=1),generation INTEGER NOT NULL);
+      INSERT OR IGNORE INTO listening_source_meta VALUES(1,0);`);
+      for(const operation of ['INSERT','UPDATE','DELETE']){const row=operation==='DELETE'?'OLD':'NEW';
+        this.db.exec(`CREATE TRIGGER IF NOT EXISTS listening_source_${operation.toLowerCase()} AFTER ${operation} ON runtime_flag
+          WHEN ${row}.key IN ('p003.search.canary.enabled','p003.search.canary.allowlist','p003.search.canary.expires_at_ms','p003.search.canary.agent')
+          BEGIN UPDATE listening_source_meta SET generation=generation+1 WHERE id=1;END;`);
+      }this.sourceWatch=true;
+    }
+    const row=this.db.prepare('SELECT generation FROM listening_source_meta WHERE id=1').get() as any;
+    if(!Number.isSafeInteger(row?.generation)||row.generation<0)throw new ListeningConfigError('corrupt_config');return row.generation as number;
   }
   view() { return this.transaction(() => ({ ...this.read(), history: this.history() }), false); }
   private transaction<T>(fn: () => T, write = true): T {

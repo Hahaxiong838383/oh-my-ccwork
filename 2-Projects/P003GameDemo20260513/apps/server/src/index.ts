@@ -29,6 +29,9 @@ import { checkAndCount, getClientIp } from './guard.js';
 import { verifyAuthToken, type AuthContext } from './auth-jwt.js';
 import { searchTaskRoute } from './tools/search-runtime.js';
 import { searchAdminRoute } from './routes/search-admin.js';
+import { createListeningRoute,createLazyListeningRoute } from './routes/listening.js';
+import { getListeningAuthority } from './listening-runtime.js';
+import { generateListeningContent,readListeningPersonality } from './listening-content.js';
 
 const app = new Hono();
 const port = Number(process.env.PORT ?? 8787);
@@ -66,6 +69,7 @@ app.route('/api/parent/pairing', parentPairingRoute);
 app.route('/v1', customLlmRoute);
 // Default-off independent background jobs; ordinary chat never awaits these requests.
 app.route('/v1/internal/search-tasks', searchTaskRoute);
+app.route('/v1/internal/listening', createLazyListeningRoute(()=>createListeningRoute(getListeningAuthority(), {generate:generateListeningContent,personality:readListeningPersonality})));
 
 // admin 静态兜底（本地 dev 同源 E2E 用；生产 nginx 直接 serve public/admin，不会走到这里）。
 app.use('/admin/*', serveStatic({ root: '../web/public' }));

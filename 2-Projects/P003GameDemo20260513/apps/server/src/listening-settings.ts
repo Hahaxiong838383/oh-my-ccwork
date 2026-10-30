@@ -55,11 +55,3 @@ export function parseListeningConfig(value: unknown): ListeningConfig | null {
 export function listeningPolicyFromConfig(config: ListeningConfig): ListeningSettings {
   return { version: config.revision, enabled: config.enabled, allowlist: [...config.allowlist] };
 }
-export function listeningRuntimeStatus() {
-  // There is deliberately no env/UI override claiming a Worker has applied this configuration.
-  // Replace with authoritative readiness + acknowledgement evidence during runtime integration.
-  return { status: 'not_integrated', ready: false, effective_enabled: false,
-    applied_revision: null, active_sessions: null, last_ack_at: null,
-    message: '倾听运行链路尚未接入；可预先保存参数，当前不能开启总闸。',
-    parameter_effect: '接入后，新进入的倾听会话使用参数快照；关闭总闸、移出名单或禁用场景经短租约撤权。' };
-}
