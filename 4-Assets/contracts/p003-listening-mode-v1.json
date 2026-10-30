@@ -1,0 +1,175 @@
+{
+  "id": "p003-listening-mode-v1",
+  "version": 1,
+  "status": "implementation-contract-not-released",
+  "topic": "control",
+  "delivery": "reliable-ordered",
+  "capability": "listening_mode_v1",
+  "scenes": [
+    "story",
+    "sharing",
+    "singing"
+  ],
+  "states": [
+    "normal",
+    "entering",
+    "listening",
+    "feedback_reserved",
+    "feedback_active",
+    "paused"
+  ],
+  "commands": {
+    "listening.enter": {
+      "version": 1,
+      "request_id": "<trace_id>:<seq>",
+      "scene": "story|sharing|singing",
+      "mode_epoch": "current server epoch; initial normal epoch is 0"
+    },
+    "listening.local_ready": {
+      "version": 1,
+      "request_id": "<trace_id>:<seq>",
+      "mode_epoch": "server epoch from enter.received"
+    },
+    "listening.feedback": {
+      "version": 1,
+      "request_id": "<trace_id>:<seq>",
+      "mode_epoch": "current server epoch"
+    },
+    "listening.exit": {
+      "version": 1,
+      "request_id": "<trace_id>:<seq>",
+      "mode_epoch": "current server epoch"
+    },
+    "listening.state": {
+      "version": 1,
+      "request_id": "<trace_id>:<seq>"
+    }
+  },
+  "sequence": {
+    "min": 1,
+    "max": 9007199254740991,
+    "scope": "job trace; monotonically increasing; deterministic request_id",
+    "duplicates": "same accepted seq and identical payload: return current state, no action; changed payload: reject; old evicted seq: reject, query state with a new seq"
+  },
+  "authorization": [
+    "actual LiveKit participant equals expected dev-SN",
+    "trace/session equals signed metadata",
+    "capability and current main-Brain lease",
+    "strict worker service auth plus bound grant for internal HTTP"
+  ],
+  "entry_completion": [
+    "new output disabled",
+    "old capture tasks drained and Worker queue cleared",
+    "Android confirms local prompts and playback queues stopped"
+  ],
+  "feedback": {
+    "lifecycle": [
+      "reserved",
+      "active(turn_id)",
+      "spent|cancelled"
+    ],
+    "one_turn": true,
+    "filler": false,
+    "resume_listening_on": [
+      "completed",
+      "failed",
+      "interrupted"
+    ],
+    "singing_trigger": "button only in P0",
+    "user_speaking": "reject request while input active; new speech revokes reserved/active permit; speech_end never resumes cancelled output"
+  },
+  "lease": {
+    "refresh_ms": 5000,
+    "request_budget_ms": 1000,
+    "max_ttl_ms": 15000,
+    "revoke_target_ms": 16000,
+    "failure": "do not extend; pause silently on expiry; old session closes before ordinary new session"
+  },
+  "limits": {
+    "session_ms": 1800000,
+    "raw_chars": 12000,
+    "recent_chars": 4000,
+    "summary_chars": 1200,
+    "trace_ascii_chars": 64,
+    "request_id_chars": 96
+  },
+  "privacy": {
+    "auto_long_term_memory": false,
+    "auto_traits": false,
+    "raw_audio_capture": false
+  },
+  "default_enabled": false,
+  "empty_allowlist": "disabled",
+  "examples": [
+    {
+      "trace_id": "trace-test-1",
+      "ts_ms": 0,
+      "src": "android",
+      "type": "listening.enter",
+      "seq": 1,
+      "payload": {
+        "version": 1,
+        "request_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 0
+      }
+    },
+    {
+      "trace_id": "trace-test-1",
+      "ts_ms": 0,
+      "src": "android",
+      "type": "listening.local_ready",
+      "seq": 2,
+      "payload": {
+        "version": 1,
+        "request_id": "trace-test-1:2",
+        "mode_epoch": 1
+      }
+    },
+    {
+      "trace_id": "trace-test-1",
+      "ts_ms": 0,
+      "src": "android",
+      "type": "listening.feedback",
+      "seq": 3,
+      "payload": {
+        "version": 1,
+        "request_id": "trace-test-1:3",
+        "mode_epoch": 1
+      }
+    }
+  ],
+  "ack": {
+    "type": "listening.ack",
+    "stages": [
+      "received",
+      "completed",
+      "rejected"
+    ],
+    "fields": [
+      "version",
+      "request_id",
+      "command_seq",
+      "stage",
+      "state",
+      "mode_epoch",
+      "scene",
+      "listening_id",
+      "duplicate",
+      "reason"
+    ],
+    "entry": "received is not ready; completed follows Worker drain plus Android local_ready; the completed entry ACK echoes original enter request_id/command_seq",
+    "state_query": "new seq; returns current snapshot, never consumes another speech permit",
+    "client_timeouts_ms": {
+      "received": 3000,
+      "completed": 5000
+    },
+    "timeout_action": "query state with a new seq; do not assume listening or resume local audio; close session if no trustworthy response"
+  },
+  "buffer": {
+    "retired_revision_records": 256,
+    "older_than_ledger": "conservative summary invalidation and explicit context gap",
+    "summary_reply": "bound to authenticated room/session/trace/listening_id plus retained ticket and buffer instance; stale reply rejected",
+    "gap": "true for source loss OR unsummarized prefix omitted from recent context; never infer uninterrupted complete recall"
+  }
+}
