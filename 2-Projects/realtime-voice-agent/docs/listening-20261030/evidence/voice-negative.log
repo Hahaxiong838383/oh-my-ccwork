@@ -1,0 +1,132 @@
+TEST_INPUT_MANIFEST_SHA256 75a6492a7c1865130cd3b610e014381e8da44b146a7a187b1183822f0b71a31b FILES 78
+REMOTE_LOG /data/p003-listening-worker-check-20261030-session39/voice/2-Projects/realtime-voice-agent/voice-red.log RC 101
+   Compiling voice-rust-worker v0.1.0 (/data/p003-listening-worker-check-20261030-session39/voice/2-Projects/realtime-voice-agent/rust-worker)
+warning: method `revoke` is never used
+   --> src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ method in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `text` is never used
+  --> src/listening_buffer.rs:43:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ method in this implementation
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: variant `Device` is never constructed
+  --> src/listening_runtime.rs:19:5
+   |
+15 | pub enum OutputPurpose {
+   |          ------------- variant in this enum
+...
+19 |     Device,
+   |     ^^^^^^
+   |
+   = note: `OutputPurpose` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: fields `voice_counter` and `last_voice` are never read
+  --> src/listening_adapter.rs:81:5
+   |
+56 | pub struct Adapter {
+   |            ------- fields in this struct
+...
+81 |     voice_counter: u64,
+   |     ^^^^^^^^^^^^^
+...
+88 |     last_voice: Option<(u64, crate::listening_voice::Intent)>,
+   |     ^^^^^^^^^^
+
+warning: method `chat` is never used
+   --> src/llm.rs:643:18
+    |
+589 | impl Llm {
+    | -------- method in this implementation
+...
+643 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 5 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7m 55s
+     Running unittests src/main.rs (/data/p003-listening-worker-check-20261030-session39/target/debug/deps/voice_rust_worker-595a24a3d3c9ed0c)
+
+running 14 tests
+test listening_adapter::tests::listening_voice_invitation_excludes_quotes_lyrics_and_ordinary_questions ... ok
+test pipeline::listening_voice_pipeline_tests::listening_voice_in_playback_or_just_ended_echo_cannot_propose_mode ... ok
+test control::listening_tests::listening_voice_proposal_echo_is_strict_and_never_an_android_seq ... ok
+test listening_adapter::adapter_tests::listening_voice_state_query_does_not_conflict_with_inflight_proposal ... FAILED
+test listening_adapter::adapter_tests::listening_voice_legacy_client_never_proposes_or_speaks_a_fake_entry ... FAILED
+test listening_adapter::adapter_tests::listening_voice_proposal_binds_sender_trace_epoch_and_payload_replay ... FAILED
+test listening_adapter::adapter_tests::listening_voice_proposal_timeout_pauses_and_cannot_voice_exit ... FAILED
+test listening_adapter::adapter_tests::listening_voice_missing_local_ready_overflow_and_expired_lease_stay_silent ... FAILED
+test listening_adapter::adapter_tests::listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output ... FAILED
+test listening_adapter::adapter_tests::listening_voice_final_before_vad_end_is_not_lost ... ok
+test listening_adapter::adapter_tests::listening_voice_invitation_preempts_inflight_summary ... ok
+test listening_adapter::adapter_tests::listening_voice_entry_retains_tail_and_transition_story_until_double_confirmation ... FAILED
+test listening_adapter::adapter_tests::listening_voice_singing_requires_pause_before_command_and_never_records_command ... FAILED
+test listening_adapter::adapter_tests::listening_voice_flag_and_singing_exclude_automatic_feedback ... ok
+
+failures:
+
+---- listening_adapter::adapter_tests::listening_voice_state_query_does_not_conflict_with_inflight_proposal stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_state_query_does_not_conflict_with_inflight_proposal' (2937823) panicked at src/listening_adapter.rs:1220:74:
+called `Option::unwrap()` on a `None` value
+
+---- listening_adapter::adapter_tests::listening_voice_legacy_client_never_proposes_or_speaks_a_fake_entry stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_legacy_client_never_proposes_or_speaks_a_fake_entry' (2937818) panicked at src/listening_adapter.rs:1156:46:
+called `Option::unwrap()` on a `None` value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- listening_adapter::adapter_tests::listening_voice_proposal_binds_sender_trace_epoch_and_payload_replay stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_proposal_binds_sender_trace_epoch_and_payload_replay' (2937820) panicked at src/listening_adapter.rs:1184:74:
+called `Option::unwrap()` on a `None` value
+
+---- listening_adapter::adapter_tests::listening_voice_proposal_timeout_pauses_and_cannot_voice_exit stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_proposal_timeout_pauses_and_cannot_voice_exit' (2937821) panicked at src/listening_adapter.rs:1160:69:
+called `Option::unwrap()` on a `None` value
+
+---- listening_adapter::adapter_tests::listening_voice_missing_local_ready_overflow_and_expired_lease_stay_silent stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_missing_local_ready_overflow_and_expired_lease_stay_silent' (2937819) panicked at src/listening_adapter.rs:1202:74:
+called `Option::unwrap()` on a `None` value
+
+---- listening_adapter::adapter_tests::listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output' (2937814) panicked at src/listening_adapter.rs:1212:52:
+called `Option::unwrap()` on a `None` value
+
+---- listening_adapter::adapter_tests::listening_voice_entry_retains_tail_and_transition_story_until_double_confirmation stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_entry_retains_tail_and_transition_story_until_double_confirmation' (2937813) panicked at src/listening_adapter.rs:1138:66:
+called `Option::unwrap()` on a `None` value
+
+---- listening_adapter::adapter_tests::listening_voice_singing_requires_pause_before_command_and_never_records_command stdout ----
+
+thread 'listening_adapter::adapter_tests::listening_voice_singing_requires_pause_before_command_and_never_records_command' (2937822) panicked at src/listening_adapter.rs:1175:94:
+assertion failed: a.pending_feedback.is_some()
+
+
+failures:
+    listening_adapter::adapter_tests::listening_voice_entry_retains_tail_and_transition_story_until_double_confirmation
+    listening_adapter::adapter_tests::listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output
+    listening_adapter::adapter_tests::listening_voice_legacy_client_never_proposes_or_speaks_a_fake_entry
+    listening_adapter::adapter_tests::listening_voice_missing_local_ready_overflow_and_expired_lease_stay_silent
+    listening_adapter::adapter_tests::listening_voice_proposal_binds_sender_trace_epoch_and_payload_replay
+    listening_adapter::adapter_tests::listening_voice_proposal_timeout_pauses_and_cannot_voice_exit
+    listening_adapter::adapter_tests::listening_voice_singing_requires_pause_before_command_and_never_records_command
+    listening_adapter::adapter_tests::listening_voice_state_query_does_not_conflict_with_inflight_proposal
+
+test result: FAILED. 6 passed; 8 failed; 0 ignored; 0 measured; 478 filtered out; finished in 0.10s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`

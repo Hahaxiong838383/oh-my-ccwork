@@ -1,0 +1,109 @@
+warning: methods `base_version`, `coverage`, and `segments` are never used
+  --> tests/../src/listening_buffer.rs:28:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ methods in this implementation
+27 |     /// Private summarizer input. Never log this text.
+28 |     pub fn base_version(&self) -> u64 {
+   |            ^^^^^^^^^^^^
+...
+31 |     pub fn coverage(&self) -> Vec<(u64, u64)> {
+   |            ^^^^^^^^
+...
+37 |     pub fn segments(&self) -> Vec<(u64, u64, String)> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: methods `input_active`, `pause_pending_entry`, `pause_unavailable`, `configure`, `reserve_voice_feedback`, and `cancel_feedback` are never used
+   --> tests/../src/listening_mode.rs:304:12
+    |
+84  | impl ListeningMode {
+    | ------------------ methods in this implementation
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+318 |     pub fn pause_pending_entry(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+321 |     pub fn pause_unavailable(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+326 |     pub fn configure(&mut self, session_ms: u64, duration_ms: u64, cooldown_ms: u64) {
+    |            ^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: method `as_str` is never used
+   --> tests/../src/listening_mode.rs:379:12
+    |
+378 | impl Scene {
+    | ---------- method in this implementation
+379 |     pub fn as_str(self) -> &'static str {
+    |            ^^^^^^
+
+warning: 3 warnings emitted
+
+
+running 29 tests
+test bad_lease_deadlines_and_old_epoch_ready_are_rejected ... ok
+test buffer_bounds_unicode_by_chars_and_marks_content_loss ... ok
+test buffer_revisions_replace_instead_of_append_and_duplicates_are_ignored ... ok
+test clipped_source_retransmission_is_still_a_duplicate ... ok
+test disabled_has_no_entry_or_automatic_speech_policy_change ... ok
+test duplicates_do_not_grant_another_feedback_and_changed_payload_is_rejected ... ok
+test empty_and_invalid_limits_do_not_create_fake_story_content ... ok
+test enter_needs_both_capture_drain_and_android_ready_in_either_order ... ok
+test evicted_old_sequence_cannot_execute_again ... ok
+test expired_lease_closes_output_even_before_tick_and_never_returns_to_chat ... ok
+test explicit_exit_clears_scene_and_invalidates_prior_audio_epoch ... ok
+test feedback_permit_is_consumed_once_and_frames_require_the_active_turn ... ok
+test late_feedback_from_a_previous_epoch_cannot_start_another_reply ... ok
+test new_feedback_requires_speech_end_and_old_entry_cannot_reenter ... ok
+test maximum_session_deadline_pauses_even_if_lease_was_refreshed ... ok
+test new_speech_cancels_reserved_or_playing_feedback_and_never_resumes_it ... ok
+test oversized_summary_is_rejected_without_losing_source ... ok
+test renewal_after_expiry_cannot_hide_the_expired_interval ... ok
+test retransmitted_compacted_source_preserves_valid_summary ... ok
+test revoked_and_old_lease_versions_cannot_reenable_the_room ... ok
+test segment_gaps_and_same_revision_conflicts_are_visible ... ok
+test speech_started_before_request_prevents_feedback ... ok
+test state_queries_cannot_reopen_expired_modes_and_new_entry_cannot_erase_active_story ... ok
+test late_completion_cannot_acknowledge_listening_after_expiry ... ok
+test summary_cannot_cross_buffer_instances ... ok
+test summary_cannot_delete_revised_source_or_replace_a_newer_summary ... ok
+test summary_commits_only_the_frozen_prefix_and_keeps_new_tail ... ok
+test too_late_revision_invalidates_summary_instead_of_claiming_complete_memory ... ok
+test unsummarized_context_omission_is_visible ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+
+running 9 tests
+test entered_completion_waits_for_actual_inflight_capture_and_local_ready ... ok
+test feedback_is_one_turn_and_speechstart_revokes_every_later_frame ... ok
+test newer_normal_turn_revokes_old_turn_before_any_late_frame ... ok
+test ordinary_story_collection_preserves_buffer_and_never_creates_output_permission ... ok
+test real_participant_and_job_trace_are_required_before_mode_mutation ... ok
+test renewal_failure_and_entry_timeout_pause_without_chat_fallback ... ok
+test voice_transition_holds_normal_outputs_without_spending_android_epoch ... ok
+test snapshot_tuning_changes_duration_cooldown_and_session_deadline ... ok
+test voice_transition_timeout_cannot_resume_normal_chat ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+
+running 4 tests
+test explicit_first_utterance_selects_scene_and_preserves_immediate_story ... ok
+test feedback_and_exit_are_explicit_complete_phrases ... ok
+test interim_command_prefix_is_held_before_ordinary_speculation ... ok
+test lyrics_quotes_partial_requests_and_ordinary_questions_do_not_command ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

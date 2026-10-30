@@ -1,0 +1,51 @@
+TEST_INPUT_MANIFEST_SHA256 1da57c0cd3425bca2725e40eebd8b34eb1a66b3100be18ce26ab6735a89c4505 FILES 79
+REMOTE_LOG /data/p003-listening-worker-check-20261030-session39/voice/2-Projects/realtime-voice-agent/joint.log RC 0
+warning: method `revoke` is never used
+   --> src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ method in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `text` is never used
+  --> src/listening_buffer.rs:43:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ method in this implementation
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: variant `Device` is never constructed
+  --> src/listening_runtime.rs:19:5
+   |
+15 | pub enum OutputPurpose {
+   |          ------------- variant in this enum
+...
+19 |     Device,
+   |     ^^^^^^
+   |
+   = note: `OutputPurpose` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `chat` is never used
+   --> src/llm.rs:643:18
+    |
+589 | impl Llm {
+    | -------- method in this implementation
+...
+643 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 4 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 24s
+     Running unittests src/main.rs (/data/p003-listening-worker-check-20261030-session39/target/debug/deps/voice_rust_worker-595a24a3d3c9ed0c)
+
+running 2 tests
+test listening_adapter::http_joint_tests::listening_joint_real_brain_http_voice_singing_uses_negotiated_trigger_and_exit ... ok
+test listening_adapter::http_joint_tests::listening_joint_real_brain_http_entry_feedback_and_revocation ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 494 filtered out; finished in 0.46s
