@@ -24,6 +24,11 @@ impl Effects {
         }
     }
 }
+struct Proposal {
+    id: String,
+    action: Action,
+    deadline: u64,
+}
 struct Pending {
     cmd: Command,
     participant: String,
@@ -76,6 +81,15 @@ pub struct Adapter {
     entry_completed: bool,
     closing: bool,
     paused_reported: bool,
+    proposal: Option<Proposal>,
+    voice_counter: u64,
+    pending_story: Vec<String>,
+    pending_chars: usize,
+    speech_generation: u64,
+    had_speech_end: bool,
+    last_speech_end: Option<u64>,
+    speech_began_after_pause: bool,
+    last_voice: Option<(u64, crate::listening_voice::Intent)>,
 }
 impl Drop for Adapter {
     fn drop(&mut self) {
@@ -141,7 +155,156 @@ impl Adapter {
             entry_completed: false,
             closing: false,
             paused_reported: false,
+            proposal: None,
+            voice_counter: 0,
+            pending_story: vec![],
+            pending_chars: 0,
+            speech_generation: 0,
+            last_speech_end: None,
+            had_speech_end: false,
+            speech_began_after_pause: false,
+            last_voice: None,
         })
+    }
+    pub fn voice_available(&self) -> bool {
+        self.client
+            .meta
+            .voice_control
+            .as_ref()
+            .is_some_and(|v| v.version == 1 && v.capability == "listening_voice_control_v1")
+    }
+    fn pause_voice(&mut self, out: &mut Effects) {
+        self.runtime.pause_pending_entry();
+        self.proposal = None;
+        self.pending_story.clear();
+        self.pending_chars = 0;
+        self.cancel_content();
+        self.pending_feedback = None;
+        out.stopped = true;
+    }
+    fn queue_story(&mut self, text: &str) {
+        if text.trim().is_empty() {
+            return;
+        }
+        let size = text.chars().count();
+        if self.pending_chars.saturating_add(size) > 12000 {
+            // Fail closed rather than silently lose pre-entry context or allocate unbounded memory.
+            self.runtime.pause_pending_entry();
+            self.pending_story.clear();
+            self.pending_chars = 0;
+            return;
+        }
+        self.pending_chars += size;
+        self.pending_story.push(text.to_owned());
+    }
+    /// Only final STT commits commands; this never fabricates an Android sequence.
+    pub fn voice_text(&mut self, text: &str) -> Option<Effects> {
+        use crate::listening_voice::{Intent, parse};
+        let utterance = parse(text)?;
+        let mut out = Effects::new();
+        // Explicit unsupported commands are consumed silently: no false success from ordinary LLM.
+        if !self.voice_available() {
+            return Some(out);
+        }
+        let now = self.runtime.now_ms();
+        self.runtime.tick(now);
+        let state = self.runtime.snapshot();
+        if state.phase == Phase::Paused
+            || self.client.meta.grant_expires_at_ms <= listening_http::unix_ms()
+        {
+            return Some(out);
+        }
+        if self.last_voice.as_ref() == Some(&(self.speech_generation, utterance.intent.clone())) {
+            return Some(out);
+        }
+        self.last_voice = Some((self.speech_generation, utterance.intent.clone()));
+        match utterance.intent {
+            Intent::Feedback { singing_only } => {
+                if state.phase != Phase::Listening
+                    || !self.policy.tuning.voice_invitation_enabled
+                    || self.pending_feedback.is_some()
+                {
+                    return Some(out);
+                }
+                if state.scene == Some(Scene::Singing)
+                    && (!singing_only || !self.speech_began_after_pause)
+                {
+                    return Some(out);
+                }
+                if singing_only && state.scene != Some(Scene::Singing) {
+                    return Some(out);
+                }
+                // A bounded, sanitized intent is the only question sent to Brain, never the control phrase.
+                self.pending_feedback = Some((
+                    state.epoch,
+                    "请对刚才的分享给一次简短反馈。".into(),
+                    "voice_command",
+                ));
+                self.next_lease = 0;
+            }
+            intent => {
+                if self.proposal.is_some() || self.pending.is_some() || self.closing {
+                    return Some(out);
+                }
+                let action = match intent {
+                    Intent::Enter(scene)
+                        if state.phase == Phase::Normal
+                            && self.policy.tuning.voice_invitation_enabled
+                            && self.policy.scenes.iter().any(|s| s == scene.as_str()) =>
+                    {
+                        Action::Enter {
+                            scene,
+                            epoch: state.epoch,
+                        }
+                    }
+                    Intent::Exit
+                        if matches!(
+                            state.phase,
+                            Phase::Listening | Phase::FeedbackReserved | Phase::FeedbackActive
+                        ) =>
+                    {
+                        Action::Exit { epoch: state.epoch }
+                    }
+                    _ => return Some(out),
+                };
+                self.voice_counter += 1;
+                let id = format!(
+                    "{}:voice:{}",
+                    self.runtime.binding.trace, self.voice_counter
+                );
+                let mut payload = json!({"version":1,"proposal_id":id,"session_id":self.runtime.binding.session,"participant":format!("dev-{}",self.client.meta.session.sn),"mode_epoch":state.epoch,"action":if matches!(action,Action::Enter{..}){"enter"}else{"exit"},"ttl_ms":3000});
+                if let Action::Enter { scene, .. } = action {
+                    payload["scene"] = json!(scene.as_str());
+                }
+                out.acks.push(json!({"trace_id":self.runtime.binding.trace,"ts_ms":listening_http::unix_ms(),"src":"worker","type":"listening.proposal","payload":payload}));
+                let entering = matches!(action, Action::Enter { .. });
+                if entering {
+                    self.entry_completed = false;
+                }
+                self.proposal = Some(Proposal {
+                    id,
+                    action,
+                    deadline: now + 3000,
+                });
+                self.runtime.hold_voice_transition();
+                self.cancel_content();
+                self.pending_feedback = None;
+                out.stopped = true;
+                if entering {
+                    self.queue_story(&utterance.tail);
+                }
+            }
+        }
+        Some(out)
+    }
+    /// Used only for ordered first-turn admission; control() still authenticates every return packet.
+    pub fn matches_voice_proposal(&self, command: &Command) -> bool {
+        self.voice_available()
+            && self.proposal.as_ref().is_some_and(|p| {
+                command.proposal_id.as_deref() == Some(p.id.as_str())
+                    && command.action == p.action
+                    && self.runtime.now_ms() < p.deadline
+            })
     }
     fn id(&mut self, prefix: &str) -> String {
         self.counter += 1;
@@ -287,6 +450,21 @@ impl Adapter {
             ));
             return out;
         }
+        if !matches!(cmd.action, Action::State)
+            && (cmd.proposal_id.is_some() || self.proposal.is_some())
+        {
+            if !self.matches_voice_proposal(&cmd) {
+                let reason = if self.proposal.as_ref().is_some_and(|p| now >= p.deadline) {
+                    "proposal_expired"
+                } else {
+                    "proposal_conflict"
+                };
+                self.pause_voice(&mut out);
+                out.acks.push(self.ack(&cmd, "rejected", Some(reason)));
+                return out;
+            }
+            self.proposal = None;
+        }
         if let Action::Enter { scene, epoch } = cmd.action {
             if self.runtime.snapshot().phase == Phase::Normal {
                 if self.closing
@@ -329,6 +507,9 @@ impl Adapter {
                             self.next_lease = 0;
                         }
                         Action::Exit { .. } => {
+                            self.runtime.release_voice_transition();
+                            self.pending_story.clear();
+                            self.pending_chars = 0;
                             out.stopped = true;
                             self.cancel_content();
                             self.pending_feedback = None;
@@ -399,14 +580,23 @@ impl Adapter {
         }));
     }
     pub fn speech_start(&mut self) {
+        self.speech_generation = self.speech_generation.saturating_add(1);
         let now = self.runtime.now_ms();
+        // Fixed extra 500ms after observed VAD SpeechEnd; breathing/command's own end is insufficient.
+        self.speech_began_after_pause = self.had_speech_end
+            && self
+                .last_speech_end
+                .is_some_and(|t| now.saturating_sub(t) >= 500);
+        self.had_speech_end = false;
         self.runtime.speech_start(now);
         self.cancel_content();
         self.pending_feedback = None;
         self.next_lease = 0;
     }
     pub fn speech_end(&mut self) {
+        self.had_speech_end = true;
         let now = self.runtime.now_ms();
+        self.last_speech_end = Some(now);
         self.runtime.speech_end(now);
         if self.pending_feedback.is_some() {
             self.next_lease = 0;
@@ -419,7 +609,13 @@ impl Adapter {
         self.next_lease = 0;
     }
     pub fn final_text(&mut self, text: &str) {
-        self.runtime.final_text(text);
+        if self.runtime.active()
+            && !self.entry_completed
+            && self.runtime.snapshot().phase != Phase::Paused
+        {
+            self.queue_story(text);
+            return;
+        }
         // P0 high precision direct address only. Narratives, quotes and singing never trigger.
         if self.runtime.snapshot().phase == Phase::Listening
             && self.runtime.snapshot().scene != Some(Scene::Singing)
@@ -428,14 +624,16 @@ impl Adapter {
         {
             self.pending_feedback = Some((
                 self.runtime.snapshot().epoch,
-                text.into(),
+                "请对刚才的分享给一次简短反馈。".into(),
                 "voice_invitation",
             ));
+        } else {
+            self.runtime.final_text(text);
         }
     }
     fn request_feedback(&mut self, epoch: u64, question: String, trigger: &'static str) {
         let now = self.runtime.now_ms();
-        if trigger == "voice_invitation" {
+        if matches!(trigger, "voice_invitation" | "voice_command") {
             // Voice invitations need the same state reservation without spending Android sequence IDs.
             if self.runtime.reserve_voice_feedback(epoch, now).is_err() {
                 return;
@@ -538,6 +736,11 @@ impl Adapter {
     fn complete_entry(&mut self, out: &mut Effects) {
         if !self.entry_completed && self.runtime.snapshot().phase == Phase::Listening {
             self.entry_completed = true;
+            self.runtime.release_voice_transition();
+            for text in std::mem::take(&mut self.pending_story) {
+                self.runtime.final_text(&text);
+            }
+            self.pending_chars = 0;
             if let Some(c) = self.runtime.entry_command() {
                 out.acks.push(self.ack(c, "completed", None));
             }
@@ -547,6 +750,9 @@ impl Adapter {
         let mut out = Effects::new();
         let now = self.runtime.now_ms();
         self.runtime.tick(now);
+        if self.proposal.as_ref().is_some_and(|p| now >= p.deadline) {
+            self.pause_voice(&mut out);
+        }
         if self.pending_deadline.is_some_and(|d| now >= d) {
             self.pending_deadline = None;
             if let Some(p) = self.pending.take() {
@@ -652,7 +858,7 @@ impl Adapter {
                                         self.pending_feedback = Some((e, q, t));
                                         continue;
                                     }
-                                    if t == "voice_invitation"
+                                    if matches!(t, "voice_invitation" | "voice_command")
                                         && self.runtime.snapshot().phase == Phase::Listening
                                     {
                                         self.request_feedback(e, q, t);
@@ -864,6 +1070,7 @@ mod http_joint_tests {
         let identity = format!("dev-{sn}");
         let cmd = |seq, action| {
             Some(Command {
+                proposal_id: None,
                 seq,
                 request_id: format!("{trace}:{seq}"),
                 action,
@@ -982,6 +1189,119 @@ mod http_joint_tests {
                 .is_none()
         );
     }
+    #[tokio::test]
+    #[ignore = "requires current committed Brain HTTP fixture; not RTC/Android"]
+    async fn listening_joint_real_brain_http_voice_singing_uses_negotiated_trigger_and_exit() {
+        let path = std::env::var("P003_LISTENING_JOINT_CONFIG").unwrap();
+        let config: Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let v = &config["voice"];
+        let mut a = Adapter::from_client(Client::joint(v)).unwrap();
+        assert!(a.voice_available());
+        let e = a.voice_text("小可，听我唱首歌。月亮出来了。").unwrap();
+        let proposal = e.acks[0]["payload"]["proposal_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        a.final_text("花儿也笑了。");
+        let identity = "dev-BJP00326070803800006";
+        let trace = "trace-test-1";
+        a.control(
+            Some(identity),
+            trace,
+            Some(Command {
+                seq: 1,
+                request_id: format!("{trace}:1"),
+                proposal_id: Some(proposal),
+                action: Action::Enter {
+                    scene: Scene::Singing,
+                    epoch: 0,
+                },
+            }),
+        );
+        assert!(wait_entry(&mut a).await.entered);
+        assert_eq!(a.runtime.snapshot().phase, Phase::Entering);
+        a.drained();
+        let e = a.control(
+            Some(identity),
+            trace,
+            Some(Command {
+                seq: 2,
+                request_id: format!("{trace}:2"),
+                proposal_id: None,
+                action: Action::LocalReady { epoch: 1 },
+            }),
+        );
+        assert_eq!(e.acks.last().unwrap()["payload"]["stage"], "completed");
+        assert!(a.runtime.context().recent.contains("月亮出来了"));
+        assert!(!a.runtime.context().recent.contains("听我唱首歌"));
+        // Actual route/authority validate the new trigger, with model and registry doubles only.
+        a.speech_start();
+        a.speech_end();
+        a.runtime.advance_clock(501);
+        a.speech_start();
+        a.voice_text("小可，我唱完了，请给我反馈。");
+        a.speech_end();
+        let mut feedback = None;
+        for _ in 0..300 {
+            let e = a.poll();
+            if e.feedback.is_some() {
+                feedback = e.feedback;
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        assert!(
+            feedback.is_some(),
+            "Brain must authorize real voice_command for a negotiated singing entry"
+        );
+        let epoch = a.runtime.snapshot().epoch;
+        a.runtime
+            .begin_feedback(epoch, 11, a.runtime.now_ms())
+            .unwrap();
+        let permit = a
+            .runtime
+            .output_permit(OutputPurpose::Feedback, 11, a.runtime.now_ms())
+            .unwrap();
+        assert!(permit.allowed());
+        a.runtime.feedback_done(11, a.runtime.now_ms()).unwrap();
+        assert_eq!(a.runtime.snapshot().phase, Phase::Listening);
+        assert!(!permit.allowed());
+        let stats: Value = reqwest::get(format!("{}test/stats", config["url"].as_str().unwrap()))
+            .await
+            .unwrap()
+            .json()
+            .await
+            .unwrap();
+        assert!(
+            stats["triggers"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|v| v["scene"] == "singing" && v["trigger"] == "voice_command")
+        );
+        a.speech_start();
+        let p = a.voice_text("小可结束倾听恢复聊天").unwrap().acks.remove(0);
+        let e = a.control(
+            Some(identity),
+            trace,
+            Some(Command {
+                seq: 3,
+                request_id: format!("{trace}:3"),
+                proposal_id: Some(p["payload"]["proposal_id"].as_str().unwrap().into()),
+                action: Action::Exit {
+                    epoch: a.runtime.snapshot().epoch,
+                },
+            }),
+        );
+        assert_eq!(e.acks[0]["payload"]["state"], "normal");
+        assert!(!a.runtime.active());
+        assert!(!permit.allowed());
+        assert!(
+            a.runtime
+                .output_permit(OutputPurpose::Ordinary, 12, a.runtime.now_ms())
+                .is_some()
+        );
+    }
 }
 #[cfg(test)]
 mod adapter_tests {
@@ -990,9 +1310,10 @@ mod adapter_tests {
         adapter_at(0)
     }
     fn adapter_at(elapsed: u64) -> Adapter {
-        let contract: Value =
-            serde_json::from_str(include_str!("../../../../4-Assets/contracts/p003-listening-http-v1.json"))
-                .unwrap();
+        let contract: Value = serde_json::from_str(include_str!(
+            "../../../../4-Assets/contracts/p003-listening-http-v1.json"
+        ))
+        .unwrap();
         let client = Client::joint(
             &json!({"url":"http://127.0.0.1:9/","metadata":contract["metadata"]["shape"],"key":"synthetic","token":"synthetic"}),
         );
@@ -1002,6 +1323,7 @@ mod adapter_tests {
         a.apply_policy(a.policy.clone());
         a.runtime.renew_lease(3, now + 10000, now).unwrap();
         let enter = Command {
+            proposal_id: None,
             seq: 1,
             request_id: "trace-test-1:1".into(),
             action: Action::Enter {
@@ -1018,6 +1340,7 @@ mod adapter_tests {
                 Some("dev-BJP00326070803800006"),
                 "trace-test-1",
                 Command {
+                    proposal_id: None,
                     seq: 2,
                     request_id: "trace-test-1:2".into(),
                     action: Action::LocalReady { epoch: 1 },
@@ -1029,6 +1352,465 @@ mod adapter_tests {
         a.entry_completed = true;
         a.next_lease = u64::MAX;
         a
+    }
+    fn voice_adapter() -> Adapter {
+        let mut a = adapter();
+        a.client.meta.voice_control = Some(listening_http::VoiceControl {
+            version: 1,
+            capability: "listening_voice_control_v1".into(),
+        });
+        a.runtime = ListeningSession::new(a.runtime.binding.clone()).unwrap();
+        a.entry = None;
+        a.entry_completed = false;
+        a
+    }
+    fn voice_enter(a: &mut Adapter, proposal: &Value) -> Effects {
+        a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(Command {
+                seq: 1,
+                request_id: "trace-test-1:1".into(),
+                proposal_id: proposal["payload"]["proposal_id"]
+                    .as_str()
+                    .map(str::to_owned),
+                action: Action::Enter {
+                    epoch: 0,
+                    scene: Scene::Story,
+                },
+            }),
+        )
+    }
+    #[tokio::test]
+    async fn listening_voice_entry_retains_tail_and_transition_story_until_double_confirmation() {
+        let mut a = voice_adapter();
+        let e = a.voice_text("小可，先听我讲个故事。从前有只猫。").unwrap();
+        let proposal = &e.acks[0];
+        assert!(e.stopped);
+        assert!(a.runtime.active());
+        assert_eq!(proposal["type"], "listening.proposal");
+        assert!(proposal.get("seq").is_none());
+        a.final_text("后来下雨了。");
+        voice_enter(&mut a, proposal);
+        inject_lease(&mut a, 1);
+        assert!(a.poll().entered);
+        assert_eq!(a.runtime.snapshot().phase, Phase::Entering);
+        a.final_text("小猫回家了。");
+        assert!(
+            a.runtime.context().recent.is_empty(),
+            "only complete entry commits the pending story"
+        );
+        a.drained();
+        let e = a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(Command {
+                seq: 2,
+                request_id: "trace-test-1:2".into(),
+                proposal_id: None,
+                action: Action::LocalReady { epoch: 1 },
+            }),
+        );
+        assert!(
+            e.acks
+                .iter()
+                .any(|a| a["payload"]["request_id"] == "trace-test-1:1"
+                    && a["payload"]["stage"] == "completed")
+        );
+        let c = a.runtime.context();
+        assert!(
+            c.recent.contains("从前有只猫")
+                && c.recent.contains("后来下雨")
+                && c.recent.contains("小猫回家")
+        );
+        assert!(!c.recent.contains("先听我"));
+    }
+    #[tokio::test]
+    async fn listening_voice_legacy_client_never_proposes_or_speaks_a_fake_entry() {
+        let mut a = voice_adapter();
+        a.client.meta.voice_control = None;
+        let e = a.voice_text("小可听我唱首歌").unwrap();
+        assert!(e.acks.is_empty() && e.feedback.is_none());
+        assert!(!a.runtime.active());
+    }
+    #[tokio::test]
+    async fn listening_voice_proposal_timeout_pauses_and_cannot_voice_exit() {
+        let mut a = voice_adapter();
+        a.voice_text("小可先听我讲故事").unwrap();
+        a.runtime.advance_clock(3001);
+        assert!(a.poll().stopped);
+        assert_eq!(a.runtime.snapshot().phase, Phase::Paused);
+        assert!(a.voice_text("小可退出倾听模式").unwrap().acks.is_empty());
+        assert!(
+            a.runtime
+                .output_permit(OutputPurpose::Ordinary, 5, a.runtime.now_ms())
+                .is_none()
+        );
+    }
+    #[tokio::test]
+    async fn listening_voice_singing_requires_pause_before_command_and_never_records_command() {
+        let mut a = adapter();
+        a.client.meta.voice_control = Some(listening_http::VoiceControl {
+            version: 1,
+            capability: "listening_voice_control_v1".into(),
+        });
+        a.entry = Some(("trace-test-1:1".into(), Scene::Singing));
+        // Scene belongs to the mode; build a singing entry through the real reducer.
+        a.runtime = ListeningSession::new(a.runtime.binding.clone()).unwrap();
+        let now = a.runtime.now_ms();
+        a.runtime.renew_lease(3, now + 10000, now).unwrap();
+        a.runtime
+            .control(
+                Some("dev-BJP00326070803800006"),
+                "trace-test-1",
+                Command {
+                    seq: 1,
+                    request_id: "trace-test-1:1".into(),
+                    proposal_id: None,
+                    action: Action::Enter {
+                        epoch: 0,
+                        scene: Scene::Singing,
+                    },
+                },
+                now,
+            )
+            .unwrap();
+        a.runtime.capture_drained(1, now).unwrap();
+        a.runtime
+            .control(
+                Some("dev-BJP00326070803800006"),
+                "trace-test-1",
+                Command {
+                    seq: 2,
+                    request_id: "trace-test-1:2".into(),
+                    proposal_id: None,
+                    action: Action::LocalReady { epoch: 1 },
+                },
+                now,
+            )
+            .unwrap();
+        a.speech_start();
+        a.voice_text("小可我唱完了请给我反馈");
+        a.speech_end();
+        assert!(
+            a.pending_feedback.is_none(),
+            "continuous lyrics cannot authorize feedback"
+        );
+        a.runtime.advance_clock(501);
+        a.speech_start();
+        a.voice_text("小可我唱完了请给我反馈");
+        assert!(a.pending_feedback.is_some());
+        inject_lease(&mut a, 1);
+        a.poll();
+        assert_eq!(a.runtime.snapshot().phase, Phase::Listening);
+        a.speech_end();
+        inject_lease(&mut a, 1);
+        a.poll();
+        assert_eq!(a.runtime.snapshot().phase, Phase::FeedbackReserved);
+        assert_eq!(a.pending_feedback.as_ref().unwrap().2, "voice_command");
+        assert!(!a.runtime.context().recent.contains("请给我反馈"));
+        let epoch = a.runtime.snapshot().epoch;
+        a.voice_text("小可我唱完了请给我反馈");
+        assert_eq!(a.runtime.snapshot().epoch, epoch);
+        a.speech_start();
+        assert!(a.pending_feedback.is_none());
+        assert_eq!(a.runtime.snapshot().phase, Phase::Listening);
+    }
+    #[tokio::test]
+    async fn listening_voice_proposal_binds_sender_trace_epoch_and_payload_replay() {
+        let mut a = voice_adapter();
+        let p = a.voice_text("小可先听我讲故事").unwrap().acks.remove(0);
+        let cmd = Command {
+            seq: 1,
+            request_id: "trace-test-1:1".into(),
+            proposal_id: Some(p["payload"]["proposal_id"].as_str().unwrap().into()),
+            action: Action::Enter {
+                scene: Scene::Story,
+                epoch: 0,
+            },
+        };
+        for (sender, trace) in [
+            (Some("dev-foreign"), "trace-test-1"),
+            (Some("dev-BJP00326070803800006"), "foreign"),
+        ] {
+            assert!(a.control(sender, trace, Some(cmd.clone())).acks.is_empty());
+            assert!(a.proposal.is_some());
+        }
+        a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(cmd.clone()),
+        );
+        // Same Android packet while HTTP entry is pending does not start a new lease/proposal.
+        assert!(
+            a.control(
+                Some("dev-BJP00326070803800006"),
+                "trace-test-1",
+                Some(cmd.clone())
+            )
+            .acks
+            .is_empty()
+        );
+        inject_lease(&mut a, 1);
+        a.poll();
+        a.runtime.advance_clock(3001);
+        let e = a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(cmd.clone()),
+        );
+        assert_eq!(e.acks[0]["payload"]["duplicate"], true);
+        assert_eq!(e.acks[0]["payload"]["stage"], "received");
+        let mut changed = cmd;
+        changed.proposal_id = Some("trace-test-1:voice:99".into());
+        assert_eq!(
+            a.control(
+                Some("dev-BJP00326070803800006"),
+                "trace-test-1",
+                Some(changed)
+            )
+            .acks[0]["payload"]["reason"],
+            "sequence_conflict"
+        );
+        let mut b = voice_adapter();
+        let p = b.voice_text("小可先听我讲故事").unwrap().acks.remove(0);
+        let bad = Command {
+            seq: 1,
+            request_id: "trace-test-1:1".into(),
+            proposal_id: Some(p["payload"]["proposal_id"].as_str().unwrap().into()),
+            action: Action::Enter {
+                scene: Scene::Story,
+                epoch: 9,
+            },
+        };
+        assert!(
+            b.control(Some("dev-BJP00326070803800006"), "trace-test-1", Some(bad))
+                .stopped
+        );
+        assert_eq!(b.runtime.snapshot().phase, Phase::Paused);
+        let mut fresh = voice_adapter();
+        assert!(
+            fresh
+                .control(
+                    Some("dev-BJP00326070803800006"),
+                    "trace-test-1",
+                    Some(Command {
+                        seq: 1,
+                        request_id: "trace-test-1:1".into(),
+                        proposal_id: Some("trace-test-1:voice:1".into()),
+                        action: Action::Enter {
+                            scene: Scene::Story,
+                            epoch: 0
+                        }
+                    })
+                )
+                .stopped
+        );
+        assert_eq!(
+            fresh.runtime.snapshot().phase,
+            Phase::Paused,
+            "reconnected job cannot inherit old proposal even if trace were replayed"
+        );
+    }
+    #[tokio::test]
+    async fn listening_voice_missing_local_ready_overflow_and_expired_lease_stay_silent() {
+        let mut a = voice_adapter();
+        let p = a.voice_text("小可先听我讲故事").unwrap().acks.remove(0);
+        voice_enter(&mut a, &p);
+        inject_lease(&mut a, 1);
+        a.poll();
+        a.drained();
+        a.runtime.advance_clock(5001);
+        assert!(a.poll().stopped);
+        assert_eq!(a.runtime.snapshot().phase, Phase::Paused);
+        let mut b = voice_adapter();
+        b.voice_text("小可先听我讲故事");
+        b.final_text(&"歌".repeat(12001));
+        assert!(b.poll().stopped);
+        assert_eq!(b.runtime.snapshot().phase, Phase::Paused);
+        let mut c = adapter();
+        c.client.meta.voice_control = Some(listening_http::VoiceControl {
+            version: 1,
+            capability: "listening_voice_control_v1".into(),
+        });
+        c.runtime.advance_clock(10001);
+        assert!(c.voice_text("小可退出倾听模式").unwrap().acks.is_empty());
+        assert_eq!(c.runtime.snapshot().phase, Phase::Paused);
+    }
+    #[tokio::test]
+    async fn listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output() {
+        let mut a = adapter();
+        a.client.meta.voice_control = Some(listening_http::VoiceControl {
+            version: 1,
+            capability: "listening_voice_control_v1".into(),
+        });
+        let e = a.voice_text("小可结束倾听恢复聊天").unwrap();
+        let id = e.acks[0]["payload"]["proposal_id"].as_str().unwrap();
+        let e = a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(Command {
+                seq: 3,
+                request_id: "trace-test-1:3".into(),
+                proposal_id: Some(id.into()),
+                action: Action::Exit { epoch: 1 },
+            }),
+        );
+        assert!(e.stopped);
+        assert_eq!(e.acks[0]["payload"]["state"], "normal");
+        assert!(!a.runtime.active());
+        assert!(a.pending_story.is_empty() && a.pending_feedback.is_none());
+        let next = a
+            .runtime
+            .output_permit(OutputPurpose::Ordinary, 10, a.runtime.now_ms())
+            .unwrap();
+        assert!(next.allowed());
+        a.runtime.hold_voice_transition();
+        a.runtime.release_voice_transition();
+        assert!(!next.allowed());
+    }
+    #[tokio::test]
+    async fn listening_voice_state_query_does_not_conflict_with_inflight_proposal() {
+        let mut a = voice_adapter();
+        let p = a.voice_text("小可先听我讲故事").unwrap().acks.remove(0);
+        let deadline = a.proposal.as_ref().unwrap().deadline;
+        let q = a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(Command {
+                seq: 1,
+                request_id: "trace-test-1:1".into(),
+                proposal_id: None,
+                action: Action::State,
+            }),
+        );
+        assert_eq!(q.acks[0]["payload"]["state"], "normal");
+        assert_eq!(a.proposal.as_ref().unwrap().deadline, deadline);
+        assert!(a.runtime.active());
+        let enter = Command {
+            seq: 2,
+            request_id: "trace-test-1:2".into(),
+            proposal_id: Some(p["payload"]["proposal_id"].as_str().unwrap().into()),
+            action: Action::Enter {
+                scene: Scene::Story,
+                epoch: 0,
+            },
+        };
+        a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(enter),
+        );
+        inject_lease(&mut a, 1);
+        assert!(a.poll().entered);
+        assert_eq!(a.runtime.snapshot().phase, Phase::Entering);
+    }
+    #[test]
+    fn listening_voice_finite_rules_match_the_three_frozen_contracts() {
+        use crate::listening_voice::{Intent, parse};
+        let c: Value = serde_json::from_str(include_str!(
+            "../../../../4-Assets/contracts/p003-listening-mode-v1.json"
+        ))
+        .unwrap();
+        let r = &c["voice_control"]["recognition"];
+        for (key, scene) in [
+            ("story", Scene::Story),
+            ("sharing", Scene::Sharing),
+            ("singing", Scene::Singing),
+        ] {
+            for text in r["enter"][key].as_array().unwrap() {
+                assert_eq!(
+                    parse(text.as_str().unwrap()).unwrap().intent,
+                    Intent::Enter(scene)
+                );
+            }
+        }
+        for key in ["feedback_story", "feedback_singing", "exit"] {
+            for text in r[key].as_array().unwrap() {
+                assert!(parse(text.as_str().unwrap()).is_some());
+            }
+        }
+        for text in r["negative_examples"].as_array().unwrap() {
+            assert!(parse(text.as_str().unwrap()).is_none(), "{}", text);
+        }
+    }
+    #[tokio::test]
+    async fn listening_voice_flag_off_denies_entry_but_preserves_safe_exit() {
+        let mut a = voice_adapter();
+        a.policy.tuning.voice_invitation_enabled = false;
+        assert!(a.voice_text("小可先听我讲故事").unwrap().acks.is_empty());
+        assert!(!a.runtime.active());
+        let mut b = adapter();
+        b.client.meta.voice_control = Some(listening_http::VoiceControl {
+            version: 1,
+            capability: "listening_voice_control_v1".into(),
+        });
+        b.policy.tuning.voice_invitation_enabled = false;
+        assert!(
+            b.voice_text("小可我讲完了请说说你的看法")
+                .unwrap()
+                .acks
+                .is_empty()
+        );
+        assert!(b.pending_feedback.is_none());
+        assert_eq!(
+            b.voice_text("小可退出倾听模式").unwrap().acks[0]["payload"]["action"],
+            "exit"
+        );
+    }
+    #[tokio::test]
+    async fn listening_voice_first_ordered_commit_preserves_tail_without_spending_android_seq() {
+        use crate::ordered_pcm as pcm;
+        let mut ordered = pcm::Session::new(
+            Some("trace-test-1".into()),
+            pcm::Limits {
+                first_turn_rtc: true,
+                ..Default::default()
+            },
+        )
+        .with_expected_session(Some("test-session-1".into()));
+        let packet = |t: &str, seq: u64, start: u64, end: u64, samples: &[i16]| {
+            let header = json!({"t":t,"input_id":"voice-first","trace_id":"trace-test-1","session_id":"test-session-1","capture_epoch":1,"wake_generation":1,"seq":seq,"start":start,"end":end,"keep_from":0,"boundary_kind":"kws_tail","overlaps_local_playback":false,"sr":16000,"ch":1,"fmt":"s16le"});
+            pcm::parse_packet(&pcm::encode_packet(&header, samples)).unwrap()
+        };
+        ordered.on_packet(&packet("begin", 0, 0, 0, &[]), 0);
+        ordered.on_packet(&packet("chunk", 0, 0, 3200, &vec![100; 3200]), 1);
+        ordered.drain_submits(|_| true);
+        ordered.on_stt_final("小可先听我讲故事。从前有只熊。".into(), 2);
+        let mut a = voice_adapter();
+        assert!(!a.runtime.active(), "held text alone cannot activate mode");
+        assert!(
+            crate::listening_voice::possible_prefix(&ordered.held_text()),
+            "same predicate suppresses held-final speculation"
+        );
+        ordered.on_packet(&packet("end", 1, 3200, 3200, &[]), 3);
+        ordered.drain_submits(|_| true);
+        let (pcm::Decision::Commit(text), _) = ordered.on_stream_end(4) else {
+            panic!("complete first turn")
+        };
+        let p = a.voice_text(&text).unwrap().acks.remove(0);
+        assert!(a.runtime.active());
+        assert_eq!(a.runtime.snapshot().epoch, 0);
+        a.final_text("熊开始爬山。");
+        voice_enter(&mut a, &p);
+        inject_lease(&mut a, 1);
+        assert!(a.poll().entered);
+        a.drained();
+        a.control(
+            Some("dev-BJP00326070803800006"),
+            "trace-test-1",
+            Some(Command {
+                seq: 2,
+                request_id: "trace-test-1:2".into(),
+                proposal_id: None,
+                action: Action::LocalReady { epoch: 1 },
+            }),
+        );
+        assert!(
+            a.runtime.context().recent.contains("从前有只熊")
+                && a.runtime.context().recent.contains("熊开始爬山")
+        );
+        assert!(!a.runtime.context().recent.contains("先听我"));
     }
     fn inject_lease(a: &mut Adapter, epoch: u64) {
         if let Some(t) = a.lease_task.take() {
@@ -1061,6 +1843,7 @@ mod adapter_tests {
             Some("dev-BJP00326070803800006"),
             "trace-test-1",
             Some(Command {
+                proposal_id: None,
                 seq: 1,
                 request_id: "trace-test-1:1".into(),
                 action: Action::Enter {
@@ -1091,6 +1874,7 @@ mod adapter_tests {
             Some("dev-BJP00326070803800006"),
             "trace-test-1",
             Some(Command {
+                proposal_id: None,
                 seq: 1,
                 request_id: "trace-test-1:1".into(),
                 action: Action::Enter {
@@ -1103,6 +1887,7 @@ mod adapter_tests {
             Some("dev-BJP00326070803800006"),
             "trace-test-1",
             Some(Command {
+                proposal_id: None,
                 seq: 2,
                 request_id: "trace-test-1:2".into(),
                 action: Action::State,
@@ -1122,6 +1907,7 @@ mod adapter_tests {
         a.runtime = ListeningSession::new(a.runtime.binding.clone()).unwrap();
         a.entry = None;
         let command = Command {
+            proposal_id: None,
             seq: 1,
             request_id: "trace-test-1:1".into(),
             action: Action::Enter {
@@ -1184,6 +1970,7 @@ mod adapter_tests {
             Some("dev-BJP00326070803800006"),
             "trace-test-1",
             Some(Command {
+                proposal_id: None,
                 seq: 3,
                 request_id: "trace-test-1:3".into(),
                 action: Action::State,
@@ -1310,6 +2097,7 @@ mod adapter_tests {
                         Some("dev-BJP00326070803800006"),
                         "trace-test-1",
                         Command {
+                            proposal_id: None,
                             seq: 1,
                             request_id: "trace-test-1:1".into(),
                             action: Action::Enter { epoch: 0, scene },
@@ -1323,6 +2111,7 @@ mod adapter_tests {
                         Some("dev-BJP00326070803800006"),
                         "trace-test-1",
                         Command {
+                            proposal_id: None,
                             seq: 2,
                             request_id: "trace-test-1:2".into(),
                             action: Action::LocalReady { epoch: 1 },
@@ -1344,6 +2133,7 @@ mod adapter_tests {
             Some("dev-BJP00326070803800006"),
             "trace-test-1",
             Some(Command {
+                proposal_id: None,
                 seq: 1,
                 request_id: "trace-test-1:1".into(),
                 action: Action::Enter {

@@ -434,6 +434,7 @@ struct Orchestrator {
     /// B23：首句期间最近 ≤1 s 的 RTC 帧（到达时刻 + 样本）；切换时只回灌 end 到达之后的帧
     rtc_catchup: std::collections::VecDeque<(Instant, Vec<i16>)>,
     rtc_catchup_samples: usize,
+    voice_catchup_gap: bool,
     /// B23：本轮首句逗号切阈值（commit 时按「ordered 首句轮 / 全局开关」决定，start_turn 消费）
     turn_first_clause_min: usize,
     /// ordered_pcm:待执行的「主动收流」(drop 唯一 ASR 发送端);由主循环消费,因为发送端不在 Orchestrator 里
@@ -1050,6 +1051,7 @@ pub async fn run_pipeline(
         pending_phase_switch: None,
         rtc_catchup: std::collections::VecDeque::new(),
         rtc_catchup_samples: 0,
+        voice_catchup_gap: false,
         turn_first_clause_min: 0,
         ordered_end_stream_pending: false,
         ordered_end_candidate_logged: false,
@@ -1137,11 +1139,12 @@ pub async fn run_pipeline(
             orch.rtc_catchup_samples = 0;
             // 自声窗口:端侧本地承接 accepted / worker 本轮已挑垫句 / 有任务(worker 必出垫句或正文)——
             // 三者任一成立,追补窗口里的 RTC 上行就含自声。
+            let voice_entry = reason == "first_turn_listening_command" && orch.listening_active();
             let local_audio_window = orch.ordered.as_ref().map(|o| o.local_receipt_accepted()).unwrap_or(false)
                 || !orch.echo_cur_filler.is_empty()
                 || reason == "first_turn_committed";
-            let complete = reason == "first_turn_committed" || reason == "first_turn_no_task";
-            let catchup_skipped = if orch.cfg.ordered_rtc_catchup_ms == 0 {
+            let complete = voice_entry || reason == "first_turn_committed" || reason == "first_turn_no_task";
+            let catchup_skipped = if voice_entry { None } else if orch.cfg.ordered_rtc_catchup_ms == 0 {
                 Some("disabled")
             } else if !complete {
                 Some("not_complete")
@@ -1151,6 +1154,7 @@ pub async fn run_pipeline(
                 None
             };
             let mut fed = 0usize;
+            if voice_entry && orch.voice_catchup_gap { orch.pause_listening_input_gap(); }
             if catchup_skipped.is_none()
                 && let Some(cut) = cutoff
             {
@@ -1264,13 +1268,16 @@ pub async fn run_pipeline(
                         o.note_rtc_frame_dropped();
                     }
                     // B25:容量按 env(默认 0=不留环,零内存零回灌)
-                    let cap = (orch.cfg.ordered_rtc_catchup_ms as usize) * 16;
+                    // Voice-capable first utterance keeps a bounded 8s bridge even when legacy catch-up is off.
+                    let cap = if orch.listening.as_ref().is_some_and(|l|l.voice_available()) { 8000*16 } else { (orch.cfg.ordered_rtc_catchup_ms as usize)*16 };
                     if v1 && cap > 0 {
                         orch.rtc_catchup_samples += samples.len();
                         orch.rtc_catchup.push_back((Instant::now(), samples.to_vec()));
                         while orch.rtc_catchup_samples > cap {
                             match orch.rtc_catchup.pop_front() {
-                                Some((_, f)) => orch.rtc_catchup_samples -= f.len(),
+                                Some((t, f)) => {orch.rtc_catchup_samples -= f.len();
+                                    if orch.ordered_end_seen_at.is_some_and(|cut|t>=cut) {orch.voice_catchup_gap=true;}
+                                },
                                 None => break,
                             }
                         }
@@ -1285,7 +1292,7 @@ pub async fn run_pipeline(
                 if stt_buf.len() >= STT_SEGMENT_SAMPLES {
                     // 满则丢段不阻塞热路径(channel 128 段 ≈ 25s 缓冲,正常永远不满)
                     if let Some(tx) = &stt_pcm_tx {
-                        let _ = tx.try_send(std::mem::take(&mut stt_buf));
+                        if tx.try_send(std::mem::take(&mut stt_buf)).is_err() && orch.listening_active() {orch.pause_listening_input_gap();}
                     }
                 }
                 eot_ring.extend(samples.iter().copied());
@@ -1435,8 +1442,30 @@ pub async fn run_pipeline(
 }
 
 impl Orchestrator {
+    fn pause_listening_input_gap(&mut self) {
+        if let Some(l)=&mut self.listening {l.runtime.pause_pending_entry();}
+        self.hard_abort_current();self.clear_listening_pending();self.source.clear_buffer();
+        let _=self.fatal_tx.try_send("listening_input_gap_close_required".into());
+    }
+    fn try_voice_final(&mut self, text: &str) -> bool {
+        if self.listening.is_none() || crate::listening_voice::parse(text).is_none() {return false;}
+        // Final may correct a non-command interim. Retract that same subtitle segment even for echo/unsupported control.
+        self.tr.user_final("");
+        let playing=self.agent_turn.is_some();
+        let in_window=self.echo_playout_end.is_some_and(|t|t.elapsed()<=self.cfg.echo_suppress_window);
+        if voice_command_is_echo(text,&self.recent_spoken_text(playing,in_window),!self.cfg.echo_suppress_window.is_zero() && (playing||in_window)) {
+            // Control recognition precedes ordinary commit, so its mutation needs the same TTS echo gate here.
+            return true;
+        }
+        let effect=self.listening.as_mut().and_then(|l|l.voice_text(text));
+        if let Some(e)=effect {self.apply_listening_effects(e);true} else {false}
+    }
+    fn voice_candidate(&self, text: &str) -> bool {
+        self.listening.is_some() && crate::listening_voice::possible_prefix(text)
+    }
     fn listening_active(&self)->bool {self.listening.as_ref().is_some_and(|l|l.runtime.active())}
     fn clear_listening_pending(&mut self){
+        let captions=self.caption_gate.cancel_pending();self.tr.publish_deferred_batch(&captions,true);
         if let Some(spec)=self.spec.take(){spec.task.abort();}self.pending_tts_warm.take();self.paused=None;self.false_deadline=None;self.resume_grace=None;
         self.deferred_say.clear_on_abort();self.listening_deferred_turn=None;self.pending_local_receipt_deadline=None;
         self.local_receipt_release=None;self.exit_pending=None;self.latest_interim.clear();self.tele_text.clear();self.pending_amend=None;
@@ -1447,7 +1476,7 @@ impl Orchestrator {
         if e.stopped {self.hard_abort_current();self.clear_listening_pending();self.source.clear_buffer();
             if self.listening.as_ref().is_some_and(|l|l.runtime.snapshot().phase==crate::listening_mode::Phase::Paused){let _=self.fatal_tx.try_send("listening_session_paused_close_required".into());}
         }
-        if e.entered {
+        if e.entered || (e.stopped && self.listening_active()) {
             self.device_reply_suppressed=true;self.audit=None;self.snap=None;self.isnap=None;self.isnap_ring=None;
             if let Some(search)=&mut self.search{search.require_explicit_play();}
         }
@@ -1591,6 +1620,10 @@ impl Orchestrator {
         match decision {
             crate::ordered_pcm::Decision::Commit(text) => {
                 info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm generation complete → final 进现役 commit 路径");
+                if self.try_voice_final(&text) {
+                    self.request_phase_switch("first_turn_listening_command".into());
+                    return;
+                }
                 self.on_final(text);
                 // B6(2026-09-09 真机 7/7 房 eou 400–448 ms 全是空等):输入已由设备 end 宣告结束且完整性门已裁决,
                 // 终局 final 免 MIN_ENDPOINTING_DELAY——下一 tick 即 commit;退出/急停/回声/命令/LLM 门照常在 commit 后。
@@ -1783,7 +1816,7 @@ impl Orchestrator {
 
     /// S1v3 触发器逐帧喂音频;fire → 起投机。
     async fn on_pf_frame(&mut self, samples: &[i16]) {
-        if self.listening_active(){return;}
+        if self.listening_active() || self.voice_candidate(&self.latest_interim){return;}
         let now_ms = self.now_ms();
         // B34-C:取证环在这里维护。诊断关 = isnap_ring 为 None = 不分配、不拷贝。
         if let Some(r) = self.isnap_ring.as_mut() {
@@ -1820,7 +1853,7 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
-        if self.listening_active(){return;}
+        if self.listening_active() || self.voice_candidate(&text){return;}
         if self.search_ack(&text,false){return;}
         let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
@@ -1863,7 +1896,7 @@ impl Orchestrator {
             return;
         }
         let text = self.ordered.as_ref().map(|o| o.held_text()).unwrap_or_default();
-        if text.trim().is_empty() {
+        if text.trim().is_empty() || self.voice_candidate(&text) {
             return;
         }
         info!(room = %self.room_name, chars = text.chars().count(), "ordered_pcm speculation on held final");
@@ -1973,6 +2006,10 @@ impl Orchestrator {
     }
 
     fn on_interim(&mut self, t: String) {
+        if self.voice_candidate(&t) {
+            if let Some(s)=self.spec.take(){s.task.abort();}self.pending_tts_warm=None;
+            self.pf.reset();self.latest_interim=t;return;
+        }
         if self.listening_active(){self.tr.user_interim(&t);return;}
         self.contract.user_transcript_interim();
         self.tr.user_interim(&t);
@@ -1984,6 +2021,7 @@ impl Orchestrator {
     }
 
     fn on_final(&mut self, t: String) {
+        if self.try_voice_final(&t) {return;}
         if self.listening_active(){self.tr.user_final(&t);if let Some(l)=&mut self.listening {l.final_text(&t);}return;}
         self.contract.user_transcript_final();
         // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
@@ -2369,7 +2407,8 @@ impl Orchestrator {
         kind: control::Inbound,
         identity: Option<&str>,
     ) {
-        if self.listening_active() {
+        let held_voice = self.ordered_first_turn_active() && self.ordered.as_ref().is_some_and(|o|self.voice_candidate(&o.held_text()));
+        if self.listening_active() || self.voice_candidate(&self.latest_interim) || held_voice {
             if matches!(&kind,control::Inbound::CommandWord{..}|control::Inbound::CanarySay){return;}
             if matches!(&kind,control::Inbound::Cancel){
                 let trusted=self.listening.as_ref().is_some_and(|l|l.runtime.authenticated(identity,&ev.trace_id));
@@ -2379,7 +2418,7 @@ impl Orchestrator {
         }
         match kind {
             control::Inbound::Listening{command}=>{
-                let reject=if command.is_none(){Some("invalid_request")}else if self.ordered_first_turn_active() && command.as_ref().is_some_and(|c|matches!(c.action,crate::listening_mode::Action::Enter{..})){Some("not_ready")}else{None};
+                let reject=if command.is_none(){Some("invalid_request")}else if self.ordered_first_turn_active() && command.as_ref().is_some_and(|c|matches!(c.action,crate::listening_mode::Action::Enter{..}) && !self.listening.as_ref().is_some_and(|l|l.matches_voice_proposal(c))){Some("not_ready")}else{None};
                 if let Some(reason)=reject {
                     if let Some(l)=self.listening.as_ref().filter(|l|l.runtime.authenticated(identity,&ev.trace_id)) {
                         if ev.seq>0 && ev.seq<=9_007_199_254_740_991 {
@@ -4369,5 +4408,23 @@ mod listening_lifecycle_tests {
             assert!(stopped.is_ok_and(|r| r.is_err_and(|e| e.is_cancelled())),
                 "STT child must not survive its failed/panicked pipeline owner");
         }
+    }
+}
+
+fn voice_command_is_echo(text: &str, recent: &str, in_playback_window: bool) -> bool {
+    let normalized=normalize_echo(text);
+    in_playback_window && !normalized.is_empty() && normalize_echo(recent).contains(&normalized)
+}
+#[cfg(test)]
+mod listening_voice_pipeline_tests {
+    use super::*;
+    #[test]
+    fn listening_voice_in_playback_or_just_ended_echo_cannot_propose_mode() {
+        for in_window in [true,false] {
+            for text in ["小可，先听我讲个故事。","小可结束倾听恢复聊天","小可我唱完了请给我反馈"] {
+                assert_eq!(voice_command_is_echo(text,&format!("你可以说：{text}"),in_window),in_window);
+            }
+        }
+        assert!(!voice_command_is_echo("小可先听我讲故事","我在倾听",true));
     }
 }

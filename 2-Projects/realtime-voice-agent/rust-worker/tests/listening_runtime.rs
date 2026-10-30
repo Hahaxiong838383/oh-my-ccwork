@@ -18,6 +18,7 @@ fn session() -> ListeningSession {
 }
 fn cmd(seq: u64, action: Action) -> Command {
     Command {
+        proposal_id: None,
         seq,
         request_id: format!("trace-1:{seq}"),
         action,
@@ -225,4 +226,39 @@ fn newer_normal_turn_revokes_old_turn_before_any_late_frame() {
     assert!(!first.allowed_at(0));
     assert!(first.begin_capture_at(0).is_none());
     assert!(second.allowed_at(0));
+}
+
+#[test]
+fn voice_transition_holds_normal_outputs_without_spending_android_epoch() {
+    let mut s = session();
+    let old = s.output_permit(OutputPurpose::Ordinary, 5, 0).unwrap();
+    s.hold_voice_transition();
+    assert!(s.active());
+    assert_eq!(s.snapshot().phase, Phase::Normal);
+    assert_eq!(s.snapshot().epoch, 0);
+    assert!(!old.allowed_at(0));
+    for purpose in [
+        OutputPurpose::Ordinary,
+        OutputPurpose::Search,
+        OutputPurpose::Device,
+    ] {
+        assert!(s.output_permit(purpose, 6, 0).is_none());
+    }
+    s.release_voice_transition();
+    assert!(!s.active());
+    assert!(
+        !old.allowed_at(0),
+        "releasing a transition must never replay the old turn"
+    );
+    assert!(s.output_permit(OutputPurpose::Ordinary, 7, 0).is_some());
+}
+#[test]
+fn voice_transition_timeout_cannot_resume_normal_chat() {
+    let mut s = session();
+    s.hold_voice_transition();
+    s.pause_pending_entry();
+    s.release_voice_transition();
+    assert_eq!(s.snapshot().phase, Phase::Paused);
+    assert!(s.active());
+    assert!(s.output_permit(OutputPurpose::Ordinary, 1, 0).is_none());
 }

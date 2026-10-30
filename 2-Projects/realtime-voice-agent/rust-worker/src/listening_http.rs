@@ -44,7 +44,14 @@ pub struct Snapshot {
 }
 #[derive(Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct VoiceControl {
+    pub version: u8,
+    pub capability: String,
+}
+#[derive(Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Metadata {
+    pub voice_control: Option<VoiceControl>,
     pub version: u8,
     pub authority: String,
     pub grant: String,
@@ -150,6 +157,11 @@ impl Client {
             || meta.session.room.strip_prefix("sn-")?.rsplit_once('-')?.0 != meta.session.sn
             || meta.grant.is_empty()
             || meta.grant.len() > 8192
+            || meta.voice_control.as_ref().is_some_and(|v| {
+                v.version != 1
+                    || v.capability != "listening_voice_control_v1"
+                    || !meta.snapshot.tuning.voice_invitation_enabled
+            })
             || !meta.snapshot.valid()
             || meta.grant_expires_at_ms <= unix_ms()
             || meta.agent.is_empty()
@@ -274,9 +286,10 @@ mod tests {
     }
     #[test]
     fn listening_frozen_snapshot_hash_and_every_tuning_bound() {
-        let contract: Value =
-            serde_json::from_str(include_str!("../../../../4-Assets/contracts/p003-listening-http-v1.json"))
-                .unwrap();
+        let contract: Value = serde_json::from_str(include_str!(
+            "../../../../4-Assets/contracts/p003-listening-http-v1.json"
+        ))
+        .unwrap();
         let s: Snapshot =
             serde_json::from_value(contract["metadata"]["shape"]["snapshot"].clone()).unwrap();
         assert!(s.valid());

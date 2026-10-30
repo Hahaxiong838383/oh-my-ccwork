@@ -691,8 +691,8 @@ mod listening_audio_tests {
             capture_guarded(||{let (started,wait)=pair.take().unwrap();async move {let _=started.send(());let _=wait.await;true}},||{c.fetch_add(1,Ordering::SeqCst);},&ctl).await
         });
         seen.await.unwrap();
-        s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{seq:1,request_id:"trace-1:1".into(),action:Action::Enter{scene:Scene::Story,epoch:0}},0).unwrap();
-        s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{seq:2,request_id:"trace-1:2".into(),action:Action::LocalReady{epoch:1}},0).unwrap();
+        s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{proposal_id:None,seq:1,request_id:"trace-1:1".into(),action:Action::Enter{scene:Scene::Story,epoch:0}},0).unwrap();
+        s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{proposal_id:None,seq:2,request_id:"trace-1:2".into(),action:Action::LocalReady{epoch:1}},0).unwrap();
         assert!(!s.capture_is_drained());assert_eq!(s.capture_drained(1,0),Err(Reject::NotReady));
         release.send(()).unwrap();assert!(!task.await.unwrap());assert_eq!(cleared.load(Ordering::SeqCst),1);
         assert_eq!(s.capture_drained(1,0).unwrap().phase,Phase::Listening);
@@ -701,7 +701,7 @@ mod listening_audio_tests {
     async fn listening_revocation_stops_retry_and_short_tail_admission() {
         let mut s=session();s.renew_lease(1,15000,0).unwrap();let (_guard,mut ctl)=test_control();ctl.permit=s.output_permit(OutputPurpose::Ordinary,1,0);
         let calls=AtomicUsize::new(0);
-        let result=capture_guarded(||{calls.fetch_add(1,Ordering::SeqCst);s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{seq:1,request_id:"trace-1:1".into(),action:Action::Enter{scene:Scene::Story,epoch:0}},0).unwrap();async {false}},||{},&ctl).await;
+        let result=capture_guarded(||{calls.fetch_add(1,Ordering::SeqCst);s.control(Some("dev-BJP00326070803800006"),"trace-1",Command{proposal_id:None,seq:1,request_id:"trace-1:1".into(),action:Action::Enter{scene:Scene::Story,epoch:0}},0).unwrap();async {false}},||{},&ctl).await;
         assert!(!result);assert_eq!(calls.load(Ordering::SeqCst),1);
         assert!(!capture_guarded(||async {panic!("revoked short tail reached native capture")},||{},&ctl).await);
     }
@@ -718,8 +718,8 @@ mod listening_rtc_tests {
   tx.send(vec![0;2400]).await.unwrap();
   for _ in 0..100{if ctl.audio_started(){break;}tokio::time::sleep(Duration::from_millis(5)).await;}
   assert!(ctl.audio_started(),"native RTC capture must actually accept PCM");
-  let enter=s.control(Some("dev-BJP00326070803800006"),"trace-rtc",Command{seq:1,request_id:"trace-rtc:1".into(),action:Action::Enter{epoch:0,scene:Scene::Story}},s.now_ms()).unwrap();ctl.abort();
-  s.control(Some("dev-BJP00326070803800006"),"trace-rtc",Command{seq:2,request_id:"trace-rtc:2".into(),action:Action::LocalReady{epoch:enter.epoch}},s.now_ms()).unwrap();
+  let enter=s.control(Some("dev-BJP00326070803800006"),"trace-rtc",Command{proposal_id:None,seq:1,request_id:"trace-rtc:1".into(),action:Action::Enter{epoch:0,scene:Scene::Story}},s.now_ms()).unwrap();ctl.abort();
+  s.control(Some("dev-BJP00326070803800006"),"trace-rtc",Command{proposal_id:None,seq:2,request_id:"trace-rtc:2".into(),action:Action::LocalReady{epoch:enter.epoch}},s.now_ms()).unwrap();
   drop(tx);tokio::time::timeout(Duration::from_secs(2),task).await.unwrap().unwrap();
   assert!(s.capture_is_drained());source.clear_buffer();assert_eq!(s.capture_drained(enter.epoch,s.now_ms()).unwrap().phase,Phase::Listening);
   let captured=ctl.captured_samples();assert!(ctl.aborted());tokio::time::sleep(Duration::from_millis(30)).await;assert_eq!(ctl.captured_samples(),captured);

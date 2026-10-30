@@ -10,6 +10,7 @@ mod listening_runtime;
 mod listening_http;
 mod listening_adapter;
 mod listening_ready;
+mod listening_voice;
 mod contract;
 mod candidate;
 mod say_defer;

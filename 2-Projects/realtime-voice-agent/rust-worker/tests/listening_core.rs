@@ -11,6 +11,7 @@ fn mode() -> ListeningMode {
 }
 fn command(seq: u64, action: Action) -> Command {
     Command {
+        proposal_id: None,
         seq,
         request_id: format!("trace-1:{seq}"),
         action,

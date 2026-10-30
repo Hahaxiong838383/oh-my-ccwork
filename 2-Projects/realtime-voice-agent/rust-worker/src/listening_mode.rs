@@ -32,6 +32,7 @@ pub enum Action {
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Command {
+    pub proposal_id: Option<String>,
     pub seq: u64,
     pub request_id: String,
     pub action: Action,

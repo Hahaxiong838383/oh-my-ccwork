@@ -888,6 +888,15 @@ mod listening_tests {
         let mut v=base;v["src"]=json!("worker");assert!(parse(v.to_string().as_bytes()).is_none());
     }
 
+    #[test]
+    fn listening_voice_proposal_echo_is_strict_and_never_an_android_seq() {
+        let base=json!({"trace_id":"trace-test-1","ts_ms":0,"src":"android","type":"listening.enter","seq":1,"payload":{"version":1,"request_id":"trace-test-1:1","mode_epoch":0,"scene":"story","proposal_id":"trace-test-1:voice:1"}});
+        let (_,Inbound::Listening{command:Some(c)})=parse(base.to_string().as_bytes()).unwrap() else {panic!("valid proposal echo")};
+        assert_eq!(c.seq,1);assert_eq!(c.proposal_id.as_deref(),Some("trace-test-1:voice:1"));
+        for id in [json!(null),json!(1),json!("other:voice:1"),json!("trace-test-1:voice:0"),json!("trace-test-1:voice:9007199254740992")]{let mut v=base.clone();v["payload"]["proposal_id"]=id;assert!(matches!(parse(v.to_string().as_bytes()),Some((_,Inbound::Listening{command:None}))));}
+        for kind in ["listening.local_ready","listening.feedback","listening.state"] {let mut v=base.clone();v["type"]=json!(kind);v["payload"].as_object_mut().unwrap().remove("scene");assert!(matches!(parse(v.to_string().as_bytes()),Some((_,Inbound::Listening{command:None}))));}
+    }
+
 }
 
 fn parse_listening(ev: &Envelope) -> Option<crate::listening_mode::Command> {
@@ -899,7 +908,13 @@ fn parse_listening(ev: &Envelope) -> Option<crate::listening_mode::Command> {
         "listening.state" => &["version","request_id"],
         _ => &["version","request_id","mode_epoch"],
     };
-    if p.len()!=allowed.len() || p.keys().any(|k|!allowed.contains(&k.as_str())) || p.get("version")?.as_u64()!=Some(1) || ev.seq<=0 || ev.seq as u64>MAX {return None;}
+    let proposal_id = if let Some(id)=p.get("proposal_id") {
+        let id=id.as_str()?;
+        if !matches!(ev.kind.as_str(),"listening.enter"|"listening.exit") || id.len()>96
+            || !id.strip_prefix(&format!("{}:voice:",ev.trace_id)).is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) && n.parse::<u64>().is_ok_and(|n| n>0 && n<=MAX)) {return None;}
+        Some(id.to_owned())
+    } else {None};
+    if p.len()!=allowed.len()+usize::from(proposal_id.is_some()) || p.keys().any(|k|!allowed.contains(&k.as_str()) && k!="proposal_id") || p.get("version")?.as_u64()!=Some(1) || ev.seq<=0 || ev.seq as u64>MAX {return None;}
     let request_id=p.get("request_id")?.as_str()?;
     if request_id!=format!("{}:{}",ev.trace_id,ev.seq) || request_id.len()>96 {return None;}
     let action=if ev.kind=="listening.state" {Action::State} else {
@@ -909,7 +924,7 @@ fn parse_listening(ev: &Envelope) -> Option<crate::listening_mode::Command> {
             "listening.local_ready"=>Action::LocalReady{epoch},"listening.feedback"=>Action::Feedback{epoch},"listening.exit"=>Action::Exit{epoch},_=>return None,
         }
     };
-    Some(Command{seq:ev.seq as u64,request_id:request_id.into(),action})
+    Some(Command{seq:ev.seq as u64,request_id:request_id.into(),action,proposal_id})
 }
 
 pub fn listening_ack(trace: &str, seq: u64, request: &str, stage: &str, s: &crate::listening_mode::Snapshot, reason: Option<&str>) -> Value {

@@ -21,6 +21,7 @@ pub enum OutputPurpose {
 struct Shared {
     mode: ListeningMode,
     captures: usize,
+    voice_transition: bool,
     output: Option<(u64, u64, OutputPurpose)>,
 }
 #[derive(Clone)]
@@ -66,14 +67,16 @@ impl AudioPermit {
         self.shared
             .lock()
             .map(|s| {
-                s.output == Some((self.epoch, self.turn, self.purpose))
+                !s.voice_transition
+                    && s.output == Some((self.epoch, self.turn, self.purpose))
                     && purpose_allowed(&s.mode, self.purpose, self.epoch, self.turn, now)
             })
             .unwrap_or(false)
     }
     pub fn begin_capture_at(&self, now: u64) -> Option<CaptureTicket> {
         let mut s = self.shared.lock().ok()?;
-        if s.output != Some((self.epoch, self.turn, self.purpose))
+        if s.voice_transition
+            || s.output != Some((self.epoch, self.turn, self.purpose))
             || !purpose_allowed(&s.mode, self.purpose, self.epoch, self.turn, now)
         {
             return None;
@@ -124,6 +127,7 @@ impl ListeningSession {
             shared: Arc::new(Mutex::new(Shared {
                 mode,
                 captures: 0,
+                voice_transition: false,
                 output: None,
             })),
             anchor: Instant::now(),
@@ -218,8 +222,23 @@ impl ListeningSession {
                 duplicate: false,
             })
     }
+    pub fn hold_voice_transition(&mut self) {
+        if let Ok(mut shared) = self.shared.lock() {
+            shared.voice_transition = true;
+            shared.output = None;
+        }
+    }
+    pub fn release_voice_transition(&mut self) {
+        if let Ok(mut shared) = self.shared.lock() {
+            shared.voice_transition = false;
+            shared.output = None;
+        }
+    }
     pub fn active(&self) -> bool {
-        self.snapshot().phase != Phase::Normal
+        self.shared
+            .lock()
+            .map(|s| s.voice_transition || s.mode.snapshot().phase != Phase::Normal)
+            .unwrap_or(true)
     }
     pub fn output_permit(
         &self,
@@ -229,7 +248,10 @@ impl ListeningSession {
     ) -> Option<AudioPermit> {
         let mut shared = self.shared.lock().ok()?;
         let epoch = shared.mode.snapshot().epoch;
-        if turn == 0 || !purpose_allowed(&shared.mode, purpose, epoch, turn, now) {
+        if shared.voice_transition
+            || turn == 0
+            || !purpose_allowed(&shared.mode, purpose, epoch, turn, now)
+        {
             return None;
         }
         shared.output = Some((epoch, turn, purpose));

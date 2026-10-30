@@ -5,12 +5,13 @@ use serde_json::{Value, json};
 use std::sync::{Mutex, OnceLock};
 static APPLIED: OnceLock<Mutex<Option<(Snapshot, std::time::Instant, String, String)>>> =
     OnceLock::new();
-const CAPABILITIES: [&str; 5] = [
+const CAPABILITIES: [&str; 6] = [
     "listening_mode_v1",
     "listening_http_v1",
     "per_frame_output_permit_v1",
     "capture_drain_v1",
     "local_ready_ack_v1",
+    "listening_voice_control_v1",
 ];
 pub struct Registered {
     task: tokio::task::JoinHandle<()>,
@@ -108,9 +109,10 @@ mod tests {
     use super::*;
     #[test]
     fn listening_worker_ready_requires_valid_complete_applied_snapshot() {
-        let c: Value =
-            serde_json::from_str(include_str!("../../../../4-Assets/contracts/p003-listening-http-v1.json"))
-                .unwrap();
+        let c: Value = serde_json::from_str(include_str!(
+            "../../../../4-Assets/contracts/p003-listening-http-v1.json"
+        ))
+        .unwrap();
         let s = c["metadata"]["shape"]["snapshot"].clone();
         let reply = json!({"version":1,"ok":true,"policy_revision":s["revision"],"config_sha256":s["sha256"],"config":s});
         assert!(offered_policy(&reply).is_some());

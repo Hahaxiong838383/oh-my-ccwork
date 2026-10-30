@@ -728,11 +728,13 @@ mod tests {
                 if reason == "capture_not_drained" { capture = old_output.begin_capture_at(0); }
                 old.renew_lease(3, 15000, 0).unwrap();
                 old.control(Some("dev-BJP00326070803800006"), "trace-1", Command {
+                    proposal_id: None,
                     seq: 1, request_id: "trace-1:1".into(),
                     action: Action::Enter { epoch: 0, scene: Scene::Story } }, 0).unwrap();
                 if reason != "capture_not_drained" { old.capture_drained(1, 0).unwrap(); }
                 if reason != "local_ready_missing" {
                     old.control(Some("dev-BJP00326070803800006"), "trace-1", Command {
+                        proposal_id: None,
                         seq: 2, request_id: "trace-1:2".into(), action: Action::LocalReady { epoch: 1 } }, 0).unwrap();
                 }
                 old.tick(if reason == "lease_expired" { 15001 } else { 5001 });

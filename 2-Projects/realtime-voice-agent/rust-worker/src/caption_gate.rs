@@ -172,6 +172,12 @@ impl CaptionGate {
         true
     }
 
+    /// Explicit mode/control cancellation retracts old pending segments, without replay on later chat.
+    pub fn cancel_pending(&mut self) -> Vec<PendingFinal> {
+        self.verdict=Verdict::Hold;
+        let old=std::mem::take(&mut self.buf);self.dropped_total+=old.len() as u32;old
+    }
+
     /// tick 收尾唯一出口:取出裁决并复位。`Hold` 不动缓冲。
     pub fn take_flush(&mut self) -> Flush {
         match std::mem::replace(&mut self.verdict, Verdict::Hold) {
@@ -198,6 +204,14 @@ mod tests {
         PendingFinal { seg: seg.into(), text: text.into() }
     }
 
+    #[test]
+    fn listening_transition_retracts_pending_captions_before_next_normal_speech() {
+        let mut g=CaptionGate::new(true);g.on_final("old".into(),"先前的叙述");
+        assert_eq!(g.cancel_pending(),vec![p("old","先前的叙述")]);
+        assert_eq!(g.take_flush(),Flush::Hold);
+        g.on_final("new".into(),"新的普通问题");g.on_commit_decided();
+        assert_eq!(g.take_flush(),Flush::Publish(vec![p("new","新的普通问题")]));
+    }
     /// 默认关是安全根基:门关着时一条都不缓冲,调用方走原路立即发。
     #[test]
     fn disabled_never_buffers() {
