@@ -148,7 +148,7 @@ impl Client {
             cfg.base_url.trim_end_matches('/')
         ))
         .ok()?;
-        if base.as_str() != "https://kidshub-ai.hahaxiong.cc/v1/internal/listening/"
+        if !approved_transport(&base)
             || meta.version != 1
             || meta.authority != "p003-main-brain"
             || meta.session.room != room
@@ -317,6 +317,19 @@ mod tests {
     }
 }
 
+// This feature is compiled only into the isolated RTC test artifact. There is
+// no runtime opt-out of the production HTTPS origin restriction.
+fn approved_transport(base: &reqwest::Url) -> bool {
+    #[cfg(not(feature = "listening-rtc-test"))]
+    { base.as_str() == "https://kidshub-ai.hahaxiong.cc/v1/internal/listening/" }
+    #[cfg(feature = "listening-rtc-test")]
+    { base.scheme() == "http"
+        && matches!(base.host_str(), Some("127.0.0.1" | "[::1]"))
+        && base.username().is_empty() && base.password().is_none()
+        && base.query().is_none() && base.fragment().is_none()
+        && base.path() == "/v1/internal/listening/" }
+}
+
 impl Service {
     pub fn new(cfg: &crate::llm::LlmConfig) -> Option<Self> {
         let base = reqwest::Url::parse(&format!(
@@ -324,7 +337,7 @@ impl Service {
             cfg.base_url.trim_end_matches('/')
         ))
         .ok()?;
-        if base.as_str() != "https://kidshub-ai.hahaxiong.cc/v1/internal/listening/"
+        if !approved_transport(&base)
             || cfg.api_key.trim().is_empty()
             || cfg.api_key == "sk-noauth"
         {
@@ -394,5 +407,36 @@ impl Service {
         tokio::time::timeout(Duration::from_millis(budget), work)
             .await
             .map_err(|_| ())?
+    }
+}
+
+#[cfg(test)]
+mod transport_tests {
+    use super::*;
+    fn cfg(base: &str) -> crate::llm::LlmConfig {
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        crate::llm::LlmConfig { base_url:base.into(), api_key:"isolated-key".into(), model:"synthetic".into(), instructions:String::new(), thinking:"disabled".into(), strip_leading_filler:false, url_query:"token=isolated-worker-token".into(), room:String::new() }
+    }
+    #[test]
+    fn transport_rejects_remote_unapproved_or_credential_urls() {
+        for url in ["http://example.com/v1", "https://example.com/v1", "http://127.0.0.1.example.com/v1", "http://user@127.0.0.1:1234/v1", "http://127.0.0.1:1234/v1?x=y", "http://localhost:1234/v1"] {
+            assert!(Service::new(&cfg(url)).is_none(), "{url}");
+        }
+    }
+    #[cfg(not(feature="listening-rtc-test"))]
+    #[test]
+    fn release_transport_only_approved_https_origin() {
+        assert!(Service::new(&cfg("https://kidshub-ai.hahaxiong.cc/v1")).is_some());
+        for url in ["http://127.0.0.1:1234/v1", "http://[::1]:1234/v1", "http://kidshub-ai.hahaxiong.cc/v1"] {
+            assert!(Service::new(&cfg(url)).is_none());
+        }
+    }
+    #[cfg(feature="listening-rtc-test")]
+    #[test]
+    fn isolated_transport_only_literal_loopback_and_never_production() {
+        for url in ["http://127.0.0.1:1234/v1", "http://[::1]:1234/v1"] {
+            assert!(Service::new(&cfg(url)).is_some(), "{url}");
+        }
+        assert!(Service::new(&cfg("https://kidshub-ai.hahaxiong.cc/v1")).is_none());
     }
 }

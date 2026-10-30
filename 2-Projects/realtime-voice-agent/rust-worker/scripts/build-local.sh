@@ -22,7 +22,7 @@ CXX_CEILING="3.4.33"  # libstdc++ 上限。CI 没查这层，这是本脚本比 
                       # 【未实测目标机】。等有了 SSH 凭据，用这条取真值再回来改：
                       #   ssh root@64.90.13.177 "strings /lib/x86_64-linux-gnu/libstdc++.so.6 \
                       #     | grep -oE '^GLIBCXX_[0-9.]+' | sort -u -V | tail -1"
-BIN=target/release/voice-rust-worker
+BIN= # resolved from compiler-artifact, never a guessed target/release path
 
 ok()   { printf '   \033[32m✓\033[0m %s\n' "$*"; }
 bad()  { printf '   \033[31m✗\033[0m %s\n' "$*"; }
@@ -97,7 +97,7 @@ ok "libstdc++ 喂 3.4.9/3.4.31 → 正确放行（顺带验了 3.4.9 不被误�
 if ! printf "GLIBCXX_$CXX_CEILING\n" | glibcxx_gate >/dev/null 2>&1; then
   bad "判据把等于上限的 $CXX_CEILING 判成超标 —— 边界错误，中止"; exit 1
 fi
-ok "libstdc++ 喂 $CXX_CEILING（正好等于上限）→ 正确放行"
+ok "libstdc++ 喂 ${CXX_CEILING}（正好等于上限）→ 正确放行"
 
 if [ "${1:-}" = "--check" ]; then
   echo
@@ -106,7 +106,29 @@ if [ "${1:-}" = "--check" ]; then
 fi
 
 step "3/4 编译 release"
-cargo build --release --locked
+# The registration capability must name the exact approved input commit. Isolated
+# source exports have no .git; the caller verifies its input manifest before this.
+[[ "${P003_WORKER_BUILD_SHA:-}" =~ ^[a-fA-F0-9]{40}$ ]] || {
+  bad "必须显式设置40位 P003_WORKER_BUILD_SHA（已核源码提交）"; exit 1;
+}
+export P003_WORKER_BUILD_SHA
+BUILD_MESSAGES=$(mktemp)
+trap 'rm -f "$BUILD_MESSAGES"' EXIT
+cargo build --release --locked --bin voice-rust-worker --message-format=json-render-diagnostics | tee "$BUILD_MESSAGES"
+BIN=$(python3 - "$BUILD_MESSAGES" <<'PY_ARTIFACT'
+import json,sys
+paths=set()
+for line in open(sys.argv[1]):
+    try: value=json.loads(line)
+    except ValueError: continue
+    if value.get('reason')=='compiler-artifact' and value.get('target',{}).get('name')=='voice-rust-worker' and 'bin' in value['target'].get('kind',[]) and value.get('executable'):
+        paths.add(value['executable'])
+if len(paths)!=1: raise SystemExit('Expected exactly one Cargo binary artifact')
+print(paths.pop())
+PY_ARTIFACT
+)
+ok "build source: $P003_WORKER_BUILD_SHA"
+ok "Cargo artifact: $BIN"
 
 step "4/4 符号天花板（glibc + libstdc++）"
 [ -f "$BIN" ] || { bad "产物不存在: $BIN"; exit 1; }
@@ -131,7 +153,7 @@ fi
 
 step "产物"
 ls -lh "$BIN" | sed 's/^/   /'
-echo "   md5: $(md5sum "$BIN" | cut -d' ' -f1)"
+echo "   sha256: $(sha256sum "$BIN" | cut -d' ' -f1)"
 echo
 echo "   下一步（部署到 64.90，需要 SSH 凭据）："
 echo "     scp $BIN root@64.90.13.177:/root/rust-worker/voice-rust-worker.new   # 2026-09-23 起生产池在 hk2"

@@ -3,6 +3,10 @@ name = "voice-rust-worker"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+# Isolated RTC harness only; never use this artifact for deployment.
+listening-rtc-test = []
+
 [dependencies]
 anyhow = "1.0.104"
 base64 = "0.21.7"
