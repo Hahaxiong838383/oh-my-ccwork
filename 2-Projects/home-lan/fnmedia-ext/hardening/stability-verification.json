@@ -1,0 +1,82 @@
+{
+  "date": "2026-10-31",
+  "version": "0.2.19.3",
+  "tests": {
+    "passed": 160,
+    "failed": 0,
+    "python": "3.11.16",
+    "negative_regressions_old_failed": 4,
+    "negative_regressions_new_passed": 4
+  },
+  "production": {
+    "payload_files": 85,
+    "payload_mismatches": [],
+    "official_sha_unchanged": true,
+    "official_pid": 7511,
+    "enabled_flags": {
+      "playback_stability": true,
+      "playback_prefetch": true
+    },
+    "anonymous_status": {
+      "admin": 401,
+      "media": 401
+    },
+    "data_preserved_except_two_flags": true
+  },
+  "isolated_real_origin": {
+    "scope": "isolated NAS process using installed modules and real origin; not authenticated player E2E",
+    "first_bytes": 660444,
+    "repeat_sha_equal": true,
+    "next_origin": "cache",
+    "samples": [
+      {
+        "bytes": 660444,
+        "download_s": 0.908,
+        "ttfb_s": 0.201,
+        "duration_s": 3.12,
+        "r": 0.291
+      },
+      {
+        "bytes": 349680,
+        "download_s": 0.269,
+        "ttfb_s": 0.2,
+        "duration_s": 3.12,
+        "r": 0.086
+      }
+    ],
+    "closed_buffer": {
+      "entries": 0,
+      "keys": 0,
+      "cache_bytes": 0,
+      "reserved_bytes": 0,
+      "foreground_inflight": 0,
+      "prefetch_inflight": 0,
+      "foreground_waiters": 0,
+      "hits": 2,
+      "joins": 0,
+      "network_completions": 2,
+      "incomplete": 0,
+      "bypasses": 0,
+      "prefetch_started": 1,
+      "prefetch_abandoned": 1,
+      "prefetch_cancelled": 0,
+      "foreground_cancelled": 0,
+      "downloaded_bytes": 1010124,
+      "wasted_bytes": 0,
+      "paused_keys": 0,
+      "disabled_keys": 0,
+      "disabled_events": 0,
+      "hook_errors": 0,
+      "aclose_errors": 0,
+      "samples": 2,
+      "closed": 1
+    }
+  },
+  "maintenance": {
+    "latest_upstream": "0.2.35",
+    "status": "needs_review",
+    "timer": "active",
+    "last_good_version": "0.2.19.3"
+  },
+  "native_player_ab_test": "not performed; TV unreachable; no production user session supplied"
+}

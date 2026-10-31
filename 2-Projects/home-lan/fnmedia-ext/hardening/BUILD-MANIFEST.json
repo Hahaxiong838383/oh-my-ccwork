@@ -1,8 +1,9 @@
 {
-  "version": "0.2.19.2",
+  "version": "0.2.19.3",
   "upstream_commit": "93a781b1813eaaa83723765f38e6e4dddd60a651",
-  "hardened_source_commit": "e6de9a6ad5f680863dd63d31a414fe3f7e0b739d",
-  "patch_sha256": "b5d5c413d5526b0c846d24425b83ca528f2af97e3158759322b5d2bdf3bf7ed7",
-  "fpk_sha256": "ea34e7a6ea66897bf414c8f10a267f5d01f19f4d8d77291b179e4177669d4fcb",
-  "fnpack_sha256": "54b97fa7b70968c4d05c79840f5daeff508957d0bb2062fdb0376d00d9615c93"
+  "hardened_source_commit": "49580746c095464859b2bebc18a92132a1e6a3c6",
+  "patch_sha256": "0fa62466b91a17f916b479689122fc9e26bb5c069cda57c2423c02d9bb813cf7",
+  "fpk_sha256": "542dab0ec8cb450254261d529674757db4ae06c850888679c57b0d09c19d12c3",
+  "fnpack_sha256": "54b97fa7b70968c4d05c79840f5daeff508957d0bb2062fdb0376d00d9615c93",
+  "packaged_source_commit": "89e392d01f676bdc4ef71dc449c76ce2a777576b"
 }

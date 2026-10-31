@@ -10,13 +10,54 @@ index 09b8290..8d82b64 100644
  
  # Editor/OS
  .DS_Store
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 2696dbc..421f157 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -2,6 +2,12 @@
+ 
+ 本文件记录 fnmedia-ext（飞牛影视在线扩展）每个公开版本的更新内容，最新版本在最前。
+ 
++## v0.2.19.3（本地维护版）— 2026-10-31
++
++- 新增有界完整分片选线、会话固定、普通 TS 一段预取和脱敏性能汇总；管理页独立开关。
++- 保留每请求官方鉴权、用户隔离、SSRF、安全更新机制与原生手动选线；不修改官方影视程序。
++- 修复下载取消、连接关闭、内存额度和会话失效重建的并发边界，兼容旧链接和非普通 TS 路径。
++
+ ## v0.2.19 — 2026-10-28
+ 
+ 内部资源加载与启动体验改进（轻量版无可见变化）。
+diff --git a/README.md b/README.md
+index cd84128..e428317 100644
+--- a/README.md
++++ b/README.md
+@@ -95,11 +95,19 @@ proxy/
+   config.py         可热加载配置：自定义源增删、启用开关、噪音过滤、在线前排
+   admin_ui.py       单文件管理页（源管理/测速/设置）
+   fnmedia_authx.py  官方 authx 签名客户端（MD5 + apiKey）
++  segment_buffer.py 普通 VOD TS 内存缓存与一段预取
++  playback_stability.py 播放上下文、完整分片选线与脱敏统计
+ deploy/             持久 systemd 单元 + install/uninstall
+ packaging/fpk/      飞牛应用中心 FPK 打包
+ state/              titles.json / config.json（运行时生成）
+ ```
+ 
++本地维护版 0.2.19.3 在管理页增加“稳定播放”和“一段预取”两个独立开关（出厂默认关闭）。原生线路菜单增加“自动·稳定优先”，起播最多比较两条同片线路，按完整视频分片下载耗时/EXTINF 判断余量，总预算 6 秒。清单首次返回后固定线路；手动线路与历史链接保持原语义。每个 HTTP 请求仍核验官方会话，缓存按用户和播放上下文隔离。
++
++普通 TS VOD 可复用完整分片并提前取下一段；慢源暂停预取，拖动或取消会回收无人下载，已加入的前台请求继续。AES、PNG 包装、fMP4、BYTERANGE、直播和特殊 Range 沿原处理。单段上限 8MiB、每上下文 32MiB、全局分片缓存及双份下载缓冲预算 96MiB，另留 16MiB 冷采样和 16MiB 选中样本；这不是整个进程 RSS 上限。分片缓存 60 秒过期，15 秒无前台请求取消无人预取。管理页只显示脱敏汇总；“交给本地网关”耗时不能当作电视解码或卡顿时间。
++
++关闭开关可停止新增优化并沿固定原源处理，不删除配置、历史或收藏。服务器回归通过并不代表手机/电视实播性能达标，终端请求模式和弱网效果需单独验收。
++
+ ## 从源码构建 FPK
+ 
+ 普通用户建议直接下载 Release 的 `.fpk`。开发者可从源码构建：
 diff --git a/VERSION b/VERSION
-index 6bf5ecb..b49d92e 100644
+index 6bf5ecb..8a0158a 100644
 --- a/VERSION
 +++ b/VERSION
 @@ -1 +1 @@
 -0.2.19
-+0.2.19.2
++0.2.19.3
 diff --git a/compatibility.json b/compatibility.json
 new file mode 100644
 index 0000000..0f98118
@@ -959,7 +1000,7 @@ index 77450ea..dc6bdb0 100644
  maintainer            = yujian0815
  maintainer_url        = https://github.com/yujian0815/fnmedia-ext
 diff --git a/proxy/admin_ui.py b/proxy/admin_ui.py
-index d087bef..85916a2 100644
+index d087bef..191f95e 100644
 --- a/proxy/admin_ui.py
 +++ b/proxy/admin_ui.py
 @@ -100,13 +100,9 @@ label.field>span{display:block;color:var(--muted);font-size:12px;margin-bottom:4
@@ -1043,7 +1084,19 @@ index d087bef..85916a2 100644
        </div>
        <div class="card">
          <div class="card-title">🛡 播放去广告（m3u8 流层）
-@@ -464,25 +446,14 @@ pre.log{max-height:240px;overflow:auto;background:#0f1115;color:#d6dae0;border-r
+@@ -428,6 +410,11 @@ pre.log{max-height:240px;overflow:auto;background:#0f1115;color:#d6dae0;border-r
+ 
+       <div class="card">
+         <div class="card-title">播放线路</div>
++        <label class="switch-row"><input type="checkbox" id="playbackStability"/>
++          <span>播放稳定优化<span class="sub">提供“自动·稳定优先”线路；开始播放后固定来源，手动选线保持有效</span></span></label>
++        <label class="switch-row"><input type="checkbox" id="playbackPrefetch"/>
++          <span>提前缓冲下一段<span class="sub">适用于普通点播；检测到播放器并发下载时自动停用额外预取</span></span></label>
++        <div class="muted" id="playbackMetrics"></div>
+         <label class="switch-row"><input type="checkbox" id="lineFastest"/>
+           <span>自动选最快线路<span class="sub">起播时并行测速、自动选首字节最快的线路；同一集短时间内固定用它</span></span></label>
+         <label class="field" style="max-width:260px"><span>参与测速的线路数</span>
+@@ -464,25 +451,14 @@ pre.log{max-height:240px;overflow:auto;background:#0f1115;color:#d6dae0;border-r
        </div>
  
        <div class="card" id="updCard">
@@ -1075,7 +1128,7 @@ index d087bef..85916a2 100644
          </div>
        </div>
  
-@@ -512,6 +483,19 @@ pre.log{max-height:240px;overflow:auto;background:#0f1115;color:#d6dae0;border-r
+@@ -512,6 +488,19 @@ pre.log{max-height:240px;overflow:auto;background:#0f1115;color:#d6dae0;border-r
  <div id="toast"></div>
  
  <script>
@@ -1095,7 +1148,7 @@ index d087bef..85916a2 100644
  const $=(id)=>document.getElementById(id);
  const $$=(sel)=>Array.from(document.querySelectorAll(sel));
  let CFG=null,KWS=[],STATUS=null,PRIO={};
-@@ -529,121 +513,39 @@ async function switchPage(page){
+@@ -529,121 +518,39 @@ async function switchPage(page){
    $$(".page").forEach(el=>el.classList.toggle("active",el.id==="page-"+page));
    $$("[data-page]").forEach(el=>el.classList.toggle("active",el.dataset.page===page));
    window.scrollTo(0,0);
@@ -1234,7 +1287,7 @@ index d087bef..85916a2 100644
  
  /* ---------- 概览 ---------- */
  /* ---------- 本设备识别（自检） ---------- */
-@@ -660,133 +562,6 @@ async function loadWhoami(){
+@@ -660,133 +567,6 @@ async function loadWhoami(){
    }catch(e){$("ovClient").textContent="识别失败："+e;}
  }
  
@@ -1368,7 +1421,7 @@ index d087bef..85916a2 100644
  function renderOverview(){
    if(!STATUS)return;
    const c=STATUS.charts&&STATUS.charts.counts||{};
-@@ -843,6 +618,7 @@ function renderLibrary(){
+@@ -843,6 +623,7 @@ function renderLibrary(){
    $("hotEnabled").checked=CFG.hot_library_enabled!==false;
    if($("catEnabled"))$("catEnabled").checked=CFG.catalog_library_enabled!==false;
    $("hotInterval").value=Math.round((CFG.hot_refresh_interval||21600)/3600);
@@ -1376,7 +1429,7 @@ index d087bef..85916a2 100644
    const c=STATUS.charts&&STATUS.charts.counts||{};
    const cats=(STATUS.catalog&&STATUS.catalog.categories)||{};
    const hotIc={movie:"🎬",tv:"📺",anime:"🌸",variety:"🎤"};
-@@ -859,6 +635,37 @@ function renderLibrary(){
+@@ -859,6 +640,37 @@ function renderLibrary(){
    $("hotStatus").textContent=(STATUS.charts&&STATUS.charts.refreshing?"正在后台刷新榜单…":"最近刷新："+fmtTs(STATUS.charts&&STATUS.charts.updated_at))
      +` · 数据源 ${(STATUS.charts&&STATUS.charts.provider_ok)||0}/${(STATUS.charts&&STATUS.charts.provider_total)||0}`
      +(STATUS.charts&&STATUS.charts.last_error?(" · "+STATUS.charts.last_error):"");
@@ -1414,7 +1467,7 @@ index d087bef..85916a2 100644
  }
  function fmtTs(ts){if(!ts)return"尚未刷新";const d=new Date(ts*1000),p=n=>String(n).padStart(2,"0");
    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
-@@ -869,16 +676,26 @@ async function saveHotCfg(){
+@@ -869,16 +681,26 @@ async function saveHotCfg(){
    if(r.code===0){Object.assign(CFG,body);toast("热门设置已保存");await loadLibs();renderLibrary();}else toast(r.msg||"保存失败","fail");
  }
  async function saveCatCfg(){
@@ -1444,7 +1497,7 @@ index d087bef..85916a2 100644
  }
  
  /* ---------- 片源质量 ---------- */
-@@ -994,47 +811,6 @@ async function addSource(){
+@@ -994,47 +816,6 @@ async function addSource(){
      await loadStatus();const tr=$("srcRows").querySelector(`tr[data-id="${r.data.id}"]`);if(tr&&!standalone)testOne(r.data.id,tr);}
    else toast(r.msg||"添加失败","fail");
  }
@@ -1492,7 +1545,30 @@ index d087bef..85916a2 100644
  async function loadAdfilter(){
    const box=$("adfStatus"), cb=$("adfEnable");
    try{
-@@ -1277,11 +1053,7 @@ async function init(){
+@@ -1235,7 +1016,8 @@ async function saveCfg(){
+   if(r.code===0){toast("已保存");Object.assign(CFG,body);}else toast("保存失败 "+r.msg,"fail");
+ }
+ async function saveLines(){
+-  const body={line_fastest:$("lineFastest").checked,
++  const body={playback_stability:$("playbackStability").checked,
++    playback_prefetch:$("playbackPrefetch").checked,line_fastest:$("lineFastest").checked,
+     line_fastest_max:Math.max(2,Math.min(12,parseInt($("fastestMax").value)||6)),
+     line_fastest_timeout:Math.max(1,Math.min(10,parseFloat($("fastestTimeout").value)||4)),
+     line_autofail:$("lineAutofail").checked};
+@@ -1267,6 +1049,12 @@ async function init(){
+   $("maxn").value=CFG.max_per_keyword;
+   $("junk").checked=CFG.filter_junk;
+   $("onlineFirst").checked=CFG.online_first!==false;
++  $("playbackStability").checked=CFG.playback_stability===true;
++  $("playbackPrefetch").checked=CFG.playback_prefetch===true;
++  const ps=(STATUS.playback||{}).session||{};
++  $("playbackMetrics").textContent="近5分钟完整分片样本："+(ps.recent_samples||0)+
++    "；下载耗时/片段时长 P90："+(ps.recent_r_p90==null?"暂无":ps.recent_r_p90)+
++    "（小于1表示下载快于播放）";
+   $("lineFastest").checked=CFG.line_fastest!==false;
+   $("lineAutofail").checked=CFG.line_autofail!==false;
+   $("fastestMax").value=CFG.line_fastest_max||6;
+@@ -1277,11 +1065,7 @@ async function init(){
    loadOnline();
    renderOverview();
    loadWhoami();
@@ -1505,7 +1581,7 @@ index d087bef..85916a2 100644
  $("kw").addEventListener("input",()=>{clearTimeout(window._t);window._t=setTimeout(loadOnline,250);});
  init().catch(e=>{const gs=$("globalState");gs.textContent="未接管/接口不可用";gs.className="dot bad";console.error(e);});
 diff --git a/proxy/app.py b/proxy/app.py
-index d338a13..0fb53c3 100644
+index d338a13..57f2b5f 100644
 --- a/proxy/app.py
 +++ b/proxy/app.py
 @@ -26,6 +26,7 @@ import zlib
@@ -1516,7 +1592,7 @@ index d338a13..0fb53c3 100644
  from fastapi import FastAPI, Request, Response
  from fastapi.responses import (JSONResponse, RedirectResponse,
                                 StreamingResponse)
-@@ -43,6 +44,7 @@ import charts as chartmod
+@@ -43,11 +44,38 @@ import charts as chartmod
  from charts import chart_cache
  import catalog as catalogmod
  from catalog import catalog
@@ -1524,7 +1600,38 @@ index d338a13..0fb53c3 100644
  import history as histmod
  from history import history
  import marks as marksmod
-@@ -254,9 +256,6 @@ def start_resolve_chart(guid: str) -> asyncio.Future | None:
+ from marks import marks
+ import updater
++import playback_stability as stability
++from segment_buffer import SegmentBuffer, BypassBuffer
++from user_scope import current_user_id
++
++_playback = stability.Playback()
++
++
++def _buffer_network_sample(key, sample):
++    ctx = _playback.contexts.get(key)
++    if ctx is not None:
++        _playback.record(ctx.health, sample.duration_s, sample.total_s, sample.ttfb_s)
++
++
++# Leave 32MiB for cold-probe working copies (16MiB) and reusable samples (16MiB).
++_segments = SegmentBuffer(global_max=96 * 1024 * 1024,
++                          on_network_sample=_buffer_network_sample)
++
++
++def _stability_on():
++    return config.get().get("playback_stability", False) is True
++
++
++async def _expire_playback():
++    for key in _playback.expired():
++        await _segments.invalidate(key)
++
+ from store import (store, make_guid, media_guid, video_guid, is_online_guid,
+                    season_guid, episode_guid, ep_media_guid, ep_video_guid)
+ 
+@@ -254,9 +282,6 @@ def start_resolve_chart(guid: str) -> asyncio.Future | None:
                                          and all(tok in n for tok in want_tokens))):
                      best = b
                      break
@@ -1534,7 +1641,7 @@ index d338a13..0fb53c3 100644
              if best is not None:
                  # 关键：把可播放 brief 的身份换成 chart guid，使播放链挂到榜单卡片
                  bound = dict(best)
-@@ -291,7 +290,7 @@ async def resolve_chart(guid: str) -> dict | None:
+@@ -291,7 +316,7 @@ async def resolve_chart(guid: str) -> dict | None:
      fut = start_resolve_chart(guid)
      if fut is None:
          return store.get_title_by_guid(guid)
@@ -1543,7 +1650,7 @@ index d338a13..0fb53c3 100644
  
  
  def chart_guid_by_media(mg: str) -> str:
-@@ -397,10 +396,14 @@ async def lifespan(app: FastAPI):
+@@ -397,10 +422,14 @@ async def lifespan(app: FastAPI):
      app.state.up = httpx.AsyncClient(
          transport=httpx.AsyncHTTPTransport(uds=UPSTREAM_SOCK),
          timeout=httpx.Timeout(120), trust_env=False)
@@ -1562,7 +1669,7 @@ index d338a13..0fb53c3 100644
  
  
      # 后台只读检查 GitHub 更新（仅提示，绝不自动安装）
-@@ -412,10 +415,10 @@ async def lifespan(app: FastAPI):
+@@ -412,10 +441,10 @@ async def lifespan(app: FastAPI):
      try:
          yield
      finally:
@@ -1576,12 +1683,13 @@ index d338a13..0fb53c3 100644
          except (asyncio.CancelledError, Exception):
              pass
          try:
-@@ -424,40 +427,13 @@ async def lifespan(app: FastAPI):
+@@ -424,40 +453,14 @@ async def lifespan(app: FastAPI):
              await app.state.update_task
          except (asyncio.CancelledError, Exception):
              pass
 +        histmod.flush()
 +        marksmod.flush()
++        await _segments.close()
          await app.state.up.aclose()
          await app.state.ext.aclose()
  
@@ -1620,7 +1728,7 @@ index d338a13..0fb53c3 100644
  
  import logging
  _log = logging.getLogger("fnmedia")
-@@ -475,9 +451,9 @@ async def _access(request: Request, call_next):
+@@ -475,9 +478,9 @@ async def _access(request: Request, call_next):
      p = request.url.path
      if "/api/" in p or p.startswith(ONLINE_PREFIX) or p.startswith("/v/media"):
          _log.info("%s %s -> %s", request.method,
@@ -1632,7 +1740,7 @@ index d338a13..0fb53c3 100644
      return resp
  
  
-@@ -865,7 +841,7 @@ async def online_search(keyword: str, client: httpx.AsyncClient) -> list:
+@@ -865,7 +868,7 @@ async def online_search(keyword: str, client: httpx.AsyncClient) -> list:
                  _search_inflight.pop(keyword, None)
  
          asyncio.create_task(work())
@@ -1641,7 +1749,402 @@ index d338a13..0fb53c3 100644
  
  
  def _norm_title(t: str) -> str:
-@@ -3239,6 +3215,8 @@ async def hls_seg(mg: str, request: Request):
+@@ -2086,6 +2089,9 @@ def _qualities(target: dict) -> list[dict]:
+     if len(lines) <= 1:
+         return []
+     out = []
++    if _stability_on():
++        out.append({"resolution": "自动·稳定优先", "bitrate": stability.AUTO_BITRATE,
++                    "progressive": True, "is_m3u8": False})
+     for i, t in enumerate(lines):
+         out.append({
+             "resolution": t.get("label") or _friendly_line(t["line"]),
+@@ -2208,12 +2214,15 @@ async def play_play(request: Request):
+     # 卡在海报墙像“点了没反应”）。先瞬时返回播放地址让播放器立刻进入加载页转圈，
+     # 真正的解析延迟到播放器内部取 main.m3u8 / direct 时再做（那里本就有加载指示）。
+     wrapper, is_hls = _guess_wrapper(target)
+-    q = urllib.parse.urlencode({"line": target["line"], "index": target["index"]})
++    auto = _stability_on() and str(body.get("bitrate", "")) == str(stability.AUTO_BITRATE)
++    q = urllib.parse.urlencode({"index": target["index"], "mode": "stable"} if auto else
++                              {"line": target["line"], "index": target["index"]})
+     if is_hls:
+         play_link = f"{ONLINE_PREFIX}/{mg}/preset.m3u8?{q}"
+         # 后台立刻预热该线路（含解析 + 播放列表），播放器取 main 时大概率已就绪
+         try:
+-            _warm_playlist(mg, target, request)
++            if not auto:
++                _warm_playlist(mg, target, request)
+         except Exception:
+             pass
+     else:
+@@ -2231,8 +2240,13 @@ async def play_play(request: Request):
+ @app.get(f"{ONLINE_PREFIX}/{{mg}}/direct")
+ async def direct_proxy(mg: str, request: Request):
+     """mp4 等非 HLS 直链代理：同源、带 Range 支持（播放器 seek）。"""
++    await _expire_playback()
++    sid = request.query_params.get("sid")
++    ctx = _playback.get(current_user_id(), sid, mg) if sid else None
++    if sid and ctx is None:
++        return Response("playback context expired", status_code=410)
+     failed_g = await _await_pending_chart(mg)
+-    target = store.resolve_media_guid(mg)
++    target = dict(ctx.picked) if ctx else store.resolve_media_guid(mg)
+     if not target:
+         if failed_g:
+             return Response("暂无可用在线片源", status_code=503)
+@@ -2240,7 +2254,7 @@ async def direct_proxy(mg: str, request: Request):
+     # direct 的 query 会显式带线路（HLS 预判为 MP4 时回跳而来）；必须解析该线路，
+     # 不能沿用默认线路，否则可能拿到另一资源站的 HLS 而再次弹回，形成重定向环。
+     qline = request.query_params.get("line")
+-    if qline and qline != target.get("line"):
++    if not ctx and qline and qline != target.get("line"):
+         if target.get("kind") == "episode" and target.get("ep_guid"):
+             switched = store.get_episode_target(target["ep_guid"], qline)
+         else:
+@@ -2250,11 +2264,13 @@ async def direct_proxy(mg: str, request: Request):
+             target = switched
+     # 线路健康探测 + 自动换线（直链/小雅等非 HLS 线路）
+     request.state._play_mg = mg
+-    if _autofail_on():
++    if _autofail_on() and ctx is None:
+         target = await _ensure_playable(target, request)
+     else:
+         await _resolve_if_needed(target, request)
+     src_url = target["url"]
++    if ctx and re.search(r"\.m3u8(\?|$)", src_url, re.I):
++        return Response("selected source format changed", status_code=502)
+     if re.search(r"\.m3u8(\?|$)", src_url, re.I):
+         # 源是 HLS 却走到直链（MP4 预判失误）：带线路/集序重定向到 preset
+         q = urllib.parse.urlencode({"line": target["line"],
+@@ -2269,7 +2285,7 @@ async def direct_proxy(mg: str, request: Request):
+         r = await ext_client(request).send(req, stream=True)
+     except Exception as exc:
+         # 直链连接失败：记忆坏线并自动换线重试一次
+-        if _autofail_on():
++        if _autofail_on() and ctx is None:
+             _mark_line_bad(target)
+             alt = await _find_playable(target, request, skip_current=True)
+             if alt is not None:
+@@ -2299,7 +2315,7 @@ async def direct_proxy(mg: str, request: Request):
+         else:
+             return Response(f"direct fail {type(exc).__name__}", status_code=502)
+     # 上游明确 4xx/5xx（文件被删/鉴权失败）：记忆坏线，换线重定向重试
+-    if r.status_code >= 400 and _autofail_on():
++    if r.status_code >= 400 and _autofail_on() and ctx is None:
+         await r.aclose()
+         _mark_line_bad(target)
+         alt = await _find_playable(target, request, skip_current=True)
+@@ -2633,7 +2649,7 @@ async def _probe_latency(cand: dict, request: Request,
+             return time.time() - t0
+ 
+         # HLS
+-        key = _playlist_cache_key(cand)
++        key = _playlist_cache_key(cand, getattr(request.state, "_play_mg", ""))
+         if key in _PLAYLIST_CACHE:
+             return time.time() - t0
+         if build_hls:
+@@ -2858,8 +2874,10 @@ _PLAYLIST_FUT: dict[str, asyncio.Future] = {}
+ _NOT_HLS = object()
+ 
+ 
+-def _playlist_cache_key(picked: dict) -> str:
+-    return f'{picked.get("online_guid","")}|{picked.get("line","")}|{int(picked.get("index",0) or 0)}'
++def _playlist_cache_key(picked: dict, mg: str = "") -> str:
++    raw = [current_user_id(), mg, picked.get("online_guid"), picked.get("line"),
++           picked.get("index"), picked.get("url"), picked.get("headers", {})]
++    return hashlib.sha256(json.dumps(raw, sort_keys=True).encode()).hexdigest()
+ 
+ 
+ async def _build_playlist_body(mg: str, picked: dict, request: Request):
+@@ -2976,7 +2994,7 @@ async def _build_playlist_body(mg: str, picked: dict, request: Request):
+ async def _get_playlist_cached(mg: str, picked: dict, request: Request):
+     """取改写后的播放列表（内存缓存 + 单飞）。返回文本或 None。
+     若该集/线路已有在途抓取（点击时预热启动），直接等同一个结果，不重复请求上游。"""
+-    key = _playlist_cache_key(picked)
++    key = _playlist_cache_key(picked, mg)
+     now = time.time()
+     hit = _PLAYLIST_CACHE.get(key)
+     if hit and now - hit[0] < _PLAYLIST_TTL:
+@@ -3004,12 +3022,12 @@ async def _get_playlist_cached(mg: str, picked: dict, request: Request):
+                 _PLAYLIST_FUT.pop(key, None)
+ 
+         asyncio.create_task(produce())
+-    return await fut
++    return await asyncio.shield(fut)
+ 
+ 
+ def _warm_playlist(mg: str, picked: dict, request: Request) -> None:
+     """点击播放时后台预热默认线路播放列表（单飞，真正取 main 时并入同一任务）。"""
+-    key = _playlist_cache_key(picked)
++    key = _playlist_cache_key(picked, mg)
+     hit = _PLAYLIST_CACHE.get(key)
+     if hit and time.time() - hit[0] < _PLAYLIST_TTL:
+         return
+@@ -3026,6 +3044,19 @@ async def hls_preset(mg: str, request: Request):
+         if failed_g:
+             return Response("暂无可用在线片源", status_code=503)
+         return Response("not found", status_code=404)
++    if _stability_on() and (request.query_params.get("line") or
++                            request.query_params.get("mode") == "stable"):
++        await _expire_playback()
++        automatic = request.query_params.get("mode") == "stable" and not request.query_params.get("line")
++        ctx = _playback.create(current_user_id(), mg, picked, automatic)
++        if ctx is not None:
++            master = ("#EXTM3U\n#EXT-X-VERSION:3\n"
++                      "#EXT-X-STREAM-INF:BANDWIDTH=2000000\n"
++                      f"main.m3u8?sid={ctx.sid}\n")
++            return Response(master, media_type="application/vnd.apple.mpegurl",
++                            headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
++        if request.query_params.get("mode") == "stable":
++            return Response("playback context capacity reached", status_code=503)
+     # 起播即跳过已知坏线（用户显式选线除外）
+     picked = _dodge_known_bad(picked, request)
+     # 注意：此处不 await _resolve_if_needed —— preset 只输出线路变体菜单，
+@@ -3147,6 +3178,8 @@ async def _fetch_playlist(request: Request, url: str, headers: dict,
+         if r.status_code != 200:
+             return None, cur
+         text = r.text
++        if not text.lstrip().startswith("#EXTM3U"):
++            return None, cur
+         if _is_media_playlist(text):
+             break
+         nxt = _first_variant(text, cur)
+@@ -3156,8 +3189,217 @@ async def _fetch_playlist(request: Request, url: str, headers: dict,
+     return text, cur
+ 
+ 
++async def _stable_choice(ctx, request):
++    """At most two candidates and six seconds; never race after publishing media."""
++    picked = ctx.picked
++    candidates = [picked]
++    if ctx.automatic and _stability_on():
++        for cand in _episode_candidates(picked):
++            if cand.get("line") == picked.get("line"):
++                continue
++            # Index alone is not proof of the same episode across different lists.
++            if picked.get("kind") == "episode" and cand.get("ep_title") != picked.get("ep_title"):
++                continue
++            if cand.get("online_guid") != picked.get("online_guid") or cand.get("index") != picked.get("index"):
++                continue
++            candidates.append(cand)
++            break
++    prepared = []
++    probe_allowed = False
++
++    async def candidate(target):
++        target = dict(target)
++        # New selection owns its cancellation; do not start orphan cache producers.
++        body, _ = await _build_playlist_body(ctx.mg, target, request)
++        if body is None or body is _NOT_HLS:
++            result = (target, body, (), None, None)
++            prepared.append(result)
++            return result
++        specs = stability.ordinary_vod(body, f"{ONLINE_PREFIX}/{ctx.mg}")
++        result = (target, body, specs, None, None)
++        prepared.append(result)
++        if not specs or not ctx.automatic or not _stability_on():
++            return result
++        hk = stability.health_key(ctx.uid, target, specs)
++        score = _playback.score(hk)
++        if score is not None:
++            return target, body, specs, None, score
++        if not probe_allowed:
++            return result
++        sample = await _playback.sample(ext_client(request), specs[0], target.get("headers", {}))
++        if sample is None:
++            _playback.metrics["cold_inconclusive"] += 1
++            return result
++        data, elapsed, ttfb = sample
++        _playback.record(hk, specs[0].duration, elapsed, ttfb, cold=True)
++        return target, body, specs, data, elapsed / specs[0].duration
++
++    # Manual choice avoids extra origin probes and never falls through to another line.
++    if len(candidates) == 1 and not ctx.automatic:
++        return await candidate(picked)
++    # Keep the two candidates' retained results inside the same memory lease,
++    # including cancellation cleanup. Concurrent viewers use existing evidence.
++    probe_allowed = _playback.cold_selections == 0
++    if probe_allowed:
++        _playback.cold_selections += 1
++    tasks = {asyncio.create_task(candidate(c)) for c in candidates}
++    done_results = []
++    deadline = time.monotonic() + 6
++    try:
++        pending = tasks.copy()
++        while pending:
++            remaining = deadline - time.monotonic()
++            if remaining <= 0:
++                _playback.metrics["selection_timeouts"] += 1
++                break
++            done, pending = await asyncio.wait(pending, timeout=remaining,
++                                                return_when=asyncio.FIRST_COMPLETED)
++            if not done:
++                _playback.metrics["selection_timeouts"] += 1
++                break
++            for task in done:
++                try:
++                    result = task.result()
++                except Exception:
++                    continue
++                done_results.append(result)
++                if result[1] is not None and result[4] is not None and result[4] <= .7:
++                    return result
++        measured = [r for r in done_results if r[1] is not None and r[4] is not None]
++        if measured:
++            return min(measured, key=lambda r: r[4])
++        usable = [r for r in prepared if r[1] is not None]
++        usable.sort(key=lambda r: r[0].get("line") != picked.get("line"))
++        if usable:
++            return usable[0]
++        # No successful playlist in bounded selection: return failure, not an unrelated episode.
++        return picked, None, (), None, None
++    finally:
++        for task in tasks:
++            if not task.done():
++                task.cancel()
++        try:
++            await asyncio.gather(*tasks, return_exceptions=True)
++        finally:
++            if probe_allowed:
++                _playback.cold_selections -= 1
++
++
++async def _stable_main(mg: str, request: Request):
++    await _expire_playback()
++    ctx = _playback.get(current_user_id(), request.query_params.get("sid"), mg)
++    if ctx is None:
++        return Response("playback context expired", status_code=410)
++    async with ctx.lock:
++        if ctx.redirect:
++            return RedirectResponse(ctx.redirect, status_code=302)
++        if ctx.body is None:
++            try:
++                picked, body, specs, prime, _ = await _stable_choice(ctx, request)
++            except SSRFBlocked:
++                return Response("destination not permitted", status_code=403)
++            except Exception:
++                return Response("playlist unavailable", status_code=502)
++            if body is None:
++                return Response("playlist unavailable", status_code=502)
++            if body is _NOT_HLS:
++                # A direct source retains the selected line in its redirect.
++                q = urllib.parse.urlencode({"line": picked["line"], "index": picked["index"]})
++                ctx.picked = dict(picked)
++                ctx.redirect = f"{ONLINE_PREFIX}/{mg}/direct?{q}&sid={ctx.sid}"
++                return RedirectResponse(ctx.redirect, status_code=302)
++            if not specs:
++                ctx.picked, ctx.automatic = dict(picked), False
++                return Response(body, media_type="application/vnd.apple.mpegurl",
++                                headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
++            if ctx.retired:
++                # Only rebuild the pinned source, no race or failover after idle expiry.
++                return Response(body, media_type="application/vnd.apple.mpegurl",
++                                headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
++            if not _playback.register(ctx, picked, body, specs, prime):
++                if _playback.retire(ctx, picked):
++                    # A full cache must not turn a playable source into an error.
++                    return Response(body, media_type="application/vnd.apple.mpegurl",
++                                    headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
++                return Response("playback context capacity reached", status_code=503)
++        # After this media response is published there is no re-selection, including on TTL.
++        body = stability.rewrite(ctx.body, f"{ONLINE_PREFIX}/{mg}", ctx.sid, ctx.uid) if ctx.specs else ctx.body
++        return Response(body, media_type="application/vnd.apple.mpegurl",
++                        headers={"Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"})
++
++
++async def _stable_segment(mg: str, request: Request):
++    await _expire_playback()
++    ctx = _playback.get(current_user_id(), request.query_params.get("sid"), mg)
++    if ctx is None:
++        return Response("playback context expired", status_code=410)
++    if ctx.retired:
++        # The URL already carries the original source, line and episode. The uid/sid
++        # descriptor is still checked; unknown/other-user contexts never fall back.
++        if (request.query_params.get("line") != ctx.picked.get("line") or
++                request.query_params.get("index") != str(ctx.picked.get("index")) or
++                not stability.valid_link(ctx.uid, f"{ONLINE_PREFIX}/{mg}", ctx.sid, request.query_params)):
++            return Response("bad retired context", status_code=400)
++        params = dict(request.query_params)
++        params.pop("sid", None)
++        params.pop("n", None)
++        params.pop("proof", None)
++        scope = dict(request.scope, query_string=urllib.parse.urlencode(params).encode(),
++                     state=dict(request.scope.get("state", {}), _stable_picked=ctx.picked))
++        return await hls_seg(mg, Request(scope))
++    try:
++        index = int(request.query_params.get("n", ""))
++        if not 0 <= index < len(ctx.specs):
++            raise ValueError()
++    except ValueError:
++        return Response("bad segment index", status_code=400)
++    incoming_range = request.headers.get("range", "").strip()
++    full_range = incoming_range.lower() == "bytes=0-"
++    _playback.metrics["full_range" if full_range else "partial_range" if incoming_range else "no_range"] += 1
++    if _stability_on() and not ctx.buffer_disabled and (not incoming_range or full_range):
++        result = None
++        if index == 0 and ctx.prime and time.monotonic() - ctx.prime_at <= 60:
++            body = ctx.prime
++            _playback.metrics["prime"] += 1
++        else:
++            body = None
++            try:
++                result = await _segments.get(ctx.key, ctx.specs, index, ext_client(request),
++                    ctx.picked.get("headers", {}),
++                    prefetch=config.get().get("playback_prefetch", False) is True and ctx.seen >= 2)
++                body = result.body
++                if result.origin in ("cache", "join"):
++                    _playback.metrics[result.origin] += 1
++            except SSRFBlocked:
++                return Response("destination not permitted", status_code=403)
++            except BypassBuffer as exc:
++                _playback.metrics["bypass"] += 1
++                if str(exc) in {"not-ts", "png", "compressed", "partial-206", "segment-cap", "range"}:
++                    # A PNG wrapper/unsupported format should not be re-probed for every segment.
++                    ctx.buffer_disabled = True
++                    await _segments.invalidate(ctx.key)
++            except Exception:
++                _playback.metrics["bypass"] += 1
++        ctx.seen += 1
++        ctx.last_index = index
++        if body is not None:
++            headers = {"Content-Type": "video/mp2t", "Content-Length": str(len(body)),
++                       "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"}
++            if full_range:
++                headers["Content-Range"] = f"bytes 0-{len(body)-1}/{len(body)}"
++                headers["Accept-Ranges"] = "bytes"
++            return Response(body, status_code=206 if full_range else 200, headers=headers)
++    # Preserve the original Range/PNG/error retry behavior, using the locked source.
++    params = {"u": b64e(ctx.specs[index].url), "line": ctx.picked["line"], "index": ctx.picked["index"]}
++    scope = dict(request.scope, query_string=urllib.parse.urlencode(params).encode(),
++                 state=dict(request.scope.get("state", {}), _stable_picked=ctx.picked))
++    return await hls_seg(mg, Request(scope))
++
++
+ @app.get(f"{ONLINE_PREFIX}/{{mg}}/main.m3u8")
+ async def hls_main(mg: str, request: Request):
++    if "sid" in request.query_params:
++        return await _stable_main(mg, request)
+     failed_g = await _await_pending_chart(mg)
+     picked = _pick_episode(mg, request)
+     if not picked:
+@@ -3221,13 +3463,15 @@ async def hls_cors_preflight(rest: str):
+ 
+ @app.get(f"{ONLINE_PREFIX}/{{mg}}/seg")
+ async def hls_seg(mg: str, request: Request):
++    if "sid" in request.query_params:
++        return await _stable_segment(mg, request)
+     u = request.query_params.get("u", "")
+     try:
+         src_url = b64d(u)
+     except Exception:
+         return Response("bad u", status_code=400)
+     await _await_pending_chart(mg)
+-    picked = _pick_episode(mg, request)
++    picked = getattr(request.state, "_stable_picked", None) or _pick_episode(mg, request)
+     headers = picked["headers"] if picked else {}
+     # 透传 Range（播放器 seek）
+     fwd = dict(headers)
+@@ -3239,6 +3483,8 @@ async def hls_seg(mg: str, request: Request):
      try:
          # 分片在播放中途持续拉取，对瞬时抖动必须重试，否则单次失败播放器直接报错
          r = await ext_get_retry(request, src_url, fwd, tries=4, timeout=30.0)
@@ -1650,7 +2153,7 @@ index d338a13..0fb53c3 100644
      except Exception as exc:
          _log.warning("seg fetch fail %s %s", type(exc).__name__,
                       urllib.parse.urlsplit(src_url).netloc)
-@@ -3350,6 +3328,8 @@ async def _serve_online_poster(tok_path: str, request: Request) -> Response:
+@@ -3350,6 +3596,8 @@ async def _serve_online_poster(tok_path: str, request: Request) -> Response:
              sniff = "image/jpeg"
          elif head[:6] in (b"GIF87a", b"GIF89a"):
              sniff = "image/gif"
@@ -1659,18 +2162,19 @@ index d338a13..0fb53c3 100644
          if not (ctype.startswith("image/") or sniff):
              return _poster_fallback()
          ctype = ctype if ctype.startswith("image/") else sniff
-@@ -3416,7 +3396,9 @@ async def ext_status(request: Request):
+@@ -3416,7 +3664,10 @@ async def ext_status(request: Request):
              "cached_titles": len(store._titles),
              "hot": hot_cache.status(),
              "charts": chart_cache.status(),
 -            "catalog": catalog.status()}
 +            "catalog": catalog.status(),
 +            # 内容更新调度：真成功/失败/下次计划（来自 content_refresh 的持久化状态）
-+            "content": refreshmod.status()}
++            "content": refreshmod.status(),
++            "playback": {"session": _playback.snapshot(), "buffer": _segments.snapshot()}}
  
  
  # --------------------------------------------------------------- 版本更新
-@@ -3426,6 +3408,11 @@ async def ext_update_check(request: Request):
+@@ -3426,6 +3677,11 @@ async def ext_update_check(request: Request):
      return await updater.check(force=force)
  
  
@@ -1682,7 +2186,7 @@ index d338a13..0fb53c3 100644
  @app.get("/v/api/ext/update/status")
  async def ext_update_status(request: Request):
      return updater.status()
-@@ -3493,16 +3480,62 @@ async def ext_lib_pin(request: Request):
+@@ -3493,16 +3749,62 @@ async def ext_lib_pin(request: Request):
              "data": {"pinned_libs": sorted(config.pinned_lib_guids())}}
  
  
@@ -1753,7 +2257,7 @@ index d338a13..0fb53c3 100644
  
  
  @app.get("/v/api/ext/online")
-@@ -3529,11 +3562,10 @@ async def ext_set_config(request: Request):
+@@ -3529,13 +3831,15 @@ async def ext_set_config(request: Request):
          "max_per_keyword", "filter_junk", "junk_keywords", "online_first",
          "hot_library_enabled", "hot_library_title", "hot_limit",
          "hot_per_source", "hot_pages_per_source", "hot_refresh_interval",
@@ -1761,12 +2265,18 @@ index d338a13..0fb53c3 100644
 +        "catalog_library_enabled", "catalog_refresh_interval",
          "prefer_quality_source",
          "line_fastest", "line_fastest_max", "line_fastest_timeout",
-         "line_fastest_prefer", "line_autofail",
+-        "line_fastest_prefer", "line_autofail",
 -        "update_proxy",
++        "line_fastest_prefer", "line_autofail", "playback_stability", "playback_prefetch",
      }
      patch = {k: v for k, v in body.items() if k in allowed}
++    for flag in ("playback_stability", "playback_prefetch"):
++        if flag in patch and not isinstance(patch[flag], bool):
++            return JSONResponse({"code": 400, "msg": "开关值必须为布尔值"}, status_code=400)
      if "hot_library_title" in patch:
-@@ -3547,6 +3579,11 @@ async def ext_set_config(request: Request):
+         patch["hot_library_title"] = str(patch["hot_library_title"]).strip()[:20] or HOT_DEFAULT_TITLE
+     if "hot_limit" in patch:
+@@ -3547,6 +3851,11 @@ async def ext_set_config(request: Request):
      if "hot_refresh_interval" in patch:
          patch["hot_refresh_interval"] = max(1 * 3600, min(24 * 3600,
                                                            int(patch["hot_refresh_interval"])))
@@ -1778,12 +2288,16 @@ index d338a13..0fb53c3 100644
      if "update_proxy" in patch:
          pu = str(patch["update_proxy"]).strip()[:300]
          patch["update_proxy"] = pu if re.match(r"^(https?|socks5h?)://", pu) else ""
-@@ -3569,10 +3606,24 @@ async def ext_set_config(request: Request):
+@@ -3569,10 +3878,28 @@ async def ext_set_config(request: Request):
                  if isinstance(ch.get("adult"), bool):
                      cur[sid]["adult"] = ch["adult"] and bool(cur[sid].get("standalone"))
          patch["sources"] = list(cur.values())
 +    before = config.get()
      config.save(patch)
++    if any(before.get(k) and patch.get(k) is False for k in ("playback_stability", "playback_prefetch")):
++        # Invalidate speculative work, retain contexts so already-issued URLs still play.
++        for key in tuple(_playback.contexts):
++            await _segments.invalidate(key)
      _search_cache.clear()
 +    # 配置变化调度：库开关/刷新间隔变了，让内容刷新按新计划立即重算并在到期时
 +    # 后台跑一次（单飞，绝不与手动按钮并发）。改源则重建路由 + 预热首页。
@@ -1803,7 +2317,7 @@ index d338a13..0fb53c3 100644
      return {"code": 0, "msg": "saved"}
  
  
-@@ -3583,28 +3634,7 @@ async def ext_set_subscription_proxy(request: Request):
+@@ -3583,28 +3910,7 @@ async def ext_set_subscription_proxy(request: Request):
      播放、搜索、CMS 探测不走此代理。body: {"proxy":"http://user:pass@host:port"或""}
      会即时保存并用该代理探测一次（拉一个轻量 URL），返回连通结果。
      """
@@ -1833,7 +2347,7 @@ index d338a13..0fb53c3 100644
  
  
  @app.post("/v/api/ext/junk-keywords")
-@@ -3618,10 +3648,25 @@ async def ext_junk_keywords(request: Request):
+@@ -3618,10 +3924,25 @@ async def ext_junk_keywords(request: Request):
      return {"code": 0, "msg": "saved", "data": {"junk_keywords": kws}}
  
  
@@ -1861,13 +2375,14 @@ index d338a13..0fb53c3 100644
      except Exception:
          pass
  
-@@ -3998,3 +4043,8 @@ async def catch_all(request: Request, full_path: str):
+@@ -3998,3 +4319,9 @@ async def catch_all(request: Request, full_path: str):
      # 本地视频/文件等大响应必须流式透传（不缓冲整文件），避免打满内存拖死系统；
      # 该函数内部对普通 JSON 自动回落到缓冲透传。
      return await forward_upstream_streaming(request)
 +
 +
 +# Authentication remains in the independent extension; official files are untouched.
++app.add_middleware(stability.DeliveryMetrics, get_playback=lambda: _playback)
 +from security import SessionMiddleware
 +app.add_middleware(SessionMiddleware, api_app=app, forward=forward_upstream_streaming)
 diff --git a/proxy/catalog.py b/proxy/catalog.py
@@ -3674,10 +4189,19 @@ index 0000000..9592092
 +
 +    return Contract(not reasons, tuple(reasons), sys_version, mediasrv_version, user_code)
 diff --git a/proxy/config.py b/proxy/config.py
-index b83a13c..bbce73e 100644
+index b83a13c..91da962 100644
 --- a/proxy/config.py
 +++ b/proxy/config.py
-@@ -42,9 +42,9 @@ DEFAULTS = {
+@@ -32,6 +32,8 @@ DEFAULTS = {
+     # 播放线路健康探测与自动换线：当前线路解析失败/文件不存在时，自动探测同集其他
+     # 线路并切到首个可用线路；坏线短时记忆，起播自动跳过（关闭则保持纯手动选线）
+     "line_autofail": True,
++    "playback_stability": False,
++    "playback_prefetch": False,
+     # 完全自动选最快线：起播时并行竞速探测前若干条候选线路，选首字节延迟最低的线；
+     # 最快线短时记忆，同一集后续/重放稳定用它（手动在播放器切线仍被尊重）
+     "line_fastest": True,
+@@ -42,9 +44,9 @@ DEFAULTS = {
      # 默认线（高质量源）领先优势（秒）：它在该优势内返回就算赢，避免无谓抖动
      "line_fastest_prefer": 0.25,
      # 虚拟“热门榜单”四库媒体库（豆瓣真实周榜/标签榜）
@@ -3689,7 +4213,7 @@ index b83a13c..bbce73e 100644
      # 是否把每个启用的 TVBox 加固源（csp_*Guard，如比特/糯米/花花）生成为一张
      # 独立“专区媒体库”卡片。默认关闭：加固源只作为播放时可切换的线路/搜索源，
      # 不在媒体库列表里产生空库。需要专区墙时可在管理页打开。
-@@ -59,6 +59,9 @@ DEFAULTS = {
+@@ -59,6 +61,9 @@ DEFAULTS = {
      "hot_per_source": 120,    # 每个资源站最多抓取的可播条目
      "hot_pages_per_source": 6,  # 每个资源站翻“最近更新”的页数（每页约20条）
      "hot_refresh_interval": 6 * 3600,
@@ -3699,7 +4223,7 @@ index b83a13c..bbce73e 100644
      # 源质量优先级：source_id -> 权重（越高越优先）。未列出的源取内省默认（见
      # providers.source_priority）。热门榜单点击搜源时按 (优先级, 直链数) 排序。
      "source_priority": {},
-@@ -191,6 +194,7 @@ class Config:
+@@ -191,6 +196,7 @@ class Config:
          _STATE.parent.mkdir(parents=True, exist_ok=True)
          tmp = _STATE.with_suffix(".tmp")
          tmp.write_text(json.dumps(cfg, ensure_ascii=False, indent=2))
@@ -4703,6 +5227,319 @@ index 14593ff..f1a9b85 100644
 +
 +
 +flush_all = flush
+diff --git a/proxy/playback_stability.py b/proxy/playback_stability.py
+new file mode 100644
+index 0000000..a00eaf6
+--- /dev/null
++++ b/proxy/playback_stability.py
+@@ -0,0 +1,307 @@
++"""Bounded, authenticated-user playback contexts; no credentials or persistent URLs.
++
++A context is correlation only. Every route still runs official session auth.
++An idle context keeps a bounded explicit-source descriptor and never re-selects.
++"""
++from __future__ import annotations
++
++import asyncio
++import base64
++import hashlib
++import hmac
++import json
++import math
++import secrets
++import time
++import urllib.parse
++from collections import OrderedDict, deque
++from dataclasses import dataclass, field
++
++from segment_buffer import SegmentSpec
++
++AUTO_BITRATE = 91_500_001  # distinct from the legacy 90M manual-line encoding
++MAX_PLAYLIST = 2 * 1024 * 1024
++MAX_SEGMENTS = 8192
++COLD_BYTES = 4 * 1024 * 1024
++_LINK_KEY = secrets.token_bytes(32)  # ephemeral integrity only; never authenticates a user
++
++
++def ordinary_vod(body: str, prefix: str) -> tuple[SegmentSpec, ...]:
++    """Accept only rewritten complete plain TS VOD; all other media keep old path."""
++    if len(body) > MAX_PLAYLIST or not body.startswith('#EXTM3U') or '#EXT-X-ENDLIST' not in body:
++        return ()
++    if any(tag in body for tag in ('#EXT-X-KEY', '#EXT-X-MAP', '#EXT-X-BYTERANGE',
++                                   '#EXT-X-PART', '#EXT-X-I-FRAMES',
++                                   '#EXT-X-GAP', '#EXT-X-STREAM-INF')):
++        return ()
++    out, duration = [], None
++    for raw in body.splitlines():
++        line = raw.strip()
++        if line.startswith('#EXTINF:'):
++            try:
++                duration = float(line.split(':', 1)[1].split(',', 1)[0])
++            except ValueError:
++                return ()
++            if not math.isfinite(duration) or not 0 < duration < 3600:
++                return ()
++        elif line and not line.startswith('#'):
++            if duration is None or not line.startswith(prefix + '/seg?'):
++                return ()
++            query = urllib.parse.parse_qs(urllib.parse.urlsplit(line).query)
++            if 'dec' in query or set(query) - {'u', 'line', 'index'}:
++                return ()
++            try:
++                token = query['u'][0]
++                url = base64.urlsafe_b64decode(token + '=' * (-len(token) % 4)).decode()
++            except (KeyError, ValueError, UnicodeError):
++                return ()
++            parsed = urllib.parse.urlsplit(url)
++            if parsed.scheme not in ('http', 'https') or not parsed.path.lower().endswith('.ts'):
++                return ()
++            if len(url) > 8192 or len(out) >= MAX_SEGMENTS:
++                return ()
++            out.append(SegmentSpec(url, duration))
++            duration = None
++    return tuple(out) if duration is None else ()
++
++
++def link_proof(uid: str, prefix: str, sid: str, n: str, params: dict) -> str:
++    raw = json.dumps([uid, prefix, sid, n, {k: params.get(k, "") for k in ("u", "line", "index")}],
++                     sort_keys=True, separators=(",", ":")).encode()
++    return hmac.new(_LINK_KEY, raw, hashlib.sha256).hexdigest()
++
++
++def valid_link(uid: str, prefix: str, sid: str, params) -> bool:
++    if set(params) != {"u", "line", "index", "sid", "n", "proof"}:
++        return False
++    proof = params.get("proof", "")
++    if len(proof) != 64 or any(c not in "0123456789abcdef" for c in proof):
++        return False
++    expected = link_proof(uid, prefix, sid, params.get("n", ""), params)
++    return hmac.compare_digest(expected, proof)
++
++
++def rewrite(body: str, prefix: str, sid: str, uid: str) -> str:
++    out, index = [], 0
++    for raw in body.splitlines():
++        if raw.strip() and not raw.strip().startswith('#'):
++            # Keep the original explicit source for an idle context's bounded tombstone.
++            params = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(raw).query))
++            proof = link_proof(uid, prefix, sid, str(index), params)
++            raw += f'&sid={sid}&n={index}&proof={proof}'
++            index += 1
++        out.append(raw)
++    return '\n'.join(out) + '\n'
++
++
++def health_key(uid: str, picked: dict, specs: tuple) -> str:
++    # Raw headers are never retained in health records or diagnostic output.
++    host = urllib.parse.urlsplit(specs[0].url if specs else picked.get('url', '')).netloc
++    raw = [uid, picked.get('line'), host,
++           sorted((str(k).lower(), str(v)) for k, v in picked.get('headers', {}).items())]
++    return hashlib.sha256(json.dumps(raw, ensure_ascii=True).encode()).hexdigest()
++
++
++@dataclass
++class Context:
++    uid: str
++    sid: str
++    mg: str
++    automatic: bool
++    picked: dict
++    touched: float = field(default_factory=time.monotonic)
++    lock: asyncio.Lock = field(default_factory=asyncio.Lock)
++    body: str | None = None
++    redirect: str | None = None
++    retired: bool = False
++    buffer_disabled: bool = False
++    specs: tuple = ()
++    health: str = ''
++    cost: int = 0
++    prime: bytes | None = None
++    prime_at: float = 0
++    seen: int = 0
++    last_index: int = -1
++
++    @property
++    def key(self):
++        return self.uid, self.sid
++
++
++class Playback:
++    def __init__(self):
++        self.contexts = OrderedDict()
++        self.retired = OrderedDict()
++        self.samples = OrderedDict()
++        self.metrics = {'network_samples': 0, 'slow_samples': 0, 'cold_samples': 0,
++                        'cold_inconclusive': 0, 'selection_timeouts': 0,
++                        'cache': 0, 'join': 0, 'prime': 0, 'bypass': 0,
++                        'no_range': 0, 'full_range': 0, 'partial_range': 0}
++        self.cold_active = 0
++        self.cold_selections = 0
++        self.delivery = deque(maxlen=256)
++
++    def expired(self):
++        now = time.monotonic()
++        keys = [k for k, c in self.contexts.items() if now - c.touched > 1800 and not c.lock.locked()]
++        for k in keys:
++            c = self.contexts.pop(k)
++            c.body, c.specs, c.prime, c.cost = None, (), None, 0
++            c.automatic, c.retired = False, True
++            self.retired[k] = c
++        # Small descriptors preserve a pinned source after 30min of idle time.
++        # Their bounded lifetime is independent of the much larger playlist cache.
++        for k in list(self.retired):
++            if now - self.retired[k].touched > 86400:
++                self.retired.pop(k)
++        while len(self.retired) > 256:
++            self.retired.popitem(last=False)
++        for c in self.contexts.values():
++            if now - c.prime_at > 60:
++                c.prime = None
++        return keys
++
++    def retire(self, c, picked=None):
++        target = dict(picked or c.picked)
++        if len(json.dumps(target)) > 16384:
++            return False
++        self.contexts.pop(c.key, None)
++        c.picked = target
++        c.body, c.specs, c.prime, c.cost = None, (), None, 0
++        c.automatic, c.retired = False, True
++        self.retired[c.key] = c
++        while len(self.retired) > 256:
++            self.retired.popitem(last=False)
++        return True
++
++    def create(self, uid, mg, picked, automatic):
++        if not uid or len(self.contexts) >= 32 or len(json.dumps(picked)) > 16384:
++            return None
++        c = Context(uid, secrets.token_urlsafe(24), mg, automatic, dict(picked))
++        self.contexts[c.key] = c
++        return c
++
++    def get(self, uid, sid, mg):
++        c = self.contexts.get((uid, sid)) or self.retired.get((uid, sid))
++        if c is None or c.mg != mg:
++            return None
++        c.touched = time.monotonic()
++        if c.touched - c.prime_at > 60:
++            c.prime = None
++        return c
++
++    def register(self, c, picked, body, specs, prime=None):
++        if c.retired or len(json.dumps(picked)) > 16384:
++            return False
++        cost = len(body.encode()) + sum(len(s.url.encode()) + 32 for s in specs)
++        if cost > 4 * MAX_PLAYLIST or sum(x.cost for x in self.contexts.values()) + cost > 32 * 1024 * 1024:
++            return False
++        c.picked, c.body, c.specs = dict(picked), body, specs
++        c.health, c.cost = health_key(c.uid, picked, specs), cost
++        if prime and sum(len(x.prime or b'') for x in self.contexts.values()) + len(prime) <= 16 * 1024 * 1024:
++            c.prime, c.prime_at = prime, time.monotonic()
++        return True
++
++    def record(self, key, duration, elapsed, ttfb=0, cold=False):
++        if duration <= 0 or elapsed <= 0:
++            return
++        now = time.monotonic()
++        rows = self.samples.setdefault(key, deque(maxlen=20))
++        rows.append((now, elapsed / duration, ttfb, elapsed))
++        self.samples.move_to_end(key)
++        while len(self.samples) > 256:
++            self.samples.popitem(last=False)
++        self.metrics['network_samples'] += 1
++        self.metrics['slow_samples'] += int(elapsed / duration > 1)
++        self.metrics['cold_samples'] += int(cold)
++
++    def score(self, key):
++        rows = [r[1] for r in self.samples.get(key, ()) if time.monotonic() - r[0] < 300]
++        if len(rows) < 3:
++            return None
++        return sorted(rows)[math.ceil(len(rows) * .9) - 1]
++
++    def snapshot(self):
++        rows = [r for values in self.samples.values() for r in values if time.monotonic() - r[0] < 300]
++        delivered = [r for r in self.delivery if time.monotonic() - r[0] < 300]
++        return dict(self.metrics, gateway_responses=len(delivered),
++                    gateway_bytes=sum(r[1] for r in delivered),
++                    gateway_handoff_mean_s=round(sum(r[3] for r in delivered)/len(delivered), 4) if delivered else None,
++                    recent_body_mean_s=round(sum(max(0, r[3]-r[2]) for r in rows)/len(rows), 3) if rows else None,
++                    retired_contexts=len(self.retired), contexts=len(self.contexts), playlist_bytes=sum(c.cost for c in self.contexts.values()),
++                    prime_bytes=sum(len(c.prime or b'') for c in self.contexts.values()),
++                    recent_samples=len(rows),
++                    recent_r_p90=round(sorted(r[1] for r in rows)[math.ceil(len(rows)*.9)-1], 3) if rows else None,
++                    recent_ttfb_mean=round(sum(r[2] for r in rows)/len(rows), 3) if rows else None)
++
++    async def sample(self, client, spec, headers):
++        """A complete <=4MiB TS sample only; slow/incomplete data is not a dead source."""
++        if self.cold_active >= 2:
++            return None
++        self.cold_active += 1
++        response = None
++        start, first = time.monotonic(), None
++        try:
++            request = client.build_request('GET', spec.url, headers={k:v for k,v in headers.items() if k.lower() != 'range'}, timeout=6)
++            response = await client.send(request, stream=True)
++            if response.status_code != 200 or response.headers.get('content-encoding', 'identity') != 'identity':
++                return None
++            size = int(response.headers.get('content-length', '0'))
++            if size < 0 or size > COLD_BYTES:
++                return None
++            capacity, used = size or COLD_BYTES, 0
++            data = bytearray(capacity)
++            async for chunk in response.aiter_raw():
++                if chunk and first is None:
++                    first = time.monotonic()
++                end = used + len(chunk)
++                if end > capacity:
++                    return None
++                data[used:end] = chunk
++                used = end
++                if used >= 564 and any(data[n] != 71 for n in (0, 188, 376)):
++                    return None
++            elapsed = time.monotonic() - start
++            if (size and size != used) or used < 564 or used % 188 or any(data[n] != 71 for n in range(0, used, 188)):
++                return None
++            return bytes(memoryview(data)[:used]), elapsed, (first or time.monotonic()) - start
++        except (Exception,):
++            return None
++        finally:
++            try:
++                if response is not None:
++                    await response.aclose()
++            finally:
++                self.cold_active -= 1
++
++
++class DeliveryMetrics:
++    """Measure ASGI handoff to the local gateway, not the remote player's buffer."""
++    def __init__(self, app, get_playback):
++        self.app, self.get_playback = app, get_playback
++
++    async def __call__(self, scope, receive, send):
++        if scope['type'] != 'http' or not scope.get('path', '').startswith('/v/media/online/') or not scope['path'].endswith('/seg'):
++            return await self.app(scope, receive, send)
++        started = time.monotonic()
++        first = None
++        status, size, completed = 0, 0, False
++        async def observed(message):
++            nonlocal first, status, size, completed
++            if message['type'] == 'http.response.start':
++                status = message['status']
++            if message['type'] == 'http.response.body':
++                if first is None:
++                    first = time.monotonic()
++                size += len(message.get('body', b''))
++                await send(message)
++                completed = not message.get('more_body', False)
++            else:
++                await send(message)
++        try:
++            return await self.app(scope, receive, observed)
++        finally:
++            if completed and status in (200, 206) and size:
++                p = self.get_playback()
++                p.delivery.append((time.monotonic(), size, (first or started)-started,
++                                   time.monotonic()-(first or started)))
 diff --git a/proxy/probe_sources.py b/proxy/probe_sources.py
 index 944923c..95dabb9 100644
 --- a/proxy/probe_sources.py
@@ -6578,6 +7415,1220 @@ index 0000000..203a718
 +            await self.app(scope, receive, guarded_send)
 +        finally:
 +            user_scope.reset_user(marker)
+diff --git a/proxy/segment_buffer.py b/proxy/segment_buffer.py
+new file mode 100644
+index 0000000..6484c8a
+--- /dev/null
++++ b/proxy/segment_buffer.py
+@@ -0,0 +1,1208 @@
++#!/usr/bin/env python3
++"""普通 VOD TS 的有界内存分段缓存与一段预取。
++
++本模块不连接设备、不读凭据、不创建 HTTP 客户端，也不做鉴权、清单登记、
++AES/PNG 解包或客户端 Range 解释。调用方只把已确认的完整对象交给这里，
++并始终传入自己的 SafeAsyncClient。
++
++契约（给接入方）：
++
++* ``get`` 成功只表示拿到一份可缓存的完整 TS。``origin`` 为
++  ``network`` / ``join`` / ``cache``。只有发起该次下载的前台等待者拿到
++  ``network`` 与真实 ``total_s`` / ``ttfb_s``。``join`` 与 ``cache`` 的
++  这两项为 0，不能拿去算 r。
++* r 只在生产者完整下完且 EXTINF>0 时写入 ``NetworkSample``：
++  ``r = total_s / duration``。缓存、加入在途、取消、截断、错误状态都不记成
++  网络速度。``last_samples()`` 不含 key/url/header；``on_network_sample``
++  会把调用方自己传入的 key 交回去，便于把预取样本归到会话。钩子必须同步、
++  不得再入 ``get`` / ``invalidate`` / ``close``。
++* ``BypassBuffer`` 表示不适用或预算满，调用方走旧路径，不是上游故障。
++  ``UpstreamSegmentError`` 才是上游状态/截断/断流。必要的额外类型：
++  不能把上游故障伪装成 BypassBuffer。
++* ``prefetch=False`` 只复用缓存和同 key/index/URL 单飞，不同 index 的前台
++  并发下载，不串行。``prefetch=True`` 在本次前台结束后最多再后台取下一段，
++  不递归；下一段已在缓存里就不会再去抓下下段。
++* 预取开启且尚未发现前台重叠时，同一 key 同时最多一个下载（前台优先，
++  无等待者的旧预取会被取消）。一旦观察到同一 key 不同 index 的前台重叠，
++  该 key 停止预取，已有前台保持并发，不再排队。
++* 全局同时最多 ``max_prefetch_global`` 个预取（默认 2）。超额直接放弃，
++  不排队。慢样本（r>slow_r，默认 1）、429、上游错误会暂停该 key 的新预取；
++  之后出现 r<=resume_r（默认 0.7）的完整网络样本才恢复。0.7 与 1 是可测
++  初值，不是播放器验收阈值。
++* 配额按两份单段上限预留（读缓冲+不可变结果），响应头后缩到两倍声明长度，完成时改为
++  实际缓存字节。前台放不下就抛 ``BypassBuffer("budget")``；预取放不下
++  就只尝试淘汰本 key 已播放的旧分片，仍放不下则静默放弃。
++* ``invalidate(key)`` 丢掉该 key 的缓存，取消无人等待的后台；已经在等的
++  前台仍拿到本次正文，但这次结果不再写入缓存。``close`` 同样不取消仍有
++  等待者的前台，并拒绝之后的新 ``get``。二者都可以安全重入。
++* 只缓存完整 200，或 Content-Range 覆盖整个对象的 206。200 不会被改写成
++  206。请求头里带 Range 直接 BypassBuffer，模块不发 Range。
++"""
++from __future__ import annotations
++
++import asyncio
++import hashlib
++import re
++import threading
++import time
++from collections.abc import Callable, Mapping
++from dataclasses import dataclass
++
++import httpx
++
++from safe_http import SafeAsyncClient
++
++__all__ = [
++    "SEGMENT_MAX_BYTES",
++    "KEY_MAX_BYTES",
++    "GLOBAL_MAX_BYTES",
++    "CACHE_TTL_S",
++    "PREFETCH_IDLE_S",
++    "MAX_PREFETCH_GLOBAL",
++    "MAX_KEYS",
++    "MAX_ENTRIES",
++    "MAX_INFLIGHT",
++    "SLOW_R",
++    "RESUME_R",
++    "SegmentSpec",
++    "SegmentResult",
++    "NetworkSample",
++    "BypassBuffer",
++    "UpstreamSegmentError",
++    "SegmentBuffer",
++]
++
++SEGMENT_MAX_BYTES = 8 * 1024 * 1024
++KEY_MAX_BYTES = 32 * 1024 * 1024
++GLOBAL_MAX_BYTES = 128 * 1024 * 1024
++CACHE_TTL_S = 60.0
++PREFETCH_IDLE_S = 15.0
++MAX_PREFETCH_GLOBAL = 2
++MAX_KEYS = 64
++MAX_ENTRIES = 256
++MAX_INFLIGHT = 32
++SLOW_R = 1.0
++RESUME_R = 0.7
++
++_TS_PACKET = 188
++_MIN_TS_PACKETS = 3
++_CONTENT_RANGE_RE = re.compile(r"^bytes\s+(\d+)-(\d+)/(\d+)$", re.IGNORECASE)
++_KEEP_RESPONSE_HEADERS = ("content-type", "accept-ranges", "etag", "last-modified")
++_DROP_REQUEST_HEADERS = {
++    "connection", "keep-alive", "transfer-encoding", "te", "upgrade",
++    "proxy-connection", "host", "content-length", "range",
++}
++_SampleHook = Callable[[tuple[str, str], "NetworkSample"], None]
++
++
++class BypassBuffer(Exception):
++    """不适用或预算已满。调用方回旧路径，不得当成上游故障。"""
++
++
++class UpstreamSegmentError(Exception):
++    """上游非完整成功：错误状态、截断或读失败。"""
++
++    def __init__(self, status: int, reason: str = "upstream") -> None:
++        self.status = int(status)
++        self.reason = reason
++        super().__init__(f"upstream segment status={status} reason={reason}")
++
++
++@dataclass(frozen=True)
++class SegmentSpec:
++    url: str
++    duration: float
++
++
++@dataclass(frozen=True)
++class SegmentResult:
++    body: bytes
++    headers: dict[str, str]
++    status: int
++    total_s: float
++    ttfb_s: float
++    origin: str
++
++
++@dataclass(frozen=True)
++class NetworkSample:
++    """一次完整网络下载。没有 key、url 或请求头。"""
++
++    total_s: float
++    ttfb_s: float
++    duration_s: float
++    nbytes: int
++    r: float | None
++    status: int
++
++
++@dataclass
++class _Entry:
++    result: SegmentResult
++    stored_at: float
++    nbytes: int
++    key: tuple[str, str]
++    index: int
++    url: str
++
++
++class _Flight:
++    def __init__(
++        self,
++        ident: tuple[tuple[str, str], int, str],
++        key: tuple[str, str],
++        index: int,
++        url: str,
++        fut: asyncio.Future[SegmentResult | None],
++        *,
++        prefetch: bool,
++        reserved: int,
++        generation: int,
++    ) -> None:
++        self.ident = ident
++        self.key = key
++        self.index = index
++        self.url = url
++        self.fut = fut
++        self.task: asyncio.Task[None] | None = None
++        self.watch: asyncio.Task[None] | None = None
++        self.waiters = 0
++        self.prefetch = prefetch
++        self.prefetch_slot = prefetch
++        self.foreground_slot = not prefetch
++        self.reserved = reserved
++        self.generation = generation
++        self.bytes_read = 0
++        self.allow_store = True
++        self.dead = False
++        self.finished = False
++        self.accounted = False
++        self.reservation_released = False
++
++
++class _KeyState:
++    def __init__(self, generation: int, now: float, header_fp: bytes) -> None:
++        self.generation = generation
++        self.last_foreground = now
++        self.header_fp = header_fp
++        self.prefetch_disabled = False
++        self.prefetch_paused = False
++        self.cache_bytes = 0
++        self.reserved = 0
++        self.foreground_indexes: dict[int, int] = {}
++
++
++def _is_ts(body: bytes) -> bool:
++    size = len(body)
++    if size < _TS_PACKET * _MIN_TS_PACKETS or size % _TS_PACKET != 0:
++        return False
++    return all(body[offset] == 0x47 for offset in range(0, size, _TS_PACKET))
++
++
++def _has_range(headers: Mapping[str, str]) -> bool:
++    return any(str(name).lower() == "range" for name in headers)
++
++
++def _header_fingerprint(headers: Mapping[str, str]) -> bytes:
++    items = tuple(sorted((str(k).lower(), str(v)) for k, v in headers.items()))
++    return hashlib.sha256(repr(items).encode("utf-8")).digest()
++
++
++def _full_object_total(content_range: str | None) -> int | None:
++    if not content_range:
++        return None
++    match = _CONTENT_RANGE_RE.fullmatch(content_range.strip())
++    if match is None:
++        return None
++    start, end, total = (int(match.group(i)) for i in range(1, 4))
++    if start != 0 or total <= 0 or end != total - 1:
++        return None
++    return total
++
++
++def _parse_content_length(value: str | None) -> int | None:
++    if value is None or not str(value).strip():
++        return None
++    try:
++        parsed = int(str(value).strip())
++    except ValueError:
++        return None
++    if parsed < 0:
++        return None
++    return parsed
++
++
++def _latin1(value: str) -> bool:
++    try:
++        value.encode("latin-1")
++    except UnicodeEncodeError:
++        return False
++    return True
++
++
++def _public_headers(src: httpx.Headers, status: int, nbytes: int) -> dict[str, str]:
++    found: dict[str, str] = {}
++    for name in _KEEP_RESPONSE_HEADERS:
++        value = src.get(name)
++        if value is None or not _latin1(value):
++            continue
++        found[name] = value
++    headers = {
++        "Content-Type": found["content-type"],
++    } if "content-type" in found else {}
++    if "accept-ranges" in found:
++        headers["Accept-Ranges"] = found["accept-ranges"]
++    if "etag" in found:
++        headers["ETag"] = found["etag"]
++    if "last-modified" in found:
++        headers["Last-Modified"] = found["last-modified"]
++    headers["Content-Length"] = str(nbytes)
++    if status == 206:
++        headers["Content-Range"] = f"bytes 0-{nbytes - 1}/{nbytes}"
++    return headers
++
++
++class SegmentBuffer:
++    """单进程内的分段缓存。一个实例对应代理进程里的一块预算。"""
++
++    def __init__(
++        self,
++        *,
++        segment_max: int = SEGMENT_MAX_BYTES,
++        key_max: int = KEY_MAX_BYTES,
++        global_max: int = GLOBAL_MAX_BYTES,
++        ttl_s: float = CACHE_TTL_S,
++        idle_prefetch_s: float = PREFETCH_IDLE_S,
++        max_prefetch_global: int = MAX_PREFETCH_GLOBAL,
++        max_keys: int = MAX_KEYS,
++        max_entries: int = MAX_ENTRIES,
++        max_inflight: int = MAX_INFLIGHT,
++        slow_r: float = SLOW_R,
++        resume_r: float = RESUME_R,
++        read_timeout: float = 30.0,
++        sample_limit: int = 32,
++        on_network_sample: _SampleHook | None = None,
++    ) -> None:
++        if not (1 <= segment_max <= key_max <= global_max):
++            raise ValueError("require 1 <= segment_max <= key_max <= global_max")
++        if max_prefetch_global < 1 or max_keys < 1 or max_entries < 1 or max_inflight < 1:
++            raise ValueError("caps must be positive")
++        if ttl_s <= 0 or idle_prefetch_s <= 0 or read_timeout <= 0:
++            raise ValueError("timers must be positive")
++        if sample_limit < 1 or slow_r <= 0 or resume_r < 0 or resume_r > slow_r:
++            raise ValueError("invalid sample or r window")
++        self.segment_max = int(segment_max)
++        self.key_max = int(key_max)
++        self.global_max = int(global_max)
++        self.ttl_s = float(ttl_s)
++        self.idle_prefetch_s = float(idle_prefetch_s)
++        self.max_prefetch_global = int(max_prefetch_global)
++        self.max_keys = int(max_keys)
++        self.max_entries = int(max_entries)
++        self.max_inflight = int(max_inflight)
++        self.slow_r = float(slow_r)
++        self.resume_r = float(resume_r)
++        self.read_timeout = float(read_timeout)
++        self._sample_limit = int(sample_limit)
++        self._on_sample = on_network_sample
++        self._mu = threading.Lock()
++        self._keys: dict[tuple[str, str], _KeyState] = {}
++        self._entries: dict[tuple[tuple[str, str], int, str], _Entry] = {}
++        self._flights: dict[tuple[tuple[str, str], int, str], _Flight] = {}
++        self._tasks: set[asyncio.Task[None]] = set()
++        self._detached: set[_Flight] = set()
++        self._generation = 0
++        self._closed = False
++        self._cache_bytes = 0
++        self._reserved = 0
++        self._foreground_inflight = 0
++        self._prefetch_inflight = 0
++        self._hits = 0
++        self._joins = 0
++        self._network_completions = 0
++        self._incomplete = 0
++        self._bypasses = 0
++        self._prefetch_started = 0
++        self._prefetch_abandoned = 0
++        self._prefetch_cancelled = 0
++        self._foreground_cancelled = 0
++        self._downloaded_bytes = 0
++        self._wasted_bytes = 0
++        self._disabled_events = 0
++        self._hook_errors = 0
++        self._aclose_errors = 0
++        self._samples: list[NetworkSample] = []
++
++    async def get(
++        self,
++        key: tuple[str, str],
++        specs: tuple[SegmentSpec, ...],
++        index: int,
++        client: SafeAsyncClient,
++        headers: Mapping[str, str] | None,
++        *,
++        prefetch: bool = False,
++    ) -> SegmentResult:
++        header_map = _copy_headers(headers)
++        spec = self._validate_request(key, specs, index, client, header_map)
++        fingerprint = _header_fingerprint(header_map)
++        entered = False
++        try:
++            generation = self._enter_foreground(key, index, fingerprint)
++            entered = True
++            # Closing speculative producers still own their buffers and sockets.
++            # Drain them before replacing them; never serialize real foreground peers.
++            next_url = specs[index + 1].url if index + 1 < len(specs) else None
++            closing = self._displace_prefetch(key, index, spec.url, next_url)
++            if closing:
++                await asyncio.gather(*(asyncio.shield(t) for t in closing), return_exceptions=True)
++            cached, flight, owner = self._acquire(key, spec, index, client, header_map, generation)
++            if cached is not None:
++                if prefetch:
++                    self._schedule_prefetch(key, specs, index, client, header_map, generation)
++                return _clone(cached, "cache", 0.0, 0.0)
++            assert flight is not None
++            try:
++                raw = await asyncio.shield(flight.fut)
++            finally:
++                self._leave_waiter(flight)
++            if not isinstance(raw, SegmentResult):
++                raise BypassBuffer("cancelled")
++            if owner:
++                result = _clone(raw, "network", raw.total_s, raw.ttfb_s)
++            else:
++                result = _clone(raw, "join", 0.0, 0.0)
++                with self._mu:
++                    self._joins += 1
++            if prefetch:
++                self._schedule_prefetch(key, specs, index, client, header_map, generation)
++            return result
++        finally:
++            if entered:
++                self._exit_foreground(key, index, generation)
++
++    async def invalidate(self, key: tuple[str, str]) -> None:
++        """丢掉该 key 的缓存与无人预取。有等待者的前台下载继续并返回正文。"""
++        with self._mu:
++            self._expire_locked(time.monotonic())
++            self._drop_key_locked(key, cancel_waiters=False)
++            self._assert_locked()
++
++    async def close(self) -> None:
++        """停新请求、取消无人后台。有等待者的前台不被取消，其结果不再入库。"""
++        tasks: list[asyncio.Task[None]] = []
++        with self._mu:
++            self._closed = True
++            foreground: set[asyncio.Task[None]] = set()
++            for flight in list(self._flights.values()) + list(self._detached):
++                was_prefetch = flight.prefetch
++                flight.allow_store = False
++                if flight.waiters > 0 and flight.task is not None:
++                    flight.prefetch = False
++                    foreground.add(flight.task)
++                else:
++                    self._cancel_flight_locked(flight, prefetch_stat=was_prefetch)
++            for task in list(self._tasks):
++                if task not in foreground:
++                    task.cancel()
++                    tasks.append(task)
++            self._entries.clear()
++            self._cache_bytes = 0
++            for state in self._keys.values():
++                state.cache_bytes = 0
++            self._keys.clear()
++            self._assert_locked()
++        if tasks:
++            await asyncio.gather(*tasks, return_exceptions=True)
++
++    def snapshot(self) -> dict[str, int]:
++        """汇总数。会清掉已过期条目。不含 key、url、header 或样本明细。"""
++        with self._mu:
++            self._expire_locked(time.monotonic())
++            paused = sum(1 for state in self._keys.values() if state.prefetch_paused)
++            disabled = sum(1 for state in self._keys.values() if state.prefetch_disabled)
++            waiters = sum(flight.waiters for flight in list(self._flights.values()) + list(self._detached))
++            self._assert_locked()
++            return {
++                "entries": len(self._entries),
++                "keys": len(self._keys),
++                "cache_bytes": self._cache_bytes,
++                "reserved_bytes": self._reserved,
++                "foreground_inflight": self._foreground_inflight,
++                "prefetch_inflight": self._prefetch_inflight,
++                "foreground_waiters": waiters,
++                "hits": self._hits,
++                "joins": self._joins,
++                "network_completions": self._network_completions,
++                "incomplete": self._incomplete,
++                "bypasses": self._bypasses,
++                "prefetch_started": self._prefetch_started,
++                "prefetch_abandoned": self._prefetch_abandoned,
++                "prefetch_cancelled": self._prefetch_cancelled,
++                "foreground_cancelled": self._foreground_cancelled,
++                "downloaded_bytes": self._downloaded_bytes,
++                "wasted_bytes": self._wasted_bytes,
++                "paused_keys": paused,
++                "disabled_keys": disabled,
++                "disabled_events": self._disabled_events,
++                "hook_errors": self._hook_errors,
++                "aclose_errors": self._aclose_errors,
++                "samples": len(self._samples),
++                "closed": int(self._closed),
++            }
++
++    def last_samples(self) -> tuple[NetworkSample, ...]:
++        with self._mu:
++            return tuple(self._samples)
++
++    def _validate_request(
++        self,
++        key: tuple[str, str],
++        specs: tuple[SegmentSpec, ...],
++        index: int,
++        client: SafeAsyncClient,
++        headers: dict[str, str],
++    ) -> SegmentSpec:
++        if not isinstance(client, SafeAsyncClient):
++            self._bump_bypass()
++            raise BypassBuffer("client")
++        if not isinstance(key, tuple) or len(key) != 2 or not all(
++            isinstance(part, str) and part for part in key
++        ):
++            self._bump_bypass()
++            raise BypassBuffer("key")
++        if isinstance(index, bool) or not isinstance(index, int):
++            self._bump_bypass()
++            raise BypassBuffer("index")
++        if not isinstance(specs, tuple) or not (0 <= index < len(specs)):
++            self._bump_bypass()
++            raise BypassBuffer("index")
++        spec = specs[index]
++        if not isinstance(spec, SegmentSpec) or not isinstance(spec.url, str) or not spec.url:
++            self._bump_bypass()
++            raise BypassBuffer("spec")
++        if isinstance(spec.duration, bool) or not isinstance(spec.duration, (int, float)):
++            self._bump_bypass()
++            raise BypassBuffer("spec")
++        if spec.duration < 0:
++            self._bump_bypass()
++            raise BypassBuffer("spec")
++        if _has_range(headers):
++            self._bump_bypass()
++            raise BypassBuffer("range")
++        return spec
++
++    def _bump_bypass(self) -> None:
++        with self._mu:
++            self._bypasses += 1
++
++    def _enter_foreground(
++        self,
++        key: tuple[str, str],
++        index: int,
++        fingerprint: bytes,
++    ) -> int:
++        with self._mu:
++            if self._closed:
++                self._bypasses += 1
++                raise BypassBuffer("closed")
++            state = self._keys.get(key)
++            if state is None:
++                self._expire_locked(time.monotonic())
++                while len(self._keys) >= self.max_keys and self._evict_idle_key_locked():
++                    pass
++                if len(self._keys) >= self.max_keys:
++                    self._bypasses += 1
++                    raise BypassBuffer("key-cap")
++                self._generation += 1
++                state = _KeyState(self._generation, time.monotonic(), fingerprint)
++                self._keys[key] = state
++            elif state.header_fp != fingerprint:
++                self._bypasses += 1
++                raise BypassBuffer("header-context")
++            others = any(
++                active_index != index and count > 0
++                for active_index, count in state.foreground_indexes.items()
++            )
++            state.foreground_indexes[index] = state.foreground_indexes.get(index, 0) + 1
++            state.last_foreground = time.monotonic()
++            if others and not state.prefetch_disabled:
++                state.prefetch_disabled = True
++                self._disabled_events += 1
++                self._cancel_prefetches_locked(key, keep_index=None)
++            self._assert_locked()
++            return state.generation
++
++    def _exit_foreground(self, key: tuple[str, str], index: int, generation: int) -> None:
++        with self._mu:
++            state = self._keys.get(key)
++            if state is None or state.generation != generation:
++                return
++            state.last_foreground = time.monotonic()
++            remaining = state.foreground_indexes.get(index, 0) - 1
++            if remaining <= 0:
++                state.foreground_indexes.pop(index, None)
++            else:
++                state.foreground_indexes[index] = remaining
++
++    def _acquire(
++        self,
++        key: tuple[str, str],
++        spec: SegmentSpec,
++        index: int,
++        client: SafeAsyncClient,
++        headers: dict[str, str],
++        generation: int,
++    ) -> tuple[SegmentResult | None, _Flight | None, bool]:
++        with self._mu:
++            if self._closed:
++                self._bypasses += 1
++                raise BypassBuffer("closed")
++            state = self._keys.get(key)
++            if state is None or state.generation != generation:
++                raise BypassBuffer("invalidated")
++            now = time.monotonic()
++            self._expire_locked(now)
++            ident = (key, index, spec.url)
++            entry = self._entries.get(ident)
++            if entry is not None and now - entry.stored_at < self.ttl_s:
++                self._hits += 1
++                return entry.result, None, False
++            flight = self._flights.get(ident)
++            if flight is not None and not flight.dead and flight.generation == generation:
++                flight.waiters += 1
++                return None, flight, False
++            if self._foreground_inflight >= self.max_inflight or not self._make_room_locked(
++                state, 2 * self.segment_max
++            ):
++                self._bypasses += 1
++                raise BypassBuffer("budget")
++            flight = self._start_flight_locked(
++                key, state, spec, index, client, headers, prefetch=False,
++            )
++            flight.waiters += 1
++            self._assert_locked()
++            return None, flight, True
++
++    def _schedule_prefetch(
++        self,
++        key: tuple[str, str],
++        specs: tuple[SegmentSpec, ...],
++        index: int,
++        client: SafeAsyncClient,
++        headers: dict[str, str],
++        generation: int,
++    ) -> None:
++        with self._mu:
++            if self._closed:
++                return
++            state = self._keys.get(key)
++            nxt = index + 1
++            if state is None or state.generation != generation or nxt >= len(specs):
++                return
++            if state.prefetch_disabled or state.prefetch_paused:
++                self._prefetch_abandoned += 1
++                return
++            spec = specs[nxt]
++            if not isinstance(spec, SegmentSpec):
++                self._prefetch_abandoned += 1
++                return
++            now = time.monotonic()
++            self._expire_locked(now)
++            ident = (key, nxt, spec.url)
++            cached = self._entries.get(ident)
++            if cached is not None and now - cached.stored_at < self.ttl_s:
++                return
++            if ident in self._flights or any(item.key == key for item in list(self._flights.values()) + list(self._detached)):
++                self._prefetch_abandoned += 1
++                return
++            need = 2 * self.segment_max
++            # Keep the current segment and other users' caches. Old segments of
++            # this playback must not permanently starve lookahead at the cap.
++            for old_ident in list(self._entries):
++                if (
++                    state.cache_bytes + state.reserved + need <= self.key_max
++                    and self._cache_bytes + self._reserved + need <= self.global_max
++                    and len(self._entries) < self.max_entries
++                ):
++                    break
++                if old_ident[0] == key and old_ident[1] < index:
++                    self._drop_entry_locked(old_ident)
++            key_free = self.key_max - state.cache_bytes - state.reserved
++            global_free = self.global_max - self._cache_bytes - self._reserved
++            if (
++                self._prefetch_inflight >= self.max_prefetch_global
++                or key_free < need
++                or global_free < need
++                or len(self._entries) >= self.max_entries
++            ):
++                self._prefetch_abandoned += 1
++                return
++            self._start_flight_locked(
++                key, state, spec, nxt, client, headers, prefetch=True,
++            )
++            self._prefetch_started += 1
++            self._assert_locked()
++
++    def _start_flight_locked(
++        self,
++        key: tuple[str, str],
++        state: _KeyState,
++        spec: SegmentSpec,
++        index: int,
++        client: SafeAsyncClient,
++        headers: dict[str, str],
++        *,
++        prefetch: bool,
++    ) -> _Flight:
++        need = 2 * self.segment_max
++        state.reserved += need
++        self._reserved += need
++        loop = asyncio.get_running_loop()
++        ident = (key, index, spec.url)
++        flight = _Flight(
++            ident, key, index, spec.url, loop.create_future(),
++            prefetch=prefetch, reserved=need, generation=state.generation,
++        )
++        if prefetch:
++            self._prefetch_inflight += 1
++        else:
++            self._foreground_inflight += 1
++        self._flights[ident] = flight
++        flight.task = loop.create_task(
++            self._run_flight(flight, client, headers, spec),
++            name="segment-buffer",
++        )
++        self._track(flight.task)
++        flight.task.add_done_callback(lambda task: self._producer_done(flight))
++        if prefetch:
++            self._ensure_watch_locked(flight)
++        return flight
++
++    def _track(self, task: asyncio.Task[None]) -> None:
++        self._tasks.add(task)
++        task.add_done_callback(self._tasks.discard)
++
++    async def _run_flight(
++        self,
++        flight: _Flight,
++        client: SafeAsyncClient,
++        headers: dict[str, str],
++        spec: SegmentSpec,
++    ) -> None:
++        response: httpx.Response | None = None
++        try:
++            try:
++                started = time.monotonic()
++                response = await self._send(client, spec.url, headers)
++                declared = self._inspect(response, flight)
++                body, ttfb_s, total_s = await self._consume(response, flight, declared, started)
++                if not _is_ts(body):
++                    raise BypassBuffer("not-ts")
++                result = SegmentResult(
++                    body,
++                    _public_headers(response.headers, response.status_code, len(body)),
++                    response.status_code,
++                    total_s,
++                    ttfb_s,
++                    "network",
++                )
++            finally:
++                if response is not None:
++                    await self._aclose(response)
++                    response = None
++            self._commit_success(flight, result, float(spec.duration))
++        except asyncio.CancelledError:
++            self._commit_incomplete(flight, BypassBuffer("cancelled"), paused=False)
++            raise
++        except BypassBuffer as exc:
++            self._commit_incomplete(flight, exc, paused=False)
++        except UpstreamSegmentError as exc:
++            self._commit_incomplete(flight, exc, paused=True)
++        except Exception as exc:
++            wrapped = UpstreamSegmentError(0, type(exc).__name__)
++            wrapped.__cause__ = exc
++            self._commit_incomplete(flight, wrapped, paused=True)
++
++    async def _send(
++        self,
++        client: SafeAsyncClient,
++        url: str,
++        headers: Mapping[str, str],
++    ) -> httpx.Response:
++        outbound = {
++            str(name): str(value)
++            for name, value in headers.items()
++            if str(name).lower() not in _DROP_REQUEST_HEADERS
++        }
++        outbound["Accept-Encoding"] = "identity"
++        timeout = httpx.Timeout(
++            connect=min(10.0, self.read_timeout),
++            read=self.read_timeout,
++            write=self.read_timeout,
++            pool=min(10.0, self.read_timeout),
++        )
++        request = client.build_request("GET", url, headers=outbound, timeout=timeout)
++        return await client.send(request, stream=True)
++
++    def _inspect(self, response: httpx.Response, flight: _Flight) -> int | None:
++        encoding = response.headers.get("content-encoding")
++        if encoding is not None and encoding.strip().lower() not in ("", "identity"):
++            raise BypassBuffer("compressed")
++        status = response.status_code
++        if status not in (200, 206):
++            raise UpstreamSegmentError(status, "status")
++        content_length = _parse_content_length(response.headers.get("content-length"))
++        if content_length is not None and content_length > self.segment_max:
++            raise BypassBuffer("segment-cap")
++        declared = content_length
++        if status == 206:
++            total = _full_object_total(response.headers.get("content-range"))
++            if total is None:
++                raise BypassBuffer("partial-206")
++            if total > self.segment_max:
++                raise BypassBuffer("segment-cap")
++            if content_length is not None and content_length != total:
++                raise UpstreamSegmentError(status, "truncated")
++            declared = total
++        elif response.headers.get("content-range"):
++            # 完整 200 即使带了 Content-Range 也不解释成 206。
++            pass
++        if declared is not None and 2 * declared < flight.reserved:
++            self._resize_reservation(flight, 2 * declared)
++        return declared
++
++    async def _consume(
++        self,
++        response: httpx.Response,
++        flight: _Flight,
++        declared: int | None,
++        started: float,
++    ) -> tuple[bytes, float, float]:
++        # Exact allocation avoids bytearray growth slack; reserve also covers the
++        # immutable result while this workspace is still alive.
++        capacity = declared if declared is not None else self.segment_max
++        buf = bytearray(capacity)
++        used = 0
++        ttfb_s: float | None = None
++        async for chunk in response.aiter_raw():
++            if not chunk:
++                continue
++            if ttfb_s is None:
++                ttfb_s = time.monotonic() - started
++            end = used + len(chunk)
++            if end > capacity:
++                if declared is not None:
++                    raise UpstreamSegmentError(response.status_code, "length-mismatch")
++                raise BypassBuffer("segment-cap")
++            buf[used:end] = chunk
++            used = end
++            flight.bytes_read = used
++            if used >= 8 and buf[:8] == b"\x89PNG\r\n\x1a\n":
++                raise BypassBuffer("png")
++            if used >= 564 and any(buf[n] != 71 for n in (0, 188, 376)):
++                raise BypassBuffer("not-ts")
++        total_s = time.monotonic() - started
++        if ttfb_s is None:
++            ttfb_s = total_s
++        if declared is not None and used != declared:
++            raise UpstreamSegmentError(response.status_code, "truncated")
++        return bytes(memoryview(buf)[:used]), ttfb_s, total_s
++
++    def _commit_success(self, flight: _Flight, result: SegmentResult, duration_s: float) -> None:
++        sample = _make_sample(result, duration_s)
++        hook_key: tuple[str, str] | None = None
++        with self._mu:
++            waiting = flight.waiters > 0
++            if not flight.accounted:
++                flight.accounted = True
++                # 取消已经赢了且没有等待者：正文无人接收，不计网络速度。
++                if flight.dead and not waiting:
++                    self._incomplete += 1
++                    self._wasted_bytes += len(result.body)
++                else:
++                    state = self._keys.get(flight.key)
++                    can_store = (
++                        flight.allow_store
++                        and not flight.dead
++                        and not self._closed
++                        and state is not None
++                        and state.generation == flight.generation
++                    )
++                    if can_store:
++                        self._store_locked(flight, result)
++                    if state is not None and state.generation == flight.generation:
++                        _apply_r(state, sample.r, self.slow_r, self.resume_r)
++                    self._remember_locked(sample)
++                    self._downloaded_bytes += len(result.body)
++                    self._network_completions += 1
++                    hook_key = flight.key
++            self._finish_flight_locked(flight)
++            self._assert_locked()
++        if hook_key is not None and self._on_sample is not None:
++            try:
++                self._on_sample(hook_key, sample)
++            except Exception:
++                with self._mu:
++                    self._hook_errors += 1
++        if not flight.fut.done():
++            flight.fut.set_result(result if waiting else None)
++
++    def _commit_incomplete(
++        self,
++        flight: _Flight,
++        exc: BaseException,
++        *,
++        paused: bool,
++    ) -> None:
++        with self._mu:
++            waiting = flight.waiters > 0
++            if not flight.accounted:
++                flight.accounted = True
++                cancelled = isinstance(exc, BypassBuffer) and exc.args == ("cancelled",)
++                if isinstance(exc, BypassBuffer) and not cancelled:
++                    self._bypasses += 1
++                elif not isinstance(exc, BypassBuffer):
++                    self._incomplete += 1
++                self._wasted_bytes += flight.bytes_read
++                state = self._keys.get(flight.key)
++                if paused and state is not None and state.generation == flight.generation:
++                    state.prefetch_paused = True
++            self._finish_flight_locked(flight)
++            self._assert_locked()
++        if flight.fut.done():
++            return
++        if waiting:
++            flight.fut.set_exception(exc)
++        else:
++            flight.fut.set_result(None)
++
++    def _store_locked(self, flight: _Flight, result: SegmentResult) -> None:
++        state = self._keys.get(flight.key)
++        if state is None:
++            return
++        cached = _clone(result, "cache", 0.0, 0.0)
++        nbytes = len(cached.body)
++        ident = flight.ident
++        if ident in self._entries:
++            self._drop_entry_locked(ident)
++        while (
++            self._cache_bytes + nbytes > self.global_max
++            or state.cache_bytes + nbytes > self.key_max
++            or len(self._entries) >= self.max_entries
++        ):
++            if not self._evict_oldest_locked():
++                return
++        self._entries[ident] = _Entry(
++            cached, time.monotonic(), nbytes, flight.key, flight.index, flight.url,
++        )
++        self._cache_bytes += nbytes
++        state.cache_bytes += nbytes
++
++    def _leave_waiter(self, flight: _Flight) -> None:
++        with self._mu:
++            flight.waiters = max(0, flight.waiters - 1)
++            if flight.waiters > 0 or flight.finished or flight.dead:
++                return
++            state = self._keys.get(flight.key)
++            keep_prefetch = (
++                flight.prefetch
++                and state is not None
++                and not state.prefetch_disabled
++                and not self._closed
++                and state.generation == flight.generation
++            )
++            if keep_prefetch:
++                self._ensure_watch_locked(flight)
++                return
++            if flight.prefetch:
++                self._prefetch_cancelled += 1
++            else:
++                self._foreground_cancelled += 1
++            self._cancel_flight_locked(flight, prefetch_stat=False)
++
++    def _ensure_watch_locked(self, flight: _Flight) -> None:
++        watch = flight.watch
++        if watch is not None and not watch.done():
++            return
++        flight.watch = asyncio.get_running_loop().create_task(
++            self._idle_watch(flight), name="segment-buffer-idle",
++        )
++        self._track(flight.watch)
++
++    async def _idle_watch(self, flight: _Flight) -> None:
++        try:
++            while True:
++                with self._mu:
++                    if flight.finished or flight.dead or flight.fut.done() or flight.waiters > 0:
++                        return
++                    state = self._keys.get(flight.key)
++                    if (
++                        state is None
++                        or not flight.prefetch
++                        or state.prefetch_disabled
++                        or self._closed
++                        or state.generation != flight.generation
++                    ):
++                        self._prefetch_cancelled += 1
++                        self._cancel_flight_locked(flight, prefetch_stat=False)
++                        return
++                    delay = state.last_foreground + self.idle_prefetch_s - time.monotonic()
++                if delay <= 0:
++                    with self._mu:
++                        if flight.waiters == 0 and not flight.finished and not flight.dead:
++                            self._prefetch_cancelled += 1
++                            self._cancel_flight_locked(flight, prefetch_stat=False)
++                    return
++                await asyncio.sleep(delay)
++        except asyncio.CancelledError:
++            return
++
++    def _producer_done(self, flight: _Flight) -> None:
++        # A task cancelled before its first instruction never enters its finally.
++        if not flight.finished:
++            self._commit_incomplete(flight, BypassBuffer("cancelled"), paused=False)
++
++    def _displace_prefetch(self, key, index, url, next_url):
++        closing = []
++        with self._mu:
++            self._expire_locked(time.monotonic())
++            cached = (key, index, url) in self._entries
++            for flight in list(self._flights.values()) + list(self._detached):
++                if flight.key != key or flight.waiters:
++                    continue
++                wanted = (flight.index == index and flight.url == url) or (
++                    cached and flight.index == index + 1 and flight.url == next_url
++                )
++                unwanted = flight.prefetch and not wanted
++                if unwanted:
++                    self._cancel_flight_locked(flight, prefetch_stat=True)
++                if flight.dead and flight.task is not None and not flight.task.done():
++                    closing.append(flight.task)
++        return closing
++
++    def _cancel_prefetches_locked(
++        self,
++        key: tuple[str, str],
++        keep_index: int | None,
++    ) -> None:
++        for flight in list(self._flights.values()):
++            if flight.key != key or not flight.prefetch or flight.waiters > 0:
++                continue
++            if keep_index is not None and flight.index == keep_index:
++                continue
++            self._prefetch_cancelled += 1
++            self._cancel_flight_locked(flight, prefetch_stat=False)
++
++    def _cancel_flight_locked(self, flight: _Flight, *, prefetch_stat: bool) -> None:
++        if flight.dead or flight.finished or flight.waiters > 0:
++            return
++        flight.dead = True
++        flight.allow_store = False
++        flight.prefetch = False
++        if prefetch_stat:
++            self._prefetch_cancelled += 1
++        self._cancel_task(flight.task)
++        self._cancel_task(flight.watch)
++
++    def _finish_flight_locked(self, flight: _Flight) -> None:
++        if flight.finished:
++            self._cancel_task(flight.watch)
++            return
++        flight.finished = True
++        flight.dead = True
++        if self._flights.get(flight.ident) is flight:
++            self._flights.pop(flight.ident, None)
++        self._detached.discard(flight)
++        self._release_reservation_locked(flight)
++        self._release_slot_locked(flight)
++        self._cancel_task(flight.watch)
++
++    def _release_slot_locked(self, flight: _Flight) -> None:
++        if flight.prefetch_slot:
++            self._prefetch_inflight -= 1
++            flight.prefetch_slot = False
++        if flight.foreground_slot:
++            self._foreground_inflight -= 1
++            flight.foreground_slot = False
++
++    def _cancel_task(self, task: asyncio.Task[None] | None) -> None:
++        if task is None or task.done() or task is asyncio.current_task():
++            return
++        task.cancel()
++
++    def _resize_reservation(self, flight: _Flight, new_size: int) -> None:
++        with self._mu:
++            if flight.reservation_released or flight.finished:
++                return
++            if flight.dead or new_size >= flight.reserved:
++                return
++            delta = flight.reserved - new_size
++            flight.reserved = new_size
++            self._reserved -= delta
++            state = self._keys.get(flight.key)
++            if state is not None and state.generation == flight.generation:
++                state.reserved = max(0, state.reserved - delta)
++
++    def _release_reservation_locked(self, flight: _Flight) -> None:
++        if flight.reservation_released:
++            return
++        flight.reservation_released = True
++        released = flight.reserved
++        flight.reserved = 0
++        self._reserved -= released
++        state = self._keys.get(flight.key)
++        if state is not None and state.generation == flight.generation:
++            state.reserved = max(0, state.reserved - released)
++
++    def _make_room_locked(self, state: _KeyState, need: int) -> bool:
++        while (
++            self._cache_bytes + self._reserved + need > self.global_max
++            or state.cache_bytes + state.reserved + need > self.key_max
++            or len(self._entries) >= self.max_entries
++        ):
++            if not self._evict_oldest_locked():
++                return False
++        return True
++
++    def _evict_oldest_locked(self) -> bool:
++        if not self._entries:
++            return False
++        ident = next(iter(self._entries))
++        self._drop_entry_locked(ident)
++        return True
++
++    def _evict_idle_key_locked(self) -> bool:
++        candidates: list[tuple[float, tuple[str, str]]] = []
++        for key, state in self._keys.items():
++            if state.foreground_indexes:
++                continue
++            if any(flight.key == key for flight in self._flights.values()):
++                continue
++            candidates.append((state.last_foreground, key))
++        if not candidates:
++            return False
++        candidates.sort()
++        self._drop_key_locked(candidates[0][1], cancel_waiters=False)
++        return True
++
++    def _drop_key_locked(self, key: tuple[str, str], *, cancel_waiters: bool) -> None:
++        for ident in [item for item in self._entries if item[0] == key]:
++            self._drop_entry_locked(ident)
++        for flight in list(self._flights.values()) + list(self._detached):
++            if flight.key != key:
++                continue
++            flight.allow_store = False
++            if flight.waiters == 0 or cancel_waiters:
++                self._cancel_flight_locked(flight, prefetch_stat=flight.prefetch)
++            else:
++                flight.prefetch = False
++                if self._flights.get(flight.ident) is flight:
++                    self._flights.pop(flight.ident)
++                self._detached.add(flight)
++        self._keys.pop(key, None)
++
++    def _drop_entry_locked(self, ident: tuple[tuple[str, str], int, str]) -> None:
++        entry = self._entries.pop(ident)
++        self._cache_bytes -= entry.nbytes
++        state = self._keys.get(entry.key)
++        if state is not None:
++            state.cache_bytes = max(0, state.cache_bytes - entry.nbytes)
++
++    def _expire_locked(self, now: float) -> None:
++        stale = [
++            ident for ident, entry in self._entries.items()
++            if now - entry.stored_at >= self.ttl_s
++        ]
++        for ident in stale:
++            self._drop_entry_locked(ident)
++
++    def _remember_locked(self, sample: NetworkSample) -> None:
++        self._samples.append(sample)
++        extra = len(self._samples) - self._sample_limit
++        if extra > 0:
++            del self._samples[:extra]
++
++    async def _aclose(self, response: httpx.Response) -> None:
++        task = asyncio.create_task(response.aclose())
++        current = asyncio.current_task()
++        try:
++            await asyncio.shield(task)
++        except asyncio.CancelledError:
++            absorbed = 0
++            if current is not None:
++                while current.cancelling():
++                    current.uncancel()
++                    absorbed += 1
++            try:
++                await task
++            except Exception:
++                with self._mu:
++                    self._aclose_errors += 1
++            if current is not None:
++                for _ in range(absorbed):
++                    current.cancel()
++            raise
++        except Exception:
++            with self._mu:
++                self._aclose_errors += 1
++
++    def _assert_locked(self) -> None:
++        if self._reserved < 0 or self._cache_bytes < 0:
++            raise AssertionError("negative buffer accounting")
++        entry_bytes = sum(entry.nbytes for entry in self._entries.values())
++        if entry_bytes != self._cache_bytes:
++            raise AssertionError("cache bytes diverged")
++        key_cache = 0
++        key_reserved = 0
++        for state in self._keys.values():
++            if state.cache_bytes < 0 or state.reserved < 0:
++                raise AssertionError("negative key accounting")
++            key_cache += state.cache_bytes
++            key_reserved += state.reserved
++        if key_cache != self._cache_bytes:
++            raise AssertionError("key cache bytes diverged")
++        if key_reserved > self._reserved:
++            raise AssertionError("key reservation exceeds global")
++        if self._prefetch_inflight < 0 or self._foreground_inflight < 0:
++            raise AssertionError("negative inflight")
++        if self._cache_bytes + self._reserved > self.global_max:
++            raise AssertionError("global budget exceeded")
++
++
++def _copy_headers(headers: Mapping[str, str] | None) -> dict[str, str]:
++    if not headers:
++        return {}
++    return {str(key): str(value) for key, value in headers.items()}
++
++
++def _clone(result: SegmentResult, origin: str, total_s: float, ttfb_s: float) -> SegmentResult:
++    return SegmentResult(
++        result.body,
++        dict(result.headers),
++        result.status,
++        total_s,
++        ttfb_s,
++        origin,
++    )
++
++
++def _make_sample(result: SegmentResult, duration_s: float) -> NetworkSample:
++    ratio = None if duration_s <= 0 else result.total_s / duration_s
++    return NetworkSample(
++        total_s=result.total_s,
++        ttfb_s=result.ttfb_s,
++        duration_s=duration_s,
++        nbytes=len(result.body),
++        r=ratio,
++        status=result.status,
++    )
++
++
++def _apply_r(state: _KeyState, ratio: float | None, slow_r: float, resume_r: float) -> None:
++    if ratio is None:
++        return
++    if ratio > slow_r:
++        state.prefetch_paused = True
++    elif ratio <= resume_r:
++        state.prefetch_paused = False
 diff --git a/proxy/subfetch.py b/proxy/subfetch.py
 index 56f93d6..6a668e3 100644
 --- a/proxy/subfetch.py
@@ -10126,6 +12177,428 @@ index 0000000..9aa6012
 +    assert st["last_success"] == successes
 +    assert st["skipped"] is True
 +    assert st["next_due"] >= successes + 86400
+diff --git a/tests/test_playback_stability.py b/tests/test_playback_stability.py
+new file mode 100644
+index 0000000..b760187
+--- /dev/null
++++ b/tests/test_playback_stability.py
+@@ -0,0 +1,416 @@
++"""Real ASGI routes + real bounded HTTP origin, including native play entry."""
++import asyncio
++import base64
++import threading
++import time
++import urllib.parse
++from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
++
++import httpcore
++import pytest
++import pytest_asyncio
++
++from test_security_integration import site, module, safe_http
++import playback_stability as stability
++from segment_buffer import SegmentBuffer
++from store import media_guid
++
++TS = (b'\x47' + b'\0'*187) * 500
++ADMIN = {'Authorization': 'admin-test-session'}
++USER = {'Authorization': 'user-test-session'}
++
++
++@pytest_asyncio.fixture
++async def playback(site, monkeypatch):
++    client, calls, authority = site
++    hits = []
++    control = {'delays': {'slow': .5, 'fast': .01}, 'html': False, 'private': False}
++    class Origin(BaseHTTPRequestHandler):
++        def log_message(self, *args): pass
++        def do_GET(self):
++            hits.append(self.path)
++            group = self.path.split('/')[1]
++            if self.path.endswith('.m3u8'):
++                body = ('#EXTM3U\n#EXT-X-TARGETDURATION:2\n' + ''.join(
++                    f'#EXTINF:2,\n{n+control.get("sequence", 0)}.ts\n' for n in range(6)) + ('' if control.get('live') else '#EXT-X-ENDLIST\n')).encode()
++                if control['private']:
++                    body = body.replace(b'0.ts', b'http://127.0.0.1/private.ts')
++            else:
++                body = b'<html>not media</html>' if control['html'] else TS
++                if control.get('png'):
++                    body = b'\x89PNG\r\n\x1a\nIEND\0\0\0\0' + TS
++            time.sleep(control.get("header_delay", 0))
++            self.send_response(control.get("status", {}).get(self.path, 200))
++            self.send_header('Content-Length', str(len(body)))
++            self.end_headers()
++            try:
++                if self.path.endswith('.ts'):
++                    self.wfile.write(body[:188]); self.wfile.flush()
++                    time.sleep(control['delays'].get(group, 0))
++                    self.wfile.write(body[188:])
++                else:
++                    self.wfile.write(body)
++            except (BrokenPipeError, ConnectionResetError): pass
++    server = ThreadingHTTPServer(('127.0.0.1', 0), Origin)
++    threading.Thread(target=server.serve_forever, daemon=True).start()
++    async def dial(host, port, **kwargs):
++        assert host == '93.184.216.34'
++        from httpcore._backends.anyio import AnyIOBackend
++        return await AnyIOBackend().connect_tcp('127.0.0.1', server.server_port, **kwargs)
++    backend = safe_http.GuardedNetworkBackend(resolver=lambda host, port: ['93.184.216.34'], dialer=dial)
++    monkeypatch.setattr(module, '_playback', stability.Playback())
++    buffer = SegmentBuffer(global_max=96 * 1024 * 1024,
++                           on_network_sample=module._buffer_network_sample)
++    monkeypatch.setattr(module, '_segments', buffer)
++    # Isolate fixture media state; no mocked playback/selection/download functions.
++    monkeypatch.setattr(module.store, '_titles', {})
++    monkeypatch.setattr(module.store, '_orig', {})
++    monkeypatch.setattr(module.store, '_media_index', {})
++    monkeypatch.setattr(module.store, '_ep_index', {})
++    module.store.remember_merged([{'guid': 'fixture-title', 'title': 'Stability fixture', 'online_id': 'fixture:1',
++        'type': 'Movie', 'lines': {name: [{'title': '正片', 'url': f'http://fixture.example/{name}/main.m3u8',
++                     'direct': True, 'headers': {}}] for name in ('slow', 'fast')}}])
++    module.config.save({'playback_stability': True, 'playback_prefetch': True, 'ad_filter_enabled': False})
++    async with safe_http.SafeAsyncClient(network_backend=backend) as ext:
++        module.app.state.ext = ext
++        try:
++            yield client, calls, authority, hits, control, media_guid('fixture-title')
++        finally:
++            await buffer.close()
++            server.shutdown()
++            server.server_close()
++
++
++def first_uri(text):
++    return next(x for x in text.splitlines() if x and not x.startswith('#'))
++
++
++async def start(client, mg, auto=False, line='slow'):
++    prefix = f'/v/media/online/{mg}/'
++    preset = await client.get(prefix+'preset.m3u8', headers=ADMIN,
++                             params={'mode': 'stable'} if auto else {'line': line})
++    assert preset.status_code == 200 and preset.text.startswith('#EXTM3U')
++    main = prefix+first_uri(preset.text)
++    response = await client.get(main, headers=ADMIN)
++    assert response.status_code == 200 and response.text.count('#EXTINF:') == 6
++    return main, first_uri(response.text), response.text
++
++
++@pytest.mark.asyncio
++async def test_native_auto_manual_and_legacy_line_auto(playback):
++    client, _, _, hits, ctl, mg = playback
++    streams = (await client.post('/v/api/v1/stream', headers=ADMIN, json={'media_guid': mg})).json()['data']
++    assert streams['qualities'][0]['bitrate'] == stability.AUTO_BITRATE
++    assert streams['video_stream']['bps'] == stability.AUTO_BITRATE
++    auto = await client.post('/v/api/v1/play/play', headers=ADMIN,
++        json={'media_guid': mg, 'bitrate': stability.AUTO_BITRATE})
++    assert 'mode=stable' in auto.json()['data']['play_link'] and 'line=' not in auto.json()['data']['play_link']
++    manual = await client.post('/v/api/v1/play/play', headers=ADMIN,
++        json={'media_guid': mg, 'bitrate': streams['qualities'][1]['bitrate']})
++    assert 'line=slow' in manual.json()['data']['play_link'] and 'mode=' not in manual.json()['data']['play_link']
++    # Old line+auto must remain a fixed source despite the legacy misleading auto flag.
++    prefix = f'/v/media/online/{mg}/'
++    r = await client.get(prefix+'preset.m3u8?line=slow&auto=1', headers=ADMIN)
++    main = await client.get(prefix+first_uri(r.text), headers=ADMIN)
++    assert main.status_code == 200
++    assert module._playback.get('admin-fixture', urllib.parse.parse_qs(urllib.parse.urlsplit(first_uri(main.text)).query)['sid'][0], mg).picked['line'] == 'slow'
++
++
++@pytest.mark.asyncio
++async def test_complete_sample_wins_reuses_and_pins_even_after_health_changes(playback):
++    client, _, _, hits, ctl, mg = playback
++    main, segment, body = await start(client, mg, auto=True)
++    ctx = next(iter(module._playback.contexts.values()))
++    assert ctx.picked['line'] == 'fast'
++    assert hits.count('/fast/0.ts') == 1
++    r = await client.get(segment, headers=ADMIN)
++    assert r.status_code == 200 and r.content == TS
++    assert hits.count('/fast/0.ts') == 1  # the full cold sample was reused
++    ctl['delays'] = {'slow': .001, 'fast': .8}
++    module._playback.samples.clear()
++    hits.clear()
++    assert (await client.get(main, headers=ADMIN)).text == body
++    assert not hits  # no origin, no re-race on media reload
++    ctx.touched -= 1801
++    resumed = await client.get(main, headers=ADMIN)
++    assert resumed.status_code == 200 and resumed.text.count('#EXTINF:') == 6
++    assert hits == ['/fast/main.m3u8']  # idle expiry rebuilds only the pinned source
++    assert (await client.get(segment, headers=ADMIN)).content == TS
++    assert '/slow/main.m3u8' not in hits
++    assert (await client.get(segment, headers=USER)).status_code == 410
++
++
++@pytest.mark.asyncio
++async def test_every_cache_hit_requires_official_auth_user_scope_and_revocation(playback):
++    client, calls, authority, hits, ctl, mg = playback
++    main, segment, _ = await start(client, mg)
++    first = await client.get(segment, headers=ADMIN)
++    assert first.content == TS
++    before = len(hits)
++    auth_before = len(calls)
++    assert (await client.get(segment, headers=ADMIN)).content == TS
++    assert len(hits) == before and len(calls) > auth_before
++    assert (await client.get(segment, headers=USER)).status_code == 410
++    assert (await client.get(main, headers=USER)).status_code == 410
++    assert (await client.get(segment)).status_code == 401
++    authority.pop('admin-test-session')
++    assert (await client.get(segment, headers=ADMIN)).status_code == 401
++    assert len(hits) == before
++
++
++@pytest.mark.asyncio
++async def test_disable_keeps_issued_urls_range_contract_and_ssrf(playback):
++    client, _, _, hits, ctl, mg = playback
++    main, segment, _ = await start(client, mg)
++    r = await client.get(segment, headers=ADMIN | {'Range': 'bytes=0-'})
++    assert r.status_code == 206 and r.content == TS
++    assert r.headers['content-range'] == f'bytes 0-{len(TS)-1}/{len(TS)}'
++    changed = await client.post('/v/api/ext/config', headers=ADMIN | {'X-Fnmedia-Admin': '1'},
++                               json={'playback_stability': False, 'playback_prefetch': False})
++    assert changed.status_code == 200
++    before = len(hits)
++    assert (await client.get(segment, headers=ADMIN)).content == TS
++    assert len(hits) == before + 1
++    assert (await client.get(main, headers=ADMIN)).status_code == 200
++    # Same handler, registered URL, real SafeAsyncClient blocks private destination.
++    module.config.save({'playback_stability': True})
++    ctl['private'] = True
++    _, bad, _ = await start(client, mg)
++    before = len(hits)
++    assert (await client.get(bad, headers=ADMIN)).status_code == 403
++    assert len(hits) == before
++
++
++@pytest.mark.asyncio
++async def test_prefetch_real_path_and_diagnostic_redaction(playback):
++    client, _, _, hits, ctl, mg = playback
++    ctl['delays']['slow'] = .01
++    _, _, text = await start(client, mg)
++    segments = [x for x in text.splitlines() if x and not x.startswith('#')]
++    for url in segments[:3]:
++        assert (await client.get(url, headers=ADMIN)).content == TS
++    deadline = time.monotonic()+2
++    while '/slow/3.ts' not in hits and time.monotonic() < deadline:
++        await asyncio.sleep(.01)
++    assert '/slow/3.ts' in hits  # effective prefetch, not merely an enabled flag
++    await asyncio.sleep(.05)
++    assert (await client.get(segments[3], headers=ADMIN)).content == TS
++    assert hits.count('/slow/3.ts') == 1
++    status = (await client.get('/v/api/ext/status', headers=ADMIN)).json()['playback']
++    assert status['session']['cache'] >= 1 or status['session']['join'] >= 1
++    diagnostic = str(status)
++    assert 'fixture.example' not in diagnostic and 'admin-fixture' not in diagnostic and 'test-session' not in diagnostic
++
++
++@pytest.mark.parametrize('tag', ['#EXT-X-KEY:METHOD=AES-128,URI="key"', '#EXT-X-MAP:URI="init.mp4"',
++    '#EXT-X-BYTERANGE:188@0', '#EXT-X-PART:DURATION=1,URI="x"'])
++def test_nonordinary_media_bypasses(tag):
++    token = base64.urlsafe_b64encode(b'https://media.example/0.ts').decode().rstrip('=')
++    base = '#EXTM3U\n#EXTINF:2,\n/v/media/online/m/seg?u='+token+'\n#EXT-X-ENDLIST\n'
++    assert len(stability.ordinary_vod(base, '/v/media/online/m')) == 1
++    assert not stability.ordinary_vod(base.replace('#EXTINF:', tag+'\n#EXTINF:'), '/v/media/online/m')
++    assert not stability.ordinary_vod(base.replace('#EXT-X-ENDLIST', ''), '/v/media/online/m')
++
++
++def test_context_and_health_capacity_and_headers_isolation():
++    p = stability.Playback()
++    for _ in range(32):
++        assert p.create('u', 'm', {}, False) is not None
++    assert p.create('u', 'm', {}, False) is None
++    ctx = next(iter(p.contexts.values()))
++    assert p.get('u2', ctx.sid, 'm') is None and p.get('u', ctx.sid, 'different') is None
++    one = stability.health_key('u', {'url': 'https://cdn.example', 'headers': {'Referer': 'one'}}, ())
++    two = stability.health_key('u', {'url': 'https://cdn.example', 'headers': {'Referer': 'two'}}, ())
++    assert one != two
++    for i in range(300):
++        p.record(str(i), 2, 1)
++    assert len(p.samples) == 256
++    assert p.score('299') is None
++    p.record('299', 2, 1); p.record('299', 2, 1)
++    assert p.score('299') == .5
++
++
++@pytest.mark.asyncio
++async def test_html_is_not_fast_health_and_sample_is_bounded(playback):
++    client, _, _, hits, ctl, mg = playback
++    ctl['html'] = True
++    _, segment, _ = await start(client, mg, auto=True)
++    assert module._playback.metrics['cold_samples'] == 0
++    assert module._playback.metrics['cold_inconclusive'] == 2
++    before = hits.count('/slow/0.ts')
++    await client.get(segment, headers=ADMIN)
++    await client.get(segment, headers=ADMIN)
++    assert hits.count('/slow/0.ts') > before + 1  # no false cache success
++
++
++@pytest.mark.asyncio
++async def test_one_cancelled_playlist_waiter_does_not_poison_other(playback):
++    from starlette.requests import Request
++    from user_scope import user_scope
++    client, _, _, hits, ctl, mg = playback
++    request = Request({'type': 'http', 'method': 'GET', 'path': '/', 'query_string': b'',
++                       'headers': [], 'app': module.app})
++    picked = module.store.resolve_media_guid(mg)
++    module._PLAYLIST_CACHE.clear()
++    with user_scope('admin-fixture'):
++        # Cancellation at the first await exercises the shared producer, not a fake result.
++        one = asyncio.create_task(module._get_playlist_cached(mg, picked, request))
++        two = asyncio.create_task(module._get_playlist_cached(mg, picked, request))
++        await asyncio.sleep(0)
++        one.cancel()
++        with pytest.raises(asyncio.CancelledError):
++            await one
++        body = await two
++        assert body.startswith('#EXTM3U') and body.count('#EXTINF:') == 6
++        assert hits.count('/slow/main.m3u8') == 1
++        assert not module._PLAYLIST_FUT
++
++
++@pytest.mark.asyncio
++async def test_unknown_client_keeps_legacy_hls_manual_menu(playback):
++    client, _, _, _, _, mg = playback
++    response = await client.get(f'/v/media/online/{mg}/preset.m3u8', headers=ADMIN)
++    assert response.status_code == 200
++    assert response.text.count('#EXT-X-STREAM-INF') == 2
++    assert 'line=slow' in response.text and 'line=fast' in response.text
++    assert 'sid=' not in response.text
++
++
++def test_plain_ts_discontinuity_preserves_timeline_and_urls():
++    token = base64.urlsafe_b64encode(b'https://media.example/0.ts').decode().rstrip('=')
++    body = '#EXTM3U\n#EXT-X-DISCONTINUITY-SEQUENCE:1\n#EXT-X-DISCONTINUITY\n#EXTINF:2,\n/v/media/online/m/seg?u='+token+'&line=one&index=0\n#EXT-X-ENDLIST\n'
++    assert len(stability.ordinary_vod(body, '/v/media/online/m')) == 1
++    rewritten = stability.rewrite(body, '/v/media/online/m', 'test-context', 'fixture-user')
++    assert '#EXT-X-DISCONTINUITY-SEQUENCE:1\n#EXT-X-DISCONTINUITY\n' in rewritten
++    assert '&sid=test-context&n=0' in rewritten and 'u='+token in rewritten
++
++
++@pytest.mark.asyncio
++async def test_network_sample_includes_waiting_for_origin_headers(playback):
++    client, _, _, _, ctl, mg = playback
++    _, segment, _ = await start(client, mg)
++    ctl['delays']['slow'] = .01
++    ctl['header_delay'] = .25
++    began = time.monotonic()
++    assert (await client.get(segment, headers=ADMIN)).content == TS
++    wall = time.monotonic() - began
++    samples = module._segments.last_samples()
++    assert len(samples) == 1
++    assert samples[0].ttfb_s >= .24
++    assert .25 <= samples[0].total_s <= wall
++
++
++@pytest.mark.asyncio
++async def test_idle_fallback_cannot_replace_source_or_leak_its_headers(playback):
++    client, _, _, hits, _, mg = playback
++    main, segment, _ = await start(client, mg)
++    ctx = next(iter(module._playback.contexts.values()))
++    ctx.touched -= 1801
++    parsed = urllib.parse.urlsplit(segment)
++    params = dict(urllib.parse.parse_qsl(parsed.query))
++    params['u'] = module.b64e('http://fixture.example/attacker/0.ts')
++    before = len(hits)
++    changed = await client.get(parsed.path, params=params, headers=ADMIN)
++    assert changed.status_code == 400 and len(hits) == before
++    params['proof'] = '无效'
++    assert (await client.get(parsed.path, params=params, headers=ADMIN)).status_code == 400
++    valid = await client.get(segment, headers=ADMIN)
++    assert valid.status_code == 200 and valid.content == TS
++
++
++@pytest.mark.asyncio
++async def test_context_pressure_cannot_turn_auto_into_legacy_abr(playback):
++    client, _, _, _, _, mg = playback
++    for i in range(32):
++        assert module._playback.create('admin-fixture', f'other-{i}', {}, False)
++    response = await client.get(f'/v/media/online/{mg}/preset.m3u8?mode=stable', headers=ADMIN)
++    assert response.status_code == 503 and '#EXT-X-STREAM-INF' not in response.text
++
++
++@pytest.mark.asyncio
++async def test_live_playlist_refreshes_same_source_instead_of_freezing(playback):
++    client, _, _, hits, ctl, mg = playback
++    ctl['live'] = True
++    main, _, first = await start(client, mg)
++    ctx = next(iter(module._playback.contexts.values()))
++    assert ctx.body is None and not ctx.specs and not ctx.automatic
++    ctl['sequence'] = 10
++    response = await client.get(main, headers=ADMIN)
++    assert response.status_code == 200 and response.text != first
++    assert response.headers['access-control-allow-origin'] == '*'
++    assert hits.count('/slow/main.m3u8') == 2
++    assert '/fast/main.m3u8' not in hits
++
++
++@pytest.mark.asyncio
++async def test_published_mp4_choice_cannot_failover_on_subsequent_get(playback):
++    client, _, _, hits, ctl, mg = playback
++    module.store._titles['fixture-title']['lines']['slow'][0]['url'] = 'http://fixture.example/slow/movie.mp4'
++    module.store._rebuild_index()
++    prefix = f'/v/media/online/{mg}/'
++    preset = await client.get(prefix+'preset.m3u8?line=slow', headers=ADMIN)
++    response = await client.get(prefix+first_uri(preset.text), headers=ADMIN)
++    assert response.status_code == 302 and 'sid=' in response.headers['location']
++    ctl['status'] = {'/slow/movie.mp4': 404}
++    direct = await client.get(response.headers['location'], headers=ADMIN)
++    assert direct.status_code == 404
++    assert hits == ['/slow/movie.mp4']
++    assert (await client.get(response.headers['location'], headers=USER)).status_code == 410
++
++
++@pytest.mark.asyncio
++async def test_route_waiter_cancellation_leaves_other_player_request_alive(playback):
++    client, _, _, hits, ctl, mg = playback
++    module.config.save({'playback_prefetch': False})
++    _, segment, _ = await start(client, mg)
++    ctl['delays']['slow'] = .4
++    one = asyncio.create_task(client.get(segment, headers=ADMIN))
++    await asyncio.sleep(.05)
++    two = asyncio.create_task(client.get(segment, headers=ADMIN))
++    await asyncio.sleep(.05)
++    one.cancel()
++    with pytest.raises(asyncio.CancelledError):
++        await one
++    response = await two
++    assert response.status_code == 200 and response.content == TS
++    assert hits.count('/slow/0.ts') == 1
++    assert module._segments.snapshot()['foreground_waiters'] == 0
++    assert module._segments.snapshot()['reserved_bytes'] == 0
++
++
++@pytest.mark.asyncio
++async def test_turning_off_during_joined_prefetch_preserves_foreground(playback):
++    client, _, _, hits, ctl, mg = playback
++    ctl['delays']['slow'] = .18
++    _, _, body = await start(client, mg)
++    segments = [x for x in body.splitlines() if x and not x.startswith('#')]
++    for url in segments[:3]:
++        assert (await client.get(url, headers=ADMIN)).content == TS
++    deadline = time.monotonic()+1
++    while '/slow/3.ts' not in hits and time.monotonic() < deadline:
++        await asyncio.sleep(.005)
++    assert '/slow/3.ts' in hits
++    front = asyncio.create_task(client.get(segments[3], headers=ADMIN))
++    await asyncio.sleep(.03)
++    assert module._segments.snapshot()['foreground_waiters'] >= 1
++    off = await client.post('/v/api/ext/config', headers=ADMIN | {'X-Fnmedia-Admin': '1'},
++                           json={'playback_prefetch': False})
++    assert off.status_code == 200
++    assert (await front).content == TS
++    await asyncio.sleep(.05)
++    assert '/slow/4.ts' not in hits
++    assert module._segments.snapshot()['prefetch_inflight'] == 0
++
++
++@pytest.mark.asyncio
++async def test_png_ts_wrapper_uses_legacy_conversion_without_reprobing_every_segment(playback):
++    client, _, _, hits, ctl, mg = playback
++    ctl['png'] = True
++    ctl['delays']['slow'] = .01
++    _, _, body = await start(client, mg)
++    urls = [x for x in body.splitlines() if x and not x.startswith('#')]
++    assert (await client.get(urls[0], headers=ADMIN)).content == TS
++    assert next(iter(module._playback.contexts.values())).buffer_disabled
++    assert (await client.get(urls[1], headers=ADMIN)).content == TS
++    assert hits.count('/slow/1.ts') == 1
++    assert module._playback.metrics['network_samples'] == 0
 diff --git a/tests/test_recovery.py b/tests/test_recovery.py
 new file mode 100644
 index 0000000..74df478
@@ -11877,6 +14350,1167 @@ index 0000000..6fe5879
 +    h = {'Authorization': 'admin-test-session'}
 +    for path in ['/v/api/ext/status', '/v/api/v1/play/record']:
 +        assert (await client.get(path, headers=h)).status_code == 503
+diff --git a/tests/test_segment_buffer.py b/tests/test_segment_buffer.py
+new file mode 100644
+index 0000000..ade47c8
+--- /dev/null
++++ b/tests/test_segment_buffer.py
+@@ -0,0 +1,946 @@
++#!/usr/bin/env python3
++"""segment_buffer 的传输级测试。
++
++本地 HTTP 服务逐块回包，经 SafeAsyncClient 的真实 httpx 传输进入缓冲。
++不模拟被测的单飞、取消或配额协作，也不碰官方鉴权。
++"""
++from __future__ import annotations
++
++import asyncio
++import http.server
++import os
++import select
++import socket
++import sys
++import threading
++import time
++import typing
++
++import httpcore
++import httpx
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++PROXY_DIR = os.path.join(os.path.dirname(HERE), "proxy")
++if PROXY_DIR not in sys.path:
++    sys.path.insert(0, PROXY_DIR)
++
++import safe_http  # noqa: E402
++import segment_buffer as sb  # noqa: E402
++
++PUBLIC_IP = "93.184.216.34"
++HEADERS = {"User-Agent": "fnmedia-segment-test"}
++
++
++def ts(packets: int = 3, mark: int = 0x11) -> bytes:
++    packet = bytes((0x47, mark)) + b"\x00" * 186
++    if len(packet) != 188:
++        raise AssertionError(len(packet))
++    return packet * packets
++
++
++TS = ts()
++
++
++class Plan:
++    def __init__(
++        self,
++        body: bytes,
++        *,
++        status: int = 200,
++        headers: dict[str, str] | None = None,
++        content_length: int | None | str = "auto",
++        send: bytes | None = None,
++        chunk: int = 0,
++        gap: float = 0.0,
++        hold: bool = False,
++        drop_after_headers: bool = False,
++        http10: bool = False,
++    ) -> None:
++        self.send = body if send is None else send
++        self.status = status
++        self.headers = {"Content-Type": "video/mp2t"}
++        if headers:
++            self.headers.update(headers)
++        self.content_length = content_length
++        self.chunk = chunk
++        self.gap = gap
++        self.hold = hold
++        self.drop_after_headers = drop_after_headers
++        self.http10 = http10
++        self.release = threading.Event()
++        if not hold:
++            self.release.set()
++
++
++class Fixture:
++    def __init__(self, plans: dict[str, list[Plan]]) -> None:
++        self.plans = plans
++        self.cursor: dict[str, int] = {}
++        self.lock = threading.Lock()
++        self.requests: list[str] = []
++        self.aborted: list[str] = []
++        self.encodings: list[str | None] = []
++        self.ranges: list[str | None] = []
++        self.started: dict[str, threading.Event] = {}
++        self.finished: dict[str, int] = {}
++        self.inflight = 0
++        self.max_inflight = 0
++        self.port = 0
++        self._server: http.server.ThreadingHTTPServer | None = None
++        self._thread: threading.Thread | None = None
++
++    def take(self, path: str) -> Plan | None:
++        seq = self.plans.get(path)
++        if not seq:
++            return None
++        index = self.cursor.get(path, 0)
++        plan = seq[min(index, len(seq) - 1)]
++        if index < len(seq) - 1:
++            self.cursor[path] = index + 1
++        return plan
++
++    def release_all(self) -> None:
++        for seq in self.plans.values():
++            for plan in seq:
++                plan.release.set()
++
++    def __enter__(self) -> "Fixture":
++        handler = type("_Handler", (_Handler,), {})
++        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
++        server.daemon_threads = True
++        server.fx = self  # type: ignore[attr-defined]
++        self._server = server
++        self.port = server.server_address[1]
++        self._thread = threading.Thread(target=server.serve_forever, daemon=True)
++        self._thread.start()
++        return self
++
++    def close(self) -> None:
++        self.release_all()
++        if self._server is not None:
++            self._server.shutdown()
++            self._server.server_close()
++        if self._thread is not None:
++            self._thread.join(timeout=5)
++
++    def __exit__(self, *exc: object) -> None:
++        self.close()
++
++
++class _Handler(http.server.BaseHTTPRequestHandler):
++    protocol_version = "HTTP/1.1"
++
++    def log_message(self, format: str, *args: object) -> None:
++        return
++
++    def do_GET(self) -> None:  # noqa: N802
++        fx: Fixture = self.server.fx  # type: ignore[attr-defined]
++        path = self.path.split("?", 1)[0]
++        with fx.lock:
++            fx.inflight += 1
++            fx.max_inflight = max(fx.max_inflight, fx.inflight)
++            fx.requests.append(path)
++            fx.encodings.append(self.headers.get("Accept-Encoding"))
++            fx.ranges.append(self.headers.get("Range"))
++            fx.started.setdefault(path, threading.Event()).set()
++        plan = fx.take(path)
++        try:
++            if plan is None:
++                self.send_error(404)
++                return
++            self.protocol_version = "HTTP/1.0" if plan.http10 else "HTTP/1.1"
++            try:
++                self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
++            except OSError:
++                pass
++            self.send_response(plan.status)
++            for name, value in plan.headers.items():
++                self.send_header(name, value)
++            if plan.content_length == "auto":
++                self.send_header("Content-Length", str(len(plan.send)))
++            elif plan.content_length is not None:
++                self.send_header("Content-Length", str(plan.content_length))
++            self.end_headers()
++            if plan.drop_after_headers:
++                try:
++                    self.connection.shutdown(socket.SHUT_WR)
++                except OSError:
++                    pass
++                return
++            if not _wait_release(self, plan):
++                with fx.lock:
++                    fx.aborted.append(path)
++                return
++            step = plan.chunk or len(plan.send) or 1
++            sent = 0
++            while sent < len(plan.send):
++                piece = plan.send[sent:sent + step]
++                try:
++                    self.wfile.write(piece)
++                    self.wfile.flush()
++                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError, OSError):
++                    with fx.lock:
++                        fx.aborted.append(path)
++                    return
++                sent += len(piece)
++                if plan.gap and sent < len(plan.send):
++                    time.sleep(plan.gap)
++        finally:
++            with fx.lock:
++                fx.inflight -= 1
++                fx.finished[path] = fx.finished.get(path, 0) + 1
++
++
++def _wait_release(handler: _Handler, plan: Plan) -> bool:
++    if not plan.hold and plan.release.is_set():
++        return True
++    deadline = time.monotonic() + 8
++    while time.monotonic() < deadline:
++        if plan.release.is_set():
++            return True
++        readable, _, _ = select.select([handler.connection], [], [], 0.05)
++        if not readable:
++            continue
++        try:
++            peeked = handler.connection.recv(1, socket.MSG_PEEK)
++        except OSError:
++            return False
++        if peeked == b"":
++            return False
++    return plan.release.is_set()
++
++
++def _client(fx: Fixture, seen: list[tuple[str, int]], limits: httpx.Limits) -> safe_http.SafeAsyncClient:
++    def resolve(host: str, port: int) -> list[str]:
++        return [PUBLIC_IP]
++
++    async def dial(host: str, port: int, *, timeout: typing.Any = None,
++                   local_address: typing.Any = None, socket_options: typing.Any = None):
++        seen.append((host, port))
++        backend = typing.cast(typing.Any, httpcore.AnyIOBackend())
++        return await backend.connect_tcp(
++            "127.0.0.1", fx.port, timeout=timeout,
++            local_address=local_address, socket_options=socket_options,
++        )
++
++    backend = safe_http.GuardedNetworkBackend(resolver=resolve, dialer=dial)
++    return safe_http.SafeAsyncClient(
++        network_backend=backend, limits=limits, follow_redirects=False,
++        timeout=httpx.Timeout(2.0),
++    )
++
++
++class Lab:
++    def __init__(self, plans: dict[str, list[Plan]], *, limits: httpx.Limits | None = None,
++                 **buffer_kw: typing.Any) -> None:
++        self.plans = plans
++        self.limits = limits or httpx.Limits(max_connections=8, max_keepalive_connections=4)
++        self.buffer_kw = {"read_timeout": 2.0, **buffer_kw}
++        self.seen: list[tuple[str, int]] = []
++        self.fx = Fixture(plans)
++        self.client: safe_http.SafeAsyncClient
++        self.buf: sb.SegmentBuffer
++
++    async def __aenter__(self) -> "Lab":
++        self.fx.__enter__()
++        self.client = _client(self.fx, self.seen, self.limits)
++        self.buf = sb.SegmentBuffer(**self.buffer_kw)
++        return self
++
++    async def __aexit__(self, *exc: object) -> None:
++        self.fx.release_all()
++        try:
++            await asyncio.wait_for(self.buf.close(), timeout=3)
++        finally:
++            await self.client.aclose()
++            self.fx.close()
++
++    def specs(self, pairs: list[tuple[str, float]]) -> tuple[sb.SegmentSpec, ...]:
++        port = self.fx.port
++        return tuple(sb.SegmentSpec(f"http://public.test:{port}{path}", dur) for path, dur in pairs)
++
++    async def get(self, pairs: list[tuple[str, float]], index: int, *,
++                  key: tuple[str, str] = ("user-a", "sid-a"),
++                  headers: dict[str, str] | None = None,
++                  prefetch: bool = False) -> sb.SegmentResult:
++        return await self.buf.get(
++            key, self.specs(pairs), index, self.client, headers or dict(HEADERS),
++            prefetch=prefetch,
++        )
++
++
++async def wait_until(pred: typing.Callable[[], bool], timeout: float = 2.0, detail: str = "") -> None:
++    end = time.monotonic() + timeout
++    while time.monotonic() < end:
++        if pred():
++            return
++        await asyncio.sleep(0.02)
++    raise AssertionError(detail or "condition not met")
++
++
++def _idle(buf: sb.SegmentBuffer) -> None:
++    snap = buf.snapshot()
++    assert snap["reserved_bytes"] == 0, snap
++    assert snap["foreground_inflight"] == 0, snap
++    assert snap["prefetch_inflight"] == 0, snap
++    assert snap["cache_bytes"] >= 0
++
++
++def test_defaults_and_no_owned_client() -> None:
++    assert sb.SEGMENT_MAX_BYTES == 8 * 1024 * 1024
++    assert sb.KEY_MAX_BYTES == 32 * 1024 * 1024
++    assert sb.GLOBAL_MAX_BYTES == 128 * 1024 * 1024
++    assert sb.CACHE_TTL_S == 60
++    assert sb.PREFETCH_IDLE_S == 15
++    assert sb.MAX_PREFETCH_GLOBAL == 2
++    buf = sb.SegmentBuffer()
++    assert buf.segment_max == sb.SEGMENT_MAX_BYTES
++    try:
++        sb.SegmentBuffer(segment_max=10, key_max=5, global_max=5)
++        raise AssertionError("expected ValueError")
++    except ValueError:
++        pass
++    text = open(sb.__file__, encoding="utf-8").read()
++    for token in ("httpx.AsyncClient(", "httpx.Client(", "async_client(", "SafeAsyncClient("):
++        assert token not in text, token
++
++
++def test_network_cache_headers_and_samples() -> None:
++    seen: list[tuple[object, sb.NetworkSample]] = []
++
++    def hook(key: tuple[str, str], sample: sb.NetworkSample) -> None:
++        seen.append((key, sample))
++
++    async def go() -> None:
++        plans = {"/0": [Plan(TS, chunk=188, gap=0.05, headers={
++            "Content-Type": "video/mp2t",
++            "Set-Cookie": "COOKIE-SECRET=1",
++            "ETag": '"abc"',
++            "Accept-Ranges": "bytes",
++        })]}
++        async with Lab(plans, on_network_sample=hook) as lab:
++            result = await lab.get([("/0", 4.0)], 0)
++            assert result.origin == "network", result.origin
++            assert result.status == 200
++            assert result.body == TS
++            assert result.total_s > result.ttfb_s >= 0
++            assert result.headers["Content-Type"] == "video/mp2t"
++            assert result.headers["Content-Length"] == str(len(TS))
++            assert result.headers["ETag"] == '"abc"'
++            assert result.headers["Accept-Ranges"] == "bytes"
++            assert "Content-Range" not in result.headers
++            lowered = {name.lower() for name in result.headers}
++            assert "set-cookie" not in lowered
++            assert lab.fx.encodings == ["identity"]
++            assert lab.fx.ranges == [None]
++            cached = await lab.get([("/0", 4.0)], 0)
++            assert cached.origin == "cache"
++            assert cached.body == TS
++            assert cached.total_s == 0 and cached.ttfb_s == 0
++            assert lab.fx.requests == ["/0"]
++            snap = lab.buf.snapshot()
++            assert snap["hits"] == 1
++            assert snap["network_completions"] == 1
++            assert snap["joins"] == 0
++            assert len(seen) == 1
++            assert seen[0][0] == ("user-a", "sid-a")
++            assert seen[0][1].nbytes == len(TS)
++            assert seen[0][1].r is not None and seen[0][1].r < 1
++            assert len(lab.buf.last_samples()) == 1
++            blob = repr(snap) + repr(lab.buf.last_samples())
++            assert "COOKIE-SECRET" not in blob
++            assert "user-a" not in blob
++            assert "/0" not in blob
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_joiners_survive_one_cancel() -> None:
++    async def go() -> None:
++        held = Plan(TS, hold=True)
++        async with Lab({"/0": [held]}) as lab:
++            pairs = [("/0", 4.0)]
++            tasks = [asyncio.create_task(lab.get(pairs, 0)) for _ in range(4)]
++            await wait_until(lambda: lab.buf.snapshot()["foreground_waiters"] >= 4, detail="waiters")
++            assert lab.fx.requests == ["/0"]
++            tasks[0].cancel()
++            with _raises(asyncio.CancelledError):
++                await tasks[0]
++            assert lab.buf.snapshot()["foreground_waiters"] == 3
++            held.release.set()
++            results = await asyncio.gather(*tasks[1:])
++            assert [item.body for item in results] == [TS, TS, TS]
++            assert all(item.origin in {"network", "join"} for item in results)
++            assert sum(item.origin == "network" for item in results) <= 1
++            assert "cache" not in {item.origin for item in results}
++            snap = lab.buf.snapshot()
++            assert snap["network_completions"] == 1
++            assert snap["joins"] == sum(item.origin == "join" for item in results)
++            assert snap["hits"] == 0
++            assert lab.fx.requests == ["/0"]
++            assert lab.fx.max_inflight == 1
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_last_waiter_cancel_frees_the_socket() -> None:
++    async def go() -> None:
++        limits = httpx.Limits(max_connections=1, max_keepalive_connections=0)
++        held = Plan(TS, hold=True)
++        async with Lab({"/0": [held], "/1": [Plan(TS)]}, limits=limits) as lab:
++            task = asyncio.create_task(lab.get([("/0", 4.0), ("/1", 4.0)], 0))
++            await wait_until(lambda: lab.fx.started.get("/0") is not None and lab.fx.started["/0"].is_set())
++            task.cancel()
++            with _raises(asyncio.CancelledError):
++                await task
++            await wait_until(lambda: "/0" in lab.fx.aborted or lab.buf.snapshot()["reserved_bytes"] == 0)
++            follow = await asyncio.wait_for(lab.get([("/0", 4.0), ("/1", 4.0)], 1), timeout=2)
++            assert follow.body == TS
++            assert follow.origin == "network"
++            snap = lab.buf.snapshot()
++            assert snap["entries"] == 1
++            assert snap["reserved_bytes"] == 0
++            assert "/0" in lab.fx.aborted or lab.fx.finished.get("/0", 0) >= 1
++
++    asyncio.run(go())
++
++
++def test_budget_bypass_does_not_queue_foreground() -> None:
++    async def go() -> None:
++        size = len(TS)
++        held = Plan(TS, hold=True)
++        async with Lab(
++            {"/0": [held], "/1": [Plan(TS)], "/2": [Plan(TS)]},
++            segment_max=size, key_max=size * 2, global_max=size * 2,
++        ) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            first = asyncio.create_task(lab.get(pairs, 0, prefetch=True))
++            await wait_until(lambda: lab.buf.snapshot()["foreground_waiters"] >= 1)
++            started = time.monotonic()
++            with _raises(sb.BypassBuffer) as caught:
++                await lab.get(pairs, 1, prefetch=True)
++            assert time.monotonic() - started < 0.5
++            assert caught.args == ("budget",)
++            assert not first.done()
++            held.release.set()
++            got = await first
++            assert got.body == TS
++            assert "/1" not in lab.fx.requests
++            assert lab.buf.snapshot()["prefetch_started"] == 0
++            _idle(lab.buf)
++
++            # 一份缓存加双份在途内存超过预算，预取静默放弃。
++            again = await lab.get(pairs, 0, prefetch=True)
++            assert again.origin == "cache"
++            await asyncio.sleep(0.1)
++            assert lab.fx.requests == ["/0"]
++            assert lab.buf.snapshot()["prefetch_abandoned"] >= 1
++
++    asyncio.run(go())
++
++
++def test_key_budget_evicts_oldest_and_isolate_users() -> None:
++    async def go() -> None:
++        size = len(TS)
++        async with Lab(
++            {"/0": [Plan(TS)], "/1": [Plan(ts(mark=0x22))], "/x": [Plan(TS)]},
++            segment_max=size, key_max=size * 2, global_max=size * 4,
++        ) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0)]
++            first = await lab.get(pairs, 0)
++            assert first.origin == "network"
++            second = await lab.get(pairs, 1)
++            assert second.body[1] == 0x22
++            third = await lab.get(pairs, 0)
++            assert third.origin == "network"
++            assert lab.fx.requests.count("/0") == 2
++            other = await lab.buf.get(
++                ("user-b", "sid-b"), lab.specs([("/x", 4.0)]), 0, lab.client, dict(HEADERS),
++            )
++            assert other.origin == "network"
++            assert lab.fx.requests.count("/x") == 1
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_old_segments_do_not_starve_next_segment_prefetch() -> None:
++    async def go() -> None:
++        size = len(TS)
++        async with Lab(
++            {f"/{i}": [Plan(TS)] for i in range(6)},
++            segment_max=size, key_max=4 * size, global_max=12 * size,
++        ) as lab:
++            pairs = [(f"/{i}", 4.0) for i in range(6)]
++            for i in range(6):
++                got = await lab.get(pairs, i, prefetch=True)
++                assert got.body == TS
++                assert got.origin == ("network" if i == 0 else "cache")
++                if i < 5:
++                    await wait_until(lambda: lab.buf.snapshot()["network_completions"] == i + 2)
++                snap = lab.buf.snapshot()
++                assert snap["cache_bytes"] + snap["reserved_bytes"] <= 4 * size
++            assert lab.fx.requests == [f"/{i}" for i in range(6)]
++            assert lab.buf.snapshot()["prefetch_started"] == 5
++    asyncio.run(go())
++
++
++def test_ttl_refetches() -> None:
++    async def go() -> None:
++        async with Lab({"/0": [Plan(TS)]}, ttl_s=0.25) as lab:
++            await lab.get([("/0", 4.0)], 0)
++            assert lab.buf.snapshot()["entries"] == 1
++            await asyncio.sleep(0.35)
++            assert lab.buf.snapshot()["entries"] == 0
++            again = await lab.get([("/0", 4.0)], 0)
++            assert again.origin == "network"
++            assert lab.fx.requests == ["/0", "/0"]
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_prefetch_stops_at_one_and_cache_hit_does_not_chain() -> None:
++    async def go() -> None:
++        async with Lab({"/0": [Plan(TS)], "/1": [Plan(TS)], "/2": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            await lab.get(pairs, 0, prefetch=False)
++            await lab.get(pairs, 1, prefetch=False)
++            await lab.get(pairs, 0, prefetch=True)
++            await asyncio.sleep(0.2)
++            assert lab.fx.requests == ["/0", "/1"]
++
++        async with Lab({"/0": [Plan(TS)], "/1": [Plan(TS)], "/2": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            await lab.get(pairs, 0, prefetch=True)
++            await wait_until(lambda: lab.fx.finished.get("/1", 0) >= 1, detail="prefetch /1")
++            await asyncio.sleep(0.2)
++            assert lab.fx.requests == ["/0", "/1"]
++            assert "/2" not in lab.fx.requests
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_prefetch_false_keeps_native_concurrency() -> None:
++    async def go() -> None:
++        hold0, hold1 = Plan(TS, hold=True), Plan(ts(mark=0x22), hold=True)
++        async with Lab({"/0": [hold0], "/1": [hold1], "/2": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            left = asyncio.create_task(lab.get(pairs, 0, prefetch=False))
++            right = asyncio.create_task(lab.get(pairs, 1, prefetch=False))
++            await wait_until(lambda: lab.fx.max_inflight >= 2, detail="concurrency")
++            hold0.release.set()
++            hold1.release.set()
++            a, b = await asyncio.gather(left, right)
++            assert a.body == TS and b.body[1] == 0x22
++            await asyncio.sleep(0.1)
++            assert "/2" not in lab.fx.requests
++            assert lab.fx.max_inflight >= 2
++            # 两个前台 index 重叠时记下停预取，但不把这两个下载串行化。
++            assert lab.buf.snapshot()["disabled_events"] == 1
++            assert lab.buf.snapshot()["prefetch_started"] == 0
++
++    asyncio.run(go())
++
++
++def test_overlap_disables_prefetch_without_serializing() -> None:
++    async def go() -> None:
++        hold0, hold1 = Plan(TS, hold=True), Plan(ts(mark=0x22), hold=True)
++        async with Lab({"/0": [hold0], "/1": [hold1], "/2": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            left = asyncio.create_task(lab.get(pairs, 0, prefetch=True))
++            right = asyncio.create_task(lab.get(pairs, 1, prefetch=True))
++            await wait_until(lambda: lab.fx.max_inflight >= 2, detail="overlap")
++            assert lab.buf.snapshot()["disabled_keys"] == 1
++            hold0.release.set()
++            hold1.release.set()
++            await asyncio.gather(left, right)
++            await asyncio.sleep(0.2)
++            assert lab.fx.requests == ["/0", "/1"]
++            assert lab.buf.snapshot()["prefetch_started"] == 0
++
++    asyncio.run(go())
++
++
++def test_seek_cancels_unwanted_prefetch() -> None:
++    async def go() -> None:
++        held = Plan(TS, hold=True)
++        later = Plan(ts(mark=0x33), hold=True)
++        async with Lab({
++            "/0": [Plan(TS)],
++            "/1": [held],
++            "/5": [Plan(ts(mark=0x44))],
++            "/6": [later],
++        }) as lab:
++            pairs = [(f"/{i}", 4.0) for i in range(7)]
++            await lab.get(pairs, 0, prefetch=True)
++            await wait_until(lambda: lab.fx.started.get("/1") is not None and lab.fx.started["/1"].is_set())
++            jumped = await lab.get(pairs, 5, prefetch=True)
++            assert jumped.body[1] == 0x44
++            await wait_until(lambda: "/1" in lab.fx.aborted, detail="old prefetch")
++            await wait_until(
++                lambda: lab.fx.started.get("/6") is not None and lab.fx.started["/6"].is_set(),
++                detail="new prefetch",
++            )
++            assert "/2" not in lab.fx.requests
++            later.release.set()
++            await wait_until(lambda: lab.fx.finished.get("/6", 0) >= 1)
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_idle_prefetch_is_cancelled() -> None:
++    async def go() -> None:
++        limits = httpx.Limits(max_connections=1, max_keepalive_connections=0)
++        held = Plan(TS, hold=True)
++        async with Lab(
++            {"/0": [Plan(TS)], "/1": [held], "/2": [Plan(TS)]},
++            limits=limits, idle_prefetch_s=0.35,
++        ) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            await lab.get(pairs, 0, prefetch=True)
++            await wait_until(lambda: lab.fx.started.get("/1") is not None and lab.fx.started["/1"].is_set())
++            refreshed = await lab.get(pairs, 0, prefetch=False)
++            assert refreshed.origin == "cache"
++            await asyncio.sleep(0.15)
++            assert "/1" not in lab.fx.aborted
++            await wait_until(lambda: "/1" in lab.fx.aborted, timeout=2, detail="idle cancel")
++            follow = await asyncio.wait_for(lab.get(pairs, 2, prefetch=False), timeout=2)
++            assert follow.body == TS
++            snap = lab.buf.snapshot()
++            assert snap["reserved_bytes"] == 0
++            assert snap["prefetch_cancelled"] >= 1
++            assert snap["entries"] == 2
++
++    asyncio.run(go())
++
++
++def test_slow_and_429_pause_until_fast_sample() -> None:
++    async def go() -> None:
++        slow = Plan(TS, hold=True)
++        async with Lab({
++            "/0": [slow],
++            "/1": [Plan(TS)],
++            "/2": [Plan(TS, hold=True)],
++        }) as lab:
++            pairs = [("/0", 0.05), ("/1", 10.0), ("/2", 10.0)]
++            task = asyncio.create_task(lab.get(pairs, 0, prefetch=True))
++            await wait_until(lambda: lab.fx.started.get("/0") is not None and lab.fx.started["/0"].is_set())
++            await asyncio.sleep(0.25)
++            slow.release.set()
++            got = await task
++            assert got.origin == "network"
++            assert got.total_s / 0.05 > 1
++            await asyncio.sleep(0.1)
++            assert "/1" not in lab.fx.requests
++            assert lab.buf.snapshot()["paused_keys"] == 1
++            sample = lab.buf.last_samples()[-1]
++            assert sample.r is not None and sample.r > 1
++            resumed = await lab.get(pairs, 1, prefetch=True)
++            assert resumed.body == TS
++            await wait_until(lambda: "/2" in lab.fx.requests, detail="resume prefetch")
++            assert lab.buf.snapshot()["paused_keys"] == 0
++
++        denied = Plan(b"no", status=429, headers={"Content-Type": "text/plain"})
++        async with Lab({
++            "/0": [denied, Plan(TS)],
++            "/1": [Plan(TS)],
++        }) as lab:
++            pairs = [("/0", 10.0), ("/1", 10.0)]
++            with _raises(sb.UpstreamSegmentError) as caught:
++                await lab.get(pairs, 0, prefetch=True)
++            assert caught.status == 429
++            await asyncio.sleep(0.1)
++            assert lab.fx.requests == ["/0"]
++            assert lab.buf.snapshot()["paused_keys"] == 1
++            assert lab.buf.snapshot()["entries"] == 0
++            ok = await lab.get(pairs, 0, prefetch=True)
++            assert ok.origin == "network"
++            await wait_until(lambda: "/1" in lab.fx.requests, detail="prefetch after 429")
++
++    asyncio.run(go())
++
++
++def test_rejects_non_cacheable_bodies() -> None:
++    async def go() -> None:
++        n = len(TS)
++        partial = ts(1)
++        async with Lab({
++            "/html": [Plan(b"<html>not ts</html>", headers={"Content-Type": "text/html"})],
++            "/short": [Plan(ts(2))],
++            "/sync": [Plan(b"\x47" + b"\x00" * 187 + b"\x00" + b"\x00" * 187 + ts(1))],
++            "/partial": [Plan(partial, status=206, headers={
++                "Content-Type": "video/mp2t",
++                "Content-Range": f"bytes 0-{len(partial) - 1}/{n}",
++            })],
++            "/gzip": [Plan(TS, headers={"Content-Type": "video/mp2t", "Content-Encoding": "gzip"})],
++            "/trunc": [Plan(TS, send=TS[:188], content_length=n)],
++            "/drop": [Plan(TS, drop_after_headers=True)],
++            "/ok": [Plan(TS)],
++        }) as lab:
++            cases = [
++                ("/html", "not-ts"),
++                ("/short", "not-ts"),
++                ("/sync", "not-ts"),
++                ("/partial", "partial-206"),
++                ("/gzip", "compressed"),
++            ]
++            for path, reason in cases:
++                with _raises(sb.BypassBuffer) as caught:
++                    await lab.get([(path, 4.0)], 0)
++                assert caught.args == (reason,), (path, caught)
++                assert lab.buf.snapshot()["entries"] == 0
++                assert lab.buf.snapshot()["reserved_bytes"] == 0
++            with _raises(sb.UpstreamSegmentError):
++                await lab.get([("/trunc", 4.0)], 0)
++            with _raises(sb.UpstreamSegmentError):
++                await lab.get([("/drop", 4.0)], 0)
++            assert lab.buf.snapshot()["entries"] == 0
++            assert lab.buf.snapshot()["reserved_bytes"] == 0
++            good = await lab.get([("/ok", 4.0)], 0)
++            assert good.body == TS
++            with _raises(sb.BypassBuffer) as ranged:
++                await lab.buf.get(
++                    ("user-a", "sid-a"), lab.specs([("/ok", 4.0)]), 0, lab.client,
++                    {"Range": "bytes=0-", **HEADERS},
++                )
++            assert ranged.args == ("range",)
++            assert lab.fx.requests.count("/ok") == 1
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_full_206_is_kept_and_200_is_not_rewritten() -> None:
++    async def go() -> None:
++        n = len(TS)
++        async with Lab({
++            "/partial-full": [Plan(TS, status=206, headers={
++                "Content-Type": "video/mp2t",
++                "Content-Range": f"bytes 0-{n - 1}/{n}",
++                "Accept-Ranges": "bytes",
++            })],
++            "/plain": [Plan(TS, headers={
++                "Content-Type": "video/mp2t",
++                "Content-Range": "bytes 0-10/999",
++            })],
++        }) as lab:
++            ranged = await lab.get([("/partial-full", 4.0)], 0)
++            assert ranged.status == 206
++            assert ranged.headers["Content-Range"] == f"bytes 0-{n - 1}/{n}"
++            assert ranged.headers["Content-Length"] == str(n)
++            cached = await lab.get([("/partial-full", 4.0)], 0)
++            assert cached.origin == "cache" and cached.status == 206
++            plain = await lab.get([("/plain", 4.0)], 0)
++            assert plain.status == 200
++            assert "Content-Range" not in plain.headers
++            assert lab.fx.requests == ["/partial-full", "/plain"]
++
++    asyncio.run(go())
++
++
++def test_stream_without_length_and_declared_oversize() -> None:
++    async def go() -> None:
++        big = ts(5)  # 940 bytes
++        async with Lab({
++            "/huge": [Plan(b"", status=200, headers={"Content-Type": "video/mp2t"},
++                           content_length=9_999_999, send=b"")],
++            "/stream": [Plan(big, http10=True, content_length=None, chunk=100)],
++            "/ok": [Plan(TS)],
++        }, segment_max=700, key_max=700 * 4, global_max=700 * 4) as lab:
++            with _raises(sb.BypassBuffer) as declared:
++                await lab.get([("/huge", 4.0)], 0)
++            assert declared.args == ("segment-cap",)
++            with _raises(sb.BypassBuffer) as streamed:
++                await lab.get([("/stream", 4.0)], 0)
++            assert streamed.args == ("segment-cap",)
++            snap = lab.buf.snapshot()
++            assert snap["entries"] == 0
++            assert snap["reserved_bytes"] == 0
++            assert snap["wasted_bytes"] > 0
++            ok = await lab.get([("/ok", 4.0)], 0)
++            assert ok.body == TS
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_header_context_and_redaction() -> None:
++    async def go() -> None:
++        async with Lab({"/secret-token-zz": [Plan(TS)]}) as lab:
++            key = ("USER-SECRET-9f3a", "SID-SECRET-77")
++            pairs = [("/secret-token-zz", 4.0)]
++            first = await lab.buf.get(key, lab.specs(pairs), 0, lab.client, dict(HEADERS))
++            assert first.origin == "network"
++            with _raises(sb.BypassBuffer) as changed:
++                await lab.buf.get(
++                    key, lab.specs(pairs), 0, lab.client,
++                    {"User-Agent": "other", "X-Token": "HEADER-SECRET"},
++                )
++            assert changed.args == ("header-context",)
++            again = await lab.buf.get(key, lab.specs(pairs), 0, lab.client, dict(HEADERS))
++            assert again.origin == "cache"
++            assert lab.fx.requests == ["/secret-token-zz"]
++            blob = repr(lab.buf.snapshot()) + repr(lab.buf.last_samples())
++            for secret in ("USER-SECRET", "SID-SECRET", "secret-token", "HEADER-SECRET"):
++                assert secret not in blob
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++def test_invalidate_and_close_preserve_foreground() -> None:
++    async def go() -> None:
++        held = Plan(TS, hold=True)
++        async with Lab({"/0": [held], "/1": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0)]
++            task = asyncio.create_task(lab.get(pairs, 0, prefetch=False))
++            await wait_until(lambda: lab.buf.snapshot()["foreground_waiters"] >= 1)
++            await lab.buf.invalidate(("user-a", "sid-a"))
++            assert not task.done()
++            held.release.set()
++            got = await task
++            assert got.body == TS and got.origin == "network"
++            assert lab.buf.snapshot()["entries"] == 0
++            again = await lab.get(pairs, 0, prefetch=False)
++            assert again.origin == "network"
++            assert lab.fx.requests.count("/0") == 2
++            await lab.buf.invalidate(("missing", "key"))
++
++        held_fg = Plan(TS, hold=True)
++        prefetch = Plan(ts(mark=0x55), hold=True)
++        async with Lab({"/0": [held_fg], "/1": [prefetch], "/2": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0), ("/2", 4.0)]
++            foreground = asyncio.create_task(lab.get(pairs, 0, prefetch=False))
++            await wait_until(lambda: lab.fx.started.get("/0") is not None and lab.fx.started["/0"].is_set())
++            starter = asyncio.create_task(lab.get(pairs, 0, prefetch=True))
++            # 同一 index 会并进前台，不会另开预取。先等前台，再关闭。
++            await wait_until(lambda: lab.buf.snapshot()["foreground_waiters"] >= 2)
++            await lab.buf.close()
++            assert not foreground.done()
++            held_fg.release.set()
++            results = await asyncio.gather(foreground, starter)
++            assert all(item.body == TS for item in results)
++            with _raises(sb.BypassBuffer) as closed:
++                await lab.get(pairs, 2)
++            assert closed.args == ("closed",)
++            assert lab.buf.snapshot()["closed"] == 1
++            await lab.buf.close()
++
++        prefetch_only = Plan(TS, hold=True)
++        async with Lab({"/0": [Plan(TS)], "/1": [prefetch_only]}) as lab:
++            await lab.get([("/0", 4.0), ("/1", 4.0)], 0, prefetch=True)
++            await wait_until(lambda: lab.fx.started.get("/1") is not None and lab.fx.started["/1"].is_set())
++            await lab.buf.close()
++            await wait_until(lambda: "/1" in lab.fx.aborted, detail="close prefetch")
++            assert lab.buf.snapshot()["reserved_bytes"] == 0
++            with _raises(sb.BypassBuffer):
++                await lab.get([("/0", 4.0), ("/1", 4.0)], 0)
++
++    asyncio.run(go())
++
++
++def test_global_prefetch_cap_and_hook_failure() -> None:
++    async def go() -> None:
++        size = len(TS)
++        plans: dict[str, list[Plan]] = {}
++        holds: list[Plan] = []
++        for name in ("a", "b", "c"):
++            plans[f"/{name}/0"] = [Plan(TS)]
++            held = Plan(TS, hold=True)
++            holds.append(held)
++            plans[f"/{name}/1"] = [held]
++        async with Lab(
++            plans, segment_max=size, key_max=size * 5, global_max=size * 8,
++        ) as lab:
++            for name in ("a", "b", "c"):
++                pairs = [(f"/{name}/0", 4.0), (f"/{name}/1", 4.0)]
++                await lab.buf.get(
++                    ("user", name), lab.specs(pairs), 0, lab.client, dict(HEADERS), prefetch=True,
++                )
++            await asyncio.sleep(0.2)
++            started = [path for path in lab.fx.requests if path.endswith("/1")]
++            assert len(started) == 2, lab.fx.requests
++            assert lab.buf.snapshot()["prefetch_inflight"] <= 2
++            for held in holds:
++                held.release.set()
++            await wait_until(lambda: lab.buf.snapshot()["prefetch_inflight"] == 0, timeout=2)
++            _idle(lab.buf)
++
++        def explode(key: tuple[str, str], sample: sb.NetworkSample) -> None:
++            raise RuntimeError("hook failed")
++
++        async with Lab({"/0": [Plan(TS)]}, on_network_sample=explode) as lab:
++            got = await lab.get([("/0", 4.0)], 0)
++            assert got.body == TS
++            assert lab.buf.snapshot()["hook_errors"] == 1
++
++    asyncio.run(go())
++
++
++def test_prefetch_waits_until_current_download_finishes() -> None:
++    async def go() -> None:
++        held = Plan(TS, hold=True)
++        async with Lab({"/0": [held], "/1": [Plan(TS)]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0)]
++            task = asyncio.create_task(lab.get(pairs, 0, prefetch=True))
++            await wait_until(lambda: lab.fx.started.get("/0") is not None and lab.fx.started["/0"].is_set())
++            await asyncio.sleep(0.1)
++            assert lab.fx.requests == ["/0"]
++            assert lab.buf.snapshot()["prefetch_inflight"] == 0
++            held.release.set()
++            await task
++            await wait_until(lambda: "/1" in lab.fx.requests, detail="lookahead")
++            _idle(lab.buf)
++
++    asyncio.run(go())
++
++
++class _raises:
++    def __init__(self, exc_type: type[BaseException]) -> None:
++        self.exc_type = exc_type
++        self.value: BaseException | None = None
++
++    def __enter__(self) -> "_raises":
++        return self
++
++    def __exit__(self, exc_type: type[BaseException] | None,
++                 exc: BaseException | None, tb: object) -> bool:
++        if exc is None:
++            raise AssertionError(f"expected {self.exc_type.__name__}")
++        if not isinstance(exc, self.exc_type):
++            return False
++        self.value = exc
++        self.args = exc.args
++        return True
++
++    def __getattr__(self, name: str) -> object:
++        if self.value is None:
++            raise AttributeError(name)
++        return getattr(self.value, name)
++
++
++def _main() -> int:
++    tests = [(name, obj) for name, obj in sorted(globals().items())
++             if name.startswith("test_") and callable(obj)]
++    failed = 0
++    for name, fn in tests:
++        try:
++            fn()
++        except BaseException:
++            failed += 1
++            import traceback
++            print(f"FAIL {name}")
++            traceback.print_exc()
++        else:
++            print(f"PASS {name}")
++    print(f"\n{len(tests) - failed} passed, {failed} failed")
++    return 1 if failed else 0
++
++
++if __name__ == "__main__":
++    sys.exit(_main())
+diff --git a/tests/test_segment_buffer_regressions.py b/tests/test_segment_buffer_regressions.py
+new file mode 100644
+index 0000000..cd167b2
+--- /dev/null
++++ b/tests/test_segment_buffer_regressions.py
+@@ -0,0 +1,203 @@
++"""segment_buffer 三个已证实边界的回归。
++
++复用 test_segment_buffer 的 Fixture / Plan / Lab，经真实 HTTP 传输断言修复后的行为。
++"""
++from __future__ import annotations
++
++import asyncio
++import os
++import sys
++
++_HERE = os.path.dirname(os.path.abspath(__file__))
++if _HERE not in sys.path:
++    sys.path.insert(0, _HERE)
++
++import test_segment_buffer as tb
++
++NEXT_HEADERS = {"User-Agent": "fnmedia-segment-next"}
++
++
++def _started(fx: tb.Fixture, path: str) -> bool:
++    event = fx.started.get(path)
++    return event is not None and event.is_set()
++
++
++async def _cancel(tasks: list[asyncio.Task[object] | None]) -> None:
++    live = [task for task in tasks if task is not None]
++    for task in live:
++        if not task.done():
++            task.cancel()
++    if live:
++        await asyncio.gather(*live, return_exceptions=True)
++
++
++def test_invalidate_detaches_flight_and_keeps_new_foreground() -> None:
++    """invalidate 后同 key/index/url、不同 headers 的新 get 不得并入旧 flight。"""
++
++    async def go() -> None:
++        old_body, new_body, side_body = tb.ts(mark=0x11), tb.ts(mark=0x22), tb.ts(mark=0x33)
++        old_plan = tb.Plan(old_body, hold=True)
++        new_plan = tb.Plan(new_body, hold=True)
++        side_plan = tb.Plan(side_body, hold=True)
++        async with tb.Lab({"/0": [old_plan, new_plan], "/1": [side_plan]}) as lab:
++            pairs = [("/0", 4.0), ("/1", 4.0)]
++            key = ("user-a", "sid-a")
++            first = asyncio.create_task(lab.get(pairs, 0, key=key, prefetch=False))
++            second = side = None
++            try:
++                await tb.wait_until(lambda: _started(lab.fx, "/0"), detail="old flight")
++                await lab.buf.invalidate(key)
++                assert not first.done()
++                second = asyncio.create_task(
++                    lab.get(pairs, 0, key=key, headers=dict(NEXT_HEADERS), prefetch=False),
++                )
++                try:
++                    await tb.wait_until(
++                        lambda: lab.fx.requests.count("/0") >= 2,
++                        timeout=0.6, detail="new flight",
++                    )
++                except AssertionError:
++                    raise AssertionError(
++                        "new get joined old flight "
++                        f"requests={lab.fx.requests} joins={lab.buf.snapshot()['joins']}"
++                    ) from None
++                old_plan.release.set()
++                got_old = await asyncio.wait_for(first, timeout=2)
++                assert got_old.body == old_body and got_old.origin == "network"
++                if second.done():
++                    raise AssertionError(f"new get finished with old flight: {second.exception()!r}")
++                side = asyncio.create_task(
++                    lab.get(pairs, 1, key=key, headers=dict(NEXT_HEADERS), prefetch=False),
++                )
++                await tb.wait_until(lambda: _started(lab.fx, "/1"), detail="new generation overlap")
++                assert lab.buf.snapshot()["disabled_events"] >= 1, lab.buf.snapshot()
++                new_plan.release.set()
++                side_plan.release.set()
++                got_new, got_side = await asyncio.gather(second, side)
++                assert got_new.body == new_body and got_new.origin == "network"
++                assert got_side.body == side_body
++                assert lab.buf.snapshot()["joins"] == 0
++            finally:
++                lab.fx.release_all()
++                await _cancel([first, second, side])
++
++    asyncio.run(go())
++
++
++def test_same_index_url_change_aborts_prefetch_before_send() -> None:
++    """同 index 换 URL 时，前台必须先完成本地真实连接关闭，再发出新请求。"""
++
++    async def go() -> None:
++        new_body = tb.ts(mark=0x22)
++        held = tb.Plan(tb.ts(mark=0x21), hold=True)
++        async with tb.Lab({
++            "/0": [tb.Plan(tb.TS)],
++            "/old": [held],
++            "/new": [tb.Plan(new_body)],
++        }) as lab:
++            await lab.get([("/0", 4.0), ("/old", 4.0)], 0, prefetch=True)
++            await tb.wait_until(lambda: _started(lab.fx, "/old"), detail="prefetch")
++            events = []
++            real_close, real_send = lab.buf._aclose, lab.buf._send
++            async def close(response):
++                await real_close(response)
++                if response.request.url.path == "/old":
++                    events.append("old closed")
++            async def send(client, url, headers):
++                if url.endswith("/new"):
++                    events.append("new sent")
++                return await real_send(client, url, headers)
++            lab.buf._aclose, lab.buf._send = close, send
++            task = asyncio.create_task(
++                lab.get([("/0", 4.0), ("/new", 4.0)], 1, prefetch=False),
++            )
++            try:
++                await tb.wait_until(lambda: "/new" in lab.fx.requests, detail="replacement")
++                assert events == ["old closed", "new sent"], events
++                # The server observes the TCP close asynchronously; it is not a
++                # reliable clock for the client's actual resource lifetime.
++                await tb.wait_until(lambda: "/old" in lab.fx.aborted, detail="server observed close")
++                got = await asyncio.wait_for(task, timeout=2)
++                assert got.body == new_body and got.origin == "network"
++            finally:
++                lab.fx.release_all()
++                await _cancel([task])
++
++    asyncio.run(go())
++
++
++def test_long_foreground_does_not_idle_cancel_fresh_prefetch() -> None:
++    """前台等待已超过 idle，但 r<=1 时，刚启动的下一段预取不能马上被 idle 取消。"""
++
++    async def go() -> None:
++        idle = 0.35
++        held = tb.Plan(tb.TS, hold=True)
++        nxt = tb.Plan(tb.ts(mark=0x41), hold=True)
++        async with tb.Lab(
++            {"/0": [held], "/1": [nxt]}, idle_prefetch_s=idle,
++        ) as lab:
++            pairs = [("/0", 30.0), ("/1", 30.0)]
++            task = asyncio.create_task(lab.get(pairs, 0, prefetch=True))
++            try:
++                await tb.wait_until(lambda: _started(lab.fx, "/0"), detail="foreground")
++                await asyncio.sleep(idle + 0.25)
++                assert not task.done()
++                assert "/1" not in lab.fx.requests
++                held.release.set()
++                got = await asyncio.wait_for(task, timeout=2)
++                assert got.body == tb.TS and got.origin == "network"
++                sample = lab.buf.last_samples()[-1]
++                assert sample.r is not None and sample.r <= 1, sample
++                assert lab.buf.snapshot()["paused_keys"] == 0
++                await asyncio.sleep(0.15)
++                snap = lab.buf.snapshot()
++                assert (
++                    _started(lab.fx, "/1")
++                    and "/1" not in lab.fx.aborted
++                    and snap["prefetch_cancelled"] == 0
++                    and snap["prefetch_inflight"] == 1
++                ), (
++                    "fresh prefetch idle-cancelled",
++                    lab.fx.requests, list(lab.fx.aborted),
++                    snap["prefetch_cancelled"], snap["prefetch_inflight"],
++                )
++                nxt.release.set()
++                await tb.wait_until(lambda: lab.fx.finished.get("/1", 0) >= 1)
++            finally:
++                lab.fx.release_all()
++                await _cancel([task])
++
++    asyncio.run(go())
++
++
++def test_cancel_holds_reservation_until_producer_finishes() -> None:
++    """延迟真实 aclose，验证预算和下载槽位等到本地资源收尾才释放。"""
++    async def go() -> None:
++        held = tb.Plan(tb.TS, hold=True)
++        async with tb.Lab(
++            {"/0": [tb.Plan(tb.TS)], "/1": [held]}, idle_prefetch_s=0.2,
++        ) as lab:
++            entered, release = asyncio.Event(), asyncio.Event()
++            real_close = lab.buf._aclose
++            async def delayed_close(response):
++                if response.request.url.path == "/1":
++                    entered.set()
++                    await release.wait()
++                await real_close(response)
++            lab.buf._aclose = delayed_close
++            try:
++                await lab.get([("/0", 4.0), ("/1", 4.0)], 0, prefetch=True)
++                await tb.wait_until(lambda: _started(lab.fx, "/1"), detail="prefetch")
++                await asyncio.wait_for(entered.wait(), timeout=2)
++                snap = lab.buf.snapshot()
++                assert snap["prefetch_cancelled"] == 1, snap
++                assert snap["reserved_bytes"] > 0, snap
++                assert snap["prefetch_inflight"] == 1, snap
++                # httpcore may close TCP while unwinding its read; the producer
++                # still owns its allocation until its full cleanup returns.
++            finally:
++                release.set()
++            await tb.wait_until(lambda: lab.buf.snapshot()["reserved_bytes"] == 0)
++            assert lab.buf.snapshot()["prefetch_inflight"] == 0
++            await tb.wait_until(lambda: "/1" in lab.fx.aborted)
++    asyncio.run(go())
 diff --git a/tests/test_user_scope.py b/tests/test_user_scope.py
 new file mode 100644
 index 0000000..278179a

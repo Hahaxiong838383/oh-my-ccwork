@@ -1,19 +1,19 @@
 {
   "source_repository": "~/home-lan",
-  "source_commit": "0cde8612bd7c3f077fe69e271a3dab3d854d1c2c",
+  "source_commit": "cfe698542380a555216ac0ff0ffc9c9c20414985",
   "date": "2026-10-31",
   "files": [
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/BUILD-MANIFEST.json",
       "snapshot": "hardening/BUILD-MANIFEST.json",
-      "bytes": 422,
-      "sha256": "ff96b2037c90e7028234ed7dfc21d75c9349a1863e68caedf26a0afed3703ef0"
+      "bytes": 494,
+      "sha256": "19b3dee71516b1975a2e38b456f6831104eba699d9fbf317d4583adec9ca0dbe"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/README.md",
       "snapshot": "hardening/README.md",
-      "bytes": 5675,
-      "sha256": "102cabdb9498db9771f9ed90f11b8ff17d0b27b71392aa0a5b78d88aa4c7c1ce"
+      "bytes": 7015,
+      "sha256": "a951d082fd25fb881f0c84def759b2c8ac690fadd626d1f4f23943ee075215b7"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/build.py",
@@ -36,8 +36,8 @@
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/hardening.patch",
       "snapshot": "hardening/hardening.patch",
-      "bytes": 531272,
-      "sha256": "b5d5c413d5526b0c846d24425b83ca528f2af97e3158759322b5d2bdf3bf7ed7"
+      "bytes": 691287,
+      "sha256": "0fa62466b91a17f916b479689122fc9e26bb5c069cda57c2423c02d9bb813cf7"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/maintenance/.gitignore",
@@ -174,8 +174,20 @@
     {
       "source": "2-Projects/P01-家里局域网与飞牛/17-fnmedia-ext播放稳定性方案.md",
       "snapshot": "17-fnmedia-ext播放稳定性方案.md",
-      "bytes": 20004,
-      "sha256": "5f6b66686570077fc8a2d6c8a4caa457c9db7598426c3218371e798f03e40095"
+      "bytes": 20159,
+      "sha256": "59c9fcb56dce2cdfacb000f1da4c1c4bf522a328e3a15ad01c6fccdcc15ed1e5"
+    },
+    {
+      "source": "2-Projects/P01-家里局域网与飞牛/18-fnmedia-ext播放稳定性实施与验收.md",
+      "snapshot": "18-fnmedia-ext播放稳定性实施与验收.md",
+      "bytes": 6984,
+      "sha256": "29406bde86150b8f3b3f27094e3b33da5c9f82ed98b5d06a0b3251ee7a5c30ad"
+    },
+    {
+      "source": "4-Assets/Code/fnmedia-ext-hardening/stability-verification.json",
+      "snapshot": "hardening/stability-verification.json",
+      "bytes": 2012,
+      "sha256": "be54b6832e85c215c3d9f32aa7a2ec3ab69d635afd66358b7c5b0e1fcf342337"
     }
   ]
 }
