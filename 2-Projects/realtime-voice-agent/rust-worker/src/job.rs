@@ -4,8 +4,8 @@
 //! 用户轨订到即启输入链(不再等 LocalTrackSubscribed,旧耦合白等 ~950ms 吞用户首句);
 //! 输出方向仍守「本地轨被订阅才出声」(P2 实测教训:缺它开播丢头),经 watch 传给
 //! pipeline 的 OutputGate(首个待播 PCM 起 5s fail-closed)。生命周期:participant
-//! 断开 → 关 pipeline → 关房(与 Python 版 close_on_disconnect+delete_room_on_close
-//! 语义对齐,删房由 dispatch 配置负责)。
+//! 已开输入的参与者断开 → 关 pipeline → 关房；尚未开输入的设备房可在有界窗口内
+//! 接纳同身份新 SID，避免旧连接退出误删正在恢复的房间。
 //!
 //! 结构化打点(合同 §5.1):本文件的英文短语日志行就是事件名(job_assignment_received /
 //! worker_room_connected / user_track_subscribed / agent_track_subscribed_by_android
@@ -27,6 +27,8 @@ use crate::config::Config;
 use crate::control;
 use crate::gate::StartupGates;
 use crate::pipeline;
+use crate::owned_task::OwnedTask;
+use crate::startup_participant::{Departure, StartupParticipant};
 use crate::token::server_api_jwt;
 use crate::transcript_pub;
 use crate::tts_volc::TTS_SAMPLE_RATE;
@@ -106,8 +108,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         warn!(room = %room_name, "job.metadata 无 trace_id,session.input_ready 将不发(fail-visible)");
     }
     // 预组装(2026-09-07):ASR 预连 + VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/回声库拉取,全部与建房/发布出声轨/
-    // 等用户音轨并行;订到轨后 pipeline 直接接管。job 在 pipeline 启动前退出时产物随本函数丢弃(ASR sender drop → 流收尾)。
-    let mut prebuilt_task = Some(tokio::spawn(pipeline::prebuild(room_name.clone())));
+    // 等用户音轨并行;订到轨后 pipeline 直接接管。OwnedTask 保证提前退出/未接管结果被丢弃时取消 ASR。
+    let mut prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
     info!(job_id = %job.id, room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "worker_room_connect_start");
 
     let (room, mut events) = Room::connect(&url, &token, RoomOptions::default())
@@ -171,6 +173,11 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let ordered_first_turn = input_mode == crate::ordered_pcm::InputMode::OrderedPcm && meta.oneshot_first_turn.as_deref() == Some("v1");
     let ordered_ctx = pipeline::OrderedCtx { local_receipt: ordered_local_receipt, first_turn_rtc: ordered_first_turn, session_id: meta.session_id.clone() };
     let expected_device = crate::ordered_pcm::expected_device_identity(&room_name);
+    let mut participant_lifecycle = StartupParticipant::new(expected_device.clone());
+    // Participants present at Room::connect need not emit ParticipantConnected.
+    for p in room.remote_participants().values() {
+        participant_lifecycle.connected(&p.identity().to_string(), &p.sid().to_string(), t0.elapsed().as_millis() as u64);
+    }
     let (hist_tx, hist_rx) = mpsc::channel::<crate::ordered_pcm::Packet>(256);
     let mut hist_rx = Some(hist_rx);
     if input_mode == crate::ordered_pcm::InputMode::OrderedPcm {
@@ -191,6 +198,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 None => break,
             },
             _ = watchdog.tick() => {
+                if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) {
+                    info!(room=%room_name, "startup participant recovery expired → closing job");
+                    break;
+                }
                 if !crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata) {
                     info!(room=%room_name,"canary window closed: closing room, reconnect returns baseline");
                     break;
@@ -215,6 +226,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 continue;
             }
         };
+        if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) { break; }
         match ev {
             // 设备控制包。⚠️ worker 自己的 ack 也走 control topic,
             // 过滤在 control::parse 里(只认 src=android),不然会自己取消自己。
@@ -224,6 +236,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 participant,
                 ..
             } => {
+                // Ignore queued data from an obsolete device connection.
+                if expected_device.is_some() && !participant.as_ref().is_some_and(|p|
+                    current_remote(&room, p) && participant_lifecycle.accepts(&p.identity().to_string(), &p.sid().to_string())) { continue; }
                 if topic.as_deref() == Some(control::TOPIC)
                     && let Some((ev, kind)) = control::parse(&payload)
                 {
@@ -273,7 +288,21 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 }
             }
             RoomEvent::ParticipantConnected(p) => {
-                info!(room = %room_name, identity = %p.identity(), "participant connected");
+                info!(room = %room_name, identity = %p.identity(), participant_sid = %p.sid(), "participant connected");
+                if current_remote(&room, &p) && participant_lifecycle.connected(
+                    &p.identity().to_string(), &p.sid().to_string(), t0.elapsed().as_millis() as u64) {
+                    // No pipeline has started: there is no search/ordered state to reuse.
+                    discard_pending(&mut ctrl_rx);
+                    discard_pending(&mut devres_rx);
+                    discard_pending(&mut hist_rx);
+                    gates = StartupGates::new();
+                    let _ = out_tx.send(false);
+                    mic_stream = None;
+                    user_info = None;
+                    drop(prebuilt_task.take());
+                    prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
+                    info!(room=%room_name, participant_sid=%p.sid(), "startup participant replacement accepted");
+                }
             }
             RoomEvent::LocalTrackSubscribed { .. } => {
                 info!(room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_subscribed_by_android");
@@ -291,6 +320,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 publication,
                 participant,
             } => {
+                if !current_remote(&room, &participant) || !participant_lifecycle.accepts(
+                    &participant.identity().to_string(), &participant.sid().to_string()) { continue; }
                 info!(
                     room = %room_name,
                     identity = %participant.identity(),
@@ -298,6 +329,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     "user_track_subscribed"
                 );
                 if gates.on_user_track() {
+                    participant_lifecycle.started(&participant.identity().to_string(), &participant.sid().to_string());
                     t_user_track = Some(Instant::now());
                     user_info = Some((
                         participant.identity().to_string(),
@@ -333,12 +365,23 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 );
             }
             RoomEvent::ParticipantDisconnected(p) => {
-                info!(
-                    room = %room_name,
-                    identity = %p.identity(),
-                    "participant disconnected → closing job"
-                );
-                break;
+                let action = participant_lifecycle.disconnected(&p.identity().to_string(), &p.sid().to_string(), t0.elapsed().as_millis() as u64);
+                info!(room=%room_name, identity=%p.identity(), participant_sid=%p.sid(), ?action, "participant disconnected");
+                match action {
+                    Departure::Ignore => {},
+                    Departure::AwaitReplacement => {
+                        discard_pending(&mut ctrl_rx);
+                        discard_pending(&mut devres_rx);
+                        discard_pending(&mut hist_rx);
+                        gates = StartupGates::new();
+                        let _ = out_tx.send(false);
+                        mic_stream = None;
+                        user_info = None;
+                        drop(prebuilt_task.take());
+                        info!(room=%room_name, "startup participant replacement grace armed");
+                    },
+                    Departure::Close => break,
+                }
             }
             RoomEvent::Disconnected { reason } => {
                 info!(room = %room_name, ?reason, "room disconnected");
@@ -400,6 +443,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         }
     }
 
+    // Both a still-running prebuild and a completed result own their ASR task.
+    drop(prebuilt_task.take());
     if let Some(t) = pipeline_task.take() {
         close_pipeline(t,if graceful_search_close{pipeline_close_tx.take()}else{None}).await;
     }
@@ -416,6 +461,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // until the independent reconciler verifies that this exact SID is gone.
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
+}
+
+// Before the input gate opens, an ordered begin or cancel can already be
+// queued. A new SID must never inherit those packets from the old connection.
+fn discard_pending<T>(receiver: &mut Option<mpsc::Receiver<T>>) {
+    if let Some(rx) = receiver { while rx.try_recv().is_ok() {} }
+}
+
+fn current_remote(room: &Room, participant: &RemoteParticipant) -> bool {
+    room.remote_participants().get(&participant.identity())
+        .is_some_and(|current| current.sid() == participant.sid())
 }
 
 /// Give an exiting candidate one bounded opportunity to freeze playback progress.
@@ -616,5 +672,19 @@ mod style_ark_metadata_tests {
         assert_eq!(meta.trace_id.as_deref(),Some("trace-test"));
         assert_eq!(meta.input_mode.as_deref(),Some("ordered_pcm"));
         assert!(crate::filler::FillerPolicy::from_metadata(meta.filler_policy.as_ref(),"sn-BJP00326070803800006-123").is_none());
+    }
+}
+
+#[cfg(test)]
+mod startup_queue_tests {
+    use super::*;
+    #[tokio::test]
+    async fn replacement_discards_old_begin_and_cancel_without_closing_channel() {
+        let (tx, rx)=mpsc::channel(8);let mut rx=Some(rx);
+        tx.send("old-ordered-begin").await.unwrap();tx.send("old-cancel").await.unwrap();
+        discard_pending(&mut rx);
+        tx.send("new-ordered-begin").await.unwrap();
+        assert_eq!(rx.as_mut().unwrap().recv().await,Some("new-ordered-begin"));
+        assert!(rx.as_mut().unwrap().try_recv().is_err());
     }
 }
