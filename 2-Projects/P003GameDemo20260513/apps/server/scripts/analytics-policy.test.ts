@@ -28,7 +28,13 @@ try{
   assert.throws(()=>configStore.analyticsPolicy(),/ANALYTICS_POLICY_INVALID/);
   assert.throws(()=>parseUploadPolicy(JSON.stringify({...first,subjects:[a,a]})),/INVALID/);
   const s={free_bytes:10641600512,total_bytes:41882943488,db_bytes:106422272,wal_bytes:23306872,daily_peak:8205,sample_devices:1,maintenance_ok:true,checked_at_ms:1};
-  const c=capacityForecast(s);assert.equal(c.daily_events_per_device,9000);assert.equal(c.max_enabled_devices,1);assert.equal(c.twenty_devices_fit,false);
+  const c=capacityForecast(s);assert.equal(c.daily_events_per_device,9000);assert.equal(c.max_enabled_devices,2);assert.equal(c.twenty_devices_fit,false);
+  assert.equal(c.horizon_days,30);assert.equal(c.bytes_per_device,2401344000);
+  assert.equal(c.raw_retention_days,14);assert.equal(c.fact_retention_days,90);assert.equal(c.seen_retention,'persistent');
+  assert.equal(capacityForecast({...s,free_bytes:s.free_bytes+6102478848}).max_enabled_devices,4);
+  const fiveDeviceThreshold=c.reserve_bytes+c.wal_reserve_bytes+5*c.bytes_per_device;
+  assert.equal(capacityForecast({...s,free_bytes:fiveDeviceThreshold-1}).max_enabled_devices,4);
+  assert.equal(capacityForecast({...s,free_bytes:fiveDeviceThreshold}).max_enabled_devices,5);
   assert.equal(capacityForecast({...s,free_bytes:1024**3}).max_enabled_devices,0);
   assert.equal(capacityForecast({...s,maintenance_ok:false}).max_enabled_devices,0);
   assert.equal(capacityForecast({...s,free_bytes:500*1024**3}).max_enabled_devices,c.maintenance_limit);
