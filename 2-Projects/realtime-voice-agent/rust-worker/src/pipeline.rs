@@ -654,11 +654,11 @@ fn boundary_reply(action: &str) -> String {
 /// 预连 ASR 句柄(2026-09-07):job 层在 assignment 到达后立刻 spawn,火山 ASR websocket 握手(实测 0.4–0.6 s)与
 /// 建房/发布出声轨/等用户音轨并行;pipeline 启动时直接接管。此前握手在 pipeline 内起,落在输入环启动后
 /// +380–614ms(今早四房实读),真人「提示音一停就说」的首段语音只能在 channel 里排队等握手,首个转写整体延后。
-/// job 在 pipeline 启动前退出时句柄随之丢弃:sender drop → 流发空尾段按 InputDone 自然收尾。
+/// 任务所有权随预热产物转交；产物被丢弃或流水线被取消时停止 ASR，不留后台重试。
 pub struct SttPre {
     pub pcm_tx: mpsc::Sender<Vec<i16>>,
     pub ev_rx: mpsc::Receiver<SttEvent>,
-    pub task: tokio::task::JoinHandle<()>,
+    pub task: crate::owned_task::OwnedTask<()>,
 }
 
 // The provider expires an idle preconnect after about10s. RTC signal retries
@@ -720,6 +720,7 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
         let mut pcm_rx = stt_pcm_rx;
         let mut fails = 0u32;
         loop {
+            if stt_ev_tx.is_closed() || (pcm_rx.is_closed() && pcm_rx.is_empty()) { break; }
             let started = Instant::now();
             match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone()).await {
                 Ok(AsrEnd::InputDone) => break,
@@ -737,6 +738,9 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
                     let _ = stt_ev_tx.send(SttEvent::Interrupted).await;
                 }
             }
+            // A closed input is terminal, including provider rejection of its
+            // final empty packet. Never reconnect an abandoned prewarm stream.
+            if pcm_rx.is_closed() || stt_ev_tx.is_closed() { break; }
             if started.elapsed() > Duration::from_secs(10) {
                 fails = 0; // 长稳连接后的断开不算连败
             }
@@ -751,7 +755,7 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
         }
         let _ = stt_ev_tx.send(SttEvent::Closed).await;
     });
-    SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task }
+    SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task: crate::owned_task::OwnedTask::new(task) }
 }
 
 /// 预组装产物(2026-09-07):不依赖音轨/房间对象的全部重活。job 收到 assignment 即起 `prebuild`,与建房/发布出声轨/
@@ -952,7 +956,7 @@ pub async fn run_pipeline(
     let mut stt_closed = false;
     // B23：首句 end 收流后预连的第二条 STT（与首答并行建连），切 RTC 时接管；首条任务句柄留到收尾
     let mut stt2: Option<(SttPre, Instant)> = None;
-    let mut stt_tasks_done: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+    let mut stt_tasks_done: Vec<crate::owned_task::OwnedTask<()>> = Vec::new();
 
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
@@ -1136,7 +1140,7 @@ pub async fn run_pipeline(
                 Some(x) => x,
                 None => (stt_cleanup.track(spawn_stt(stt_cfg_for_room(&room_name), &room_name)), Instant::now()),
             };
-            let SttPre { pcm_tx, ev_rx, task } = pre;
+            let SttPre { pcm_tx, ev_rx, task: crate::owned_task::OwnedTask::new(task) } = pre;
             // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
             // (2026-09-11 模拟实证:begin 超时/取消路径的 fail→EndStream 在切换后到达,关的是刚接管的第二条 → job 收尾)
             drop(stt_pcm_tx.take());
@@ -4462,7 +4466,7 @@ mod listening_lifecycle_tests {
             let (started, ready) = tokio::sync::oneshot::channel();
             let owner = tokio::spawn(async move {
                 let mut cleanup = SttTaskCleanup::default();
-                let pre = cleanup.track(SttPre { pcm_tx, ev_rx, task: child });
+                let pre = cleanup.track(SttPre { pcm_tx, ev_rx, task: crate::owned_task::OwnedTask::new(child) });
                 let _ = started.send(pre.task);
                 if panic_owner { panic!("synthetic pipeline panic"); }
                 Err::<(), anyhow::Error>(anyhow::anyhow!("listening_session_paused_close_required"))
@@ -4513,7 +4517,7 @@ mod stt_preconnect_tests {
             let _events = ev_tx;
             while pcm_rx.recv().await.is_some() {}
         });
-        SttPre { pcm_tx, ev_rx, task }
+        SttPre { pcm_tx, ev_rx, task: crate::owned_task::OwnedTask::new(task) }
     }
 
     #[tokio::test]
@@ -4527,7 +4531,7 @@ mod stt_preconnect_tests {
                 assert!(dropped.load(Ordering::SeqCst), "old native task stopped before replacement");
                 let (pcm_tx, mut pcm_rx)=mpsc::channel(4);let (_ev_tx,ev_rx)=mpsc::channel(4);
                 let task=tokio::spawn(async move { let _=first_tx.send(pcm_rx.recv().await); });
-                SttPre { pcm_tx,ev_rx,task }
+                SttPre { pcm_tx,ev_rx,task: crate::owned_task::OwnedTask::new(task) }
             }).await.unwrap();
             assert!(old_sender.is_closed(), "expired sender cannot consume first PCM");
             assert!(!new.pcm_tx.same_channel(&old_sender));
@@ -4555,9 +4559,45 @@ mod stt_preconnect_tests {
         let current=usable_stt_preconnect(old,Duration::from_millis(4999),||panic!("fresh preconnect should retain latency benefit")).await.unwrap();
         assert!(current.pcm_tx.same_channel(&sender));current.task.abort();let _=current.task.await;
         let (pcm_tx,pcm_rx)=mpsc::channel(1);drop(pcm_rx);let (_ev_tx,ev_rx)=mpsc::channel(1);
-        let old=SttPre {pcm_tx,ev_rx,task:tokio::spawn(async {})};let sender=old.pcm_tx.clone();
+        let old=SttPre {pcm_tx,ev_rx,task:crate::owned_task::OwnedTask::new(tokio::spawn(async {}))};let sender=old.pcm_tx.clone();
         let current=usable_stt_preconnect(old,Duration::ZERO,||pending_pre(Arc::new(AtomicBool::new(false)))).await.unwrap();
         assert!(!current.pcm_tx.same_channel(&sender),"closed preconnect cannot be reused even when young");
         current.task.abort();let _=current.task.await;
+    }
+}
+
+#[cfg(test)]
+mod asr_lifecycle_tests {
+    use super::*;
+    #[tokio::test]
+    async fn rejected_final_packet_does_not_reconnect_closed_input() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let (accepted,ready)=tokio::sync::oneshot::channel();
+        let (release,rx)=tokio::sync::oneshot::channel();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            let _=accepted.send(());let _=rx.await;drop(socket);
+            tokio::time::timeout(Duration::from_millis(800),listener.accept()).await.is_err()
+        });
+        let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
+        let SttPre{pcm_tx,mut ev_rx,task}=spawn_stt(cfg,"synthetic-asr-closed");
+        ready.await.unwrap();drop(pcm_tx);let _=release.send(());
+        tokio::time::timeout(Duration::from_millis(400),task).await.expect("closed input must not enter backoff").unwrap();
+        assert!(server.await.unwrap(),"closed input must not reconnect");
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Interrupted)));
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Closed)));
+    }
+    #[tokio::test]
+    async fn abandoned_asr_owner_drops_socket_without_retries() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
+        let pre=spawn_stt(cfg,"synthetic-asr-abandoned");
+        let (mut socket,_)=listener.accept().await.unwrap();drop(pre);
+        use tokio::io::AsyncReadExt;
+        let mut bytes=Vec::new();
+        tokio::time::timeout(Duration::from_secs(1),socket.read_to_end(&mut bytes)).await.expect("abandoned ASR must close transport").unwrap();
+        assert!(tokio::time::timeout(Duration::from_millis(800),listener.accept()).await.is_err());
     }
 }
