@@ -20,6 +20,15 @@ const REALITY_REDLINE =
   '标「数值未公开」的（光环天数、暴击倍率、掉落权重）只讲机制、不报数字（「金色翻倍」可以，「持续3天」不行），「还剩X天」走系统实时。';
 
 // 知识条目：每条带触发关键词（≥2 字、尽量特异防误伤）+ 注入内容（讲世界里真实存在的，讲品类不讲笼统）。
+export function isArkStateQuestion(text: string): boolean {
+  if (/哆啦|原神|王者荣耀|我的世界|天上的|星空|天文|恒星|黄金|金价|比特币/.test(text)) return false;
+  return /金币|家族币|星尘|星辰|宝箱|奖励|补勤卡|补签卡|库存|方舟进度/.test(text)
+    && /多少|几[个分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|现在|当前|今天|暂停|进度/.test(text);
+}
+const G1_PROGRESS_KNOWLEDGE = '【当前G1专注奖励】奖励按当前内容版本的有效专注进度计算；墙钟流逝、合盖离线、夜航都不等于有效专注。' +
+  '到达条件与领取到账是不同状态；可领取时按设备奖励页面提示领取，小可不能代领，也不声称已经到账。' +
+  '下一项奖励可能是家族币，也可能是宝箱或其他道具，必须以本轮事实的reward kind/item_id为准，不把下一宝箱叫下一金币。' +
+  '余额、是否可领及还需多久只能依据本轮可信方舟事实；缺少或过期就说暂时查不到，不填0，不猜五段分钟阈值，不套旧夜航规则。';
 const KB_ENTRIES: KbEntry[] = [
   {
     key: 'economy',
@@ -29,7 +38,7 @@ const KB_ENTRIES: KbEntry[] = [
       '星尘与家族币是两种独立资源，不能混为一谈。星尘的设计用途是方舟里的小可换装；只介绍用途，不自行举帽子、衣服等未确认商品，具体当前可兑换内容以设备页面为准。角色外观也可能由奖励直接获得，不能说所有外观解锁都靠星尘。可简答“星尘是给小可换装用的资源，具体现在能换什么，要看设备页面。”家族币记录家长与孩子约定的奖励，约定可由家长在现实中兑现，但不是平台自动兑换商品，不能说家族币不能获得任何现实奖励；具体约定由家长设置，不代表真实货币，不能承诺提现或固定兑换比。' +
       '“星辰”在游戏资源提问里按“星尘”的常见口语或识别写法解释；“金币”可能指旧版界面的家族币，先简短说明两类用途，再确认孩子指哪一种，不能把金币断言成星尘，也不能凭颜色推断是哪种资源。金币问句可简答：“星尘能给小可换装；家族币用来记录和爸妈约好的奖励。你说的是哪一种呀？”' +
       '专注与游戏任务可以带来游戏奖励，具体以当前设备页面为准，不承诺某项奖励数量、商店商品已上架或购买已完成。' +
-      '你目前查不到孩子的实时余额、库存、兑换价格和可用商品；仅这些实时状态说明暂时查不到，建议看设备资源页面，不承诺稍后就能查到、也不声称自己能读取屏幕，不把已知用途一并推给家长。星尘不能兑换现实金钱或物品。',
+      '余额、库存与进度只引用本轮可信方舟事实；若本轮没有对应事实，仅这些实时状态说明暂时查不到，建议看设备资源页面，不承诺稍后就能查到、也不声称自己能读取屏幕，不把已知用途一并推给家长。星尘不能兑换现实金钱或物品。',
   },
   {
     key: 'props',
@@ -165,7 +174,9 @@ export function matchesKnowledge(text: string): boolean {
 export function buildKnowledgeRecall(text: string): string | null {
   try {
     if (!text) return null;
-    const hits = KB_ENTRIES.filter((e) => entryMatches(e, text));
+    const stateQuestion = isArkStateQuestion(text);
+    const hits = KB_ENTRIES.filter((e) => entryMatches(e, text) && (!stateQuestion || !['nightsail', 'halo', 'firsttime'].includes(e.key)));
+    if (stateQuestion) hits.unshift({key: 'g1_progress', keywords: [], content: G1_PROGRESS_KNOWLEDGE});
     if (!hits.length) return null;
     const picked = hits.slice(0, MAX_RECALL); // 多命中防爆长
     return [
