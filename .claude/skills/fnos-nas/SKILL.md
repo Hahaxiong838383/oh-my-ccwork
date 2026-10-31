@@ -10,6 +10,10 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 
 ---
 
+## 专项维护
+
+飞牛影视在线扩展的安装、播放/卡顿、插件更新与官方升级复连，使用 [fnmedia-ext-maintenance](../fnmedia-ext-maintenance/SKILL.md)。先查带日期的设备台账与运行态；下文历史端口/内核记录不能直接当作当前设备状态。
+
 ## 系统架构
 
 | 组件 | 说明 |

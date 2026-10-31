@@ -1,6 +1,6 @@
 {
   "source_repository": "~/home-lan",
-  "source_commit": "cfe698542380a555216ac0ff0ffc9c9c20414985",
+  "source_commit": "6d18f17976beaca3902b84a902378d59d7a650cc",
   "date": "2026-10-31",
   "files": [
     {
@@ -180,14 +180,20 @@
     {
       "source": "2-Projects/P01-家里局域网与飞牛/18-fnmedia-ext播放稳定性实施与验收.md",
       "snapshot": "18-fnmedia-ext播放稳定性实施与验收.md",
-      "bytes": 6984,
-      "sha256": "29406bde86150b8f3b3f27094e3b33da5c9f82ed98b5d06a0b3251ee7a5c30ad"
+      "bytes": 7543,
+      "sha256": "d040288f1f3953c1df763b37f9fac21a97d221782bcc01461d552169c9a92b1b"
     },
     {
       "source": "4-Assets/Code/fnmedia-ext-hardening/stability-verification.json",
       "snapshot": "hardening/stability-verification.json",
       "bytes": 2012,
       "sha256": "be54b6832e85c215c3d9f32aa7a2ec3ab69d635afd66358b7c5b0e1fcf342337"
+    },
+    {
+      "source": "2-Projects/P01-家里局域网与飞牛/19-fnmedia-ext播放优化复盘与后续计划.md",
+      "snapshot": "19-fnmedia-ext播放优化复盘与后续计划.md",
+      "bytes": 6549,
+      "sha256": "b4254955b832b6b535e4c284108ea2c79ae0d95399b1ac4ad167778fec7dcbd2"
     }
   ]
 }
