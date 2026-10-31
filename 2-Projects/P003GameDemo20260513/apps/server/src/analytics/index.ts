@@ -1,3 +1,7 @@
+import {readBoundedJson} from '../ark/http.js';
+import {readArkHistory} from '../ark/history.js';
+import {historyRequestSchema} from '../ark/contracts.js';
+import type {ArkIdentity} from '../ark/identity.js';
 import {AnalyticsCheckpointer} from './checkpointer.js';
 import {ANALYTICS_WAL_MAX_BYTES,validateWalMaxBytes} from './sqlite-policy.mjs';
 import { Hono } from 'hono';
@@ -22,7 +26,7 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
     return {enabled:data.enabled,valid:true};
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
-type Reader={acceptsCredential(subject:string,iat:number):boolean;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
+type Reader={arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
 export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
@@ -51,6 +55,16 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     const hash=(s:string)=>createHash('sha256').update(s).digest();
     if(!options.internalSecret||!token||!timingSafeEqual(hash(token),hash(options.internalSecret)))return c.json({ok:false,error_code:'UNAUTHORIZED'},401);
     await next();
+  });
+  app.post('/internal/analytics/ark-summary',async c=>{
+    // Independent read-only capability; never turns on the batch upload gate.
+    let body:unknown;try{body=await readBoundedJson(c.req.raw,1024);}catch(e){return c.json({ok:false,error_code:'INVALID_QUERY'},(e as {status?:number}).status===413?413:400);}
+    const parsed=historyRequestSchema.safeParse(body);if(!parsed.success)return c.json({ok:false,error_code:'INVALID_QUERY'},400);
+    const q=parsed.data,identity=options.reader.readArkAuthorization?.(q.subject);
+    if(!identity||identity.account_id!==q.account_id||identity.epoch!==q.epoch||q.not_before_ms<identity.not_before_ms)return c.json({ok:false,error_code:'ARK_NOT_AUTHORIZED'},403);
+    const key=options.reader.arkDeviceKey?.(q.subject);if(!key)return c.json({ok:false,error_code:'ARK_NOT_AUTHORIZED'},403);
+    c.header('Cache-Control','no-store');
+    return c.json(readArkHistory(options.store,key,q.not_before_ms));
   });
   for(const kind of ADMIN_ANALYTICS_PATHS)app.get('/internal/analytics/'+kind,c=>{
     if(kind==='health')return c.json(health());
@@ -113,7 +127,7 @@ export function analyticsOptionsFromEnv():AnalyticsAppOptions{
   const required=(key:string)=>{const value=process.env[key];if(!value)throw new Error('MISSING_'+key);return value;};
   const devicesPath=required('ANALYTICS_DEVICES_DB_PATH'),configPath=required('ANALYTICS_CONFIG_DB_PATH');
   const allow=(process.env.ANALYTICS_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean);
-  return {store:new AnalyticsStore(required('ANALYTICS_DB_PATH')),reader:new AnalyticsDeviceReader({devicesPath,configPath,deviceKeySecret:required('ANALYTICS_DEVICE_KEY_SECRET'),envAllow:(process.env.DEVICE_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean)}),authSecret:required('AUTH_JWT_SECRET'),internalSecret:required('ANALYTICS_INTERNAL_SECRET'),controlPath:required('ANALYTICS_CONTROL_PATH'),allowSubjects:allow,walMaxBytes:Number(process.env.ANALYTICS_WAL_MAX_BYTES??ANALYTICS_WAL_MAX_BYTES),globalRpm:Number(process.env.ANALYTICS_GLOBAL_RPM??600)};
+  return {store:new AnalyticsStore(required('ANALYTICS_DB_PATH')),reader:new AnalyticsDeviceReader({devicesPath,configPath,arkPath:process.env.ARK_DB_PATH?resolve(process.env.ARK_DB_PATH):undefined,deviceKeySecret:required('ANALYTICS_DEVICE_KEY_SECRET'),envAllow:(process.env.DEVICE_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean)}),authSecret:required('AUTH_JWT_SECRET'),internalSecret:required('ANALYTICS_INTERNAL_SECRET'),controlPath:required('ANALYTICS_CONTROL_PATH'),allowSubjects:allow,walMaxBytes:Number(process.env.ANALYTICS_WAL_MAX_BYTES??ANALYTICS_WAL_MAX_BYTES),globalRpm:Number(process.env.ANALYTICS_GLOBAL_RPM??600)};
 }
 /** One lifecycle for production (3006) and the explicitly isolated staging listener (3306). */
 export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=3006){

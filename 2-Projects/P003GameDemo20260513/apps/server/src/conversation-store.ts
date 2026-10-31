@@ -13,6 +13,7 @@ export type ConversationItem = {
   text: string;
   ts: number;
   tokens: number;
+  memory_excluded?: boolean;
 };
 
 export type ConversationAddInput = {
@@ -21,6 +22,7 @@ export type ConversationAddInput = {
   role: ConversationRole;
   text: string;
   tokens?: number;
+  memory_excluded?: boolean;
 };
 
 export type ConversationListOptions = {
@@ -37,10 +39,11 @@ type ConversationRow = {
   text: string;
   ts: number;
   tokens: number;
+  memory_excluded: number;
 };
 
 const DEFAULT_DB_PATH = './data/conversation.db';
-const CONVERSATION_COLUMNS = ['id', 'account_id', 'session_id', 'role', 'text', 'ts', 'tokens'] as const;
+const CONVERSATION_COLUMNS = ['id', 'account_id', 'session_id', 'role', 'text', 'ts', 'tokens', 'memory_excluded'] as const;
 const SELECT_COLS = CONVERSATION_COLUMNS.join(', ');
 const DEFAULT_LIMIT = 200;
 const MAX_LIMIT = 1_000;
@@ -61,6 +64,7 @@ function toConversationItem(row: ConversationRow | null | undefined): Conversati
     text: row.text,
     ts: row.ts,
     tokens: Number(row.tokens) || 0,
+    memory_excluded: !!row.memory_excluded,
   };
 }
 
@@ -93,6 +97,7 @@ class ConversationStore {
       ON conversation (session_id, ts);
     `);
     const cols = this.db.prepare('PRAGMA table_info(conversation)').all() as Array<{ name: string }>;
+    if (!cols.some((col) => col.name === 'memory_excluded')) this.db.exec('ALTER TABLE conversation ADD COLUMN memory_excluded INTEGER NOT NULL DEFAULT 0');
     if (!cols.some((col) => col.name === 'tokens')) {
       this.db.exec('ALTER TABLE conversation ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
     }
@@ -110,11 +115,12 @@ class ConversationStore {
       text,
       ts: Date.now(),
       tokens: input.tokens ?? 0,
+      memory_excluded: !!input.memory_excluded,
     };
 
     this.db
-      .prepare(`INSERT INTO conversation (${SELECT_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?) `)
-      .run(item.id, item.account_id, item.session_id, item.role, item.text, item.ts, item.tokens);
+      .prepare(`INSERT INTO conversation (${SELECT_COLS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?) `)
+      .run(item.id, item.account_id, item.session_id, item.role, item.text, item.ts, item.tokens, item.memory_excluded ? 1 : 0);
 
     return item;
   }

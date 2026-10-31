@@ -1,16 +1,18 @@
+import {readArkIdentity} from '../ark/identity.js';
 import { createHmac } from 'node:crypto';
-import { isAbsolute } from 'node:path';
+import { dirname,join,isAbsolute } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 export type AnalyticsDeviceContext = { deviceKey: string; active: boolean; uploadEnabled: boolean; uploadHourCst: number };
 export class AnalyticsDependencyUnavailable extends Error { constructor(){super('ANALYTICS_DEPENDENCY_UNAVAILABLE');} }
 export class AnalyticsDeviceReader {
-  constructor(private options: { devicesPath: string; configPath: string; deviceKeySecret: string; envAllow: readonly string[] }) {
+  constructor(private options: { devicesPath: string; configPath: string; deviceKeySecret: string; envAllow: readonly string[];arkPath?:string }) {
     for (const p of [options.devicesPath, options.configPath]) if (!isAbsolute(p)) throw new Error('analytics dependency paths must be absolute');
+    if(options.arkPath&&!isAbsolute(options.arkPath))throw new Error('ark dependency path must be absolute');
     if (!options.deviceKeySecret) throw new Error('ANALYTICS_DEVICE_KEY_SECRET_REQUIRED');
   }
-  private read<T>(path: string, fn: (db: DatabaseSync) => T): T {
+  private read<T>(path: string, fn: (db: DatabaseSync) => T, busyMs=250): T {
     let db: DatabaseSync | undefined;
-    try { db = new DatabaseSync(path, {readOnly:true}); db.exec('PRAGMA busy_timeout=250;'); return fn(db); }
+    try { db = new DatabaseSync(path, {readOnly:true}); db.exec('PRAGMA busy_timeout='+busyMs+';'); return fn(db); }
     catch { throw new AnalyticsDependencyUnavailable(); }
     finally { db?.close(); }
   }
@@ -28,6 +30,17 @@ export class AnalyticsDeviceReader {
     const config = this.collectionConfigForScope(subject);
     return {deviceKey:createHmac('sha256',this.options.deviceKeySecret).update('p003-analytics-v1\0'+subject).digest('hex'),active,...config};
   }
+  readArkIdentity(subject:string){
+    return this.read(this.options.devicesPath,db=>readArkIdentity(db,subject),15);
+  }
+  readArkAuthorization(subject:string){
+    const identity=this.readArkIdentity(subject);if(!identity)return null;
+    return this.read(this.options.arkPath??join(dirname(this.options.devicesPath),'ark.db'),db=>{
+      const g=db.prepare('SELECT g.account_id,g.epoch,g.not_before_ms FROM ark_grant g JOIN ark_settings s ON s.id=1 AND s.enabled=1 WHERE g.sn=?').get(subject) as {account_id:string;epoch:number;not_before_ms:number}|undefined;
+      return g&&g.account_id===identity.account_id&&g.epoch===identity.epoch?{...identity,not_before_ms:g.not_before_ms}:null;
+    },15);
+  }
+  arkDeviceKey(subject:string){return createHmac('sha256',this.options.deviceKeySecret).update('p003-analytics-v1\0'+subject).digest('hex');}
   private collectionConfigForScope(subject?: string): {uploadEnabled:boolean;uploadHourCst:number} {
     return this.read(this.options.configPath, db => {
       let uploadEnabled=false,uploadHourCst=23;

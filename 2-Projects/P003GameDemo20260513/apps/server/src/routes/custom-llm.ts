@@ -1,3 +1,6 @@
+import {arkContext} from '../ark/service.js';
+import {isArkStateQuestion} from '../xiaoke-kb.js';
+import {isArkFollowup,stripArkDynamicTurns} from '../ark/memory-policy.js';
 import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
 import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
 import { searchSettings, searchDeviceAllowed, currentSearchDialogue } from '../tools/search-runtime.js';
@@ -84,9 +87,12 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const chat = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
   const lastUserIdx = chat.map((m) => m.role).lastIndexOf('user');
   const userText = lastUserIdx >= 0 ? extractText(chat[lastUserIdx]!.content) : '';
-  const history: ChatHistoryTurn[] = chat
+  const rawHistory: ChatHistoryTurn[] = chat
     .slice(0, Math.max(lastUserIdx, 0))
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: extractText(m.content) }));
+
+  const dynamicArk = isArkStateQuestion(userText) || isArkFollowup(userText,rawHistory);
+  const history = stripArkDynamicTurns(rawHistory);
 
   // 复用与 WS pipeline 同一个大脑：内置世界观 + AI 安全基座 + 课程护栏 + AI 启蒙门控 + 尾部人设锚点。
   curriculumKG.load();
@@ -125,10 +131,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const searchConfig = searchSettings();
   const searchRoom=c.req.query('room')??'',searchSn=/^sn-(BJP003\d{14})-\d+$/.exec(searchRoom)?.[1];
   const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),live:!process.env.SEARCH_CANARY_ROOT,enabled:searchConfig.enabled,role:authContext?.role ?? '',room:searchRoom,allowed:searchSn&&searchDeviceAllowed(searchSn)?[searchSn]:[]});
-  const inOnboarding = !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
+  const inOnboarding = !dynamicArk && !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
-  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(userText);
+  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(dynamicArk ? '当前方舟进度 '+userText : userText);
   // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
   // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
   const companionGuardrail = (overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
@@ -142,6 +148,8 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
+  const ark = await arkContext({auth:workerAuth,room:c.req.query('room')??'',text:userText,history:rawHistory,override:Boolean(overridePrompt),feedback:isFeedback});
+  if(ark.prompt) systemPrompt += '\n\n'+ark.prompt;
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
   const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
@@ -226,12 +234,12 @@ customLlmRoute.post('/chat/completions', async (c) => {
       let userMsgId: string | undefined;
       let assistantMsgId: string | undefined;
       try {
-        userMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText }).id;
+        userMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText, memory_excluded: dynamicArk }).id;
         if (finalAssistant) {
-          assistantMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant }).id;
+          assistantMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant, memory_excluded: dynamicArk }).id;
         }
       } catch { /* 审计落库失败不阻断 */ }
-      if (!finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
+      if (dynamicArk || !finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
       const full = [
         ...history,
         { role: 'user' as const, content: userText, id: userMsgId },

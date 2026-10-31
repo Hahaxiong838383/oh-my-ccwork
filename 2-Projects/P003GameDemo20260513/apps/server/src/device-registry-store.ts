@@ -1,3 +1,4 @@
+import { readArkIdentity, installArkIdentityEpoch } from './ark/identity.js';
 import { randomBytes } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -58,6 +59,9 @@ function resolveDbPath(): string {
 
 class DeviceRegistryStore {
   private readonly db: DatabaseSync;
+  private arkEpochReady = false;
+
+  arkIdentity(sn: string) { return this.arkEpochReady ? readArkIdentity(this.db, sn) : null; }
 
   constructor() {
     const dbPath = resolveDbPath();
@@ -105,6 +109,7 @@ class DeviceRegistryStore {
       );
     `);
     this.migrate();
+    try { installArkIdentityEpoch(this.db); this.arkEpochReady = true; } catch { console.error('[ark] identity_epoch_unavailable'); }
   }
 
   /**
