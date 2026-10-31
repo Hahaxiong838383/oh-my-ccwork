@@ -10,3 +10,5 @@
 6. 回滚后核main/analytics/P2健康、原单机23点配置、未授权接口拒绝、个人服务/倾听PID未变。不得在代码回滚中恢复旧数据库来覆盖新会话或埋点。
 
 P2通过专用secret与回环只读接口取主Brain授权事实，150ms总截止，普通聊天不请求；服务端校验socket回环，公网nginx /internal不转发本路由。Ark新环境键不放入P2 *_DB_PATH，不破坏工作树隔离。
+
+实际备份：`/opt/p003/backups/analytics-control-20261031T105114Z`。脚本：`python3 /opt/p003/backups/analytics-control-20261031T105114Z/rollback.py /opt/p003/backups/analytics-control-20261031T105114Z`。执行前须检查当前回滚目标；有后续文件或环境变更时脚本拒绝覆盖，交由人工合并差分。上传策略已接管，回滚后硬闸保持关闭，恢复原单机上传需另行核对。

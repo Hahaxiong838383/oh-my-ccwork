@@ -1,0 +1,83 @@
+{
+  "at_ms": 1793444089030,
+  "checks": {
+    "/api/admin/analytics/control unauth": 401,
+    "/v1/device/ark/admin/settings unauth": 403,
+    "same_scope_policy_takeover": true,
+    "existing_only_23_cst": true,
+    "ark_preview_02000026": {
+      "nonempty": true,
+      "unknown": true,
+      "bytes": 741
+    },
+    "ark_preview_03800006": {
+      "nonempty": true,
+      "unknown": true,
+      "bytes": 741
+    },
+    "p2_authority_read": true,
+    "proxy_bad_token": 401,
+    "proxy_wrong_scope": 403,
+    "state_bad_bearer": 401,
+    "public /api/admin/analytics/control": true,
+    "public /v1/device/ark/admin/settings": true,
+    "public_admin_sha": "5dce0ffe761ca8b250fc363b04f0a0eb83dee6e480cecab0fbfdbff2784c603f",
+    "public_internal": {
+      "status": 405
+    },
+    "health_3001": true,
+    "health_3006": true,
+    "health_3007": true,
+    "health_3008": true
+  },
+  "capacity": {
+    "ok": true,
+    "free_bytes": 10639728640,
+    "total_bytes": 41882943488,
+    "db_bytes": 108761088,
+    "wal_bytes": 7667352,
+    "daily_peak": 8205,
+    "sample_devices": 1,
+    "maintenance_ok": true,
+    "checked_at_ms": 1793444089045,
+    "horizon_days": 90,
+    "daily_events_per_device": 9000,
+    "raw_retention_days": 14,
+    "fact_retention_days": 90,
+    "seen_retention": "persistent",
+    "backup_peak_copies": 4,
+    "reserve_bytes": 4294967296,
+    "wal_reserve_bytes": 536870912,
+    "budget_bytes": 5807890432,
+    "bytes_per_device": 5784768000,
+    "storage_limit": 1,
+    "maintenance_limit": 11,
+    "validated_device_limit": 20,
+    "max_enabled_devices": 1,
+    "twenty_devices_bytes": 115695360000,
+    "twenty_devices_fit": false,
+    "model": "20261031-v1",
+    "sample_warning": "单设备样本，按峰值及最低6000条/日保守估算"
+  },
+  "analytics": {
+    "revision": 1,
+    "enabled": true,
+    "subjects": [
+      "BJP00326070803800006"
+    ],
+    "hour": 23
+  },
+  "ark_grants": [
+    {
+      "sn": "BJP00326070803800006",
+      "authorized": true,
+      "not_before_ms": 1793443962120
+    },
+    {
+      "sn": "BJP00326081002000026",
+      "authorized": true,
+      "not_before_ms": 1793443962091
+    }
+  ],
+  "backup": "/opt/p003/backups/analytics-control-20261031T105114Z"
+}

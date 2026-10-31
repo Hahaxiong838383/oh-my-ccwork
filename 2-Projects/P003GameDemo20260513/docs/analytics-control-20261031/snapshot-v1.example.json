@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "snapshot_id": "synthetic-example-1",
+  "captured_at_ms": 1793437200000,
+  "boot_id": "synthetic-boot-a",
+  "boot_started_at_ms": 1793437140000,
+  "sequence": 1,
+  "logical_day": "2026-10-31",
+  "config_revision": "example-rules-v1",
+  "content_version": "example-content-v1",
+  "source_mode": "normal",
+  "wallets": {
+    "family_coin": 0,
+    "stardust": null
+  },
+  "inventory": {
+    "M-CARD-001": null
+  },
+  "progress": {
+    "timer_state": "running",
+    "next_reward": {
+      "status": "locked",
+      "kind": "currency",
+      "item_id": "C-FAMILY-001",
+      "stage_id": "example-stage",
+      "remaining_seconds": 121
+    },
+    "claimable_count": 0
+  }
+}
