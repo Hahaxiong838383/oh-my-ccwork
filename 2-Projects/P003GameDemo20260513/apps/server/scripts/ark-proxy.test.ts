@@ -26,4 +26,5 @@ test('authority deadline includes facts and client rejects elapsed time even bef
  const app=arkFactsRoute({secret:()=>secret,allowed:()=>[sn],facts:async()=>{await new Promise(r=>setTimeout(r,220));return {prompt:'late'};}});
  const at=performance.now();const r=await app.request('http://localhost/',{method:'POST',headers:{'X-Ark-Internal-Token':secret},body:JSON.stringify({subject:sn})});assert.equal(r.status,503);assert.ok(performance.now()-at<210);
  const p=new ArkFactsProxy({url:'http://127.0.0.1',secret,allowed:()=>[sn],fetchImpl:async()=>{const start=performance.now();while(performance.now()-start<175){}return Response.json({ok:true,prompt:'late'});}});assert.equal((await p.context(sn)).prompt,'');
+ const blocked=arkFactsRoute({secret:()=>secret,allowed:()=>[sn],facts:async()=>{const start=performance.now();while(performance.now()-start<175){}return {prompt:'late'};}});assert.equal((await blocked.request('http://localhost/',{method:'POST',headers:{'X-Ark-Internal-Token':secret},body:JSON.stringify({subject:sn})})).status,503);
 });

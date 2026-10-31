@@ -9,10 +9,11 @@ export function arkFactsRoute(o:{secret:()=>string;allowed:()=>string[];facts:(s
   const want=o.secret(),got=c.req.header('X-Ark-Internal-Token')??'';
   if(want.length<32||Buffer.byteLength(want)!==Buffer.byteLength(got)||!timingSafeEqual(Buffer.from(want),Buffer.from(got)))return c.json({ok:false},401);
   if(pending>=8)return c.json({ok:false},503);
-  pending++;const work=(async()=>{try{
+  const started=performance.now();pending++;const work=(async()=>{try{
    const q=await readBoundedJson(c.req.raw,128,150) as {subject?:string};
    if(!q||Object.keys(q).length!==1||typeof q.subject!=='string'||!/^BJP003\d{14}$/.test(q.subject)||!o.allowed().includes(q.subject))return c.json({ok:false},403);
    const result=await o.facts(q.subject);
+   if(performance.now()-started>150)return c.json({ok:false},503);
    // The authority checks current identity and grant again after its async history read.
    if(!o.allowed().includes(q.subject))return c.json({ok:false},403);
    return c.json({ok:true,prompt:result.prompt});
