@@ -1,0 +1,152 @@
+{
+  "scope": "server_isolated_acceptance_only",
+  "generated_at": "2026-10-31T17:55:47.691407+08:00",
+  "author": "codex（OpenAI）",
+  "branch": "codex/p003-ark-brain-context-20261031",
+  "baseline_commit": "83cff28c",
+  "runtime_baseline_commit": "0708d768",
+  "knowledge_commit": "e6f330ec",
+  "implementation_commit": "0e1f2cd4e7a900d8e2ab5b8736ddc0c3c5af5529",
+  "environment": {
+    "node": "v24.19.0",
+    "dependency_install_performed": false,
+    "node_modules": "verified existing dependency symlink",
+    "databases": "mkdtemp synthetic private independent SQLite",
+    "network": "loopback HTTP/SSE mock only; no external model experiments"
+  },
+  "tests": {
+    "ark": {
+      "command": "npm run test:ark",
+      "passed": 39,
+      "failed": 0,
+      "groups": {
+        "knowledge": 3,
+        "state": 13,
+        "history": 9,
+        "runtime": 7,
+        "http_sse": 7
+      }
+    },
+    "analytics_regression": {
+      "command": "npm run test:analytics",
+      "scripts_passed": 10,
+      "exit_code": 0
+    },
+    "device_brain": {
+      "passed": 29,
+      "failed": 0
+    },
+    "knowledge_regression": {
+      "cases_passed": 6
+    },
+    "memory_extract_regression": {
+      "passed": 15,
+      "failed": 0
+    },
+    "extract_scheduler_regression": {
+      "passed": 17,
+      "failed": 0
+    },
+    "listening_rtc_brain": {
+      "status": "PASS isolated real-route preflight"
+    },
+    "typescript": {
+      "status": "BASELINE_FAILURE",
+      "error_count": 12,
+      "baseline_diagnostics_identical": true,
+      "new_diagnostics": 0,
+      "files": [
+        "src/listening-content.ts",
+        "src/tools/amap-weather.ts"
+      ]
+    },
+    "search_baseline": {
+      "chat_policy": {
+        "passed": 11,
+        "failed": 3,
+        "baseline_rerun_exit": 1
+      },
+      "dialogue_context": {
+        "status": "MISSING_BASELINE_EXPORT",
+        "name": "searchDialogueHistory",
+        "baseline_rerun_exit": 1
+      },
+      "source_changed_by_this_feature": false
+    }
+  },
+  "latency_observation": {
+    "hanging_body_total_context_ms": 131.62,
+    "deadline_ms": 120,
+    "observation_only_not_production_percentiles": true
+  },
+  "review": {
+    "initial_task": "30a18b46-8513-415e-a1d1-e06fcb92c12d",
+    "critical": 0,
+    "important_initial": 3,
+    "important_fixed_with_red_green": 3,
+    "narrow_recheck_task": "dde617ac-423f-4972-9571-9096a69f2e98",
+    "narrow_recheck": "COMPLETED: all three original Important issues closed; read-only verification, tests run by main implementer",
+    "unresolved_original_important": 0
+  },
+  "production": {
+    "deployed": false,
+    "production_files_or_env_changed": false,
+    "services_restarted": false,
+    "analytics_upload_opened": false,
+    "search_or_listening_changed": false,
+    "rust_worker_changed": false,
+    "default_gate_enabled": false
+  },
+  "unverified": [
+    "Android authoritative projector integration",
+    "real device snapshot arrival and identity coverage",
+    "production gateway reachability",
+    "real LLM response correctness and real voice playback",
+    "production index creation time and load latency",
+    "real device offline/reconnect/day-boundary behavior"
+  ],
+  "evidence_sha256": {
+    "ark-suite.log": "18c2a5071ccaa31292db0815590896cb81c4926fc552ec85782a49aedec06cb7",
+    "analytics-regression.log": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
+    "memory-regression.log": "245c12e68eacd9407d83a734f99817a4aef7a9144885d41cc02f8a22a069ea03",
+    "scheduler-regression.log": "2b367b79fe215b1168993085d3cf1cecfe60de02113df570a85389ada37dcb53",
+    "final-brain.log": "e778a6c4f2beb5b86bbf54708d1b7706215c2f0f7f8092c00ff077ff744384db",
+    "final-kb.log": "fe7cfd862ebcb14abecbcfe0a218b758317d0ab3c91690891a94195af9e97af4",
+    "listening-regression.log": "2e8555150a6086973cc71d4b51d0332e3d5f9c3a0293eccbb2c2c5d178282813",
+    "current-tsc.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "baseline-tsc.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "baseline-search-chat-policy.log": "e0e1d751e2685747d6109143ef6ce701211279868a87fad0f1309bb0985a4c9b",
+    "baseline-search-dialogue-context.log": "f4587b0d85ede49a88a32bdfa2e830e6518ef90960049baf5588e19f718462ba",
+    "history-tie-red.log": "33fbbd83bcaebd7466269a5cbfef1bf95fe370b9165f6c8c5ad0be62cecab079",
+    "history-marker-red.log": "5eec4c06f301d265ab572d6b1e18c743ece31b2514879205ed7f41d3c11d86e2",
+    "memory-metadata-red.log": "1c9d6de20c8351453498c91b5ee72341df61c34d26f36b386a91922e244c611f",
+    "watermark-red.log": "4d07b09910d114ddf673fa0fad41b67ab58df937d04b22f3b30285ccb2ae52f7",
+    "gm-watermark-red.log": "c235ba340469f5a37bf47ef791e68710a59ead1c4c5765057fedb17b4953773e",
+    "source-resolution-red.log": "dec93f49630110e481ce1c743726024fc237b257f2649e211a13666a7f6466a6",
+    "gm-future-red.log": "69e5a139db9464ba1e66f9053110b20ceb9fbe95976ca5629a20fbd2f1bedc88"
+  },
+  "candidate_source_sha256": {
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/device-context.ts": "af76d3796aff5b5699c34888ad8edc7ff1cbab1deab678d19823d68d93507bb3",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/index.ts": "a456ae2592a032b796c1ef1e6c3cace7957e33747e542ae30e57c70dc2afb6ce",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts": "6cf7035e8f61e3e89d3250f2cf65c585bd60e8babfeae4991a2880c404f76499",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/context.ts": "987414e1d506cacd60ee98df67e8dc085605057ca98406a953dd15e34a64b24e",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/contracts.ts": "555ce9454ee79b8f5a4cf7faacf577734116ba0e62decb2644da75c11a6ae7cf",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/history.ts": "f8ac19320d603441a0f5d7779b808786a11901e0f98dbd25bed6ced95f42e90b",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/http.ts": "c8f2fd630ea28a01cef71dc92f4723d354c4bd66b7943c747a074155c4d88a1a",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/identity.ts": "0aa12e50e1b7934546ae744b8a6df7eb443afb03813325c9d95b2e84c3f0a27e",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/memory-policy.ts": "7f4341b93873f8cdc29232b995a7e13b8fad74def930614a1d83671cc4882e45",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/routes.ts": "78b159760baa82197a7f1a41bbefa9884d7d95ff211403fdf645138cc4d757ca",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/runtime.ts": "0b318b7e62002e65e75342a0bee1a4c31204e17381b911510925d58c174fabfd",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/service.ts": "ebdbdf0db544e475ceed4993fc2982bb5c1a9688eca830cfdfd9fe498e1c1002",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts": "a52b34d15610d913a9489f809a8303ba74e8e738b39b643698c5968eeda3e3a7",
+    "2-Projects/P003GameDemo20260513/apps/server/src/conversation-store.ts": "2d06eb1bfa7d1f242bba0d5c29cdc32ce287a20d8aa2bfa22334795b84df40bc",
+    "2-Projects/P003GameDemo20260513/apps/server/src/device-registry-store.ts": "53876d235905c4dde8b12ba268ff2fb57d2564ee148a3ef445d5f193f206d7d3",
+    "2-Projects/P003GameDemo20260513/apps/server/src/extract-scheduler.ts": "faa94e0d942a7a24beab7983637689b0d87dd5067d013fa6220572e1c89f48e7",
+    "2-Projects/P003GameDemo20260513/apps/server/src/index.ts": "795f6bfa6be72da4c0037fce23cdfcaf32148a7ed51eddae48e02c111d3b0169",
+    "2-Projects/P003GameDemo20260513/apps/server/src/memory-extractor.ts": "8cae7d12b90dd81f1b63762b598610dd8ea7f1d71fe340a139ceb92b0776dff8",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/ark.ts": "e55ee9037b2b849d1e801e82a05dab5ced45e1f0d98a1c2ce9c60f922da7db7d",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/custom-llm.ts": "df4f422d76fa772d99ef69b0a98e58fa181f28b8f62633d9c466fb9ae8fc1dc7",
+    "2-Projects/P003GameDemo20260513/apps/server/src/xiaoke-kb.ts": "7adb65138754f03078d5de718b8927537f087839a78aed8f80e8b3e4841492bb"
+  },
+  "deployment_manifest_note": "Candidate source hashes only; coordinator must merge differences with actual running ordinary/P2 sources, never copy whole tree."
+}

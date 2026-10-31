@@ -20,3 +20,13 @@
 ## 入口
 
 Codeg folder30 / session45。历史来自总调度会话13最后已完成轮次；快照不是实时同步。主会话保留原ID、路径及运行状态。
+
+## 开发交付（会话45）
+
+服务端候选代码锚 `0e1f2cd4`，尚未部署、安卓真实快照尚待接入。
+
+- [服务端回执](SERVER_RECEIPT.md)
+- [安卓合同与最小验收](ANDROID_HANDOFF.md)
+- [测试结果与已知基线问题](TEST_RESULTS.json)
+- [回滚记录](ROLLBACK.md)
+- [跨会话记忆与实施裁定](MEMORY.md)
