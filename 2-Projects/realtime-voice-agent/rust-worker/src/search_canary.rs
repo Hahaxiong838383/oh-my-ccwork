@@ -20,7 +20,7 @@ pub fn is_candidate(agent: &str) -> bool { profile(agent).is_some() }
 pub struct Window { pub enabled: bool, #[serde(default)] pub sn: String, #[serde(default)] pub allowlist: Vec<String>, pub expires_at_ms: u64, pub generation: String }
 pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
 fn valid_sn(sn:&str)->bool { sn.len()==20 && sn.starts_with("BJP003") && sn.as_bytes()[6..].iter().all(u8::is_ascii_digit) }
-fn valid_list(list:&[String])->bool { !list.is_empty() && list.len()<=2 && list.iter().all(|s|valid_sn(s)) && (list.len()==1 || list[0]!=list[1]) }
+fn valid_list(list:&[String])->bool { !list.is_empty() && list.len()<=3 && list.iter().enumerate().all(|(i,s)|valid_sn(s) && !list[..i].contains(s)) }
 fn allowed(w:&Window)->Vec<String> {
  let list=if w.allowlist.is_empty(){vec![w.sn.clone()]}else if w.sn.is_empty(){w.allowlist.clone()}else{return vec![]};
  if valid_list(&list){list}else{vec![]}
@@ -169,9 +169,31 @@ mod tests {
   let other="BJP00326060100200003";assert!(!accepts(&w,&format!("sn-{other}-123"),&meta(other),1000));
   assert!(matches_environment(&w,&format!("{b},{a}")));assert!(!matches_environment(&w,a));
   w.enabled=false;assert!(!accepts(&w,&format!("sn-{b}-123"),&meta(b),1000));w.enabled=true;
-  w.allowlist.push(other.into());assert!(!accepts(&w,&format!("sn-{a}-123"),&meta(a),1000));
+  w.allowlist.extend([other.into(),"BJP00326081002000038".into()]);assert!(!accepts(&w,&format!("sn-{a}-123"),&meta(a),1000));
   w.allowlist=vec![a.into(),a.into()];assert!(!matches_environment(&w,&format!("{a},{a}")));
   w.allowlist=vec![a.into(),"00100004".into()];assert!(!accepts(&w,&format!("sn-{a}-123"),&meta(a),1000));
+ }
+ #[test] fn bounded_three_device_scope_keeps_two_job_capacity() {
+  let sns=["BJP00326070803800006","BJP00326060100100004","BJP00326081002000038"];
+  let w=Window{enabled:true,sn:String::new(),allowlist:sns.iter().map(|s|s.to_string()).collect(),expires_at_ms:9000,generation:"triple".into()};
+  let meta=|sn:&str|serde_json::json!({"search_canary":{"sn":sn,"expires_at_ms":9000,"generation":"triple"}}).to_string();
+  assert_eq!(profile(AGENT).unwrap().max_jobs,2);
+  assert!(matches_environment(&w,&format!("{},{},{}",sns[2],sns[0],sns[1])));
+  assert!(!matches_environment(&w,&sns[..2].join(",")));
+  for sn in sns {
+   let room=format!("sn-{sn}-123");
+   assert!(accepts(&w,&room,&meta(sn),1000));
+   assert!(!accepts(&w,&room,&meta(sn),9000));
+  }
+  let room=format!("sn-{}-123",sns[0]);
+  assert!(!accepts(&w,&room,&meta(sns[2]),1000));
+  let other="BJP00326060100200003";
+  assert!(!accepts(&w,&format!("sn-{other}-123"),&meta(other),1000));
+  for list in [vec![sns[0],sns[1],sns[0]],vec![sns[0],sns[1],sns[1]],vec![sns[0],sns[1],"02000038"],vec![sns[0],sns[1],sns[2],other]] {
+   let invalid=Window{allowlist:list.iter().map(|s|s.to_string()).collect(),..w.clone()};
+   assert!(!accepts(&invalid,&room,&meta(sns[0]),1000));
+  }
+  assert!(!matches_profile(profile(VERIFICATION_AGENT).unwrap(),&w,&sns.join(",")));
  }
  #[test] fn legacy_window_and_conflicting_lists() {
   let raw=r#"{"enabled":true,"sn":"BJP00326070803800006","expires_at_ms":9000,"generation":"old"}"#;
