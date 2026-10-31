@@ -292,16 +292,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     // LocalTrackSubscribed is a one-shot per publication in the
                     // SDK. Republish before input starts so the new SID must
                     // establish its own output readiness, not inherit the old one.
-                    if let Err(e) = room.local_participant().unpublish_track(&agent_pub.sid()).await {
-                        warn!(room=%room_name, error=%e, "replacement output unpublish failed");
-                        break;
-                    }
-                    match publish_output_track(&room, &source).await {
-                        Ok(publication) => {
+                    let renewed = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+                        room.local_participant().unpublish_track(&agent_pub.sid()).await?;
+                        publish_output_track(&room, &source).await
+                    }).await;
+                    match renewed {
+                        Ok(Ok(publication)) => {
                             agent_pub = publication;
                             agent_track_sid = agent_pub.sid().to_string();
                         },
-                        Err(e) => { warn!(room=%room_name, error=%e, "replacement output publish failed"); break; },
+                        Ok(Err(e)) => { warn!(room=%room_name, error=%e, "replacement output publish failed"); break; },
+                        Err(_) => { warn!(room=%room_name, "replacement output publish timed out"); break; },
                     }
                     info!(room=%room_name, participant_sid=%p.sid(), agent_track_sid=%agent_track_sid, "startup participant replacement accepted");
                 }
