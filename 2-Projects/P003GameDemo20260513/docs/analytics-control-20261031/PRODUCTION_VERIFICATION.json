@@ -21,14 +21,15 @@
     "state_bad_bearer": 401,
     "public /api/admin/analytics/control": true,
     "public /v1/device/ark/admin/settings": true,
-    "public_admin_sha": "5dce0ffe761ca8b250fc363b04f0a0eb83dee6e480cecab0fbfdbff2784c603f",
+    "public_admin_sha": "31e43d19ac4c34911511685d3ec694df76056bfba9535b3791b72f61d203dd46",
     "public_internal": {
       "status": 405
     },
     "health_3001": true,
     "health_3006": true,
     "health_3007": true,
-    "health_3008": true
+    "health_3008": true,
+    "public_admin_final_at_ms": 1793444274471
   },
   "capacity": {
     "ok": true,
@@ -79,5 +80,6 @@
       "not_before_ms": 1793443962091
     }
   ],
-  "backup": "/opt/p003/backups/analytics-control-20261031T105114Z"
+  "backup": "/opt/p003/backups/analytics-control-20261031T105114Z",
+  "deployed_code_commit": "1d9afe290bbb918a07c482068343c44676431f04"
 }
