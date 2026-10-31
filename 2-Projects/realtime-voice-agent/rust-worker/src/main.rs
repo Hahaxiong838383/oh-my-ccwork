@@ -66,6 +66,9 @@ async fn main() -> anyhow::Result<()> {
 
     let cfg = config::Config::from_env()?;
     search_canary::validate_startup(&cfg.agent_name,cfg.max_jobs)?;
+    // Build the shared place dictionary before accepting jobs, including P1.
+    // First-turn weather parsing must not allocate it on the audio event loop.
+    search_routing::prepare_weather_places();
     tracing::info!(
         agent_name = %cfg.agent_name,
         url = %cfg.ws_url,
