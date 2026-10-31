@@ -1,0 +1,17 @@
+{
+  "archive": "/Users/rayman.chen/Downloads/P003_CLOUD_ECONOMY_P0_20261101.zip",
+  "folder": "/Users/rayman.chen/Downloads/P003_CLOUD_ECONOMY_P0_20261101",
+  "sha256": "308201318bb2528ecf78ebed3d30a8b6148ba08a6ae18e001f2e27daf843c380",
+  "files_verified": 13,
+  "bytes": 24293,
+  "source_commit": "f09f8191eb0c2a1d478289f5f3b84583d0e46be6",
+  "source_push_verified": true,
+  "public_telemetry_probe": {
+    "method": "unauthenticated empty POST",
+    "http_status": 401,
+    "reason": "credential_missing_or_invalid",
+    "writes": 0,
+    "note": "Python本地CA链失败，改用系统curl证书验证成功；未关闭TLS校验。"
+  },
+  "shared_memory": "本机落盘，原件/候选/回执位于 ~/.local/state/p003-cloud-economy-20261101/memory-before 与 memory-after；不自动推送独立记忆仓。"
+}

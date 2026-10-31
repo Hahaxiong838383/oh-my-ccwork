@@ -26,23 +26,25 @@
 
 ## Task 1 — 纯计算与规则
 
-- [ ] 建立 `apps/server/scripts/economy-shadow.test.ts`，先验证缺失实现失败。
-- [ ] 实现 `src/economy-shadow/contracts.ts`、`evaluate.ts`：严格范围、观测审计、纯规则函数。
-- [ ] 覆盖重复/冲突/回退/时钟/GM/逻辑日/阈值与重排测试，全部通过。
+- [x] 建立 `apps/server/scripts/economy-shadow.test.ts`，先验证缺失实现失败。
+- [x] 实现 `src/economy-shadow/contracts.ts`、`evaluate.ts`：严格范围、观测审计、纯规则函数。
+- [x] 覆盖重复/冲突/回退/时钟/GM/逻辑日/阈值与重排测试，全部通过。
 
 ## Task 2 — 只读数据与报告存储
 
-- [ ] 实现 `src/economy-shadow/source.ts`，依赖 `{analyticsPath,telemetryPath,deviceKeySecret}`；只读且有界。
-- [ ] 实现 `src/economy-shadow/report.ts`、`store.ts` 与 `scripts/economy-shadow.ts`；输出 shadow-only JSON/Markdown。
-- [ ] 源库拒绝写入、同输入幂等、不同规则可重跑、恶意输出路径防护集成测试通过。
+- [x] 实现 `src/economy-shadow/source.ts`，依赖 `{analyticsPath,telemetryPath,deviceKeySecret}`；只读且有界。
+- [x] 实现 `src/economy-shadow/report.ts`、`store.ts` 与 `scripts/economy-shadow.ts`；输出 shadow-only JSON/Markdown。
+- [x] 源库拒绝写入、同输入幂等、不同规则可重跑、恶意输出路径防护集成测试通过。
 
 ## Task 3 — 实际回放与交接
 
-- [ ] HK 版本化独立目录安装，源文件 SHA 核验；运行测试与三台目标设备真实回放。
-- [ ] 复审、修复、主路径相关回归，记录所有失败与未覆盖项。
-- [ ] 记忆/实施回执/端侧最小接入清单落盘；Air Downloads 交付；选择性 commit+push 并核远端。
+- [x] HK 版本化独立目录安装，源文件 SHA 核验；运行测试与三台目标设备真实回放。
+- [x] 复审、修复、主路径相关回归，记录所有失败与未覆盖项。
+- [x] 记忆/实施回执/端侧最小接入清单落盘；Air Downloads 交付；选择性 commit+push 并核远端（最终Git状态见交付回执）。
 
 ## Ledger
 
 - 开始：基线 39594625，复用现有隔离工作树与 Codeg 会话48；主仓无关脏文件不动。
 - 裁定：P0不挂管理后台或定时任务，先交付真实可执行只读报告。避免增加语音主进程负担，也不把尚未冻结的经济协议冒充上线功能。
+
+- 完成：源码f09f8191，34新增+50Ark+37遥测通过，定向tsc通过，独立复审通过；HK独立目录真实6回放与重复幂等通过，三健康200，生产配置/Ark/进程未变。正式有效时长和现行配表仍待端侧核实，禁止正式发奖。

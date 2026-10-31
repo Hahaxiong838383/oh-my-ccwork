@@ -1,0 +1,424 @@
+{
+  "at_ms": 1793463840596,
+  "target": "/opt/p003/economy-shadow-20261101/899e5296e0c469c3",
+  "source_paths": {
+    "ANALYTICS_DB_PATH": "/opt/p003/server/data/analytics.db",
+    "TELEMETRY_DB_PATH": "/opt/p003/server/data/telemetry.db"
+  },
+  "manifest": {
+    "src/economy-shadow/report.ts": "fb9ff0d52c8b78dd235e3a1c12c4da93f49f6076ac0a79d53c78ffc4160e8b87",
+    "src/economy-shadow/source.ts": "6876cf0fff96ff7732395ffa623e139e8702ea3481f0e37414c7b06147b8ebc1",
+    "src/economy-shadow/source-worker.ts": "750b2ed46741412430ae3d9d9a1cddbdb44cda7d993da9a982772cf454b28ce8",
+    "src/economy-shadow/evaluate.ts": "fcb969094a0e8b1cdbaf31337861f9e4853c3f4d45419e9e13bf767e0408d232",
+    "src/economy-shadow/contracts.ts": "3a3402f2e85ac33771a8b406bac011d99ee080a703aa8229ea210cc4b9832fc8",
+    "src/economy-shadow/store.ts": "c875b0306f2ba092b74e580f62407e576751059d94f0d046ac79488ae1a4458b",
+    "scripts/economy-shadow-storage.test.ts": "26df9f46fcee01fc2f3e4998f1c3fd3a54c562c8f4075990a78739fb7f207999",
+    "scripts/economy-shadow.test.ts": "9673931c8ef8aa235ceb9ec574e9c5b7f72afcf91ced9e5b74b1e3262d79a7e1",
+    "scripts/economy-shadow.ts": "594e9e2cdfa27d52d8d717174f8d23e8846e614214711035d531599e98382607",
+    "package.json": "89c47db7851f89caec72da4f215ebc21cf1e294aeef3b45d2583562d846ab035"
+  },
+  "before": {
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 3403944,
+        "restarts": 43,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3433283,
+        "restarts": 7,
+        "status": "online"
+      }
+    ],
+    "guards": {
+      "config.db": "ca5eb7bf590bffac74fa9a19ddbfcdaeb9197573402f44e92ece528cd31e5d80",
+      "ark.db": "a03bd88a02d43f664beec58dc1bc7a4cbf8bba560b6277b65bf651a2689a0c48"
+    }
+  },
+  "after": {
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 3403944,
+        "restarts": 43,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3433283,
+        "restarts": 7,
+        "status": "online"
+      }
+    ],
+    "guards": {
+      "config.db": "ca5eb7bf590bffac74fa9a19ddbfcdaeb9197573402f44e92ece528cd31e5d80",
+      "ark.db": "a03bd88a02d43f664beec58dc1bc7a4cbf8bba560b6277b65bf651a2689a0c48"
+    }
+  },
+  "production_unchanged": true,
+  "no_services_restarted": true,
+  "health": {
+    "at_ms": 1793463892450,
+    "health": {
+      "3001": 200,
+      "3007": 200,
+      "3008": 200
+    }
+  },
+  "tests": {
+    "local_new": 34,
+    "ark": 50,
+    "telemetry": 37,
+    "local_total": 121,
+    "remote": 33,
+    "targeted_types": "pass",
+    "independent_review": "pass"
+  },
+  "reports": [
+    {
+      "duration_ms": 755.98,
+      "report": {
+        "schema_version": 1,
+        "engine_version": "p003-shadow-v1",
+        "run_id": "0acdad38309783a854de8cf8170df56bcd3acad1ef0aa724fa44004d3fe26ad3",
+        "subject_alias": "02000026",
+        "scope_sha256": "3b55af8949f7ad2f69de9ee2b53360653741c419d4a28f3a2390e956a071a492",
+        "day": "2026-10-28",
+        "cutoff_ms": 1793462967006,
+        "mode": "shadow_only",
+        "ready_for_settlement": false,
+        "certified_eligible_ms": null,
+        "quality": "unknown",
+        "comparison_status": "not_comparable",
+        "source_counts": {
+          "analytics": 0,
+          "telemetry": 0
+        },
+        "input_sha256": "5219cd7023fa04ecf380c3735076364ef244a5a8a3b14ce4ae7c3893942199e4",
+        "truncated": {
+          "analytics": false,
+          "telemetry": false
+        },
+        "content_version_basis": "upload_batch_declaration",
+        "content_versions": [],
+        "config_revisions": [],
+        "observed": {
+          "telemetry_segments": 0,
+          "telemetry_union_ms": null,
+          "telemetry_overlap_ms": null,
+          "checkpoint_count": 0,
+          "checkpoint_max_seconds": null,
+          "checkpoint_sessions": 0,
+          "reward_instances": 0
+        },
+        "issues": [],
+        "blockers": [
+          "current_rule_not_bound",
+          "effective_presence_unverified",
+          "event_rule_version_unverified",
+          "input_coverage_unproven",
+          "no_duration_input",
+          "ownership_and_save_scope_unverified"
+        ],
+        "scenario": null,
+        "rule_candidate": null
+      }
+    },
+    {
+      "duration_ms": 569.57,
+      "report": {
+        "schema_version": 1,
+        "engine_version": "p003-shadow-v1",
+        "run_id": "c3396ba911bae4f0d5a7d6806e04660606fe478547070854b40148959ebb47b0",
+        "subject_alias": "02000026",
+        "scope_sha256": "3b55af8949f7ad2f69de9ee2b53360653741c419d4a28f3a2390e956a071a492",
+        "day": "2026-10-31",
+        "cutoff_ms": 1793462967006,
+        "mode": "shadow_only",
+        "ready_for_settlement": false,
+        "certified_eligible_ms": null,
+        "quality": "unknown",
+        "comparison_status": "not_comparable",
+        "source_counts": {
+          "analytics": 0,
+          "telemetry": 0
+        },
+        "input_sha256": "5219cd7023fa04ecf380c3735076364ef244a5a8a3b14ce4ae7c3893942199e4",
+        "truncated": {
+          "analytics": false,
+          "telemetry": false
+        },
+        "content_version_basis": "upload_batch_declaration",
+        "content_versions": [],
+        "config_revisions": [],
+        "observed": {
+          "telemetry_segments": 0,
+          "telemetry_union_ms": null,
+          "telemetry_overlap_ms": null,
+          "checkpoint_count": 0,
+          "checkpoint_max_seconds": null,
+          "checkpoint_sessions": 0,
+          "reward_instances": 0
+        },
+        "issues": [],
+        "blockers": [
+          "current_rule_not_bound",
+          "effective_presence_unverified",
+          "event_rule_version_unverified",
+          "input_coverage_unproven",
+          "no_duration_input",
+          "ownership_and_save_scope_unverified"
+        ],
+        "scenario": null,
+        "rule_candidate": null
+      }
+    },
+    {
+      "duration_ms": 555.83,
+      "report": {
+        "schema_version": 1,
+        "engine_version": "p003-shadow-v1",
+        "run_id": "c5c490fd722abe6c99253bd16e7015c7dea2816318fc6dd199447f3b1a3ef81f",
+        "subject_alias": "02000038",
+        "scope_sha256": "2371c51c5f4c3998d57350f34ae9e036a083f21d9ac290c12b7e0c2b4f89a91f",
+        "day": "2026-10-28",
+        "cutoff_ms": 1793462967006,
+        "mode": "shadow_only",
+        "ready_for_settlement": false,
+        "certified_eligible_ms": null,
+        "quality": "unknown",
+        "comparison_status": "not_comparable",
+        "source_counts": {
+          "analytics": 0,
+          "telemetry": 0
+        },
+        "input_sha256": "5219cd7023fa04ecf380c3735076364ef244a5a8a3b14ce4ae7c3893942199e4",
+        "truncated": {
+          "analytics": false,
+          "telemetry": false
+        },
+        "content_version_basis": "upload_batch_declaration",
+        "content_versions": [],
+        "config_revisions": [],
+        "observed": {
+          "telemetry_segments": 0,
+          "telemetry_union_ms": null,
+          "telemetry_overlap_ms": null,
+          "checkpoint_count": 0,
+          "checkpoint_max_seconds": null,
+          "checkpoint_sessions": 0,
+          "reward_instances": 0
+        },
+        "issues": [],
+        "blockers": [
+          "current_rule_not_bound",
+          "effective_presence_unverified",
+          "event_rule_version_unverified",
+          "input_coverage_unproven",
+          "no_duration_input",
+          "ownership_and_save_scope_unverified"
+        ],
+        "scenario": null,
+        "rule_candidate": null
+      }
+    },
+    {
+      "duration_ms": 664.07,
+      "report": {
+        "schema_version": 1,
+        "engine_version": "p003-shadow-v1",
+        "run_id": "c84dba4fc1609cd18e7b9a80a7b11982f623c978b9e4d4b5056a25995d4dca16",
+        "subject_alias": "02000038",
+        "scope_sha256": "2371c51c5f4c3998d57350f34ae9e036a083f21d9ac290c12b7e0c2b4f89a91f",
+        "day": "2026-10-31",
+        "cutoff_ms": 1793462967006,
+        "mode": "shadow_only",
+        "ready_for_settlement": false,
+        "certified_eligible_ms": null,
+        "quality": "unknown",
+        "comparison_status": "not_comparable",
+        "source_counts": {
+          "analytics": 0,
+          "telemetry": 0
+        },
+        "input_sha256": "5219cd7023fa04ecf380c3735076364ef244a5a8a3b14ce4ae7c3893942199e4",
+        "truncated": {
+          "analytics": false,
+          "telemetry": false
+        },
+        "content_version_basis": "upload_batch_declaration",
+        "content_versions": [],
+        "config_revisions": [],
+        "observed": {
+          "telemetry_segments": 0,
+          "telemetry_union_ms": null,
+          "telemetry_overlap_ms": null,
+          "checkpoint_count": 0,
+          "checkpoint_max_seconds": null,
+          "checkpoint_sessions": 0,
+          "reward_instances": 0
+        },
+        "issues": [],
+        "blockers": [
+          "current_rule_not_bound",
+          "effective_presence_unverified",
+          "event_rule_version_unverified",
+          "input_coverage_unproven",
+          "no_duration_input",
+          "ownership_and_save_scope_unverified"
+        ],
+        "scenario": null,
+        "rule_candidate": null
+      }
+    },
+    {
+      "duration_ms": 1185.9,
+      "report": {
+        "schema_version": 1,
+        "engine_version": "p003-shadow-v1",
+        "run_id": "00e01dfa7282930f9372810602ee7c6e14e6a9aaf4667ac552ea1b033b1484ae",
+        "subject_alias": "03800006",
+        "scope_sha256": "bfa324aa8d74878a183994dd71241ec5d00fd058c5a52d23bfd265089a2268f4",
+        "day": "2026-10-28",
+        "cutoff_ms": 1793462967006,
+        "mode": "shadow_only",
+        "ready_for_settlement": false,
+        "certified_eligible_ms": null,
+        "quality": "unknown",
+        "comparison_status": "not_comparable",
+        "source_counts": {
+          "analytics": 3056,
+          "telemetry": 0
+        },
+        "input_sha256": "edb753209d5cb2660fd95883f5f24e4548b7bc775661187f62674581c0d261d9",
+        "truncated": {
+          "analytics": false,
+          "telemetry": false
+        },
+        "content_version_basis": "upload_batch_declaration",
+        "content_versions": [
+          "builtin"
+        ],
+        "config_revisions": [
+          "g1-ecotank-upgrade-20260910",
+          "g1-music-character-shadow-20260930-1"
+        ],
+        "observed": {
+          "telemetry_segments": 0,
+          "telemetry_union_ms": null,
+          "telemetry_overlap_ms": null,
+          "checkpoint_count": 29,
+          "checkpoint_max_seconds": 2700,
+          "checkpoint_sessions": 3,
+          "reward_instances": 5
+        },
+        "issues": [
+          "checkpoint_multiple_sessions",
+          "checkpoint_reversal",
+          "gm_evidence",
+          "logical_day_mismatch",
+          "rules_changed_in_window"
+        ],
+        "blockers": [
+          "checkpoint_domain_unverified",
+          "checkpoint_multiple_sessions",
+          "checkpoint_reversal",
+          "current_rule_not_bound",
+          "effective_presence_unverified",
+          "event_rule_version_unverified",
+          "gm_evidence",
+          "input_coverage_unproven",
+          "logical_day_mismatch",
+          "ownership_and_save_scope_unverified",
+          "rules_changed_in_window"
+        ],
+        "scenario": null,
+        "rule_candidate": null
+      }
+    },
+    {
+      "duration_ms": 679.76,
+      "report": {
+        "schema_version": 1,
+        "engine_version": "p003-shadow-v1",
+        "run_id": "c9789dcaca695fed5c445efe5b822a6ed5ccd4c22c5b108884536a079562423f",
+        "subject_alias": "03800006",
+        "scope_sha256": "bfa324aa8d74878a183994dd71241ec5d00fd058c5a52d23bfd265089a2268f4",
+        "day": "2026-10-31",
+        "cutoff_ms": 1793462967006,
+        "mode": "shadow_only",
+        "ready_for_settlement": false,
+        "certified_eligible_ms": null,
+        "quality": "unknown",
+        "comparison_status": "not_comparable",
+        "source_counts": {
+          "analytics": 15,
+          "telemetry": 0
+        },
+        "input_sha256": "8557a2f4127ff129b3676fa8aa9a6e1042f89de2f1a3b15ef9dcfccc1e9022ab",
+        "truncated": {
+          "analytics": false,
+          "telemetry": false
+        },
+        "content_version_basis": "upload_batch_declaration",
+        "content_versions": [
+          "builtin"
+        ],
+        "config_revisions": [],
+        "observed": {
+          "telemetry_segments": 0,
+          "telemetry_union_ms": null,
+          "telemetry_overlap_ms": null,
+          "checkpoint_count": 0,
+          "checkpoint_max_seconds": null,
+          "checkpoint_sessions": 0,
+          "reward_instances": 0
+        },
+        "issues": [
+          "gm_evidence"
+        ],
+        "blockers": [
+          "current_rule_not_bound",
+          "effective_presence_unverified",
+          "event_rule_version_unverified",
+          "gm_evidence",
+          "input_coverage_unproven",
+          "no_duration_input",
+          "ownership_and_save_scope_unverified"
+        ],
+        "scenario": null,
+        "rule_candidate": null
+      }
+    }
+  ],
+  "source_commit": "f09f8191",
+  "telemetry_gate_audit": {
+    "file_allowlist_present": false,
+    "target_in_file_allowlist": {
+      "02000026": false,
+      "02000038": false,
+      "03800006": false
+    },
+    "acceptance_override_set": false,
+    "overall": {
+      "rows": 6883,
+      "last_received_ms": 1789707784087
+    },
+    "pm2_override_allowlist_present": false,
+    "pm2_acceptance_override_set": false
+  }
+}

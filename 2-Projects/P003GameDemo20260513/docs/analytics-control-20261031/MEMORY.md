@@ -11,3 +11,5 @@ P2是独立Brain，普通服务发布不会自动覆盖它；本次逐文件三�
 用户后续明确授权清理旧压测与未来30天预测；7个文件完整异机归档后释放5.68GiB，实际预算上限4台、已开1台、可新增3台。raw14/fact90/seen持续保留不变，不能沿用上面初版90天上限1的结论。最新证据CAPACITY_30D_CLEANUP_RECEIPT.md；归档/校验在本机~/.local/share/p003-analytics-archives/20261031-old-stage/，HK回执在/opt/p003/backups/analytics-stage-cleanup-20261031。
 
 2026-11-01 用户明确并批准新目标：云端统一规则、配表和收益账本，尽量复用现有端侧数据，减少反复OTA。P0先做只读真实回放+条件试算，不发奖/不回写；方案 ../cloud-economy-20261101/DESIGN.md。检查点与focus_segment独立，旧配表/GM/输入缺口不得产生正式结算结论。真实探针三台近7天均无focus_segment，02000026/02000038无Analytics，03800006有夜批；这是本次时间窗证据，不代表其他设备无遥测。当前开发尚未正式接管经济。
+
+2026-11-01 P0已完成：源f09f8191，HK独立目录 /opt/p003/economy-shadow-20261101/899e5296e0c469c3，34新增+50Ark+37遥测及HK33通过，6真实报告重复幂等。GM漏检SQL和悬空链接反例已修；批次版本不得当发生时版本。config/Ark/PM2前后同，3健康200，无正式发奖/回写。后续须端侧导出实际规则与计时契约，见 ../cloud-economy-20261101/SERVER_RECEIPT.md 和 ANDROID_HANDOFF.md。
