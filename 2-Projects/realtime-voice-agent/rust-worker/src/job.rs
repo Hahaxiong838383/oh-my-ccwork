@@ -157,22 +157,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 队列 200ms 对齐 Python room_io(queue_size_ms=200):pause 时排队尾音 ≤200ms
     // 自然放完(框架不 clear),硬打断才 clear_buffer。
     let source = NativeAudioSource::new(AudioSourceOptions::default(), TTS_SAMPLE_RATE, 1, 200);
-    let track =
-        LocalAudioTrack::create_audio_track("agent-voice", RtcAudioSource::Native(source.clone()));
-    let agent_pub = room
-        .local_participant()
-        .publish_track(
-            LocalTrack::Audio(track),
-            TrackPublishOptions {
-                source: TrackSource::Microphone,
-                ..Default::default()
-            },
-        )
-        .await
-        .context("publish audio track")?;
+    let mut agent_pub = publish_output_track(&room, &source).await.context("publish audio track")?;
     info!(room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_published");
     let agent_identity = room.local_participant().identity().to_string();
-    let agent_track_sid = agent_pub.sid().to_string();
+    let mut agent_track_sid = agent_pub.sid().to_string();
 
     // 启动门解耦(gate.rs):决策归状态机,资源(mic/pipeline task)仍归本函数
     let mut gates = StartupGates::new();
@@ -337,10 +325,25 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     user_info = None;
                     drop(prebuilt_task.take());
                     prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
-                    info!(room=%room_name, participant_sid=%p.sid(), "startup participant replacement accepted");
+                    // LocalTrackSubscribed is a one-shot per publication in the
+                    // SDK. Republish before input starts so the new SID must
+                    // establish its own output readiness, not inherit the old one.
+                    if let Err(e) = room.local_participant().unpublish_track(&agent_pub.sid()).await {
+                        warn!(room=%room_name, error=%e, "replacement output unpublish failed");
+                        break;
+                    }
+                    match publish_output_track(&room, &source).await {
+                        Ok(publication) => {
+                            agent_pub = publication;
+                            agent_track_sid = agent_pub.sid().to_string();
+                        },
+                        Err(e) => { warn!(room=%room_name, error=%e, "replacement output publish failed"); break; },
+                    }
+                    info!(room=%room_name, participant_sid=%p.sid(), agent_track_sid=%agent_track_sid, "startup participant replacement accepted");
                 }
             }
-            RoomEvent::LocalTrackSubscribed { .. } => {
+            RoomEvent::LocalTrackSubscribed { track } => {
+                if track.sid() != agent_pub.sid() { continue; }
                 info!(room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_subscribed_by_android");
                 if gates.on_local_subscribed() {
                     let _ = out_tx.send(true);
@@ -495,6 +498,13 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // until the independent reconciler verifies that this exact SID is gone.
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
+}
+
+async fn publish_output_track(room: &Room, source: &NativeAudioSource) -> Result<LocalTrackPublication> {
+    let track = LocalAudioTrack::create_audio_track("agent-voice", RtcAudioSource::Native(source.clone()));
+    Ok(room.local_participant().publish_track(LocalTrack::Audio(track), TrackPublishOptions {
+        source: TrackSource::Microphone, ..Default::default()
+    }).await?)
 }
 
 // Before the input gate opens, an ordered begin or cancel can already be
