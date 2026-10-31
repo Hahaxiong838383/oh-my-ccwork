@@ -3,7 +3,9 @@
 import argparse,json,os,signal,socket,subprocess,time,urllib.request
 from pathlib import Path
 from secrets import token_hex
-ROOT=Path('/opt/p003/analytics-staging-20261013')
+ROOT=Path(os.environ.get('ANALYTICS_STAGE_ROOT','/opt/p003/analytics-staging-20261013'))
+assert str(ROOT) in ['/opt/p003/analytics-staging-20261013','/opt/p003/analytics-control-staging-20261031']
+ACTORS=int(os.environ.get('ANALYTICS_TEST_DEVICES','14')); assert ACTORS in [14,20]
 NODE=Path(os.environ.get('ANALYTICS_NODE_PATH','/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node'))
 if not NODE.is_absolute():raise RuntimeError('absolute analytics runtime required')
 def run(args,cwd=None):
@@ -58,8 +60,8 @@ def main():
  if a.action=='restart-ingest':stop_one('ingest');start_one('ingest','deploy/analytics-stage-ingest.ts');print(json.dumps({'ok':True,'ingest_restarted':True}));return
  if any(occupied(port) for port in [3005,3306,13306]):raise RuntimeError('staging already running; credentials were not changed')
  server=ROOT/'server'; (server/'data').mkdir(parents=True,exist_ok=True,mode=0o700)
- subjects=['BJP003261013'+str(i+1).zfill(8) for i in range(14)]
- values={'AUTH_JWT_SECRET':token_hex(32),'ANALYTICS_DEVICE_KEY_SECRET':token_hex(32),'ANALYTICS_INTERNAL_SECRET':token_hex(32),'ANALYTICS_DB_PATH':str(server/'data/analytics.db'),'ANALYTICS_DEVICES_DB_PATH':str(server/'data/devices.db'),'ANALYTICS_CONFIG_DB_PATH':str(server/'data/config.db'),'ANALYTICS_CONTROL_PATH':str(server/'data/analytics-control.json'),'ANALYTICS_SN_ALLOW':','.join(subjects),'ANALYTICS_GLOBAL_RPM':'600','ANALYTICS_INTERNAL_URL':'http://127.0.0.1:3306','STUDIO_USER':'analytics-stage-admin','STUDIO_PASS':token_hex(16),'STUDIO_EDITOR_USERS':'analytics-stage-editor','STUDIO_EDITOR_PASS':token_hex(16),'STUDIO_GUEST_USER':'analytics-stage-guest','STUDIO_GUEST_PASS':token_hex(16),'CONFIG_DB_PATH':str(server/'data/config.db'),'DEVICES_DB_PATH':str(server/'data/devices.db'),'PORT':'3005'}
+ subjects=['BJP003261013'+str(i+1).zfill(8) for i in range(ACTORS)]
+ values={'ANALYTICS_STAGE_ROOT':str(ROOT),'ANALYTICS_TEST_DEVICES':str(ACTORS),'AUTH_JWT_SECRET':token_hex(32),'ANALYTICS_DEVICE_KEY_SECRET':token_hex(32),'ANALYTICS_INTERNAL_SECRET':token_hex(32),'ANALYTICS_DB_PATH':str(server/'data/analytics.db'),'ANALYTICS_DEVICES_DB_PATH':str(server/'data/devices.db'),'ANALYTICS_CONFIG_DB_PATH':str(server/'data/config.db'),'ANALYTICS_CONTROL_PATH':str(server/'data/analytics-control.json'),'ANALYTICS_SN_ALLOW':','.join(subjects),'ANALYTICS_GLOBAL_RPM':'600','ANALYTICS_INTERNAL_URL':'http://127.0.0.1:3306','STUDIO_USER':'analytics-stage-admin','STUDIO_PASS':token_hex(16),'STUDIO_EDITOR_USERS':'analytics-stage-editor','STUDIO_EDITOR_PASS':token_hex(16),'STUDIO_GUEST_USER':'analytics-stage-guest','STUDIO_GUEST_PASS':token_hex(16),'CONFIG_DB_PATH':str(server/'data/config.db'),'DEVICES_DB_PATH':str(server/'data/devices.db'),'PORT':'3005'}
  env=server/'.env.stage';fresh=not env.exists()
  if fresh:
   env.write_text(''.join(k+'='+v+'\n' for k,v in values.items()));os.chmod(env,0o600)

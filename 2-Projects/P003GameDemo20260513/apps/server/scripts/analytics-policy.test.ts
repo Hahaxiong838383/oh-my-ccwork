@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';
+import {parseUploadPolicy,UPLOAD_POLICY_KEY} from '../src/analytics/upload-policy.js';
+import {capacityForecast} from '../src/analytics/capacity.js';
+const dir=mkdtempSync(join(tmpdir(),'analytics-policy-'));
+process.env.CONFIG_DB_PATH=join(dir,'config.db');
+const {configStore}=await import('../src/config-store.js');
+const a='BJP00326070803800006',b='BJP00326081002000026';
+try{
+  configStore.setValue(a,'posture.reminder_cooldown_sec',1234);
+  const first=configStore.saveAnalyticsPolicy({expected_revision:0,enabled:true,subjects:[a,b],hour:23},[a,b],'test');
+  assert.equal(first.revision,1);assert.equal(configStore.getEffectiveBool(b,'analytics.event_upload_enabled'),true);
+  assert.equal(configStore.getEffectiveBool('future','analytics.event_upload_enabled'),false);
+  assert.equal(configStore.getEffective(a,'posture.reminder_cooldown_sec'),1234);
+  assert.throws(()=>configStore.saveAnalyticsPolicy({expected_revision:0,enabled:false,subjects:[],hour:23},[a,b],'test'),/POLICY_CONFLICT/);
+  assert.equal(configStore.analyticsPolicy()?.enabled,true);
+  assert.throws(()=>configStore.saveAnalyticsPolicy({expected_revision:1,enabled:true,subjects:[a,b],hour:23},[a],'test'),/DEVICE_NOT_ACTIVE/);
+  const next=configStore.saveAnalyticsPolicy({expected_revision:1,enabled:false,subjects:[a,b],hour:23},[a,b],'test');
+  assert.equal(next.subjects.length,2);assert.equal(configStore.getEffectiveBool(a,'analytics.event_upload_enabled'),false);
+  const db=new DatabaseSync(process.env.CONFIG_DB_PATH);
+  db.exec("CREATE TRIGGER reject_policy BEFORE UPDATE ON runtime_flag BEGIN SELECT RAISE(ABORT,'failure'); END");
+  assert.throws(()=>configStore.saveAnalyticsPolicy({expected_revision:2,enabled:true,subjects:[a],hour:0},[a,b],'test'));
+  assert.equal(configStore.getEffective(b,'analytics.daily_upload_hour_cst'),23);assert.equal(configStore.analyticsPolicy()?.revision,2);
+  db.exec('DROP TRIGGER reject_policy');db.prepare('UPDATE runtime_flag SET value=? WHERE key=?').run('{}',UPLOAD_POLICY_KEY);db.close();
+  assert.throws(()=>configStore.analyticsPolicy(),/ANALYTICS_POLICY_INVALID/);
+  assert.throws(()=>parseUploadPolicy(JSON.stringify({...first,subjects:[a,a]})),/INVALID/);
+  const s={free_bytes:10641600512,total_bytes:41882943488,db_bytes:106422272,wal_bytes:23306872,daily_peak:8205,sample_devices:1,maintenance_ok:true,checked_at_ms:1};
+  const c=capacityForecast(s);assert.equal(c.daily_events_per_device,9000);assert.equal(c.max_enabled_devices,1);assert.equal(c.twenty_devices_fit,false);
+  assert.equal(capacityForecast({...s,free_bytes:1024**3}).max_enabled_devices,0);
+  assert.equal(capacityForecast({...s,maintenance_ok:false}).max_enabled_devices,0);
+  assert.equal(capacityForecast({...s,free_bytes:500*1024**3}).max_enabled_devices,c.maintenance_limit);
+  console.log('analytics policy: PASS (CAS, atomic rollback, defaults, hard validation, 20-device capacity)');
+}finally{rmSync(dir,{recursive:true,force:true});}

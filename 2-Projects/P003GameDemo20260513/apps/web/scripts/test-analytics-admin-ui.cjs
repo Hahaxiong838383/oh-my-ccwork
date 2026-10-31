@@ -1,4 +1,4 @@
-/* Read-only browser acceptance. No real credentials, device writes or API mutations.
+/* Browser acceptance with fully stubbed APIs. No real credentials or device writes.
  * node apps/web/scripts/test-analytics-admin-ui.cjs
  * Uses existing PLAYWRIGHT_MODULE (or local cached module), and ASSET_DIR containing
  * vue.js 3.4.21, element.js/css 2.9.1, echarts.js 5.5.0 downloaded from production CDN URLs.
@@ -16,14 +16,19 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
  const browser=await webkit.launch({headless:true});let checks=0;
  try{
   async function session(role){
-   const context=await browser.newContext({viewport:{width:1500,height:1000}}), state={mode:'empty',seen:[],errors:[]};
+   const context=await browser.newContext({viewport:{width:1500,height:1000}}), state={mode:'empty',seen:[],errors:[],control:{revision:0,enabled:true,subjects:['BJP00326070803800006'],hour:23}};
    if(role)await context.addInitScript(role=>{localStorage.setItem('kidshub_admin_token','ui-stub-token');localStorage.setItem('kidshub_admin_role',role);localStorage.setItem('kidshub_admin_username','验收账号');},role);
    await context.route('**/*',async route=>{
     const req=route.request(),u=new URL(req.url());
     if(u.hostname==='cdn.jsdelivr.net'){let name=u.pathname.includes('/vue@')?'vue.js':u.pathname.endsWith('index.css')?'element.css':u.pathname.includes('/element-plus@')?'element.js':'echarts.js';return route.fulfill({body:fs.readFileSync(path.join(assetDir,name)),contentType:name.endsWith('.css')?'text/css':'application/javascript'});}
     if(u.origin!==origin)return route.fulfill({json:{type:'FeatureCollection',features:[]}});
-    if(!u.pathname.startsWith('/api/'))return route.continue();
+    if(!u.pathname.startsWith('/api/')&&!u.pathname.startsWith('/v1/'))return route.continue();
     state.seen.push({path:u.pathname,query:u.search,method:req.method()});
+    if(u.pathname.startsWith('/v1/device/ark/admin/')){
+      if(role!=='admin')return route.fulfill({status:403,json:{ok:false}});
+      if(u.pathname.endsWith('/authorize')){state.arkAuthorized=true;state.arkGrantBody=req.postDataJSON();return route.fulfill({json:{ok:true}});}
+      if(u.pathname.endsWith('/preview')){const reply=()=>route.fulfill({json:{ok:true,prompt:state.arkAuthorized?'家族币余额：0；数据时间已标注':''}});if(state.mode==='ark-delay'){state.releaseArk=reply;state.pendingReady();return;}return reply();}
+    }
     if(u.pathname==='/api/auth/check')return route.fulfill({json:{ok:true,role}});
     if(u.pathname==='/api/auth/login')return route.fulfill({json:{ok:true,token:state.loginToken||'new-ui-stub-token',role:'admin'}});
     if(!u.pathname.startsWith('/api/admin/analytics/'))return route.fulfill({json:{ok:true,items:[],devices:[],sessions:[],themes:[]}});
@@ -49,6 +54,11 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
     if(kind==='batches')return route.fulfill({json:{ok:true,limit:25,offset:Number(q.get('offset')),items:[{attempt_id:'attempt-1',request_id:'request-1',batch_id:'batch-1',received_at_ms:Date.now(),sent_at_ms:Date.now(),accepted:1,duplicated:0,rejected:0,device_alias:state.mode==='candidate-error'?'设备-fedcba987654':['aliases','alias-race'].includes(state.mode)?'设备-abcdef012345':'设备-012345abcdef',http_status:200,processing_ms:1,sent_received_skew_ms:0,upload_client:{product:'KidsHubAI-VoiceKit',component:'uploader',protocol_version:'1',content_version:'v1'}}]}});
     if(kind==='events')return route.fulfill({json:{ok:true,id_digest:'safe-digest',events:[],settlements:[{attempt_id:'attempt-1',request_id:'request-1',received_at_ms:Date.now(),device_alias:'设备-012345abcdef',outcome:'rejected',reason:'INVALID_SCHEMA'}]}});
     if(kind==='registry')return route.fulfill({json:{ok:true,event_count:57,schema_version:1,items:[{event_name:'g1.reward_granted',group:'reward',properties_schema:{type:'object',description:'<img src=x onerror=alert(1)>'}}]}});
+    if(kind==='control'){
+      if(req.method()==='PUT'){const body=req.postDataJSON();if(body.enabled&&body.subjects.length>1)return route.fulfill({status:409,json:{ok:false,error:'CAPACITY_LIMIT'}});state.control={...body,revision:state.control.revision+1};return route.fulfill({json:{ok:true,policy:state.control}});}
+      if(state.mode==='control-delay'){await new Promise(resolve=>{state.releaseControl=resolve;state.pendingReady();});}
+      const valid=state.mode!=='invalid-config';return route.fulfill({json:{ok:true,runtime_available:state.mode!=='control-offline',policy:{...state.control,valid,emergency_gate:{enabled:valid,valid}},devices:['BJP00326070803800006','BJP00326081002000026'].map(sn=>({sn,note:sn.endsWith('26')?'另一台测试机':'已有测试机',status:state.mode==='disabled-selected'&&sn.endsWith('26')?'disabled':'active',upload_allowed:state.mode==='control-offline'?null:state.control.enabled&&state.control.subjects.includes(sn)})),capacity:{max_enabled_devices:1,free_bytes:10641600512,db_bytes:106422272,twenty_devices_fit:false,twenty_devices_bytes:115700000000,daily_events_per_device:9000,maintenance_ok:true,checked_at_ms:Date.now()}}});
+    }
     if(kind==='collection-config')return route.fulfill({json:{ok:true,server_gate:{enabled:false,valid:state.mode!=='invalid-config'},allowlist_count:0,global:{event_upload_enabled:false,daily_upload_hour_cst:0},device_defaults:{event_upload_enabled:false,daily_upload_hour_cst:23},items:[]}});
    });
    const page=await context.newPage();page.on('pageerror',e=>state.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')state.errors.push(m.text());});await page.goto(origin);await page.waitForFunction(()=>typeof Vue!=='undefined' && document.querySelector('#app').__vue_app__);
@@ -123,8 +133,28 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
   await run(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.analyticsFilters.from='2026-10-01';p.analyticsFilters.to='2026-10-13';p.analyticsSetTab('batches');});await page.getByText('attempt-1',{exact:true}).waitFor();assert(state.seen.filter(r=>r.path.endsWith('/batches')).every(r=>r.query.includes('dimension=received')));await page.getByText('查看摘要',{exact:true}).click();assert(await page.locator('.analytics-panel').innerText().then(t=>t.includes('KidsHubAI-VoiceKit')));checks++;
   await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsSetTab('events'));await page.locator('.analytics-panel input').fill('private-test-event');await page.getByRole('button',{name:'查询事件',exact:true}).click();await page.getByText('safe-digest',{exact:false}).waitFor();assert.equal(await page.locator('.analytics-panel input').inputValue(),'');assert(!(await page.locator('.analytics-panel').innerText()).includes('private-test-event'));assert(!(await run(()=>JSON.stringify(localStorage))).includes('private-test-event'));assert(!page.url().includes('private-test-event'));checks++;
   await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsSetTab('registry'));await page.getByText('查看 JSON Schema',{exact:true}).click();assert.equal(await page.locator('.analytics-panel pre img').count(),0);assert((await page.locator('.analytics-panel pre').innerText()).includes('<img'));checks++;
-  await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsSetTab('config'));await page.getByRole('heading',{name:'设备上传默认值 · CST'}).waitFor();assert((await page.locator('.analytics-panel').innerText()).includes('23:00'));assert((await page.locator('.analytics-panel').innerText()).includes('00:00'));assert(!state.seen.some(r=>r.path.includes('/analytics/')&&r.method!=='GET'));checks++;
-  state.mode='invalid-config';await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());await page.locator('.analytics-panel .an-error').filter({hasText:'采集控制配置无效'}).waitFor();checks++;
+  await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsSetTab('config'));await page.getByRole('heading',{name:'上传控制',exact:true}).waitFor();assert((await page.locator('.analytics-panel').innerText()).includes('当前安全开启上限'));assert(!state.seen.some(r=>r.path.includes('/analytics/')&&r.method!=='GET'));checks++;
+  await page.getByPlaceholder('SN、末8位或设备备注').fill('02000026');await page.getByRole('button',{name:'全选筛选结果',exact:true}).click();await page.getByRole('button',{name:'保存上传设置',exact:true}).click();await page.getByRole('alert').filter({hasText:'超过当前容量上限'}).waitFor();assert.equal(state.control.subjects.length,1);assert.equal(state.errors.filter(e=>e.includes('409 (Conflict)')).length,1);state.errors=state.errors.filter(e=>!e.includes('409 (Conflict)'));checks++;
+  await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsControlToggle('BJP00326070803800006',false));await page.getByRole('button',{name:'保存上传设置',exact:true}).click();await page.getByRole('status').filter({hasText:'上传设置已保存'}).waitFor();assert.deepEqual(state.control.subjects,['BJP00326081002000026']);checks++;
+  await page.getByRole('button',{name:'关闭全部上传',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anControl.data?.policy.enabled===false);assert.equal(state.control.enabled,false);checks++;
+  // Pending GET freezes draft edits, and a disabled selected device can be removed.
+  state.mode='control-delay';const heldControl=new Promise(resolve=>state.pendingReady=resolve);
+  await run(()=>{document.querySelector('#app').__vue_app__._container._vnode.component.proxy.loadAnalyticsControl();});await heldControl;
+  await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsControlToggle('BJP00326070803800006',true));
+  assert.deepEqual(await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anControl.subjects),['BJP00326081002000026']);
+  state.mode='disabled-selected';state.releaseControl();await page.waitForFunction(()=>!document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anControl.loading);
+  const disabledRow=page.locator('.an-table tbody tr').filter({hasText:'BJP00326081002000026'});assert(!(await disabledRow.locator('.el-switch').getAttribute('class')).includes('is-disabled'));
+  await page.getByRole('button',{name:'清空筛选结果',exact:true}).click();assert.deepEqual(await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anControl.subjects),[]);assert((await disabledRow.locator('.el-switch').getAttribute('class')).includes('is-disabled'));checks++;
+  state.mode='control-offline';await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.loadAnalyticsControl());await page.getByText('上传服务暂不可达，显示已保存配置，实际准入状态未知；仍可关闭上传。',{exact:true}).waitFor();assert.equal(await page.getByText(/运维保护闸关闭或配置异常/).count(),0);assert.equal(await page.getByRole('button',{name:'关闭全部上传',exact:true}).isDisabled(),false);checks++;
+  // Real /v1 Ark controls: preview and authorize cannot race; authorize reads fresh facts.
+  state.mode='ark-delay';await run(()=>{document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anArk.sn='BJP00326081002000026';});
+  const heldArk=new Promise(resolve=>state.pendingReady=resolve);await page.getByRole('button',{name:'查看小可可读事实',exact:true}).click();await heldArk;
+  assert.equal(await page.getByRole('button',{name:'启用该设备游戏数据问答',exact:true}).isDisabled(),true);
+  await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.authorizeAnalyticsArk());assert.equal(state.arkAuthorized,undefined);
+  state.mode='empty';await state.releaseArk();await page.waitForFunction(()=>!document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anArk.loading);
+  await page.getByRole('button',{name:'启用该设备游戏数据问答',exact:true}).click();await page.getByText('家族币余额：0；数据时间已标注',{exact:true}).waitFor();assert.deepEqual(state.arkGrantBody,{});assert.equal(state.seen.filter(r=>r.path.endsWith('/authorize')).length,1);checks++;
+  await page.screenshot({path:process.env.ANALYTICS_UI_SCREENSHOT||'/tmp/p003-analytics-control-ui.png',fullPage:false});
+  state.mode='invalid-config';await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsRefresh());await page.locator('.analytics-panel .an-error').filter({hasText:'运维保护闸关闭或配置异常'}).waitFor();checks++;
   await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.handleMenuSelect('kidshub'));assert.equal(await page.locator('.analytics-panel').count(),0);assert.equal(await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.khNav),'board');checks++;
   await run(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('analytics');});state.mode='unauthorized';await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsSetTab('overview'));await page.locator('.login-card').waitFor();assert.equal(await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analytics.eventQuery),'');checks++;
   assert.deepEqual(state.errors.filter(e=>!/^Failed to load resource:.*status of (503|401) /.test(e)),[]);await admin.context.close();

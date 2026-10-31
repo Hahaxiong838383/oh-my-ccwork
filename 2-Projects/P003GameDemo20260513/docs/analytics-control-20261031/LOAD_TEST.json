@@ -1,0 +1,67 @@
+{
+  "ok": true,
+  "mode": "load",
+  "captured_at": "2026-10-31T10:33:23.887Z",
+  "real_device_data_used": false,
+  "synthetic_actors": 20,
+  "batches": 600,
+  "events_accepted": 120000,
+  "events_duplicated": 0,
+  "events_acknowledged": 120000,
+  "unique_acknowledged_events": 120000,
+  "expected_events": 120000,
+  "expected_batches": 600,
+  "counts": {
+    "events": 120000,
+    "seen": 120000,
+    "batches": 600
+  },
+  "database_before": {
+    "events": 0,
+    "seen": 0,
+    "batches": 0
+  },
+  "database_delta": {
+    "events": 120000,
+    "seen": 120000,
+    "batches": 600
+  },
+  "database_run_events": 120000,
+  "database_unique_event_ids": 120000,
+  "database_acknowledged_matches": 120000,
+  "database_seen_matches": 120000,
+  "database_integrity": true,
+  "complete": true,
+  "duration_ms": 151513,
+  "retries": {
+    "503": 153
+  },
+  "retry_reasons": {
+    "503:ANALYTICS_OVERLOADED:5": 70,
+    "503:ANALYTICS_WAL_PRESSURE:10": 83
+  },
+  "actor_failures": [],
+  "monitor_failures": [],
+  "proxy_latency_ms": {
+    "p50": 39.20385600000009,
+    "p95": 65.52128000000084,
+    "p99": 218.80292599999666,
+    "max": 451.04993999999715
+  },
+  "rss_peak_bytes": 266510336,
+  "voice_health": {
+    "samples": 148,
+    "p95_ms": 4.262491999994381,
+    "predeploy_p95_ms": 1.797424629330635,
+    "delta_p95_ms": 2.4650673706637463,
+    "probe_only": true
+  },
+  "gates": {
+    "complete": true,
+    "monitoring": true,
+    "p95": true,
+    "p99": true,
+    "rss": true,
+    "existing_health": true
+  }
+}

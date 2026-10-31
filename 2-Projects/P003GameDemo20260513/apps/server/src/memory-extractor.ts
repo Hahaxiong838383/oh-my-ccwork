@@ -1,4 +1,4 @@
-import {containsArkDynamicData} from './ark/memory-policy.js';
+import {stripArkDynamicTurns} from './ark/memory-policy.js';
 import { isSameInterest, normalizeInterestValue, profileStore, activeInterests, cstDay, type MemoryPatch, type FamilyMember, type InterestItem, type GameEvent } from './profile-store.js';
 import { memoryItemStore, type NewMemoryItem } from './memory-item-store.js';
 import { checkRenameCandidate, clipText, isValidNickname } from './rename-gate.js';
@@ -523,7 +523,7 @@ export function revivePreferences(acctId: string, items: NewMemoryItem[], lastUs
  * 所有写走 store 同步原子方法;本函数只应被 fire-and-forget 调用(失败 log 不抛)。
  */
 export async function extractAndPersist(acctId: string, snapshot: ChatTurn[], sessionId: string, opts?: { reason?: string }): Promise<void> {
-  if (containsArkDynamicData(snapshot)) return; // Audit stays in conversations; volatile game state never becomes a profile.
+  snapshot=stripArkDynamicTurns(snapshot); // Preserve ordinary interests in mixed windows; never extract volatile game turns.
 
   try {
     if (!snapshot.length) return;

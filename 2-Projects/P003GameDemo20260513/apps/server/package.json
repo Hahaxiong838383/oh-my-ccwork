@@ -30,7 +30,8 @@
     "test:analytics-capacity": "node --experimental-sqlite --import tsx scripts/analytics-load-accounting.test.ts && node --experimental-sqlite --import tsx scripts/analytics-fact-layout.test.ts && node --experimental-sqlite --import tsx scripts/analytics-prune.test.ts && node --experimental-sqlite --import tsx scripts/analytics-writer.test.ts && node --experimental-sqlite --import tsx scripts/analytics-writer-http.test.ts",
     "analytics:fact-layout": "node --experimental-sqlite --import tsx scripts/analytics-fact-layout.ts",
     "analytics:rollup": "node --experimental-sqlite --import tsx scripts/analytics-rollup.ts",
-    "test:ark": "node --experimental-sqlite --import tsx scripts/ark-knowledge.test.ts && node --experimental-sqlite --import tsx scripts/ark-state.test.ts && node --experimental-sqlite --import tsx scripts/ark-history.test.ts && node --experimental-sqlite --import tsx scripts/ark-runtime.test.ts && node --experimental-sqlite --import tsx scripts/ark-http-sse.test.ts"
+    "test:ark": "node --experimental-sqlite --import tsx scripts/ark-knowledge.test.ts && node --experimental-sqlite --import tsx scripts/ark-state.test.ts && node --experimental-sqlite --import tsx scripts/ark-history.test.ts && node --experimental-sqlite --import tsx scripts/ark-runtime.test.ts && node --experimental-sqlite --import tsx scripts/ark-http-sse.test.ts && node --experimental-sqlite --import tsx scripts/ark-proxy.test.ts && node --experimental-sqlite --import tsx scripts/ark-proxy-service.test.ts",
+    "test:analytics-control": "node --experimental-sqlite --import tsx scripts/analytics-policy.test.ts && node --experimental-sqlite --import tsx scripts/analytics-control-route.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

@@ -3,6 +3,7 @@ import { verifyDeviceCredential } from './device-session.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { configStore, CONFIG_KEYS, invalidValueMessage } from '../config-store.js';
+import {UPLOAD_POLICY_KEY} from '../analytics/upload-policy.js';
 
 /**
  * 设备运行配置（联调合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + cc 回执冻结）。
@@ -93,6 +94,7 @@ function parseSetBody(body: unknown): { key: string; value: unknown } | null {
 configAdminRoute.put('/global', async (c) => {
   const parsed = parseSetBody(await c.req.json().catch(() => null));
   if (!parsed) return c.json({ ok: false, error: 'unknown_key' }, 400);
+  if(parsed.key.startsWith('analytics.')&&configStore.getFlag(UPLOAD_POLICY_KEY))return c.json({ok:false,error:'analytics_managed',message:'请在数据埋点的上传管理中调整'},409);
   const rev = configStore.setGlobal(parsed.key, parsed.value);
   if (rev === null) return c.json({ ok: false, error: 'invalid_value', message: invalidValueMessage(parsed.key) }, 400);
   console.log(`[device-config] global ${parsed.key}=${JSON.stringify(parsed.value)} rev=${rev}`);
@@ -104,6 +106,7 @@ configAdminRoute.put('/sn/:sn', async (c) => {
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'bad_sn' }, 400);
   const parsed = parseSetBody(await c.req.json().catch(() => null));
   if (!parsed) return c.json({ ok: false, error: 'unknown_key' }, 400);
+  if(parsed.key.startsWith('analytics.')&&configStore.getFlag(UPLOAD_POLICY_KEY))return c.json({ok:false,error:'analytics_managed',message:'请在数据埋点的上传管理中调整'},409);
   const rev = configStore.setValue(sn, parsed.key, parsed.value);
   if (rev === null) return c.json({ ok: false, error: 'invalid_value', message: invalidValueMessage(parsed.key) }, 400);
   console.log(`[device-config] sn=${sn} ${parsed.key}=${JSON.stringify(parsed.value)} rev=${rev}`);
@@ -114,6 +117,7 @@ configAdminRoute.delete('/sn/:sn', (c) => {
   const sn = c.req.param('sn');
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'bad_sn' }, 400);
   const key = c.req.query('key') || '';
+  if(key.startsWith('analytics.')&&configStore.getFlag(UPLOAD_POLICY_KEY))return c.json({ok:false,error:'analytics_managed',message:'请在数据埋点的上传管理中调整'},409);
   const rev = configStore.clearForSn(sn, key);
   if (rev === null) return c.json({ ok: false, error: 'unknown_key' }, 400);
   console.log(`[device-config] clear sn=${sn} ${key} rev=${rev}`);

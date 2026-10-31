@@ -26,14 +26,20 @@ export function createArkRoutes(o:Options){
   catch(e){const code=(e as Error).message;if(['stale','conflict','before_grant'].includes(code))return c.json({ok:false,error:code},409);if(code==='clock_invalid')return c.json({ok:false,error:code},400);throw e;}
  });
  app.use('/admin/*',async(c,next)=>{if(!o.isAdmin(c.req.header('authorization')??''))return c.json({ok:false,error:'admin_required'},403);await next();});
- app.get('/admin/settings',c=>{const settings=o.store().settings();return c.json({...settings,scope_ceiling:o.ceiling(),freshness_seconds:30,interface:'api_only',grants:settings.subjects.map(sn=>{const identity=o.runtime().identity(sn),g=identity&&o.store().grant(identity);return {sn,authorized:!!g,not_before_ms:g?.not_before_ms??null};})});});
+ app.get('/admin/settings',c=>{const settings=o.store().settings();return c.json({ok:true,...settings,scope_ceiling:o.ceiling(),freshness_seconds:30,interface:'admin_ui_and_api',grants:settings.subjects.map(sn=>{const identity=o.runtime().identity(sn),g=identity&&o.store().grant(identity);return {sn,authorized:!!g,not_before_ms:g?.not_before_ms??null};})});});
+ app.put('/admin/devices/:sn/authorize',async c=>{
+  const sn=c.req.param('sn');if(!o.ceiling().includes(sn))return c.json({ok:false,error:'invalid_scope'},400);
+  const body=await readBoundedJson(c.req.raw,128);if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length)return c.json({ok:false,error:'invalid_settings'},400);
+  const identity=o.runtime().identity(sn);if(!identity)return c.json({ok:false,error:'invalid_scope'},400);
+  o.store().authorize(identity,Date.now());return c.json({ok:true,sn,authorized:true});
+ });
  app.put('/admin/settings',async c=>{
   const parsed=settingsSchema.safeParse(await readBoundedJson(c.req.raw,4096));if(!parsed.success)return c.json({ok:false,error:'invalid_settings'},400);
   const q=parsed.data,identities=q.subjects.map(sn=>o.ceiling().includes(sn)?o.runtime().identity(sn):null);
   if(q.enabled&&(!q.subjects.length||identities.some(x=>!x)))return c.json({ok:false,error:'invalid_scope'},400);
-  o.store().configure(q.enabled,q.enabled?identities.filter(x=>x!==null):[],Date.now());return c.json(o.store().settings());
+  o.store().configure(q.enabled,q.enabled?identities.filter(x=>x!==null):[],Date.now(),q.expected_revision);return c.json({ok:true,...o.store().settings()});
  });
  app.get('/admin/preview',async c=>{const sn=c.req.query('sn')??'';if(!o.ceiling().includes(sn))return c.json({ok:false,error:'invalid_scope'},400);return c.json({ok:true,...await o.runtime().preview(sn),interface:'same_runtime_api_preview'});});
- app.onError((e,c)=>{if(e instanceof ArkHttpError)return c.json({ok:false,error:e.message},e.status);return c.json({ok:false,error:'ark_dependency_unavailable'},503);});
+ app.onError((e,c)=>{if(e.message==='settings_conflict')return c.json({ok:false,error:e.message},409);if(e instanceof ArkHttpError)return c.json({ok:false,error:e.message},e.status);return c.json({ok:false,error:'ark_dependency_unavailable'},503);});
  return app;
 }

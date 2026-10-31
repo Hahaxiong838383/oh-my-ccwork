@@ -2,6 +2,7 @@ import {readArkIdentity} from '../ark/identity.js';
 import { createHmac } from 'node:crypto';
 import { dirname,join,isAbsolute } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {UPLOAD_POLICY_KEY,parseUploadPolicy} from './upload-policy.js';
 export type AnalyticsDeviceContext = { deviceKey: string; active: boolean; uploadEnabled: boolean; uploadHourCst: number };
 export class AnalyticsDependencyUnavailable extends Error { constructor(){super('ANALYTICS_DEPENDENCY_UNAVAILABLE');} }
 export class AnalyticsDeviceReader {
@@ -22,6 +23,10 @@ export class AnalyticsDeviceReader {
       return !row || iatSec > row.not_before_sec;
     });
   }
+  uploadPolicy(){return this.read(this.options.configPath,db=>{
+    const row=db.prepare('SELECT value FROM runtime_flag WHERE key=?').get(UPLOAD_POLICY_KEY) as {value:string}|undefined;
+    return row?parseUploadPolicy(row.value):null;
+  });}
   readAnalyticsDeviceContext(subject: string): AnalyticsDeviceContext {
     const active = this.read(this.options.devicesPath, db => {
       const row = db.prepare('SELECT status FROM device_registry WHERE sn=?').get(subject) as {status:string}|undefined;

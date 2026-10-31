@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {UPLOAD_POLICY_KEY,parseUploadPolicy,parseUploadChange,type UploadPolicy} from './analytics/upload-policy.js';
 
 /**
  * 设备运行配置数据层（联调合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + cc 回执）。
@@ -121,11 +122,10 @@ function resolveDbPath(): string {
   return resolve(process.cwd(), raw);
 }
 
-class ConfigStore {
+export class ConfigStore {
   private readonly db: DatabaseSync;
 
-  constructor() {
-    const dbPath = resolveDbPath();
+  constructor(dbPath = resolveDbPath()) {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
     this.db.exec('PRAGMA journal_mode = WAL;');
@@ -163,6 +163,33 @@ class ConfigStore {
         done_at INTEGER
       );
     `);
+  }
+
+  analyticsPolicy():UploadPolicy|null {
+    const flag=this.getFlag(UPLOAD_POLICY_KEY);
+    return flag?parseUploadPolicy(flag.value):null;
+  }
+
+  /** One transaction owns enrollment, device snapshots and their monotonically increasing revisions. */
+  saveAnalyticsPolicy(input:ReturnType<typeof parseUploadChange>,activeSubjects:readonly string[],by:string):UploadPolicy {
+    const p=parseUploadChange(input),active=new Set(activeSubjects);
+    if(p.subjects.some(s=>!active.has(s)))throw new Error('DEVICE_NOT_ACTIVE');
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const old=this.analyticsPolicy();
+      if((old?.revision??0)!==p.expected_revision)throw new Error('POLICY_CONFLICT');
+      // A single writer entry also prevents inherited defaults enabling future registrations.
+      const scope=new Set([...activeSubjects,...(old?.subjects??[])]);
+      this.setGlobal('analytics.event_upload_enabled',false);
+      this.setGlobal('analytics.daily_upload_hour_cst',p.hour);
+      for(const sn of scope){
+        this.setValue(sn,'analytics.event_upload_enabled',p.enabled&&p.subjects.includes(sn));
+        this.setValue(sn,'analytics.daily_upload_hour_cst',p.hour);
+      }
+      const next:UploadPolicy={version:1,revision:(old?.revision??0)+1,enabled:p.enabled,subjects:[...p.subjects].sort(),hour:p.hour,updated_at_ms:Date.now()};
+      this.db.prepare(`INSERT INTO runtime_flag(key,value,updated_at,updated_by,note) VALUES(?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at,updated_by=excluded.updated_by,note=excluded.note`).run(UPLOAD_POLICY_KEY,JSON.stringify(next),next.updated_at_ms,by,'Analytics 上传管理');
+      this.db.exec('COMMIT');return next;
+    }catch(e){this.db.exec('ROLLBACK');throw e;}
   }
 
   // ── 下一版待办：open 在前（按创建顺序），done/dropped 在后（按更新时间倒序）。只软删（dropped），来源永远可追。──

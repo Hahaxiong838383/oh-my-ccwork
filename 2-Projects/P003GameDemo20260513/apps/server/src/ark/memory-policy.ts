@@ -10,5 +10,5 @@ export function isArkFollowup(text:string,history:Turn[]){
  return active;
 }
 export function stripArkDynamicTurns<T extends Turn>(turns:T[]):T[]{
- let active=false;return turns.filter(t=>{if(t.role==='user')active=isArkStateQuestion(t.content)||(active&&shortFollowup(t.content));return !active&&!(t.role==='assistant'&&numericAnswer(t.content));});
+ let active=false;return turns.filter(t=>{if(t.role==='user')active=!!t.memory_excluded||isArkStateQuestion(t.content)||(active&&shortFollowup(t.content));return !t.memory_excluded&&!active&&!(t.role==='assistant'&&numericAnswer(t.content));});
 }

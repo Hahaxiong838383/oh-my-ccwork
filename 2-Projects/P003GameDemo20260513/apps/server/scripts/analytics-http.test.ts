@@ -55,6 +55,15 @@ writeFileSync(control,JSON.stringify({enabled:true}),{mode:0o600});
 const perDevice=createAnalyticsApp(options);
 for(let i=0;i<60;i++){r=await perDevice.request('/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'rpm-'+i},body:JSON.stringify(batch('rpm'))});assert.equal(r.status,200);}
 r=await perDevice.request('/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'rpm-61'},body:JSON.stringify(batch('rpm'))});assert.equal(r.status,429);
+// Live policy is checked as one snapshot after the body/context; a retained list cannot override a closed master.
+let reads=0,managed:any={version:1,revision:1,enabled:true,subjects:['allowed'],hour:23,updated_at_ms:Date.now()};
+const dynamic=createAnalyticsApp({...options,reader:{...reader,uploadPolicy:()=>managed,readAnalyticsDeviceContext:sn=>{if(++reads===2)managed={...managed,enabled:false,revision:2};return reader.readAnalyticsDeviceContext(sn);}}});
+r=await dynamic.request('/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'dynamic-off'},body:JSON.stringify(batch('dynamic-off'))});assert.equal(r.status,503);assert.equal((await r.json()).error_code,'ANALYTICS_UPLOAD_DISABLED');
+assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event WHERE client_event_id=?').get('dynamic-off')!.n,0);
+const broken=createAnalyticsApp({...options,reader:{...reader,uploadPolicy:()=>{throw new Error('broken');}}});assert.equal((await broken.request('/ready')).status,503);
+const timed=createAnalyticsApp({...options,bodyTimeoutMs:10});
+r=await timed.fetch(new Request('http://localhost/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'timeout'},body:new ReadableStream({start(){}}),duplex:'half'} as any));assert.equal(r.status,503);assert.equal((await r.json()).error_code,'ANALYTICS_BODY_TIMEOUT');
+const afterTimeout=await(await timed.request('/ready')).json();assert.equal(afterTimeout.in_flight,0);assert.equal(afterTimeout.storage_failures,0);
 for(const mode of [0o400,0o700,0o640]){
  chmodSync(control,mode);assert.deepEqual(readControl(control),{enabled:false,valid:false},'只有精确0600可用');
  assert.equal((await app.request('/ready')).status,503);

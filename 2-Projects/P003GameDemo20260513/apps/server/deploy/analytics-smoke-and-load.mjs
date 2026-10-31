@@ -37,10 +37,11 @@ export function createLoadAccounting({expectedEvents=84000,expectedBatches=420}=
  }};
 }
 async function main(){
-const root='/opt/p003/analytics-staging-20261013', server=root+'/server';
+const root=process.env.ANALYTICS_STAGE_ROOT||'/opt/p003/analytics-staging-20261013', server=root+'/server';
+assert.match(root,/^\/opt\/p003\/analytics-(?:staging-20261013|control-staging-20261031)$/);
 assert.equal(resolve(process.cwd()),server,'staging cwd required');
 assert.equal(process.env.ANALYTICS_DB_PATH,server+'/data/analytics.db','isolated database required');
-assert.equal(process.env.ANALYTICS_SN_ALLOW.split(',').length,14);
+const actorCount=Number(process.env.ANALYTICS_TEST_DEVICES||14);assert.ok(actorCount===14||actorCount===20);assert.equal(process.env.ANALYTICS_SN_ALLOW.split(',').length,actorCount);
 const out=root+'/evidence';mkdirSync(out,{recursive:true,mode:0o700});
 const subjects=process.env.ANALYTICS_SN_ALLOW.split(','),mode=process.argv[2]||'smoke';
 const catalog=JSON.parse(readFileSync('src/analytics/event-property-schema-v1.json','utf8')).events;
@@ -85,7 +86,7 @@ async function smoke(){
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const percentile=(values,p)=>{const a=[...values].sort((a,b)=>a-b);return a.length?a[Math.min(a.length-1,Math.floor(a.length*p))]:null;};
 async function load(){
- const started=Date.now(),deadline=started+5*60*1000,prefix='load-'+started,latencies=[],voiceLatencies=[],retries={},retryReasons={},maxRssSamples=[],monitorFailures=[],actorFailures=[],before=counts(),accounting=createLoadAccounting({expectedEvents:84000,expectedBatches:420});let monitor=true;
+ const started=Date.now(),deadline=started+5*60*1000,prefix='load-'+started,latencies=[],voiceLatencies=[],retries={},retryReasons={},maxRssSamples=[],monitorFailures=[],actorFailures=[],before=counts(),accounting=createLoadAccounting({expectedEvents:actorCount*6000,expectedBatches:actorCount*30});let monitor=true;
  // Keep failed monitoring evidence and finish the load; an unhandled watcher rejection
  // previously killed Node before recording which server failed. Every failure still fails a gate.
  const watcher=(async()=>{while(monitor){for(const source of ['existing_health','stage_ready']){const start=performance.now();let status;try{const response=await fetch(source==='existing_health'?'http://127.0.0.1:3001/health':'http://127.0.0.1:3306/ready',{signal:AbortSignal.timeout(5000)});status=response.status;if(source==='existing_health'){assert.equal(status,200);await response.arrayBuffer();voiceLatencies.push(performance.now()-start);}else{assert.ok(status===200||status===503);const health=await response.json();assert.ok(Number.isFinite(health.rss_bytes));maxRssSamples.push(health.rss_bytes);}}catch(error){monitorFailures.push({source,status:status??null,error_type:error.name,elapsed_ms:performance.now()-start});}}await sleep(1000);}})();
@@ -94,7 +95,7 @@ async function load(){
  const baseline=JSON.parse(readFileSync(out+'/voice-health-predeploy.json','utf8'));const oldP95=baseline.p95_ms??baseline.p95??baseline.latency_ms?.p95;
  const readerDb=new DatabaseSync(process.env.ANALYTICS_DB_PATH,{readOnly:true});let integrity;
  try{integrity=accounting.report(readerDb,prefix,before,actorFailures);}finally{readerDb.close();}
- const report={ok:true,mode,captured_at:new Date().toISOString(),real_device_data_used:false,synthetic_actors:14,...integrity,duration_ms:Date.now()-started,retries,retry_reasons:retryReasons,actor_failures:actorFailures,monitor_failures:monitorFailures,proxy_latency_ms:{p50:percentile(latencies,.5),p95:percentile(latencies,.95),p99:percentile(latencies,.99),max:latencies.length?Math.max(...latencies):null},rss_peak_bytes:maxRssSamples.length?Math.max(...maxRssSamples):null,voice_health:{samples:voiceLatencies.length,p95_ms:percentile(voiceLatencies,.95),predeploy_p95_ms:oldP95,delta_p95_ms:voiceLatencies.length?percentile(voiceLatencies,.95)-oldP95:null,probe_only:true}};
+ const report={ok:true,mode,captured_at:new Date().toISOString(),real_device_data_used:false,synthetic_actors:actorCount,...integrity,duration_ms:Date.now()-started,retries,retry_reasons:retryReasons,actor_failures:actorFailures,monitor_failures:monitorFailures,proxy_latency_ms:{p50:percentile(latencies,.5),p95:percentile(latencies,.95),p99:percentile(latencies,.99),max:latencies.length?Math.max(...latencies):null},rss_peak_bytes:maxRssSamples.length?Math.max(...maxRssSamples):null,voice_health:{samples:voiceLatencies.length,p95_ms:percentile(voiceLatencies,.95),predeploy_p95_ms:oldP95,delta_p95_ms:voiceLatencies.length?percentile(voiceLatencies,.95)-oldP95:null,probe_only:true}};
  report.gates={complete:integrity.complete,monitoring:monitorFailures.length===0&&maxRssSamples.length>0,p95:latencies.length>0&&report.proxy_latency_ms.p95<=500,p99:latencies.length>0&&report.proxy_latency_ms.p99<=2000,rss:maxRssSamples.length>0&&report.rss_peak_bytes<=256*1024**2,existing_health:voiceLatencies.length>0&&!monitorFailures.some(f=>f.source==='existing_health')&&Number.isFinite(oldP95)&&report.voice_health.delta_p95_ms<=50};report.ok=Object.values(report.gates).every(Boolean);writeFileSync(out+'/load-'+started+'.json',JSON.stringify(report,null,2),{mode:0o600});writeFileSync(out+'/load.json',JSON.stringify(report,null,2),{mode:0o600});console.log(JSON.stringify(report));
  writeFileSync(out+'/load-http-timings-'+started+'.json',JSON.stringify({synthetic_only:true,records:httpTimings},null,2),{mode:0o600});
  assert.ok(report.gates.complete,'84000-event completion gate');assert.ok(report.gates.monitoring,'monitoring gate');

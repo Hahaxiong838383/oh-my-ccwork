@@ -3,6 +3,7 @@ import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabiliti
 import { Hono } from 'hono';
 import { canaryAdminRoute } from '../search-canary-status.js';
 import { analyticsAdminGateway } from '../analytics/admin-query.js';
+import { analyticsControlRoute } from '../analytics/control-route.js';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
 import { otaAdminRoute } from './ota.js';
@@ -2172,6 +2173,13 @@ adminDataRoute.route('/device-config', configAdminRoute);
 adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);
 
 // 产品事件后台：既有 admin-only 网关后才允许访问回环内部查询。
+adminDataRoute.route('/analytics/control',analyticsControlRoute({
+  authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+  internalUrl:process.env.ANALYTICS_INTERNAL_URL||'http://127.0.0.1:3006',
+  internalSecret:process.env.ANALYTICS_INTERNAL_SECRET||'',
+  devices:()=>deviceRegistryStore.list(),policy:()=>configStore.analyticsPolicy(),
+  save:(p,active,by)=>configStore.saveAnalyticsPolicy(p,active,by),
+}));
 adminDataRoute.route('/analytics', analyticsAdminGateway({
   authorize(header) {
     const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
