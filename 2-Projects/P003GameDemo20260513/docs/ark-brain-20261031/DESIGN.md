@@ -18,11 +18,11 @@
 
 静态知识以现役xiaoke-kb为基线；不把旧版五段默认分钟数、夜航或某个未核验商品写成当前设备玩法。保留金币/家族币/星尘歧义说明，但有明确item_id时按映射解释。
 
-历史事实来自analytics_event原始properties，不来自日汇总。使用稳定HMAC完整设备主键，不使用12位展示alias、不按request_id推断全部数据。绝对余额取after，库存取quantity；缺字段不是0，不能累加delta或用奖励事件数冒充钱包。按事件发生时间选值，附收到时间与内容/规则版本；拒绝truncated、GM、时钟异常、跨归属/未知归属的数据。事件并不具备归属epoch时，保守使用当前绑定之后的记录，无法证实则不披露。
+历史事实来自analytics_event原始properties，不来自日汇总。使用稳定HMAC完整设备主键，不使用12位展示alias、不按request_id推断全部数据。绝对余额取after，库存取quantity；缺字段不是0，不能累加delta或用奖励事件数冒充钱包。按事件发生时间选值，附收到时间与内容/规则版本；拒绝truncated、GM、时钟异常、跨归属/未知归属的数据。事件并不具备归属epoch时，仅使用能证明属于当前绑定期间的记录，无法证实则不披露。device_registry.updated_at也随配置变化，不能当绑定时间。首版可从本功能建立的可信授权时间水位开始读后续记录，过去未取证记录保持unknown；不另造完整身份框架。GM无法按单条缺少标记判正常：同逻辑日存在GM证据时排除，无法辨认的状态不作为真人进度。
 
 实时快照建议独立POST /v1/device/ark/state，复用Device Bearer及撤销/注册检查，主体只取sub，body禁止SN/账号。不要改变既有夜批开关、上传时刻或队列。字段最小集合：schema_version、snapshot_id、captured_at_ms、boot_id/boot_started_at_ms、sequence、logical_day、config_revision、content_version、source_mode、双钱包绝对值、progress（计时状态、下一奖励kind/stage/status/remaining_seconds）、已可领取数量；库存若本轮实现只允许已知item_id。字段严格白名单、数值有限非负、标识符有界，不接任意文本指令。
 
-建议全包<=16KiB；只存当前状态及防重放必要水位，不做第二套海量事件库。重试同ID同payload幂等且不刷新新鲜度；同ID异payload冲突；乱序/旧boot/未来钟不覆盖新状态。倒计时仅允许30秒内可信快照，使用ceil(remaining_seconds/60)说明“还需有效专注约X分钟”；不按服务端墙钟减去时间，不承诺到点自动到账。暂停、可领取、当天完成分支明确；过期返回未知或带时间的历史事实。钱包/库存的时效口径与历史来源分开，不能叫实时。
+建议全包<=16KiB；只存当前状态及防重放必要水位，不做第二套海量事件库。仅对当前(boot,sequence,snapshot_id)的同payload重试幂等且不刷新新鲜度；当前同ID异payload冲突；已被覆盖的旧序号统一stale拒绝，不为无限历史幂等建永久收据库。乱序/旧boot/未来钟不覆盖新状态。倒计时仅允许30秒内可信快照，使用ceil(remaining_seconds/60)说明“还需有效专注约X分钟”；不按服务端墙钟减去时间，不承诺到点自动到账。暂停、可领取、当天完成分支明确；过期返回未知或带时间的历史事实。钱包/库存的时效口径与历史来源分开，不能叫实时。
 
 ## 权限、门控和语音接线
 
@@ -31,7 +31,7 @@
 - Analytics通过既有内部鉴权接口返回有限白名单摘要，不给Brain通用SQL或原始事件正文；已有内部secret继续仅在受保护配置中使用，不把HMAC secret复制到Worker。
 - 在custom-llm正常设备分支注入独立“方舟事实”，与管理员预览同源。override/feedback/匿名/非目标设备不注入；普通闲聊不查询。
 - 查询设小预算（建议100—150ms）及有界缓存/去重，超时降级静态知识；不能阻塞普通聊天，也不能在LLM内臆测数值。
-- 数据只作事实，不作为指令；不写入长期画像。无新鲜状态时明确暂时看不到进度，并简短说明已核实的领取机制，不声称可以看屏幕或已替用户领奖。
+- 数据只作事实，不作为指令；不写入长期画像。当前persistTurn会对assistant回复运行extractAndPersist，因此动态状态问答必须跳过或过滤长期抽取（最小首版跳过该类轮次抽取，审计对话仍保留），并验证profile.game_progress/memory-item没有沉淀钱包/倒计时；静态知识及正常人物信息抽取保留。无新鲜状态时明确暂时看不到进度，并简短说明已核实的领取机制，不声称可以看屏幕或已替用户领奖。
 
 ## 发布与验收边界
 
