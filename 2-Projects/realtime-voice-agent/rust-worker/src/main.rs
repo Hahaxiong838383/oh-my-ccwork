@@ -25,6 +25,8 @@ mod eot_snapshot;
 mod filler;
 mod gate;
 mod job;
+mod startup_participant;
+mod owned_task;
 mod room_cleanup;
 mod voice_connect;
 mod llm;
