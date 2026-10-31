@@ -42,7 +42,7 @@ async function status(){
     ...(confirmed ? [{title:'设备身份与版本已由持有人确认',detail:`完整SN及v${confirmation.version_code}（${confirmation.version_name}）已在记录时间确认；云端后续上报另显示时间。`,status:'已确认'}] : [{title:'所选设备现场身份与版本待确认',detail:'云端自报版本带时间显示；需核对现场SN与安装版本。',status:'待确认'}]),
     {title:'P1与P2分开发布',detail:'P1是否开启及全量范围请看P1页；本页仅观察独立P2候选。P2未开启时，状态会明确显示仅P1。',status:'范围说明'},
     {title:'首句、插话与本地回复语需现场回归',detail:'候选关闭搜索时回归普通对话；随后P1验证补播、续讲、取消、改查和退出重连。',status:'待真机'},
-    {title:'P2真人体验待验收',detail:'仅原两台灰度设备测试Tool Calls与受控网页抓取，截止时间不因P1全量而延长；到期退出重进回P1。',status:'待真机'},
+    {title:'P2真人体验待验收',detail:'仅当前名单内的灰度设备测试Tool Calls与受控网页抓取，截止时间不因P1全量而延长；到期退出重进回P1。',status:'待真机'},
   ];
   if(lease?.cleanup?.healthy===false)issues.unshift({title:'候选关房补偿未就绪',detail:'关房控制请求待补偿，或补偿心跳缺失/过期；已停止新增灰度派单。',status:'阻塞'});
   if(!summary.health_ok)issues.unshift({title:'候选健康检查未通过',detail:'当前无法确认候选在线，请勿依据历史部署记录开窗。',status:'阻塞'});

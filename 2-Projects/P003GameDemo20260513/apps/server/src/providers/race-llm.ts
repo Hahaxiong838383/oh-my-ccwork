@@ -2,7 +2,7 @@ import type { ChatHistoryTurn } from './gemini-llm.js';
 import type { DeepseekLlmClient } from './deepseek-llm.js';
 import { createDeepseekLlmClient } from './deepseek-llm.js';
 import { createVolcLlmClient } from './volc-llm.js';
-import { recordRaceContent, recordRaceFailure, ProviderCircuit, fallbackCircuit } from './provider-health.js';
+import { recordRaceContent, recordRaceFailure } from './provider-health.js';
 
 /**
  * 大脑内双路 LLM 赛马（2026-08-17 P1，_run_race 家族第三个实现：Python FastLLM →
@@ -22,7 +22,6 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
   constructor(
     private readonly mainFactory: ClientFactory,
     private readonly fbFactory: ClientFactory,
-    private readonly fallbackGate?: ProviderCircuit,
   ) {}
 
   async streamChat(opts: {
@@ -38,7 +37,6 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
     const fb = this.fbFactory();
     this.main = main;
     this.fb = fb;
-    const fallbackTicket = this.fallbackGate?.acquire();
 
     let winner: 'main' | 'fallback' | null = null;
     const failures = new Set<'main' | 'fallback'>();
@@ -48,11 +46,9 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
 
     const wrap = (tag: 'main' | 'fallback', loser: DeepseekLlmClient) => ({
       onDelta: (delta: string): void => {
-        if (!delta) return;
         if (winner === null) {
           winner = tag;
           recordRaceContent(tag);
-          if (tag === 'fallback' && fallbackTicket != null) this.fallbackGate!.content(fallbackTicket);
           console.log(`[race] won_by=${tag} ttft_ms=${Date.now() - t0}`);
           loser.abort();
         }
@@ -70,7 +66,6 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
         if (failures.has(tag) || err.name === 'AbortError') return;
         failures.add(tag);
         recordRaceFailure(tag, err);
-        if (tag === 'fallback' && fallbackTicket != null) this.fallbackGate!.failure(fallbackTicket, err);
         lastErr = err;
         if (winner === tag && !settledOut) {
           settledOut = true; // 胜者中途死：如实上报（外层有人设兜底文案）
@@ -100,12 +95,7 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
         });
     };
 
-    try {
-      await Promise.allSettled([run(main, 'main', fb),
-        fallbackTicket === null ? Promise.resolve() : run(fb, 'fallback', main)]);
-    } finally {
-      if (fallbackTicket != null) this.fallbackGate!.release(fallbackTicket);
-    }
+    await Promise.allSettled([run(main, 'main', fb), run(fb, 'fallback', main)]);
     // 兜底：两路都终结但从未对外发过（如双路空回复流）→ 以空回复收尾，绝不让调用方悬挂
     if (!settledOut) {
       settledOut = true;
@@ -127,7 +117,6 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
 export function createRaceLlmClient(
   mainFactory: ClientFactory = createDeepseekLlmClient,
   fbFactory: ClientFactory = createVolcLlmClient,
-  fallbackGate: ProviderCircuit | undefined = process.env.SEARCH_CANARY_ROOT ? fallbackCircuit : undefined,
 ): DeepseekLlmClient {
-  return new RaceLlmClientImpl(mainFactory, fbFactory, fallbackGate);
+  return new RaceLlmClientImpl(mainFactory, fbFactory);
 }

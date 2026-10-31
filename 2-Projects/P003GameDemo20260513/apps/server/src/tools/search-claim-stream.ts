@@ -9,11 +9,6 @@ const WAIT = ['稍等','请稍等','等我'];
 const CLAIM = /(?:我|小可)(?:现在|这就|马上|已经|刚刚|刚|正在|会|来|可以|能|帮你|替你|先|没有|没|还没|还没有|为你|帮您|去|在网上|上网|联网|试着){0,6}(?:查|搜)|(?:正在|已经|还在|马上|这就)(?:为你|帮你)?(?:查|搜)|(?:搜索|查询)(?:已经|已|正在|还没|没有)?(?:完成|开始|接单|取消|结束|失败)|(?:我|小可)(?:来|会)?帮你看看|(?:我|小可)[^。！？!?]{0,18}(?:还查不到|还没法查|不能查|无法查|没有搜索能力)|等我长大/;
 const INITIAL_CLAIM = /^(?:好[的呀]?|嗯|刚才)?(?:查到|搜到|查完|搜完)/;
 const STANDALONE_WAIT = /^(?:稍等|请稍等|等我)[一下会儿哦呀啦]*[。！!？?；;…~～]?$/;
-// Only explicit questions/conditions qualify, not an arbitrary earlier question.
-// Keep punctuation here: a new clause must regain execution-claim protection.
-const NON_EXECUTION_PREFIX = new RegExp(`(?:你想让|你希望|你想要|如果)(?:(?:我|小可)(?:${MODIFIERS.join('|')}){0,6})?$`);
-const nonExecution = (prefix: string) => NON_EXECUTION_PREFIX.test(prefix.replace(/[\s：:]/g, ''));
-const QUOTES: Record<string,string> = { '“':'”', '‘':'’', '"':'"', "'":"'" };
 
 /** Whether an unfinished normalized suffix can still form prefix + token{0,n}
  * + ending. A small NFA retains overlapping tokens (已/已经, 刚/刚刚), so decisions
@@ -79,49 +74,31 @@ function normalized(raw: string): { text: string; offsets: number[] } {
  * is discarded. Original quoted sentences and disabled/production passthrough
  * retain their prior behavior. No user text or provider text is logged here. */
 export function createSearchClaimFilter(enabled: boolean) {
-  let pending = ''; let emitted = 0; let quoteEnd = ''; let closingAfterEnd = ''; let context = ''; let dropping = false; let warned = false;
-  const reset = () => { pending = ''; emitted = 0; quoteEnd = ''; closingAfterEnd = ''; context = ''; dropping = false; };
-  const remember = (text: string) => { context = (context + text).slice(-96); };
+  let pending = ''; let emitted = 0; let quoted = false; let dropping = false; let warned = false;
+  const reset = () => { pending = ''; emitted = 0; quoted = false; dropping = false; };
   const fallback = () => {
     if (warned) return '';
     warned = true;
     return '要查询资料，请说“帮我查一下”，再加上具体问题。';
   };
-  const forbidden = (text: string, offsets: number[], finish: boolean) => {
-    for (const match of text.matchAll(new RegExp(CLAIM.source, 'g'))) {
-      if (!nonExecution(context + pending.slice(0, offsets[match.index!]))) return true;
-    }
-    return emitted === 0 && (INITIAL_CLAIM.test(text) || (finish && STANDALONE_WAIT.test(text)));
-  };
+  const forbidden = (text: string, finish: boolean) => CLAIM.test(text)
+    || (emitted === 0 && (INITIAL_CLAIM.test(text) || (finish && STANDALONE_WAIT.test(text))));
   return {
     feed(delta: string): string {
       if (!enabled) return delta;
       let out = '';
       for (const char of delta) {
         if (dropping) { if (END.test(char)) reset(); continue; }
-        if (closingAfterEnd) {
-          // A sentence-ending quote is a closer, even for symmetric ASCII
-          // quotes. It must not open a new exemption for the following claim.
-          if (/\s/.test(char)) {out += char; remember(char); continue;}
-          const closes=char===closingAfterEnd;closingAfterEnd='';
-          if (closes) {out += char; emitted++; remember(char); continue;}
-        }
-        if (quoteEnd) {
-          out += char; emitted++; remember(char);
-          if (char === quoteEnd) quoteEnd = '';
-          // An unclosed quote cannot disable the rest of a multi-sentence reply.
-          if (END.test(char)) {const close=quoteEnd;reset();closingAfterEnd=close;}
-          continue;
-        }
-        if (QUOTES[char]) {
-          out += pending + char; emitted += normalized(pending).text.length + 1;
-          remember(pending + char); pending = ''; quoteEnd = QUOTES[char];
-          continue;
-        }
         pending += char;
         const { text, offsets } = normalized(pending);
+        if (emitted === 0 && /^[“‘"']/.test(text)) quoted = true;
+        if (quoted) {
+          out += pending; pending = ''; emitted += text.length;
+          if (END.test(char)) reset();
+          continue;
+        }
         const finish = END.test(char);
-        if (forbidden(text, offsets, finish)) {
+        if (forbidden(text, finish)) {
           out += fallback(); pending = ''; dropping = true;
           if (finish) reset();
         } else if (finish) {
@@ -131,19 +108,17 @@ export function createSearchClaimFilter(enabled: boolean) {
         } else {
           let keep = text.length;
           for (let i = 0; i < text.length; i++) {
-            if (possibleClaim(text.slice(i), emitted === 0 && i === 0)
-              && !nonExecution(context + pending.slice(0, offsets[i]))) { keep = i; break; }
+            if (possibleClaim(text.slice(i), emitted === 0 && i === 0)) { keep = i; break; }
           }
           const at = keep === text.length ? pending.length : offsets[keep];
-          out += pending.slice(0, at); remember(pending.slice(0, at)); pending = pending.slice(at); emitted += keep;
+          out += pending.slice(0, at); pending = pending.slice(at); emitted += keep;
         }
       }
       return out;
     },
     flush(): string {
       if (!enabled || dropping) { reset(); return ''; }
-      const {text,offsets}=normalized(pending);
-      const out = !quoteEnd && forbidden(text, offsets, true) ? fallback() : pending;
+      const out = !quoted && forbidden(normalized(pending).text, true) ? fallback() : pending;
       reset(); return out;
     },
   };

@@ -13,10 +13,3 @@ export function searchChatPolicy(input: {candidate:boolean;live?:boolean;enabled
 
 // The streaming guard retains its public API; it never executes a tool.
 export { createSearchClaimFilter } from './search-claim-stream.js';
-
-/** A bounded vocabulary question, not a search intent or a model invocation. */
-export function searchTermExplanation(text: string): string | null {
- const compact=text.replace(/[\s，,。.!！?？“”"‘’]/g,'');
- return /^(?:小可)?(?:请)?(?:帮我)?(?:查查|查一下|查询|搜索|搜一下)(?:这个词)?(?:是啥|是什么|是什么意思|啥意思|什么意思)$/.test(compact)
-  ? '查查就是找资料、核实信息，比如了解一项运动的规则。' : null;
-}

@@ -1,5 +1,5 @@
-import { searchDialogueClarification, searchDialogueHistory } from '../tools/search-dialogue-context.js';
-import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter, searchTermExplanation } from '../tools/search-chat-policy.js';
+import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
+import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
 import { searchSettings, searchDeviceAllowed, currentSearchDialogue } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
@@ -125,14 +125,13 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const searchConfig = searchSettings();
   const searchRoom=c.req.query('room')??'',searchSn=/^sn-(BJP003\d{14})-\d+$/.exec(searchRoom)?.[1];
   const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),live:!process.env.SEARCH_CANARY_ROOT,enabled:searchConfig.enabled,role:authContext?.role ?? '',room:searchRoom,allowed:searchSn&&searchDeviceAllowed(searchSn)?[searchSn]:[]});
-  const searchExplanation = !overridePrompt && !isFeedback && searchPolicy.instruction ? searchTermExplanation(userText) : null;
   const inOnboarding = !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
   const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(userText);
   // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
   // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
-  const companionGuardrail = (overridePrompt || isFeedback || searchExplanation || curriculumGuardrail || aiLiteracyGuide)
+  const companionGuardrail = (overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
     ? null
     : await companionKG.buildGuardrail(userText, true);
   console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${overridePrompt ? ' [override]' : ''}${isFeedback ? ' [feedback]' : ''}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
@@ -147,9 +146,8 @@ customLlmRoute.post('/chat/completions', async (c) => {
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
   const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
   if(temporarySearch)systemPrompt+='\n\n'+temporarySearch;
-  const searchAnswer=temporarySearch?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??'',true):'';
   const searchClarification=temporarySearch?searchDialogueClarification(userText):null;
-  if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),answer_context:Boolean(searchAnswer),local_clarification:Boolean(searchClarification)}));
+  if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),local_clarification:Boolean(searchClarification)}));
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
   const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
@@ -203,20 +201,6 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const model = body.model ?? 'xiaoke-ark';
 
   return streamSSE(c, async (stream) => {
-    let cancelled = false;
-    if (process.env.SEARCH_CANARY_ROOT) {
-      const cancel = () => {
-        if (cancelled) return;
-        cancelled = true;
-        llm.abort();
-        console.info('[search-chat-abort]', JSON.stringify({
-          room: c.req.query('room'), response_id: id,
-          elapsed_ms: Math.round(performance.now() - requestStarted),
-        }));
-      };
-      stream.onAbort(cancel);
-      if (stream.aborted) cancel();
-    }
     const chunk = (delta: Record<string, unknown>, finish: string | null): string =>
       JSON.stringify({
         id,
@@ -229,15 +213,14 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // 串行写出，保证 SSE chunk 顺序（writeSSE 是 async，并发写会乱序）。
     let chain: Promise<unknown> = Promise.resolve();
     const enqueue = (data: string): void => {
-      if (cancelled) return;
-      chain = chain.then(() => cancelled ? undefined : stream.writeSSE({ data }));
+      chain = chain.then(() => stream.writeSSE({ data }));
     };
 
     // Phase 1(docs/43 §8 F1):RTC 链路补齐对话落库 + 画像/情景记忆抽取——此前只有 WS 链路有,
     // 手机端 /m 的对话既无审计历史也无记忆抽取。累积 assistant 全文,onDone 后 fire-and-forget。
     let assistantText = '';
     const persistTurn = (): void => {
-      if (cancelled || !authContext || overridePrompt || isFeedback) return; // 取消的未完成投机回复不当作完整对话落库
+      if (!authContext || overridePrompt || isFeedback) return; // override/吐槽不落库不抽取(不污染真实 profile)
       const finalAssistant = assistantText.trim();
       // R2 证据链（2026-09-03）：本轮两条消息的 conversation.id 随快照传给抽取器（窗口内旧消息由抽取器按原话反查）
       let userMsgId: string | undefined;
@@ -263,10 +246,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
       }
     };
 
-    const localSearchReply=searchExplanation??searchClarification;
-    if(localSearchReply){
-      assistantText=localSearchReply;
-      enqueue(chunk({role:'assistant',content:localSearchReply},null));enqueue(chunk({},'stop'));persistTurn();enqueue('[DONE]');await chain;return;
+    if(searchClarification){
+      assistantText=searchClarification;
+      enqueue(chunk({role:'assistant',content:searchClarification},null));enqueue(chunk({},'stop'));persistTurn();enqueue('[DONE]');await chain;return;
     }
 
     // 括号旁白硬防线(paren-filter,2026-07-03):LLM 输出"（挠了挠头）"类状态机旁白会被火山
@@ -298,14 +280,12 @@ customLlmRoute.post('/chat/completions', async (c) => {
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
-    if (cancelled) return;
     try {
       await llm.streamChat({
         systemPrompt,
         userText,
-        history: searchDialogueHistory(history,searchAnswer,userText),
+        history,
         onDelta: (delta) => {
-          if (cancelled) return;
           if (delta && firstUpstreamAt === null) firstUpstreamAt = performance.now();
           const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(delta).text)); // EXIT → 括号 两级串联
           if (!clean) return; // 整个 delta 都在过滤器扣留中
@@ -314,7 +294,6 @@ customLlmRoute.post('/chat/completions', async (c) => {
           enqueue(chunk({ content: clean }, null));
         },
         onDone: () => {
-          if (cancelled) return;
           // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
           const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
           if (tail) {

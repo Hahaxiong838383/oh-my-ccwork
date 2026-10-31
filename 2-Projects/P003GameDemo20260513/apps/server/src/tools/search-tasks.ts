@@ -8,7 +8,7 @@ import { searchFailure, type SearchFailureInfo } from './search-failure.js';
 export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest; auto_weather?: import('./moji-weather.js').AutoWeatherRequest; place_weather?: import('./baidu-weather.js').PlaceWeatherRequest };
 export type TaskRouting = RoutingClaim & { weather_enabled: boolean; auto_location_enabled?: boolean; baidu_weather_enabled?: boolean };
 export type SearchOwner = { subject: string; session: string };
-export type SearchResult = { grounding?: {version:2;notice?:string;claims:{text:string;evidence:{source_id:number;quote:string}[]}[]}; weather?: import('./moji-weather.js').WeatherEvidence | import('./baidu-weather.js').BaiduWeatherEvidence | import('./amap-weather.js').AmapWeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
+export type SearchResult = { grounding?: {version:2;notice?:string;claims:{text:string;evidence:{source_id:number;quote:string}[]}[]}; weather?: import('./moji-weather.js').WeatherEvidence | import('./baidu-weather.js').BaiduWeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
 export type SearchTask = SearchOwner & {
   id: string; key: string; turn: string; revision: number; routing?: TaskRouting;
   status: 'queued' | 'running' | 'ready' | 'delivered' | 'failed' | 'cancelled' | 'expired';
@@ -36,11 +36,7 @@ export function validateQuery(value: unknown): string {
   if (typeof value !== 'string') return fail('invalid_request');
   const q = value.normalize('NFKC').trim();
   if (!q || [...q].length > 128 || /[\x00-\x1f\x7f]/.test(q)) return fail('invalid_request');
-  // Only mask a public title for the pronoun check. Keep the original query and
-  // every other privacy check; a game title must never hide an account or person.
-  // Unquoted “我的世界观” is still personal, not the Minecraft title.
-  const privacyText = q.replace(/《我的世界》|我的世界(?=(?:(?:里面|里|中)的?)?(?:基岩版|Java版|中国版|国际版|网易版|游戏|最近|最新|更新|版本|官网|红石|村民|苦力怕|生存模式|创造模式)|$)/gi, 'Minecraft');
-  if (/(?:https?:|www\.|@|\b\d{7,}\b|BJP003|Bearer|密钥|密码|手机号|电话|身份证|家庭|住址|我家|我的|我们|学校|班级|同学|孩子|儿子|女儿)/i.test(privacyText)) return fail('private_query');
+  if (/(?:https?:|www\.|@|\b\d{7,}\b|BJP003|Bearer|密钥|密码|手机号|电话|身份证|家庭|住址|我家|我的|我们|学校|班级|同学|孩子|儿子|女儿)/i.test(q)) return fail('private_query');
   if (/(?:色情|裸照|自杀|自残|制毒|炸弹|杀人|人肉|开盒)/.test(q)) return fail('unsafe_query');
   return q;
 }
@@ -51,7 +47,6 @@ export class SearchTasks {
   private resume: SearchResume;
   private progressByDelivery = new Map<string, SearchProgress>();
   private records = new Map<string, SearchTask>();
-  private closedSessions = new Map<string, number>();
   private nextPurge = 0;
   private pending = new Map<string, string>();
   private active = new Map<string, AbortController>();
@@ -72,7 +67,6 @@ export class SearchTasks {
     for (const row of this.db.prepare('SELECT body FROM tasks ORDER BY created,id').all() as { body: string }[]) {
       const t: SearchTask = JSON.parse(row.body); this.records.set(t.id, t);
     }
-    for(const r of this.db.prepare('SELECT subject,session,created FROM closed_sessions').all() as {subject:string;session:string;created:number}[])this.closedSessions.set(JSON.stringify([r.subject,r.session]),r.created);
     // Never resume network work or a claimed delivery after process loss.
     for (const t of this.all()) {
       let changed = false;
@@ -182,7 +176,6 @@ export class SearchTasks {
       this.db.prepare('DELETE FROM tasks WHERE created<?').run(before);
       this.db.prepare('DELETE FROM closed_sessions WHERE created<?').run(before);
       for (const [id, t] of this.records) if (t.createdAt < before) this.records.delete(id);
-      for(const [key,at]of this.closedSessions)if(at<before)this.closedSessions.delete(key);
       this.nextPurge = this.now() + 60_000;
     }
     this.pump();
@@ -204,14 +197,12 @@ export class SearchTasks {
   }
   cancelSession(owner: SearchOwner) {
     this.db.prepare('INSERT OR IGNORE INTO closed_sessions VALUES(?,?,?)').run(owner.subject, owner.session, this.now());
-    this.closedSessions.set(JSON.stringify([owner.subject,owner.session]),this.now());
     for (const t of this.all()) if (t.subject === owner.subject && t.session === owner.session) this.cancel(owner, t.id);
   }
-  private sessionClosed(owner:SearchOwner){return this.closedSessions.has(JSON.stringify([owner.subject,owner.session]));}
+  private sessionClosed(owner:SearchOwner){return Boolean(this.db.prepare('SELECT 1 FROM closed_sessions WHERE subject=? AND session=?').get(owner.subject,owner.session));}
   closeSession(owner: SearchOwner) {
     if (!this.opts.resumeEnabled?.()) return this.cancelSession(owner);
     this.db.prepare('INSERT OR IGNORE INTO closed_sessions VALUES(?,?,?)').run(owner.subject,owner.session,this.now());
-    this.closedSessions.set(JSON.stringify([owner.subject,owner.session]),this.now());
     this.resume.close(owner);
     console.info('[search-resume]',JSON.stringify({event:'session_closed',session:owner.session,at_ms:this.now()}));
     for (const t of this.all()) if(t.subject===owner.subject&&t.session===owner.session&&['queued','running','failed'].includes(t.status)) this.cancel(owner,t.id);
@@ -231,17 +222,11 @@ export class SearchTasks {
   resumeReceipt(owner:SearchOwner,grant:string,outcome:string,p?:SearchProgress){this.tick();return this.resume.receipt(owner,grant,outcome,p);}
   resumeCancel(owner:SearchOwner){this.tick();const t=this.resume.cancelLatest(owner);return this.cancel(t,t.id);}
   dialogueContext(owner:SearchOwner,id:string,revision:number,grant?:string){
-    if(this.closed||this.sessionClosed(owner)||!this.opts.enabled()||!this.opts.allowed(owner.subject))return false;
+    if(!this.opts.enabled()||!this.opts.allowed(owner.subject))return false;
     if(grant)return this.resume.context(owner,id,revision,grant);
     const t=this.records.get(id);
     return !!(t&&t.subject===owner.subject&&t.session===owner.session&&t.revision===revision&&
       ['queued','running','ready','delivered'].includes(t.status)&&this.now()<(t.readyAt===undefined?t.deadline:t.readyAt+300_000));
-  }
-  /** Bounded in-memory inference context only. A claim is not proof of hearing. */
-  dialogueAnswer(owner:SearchOwner,id:string,revision:number,grant?:string):string {
-    if(!this.dialogueContext(owner,id,revision,grant))return '';
-    const t=this.records.get(id);
-    return t?.outcome==='answered'&&(grant||t.claim&&['claimed','completed','interrupted'].includes(t.delivery??''))?t.result?.text??'':'';
   }
   claim(owner: SearchOwner, id: string, delivery: string): SearchTask {
     if(this.sessionClosed(owner))return fail('not_ready');

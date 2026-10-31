@@ -4,7 +4,6 @@ type GeminiUsage = { totalTokens: number; promptTokens: number; completionTokens
 export type ChatHistoryTurn = { role: 'user' | 'assistant'; content: string };
 
 export interface GeminiLlmClient {
-  abort(): void;
   streamChat(opts: {
     systemPrompt: string;
     userText: string;

@@ -11,7 +11,6 @@ import type { ChatHistoryTurn } from './gemini-llm.js';
  * 结构对齐 deepseek-llm.ts / gemini-llm.ts（同 streamChat 签名），可被 pipeline 工厂切换。
  */
 export interface MinimaxLlmClient {
-  abort(): void;
   streamChat(opts: {
     systemPrompt: string;
     userText: string;
