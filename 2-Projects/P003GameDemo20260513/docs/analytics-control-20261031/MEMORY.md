@@ -7,3 +7,5 @@
 P2是独立Brain，普通服务发布不会自动覆盖它；本次逐文件三方合并保留searchDialogueHistory/searchTermExplanation/取消逻辑，通过专用鉴权回环只读proxy取主服务Ark事实。不得共享P2可写库或整树覆盖。
 
 主树0708d768有12条既存tsc诊断，不能泛称全量检查通过。所有本次变更在codex/p003-analytics-control-20261031，Codeg folder31/session48；主会话13负责实现。回滚脚本先做文件/环境SHA检查，无整库恢复。
+
+用户后续明确授权清理旧压测与未来30天预测；7个文件完整异机归档后释放5.68GiB，实际预算上限4台、已开1台、可新增3台。raw14/fact90/seen持续保留不变，不能沿用上面初版90天上限1的结论。最新证据CAPACITY_30D_CLEANUP_RECEIPT.md；归档/校验在本机~/.local/share/p003-analytics-archives/20261031-old-stage/，HK回执在/opt/p003/backups/analytics-stage-cleanup-20261031。
