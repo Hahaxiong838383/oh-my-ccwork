@@ -49,9 +49,14 @@ try {
 
 const a='BJP00326070803800006',b='BJP00326060100100004';
 assert.deepEqual(canarySns(a+','+b),[a,b]);
-for(const raw of ['',a+','+a,a+',00100004',a+','+b+',BJP00326060100200003']) assert.deepEqual(canarySns(raw),[]);
+const third='BJP00326081002000038';
+assert.deepEqual(canarySns([a,b,third].join(',')),[a,b,third]);
+for(const raw of ['',a+','+a,a+',00100004',[a,b,third,'BJP00326060100200003'].join(','),[a,b,a].join(','),[a,b,b].join(',')]) assert.deepEqual(canarySns(raw),[]);
 assert.equal(canaryMaxJobs('2'),2);assert.equal(canaryMaxJobs('3'),0);
 const pair={path:'/v1/chat/completions',room:'sn-'+b+'-123',sn:b,allowedSns:[a,b],account:'search-canary-worker',expectedAccount:'search-canary-worker',role:'device',expires:2000,now:1000};
 assert.equal(canaryRequestAllowed(pair),true);
 assert.equal(canaryRequestAllowed({...pair,allowedSns:[a]}),false);
 assert.equal(canaryRequestAllowed({...pair,sn:a}),false);
+const triple={...pair,allowedSns:[a,b,third],sn:third,room:'sn-'+third+'-123'};
+assert.equal(canaryRequestAllowed(triple),true);
+for(const delta of [{sn:a},{allowedSns:[a,b]},{expires:1000},{role:'parent'},{account:'other-worker'}]) assert.equal(canaryRequestAllowed({...triple,...delta}),false);

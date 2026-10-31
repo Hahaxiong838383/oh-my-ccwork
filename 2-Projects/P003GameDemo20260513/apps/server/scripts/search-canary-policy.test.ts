@@ -18,8 +18,18 @@ console.log('canary policy: positive + 13 fail-closed cases passed');
 
 const second='BJP00326060100100004';
 for(const sn of [input.sn,second]) assert.equal(selectSearchCanaryAgent({...input,sn,allowlist:[input.sn,second]}),input.canaryAgent);
-for(const allowlist of [[input.sn,input.sn],[input.sn,second,'BJP00326060100200003'],[input.sn,'00100004']]) assert.equal(selectSearchCanaryAgent({...input,allowlist}),input.baselineAgent);
-console.log('two-device scope: both targets pass; duplicate/third/malformed fail closed');
+for(const allowlist of [[input.sn,input.sn],[input.sn,'00100004']]) assert.equal(selectSearchCanaryAgent({...input,allowlist}),input.baselineAgent);
+const third='BJP00326081002000038',fourth='BJP00326060100200003';
+const triple=[input.sn,second,third];
+for(const sn of triple) assert.equal(selectSearchCanaryAgent({...input,sn,allowlist:triple}),input.canaryAgent);
+assert.equal(selectSearchCanaryAgent({...input,sn:fourth,allowlist:triple}),input.baselineAgent);
+for(const allowlist of [[...triple,fourth],[input.sn,second,input.sn],[input.sn,second,second],[input.sn,second,'02000038']]) {
+  assert.equal(selectSearchCanaryAgent({...input,allowlist}),input.baselineAgent);
+}
+for(const delta of [{enabled:false},{expiresAtMs:1000},{leaseUntilMs:1000},{contractCompatible:false}]) {
+  assert.equal(selectSearchCanaryAgent({...input,sn:third,allowlist:triple,...delta}),input.baselineAgent);
+}
+console.log('three-device scope: exact targets pass; fourth, duplicate, malformed and expired fail closed');
 
 assert.deepEqual(explainSearchCanarySelection(input),{agent:input.canaryAgent,reason:'selected'});
 for(const [delta,reason] of [

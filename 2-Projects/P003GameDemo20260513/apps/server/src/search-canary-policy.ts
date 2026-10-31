@@ -4,7 +4,7 @@ export type CanaryInput = {
 };
 export const SEARCH_CANARY_AGENT = 'p003-search-canary-20261021';
 export function validCanaryAllowlist(list: readonly string[]): boolean {
-  return list.length>=1 && list.length<=2 && new Set(list).size===list.length && list.every(sn=>/^BJP003\d{14}$/.test(sn));
+  return list.length>=1 && list.length<=3 && new Set(list).size===list.length && list.every(sn=>/^BJP003\d{14}$/.test(sn));
 }
 export function selectSearchCanaryAgent(i: CanaryInput): string {
   return explainSearchCanarySelection(i).agent;
