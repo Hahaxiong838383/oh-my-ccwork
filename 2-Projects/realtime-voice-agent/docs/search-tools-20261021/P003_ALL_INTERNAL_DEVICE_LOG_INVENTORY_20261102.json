@@ -1,0 +1,389 @@
+{
+  "recorded_at": "2026-11-02T13:53:06+08:00",
+  "authorization": "P2 for all currently registered internal-test devices, per explicit user clarification; all their usage logs are in diagnostic scope",
+  "actual_production_p2_full_enabled": false,
+  "runtime_read_at_ms": 1793598224204,
+  "actual_flags": {
+    "main": {
+      "p003.search.canary.selected_sn": "BJP00326060100100004",
+      "p003.search.canary.enabled": "0",
+      "p003.search.canary.expires_at_ms": "1793589540000",
+      "p003.search.canary.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\", \"BJP00326081002000038\"]",
+      "p003.search.canary.agent": "p003-search-canary-20261021",
+      "p003.search.canary.started_at_ms": "1793065558897",
+      "p003.search.canary.device_joined_at_ms": "{\"BJP00326070803800006\": 1792984740000, \"BJP00326060100100004\": 1792984740000, \"BJP00326081002000038\": 1793432782394}",
+      "p003.search.scope": "all_registered",
+      "p003.search.exclusions": "[]",
+      "p003.search.enabled": "1",
+      "p003.search.tools": "0"
+    },
+    "candidate": {
+      "p003.search.tools": "0",
+      "p003.search.allowlist": "[\"BJP00326070803800006\", \"BJP00326060100100004\", \"BJP00326081002000038\"]",
+      "p003.search.canary.expires_at_ms": "1793589540000",
+      "p003.search.enabled": "0"
+    }
+  },
+  "main_runtime_source_sha256": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+  "summary": {
+    "registered_eligible_devices": 16,
+    "retained_conversation_messages": 28464,
+    "retained_user_messages": 14055,
+    "recent_conversation_messages": 2200,
+    "recent_history_devices": 8,
+    "recent_ok_issuance_devices": 10,
+    "recent_ok_issuance_records": 550
+  },
+  "inventory_is_not_completed_full_history_regression": true,
+  "device_suffixes": [
+    "00000001",
+    "00000002",
+    "00100004",
+    "00100010",
+    "00200003",
+    "03800006",
+    "04800006",
+    "00800010",
+    "02000002",
+    "02000004",
+    "02000020",
+    "02000025",
+    "02000026",
+    "02000038",
+    "02000053",
+    "01700006"
+  ],
+  "session_issuance_window": {
+    "since_ms": 1792993601200,
+    "read_at_ms": 1793598401255
+  },
+  "conversation_window": {
+    "since_ms": 1792993783162,
+    "read_at_ms": 1793598583162
+  },
+  "conversation_counts": [
+    {
+      "device_suffix": "00000001",
+      "retained_messages": 4,
+      "retained_user_messages": 2,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1788672972676,
+      "last_at_ms": 1788672986137
+    },
+    {
+      "device_suffix": "00000002",
+      "retained_messages": 967,
+      "retained_user_messages": 480,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1788179640458,
+      "last_at_ms": 1790148606840
+    },
+    {
+      "device_suffix": "00100004",
+      "retained_messages": 1038,
+      "retained_user_messages": 513,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1787202481316,
+      "last_at_ms": 1792993566441
+    },
+    {
+      "device_suffix": "00100010",
+      "retained_messages": 2250,
+      "retained_user_messages": 1056,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1787313846198,
+      "last_at_ms": 1791619086059
+    },
+    {
+      "device_suffix": "00200003",
+      "retained_messages": 2282,
+      "retained_user_messages": 1039,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1786980226335,
+      "last_at_ms": 1789706800812
+    },
+    {
+      "device_suffix": "03800006",
+      "retained_messages": 1718,
+      "retained_user_messages": 859,
+      "retained_sessions": 1,
+      "recent_messages": 8,
+      "recent_sessions": 1,
+      "first_at_ms": 1788505010605,
+      "last_at_ms": 1793166338824
+    },
+    {
+      "device_suffix": "04800006",
+      "retained_messages": 4723,
+      "retained_user_messages": 2362,
+      "retained_sessions": 1,
+      "recent_messages": 66,
+      "recent_sessions": 1,
+      "first_at_ms": 1788689290405,
+      "last_at_ms": 1793359153119
+    },
+    {
+      "device_suffix": "00800010",
+      "retained_messages": 1574,
+      "retained_user_messages": 787,
+      "retained_sessions": 1,
+      "recent_messages": 12,
+      "recent_sessions": 1,
+      "first_at_ms": 1789117713552,
+      "last_at_ms": 1793238951905
+    },
+    {
+      "device_suffix": "02000002",
+      "retained_messages": 5175,
+      "retained_user_messages": 2588,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1788750271724,
+      "last_at_ms": 1789017049041
+    },
+    {
+      "device_suffix": "02000004",
+      "retained_messages": 122,
+      "retained_user_messages": 61,
+      "retained_sessions": 1,
+      "recent_messages": 62,
+      "recent_sessions": 1,
+      "first_at_ms": 1790134753973,
+      "last_at_ms": 1793504621396
+    },
+    {
+      "device_suffix": "02000020",
+      "retained_messages": 304,
+      "retained_user_messages": 152,
+      "retained_sessions": 1,
+      "recent_messages": 46,
+      "recent_sessions": 1,
+      "first_at_ms": 1790671841088,
+      "last_at_ms": 1793155092182
+    },
+    {
+      "device_suffix": "02000025",
+      "retained_messages": 176,
+      "retained_user_messages": 88,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1791447300929,
+      "last_at_ms": 1792562159471
+    },
+    {
+      "device_suffix": "02000026",
+      "retained_messages": 758,
+      "retained_user_messages": 379,
+      "retained_sessions": 1,
+      "recent_messages": 758,
+      "recent_sessions": 1,
+      "first_at_ms": 1792999549719,
+      "last_at_ms": 1793439913305
+    },
+    {
+      "device_suffix": "02000038",
+      "retained_messages": 1052,
+      "retained_user_messages": 526,
+      "retained_sessions": 1,
+      "recent_messages": 1052,
+      "recent_sessions": 1,
+      "first_at_ms": 1793001061441,
+      "last_at_ms": 1793428490834
+    },
+    {
+      "device_suffix": "02000053",
+      "retained_messages": 718,
+      "retained_user_messages": 359,
+      "retained_sessions": 1,
+      "recent_messages": 196,
+      "recent_sessions": 1,
+      "first_at_ms": 1791442080254,
+      "last_at_ms": 1793541854128
+    },
+    {
+      "device_suffix": "01700006",
+      "retained_messages": 5603,
+      "retained_user_messages": 2804,
+      "retained_sessions": 1,
+      "recent_messages": 0,
+      "recent_sessions": 0,
+      "first_at_ms": 1788750377081,
+      "last_at_ms": 1789017596707
+    }
+  ],
+  "journal": {
+    "since": "2026-10-26 00:00:00 +0800",
+    "read_at_ms": 1793598452406,
+    "lanes": {
+      "voice-worker-rust": {
+        "journal_lines_scanned": 64004,
+        "device_room_counts": [
+          {
+            "device_suffix": "00000001",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00000002",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00100004",
+            "distinct_log_rooms": 1
+          },
+          {
+            "device_suffix": "00100010",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00200003",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "03800006",
+            "distinct_log_rooms": 6
+          },
+          {
+            "device_suffix": "04800006",
+            "distinct_log_rooms": 9
+          },
+          {
+            "device_suffix": "00800010",
+            "distinct_log_rooms": 12
+          },
+          {
+            "device_suffix": "02000002",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000004",
+            "distinct_log_rooms": 8
+          },
+          {
+            "device_suffix": "02000020",
+            "distinct_log_rooms": 5
+          },
+          {
+            "device_suffix": "02000025",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000026",
+            "distinct_log_rooms": 45
+          },
+          {
+            "device_suffix": "02000038",
+            "distinct_log_rooms": 40
+          },
+          {
+            "device_suffix": "02000053",
+            "distinct_log_rooms": 15
+          },
+          {
+            "device_suffix": "01700006",
+            "distinct_log_rooms": 0
+          }
+        ]
+      },
+      "p003-search-worker": {
+        "journal_lines_scanned": 81056,
+        "device_room_counts": [
+          {
+            "device_suffix": "00000001",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00000002",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00100004",
+            "distinct_log_rooms": 274
+          },
+          {
+            "device_suffix": "00100010",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00200003",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "03800006",
+            "distinct_log_rooms": 87
+          },
+          {
+            "device_suffix": "04800006",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "00800010",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000002",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000004",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000020",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000025",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000026",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "02000038",
+            "distinct_log_rooms": 1
+          },
+          {
+            "device_suffix": "02000053",
+            "distinct_log_rooms": 0
+          },
+          {
+            "device_suffix": "01700006",
+            "distinct_log_rooms": 0
+          }
+        ]
+      }
+    }
+  },
+  "search_retained_tasks": {
+    "main": {
+      "counts": [],
+      "history_complete": false
+    },
+    "candidate": {
+      "counts": [],
+      "history_complete": false
+    }
+  },
+  "limits": [
+    "Registry active status does not prove device online.",
+    "Signature issuance is not a successful RTC conversation; prefetch and rejection rows have separate denominators.",
+    "Conversation session_id is not a reliable room/session denominator in this dataset.",
+    "Task retention is bounded; empty current task tables do not erase historical tasks.",
+    "P1 logs are baseline/diagnostic evidence, not P2 or R27 acceptance.",
+    "Only metadata was inventoried in this turn, no full semantic regression, new physical tests, external model training or raw user text/audio export."
+  ],
+  "production_mutation_this_turn": false
+}
