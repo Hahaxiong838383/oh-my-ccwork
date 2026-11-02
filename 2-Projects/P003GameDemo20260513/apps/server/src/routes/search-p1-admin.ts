@@ -22,10 +22,16 @@ searchP1AdminRoute.get('/',async c=>{
  let release=null;
  try{const path=process.env.SEARCH_P1_RELEASE_FILE;if(path){const raw=await readFile(path,'utf8');if(raw.length<=8192){const r=JSON.parse(raw);release={verified_at_ms:r.verified_at_ms,brain_commit:r.brain_commit,worker_commit:r.worker_commit,worker_sha256:r.worker_sha256};}}}catch{}
  const audit=searchAudit();
- return c.json({ok:true,lane:'p1',observed_at_ms:Date.now(),settings,devices,release,
+ return c.json({ok:true,lane:settings.tools?'p2':'p1',observed_at_ms:Date.now(),settings,devices,release,
   tasks:{loaded:audit.loaded,recent:audit.tasks.map(({id,device_suffix,status,outcome,delivery,error,created_at,execution_ms})=>({id,device_suffix,status,outcome,delivery,error,created_at,execution_ms}))},
-  issues:[...(!settings.configured?['服务端配置尚未就绪']:[]),...(!settings.scope_valid?['准入配置无效，已拒绝搜索']:[]),...(!release?['尚无本轮部署核验记录']:[]),'普通聊天正式延迟验收尚未完成；以本轮日志和真人反馈持续观察'],
-  note:'P1使用设备原有身份、人格和记忆。新注册且启用服务的设备自动纳入；总闸关闭或单机排除不关闭普通聊天。P2仍独立限于两台。'});
+  issues:[...(!settings.configured?['服务端配置尚未就绪']:[]),...(!settings.scope_valid?['准入配置无效，已拒绝搜索']:[]),...(!release?['尚无本轮部署核验记录']:[]),'设备实听和持续体验以实际日志与反馈为准'],
+  note:'全量内测保留设备原有身份、人格和记忆。新注册且启用服务的设备自动纳入；P2增加后台工具调用与受控网页读取。关闭P2退回P1，总闸关闭或单机排除不关闭普通聊天；独立候选配置另行显示。'});
+});
+searchP1AdminRoute.put('/tools',async c=>{
+ const {enabled}=z.object({enabled:z.boolean()}).strict().parse(await boundedSearchBody(c));
+ if(enabled&&!searchSettings().enabled)return c.json({ok:false,error:'search_unavailable'},409);
+ configStore.setFlag('p003.search.main.tools',enabled?'1':'0',who(c));
+ return c.json({ok:true,settings:searchSettings()});
 });
 searchP1AdminRoute.put('/enabled',async c=>{
  const {enabled}=z.object({enabled:z.boolean()}).strict().parse(await boundedSearchBody(c));

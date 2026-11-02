@@ -21,6 +21,14 @@ test('P1 admin has separate status, strict mutations and no P2 side effects',asy
  assert.equal((await(await req('')).json()).devices.find((d:any)=>d.sn===sn).search_allowed,false);
  assert.equal((await req('/devices/'+sn,'PUT',{excluded:false},editor)).status,403);
  assert.equal((await req('/devices/03800006','PUT',{excluded:true})).status,400);
+ assert.equal((await req('/tools','PUT',{enabled:true},editor)).status,403);
+ assert.equal((await req('/tools','PUT',{enabled:true,allowlist:[]})).status,400);
+ assert.equal((await req('/tools','PUT',{enabled:true})).status,200);
+ const p2=await(await req('')).json();assert.equal(p2.lane,'p2');assert.equal(p2.settings.tools,true);
+ assert.equal(configStore.getFlag('p003.search.main.tools')?.value,'1');
+ assert.equal(configStore.getFlag('p003.search.tools'),null);
+ assert.equal((await req('/tools','PUT',{enabled:false})).status,200);
+ assert.equal((await(await req('')).json()).lane,'p1');
  assert.equal((await req('/enabled','PUT',{enabled:false})).status,200);
  assert.equal(configStore.getFlag('p003.search.canary.enabled'),null);
  assert.equal(configStore.getFlag('p003.search.tools'),null);

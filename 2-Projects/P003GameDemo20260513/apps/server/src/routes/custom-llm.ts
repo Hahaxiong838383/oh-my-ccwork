@@ -204,7 +204,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
 
   return streamSSE(c, async (stream) => {
     let cancelled = false;
-    if (process.env.SEARCH_CANARY_ROOT) {
+    if (process.env.SEARCH_CANARY_ROOT || searchConfig.tools) {
       const cancel = () => {
         if (cancelled) return;
         cancelled = true;

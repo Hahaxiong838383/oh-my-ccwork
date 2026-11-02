@@ -1,0 +1,147 @@
+{
+  "status": "built_and_unit_tested; RTC_and_performance_pending",
+  "worker_sha256": "1218c0a6655e159ca024d2221035d8f80051384a54a853c7c6e03c4eea8f2fba",
+  "worker_source": {
+    "../../../4-Assets/contracts/p003-search-task-v1.json": "7c3d30bd97df3df2341d105644372dad9587a33f40e541acf5b7f7993bfec7fc",
+    "src/search_control_recovery.rs": "af2f8a634f07a5d0e080d55ef4a6df67686d6a74ece3f749686913e2513e2738",
+    "src/ordered_pcm.rs": "1781914dad34a0981ca81b3ddc5390acdd46318243bd569b73d1192f1d41f85a",
+    "src/speaker_id.rs": "450f01eb5f18ab33ae805562deda12e0933d9d2fdb7e4a8de19f72eacb6670d0",
+    "src/vad.rs": "3cf2bca4621e5dacc7efcf7766cac88e0a2ad9d7db0a3f08348957eaf301c7ab",
+    "src/volc.rs": "c58ab6604c65f1c3107307318c7478ae6aa7edf1b489f0626ef9a601423810e3",
+    "src/filler.rs": "90e0816005b2b93fe46352a4703465edc9b211b2ca1fad4b74cae56717a8e112",
+    "tools/search-route-preview/src/main.rs": "483099c3e941b8ee9d489d7dafea450c193ae235a0840792c5cc205db96702dc",
+    "src/search_policy.rs": "310f2c69fd5e5f63ecd48f14581c3179bfe8180d82453b0b27f0d7a6f865acbf",
+    "src/search_receipts.rs": "03026c9f27c81c21589ba3830d4ea37b358abf6f318a550a6706138b3a596d45",
+    "src/segmenter.rs": "a044798a0afb58f33ef272bb622bd3764442be84a3958c66af02894d30571199",
+    "src/device_ledger.rs": "7defc258595513afd15434f5e78f232076a9c9d4c9845d5da562636b42f94929",
+    "src/ready_confirm.rs": "a0fa66795ea21c21d40f671d2e781776647735da34cf6b70c0c59b2ddb527f70",
+    "src/worker.rs": "c93595442e1218eb76b88b42b91e9af3012cb964da581a6b1fb492f9a0530adc",
+    "src/search_policy_cases.rs": "1d50026ae40560412ed198a7dabdf654888bdc8d9c87397595c8f747d6939562",
+    "src/eot_snapshot.rs": "0ffdcd2b28233c2b9552b8aa02363f5860db579a7357cd721e988d19260f0259",
+    "src/tts_volc.rs": "6a333e155efd0757890271329bbfbb35cc810a6fae71a8ef5cceb933fd6b3600",
+    "src/playout.rs": "5a804e9b78b8576fb64198d2ec0070fc59aa71e7c20ad64ec240546239495230",
+    "src/tts.rs": "989bd3a007a4ee842ae1a6dd9f3d94b54a3393526d02a9c56a545a85d09c6ed3",
+    "src/job.rs": "77582cdf5ddfde283481b73b9712659a2bee3da021af8d0f00d125a72c18dae7",
+    "src/startup_participant.rs": "04f071337ba2ab8362124a6d09dea18671b803fad7ee92757976edff822db930",
+    "src/textproc.rs": "370d7413591454e69af4e049ff803f2a30a347b739058ab35b6cf36655df56e6",
+    "src/search-routing-defaults.json": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+    "src/pipeline.rs": "c259ce181ff05f5cd10d98b0d53affaf62666d1ce5510f67d225f99724a4a53a",
+    "Cargo.lock": "8249938113ac79e8d76a59cf87512b04a920bb2f5592fcf66e9bd4e29f768262",
+    "src/search_tasks.rs": "7e469c8a28647f1ad165402ae703783a8e56453054e4467f0afe0f871dc4b276",
+    "src/device_grammar_testdata.rs": "46e3d5411d664bdaf19d63d4506218c006c3ea0e9fbc8ced5483f4f667c17be3",
+    "src/preflight.rs": "950bb416101f68868b3bc19440affc5e2e372f80669f35155d8218e7fc2e2f63",
+    "src/token.rs": "9e5c7d3d0d5c18e6c5218c86e03e6aba8bfd3b9e186e623c1ac47d1f576b1b22",
+    "src/turn.rs": "537376f6301a2718a40d2797f67565ef7850a589704f6b03c589168232f5b977",
+    "Cargo.toml": "2f04829caedaff0af2639f0791b5180bee2832d283d39200d93fe80dbf07d4c3",
+    "src/search_dialogue.rs": "e9749ef9305da869cb7edc90a92e8251931966b84302814363f5150a429cf778",
+    "src/device_intent.rs": "b45b98b03df87370cc28e2d3febb7a931a4d308d46294509c88d9194585023dc",
+    "src/backchannel.rs": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c",
+    "tools/search-route-preview/Cargo.toml": "0385627127c0757ab95cdfd6dfe72ecb050b2f8bfca51ba58ec0c278df221d94",
+    "tools/search-route-preview/Cargo.lock": "a0627208a2bcf9d1d94a2891822a3d11ae196810d845c455c411f2ed8ae950dd",
+    "src/contract.rs": "fd57e2ecd11d523d9f44263d381ed94e4da6b2b82ec466fc7b879aafd9974ec4",
+    "src/voice_connect.rs": "5b75154960082f601af9eeb5c8005147da40e5494ee0d87686429ac6151982da",
+    "src/eot.rs": "0c6ca211e120145d986b4d950a5accb4dde243804659d9d4ac18778ea41dfbfe",
+    "src/search_routing.rs": "759a1c786815d22e396b6bfc7b6a248feb810230479f73adb1b7d358952c5deb",
+    "src/search_enrollment.rs": "d40dd87c6ede13a2f64de37130b94eab3bf2fc449b6f01c7b4b39a76343ad543",
+    "src/search_progress.rs": "6bc42795174050c5a77860cf11bd4c519fb19c11a95e77bb4c574a10dcca7547",
+    "src/say_defer.rs": "bbdafa12d8040ae4ebac8fab8bb74b2d0725e6071cd48b45e17b136dc6b4e6af",
+    "src/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "src/device_grammar.rs": "beb2a6adc33e4b2f932aacd1c348c6e42b427a51576283dc382e34220a7592c8",
+    "src/stt_volc.rs": "422f7629e5c4059c48a60e19a00ff21cccd4967b9110ef020174bddcd89516fb",
+    "src/gate.rs": "bcfabf259a70d961cb1a777394429471defc7efabf1f7c53dd3762423a73541f",
+    "src/search_canary.rs": "c1a4e6cb8292cad38458bea2fab74f9632769c09283fdce286cccd0640957925",
+    "src/caption_gate.rs": "33b73e3eb96ebcb21ec9644b8ed6f0a89ea9f004ecb57aab689e32573feb81e8",
+    "src/transcript_pub.rs": "e6ca31d914a16934d020048f04f50e192a6c1e583cfa511afe7563804f94ae66",
+    "src/llm.rs": "b300a739e042aff316f0caafe7331f8e7ffeef69571f9f73fd3bae6873b36fe5",
+    "src/candidate.rs": "4b3a3d489db169c9f8ee95e8e01ce79a9ccc577a89e8223d79a39fd584c73c8e",
+    "src/control.rs": "17e659e03beef5f81fe732e40f2bfcb9a6bb86733b5d667709779a2bc971cff7",
+    "src/room_cleanup.rs": "e254500d88416cfcf5a74e384b879d50cce5329b06ea1db2dc156213935bfcbc",
+    "src/device_grammar_slot_matrix.rs": "3e92cfc577cd058276076f82c5a273d732157cf6d763797d6b1a43eadedccbf6",
+    "src/config.rs": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218",
+    "src/main.rs": "8d12e174b02f2055d06e19fa95ca47ffcff1704f10c28e62ecf74603b30eadc9",
+    "src/tts_xfyun.rs": "b702c7eb40e4b23cec899ed108349ae13c5d269c16f9771c7cdac63257166ef5",
+    "src/owned_task.rs": "033742fc46f0bf627cb6826dbd6503d0b5436b69c77a71e53833da7a756eec3f",
+    "src/audit_capture.rs": "4b59e228dc3c4fe68efcdc902a413da6893f0bec10ca6d25d74090724acfde85",
+    "scripts/build-local.sh": "f0073b0335a28a3d0a3eb172a3f226014a55f38b207725439551534f270340fb",
+    ".cargo/config.toml": "33f71a9bdeb3b5108ae295ee9fedf9d903bcd2f6a78baf39da3158541b9d91db",
+    "assets/device_aliases.tsv": "e3fada6296b3767a3c8f57618cf0c99c7d9c60b9a777f47486b141586b6c16cb",
+    "../tests/fixtures/s2b1_canary_control_contract.json": "119e1f15c5fce0e62d968dd2f8a9ca8b240c4d7c7e70dffb2cbb5f741e812253",
+    "tests/fixtures/opcm/00-begin.opcm": "743115080248b978cf81854bc2c8d1cbd132381fd427f4adfa621c4e439eae2f",
+    "tests/fixtures/opcm/03-end.opcm": "84a89ca1d81f3b28e5cfeab282929a611c6d12b64b254f19f0066455ae19c8a6",
+    "tests/fixtures/opcm/02-tail.opcm": "f1d2a66a18805a7efd5f8655eb02d495c9907c188ca30cacd705cd1b6b0ed2e2",
+    "tests/fixtures/opcm/verification.json": "b9b480afe57ae23c58e4a384f12a2b0eaf8515fdb224001f26eeb49458d3d4d8",
+    "tests/fixtures/opcm/01-chunk.opcm": "9bb670656f6fa501125050fb4fab1049448576998e958d3316e779fba779aa84"
+  },
+  "brain_increment": {
+    "src/tools/search-simple-fallback.ts": {
+      "before": null,
+      "after": "bd3a8452f8ae4ca6850033bd0e24aeaea0c03b40ea0b022ba1dca7f26622e808"
+    },
+    "src/tools/search-chat-policy.ts": {
+      "before": "c681f8e54c394c9266d71cd026a39e2083b4fb6cf58349e9634e257f5d3d8ca7",
+      "after": "ed7614a945d76889734a79fdd7f239d6fdc4b5073ccfdb1d3b5f0487a6886884"
+    },
+    "src/tools/search-source-scope.ts": {
+      "before": null,
+      "after": "890b03dedd8899e6e0a269643aee3cafe2cf689a24210571b96f5fdd1c51bf1d"
+    },
+    "src/tools/search-runtime.ts": {
+      "before": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+      "after": "f43b2be8e7df20236b49d0eba5417d2b2d6df51c026b17309c5b2e7bdfad0b5c"
+    },
+    "src/tools/search-resume.ts": {
+      "before": "1d5ba20593819ddd6653b6ea45d8131e3c16036ebfa1639a4bcaa57ab852fa85",
+      "after": "77950a8e1e807395a236e5ff5232c7391447497496a5438e98657e48864056e2"
+    },
+    "src/tools/amap-weather.ts": {
+      "before": null,
+      "after": "5e8834abee94f8debaea782ff25bebde5a2a718b9950f63315b6025693c395a8"
+    },
+    "src/tools/search-tasks.ts": {
+      "before": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+      "after": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144"
+    },
+    "src/tools/search-executor.ts": {
+      "before": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+      "after": "f2b8d8ad55767739acce4a662235030e9a9a54b1a5a9031a2fc236187be0ced7"
+    },
+    "src/tools/search-dialogue-context.ts": {
+      "before": "5ac631693385fc64848e69c124a33bebec8e695eeefe06af2497d1022b7dffad",
+      "after": "ab6e51e38633afb45d5d5559479dd1076af48e6e8b2819153651217dbc79932e"
+    },
+    "src/tools/search-claim-stream.ts": {
+      "before": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+      "after": "2568f4e4b71da2350dda248deb5f5c5607f68ea15bce55ac89940d2f84b8427f"
+    },
+    "src/providers/gemini-llm.ts": {
+      "before": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140",
+      "after": "7ad2cd86c0692ec348a6b175baf58b8045484e6615c98214b0b6ad6a8b6b4735"
+    },
+    "src/providers/minimax-llm.ts": {
+      "before": "175ccc97309246e9c6283694d05ee204a8d388f3aa94f94b58649c1a2be20d01",
+      "after": "6da2296e4cb5b5e6dae743099cef76cda9cb1bd297b273bf6db05f6819dc53a9"
+    },
+    "src/routes/search-p1-admin.ts": {
+      "before": "4711e5d9fbb8adb61f673e67fddf5a568e3bcd99ed806a911fea18dcf054232c",
+      "after": "760c82c0e80cf0849f6e79c83d007b87d1388f1cfcd614994774328c27ae5015"
+    },
+    "src/routes/custom-llm.ts": {
+      "before": "df4f422d76fa772d99ef69b0a98e58fa181f28b8f62633d9c466fb9ae8fc1dc7",
+      "after": "7cf3122e81d2a30457aac855e32df9bdad971618329f01297ac0edbaeb82a0e6"
+    }
+  },
+  "unchanged_shared_modules": [
+    "listening",
+    "analytics",
+    "identity",
+    "persona",
+    "provider runtime",
+    "fixed weather city-level fallback"
+  ],
+  "admin_before_sha256": "10d81c98e613df363046b2426a0e664a785c8bd8d926b837c95718034ff6c423",
+  "admin_after_sha256": "c909848756dc79102204d9adbb733ffc85357e319e8d611dc7d130f67fc8ab96",
+  "worker_tests": 508,
+  "preview_tests": 39,
+  "typescript": "pass",
+  "rollback": "R1 2026-11-02; main.tools=0 -> P1; no database restore"
+}

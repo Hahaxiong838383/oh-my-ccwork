@@ -43,7 +43,9 @@ export function searchSettings() {
   const enabled=configured&&enrollment.scope_valid&&flag('enabled')==='1'&&(!candidate||Number(flag('canary.expires_at_ms'))>Date.now());
   const candidateDevices=(process.env.SEARCH_CANARY_SN??'').split(',');
   const toolScope=candidateDevices.length===enrollment.allowed.length&&enrollment.allowed.every(sn=>candidateDevices.includes(sn));
-  return {configured,enabled,...enrollment,tools:enabled&&candidate&&toolScope&&flag('tools')==='1',upstream:availability.state()};
+  // Main P2 has its own switch: the legacy candidate settings API cannot open it.
+  const tools=enabled&&(candidate?toolScope&&flag('tools')==='1':flag('main.tools')==='1');
+  return {configured,enabled,...enrollment,tools,upstream:availability.state()};
 }
 export function searchDeviceAllowed(sn:string):boolean {
  const s=searchSettings();if(!s.enabled||!/^BJP003\d{14}$/.test(sn)||s.excluded.includes(sn))return false;

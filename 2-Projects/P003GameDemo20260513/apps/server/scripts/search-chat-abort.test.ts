@@ -9,10 +9,12 @@ import {serve} from '@hono/node-server';
 import {request as httpRequest} from 'node:http';
 import {setTimeout as delay} from 'node:timers/promises';
 
-const dir=mkdtempSync(join(tmpdir(),'r22-chat-abort-'));
+const mainP2=process.env.P003_TEST_MAIN_P2==='1';
+const dir=mkdtempSync(join(tmpdir(),'r28-chat-abort-'));
 process.chdir(dir);
 for(const name of ['CONFIG','PROFILE','DEVICES','ACCOUNTS','CONVERSATION','FEEDBACK','LOCAL_AUDIO','RELATION_STATE'])process.env[name+'_DB_PATH']=join(dir,name+'.db');
 Object.assign(process.env,{AUTH_JWT_SECRET:'synthetic-secret',SEARCH_WORKER_ACCOUNT_ID:'worker',SEARCH_CANARY_ROOT:dir,SEARCH_TASK_DB_PATH:join(dir,'search.db'),DEEPSEEK_API_KEY:'synthetic',LLM_PROVIDER:'deepseek',MEMORY_EXTRACT_ENABLED:'0'});
+if(mainP2){delete process.env.SEARCH_CANARY_ROOT;Object.assign(process.env,{SEARCH_ENABLED:'1',SEARCH_ALLOWED_DOMAINS:'cstm.org.cn'});}
 const pending:{signal:AbortSignal;controller:ReadableStreamDefaultController<Uint8Array>;aborts:number}[]=[];
 const encode=(text:string)=>new TextEncoder().encode('data: '+JSON.stringify({choices:[{delta:{content:text}}]})+'\n\n');
 globalThis.fetch=(async(url,init)=>{
@@ -28,12 +30,13 @@ globalThis.fetch=(async(url,init)=>{
 const {configStore}=await import('../src/config-store.js');
 const {deviceRegistryStore}=await import('../src/device-registry-store.js');
 const {profileStore}=await import('../src/profile-store.js');
-const {closeSearchRuntime}=await import('../src/tools/search-runtime.js');
+const {closeSearchRuntime,searchSettings}=await import('../src/tools/search-runtime.js');
 const {customLlmRoute}=await import('../src/routes/custom-llm.js');
 const sn='BJP00326060100100004',room=`sn-${sn}-1`;
 deviceRegistryStore.add(sn,'test');deviceRegistryStore.setAccountId(sn,'device-A');
 profileStore.upsertBasics('device-A',{nickname:'测试同学',birthday:'2019-01',gender:'男孩'});
 configStore.setFlag('p003.search.allowlist',JSON.stringify([sn]),'test');configStore.setFlag('p003.search.enabled','1','test');configStore.setFlag('p003.search.canary.expires_at_ms',String(Date.now()+60000),'test');
+if(mainP2){configStore.setFlag('p003.search.scope','all_registered','test');configStore.setFlag('p003.search.main.tools','1','test');assert.equal(searchSettings().tools,true);}
 const token=await new SignJWT({accountId:'worker',role:'device'}).setProtectedHeader({alg:'HS256'}).setIssuer('p003').setAudience('kidshub').setExpirationTime('5m').sign(new TextEncoder().encode(process.env.AUTH_JWT_SECRET));
 const call=()=>customLlmRoute.request(`/chat/completions?room=${room}&token=${token}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:'我们聊小猫'}]})});
 const stored=()=>{const db=new DatabaseSync(process.env.CONVERSATION_DB_PATH!,{readOnly:true});try{return db.prepare('SELECT text FROM conversation').all().map(r=>r.text);}finally{db.close();}};
