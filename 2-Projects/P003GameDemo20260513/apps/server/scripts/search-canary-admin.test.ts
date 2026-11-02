@@ -33,3 +33,8 @@ assert.equal(summarizeCanary(pair).state,'p1');assert.equal(summarizeCanary(pair
 assert.equal(summarizeCanary({...pair,settings:{allowlist:[sn]}}).state,'blocked');
 assert.equal(summarizeCanary({...pair,allowlist:[sn,sn],settings:{allowlist:[sn,sn]}}).state,'blocked');
 assert.equal(summarizeCanary({...pair,selected:other}).selected_prepared,false);
+
+const listening={...base,enabled:true,agent:'p003-search-listening-20261030',lease:{...base.lease,agent:'p003-search-listening-20261030'}};
+assert.equal(summarizeCanary(listening).lease_ok,true);assert.equal(summarizeCanary(listening).scope_ok,true);assert.equal(summarizeCanary(listening).state,'regression');
+assert.equal(summarizeCanary({...listening,lease:base.lease}).lease_ok,false);
+assert.equal(summarizeCanary({...listening,agent:'untrusted',lease:{...base.lease,agent:'untrusted'}}).lease_ok,false);

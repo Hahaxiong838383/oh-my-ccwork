@@ -34,7 +34,7 @@ async function status(){
   }finally{db.close();}}catch{}
   const versions=new Map(otaStore.listDeviceStatus().map(d=>[d.sn,d]));
   const devices=deviceRegistryStore.list().map(d=>{const v=versions.get(d.sn);return {sn:d.sn,eligible:d.status==='active'&&Boolean(d.account_id),status:d.status,version_code:v?.version_code??null,version_name:v?.version_name??null,version_reported_at_ms:v?.last_check_at??null};});
-  const summary=summarizeCanary({now,selected,enabled:flag('enabled')==='1',expires:Number(flag('expires_at_ms')||0),allowlist:array(flag('allowlist')),lease,health,settings});
+  const summary=summarizeCanary({agent:flag('agent'),now,selected,enabled:flag('enabled')==='1',expires:Number(flag('expires_at_ms')||0),allowlist:array(flag('allowlist')),lease,health,settings});
   const confirmation=(Array.isArray(release?.operator_confirmations)?release.operator_confirmations:[release?.operator_confirmation]).find((v:any)=>v?.sn===selected);
   const confirmed=confirmation && Number.isInteger(confirmation.version_code) && confirmation.version_code>0
     && typeof confirmation.version_name==='string' && confirmation.version_name.length<=100

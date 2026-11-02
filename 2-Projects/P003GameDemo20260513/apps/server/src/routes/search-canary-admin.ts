@@ -1,11 +1,12 @@
-import {validCanaryAllowlist} from '../search-canary-policy.js';
+import {validCanaryAllowlist,isSearchCanaryAgent} from '../search-canary-policy.js';
 import {Hono} from 'hono';
 import {isValidToken,isAdminRole,getTokenUser} from './auth.js';
 export const DEFAULT_CANARY_SN='BJP00326070803800006';
-type SnapshotInput={now:number;enabled:boolean;expires:number;allowlist:string[];selected:string;lease:any;health:any;settings:any};
+type SnapshotInput={agent?:string;now:number;enabled:boolean;expires:number;allowlist:string[];selected:string;lease:any;health:any;settings:any};
 export function summarizeCanary(i:SnapshotInput){
   const health_ok=i.health?.status==='ok';
-  const lease_ok=i.lease?.agent==='p003-search-canary-20261021' && typeof i.lease?.generation==='string' && i.lease.generation.length>0 && Number.isFinite(i.lease.until_ms) && i.lease.until_ms>i.now && i.lease.until_ms-i.now<=15000;
+  const agent=i.agent??'p003-search-canary-20261021';
+  const lease_ok=isSearchCanaryAgent(agent) && i.lease?.agent===agent && typeof i.lease?.generation==='string' && i.lease.generation.length>0 && Number.isFinite(i.lease.until_ms) && i.lease.until_ms>i.now && i.lease.until_ms-i.now<=15000;
   const scope_ok=validCanaryAllowlist(i.allowlist) && Array.isArray(i.settings?.allowlist) && validCanaryAllowlist(i.settings.allowlist) && i.settings.allowlist.length===i.allowlist.length && i.allowlist.every(sn=>i.settings.allowlist.includes(sn));
   const state=!i.enabled?'closed':i.expires<=i.now?'expired':!health_ok||!lease_ok||!scope_ok||i.expires-i.now>168*3600_000?'blocked':!i.health.search?'regression':i.health.tools?'p2':'p1';
   return {state,health_ok,lease_ok,scope_ok,dispatch_requested:i.enabled,expires_at_ms:i.expires||null,configured_devices:i.allowlist,selected_prepared:scope_ok && i.allowlist.includes(i.selected)};
