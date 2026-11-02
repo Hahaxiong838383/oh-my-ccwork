@@ -1,118 +1,28 @@
 ---
 name: restart
-description: 服务重启与状态验证。重启所有后台进程并验证服务恢复正常。触发词："/restart"、"重启服务"、"重启后端"、"kill进程"、"服务状态"
+description: 诊断 mycc 后端服务状态，或在用户明确指定后重启该服务并验证恢复；“服务状态/检查进程”只做只读检查，不用于电脑重启前保全或批量结束智能体会话。
 ---
 
-# restart - 服务重启与状态验证
+# mycc 服务状态与按目标重启
 
-> 重启所有后台进程并验证服务恢复正常。触发词："/restart"、"重启服务"、"重启后端"、"kill进程"、"服务状态"
+先区分用户意图：
 
-## 触发条件
+- “服务状态”“检查进程”：只读检查，不执行停服务或 kill。
+- “准备重启电脑”“文件会不会丢”“能否重启”：home-studio 使用 `home-studio-reboot-preservation`；其他机器按其规则保全。不因关键词“重启”进入下面的服务重启流程。
+- 明确“重启 mycc 后端”或已授权处理该服务故障：定位真实服务后执行目标重启；若已授权，无需再确认相同动作。
 
-- 用户说"重启"、"restart"、"kill 进程"、"服务状态"、"检查进程"
-- 飞书通道异常需要重启时
+## 定位并记录状态
 
-## 执行流程
+读项目运行说明和共享记忆，确认当前机器上的mycc入口、端口与服务管理器；不套用其他机器的绝对路径或旧18080端口。查看该服务的管理器状态、监听者、PID/启动时间和健康响应，记录必要的恢复入口。不要整份输出含密钥的配置、`current.json`、进程环境或完整命令行。
 
-### 1. 状态快照（重启前）
+## 执行已授权的目标重启
 
-```bash
-# 列出所有相关进程
-echo "=== claude 进程 ===" && ps aux | grep -i claude | grep -v grep
-echo "=== mycc 后端 ===" && lsof -i :18080 2>/dev/null || echo "无 18080 占用"
-echo "=== node 后台进程 ===" && ps aux | grep "node.*tsx.*index.ts" | grep -v grep
-```
+优先使用真实的systemd user unit、launchd服务或项目维护入口，让原监督进程负责拉起。若确无管理器且必须结束进程，先验证确切PID属于目标服务并记录原启动方式，只对该PID操作。
 
-记录当前终端的 PID（不能 kill 自己）：
-```bash
-# 当前终端 claude 进程（交互式，有 tty）
-ps aux | grep -i claude | grep -v grep | grep 's0[0-9][0-9]' | awk '{print $2}'
-```
+不要用claude/node等宽模式批量kill，不通过tty猜测“保留当前进程就可以杀其余进程”。其他终端、智能体任务和用户会话不是默认重启范围；用户明确要求的范围更广时逐项识别。
 
-### 2. Kill 进程
+## 验证恢复
 
-**保护当前终端进程**，kill 其余所有 claude 相关进程：
+核新PID/启动时间、端口实际所有者、非空健康响应及请求所涉及的一条实际业务路径。只看到进程或HTTP200不足以判定功能恢复。若变更连接入口，只按已授权渠道报告，不自行发送外部通知。
 
-```bash
-MY_PID=$(ps aux | grep -i claude | grep -v grep | grep 's0[0-9][0-9]' | awk '{print $2}' | head -1)
-ps aux | grep -i claude | grep -v grep | awk '{print $2}' | grep -v "^${MY_PID}$" | while read pid; do
-  echo "killing $pid"
-  kill $pid 2>/dev/null
-done
-```
-
-同时 kill mycc 后端（如果 daemon 没自动拉起会手动重启）：
-```bash
-lsof -i :18080 -t 2>/dev/null | xargs kill 2>/dev/null
-```
-
-等待 2 秒让进程退出：
-```bash
-sleep 2
-```
-
-### 3. 验证进程已清理
-
-```bash
-echo "=== 存活检查 ===" && ps aux | grep -i claude | grep -v grep
-# 应该只剩当前终端进程
-```
-
-### 4. 重启 mycc 后端
-
-检查 daemon 是否自动拉起：
-```bash
-lsof -i :18080 2>/dev/null
-```
-
-如果没有自动拉起，手动启动：
-```bash
-cd /Users/rayman.chen/mycc
-.claude/skills/mycc/scripts/node_modules/.bin/tsx .claude/skills/mycc/scripts/src/index.ts start &
-sleep 3
-```
-
-### 5. 验证服务恢复
-
-```bash
-# 端口监听
-lsof -i :18080
-
-# 健康检查
-curl -s http://localhost:18080/health
-
-# 连接信息
-cat .claude/skills/mycc/current.json | python3 -m json.tool
-
-# 进程总览
-ps aux | grep -i claude | grep -v grep
-```
-
-### 6. 输出状态报告
-
-以表格形式汇报：
-
-| 检查项 | 状态 |
-|--------|------|
-| 旧进程已清理 | ? |
-| mycc 后端 (18080) | ? |
-| health 检查 | ? |
-| tunnel URL | ? |
-| 当前终端保留 | ? |
-
-## 注意事项
-
-- **绝对不能 kill 当前终端的 claude 进程**（通过 tty 标识区分）
-- mycc 后端有 launchd daemon，通常会自动拉起
-- 如果 tunnel URL 变了，需要通知用户更新连接
-- evomap heartbeat 进程被 kill 后不会自动拉起（非关键服务）
-- 重启后飞书 WebSocket 通道需要 ~5s 重新连接
-
-## 相关文件
-
-| 文件 | 说明 |
-|------|------|
-| `.claude/skills/mycc/scripts/src/index.ts` | mycc 后端入口 |
-| `.claude/skills/mycc/current.json` | 运行时连接信息 |
-| `install-daemon.sh` | daemon 安装脚本 |
-| `uninstall-daemon.sh` | daemon 卸载脚本 |
+未恢复时收集目标服务日志中的必要脱敏片段，核是否重复进程、端口竞争或配置未被运行时读取；依据证据处理，不循环盲目重启。输出目标、结果、证据和仍未恢复的功能。

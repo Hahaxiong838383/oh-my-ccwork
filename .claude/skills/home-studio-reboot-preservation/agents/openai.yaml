@@ -1,0 +1,4 @@
+interface:
+  display_name: "home-studio 重启前保全"
+  short_description: "固化临时文件和未提交工作树，验证数据库及飞牛备份并提供按需恢复入口"
+  default_prompt: "使用 $home-studio-reboot-preservation 为 home-studio 做重启前文件保全并核查当前重启就绪状态。"

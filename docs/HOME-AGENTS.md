@@ -16,6 +16,7 @@
 4. **共享记忆优先**：当川哥要求“更新记忆 / 同步记忆 / 确保 Claude 知道”时，必须写入 `~/mycc/0-System/` 共享记忆（至少 `RECENT_EVENTS.md`，必要时 `memory-items.md`/`task-log.md`）；Codex 私有 memory 只能作辅助，不能作为唯一记忆来源；secret 仍然一律不入记忆。
 5. **跨站大文件走统一规则**：Air↔公司传大文件或批量目录时，进入 `~/mycc` 读取 `docs/rules/MULTI-DEVICE.md` 和 `.claude/skills/cross-site-file-transfer/SKILL.md`；HOME 层只保留此指针，不复制传输参数。
 6. DO NOT send optional commentary
+7. **home-studio 数据盘优先（2026-10-30）**：在本机新建、下载、生成或导出与软件安装/运行路径无强绑定的独立数据与产物时，默认用 `/data/home-studio/`，不设文件大小门槛。写入前必须读 `~/mycc/docs/rules/HOME-STUDIO-STORAGE.md`（分类、已迁移路径和备份边界唯一真源），确认 `/data` 已实际挂载；未挂载则停止该次数据写入，不在根盘同名目录兜底。已迁移的旧路径软链接须保留。活跃源码、编译、依赖环境、运行数据库仍留 NVMe；知识文档/共享记忆继续按 mycc 归档，凭据与他人数据遵守第 3 条。这是第 1 条的本机独立数据存储例外，不适用于其他设备。
 
 ---
 
@@ -108,11 +109,13 @@ ssh -o ProxyJump=none -i ~/.ssh/id_ed25519 root@23.226.135.149   # 兜底直连
 |-------|---------|------|
 | cc | `~/.claude/rules/home-constitution.md`（指针文件） | rules 目录自动加载 |
 | codex | Air：`ln -s ~/AGENTS.md ~/.codex/AGENTS.md`；home-studio：`~/.codex/AGENTS.md` 由 `mycc/4-Assets/scripts/agent-entry-derive.py` 生成＝本文件原文块＋记忆入口块（systemd `agent-entry.path` 盯本文件与热索引自动重生成） | codex 全局只读 `~/.codex/AGENTS.md` 一个文件（在 ~/MyAgent、codeg 会话目录下不会读 `~/AGENTS.md`；2026-09-24 查实 home-studio 原先漏接此线） |
-| gemini | `~/.gemini/AGENTS.md` 顶部加引用段 | gemini settings `context.fileName` 已自动加载该文件 |
+| gemini | home-studio：`~/.gemini/GEMINI.md` 预置 HOME 与存储规则指针；其他机器按各自实际配置 | 本机未安装 CLI，入口已预置，未宣称运行时加载验收 |
 | grok | home-studio：`~/.grok/AGENTS.md` 由 `agent-entry-derive.py` 生成＝原权限说明＋本文件原文块＋记忆入口块；omp 编排脚本仍可 prompt 注入 | grok 会加载 `~/.grok/AGENTS.md` 与 Claude rules 目录（含 cc 的指针文件），但**不读 `~/AGENTS.md`**（2026-09-24 home-studio 验收会话实测：rules 段无本文件原文）。`~/.grok/README.md` 是产品文档，勿改 |
-| omp | 编排脚本模板注入本文件引用 | 脚本层 |
+| cursor | home-studio：`~/.cursor/hooks.json` 的 `sessionStart` 注入存储规则正文；`workspaceOpen` 为桌面/CLI 加载本地 alwaysApply 规则插件 | 官方全局 hook 已配置、派生规则与真源一致；旧进程事件触发未测，不保证缓存会话热更新 |
+| hermes | home-studio：`~/.hermes/SOUL.md` 附加 HOME 与存储规则指针 | 全局身份文件随新会话 system prompt 加载；已缓存会话不保证热更新 |
+| omp / openclaw | 接入时由全局入口或编排模板注入本文件及存储规则引用 | home-studio 当前未安装；安装验收须核真实加载，不以 Codeg enabled 标记代替 |
 
-**新 agent 入场握手 checklist**：① 在 §二 YAML `agent_cfg` 加配置目录 ② 按上表接线 ③ 纳入 HOME-lint ④ 确认 secret / 归档 / 并发规则已传达。
+**新 agent 入场握手 checklist**：① 在 §二 YAML `agent_cfg` 加配置目录 ② 按上表接线 ③ 纳入 HOME-lint ④ 确认 secret / 归档 / 并发规则已传达 ⑤ home-studio 新智能体/runtime 必须接入 §一.7 数据盘规则，并用实际会话加载证据验收。
 
 **检测**：
 - HOME-lint（`~/mycc/4-Assets/scripts/home-lint-structure.sh`）解析 §二 YAML 白名单查顶层散落，应用 `lint_ignore_globs` 过滤;cron 或各 agent Stop hook 触发。

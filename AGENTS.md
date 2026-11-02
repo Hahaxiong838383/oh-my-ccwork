@@ -25,6 +25,7 @@
 4. **简洁直接**，不废话、不客套
 5. **先跑起来再迭代**，够用就行
 6. DO NOT send optional commentary
+7. **home-studio 数据盘优先**：新独立数据/产物默认 `/data/home-studio/`，不设大小门槛；生成、下载、导出或改输出路径前读 `docs/rules/HOME-STUDIO-STORAGE.md`。保留已迁移软链；源码/编译/数据库仍留 NVMe，知识文档与共享记忆照常归档。
 
 ## 记忆系统
 
