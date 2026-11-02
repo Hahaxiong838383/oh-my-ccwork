@@ -6,6 +6,8 @@ import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { accountStore } from '../account-store.js';
 import { kickoffLocalAudioOnce } from '../local-audio-generator.js';
+import { requiresBleProof } from '../ble-binding-policy.js';
+import { getBleBindingStore } from '../ble-binding-store.js';
 
 // 家长端建档 + 配网绑定 API。鉴权用邀请码登录 JWT（与 WS 鉴权同 verifyAuthToken），按 accountId 隔离。
 const profileRoute = new Hono<{ Variables: { accountId: string } }>();
@@ -45,8 +47,19 @@ profileRoute.post('/', async (c) => {
   if (!parsed.success) {
     return c.json({ ok: false, error: 'bad_request' }, 400);
   }
-  const profile = profileStore.upsertProfile(c.get('accountId'), parsed.data);
-  return c.json({ ok: true, profile });
+  const accountId = c.get('accountId');
+  const profile = profileStore.upsertProfile(accountId, parsed.data);
+  try {
+    // Keep ownership stable while updating basic fields; conversation memories are preserved.
+    const syncedDevices = getBleBindingStore().syncOwnedProfiles(accountId, (brainAccountId) => {
+      if (accountStore.findAccount(brainAccountId)?.role !== 'device') throw new Error('invalid Brain account');
+      profileStore.upsertProfile(brainAccountId, parsed.data);
+    });
+    return c.json({ ok: true, profile, synced_devices: syncedDevices });
+  } catch {
+    // Cross-database writes are intentionally idempotent, not presented as one atomic transaction.
+    return c.json({ ok: false, error: 'profile_sync_pending', profile_saved: true, retryable: true }, 503);
+  }
 });
 
 // 读当前账号的孩子档案（无则 profile=null）
@@ -93,7 +106,8 @@ export function performSnBinding(
   sn: string,
 ):
   | { ok: true; brainAccountId: string; syncedProfile: boolean; alreadyBound: boolean }
-  | { ok: false; error: 'sn_not_available' | 'sn_taken' } {
+  | { ok: false; error: 'sn_not_available' | 'sn_taken' | 'device_proof_required' } {
+  if (requiresBleProof(sn)) return { ok: false, error: 'device_proof_required' };
   const device = deviceRegistryStore.get(sn);
   if (!device || device.status !== 'active') return { ok: false, error: 'sn_not_available' };
   if (device.parent_account_id && device.parent_account_id !== parentAccountId) {
@@ -136,6 +150,7 @@ profileRoute.post('/bind-sn', async (c) => {
   // 核心序列抽为 performSnBinding（与配网 claim 共用）；本路由保持原响应口径不变
   const r = performSnBinding(accountId, sn);
   if (!r.ok) {
+    if (r.error === 'device_proof_required') return c.json({ ok: false, error: 'device_proof_required', message: '请通过蓝牙完成设备身份验证' }, 403);
     if (r.error === 'sn_not_available') {
       // 不在台账/已停用统一一种口径（不区分暴露台账内容）
       return c.json({ ok: false, error: 'sn_not_available', message: '设备不存在或未激活' }, 404);

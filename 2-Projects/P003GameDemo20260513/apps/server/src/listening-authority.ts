@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 import { jwtVerify } from 'jose';
+import { acceptsDeviceBindingCredential } from './ble-binding-policy.js';
 import { issueListeningGrant,verifyListeningGrant,type ListeningBinding } from './listening-grant.js';
 import { listeningDigest,listeningSessionSchema,parseListeningRequest,validListeningWorkerCapabilities,LISTENING_VOICE_CAPABILITY,type SessionWire,type ListeningRequest } from './listening-http-contract.js';
 import { ListeningAuthorityStore,ListeningError,listeningSnapshot,type AuthoritySession,type ListeningSnapshot } from './listening-authority-store.js';
@@ -73,6 +74,7 @@ export class ListeningAuthority {
   }catch{return null;}
   if(credential.kind!=='p003-device'||credential.sub!==input.sn||!Number.isSafeInteger(credential.iat)||!Number.isSafeInteger(credential.exp)
    ||credential.iat!>Math.floor(this.now()/1000)||credential.exp!<=credential.iat!)return null;
+  if(!acceptsDeviceBindingCredential(input.sn,credential.binding_version))return null;
   const device=this.store.device(input.sn);if(!device||device.status!=='active'||!device.accountId||credential.iat!<=(device.credentialNotBefore??-1))return null;
   const session:SessionWire={sn:input.sn,room:input.room,session_id:input.session_id,trace_id:input.trace_id,account_id:device.accountId};
   if(!listeningSessionSchema.safeParse(session).success)return null;

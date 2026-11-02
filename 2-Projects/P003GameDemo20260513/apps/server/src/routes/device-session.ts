@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt } from 'jose';
 import { verifyDeviceCredential as verifyPureDeviceCredential } from '../device-credential.js';
+import { noteBleActivation } from './ble-bindings.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
 import { configStore, type RuntimeFlag } from '../config-store.js';
@@ -207,7 +208,7 @@ function logQuiet(entry: SessionLogEntry): void {
 export async function verifyDeviceCredential(
   header: string | undefined,
   secret: string,
-): Promise<{ sn: string } | null> {
+): Promise<{ sn: string; bindingVersion?: number } | null> {
   return verifyPureDeviceCredential(header, secret, credentialAcceptedByRevocation);
 }
 
@@ -422,6 +423,7 @@ deviceSessionRoute.post('/session', async (c) => {
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });
+  noteBleActivation(cred.sn, cred.bindingVersion);
   return c.json(resp);
 });
 
@@ -446,6 +448,7 @@ deviceSessionRoute.post('/session/prefetch', async (c) => {
 
   console.log(`[device-session] prefetch sn=${cred.sn} prefetch=${prefetchId}`);
   logQuiet({ sn: cred.sn, room: '', session_id: prefetchId, trace_id: '', status: 'prefetch', ttl_s: 0, ms: 0 });
+  noteBleActivation(cred.sn, cred.bindingVersion);
   return c.json({ status: 'warming', prefetch_id: prefetchId, expires_at_ms: exp });
 });
 

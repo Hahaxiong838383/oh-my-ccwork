@@ -41,6 +41,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { requiresBleProof } from '../ble-binding-policy.js';
 import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
@@ -224,6 +225,7 @@ type PreauthApply =
   | { ok: false; error: string };
 /** 预授权 + 家长绑定 + 晚到 announce 代确认（添加设备 / PUT preauth 共用）。 */
 function applyPreauth(sn: string, phone: string, days: number, by: string): PreauthApply {
+  if (requiresBleProof(sn)) return { ok: false, error: '该设备须通过蓝牙身份验证，不能使用旧预授权' };
   const existing = accountStore.findByPhone(phone);
   if (existing && existing.role === 'device') return { ok: false, error: '该手机号对应设备账号，不能绑定为家长' };
   const device = deviceRegistryStore.get(sn);
@@ -439,6 +441,7 @@ adminDataRoute.delete('/devices/:sn', (c) => {
 adminDataRoute.post('/devices/:sn/credential', async (c) => {
   try {
     const sn = c.req.param('sn').trim();
+    if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required', message: '请通过蓝牙身份验证恢复设备凭据' }, 403);
     const device = deviceRegistryStore.get(sn);
     if (!device) return c.json({ ok: false, error: '设备不在台账中，请先添加' }, 404);
     if (device.status !== 'active') {

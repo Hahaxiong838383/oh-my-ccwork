@@ -8,6 +8,9 @@ import { pairingStore, hashToken, IDEMPOTENT_WINDOW_MS, TOKEN_TTL_S } from '../p
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDevicePk, encryptCredential, ECIES_ALG } from '../pairing-crypto.js';
 import { performSnBinding } from './profile.js';
+import { requiresBleProof } from '../ble-binding-policy.js';
+import { claimBleCredential } from './ble-bindings.js';
+import { bodyLimit } from 'hono/body-limit';
 
 /**
  * 配网即绑定（联调合同 v3 冻结版 + 三项口径确认回执 2026-08-22）。
@@ -109,6 +112,7 @@ parentPairingRoute.post('/confirm', async (c) => {
   const parsed = ConfirmSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
   const sn = parsed.data.sn.toUpperCase();
+  if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required' }, 403);
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'bad_request' }, 400);
   if (!validateDevicePk(parsed.data.pk)) return c.json({ ok: false, error: 'invalid_pk' }, 400);
   // nonce 形状：canonical base64url ≥16 字符（≥128bit 由设备保证，server 只验形状）
@@ -175,10 +179,15 @@ const ClaimSchemaV2 = z.object({
 });
 
 export const devicePairingRoute = new Hono();
+devicePairingRoute.use('/claim', bodyLimit({ maxSize: 4096, onError: c => c.json({ ok: false, error: 'bad_request' }, 400) }));
 
 devicePairingRoute.post('/claim', async (c) => {
   const conf = cfg();
   const body = await c.req.json().catch(() => ({}));
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({ ok: false, error: 'bad_request' }, 400);
+  if (body.binding_protocol === 'ble-key-v1') return claimBleCredential(c, body);
+  if (body.binding_protocol !== undefined) return c.json({ ok: false, error: 'bad_request' }, 400);
+  if (typeof body.sn === 'string' && requiresBleProof(body.sn.trim().toUpperCase())) return c.json({ ok: false, error: 'device_proof_required', code: 'device_proof_required' }, 403);
 
   // ── 协议分派：pairing_protocol=2（nonce 桥 + ECIES）优先；v1 受开关控制（默认关）──
   if ((body as Record<string, unknown>).pairing_protocol === 2) return claimV2(c, body, conf);
@@ -381,6 +390,7 @@ export function deviceAnnounceState(input: {
 
 /** 预授权代确认（announce 到达 / 晚到预授权两个触发点共用）。家长优先：同 SN 已有未认领会话即跳过。 */
 export function tryAutoConfirm(sn: string, nonceHash: string, devicePkB64: string, trigger: 'announce' | 'late_preauth'): AutoConfirmResult {
+  if (requiresBleProof(sn)) return { done: false, reason: 'device_proof_required' };
   if (!cfg().preauthEnabled) return { done: false, reason: 'disabled' };
   const preauth = pairingStore.activePreauth(sn);
   if (!preauth) return { done: false, reason: 'no_preauth' };
@@ -398,6 +408,7 @@ export function tryAutoConfirm(sn: string, nonceHash: string, devicePkB64: strin
 
 /** 后台一键确认：拿 announce 存下的 hash + pk，以指定家长账号确认。不覆盖已存在的未认领会话（家长优先）。 */
 export function manualConfirm(sn: string, parentAccountId: string, by: string): AutoConfirmResult {
+  if (requiresBleProof(sn)) return { done: false, reason: 'device_proof_required' };
   const ann = pairingStore.findAnnounce(sn);
   if (!ann || ann.expires_at <= Date.now()) return { done: false, reason: 'no_announce' };
   if (!validateDevicePk(ann.device_pk)) return { done: false, reason: 'invalid_pk' };
@@ -417,6 +428,7 @@ devicePairingRoute.post('/announce', async (c) => {
   const parsed = AnnounceSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
   const sn = parsed.data.sn.toUpperCase();
+  if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required' }, 403);
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'bad_request' }, 400);
   if (!/^[A-Za-z0-9_-]{16,}$/.test(parsed.data.nonce)) return c.json({ ok: false, error: 'bad_request' }, 400);
   if (!validateDevicePk(parsed.data.pk)) return c.json({ ok: false, error: 'invalid_pk' }, 400);

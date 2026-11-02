@@ -12,7 +12,7 @@ import { readFileSync,lstatSync,statfsSync } from 'node:fs';
 import { isAbsolute,resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { timingSafeEqual,createHash } from 'node:crypto';
-import { verifyDeviceCredential } from '../device-credential.js';
+import { verifyDeviceCredential,type DeviceCredentialStateReader } from '../device-credential.js';
 import { AnalyticsDeviceReader,type AnalyticsDeviceContext } from './device-context.js';
 import { AnalyticsStore,AnalyticsStorageUnavailable } from './store.js';
 import { LIMITS,validRequestId,validateAnalyticsBatch } from './contracts.js';
@@ -28,7 +28,7 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
     return {enabled:data.enabled,valid:true};
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
-type Reader={uploadPolicy?():UploadPolicy|null;arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
+type Reader={uploadPolicy?():UploadPolicy|null;arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readCredentialState:DeviceCredentialStateReader;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
 export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;bodyTimeoutMs?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
@@ -90,7 +90,8 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
   app.post('/v1/device/analytics/events:batch',async c=>{
     const started=performance.now();requests++;
     const error=(code:string,status:400|401|403|413|429|503,retry?:number)=>{if(retry!==undefined)c.header('Retry-After',String(retry));return c.json({ok:false,error_code:code},status);};
-    const cred=await verifyDeviceCredential(c.req.header('authorization'),options.authSecret,options.reader.acceptsCredential.bind(options.reader));
+    if(typeof options.reader.readCredentialState!=='function')return error('ANALYTICS_DEPENDENCY_UNAVAILABLE',503,30);
+    const cred=await verifyDeviceCredential(c.req.header('authorization'),options.authSecret,options.reader.acceptsCredential.bind(options.reader),options.reader.readCredentialState.bind(options.reader));
     if(!cred)return error('INVALID_DEVICE_CREDENTIAL',401);
     const context=options.reader.readAnalyticsDeviceContext(cred.sn),initial=admission();
     if(!initial.enabled||!initial.valid)return error('ANALYTICS_UPLOAD_DISABLED',503,900);

@@ -74,6 +74,7 @@ class AccountStore {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
     this.db.exec('PRAGMA journal_mode = WAL;');
+    this.db.exec('PRAGMA busy_timeout = 5000;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS account (
         id TEXT PRIMARY KEY,
@@ -197,22 +198,32 @@ class AccountStore {
    * 并发双请求由 phone 唯一索引兜底：插入冲突后重查返回。
    */
   upsertPhoneAccount(phone: string): Account {
+    return this.upsertPhoneAccountWithStatus(phone).account;
+  }
+
+  /** Phone identity and isNew are decided in one write transaction, including acct-NN allocation. */
+  upsertPhoneAccountWithStatus(phone: string): { account: Account; isNew: boolean } {
     const normalized = phone.trim();
-    const existing = this.findByPhone(normalized);
-    if (existing) return existing;
-    const accountNo = nextAccountNumber(this.listAccounts());
-    const accountId = formatAccountId(accountNo);
-    const nickname = `家长${normalized.slice(-4)}`;
+    this.db.exec('BEGIN IMMEDIATE');
     try {
+      const existing = this.findByPhone(normalized);
+      if (existing) {
+        this.db.exec('COMMIT');
+        return { account: existing, isNew: false };
+      }
+      const accountNo = nextAccountNumber(this.listAccounts());
+      const accountId = formatAccountId(accountNo);
+      const nickname = `家长${normalized.slice(-4)}`;
       this.db
         .prepare(`INSERT INTO account (id, nickname, role, created_at, phone) VALUES (?, ?, 'parent', ?, ?)`)
         .run(accountId, nickname, Date.now(), normalized);
+      const account = this.findByPhone(normalized)!;
+      this.db.exec('COMMIT');
+      return { account, isNew: true };
     } catch {
-      const raced = this.findByPhone(normalized);
-      if (raced) return raced;
+      this.db.exec('ROLLBACK');
       throw new Error('phone_account_create_failed');
     }
-    return this.findByPhone(normalized)!;
   }
 
   /**

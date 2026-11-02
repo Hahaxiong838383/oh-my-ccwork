@@ -1,0 +1,76 @@
+{
+  "source_base": "6c2f828d4fc6671dfb28edeeae8e49ae6b6528fc",
+  "observed_at_cst": "2026-11-02 20:15:32",
+  "rechecked_through_cst": "2026-11-02 20:34:17",
+  "origin": "production read-only snapshot; matches miniapp worktree uncommitted BLE changes; not a deployment",
+  "files": [
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/device-registry-store.ts",
+      "sha256": "2242517c76fe72502af8a1897507612689bd3804e28766465e2e1b0af8109f63"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/wechat-phone.ts",
+      "sha256": "bc10b7270a141caf18ce2a3b38af069125691678228e329ffe7bb283a7e15513"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ble-binding-store.ts",
+      "sha256": "4c72960343edd4ce6b8752c912ed0df329bfd25d6e04c45a59cbbb7209efad89"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/listening-authority.ts",
+      "sha256": "c401b6b5583bba07fa33e6ffab427dee6a6909b8149084c868914a8f45f92ae7"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/device-credential.ts",
+      "sha256": "0d85a49f403ad10cb428fbbd5347838e5522cb69453aac1c5f560b269f4969d4"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/account-store.ts",
+      "sha256": "949f4a92d4e26eff3addd925416cd050c6be0501a6a238f22336dfbbfc942f9a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/index.ts",
+      "sha256": "cb852a0ca5d2efd9278088facc224d5a5351acd712f7f65cab84b4e665400695"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ble-binding-proof.ts",
+      "sha256": "a49da73a718725b93494c7e49655f3928f617420bcee639b5f04a782e853c374"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ble-binding-policy.ts",
+      "sha256": "f2c403bf809e48295900a6c7eb963c34f74ce793af132c81524ee5f5bc8b2991"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/pairing.ts",
+      "sha256": "f1bdad9533d8090f8b5e40ff01148cdaec7f2fc272697c5cf14f3a3e9634a34a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/admin-data.ts",
+      "sha256": "20ade5235768f0bf4d48ee48a149907fc6cbe7a983c3c2f2490d7ef1840ae426"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/ble-bindings.ts",
+      "sha256": "80a370a2efa43e46c667e3dc2e6b3b95b361600f452e482785e5adb5de44f93a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/profile.ts",
+      "sha256": "a6f8536d42ee7907ecb2df15e4455b614279f87789fbf43d07a24a231e335681"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/wechat-auth.ts",
+      "sha256": "0ecb62555f1e823044eb031065af3b52345089a4e54e297c45ad61e9daacdd60"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/device-session.ts",
+      "sha256": "6763d2275f935b808e14415482f51103f1ffb449af34ff6508c23e8caf2fe531"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/device-context.ts",
+      "sha256": "b64f9e5faea5d18709904ad473d57c233714564b89a0770aecb9a090ad860336"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/index.ts",
+      "sha256": "8df8f6f42f5614ed1dd591b017a50c1cd1ddbf5912c914483774b7e2f4ebfa7a"
+    }
+  ]
+}

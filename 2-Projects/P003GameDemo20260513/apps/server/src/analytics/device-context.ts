@@ -3,6 +3,7 @@ import { createHmac } from 'node:crypto';
 import { dirname,join,isAbsolute } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {UPLOAD_POLICY_KEY,parseUploadPolicy} from './upload-policy.js';
+import type {DeviceCredentialState} from '../device-credential.js';
 export type AnalyticsDeviceContext = { deviceKey: string; active: boolean; uploadEnabled: boolean; uploadHourCst: number };
 export class AnalyticsDependencyUnavailable extends Error { constructor(){super('ANALYTICS_DEPENDENCY_UNAVAILABLE');} }
 export class AnalyticsDeviceReader {
@@ -21,6 +22,27 @@ export class AnalyticsDeviceReader {
     return this.read(this.options.devicesPath, db => {
       const row = db.prepare('SELECT not_before_sec FROM device_credential_revocation WHERE sn=?').get(subject) as {not_before_sec:number}|undefined;
       return !row || iatSec > row.not_before_sec;
+    });
+  }
+  /** Same read-only dependency as analytics context; never opens the main-service writer. */
+  readCredentialState(subject:string):DeviceCredentialState {
+    return this.read(this.options.devicesPath,db=>{
+      const row=db.prepare(`SELECT d.sn AS current_sn,d.binding_policy,d.binding_version,d.status,d.parent_account_id,
+        s.binding_policy AS persisted_policy,s.binding_version AS persisted_version,r.not_before_sec
+        FROM (SELECT ? AS sn) q
+        LEFT JOIN device_registry d ON d.sn=q.sn
+        LEFT JOIN device_binding_state s ON s.sn=q.sn
+        LEFT JOIN device_credential_revocation r ON r.sn=q.sn`).get(subject) as {
+          current_sn:string|null;binding_policy:string|null;binding_version:number|null;status:'active'|'disabled'|null;
+          parent_account_id:string|null;persisted_policy:string|null;persisted_version:number|null;not_before_sec:number|null;
+        };
+      const persisted=row.persisted_policy!==null&&row.persisted_policy!=='legacy';
+      const binding=row.current_sn?{
+        binding_policy:row.binding_policy==='legacy'&&persisted?row.persisted_policy!:row.binding_policy!,
+        binding_version:persisted?Math.max(row.binding_version!,row.persisted_version!):row.binding_version!,
+        status:row.status!,parent_account_id:row.parent_account_id,
+      }:persisted?{binding_policy:row.persisted_policy!,binding_version:row.persisted_version!,status:'disabled' as const,parent_account_id:null}:null;
+      return {binding,revokedThroughSec:row.not_before_sec};
     });
   }
   uploadPolicy(){return this.read(this.options.configPath,db=>{
@@ -61,6 +83,10 @@ export class AnalyticsDeviceReader {
   }
   readiness(): boolean {
     this.read(this.options.devicesPath, db=>db.prepare('SELECT sn FROM device_credential_revocation LIMIT 1').get());
+    this.read(this.options.devicesPath,db=>{
+      db.prepare('SELECT binding_policy,binding_version,parent_account_id FROM device_registry LIMIT 1').get();
+      db.prepare('SELECT sn,binding_policy,binding_version FROM device_binding_state LIMIT 1').get();
+    });
     this.read(this.options.configPath, db=>db.prepare('SELECT key FROM device_config LIMIT 1').get());
     return true;
   }

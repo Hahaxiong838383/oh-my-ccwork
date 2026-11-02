@@ -10,6 +10,9 @@ import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.
 import { authRoute } from './routes/auth.js';
 import { inviteAuthRoute } from './routes/invite-auth.js';
 import { smsAuthRoute } from './routes/sms-auth.js';
+import { wechatAuthRoute } from './routes/wechat-auth.js';
+import { bleBindingsRoute } from './routes/ble-bindings.js';
+import { getBleBindingStore } from './ble-binding-store.js';
 import { feedbackRoute } from './routes/feedback.js';
 import { conversationRoute } from './routes/conversation.js';
 import { visionRoute } from './routes/vision.js';
@@ -38,6 +41,8 @@ import { getListeningAuthority } from './listening-runtime.js';
 import { generateListeningContent,readListeningPersonality } from './listening-content.js';
 
 const app = new Hono();
+// Additive schema is checked at startup; no device is automatically enrolled in BLE identity policy.
+getBleBindingStore();
 const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
@@ -46,6 +51,7 @@ app.route('/internal/ark-facts',arkFactsRoute({secret:()=>process.env.ARK_FACTS_
 app.route('/api/auth', authRoute);
 app.route('/api/auth', inviteAuthRoute);
 app.route('/api/auth', smsAuthRoute);
+app.route('/api/auth', wechatAuthRoute);
 app.route('/api/feedback', feedbackRoute);
 app.route('/api/conversation', conversationRoute);
 app.route('/api/vision', visionRoute);
@@ -72,6 +78,7 @@ app.route('/v1/parent/devices', parentTelemetryRoute);
 app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);
 // 配网家长侧（联调合同 v3）：token 签发 + H5 轮询
 app.route('/api/parent/pairing', parentPairingRoute);
+app.route('/api/parent/ble-bindings', bleBindingsRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
 // Default-off independent background jobs; ordinary chat never awaits these requests.

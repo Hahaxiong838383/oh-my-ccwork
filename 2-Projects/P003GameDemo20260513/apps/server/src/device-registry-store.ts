@@ -16,12 +16,21 @@ import { DatabaseSync } from 'node:sqlite';
 
 export type DeviceStatus = 'active' | 'disabled';
 
+export type DeviceCredentialBindingState = {
+  binding_policy: string;
+  binding_version: number;
+  status: DeviceStatus;
+  parent_account_id: string | null;
+};
+
 export type DeviceRecord = {
   sn: string;
   note: string;
   status: DeviceStatus;
   account_id: string | null; // brain 账号关联（Worker Brain tab）
   parent_account_id: string | null; // 家长账号关联（小程序绑定/admin 手工；建档下发链的取数源）
+  binding_policy: string; // legacy | ble-key-v1; unknown policies fail closed
+  binding_version: number; // Monotonic ownership generation; never reset on delete/re-add.
   public_id: string | null; // 对外不透 SN 的稳定 id（dev_<16hex>，telemetry 合同 §9：H5 路由/前端日志零 SN）
   worldview_override: string; // per-device 世界观人设（空 = 默认 ARK_WORLDVIEW_BASE）
   prompt_addendum: string; // per-device 附加规则（空 = 关闭；拼接在 systemPrompt 最末）
@@ -109,7 +118,85 @@ class DeviceRegistryStore {
       );
     `);
     this.migrate();
+    this.installBindingPolicy();
     try { installArkIdentityEpoch(this.db); this.arkEpochReady = true; } catch { console.error('[ark] identity_epoch_unavailable'); }
+  }
+
+  /** Security migration is mandatory: do not start without version enforcement. */
+  private installBindingPolicy(): void {
+    const columns = this.db.prepare('PRAGMA table_info(device_registry)').all() as { name: string }[];
+    if (!columns.some((column) => column.name === 'binding_policy')) {
+      this.db.exec("ALTER TABLE device_registry ADD COLUMN binding_policy TEXT NOT NULL DEFAULT 'legacy'");
+    }
+    if (!columns.some((column) => column.name === 'binding_version')) {
+      this.db.exec('ALTER TABLE device_registry ADD COLUMN binding_version INTEGER NOT NULL DEFAULT 0');
+    }
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS device_binding_state (
+        sn TEXT PRIMARY KEY,
+        binding_policy TEXT NOT NULL,
+        binding_version INTEGER NOT NULL
+      );
+      INSERT OR IGNORE INTO device_binding_state
+        SELECT sn,binding_policy,binding_version FROM device_registry;
+      CREATE TRIGGER IF NOT EXISTS device_binding_state_update
+        AFTER UPDATE OF binding_policy,binding_version ON device_registry BEGIN
+        INSERT INTO device_binding_state VALUES(NEW.sn,NEW.binding_policy,NEW.binding_version)
+        ON CONFLICT(sn) DO UPDATE SET
+          binding_policy=CASE WHEN device_binding_state.binding_policy <> 'legacy'
+            THEN device_binding_state.binding_policy ELSE excluded.binding_policy END,
+          binding_version=MAX(device_binding_state.binding_version,excluded.binding_version);
+      END;
+      CREATE TRIGGER IF NOT EXISTS device_binding_state_delete
+        AFTER DELETE ON device_registry BEGIN
+        INSERT INTO device_binding_state VALUES(OLD.sn,OLD.binding_policy,OLD.binding_version+1)
+        ON CONFLICT(sn) DO UPDATE SET
+          binding_policy=CASE WHEN device_binding_state.binding_policy <> 'legacy'
+            THEN device_binding_state.binding_policy ELSE excluded.binding_policy END,
+          binding_version=MAX(device_binding_state.binding_version,OLD.binding_version)+1;
+      END;
+      CREATE TRIGGER IF NOT EXISTS device_binding_state_insert
+        AFTER INSERT ON device_registry BEGIN
+        INSERT OR IGNORE INTO device_binding_state VALUES(NEW.sn,NEW.binding_policy,NEW.binding_version);
+        UPDATE device_registry SET
+          binding_policy=(SELECT binding_policy FROM device_binding_state WHERE sn=NEW.sn),
+          binding_version=MAX(binding_version,(SELECT binding_version FROM device_binding_state WHERE sn=NEW.sn))
+        WHERE sn=NEW.sn;
+      END;
+      CREATE TRIGGER IF NOT EXISTS device_binding_owner_generation
+        AFTER UPDATE OF parent_account_id ON device_registry
+        WHEN NEW.parent_account_id IS NOT OLD.parent_account_id
+          AND NEW.binding_version <= OLD.binding_version BEGIN
+        UPDATE device_registry SET binding_version=OLD.binding_version+1 WHERE sn=NEW.sn;
+      END;
+    `);
+  }
+
+  /** A removed BLE device keeps its policy tombstone; env fallback cannot downgrade it. */
+  credentialBindingState(sn: string): DeviceCredentialBindingState | null {
+    const row = this.db.prepare(`SELECT binding_policy,binding_version,status,parent_account_id
+      FROM device_registry WHERE sn=?`).get(sn) as DeviceCredentialBindingState | undefined;
+    const persisted = this.db.prepare('SELECT binding_policy,binding_version FROM device_binding_state WHERE sn=?')
+      .get(sn) as { binding_policy: string; binding_version: number } | undefined;
+    if (row) {
+      if (persisted && persisted.binding_policy !== 'legacy') {
+        return {
+          ...row,
+          binding_policy: row.binding_policy === 'legacy' ? persisted.binding_policy : row.binding_policy,
+          binding_version: Math.max(row.binding_version, persisted.binding_version),
+        };
+      }
+      return row;
+    }
+    if (persisted && persisted.binding_policy !== 'legacy') {
+      return { ...persisted, status: 'disabled', parent_account_id: null };
+    }
+    return null;
+  }
+
+  isBleBindingRequired(sn: string): boolean {
+    const state = this.credentialBindingState(sn);
+    return Boolean(state && state.binding_policy !== 'legacy');
   }
 
   /**
@@ -270,8 +357,10 @@ class DeviceRegistryStore {
   /** 设备 ↔ 家长账号关联（小程序绑定/admin 手工）。accountId=null 即解绑。 */
   setParentAccountId(sn: string, accountId: string | null): boolean {
     const r = this.db
-      .prepare(`UPDATE device_registry SET parent_account_id = ?, updated_at = ? WHERE sn = ?`)
-      .run(accountId, Date.now(), sn);
+      .prepare(`UPDATE device_registry SET parent_account_id = ?,
+        binding_version = CASE WHEN parent_account_id IS NOT ? THEN binding_version + 1 ELSE binding_version END,
+        updated_at = ? WHERE sn = ?`)
+      .run(accountId, accountId, Date.now(), sn);
     return Number(r.changes) > 0;
   }
 
