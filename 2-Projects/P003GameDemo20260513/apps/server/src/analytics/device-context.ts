@@ -4,7 +4,8 @@ import { dirname,join,isAbsolute } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import {UPLOAD_POLICY_KEY,parseUploadPolicy} from './upload-policy.js';
 import type {DeviceCredentialState} from '../device-credential.js';
-export type AnalyticsDeviceContext = { deviceKey: string; active: boolean; uploadEnabled: boolean; uploadHourCst: number };
+import {diagnosticRequests,type DiagnosticRequest} from './tier-settings.js';
+export type AnalyticsDeviceContext = { deviceKey: string; active: boolean; uploadEnabled: boolean; uploadHourCst: number;subject?:string;diagnosticRequests?:DiagnosticRequest[] };
 export class AnalyticsDependencyUnavailable extends Error { constructor(){super('ANALYTICS_DEPENDENCY_UNAVAILABLE');} }
 export class AnalyticsDeviceReader {
   constructor(private options: { devicesPath: string; configPath: string; deviceKeySecret: string; envAllow: readonly string[];arkPath?:string }) {
@@ -55,7 +56,12 @@ export class AnalyticsDeviceReader {
       return row ? row.status === 'active' : this.options.envAllow.includes(subject);
     });
     const config = this.collectionConfigForScope(subject);
-    return {deviceKey:createHmac('sha256',this.options.deviceKeySecret).update('p003-analytics-v1\0'+subject).digest('hex'),active,...config};
+    const requests=this.read(this.options.configPath,db=>{
+      // Old configuration databases remain valid before the main-service additive migration.
+      if(!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='analytics_diagnostic_request'").get())return [];
+      return diagnosticRequests(db,subject);
+    });
+    return {deviceKey:createHmac('sha256',this.options.deviceKeySecret).update('p003-analytics-v1\0'+subject).digest('hex'),subject,diagnosticRequests:requests,active,...config};
   }
   readArkIdentity(subject:string){
     return this.read(this.options.devicesPath,db=>readArkIdentity(db,subject),15);

@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {validateAnalyticsEvent} from '../src/analytics/contracts.js';
+const DAY=86400000,period=7*DAY,start=Math.floor((Date.now()+8*3600000)/period)*period-8*3600000-period;
+const aggregate={schema_version:1,client_event_id:'g2agg-synthetic',event_name:'analytics.periodic_aggregate',occurred_at_ms:start+period-1,session_id:'aggregate-synthetic',sequence:1,priority:'normal',context:{analytics_tier:'periodic_aggregate',component:'godot_g1_demo'},properties:{source_event_name:'settings.closed',period_start_ms:start,period_end_ms:start+period,period_days:7,first_occurred_at_ms:start+1,last_occurred_at_ms:start+2,count:20,dimensions:{},measurements:{}}};
+assert.equal(validateAnalyticsEvent(aggregate).ok,true,'exact v375 aggregate envelope including context');
+const invalid=(changes:any)=>assert.equal(validateAnalyticsEvent({...aggregate,...changes}).ok,false);
+invalid({properties:{...aggregate.properties,source_event_name:'g1.reward_granted'}});
+invalid({properties:{...aggregate.properties,dimensions:{free_text:'hello'}}});
+invalid({properties:{...aggregate.properties,period_end_ms:start+period+1}});
+invalid({properties:{...aggregate.properties,count:0}});
+invalid({properties:{...aggregate.properties,source_event_name:'g1.semantic_interaction',dimensions:{handled:false}}});
+invalid({context:{...aggregate.context,child_name:'private'}});
+const sample={schema_version:1,client_event_id:'g2diag-synthetic',event_name:'analytics.on_demand_sample',occurred_at_ms:Date.now(),session_id:'diagnostic-synthetic',sequence:2,priority:'normal',context:{analytics_tier:'on_demand_diagnostic',request_id:'diag-synthetic'},properties:{source_event_name:'app.bridge_ready',source_occurred_at_ms:Date.now(),source_context:{},source_properties:{},capture_source:'on_demand'}};
+assert.equal(validateAnalyticsEvent(sample).ok,true,'exact v375 sample context and nested source');
+assert.equal(validateAnalyticsEvent({...sample,context:{...sample.context,request_id:''}}).ok,false);
+assert.equal(validateAnalyticsEvent({...sample,properties:{...sample.properties,source_properties:{child_name:'private'}}}).ok,false);
+assert.equal(validateAnalyticsEvent({...sample,properties:{...sample.properties,source_event_name:'analytics.periodic_aggregate'}}).ok,false,'no recursive envelopes');
+console.log('analytics tier contracts: PASS (source-derived contexts, fixed dimensions, periods/counts, source privacy, no nesting)');

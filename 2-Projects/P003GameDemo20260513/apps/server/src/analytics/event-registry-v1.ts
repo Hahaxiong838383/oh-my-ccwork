@@ -1,7 +1,9 @@
 import { inspectEventStructure } from './structure.js';
 import { readFileSync } from 'node:fs';
+import {TIER_REGISTRY,tierSemanticValid} from './tier-contracts.js';
 const schema=JSON.parse(readFileSync(new URL('./event-property-schema-v1.json',import.meta.url),'utf8'));
-export const EVENT_REGISTRY: {eventName:string;group:string;sample:Record<string,unknown>;jsonSchema:Schema}[]=schema.events;
+export const RAW_EVENT_REGISTRY: {eventName:string;group:string;sample:Record<string,unknown>;jsonSchema:Schema}[]=schema.events;
+export const EVENT_REGISTRY=[...RAW_EVENT_REGISTRY,...TIER_REGISTRY] as typeof RAW_EVENT_REGISTRY;
 type Schema={type?:string|string[];const?:unknown;enum?:unknown[];oneOf?:Schema[];anyOf?:Schema[];not?:Schema;properties?:Record<string,Schema>;required?:string[];additionalProperties?:boolean;items?:Schema;maxItems?:number;maxLength?:number;pattern?:string;minimum?:number;maximum?:number;multipleOf?:number};
 export function matchesSchema(value:unknown,s:Schema):boolean {
   if(s.oneOf && s.oneOf.filter(branch=>matchesSchema(value,branch)).length!==1)return false;
@@ -27,5 +29,6 @@ export function validateProperties(eventName:string,properties:unknown):'event_n
   const entry=EVENT_REGISTRY.find(e=>e.eventName===eventName);
   if(!entry)return 'event_not_allowed';
   if(inspectEventStructure(properties)||containsSensitive(properties)||!matchesSchema(properties,entry.jsonSchema))return 'invalid_properties';
+  if(!tierSemanticValid(eventName,properties as Record<string,unknown>))return 'invalid_properties';
   return null;
 }

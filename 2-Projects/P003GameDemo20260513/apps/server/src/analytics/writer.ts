@@ -2,6 +2,7 @@ import {Worker} from 'node:worker_threads';
 import {isObject,type AnalyticsBatch,type AnalyticsBatchAck} from './contracts.js';
 import type {AnalyticsDeviceContext} from './device-context.js';
 import {AnalyticsStorageUnavailable} from './store.js';
+import type {AnalyticsTransport} from './transport.js';
 
 export class AnalyticsWriterBusy extends Error {
   constructor(){super('ANALYTICS_WRITER_BUSY');}
@@ -14,7 +15,7 @@ export type AnalyticsWriterOptions={
   jobTimeoutMs?:number;
 };
 export type AnalyticsWriterRequest=
-  | ({type:'settle';id:number;context:AnalyticsDeviceContext;requestId:string}&(
+  | ({type:'settle';id:number;context:AnalyticsDeviceContext;requestId:string;transport?:AnalyticsTransport}&(
       {batch:AnalyticsBatch;serializedBatch?:never}|{serializedBatch:string;batch?:never}
     ))
   | {type:'close'};
@@ -23,7 +24,7 @@ type Pending={
   resolve:(ack:AnalyticsBatchAck)=>void;reject:(error:AnalyticsStorageUnavailable)=>void;
   timer?:ReturnType<typeof setTimeout>;
 };
-const rejectionReasons=new Set(['event_not_allowed','event_too_large','invalid_event','invalid_context','invalid_properties','client_event_id_conflict']);
+const rejectionReasons=new Set(['event_not_allowed','event_too_large','invalid_event','invalid_context','invalid_properties','client_event_id_conflict','diagnostic_request_invalid','diagnostic_request_revoked','diagnostic_request_expired','diagnostic_source_not_allowed','diagnostic_sample_stale','diagnostic_request_limit']);
 
 function validAck(value:unknown,pending:Pending):value is AnalyticsBatchAck {
   if(!isObject(value)||value.ok!==true||value.request_id!==pending.requestId||value.retry_after_ms!==0||!Array.isArray(value.accepted_event_ids)||!Array.isArray(value.duplicated_event_ids)||!Array.isArray(value.rejected))return false;
@@ -79,7 +80,7 @@ export class AnalyticsWriter {
   /** Remains true after a deadline until the real worker operation ends. */
   get busy():boolean{return this.pending!==undefined;}
 
-  settle(context:AnalyticsDeviceContext,batch:AnalyticsBatch,requestId:string,serializedBatch?:string):Promise<AnalyticsBatchAck> {
+  settle(context:AnalyticsDeviceContext,batch:AnalyticsBatch,requestId:string,serializedBatch?:string,transport?:AnalyticsTransport):Promise<AnalyticsBatchAck> {
     if(!this.ready)return Promise.reject(new AnalyticsStorageUnavailable());
     if(this.pending)return Promise.reject(new AnalyticsWriterBusy());
     return new Promise((resolve,reject)=>{
@@ -100,11 +101,11 @@ export class AnalyticsWriter {
         void this.close().catch(()=>{});
       },this.jobTimeoutMs);
       try{
-        const {deviceKey,active,uploadEnabled,uploadHourCst}=context;
+        const {deviceKey,active,uploadEnabled,uploadHourCst,subject,diagnosticRequests}=context;
         // HTTP supplies its original, bounded JSON text: neither stringify nor structuredClone
         // may walk an arbitrarily deep event before the iterative per-event rejection logic.
         const payload=serializedBatch===undefined?{batch}:{serializedBatch};
-        this.worker!.postMessage({type:'settle',id:pending.id,context:{deviceKey,active,uploadEnabled,uploadHourCst},...payload,requestId} satisfies AnalyticsWriterRequest);
+        this.worker!.postMessage({type:'settle',id:pending.id,context:{deviceKey,active,uploadEnabled,uploadHourCst,subject,diagnosticRequests},...payload,requestId,transport} satisfies AnalyticsWriterRequest);
       }catch{
         // structuredClone failed before submission; the healthy worker and its slot remain reusable.
         this.rejectPending(true);

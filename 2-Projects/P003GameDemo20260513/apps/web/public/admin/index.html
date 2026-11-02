@@ -1408,6 +1408,34 @@
                   <template v-if="analytics.tab==='registry'">
                     <div class="an-filters"><label class="an-catalog-search">搜索事件名称 / 组<input class="an-input" v-model="analytics.catalogSearch" placeholder="例如 g1.reward"></label><label>事件组<select class="an-input" v-model="analytics.catalogGroup"><option value="">全部组</option><option v-for="g in analyticsCatalogGroups" :key="g" :value="g">{{ g }}</option></select></label></div><div v-if="analytics.registry.loading" class="an-status">正在加载事件合同…</div><div v-if="analytics.registry.error" class="an-status an-error">{{ analytics.registry.error }}</div><div v-if="analytics.registry.data" class="kh-card an-card"><div class="an-section-head"><h2>正式事件目录</h2><span class="an-muted">Schema v{{ analytics.registry.data.schema_version }} · {{ analytics.registry.data.event_count }} 项 · 匹配 {{ analyticsCatalog.length }} 项</span></div><div class="an-scroll"><table class="an-table"><thead><tr><th>事件名称</th><th>组</th><th>属性合同</th></tr></thead><tbody><tr v-for="r in analyticsCatalog" :key="r.event_name"><td class="an-mono">{{ r.event_name }}</td><td>{{ r.group }}</td><td><el-button link size="small" @click="analytics.catalogDetail=r">查看 JSON Schema</el-button></td></tr><tr v-if="!analyticsCatalog.length"><td colspan="3" class="an-muted">没有匹配的事件定义。</td></tr></tbody></table></div></div><div v-if="analytics.catalogDetail" class="kh-card an-card"><div class="an-section-head"><h2>{{ analytics.catalogDetail.event_name }}</h2><el-button link @click="analytics.catalogDetail=null">关闭详情</el-button></div><p class="an-note">{{ analytics.catalogDetail.group }} · 服务端当前属性合同</p><pre class="an-pre">{{ analyticsSchema(analytics.catalogDetail) }}</pre></div>
                   </template>
+                  <template v-if="analytics.tab==='tiering'">
+                    <div class="an-filters"><label>目标设备<select class="an-input" v-model="anTier.sn" :disabled="anTier.saving" @change="loadAnalyticsTier"><option value="">请选择设备</option><option v-for="d in (anControl.data||{}).devices||[]" :key="d.sn" :value="d.sn">{{ d.sn }} · {{ d.note || '未备注' }}</option></select></label><el-button :disabled="anTier.loading || anTier.saving || !anTier.sn" @click="loadAnalyticsTier">重新读取</el-button></div>
+                    <div v-if="anTier.loading" class="an-status">正在读取该设备分层配置与接收记录…</div><div v-if="anTier.error" class="an-status an-error" role="alert">{{ anTier.error }}</div><div v-if="anTier.notice" class="an-status" role="status">{{ anTier.notice }}</div>
+                    <template v-if="anTier.data">
+                      <div class="an-grid">
+                        <div class="kh-card an-card"><h2>分层配置 · 仅当前设备</h2><p class="an-note">只有本地分层与周期聚合同时开启才会产生聚合桶；单开一个仍逐条上传。新设置不会清除持久队列，保存不代表设备已应用。</p>
+                          <div class="an-filters"><label>压缩上传<el-switch v-model="anTier.draft.request_gzip_enabled" :disabled="anTier.saving"></el-switch></label><label>本地分层<el-switch v-model="anTier.draft.tiering_enabled" :disabled="anTier.saving"></el-switch></label><label>周期聚合<el-switch v-model="anTier.draft.aggregate_upload_enabled" :disabled="anTier.saving"></el-switch></label><label>短期样本捕获<el-switch v-model="anTier.draft.on_demand_capture_enabled" :disabled="anTier.saving"></el-switch></label></div>
+                          <p>聚合周期：<strong>7天</strong>（本轮固定，按北京时间与 Unix 起点划分，非自然周）。奖励、库存、恢复和失败事实仍逐条保留。</p>
+                          <details><summary>本地队列上限与保留期</summary><div class="an-filters"><label>聚合保留天数<input class="an-input" type="number" min="14" max="180" v-model.number="anTier.draft.aggregate_retention_days"></label><label>聚合桶上限<input class="an-input" type="number" min="128" max="4096" v-model.number="anTier.draft.aggregate_max_buckets"></label><label>样本保留天数<input class="an-input" type="number" min="1" max="14" v-model.number="anTier.draft.on_demand_retention_days"></label><label>样本条数<input class="an-input" type="number" min="100" max="2000" v-model.number="anTier.draft.on_demand_max_events"></label><label>样本字节<input class="an-input" type="number" min="262144" max="4194304" v-model.number="anTier.draft.on_demand_max_bytes"></label></div></details>
+                          <div v-if="!anTier.data.runtime" class="an-status an-error">接收服务暂不可达，不能新增开启；仍可保存关闭设置。</div><div v-else-if="!anTier.data.runtime.upload_allowed" class="an-status">该设备目前未获准上传；请先在上传管理中核对总闸及设备范围。</div>
+                          <el-button type="primary" :loading="anTier.saving" @click="saveAnalyticsTier">保存并回读</el-button><p class="an-note">配置版本：{{ anTier.data.revision }}。关闭样本捕获会撤销该设备的按需请求；已在提交中的批次可完成结算。</p>
+                        </div>
+                        <div class="kh-card an-card"><h2>短期按需请求</h2><p class="an-note">服务端生成 ID，绑定当前完整 SN、事件范围、有效期和条数。到期自动拒收新样本，设备下次拉配置时收到关闭状态；其他设备不受影响。</p>
+                          <div class="an-filters"><label>有效分钟<input class="an-input" type="number" min="1" max="1440" v-model.number="anTier.minutes"></label><label>最多样本数<input class="an-input" type="number" min="1" max="1000" v-model.number="anTier.maxEvents"></label><label>回溯天数<input class="an-input" type="number" min="1" max="14" v-model.number="anTier.lookback"></label></div>
+                          <details><summary>允许的来源事件（{{ anTier.allowed.length }} 项）</summary><div style="display:grid;gap:6px;margin:12px 0"><label v-for="n in anTier.data.allowed_event_names" :key="n"><input type="checkbox" :value="n" v-model="anTier.allowed"> <span class="an-mono">{{ n }}</span></label></div></details>
+                          <p class="an-note">客户端会上传已有短期样本；不在所选范围内的新样本将逐条拒收。新请求会撤销该设备上一请求。同一样本跨请求不重复计数。</p>
+                          <el-button type="primary" :loading="anTier.saving" :disabled="!anTier.data.runtime || !anTier.data.runtime.upload_allowed || !anTier.data.analytics.tiering_enabled || !anTier.data.analytics.aggregate_upload_enabled" @click="createAnalyticsDiagnostic">创建并启用短期请求</el-button>
+                          <p class="an-note">当前上传：{{ anTier.data.analytics.on_demand_upload_enabled ? '开启' : '关闭' }}<br>ID：<span class="an-mono">{{ anTier.data.analytics.on_demand_request_id || '无' }}</span></p>
+                        </div>
+                      </div>
+                      <div class="kh-card an-card"><h2>最近请求</h2><div class="an-scroll"><table class="an-table"><thead><tr><th>请求 ID</th><th>状态 / 到期</th><th>新接收 / 限额</th><th>操作</th></tr></thead><tbody><tr v-for="r in anTier.data.requests" :key="r.id"><td class="an-mono">{{ r.id }}</td><td>{{ r.revoked_at_ms ? '已撤销' : r.expires_at_ms &lt;= Date.now() ? '已到期' : '有效' }}<div>{{ analyticsTime(r.expires_at_ms) }}</div></td><td>{{ anTier.data.runtime ? ((anTier.data.runtime.request_usage.find(x=>x.request_id===r.id)||{}).accepted || 0) : '未知' }} / {{ r.max_events }}</td><td><el-button link :disabled="!!r.revoked_at_ms || anTier.saving" @click="revokeAnalyticsDiagnostic(r.id)">撤销</el-button></td></tr><tr v-if="!anTier.data.requests.length"><td colspan="4">尚未创建按需请求。</td></tr></tbody></table></div></div>
+                      <div v-if="anTier.data.runtime" class="kh-card an-card"><h2>近7个接收日 · 分层与压缩观察</h2><p class="an-note">仅统计本版本部署后真实接收的数据。聚合代表次数不等于原始记录数，也不是余额或奖励流水；尚未完成7天容量验收，不能据此扩大设备范围。</p><p>云端保留：原始14天、聚合90天、样本3天；去重记录持续保留。本地保留设置不改变云端策略。</p>
+                        <div class="an-scroll"><table class="an-table"><thead><tr><th>层级 / 来源</th><th>存储记录</th><th>代表原事件次数</th><th>载荷字节</th></tr></thead><tbody><tr v-for="r in anTier.data.runtime.layers" :key="r.tier+r.source_event_name"><td>{{ r.tier }} · <span class="an-mono">{{ r.source_event_name }}</span></td><td>{{ analyticsNumber(r.records) }}</td><td>{{ r.tier==='diagnostic' ? '代表样本，不计活动次数' : analyticsNumber(r.source_events) }}</td><td>{{ analyticsNumber(r.payload_bytes) }}</td></tr><tr v-if="!anTier.data.runtime.layers.length"><td colspan="4">尚无本版本接收记录；不是端侧队列为空的证明。</td></tr></tbody></table></div>
+                        <div v-for="t in anTier.data.runtime.transport" :key="t.encoding" class="an-status">{{ t.encoding }} · {{ t.requests }} 次请求 · 传输 {{ analyticsNumber(t.wire_bytes) }} 字节 / 解压 {{ analyticsNumber(t.inflated_bytes) }} 字节<span v-if="t.encoding==='gzip' && t.inflated_bytes>0"> · 本窗口传输减少 {{ ((1-t.wire_bytes/t.inflated_bytes)*100).toFixed(1) }}%</span>（含重试，不代表存储节省率）</div>
+                        <details><summary>最近10条分层记录</summary><pre class="an-pre">{{ JSON.stringify(anTier.data.runtime.recent,null,2) }}</pre></details>
+                      </div>
+                    </template>
+                  </template>
                   <template v-if="analytics.tab==='config'">
                     <div v-if="anControl.error" class="an-status an-error" role="alert">{{ anControl.error }}</div>
                     <div v-if="anControl.notice" class="an-status" role="status">{{ anControl.notice }}</div>
@@ -4951,10 +4979,27 @@
         function analyticsDay(ms) { return new Date(ms + 8 * 3600000).toISOString().slice(0,10); }
         var analyticsFilters = reactive({ from:analyticsDay(Date.now()-13*86400000), to:analyticsDay(Date.now()), dimension:'occurred', alias:'' });
         var analytics = reactive({ tab:'overview', overview:analyticsSection(), daily:analyticsSection(), health:analyticsSection(), batches:analyticsSection(), batchDevices:analyticsSection(), events:analyticsSection(), registry:analyticsSection(), config:analyticsSection(), batchOffset:0, eventOffset:0, limit:25, requestId:'', eventId:'', eventQuery:'', catalogSearch:'', catalogGroup:'', catalogDetail:null, batchDetail:null, selectedDay:'', group:'activity' });
-        var analyticsTabs = [{k:'overview',l:'概览'},{k:'batches',l:'上传批次'},{k:'events',l:'事件对账'},{k:'registry',l:'57事件目录'},{k:'config',l:'上传管理'}];
+        var analyticsTabs = [{k:'overview',l:'概览'},{k:'batches',l:'上传批次'},{k:'events',l:'事件对账'},{k:'registry',l:'事件目录'},{k:'config',l:'上传管理'},{k:'tiering',l:'分层与按需'}];
         var analyticsGroupDefs = [{k:'activity',l:'设备与会话',hint:'设备键 / 应用会话去重'}, {k:'g1_flow',l:'G1 主流程',hint:'主流程语义事件计数'}, {k:'logical_day_ecotank',l:'逻辑日与生态缸',hint:'逻辑日、进度与生态缸'}, {k:'rewards_makeup',l:'奖励与补签',hint:'实际发奖与奖励实例'}, {k:'settings',l:'设置使用',hint:'设置相关事件计数'}, {k:'voice_state',l:'语音状态',hint:'KidsHubAI-VoiceKit 状态事件'}, {k:'command_failures',l:'命令失败',hint:'按命令与受控错误分组'}];
         var anControl=reactive({data:null,loading:false,saving:false,error:'',notice:'',query:'',filter:'all',subjects:[],enabled:false,hour:23,dirty:false,seq:0});
         var anArk=reactive({sn:'',loading:false,saving:false,error:'',prompt:'',seq:0});
+        var anTier=reactive({sn:'',data:null,draft:{},loading:false,saving:false,error:'',notice:'',seq:0,minutes:60,maxEvents:100,lookback:3,allowed:[]});
+        function analyticsTierError(e){return ({POLICY_CONFLICT:'配置已更新，请重新读取再保存。',DEVICE_UPLOAD_NOT_ENABLED:'该设备未获准上传，请先核对上传管理。',ANALYTICS_UNAVAILABLE:'接收服务暂不可用，不能新增开启。',INVALID_TIER_SETTINGS:'配置不合法：本轮周期固定7天，请核对各项范围。',INVALID_DIAGNOSTIC_REQUEST:'请求参数不合法，请核对事件、有效期和限额。',TIERING_NOT_ENABLED:'请先保存本地分层与周期聚合双开关。',DIAGNOSTIC_REQUEST_LIMIT:'该设备24小时内请求次数已达上限。'})[e&&e.message]||String(e&&e.message||'操作失败');}
+        async function openAnalyticsTier(){await loadAnalyticsControl();if(!anTier.sn&&anControl.data&&anControl.data.devices.length)anTier.sn=(anControl.data.devices.find(d=>d.upload_allowed)||anControl.data.devices[0]).sn;if(anTier.sn)await loadAnalyticsTier();}
+        async function loadAnalyticsTier(){
+          if(!canManageInvites.value||!anTier.sn||anTier.saving)return;var sn=anTier.sn,seq=++anTier.seq,epoch=authSessionEpoch,token=getToken();anTier.loading=true;anTier.error='';anTier.data=null;
+          try{var j=await deviceApi('/api/admin/analytics/tiering/'+encodeURIComponent(sn),{method:'GET'});if(seq!==anTier.seq||sn!==anTier.sn||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'ANALYTICS_UNAVAILABLE');anTier.data=j;anTier.draft=Object.fromEntries(Object.entries(j.analytics).filter(([k])=>!['on_demand_upload_enabled','on_demand_request_id','event_upload_enabled','daily_upload_hour_cst'].includes(k)));anTier.allowed=j.allowed_event_names.slice();}
+          catch(e){if(seq===anTier.seq&&epoch===authSessionEpoch)anTier.error=analyticsTierError(e);}finally{if(seq===anTier.seq)anTier.loading=false;}
+        }
+        async function analyticsTierMutation(path,method,body){
+          if(!canManageInvites.value||!anTier.data||anTier.saving||anTier.loading)return;var sn=anTier.sn,epoch=authSessionEpoch,token=getToken();anTier.saving=true;anTier.error='';anTier.notice='';
+          try{var j=await deviceApi('/api/admin/analytics/tiering/'+encodeURIComponent(sn)+path,{method:method,...(body?{body:JSON.stringify(body)}:{})});if(sn!==anTier.sn||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'ANALYTICS_UNAVAILABLE');anTier.notice='云端已保存，正在回读；设备配置应用与真实上传仍待核验。';anTier.saving=false;await loadAnalyticsTier();}
+          catch(e){if(sn===anTier.sn&&epoch===authSessionEpoch)anTier.error=analyticsTierError(e);}finally{if(epoch===authSessionEpoch)anTier.saving=false;}
+        }
+        function saveAnalyticsTier(){return analyticsTierMutation('','PUT',{expected_revision:anTier.data.revision,settings:anTier.draft});}
+        function createAnalyticsDiagnostic(){return analyticsTierMutation('/requests','POST',{expected_revision:anTier.data.revision,allowed_event_names:anTier.allowed.slice(),ttl_seconds:anTier.minutes*60,max_events:anTier.maxEvents,lookback_days:anTier.lookback});}
+        function revokeAnalyticsDiagnostic(id){return analyticsTierMutation('/requests/'+encodeURIComponent(id),'DELETE');}
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){anTier.seq++;anTier.sn='';anTier.data=null;anTier.draft={};anTier.allowed=[];anTier.loading=false;anTier.saving=false;anTier.error='';anTier.notice='';}});
         function analyticsCapacityBytes(n){return n==null?'未知':(Number(n)/1073741824).toFixed(2)+' GiB';}
         var analyticsControlDevices=computed(function(){return ((anControl.data||{}).devices||[]).filter(function(d){var match=(d.sn+' '+d.note).toLowerCase().includes(anControl.query.trim().toLowerCase());return match&&(anControl.filter==='all'||anControl.filter==='allowed'&&d.upload_allowed||anControl.filter==='closed'&&!d.upload_allowed||anControl.filter==='selected'&&anControl.subjects.includes(d.sn)||anControl.filter==='disabled'&&d.status!=='active');});});
         function analyticsControlToggle(sn,on){if(anControl.saving||anControl.loading)return;anControl.subjects=anControl.subjects.filter(function(s){return s!==sn;});if(on)anControl.subjects.push(sn);anControl.dirty=true;}
@@ -5030,6 +5075,7 @@
             } catch(e) { analyticsInvalidate('batches',e);analyticsInvalidate('batchDevices',e); }
           } else if (analytics.tab==='registry') { analytics.catalogDetail=null;analyticsRead('registry','registry'); }
           else if (analytics.tab==='config') loadAnalyticsControl();
+          else if (analytics.tab==='tiering') openAnalyticsTier();
           else if (analytics.tab==='events' && analytics.eventQuery) analyticsLookup(false);
         }
         function analyticsSetTab(k) { analytics.tab=k;analyticsRefresh(); }
@@ -8106,6 +8152,7 @@
           visibleWorkerNavs: visibleWorkerNavs,
           analytics: analytics,
           analyticsFilters: analyticsFilters,
+          anTier,loadAnalyticsTier,saveAnalyticsTier,createAnalyticsDiagnostic,revokeAnalyticsDiagnostic,
           anControl,anArk,analyticsCapacityBytes,analyticsControlDevices,analyticsControlToggle,analyticsControlSelect,loadAnalyticsControl,saveAnalyticsControl,previewAnalyticsArk,authorizeAnalyticsArk,
           analyticsTabs: analyticsTabs,
           analyticsGroupDefs: analyticsGroupDefs,

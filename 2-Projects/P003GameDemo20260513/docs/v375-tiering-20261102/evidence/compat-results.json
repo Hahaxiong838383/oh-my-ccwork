@@ -1,0 +1,82 @@
+{
+  "device-config": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/device-config.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-config-store": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-config-store.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-authority-store": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-authority-store.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-auth": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-auth.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-policy": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-policy.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-integration": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-integration.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-http-contract": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-http-contract.test.ts"
+    ],
+    "exit_code": 0
+  },
+  "listening-canary-profile": {
+    "command": [
+      "node",
+      "--experimental-sqlite",
+      "--import",
+      "tsx",
+      "scripts/listening-canary-profile.test.ts"
+    ],
+    "exit_code": 0
+  }
+}

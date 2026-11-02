@@ -1,6 +1,9 @@
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {randomUUID} from 'node:crypto';
+import {TIER_CONFIG_KEYS,TIER_SETTING_NAMES,initDiagnosticRequests,diagnosticRequests} from './analytics/tier-settings.js';
+import {DIAGNOSTIC_SOURCES} from './analytics/tier-contracts.js';
 import {UPLOAD_POLICY_KEY,parseUploadPolicy,parseUploadChange,type UploadPolicy} from './analytics/upload-policy.js';
 
 /**
@@ -15,12 +18,12 @@ import {UPLOAD_POLICY_KEY,parseUploadPolicy,parseUploadChange,type UploadPolicy}
  */
 
 export type KeySpec = {
-  builtinDefault: number | boolean;
+  builtinDefault: number | boolean | string;
   validate: (v: unknown) => boolean;
   /** admin 通用渲染用的展示元数据；min/max 只做提示与前端预校验，真门在 validate */
   label: string;
   /** bool 键：builtinDefault/值为 boolean，min/max 只占位（admin 渲染走开关） */
-  unit: 'sec' | 'day' | 'bool' | 'hour';
+  unit: 'sec' | 'day' | 'bool' | 'hour' | 'count' | 'bytes' | 'text';
   hint: string;
   min: number;
   max: number;
@@ -48,6 +51,7 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     builtinDefault: 23, validate: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23,
     label: '每日上传时间（北京时间）', unit: 'hour', hint: '设备常驻时约五分钟检查一次，积压可能立即补传', min: 0, max: 23,
   },
+  ...TIER_CONFIG_KEYS,
   // 本地人格音频保底刷新（2026-09-03 川哥定）：触发式重生成之外，超过 N 天没出新套就主动重生成一次（哪怕变化很小）。
   // 只有 server 每日批读它（local-audio-generator），设备不需要 → serverOnly。
   'local_audio.refresh_days': {
@@ -163,6 +167,50 @@ export class ConfigStore {
         done_at INTEGER
       );
     `);
+    initDiagnosticRequests(this.db);
+  }
+
+  analyticsTierSettings(sn:string){const snapshot=this.effectiveSnapshot(sn);return {revision:snapshot.revision as string,analytics:snapshot.analytics as Record<string,any>};}
+  analyticsDiagnosticRequests(sn:string){return diagnosticRequests(this.db,sn);}
+  private analyticsSettingsTransaction<T>(fn:()=>T):T{this.db.exec('BEGIN IMMEDIATE');try{const result=fn();this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}}
+  saveAnalyticsTierSettings(sn:string,input:{expected_revision:string;settings:Record<string,unknown>},by:string){
+    const settings=input?.settings;
+    if(!settings||Array.isArray(settings)||typeof settings!=='object'||!Object.keys(settings).length||Object.keys(input).some(k=>!['expected_revision','settings'].includes(k))||Object.entries(settings).some(([k,v])=>!TIER_SETTING_NAMES.includes(k)||!TIER_CONFIG_KEYS['analytics.'+k].validate(v)))throw new Error('INVALID_TIER_SETTINGS');
+    return this.analyticsSettingsTransaction(()=>{
+      if(this.analyticsTierSettings(sn).revision!==input.expected_revision)throw new Error('POLICY_CONFLICT');
+      for(const [k,v] of Object.entries(settings))this.setValue(sn,'analytics.'+k,v);
+      // Disabling capture also stops future sample handoff; already durable samples keep their request semantics.
+      if(settings.on_demand_capture_enabled===false){this.setValue(sn,'analytics.on_demand_upload_enabled',false);this.setValue(sn,'analytics.on_demand_request_id','');this.db.prepare('UPDATE analytics_diagnostic_request SET revoked_at_ms=? WHERE sn=? AND revoked_at_ms IS NULL').run(Date.now(),sn);}
+      return this.analyticsTierSettings(sn);
+    });
+  }
+  createAnalyticsDiagnosticRequest(sn:string,input:{expected_revision:string;allowed_event_names:string[];ttl_seconds:number;max_events:number;lookback_days:number},by:string,now=Date.now()){
+    const names=input?.allowed_event_names;
+    if(!input||Object.keys(input).some(k=>!['expected_revision','allowed_event_names','ttl_seconds','max_events','lookback_days'].includes(k))||!Array.isArray(names)||!names.length||names.length>DIAGNOSTIC_SOURCES.length||new Set(names).size!==names.length||names.some(n=>!DIAGNOSTIC_SOURCES.includes(n))||!Number.isInteger(input.ttl_seconds)||input.ttl_seconds<60||input.ttl_seconds>86400||!Number.isInteger(input.max_events)||input.max_events<1||input.max_events>1000||!Number.isInteger(input.lookback_days)||input.lookback_days<1||input.lookback_days>14)throw new Error('INVALID_DIAGNOSTIC_REQUEST');
+    return this.analyticsSettingsTransaction(()=>{
+      const current=this.analyticsTierSettings(sn);if(current.revision!==input.expected_revision)throw new Error('POLICY_CONFLICT');
+      if(!current.analytics.tiering_enabled||!current.analytics.aggregate_upload_enabled)throw new Error('TIERING_NOT_ENABLED');
+      if(Number(this.db.prepare('SELECT count(*) n FROM analytics_diagnostic_request WHERE sn=? AND created_at_ms>=?').get(sn,now-86400000)!.n)>=10)throw new Error('DIAGNOSTIC_REQUEST_LIMIT');
+      this.db.prepare('UPDATE analytics_diagnostic_request SET revoked_at_ms=? WHERE sn=? AND revoked_at_ms IS NULL').run(now,sn);
+      const id='diag-'+randomUUID();this.db.prepare('INSERT INTO analytics_diagnostic_request VALUES (?,?,?,?,NULL,?,?,?,?)').run(id,sn,now,now+input.ttl_seconds*1000,JSON.stringify(names),input.max_events,input.lookback_days,by);
+      this.setValue(sn,'analytics.on_demand_capture_enabled',true);this.setValue(sn,'analytics.on_demand_upload_enabled',true);this.setValue(sn,'analytics.on_demand_request_id',id);
+      return {...this.analyticsTierSettings(sn),request:this.analyticsDiagnosticRequests(sn).find(r=>r.id===id)!};
+    });
+  }
+  revokeAnalyticsDiagnosticRequest(sn:string,id:string,_by:string,now=Date.now()){
+    return this.analyticsSettingsTransaction(()=>{
+      const request=this.analyticsDiagnosticRequests(sn).find(r=>r.id===id);if(!request)throw new Error('DIAGNOSTIC_REQUEST_NOT_FOUND');
+      if(request.revoked_at_ms===null)this.db.prepare('UPDATE analytics_diagnostic_request SET revoked_at_ms=? WHERE id=? AND sn=?').run(now,id,sn);
+      if(this.analyticsTierSettings(sn).analytics.on_demand_request_id===id){this.setValue(sn,'analytics.on_demand_upload_enabled',false);this.setValue(sn,'analytics.on_demand_request_id','');}
+      return this.analyticsTierSettings(sn);
+    });
+  }
+  expireAnalyticsDiagnosticRequests(sn:string,now=Date.now()){
+    const id=this.analyticsTierSettings(sn).analytics.on_demand_request_id;
+    if(!id)return;
+    const request=this.analyticsDiagnosticRequests(sn).find(r=>r.id===id);
+    if(request&&request.expires_at_ms>now&&request.revoked_at_ms===null)return;
+    this.analyticsSettingsTransaction(()=>{if(this.analyticsTierSettings(sn).analytics.on_demand_request_id!==id)return;this.setValue(sn,'analytics.on_demand_upload_enabled',false);this.setValue(sn,'analytics.on_demand_request_id','');});
   }
 
   analyticsPolicy():UploadPolicy|null {
@@ -372,7 +420,7 @@ export class ConfigStore {
   adminOverview(): {
     keys: Array<{
       key: string;
-      builtin_default: number | boolean;
+      builtin_default: number | boolean | string;
       global: unknown;
       global_updated_at: number | null;
       label: string;

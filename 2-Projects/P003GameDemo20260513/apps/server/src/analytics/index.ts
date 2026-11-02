@@ -1,4 +1,6 @@
 import {capacityReader} from './capacity.js';
+import {readAnalyticsBody,AnalyticsBodyError} from './http-body.js';
+import {queryAnalyticsTiers} from './tier-query.js';
 import type {UploadPolicy} from './upload-policy.js';
 import {readBoundedJson} from '../ark/http.js';
 import {readArkHistory} from '../ark/history.js';
@@ -76,6 +78,11 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
   });
   app.get('/internal/analytics/upload-status',c=>{const a=admission();return c.json({ok:true,revision:a.policy?.revision??0,enabled:a.policy?.enabled??a.emergency.enabled,subjects:a.subjects,hour:a.policy?.hour??23,effective_enabled:a.enabled,valid:a.valid,emergency_gate:a.emergency,managed:!!a.policy,device_config:a.subjects.map(sn=>{const d=options.reader.readAnalyticsDeviceContext(sn);return {sn,active:d.active,enabled:d.uploadEnabled,hour:d.uploadHourCst};})});});
   app.get('/internal/analytics/capacity',c=>c.json(capacity()));
+  app.get('/internal/analytics/tiering',c=>{
+    const sn=c.req.query('sn');if(!sn||sn.length>64)return c.json({ok:false,error_code:'INVALID_QUERY'},400);
+    const context=options.reader.readAnalyticsDeviceContext(sn),a=admission(),h=health();
+    return c.json({...queryAnalyticsTiers(options.store,context.deviceKey),runtime_ready:h.ready,upload_allowed:a.valid&&a.enabled&&context.active&&context.uploadEnabled&&a.subjects.includes(sn),capabilities:{version:1,gzip:true,wire_limit_bytes:LIMITS.bodyBytes,inflated_limit_bytes:LIMITS.bodyBytes,aggregate_period_days:7}});
+  });
   for(const kind of ADMIN_ANALYTICS_PATHS)app.get('/internal/analytics/'+kind,c=>{
     if(kind==='health')return c.json(health());
     if(kind==='collection-config'){const control=admission();return c.json({ok:true,server_gate:{enabled:control.enabled,valid:control.valid},allowlist_count:control.subjects.length,global:options.reader.readGlobalCollectionConfig?.()??{event_upload_enabled:false,daily_upload_hour_cst:23},device_defaults:{event_upload_enabled:false,daily_upload_hour_cst:23},items:control.subjects.map(subject=>{const ctx=options.reader.readAnalyticsDeviceContext(subject);return {device_alias:deviceAlias(ctx.deviceKey),active:ctx.active,event_upload_enabled:ctx.uploadEnabled,daily_upload_hour_cst:ctx.uploadHourCst};})});}
@@ -89,7 +96,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
   });
   app.post('/v1/device/analytics/events:batch',async c=>{
     const started=performance.now();requests++;
-    const error=(code:string,status:400|401|403|413|429|503,retry?:number)=>{if(retry!==undefined)c.header('Retry-After',String(retry));return c.json({ok:false,error_code:code},status);};
+    const error=(code:string,status:400|401|403|413|415|429|503,retry?:number)=>{if(retry!==undefined)c.header('Retry-After',String(retry));return c.json({ok:false,error_code:code},status);};
     if(typeof options.reader.readCredentialState!=='function')return error('ANALYTICS_DEPENDENCY_UNAVAILABLE',503,30);
     const cred=await verifyDeviceCredential(c.req.header('authorization'),options.authSecret,options.reader.acceptsCredential.bind(options.reader),options.reader.readCredentialState.bind(options.reader));
     if(!cred)return error('INVALID_DEVICE_CREDENTIAL',401);
@@ -110,16 +117,8 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     if(process.memoryUsage().rss>512*1024**2)return error('ANALYTICS_MEMORY_PRESSURE',503,60);
     globalHits.push(now);hits.push(now);deviceHits.set(context.deviceKey,hits);inFlight++;
     try{
-      const length=Number(c.req.header('Content-Length'));
-      if(length>LIMITS.bodyBytes)return error('ANALYTICS_BODY_TOO_LARGE',413);
-      const stream=c.req.raw.body;if(!stream)return error('INVALID_BATCH',400);
-      const reader=stream.getReader(),chunks:Uint8Array[]=[];let bytes=0;
-      let timer:ReturnType<typeof setTimeout>|undefined;
-      const timeout=new Promise<never>((_,reject)=>{timer=setTimeout(()=>{reject(new Error('BODY_TIMEOUT'));void reader.cancel().catch(()=>{});},options.bodyTimeoutMs??15_000);});
-      try{while(true){const {value,done}=await Promise.race([reader.read(),timeout]);if(done)break;bytes+=value.byteLength;if(bytes>LIMITS.bodyBytes){void reader.cancel().catch(()=>{});return error('ANALYTICS_BODY_TOO_LARGE',413);}chunks.push(value);}}
-      catch(e){if((e as Error).message==='BODY_TIMEOUT')return error('ANALYTICS_BODY_TIMEOUT',503,5);throw e;}
-      finally{clearTimeout(timer);}
-      const rawBody=Buffer.concat(chunks).toString('utf8');
+      const transport=await readAnalyticsBody(c.req.raw,options.bodyTimeoutMs);
+      const rawBody=transport.text;
       let raw:unknown;try{raw=JSON.parse(rawBody);}catch{return error('INVALID_JSON',400);}
       let batch;try{batch=validateAnalyticsBatch(raw);}catch{return error('INVALID_BATCH',400);}
       const latestContext=options.reader.readAnalyticsDeviceContext(cred.sn),latestAdmission=admission();
@@ -131,8 +130,9 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
       if(options.writer?.busy)return error('ANALYTICS_OVERLOADED',503,5);
       // Transfer the original JSON text: structuredClone can overflow on a deeply invalid event
       // before the worker can settle it as a per-event rejection alongside valid events.
-      const ack=options.writer?await options.writer.settle(latestContext,batch,requestId,rawBody):settleAnalyticsBatch(options.store,latestContext,batch,requestId);return c.json(ack);
-    }catch(cause){if(cause instanceof AnalyticsWriterBusy)return error('ANALYTICS_OVERLOADED',503,5);storageFailures++;if(cause instanceof AnalyticsStorageUnavailable&&cause.busy)sqlBusy++;return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);}
+      const measured={encoding:transport.encoding,wireBytes:transport.wireBytes,inflatedBytes:transport.inflatedBytes};
+      const ack=options.writer?await options.writer.settle(latestContext,batch,requestId,rawBody,measured):settleAnalyticsBatch(options.store,latestContext,batch,requestId,Date.now(),measured);return c.json(ack);
+    }catch(cause){if(cause instanceof AnalyticsBodyError)return error(cause.code,cause.status,cause.status===503?5:undefined);if(cause instanceof AnalyticsWriterBusy)return error('ANALYTICS_OVERLOADED',503,5);storageFailures++;if(cause instanceof AnalyticsStorageUnavailable&&cause.busy)sqlBusy++;return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);}
     finally{inFlight--;durations.push(Math.ceil(performance.now()-started));if(durations.length>1024)durations.shift();}
   });
   app.onError((e,c)=>{const invalid=e.message==='INVALID_QUERY';console.error('[analytics] '+(invalid?'INVALID_QUERY':'DEPENDENCY_UNAVAILABLE'));c.header('Retry-After','30');return c.json({ok:false,error_code:invalid?'INVALID_QUERY':'ANALYTICS_DEPENDENCY_UNAVAILABLE'},invalid?400:503);});

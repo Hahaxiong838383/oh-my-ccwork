@@ -1,0 +1,29 @@
+{
+  "analytics": {
+    "command": [
+      "npm",
+      "run",
+      "test:analytics"
+    ],
+    "exit_code": 0,
+    "completed": "2026-11-02T21:11:42.035560"
+  },
+  "capacity": {
+    "command": [
+      "npm",
+      "run",
+      "test:analytics-capacity"
+    ],
+    "exit_code": 0,
+    "completed": "2026-11-02T21:11:53.039433"
+  },
+  "control": {
+    "command": [
+      "npm",
+      "run",
+      "test:analytics-control"
+    ],
+    "exit_code": 0,
+    "completed": "2026-11-02T21:11:54.940583"
+  }
+}

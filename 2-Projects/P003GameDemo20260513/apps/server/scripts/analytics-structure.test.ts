@@ -10,9 +10,10 @@ const writer=new AnalyticsWriter(store.path);
 try{
 const workerDeadline=Date.now()+5000;while(!writer.ready){assert.ok(Date.now()<workerDeadline,'writer startup');await new Promise(resolve=>setTimeout(resolve,5));}
 const control=join(dir,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
-const app=createAnalyticsApp({store,writer,reader:{acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'a'.repeat(64),active:true,uploadEnabled:true,uploadHourCst:23})},authSecret:'fake',internalSecret:'fake-internal',controlPath:control,allowSubjects:['FAKE'],diskFreeBytes:()=>20*1024**3});
+const app=createAnalyticsApp({store,writer,reader:{readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'a'.repeat(64),active:true,uploadEnabled:true,uploadHourCst:23})},authSecret:'fake',internalSecret:'fake-internal',controlPath:control,allowSubjects:['FAKE'],diskFreeBytes:()=>20*1024**3});
 const token=await new SignJWT({kind:'p003-device'}).setSubject('FAKE').setProtectedHeader({alg:'HS256'}).setExpirationTime('1h').sign(new TextEncoder().encode('fake'));
-const event=(id:string)=>({schema_version:1,client_event_id:id,event_name:'app.bridge_ready',occurred_at_ms:Date.now(),session_id:'s',sequence:1,priority:'normal',context:{},properties:{}});
+const fixtureTime=Date.now();
+const event=(id:string)=>({schema_version:1,client_event_id:id,event_name:'app.bridge_ready',occurred_at_ms:fixtureTime,session_id:'s',sequence:1,priority:'normal',context:{},properties:{}});
 const deep=(id:string,depth:number,leaf=0)=>JSON.stringify(event(id)).replace('"properties":{}','"properties":{"extra":'+'['.repeat(depth)+leaf+']'.repeat(depth)+'}');
 const post=async(events:string[],request:string)=>app.request('/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':request},body:'{"schema_version":1,"batch_id":"deep-batch","sent_at_ms":1,"client":{},"events":['+events.join(',')+']}'});
 const poison=deep('deep',4000);

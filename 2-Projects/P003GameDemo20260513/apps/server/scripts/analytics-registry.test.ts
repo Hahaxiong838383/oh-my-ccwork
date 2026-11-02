@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-const {EVENT_REGISTRY,matchesSchema}=await import('../src/analytics/event-registry-v1.js');
+const {RAW_EVENT_REGISTRY:EVENT_REGISTRY,matchesSchema}=await import('../src/analytics/event-registry-v1.js');
 const {validateAnalyticsEvent,validateAnalyticsBatch}=await import('../src/analytics/contracts.js');
 assert.equal(EVENT_REGISTRY.length,57);
 for(const entry of EVENT_REGISTRY){

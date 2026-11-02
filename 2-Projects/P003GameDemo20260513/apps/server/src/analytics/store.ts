@@ -3,6 +3,8 @@ import { mkdirSync,statSync } from 'node:fs';
 import { dirname, isAbsolute } from 'node:path';
 import {configureAnalyticsWriter} from './sqlite-policy.mjs';
 import {FACT_TABLE_COLUMNS} from './fact-layout.js';
+import {initAnalyticsTransport} from './transport.js';
+import {initAnalyticsTiers} from './tiers.js';
 const INGEST_SQL={
  seen:'SELECT event_hash FROM analytics_event_seen WHERE device_key=? AND id_digest=?',
  event:'INSERT INTO analytics_event VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -10,7 +12,13 @@ const INGEST_SQL={
  fact:'INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)',
  dirty:'INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)',
  batch:'INSERT INTO analytics_batch VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
- settlement:'INSERT INTO analytics_settlement VALUES (?,?,?,?)'
+ settlement:'INSERT INTO analytics_settlement VALUES (?,?,?,?)',
+ tierEvent:'INSERT INTO analytics_tier_event VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+ tierDay:`INSERT INTO analytics_tier_day VALUES (?,?,?,?,?,?,?) ON CONFLICT(day,device_key,tier,source_event_name) DO UPDATE SET records=records+excluded.records,source_events=source_events+excluded.source_events,payload_bytes=payload_bytes+excluded.payload_bytes`,
+ diagnosticUsed:'SELECT accepted FROM analytics_diagnostic_usage WHERE request_id=? AND device_key=?',
+ diagnosticUse:'INSERT INTO analytics_diagnostic_usage VALUES (?,?,1) ON CONFLICT(request_id,device_key) DO UPDATE SET accepted=accepted+1',
+ transport:'INSERT INTO analytics_transport VALUES (?,?,?,?)',
+ transportDay:`INSERT INTO analytics_transport_day VALUES (?,?,?,1,?,?) ON CONFLICT(day,device_key,encoding) DO UPDATE SET requests=requests+1,wire_bytes=wire_bytes+excluded.wire_bytes,inflated_bytes=inflated_bytes+excluded.inflated_bytes`
 } as const;
 type IngestStatements={readonly [K in keyof typeof INGEST_SQL]:ReturnType<DatabaseSync['prepare']>};
 export class AnalyticsStorageUnavailable extends Error {
@@ -64,6 +72,8 @@ export class AnalyticsStore {
       CREATE TABLE IF NOT EXISTS analytics_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);
     `);
     if(!(this.db.prepare('PRAGMA table_info(analytics_device_day)').all() as {name:string}[]).some(r=>r.name==='summary_json'))this.db.exec("ALTER TABLE analytics_device_day ADD COLUMN summary_json TEXT NOT NULL DEFAULT '{}'");
+    initAnalyticsTransport(this.db);
+    initAnalyticsTiers(this.db);
   }
   transaction<T>(fn:()=>T):T {
     try {this.db.exec('BEGIN IMMEDIATE');const result=fn();this.db.exec('COMMIT');return result;}
@@ -77,7 +87,7 @@ export class AnalyticsStore {
     catch(error){try{this.db.exec('ROLLBACK');}catch{}throw error;}
   }
   get ingest():IngestStatements{
-    // Exactly seven fixed statements per connection; no cache of arbitrary/dynamic queries.
+    // Thirteen fixed statements per connection; no cache of arbitrary/dynamic queries.
     return this.ingestStatements??=Object.freeze(Object.fromEntries(Object.entries(INGEST_SQL).map(([key,sql])=>[key,this.db.prepare(sql)])) as IngestStatements);
   }
   close(){this.db.close();}

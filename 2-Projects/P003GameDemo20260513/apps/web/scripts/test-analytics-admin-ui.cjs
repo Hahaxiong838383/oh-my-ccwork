@@ -33,6 +33,16 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
     if(u.pathname==='/api/auth/login')return route.fulfill({json:{ok:true,token:state.loginToken||'new-ui-stub-token',role:'admin'}});
     if(!u.pathname.startsWith('/api/admin/analytics/'))return route.fulfill({json:{ok:true,items:[],devices:[],sessions:[],themes:[]}});
     if(role!=='admin')return route.fulfill({status:403,json:{ok:false,error:'FORBIDDEN'}});
+    if(u.pathname.includes('/analytics/tiering/')){
+      const sn=u.pathname.split('/')[5];
+      state.tiers ||= {};
+      const data=state.tiers[sn] ||= {ok:true,sn,revision:1,analytics:{request_gzip_enabled:false,tiering_enabled:false,aggregate_upload_enabled:false,aggregate_period_days:7,aggregate_retention_days:90,aggregate_max_buckets:2048,on_demand_capture_enabled:false,on_demand_upload_enabled:false,on_demand_request_id:'',on_demand_retention_days:3,on_demand_max_events:1000,on_demand_max_bytes:2097152},requests:[],allowed_event_names:['settings.opened'],runtime:{upload_allowed:true,layers:[],transport:[],recent:[],request_usage:[]},client_applied:false};
+      if(req.method()==='PUT'){Object.assign(data.analytics,req.postDataJSON().settings);data.revision++;}
+      if(req.method()==='POST'){const b=req.postDataJSON();data.requests.push({id:'diag-ui-test',expires_at_ms:Date.now()+60000,revoked_at_ms:null,max_events:b.max_events});data.analytics.on_demand_request_id='diag-ui-test';data.analytics.on_demand_upload_enabled=true;data.revision++;}
+      if(req.method()==='DELETE'){data.requests[0].revoked_at_ms=Date.now();data.analytics.on_demand_upload_enabled=false;data.analytics.on_demand_request_id='';data.revision++;}
+      if(state.mode==='tier-delay'&&req.method()==='GET'){state.releaseTier=()=>route.fulfill({json:data});state.pendingReady();return;}
+      return route.fulfill({json:{...data,runtime:state.mode==='tier-offline'?null:data.runtime}});
+    }
     const kind=u.pathname.split('/').pop(),q=u.searchParams;
     if(state.mode==='late401' && kind==='overview'){state.release401=()=>route.fulfill({status:401,json:{ok:false}});state.pendingReady();return;}
     if(state.mode==='error' && kind==='overview')return route.fulfill({status:503,json:{ok:false,error:'analytics_unavailable'}});
@@ -121,6 +131,25 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
   assert(aliases.state.seen.filter(r=>r.path.endsWith('/overview') && new URLSearchParams(r.query).get('dimension')==='received').every(r=>!new URLSearchParams(r.query).has('device_alias')));
   await aliases.context.close();
   if(process.env.ANALYTICS_REGRESSION_ONLY==='i2'){console.log('PASS: I2 receipt-date candidates, late candidate isolation and direct alias after candidate failure');return;}
+  // v375 real browser controls; all API data here is synthetic.
+  const tier=await session('admin'),tp=tier.page;
+  const trun=fn=>tp.evaluate(fn);
+  await trun(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('analytics');p.analyticsSetTab('tiering');});
+  await tp.getByRole('button',{name:'保存并回读',exact:true}).waitFor();
+  assert.equal(await tp.getByRole('button',{name:'创建并启用短期请求',exact:true}).isDisabled(),true);
+  assert(!tier.state.seen.some(r=>r.path.includes('/tiering/')&&r.method!=='GET'));checks++;
+  await trun(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.anTier.draft.request_gzip_enabled=true;p.anTier.draft.tiering_enabled=true;p.anTier.draft.aggregate_upload_enabled=true;});
+  await tp.getByRole('button',{name:'保存并回读',exact:true}).click();
+  await tp.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anTier.data?.revision===2);
+  assert((await tp.locator('.analytics-panel').innerText()).includes('设备配置应用与真实上传仍待核验'));checks++;
+  await tp.getByRole('button',{name:'创建并启用短期请求',exact:true}).click();await tp.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anTier.data?.requests.length===1);
+  await tp.getByRole('button',{name:'撤销',exact:true}).click();await tp.getByText('已撤销',{exact:false}).waitFor();checks++;
+  tier.state.mode='tier-offline';await tp.getByRole('button',{name:'重新读取',exact:true}).click();await tp.getByText('接收服务暂不可达，不能新增开启；仍可保存关闭设置。',{exact:true}).waitFor();
+  assert.equal(await tp.getByRole('button',{name:'创建并启用短期请求',exact:true}).isDisabled(),true);
+  await tp.screenshot({path:'/tmp/p003-v375-tiering-ui.png',fullPage:true});checks++;
+  tier.state.mode='tier-delay';const pendingTier=new Promise(resolve=>tier.state.pendingReady=resolve);await trun(()=>{document.querySelector('#app').__vue_app__._container._vnode.component.proxy.loadAnalyticsTier();});await pendingTier;
+  await trun(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.handleDropdown('logout'));await tier.state.releaseTier();await tp.waitForTimeout(100);
+  assert.equal(await trun(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anTier.data),null);assert.deepEqual(tier.state.errors,[]);checks++;await tier.context.close();
   const guest=await session(null);assert.equal(await guest.page.locator('.login-card').count(),1);assert.equal(await guest.page.locator('.login-card input').count(),2);assert.deepEqual(guest.state.errors,[]);checks++;await guest.context.close();
   const admin=await session('admin'),{page,state}=admin;
   const run=fn=>page.evaluate(fn);

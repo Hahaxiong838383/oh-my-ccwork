@@ -35,7 +35,7 @@ try{
     try{
       const batch=validateAnalyticsBatch(typeof message.serializedBatch==='string'?JSON.parse(message.serializedBatch):message.batch);
       // settleAnalyticsBatch only returns after its FULL transaction has committed.
-      const ack=settleAnalyticsBatch(store!,message.context,batch,message.requestId);
+      const ack=settleAnalyticsBatch(store!,message.context,batch,message.requestId,Date.now(),message.transport);
       port.postMessage({type:'result',id:message.id,ok:true,ack});
     }catch(error){
       try{port.postMessage({type:'result',id:message.id,ok:false,busy:error instanceof AnalyticsStorageUnavailable&&error.busy});}

@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';import {mkdtempSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {AnalyticsStore} from '../src/analytics/store.js';import {settleAnalyticsBatch} from '../src/analytics/ingest.js';
+const dir=mkdtempSync(join(tmpdir(),'analytics-tier-ingest-'));let store=new AnalyticsStore(join(dir,'analytics.db'));
+const now=Date.now(),subject='synthetic-device';
+const grant={id:'diag-00000000-0000-0000-0000-000000000001',sn:subject,created_at_ms:now-1000,expires_at_ms:now+60000,revoked_at_ms:null,allowed_event_names:['app.bridge_ready'],max_events:1,lookback_days:3};
+const ctx={deviceKey:'synthetic-key',subject,active:true,uploadEnabled:true,uploadHourCst:23,diagnosticRequests:[grant]};
+const raw=(id:string)=>({schema_version:1,client_event_id:id,event_name:'app.bridge_ready',occurred_at_ms:now,session_id:'raw-session',sequence:1,priority:'normal',context:{},properties:{}});
+const sample=(id:string,request=grant.id)=>({...raw(id),event_name:'analytics.on_demand_sample',context:{analytics_tier:'on_demand_diagnostic',request_id:request},session_id:'diagnostic-'+request.slice(-12),properties:{source_event_name:'app.bridge_ready',source_occurred_at_ms:now-60000,source_context:{},source_properties:{},capture_source:'on_demand'}});
+const send=(events:any[],context=ctx,time=now)=>settleAnalyticsBatch(store,context,{schema_version:1,batch_id:'synthetic',sent_at_ms:time,client:{},events},'synthetic-rid',time);
+try{
+ let ack=send([sample('one'),raw('raw')]);assert.deepEqual(ack.accepted_event_ids,['one','raw']);
+ assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event').get()!.n,1,'samples must not enter raw/Ark facts');
+ assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_tier_event').get()!.n,1);
+ ack=send([sample('two'),raw('raw-two')]);assert.deepEqual(ack.accepted_event_ids,['raw-two']);assert.deepEqual(ack.rejected,[{client_event_id:'two',reason:'diagnostic_request_limit'}]);
+ ack=send([sample('one')]);assert.deepEqual(ack.duplicated_event_ids,['one']);
+ const second={...grant,id:'diag-00000000-0000-0000-0000-000000000002'};
+ ack=send([sample('one',second.id)],{...ctx,diagnosticRequests:[second]});assert.deepEqual(ack.duplicated_event_ids,['one'],'same sampled event across request IDs never consumes a second slot');
+ ack=send([sample('foreign')],{...ctx,deviceKey:'different-key',subject:'other-device'});assert.equal(ack.rejected[0].reason,'diagnostic_request_invalid');
+ ack=send([sample('expired'),raw('raw-three')],ctx,now+60001);assert.deepEqual(ack.accepted_event_ids,['raw-three']);assert.equal(ack.rejected[0].reason,'diagnostic_request_expired');
+ ack=send([sample('revoked')],{...ctx,diagnosticRequests:[{...grant,revoked_at_ms:now}]} as any);assert.equal(ack.rejected[0].reason,'diagnostic_request_revoked');
+ ack=send([{...sample('stale'),occurred_at_ms:now-4*86400000}]);assert.equal(ack.rejected[0].reason,'diagnostic_sample_stale');
+ store.close();store=new AnalyticsStore(join(dir,'analytics.db'));ack=send([sample('one')],ctx,now+120000);assert.deepEqual(ack.duplicated_event_ids,['one'],'duplicate settlement survives expiry and restart');
+ assert.equal(store.db.prepare('SELECT accepted FROM analytics_diagnostic_usage WHERE request_id=?').get(grant.id)!.accepted,1);
+ assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_rollup_fact WHERE event_name LIKE 'analytics.%'").get()!.n,0);
+ console.log('analytics tier ingest: PASS (isolated storage, precise mixed ACK, full identity, quota, revoke/expiry/stale, cross-request replay, restart)');
+}finally{store.close();rmSync(dir,{recursive:true,force:true});}

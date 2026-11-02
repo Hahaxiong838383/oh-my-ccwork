@@ -7,7 +7,7 @@ const {AnalyticsStore}=await import('../src/analytics/store.js');
 const dir=mkdtempSync(join(tmpdir(),'analytics-http-')),control=join(dir,'control.json');
 writeFileSync(control,JSON.stringify({enabled:false}),{mode:0o600});
 const store=new AnalyticsStore(join(dir,'analytics.db'));
-const reader={acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:'fake-'+sn,active:sn!=='inactive',uploadEnabled:sn!=='off',uploadHourCst:23})};
+const reader={readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:'fake-'+sn,active:sn!=='inactive',uploadEnabled:sn!=='off',uploadHourCst:23})};
 let freeBytes=20*1024**3;
 const options={store,reader,authSecret:'fake-jwt-secret',internalSecret:'fake-internal-secret',controlPath:control,allowSubjects:['allowed','off'],globalRpm:600,diskFreeBytes:()=>freeBytes};
 const app=createAnalyticsApp(options);

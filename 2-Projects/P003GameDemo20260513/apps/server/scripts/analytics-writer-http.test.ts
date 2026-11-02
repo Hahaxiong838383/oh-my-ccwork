@@ -22,7 +22,7 @@ const writer={ready:false,busy:false,
  },async close(){this.ready=false;}
 };
 const context={deviceKey:'fake-http-writer-device',active:true,uploadEnabled:true,uploadHourCst:0};
-const options={store,writer,reader:{acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>context},authSecret:'fake-worker-http-key',internalSecret:'fake-worker-internal',controlPath:control,allowSubjects:['fake-worker'],diskFreeBytes:()=>20*1024**3};
+const options={store,writer,reader:{readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>context},authSecret:'fake-worker-http-key',internalSecret:'fake-worker-internal',controlPath:control,allowSubjects:['fake-worker'],diskFreeBytes:()=>20*1024**3};
 const app=createAnalyticsApp(options),server=serve({fetch:app.fetch,hostname:'127.0.0.1',port:0});
 await new Promise<void>(resolve=>server.listening?resolve():server.once('listening',resolve));
 const address=server.address();assert.ok(address&&typeof address!=='string');const base='http://127.0.0.1:'+address.port;

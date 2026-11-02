@@ -1,0 +1,54 @@
+/** Synthetic identities and fresh local DBs only. Real sockets + real SQLite writer + admin/config paths. */
+import assert from 'node:assert/strict';import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';import {gzipSync} from 'node:zlib';import {SignJWT} from 'jose';import {serve} from '@hono/node-server';
+import {AnalyticsStore} from '../src/analytics/store.js';import {AnalyticsWriter} from '../src/analytics/writer.js';import {AnalyticsDeviceReader} from '../src/analytics/device-context.js';
+import {createAnalyticsApp} from '../src/analytics/index.js';import {analyticsTierControlRoute} from '../src/analytics/tier-control-route.js';
+const dir=mkdtempSync(join(tmpdir(),'analytics-v375-http-'));process.env.CONFIG_DB_PATH=join(dir,'singleton.db');
+const {ConfigStore}=await import('../src/config-store.js');const config=new ConfigStore(join(dir,'config.db'));
+const sn='BJP00326010199999999',other='BJP00326010199999998',devices=[{sn,status:'active'},{sn:other,status:'active'}];
+const registry=new DatabaseSync(join(dir,'devices.db'));
+registry.exec(`CREATE TABLE device_registry(sn TEXT PRIMARY KEY,status TEXT,binding_policy TEXT DEFAULT 'legacy',binding_version INTEGER DEFAULT 0,parent_account_id TEXT);CREATE TABLE device_binding_state(sn TEXT PRIMARY KEY,binding_policy TEXT,binding_version INTEGER);CREATE TABLE device_credential_revocation(sn TEXT PRIMARY KEY,not_before_sec INTEGER);`);
+for(const d of devices)registry.prepare('INSERT INTO device_registry(sn,status) VALUES (?,?)').run(d.sn,d.status);
+config.saveAnalyticsPolicy({expected_revision:0,enabled:true,subjects:[sn],hour:23},[sn,other],'synthetic-admin');
+const control=join(dir,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
+const store=new AnalyticsStore(join(dir,'analytics.db'));let writer=new AnalyticsWriter(store.path);
+const reader=new AnalyticsDeviceReader({devicesPath:join(dir,'devices.db'),configPath:join(dir,'config.db'),deviceKeySecret:'synthetic-hmac-key',envAllow:[]});
+const options={store,writer,reader,authSecret:'synthetic-jwt',internalSecret:'synthetic-internal',controlPath:control,allowSubjects:[],diskFreeBytes:()=>20*1024**3};
+const app=createAnalyticsApp(options),server=serve({fetch:app.fetch,hostname:'127.0.0.1',port:0});
+await new Promise<void>(r=>server.listening?r():server.once('listening',r));const addr=server.address();assert.ok(addr&&typeof addr!=='string');const base='http://127.0.0.1:'+addr.port;
+const admin=analyticsTierControlRoute({authorize:h=>h==='synthetic-admin'?'admin':h?'parent':'none',config,devices:()=>devices,internalUrl:base,internalSecret:'synthetic-internal'});
+const adminServer=serve({fetch:admin.fetch,hostname:'127.0.0.1',port:0});await new Promise<void>(r=>adminServer.listening?r():adminServer.once('listening',r));const a=adminServer.address();assert.ok(a&&typeof a!=='string');const adminBase='http://127.0.0.1:'+a.port;
+const manage=(path='',method='GET',body?:unknown,auth='synthetic-admin')=>fetch(adminBase+'/'+sn+path,{method,headers:{Authorization:auth,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+const credential=(subject=sn,binding?:number)=>new SignJWT({kind:'p003-device',...(binding===undefined?{}:{binding_version:binding})}).setSubject(subject).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode('synthetic-jwt'));
+let token=await credential();const now=Date.now();let rid=0;
+const event=(id:string)=>({schema_version:1,client_event_id:id,event_name:'app.bridge_ready',occurred_at_ms:now,session_id:'synthetic-session',sequence:1,priority:'normal',context:{},properties:{}});
+const sample=(id:string,request:string)=>({...event(id),event_name:'analytics.on_demand_sample',session_id:'diagnostic-'+request.slice(-12),context:{analytics_tier:'on_demand_diagnostic',request_id:request},properties:{source_event_name:'app.bridge_ready',source_occurred_at_ms:now-60000,source_context:{},source_properties:{},capture_source:'on_demand'}});
+const start=Math.floor((now+28800000)/(7*86400000))*7*86400000-28800000-7*86400000;
+const aggregate={...event('synthetic-aggregate'),event_name:'analytics.periodic_aggregate',occurred_at_ms:start+7*86400000-1,context:{analytics_tier:'periodic_aggregate',component:'godot_g1_demo'},properties:{source_event_name:'settings.closed',period_start_ms:start,period_end_ms:start+7*86400000,period_days:7,first_occurred_at_ms:start+1,last_occurred_at_ms:start+2,count:20,dimensions:{},measurements:{}}};
+const post=(events:unknown[],gzip=false,cred=token)=>{const body=JSON.stringify({schema_version:1,batch_id:'synthetic-batch',sent_at_ms:now,client:{component:'synthetic-tests'},events});return fetch(base+'/v1/device/analytics/events:batch',{method:'POST',headers:{Authorization:'Bearer '+cred,'X-Request-Id':'synthetic-v375-'+ ++rid,...(gzip?{'Content-Encoding':'gzip'}:{})},body:gzip?gzipSync(body):body});};
+const ready=async()=>{const end=Date.now()+20000;while(!writer.ready){assert.ok(Date.now()<end);await new Promise(r=>setTimeout(r,10));}};
+try{
+ await ready();assert.equal((await manage('','GET',undefined,'parent')).status,403);assert.equal((await manage('','GET',undefined,'')).status,401);
+ assert.equal((await fetch(adminBase+'/'+sn,{method:'PUT',headers:{Authorization:'synthetic-admin'},body:'{bad'})).status,400);
+ let status=await(await manage()).json();assert.equal(status.analytics.tiering_enabled,false);assert.equal(status.runtime.capabilities.gzip,true);
+ let response=await manage('','PUT',{expected_revision:status.revision,settings:{tiering_enabled:true,aggregate_upload_enabled:true,request_gzip_enabled:true}});assert.equal(response.status,200);
+ status=await response.json();assert.equal((config.effectiveSnapshot(other).analytics as any).tiering_enabled,false);
+ response=await manage('/requests','POST',{expected_revision:status.revision,allowed_event_names:['app.bridge_ready'],ttl_seconds:60,max_events:1,lookback_days:3});assert.equal(response.status,200);const grant=await response.json();
+ const mixed=[aggregate,sample('synthetic-sample',grant.request.id),event('synthetic-raw')];
+ response=await post(mixed,true);assert.equal(response.status,200);let ack=await response.json();assert.deepEqual(ack.accepted_event_ids,mixed.map(x=>x.client_event_id));assert.equal(ack.request_id,'synthetic-v375-1');
+ response=await post(mixed);ack=await response.json();assert.equal(response.status,200);assert.deepEqual(ack.duplicated_event_ids,mixed.map(x=>x.client_event_id));
+ response=await post([sample('quota-new',grant.request.id),event('raw-quota')],true);ack=await response.json();assert.deepEqual(ack.accepted_event_ids,['raw-quota']);assert.equal(ack.rejected[0].reason,'diagnostic_request_limit');
+ assert.equal((await post([event('other')],true,await credential(other))).status,403);
+ response=await manage('/requests/'+grant.request.id,'DELETE');assert.equal(response.status,200);
+ response=await post([sample('revoked-new',grant.request.id),event('raw-revoked')]);ack=await response.json();assert.deepEqual(ack.accepted_event_ids,['raw-revoked']);assert.equal(ack.rejected[0].reason,'diagnostic_request_revoked');
+ status=await(await manage()).json();assert.equal(status.analytics.on_demand_upload_enabled,false);assert.equal(status.runtime.layers.find((r:any)=>r.tier==='aggregate').source_events,20);assert.equal(status.runtime.layers.find((r:any)=>r.tier==='aggregate').records,1);
+ assert.ok(status.runtime.transport.some((t:any)=>t.encoding==='gzip'&&t.wire_bytes<t.inflated_bytes));
+ assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_event WHERE event_name LIKE 'analytics.%'").get()!.n,0);
+ assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_rollup_fact WHERE event_name LIKE 'analytics.%'").get()!.n,0);
+ await writer.close();writer=new AnalyticsWriter(store.path);options.writer=writer;await ready();response=await post(mixed,true);ack=await response.json();assert.deepEqual(ack.duplicated_event_ids,mixed.map(x=>x.client_event_id));
+ // The current BLE binding-version requirement remains enforced, even for gzip ingress.
+ registry.prepare("UPDATE device_registry SET binding_policy='ble-key-v1',binding_version=1,parent_account_id='synthetic-parent' WHERE sn=?").run(sn);
+ assert.equal((await post([event('old-credential')],true)).status,401);token=await credential(sn,1);assert.equal((await post([event('ble-current')],true)).status,200);
+ registry.prepare('UPDATE device_registry SET binding_version=2 WHERE sn=?').run(sn);assert.equal((await post([event('ble-stale')],true)).status,401);
+ console.log('analytics v375 HTTP: PASS (real admin/HTTP/writer/DB, gzip/raw, mixed ACK, scope/revoke/quota, restart, tier statistics, Ark isolation, current BLE version)');
+}finally{server.closeAllConnections();adminServer.closeAllConnections();await Promise.all([new Promise<void>(r=>server.close(()=>r())),new Promise<void>(r=>adminServer.close(()=>r()))]);await writer.close();store.close();registry.close();rmSync(dir,{recursive:true,force:true});}

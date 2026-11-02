@@ -48,7 +48,7 @@ export function queryAnalytics(store:AnalyticsStore,kind:string,params:URLSearch
     const where=`WHERE received_at_ms>=? AND received_at_ms<?${aliasSql}${requestId?' AND request_id=?':''}`;
     const values=[Date.parse(filter.from+'T00:00:00Z')-8*3_600_000,Date.parse(filter.to+'T00:00:00Z')+16*3_600_000,...(filter.alias?[filter.aliasPrefix!]:[]),...(requestId?[requestId]:[]),limit,offset];
     const rows=db.prepare(`SELECT * FROM analytics_batch ${where} ORDER BY received_at_ms DESC,attempt_id LIMIT ? OFFSET ?`).all(...values) as any[];
-    return {ok:true,dimension:'received',from:filter.from,to:filter.to,device_alias:filter.alias??null,limit,offset,items:rows.map(({device_key,client_json,...row})=>({...row,device_alias:deviceAlias(device_key),upload_client:JSON.parse(client_json),sent_received_skew_ms:row.received_at_ms-row.sent_at_ms}))};
+    return {ok:true,dimension:'received',from:filter.from,to:filter.to,device_alias:filter.alias??null,limit,offset,items:rows.map(({device_key,client_json,...row})=>({...row,device_alias:deviceAlias(device_key),upload_client:JSON.parse(client_json),transport:db.prepare('SELECT encoding,wire_bytes,inflated_bytes FROM analytics_transport WHERE attempt_id=?').get(row.attempt_id)??null,sent_received_skew_ms:row.received_at_ms-row.sent_at_ms}))};
   }
   if(kind==='events'){
     const id=params.get('client_event_id');if(!id||id.length>128)throw new Error('INVALID_QUERY');
@@ -56,7 +56,9 @@ export function queryAnalytics(store:AnalyticsStore,kind:string,params:URLSearch
     const receiptBindings=[Date.parse(filter.from+'T00:00:00Z')-8*3_600_000,Date.parse(filter.to+'T00:00:00Z')+16*3_600_000,...(filter.alias?[filter.aliasPrefix!]:[])];
     const rows=db.prepare(`SELECT s.attempt_id,s.outcome,s.reason,b.request_id,b.received_at_ms,b.device_key FROM analytics_settlement s JOIN analytics_batch b ON b.attempt_id=s.attempt_id WHERE s.id_digest=? AND b.received_at_ms>=? AND b.received_at_ms<?${receiptAlias} ORDER BY b.received_at_ms DESC LIMIT ? OFFSET ?`).all(idHash,...receiptBindings,limit,offset) as any[];
     const dayColumn=filter.dimension==='received'?'received_day':'occurred_day';
-    const events=db.prepare(`SELECT device_key,event_name,occurred_at_ms,received_at_ms,session_id,sequence,priority,clock_suspicious FROM analytics_event WHERE client_event_id=? AND ${dayColumn}>=? AND ${dayColumn}<=?${aliasSql} ORDER BY received_at_ms DESC LIMIT ? OFFSET ?`).all(id,...bindings,limit,offset) as any[];
+    const columns='device_key,event_name,occurred_at_ms,received_at_ms,session_id,sequence,priority,clock_suspicious';
+    const events=db.prepare(`SELECT * FROM (SELECT ${columns},'raw' tier FROM analytics_event WHERE client_event_id=? AND ${dayColumn}>=? AND ${dayColumn}<=?${aliasSql}
+      UNION ALL SELECT ${columns},tier FROM analytics_tier_event WHERE client_event_id=? AND ${dayColumn}>=? AND ${dayColumn}<=?${aliasSql}) ORDER BY received_at_ms DESC LIMIT ? OFFSET ?`).all(id,...bindings,id,...bindings,limit,offset) as any[];
     return {ok:true,id_digest:idHash,from:filter.from,to:filter.to,dimension:filter.dimension,device_alias:filter.alias??null,limit,offset,settlements:rows.map(({device_key,...r})=>({...r,device_alias:deviceAlias(device_key)})),events:events.map(({device_key,session_id,...r})=>({...r,device_alias:deviceAlias(device_key),session_digest:digest(session_id)}))};
   }
   throw new Error('INVALID_QUERY');

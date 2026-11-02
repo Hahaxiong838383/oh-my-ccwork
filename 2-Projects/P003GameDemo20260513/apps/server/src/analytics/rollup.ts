@@ -1,4 +1,5 @@
 import { AnalyticsStore,AnalyticsRollupBudgetExceeded,cstDay,DAY_MS } from './store.js';
+import {pruneAnalyticsTiers} from './tiers.js';
 type Fact={device_key:string;event_name:string;session_digest:string;clock_suspicious:number;semantic_json:string;received_at_ms:number};
 export type RollupBudget={maxFactsPerDay:number;maxDayMs:number};
 export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"}[];remaining_dirty_days:number;partial:boolean};
@@ -91,9 +92,11 @@ function pruneDailyTable(store:AnalyticsStore,table:string,cutoff:string,limit:n
 export function pruneAnalytics(store:AnalyticsStore,now=Date.now(),chunk=1000):{events:number;batches:number}{
   const bounded=Math.max(1,Math.min(5000,chunk)),rawCutoff=now-14*DAY_MS,dailyCutoff=cstDay(now-90*DAY_MS);
   return store.transaction(()=>{
-    const events=Number(store.db.prepare('DELETE FROM analytics_event WHERE rowid IN (SELECT rowid FROM analytics_event WHERE received_at_ms<? LIMIT ?)').run(rawCutoff,bounded).changes);
+    const rawEvents=Number(store.db.prepare('DELETE FROM analytics_event WHERE rowid IN (SELECT rowid FROM analytics_event WHERE received_at_ms<? LIMIT ?)').run(rawCutoff,bounded).changes);
+    const events=rawEvents+pruneAnalyticsTiers(store.db,now,bounded-rawEvents);
     const old=store.db.prepare('SELECT attempt_id FROM analytics_batch WHERE received_at_ms<? LIMIT ?').all(rawCutoff,bounded) as {attempt_id:string}[];
-    for(const {attempt_id} of old){store.db.prepare('DELETE FROM analytics_settlement WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_batch WHERE attempt_id=?').run(attempt_id);}
+    for(const {attempt_id} of old){store.db.prepare('DELETE FROM analytics_transport WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_settlement WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_batch WHERE attempt_id=?').run(attempt_id);}
+    store.db.prepare('DELETE FROM analytics_transport_day WHERE rowid IN (SELECT rowid FROM analytics_transport_day WHERE day<? LIMIT ?)').run(dailyCutoff,bounded);
     for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry'])pruneDailyTable(store,table,dailyCutoff,bounded);
     return {events,batches:old.length};
   });
