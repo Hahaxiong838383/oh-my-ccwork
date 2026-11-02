@@ -27,10 +27,11 @@
 
 ## 工具和证据规则
 
-- `prepare_candidate.py` 只接受48回执中出现的完整SHA；git archive到私有目录；从候选运行，绝不覆盖48工作树。
+- `prepare_candidate.py` 只接受48回执顶层 `candidate_sha` 精确匹配的完整SHA，baseline或嵌套字段不能替代；git archive到私有目录；从候选运行，绝不覆盖48工作树。
 - `audit45-http.ts` 是独立真实localhost HTTP+writer+SQLite兼容/压缩/重启检查；复制到隔离候选apps/server/scripts后运行。使用合成主体，绝不使用真实SN/儿童正文/外部模型。
 - 继续执行候选自带Ark/history/state/runtime/http-sse等回归，但报告注明这些是复跑已有测试；不充当独立新事件测试。
 - 候选新接口稳定后补其授权/TTL/计数独立用例；候选未到、API适配未完必须写NOT_RUN，不能因已有测试全绿给总PASS。
 - 本机延迟只作为本机证据；HK真实负载、v375当前PCK实际分层能力、7天真实统计、真人语音均单列未验。
+- 仅文档提交变化且运行源码、配置、迁移、依赖锁及测试字节完全相同时，记录逐文件hash等价与原证据SHA，不机械全套重跑；业务变更、失败或未解决疑点按影响复验。原来未验的项目仍保持未验。
 
 署名：codex（OpenAI）| 2026-11-02

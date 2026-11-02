@@ -5,7 +5,7 @@
 - `CONTRACT-45.md`：从精确客户端源码52b89ec9与交付4f7cc366核得的合同；纠正双开关、request_id位置、队列TTL/幂等期限等边界。
 - `CLIENT_SOURCE.json`：私有Git读取的10份精确源文件SHA256，不包含真实用户数据。
 - `MATRIX.md`：候选准入矩阵及未验边界。
-- `prepare_candidate.py`：验证48候选JSON中的完整SHA及现役基线祖先，归档至私有state目录。
+- `prepare_candidate.py`：只验证48候选JSON顶层 `candidate_sha` 的完整SHA及现役基线祖先，归档至私有state目录；baseline等其他字段不能充当候选。
 - `audit45-http.ts`：真实localhost HTTP、真实writer、SQLite、gzip异常、精确ACK、重启幂等与鉴权测试；复制到隔离候选server/scripts执行。
 - `fixtures.ts`：按客户端生成算法构造的合成信封，未冒充客户端运行输出。候选确定后用于新事件合同/授权/TTL测试。
 - `PREPARATION_RESULTS.json`：仅工具准备与旧基线负向对照，不代表候选通过。
@@ -18,7 +18,7 @@
 
 ## 后续执行
 
-48交付CANDIDATE-48.json → prepare_candidate归档 → 核Node24.19.0与现有依赖版本后只在隔离目录链接node_modules → 复制独立测试并运行 → 按候选接口补请求授权/TTL/Ark隔离用例 → 记录日志SHA和结果 → 缺陷发48修复重验 → 固定SHA审查结果发13。每次新SHA需重新归档与验证，不能只检查差异就沿用旧PASS。
+48交付CANDIDATE-48.json → prepare_candidate归档 → 核Node24.19.0与现有依赖版本后只在隔离目录链接node_modules → 复制独立测试并运行 → 按候选接口补请求授权/TTL/Ark隔离用例 → 记录日志SHA和结果 → 缺陷发48修复重验 → 固定SHA审查结果发13。新SHA先归档核对；仅文档变化且运行源码、配置、迁移、依赖锁和测试字节完全相同，可记录逐文件hash等价及原证据，不机械全套重跑。业务变化/失败按影响重验；未验项目不能因文档等价变成通过。
 
 本轮不改生产、不改端侧、不扩大设备范围；会话13唯一负责部署及最终真机验收。
 

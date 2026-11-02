@@ -14,15 +14,11 @@ SERVER = '2-Projects/P003GameDemo20260513/apps/server'
 BASE = '9e7aab980114b796e22cc5286a1edf5c44f3b35a'
 
 
-def values(value):
-    if isinstance(value, str):
-        yield value
-    elif isinstance(value, dict):
-        for item in value.values():
-            yield from values(item)
-    elif isinstance(value, list):
-        for item in value:
-            yield from values(item)
+def verify_candidate_sha(receipt, expected):
+    if not isinstance(expected, str) or not re.fullmatch(r'[0-9a-f]{40}', expected):
+        raise ValueError('必须完整SHA')
+    if not isinstance(receipt, dict) or receipt.get('candidate_sha') != expected:
+        raise ValueError('SHA必须精确匹配48回执顶层candidate_sha，不接受baseline或其他字段')
 
 
 def main():
@@ -32,9 +28,8 @@ def main():
     parser.add_argument('--repo', type=Path, required=True)
     parser.add_argument('--output-parent', type=Path, required=True)
     args = parser.parse_args()
-    assert re.fullmatch(r'[0-9a-f]{40}', args.sha), '必须完整SHA'
     raw = args.candidate.read_bytes()
-    assert args.sha in set(values(json.loads(raw))), 'SHA必须来自48候选JSON的独立字段'
+    verify_candidate_sha(json.loads(raw), args.sha)
     git = ['git', '-C', str(args.repo)]
     resolved = subprocess.check_output(git + ['rev-parse', args.sha + '^{commit}'], text=True).strip()
     assert resolved == args.sha
