@@ -275,7 +275,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
-    const claimGuardEnabled = Boolean(searchPolicy.instruction) && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText);
+    const claimGuardEnabled = Boolean(searchPolicy.instruction) && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞|^(?:小可[，,\s]*)?(?:(?:请|帮我|给我)[，,\s]*){0,3}(?:读一下|读一读|读读|打开|看看|看一下|看一看)[^。！？!?]{0,80}(?:网页|新闻页面|官网|网站|网址|https?:\/\/)/.test(userText);
     const searchClaimFilter = createSearchClaimFilter(claimGuardEnabled);
     const modelStarted = performance.now();
     let firstUpstreamAt: number | null = null;
