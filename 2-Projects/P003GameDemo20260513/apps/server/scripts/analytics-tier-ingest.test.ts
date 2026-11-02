@@ -22,5 +22,10 @@ try{
  store.close();store=new AnalyticsStore(join(dir,'analytics.db'));ack=send([sample('one')],ctx,now+120000);assert.deepEqual(ack.duplicated_event_ids,['one'],'duplicate settlement survives expiry and restart');
  assert.equal(store.db.prepare('SELECT accepted FROM analytics_diagnostic_usage WHERE request_id=?').get(grant.id)!.accepted,1);
  assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_rollup_fact WHERE event_name LIKE 'analytics.%'").get()!.n,0);
- console.log('analytics tier ingest: PASS (isolated storage, precise mixed ACK, full identity, quota, revoke/expiry/stale, cross-request replay, restart)');
+ const period=7*86400000,start=Math.floor((now+28800000)/period)*period-28800000,end=start+period;
+ const aggregate={...raw('period-open'),event_name:'analytics.periodic_aggregate',occurred_at_ms:end-1,context:{analytics_tier:'periodic_aggregate',component:'godot_g1_demo'},properties:{source_event_name:'settings.closed',period_start_ms:start,period_end_ms:end,period_days:7,first_occurred_at_ms:start+1,last_occurred_at_ms:start+2,count:20,dimensions:{},measurements:{}}};
+ ack=send([aggregate,raw('raw-beside-open')],ctx,end-1);assert.deepEqual(ack.accepted_event_ids,['raw-beside-open'],'open aggregate must not consume its final event ID');assert.deepEqual(ack.rejected,[{client_event_id:'period-open',reason:'invalid_properties'}]);
+ ack=send([aggregate],ctx,end);assert.deepEqual(ack.accepted_event_ids,['period-open'],'exact close boundary accepts final bucket');
+ ack=send([aggregate],ctx,end-1);assert.deepEqual(ack.duplicated_event_ids,['period-open'],'accepted replay stays idempotent if server clock moves backward');
+ console.log('analytics tier ingest: PASS (isolated storage, precise mixed ACK, full identity, quota, revoke/expiry/stale, cross-request replay, restart, closed-period boundary)');
 }finally{store.close();rmSync(dir,{recursive:true,force:true});}

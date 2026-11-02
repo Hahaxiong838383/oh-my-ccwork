@@ -32,6 +32,11 @@ export function settleAnalyticsBatch(store:AnalyticsStore,context:AnalyticsDevic
         else {ack.rejected.push({client_event_id:id,reason:'client_event_id_conflict'});settlements.push({id,outcome:'rejected',reason:'client_event_id_conflict'});}
         continue;
       }
+      // A bucket is a final count, never a live snapshot. Check the authoritative
+      // receipt clock after replay detection so an accepted ID remains settled.
+      if(tier==='aggregate'&&(event.properties.period_end_ms as number)>receivedAt){
+        ack.rejected.push({client_event_id:id,reason:'invalid_properties'});settlements.push({id,outcome:'rejected',reason:'invalid_properties'});continue;
+      }
       if(tier==='diagnostic'){
         const denied=authorizeDiagnostic(statements,context,event,receivedAt);
         if(denied){ack.rejected.push({client_event_id:id,reason:denied});settlements.push({id,outcome:'rejected',reason:denied});continue;}

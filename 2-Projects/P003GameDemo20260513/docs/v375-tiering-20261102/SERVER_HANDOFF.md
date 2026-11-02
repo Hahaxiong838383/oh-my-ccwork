@@ -6,7 +6,7 @@
 ## 实现边界
 
 - 保持57类raw合同，新增analytics.periodic_aggregate与analytics.on_demand_sample。旧raw表形状、Ark事实及幂等不变；新载荷独立表，不能挤占Ark raw扫描预算、计算余额/奖励或写长期人格。
-- 精确12种聚合来源/维度、14种样本来源；嵌套源事件继续按旧隐私合同验证。周期按Unix epoch对齐CST整日，固定配置7天；接收旧7～31天合法队列兼容。count限1～10亿。失败/奖励/钱包等仍raw。
+- 精确12种聚合来源/维度、14种样本来源；嵌套源事件继续按旧隐私合同验证。周期按Unix epoch对齐CST整日，固定配置7天；接收旧7～31天合法队列兼容。count限1～10亿。新聚合严格要求period_end_ms<=服务端receivedAt（零未来容差），等于边界才可收；未闭合仅该ID以invalid_properties拒收且不占seen，同批raw照常。已有ID重放先去重，服务器时钟回拨不导致二次结算。真机必须先核对设备时钟，不能将提前闭合的计数当完整周期。失败/奖励/钱包等仍raw。
 - gzip是整请求压缩；wire/inflated分别2MiB，15秒读取解压界限，异步zlib；最多2个HTTP请求，单writer、无排队、8秒写入deadline，现有内存/磁盘/WAL保护保留。JSON413可拆批；错误/截断/CRC400；不支持编码415；超时/忙503带Retry-After，不能用400表达单条样本无授权。
 - ACK仅在事务提交后发；accepted/duplicated/rejected覆盖且互斥。raw/gzip同义。新样本授权失败仅该ID rejected，混批raw正常结算。
 - 聚合/样本已进Launcher的队列不因后续双开关关闭而自动消失；服务端仍接受合法聚合，样本需有效服务端请求。已接收样本即使请求撤销/到期，精确重放仍duplicated；同ID跨新请求只忽略context.request_id/session路由元数据，其余源内容变化仍冲突，不重占额度。
