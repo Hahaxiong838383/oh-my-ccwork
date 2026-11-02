@@ -1,0 +1,453 @@
+{
+  "verified_at_cst": "2026-11-02 18:15:51",
+  "window": {
+    "opened_at_ms": 1793614183476,
+    "expires_at_ms": 1793786311000,
+    "generation": "v374-listening-ark-20261102-1793613511",
+    "allowlist": [
+      "BJP00326070803800006"
+    ],
+    "agent": "p003-search-listening-20261030",
+    "config_revision": 6
+  },
+  "code_commits": {
+    "main": "7c47de178013ad8cd5dd563b7302be19fccda87e",
+    "listening_brain": "cf6ef97a35b8e1c94fb7892316a56d9243684f46",
+    "listening_worker": "b663e0e09d423ba282e21e242569774466fcfdb0"
+  },
+  "worker": {
+    "at_ms": 1793614552125,
+    "window": {
+      "enabled": true,
+      "allowlist": [
+        "BJP00326070803800006"
+      ],
+      "generation": "v374-listening-ark-20261102-1793613511",
+      "expires_at_ms": 1793786311000
+    },
+    "health": {
+      "agent": "p003-search-listening-20261030",
+      "at_ms": 1793614551505,
+      "cleanup": {
+        "at_ms": 1793614551411,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "v374-listening-ark-20261102-1793613511",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "units": {
+      "p003-listening-worker": {
+        "MainPID": "2222439",
+        "NRestarts": "32",
+        "ActiveState": "active",
+        "binary_sha256": "c2c8081581ae86c8155bbaf51af5eec34a05454bf8c3d8047fb74b326adcb4f5"
+      },
+      "p003-search-worker": {
+        "MainPID": "2143116",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "binary_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+      },
+      "voice-worker-rust": {
+        "MainPID": "1825469",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "binary_sha256": "52f644bb6628a818b364f829b49fcea6126eea0ddcd2a195f00522d683c2369c"
+      },
+      "p003-listening-v374-expiry.timer": {
+        "NextElapseUSecRealtime": "Wed 2026-11-04 09:58:31 UTC",
+        "ActiveState": "active"
+      }
+    },
+    "expiry_preflight": {
+      "result": "not_due",
+      "kind": "worker",
+      "at_ms": 1793614554470,
+      "generation": "v374-listening-ark-20261102-1793613511"
+    }
+  },
+  "listening_config": {
+    "enabled": true,
+    "allowlist": [
+      "BJP00326070803800006"
+    ],
+    "scenes": [
+      "story",
+      "sharing",
+      "singing"
+    ],
+    "tuning": {
+      "max_session_sec": 1800,
+      "feedback_max_chars": 80,
+      "feedback_max_duration_sec": 12,
+      "feedback_cooldown_sec": 5,
+      "summary_interval_sec": 180,
+      "summary_trigger_chars": 6000,
+      "voice_invitation_enabled": true
+    },
+    "schema_version": 1,
+    "revision": 6
+  },
+  "listening_runtime": {
+    "status": "evidence_ready",
+    "ready": true,
+    "effective_enabled": true,
+    "applied_revision": 6,
+    "active_sessions": 0,
+    "last_ack_at": 1793614548220,
+    "message": "已核准构建及配置应用确认；授权会话数不代表设备实听验收。",
+    "parameter_effect": "新进入使用参数快照；关闸、移出名单或禁用场景经短租约撤权。"
+  },
+  "observer_summary": {
+    "state": "regression",
+    "health_ok": true,
+    "lease_ok": true,
+    "scope_ok": true,
+    "dispatch_requested": true,
+    "expires_at_ms": 1793786311000,
+    "configured_devices": [
+      "BJP00326070803800006"
+    ],
+    "selected_prepared": true
+  },
+  "main_timer": [
+    "NextElapseUSecRealtime=Wed 2026-11-04 17:58:31 CST",
+    "ActiveState=active"
+  ],
+  "main_timer_preflight": {
+    "result": "not_due",
+    "kind": "main",
+    "at_ms": 1793614551714,
+    "generation": "v374-listening-ark-20261102-1793613511"
+  },
+  "ark_snapshot_metadata": {
+    "schema_version": 1,
+    "sequence": 16,
+    "source_mode": "gm",
+    "logical_day": "2026-11-04",
+    "captured_at_ms": 1793614546254
+  },
+  "ark_received_at_ms": 1793614550897,
+  "ark_authority_facts": {
+    "subject": "BJP00326070803800006",
+    "schema_version": 1,
+    "assets": {
+      "family_coin": null,
+      "stardust": null,
+      "makeup_card": null
+    },
+    "progress": null
+  },
+  "analytics_policy": {
+    "ok": true,
+    "revision": 1,
+    "enabled": true,
+    "subjects": [
+      "BJP00326070803800006"
+    ],
+    "hour": 23,
+    "effective_enabled": true,
+    "valid": true,
+    "emergency_gate": {
+      "enabled": true,
+      "valid": true
+    },
+    "managed": true,
+    "device_config": [
+      {
+        "sn": "BJP00326070803800006",
+        "active": true,
+        "enabled": true,
+        "hour": 23
+      }
+    ]
+  },
+  "main_direct_markers": [
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614093390\",\"response_id\":\"chatcmpl-lzk7o1gkry\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614093617\",\"response_id\":\"chatcmpl-lbn5jpxpjr\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614093790\",\"response_id\":\"chatcmpl-gfuzn07qb8\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614093898\",\"response_id\":\"chatcmpl-3j9o87crqk\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614093961\",\"response_id\":\"chatcmpl-5moxjal5w6\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094051\",\"response_id\":\"chatcmpl-n8nu36z81f\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094123\",\"response_id\":\"chatcmpl-ms2bjo68ag\",\"typed_facts\":false}"
+  ],
+  "candidate_direct_markers": [
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094428\",\"response_id\":\"chatcmpl-c4amk9498l\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094607\",\"response_id\":\"chatcmpl-6kx7f3ubuw\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094676\",\"response_id\":\"chatcmpl-n6qvqtc3hg\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094775\",\"response_id\":\"chatcmpl-cf8rigox95\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094888\",\"response_id\":\"chatcmpl-s0zsx7yowz\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614094991\",\"response_id\":\"chatcmpl-dbuxrx4u4h\",\"typed_facts\":true}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614095068\",\"response_id\":\"chatcmpl-bc1alexurt\",\"typed_facts\":false}",
+    "[ark-direct] {\"room\":\"sn-BJP00326070803800006-1793614363917\",\"response_id\":\"chatcmpl-vyntu1g0hk\",\"typed_facts\":false}"
+  ],
+  "live_ark_http": [
+    {
+      "candidate": false,
+      "results": [
+        {
+          "question": "我现在有多少家族币，家族币有什么用？",
+          "answer": "家族币余额我暂时查不到，可以看设备上的资源页面。家族币用来记录你和家长约好的奖励，具体约定由家长设置，不是平台自动兑换或提现。",
+          "http": 200,
+          "done": true,
+          "ms": 227,
+          "room": "sn-BJP00326070803800006-1793614093390"
+        },
+        {
+          "question": "我有多少星尘，星尘有什么用？",
+          "answer": "星尘余额我暂时查不到，可以看设备上的资源页面。星尘是给小可换装用的资源，具体能换什么以设备页面为准。",
+          "http": 200,
+          "done": true,
+          "ms": 173,
+          "room": "sn-BJP00326070803800006-1793614093617"
+        },
+        {
+          "question": "我还有多少补勤卡，补勤卡有什么用？",
+          "answer": "补勤卡库存我暂时查不到，可以看设备上的资源页面。补勤卡用于符合条件的历史航线节点补签，补签后的奖励还需按设备页面提示领取。",
+          "http": 200,
+          "done": true,
+          "ms": 108,
+          "room": "sn-BJP00326070803800006-1793614093790"
+        },
+        {
+          "question": "我今天赚了多少金币？",
+          "answer": "今日收益我暂时查不到，不能把钱包余额当成今天获得的数量。",
+          "http": 200,
+          "done": true,
+          "ms": 63,
+          "room": "sn-BJP00326070803800006-1793614093898"
+        },
+        {
+          "question": "我离下一个宝箱还需要多久？",
+          "answer": "当前奖励进度我暂时查不到，请看设备上的奖励页面。",
+          "http": 200,
+          "done": true,
+          "ms": 90,
+          "room": "sn-BJP00326070803800006-1793614093961"
+        },
+        {
+          "question": "我现在方舟进度怎么样？",
+          "answer": "当前奖励进度我暂时查不到，请看设备上的奖励页面。",
+          "http": 200,
+          "done": true,
+          "ms": 72,
+          "room": "sn-BJP00326070803800006-1793614094051"
+        },
+        {
+          "question": "金币有什么用？",
+          "answer": "你说的金币是家族币，还是星尘？家族币记录和家长约好的奖励，星尘用于给小可换装。",
+          "http": 200,
+          "done": true,
+          "ms": 14,
+          "room": "sn-BJP00326070803800006-1793614094123"
+        }
+      ],
+      "at_ms": 1793614094137
+    },
+    {
+      "candidate": true,
+      "results": [
+        {
+          "question": "我现在有多少家族币，家族币有什么用？",
+          "answer": "家族币余额我暂时查不到，可以看设备上的资源页面。家族币用来记录你和家长约好的奖励，具体约定由家长设置，不是平台自动兑换或提现。",
+          "http": 200,
+          "done": true,
+          "ms": 179,
+          "room": "sn-BJP00326070803800006-1793614094428"
+        },
+        {
+          "question": "我有多少星尘，星尘有什么用？",
+          "answer": "星尘余额我暂时查不到，可以看设备上的资源页面。星尘是给小可换装用的资源，具体能换什么以设备页面为准。",
+          "http": 200,
+          "done": true,
+          "ms": 69,
+          "room": "sn-BJP00326070803800006-1793614094607"
+        },
+        {
+          "question": "我还有多少补勤卡，补勤卡有什么用？",
+          "answer": "补勤卡库存我暂时查不到，可以看设备上的资源页面。补勤卡用于符合条件的历史航线节点补签，补签后的奖励还需按设备页面提示领取。",
+          "http": 200,
+          "done": true,
+          "ms": 99,
+          "room": "sn-BJP00326070803800006-1793614094676"
+        },
+        {
+          "question": "我今天赚了多少金币？",
+          "answer": "今日收益我暂时查不到，不能把钱包余额当成今天获得的数量。",
+          "http": 200,
+          "done": true,
+          "ms": 113,
+          "room": "sn-BJP00326070803800006-1793614094775"
+        },
+        {
+          "question": "我离下一个宝箱还需要多久？",
+          "answer": "当前奖励进度我暂时查不到，请看设备上的奖励页面。",
+          "http": 200,
+          "done": true,
+          "ms": 103,
+          "room": "sn-BJP00326070803800006-1793614094888"
+        },
+        {
+          "question": "我现在方舟进度怎么样？",
+          "answer": "当前奖励进度我暂时查不到，请看设备上的奖励页面。",
+          "http": 200,
+          "done": true,
+          "ms": 77,
+          "room": "sn-BJP00326070803800006-1793614094991"
+        },
+        {
+          "question": "金币有什么用？",
+          "answer": "你说的金币是家族币，还是星尘？家族币记录和家长约好的奖励，星尘用于给小可换装。",
+          "http": 200,
+          "done": true,
+          "ms": 14,
+          "room": "sn-BJP00326070803800006-1793614095068"
+        }
+      ],
+      "at_ms": 1793614095082
+    }
+  ],
+  "live_signing_and_provider": {
+    "at_ms": 1793614219586,
+    "scope": "actual live signing/authority/provider HTTP; no RTC connection or Android playback",
+    "ticket": {
+      "http": 200,
+      "room": "sn-BJP00326070803800006-1793614219",
+      "session_id": "562ef691-f412-4b1f-94bd-95de2f030b70",
+      "trace_id": "v374-server-1793614219430",
+      "agent": "p003-search-listening-20261030",
+      "listening_contract": {
+        "version": 1,
+        "capability": "listening_mode_v1",
+        "policy_revision": 6,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "expires_at_ms": 1793614519000,
+        "voice_control": {
+          "version": 1,
+          "capability": "listening_voice_control_v1"
+        }
+      },
+      "build_sha": "b663e0e09d423ba282e21e242569774466fcfdb0",
+      "source_generation": "v374-listening-ark-20261102-1793613511"
+    },
+    "checks": [
+      {
+        "name": "lease offer and applied snapshot",
+        "pass": true,
+        "revision": 6
+      },
+      {
+        "name": "actual configured model summary",
+        "http": 200,
+        "ms": 1287,
+        "body": {
+          "version": 1,
+          "request_id": "synthetic-summary",
+          "listening_id": "v374-server-1793614219430:1",
+          "mode_epoch": 1,
+          "policy_revision": 6,
+          "snapshot_revision": 6,
+          "base_summary_version": 0,
+          "source_sha256": "ca181b5930479d433f9f38b4297e8b2f055efe452f71f46d6c69b9a7053e34b3",
+          "covered": [
+            {
+              "seq": 1,
+              "revision": 1
+            }
+          ],
+          "summary": "用户提供的是一段合成的联调用例：小熊迷路，朋友点灯带它回家。角色为小熊和其朋友；事件顺序是先迷路，后由朋友点灯引路回家。文本简短，没有更多细节；情绪未明确，地点和迷路原因等也不确定。该内容不是用户自身经历，不能当作事实或长期资料。",
+          "has_gap": false
+        }
+      },
+      {
+        "name": "actual configured model feedback",
+        "http": 200,
+        "ms": 908,
+        "body": {
+          "version": 1,
+          "request_id": "synthetic-feedback",
+          "listening_id": "v374-server-1793614219430:1",
+          "mode_epoch": 1,
+          "policy_revision": 6,
+          "snapshot_revision": 6,
+          "text": "小熊迷路时肯定有点怕，还好朋友把它带回家了。有你陪它一起听这个故事，真好呀。",
+          "max_chars": 80,
+          "max_duration_ms": 12000
+        }
+      },
+      {
+        "name": "close synthetic lease",
+        "http": 200,
+        "body": {
+          "version": 1,
+          "request_id": "close-probe",
+          "closed": true
+        }
+      },
+      {
+        "name": "outside device remains baseline",
+        "sn_suffix": "02000026",
+        "agent": "rust-worker",
+        "pass": true
+      }
+    ]
+  },
+  "public_tls_sse": [
+    {
+      "question": "金币有什么用？",
+      "answer": "你说的金币是家族币，还是星尘？家族币记录和家长约好的奖励，星尘用于给小可换装。",
+      "http": 200,
+      "done": true,
+      "ms": 64
+    },
+    {
+      "question": "你好，小可，请简单打个招呼。",
+      "answer": "嘿呀，你好呀！我是小可，很高兴见到你！\n\n对了，小可还不知道该怎么称呼你呢——你有名字吗，或者喜欢我叫你什么呀？",
+      "http": 200,
+      "done": true,
+      "ms": 1271
+    }
+  ],
+  "joint_release": {
+    "joint_lines": [
+      "test listening_adapter::http_joint_tests::listening_joint_real_brain_http_voice_singing_uses_negotiated_trigger_and_exit ... ok",
+      "test listening_adapter::http_joint_tests::listening_joint_real_brain_http_entry_feedback_and_revocation ... ok",
+      "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 563 filtered out; finished in 0.32s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s",
+      "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 0.00s",
+      "   \u001b[32m✓\u001b[0m build source: b663e0e09d423ba282e21e242569774466fcfdb0",
+      "   sha256: c2c8081581ae86c8155bbaf51af5eec34a05454bf8c3d8047fb74b326adcb4f5"
+    ],
+    "abi_pass": true
+  },
+  "joint_final_equivalence": {
+    "tested_bundle_sha256": "f8c0b92ec702c2c8eee414c81b266794d8d527d84503f6a51ec4833270ff9889",
+    "final_bundle_sha256": "f8c0b92ec702c2c8eee414c81b266794d8d527d84503f6a51ec4833270ff9889",
+    "equal": true,
+    "final_manifest": "joint-final.mjs.manifest.json"
+  },
+  "verification_boundaries": [
+    "Android APK identity comes from client receipt; APK not independently rebuilt here",
+    "no actual Android microphone, loudspeaker or gameplay normal snapshot verification in this turn",
+    "live latest game snapshot remains GM; unknown answers are intentional",
+    "Main whole-project tsc still reports 11 errors in existing listening-content/Gemini and amap-weather code; listening candidate tsc passes"
+  ]
+}
