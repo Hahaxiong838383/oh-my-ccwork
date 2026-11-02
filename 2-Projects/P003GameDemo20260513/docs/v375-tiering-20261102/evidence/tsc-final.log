@@ -1,0 +1,13 @@
+src/listening-content.ts(29,133): error TS2339: Property 'abort' does not exist on type 'GeminiLlmClient'.
+src/tools/amap-weather.ts(25,126): error TS2698: Spread types may only be created from object types.
+src/tools/amap-weather.ts(25,151): error TS2322: Type 'boolean' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,100): error TS2322: Type 'string' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,116): error TS2322: Type 'string' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,132): error TS2322: Type 'string' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,153): error TS2322: Type 'string' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,172): error TS2322: Type 'string' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,191): error TS2322: Type 'string' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,237): error TS2322: Type 'false' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,253): error TS2322: Type '"forecast" | "current" | "aqi"' is not assignable to type 'never'.
+  Type '"forecast"' is not assignable to type 'never'.
+src/tools/amap-weather.ts(71,269): error TS2322: Type '"city"' is not assignable to type 'never'.

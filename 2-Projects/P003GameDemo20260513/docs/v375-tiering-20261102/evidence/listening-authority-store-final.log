@@ -1,0 +1,11 @@
+✔ authority survives restart and registry A→B→A/delete invalidate old ownership epoch (46.919417ms)
+✔ entry snapshot stays frozen, old epoch/id cannot reopen, closed entry allows newer seq (50.6155ms)
+✔ durable request replay rejects changed content, concurrent tasks and second feedback in same epoch (51.590458ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 177.276042

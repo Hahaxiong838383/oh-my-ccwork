@@ -1,0 +1,10 @@
+
+> server@0.0.1 test:analytics-v375
+> node --experimental-sqlite --import tsx scripts/analytics-gzip.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-contract.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-settings.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-retention.test.ts && node --experimental-sqlite --import tsx scripts/analytics-v375-http.test.ts
+
+analytics gzip: PASS (real HTTP + writer, mixed ACK/raw duplicate, malformed/truncated/encoding/wire/inflated bounds)
+analytics tier contracts: PASS (source-derived contexts, fixed dimensions, periods/counts, source privacy, no nesting)
+analytics tier settings: PASS (off defaults, per-SN CAS, no forged ID, expiry revision, revocation/isolation)
+analytics tier ingest: PASS (isolated storage, precise mixed ACK, full identity, quota, revoke/expiry/stale, cross-request replay, restart)
+analytics tier retention: PASS (90d aggregate, 3d sample, receive-time boundary, bounded deletes, permanent seen)
+analytics v375 HTTP: PASS (real admin/HTTP/writer/DB, gzip/raw, mixed ACK, scope/revoke/quota, restart, tier statistics, Ark isolation, current BLE version)

@@ -1,0 +1,16 @@
+[memory] extract scheduler mode=turn allowlist=""
+[device-session] ok sn=BJP00326070803800006 room=sn-BJP00326070803800006-1793625173 session=76ac6243-54b4-4922-b126-b993ea2ac327 trace=loopback-trace contract=- policy=allowlist policy_src=default supports=listening_mode_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=29
+[listening-content] {"purpose":"summary","outcome":"done","chars":14,"elapsed_ms":31}
+[listening-content] {"purpose":"feedback","outcome":"done","chars":14,"elapsed_ms":24}
+[device-session] ok sn=BJP00326070803800006 room=sn-BJP00326070803800006-1793625174 session=af0a9304-786b-44a7-951c-087804655bdc trace=voice-trace contract=- policy=allowlist policy_src=default supports=listening_mode_v1|listening_voice_control_v1 selected_agent="rust-worker" canary_reason=invalid_scope lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=25
+[listening-content] {"purpose":"feedback","outcome":"done","chars":14,"elapsed_ms":19}
+[device-session] ok sn=BJP00326070803800006 room=sn-BJP00326070803800006-1793625175 session=ed1a6028-7099-4397-8018-73a604d49023 trace=legacy-trace contract=- policy=allowlist policy_src=default supports=listening_mode_v1 selected_agent="rust-worker" canary_reason=invalid_scope lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=15
+✔ real signing→main HTTP→lease→independent SSE content; real ordinary stores stay unchanged (1616.33775ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1636.196042

@@ -1,0 +1,157 @@
+{
+  "candidate_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3",
+  "comparison_base_sha": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+  "deployment_executor": "session13-only",
+  "production_mutated": false,
+  "precondition": "Every existing target must equal before_sha256; every new target must be absent. Drift requires rebase/review, never force overwrite.",
+  "database": "additive tables only; keep live data and seen; never restore whole DB",
+  "files": [
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/admin-query.ts",
+      "relative_target": "apps/server/src/analytics/admin-query.ts",
+      "before_sha256": "a4fe2ae3ab57d619c808d26c5273a9ef3221cdfddd2045860276f64eb725e629",
+      "after_sha256": "f8d85b18bac044065b8f63e2fb2dd2672fbbf615d7d2c5ad1e540fcc93f0f022",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/contracts.ts",
+      "relative_target": "apps/server/src/analytics/contracts.ts",
+      "before_sha256": "52b9fe94b6a835af2ba196c64ead9de0ba6db85f53885afdd95127b37fac8bb1",
+      "after_sha256": "bd846770e376ec0b61162c69ffa7691a208f52502eaadae57ddd4666e566926d",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/device-context.ts",
+      "relative_target": "apps/server/src/analytics/device-context.ts",
+      "before_sha256": "b64f9e5faea5d18709904ad473d57c233714564b89a0770aecb9a090ad860336",
+      "after_sha256": "dcd03052b9686805bfd0c2462ba438b8f343c211fbb15e14319f6b2e823672d2",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/event-registry-v1.ts",
+      "relative_target": "apps/server/src/analytics/event-registry-v1.ts",
+      "before_sha256": "8c58786dc86a14c21b65ad7f64ad834b1943f2452650a7aa71feb58cc22c94e7",
+      "after_sha256": "935488749baa049ffd02fad94794fe822c3636f365dd9a12318f2026606c6204",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/http-body.ts",
+      "relative_target": "apps/server/src/analytics/http-body.ts",
+      "before_sha256": null,
+      "after_sha256": "331173c4bb29b58e562b422d491b6a12a63d4455ffb7e829db4a95fe461824ae",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/index.ts",
+      "relative_target": "apps/server/src/analytics/index.ts",
+      "before_sha256": "8df8f6f42f5614ed1dd591b017a50c1cd1ddbf5912c914483774b7e2f4ebfa7a",
+      "after_sha256": "d9dc939ce5a137d06fab7ef83a54a88b3aa70b403f79a62e732fc5f2c44e7910",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/ingest.ts",
+      "relative_target": "apps/server/src/analytics/ingest.ts",
+      "before_sha256": "f4047d950e556e542a79c809a405b76a053520c97ae313554205ba1c7cad381b",
+      "after_sha256": "9c186704af14848f7e9884ef65d9b9c838bb0942fd9fb8df3f91a63e8c5a5f18",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts",
+      "relative_target": "apps/server/src/analytics/rollup.ts",
+      "before_sha256": "77b3c9ff85b6682ffec321f6fb447d67fe656f69c089870f9f336d90e57434ee",
+      "after_sha256": "916727cb51f237199f6d962bdbe30d388ad1c9122d686cdf23c4528c76aa0ac6",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts",
+      "relative_target": "apps/server/src/analytics/store.ts",
+      "before_sha256": "f57c9aeb68898c88a3a9ba6bb0641c6a80071a9215325ce0fadd834700f7d861",
+      "after_sha256": "2b82b906d86005f9d323d6f48ec288276ea62625c0afcdc23a444a9090346f1f",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-contracts.ts",
+      "relative_target": "apps/server/src/analytics/tier-contracts.ts",
+      "before_sha256": null,
+      "after_sha256": "937492e706bf2420837123c29940bee73528e1c77a18c253f0ba9ce423eae606",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-control-route.ts",
+      "relative_target": "apps/server/src/analytics/tier-control-route.ts",
+      "before_sha256": null,
+      "after_sha256": "f0fb3c25abe47cb4bfe6fe2075a46f3f37cb6bac84d9a77cc5c749bc827bf2b1",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-query.ts",
+      "relative_target": "apps/server/src/analytics/tier-query.ts",
+      "before_sha256": null,
+      "after_sha256": "f9facf9bc7731ea6b7838dc609f3f6968dfacd95bbd2b592bbe5aa08349e4f07",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-settings.ts",
+      "relative_target": "apps/server/src/analytics/tier-settings.ts",
+      "before_sha256": null,
+      "after_sha256": "b6c0cc098d3da4a5ba4617107abac7b47e6d33b16a47264a53ca80bb4f72e3b8",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tiers.ts",
+      "relative_target": "apps/server/src/analytics/tiers.ts",
+      "before_sha256": null,
+      "after_sha256": "3d780a9ae31949778bd16afafd129f105bb3caf51ca7394c7408342d98a644b7",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/transport.ts",
+      "relative_target": "apps/server/src/analytics/transport.ts",
+      "before_sha256": null,
+      "after_sha256": "7485b5334b6728ad8c6c7c28649487e03b67e751e97472ddfe3ff872b56571ec",
+      "rollback": "remove only if current SHA equals after_sha256"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/writer-thread.ts",
+      "relative_target": "apps/server/src/analytics/writer-thread.ts",
+      "before_sha256": "79c7b334baa2e5b056cfcaaf282393761f35daf60316a8d41dbf5ede3e7950aa",
+      "after_sha256": "5d6a19dd469965a3da6d8d12a6c98808a9dc73bd6d7abdb3bb4bc3bc88d346a8",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/writer.ts",
+      "relative_target": "apps/server/src/analytics/writer.ts",
+      "before_sha256": "b798afc0c74ed761382db73212da35f929dbf55ec81cbcb8280329aa13c0ee07",
+      "after_sha256": "43e33cde14869a66ebd08977fd7f165f422b3a33d65008f6d5f63cb02680d418",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts",
+      "relative_target": "apps/server/src/config-store.ts",
+      "before_sha256": "5565f213fa71bc71db3c87daefb3d7a2f41cc2ff11a247e8485201399cd82eec",
+      "after_sha256": "aa49c2b8171e08e72230ac3157662e70cd96eef3cd50ed58634b929fbe9590cb",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/admin-data.ts",
+      "relative_target": "apps/server/src/routes/admin-data.ts",
+      "before_sha256": "20ade5235768f0bf4d48ee48a149907fc6cbe7a983c3c2f2490d7ef1840ae426",
+      "after_sha256": "75b6d07ebadd06b8cbe04147eb1c5383c45fb86fe0b6ab28d70579f9893a6002",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/device-config.ts",
+      "relative_target": "apps/server/src/routes/device-config.ts",
+      "before_sha256": "553b197b57ee1185a8cdd3cf087ab99f2db18e791fd1f936d31983dbc3581ed7",
+      "after_sha256": "62a654c003a45f91cfd6c308de94386b53eccec127854f44f60f5d3e51c3f7a7",
+      "rollback": "restore exact saved predeployment bytes"
+    },
+    {
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
+      "relative_target": "apps/web/public/admin/index.html",
+      "before_sha256": "10d81c98e613df363046b2426a0e664a785c8bd8d926b837c95718034ff6c423",
+      "after_sha256": "f903482f92d8e296b1a9dd5a213a65a9e95b27df3189566a87d28496bf1d17ac",
+      "rollback": "restore exact saved predeployment bytes"
+    }
+  ]
+}
