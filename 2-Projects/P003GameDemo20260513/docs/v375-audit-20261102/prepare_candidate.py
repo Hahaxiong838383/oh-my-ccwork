@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""将48固定候选归档到私有隔离目录；不会运行或发布服务。"""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import subprocess
+import tarfile
+import tempfile
+
+SERVER = '2-Projects/P003GameDemo20260513/apps/server'
+BASE = '9e7aab980114b796e22cc5286a1edf5c44f3b35a'
+
+
+def values(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from values(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from values(item)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--candidate', type=Path, required=True)
+    parser.add_argument('--sha', required=True)
+    parser.add_argument('--repo', type=Path, required=True)
+    parser.add_argument('--output-parent', type=Path, required=True)
+    args = parser.parse_args()
+    assert re.fullmatch(r'[0-9a-f]{40}', args.sha), '必须完整SHA'
+    raw = args.candidate.read_bytes()
+    assert args.sha in set(values(json.loads(raw))), 'SHA必须来自48候选JSON的独立字段'
+    git = ['git', '-C', str(args.repo)]
+    resolved = subprocess.check_output(git + ['rev-parse', args.sha + '^{commit}'], text=True).strip()
+    assert resolved == args.sha
+    subprocess.run(git + ['merge-base', '--is-ancestor', BASE, args.sha], check=True)
+    parent = args.output_parent.resolve()
+    state = (Path.home() / '.local/state').resolve()
+    assert parent.is_relative_to(state), '只允许私有state目录'
+    parent.mkdir(parents=True, exist_ok=True)
+    root = Path(tempfile.mkdtemp(prefix='candidate45-' + args.sha[:12] + '-', dir=parent))
+    os.chmod(root, 0o700)
+    archive = root / 'candidate.tar'
+    with archive.open('wb') as out:
+        subprocess.run(git + ['archive', args.sha, SERVER], stdout=out, check=True)
+    with tarfile.open(archive) as tar:
+        # 不接受归档中的链接和越界路径；依赖由核版本后的外部只读路径提供。
+        for member in tar.getmembers():
+            target = (root / member.name).resolve()
+            assert target.is_relative_to(root) and not member.issym() and not member.islnk()
+        tar.extractall(root, filter='data')
+    files = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
+             for p in (root / SERVER).rglob('*') if p.is_file()}
+    evidence = {'candidate_sha': args.sha, 'baseline': BASE,
+                'candidate_receipt_sha256': hashlib.sha256(raw).hexdigest(),
+                'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
+                'source_files_sha256': files, 'verdict': 'NOT_RUN',
+                'note': '归档不等于验收；必须继续运行实际HTTP/持久化/授权/TTL/Ark测试'}
+    (root / 'PREPARATION.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n')
+    print(json.dumps({'root': str(root), 'server': str(root / SERVER),
+                      'candidate_sha': args.sha, 'verdict': 'NOT_RUN'}, ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()
