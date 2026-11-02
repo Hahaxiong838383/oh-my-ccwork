@@ -1,0 +1,228 @@
+{
+  "candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "runtime_tested_sha": "b665c6854500c9106b4cec786be1ed912d66e5d0",
+  "deployment_base_sha": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+  "reviewer": "session45 codex（OpenAI）",
+  "reviewed_at": "2026-11-02T21:41:52.426559+08:00",
+  "verdict": "PASS_ISOLATED",
+  "release_blockers": [],
+  "decision": "独立隔离验收通过，可交13核线上逐文件SHA/实际配置并执行单机分阶段发布；不表示生产或真机通过",
+  "resolved_findings": [
+    {
+      "id": "F45-01",
+      "failed_candidate": "0e29acf65b87a0510fc4ef3e563a19f249db19d3",
+      "issue": "未闭合周期被accepted并占用幂等ID",
+      "fixed_in": "b665c6854500c9106b4cec786be1ed912d66e5d0",
+      "retest": "独立真实HTTP未闭合混批拒收；最终候选精确end-1/end/end+1与修改最终count测试通过",
+      "status": "CLOSED"
+    }
+  ],
+  "checks": {
+    "independent_http": {
+      "status": "PASS",
+      "groups": 8
+    },
+    "independent_tiers_ark": {
+      "status": "PASS",
+      "groups": 12,
+      "tier_budget_probe_records": 600
+    },
+    "analytics_v375": "PASS",
+    "analytics_regression": "PASS",
+    "ark": {
+      "status": "PASS",
+      "tests": 51,
+      "includes": "真实本地SSE/普通闲聊零查询/identity epoch/时效/动态数据抽取隔离，模型为合成stub"
+    },
+    "capacity_and_control": "PASS on 0e29; unchanged code plus full ingest regression on b665",
+    "device_config": "PASS 36/36",
+    "listening": "PASS 7 scripts",
+    "admin_ui": "PASS 45 WebKit production Vue checks; API fully synthetic",
+    "typecheck": {
+      "status": "BASELINE_FAILURE_UNCHANGED",
+      "exit_code": 2,
+      "errors": 12,
+      "baseline_log_byte_identical": true
+    }
+  },
+  "equivalence": {
+    "from": "b665c6854500c9106b4cec786be1ed912d66e5d0",
+    "to": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+    "server_and_fixture_delta": [
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-tier-ingest.test.ts"
+    ],
+    "equal_file_count": 497,
+    "business_source_equal": true,
+    "ui_files": [
+      {
+        "path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
+        "candidate_sha256": "c4a47f1025247df39cf80be421c7e2f58f64a269d0eb74e2dd07909485cf1634",
+        "executed_sha256": "c4a47f1025247df39cf80be421c7e2f58f64a269d0eb74e2dd07909485cf1634",
+        "adaptation": "none"
+      },
+      {
+        "path": "2-Projects/P003GameDemo20260513/apps/web/scripts/test-analytics-admin-ui.cjs",
+        "candidate_sha256": "223ba19997a15421caa426e06dbd79d067b9bd605c27c4ab75e6c88391f74067",
+        "executed_sha256": "c3d81417d0ca2a55c28b6e1591490216937fda400073aed921ef6c1a206383b9",
+        "adaptation": "screenshot destinations only"
+      }
+    ]
+  },
+  "deployment_bundle": {
+    "candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+    "base": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+    "bundle_sha256": "e5b28557253af25fa458b101b4d2e41f669e729ae887a3c5e630781ef2ec4faa",
+    "runtime_files": 21,
+    "per_file_matches_fixed_git": true,
+    "private_mirror_checks": [
+      {
+        "label": "before",
+        "phase": "before",
+        "expected_exit": 0,
+        "actual_exit": 0
+      },
+      {
+        "label": "after",
+        "phase": "after",
+        "expected_exit": 0,
+        "actual_exit": 0
+      },
+      {
+        "label": "drift-rejected",
+        "phase": "after",
+        "expected_exit": 1,
+        "actual_exit": 1
+      }
+    ],
+    "production_touched": false,
+    "status": "PASS"
+  },
+  "remote_branch_verified": {
+    "branch": "codex/p003-analytics-control-20261031",
+    "sha": "856552b942f5f8c2feb08db5949ebe7080eff77f"
+  },
+  "runtime": {
+    "node": "v24.19.0",
+    "node_path": "/Users/fu-121/.local/node-v24/bin/node",
+    "tsx": "4.22.4",
+    "typescript": "5.9.3"
+  },
+  "evidence": [
+    {
+      "file": "audit45-0e29-tiers.log",
+      "sha256": "52483c0ae2fbea8d6b201369c8d2284e79ca226b0cf87fb8e237f6b78319451b",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-0e29-tiers.log"
+    },
+    {
+      "file": "audit45-b665-independent-http.log",
+      "sha256": "8adccb7a09c3f05f1cb2d3162e8c0a25aef5f4337570c89935a868fb4d902d92",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-independent-http.log"
+    },
+    {
+      "file": "audit45-b665-independent-tiers.log",
+      "sha256": "34c731360f2bf0247480c53f548441fb33201c8cd7f91a0cc2a0d15e59b95784",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-independent-tiers.log"
+    },
+    {
+      "file": "audit45-b665-test-analytics-v375.log",
+      "sha256": "f5bdd9cbd8b187a8607909dc024cda3cc63065595248c44af96cb40d89191ab2",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-test-analytics-v375.log"
+    },
+    {
+      "file": "audit45-b665-test-analytics.log",
+      "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-test-analytics.log"
+    },
+    {
+      "file": "audit45-b665-test-ark.log",
+      "sha256": "4d1fb854d7405e03cf44bb95993171468cbee11ae3eb6d367b27c988dccacebe",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-test-ark.log"
+    },
+    {
+      "file": "audit45-0e29-test-analytics-control.log",
+      "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-0e29-test-analytics-control.log"
+    },
+    {
+      "file": "audit45-0e29-test-analytics-capacity.log",
+      "sha256": "96b623382c82a4567f3291b8741cd8242a3bf6ce2cc85670ea9df08f4ba5bbe5",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-0e29-test-analytics-capacity.log"
+    },
+    {
+      "file": "audit45-b665-device-config.log",
+      "sha256": "138e8bba1e36003a99877dafc6accf98097ca0d71e70cb6bb1a0caa665b2a53a",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-device-config.log"
+    },
+    {
+      "file": "audit45-b665-listening-http-contract-complete.log",
+      "sha256": "b0684370555ca5b28500a4beab1be8130fec8f1aa81141610d31fb9d49940d32",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-http-contract-complete.log"
+    },
+    {
+      "file": "audit45-856-ui.log",
+      "sha256": "1b7a22dc0dcb0735e3c04f9abc667230177895cb91137748cf134bfd6067d30a",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-856-ui.log"
+    },
+    {
+      "file": "audit45-856-period-boundary.log",
+      "sha256": "40ad50185101964eb37a00c9c93e9f0526f3525f9005795c3ba5de4870574f39",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-856-period-boundary.log"
+    },
+    {
+      "file": "audit45-b665-tsc.log",
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-tsc.log"
+    },
+    {
+      "file": "audit45-9e7a-tsc.log",
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-9e7a-tsc.log"
+    },
+    {
+      "file": "audit45-b665-listening-config-store.log",
+      "sha256": "9f0008854d9e4524c42f2e1c56f245947f38cf9dd7f975d0a2142b6d7a46e400",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-config-store.log"
+    },
+    {
+      "file": "audit45-b665-listening-authority-store.log",
+      "sha256": "e0e153a386f986faa9eddc99968fa42b3afd093132dde431851382a862cfa86f",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-authority-store.log"
+    },
+    {
+      "file": "audit45-b665-listening-auth.log",
+      "sha256": "8362352af45e4d1b9e192d389059cf0a5facb33339223a18f388a3f7ecc19d59",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-auth.log"
+    },
+    {
+      "file": "audit45-b665-listening-policy.log",
+      "sha256": "b2e1bd292a2c46832eeb7a8c87247c7172f5e29effb189e3cdf9aae80333e540",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-policy.log"
+    },
+    {
+      "file": "audit45-b665-listening-integration.log",
+      "sha256": "d0412ce41ad4f344bfbad97e1260ffe0c4712b64cb8d1f89bf5e5c44fa9199a8",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-integration.log"
+    },
+    {
+      "file": "audit45-b665-listening-canary-profile.log",
+      "sha256": "58255f16bbe20cd51fbd74d2a51812cbc0d31584fe187bab98b6da749753e6e1",
+      "private_path": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/audit45-b665-listening-canary-profile.log"
+    }
+  ],
+  "harness_corrections": [
+    "Ark example JSON and listening HTTP fixture omitted from initial server-only archive; restored exact candidate Git files, reruns PASS; prepare_candidate includes both now",
+    "UI test only screenshot destinations changed to private evidence; production HTML/test origin SHA recorded"
+  ],
+  "not_verified": [
+    "真实v375/PCK分层能力与配置应用",
+    "真实设备埋点/账户端到端",
+    "公网代理gzip及JSON413",
+    "生产并发负载、真人语音与响应延迟",
+    "7天真实节省率",
+    "当前线上目标文件和配置/开关真值（13发布前再核）"
+  ],
+  "production_mutations": false,
+  "android_mutations": false,
+  "device_scope_changes": false,
+  "next_owner": "session13 deployment + final real-device acceptance"
+}

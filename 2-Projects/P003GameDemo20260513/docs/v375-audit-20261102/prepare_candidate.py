@@ -11,6 +11,10 @@ import tarfile
 import tempfile
 
 SERVER = '2-Projects/P003GameDemo20260513/apps/server'
+TEST_FIXTURES = (
+    '2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json',
+    '4-Assets/contracts/p003-listening-http-v1.fixtures.json',
+)
 BASE = '9e7aab980114b796e22cc5286a1edf5c44f3b35a'
 
 
@@ -42,7 +46,7 @@ def main():
     os.chmod(root, 0o700)
     archive = root / 'candidate.tar'
     with archive.open('wb') as out:
-        subprocess.run(git + ['archive', args.sha, SERVER], stdout=out, check=True)
+        subprocess.run(git + ['archive', args.sha, SERVER, *TEST_FIXTURES], stdout=out, check=True)
     with tarfile.open(archive) as tar:
         # 不接受归档中的链接和越界路径；依赖由核版本后的外部只读路径提供。
         for member in tar.getmembers():
@@ -51,6 +55,8 @@ def main():
         tar.extractall(root, filter='data')
     files = {str(p.relative_to(root)): hashlib.sha256(p.read_bytes()).hexdigest()
              for p in (root / SERVER).rglob('*') if p.is_file()}
+    for path in TEST_FIXTURES:
+        files[path] = hashlib.sha256((root / path).read_bytes()).hexdigest()
     evidence = {'candidate_sha': args.sha, 'baseline': BASE,
                 'candidate_receipt_sha256': hashlib.sha256(raw).hexdigest(),
                 'archive_sha256': hashlib.sha256(archive.read_bytes()).hexdigest(),
