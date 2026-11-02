@@ -274,6 +274,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
 
     if(directArkQuestion){
       if(stream.aborted || c.req.raw.signal.aborted) return;
+      console.info('[ark-direct]',JSON.stringify({room:c.req.query('room'),response_id:id,typed_facts:!!ark.facts_v1}));
       assistantText=answerArk(userText,ark.facts_v1,rawHistory)??'这部分方舟数据我暂时查不到。';
       enqueue(chunk({role:'assistant',content:assistantText},null));enqueue(chunk({},'stop'));
       await chain;
