@@ -1,0 +1,52 @@
+{
+  "verified_at": "2026-11-02T13:06:49+08:00",
+  "host_identity": "RaymanMacBook-Air",
+  "target_directory": "/Users/rayman.chen/Downloads",
+  "transport": "existing pinned SSH host key; current identity/network rechecked",
+  "independent_remote_hash_readback": true,
+  "files": [
+    {
+      "filename": "P003_SEARCH_PENDING_ANDROID_HANDOFF_20261102.md",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_PENDING_ANDROID_HANDOFF_20261102.md",
+      "sha256": "7ea195372b5c718f5a31f7ea7b3746b142f7245dd57b3856b62b3ab4d0220b87",
+      "bytes": 4872
+    },
+    {
+      "filename": "P003_SEARCH_R27_DAILY_TEST_GUIDE_20261102.md",
+      "path": "/Users/rayman.chen/Downloads/P003_SEARCH_R27_DAILY_TEST_GUIDE_20261102.md",
+      "sha256": "a734ab5e1621eb678f0143b64efed3f9e1019dea8443f011254b82c0b20cae35",
+      "bytes": 6110
+    },
+    {
+      "filename": "R27_DAILY_SEARCH_TECHNICAL_RECEIPT_20261102.md",
+      "path": "/Users/rayman.chen/Downloads/R27_DAILY_SEARCH_TECHNICAL_RECEIPT_20261102.md",
+      "sha256": "290aa8d3041aea018943b3e40315f2660328bfdf434d193c13015d83d8a57272",
+      "bytes": 9620
+    },
+    {
+      "filename": "R27_DAILY_SEARCH_ROLLBACK_20261102.md",
+      "path": "/Users/rayman.chen/Downloads/R27_DAILY_SEARCH_ROLLBACK_20261102.md",
+      "sha256": "5b3599f4061c8abe85d7a8ae04205ead9be84a35b76614896b95df5cddb7cc0f",
+      "bytes": 3508
+    },
+    {
+      "filename": "R27_DAILY_SEARCH_EVIDENCE_20261102.json",
+      "path": "/Users/rayman.chen/Downloads/R27_DAILY_SEARCH_EVIDENCE_20261102.json",
+      "sha256": "4f6cbed22bdd2939dde8ee6000c7901954c84570fbc760767792b7d1e730c8d2",
+      "bytes": 50141
+    },
+    {
+      "filename": "R27_DAILY_SEARCH_LATENCY_20261102.json",
+      "path": "/Users/rayman.chen/Downloads/R27_DAILY_SEARCH_LATENCY_20261102.json",
+      "sha256": "467c3c378d03a22a099cd0f525aafec650b0e45bb262c525aa5329211368e890",
+      "bytes": 38155
+    },
+    {
+      "filename": "P003_Search_R27_端侧联调包_20261102.zip",
+      "path": "/Users/rayman.chen/Downloads/P003_Search_R27_端侧联调包_20261102.zip",
+      "sha256": "b5681dffa54aed44cc2df41727ddbc04ce3475416abb594f58e8a69df3c4c7c7",
+      "bytes": 6606
+    }
+  ],
+  "sent_to_colleague": false
+}

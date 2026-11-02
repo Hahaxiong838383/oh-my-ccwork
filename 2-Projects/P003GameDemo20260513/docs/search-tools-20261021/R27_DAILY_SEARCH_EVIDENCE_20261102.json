@@ -1,0 +1,1648 @@
+{
+  "recorded_at": "2026-11-02T13:04:29+08:00",
+  "status": "cloud_candidate_deployed_closed; android_integration_and_physical_acceptance_pending",
+  "real_window_opened": false,
+  "physical_device_tested_this_round": false,
+  "original_control_prefix_root_cause": "unresolved",
+  "code_push": [
+    {
+      "repo": "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021",
+      "branch": "codex/p003-brain-search-tools-20261021",
+      "sha": "d4ba3f9a48af637d5c35557cfa285d7e57cda578",
+      "remote_sha": "d4ba3f9a48af637d5c35557cfa285d7e57cda578"
+    },
+    {
+      "repo": "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021",
+      "branch": "codex/p003-worker-tool-lifecycle-20261021",
+      "sha": "f57625906c66b49a4511cffd2106216a970b5ac5",
+      "remote_sha": "f57625906c66b49a4511cffd2106216a970b5ac5"
+    }
+  ],
+  "artifacts": {
+    "old_source": {
+      "src/routes/custom-llm.ts": "51c059605db7ff2f936e6aef73cf1b126b46e63ad14c4926f19019a8db7c109c"
+    },
+    "source": {
+      "src/routes/custom-llm.ts": "c668eccd98b2c9cde188caad447f87f3420d29b9f9b1dcd21ce33f66e7352750"
+    },
+    "brain_manifest_A": "6b2c87c5be9e5fb3f63daa1082f5afa40fe507f0c5531bfd013e9fc350d13ea6",
+    "brain_manifest_B": "a3e5739da9b9c3c9c486b7ee19ce8a12501f20dc273c04676bcc7b5606a1e770",
+    "preview_sha256": "f1f3b440dae794a0c3f05fb0227b36d51a70e5667cceb1d31e98103ad6bbc57b",
+    "preserved_other_sources": 163,
+    "worker_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+    "old_worker_sha256": "0dc3f810bcb1fa3d43b9998a906759dafdf3c01039394409b7a2be9214b6d6f3",
+    "worker_bytes": 77354944
+  },
+  "tests": {
+    "worker": 505,
+    "preview": 36,
+    "brain_core": 38,
+    "brain_extra_suites": 4,
+    "tsc": "passed",
+    "linux_release": "passed",
+    "abi": {
+      "glibc_max": "2.39",
+      "glibcxx_max": "3.4.31",
+      "glibcxx_ceiling": "3.4.33"
+    },
+    "brain_log_hashes": [
+      {
+        "file": "search-chat-abort-final.log",
+        "tests": [
+          "3"
+        ],
+        "sha256": "98fdda446857548d8253007ee9bad2e672f875c66bf7b7e00ac9d1db16a99fe9"
+      },
+      {
+        "file": "search-chat-policy-final.log",
+        "tests": [
+          "14"
+        ],
+        "sha256": "699bd0ba6670b159dfc59e3858ca2e1e1710bd946a6eded05b5a024335c76cd3"
+      },
+      {
+        "file": "search-chat-stream-final.log",
+        "tests": [
+          "1"
+        ],
+        "sha256": "1e08ff39cb3c9cbc09ebf8c3dad62fda204767b8f7b7f3e41983f6c952fdaa7c"
+      },
+      {
+        "file": "search-dialogue-route-final.log",
+        "tests": [
+          "1"
+        ],
+        "sha256": "08bbe1044c9c02a9efbfb009fda02f4774b1c2ec63b6518c25b2e859c1e3d95c"
+      },
+      {
+        "file": "search-page-claim-route-final.log",
+        "tests": [
+          "1"
+        ],
+        "sha256": "bea415ea98b2b097e11e1e7b285cd7ab553f7dc68c3f2b1f6f294d451306ba29"
+      },
+      {
+        "file": "search-resume-final.log",
+        "tests": [
+          "6"
+        ],
+        "sha256": "2d445e28b811f6d7ba698255b1a51dae18c3d7126aea9f62c876b8611179ecde"
+      },
+      {
+        "file": "search-runtime-final.log",
+        "tests": [
+          "1"
+        ],
+        "sha256": "8817403843a97d344e6d45b930d747bb6f5eae161529f99b8003b1e9a6dd911f"
+      },
+      {
+        "file": "search-tasks-final.log",
+        "tests": [
+          "11"
+        ],
+        "sha256": "4ea4bf453f08446ae2e49696bbdb80fa4a55d4b854195759fde623c838ceb396"
+      }
+    ],
+    "latest_live_source_fixture": {
+      "rc": 0,
+      "tail": "device-A\n[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0\n[custom-llm] 记忆注入 account=device-A\n[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0\n[custom-llm] 记忆注入 account=device-A\n[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0\n# Subtest: R27 page guard blocks uncreated queries without rewriting ordinary page conversation\nok 1 - R27 page guard blocks uncreated queries without rewriting ordinary page conversation\n  ---\n  duration_ms: 84.977957\n  type: 'test'\n  ...\n1..1\n# tests 1\n# suites 0\n# pass 1\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n# duration_ms 91.689763\n"
+    }
+  },
+  "functional": {
+    "all_pass": true,
+    "cases": [
+      {
+        "case": "replace_implicit_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593406",
+        "trace": "search-probe-1793593406",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 2,
+          "audio_voiced_ms": 8500.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 85,
+          "packets_after": 1605
+        },
+        "tasks": [
+          {
+            "id": "80d5b950-f976-4f73-b297-ce41e0053053",
+            "session": "sn-BJP00399999999999901-1793593406",
+            "revision": 1,
+            "status": "cancelled",
+            "outcome": "answered",
+            "delivery": null,
+            "sources": 0
+          },
+          {
+            "id": "1fd45692-744c-4613-865e-5e1ac85d9693",
+            "session": "sn-BJP00399999999999901-1793593406",
+            "revision": 2,
+            "status": "expired",
+            "outcome": "answered",
+            "delivery": "completed",
+            "sources": 0
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 4722,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 1,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 6693,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 2,
+              "valid_for_ms": 22955
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 7596,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 3,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 9642,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 4,
+              "valid_for_ms": 22951
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 11643,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 5,
+              "valid_for_ms": 20951
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 13648,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 6,
+              "valid_for_ms": 18950
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 15705,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 7,
+              "valid_for_ms": 16900
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 17693,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 8,
+              "valid_for_ms": 14900
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 19743,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 9,
+              "valid_for_ms": 12851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 20450,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 10,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 22495,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 11,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 24494,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593406",
+              "sequence": 12,
+              "valid_for_ms": 0
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "pending_released": true,
+          "old_cancelled": true,
+          "new_answered": true,
+          "chengdu_target": true,
+          "chengdu_caption": true,
+          "no_late_beijing": true
+        }
+      },
+      {
+        "case": "cancel_verified",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593471",
+        "trace": "search-probe-1793593471",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 3,
+          "metrics": 7,
+          "audio_voiced_ms": 9290.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 2656
+        },
+        "tasks": [
+          {
+            "id": "9e549d20-ee72-4af8-8240-97dd08c2093d",
+            "session": "sn-BJP00399999999999901-1793593471",
+            "revision": 1,
+            "status": "cancelled",
+            "outcome": null,
+            "delivery": null,
+            "sources": 0
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 4432,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593471",
+              "sequence": 1,
+              "valid_for_ms": 24999
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 6232,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 2,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593471",
+              "sequence": 2,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 8279,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 2,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593471",
+              "sequence": 3,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 10279,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 2,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593471",
+              "sequence": 4,
+              "valid_for_ms": 0
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "pending_released": true,
+          "cancelled": true,
+          "cat_chat": true,
+          "same_room_open": true,
+          "no_late_dinosaur": true
+        }
+      },
+      {
+        "case": "cancel_combo_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593558",
+        "trace": "search-probe-1793593558",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 3,
+          "metrics": 9,
+          "audio_voiced_ms": 15190.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 55,
+          "packets_after": 2721
+        },
+        "tasks": [
+          {
+            "id": "a9cf0ac0-d4af-4849-a4d8-bd7104841a3b",
+            "session": "sn-BJP00399999999999901-1793593558",
+            "revision": 1,
+            "status": "cancelled",
+            "outcome": null,
+            "delivery": null,
+            "sources": 0
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 4422,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593558",
+              "sequence": 1,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 6461,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593558",
+              "sequence": 2,
+              "valid_for_ms": 22953
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 7407,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 2,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593558",
+              "sequence": 3,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 9457,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 2,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593558",
+              "sequence": 4,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 11457,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 2,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593558",
+              "sequence": 5,
+              "valid_for_ms": 0
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "pending_released": true,
+          "cancelled": true,
+          "cat_chat": true,
+          "same_room_open": true,
+          "no_late_dinosaur": true
+        }
+      },
+      {
+        "case": "page_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593647",
+        "trace": "search-probe-1793593647",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 5,
+          "user_transcripts": 2,
+          "metrics": 5,
+          "audio_voiced_ms": 15360.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 54,
+          "packets_after": 2757
+        },
+        "tasks": [
+          {
+            "id": "3841865d-98c2-4627-9f98-2124d9b76968",
+            "session": "sn-BJP00399999999999901-1793593647",
+            "revision": 1,
+            "status": "delivered",
+            "outcome": "no_evidence",
+            "delivery": "completed",
+            "sources": 0
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 10203,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 1,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 12250,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 2,
+              "valid_for_ms": 22950
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 14300,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 3,
+              "valid_for_ms": 20900
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 16349,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 4,
+              "valid_for_ms": 18851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 18348,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 5,
+              "valid_for_ms": 16851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 20349,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 6,
+              "valid_for_ms": 14851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 22352,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 7,
+              "valid_for_ms": 12851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 24349,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 8,
+              "valid_for_ms": 10851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 26349,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 9,
+              "valid_for_ms": 8851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 28351,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 10,
+              "valid_for_ms": 6851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 30354,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 11,
+              "valid_for_ms": 4851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 32355,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 12,
+              "valid_for_ms": 2851
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 33351,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 13,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 35354,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 14,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 37349,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593647",
+              "sequence": 15,
+              "valid_for_ms": 0
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "pending_released": true,
+          "submitted": true,
+          "explicit_rule": true,
+          "p2_tools_called": true,
+          "delivered_or_explained": true
+        }
+      },
+      {
+        "case": "catalog_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593737",
+        "trace": "search-probe-1793593737",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 4,
+          "user_transcripts": 2,
+          "metrics": 4,
+          "audio_voiced_ms": 16190.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 56,
+          "packets_after": 3160
+        },
+        "tasks": [
+          {
+            "id": "0f967d59-5f18-40d8-b882-e3f4a13f1688",
+            "session": "sn-BJP00399999999999901-1793593737",
+            "revision": 1,
+            "status": "delivered",
+            "outcome": "answered",
+            "delivery": "completed",
+            "sources": 2
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 5618,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 1,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 7649,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 2,
+              "valid_for_ms": 22951
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 9651,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 3,
+              "valid_for_ms": 20950
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 11700,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 4,
+              "valid_for_ms": 18900
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 13700,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 5,
+              "valid_for_ms": 16900
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 15749,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 6,
+              "valid_for_ms": 14850
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 17751,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 7,
+              "valid_for_ms": 12850
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 19749,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 8,
+              "valid_for_ms": 10850
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 21799,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 9,
+              "valid_for_ms": 8800
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 23853,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 10,
+              "valid_for_ms": 6751
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 25848,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 11,
+              "valid_for_ms": 4751
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 27849,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 12,
+              "valid_for_ms": 2750
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 29851,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 13,
+              "valid_for_ms": 750
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 30600,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 14,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 32603,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 15,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 34651,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593737",
+              "sequence": 16,
+              "valid_for_ms": 0
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "pending_released": true,
+          "sourced_answer": true,
+          "p2": true,
+          "chat_before_result": true
+        }
+      },
+      {
+        "case": "replace_result_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593834",
+        "trace": "search-probe-1793593834",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 6,
+          "user_transcripts": 2,
+          "metrics": 2,
+          "audio_voiced_ms": 14630.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 57,
+          "packets_after": 3438
+        },
+        "tasks": [
+          {
+            "id": "5e71d6c1-1e04-4cb6-a387-2e0129e99bfb",
+            "session": "sn-BJP00399999999999901-1793593834",
+            "revision": 1,
+            "status": "cancelled",
+            "outcome": "answered",
+            "delivery": "completed",
+            "sources": 0
+          },
+          {
+            "id": "3d6c5c29-3630-437e-be01-3d1a8d66d165",
+            "session": "sn-BJP00399999999999901-1793593834",
+            "revision": 2,
+            "status": "delivered",
+            "outcome": "answered",
+            "delivery": "completed",
+            "sources": 1
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 4230,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 1,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 6238,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 2,
+              "valid_for_ms": 22986
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 8238,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 3,
+              "valid_for_ms": 20986
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 10238,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 4,
+              "valid_for_ms": 18986
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 12239,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 5,
+              "valid_for_ms": 16985
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 14297,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 6,
+              "valid_for_ms": 14936
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 16241,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 7,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 18286,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 8,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 20293,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 9,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 33653,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 10,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 35686,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 11,
+              "valid_for_ms": 22953
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 37736,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 12,
+              "valid_for_ms": 20904
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 39741,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 13,
+              "valid_for_ms": 18900
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 41755,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 14,
+              "valid_for_ms": 16898
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 43794,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 15,
+              "valid_for_ms": 14853
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 45801,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 16,
+              "valid_for_ms": 12852
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 46553,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 17,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 48590,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 18,
+              "valid_for_ms": 0
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 50588,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 3,
+              "pending": false,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593834",
+              "sequence": 19,
+              "valid_for_ms": 0
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "pending_released": true,
+          "old_cancelled": true,
+          "new_answered": true,
+          "chengdu_target": true,
+          "chengdu_caption": true,
+          "no_late_beijing": true,
+          "successful_original_before_replace": true
+        }
+      },
+      {
+        "case": "cross_disconnect_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593936",
+        "trace": "search-probe-1793593936",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 1,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 2950.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 57,
+          "packets_after": 732
+        },
+        "tasks": [
+          {
+            "id": "65a8c2d5-fae9-4290-b2b9-897693c21c36",
+            "session": "sn-BJP00399999999999901-1793593936",
+            "revision": 1,
+            "status": "delivered",
+            "outcome": "answered",
+            "delivery": "interrupted",
+            "sources": 1
+          }
+        ],
+        "pending_events": [
+          {
+            "event": "search_pending",
+            "ms": 4442,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593936",
+              "sequence": 1,
+              "valid_for_ms": 25000
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 6469,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593936",
+              "sequence": 2,
+              "valid_for_ms": 22956
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 8471,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593936",
+              "sequence": 3,
+              "valid_for_ms": 20955
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 10520,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593936",
+              "sequence": 4,
+              "valid_for_ms": 18906
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 12518,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593936",
+              "sequence": 5,
+              "valid_for_ms": 16906
+            }
+          },
+          {
+            "event": "search_pending",
+            "ms": 14521,
+            "trace_matches": true,
+            "payload": {
+              "epoch": 1,
+              "pending": true,
+              "protocol": 1,
+              "room": "sn-BJP00399999999999901-1793593936",
+              "sequence": 6,
+              "valid_for_ms": 14906
+            }
+          }
+        ],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "pending_present": true,
+          "pending_room_trace": true,
+          "pending_order": true,
+          "pending_bounded": true,
+          "sourced_interrupted": true
+        }
+      },
+      {
+        "case": "cross_resume_disconnect_final",
+        "device_heard_verified": false,
+        "room": "sn-BJP00399999999999901-1793593981",
+        "trace": "search-probe-1793593981",
+        "runtime_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "counts": {
+          "agent_transcripts": 2,
+          "user_transcripts": 1,
+          "metrics": 1,
+          "audio_voiced_ms": 11640.0,
+          "input_ready": 1,
+          "output_ready": 1,
+          "packets_before": 92,
+          "packets_after": 2785
+        },
+        "tasks": [],
+        "pending_events": [],
+        "checks": {
+          "final_binary": true,
+          "cleanup": true,
+          "audio_received": true,
+          "same_task_granted": true,
+          "same_task_completed": true,
+          "quiet_before_resume": true
+        }
+      }
+    ],
+    "physical_hearing": false,
+    "all_attempts_retained": true,
+    "weather_provider": "isolated Baidu/fallback; AMAP disabled to avoid unaudited quota usage"
+  },
+  "latency_summary": {
+    "samples": 40,
+    "eligible_pairs": 20,
+    "median_delta_ms": -233.90550000000002,
+    "p90_delta_ms": 49.878,
+    "new_missing_body": 0,
+    "gate_pass": true
+  },
+  "latency_file": "R27_DAILY_SEARCH_LATENCY_20261102.json",
+  "rollback_switches": [
+    {
+      "label": "finalA",
+      "host": "worker",
+      "arm": "A",
+      "main_unchanged": true,
+      "source_or_binary": "0dc3f810bcb1fa3d43b9998a906759dafdf3c01039394409b7a2be9214b6d6f3",
+      "manifest_sha256": null,
+      "env_sha256": "624105ff4e7f91fccf529d3ddcf53a585843aa1eb90a79ab5097126e34c7f0c3"
+    },
+    {
+      "label": "finalA",
+      "host": "brain",
+      "arm": "A",
+      "main_unchanged": true,
+      "source_or_binary": {
+        "src/routes/custom-llm.ts": "51c059605db7ff2f936e6aef73cf1b126b46e63ad14c4926f19019a8db7c109c"
+      },
+      "manifest_sha256": "6b2c87c5be9e5fb3f63daa1082f5afa40fe507f0c5531bfd013e9fc350d13ea6",
+      "env_sha256": "4ddd44335bfc47771c626b09252b692f782b44247a8e52c3553f45c02163b8ae"
+    },
+    {
+      "label": "finalB",
+      "host": "worker",
+      "arm": "B",
+      "main_unchanged": true,
+      "source_or_binary": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "manifest_sha256": null,
+      "env_sha256": "624105ff4e7f91fccf529d3ddcf53a585843aa1eb90a79ab5097126e34c7f0c3"
+    },
+    {
+      "label": "finalB",
+      "host": "brain",
+      "arm": "B",
+      "main_unchanged": true,
+      "source_or_binary": {
+        "src/routes/custom-llm.ts": "c668eccd98b2c9cde188caad447f87f3420d29b9f9b1dcd21ce33f66e7352750"
+      },
+      "manifest_sha256": "a3e5739da9b9c3c9c486b7ee19ce8a12501f20dc273c04676bcc7b5606a1e770",
+      "env_sha256": "4ddd44335bfc47771c626b09252b692f782b44247a8e52c3553f45c02163b8ae"
+    },
+    {
+      "label": "rollbackA",
+      "host": "worker",
+      "arm": "A",
+      "main_unchanged": true,
+      "source_or_binary": "0dc3f810bcb1fa3d43b9998a906759dafdf3c01039394409b7a2be9214b6d6f3",
+      "manifest_sha256": null,
+      "env_sha256": "624105ff4e7f91fccf529d3ddcf53a585843aa1eb90a79ab5097126e34c7f0c3"
+    },
+    {
+      "label": "rollbackA",
+      "host": "brain",
+      "arm": "A",
+      "main_unchanged": true,
+      "source_or_binary": {
+        "src/routes/custom-llm.ts": "51c059605db7ff2f936e6aef73cf1b126b46e63ad14c4926f19019a8db7c109c"
+      },
+      "manifest_sha256": "6b2c87c5be9e5fb3f63daa1082f5afa40fe507f0c5531bfd013e9fc350d13ea6",
+      "env_sha256": "4ddd44335bfc47771c626b09252b692f782b44247a8e52c3553f45c02163b8ae"
+    },
+    {
+      "label": "finalBrestore",
+      "host": "worker",
+      "arm": "B",
+      "main_unchanged": true,
+      "source_or_binary": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "manifest_sha256": null,
+      "env_sha256": "624105ff4e7f91fccf529d3ddcf53a585843aa1eb90a79ab5097126e34c7f0c3"
+    },
+    {
+      "label": "finalBrestore",
+      "host": "brain",
+      "arm": "B",
+      "main_unchanged": true,
+      "source_or_binary": {
+        "src/routes/custom-llm.ts": "c668eccd98b2c9cde188caad447f87f3420d29b9f9b1dcd21ce33f66e7352750"
+      },
+      "manifest_sha256": "a3e5739da9b9c3c9c486b7ee19ce8a12501f20dc273c04676bcc7b5606a1e770",
+      "env_sha256": "4ddd44335bfc47771c626b09252b692f782b44247a8e52c3553f45c02163b8ae"
+    }
+  ],
+  "verification_shutdown": {
+    "worker": {
+      "host": "worker",
+      "closed": true,
+      "at_ms": 1793595544969
+    },
+    "brain": {
+      "host": "brain",
+      "closed": true,
+      "at_ms": 1793595545879
+    }
+  },
+  "deployment": {
+    "worker": {
+      "at_ms": 1793595567605,
+      "completed_at_ms": 1793595576935,
+      "window_opened": false,
+      "protected_unchanged": true
+    },
+    "brain": {
+      "at_ms": 1793595732849,
+      "completed_at_ms": 1793595735343,
+      "window_opened": false,
+      "protected_unchanged": true
+    }
+  },
+  "deployment_preflight_first_attempt": {
+    "brain_blocked_before_restart": true,
+    "reason": "expired credential stopped dispatch-lease renewal at original window deadline",
+    "direct_closed_deployment_verified": {
+      "method": "fresh SSH read of actual Worker health and LiveKit rooms; expired dispatch lease is not liveness",
+      "worker_at_ms": 1793595730873,
+      "room_count": 0,
+      "credential_exp_ms": 1793589540000,
+      "credential_renewed": false
+    },
+    "failed_attempt_retained": true
+  },
+  "scope": {
+    "devices": [
+      "BJP00326070803800006",
+      "BJP00326060100100004",
+      "BJP00326081002000038"
+    ],
+    "expires_at_ms": 1793589540000,
+    "enabled": false,
+    "max_concurrent_jobs": 2,
+    "main_p1_unchanged": true,
+    "listening_unchanged": true,
+    "admin_unchanged": true,
+    "original_credential_renewed": false
+  },
+  "current_cloud_version_reports": [
+    {
+      "sn": "BJP00326060100100004",
+      "version_code": 367,
+      "version_name": "1.2.2-canary.353",
+      "reported_at_ms": 1793443807460,
+      "physical_apk_verified": false
+    },
+    {
+      "sn": "BJP00326070803800006",
+      "version_code": 371,
+      "version_name": "1.2.2-canary.357",
+      "reported_at_ms": 1793592291867,
+      "physical_apk_verified": false
+    },
+    {
+      "sn": "BJP00326081002000038",
+      "version_code": 367,
+      "version_name": "1.2.2-canary.353",
+      "reported_at_ms": 1793514205933,
+      "physical_apk_verified": false
+    }
+  ],
+  "last_readback_at_ms": 1793595744132,
+  "grok_readonly_review": {
+    "delegation_task_id": "0419efce-a8fb-4d19-992f-a180f01b2641",
+    "agent": "grok",
+    "scope": "read-only v367 existing smali call graph",
+    "conclusion": "No microphone mute/publication pause/input_ready switch found in inspected remote speech callbacks; does not establish acoustic root cause or exclude lower layers.",
+    "raw_audio_shared": false,
+    "production_changes": false
+  },
+  "private_evidence_root": "~/.local/state/p003-search-fix-20261102/final",
+  "raw_audio_or_user_text_included": false
+}
