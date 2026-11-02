@@ -1,0 +1,73 @@
+{
+  "suite": "audit45-independent-tiers",
+  "status": "FAIL",
+  "results": [
+    {
+      "name": "默认关、admin鉴权、单设备配置和CAS",
+      "status": "PASS",
+      "ms": 165.32054199999993
+    },
+    {
+      "name": "精确信封混批、分表、计数20和原始余额事实",
+      "status": "PASS",
+      "ms": 110.14862500000004
+    },
+    {
+      "name": "跨设备请求越权逐条拒收，合法raw仍accepted",
+      "status": "PASS",
+      "ms": 18.80341599999997
+    },
+    {
+      "name": "跨新请求重复样本不再结算或占用额度",
+      "status": "PASS",
+      "ms": 69.62629200000015
+    },
+    {
+      "name": "源范围及额度限制，重复不占额度",
+      "status": "PASS",
+      "ms": 127.82404199999996
+    },
+    {
+      "name": "请求到期/撤销/未来创建逐条拒收",
+      "status": "PASS",
+      "ms": 141.94766600000003
+    },
+    {
+      "name": "样本捕获/源时钟与3天回溯边界",
+      "status": "PASS",
+      "ms": 80.8286250000001
+    },
+    {
+      "name": "新字段非法/错误位置/资产伪装均逐条拒收",
+      "status": "PASS",
+      "ms": 19.571292000000085
+    },
+    {
+      "name": "完整但尚未闭合的周期不能accepted",
+      "status": "FAIL",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\n+ actual - expected\n\n  [\n+   'audit45-open-period',\n    'audit45-raw-open'\n  ]\n",
+      "ms": 26.357499999999845
+    },
+    {
+      "name": "600条聚合旁证不挤占Ark raw扫描或改变余额",
+      "status": "PASS",
+      "ms": 266.11462499999993
+    },
+    {
+      "name": "样本payload TTL后墓碑/额度保留且重启重放仍dup",
+      "status": "PASS",
+      "ms": 274.23516599999994
+    },
+    {
+      "name": "GM raw逻辑日使同日资产回unknown",
+      "status": "PASS",
+      "ms": 22.469708000000082
+    }
+  ],
+  "not_verified": [
+    "real Android/PCK",
+    "production proxy",
+    "real voice",
+    "7-day savings"
+  ]
+}

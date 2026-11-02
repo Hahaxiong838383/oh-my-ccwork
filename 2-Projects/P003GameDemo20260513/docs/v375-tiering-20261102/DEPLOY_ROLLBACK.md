@@ -1,8 +1,10 @@
 # v375 精确增量发布与回滚（13专用）
 
-48已完成候选导出；本文件不是部署回执。主13是唯一线上执行者。候选0e29acf65b87a0510fc4ef3e563a19f249db19d3；比较基线9e7aab980114b796e22cc5286a1edf5c44f3b35a已固化现役BLE差异。正式回滚标签`rollback/p003-v375-runtime-pre-20261102`解引用为9e7aab98；更早6c2f828d只能作历史证据，不得整树退回。
+48已完成候选导出；本文件不是部署回执。主13是唯一线上执行者。候选856552b942f5f8c2feb08db5949ebe7080eff77f；比较基线9e7aab980114b796e22cc5286a1edf5c44f3b35a已固化现役BLE差异。正式回滚标签`rollback/p003-v375-runtime-pre-20261102`解引用为9e7aab98；更早6c2f828d只能作历史证据，不得整树退回。
 
-包：协调目录bundle-0e29acf6.tar.gz，SHA256 bdc8107171259bd589a0e0c0c907d9b66a4e4a406ed92bc70aca88653be25fea。21个运行文件及逐文件before/after SHA在DEPLOY_MANIFEST.json；包内before仅供对撞，最终回滚必须用发布当刻实际备份。无环境/凭据/数据库/Worker二进制/依赖安装。
+包：协调目录bundle-856552b9.tar.gz，SHA256 e5b28557253af25fa458b101b4d2e41f669e729ae887a3c5e630781ef2ec4faa。21个运行文件及逐文件before/after SHA在DEPLOY_MANIFEST.json；包内before仅供对撞，最终回滚必须用发布当刻实际备份。无环境/凭据/数据库/Worker二进制/依赖安装。
+
+旧0e29acf6候选存在F45-01未闭合周期缺陷，旧包不可部署；本包只增加该摄入边界修复，45已对最终856候选独立复验通过（PASS_ISOLATED），生产预检仍归13。
 
 ## 发布前
 

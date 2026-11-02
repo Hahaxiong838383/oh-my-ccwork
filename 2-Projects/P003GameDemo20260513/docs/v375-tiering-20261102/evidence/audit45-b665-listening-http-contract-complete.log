@@ -1,0 +1,24 @@
+✔ frozen wire accepts worker-ready (7.55325ms)
+✔ frozen wire accepts lease (1.749292ms)
+✔ frozen wire accepts close (0.958041ms)
+✔ frozen wire accepts summary (1.34ms)
+✔ frozen wire accepts feedback (0.79625ms)
+✔ frozen wire accepts worker-ready voice capability (0.545333ms)
+✔ frozen wire accepts singing voice command (wire only, session capability separately enforced) (0.498792ms)
+✔ frozen wire rejects unknown-field (1.638125ms)
+✔ frozen wire rejects wrong-version (0.645708ms)
+✔ frozen wire rejects short-sn (0.90925ms)
+✔ frozen wire rejects foreign-listening-id (0.368ms)
+✔ frozen wire rejects zero-segment-revision (0.609125ms)
+✔ frozen wire rejects unknown optional capability (0.494875ms)
+✔ frozen wire rejects duplicate capability (0.416291ms)
+✔ summary rejects noncontiguous coverage and total source over limit (1.817375ms)
+✔ feedback Unicode limit counts codepoints and rejects oversized source (1.246375ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 75.285208

@@ -1,0 +1,1 @@
+analytics tier ingest: PASS (isolated storage, precise mixed ACK, full identity, quota, revoke/expiry/stale, cross-request replay, restart, closed-period boundary)

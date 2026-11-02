@@ -1,6 +1,6 @@
 # P003 v375 分层埋点服务端交接
 
-本包为服务端候选，发布/设备开关仅由主会话13执行。48没有部署、没有给真实设备写合成数据。
+本包服务端候选856552b942f5f8c2feb08db5949ebe7080eff77f已通过独立隔离复核（INDEPENDENT_REVIEW_45.json），发布/设备开关仅由主会话13执行。48没有部署、没有给真实设备写合成数据。
 客户端合同：源码52b89ec9a4823eb62b424f094d613b4a09a10708，v375 / 1.2.2-canary.361；详见CLIENT_CONTRACT.md。APK版本不等于运行PCK具备分层能力，真机必须验证配置消费及实际桶生成。
 
 ## 实现边界
@@ -54,8 +54,8 @@
 ## 验收证据与未验项
 
 针对性自动测试：`npm run test:analytics-v375`（真实本地socket/admin/SQLite writer、gzip/CRC/膨胀/慢体并发保护、精确ACK、请求越权/额度/撤销/到期、跨请求/重启去重、TTL隔离、统计、BLE绑定版本）。旧回归：test:analytics、test:analytics-capacity、test:analytics-control、test:ark；device-config与7项倾听回归另有日志。
-后台：`node apps/web/scripts/test-analytics-admin-ui.cjs`，生产Vue模板/真实WebKit、合成API，44项，包括默认不开启、保存回读、创建撤销、接收端不可达、迟到响应不污染退出后的会话。截图是本地合成数据，不能充当线上验收。
+后台：[现有管理入口](https://kidshub-ai.hahaxiong.cc/admin/)；新页签部署后可用。自动验收：`node apps/web/scripts/test-analytics-admin-ui.cjs`，生产Vue模板/真实WebKit、合成API，45项，包括默认不开启、保存回读、创建撤销、接收端不可达、迟到响应不污染退出后的会话。截图是本地合成数据，不能充当线上验收。
 全仓tsc仍有12项基线已有错误（listening-content 1项、amap-weather 11项）；独立9e7aab98归档复现且候选错误集合相同，不能写全仓typecheck通过。
-独立45复核另附REVIEW；真机/PCK、公网代理、生产负载/真实语音和7天节省率均待13部署后联调，不能据本地测试宣布通过。
+独立45复核PASS_ISOLATED，原F45-01已关闭，详见INDEPENDENT_REVIEW_45.json；真机/PCK、公网代理、生产负载/真实语音和7天节省率均待13部署后联调，不能据本地测试宣布通过。
 
 署名：codex（OpenAI）| 2026-11-02 CST

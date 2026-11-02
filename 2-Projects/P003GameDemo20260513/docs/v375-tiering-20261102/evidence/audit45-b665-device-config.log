@@ -1,0 +1,12 @@
+[device-config] global posture.reminder_cooldown_sec=10 rev=1
+[device-config] global posture.reminder_cooldown_sec=86400 rev=2
+[device-config] global posture.reminder_cooldown_sec=600 rev=3
+[device-config] sn=BJP00326060100000601 posture.reminder_cooldown_sec=30 rev=4
+[device-config] global posture.reminder_cooldown_sec=700 rev=5
+[device-config] clear sn=BJP00326060100000601 posture.reminder_cooldown_sec rev=6
+[device-config] sn=BJP00326060100000777 posture.reminder_cooldown_sec=1200 rev=7
+[device-config] global local_audio.refresh_days=5 rev=8
+[device-config] sn=BJP00326060100000601 local_audio.refresh_days=2 rev=9
+[device-config] global posture.reminder_cooldown_sec=777 rev=10
+
+device-config.test: pass=36 fail=0

@@ -1,5 +1,5 @@
 {
-  "candidate_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3",
+  "candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
   "comparison_base_sha": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
   "deployment_executor": "session13-only",
   "production_mutated": false,
@@ -52,7 +52,7 @@
       "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/ingest.ts",
       "relative_target": "apps/server/src/analytics/ingest.ts",
       "before_sha256": "f4047d950e556e542a79c809a405b76a053520c97ae313554205ba1c7cad381b",
-      "after_sha256": "9c186704af14848f7e9884ef65d9b9c838bb0942fd9fb8df3f91a63e8c5a5f18",
+      "after_sha256": "73e4289b8faa3209507b36089661a3c53e6c29b46fee921b828e65660f1ec321",
       "rollback": "restore exact saved predeployment bytes"
     },
     {
@@ -150,7 +150,7 @@
       "repo_path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
       "relative_target": "apps/web/public/admin/index.html",
       "before_sha256": "10d81c98e613df363046b2426a0e664a785c8bd8d926b837c95718034ff6c423",
-      "after_sha256": "f903482f92d8e296b1a9dd5a213a65a9e95b27df3189566a87d28496bf1d17ac",
+      "after_sha256": "c4a47f1025247df39cf80be421c7e2f58f64a269d0eb74e2dd07909485cf1634",
       "rollback": "restore exact saved predeployment bytes"
     }
   ]

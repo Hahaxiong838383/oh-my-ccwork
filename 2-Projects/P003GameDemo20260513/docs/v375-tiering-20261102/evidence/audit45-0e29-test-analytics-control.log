@@ -1,0 +1,6 @@
+
+> server@0.0.1 test:analytics-control
+> node --experimental-sqlite --import tsx scripts/analytics-policy.test.ts && node --experimental-sqlite --import tsx scripts/analytics-control-route.test.ts
+
+analytics policy: PASS (CAS, atomic rollback, defaults, hard validation, 20-device capacity)
+analytics control HTTP: PASS (auth, limit, stop while offline, revision, duplicate validation)

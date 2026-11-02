@@ -1,0 +1,29 @@
+{
+  "candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "base": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+  "bundle_sha256": "e5b28557253af25fa458b101b4d2e41f669e729ae887a3c5e630781ef2ec4faa",
+  "runtime_files": 21,
+  "per_file_matches_fixed_git": true,
+  "private_mirror_checks": [
+    {
+      "label": "before",
+      "phase": "before",
+      "expected_exit": 0,
+      "actual_exit": 0
+    },
+    {
+      "label": "after",
+      "phase": "after",
+      "expected_exit": 0,
+      "actual_exit": 0
+    },
+    {
+      "label": "drift-rejected",
+      "phase": "after",
+      "expected_exit": 1,
+      "actual_exit": 1
+    }
+  ],
+  "production_touched": false,
+  "status": "PASS"
+}

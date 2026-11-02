@@ -1,0 +1,154 @@
+{
+  "code_candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "baseline_sha": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+  "node": "v24.19.0",
+  "scope": "synthetic localhost/SQLite and WebKit; no production writes",
+  "tests": [
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "npm run test:analytics",
+      "exit_code": 0,
+      "evidence": "evidence/analytics-period-fix.log",
+      "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
+      "tested_sha": "b665c6854500c9106b4cec786be1ed912d66e5d0"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "npm run test:analytics-capacity",
+      "exit_code": 0,
+      "evidence": "evidence/capacity-final.log",
+      "sha256": "96b623382c82a4567f3291b8741cd8242a3bf6ce2cc85670ea9df08f4ba5bbe5",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "npm run test:analytics-control",
+      "exit_code": 0,
+      "evidence": "evidence/control-final.log",
+      "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "npm run test:analytics-v375",
+      "exit_code": 0,
+      "evidence": "evidence/v375-period-fix.log",
+      "sha256": "f5bdd9cbd8b187a8607909dc024cda3cc63065595248c44af96cb40d89191ab2",
+      "tested_sha": "b665c6854500c9106b4cec786be1ed912d66e5d0"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "npm run test:ark",
+      "exit_code": 0,
+      "evidence": "evidence/ark-final.log",
+      "sha256": "6dd49b1b4f97578304cf2966fb78886277015c2b47803bdda81e8633d4956904",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/device-config.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/device-config-final.log",
+      "sha256": "138e8bba1e36003a99877dafc6accf98097ca0d71e70cb6bb1a0caa665b2a53a",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node ../web/scripts/test-analytics-admin-ui.cjs",
+      "exit_code": 0,
+      "evidence": "evidence/ui-scheduling-45.log",
+      "sha256": "1b7a22dc0dcb0735e3c04f9abc667230177895cb91137748cf134bfd6067d30a",
+      "tested_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node node_modules/typescript/bin/tsc --noEmit --pretty false",
+      "exit_code": 2,
+      "evidence": "evidence/tsc-final.log",
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-config-store.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-config-store-final.log",
+      "sha256": "9f0008854d9e4524c42f2e1c56f245947f38cf9dd7f975d0a2142b6d7a46e400",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-authority-store.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-authority-store-final.log",
+      "sha256": "a77c5c3baf8586f4ecbb2985181a6c73d41f43b4aaa2d0a6c89b68fe0f3218d0",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-auth.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-auth-final.log",
+      "sha256": "4e9cb5e14cbbf8c9444e84ad159f3af26ea6ce98a8423e9aef646a8c37903a1f",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-policy.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-policy-final.log",
+      "sha256": "4dbf629dd201bb8fce5c6df2ce387803318af73205f1e4202902b2c139f11c37",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-integration.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-integration-final.log",
+      "sha256": "a3238b0373f234783bcaf7784ce7724d1867b1e7bd3923aeddb5360db56097ea",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-http-contract.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-http-contract-final.log",
+      "sha256": "b1e6e4f749e15ece53f9076af3d7b9dfa6342faa7aec9f050c19f7be788f5309",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/listening-canary-profile.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/listening-canary-profile-final.log",
+      "sha256": "58255f16bbe20cd51fbd74d2a51812cbc0d31584fe187bab98b6da749753e6e1",
+      "tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3"
+    },
+    {
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "command": "node --experimental-sqlite --import tsx scripts/analytics-tier-ingest.test.ts",
+      "exit_code": 0,
+      "evidence": "evidence/period-boundary-final.log",
+      "sha256": "40ad50185101964eb37a00c9c93e9f0526f3525f9005795c3ba5de4870574f39",
+      "tested_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f"
+    }
+  ],
+  "tsc_status": "12 pre-existing errors; exact log equality against independently archived baseline; NOT an all-project typecheck PASS",
+  "independent_review": {
+    "status": "PASS_ISOLATED",
+    "candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+    "document": "INDEPENDENT_REVIEW_45.json",
+    "evidence_sha256_verified": true,
+    "real_device_or_production_pass": false
+  },
+  "unverified": [
+    "real v375/PCK capability",
+    "HK public gzip proxy/JSON413",
+    "real voice",
+    "7-day statistics",
+    "production load/capacity enlargement"
+  ],
+  "previous_tested_sha": "0e29acf65b87a0510fc4ef3e563a19f249db19d3",
+  "scope_note": "Backend runtime byte-identical to b665c685; only UI scheduling paragraph + one browser assertion + expanded boundary tests changed. Independent45 fixed-SHA review pending.",
+  "red_evidence": "evidence/period-boundary-red.log"
+}

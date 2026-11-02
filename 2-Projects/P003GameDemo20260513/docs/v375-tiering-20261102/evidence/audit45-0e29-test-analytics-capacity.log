@@ -1,0 +1,9 @@
+
+> server@0.0.1 test:analytics-capacity
+> node --experimental-sqlite --import tsx scripts/analytics-load-accounting.test.ts && node --experimental-sqlite --import tsx scripts/analytics-fact-layout.test.ts && node --experimental-sqlite --import tsx scripts/analytics-prune.test.ts && node --experimental-sqlite --import tsx scripts/analytics-writer.test.ts && node --experimental-sqlite --import tsx scripts/analytics-writer-http.test.ts
+
+analytics load accounting: PASS (durable ACK loss/replay, exact IDs, raw/seen deltas, no double counting)
+analytics fact layout: PASS (atomic migration, exact data/rowid preservation, replay/conflict/TTL, rollback compatibility, ordered scan, stable ranking)
+analytics prune: PASS (indexed expiry seeks, per-table bounds, unknown/empty dimensions, cutoff retention, atomic rollback, seen preservation)
+analytics writer: PASS (real durable ACK, single slot, live heartbeat, atomic failure, worker crash/replay, bounded close and job deadline)
+analytics writer HTTP: PASS (readiness, responsive backpressure, ACK after commit, failure/gate handling)

@@ -1,0 +1,23 @@
+{
+  "from": "b665c6854500c9106b4cec786be1ed912d66e5d0",
+  "to": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "server_and_fixture_delta": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-tier-ingest.test.ts"
+  ],
+  "equal_file_count": 497,
+  "business_source_equal": true,
+  "ui_files": [
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
+      "candidate_sha256": "c4a47f1025247df39cf80be421c7e2f58f64a269d0eb74e2dd07909485cf1634",
+      "executed_sha256": "c4a47f1025247df39cf80be421c7e2f58f64a269d0eb74e2dd07909485cf1634",
+      "adaptation": "none"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/web/scripts/test-analytics-admin-ui.cjs",
+      "candidate_sha256": "223ba19997a15421caa426e06dbd79d067b9bd605c27c4ab75e6c88391f74067",
+      "executed_sha256": "c3d81417d0ca2a55c28b6e1591490216937fda400073aed921ef6c1a206383b9",
+      "adaptation": "screenshot destinations only"
+    }
+  ]
+}
