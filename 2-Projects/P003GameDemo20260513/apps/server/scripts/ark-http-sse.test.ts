@@ -89,6 +89,16 @@ test('actual persistence: audit retained; current/later/idle windows skip dynami
  const mixedCalls=captured.filter(x=>!x.stream).slice(before);for(const call of mixedCalls)assert.doesNotMatch(JSON.stringify(call.messages),/余额是0|有效专注3分钟|三枚呀/);assert.deepEqual(profileStore.getProfile(account)!.game_progress,[]);assert.equal(memoryItemStore.listByAccount(account).items.length,0);
  const cleanBefore=captured.filter(x=>!x.stream).length;await extractAndPersist(account,[{role:'user',content:'金币还有多少'},{role:'assistant',content:'家族币余额999999',memory_excluded:true},{role:'user',content:'我喜欢画画'},{role:'assistant',content:'画画很有趣'}],'rtc');assert.equal(captured.filter(x=>!x.stream).length,cleanBefore+1);assert.doesNotMatch(JSON.stringify(captured.at(-1).messages),/金币还有多少|999999/);assert.equal(profileStore.getProfile(account)!.interests[0]?.value,'画画');
 });
+test('main JWT-only callback retains verified facts with zero upstream model calls',async()=>{
+ const saved=process.env.CUSTOM_LLM_API_KEY;delete process.env.CUSTOM_LLM_API_KEY;process.env.ARK_DIRECT_REPLY_SN_ALLOW=SN;
+ try{
+  const before=captured.length;
+  const response=await request('/v1/chat/completions?room=sn-'+SN+'-1793430001&token='+workerJwt,{messages:[{role:'user',content:'我现在家族币有多少'}]});
+  const text=await response.text();assert.equal(response.status,200);assert.match(text,/家族币余额是0枚/);assert.match(text,/\[DONE\]/);assert.equal(captured.length,before);
+  const denied=await new SignJWT({accountId:'other-worker',role:'device'}).setProtectedHeader({alg:'HS256'}).setIssuer('p003').setAudience('kidshub').setExpirationTime('10m').sign(new TextEncoder().encode(SECRET));
+  for(const token of ['', 'invalid', denied]){const calls=historyCalls;await chat('家族币还有多少',[],token);assert.equal(historyCalls,calls);}
+ }finally{process.env.CUSTOM_LLM_API_KEY=saved;delete process.env.ARK_DIRECT_REPLY_SN_ALLOW;}
+});
 test('disable/reactivation and credential revocation invalidate grants without restart',async()=>{
  devices.setStatus(SN,'disabled');assert.equal((await arkService().preview(SN)).prompt,'');devices.setStatus(SN,'active');assert.equal((await arkService().preview(SN)).prompt,'');arkStore().configure(true,[devices.arkIdentity(SN)!],Date.now());devices.revokeCredentials(SN,'test','test');assert.equal((await arkService().preview(SN)).prompt,'');assert.equal((await request('/ark/state',sample())).status,401);
 });

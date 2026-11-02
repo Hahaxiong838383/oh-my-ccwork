@@ -1,3 +1,4 @@
+import {arkDirectReplyAllowed} from './answer.js';
 import type {ArkReadResult} from './contracts.js';
 import {isArkStateQuestion} from '../xiaoke-kb.js';
 import {isArkFollowup} from './memory-policy.js';
@@ -20,7 +21,7 @@ export function arkService(){return service??=new ArkRuntime({store:arkStore(),
 /** Lazy: closed/unused feature creates no new DB and never delays ordinary chat. */
 export async function arkContext(q:Parameters<ArkRuntime['context']>[0]):Promise<ArkReadResult>{
  if(!isArkStateQuestion(q.text)&&!isArkFollowup(q.text,q.history??[]))return {prompt:''};
- if(!process.env.AUTH_JWT_SECRET?.trim()||!process.env.CUSTOM_LLM_API_KEY?.trim()||q.override||q.feedback||q.auth?.role!=='device')return {prompt:''};
+ if(!process.env.AUTH_JWT_SECRET?.trim()||(!process.env.CUSTOM_LLM_API_KEY?.trim()&&!arkDirectReplyAllowed(q.auth,q.room,!!q.override,!!q.feedback))||q.override||q.feedback||q.auth?.role!=='device')return {prompt:''};
  if(process.env.ARK_FACTS_PROXY_URL){
   if(!process.env.SEARCH_WORKER_ACCOUNT_ID||q.auth.accountId!==process.env.SEARCH_WORKER_ACCOUNT_ID)return {prompt:''};
   const sn=/^sn-(BJP003\d{14})-\d{1,20}$/.exec(q.room)?.[1];if(!sn)return {prompt:''};

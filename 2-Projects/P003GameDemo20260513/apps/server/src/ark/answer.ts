@@ -3,9 +3,12 @@ import {isArkStateQuestion,isOutsideArkQuestion} from '../xiaoke-kb.js';
 import {resolveArkQuestion} from './memory-policy.js';
 type Turn={role:string;content:string};
 type Auth={accountId:string;role:string}|null;
-/** Original verified Worker identity is required, even for static direct answers. */
+/** Main may intentionally omit the optional callback key; verified service JWT + explicit SN remain mandatory.
+ * Original verified Worker identity is required, even for static direct answers. */
 export function arkDirectReplyAllowed(auth:Auth,room:string,override=false,feedback=false):boolean {
- if(override||feedback||auth?.role!=='device'||!process.env.AUTH_JWT_SECRET?.trim()||!process.env.CUSTOM_LLM_API_KEY?.trim())return false;
+ if(override||feedback||auth?.role!=='device'||!process.env.AUTH_JWT_SECRET?.trim()||(!!process.env.ARK_FACTS_PROXY_URL&&!process.env.CUSTOM_LLM_API_KEY?.trim()))return false;
+ const mainJwtOnly=!process.env.CUSTOM_LLM_API_KEY?.trim();
+ if(mainJwtOnly&&(process.env.SEARCH_CANARY_ROOT||process.env.ARK_FACTS_PROXY_URL||!process.env.ARK_WORKER_ACCOUNT_ID?.trim()))return false;
  const worker=process.env.ARK_FACTS_PROXY_URL?process.env.SEARCH_WORKER_ACCOUNT_ID:(process.env.ARK_WORKER_ACCOUNT_ID??process.env.SEARCH_WORKER_ACCOUNT_ID);
  const sn=/^sn-(BJP003\d{14})-\d{1,20}$/.exec(room)?.[1];
  return !!worker&&auth.accountId===worker&&!!sn&&(process.env.ARK_DIRECT_REPLY_SN_ALLOW??'').split(',').map(s=>s.trim()).includes(sn);

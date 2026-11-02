@@ -59,3 +59,15 @@ test('resource choice preserves earnings intent and outside-domain history reset
  assert.equal(isArkFollowup('还有多久',mixed),false);assert.equal(answerArk('还有多久',undefined,mixed,now),null);
  assert.deepEqual(stripArkDynamicTurns(mixed),[mixed[1]]);
 });
+
+test('main without optional callback key still requires original verified Worker and exact explicit scope',async()=>{
+ const {arkDirectReplyAllowed}=await import('../src/ark/answer.js');const saved={...process.env};
+ try{
+ Object.assign(process.env,{AUTH_JWT_SECRET:'synthetic',ARK_WORKER_ACCOUNT_ID:'worker',ARK_DIRECT_REPLY_SN_ALLOW:'BJP00399999999999901'});delete process.env.CUSTOM_LLM_API_KEY;delete process.env.ARK_FACTS_PROXY_URL;
+ const room='sn-BJP00399999999999901-123';assert.equal(arkDirectReplyAllowed({accountId:'worker',role:'device'},room),true);
+ for(const auth of [null,{accountId:'other',role:'device'},{accountId:'worker',role:'parent'}])assert.equal(arkDirectReplyAllowed(auth,room),false);
+ for(const r of ['sn-BJP00399999999999902-123',room+'-extra'])assert.equal(arkDirectReplyAllowed({accountId:'worker',role:'device'},r),false);
+ assert.equal(arkDirectReplyAllowed({accountId:'worker',role:'device'},room,true),false);
+ process.env.ARK_FACTS_PROXY_URL='http://127.0.0.1:3001';assert.equal(arkDirectReplyAllowed({accountId:'worker',role:'device'},room),false);
+ }finally{for(const k of Object.keys(process.env))if(!(k in saved))delete process.env[k];Object.assign(process.env,saved);}
+});
