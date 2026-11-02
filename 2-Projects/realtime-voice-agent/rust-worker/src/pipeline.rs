@@ -1140,7 +1140,7 @@ pub async fn run_pipeline(
                 Some(x) => x,
                 None => (stt_cleanup.track(spawn_stt(stt_cfg_for_room(&room_name), &room_name)), Instant::now()),
             };
-            let SttPre { pcm_tx, ev_rx, task: crate::owned_task::OwnedTask::new(task) } = pre;
+            let SttPre { pcm_tx, ev_rx, task } = pre;
             // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
             // (2026-09-11 模拟实证:begin 超时/取消路径的 fail→EndStream 在切换后到达,关的是刚接管的第二条 → job 收尾)
             drop(stt_pcm_tx.take());
