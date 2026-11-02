@@ -1,8 +1,8 @@
 import {isArkStateQuestion} from '../xiaoke-kb.js';
 import {isArkFollowup} from './memory-policy.js';
-import {historySchema,unknownHistory,type ArkHistory} from './contracts.js';
+import {historySchema,unknownHistory,type ArkHistory,type ArkReadResult} from './contracts.js';
 import {readBoundedJson} from './http.js';
-import {formatArkFacts} from './context.js';
+import {formatArkFacts,resolveArkFacts} from './context.js';
 import type {ArkIdentity} from './identity.js';
 import type {ArkStore} from './store.js';
 type Options={workerAccountId:string;store:ArkStore;readIdentity:(sn:string)=>ArkIdentity|null;validAccount:(accountId:string)=>boolean;internalUrl:string;internalSecret:string;fetchImpl?:typeof fetch};
@@ -12,14 +12,14 @@ export class ArkRuntime {
  private pending=0;
  constructor(private o:Options){}
  identity(sn:string){const i=this.o.readIdentity(sn);return i&&this.o.validAccount(i.account_id)?i:null;}
- async context(q:Input):Promise<{prompt:string}>{
+ async context(q:Input):Promise<ArkReadResult>{
   if(!isArkStateQuestion(q.text)&&!isArkFollowup(q.text,q.history??[]))return {prompt:''};
   if(q.override||q.feedback||q.auth?.role!=='device'||!this.o.workerAccountId||q.auth.accountId!==this.o.workerAccountId)return {prompt:''};
   const sn=/^sn-(BJP003\d{14})-\d+$/.exec(q.room)?.[1];if(!sn)return {prompt:''};
   return this.facts(sn);
  }
  async preview(sn:string){return this.facts(sn);}
- private async facts(sn:string):Promise<{prompt:string}>{
+ private async facts(sn:string):Promise<ArkReadResult>{
   const started=performance.now();
   try{
    const identity=this.identity(sn),grant=identity&&this.o.store.grant(identity);if(!identity||!grant)return {prompt:''};
@@ -37,7 +37,8 @@ export class ArkRuntime {
    }
    const latest=this.identity(sn),currentGrant=latest&&this.o.store.grant(latest);
    if(!latest||latest.account_id!==identity.account_id||latest.epoch!==identity.epoch||currentGrant?.grant_id!==grant.grant_id)return {prompt:''};
-   return {prompt:formatArkFacts({snapshot:this.o.store.current(latest),history},Date.now())};
+   const facts={snapshot:this.o.store.current(latest),history},now=Date.now();
+   return {prompt:formatArkFacts(facts,now),facts_v1:{subject:sn,...resolveArkFacts(facts,now)}};
   }catch{return {prompt:''};}
  }
 }

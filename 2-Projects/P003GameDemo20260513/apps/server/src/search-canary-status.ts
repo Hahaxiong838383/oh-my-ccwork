@@ -13,14 +13,15 @@ import {deviceRegistryStore} from './device-registry-store.js';
 import {otaStore} from './ota-store.js';
 import {createCanaryAdminRoute,DEFAULT_CANARY_SN,summarizeCanary} from './routes/search-canary-admin.js';
 const root=()=>process.env.SEARCH_CANARY_OBSERVER_ROOT||'/opt/p003/search-canary-20261021/brain';
+const healthUrl=()=>{const u=new URL(process.env.SEARCH_CANARY_OBSERVER_BASE_URL||'http://127.0.0.1:3007');if(u.protocol!=='http:'||u.hostname!=='127.0.0.1'||u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw new Error('invalid observer loopback URL');return new URL('/health',u);};
 const flag=(k:string)=>configStore.getFlag('p003.search.canary.'+k)?.value;
 function array(s:string|undefined):string[]{try{const a=JSON.parse(s||'[]');return Array.isArray(a)&&a.every(x=>typeof x==='string')?a:[];}catch{return [];}}
 async function json(path:string){try{const raw=await readFile(path,'utf8');return raw.length<=32768?JSON.parse(raw):null;}catch{return null;}}
 async function status(){
   const now=Date.now(),selected=flag('selected_sn')||DEFAULT_CANARY_SN;
   const [lease,release,health]=await Promise.all([
-    json(process.env.SEARCH_CANARY_HEALTH_FILE||root()+'/health.json'),json(root()+'/release-status.json'),
-    fetch('http://127.0.0.1:3007/health',{signal:AbortSignal.timeout(1200),redirect:'error'}).then(r=>r.ok?r.json():null).catch(()=>null),
+    json(process.env.SEARCH_CANARY_OBSERVER_HEALTH_FILE||process.env.SEARCH_CANARY_HEALTH_FILE||root()+'/health.json'),json(root()+'/release-status.json'),
+    fetch(healthUrl(),{signal:AbortSignal.timeout(1200),redirect:'error'}).then(r=>r.ok?r.json():null).catch(()=>null),
   ]);
   let settings:{allowlist:string[];enabled?:boolean;tools?:boolean}|null=null;
   try{const db=new DatabaseSync(root()+'/data/config.db',{readOnly:true});try{
@@ -44,6 +45,7 @@ async function status(){
     {title:'首句、插话与本地回复语需现场回归',detail:'候选关闭搜索时回归普通对话；随后P1验证补播、续讲、取消、改查和退出重连。',status:'待真机'},
     {title:'P2真人体验待验收',detail:'仅当前名单内的灰度设备测试Tool Calls与受控网页抓取，截止时间不因P1全量而延长；到期退出重进回P1。',status:'待真机'},
   ];
+  if(flag('agent')==='p003-search-listening-20261030'){issues.splice(1,3,{title:'倾听与方舟单机联调',detail:'本页观察当前倾听候选；范围、到期时间以实时配置为准。语音进入、安静倾听、反馈后恢复仍需设备实测。',status:'待真机'});}
   if(lease?.cleanup?.healthy===false)issues.unshift({title:'候选关房补偿未就绪',detail:'关房控制请求待补偿，或补偿心跳缺失/过期；已停止新增灰度派单。',status:'阻塞'});
   if(!summary.health_ok)issues.unshift({title:'候选健康检查未通过',detail:'当前无法确认候选在线，请勿依据历史部署记录开窗。',status:'阻塞'});
   if(!summary.lease_ok)issues.unshift({title:'当前无可用派单租约',detail:'可能满载、心跳过期或未注册；不等同于设备离线。',status:'阻塞'});
@@ -59,7 +61,7 @@ canaryAdminRoute.route('/p1',searchP1AdminRoute);
 let amapUsage:AmapUsageStore|null=null;
 canaryAdminRoute.route('/amap-usage',createAmapUsageAdminRoute({
  store:()=>amapUsage??=new AmapUsageStore(root()+'/data/amap-usage.db'),
- runtime:async()=>{try{const r=await fetch('http://127.0.0.1:3007/health',{signal:AbortSignal.timeout(1200),redirect:'error'});if(!r.ok)return null;const h=await r.json() as any;return typeof h.amap?.enabled==='boolean'&&typeof h.amap?.key_configured==='boolean'?{enabled:h.amap.enabled,key_configured:h.amap.key_configured}:null;}catch{return null;}},
+ runtime:async()=>{try{const r=await fetch(healthUrl(),{signal:AbortSignal.timeout(1200),redirect:'error'});if(!r.ok)return null;const h=await r.json() as any;return typeof h.amap?.enabled==='boolean'&&typeof h.amap?.key_configured==='boolean'?{enabled:h.amap.enabled,key_configured:h.amap.key_configured}:null;}catch{return null;}},
 }));
 
 let routes:RoutingStore|null=null;

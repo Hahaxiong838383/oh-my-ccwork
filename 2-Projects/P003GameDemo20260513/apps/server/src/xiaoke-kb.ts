@@ -21,11 +21,15 @@ const REALITY_REDLINE =
 
 // 知识条目：每条带触发关键词（≥2 字、尽量特异防误伤）+ 注入内容（讲世界里真实存在的，讲品类不讲笼统）。
 export function isArkStateQuestion(text: string): boolean {
-  if (/哆啦|原神|王者荣耀|我的世界|天上的|星空|天文|恒星|黄金|金价|比特币/.test(text)) return false;
-  const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|余额|资源|库存|奖励)/.test(text);
-  const stateQuery=/多少|几[个分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度/.test(text);
+  if (isOutsideArkQuestion(text)) return false;
+  const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);
+  const stateQuery=/多少|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有/.test(text);
   const rewardRequest=/奖励/.test(text)&&/下次|下一次|下一项|下一个|专注/.test(text)&&/领取|领到|能领|可领|怎么领|有效专注|计时|进度/.test(text);
   return game&&stateQuery||rewardRequest;
+}
+export function isOutsideArkQuestion(text:string):boolean {
+ if(/游戏|手游|网游/.test(text)&&!/(?:方舟|小可)/.test(text))return true;
+ return /哆啦|原神|明日方舟|王者荣耀|我的世界|天上的|星空|天文|恒星|宇宙|别的游戏|其他游戏|马里奥|黄金|金价|比特币|股票|基金|工资|理财|银行|利息|翻译|造句|写.{0,6}(?:故事|小说)|故事里|他说|她说|这句话/.test(text);
 }
 const G1_PROGRESS_KNOWLEDGE = '【当前G1专注奖励】奖励按当前内容版本的有效专注进度计算；墙钟流逝、合盖离线、夜航都不等于有效专注。' +
   '到达条件与领取到账是不同状态；可领取时按设备奖励页面提示领取，小可不能代领，也不声称已经到账。' +
@@ -156,7 +160,7 @@ const KB_ENTRIES: KbEntry[] = [
 function entryMatches(entry: KbEntry, text: string): boolean {
   if (entry.key === 'economy' || entry.key === 'props') {
     // A wake-word is not a game topic. Explicit external subjects win over generic aliases.
-    if (/哆啦|原神|王者荣耀|我的世界|天上的|星空|天文|恒星/.test(text)) return false;
+    if (/哆啦|原神|王者荣耀|我的世界|天上的|星空|天文|恒星|宇宙|别的游戏|其他游戏|马里奥/.test(text)) return false;
     if (/黄金|金价|金店|人民币|比特币/.test(text) && !/方舟|星尘|家族币/.test(text)) return false;
     if (entry.key === 'props' && !/道具|补勤卡|补签卡|生态缸部件/.test(text) && !/方舟|装扮小可|小可的/.test(text)) return false;
   }

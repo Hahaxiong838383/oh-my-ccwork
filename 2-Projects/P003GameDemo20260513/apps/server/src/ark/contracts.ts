@@ -24,3 +24,18 @@ export const unknownHistory=(reason:ArkHistory['reason']='no_trusted_events'):Ar
 export const historyRequestSchema=z.object({subject:SN,account_id:z.string().min(1).max(128),epoch:z.number().int().min(1),not_before_ms:timestamp}).strict();
 export const settingsSchema=z.object({enabled:z.boolean(),subjects:z.array(SN).max(32).refine(a=>new Set(a).size===a.length),expected_revision:z.number().int().nonnegative()}).strict();
 export const cstDay=(ms:number)=>new Date(ms+8*3600000).toISOString().slice(0,10);
+
+/** Authority-resolved facts only. This is not a raw client snapshot transport. */
+export const progressFactSchema=z.object({captured_at_ms:timestamp,received_at_ms:timestamp,logical_day:daySchema,
+ timer_state:z.enum(['running','paused','stopped','unknown']),status:z.enum(['locked','claimable','claimed','day_complete','unknown']),
+ kind:z.enum(['currency','chest','item','unknown']),item_id:z.enum(['C-FAMILY-001','M-CARD-001']).nullable(),
+ remaining_seconds:z.number().int().min(0).max(86400).nullable(),claimable_count:count.nullable()}).strict().superRefine((p,c)=>{
+ if(p.status==='locked'&&(!p.remaining_seconds||p.kind==='unknown'))c.addIssue({code:'custom',message:'invalid_locked'});
+ if(p.status==='claimable'&&(p.remaining_seconds!==0||!p.claimable_count||p.kind==='unknown'))c.addIssue({code:'custom',message:'invalid_claimable'});
+ if(['claimed','day_complete','unknown'].includes(p.status)&&p.remaining_seconds!==null)c.addIssue({code:'custom',message:'invalid_remaining'});
+ if(p.kind==='currency'&&p.item_id!=='C-FAMILY-001'||p.kind==='item'&&p.item_id!=='M-CARD-001'||['chest','unknown'].includes(p.kind)&&p.item_id!==null)c.addIssue({code:'custom',message:'invalid_item'});
+});
+export const resolvedFactsSchema=z.object({schema_version:z.literal(1),assets:z.object({family_coin:factSchema.nullable(),stardust:factSchema.nullable(),makeup_card:factSchema.nullable()}).strict(),progress:progressFactSchema.nullable()}).strict();
+export const wireFactsSchema=resolvedFactsSchema.extend({subject:SN});
+export type ArkFacts=z.infer<typeof resolvedFactsSchema>;
+export type ArkReadResult={prompt:string;facts_v1?:z.infer<typeof wireFactsSchema>};

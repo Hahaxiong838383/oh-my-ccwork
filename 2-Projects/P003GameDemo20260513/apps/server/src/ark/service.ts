@@ -1,3 +1,4 @@
+import type {ArkReadResult} from './contracts.js';
 import {isArkStateQuestion} from '../xiaoke-kb.js';
 import {isArkFollowup} from './memory-policy.js';
 import {resolve} from 'node:path';
@@ -17,7 +18,7 @@ export function arkService(){return service??=new ArkRuntime({store:arkStore(),
  validAccount:id=>accountStore.findAccount(id)?.role==='device',
  internalUrl:process.env.ARK_ANALYTICS_INTERNAL_URL??'http://127.0.0.1:3006',internalSecret:process.env.ANALYTICS_INTERNAL_SECRET??''});}
 /** Lazy: closed/unused feature creates no new DB and never delays ordinary chat. */
-export async function arkContext(q:Parameters<ArkRuntime['context']>[0]){
+export async function arkContext(q:Parameters<ArkRuntime['context']>[0]):Promise<ArkReadResult>{
  if(!isArkStateQuestion(q.text)&&!isArkFollowup(q.text,q.history??[]))return {prompt:''};
  if(!process.env.AUTH_JWT_SECRET?.trim()||!process.env.CUSTOM_LLM_API_KEY?.trim()||q.override||q.feedback||q.auth?.role!=='device')return {prompt:''};
  if(process.env.ARK_FACTS_PROXY_URL){
