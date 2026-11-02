@@ -211,6 +211,12 @@ fn predicate_tail(t: &str) -> bool {
         ["灭绝","会","能","要","是","不","没有","变","发","形成","出现","产生","生长","消失","吃","飞","转","掉","亮","正式更新","更新","有什么"].iter().any(|p|t.starts_with(p)) &&
         !["帮我","查","搜","取消","不用","不要","停","退出","聊","我们","你","我","天气","；",";"].iter().any(|p|t.contains(p))
 }
+fn explicit_weather_target(d:&Decision)->Option<(String,u8,String)> {
+    if let Some(w)=&d.place_weather {return Some((w.place.trim_end_matches('市').into(),w.day_offset,w.metric.clone()));}
+    d.weather.as_ref().map(|w|(w.city_name.trim_end_matches('市').into(),w.day_offset,w.metric.clone()))
+}
+#[derive(PartialEq)]
+enum WeatherTarget { Auto, Explicit((String,u8,String)) }
 pub struct SearchSession {
     resume_v1: bool,
     context_v1: bool,
@@ -241,6 +247,11 @@ pub struct SearchSession {
     query_intent: RoutingSession,
     routing: Option<RoutingSnapshot>,
     last_route: Option<(String,Decision)>,
+    submitted_weather: Option<WeatherTarget>,
+    wait_deadline_ms: Option<u64>,
+    wait_sequence: u64,
+    wait_terminal_repeats: u8,
+    wait_last: Option<(u64,bool,u64)>,
     routing_task: Option<JoinHandle<()>>,
     clarified_at: Option<Instant>,
     pending_topic: Option<PendingTopic>,
@@ -283,7 +294,8 @@ impl SearchSession {
             suppress_auto: false,
             requires_explicit_play: false,
             query_intent: RoutingSession::default(),
-            routing:None,last_route:None,routing_task,
+            routing:None,last_route:None,submitted_weather:None,routing_task,
+            wait_deadline_ms:None,wait_sequence:0,wait_terminal_repeats:0,wait_last:None,
             clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
         })
     }
@@ -309,7 +321,15 @@ impl SearchSession {
         }
         let text=joined.as_deref().unwrap_or(text);
         let version=self.routing.as_ref().map(|r|r.version.clone()).unwrap_or_default();
-        let decision=self.query_intent.route(text,self.started.elapsed().as_millis() as u64,self.routing.as_ref().map(|r|&r.config),&version);
+        let mut decision=self.query_intent.route(text,self.started.elapsed().as_millis() as u64,self.routing.as_ref().map(|r|&r.config),&version);
+        // A clear new weather target is an ordinary replacement, even if ASR
+        // loses the control prefix. Do not infer cancellation from unrelated chat
+        // or create another task for the same target.
+        if self.busy && decision.action=="search" {
+            if let (Some(previous),Some(next))=(&self.submitted_weather,explicit_weather_target(&decision)) {
+                if previous!=&WeatherTarget::Explicit(next) {decision.action="replace".into();decision.reason="明确的新天气目标替换当前天气查询".into();}
+            }
+        }
         let action=decision.intent();
         if action.is_none(){
             self.clarified_at=None;
@@ -360,6 +380,8 @@ impl SearchSession {
             }
             Intent::Replace(query) => { return self.replace_query(query); },
             Intent::Cancel => {
+                self.submitted_weather=None;
+                self.wait_deadline_ms=None;
                 self.pending_topic=None;self.clarified_at=None;
                 self.suppress_auto_replay();
                 self.epoch += 1;
@@ -455,6 +477,11 @@ impl SearchSession {
             generation: self.generation,
         };
         if self.tx.try_send(cmd).is_ok() {
+            self.submitted_weather=self.last_route.as_ref().and_then(|(_,d)|explicit_weather_target(d).map(WeatherTarget::Explicit)
+                .or_else(||d.auto_weather.as_ref().map(|_|WeatherTarget::Auto)));
+            // The server task itself is bounded to 20s. Allow transport/claim
+            // margin without extending ordinary chat or renewing on chatter.
+            self.wait_deadline_ms=Some(self.started.elapsed().as_millis() as u64+25000);
             self.busy = true;
             if self.receipt(receipt_kind) { self.receipt_epoch = Some(self.epoch); }
             true
@@ -528,9 +555,9 @@ impl SearchSession {
                     }
                     self.speech.push_back(speech);
                 }
-                Event::Finished { epoch } if epoch == self.epoch => self.busy = false,
+                Event::Finished { epoch } if epoch == self.epoch => {self.busy=false;self.wait_deadline_ms=None;},
                 Event::Revoked { epoch } if epoch == self.epoch => {
-                    self.busy = false;
+                    self.busy = false; self.wait_deadline_ms=None;
                     self.gate.cancel();
                     self.speech.retain(|s| s.result_until.is_none());
                     self.remainder = None; self.dialogue=None;
@@ -566,9 +593,9 @@ impl SearchSession {
         while let Some(speech) = self.speech.pop_front() {
             if now < speech.expires {
                 kept.push_back(speech);
-            } else if self.resume_v1 && !speech.digest.is_empty(){self.busy=false;let mut s=speech;s.sequence+=1;let _=self.tx.try_send(Command::Progress{speech:s,final_outcome:Some("dropped")});
+            } else if self.resume_v1 && !speech.digest.is_empty(){self.busy=false;self.wait_deadline_ms=None;let mut s=speech;s.sequence+=1;let _=self.tx.try_send(Command::Progress{speech:s,final_outcome:Some("dropped")});
             } else if let Some(id) = speech.task {
-                self.busy = false;
+                self.busy = false; self.wait_deadline_ms=None;
                 let _ = self.tx.try_send(Command::Receipt {
                     id,
                     delivery: speech.delivery,
@@ -644,13 +671,31 @@ impl SearchSession {
         self.query_intent.clear();
         self.auto_pending = false;
         // Invalidate an automatic revalidation already in flight without blocking ordinary speech.
-        if self.busy && self.remainder.is_some() { self.epoch += 1; self.busy = false; }
+        if self.busy && self.remainder.is_some() { self.epoch += 1; self.busy = false; self.wait_deadline_ms=None; }
         self.speech.retain(|s| !s.auto_replayed && s.receipt.is_none());
     }
     pub fn is_result_active(&self)->bool {self.active.as_ref().is_some_and(|s|s.task.is_some()&&!s.digest.is_empty())}
     pub fn has_pending_search(&self)->bool {
         !self.closing && (self.busy || self.pending_topic.is_some() || self.active.as_ref().is_some_and(|s|s.task.is_some())
             || self.auto_pending || self.speech.iter().any(|s|s.task.is_some()))
+    }
+    /// Independent, bounded idle hold for clients that understand search state.
+    pub fn started_ms(&self)->u64 {self.started.elapsed().as_millis() as u64}
+    pub fn pending_state(&mut self, now_ms:u64)->Option<Value> {
+        let left=self.wait_deadline_ms.unwrap_or(0).saturating_sub(now_ms).min(25000);
+        let pending=!self.closing && self.busy && left>0;
+        if !pending {self.wait_deadline_ms=None;}
+        match self.wait_last {
+            None if !pending=>return None,
+            Some((epoch,was_pending,at)) if epoch==self.epoch && was_pending==pending
+                && (now_ms.saturating_sub(at)<2000 || (!pending && self.wait_terminal_repeats>=3))=>return None,
+            _=>{}
+        }
+        self.wait_terminal_repeats=if pending{0}else if self.wait_last.is_some_and(|(epoch,p,_)|epoch==self.epoch&&!p){self.wait_terminal_repeats.saturating_add(1)}else{1};
+        self.wait_sequence=self.wait_sequence.saturating_add(1);
+        self.wait_last=Some((self.epoch,pending,now_ms));
+        Some(json!({"protocol":1,"epoch":self.epoch,"sequence":self.wait_sequence,
+            "pending":pending,"valid_for_ms":if pending{left}else{0}}))
     }
     /// Resolve only a whole ambiguous refusal while a search is active. Explicit
     /// exits, quotations, and ordinary conversation keep their existing meaning.
@@ -708,7 +753,7 @@ impl SearchSession {
     pub fn finish_sentences(&mut self,interrupted:bool,complete:usize,played_ms:u64){
         self.record_sentences(complete,Some(if interrupted{"interrupted"}else{"completed"}));
         let Some(mut s)=self.active.take() else{return;};
-        self.set_phase(if interrupted{"interrupted"}else{"ready"});self.busy=false;
+        self.set_phase(if interrupted{"interrupted"}else{"ready"});self.busy=false;self.wait_deadline_ms=None;
         self.auto_pending=interrupted && played_ms<1000 && complete==0
             && !s.auto_replayed && !self.suppress_auto && Instant::now()<s.expires;
         let parts=crate::search_progress::sentences(&s.text);
@@ -718,7 +763,7 @@ impl SearchSession {
         self.remainder=Some(s);
     }
     pub fn close(&mut self){
-        if self.closing{return;} self.closing=true;
+        if self.closing{return;} self.closing=true;self.wait_deadline_ms=None;
         if let Some(task)=&self.routing_task {task.abort();}
         let api=self.api.clone();let tx=self.tx.clone();let abort=self.task.abort_handle();let resume=self.resume_v1;
         if let Ok(rt)=tokio::runtime::Handle::try_current(){rt.spawn(async move{
@@ -746,7 +791,7 @@ impl SearchSession {
                     remainder.text = speech.text.chars().skip(spoken_chars).collect();
                 }
                 self.remainder = Some(remainder);
-                self.busy = false;
+                self.busy = false; self.wait_deadline_ms=None;
             }
             if let Some(id) = speech.task {
                 let _ = self.tx.try_send(Command::Receipt {
@@ -1004,6 +1049,78 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
 mod tests {
     use super::*;
     #[tokio::test]
+    async fn r27_search_idle_hold_survives_receipt_and_chat_but_never_renews_forever() {
+        let (mut s,_,mut commands)=test_session();
+        assert!(s.pending_state(0).is_none(),"ordinary chat must publish no extra state");
+        let a=s.interpret("帮我查一下恐龙为什么会灭绝").unwrap();s.command(a);commands.try_recv().unwrap();
+        let first=s.pending_state(0).expect("a dispatched query must hold client idle");
+        assert_eq!(first["pending"],true);assert!(first["valid_for_ms"].as_u64().unwrap()<=25000);
+        s.notice("我查查。");s.idle_since=Some(Instant::now()-Duration::from_secs(1));s.poll(true);s.finish(false,4);
+        assert!(s.interpret("我们聊聊小猫吧").is_none());s.on_commit();
+        let later=s.pending_state(6000).unwrap();assert_eq!(later["pending"],true);
+        assert_eq!(later["epoch"],first["epoch"]);assert!(later["valid_for_ms"].as_u64().unwrap()<first["valid_for_ms"].as_u64().unwrap());
+        assert!(s.pending_state(6100).is_none(),"no packet per audio tick");
+        let expired=s.pending_state(30000).unwrap();assert_eq!(expired["pending"],false);assert_eq!(expired["valid_for_ms"],0);
+        assert!(s.pending_state(31000).is_none(),"an expired query cannot silently renew idle hold");
+    }
+    #[tokio::test]
+    async fn r27_cancel_close_and_replacement_publish_monotonic_search_state() {
+        let (mut s,events,mut commands)=test_session();
+        s.command(Intent::Search("恐龙为什么会灭绝".into()));commands.try_recv().unwrap();
+        let first=s.pending_state(0).unwrap();let old_epoch=s.epoch;
+        s.command(Intent::Replace("火星为什么是红色".into()));commands.try_recv().unwrap();
+        let replaced=s.pending_state(1).unwrap();assert!(replaced["epoch"].as_u64()>first["epoch"].as_u64());
+        events.send(Event::Finished{epoch:old_epoch}).await.unwrap();s.poll(false);
+        assert_eq!(s.pending_state(2100).unwrap()["pending"],true,"late old-task completion cannot clear the new hold");
+        s.command(Intent::Cancel);commands.try_recv().unwrap();let cancel=s.pending_state(2101).unwrap();
+        assert_eq!(cancel["pending"],false);assert!(cancel["sequence"].as_u64()>replaced["sequence"].as_u64());
+        s.close();assert!(s.pending_state(3000).is_none()||!s.has_pending_search());
+    }
+    #[tokio::test]
+    async fn r27_finished_hold_does_not_revive_on_resume_and_close_is_terminal() {
+        let(mut s,events,mut commands)=test_session();s.resume_v1=true;
+        s.command(Intent::Search("恐龙为什么会灭绝".into()));commands.try_recv().unwrap();
+        assert_eq!(s.pending_state(0).unwrap()["pending"],true);
+        events.send(Event::Finished{epoch:s.epoch}).await.unwrap();s.poll(false);
+        assert_eq!(s.pending_state(1000).unwrap()["pending"],false);
+        s.command(Intent::Resume);commands.try_recv().unwrap();
+        assert_ne!(s.pending_state(2000).unwrap()["pending"],true,"resume cannot reuse a completed query's lease");
+        s.command(Intent::Replace("火星为什么是红色".into()));commands.try_recv().unwrap();
+        assert_eq!(s.pending_state(2001).unwrap()["pending"],true);
+        s.close();assert_eq!(s.pending_state(2002).unwrap()["pending"],false);
+        assert_eq!(s.pending_state(4002).unwrap()["pending"],false,"terminal state is restated after a possible enqueue failure");
+        assert_eq!(s.pending_state(6002).unwrap()["pending"],false);
+        assert!(s.pending_state(8002).is_none(),"terminal restatement is finite");
+    }
+    #[tokio::test]
+    async fn r27_auto_weather_accepts_explicit_replacement_and_drops_old_ready() {
+        let(mut s,events,mut commands)=test_session();
+        s.routing=Some(RoutingSnapshot{version:"r7-111111111111111111111111".into(),config:RoutingConfig{weather_enabled:true,baidu_weather_enabled:true,auto_location_enabled:true,..RoutingConfig::default()}});
+        let a=s.interpret("今天天气怎么样").unwrap();assert!(s.command(a));commands.try_recv().unwrap();let old_epoch=s.epoch;
+        let a=s.interpret("成都今天的天气").unwrap();assert!(s.command(a));
+        match commands.try_recv().unwrap(){Command::Submit{replace,routing,epoch,..}=>{assert!(replace);assert!(epoch>old_epoch);assert_eq!(routing.unwrap()["place_weather"]["place"],"成都");},_=>panic!("replacement command required")}
+        events.send(Event::Ready{id:"old-city".into(),text:"旧城市结果".into(),epoch:old_epoch}).await.unwrap();s.poll(false);
+        assert!(s.speech.is_empty());assert!(commands.try_recv().is_err(),"old result must not be claimed");
+    }
+    #[tokio::test]
+    async fn r27_new_explicit_weather_target_replaces_busy_weather_only() {
+        for next in ["成都今天的天气", "明天北京天气"] {
+            let (mut s,_,mut commands)=test_session();
+            s.routing=Some(RoutingSnapshot{version:"synthetic".into(),config:RoutingConfig{weather_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()}});
+            let a=s.interpret("查北京今天的天气").unwrap();assert!(s.command(a));
+            assert!(matches!(commands.try_recv(),Ok(Command::Submit{replace:false,..})));
+            let a=s.interpret(next).unwrap();assert!(s.command(a),"{next}");
+            assert!(matches!(commands.try_recv(),Ok(Command::Submit{replace:true,..})),"new target must replace without requiring a magic prefix");
+        }
+        for next in ["北京今天的天气", "我们聊聊小猫吧", "天气为什么会变化"] {
+            let (mut s,_,mut commands)=test_session();
+            s.routing=Some(RoutingSnapshot{version:"synthetic".into(),config:RoutingConfig{weather_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()}});
+            let a=s.interpret("查北京今天的天气").unwrap();s.command(a);commands.try_recv().unwrap();
+            if let Some(a)=s.interpret(next){s.command(a);}
+            assert!(commands.try_recv().is_err(),"chat and duplicate query must not replace: {next}");
+        }
+    }
+    #[tokio::test]
     async fn r17_verification_task_client_uses_the_real_background_path() {
         let _=rustls::crypto::ring::default_provider().install_default();
         let mut cfg=LlmConfig{base_url:"https://kidshub-ai.hahaxiong.cc/_canary/search-verification-20261026/v1".into(),
@@ -1179,7 +1296,8 @@ mod tests {
             suppress_auto: false,
             requires_explicit_play: false,
             query_intent: RoutingSession::default(),
-            routing:None,last_route:None,routing_task:None,
+            routing:None,last_route:None,submitted_weather:None,routing_task:None,
+            wait_deadline_ms:None,wait_sequence:0,wait_terminal_repeats:0,wait_last:None,
             clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
             },
             events,
