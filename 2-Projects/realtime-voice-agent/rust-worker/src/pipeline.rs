@@ -2904,6 +2904,18 @@ impl Orchestrator {
             && !self.search_user_speaking && self.turn_gate.pending().is_empty()
             && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active();
         let speech = self.search.as_mut().and_then(|s| s.poll(safe));
+        // Separate search waiting from actual speaking. Legacy clients ignore
+        // this event; capable clients hold only their idle watchdog, not input.
+        if self.device_trace.is_some() {
+            let update=self.search.as_mut().and_then(|s|s.pending_state(s.started_ms()));
+            if let Some(mut payload)=update {
+                let trace=self.device_trace.as_ref().unwrap().clone();
+                payload["room"]=json!(self.room_name);
+                let packet=json!({"trace_id":trace,"ts_ms":unix_ms_now(),"src":"worker",
+                    "type":"session.search_pending","lane":"L2","payload":payload});
+                self.publish_json_traced(control::TOPIC,packet,"session.search_pending",trace);
+            }
+        }
         if self.search.as_mut().map(|s| s.take_revoked()).unwrap_or(false) && self.search_turn {
             self.hard_abort_current();
         }

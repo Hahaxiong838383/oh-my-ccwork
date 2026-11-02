@@ -75,6 +75,14 @@ fn protected(t: &str) -> bool {
         || ["不要真的查","但不用搜索","心情","编一个","讲个故事"].iter().any(|p|t.contains(p))
         || ["搜索引擎","搜索算法","搜索功能","查询功能"].iter().any(|p|t.starts_with(p))
 }
+fn page_read_request(t: &str) -> bool {
+    let mut rest=t;
+    for _ in 0..3 {
+        if let Some(next)=["请","帮我","给我"].iter().find_map(|p|rest.strip_prefix(p)){rest=next;}else{break;}
+    }
+    ["读一下","读一读","读读","打开","看看","看一下","看一看"].iter().any(|p|rest.starts_with(p))
+        && ["网站","网页","官网","网址","新闻页面","https://","http://"].iter().any(|w|rest.contains(w))
+}
 fn weather_topic(q: &str) -> bool {
     ["天气","气温","温度","下雨","降雨","空气质量","带伞","多少度"].iter().any(|p|q.contains(p))
         && !["为什么","原理","形成","是什么意思","什么是","心情","故事","烤箱","体温","发烧","开水","水温","空调","冰箱","显卡","电脑"].iter().any(|p|q.contains(p))
@@ -169,6 +177,10 @@ impl RoutingSession {
             return self.from_intent(control,"builtin-control",now,Some(config));
         }
         if t.is_empty() || t.chars().count()>128 || t.chars().any(char::is_control) || protected(t) {self.clear();return Decision::new("chat","protected","普通聊天或保护表达");}
+        if page_read_request(t) {
+            self.legacy.clear();
+            return self.from_intent(Intent::Search(t.into()),"builtin-explicit",now,Some(config));
+        }
         if config.weather_enabled && config.baidu_weather_enabled {
             if let Some(q)=["该插","改插","该查"].iter().find_map(|p|t.strip_prefix(p)) {
                 if expanded_weather(q).is_some() {
@@ -244,6 +256,18 @@ mod style_ark_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn r27_explicit_page_reading_routes_without_changing_chat() {
+        let config=RoutingConfig::default();
+        for text in ["帮我读一下央视网国内新闻页面挑一条能核实日期的新闻讲两句重点告诉我来源", "帮我读一下央视往国内新闻页面", "请打开科普中国网站看看恐龙的资料", "帮我看看https://news.cctv.com/china/页面上的新闻"] {
+            let d=RoutingSession::default().route(text,0,Some(&config),"r27");
+            assert_eq!(d.action,"search","{text}");assert!(d.query.is_some());
+            assert_eq!(d.rule_id,"builtin-explicit","reuse the Brain-approved explicit-query claim");
+        }
+        for text in ["帮我读一下这首诗", "网站是什么", "他说帮我读一下央视网页面", "不要打开央视网新闻页面", "如果打开央视网页会怎样", "帮我编一个打开新闻网页的故事", "我今天看了央视新闻", "小可我们聊聊小猫吧"] {
+            assert_eq!(RoutingSession::default().route(text,0,Some(&config),"r27").action,"chat","{text}");
+        }
+    }
     #[test] fn r26_continued_weather_imperative_keeps_verified_place() {
         let c=RoutingConfig{weather_enabled:true,auto_location_enabled:true,baidu_weather_enabled:true,..RoutingConfig::default()};
         for (text,place) in [("查北京今天的天气","北京"),("查成都今天的天气","成都"),("请查一下北京市明天天气","北京市"),("小可，查深圳现在多少度","深圳")] {
