@@ -280,6 +280,27 @@ fn warm_is_fresh(age: Duration) -> bool {
 #[cfg(test)]
 const PROTOCOL_IDLE_LIMIT: Duration = Duration::from_secs(14);
 
+fn async_dns_enabled(agent: &str, flag: Option<&str>, host: &str) -> bool {
+    flag == Some("1")
+        && (agent == "rust-worker" || crate::search_canary::is_candidate(agent))
+        && host.eq_ignore_ascii_case("cbm01.cn-huabei-1.xf-yun.com")
+}
+
+#[test]
+fn r28_main_dns_requires_explicit_flag_and_expected_provider() {
+    let host = "cbm01.cn-huabei-1.xf-yun.com";
+    assert!(async_dns_enabled("rust-worker", Some("1"), host));
+    assert!(async_dns_enabled("p003-search-verification-20261026", Some("1"), host));
+    for flag in [None, Some("0"), Some("true")] {
+        assert!(!async_dns_enabled("rust-worker", flag, host));
+    }
+    assert!(!async_dns_enabled("another-worker", Some("1"), host));
+    for host in ["localhost", "internal.local", "cbm01.cn-huabei-1.xf-yun.com.evil"] {
+        assert!(!async_dns_enabled("rust-worker", Some("1"), host));
+        assert!(!async_dns_enabled("p003-search-verification-20261026", Some("1"), host));
+    }
+}
+
 async fn connect_observed(url: String) -> Result<Warm> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static NEXT: AtomicU64 = AtomicU64::new(1);
@@ -287,16 +308,19 @@ async fn connect_observed(url: String) -> Result<Warm> {
         id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
         stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled", dns_path: None,
     };
-    // Ordinary workers retain the OS connector; candidate DNS racing is gated.
-    // Both retain
-    // TCP defaults, TLS/SNI/certificate validation and one overall 10s budget.
+    // Keep the OS connector by default. The explicit async-DNS flag may also
+    // promote the verified connector to the main worker for this provider only.
+    // Both retain TCP defaults, TLS/SNI/certificate validation and a 10s budget.
     // TLS and WebSocket stay one measured stage; do not invent separate timings.
     let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
         let request = url.into_client_request().map_err(|_| anyhow::anyhow!("invalid_request"))?;
         let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
         let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str() == Some("wss") {443} else {80});
-        let socket = if std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v))
-            && std::env::var("P003_ASYNC_DNS_V1").is_ok_and(|v|v=="1") {
+        let socket = if async_dns_enabled(
+            &std::env::var("AGENT_NAME").unwrap_or_default(),
+            std::env::var("P003_ASYNC_DNS_V1").ok().as_deref(),
+            &host,
+        ) {
             trace.stage="resolve_tcp";
             let connected=crate::voice_connect::connect(&host,port).await?;
             trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
