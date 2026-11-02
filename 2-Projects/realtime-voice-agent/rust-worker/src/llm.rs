@@ -355,10 +355,11 @@ pub async fn stream_chat_with_context(
     }
     let url = cfg.chat_url();
     let t0 = std::time::Instant::now();
-    // Candidate diagnostics only: correlate the same SSE response with Brain
-    // timing, without logging URLs, headers, prompts or returned content.
-    let trace_candidate = std::env::var("AGENT_NAME")
-        .is_ok_and(|v| crate::search_canary::is_candidate(&v));
+    // Candidates and the explicitly promoted main transport correlate the
+    // same SSE response without URLs, headers, prompts or returned content.
+    let agent = std::env::var("AGENT_NAME").unwrap_or_default();
+    let trace_transport = crate::search_canary::is_candidate(&agent)
+        || http2_enabled(&agent, std::env::var("P003_LLM_HTTP2_V1").ok().as_deref());
     let resp = client
         .post(&url)
         .bearer_auth(&cfg.api_key)
@@ -411,7 +412,7 @@ pub async fn stream_chat_with_context(
                     }
                     if ttft_ms.is_none() {
                         ttft_ms = Some(t0.elapsed().as_millis() as u64);
-                        if trace_candidate {
+                        if trace_transport {
                             let response_id = v["id"].as_str().filter(|id|
                                 id.starts_with("chatcmpl-") && id.len() <= 80
                                 && id.bytes().all(|c| c.is_ascii_alphanumeric() || c == b'-' || c == b'_')
@@ -419,7 +420,7 @@ pub async fn stream_chat_with_context(
                             info!(room = %cfg.room, response_id, headers_ms, ?http_version,
                                 first_body_byte_ms = first_body_byte_ms.unwrap_or(0),
                                 first_content_ms = ttft_ms.unwrap_or(0),
-                                "candidate llm response timing");
+                                "llm response timing");
                         }
                     }
                     n_chunks += 1;
@@ -606,7 +607,8 @@ fn build_client() -> reqwest::Client {
 }
 
 fn http2_enabled(agent: &str, setting: Option<&str>) -> bool {
-    crate::search_canary::is_candidate(agent) && setting == Some("1")
+    (agent == "rust-worker" || crate::search_canary::is_candidate(agent))
+        && setting == Some("1")
 }
 
 fn client_builder(candidate: bool, http2: bool) -> reqwest::ClientBuilder {
@@ -614,11 +616,11 @@ fn client_builder(candidate: bool, http2: bool) -> reqwest::ClientBuilder {
         .redirect(if candidate { reqwest::redirect::Policy::none() } else { reqwest::redirect::Policy::default() })
         .connect_timeout(std::time::Duration::from_secs(10))
         .timeout(std::time::Duration::from_secs(30));
-    // ALPN negotiates h2 only for an explicit candidate opt-in. Dropping an
+    // ALPN negotiates h2 only for an explicit candidate/main opt-in. Dropping an
     // interrupted SSE stream then resets that stream, preserving the shared
     // connection. HTTP/1-only servers remain supported through negotiation.
     // Pin the old mode elsewhere: adding a Cargo feature is not a rollout.
-    if candidate && http2 { builder } else { builder.http1_only() }
+    if http2 { builder } else { builder.http1_only() }
 }
 
 impl Llm {
@@ -866,6 +868,17 @@ mod tests {
             strip_leading_filler: true,
             url_query: String::new(),
             room: String::new(),
+        }
+    }
+
+    #[test]
+    fn r28_main_http2_requires_explicit_opt_in() {
+        assert!(http2_enabled("rust-worker", Some("1")));
+        for setting in [None, Some("0"), Some("true"), Some(" 1")] {
+            assert!(!http2_enabled("rust-worker", setting));
+        }
+        for agent in ["voice-worker-rust", "rust-worker-dev", "", "p003-search-canary-other"] {
+            assert!(!http2_enabled(agent, Some("1")));
         }
     }
 
