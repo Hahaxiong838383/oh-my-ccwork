@@ -14,7 +14,7 @@ const {searchChatPolicy}=await import('../src/tools/search-chat-policy.js');
 const first='BJP00326060100100004',second='BJP00326070803800006',fresh='BJP00326102700100005';
 const set=(k:string,v:string)=>configStore.setFlag('p003.search.'+k,v,'synthetic-test');
 const add=(sn:string)=>{devices.add(sn,'synthetic');devices.setAccountId(sn,'account-'+sn);};
-test('P1 all_registered admits present and later active devices; main cannot enable P2',()=>{
+test('P1 all_registered admits present and later active devices; legacy candidate flag cannot enable main P2',()=>{
  try{
   add(first);set('enabled','1');set('scope','all_registered');set('allowlist','[]');set('exclusions','[]');set('tools','1');
   assert.equal((runtime.searchSettings() as any).scope,'all_registered');
@@ -31,14 +31,17 @@ test('P1 all_registered admits present and later active devices; main cannot ena
   set('scope','all_registered');set('enabled','0');assert.equal(allowed(first),false);
  }finally{runtime.closeSearchRuntime();}
 });
-test('P2 remains bounded to candidate environment and two approved devices',()=>{
+test('isolated P2 requires exact candidate environment/list agreement and valid expiry',()=>{
  try{
   add(second);process.env.SEARCH_CANARY_ROOT=root;process.env.SEARCH_CANARY_SN=[first,second].join(',');
   set('canary.expires_at_ms',String(Date.now()+60000));set('enabled','1');set('tools','1');set('scope','all_registered');
   assert.equal(runtime.searchSettings().enabled,false,'candidate must reject all-device scope');
   set('scope','allowlist');set('allowlist',JSON.stringify([first,second]));
   assert.equal(runtime.searchSettings().tools,true);assert.equal((runtime as any).searchDeviceAllowed(fresh),false);
-  set('allowlist',JSON.stringify([first,second,fresh]));assert.equal(runtime.searchSettings().enabled,false);
+  set('allowlist',JSON.stringify([first,second,fresh]));assert.equal(runtime.searchSettings().tools,false,'environment/list mismatch cannot enable tools');
+  process.env.SEARCH_CANARY_SN=[first,second,fresh].join(',');assert.equal(runtime.searchSettings().tools,true,'the existing three-device candidate contract is preserved');
+  set('allowlist',JSON.stringify([first,second,fresh,'BJP00399999999999901']));assert.equal(runtime.searchSettings().enabled,false,'independent candidate scope remains bounded');
+  process.env.SEARCH_CANARY_SN=[first,second].join(',');
   set('allowlist',JSON.stringify([first,second]));set('canary.expires_at_ms','1');assert.equal(runtime.searchSettings().enabled,false);
  }finally{delete process.env.SEARCH_CANARY_ROOT;runtime.closeSearchRuntime();}
 });

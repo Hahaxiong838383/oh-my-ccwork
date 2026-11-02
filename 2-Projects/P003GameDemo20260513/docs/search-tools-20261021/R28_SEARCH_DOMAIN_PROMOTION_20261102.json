@@ -1,0 +1,13 @@
+{
+  "scope": "main P2 full internal rollout",
+  "search_only_env": {
+    "SEARCH_ALLOWED_DOMAINS": "weather.com.cn,gov.cn,people.com.cn,xinhuanet.com,cas.cn,cctv.com,chnmuseum.cn,dpm.org.cn,minecraft.net,mc.163.com,pokemon.cn,pokemon.com.cn,bwf.sport,bwfbadminton.com,olympics.com,kepuchina.cn,baike.baidu.com,zh.wikipedia.org,y.qq.com,minecraft.wiki",
+    "P003_SEARCH_SIMPLE_FALLBACK": "1"
+  },
+  "before": {
+    "SEARCH_ALLOWED_DOMAINS": "weather.com.cn,gov.cn,people.com.cn,xinhuanet.com,cas.cn,cctv.com,chnmuseum.cn,dpm.org.cn",
+    "P003_SEARCH_SIMPLE_FALLBACK": null
+  },
+  "reason": "actual P1 domain config omitted already-reviewed P2 game/sport/knowledge sources; initial RTC tests retained; final regression uses promoted config",
+  "ordinary_chat_model_asr_tts_flags_changed": false
+}
