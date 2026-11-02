@@ -138,6 +138,7 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
   await tp.getByRole('button',{name:'保存并回读',exact:true}).waitFor();
   assert.equal(await tp.getByRole('button',{name:'创建并启用短期请求',exact:true}).isDisabled(),true);
   assert(!tier.state.seen.some(r=>r.path.includes('/tiering/')&&r.method!=='GET'));checks++;
+  assert((await tp.locator('.analytics-panel').innerText()).includes('创建请求不会立即上传'));checks++;
   await trun(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.anTier.draft.request_gzip_enabled=true;p.anTier.draft.tiering_enabled=true;p.anTier.draft.aggregate_upload_enabled=true;});
   await tp.getByRole('button',{name:'保存并回读',exact:true}).click();
   await tp.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anTier.data?.revision===2);

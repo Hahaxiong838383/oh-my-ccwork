@@ -44,7 +44,9 @@
 2. **仅gzip=true**：设备下拉明确revision，核Launcher真正应用；产生一个真实事件，记录RID/ID/时间/批数。服务器传输明细encoding=gzip，wire/inflated可查；raw入库/精确ACK与重放一致。检查公网代理413仍JSON，不调其他设备。
 3. **tiering=true + aggregate_upload=true同时打开**：只有11才生成新桶；00/01/10均raw。先核运行PCK实际收到配置、本地12类桶计数，关键失败/奖励/余额事件仍raw。不要用单开tiering声称本地分层通过。
 4. **闭合周期**：按客户端当前周期起止记录实际时间，闭合后在23点策略中上传，按同一RID/ID核count/维度/最大值与云端一条记录。7天窗口未完成前标待验，不改设备时钟制造“真实7天”。
-5. **短期按需**：后台限定来源创建60分钟、100条、回溯3天请求；端侧核完整ID/config revision。产生/上传真实样本后核source_context/source_properties、数量和额度。重放只dup，不再次增加。后台撤销，后续新样本应逐条rejected、混批raw仍accepted。
+5. **短期按需**：建议22:50～22:55由后台限定来源创建60分钟、100条、回溯3天请求，覆盖23点日批及重试；端侧核完整ID/config revision。产生/上传真实样本后核source_context/source_properties、数量和额度。重放只dup，不再次增加。后台撤销，后续新样本应逐条rejected、混批raw仍accepted。
+注意：v375的on_demand是Godot样本交接控制，不是即时HTTP通道。Launcher普通append不触发网络，onRuntimeConfig仅event_upload_enabled从false→true才forceResume；单改request ID/gzip/tiering仍走日批/历史补传。若当天日批已完成，新请求需等待下一次日批且TTL覆盖实际上传，否则到期样本会按合同被拒收。不要为验收擅自翻总上传开关、改23点或承诺“创建后立即到账”。客户端只需按原日批联调；超出24h/即时诊断需求另行评估端侧调度支持。
+
 6. **恢复**：显式false关capture/tiering/aggregate/gzip并回读；capture关闭同时清upload/id。确认设备新revision已应用，旧队列按合同继续结算。保留原上传单038/23点和其他功能配置。
 
 测试对账表至少记录：SN、客户端/APK/PCK版本、配置revision、服务端SHA、CST时间、RID、event ID、请求ID（不同于RID）、accepted/dup/rejected原因、实际各层数据库数量、后台结果。禁止正文/令牌进入回执。

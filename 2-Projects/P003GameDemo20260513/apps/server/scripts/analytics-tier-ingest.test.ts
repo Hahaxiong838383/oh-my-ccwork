@@ -25,7 +25,12 @@ try{
  const period=7*86400000,start=Math.floor((now+28800000)/period)*period-28800000,end=start+period;
  const aggregate={...raw('period-open'),event_name:'analytics.periodic_aggregate',occurred_at_ms:end-1,context:{analytics_tier:'periodic_aggregate',component:'godot_g1_demo'},properties:{source_event_name:'settings.closed',period_start_ms:start,period_end_ms:end,period_days:7,first_occurred_at_ms:start+1,last_occurred_at_ms:start+2,count:20,dimensions:{},measurements:{}}};
  ack=send([aggregate,raw('raw-beside-open')],ctx,end-1);assert.deepEqual(ack.accepted_event_ids,['raw-beside-open'],'open aggregate must not consume its final event ID');assert.deepEqual(ack.rejected,[{client_event_id:'period-open',reason:'invalid_properties'}]);
- ack=send([aggregate],ctx,end);assert.deepEqual(ack.accepted_event_ids,['period-open'],'exact close boundary accepts final bucket');
- ack=send([aggregate],ctx,end-1);assert.deepEqual(ack.duplicated_event_ids,['period-open'],'accepted replay stays idempotent if server clock moves backward');
+ ack=send([{...aggregate,client_event_id:'period-far-future'}],ctx,start+1000);assert.deepEqual(ack.rejected,[{client_event_id:'period-far-future',reason:'invalid_properties'}]);
+ assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_tier_event WHERE tier='aggregate'").get()!.n,0,'open periods never write payload');
+ assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_tier_day WHERE tier='aggregate'").get()!.n,0,'open periods never write aggregate counters');
+ const finalAggregate={...aggregate,properties:{...aggregate.properties,count:21,last_occurred_at_ms:start+3}};
+ ack=send([finalAggregate],ctx,end);assert.deepEqual(ack.accepted_event_ids,['period-open'],'exact close boundary accepts changed final content: rejected attempt did not consume ID');
+ ack=send([finalAggregate],ctx,end-1);assert.deepEqual(ack.duplicated_event_ids,['period-open'],'accepted replay stays idempotent if server clock moves backward');
+ ack=send([{...finalAggregate,client_event_id:'period-closed-earlier'}],ctx,end+1);assert.deepEqual(ack.accepted_event_ids,['period-closed-earlier'],'end equals receivedAt minus one is closed');
  console.log('analytics tier ingest: PASS (isolated storage, precise mixed ACK, full identity, quota, revoke/expiry/stale, cross-request replay, restart, closed-period boundary)');
 }finally{store.close();rmSync(dir,{recursive:true,force:true});}

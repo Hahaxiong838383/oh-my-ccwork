@@ -1423,7 +1423,7 @@
                         <div class="kh-card an-card"><h2>短期按需请求</h2><p class="an-note">服务端生成 ID，绑定当前完整 SN、事件范围、有效期和条数。到期自动拒收新样本，设备下次拉配置时收到关闭状态；其他设备不受影响。</p>
                           <div class="an-filters"><label>有效分钟<input class="an-input" type="number" min="1" max="1440" v-model.number="anTier.minutes"></label><label>最多样本数<input class="an-input" type="number" min="1" max="1000" v-model.number="anTier.maxEvents"></label><label>回溯天数<input class="an-input" type="number" min="1" max="14" v-model.number="anTier.lookback"></label></div>
                           <details><summary>允许的来源事件（{{ anTier.allowed.length }} 项）</summary><div style="display:grid;gap:6px;margin:12px 0"><label v-for="n in anTier.data.allowed_event_names" :key="n"><input type="checkbox" :value="n" v-model="anTier.allowed"> <span class="an-mono">{{ n }}</span></label></div></details>
-                          <p class="an-note">客户端会上传已有短期样本；不在所选范围内的新样本将逐条拒收。新请求会撤销该设备上一请求。同一样本跨请求不重复计数。</p>
+                          <p class="an-note">样本先进入本地上传队列，网络仍按北京时间 {{ anTier.data.analytics.daily_upload_hour_cst == null ? 23 : anTier.data.analytics.daily_upload_hour_cst }} 点日批；创建请求不会立即上传。请在日批前创建，让有效期覆盖上传与重试。新请求会撤销上一请求，同一样本跨请求不重复计数。</p>
                           <el-button type="primary" :loading="anTier.saving" :disabled="!anTier.data.runtime || !anTier.data.runtime.upload_allowed || !anTier.data.analytics.tiering_enabled || !anTier.data.analytics.aggregate_upload_enabled" @click="createAnalyticsDiagnostic">创建并启用短期请求</el-button>
                           <p class="an-note">当前上传：{{ anTier.data.analytics.on_demand_upload_enabled ? '开启' : '关闭' }}<br>ID：<span class="an-mono">{{ anTier.data.analytics.on_demand_request_id || '无' }}</span></p>
                         </div>
