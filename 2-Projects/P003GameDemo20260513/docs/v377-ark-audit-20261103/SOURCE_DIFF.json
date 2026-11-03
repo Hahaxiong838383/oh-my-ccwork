@@ -1,0 +1,76 @@
+{
+  "base": "3c653b5d3d28940fe6be275ba0382a6956d27234",
+  "head": "35502e7746eed6b5f24e5ba1cfa7d7e263c68a72",
+  "status": "ahead",
+  "total_commits": 2,
+  "files": [
+    {
+      "filename": "VERSION.lock",
+      "status": "modified"
+    },
+    {
+      "filename": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003LocalLogExportProvider.kt",
+      "status": "added"
+    },
+    {
+      "filename": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003LocalLogRecorder.kt",
+      "status": "modified"
+    },
+    {
+      "filename": "android_injection/livekit_sdk_probe/payload/src/test/java/com/futurus/p003/launcher/voice/livekit/P003LocalLogRecorderTest.kt",
+      "status": "modified"
+    },
+    {
+      "filename": "project-management/CURRENT_WORK.md",
+      "status": "modified"
+    },
+    {
+      "filename": "project-management/DECISIONS.md",
+      "status": "modified"
+    },
+    {
+      "filename": "project-management/PITFALLS.yaml",
+      "status": "modified"
+    },
+    {
+      "filename": "project-management/PROJECT_STATE.json",
+      "status": "modified"
+    },
+    {
+      "filename": "project-management/SOURCE_REGISTRY.yaml",
+      "status": "modified"
+    },
+    {
+      "filename": "project-management/TEST_MATRIX.yaml",
+      "status": "modified"
+    },
+    {
+      "filename": "reports/P003_G2_V376_PROGRESS_CHEST_MOTION_FIX_20261102.md",
+      "status": "added"
+    },
+    {
+      "filename": "scripts/build_livekit_sdk_payload.sh",
+      "status": "modified"
+    },
+    {
+      "filename": "scripts/export_p003_local_logs.py",
+      "status": "added"
+    },
+    {
+      "filename": "scripts/patch_launcher_local_logs.py",
+      "status": "modified"
+    },
+    {
+      "filename": "tests/test_export_p003_local_logs.py",
+      "status": "added"
+    },
+    {
+      "filename": "tests/test_local_log_export_contract.py",
+      "status": "added"
+    },
+    {
+      "filename": "tests/test_patch_launcher_local_logs.py",
+      "status": "modified"
+    }
+  ]
+}

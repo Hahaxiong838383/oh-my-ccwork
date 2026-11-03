@@ -1,0 +1,39 @@
+{
+  "status": "PASS_PATCH_APPLICABILITY_SERVER_AUTH_READY_REAL_DEVICE_PENDING",
+  "checked_at": "2026-11-03T04:32:10.720050+00:00",
+  "source_sha": "35502e7746eed6b5f24e5ba1cfa7d7e263c68a72",
+  "existing_patch_commit": "724559e5a30d8a6a42755189dd7b78b73e982080",
+  "apply_reverse": "PASS",
+  "v377_contains_wallet_fix": false,
+  "normal_sample_received_at_read": false,
+  "production_mutated": false,
+  "android_shared_branch_mutated": false,
+  "runtime_code_added_to_this_commit": false,
+  "tests_rerun": false,
+  "full_crate_test_fixture_byte_equivalence": true,
+  "reused_native_rust_test_passes": 176,
+  "reused_rust_projection_http_passes": 7,
+  "receipt_review": {
+    "file_name": "P003_V377_SERVER_WINDOW_RECEIPT_20261103.md",
+    "sha256": "7fb8b622b22ece96781103f336dd70c646b81aaa591dfa8bde059c50ea16ffc1",
+    "scope": "Ark authorization, wallet-source difference, normal sample and Q&A acceptance only",
+    "factual_corrections_required": false,
+    "clarification": "Keep normal acceptance pending if current GM save cannot yield a trustworthy normal sample without changing data.",
+    "public_file_modified": false
+  },
+  "not_verified": [
+    "Installed APK/PCK hashes and version",
+    "Wallet fix merged into Android source/build",
+    "Godot/Launcher/Android ABI integration",
+    "Real normal snapshot preview and matching live Q&A",
+    "Analytics real request samples and tonight daily batch (session48 scope)"
+  ],
+  "evidence_sha256": {
+    "ARK_RECEIPT.md": "d59294ce21dd8bfa4145636bc033816282870f729b0ca844cb5902869dac8cae",
+    "CLIENT_SOURCE.json": "4bfe000917f3dcfbf7ac5efdc8e0b0ddbfae0487e02a4395fdf40e4972776453",
+    "PATCH_APPLY_REVERSE.json": "75591a5c476471d53ada7cfc732ec20ae01e2b042ce82ee00229ce11df779de9",
+    "READBACK.json": "710a02ac1220f5fea76a947fb253bb3dbab7b2680310c01b6daf13a82b3b8a9a",
+    "README.md": "73f2d67d69300dc2ea7819e00dcb3e51dbf93e9cab58530ff1264b2a64640ca9",
+    "SOURCE_DIFF.json": "594f956ef097f354b1f4268505336b39334fd15f770587da63328ceec04d9dc2"
+  }
+}

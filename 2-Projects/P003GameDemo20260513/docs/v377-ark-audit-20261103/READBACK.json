@@ -1,0 +1,45 @@
+{
+  "checked_at_cst": "2026-11-03T12:30:52.358000+08:00",
+  "subject_suffix": "03800006",
+  "config_revision": "cfg-66",
+  "request": {
+    "id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+    "created_at_ms": 1793679950775,
+    "expires_at_ms": 1793719799775,
+    "revoked_at_ms": null,
+    "max_events": 1000,
+    "lookback_days": 3
+  },
+  "request_active_at_read": true,
+  "request_expires_at_cst": "2026-11-03T23:29:59.775000+08:00",
+  "target_analytics": {
+    "analytics.aggregate_upload_enabled": true,
+    "analytics.daily_upload_hour_cst": 23,
+    "analytics.event_upload_enabled": true,
+    "analytics.on_demand_capture_enabled": true,
+    "analytics.on_demand_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+    "analytics.on_demand_upload_enabled": true,
+    "analytics.request_gzip_enabled": true,
+    "analytics.tiering_enabled": true
+  },
+  "ark_settings": {
+    "id": 1,
+    "enabled": 1,
+    "revision": 3
+  },
+  "identity_epoch": 3,
+  "grant_epoch": 3,
+  "grant_account_matches": true,
+  "not_before_ms": 1793609324433,
+  "ceiling_target_allowed": true,
+  "current_grant_matches": true,
+  "current_received_at_cst": "2026-11-03T12:30:46.028000+08:00",
+  "snapshot_id": "ark-c89d8f6b7edd4e3c-478",
+  "sequence": 478,
+  "source_mode": "gm",
+  "wallet_null_count": 1,
+  "logical_day": "2026-11-05",
+  "content_version": "v180-pck-foundation-1",
+  "normal_snapshot_present": false,
+  "read_only": true
+}
