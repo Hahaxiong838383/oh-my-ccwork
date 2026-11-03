@@ -1,0 +1,26 @@
+{
+  "candidate": "558607252f92b313cf1843970d637af3c792e9f9",
+  "base": "98190bf737ad52dadf8a9d9d5883248b5659df94",
+  "files": [
+    {
+      "path": "src/routes/sms-auth.ts",
+      "before_sha256": "a05e29a5eacaf18326049355a591517f735c4af72e7c4e95a3e96a3442a72999",
+      "after_sha256": "937519d32f124b1d79f26ef2b2e0e9d3577856da8fdc7102b279a9061939edda"
+    },
+    {
+      "path": "src/sms-limit-store.ts",
+      "before_sha256": "b9d9b57f6c195207e4db1e341a62028436a6f15c353eccf1203aff729f797e3d",
+      "after_sha256": "d7978ed6e87efdca3d8b95885372b0ab418f845bdcac6c27943d065cd76cecf3"
+    },
+    {
+      "path": "src/spug-sms.ts",
+      "before_sha256": "e82bbc942349525ed154e45d6655fc166e52554d8b49e6dc50f40b78dfcf8bdf",
+      "after_sha256": "84f18dbf6dfd78af2e7b1385c178e557012747456cd17efb09b4846b8bdeb5e1"
+    },
+    {
+      "path": "src/verify-code-store.ts",
+      "before_sha256": "c0991de5ef67deb7ab3c947c2e60de4628a954935069d0fb7588d069e482eb3b",
+      "after_sha256": "d10829cd350518d76c95f2053ee74d0f7bc1e263b68d756568da3e854ec7d19c"
+    }
+  ]
+}

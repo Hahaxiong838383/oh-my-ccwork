@@ -1,0 +1,58 @@
+{
+  "status": "PASS_ISOLATED",
+  "runtime_sha256": {
+    "src/routes/sms-auth.ts": "937519d32f124b1d79f26ef2b2e0e9d3577856da8fdc7102b279a9061939edda",
+    "src/spug-sms.ts": "84f18dbf6dfd78af2e7b1385c178e557012747456cd17efb09b4846b8bdeb5e1",
+    "src/sms-limit-store.ts": "d7978ed6e87efdca3d8b95885372b0ab418f845bdcac6c27943d065cd76cecf3",
+    "src/verify-code-store.ts": "d10829cd350518d76c95f2053ee74d0f7bc1e263b68d756568da3e854ec7d19c"
+  },
+  "active_tree_hash_matched_at": "2026-11-03T08:46:44.716771+00:00",
+  "closed_findings": [
+    "F-SMS-01"
+  ],
+  "open_blockers": [],
+  "hardening_cases": 17,
+  "localhost_http_assertions": 21,
+  "transport_cases": 8,
+  "additional_independent_checks": [
+    "same_phone_uncertain_5_per_hour",
+    "malformed_success_charged_once",
+    "same_ip_20_concurrent",
+    "old_sha_one_time",
+    "reservation_expiry_keeps_60s_attempt_cooldown",
+    "new_process_hmac_and_reservation",
+    "unknown_quotas_persist",
+    "unknown_ip_twenty_first_rejected",
+    "explicit_rejection_releases",
+    "no_otp_after_uncertain_result",
+    "crash_pending_ledger_survives_new_process"
+  ],
+  "evidence_logs": {
+    "hardening-independent.log": "05d0a1c4fcad88ce160499861f5a9b50609204ac0a36323d05d3dde4be33a9d8",
+    "http-independent.log": "bc60b20ff617023f29f540b6baf8c37f53a8fe94ecc2c16cee4d099a79a1648b",
+    "transport-independent.log": "ed08f93832fc6aa0489585e242895209d78d24019e5d2b419c469f78c24f158d",
+    "audit-edge.log": "cc65f7123097ada3e33bf90ef50e7e7741daaffc86da5d826786e9d2d8b71a26",
+    "audit-restart.log": "9ce97b77d003542fcc173e329de3bcc350c8afa3a4a386b1dc54b4069a35f7ad",
+    "audit-persist-unknown.log": "13d6f5916b00f83e91037d84bf2f46331802f042691d572676682d1d1f309d47",
+    "audit-crash.log": "69618105c7447f2f74adc2588621af68c9e0deab74e25a5423e831b7bab99fc4"
+  },
+  "production_access": false,
+  "real_sms_sent": false,
+  "actual_A_B_handset_test": false,
+  "candidate_commit": "558607252f92b313cf1843970d637af3c792e9f9",
+  "git_object_hash_match": true,
+  "latest_review_time": "2026-11-03T08:48:31.199230+00:00",
+  "latest_snapshot": "/Users/fu-121/.local/state/p003-sms-login-20261103/audit-release-zm9d8lp0",
+  "newly_rerun": [
+    "hardening-independent.log",
+    "http-independent.log",
+    "audit-persist-unknown.log",
+    "audit-crash.log"
+  ],
+  "reused_after_source_equivalence": [
+    "transport-independent.log",
+    "audit-edge.log",
+    "audit-restart.log"
+  ],
+  "onError_safe_json_503_verified": true
+}

@@ -1,0 +1,202 @@
+{
+  "candidate": "558607252f92b313cf1843970d637af3c792e9f9",
+  "logs_sha256": {
+    "sms-suite-final.log": "a691d60410d063a4fa58dccb6d357e606a88f6bec95f1704f77983f60878d95f",
+    "pairing.log": "decd63d50b9d8976d9ffdf181808e48078f0bbb1e66a4fc55981746b4c4406de",
+    "telemetry.log": "2c788b30856cd13d891f5dd4d95ec060676025661c99acb5437daba1c52603f3",
+    "wechat-auth.test.ts.log": "093b47337617a83ca3f112e79cdbd78cc8ade334bb5304e0405e700d56e0366d",
+    "ble-binding-core-fixed-harness.log": "8efd2083f96c36f3ee0b59833ed17ec2a66dc98ae553c172dd45367794c6b596",
+    "ble-binding-guards.test.ts.log": "4b24cc184ffd4d34fd7fd75a4436823fa03932519d9c1c1279fd8ec3316b004b",
+    "ble-binding-http.test.ts.log": "90883f34105db6b1a1135403b5e38797b254b5fb2c3012e7ccaed4a0c760c831",
+    "tsc-baseline.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "tsc-candidate.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "tsc-final-server-cwd.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7"
+  },
+  "staging": {
+    "stage": "/opt/p003/staging/sms-login-55860725",
+    "candidate": "558607252f92b313cf1843970d637af3c792e9f9",
+    "node": "/usr/bin/node",
+    "node_version": "v22.22.2",
+    "results": [
+      {
+        "test": "sms-auth",
+        "exit": 0,
+        "log_sha256": "71fdf37d363147379f0c7d0fa7d2898bbacbf14bf5c00125f2ae72cc82f786f2",
+        "tail": [
+          "sms-auth.test: pass=53 fail=0"
+        ]
+      },
+      {
+        "test": "sms-login-hardening",
+        "exit": 0,
+        "log_sha256": "074df8054c374b64324f20e8d97a3b47587ea9df0b87828f6e67b11f3113487f",
+        "tail": [
+          "sms-login-hardening: pass=17 fail=0"
+        ]
+      },
+      {
+        "test": "sms-login-http",
+        "exit": 0,
+        "log_sha256": "81c19a2c0933aa7aaf0c662980ec4cfc2359a34b38093c236f0fee65b456deb5",
+        "tail": [
+          "sms-login-http: PASS 21 assertions; actual localhost HTTP, SQLite and JWT; SMS provider simulated"
+        ]
+      },
+      {
+        "test": "spug-transport",
+        "exit": 0,
+        "log_sha256": "4b1c699188da6f2b5d3b4ad02d86dedf139496e88ae677989d2711093025228f",
+        "tail": [
+          "spug-transport: PASS 8 cases; no real external requests"
+        ]
+      }
+    ],
+    "pass": true,
+    "checked_at": "2026-11-03T08:48:33.393634+00:00"
+  },
+  "deployment": {
+    "candidate": "558607252f92b313cf1843970d637af3c792e9f9",
+    "backup": "/opt/p003/server/backups/sms-login-20261103T084911Z",
+    "completed_at_cst": "2026-11-03T16:49:13.909991+08:00",
+    "health": {
+      "status": 200,
+      "body": {
+        "status": "ok"
+      }
+    },
+    "checks": {
+      "restart_ok": true,
+      "health": true,
+      "only_expected_files": true,
+      "env_unchanged": true,
+      "acl_unchanged": true,
+      "other_processes_unchanged": true,
+      "after_hashes": true
+    },
+    "pass": true,
+    "processes_before": {
+      "p003-voice": {
+        "pid": 3937878,
+        "restart": 48,
+        "status": "online"
+      },
+      "kidshub-voice": {
+        "pid": 1626403,
+        "restart": 0,
+        "status": "online"
+      },
+      "p003-analytics": {
+        "pid": 3937833,
+        "restart": 9,
+        "status": "online"
+      }
+    },
+    "processes_after": {
+      "p003-voice": {
+        "pid": 4049589,
+        "restart": 49,
+        "status": "online"
+      },
+      "kidshub-voice": {
+        "pid": 1626403,
+        "restart": 0,
+        "status": "online"
+      },
+      "p003-analytics": {
+        "pid": 3937833,
+        "restart": 9,
+        "status": "online"
+      }
+    },
+    "changed_files": [
+      "src/verify-code-store.ts",
+      "src/sms-limit-store.ts",
+      "src/spug-sms.ts",
+      "src/routes/sms-auth.ts"
+    ]
+  },
+  "spug_channel_status": {
+    "checked_at_cst": "2026-11-03T16:52:14.308617+08:00",
+    "results": [
+      {
+        "account": "acct-20",
+        "phone_masked": "138****3227",
+        "request_id": "smsreq-5ab914ae-0254-43d8-a0a1-8fe9c7a13f00",
+        "provider_request_id": "WYXwm6ylo9b8b1VZ",
+        "query_code": 200,
+        "states": [
+          {
+            "target_masked": "138****3227",
+            "status": "2",
+            "reason": "success"
+          }
+        ]
+      },
+      {
+        "account": "acct-27",
+        "phone_masked": "181****2645",
+        "request_id": "smsreq-0030d3be-b939-4f0b-a64b-40dd369b380c",
+        "provider_request_id": "od4AjbPDRLd8vW7y",
+        "query_code": 200,
+        "states": [
+          {
+            "target_masked": "181****2645",
+            "status": "2",
+            "reason": "success"
+          }
+        ]
+      }
+    ],
+    "public_header_check": {
+      "status": 400,
+      "cache_control": "no-store",
+      "content_type": "application/json"
+    }
+  },
+  "production_readonly_acl": {
+    "kind": "server_minted_60s_readonly_diagnostic_jwt_not_real_sms_login",
+    "at": "2026-11-03T08:53:36.052Z",
+    "results": [
+      {
+        "account_id": "acct-20",
+        "phone_masked": "138****3227",
+        "list_status": 200,
+        "owned_count": 2,
+        "registry_match": true,
+        "target_03800006_dashboard_status": 200
+      },
+      {
+        "account_id": "acct-27",
+        "phone_masked": "181****2645",
+        "list_status": 200,
+        "owned_count": 0,
+        "registry_match": true,
+        "target_03800006_dashboard_status": 404
+      }
+    ]
+  },
+  "handset_receipt": "PENDING_USER_CONFIRMATION",
+  "real_SMS_OTP_login": "PENDING_HOLDER_LOGIN",
+  "typecheck": "12 baseline errors; identical output; not PASS",
+  "initial_harness_issue": "BLE core first archive omitted register-device-identity.ts; exact-source fixture restored, 26/26 passed; initial log retained privately",
+  "header_measurement_issue": "Initial Python dict read Cache-Control case-sensitively and falsely marked no_store false; followup HTTPMessage case-insensitive read confirms cache-control=no-store. No production change.",
+  "final_check": {
+    "checked_at_cst": "2026-11-03T16:57:43.988506+08:00",
+    "health": {
+      "status": 200,
+      "body": {
+        "status": "ok"
+      }
+    },
+    "p003_voice": {
+      "pid": 4049589,
+      "restart": 49,
+      "status": "online"
+    },
+    "runtime_hash_match": true,
+    "observed_A_B_sms_login_records": [],
+    "note": "Only explicit new-format SMS login markers; lack of a record is not handset non-delivery proof."
+  },
+  "final_tsc_byte_identical_to_baseline": true,
+  "public_health_boundary": "Root /health is served by frontend HTML, not backend health. Backend health checked at localhost:3001; public API verified by JSON SMS and device endpoints."
+}
