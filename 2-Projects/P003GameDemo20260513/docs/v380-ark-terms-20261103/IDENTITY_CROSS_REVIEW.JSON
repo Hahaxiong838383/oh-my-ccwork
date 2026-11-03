@@ -1,0 +1,8 @@
+{
+  "own_ok_rooms": 11,
+  "peer_rooms": 11,
+  "common": 11,
+  "exact_same_pairs": true,
+  "client_problem_trace_available": false,
+  "source_sha256": "013e7ca785634f995e8cd604815d6aeb185c1688589367bfb3873fc9a6591ada"
+}

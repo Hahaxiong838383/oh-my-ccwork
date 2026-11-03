@@ -1,0 +1,17 @@
+{
+  "source_sha": "6558e03ee9fda9f77d8a1f6209eae49124a55526",
+  "files": {
+    "godot/assets/g1_formal_content.json": {
+      "blob_sha": "75e22b1f0823b175a258a7956f3ce116d0452b43",
+      "sha256": "6b5883b07c870369859ac5a0f4b5a016b612adc84c03663b5360e2f8ec034243"
+    },
+    "rust_runtime/src/g1_ark_state.rs": {
+      "blob_sha": "e0e7278fd2c23af8dd39109f05bef08d467ab739",
+      "sha256": "d484587ac4605e86ca1782caaaee4cb96ee9bebe9814eb6de65633dcee400e8d"
+    },
+    "rust_runtime/src/g1/engine/history.rs": {
+      "blob_sha": "82d7af3847aee976336663d46ab5d9a6c9df3bf4",
+      "sha256": "558b06a424c5b1f58a484e2ee9c1b317bf914a79b65e98d06b8c513d3966d07f"
+    }
+  }
+}
