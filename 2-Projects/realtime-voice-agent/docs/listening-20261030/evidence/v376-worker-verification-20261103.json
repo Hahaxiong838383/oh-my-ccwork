@@ -1,0 +1,1011 @@
+{
+  "baseline": "980b64821d88d76650a59480294d25a26839bbe4",
+  "deployed_source": "b663e0e09d423ba282e21e242569774466fcfdb0",
+  "production_binary_sha256": "c2c8081581ae86c8155bbaf51af5eec34a05454bf8c3d8047fb74b326adcb4f5",
+  "source_binding": {
+    "source_commit": "b663e0e09d423ba282e21e242569774466fcfdb0",
+    "binary_sha256": "c2c8081581ae86c8155bbaf51af5eec34a05454bf8c3d8047fb74b326adcb4f5",
+    "binding_source": "v374 release-build-private.json; current /proc/2222439/exe SHA and historical journal PID match",
+    "inputs": {
+      "src/listening_voice.rs": {
+        "deployed_source_sha256": "884f683c5731da3be93783f57eaf784ef462ac69687234a3cda204c50aa0350b",
+        "current_tree_sha256": "884f683c5731da3be93783f57eaf784ef462ac69687234a3cda204c50aa0350b",
+        "equal": true
+      },
+      "src/listening_adapter.rs": {
+        "deployed_source_sha256": "91efd9c5599e17e79246e915a65ee30bd7a0b67b08cade38813aca754475fd9e",
+        "current_tree_sha256": "91efd9c5599e17e79246e915a65ee30bd7a0b67b08cade38813aca754475fd9e",
+        "equal": true
+      },
+      "src/pipeline.rs": {
+        "deployed_source_sha256": "ff98c79b3496a301d02f65f4ad63ce65620ce6b97dff574bfda94a5d0fbb2fce",
+        "current_tree_sha256": "ff98c79b3496a301d02f65f4ad63ce65620ce6b97dff574bfda94a5d0fbb2fce",
+        "equal": true
+      },
+      "src/job.rs": {
+        "deployed_source_sha256": "33ec07f793d077e7bf1fb622b76b15e0a6d0d311d6a8cadb60719c923c23c54d",
+        "current_tree_sha256": "33ec07f793d077e7bf1fb622b76b15e0a6d0d311d6a8cadb60719c923c23c54d",
+        "equal": true
+      }
+    }
+  },
+  "brain_inputs": {
+    "commit": "eeac0a68ef9886487958fdb5780d60474b8357ff",
+    "count": 65,
+    "all_match_committed": true,
+    "input_paths": [
+      "2-Projects/P003GameDemo20260513/apps/server/src/device-registry-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/device-sn.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-settings.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-settings-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-policy.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-grant.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-http-contract.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-authority-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-authority.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-runtime.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/memory-safety-filter.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/growth-ledger-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/style-template.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/trait-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/filler-policy.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/device-credential.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/search-canary-policy.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/search-canary-runtime.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-resume-scope.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-dialogue-context.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/auth-jwt.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/profile-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/memory-item-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/relation-state-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/conversation-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/style-pool-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/child-insight-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/prompt-orchestrator.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/prompts.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/ai-literacy.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/device-brain-prompt.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/moji-weather.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/weather-places.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/baidu-weather.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/routes/search-tasks.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-resume.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-failure.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-tasks.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-availability.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-routing-config.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-routing-store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/amap-usage.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/amap-weather.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/fixed-weather.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/device-location.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/device-location-runtime.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-claim-stream.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-chat-policy.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/cctv-news.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-source-scope.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-executor.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-simple-fallback.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-enrollment.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/tools/search-runtime.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/routes/device-session.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/providers/deepseek-llm.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/providers/provider-health.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/providers/volc-llm.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/providers/race-llm.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/providers/minimax-llm.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/providers/gemini-llm.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/listening-content.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/routes/listening.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/listening-rtc-brain.ts"
+    ]
+  },
+  "stopped": {
+    "worker": {
+      "pid": 2379824,
+      "stopped": true
+    },
+    "brain": {
+      "pid": 2379812,
+      "stopped": true
+    }
+  },
+  "production_mutated": false,
+  "protocol_mutated": false,
+  "historical_raw_audio_available": false,
+  "test_notes": [
+    "normal real chain passes; split case remains failed, not a green regression",
+    "initial local edition2024 unsupported; edition2021 pure core 4/4",
+    "initial build used wrong environment variable and was never launched; rebuilt with P003_WORKER_BUILD_SHA before RTC",
+    "direct SSH timeouts resolved by existing strict-key Air/home-studio route; no network/security configuration change"
+  ],
+  "linux_targeted": {
+    "command": "P003_WORKER_BUILD_SHA=980b64821d88d76650a59480294d25a26839bbe4 cargo test --locked --offline listening_voice",
+    "passed": 17,
+    "failed": 0,
+    "full_suite": false,
+    "log": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/39-voice-regression.log",
+    "sha256": "def6cd73f1832e6b3937e57e38b38aae3c074900f226d0578951dca7fef251ce"
+  },
+  "actual_split_probe_delta_from_baseline": "--- 980b6482/rtc-probe.py\n+++ rtc-probe-split.py\n@@ -172,7 +172,7 @@\n         await self.queue.join()\n \n     async def ordered(self):\n-        data = pcm(Path(self.args.fixtures)/'enter.wav')\n+        data = pcm(Path(self.args.fixtures)/'wake.wav')\n         base = {'input_id': 'p0-input-'+str(uuid.uuid4()), 'trace_id': self.trace, 'session_id': self.signed['session_id'], 'capture_epoch': 1, 'wake_generation': 1, 'keep_from': 0, 'boundary_kind': 'kws_tail', 'overlaps_local_playback': False, 'sr': SR, 'ch': 1, 'fmt': 's16le'}\n         async def send(t, seq, start, end, body=b''):\n             header = {**base, 't': t, 'seq': seq, 'start': start, 'end': end, 'sent_at_ms': int(time.time()*1000)}\n@@ -187,7 +187,10 @@\n             await asyncio.sleep(.005)\n         await send('end', seq, len(data)//2, len(data)//2)\n         self.log('ordered_end', samples=len(data)//2)\n-        # Begin real RTP narration immediately after end, while first ASR closes.\n+        await self.wait(lambda:any(v.get('type')=='session.input_phase' and v.get('payload',{}).get('phase')=='rtc' for v in self.messages), 'wake-only phase to RTP')\n+        await asyncio.sleep(.4)\n+        await self.speak('enter_tail')\n+        # Begin real RTP narration immediately after the remaining command.\n         self.story_task = asyncio.create_task(self.speak('story'))\n \n     def ack(self, state):\n",
+  "actual_split_probe_sha256": "71972c2aaaeddeeab723a5e64ec7c8786faa86a0f159184d2ee8b18fdd1bf8ad",
+  "candidate_commit": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+  "baseline_runs": [
+    {
+      "evidence_file": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/rtc-baseline-bundle.json",
+      "evidence_sha256": "0f96660bd8ce416faaa0300aa8b94310aae9d2428436c77e316cfc6b48444ffb",
+      "manifest": {
+        "run_id": "rtc-run-1793672973401663966",
+        "started_at_ns": 1793672973401663966,
+        "source_compile_sha": "980b64821d88d76650a59480294d25a26839bbe4",
+        "max_jobs": 1,
+        "mic_publish_delay_ms": 0,
+        "artifact_sha256": {
+          "rtc-test-worker": "d70be2a532d40a9e143a8bdd8c9850eba0d2be43eb3d1e1c2eca3560406e6560",
+          "brain.mjs": "952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a",
+          "brain.manifest.json": "84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c",
+          "rtc-probe.py": "ca006304d1b0eaf208cbb166c00aa5cca6d69b26fd7699b7140ffaeaf36729eb"
+        },
+        "synthetic_fixture_sha256": {
+          "enter": "643a9dac79db74f5c08b4c03c1294197023ead16d88c5b349281dc58182d345a",
+          "story": "683a6b22766a1b1effc2719898cc272ac3d8f9f53a01aba66cf7cac37e3512ab",
+          "feedback": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+          "barge": "26113634d08beb987c740e2e127a2908f55fed4e52d5039081e09cb5172ef7ed",
+          "exit": "02464cf1d4fa32e851c73c020fc06630832c8b4f17889bb4a2174a743f3169b2",
+          "chat": "575acbdf667178d28c5773081c151ed004a17f350c5343dbaa30ab2b42139e4e"
+        },
+        "scenarios": [
+          {
+            "scenario": "normal",
+            "rc": 0,
+            "passed": true,
+            "signed_binding": {
+              "room_name": "sn-BJP00326103099999938-1793672978",
+              "session_id": "72c7d816-ed1d-4490-ae07-c9365d641b4c",
+              "trace_id": "p0-39-8e6e37de-fafd-4772-95e6-d2507b2ed225",
+              "expected_agent_name": "p003-listening-p0-v376-session39"
+            },
+            "started_at_ns": 1793672977471722805,
+            "ended_at_ns": 1793673025305620108
+          }
+        ],
+        "ended_at_ns": 1793673029367518904
+      },
+      "passed": true,
+      "error": null,
+      "binding": {
+        "room_name": "sn-BJP00326103099999938-1793672978",
+        "session_id": "72c7d816-ed1d-4490-ae07-c9365d641b4c",
+        "trace_id": "p0-39-8e6e37de-fafd-4772-95e6-d2507b2ed225",
+        "expected_agent_name": "p003-listening-p0-v376-session39"
+      },
+      "proposal_count": 2,
+      "assertions": [
+        {
+          "mono_ns": 3063590225174793,
+          "t_ms": 1099,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063592309692227,
+          "t_ms": 3184,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063603296345730,
+          "t_ms": 14170,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063609834447023,
+          "t_ms": 20708,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063620236173376,
+          "t_ms": 31110,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063625740620754,
+          "t_ms": 36615,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063631989278244,
+          "t_ms": 42863,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063634765901576,
+          "t_ms": 45640,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063634766222909,
+          "t_ms": 45640,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063634767061335,
+          "t_ms": 45641,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-13",
+            "trace_id": "p0-39-8e6e37de-fafd-4772-95e6-d2507b2ed225",
+            "room": "sn-BJP00326103099999938-1793672978",
+            "session_id": "72c7d816-ed1d-4490-ae07-c9365d641b4c",
+            "listening_id": "p0-39-8e6e37de-fafd-4772-95e6-d2507b2ed225:2",
+            "mode_epoch": 2,
+            "at": 1793672998328,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 168,
+            "sha256": "72ac22b94285d978f477748be60424b29272597ceeeb01d24017b4dbd21a44d0",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        },
+        {
+          "mono_ns": 3063635306794805,
+          "t_ms": 46181,
+          "event": "room_api_absent",
+          "room": "sn-BJP00326103099999938-1793672978"
+        }
+      ],
+      "scope": "real SFU/ASR/TTS + actual job/Orchestrator; software Android and deterministic Brain text provider"
+    },
+    {
+      "evidence_file": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/rtc-split-before-bundle.json",
+      "evidence_sha256": "3ac5a2d4455532eb03265a74f83d00e4d9e8ab7ebd08d3f1826fda1d69d1ea38",
+      "manifest": {
+        "run_id": "rtc-run-1793673206890340170",
+        "started_at_ns": 1793673206890340170,
+        "source_compile_sha": "980b64821d88d76650a59480294d25a26839bbe4",
+        "max_jobs": 1,
+        "mic_publish_delay_ms": 0,
+        "artifact_sha256": {
+          "rtc-test-worker": "d70be2a532d40a9e143a8bdd8c9850eba0d2be43eb3d1e1c2eca3560406e6560",
+          "brain.mjs": "952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a",
+          "brain.manifest.json": "84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c",
+          "rtc-probe.py": "71972c2aaaeddeeab723a5e64ec7c8786faa86a0f159184d2ee8b18fdd1bf8ad"
+        },
+        "synthetic_fixture_sha256": {
+          "enter": "643a9dac79db74f5c08b4c03c1294197023ead16d88c5b349281dc58182d345a",
+          "story": "683a6b22766a1b1effc2719898cc272ac3d8f9f53a01aba66cf7cac37e3512ab",
+          "feedback": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+          "barge": "26113634d08beb987c740e2e127a2908f55fed4e52d5039081e09cb5172ef7ed",
+          "exit": "02464cf1d4fa32e851c73c020fc06630832c8b4f17889bb4a2174a743f3169b2",
+          "chat": "575acbdf667178d28c5773081c151ed004a17f350c5343dbaa30ab2b42139e4e"
+        },
+        "scenarios": [
+          {
+            "scenario": "normal",
+            "rc": 1,
+            "passed": false,
+            "error": "timeout: enter double-confirm completed",
+            "signed_binding": {
+              "room_name": "sn-BJP00326103099999938-1793673211",
+              "session_id": "24e846c6-4d40-4b27-a270-d428c669d2f8",
+              "trace_id": "p0-39-7282153c-a3fc-4cea-a8eb-586891863ac7",
+              "expected_agent_name": "p003-listening-p0-v376-session39"
+            },
+            "started_at_ns": 1793673210494710367,
+            "ended_at_ns": 1793673231643085035
+          }
+        ],
+        "ended_at_ns": 1793673240500727408
+      },
+      "passed": false,
+      "error": "timeout: enter double-confirm completed",
+      "binding": {
+        "room_name": "sn-BJP00326103099999938-1793673211",
+        "session_id": "24e846c6-4d40-4b27-a270-d428c669d2f8",
+        "trace_id": "p0-39-7282153c-a3fc-4cea-a8eb-586891863ac7",
+        "expected_agent_name": "p003-listening-p0-v376-session39"
+      },
+      "proposal_count": 0,
+      "assertions": [
+        {
+          "mono_ns": 3063823359166010,
+          "t_ms": 1228,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063824281190897,
+          "t_ms": 2150,
+          "event": "assertion",
+          "name": "wake-only phase to RTP",
+          "passed": true
+        },
+        {
+          "mono_ns": 3063841424227954,
+          "t_ms": 19293,
+          "event": "failure",
+          "error": "timeout: enter double-confirm completed"
+        },
+        {
+          "mono_ns": 3063841595620185,
+          "t_ms": 19465,
+          "event": "room_api_absent",
+          "room": "sn-BJP00326103099999938-1793673211"
+        }
+      ],
+      "scope": "real SFU/ASR/TTS + actual job/Orchestrator; software Android and deterministic Brain text provider"
+    }
+  ],
+  "candidate_runs": [
+    {
+      "case": "full",
+      "evidence_file": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/rtc-final-full-bundle.json",
+      "evidence_sha256": "a88493c925fb9bf789ec1a178931fda1f2d00dad0bdec7f82231c0b4b7df7804",
+      "manifest": {
+        "run_id": "rtc-run-1793676202100317625",
+        "entry_style": "full",
+        "started_at_ns": 1793676202100317625,
+        "source_compile_sha": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+        "max_jobs": 1,
+        "mic_publish_delay_ms": 0,
+        "artifact_sha256": {
+          "rtc-test-worker": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+          "brain.mjs": "952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a",
+          "brain.manifest.json": "84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c",
+          "rtc-probe.py": "bcd156603b44953d94d58eb5fd2f073b3eb36a0c9484b4dfc330ce1ff5f8f2f9"
+        },
+        "synthetic_fixture_sha256": {
+          "enter": "643a9dac79db74f5c08b4c03c1294197023ead16d88c5b349281dc58182d345a",
+          "story": "683a6b22766a1b1effc2719898cc272ac3d8f9f53a01aba66cf7cac37e3512ab",
+          "feedback": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+          "barge": "26113634d08beb987c740e2e127a2908f55fed4e52d5039081e09cb5172ef7ed",
+          "exit": "02464cf1d4fa32e851c73c020fc06630832c8b4f17889bb4a2174a743f3169b2",
+          "chat": "575acbdf667178d28c5773081c151ed004a17f350c5343dbaa30ab2b42139e4e",
+          "wake": "eb6f3d6f161b426ac13e023954d6b2a31a4241fa2f20abfee824acc20c0f9571",
+          "enter_tail": "93cbe35a1ed9dc62de93036084240c73f8b83d638f366069b1cd2e3eae99cde4"
+        },
+        "scenarios": [
+          {
+            "scenario": "normal",
+            "rc": 0,
+            "passed": true,
+            "signed_binding": {
+              "room_name": "sn-BJP00326103099999938-1793676206",
+              "session_id": "9efde9f8-f4c3-4188-a874-b2ce0432ffc4",
+              "trace_id": "p0-39-dbd3d108-5e5a-4939-96eb-9bc4d9b541ed",
+              "expected_agent_name": "p003-listening-p0-v376-session39"
+            },
+            "started_at_ns": 1793676205283673253,
+            "ended_at_ns": 1793676254818770239
+          }
+        ],
+        "ended_at_ns": 1793676257842463754
+      },
+      "passed": true,
+      "binding": {
+        "room_name": "sn-BJP00326103099999938-1793676206",
+        "session_id": "9efde9f8-f4c3-4188-a874-b2ce0432ffc4",
+        "trace_id": "p0-39-dbd3d108-5e5a-4939-96eb-9bc4d9b541ed",
+        "expected_agent_name": "p003-listening-p0-v376-session39"
+      },
+      "assertions": [
+        {
+          "mono_ns": 3066819321859022,
+          "t_ms": 2216,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066821191756435,
+          "t_ms": 4086,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066832557577165,
+          "t_ms": 15452,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066843951639173,
+          "t_ms": 26846,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066850180636601,
+          "t_ms": 33075,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066855527867734,
+          "t_ms": 38422,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066860877753855,
+          "t_ms": 43772,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066864220743479,
+          "t_ms": 47115,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066864220944740,
+          "t_ms": 47115,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066864221949549,
+          "t_ms": 47116,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-13",
+            "trace_id": "p0-39-dbd3d108-5e5a-4939-96eb-9bc4d9b541ed",
+            "room": "sn-BJP00326103099999938-1793676206",
+            "session_id": "9efde9f8-f4c3-4188-a874-b2ce0432ffc4",
+            "listening_id": "p0-39-dbd3d108-5e5a-4939-96eb-9bc4d9b541ed:2",
+            "mode_epoch": 2,
+            "at": 1793676227518,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 170,
+            "sha256": "4f12b2dc2fbb96083c2db4aba3110b535618f5ec51da8b5f5037f3042936f48a",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        },
+        {
+          "mono_ns": 3066864751712075,
+          "t_ms": 47646,
+          "event": "room_api_absent",
+          "room": "sn-BJP00326103099999938-1793676206"
+        }
+      ]
+    },
+    {
+      "case": "split",
+      "evidence_file": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/rtc-final-split-bundle.json",
+      "evidence_sha256": "abbb72cf30b317b1030fdcd152eb4dd368d1671b6c2a5d4c72f05a55d07f4800",
+      "manifest": {
+        "run_id": "rtc-run-1793676370432794112",
+        "entry_style": "wake-tail",
+        "started_at_ns": 1793676370432794112,
+        "source_compile_sha": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+        "max_jobs": 1,
+        "mic_publish_delay_ms": 0,
+        "artifact_sha256": {
+          "rtc-test-worker": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+          "brain.mjs": "952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a",
+          "brain.manifest.json": "84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c",
+          "rtc-probe.py": "bcd156603b44953d94d58eb5fd2f073b3eb36a0c9484b4dfc330ce1ff5f8f2f9"
+        },
+        "synthetic_fixture_sha256": {
+          "enter": "643a9dac79db74f5c08b4c03c1294197023ead16d88c5b349281dc58182d345a",
+          "story": "683a6b22766a1b1effc2719898cc272ac3d8f9f53a01aba66cf7cac37e3512ab",
+          "feedback": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+          "barge": "26113634d08beb987c740e2e127a2908f55fed4e52d5039081e09cb5172ef7ed",
+          "exit": "02464cf1d4fa32e851c73c020fc06630832c8b4f17889bb4a2174a743f3169b2",
+          "chat": "575acbdf667178d28c5773081c151ed004a17f350c5343dbaa30ab2b42139e4e",
+          "wake": "eb6f3d6f161b426ac13e023954d6b2a31a4241fa2f20abfee824acc20c0f9571",
+          "enter_tail": "93cbe35a1ed9dc62de93036084240c73f8b83d638f366069b1cd2e3eae99cde4"
+        },
+        "scenarios": [
+          {
+            "scenario": "normal",
+            "rc": 0,
+            "passed": true,
+            "signed_binding": {
+              "room_name": "sn-BJP00326103099999938-1793676374",
+              "session_id": "c177fbfc-cd4d-404f-acdc-0fe910d1863e",
+              "trace_id": "p0-39-0be6d460-7307-4813-96a1-5af9348deabe",
+              "expected_agent_name": "p003-listening-p0-v376-session39"
+            },
+            "started_at_ns": 1793676373338629462,
+            "ended_at_ns": 1793676424649801878
+          }
+        ],
+        "ended_at_ns": 1793676428039479933
+      },
+      "passed": true,
+      "binding": {
+        "room_name": "sn-BJP00326103099999938-1793676374",
+        "session_id": "c177fbfc-cd4d-404f-acdc-0fe910d1863e",
+        "trace_id": "p0-39-0be6d460-7307-4813-96a1-5af9348deabe",
+        "expected_agent_name": "p003-listening-p0-v376-session39"
+      },
+      "assertions": [
+        {
+          "mono_ns": 3066986049646902,
+          "t_ms": 960,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066987461089855,
+          "t_ms": 2372,
+          "event": "assertion",
+          "name": "wake-only phase to RTP",
+          "passed": true
+        },
+        {
+          "mono_ns": 3066991014848085,
+          "t_ms": 5925,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067002152538779,
+          "t_ms": 17063,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067009004405483,
+          "t_ms": 23915,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067019418846186,
+          "t_ms": 34329,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067024855736606,
+          "t_ms": 39766,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067030916124543,
+          "t_ms": 45827,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067033761457012,
+          "t_ms": 48672,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067033761840756,
+          "t_ms": 48672,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067033763894876,
+          "t_ms": 48674,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-12",
+            "trace_id": "p0-39-0be6d460-7307-4813-96a1-5af9348deabe",
+            "room": "sn-BJP00326103099999938-1793676374",
+            "session_id": "c177fbfc-cd4d-404f-acdc-0fe910d1863e",
+            "listening_id": "p0-39-0be6d460-7307-4813-96a1-5af9348deabe:2",
+            "mode_epoch": 2,
+            "at": 1793676397351,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 168,
+            "sha256": "72ac22b94285d978f477748be60424b29272597ceeeb01d24017b4dbd21a44d0",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        },
+        {
+          "mono_ns": 3067034348072079,
+          "t_ms": 49259,
+          "event": "room_api_absent",
+          "room": "sn-BJP00326103099999938-1793676374"
+        }
+      ]
+    },
+    {
+      "case": "natural",
+      "evidence_file": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/rtc-final-natural-bundle.json",
+      "evidence_sha256": "a6fc82f491bd8b8c8296203ff7dc4fd04adb4a703dc6f910b5f4b00948aa31c2",
+      "manifest": {
+        "run_id": "rtc-run-1793676833105411148",
+        "entry_style": "wake-tail",
+        "started_at_ns": 1793676833105411148,
+        "source_compile_sha": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+        "max_jobs": 1,
+        "mic_publish_delay_ms": 0,
+        "artifact_sha256": {
+          "rtc-test-worker": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+          "brain.mjs": "952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a",
+          "brain.manifest.json": "84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c",
+          "rtc-probe.py": "bcd156603b44953d94d58eb5fd2f073b3eb36a0c9484b4dfc330ce1ff5f8f2f9"
+        },
+        "synthetic_fixture_sha256": {
+          "enter": "643a9dac79db74f5c08b4c03c1294197023ead16d88c5b349281dc58182d345a",
+          "story": "683a6b22766a1b1effc2719898cc272ac3d8f9f53a01aba66cf7cac37e3512ab",
+          "feedback": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+          "barge": "26113634d08beb987c740e2e127a2908f55fed4e52d5039081e09cb5172ef7ed",
+          "exit": "02464cf1d4fa32e851c73c020fc06630832c8b4f17889bb4a2174a743f3169b2",
+          "chat": "575acbdf667178d28c5773081c151ed004a17f350c5343dbaa30ab2b42139e4e",
+          "wake": "195ebd33a104e2bd0ea016e652ad4bb61759664ffa4aea374d52c53a02ddb47e",
+          "enter_tail": "b89340f665e90b94b64773d02dca5e11d5ca7d81bee9774ca74ac63210fd1469"
+        },
+        "scenarios": [
+          {
+            "scenario": "normal",
+            "rc": 0,
+            "passed": true,
+            "signed_binding": {
+              "room_name": "sn-BJP00326103099999938-1793676837",
+              "session_id": "7a054139-c663-46d0-a4a8-c1133fc997b1",
+              "trace_id": "p0-39-a48449c0-b9e6-4767-b516-568a2da2430c",
+              "expected_agent_name": "p003-listening-p0-v376-session39"
+            },
+            "started_at_ns": 1793676835977331507,
+            "ended_at_ns": 1793676904702821916
+          }
+        ],
+        "ended_at_ns": 1793676907961656181
+      },
+      "passed": true,
+      "binding": {
+        "room_name": "sn-BJP00326103099999938-1793676837",
+        "session_id": "7a054139-c663-46d0-a4a8-c1133fc997b1",
+        "trace_id": "p0-39-a48449c0-b9e6-4767-b516-568a2da2430c",
+        "expected_agent_name": "p003-listening-p0-v376-session39"
+      },
+      "assertions": [
+        {
+          "mono_ns": 3067456150375096,
+          "t_ms": 8305,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067457736236654,
+          "t_ms": 9891,
+          "event": "assertion",
+          "name": "wake-only phase to RTP",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067470203256964,
+          "t_ms": 22358,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067482408514347,
+          "t_ms": 34563,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067489487224948,
+          "t_ms": 41642,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067499875096460,
+          "t_ms": 52030,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067505334418063,
+          "t_ms": 57489,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067511654398391,
+          "t_ms": 63809,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067514437820807,
+          "t_ms": 66593,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067514437913709,
+          "t_ms": 66593,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3067514438750831,
+          "t_ms": 66594,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-12",
+            "trace_id": "p0-39-a48449c0-b9e6-4767-b516-568a2da2430c",
+            "room": "sn-BJP00326103099999938-1793676837",
+            "session_id": "7a054139-c663-46d0-a4a8-c1133fc997b1",
+            "listening_id": "p0-39-a48449c0-b9e6-4767-b516-568a2da2430c:2",
+            "mode_epoch": 2,
+            "at": 1793676877694,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 170,
+            "sha256": "5002a09c1cb6f4dcb1803ba7d43889f0a6615a982d75bc2b4a2309b7b7c16958",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        },
+        {
+          "mono_ns": 3067514520467176,
+          "t_ms": 66675,
+          "event": "room_api_absent",
+          "room": "sn-BJP00326103099999938-1793676837"
+        }
+      ]
+    }
+  ],
+  "final_tests": {
+    "cargo": {
+      "passed": 611,
+      "components": [
+        566,
+        29,
+        9,
+        7
+      ],
+      "ignored": 2
+    },
+    "ignored_http_joint_executed": {
+      "passed": 2
+    },
+    "rtc_feature_transport": {
+      "passed": 1
+    },
+    "local_core": {
+      "passed": 7,
+      "overlaps_cargo": true
+    },
+    "logs": {
+      "39-final-linux.log": "793199b0967d70f48ad0c2cbdde14c98bf8f7c2a43e6dde975b4c7901b3bbf79",
+      "39-final-http-joint.log": "ffe21183eb69906e14797f488c2010a7052a8bd7a696cbbdfab2cc77e79301e7",
+      "wish-phrase-red.log": "bcc30b02b7be0c2e89ff2dc7df33307585357f9831e523d7eea4e1241d466122",
+      "wish-phrase-green.log": "f481d042d3fc4241bce5c63c82725ae87163ae97bd24c5b17a8bc4d71a549377"
+    }
+  },
+  "release": {
+    "source_commit": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "binary_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+    "cargo_artifact": {
+      "features": [],
+      "executable": "/data/p003-listening-worker-check-20261030-session39/target/release/voice-rust-worker",
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": 0,
+        "debug_assertions": false,
+        "overflow_checks": false,
+        "test": false
+      }
+    },
+    "compatibility_lines": [
+      "   ✓ glibc 全部 ≤ 2.39",
+      "   ✓ libstdc++ 全部 ≤ GLIBCXX_3.4.33"
+    ],
+    "build_log_sha256": "cafc218000e5d3cc24b8a0f7b0ecc7bb542ba2cec0ed7cf71d969ea319c310ea"
+  },
+  "target_compatibility": {
+    "sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+    "ldd": [
+      "\tlinux-vdso.so.1 (0x00007ffe1b2da000)",
+      "\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x000076ff4a800000)",
+      "\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x000076ff4e87f000)",
+      "\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x000076ff4e851000)",
+      "\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x000076ff4a400000)",
+      "\t/lib64/ld-linux-x86-64.so.2 (0x000076ff4e96f000)"
+    ],
+    "missing_libraries": false,
+    "started_as_service": false
+  },
+  "historical_parser": {
+    "historical": {
+      "text_sha256": "f72a2cffbcf2647bf902ca1e5b848ca63fd2cdbd53f489fd0f1377d99244b483",
+      "matched": true,
+      "scene": "story"
+    },
+    "parser_binary_sha256": "4696688c0a0a2dfaff439ba3f6429c2041bf5fab07b845f6bfbb32228d8e9b76",
+    "raw_text_exported": false,
+    "source_commit": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "source_inputs_match": true
+  },
+  "natural_timing": {
+    "trace": "p0-39-a48449c0-b9e6-4767-b516-568a2da2430c",
+    "room": "sn-BJP00326103099999938-1793676837",
+    "first_final_utc": "2026-11-03T03:34:07.116745+00:00",
+    "second_final_utc": "2026-11-03T03:34:19.263925+00:00",
+    "gap_ms": 12147.18,
+    "method": "same max_jobs=1 synthetic room; first two actual ASR finals from this job start; no transcript export",
+    "synthetic_wav_has_repeated_wake": true,
+    "actual_first_final_chars": 2,
+    "actual_first_final_wake_count": 1,
+    "repeated_wake_final_verified_by_rtc": false
+  },
+  "final_readonly": {
+    "test_processes": {
+      "2369459": {
+        "exists": false,
+        "exe_exists": false
+      },
+      "2369473": {
+        "exists": false,
+        "exe_exists": false
+      },
+      "2369474": {
+        "exists": false,
+        "exe_exists": false
+      },
+      "2379812": {
+        "exists": false,
+        "exe_exists": false
+      },
+      "2379824": {
+        "exists": false,
+        "exe_exists": false
+      },
+      "2379825": {
+        "exists": false,
+        "exe_exists": false
+      }
+    },
+    "production": {
+      "voice-worker-rust.service": {
+        "MainPID": "1825469",
+        "ExecMainStartTimestamp": "Sat 2026-10-31 07:50:16 UTC",
+        "ActiveState": "active",
+        "exe_sha256": "52f644bb6628a818b364f829b49fcea6126eea0ddcd2a195f00522d683c2369c"
+      },
+      "p003-search-worker.service": {
+        "MainPID": "2143116",
+        "ExecMainStartTimestamp": "Mon 2026-11-02 04:59:30 UTC",
+        "ActiveState": "active",
+        "exe_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+      },
+      "p003-listening-worker.service": {
+        "MainPID": "2222439",
+        "ExecMainStartTimestamp": "Mon 2026-11-02 10:03:10 UTC",
+        "ActiveState": "active",
+        "exe_sha256": "c2c8081581ae86c8155bbaf51af5eec34a05454bf8c3d8047fb74b326adcb4f5"
+      }
+    },
+    "window_sha256": "a1debd389f7f5f5b63f81bfd1f3c75829b7d28c57085b778c0facb65c7bf005c"
+  },
+  "source_push": {
+    "status": "pushed_and_remote_verified",
+    "head": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "remote_head": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "previous": "980b64821d88d76650a59480294d25a26839bbe4",
+    "private_bare_directory": "/var/folders/3m/gvt8nhbs4nzbj74kpc2c7hqc0000gn/T/p003-v376-39-push-44ozmdov/repo.git",
+    "steps": [
+      {
+        "action": "init",
+        "returncode": 0
+      },
+      {
+        "action": "remote",
+        "returncode": 0
+      },
+      {
+        "action": "fetch",
+        "returncode": 0
+      },
+      {
+        "action": "rev-parse",
+        "returncode": 0
+      },
+      {
+        "action": "fetch",
+        "returncode": 0
+      },
+      {
+        "action": "rev-parse",
+        "returncode": 0
+      },
+      {
+        "action": "push",
+        "returncode": 0
+      },
+      {
+        "action": "ls-remote",
+        "returncode": 0
+      }
+    ]
+  },
+  "prepared_manifest": {
+    "output": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/release-package/listening-release.next.json",
+    "sha256": "608eeea328f129acaf7a46b78f1005a192a7c10db2fcbacb6470fbd5dcbd5765",
+    "changed": [
+      "agents[agent=p003-search-listening-20261030].build_sha",
+      "evidence_ref"
+    ]
+  },
+  "recognition_semantics_changed": true,
+  "wire_protocol_changed": false,
+  "product_authority": "MAIN-LISTENING-FIX-DECISION.md, main session 13, 15-second single-use finite natural enter",
+  "independent_review": {
+    "owner": 38,
+    "fixed_commit": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "reported_at": "2026-11-03T11:40:19+08:00",
+    "no_new_blocker": true,
+    "scope": "three single-run RTC event chains and fixed source; not Android acoustic/long-run acceptance",
+    "limitations": [
+      "natural repeated-wake WAV produced a single-wake final",
+      "old split manifest lacks wake/tail WAV SHA; compare ASR shape, not byte-identical WAV"
+    ]
+  }
+}
