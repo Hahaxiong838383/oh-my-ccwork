@@ -137,5 +137,171 @@
       "failed": 0
     }
   ],
-  "evidence_directory": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/evidence-38"
+  "evidence_directory": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/evidence-38",
+  "worker_fix_review": {
+    "at": "2026-11-03T11:39:34.520010+08:00",
+    "candidate": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "independent_rule_tests": {
+      "candidate": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+      "timestamp": "2026-11-03T11:19:05.350743+08:00",
+      "source_sha256": {
+        "src/listening_mode.rs": "d61e4e37a3db6fa78725bfc98011705bbab528ca79051b88608ec5bcb6140065",
+        "src/listening_voice.rs": "19ad720bf9757204b83c5214d4b914550a704c8bbeca4e834de350763fd52bd7",
+        "tests/listening_voice.rs": "0a277c7a5db65a3b9336d1aeff698f49a982f5c4363d73125f50241213f6972e"
+      },
+      "exit_code": 0,
+      "output": "\nrunning 7 tests\ntest feedback_and_exit_are_explicit_complete_phrases ... ok\ntest explicit_first_utterance_selects_scene_and_preserves_immediate_story ... ok\ntest interim_command_prefix_is_held_before_ordinary_speculation ... ok\ntest recent_wake_partials_never_refresh_and_only_one_explicit_refresh_is_allowed ... ok\ntest recent_wake_accepts_finite_enter_at_ten_seconds_but_not_fifteen ... ok\ntest recent_wake_rejects_ordinary_quotes_negation_questions_and_cannot_authorize_feedback ... ok\ntest lyrics_quotes_partial_requests_and_ordinary_questions_do_not_command ... ok\n\ntest result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+      "scope": "fixed git snapshot; independent local pure Rust tests, not full adapter/RTC"
+    },
+    "input_check": {
+      "candidate": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+      "manifest_sha256": "8f51b2f87c6f53e70d66e6394d0e0a1a25a7fee24b622fa682587918b8ca7b85",
+      "checked": 86,
+      "mismatches": [],
+      "at": "2026-11-03T11:20:14.899685+08:00"
+    },
+    "source_review": "No new blocker found; gates and original handshake preserved",
+    "rtc_review": [
+      {
+        "bundle": "rtc-final-full-bundle.json",
+        "bundle_sha256": "a88493c925fb9bf789ec1a178931fda1f2d00dad0bdec7f82231c0b4b7df7804",
+        "candidate": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+        "binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "actual_worker_pid": 2379825,
+        "trace": "p0-39-dbd3d108-5e5a-4939-96eb-9bc4d9b541ed",
+        "room_suffix": "1793676206",
+        "entry_style": "full",
+        "proposal_actions": [
+          "enter",
+          "exit"
+        ],
+        "enter_ack_sequence": "proposal -> Android enter -> received -> local_ready -> completed",
+        "first_consume_ms": 9,
+        "assertions": 10,
+        "feedback_requests_for_trace": 1,
+        "lease_200_count_in_exclusive_single_job_time_window": 17,
+        "room_api_absent": true,
+        "limitations": {
+          "RTC": "real shared SFU unique agent/room",
+          "job_orchestrator": "real candidate test-feature binary",
+          "Brain_authority": "real isolated SQLite/clock/routes/registration",
+          "text_provider": "deterministic synthetic",
+          "ASR_TTS": "real provider, synthetic WAV input",
+          "Android": "software substitute"
+        }
+      },
+      {
+        "bundle": "rtc-final-split-bundle.json",
+        "bundle_sha256": "abbb72cf30b317b1030fdcd152eb4dd368d1671b6c2a5d4c72f05a55d07f4800",
+        "candidate": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+        "binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "actual_worker_pid": 2379825,
+        "trace": "p0-39-0be6d460-7307-4813-96a1-5af9348deabe",
+        "room_suffix": "1793676374",
+        "entry_style": "wake-tail",
+        "proposal_actions": [
+          "enter",
+          "exit"
+        ],
+        "enter_ack_sequence": "proposal -> Android enter -> received -> local_ready -> completed",
+        "first_consume_ms": 10,
+        "assertions": 11,
+        "feedback_requests_for_trace": 1,
+        "lease_200_count_in_exclusive_single_job_time_window": 16,
+        "room_api_absent": true,
+        "limitations": {
+          "RTC": "real shared SFU unique agent/room",
+          "job_orchestrator": "real candidate test-feature binary",
+          "Brain_authority": "real isolated SQLite/clock/routes/registration",
+          "text_provider": "deterministic synthetic",
+          "ASR_TTS": "real provider, synthetic WAV input",
+          "Android": "software substitute"
+        },
+        "wake_to_request_final_ms": 3334.469,
+        "wake_to_request_log_observed_ms": 3327.176613
+      },
+      {
+        "bundle": "rtc-final-natural-bundle.json",
+        "bundle_sha256": "a6fc82f491bd8b8c8296203ff7dc4fd04adb4a703dc6f910b5f4b00948aa31c2",
+        "candidate": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+        "binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "actual_worker_pid": 2379825,
+        "trace": "p0-39-a48449c0-b9e6-4767-b516-568a2da2430c",
+        "room_suffix": "1793676837",
+        "entry_style": "wake-tail",
+        "proposal_actions": [
+          "enter",
+          "exit"
+        ],
+        "enter_ack_sequence": "proposal -> Android enter -> received -> local_ready -> completed",
+        "first_consume_ms": 14,
+        "assertions": 11,
+        "feedback_requests_for_trace": 1,
+        "lease_200_count_in_exclusive_single_job_time_window": 16,
+        "room_api_absent": true,
+        "limitations": {
+          "RTC": "real shared SFU unique agent/room",
+          "job_orchestrator": "real candidate test-feature binary",
+          "Brain_authority": "real isolated SQLite/clock/routes/registration",
+          "text_provider": "deterministic synthetic",
+          "ASR_TTS": "real provider, synthetic WAV input",
+          "Android": "software substitute"
+        },
+        "wake_to_request_final_ms": 12147.18,
+        "wake_to_request_log_observed_ms": 12149.051195
+      }
+    ],
+    "before_after": {
+      "comparison": "same intended split utterance and observed ASR finals; before/after fixed source",
+      "fixture_hashes_equal": {
+        "wake": null,
+        "enter_tail": null,
+        "story": true,
+        "feedback": true,
+        "exit": true,
+        "chat": true
+      },
+      "baseline_proposals": 0,
+      "candidate_proposals": 2,
+      "baseline_enter_timeout": true,
+      "candidate_enter_completed": true,
+      "brain_bundle_same": true,
+      "baseline_source": "980b64821d88d76650a59480294d25a26839bbe4",
+      "candidate_source": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+      "limitations": "Baseline manifest omitted split-specific WAV hashes; do not claim byte-identical input/probe. One observed run each; ASR final arrival gaps differ; synthetic audio/software Android/deterministic content, not real device"
+    },
+    "worker_reported_linux_pass_groups": [
+      566,
+      29,
+      9,
+      7
+    ],
+    "worker_reported_http_joint_pass": 2,
+    "worker_reported_transport_pass": 1,
+    "release_binary_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+    "actual_android": "unverified",
+    "production_changed_by_38": false,
+    "process_cleanup": {
+      "source_file": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/39-evidence/final-after-tests-readonly.json",
+      "sha256": "b1930e5455d588f301944e94f62989683fe71370661890ba4191095203c4aceb",
+      "actual_worker_pid": 2379825,
+      "launcher_pid": 2379824,
+      "brain_pid": 2379812,
+      "all_absent": true,
+      "three_production_pid_start_binary_unchanged": true,
+      "window_sha256_unchanged": "a1debd389f7f5f5b63f81bfd1f3c75829b7d28c57085b778c0facb65c7bf005c",
+      "reviewed_at": "2026-11-03T11:41:09.171742+08:00"
+    },
+    "historical_parser": {
+      "historical": {
+        "text_sha256": "f72a2cffbcf2647bf902ca1e5b848ca63fd2cdbd53f489fd0f1377d99244b483",
+        "matched": true,
+        "scene": "story"
+      },
+      "parser_binary_sha256": "4696688c0a0a2dfaff439ba3f6429c2041bf5fab07b845f6bfbb32228d8e9b76",
+      "raw_text_exported": false,
+      "source_commit": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+      "source_inputs_match": true
+    }
+  }
 }

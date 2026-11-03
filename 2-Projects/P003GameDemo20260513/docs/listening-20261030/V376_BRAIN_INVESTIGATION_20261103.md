@@ -1,6 +1,6 @@
 # v376 倾听联调：Brain 历史取证回执
 
-**结果：Brain 侧历史签票、设备范围和语音能力已核实，未发现足以解释本次无 proposal 的 Brain 缺陷；产品仍未完成真机验收。** 本轮不修改业务源码、三个冻结合同或生产配置，不部署、不重启、不唤醒设备。
+**结果：Brain 侧历史签票、设备范围和语音能力已核实，未发现足以解释本次无 proposal 的 Brain 缺陷；Worker修复候选已通过本轮源码及三组隔离RTC复核，产品仍未完成真机验收。** 本轮不修改业务源码、三个冻结合同或生产配置，不部署、不重启、不唤醒设备。
 
 取证：2026-11-03 10:13–10:22 CST。代码基线 `eeac0a68ef9886487958fdb5780d60474b8357ff`，原分支 `codex/p003-listening-brain-20261030`。启动时工作区干净。
 
@@ -28,14 +28,14 @@
 | 19:58:02.041 | `3c770bf4-2eb6-4bf6-8cc9-38ab3970b77e` | `bb7eca3c-5bd1-4be3-97ca-a4e7e700a991` | 两能力、voice_control、正确agent/build |
 | 19:59:20.478 | `172f1281-3387-4401-b697-de5456ed5534` | `c9ab6927-3364-49f4-a6e8-b1519b045f74` | 两能力、voice_control、正确agent/build |
 
-39提供的脱敏 journal 形态证据已经读取并交叉核对身份、时间及源码指纹：19:58:13 的2字 final 仅唤醒词；19:59:32 的9字 final 不含唤醒词或“听”，均未命中原有限口令。各自 final 与普通 commit 文本摘要相同。现有 `listening_voice.rs` 要求完整呼名口令，因此这些证据**不支持“推荐完整口令已被服务端识别，却被 Brain 拒绝”**。声学切分发生在哪一层、完整口令实际到达后能否跑完，仍需隔离正对照及真人验证。此处不转发用户原话。
+39提供的脱敏 journal 形态证据已经读取并交叉核对身份、时间及源码指纹：19:58:13 的2字 final 仅唤醒词；19:59:32 的9字 final 不含唤醒词或“听”，均未命中原有限口令。各自 final 与普通 commit 文本摘要相同。修复前现役 `listening_voice.rs` 要求完整呼名口令，因此这些证据**不支持“推荐完整口令已被服务端识别，却被 Brain 拒绝”**。这批历史日志不能单独说明声学切分层或完整口令端到端情况；后续隔离正对照见第6、8节，真人仍待验证。此处不转发用户原话。
 
 ## 2. 协议检查与39协作
 
 - proposal 沿既有可靠 RTC `control` topic，`src=worker`；Android仍唯一分配 control seq。Brain 不发送 proposal，签票后识别/提议属 Worker 层。
 - Android必须以当前房间的服务端 AGENT kind、`attributes[lk.agent.name] == response.expected_agent_name` 验证并锁定实际 sender identity；不能把调度名直接等同 `agent-<job_id>`。本轮未取得 Android 实际校验执行证据。
 - proposal 3000ms仅约束首次接受；enter接受后沿原进入超时；state查询不消费 pending proposal。三个合同均未改字节。
-- 原合同 `recognition.normalization` 明确呼名开头、拒不完整前缀；“近期唤醒后无呼名同义句”并非原合同已有规则。已向13/39指出边界，不自行放宽唱后反馈、引语、歌词或权限门。
+- 原合同 `recognition.normalization` 明确呼名开头、拒不完整前缀、仅final触发，**没有逐字要求同一条final**；单条final匹配是当时Worker实现限制。“近期唤醒后无呼名同义句”超出原有限词表。本轮以主13后续明确决定为新识别语义基线，唱后反馈、引语、歌词和权限门保持。
 - 已交39本树新构建的既有 RTC harness，复用真实签票/authority/worker-ready/config ACK，`Date.now`、独立SQLite、合成身份及确定性文本provider。39独占真实RTC房间和进程启动/清理；本38没有启动真实RTC会话。
 
 测试包 `rtc-brain.mjs` SHA256：`952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a`；manifest：`84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c`。65个源码输入及两份资产已重新核SHA。此包是隔离测试入口，不是生产发布包。
@@ -48,7 +48,7 @@
 
 关键保护点：实际 `listening-authority.ts` 比本树多 `acceptsDeviceBindingCredential` 检查，`device-session.ts` 多 `noteBleActivation` 及绑定版本返回；这些是现役BLE功能，不应回退。历史签票成功也说明本次身份通过了当时授权链。
 
-**本轮无源码候选、无需生产回滚。** 如后续确有源码修复，必须基于实时现役精确差分发布，不能整树覆盖。Git基线 `eeac0a68` 只供撤销本轮文档；线上真实备份仍由主13发布记录管理：`/opt/p003/backups/v374-ready-20261102`、`/opt/p003/backups/v375-tiering-20261102T135555Z`，禁止把本树Git版本当线上回滚包。
+**本Brain无业务源码候选、无需生产回滚。** 如后续确有源码修复，必须基于实时现役精确差分发布，不能整树覆盖。Git基线 `eeac0a68` 只供撤销本轮文档；线上真实备份仍由主13发布记录管理：`/opt/p003/backups/v374-ready-20261102`、`/opt/p003/backups/v375-tiering-20261102T135555Z`，禁止把本树Git版本当线上回滚包。
 
 ## 4. 本轮实测与可复跑入口
 
@@ -73,9 +73,61 @@ node scripts/listening-rtc-prepare.mjs /private/tmp/p003-v376-brain/rtc-brain.mj
 
 ## 5. 未完成与安卓最小下一步
 
-1. 39先跑隔离完整推荐口令正对照，核 actual final→proposal→enter→local_ready→completed；失败再按明确层修复。其结果另由39/13验收，本回执不预填通过。
+1. 初版交付时待39跑完整口令隔离RTC正对照；后续证据与批准的修复范围见下节。固定候选及真人结果仍须各自验收。
 2. 白天或真人在场，用新RTC会话清晰连续说“小可先听我讲个故事”，紧接叙述；按同trace记录proposal_id、Android seq/request_id、可信sender校验结果及ACK顺序。无声仅凭听感不能证明已进入。
 3. 再跑一次反馈→回倾听→语音退出→下一句普通聊天，以及唱后明确呼名、歌词不误触、断网/超时；不绕过夜间无人门禁。
 4. 钱包null/0与normal快照归45线；本轮不补写余额、不混算方舟通过。主13统一验收/部署。
 
-署名：codex（OpenAI）| 2026-11-03 10:22 CST
+## 6. 修复前对照与主13决定（11/3接续）
+
+38已读取39的完整口令正锚与分段负锚原始证据包，核对相同测试Worker/Brain SHA：完整口令实际收到enter/exit proposal并完成进入；“小可”与“先听我讲个故事”两final相距3.145584秒时proposal=0、后半句普通commit。两房均有Room API absent记录。该对照使用真实RTC/ASR/TTS、合成WAV、Android软件替身和确定性文本provider；不证明历史真机原声必然同因，也不等于真人实听通过。测试二进制来自 `980b6482`，四个相关核心源码与现役 `b663e0e0` 相同，不能称同一现役可执行文件。
+
+主13已在协调目录 `MAIN-LISTENING-FIX-DECISION.md` 明确批准：当前可信能力会话、最近明确唤醒后的**15秒单次有限自然enter**，覆盖“先听我讲个故事”“我给你讲一个故事”等明确请求；旧完整呼名继续支持。下一实质final若为普通聊天立即正常处理并消费窗口，partial不得无限续期；跨房/会话/epoch、失效权限、取消/结束均不得继承。15秒识别窗口不延长Brain grant/lease，也不改变proposal的3000ms首次消费规则。
+
+此决定替代38之前仅建议5秒拼接的临时方案。39实施，38审固定候选，13验收与统一部署。本节仅记录修复前对照与批准范围；新候选复核见下节，**未上线**。三个冻结JSON字节保持。
+
+补充证据：协调目录 `evidence-38/rtc-cross-review.json`、`38-review-alignment.md`。39的 `final-readonly.json` 已确认实际测试Worker2369474、启动器2369473和Brain2369459均退出，原清理疑点关闭。
+
+## 7. 固定 Worker 候选独立审查（11/3 11:20 CST）
+
+源码候选 `70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d`（前置 `cb892576`，恢复基线 `980b6482`）。38逐项阅读5个差分文件及后续2行有限词表扩展，没有修改Worker树。自然enter增加“我想给你讲个故事/一个故事”；不是任意语义分类，也不允许无近期唤醒的自然句直接进入。
+
+| 审查点 | 固定源码事实 |
+|---|---|
+| 时间与一次性 | RecentWake保存runtime单调钟截止和mode epoch；14999ms可用、15000ms失效；明确wake最多刷新一次，partial只查询；下一实质final无论是否命中均消费 |
+| 当前身份与权限 | 复用job的当前participant生命周期/音轨门，Adapter独占状态；voice capability、grant未过期、Normal、voice_invitation及scene门保留；新房无继承、暂停/关闭清理 |
+| 两种输入路径 | ordered WakeOnly和普通RTC final均经同一echo gate后才建立上下文；重复呼名复用已有is_wake_only；普通final返回原聊天路径，不等待15秒 |
+| 原控制协议 | 只发Worker proposal，不伪造Android seq；3000ms首次消费、合法state查询不消费提议、Brain lease及local_ready/completed保持；反馈与退出仍沿旧完整呼名规则 |
+| 边界 | 有限短语，保留引语/歌词/否定/含义询问等已列负例；不宣称文本规则零误触或真实扬声器通过 |
+
+38从两个固定Git SHA分别提取纯Rust源码独立运行规则测试；最新 `70d5f98a` **7项通过、0失败**，包括新增自然表达、9.982秒/15秒边界及旧口令。最新Linux构建manifest的86项输入逐个与该Git SHA核同；三个冻结合同字节未变。39最新匹配该SHA的Linux日志记录566+29+9+7＝611项通过、2项HTTP joint另行实跑均通过，test-feature隔离transport专项1项通过；38核了输入SHA与日志，不冒充独立重跑全套。正式release无test features，交付二进制SHA `27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86` 已本地实算核同，HK2只读ldd无缺库。
+
+可复跑：`python3 /Users/fu-121/.local/state/p003-v376-coordination-20261103/evidence-38/verify-worker-candidate.py 70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d`。证据 `evidence-38/70d5f98a-review/result.json`、`input-check.json`；最新RTC逐事件核验见下节；源码/规则测试不单独代表端到端通过。
+
+本38仅文档交付，恢复点 `472606b058f7051ace5bba92b730c624d4d3e2e7`。若需撤销此次文档，按本次提交精确revert；不触及生产、业务源码或另一工作树。Worker候选回滚及真实现役文件仍由39/13交付和核对。
+
+## 8. 最新候选真实RTC复核与交付边界（11/3 11:38 CST）
+
+三包均明确编译源码 `70d5f98a`、同一test-feature二进制 `1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a`；实际进程PID2379825、Brain包仍 `952e58ac…`。客户端脚本SHA与固定Git一致。38逐条验证签发绑定、服务端AGENT kind/调度名锁定实际identity、proposal、Android替身seq、received/local_ready/completed、退出normal、反馈provider与房间删除事件，而非只读passed字段。
+
+| 样本 | trace | 实际证据 |
+|---|---|---|
+| 完整呼名 | `p0-39-dbd3d108-5e5a-4939-96eb-9bc4d9b541ed` | 原口令进入成功；10项客户端断言通过 |
+| ordered唤醒→RTC后半句 | `p0-39-0be6d460-7307-4813-96a1-5af9348deabe` | final为“小可”→“先听我讲个故事”，日志内final间隔3334.469ms；11项断言通过 |
+| 延迟自然请求 | `p0-39-a48449c0-b9e6-4767-b516-568a2da2430c` | final为“小可”→“我要给你讲一个故事”，实际间隔12147.18ms，处于15秒内；11项断言通过 |
+
+每房均收到enter和exit proposal，首次消费分别9/10/14ms；State查询后enter仍有效，随后Brain租约与local_ready双确认完成。每trace恰有一次反馈provider请求且包含即时续讲标记，退出后普通聊天有音频/字幕/metrics；三个房均有Room API absent。Brain观测为累计文件，38按该单并发测试的时间窗筛选，未把上一房的租约误计到下一房。
+
+旧split负例proposal=0，新split完成握手，识别后的ASR两句相同。旧manifest未登记wake/enter_tail WAV SHA，故只认同类输入与实际ASR形态的前后对照，**不宣称音频字节完全相同或多轮稳定性通过**。延迟样本使用重复呼名合成音频，但实际ASR首final只有“小可”，不能称真实RTC已检验“小可小可”final；重复呼名代码路径已有定向测试。
+
+历史9字请求仅在HK2进程内送入新parser，源码指纹核同70，原文SHA仍 `f72a2cffbcf2647bf902ca1e5b848ca63fd2cdbd53f489fd0f1377d99244b483`，得到story；没有导出原文，也没有把此结果冒充历史房间发生了新proposal。
+
+可复跑核验：协调目录 `python3 evidence-38/review-final-rtc.py rtc-final-full-bundle.json`，另两包替换为 `rtc-final-split-bundle.json` / `rtc-final-natural-bundle.json`。三份脱敏复核JSON、原包SHA、输入核同与测试结果已并入本回执同目录的 `evidence/v376-brain-verification-20261103.json`。
+
+**本轮结论：Brain不需要业务改动；Worker固定候选在此次隔离条件下通过独立复核，可交13继续发布验收。** 未替代真实Android、真实用户原声、扬声器/麦克风声学误触、唱歌实听与长期运行验证。实际RTC用了真实ASR/TTS/SFU、合成WAV/身份、Android软件替身、确定性文本provider；测试feature与正式release二进制分开记录，后者未由38启动或部署。
+
+下一步最小真人动作：13按单038原范围验收部署后，Android新房先测完整呼名，再测单次唤醒后10–12秒自然请求；留同trace的可信sender、proposal_id/seq/received/local_ready/completed证据；接续叙述应保持安静，明确反馈一次后退出恢复聊天。测试一条普通问题应即时走聊天并消费窗口，再次无呼名故事句不应复用旧窗口。不延长原窗口，不增加设备。
+
+最终已读取39 `final-after-tests-readonly.json`：实际Worker2379825、启动器2379824、Brain2379812均 `/proc` 不存在；与前次只读记录对撞，三生产unit的PID/启动时间/运行binary SHA及窗口文件SHA完全相同。清理疑点已关闭。38未操作生产；这只是本次取证时点事实，不是永久状态。
+
+署名：codex（OpenAI）| 初版2026-11-03 10:22 CST；接续更新11:42 CST
