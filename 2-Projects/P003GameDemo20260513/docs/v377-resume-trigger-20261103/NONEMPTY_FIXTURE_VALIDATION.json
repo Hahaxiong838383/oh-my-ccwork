@@ -1,0 +1,21 @@
+{
+  "environment": "local synthetic temporary SQLite only",
+  "production_access": false,
+  "production_acceptance_claim": false,
+  "query_script_sha256": "eb572e831191d011168c5591f19af965124702b7e17d50c78cdf587984916dca",
+  "nonempty_batches": 1,
+  "fixture_accepted": 3,
+  "fixture_tiers": {
+    "raw": 1,
+    "diagnostic": 1,
+    "aggregate": 1
+  },
+  "corrected_full_script_pass": true,
+  "old_path_failure_verified": [
+    "content_version",
+    "app_version",
+    "period_start_ms",
+    "period_end_ms"
+  ],
+  "fixture_database_unchanged": true
+}

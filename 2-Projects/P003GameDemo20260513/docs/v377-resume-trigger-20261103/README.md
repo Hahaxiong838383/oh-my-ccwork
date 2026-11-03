@@ -2,9 +2,14 @@
 
 服务端false→true握手已完成，当前cfg-132/policy3，仅03800006有效上传。11/10 12:39:39.162到期、日批23点、同诊断ID/累计1000条/3天回溯保持。
 
+- [当前可转发：真实上传到账服务端回执](P003_V377_RESUME_UPLOAD_SERVER_RECEIPT_20261103.md)：两批252条入库与ACK核同；客户端最终结算待回传。
 - [已交对外握手回执（原字节）](P003_V377_RESUME_TRIGGER_RECEIPT_20261103.md)：截至13:41:52.208尚无上传，保留历史。
 - [随后真实到账补充](REAL_HTTP_ADDENDUM.md)：13:44:09独立查到两批252条，226 raw+26诊断，0重复/0拒收；端侧最终pending及RESUME归因仍待回传。
 - [审计、回滚事实与工具修正](AUDIT_ROLLBACK.md)
 - [当前按日只读对账工具](reconcile_day_readonly.py)
 
 此前一周目录中的cfg66为握手前状态，当前以cfg132为准；原期限没有变化。旧版只读查询脚本缺JSON路径前缀，遇非空真实批次会失败，后续使用本目录修正版。无生产部署/新增定时/诊断请求变更。
+
+两份公共MD各自SHA256固定于 `SHA256.json`，握手原件保留历史字节。
+
+本地非空fixture复验：`python3 2-Projects/P003GameDemo20260513/docs/v377-resume-trigger-20261103/verify_nonempty_fixture.py`。仅创建临时SQLite测试库，覆盖批次版本与聚合周期四条JSON路径；逐项恢复旧路径须报错，修正版完整查询通过。fixture为合成测试数据，与真实252条证据严格区分。结果见 `NONEMPTY_FIXTURE_VALIDATION.json`。
