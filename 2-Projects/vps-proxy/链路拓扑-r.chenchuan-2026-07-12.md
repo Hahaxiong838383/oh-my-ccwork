@@ -46,6 +46,8 @@
 
 2026-10-12 home-studio 兜底：ZGO `gost-admin-lisa-via-zgo` `:11445 → 154.44.3.170:11443`，走默认不限速类，不进 Alex 的 `1:20`。只给 home-studio 的 `lisa-direct-then-dmit` 当备用。
 
+2026-11-03 **仅 home-studio 本机**（`/usr/local/etc/xray/config.json`，不进 git、禁止同步到公司 Mac Studio / Air / 电视 / 其他设备）：Anthropic、OpenAI、GitHub、Google、Gmail，以及同一条冲突规则里的 YouTube、Gemini，强制走 `lisa-direct-then-dmit`（主用 `admin-LISA-DMIT-11443`，失败再走 `admin-LISA-via-ZGO-11445`）。公司 Mac Studio 仍是单独的固定路由，不要套用这次改动。备份 `config.json.bak-lisa-domains-20261103-213038`。
+
 ## 落地丽萨（`lisa` / `154.44.3.170`，SSH 端口见本地 RTF）
 
 | 端口 | dest / SNI | 状态 |
