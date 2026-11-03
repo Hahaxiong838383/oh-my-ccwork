@@ -7,5 +7,6 @@
   "reconcile-public-script.json": "694a2d024561bf5538f333a474cee96f6d82df60eedc08a47d0e3f52a391fc23",
   "reconcile_readonly.py": "69723ccc70c7410e7b214c0f0180de58a906ddd074a111e5a1824a36f9827fca",
   "source-check.json": "b02a7186251c99a75195acf14ed97e7fba83bc1712fa2bc25b46ce1d05a60d5e",
-  "source-manifest.json": "42de90b7a007b40efa0629b34d991848d4e2dd4c9d116d9c79cb03f43a82ae92"
+  "source-manifest.json": "42de90b7a007b40efa0629b34d991848d4e2dd4c9d116d9c79cb03f43a82ae92",
+  "README.md": "30415f2dd2d93bfba60cb5098c507ecf9981d77ee4631f5230e94e91e6fc8c3b"
 }

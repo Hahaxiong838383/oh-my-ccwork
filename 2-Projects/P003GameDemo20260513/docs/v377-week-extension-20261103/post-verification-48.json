@@ -1,0 +1,11 @@
+{
+  "checked_at": "2026-11-03T12:39:58.018981+08:00",
+  "extension_start_cst": "2026-11-03T12:39:39.162000+08:00",
+  "extension_end_cst": "2026-11-10T12:39:39.162000+08:00",
+  "only_request_expiry_changed": true,
+  "config_and_revision_unchanged": true,
+  "processes_and_sources_unchanged": true,
+  "same_config_db": true,
+  "server_window_verdict": "PASS_READONLY_EXTENSION",
+  "real_client_acceptance": "PENDING"
+}

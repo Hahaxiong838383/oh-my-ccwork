@@ -1,0 +1,12 @@
+{
+  "src/analytics/index.ts": true,
+  "src/analytics/device-context.ts": true,
+  "src/analytics/writer.ts": true,
+  "src/analytics/writer-thread.ts": true,
+  "src/analytics/tiers.ts": true,
+  "src/analytics/tier-settings.ts": true,
+  "src/analytics/tier-control-route.ts": true,
+  "src/config-store.ts": true,
+  "src/routes/device-config.ts": true,
+  "admin": true
+}

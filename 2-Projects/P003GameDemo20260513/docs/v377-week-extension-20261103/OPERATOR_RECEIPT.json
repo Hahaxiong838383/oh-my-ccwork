@@ -1,0 +1,30 @@
+{
+  "extension_applied_at_ms": 1793680779162,
+  "expires_at_ms": 1794285579162,
+  "extension_duration_ms": 604800000,
+  "original_opened_at_ms": 1793679950775,
+  "old_expires_at_ms": 1793719799775,
+  "sn_suffix": "03800006",
+  "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "revision": "cfg-66",
+  "max_events": 1000,
+  "lookback_days": 3,
+  "daily_upload_hour_cst": 23,
+  "current_request_usage": [],
+  "admin_readback_verified": true,
+  "receiver_reader": {
+    "active": true,
+    "uploadEnabled": true,
+    "hour": 23,
+    "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+    "expires_at_ms": 1794285579162,
+    "max_events": 1000,
+    "lookback_days": 3
+  },
+  "configuration_unchanged": true,
+  "other_requests_unchanged": true,
+  "service_processes_unchanged": true,
+  "one_time_admin_extension": true,
+  "normal_create_max_ttl_seconds_unchanged": 86400,
+  "real_client_or_upload_passed": false
+}
