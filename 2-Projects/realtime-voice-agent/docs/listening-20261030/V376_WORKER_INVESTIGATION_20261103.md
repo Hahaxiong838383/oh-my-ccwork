@@ -85,3 +85,24 @@
 | A06 | 唱歌模式、唱后停顿+完整反馈口令；正常夜间无人策略另记 | 唱中歌词/静音不触发，反馈不杜撰音准；夜间无人继续遵守门禁，不通过改时钟/GM完成 |
 
 署名：codex（OpenAI）| 2026-11-03
+
+
+## 主13生产发布验收追加（2026-11-03 12:00 CST）
+
+**主13已完成原单038范围发布及发布后健康核验；真实Android/真人实听仍待验收。** 上文保留为39交付时的隔离测试、发布计划与边界快照，本节更新部署状态，不把隔离替身证据升级为真机通过。39本轮仅核主13落盘证据、归档文档和标签，未访问或操作生产、未改源码、未重跑既有测试。
+
+已完整读取并交叉核对主13的release-record、activate-worker、activate-brain、post-worker-check-1、post-brain-stable与SERVER_DEPLOYMENT；同时与发布前Worker/Brain快照比较。
+
+- 11:55:48 CST启动倾听Worker PID **2386175**，正式源码 **70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d**；实际进程/文件二进制SHA均为 **27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86**。
+- 11:56:34.095 CST启用manifest，SHA **608eeea328f129acaf7a46b78f1005a192a7c10db2fcbacb6470fbd5dcbd5765**。12:00稳定检查ready/effective=true、config revision=applied ACK=6，沿用单038、原expiry1793786311000与generation。
+- 发布完成后观察 **267.602秒**；新PID NRestarts=0，journal registered_worker=1、error=0、panic=0、received_job=0。没有新job，因此该窗口证明进程/登记与配置健康，不能证明上线后的真人语音链路已经验收，也不代表长期稳定性。
+- Brain **185份源码**逐项SHA、admin及PM2状态与前快照完全一致；普通Worker PID1825469、Search PID2143116的PID/启动时间/二进制未变；window/env SHA及generation均未变。
+- 除两处功能发布文件，主13同步更新Worker同目录`release.json`的 **build_sha、binary_sha256、bytes** 三字段，分别对应70d5f98a、27a723…、77997808字节。该发布元数据SHA由 **b616f758439d2a2e194bdbf7683615546bce86eb7b1b449afed06e9a3e26834f** 更新为 **5c8a65380c085cc428df365d3681a1bb84421c753f8077793855c53ab0a0a821**，已备份并纳入回滚，不能仅恢复二进制而留下新元数据。
+
+实际备份：HK2 `/opt/p003-listening-canary-20261030/backups/v376-listening-20261103T033634Z`；Brain原manifest `/opt/p003/listening-canary-20261030/backups/v376-listening-20261103T033634Z/listening-release.json`。异常时仅恢复原Worker **binary+release.json** 与原Brain manifest，停止/启动倾听unit；保持当前window/env/generation/数据库，不回灌整库。旧源 **b663e0e09d423ba282e21e242569774466fcfdb0**，源码回滚标签 **rollback/p003-listening-pre-v376-20261103** 指向该提交，不用本次文档提交替代构建源。
+
+主13最终交付原字节归档：[联调回执](v376-joint-handoff-20261103/P003_V376_JOINT_FIX_AND_TEST_RECEIPT_20261103.md)、[SERVER_DEPLOYMENT.json](v376-joint-handoff-20261103/SERVER_DEPLOYMENT.json)。其钱包包引用按原字节保留；配套钱包包由主13独立交安卓，不重复收入Worker仓。两文件复制后逐字节及SHA核同。详细证据来源SHA与比较结果附现有[验证JSON](evidence/v376-worker-verification-20261103.json)的`main13_production_deployment`节。
+
+下一步仍是安卓钱包补丁集成/安装与真实snapshot对账、真人倾听L01–L06；本次不宣称已完成。共享记忆与Air交付由13负责。
+
+署名：codex（OpenAI）| 2026-11-03

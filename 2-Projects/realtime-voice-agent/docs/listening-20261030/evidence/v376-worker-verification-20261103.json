@@ -1007,5 +1007,61 @@
       "natural repeated-wake WAV produced a single-wake final",
       "old split manifest lacks wake/tail WAV SHA; compare ASR shape, not byte-identical WAV"
     ]
+  },
+  "main13_production_deployment": {
+    "verification_kind": "local cross-check of main13 persisted production evidence; no production access or test rerun by39",
+    "verified": true,
+    "source_commit": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "worker_pid": "2386175",
+    "binary_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+    "manifest_sha256": "608eeea328f129acaf7a46b78f1005a192a7c10db2fcbacb6470fbd5dcbd5765",
+    "observation_ms": 267602,
+    "new_pid_journal": {
+      "lines": 689,
+      "registered_worker": 1,
+      "error": 0,
+      "panic": 0,
+      "received_job": 0,
+      "process_exit": 0
+    },
+    "protected_source_count": 185,
+    "protected_source_admin_pm2_and_ordinary_search_unchanged": true,
+    "config_revision_ack": 6,
+    "allowlist_suffix": [
+      "03800006"
+    ],
+    "expiry": 1793786311000,
+    "window_env_generation_unchanged": true,
+    "release_metadata": {
+      "build_sha": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+      "binary_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+      "bytes": 77997808
+    },
+    "release_metadata_sha256": "5c8a65380c085cc428df365d3681a1bb84421c753f8077793855c53ab0a0a821",
+    "release_metadata_previous_sha256": "b616f758439d2a2e194bdbf7683615546bce86eb7b1b449afed06e9a3e26834f",
+    "worker_backup": "/opt/p003-listening-canary-20261030/backups/v376-listening-20261103T033634Z",
+    "brain_manifest_backup": "/opt/p003/listening-canary-20261030/backups/v376-listening-20261103T033634Z/listening-release.json",
+    "real_android_acceptance": "PENDING",
+    "evidence_sha256": {
+      "release-record.json": "b432d7b1a7bd87ffea37d470a42b30523d942dedfcb6cdffed6768b4ccdf6433",
+      "activate-worker.json": "b1d808b9aac58c76fe9e63aacd946607bc7cc34495b642de272b3c73d8fd3fc4",
+      "activate-brain.json": "31d322dc67158ee6669556d5082929a5fdd4e784ed373ad9ac346fb876ca211d",
+      "post-worker-check-1.json": "66f98ee4c28f38faaf1e508e7a7b57916c819369f2e6c2aa63b4038577c9b9a2",
+      "post-brain-stable.json": "f8c7774bc37fca8dfc9b8ff0401cd071d79faa549d814c207ab482d9ad655d62",
+      "main-brain-preflight.json": "1bdd7000a8455344da1896e2b46d8950c71c141f69c2725effcf994ce4bdd7dc",
+      "worker-preflight.json": "80c7f4fb03852d72681987d043343f981ab5a50f509874508d626318e6603641",
+      "stage-worker.json": "68651251e0774c4077ffb7e93827ed0fe85013f00ae26ada78b0a51df1174cc9"
+    },
+    "prior_worker_start_evidence_sha256": "b1930e5455d588f301944e94f62989683fe71370661890ba4191095203c4aceb",
+    "delivery_sha256": {
+      "P003_V376_JOINT_FIX_AND_TEST_RECEIPT_20261103.md": "4f68933a373dcadca976c469a6cab0336a694087b5142b98a358d47c363f570f",
+      "SERVER_DEPLOYMENT.json": "a52bbc8c0787f6baf09f9dfc5b54b0fd7828f36298300328e7ecb3ac385f4be9"
+    },
+    "archive_directory": "2-Projects/realtime-voice-agent/docs/listening-20261030/v376-joint-handoff-20261103",
+    "rollback_tag": {
+      "name": "rollback/p003-listening-pre-v376-20261103",
+      "target_commit": "b663e0e09d423ba282e21e242569774466fcfdb0"
+    },
+    "scope": "documentation/tag only; earlier isolated evidence and limitations preserved"
   }
 }

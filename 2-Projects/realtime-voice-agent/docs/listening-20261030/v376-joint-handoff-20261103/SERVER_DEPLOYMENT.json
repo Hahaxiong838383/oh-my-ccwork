@@ -1,0 +1,63 @@
+{
+  "status": "CLOUD_FIX_DEPLOYED_ANDROID_JOINT_PENDING",
+  "verified_at_cst": "2026-11-03T12:00:22.958000+08:00",
+  "device_sn": "BJP00326070803800006",
+  "window_expires_at_cst": "2026-11-04T17:58:31+08:00",
+  "worker_source": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+  "worker_documentation_commit": "a450a464875885b8b217f4145f25cbb79f441c9c",
+  "brain_review_commit": "32d55ceb4e9c4ce907c3e9599e02281f41c25d41",
+  "wallet_patch_commit": "724559e5a30d8a6a42755189dd7b78b73e982080",
+  "binary_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+  "manifest_sha256": "608eeea328f129acaf7a46b78f1005a192a7c10db2fcbacb6470fbd5dcbd5765",
+  "worker_started_at_cst": "2026-11-03T11:55:48+08:00",
+  "manifest_activated_at_cst": "2026-11-03T11:56:34.095000+08:00",
+  "worker_pid": "2386175",
+  "restart_count": 0,
+  "new_pid_journal": {
+    "lines": 689,
+    "registered_worker": 1,
+    "error": 0,
+    "panic": 0,
+    "received_job": 0,
+    "process_exit": 0
+  },
+  "config_revision": 6,
+  "effective_enabled": true,
+  "unchanged": {
+    "ordinary_worker_pid": "1825469",
+    "search_worker_pid": "2143116",
+    "main_source_files": 185,
+    "admin_asset": true,
+    "main_pm2_processes": true,
+    "window_generation_allowlist_expiry": true,
+    "canary_environment": true,
+    "database_no_migration_or_restore": true
+  },
+  "tests": {
+    "worker_rust": 611,
+    "worker_http_joint": 2,
+    "isolated_transport": 1,
+    "real_rtc_software_android": {
+      "full": true,
+      "split_final_gap_ms": 3334.469,
+      "natural_final_gap_ms": 12147.18
+    },
+    "wallet_original_rust": 164,
+    "wallet_patched_rust": 176,
+    "wallet_real_projection_http": 7,
+    "ark_regression": 51
+  },
+  "rollback": {
+    "worker_backup": "/opt/p003-listening-canary-20261030/backups/v376-listening-20261103T033634Z",
+    "brain_manifest_backup": "/opt/p003/listening-canary-20261030/backups/v376-listening-20261103T033634Z",
+    "source": "b663e0e09d423ba282e21e242569774466fcfdb0",
+    "binary_sha256": "c2c8081581ae86c8155bbaf51af5eec34a05454bf8c3d8047fb74b326adcb4f5",
+    "restore": "only previous worker binary+release metadata and previous manifest; preserve current window/env/database; stop/start listening unit only"
+  },
+  "not_verified": [
+    "Android wallet patch build/sign/install and actual APK/PCK hashes",
+    "real human listening and acoustics",
+    "true device wallet snapshot/preview/voice reconciliation after patch"
+  ],
+  "verification_harness_note": "First post-deploy log parser rejected journald binary MESSAGE list. Parser corrected; first failure retained; subsequent counts and stability checked. No production rollback or code changes caused by that harness error."
+}
