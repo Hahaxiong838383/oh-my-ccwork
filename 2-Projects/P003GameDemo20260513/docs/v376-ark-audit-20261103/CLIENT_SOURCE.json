@@ -1,0 +1,57 @@
+{
+  "repo": "FUTURUS-ProductResearch/kidshub-ai---godot",
+  "source_sha": "3c653b5d3d28940fe6be275ba0382a6956d27234",
+  "evidence": "GitHub contents exact ref, compared byte for byte with locally archived v375 source",
+  "files": {
+    "rust_runtime/src/g1_ark_state.rs": {
+      "blob_sha": "ebe399a1cdb4a522504cdcff943fd56a3d7304c7",
+      "sha256": "a06ee00003dad7b19f748dca7cba27fab8d2672668cf24581d7ceccb5dd6b4e8",
+      "same_as_v375": true
+    },
+    "rust_runtime/src/g1/model.rs": {
+      "blob_sha": "d6ce481377c88889afae5898ba99ab7c8b2c1539",
+      "sha256": "eabe4ebb6c1edd123240ada692d0d384009b03117c76e97ae525fd1d766e7c2b",
+      "same_as_v375": true
+    },
+    "rust_runtime/src/lib.rs": {
+      "blob_sha": "aa6c112958f8237a4c15e7dc1d1a337e6b947644",
+      "sha256": "52f37afc931bed635d870f47c4f89747e09e1d7fca5534bb5d102426b6fc2d12",
+      "same_as_v375": true
+    },
+    "godot/scripts/ark_state_snapshot_client.gd": {
+      "blob_sha": "65141562335e91b48ca86b9d06712d980acdea36",
+      "sha256": "a94e0e439f2ae7d982e27a739de2392fe86ef06758ec9eb1ccb72d3a91601e0e",
+      "same_as_v375": true
+    },
+    "godot/scripts/runtime_client.gd": {
+      "blob_sha": "492f5547adf79781ee6818910666b471822a77e7",
+      "sha256": "f80bab737a2b8644a501fe85ddb0c7963ef0602cf55cff146496d200f4b61c5a",
+      "same_as_v375": true
+    },
+    "godot/g1/formal/projectors/inventory_scene_projector.gd": {
+      "blob_sha": "bbf79f67c1661085899fe039396010b8aa69bfea",
+      "sha256": "939287e18d77969aee779562063b4d06118a24a0d661566b836129a25d448da5",
+      "same_as_v375": true
+    },
+    "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003ArkStateContracts.kt": {
+      "blob_sha": "e42cc05c2a15c8f396df7eb391ae020a5263ec8d",
+      "sha256": "c48bf817ad4c24a19a59bc256dfc41cfd01fedc88399d4708fe4ee3d25ce90e0",
+      "same_as_v375": true
+    },
+    "VERSION.lock": {
+      "blob_sha": "3cc9ecfdd900155e0f94cb021a852e636cbdec5d",
+      "sha256": "278cdb50079d15a067a23836d2080e5db184d074eb0e2ea418ff80abbd07e434",
+      "same_as_v375": false
+    },
+    "godot/g1/formal/views/scene_chrome.gd": {
+      "blob_sha": "7a877ecd723d9346bedccbf92dcd6942566ad26a",
+      "sha256": "5be9225f7ae4ecae902f01d02796841deda24f54434da536931f753adfa67420",
+      "same_as_v375": true
+    },
+    "rust_runtime/src/g1/engine/reward_resolution.rs": {
+      "blob_sha": "d0a6d042311bf77a8a9eda253a603874ecd5e1ad",
+      "sha256": "1b7d9c4e7f8b54afb585ff691db9c88b2f5662b1248bc5f1c29ed3a6a848452c",
+      "same_as_v375": true
+    }
+  }
+}

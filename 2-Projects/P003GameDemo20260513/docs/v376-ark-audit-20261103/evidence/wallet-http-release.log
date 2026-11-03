@@ -1,0 +1,16 @@
+▶ v376 wallet contract: real local HTTP → durable store → authority → proxy → factual answer
+  ✔ normal null remains unknown; card 1 and paused chest remain independently available (254.395625ms)
+  ✔ authoritative zero persists, answers zero, duplicate does not refresh freshness (76.338875ms)
+  ✔ nonzero values are exact; no conversion to daily earnings (19.812375ms)
+  ✔ GM → fresh normal reset cannot leak GM balances or replace identity epoch (29.625583ms)
+  ✔ missing, stringified null and negative wallet fields are rejected rather than coerced (22.135417ms)
+  ✔ restart preserves exact accepted wallet and timestamp; rebinding epoch denies old grant (22.976875ms)
+✔ v376 wallet contract: real local HTTP → durable store → authority → proxy → factual answer (523.983625ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2058.435583

@@ -1,0 +1,93 @@
+{
+  "status": "PASS_ISOLATED_CLIENT_FIX_REQUIRED",
+  "at": "2026-11-03T02:43:29.713888+00:00",
+  "owner": "session45",
+  "runtime_candidate_changed": false,
+  "production_changed": false,
+  "device_changed": false,
+  "server_candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "server_predeploy_sha": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+  "client_source_sha": "3c653b5d3d28940fe6be275ba0382a6956d27234",
+  "client_delivery_sha": "9a7a4bb4c64f62e54bca917d3584db4ded533ca1",
+  "client_installed_hash_independently_verified": false,
+  "node": "24.19.0",
+  "tests": [
+    {
+      "command": "node --import tsx --test scripts/audit45-v376-wallet.test.ts",
+      "exit": 0,
+      "pass": 7,
+      "parent_cases": 1,
+      "child_cases": 6,
+      "fail": 0,
+      "log": "evidence/wallet-http-release.log"
+    },
+    {
+      "command": "npm run test:ark",
+      "exit": 0,
+      "pass": 51,
+      "fail": 0,
+      "group_passes": [
+        4,
+        16,
+        11,
+        7,
+        8,
+        4,
+        1
+      ],
+      "log": "evidence/ark-regression.log"
+    }
+  ],
+  "main_production_sha256": {
+    "src/ark/answer.ts": "2ba1bd32c27dd933a105767e30e1ac498a19a4928681136c4e2a7bb66841d0a3",
+    "src/ark/proxy.ts": "f52d71eb39046e77e76865ad643734a308bb1ee07cbad0028adfb77a4631352a",
+    "src/ark/routes.ts": "4a741aefd50a885815505ac445911d70b27b41bfcf29d61534eacafae344b9e6",
+    "src/ark/runtime.ts": "73a32c1fe5197f6315aa8315b4ac8c8eb1fb9a938da2ed8383a904ee1878f270",
+    "src/ark/http.ts": "c8f2fd630ea28a01cef71dc92f4723d354c4bd66b7943c747a074155c4d88a1a",
+    "src/ark/identity.ts": "0aa12e50e1b7934546ae744b8a6df7eb443afb03813325c9d95b2e84c3f0a27e",
+    "src/ark/context.ts": "f7113f2462e93a72e971971a52093077ca0aa6678c7c364d7336b899621c814c",
+    "src/ark/store.ts": "08637691485c3450df2ec06f2f241e2f00f11eb11622b274cee4a945ef831f2a",
+    "src/ark/memory-policy.ts": "b8900e1fed7e6e751161bbbf4803d912265b7353cb94b23d755a69838395b603",
+    "src/ark/service.ts": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+    "src/ark/history.ts": "76b75736878b1bd5dd9717d8649c27e17256affe541ea7ea5d39c70ba6e60a66",
+    "src/ark/contracts.ts": "6e4d7e2df287f5ed332162623507c63f0904fc96d052af793e700812372c9ffd",
+    "src/routes/custom-llm.ts": "cabf67279074a1fb2cab191d28d4774c981f917cc7dfee514018441c0746bc09"
+  },
+  "canary_context_sha256": "55624d89062459ae5ed2a540bf1f25c59a8952260d62236996b0fc4b9ec71da9",
+  "canary_context_source_sha": "cf6ef97a35b8e1c94fb7892316a56d9243684f46",
+  "historical_evidence": {
+    "receipt_sha256": "aac82635aee578d14664f9470abb322303a676733a8858c82056278874c32ddf",
+    "time_cst": "2026-11-02 19:52–20:01",
+    "trace_unique": true,
+    "subject_suffix": "03800006",
+    "ark_direct_at_cst": "2026-11-02 19:57:36",
+    "typed_facts": true,
+    "user_assistant_memory_excluded": [
+      1,
+      1
+    ],
+    "endpoint_level_200_count": 48,
+    "count_is_subject_attributed": false,
+    "historical_snapshot_body_available": false
+  },
+  "not_verified": [
+    "installed v376 APK/PCK hashes independently read",
+    "historical normal snapshot body/card1/paused persisted values independently reconstructed",
+    "Android Rust/Godot/Launcher fix and regressions",
+    "new real-device voice acceptance",
+    "full repository typecheck"
+  ],
+  "harness_corrections": [
+    "Initial invocation ran from audit worktree rather than candidate server directory; module-resolution failure, no business execution.",
+    "First new test file missed a function closing brace; transform failure corrected before executing tests.",
+    "Restart test strengthened to recreate runtime and read via HTTP proxy; final 7/7 run archived."
+  ],
+  "source_retrieval_note": "Full Git fetch interrupted; exact-ref GitHub contents for 10 required files and complete 15-file compare established source evidence without using partial pack.",
+  "evidence_sha256": {
+    "wallet-contract.test.ts": "9fe38f8e88c2c85a7825271caedba3bf8106cf8088b306df23948e1182a9c258",
+    "CLIENT_SOURCE.json": "0cd793c8b0512a04ff56b9cd32f0e9aa43e4dc40f0e424bccb654b73d657dd8b",
+    "SOURCE_VERIFICATION.json": "969eaeaf22169b8080bfc7e8e3623442d4e7465f63e94444fdb2ebe7e8cf036c",
+    "evidence/ark-regression.log": "6bdd17fc091a8cfd8143a77db46effedb050a71d91fe47feff6724adf0f61f86",
+    "evidence/wallet-http-release.log": "53df82e02b54190b556ad83b708526b5d9570940db18e3b6efd09724b123fff5"
+  }
+}

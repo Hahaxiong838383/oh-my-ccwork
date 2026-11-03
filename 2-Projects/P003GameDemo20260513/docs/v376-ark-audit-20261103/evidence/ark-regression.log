@@ -1,0 +1,138 @@
+
+> server@0.0.1 test:ark
+> node --experimental-sqlite --import tsx scripts/ark-knowledge.test.ts && node --experimental-sqlite --import tsx scripts/ark-state.test.ts && node --experimental-sqlite --import tsx scripts/ark-history.test.ts && node --experimental-sqlite --import tsx scripts/ark-runtime.test.ts && node --experimental-sqlite --import tsx scripts/ark-http-sse.test.ts && node --experimental-sqlite --import tsx scripts/ark-proxy.test.ts && node --experimental-sqlite --import tsx scripts/ark-proxy-service.test.ts
+
+✔ 当前G1奖励问句优先召回有效专注与领取边界，不借旧夜航解释 (5.627792ms)
+✔ 静态资源用途保留独立双钱包和现实奖励约定边界 (0.522084ms)
+✔ 外部游戏及普通闲聊不会被G1状态召回污染 (0.427375ms)
+✔ ordinary classroom rewards are not game state or knowledge requests (0.507292ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 30.029042
+✔ identity epoch ignores settings timestamp but catches ABA binding and reactivation (55.221458ms)
+✔ revocation and delete/recreate invalidate already accepted state (53.938542ms)
+✔ absent identity/epoch never falls back to an env or parent account (31.915125ms)
+✔ default closed and disabled gate cannot disclose or accept state (34.29575ms)
+✔ snapshot accepts real zero and unknown separately; current duplicate never renews timestamp (34.057167ms)
+✔ same ID different payload conflicts, superseded sequences remain stale (36.826667ms)
+✔ new boot requires strictly newer boot start, old boot cannot return (42.365541ms)
+✔ future clock, boot after capture, pre-grant capture and captured-time reversal rejected (35.37175ms)
+✔ arbitrary text, extra identity, invalid numbers and inconsistent reward shapes are rejected (2.989875ms)
+✔ GM, unknown source, stale and cross-day snapshots never become live countdown (43.349709ms)
+✔ reward kinds and paused/claimable/claimed/complete/unknown remain distinct (42.311917ms)
+✔ versioned Android example conforms to executable v1 schema (1.790458ms)
+✔ one resolved value per asset; newer occurrence wins across sources, equal-time disagreement is unknown (32.420125ms)
+✔ unchanged grants and snapshots survive repeated saves and enrolling another device (32.134959ms)
+✔ single-device authorization cannot revive another rebound device; full settings use CAS (51.719625ms)
+✔ Ark settings migration survives reopening the store (9.169667ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 576.613625
+✔ history keeps unknown distinct from zero and never uses a 12-character alias (70.033958ms)
+✔ latest value uses event occurrence time, not delayed batch receipt or sum(delta) (47.775375ms)
+✔ historical ownership watermark and suspicious clocks are fail-closed (45.611709ms)
+✔ GM marker poisons logical day, absent marker is unknown, truncated never yields a balance (48.035792ms)
+✔ retention and query limit cannot turn partial unknown history into confident facts (2386.019ms)
+✔ known inventory uses absolute quantity; unknown asset IDs never leak (37.517875ms)
+✔ same occurrence-time conflicting absolute values are unknown, never resolved by upload order (36.103041ms)
+✔ truncated or impossible receipt-time normal markers cannot authorize later unmarked facts (24.57775ms)
+✔ GM evidence before the authorization watermark and with future clock still excludes its logical day (61.064708ms)
+✔ thousands of unrelated valid events cannot hide wallet state or GM veto (102.55775ms)
+✔ uppercase and slash-separated GM source tokens veto normal-day history (129.873666ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3027.27475
+✔ ordinary chat and static purposes cause zero identity or internal queries (20.849584ms)
+✔ parent/anonymous/override/feedback/wrong-room cannot read device facts (13.075708ms)
+ark_total_body_timeout_ms=157.92
+✔ query timeout includes body parsing and degrades to unknown within total budget (172.56325ms)
+✔ late rebinding invalidates in-flight facts; malformed or oversized responses fail closed (47.948625ms)
+✔ dynamic turns and their answers cannot reach later/idle extraction windows; normal profile statements remain (2.292916ms)
+✔ multiple short followups retain the game topic; explicit topic switch stops both queries and stale context (0.588625ms)
+✔ audit exclusion metadata survives even when an isolated answer contains no recognizable resource words (0.269125ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 269.588625
+[memory] extract scheduler mode=turn allowlist=""
+✔ real HTTP: default closed, admin authorization and fixed scope ceiling (220.161ms)
+✔ real HTTP: Bearer isolation, byte limit, schema, duplicate timestamp, conflict, stale and rate limit (132.863792ms)
+✔ real internal HTTP: token, subject/account/epoch, malformed and oversized requests; upload remains shut (59.41275ms)
+[curriculum-kg] 加载失败（降级为不注入）: ENOENT: no such file or directory, open '/tmp/codeg-acp/66120-0393eb23/ark-http-TdDnCj/absent/nodes.json'
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+✔ real custom-llm SSE: static/ordinary zero queries; prompt has authorized zero balance and source timestamps (110.831333ms)
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+✔ real SSE: stale history removed; followup requeries; admin preview same source; parent cannot query (74.217666ms)
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[memory] account=device-BJP00399999999999901 画像更新: interests
+✔ actual persistence: audit retained; current/later/idle windows skip dynamic extraction; ordinary interest still persists (35.076083ms)
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[ark-direct] {"room":"sn-BJP00399999999999901-1793430001","response_id":"chatcmpl-thedmuipiw","typed_facts":true}
+[custom-llm] 匿名（无 token） [kb]
+[custom-llm] 匿名（无 token） [kb]
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+✔ main JWT-only callback retains verified facts with zero upstream model calls (83.504167ms)
+✔ disable/reactivation and credential revocation invalidate grants without restart (10.854792ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 771.855334
+✔ proxy requires dedicated token and exact scope; returns bounded trusted facts (73.737125ms)
+✔ proxy cannot use remote URLs, unknown subjects, redirects, malformed or oversized responses (1.500875ms)
+✔ proxy total deadline covers slow fetch/body and revocation suppresses in-flight facts (310.434125ms)
+✔ authority deadline includes facts and client rejects elapsed time even before timers run (508.454083ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 904.820875
+✔ isolated Brain uses authority only for its trusted worker, SN, state question; never opens ark.db (74.287292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 107.554
