@@ -90,6 +90,7 @@ pub struct Adapter {
     last_speech_end: Option<u64>,
     speech_began_after_pause: bool,
     last_voice: Option<(u64, crate::listening_voice::Intent)>,
+    recent_wake: crate::listening_voice::RecentWake,
 }
 impl Drop for Adapter {
     fn drop(&mut self) {
@@ -164,6 +165,7 @@ impl Adapter {
             had_speech_end: false,
             speech_began_after_pause: false,
             last_voice: None,
+            recent_wake: Default::default(),
         })
     }
     pub fn voice_available(&self) -> bool {
@@ -173,7 +175,43 @@ impl Adapter {
             .as_ref()
             .is_some_and(|v| v.version == 1 && v.capability == "listening_voice_control_v1")
     }
+    fn natural_voice_allowed(&self) -> bool {
+        self.voice_available()
+            && self.runtime.snapshot().phase == Phase::Normal
+            && self.client.meta.grant_expires_at_ms > listening_http::unix_ms()
+            && self.policy.tuning.voice_invitation_enabled
+            && !self.closing && self.pending.is_none() && self.proposal.is_none()
+    }
+    pub fn clear_voice_wake(&mut self) { self.recent_wake.clear(); }
+    pub fn voice_final_candidate(&self, text: &str) -> bool {
+        crate::listening_voice::parse(text).is_some()
+            || (self.natural_voice_allowed() && (crate::textproc::is_wake_only(text)
+                || (self.recent_wake.active(self.runtime.now_ms(), self.runtime.snapshot().epoch)
+                    && crate::listening_voice::parse_natural_enter(text).is_some())))
+    }
+    pub fn voice_candidate(&self, text: &str) -> bool {
+        crate::listening_voice::possible_prefix(text)
+            || (self.natural_voice_allowed() && (crate::textproc::is_wake_only(text) || self.recent_wake.possible_tail(
+                text, self.runtime.now_ms(), self.runtime.snapshot().epoch)))
+    }
+    /// Called only after the pipeline's echo gate, for ordered AND RTC finals.
+    pub fn voice_final(&mut self, text: &str) -> Option<Effects> {
+        if text.trim().is_empty() { return None; }
+        let now = self.runtime.now_ms();
+        self.runtime.tick(now);
+        let epoch = self.runtime.snapshot().epoch;
+        if self.natural_voice_allowed() && crate::textproc::is_wake_only(text) {
+            self.recent_wake.arm(now, epoch);
+            return Some(Effects::new()); // no success playback, no ordinary reply
+        }
+        let natural = if self.natural_voice_allowed() {
+            self.recent_wake.take_enter(text, now, epoch)
+        } else { self.recent_wake.clear(); None };
+        let utterance = crate::listening_voice::parse(text).or(natural)?;
+        self.voice_utterance(utterance)
+    }
     fn pause_voice(&mut self, out: &mut Effects) {
+        self.clear_voice_wake();
         self.runtime.pause_pending_entry();
         self.proposal = None;
         self.pending_story.clear();
@@ -199,8 +237,11 @@ impl Adapter {
     }
     /// Only final STT commits commands; this never fabricates an Android sequence.
     pub fn voice_text(&mut self, text: &str) -> Option<Effects> {
-        use crate::listening_voice::{Intent, parse};
-        let utterance = parse(text)?;
+        self.clear_voice_wake();
+        self.voice_utterance(crate::listening_voice::parse(text)?)
+    }
+    fn voice_utterance(&mut self, utterance: crate::listening_voice::Utterance) -> Option<Effects> {
+        use crate::listening_voice::Intent;
         let mut out = Effects::new();
         // Explicit unsupported commands are consumed silently: no false success from ordinary LLM.
         if !self.voice_available() {
@@ -374,6 +415,7 @@ impl Adapter {
         let Some(cmd) = cmd else {
             return out;
         };
+        if !matches!(cmd.action, Action::State) { self.clear_voice_wake(); }
         match self.runtime.precheck(&cmd) {
             Ok(Some(snapshot)) => {
                 let (stage, reason) = if matches!(cmd.action, Action::Enter { .. }) {
@@ -560,6 +602,7 @@ impl Adapter {
         }
     }
     fn close(&mut self, epoch: u64) {
+        self.clear_voice_wake();
         if self.closing {
             return;
         }
@@ -750,6 +793,7 @@ impl Adapter {
         let mut out = Effects::new();
         let now = self.runtime.now_ms();
         self.runtime.tick(now);
+        if !self.natural_voice_allowed() { self.clear_voice_wake(); }
         if self.proposal.as_ref().is_some_and(|p| now >= p.deadline) {
             self.pause_voice(&mut out);
         }
@@ -1363,6 +1407,51 @@ mod adapter_tests {
         a.entry = None;
         a.entry_completed = false;
         a
+    }
+    #[tokio::test]
+    async fn listening_voice_recent_wake_proposes_at_ten_seconds_without_forging_transcript() {
+        let mut a=voice_adapter();
+        assert!(a.voice_final("小可").unwrap().acks.is_empty());
+        assert_eq!(a.runtime.snapshot().phase,Phase::Normal);
+        assert!(a.voice_candidate("我要给你讲"));
+        assert!(!a.voice_candidate("我今天天气"));
+        a.runtime.advance_clock(9982);
+        let e=a.voice_final("我要给你讲一个故事。从前有只猫").unwrap();
+        assert_eq!(e.acks.len(),1);
+        assert_eq!(e.acks[0]["payload"]["action"],"enter");
+        assert_eq!(e.acks[0]["payload"]["scene"],"story");
+        assert_eq!(e.acks[0]["payload"]["ttl_ms"],3000);
+        assert_eq!(a.pending_story,vec!["从前有只猫"]);
+        assert!(a.voice_final("我要给你讲一个故事").is_none());
+    }
+    #[tokio::test]
+    async fn listening_voice_recent_wake_ordinary_final_consumes_and_full_command_still_works() {
+        let mut a=voice_adapter();
+        a.voice_final("小可小可。");
+        assert!(a.voice_final("天空为什么是蓝色的").is_none());
+        assert!(a.voice_final("我给你讲一个故事").is_none());
+        assert!(a.voice_final("小可先听我讲个故事").unwrap().acks.len()==1);
+        let mut fresh=voice_adapter();
+        assert!(fresh.voice_final("先听我讲故事").is_none(),"new room has no wake");
+    }
+    #[tokio::test]
+    async fn listening_voice_recent_wake_fails_closed_on_capability_policy_grant_epoch_and_pause() {
+        for fault in 0..6 {
+            let mut a=voice_adapter();a.voice_final("小可");
+            match fault {
+                0=>a.client.meta.voice_control=None,
+                1=>a.client.meta.grant_expires_at_ms=0,
+                2=>a.policy.tuning.voice_invitation_enabled=false,
+                3=>a.runtime.advance_clock(15000),
+                4=>a.runtime.pause_pending_entry(),
+                _=>a.policy.scenes.retain(|s|s!="story"),
+            }
+            assert!(a.voice_final("我给你讲一个故事").is_none_or(|e|e.acks.is_empty()),"fault {fault}");
+            assert!(a.proposal.is_none());
+        }
+        let mut a=voice_adapter();a.client.meta.voice_control=None;
+        assert!(a.voice_final("小可").is_none());
+        assert!(a.voice_final("先听我讲故事").is_none());
     }
     fn voice_enter(a: &mut Adapter, proposal: &Value) -> Effects {
         a.control(

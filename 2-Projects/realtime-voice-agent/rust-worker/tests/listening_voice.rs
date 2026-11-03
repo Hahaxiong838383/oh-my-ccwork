@@ -80,3 +80,50 @@ fn interim_command_prefix_is_held_before_ordinary_speculation() {
         assert!(!possible_prefix(text), "{text}");
     }
 }
+
+#[test]
+fn recent_wake_accepts_finite_enter_at_ten_seconds_but_not_fifteen() {
+    use listening_voice::RecentWake;
+    let mut wake = RecentWake::default();
+    for text in ["先听我讲个故事", "我给你讲一个故事", "我要给你讲一个故事", "我给你唱一首歌", "我想和你分享一件事"] {
+        wake.arm(0, 4);
+        assert!(wake.take_enter(text, 9982, 4).is_some(), "{text}");
+        assert!(wake.take_enter(text, 9983, 4).is_none(), "single use");
+    }
+    wake.arm(0, 4);
+    assert!(wake.take_enter("先听我讲故事", 14999, 4).is_some());
+    wake.arm(0, 4);
+    assert!(wake.take_enter("先听我讲故事", 15000, 4).is_none());
+}
+#[test]
+fn recent_wake_rejects_ordinary_quotes_negation_questions_and_cannot_authorize_feedback() {
+    let mut wake = listening_voice::RecentWake::default();
+    for text in ["今天下雨吗", "先听我讲故事吗", "我给你讲一个故事是什么意思", "他说我给你讲个故事",
+        "“我给你讲一个故事”", "不要听我讲故事", "我给你唱首歌，这是歌词", "我给你讲个故事，好不好",
+        "我给你讲一个故事，不过别进入倾听", "我唱完了请给我反馈", "退出倾听模式", "先听我"] {
+        wake.arm(0, 4);
+        assert!(wake.take_enter(text, 1000, 4).is_none(), "{text}");
+        assert!(wake.take_enter("先听我讲故事", 1001, 4).is_none(), "ordinary/negative final consumed window");
+    }
+    wake.arm(0, 4);
+    assert!(wake.take_enter("先听我讲故事", 1000, 5).is_none());
+    assert!(wake.take_enter("先听我讲故事", 1001, 4).is_none());
+    assert!(listening_voice::RecentWake::default().take_enter("我给你讲个故事", 1000, 4).is_none());
+}
+#[test]
+fn recent_wake_partials_never_refresh_and_only_one_explicit_refresh_is_allowed() {
+    let mut wake = listening_voice::RecentWake::default();
+    wake.arm(0, 4);
+    for now in [1000, 10000, 14999] {
+        assert!(wake.possible_tail("先听我", now, 4));
+        assert!(!wake.possible_tail("我", now, 4));
+        assert!(!wake.possible_tail("我今天", now, 4));
+    }
+    assert!(!wake.possible_tail("先听我", 15000, 4));
+    wake.arm(20000, 4);
+    wake.arm(21000, 4);
+    wake.arm(35000, 4);
+    assert!(wake.take_enter("先听我讲故事", 36000, 4).is_none(), "second refresh cannot extend");
+    wake.arm(40000, 4);wake.clear();
+    assert!(wake.take_enter("先听我讲故事", 40001, 4).is_none());
+}

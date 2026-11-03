@@ -1479,23 +1479,31 @@ impl Orchestrator {
         let _=self.fatal_tx.try_send("listening_input_gap_close_required".into());
     }
     fn try_voice_final(&mut self, text: &str) -> bool {
-        if self.listening.is_none() || crate::listening_voice::parse(text).is_none() {return false;}
-        // Final may correct a non-command interim. Retract that same subtitle segment even for echo/unsupported control.
-        self.tr.user_final("");
+        let Some(l) = self.listening.as_ref() else {return false;};
+        let candidate = l.voice_final_candidate(text);
         let playing=self.agent_turn.is_some();
         let in_window=self.echo_playout_end.is_some_and(|t|t.elapsed()<=self.cfg.echo_suppress_window);
-        if voice_command_is_echo(text,&self.recent_spoken_text(playing,in_window),!self.cfg.echo_suppress_window.is_zero() && (playing||in_window)) {
+        if candidate && voice_command_is_echo(text,&self.recent_spoken_text(playing,in_window),!self.cfg.echo_suppress_window.is_zero() && (playing||in_window)) {
             // Control recognition precedes ordinary commit, so its mutation needs the same TTS echo gate here.
+            if let Some(l)=&mut self.listening {l.clear_voice_wake();}
+            self.tr.user_final("");
             return true;
         }
-        let effect=self.listening.as_mut().and_then(|l|l.voice_text(text));
-        if let Some(e)=effect {self.apply_listening_effects(e);true} else {false}
+        // Ordinary finals consume the wake context too, without delaying normal routing.
+        let effect=self.listening.as_mut().and_then(|l|l.voice_final(text));
+        if let Some(e)=effect {
+            self.tr.user_final("");
+            if let Some(s)=self.spec.take(){s.task.abort();}
+            self.pending_tts_warm=None;self.pf.reset();self.latest_interim.clear();
+            self.apply_listening_effects(e);true
+        } else {false}
     }
     fn voice_candidate(&self, text: &str) -> bool {
-        self.listening.is_some() && crate::listening_voice::possible_prefix(text)
+        self.listening.as_ref().is_some_and(|l|l.voice_candidate(text))
     }
     fn listening_active(&self)->bool {self.listening.as_ref().is_some_and(|l|l.runtime.active())}
     fn clear_listening_pending(&mut self){
+        if let Some(l)=&mut self.listening {l.clear_voice_wake();}
         let captions=self.caption_gate.cancel_pending();self.tr.publish_deferred_batch(&captions,true);
         if let Some(spec)=self.spec.take(){spec.task.abort();}self.pending_tts_warm.take();self.paused=None;self.false_deadline=None;self.resume_grace=None;
         self.deferred_say.clear_on_abort();self.listening_deferred_turn=None;self.pending_local_receipt_deadline=None;
@@ -1668,6 +1676,9 @@ impl Orchestrator {
                 // reason 区分 wake_only(用户只叫了一声)与 no_final(供应商没给 final,不能断言没说话)。
                 info!(room = %self.room_name, chars = text.chars().count(), reason = why.as_str(),
                       "ordered_pcm generation complete → no_task (不进 LLM)");
+                if why == crate::ordered_pcm::NoTaskReason::WakeOnly {
+                    self.try_voice_final(&text); // same capability/authority/echo gates as RTC finals
+                }
                 self.request_phase_switch("first_turn_no_task".into());
             }
             crate::ordered_pcm::Decision::Discard(r) => {
@@ -4505,7 +4516,7 @@ mod listening_voice_pipeline_tests {
     #[test]
     fn listening_voice_in_playback_or_just_ended_echo_cannot_propose_mode() {
         for in_window in [true,false] {
-            for text in ["小可，先听我讲个故事。","小可结束倾听恢复聊天","小可我唱完了请给我反馈"] {
+            for text in ["小可，先听我讲个故事。","小可结束倾听恢复聊天","小可我唱完了请给我反馈","小可","小可小可","我要给你讲一个故事"] {
                 assert_eq!(voice_command_is_echo(text,&format!("你可以说：{text}"),in_window),in_window);
             }
         }

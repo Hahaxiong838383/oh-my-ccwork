@@ -172,7 +172,9 @@ class Probe:
         await self.queue.join()
 
     async def ordered(self):
-        data = pcm(Path(self.args.fixtures)/'enter.wav')
+        split = self.args.entry_style == 'wake-tail'
+        data = pcm(Path(self.args.fixtures)/('wake.wav' if split else 'enter.wav'))
+        self.log('entry_fixture', style=self.args.entry_style, sha256=hashlib.sha256(data).hexdigest())
         base = {'input_id': 'p0-input-'+str(uuid.uuid4()), 'trace_id': self.trace, 'session_id': self.signed['session_id'], 'capture_epoch': 1, 'wake_generation': 1, 'keep_from': 0, 'boundary_kind': 'kws_tail', 'overlaps_local_playback': False, 'sr': SR, 'ch': 1, 'fmt': 's16le'}
         async def send(t, seq, start, end, body=b''):
             header = {**base, 't': t, 'seq': seq, 'start': start, 'end': end, 'sent_at_ms': int(time.time()*1000)}
@@ -187,6 +189,14 @@ class Probe:
             await asyncio.sleep(.005)
         await send('end', seq, len(data)//2, len(data)//2)
         self.log('ordered_end', samples=len(data)//2)
+        if split:
+            # Diagnostic case, not a fabricated STT/control event. The real ASR
+            # receives a wake-only ordered segment, then the rest over RTP.
+            await self.wait(lambda: any(v.get('type') == 'session.input_phase'
+                and v.get('payload', {}).get('phase') == 'rtc' for v in self.messages),
+                'wake-only phase to RTP')
+            await asyncio.sleep(.4)
+            await self.speak('enter_tail')
         # Begin real RTP narration immediately after end, while first ASR closes.
         self.story_task = asyncio.create_task(self.speak('story'))
 
@@ -380,7 +390,7 @@ class Probe:
 
 async def main(args):
     probe = Probe(args)
-    result = {'scenario': args.scenario, 'passed': False, 'boundaries': {'RTC': 'real shared SFU unique agent/room', 'job_orchestrator': 'real candidate test-feature binary', 'Brain_authority': 'real isolated SQLite/clock/routes/registration', 'text_provider': 'deterministic synthetic', 'ASR_TTS': 'real provider, synthetic WAV input', 'Android': 'software substitute'}}
+    result = {'scenario': args.scenario, 'entry_style': args.entry_style, 'passed': False, 'boundaries': {'RTC': 'real shared SFU unique agent/room', 'job_orchestrator': 'real candidate test-feature binary', 'Brain_authority': 'real isolated SQLite/clock/routes/registration', 'text_provider': 'deterministic synthetic', 'ASR_TTS': 'real provider, synthetic WAV input', 'Android': 'software substitute'}}
     try:
         await probe.run()
         result['passed'] = True
@@ -402,6 +412,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--credentials', required=True)
     parser.add_argument('--mic-publish-delay-ms', type=int, default=0)
+    parser.add_argument('--entry-style', choices=['full', 'wake-tail'], default='full',
+                        help='wake-tail needs synthetic wake.wav and enter_tail.wav; unsupported entry remains a failing result')
     parser.add_argument('--base', default='http://127.0.0.1:18738')
     parser.add_argument('--fixtures', required=True)
     parser.add_argument('--output', required=True)
