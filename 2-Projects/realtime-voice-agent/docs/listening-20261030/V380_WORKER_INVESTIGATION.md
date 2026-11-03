@@ -2,7 +2,7 @@
 
 结论：**两词 ASR 增强可交主13发布；倾听退出兼容链在六项隔离 RTC 场景通过，本轮没有证据需要修改现役 Worker 业务代码。主13在18:53尝试后台发布触发sidecar保护，已自动回滚，候选尚未上线。原口述“云端退出、端侧未收到”的真机故障尚未定位，不能宣称已修复或真机全验。**
 
-实现候选 `d36248a65b9271217ae0bc094ae1ed30e93a809f`；原分支 `codex/p003-listening-worker-20261030`，任务前回滚点 `fc1234deca51e71a021815b08c5b88b339886f20`。本轮两个实现提交只改测试、探针及离线快照工具；Rust 变动全部位于 `#[cfg(test)]`，生产代码前缀逐字节相同。三合同未变。后续文档提交不改变测试输入。
+实现候选 `d36248a65b9271217ae0bc094ae1ed30e93a809f`；原分支 `codex/p003-listening-worker-20261030`，任务前回滚点 `fc1234deca51e71a021815b08c5b88b339886f20`。倾听候选两个实现提交只改测试、探针及离线快照工具；Rust 变动全部位于 `#[cfg(test)]`，生产代码前缀逐字节相同。三合同未变。后续文档提交不改变测试输入。
 
 ## 现役与故障范围
 
@@ -55,6 +55,12 @@ PCM SHA `61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8`。实
 4. 回滚走后台旧27词草稿→仅asr重新发布；随后按池恢复这次私有原字节env备份并核published/进程值一致。普通池回滚不等于独立池已回滚。禁止整库恢复或覆盖旧分支。测试源码若需撤销，只撤本轮48f368ad/d36248a6相关变更，保留70d5生命周期/入口修复。
 
 18:51:43 CST清场证据：7个测试房API均不存在，独立Worker/collector/Brain及3个ASR进程全部结束；生产三池PID/二进制/NRestarts与开始一致，倾听env/window/release完整SHA不变。这只是18:51时点；18:53主13发布502后自动回滚，普通池已重启为PID2443912，原asr id2/v1/live27恢复，其他kind与canary未变。18:55只读逐PID核EOT仅生产普通/搜索/倾听三个服务cgroup（2443921/2143118/2386177），无本轮测试EOT残留；现役apply_hotwords.py的sidecar_count全机匹配，包含其他池，已交13定位，不泛kill、不绕过保护。39未操作生产，不能据此说全局没有发布尝试。全套证据在协调目录`evidence-39`；SHA索引随本仓JSON归档。39不更改共享记忆和其他工作树，最终Air交付由13统一。
+
+## 发布器保护误计数的独立修复
+
+主13确认原`sidecar_count`按全机进程文本计数，把健康的搜索/倾听EOT也计入普通池stop排空条件，导致本次502保护回滚。主13亲写的固定补丁已归档为 `d6d6913bcbcb26d543e1b8ae34845546df95fdae`：`rust-worker/ops/apply_hotwords.py`仅`sidecar_count`函数改为按精确systemd unit cgroup归属计数；本unit重父孤儿仍计，不可读保守阻止，其他池不计。不改force、stop/drain/start、备份或回滚链，不杀其他池进程。
+
+归档前核本树与现役原件完整SHA均`4a723a9dd406c4c9228a5f7ecd05ad58d0e244049344f294f1046ea834bd99ee`；补丁后SHA `6e675aa36110889a1ccb38c33f1c73aa622abc30b50bf402e4590acddc691475`，除该函数外AST一致。本机同目录`python3 rust-worker/ops/test_apply_hotwords_sidecars.py`实际11项通过，未执行生产main。主13负责独立复核后单文件备份部署及后台重试。该运维脚本修复不改变Worker运行二进制，无需重跑与此无关的Cargo/RTC。
 
 ## 给安卓的最小复验
 

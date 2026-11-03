@@ -527,5 +527,19 @@
     "v380 share/sharing, failed/rejected and feedback state enum mismatches retained; separate scope",
     "publication protected rollback after main13 attempt; retry/repair belongs to main13",
     "EOT sidecar unavailable in isolated RTC; fallback boundary, no real endpoint-model validation"
-  ]
+  ],
+  "publisher_fix": {
+    "source_owner": 13,
+    "source_manifest_sha256": "32c3bd3b7e11e0fd8bf73f5ed9321b4c7d2027983b2a74cdf86725fa8621f6c2",
+    "before_sha256": "4a723a9dd406c4c9228a5f7ecd05ad58d0e244049344f294f1046ea834bd99ee",
+    "after_sha256": "6e675aa36110889a1ccb38c33f1c73aa622abc30b50bf402e4590acddc691475",
+    "test_sha256": "aafc501356f7704a2b1a71b9e5f087828739ea9a3df408f99efc3eac6a0fbf50",
+    "only_function_changed": "sidecar_count",
+    "other_ast_identical": true,
+    "production_modified_by_39": false,
+    "commit": "d6d6913bcbcb26d543e1b8ae34845546df95fdae",
+    "tests_passed": 11,
+    "tests_sha256": "a3fd0d72b54f53bec3a04c8b02dfc910f9cd5b0bf4121ed999a9977ffa7b68d8",
+    "deployed_by_39": false
+  }
 }
