@@ -14,6 +14,7 @@
     "test:exit": "tsx scripts/exit-intent.test.ts",
     "test:onboarding": "tsx scripts/onboarding-extractor.test.ts",
     "test:sms": "NODE_OPTIONS=--experimental-sqlite tsx scripts/sms-auth.test.ts",
+    "test:sms-login": "node --experimental-sqlite --import tsx scripts/sms-auth.test.ts && node --experimental-sqlite --import tsx scripts/sms-login-hardening.test.ts && node --experimental-sqlite --import tsx scripts/sms-login-http.test.ts && node --experimental-sqlite --import tsx scripts/spug-transport.test.ts",
     "test:ota": "NODE_OPTIONS=--experimental-sqlite tsx scripts/ota.test.ts",
     "test:device-config": "NODE_OPTIONS=--experimental-sqlite tsx scripts/device-config.test.ts",
     "test:pairing": "NODE_OPTIONS=--experimental-sqlite tsx scripts/pairing.test.ts",

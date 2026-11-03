@@ -22,7 +22,7 @@ process.env.ACCOUNTS_DB_PATH = join(tmp, 'accounts.db');
 process.env.SMS_DB_PATH = join(tmp, 'sms.db');
 process.env.DEVICES_DB_PATH = join(tmp, 'devices.db');
 process.env.PROFILE_DB_PATH = join(tmp, 'profile.db');
-process.env.AUTH_JWT_SECRET = 'test-secret';
+process.env.AUTH_JWT_SECRET = 'sms-regression-test-secret-at-least-32-bytes';
 process.env.SMS_PROVIDER = 'aliyun'; // 存量段落按阿里云链路跑；文件末尾有 spug 专段（届时切换）
 delete process.env.ALIYUN_SMS_ACCESS_KEY_ID;
 delete process.env.ALIYUN_SMS_ACCESS_KEY_SECRET;
@@ -115,11 +115,11 @@ eq('send-fmt-5 非 json body 不 500', (await app.request('/api/auth/sms/send', 
   for (let i = 0; i < 5; i += 1) smsLimitStore.record('13800000003', '', `seed-${i}`, now - 120_000 - i * 1000);
   const r2 = await post('/api/auth/sms/send', { phone: '13800000003' });
   eq('limit-4 小时窗 429', { status: r2.status, reason: r2.json.error }, { status: 429, reason: 'rate_limited' });
-  // IP 日窗：x-forwarded-for 计数
+  // IP 日窗：生产nginx覆盖的X-Real-IP计数，不能信任调用方追加的XFF首项
   for (let i = 0; i < 20; i += 1) smsLimitStore.record(`1390000${String(i).padStart(4, '0')}`, '9.9.9.9', `ip-${i}`, now - 3600_000);
   const res = await app.request('/api/auth/sms/send', {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-forwarded-for': '9.9.9.9, 10.0.0.1' },
+    headers: { 'content-type': 'application/json', 'x-real-ip': '9.9.9.9', 'x-forwarded-for': 'spoofed, 10.0.0.1' },
     body: JSON.stringify({ phone: '13800000004' }),
   });
   eq('limit-5 IP 日窗 429', res.status, 429);
