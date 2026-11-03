@@ -1,0 +1,20 @@
+   Compiling p003_runtime v0.1.0 (/Users/fu-121/.local/state/p003-v376-coordination-20261103/45-evidence/wallet-patch/rust_runtime)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.50s
+     Running unittests src/lib.rs (/Users/fu-121/.local/state/p003-v376-coordination-20261103/45-evidence/wallet-cargo-target/debug/deps/p003_runtime-94cc85d034f3b4a3)
+
+running 12 tests
+test g1_ark_state::wallet_regression::corrupt_existing_store_is_unknown_but_absent_store_is_new ... ok
+test g1_ark_state::wallet_regression::corrupt_relaxed_or_backup_only_store_is_not_a_new_wallet ... ok
+test g1_ark_state::wallet_regression::export_real_projection_json_for_isolated_server_http ... ok
+test g1_ark_state::wallet_regression::failed_reset_keeps_original_wallet_and_provenance ... ok
+test g1_ark_state::wallet_regression::gm_survives_restart_and_only_committed_reset_returns_normal_zero ... ok
+test g1_ark_state::wallet_regression::known_new_sparse_wallet_is_zero_without_mutating_game_state ... ok
+test g1_ark_state::wallet_regression::missing_invalid_or_unsupported_formal_is_never_a_known_zero ... ok
+test g1_ark_state::wallet_regression::nonzero_and_single_sparse_wallet_remain_independent ... ok
+test g1_ark_state::wallet_regression::restored_missing_wallet_or_provenance_cannot_be_laundered_by_defaults ... ok
+test g1_ark_state::wallet_regression::unknown_provenance_never_becomes_known_wallet ... ok
+test g1_ark_state::wallet_regression::valid_backup_recovers_exact_nonzero_wallet ... ok
+test g1_ark_state::wallet_regression::valid_legacy_currency_normalizes_once_without_double_credit ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 164 filtered out; finished in 17.87s
+

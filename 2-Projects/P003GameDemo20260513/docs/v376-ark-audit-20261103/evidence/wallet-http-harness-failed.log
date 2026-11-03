@@ -1,0 +1,35 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+Error: Transform failed with 1 error:
+/Users/fu-121/.local/state/p003-v375-coordination-20261102/candidate45-856552b942f5-sfhpi8_y/2-Projects/P003GameDemo20260513/apps/server/scripts/audit45-v376-wallet.test.ts:40:2: ERROR: "await" can only be used inside an "async" function
+    at failureErrorWithLog (/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1748:15)
+    at /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:1017:50
+    at responseCallbacks.<computed> (/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:884:9)
+    at handleIncomingPacket (/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:939:12)
+    at Socket.readFromStdout (/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/esbuild@0.28.1/node_modules/esbuild/lib/main.js:862:7)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23) {
+  name: 'TransformError'
+}
+
+Node.js v24.19.0
+✖ scripts/audit45-v376-wallet.test.ts (485.339417ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 507.348208
+
+✖ failing tests:
+
+test at scripts/audit45-v376-wallet.test.ts:1:1
+✖ scripts/audit45-v376-wallet.test.ts (485.339417ms)
+  'test failed'

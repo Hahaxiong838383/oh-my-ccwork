@@ -1,0 +1,16 @@
+▶ patched Rust projection → real local HTTP → SQLite → proxy → answer
+  ✔ real Rust zero retains semantics and authority (265.915625ms)
+  ✔ real Rust nonzero retains semantics and authority (128.184583ms)
+  ✔ real Rust null retains semantics and authority (76.11125ms)
+  ✔ real Rust gm retains semantics and authority (56.721125ms)
+  ✔ real Rust unknown retains semantics and authority (48.145084ms)
+  ✔ normal restart accepts zero after GM; binding epoch still isolates old save (61.091125ms)
+✔ patched Rust projection → real local HTTP → SQLite → proxy → answer (728.319125ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2120.344833

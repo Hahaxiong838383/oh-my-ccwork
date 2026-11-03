@@ -1,0 +1,133 @@
+{
+  "source_sha": "3c653b5d3d28940fe6be275ba0382a6956d27234",
+  "files": {
+    "godot/assets/g1_formal_content.json": {
+      "blob_sha": "75e22b1f0823b175a258a7956f3ce116d0452b43",
+      "sha256": "6b5883b07c870369859ac5a0f4b5a016b612adc84c03663b5360e2f8ec034243"
+    },
+    "rust_runtime/Cargo.lock": {
+      "blob_sha": "6a6909f544407c5c6d483be2685000d01eb6fa3e",
+      "sha256": "8f8a2605b8fce7418a3a22e57ce0b227ac1bab8e174e582780257e29d09bd64a"
+    },
+    "rust_runtime/Cargo.toml": {
+      "blob_sha": "04e52a953c1e6755f16f5a3b08718cea62d932e4",
+      "sha256": "b8d0f21f9830a8dbb41805f98176a3ab5e434ab5186be0f94c63ba6d4196c059"
+    },
+    "rust_runtime/src/g1/config.rs": {
+      "blob_sha": "395ae42f8c8ecaeea433f4a76ef14af0d76f56be",
+      "sha256": "9ddbee16308bd4cd072bb050938d6c96dbfc046bb8ea4c7723e6cacdeeb6c835"
+    },
+    "rust_runtime/src/g1/engine.rs": {
+      "blob_sha": "867234eeadfe479f2cc958b6039d4d85f2dd931c",
+      "sha256": "9adea9b23d496cf28aa9ba218942cbe7857aae841bc706ca9b19a45d46eb7e86"
+    },
+    "rust_runtime/src/g1/engine/chest.rs": {
+      "blob_sha": "c0eb2ccb5d63156360fd59b978d6211b08399bf9",
+      "sha256": "3dedbb8ff50fd9d826d8cec34686512bc10a06d80db55964b6e9708e9874f9eb"
+    },
+    "rust_runtime/src/g1/engine/ecotank.rs": {
+      "blob_sha": "47c55c98b4f806f6d2418c68b45ca35aeb73d306",
+      "sha256": "27d96cde320156e5b3e5d588e620715abb1c62d209e6a78bcc07c5c0a93bd454"
+    },
+    "rust_runtime/src/g1/engine/gift.rs": {
+      "blob_sha": "a8c25cb59cc3994d95cc7ec71984329a1c07ad5b",
+      "sha256": "58e5077716d2ab2a31dc198478c661074188eb0337791fc3157e66e52ef46a27"
+    },
+    "rust_runtime/src/g1/engine/gm.rs": {
+      "blob_sha": "d128675a9b966e4ab0a2068e20ac06207e6153b7",
+      "sha256": "a1c979b61b405256e191506123cc8df3313e7c109fd9c3c059b7b484f9795bef"
+    },
+    "rust_runtime/src/g1/engine/history.rs": {
+      "blob_sha": "82d7af3847aee976336663d46ab5d9a6c9df3bf4",
+      "sha256": "558b06a424c5b1f58a484e2ee9c1b317bf914a79b65e98d06b8c513d3966d07f"
+    },
+    "rust_runtime/src/g1/engine/lifecycle.rs": {
+      "blob_sha": "89914638f9d84fd96be9e171897102139582b76f",
+      "sha256": "7b9323f3a97edfafe7628975c073ba7376b84f10882279e3e5e8ed739c7010a5"
+    },
+    "rust_runtime/src/g1/engine/presentation.rs": {
+      "blob_sha": "092697629f8e1ed77b8191fe9b7b96495055427d",
+      "sha256": "15abd4e0ea3b87fa01b0b634a31d95746d27514a68015021ce470ce555bbdfb7"
+    },
+    "rust_runtime/src/g1/engine/progress.rs": {
+      "blob_sha": "927b3fcc91fb81896681c9086ff6bd2aae042a2e",
+      "sha256": "e1a17d16191f3c2eafadcfdfc390e6eb4a5adf0cd75cade48df966dd9047ff5f"
+    },
+    "rust_runtime/src/g1/engine/reward.rs": {
+      "blob_sha": "9c17d7d6e5e3930162f3d0e0c30deab3e326ac3d",
+      "sha256": "f507d418db7f38ebae617542ea98f7f364856c2f556bad3e9ae45af74a46798d"
+    },
+    "rust_runtime/src/g1/engine/reward_resolution.rs": {
+      "blob_sha": "d0a6d042311bf77a8a9eda253a603874ecd5e1ad",
+      "sha256": "1b7d9c4e7f8b54afb585ff691db9c88b2f5662b1248bc5f1c29ed3a6a848452c"
+    },
+    "rust_runtime/src/g1/engine/route.rs": {
+      "blob_sha": "3ee05183051dbb3046a6d8a87de8b0717719ac7d",
+      "sha256": "6768ab43d344fcde96fff29709d6da9a85b26adc471574e9c6066eeaa923985c"
+    },
+    "rust_runtime/src/g1/engine/route_reward.rs": {
+      "blob_sha": "37cd2bd1e5736b3a6353c84db33e8f13db533472",
+      "sha256": "9b0cadac3d8eeacbf5b12e8202bce4534ed6a37b59d9e74a23ee5841dc36cb9b"
+    },
+    "rust_runtime/src/g1/engine/route_visual.rs": {
+      "blob_sha": "9b0f7b7591dec12879267cc16fcec8d1354b4957",
+      "sha256": "bec3bd0e76e52cdb809fe8eaea15a26be9d3f31df99e838a1da3f2833ef55e85"
+    },
+    "rust_runtime/src/g1/engine/tests.rs": {
+      "blob_sha": "e7db7cff9a78cec918b495dadae18a82881238bb",
+      "sha256": "4fd357ec4becf4644f6d072202dc9697995f8f7880f3622273a0f489998668ff"
+    },
+    "rust_runtime/src/g1/mod.rs": {
+      "blob_sha": "eed341191719ed60c8c49a6d60b093b8d554ff11",
+      "sha256": "292282a421af8c75231293c6c344b43d1d034901bafb2351b789be5d34ff0002"
+    },
+    "rust_runtime/src/g1/model.rs": {
+      "blob_sha": "d6ce481377c88889afae5898ba99ab7c8b2c1539",
+      "sha256": "eabe4ebb6c1edd123240ada692d0d384009b03117c76e97ae525fd1d766e7c2b"
+    },
+    "rust_runtime/src/g1/route_catalog.rs": {
+      "blob_sha": "7b7232344ffb560ab6a5a63f8ad0b9fb539086f0",
+      "sha256": "248ad89fc8a51fca88f6b5b9ee0044b9e207d53786cdf1a91d2116e659cd34d2"
+    },
+    "rust_runtime/src/g1/route_state.rs": {
+      "blob_sha": "b341fc1ed6dc57827866a514270d7674a74deaad",
+      "sha256": "902681b44baff6c2316292637c9912dcd4ddce67fd57909ea0f65ca2446e65b1"
+    },
+    "rust_runtime/src/g1/route_state_tests.rs": {
+      "blob_sha": "6d1f0ee0213d3ae7de9d9f68276624e08e08f992",
+      "sha256": "7ba850a3a2a5c72a8d235bdc5215d91891ab549f500acc140a7b589feb5fc973"
+    },
+    "rust_runtime/src/g1/time.rs": {
+      "blob_sha": "0c4ee9194975469abdc8922d7fa8eecb4121f4ec",
+      "sha256": "080884ac9ba84b1e94c74a73c1955a89172671e20cf0c6236c8c4b6138235ac2"
+    },
+    "rust_runtime/src/g1_ark_state.rs": {
+      "blob_sha": "ebe399a1cdb4a522504cdcff943fd56a3d7304c7",
+      "sha256": "a06ee00003dad7b19f748dca7cba27fab8d2672668cf24581d7ceccb5dd6b4e8"
+    },
+    "rust_runtime/src/g1_makeup_claim.rs": {
+      "blob_sha": "272ae8936cea3105e459e24513b5a6972c1eb0c7",
+      "sha256": "3a27cc842b38ddc38bffceae3dcc7c22504806e9c0b60f626e4a1d2302f959ef"
+    },
+    "rust_runtime/src/g1_route_runtime.rs": {
+      "blob_sha": "de7a8d79b2f3663747a3f11c2e7223852443ca7c",
+      "sha256": "c2162d0aa768e642fbb152d693f969db454d59baf19d05ef515f03e34fd15b1e"
+    },
+    "rust_runtime/src/g1_user_journey_tests.rs": {
+      "blob_sha": "376269b8466b9e1807017a233caf3a32da0c7ae1",
+      "sha256": "6316b621fc7a268c9fdd2428e80c0ed3cc998f913c99de9d83c5ed7dcaf5d47d"
+    },
+    "rust_runtime/src/g2_gm_runtime.rs": {
+      "blob_sha": "c43ad66d4f8ab2827ab71c41cd41b198201f8f21",
+      "sha256": "cc60131b12cc835c72125053fc71f51714a4fa14c51ea43e15d996b8eca043d5"
+    },
+    "rust_runtime/src/lib.rs": {
+      "blob_sha": "aa6c112958f8237a4c15e7dc1d1a337e6b947644",
+      "sha256": "52f37afc931bed635d870f47c4f89747e09e1d7fca5534bb5d102426b6fc2d12"
+    },
+    "tests/fixtures/webdemo_godot_visual_baseline.json": {
+      "blob_sha": "f2f8322a0ef4b6c1fc775bae3db38edecbd7dc71",
+      "sha256": "9ae2caa44254aa43a176158efebf1352ee88e6f27a87bf69fe176770e727050e"
+    }
+  }
+}

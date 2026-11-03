@@ -1,8 +1,8 @@
 {
-  "status": "PASS_ISOLATED_CLIENT_FIX_REQUIRED",
-  "at": "2026-11-03T02:43:29.713888+00:00",
+  "status": "PASS_ISOLATED_PATCH_READY_REAL_DEVICE_PENDING",
+  "at": "2026-11-03T03:19:09.330801+00:00",
   "owner": "session45",
-  "runtime_candidate_changed": false,
+  "runtime_candidate_changed": true,
   "production_changed": false,
   "device_changed": false,
   "server_candidate_sha": "856552b942f5f8c2feb08db5949ebe7080eff77f",
@@ -36,6 +36,53 @@
         1
       ],
       "log": "evidence/ark-regression.log"
+    },
+    {
+      "command": "cargo test --offline --locked --manifest-path rust_runtime/Cargo.toml (original exact v376)",
+      "exit": 0,
+      "pass": 164,
+      "fail": 0,
+      "log": "evidence/wallet-rust-baseline.log"
+    },
+    {
+      "command": "cargo test --offline --locked --manifest-path rust_runtime/Cargo.toml wallet_regression -- --test-threads=1 (before fix)",
+      "exit": 101,
+      "pass": 4,
+      "fail": 8,
+      "expected": "TDD RED: real behavioral assertions, not harness syntax failure",
+      "log": "evidence/wallet-rust-red.log"
+    },
+    {
+      "command": "cargo test --offline --locked --manifest-path rust_runtime/Cargo.toml wallet_regression -- --test-threads=1 (first patch)",
+      "exit": 0,
+      "pass": 12,
+      "fail": 0,
+      "note": "Export helper returns without exporting when output env absent; final full run sets env and verifies generated JSON. Final patch also checks missing provenance, temporary files and dangling symlink.",
+      "log": "evidence/wallet-rust-green.log"
+    },
+    {
+      "command": "ARK_WALLET_FIXTURES_OUT=<private>/wallet-rust-projections.json cargo test --offline --locked --manifest-path rust_runtime/Cargo.toml (final patch)",
+      "exit": 0,
+      "pass": 176,
+      "fail": 0,
+      "doc_tests": 0,
+      "log": "evidence/wallet-rust-full-green.log"
+    },
+    {
+      "command": "ARK_WALLET_FIXTURES_IN=<private>/wallet-rust-projections.json node --import tsx --test scripts/audit45-v376-rust-projection.test.ts (fixed server 856552b9)",
+      "exit": 0,
+      "pass": 7,
+      "parent_cases": 1,
+      "child_cases": 6,
+      "fail": 0,
+      "log": "evidence/wallet-rust-http.log",
+      "input": "client-fix/rust-projections.json"
+    },
+    {
+      "command": "git apply --check; git apply; compare tested bytes; git apply --reverse --check; git apply --reverse; compare all original bytes",
+      "exit": 0,
+      "result": "PASS",
+      "evidence": "client-fix/PATCH_VERIFICATION.json"
     }
   ],
   "main_production_sha256": {
@@ -73,21 +120,50 @@
   "not_verified": [
     "installed v376 APK/PCK hashes independently read",
     "historical normal snapshot body/card1/paused persisted values independently reconstructed",
-    "Android Rust/Godot/Launcher fix and regressions",
     "new real-device voice acceptance",
-    "full repository typecheck"
+    "full repository typecheck",
+    "Android ABI cross-build, signed APK/PCK, Godot/Launcher integrated tests and device runtime",
+    "Historical saves already defaulted and persisted by old code cannot recover lost provenance retrospectively"
   ],
   "harness_corrections": [
     "Initial invocation ran from audit worktree rather than candidate server directory; module-resolution failure, no business execution.",
     "First new test file missed a function closing brace; transform failure corrected before executing tests.",
-    "Restart test strengthened to recreate runtime and read via HTTP proxy; final 7/7 run archived."
+    "Restart test strengthened to recreate runtime and read via HTTP proxy; final 7/7 run archived.",
+    "Original await syntax failure archived as evidence/wallet-http-harness-failed.log; retained original private log unchanged.",
+    "Rust export JSON variable named null collided with json! literal syntax; renamed unavailable_wallet before final full run and HTTP verification; no business failure attributed to it."
   ],
-  "source_retrieval_note": "Full Git fetch interrupted; exact-ref GitHub contents for 10 required files and complete 15-file compare established source evidence without using partial pack.",
+  "source_retrieval_note": "Full Git fetch interrupted; exact-ref GitHub contents for 10 required files and complete 15-file compare established source evidence without using partial pack. Follow-up verified full Rust crate plus fixtures (32 files) by exact v376 Git tree/blob hashes; required blobs equal cached v375 bytes, not assumed from version number.",
   "evidence_sha256": {
     "wallet-contract.test.ts": "9fe38f8e88c2c85a7825271caedba3bf8106cf8088b306df23948e1182a9c258",
     "CLIENT_SOURCE.json": "0cd793c8b0512a04ff56b9cd32f0e9aa43e4dc40f0e424bccb654b73d657dd8b",
     "SOURCE_VERIFICATION.json": "969eaeaf22169b8080bfc7e8e3623442d4e7465f63e94444fdb2ebe7e8cf036c",
     "evidence/ark-regression.log": "6bdd17fc091a8cfd8143a77db46effedb050a71d91fe47feff6724adf0f61f86",
-    "evidence/wallet-http-release.log": "53df82e02b54190b556ad83b708526b5d9570940db18e3b6efd09724b123fff5"
+    "evidence/wallet-http-release.log": "53df82e02b54190b556ad83b708526b5d9570940db18e3b6efd09724b123fff5",
+    "ANDROID_HANDOFF.md": "f2b32de1de8965756c83606abd55981a2ef98f8c207720b4c54f651832768417",
+    "MEMORY.md": "679bfdf39de86dd312d3e055b0f564b9ffb08e0e0456753e04d0d7ef58bf5db3",
+    "README.md": "eb202995492606b526423323cb6f0f79e2822ac945f255c85aa326c99d321926",
+    "ROLLBACK.md": "3740738aa4fa0ff6fb94e00579a10888b553d410f7d8f944efa51af172bc711f",
+    "client-fix/CLIENT_CRATE_SOURCE.json": "fd77a274e434b4ac9b663d18cad34dc77a59dd61245af974d3626e5d281778c3",
+    "client-fix/PATCH_VERIFICATION.json": "35678dbb9616ecf09db31cffdfc00ee9720363201cfcd47b1715e1cc1772c552",
+    "client-fix/README.md": "3c6e8a1583df99661226e6a9b471e6ae4d42594127785cf64f4ec0e23843fd48",
+    "client-fix/rust-projection-http.test.ts": "db29c207881fd5d393af95d660b6f672f3ac7a644ad0def2fb438528eff884fd",
+    "client-fix/rust-projections.json": "8b83003aaa700f75c3d5b6cea71a48d4a1ff3ae49bcb1f4ba39fc27bc9d568f7",
+    "client-fix/v376-wallet-known-zero.patch": "131d91ddd04482e9bad4d9234b424fa2af81c7224134eb6935b8b6cd336465ab",
+    "evidence/wallet-http-harness-failed.log": "0997a975504c787407a6c3958b07fb76bbab61a96a3bf6ab9965251e4b72114e",
+    "evidence/wallet-rust-baseline.log": "977369ed5d293ea46c07271c5f56e55c6499c09c3ac77316e48fbaf080ec99e2",
+    "evidence/wallet-rust-full-green.log": "b4822883656cba2a34913ac760b85b12e8c0e0f7bb90e354a92532ee65fa42ba",
+    "evidence/wallet-rust-green.log": "7f32479c6024b650ff42352265b655e5f66859421dd649f1f2ade2de8d9e9f3d",
+    "evidence/wallet-rust-http.log": "ebba407d8838268b351685ecf766a4fea8349e8ae6d911a946713070bf038d84",
+    "evidence/wallet-rust-red.log": "6ba603f0893a4d48c5c3bc66cafda44bb4cef13c41e71666320138acc4d54b2f"
+  },
+  "runtime_candidate_scope": "Client patch artifact only; no server runtime change, Android remote branch write or installation.",
+  "client_patch_sha256": "131d91ddd04482e9bad4d9234b424fa2af81c7224134eb6935b8b6cd336465ab",
+  "rust": {
+    "version": "1.97.1",
+    "host": "aarch64-apple-darwin",
+    "offline_locked": true,
+    "new_dependencies_installed": false,
+    "exact_source_files": 32,
+    "server_source_verified_files": 216
   }
 }

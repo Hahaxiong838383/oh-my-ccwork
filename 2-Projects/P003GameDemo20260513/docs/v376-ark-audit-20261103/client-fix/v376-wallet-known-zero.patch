@@ -1,0 +1,291 @@
+diff --git a/rust_runtime/src/g1_ark_state.rs b/rust_runtime/src/g1_ark_state.rs
+--- a/rust_runtime/src/g1_ark_state.rs
++++ b/rust_runtime/src/g1_ark_state.rs
+@@ -7,8 +7,27 @@
+ const STARDUST: &str = "C-STARDUST-001";
+ const MAKEUP_CARD: &str = "M-CARD-001";
+ 
++// Inspect the persisted representation before serde defaults or migration can
++// erase evidence of an unavailable wallet. A valid sparse map is authoritative
++// for a known save; a missing map or provenance is not a zero balance.
++pub(crate) fn ark_wallet_is_known(raw: &Value) -> bool {
++    raw.get("schema_version").and_then(Value::as_u64)
++        == Some(crate::g1::model::G1_FORMAL_STATE_SCHEMA_VERSION as u64)
++        && matches!(raw.get("ark_source_mode").and_then(Value::as_str), Some("normal" | "gm"))
++        && raw.get("wallet").and_then(Value::as_object).is_some_and(|wallet| {
++            wallet.values().all(|value| value.as_u64().is_some_and(|n| n <= 1_000_000_000))
++        })
++        && serde_json::from_value::<G1FormalState>(raw.clone()).is_ok()
++}
++
++fn wallet_amount(formal: &G1FormalState, known: bool, item: &str) -> Option<i64> {
++    let amount = formal.wallet.get(item).copied().unwrap_or(0);
++    (known && (0..=1_000_000_000).contains(&amount)).then_some(amount)
++}
++
+ impl GameRuntime {
+     pub(crate) fn g1_ark_state_projection(&self) -> Result<Value, String> {
++        let wallet_known = ark_wallet_is_known(&self.snapshot.g1["formal"]);
+         let formal = self.g1_formal_state();
+         let config = self.g1_content_config()?;
+         let progress = self.g1_product_progress(false);
+@@ -17,7 +36,13 @@
+             return Err("ARK_LOGICAL_DAY_UNAVAILABLE".to_string());
+         }
+ 
+-        let source_mode = ark_source_mode(&formal);
++        let source_mode = if ark_source_mode(&formal) == "gm" {
++            "gm"
++        } else if self.snapshot.g1["formal"]["ark_source_mode"] == "normal" {
++            "normal"
++        } else {
++            "unknown"
++        };
+         let timer_state = if !formal.onboarding.completed {
+             "stopped"
+         } else if progress.counting {
+@@ -45,8 +70,8 @@
+             "config_revision": nonempty_or_unknown(&formal.active_config_revision),
+             "source_mode": source_mode,
+             "wallets": {
+-                "family_coin": formal.wallet.get(FAMILY_COIN).copied(),
+-                "stardust": formal.wallet.get(STARDUST).copied(),
++                "family_coin": wallet_amount(&formal, wallet_known, FAMILY_COIN),
++                "stardust": wallet_amount(&formal, wallet_known, STARDUST),
+             },
+             "inventory": {
+                 MAKEUP_CARD: formal.inventory.get(MAKEUP_CARD).map(|entry| entry.quantity),
+@@ -178,3 +203,7 @@
+         "remaining_seconds": Value::Null,
+     })
+ }
++
++#[cfg(test)]
++#[path = "g1_ark_wallet_tests.rs"]
++mod wallet_regression;
+diff --git a/rust_runtime/src/lib.rs b/rust_runtime/src/lib.rs
+--- a/rust_runtime/src/lib.rs
++++ b/rust_runtime/src/lib.rs
+@@ -441,6 +441,8 @@
+ /// the Godot bridge.
+ pub(crate) trait StateStore {
+     fn load(&self) -> Option<PersistedRuntimeState>;
++    // None from load may mean corrupt/unreadable storage, not a new profile.
++    fn is_pristine(&self) -> bool { false }
+     fn commit(&self, state: &PersistedRuntimeState) -> std::io::Result<()>;
+ 
+     fn commit_relaxed(&self, state: &PersistedRuntimeState) -> std::io::Result<()> {
+@@ -500,6 +502,12 @@
+ }
+ 
+ impl StateStore for LocalJsonStateStore {
++    fn is_pristine(&self) -> bool {
++        [&self.path, &backup_path(&self.path), &relaxed_path(&self.path), &self.path.with_extension("tmp")]
++            .iter()
++            .all(|path| matches!(fs::symlink_metadata(path), Err(error) if error.kind() == std::io::ErrorKind::NotFound))
++    }
++
+     fn load(&self) -> Option<PersistedRuntimeState> {
+         read_persisted_state(&relaxed_path(&self.path))
+             .or_else(|| read_persisted_state(&self.path))
+@@ -734,7 +742,15 @@
+                 }
+                 runtime
+             }
+-            None => Self::fixture(),
++            None => {
++                let mut runtime = Self::fixture();
++                if !store.is_pristine() {
++                    let mut formal = runtime.g1_formal_state();
++                    formal.ark_source_mode = "unknown".to_string();
++                    runtime.set_g1_formal_state(&formal);
++                }
++                runtime
++            }
+         }
+     }
+ 
+@@ -3334,6 +3350,8 @@
+ }
+ 
+ fn normalize_g1_state(state: &mut Value, pause_on_restore: bool) {
++    let restored_wallet_unknown = pause_on_restore
++        && !g1_ark_state::ark_wallet_is_known(&state["formal"]);
+     if !state.is_object() {
+         *state = default_g1_state();
+     }
+@@ -3356,6 +3374,9 @@
+         .and_then(|value| serde_json::from_value::<G1FormalState>(value).ok())
+         .unwrap_or_default();
+     formal.normalize();
++    if restored_wallet_unknown && formal.ark_source_mode != "gm" {
++        formal.ark_source_mode = "unknown".to_string();
++    }
+     object.insert(
+         "formal".to_string(),
+         serde_json::to_value(formal).expect("formal state serializes"),
+diff --git a/rust_runtime/src/g1_ark_wallet_tests.rs b/rust_runtime/src/g1_ark_wallet_tests.rs
+new file mode 100644
+--- /dev/null
++++ b/rust_runtime/src/g1_ark_wallet_tests.rs
+@@ -0,0 +1,160 @@
++use super::*;
++use crate::StateStore;
++use std::{fs, path::PathBuf};
++
++const NOW: u64 = 1_793_620_500_000;
++struct Temp(PathBuf);
++impl Temp {
++    fn new() -> Self {
++        let p = std::env::temp_dir().join(format!("p003-wallet-{}-{}", std::process::id(), std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()));
++        fs::create_dir_all(&p).unwrap(); Self(p)
++    }
++    fn file(&self) -> PathBuf { self.0.join("state.json") }
++}
++impl Drop for Temp { fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); } }
++fn command(r: &mut GameRuntime, body: Value) -> Value {
++    let out: Value = serde_json::from_str(&r.handle_json(&body.to_string())).unwrap();
++    assert_eq!(out["ok"], true, "{out}"); out
++}
++fn open(r: &mut GameRuntime) {
++    command(r, json!({"action":"g1.open_experience","idempotency_key":"wallet:open","payload":{"profile_id":"synthetic-wallet","utc_epoch_ms":NOW}}));
++}
++fn configured(mut r: GameRuntime) -> GameRuntime {
++    let config: Value = serde_json::from_str(include_str!("../../godot/assets/g1_formal_content.json")).unwrap();
++    command(&mut r, json!({"action":"g1.config.apply","idempotency_key":"wallet:config","payload":{"config":config}}));
++    open(&mut r); r
++}
++fn fresh() -> GameRuntime { configured(GameRuntime::fixture()) }
++fn query(r: &mut GameRuntime) -> Value { command(r, json!({"action":"g1.ark.query"}))["result"]["data"].clone() }
++fn unavailable(r: &mut GameRuntime) {
++    let out: Value = serde_json::from_str(&r.handle_json(r#"{"action":"g1.ark.query"}"#)).unwrap();
++    if out["ok"] == true {
++        assert!(out["result"]["data"]["wallets"]["family_coin"].is_null(), "{out}");
++        assert!(out["result"]["data"]["wallets"]["stardust"].is_null(), "{out}");
++    }
++}
++
++#[test]
++fn known_new_sparse_wallet_is_zero_without_mutating_game_state() {
++    let mut r = fresh(); let before = r.snapshot();
++    assert_eq!(before.g1["formal"]["wallet"], json!({}));
++    let p = query(&mut r);
++    assert_eq!(p["source_mode"], "normal");
++    assert_eq!(p["wallets"], json!({"family_coin":0,"stardust":0}));
++    assert_eq!(r.snapshot(), before);
++}
++#[test]
++fn nonzero_and_single_sparse_wallet_remain_independent() {
++    let mut r = fresh();
++    r.snapshot.g1["formal"]["wallet"] = json!({"C-FAMILY-001":7,"C-STARDUST-001":13});
++    assert_eq!(query(&mut r)["wallets"], json!({"family_coin":7,"stardust":13}));
++    r.snapshot.g1["formal"]["wallet"] = json!({"C-FAMILY-001":0});
++    assert_eq!(query(&mut r)["wallets"], json!({"family_coin":0,"stardust":0}));
++}
++#[test]
++fn missing_invalid_or_unsupported_formal_is_never_a_known_zero() {
++    for field in ["formal", "wallet", "schema_version", "ark_source_mode"] {
++        let mut r = fresh();
++        if field == "formal" { r.snapshot.g1.as_object_mut().unwrap().remove(field); }
++        else { r.snapshot.g1["formal"].as_object_mut().unwrap().remove(field); }
++        unavailable(&mut r);
++    }
++    for bad in [Value::Null, json!([]), json!({"C-FAMILY-001":"0"}), json!({"C-FAMILY-001":-1}), json!({"C-FAMILY-001":1_000_000_001_i64}), json!({"C-FAMILY-001":1.5})] {
++        let mut r = fresh(); r.snapshot.g1["formal"]["wallet"] = bad; unavailable(&mut r);
++    }
++    let mut r = fresh(); r.snapshot.g1["formal"]["schema_version"] = json!(1); unavailable(&mut r);
++}
++#[test]
++fn unknown_provenance_never_becomes_known_wallet() {
++    let mut r = fresh(); r.snapshot.g1["formal"]["ark_source_mode"] = json!("unknown");
++    r.snapshot.g1["formal"]["wallet"] = json!({"C-FAMILY-001":7}); unavailable(&mut r);
++    assert_eq!(query(&mut r)["source_mode"], "unknown");
++    r.snapshot.g1["formal"].as_object_mut().unwrap().remove("ark_source_mode");
++    assert_eq!(query(&mut r)["source_mode"], "unknown");
++}
++#[test]
++fn valid_legacy_currency_normalizes_once_without_double_credit() {
++    let mut r = fresh(); r.snapshot.g1["formal"]["wallet"] = json!({"C-COIN-001":40,"C-FAMILY-001":7});
++    let before = r.snapshot();
++    for _ in 0..2 { assert_eq!(query(&mut r)["wallets"], json!({"family_coin":47,"stardust":0})); }
++    assert_eq!(r.snapshot(), before);
++    let dir = Temp::new(); r.save(&dir.file()).unwrap();
++    let mut restored = GameRuntime::load_or_fixture(&dir.file());
++    assert_eq!(query(&mut restored)["wallets"]["family_coin"], 47);
++}
++#[test]
++fn restored_missing_wallet_or_provenance_cannot_be_laundered_by_defaults() {
++    for field in ["wallet", "ark_source_mode", "schema_version"] {
++        let dir = Temp::new(); let mut r = fresh();
++        r.snapshot.g1["formal"].as_object_mut().unwrap().remove(field); r.save(&dir.file()).unwrap();
++        let mut restored = GameRuntime::load_or_fixture(&dir.file());
++        unavailable(&mut restored);
++        assert_eq!(query(&mut restored)["source_mode"], "unknown");
++    }
++}
++#[test]
++fn corrupt_existing_store_is_unknown_but_absent_store_is_new() {
++    let dir = Temp::new(); let path = dir.file();
++    let mut new = configured(GameRuntime::load_or_fixture(&path));
++    assert_eq!(query(&mut new)["wallets"]["family_coin"], 0);
++    fs::write(&path, "{broken").unwrap();
++    let mut recovered = configured(GameRuntime::load_or_fixture(&path));
++    unavailable(&mut recovered); assert_eq!(query(&mut recovered)["source_mode"], "unknown");
++    recovered.save(&path).unwrap();
++    let mut again = GameRuntime::load_or_fixture(&path); unavailable(&mut again);
++}
++#[test]
++fn corrupt_relaxed_or_backup_only_store_is_not_a_new_wallet() {
++    for kind in ["backup", "relaxed", "temporary"] {
++        let dir = Temp::new(); let path = dir.file();
++        let artifact = match kind { "backup" => crate::backup_path(&path), "relaxed" => crate::relaxed_path(&path), _ => path.with_extension("tmp") };
++        fs::write(artifact, "{broken").unwrap();
++        let mut r = configured(GameRuntime::load_or_fixture(&path)); unavailable(&mut r);
++    }
++    #[cfg(unix)] {
++        let dir = Temp::new(); let path = dir.file();
++        std::os::unix::fs::symlink(dir.0.join("missing-target"), &path).unwrap();
++        let mut r = configured(GameRuntime::load_or_fixture(&path)); unavailable(&mut r);
++    }
++}
++#[test]
++fn valid_backup_recovers_exact_nonzero_wallet() {
++    let dir = Temp::new(); let path = dir.file(); let mut r = fresh();
++    r.snapshot.g1["formal"]["wallet"] = json!({"C-FAMILY-001":7,"C-STARDUST-001":13});
++    r.save(&path).unwrap(); fs::rename(&path, crate::backup_path(&path)).unwrap(); fs::write(&path, "{broken").unwrap();
++    let mut restored = GameRuntime::load_or_fixture(&path);
++    assert_eq!(query(&mut restored)["wallets"], json!({"family_coin":7,"stardust":13}));
++}
++#[test]
++fn gm_survives_restart_and_only_committed_reset_returns_normal_zero() {
++    let dir = Temp::new(); let path = dir.file(); let mut r = fresh();
++    r.snapshot.g1["formal"]["ark_source_mode"] = json!("gm");
++    r.snapshot.g1["formal"]["wallet"] = json!({"C-FAMILY-001":999}); r.save(&path).unwrap();
++    let mut r = GameRuntime::load_or_fixture(&path); assert_eq!(query(&mut r)["source_mode"], "gm");
++    let result: Value = serde_json::from_str(&r.handle_json_persisted(r#"{"action":"g1.gm.reset_user_data","idempotency_key":"wallet:reset","payload":{}}"#, &path).unwrap()).unwrap();
++    assert_eq!(result["ok"], true); open(&mut r); r.save(&path).unwrap();
++    let mut restored = GameRuntime::load_or_fixture(&path); let p=query(&mut restored);
++    assert_eq!(p["source_mode"], "normal"); assert_eq!(p["wallets"], json!({"family_coin":0,"stardust":0}));
++}
++#[test]
++fn failed_reset_keeps_original_wallet_and_provenance() {
++    struct FailReset(crate::PersistedRuntimeState);
++    impl StateStore for FailReset {
++        fn load(&self)->Option<crate::PersistedRuntimeState>{Some(self.0.clone())}
++        fn commit(&self,_:&crate::PersistedRuntimeState)->std::io::Result<()>{Err(std::io::Error::other("synthetic write failure"))}
++    }
++    let mut r=fresh(); r.snapshot.g1["formal"]["ark_source_mode"]=json!("gm");r.snapshot.g1["formal"]["wallet"]=json!({"C-FAMILY-001":999});
++    let before=r.snapshot();let store=FailReset(crate::PersistedRuntimeState{schema_version:crate::RUNTIME_STATE_SCHEMA_VERSION,snapshot:before.clone(),idempotency:r.idempotency.clone()});
++    assert!(r.handle_json_with_store(r#"{"action":"g1.gm.reset_user_data","idempotency_key":"wallet:failed-reset","payload":{}}"#,&store).is_err());
++    assert_eq!(r.snapshot(),before);assert_eq!(query(&mut r)["source_mode"],"gm");
++}
++#[test]
++fn export_real_projection_json_for_isolated_server_http() {
++    let Some(output)=std::env::var_os("ARK_WALLET_FIXTURES_OUT") else{return};
++    let mut r=fresh(); let zero=query(&mut r);
++    r.snapshot.g1["formal"]["wallet"]=json!({"C-FAMILY-001":7,"C-STARDUST-001":13});let nonzero=query(&mut r);
++    r.snapshot.g1["formal"]["ark_source_mode"]=json!("gm");let gm=query(&mut r);
++    r.snapshot.g1["formal"]["ark_source_mode"]=json!("unknown");let unknown=query(&mut r);
++    let mut r=fresh();r.snapshot.g1["formal"].as_object_mut().unwrap().remove("wallet");let unavailable_wallet=query(&mut r);
++    fs::write(output,serde_json::to_vec_pretty(&json!({"zero":zero,"nonzero":nonzero,"gm":gm,"unknown":unknown,"null":unavailable_wallet})).unwrap()).unwrap();
++}
