@@ -1,0 +1,203 @@
+{
+  "checked_at": "2026-11-03T18:54:30.574693+08:00",
+  "brain_baseline": "32d55ceb4e9c4ce907c3e9599e02281f41c25d41",
+  "branch": "codex/p003-listening-brain-20261030",
+  "android_commit": "6558e03ee9fda9f77d8a1f6209eae49124a55526",
+  "worker_candidate": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+  "worker_runtime_source": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+  "business_code_changed": false,
+  "production_modified_by_38": false,
+  "contracts": {
+    "p003-listening-mode-v1.json": "c055866fad0e9b69cdd75c526eeb2fee6ad97899641d792be63037a064bf2411",
+    "p003-listening-http-v1.json": "86825d6281da13fdf17c32b04d5c9dcb4edf71ceb69257d839aacb9df0a99f1e",
+    "p003-listening-http-v1.fixtures.json": "c58dd98ade3329d04e5c9b7622e7e4668c33483b38cd804f37257e5baa6d415b"
+  },
+  "android_source_inputs": [
+    {
+      "path": "/Users/fu-121/.local/state/p003-v380-coordination-20261103/evidence-38/client-source/android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/ListeningVoiceControl.kt",
+      "sha256": "8d53604cf4a3dc5227b53397c1bfe6201c7e6f463b1103ca5390a64e72be8f4e"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v380-coordination-20261103/evidence-38/client-source/android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/VoiceControlCodec.kt",
+      "sha256": "b0f6418e7d03437d3626addf78a70efb9348323b25d1a5aaf952df5e02a4442f"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v380-coordination-20261103/evidence-38/client-source/android_injection/livekit_sdk_probe/payload/src/test/java/com/futurus/p003/launcher/voice/livekit/ListeningVoiceControlTest.kt",
+      "sha256": "f9715d167cd749a49ef487264736ee70721ec5f61a5f559d0a8cc60409563c1f"
+    }
+  ],
+  "harness_sources": {
+    "V380RtcReplay.kt": "cf0445a909043125ab797c6cf7a0263e30a79c55d2ea76440edeb3b33c827bcf",
+    "run_jvm.py": "8130959d94ed477b25ee0cdace73a484335f178d3fe19c2f15397f907edc90db",
+    "V380ExitConsumerReviewTest.kt": "b8e24ad5d3239835775dc51269b78248f8c5c5a64e1b06663740aceced0f58d9"
+  },
+  "jvm_unit_tests": {
+    "passed": 14,
+    "failed": 0,
+    "log_sha256": "a26a8a2a237adffc7aba10c5b71c9d565df93f240ea8359e4455044b27a20d9c"
+  },
+  "rtc_replays": [
+    {
+      "scenario": "normal",
+      "input_sha256": "5bfb9edfc73925c7d1a09badb1f23faf04e005ae6d1384722aa05e2799b2e802",
+      "log_sha256": "96649e36e6de8564fd4327daef3f7d525c9ff58829a8067bb81c45946e8e33d6",
+      "exit_code": 0,
+      "consumer": {
+        "pass": true,
+        "trace": "p0-39-8e1a289a-b0f9-4933-8b67-f749ea694a45",
+        "received_controls_replayed": 9,
+        "controller_generated_commands": 3,
+        "normal_exit_consumed": true,
+        "disconnect_reset_observed": 0,
+        "probe_query_sequence_slots": 2,
+        "active": false,
+        "states": "PREPARING:enter_proposal;LISTENING:enter_completed;PREPARING:exit_proposal;NORMAL:exit_completed",
+        "recoveries": "",
+        "limits": "recorded packet order, not realtime timers/audio/UI; trust verified separately; probe query slots reserved; reset calls outer disconnected path"
+      }
+    },
+    {
+      "scenario": "missing_ready",
+      "input_sha256": "7422de9303c1e636497430f779f49bc025648033809c81e4fd6e6ecc4c4b9bda",
+      "log_sha256": "4c6842e940463a335d2933ee0b5d62de68bc6e654f61e492f5d29f3ba61368df",
+      "exit_code": 0,
+      "consumer": {
+        "pass": true,
+        "trace": "p0-39-991f0d70-9efc-476f-b738-6a46b3fba62e",
+        "received_controls_replayed": 3,
+        "controller_generated_commands": 2,
+        "normal_exit_consumed": false,
+        "disconnect_reset_observed": 1,
+        "probe_query_sequence_slots": 1,
+        "active": false,
+        "states": "PREPARING:enter_proposal",
+        "recoveries": "",
+        "limits": "recorded packet order, not realtime timers/audio/UI; trust verified separately; probe query slots reserved; reset calls outer disconnected path"
+      }
+    },
+    {
+      "scenario": "lease_timeout",
+      "input_sha256": "02be5c7023445a2e210bed53e265b12343edeba86b5dea7e8cbdd6bad3474e73",
+      "log_sha256": "b99b618908b506c4d5803f616f25fb09c3737d49eb863634105a63d83dfa4a76",
+      "exit_code": 0,
+      "consumer": {
+        "pass": true,
+        "trace": "p0-39-6aec4572-8789-455c-adf3-a6d0c895a4bf",
+        "received_controls_replayed": 5,
+        "controller_generated_commands": 2,
+        "normal_exit_consumed": false,
+        "disconnect_reset_observed": 1,
+        "probe_query_sequence_slots": 1,
+        "active": false,
+        "states": "PREPARING:enter_proposal;LISTENING:enter_completed",
+        "recoveries": "",
+        "limits": "recorded packet order, not realtime timers/audio/UI; trust verified separately; probe query slots reserved; reset calls outer disconnected path"
+      }
+    },
+    {
+      "scenario": "revoke",
+      "input_sha256": "fc1de40a6c902005ec182afe45a4a89964267e7ab8f40d992bc9d3b924387f08",
+      "log_sha256": "e98f7eb3ae5b1388e21a424bb078db800b65201a65093bcf33da045764f1b553",
+      "exit_code": 0,
+      "consumer": {
+        "pass": true,
+        "trace": "p0-39-7518c979-d5f9-4784-8dd3-21bbc68a9179",
+        "received_controls_replayed": 5,
+        "controller_generated_commands": 2,
+        "normal_exit_consumed": false,
+        "disconnect_reset_observed": 1,
+        "probe_query_sequence_slots": 1,
+        "active": false,
+        "states": "PREPARING:enter_proposal;LISTENING:enter_completed",
+        "recoveries": "",
+        "limits": "recorded packet order, not realtime timers/audio/UI; trust verified separately; probe query slots reserved; reset calls outer disconnected path"
+      }
+    },
+    {
+      "scenario": "barge",
+      "input_sha256": "3f03ddcdc79571e168a01b0c1a9d6c2a44cf52a0f2cf9e3b2f3b25954cfca89b",
+      "log_sha256": "435ff2f65f89514bbd8f0de0ff3f132143f2185f2edc02d8fe8d247a3d932426",
+      "exit_code": 0,
+      "consumer": {
+        "pass": true,
+        "trace": "p0-39-73b9ea0b-a33a-4af3-90c6-59716ea20bac",
+        "received_controls_replayed": 9,
+        "controller_generated_commands": 3,
+        "normal_exit_consumed": true,
+        "disconnect_reset_observed": 0,
+        "probe_query_sequence_slots": 2,
+        "active": false,
+        "states": "PREPARING:enter_proposal;LISTENING:enter_completed;PREPARING:exit_proposal;NORMAL:exit_completed",
+        "recoveries": "",
+        "limits": "recorded packet order, not realtime timers/audio/UI; trust verified separately; probe query slots reserved; reset calls outer disconnected path"
+      }
+    },
+    {
+      "scenario": "proposal_timeout",
+      "input_sha256": "a8f87c9dbf694e04b3d1f9d85d65c49f15052cc3671d7d12901f445b231ce591",
+      "log_sha256": "e48358668debbfcd14934b5460ee662ead29ef3641d9a61c3efa1c31c3bc0859",
+      "exit_code": 0,
+      "consumer": {
+        "pass": true,
+        "trace": "p0-39-a3b0320b-116c-4c78-82a6-de482cb9eae1",
+        "received_controls_replayed": 1,
+        "controller_generated_commands": 1,
+        "normal_exit_consumed": false,
+        "disconnect_reset_observed": 1,
+        "probe_query_sequence_slots": 0,
+        "intentional_transport_drop_scenario": true,
+        "active": false,
+        "states": "PREPARING:enter_proposal",
+        "recoveries": "",
+        "limits": "recorded packet order, not realtime timers/audio/UI; trust verified separately; probe query slots reserved; reset calls outer disconnected path"
+      }
+    }
+  ],
+  "worker_independent_review": {
+    "commit": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+    "existing_tests_exit": 0,
+    "independent_missing_ready_guard_exit": 0,
+    "source_sha256": {
+      "rtc-probe.py": "101f649011fdb3a7633857d39f7cee4c847b7fef4a765566281a14c357dfb641",
+      "v380_consumer.py": "bc1307cc16713ef44b72dbf32bcd2e4f6dcf981e5e455e82cca418be03de5a6f",
+      "test_v380_consumer.py": "558922e938dc10a6e75cd6d4f57a80d1cd3eec23577777c03d989b7f904275c6",
+      "test_rtc_probe.py": "d8baa9df52fc1439085dd5231a88dad3f931ac4f48ad54d750e1efd646cdc234",
+      "prepare_hotword_snapshot.py": "8736dd5f6437ef191af73b3c25983727908fec5482402bf4fb09a2708c2a4a6a",
+      "test_prepare_hotword_snapshot.py": "9d39b9e2a144c9fa521596d16d4fe24a883a092ef56445e54fe267264160da4e"
+    },
+    "runtime_probe_equal": true
+  },
+  "worker_execution_crosscheck": {
+    "candidate": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+    "linux_sources_compared_to_git": 90,
+    "cargo_results": {
+      "passed": 611,
+      "ignored": 3,
+      "explicit_context_cases": 4
+    },
+    "cargo_log_sha256": "28e59f8066e3946995567c1e423ed355e507319007a3883e5a3ec40397b3f694",
+    "brain_joint_inputs_rehashed": 33,
+    "http_joint_passed": 2,
+    "joint_log_sha256": "2757a01fa1bec38cff33c2360dffa11cc20202ee624b746f9bfda9c591e23515",
+    "source": "39 execution logs independently parsed, source inputs compared; not rerun by38"
+  },
+  "publish_script_review": {
+    "checked_at": "2026-11-03T18:51:39.225945+08:00",
+    "script_sha256": {
+      "publish-hotwords-prepared.py": "8368912c321478daa86496a4a706afacac7dd3d15b9b1cc4c3623bb2cdb653a4",
+      "activate-hotword-canaries-body.py": "c0d33df6c374343b4516ff212b1574f8ebce8dae8d2096f3a305529451d98f6e"
+    },
+    "tests_exit": 0,
+    "tests": 5,
+    "log_sha256": "a4e0b64dd00841b6dbb95db414a88f1152da99fa27f1ea07856f80c20776981a",
+    "production_executed": false,
+    "result": "PASS prepared-script static review and isolated stub recovery tests; runtime publication verification remains main13 responsibility"
+  },
+  "limits": [
+    "no real Android UI or human acoustic pass",
+    "historical issue trace absent; expired authority rows cascade away",
+    "replay uses recorded order, not wall time; trust verified separately",
+    "intentional transport loss is a test injection",
+    "production deployment and isolation cleanup verification belong to13/39"
+  ]
+}
