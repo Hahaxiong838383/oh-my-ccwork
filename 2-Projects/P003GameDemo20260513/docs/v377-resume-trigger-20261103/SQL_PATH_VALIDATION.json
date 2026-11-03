@@ -1,0 +1,26 @@
+{
+  "environment": "local sqlite memory only",
+  "production_writes": false,
+  "checks": [
+    {
+      "field": "content_version",
+      "correct_path_pass": true,
+      "old_path_reproduces_error": true
+    },
+    {
+      "field": "app_version",
+      "correct_path_pass": true,
+      "old_path_reproduces_error": true
+    },
+    {
+      "field": "period_start_ms",
+      "correct_path_pass": true,
+      "old_path_reproduces_error": true
+    },
+    {
+      "field": "period_end_ms",
+      "correct_path_pass": true,
+      "old_path_reproduces_error": true
+    }
+  ]
+}

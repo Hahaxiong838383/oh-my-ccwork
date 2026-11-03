@@ -1,0 +1,17 @@
+{
+  "AUDIT_ROLLBACK.md": "38a878fb81b84b98bfddeb931af496b5dda6a664ae2a75a5eb2e4a5b4d96dc58",
+  "FALSE-READBACK-48.json": "2fe4bc26b6605c95071ad8abe6a2946de766148d0d9eab4f81274bc97a5c198a",
+  "P003_V377_RESUME_TRIGGER_RECEIPT_20261103.md": "3501c92bfb2e76b5fa2404fef81a7b27cdbb60ca33c9d643ede19b295fe17e06",
+  "README.md": "f09034b11f1670f077d5df45fdf5b49bdbe039034cc64bd2ca9cae63729f8a81",
+  "REAL_HTTP_ADDENDUM.md": "bb9b2a57299463d4af78fde8c60f768d775390196b33d70488e80836c5158516",
+  "SQL_PATH_VALIDATION.json": "d1a4d685fa734981909bb5a177c01f7f97f81c2938674ccd28f72db5fc357586",
+  "TRUE-READBACK-48.json": "5dc4f71c0dd43af954be0daf038d4e1e5dfc58b2fe7fe8fdc1603ebb51ca7933",
+  "archive-day-query-corrected-48.json": "43a5158aec71099729803c480e19f0b5f222217dd88db2904f6f7300bb3db296",
+  "client-false-ack.json": "2e84d81a643e134e81743b6fdcc85b4e364d4aab8276c304c714f072e4b218e3",
+  "client-source-sha.json": "26f353db8331ad15755ba59e05e09d342c9b065493488bd3ace33896a7b9f052",
+  "false-receipt.json": "5ff77c86ca3626608df3a963090c8a77639c52fffede2cd16b8528f63a28b7e6",
+  "reconcile-after-true-initial.json": "4deb2f226ad8b49b3679d943fc9d85ea97a7ec48316ef0572f1eb9ced78ac864",
+  "reconcile_day_readonly.py": "eb572e831191d011168c5591f19af965124702b7e17d50c78cdf587984916dca",
+  "source-check-48.json": "fa13fa4dddd75d714edf2a5a246a6adf7df9f30f1e97c62dbe38ef6e4348c970",
+  "true-receipt.json": "7adb2ca0c0d88925c0158b5c3d03e29cb31d768e9bc7f228551c00a9f27aa58d"
+}

@@ -1,0 +1,32 @@
+{
+  "checked_at": "2026-11-03T13:41:52.208077+08:00",
+  "device_tail": "03800006",
+  "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "window_start_ms": 1793679950775,
+  "query_start_ms": 1793679950775,
+  "date_cst": "2026-11-03",
+  "authorization_expires_ms": 1794285579162,
+  "query_end_ms": 1793684512207,
+  "read_only": true,
+  "summary": [
+    {
+      "attempts": 0,
+      "accepted": 0,
+      "duplicated": 0,
+      "rejected": 0
+    }
+  ],
+  "batches": [],
+  "batches_truncated": false,
+  "settlement": [],
+  "payload_by_batch": [],
+  "tiers": [],
+  "samples": [],
+  "aggregate_periods": [],
+  "usage": [],
+  "has_real_window_traffic": false,
+  "interpretation": "Nonzero actual client traffic and client-side settlement required; empty equality is not PASS.",
+  "settlement_count_matches_attempt_totals": true,
+  "payload_evidence_may_be_pruned": false,
+  "accepted_payload_count_matches": true
+}

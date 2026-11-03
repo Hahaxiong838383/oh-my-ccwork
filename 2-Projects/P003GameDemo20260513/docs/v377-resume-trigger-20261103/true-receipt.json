@@ -1,0 +1,56 @@
+{
+  "status": "TRUE_SAVED_WAIT_REAL_HTTP_AND_CLIENT_SETTLEMENT",
+  "true_saved_at_ms": 1793684441495,
+  "operation_started_at_ms": 1793684441488,
+  "true_revision": "cfg-132",
+  "policy_revision": 3,
+  "sn_suffix": "03800006",
+  "analytics": {
+    "event_upload_enabled": true,
+    "daily_upload_hour_cst": 23,
+    "tiering_enabled": true,
+    "aggregate_upload_enabled": true,
+    "aggregate_period_days": 7,
+    "aggregate_retention_days": 90,
+    "aggregate_max_buckets": 2048,
+    "on_demand_capture_enabled": true,
+    "on_demand_upload_enabled": true,
+    "on_demand_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+    "on_demand_retention_days": 3,
+    "on_demand_max_events": 1000,
+    "on_demand_max_bytes": 2097152,
+    "request_gzip_enabled": true
+  },
+  "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "request_expires_at_ms": 1794285579162,
+  "request_max_events": 1000,
+  "lookback_days": 3,
+  "only_value_change": [
+    {
+      "scope_suffix": "03800006",
+      "key": "analytics.event_upload_enabled",
+      "before": "false",
+      "after": "true"
+    }
+  ],
+  "standard_api_metadata_refreshed_rows": 36,
+  "other_device_effective_values_unchanged": true,
+  "ark_grants_unchanged": true,
+  "services_unchanged": true,
+  "server_public_get_verified": true,
+  "client_false_applied_reported": true,
+  "client_ack": {
+    "sn_suffix": "03800006",
+    "false_revision": "cfg-96",
+    "analytics_enabled": false,
+    "applied_cst_start": "2026-11-03T13:35:38.739+08:00",
+    "applied_cst_end": "2026-11-03T13:35:38.744+08:00",
+    "evidence": "用户转述端侧确认：cfg-96 已应用；analytics_config enabled=false；false 生效后没有出现上传尝试，可以继续恢复 true。",
+    "evidence_source": "current user message",
+    "verification_level": "client_reported_not_independent_device_log",
+    "recorded_at": "2026-11-03T05:40:39.717150+00:00"
+  },
+  "true_performed": true,
+  "client_true_applied": false,
+  "checked_at_ms": 1793684441690
+}

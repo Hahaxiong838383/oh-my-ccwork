@@ -1,0 +1,11 @@
+{
+  "sn_suffix": "03800006",
+  "false_revision": "cfg-96",
+  "analytics_enabled": false,
+  "applied_cst_start": "2026-11-03T13:35:38.739+08:00",
+  "applied_cst_end": "2026-11-03T13:35:38.744+08:00",
+  "evidence": "用户转述端侧确认：cfg-96 已应用；analytics_config enabled=false；false 生效后没有出现上传尝试，可以继续恢复 true。",
+  "evidence_source": "current user message",
+  "verification_level": "client_reported_not_independent_device_log",
+  "recorded_at": "2026-11-03T05:40:39.717150+00:00"
+}

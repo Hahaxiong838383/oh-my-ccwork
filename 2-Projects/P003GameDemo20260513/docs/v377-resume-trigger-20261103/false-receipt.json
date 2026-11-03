@@ -1,0 +1,44 @@
+{
+  "status": "FALSE_SAVED_WAIT_CLIENT_APPLIED_ACK",
+  "false_saved_at_ms": 1793683795203,
+  "operation_started_at_ms": 1793683795196,
+  "false_revision": "cfg-96",
+  "policy_revision": 2,
+  "sn_suffix": "03800006",
+  "analytics": {
+    "event_upload_enabled": false,
+    "daily_upload_hour_cst": 23,
+    "tiering_enabled": true,
+    "aggregate_upload_enabled": true,
+    "aggregate_period_days": 7,
+    "aggregate_retention_days": 90,
+    "aggregate_max_buckets": 2048,
+    "on_demand_capture_enabled": true,
+    "on_demand_upload_enabled": true,
+    "on_demand_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+    "on_demand_retention_days": 3,
+    "on_demand_max_events": 1000,
+    "on_demand_max_bytes": 2097152,
+    "request_gzip_enabled": true
+  },
+  "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "request_expires_at_ms": 1794285579162,
+  "request_max_events": 1000,
+  "lookback_days": 3,
+  "only_value_change": [
+    {
+      "scope_suffix": "03800006",
+      "key": "analytics.event_upload_enabled",
+      "before": "true",
+      "after": "false"
+    }
+  ],
+  "standard_api_metadata_refreshed_rows": 36,
+  "other_device_effective_values_unchanged": true,
+  "ark_grants_unchanged": true,
+  "services_unchanged": true,
+  "server_public_get_verified": true,
+  "client_false_applied": false,
+  "true_performed": false,
+  "checked_at_ms": 1793683795397
+}

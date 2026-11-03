@@ -1,0 +1,48 @@
+{
+  "checked_at": "2026-11-03T13:40:52.893621+08:00",
+  "query_checked_at": "2026-11-03T13:40:52.868219+08:00",
+  "verdict": "PASS_SERVER_TRUE_READBACK_ONLY",
+  "revision": "cfg-132",
+  "policy_revision": 3,
+  "master_enabled": true,
+  "effective_enabled": true,
+  "allowlist_tails": [
+    "03800006"
+  ],
+  "daily_hour_cst": 23,
+  "value_changes": [
+    {
+      "scope_tail": "03800006",
+      "key": "analytics.event_upload_enabled",
+      "before": "false",
+      "after": "true"
+    }
+  ],
+  "metadata_refreshed_rows": 36,
+  "diagnostic_request_unchanged": true,
+  "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "expiry_ms": 1794285579162,
+  "quota": 1000,
+  "lookback_days": 3,
+  "post_true_batches": [],
+  "post_true_attempts": 0,
+  "whole_window_summary": [
+    {
+      "attempts": 0,
+      "accepted": 0,
+      "duplicated": 0,
+      "rejected": 0
+    }
+  ],
+  "diagnostic_usage": [],
+  "client_false_evidence": "user-relayed client report; not independently collected device log",
+  "client_true_applied": "NOT_CONFIRMED",
+  "device_end_to_end_verdict": "PENDING_REAL_HTTP_AND_CLIENT_SETTLEMENT",
+  "production_write_by_48": false,
+  "evidence_sha256": {
+    "actual-true-read-48.json": "a5ed61e2aca0a1b24ddd2dd994a44f54d5699c1c755c202fa51c68aeeb24c9d3",
+    "true-day-query-48.json": "ab1be584fbd13cbea224d9f9de1449e3a1f108c16bc4273d6edbeed38794eeb7",
+    "true-receipt.json": "2677f560b53c1ec00e63e6c39a9cf1cc2e13b6f79aa5a88419b22182b596ecd6",
+    "client-false-ack.json": "2e84d81a643e134e81743b6fdcc85b4e364d4aab8276c304c714f072e4b218e3"
+  }
+}

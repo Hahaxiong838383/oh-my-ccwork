@@ -1,0 +1,57 @@
+{
+  "checked_at": "2026-11-03T13:33:22.236482+08:00",
+  "operation_saved_at_ms": 1793683795203,
+  "verification": "PASS_SERVER_FALSE_READBACK_ONLY",
+  "actual_method": "standard analytics control API; target-only proposal NOT executed",
+  "revision": "cfg-96",
+  "policy_revision": 2,
+  "master_enabled": false,
+  "effective_enabled": false,
+  "allowlist_tails": [
+    "03800006"
+  ],
+  "target_upload_enabled": false,
+  "daily_hour_cst": 23,
+  "diagnostic_request": {
+    "id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+    "created_at_ms": 1793679950775,
+    "expires_at_ms": 1794285579162,
+    "revoked_at_ms": null,
+    "allowed_event_names_json": "[\"app.lifecycle_changed\",\"g1.screen_viewed\",\"g1.semantic_interaction\",\"g1.runtime_command_completed\",\"g1.progress_checkpoint\",\"settings.opened\",\"settings.closed\",\"settings.page_viewed\",\"settings.value_changed\",\"network.connectivity_changed\",\"network.provisioning_state_changed\",\"voice.session_state_changed\",\"app.bridge_ready\",\"g1.route_state_loaded\"]",
+    "max_events": 1000,
+    "lookback_days": 3,
+    "status_at_read": "active"
+  },
+  "diagnostic_request_unchanged": true,
+  "usage_unchanged": true,
+  "existing_value_changes": [
+    {
+      "scope_tail": "03800006",
+      "key": "analytics.event_upload_enabled",
+      "before": "true",
+      "after": "false"
+    }
+  ],
+  "new_disabled_defaults_since_132941": [
+    {
+      "scope_tail": "02000060",
+      "key": "analytics.daily_upload_hour_cst",
+      "before": null,
+      "after": "23"
+    },
+    {
+      "scope_tail": "02000060",
+      "key": "analytics.event_upload_enabled",
+      "before": null,
+      "after": "false"
+    }
+  ],
+  "metadata_refreshed_rows": 36,
+  "other_device_effective_values_unchanged": true,
+  "key_source_hashes_unchanged": true,
+  "ready": true,
+  "client_false_applied": "NOT_CONFIRMED_WAIT_DEVICE_ACK",
+  "true_performed_by_48": false,
+  "production_mutations_by_48": false,
+  "evidence_sha256": "2767ee17db96bad6a4ddcc4e67af6b55264974ad903a119ccd1c523d9fcc9417"
+}

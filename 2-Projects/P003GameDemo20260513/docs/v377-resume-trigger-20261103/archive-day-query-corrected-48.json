@@ -1,0 +1,365 @@
+{
+  "checked_at": "2026-11-03T13:44:09.458933+08:00",
+  "device_tail": "03800006",
+  "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "window_start_ms": 1793679950775,
+  "query_start_ms": 1793679950775,
+  "date_cst": "2026-11-03",
+  "authorization_expires_ms": 1794285579162,
+  "query_end_ms": 1793684649458,
+  "read_only": true,
+  "summary": [
+    {
+      "attempts": 2,
+      "accepted": 252,
+      "duplicated": 0,
+      "rejected": 0
+    }
+  ],
+  "batches": [
+    {
+      "attempt_id": "9f829919-f6de-42f8-8b00-6dca8008330c",
+      "http_rid": "ana-03800006-b760f4fa-9",
+      "batch_id": "analytics_271",
+      "received_at_ms": 1793684512333,
+      "sent_at_ms": 1793684511592,
+      "accepted": 200,
+      "duplicated": 0,
+      "rejected": 0,
+      "http_status": 200,
+      "content_version": "builtin",
+      "app_version": null,
+      "encoding": "gzip",
+      "wire_bytes": 5260,
+      "inflated_bytes": 79284
+    },
+    {
+      "attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561",
+      "http_rid": "ana-03800006-b760f4fa-10",
+      "batch_id": "analytics_272",
+      "received_at_ms": 1793684515135,
+      "sent_at_ms": 1793684514411,
+      "accepted": 52,
+      "duplicated": 0,
+      "rejected": 0,
+      "http_status": 200,
+      "content_version": "builtin",
+      "app_version": null,
+      "encoding": "gzip",
+      "wire_bytes": 2936,
+      "inflated_bytes": 25724
+    }
+  ],
+  "batches_truncated": false,
+  "settlement": [
+    {
+      "outcome": "accepted",
+      "reason": null,
+      "n": 252
+    }
+  ],
+  "payload_by_batch": [
+    {
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561",
+      "tier": "diagnostic",
+      "records": 26
+    },
+    {
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561",
+      "tier": "raw",
+      "records": 26
+    },
+    {
+      "batch_attempt_id": "9f829919-f6de-42f8-8b00-6dca8008330c",
+      "tier": "raw",
+      "records": 200
+    }
+  ],
+  "tiers": [
+    {
+      "tier": "diagnostic",
+      "source_event_name": "g1.progress_checkpoint",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 3,
+      "source_events": 3
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "g1.runtime_command_completed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 5,
+      "source_events": 5
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "g1.screen_viewed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 4,
+      "source_events": 4
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "g1.semantic_interaction",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 5,
+      "source_events": 5
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "network.provisioning_state_changed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 2,
+      "source_events": 2
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "settings.closed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 1,
+      "source_events": 1
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "settings.opened",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 1,
+      "source_events": 1
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "settings.value_changed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 1,
+      "source_events": 1
+    },
+    {
+      "tier": "diagnostic",
+      "source_event_name": "voice.session_state_changed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "records": 4,
+      "source_events": 4
+    }
+  ],
+  "samples": [
+    {
+      "client_event_id": "g2diag-b2310e2e1abfd35303b2d4c8544ee38a",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "network.provisioning_state_changed",
+      "occurred_at_ms": 1793671620831,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-7df9286ef6981bcd4ce03e10cd430bed",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "network.provisioning_state_changed",
+      "occurred_at_ms": 1793671623382,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-528f9fd87098c142a229f04c43a74fef",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.runtime_command_completed",
+      "occurred_at_ms": 1793671756664,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-c6d4a1b8d811a4d94d2fc2c30010e85e",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.semantic_interaction",
+      "occurred_at_ms": 1793671757322,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-78c30d927ed03b0db71fe6b3a1d1fc86",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.runtime_command_completed",
+      "occurred_at_ms": 1793671759991,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-ce710a85d4760c4e0e858f9137cad1e3",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.progress_checkpoint",
+      "occurred_at_ms": 1793671785888,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-56b5fdfccc906693272d0002c81d7721",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.runtime_command_completed",
+      "occurred_at_ms": 1793671798515,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-cb9fc8db394d9d0eed0f3e43e4d6da14",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.semantic_interaction",
+      "occurred_at_ms": 1793671799475,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-6e3e66c220d3dab0fd87d027808cad15",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.screen_viewed",
+      "occurred_at_ms": 1793671807600,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-535379364fc65eb3e7401fbdf54f103f",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.screen_viewed",
+      "occurred_at_ms": 1793671808002,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-76e4a4f86411c9bcad3357523c9404a0",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.screen_viewed",
+      "occurred_at_ms": 1793671813033,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-a7976bd0cf2b14390614faafbae47c06",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.screen_viewed",
+      "occurred_at_ms": 1793671813861,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-75871b883e0dd8ae6fa778bd5f085eeb",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "settings.opened",
+      "occurred_at_ms": 1793671815705,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-e79b9b3de6006cb711ae636133f9ff97",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "settings.value_changed",
+      "occurred_at_ms": 1793671817419,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-7310771ddb31158af695bae06274bbfb",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "settings.closed",
+      "occurred_at_ms": 1793671817546,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-ab174be94f2a7920ca6f09da86c564a8",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.semantic_interaction",
+      "occurred_at_ms": 1793671822064,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-f71506ea161b2d5bbe7be83dbfce009f",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.semantic_interaction",
+      "occurred_at_ms": 1793671823762,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-5247f201d2ee76bf4c27f341e8cff24e",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "voice.session_state_changed",
+      "occurred_at_ms": 1793671906532,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-7f8df9aa83b72fbd880c71f72c260031",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.runtime_command_completed",
+      "occurred_at_ms": 1793671907759,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-92202ffc6814360277c513fba0cf5080",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.semantic_interaction",
+      "occurred_at_ms": 1793671908357,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-cbe729d951789eafc60d5df6a5bbb1d5",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "voice.session_state_changed",
+      "occurred_at_ms": 1793671908470,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-e29ba8a61be96c7c994c15beaf8d45b6",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "voice.session_state_changed",
+      "occurred_at_ms": 1793671909661,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-b1490acc70a439b18e7e50b4dad2c287",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.progress_checkpoint",
+      "occurred_at_ms": 1793672213883,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-57a8101c26178417b47919293c9f2c4b",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.progress_checkpoint",
+      "occurred_at_ms": 1793672655832,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-33578a60a68c35f0645fb62f5a10e169",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "g1.runtime_command_completed",
+      "occurred_at_ms": 1793677886965,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    },
+    {
+      "client_event_id": "g2diag-92e234d34c9a737e0dd2e4bbe5a13195",
+      "diagnostic_request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "source_event_name": "voice.session_state_changed",
+      "occurred_at_ms": 1793677888052,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    }
+  ],
+  "aggregate_periods": [],
+  "usage": [
+    {
+      "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "accepted": 26
+    }
+  ],
+  "has_real_window_traffic": true,
+  "interpretation": "Nonzero actual client traffic and client-side settlement required; empty equality is not PASS.",
+  "settlement_count_matches_attempt_totals": true,
+  "payload_evidence_may_be_pruned": false,
+  "accepted_payload_count_matches": true
+}

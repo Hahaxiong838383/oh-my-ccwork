@@ -1,0 +1,7 @@
+{
+  "src/routes/telemetry.ts": true,
+  "src/routes/diagnostics.ts": true,
+  "src/routes/device-config.ts": true,
+  "src/config-store.ts": true,
+  "src/analytics/control-route.ts": true
+}
