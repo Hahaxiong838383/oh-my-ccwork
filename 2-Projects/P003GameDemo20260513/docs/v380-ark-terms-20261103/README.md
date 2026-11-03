@@ -8,6 +8,8 @@
 - 18:23普通与倾听Brain的9份模块逐文件hash等于已提交 `856552b942f5f8c2feb08db5949ebe7080eff77f`，见SERVER_SOURCE.json。当天短信等其他模块未据此宣称整树相同；旧P2目录差异不是本轮修改目标。
 - 自检在既有私有固定856归档执行 `node --import tsx --test scripts/audit45-v380-terms.test.ts`，Node24.19.0，9/9通过，无新依赖、无网络/外部模型/真实设备实验。测试文件见terms-contract.test.ts，输出为terms-contract.log。
 
+后续已独立复核39受控ASR结果与发布差分，见 [ASR_REVIEW.md](ASR_REVIEW.md)：两正确词改善成立，但实际合成转写仍可丢库存意图，不能宣称整句或真人通过。
+
 ## 历史与当前事实分层
 
 附件17:49–17:53只记11次模拟唤醒/Ready/空闲退出；未给补勤卡原说法/误转文本、问题trace或SN，不能把未自然命中的首轮拒绝写成真机通过。

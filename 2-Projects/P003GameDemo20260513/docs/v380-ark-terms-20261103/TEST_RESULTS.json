@@ -35,16 +35,28 @@
     "Fresh installed APK hash independently read (attachment reports it only)"
   ],
   "evidence_sha256": {
+    "ASR_REVIEW.json": "0adef3ee709c0d0aef21a21d163c44b69faa59cc1e1cba2e86f058c03a45f1da",
+    "ASR_REVIEW.md": "5be4b82bf173239cb366ab17238243ee922afad74f77763953e35d42d6339cb2",
+    "ASR_ROUTING.json": "52a156fb5686196314f98cb15573ff937011cb460ada692e02d76de49338006a",
     "CLIENT_SOURCE.json": "11ec0bec8747febac88bf7122a231d856814912f21654abfe2a6a72997f3a669",
     "CROSS_REVIEW.md": "8afbe73bb5d73f1276c380cab4fd4e31bd4966b452e5c724266969ed9805d4ff",
     "HOTWORD_CROSS_REVIEW.JSON": "4da983d81c5a36a6e936644ab0463b5fc37ea901da161ab120819699daf7cf27",
     "IDENTITY_CROSS_REVIEW.JSON": "6ab4f97ba83d8ec00ce594c180b0661450034528a4192eb1009620fc12ee16a0",
-    "README.md": "d79d6067ecbd9eaf0315432d9fa3e54d3a0d2ca4bc125997da6ae384dfe0a0e0",
+    "README.md": "7f087279296a37b3ed9e9436e4aec9fb4eab6e2f429177746280b75652e4ac31",
     "RECHECK_CASES.md": "589dc514ea3254c87a05e89d6c5af7a970185bec4b4fb1325992f218356b8336",
     "SERVER_SOURCE.json": "9fa28def60ff76951b394e7e900514e5936aa99db327bafbe4dd33f9f8737579",
     "TERMS-45.md": "eda4d5ddd3bd3e17d6d859de953e1b547e4778acc360995e986099784fd97933",
     "WINDOW_EVIDENCE.json": "bcfc7563e56330c110dd012a4af3288c3e5063ca7cc5e9497c33342e86d3a646",
+    "asr-routing-review.ts": "9bad1991a579f96b6d425027554273a57a0c243ead01c717732fd4049ea45318",
     "terms-contract.log": "498554c89391fa5b3658c3b7c3df3833d5cc4e622de800cd19ae9d4b630770fc",
     "terms-contract.test.ts": "58b2163b0cf82dde987058a29edfabbf4199b7aebac29934ae524e9335d0e424"
+  },
+  "asr_followup": {
+    "review": "ASR_REVIEW.json",
+    "direct_provider_calls_by45": false,
+    "synthetic_transcript_route_replay_exit": 0,
+    "inventory_intent_loss_reproduced": true,
+    "full_sentence_or_real_human_pass": false,
+    "production_changed": false
   }
 }
