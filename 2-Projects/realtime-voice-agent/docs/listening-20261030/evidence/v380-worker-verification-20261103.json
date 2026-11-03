@@ -1,0 +1,531 @@
+{
+  "status": "ready_for_main13_review_not_deployed_by_39",
+  "at": "2026-11-03T18:57:04.172425+08:00",
+  "branch": "codex/p003-listening-worker-20261030",
+  "fixed_candidate": {
+    "candidate_source": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+    "baseline": "fc1234deca51e71a021815b08c5b88b339886f20",
+    "production_source": "70d5f98a8f4d3e4aceca00890271a7bd7a1b6f3d",
+    "runtime_changes": false,
+    "stt_prefix_before_cfg_test_identical": true,
+    "matched_linux_source_files": 90,
+    "three_contracts": {
+      "p003-listening-http-v1.json": "86825d6281da13fdf17c32b04d5c9dcb4edf71ceb69257d839aacb9df0a99f1e",
+      "p003-listening-mode-v1.json": "c055866fad0e9b69cdd75c526eeb2fee6ad97899641d792be63037a064bf2411",
+      "p003-listening-http-v1.fixtures.json": "c58dd98ade3329d04e5c9b7622e7e4668c33483b38cd804f37257e5baa6d415b"
+    },
+    "changed_files": {
+      "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/prepare_hotword_snapshot.py": "8736dd5f6437ef191af73b3c25983727908fec5482402bf4fb09a2708c2a4a6a",
+      "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/rtc-probe.py": "101f649011fdb3a7633857d39f7cee4c847b7fef4a765566281a14c357dfb641",
+      "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/test_prepare_hotword_snapshot.py": "9d39b9e2a144c9fa521596d16d4fe24a883a092ef56445e54fe267264160da4e",
+      "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/test_rtc_probe.py": "d8baa9df52fc1439085dd5231a88dad3f931ac4f48ad54d750e1efd646cdc234",
+      "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/test_v380_consumer.py": "558922e938dc10a6e75cd6d4f57a80d1cd3eec23577777c03d989b7f904275c6",
+      "2-Projects/realtime-voice-agent/rust-worker/scripts/listening/v380_consumer.py": "bc1307cc16713ef44b72dbf32bcd2e4f6dcf981e5e455e82cca418be03de5a6f",
+      "2-Projects/realtime-voice-agent/rust-worker/src/stt_volc.rs": "e58c925ee682f0736c45706f8efb0e5bd8247c63a35a499f238132bdaa8c3867"
+    }
+  },
+  "production_changes_by_39": false,
+  "main13_publication_status": {
+    "attempt_at_cst": "2026-11-03 18:53",
+    "success": false,
+    "http_status": 502,
+    "automatic_rollback_recovered": true,
+    "asr_published_id": 2,
+    "asr_published_version": 1,
+    "candidate_draft_id": 11,
+    "canaries_not_yet_changed": true,
+    "evidence_sha256": "a313f9e6c1738bcaa9ad8d9f96f90b3fc52b7e0fce8f4bd3ad7476dca330d96d"
+  },
+  "production_binary_rebuild_required": false,
+  "tests": {
+    "python": {
+      "passed": 13,
+      "failed": 0
+    },
+    "linux_cargo": {
+      "passed": 611,
+      "default_ignored": 3,
+      "groups": [
+        566,
+        29,
+        9,
+        7
+      ],
+      "matching_input_files": 90
+    },
+    "explicit_context_cases": 4,
+    "rust_brain_http_joint_passed": 2,
+    "rtc": [
+      {
+        "scenario": "normal",
+        "evidence": "evidence-39/rtc-first/normal-result.json",
+        "sha256": "5bfb9edfc73925c7d1a09badb1f23faf04e005ae6d1384722aa05e2799b2e802",
+        "binding": {
+          "room_name": "sn-BJP00326103099999938-1793702290",
+          "session_id": "bda53035-b819-48d3-9e04-ab735872dad1",
+          "trace_id": "p0-39-8e1a289a-b0f9-4933-8b67-f749ea694a45",
+          "expected_agent_name": "p003-listening-p0-v380-session39"
+        },
+        "passed": true,
+        "room_api_absent": true,
+        "disconnect_events": [
+          {
+            "mono_ns": 3092945843946060,
+            "t_ms": 44532,
+            "event": "disconnected",
+            "reason": "1",
+            "previous_state": "normal",
+            "consumer_state": "normal"
+          }
+        ],
+        "test_binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "probe_sha256": "6c52c5808d7a353a0a30a5332a9809fe9a1a145a02a117e642da74e16c69a26d",
+        "consumer_sha256": "be4a2555dd8b5c2af5dc33fc82c2681c1fc010142eaaf4b4d0904d111d20ff8a"
+      },
+      {
+        "scenario": "missing_ready",
+        "evidence": "evidence-39/rtc-first/missing_ready-result.json",
+        "sha256": "7422de9303c1e636497430f779f49bc025648033809c81e4fd6e6ecc4c4b9bda",
+        "binding": {
+          "room_name": "sn-BJP00326103099999938-1793702369",
+          "session_id": "aa22f7c8-cd61-404b-a132-a162b76d6d93",
+          "trace_id": "p0-39-991f0d70-9efc-476f-b738-6a46b3fba62e",
+          "expected_agent_name": "p003-listening-p0-v380-session39"
+        },
+        "passed": true,
+        "room_api_absent": true,
+        "disconnect_events": [
+          {
+            "mono_ns": 3092988118899937,
+            "t_ms": 8113,
+            "event": "disconnected",
+            "reason": "5",
+            "previous_state": "preparing",
+            "consumer_state": "normal"
+          }
+        ],
+        "test_binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "probe_sha256": "6c52c5808d7a353a0a30a5332a9809fe9a1a145a02a117e642da74e16c69a26d",
+        "consumer_sha256": "be4a2555dd8b5c2af5dc33fc82c2681c1fc010142eaaf4b4d0904d111d20ff8a"
+      },
+      {
+        "scenario": "lease_timeout",
+        "evidence": "evidence-39/rtc-first/lease_timeout-result.json",
+        "sha256": "02be5c7023445a2e210bed53e265b12343edeba86b5dea7e8cbdd6bad3474e73",
+        "binding": {
+          "room_name": "sn-BJP00326103099999938-1793702458",
+          "session_id": "53154660-aeef-4678-a4d2-24af9af2c2b1",
+          "trace_id": "p0-39-6aec4572-8789-455c-adf3-a6d0c895a4bf",
+          "expected_agent_name": "p003-listening-p0-v380-session39"
+        },
+        "passed": true,
+        "room_api_absent": true,
+        "disconnect_events": [
+          {
+            "mono_ns": 3093095474406223,
+            "t_ms": 26104,
+            "event": "disconnected",
+            "reason": "5",
+            "previous_state": "listening",
+            "consumer_state": "normal"
+          }
+        ],
+        "test_binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "probe_sha256": "6c52c5808d7a353a0a30a5332a9809fe9a1a145a02a117e642da74e16c69a26d",
+        "consumer_sha256": "be4a2555dd8b5c2af5dc33fc82c2681c1fc010142eaaf4b4d0904d111d20ff8a"
+      },
+      {
+        "scenario": "revoke",
+        "evidence": "evidence-39/rtc-followup/revoke-result.json",
+        "sha256": "fc1de40a6c902005ec182afe45a4a89964267e7ab8f40d992bc9d3b924387f08",
+        "binding": {
+          "room_name": "sn-BJP00326103099999938-1793702830",
+          "session_id": "780e04e3-c8a2-43d9-bbb0-69a81f32b68d",
+          "trace_id": "p0-39-7518c979-d5f9-4784-8dd3-21bbc68a9179",
+          "expected_agent_name": "p003-listening-p0-v380-session39"
+        },
+        "passed": true,
+        "room_api_absent": true,
+        "disconnect_events": [
+          {
+            "mono_ns": 3093468114643561,
+            "t_ms": 26726,
+            "event": "disconnected",
+            "reason": "5",
+            "previous_state": "listening",
+            "consumer_state": "normal"
+          }
+        ],
+        "test_binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "probe_sha256": "101f649011fdb3a7633857d39f7cee4c847b7fef4a765566281a14c357dfb641",
+        "consumer_sha256": "bc1307cc16713ef44b72dbf32bcd2e4f6dcf981e5e455e82cca418be03de5a6f"
+      },
+      {
+        "scenario": "barge",
+        "evidence": "evidence-39/rtc-followup/barge-result.json",
+        "sha256": "3f03ddcdc79571e168a01b0c1a9d6c2a44cf52a0f2cf9e3b2f3b25954cfca89b",
+        "binding": {
+          "room_name": "sn-BJP00326103099999938-1793702892",
+          "session_id": "bdb9b167-223a-41b9-a3fc-73d592cf6b45",
+          "trace_id": "p0-39-73b9ea0b-a33a-4af3-90c6-59716ea20bac",
+          "expected_agent_name": "p003-listening-p0-v380-session39"
+        },
+        "passed": true,
+        "room_api_absent": true,
+        "disconnect_events": [
+          {
+            "mono_ns": 3093546782851347,
+            "t_ms": 43450,
+            "event": "disconnected",
+            "reason": "1",
+            "previous_state": "normal",
+            "consumer_state": "normal"
+          }
+        ],
+        "test_binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "probe_sha256": "101f649011fdb3a7633857d39f7cee4c847b7fef4a765566281a14c357dfb641",
+        "consumer_sha256": "bc1307cc16713ef44b72dbf32bcd2e4f6dcf981e5e455e82cca418be03de5a6f"
+      },
+      {
+        "scenario": "proposal_timeout",
+        "evidence": "evidence-39/rtc-followup/proposal_timeout-result.json",
+        "sha256": "a8f87c9dbf694e04b3d1f9d85d65c49f15052cc3671d7d12901f445b231ce591",
+        "binding": {
+          "room_name": "sn-BJP00326103099999938-1793702971",
+          "session_id": "e8177662-cb3c-4566-ac53-d761d946ca67",
+          "trace_id": "p0-39-a3b0320b-116c-4c78-82a6-de482cb9eae1",
+          "expected_agent_name": "p003-listening-p0-v380-session39"
+        },
+        "passed": true,
+        "room_api_absent": true,
+        "disconnect_events": [
+          {
+            "mono_ns": 3093587955115223,
+            "t_ms": 6266,
+            "event": "disconnected",
+            "reason": "5",
+            "previous_state": "normal",
+            "consumer_state": "normal"
+          }
+        ],
+        "test_binary_sha256": "1fda3c073fbc7a110186d36fabbeb45fe33838780eabd5fbfa9e85d114b6ea1a",
+        "probe_sha256": "101f649011fdb3a7633857d39f7cee4c847b7fef4a765566281a14c357dfb641",
+        "consumer_sha256": "bc1307cc16713ef44b72dbf32bcd2e4f6dcf981e5e455e82cca418be03de5a6f"
+      }
+    ],
+    "jvm_replay": [
+      {
+        "scenario": "normal",
+        "exit_code": 0,
+        "input_sha256": "5bfb9edfc73925c7d1a09badb1f23faf04e005ae6d1384722aa05e2799b2e802",
+        "log_sha256": "96649e36e6de8564fd4327daef3f7d525c9ff58829a8067bb81c45946e8e33d6"
+      },
+      {
+        "scenario": "missing_ready",
+        "exit_code": 0,
+        "input_sha256": "7422de9303c1e636497430f779f49bc025648033809c81e4fd6e6ecc4c4b9bda",
+        "log_sha256": "4c6842e940463a335d2933ee0b5d62de68bc6e654f61e492f5d29f3ba61368df"
+      },
+      {
+        "scenario": "lease_timeout",
+        "exit_code": 0,
+        "input_sha256": "02be5c7023445a2e210bed53e265b12343edeba86b5dea7e8cbdd6bad3474e73",
+        "log_sha256": "b99b618908b506c4d5803f616f25fb09c3737d49eb863634105a63d83dfa4a76"
+      },
+      {
+        "scenario": "revoke",
+        "exit_code": 0,
+        "input_sha256": "fc1de40a6c902005ec182afe45a4a89964267e7ab8f40d992bc9d3b924387f08",
+        "log_sha256": "e98f7eb3ae5b1388e21a424bb078db800b65201a65093bcf33da045764f1b553"
+      },
+      {
+        "scenario": "barge",
+        "exit_code": 0,
+        "input_sha256": "3f03ddcdc79571e168a01b0c1a9d6c2a44cf52a0f2cf9e3b2f3b25954cfca89b",
+        "log_sha256": "435ff2f65f89514bbd8f0de0ff3f132143f2185f2edc02d8fe8d247a3d932426"
+      },
+      {
+        "scenario": "proposal_timeout",
+        "exit_code": 0,
+        "input_sha256": "a8f87c9dbf694e04b3d1f9d85d65c49f15052cc3671d7d12901f445b231ce591",
+        "log_sha256": "e48358668debbfcd14934b5460ee662ead29ef3641d9a61c3efa1c31c3bc0859"
+      }
+    ]
+  },
+  "asr": {
+    "synthetic_only": true,
+    "results": [
+      {
+        "batch": "initial",
+        "candidate": false,
+        "nonstream": false,
+        "target_term_hits": 1,
+        "target_term_total": 9,
+        "core_7_hits": 1,
+        "near_homophone_intrusions": 0,
+        "negative_missing": 0,
+        "pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+        "story_output": "故事里的捕禽卡。",
+        "inventory_question_output": "忽悠几声，补情卡。"
+      },
+      {
+        "batch": "initial",
+        "candidate": true,
+        "nonstream": false,
+        "target_term_hits": 9,
+        "target_term_total": 9,
+        "core_7_hits": 7,
+        "near_homophone_intrusions": 0,
+        "negative_missing": 0,
+        "pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+        "story_output": "故事里的补勤卡。",
+        "inventory_question_output": "忽悠几声，补勤卡。"
+      },
+      {
+        "batch": "initial",
+        "candidate": false,
+        "nonstream": true,
+        "target_term_hits": 3,
+        "target_term_total": 9,
+        "core_7_hits": 3,
+        "near_homophone_intrusions": 0,
+        "negative_missing": 0,
+        "pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+        "story_output": "故事里的捕情卡。",
+        "inventory_question_output": "我有几张补情卡。"
+      },
+      {
+        "batch": "initial",
+        "candidate": true,
+        "nonstream": true,
+        "target_term_hits": 8,
+        "target_term_total": 9,
+        "core_7_hits": 7,
+        "near_homophone_intrusions": 0,
+        "negative_missing": 1,
+        "pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+        "story_output": "故事里的补情卡。",
+        "inventory_question_output": "我有几张补勤卡。"
+      },
+      {
+        "batch": "repeat",
+        "candidate": false,
+        "nonstream": true,
+        "target_term_hits": 3,
+        "target_term_total": 9,
+        "core_7_hits": 3,
+        "near_homophone_intrusions": 0,
+        "negative_missing": 0,
+        "pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+        "story_output": "故事里的捕情卡。",
+        "inventory_question_output": "我有几张补签卡。"
+      },
+      {
+        "batch": "repeat",
+        "candidate": true,
+        "nonstream": true,
+        "target_term_hits": 8,
+        "target_term_total": 9,
+        "core_7_hits": 7,
+        "near_homophone_intrusions": 0,
+        "negative_missing": 0,
+        "pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+        "story_output": "故事里的补情卡。",
+        "inventory_question_output": "我有几张补勤卡。"
+      }
+    ],
+    "whole_sentence_accuracy_claim": false,
+    "all_vendor_budget_tokens_verified": false,
+    "published_by_39": false
+  },
+  "deployment_proposal": {
+    "status": "draft_only_not_published",
+    "kind": "asr",
+    "expected_published_id": 2,
+    "expected_published_version": 1,
+    "expected_words_sha256": "a3393758419d51db148f87be9f9fb53fcaad479ccce88817de3ae83d78c7aab7",
+    "put_draft": {
+      "path": "/api/admin/hotwords/asr/draft",
+      "body": {
+        "words": [
+          "补勤卡",
+          "补签卡",
+          "停",
+          "停停",
+          "停下",
+          "停一下",
+          "等等",
+          "等一下",
+          "别说了",
+          "别说",
+          "闭嘴",
+          "安静",
+          "好",
+          "好的",
+          "对",
+          "行",
+          "可以",
+          "继续",
+          "换一个",
+          "再见",
+          "停止",
+          "不说了",
+          "不聊了",
+          "拜拜",
+          "退出对话",
+          "我不想聊了",
+          "不用了",
+          "退出",
+          "结束"
+        ],
+        "note": "v380：方舟正确专名补勤卡及合法同义词补签卡前置；合成同PCM对照，未宣称真人通过"
+      }
+    },
+    "publish": {
+      "path": "/api/admin/hotwords/publish",
+      "body": {
+        "kinds": [
+          "asr"
+        ],
+        "force": false
+      }
+    },
+    "rollback_draft": {
+      "path": "/api/admin/hotwords/asr/draft",
+      "body": {
+        "words": [
+          "停",
+          "停停",
+          "停下",
+          "停一下",
+          "等等",
+          "等一下",
+          "别说了",
+          "别说",
+          "闭嘴",
+          "安静",
+          "好",
+          "好的",
+          "对",
+          "行",
+          "可以",
+          "继续",
+          "换一个",
+          "再见",
+          "停止",
+          "不说了",
+          "不聊了",
+          "拜拜",
+          "退出对话",
+          "我不想聊了",
+          "不用了",
+          "退出",
+          "结束"
+        ],
+        "note": "回滚v380两词前置，原asr v1"
+      }
+    }
+  },
+  "cleanup": {
+    "at": "2026-11-03T10:51:43.644753+00:00",
+    "own_rooms": {
+      "queried_rooms": [
+        "sn-BJP00326103099999938-1793702830",
+        "sn-BJP00326103099999938-1793702892",
+        "sn-BJP00326103099999938-1793702971",
+        "sn-BJP00326103099999938-1793702290",
+        "sn-BJP00326103099999938-1793702369",
+        "sn-BJP00326103099999938-1793702411",
+        "sn-BJP00326103099999938-1793702458"
+      ],
+      "remaining": 0
+    },
+    "stopped": {
+      "worker": {
+        "pid": 2440256,
+        "stopped": true
+      },
+      "brain": {
+        "pid": 2440242,
+        "stopped": true
+      }
+    },
+    "test_processes": {
+      "worker.pid": {
+        "pid": 2440256,
+        "executable_exists": false
+      },
+      "worker-actual.pid": {
+        "pid": 2440257,
+        "executable_exists": false
+      },
+      "brain.pid": {
+        "pid": 2440242,
+        "executable_exists": false
+      },
+      "asr.pid": {
+        "pid": 2438977,
+        "executable_exists": false
+      },
+      "asr-controls.pid": {
+        "pid": 2440083,
+        "executable_exists": false
+      },
+      "asr-repeat.pid": {
+        "pid": 2441493,
+        "executable_exists": false
+      }
+    },
+    "production_units": {
+      "voice-worker-rust": {
+        "MainPID": "1825469",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "exe_sha256": "52f644bb6628a818b364f829b49fcea6126eea0ddcd2a195f00522d683c2369c"
+      },
+      "p003-search-worker": {
+        "MainPID": "2143116",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "exe_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+      },
+      "p003-listening-worker": {
+        "MainPID": "2386175",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "exe_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86"
+      }
+    },
+    "canary_files": {
+      "voice-rust-worker": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+      "canary.env": "089632fc0aef0faf7ef482b23fad65deb79947007105fc229fc0dbb60e0fa1ae",
+      "window.json": "a1debd389f7f5f5b63f81bfd1f3c75829b7d28c57085b778c0facb65c7bf005c",
+      "release.json": "5c8a65380c085cc428df365d3681a1bb84421c753f8077793855c53ab0a0a821"
+    },
+    "production_mutated_by_39": false
+  },
+  "evidence_sha256": {
+    "evidence-39/fixed-source-verification.json": "a2dc28c2a80143d4fa33a8b383534aff83cefeee8b905a4f10515e96b2091e1c",
+    "evidence-39/39-final-cargo-context-v2.log": "28e59f8066e3946995567c1e423ed355e507319007a3883e5a3ec40397b3f694",
+    "evidence-39/39-final-cargo-context-v2-inputs.json": "468dd0701a7c4ab20cea7191a262daef4f15968b5e5579c7ce36249666289ebc",
+    "evidence-39/39-final-http-joint.log": "2757a01fa1bec38cff33c2360dffa11cc20202ee624b746f9bfda9c591e23515",
+    "evidence-39/python-final.log": "dc4b1db07756ee7b7f22613f3c9e39607c244297fab5a3b8c881002035f386cb",
+    "evidence-39/local-ready-red.log": "d9bde66c4bd975435ce32a9d229a017b130a1cd0816e2ed23474aefa7f6b2f5a",
+    "evidence-39/rust-probe-context-equivalence.json": "9ad2bc60caf6e262c3e44b70972c2434eff620c05594e49448d8b1a2577a12a1",
+    "evidence-39/joint-inputs-verified.json": "4db2cf64584851fb40853803f72d0fe3995fa10b0c468fdf43c812b7a5adbe80",
+    "evidence-39/asr-repeat-collected.json": "8052c2486c72de0f12a314886d8b15b19f03576ef2af18c857f62aa47e54fae9",
+    "evidence-39/hotword-draft-plan.json": "cb579fb5571a2d328cbfaf7fac9e1c01d04700ffe71a86cb3bc0fd76198e9f22",
+    "evidence-39/cleanup-final.json": "488a02dd560eb519a47a7677428a82d3db4b39784c9017b4b149ea48620f55f0",
+    "evidence-39/history.json": "0991d2ac35f71d3e6f8809e263dffedac451710588c071f7736ce86b0d80edb4",
+    "evidence-39/eleven-room-crosscheck.json": "013e7ca785634f995e8cd604815d6aeb185c1688589367bfb3873fc9a6591ada",
+    "evidence-39/eot-ownership.json": "46720cb9cca80b8a0e97f17ce474a4d2ae699dd04cadc09e16f9ea11d87b90e2"
+  },
+  "remaining": [
+    "original reported failure trace/audio unavailable",
+    "Android real UI/device/microphone/acoustic quality unverified",
+    "max-duration and broad packet fault injection not newly exercised over real RTC",
+    "v380 share/sharing, failed/rejected and feedback state enum mismatches retained; separate scope",
+    "publication protected rollback after main13 attempt; retry/repair belongs to main13",
+    "EOT sidecar unavailable in isolated RTC; fallback boundary, no real endpoint-model validation"
+  ]
+}
