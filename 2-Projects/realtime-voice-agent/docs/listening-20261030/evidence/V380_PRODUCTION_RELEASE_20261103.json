@@ -1,0 +1,200 @@
+{
+  "status": "ASR_DEPLOYED_VERIFIED_LISTENING_REAL_DEVICE_RECHECK_PENDING",
+  "completed_at": "2026-11-03 19:09 CST",
+  "receipt": {
+    "path": "/Users/fu-121/Downloads/P003_V380_VOICE_SERVER_RECEIPT_20261103.md",
+    "name": "P003_V380_VOICE_SERVER_RECEIPT_20261103.md",
+    "sha256": "83bb51bfae978635d9f0272d5cc9aebacc67b919f9922cd65106874a4ba99b1c",
+    "bytes": 8621,
+    "completed_at": "2026-11-03 19:09 CST"
+  },
+  "publication": {
+    "http": 200,
+    "version": 2,
+    "other_kinds_unchanged": true,
+    "ordinary_backup": "/root/rust-worker/rust-worker.env.bak-hotwords-20261103-110247",
+    "scope": "ordinary global pool plus existing search/listening snapshots; ranges unchanged"
+  },
+  "publisher": {
+    "at": "2026-11-03T11:02:31.472371+00:00",
+    "success": true,
+    "path": "/root/rust-worker/apply_hotwords.py",
+    "backup": "/root/rust-worker/apply_hotwords.py.bak-v380-20261103T110231Z",
+    "before_sha256": "4a723a9dd406c4c9228a5f7ecd05ad58d0e244049344f294f1046ea834bd99ee",
+    "after_sha256": "6e675aa36110889a1ccb38c33f1c73aa622abc30b50bf402e4590acddc691475",
+    "mode": "0o755",
+    "ordinary_sidecars": 1,
+    "service_restarted": false
+  },
+  "canaries": {
+    "at": "2026-11-03T11:03:54.127797+00:00",
+    "operation": "v380_published_hotword_snapshot",
+    "units": {
+      "p003-search-worker": {
+        "before_sha256": "8feea6199a4e3148e31418fdda67220ac7ab98c2f0c8c59176bea086f15ec917",
+        "changed_keys": [
+          "VOLC_ASR_HOTWORDS"
+        ],
+        "published": {
+          "asr": {
+            "id": 12,
+            "version": 2,
+            "word_count": 29,
+            "value_sha256": "b01b160a0119f70020c14e84169735cabea95fd6b248d16a891794dfd736e7ae"
+          },
+          "device_asr": {
+            "id": 10,
+            "version": 2,
+            "word_count": 247,
+            "value_sha256": "1280174f8cf39a5fd7ec465dd49e307e19bdcd73c03f6505d3197a8b52ffd401"
+          }
+        },
+        "after_sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+        "deployed": true,
+        "backup": "/opt/p003-search-canary-20261021/backups/v380-hotwords-20261103T110354Z",
+        "source_tool_sha256": "8736dd5f6437ef191af73b3c25983727908fec5482402bf4fb09a2708c2a4a6a",
+        "source_commit": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+        "runtime": {
+          "pid": 2446060,
+          "restarts": 0,
+          "health": {
+            "agent": "p003-search-canary-20261021",
+            "at_ms": 1793703841329,
+            "cleanup": {
+              "at_ms": 1793703839139,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "R4-20261022-two-devices",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "exe_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+          "asr_csv_sha256": "b01b160a0119f70020c14e84169735cabea95fd6b248d16a891794dfd736e7ae"
+        }
+      },
+      "p003-listening-worker": {
+        "before_sha256": "089632fc0aef0faf7ef482b23fad65deb79947007105fc229fc0dbb60e0fa1ae",
+        "changed_keys": [
+          "VOLC_ASR_HOTWORDS"
+        ],
+        "published": {
+          "asr": {
+            "id": 12,
+            "version": 2,
+            "word_count": 29,
+            "value_sha256": "b01b160a0119f70020c14e84169735cabea95fd6b248d16a891794dfd736e7ae"
+          },
+          "device_asr": {
+            "id": 10,
+            "version": 2,
+            "word_count": 247,
+            "value_sha256": "1280174f8cf39a5fd7ec465dd49e307e19bdcd73c03f6505d3197a8b52ffd401"
+          }
+        },
+        "after_sha256": "1213df3af031d89cc2d6352925ca1bf8c63814b80774fa21f7b10c38e55d6a59",
+        "deployed": true,
+        "backup": "/opt/p003-listening-canary-20261030/backups/v380-hotwords-20261103T110403Z",
+        "source_tool_sha256": "8736dd5f6437ef191af73b3c25983727908fec5482402bf4fb09a2708c2a4a6a",
+        "source_commit": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+        "runtime": {
+          "pid": 2446109,
+          "restarts": 0,
+          "health": {
+            "agent": "p003-search-listening-20261030",
+            "at_ms": 1793703849458,
+            "cleanup": {
+              "at_ms": 1793703846520,
+              "healthy": true,
+              "pending": 0,
+              "remaining": 0
+            },
+            "generation": "v374-listening-ark-20261102-1793613511",
+            "jobs": 0,
+            "ordered_pcm_v1": true,
+            "registered": true
+          },
+          "exe_sha256": "27a72325f781e37d1114f91b58feb53bfd38de4b1e6ec2ca6453a7745bcd5e86",
+          "asr_csv_sha256": "b01b160a0119f70020c14e84169735cabea95fd6b248d16a891794dfd736e7ae"
+        }
+      }
+    },
+    "binary_replaced": false,
+    "range_changed": false,
+    "success": true
+  },
+  "post_verification": {
+    "voice-worker-rust": {
+      "pid": "2445772",
+      "active": "active",
+      "restarts": "0",
+      "binary_unchanged": true,
+      "asr_matches_v2": true,
+      "protected_settings_unchanged": true
+    },
+    "p003-search-worker": {
+      "pid": "2446060",
+      "active": "active",
+      "restarts": "0",
+      "binary_unchanged": true,
+      "asr_matches_v2": true,
+      "protected_settings_unchanged": true
+    },
+    "p003-listening-worker": {
+      "pid": "2446109",
+      "active": "active",
+      "restarts": "0",
+      "binary_unchanged": true,
+      "asr_matches_v2": true,
+      "protected_settings_unchanged": true
+    },
+    "brain": {
+      "all_typescript_sources_unchanged": true,
+      "admin_unchanged": true,
+      "processes_unchanged": true,
+      "listening_release_unchanged": true
+    },
+    "asr_version": 2,
+    "asr_csv_sha256": "b01b160a0119f70020c14e84169735cabea95fd6b248d16a891794dfd736e7ae",
+    "first_post_at_ms": 1793703867780
+  },
+  "stability": {
+    "elapsed_seconds": 289.185,
+    "stable": true,
+    "checked_at": "2026-11-03T19:09:18.804000+08:00",
+    "pids": {
+      "voice-worker-rust": "2445772",
+      "p003-search-worker": "2446060",
+      "p003-listening-worker": "2446109"
+    },
+    "restarts": {
+      "voice-worker-rust": "0",
+      "p003-search-worker": "0",
+      "p003-listening-worker": "0"
+    },
+    "measurement_note": "Freshness evaluated at end of multi-file capture, not capture start."
+  },
+  "source_commits": {
+    "publisher": "d6d6913bcbcb26d543e1b8ae34845546df95fdae",
+    "worker_tests": "d36248a65b9271217ae0bc094ae1ed30e93a809f",
+    "brain_review": "2f4eaf0f0aa84c9654ac18d0cb2ec0f97ecbc70a",
+    "ark_review": "c3e8e595f4f0115e39e934342dfde90ae53ee3e8"
+  },
+  "runtime_replaced": false,
+  "reported_historical_issue_fixed": false,
+  "limitations": [
+    "synthetic RTC/ASR and exact Kotlin replay, not real Android UI",
+    "isolated RTC EOT fallback and synthetic text model",
+    "full utterance accuracy not guaranteed; no historical incident trace"
+  ],
+  "evidence_sha256": {
+    "main-evidence/hotwords-publish-result.json": "a313f9e6c1738bcaa9ad8d9f96f90b3fc52b7e0fce8f4bd3ad7476dca330d96d",
+    "main-evidence/hotwords-publish-retry-result.json": "f976abcb50e2b45f238cffb8c215b9ba068d3f120b9e9c94b973f15f04831a57",
+    "main-evidence/canaries-activation-result.json": "d11143d93e77f3b67f4f585a118cb3d89ebd2e66be9b9c9b44ebd75581529205",
+    "main-evidence/publisher-fix/installed.json": "339ccc11f907616af4873c6ef546157d77e78939bdd23219f0fe194d39f94ef1",
+    "main-evidence/post-deployment-verification.json": "b19496f6ddbd4302799821933189f5353fdc0c0d1479017848b55ed9e035f3c6",
+    "main-evidence/stability-verification-final.json": "b97170e42bff0ec7efa7ba6b88de7ec373130a998acc4466e1dd97bc5e31dda1"
+  }
+}
