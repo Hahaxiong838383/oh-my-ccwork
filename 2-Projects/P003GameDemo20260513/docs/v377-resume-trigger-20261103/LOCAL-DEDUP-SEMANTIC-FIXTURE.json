@@ -1,0 +1,8 @@
+{
+  "environment": "local synthetic in-memory SQLite",
+  "production_evidence": false,
+  "first_unique": 26,
+  "repeat_local_accepted": 6,
+  "unique_after": 26,
+  "conclusion": "Local accepted can include existing IDs; this does not prove the real six IDs overlapped."
+}

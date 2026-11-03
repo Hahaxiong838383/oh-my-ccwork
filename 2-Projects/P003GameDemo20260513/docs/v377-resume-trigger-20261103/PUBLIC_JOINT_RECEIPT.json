@@ -1,0 +1,30 @@
+{
+  "client_receipt_sha256": "bb3233a7dc46393c07fd16ef557d4f9996583ae380b3a5661d31d2fe0d3840a7",
+  "client_evidence_source": "user supplied signed Markdown containing device log excerpts; source log directory is on Android colleague Windows machine, not independently accessed",
+  "cfg132_applied_cst": "2026-11-03T13:41:51.558+08:00",
+  "cfg132_runtime_changed_cst": "2026-11-03T13:41:51.563+08:00",
+  "client_pending_final": 0,
+  "drain_kind": "resume",
+  "daily_marked": false,
+  "core_http_ack_matches_independent_server": true,
+  "server_ack": {
+    "accepted": 252,
+    "duplicated": 0,
+    "rejected": 0,
+    "attempts": 2
+  },
+  "server_diag_unique": 26,
+  "server_diag_usage": 26,
+  "client_reported_diag_local_accepted_sum": 32,
+  "diag_distinct_id_reconciliation": "PENDING_SOURCE_AND_ID_EVIDENCE",
+  "apk_provenance": "reported by Android receipt, not independently inspected",
+  "ark_and_listening_out_of_scope": true,
+  "status": "PASS_RESUME_CORE_DIAGNOSTIC_COUNT_CLARIFICATION_PENDING",
+  "current_revision": "cfg-132",
+  "policy_revision": 3,
+  "daily_hour_cst": 23,
+  "window_expiry_cst": "2026-11-10T12:39:39.162+08:00",
+  "public_md_sha256": "a7a6e0bf437999cdd775d4cd95576172cf1a0bd48c20cf9e5397660142865e8d",
+  "server_counts_evidence": "reconcile-independent.json",
+  "request_full_day_evidence": "../client-final-48/REQUEST-DAY-READBACK-48.json"
+}

@@ -1,0 +1,98 @@
+{
+  "checked_at_cst": "2026-11-03T13:53:26.570406+08:00",
+  "query_start_ms": 1793635200000,
+  "query_end_ms": 1793685206569,
+  "device_tail": "03800006",
+  "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+  "read_only": true,
+  "all_day_batches": [
+    {
+      "attempt_id": "827f291f-d339-4499-8bfd-5652705b1196",
+      "http_rid": "ana-03800006-e7ea198f-37",
+      "batch_id": "analytics_270",
+      "received_at_ms": 1793635215806,
+      "accepted": 11,
+      "duplicated": 0,
+      "rejected": 0,
+      "http_status": 200
+    },
+    {
+      "attempt_id": "9f829919-f6de-42f8-8b00-6dca8008330c",
+      "http_rid": "ana-03800006-b760f4fa-9",
+      "batch_id": "analytics_271",
+      "received_at_ms": 1793684512333,
+      "accepted": 200,
+      "duplicated": 0,
+      "rejected": 0,
+      "http_status": 200
+    },
+    {
+      "attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561",
+      "http_rid": "ana-03800006-b760f4fa-10",
+      "batch_id": "analytics_272",
+      "received_at_ms": 1793684515135,
+      "accepted": 52,
+      "duplicated": 0,
+      "rejected": 0,
+      "http_status": 200
+    }
+  ],
+  "all_day_settlement": [
+    {
+      "outcome": "accepted",
+      "reason": null,
+      "n": 263
+    }
+  ],
+  "request_unique_samples": [
+    {
+      "n": 26,
+      "unique_ids": 26,
+      "min_captured_ms": 1793671620831,
+      "max_captured_ms": 1793677888052
+    }
+  ],
+  "all_day_payload_tiers": [
+    {
+      "tier": "diagnostic",
+      "n": 26
+    },
+    {
+      "tier": "raw",
+      "n": 237
+    }
+  ],
+  "recent_raw_metadata": [
+    {
+      "event_name": "g1.presentation_state_changed",
+      "occurred_at_ms": 1793683202332,
+      "received_at_ms": 1793684512333,
+      "batch_attempt_id": "9f829919-f6de-42f8-8b00-6dca8008330c"
+    },
+    {
+      "event_name": "g1.route_check_completed",
+      "occurred_at_ms": 1793683203244,
+      "received_at_ms": 1793684515135,
+      "batch_attempt_id": "2c57a9ca-ccb9-485d-a9b9-b8cdf7dce561"
+    }
+  ],
+  "usage": [
+    {
+      "request_id": "diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae",
+      "accepted": 26
+    }
+  ],
+  "limits": {
+    "batch_limit": 1000,
+    "sample_limit": 1001,
+    "recent_raw_limit": 100,
+    "query_budget_seconds": 8
+  },
+  "individual_sample_settlement_summary": {
+    "unique_id_count": 26,
+    "accepted_once_count": 26,
+    "rejected_count": 0,
+    "duplicated_count": 0,
+    "sample_id_list_omitted": true
+  }
+}
