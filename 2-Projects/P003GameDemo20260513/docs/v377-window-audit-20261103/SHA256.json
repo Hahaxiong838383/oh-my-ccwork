@@ -1,0 +1,11 @@
+{
+  "P003_V377_SERVER_WINDOW_RECEIPT_20261103.md": "58ec3951af67f9b599581c7fee9d8542b8a93e7fa44fa1c72e7d5a66af453519",
+  "READONLY_AUDIT.md": "711649ca2568c099bdd94214b2cd49d05522649b67d9adb15cd45b571c5eece6",
+  "SERVER_WINDOW_EVIDENCE.json": "0ae1026809b646b0e4b1f558a8e1edd80e3a4a440e2582c507d3f935a0499f36",
+  "config-change-check.json": "f36585cf8ba1a12f36b9d0540fdcd14e961f5674ef0b087523a7b690513b9f96",
+  "reconcile-final-check.json": "8e2bf5d6117b21ce2177ab7242898504dd4051b90146acf79771cd619f8e1bcd",
+  "reconcile-public-script.json": "694a2d024561bf5538f333a474cee96f6d82df60eedc08a47d0e3f52a391fc23",
+  "reconcile_readonly.py": "69723ccc70c7410e7b214c0f0180de58a906ddd074a111e5a1824a36f9827fca",
+  "source-check.json": "b02a7186251c99a75195acf14ed97e7fba83bc1712fa2bc25b46ce1d05a60d5e",
+  "source-manifest.json": "42de90b7a007b40efa0629b34d991848d4e2dd4c9d116d9c79cb03f43a82ae92"
+}

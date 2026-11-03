@@ -1,0 +1,17 @@
+{
+  "value_changes": [
+    {
+      "scope_tail": "03800006",
+      "key": "analytics.on_demand_upload_enabled",
+      "before": "false",
+      "after": "true"
+    },
+    {
+      "scope_tail": "03800006",
+      "key": "analytics.on_demand_request_id",
+      "before": "\"\"",
+      "after": "\"diag-121d6b4b-a9ed-43b2-975c-786542d8b9ae\""
+    }
+  ],
+  "only_target_request_changes": true
+}

@@ -1,0 +1,41 @@
+{
+  "commit": "35502e7746eed6b5f24e5ba1cfa7d7e263c68a72",
+  "files": {
+    "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsClient.kt": {
+      "sha256": "069602e3295771b275a9ddb93c0426b000cea329426df7f14ccdd999f6301491",
+      "bytes": 3215
+    },
+    "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsContracts.kt": {
+      "sha256": "1bdf6ae8cea8143e648733e8e00467c039d7b94c1f5afa0aae12228a5c44e217",
+      "bytes": 6956
+    },
+    "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsCoordinator.kt": {
+      "sha256": "41b635e55a64aca06a41cf32c1c6521961879b5fff031768be74b07c2bb99cbc",
+      "bytes": 23971
+    },
+    "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsStore.kt": {
+      "sha256": "6a18911d9f09142077c0badde45b49adc59b1559e9a7f79252493be448d7a318",
+      "bytes": 16843
+    },
+    "android_injection/livekit_sdk_probe/payload/src/test/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsContractsTest.kt": {
+      "sha256": "72c0b676b8ce0acf778ddf527b27ff4b04028502bda090193ddba31e7973962e",
+      "bytes": 6878
+    },
+    "godot/scripts/analytics_event_client.gd": {
+      "sha256": "d3f7d013e1aab74584b79abc5d5e2a343ffff3002f915d3ec30e924f015c6c8e",
+      "bytes": 22145
+    },
+    "godot/scripts/analytics_event_client.gd.uid": {
+      "sha256": "1c8584284d66dc5f01615cfed2b42eb3af2f5d9dfa297c8123a0dea59528bffd",
+      "bytes": 19
+    },
+    "godot/scripts/analytics_event_policy.gd": {
+      "sha256": "81bbd1e729c4d66d614c2f33b4c7ae26d47ac442fcb682c5d5dbf74399c5e451",
+      "bytes": 6310
+    },
+    "godot/scripts/analytics_event_policy.gd.uid": {
+      "sha256": "bb73212624db56eaefb8273e8b4d45653c7c272cef995359a674d5e2227a2cf8",
+      "bytes": 19
+    }
+  }
+}
