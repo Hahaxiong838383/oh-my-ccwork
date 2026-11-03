@@ -104,6 +104,7 @@ fn natural_phrases() -> Vec<(&'static str, Intent)> {
         ("先听我讲个故事", Story), ("先听我讲故事", Story), ("先听我讲一个故事", Story),
         ("我给你讲一个故事", Story), ("我给你讲个故事", Story),
         ("我要给你讲一个故事", Story), ("我要给你讲个故事", Story),
+        ("我想给你讲一个故事", Story), ("我想给你讲个故事", Story),
         ("先听我说一会儿", Sharing), ("先听我分享一下", Sharing),
         ("我想和你分享一件事", Sharing), ("我给你分享一件事", Sharing),
         ("听我唱首歌", Singing), ("先听我唱歌", Singing),
@@ -149,7 +150,7 @@ impl RecentWake {
         if !self.active(now, epoch) { return false; }
         let n = normalized(text).0;
         // Never hold arbitrary “我…” interims or wait 15 seconds to route ordinary chat.
-        let direct = ["先听", "听我", "我给你", "我要给你", "我想和你"].iter().any(|p| n.starts_with(p));
+        let direct = ["先听", "听我", "我给你", "我要给你", "我想给你", "我想和你"].iter().any(|p| n.starts_with(p));
         direct && (parse_natural_enter(text).is_some() || natural_phrases().iter().any(|(p, _)| p.starts_with(&n)))
     }
 }

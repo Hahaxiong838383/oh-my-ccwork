@@ -85,7 +85,7 @@ fn interim_command_prefix_is_held_before_ordinary_speculation() {
 fn recent_wake_accepts_finite_enter_at_ten_seconds_but_not_fifteen() {
     use listening_voice::RecentWake;
     let mut wake = RecentWake::default();
-    for text in ["先听我讲个故事", "我给你讲一个故事", "我要给你讲一个故事", "我给你唱一首歌", "我想和你分享一件事"] {
+    for text in ["先听我讲个故事", "我给你讲一个故事", "我要给你讲一个故事", "我想给你讲个故事", "我想给你讲一个故事", "我给你唱一首歌", "我想和你分享一件事"] {
         wake.arm(0, 4);
         assert!(wake.take_enter(text, 9982, 4).is_some(), "{text}");
         assert!(wake.take_enter(text, 9983, 4).is_none(), "single use");
