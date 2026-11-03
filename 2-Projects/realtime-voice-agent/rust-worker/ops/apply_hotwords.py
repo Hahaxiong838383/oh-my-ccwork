@@ -131,10 +131,36 @@ def recent_activity() -> int:
     return n
 
 
-def sidecar_count() -> int:
-    """ps 全量输出进程内过滤:观察者不在被观察集合(自身 cmdline 无该串)。"""
-    r = run(["ps", "-eo", "pid,args"])
-    return sum(1 for ln in r.stdout.splitlines() if "eot_sidecar.py" in ln and "ps -eo" not in ln)
+def sidecar_count(proc_root: str = "/proc") -> int:
+    """Count this systemd unit's EOT children, including reparented orphans.
+
+    Other Worker pools keep their own healthy sidecars while this unit stops.
+    An unreadable process/ownership record conservatively blocks the drain;
+    processes that vanished during inspection no longer own a live sidecar.
+    """
+    try:
+        pids = os.listdir(proc_root)
+    except OSError:
+        return 1
+    count = 0
+    for pid in pids:
+        if not pid.isdigit():
+            continue
+        try:
+            with open(os.path.join(proc_root, pid, "cmdline"), "rb") as f:
+                args = f.read().split(b"\0")
+            if not any(os.path.basename(arg) == b"eot_sidecar.py" for arg in args):
+                continue
+            with open(os.path.join(proc_root, pid, "cgroup"), encoding="utf-8") as f:
+                rows = f.read().splitlines()
+            paths = [row.split(":", 2)[2] for row in rows if len(row.split(":", 2)) == 3]
+            if not paths or any(UNIT + ".service" in path.split("/") for path in paths):
+                count += 1
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except (OSError, UnicodeError):
+            count += 1
+    return count
 
 
 def is_active() -> bool:
