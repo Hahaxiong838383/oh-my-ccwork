@@ -1,0 +1,141 @@
+{
+  "verified_at": "2026-11-03T10:21:43.772419+08:00",
+  "result": "PASS metadata and source/bundle consistency, not device end-to-end",
+  "identity_suffix": "03800006",
+  "trace_unique": true,
+  "room_sn_sha_match_independent_worker_capture": true,
+  "historical_authority_sessions": 8,
+  "rev": 6,
+  "voice_granted": true,
+  "entries_in_retained_tables": 0,
+  "requests_in_retained_tables": 0,
+  "v375_live_targets_match": 21,
+  "v375_source": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "v375_targets": [
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/admin-query.ts",
+      "sha256": "f8d85b18bac044065b8f63e2fb2dd2672fbbf615d7d2c5ad1e540fcc93f0f022"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/contracts.ts",
+      "sha256": "bd846770e376ec0b61162c69ffa7691a208f52502eaadae57ddd4666e566926d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/device-context.ts",
+      "sha256": "dcd03052b9686805bfd0c2462ba438b8f343c211fbb15e14319f6b2e823672d2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/event-registry-v1.ts",
+      "sha256": "935488749baa049ffd02fad94794fe822c3636f365dd9a12318f2026606c6204"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/http-body.ts",
+      "sha256": "331173c4bb29b58e562b422d491b6a12a63d4455ffb7e829db4a95fe461824ae"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/index.ts",
+      "sha256": "d9dc939ce5a137d06fab7ef83a54a88b3aa70b403f79a62e732fc5f2c44e7910"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/ingest.ts",
+      "sha256": "73e4289b8faa3209507b36089661a3c53e6c29b46fee921b828e65660f1ec321"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts",
+      "sha256": "916727cb51f237199f6d962bdbe30d388ad1c9122d686cdf23c4528c76aa0ac6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts",
+      "sha256": "2b82b906d86005f9d323d6f48ec288276ea62625c0afcdc23a444a9090346f1f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-contracts.ts",
+      "sha256": "937492e706bf2420837123c29940bee73528e1c77a18c253f0ba9ce423eae606"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-control-route.ts",
+      "sha256": "f0fb3c25abe47cb4bfe6fe2075a46f3f37cb6bac84d9a77cc5c749bc827bf2b1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-query.ts",
+      "sha256": "f9facf9bc7731ea6b7838dc609f3f6968dfacd95bbd2b592bbe5aa08349e4f07"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tier-settings.ts",
+      "sha256": "b6c0cc098d3da4a5ba4617107abac7b47e6d33b16a47264a53ca80bb4f72e3b8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/tiers.ts",
+      "sha256": "3d780a9ae31949778bd16afafd129f105bb3caf51ca7394c7408342d98a644b7"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/transport.ts",
+      "sha256": "7485b5334b6728ad8c6c7c28649487e03b67e751e97472ddfe3ff872b56571ec"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/writer-thread.ts",
+      "sha256": "5d6a19dd469965a3da6d8d12a6c98808a9dc73bd6d7abdb3bb4bc3bc88d346a8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/writer.ts",
+      "sha256": "43e33cde14869a66ebd08977fd7f165f422b3a33d65008f6d5f63cb02680d418"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts",
+      "sha256": "aa49c2b8171e08e72230ac3157662e70cd96eef3cd50ed58634b929fbe9590cb"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/admin-data.ts",
+      "sha256": "75b6d07ebadd06b8cbe04147eb1c5383c45fb86fe0b6ab28d70579f9893a6002"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/device-config.ts",
+      "sha256": "62a654c003a45f91cfd6c308de94386b53eccec127854f44f60f5d3e51c3f7a7"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
+      "sha256": "c4a47f1025247df39cf80be421c7e2f58f64a269d0eb74e2dd07909485cf1634"
+    }
+  ],
+  "tree_drift": {
+    "same": 124,
+    "different": 37,
+    "absent_in_brain_tree": 24
+  },
+  "bundle_sha256": "952e58ac01c278836ee7466f771cf0bc10469dbddb2bc0c344c4e22f7424848a",
+  "bundle_inputs_verified": 65,
+  "contracts": {
+    "p003-listening-mode-v1.json": "c055866fad0e9b69cdd75c526eeb2fee6ad97899641d792be63037a064bf2411",
+    "p003-listening-http-v1.json": "86825d6281da13fdf17c32b04d5c9dcb4edf71ceb69257d839aacb9df0a99f1e",
+    "p003-listening-http-v1.fixtures.json": "c58dd98ade3329d04e5c9b7622e7e4668c33483b38cd804f37257e5baa6d415b"
+  },
+  "evidence_sha256": {
+    "historical-brain-summary.json": "45e557f0ef28e7faf76dcf3a47c755c67a815e7ca4169b6719bd4e9845c95b6a",
+    "current-readonly.json": "1e604e18ba76a7b33bd04c42290e4d6bbe896971a24d388ad129e5012e987d6c",
+    "source-drift.json": "0fc84dd0e4b496516f7b3c3909d0edd2d8577e4fe70314225c9c01b49deac9f4",
+    "brain-targeted-tests.log": "77beb9d9dca0d29a97c01cf5cbdfd2c0988dba954759e6a1bd0370b4077cfb93",
+    "rtc-entry-tests.log": "7b02de44875fc21751ab69f6b720d911444888266931a2d8d1c96508b907ed63",
+    "rtc-brain.mjs.manifest.json": "84e01a52c929b806d1d991fdfb67ff621edeecde5600258bc714a24acfd7263c"
+  },
+  "limitations": [
+    "no real Android/RTC pass",
+    "current ready is not historical ready",
+    "no entries does not prove no rejected requests",
+    "synthetic provider only; branch lacks live BLE/v375 additions; not release candidate"
+  ],
+  "production_changed": false,
+  "code_baseline": "eeac0a68ef9886487958fdb5780d60474b8357ff",
+  "tests": [
+    {
+      "command": "node --experimental-sqlite --import tsx --test scripts/listening-http-contract.test.ts scripts/listening-authority.test.ts scripts/listening-integration.test.ts",
+      "passed": 32,
+      "failed": 0
+    },
+    {
+      "command": "node --experimental-sqlite --import tsx --test scripts/listening-rtc-brain.test.ts",
+      "passed": 1,
+      "failed": 0
+    }
+  ],
+  "evidence_directory": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/evidence-38"
+}
