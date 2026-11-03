@@ -345,6 +345,32 @@ async fn handle_result(
 mod tests {
     use super::*;
 
+    // Run in a separate process with the two public word-list env values from
+    // the readonly admin snapshot. No credentials, provider call or env mutation.
+    #[test]
+    #[ignore = "requires a verified public hotword snapshot; not an ASR accuracy test"]
+    fn v380_live_snapshot_context_matches_controlled_probe() {
+        use sha2::{Digest, Sha256};
+        let path = std::env::var("P003_ASR_CONTEXT_FIXTURE").expect("snapshot fixture required");
+        let fixture: serde_json::Value = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        let mut config = SttConfig::from_env();
+        config.nonstream = fixture["nonstream"].as_bool().unwrap();
+        let payload = build_init_payload(&config, "synthetic-request");
+        let context = payload["request"]["corpus"]["context"].as_str().unwrap();
+        let decoded: serde_json::Value = serde_json::from_str(context).unwrap();
+        assert_eq!(decoded, fixture["context"]);
+        let mut normalized = payload.clone();
+        normalized["request"]["corpus"]["context"] = decoded.clone();
+        assert_eq!(normalized, fixture["normalized_payload"]);
+        println!("context_evidence={}", json!({
+            "hotwords": config.hotwords.len(), "nonstream": config.nonstream,
+            "context_wire_sha256": format!("{:x}", Sha256::digest(context.as_bytes())),
+            "context_semantic_sha256": format!("{:x}", Sha256::digest(serde_json::to_vec(&decoded).unwrap())),
+            "payload_semantic_sha256": format!("{:x}", Sha256::digest(serde_json::to_vec(&normalized).unwrap())),
+            "term_indices": ["补勤卡", "补签卡"].map(|term| config.hotwords.iter().position(|w| w == term)),
+        }));
+    }
+
     fn cfg(hotwords: Vec<String>) -> SttConfig {
         SttConfig {
             app_id: "a".into(),

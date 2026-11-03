@@ -19,6 +19,7 @@ import uuid
 import wave
 from pathlib import Path
 from livekit import api, rtc
+from v380_consumer import V380Consumer
 
 SR = 16000
 HISTORY = 'p003.audio.history.v1'
@@ -49,6 +50,7 @@ class Probe:
         self.events = []
         self.started = time.monotonic()
         self.trace = 'p0-39-' + str(uuid.uuid4())
+        self.consumer = V380Consumer(self.trace)
         self.seq = 0
         self.messages = []
         self.packets = []
@@ -100,6 +102,11 @@ class Probe:
                 value = {'trace_id': self.trace, 'ts_ms': int(time.time()*1000), 'src': 'android', 'type': kind, 'seq': self.seq, 'payload': payload}
             else:
                 value = replay
+            if replay is None:
+                if kind in ['listening.enter', 'listening.exit']:
+                    self.consumer.command(kind.split('.')[1], self.seq)
+                elif kind == 'listening.state':
+                    self.consumer.query(self.seq)
             await self.room.local_participant.publish_data(json.dumps(value).encode(), reliable=True, topic='control')
             self.log('control_sent', type=kind, seq=value['seq'], payload=value['payload'])
             return value
@@ -112,6 +119,12 @@ class Probe:
                 return
             assert p['version'] == 1 and p['session_id'] == self.signed['session_id']
             assert p['participant'] == self.signed['identity'] and 0 < p['ttl_ms'] <= 3000
+            assert p['mode_epoch'] >= self.consumer.epoch
+            if p['action'] == 'enter':
+                assert p['scene'] in ['story', 'share', 'singing'], 'exact v380 scene mismatch'
+            else:
+                assert p['action'] == 'exit' and p.get('scene') is None
+            assert self.consumer.pending is None, 'proposal_in_flight'
             self.proposals.add(proposal)
             if self.args.scenario == 'proposal_timeout':
                 return
@@ -124,8 +137,12 @@ class Probe:
             self.commands[p['action']] = self.enter_command['seq']
             # Exact same seq/payload retransmission, never a second allocator.
             await self.send_control('listening.'+p['action'], body, self.enter_command)
-        elif value['type'] == 'listening.ack' and p.get('state') == 'entering' and p.get('stage') == 'received':
-            if self.args.scenario == 'missing_ready' or getattr(self, 'ready_sent', False):
+        elif value['type'] == 'listening.ack':
+            decision = self.consumer.ack(value)
+            self.log('v380_consumed', decision=decision, state=self.consumer.state,
+                     epoch=self.consumer.epoch, request_id=p.get('request_id'),
+                     recovery=self.consumer.recovery)
+            if decision != 'local_ready' or self.args.scenario == 'missing_ready':
                 return
             # Software device has no local player; drain is genuinely empty.
             self.ready_sent = True
@@ -202,7 +219,9 @@ class Probe:
 
     def ack(self, state):
         action = 'exit' if state == 'normal' else 'enter'
-        return any(v.get('type') == 'listening.ack' and v.get('payload', {}).get('command_seq') == self.commands.get(action) and v['payload'].get('stage') == 'completed' and v['payload'].get('state') == state for v in self.messages)
+        return self.consumer.state == state and any(
+            v['event'] == 'v380_consumed' and v['decision'] == action + '_completed'
+            for v in self.events)
 
     async def run(self):
         session = await asyncio.to_thread(http_json, self.args.base+'/v1/device/session', {'device_sn': self.creds['device_sn'], 'trace_id': self.trace, 'supports': ['oneshot_first_turn_v1', 'local_receipt_v1', 'listening_mode_v1', 'listening_voice_control_v1']}, self.creds['device_bearer'])
@@ -231,7 +250,7 @@ class Probe:
             self.log('data_received', topic=packet.topic, value=value)
             self.packets.append({'topic':packet.topic, 'value':value, 't_ms':round((time.monotonic()-self.started)*1000)})
             if packet.topic == 'control':
-                if value.get('trace_id') != self.trace:
+                if value.get('trace_id') != self.trace or value.get('src') != 'worker':
                     return
                 self.messages.append(value)
                 task = asyncio.create_task(self.handle_control(value))
@@ -254,7 +273,9 @@ class Probe:
         @self.room.on('disconnected')
         def on_disconnect(reason):
             self.disconnected = True
-            self.log('disconnected', reason=str(reason))
+            previous = self.consumer.state
+            self.consumer.disconnected()
+            self.log('disconnected', reason=str(reason), previous_state=previous, consumer_state=self.consumer.state)
         await self.room.connect(session['server_url'], session['token'])
         # Delay only this software client's microphone publication. The actual
         # job/prebuild is already running: exercises idle ASR takeover without
@@ -273,6 +294,7 @@ class Probe:
         if self.args.scenario in ['missing_ready', 'proposal_timeout']:
             await self.wait(lambda: self.disconnected, 'client observes server disconnect', 18)
             assert not self.audio and not self.ack('listening')
+            assert self.consumer.state == 'normal' and not self.consumer.connected
         else:
             await self.wait(lambda: self.ack('listening'), 'enter double-confirm completed')
             await self.story_task
@@ -288,13 +310,14 @@ class Probe:
                 else:
                     private=Path(self.args.credentials).resolve().parent
                     parent=private.parent
-                    assert parent.name=='p003-listening-p0-20261030-session39'
+                    assert parent.name in ['p003-listening-p0-20261030-session39', 'p003-listening-p0-v380-session39']
                     pid=int((parent/'brain.pid').read_text())
                     assert Path('/proc',str(pid),'exe').resolve()==parent/'node'
                     os.kill(pid,signal.SIGSTOP)
                     self.paused_brain=pid
                     self.log('isolated_authority_paused', pid=pid)
-                await self.wait(lambda:self.disconnected, 'client observes lease/revocation disconnect', 15)
+                await self.wait(lambda:self.disconnected, 'client observes lease/revocation disconnect', 18)
+                assert self.consumer.state == 'normal' and not self.consumer.connected
                 assert not self.audio
                 self.log('assertion',name='no output under failed authorization',passed=True)
             elif self.args.scenario == 'disconnect':

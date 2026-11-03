@@ -11,23 +11,36 @@ spec = importlib.util.spec_from_file_location('p0_rtc_probe', Path(__file__).wit
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
-class AckBinding(unittest.TestCase):
-    def test_normal_state_query_cannot_complete_later_exit(self):
+class AckBinding(unittest.IsolatedAsyncioTestCase):
+    def probe(self, action, seq):
         probe = module.Probe.__new__(module.Probe)
-        probe.commands = {'enter': 2, 'exit': 5}
-        probe.messages = [{'type':'listening.ack', 'payload':{'command_seq':1, 'stage':'completed', 'state':'normal'}}]
+        probe.consumer = module.V380Consumer('trace-1')
+        probe.consumer.command(action, seq)
+        probe.events = []
+        probe.args = types.SimpleNamespace(scenario='normal')
+        probe.log = lambda event, **kw: probe.events.append({'event': event, **kw})
+        return probe
+
+    async def receive(self, probe, seq, stage, state):
+        await probe.handle_control({'type':'listening.ack', 'src':'worker', 'trace_id':'trace-1',
+            'payload':{'version':1,'request_id':f'trace-1:{seq}','command_seq':seq,
+                'stage':stage,'state':state,'mode_epoch':2}})
+
+    async def test_normal_state_query_cannot_complete_later_exit(self):
+        probe = self.probe('exit',5)
+        probe.consumer.query(1)
+        await self.receive(probe,1,'completed','normal')
         self.assertFalse(probe.ack('normal'))
-        probe.messages.append({'type':'listening.ack', 'payload':{'command_seq':5, 'stage':'received', 'state':'normal'}})
+        await self.receive(probe,5,'received','normal')
         self.assertFalse(probe.ack('normal'))
-        probe.messages.append({'type':'listening.ack', 'payload':{'command_seq':5, 'stage':'completed', 'state':'normal'}})
+        await self.receive(probe,5,'completed','normal')
         self.assertTrue(probe.ack('normal'))
 
-    def test_local_ready_is_not_original_enter_completion(self):
-        probe = module.Probe.__new__(module.Probe)
-        probe.commands = {'enter': 2}
-        probe.messages = [{'type':'listening.ack', 'payload':{'command_seq':3, 'stage':'completed', 'state':'listening'}}]
+    async def test_local_ready_is_not_original_enter_completion(self):
+        probe = self.probe('enter',2)
+        await self.receive(probe,3,'completed','listening')
         self.assertFalse(probe.ack('listening'))
-        probe.messages.append({'type':'listening.ack', 'payload':{'command_seq':2, 'stage':'completed', 'state':'listening'}})
+        await self.receive(probe,2,'completed','listening')
         self.assertTrue(probe.ack('listening'))
 
 class AudioLifetime(unittest.IsolatedAsyncioTestCase):
