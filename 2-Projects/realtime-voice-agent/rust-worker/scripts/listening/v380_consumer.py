@@ -18,8 +18,13 @@ class V380Consumer:
         self.recovery = False
 
     def command(self, action, seq):
-        self.pending = {'action': action, 'seq': seq, 'received': False}
+        self.pending = {'action': action, 'seq': seq, 'received': False, 'local_ready_sent': False}
         self.state = 'preparing'
+
+    def local_ready_sent(self):
+        current = self.pending
+        if current and current['action'] == 'enter' and current['received']:
+            current['local_ready_sent'] = True
 
     def query(self, seq):
         self.queries.append(f'{self.trace}:{seq}')
@@ -53,7 +58,7 @@ class V380Consumer:
             return 'local_ready' if current['action'] == 'enter' else 'received'
         if p['stage'] == 'completed':
             expected = 'listening' if current['action'] == 'enter' else 'normal'
-            if state != expected:
+            if state != expected or (current['action'] == 'enter' and not current['local_ready_sent']):
                 self.state, self.recovery = 'paused', True
                 return 'completion_state_invalid'
             self.epoch = max(self.epoch, epoch)

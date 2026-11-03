@@ -15,11 +15,20 @@ class Consumption(unittest.TestCase):
     def test_completed_entry_old_ack_cannot_fake_asynchronous_terminal(self):
         c=V380Consumer('trace-1');c.command('enter',1)
         self.assertEqual(c.ack(ack(1,'received','entering')), 'local_ready')
+        c.local_ready_sent()
         c.ack(ack(1,'completed','listening'))
         self.assertEqual(c.state,'listening')
         self.assertEqual(c.ack(ack(1,'completed','normal',2)), 'request_mismatch')
         self.assertEqual(c.state,'listening')
         c.disconnected();self.assertEqual(c.state,'normal');self.assertFalse(c.connected)
+
+    def test_enter_completion_requires_actual_local_ready(self):
+        for received in [False, True]:
+            c=V380Consumer('trace-1');c.command('enter',1)
+            if received:c.ack(ack(1,'received','entering'))
+            self.assertEqual(c.ack(ack(1,'completed','listening')), 'completion_state_invalid')
+            self.assertTrue(c.recovery)
+            self.assertEqual(c.state,'paused')
 
     def test_normal_exit_matches_real_pending_and_is_idempotent(self):
         c=V380Consumer('trace-1');c.command('exit',7)

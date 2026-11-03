@@ -25,6 +25,15 @@ SR = 16000
 HISTORY = 'p003.audio.history.v1'
 
 
+def isolated_private_directory(credentials):
+    private = Path(credentials).resolve().parent
+    roots = [Path('/opt/p003-listening-p0-20261030-session39'),
+             Path('/opt/p003-listening-p0-v380-session39')]
+    if private.parent not in roots or not private.name.startswith('brain-'):
+        raise ValueError('refusing mutation outside exact isolated Brain directory')
+    return private
+
+
 def pcm(path):
     with wave.open(str(path)) as w:
         assert (w.getnchannels(), w.getsampwidth(), w.getframerate()) == (1, 2, SR)
@@ -146,6 +155,7 @@ class Probe:
                 return
             # Software device has no local player; drain is genuinely empty.
             self.ready_sent = True
+            self.consumer.local_ready_sent()
             await self.send_control('listening.local_ready', {'mode_epoch': p['mode_epoch']})
 
     async def pull(self, track):
@@ -308,9 +318,8 @@ class Probe:
                 if self.args.scenario == 'revoke':
                     self.set_isolated_enabled(False)
                 else:
-                    private=Path(self.args.credentials).resolve().parent
+                    private=isolated_private_directory(self.args.credentials)
                     parent=private.parent
-                    assert parent.name in ['p003-listening-p0-20261030-session39', 'p003-listening-p0-v380-session39']
                     pid=int((parent/'brain.pid').read_text())
                     assert Path('/proc',str(pid),'exe').resolve()==parent/'node'
                     os.kill(pid,signal.SIGSTOP)
@@ -361,8 +370,7 @@ class Probe:
         self.log('summary', scenario=self.args.scenario, audio_nonzero_frames=len(self.audio), caption_events=len(self.captions), uplink_frames=self.sent_frames, control_types=[v.get('type') for v in self.messages], server_disconnected=self.disconnected)
 
     def set_isolated_enabled(self, enabled):
-        private=Path(self.args.credentials).resolve().parent
-        assert private.parent.name=='p003-listening-p0-20261030-session39' and private.name.startswith('brain-')
+        private=isolated_private_directory(self.args.credentials)
         db=sqlite3.connect(private/'config.db')
         try:
             db.execute('BEGIN IMMEDIATE')

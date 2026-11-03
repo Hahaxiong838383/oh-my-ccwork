@@ -40,8 +40,21 @@ class AckBinding(unittest.IsolatedAsyncioTestCase):
         probe = self.probe('enter',2)
         await self.receive(probe,3,'completed','listening')
         self.assertFalse(probe.ack('listening'))
+        probe.consumer.pending['received'] = True
+        probe.consumer.local_ready_sent()
         await self.receive(probe,2,'completed','listening')
         self.assertTrue(probe.ack('listening'))
+
+class IsolationScope(unittest.TestCase):
+    def test_only_exact_isolated_roots_and_brain_children(self):
+        for root in ['p003-listening-p0-20261030-session39', 'p003-listening-p0-v380-session39']:
+            path = Path('/opt') / root / 'brain-123' / 'credentials.json'
+            self.assertEqual(module.isolated_private_directory(path), path.parent)
+        for root in ['p003-listening-canary-20261030', 'p003-listening-p0-v380-session38']:
+            with self.assertRaises(ValueError):
+                module.isolated_private_directory(Path('/opt') / root / 'brain-123' / 'credentials.json')
+        with self.assertRaises(ValueError):
+            module.isolated_private_directory('/opt/p003-listening-p0-v380-session39/production/credentials.json')
 
 class AudioLifetime(unittest.IsolatedAsyncioTestCase):
     async def test_cancelled_pull_disposes_native_stream_before_loop_exits(self):

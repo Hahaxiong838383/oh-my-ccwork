@@ -367,7 +367,7 @@ mod tests {
             "context_wire_sha256": format!("{:x}", Sha256::digest(context.as_bytes())),
             "context_semantic_sha256": format!("{:x}", Sha256::digest(serde_json::to_vec(&decoded).unwrap())),
             "payload_semantic_sha256": format!("{:x}", Sha256::digest(serde_json::to_vec(&normalized).unwrap())),
-            "term_indices": ["补勤卡", "补签卡"].map(|term| config.hotwords.iter().position(|w| w == term)),
+            "term_indices": (["补勤卡", "补签卡"].map(|term| config.hotwords.iter().position(|w| w == term))),
         }));
     }
 
