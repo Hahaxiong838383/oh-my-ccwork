@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import * as context from '../src/ark/context.js';
 import {isArkStateQuestion} from '../src/xiaoke-kb.js';
 const now=Date.parse('2026-11-02T17:00:00+08:00');
+test('v384 split static usage inherits only the latest explicit user resource',async()=>{
+ const {answerArk}=await import('../src/ark/answer.js');
+ const user=(content:string)=>({role:'user',content});
+ for(const fragment of ['请问 方舟里的补勤卡','方舟里的补勤卡','补签卡','我有几张补勤卡']){
+  for(const tail of ['有什么用','那这个有什么用','请问有什么用？']){
+   const result=answerArk(tail,undefined,[user(fragment),{role:'assistant',content:'你想问它的数量还是用途？'}],now);
+   assert.match(result??'',/补勤卡用于符合条件的历史航线节点补签/);
+   assert.doesNotMatch(result!,/查不到|库存|\d+张/);
+  }
+ }
+ for(const history of [[],[{role:'assistant',content:'补勤卡'}],[user('补勤卡'),user('今天天气')],[user('原神里的补勤卡')],[user('故事里的补勤卡')],[user('补勤卡和星尘')],[user('不要聊补勤卡')],[user('补勤卡，今天天气怎么样')]])assert.equal(answerArk('有什么用',undefined,history,now),null);
+ for(const tail of ['有什么用，顺便讲故事','翻译有什么用','现在还有多少'])assert.equal(answerArk(tail,undefined,[user('方舟里的补勤卡')],now),null);
+});
 // Source fixture lives in the reviewed Android contract, never in production.
 const sample=()=>({schema_version:1,snapshot_id:'test-1',captured_at_ms:now,boot_id:'boot-1',boot_started_at_ms:now-10000,sequence:1,logical_day:'2026-11-02',config_revision:'test-rule',content_version:'test-v',source_mode:'normal',wallets:{family_coin:0,stardust:7},inventory:{'M-CARD-001':3},progress:{timer_state:'paused',claimable_count:0,next_reward:{status:'locked',kind:'chest',item_id:null,stage_id:'s1',remaining_seconds:120}}} as const);
 test('realistic quantity variants request current facts; external domains never do',()=>{

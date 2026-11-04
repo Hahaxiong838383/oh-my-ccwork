@@ -1,4 +1,4 @@
-import {answerArk,arkDirectReplyAllowed} from '../ark/answer.js';
+import {answerArk,arkDirectReplyAllowed,resolveArkUsageQuestion} from '../ark/answer.js';
 import {arkContext} from '../ark/service.js';
 import {isArkStateQuestion} from '../xiaoke-kb.js';
 import {isArkFollowup,stripArkDynamicTurns} from '../ark/memory-policy.js';
@@ -136,7 +136,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const inOnboarding = !dynamicArk && !directArkQuestion && !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
-  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(dynamicArk ? '当前方舟进度 '+userText : userText);
+  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(dynamicArk ? '当前方舟进度 '+userText : resolveArkUsageQuestion(userText,rawHistory)??userText);
   // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
   // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
   const companionGuardrail = (directArkQuestion || overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
