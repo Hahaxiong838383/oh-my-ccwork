@@ -1,0 +1,165 @@
+{
+  "status": "SERVER_FIXED_DEPLOYED_DEVICE_RETEST_PENDING",
+  "at": "2026-11-04T18:25:39.711920+08:00",
+  "brain_candidate": "362b8db2ad529e21a4247a97ea3336a7300157de",
+  "worker_runtime_candidate": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+  "worker_additional_test_commit": "3636e015d411ea88ec1472e06ba9a61e8705f546",
+  "brain_deploy": {
+    "backup": "/opt/p003/backups/v384-voice-brain-20261104",
+    "started_ms": 1793786311250,
+    "success": true,
+    "after": {
+      "pm2": {
+        "p003-voice": {
+          "pid": 4186397,
+          "restarts": 51
+        },
+        "kidshub-voice": {
+          "pid": 1626403,
+          "restarts": 0
+        },
+        "p003-analytics": {
+          "pid": 3937833,
+          "restarts": 9
+        }
+      },
+      "search": "MainPID=3839441\nNRestarts=0\nActiveState=active",
+      "listening": "MainPID=4186369\nNRestarts=0\nActiveState=active"
+    },
+    "files": {
+      "/opt/p003/server/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+      "/opt/p003/server/src/routes/custom-llm.ts": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d",
+      "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+      "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477"
+    },
+    "ended_ms": 1793786315794
+  },
+  "worker_deploy": {
+    "backup": "/opt/p003-listening-canary-20261030/backups/v384-worker-20261104",
+    "started_ms": 1793787505144,
+    "runtime": {
+      "unit": {
+        "MainPID": "2750511",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "health": {
+        "agent": "p003-search-listening-20261030",
+        "at_ms": 1793787513491,
+        "cleanup": {
+          "at_ms": 1793787511215,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "v374-listening-ark-20261102-1793613511",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      },
+      "binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0"
+    },
+    "success": true,
+    "ended_ms": 1793787514514
+  },
+  "worker_manifest": {
+    "success": true,
+    "at_ms": 1793787538194,
+    "before_sha256": "02b6e950632a1afb187e285176e1c9ac8f1832ae42b6a974dc29e0654fa9254f",
+    "after_sha256": "c6013b898ddc292fd3b2f17c27260cefbcbb2ca4dda75090b6dabbd02663618b",
+    "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+    "backup": "/opt/p003/listening-canary-20261030/backups/v384-worker-manifest-20261104"
+  },
+  "window": {
+    "device_sn": "BJP00326070803800006",
+    "until_cst": "2026-11-11T18:00:00+08:00",
+    "expires_at_ms": 1794391200000,
+    "listening_revision": 6,
+    "source_generation": 1,
+    "requires_fresh_wake": true,
+    "service_jwt_expires_at_s": 1794391200
+  },
+  "verification": {
+    "brain_main": {
+      "passed": 52,
+      "failed": 0
+    },
+    "brain_canary_independent": {
+      "unit_passed": 18,
+      "http_groups_passed": 8
+    },
+    "worker_linux": {
+      "passed": 613,
+      "failed": 0,
+      "preexisting_ignored": 2
+    },
+    "feedback_state_exit_additional": {
+      "passed": 1,
+      "states": [
+        "FeedbackReserved",
+        "FeedbackActive"
+      ]
+    },
+    "rtc_voice_exit": {
+      "passed": 3,
+      "commands": [
+        "恢复聊天",
+        "结束倾听恢复聊天",
+        "小可结束倾听"
+      ],
+      "control_entry": true,
+      "android": "software consumer",
+      "brain_text": "deterministic substitute",
+      "real_asr_tts": true,
+      "real_endpoint_model": false
+    },
+    "admin": {
+      "samples": 14,
+      "duration_ms": 195027,
+      "all_ready": true,
+      "effective_enabled": true,
+      "revision": 6,
+      "ack_age_max_ms": 3201
+    },
+    "worker_stability": {
+      "samples": 14,
+      "duration_ms": 200044,
+      "pid": 2750511,
+      "restarts": 0,
+      "same_process_and_fingerprints": true,
+      "sample_span_ms": 195401
+    },
+    "journal": {
+      "brain": {
+        "unit": "p003-listening-brain",
+        "since_epoch": 1793786311,
+        "until_ms": 1793787881751,
+        "journal_exit": 0,
+        "entries": 9,
+        "panic_entries": 0,
+        "error_entries": 0,
+        "error_categories": {}
+      },
+      "worker": {
+        "unit": "p003-listening-worker",
+        "since_epoch": 1793787505,
+        "until_ms": 1793787880245,
+        "journal_exit": 0,
+        "entries": 701,
+        "panic_entries": 0,
+        "error_entries": 0,
+        "error_categories": {}
+      }
+    }
+  },
+  "not_verified": [
+    "post-release v384 physical Android H1 and L1",
+    "human acoustic input and singing",
+    "new real device session signed after source-generation advance"
+  ],
+  "rollback_tags": {
+    "brain": "rollback/p003-v384-brain-pre-20261104",
+    "worker": "rollback/p003-v384-worker-pre-20261104"
+  },
+  "private_evidence_root": "/Users/fu-121/.local/state/p003-v384-followup-20261104"
+}

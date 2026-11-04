@@ -1,0 +1,21 @@
+{
+  "source_candidate": "362b8db2ad529e21a4247a97ea3336a7300157de",
+  "runtime_files": {
+    "/opt/p003/server/src/ark/answer.ts": {
+      "before_sha256": "2ba1bd32c27dd933a105767e30e1ac498a19a4928681136c4e2a7bb66841d0a3",
+      "after_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56"
+    },
+    "/opt/p003/server/src/routes/custom-llm.ts": {
+      "before_sha256": "cabf67279074a1fb2cab191d28d4774c981f917cc7dfee514018441c0746bc09",
+      "after_sha256": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d"
+    },
+    "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts": {
+      "before_sha256": "2ba1bd32c27dd933a105767e30e1ac498a19a4928681136c4e2a7bb66841d0a3",
+      "after_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56"
+    },
+    "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts": {
+      "before_sha256": "c9c2aff945ab0dc65ea29dbc342369440f70611525208977532a5ba155c6bfea",
+      "after_sha256": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477"
+    }
+  }
+}

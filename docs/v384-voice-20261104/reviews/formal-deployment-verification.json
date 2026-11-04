@@ -1,0 +1,97 @@
+{
+  "at": "2026-11-04T10:25:11.125337+00:00",
+  "verdict": "FORMAL_DEPLOYMENT_READINESS_STABLE_OVER_3_MINUTES",
+  "candidate": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+  "binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+  "admin_interval_ms": 195027,
+  "admin_samples": 14,
+  "worker_interval_ms": 195401,
+  "worker_samples": 14,
+  "admin_start_ms": 1793787607276,
+  "admin_end_ms": 1793787802303,
+  "max_ack_age_ms": 4802,
+  "max_worker_health_age_ms": 4627,
+  "active_sessions_values": [
+    0
+  ],
+  "jobs_values": [
+    0
+  ],
+  "checks": {
+    "admin_observed_over_3min": true,
+    "worker_observed_over_3min": true,
+    "real_admin_all_ready": true,
+    "all_applied_revision6": true,
+    "all_ack_age_under_5sec": true,
+    "periodic_ack_advances": true,
+    "unchanged_config_scope": true,
+    "source_generation1": true,
+    "four_files_and_search_unchanged": true,
+    "four_files_match_deployment": true,
+    "brain_and_analytics_processes_unchanged": true,
+    "brain_health_all200": true,
+    "manifest_matches_activation": true,
+    "formal_actual_binary": true,
+    "worker_process_stable": true,
+    "worker_health_fresh": true,
+    "worker_registered_cleanup_healthy": true,
+    "worker_fingerprints_stable": true,
+    "ordinary_search_preserved": true,
+    "worker_formal_fingerprint": true,
+    "worker_env_window_preserved": true,
+    "credential_in_actual_process": true,
+    "window_config_unchanged": true,
+    "brain preserved /opt/p003/listening-canary-20261030/v374-window.json": true,
+    "brain preserved /opt/p003/listening-canary-20261030/expire-v374-window.py": true,
+    "brain preserved /etc/systemd/system/p003-listening-v374-expiry.timer": true,
+    "brain preserved /etc/systemd/system/p003-listening-v374-expiry.service": true,
+    "brain timer_active_waiting": true,
+    "worker preserved /opt/p003-listening-canary-20261030/v374-window.json": true,
+    "worker preserved /opt/p003-listening-canary-20261030/expire-v374-window.py": true,
+    "worker preserved /etc/systemd/system/p003-listening-v374-expiry.timer": true,
+    "worker preserved /etc/systemd/system/p003-listening-v374-expiry.service": true,
+    "worker timer_active_waiting": true,
+    "both_brain_db_deadlines": true,
+    "worktree_clean": true,
+    "post_release_journal_no_panic_error": true
+  },
+  "sha256": {
+    "formal-journal-brain.json": "f9bcb118b1ab108b582da6cfb778061cc3ef74e7794da6e230f3e5a3a531773d",
+    "formal-journal-worker.json": "88f9cfc4684e31178d656b6cf30edb7bc4a9d6cc6c0b9e446639d1b0f5327fd7",
+    "formal-admin-stability.json": "47c4e7399442e815885b501e2649e7784ea478885105236759d385df1c7f3fc2",
+    "formal-worker-stability.json": "a8b7b25553d97d5291194744fb95f1e50fdd622d21441e32244fe20bb025f080",
+    "formal-worker-current.json": "2d75585e0b248ded20ffb0a4353ce2323aa76f13a7eb3822a04cc5066e56a58e",
+    "formal-worker-credential.json": "2988108df549ae775e8f664ec34476f693e96a9d5da7303190ddbe92b01cf988",
+    "formal-admin-end.json": "c43d986908cc32536577b6588a18140d41a1500bdb20e0831302428c323031c2",
+    "formal-window-brain.json": "dd8dae15b4ae9ff1cd6310d4c64b4d5cdce7e384c53d00749488d699d98c1c9f",
+    "formal-window-worker.json": "51a64b87cdec336e7e712cad17f886350eefc78e959cf9884015ef74a881f5ae"
+  },
+  "journal_summary": {
+    "brain": {
+      "unit": "p003-listening-brain",
+      "since_epoch": 1793786311,
+      "until_ms": 1793787881751,
+      "journal_exit": 0,
+      "entries": 9,
+      "panic_entries": 0,
+      "error_entries": 0,
+      "error_categories": {}
+    },
+    "worker": {
+      "unit": "p003-listening-worker",
+      "since_epoch": 1793787505,
+      "until_ms": 1793787880245,
+      "journal_exit": 0,
+      "entries": 701,
+      "panic_entries": 0,
+      "error_entries": 0,
+      "error_categories": {}
+    }
+  },
+  "not_verified": [
+    "main PM2 application log contents not audited",
+    "production new device session",
+    "real Android voice/H1/singing",
+    "zero transient failures between 15-second samples"
+  ]
+}
