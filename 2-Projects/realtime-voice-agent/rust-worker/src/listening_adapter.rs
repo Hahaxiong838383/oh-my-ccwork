@@ -183,14 +183,24 @@ impl Adapter {
             && !self.closing && self.pending.is_none() && self.proposal.is_none()
     }
     pub fn clear_voice_wake(&mut self) { self.recent_wake.clear(); }
+    fn active_exit_context(&self) -> bool {
+        self.voice_available() && matches!(self.runtime.snapshot().phase,
+            Phase::Listening | Phase::FeedbackReserved | Phase::FeedbackActive)
+    }
+    fn parse_voice(&self, text: &str) -> Option<crate::listening_voice::Utterance> {
+        crate::listening_voice::parse(text).or_else(|| {
+            self.active_exit_context().then(|| crate::listening_voice::parse_active_exit(text)).flatten()
+        })
+    }
     pub fn voice_final_candidate(&self, text: &str) -> bool {
-        crate::listening_voice::parse(text).is_some()
+        self.parse_voice(text).is_some()
             || (self.natural_voice_allowed() && (crate::textproc::is_wake_only(text)
                 || (self.recent_wake.active(self.runtime.now_ms(), self.runtime.snapshot().epoch)
                     && crate::listening_voice::parse_natural_enter(text).is_some())))
     }
     pub fn voice_candidate(&self, text: &str) -> bool {
         crate::listening_voice::possible_prefix(text)
+            || (self.active_exit_context() && crate::listening_voice::possible_active_exit_prefix(text))
             || (self.natural_voice_allowed() && (crate::textproc::is_wake_only(text) || self.recent_wake.possible_tail(
                 text, self.runtime.now_ms(), self.runtime.snapshot().epoch)))
     }
@@ -207,7 +217,7 @@ impl Adapter {
         let natural = if self.natural_voice_allowed() {
             self.recent_wake.take_enter(text, now, epoch)
         } else { self.recent_wake.clear(); None };
-        let utterance = crate::listening_voice::parse(text).or(natural)?;
+        let utterance = self.parse_voice(text).or(natural)?;
         self.voice_utterance(utterance)
     }
     fn pause_voice(&mut self, out: &mut Effects) {
@@ -238,7 +248,8 @@ impl Adapter {
     /// Only final STT commits commands; this never fabricates an Android sequence.
     pub fn voice_text(&mut self, text: &str) -> Option<Effects> {
         self.clear_voice_wake();
-        self.voice_utterance(crate::listening_voice::parse(text)?)
+        let utterance = self.parse_voice(text)?;
+        self.voice_utterance(utterance)
     }
     fn voice_utterance(&mut self, utterance: crate::listening_voice::Utterance) -> Option<Effects> {
         use crate::listening_voice::Intent;
@@ -1725,6 +1736,57 @@ mod adapter_tests {
         c.runtime.advance_clock(10001);
         assert!(c.voice_text("小可退出倾听模式").unwrap().acks.is_empty());
         assert_eq!(c.runtime.snapshot().phase, Phase::Paused);
+    }
+    #[tokio::test]
+    async fn listening_active_exit_aliases_complete_normal_transition() {
+        for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听", "小可，恢复普通聊天。", "小可小可退出倾听模式"] {
+            let mut a = adapter();
+            a.client.meta.voice_control = Some(listening_http::VoiceControl {
+                version: 1, capability: "listening_voice_control_v1".into(),
+            });
+            assert!(a.voice_final_candidate(phrase), "{phrase}");
+            let e = a.voice_final(phrase).unwrap();
+            assert_eq!(e.acks.len(), 1, "{phrase}");
+            assert_eq!(e.acks[0]["type"], "listening.proposal");
+            assert_eq!(e.acks[0]["payload"]["action"], "exit");
+            // A proposal alone must not pretend that Android completed the exit.
+            assert_eq!(a.runtime.snapshot().phase, Phase::Listening);
+            let e = a.control(Some("dev-BJP00326070803800006"), "trace-test-1", Some(Command {
+                seq: 3, request_id: "trace-test-1:3".into(),
+                proposal_id: Some(e.acks[0]["payload"]["proposal_id"].as_str().unwrap().into()),
+                action: Action::Exit { epoch: 1 },
+            }));
+            assert!(e.stopped);
+            assert_eq!(e.acks[0]["payload"]["state"], "normal");
+            assert!(a.runtime.output_permit(OutputPurpose::Ordinary, 10, a.runtime.now_ms()).unwrap().allowed());
+        }
+    }
+    #[tokio::test]
+    async fn listening_active_exit_does_not_capture_normal_chat_quotes_or_questions() {
+        for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听"] {
+            let mut a = voice_adapter();
+            assert!(!a.voice_final_candidate(phrase));
+            assert!(a.voice_final(phrase).is_none());
+        }
+        for phrase in ["故事里的小可说结束倾听恢复聊天", "歌词是恢复聊天", "不要结束倾听", "结束倾听是什么意思", "可以恢复聊天吗", "小可结束倾听这句话怎么说", "“恢复聊天”"] {
+            let mut a = adapter();
+            a.client.meta.voice_control = Some(listening_http::VoiceControl {
+                version: 1, capability: "listening_voice_control_v1".into(),
+            });
+            assert!(!a.voice_final_candidate(phrase), "{phrase}");
+            assert!(a.voice_final(phrase).is_none(), "{phrase}");
+            assert!(a.proposal.is_none());
+        }
+        let mut unsupported = adapter();
+        assert!(unsupported.voice_final("恢复聊天").is_none());
+        let mut expired = adapter();
+        expired.client.meta.voice_control = Some(listening_http::VoiceControl {
+            version: 1, capability: "listening_voice_control_v1".into(),
+        });
+        expired.runtime.advance_clock(10001);
+        assert!(expired.voice_final("恢复聊天").is_none());
+        assert!(expired.proposal.is_none());
+        assert_eq!(expired.runtime.snapshot().phase, Phase::Paused);
     }
     #[tokio::test]
     async fn listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output() {

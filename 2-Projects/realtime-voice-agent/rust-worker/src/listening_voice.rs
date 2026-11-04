@@ -60,6 +60,27 @@ fn normalized(text: &str) -> (String, Vec<usize>) {
 pub fn parse(text: &str) -> Option<Utterance> {
     parse_rules(text, phrases())
 }
+
+// Short exits are meaningful only inside an already-authorized listening mode.
+// The Adapter supplies that state; do not add these to the global command table.
+const ACTIVE_EXITS: &[&str] = &[
+    "结束倾听恢复聊天", "结束倾听模式恢复聊天", "结束倾听", "结束倾听模式",
+    "退出倾听", "退出倾听模式", "恢复聊天", "恢复普通聊天",
+];
+fn active_exit_text(text: &str) -> String {
+    let value = normalized(text).0;
+    value.strip_prefix("小可小可").or_else(|| value.strip_prefix("小可"))
+        .unwrap_or(&value).to_owned()
+}
+pub fn parse_active_exit(text: &str) -> Option<Utterance> {
+    let value = active_exit_text(text);
+    ACTIVE_EXITS.contains(&value.as_str())
+        .then(|| Utterance { intent: Intent::Exit, tail: String::new() })
+}
+pub fn possible_active_exit_prefix(text: &str) -> bool {
+    let value = active_exit_text(text);
+    !value.is_empty() && ACTIVE_EXITS.iter().any(|phrase| phrase.starts_with(&value))
+}
 fn parse_rules(text: &str, rules: Vec<(&str, Intent)>) -> Option<Utterance> {
     let (normal, ends) = normalized(text);
     for (phrase, intent) in rules {
