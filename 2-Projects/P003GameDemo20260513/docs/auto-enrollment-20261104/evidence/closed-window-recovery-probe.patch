@@ -1,0 +1,17 @@
+--- a/scripts/device-enrollment-http.test.ts
++++ b/scripts/device-enrollment-http.test.ts
+@@ -85,6 +85,14 @@
+  assert.equal((await req('/api/parent/device-enrollments/confirm',a,confirm)).json.binding_id,bound.json.binding_id,'gate closure cannot break committed receipt retries');
+  assert.equal((await req('/api/parent/device-enrollments/challenge',a,input)).status,503);
+  assert.equal((await req('/v1/device/pairing/claim',undefined,{binding_protocol:'ble-key-v1',sn:fixture.sn,pairing_nonce:nonce})).status,200,'gate closure cannot stop existing claim');
++ const recoveryNonce=randomBytes(32).toString('base64url');
++ const recoveryInput={binding_protocol:'ble-key-v1',sn:fixture.sn,device_key_id:fixture.body.device_key_id,ble_session_id:randomBytes(16).toString('hex'),ble_transcript_hash:randomBytes(32).toString('hex'),pairing_nonce:recoveryNonce,credential_pk:rec.getPublicKey(null,'compressed').toString('base64url')};
++ const recoveryChallenge=await req('/api/parent/ble-bindings/challenge',a,recoveryInput);assert.equal(recoveryChallenge.status,200,'registered owner can recover after enrollment gate closes');
++ const recoveryPayload=Buffer.from(recoveryChallenge.json.signing_payload_b64url,'base64url').toString();assert.equal(recoveryPayload.split('\n').length,12);assert.equal(recoveryPayload.split('\n')[0],'P003-BLE-BIND-V1');
++ const recoveryBinding=await req('/api/parent/ble-bindings/confirm',a,{challenge_id:recoveryChallenge.json.challenge_id,device_signature:signature(fixture.keys.privateKey,recoveryChallenge.json.signing_payload_b64url)});assert.equal(recoveryBinding.status,200);assert.notEqual(recoveryBinding.json.binding_id,bound.json.binding_id);assert.equal(recoveryBinding.json.binding_version,bound.json.binding_version);
++ const recovered=await req('/v1/device/pairing/claim',undefined,{binding_protocol:'ble-key-v1',sn:fixture.sn,pairing_nonce:recoveryNonce});assert.equal(recovered.status,200);
++ const recoveredCred=decryptCredential(rec.getPrivateKey(),recovered.json.enc,recoveryNonce,fixture.sn);assert.equal((await req('/v1/device/session/prefetch',recoveredCred,{})).status,200);assert.equal((await req('/api/parent/ble-bindings/'+recoveryBinding.json.binding_id,a)).json.activation_state,'activated');assert.equal(deviceRegistryStore.get(fixture.sn)?.parent_account_id,A.id);
++ console.log('PASS closed enrollment gate: already-enrolled original owner recovers via legacy 12-line proof, new receipt, claim and actual authentication');
+  config.enabled=true;saveConfig();
+  const replaced=newIdentity(fixture.sn);assert.equal((await req('/v1/device/provisioning/identity',config.provisioning_token,replaced.body)).status,409);
+  deviceRegistryStore.remove(fixture.sn);
