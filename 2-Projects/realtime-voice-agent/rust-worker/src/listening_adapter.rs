@@ -1738,6 +1738,32 @@ mod adapter_tests {
         assert_eq!(c.runtime.snapshot().phase, Phase::Paused);
     }
     #[tokio::test]
+    async fn listening_active_short_exit_cancels_reserved_and_playing_feedback() {
+        for playing in [false, true] {
+            let mut a = adapter();
+            a.client.meta.voice_control = Some(listening_http::VoiceControl {
+                version: 1, capability: "listening_voice_control_v1".into(),
+            });
+            let now = a.runtime.now_ms();
+            a.runtime.reserve_voice_feedback(1, now).unwrap();
+            let epoch = a.runtime.snapshot().epoch;
+            if playing { a.runtime.begin_feedback(epoch, 7, now).unwrap(); }
+            assert_eq!(a.runtime.snapshot().phase, if playing { Phase::FeedbackActive } else { Phase::FeedbackReserved });
+            let old = if playing { a.runtime.output_permit(OutputPurpose::Feedback, 7, now) } else { None };
+            if playing { assert!(old.as_ref().unwrap().allowed()); }
+            let e = a.voice_final("恢复聊天").unwrap();
+            assert_eq!(e.acks[0]["payload"]["action"], "exit");
+            let e = a.control(Some("dev-BJP00326070803800006"), "trace-test-1", Some(Command {
+                seq: 3, request_id: "trace-test-1:3".into(),
+                proposal_id: Some(e.acks[0]["payload"]["proposal_id"].as_str().unwrap().into()),
+                action: Action::Exit { epoch },
+            }));
+            assert_eq!(e.acks[0]["payload"]["state"], "normal");
+            if let Some(old) = old { assert!(!old.allowed(), "old feedback must never resume after exit"); }
+            assert!(a.runtime.output_permit(OutputPurpose::Ordinary, 8, a.runtime.now_ms()).unwrap().allowed());
+        }
+    }
+    #[tokio::test]
     async fn listening_active_exit_aliases_complete_normal_transition() {
         for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听", "小可，恢复普通聊天。", "小可小可退出倾听模式"] {
             let mut a = adapter();
