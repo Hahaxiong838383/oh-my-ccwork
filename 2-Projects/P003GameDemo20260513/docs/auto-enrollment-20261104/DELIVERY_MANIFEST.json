@@ -1,0 +1,44 @@
+{
+  "delivered": true,
+  "files": [
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104/P003_AUTO_ENROLLMENT_SERVER_RECEIPT_20261104.md",
+      "bytes": 5363,
+      "sha256": "3388845f68a9531bd82ed16775cd83b4a68a0df9978b64851a98d3d53d32c538"
+    },
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104/P003_AUTO_ENROLLMENT_CLIENT_CONTRACT_20261104.md",
+      "bytes": 16611,
+      "sha256": "8b0cedb3716da072f67b8b0cf0719594798ed01b414ee26ff65f50062aa4a1e2"
+    },
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104/P003_AUTO_ENROLLMENT_TEST_CASES_20261104.md",
+      "bytes": 7109,
+      "sha256": "6765241946bdda65573ce1e05f5cc49e28cc26c109a63260f94bb9af40e61c96"
+    },
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104/provision-device-identity.mjs",
+      "bytes": 2672,
+      "sha256": "f1486e8c5f154f479c0b28067cc200f00aca3b6c39b07ff75338c2c9bb3aaa1d"
+    },
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104/README.md",
+      "bytes": 984,
+      "sha256": "bfce26d29278b2b505af5e99e312ee6f7c755a79d30f12ad6929d0a7d1cf438e"
+    },
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104/SHA256SUMS.txt",
+      "bytes": 511,
+      "sha256": "c9fca9412b540fab6793988558c5f251e43244e3f10878a54c17095d01f80f9b"
+    },
+    {
+      "file": "/Users/rayman.chen/Downloads/P003_Auto_Enrollment_20261104.zip",
+      "bytes": 17957,
+      "sha256": "e172b0e3112da5ed58851d2aea87f9a8e08bceb4db0df53783286b059392fe09"
+    }
+  ],
+  "local_air_hash_comparison": "7/7 identical",
+  "package_includes_credentials": false,
+  "runtime_candidate": "60485d45e566eba7b6e26277e925b8e68852a16b",
+  "handoff_document_commit": "9eb3437ad76e5ccc1239f2f8e41ef87c6cfff1ba"
+}
