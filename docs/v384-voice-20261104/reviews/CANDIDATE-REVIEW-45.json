@@ -1,0 +1,64 @@
+{
+  "status": "PASS_ISOLATED_H1_CANARY",
+  "candidate_sha": "362b8db2ad529e21a4247a97ea3336a7300157de",
+  "runtime_variant": "exact live listening-canary source archive plus exactly two declared file overrides",
+  "runtime_overrides": {
+    "src/routes/custom-llm.ts": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477",
+    "src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56"
+  },
+  "source_files_rehashed_after_test": 154,
+  "baseline_reversible_exact": true,
+  "tests": {
+    "candidate-unit-r2.log": {
+      "tests": 18,
+      "pass": 18,
+      "fail": 0
+    },
+    "candidate-http-r2.log": {
+      "tests": 8,
+      "pass": 8,
+      "fail": 0
+    }
+  },
+  "network": "global fetch restricted to 127.0.0.1; fresh synthetic accounts/SQLite and local mock model/facts services; clean child env",
+  "verified": [
+    "4 original RED cases now green; 18 independent source tests",
+    "8 static fragment/confirmation combinations over actual HTTP return finite known usage; zero model and proxy calls",
+    "11 topic/quote/external-game/ambiguous/fragment/state/action negative combinations over actual HTTP",
+    "missing/wrong callback Bearer 401; invalid/missing/wrong role/wrong Worker JWT cannot use finite path or proxy",
+    "wrong/unknown room cannot use finite/proxy path; missing callback configuration in canary cannot bypass",
+    "authorized dynamic facts through canary proxy; wrong subject/legacy/null facts safe unknown; known authoritative zero remains zero",
+    "static fallback KB preserved when finite gate closed; original tail retained in audit; finite answer memory_excluded",
+    "real SSE abort cancels local upstream stream, no cancelled turn persisted",
+    "R26 term explanation still local HTTP branch with zero model/proxy calls; history transform pure-module checks",
+    "override/feedback skip finite Ark response and KB as before"
+  ],
+  "retained_failed_attempt": {
+    "file": "candidate-unit.log",
+    "exit": 1,
+    "reason": "extra main-only ark-answer.test.ts imports src/ark/context.ts absent by design in live canary archive; independent 18 tests passed in same run",
+    "resolution": "did not inject main source; reran only applicable 18 tests separately; full actual canary HTTP dependency graph loaded and passed"
+  },
+  "blockers": [],
+  "not_verified": [
+    "human original audio / physical Android H1 retest",
+    "historical original full HTTP request payload",
+    "live production deployment and post-deploy acceptance",
+    "full R26 search task creation/resume/end-to-end in this lane; source deltas preserved, local explanation HTTP and history pure module tested",
+    "whole-main suite in this lane; owner13 handles main candidate",
+    "L1 exit acceptance belongs to 38/39 + main13"
+  ],
+  "production_changes": false,
+  "worktree_changes": false,
+  "at": "2026-11-04T17:56:54.263680+08:00",
+  "evidence_sha256": {
+    "candidate-unit.log": "c21a1ab046f14cd129c527fb24080263b689c1f1243495b5e97f9dce3b8405e7",
+    "candidate-unit-r2.log": "5b1f531d5827b2c2a152e85b48e2163c305cb977acd790f7352153aaafeab4f2",
+    "candidate-http.log": "9265c70e84fd9cea365a5660d0171616a132557d791ea6f70b10bebe78623390",
+    "candidate-http-r2.log": "38783f21406cd941d64ef7ff41e457422dd8810f46065cb1ae4d382748382efc",
+    "canary-runtime-manifest.json": "366fe67e1814025df60f25606d46a4383d27d3547b257c6632d5f24a850ea084",
+    "baseline-canary-drift.patch": "2b1312f8fc9f16094b3b9b24ea31a3b82412f6e9effb30838e58efb6b107f846",
+    "canary-http/fragment-audit.test.ts": "170b882e13589c83f64db900c716c6ced94d7162569eee90efeee386591fc43e",
+    "canary-http/scripts/v384-canary-independent.test.ts": "d774a08bd449f98b2eabee3630cb15d4cfda515bd80530e2786128c9d3732c32"
+  }
+}
