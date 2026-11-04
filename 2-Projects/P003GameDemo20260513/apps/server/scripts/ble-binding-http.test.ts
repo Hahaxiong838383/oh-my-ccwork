@@ -1,0 +1,131 @@
+/** Real Hono/SQLite/crypto integration. Never print credentials or mutate a production DB. */
+import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { Hono } from 'hono';
+import { createECDH, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { SignJWT, jwtVerify } from 'jose';
+import { serve } from '@hono/node-server';
+
+const tmp = mkdtempSync(join(tmpdir(), 'p003-ble-http-'));
+for (const name of ['DEVICES','ACCOUNTS','PROFILE','PAIRING','CONFIG','MEMORY','TELEMETRY','LOCAL_AUDIO']) {
+  process.env[`${name}_DB_PATH`] = join(tmp, `${name.toLowerCase()}.db`);
+}
+process.chdir(tmp);
+process.env.AUTH_JWT_SECRET = 'isolated-ble-http-test-secret-minimum-32-bytes';
+process.env.LOCAL_AUDIO_GENERATION_PAUSED = '1';
+let app = new Hono();
+const routeUrl = new URL('../src/routes/ble-bindings.ts', import.meta.url);
+if (existsSync(routeUrl)) {
+  const { bleBindingsRoute } = await import(routeUrl.href);
+  app.route('/api/parent/ble-bindings', bleBindingsRoute);
+}
+const r = await app.request('/api/parent/ble-bindings/challenge', {
+  method:'POST', headers:{'content-type':'application/json'}, body:'{}',
+});
+assert.equal(r.status, 401, 'BLE challenge must be registered and reject anonymous requests');
+assert.equal((await r.json() as any).error, 'unauthorized');
+console.log('PASS anonymous BLE challenge rejected');
+const originalSecret = process.env.AUTH_JWT_SECRET;
+delete process.env.AUTH_JWT_SECRET;
+assert.equal((await app.request('/api/parent/ble-bindings/challenge',{method:'POST',body:'{}'})).status,503,'missing secret cannot fall back to public development JWT secret');
+process.env.AUTH_JWT_SECRET = originalSecret;
+
+const { accountStore } = await import('../src/account-store.js');
+const { deviceRegistryStore } = await import('../src/device-registry-store.js');
+const { getBleBindingStore } = await import('../src/ble-binding-store.js');
+const { profileStore } = await import('../src/profile-store.js');
+const { profileRoute } = await import('../src/routes/profile.js');
+const { parentPairingRoute, devicePairingRoute } = await import('../src/routes/pairing.js');
+const { deviceSessionRoute, verifyDeviceCredential } = await import('../src/routes/device-session.js');
+const { decryptCredential } = await import('../src/pairing-crypto.js');
+// The auth probe above has already built its router; use a fresh app for full route integration.
+app = new Hono();
+const { bleBindingsRoute } = await import('../src/routes/ble-bindings.js');
+app.route('/api/parent/ble-bindings', bleBindingsRoute);
+app.route('/api/profile', profileRoute);
+app.route('/api/parent/pairing', parentPairingRoute);
+app.route('/v1/device/pairing', devicePairingRoute);
+app.route('/v1/device', deviceSessionRoute);
+const port = Number(process.env.P003_TEST_HTTP_PORT || 0);
+const httpServer = port ? serve({fetch:app.fetch,hostname:'127.0.0.1',port}) : null;
+httpServer?.unref();
+const A = accountStore.upsertPhoneAccount('13800000001'), B = accountStore.upsertPhoneAccount('13800000002');
+const secret = process.env.AUTH_JWT_SECRET!;
+const jwt = async (id: string, role='parent') => new SignJWT({ accountId:id, role }).setProtectedHeader({alg:'HS256'}).setIssuer('p003').setAudience('kidshub').setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(secret));
+const a = await jwt(A.id), b = await jwt(B.id);
+const sn = 'BJP00326110200000001';
+deviceRegistryStore.add(sn, 'isolated BLE HTTP test');
+const identity = generateKeyPairSync('ec',{namedCurve:'prime256v1'});
+getBleBindingStore().registerIdentityKey({ sn,keyId:'http-device-key', publicKeyPem:identity.publicKey.export({type:'spki',format:'pem'}).toString(),enablePolicy:true });
+const recipient = createECDH('prime256v1');recipient.generateKeys();
+const nonce = randomBytes(32).toString('base64url');
+const input = {binding_protocol:'ble-key-v1',sn,device_key_id:'http-device-key',ble_session_id:'abcd'.repeat(8),ble_transcript_hash:'1234'.repeat(16),pairing_nonce:nonce,credential_pk:recipient.getPublicKey(null,'compressed').toString('base64url')};
+async function req(path:string,token:string|undefined,body?:unknown) {
+  const init={method:body===undefined?'GET':'POST',headers:{...(token?{authorization:`Bearer ${token}`} : {}),'content-type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})};
+  const r = port ? await fetch(`http://127.0.0.1:${port}${path}`,init) : await app.request(path,init);
+  return {status:r.status,json:await r.json() as any};
+}
+const challenge = await req('/api/parent/ble-bindings/challenge',a,input);
+assert.equal(challenge.status,200,'authenticated known device creates challenge');
+assert.equal(deviceRegistryStore.get(sn)?.parent_account_id,null,'challenge alone cannot bind');
+const signature=sign('sha256',Buffer.from(challenge.json.signing_payload_b64url,'base64url'),{key:identity.privateKey,dsaEncoding:'ieee-p1363'}).toString('base64url');
+const confirm={challenge_id:challenge.json.challenge_id,device_signature:signature};
+assert.equal((await req('/api/parent/ble-bindings/confirm',b,confirm)).status,404,'other account cannot consume challenge');
+assert.equal((await req('/api/parent/ble-bindings/confirm',a,{...confirm,device_signature:randomBytes(64).toString('base64url')})).status,403,'bad signature does not bind');
+assert.equal(deviceRegistryStore.get(sn)?.parent_account_id,null);
+deviceRegistryStore.setAccountId(sn,B.id);
+const pendingBrain=await req('/api/parent/ble-bindings/confirm',a,confirm);
+assert.equal(pendingBrain.status,200);
+assert.equal(pendingBrain.json.brain_state,'initializing');
+assert.equal(profileStore.getProfile(B.id),null,'invalid legacy Brain mapping must not write another account profile');
+deviceRegistryStore.setAccountId(sn,null);
+const bound=await req(`/api/parent/ble-bindings/${pendingBrain.json.binding_id}`,a);
+assert.equal(bound.status,200,'valid proof commits binding before WiFi');
+assert.equal(bound.json.binding_state,'bound');assert.equal(bound.json.activation_state,'pending_network');assert.equal(bound.json.brain_state,'ready');
+assert.equal(deviceRegistryStore.get(sn)?.parent_account_id,A.id);assert.equal(deviceRegistryStore.get(sn)?.account_id,`device-${sn}`);
+assert.equal((await req('/api/profile/bound-devices',a)).json.devices[0].public_id,bound.json.device.public_id);
+assert.equal((await req('/api/profile/bound-devices',b)).json.devices.length,0);
+assert.equal((await req(`/api/parent/ble-bindings/${bound.json.binding_id}`,b)).status,404);
+deviceRegistryStore.setAccountId(sn,null);
+assert.equal((await req(`/api/parent/ble-bindings/${bound.json.binding_id}`,a)).json.brain_state,'unavailable','GET cannot falsely report or silently reopen administratively removed Brain');
+assert.equal(deviceRegistryStore.get(sn)?.account_id,null);
+deviceRegistryStore.setAccountId(sn,`device-${sn}`);
+const same=await req('/api/parent/ble-bindings/confirm',a,confirm);
+assert.equal(same.json.binding_id,bound.json.binding_id);assert.equal(same.json.binding_version,bound.json.binding_version);assert.equal(same.json.already_bound,true);
+assert.equal((await req('/api/parent/ble-bindings/challenge',b,{...input,pairing_nonce:randomBytes(32).toString('base64url')})).status,409);
+assert.equal((await req('/api/profile/bind-sn',a,{sn})).status,403,'legacy SN route cannot bypass proof');
+assert.equal((await req('/api/parent/pairing/confirm',a,{sn,nonce,pk:input.credential_pk,pairing_protocol:2})).status,403);
+assert.equal((await req('/v1/device/pairing/announce',undefined,{sn,nonce,pk:input.credential_pk,pairing_protocol:2,v:3})).status,403);
+assert.equal((await req('/v1/device/pairing/claim',undefined,{sn,pairing_nonce:nonce,pairing_protocol:2})).status,403);
+const claimBody={binding_protocol:'ble-key-v1',sn,pairing_nonce:nonce};
+const claimed=await req('/v1/device/pairing/claim',undefined,claimBody);
+assert.equal(claimed.status,200,'new claim delivers ECIES without rebinding');
+const credential=decryptCredential(recipient.getPrivateKey(),claimed.json.enc,nonce,sn);
+const claims=(await jwtVerify(credential,new TextEncoder().encode(secret))).payload;
+assert.equal(claims.sub,sn);assert.equal(claims.kind,'p003-device');assert.equal(claims.binding_version,bound.json.binding_version);assert.equal(claims.exp!*1000,claimed.json.credential_expires_at_ms);
+assert.equal((await verifyDeviceCredential(`Bearer ${credential}`,secret))?.sn,sn);
+assert.equal((await req(`/api/parent/ble-bindings/${bound.json.binding_id}`,a)).json.activation_state,'pending_device_auth');
+assert.equal((await req('/v1/device/session/prefetch',credential,{})).status,200);
+assert.equal((await req(`/api/parent/ble-bindings/${bound.json.binding_id}`,a)).json.activation_state,'activated');
+const again=await req('/v1/device/pairing/claim',undefined,claimBody);assert.equal(again.status,200);assert.equal(again.json.code,'idempotent_recovery');
+const old=await new SignJWT({kind:'p003-device'}).setProtectedHeader({alg:'HS256'}).setSubject(sn).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(secret));
+assert.equal(await verifyDeviceCredential(`Bearer ${old}`,secret),null,'BLE policy rejects no-version credential');
+profileStore.updateMemoryFields(`device-${sn}`,{personality_notes:'preserve existing memory'});
+const saved=await req('/api/profile',a,{nickname:'联调孩子',birthday:'2020-06',gender:'女孩'});
+assert.equal(saved.status,200);
+assert.equal(saved.json.synced_devices,1,'late parent profile must reach current device Brain');
+assert.equal(profileStore.getProfile(`device-${sn}`)?.nickname,'联调孩子');
+assert.equal(profileStore.getProfile(`device-${sn}`)?.personality_notes,'preserve existing memory');
+const otherSaved=await req('/api/profile',b,{nickname:'另一个孩子',birthday:'',gender:''});
+assert.equal(otherSaved.json.synced_devices,0,'other parent cannot alter device profile');
+assert.equal(profileStore.getProfile(`device-${sn}`)?.nickname,'联调孩子');
+deviceRegistryStore.setParentAccountId(sn,B.id);
+assert.equal((await req('/v1/device/pairing/claim',undefined,claimBody)).status,409,'owner change revokes even idempotent claim');
+assert.equal(await verifyDeviceCredential(`Bearer ${credential}`,secret),null,'owner change revokes signed version');
+assert.equal((await req(`/api/parent/ble-bindings/${bound.json.binding_id}`,a)).status,404);
+assert.equal((await req('/api/parent/ble-bindings/confirm',a,confirm)).status,409);
+assert.ok(profileStore.getProfile(`device-${sn}`),'basic profile created without WiFi');
+console.log('PASS BLE HTTP: proof/bind/Brain/isolation/legacy gates/ECIES/activation/idempotence/ownership revocation');
+httpServer?.close();

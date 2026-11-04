@@ -48,7 +48,7 @@ function currentBrainState(row: BleBindingRecord) {
   const id = deviceRegistryStore.get(row.sn)?.account_id;
   return id === `device-${row.sn}` && accountStore.findAccount(id)?.role === 'device' ? 'ready' : 'unavailable';
 }
-function receipt(row: BleBindingRecord, alreadyBound: boolean) {
+export function receipt(row: BleBindingRecord, alreadyBound: boolean) {
   return {
     binding_id: row.binding_id, binding_state: 'bound', binding_version: row.binding_version,
     device: { sn: row.sn, public_id: row.public_id }, already_bound: alreadyBound,
@@ -57,7 +57,7 @@ function receipt(row: BleBindingRecord, alreadyBound: boolean) {
     bound_at_ms: row.bound_at_ms,
   };
 }
-function initializeBrain(accountId: string, row: BleBindingRecord): BleBindingRecord {
+export function initializeBrain(accountId: string, row: BleBindingRecord): BleBindingRecord {
   if (row.brain_state === 'ready') return row;
   try {
     return getBleBindingStore().ensureBrain(accountId, row.binding_id, locked => {
