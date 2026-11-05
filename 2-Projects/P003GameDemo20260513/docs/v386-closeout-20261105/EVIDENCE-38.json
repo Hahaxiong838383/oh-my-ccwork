@@ -1,0 +1,276 @@
+{
+  "status": "BRAIN_THREE_REAL_DEVICE_AUTHORITY_CLOSE_LOOPS_VERIFIED",
+  "at": "2026-11-05T09:46:18.188050+00:00",
+  "worktree_base": "2f4eaf0f0aa84c9654ac18d0cb2ec0f97ecbc70a",
+  "attachment_sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342",
+  "trace_evidence": [
+    {
+      "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+      "exit_command_from_client_receipt": "结束倾听恢复聊天",
+      "session_id": "f2be43c6-ed2f-4826-8184-ab8e7341e47b",
+      "room_masked": "sn-****03800006-1793865847",
+      "sn_suffix": "03800006",
+      "session_at": "2026-11-05T16:04:07.869+08:00",
+      "session_ms": 9,
+      "entry_seq": 46,
+      "mode_epoch": 1,
+      "entry_started_at": "2026-11-05T16:04:14.497+08:00",
+      "authorized_lease_count": 4,
+      "snapshot_offer_count": 1,
+      "close_request_id": "close-6",
+      "close_at": "2026-11-05T16:04:27.676+08:00",
+      "entry_closed": true,
+      "lease_zero_after_close": true,
+      "revocations": 0,
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "revision": 6,
+      "snapshot_sha256": "9ceff0d0e71c8e26ed66caa0c01ca57d724f2d0e4c6f7ac57c981574359f832f",
+      "source_generation": 1,
+      "dispatch": {
+        "session": "f2be43c6-ed2f-4826-8184-ab8e7341e47b",
+        "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "p003-search-listening-20261030",
+        "canary_reason": "selected",
+        "lease_remaining_ms": "10617",
+        "lease_age_ms": "4383",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "v374-listening-ark-20261102-1793613511",
+        "prefetch": "b7c6aa1a-06f7-4b89-ba46-fdd0df28469b",
+        "ttl": "3600s",
+        "ms": "9"
+      }
+    },
+    {
+      "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+      "exit_command_from_client_receipt": "恢复聊天",
+      "session_id": "60638299-a95c-4406-a7bf-c30695bb304c",
+      "room_masked": "sn-****03800006-1793865984",
+      "sn_suffix": "03800006",
+      "session_at": "2026-11-05T16:06:24.650+08:00",
+      "session_ms": 11,
+      "entry_seq": 61,
+      "mode_epoch": 1,
+      "entry_started_at": "2026-11-05T16:06:31.182+08:00",
+      "authorized_lease_count": 2,
+      "snapshot_offer_count": 1,
+      "close_request_id": "close-4",
+      "close_at": "2026-11-05T16:06:37.385+08:00",
+      "entry_closed": true,
+      "lease_zero_after_close": true,
+      "revocations": 0,
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "revision": 6,
+      "snapshot_sha256": "9ceff0d0e71c8e26ed66caa0c01ca57d724f2d0e4c6f7ac57c981574359f832f",
+      "source_generation": 1,
+      "dispatch": {
+        "session": "60638299-a95c-4406-a7bf-c30695bb304c",
+        "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "p003-search-listening-20261030",
+        "canary_reason": "selected",
+        "lease_remaining_ms": "8840",
+        "lease_age_ms": "6160",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "v374-listening-ark-20261102-1793613511",
+        "prefetch": "985b15fd-77b9-4dc3-8988-c20b4142080b",
+        "ttl": "3600s",
+        "ms": "11"
+      }
+    },
+    {
+      "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+      "exit_command_from_client_receipt": "小可结束倾听",
+      "session_id": "c2daf1f1-dac4-4541-bcc1-c9f3207e2233",
+      "room_masked": "sn-****03800006-1793866288",
+      "sn_suffix": "03800006",
+      "session_at": "2026-11-05T16:11:28.534+08:00",
+      "session_ms": 11,
+      "entry_seq": 98,
+      "mode_epoch": 1,
+      "entry_started_at": "2026-11-05T16:11:34.791+08:00",
+      "authorized_lease_count": 3,
+      "snapshot_offer_count": 1,
+      "close_request_id": "close-5",
+      "close_at": "2026-11-05T16:11:41.592+08:00",
+      "entry_closed": true,
+      "lease_zero_after_close": true,
+      "revocations": 0,
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "revision": 6,
+      "snapshot_sha256": "9ceff0d0e71c8e26ed66caa0c01ca57d724f2d0e4c6f7ac57c981574359f832f",
+      "source_generation": 1,
+      "dispatch": {
+        "session": "c2daf1f1-dac4-4541-bcc1-c9f3207e2233",
+        "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "p003-search-listening-20261030",
+        "canary_reason": "selected",
+        "lease_remaining_ms": "9953",
+        "lease_age_ms": "5047",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "v374-listening-ark-20261102-1793613511",
+        "prefetch": "08a4256c-db58-4958-9e66-8d413e992ba1",
+        "ttl": "3600s",
+        "ms": "11"
+      }
+    }
+  ],
+  "current": {
+    "observed_at": "2026-11-05T09:44:25.103441+00:00",
+    "config": {
+      "enabled": true,
+      "allowlist": [
+        "****03800006"
+      ],
+      "scenes": [
+        "story",
+        "sharing",
+        "singing"
+      ],
+      "tuning": {
+        "max_session_sec": 1800,
+        "feedback_max_chars": 80,
+        "feedback_max_duration_sec": 12,
+        "feedback_cooldown_sec": 5,
+        "summary_interval_sec": 180,
+        "summary_trigger_chars": 6000,
+        "voice_invitation_enabled": true
+      },
+      "schema_version": 1,
+      "revision": 6
+    },
+    "source_generation": 1,
+    "deadline_ms": 1794391200000,
+    "manifest_sha256": "c6013b898ddc292fd3b2f17c27260cefbcbb2ca4dda75090b6dabbd02663618b",
+    "brain_four_files": {
+      "/opt/p003/server/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+      "/opt/p003/server/src/routes/custom-llm.ts": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d",
+      "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+      "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477"
+    },
+    "pm2": {
+      "p003-voice": {
+        "pid": 196861,
+        "status": "online",
+        "restarts": 54
+      },
+      "p003-analytics": {
+        "pid": 196818,
+        "status": "online",
+        "restarts": 11
+      }
+    },
+    "listening_unit": "MainPID=4186369\nNRestarts=0\nTriggers=\nActiveState=active\nSubState=running\nActiveEnterTimestamp=Wed 2026-11-04 17:58:31 CST\n"
+  },
+  "independent_timeout_observation": {
+    "status": "UNMATCHED_CLIENT_OBSERVATION",
+    "read_interval_cst": [
+      "2026-11-05T16:00:00+08:00",
+      "2026-11-05T16:13:00+08:00"
+    ],
+    "session_status_counts": {
+      "ok": 9,
+      "prefetch": 9
+    },
+    "matched_timeout_trace": null,
+    "meaning": "No error row in bounded same-device session log does not disprove client timeout; no unique client timestamp/trace supplied. No root-cause attribution."
+  },
+  "checks": {
+    "attachment_sha": true,
+    "three_unique_traces": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b unique session authority entry": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b trusted identities": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b inside receipt window": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b historical authority": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b snapshot_then_authorized": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b successful_close": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b ordered_and_in_grant": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b unique_dispatch": true,
+    "b04ef593-f44c-4b69-bb45-4c4d96b09c8b selected_dispatch": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 unique session authority entry": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 trusted identities": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 inside receipt window": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 historical authority": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 snapshot_then_authorized": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 successful_close": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 ordered_and_in_grant": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 unique_dispatch": true,
+    "eab501f1-16c5-49b3-a459-8eaeabfbe6e2 selected_dispatch": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 unique session authority entry": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 trusted identities": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 inside receipt window": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 historical authority": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 snapshot_then_authorized": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 successful_close": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 ordered_and_in_grant": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 unique_dispatch": true,
+    "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 selected_dispatch": true,
+    "same_full_sn_and_account": true,
+    "current_single_device_revision": true,
+    "current_flags_cutoff": true,
+    "current_manifest": true,
+    "current_timer": true,
+    "current_four_files_match_v384": true,
+    "exact_live_authority_semantics": true
+  },
+  "evidence_files": [
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/P003_G2_V386_LISTENING_PREPARING_IDLE_RACE_FIX_AND_DEVICE_ACCEPTANCE_20261105.md",
+      "sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342",
+      "bytes": 3461
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-38/historical-brain.json",
+      "sha256": "b24f4fc5725f85f9da4d48954a6abd18ce0f5ad5d2596ebc3b95458ec108b2b8",
+      "bytes": 13059
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-38/dispatch-timeout.json",
+      "sha256": "1e9fc12b89e598779efb10a2623f8d5cf386e70ebe3149c087c9216286b0e711",
+      "bytes": 8149
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-38/current-brain.json",
+      "sha256": "1fc9cfe6a5116266c1b263f6ddec8404e73c4e35ac7d364abaa7847c7cfac50c",
+      "bytes": 5114
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-38/authority-semantics.json",
+      "sha256": "878c70289063508ee90dcc98aa462b60cc98335aafe645bacb576794b8ec038b",
+      "bytes": 5045
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/TRACE-MAP-38.json",
+      "sha256": "12fae86d1dda2e85c37908c45411b7057b45d5ba27ebafba55338302f3adc4cd",
+      "bytes": 1248
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-38/verify-closeout.py",
+      "sha256": "6411eb36e76dfbc989bebe8980908c2a6868de0d9668617d176522c2f815d92d",
+      "bytes": 7062
+    }
+  ],
+  "boundaries": [
+    "Android UI and PREPARING/idle timings are client receipt evidence, not independently replayed APK/logs",
+    "Brain close response does not itself prove RTC ACK or UI publication; correlate Worker evidence from39",
+    "Current process/config not substitute for historical authority rows",
+    "User accepted snapshots; this attachment does not supply snapshot use-case evidence",
+    "No new tests/devices/production changes; no broad voice reliability closeout"
+  ]
+}
