@@ -1,0 +1,56 @@
+[
+  {
+    "file": "src/routes/device-enrollments.ts",
+    "sha256": "d742759293871298e34c21ef1a7dcf232386ea1de9b4a59983ea8c00804ef859",
+    "matches_previous_production_evidence": true,
+    "evidence": "preflight.json 15:40 CST; not in six-file deploy"
+  },
+  {
+    "file": "src/device-enrollment-proof.ts",
+    "sha256": "6f248e1a8e7765f7e6f71da1cc6d8bad487cad2358ef01988c3a5b3a800b8a00",
+    "matches_previous_production_evidence": true,
+    "evidence": "preflight.json 15:40 CST; not in six-file deploy"
+  },
+  {
+    "file": "src/device-enrollment-store.ts",
+    "sha256": "8185ecb4d7024b4cb6fb32bee6800eade4baaadfe2e56d7a8066e0440195ba94",
+    "matches_previous_production_evidence": true,
+    "evidence": "preflight.json 15:40 CST; not in six-file deploy"
+  },
+  {
+    "file": "src/routes/ble-bindings.ts",
+    "sha256": "b494bd6eea5f3009cf35e12552b7ad9fe10ac58f22fbc9206e48251585d7c825",
+    "matches_previous_production_evidence": true,
+    "evidence": "preflight.json 15:40 CST; not in six-file deploy"
+  },
+  {
+    "file": "src/ble-binding-store.ts",
+    "sha256": "4c72960343edd4ce6b8752c912ed0df329bfd25d6e04c45a59cbbb7209efad89",
+    "matches_previous_production_evidence": true,
+    "evidence": "preflight.json 15:40 CST; not in six-file deploy"
+  },
+  {
+    "file": "src/device-credential.ts",
+    "sha256": "e7e8fce66385596b251dfcf17f46c19ab35a81a7feb3b4509ef5e67b8906d895",
+    "matches_previous_production_evidence": true,
+    "evidence": "stability.json 16:03 CST"
+  },
+  {
+    "file": "src/routes/pairing.ts",
+    "sha256": "ccb89ef6547d77a87309d05b8818004713829719facbdda467f534e68d1cc8e5",
+    "matches_previous_production_evidence": true,
+    "evidence": "stability.json 16:03 CST"
+  },
+  {
+    "file": "src/routes/profile.ts",
+    "sha256": "00d70dc5265014e9de95a3420ec96a6df333b07623e25f3d4f33f604f2e92614",
+    "matches_previous_production_evidence": true,
+    "evidence": "stability.json 16:03 CST"
+  },
+  {
+    "file": "src/index.ts",
+    "sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+    "matches_previous_production_evidence": true,
+    "evidence": "preflight.json 15:40 CST; not in six-file deploy"
+  }
+]

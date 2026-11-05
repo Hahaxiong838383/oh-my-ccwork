@@ -1,0 +1,91 @@
+{
+  "reviewed_at": "2026-11-05 16:40:39 CST",
+  "status": "NOT_END_TO_END_READY_SERVER_V2_AND_MINIAPP_ALIGNMENT_REQUIRED",
+  "scope": "read-only local source, four supplied receipt artifacts, historical production manifests; no SSH/network/APK install/runtime tests",
+  "server": {
+    "source_head": "823458144419c7c40a8d687a4de3ca295f211e12",
+    "runtime_candidate": "c412d67f44b5b1384df3cc33da47ace8ed7d03cd",
+    "enrollment_protocol_implemented": "ble-enroll-v1",
+    "simple_flow": "bind-sn + pairing_protocol:2",
+    "v2_supported_in_reviewed_source": false,
+    "production_evidence_limit": "15:40 preflight + 16:01 six-file deploy + 16:03 stability; not a fresh live read"
+  },
+  "client_receipt": {
+    "source_commit": "75c7dea1e520f400a0ec78d1ab8b9e83262b9343",
+    "version_name": "371_mini_003",
+    "version_code": 371,
+    "apk_sha256_claimed": "0287a36d91a3da86cd071ebfd834e3c7b0232cb04c71645cecfc4f7a53fec5ea",
+    "apk_bytes_claimed": 85271980,
+    "source_available_and_independently_reviewed": false,
+    "apk_available_and_independently_verified": false,
+    "host_test_counts_independently_verified": false
+  },
+  "attachments": {
+    "P003_SN_PUBLIC_KEY_ENROLLMENT_V2_20261105.md": {
+      "sha256": "2f7093bc8512b5a8522370b0712630b9f3b93a1504f7a94bd7519ae0fd4d68b6",
+      "bytes": 10006,
+      "read_full": true
+    },
+    "P003_SN公钥首绑_客户端回执_20261105.md": {
+      "sha256": "60f9b5de13ecc129e44d03b8146c39d37820215d3d9f62b91f5cbb39bd482077",
+      "bytes": 6658,
+      "read_full": true
+    },
+    "P003_MINI371_003_PACKAGE_RECEIPT_20261105.md": {
+      "sha256": "2a750e76677b8e648978806b286934852292aaa8894d2a4ad75ff12e09f222c9",
+      "bytes": 3417,
+      "read_full": true
+    },
+    "FINAL_PACKAGE_RECEIPT.json": {
+      "sha256": "6a4d82ec63af89d650b8bcb8668a0c5429245ba7d6e9cdcc8d46503c22ae8ae5",
+      "bytes": 1180,
+      "read_full": true
+    }
+  },
+  "local_miniapp_cache": {
+    "current_experience_build": false,
+    "files_sha256": {
+      "src/services/bleSession.ts": "2f7d2ffdc7eae73d8a67f7f3154a8b3da4c5bc9e39d9e8683941dd709557c958",
+      "src/services/api.ts": "43058715901b76806597d6cea6badb94cfaf81d4490e01144fd08cd218b15f81",
+      "src/services/live-api.ts": "f4312476b948a9ba7fa8447dc82cd8084247d21eaccb2d8afdecf09d6280ecc8",
+      "src/services/bleProtocol.ts": "67a919a2c89a1c4b2f6f04407d2da3adda743cb64be242a291683bdf3cdc57c6"
+    }
+  },
+  "findings": [
+    {
+      "id": "M003-01",
+      "severity": "blocker",
+      "finding": "server enrollment accepts v1 nine fields + statement/window; mini003 sends v2 eight fields and signs 13 lines"
+    },
+    {
+      "id": "M003-02",
+      "severity": "blocker",
+      "finding": "pairing2 binding does not create BLE key/policy/receipt needed by mini003 ble-key-v1 claim"
+    },
+    {
+      "id": "M003-03",
+      "severity": "blocker",
+      "finding": "current miniapp experience version and v2 orchestration unverified; local historical cache lacks material/proof handling and retains 5-minute timeout"
+    },
+    {
+      "id": "M003-04",
+      "severity": "implementation_risk_to_close",
+      "finding": "existing BLE same-owner rebind can reuse binding_version; activation lookup by SN/version can attribute an old credential to newer claimed receipt",
+      "evidence_kind": "static source reasoning, not a runtime production incident"
+    }
+  ],
+  "recommended_convergence": "server add explicit ble-enroll-v2 branch on existing parent enrollment routes; mini003 retains ble-key-v1 claim; miniapp selects v2 and polls BLE binding receipt; retain existing pairing2 for legacy clients without mixing workflows",
+  "old_pass_not_inherited": [
+    "c412 17 independent pairing2 cases",
+    "c412 main five groups",
+    "v1 14-line enrollment tests",
+    "old 12-line BLE tests as v2 acceptance",
+    "client 1775/1194 host counts as independent/device verification"
+  ],
+  "no_changes": [
+    "no product tree writes",
+    "no production/config/owner mutations",
+    "no APK install",
+    "no network or runtime tests"
+  ]
+}

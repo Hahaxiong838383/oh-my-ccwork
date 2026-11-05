@@ -1,0 +1,247 @@
+{
+  "conclusion": "NOT_READY_PROTOCOL_MISMATCH_AND_BLE_ACTIVATION_ATTRIBUTION",
+  "client_source_claimed": "75c7dea1e520f400a0ec78d1ab8b9e83262b9343",
+  "server_code": "c412d67f44b5b1384df3cc33da47ace8ed7d03cd",
+  "production_observed_at": "2026-11-05T08:35:00.571885+00:00",
+  "standalone_receipt_sha256": "60f9b5de13ecc129e44d03b8146c39d37820215d3d9f62b91f5cbb39bd482077",
+  "zip_sha256": "be57b2fbad9730c0b13350bde98d7f9ee5e265fbf4030bf0ad2495237213b04b",
+  "inputs": {
+    "probe-result.json": "a4178027716061a835dfc6fd91c1dd8800019685a4b4786f5ad06bf538b425fe",
+    "P003_MINI371_003_PACKAGE_RECEIPT_20261105.md": "2a750e76677b8e648978806b286934852292aaa8894d2a4ad75ff12e09f222c9",
+    "P003_SN公钥首绑_客户端回执_20261105.md": "60f9b5de13ecc129e44d03b8146c39d37820215d3d9f62b91f5cbb39bd482077",
+    "online-readonly-retry.json": "cad0d1972e0bc475fad809f86ec16175b202ba2e32f009db5276d6bcc044dd1e",
+    "FINAL_PACKAGE_RECEIPT.json": "6a4d82ec63af89d650b8bcb8668a0c5429245ba7d6e9cdcc8d46503c22ae8ae5",
+    "probe.mts": "841009d4cb380503379888ee4c3be63a22ea3f03a6996b5245b80c141bb02e56",
+    "P003_SN_PUBLIC_KEY_ENROLLMENT_V2_20261105.md": "2f7093bc8512b5a8522370b0712630b9f3b93a1504f7a94bd7519ae0fd4d68b6",
+    "REVIEW-37.md": "53568a8affee4a2d1b6ad9517c440c64232dcb2c8ff1af143042ec140c4f28bb",
+    "REVIEW-37.json": "68c53270e7f8186a0d8eda19818f017fa2c6c9c6cb1b1c7a660cd98f309100ea",
+    "SOURCE-METADATA-37.json": "d6b0c034207f5f5bb40f62679323105d8451b7dd8a68b8625e4ce1ceb0607bde",
+    "repro-ble-activation-result.json": "b1a5eeda7aac3e0127b7a2c814cf743e59808ca2c190e2fdf623fcf6f52a00d0",
+    "repro-ble-activation.mts": "52e946206ee03ba542f3ff2776a00c32bd787abb0a90d347b5de453772a689fe",
+    "repro-ble-activation.log": "65aec3284f95f18f1c6f89ca05f64840a82d72784a49402ca770a0b55a385f0d"
+  },
+  "scope": "Read-only live source/config/metadata plus isolated route reproduction; no production mutations, no Android APK/source independent verification",
+  "production": {
+    "at": "2026-11-05T08:35:00.571885+00:00",
+    "files": {
+      "src/routes/device-enrollments.ts": "d742759293871298e34c21ef1a7dcf232386ea1de9b4a59983ea8c00804ef859",
+      "src/device-enrollment-proof.ts": "6f248e1a8e7765f7e6f71da1cc6d8bad487cad2358ef01988c3a5b3a800b8a00",
+      "src/device-enrollment-store.ts": "8185ecb4d7024b4cb6fb32bee6800eade4baaadfe2e56d7a8066e0440195ba94",
+      "src/routes/ble-bindings.ts": "b494bd6eea5f3009cf35e12552b7ad9fe10ac58f22fbc9206e48251585d7c825",
+      "src/ble-binding-store.ts": "4c72960343edd4ce6b8752c912ed0df329bfd25d6e04c45a59cbbb7209efad89",
+      "src/routes/profile.ts": "00d70dc5265014e9de95a3420ec96a6df333b07623e25f3d4f33f604f2e92614",
+      "src/routes/pairing.ts": "ccb89ef6547d77a87309d05b8818004713829719facbdda467f534e68d1cc8e5",
+      "src/routes/device-session.ts": "445ce889601aa148672e5f1a0dc6e3139d78f5e71f5a285f7cd48ea591631e16"
+    },
+    "C": {
+      "sn": "BJP00326081002000031",
+      "registry": null,
+      "key_count": 0,
+      "receipt_count": 0
+    },
+    "old_enrollment_config": {
+      "enabled": true,
+      "starts_at_ms": 1793777707605,
+      "expires_at_ms": 1794987307605
+    },
+    "simple_sn_auto_create": true,
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 157492,
+        "restarts": 52,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 157401,
+        "restarts": 10,
+        "status": "online"
+      }
+    ]
+  },
+  "probe": {
+    "scope": "isolated real Hono routes + fresh SQLite; synthetic account/SN/keys; no production writes",
+    "tests": [
+      {
+        "label": "current enrollment only advertises v1",
+        "path": "/api/parent/device-enrollments/capabilities",
+        "status": 200,
+        "json": {
+          "ok": true,
+          "binding_protocol": "ble-enroll-v1",
+          "enabled": true,
+          "window_starts_at_ms": 1793867666332,
+          "window_expires_at_ms": 1795077267332,
+          "challenge_ttl_s": 120,
+          "request_id": "68575874-522c-46f3-a181-f389c8c145d3"
+        }
+      },
+      {
+        "label": "mini003 exact eight fields rejected",
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 400,
+        "json": {
+          "ok": false,
+          "error": "bad_request",
+          "message": "请求格式不正确",
+          "request_id": "3a4db1ff-17ab-4d5e-971a-f019367b05b8"
+        }
+      },
+      {
+        "label": "empty statement is not a valid bridge",
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 403,
+        "json": {
+          "ok": false,
+          "error": "device_identity_invalid",
+          "message": "设备身份材料未通过验证，请联系设备维护人员",
+          "request_id": "0b2cafc1-148a-4691-a773-8beb7a5c29e2"
+        }
+      },
+      {
+        "label": "V3 SN bind route works separately",
+        "path": "/api/profile/bind-sn",
+        "status": 200,
+        "json": {
+          "ok": true,
+          "sn": "BJP00326110500009231",
+          "public_id": "dev_763e6bd125a6ef91",
+          "already_bound": false,
+          "brain_opened": true,
+          "brain_state": "ready",
+          "synced_profile": false
+        }
+      },
+      {
+        "label": "V3 SN bind does not mint BLE receipt for mini003 claim",
+        "path": "/v1/device/pairing/claim",
+        "status": 404,
+        "json": {
+          "ok": false,
+          "error": "pairing_pending",
+          "message": "等待原账号完成设备绑定",
+          "request_id": "bdb55dc3-23d8-4c03-976b-ae56ab75863a"
+        }
+      },
+      {
+        "label": "enrollment challenge still depends on old window",
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 503,
+        "json": {
+          "ok": false,
+          "error": "enrollment_closed",
+          "message": "当前未开放新设备接入",
+          "request_id": "c1a11f0f-a8e0-4265-9c2d-a132e17742f5"
+        }
+      }
+    ],
+    "result": "INCOMPATIBILITY_REPRODUCED",
+    "at": "2026-11-05T08:34:28.320Z"
+  },
+  "independent_review": {
+    "reviewed_at": "2026-11-05 16:40:39 CST",
+    "status": "NOT_END_TO_END_READY_SERVER_V2_AND_MINIAPP_ALIGNMENT_REQUIRED",
+    "scope": "read-only local source, four supplied receipt artifacts, historical production manifests; no SSH/network/APK install/runtime tests",
+    "server": {
+      "source_head": "823458144419c7c40a8d687a4de3ca295f211e12",
+      "runtime_candidate": "c412d67f44b5b1384df3cc33da47ace8ed7d03cd",
+      "enrollment_protocol_implemented": "ble-enroll-v1",
+      "simple_flow": "bind-sn + pairing_protocol:2",
+      "v2_supported_in_reviewed_source": false,
+      "production_evidence_limit": "15:40 preflight + 16:01 six-file deploy + 16:03 stability; not a fresh live read"
+    },
+    "client_receipt": {
+      "source_commit": "75c7dea1e520f400a0ec78d1ab8b9e83262b9343",
+      "version_name": "371_mini_003",
+      "version_code": 371,
+      "apk_sha256_claimed": "0287a36d91a3da86cd071ebfd834e3c7b0232cb04c71645cecfc4f7a53fec5ea",
+      "apk_bytes_claimed": 85271980,
+      "source_available_and_independently_reviewed": false,
+      "apk_available_and_independently_verified": false,
+      "host_test_counts_independently_verified": false
+    },
+    "attachments": {
+      "P003_SN_PUBLIC_KEY_ENROLLMENT_V2_20261105.md": {
+        "sha256": "2f7093bc8512b5a8522370b0712630b9f3b93a1504f7a94bd7519ae0fd4d68b6",
+        "bytes": 10006,
+        "read_full": true
+      },
+      "P003_SN公钥首绑_客户端回执_20261105.md": {
+        "sha256": "60f9b5de13ecc129e44d03b8146c39d37820215d3d9f62b91f5cbb39bd482077",
+        "bytes": 6658,
+        "read_full": true
+      },
+      "P003_MINI371_003_PACKAGE_RECEIPT_20261105.md": {
+        "sha256": "2a750e76677b8e648978806b286934852292aaa8894d2a4ad75ff12e09f222c9",
+        "bytes": 3417,
+        "read_full": true
+      },
+      "FINAL_PACKAGE_RECEIPT.json": {
+        "sha256": "6a4d82ec63af89d650b8bcb8668a0c5429245ba7d6e9cdcc8d46503c22ae8ae5",
+        "bytes": 1180,
+        "read_full": true
+      }
+    },
+    "local_miniapp_cache": {
+      "current_experience_build": false,
+      "files_sha256": {
+        "src/services/bleSession.ts": "2f7d2ffdc7eae73d8a67f7f3154a8b3da4c5bc9e39d9e8683941dd709557c958",
+        "src/services/api.ts": "43058715901b76806597d6cea6badb94cfaf81d4490e01144fd08cd218b15f81",
+        "src/services/live-api.ts": "f4312476b948a9ba7fa8447dc82cd8084247d21eaccb2d8afdecf09d6280ecc8",
+        "src/services/bleProtocol.ts": "67a919a2c89a1c4b2f6f04407d2da3adda743cb64be242a291683bdf3cdc57c6"
+      }
+    },
+    "findings": [
+      {
+        "id": "M003-01",
+        "severity": "blocker",
+        "finding": "server enrollment accepts v1 nine fields + statement/window; mini003 sends v2 eight fields and signs 13 lines"
+      },
+      {
+        "id": "M003-02",
+        "severity": "blocker",
+        "finding": "pairing2 binding does not create BLE key/policy/receipt needed by mini003 ble-key-v1 claim"
+      },
+      {
+        "id": "M003-03",
+        "severity": "blocker",
+        "finding": "current miniapp experience version and v2 orchestration unverified; local historical cache lacks material/proof handling and retains 5-minute timeout"
+      },
+      {
+        "id": "M003-04",
+        "severity": "implementation_risk_to_close",
+        "finding": "existing BLE same-owner rebind can reuse binding_version; activation lookup by SN/version can attribute an old credential to newer claimed receipt",
+        "evidence_kind": "static source reasoning, not a runtime production incident"
+      }
+    ],
+    "recommended_convergence": "server add explicit ble-enroll-v2 branch on existing parent enrollment routes; mini003 retains ble-key-v1 claim; miniapp selects v2 and polls BLE binding receipt; retain existing pairing2 for legacy clients without mixing workflows",
+    "old_pass_not_inherited": [
+      "c412 17 independent pairing2 cases",
+      "c412 main five groups",
+      "v1 14-line enrollment tests",
+      "old 12-line BLE tests as v2 acceptance",
+      "client 1775/1194 host counts as independent/device verification"
+    ],
+    "no_changes": [
+      "no product tree writes",
+      "no production/config/owner mutations",
+      "no APK install",
+      "no network or runtime tests"
+    ]
+  },
+  "ble_activation_reproduction": {
+    "at": "2026-11-05T08:46:14.026Z",
+    "result": "OLD_CREDENTIAL_ACTIVATES_NEW_RECEIPT_REPRODUCED",
+    "scope": "isolated Hono routes + fresh SQLite + real crypto; synthetic SN/account; no production writes",
+    "same_binding_version": 2,
+    "distinct_receipts": true,
+    "new_credential_decrypted": false,
+    "new_credential_saved": false,
+    "new_credential_authenticated": false,
+    "second_receipt_before_old_prefetch": "pending_device_auth",
+    "second_receipt_after_old_prefetch": "activated"
+  },
+  "runtime_changes": false,
+  "new_deployment": false
+}

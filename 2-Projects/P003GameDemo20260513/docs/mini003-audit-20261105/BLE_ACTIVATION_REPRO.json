@@ -1,0 +1,12 @@
+{
+  "at": "2026-11-05T08:46:14.026Z",
+  "result": "OLD_CREDENTIAL_ACTIVATES_NEW_RECEIPT_REPRODUCED",
+  "scope": "isolated Hono routes + fresh SQLite + real crypto; synthetic SN/account; no production writes",
+  "same_binding_version": 2,
+  "distinct_receipts": true,
+  "new_credential_decrypted": false,
+  "new_credential_saved": false,
+  "new_credential_authenticated": false,
+  "second_receipt_before_old_prefetch": "pending_device_auth",
+  "second_receipt_after_old_prefetch": "activated"
+}
