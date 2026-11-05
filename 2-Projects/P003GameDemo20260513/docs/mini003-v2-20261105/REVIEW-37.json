@@ -1,0 +1,181 @@
+{
+  "status": "PASS_PREDEPLOY_INDEPENDENT_REVIEW",
+  "candidate": "a92bd8f342144d6253cbb9a928925639ffa597cc",
+  "baseline": "78612abfb0a4a49151dd64d3aa783aa45f1000c3",
+  "reviewed_at": "2026-11-05 17:21:33 CST",
+  "reviewer": "codex (OpenAI), session37",
+  "blockers": [],
+  "independently_executed": {
+    "v2": {
+      "pass": 11,
+      "fail": 0,
+      "tests": [
+        {
+          "id": "LOGIN",
+          "status": "pass"
+        },
+        {
+          "id": "V03-independent-pure-JS-signature-oracle",
+          "status": "pass"
+        },
+        {
+          "id": "V01-no-config-capabilities-and-auth",
+          "status": "pass"
+        },
+        {
+          "id": "V03-V04-exact13-and-wrong-signed-bytes",
+          "status": "pass"
+        },
+        {
+          "id": "V05-V07-atomic-bind-claim-idempotence",
+          "status": "pass"
+        },
+        {
+          "id": "V08-old-credential-cannot-activate-new-receipt",
+          "status": "pass"
+        },
+        {
+          "id": "V02-key-id-and-field-shape-rejected",
+          "status": "pass"
+        },
+        {
+          "id": "V01-closed-expired-config-and-v1-discovery",
+          "status": "pass"
+        },
+        {
+          "id": "V05-transaction-rollback-and-Brain-retry",
+          "status": "pass"
+        },
+        {
+          "id": "V06-two-process-owner-and-key-race",
+          "status": "pass"
+        },
+        {
+          "id": "V09-expiry-generation-tombstone-and-recovery-TTL",
+          "status": "pass"
+        }
+      ],
+      "scope": "selected real routes + private SQLite + actual SMS verify fixture; noble JS signs / server OpenSSL verifies; no main/Android/network"
+    },
+    "compatibility": {
+      "candidate": "a92bd8f342144d6253cbb9a928925639ffa597cc",
+      "tests": [
+        {
+          "test": "device-enrollment-http",
+          "exit": 0,
+          "seconds": 4.22,
+          "log_sha256": "f661f7a6c0f6cb003acf0f754dc6ca492c5de0feb28359fc45ce5eb5d735f121",
+          "tail": [
+            "[pairing] claim request_id=7e4e4c72-ef56-421c-b82a-a31ade11f66b status=200",
+            "[device-session] prefetch sn=BJP00326110400009001 prefetch=129e811f-219f-44c7-9084-ac8f68641220",
+            "[device-enrollment] bound request_id=cb2d2902-d070-4496-8156-30722cc9d781 binding_id=T8f4eL2lsy24D_MsNhYCZNNW already_bound=true",
+            "[device-enrollment] rejected request_id=59ec6324-ff95-4e0e-9126-b95c7be0fa99 stage=challenge reason=enrollment_closed status=503",
+            "[pairing] claim request_id=dc121182-4681-4b7f-bb55-01249c7e3c8a status=200",
+            "[device-enrollment] rejected request_id=3bd38ef2-6c52-4a67-b647-8ba21e32adc2 stage=issue reason=identity_key_conflict status=409",
+            "[device-enrollment] rejected request_id=53c6910d-662a-4058-859d-4c7d47168169 stage=challenge reason=device_not_available status=404",
+            "PASS automatic enrollment real HTTP: authenticated issuance/no pre-registration/PoP/atomic binding/idempotency/claim/activation/owner isolation/gate closure/tombstone"
+          ]
+        },
+        {
+          "test": "ble-binding-http",
+          "exit": 0,
+          "seconds": 3.5,
+          "log_sha256": "35a47bc67816c4329fe2cdbc85666eb73b2a14c6be9258ea223d205892d26a64",
+          "tail": [
+            "[profile] bind request_id=7445fcc9-8f31-457a-8ffe-6422efa0ce5c status=403",
+            "[pairing] parent request_id=449a00dd-6809-4a03-9199-8c76f10a67b7 path=/api/parent/pairing/confirm status=403",
+            "[pairing] claim request_id=a98ff008-2484-4198-9191-f3130caa5d48 status=403",
+            "[pairing] claim request_id=d03fba24-2002-46c8-aa40-c00407ad3e4b status=200",
+            "[device-session] prefetch sn=BJP00326110200000001 prefetch=96a2a6fb-62ca-43e0-86ad-50ef08c37e84",
+            "[pairing] claim request_id=c08ff8f2-75b8-4acc-813f-cc6d78af4947 status=200",
+            "[pairing] claim request_id=4a63b298-da0f-477b-b396-63214f09a222 status=409",
+            "PASS BLE HTTP: proof/bind/Brain/isolation/legacy gates/ECIES/activation/idempotence/ownership revocation"
+          ]
+        },
+        {
+          "test": "pairing",
+          "exit": 0,
+          "seconds": 6.54,
+          "log_sha256": "846037d0cb6d305d6c591506f5b8ab7000474d7d3dfd697b32b6596d2847e8b2",
+          "tail": [
+            "[pairing] v2 claim ok sn=BJP00326060100000906 session=tQeEeDNMBXXa source=parent brain=ready alg=ECIES-P256-HKDF-SHA256-A256GCM binding=existing_binding_recovery",
+            "[pairing] claim request_id=b0636a9e-f99c-4944-a1fa-10331e647098 status=200",
+            "[pairing] announce sn=BJP00326060100000901 outcome=replaced auto=no_preauth state=pending ttl=600 v=3",
+            "[pairing] confirm rejected sn=BJP00326060100000901 reason=sn_bound_by_other",
+            "[pairing] parent request_id=6276bfe0-7582-4393-a1e1-75edf147a3e1 path=/api/parent/pairing/confirm status=409",
+            "[pairing] claim request_id=e0ba78dc-b703-4bff-8ddd-121e9a5fd330 status=404",
+            "",
+            "pairing.test: pass=148 fail=0"
+          ]
+        }
+      ],
+      "scope": "37 fixed SHA old v1 HTTP + 12-line BLE routes + pairing regressions; private synthetic DB"
+    }
+  },
+  "13_main_artifacts_verified": {
+    "manifest_src_files": 203,
+    "payload_files_match_candidate": 10,
+    "v2_groups": 5,
+    "pairing2_groups": 5,
+    "v1_retry_groups": 9,
+    "initial_v1_failure": "missing scripts/provision-device-identity.mjs; only fixed candidate identical fixture added on retry",
+    "rerun_by_37": false
+  },
+  "contract_notes": [
+    "default capabilities is v2; v1 discovery requires ?binding_protocol=ble-enroll-v1",
+    "public_id is device.public_id in binding receipt",
+    "new enrollment route, existing ble-key-v1 claim and ble-bindings receipt; not pairing2 session_id",
+    "v2 has no old enrollment configuration/window/statement dependency; signing TTL120s, first claim600s, retry900s unchanged",
+    "SPKI possession proof is not manufacturer attestation; this is the user-authorized simplified policy, no added factory step"
+  ],
+  "limits": [
+    "candidate review is not deployment certification; production release remains13",
+    "no physical Android Keystore/APK source review: exact mini003 source/APK not supplied locally",
+    "SMS verify uses synthetic local code; SMS delivery/iPhone HTTPS/WeChat QR/BLE/WiFi/device reboot and data remain现场Q1-Q7",
+    "matrix was planned coverage; actual evidence is enumerated test assertions, no exhaustive fuzz/rate-limit/invalid-curve test claim",
+    "typecheck has reported12 baseline errors; not full repo typecheck pass"
+  ],
+  "workspace": {
+    "head": "6c2cc932713199968337d45641c3286d66c1fbfe",
+    "dirty_count": 34,
+    "business_mutated": false,
+    "production_accessed": false,
+    "device_or_owner_mutated": false
+  },
+  "artifacts": {
+    "/Users/fu-121/.local/state/p003-mini003-contract-audit-20261105/verification-37/run-candidate-v2-final/result.json": {
+      "sha256": "82d93ce2734f007565f951dabc210f004d8524193537e84cacc205791a3c1169",
+      "frozen_copy": "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/run-candidate-v2-final-result.json"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-contract-audit-20261105/verification-37/run-candidate-v2-final/inputs.json": {
+      "sha256": "8eb9c4c3130616a9111af9d7ed039ddf1904f2c2b989600af8a03c7b164b2df5",
+      "frozen_copy": "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/run-candidate-v2-final-inputs.json"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-contract-audit-20261105/verification-37/run-candidate-v2-compat/result.json": {
+      "sha256": "e283711a7ebc313841610dde290f84c09ae58731dafda9d76aa2a305c075e22f",
+      "frozen_copy": "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/run-candidate-v2-compat-result.json"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-contract-audit-20261105/verification-37/run-candidate-v2-compat/inputs.json": {
+      "sha256": "4744220de921255918b0d04527babea4ee9546e47ed2c56b1b9bd5009840660c",
+      "frozen_copy": "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/run-candidate-v2-compat-inputs.json"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/v2-contract.mjs": {
+      "sha256": "0d192cdbe789a75b8c76a0fc7c408de4f888d7101fd4c753ac1cbb2798682997"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/v2-race-worker.mjs": {
+      "sha256": "df0354e7ec31e58a5412607c5aab428b5d01f306201e1b03b3662fced492804d"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/archive_runner.py": {
+      "sha256": "da440ff7ba05aff19b80819d05f89ec08156f959918ac320e60080d098268296"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/compat_runner.py": {
+      "sha256": "b779dc76476d272157ffa5a682ddbcc9e048f7633cc654cebf1f10a718c97cde"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/main-input-verification.json": {
+      "sha256": "49504848ca2b3abdd86fab3b0a3fc0ea22287594680ff33d4d7e083a9d9d2d56"
+    },
+    "/Users/fu-121/.local/state/p003-mini003-implementation-20261105/evidence-37/verify-main-inputs.py": {
+      "sha256": "9a31e7e07c17fcd518d6aca2825ac60fc0ec1ec1d6c68efad89ed22df00d4f30"
+    }
+  }
+}

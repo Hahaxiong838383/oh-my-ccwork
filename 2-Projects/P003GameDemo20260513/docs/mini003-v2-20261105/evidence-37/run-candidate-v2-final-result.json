@@ -1,0 +1,348 @@
+{
+  "at": "2026-11-05T09:18:19.162Z",
+  "scope": "selected real routes + private SQLite + actual SMS verify fixture; noble JS signs / server OpenSSL verifies; no main/Android/network",
+  "noble_source_sha256": "0a692b98e22c56c0354f78eb1759cfbf6aec89eafc78cd2984a4f2e8428081e6",
+  "tests": [
+    {
+      "id": "LOGIN",
+      "status": "pass"
+    },
+    {
+      "id": "V03-independent-pure-JS-signature-oracle",
+      "status": "pass"
+    },
+    {
+      "id": "V01-no-config-capabilities-and-auth",
+      "status": "pass"
+    },
+    {
+      "id": "V03-V04-exact13-and-wrong-signed-bytes",
+      "status": "pass"
+    },
+    {
+      "id": "V05-V07-atomic-bind-claim-idempotence",
+      "status": "pass"
+    },
+    {
+      "id": "V08-old-credential-cannot-activate-new-receipt",
+      "status": "pass"
+    },
+    {
+      "id": "V02-key-id-and-field-shape-rejected",
+      "status": "pass"
+    },
+    {
+      "id": "V01-closed-expired-config-and-v1-discovery",
+      "status": "pass"
+    },
+    {
+      "id": "V05-transaction-rollback-and-Brain-retry",
+      "status": "pass"
+    },
+    {
+      "id": "V06-two-process-owner-and-key-race",
+      "status": "pass"
+    },
+    {
+      "id": "V09-expiry-generation-tombstone-and-recovery-TTL",
+      "status": "pass"
+    }
+  ],
+  "requests": [
+    {
+      "path": "/api/auth/sms/verify",
+      "status": 200,
+      "error": null,
+      "request_id": "smsreq-8613295f-5977-4175-862b-54430da533ee"
+    },
+    {
+      "path": "/api/auth/sms/verify",
+      "status": 200,
+      "error": null,
+      "request_id": "smsreq-970353ac-abf5-489f-86da-a032c8eaf8fb"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities",
+      "status": 401,
+      "error": "unauthorized",
+      "request_id": "b9ab700e-1fed-4f14-8da8-1cf80e17cd71"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities",
+      "status": 200,
+      "error": null,
+      "request_id": "64053d44-7747-4230-9d46-e359240d8f70"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 200,
+      "error": null,
+      "request_id": "7f36ecd1-7cd7-4e09-b101-b9ae2c4bcac9"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 403,
+      "error": "device_proof_invalid",
+      "request_id": "8df0058d-4e63-4353-926e-45c1fef5e318"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 403,
+      "error": "device_proof_invalid",
+      "request_id": "7dd5ad20-8a56-4fb4-af28-7ba1dc610fc9"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 403,
+      "error": "device_proof_invalid",
+      "request_id": "c7d6622e-4e5a-484f-a2d1-46828a532217"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 403,
+      "error": "device_proof_invalid",
+      "request_id": "8f5c38c8-f1a4-4ee0-bc54-95214769c557"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 404,
+      "error": "binding_not_found",
+      "request_id": "64233010-f200-4dcf-9fc4-b417ac35eebb"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "a6cf0d78-108a-4fdd-af4b-bca6c4611bcd"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 200,
+      "error": null,
+      "request_id": "25a7d830-2322-4cdb-9a02-37dd7460ee23"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "0a0dc7b0-fa64-4c91-89f0-b1fc2f360d63"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "e1a2de1f-4ae8-47cd-b4fc-a577d184989b"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 409,
+      "error": "device_already_bound",
+      "request_id": "ca66073e-d828-4320-8361-d80c9d8f1c80"
+    },
+    {
+      "path": "/v1/device/pairing/claim",
+      "status": 200,
+      "error": "claimed",
+      "request_id": "7b2720dd-cd0f-4fab-a951-2b4ecc84eb9f"
+    },
+    {
+      "path": "/api/parent/ble-bindings/fQNWtTFI42DE5Hdr0d8mxWGP",
+      "status": 200,
+      "error": null,
+      "request_id": "836e1bff-2172-4c5d-aa8f-879a7284435a"
+    },
+    {
+      "path": "/v1/device/session/prefetch",
+      "status": 200,
+      "error": null,
+      "request_id": null
+    },
+    {
+      "path": "/api/parent/ble-bindings/fQNWtTFI42DE5Hdr0d8mxWGP",
+      "status": 200,
+      "error": null,
+      "request_id": "f9b0a033-0e67-4b01-bff1-4321097230d1"
+    },
+    {
+      "path": "/api/parent/ble-bindings/fQNWtTFI42DE5Hdr0d8mxWGP",
+      "status": 404,
+      "error": "binding_not_found",
+      "request_id": "191d326b-bcae-46b7-adf1-1a26d8c00158"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 200,
+      "error": null,
+      "request_id": "2f08843a-235d-4c66-bcbe-828f015fe928"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "7821931f-819f-43bc-a3ef-b0c262cc8989"
+    },
+    {
+      "path": "/v1/device/pairing/claim",
+      "status": 200,
+      "error": "claimed",
+      "request_id": "2b09fab4-452b-461c-826c-a1a321ee6abe"
+    },
+    {
+      "path": "/v1/device/session/prefetch",
+      "status": 200,
+      "error": null,
+      "request_id": null
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 200,
+      "error": null,
+      "request_id": "769ede76-c631-49c1-b95a-494aa73ab68f"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "db77d220-ebe9-4c8b-b9a5-c28408b1b6d1"
+    },
+    {
+      "path": "/v1/device/pairing/claim",
+      "status": 200,
+      "error": "claimed",
+      "request_id": "52aa92ae-3c03-4aac-8a6b-d4c7d5594b94"
+    },
+    {
+      "path": "/api/parent/ble-bindings/Pv-AT7uB0MXvcD9Qm7TnVlRk",
+      "status": 200,
+      "error": null,
+      "request_id": "f40631c3-61a7-4c36-9c41-2f8f016d75ed"
+    },
+    {
+      "path": "/v1/device/session/prefetch",
+      "status": 200,
+      "error": null,
+      "request_id": null
+    },
+    {
+      "path": "/api/parent/ble-bindings/Pv-AT7uB0MXvcD9Qm7TnVlRk",
+      "status": 200,
+      "error": null,
+      "request_id": "d0f4fb3d-ca8c-4228-ac8c-d53ddcebec7a"
+    },
+    {
+      "path": "/v1/device/session/prefetch",
+      "status": 200,
+      "error": null,
+      "request_id": null
+    },
+    {
+      "path": "/api/parent/ble-bindings/Pv-AT7uB0MXvcD9Qm7TnVlRk",
+      "status": 200,
+      "error": null,
+      "request_id": "cb0eef3b-7ff0-4ade-8808-016c39b6fd98"
+    },
+    {
+      "path": "/v1/device/session/prefetch",
+      "status": 200,
+      "error": null,
+      "request_id": null
+    },
+    {
+      "path": "/api/parent/ble-bindings/Pv-AT7uB0MXvcD9Qm7TnVlRk",
+      "status": 200,
+      "error": null,
+      "request_id": "89febdab-214a-4e99-ab0f-08587febb17a"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 400,
+      "error": "invalid_identity_public_key",
+      "request_id": "eb0f79d9-c0a2-433d-bb1e-3e922b5b0feb"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 400,
+      "error": "bad_request",
+      "request_id": "61279e82-3558-47f9-8f1e-ade6863d19d4"
+    },
+    {
+      "path": "/api/parent/device-enrollments/challenge",
+      "status": 400,
+      "error": "bad_request",
+      "request_id": "0bb0f16f-5a0c-49ad-b187-96a3640e9204"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities",
+      "status": 200,
+      "error": null,
+      "request_id": "f186772c-db58-4dff-ace4-70de945ebce1"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities?binding_protocol=ble-enroll-v1",
+      "status": 200,
+      "error": null,
+      "request_id": "a697fa63-1173-42fc-82ef-81391d8f024e"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities",
+      "status": 200,
+      "error": null,
+      "request_id": "b0de0a47-cf37-48ff-9686-b70765614b4d"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities?binding_protocol=ble-enroll-v1",
+      "status": 200,
+      "error": null,
+      "request_id": "ff332a98-6dd5-4d17-be10-0383e3f79de5"
+    },
+    {
+      "path": "/api/parent/device-enrollments/capabilities?binding_protocol=unknown",
+      "status": 400,
+      "error": "bad_request",
+      "request_id": "6d1c070c-be36-4e7f-a98c-ceadfccc02fe"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "00feefb1-7b3e-485f-8c98-5d01da015c9c"
+    },
+    {
+      "path": "/api/parent/ble-bindings/eIzUOw_JZX1rELKJqOg5V8Wr",
+      "status": 200,
+      "error": null,
+      "request_id": "7e9401dd-c9e8-406d-ba79-128e5964b487"
+    },
+    {
+      "path": "/api/parent/device-enrollments/confirm",
+      "status": 200,
+      "error": null,
+      "request_id": "f1403e0a-3107-4897-94d0-b836c7794f2d"
+    },
+    {
+      "path": "/v1/device/pairing/claim",
+      "status": 200,
+      "error": "claimed",
+      "request_id": "9c54d217-83c1-475d-88ab-8ea92e6c5836"
+    },
+    {
+      "path": "/v1/device/session/prefetch",
+      "status": 401,
+      "error": 401,
+      "request_id": null
+    },
+    {
+      "path": "/v1/device/pairing/claim",
+      "status": 409,
+      "error": "binding_changed",
+      "request_id": "ecab720f-70ac-45d3-a4ec-81c21f01b44f"
+    }
+  ],
+  "pass": 11,
+  "fail": 0,
+  "pending": [
+    "V10 old v1/12-line/pairing2 archive regression",
+    "V11 exact main and deployment",
+    "V12 real phone/device"
+  ]
+}

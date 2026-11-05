@@ -1,0 +1,976 @@
+{
+  "status": "SERVER_READY_FOR_MINI003_JOINT_TEST",
+  "candidate": "a92bd8f342144d6253cbb9a928925639ffa597cc",
+  "deployment": {
+    "candidate": "a92bd8f342144d6253cbb9a928925639ffa597cc",
+    "backup": "/opt/p003/_backup/mini003-v2-20261105T172035",
+    "before_processes": [
+      {
+        "name": "p003-voice",
+        "pid": 178842,
+        "restarts": 53,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 157401,
+        "restarts": 10,
+        "status": "online"
+      }
+    ],
+    "at": "2026-11-05T09:20:35.797702+00:00",
+    "files_verified": true,
+    "p003-analytics_health": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "alive": true,
+        "ready": true,
+        "dependencies_ready": true,
+        "storage_ready": true,
+        "gate_enabled": true,
+        "control_valid": true,
+        "allowlist_count": 1,
+        "in_flight": 0,
+        "requests": 0,
+        "storage_failures": 0,
+        "sql_busy": 0,
+        "rss_bytes": 132640768,
+        "wal_bytes": 0,
+        "wal_max_bytes": 268435456,
+        "wal_pressure": false,
+        "sqlite_version": "3.53.3",
+        "sqlite_version_safe": true,
+        "sqlite_synchronous": 2,
+        "sqlite_wal_autocheckpoint": 0,
+        "checkpoint": {
+          "enabled": true,
+          "running": false,
+          "worker_pid": null,
+          "interval_ms": 10000,
+          "timeout_ms": 30000,
+          "stale_after_ms": 60000,
+          "last_attempt_ms": 1793870436440,
+          "last_completed_ms": 1793870436646,
+          "last_success_ms": 1793870436646,
+          "last_result": {
+            "ok": true,
+            "sqlite_version": "3.53.3",
+            "busy": 0,
+            "log_frames": 0,
+            "checkpointed_frames": 0,
+            "duration_ms": 0.06530300000000011,
+            "reclaimed": false,
+            "reclaim_busy": false
+          },
+          "last_error": null,
+          "failures": 0,
+          "timeouts": 0,
+          "stale": false,
+          "stalled": false
+        },
+        "disk_free_bytes": 16343621632,
+        "disk_warning": false,
+        "processing_p95_ms": null,
+        "processing_p99_ms": null,
+        "last_rollup_success_ms": 1793870411496,
+        "last_rollup_attempt_ms": 1793870411496,
+        "last_rollup_partial_ms": null,
+        "rollup_status": "complete",
+        "rollup_failed_days": 0,
+        "rollup_remaining_dirty_days": 0,
+        "last_backup_success_ms": 1793809817879
+      }
+    },
+    "p003-voice_health": {
+      "status": 200,
+      "body": {
+        "status": "ok"
+      }
+    },
+    "after_processes": [
+      {
+        "name": "p003-voice",
+        "pid": 196861,
+        "restarts": 54,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 196818,
+        "restarts": 11,
+        "status": "online"
+      }
+    ],
+    "env_unchanged": true,
+    "untouched_runtime": {
+      "src/ark/answer.ts": true,
+      "src/routes/custom-llm.ts": true,
+      "src/listening-authority.ts": true,
+      "src/routes/pairing.ts": true,
+      "src/routes/profile.ts": true
+    },
+    "status": "DEPLOYED_HEALTHY"
+  },
+  "public_readonly_verification": {
+    "at": "2026-11-05T09:22:57.765531+00:00",
+    "capabilities": {
+      "status": 200,
+      "request_id": "2d1adb3b-4868-499a-84ed-49ea1d934874",
+      "json": {
+        "ok": true,
+        "binding_protocol": "ble-enroll-v2",
+        "supported_protocols": [
+          "ble-enroll-v2",
+          "ble-enroll-v1"
+        ],
+        "enabled": true,
+        "identity_statement_required": false,
+        "window_starts_at_ms": null,
+        "window_expires_at_ms": null,
+        "challenge_ttl_s": 120,
+        "claim_protocol": "ble-key-v1",
+        "request_id": "2d1adb3b-4868-499a-84ed-49ea1d934874"
+      }
+    },
+    "anonymous_challenge": {
+      "status": 401,
+      "request_id": "74de441b-0c1e-4d6b-a944-b12aae3ac3c0",
+      "json": {
+        "ok": false,
+        "error": "unauthorized",
+        "message": "请先登录",
+        "request_id": "74de441b-0c1e-4d6b-a944-b12aae3ac3c0"
+      }
+    },
+    "invalid_claim": {
+      "status": 400,
+      "request_id": "28dbf038-c642-40da-bf75-db2b44fa612d",
+      "json": {
+        "ok": false,
+        "error": "bad_request",
+        "message": "请求格式不正确",
+        "request_id": "28dbf038-c642-40da-bf75-db2b44fa612d"
+      }
+    },
+    "C": {
+      "sn": "BJP00326081002000031",
+      "registry": [],
+      "key_count": 0,
+      "receipt_count": 0
+    },
+    "files": {
+      "src/device-enrollment-proof.ts": "1fa10facfccd43a793912e3ebf8e00456f984528d2fe60a8083cab3e2c70965e",
+      "src/device-enrollment-store.ts": "525acf81c66166a82f779e80d8e11d8f5fbe2890f7f27ddce1a5965491e5e3df",
+      "src/routes/device-enrollments.ts": "3e3fce7517b4909325eb355b14b7325c6e38dc9f2f56e2af5ed275f7f541a912",
+      "src/ble-binding-store.ts": "b10d9c3c301d064fca3949cb7f79a21133f5f6852a651458f075047c0ba4c07f",
+      "src/routes/ble-bindings.ts": "6a58a928aecd039d356caf479f6819be0ee2fab1696dfef94398831aab3316ff",
+      "src/device-credential.ts": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038",
+      "src/routes/device-session.ts": "3356e98effed3586f2d66746014191f58156626f57d3661ae963955670178834"
+    },
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 196861,
+        "restarts": 54,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 196818,
+        "restarts": 11,
+        "status": "online"
+      }
+    ],
+    "scope": "public HTTPS read-only capability plus invalid/anonymous requests; no registry/owner/config/device writes; short-lived token never exported"
+  },
+  "stability": {
+    "at": "2026-11-05T09:23:52.951672+00:00",
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 196861,
+        "restarts": 54,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 196818,
+        "restarts": 11,
+        "status": "online"
+      }
+    ],
+    "same_pid_and_restart_counts": true,
+    "files": {
+      "src/ble-binding-store.ts": "b10d9c3c301d064fca3949cb7f79a21133f5f6852a651458f075047c0ba4c07f",
+      "src/device-credential.ts": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038",
+      "src/device-enrollment-proof.ts": "1fa10facfccd43a793912e3ebf8e00456f984528d2fe60a8083cab3e2c70965e",
+      "src/device-enrollment-store.ts": "525acf81c66166a82f779e80d8e11d8f5fbe2890f7f27ddce1a5965491e5e3df",
+      "src/routes/ble-bindings.ts": "6a58a928aecd039d356caf479f6819be0ee2fab1696dfef94398831aab3316ff",
+      "src/routes/device-enrollments.ts": "3e3fce7517b4909325eb355b14b7325c6e38dc9f2f56e2af5ed275f7f541a912",
+      "src/routes/device-session.ts": "3356e98effed3586f2d66746014191f58156626f57d3661ae963955670178834"
+    },
+    "env_unchanged": true,
+    "main_health": {
+      "status": 200,
+      "json": {
+        "status": "ok"
+      }
+    },
+    "analytics_ready": {
+      "status": 200,
+      "json": {
+        "ok": true,
+        "alive": true,
+        "ready": true,
+        "dependencies_ready": true,
+        "storage_ready": true,
+        "gate_enabled": true,
+        "control_valid": true,
+        "allowlist_count": 1,
+        "in_flight": 0,
+        "requests": 0,
+        "storage_failures": 0,
+        "sql_busy": 0,
+        "rss_bytes": 121171968,
+        "wal_bytes": 0,
+        "wal_max_bytes": 268435456,
+        "wal_pressure": false,
+        "sqlite_version": "3.53.3",
+        "sqlite_version_safe": true,
+        "sqlite_synchronous": 2,
+        "sqlite_wal_autocheckpoint": 0,
+        "checkpoint": {
+          "enabled": true,
+          "running": false,
+          "worker_pid": null,
+          "interval_ms": 10000,
+          "timeout_ms": 30000,
+          "stale_after_ms": 60000,
+          "last_attempt_ms": 1793870626453,
+          "last_completed_ms": 1793870626558,
+          "last_success_ms": 1793870626558,
+          "last_result": {
+            "ok": true,
+            "sqlite_version": "3.53.3",
+            "busy": 0,
+            "log_frames": 0,
+            "checkpointed_frames": 0,
+            "duration_ms": 0.05449899999999275,
+            "reclaimed": false,
+            "reclaim_busy": false
+          },
+          "last_error": null,
+          "failures": 0,
+          "timeouts": 0,
+          "stale": false,
+          "stalled": false
+        },
+        "disk_free_bytes": 16343347200,
+        "disk_warning": false,
+        "processing_p95_ms": null,
+        "processing_p99_ms": null,
+        "last_rollup_success_ms": 1793870411496,
+        "last_rollup_attempt_ms": 1793870411496,
+        "last_rollup_partial_ms": null,
+        "rollup_status": "complete",
+        "rollup_failed_days": 0,
+        "rollup_remaining_dirty_days": 0,
+        "last_backup_success_ms": 1793809817879
+      }
+    },
+    "backup_complete": true,
+    "rollback_script_sha256": "c2ae3b6e86d18cedacc1a2731c8ad423b509d44ec9192072262892da95f5ab98"
+  },
+  "observed_seconds": 197.154,
+  "local_regression": [
+    {
+      "test": "device-enrollment-v2",
+      "exit": 0,
+      "seconds": 2.86
+    },
+    {
+      "test": "device-enrollment-boundaries",
+      "exit": 0,
+      "seconds": 1.43
+    },
+    {
+      "test": "device-enrollment-http",
+      "exit": 0,
+      "seconds": 3.27
+    },
+    {
+      "test": "ble-binding-core",
+      "exit": 0,
+      "seconds": 1.08
+    },
+    {
+      "test": "ble-binding-guards",
+      "exit": 0,
+      "seconds": 1.78
+    },
+    {
+      "test": "ble-binding-http",
+      "exit": 0,
+      "seconds": 2.33
+    },
+    {
+      "test": "simple-binding",
+      "exit": 0,
+      "seconds": 2.49
+    },
+    {
+      "test": "pairing",
+      "exit": 0,
+      "seconds": 5.2
+    },
+    {
+      "test": "device-session",
+      "exit": 0,
+      "seconds": 2.35
+    }
+  ],
+  "main": {
+    "v2": {
+      "started_at": "2026-11-05T09:08:56.308Z",
+      "node": "v22.22.2",
+      "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "network_isolated": true,
+      "tests": [
+        "actual main + SMS login + v2 exact proof + automatic SN/key/owner/Brain without statement or legacy window",
+        "unchanged ble-key-v1 ECIES claim + actual device authentication + receipt-specific activation",
+        "real HTTP telemetry persists; owner reads exact values and second parent cannot access",
+        "actual server restart preserves ownership, saved credential validity, activation and data",
+        "ownership change invalidates retry claim, versioned credential and prior parent access"
+      ],
+      "requests": [
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-50a7a040-79d2-4033-a0ff-f73ed9e2b012"
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-70824b43-b314-416d-8728-9d0b1d48cbe1"
+        },
+        {
+          "path": "/api/parent/device-enrollments/capabilities",
+          "status": 200,
+          "request_id": "0c120c89-bb30-4fac-90cd-35f6663fce36"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 401,
+          "request_id": "ca436350-1472-460c-b758-4b2c0694cfbc"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 200,
+          "request_id": "58ed1fa7-7ec8-4e22-a99d-b1c7cac49f2c"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 404,
+          "request_id": "44677b44-41d2-4219-8f67-5afd210ad43b"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "c348795f-3222-4385-8536-6f1faf74c712"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "50a104dc-f520-408f-8211-ef1414341f4a"
+        },
+        {
+          "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+          "status": 200,
+          "request_id": "b477cfc0-9a84-42a0-86dd-3649e5028a0a"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": "b4e14bca-6558-42a5-a6fb-fbf00ae9afd8"
+        },
+        {
+          "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+          "status": 200,
+          "request_id": "e15f7af5-05fb-4b6f-90f2-644a21f7d12e"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+          "status": 200,
+          "request_id": "e1d990db-99b1-42ed-9821-0085978b09d7"
+        },
+        {
+          "path": "/v1/device/config",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/telemetry",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+          "status": 404,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+          "status": 404,
+          "request_id": "7d8d201e-a680-493b-b662-b5f8210bede9"
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+          "status": 200,
+          "request_id": "cf0dff40-1d82-44e5-a839-c280a99a121c"
+        },
+        {
+          "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": "d5e6faac-2984-409f-8823-75b0e1f69e94"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 409,
+          "request_id": "5469b89a-07fc-48d4-a500-26d966b19c1a"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 401,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+          "status": 404,
+          "request_id": "772e8200-c697-42e8-b827-32fa1e38192f"
+        },
+        {
+          "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+          "status": 404,
+          "request_id": null
+        }
+      ],
+      "status": "PASS",
+      "finished_at": "2026-11-05T09:08:59.602Z",
+      "assertion_groups": 5
+    },
+    "pairing2": {
+      "started_at": "2026-11-05T09:08:59.869Z",
+      "node": "v22.22.2",
+      "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "network_isolated": true,
+      "tests": [
+        "actual main entry + real SMS login + new SN auto-bind without any identity statement/key/enrollment window",
+        "existing pairing2 ECIES claim + actual prefetch authentication + truthful activated state",
+        "real HTTP telemetry persists; owner reads exact values and second parent cannot access",
+        "actual server restart preserves ownership, saved credential validity, activation and data",
+        "ownership change invalidates retry claim, versioned credential and prior parent access"
+      ],
+      "requests": [
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-827f96ea-39e1-4607-8c38-d09b42dd9544"
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-0b3e0c2c-02f5-4e8a-a884-c6a1bae2f01e"
+        },
+        {
+          "path": "/api/parent/device-enrollments/capabilities?binding_protocol=ble-enroll-v1",
+          "status": 200,
+          "request_id": "29e9252f-ecf2-4c01-8cd0-5c5f77a218eb"
+        },
+        {
+          "path": "/api/profile/bind-sn",
+          "status": 401,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bind-sn",
+          "status": 400,
+          "request_id": "e0fe5bcc-d0ee-4c37-8492-4ecc72f5e15e"
+        },
+        {
+          "path": "/api/profile/bind-sn",
+          "status": 200,
+          "request_id": "30efba59-fef7-488f-91f1-5a40a82b4642"
+        },
+        {
+          "path": "/api/profile/bind-sn",
+          "status": 200,
+          "request_id": "7104277d-d512-434b-b9f6-e8e6b7fbf804"
+        },
+        {
+          "path": "/api/profile/bind-sn",
+          "status": 409,
+          "request_id": "71f5126b-6b29-41f3-9ebe-f9e5abbfafe3"
+        },
+        {
+          "path": "/api/parent/pairing/confirm",
+          "status": 200,
+          "request_id": "f425caf4-5e05-41d7-b740-03ab6cd5b367"
+        },
+        {
+          "path": "/api/parent/pairing/confirm",
+          "status": 200,
+          "request_id": "7e08253e-be1c-4a32-b1bd-4c573d8f00f8"
+        },
+        {
+          "path": "/api/parent/pairing/confirm",
+          "status": 409,
+          "request_id": "3726130a-c0eb-413a-bffc-e38e7848b3a8"
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 200,
+          "request_id": "e974f9c8-c0ac-4599-b1e3-1d1e0aee630e"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": "421a5425-65bf-4f56-8c88-4c723afb3d93"
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 200,
+          "request_id": "48b67746-c2d7-40e2-a35b-4e494613fe27"
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 200,
+          "request_id": "420f223e-717d-46ee-bb2d-224e806934ab"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 200,
+          "request_id": "d7a3fe09-6190-4aa1-8b35-be9948e8696a"
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 200,
+          "request_id": "c345d280-b21a-4198-aad2-5fe9b17b72eb"
+        },
+        {
+          "path": "/v1/device/config",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/telemetry",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+          "status": 404,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 404,
+          "request_id": "64308e33-fcec-4e48-92f7-d6097b15590a"
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 200,
+          "request_id": "fa7e50a3-e47b-4800-b9c2-8b71fd1248d0"
+        },
+        {
+          "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": "229eace8-e381-4d98-bf0d-479f038a514e"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 409,
+          "request_id": "21f2acf2-708f-4795-9fe8-f15af02f26b4"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 401,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+          "status": 409,
+          "request_id": "7e71d817-853d-4f76-9b65-874994f0b64f"
+        },
+        {
+          "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+          "status": 404,
+          "request_id": null
+        }
+      ],
+      "status": "PASS",
+      "finished_at": "2026-11-05T09:09:02.815Z",
+      "assertion_groups": 5
+    },
+    "legacy_v1": {
+      "started_at": "2026-11-05T09:10:10.712Z",
+      "node": "v22.22.2",
+      "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "network_isolated": true,
+      "tests": [
+        "real main entry + SMS verify HTTP creates isolated A/B accounts and single-use verification code and reusable parent tokens",
+        "station stdin/stdout issuance and replay are automatic, authenticated, and do not pre-register",
+        "14-line proof rejects wrong device, account and purpose without partial registration",
+        "atomic device binding + separate idempotent Brain initialization recovers from real SQLite failure",
+        "encrypted claim only decrypts for recipient; actual device authentication activates and reads default config",
+        "device data is persisted and parent A reads exact values; parent B cannot see device or dashboard",
+        "real server restart preserves identity, owner, receipt, telemetry and idempotency",
+        "closed enrollment gate preserves committed receipts; expired claim recovers with original owner 12-line proof",
+        "owner/version change invalidates old device credential and old parent access"
+      ],
+      "requests": [
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-c13b82e6-a64e-4a2f-a676-db12e4be009c"
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-101f4f63-ed08-4c5f-b112-31a371d98745"
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 401,
+          "request_id": "smsreq-ea14da3d-7cb6-4a0f-bdfe-a1eea6a1fcd4"
+        },
+        {
+          "path": "/v1/device/provisioning/identity",
+          "status": 401,
+          "request_id": "098e257d-ca40-4c01-a742-04b1cc08f70e"
+        },
+        {
+          "path": "/v1/device/provisioning/identity",
+          "status": 401,
+          "request_id": "0f59326a-af75-400b-9516-4761c95d5862"
+        },
+        {
+          "path": "/api/parent/device-enrollments/capabilities",
+          "status": 200,
+          "request_id": "0b8ceb5f-d48b-4779-b107-84b8c2984430"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 403,
+          "request_id": "fcff3a8a-a784-42b9-9c67-02c52bc60148"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 200,
+          "request_id": "9cafe37e-4b46-4d3d-92d5-177e3a2fcf82"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 404,
+          "request_id": "b3f7d1aa-e6d8-46d3-94d3-cc886e5d43c7"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 403,
+          "request_id": "10757138-e884-4195-b4d2-9216d4d456e1"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "27684d98-3bb3-4e27-afea-258c936eca9d"
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "17cfbc1a-cffd-4b2a-b5b0-ab5772eea2c4"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "9fc8d617-aea0-431f-b346-791d68c1bdd1"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 409,
+          "request_id": "18dc996b-29c3-469b-9768-227205006c98"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "3b3669a6-2f43-4d72-bc74-18576a7e7c37"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "62d019ab-b197-490f-a470-818567faf1cc"
+        },
+        {
+          "path": "/v1/device/config",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/telemetry",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 404,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 404,
+          "request_id": "2665723b-688a-481a-bc20-370dcc9cacac"
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "ad37b9ed-578e-4cc5-8a0f-b593487c9c88"
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "3e634315-838e-44c4-9fb7-76fa93d2c68f"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 503,
+          "request_id": "70d2551d-d65c-406e-9936-47697fc260e2"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "8f23e0ca-beca-4cd6-8609-ccd21403d1ce"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 410,
+          "request_id": "1abc2198-da27-496d-b707-dc3d6df19dae"
+        },
+        {
+          "path": "/api/parent/ble-bindings/challenge",
+          "status": 200,
+          "request_id": "faf5cd86-c29e-4b7c-8be8-81799318558f"
+        },
+        {
+          "path": "/api/parent/ble-bindings/confirm",
+          "status": 200,
+          "request_id": "4d11363e-a539-4a4a-971a-c8186d925626"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/0LzGBqlXjTu5mxlKDX65wGZ-",
+          "status": 200,
+          "request_id": "19aa53be-11ee-44e7-95b9-7e1b29c39613"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 401,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 404,
+          "request_id": null
+        }
+      ],
+      "status": "PASS",
+      "finished_at": "2026-11-05T09:10:13.797Z",
+      "assertion_groups": 9
+    }
+  },
+  "typecheck": "12 unchanged baseline errors; logs byte-identical; not a global typecheck pass",
+  "limitations": [
+    "No Android APK/source independent verification or installation",
+    "No real C signing / Wi-Fi / credential persistence / WeChat device UI test",
+    "No SMS delivery or iPhone TLS test in this task"
+  ],
+  "failed_attempts": [
+    {
+      "kind": "legacy_main_archive",
+      "reason": "missing same-SHA provision-device-identity.mjs fixture; added and passed 9 groups; no business code changed"
+    },
+    {
+      "kind": "public_negative_probe",
+      "reason": "empty claim body selects historical disabled protocol, not BLE validation; corrected probe to explicit ble-key-v1 incomplete body; 400 verified; no business change"
+    }
+  ],
+  "evidence_sha256": {
+    "DEPLOY_MANIFEST.json": "334941f43ae8f8ac3e124ec8a9f7d3c0df640df299a335cc760bc6b21bf08796",
+    "REVIEW-37.md": "8dd2308b5492d824df59c889a79067b3705c3c64de66134f69fa041c7b4235d9",
+    "REVIEW-37.json": "ccf03d0b6806947455246130d85ab015d737bbfa4eca57b19d617dde13d22167",
+    "regression.json": "b4079f224dcc7dfadeea5adf0bdc7ba1f160b9b10764d8baba3d51ac8ba8f128",
+    "typecheck.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "analytics.log": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
+    "main-result.json": "36d5bdd297d4d6f86858ef4b37913b177836f930ee1f00cde03e8e3c2f0f2472",
+    "main-legacy-retry.json": "4bcf0c3c1499bc89797cef3c1e256ebc52520093981f274093df9d8ff10f1a2b",
+    "deployed.json": "70df676b7ffd9beb308585759ef9a96df325a1409ce140824ba48b1b703c4057",
+    "post-fixed.json": "b6e2eb854ac81a8512aa5196bded9aff65d62a020245702e95fb222db353ec66",
+    "stability.json": "c79eb4bb0d5e04b60812215056b98a3bf140a2e75d6ee9d1dc126d62a6961a02"
+  }
+}

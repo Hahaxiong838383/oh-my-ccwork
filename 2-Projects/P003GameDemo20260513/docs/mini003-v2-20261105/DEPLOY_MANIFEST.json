@@ -1,0 +1,41 @@
+{
+  "baseline": "78612abfb0a4a49151dd64d3aa783aa45f1000c3",
+  "files": [
+    {
+      "path": "src/ble-binding-store.ts",
+      "before": "4c72960343edd4ce6b8752c912ed0df329bfd25d6e04c45a59cbbb7209efad89",
+      "after": "b10d9c3c301d064fca3949cb7f79a21133f5f6852a651458f075047c0ba4c07f"
+    },
+    {
+      "path": "src/device-credential.ts",
+      "before": "e7e8fce66385596b251dfcf17f46c19ab35a81a7feb3b4509ef5e67b8906d895",
+      "after": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038"
+    },
+    {
+      "path": "src/device-enrollment-proof.ts",
+      "before": "6f248e1a8e7765f7e6f71da1cc6d8bad487cad2358ef01988c3a5b3a800b8a00",
+      "after": "1fa10facfccd43a793912e3ebf8e00456f984528d2fe60a8083cab3e2c70965e"
+    },
+    {
+      "path": "src/device-enrollment-store.ts",
+      "before": "8185ecb4d7024b4cb6fb32bee6800eade4baaadfe2e56d7a8066e0440195ba94",
+      "after": "525acf81c66166a82f779e80d8e11d8f5fbe2890f7f27ddce1a5965491e5e3df"
+    },
+    {
+      "path": "src/routes/ble-bindings.ts",
+      "before": "b494bd6eea5f3009cf35e12552b7ad9fe10ac58f22fbc9206e48251585d7c825",
+      "after": "6a58a928aecd039d356caf479f6819be0ee2fab1696dfef94398831aab3316ff"
+    },
+    {
+      "path": "src/routes/device-enrollments.ts",
+      "before": "d742759293871298e34c21ef1a7dcf232386ea1de9b4a59983ea8c00804ef859",
+      "after": "3e3fce7517b4909325eb355b14b7325c6e38dc9f2f56e2af5ed275f7f541a912"
+    },
+    {
+      "path": "src/routes/device-session.ts",
+      "before": "445ce889601aa148672e5f1a0dc6e3139d78f5e71f5a285f7cd48ea591631e16",
+      "after": "3356e98effed3586f2d66746014191f58156626f57d3661ae963955670178834"
+    }
+  ],
+  "candidate": "a92bd8f342144d6253cbb9a928925639ffa597cc"
+}

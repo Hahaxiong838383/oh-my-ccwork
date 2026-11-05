@@ -11,3 +11,5 @@
 - [决策和经验](MEMORY.md)
 
 旧auto-enrollment/QR V2文档保留历史；其声明前置不适用于当前普通内测绑定。
+
+**17:25更新：mini003的服务端v2兼容与激活修复已上线，改用[mini003正式回执及实机说明](../mini003-v2-20261105/P003_MINI003_SERVER_READY_AND_DEVICE_TEST_20261105.md)；本文V3仍仅用于pairing2。**

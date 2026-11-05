@@ -1,0 +1,740 @@
+{
+  "candidate": "a92bd8f342144d6253cbb9a928925639ffa597cc",
+  "verified_at": "2026-11-05",
+  "manifest_files": 203,
+  "preflight_count": 205,
+  "whole_src_manifest_matches_preflight_plus_seven_candidate_files": true,
+  "payloads": [
+    {
+      "path": "src/ble-binding-store.ts",
+      "sha256": "b10d9c3c301d064fca3949cb7f79a21133f5f6852a651458f075047c0ba4c07f",
+      "matches_candidate": true
+    },
+    {
+      "path": "src/device-credential.ts",
+      "sha256": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038",
+      "matches_candidate": true
+    },
+    {
+      "path": "src/device-enrollment-proof.ts",
+      "sha256": "1fa10facfccd43a793912e3ebf8e00456f984528d2fe60a8083cab3e2c70965e",
+      "matches_candidate": true
+    },
+    {
+      "path": "src/device-enrollment-store.ts",
+      "sha256": "525acf81c66166a82f779e80d8e11d8f5fbe2890f7f27ddce1a5965491e5e3df",
+      "matches_candidate": true
+    },
+    {
+      "path": "src/routes/ble-bindings.ts",
+      "sha256": "6a58a928aecd039d356caf479f6819be0ee2fab1696dfef94398831aab3316ff",
+      "matches_candidate": true
+    },
+    {
+      "path": "src/routes/device-enrollments.ts",
+      "sha256": "3e3fce7517b4909325eb355b14b7325c6e38dc9f2f56e2af5ed275f7f541a912",
+      "matches_candidate": true
+    },
+    {
+      "path": "src/routes/device-session.ts",
+      "sha256": "3356e98effed3586f2d66746014191f58156626f57d3661ae963955670178834",
+      "matches_candidate": true
+    },
+    {
+      "path": "scripts/device-enrollment-v2-main.test.ts",
+      "sha256": "7ec87262ef1f18e87db892d314c96c93216f5237e826975ab5d7553acc3ae166",
+      "matches_candidate": true
+    },
+    {
+      "path": "scripts/simple-binding-main.test.ts",
+      "sha256": "342ce090f06abdf63c174c54c81a7d5d11693ae0664080f2a58dc6f30f88ecd1",
+      "matches_candidate": true
+    },
+    {
+      "path": "scripts/device-enrollment-main.test.ts",
+      "sha256": "92b41f893b16daa13f360c3afeb53433e43966dc6218ae50ad80e7693b06fe43",
+      "matches_candidate": true
+    }
+  ],
+  "retry_only_missing_fixture": {
+    "path": "scripts/provision-device-identity.mjs",
+    "sha256": "f1486e8c5f154f479c0b28067cc200f00aca3b6c39b07ff75338c2c9bb3aaa1d",
+    "matches_candidate": true
+  },
+  "main_tests": [
+    {
+      "test": "device-enrollment-v2-main",
+      "exit": 0,
+      "result": {
+        "started_at": "2026-11-05T09:08:56.308Z",
+        "node": "v22.22.2",
+        "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+        "network_isolated": true,
+        "tests": [
+          "actual main + SMS login + v2 exact proof + automatic SN/key/owner/Brain without statement or legacy window",
+          "unchanged ble-key-v1 ECIES claim + actual device authentication + receipt-specific activation",
+          "real HTTP telemetry persists; owner reads exact values and second parent cannot access",
+          "actual server restart preserves ownership, saved credential validity, activation and data",
+          "ownership change invalidates retry claim, versioned credential and prior parent access"
+        ],
+        "requests": [
+          {
+            "path": "/health",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 200,
+            "request_id": "smsreq-50a7a040-79d2-4033-a0ff-f73ed9e2b012"
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 200,
+            "request_id": "smsreq-70824b43-b314-416d-8728-9d0b1d48cbe1"
+          },
+          {
+            "path": "/api/parent/device-enrollments/capabilities",
+            "status": 200,
+            "request_id": "0c120c89-bb30-4fac-90cd-35f6663fce36"
+          },
+          {
+            "path": "/api/parent/device-enrollments/challenge",
+            "status": 401,
+            "request_id": "ca436350-1472-460c-b758-4b2c0694cfbc"
+          },
+          {
+            "path": "/api/parent/device-enrollments/challenge",
+            "status": 200,
+            "request_id": "58ed1fa7-7ec8-4e22-a99d-b1c7cac49f2c"
+          },
+          {
+            "path": "/api/parent/device-enrollments/confirm",
+            "status": 404,
+            "request_id": "44677b44-41d2-4219-8f67-5afd210ad43b"
+          },
+          {
+            "path": "/api/parent/device-enrollments/confirm",
+            "status": 200,
+            "request_id": "c348795f-3222-4385-8536-6f1faf74c712"
+          },
+          {
+            "path": "/api/parent/device-enrollments/confirm",
+            "status": 200,
+            "request_id": "50a104dc-f520-408f-8211-ef1414341f4a"
+          },
+          {
+            "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+            "status": 200,
+            "request_id": "b477cfc0-9a84-42a0-86dd-3649e5028a0a"
+          },
+          {
+            "path": "/v1/device/pairing/claim",
+            "status": 200,
+            "request_id": "b4e14bca-6558-42a5-a6fb-fbf00ae9afd8"
+          },
+          {
+            "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+            "status": 200,
+            "request_id": "e15f7af5-05fb-4b6f-90f2-644a21f7d12e"
+          },
+          {
+            "path": "/v1/device/session/prefetch",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+            "status": 200,
+            "request_id": "e1d990db-99b1-42ed-9821-0085978b09d7"
+          },
+          {
+            "path": "/v1/device/config",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/profile/bound-devices",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/profile/bound-devices",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/device/telemetry",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+            "status": 404,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+            "status": 404,
+            "request_id": "7d8d201e-a680-493b-b662-b5f8210bede9"
+          },
+          {
+            "path": "/health",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/device/session/prefetch",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+            "status": 200,
+            "request_id": "cf0dff40-1d82-44e5-a839-c280a99a121c"
+          },
+          {
+            "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/device/pairing/claim",
+            "status": 200,
+            "request_id": "d5e6faac-2984-409f-8823-75b0e1f69e94"
+          },
+          {
+            "path": "/v1/device/pairing/claim",
+            "status": 409,
+            "request_id": "5469b89a-07fc-48d4-a500-26d966b19c1a"
+          },
+          {
+            "path": "/v1/device/session/prefetch",
+            "status": 401,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/ble-bindings/ryg_yZYQpaCjxiFwcepwKx3I",
+            "status": 404,
+            "request_id": "772e8200-c697-42e8-b827-32fa1e38192f"
+          },
+          {
+            "path": "/v1/parent/devices/dev_7154aed6e51dde1f/dashboard",
+            "status": 404,
+            "request_id": null
+          }
+        ],
+        "status": "PASS",
+        "finished_at": "2026-11-05T09:08:59.602Z",
+        "assertion_groups": 5
+      }
+    },
+    {
+      "test": "simple-binding-main",
+      "exit": 0,
+      "result": {
+        "started_at": "2026-11-05T09:08:59.869Z",
+        "node": "v22.22.2",
+        "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+        "network_isolated": true,
+        "tests": [
+          "actual main entry + real SMS login + new SN auto-bind without any identity statement/key/enrollment window",
+          "existing pairing2 ECIES claim + actual prefetch authentication + truthful activated state",
+          "real HTTP telemetry persists; owner reads exact values and second parent cannot access",
+          "actual server restart preserves ownership, saved credential validity, activation and data",
+          "ownership change invalidates retry claim, versioned credential and prior parent access"
+        ],
+        "requests": [
+          {
+            "path": "/health",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 200,
+            "request_id": "smsreq-827f96ea-39e1-4607-8c38-d09b42dd9544"
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 200,
+            "request_id": "smsreq-0b3e0c2c-02f5-4e8a-a884-c6a1bae2f01e"
+          },
+          {
+            "path": "/api/parent/device-enrollments/capabilities?binding_protocol=ble-enroll-v1",
+            "status": 200,
+            "request_id": "29e9252f-ecf2-4c01-8cd0-5c5f77a218eb"
+          },
+          {
+            "path": "/api/profile/bind-sn",
+            "status": 401,
+            "request_id": null
+          },
+          {
+            "path": "/api/profile/bind-sn",
+            "status": 400,
+            "request_id": "e0fe5bcc-d0ee-4c37-8492-4ecc72f5e15e"
+          },
+          {
+            "path": "/api/profile/bind-sn",
+            "status": 200,
+            "request_id": "30efba59-fef7-488f-91f1-5a40a82b4642"
+          },
+          {
+            "path": "/api/profile/bind-sn",
+            "status": 200,
+            "request_id": "7104277d-d512-434b-b9f6-e8e6b7fbf804"
+          },
+          {
+            "path": "/api/profile/bind-sn",
+            "status": 409,
+            "request_id": "71f5126b-6b29-41f3-9ebe-f9e5abbfafe3"
+          },
+          {
+            "path": "/api/parent/pairing/confirm",
+            "status": 200,
+            "request_id": "f425caf4-5e05-41d7-b740-03ab6cd5b367"
+          },
+          {
+            "path": "/api/parent/pairing/confirm",
+            "status": 200,
+            "request_id": "7e08253e-be1c-4a32-b1bd-4c573d8f00f8"
+          },
+          {
+            "path": "/api/parent/pairing/confirm",
+            "status": 409,
+            "request_id": "3726130a-c0eb-413a-bffc-e38e7848b3a8"
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 200,
+            "request_id": "e974f9c8-c0ac-4599-b1e3-1d1e0aee630e"
+          },
+          {
+            "path": "/v1/device/pairing/claim",
+            "status": 200,
+            "request_id": "421a5425-65bf-4f56-8c88-4c723afb3d93"
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 200,
+            "request_id": "48b67746-c2d7-40e2-a35b-4e494613fe27"
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 200,
+            "request_id": "420f223e-717d-46ee-bb2d-224e806934ab"
+          },
+          {
+            "path": "/v1/device/session/prefetch",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 200,
+            "request_id": "d7a3fe09-6190-4aa1-8b35-be9948e8696a"
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 200,
+            "request_id": "c345d280-b21a-4198-aad2-5fe9b17b72eb"
+          },
+          {
+            "path": "/v1/device/config",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/profile/bound-devices",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/profile/bound-devices",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/device/telemetry",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+            "status": 404,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 404,
+            "request_id": "64308e33-fcec-4e48-92f7-d6097b15590a"
+          },
+          {
+            "path": "/health",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/device/session/prefetch",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 200,
+            "request_id": "fa7e50a3-e47b-4800-b9c2-8b71fd1248d0"
+          },
+          {
+            "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/v1/device/pairing/claim",
+            "status": 200,
+            "request_id": "229eace8-e381-4d98-bf0d-479f038a514e"
+          },
+          {
+            "path": "/v1/device/pairing/claim",
+            "status": 409,
+            "request_id": "21f2acf2-708f-4795-9fe8-f15af02f26b4"
+          },
+          {
+            "path": "/v1/device/session/prefetch",
+            "status": 401,
+            "request_id": null
+          },
+          {
+            "path": "/api/parent/pairing/status?session_id=GyGMZH88O-ut",
+            "status": 409,
+            "request_id": "7e71d817-853d-4f76-9b65-874994f0b64f"
+          },
+          {
+            "path": "/v1/parent/devices/dev_3816749ad3df629d/dashboard",
+            "status": 404,
+            "request_id": null
+          }
+        ],
+        "status": "PASS",
+        "finished_at": "2026-11-05T09:09:02.815Z",
+        "assertion_groups": 5
+      }
+    },
+    {
+      "test": "device-enrollment-main",
+      "exit": 1,
+      "result": {
+        "started_at": "2026-11-05T09:09:03.099Z",
+        "node": "v22.22.2",
+        "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+        "network_isolated": true,
+        "tests": [
+          "real main entry + SMS verify HTTP creates isolated A/B accounts and single-use verification code and reusable parent tokens"
+        ],
+        "requests": [
+          {
+            "path": "/health",
+            "status": 200,
+            "request_id": null
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 200,
+            "request_id": "smsreq-f2402fb2-6662-4694-95ba-e8782dc18420"
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 200,
+            "request_id": "smsreq-83b560db-5aa7-414c-9c6c-2bfb69682baf"
+          },
+          {
+            "path": "/api/auth/sms/verify",
+            "status": 401,
+            "request_id": "smsreq-b14c8105-d98a-49f2-b015-78c7422d5644"
+          },
+          {
+            "path": "/v1/device/provisioning/identity",
+            "status": 401,
+            "request_id": "124d1676-0a5d-4e92-ad77-79f1197cfce6"
+          },
+          {
+            "path": "/v1/device/provisioning/identity",
+            "status": 401,
+            "request_id": "371377cd-0a79-4e4e-8036-50656c3f321a"
+          }
+        ],
+        "status": "FAIL",
+        "error": "station adapter succeeds\n\n1 !== 0\n",
+        "finished_at": "2026-11-05T09:09:04.733Z",
+        "assertion_groups": 1
+      }
+    }
+  ],
+  "legacy_retry": {
+    "exit": 0,
+    "log_sha256": "d5019f67ecbc725d2412b9201008fc4b06771994bec88a863e302ec5571d54b7",
+    "tail": [
+      "PASS real main entry + SMS verify HTTP creates isolated A/B accounts and single-use verification code and reusable parent tokens",
+      "PASS station stdin/stdout issuance and replay are automatic, authenticated, and do not pre-register",
+      "PASS 14-line proof rejects wrong device, account and purpose without partial registration",
+      "PASS atomic device binding + separate idempotent Brain initialization recovers from real SQLite failure",
+      "PASS encrypted claim only decrypts for recipient; actual device authentication activates and reads default config",
+      "PASS device data is persisted and parent A reads exact values; parent B cannot see device or dashboard",
+      "PASS real server restart preserves identity, owner, receipt, telemetry and idempotency",
+      "PASS closed enrollment gate preserves committed receipts; expired claim recovers with original owner 12-line proof",
+      "PASS owner/version change invalidates old device credential and old parent access",
+      "{\"status\":\"PASS\",\"assertion_groups\":9,\"evidence\":\"/tmp/p003-enrollment-main-G5c0B5/result.json\"}",
+      "(node:192543) ExperimentalWarning: SQLite is an experimental feature and might change at any time",
+      "(Use `node --trace-warnings ...` to show where the warning was created)"
+    ],
+    "test_result": {
+      "started_at": "2026-11-05T09:10:10.712Z",
+      "node": "v22.22.2",
+      "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "network_isolated": true,
+      "tests": [
+        "real main entry + SMS verify HTTP creates isolated A/B accounts and single-use verification code and reusable parent tokens",
+        "station stdin/stdout issuance and replay are automatic, authenticated, and do not pre-register",
+        "14-line proof rejects wrong device, account and purpose without partial registration",
+        "atomic device binding + separate idempotent Brain initialization recovers from real SQLite failure",
+        "encrypted claim only decrypts for recipient; actual device authentication activates and reads default config",
+        "device data is persisted and parent A reads exact values; parent B cannot see device or dashboard",
+        "real server restart preserves identity, owner, receipt, telemetry and idempotency",
+        "closed enrollment gate preserves committed receipts; expired claim recovers with original owner 12-line proof",
+        "owner/version change invalidates old device credential and old parent access"
+      ],
+      "requests": [
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-c13b82e6-a64e-4a2f-a676-db12e4be009c"
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 200,
+          "request_id": "smsreq-101f4f63-ed08-4c5f-b112-31a371d98745"
+        },
+        {
+          "path": "/api/auth/sms/verify",
+          "status": 401,
+          "request_id": "smsreq-ea14da3d-7cb6-4a0f-bdfe-a1eea6a1fcd4"
+        },
+        {
+          "path": "/v1/device/provisioning/identity",
+          "status": 401,
+          "request_id": "098e257d-ca40-4c01-a742-04b1cc08f70e"
+        },
+        {
+          "path": "/v1/device/provisioning/identity",
+          "status": 401,
+          "request_id": "0f59326a-af75-400b-9516-4761c95d5862"
+        },
+        {
+          "path": "/api/parent/device-enrollments/capabilities",
+          "status": 200,
+          "request_id": "0b8ceb5f-d48b-4779-b107-84b8c2984430"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 403,
+          "request_id": "fcff3a8a-a784-42b9-9c67-02c52bc60148"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 200,
+          "request_id": "9cafe37e-4b46-4d3d-92d5-177e3a2fcf82"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 404,
+          "request_id": "b3f7d1aa-e6d8-46d3-94d3-cc886e5d43c7"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 403,
+          "request_id": "10757138-e884-4195-b4d2-9216d4d456e1"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "27684d98-3bb3-4e27-afea-258c936eca9d"
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "17cfbc1a-cffd-4b2a-b5b0-ab5772eea2c4"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "9fc8d617-aea0-431f-b346-791d68c1bdd1"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 409,
+          "request_id": "18dc996b-29c3-469b-9768-227205006c98"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "3b3669a6-2f43-4d72-bc74-18576a7e7c37"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "62d019ab-b197-490f-a470-818567faf1cc"
+        },
+        {
+          "path": "/v1/device/config",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/profile/bound-devices",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/telemetry",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 404,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 404,
+          "request_id": "2665723b-688a-481a-bc20-370dcc9cacac"
+        },
+        {
+          "path": "/health",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/7O5NG5UwbWIRxJwmL6rZuxFv",
+          "status": 200,
+          "request_id": "ad37b9ed-578e-4cc5-8a0f-b593487c9c88"
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "3e634315-838e-44c4-9fb7-76fa93d2c68f"
+        },
+        {
+          "path": "/api/parent/device-enrollments/challenge",
+          "status": 503,
+          "request_id": "70d2551d-d65c-406e-9936-47697fc260e2"
+        },
+        {
+          "path": "/api/parent/device-enrollments/confirm",
+          "status": 200,
+          "request_id": "8f23e0ca-beca-4cd6-8609-ccd21403d1ce"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 410,
+          "request_id": "1abc2198-da27-496d-b707-dc3d6df19dae"
+        },
+        {
+          "path": "/api/parent/ble-bindings/challenge",
+          "status": 200,
+          "request_id": "faf5cd86-c29e-4b7c-8be8-81799318558f"
+        },
+        {
+          "path": "/api/parent/ble-bindings/confirm",
+          "status": 200,
+          "request_id": "4d11363e-a539-4a4a-971a-c8186d925626"
+        },
+        {
+          "path": "/v1/device/pairing/claim",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 200,
+          "request_id": null
+        },
+        {
+          "path": "/api/parent/ble-bindings/0LzGBqlXjTu5mxlKDX65wGZ-",
+          "status": 200,
+          "request_id": "19aa53be-11ee-44e7-95b9-7e1b29c39613"
+        },
+        {
+          "path": "/v1/device/session/prefetch",
+          "status": 401,
+          "request_id": null
+        },
+        {
+          "path": "/v1/parent/devices/dev_e771f6f103eb988f/dashboard",
+          "status": 404,
+          "request_id": null
+        }
+      ],
+      "status": "PASS",
+      "finished_at": "2026-11-05T09:10:13.797Z",
+      "assertion_groups": 9
+    }
+  },
+  "scope": "37 verifies supplied 13 artifacts and exact inputs; not 37 SSH or independent rerun of main",
+  "artifacts": {
+    "CANDIDATE-13.json": "65938659fa56290f9154d961ec556cc81a594065361a21b284ac8125047c4821",
+    "DEPLOY_MANIFEST.json": "334941f43ae8f8ac3e124ec8a9f7d3c0df640df299a335cc760bc6b21bf08796",
+    "main-result.json": "36d5bdd297d4d6f86858ef4b37913b177836f930ee1f00cde03e8e3c2f0f2472",
+    "main-legacy-retry.json": "4bcf0c3c1499bc89797cef3c1e256ebc52520093981f274093df9d8ff10f1a2b",
+    "preflight.json": "b6e326061e1b597355c34b68752b934abc6621c33288b40b3de51bdedfe95c6b",
+    "regression.json": "b4079f224dcc7dfadeea5adf0bdc7ba1f160b9b10764d8baba3d51ac8ba8f128",
+    "run-main.py": "7e46bb927b1ffb9b84fac6584767ad03fdc96ffd4c683958421ba12def62ecde",
+    "run-main-legacy-retry.py": "82a90e0f4494a38b1a5d6c6b13806b274cc0c0fd158298b5243c7ecc05ff8a64"
+  }
+}
