@@ -1,0 +1,14 @@
+{
+  "at": "2026-11-05T11:57:23.030252+00:00",
+  "merge_commit": "e2c06470a314e8d3d00531e4aa722ef2d75e1732",
+  "first_parent_knowledge_commit": "3c0c659eed3adf8bad4e6131efb9e723ea2df960",
+  "source45": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718",
+  "changed_files": 69,
+  "only_docs": true,
+  "all_merged_blobs_equal_source45": true,
+  "runtime_source_changed": false,
+  "source_history_ancestor": true,
+  "production_deployed": false,
+  "validation": "69 paths equal merge-tree precheck; JSON parsed; every changed blob equals fixed source45; no application source diff",
+  "rollback": "git revert -m 1 e2c06470a314e8d3d00531e4aa722ef2d75e1732"
+}
