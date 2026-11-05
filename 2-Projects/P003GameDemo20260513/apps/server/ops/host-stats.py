@@ -8,8 +8,11 @@
   api     ：aliyun-hk（pm2 p003-voice / nginx）+ 本机 /health
 输出：单行 JSON。worker 角色保留 stats.sh 的老键（mem_total_mb…max_jobs…ts），/worker-stats 与资源卡零改动。
 
-纪律：只读；不读任何密钥（env 文件只取 LIVEKIT_URL 一行）；每项采集独立 try/except，失败进 errors[]，
-永不让整份快照失败；单个外部命令 ≤ 5 s，整体目标 < 8 s（server 侧 ssh 超时 12 s）。
+普通采集只读；env 仅取必要配置键。每项采集独立降级，失败进 errors[]，整体预算 7.5 s。
+worker 历史统计由 --refresh-journal-cache 异步刷新，单次 40 s / 每条 journal 15 s；普通采集不扫日志。
+缓存只写 /run/p003-host-monitor（0600，聚合数据无孩子原话），过期/刷新失败/进程换代均明确不可用。
+手动刷新须用 systemctl start p003-host-journal-cache.service，或持有同一 refresh.lock 的 flock；
+不得裸跑刷新 CLI 与已启用的 timer 竞争（timer 的 ExecStart 已持锁）。
 forced-command 只读 key 锁死到本脚本（64.90 经 stats.sh 转调；47.239 直接指向本脚本）。
 """
 from __future__ import annotations
@@ -23,10 +26,19 @@ import subprocess
 import sys
 import time
 import collections
+import signal
+import contextlib
+import tempfile
+from pathlib import Path
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 SUBPROCESS_TIMEOUT_S = 5
-JOURNAL_TIMEOUT_S = 6
+JOURNAL_TIMEOUT_S = 15
+COLLECTION_BUDGET_S = 7.5
+JOURNAL_REFRESH_BUDGET_S = 40
+JOURNAL_MAX_LINES = 2000
+JOURNAL_CACHE_PATH = "/run/p003-host-monitor/cache.json"
+JOURNAL_CACHE_MAX_AGE_S = 180
 JOURNAL_WINDOW = "-24h"
 # 连接状态看的是「当前这代进程」：注册/断线事件可能远早于 24h（09-15 注册后三天无事件），
 # 所以 worker 连接块从 unit 的 ActiveEnterTimestamp 起读日志（封顶 3 天），24h 计数另给。
@@ -42,17 +54,55 @@ LIVEKIT_UNITS = ("livekit-server", "nginx")
 API_UNITS = ("nginx",)
 
 errors: list[str] = []
+_deadline: float | None = None
+_snapshot_now = time.time()
+_journal_cache: dict[tuple, "JournalRows"] = {}
+
+
+class CollectionDeadline(BaseException):
+    """Must escape per-section except Exception so the snapshot can be published."""
+
+
+def remaining_timeout(timeout: float) -> float:
+    if _deadline is None:
+        return timeout
+    remaining = _deadline - time.monotonic()
+    if remaining <= 0:
+        raise CollectionDeadline("collection deadline exceeded")
+    return min(timeout, remaining)
+
+
+def error_text(exc: BaseException | str) -> str:
+    if isinstance(exc, subprocess.TimeoutExpired):
+        return f"timed out after {exc.timeout:g}s"
+    return str(exc).strip().replace("\n", " ")[:160]
 
 
 def note_error(where: str, exc: BaseException | str) -> None:
-    msg = str(exc).strip().replace("\n", " ")
+    msg = error_text(exc)
     errors.append(f"{where}: {msg[:160]}")
 
 
-def run(cmd: list[str], timeout: int = SUBPROCESS_TIMEOUT_S) -> str:
-    """跑一条只读命令，返回 stdout（去 ANSI）。非零退出码也返回 stdout（systemctl show 对不存在的 unit 也退 0）。"""
-    out = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
-    return ANSI_RE.sub("", out.stdout)
+def run(cmd: list[str], timeout: float = SUBPROCESS_TIMEOUT_S, *, no_match_ok: bool = False) -> str:
+    """有界只读命令；失败清理整个进程组，禁止把真实失败变成空数据。"""
+    timeout = remaining_timeout(timeout)
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True, start_new_session=True)
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+    except BaseException:
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        proc.communicate()
+        raise
+    # journalctl -g 无匹配退出 1；权限/参数错误等 stderr 不能伪装成零事件。
+    if proc.returncode and not (no_match_ok and proc.returncode == 1 and not stdout.strip() and not stderr.strip()):
+        raise RuntimeError(f"{cmd[0]} exit {proc.returncode}: {stderr.strip()[:160]}")
+    if no_match_ok and stderr.strip():
+        raise RuntimeError(f"{cmd[0]}: {stderr.strip()[:160]}")
+    return ANSI_RE.sub("", stdout)
 
 
 def to_int(v: str | None) -> int | None:
@@ -149,8 +199,9 @@ def service_block(unit: str) -> dict:
     }
 
 
-def services_block(units: tuple[str, ...]) -> list[dict]:
-    res = []
+def services_block(units: tuple[str, ...], res: list[dict] | None = None) -> list[dict]:
+    if res is None:
+        res = []
     for u in units:
         try:
             if unit_exists(u):
@@ -162,24 +213,60 @@ def services_block(units: tuple[str, ...]) -> list[dict]:
 
 # ── journald 解析（-o short-unix：行首 epoch.us）────────────────────────────────
 
-def journal_lines(unit: str, since: str = JOURNAL_WINDOW, grep: str | None = None) -> list[tuple[float, str]]:
-    cmd = ["journalctl", "-u", unit, f"--since={since}", "-o", "short-unix", "--no-pager", "-q"]
+class JournalRows(list):
+    def __init__(self, rows=(), *, error: str | None = None, truncated: bool = False):
+        super().__init__(rows)
+        self.error = error
+        self.truncated = truncated
+        self.ok = error is None and not truncated
+
+
+# 只筛消息短语，不筛 tracing 着色的字段名；字段解析前统一剥 ANSI。
+WORKER_JOURNAL_GREP = (
+    r"registered worker|worker connection failed|次连接失败,放弃|accepting|connected to livekit|"
+    r"EOT sidecar|speaker embed|无可用连接|通道不可用|自愈失败|首次连接失败"
+)
+
+
+def journal_lines(unit: str, since: str = JOURNAL_WINDOW, grep: str | None = None) -> JournalRows:
+    key = (unit, since, grep)
+    if key in _journal_cache:
+        return _journal_cache[key]
+    # 新→旧读取，最多 N+1 个匹配事件；多出的一个仅作截断哨兵。
+    cmd = ["journalctl", "-u", unit, f"--since={since}", "-o", "short-unix", "--no-pager", "-q",
+           "--reverse", f"--lines={JOURNAL_MAX_LINES + 1}"]
     if grep:
         cmd += ["-g", grep]  # journald 侧过滤(PCRE),24h 全量行不过管道
-    out = run(cmd, timeout=JOURNAL_TIMEOUT_S)
-    rows: list[tuple[float, str]] = []
-    for line in out.splitlines():
-        m = re.match(r"^(\d+(?:\.\d+)?)\s+(.*)$", line)
-        if m:
-            rows.append((float(m.group(1)), m.group(2)))
+    try:
+        out = run(cmd, timeout=JOURNAL_TIMEOUT_S, no_match_ok=bool(grep))
+        parsed = []
+        for line in out.splitlines():
+            m = re.match(r"^(\d+(?:\.\d+)?)\s+(.*)$", line)
+            if m:
+                parsed.append((float(m.group(1)), m.group(2)))
+            elif line.strip():
+                raise ValueError("unexpected journal output")
+        truncated = len(parsed) > JOURNAL_MAX_LINES
+        rows = JournalRows(sorted(parsed[:JOURNAL_MAX_LINES]), truncated=truncated)
+        if truncated:
+            note_error(f"journal {unit}", f"超过 {JOURNAL_MAX_LINES} 条事件，统计不完整")
+    except Exception as exc:  # CollectionDeadline intentionally escapes.
+        note_error(f"journal {unit}", exc)
+        rows = JournalRows(error=error_text(exc))
+    _journal_cache[key] = rows  # 失败也复用；同一快照不重复付出超时预算。
     return rows
+
+
+def worker_journal(unit: str, active_since_ms: int | None) -> tuple[float, JournalRows]:
+    since_s = max(_snapshot_now - LINK_WINDOW_CAP_S,
+                  (active_since_ms / 1000) - 5 if active_since_ms else _snapshot_now - 86400)
+    return since_s, journal_lines(unit, since=f"@{int(since_s)}", grep=WORKER_JOURNAL_GREP)
 
 
 def worker_link_block(unit: str, active_since_ms: int | None) -> dict:
     """worker → LiveKit /agent 连接状态。窗口 = 本代进程起（封顶 3 天）；判定用日志锚（worker.rs 原话），不猜。"""
-    now = time.time()
-    since_s = max(now - LINK_WINDOW_CAP_S, (active_since_ms / 1000) - 5 if active_since_ms else now - 86400)
-    rows = journal_lines(unit, since=f"@{int(since_s)}")
+    now = _snapshot_now
+    since_s, rows = worker_journal(unit, active_since_ms)
     day_ago = now - 86400
     registered = [t for t, s in rows if "registered worker" in s]
     failed = [(t, s) for t, s in rows if "worker connection failed" in s]
@@ -190,7 +277,9 @@ def worker_link_block(unit: str, active_since_ms: int | None) -> dict:
     consecutive = 0
     if last_fail is not None:
         consecutive = sum(1 for t, _ in failed if last_reg is None or t > last_reg)
-    if last_reg is not None and (last_fail is None or last_reg > last_fail[0]):
+    if not rows.ok:
+        state = "unknown"
+    elif last_reg is not None and (last_fail is None or last_reg > last_fail[0]):
         state = "registered"
     elif last_fail is not None:
         state = "reconnecting"
@@ -209,22 +298,28 @@ def worker_link_block(unit: str, active_since_ms: int | None) -> dict:
         "unit": unit,
         "agent_name": agent,
         "state": state,
+        "journal_ok": rows.ok,
+        "journal_truncated": rows.truncated,
+        "journal_error": rows.error,
         "window_since_ms": int(since_s * 1000),
         "registered_at_ms": int(last_reg * 1000) if last_reg else None,
         "last_failure_at_ms": int(last_fail[0] * 1000) if last_fail else None,
         "last_failure_error": err,
-        "failures_window": len(failed),
-        "failures_24h": sum(1 for t, _ in failed if t >= day_ago),
-        "registrations_window": len(registered),
-        "give_ups_window": len(give_ups),
-        "consecutive_failures_since_register": consecutive,
-        "job_accepts_24h": sum(1 for t in accepts if t >= day_ago),
+        "failures_window": len(failed) if rows.ok else None,
+        "failures_24h": sum(1 for t, _ in failed if t >= day_ago) if rows.ok else None,
+        "registrations_window": len(registered) if rows.ok else None,
+        "give_ups_window": len(give_ups) if rows.ok else None,
+        "consecutive_failures_since_register": consecutive if rows.ok else None,
+        "job_accepts_24h": sum(1 for t in accepts if t >= day_ago) if rows.ok else None,
         "journal_lines_window": len(rows),
     }
 
 
 def livekit_events_block() -> dict:
-    rows = journal_lines("livekit-server", since=LIVEKIT_EVENTS_WINDOW)
+    rows = journal_lines("livekit-server", since=LIVEKIT_EVENTS_WINDOW,
+                         grep=r"worker registered|closing worker|last worker deregistered")
+    if not rows.ok:
+        raise RuntimeError("注册事件采集不完整，计数不可用")
     day_ago = time.time() - 86400
     reg = [(t, s) for t, s in rows if "worker registered" in s]
     closing = [(t, s) for t, s in rows if "closing worker" in s]
@@ -268,6 +363,7 @@ def read_livekit_host() -> str | None:
 def tls_probe(host: str, port: int = 443, timeout: float = 3.0) -> dict:
     t0 = time.monotonic()
     try:
+        timeout = remaining_timeout(timeout)
         ctx = ssl.create_default_context()
         with socket.create_connection((host, port), timeout=timeout) as raw:
             with ctx.wrap_socket(raw, server_hostname=host):
@@ -298,6 +394,7 @@ def http_probe(url: str, timeout: float = 3.0) -> dict:
 
     t0 = time.monotonic()
     try:
+        timeout = remaining_timeout(timeout)
         with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - 固定 127.0.0.1
             resp.read(256)
             return {"url": url, "status": resp.status, "ms": round((time.monotonic() - t0) * 1000, 1), "error": None}
@@ -384,10 +481,26 @@ def listening_unix_socks() -> set[str]:
     return socks
 
 
-def sidecars_block(services: list[dict]) -> list[dict]:
+def sidecar_history(unit: str, active_since_ms: int | None) -> dict:
+    _, journal = worker_journal(unit, active_since_ms)
+    last_connected_ms = last_connected_mode = None
+    unavailable_1h = 0 if journal.ok else None
+    for stamp, line in journal:
+        match = SIDECAR_CONNECTED_RE.search(line)
+        if match:
+            last_connected_ms = int(stamp * 1000)
+            last_connected_mode = match.group(1) or "healed"
+        if journal.ok and stamp >= _snapshot_now - 3600 and SIDECAR_UNAVAILABLE_RE.search(line):
+            unavailable_1h += 1
+    return {"journal_ok": journal.ok, "journal_truncated": journal.truncated,
+            "journal_error": journal.error, "last_connected_ms": last_connected_ms,
+            "last_connected_mode": last_connected_mode, "unavailable_1h": unavailable_1h}
+
+
+def sidecars_block(services: list[dict], histories: dict | None = None) -> list[dict]:
     procs = sidecar_processes()
     listening = listening_unix_socks()
-    now = time.time()
+    now = _snapshot_now
     rows = []
     sock_owner: dict[str, list[str]] = {}
     for s in services:
@@ -406,21 +519,13 @@ def sidecars_block(services: list[dict]) -> list[dict]:
             continue  # 非 rust 池（python 租户线）没有边车
         proc = next((p for p in procs if p["sock"] == sock), None)
         is_listening = sock in listening
-        last_connected_ms = None
-        last_connected_mode = None
-        unavailable_1h = 0
-        try:
-            since_s = max(now - LINK_WINDOW_CAP_S, (s["active_since_ms"] / 1000) - 5 if s.get("active_since_ms") else now - 86400)
-            for t, line in journal_lines(unit, since=f"@{int(since_s)}"):
-                m = SIDECAR_CONNECTED_RE.search(line)
-                if m:
-                    last_connected_ms = int(t * 1000)
-                    last_connected_mode = m.group(1) or "healed"
-                if t >= now - 3600 and SIDECAR_UNAVAILABLE_RE.search(line):
-                    unavailable_1h += 1
-        except Exception as e:  # noqa: BLE001
-            note_error(f"sidecar journal {unit}", e)
-        if proc and is_listening and unavailable_1h == 0:
+        history = sidecar_history(unit, s.get("active_since_ms")) if histories is None else histories.get(unit, {
+            "journal_ok": False, "journal_error": "日志缓存不可用", "unavailable_1h": None,
+            "last_connected_ms": None, "last_connected_mode": None})
+        unavailable_1h = history.get("unavailable_1h")
+        if proc and is_listening and not history.get("journal_ok"):
+            state = "unknown"
+        elif proc and is_listening and unavailable_1h == 0:
             state = "ok"
         elif proc and is_listening:
             state = "degraded"
@@ -429,6 +534,7 @@ def sidecars_block(services: list[dict]) -> list[dict]:
         rows.append({
             "unit": unit,
             "state": state,
+            **history,
             "sock": sock,
             "listening": is_listening,
             "pid": (proc or {}).get("pid"),
@@ -437,16 +543,13 @@ def sidecars_block(services: list[dict]) -> list[dict]:
             "owner_unit": (proc or {}).get("unit"),
             "spawned_by_this_worker": bool(proc and proc.get("ppid") == pid),
             "shared_with": [u for u in sock_owner.get(sock, []) if u != unit],
-            "last_connected_ms": last_connected_ms,
-            "last_connected_mode": last_connected_mode,
-            "unavailable_1h": unavailable_1h,
         })
     return rows
 
 
 # ── 语音控设备 24h（D1 W4，2026-09-22）：提案/结果/慢路/承接音/误触发嫌疑，只读 journal 锚（worker 日志原话，不猜）──
 DEVICE_CMD_WINDOW = "-24h"
-DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked .*bucket=device|device grammar hit|device grammar veto|received job request, accepting"
+DEVICE_CMD_GREP = r"device command proposed|device command result|llm device intent|fallback hint queued|filler picked|device grammar hit|device grammar veto|received job request, accepting"
 ACCEPT_ROOM_RE = re.compile(r"accepting job_id=\S+ room=(sn-[A-Za-z0-9]+-\d+)")
 # 「误触发嫌疑」= 慢路(LLM)提案而原话不含任何设备词根(方案 v1.1 §W4);裸「高/低/远/近」太泛不算根,组合词才算
 DEVICE_ROOTS = (
@@ -491,6 +594,8 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
         if s.get("active_state") != "active":
             continue
         rows = journal_lines(unit, since=DEVICE_CMD_WINDOW, grep=DEVICE_CMD_GREP)
+        if not rows.ok:
+            continue  # 无完整证据时不发布全零 24h 统计；错误已写入 errors。
         props: list[dict] = []
         results: list[dict] = []
         observed = executed = hints = filler_dev = 0
@@ -642,6 +747,172 @@ def device_cmd_block(services: list[dict]) -> list[dict]:
 
 # ── 角色装配 ────────────────────────────────────────────────────────────────────
 
+@contextlib.contextmanager
+def collection_budget(seconds: float, *, catch_term: bool = False):
+    global _deadline, _snapshot_now
+    errors.clear()
+    _journal_cache.clear()
+    started = time.monotonic()
+    _snapshot_now = time.time()
+    _deadline = started + seconds
+    def expired(_signum, _frame):
+        raise CollectionDeadline("collection deadline exceeded")
+    old_alarm = signal.signal(signal.SIGALRM, expired)
+    old_term = signal.signal(signal.SIGTERM, expired) if catch_term else None
+    old_timer = signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, old_alarm)
+        if catch_term:
+            signal.signal(signal.SIGTERM, old_term)
+        if old_timer[0] or old_timer[1]:
+            signal.setitimer(signal.ITIMER_REAL,
+                             max(0.000001, old_timer[0] - (time.monotonic() - started)) if old_timer[0] else 0,
+                             old_timer[1])
+        _deadline = None
+
+
+def atomic_cache_write(payload: dict) -> None:
+    path = Path(JOURNAL_CACHE_PATH)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent,
+                                         prefix=".cache-", delete=False) as stream:
+            temporary = stream.name
+            os.fchmod(stream.fileno(), 0o600)
+            json.dump(payload, stream, ensure_ascii=False, separators=(",", ":"))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def without_child_text(value):
+    """缓存只保留计数、状态和必要标识；不持久化原始日志或孩子说的话。"""
+    if isinstance(value, dict):
+        return {key: without_child_text(item) for key, item in value.items()
+                if key not in ("text", "last_text")}
+    if isinstance(value, list):
+        return [without_child_text(item) for item in value]
+    return value
+
+
+def refresh_journal_cache() -> bool:
+    payload = {"schema": "host-journal-cache/1", "ok": False, "units": {}}
+    with collection_budget(JOURNAL_REFRESH_BUDGET_S, catch_term=True):
+        payload["started_at_ms"] = int(_snapshot_now * 1000)
+        try:
+            services = services_block(WORKER_UNITS)
+            for service in services:
+                if service.get("active_state") != "active":
+                    continue
+                unit = service["name"]
+                link = worker_link_block(unit, service.get("active_since_ms"))
+                history = sidecar_history(unit, service.get("active_since_ms"))
+                commands = device_cmd_block([service])
+                payload["units"][unit] = {
+                    "main_pid": service.get("main_pid"),
+                    "active_since_ms": service.get("active_since_ms"),
+                    "worker_link": link, "sidecar": history,
+                    "device_cmd": commands[0] if commands else None,
+                }
+            if not payload["units"]:
+                note_error("journal cache", "没有可采集的活动 worker")
+        except (Exception, CollectionDeadline) as exc:
+            note_error("journal refresh", exc)
+        payload["errors"] = list(errors)
+        payload["ok"] = not errors
+    payload["collected_at_ms"] = int(time.time() * 1000)
+    atomic_cache_write(without_child_text(payload))
+    return payload["ok"]
+
+
+def invalidate_failed_refresh() -> None:
+    # ExecStopPost also runs after success; only an actual systemd failure invalidates.
+    result = os.environ.get("SERVICE_RESULT", "unknown")
+    if result == "success":
+        return
+    details = []
+    try:
+        with open(JOURNAL_CACHE_PATH, encoding="utf-8") as stream:
+            previous = json.load(stream)
+        if previous.get("ok") is False and isinstance(previous.get("errors"), list):
+            details = [str(item)[:200] for item in previous["errors"][:12]]
+    except (OSError, ValueError, AttributeError):
+        pass
+    message = f"refresh service failed: {result}"
+    if message not in details:
+        details.append(message)
+    try:
+        atomic_cache_write({"schema": "host-journal-cache/1", "ok": False,
+                            "collected_at_ms": int(time.time() * 1000), "units": {},
+                            "errors": details})
+    except Exception:
+        # 磁盘满等故障下，精确移除旧成功缓存也比继续假健康更诚实。
+        try:
+            Path(JOURNAL_CACHE_PATH).unlink(missing_ok=True)
+        except OSError:
+            pass  # 若只读文件系统连删除也失败，非零退出 + 180 秒过期兜底。
+        raise
+
+
+def read_journal_cache(services: list[dict]) -> tuple[dict, dict]:
+    info = {"state": "missing", "collected_at_ms": None,
+            "max_age_s": JOURNAL_CACHE_MAX_AGE_S, "error": None}
+    units = {}
+    try:
+        with open(JOURNAL_CACHE_PATH, encoding="utf-8") as stream:
+            raw = stream.read(2 * 1024 * 1024 + 1)
+        if len(raw) > 2 * 1024 * 1024:
+            raise ValueError("日志缓存过大")
+        data = json.loads(raw)
+        if data.get("schema") != "host-journal-cache/1":
+            raise ValueError("日志缓存版本无效")
+        stamp = data.get("collected_at_ms")
+        if not isinstance(stamp, (int, float)) or isinstance(stamp, bool):
+            raise ValueError("日志缓存采集时间无效")
+        info["collected_at_ms"] = stamp
+        age = time.time() - stamp / 1000
+        if not data.get("ok"):
+            raise ValueError("; ".join(str(e) for e in data.get("errors", [])) or "日志缓存刷新失败")
+        if age > JOURNAL_CACHE_MAX_AGE_S or age < -5:
+            info.update(state="stale", error="日志统计已过期，等待刷新")
+        else:
+            info["state"] = "fresh"
+            for service in services:
+                if service.get("active_state") != "active":
+                    continue
+                cached = data.get("units", {}).get(service["name"])
+                if (not isinstance(cached, dict)
+                        or cached.get("main_pid") != service.get("main_pid")
+                        or cached.get("active_since_ms") != service.get("active_since_ms")):
+                    info.update(state="generation_mismatch", error="worker 进程代次已变化，等待日志刷新")
+                    continue
+                if not isinstance(cached.get("worker_link"), dict) or not isinstance(cached.get("sidecar"), dict):
+                    raise ValueError("日志缓存结构不完整")
+                units[service["name"]] = cached
+    except FileNotFoundError:
+        info["error"] = "日志缓存尚未生成"
+    except Exception as exc:
+        info.update(state="error", error=error_text(exc))
+        units = {}
+    if info["state"] != "fresh":
+        note_error("journal cache", info["error"] or info["state"])
+    return units, info
+
+
+def unknown_worker_link(unit: str, reason: str | None) -> dict:
+    return {"unit": unit, "agent_name": None, "state": "unknown", "journal_ok": False,
+            "journal_error": reason, "registered_at_ms": None, "last_failure_at_ms": None,
+            "last_failure_error": None, "failures_window": None, "failures_24h": None,
+            "registrations_window": None, "give_ups_window": None,
+            "consecutive_failures_since_register": None, "job_accepts_24h": None}
+
 def detect_role() -> str:
     if unit_exists("voice-worker-rust"):
         return "worker"
@@ -655,7 +926,7 @@ def detect_role() -> str:
     return "unknown"
 
 
-def legacy_worker_keys(snap: dict) -> None:
+def legacy_worker_keys(snap: dict, *, read_capacity: bool = True) -> None:
     """stats.sh 老键（设备接入页资源卡 + /worker-stats 容量卡消费；缺一不可）。"""
     h = snap.get("host", {})
     snap["mem_total_mb"] = h.get("mem_total_mb")
@@ -666,61 +937,45 @@ def legacy_worker_keys(snap: dict) -> None:
     snap["rust_mem_bytes"] = (rust or {}).get("mem_bytes") or 0
     snap["rust_mem_high_bytes"] = (rust or {}).get("mem_high_bytes") or 0
     snap["rust_active"] = (rust or {}).get("active_state") or "unknown"
-    max_jobs = None
-    try:
-        with open("/root/rust-worker/rust-worker.env", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("WORKER_MAX_JOBS="):
-                    max_jobs = to_int(line.split("=", 1)[1])
-    except OSError:
-        pass
+    max_jobs = snap.get("max_jobs")
+    if read_capacity:
+        try:
+            with open("/root/rust-worker/rust-worker.env", encoding="utf-8") as f:
+                for line in f:
+                    if line.startswith("WORKER_MAX_JOBS="):
+                        max_jobs = to_int(line.split("=", 1)[1])
+        except OSError:
+            pass
     snap["max_jobs"] = max_jobs if max_jobs is not None else 6
 
 
-def main() -> None:
-    role = None
-    if len(sys.argv) >= 3 and sys.argv[1] == "--role":
-        role = sys.argv[2]
-    snap: dict = {"schema": "host-stats/1", "ts": int(time.time()), "collected_at_ms": int(time.time() * 1000)}
-    try:
-        snap["hostname"] = socket.gethostname()
-    except Exception as e:  # noqa: BLE001
-        note_error("hostname", e)
-    snap["host"] = host_block()
-    try:
-        role = role or detect_role()
-    except Exception as e:  # noqa: BLE001
-        note_error("detect_role", e)
-        role = "unknown"
-    snap["role"] = role
-
+def collect_role(snap: dict, role: str) -> None:
     if role == "worker":
-        snap["services"] = services_block(WORKER_UNITS)
+        legacy_worker_keys(snap)
+        snap["services"] = services_block(WORKER_UNITS, snap["services"])
         links = []
-        for s in snap["services"]:
-            try:
-                links.append(worker_link_block(s["name"], s.get("active_since_ms")))
-            except Exception as e:  # noqa: BLE001
-                note_error(f"worker_link {s['name']}", e)
+        snap["connections"] = {"worker_links": links}
+        legacy_worker_keys(snap, read_capacity=False)
+        cached_units, info = read_journal_cache(snap["services"])
+        snap["journal_cache"] = info
+        for service in snap["services"]:
+            cached = cached_units.get(service["name"], {})
+            links.append(cached.get("worker_link") or unknown_worker_link(service["name"], info.get("error")))
         try:
-            snap["sidecars"] = sidecars_block(snap["services"])
-        except Exception as e:  # noqa: BLE001
-            note_error("sidecars", e)
+            snap["sidecars"] = sidecars_block(snap["services"], {
+                unit: value["sidecar"] for unit, value in cached_units.items()})
+        except Exception as exc:
+            note_error("sidecars", exc)
             snap["sidecars"] = []
-        try:
-            snap["device_cmd"] = device_cmd_block(snap["services"])
-        except Exception as e:  # noqa: BLE001
-            note_error("device_cmd", e)
-            snap["device_cmd"] = []
+        snap["device_cmd"] = [value["device_cmd"] for value in cached_units.values() if value.get("device_cmd")]
         lk_host = read_livekit_host()
         snap["connections"] = {
             "worker_links": links,
             "livekit_probe": tls_probe(lk_host) if lk_host else {"host": None, "error": "LIVEKIT_URL not found"},
         }
-        legacy_worker_keys(snap)
     elif role == "livekit":
-        snap["services"] = services_block(LIVEKIT_UNITS)
-        conn: dict = {}
+        snap["services"] = services_block(LIVEKIT_UNITS, snap["services"])
+        conn = snap["connections"]
         try:
             conn["livekit"] = livekit_events_block()
         except Exception as e:  # noqa: BLE001
@@ -729,8 +984,8 @@ def main() -> None:
         conn["local_http"] = http_probe("http://127.0.0.1:7880/")
         snap["connections"] = conn
     elif role == "api":
-        snap["services"] = services_block(API_UNITS)
-        conn = {}
+        snap["services"] = services_block(API_UNITS, snap["services"])
+        conn = snap["connections"]
         try:
             conn["pm2"] = [p for p in pm2_block() if p.get("name") in ("p003-voice",)]
         except Exception as e:  # noqa: BLE001
@@ -742,8 +997,41 @@ def main() -> None:
         snap["services"] = []
         snap["connections"] = {}
 
-    snap["errors"] = errors
-    snap["collect_ms"] = int(time.time() * 1000) - snap["collected_at_ms"]
+
+def collect_snapshot(role: str | None = None) -> dict:
+    started = time.monotonic()
+    snap: dict = {"schema": "host-stats/1", "ts": int(time.time()),
+                  "collected_at_ms": int(time.time() * 1000), "host": {},
+                  "services": [], "connections": {}, "role": role or "unknown"}
+    with collection_budget(COLLECTION_BUDGET_S):
+        try:
+            snap["hostname"] = socket.gethostname()
+            snap["host"] = host_block()
+            role = role or detect_role()
+            snap["role"] = role
+            collect_role(snap, role)
+        except (Exception, CollectionDeadline) as exc:
+            note_error("collection", exc)
+            snap["partial"] = True
+    if snap["role"] == "worker":
+        legacy_worker_keys(snap, read_capacity=False)
+    snap["errors"] = list(errors)
+    snap["collect_ms"] = int((time.monotonic() - started) * 1000)
+    return snap
+
+
+def main() -> None:
+    if sys.argv[1:] == ["--refresh-journal-cache"]:
+        ok = refresh_journal_cache()
+        sys.stdout.write(json.dumps({"ok": ok, "errors": list(errors)}, ensure_ascii=False) + "\n")
+        if not ok:
+            raise SystemExit(1)
+        return
+    if sys.argv[1:] == ["--invalidate-failed-refresh"]:
+        invalidate_failed_refresh()
+        return
+    role = sys.argv[2] if len(sys.argv) >= 3 and sys.argv[1] == "--role" else None
+    snap = collect_snapshot(role)
     sys.stdout.write(json.dumps(snap, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
@@ -752,3 +1040,5 @@ if __name__ == "__main__":
         main()
     except Exception as e:  # noqa: BLE001 - 最后防线：仍输出合法 JSON
         sys.stdout.write(json.dumps({"schema": "host-stats/1", "ts": int(time.time()), "role": "unknown", "errors": [f"fatal: {e}"]}) + "\n")
+        if sys.argv[1:] in (["--refresh-journal-cache"], ["--invalidate-failed-refresh"]):
+            raise SystemExit(1)  # 让 systemd 执行失败失效钩子，不能把缓存写失败当成功。
