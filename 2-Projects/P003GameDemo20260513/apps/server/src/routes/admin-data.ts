@@ -1,5 +1,10 @@
+import { listeningAdminRoute } from './listening-admin.js';
+import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
 import { Hono } from 'hono';
+import { canaryAdminRoute } from '../search-canary-status.js';
 import { analyticsAdminGateway } from '../analytics/admin-query.js';
+import { analyticsControlRoute } from '../analytics/control-route.js';
+import {analyticsTierControlRoute} from '../analytics/tier-control-route.js';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
 import { otaAdminRoute } from './ota.js';
@@ -37,6 +42,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { requiresBleProof } from '../ble-binding-policy.js';
 import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
@@ -63,7 +69,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot|analytics)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot|analytics|search-canary)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -73,6 +79,9 @@ adminDataRoute.use('*', async (c, next) => {
   }
   await next();
 });
+
+adminDataRoute.route('/search-canary', canaryAdminRoute);
+adminDataRoute.route('/worker-voice/listening', listeningAdminRoute);
 
 // 列所有孩子档案 + 关联设备（按账号聚合）
 adminDataRoute.get('/profiles', (c) => {
@@ -217,6 +226,7 @@ type PreauthApply =
   | { ok: false; error: string };
 /** 预授权 + 家长绑定 + 晚到 announce 代确认（添加设备 / PUT preauth 共用）。 */
 function applyPreauth(sn: string, phone: string, days: number, by: string): PreauthApply {
+  if (requiresBleProof(sn)) return { ok: false, error: '该设备须通过蓝牙身份验证，不能使用旧预授权' };
   const existing = accountStore.findByPhone(phone);
   if (existing && existing.role === 'device') return { ok: false, error: '该手机号对应设备账号，不能绑定为家长' };
   const device = deviceRegistryStore.get(sn);
@@ -432,6 +442,7 @@ adminDataRoute.delete('/devices/:sn', (c) => {
 adminDataRoute.post('/devices/:sn/credential', async (c) => {
   try {
     const sn = c.req.param('sn').trim();
+    if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required', message: '请通过蓝牙身份验证恢复设备凭据' }, 403);
     const device = deviceRegistryStore.get(sn);
     if (!device) return c.json({ ok: false, error: '设备不在台账中，请先添加' }, 404);
     if (device.status !== 'active') {
@@ -1227,6 +1238,16 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
   } catch (error) {
     return c.json({ ok: false, error: '重置失败，请稍后重试' }, 500);
   }
+});
+
+// Global per-style settings, guarded by the existing admin-only worker-voice namespace.
+adminDataRoute.get('/worker-voice/filler-probabilities', (c) => c.json({ ok: true, ...getFillerStyleSettings() }));
+adminDataRoute.put('/worker-voice/filler-probabilities', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || Object.keys(body).length !== 1 || !validFillerProbabilities(body.probabilities)) {
+    return c.json({ ok: false, error: '请完整填写四种风格的概率（0–100%）' }, 400);
+  }
+  return c.json({ ok: true, ...saveFillerStyleSettings(body.probabilities, opUser(c)) });
 });
 
 // ── 说话风格模板（P0 2026-09-01 风格系统方案 §四）──
@@ -2156,6 +2177,17 @@ adminDataRoute.route('/device-config', configAdminRoute);
 adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);
 
 // 产品事件后台：既有 admin-only 网关后才允许访问回环内部查询。
+adminDataRoute.route('/analytics/control',analyticsControlRoute({
+  authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+  internalUrl:process.env.ANALYTICS_INTERNAL_URL||'http://127.0.0.1:3006',
+  internalSecret:process.env.ANALYTICS_INTERNAL_SECRET||'',
+  devices:()=>deviceRegistryStore.list(),policy:()=>configStore.analyticsPolicy(),
+  save:(p,active,by)=>configStore.saveAnalyticsPolicy(p,active,by),
+}));
+adminDataRoute.route('/analytics/tiering',analyticsTierControlRoute({
+  authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+  internalUrl:process.env.ANALYTICS_INTERNAL_URL||'http://127.0.0.1:3006',internalSecret:process.env.ANALYTICS_INTERNAL_SECRET||'',devices:()=>deviceRegistryStore.list(),config:configStore,
+}));
 adminDataRoute.route('/analytics', analyticsAdminGateway({
   authorize(header) {
     const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;

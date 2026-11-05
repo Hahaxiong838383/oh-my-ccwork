@@ -386,6 +386,31 @@
     .kh-nav button.on { background: #E3F0FD; color: #3B7A99; }
     .kh-nav .kh-back { margin-top: auto; border: 1px solid #E4E9EF; background: #F6F8FA; color: #3B7A99; }
     .kh-main { flex: 1; min-width: 0; padding: 20px; overflow: auto; }
+    /* Worker Brain page-local navigation. Hidden panels stay mounted to retain drafts. */
+    .brain-page { flex:1; min-width:0; padding:0 20px 20px; overflow-y:auto; }
+    .brain-topbar { position:sticky; top:0; z-index:20; background:#F8FAFC; margin:0 -20px; padding:20px 20px 0; border-bottom:1px solid #DDE5ED; }
+    .brain-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+    .brain-heading .kh-sub { margin-bottom:14px; }
+    .brain-section-tabs { display:flex; gap:24px; overflow-x:auto; scrollbar-width:thin; }
+    .brain-section-tabs button { position:relative; flex:none; padding:12px 0; border:0; border-bottom:3px solid transparent; background:transparent; color:#536273; font:inherit; font-size:14px; cursor:pointer; white-space:nowrap; }
+    .brain-section-tabs button:hover { color:#2563A5; }
+    .brain-section-tabs button.active { color:#2563A5; border-bottom-color:#2563A5; font-weight:600; }
+    .brain-section-tabs button:focus-visible { outline:2px solid #2563A5; outline-offset:-2px; border-radius:3px; }
+    .brain-section-panel { padding-top:20px; }
+    .brain-section-panel:focus-visible { outline:2px solid #2563A5; outline-offset:3px; }
+    .brain-unsaved { display:inline-block; width:6px; height:6px; margin-left:6px; vertical-align:middle; border-radius:50%; background:#B8741A; }
+    .brain-device-layout { display:flex; gap:16px; align-items:flex-start; }
+    .brain-device-list { width:250px; flex-shrink:0; padding:10px; max-height:calc(100vh - 260px); overflow-y:auto; }
+    .brain-device-empty { padding:40px 24px; text-align:center; color:#536273; }
+    .brain-device-empty h3 { margin:0 0 12px; color:#243746; font-size:16px; }
+    .brain-device-empty p { margin:0; font-size:13px; line-height:1.8; }
+    @media(max-width:1050px) {
+      .brain-page { padding:0 12px 16px; }
+      .brain-topbar { margin:0 -12px; padding:16px 12px 0; }
+      .brain-section-tabs { gap:20px; }
+      .brain-device-layout { flex-direction:column; align-items:stretch; }
+      .brain-device-list { width:auto; max-height:220px; }
+    }
     .kh-h1 { font-size: 18px; font-weight: 700; color: #1F2933; }
     .kh-sub { font-size: 12.5px; color: #6B7785; margin: 4px 0 16px; }
     .kh-card { background: #fff; border-radius: 12px; border: 1px solid #E4E9EF; box-shadow: 0 1px 3px rgba(31,41,51,.06); }
@@ -462,7 +487,19 @@
     .analytics-panel .an-catalog-search { max-width:360px;flex:1; }.analytics-panel .an-hour { font-variant-numeric:tabular-nums; }
     @media(max-width:1200px) { .analytics-panel .an-stats,.analytics-panel .an-groups { grid-template-columns:repeat(2,minmax(0,1fr)); }.analytics-panel .an-grid { grid-template-columns:1fr; } }
     @media(max-width:700px) { .analytics-panel .an-heading { align-items:flex-start; }.analytics-panel .an-stats,.analytics-panel .an-groups { grid-template-columns:1fr; } }
-  </style>
+      .routing-fields{border:0;padding:0;min-width:0}.routing-rule{border:1px solid #e2e7ed;border-radius:8px;padding:14px;margin:14px 0}.routing-panel textarea{display:block;width:100%;box-sizing:border-box;padding:9px;border:1px solid #dcdfe6;border-radius:6px;font:inherit;margin:6px 0 12px;resize:vertical}.routing-panel select{max-width:100%;padding:8px;border:1px solid #dcdfe6;border-radius:6px;background:white;font:inherit}.routing-panel .canary-grid label{display:flex;flex-direction:column;gap:6px}.routing-panel input[type=number]{width:65px}.routing-preview{background:#f3f6fa;border-radius:8px;padding:12px;margin-top:12px}.routing-panel fieldset:disabled{opacity:.7}
+      .canary-panel{width:100%;min-width:0;padding:24px;box-sizing:border-box}.canary-panel .kh-card{padding:20px;margin-bottom:16px}.canary-panel h3{margin:0 0 14px}.canary-panel p{line-height:1.7}.canary-panel code{overflow-wrap:anywhere}.canary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:16px}.canary-warning{background:#fff7e8;border:1px solid #f2d399;border-radius:10px;padding:15px;margin:16px 0;line-height:1.7;color:#72521c}.canary-warning div{font-size:12px}.canary-device-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}.canary-device-row select{max-width:100%;padding:10px;border:1px solid #dcdfe6;border-radius:7px;background:white;font:inherit}.canary-issue{padding:12px 0;border-top:1px solid #eef1f5}.canary-issue span{font-size:12px;color:#805d23;margin-left:12px}.canary-issue p{margin:6px 0;color:#6b7785;font-size:13px}.canary-panel li{line-height:1.9}
+    .canary-panel .an-heading,.canary-panel .an-section-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px}
+    .canary-panel .an-tabs{display:flex;gap:24px;border-bottom:1px solid #e4e9ef;margin-bottom:18px;overflow:auto}
+    .canary-panel .an-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:12px 0;color:#6b7785;cursor:pointer;white-space:nowrap;font:inherit;font-size:14px}
+    .canary-panel .an-tabs button.on{color:#347e9d;border-bottom-color:#347e9d;font-weight:600}
+    .canary-panel .an-tabs button:disabled{cursor:wait;opacity:.6}
+    .canary-panel .an-tabs button:focus-visible{outline:2px solid #347e9d;outline-offset:-2px}
+    .canary-panel .an-table{width:100%;border-collapse:collapse;font-size:13px}
+    .canary-panel .an-table th{text-align:left;color:#6b7785;background:#f8fafc;font-weight:500}
+    .canary-panel .an-table th,.canary-panel .an-table td{padding:11px 12px;border-bottom:1px solid #edf1f4;vertical-align:top}
+  @media(max-width:760px){.canary-layout .app-aside{width:64px}.canary-layout .app-content{padding:10px}.canary-layout .app-header{padding:0 10px}.canary-layout .app-header .right{display:none}.canary-layout .kh-wrap{flex-direction:column}.canary-layout .kh-nav{width:auto;flex-direction:row;overflow-x:auto;padding:8px}.canary-layout .kh-nav button{white-space:nowrap}.canary-layout .kh-nav .kh-logo,.canary-layout .kh-nav .kh-back{display:none}.canary-layout .canary-panel{padding:12px}.canary-layout .an-heading{flex-wrap:wrap;gap:12px}.canary-layout .canary-panel .kh-card{padding:12px}}
+</style>
 </head>
 <body>
   <div id="app">
@@ -495,7 +532,7 @@
     </div>
 
     <!-- ==================== MAIN LAYOUT ==================== -->
-    <div v-else class="app-layout">
+    <div v-else class="app-layout" :class="{'canary-layout':currentPage==='worker' && khNav==='search-canary'}">
       <!-- Sidebar -->
       <div class="app-aside" :class="{ collapsed: asideCollapsed }">
         <div class="aside-logo">
@@ -555,7 +592,7 @@
             </el-breadcrumb>
           </div>
           <div class="right">
-            <el-tag :type="currentPage==='worker' && khNav==='analytics' ? 'info' : 'warning'" size="small">{{ currentPage==='worker' && khNav==='analytics' ? '数据埋点真实数据 · 管理员只读' : '用户反馈真实数据 · 其余看板演示' }}</el-tag>
+            <el-tag :type="currentPage==='worker' && khNav==='analytics' ? 'info' : 'warning'" size="small">{{ currentPage==='worker' && khNav==='search-canary' ? '搜索灰度真实状态 · 管理员专属' : currentPage==='worker' && khNav==='analytics' ? '数据埋点真实数据 · 管理员专属' : '用户反馈真实数据 · 其余看板演示' }}</el-tag>
             <el-tag :type="currentUser.role === 'admin' ? 'danger' : (currentUser.role === 'editor' ? 'warning' : 'info')" size="small">{{ currentUser.role === 'admin' ? '管理员' : (currentUser.role === 'editor' ? '编辑员' : '游客 · 只读') }}</el-tag>
             <el-dropdown @command="handleDropdown">
               <span style="cursor:pointer;display:flex;align-items:center;gap:6px">
@@ -1239,8 +1276,85 @@
                 <button class="kh-back" @click="handleMenuSelect('dashboard')">⇠ 数据看板</button>
               </div>
               <div class="kh-main" style="display:flex;gap:0;padding:0">
+                <section v-if="currentPage==='worker' && khNav==='search-canary' && canManageInvites" class="canary-panel" aria-label="搜索灰度">
+                  <div class="an-heading"><div><div class="kh-h1">搜索灰度</div><div class="kh-sub">P1 全量内测 · P2 双设备灰度 · 搜索在后台执行，普通聊天继续</div></div><el-button :loading="searchLane==='p1' ? p1.loading : canary.loading" @click="loadCanary">刷新状态</el-button></div>
+                  <nav class="an-tabs" aria-label="搜索功能页面"><button :class="{on:searchLane==='p1'}" :aria-current="searchLane==='p1' ? 'page' : null" :disabled="routing.busy || p1.saving || canary.saving" @click="setSearchLane('p1')">P1 全量内测</button><button :class="{on:searchLane==='p2'}" :aria-current="searchLane==='p2' ? 'page' : null" :disabled="routing.busy || p1.saving || canary.saving" @click="setSearchLane('p2')">P2 双设备灰度</button></nav>
+                  <section class="kh-card" aria-label="高德天气额度">
+                    <h3>高德天气调用额度 <el-tag size="small" type="info">本地估算 · P2</el-tag></h3>
+                    <p class="kh-sub">仅统计当前 P2 高德接口；P1 未接入此 Key。不是高德官方余额，不自动按日/月重置。同一账号在其他应用的消耗不在本系统统计内。</p>
+                    <p v-if="amapUsage.error" role="alert" class="canary-warning">{{ amapUsage.error }}</p>
+                    <template v-if="amapUsage.data">
+                      <div class="canary-grid"><div><span class="kh-sub">估算剩余</span><div style="font-size:28px;font-weight:700" data-testid="amap-remaining">{{ amapUsage.data.remaining.toLocaleString() }} 次</div><p>{{ !amapUsage.data.runtime ? '接入状态暂不可核实' : amapUsage.data.runtime.enabled && amapUsage.data.runtime.key_configured ? '高德已启用，失败时转备用查询' : '高德尚未启用' }}</p><p v-if="amapUsage.data.remaining===0" class="canary-warning">登记额度已耗尽，新查询将使用备用来源；可追加额度或校准余额。</p></div><div><p>天气请求 {{ amapUsage.data.weather_requests }} 次 · 城市编码 {{ amapUsage.data.geocode_requests }} 次</p><p class="kh-sub">天气成功 {{ amapUsage.data.weather_successes }} · 被拒绝 {{ amapUsage.data.weather_rejected }} · 未确认 {{ amapUsage.data.weather_unconfirmed }}。失败/超时请求也保守计数；缓存命中不扣次数，城市编码单独统计。</p><p class="kh-sub">数据时间：{{ analyticsTime(amapUsage.data.observed_at_ms) }}</p></div></div>
+                      <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+                        <label>登记方式<br><select id="amap-adjust-mode" v-model="amapUsage.mode" :disabled="amapUsage.saving || !!amapUsage.pending"><option value="add">追加购买额度</option><option value="set_remaining">校准剩余额度</option></select></label>
+                        <label>{{ amapUsage.mode==='add' ? '新增次数' : '当前官方剩余次数' }}<br><input id="amap-adjust-amount" v-model="amapUsage.amount" type="number" :min="amapUsage.mode==='add'?1:0" max="100000000" step="1" :disabled="amapUsage.saving || !!amapUsage.pending" style="max-width:180px"></label>
+                        <el-button type="primary" :loading="amapUsage.saving" :disabled="!amapUsageCanSave" @click="saveAmapUsage">{{ amapUsage.pending ? '重试本次登记' : '登记额度' }}</el-button>
+                      </div>
+                      <p class="kh-sub">购买后选“追加”；月度免费额度更新或与官方不一致时选“校准”。只调整本地额度账本，不会代购或清空调用记录。</p>
+                      <p v-if="amapUsage.notice" role="status">{{ amapUsage.notice }}</p>
+                      <details v-if="amapUsage.data.history.length"><summary>最近登记记录</summary><div v-for="h in amapUsage.data.history" :key="h.request_id" class="kh-sub">{{ analyticsTime(h.at_ms) }} · {{ h.mode==='add'?'追加':'校准为' }} {{ h.amount }} 次 · {{ h.who }}</div></details>
+                    </template>
+                    <p v-else-if="!amapUsage.error" class="kh-sub">正在读取额度…</p>
+                  </section>
+                  <template v-if="searchLane==='p1'">
+                    <div v-if="p1.error" role="alert" class="canary-warning">{{ p1.error }}。当前 P1 状态未知。</div>
+                    <div v-if="!p1.data && !p1.error" class="kh-sub">正在读取 P1 全量内测状态…</div>
+                    <template v-if="p1.data">
+                      <div class="canary-warning"><b>{{ p1.data.settings.enabled ? 'P1 服务端已开启 · 待设备体验核验' : 'P1 搜索未开启' }}</b><div>实时读取：{{ analyticsTime(p1.data.observed_at_ms) }}（北京时间）。实际设备体验以测试反馈为准。</div></div>
+                      <div class="canary-grid">
+                        <div class="kh-card"><h3>P1 开放范围</h3><p>{{ p1.data.settings.scope==='all_registered' ? '全部已注册、启用并开通服务的内测设备；新增设备自动纳入。' : '当前仍为指定设备名单模式。' }}</p><p>符合准入 {{ p1.data.devices.filter(d=>d.eligible).length }} 台 · 当前允许搜索 {{ p1.data.devices.filter(d=>d.search_allowed).length }} 台</p><p>沿用设备原有身份、人格、记忆及聊天历史。单机排除只影响搜索。</p><el-button :loading="p1.saving" :type="p1.data.settings.enabled ? 'warning' : 'primary'" :disabled="!p1.data.settings.configured" @click="setP1Enabled(!p1.data.settings.enabled)">{{ p1.data.settings.enabled ? '关闭 P1 搜索' : '开启 P1 全量内测' }}</el-button><p class="kh-sub">持续内测，不继承 P2 的到期时间。总闸关闭后停止接收新搜索，普通聊天继续。</p></div>
+                        <div class="kh-card"><h3>P1 部署核验</h3><template v-if="p1.data.release"><p>Brain：<code>{{ p1.data.release.brain_commit }}</code></p><p>Worker：<code>{{ p1.data.release.worker_commit }}</code></p><p>核验时间：{{ analyticsTime(p1.data.release.verified_at_ms) }}</p></template><p v-else>暂无本轮部署核验记录，不能仅凭开关认定已上线。</p><p class="kh-sub">P1 只做后台搜索。Tool Calls 与受控网页抓取仅在 P2 页面所示两台设备开放。</p></div>
+                      </div>
+                      <div class="kh-card"><h3>内测设备</h3><div style="overflow-x:auto"><table class="an-table"><thead><tr><th>完整 SN</th><th>最近自报版本</th><th>搜索状态</th><th>操作</th></tr></thead><tbody><tr v-for="d in p1.data.devices" :key="d.sn"><td>{{ d.sn }}</td><td>{{ d.version_code == null ? '未知' : 'v'+d.version_code }} / {{ d.version_name || '未知' }}<div class="kh-sub">{{ analyticsTime(d.version_reported_at_ms) }}</div></td><td>{{ !d.eligible ? '尚未开通或已停用' : d.excluded ? '单机已排除' : d.search_allowed ? 'P1 已允许' : '总闸关闭' }}</td><td><el-button size="small" :disabled="p1.saving || !d.eligible" @click="setP1Excluded(d.sn,!d.excluded)">{{ d.excluded ? '恢复搜索' : '排除搜索' }}</el-button></td></tr></tbody></table></div></div>
+                      <div class="kh-card"><h3>问题与待验项目</h3><p v-for="issue in p1.data.issues" :key="issue">{{ issue }}</p></div>
+                      <div class="kh-card"><h3>近期搜索任务</h3><p v-if="!p1.data.tasks.loaded" class="kh-sub">当前进程尚未加载任务账本；不表示历史没有任务。</p><p v-else-if="!p1.data.tasks.recent.length" class="kh-sub">当前账本暂无记录。</p><div class="canary-issue" v-for="task in p1.data.tasks.recent.slice(0,20)" :key="task.id"><b>{{ task.device_suffix }}</b><span>{{ task.status }} · {{ task.outcome }}</span><p>{{ analyticsTime(task.created_at) }} · 播放回执 {{ task.delivery }}<span v-if="task.error"> · {{ task.error }}</span></p></div><p class="kh-sub">服务端已发送或已完成不等于扬声器已被真人听到。</p></div>
+                    </template>
+                  </template>
+                  <template v-if="searchLane==='p2'">
+                  <div v-if="canary.error" role="alert" class="canary-warning">{{ canary.error }}。当前状态未知，请勿依据旧数据开窗。</div>
+                  <div v-if="!canary.data && !canary.error" class="kh-sub">正在核对灰度状态…</div>
+                  <template v-if="canary.data">
+                    <div class="canary-warning"><b>{{ canaryStateLabel(canary.data.summary.state) }}</b> · {{ canary.data.acceptance }}<div>实时检查：{{ analyticsTime(canary.data.observed_at_ms) }}（北京时间）；每15秒刷新。服务端已发送不代表设备实际听到。</div></div>
+                    <div class="canary-grid">
+                      <div class="kh-card"><h3>窗口与健康</h3><p>候选 Brain：<b>{{ canary.data.summary.health_ok ? '本次探测正常' : '未确认 / 不可用' }}</b></p><p>新会话派单租约：{{ canary.data.summary.lease_ok ? '有效' : '不可用（可能满载或心跳过期）' }}</p><p>实际派单名单：{{ canary.data.summary.configured_devices.join('、') || '未配置，关闭' }}</p><p>开始：{{ analyticsTime(canary.data.window_started_at_ms) }}<br>截止：{{ analyticsTime(canary.data.summary.expires_at_ms) }}</p><div class="kh-sub">到期结束测试会话，返回主界面重新进入后恢复现役链路。</div></div>
+                      <div class="kh-card"><h3>灰度版本</h3><template v-if="canary.data.release"><p>Brain：<code>{{ canary.data.release.brain_commit }}</code></p><p>Worker：<code>{{ canary.data.release.worker_commit }}</code></p><p>产物 SHA256：<code>{{ canary.data.release.worker_sha256 }}</code></p><p>部署核验：{{ analyticsTime(canary.data.release.verified_at_ms) }}</p><div class="kh-sub">部署核验记录，不冒充实时二进制校验。{{ canary.data.release.worker_tests }} 项 Worker 测试通过；真实设备体验仍需验收。</div></template><p v-else>部署核验记录缺失，版本未知。</p></div>
+                    </div>
+                    <div class="kh-card"><h3>灰度设备</h3><label for="canary-device">待测设备（手动选择）</label><div class="canary-device-row"><select id="canary-device" v-model="canary.selected" @change="canary.dirty=true" :disabled="canary.saving || canary.data.summary.dispatch_requested"><option v-for="d in canary.data.devices" :key="d.sn" :value="d.sn" :disabled="!d.eligible">{{ d.sn }}{{ d.eligible ? '' : '（不可用）' }}</option></select><el-button type="primary" :loading="canary.saving" :disabled="!canary.dirty || canary.loading || canary.data.summary.dispatch_requested" @click="saveCanaryDevice">保存待测设备</el-button></div><p class="kh-sub">保存选择不会开窗或改变派单。当前完成隔离准备的设备：{{ canary.data.prepared_sn }}。选择其他设备后需重新准备并验收。</p><p>已保存：<code>{{ canary.data.selected_sn }}</code></p><p v-if="canarySelectedDevice">云端最近自报版本：<b>{{ canarySelectedDevice.version_code == null ? '未知' : 'v'+canarySelectedDevice.version_code }}</b> / {{ canarySelectedDevice.version_name || '未知' }}<br>上报时间：{{ analyticsTime(canarySelectedDevice.version_reported_at_ms) }}；云端上报记录。</p><p v-if="canary.data.operator_confirmation" class="kh-sub">持有人已于 {{ analyticsTime(canary.data.operator_confirmation.at_ms) }} 确认完整SN及 v{{ canary.data.operator_confirmation.version_code }}（{{ canary.data.operator_confirmation.version_name }}）。</p></div>
+                    <div class="kh-card"><h3>问题与待验项目</h3><div v-for="issue in canary.data.issues" :key="issue.title" class="canary-issue"><b>{{ issue.title }}</b><span>{{ issue.status }}</span><p>{{ issue.detail }}</p></div></div>
+                    <div class="kh-card"><h3>P2 工具执行记录</h3><p class="kh-sub">只有实际调用记录才证明执行了工具。天气固定查询和普通聊天不一定调用 Tool Calls。</p><p v-if="!canary.data.recent_tasks" class="kh-sub">任务账本暂不可读，执行情况未知。</p><div class="canary-issue" v-for="task in (canary.data.recent_tasks || [])" :key="task.id"><b>{{ task.device_suffix }} · {{ task.mode }}</b><span>{{ task.status }} · {{ task.outcome || '未结算' }}</span><p>{{ analyticsTime(task.created_at) }} · 播放回执 {{ task.delivery || '待播' }}</p><p v-if="task.failure">失败环节：{{ ({search:'搜索',answer:'答案生成',tools:'工具规划',fetch:'网页抓取',weather:'天气',task:'任务'})[task.failure.stage] || '未知' }} · {{ ({timeout:'超时',transport:'网络异常',http:'上游拒绝',invalid_answer:'答案校验未通过',aborted:'已终止'})[task.failure.reason] || '返回内容未通过校验' }}</p><p v-for="(tool,i) in task.tools" :key="i">{{ ({search_web:'网页搜索',fetch_page:'正文抓取',unknown:'未知工具'})[tool.name] }}：{{ ({succeeded:'已执行成功',rejected:'已拒绝',failed:'执行失败'})[tool.outcome] }}</p></div></div>
+                    <div class="kh-card"><h3>你需要完成什么</h3><ol><li>保持目标设备开机联网；以本页最近上报时间和现场安装版本核对设备。</li><li>仅本页实际名单中的两台设备测试 Tool Calls 与受控网页抓取；其他内测设备使用 P1。</li><li>按实际起止时间结束旧会话并重新进入，按话术测 P2 搜索、正文抓取、继续聊天及插话；记录实际听到的表现。</li></ol><p>话术：先说“帮我查一下今天北京的天气”，继续聊画猫；安静等待补播。播报时说“先停一下”，随后“继续刚才的搜索结果”；再分别测“取消搜索”“改查上海的天气”和退出重连。</p><p class="kh-sub">服务端负责核对、开窗、日志对账和到期关闭。仅实际名单中的设备进入候选，截止后退出重进回到 P1；P2 是否开放以本页实时状态为准。</p></div>
+                  </template>
+                  </template>
+                  <div class="kh-card routing-panel" aria-label="任务路由配置">
+                    <div class="an-section-head"><h3>{{ searchLane==='p1' ? 'P1 全量任务路由' : 'P2 双设备任务路由' }} · 热配置</h3><el-button :loading="routing.loading" :disabled="routing.busy" @click="loadRouting">刷新路由状态</el-button></div>
+                    <p class="kh-sub">草稿不会改变运行。发布后对应会话约5～10秒加载；任务执行中仍可正常聊天。身份、窗口及取消指令不由关键词配置覆盖。</p>
+                    <div v-if="routing.error" role="alert" class="canary-warning">{{ routing.error }}</div>
+                    <template v-if="routing.data && routing.draft">
+                      <div class="canary-issue" v-for="t in routing.data.targets" :key="t.sn"><b>{{ t.sn==='*' ? '全部现有及新增内测设备' : t.sn }}</b><p>已发布：<code>{{ t.version }}</code><br>{{ routingLoadLabel(t) }}</p></div>
+                      <p v-if="!routing.data.targets.length" class="kh-sub">尚未发布，Worker 使用保守内置路由。</p>
+                      <fieldset class="routing-fields" :disabled="routing.busy">
+                        <label class="routing-source"><input type="checkbox" v-model="routing.draft.weather_enabled" @change="routingDirty"> 启用固定天气查询（个人测试）</label>
+                        <label class="routing-source"><input type="checkbox" v-model="routing.draft.baidu_weather_enabled" @change="routingDirty"> 优先使用百度天气，扩大城市覆盖</label>
+                        <label class="routing-source"><input type="checkbox" v-model="routing.draft.auto_location_enabled" @change="routingDirty"> 未指定城市时按设备网络自动定位（IP9）</label>
+                        <p class="kh-sub">当前温度、今明后天预报；扩城字典可识别3220个天气地点，返回仍须通过地点、天气站与时效校验，不代表全部地点已实测。当前AQI和旧源回退仍限北京、上海、沈阳、大连、广州、深圳、杭州。同名地点需明确省市。自动定位为城市级估计，指定城市优先；失败时不借用服务器位置。发布后需结束旧会话再进入，以取得本轮设备网络信息。此开关不会开启 P2。</p>
+                        <div class="canary-issue" v-for="loc in (routing.data.locations || [])" :key="'location-'+loc.sn"><b>{{ loc.sn }} · 网络定位</b><p>{{ ({ready:'已定位（城市级估计）',pending:'后台定位中',failed:'定位失败',expired:'记录已过期',unknown:'等待新会话'})[loc.state] || '未知' }}{{ loc.city ? ' · '+loc.city : '' }}{{ loc.provider ? ' · 来源 '+loc.provider.toUpperCase() : '' }}<br>观测：{{ loc.observed_at ? new Date(loc.observed_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}) : '—' }} · 北京时间<span v-if="loc.reason"><br>原因：{{ ({location_untrusted_ingress:'未取得可信设备公网地址',location_timeout:'定位服务超时',location_city_missing:'未查到城市',location_city_mismatch:'返回省市不一致',location_payload:'定位响应校验失败',location_cooldown:'定位服务冷却中',location_rate_limit:'达到定位请求频率上限',location_upstream:'定位服务暂不可用',location_expired:'本轮定位已过期',location_no_session:'等待设备建立新会话'})[loc.reason] || '定位暂不可用' }}</span></p></div>
+                        <div v-for="r in routing.draft.rules" :key="r.id" class="routing-rule">
+                          <div class="canary-device-row"><label><input type="checkbox" v-model="r.enabled" @change="routingDirty"> {{ r.id }}</label><label>优先级 <input type="number" min="0" max="1000" v-model.number="r.priority" @input="routingDirty" :aria-label="'优先级 '+r.id"></label><el-button link @click="routingRemove(r.id)">删除规则</el-button></div>
+                          <div class="canary-grid"><label>处理方式<select v-model="r.action" @change="routingDirty" :aria-label="'处理方式 '+r.id"><option value="search">后台搜索</option><option value="weather">天气查询</option><option value="chat">普通聊天</option></select></label><label>匹配方式<select v-model="r.mode" @change="routingDirty" :aria-label="'匹配方式 '+r.id"><option value="prefix">句首表达</option><option value="contains_any">含任意触发词</option><option value="contains_all">含全部触发词</option></select></label></div>
+                          <div class="canary-grid"><label>触发表达（用顿号或换行分隔）<textarea rows="2" :value="r.triggers.join('、')" :aria-label="'触发表达 '+r.id" @input="routingPhrases(r,'triggers',$event)"></textarea></label><label>排除表达<textarea rows="2" :value="r.exclude.join('、')" :aria-label="'排除表达 '+r.id" @input="routingPhrases(r,'exclude',$event)"></textarea></label></div>
+                        </div>
+                        <div class="canary-device-row"><el-button :disabled="routing.draft.rules.length>=32" @click="routingAdd">增加规则</el-button><el-button :disabled="!routing.dirty" @click="saveRoutingDraft">保存路由草稿</el-button><span class="kh-sub">{{ routing.dirty ? '有未保存修改' : '草稿已同步' }} · 修订 {{ routing.editRevision }}</span></div>
+                        <h3 style="margin-top:24px">话术预览</h3><label for="routing-utterances">每行一句，可验证自动定位或指定城市；预览不读取设备位置</label><textarea id="routing-utterances" rows="3" v-model="routing.utterances" @input="routing.preview=null" placeholder="查查恐龙灭绝的原因&#10;成都明天天气&#10;我今天画了一只猫"></textarea><el-button @click="previewRoutingDraft">预览路由（不执行搜索）</el-button>
+                        <div v-if="routing.preview" class="routing-preview"><p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : (d.auto_weather ? ' · 按设备网络定位 · '+['今天','明天','后天'][d.auto_weather.day_offset] : '') }}</span></p></div>
+                        <h3 style="margin-top:24px">发布与回滚</h3><div v-if="searchLane==='p2'" class="canary-device-row"><label v-for="sn in routing.data.eligible_sns" :key="sn"><input type="checkbox" :value="sn" v-model="routing.sns"> {{ sn }}</label></div><p class="kh-sub">{{ searchLane==='p1' ? '发布全量默认路由，存量及新增内测设备自动使用；不改变 P2。' : '只影响所选灰度设备，不开窗、不延窗、不改变 P1。' }} 发布前自动执行固定正反例回归。</p>
+                        <div class="canary-device-row"><el-button type="primary" :disabled="routing.dirty || (searchLane==='p2' && !routing.sns.length)" @click="publishRouting">校验并发布路由</el-button><select v-model="routing.rollbackVersion" aria-label="历史路由版本"><option value="">选择历史版本</option><option v-for="v in routing.data.versions" :key="v.version" :value="v.version">{{ v.version }}</option></select><el-button :disabled="!routing.rollbackVersion || (searchLane==='p2' && !routing.sns.length)" @click="rollbackRouting">{{ searchLane==='p1' ? '回滚全量路由' : '回滚所选设备' }}</el-button></div>
+                      </fieldset>
+                      <p v-if="routing.notice" role="status">{{ routing.notice }}</p>
+                    </template>
+                  </div>
+                </section>
                 <section v-if="currentPage==='worker' && khNav==='analytics' && canManageInvites" class="analytics-panel" aria-label="数据埋点">
-                  <div class="an-heading"><div><div class="kh-h1">数据埋点</div><div class="kh-sub">设备上传、业务事件与结算 · 管理员只读</div></div><el-button size="small" @click="analyticsRefresh">刷新当前页</el-button></div>
+                  <div class="an-heading"><div><div class="kh-h1">数据埋点</div><div class="kh-sub">设备上传控制、业务事件与结算 · 管理员专属</div></div><el-button size="small" @click="analyticsRefresh">刷新当前页</el-button></div>
                   <nav class="an-tabs" aria-label="数据埋点页签"><button v-for="tab in analyticsTabs" :key="tab.k" :class="{on:analytics.tab===tab.k}" :aria-current="analytics.tab===tab.k ? 'page' : null" @click="analyticsSetTab(tab.k)">{{ tab.l }}</button></nav>
                   <div v-if="analytics.tab==='overview' || analytics.tab==='batches'" class="an-filters">
                     <label>起始日期（CST）<input type="date" class="an-input" v-model="analyticsFilters.from"></label><label>结束日期（CST）<input type="date" class="an-input" v-model="analyticsFilters.to"></label>
@@ -1294,8 +1408,61 @@
                   <template v-if="analytics.tab==='registry'">
                     <div class="an-filters"><label class="an-catalog-search">搜索事件名称 / 组<input class="an-input" v-model="analytics.catalogSearch" placeholder="例如 g1.reward"></label><label>事件组<select class="an-input" v-model="analytics.catalogGroup"><option value="">全部组</option><option v-for="g in analyticsCatalogGroups" :key="g" :value="g">{{ g }}</option></select></label></div><div v-if="analytics.registry.loading" class="an-status">正在加载事件合同…</div><div v-if="analytics.registry.error" class="an-status an-error">{{ analytics.registry.error }}</div><div v-if="analytics.registry.data" class="kh-card an-card"><div class="an-section-head"><h2>正式事件目录</h2><span class="an-muted">Schema v{{ analytics.registry.data.schema_version }} · {{ analytics.registry.data.event_count }} 项 · 匹配 {{ analyticsCatalog.length }} 项</span></div><div class="an-scroll"><table class="an-table"><thead><tr><th>事件名称</th><th>组</th><th>属性合同</th></tr></thead><tbody><tr v-for="r in analyticsCatalog" :key="r.event_name"><td class="an-mono">{{ r.event_name }}</td><td>{{ r.group }}</td><td><el-button link size="small" @click="analytics.catalogDetail=r">查看 JSON Schema</el-button></td></tr><tr v-if="!analyticsCatalog.length"><td colspan="3" class="an-muted">没有匹配的事件定义。</td></tr></tbody></table></div></div><div v-if="analytics.catalogDetail" class="kh-card an-card"><div class="an-section-head"><h2>{{ analytics.catalogDetail.event_name }}</h2><el-button link @click="analytics.catalogDetail=null">关闭详情</el-button></div><p class="an-note">{{ analytics.catalogDetail.group }} · 服务端当前属性合同</p><pre class="an-pre">{{ analyticsSchema(analytics.catalogDetail) }}</pre></div>
                   </template>
+                  <template v-if="analytics.tab==='tiering'">
+                    <div class="an-filters"><label>目标设备<select class="an-input" v-model="anTier.sn" :disabled="anTier.saving" @change="loadAnalyticsTier"><option value="">请选择设备</option><option v-for="d in (anControl.data||{}).devices||[]" :key="d.sn" :value="d.sn">{{ d.sn }} · {{ d.note || '未备注' }}</option></select></label><el-button :disabled="anTier.loading || anTier.saving || !anTier.sn" @click="loadAnalyticsTier">重新读取</el-button></div>
+                    <div v-if="anTier.loading" class="an-status">正在读取该设备分层配置与接收记录…</div><div v-if="anTier.error" class="an-status an-error" role="alert">{{ anTier.error }}</div><div v-if="anTier.notice" class="an-status" role="status">{{ anTier.notice }}</div>
+                    <template v-if="anTier.data">
+                      <div class="an-grid">
+                        <div class="kh-card an-card"><h2>分层配置 · 仅当前设备</h2><p class="an-note">只有本地分层与周期聚合同时开启才会产生聚合桶；单开一个仍逐条上传。新设置不会清除持久队列，保存不代表设备已应用。</p>
+                          <div class="an-filters"><label>压缩上传<el-switch v-model="anTier.draft.request_gzip_enabled" :disabled="anTier.saving"></el-switch></label><label>本地分层<el-switch v-model="anTier.draft.tiering_enabled" :disabled="anTier.saving"></el-switch></label><label>周期聚合<el-switch v-model="anTier.draft.aggregate_upload_enabled" :disabled="anTier.saving"></el-switch></label><label>短期样本捕获<el-switch v-model="anTier.draft.on_demand_capture_enabled" :disabled="anTier.saving"></el-switch></label></div>
+                          <p>聚合周期：<strong>7天</strong>（本轮固定，按北京时间与 Unix 起点划分，非自然周）。奖励、库存、恢复和失败事实仍逐条保留。</p>
+                          <details><summary>本地队列上限与保留期</summary><div class="an-filters"><label>聚合保留天数<input class="an-input" type="number" min="14" max="180" v-model.number="anTier.draft.aggregate_retention_days"></label><label>聚合桶上限<input class="an-input" type="number" min="128" max="4096" v-model.number="anTier.draft.aggregate_max_buckets"></label><label>样本保留天数<input class="an-input" type="number" min="1" max="14" v-model.number="anTier.draft.on_demand_retention_days"></label><label>样本条数<input class="an-input" type="number" min="100" max="2000" v-model.number="anTier.draft.on_demand_max_events"></label><label>样本字节<input class="an-input" type="number" min="262144" max="4194304" v-model.number="anTier.draft.on_demand_max_bytes"></label></div></details>
+                          <div v-if="!anTier.data.runtime" class="an-status an-error">接收服务暂不可达，不能新增开启；仍可保存关闭设置。</div><div v-else-if="!anTier.data.runtime.upload_allowed" class="an-status">该设备目前未获准上传；请先在上传管理中核对总闸及设备范围。</div>
+                          <el-button type="primary" :loading="anTier.saving" @click="saveAnalyticsTier">保存并回读</el-button><p class="an-note">配置版本：{{ anTier.data.revision }}。关闭样本捕获会撤销该设备的按需请求；已在提交中的批次可完成结算。</p>
+                        </div>
+                        <div class="kh-card an-card"><h2>短期按需请求</h2><p class="an-note">服务端生成 ID，绑定当前完整 SN、事件范围、有效期和条数。到期自动拒收新样本，设备下次拉配置时收到关闭状态；其他设备不受影响。</p>
+                          <div class="an-filters"><label>有效分钟<input class="an-input" type="number" min="1" max="1440" v-model.number="anTier.minutes"></label><label>最多样本数<input class="an-input" type="number" min="1" max="1000" v-model.number="anTier.maxEvents"></label><label>回溯天数<input class="an-input" type="number" min="1" max="14" v-model.number="anTier.lookback"></label></div>
+                          <details><summary>允许的来源事件（{{ anTier.allowed.length }} 项）</summary><div style="display:grid;gap:6px;margin:12px 0"><label v-for="n in anTier.data.allowed_event_names" :key="n"><input type="checkbox" :value="n" v-model="anTier.allowed"> <span class="an-mono">{{ n }}</span></label></div></details>
+                          <p class="an-note">样本先进入本地上传队列，网络仍按北京时间 {{ anTier.data.analytics.daily_upload_hour_cst == null ? 23 : anTier.data.analytics.daily_upload_hour_cst }} 点日批；创建请求不会立即上传。请在日批前创建，让有效期覆盖上传与重试。新请求会撤销上一请求，同一样本跨请求不重复计数。</p>
+                          <el-button type="primary" :loading="anTier.saving" :disabled="!anTier.data.runtime || !anTier.data.runtime.upload_allowed || !anTier.data.analytics.tiering_enabled || !anTier.data.analytics.aggregate_upload_enabled" @click="createAnalyticsDiagnostic">创建并启用短期请求</el-button>
+                          <p class="an-note">当前上传：{{ anTier.data.analytics.on_demand_upload_enabled ? '开启' : '关闭' }}<br>ID：<span class="an-mono">{{ anTier.data.analytics.on_demand_request_id || '无' }}</span></p>
+                        </div>
+                      </div>
+                      <div class="kh-card an-card"><h2>最近请求</h2><div class="an-scroll"><table class="an-table"><thead><tr><th>请求 ID</th><th>状态 / 到期</th><th>新接收 / 限额</th><th>操作</th></tr></thead><tbody><tr v-for="r in anTier.data.requests" :key="r.id"><td class="an-mono">{{ r.id }}</td><td>{{ r.revoked_at_ms ? '已撤销' : r.expires_at_ms &lt;= Date.now() ? '已到期' : '有效' }}<div>{{ analyticsTime(r.expires_at_ms) }}</div></td><td>{{ anTier.data.runtime ? ((anTier.data.runtime.request_usage.find(x=>x.request_id===r.id)||{}).accepted || 0) : '未知' }} / {{ r.max_events }}</td><td><el-button link :disabled="!!r.revoked_at_ms || anTier.saving" @click="revokeAnalyticsDiagnostic(r.id)">撤销</el-button></td></tr><tr v-if="!anTier.data.requests.length"><td colspan="4">尚未创建按需请求。</td></tr></tbody></table></div></div>
+                      <div v-if="anTier.data.runtime" class="kh-card an-card"><h2>近7个接收日 · 分层与压缩观察</h2><p class="an-note">仅统计本版本部署后真实接收的数据。聚合代表次数不等于原始记录数，也不是余额或奖励流水；尚未完成7天容量验收，不能据此扩大设备范围。</p><p>云端保留：原始14天、聚合90天、样本3天；去重记录持续保留。本地保留设置不改变云端策略。</p>
+                        <div class="an-scroll"><table class="an-table"><thead><tr><th>层级 / 来源</th><th>存储记录</th><th>代表原事件次数</th><th>载荷字节</th></tr></thead><tbody><tr v-for="r in anTier.data.runtime.layers" :key="r.tier+r.source_event_name"><td>{{ r.tier }} · <span class="an-mono">{{ r.source_event_name }}</span></td><td>{{ analyticsNumber(r.records) }}</td><td>{{ r.tier==='diagnostic' ? '代表样本，不计活动次数' : analyticsNumber(r.source_events) }}</td><td>{{ analyticsNumber(r.payload_bytes) }}</td></tr><tr v-if="!anTier.data.runtime.layers.length"><td colspan="4">尚无本版本接收记录；不是端侧队列为空的证明。</td></tr></tbody></table></div>
+                        <div v-for="t in anTier.data.runtime.transport" :key="t.encoding" class="an-status">{{ t.encoding }} · {{ t.requests }} 次请求 · 传输 {{ analyticsNumber(t.wire_bytes) }} 字节 / 解压 {{ analyticsNumber(t.inflated_bytes) }} 字节<span v-if="t.encoding==='gzip' && t.inflated_bytes>0"> · 本窗口传输减少 {{ ((1-t.wire_bytes/t.inflated_bytes)*100).toFixed(1) }}%</span>（含重试，不代表存储节省率）</div>
+                        <details><summary>最近10条分层记录</summary><pre class="an-pre">{{ JSON.stringify(anTier.data.runtime.recent,null,2) }}</pre></details>
+                      </div>
+                    </template>
+                  </template>
                   <template v-if="analytics.tab==='config'">
-                    <div v-if="analytics.config.loading" class="an-status">正在读取采集配置…</div><div v-if="analytics.config.error" class="an-status an-error">{{ analytics.config.error }}</div><template v-if="analytics.config.data"><div class="an-grid"><div class="kh-card an-card"><h2>服务端采集控制</h2><dl class="an-dl"><dt>接收总闸 enabled</dt><dd>{{ analyticsBool(analytics.config.data.server_gate.enabled) }}</dd><dt>控制配置 valid</dt><dd>{{ analytics.config.data.server_gate.valid ? '有效' : '无效' }}</dd><dt>独立灰度名单</dt><dd>{{ analyticsNumber(analytics.config.data.allowlist_count) }} 台</dd></dl><div class="an-status" :class="{'an-error':!analytics.config.data.server_gate.valid}">{{ !analytics.config.data.server_gate.valid ? '采集控制配置无效，请联系管理员核查。' : analytics.config.data.server_gate.enabled ? '接收总闸已开启，仅按有效控制与名单接收。' : '接收总闸关闭，处于待灰度状态；设备保留未结算事件。' }}</div></div><div class="kh-card an-card"><h2>设备上传默认值 · CST</h2><dl class="an-dl"><dt>当前全局有效上传开关</dt><dd>{{ analyticsBool(analytics.config.data.global.event_upload_enabled) }}</dd><dt>当前全局每日上传时段</dt><dd>{{ analyticsHour(analytics.config.data.global.daily_upload_hour_cst) }}</dd><dt>端侧内置上传开关</dt><dd>{{ analyticsBool(analytics.config.data.device_defaults.event_upload_enabled) }}</dd><dt>端侧内置每日时段</dt><dd>{{ analyticsHour(analytics.config.data.device_defaults.daily_upload_hour_cst) }}</dd></dl><p class="an-note">当前全局配置与端侧内置默认值独立展示，以真实响应为准。</p><el-button size="small" @click="khSelectNav('devcfg')">前往已有设备配置</el-button></div></div><div class="kh-card an-card"><h2>灰度名单与有效设备配置</h2><p class="an-note">独立名单数量不由当前接收设备推导。本页只读，配置编辑沿用已有“设备配置”。</p><div class="an-scroll"><table class="an-table"><thead><tr><th>设备别名</th><th>设备 active</th><th>有效上传开关</th><th>有效每日时段（CST）</th></tr></thead><tbody><tr v-for="d in analytics.config.data.items" :key="d.device_alias"><td>{{ d.device_alias }}</td><td>{{ d.active ? '是' : '否' }}</td><td>{{ analyticsBool(d.event_upload_enabled) }}</td><td>{{ analyticsHour(d.daily_upload_hour_cst) }}</td></tr><tr v-if="!analytics.config.data.items.length"><td colspan="4" class="an-muted">当前独立灰度名单为空。</td></tr></tbody></table></div></div></template><p class="an-note">关机、忙碌或失败可能推迟上传；已有在途批次与端侧队列需单独审计。</p>
+                    <div v-if="anControl.error" class="an-status an-error" role="alert">{{ anControl.error }}</div>
+                    <div v-if="anControl.notice" class="an-status" role="status">{{ anControl.notice }}</div>
+                    <div v-if="anControl.loading" class="an-status">正在读取上传管理…</div>
+                    <template v-if="anControl.data">
+                      <div class="an-grid">
+                        <div class="kh-card an-card">
+                          <div class="an-section-head"><h2>上传控制</h2><span class="an-muted">{{ anControl.dirty ? '有未保存修改' : '已读取云端配置' }}</span></div>
+                          <div class="an-filters" style="margin-top:14px"><label>上传总开关<el-switch v-model="anControl.enabled" :disabled="anControl.saving || anControl.loading" @change="anControl.dirty=true"></el-switch></label><label>每日上传（北京时间）<select class="an-input" v-model.number="anControl.hour" :disabled="anControl.saving || anControl.loading" @change="anControl.dirty=true"><option v-for="h in 24" :key="h" :value="h-1">{{ analyticsHour(h-1) }}</option></select></label></div>
+                          <p class="an-note">待保存范围 {{ anControl.subjects.length }} 台 · 云端当前允许 {{ anControl.data.runtime_available ? anControl.data.devices.filter(d=>d.upload_allowed).length+' 台' : '未知' }}。新注册设备默认关闭。</p>
+                          <div v-if="anControl.data.runtime_available && (!anControl.data.policy.emergency_gate.enabled || !anControl.data.policy.valid)" class="an-status an-error">运维保护闸关闭或配置异常，当前不会接收上传；保存设备选择不会绕过保护。</div>
+                          <div v-if="!anControl.data.runtime_available" class="an-status an-error">上传服务暂不可达，显示已保存配置，实际准入状态未知；仍可关闭上传。</div><el-button type="primary" :loading="anControl.saving" :disabled="!anControl.dirty || anControl.loading" @click="saveAnalyticsControl">保存上传设置</el-button><el-button :disabled="anControl.saving || anControl.loading" @click="anControl.enabled=false;anControl.dirty=true;saveAnalyticsControl()">关闭全部上传</el-button><el-button :disabled="anControl.saving || anControl.loading" @click="loadAnalyticsControl">重新读取</el-button>
+                          <p class="an-note">保存后云端准入立即更新；设备通常在启动、恢复网络或约30分钟轮询时获取配置。首次开启可能补传积压。关闭保留端侧队列和已入库数据，正在提交的批次可正常结算。</p>
+                        </div>
+                        <div class="kh-card an-card"><h2>容量与分批上传</h2>
+                          <template v-if="anControl.data.capacity"><div v-if="anControl.data.runtime_available && anControl.data.devices.filter(d=>d.upload_allowed).length > anControl.data.capacity.max_enabled_devices" class="an-status an-error">现有上传设备已超过最新安全预算，新增开启已限制；现有设备未自动停传，请减少范围或扩容。</div><dl class="an-dl"><dt>当前安全开启上限</dt><dd><strong>{{ anControl.data.capacity.max_enabled_devices }} 台</strong></dd><dt>磁盘可用 / 当前事件库</dt><dd>{{ analyticsCapacityBytes(anControl.data.capacity.free_bytes) }} / {{ analyticsCapacityBytes(anControl.data.capacity.db_bytes) }}</dd><dt>20台是否满足当前预算</dt><dd>{{ anControl.data.capacity.twenty_devices_fit ? '满足预算，仍需观察真实到账' : '不满足，请先扩容或减少开启数量' }}</dd><dt>20台预计存储预算</dt><dd>{{ analyticsCapacityBytes(anControl.data.capacity.twenty_devices_bytes) }}</dd><dt>每设备每日测算事件</dt><dd>{{ analyticsNumber(anControl.data.capacity.daily_events_per_device) }} 条</dd><dt>汇总维护</dt><dd>{{ anControl.data.capacity.maintenance_ok ? '近期完成' : '异常或滞后，暂停新增开启' }}</dd></dl>
+                          <p class="an-note">按未来{{ anControl.data.capacity.horizon_days }}天新增数据保守预测，含索引及最多4份在线库/备份副本。原始记录仍保留14天，事实仍保留90天（本期计{{ anControl.data.capacity.fact_growth_days }}天新增），去重记录持续保留；已有数据占用已从可用空间扣除。另留4 GiB底线和512 MiB余量，容量随剩余磁盘更新，建议每周复评。{{ anControl.data.capacity.sample_warning || '' }}<br>测算时间：{{ analyticsTime(anControl.data.capacity.checked_at_ms) }}</p></template>
+                          <div v-else class="an-status an-error">容量暂不可确认，暂停新增开启；关闭上传仍可操作。</div>
+                          <p class="an-note">每批最多200条 / 2 MiB，独立写入线程串行落盘；忙时返回退避时间，设备保留未确认数据再重试。端侧须串行分批，不能用并发补传冲击服务。</p>
+                        </div>
+                      </div>
+                      <div class="kh-card an-card"><div class="an-section-head"><h2>设备上传范围</h2><span class="an-muted">{{ analyticsControlDevices.length }} 台匹配 / {{ anControl.data.devices.length }} 台注册</span></div>
+                        <div class="an-filters"><label style="flex:1">搜索设备<input class="an-input" v-model="anControl.query" placeholder="SN、末8位或设备备注"></label><label>筛选<select class="an-input" v-model="anControl.filter"><option value="all">全部设备</option><option value="allowed">云端允许上传</option><option value="closed">云端关闭上传</option><option value="selected">待保存已选择</option><option value="disabled">设备已停用</option></select></label><el-button :disabled="anControl.saving || anControl.loading" @click="analyticsControlSelect(true)">全选筛选结果</el-button><el-button :disabled="anControl.saving || anControl.loading" @click="analyticsControlSelect(false)">清空筛选结果</el-button></div>
+                        <div class="an-scroll"><table class="an-table"><thead><tr><th>启用上传（待保存）</th><th>设备 SN</th><th>备注</th><th>设备状态</th><th>当前云端准入</th></tr></thead><tbody><tr v-for="d in analyticsControlDevices" :key="d.sn"><td><el-switch :model-value="anControl.subjects.includes(d.sn)" :disabled="anControl.saving || anControl.loading || (d.status!=='active' && !anControl.subjects.includes(d.sn))" @change="v=>analyticsControlToggle(d.sn,v)"></el-switch></td><td class="an-mono">{{ d.sn }}</td><td>{{ d.note || '—' }}</td><td>{{ d.status==='active' ? '正常' : '停用' }}</td><td>{{ d.upload_allowed===null ? '运行状态未知' : d.upload_allowed ? '允许 · 待设备同步' : '关闭' }}</td></tr><tr v-if="!analyticsControlDevices.length"><td colspan="5">没有匹配设备</td></tr></tbody></table></div>
+                      </div>
+                      <div class="kh-card an-card"><h2>小可的方舟数据验收</h2><p class="an-note">上传成功、授权读取和可回答是三个状态。历史余额附数据发生时间；当前奖励倒计时需要安卓上报新鲜快照，不能从夜间补传推算。</p><div class="an-filters"><label>验收设备<select class="an-input" v-model="anArk.sn" :disabled="anArk.loading || anArk.saving" @change="anArk.seq++;anArk.prompt='';anArk.error=''"><option value="">请选择</option><option v-for="d in anControl.data.devices" :key="d.sn" :value="d.sn">{{ d.sn }}</option></select></label><el-button :loading="anArk.loading" :disabled="!anArk.sn || anArk.saving" @click="previewAnalyticsArk">查看小可可读事实</el-button><el-button :loading="anArk.saving" :disabled="!anArk.sn || anArk.loading" @click="authorizeAnalyticsArk">启用该设备游戏数据问答</el-button></div><div v-if="anArk.error" class="an-status an-error">{{ anArk.error }}</div><pre v-if="anArk.prompt" class="an-pre">{{ anArk.prompt }}</pre></div>
+                    </template>
                   </template>
                 </section>
 
@@ -2378,71 +2545,24 @@
                     </template>
                   </el-dialog>
                 </div>
-                <!-- Worker Brain（每台设备的 prompt/记忆管理，仅 admin） -->
-                <div v-if="khNav==='brain' && canManageInvites" style="flex:1;padding:20px;min-width:0;overflow-y:auto">
-                  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
-                    <div>
-                      <div class="kh-h1">Worker Brain</div>
-                      <div class="kh-sub">每台接入设备的小可大脑 —— 画像 / 五类记忆 / System Prompt。数据与体验台同源（账号维度），此处是设备视角入口</div>
+                <!-- Worker Brain: independent global sections, device detail tabs stay scoped to the selected device -->
+                <div id="worker-brain" v-if="khNav==='brain' && canManageInvites" class="brain-page">
+                  <header class="brain-topbar">
+                    <div class="brain-heading">
+                      <div><div class="kh-h1">Worker Brain</div><div class="kh-sub">按功能管理小可大脑 · 全局设置与设备数据分开查看</div></div>
+                      <el-button size="small" :loading="brainSectionLoading" @click="refreshBrainTab">刷新当前模块</el-button>
                     </div>
-                    <el-button size="small" :loading="brainState.loading" @click="refreshBrainTab">刷新</el-button>
-                  </div>
-                  <!-- 记忆抽取 LLM 配置（全局，2026-08-19）：抽取通道曾钉死 env 静默全灭数周——此卡统一管理，写入即热生效零重启 -->
-                  <div class="kh-card" style="padding:10px 16px;margin-bottom:14px">
-                    <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" @click="extractLlm.open = !extractLlm.open">
-                      <div style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                        <span style="font-weight:700">🔌 记忆抽取 LLM</span>
-                        <template v-if="extractLlm.live">
-                          <el-tag size="small" :type="extractLlm.live.source==='admin' ? 'warning' : 'info'">{{ extractLlm.live.source==='admin' ? '后台配置' : '跟随主对话(env)' }}</el-tag>
-                          <span style="font-family:monospace;font-size:12px;color:#5B6B7B">{{ extractLlm.live.provider }} · {{ extractLlm.live.model }}</span>
-                          <el-tag size="small" :type="extractLlm.live.key_configured ? 'success' : 'danger'" effect="plain">{{ extractLlm.live.key_configured ? 'key 已配 ' + extractLlm.live.api_key_masked : 'key 缺失' }}</el-tag>
-                        </template>
-                      </div>
-                      <el-button size="small" link type="primary">{{ extractLlm.open ? '收起' : '展开配置' }}</el-button>
-                    </div>
-                    <div v-if="extractLlm.open" style="margin-top:12px;padding-top:12px;border-top:1px dashed #E4E9EF">
-                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
-                        <el-select v-model="extractLlm.cfg.provider" size="small" style="width:170px">
-                          <el-option label="跟随主对话（env）" value="inherit"></el-option>
-                          <el-option label="DeepSeek 直连" value="deepseek"></el-option>
-                          <el-option label="MiniMax" value="minimax"></el-option>
-                          <el-option label="Gemini 代理" value="gemini-proxy"></el-option>
-                          <el-option label="火山方舟 doubao" value="volc-ark"></el-option>
-                        </el-select>
-                        <el-input v-model="extractLlm.cfg.model" size="small" placeholder="model（空=该渠道默认）" style="width:220px"></el-input>
-                        <el-input v-model="extractLlm.cfg.base_url" size="small" placeholder="base_url（空=该渠道默认）" style="width:280px"></el-input>
-                        <el-input v-model="extractLlm.cfg.api_key" size="small" type="password" show-password :placeholder="extractLlm.masked ? '已配置 ' + extractLlm.masked + '（留空保持）' : 'API Key（空=用 env 里该渠道的 key）'" style="width:250px"></el-input>
-                      </div>
-                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                        <el-button size="small" type="primary" :loading="extractLlm.loading" @click="saveExtractLlm">保存（立即生效）</el-button>
-                        <el-button size="small" :loading="extractLlm.testing" @click="testExtractLlm">测试连通</el-button>
-                        <span v-if="extractLlm.testResult" :style="{fontSize:'12px', fontWeight:600, color: extractLlm.testResult.reachable ? '#10B981' : '#E45649'}">
-                          {{ extractLlm.testResult.reachable ? '✓ 连通' : '✗ 不通' }} · {{ extractLlm.testResult.provider }}/{{ extractLlm.testResult.model }} · {{ extractLlm.testResult.ms }}ms<template v-if="extractLlm.testResult.sample"> · {{ extractLlm.testResult.sample.slice(0, 40) }}</template>
-                        </span>
-                        <span style="font-size:12px;color:#909399;margin-left:auto">影响：情景记忆/画像/昵称引导三条抽取链；不影响主对话。改完点「测试连通」验一下</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div style="display:flex;gap:16px;align-items:flex-start">
-                    <!-- 左：设备列表 -->
-                    <div class="kh-card" style="width:250px;flex-shrink:0;padding:10px">
-                      <div @click="brainState.selectedSn=''; loadOverview()"
-                           :style="{padding:'10px 8px', borderRadius:'8px', cursor:'pointer', marginBottom:'8px', fontWeight:700, fontSize:'13px', background: !brainState.selectedSn ? '#EFF6FF' : 'transparent', border: !brainState.selectedSn ? '1px solid #BFDBFE' : '1px solid #F2F5F8'}">🌐 全局隔离总览</div>
-                      <div style="font-size:12px;font-weight:700;color:#6B7785;padding:4px 8px 8px">台账设备（{{ deviceData.devices.length }}）</div>
-                      <div v-for="d in deviceData.devices" :key="d.sn" @click="selectBrainDevice(d.sn)"
-                           :style="{padding:'10px 8px', borderRadius:'8px', cursor:'pointer', marginBottom:'4px', background: brainState.selectedSn===d.sn ? '#EFF6FF' : 'transparent', border: brainState.selectedSn===d.sn ? '1px solid #BFDBFE' : '1px solid transparent'}">
-                        <div style="font-family:monospace;font-size:12px;font-weight:700">…{{ d.sn.slice(-8) }}</div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
-                          <span style="font-size:12px;color:#6B7785">{{ d.note || '无备注' }}</span>
-                          <el-tag size="small" :type="d.account_id ? 'success' : 'info'">{{ d.account_id ? 'brain 已开通' : '未开通' }}</el-tag>
-                        </div>
-                      </div>
-                      <div v-if="!deviceData.devices.length" style="padding:12px;font-size:12px;color:#909399">台账为空——先在「设备接入」添加设备</div>
-                    </div>
-                    <!-- 右：brain 面板 -->
-                    <div style="flex:1;min-width:0">
-                      <!-- ═══ 全局隔离总览（2026-08-19）：未选设备 = 全租户对账视图；选设备 = 单台白盒。不变量原则：0 violations 必须配非零 checked 锚 ═══ -->
-                      <template v-if="!brainState.selectedSn">
+                    <nav class="brain-section-tabs" role="tablist" aria-label="Worker Brain 功能模块">
+                      <button v-for="section in brainSections" :key="section.key" :id="'brain-tab-' + section.key" type="button" role="tab"
+                        :aria-selected="brainSection === section.key" :aria-controls="'brain-panel-' + section.key"
+                        :tabindex="brainSection === section.key ? 0 : -1" :class="{active: brainSection === section.key}"
+                        @click="selectBrainSection(section.key)" @keydown="onBrainTabKey($event, section.key)">
+                        {{ section.label }}<span v-if="section.key==='listening' && listeningPanel.dirty" class="brain-unsaved" aria-label="有未保存修改"></span>
+                      </button>
+                    </nav>
+                  </header>
+                  <section id="brain-panel-overview" class="brain-section-panel" v-show="brainSection==='overview'" role="tabpanel" aria-labelledby="brain-tab-overview" tabindex="0">
+
                         <div v-if="brainState.overviewLoading" class="kh-card" style="padding:40px;text-align:center;color:#909399;font-size:13px">正在对全部租户跑隔离自检…</div>
                         <div v-if="!brainState.overviewLoading && !brainState.overview" class="kh-card" style="padding:40px;text-align:center;color:#909399">
                           <div style="margin-bottom:10px">🌐 全局隔离总览</div>
@@ -2463,7 +2583,7 @@
                               <span>系统账号 <b style="font-size:18px;color:#3B7A99">{{ brainState.overview.accounts_total }}</b></span>
                               <span>24h 签发 <b style="font-size:18px;color:#3DBE78">{{ brainState.overview.traffic_24h.ok }}</b> <span style="color:#909399;font-size:12px">拒绝 {{ brainState.overview.traffic_24h.rejected_403 + brainState.overview.traffic_24h.rejected_429 }} · 预热 {{ brainState.overview.traffic_24h.prefetch }}</span></span>
                             </div>
-                            <div style="font-size:12px;color:#6B7785;margin-top:8px">选左侧任一设备可下钻单台隔离白盒（五跳链 + 配置矩阵）；本页是全租户对账视角。</div>
+                            <div style="font-size:12px;color:#6B7785;margin-top:8px">点击下方租户行可进入「设备与记忆」查看单台隔离白盒；本页展示全部租户。</div>
                           </div>
 
                           <!-- 隔离架构图：五层泳道 + 隔离键流转（静态代码事实，动态数据在下方各卡） -->
@@ -2678,7 +2798,28 @@
                             </div>
                           </div>
                         </template>
-                      </template>
+
+                  </section>
+                  <section id="brain-panel-devices" class="brain-section-panel" v-show="brainSection==='devices'" role="tabpanel" aria-labelledby="brain-tab-devices" tabindex="0">
+                  <div class="brain-device-layout">
+                    <!-- 左：设备列表 -->
+                    <div class="kh-card brain-device-list">
+                      <div style="font-size:12px;font-weight:700;color:#6B7785;padding:4px 8px 8px">台账设备（{{ deviceData.devices.length }}）</div>
+                      <div v-for="d in deviceData.devices" :key="d.sn" @click="selectBrainDevice(d.sn)"
+                           :style="{padding:'10px 8px', borderRadius:'8px', cursor:'pointer', marginBottom:'4px', background: brainState.selectedSn===d.sn ? '#EFF6FF' : 'transparent', border: brainState.selectedSn===d.sn ? '1px solid #BFDBFE' : '1px solid transparent'}">
+                        <div style="font-family:monospace;font-size:12px;font-weight:700">…{{ d.sn.slice(-8) }}</div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+                          <span style="font-size:12px;color:#6B7785">{{ d.note || '无备注' }}</span>
+                          <el-tag size="small" :type="d.account_id ? 'success' : 'info'">{{ d.account_id ? 'brain 已开通' : '未开通' }}</el-tag>
+                        </div>
+                      </div>
+                      <div v-if="!deviceData.devices.length" style="padding:12px;font-size:12px;color:#909399">台账为空——先在「设备接入」添加设备</div>
+                    </div>
+                    <!-- 右：brain 面板 -->
+                    <div style="flex:1;min-width:0">
+                      <div v-if="!brainState.selectedSn" class="kh-card brain-device-empty">
+                        <h3>选择一台设备</h3><p>从设备列表进入，查看这台小可的记忆、人格成长、聊天记录和提示词配置。</p>
+                      </div>
                       <template v-else>
                         <div v-if="!brainState.view || !brainState.view.bound" class="kh-card" style="padding:32px;text-align:center">
                           <div style="font-size:15px;font-weight:700;margin-bottom:8px">该设备尚未开通 brain</div>
@@ -2714,7 +2855,7 @@
                             </div>
                           </div>
                           <!-- 三 sub-tab（复刻体验台 PROMPT 工作区）：编辑 / 拼接可视化 / 小可的记忆 -->
-                          <div class="kh-card" style="padding:8px 12px;margin-bottom:14px;display:flex;gap:6px;align-items:center">
+                          <div class="kh-card" style="padding:8px 12px;margin-bottom:14px;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
                             <span style="font-size:11px;letter-spacing:1px;color:#909399;margin-right:6px">PROMPT 工作区</span>
                             <el-button size="small" :type="brainState.subTab==='editor' ? 'primary' : ''" @click="brainState.subTab='editor'">📝 编辑</el-button>
                             <el-button size="small" :type="brainState.subTab==='visual' ? 'primary' : ''" @click="brainState.subTab='visual'">🔬 拼接可视化</el-button>
@@ -3202,6 +3343,16 @@
                                   </el-radio>
                                 </el-radio-group>
                                 <div style="font-size:11px;color:#B0B8C1;margin-top:8px">切档后特质五维立即置为模板值并记入成长账本；人格成长继续在模板附近漂移（每日向模板回落）。温柔度地板 0.5 恒成立。</div>
+                                <div style="border-top:1px solid #F0F2F5;margin-top:12px;padding-top:12px">
+                                  <div style="font-weight:600;margin-bottom:8px">衔接短语触发概率</div>
+                                  <div style="font-size:12px;color:#6B7785;margin-bottom:10px">全局按风格设置，影响使用该风格的所有设备。0% 关闭普通衔接语，100% 每次触发；搜索任务确认、设备操作结果仍正常播报。保存或切换风格后，退出并重新进入语音生效。</div>
+                                  <div v-for="t in growth.styleAvailable" :key="'filler-'+t.key" style="display:flex;gap:10px;align-items:center;margin:6px 0">
+                                    <label :for="'filler-'+t.key" style="width:120px">{{ t.name }}</label>
+                                    <input :id="'filler-'+t.key" v-model.number="growth.fillerPercent[t.key]" type="number" min="0" max="100" step="1" :disabled="!growth.fillerLoaded || growth.fillerSaving" :aria-label="t.name + '衔接短语触发百分比'" style="width:90px;padding:6px 10px;border:1px solid #D6DCE5;border-radius:5px;font:inherit"><span>%</span>
+                                  </div>
+                                  <div v-if="growth.fillerError" role="alert" style="color:#B42318;margin:8px 0">{{ growth.fillerError }}</div>
+                                  <el-button size="small" :disabled="!growth.fillerLoaded" :loading="growth.fillerSaving" @click="saveFillerProbabilities">保存各风格概率</el-button>
+                                </div>
                                 <!-- P2 风格白盒：偏移摘要（相对当前档基线）+ 变化归因时间线 -->
                                 <div style="border-top:1px solid #F0F2F5;margin-top:10px;padding-top:10px">
                                   <div style="font-weight:600;font-size:12.5px;margin-bottom:6px">📈 风格成长白盒 <span style="color:#B0B8C1;font-weight:400;font-size:11px">当前档为锚：偏了多少 / 为什么变 / 什么时候变</span></div>
@@ -3307,6 +3458,114 @@
                   </div>
                   <!-- brain_token 分发已取消（2026-08-20）：多设备架构下身份由房名 SN 自动路由，
                        开通即接入零配置；worker 通行证续签走 scripts/sign-worker-token.ts -->
+
+                  </section>
+                  <section id="brain-panel-listening" class="brain-section-panel" v-show="brainSection==='listening'" role="tabpanel" aria-labelledby="brain-tab-listening" tabindex="0">
+                  <!-- listening-control-card:start -->
+                  <section id="listening-control-card" class="kh-card" style="padding:18px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+                      <div><h3 style="margin:0 0 6px">倾听模式</h3><div class="kh-sub">全局策略与设备名单 · 讲故事、分享、唱歌时先听，再由用户邀请回应</div></div>
+                      <el-button size="small" :loading="listeningPanel.loading" :disabled="listeningPanel.saving" @click="reloadListeningConfig">重新载入</el-button>
+                    </div>
+                    <el-alert v-if="listeningPanel.error" :title="listeningPanel.error" type="error" :closable="false" style="margin-top:12px"></el-alert>
+                    <div v-if="listeningPanel.loading && !listeningPanel.data" style="padding:18px;color:#6B7785">正在读取倾听配置…</div>
+                    <template v-if="listeningPanel.data && listeningPanel.draft">
+                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0">
+                        <el-tag :type="listeningPanel.data.runtime.ready ? 'success' : 'warning'">{{ listeningPanel.data.runtime.ready ? '运行链路已就绪' : '运行链路未就绪' }}</el-tag>
+                        <span>已保存 v{{ listeningPanel.data.config.revision }}</span>
+                        <span>已应用版本：{{ listeningPanel.data.runtime.applied_revision === null ? '尚未确认' : 'v' + listeningPanel.data.runtime.applied_revision }}</span>
+                        <span>倾听中会话：{{ listeningPanel.data.runtime.active_sessions === null ? '暂无运行数据' : listeningPanel.data.runtime.active_sessions }}</span>
+                        <span v-if="listeningPanel.dirty" style="color:#B8741A">有未保存修改</span>
+                      </div>
+                      <el-alert :title="listeningPanel.data.runtime.message" :type="listeningPanel.data.runtime.ready ? 'info' : 'warning'" :closable="false" style="margin-bottom:14px"></el-alert>
+                      <fieldset :disabled="listeningPanel.loading || listeningPanel.saving" style="border:0;padding:0;margin:0">
+                        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:16px">
+                          <label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="listening-enabled" type="checkbox" v-model="listeningPanel.draft.enabled" :disabled="!listeningPanel.data.runtime.ready" @change="markListeningDirty">倾听总闸</label>
+                          <span class="kh-sub">{{ listeningPanel.data.config.enabled ? '已保存开启请求' : '已保存关闭' }} · 实际运行 {{ listeningPanel.data.runtime.effective_enabled ? '已启用' : '未启用' }}</span>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:18px">
+                          <div>
+                            <label for="listening-allowlist" style="display:block;font-weight:600;margin-bottom:8px">目标设备名单</label>
+                            <textarea id="listening-allowlist" v-model="listeningPanel.allowlistText" @input="markListeningDirty" rows="3" placeholder="每行一个完整 MCU SN，例如 BJP00326070803800006" style="box-sizing:border-box;width:100%;padding:10px;border:1px solid #D5DEE7;border-radius:6px;font:13px monospace;resize:vertical"></textarea>
+                            <div class="kh-sub">空名单不授权任何设备；不接受末8位、ADB序号或通配符。</div>
+                          </div>
+                          <div>
+                            <div style="font-weight:600;margin-bottom:10px">允许的场景</div>
+                            <div style="display:flex;gap:16px;margin-bottom:14px;flex-wrap:wrap">
+                              <label v-for="scene in listeningSceneOptions" :key="scene.value"><input type="checkbox" :value="scene.value" v-model="listeningPanel.draft.scenes" @change="markListeningDirty"> {{ scene.label }}</label>
+                            </div>
+                            <label><input id="listening-voice-invitation" type="checkbox" v-model="listeningPanel.draft.tuning.voice_invitation_enabled" @change="markListeningDirty"> 允许明确的语音邀请 / 已协商的语音操作</label>
+                            <div class="kh-sub" style="margin-top:6px">关闭后新进入仅用按钮请求反馈。全程语音操作需新版端云共同协商；唱歌仅认明确呼名的唱后口令，歌词疑问句不触发。安全退出始终保留。</div>
+                          </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px">
+                          <div v-for="field in listeningPanel.data.fields" :key="field.key">
+                            <label :for="'listening-'+field.key" style="display:block;font-size:13px;font-weight:600;margin-bottom:7px">{{ field.label }}</label>
+                            <div style="display:flex;align-items:center;gap:8px"><input :id="'listening-'+field.key" type="number" v-model.number="listeningPanel.draft.tuning[field.key]" :min="field.min" :max="field.max" step="1" @input="markListeningDirty" style="width:110px;padding:8px;border:1px solid #D5DEE7;border-radius:6px;font-size:14px"><span>{{ field.unit }}</span><small style="color:#80909F">{{ field.min }}–{{ field.max }}</small></div>
+                            <div class="kh-sub" style="margin-top:6px">{{ field.hint }}</div>
+                          </div>
+                        </div>
+                      </fieldset>
+                      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:20px">
+                        <el-button type="primary" :loading="listeningPanel.saving" :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.dirty" @click="saveListeningConfig">保存倾听配置</el-button>
+                        <el-button type="danger" plain :disabled="listeningPanel.loading || listeningPanel.saving || !listeningPanel.data.config.enabled" @click="disableListeningMode">关闭总闸</el-button>
+                        <span class="kh-sub">{{ listeningPanel.data.updated_by ? '最近保存：' + listeningPanel.data.updated_by + ' · ' + listeningTime(listeningPanel.data.updated_at) : '尚无保存记录，当前为默认参数' }}</span>
+                      </div>
+                      <div class="kh-sub" style="margin-top:10px">{{ listeningPanel.data.runtime.parameter_effect }}</div>
+                      <details style="margin-top:18px;border-top:1px solid #EDF0F4;padding-top:12px">
+                        <summary style="cursor:pointer;font-weight:600">固定边界与配置历史</summary>
+                        <p class="kh-sub">每帧校验发言许可；一次反馈后回倾听；不播放附和音；不自动写长期画像。租约15秒、每5秒刷新；会话原文/近期/摘要上限12000/4000/1200字。</p>
+                        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0">
+                          <label for="listening-restore-revision">恢复参数版本</label>
+                          <select id="listening-restore-revision" v-model.number="listeningPanel.restoreRevision" :disabled="listeningPanel.saving || listeningPanel.loading" style="padding:7px;border:1px solid #D5DEE7;border-radius:6px"><option value="">请选择</option><option :value="1">v1 · 默认参数</option><option v-for="row in listeningPanel.data.history.filter(function(r){return r.revision !== listeningPanel.data.config.revision;})" :key="row.revision" :value="row.revision">v{{ row.revision }} · {{ row.actor }} · {{ listeningTime(row.at) }}</option></select>
+                          <el-button size="small" :disabled="!listeningPanel.restoreRevision || listeningPanel.saving || listeningPanel.loading" @click="restoreListeningConfig">恢复为新版本</el-button>
+                          <span class="kh-sub">恢复后总闸保持关闭，当前配置与历史记录均保留。</span>
+                        </div>
+                        <table style="width:100%;font-size:12px;border-collapse:collapse;text-align:left"><thead><tr><th>版本</th><th>操作</th><th>操作人</th><th>时间</th></tr></thead><tbody><tr v-for="row in listeningPanel.data.history" :key="row.revision"><td style="padding:7px 0">v{{ row.revision }}</td><td>{{ {save:'保存',disable:'关闭总闸',restore:'恢复参数'}[row.operation] || row.operation }}</td><td>{{ row.actor }}</td><td>{{ listeningTime(row.at) }}</td></tr><tr v-if="!listeningPanel.data.history.length"><td colspan="4" style="padding-top:10px;color:#80909F">暂无修改历史</td></tr></tbody></table>
+                      </details>
+                    </template>
+                  </section>
+                  <!-- listening-control-card:end -->
+
+                  </section>
+                  <section id="brain-panel-extract" class="brain-section-panel" v-show="brainSection==='extract'" role="tabpanel" aria-labelledby="brain-tab-extract" tabindex="0">
+                  <!-- 记忆抽取 LLM 配置（全局，2026-08-19）：抽取通道曾钉死 env 静默全灭数周——此卡统一管理，写入即热生效零重启 -->
+                  <div class="kh-card" style="padding:10px 16px;margin-bottom:14px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                      <div style="font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <span style="font-weight:700">🔌 记忆抽取 LLM</span>
+                        <template v-if="extractLlm.live">
+                          <el-tag size="small" :type="extractLlm.live.source==='admin' ? 'warning' : 'info'">{{ extractLlm.live.source==='admin' ? '后台配置' : '跟随主对话(env)' }}</el-tag>
+                          <span style="font-family:monospace;font-size:12px;color:#5B6B7B">{{ extractLlm.live.provider }} · {{ extractLlm.live.model }}</span>
+                          <el-tag size="small" :type="extractLlm.live.key_configured ? 'success' : 'danger'" effect="plain">{{ extractLlm.live.key_configured ? 'key 已配 ' + extractLlm.live.api_key_masked : 'key 缺失' }}</el-tag>
+                        </template>
+                      </div>
+                    </div>
+                    <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #E4E9EF">
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+                        <el-select v-model="extractLlm.cfg.provider" size="small" style="width:170px">
+                          <el-option label="跟随主对话（env）" value="inherit"></el-option>
+                          <el-option label="DeepSeek 直连" value="deepseek"></el-option>
+                          <el-option label="MiniMax" value="minimax"></el-option>
+                          <el-option label="Gemini 代理" value="gemini-proxy"></el-option>
+                          <el-option label="火山方舟 doubao" value="volc-ark"></el-option>
+                        </el-select>
+                        <el-input v-model="extractLlm.cfg.model" size="small" placeholder="model（空=该渠道默认）" style="width:220px"></el-input>
+                        <el-input v-model="extractLlm.cfg.base_url" size="small" placeholder="base_url（空=该渠道默认）" style="width:280px"></el-input>
+                        <el-input v-model="extractLlm.cfg.api_key" size="small" type="password" show-password :placeholder="extractLlm.masked ? '已配置 ' + extractLlm.masked + '（留空保持）' : 'API Key（空=用 env 里该渠道的 key）'" style="width:250px"></el-input>
+                      </div>
+                      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                        <el-button size="small" type="primary" :loading="extractLlm.loading" @click="saveExtractLlm">保存（立即生效）</el-button>
+                        <el-button size="small" :loading="extractLlm.testing" @click="testExtractLlm">测试连通</el-button>
+                        <span v-if="extractLlm.testResult" :style="{fontSize:'12px', fontWeight:600, color: extractLlm.testResult.reachable ? '#10B981' : '#E45649'}">
+                          {{ extractLlm.testResult.reachable ? '✓ 连通' : '✗ 不通' }} · {{ extractLlm.testResult.provider }}/{{ extractLlm.testResult.model }} · {{ extractLlm.testResult.ms }}ms<template v-if="extractLlm.testResult.sample"> · {{ extractLlm.testResult.sample.slice(0, 40) }}</template>
+                        </span>
+                        <span style="font-size:12px;color:#909399;margin-left:auto">影响：情景记忆/画像/昵称引导三条抽取链；不影响主对话。改完点「测试连通」验一下</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  </section>
                 </div>
                 <!-- 贡献账本 -->
                 <div v-if="khNav==='ledger'" style="flex:1;padding:20px">
@@ -3984,6 +4243,7 @@
 
         function handleAuthError() {
           authSessionEpoch++;
+          resetListeningPanel();
           analyticsReset();
           clearAuth();
           isLoggedIn.value = false;
@@ -4017,11 +4277,13 @@
               // 防后端契约漂移成 {ok:true} 无 token 时误放行
               if (data && data.ok && data.token) {
                 authSessionEpoch++;
+          resetListeningPanel();
                 currentUser.username = loginForm.username;
                 // 用后端返回的真实 role（admin / editor / guest），不再写死 admin。
                 currentUser.role = data.role || 'guest';
                 isLoggedIn.value = true;
                 saveAuth(data.token, loginForm.username, currentUser.role);
+                if (currentPage.value === 'worker' && khNav.value === 'brain') ensureBrainSectionLoaded(true);
                 ElementPlus.ElMessage.success('登录成功');
                 loadThemes();  // 启动加载主题词表（驱动所有 chip 渲染）
                 nextTick(function() { initCharts(); });
@@ -4040,6 +4302,7 @@
         function handleDropdown(cmd) {
           if (cmd === 'logout') {
             authSessionEpoch++;
+          resetListeningPanel();
             analyticsReset();
             clearAuth();
             isLoggedIn.value = false;
@@ -4616,16 +4879,154 @@
           return canManageInvites.value ? khNavs : khNavs.filter(function (n) { return n.k !== 'invites'; });
         });
         // Worker 管理页二级导航（设备接入 / Worker Brain 从 KidsHub 运营台迁出；仅 admin 入口）。
-        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'servers', l: '🖥 服务器状态' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }, { k: 'diaglog', l: '🧾 诊断日志' }, { k: 'analytics', l: '数据埋点' }];
+        var WORKER_NAVS = [{ k: 'devices', l: '设备接入' }, { k: 'search-canary', l: '搜索灰度' }, { k: 'servers', l: '🖥 服务器状态' }, { k: 'brain', l: 'Worker Brain' }, { k: 'hotwords', l: '热词管理' }, { k: 'race', l: '🏇 赛马配置' }, { k: 'voice', l: '🎙 语音链路' }, { k: 'release', l: '🧩 版本与 One-shot' }, { k: 'ota', l: 'OTA 升级' }, { k: 'devcfg', l: '设备配置' }, { k: 'diaglog', l: '🧾 诊断日志' }, { k: 'analytics', l: '数据埋点' }];
 
-        // ── 数据埋点：admin 专属、GET-only、安全摘要 ──
-        var visibleWorkerNavs = computed(function () { return canManageInvites.value ? WORKER_NAVS : WORKER_NAVS.filter(function (n) { return n.k !== 'analytics'; }); });
+        var searchLane=ref('p1');
+        var p1=reactive({data:null,loading:false,saving:false,error:'',seq:0});
+        var routingLaneCache={p1:null,p2:null};
+        function setSearchLane(lane){
+          if(!['p1','p2'].includes(lane)||lane===searchLane.value||routing.busy||p1.saving||canary.saving)return;
+          routingLaneCache[searchLane.value]={data:routing.data,draft:routing.draft,dirty:routing.dirty,editRevision:routing.editRevision,sns:routing.sns,rollbackVersion:routing.rollbackVersion};
+          searchLane.value=lane;routing.seq++;routing.loading=false;routing.error='';routing.notice='';routing.preview=null;
+          Object.assign(routing,routingLaneCache[lane]||{data:null,draft:null,dirty:false,editRevision:0,sns:[],rollbackVersion:''});
+          void loadCanary();
+        }
+        async function loadP1(){
+          if(!canManageInvites.value||p1.loading)return;var seq=++p1.seq,epoch=authSessionEpoch,token=getToken();p1.loading=true;p1.error='';
+          try{var j=await deviceApi('/api/admin/search-canary/p1',{method:'GET'});if(seq!==p1.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'P1 状态不可用');p1.data=j;if(searchLane.value==='p1')void loadRouting();}
+          catch(e){if(seq===p1.seq&&epoch===authSessionEpoch){p1.error=String(e.message||e);p1.data=null;}}
+          finally{if(seq===p1.seq)p1.loading=false;}
+        }
+        async function mutateP1(path,body){
+          if(p1.saving||!canManageInvites.value)return;p1.saving=true;p1.error='';var epoch=authSessionEpoch,token=getToken();
+          try{var j=await deviceApi('/api/admin/search-canary/p1'+path,{method:'PUT',body:JSON.stringify(body)});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'P1 操作失败');p1.seq++;p1.loading=false;await loadP1();}
+          catch(e){if(epoch===authSessionEpoch){p1.error=String(e.message||e);p1.data=null;}}finally{p1.saving=false;}
+        }
+        function setP1Enabled(enabled){return mutateP1('/enabled',{enabled:enabled});}
+        function setP1Excluded(sn,excluded){return mutateP1('/devices/'+encodeURIComponent(sn),{excluded:excluded});}
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){p1.seq++;p1.data=null;p1.loading=false;p1.error='';routingLaneCache={p1:null,p2:null};}});
+        var canary = reactive({loading:false,saving:false,error:'',data:null,selected:'BJP00326070803800006',dirty:false,seq:0});
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){canary.seq++;canary.data=null;canary.dirty=false;canary.loading=false;canary.error='';}});
+        var canarySelectedDevice = computed(function(){return canary.data && canary.data.devices.find(function(d){return d.sn===canary.selected;});});
+        function canaryStateLabel(s){return {closed:'正式窗口未开启',expired:'窗口已到期',blocked:'窗口已配置，暂不可新派单',regression:'关搜索回归窗口',p1:'候选目前仅 P1，P2 尚未开启',p2:'P2 已配置，端到端待验'}[s] || '状态未知';}
+        async function loadCanary(){
+          void loadAmapUsage();
+          if(searchLane.value==='p1')return loadP1();
+          if(!canManageInvites.value || canary.loading)return;
+          var epoch=authSessionEpoch,token=getToken(),seq=++canary.seq;canary.loading=true;canary.error='';
+          try{var j=await deviceApi('/api/admin/search-canary',{method:'GET'});if(seq!==canary.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'加载失败');canary.data=j;if(!canary.dirty)canary.selected=j.selected_sn;if(searchLane.value==='p2')void loadRouting();}
+          catch(e){if(seq===canary.seq&&epoch===authSessionEpoch){canary.error=String(e.message||e);canary.data=null;}}
+          finally{if(seq===canary.seq)canary.loading=false;}
+        }
+        async function saveCanaryDevice(){
+          if(!canary.dirty||canary.saving)return;canary.saving=true;
+          var epoch=authSessionEpoch,token=getToken();
+          try{var j=await deviceApi('/api/admin/search-canary/device',{method:'PUT',body:JSON.stringify({sn:canary.selected})});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'保存失败');canary.dirty=false;ElementPlus.ElMessage.success('已保存待测设备，未开启窗口');await loadCanary();}
+          catch(e){if(epoch===authSessionEpoch)ElementPlus.ElMessage.error(String(e.message||e));}finally{canary.saving=false;}
+        }
+        setInterval(function(){if(!canary.saving&&!document.hidden&&canManageInvites.value&&currentPage.value==='worker'&&khNav.value==='search-canary')loadCanary();},15000);
+
+        var amapUsage=reactive({data:null,loading:false,saving:false,error:'',notice:'',mode:'add',amount:'',pending:null,seq:0});
+        var amapUsageCanSave=computed(function(){var n=Number(amapUsage.amount);return !!amapUsage.data&&!amapUsage.saving&&amapUsage.amount!==''&&Number.isInteger(n)&&n>=(amapUsage.mode==='add'?1:0)&&n<=100000000;});
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){amapUsage.seq++;Object.assign(amapUsage,{data:null,loading:false,saving:false,error:'',notice:'',amount:'',pending:null});}});
+        async function loadAmapUsage(){
+          if(!canManageInvites.value||amapUsage.loading||amapUsage.saving)return;var seq=++amapUsage.seq,epoch=authSessionEpoch,token=getToken();amapUsage.loading=true;
+          try{var j=await deviceApi('/api/admin/search-canary/amap-usage',{method:'GET'});if(seq!==amapUsage.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok||!Number.isInteger(j.remaining)||!Number.isInteger(j.revision))throw new Error('额度暂不可用');amapUsage.data=j;if(!amapUsage.pending&&amapUsage.error.startsWith('额度读取失败'))amapUsage.error='';}
+          catch(e){if(seq===amapUsage.seq&&epoch===authSessionEpoch){amapUsage.data=null;amapUsage.error='额度读取失败，当前剩余未知，请刷新。';}}
+          finally{if(seq===amapUsage.seq)amapUsage.loading=false;}
+        }
+        async function saveAmapUsage(){
+          if(!canManageInvites.value||!amapUsageCanSave.value)return;var epoch=authSessionEpoch,token=getToken();amapUsage.saving=true;amapUsage.error='';amapUsage.notice='';amapUsage.seq++;amapUsage.loading=false;
+          var payload=amapUsage.pending||{request_id:crypto.randomUUID(),mode:amapUsage.mode,amount:Number(amapUsage.amount),expected_revision:amapUsage.data.revision};amapUsage.pending=payload;
+          try{var j=await deviceApi('/api/admin/search-canary/amap-usage',{method:'POST',body:JSON.stringify(payload)});if(epoch!==authSessionEpoch||token!==getToken())return;
+            if(!j.ok){if(['revision_conflict','idempotency_conflict','invalid_request','budget_too_large'].includes(j.error)){amapUsage.pending=null;throw new Error(j.error==='revision_conflict'?'调用量刚有变化，请核对刷新后的额度再登记。':'登记未生效，请检查次数后重试。');}throw new Error('结果暂未确认，请重试本次登记；相同请求不会重复入账。');}
+            amapUsage.data=Object.assign({},j,{runtime:amapUsage.data&&amapUsage.data.runtime});amapUsage.pending=null;amapUsage.amount='';amapUsage.notice='额度已登记，历史调用记录已保留。';
+          }catch(e){if(epoch===authSessionEpoch&&token===getToken())amapUsage.error=amapUsage.pending?'结果暂未确认，请重试本次登记；相同请求不会重复入账。':String(e.message||e);}
+          finally{if(epoch===authSessionEpoch&&token===getToken()){amapUsage.saving=false;if(!amapUsage.pending)void loadAmapUsage();}}
+        }
+
+        var routing=reactive({data:null,draft:null,loading:false,busy:false,dirty:false,error:'',notice:'',seq:0,editRevision:0,sns:[],rollbackVersion:'',utterances:'今天北京的天气\n我今天画了一只猫',preview:null});
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){routing.seq++;routing.data=null;routing.draft=null;routing.loading=false;routing.busy=false;routing.error='';routing.notice='';routing.preview=null;routing.dirty=false;routing.sns=[];}});
+        function routingDirty(){routing.dirty=true;routing.preview=null;routing.notice='';}
+        function routingPhrases(r,k,e){r[k]=e.target.value.split(/[、，,\n]/).map(function(t){return t.trim();}).filter(Boolean);routingDirty();}
+        function routingAdd(){routing.draft.rules.push({id:'custom-'+Date.now(),enabled:true,priority:100,action:'search',mode:'prefix',triggers:['帮我打听一下'],exclude:[]});routingDirty();}
+        function routingRemove(id){routing.draft.rules=routing.draft.rules.filter(function(r){return r.id!==id;});routingDirty();}
+        function routingActionLabel(a){return {search:'后台查询',replace:'替换查询',cancel:'取消查询',resume:'续讲结果',clarify:'追问主题',clarify_city:'追问城市',chat:'继续聊天'}[a]||a;}
+        function routingLoadLabel(t){if(t.sn==='*')return '已有 '+routing.data.loads.filter(function(v){return v.version===t.version;}).length+' 台设备会话确认加载（非当前在线证明）';var l=routing.data.loads.find(function(v){return v.sn===t.sn;});if(!l)return '待设备会话加载，尚无 Worker 确认';return (l.version===t.version?'Worker 已加载此版本':'Worker 仍为 '+l.version)+' · 确认时间 '+analyticsTime(l.at)+(Date.now()-l.at>15000?'（非当前在线证明）':'');}
+        function routingError(e){var s=String(e.message||e);return ({revision_conflict:'草稿被其他操作修改，请刷新核对后重试',outside_canary_scope:'所选设备已不在准备范围',routing_regression_failed:'固定话术回归未通过，未发布',preview_unavailable:'预览程序暂不可用，未发布',preview_timeout:'预览超时，未发布',invalid_request:'配置格式不合法，请检查规则与表达长度'})[s]||s;}
+        function routingEndpoint(){return searchLane.value==='p1'?'/api/admin/search-canary/p1/routing':'/api/admin/search-canary/routing';}
+        function routingAccept(j,replaceDraft){if(!j.ok||!j.draft||!Number.isInteger(j.revision))throw new Error(j.error||'路由状态暂不可用');routing.data=j;if(replaceDraft){routing.draft=JSON.parse(JSON.stringify(j.draft));routing.editRevision=j.revision;routing.dirty=false;}if(j.eligible_sns)routing.sns=routing.sns.filter(function(sn){return j.eligible_sns.includes(sn);});}
+        async function loadRouting(){
+          if(!canManageInvites.value||routing.loading||routing.busy)return;var seq=++routing.seq,epoch=authSessionEpoch,token=getToken();routing.loading=true;routing.error='';
+          try{var j=await deviceApi(routingEndpoint(),{method:'GET'});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;routingAccept(j,!routing.dirty);if(!routing.sns.length&&j.eligible_sns.includes(canary.selected))routing.sns=[canary.selected];}
+          catch(e){if(seq===routing.seq&&epoch===authSessionEpoch){routing.error=routingError(e);routing.data=null;}}
+          finally{if(seq===routing.seq)routing.loading=false;}
+        }
+        async function routingMutation(path,method,body,onSuccess){
+          if(routing.busy||!canManageInvites.value)return;var seq=++routing.seq,epoch=authSessionEpoch,token=getToken();routing.loading=false;routing.busy=true;routing.error='';routing.notice='';
+          try{var j=await deviceApi(routingEndpoint()+path,{method:method,body:JSON.stringify(body)});if(seq!==routing.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok){var details=j.regression&&j.regression.failures?j.regression.failures.map(function(f){return f.text+'：应为'+routingActionLabel(f.expected)+'，实际'+routingActionLabel(f.actual);}).join('；'):'';throw new Error(details||j.error||'操作失败');}onSuccess(j);}
+          catch(e){if(seq===routing.seq&&epoch===authSessionEpoch)routing.error=routingError(e);}
+          finally{if(seq===routing.seq)routing.busy=false;}
+        }
+        function saveRoutingDraft(){return routingMutation('/draft','PUT',{expected_revision:routing.editRevision,config:routing.draft},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='草稿已保存，运行版本未改变';});}
+        function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.notice='预览完成，没有执行搜索';});}
+        function publishRouting(){return routingMutation(searchLane.value==='p1'?'/publish-all':'/publish','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision}:{expected_revision:routing.data.revision,sns:routing.sns},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='路由已发布；等待 Worker 加载确认，不等于真机实听通过';});}
+        function rollbackRouting(){return routingMutation(searchLane.value==='p1'?'/rollback-all':'/rollback','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision,version:routing.rollbackVersion}:{expected_revision:routing.data.revision,sns:routing.sns,version:routing.rollbackVersion},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,!routing.dirty);routing.notice=searchLane.value==='p1'?'全量路由已回滚发布，等待 Worker 确认':'所选设备已回滚发布，等待 Worker 确认';});}
+
+        // ── 数据埋点：admin 专属、上传控制与安全摘要 ──
+        var visibleWorkerNavs = computed(function () { return canManageInvites.value ? WORKER_NAVS : WORKER_NAVS.filter(function (n) { return n.k !== 'analytics' && n.k !== 'search-canary'; }); });
         function analyticsSection() { return { loading:false, error:'', stale:false, data:null, seq:0 }; }
         function analyticsDay(ms) { return new Date(ms + 8 * 3600000).toISOString().slice(0,10); }
         var analyticsFilters = reactive({ from:analyticsDay(Date.now()-13*86400000), to:analyticsDay(Date.now()), dimension:'occurred', alias:'' });
         var analytics = reactive({ tab:'overview', overview:analyticsSection(), daily:analyticsSection(), health:analyticsSection(), batches:analyticsSection(), batchDevices:analyticsSection(), events:analyticsSection(), registry:analyticsSection(), config:analyticsSection(), batchOffset:0, eventOffset:0, limit:25, requestId:'', eventId:'', eventQuery:'', catalogSearch:'', catalogGroup:'', catalogDetail:null, batchDetail:null, selectedDay:'', group:'activity' });
-        var analyticsTabs = [{k:'overview',l:'概览'},{k:'batches',l:'上传批次'},{k:'events',l:'事件对账'},{k:'registry',l:'57事件目录'},{k:'config',l:'采集配置'}];
+        var analyticsTabs = [{k:'overview',l:'概览'},{k:'batches',l:'上传批次'},{k:'events',l:'事件对账'},{k:'registry',l:'事件目录'},{k:'config',l:'上传管理'},{k:'tiering',l:'分层与按需'}];
         var analyticsGroupDefs = [{k:'activity',l:'设备与会话',hint:'设备键 / 应用会话去重'}, {k:'g1_flow',l:'G1 主流程',hint:'主流程语义事件计数'}, {k:'logical_day_ecotank',l:'逻辑日与生态缸',hint:'逻辑日、进度与生态缸'}, {k:'rewards_makeup',l:'奖励与补签',hint:'实际发奖与奖励实例'}, {k:'settings',l:'设置使用',hint:'设置相关事件计数'}, {k:'voice_state',l:'语音状态',hint:'KidsHubAI-VoiceKit 状态事件'}, {k:'command_failures',l:'命令失败',hint:'按命令与受控错误分组'}];
+        var anControl=reactive({data:null,loading:false,saving:false,error:'',notice:'',query:'',filter:'all',subjects:[],enabled:false,hour:23,dirty:false,seq:0});
+        var anArk=reactive({sn:'',loading:false,saving:false,error:'',prompt:'',seq:0});
+        var anTier=reactive({sn:'',data:null,draft:{},loading:false,saving:false,error:'',notice:'',seq:0,minutes:60,maxEvents:100,lookback:3,allowed:[]});
+        function analyticsTierError(e){return ({POLICY_CONFLICT:'配置已更新，请重新读取再保存。',DEVICE_UPLOAD_NOT_ENABLED:'该设备未获准上传，请先核对上传管理。',ANALYTICS_UNAVAILABLE:'接收服务暂不可用，不能新增开启。',INVALID_TIER_SETTINGS:'配置不合法：本轮周期固定7天，请核对各项范围。',INVALID_DIAGNOSTIC_REQUEST:'请求参数不合法，请核对事件、有效期和限额。',TIERING_NOT_ENABLED:'请先保存本地分层与周期聚合双开关。',DIAGNOSTIC_REQUEST_LIMIT:'该设备24小时内请求次数已达上限。'})[e&&e.message]||String(e&&e.message||'操作失败');}
+        async function openAnalyticsTier(){await loadAnalyticsControl();if(!anTier.sn&&anControl.data&&anControl.data.devices.length)anTier.sn=(anControl.data.devices.find(d=>d.upload_allowed)||anControl.data.devices[0]).sn;if(anTier.sn)await loadAnalyticsTier();}
+        async function loadAnalyticsTier(){
+          if(!canManageInvites.value||!anTier.sn||anTier.saving)return;var sn=anTier.sn,seq=++anTier.seq,epoch=authSessionEpoch,token=getToken();anTier.loading=true;anTier.error='';anTier.data=null;
+          try{var j=await deviceApi('/api/admin/analytics/tiering/'+encodeURIComponent(sn),{method:'GET'});if(seq!==anTier.seq||sn!==anTier.sn||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'ANALYTICS_UNAVAILABLE');anTier.data=j;anTier.draft=Object.fromEntries(Object.entries(j.analytics).filter(([k])=>!['on_demand_upload_enabled','on_demand_request_id','event_upload_enabled','daily_upload_hour_cst'].includes(k)));anTier.allowed=j.allowed_event_names.slice();}
+          catch(e){if(seq===anTier.seq&&epoch===authSessionEpoch)anTier.error=analyticsTierError(e);}finally{if(seq===anTier.seq)anTier.loading=false;}
+        }
+        async function analyticsTierMutation(path,method,body){
+          if(!canManageInvites.value||!anTier.data||anTier.saving||anTier.loading)return;var sn=anTier.sn,epoch=authSessionEpoch,token=getToken();anTier.saving=true;anTier.error='';anTier.notice='';
+          try{var j=await deviceApi('/api/admin/analytics/tiering/'+encodeURIComponent(sn)+path,{method:method,...(body?{body:JSON.stringify(body)}:{})});if(sn!==anTier.sn||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'ANALYTICS_UNAVAILABLE');anTier.notice='云端已保存，正在回读；设备配置应用与真实上传仍待核验。';anTier.saving=false;await loadAnalyticsTier();}
+          catch(e){if(sn===anTier.sn&&epoch===authSessionEpoch)anTier.error=analyticsTierError(e);}finally{if(epoch===authSessionEpoch)anTier.saving=false;}
+        }
+        function saveAnalyticsTier(){return analyticsTierMutation('','PUT',{expected_revision:anTier.data.revision,settings:anTier.draft});}
+        function createAnalyticsDiagnostic(){return analyticsTierMutation('/requests','POST',{expected_revision:anTier.data.revision,allowed_event_names:anTier.allowed.slice(),ttl_seconds:anTier.minutes*60,max_events:anTier.maxEvents,lookback_days:anTier.lookback});}
+        function revokeAnalyticsDiagnostic(id){return analyticsTierMutation('/requests/'+encodeURIComponent(id),'DELETE');}
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){anTier.seq++;anTier.sn='';anTier.data=null;anTier.draft={};anTier.allowed=[];anTier.loading=false;anTier.saving=false;anTier.error='';anTier.notice='';}});
+        function analyticsCapacityBytes(n){return n==null?'未知':(Number(n)/1073741824).toFixed(2)+' GiB';}
+        var analyticsControlDevices=computed(function(){return ((anControl.data||{}).devices||[]).filter(function(d){var match=(d.sn+' '+d.note).toLowerCase().includes(anControl.query.trim().toLowerCase());return match&&(anControl.filter==='all'||anControl.filter==='allowed'&&d.upload_allowed||anControl.filter==='closed'&&!d.upload_allowed||anControl.filter==='selected'&&anControl.subjects.includes(d.sn)||anControl.filter==='disabled'&&d.status!=='active');});});
+        function analyticsControlToggle(sn,on){if(anControl.saving||anControl.loading)return;anControl.subjects=anControl.subjects.filter(function(s){return s!==sn;});if(on)anControl.subjects.push(sn);anControl.dirty=true;}
+        function analyticsControlSelect(on){analyticsControlDevices.value.filter(function(d){return !on||d.status==='active';}).forEach(function(d){analyticsControlToggle(d.sn,on);});}
+        function analyticsControlError(e){return ({CAPACITY_LIMIT:'选择数量超过当前容量上限，请减少设备或先扩容。',CAPACITY_UNAVAILABLE:'容量暂不可确认，新增开启已阻止；关闭仍可操作。',POLICY_CONFLICT:'配置已被其他窗口修改，请重新读取后再保存。',DEVICE_NOT_ACTIVE:'部分设备已停用或移除，请刷新列表。',ANALYTICS_CONTROL_UNAVAILABLE:'上传管理暂不可用，请刷新重试。',POLICY_SAVE_FAILED:'保存失败，配置未提交，请重新读取确认。'})[e&&e.message]||String(e&&e.message||'操作失败');}
+        async function loadAnalyticsControl(){
+          if(!canManageInvites.value||anControl.saving)return;var seq=++anControl.seq,epoch=authSessionEpoch,token=getToken();anControl.loading=true;anControl.error='';
+          try{var j=await deviceApi('/api/admin/analytics/control',{method:'GET'});if(seq!==anControl.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'ANALYTICS_CONTROL_UNAVAILABLE');anControl.data=j;anControl.subjects=j.policy.subjects.slice();anControl.enabled=j.policy.enabled;anControl.hour=j.policy.hour;anControl.dirty=false;}
+          catch(e){if(seq===anControl.seq&&epoch===authSessionEpoch){anControl.error=analyticsControlError(e);anControl.data=null;}}finally{if(seq===anControl.seq)anControl.loading=false;}
+        }
+        async function saveAnalyticsControl(){
+          if(anControl.saving||!anControl.data||!canManageInvites.value)return;var epoch=authSessionEpoch,token=getToken();anControl.saving=true;anControl.error='';anControl.notice='';
+          var p={expected_revision:anControl.data.policy.revision,enabled:anControl.enabled,subjects:anControl.subjects.slice(),hour:anControl.hour};
+          try{var j=await deviceApi('/api/admin/analytics/control',{method:'PUT',body:JSON.stringify(p)});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'POLICY_SAVE_FAILED');anControl.notice='上传设置已保存；云端准入已更新，设备应用及真实到账仍需观察。';anControl.saving=false;await loadAnalyticsControl();}
+          catch(e){if(epoch===authSessionEpoch)anControl.error=analyticsControlError(e);}finally{if(epoch===authSessionEpoch)anControl.saving=false;}
+        }
+        async function previewAnalyticsArk(afterAuthorize){
+          var sn=anArk.sn;if(!sn||anArk.loading||anArk.saving&&afterAuthorize!==true||!canManageInvites.value)return;var seq=++anArk.seq,epoch=authSessionEpoch,token=getToken();anArk.loading=true;anArk.error='';anArk.prompt='';
+          try{var j=await deviceApi('/v1/device/ark/admin/preview?sn='+encodeURIComponent(sn),{method:'GET'});if(seq!==anArk.seq||sn!==anArk.sn||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'预览暂不可用');anArk.prompt=j.prompt||'该设备尚未授权或身份未就绪，目前没有可读取的方舟事实。';}
+          catch(e){if(seq===anArk.seq&&sn===anArk.sn&&epoch===authSessionEpoch&&token===getToken())anArk.error=String(e.message||e);}finally{if(seq===anArk.seq)anArk.loading=false;}
+        }
+        async function authorizeAnalyticsArk(){
+          var sn=anArk.sn;if(!sn||anArk.saving||anArk.loading||!canManageInvites.value)return;var epoch=authSessionEpoch,token=getToken();anArk.saving=true;anArk.error='';
+          try{var r=await deviceApi('/v1/device/ark/admin/devices/'+encodeURIComponent(sn)+'/authorize',{method:'PUT',body:'{}'});if(epoch!==authSessionEpoch||token!==getToken())return;if(!r.ok)throw new Error(r.error||'授权失败');await previewAnalyticsArk(true);}
+          catch(e){if(epoch===authSessionEpoch)anArk.error=String(e.message||e);}finally{if(epoch===authSessionEpoch)anArk.saving=false;}
+        }
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){anControl.seq++;anControl.data=null;anControl.subjects=[];anControl.dirty=false;anControl.loading=false;anControl.saving=false;anControl.error='';anControl.notice='';anArk.seq++;anArk.sn='';anArk.prompt='';anArk.error='';anArk.loading=false;anArk.saving=false;}});
         function analyticsNumber(n) { return n == null ? '—' : Number(n).toLocaleString('zh-CN'); }
         function analyticsTime(ms) { return ms == null ? '暂无' : new Date(ms).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}); }
         function analyticsHour(n) { return n == null ? '—' : String(n).padStart(2,'0') + ':00'; }
@@ -4673,7 +5074,8 @@
               b.set('limit',String(analytics.limit));b.set('offset',String(analytics.batchOffset));if(analytics.requestId.trim())b.set('request_id',analytics.requestId.trim());analyticsRead('batches','batches?'+b);
             } catch(e) { analyticsInvalidate('batches',e);analyticsInvalidate('batchDevices',e); }
           } else if (analytics.tab==='registry') { analytics.catalogDetail=null;analyticsRead('registry','registry'); }
-          else if (analytics.tab==='config') analyticsRead('config','collection-config');
+          else if (analytics.tab==='config') loadAnalyticsControl();
+          else if (analytics.tab==='tiering') openAnalyticsTier();
           else if (analytics.tab==='events' && analytics.eventQuery) analyticsLookup(false);
         }
         function analyticsSetTab(k) { analytics.tab=k;analyticsRefresh(); }
@@ -5803,9 +6205,121 @@
           } else { fallback(); }
         }
         // ── Worker Brain（每设备 prompt/记忆管理；数据挂 brain 账号维度）──
+        // listening-control-state:start
+        var listeningSceneOptions = [{value:'story',label:'讲故事'},{value:'sharing',label:'分享'},{value:'singing',label:'唱歌'}];
+        var listeningPanel = reactive({data:null,draft:null,allowlistText:'',loading:false,saving:false,dirty:false,error:'',seq:0,restoreRevision:''});
+        function listeningTime(ts) { return ts ? new Date(ts).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false}) : '—'; }
+        function resetListeningPanel() {
+          if (!listeningPanel) return;
+          listeningPanel.seq++;listeningPanel.data=null;listeningPanel.draft=null;listeningPanel.allowlistText='';
+          listeningPanel.loading=false;listeningPanel.saving=false;listeningPanel.dirty=false;listeningPanel.error='';listeningPanel.restoreRevision='';
+        }
+        function markListeningDirty() { listeningPanel.dirty=true; }
+        function acceptListeningConfig(data) {
+          listeningPanel.data=data;listeningPanel.draft=JSON.parse(JSON.stringify(data.config));
+          delete listeningPanel.draft.revision;delete listeningPanel.draft.schema_version;
+          listeningPanel.allowlistText=data.config.allowlist.join('\n');listeningPanel.dirty=false;listeningPanel.restoreRevision='';
+        }
+        async function loadListeningConfig() {
+          if (!canManageInvites.value || listeningPanel.loading || listeningPanel.saving || listeningPanel.dirty) return;
+          var seq=++listeningPanel.seq,epoch=authSessionEpoch,token=getToken();listeningPanel.loading=true;listeningPanel.error='';
+          try {
+            var data=await deviceApi('/api/admin/worker-voice/listening');
+            if(seq!==listeningPanel.seq || epoch!==authSessionEpoch || token!==getToken()) return;
+            if(!data || !data.ok) throw new Error(data && data.error || '配置读取失败');
+            if(!listeningPanel.dirty) acceptListeningConfig(data);
+          } catch(e) {
+            if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) {listeningPanel.error=e.message || '配置读取失败';listeningPanel.data=null;}
+          } finally { if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) listeningPanel.loading=false; }
+        }
+        async function reloadListeningConfig() {
+          if(listeningPanel.loading || listeningPanel.saving) return;
+          var epoch=authSessionEpoch,token=getToken();
+          if(listeningPanel.dirty) {
+            try {await ElementPlus.ElMessageBox.confirm('重新载入会舍弃当前未保存修改。','重新载入倾听配置',{type:'warning',confirmButtonText:'重新载入',cancelButtonText:'保留修改'});} catch(e) {return;}
+          }
+          if(epoch!==authSessionEpoch || token!==getToken()) return;
+          listeningPanel.dirty=false;await loadListeningConfig();
+        }
+        async function writeListeningConfig(suffix,method,body) {
+          if(!canManageInvites.value || listeningPanel.saving || listeningPanel.loading || !listeningPanel.data) return;
+          var seq=++listeningPanel.seq,epoch=authSessionEpoch,token=getToken();listeningPanel.saving=true;listeningPanel.error='';
+          try {
+            var data=await deviceApi('/api/admin/worker-voice/listening'+suffix,{method:method,body:JSON.stringify(body)});
+            if(seq!==listeningPanel.seq || epoch!==authSessionEpoch || token!==getToken()) return;
+            if(!data || !data.ok) throw new Error(data && data.error || '配置保存失败');
+            acceptListeningConfig(data);
+            ElementPlus.ElMessage.success(data.runtime.ready ? '配置已保存，请核对实际应用状态' : '配置已保存；运行链路尚未接入，当前未生效');
+          } catch(e) {
+            if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) listeningPanel.error=e.message || '保存失败，请重试';
+          } finally {if(seq===listeningPanel.seq && epoch===authSessionEpoch && token===getToken()) listeningPanel.saving=false;}
+        }
+        async function saveListeningConfig() {
+          if(!listeningPanel.draft || !listeningPanel.data || !listeningPanel.dirty) return;
+          var settings=JSON.parse(JSON.stringify(listeningPanel.draft));
+          settings.allowlist=listeningPanel.allowlistText.trim() ? listeningPanel.allowlistText.trim().split(/[\s,，;；]+/) : [];
+          var bad=listeningPanel.data.fields.some(function(f){var n=settings.tuning[f.key];return !Number.isInteger(n)||n<f.min||n>f.max;});
+          if(bad || !settings.scenes.length) {listeningPanel.error='请至少选择一个场景，并按范围填写整数参数';return;}
+          await writeListeningConfig('','PUT',{expected_revision:listeningPanel.data.config.revision,settings:settings});
+        }
+        async function disableListeningMode() {
+          if(!listeningPanel.data || listeningPanel.saving || listeningPanel.loading) return;
+          await writeListeningConfig('/disable','POST',{});
+        }
+        async function restoreListeningConfig() {
+          if(!listeningPanel.restoreRevision || !listeningPanel.data || listeningPanel.saving || listeningPanel.loading) return;
+          var revision=listeningPanel.restoreRevision, expected=listeningPanel.data.config.revision,epoch=authSessionEpoch,token=getToken();
+          try {await ElementPlus.ElMessageBox.confirm('恢复 v'+revision+' 的参数为一个新版本，总闸保持关闭。当前未保存修改会舍弃。','恢复倾听配置',{type:'warning',confirmButtonText:'恢复参数',cancelButtonText:'取消'});} catch(e) {return;}
+          if(epoch!==authSessionEpoch || token!==getToken() || expected!==listeningPanel.data?.config.revision) return;
+          await writeListeningConfig('/restore','POST',{expected_revision:expected,revision:revision});
+        }
+        // listening-control-state:end
+        // brain-sections:start
+        var brainSection = ref('overview');
+        var brainSections = [
+          { key: 'overview', label: '全局隔离总览' }, { key: 'devices', label: '设备与记忆' },
+          { key: 'listening', label: '倾听模式' }, { key: 'extract', label: '记忆抽取 LLM' }
+        ];
+        var brainSectionLoading = computed(function () {
+          if (brainSection.value === 'overview') return brainState.overviewLoading;
+          if (brainSection.value === 'listening') return listeningPanel.loading;
+          if (brainSection.value === 'extract') return extractLlm.reading || extractLlm.loading;
+          return brainState.loading;
+        });
+        function ensureBrainSectionLoaded(afterLogin) {
+          if (brainSection.value === 'overview' && (afterLogin || !brainState.overview) && !brainState.overviewLoading) loadOverview();
+          if (brainSection.value === 'listening' && (afterLogin || !listeningPanel.data) && !listeningPanel.loading) loadListeningConfig();
+          if (brainSection.value === 'extract' && (afterLogin || !extractLlm.live) && !extractLlm.reading) loadExtractLlm();
+          if (brainSection.value === 'devices') {
+            if (afterLogin || !deviceData.devices.length) loadDevices();
+            if (afterLogin && brainState.selectedSn) {
+              loadBrain(brainState.selectedSn);
+              if (brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
+              if (brainState.subTab === 'growth') loadGrowth(brainState.selectedSn);
+            }
+          }
+        }
+        function selectBrainSection(key) {
+          if (!brainSections.some(function (section) { return section.key === key; })) return;
+          brainSection.value = key;
+          ensureBrainSectionLoaded();
+          nextTick(function () { var page = document.getElementById('worker-brain'); if (page) page.scrollTop = 0; });
+        }
+        function onBrainTabKey(event, key) {
+          var index = brainSections.findIndex(function (section) { return section.key === key; });
+          if (event.key === 'ArrowRight') index = (index + 1) % brainSections.length;
+          else if (event.key === 'ArrowLeft') index = (index + brainSections.length - 1) % brainSections.length;
+          else if (event.key === 'Home') index = 0;
+          else if (event.key === 'End') index = brainSections.length - 1;
+          else return;
+          event.preventDefault();
+          selectBrainSection(brainSections[index].key);
+          nextTick(function () { var tab = document.getElementById('brain-tab-' + brainSections[index].key); if (tab) tab.focus({ preventScroll: true }); });
+        }
+        // brain-sections:end
         var brainState = reactive({ whitebox: null, selectedSn: '', loading: false, view: null, showPrompt: false, subTab: 'memory', memView: 'list', cfgDirty: false, expandedLayer: '', graphSelected: '', isolation: null, isolationLoading: false, overview: null, overviewLoading: false });
         // 人格成长 tab（2026-09-01 重建）：probe 概览 + growth-events 时间线 + M3/M6 手动跑 + 两档重置
-        var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, styleSetAt: null, styleSource: null, styleEvents: [] });
+        var growth = reactive({ snapshots: [], rollbackDay: '', rollingBack: false, probe: null, loading: false, error: '', events: [], eventsTotal: 0, evModule: '', running: false, resetting: false, styleTemplate: 'default', stylePicked: 'default', styleAvailable: [], styleSaving: false, fillerPercent: {}, fillerLoaded: false, fillerSaving: false, fillerError: '', styleSetAt: null, styleSource: null, styleEvents: [] });
         function traitVal(dim) {
           var cur = growth.probe && growth.probe.trait && growth.probe.trait.current;
           if (cur && typeof cur[dim] === 'number') return cur[dim];
@@ -5859,6 +6373,7 @@
         }
         // 说话风格模板（P0 2026-09-01）：家长/运营选风格档——特质值立即置为模板五维，成长在模板附近继续。
         function loadStyleTemplate(sn) {
+          loadFillerProbabilities();
           if (!sn) return;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template')
             .then(function (data) {
@@ -5869,6 +6384,31 @@
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/growth-events?module=trait&limit=8')
             .then(function (data) { if (data && data.ok) growth.styleEvents = data.events || []; })
             .catch(function () {});
+        }
+        function loadFillerProbabilities() {
+          growth.fillerLoaded = false; growth.fillerError = '';
+          deviceApi('/api/admin/worker-voice/filler-probabilities').then(function (data) {
+            if (!data || !data.ok) throw new Error('读取失败');
+            ['default', 'chatty', 'quiet', 'funny'].forEach(function (key) { growth.fillerPercent[key] = Math.round(data.probabilities[key] * 100); });
+            growth.fillerLoaded = true;
+          }).catch(function () { growth.fillerError = '衔接概率读取失败，请重新打开此设备'; });
+        }
+        function saveFillerProbabilities() {
+          if (!growth.fillerLoaded || growth.fillerSaving) return;
+          var probabilities = {}; var valid = true;
+          ['default', 'chatty', 'quiet', 'funny'].forEach(function (key) {
+            var value = growth.fillerPercent[key];
+            if (!Number.isInteger(value) || value < 0 || value > 100) valid = false;
+            probabilities[key] = value / 100;
+          });
+          if (!valid) { growth.fillerError = '请完整填写 0–100 的整数百分比'; return; }
+          growth.fillerSaving = true; growth.fillerError = '';
+          deviceApi('/api/admin/worker-voice/filler-probabilities', { method: 'PUT', body: JSON.stringify({ probabilities: probabilities }) })
+            .then(function (data) {
+              if (!data || !data.ok) throw new Error((data && data.error) || '保存失败');
+              ElementPlus.ElMessage.success('各风格概率已保存，设备重新进入语音后生效');
+            }).catch(function (e) { growth.fillerError = e.message || '保存失败，请重试'; })
+            .finally(function () { growth.fillerSaving = false; });
         }
         function styleTplName(key) {
           var hit = growth.styleAvailable.filter(function (t) { return t.key === key; })[0];
@@ -5893,7 +6433,7 @@
           growth.styleSaving = true;
           deviceApi('/api/admin/devices/' + encodeURIComponent(sn) + '/style-template', { method: 'PUT', body: JSON.stringify({ template: growth.stylePicked }) })
             .then(function (data) {
-              if (data && data.ok) { ElementPlus.ElMessage.success('风格已切换为「' + (growth.styleAvailable.filter(function (t) { return t.key === data.template; })[0] || {}).name + '」，语音下一轮生效'); loadGrowth(sn); }
+              if (data && data.ok) { ElementPlus.ElMessage.success('风格已切换为「' + (growth.styleAvailable.filter(function (t) { return t.key === data.template; })[0] || {}).name + '」，衔接概率在重新进入语音后生效'); loadGrowth(sn); }
               else ElementPlus.ElMessage.warning((data && data.error) || '设置失败');
             })
             .catch(function () { ElementPlus.ElMessage.error('无法连接设备服务'); })
@@ -5937,8 +6477,9 @@
         var brainProfileDraft = reactive({ nickname: '', birthday: '', gender: '', dirty: false });
         var parentBind = reactive({ input: '' });
         // 记忆抽取 LLM 配置（全局热生效）：api_key 永不回显——GET 只给尾 4 位掩码，输入框留空=保留旧 key
-        var extractLlm = reactive({ open: false, loading: false, testing: false, live: null, masked: '', testResult: null, cfg: { provider: 'inherit', base_url: '', model: '', api_key: '' } });
+        var extractLlm = reactive({ reading: false, open: true, loading: false, testing: false, live: null, masked: '', testResult: null, cfg: { provider: 'inherit', base_url: '', model: '', api_key: '' } });
         function loadExtractLlm() {
+          extractLlm.reading = true;
           deviceApi('/api/admin/extract-llm', { method: 'GET' })
             .then(function (data) {
               if (!data || !data.ok) return;
@@ -5951,7 +6492,8 @@
               }
               extractLlm.cfg.api_key = '';
             })
-            .catch(function () { /* 静默：卡片不阻塞 brain tab */ });
+            .catch(function () { /* 配置读取失败仍可用刷新重试 */ })
+            .finally(function () { extractLlm.reading = false; });
         }
         function saveExtractLlm() {
           extractLlm.loading = true;
@@ -6105,6 +6647,7 @@
         }
         function selectBrainDevice(sn) {
           brainState.selectedSn = sn;
+          selectBrainSection('devices');
           brainState.showPrompt = false;
           brainState.isolation = null; // 换设备必清旧隔离视图——隔离面板自己串台展示旧设备数据是最讽刺的 bug
           resetGrowthView();
@@ -6113,6 +6656,13 @@
           if (brainState.subTab === 'growth') loadGrowth(sn);
         }
         function refreshBrainTab() {
+          if (brainSection.value === 'overview') { loadOverview(); return; }
+          if (brainSection.value === 'listening') { reloadListeningConfig(); return; }
+          if (brainSection.value === 'extract') {
+            ElementPlus.ElMessageBox.confirm('重新载入会放弃当前模块未保存的修改，继续吗？', '重新载入记忆抽取配置', { confirmButtonText: '重新载入', cancelButtonText: '保留修改', type: 'warning' })
+              .then(loadExtractLlm).catch(function () {});
+            return;
+          }
           loadDevices();
           if (brainState.selectedSn) loadBrain(brainState.selectedSn);
           if (brainState.selectedSn && brainState.subTab === 'isolation') loadIsolation(brainState.selectedSn);
@@ -6509,6 +7059,8 @@
           return { received: '已收到', reviewing: '评估中', adopted: '已采纳', vault: '金点子库' }[s] || s;
         }
         function khSelectNav(k) {
+          if (k === 'search-canary' && (!canManageInvites.value || currentPage.value !== 'worker')) return;
+          if (k === 'search-canary') nextTick(loadCanary);
           if (k === 'analytics' && (!canManageInvites.value || currentPage.value !== 'worker')) return;
           khNav.value = k;
           if (k === 'analytics') nextTick(analyticsRefresh);
@@ -7553,8 +8105,7 @@
           if (nv === 'dev-board') {
             if (!devItems.items || !devItems.items.length) loadDevItems();
           }
-          if (nv === 'brain' && !extractLlm.live) loadExtractLlm(); // 记忆抽取 LLM 卡：进 tab 首次拉取
-          if (nv === 'brain' && !brainState.selectedSn && !brainState.overview) loadOverview(); // 全局隔离总览：未选设备时默认视图
+          if (nv === 'brain') ensureBrainSectionLoaded();
         });
         watch(realDrawer, function (nv) {
           if (nv && nv.id) loadRealDrawerLinks(nv.id);
@@ -7594,9 +8145,15 @@
         }
 
         return {
+          amapUsage:amapUsage,amapUsageCanSave:amapUsageCanSave,saveAmapUsage:saveAmapUsage,
+          routing:routing,loadRouting:loadRouting,routingDirty:routingDirty,routingPhrases:routingPhrases,routingAdd:routingAdd,routingRemove:routingRemove,routingLoadLabel:routingLoadLabel,routingActionLabel:routingActionLabel,saveRoutingDraft:saveRoutingDraft,previewRoutingDraft:previewRoutingDraft,publishRouting:publishRouting,rollbackRouting:rollbackRouting,
+          searchLane:searchLane,setSearchLane:setSearchLane,p1:p1,setP1Enabled:setP1Enabled,setP1Excluded:setP1Excluded,
+          canary:canary,canarySelectedDevice:canarySelectedDevice,canaryStateLabel:canaryStateLabel,loadCanary:loadCanary,saveCanaryDevice:saveCanaryDevice,
           visibleWorkerNavs: visibleWorkerNavs,
           analytics: analytics,
           analyticsFilters: analyticsFilters,
+          anTier,loadAnalyticsTier,saveAnalyticsTier,createAnalyticsDiagnostic,revokeAnalyticsDiagnostic,
+          anControl,anArk,analyticsCapacityBytes,analyticsControlDevices,analyticsControlToggle,analyticsControlSelect,loadAnalyticsControl,saveAnalyticsControl,previewAnalyticsArk,authorizeAnalyticsArk,
           analyticsTabs: analyticsTabs,
           analyticsGroupDefs: analyticsGroupDefs,
           analyticsNumber: analyticsNumber,
@@ -7716,10 +8273,13 @@
           hwSaveDraft: hwSaveDraft, hwDiscardDraft: hwDiscardDraft, hwToggleHistory: hwToggleHistory,
           hwRollback: hwRollback, hwOpenPublish: hwOpenPublish, hwDoPublish: hwDoPublish,
           snInRegistry: snInRegistry, loadDevices: loadDevices, loadPairingPending: loadPairingPending, confirmPairing: confirmPairing, openPreauth: openPreauth, cancelPreauth: cancelPreauth, addDevice: addDevice, toggleDeviceStatus: toggleDeviceStatus,
-          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
+          growth: growth, growthSwitches: growthSwitches, loadGrowth: loadGrowth, loadGrowthEvents: loadGrowthEvents, runInsightNow: runInsightNow, resetPersona: resetPersona, traitVal: traitVal, growthInsightText: growthInsightText, saveStyleTemplate: saveStyleTemplate, saveFillerProbabilities: saveFillerProbabilities, styleAttribution: styleAttribution, styleDrift: styleDrift, styleTplName: styleTplName,
           saveDeviceNote: saveDeviceNote, delDevice: delDevice, openCredDialog: openCredDialog,
           issueCredential: issueCredential, copyCredential: copyCredential, loadDeviceSessions: loadDeviceSessions,
           changeSessionPage: changeSessionPage, saveSessionNote: saveSessionNote,
+          listeningPanel: listeningPanel, listeningSceneOptions: listeningSceneOptions, listeningTime: listeningTime, markListeningDirty: markListeningDirty, reloadListeningConfig: reloadListeningConfig, saveListeningConfig: saveListeningConfig, disableListeningMode: disableListeningMode, restoreListeningConfig: restoreListeningConfig,
+          brainSection: brainSection, brainSections: brainSections, brainSectionLoading: brainSectionLoading,
+          selectBrainSection: selectBrainSection, onBrainTabKey: onBrainTabKey,
           brainState: brainState, brainAdd: brainAdd, brainGroups: brainGroups,
           brainCfg: brainCfg, BRAIN_TYPE_META: BRAIN_TYPE_META, BRAIN_TYPE_BY_KEY: BRAIN_TYPE_BY_KEY,
           BRAIN_LAYER_COLORS: BRAIN_LAYER_COLORS, BRAIN_LAYER_BORDERS: BRAIN_LAYER_BORDERS,
