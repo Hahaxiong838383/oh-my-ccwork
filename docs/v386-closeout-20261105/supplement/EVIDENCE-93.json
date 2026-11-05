@@ -1,0 +1,41 @@
+{
+  "at": "2026-11-05T10:14:30.053564+00:00",
+  "scope": "transport-only; historical read reserved for session 39",
+  "files": [
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/transport93_readonly.py",
+      "sha256": "2ff129c0586e0f8acc51a496118c5f0fc66958ba34966b2026d661c8e868f72d"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/TRANSPORT-93.json",
+      "sha256": "eedbe50f5c4ee8b806d4755561c7c84114757f7bfc039b59de9211380f21388d"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/read-worker.py",
+      "sha256": "ba626c6982f774d5d18d621b3ce0940eb36d7bfbaaa337942adccb1549f0b9b1"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-sn-search-canary-20261021/r23/remote_r23.py",
+      "sha256": "fc00a92eac8c7449b80d185e38b69b399c849a96f5bd977ce6ff70a7f3b30024"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-sn-search-canary-20261021/remote.py",
+      "sha256": "35cef68b13a933c145608acceb03703b97f23852f0d5a6d8e6125b3e40dce251"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-worker-monitor-20261105/transport.py",
+      "sha256": "0f75e1e332e634802bbc60c524e4b4651f17bd316c6f40f65fa8ccf99e6f3eca"
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-worker-monitor-20261105/deploy-worker-result.json",
+      "sha256": "abc49712d2247fdcada362807abde8cf0fcaf1cfdeeb5d03e195bad8fb633350"
+    }
+  ],
+  "probe_success": true,
+  "hostname": "voice-worker-hk2",
+  "v386_acceptance_claimed": false,
+  "production_changes": false,
+  "ssh_config_changes": false,
+  "public_key_changes": false,
+  "credentials_copied": false
+}

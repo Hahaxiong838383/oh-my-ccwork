@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-05T10:13:25.513313+00:00",
+  "operation": "hostname",
+  "route": "Studio -> Air SSH client -> home TCP proxy -> hk2",
+  "auth_location": "Air",
+  "target": "64.90.13.177",
+  "strict_hostkey": true,
+  "wrapper_sha256": "2ff129c0586e0f8acc51a496118c5f0fc66958ba34966b2026d661c8e868f72d",
+  "same_argv_as_remote_r23": true,
+  "returncode": 0,
+  "stdout": "voice-worker-hk2",
+  "stderr": "",
+  "elapsed_s": 2.88,
+  "historical_logs_executed": false,
+  "binary_check_executed": false,
+  "earlier_direct_probe": {
+    "at": "2026-11-05T10:11:40.875022+00:00",
+    "operation": "true",
+    "source": "remote_r23.command",
+    "returncode": 0,
+    "stdout_bytes": 0,
+    "stderr": "",
+    "elapsed_s": 3.35
+  }
+}

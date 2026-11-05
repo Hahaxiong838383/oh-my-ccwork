@@ -1,0 +1,50 @@
+{
+  "scope": "session93 monitor release independently read by main13; historical evidence not rerun",
+  "at": "2026-11-05T08:42:02.073Z",
+  "worker_target": [
+    "64.90.13.177"
+  ],
+  "api_statuses": [
+    200,
+    200,
+    200
+  ],
+  "worker_latency_ms": 2005,
+  "worker_collect_ms": 494,
+  "worker_errors": [],
+  "worker_cache": {
+    "state": "fresh",
+    "collected_at_ms": 1793868077114,
+    "max_age_s": 180,
+    "error": null
+  },
+  "capacity": {
+    "max_jobs": 20,
+    "active_total": 0,
+    "remaining": 20,
+    "per_machine": [
+      {
+        "id": "worker:64.90.13.177",
+        "label": "voice-worker-hk2 · 语音 worker 单池（20 路）",
+        "host": "64.90.13.177",
+        "ok": true,
+        "max_jobs": 20
+      }
+    ]
+  },
+  "source_files": {
+    "deploy-worker-result.json": {
+      "path": "/Users/fu-121/.local/state/p003-worker-monitor-20261105/deploy-worker-result.json",
+      "sha256": "abc49712d2247fdcada362807abde8cf0fcaf1cfdeeb5d03e195bad8fb633350"
+    },
+    "deploy-api-result.json": {
+      "path": "/Users/fu-121/.local/state/p003-worker-monitor-20261105/deploy-api-result.json",
+      "sha256": "16c032fee0b081493fcbdd88ba387dad26e36a92f655f763250adb8943cecfb7"
+    },
+    "production-api-validation.json": {
+      "path": "/Users/fu-121/.local/state/p003-worker-monitor-20261105/production-api-validation.json",
+      "sha256": "d89d8cc80e2271f0adb68f27b5e0ab157d51fa37a8b0844a8e63939d0922252f"
+    }
+  },
+  "main13_production_mutations": false
+}

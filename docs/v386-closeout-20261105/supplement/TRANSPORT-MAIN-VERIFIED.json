@@ -1,0 +1,10 @@
+{
+  "at": "2026-11-05T10:15:42.876393+00:00",
+  "command": "hostname",
+  "returncode": 0,
+  "stdout": "voice-worker-hk2",
+  "stderr": "",
+  "route": "Studio -> Air authentication -> home TCP proxy -> hk2",
+  "wrapper_sha256": "2ff129c0586e0f8acc51a496118c5f0fc66958ba34966b2026d661c8e868f72d",
+  "production_mutations": false
+}

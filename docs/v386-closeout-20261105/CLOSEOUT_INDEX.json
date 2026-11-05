@@ -6,7 +6,7 @@
     "45": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718"
   },
   "production_mutations": false,
-  "worker_journal_runtime_independently_verified_this_round": false,
+  "worker_journal_runtime_independently_verified_this_round": true,
   "h1_new_field_trace_available": false,
   "private_evidence_root": "/Users/fu-121/.local/state/p003-v386-closeout-20261105",
   "files": {
@@ -27,16 +27,20 @@
       "bytes": 3461
     },
     "P003_V386_LISTENING_ARK_CLOSEOUT_RECEIPT_20261105.md": {
-      "sha256": "ff92a5bbe39dd88b812a2af47d2b3db5a064a93b77b9dfdf4da8800a25846c45",
-      "bytes": 6185
+      "sha256": "146159b767ebba144cd27ea66ec3589d3e15cc0d855cad25940ab5cf0982c557",
+      "bytes": 7821
     },
     "README.md": {
-      "sha256": "5d251bd58f55b5847d5b7da9c9d0128797785d332727b5fbeb3481411c8f6537",
-      "bytes": 1658
+      "sha256": "539a88c5390cd54592efd6a94e2203173b2d061fdbb46c20371b902df8e70eb2",
+      "bytes": 2585
     },
     "TRACE-MAP-38.json": {
       "sha256": "12fae86d1dda2e85c37908c45411b7057b45d5ba27ebafba55338302f3adc4cd",
       "bytes": 1248
+    },
+    "history/P003_V386_LISTENING_ARK_CLOSEOUT_RECEIPT_20261105_v1.md": {
+      "sha256": "ff92a5bbe39dd88b812a2af47d2b3db5a064a93b77b9dfdf4da8800a25846c45",
+      "bytes": 6185
     },
     "reviews/CLIENT_SOURCE_CHECK.json": {
       "sha256": "01af4e9c90ff8431af6737f13aed9d2b7fe5218871ea8382ed06091bb0e1b7e6",
@@ -69,6 +73,48 @@
     "reviews/SERVER_SNAPSHOT_SAFE.json": {
       "sha256": "e7e0c3051035bd2c1ca47b2ddaa73b40c3656778f84e1e4a65974cade6125ddd",
       "bytes": 2893
+    },
+    "supplement/EVIDENCE-93.json": {
+      "sha256": "e7987d1347c7c643fb212f2d1e58d4162e128871b27d42b8d754064e188b64ca",
+      "bytes": 1715
+    },
+    "supplement/MAIN-WORKER-ASSERTIONS.json": {
+      "sha256": "5187778d3c78165e674795dc02ca5935e9735209250966beb5ed328156a11847",
+      "bytes": 6102
+    },
+    "supplement/MONITOR-93-VERIFIED.json": {
+      "sha256": "8a4254e7d4182491a1f606b2ea77e770d5d2796f664e33a35a6b91632e5940da",
+      "bytes": 1493
+    },
+    "supplement/README.md": {
+      "sha256": "d129a211d6a529109ffc5075165b22a84d4d24396a64b108c18682d0f0f51199",
+      "bytes": 1019
+    },
+    "supplement/ROUTE-93.md": {
+      "sha256": "a1dd6b8882a1c7c604298c90a3687ed00c992c63bc8695e7b0769a12313840fd",
+      "bytes": 4025
+    },
+    "supplement/TRANSPORT-93.json": {
+      "sha256": "eedbe50f5c4ee8b806d4755561c7c84114757f7bfc039b59de9211380f21388d",
+      "bytes": 724
+    },
+    "supplement/TRANSPORT-MAIN-VERIFIED.json": {
+      "sha256": "0981a417ea99ddeab9ccd59e7b9e5ddad3fe04b68c1f5808f67e3c44663c4968",
+      "bytes": 328
+    },
+    "supplement/WORKER-SUPPLEMENT-39.json": {
+      "sha256": "04cb701be520a60163227da3026ed4816ce8e49aa959ef22f18c23d0c478915c",
+      "bytes": 18912
+    },
+    "supplement/WORKER-SUPPLEMENT-39.md": {
+      "sha256": "88c8966b488a94f29697e0827f1acac8e960ed3415b5a94fff5d9d1023504e64",
+      "bytes": 7019
     }
-  }
+  },
+  "version": 2,
+  "worker_transport_observation_closed": true,
+  "monitor_repair_session": 93,
+  "runtime_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+  "supplement_review_commit_39": "18048235faf2dd1efe4b2a59a7ef78a67a415f56",
+  "historical_source_note": "93 original read-worker.py bytes are retained privately as read-worker-v1.py after reader compatibility update; v1 MAIN and reviews files are historical snapshots."
 }

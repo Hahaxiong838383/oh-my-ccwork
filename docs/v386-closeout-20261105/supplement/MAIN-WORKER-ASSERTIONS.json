@@ -1,0 +1,131 @@
+{
+  "status": "PASS_WORKER_READ_AND_SCOPED_CORROBORATION",
+  "checked_at": "2026-11-05T10:17:56.854525+00:00",
+  "source_path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/worker.json",
+  "source_sha256": "41aa2e059df990a28e26ab688eff3930d6e1dfffbd49bad69d7dbf03684600e8",
+  "runtime": {
+    "at": "2026-11-05T10:15:00.855716+00:00",
+    "unit": {
+      "MainPID": "2750511",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Wed 2026-11-04 10:18:27 UTC",
+      "ActiveState": "active"
+    },
+    "running_binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+    "disk_binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+    "release": {
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+      "bytes": 77972432
+    },
+    "source_window": [
+      "2026-11-05T08:03:00Z",
+      "2026-11-05T08:13:00Z"
+    ],
+    "source_rows": 712
+  },
+  "traces": [
+    {
+      "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+      "room": "sn-****03800006-1793865847",
+      "ready_publish_ok": true,
+      "normal_playout_count": 1,
+      "control_close_after_last_playout_ms": 5550.986,
+      "deleted_at": "2026-11-05T16:05:17.740350+08:00",
+      "asserted_events": [
+        {
+          "us": "1793865848820101",
+          "pid": "2750511",
+          "message": "2026-11-05T08:04:08.819940Z  INFO control publish result event=\"session.input_ready\" trace=\"b04ef593-f44c-4b69-bb45-4c4d96b09c8b\" since_pipeline_ms=1 send_ms=10 publish_ok=true"
+        },
+        {
+          "us": "1793865911759921",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:11.759751Z  INFO playout metrics room=sn-****03800006-1793865847 turn_id=1 underrun_count=1 underrun_ms=294 buffered_audio_ms=0 first_underrun_ms=799 played_frames=3668 exit=\"SourceDrained\""
+        },
+        {
+          "us": "1793865917310907",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.310741Z  INFO control cancel room=sn-****03800006-1793865847 trace_id=b04ef593-f44c-4b69-bb45-4c4d96b09c8b seq=55 cancelled=false already_done=false had_turn=false"
+        },
+        {
+          "us": "1793865917740350",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.739820Z  INFO room deleted (delete_room_on_close) room=sn-****03800006-1793865847 attempt=1"
+        }
+      ]
+    },
+    {
+      "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+      "room": "sn-****03800006-1793865984",
+      "ready_publish_ok": true,
+      "normal_playout_count": 1,
+      "control_close_after_last_playout_ms": 5481.137,
+      "deleted_at": "2026-11-05T16:07:46.383078+08:00",
+      "asserted_events": [
+        {
+          "us": "1793865985585883",
+          "pid": "2750511",
+          "message": "2026-11-05T08:06:25.585811Z  INFO control publish result event=\"session.input_ready\" trace=\"eab501f1-16c5-49b3-a459-8eaeabfbe6e2\" since_pipeline_ms=0 send_ms=0 publish_ok=true"
+        },
+        {
+          "us": "1793866059933468",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:39.933208Z  INFO playout metrics room=sn-****03800006-1793865984 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=2 first_underrun_ms=-1 played_frames=5392 exit=\"SourceDrained\""
+        },
+        {
+          "us": "1793866065414605",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:45.414487Z  INFO control cancel room=sn-****03800006-1793865984 trace_id=eab501f1-16c5-49b3-a459-8eaeabfbe6e2 seq=68 cancelled=false already_done=false had_turn=false"
+        },
+        {
+          "us": "1793866066383078",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:46.382933Z  INFO room deleted (delete_room_on_close) room=sn-****03800006-1793865984 attempt=1"
+        }
+      ]
+    },
+    {
+      "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+      "room": "sn-****03800006-1793866288",
+      "ready_publish_ok": true,
+      "normal_playout_count": 2,
+      "control_close_after_last_playout_ms": 5505.341,
+      "deleted_at": "2026-11-05T16:12:07.803417+08:00",
+      "asserted_events": [
+        {
+          "us": "1793866289523531",
+          "pid": "2750511",
+          "message": "2026-11-05T08:11:29.523289Z  INFO control publish result event=\"session.input_ready\" trace=\"e843d07a-ee82-4b07-9b15-9fcf4ef62cc8\" since_pipeline_ms=0 send_ms=40 publish_ok=true"
+        },
+        {
+          "us": "1793866311343514",
+          "pid": "2750511",
+          "message": "2026-11-05T08:11:51.343248Z  INFO playout metrics room=sn-****03800006-1793866288 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=196 first_underrun_ms=-1 played_frames=516 exit=\"SourceDrained\""
+        },
+        {
+          "us": "1793866321971429",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:01.971224Z  INFO playout metrics room=sn-****03800006-1793866288 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=191 first_underrun_ms=-1 played_frames=632 exit=\"SourceDrained\""
+        },
+        {
+          "us": "1793866327476770",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.476644Z  INFO control cancel room=sn-****03800006-1793866288 trace_id=e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 seq=105 cancelled=false already_done=false had_turn=false"
+        },
+        {
+          "us": "1793866327803417",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.803023Z  INFO room deleted (delete_room_on_close) room=sn-****03800006-1793866288 attempt=1"
+        }
+      ]
+    }
+  ],
+  "rtc_ack_ui_independently_observed": false,
+  "notes": [
+    "No per-message INFO success log for listening proposal/ACK; Android consumed state remains client evidence.",
+    "First room contains one 294ms underrun followed by SourceDrained; not a zero-audio-anomaly claim.",
+    "Private raw read preserved; repository contains only selected redacted structured events."
+  ],
+  "production_mutations": false
+}
