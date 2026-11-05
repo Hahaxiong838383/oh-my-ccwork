@@ -1,0 +1,10 @@
+PASS real main entry + SMS verify HTTP creates isolated A/B accounts and single-use verification code and reusable parent tokens
+PASS station stdin/stdout issuance and replay are automatic, authenticated, and do not pre-register
+PASS 14-line proof rejects wrong device, account and purpose without partial registration
+PASS atomic device binding + separate idempotent Brain initialization recovers from real SQLite failure
+PASS encrypted claim only decrypts for recipient; actual device authentication activates and reads default config
+PASS device data is persisted and parent A reads exact values; parent B cannot see device or dashboard
+PASS real server restart preserves identity, owner, receipt, telemetry and idempotency
+PASS closed enrollment gate preserves committed receipts; expired claim recovers with original owner 12-line proof
+PASS owner/version change invalidates old device credential and old parent access
+{"status":"PASS","assertion_groups":9,"evidence":"/tmp/p003-enrollment-main-Wm2BzL/result.json"}

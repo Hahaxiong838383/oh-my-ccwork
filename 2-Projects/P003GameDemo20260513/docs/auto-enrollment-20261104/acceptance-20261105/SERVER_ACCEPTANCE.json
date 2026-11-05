@@ -1,0 +1,649 @@
+{
+  "status": "PASS_SERVER_MAIN_ISOLATED_AND_DEPLOYMENT_VERIFIED",
+  "business_candidate": "60485d45e566eba7b6e26277e925b8e68852a16b",
+  "main": {
+    "started_at": "2026-11-05T04:03:41.036Z",
+    "node": "v22.22.2",
+    "source_index_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+    "network_isolated": true,
+    "tests": [
+      "real main entry + SMS verify HTTP creates isolated A/B accounts and single-use verification code and reusable parent tokens",
+      "station stdin/stdout issuance and replay are automatic, authenticated, and do not pre-register",
+      "14-line proof rejects wrong device, account and purpose without partial registration",
+      "atomic device binding + separate idempotent Brain initialization recovers from real SQLite failure",
+      "encrypted claim only decrypts for recipient; actual device authentication activates and reads default config",
+      "device data is persisted and parent A reads exact values; parent B cannot see device or dashboard",
+      "real server restart preserves identity, owner, receipt, telemetry and idempotency",
+      "closed enrollment gate preserves committed receipts; expired claim recovers with original owner 12-line proof",
+      "owner/version change invalidates old device credential and old parent access"
+    ],
+    "requests": [
+      {
+        "path": "/health",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/auth/sms/verify",
+        "status": 200,
+        "request_id": "smsreq-120c1c32-9cda-4806-bb4e-997ea9fc6aff"
+      },
+      {
+        "path": "/api/auth/sms/verify",
+        "status": 200,
+        "request_id": "smsreq-00185859-1c29-42c6-bf3a-241942bd1bec"
+      },
+      {
+        "path": "/api/auth/sms/verify",
+        "status": 401,
+        "request_id": "smsreq-1f24086f-089b-48c1-8ec7-45dbb7f46a8a"
+      },
+      {
+        "path": "/v1/device/provisioning/identity",
+        "status": 401,
+        "request_id": "db92a4f6-31d8-4de0-8209-6cc66880c931"
+      },
+      {
+        "path": "/v1/device/provisioning/identity",
+        "status": 401,
+        "request_id": "e99ece4f-38b2-4d41-b993-0e83631c0d06"
+      },
+      {
+        "path": "/api/parent/device-enrollments/capabilities",
+        "status": 200,
+        "request_id": "e4a6a426-0f18-48a5-a7de-2f479e878c30"
+      },
+      {
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 403,
+        "request_id": "3e1789fc-ea8d-4868-913f-c2bf8ed2b7eb"
+      },
+      {
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 200,
+        "request_id": "c5acaa01-597b-432d-920e-9c2843869c3f"
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 404,
+        "request_id": "39c70421-7801-421b-8b1d-8a9b9e57a2ca"
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 403,
+        "request_id": "3e008ccd-b225-4163-bd64-c6fc088ac1a1"
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 200,
+        "request_id": "e6a44cee-696b-4d19-8145-d7a448c4f58b"
+      },
+      {
+        "path": "/api/parent/ble-bindings/hkCIshFQtRfzyt2oUppSAn2k",
+        "status": 200,
+        "request_id": "a90aa4f8-dce0-4bd9-8c93-f4ccdd4b4e29"
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 200,
+        "request_id": "9c441577-35d4-4c41-ba63-9a690398a6e3"
+      },
+      {
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 409,
+        "request_id": "c83efb81-85c7-467b-8f71-1caa35798c1a"
+      },
+      {
+        "path": "/v1/device/pairing/claim",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/parent/ble-bindings/hkCIshFQtRfzyt2oUppSAn2k",
+        "status": 200,
+        "request_id": "45426fd5-9f09-454d-b66d-da5a11176f25"
+      },
+      {
+        "path": "/v1/device/session/prefetch",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/parent/ble-bindings/hkCIshFQtRfzyt2oUppSAn2k",
+        "status": 200,
+        "request_id": "22b441c9-3f19-4b02-8f42-dd497c68c6ad"
+      },
+      {
+        "path": "/v1/device/config",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/profile/bound-devices",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/profile/bound-devices",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/v1/device/telemetry",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/v1/parent/devices/dev_75fa831fb2f37601/dashboard",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/v1/parent/devices/dev_75fa831fb2f37601/dashboard",
+        "status": 404,
+        "request_id": null
+      },
+      {
+        "path": "/api/parent/ble-bindings/hkCIshFQtRfzyt2oUppSAn2k",
+        "status": 404,
+        "request_id": "ffc11edd-affd-44bd-927f-670ba921c68e"
+      },
+      {
+        "path": "/health",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/v1/device/session/prefetch",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/parent/ble-bindings/hkCIshFQtRfzyt2oUppSAn2k",
+        "status": 200,
+        "request_id": "e07b955d-ed13-4432-b793-efa3fa2d872a"
+      },
+      {
+        "path": "/v1/parent/devices/dev_75fa831fb2f37601/dashboard",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 200,
+        "request_id": "034ac7e4-9250-47b2-b005-cf61c68f788f"
+      },
+      {
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 503,
+        "request_id": "a0f37795-65d7-4d7f-a05d-4028434a776c"
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 200,
+        "request_id": "603f8a4a-b842-4780-9ae7-47e39853460e"
+      },
+      {
+        "path": "/v1/device/pairing/claim",
+        "status": 410,
+        "request_id": "35e7c867-51a6-42aa-969d-f59ae693a709"
+      },
+      {
+        "path": "/api/parent/ble-bindings/challenge",
+        "status": 200,
+        "request_id": "d78037c2-c4c1-4931-80b8-0c02e79d75ac"
+      },
+      {
+        "path": "/api/parent/ble-bindings/confirm",
+        "status": 200,
+        "request_id": "1caf6c22-0f60-42c3-bdbf-26bce3e3b99c"
+      },
+      {
+        "path": "/v1/device/pairing/claim",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/v1/device/session/prefetch",
+        "status": 200,
+        "request_id": null
+      },
+      {
+        "path": "/api/parent/ble-bindings/8piXpBwzWwFiePcWZq5oVxO1",
+        "status": 200,
+        "request_id": "cd4f8875-cea4-4ec2-9ca8-59c07e151c64"
+      },
+      {
+        "path": "/v1/device/session/prefetch",
+        "status": 401,
+        "request_id": null
+      },
+      {
+        "path": "/v1/parent/devices/dev_75fa831fb2f37601/dashboard",
+        "status": 404,
+        "request_id": null
+      }
+    ],
+    "status": "PASS",
+    "finished_at": "2026-11-05T04:03:44.638Z",
+    "assertion_groups": 9
+  },
+  "online": {
+    "at": "2026-11-05T03:58:14.221397+00:00",
+    "window": {
+      "enabled": true,
+      "starts_at_ms": 1793777707605,
+      "expires_at_ms": 1794987307605,
+      "issuer_key_id": "p003-enroll-20261104"
+    },
+    "config_mode": "0o600",
+    "safe_runtime_config": {
+      "TELEMETRY_SN_ALLOWLIST": "",
+      "TELEMETRY_ACCEPTANCE_OVERRIDE": ""
+    },
+    "c_registry": [],
+    "c_statements": 0,
+    "registry_count": 17,
+    "pm2": [
+      {
+        "name": "p003-voice",
+        "pid": 4186397,
+        "status": "online",
+        "restarts": 51,
+        "uptime_ms": 1793786314089
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "status": "online",
+        "restarts": 0,
+        "uptime_ms": 1789165045850
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 3937833,
+        "status": "online",
+        "restarts": 9,
+        "uptime_ms": 1793627758000
+      }
+    ],
+    "dependencies": {
+      "tsx": "4.22.1",
+      "hono": "4.12.19",
+      "jose": "6.2.3",
+      "@hono/node-server": "1.19.14",
+      "ws": "8.20.1",
+      "zod": "3.25.76"
+    },
+    "auto_source": {
+      "src/index.ts": {
+        "sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+        "mtime_ms": 1793777707603
+      },
+      "src/routes/ble-bindings.ts": {
+        "sha256": "b494bd6eea5f3009cf35e12552b7ad9fe10ac58f22fbc9206e48251585d7c825",
+        "mtime_ms": 1793777707606
+      },
+      "src/device-enrollment-proof.ts": {
+        "sha256": "6f248e1a8e7765f7e6f71da1cc6d8bad487cad2358ef01988c3a5b3a800b8a00",
+        "mtime_ms": 1793777707608
+      },
+      "src/device-enrollment-store.ts": {
+        "sha256": "8185ecb4d7024b4cb6fb32bee6800eade4baaadfe2e56d7a8066e0440195ba94",
+        "mtime_ms": 1793777707610
+      },
+      "src/routes/device-enrollments.ts": {
+        "sha256": "d742759293871298e34c21ef1a7dcf232386ea1de9b4a59983ea8c00804ef859",
+        "mtime_ms": 1793777707613
+      },
+      "scripts/provision-device-identity.mjs": {
+        "sha256": "f1486e8c5f154f479c0b28067cc200f00aca3b6c39b07ff75338c2c9bb3aaa1d",
+        "mtime_ms": 1793777707615
+      }
+    },
+    "public_http": [
+      {
+        "path": "/health",
+        "status": 200,
+        "content_type": "text/html",
+        "json": {
+          "non_json": true,
+          "sha256": "edccd99f5aff429fec77c75a7dc981fdbddf3b293ca9ce6282524959315d5acb"
+        }
+      },
+      {
+        "path": "/api/parent/device-enrollments/capabilities",
+        "status": 401,
+        "content_type": "application/json",
+        "json": {
+          "ok": false,
+          "error": "unauthorized",
+          "message": "请先登录",
+          "request_id": "b8734382-a275-47c2-8b59-aee1a2f5d7c4"
+        }
+      },
+      {
+        "path": "/api/parent/device-enrollments/challenge",
+        "status": 401,
+        "content_type": "application/json",
+        "json": {
+          "ok": false,
+          "error": "unauthorized",
+          "message": "请先登录",
+          "request_id": "15681c4a-2169-4cf3-bcf1-04dc79fe4a6f"
+        }
+      },
+      {
+        "path": "/api/parent/device-enrollments/confirm",
+        "status": 401,
+        "content_type": "application/json",
+        "json": {
+          "ok": false,
+          "error": "unauthorized",
+          "message": "请先登录",
+          "request_id": "38c24b6a-b298-44ae-a8bd-fe4e7e64b732"
+        }
+      },
+      {
+        "path": "/v1/device/provisioning/identity",
+        "status": 401,
+        "content_type": "application/json",
+        "json": {
+          "ok": false,
+          "error": "unauthorized",
+          "message": "请先登录",
+          "request_id": "09ce2319-f6e9-4edb-a289-80d293e82df7"
+        }
+      },
+      {
+        "path": "/v1/device/pairing/claim",
+        "status": 400,
+        "content_type": "application/json",
+        "json": {
+          "ok": false,
+          "error": "bad_request",
+          "message": "请求格式不正确",
+          "request_id": "1a3e3e48-965b-4538-ab6c-9853a0bc9ca8"
+        }
+      },
+      {
+        "path": "/api/auth/sms/verify",
+        "status": 400,
+        "content_type": "application/json",
+        "json": {
+          "ok": false,
+          "error": "bad_request",
+          "message": "手机号或验证码格式不正确",
+          "request_id": "smsreq-ca56b7f6-ba54-45c9-8dc7-049e913b4e09"
+        }
+      }
+    ],
+    "nginx_routing": [
+      "limit_conn_zone $server_name zone=ota_total:1m;",
+      "server_name kidshub-ai.hahaxiong.cc;",
+      "server_name kidshub-ai.hahaxiong.cc;",
+      "location /api/ {",
+      "proxy_pass http://127.0.0.1:3001/api/;",
+      "location = /api/admin/ota/upload {",
+      "proxy_pass http://127.0.0.1:3001/api/admin/ota/upload;",
+      "# PCK 内容包上传（admin，2026-09-04 cc）：PCK 硬上限 32MiB，走独立 location 放开包体（server 级 2M 会 413）；流式转发同 APK",
+      "location = /api/admin/ota/pck/upload {",
+      "proxy_pass http://127.0.0.1:3001/api/admin/ota/pck/upload;",
+      "location ^~ /_pck_internal/ {",
+      "location /ota/ {",
+      "location ^~ /myjavis/ {",
+      "proxy_pass https://myjavis_kr/;",
+      "proxy_ssl_server_name on;",
+      "include /opt/p003/server/deploy/nginx/analytics-location.conf;",
+      "location ^~ /_canary/search-verification-20261026/v1/ {",
+      "proxy_pass http://127.0.0.1:3018/v1/;",
+      "location ^~ /_canary/search-20261021/v1/ {",
+      "proxy_pass http://127.0.0.1:3007/v1/;",
+      "location = /_canary/listening-20261030/v1/internal/listening/worker-ready {",
+      "proxy_pass http://127.0.0.1:3001/v1/internal/listening/worker-ready;",
+      "location = /_canary/listening-20261030/v1/internal/listening/lease {",
+      "proxy_pass http://127.0.0.1:3001/v1/internal/listening/lease;",
+      "location = /_canary/listening-20261030/v1/internal/listening/close {",
+      "proxy_pass http://127.0.0.1:3001/v1/internal/listening/close;",
+      "location = /_canary/listening-20261030/v1/internal/listening/summary {",
+      "proxy_pass http://127.0.0.1:3001/v1/internal/listening/summary;",
+      "location = /_canary/listening-20261030/v1/internal/listening/feedback {",
+      "proxy_pass http://127.0.0.1:3001/v1/internal/listening/feedback;",
+      "location ^~ /_canary/listening-20261030/v1/ {",
+      "proxy_pass http://127.0.0.1:3008/v1/;",
+      "location ^~ /_canary/ { return 404; }",
+      "location /v1/ {",
+      "proxy_pass http://127.0.0.1:3001/v1/;",
+      "location /ws/voice {",
+      "proxy_pass http://127.0.0.1:3001/ws/voice;",
+      "location ~* \\.(mp4|webm|png|jpg|webp|woff2|mp3)$ {",
+      "location = /admin { return 301 /admin/; }",
+      "location ^~ /admin/vendor/ { expires 7d; access_log off; try_files $uri =404; }"
+    ]
+  },
+  "source_manifest": {
+    "src/account-store.ts": "949f4a92d4e26eff3addd925416cd050c6be0501a6a238f22336dfbbfc942f9a",
+    "src/ai-literacy.ts": "6b735ac3202f44bb7ff695dd017878c284beedc4a82570faffc5f9a13b9f11e6",
+    "src/aliyun-sms.ts": "8fc59e63dd8502f38df644b9d9fc214a3804d3b7e4c82cb2a7b3cfd0bd20e7ab",
+    "src/analytics/admin-query.ts": "f8d85b18bac044065b8f63e2fb2dd2672fbbf615d7d2c5ad1e540fcc93f0f022",
+    "src/analytics/capacity.ts": "510530b3bb83739ba132077fbaca53bd46869a7d88aa314acc1091ea2b830583",
+    "src/analytics/checkpointer.ts": "37009b9a4ef00ddbdec81f870914f7fa0daf89cb9ac46ea5fecf42f1a9db41c5",
+    "src/analytics/contracts.ts": "bd846770e376ec0b61162c69ffa7691a208f52502eaadae57ddd4666e566926d",
+    "src/analytics/control-route.ts": "83c2abed5ebb66a5fd7b083fd4fa112d4b19cedc8c427bacc1a10cc3d75341b3",
+    "src/analytics/device-context.ts": "dcd03052b9686805bfd0c2462ba438b8f343c211fbb15e14319f6b2e823672d2",
+    "src/analytics/event-property-schema-v1.json": "7050d0be830669b63d444245f26fff2407fc3daf4d4b0866e4b2b309be06b1bc",
+    "src/analytics/event-registry-v1.ts": "935488749baa049ffd02fad94794fe822c3636f365dd9a12318f2026606c6204",
+    "src/analytics/fact-layout.ts": "cd30d56700424fb68bba06c5e78b446007edb76deeca7dc3b6069cc462c8b6cf",
+    "src/analytics/http-body.ts": "331173c4bb29b58e562b422d491b6a12a63d4455ffb7e829db4a95fe461824ae",
+    "src/analytics/index.ts": "d9dc939ce5a137d06fab7ef83a54a88b3aa70b403f79a62e732fc5f2c44e7910",
+    "src/analytics/ingest.ts": "73e4289b8faa3209507b36089661a3c53e6c29b46fee921b828e65660f1ec321",
+    "src/analytics/rollup.ts": "916727cb51f237199f6d962bdbe30d388ad1c9122d686cdf23c4528c76aa0ac6",
+    "src/analytics/sqlite-policy.d.mts": "fdea41079daec7e2a7922311cac45b22bee5ac2d915cb59bea9c4bf21200ad50",
+    "src/analytics/sqlite-policy.mjs": "06b4215ad1311d88282864fb54e7119dccdc69dfb9e0fd329c19de7cc6e0a415",
+    "src/analytics/store.ts": "2b82b906d86005f9d323d6f48ec288276ea62625c0afcdc23a444a9090346f1f",
+    "src/analytics/structure.ts": "9e3e04133dbf88e0e3c9dca0baa26e58a820469b3c8d55484139ae439ce3a90b",
+    "src/analytics/tier-contracts.ts": "937492e706bf2420837123c29940bee73528e1c77a18c253f0ba9ce423eae606",
+    "src/analytics/tier-control-route.ts": "f0fb3c25abe47cb4bfe6fe2075a46f3f37cb6bac84d9a77cc5c749bc827bf2b1",
+    "src/analytics/tier-query.ts": "f9facf9bc7731ea6b7838dc609f3f6968dfacd95bbd2b592bbe5aa08349e4f07",
+    "src/analytics/tier-settings.ts": "b6c0cc098d3da4a5ba4617107abac7b47e6d33b16a47264a53ca80bb4f72e3b8",
+    "src/analytics/tiers.ts": "3d780a9ae31949778bd16afafd129f105bb3caf51ca7394c7408342d98a644b7",
+    "src/analytics/transport.ts": "7485b5334b6728ad8c6c7c28649487e03b67e751e97472ddfe3ff872b56571ec",
+    "src/analytics/upload-policy.ts": "4a5eb5c2438879e8aab531c25d565a0deac9c39662f75f8dc986ad1f9d3a340e",
+    "src/analytics/writer-bootstrap.mjs": "2c412c6ad1afbdf9ce8beea7579dda397e78a3d4871c1cc15837a902d24eeb72",
+    "src/analytics/writer-thread.ts": "5d6a19dd469965a3da6d8d12a6c98808a9dc73bd6d7abdb3bb4bc3bc88d346a8",
+    "src/analytics/writer.ts": "43e33cde14869a66ebd08977fd7f165f422b3a33d65008f6d5f63cb02680d418",
+    "src/apk-inspect.ts": "a64939a96547c3ca7e7198d66e8a755a3f345a4ad96f29f4e3c2c23f97cda271",
+    "src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+    "src/ark/context.ts": "f7113f2462e93a72e971971a52093077ca0aa6678c7c364d7336b899621c814c",
+    "src/ark/contracts.ts": "6e4d7e2df287f5ed332162623507c63f0904fc96d052af793e700812372c9ffd",
+    "src/ark/history.ts": "76b75736878b1bd5dd9717d8649c27e17256affe541ea7ea5d39c70ba6e60a66",
+    "src/ark/http.ts": "c8f2fd630ea28a01cef71dc92f4723d354c4bd66b7943c747a074155c4d88a1a",
+    "src/ark/identity.ts": "0aa12e50e1b7934546ae744b8a6df7eb443afb03813325c9d95b2e84c3f0a27e",
+    "src/ark/memory-policy.ts": "b8900e1fed7e6e751161bbbf4803d912265b7353cb94b23d755a69838395b603",
+    "src/ark/proxy.ts": "f52d71eb39046e77e76865ad643734a308bb1ee07cbad0028adfb77a4631352a",
+    "src/ark/routes.ts": "4a741aefd50a885815505ac445911d70b27b41bfcf29d61534eacafae344b9e6",
+    "src/ark/runtime.ts": "73a32c1fe5197f6315aa8315b4ac8c8eb1fb9a938da2ed8383a904ee1878f270",
+    "src/ark/service.ts": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+    "src/ark/store.ts": "08637691485c3450df2ec06f2f241e2f00f11eb11622b274cee4a945ef831f2a",
+    "src/auth-jwt.ts": "621f9bee6f6886af691e7795473102fecc5b7b6c85ba67875cc8592d61fa67f7",
+    "src/ble-binding-policy.ts": "f2c403bf809e48295900a6c7eb963c34f74ce793af132c81524ee5f5bc8b2991",
+    "src/ble-binding-proof.ts": "a49da73a718725b93494c7e49655f3928f617420bcee639b5f04a782e853c374",
+    "src/ble-binding-store.ts": "4c72960343edd4ce6b8752c912ed0df329bfd25d6e04c45a59cbbb7209efad89",
+    "src/child-insight-store.ts": "f50f2ab901f90a5829d2fe2ec91a7b88e90538605911680294e053556f56ea09",
+    "src/companion-kg.ts": "91bc094ff32bb4e7c68eb0c636582ad4ffa7666bc5cba0b82ff186c07a96d0c5",
+    "src/config-store.ts": "aa49c2b8171e08e72230ac3157662e70cd96eef3cd50ed58634b929fbe9590cb",
+    "src/conversation-store.ts": "2d06eb1bfa7d1f242bba0d5c29cdc32ce287a20d8aa2bfa22334795b84df40bc",
+    "src/curriculum-aliases.ts": "35ea7091aa90833f18ca7f31759b34a79e69d8269bdb47b9d114358aea915276",
+    "src/curriculum-kg.ts": "4c570387ac70d1c409a5f9820ef8b00f5aff25c532fa6384cd5522bd38820016",
+    "src/dev-items-store.ts": "ec8e9f14fbcd81a0cf70d4b77f245a13223e97e74ab3a5c1eebd42267fbe8fbe",
+    "src/dev-items-types.ts": "13a322c12f6a3e38dc075733f59b5af14792b209fd66813a9e936f9fb31b52e3",
+    "src/device-brain-prompt.ts": "6f701c6d341d0ad1c80aa1dca3bf65c2e94b438d899b68f63704dc46b712bd4e",
+    "src/device-credential.ts": "0d85a49f403ad10cb428fbbd5347838e5522cb69453aac1c5f560b269f4969d4",
+    "src/device-enrollment-proof.ts": "6f248e1a8e7765f7e6f71da1cc6d8bad487cad2358ef01988c3a5b3a800b8a00",
+    "src/device-enrollment-store.ts": "8185ecb4d7024b4cb6fb32bee6800eade4baaadfe2e56d7a8066e0440195ba94",
+    "src/device-registry-store.ts": "2242517c76fe72502af8a1897507612689bd3804e28766465e2e1b0af8109f63",
+    "src/device-sn.ts": "d0c70449a96fa81dbd778e3623757257b6737903c0abe295e7d8cff15cb6ef5e",
+    "src/diagnostics-redact.ts": "37bab25d8b73c09267cd9474d004b29b67ac7799a8a8a519c2cbce34fbced270",
+    "src/diagnostics-store.ts": "b4ce364fa833214ae5fd51b7d72569cb5320d6374c9d91e231a7f9b67e22155f",
+    "src/dislike-undo.ts": "0a01f8fd5de935977998dbcc592fbec6774f71ee7e4c75aa977c7b4bed6c95d3",
+    "src/exit-intent.ts": "f04b9cb3b9d15900742981bc528995b87484c8774410787c3b70a20b5a372517",
+    "src/expression-filter.ts": "dc7e9acaab5142859c581e01c9c88e8338b47477942348bdb714ec43259e052d",
+    "src/extract-llm-store.ts": "52fcfdbf1db612b0838def0a3b53fee67fa70c5060809d4da9059389e352f37b",
+    "src/extract-scheduler.ts": "faa94e0d942a7a24beab7983637689b0d87dd5067d013fa6220572e1c89f48e7",
+    "src/extraction-log-store.ts": "8940cb3302f3bbe0f645d9074f7185ea42a269cab805c3ca7111035fcefb7448",
+    "src/feedback-arm.ts": "4f9cf6fd12ce56531d3420d45484e97a3512b56bcd6e8385d3e0756b80d2c1b7",
+    "src/feedback-store.ts": "994e67a86ae0d2320588fa70ac5a786bfad8f10e5c97050c434487fcee49622f",
+    "src/filler-generator.ts": "65d328eeafc1bf770885c45631bf48dba9e2fe64598fadb25a3f57a3130e4f5a",
+    "src/filler-policy.ts": "90b7e4ada344276220a29b73b48df6859d45e2df3e7d67d089d083b92f1dbc31",
+    "src/growth-ledger-store.ts": "77a6e83e958c2f0bfdd2c5748b05e2e8876eac0c902d86b299eb0d444b86d93b",
+    "src/guard.ts": "bc220333b41c376cd17c6c49731333dfb3c280e9b5cc839eef04b5e87a102c94",
+    "src/hosts-status.ts": "fa145a7eebcc344bf025bbf449fdaaebd6665eacb3c4f5b3ef23865ebf2a1239",
+    "src/hotword-channel.ts": "81f0bb1883777cf877aff9cd4d3bb09559e0f66355bf06cb2644b15048849dd2",
+    "src/hotword-store.ts": "1ef7b9291d5ece8e8b9dd72586f2c67f387ff446267bfc657499f0e427c99ff6",
+    "src/hotword-store.ts.bak-20260818-pre-500": "6a46d5f0cd46618a417ce2cbaf9a9f4ffe70b65088910fe82262607b03b36bae",
+    "src/index.ts": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+    "src/insight-runner.ts": "3b9a019960d7add37765684a4de4f2e59e6d1770c875d2ba6318e5d34a21fa5b",
+    "src/job-run-store.ts": "6afcee639fa1b7a8c17da21c7bb96e840a175345139bfc9e8676ead13d2681d7",
+    "src/listening-authority-store.ts": "b3ad0514258e60a73ac472e92460733bf35b6e441ec0a6811dc848bf1ee8743f",
+    "src/listening-authority.ts": "c401b6b5583bba07fa33e6ffab427dee6a6909b8149084c868914a8f45f92ae7",
+    "src/listening-content.ts": "32bc94b8bcffd065a15b114a23a4b70fe8567b30f567f3cc948165510a70628a",
+    "src/listening-grant.ts": "5ed655ecaf996cf7772012f09b67a5679c48434c3901e91f0287771d272fb0e6",
+    "src/listening-http-contract.ts": "e190d8ef1d1c567bf099184fc4972c48ecd1076d67f6f48c8408d14760f7fa6a",
+    "src/listening-policy.ts": "a60126c853f4365323af568b65726956da69ab3e90b75daeb0c1c9c7cc3e158a",
+    "src/listening-runtime.ts": "d3ed750c365e08b6ce00dd93217e24cf3e64156223e5fcdb2f74bd84e21c194d",
+    "src/listening-settings-store.ts": "ff7e93870450e476ff4fa4b5ce0226605fcbca3e0700a666b44eb78c05d5778f",
+    "src/listening-settings.ts": "a48e2da1d9d653180b61d2c1232d014bb91d0bb82bbab5d2cdafd8b7c693a290",
+    "src/llm-extract.ts": "d34eecc5476dda7706a4400abec0319f741c24a039f43203c0844074fbbe07aa",
+    "src/local-audio-device-reply.ts": "b9c850d70905ba40348c88325d4dd4912d54846db891ea601aa96c23aa618b16",
+    "src/local-audio-g1-settings.ts": "1be77f0774bdeeaa144413f68f5310afa230d0e3c4b51b2e6ebfef9778039f35",
+    "src/local-audio-generator.ts": "b8a3cfaa68c44ae9c5201e7c65791874f25f08de48371dd9940a7e4c778ff8e6",
+    "src/local-audio-integrity.ts": "f06e84f12b29a4049fbcc60d3720fa2bfcf334f5c0a59e4f6f9341aaacdd545f",
+    "src/local-audio-store.ts": "84039446eba147816abd3d5f74535377b53fd4eb92af19f65889a5e97e482e1a",
+    "src/memory-extractor.ts": "006bf53b3544b36663fbdb012be3b80fef1d80f9e150e422124a5045f39f1797",
+    "src/memory-item-store.ts": "c668e926d7d4fb78d68aaf946f13e7922c1b19b0384a158a7a27334891ff552a",
+    "src/memory-safety-filter.ts": "e368b74ebbe1432415344cadb3ef84380bf76e6b48f669b8c12bd2f626f70204",
+    "src/onboarding-extractor.ts": "f44e7cc3604a8c3819721b62c25a30d2250f1ac819f0e5c75ce99e74c7c5b283",
+    "src/ota-store.ts": "946fd00d6cbbaf44c949fd895bdd02c728e8f578dff28f7caa772fa97b707018",
+    "src/ota-store.ts.bak-20260907-113835-pre-release-notes": "ca3890dd2da700c947207e6a1e1a6021bfba32ad18f629f5948513f63ce3c546",
+    "src/pairing-crypto.ts": "0d9e7dfabf898d0871463e9cd3c5b29f2ea8d7cff7b0337052f2d86b47111a4c",
+    "src/pairing-store.ts": "7606b020b8929bafd778e5ec9b06367d68917c2ba43e242cbaf3521a6628dff3",
+    "src/paren-filter.ts": "2b91fb020c5e30268d19e51faa6446d8db004e6c4d5a2ad65609c6b82054294c",
+    "src/pck-inspect.ts": "7e840ed7a78fb16840064c2966a35b762b18d7d0bf4f5d3378ba9e2e519a11eb",
+    "src/pck-store.ts": "2e1f2f5c99b10029fb738dc46fb465d7431e9033d129a2ea2ccf7b4bdacc9f83",
+    "src/pck-store.ts.bak-20260907-113835-pre-release-notes": "a3d75273af6cc4ad1ab9007d509ee6f75a4a86bd15c27161b97f071c674fdacd",
+    "src/pipeline.ts": "35894191c7ab807074b1218530285a370407eb31a92bff872ff6a78274d29822",
+    "src/profile-store.ts": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e",
+    "src/prompt-orchestrator.ts": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f",
+    "src/prompts.ts": "80d1901a01be454c86ef758d95b4dd001000f6034d04da8c30612549b1c5dc63",
+    "src/providers/deepseek-llm.ts": "520b4ce881429b24563b4b8e338dddab5fe142489e84c17d0e60b27c48dd3ca1",
+    "src/providers/gemini-llm.ts": "f67117518b9b8480c54ba4d364ed7cef891fef3b5332029639a076c07318a140",
+    "src/providers/gemini-vision.ts": "177ed041fcb67e3c722da9a329b89df7c852f21de43d9e46704e6ed762238553",
+    "src/providers/minimax-llm.ts": "175ccc97309246e9c6283694d05ee204a8d388f3aa94f94b58649c1a2be20d01",
+    "src/providers/provider-health.ts": "f946612806ae6fe6bd42ef7e0729f00c7b25b62555efc5619cb669bcbaae3a44",
+    "src/providers/race-llm.ts": "561a8315bd137de7ccd4d301faa0b0ac8c42b340281e590d935bf12b493e2d6e",
+    "src/providers/volc-asr.ts": "0de314cf5a7c2f09db569fedfbe62fc89e70b9f6294f0528d3e4ffc08a3e90e7",
+    "src/providers/volc-llm.ts": "563f16013137e0b2b5b9dd138ebc2d6eac8d8b0d7805326686f6ec9ffd1afc8f",
+    "src/providers/volc-tts.ts": "de0c02b6003681cc13a3d5c745bd74e442759dde03812fb7c6c45af4654bd2bb",
+    "src/providers/xfyun-tts.ts": "f28e6b6bd63cd3f5bf32af82dbe0e806c3a5672c651403b6affef808b17ce4e5",
+    "src/relation-state-store.ts": "1532f998499153fb4af576004d1cf2b825bf8b83f5fac25bb7b71ae371286c12",
+    "src/rename-gate.ts": "ddc2ba983599a20f3ec8d0a592971f88d8d481321973aa9f54f7882d13b93dbd",
+    "src/routes/admin-data.ts": "75b6d07ebadd06b8cbe04147eb1c5383c45fb86fe0b6ab28d70579f9893a6002",
+    "src/routes/admin-data.ts.bak-20260907-111814-pre-announce-claimed": "619c1bd7954ee5fc7a0255f2f5197069f7e4709c28b6f5247144f4187b5eaf65",
+    "src/routes/amap-usage-admin.ts": "23d6c58ba3547b3520d8b268271d9e9eb574e4a6d4837e5bf607e14255447f7b",
+    "src/routes/ark.ts": "e55ee9037b2b849d1e801e82a05dab5ced45e1f0d98a1c2ce9c60f922da7db7d",
+    "src/routes/auth.ts": "d49dba7c3685e00fde51c87e6d1ec53df5e6fe82b73edc77273d34377d00bee5",
+    "src/routes/ble-bindings.ts": "b494bd6eea5f3009cf35e12552b7ad9fe10ac58f22fbc9206e48251585d7c825",
+    "src/routes/conversation.ts": "ea245fcc7a2d70d30c13dbab6217840f540562b66e59ea8fc3ec3129c725b551",
+    "src/routes/custom-llm.ts": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d",
+    "src/routes/dev-items.ts": "167fa55df086a1bf400af7e03cd2e73092a9eaceed5baa0686411d9bd20f53ce",
+    "src/routes/device-config.ts": "62a654c003a45f91cfd6c308de94386b53eccec127854f44f60f5d3e51c3f7a7",
+    "src/routes/device-enrollments.ts": "d742759293871298e34c21ef1a7dcf232386ea1de9b4a59983ea8c00804ef859",
+    "src/routes/device-session.ts": "6763d2275f935b808e14415482f51103f1ffb449af34ff6508c23e8caf2fe531",
+    "src/routes/device-session.ts.bak-20260818-pre-issuets": "c9c1b2801554683188d6c6d7679c980f19fd1066aa71908f1973d0b303f9ebad",
+    "src/routes/diagnostics.ts": "58c91f3272a2670b7693fc19df51c0487914a0364b1d0b274ddad4dd9f148017",
+    "src/routes/feedback.ts": "b9e49b1479dfce9287af87574860647c77a87afad428de947f52787b4710635a",
+    "src/routes/invite-auth.ts": "d0768e7fce917965154d80939c085e95dfaab63e2fdfc25dad2f3df21ff4ddb9",
+    "src/routes/listening-admin.ts": "731efd1b9c7198bd06b9f74d62153a7e8297a0b7e0f58ecd045aab3f4461c00e",
+    "src/routes/listening.ts": "a268c9fd7521b6e404f099f963594081fc4d8a1f215c6e6b9a019da475f301ae",
+    "src/routes/local-audio.ts": "918cee86103dbec71bbd96e1450ddc9f3916e46bbf5ce83962768b81758e0456",
+    "src/routes/memory.ts": "733c3313a4006e76022e3932140e31e2a9ee7f06a6f3e59a036f41c61d032568",
+    "src/routes/ota-pck.ts": "e6f76ea48feaab85b9f9253f62baebd1b5a6bbe9c38d15623dd913e53142dc15",
+    "src/routes/ota-pck.ts.bak-20260907-113835-pre-release-notes": "7edf51504eedcc0e122abad02d4175e84da9847eee5bfacf780938db042cc0b5",
+    "src/routes/ota.ts": "9fd9894558d52688ffb7d10e52de16fa82cae9ca2e2c20ad75ce39653f44bee8",
+    "src/routes/ota.ts.bak-20260907-113835-pre-release-notes": "01c34b5480d249a3afd006487126a33e96c18ead2164fd033fc62109def09b26",
+    "src/routes/pairing.ts": "f1bdad9533d8090f8b5e40ff01148cdaec7f2fc272697c5cf14f3a3e9634a34a",
+    "src/routes/pairing.ts.bak-20260907-111814-pre-announce-claimed": "c54ef8c4750b7bb2e114f9d23b8c12600e91755ce514f7a7fac400d6a4ddc13d",
+    "src/routes/profile.ts": "a6f8536d42ee7907ecb2df15e4455b614279f87789fbf43d07a24a231e335681",
+    "src/routes/rtc.ts": "024263a263c08612d3c8ce705d3ea4120d14debe9d670afaf2963e84600b2d74",
+    "src/routes/search-admin.ts": "66764cd8dc123c00e84cb716be64295b43e952272f3f69d4a4296dccea04e8de",
+    "src/routes/search-canary-admin.ts": "7051ac397ecfc1f2bfed78e9fb5688d3b324aa9897a5e766929d178e0439e4e5",
+    "src/routes/search-p1-admin.ts": "4711e5d9fbb8adb61f673e67fddf5a568e3bcd99ed806a911fea18dcf054232c",
+    "src/routes/search-routing-admin.ts": "04601d584d361000808b32e0d550153b3009f8185c24b94a0118efde5d063369",
+    "src/routes/search-tasks.ts": "3b0c59ce09922601d882fa364c4477dbd0351d06e34b30a16da730360ce557af",
+    "src/routes/sms-auth.ts": "937519d32f124b1d79f26ef2b2e0e9d3577856da8fdc7102b279a9061939edda",
+    "src/routes/telemetry.ts": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+    "src/routes/themes.ts": "0dc9e3a1df0b5a8dfd2d9d3866dcba73b65705f3282dadd42a888225ea5eaf60",
+    "src/routes/vision.ts": "61cc73271877d54afe5269d63c92ba78c7d1e8a58d03f907bb638aa76a882d27",
+    "src/routes/wechat-auth.ts": "0ecb62555f1e823044eb031065af3b52345089a4e54e297c45ad61e9daacdd60",
+    "src/rtc-prompt-override.ts": "deeb3e0a4d54275a40e4251bff386b0f38af9858fbbda4283f464319981e034b",
+    "src/rtc-token.cjs": "b3fdb35b0e528e6e6307c3af8753d1e84fccf73bde02e6d1ea9d9897d13b45c3",
+    "src/search-canary-policy.ts": "6d16507a3f969903c84b07016d688ab6fd66ef714482627618f2b1bf61f55f65",
+    "src/search-canary-runtime.ts": "c2fe1e8708786caf26bffe04292f826782ff7af9715398e947c7f202000bbf31",
+    "src/search-canary-status.ts": "50090beca4624faf722748b1fbf5c7aee8190b930d5084d930dbf28a3f820196",
+    "src/sms-limit-store.ts": "d7978ed6e87efdca3d8b95885372b0ab418f845bdcac6c27943d065cd76cecf3",
+    "src/spug-sms.ts": "84f18dbf6dfd78af2e7b1385c178e557012747456cd17efb09b4846b8bdeb5e1",
+    "src/style-intent.ts": "a126f2383af0757ad42d86b43e5d664bff074a2a3ab09af38016faa10b01ad86",
+    "src/style-pool-store.ts": "f230ca882c22f1e284378c4026d618fb55f5b98f74808af7c10f30ec2d4ab357",
+    "src/style-template.ts": "b434df4bfa8703dc18f4d753a3de940f7b91fd526eceb57fb11aa6cdd1225c21",
+    "src/telemetry-store.ts": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+    "src/themes-store.ts": "f8baab760fb23c25420f7c27d7186458f71444e6fad2df5fd5460cd8706ebc74",
+    "src/themes-types.ts": "5eccd8950d7afe6382454ad8cfc796efb5337eacb937d5debe5acde853bd7523",
+    "src/tools/amap-usage.ts": "6c30de0f0f000b8454e842fd759d11f5d1b1beb9a34f5f70a9ebd2df42ec64c3",
+    "src/tools/baidu-weather.ts": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97",
+    "src/tools/cctv-news.ts": "167db5d96b461bab12336f23f4462eaa3503ee6d6be50da5848848265758130f",
+    "src/tools/device-location-runtime.ts": "fe8387ff7b0a88dbed345b68a7aaeeead8fa777c205afcca1697d07d1a2fa8f1",
+    "src/tools/device-location.ts": "8eccbc3f897ff27ea7495d0608475b3d712e5126c878c83f8ad09b318cf34447",
+    "src/tools/fixed-weather.ts": "64527be87f0fdf9ff0630013b4ce35b27587cc054bab9e032582780090b3231d",
+    "src/tools/moji-weather.ts": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+    "src/tools/search-availability.ts": "e25ceda0627dd6f239e832bf2ba7f76bf5e5c979d19551f6e7b1c97cf78a6427",
+    "src/tools/search-chat-policy.ts": "c681f8e54c394c9266d71cd026a39e2083b4fb6cf58349e9634e257f5d3d8ca7",
+    "src/tools/search-claim-stream.ts": "32d97ad9e39f6669431c8e09829fd4c63cd0974831aaea0f1f8b69f8918d8192",
+    "src/tools/search-dialogue-context.ts": "5ac631693385fc64848e69c124a33bebec8e695eeefe06af2497d1022b7dffad",
+    "src/tools/search-enrollment.ts": "3b2c45cd43860d29ec6bcc84e940be6bffd79f8943444ab4d0e6a4ccb63199bd",
+    "src/tools/search-executor.ts": "30c3b6b3d75c75d303b04eca143b3832826c5b5bfa395cb5280ff6de5b50212f",
+    "src/tools/search-failure.ts": "8c01b46e303933b95773307788c430469e6a4021fff1ad0ffb776f565c904175",
+    "src/tools/search-resume-scope.ts": "203077cb9baedfe760dce95d70ef6ca1d0375d03e020be6f7d34bd30714125ef",
+    "src/tools/search-resume.ts": "1d5ba20593819ddd6653b6ea45d8131e3c16036ebfa1639a4bcaa57ab852fa85",
+    "src/tools/search-routing-config.ts": "f9f93d93732eca39ad03bb3eed6e7903c1d27980a90ff9a2626853fe0367dc73",
+    "src/tools/search-routing-defaults.json": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+    "src/tools/search-routing-store.ts": "67828960a3a9393b358eea3bede2653db8308a17b28b977bb9ef9d3b31ae7ca7",
+    "src/tools/search-runtime.ts": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+    "src/tools/search-tasks.ts": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+    "src/tools/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "src/tools/weather-places.ts": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+    "src/trait-store.ts": "ca0a09c9eada173ee986d193952f8f731c69adb0099fd2a241307298072aada4",
+    "src/verify-code-store.ts": "d10829cd350518d76c95f2053ee74d0f7bc1e263b68d756568da3e854ec7d19c",
+    "src/wechat-phone.ts": "bc10b7270a141caf18ce2a3b38af069125691678228e329ffe7bb283a7e15513",
+    "src/xiaoke-kb.ts": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
+    "package.json": "7597bf8b21c93d238a6d8800c45512ea11a6dee66313bfe3669365ff3cbadc3e",
+    "package-lock.json": "5a8faee611938a153d2c929566cade3833e1325440a9c7cf075af404fa6ac8a2",
+    "scripts/provision-device-identity.mjs": "f1486e8c5f154f479c0b28067cc200f00aca3b6c39b07ff75338c2c9bb3aaa1d"
+  },
+  "test_script_sha256": "92b41f893b16daa13f360c3afeb53433e43966dc6218ae50ad80e7693b06fe43",
+  "evidence_sha256": {
+    "preflight.json": "5cb3156ae7b09f2862c0cfea7d98f72618eb7ecec7496a91d6219af4234be73f",
+    "main-attempt1.json": "68e2f8677a9324b1a655c9de178cc44b30405f1d4c20e086d60a87c6c468c939",
+    "regression.json": "53c7283e05b7171a050f787e5d922f340a2a29e958f063b531ff7325589e9a51",
+    "regression-core-fixed.json": "a14ece43f646e7f7731c7ad69000646f90cdedd5beafa90f50e0001be4d2a1bf",
+    "online-final.json": "5ccb427333c75063b4206d470014f99847af9f11e8330de7ed979b05ec25d595",
+    "main-final.json": "f47031cfe6d36b73d1707184aa34c74a905bfe49939dd51ecd76bece2877dee7"
+  },
+  "limits": [
+    "C physical USB/BLE confirmation and latest miniapp build not tested",
+    "SMS delivery not sent in this round; real verification HTTP uses isolated synthetic SMS fixture",
+    "Public HTTPS path/auth checked without creating any production identity; positive chain ran exact deployed src/index in isolated network and DB",
+    "No new business code deployment or production restart required; Nov4 deployment remains current",
+    "Full repository typecheck not claimed"
+  ],
+  "remote_root": "/opt/p003/_acceptance/auto-enrollment-20261105-120340"
+}
