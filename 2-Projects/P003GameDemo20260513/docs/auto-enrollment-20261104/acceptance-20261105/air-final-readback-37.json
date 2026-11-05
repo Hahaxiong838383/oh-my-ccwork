@@ -1,0 +1,18 @@
+{
+  "at": "2026-11-05T12:06:41.579922+08:00",
+  "user": "Rayman.Chen",
+  "hostname": "RaymanMacBook-Air",
+  "en0": "10.9.1.88",
+  "files": [
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_MINI002_AUTO_ENROLLMENT_SERVER_ACCEPTANCE_20261105.md",
+      "bytes": 14229,
+      "sha256": "d0105b2b3b03f0aa16655b9df8c30c5fa0d114d14437676cfffa6a751fda61b5"
+    },
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_AUTO_ENROLLMENT_CLIENT_CONTRACT_20261104.md",
+      "bytes": 16611,
+      "sha256": "8b0cedb3716da072f67b8b0cf0719594798ed01b414ee26ff65f50062aa4a1e2"
+    }
+  ]
+}

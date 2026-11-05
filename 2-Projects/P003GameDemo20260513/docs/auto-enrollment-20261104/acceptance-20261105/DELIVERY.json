@@ -1,0 +1,25 @@
+{
+  "candidate_commit": "c000bede775600ae4d43ebc8efc4bafe6fd52d2f",
+  "branch": "codex/p003-auto-enrollment-20261104",
+  "delivery_at": "2026-11-05T04:05:41.903398+00:00",
+  "air_files": [
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_MINI002_AUTO_ENROLLMENT_SERVER_ACCEPTANCE_20261105.md",
+      "sha256": "d0105b2b3b03f0aa16655b9df8c30c5fa0d114d14437676cfffa6a751fda61b5",
+      "bytes": 14229
+    },
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_AUTO_ENROLLMENT_CLIENT_CONTRACT_20261104.md",
+      "sha256": "8b0cedb3716da072f67b8b0cf0719594798ed01b414ee26ff65f50062aa4a1e2",
+      "bytes": 16611
+    }
+  ],
+  "studio_files": [
+    "/Users/fu-121/Downloads/P003_MINI002_AUTO_ENROLLMENT_SERVER_ACCEPTANCE_20261105.md",
+    "/Users/fu-121/Downloads/P003_AUTO_ENROLLMENT_CLIENT_CONTRACT_20261104.md"
+  ],
+  "business_runtime_changed": false,
+  "rollback_record": "../DEPLOY_ROLLBACK.md",
+  "script_sha256": "92b41f893b16daa13f360c3afeb53433e43966dc6218ae50ad80e7693b06fe43",
+  "main_final_evidence_sha256": "f47031cfe6d36b73d1707184aa34c74a905bfe49939dd51ecd76bece2877dee7"
+}

@@ -1,0 +1,83 @@
+{
+  "objective": "服务端自动化完整跑通并已上线，端侧按固定合同适配，下次联调自动授权签发绑定",
+  "started_at": "2026-11-05T11:48:22.731827+08:00",
+  "requirements": [
+    {
+      "id": "R1",
+      "requirement": "受控程序自动身份签发，重复幂等，签发/challenge不提前建台账或owner",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "main-final.json",
+        "online-final.json",
+        "regression.json",
+        "regression-core-fixed.json"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "新challenge与14行签名校验，confirm同devices.db原子创建registry/key/policy/owner/回执，Brain跨库后置幂等初始化",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "main-final.json",
+        "online-final.json",
+        "regression.json",
+        "regression-core-fixed.json"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "设备claim加密领证，真实服务端鉴权通过，回执activated",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "main-final.json",
+        "online-final.json",
+        "regression.json",
+        "regression-core-fixed.json"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "原owner/错设备/错签名/撤销/窗口/重复和超期恢复约束保持",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "main-final.json",
+        "online-final.json",
+        "regression.json",
+        "regression-core-fixed.json"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "实际线上现役代码、接口、配置与测试输入核同，兼容mini002/code371无额外字段门控",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "main-final.json",
+        "online-final.json",
+        "regression.json",
+        "regression-core-fixed.json"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "前后端有固定可自动调用的合同；无主13逐台人工录SN/搬声明的必需步骤",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "main-final.json",
+        "online-final.json",
+        "regression.json",
+        "regression-core-fixed.json"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "有可复跑验收、回滚记录、上线回执及安卓/小程序对接文档，落仓并Air交付",
+      "status": "PASS_SERVER_SCOPE",
+      "evidence": [
+        "DELIVERY-13.json",
+        "air-final-delivery.json"
+      ]
+    }
+  ],
+  "independent_review": "REVIEW-37.json",
+  "real_C_end_to_end": "PENDING_CLIENT_ADAPTATION_AND_DEVICE_TEST"
+}

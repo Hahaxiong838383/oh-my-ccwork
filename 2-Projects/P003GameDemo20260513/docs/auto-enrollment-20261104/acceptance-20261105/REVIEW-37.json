@@ -1,0 +1,169 @@
+{
+  "status": "PASS_SERVER_SCOPE_R1_R7",
+  "at": "2026-11-05T12:00:34.380376+08:00",
+  "requirements": [
+    {
+      "id": "R1",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "受控adapter stdin→HTTP→stdout、重复声明相同，issue/challenge不建registry/key/owner",
+      "remaining": "无必须新增业务接口的阻断；详见证据边界与非阻断脚本加强意见"
+    },
+    {
+      "id": "R2",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "devices.db的registry/key/policy/owner/receipt原子；Brain/accounts/profile后置幂等，故障保留owner并GET恢复ready（全main+37补测）",
+      "remaining": "无必须新增业务接口的阻断；详见证据边界与非阻断脚本加强意见"
+    },
+    {
+      "id": "R3",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "ECIES解密→prefetch200→activated，错误recipient拒绝；config200、telemetry→A73/B404",
+      "remaining": "无必须新增业务接口的阻断；详见证据边界与非阻断脚本加强意见"
+    },
+    {
+      "id": "R4",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "17边界/26旧BLE核心/19guards本轮通过；前轮旧12行关闭窗口恢复有HTTP证据",
+      "remaining": "无必须新增业务接口的阻断；详见证据边界与非阻断脚本加强意见"
+    },
+    {
+      "id": "R5",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "206项全src/package/lock/adapter清单测试输入=11:52现役，测试后runtime_unchanged；11:58六发布文件及公网API路由JSON/鉴权/窗口核同，生产无重启",
+      "remaining": "无必须新增业务接口的阻断；详见证据边界与非阻断脚本加强意见"
+    },
+    {
+      "id": "R6",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "四字段工位/九字段challenge/两字段confirm/旧claim协议清楚；不要求人工录台账",
+      "remaining": "无必须新增业务接口的阻断；详见证据边界与非阻断脚本加强意见"
+    },
+    {
+      "id": "R7",
+      "status": "PASS_SERVER_SCOPE",
+      "proved": "固定验收提交c000bede已独立核远端；可复跑脚本/最终main证据/回滚指针/对外合同已落仓；Air和Studio两份MD实际字节SHA核同",
+      "remaining": "无服务端验收阻断；13随后归档review/delivery索引，不改变已验脚本与业务"
+    }
+  ],
+  "blocking_product_defects_found": [],
+  "documentation_corrections": [
+    {
+      "id": "D1",
+      "status": "CLOSED",
+      "description": "已明确devices.db原子与Brain后置跨库幂等"
+    }
+  ],
+  "test_scope": "13精确现役源完整index进程/隔离网络/合成身份全HTTP9组，37独立审脚本/结果并私有补测；不等于公网真实设备/短信送达/客户端USB",
+  "evidence": [
+    "preflight.json",
+    "independent-admission-result-37.json",
+    "boundary-regression-result-37.json",
+    "source-manifest-37.json",
+    "snapshot-live-comparison-37.json",
+    "main-attempt1.json",
+    "regression.json",
+    "regression-core-fixed.json",
+    "online-final.json",
+    "online-review-37.json",
+    "MAIN-TEST-REVIEW-37.md"
+  ],
+  "real_device_mutated": false,
+  "production_mutated_by_37": false,
+  "nonblocking_test_improvements": [],
+  "main_review": {
+    "script_sha256": "280585597a43c9ed47f2c707d420e7ad617d59a5fdeeea23954191e47a49c401",
+    "embedded_test_bytes_match": true,
+    "main_exit_code": 0,
+    "assertion_groups": 9,
+    "manifest_files": 206,
+    "manifest_equal_preflight": true,
+    "script_fully_read": true,
+    "wrapper_fully_reviewed": true,
+    "server_log_read": true,
+    "production_positive_device_test": false,
+    "final_accepted_script_sha256": "92b41f893b16daa13f360c3afeb53433e43966dc6218ae50ad80e7693b06fe43"
+  },
+  "final_review_time": "2026-11-05T12:08:39.075486+08:00",
+  "workspace_preserved": {
+    "head": "6c2cc932713199968337d45641c3286d66c1fbfe",
+    "dirty_count": 34,
+    "identical_to_start": true
+  },
+  "evidence_sha256": {
+    "preflight.json": "5cb3156ae7b09f2862c0cfea7d98f72618eb7ecec7496a91d6219af4234be73f",
+    "independent-admission-result-37.json": "404668dd1f8b2e8180f8d25cdaf8f1304bf5651da15d94694f2615bad160b6e3",
+    "boundary-regression-result-37.json": "599c91d10cb946c8f0b48c6b4c39083369c666fe32eb716ead0ab1f7468371e5",
+    "source-manifest-37.json": "b15c48e86a9feb92ffdf61d18fd41c96d9fd68053a23a8cd8d920b5a4d79581b",
+    "snapshot-live-comparison-37.json": "187a2586bff821e1bfa60e468b8211860172945b18376837608d3ef84cafdfee",
+    "main-attempt1.json": "68e2f8677a9324b1a655c9de178cc44b30405f1d4c20e086d60a87c6c468c939",
+    "regression.json": "53c7283e05b7171a050f787e5d922f340a2a29e958f063b531ff7325589e9a51",
+    "regression-core-fixed.json": "a14ece43f646e7f7731c7ad69000646f90cdedd5beafa90f50e0001be4d2a1bf",
+    "online-final.json": "5ccb427333c75063b4206d470014f99847af9f11e8330de7ed979b05ec25d595",
+    "online-review-37.json": "371816000f82159029357e40704a02b66242ac45466d1a9f75e123408d1d7201",
+    "MAIN-TEST-REVIEW-37.md": "2079637c33953aa69306d594c7209f6038b258346e67e99144aa6e99a34d81dd",
+    "main-final.json": "f47031cfe6d36b73d1707184aa34c74a905bfe49939dd51ecd76bece2877dee7",
+    "run-main-final-remote.py": "41636e26aeb43f370a06fe9126969495ec0b16679fd63a12574ee3e0b1bc9649",
+    "FINAL-HARNESS-DOC-37.md": "e7daf57a5e0c86716f59b8082795fc233f755577c75caefa137db450fda321df",
+    "DELIVERY-13.json": "bffda2a2fbf3c31c42f2a91ce02bf6af9ecb31605c55422bd97be91a71d2b6f1",
+    "air-final-delivery.json": "8264223379eb7b6accf411feaef0e37b7c4d06de23b692344a53783052a29b64",
+    "air-final-readback-37.json": "2f2109a8c616faf03c69b56d2ba3cd0a7cd73d7e5853374a28e22e0bdaeae7a0",
+    "R7-FINAL-EVIDENCE-37.json": "20524c2ccc54052586d68d4f44b177f391c3471db71e27a2392201ff73e4cb20"
+  },
+  "final_harness_review": {
+    "at": "2026-11-05T12:04:08.090410+08:00",
+    "script_sha256": "88d5c90b9a3fe9c035f30fd267a48ef21e306f1ecd7d9d783497df11ca0ca551",
+    "embedded_bytes_match": true,
+    "exit_code": 0,
+    "assertion_groups": 9,
+    "source_manifest_matches_all_206": true,
+    "runtime_unchanged": true,
+    "three_previous_suggestions_applied": true,
+    "documentation_sha256": "a2fc2ee79a2a8bfb3d6d63802ab8c54a0cda3735b0270133bd7b2e0b0b6cf63c",
+    "documentation_contract_blockers": [],
+    "remaining_packaging": [],
+    "non_product_test_risk": "已关闭：最终92b41f89脚本采用119000..120000墙钟时距容差，响应120/载荷DB到期一致保持"
+  },
+  "r7_final": {
+    "at": "2026-11-05T12:08:39.075486+08:00",
+    "status": "PASS_SERVER_SCOPE_R1_R7",
+    "candidate_commit": "c000bede775600ae4d43ebc8efc4bafe6fd52d2f",
+    "branch": "codex/p003-auto-enrollment-20261104",
+    "remote_ref_independently_matched": true,
+    "script_sha256": "92b41f893b16daa13f360c3afeb53433e43966dc6218ae50ad80e7693b06fe43",
+    "main_final_sha256": "f47031cfe6d36b73d1707184aa34c74a905bfe49939dd51ecd76bece2877dee7",
+    "main_exit_code": 0,
+    "assertion_groups": 9,
+    "runtime_unchanged": true,
+    "manifest_206_matches": true,
+    "archived_main_and_stdout_equal_final": true,
+    "all_archive_evidence_hashes_verified": true,
+    "closed_comments": [
+      "14行原字节/字段/声明和SPKI摘要/算法/TTL断言",
+      "重启原凭据prefetch",
+      "旧12行恢复的新回执activated",
+      "一次性验证码措辞",
+      "TTL工装两次墙钟取时容差119000..120000，业务120秒不变",
+      "最终归档/SHA/远端120340目录统一",
+      "mini002仅协议侧兼容表述"
+    ],
+    "air_readback": "air-final-readback-37.json",
+    "air_hashes_verified": true,
+    "studio_hashes_verified": true,
+    "main_receipt_sha256": "d0105b2b3b03f0aa16655b9df8c30c5fa0d114d14437676cfffa6a751fda61b5",
+    "rollback_document": "DEPLOY_ROLLBACK.md",
+    "rollback_tag_commit": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+    "remaining_blockers": [],
+    "excluded": [
+      "C真机USB/BLE物理确认/配网/设备安全落盘与真实页面闭环",
+      "运营商短信送达",
+      "iPhone原机HTTPS实测",
+      "全仓typecheck全绿"
+    ],
+    "original37_workspace_preserved": {
+      "head": "6c2cc932713199968337d45641c3286d66c1fbfe",
+      "dirty_count": 34
+    },
+    "no_new_business_deployment_or_production_restart": true,
+    "review_and_delivery_index_archive_commit_by_13": "后续文档归档，不改变已核脚本/业务/本次R7条件"
+  }
+}

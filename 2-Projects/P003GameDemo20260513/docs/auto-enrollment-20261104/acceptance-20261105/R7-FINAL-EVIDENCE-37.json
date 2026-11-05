@@ -1,0 +1,43 @@
+{
+  "at": "2026-11-05T12:08:39.075486+08:00",
+  "status": "PASS_SERVER_SCOPE_R1_R7",
+  "candidate_commit": "c000bede775600ae4d43ebc8efc4bafe6fd52d2f",
+  "branch": "codex/p003-auto-enrollment-20261104",
+  "remote_ref_independently_matched": true,
+  "script_sha256": "92b41f893b16daa13f360c3afeb53433e43966dc6218ae50ad80e7693b06fe43",
+  "main_final_sha256": "f47031cfe6d36b73d1707184aa34c74a905bfe49939dd51ecd76bece2877dee7",
+  "main_exit_code": 0,
+  "assertion_groups": 9,
+  "runtime_unchanged": true,
+  "manifest_206_matches": true,
+  "archived_main_and_stdout_equal_final": true,
+  "all_archive_evidence_hashes_verified": true,
+  "closed_comments": [
+    "14行原字节/字段/声明和SPKI摘要/算法/TTL断言",
+    "重启原凭据prefetch",
+    "旧12行恢复的新回执activated",
+    "一次性验证码措辞",
+    "TTL工装两次墙钟取时容差119000..120000，业务120秒不变",
+    "最终归档/SHA/远端120340目录统一",
+    "mini002仅协议侧兼容表述"
+  ],
+  "air_readback": "air-final-readback-37.json",
+  "air_hashes_verified": true,
+  "studio_hashes_verified": true,
+  "main_receipt_sha256": "d0105b2b3b03f0aa16655b9df8c30c5fa0d114d14437676cfffa6a751fda61b5",
+  "rollback_document": "DEPLOY_ROLLBACK.md",
+  "rollback_tag_commit": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+  "remaining_blockers": [],
+  "excluded": [
+    "C真机USB/BLE物理确认/配网/设备安全落盘与真实页面闭环",
+    "运营商短信送达",
+    "iPhone原机HTTPS实测",
+    "全仓typecheck全绿"
+  ],
+  "original37_workspace_preserved": {
+    "head": "6c2cc932713199968337d45641c3286d66c1fbfe",
+    "dirty_count": 34
+  },
+  "no_new_business_deployment_or_production_restart": true,
+  "review_and_delivery_index_archive_commit_by_13": "后续文档归档，不改变已核脚本/业务/本次R7条件"
+}
