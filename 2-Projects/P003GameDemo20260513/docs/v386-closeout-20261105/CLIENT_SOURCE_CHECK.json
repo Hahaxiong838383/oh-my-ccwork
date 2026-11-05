@@ -1,0 +1,38 @@
+{
+  "reports/P003_G2_V384_LISTENING_LOCK_AND_VOICE_CLOSEOUT_20261104.md": {
+    "git_blob": "c6b6f9bc4f971ef1587d64e986d3a31a0c12e5bc",
+    "sha256": "742d86b0c747d295419d45b29d18b2640560a0b23a981e430f6c202469eceaab",
+    "bytes": 3488,
+    "field_acceptance_pending_in_source": true
+  },
+  "reports/P003_G2_V385_LISTENING_EXIT_CLIENT_FIX_AND_SERVER_CLOSURE_20261105.md": {
+    "git_blob": "58fab61727be8de4539b312b88362aa8c3a57ab0",
+    "sha256": "2d6f11bac53a21f26dc0af2c71b468453b8e0b23f9473fa8c52832df0fc60364",
+    "bytes": 1243,
+    "field_acceptance_pending_in_source": true
+  },
+  "reports/P003_G2_V386_LISTENING_PREPARING_IDLE_RACE_FIX_AND_DEVICE_ACCEPTANCE_20261105.md": {
+    "git_blob": "8202012e3e922d33486f5adfa68cc89da80ea5bd",
+    "sha256": "3fdbe109a56333a626e6223cb6f4c4fc02a23f4e5c3bfc60c15e52776d2fa0c0",
+    "bytes": 1596,
+    "field_acceptance_pending_in_source": true
+  },
+  "rust_runtime/src/g1_ark_state.rs": {
+    "git_blob": "e0e7278fd2c23af8dd39109f05bef08d467ab739",
+    "sha256": "d484587ac4605e86ca1782caaaee4cb96ee9bebe9814eb6de65633dcee400e8d",
+    "bytes": 7717
+  },
+  "VERSION.lock": {
+    "git_blob": "700c281233b18e8991074aa978c765b5d9918a0c",
+    "sha256": "ba3837ed136a1b15bbbbebbd08e484459fd58a5849e768be3cb6d782e9d5ae61",
+    "bytes": 103346,
+    "v386_related_lines": [
+      "CANARY_ANDROID_VERSION_CODE=386",
+      "CANARY_ANDROID_VERSION_NAME=1.2.2-canary.372",
+      "LISTENING_EXIT_RECONCILE_STATUS=V385_FORMAL_DEVICE_EXIT_COMPLETION_UI_AND_SAME_ROOM_RECOVERY_PASS_V386_PREPARING_IDLE_RACE_FOLLOWUP",
+      "LISTENING_PREPARING_IDLE_GUARD_VERSION_CODE=386"
+    ]
+  },
+  "source_commit": "58f2a2d36bd81b4ad65ce1afb6ce6e42455a6f64",
+  "attachment_relation": "source report is pre-build PENDING draft; supplied attachment contains later field acceptance; not byte-identical; delivery object unavailable in checked mirrors"
+}

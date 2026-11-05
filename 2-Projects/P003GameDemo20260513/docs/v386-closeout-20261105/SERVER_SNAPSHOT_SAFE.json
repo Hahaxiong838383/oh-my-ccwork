@@ -1,0 +1,90 @@
+{
+  "read_only": true,
+  "at_ms": 1793871850507,
+  "window_ms": [
+    1793865840000,
+    1793866380000
+  ],
+  "device_suffix": "03800006",
+  "trace_mapping": [
+    {
+      "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+      "room_sha256": "cffd6eb14d02f9aee883ff4a0da7b2d4c4d5b009ad21d0077dde2e33004ad389",
+      "created_at_ms": 1793865847869,
+      "status": "ok"
+    },
+    {
+      "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+      "room_sha256": "5b416f8bf1a538c2328e6463b707ae5c448976f16af958fff1f97eaea8dc907a",
+      "created_at_ms": 1793865984650,
+      "status": "ok"
+    },
+    {
+      "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+      "room_sha256": "d1863a14559995b43a5e9e469765c931932da6f7105fa5a32bdfec5401832c42",
+      "created_at_ms": 1793866288534,
+      "status": "ok"
+    }
+  ],
+  "authorization": {
+    "enabled": true,
+    "registry_status": "active",
+    "epoch": 3,
+    "grant_present": true,
+    "grant_identity_matches": true,
+    "not_before_ms": 1793609324433,
+    "snapshot_grant_matches": true
+  },
+  "snapshot": {
+    "schema_version": 1,
+    "snapshot_id": "ark-ea7d74e6304d4ce0-1311",
+    "captured_at_ms": 1793871838294,
+    "sequence": 1311,
+    "logical_day": "2026-11-05",
+    "config_revision": "g1-music-character-shadow-20260930-1",
+    "content_version": "v180-pck-foundation-1",
+    "source_mode": "normal",
+    "wallets": {
+      "family_coin": 300,
+      "stardust": 0
+    },
+    "inventory": {
+      "M-CARD-001": 2
+    },
+    "received_at_ms": 1793871845474,
+    "age_ms_at_read": 5033,
+    "value_origin": "ark_current.body; latest stored client projection, not realtime guarantee",
+    "field_kinds": {
+      "family_coin": "nonzero",
+      "stardust": "zero",
+      "M-CARD-001": "nonzero"
+    }
+  },
+  "brain_sources": {
+    "/opt/p003/server/src/routes/custom-llm.ts": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d",
+    "/opt/p003/server/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+    "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477",
+    "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56"
+  },
+  "conversation_metadata": [
+    {
+      "instance": "/opt/p003/server",
+      "total_rows": 0,
+      "ark_rows_metadata": [],
+      "limit": 100,
+      "source": "rtc keyed account/time; not trace FK"
+    },
+    {
+      "instance": "/opt/p003/listening-canary-20261030/brain",
+      "total_rows": 14,
+      "ark_rows_metadata": [],
+      "limit": 100,
+      "source": "rtc keyed account/time; not trace FK"
+    }
+  ],
+  "finite_route_log": {
+    "returncode": 1,
+    "matching_target_entries": 0,
+    "scope": "three mapped rooms during bounded test window; absence is not an Ark test failure"
+  }
+}

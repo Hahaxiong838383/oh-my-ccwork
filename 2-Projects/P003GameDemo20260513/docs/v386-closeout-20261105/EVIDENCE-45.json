@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "owner_session": 45,
+  "status": "ARK_CLOSEOUT_ACCEPTED_WITH_EVIDENCE_LIMITS",
+  "basis": {
+    "user_acceptance": "用户2026-11-05明确快照和聆听模式用例都通过了，要求本轮收口；该意见由COORDINATION.md记载并在本会话授权任务中转达",
+    "independent_server_read": "one bounded read-only pass; three trace identity mappings, latest current snapshot and four deployed source hashes",
+    "new_h1_snapshot_trace_in_attachment": false
+  },
+  "attachment": {
+    "name": "P003_G2_V386_LISTENING_PREPARING_IDLE_RACE_FIX_AND_DEVICE_ACCEPTANCE_20261105.md",
+    "sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342",
+    "bytes": 3461,
+    "client_source": "58f2a2d36bd81b4ad65ce1afb6ce6e42455a6f64",
+    "client_delivery_claim": "e6ab936",
+    "time_window_cst": "2026-11-05 16:04–16:12",
+    "trace_suffixes": [
+      "96b09c8b",
+      "abfbe6e2",
+      "4ef62cc8"
+    ]
+  },
+  "client_delivery": {
+    "source_commit_present_in_existing_mirrors": true,
+    "source_commit": "58f2a2d36bd81b4ad65ce1afb6ce6e42455a6f64",
+    "version_metadata_matches": true,
+    "delivery_claim": "e6ab936",
+    "delivery_object_present_in_checked_mirrors": false,
+    "mirrors_checked": 3,
+    "fetch_performed": false,
+    "source_embedded_report": "pre-build pending draft; later supplied acceptance attachment has additional evidence, not byte-identical",
+    "apk_sha256_claim": "8e19aafdab227e1e052ef09ab33a102b6abe944de3d2712efcf0a9bd4b34384e",
+    "apk_independently_read": false,
+    "jvm1781_rerun": false
+  },
+  "closed_items": [
+    {
+      "item": "snapshot and wallet projection",
+      "basis": "user field acceptance plus independently read authorized normal nonzero/zero/nonzero latest snapshot; current fixed projection source retains known/unknown distinction"
+    },
+    {
+      "item": "H2 makeup-card inventory",
+      "basis": "v384 prior client receipt passed actual one-card answers; latest snapshot now two cards, no fixed historical one-card assumption"
+    },
+    {
+      "item": "H1 static usage split server fix",
+      "basis": "previous independently verified exact canary 18 unit +8 HTTP groups and deployed hashes still match; no newly supplied split-turn field trace"
+    }
+  ],
+  "not_reverified": [
+    "Windows raw log and screenshots",
+    "APK bytes/signature/installed binary",
+    "all live UI vs snapshot field cases and zero/null fault matrix",
+    "new H1 two-commit question/answer trace; attachment is listening-only",
+    "new per-snapshot speech answer or current countdown; no synthetic or real voice triggered"
+  ],
+  "observations": [
+    {
+      "item": "independent wake/session endpoint timeout mentioned by client",
+      "status": "separate observation for main13; not diagnosed or declared fixed by45; not reopened as Ark closeout blocker"
+    }
+  ],
+  "production_writes": false,
+  "device_actions": false,
+  "tests_rerun": false,
+  "source_runtime_changes": false,
+  "historical_tests": {
+    "canary_independent": {
+      "unit": 18,
+      "http_groups": 8
+    },
+    "main_reported_log_verified_previous_turn": 52,
+    "note": "historical separate evidence, not tests executed again in v386 closeout"
+  },
+  "evidence_files": {
+    "attachment": {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/P003_G2_V386_LISTENING_PREPARING_IDLE_RACE_FIX_AND_DEVICE_ACCEPTANCE_20261105.md",
+      "sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342"
+    },
+    "v384_client_tts_receipt": {
+      "path": "/Users/fu-121/.local/state/p003-v384-followup-20261104/P003_G2_V384_TTS_VOICE_RETEST_AND_SERVER_FOLLOWUP_20261104.md",
+      "sha256": "c58046bbf42e59b6a23184e3eff91a0f0bd1fbd8b015900ad254149709e91143"
+    },
+    "v384_server_final_receipt": {
+      "path": "/Users/fu-121/.local/state/p003-v384-followup-20261104/P003_V384_LISTENING_ARK_SERVER_FIX_RECEIPT_20261104.md",
+      "sha256": "1e0b2af3819180bed402b199574ebc0dc33cc240827828fc36a469472107db68"
+    },
+    "v384_independent_review": {
+      "path": "/Users/fu-121/.local/state/p003-v384-followup-20261104/evidence-45/CANDIDATE-REVIEW-45.json",
+      "sha256": "a478cfa3acf093d72bcf7c1455699eda8acb0065de622d00c62bfe0e340c4b29"
+    },
+    "v384_deploy_brain": {
+      "path": "/Users/fu-121/.local/state/p003-v384-followup-20261104/deploy-brain-result.json",
+      "sha256": "5d2c9a7c304d9cecc5d0e3584854be51959144ef25629243f05e42eb320ef818"
+    },
+    "v376_wallet_handoff": {
+      "path": "/Users/fu-121/.local/state/p003-v376-coordination-20261103/delivery/P003_V376_WALLET_FIX_45/ANDROID_HANDOFF.md",
+      "sha256": "f2b32de1de8965756c83606abd55981a2ef98f8c207720b4c54f651832768417"
+    },
+    "current_server_read": {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-45/ark-server-safe.json",
+      "sha256": "351d10c72a206f7b056799ce6ccefd2c7ec42e5f5b7b6ee506bffa8d3e770fe0"
+    },
+    "client_mirrors": {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-45/client-mirror.json",
+      "sha256": "8cddfd1afe741be9ff5c723166845a39d7e097c97e251d70fc96154e0b922f44"
+    },
+    "client_source": {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/evidence-45/client-source-check.json",
+      "sha256": "f43cf592c5a25c7e3f9a3db57f44f4d49ae5aca11c50f9701b0924b324b01762"
+    }
+  },
+  "archive_files": {
+    "SERVER_SNAPSHOT_SAFE.json": "e7e0c3051035bd2c1ca47b2ddaa73b40c3656778f84e1e4a65974cade6125ddd",
+    "CLIENT_SOURCE_CHECK.json": "01af4e9c90ff8431af6737f13aed9d2b7fe5218871ea8382ed06091bb0e1b7e6"
+  },
+  "at": "2026-11-05T17:48:40.621894+08:00"
+}
