@@ -1,4 +1,5 @@
 import { Hono, type Context } from 'hono';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { SignJWT } from 'jose';
 import { verifyAuthToken } from '../auth-jwt.js';
@@ -63,14 +64,14 @@ function rateLimited(key: string, rpm: number): boolean {
   return false;
 }
 
-async function signDeviceCredential(sn: string, secret: string): Promise<{ jwt: string; expMs: number; iatSec: number }> {
+async function signDeviceCredential(sn: string, secret: string, pairing?: { sessionId: string; bindingVersion: number }): Promise<{ jwt: string; expMs: number; iatSec: number }> {
   // 合同终值（codex 验收回执 2026-08-22）：credential_expires_at_ms 必须与 JWT exp*1000
   // 完全一致（端上双校验）——先取整到秒再派生两处，杜绝毫秒尾数差。
   // 恢复换钥（2026-09-17）：iat 显式取同一秒变量并返回，作废水位 = iatSec − 1 与它同源（双载体不各自派生）。
   const iatSec = Math.floor(Date.now() / 1000);
   const expS = iatSec + CREDENTIAL_TTL_MS / 1000;
   const expMs = expS * 1000;
-  const jwt = await new SignJWT({ kind: 'p003-device' })
+  const jwt = await new SignJWT({ kind: 'p003-device', ...(pairing ? { pairing_session_id: pairing.sessionId, binding_version: pairing.bindingVersion } : {}) })
     .setSubject(sn)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(iatSec)
@@ -84,12 +85,17 @@ async function signDeviceCredential(sn: string, secret: string): Promise<{ jwt: 
 export const parentPairingRoute = new Hono<{ Variables: { accountId: string } }>();
 
 parentPairingRoute.use('*', async (c, next) => {
+  const rid = randomUUID();
+  c.header('X-Request-ID', rid);
+  c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const auth = await verifyAuthToken(token);
   if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
+  if (auth.role !== 'parent') return c.json({ ok: false, error: 'parent_required' }, 403);
   c.set('accountId', auth.accountId);
   await next();
+  console.log(`[pairing] parent request_id=${rid} path=${c.req.path} status=${c.res.status}`);
 });
 
 parentPairingRoute.post('/token', (c) => {
@@ -121,7 +127,7 @@ parentPairingRoute.post('/confirm', async (c) => {
   // 恢复合同（2026-09-17）：confirm 前置绑定检查——他人扫已绑定设备当场 409 不建会话（此前要等设备 claim 409、
   // 家长 H5 轮询到过期才知道，09-17 11:46 实证 29 次轮询）；台账外/停用 404。claim 侧同名判定保留（confirm→claim 之间后台改绑的竞态）。
   let relation: 'new' | 'owner' | undefined;
-  if (cfg().recoveryContract) {
+  {
     const device = deviceRegistryStore.get(sn);
     if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
     if (device.parent_account_id && device.parent_account_id !== accountId) {
@@ -129,6 +135,11 @@ parentPairingRoute.post('/confirm', async (c) => {
       return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
     }
     relation = device.parent_account_id ? 'owner' : 'new';
+  }
+  const prior = pairingStore.findSessionByNonce(parsed.data.nonce);
+  if (prior && (prior.account_id !== accountId || prior.sn !== sn || prior.device_pk !== parsed.data.pk
+    || (prior.claimed_at && Date.now() - prior.claimed_at >= IDEMPOTENT_WINDOW_MS))) {
+    return c.json({ ok: false, error: 'nonce_used' }, 409);
   }
   const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk);
   console.log(`[pairing] confirm account=${accountId} sn=${sn} session=${sessionId} relation=${relation ?? '-'}`);
@@ -142,9 +153,19 @@ parentPairingRoute.get('/status', (c) => {
   if (sessionId) {
     const row = pairingStore.findSessionById(sessionId);
     if (!row || row.account_id !== accountId) return c.json({ ok: false, error: 'not_found' }, 404);
+    const device = deviceRegistryStore.get(row.sn);
+    if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
+    if ((device.parent_account_id && device.parent_account_id !== accountId)
+      || (row.claimed_at && (device.parent_account_id !== accountId
+        || (row.binding_version !== null && row.binding_version !== device.binding_version)))) {
+      return c.json({ ok: false, error: 'binding_changed' }, 409);
+    }
     if (row.claimed_at) {
-      const state = row.brain_state === 'ready' ? 'bound' : 'initializing';
-      return c.json({ ok: true, state, sn: row.sn, ...(cfg().recoveryContract && row.binding_outcome ? { binding_outcome: row.binding_outcome } : {}) });
+      const activated = Boolean(row.activated_at);
+      const state = activated ? 'activated' : row.brain_state === 'ready' ? 'bound' : 'initializing';
+      return c.json({ ok: true, state, sn: row.sn, public_id: device.public_id, activated,
+        activated_at_ms: row.activated_at, brain_state: row.brain_state,
+        ...(cfg().recoveryContract && row.binding_outcome ? { binding_outcome: row.binding_outcome } : {}) });
     }
     return c.json({ ok: true, state: Date.now() >= row.expires_at ? 'expired' : 'pending' });
   }
@@ -179,6 +200,13 @@ const ClaimSchemaV2 = z.object({
 });
 
 export const devicePairingRoute = new Hono();
+devicePairingRoute.use('/claim', async (c, next) => {
+  const rid = randomUUID();
+  c.header('X-Request-ID', rid);
+  c.header('Cache-Control', 'no-store');
+  await next();
+  console.log(`[pairing] claim request_id=${rid} status=${c.res.status}`);
+});
 devicePairingRoute.use('/claim', bodyLimit({ maxSize: 4096, onError: c => c.json({ ok: false, error: 'bad_request' }, 400) }));
 
 devicePairingRoute.post('/claim', async (c) => {
@@ -233,7 +261,7 @@ devicePairingRoute.post('/claim', async (c) => {
     return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
   }
   // fw_version_code 只进结构化日志备查（合同：非门槛）；OTA check 的周期上报才是版本台账真源
-  const brainState: 'ready' | 'initializing' = bind.brainAccountId ? 'ready' : 'initializing';
+  const brainState = bind.brainState;
   const { jwt, expMs } = await signDeviceCredential(sn, conf.authSecret);
   pairingStore.markClaimed(hashToken(parsed.data.bind_token), sn, brainState);
   console.log(`[pairing] claim ok sn=${sn} token_id=${row.token_id} brain=${brainState} already_bound=${bind.alreadyBound} fw=${parsed.data.fw_version_code ?? '-'}`);
@@ -271,6 +299,22 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   // 无会话 = 家长尚未 confirm（或 nonce 为假，不区分）：设备按 2s→3s→5s 抖动轮询
   if (!row) return c.json({ ok: false, code: 'pairing_pending' }, 404);
 
+  if (row.sn !== sn) return c.json({ ok: false, code: row.claimed_at ? 'nonce_used' : 'pairing_pending' }, row.claimed_at ? 409 : 404);
+  const current = deviceRegistryStore.get(sn);
+  if (!current || current.status !== 'active') return c.json({ ok: false, code: 'sn_not_allowed' }, 403);
+  if ((current.parent_account_id && current.parent_account_id !== row.account_id)
+    || (row.claimed_at && current.parent_account_id !== row.account_id)) {
+    return c.json({ ok: false, code: 'sn_bound_by_other' }, 409);
+  }
+  if (row.binding_version !== null && row.binding_version !== current.binding_version) {
+    return c.json({ ok: false, code: 'binding_changed' }, 409);
+  }
+  const stillOwned = (version: number) => {
+    const latest = deviceRegistryStore.get(sn);
+    return latest?.status === 'active' && latest.parent_account_id === row.account_id
+      && latest.binding_version === version && !requiresBleProof(sn);
+  };
+
   const devicePk = validateDevicePk(row.device_pk);
   if (!devicePk) {
     // confirm 时已验过，此处失败=库损坏级异常；显眼 500 不静默
@@ -282,7 +326,8 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
     const inWindow = Date.now() - row.claimed_at < IDEMPOTENT_WINDOW_MS;
     if (row.sn === sn && inWindow) {
       // 幂等恢复：重签等价凭据 + 新 ephemeral/新 IV 重新加密（密文必然不同，明文语义等价）
-      const { jwt, expMs } = await signDeviceCredential(sn, conf.authSecret);
+      const { jwt, expMs } = await signDeviceCredential(sn, conf.authSecret, { sessionId: row.session_id, bindingVersion: current.binding_version });
+      if (!stillOwned(current.binding_version)) return c.json({ ok: false, code: 'binding_changed' }, 409);
       const enc = encryptCredential(devicePk, nonce, sn, jwt);
       console.log(`[pairing] v2 claim idempotent sn=${sn} session=${row.session_id}`);
       return c.json({
@@ -313,10 +358,12 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   // 必须在 markSessionClaimed 之前取历史，否则本次会话自己就成了「历史」。
   const hadCredentialBefore = pairingStore.lastClaimedSessionBySn(sn) !== null || Boolean(deviceRegistryStore.get(sn)?.credential_issued_at);
   const bindingOutcome: BindingOutcome = bind.alreadyBound && hadCredentialBefore ? 'existing_binding_recovery' : 'new';
-  const brainState: 'ready' | 'initializing' = bind.brainAccountId ? 'ready' : 'initializing';
-  const { jwt, expMs, iatSec } = await signDeviceCredential(sn, conf.authSecret);
+  const brainState = bind.brainState;
+  const bindingVersion = deviceRegistryStore.get(sn)!.binding_version;
+  const { jwt, expMs, iatSec } = await signDeviceCredential(sn, conf.authSecret, { sessionId: row.session_id, bindingVersion });
+  if (!stillOwned(bindingVersion)) return c.json({ ok: false, code: 'binding_changed' }, 409);
   const enc = encryptCredential(devicePk, nonce, sn, jwt);
-  pairingStore.markSessionClaimed(nonce, brainState, bindingOutcome);
+  pairingStore.markSessionClaimed(nonce, brainState, bindingOutcome, bindingVersion);
   // v3：预授权在**真实 claim 成功**时消费（不在 announce/confirm 阶段；幂等恢复在上面已返回，不会二次消费）
   if (row.source === 'preauth' && row.preauth_created_at) {
     const consumed = pairingStore.consumePreauth(sn, row.preauth_created_at);

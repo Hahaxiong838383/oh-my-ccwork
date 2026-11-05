@@ -44,6 +44,8 @@ export type PairingSessionRow = {
   preauth_created_at: number | null;
   /** 恢复合同（2026-09-17）：本会话真实 claim 的绑定结局 new / existing_binding_recovery；幂等恢复原样回显；老行 null */
   binding_outcome: BindingOutcome | null;
+  binding_version: number | null;
+  activated_at: number | null;
 };
 
 /** 恢复合同：existing_binding_recovery = 同家长重绑且该 SN 此前签过凭据（设备曾持有凭据，本次是恢复）；其余 new */
@@ -151,6 +153,9 @@ class PairingStore {
       if (!cols.some((c) => c.name === 'preauth_created_at')) {
         this.db.exec(`ALTER TABLE pairing_session ADD COLUMN preauth_created_at INTEGER`);
       }
+      for (const name of ['binding_version', 'activated_at']) {
+        if (!cols.some(c => c.name === name)) this.db.exec(`ALTER TABLE pairing_session ADD COLUMN ${name} INTEGER`);
+      }
       if (!cols.some((c) => c.name === 'binding_outcome')) {
         this.db.exec(`ALTER TABLE pairing_session ADD COLUMN binding_outcome TEXT`);
       }
@@ -208,6 +213,11 @@ class PairingStore {
     source: PairingSessionSource,
     preauthCreatedAt: number | null = null,
   ): { sessionId: string } {
+    const previous = this.findSessionByHash(nonceHash);
+    if (previous && previous.account_id === accountId && previous.sn === sn && previous.device_pk === devicePkB64
+      && (previous.claimed_at ? Date.now() - previous.claimed_at < IDEMPOTENT_WINDOW_MS : previous.expires_at > Date.now())) {
+      return { sessionId: previous.session_id };
+    }
     const sessionId = randomBytes(9).toString('base64url');
     const now = Date.now();
     this.db.exec('BEGIN IMMEDIATE');
@@ -258,10 +268,17 @@ class PairingStore {
     return (this.db.prepare(`SELECT * FROM pairing_session WHERE session_id = ?`).get(sessionId) as PairingSessionRow) ?? null;
   }
 
-  markSessionClaimed(nonceString: string, brainState: 'ready' | 'initializing', bindingOutcome: BindingOutcome | null = null): void {
+  markSessionClaimed(nonceString: string, brainState: 'ready' | 'initializing', bindingOutcome: BindingOutcome | null = null, bindingVersion: number | null = null): void {
     this.db
-      .prepare(`UPDATE pairing_session SET claimed_at = ?, brain_state = ?, binding_outcome = ? WHERE nonce_hash = ?`)
-      .run(Date.now(), brainState, bindingOutcome, hashToken(nonceString));
+      .prepare(`UPDATE pairing_session SET claimed_at = ?, brain_state = ?, binding_outcome = ?, binding_version = ? WHERE nonce_hash = ?`)
+      .run(Date.now(), brainState, bindingOutcome, bindingVersion, hashToken(nonceString));
+  }
+
+  /** Only a successfully authenticated credential for this exact claim can activate it. */
+  markSessionActivated(sessionId: string, sn: string, accountId: string, bindingVersion: number): void {
+    this.db.prepare(`UPDATE pairing_session SET activated_at=COALESCE(activated_at,?)
+      WHERE session_id=? AND sn=? AND account_id=? AND binding_version=? AND claimed_at IS NOT NULL`)
+      .run(Date.now(), sessionId, sn, accountId, bindingVersion);
   }
 
   // ───────── v3：announce（设备自报三元组）+ 后台预授权 ─────────

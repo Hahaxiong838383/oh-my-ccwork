@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { SignJWT, decodeJwt } from 'jose';
 import { verifyDeviceCredential as verifyPureDeviceCredential } from '../device-credential.js';
+import { pairingStore } from '../pairing-store.js';
 import { noteBleActivation } from './ble-bindings.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
@@ -208,8 +209,18 @@ function logQuiet(entry: SessionLogEntry): void {
 export async function verifyDeviceCredential(
   header: string | undefined,
   secret: string,
-): Promise<{ sn: string; bindingVersion?: number } | null> {
+): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string } | null> {
   return verifyPureDeviceCredential(header, secret, credentialAcceptedByRevocation);
+}
+
+function notePairingActivation(cred: { sn: string; bindingVersion?: number; pairingSessionId?: string }): void {
+  if (!cred.pairingSessionId || cred.bindingVersion === undefined) return;
+  try {
+    const device = deviceRegistryStore.get(cred.sn);
+    if (device?.status === 'active' && device.parent_account_id && device.binding_version === cred.bindingVersion) {
+      pairingStore.markSessionActivated(cred.pairingSessionId, cred.sn, device.parent_account_id, cred.bindingVersion);
+    }
+  } catch { console.warn('[pairing] activation persistence pending; retry prefetch'); }
 }
 
 function credentialAcceptedByRevocation(sn: string, iatSec: number): boolean {
@@ -424,6 +435,7 @@ deviceSessionRoute.post('/session', async (c) => {
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });
   noteBleActivation(cred.sn, cred.bindingVersion);
+  notePairingActivation(cred);
   return c.json(resp);
 });
 
@@ -449,6 +461,7 @@ deviceSessionRoute.post('/session/prefetch', async (c) => {
   console.log(`[device-session] prefetch sn=${cred.sn} prefetch=${prefetchId}`);
   logQuiet({ sn: cred.sn, room: '', session_id: prefetchId, trace_id: '', status: 'prefetch', ttl_s: 0, ms: 0 });
   noteBleActivation(cred.sn, cred.bindingVersion);
+  notePairingActivation(cred);
   return c.json({ status: 'warming', prefetch_id: prefetchId, expires_at_ms: exp });
 });
 

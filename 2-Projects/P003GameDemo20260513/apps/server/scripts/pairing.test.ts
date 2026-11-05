@@ -557,7 +557,7 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   const jwtNew = decryptCredential(k2.priv, c2.json.enc, n2, SN_R1);
   eq('rv-3d 新凭据三通道可验', (await verifyDeviceCredential(`Bearer ${jwtNew}`, 'test-secret'))?.sn, SN_R1);
   eq('rv-3e 家长与 brain 账号不变', { p: deviceRegistryStore.get(SN_R1)?.parent_account_id, b: deviceRegistryStore.get(SN_R1)?.account_id }, { p: P4, b: brainBefore });
-  eq('rv-3f status bound 带 binding_outcome', await app.request(`/api/parent/pairing/status?session_id=${cf2.json.session_id}`, { headers: { authorization: `Bearer ${jwt4}` } }).then((r) => r.json()), { ok: true, state: 'bound', sn: SN_R1, binding_outcome: 'existing_binding_recovery' });
+  eq('rv-3f status bound 带 binding_outcome', await app.request(`/api/parent/pairing/status?session_id=${cf2.json.session_id}`, { headers: { authorization: `Bearer ${jwt4}` } }).then((r) => r.json()), { ok: true, state: 'bound', sn: SN_R1, public_id: deviceRegistryStore.get(SN_R1)!.public_id, activated: false, activated_at_ms: null, brain_state: 'ready', binding_outcome: 'existing_binding_recovery' });
   eq('rv-3g 会话落库 binding_outcome', pairingStore.findSessionByHash(hashToken(n2))?.binding_outcome, 'existing_binding_recovery');
   // ── rv-6 恢复即换钥：旧凭据失效、新凭据通过；幂等重试不推水位 ──
   eq('rv-6a 旧凭据作废', await verifyDeviceCredential(`Bearer ${jwtOld}`, 'test-secret'), null);
@@ -605,9 +605,9 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   const n8 = newNonce();
   eq('rv-8a 开关 0 → v:3 已绑也 pending', (await announceV(3, SN_R1, n8, k8.pkB64)).json.state, 'pending');
   const cf8 = await confirm(jwt5, SN_R1, n8, k8.pkB64); // 他人也能 confirm（老行为），claim 侧 409
-  eq('rv-8b 开关 0 → confirm 不前置检查且无 relation', { s: cf8.status, rel: cf8.json.relation }, { s: 200, rel: undefined });
+  eq('rv-8b 开关 0 → confirm 仍保留 owner 检查', { s: cf8.status, rel: cf8.json.relation }, { s: 409, rel: undefined });
   const c8 = await claimV2(SN_R1, n8, undefined, 3);
-  eq('rv-8c 开关 0 → claim 级门 409 且无 binding_outcome', { code: c8.json.code, bo: c8.json.binding_outcome }, { code: 'sn_bound_by_other', bo: undefined });
+  eq('rv-8c 拒绝 confirm 不创建可 claim 会话', { code: c8.json.code, bo: c8.json.binding_outcome }, { code: 'pairing_pending', bo: undefined });
   delete process.env.PAIRING_RECOVERY_CONTRACT_ENABLED;
   // ── rv-9 纯函数判定序 ──
   const nowR = Date.now();
