@@ -51,21 +51,24 @@ def parse_packet(b,iface,kind,at,peers):
         return dict(base,proto='dns',sp=sp,dp=dp,id=ident,qr=bool(flags&0x8000),rcode=flags&15,tc=bool(flags&0x200),qname=name,qtype=qt,ips=ips)
     except (ValueError,IndexError,struct.error,UnicodeError):return None
 
-MARKERS=('tts connection timing','tts stream timing','playout metrics')
-SAFE_KEYS={'connect_id','stage','outcome','dns_ms','tcp_ms','tls_ws_ms','dns_path','local','peer','turn_id','phase','completed','pcm_frames','elapsed_ms','ws_read_wait_ms','max_ws_read_wait_ms','channel_send_wait_ms','max_channel_send_wait_ms','max_observed_pcm_gap_ms','pending_wait_ms','underrun_count','underrun_ms','played_frames','exit'}
+MARKERS=('tts connection timing','tts stream timing','playout metrics','tts connection assigned','tts request sent','tts provider first PCM observed')
+SAFE_KEYS={'connect_id','stage','outcome','dns_ms','tcp_ms','tls_ws_ms','dns_path','local','peer','turn_id','phase','completed','pcm_frames','elapsed_ms','ws_read_wait_ms','max_ws_read_wait_ms','channel_send_wait_ms','max_channel_send_wait_ms','max_observed_pcm_gap_ms','pending_wait_ms','underrun_count','underrun_ms','played_frames','exit','used_warm','warm_connect_ms','connect_ms','send_ms','provider_ttfb_ms'}
 def log_event(raw):
     x=json.loads(raw);m=x.get('MESSAGE','')
     if isinstance(m,list):m=bytes(m).decode('utf8','replace')
     m=re.sub(r'\x1b\[[0-9;]*m','',m);marker=next((v for v in MARKERS if v in m),None)
     if not marker:return None
     fields={k:v.strip('"')for k,v in re.findall(r'\b([a-z_]+)=("[^"]*"|[^\s]+)',m)if k in SAFE_KEYS}
-    return {'at':int(x['__REALTIME_TIMESTAMP'])/1e6,'proto':'worker_timing','marker':marker,'fields':fields}
+    room=re.search(r'\broom=("[^"]*"|[^\s]+)',m)
+    event={'at':int(x['__REALTIME_TIMESTAMP'])/1e6,'proto':'worker_timing','marker':marker,'fields':fields,'pid':str(x.get('_PID',''))}
+    if room:event['room_ref']=hashlib.sha256(room[1].strip('"').encode()).hexdigest()[:16]
+    return event
 
 def incident(e):
     if e.get('proto')!='worker_timing':return False
     f=e['fields']
     if f.get('outcome')=='timeout':return True
-    for k,limit in [('dns_ms',1000),('tcp_ms',900),('tls_ws_ms',1500),('underrun_ms',1000),('max_ws_read_wait_ms',1000)]:
+    for k,limit in [('dns_ms',1000),('tcp_ms',900),('tls_ws_ms',1500),('underrun_ms',1000),('max_ws_read_wait_ms',1000),('max_channel_send_wait_ms',1000),('max_observed_pcm_gap_ms',1000),('pending_wait_ms',1000)]:
         try:
             if int(f.get(k,'0'))>=limit:return True
         except ValueError:pass
@@ -116,8 +119,9 @@ def main():
             with lock:
                 now=time.time()
                 while pending and now-pending[0]['at']>=15:
-                    hit=pending.pop(0);window=[v for v in ring if hit['at']-20<=v['at']<=hit['at']+15][-8000:]
-                    write(out/f"incident-{int(hit['at']*1000)}.json",{'trigger':hit,'events':window,'metadata_only':True})
+                    hit=pending.pop(0);selected=[v for v in ring if hit['at']-45<=v['at']<=hit['at']+15];window=selected[-8000:]
+                    coverage={'requested_start':hit['at']-45,'requested_end':hit['at']+15,'first_record':window[0]['at']if window else None,'last_record':window[-1]['at']if window else None,'event_cap_truncated':len(selected)>8000,'ring_start':ring[0]['at']if ring else None}
+                    write(out/f"incident-{int(hit['at']*1000)}.json",{'trigger':hit,'events':window,'coverage':coverage,'metadata_only':True})
                     for old in sorted(out.glob('incident-*.json'))[:-6]:old.unlink()
                 status={'started':started,'expires':started+args.seconds,'at':now,'counts':dict(counts),'ring_items':len(ring),'pending':len(pending),'threads_alive':[t.is_alive()for t in threads],'metadata_only':True,'incident_limit':6,'record_limit_per_incident':8000}
             write(out/'status.json',status)

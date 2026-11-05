@@ -1,0 +1,81 @@
+{
+  "status": "PARTIAL_DNS_FIX_DEPLOYED_REMAINING_CAUSES_OPEN",
+  "deployed_at_cst": "2026-11-05T22:23:56+08:00",
+  "runtime_source_commit": "44f6de30776fbb98835822f7624858f7d5489b19",
+  "runtime_binary_sha256": "06eb839d006872b7a0366aa9ca64f0d4f5b9e6a6f5b321aa60f42108d261999a",
+  "runtime_pid": "3006275",
+  "backup": "/root/p003-transport-diagnostic-20261105/rollback-main-44f6de30",
+  "only_added_flag": "P003_ASYNC_DNS_V1=1",
+  "other_environment_values_unchanged": true,
+  "protected_pools_unchanged": true,
+  "production_verification": {
+    "at_cst": "2026-11-05T22:46:13+08:00",
+    "stable_seconds": 1336.92,
+    "restarts": "0",
+    "error_count": 0,
+    "warnings_present": 8,
+    "connected": 17,
+    "dns_ms_range": [
+      0,
+      44
+    ],
+    "connect_ms_range": [
+      189,
+      293
+    ],
+    "tts_streams": 14,
+    "rtc_connectivity_pass": 3,
+    "rtc_natural_playout_complete": 2,
+    "rtc_intentionally_stopped_at_window_end": 1,
+    "underrun_zero_sessions": 3,
+    "physical_hearing_verified": false,
+    "probe_rooms_removed": true
+  },
+  "watch": {
+    "unit": "p003-tts-network-watch-20261105-v2",
+    "script_sha256": "0077d3c235344e5fa19af1de0e9e07720139ccc6dc13dbc87c62e7760e76a3f7",
+    "expires_cst": "2026-11-06T22:27:05+08:00",
+    "main_unchanged": true,
+    "metadata_only": true,
+    "threads_alive": [
+      true,
+      true
+    ],
+    "counters": {
+      "dns": 18,
+      "tcp": 2264,
+      "tcp_out": 1106,
+      "tcp_in": 1158,
+      "worker_timing": 37
+    },
+    "pre_seconds": 45,
+    "post_seconds": 15,
+    "max_incidents": 6,
+    "max_records_each": 8000
+  },
+  "open": [
+    "historical_5s_dns_same_origin_unproven",
+    "tls_vs_websocket_timeout_cause_unresolved",
+    "historical_midstream_starvation_cause_unresolved",
+    "android_physical_hearing_unverified"
+  ],
+  "private_evidence_root": "/Users/fu-121/.local/state/p003-sn02000038-latency-20261105/rootcause",
+  "evidence_sha256": {
+    "deploy-check-final.json": "6e1e07660bf226ebd5437187fa9808cb9cde356957aeb2b0b535acc3c1e4e6b8",
+    "deploy-main.json": "2757a7b44809b6810769c84aba9cef1f4722b71a08cf5dc6aea7d0c49922006e",
+    "postdeploy-final.json": "2d57d055d7f57c1a05c593ce6788fa307a516b4c932f21315fa825a1a9b553b4",
+    "rtc-cleanup-final.json": "0857f566bba138b3344a296b717f6b0c4a5aae3db52947bbcd95386b10adf408",
+    "rtc-main.json": "29ac4189d8104f5563dedc02f55b279c2ff8996b42c351a5bb92157e6056eaad",
+    "rtc-second.json": "1a3d51132de9918e290205f2bc7fe2680acb62af97730caa649f0c11386b86fb",
+    "rtc-complete.json": "6371cf4f41f4e0194a0b8bccb4c0ad1c6315923f60d0bedde7d8361603ef0422",
+    "watch-smoke-correlation.json": "c41e24e0a0744128a256f513433a353e9a41c914980a99d8ed50abd8952fc9dd",
+    "watch-replaced.json": "c65cbf72d4f4cade1fd02ce26c5b0dda9ecc71f28bac0bba757ae17b9d308312",
+    "diagnostic-health.json": "e78bf266df1bd1dd335d398e85d2f5c914e042cd80d591b66fe09e651e46f9e1",
+    "dns-capture.json": "4d8fc7342279140e0aaf341b39782e114a438381b6d377504972641f7c45ef4b",
+    "worker-red.log": "f222eea924015b0feafaa00d2b368eb5b30b51921a57e6f6534c14f73b81e189",
+    "worker-final.log": "ebff50b6cca74e36bcd9ac2327e6d91dfbe68c374841f6b737d0d84c3c534102",
+    "worker-release.log": "00229aa0792d92c1823603238dbe1b199f5a6fa137be72727d669382b0b32d3d",
+    "deps-inspect.json": "64b9007462afcfe18abe8302ac808a6ed5b15aef08a9def33872f09af90340a9",
+    "history-transport-fixed.json": "9889c3dcb5fd69d856b4144cb10e91dcf3f72eed47c80cd9eae9f75de9ae6b12"
+  }
+}
