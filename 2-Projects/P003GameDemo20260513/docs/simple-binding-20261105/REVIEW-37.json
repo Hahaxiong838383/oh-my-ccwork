@@ -1,0 +1,66 @@
+{
+  "reviewed_at": "2026-11-05 16:01:03 CST",
+  "candidate_sha": "c412d67f44b5b1384df3cc33da47ace8ed7d03cd",
+  "status": "PASS_IMPLEMENTATION_PREDEPLOY_WITH_MINOR_DOC_NOTES",
+  "blocking_findings": [],
+  "closed_findings": [
+    {
+      "id": "CAS-37-01",
+      "resolution": "registry busy_timeout=250ms; original two-process three-round competition passes 200/409, winner retry succeeds, one registry row"
+    }
+  ],
+  "verification": {
+    "independent_route_suite": {
+      "pass": 17,
+      "fail": 0,
+      "total": 17,
+      "node": "v24.19.0"
+    },
+    "legacy_BLE_original37_byte_identical": {
+      "core": 26,
+      "guards": 19,
+      "http": "pass",
+      "candidate": "c412d67f44b5b1384df3cc33da47ace8ed7d03cd"
+    },
+    "main_session13_evidence": {
+      "remote_root": "/opt/p003/_acceptance/simple-binding-20261105-155258",
+      "scripts_exit0": 7,
+      "main_groups": 5,
+      "requests": 35,
+      "runtime_source_files_match_candidate": 6,
+      "other_source_entries_match_production_preflight": 197,
+      "payload_files_match_candidate": 14,
+      "runtime_unchanged": true,
+      "independently_rerun_by37": false
+    }
+  },
+  "documentation_notes": [
+    {
+      "id": "DOC-37-01",
+      "severity": "nonblocking",
+      "change": "same nonce idempotence applies within valid session window; qualify wording",
+      "state": "sent to13"
+    },
+    {
+      "id": "DOC-37-02",
+      "severity": "nonblocking",
+      "change": "unauthenticated bind-sn 401 may omit X-Request-ID; log timestamp and HTTP",
+      "state": "sent to13"
+    }
+  ],
+  "scope_limits": [
+    "predeployment approval only, no production deployment verification",
+    "no real C or client hardware verification",
+    "SMS verify uses fixture code; SMS delivery not tested",
+    "full main results from13 independently hash-reviewed, not rerun by37",
+    "old full-project type errors not independently rerun in this review"
+  ],
+  "evidence_sha256": {
+    "verification-37/run-candidate3-final/result.json": "c8a5382f212357cf0cb6185a0ee7707340ae20023205419037f9ce5c38d0468f",
+    "verification-37/run-candidate3-final/inputs.json": "fe4b50bd63e188e1949cbe03705bcbb843b19dc165f04f8deedc3d7959e884e4",
+    "verification-37/ble-candidate3-results.json": "09b7fd1f544a6fef1c289c87b16834160303e4e3bb3c406b62f5ee4e8211622b",
+    "verification-37/main-final3-reviewed.json": "0a967a93a0e02b6290a87428b2ad8c58cb680ecf94c9b9a6351d8789cef08cdd",
+    "verification-37/main-payload-candidate3-checked.json": "061bcdc8da4e337de2e8d5eb03ebe274bb62c52d9b8fdf7cf31094ece649ae9e",
+    "verification-37/CLIENT-CONTRACT-V3-reviewed.md": "6413e4f2184457b0550a9e179c8430883ea582ae4f00836232307fdee5e18e47"
+  }
+}

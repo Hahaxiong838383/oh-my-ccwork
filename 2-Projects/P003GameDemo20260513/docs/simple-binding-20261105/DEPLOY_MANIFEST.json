@@ -1,0 +1,35 @@
+{
+  "candidate": "c412d67f44b5b1384df3cc33da47ace8ed7d03cd",
+  "files": [
+    {
+      "path": "src/device-credential.ts",
+      "before": "0d85a49f403ad10cb428fbbd5347838e5522cb69453aac1c5f560b269f4969d4",
+      "after": "e7e8fce66385596b251dfcf17f46c19ab35a81a7feb3b4509ef5e67b8906d895"
+    },
+    {
+      "path": "src/device-registry-store.ts",
+      "before": "2242517c76fe72502af8a1897507612689bd3804e28766465e2e1b0af8109f63",
+      "after": "eb5a64929b5d386da39034c722b759e201c374207f3d064d73e511d5b6d48a10"
+    },
+    {
+      "path": "src/pairing-store.ts",
+      "before": "7606b020b8929bafd778e5ec9b06367d68917c2ba43e242cbaf3521a6628dff3",
+      "after": "2065d85f892b522200079a59066707721e3a9ed48b6db3a1aaa0afb4cb12044b"
+    },
+    {
+      "path": "src/routes/device-session.ts",
+      "before": "6763d2275f935b808e14415482f51103f1ffb449af34ff6508c23e8caf2fe531",
+      "after": "445ce889601aa148672e5f1a0dc6e3139d78f5e71f5a285f7cd48ea591631e16"
+    },
+    {
+      "path": "src/routes/pairing.ts",
+      "before": "f1bdad9533d8090f8b5e40ff01148cdaec7f2fc272697c5cf14f3a3e9634a34a",
+      "after": "ccb89ef6547d77a87309d05b8818004713829719facbdda467f534e68d1cc8e5"
+    },
+    {
+      "path": "src/routes/profile.ts",
+      "before": "a6f8536d42ee7907ecb2df15e4455b614279f87789fbf43d07a24a231e335681",
+      "after": "00d70dc5265014e9de95a3420ec96a6df333b07623e25f3d4f33f604f2e92614"
+    }
+  ]
+}
