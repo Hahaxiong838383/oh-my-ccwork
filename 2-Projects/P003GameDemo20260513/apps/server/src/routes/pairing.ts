@@ -138,10 +138,11 @@ parentPairingRoute.post('/confirm', async (c) => {
   }
   const prior = pairingStore.findSessionByNonce(parsed.data.nonce);
   if (prior && (prior.account_id !== accountId || prior.sn !== sn || prior.device_pk !== parsed.data.pk
+    || (prior.binding_version !== null && prior.binding_version !== deviceRegistryStore.get(sn)!.binding_version)
     || (prior.claimed_at && Date.now() - prior.claimed_at >= IDEMPOTENT_WINDOW_MS))) {
     return c.json({ ok: false, error: 'nonce_used' }, 409);
   }
-  const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk);
+  const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk, deviceRegistryStore.get(sn)!.binding_version);
   console.log(`[pairing] confirm account=${accountId} sn=${sn} session=${sessionId} relation=${relation ?? '-'}`);
   return c.json({ ok: true, session_id: sessionId, ...(relation ? { relation } : {}) });
 });
@@ -156,8 +157,8 @@ parentPairingRoute.get('/status', (c) => {
     const device = deviceRegistryStore.get(row.sn);
     if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
     if ((device.parent_account_id && device.parent_account_id !== accountId)
-      || (row.claimed_at && (device.parent_account_id !== accountId
-        || (row.binding_version !== null && row.binding_version !== device.binding_version)))) {
+      || (row.claimed_at && device.parent_account_id !== accountId)
+      || (row.binding_version !== null && row.binding_version !== device.binding_version)) {
       return c.json({ ok: false, error: 'binding_changed' }, 409);
     }
     if (row.claimed_at) {

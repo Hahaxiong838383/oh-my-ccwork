@@ -60,6 +60,11 @@ assert.equal(await verifyDeviceCredential('Bearer '+credential,process.env.AUTH_
 registry.setParentAccountId(sn,la.json.account.id);
 assert.equal((await req('/v1/device/pairing/claim',undefined,claimBody())).status,409); // owner changed away and back
 pass('first/repeated claim and old credentials reject changed ownership/generation even when old recovery flag is off');
+// Version changes after confirm invalidate the unclaimed session too.
+nonce=randomBytes(32).toString('base64url');
+assert.equal((await req('/api/parent/pairing/confirm',a,confirmBody())).status,200);
+db.prepare('UPDATE device_registry SET binding_version=binding_version+1 WHERE sn=?').run(sn);
+assert.equal((await req('/v1/device/pairing/claim',undefined,claimBody())).status,409);
 // A distinct new pairing must not be marked active by an older session credential.
 nonce=randomBytes(32).toString('base64url');const c2=await req('/api/parent/pairing/confirm',a,confirmBody());const cl2=await req('/v1/device/pairing/claim',undefined,claimBody());assert.equal(cl2.status,200);const cred2=decryptCredential(key.getPrivateKey(),cl2.json.enc,nonce,sn);
 nonce=randomBytes(32).toString('base64url');const c3=await req('/api/parent/pairing/confirm',a,confirmBody());assert.equal((await req('/v1/device/pairing/claim',undefined,claimBody())).status,200);

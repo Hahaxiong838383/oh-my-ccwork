@@ -196,8 +196,8 @@ class PairingStore {
   // ───────── v2：nonce 会话（SoftAP 两阶段 + ECIES）─────────
 
   /** 家长 confirm：固定三元组。同 SN 未 claim 的旧会话作废（一台设备一个有效会话）。 */
-  confirmSession(accountId: string, sn: string, nonceString: string, devicePkB64: string): { sessionId: string } {
-    return this.confirmSessionByHash(accountId, sn, hashToken(nonceString), devicePkB64, 'parent');
+  confirmSession(accountId: string, sn: string, nonceString: string, devicePkB64: string, bindingVersion: number | null = null): { sessionId: string } {
+    return this.confirmSessionByHash(accountId, sn, hashToken(nonceString), devicePkB64, 'parent', null, bindingVersion);
   }
 
   /**
@@ -212,6 +212,7 @@ class PairingStore {
     devicePkB64: string,
     source: PairingSessionSource,
     preauthCreatedAt: number | null = null,
+    bindingVersion: number | null = null,
   ): { sessionId: string } {
     const previous = this.findSessionByHash(nonceHash);
     if (previous && previous.account_id === accountId && previous.sn === sn && previous.device_pk === devicePkB64
@@ -225,10 +226,10 @@ class PairingStore {
       this.db.prepare(`DELETE FROM pairing_session WHERE sn = ? AND claimed_at IS NULL`).run(sn);
       this.db
         .prepare(
-          `INSERT INTO pairing_session (nonce_hash, session_id, sn, account_id, device_pk, confirmed_at, expires_at, source, preauth_created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO pairing_session (nonce_hash, session_id, sn, account_id, device_pk, confirmed_at, expires_at, source, preauth_created_at, binding_version)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(nonceHash, sessionId, sn, accountId, devicePkB64, now, now + TOKEN_TTL_S * 1000, source, preauthCreatedAt);
+        .run(nonceHash, sessionId, sn, accountId, devicePkB64, now, now + TOKEN_TTL_S * 1000, source, preauthCreatedAt, bindingVersion);
       this.db.exec('COMMIT');
     } catch (err) {
       this.db.exec('ROLLBACK');
