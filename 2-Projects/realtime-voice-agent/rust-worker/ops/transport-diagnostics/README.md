@@ -15,3 +15,5 @@ python3 network_watch.py --seconds 86400 --output /root/p003-transport-diagnosti
 构建与测试使用现有隔离Cargo缓存，不在生产安装编译器。结果的“ok”只证明该次调用，不代表历史故障根治。
 
 记录包含PID、匿名room_ref以及连接分配/请求发送/首PCM事件，便于关联connect_id。事件coverage列出实际覆盖与截断；peer没有匹配TCP记录时先判取证缺口。接收、channel和PCM间隔各自触发，不把背压自动当网络故障。仅IPv4，无TLS解密或TCP_INFO；first_underrun_ms等未白名单字段需读原journal，不根据汇总伪造逐次等待时间。
+
+2026-11-06诊断v3补齐TCP选项（仅SACK范围、时间戳、窗口缩放等数值，不保存未知选项原文），并累计Linux PACKET_STATISTICS重置式计数。`capture_kernel_drops`是本抓包socket接收范围内的丢弃，含未被业务过滤保存的包，不是某条TTS连接的丢包数；0也不能证明链路无丢包。每份incident/tail保存计数快照。5个元数据/脱敏测试和真实Linux双向TCP smoke已验证，主Worker不需重启。当前受控v3与v2原到期时间相同，11/6 22:27:05 CST止；v2尾记录保留。

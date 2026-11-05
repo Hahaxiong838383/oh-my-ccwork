@@ -1,0 +1,160 @@
+{
+  "status": "CONNECTION_WAIT_AMPLIFICATION_FIXED_AND_DEPLOYED_TRANSPORT_ROOT_CAUSES_OPEN",
+  "release": {
+    "status": "DEPLOYED_REGISTERED",
+    "start": 1793893632.5232434,
+    "completed": 1793893637.2607183,
+    "pid": "3021826",
+    "unit": {
+      "MainPID": "3021826",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "binary_sha256": "f7dfdd4517fc2addb41b393c10f232a19d074e0752c6abb8977e08f11a7b7ed0",
+    "proc_sha256": "f7dfdd4517fc2addb41b393c10f232a19d074e0752c6abb8977e08f11a7b7ed0",
+    "source_commit": "19ac09674c0d42d91419ec8411e7175c34b3c204",
+    "backup": "/root/p003-transport-diagnostic-20261105/rollback-main-recovery-19ac0967",
+    "env_before_sha256": "5e8cc9806994a46837e222ea97ae4bd0c4d9ed65949b1fc546f6246ba8f2855a",
+    "env_after_sha256": "f9d08a699954d18b6f46bf24282f5b4a26842da0e3bff1898aadd46e0efae495",
+    "only_added_flag": "P003_TTS_CONNECT_RECOVERY_V1",
+    "flag_value": "1",
+    "other_environment_values_unchanged": true,
+    "protected_unchanged": true,
+    "idle_checks": [
+      {
+        "rooms": 0,
+        "assignments_seen": 4,
+        "completed_seen": 4,
+        "unfinished_jobs": 0
+      },
+      {
+        "rooms": 0,
+        "assignments_seen": 4,
+        "completed_seen": 4,
+        "unfinished_jobs": 0
+      },
+      {
+        "rooms": 0,
+        "assignments_seen": 4,
+        "completed_seen": 4,
+        "unfinished_jobs": 0
+      }
+    ]
+  },
+  "isolated_tests": 485,
+  "runtime_candidate_test_count": 484,
+  "added_followup_test_only": true,
+  "production_observation": {
+    "at": 1793894208.8869886,
+    "stable_seconds": 571.626270532608,
+    "unit": {
+      "MainPID": "3021826",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "log_counts": {
+      "registered worker": 1,
+      "tts connection timing": 11,
+      "tts stream timing": 9,
+      "playout metrics": 2,
+      "job assignment received": 2,
+      "process exiting": 2,
+      "output_ready": 2,
+      "input_ready": 4
+    },
+    "error_count": 0,
+    "warn_count": 3
+  },
+  "production_connect_ms_range": [
+    199,
+    303
+  ],
+  "production_first_pcm_ms_range": [
+    260,
+    322
+  ],
+  "production_rtc_runs": 2,
+  "source_drained_runs": 2,
+  "underrun_count": 0,
+  "spare_on_real_provider_incident": "NOT_REPRODUCED",
+  "target_device_hearing": "NOT_VERIFIED",
+  "capture_limit": "Repeated TCP ranges are not proof of packet loss or historical root cause.",
+  "evidence_sha256": {
+    "recovery-deployed.json": "9ea1485e5a9dd562f4514ee5ee4c3f295c2d13ba4af32fc9b9311be917d6baf8",
+    "recovery-backup-check.json": "90d8a8d3f37de6cf90c5d2acc056b3d5938fbe778b0b185690cb90cc0337db4c",
+    "worker-priority-review-followup.log": "6c8b140e76cdd53fddf1c96d99606cd0dee66d03b3b73907dcc3a558a4b38b72",
+    "source-priority-review-followup.json": "4f40f9a67f509e748534525e96ec061aee46c455239c3e700648878e1d0e1701",
+    "worker-recovery-release.log": "ff4b32211813b503fb2a42560e86eec9014fadf8ba31a7ee421e64a26d489140",
+    "source-recovery-release.json": "ace0f2fef92ed8d3beac80bd614ef47b86b95f0dd86b7ffde9bfca62e6abec66",
+    "recovery-isolated-rtc.json": "e8683fa5753ca415ddde44bdb9c5fd5eb6ac41ad24940ec571c5cd07a71d5abe",
+    "recovery-isolated-verification.json": "555727ca7fd32013387d911e27f44057504cff3e931bcffd1e79fb91a6434fb2",
+    "recovery-main-rtc-1.json": "1c5688d009f3976791b430886de02022329c3a079adb562953bbeb7e38ef837d",
+    "recovery-main-rtc-2.json": "190735782a559c66c8f76e50d286fe1dbf5faa19bbccd87a6efb1389151e9667",
+    "recovery-main-cleanup.json": "e487955f69230027d9603df3f76a511cc93550ebc554fe6ea095caa528bf0ec3",
+    "recovery-post-final.json": "edd2987490be23c508eace7ad14767e2dce8a3f4edbc0824ab4d44620f0f9dfd",
+    "captured-stream-probe-result.json": "d4356c643a2b7a612c2045622973cc243c8c7fff018813a15a1c48907d1cd8e9",
+    "captured-stream-summary.json": "4fc607b2b7c52aa29a46b7fb6884ef7ecb9f3dad1469a6aedfa333a508268a02",
+    "recovery-stability.json": "830840c38a75abad1e227070cdcd684aa34aff67eb1b8dfb3cf68c337be1afc6",
+    "watch-v3-red.log": "c75262706eb0c6acbbde0191f6b66b1460532063c95f311dd8d89974b5c19c77",
+    "watch-v3-green.log": "6273232de4d3ef7acd4ecafa5c86beeeb974f56586b21089a2990b3f72facbe6",
+    "watch-v3-smoke.json": "aae465a34b815ca98b93db711863e29782bf0800820dbd53d6e095c8d07bfae3",
+    "watch-v3-installed.json": "06e739db6165f5f93cdffaa8ae5e18032279db54a2f14d27abf509fac527eade",
+    "final-recovery-check.json": "ace424fd1eb51cb6035c1b01ddec2ee1db31aa8e776e52353b246bb644854d21"
+  },
+  "diagnostics_v3": {
+    "unit": "p003-tts-network-watch-20261105-v3",
+    "status": {
+      "started": 1793894664.8333397,
+      "expires": 1793975225.8333397,
+      "at": 1793894665.8516002,
+      "counts": {
+        "capture_packets": 0,
+        "capture_kernel_drops": 0,
+        "capture_stat_reads": 1
+      },
+      "ring_items": 0,
+      "pending": 0,
+      "threads_alive": [
+        true,
+        true
+      ],
+      "metadata_only": true,
+      "incident_limit": 6,
+      "record_limit_per_incident": 8000
+    },
+    "main_unchanged": true,
+    "previous_tail_preserved": true,
+    "script_sha256": "57140a2d792e83f818e2bec49cab1c5aa894630d8422d3b7d3b48005d9d42ea3"
+  },
+  "diagnostics_tests": 5,
+  "diagnostics_smoke": {
+    "smoke_pass": true,
+    "script_sha256": "57140a2d792e83f818e2bec49cab1c5aa894630d8422d3b7d3b48005d9d42ea3",
+    "capture_counts": {
+      "capture_packets": 104,
+      "capture_kernel_drops": 0,
+      "capture_stat_reads": 6,
+      "dns": 10,
+      "tcp": 6,
+      "tcp_out": 4,
+      "tcp_in": 2
+    },
+    "bidirectional_tcp": true,
+    "tcp_options_observed": true,
+    "main_unchanged": true
+  },
+  "final_runtime_and_diagnostics_check": {
+    "at": 1793894767.6980405,
+    "main_pid": "3021826",
+    "isolated_environment_removed": true,
+    "isolated_unit_stopped": true,
+    "v3_live": true,
+    "capture_counts": {
+      "capture_packets": 1319,
+      "capture_kernel_drops": 0,
+      "capture_stat_reads": 95
+    },
+    "previous_tail_preserved": true,
+    "expires_at": 1793975225.8333397
+  }
+}

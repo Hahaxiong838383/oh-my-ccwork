@@ -7,6 +7,28 @@ import argparse,collections,hashlib,json,pathlib,re,socket,struct,subprocess,thr
 HOST='cbm01.cn-huabei-1.xf-yun.com'
 NAMES={HOST,'hb-kaicp.xf-gtm.com'}
 
+def tcp_options(raw):
+    result={};i=0
+    while i<len(raw):
+        kind=raw[i]
+        if kind==0:break
+        if kind==1:i+=1;continue
+        if i+1>=len(raw) or raw[i+1]<2 or i+raw[i+1]>len(raw):
+            result['options_malformed']=True;break
+        size=raw[i+1];value=raw[i+2:i+size]
+        if kind==3 and size==3:result['window_scale']=value[0]
+        elif kind==4 and size==2:result['sack_permitted']=True
+        elif kind==5 and size>=10 and (size-2)%8==0:
+            result['sack_blocks']=[list(struct.unpack('!II',value[j:j+8]))for j in range(0,min(len(value),32),8)]
+        elif kind==8 and size==10:result['tsval'],result['tsecr']=struct.unpack('!II',value)
+        i+=size
+    return result
+
+def add_packet_statistics(totals, packets, dropped):
+    # Linux PACKET_STATISTICS resets this socket's counters on each read.
+    for key,value in [('capture_packets',packets),('capture_kernel_drops',dropped),('capture_stat_reads',1)]:
+        totals[key]=totals.get(key,0)+value
+
 def skip_name(b,p):
     while p<len(b):
         n=b[p];p+=1
@@ -26,8 +48,10 @@ def parse_packet(b,iface,kind,at,peers):
         if len(b)<h+20 or not ({src,dst}&peers):return None
         sp,dp,seq,ack=struct.unpack('!HHII',b[h:h+12])
         if 443 not in [sp,dp]:return None
-        total=struct.unpack('!H',b[16:18])[0];n=max(0,total-(h-14)-(b[h+12]>>4)*4)
-        return dict(base,proto='tcp',sp=sp,dp=dp,seq=seq,ack=ack,flags=b[h+13],data_len=n,window=struct.unpack('!H',b[h+14:h+16])[0])
+        tcp_header=(b[h+12]>>4)*4
+        if tcp_header<20 or len(b)<h+tcp_header:return None
+        total=struct.unpack('!H',b[16:18])[0];n=max(0,total-(h-14)-tcp_header)
+        return dict(base,proto='tcp',sp=sp,dp=dp,seq=seq,ack=ack,flags=b[h+13],data_len=n,window=struct.unpack('!H',b[h+14:h+16])[0],tcp_options=tcp_options(b[h+20:h+tcp_header]))
     if b[23]!=17:return None
     sp,dp=struct.unpack('!HH',b[h:h+4])
     if 53 not in [sp,dp]:return None
@@ -91,16 +115,23 @@ def main():
     def packets():
         # ETH_P_ALL is required for outgoing frames too. ETH_P_IP alone missed
         # client SYN/ACK in the initial short probes; do not reuse that omission.
-        s=socket.socket(socket.AF_PACKET,socket.SOCK_RAW,socket.htons(0x0003));s.settimeout(.25)
+        s=socket.socket(socket.AF_PACKET,socket.SOCK_RAW,socket.htons(0x0003));s.settimeout(.25);last_stats=0
+        def statistics():
+            try:
+                packets,dropped=struct.unpack('II',s.getsockopt(263,6,8)) # SOL_PACKET / PACKET_STATISTICS
+                with lock:add_packet_statistics(counts,packets,dropped)
+            except OSError:
+                with lock:counts['capture_statistics_errors']+=1
         try:
             while not stop.is_set():
+                if time.monotonic()-last_stats>=1:statistics();last_stats=time.monotonic()
                 try:b,a=s.recvfrom(2048)
                 except socket.timeout:continue
                 e=parse_packet(b,a[0],a[2],time.time(),peers)
                 if e:
                     if e['proto']=='dns' and e['qr']:peers.update(e['ips'][:max(0,128-len(peers))])
                     add(e)
-        finally:s.close()
+        finally:statistics();s.close()
     p=subprocess.Popen(['journalctl','-u','voice-worker-rust','--since','now','--follow','--no-pager','-o','json'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
     def logs():
         for raw in p.stdout:
@@ -121,7 +152,7 @@ def main():
                 while pending and now-pending[0]['at']>=15:
                     hit=pending.pop(0);selected=[v for v in ring if hit['at']-45<=v['at']<=hit['at']+15];window=selected[-8000:]
                     coverage={'requested_start':hit['at']-45,'requested_end':hit['at']+15,'first_record':window[0]['at']if window else None,'last_record':window[-1]['at']if window else None,'event_cap_truncated':len(selected)>8000,'ring_start':ring[0]['at']if ring else None}
-                    write(out/f"incident-{int(hit['at']*1000)}.json",{'trigger':hit,'events':window,'coverage':coverage,'metadata_only':True})
+                    write(out/f"incident-{int(hit['at']*1000)}.json",{'trigger':hit,'events':window,'coverage':coverage,'capture_counts_snapshot':dict(counts),'metadata_only':True})
                     for old in sorted(out.glob('incident-*.json'))[:-6]:old.unlink()
                 status={'started':started,'expires':started+args.seconds,'at':now,'counts':dict(counts),'ring_items':len(ring),'pending':len(pending),'threads_alive':[t.is_alive()for t in threads],'metadata_only':True,'incident_limit':6,'record_limit_per_incident':8000}
             write(out/'status.json',status)
@@ -130,5 +161,5 @@ def main():
         try:p.wait(timeout=3)
         except subprocess.TimeoutExpired:p.kill();p.wait()
         for t in threads:t.join(timeout=1)
-        with lock:write(out/'tail.json',{'events':list(ring)[-8000:],'metadata_only':True,'ended':time.time()})
+        with lock:write(out/'tail.json',{'events':list(ring)[-8000:],'capture_counts_snapshot':dict(counts),'metadata_only':True,'ended':time.time()})
 if __name__=='__main__':main()

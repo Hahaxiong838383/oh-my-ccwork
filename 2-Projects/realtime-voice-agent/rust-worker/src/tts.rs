@@ -305,6 +305,25 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn priority_actual_foreground_owner_aborts_pending_prewarm_on_cancel() {
+        let (started,ready)=tokio::sync::oneshot::channel();
+        let (dropped,done)=tokio::sync::oneshot::channel();
+        struct Notify(Option<tokio::sync::oneshot::Sender<()>>);
+        impl Drop for Notify {fn drop(&mut self){if let Some(s)=self.0.take(){let _=s.send(());}}}
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _guard=Notify(Some(dropped));let _=started.send(());
+            std::future::pending::<Result<tts_xfyun::Warm>>().await
+        })));
+        let cfg=tts_xfyun::XfyunTtsConfig{app_id:String::new(),api_key:String::new(),api_secret:String::new(),
+            vcn:tts_xfyun::DEFAULT_VCN.into(),speed:50,oral_level:"mid".into()};
+        // Empty credentials guarantee even an unexpectedly late spare cannot
+        // reach an external service. Exercise the real foreground owner method.
+        let outer=tokio::spawn(async move {let _=warm.take_for_sentence(&cfg).await;});
+        ready.await.unwrap();tokio::task::yield_now().await;outer.abort();let _=outer.await;
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200),done).await.is_ok());
+    }
+
+    #[tokio::test]
     async fn priority_recovery_pending_primary_uses_spare_without_waiting_for_failure() {
         use std::sync::atomic::{AtomicUsize,Ordering};
         let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(1);
