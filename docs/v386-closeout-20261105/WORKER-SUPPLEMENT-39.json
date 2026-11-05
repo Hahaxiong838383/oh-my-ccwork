@@ -1,0 +1,432 @@
+{
+  "status": "WORKER_RUNTIME_AND_HISTORY_SUPPLEMENT_VERIFIED",
+  "observed_at": "2026-11-05T10:15:00.855716+00:00",
+  "baseline_commit": "849d9bae723c3366c5a66839b8e96a9f49752d80",
+  "unit": {
+    "MainPID": "2750511",
+    "NRestarts": "0",
+    "ExecMainStartTimestamp": "Wed 2026-11-04 10:18:27 UTC",
+    "ActiveState": "active"
+  },
+  "runtime": {
+    "running_binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+    "disk_binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+    "release": {
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+      "bytes": 77972432
+    }
+  },
+  "journal_window": [
+    "2026-11-05T08:03:00Z",
+    "2026-11-05T08:13:00Z"
+  ],
+  "source_rows": 712,
+  "redacted_rows": 590,
+  "time_basis": "journal __REALTIME_TIMESTAMP; body-redacted events retain no embedded original message timestamp; server clock only",
+  "cases": [
+    {
+      "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+      "session_id": "f2be43c6-ed2f-4826-8184-ab8e7341e47b",
+      "room": "sn-****03800006-1793865847",
+      "sn_suffix": "03800006",
+      "entry_seq": 46,
+      "mode_epoch": 1,
+      "authority_close_ms": 1793865867676,
+      "entry_to_close_no_ordinary_commit_or_tts": true,
+      "one_job_no_overlap_in_interval": true,
+      "exit_final": {
+        "journal_us": "1793865867614979",
+        "cst": "2026-11-05T16:04:27.614+08:00",
+        "pid": "2750511",
+        "message": "stt final: 结束倾听恢复聊天",
+        "row_index": 73
+      },
+      "later_same_exit_finals": [],
+      "question": "天空为什么是蓝色的",
+      "events": {
+        "job_accept": {
+          "journal_us": "1793865848350196",
+          "cst": "2026-11-05T16:04:08.350+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:04:08.350037Z  INFO received job request, accepting job_id=AJ_L2mzdcWy8tpM room=sn-****03800006-1793865847",
+          "row_index": 25
+        },
+        "input_ready_published": {
+          "journal_us": "1793865848820101",
+          "cst": "2026-11-05T16:04:08.820+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:04:08.819940Z  INFO control publish result event=\"session.input_ready\" trace=\"b04ef593-f44c-4b69-bb45-4c4d96b09c8b\" since_pipeline_ms=1 send_ms=10 publish_ok=true",
+          "row_index": 48
+        },
+        "question_final": {
+          "journal_us": "1793865874337073",
+          "cst": "2026-11-05T16:04:34.337+08:00",
+          "pid": "2750511",
+          "message": "stt final: 天空为什么是蓝色的",
+          "row_index": 80
+        },
+        "question_commit": {
+          "journal_us": "1793865874760313",
+          "cst": "2026-11-05T16:04:34.760+08:00",
+          "pid": "2750511",
+          "message": "turn committed: 天空为什么是蓝色的",
+          "row_index": 81
+        },
+        "body_first_frame": {
+          "journal_us": "1793865876109949",
+          "cst": "2026-11-05T16:04:36.109+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:04:36.109618Z  INFO body first frame published room=sn-****03800006-1793865847 turn_id=1 played_samples=29760 since_turn_ms=1347",
+          "row_index": 97
+        },
+        "playout_source_drained": {
+          "journal_us": "1793865911759921",
+          "cst": "2026-11-05T16:05:11.759+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:11.759751Z  INFO playout metrics room=sn-****03800006-1793865847 turn_id=1 underrun_count=1 underrun_ms=294 buffered_audio_ms=0 first_underrun_ms=799 played_frames=3668 exit=\"SourceDrained\"",
+          "row_index": 141
+        },
+        "control_cancel": {
+          "journal_us": "1793865917310907",
+          "cst": "2026-11-05T16:05:17.310+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.310741Z  INFO control cancel room=sn-****03800006-1793865847 trace_id=b04ef593-f44c-4b69-bb45-4c4d96b09c8b seq=55 cancelled=false already_done=false had_turn=false",
+          "row_index": 143
+        },
+        "participant_disconnect": {
+          "journal_us": "1793865917450539",
+          "cst": "2026-11-05T16:05:17.450+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.450347Z  INFO participant disconnected room=sn-****03800006-1793865847 identity=dev-****03800006 participant_sid=PA_aQyw6jBHZtaL action=Close",
+          "row_index": 145
+        },
+        "pipeline_close": {
+          "journal_us": "1793865917614900",
+          "cst": "2026-11-05T16:05:17.614+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.614221Z  INFO pipeline closed room=sn-****03800006-1793865847",
+          "row_index": 147
+        },
+        "room_deleted": {
+          "journal_us": "1793865917740350",
+          "cst": "2026-11-05T16:05:17.740+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.739820Z  INFO room deleted (delete_room_on_close) room=sn-****03800006-1793865847 attempt=1",
+          "row_index": 150
+        },
+        "job_closed": {
+          "journal_us": "1793865917740350",
+          "cst": "2026-11-05T16:05:17.740+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:05:17.739947Z  INFO job closed room=sn-****03800006-1793865847 uptime_s=69",
+          "row_index": 151
+        }
+      },
+      "playout_underrun_count": 1,
+      "playout_underrun_ms": 294,
+      "drained_to_cancel_ms": 5550.986,
+      "drained_to_disconnect_ms": 5690.618,
+      "drained_to_room_deleted_ms": 5980.429,
+      "wire_proposal_completed_payload_in_journal": false,
+      "ui_independent_test": false
+    },
+    {
+      "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+      "session_id": "60638299-a95c-4406-a7bf-c30695bb304c",
+      "room": "sn-****03800006-1793865984",
+      "sn_suffix": "03800006",
+      "entry_seq": 61,
+      "mode_epoch": 1,
+      "authority_close_ms": 1793865997385,
+      "entry_to_close_no_ordinary_commit_or_tts": true,
+      "one_job_no_overlap_in_interval": true,
+      "exit_final": {
+        "journal_us": "1793865997307912",
+        "cst": "2026-11-05T16:06:37.307+08:00",
+        "pid": "2750511",
+        "message": "stt final: 恢复聊天",
+        "row_index": 203
+      },
+      "later_same_exit_finals": [],
+      "question": "天空为什么是蓝色的",
+      "events": {
+        "job_accept": {
+          "journal_us": "1793865985251767",
+          "cst": "2026-11-05T16:06:25.251+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:06:25.251543Z  INFO received job request, accepting job_id=AJ_844LHwvgBo5p room=sn-****03800006-1793865984",
+          "row_index": 155
+        },
+        "input_ready_published": {
+          "journal_us": "1793865985585883",
+          "cst": "2026-11-05T16:06:25.585+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:06:25.585811Z  INFO control publish result event=\"session.input_ready\" trace=\"eab501f1-16c5-49b3-a459-8eaeabfbe6e2\" since_pipeline_ms=0 send_ms=0 publish_ok=true",
+          "row_index": 178
+        },
+        "question_final": {
+          "journal_us": "1793866005956004",
+          "cst": "2026-11-05T16:06:45.956+08:00",
+          "pid": "2750511",
+          "message": "stt final: 天空为什么是蓝色的",
+          "row_index": 210
+        },
+        "question_commit": {
+          "journal_us": "1793866005986284",
+          "cst": "2026-11-05T16:06:45.986+08:00",
+          "pid": "2750511",
+          "message": "turn committed: 天空为什么是蓝色的",
+          "row_index": 211
+        },
+        "body_first_frame": {
+          "journal_us": "1793866007037594",
+          "cst": "2026-11-05T16:06:47.037+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:06:47.037523Z  INFO body first frame published room=sn-****03800006-1793865984 turn_id=1 played_samples=25054 since_turn_ms=1050",
+          "row_index": 227
+        },
+        "playout_source_drained": {
+          "journal_us": "1793866059933468",
+          "cst": "2026-11-05T16:07:39.933+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:39.933208Z  INFO playout metrics room=sn-****03800006-1793865984 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=2 first_underrun_ms=-1 played_frames=5392 exit=\"SourceDrained\"",
+          "row_index": 294
+        },
+        "control_cancel": {
+          "journal_us": "1793866065414605",
+          "cst": "2026-11-05T16:07:45.414+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:45.414487Z  INFO control cancel room=sn-****03800006-1793865984 trace_id=eab501f1-16c5-49b3-a459-8eaeabfbe6e2 seq=68 cancelled=false already_done=false had_turn=false",
+          "row_index": 296
+        },
+        "participant_disconnect": {
+          "journal_us": "1793866065598668",
+          "cst": "2026-11-05T16:07:45.598+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:45.598510Z  INFO participant disconnected room=sn-****03800006-1793865984 identity=dev-****03800006 participant_sid=PA_uTwUdyRPYsNj action=Close",
+          "row_index": 298
+        },
+        "pipeline_close": {
+          "journal_us": "1793866065944407",
+          "cst": "2026-11-05T16:07:45.944+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:45.944181Z  INFO pipeline closed room=sn-****03800006-1793865984",
+          "row_index": 300
+        },
+        "room_deleted": {
+          "journal_us": "1793866066383078",
+          "cst": "2026-11-05T16:07:46.383+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:46.382933Z  INFO room deleted (delete_room_on_close) room=sn-****03800006-1793865984 attempt=1",
+          "row_index": 302
+        },
+        "job_closed": {
+          "journal_us": "1793866066383078",
+          "cst": "2026-11-05T16:07:46.383+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:07:46.383036Z  INFO job closed room=sn-****03800006-1793865984 uptime_s=81",
+          "row_index": 303
+        }
+      },
+      "playout_underrun_count": 0,
+      "playout_underrun_ms": 0,
+      "drained_to_cancel_ms": 5481.137,
+      "drained_to_disconnect_ms": 5665.2,
+      "drained_to_room_deleted_ms": 6449.61,
+      "wire_proposal_completed_payload_in_journal": false,
+      "ui_independent_test": false
+    },
+    {
+      "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+      "session_id": "c2daf1f1-dac4-4541-bcc1-c9f3207e2233",
+      "room": "sn-****03800006-1793866288",
+      "sn_suffix": "03800006",
+      "entry_seq": 98,
+      "mode_epoch": 1,
+      "authority_close_ms": 1793866301592,
+      "entry_to_close_no_ordinary_commit_or_tts": true,
+      "one_job_no_overlap_in_interval": true,
+      "exit_final": {
+        "journal_us": "1793866301535272",
+        "cst": "2026-11-05T16:11:41.535+08:00",
+        "pid": "2750511",
+        "message": "stt final: 小可结束倾听",
+        "row_index": 523
+      },
+      "later_same_exit_finals": [
+        {
+          "journal_us": "1793866304543626",
+          "cst": "2026-11-05T16:11:44.543+08:00",
+          "pid": "2750511",
+          "message": "stt final: 小可结束倾听",
+          "row_index": 526
+        }
+      ],
+      "question": "1+1等于几",
+      "events": {
+        "job_accept": {
+          "journal_us": "1793866289077181",
+          "cst": "2026-11-05T16:11:29.077+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:11:29.076690Z  INFO received job request, accepting job_id=AJ_KVqvHdAzcVff room=sn-****03800006-1793866288",
+          "row_index": 476
+        },
+        "input_ready_published": {
+          "journal_us": "1793866289523531",
+          "cst": "2026-11-05T16:11:29.523+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:11:29.523289Z  INFO control publish result event=\"session.input_ready\" trace=\"e843d07a-ee82-4b07-9b15-9fcf4ef62cc8\" since_pipeline_ms=0 send_ms=40 publish_ok=true",
+          "row_index": 499
+        },
+        "question_final": {
+          "journal_us": "1793866314070410",
+          "cst": "2026-11-05T16:11:54.070+08:00",
+          "pid": "2750511",
+          "message": "stt final: 1+1等于几",
+          "row_index": 549
+        },
+        "question_commit": {
+          "journal_us": "1793866314484197",
+          "cst": "2026-11-05T16:11:54.484+08:00",
+          "pid": "2750511",
+          "message": "turn committed: 1+1等于几",
+          "row_index": 551
+        },
+        "body_first_frame": {
+          "journal_us": "1793866315633714",
+          "cst": "2026-11-05T16:11:55.633+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:11:55.633269Z  INFO body first frame published (no filler) room=sn-****03800006-1793866288 turn_id=2 since_turn_ms=1149",
+          "row_index": 564
+        },
+        "playout_source_drained": {
+          "journal_us": "1793866321971429",
+          "cst": "2026-11-05T16:12:01.971+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:01.971224Z  INFO playout metrics room=sn-****03800006-1793866288 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=191 first_underrun_ms=-1 played_frames=632 exit=\"SourceDrained\"",
+          "row_index": 577
+        },
+        "control_cancel": {
+          "journal_us": "1793866327476770",
+          "cst": "2026-11-05T16:12:07.476+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.476644Z  INFO control cancel room=sn-****03800006-1793866288 trace_id=e843d07a-ee82-4b07-9b15-9fcf4ef62cc8 seq=105 cancelled=false already_done=false had_turn=false",
+          "row_index": 580
+        },
+        "participant_disconnect": {
+          "journal_us": "1793866327630599",
+          "cst": "2026-11-05T16:12:07.630+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.630438Z  INFO participant disconnected room=sn-****03800006-1793866288 identity=dev-****03800006 participant_sid=PA_AEqS8fhZebgA action=Close",
+          "row_index": 582
+        },
+        "pipeline_close": {
+          "journal_us": "1793866327704396",
+          "cst": "2026-11-05T16:12:07.704+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.704192Z  INFO pipeline closed room=sn-****03800006-1793866288",
+          "row_index": 584
+        },
+        "room_deleted": {
+          "journal_us": "1793866327803417",
+          "cst": "2026-11-05T16:12:07.803+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.803023Z  INFO room deleted (delete_room_on_close) room=sn-****03800006-1793866288 attempt=1",
+          "row_index": 586
+        },
+        "job_closed": {
+          "journal_us": "1793866327803417",
+          "cst": "2026-11-05T16:12:07.803+08:00",
+          "pid": "2750511",
+          "message": "2026-11-05T08:12:07.803237Z  INFO job closed room=sn-****03800006-1793866288 uptime_s=38",
+          "row_index": 587
+        }
+      },
+      "playout_underrun_count": 0,
+      "playout_underrun_ms": 0,
+      "drained_to_cancel_ms": 5505.341,
+      "drained_to_disconnect_ms": 5659.17,
+      "drained_to_room_deleted_ms": 5831.988,
+      "wire_proposal_completed_payload_in_journal": false,
+      "ui_independent_test": false
+    }
+  ],
+  "limitations": [
+    "proposal/accepted/completed payload and Android UI remain client receipt evidence, not per-packet journal verification",
+    "SourceDrained is server playout bookkeeping, not physical speaker completion",
+    "client session timeout remains unmatched; unrelated to old operations transport failures"
+  ],
+  "sources": [
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/worker.json",
+      "sha256": "41aa2e059df990a28e26ab688eff3930d6e1dfffbd49bad69d7dbf03684600e8",
+      "bytes": 147277
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/transport-result.json",
+      "sha256": "27fead9cfc85f58af73292525974a3ca2aaeb0ba6dcfbb755b456635c47b1e44",
+      "bytes": 281
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/transport-attempt-parser-failure.json",
+      "sha256": "ad90be1e3d7bdda084a48b7c7bc7951850a309733ea13c577227b1d4e1b903d4",
+      "bytes": 578
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/transport-success.json",
+      "sha256": "687a20279e39547acf5081a2f6e447645cb8d8ddf8b40a25731351303c38a152",
+      "bytes": 250
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/TRANSPORT-93.json",
+      "sha256": "eedbe50f5c4ee8b806d4755561c7c84114757f7bfc039b59de9211380f21388d",
+      "bytes": 724
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/transport93_readonly.py",
+      "sha256": "2ff129c0586e0f8acc51a496118c5f0fc66958ba34966b2026d661c8e868f72d",
+      "bytes": 2553
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/transport39_readonly_v2.py",
+      "sha256": "de1bcad15951f4e3c9d551b8828f7b18f9e682bd150b0915a0014f38d6b0a6fa",
+      "bytes": 2553
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/read-worker-v1.py",
+      "sha256": "ba626c6982f774d5d18d621b3ce0940eb36d7bfbaaa337942adccb1549f0b9b1",
+      "bytes": 2309
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/read-worker.py",
+      "sha256": "6219538ba0261322f715f3212a3ff0053996cc10bdd40c3f86961daa80c34eac",
+      "bytes": 2428
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/local-redaction.json",
+      "sha256": "dbdabe3071300b5200f9a2dda0015ca48b6b2d970438666b1fa428f39f122849",
+      "bytes": 330
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/source-observability.json",
+      "sha256": "bf1f1aeea1434cfc6823ed3895dcbdff04060f8771278840575239215d1200fb",
+      "bytes": 754
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/ROUTE-93.md",
+      "sha256": "a1dd6b8882a1c7c604298c90a3687ed00c992c63bc8695e7b0769a12313840fd",
+      "bytes": 4025
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/worker-supplement/verify-supplement.py",
+      "sha256": "51f869305af1fcf3f77514655b893ee33fdfcaa58b5ec5f3a29d12229dd7127a",
+      "bytes": 5825
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-v386-closeout-20261105/EVIDENCE-39.json",
+      "sha256": "4e19012bb8110a4c13ba5ba0d143d3db621415e261060e2ec85a39a9fa14a7e0",
+      "bytes": 6086
+    }
+  ]
+}
