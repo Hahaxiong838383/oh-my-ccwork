@@ -238,7 +238,7 @@ pub struct Warm {
 }
 
 impl Warm {
-    fn fresh(&self) -> bool {
+    pub(crate) fn fresh(&self) -> bool {
         warm_is_fresh(self.opened.elapsed())
     }
 }
@@ -439,6 +439,22 @@ pub async fn synthesize(
     ctl: &PlayoutControl,
     warm: Option<Warm>,
 ) -> Result<(u64, usize)> {
+    synthesize_inner(cfg, text, audio_tx, ctl, warm, true).await
+}
+
+/// Foreground recovery already acquired a socket under a shared deadline.
+/// Never reset that deadline by silently creating another cold connection.
+pub async fn synthesize_connected(
+    cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl, warm: Warm,
+) -> Result<(u64, usize)> {
+    synthesize_inner(cfg, text, audio_tx, ctl, Some(warm), false).await
+}
+
+async fn synthesize_inner(
+    cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl, warm: Option<Warm>, allow_cold_connect: bool,
+) -> Result<(u64, usize)> {
     // 证据日志:只落前 24 字+字数,不落全文(S2B1 canary 合同:完整文本不得进 journal;
     // 生产回复同策——排障按开头辨认句子,运维仍按 "tts synth" 关键词捞两条线)
     let head: String = text.chars().take(24).collect();
@@ -456,6 +472,7 @@ pub async fn synthesize(
     let t0 = std::time::Instant::now();
     let (mut ws, connect_ms, connect_id) = match usable {
         Some(w) => (w.ws, 0, w.connect_id),
+        None if !allow_cold_connect => bail!("tts_acquired_connection_expired"),
         None => {
             let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
             let w = connect_observed(url).await?;
@@ -799,5 +816,149 @@ mod tests {
         assert_eq!(c.missing_keys(), vec!["XFYUN_TTS_API_SECRET"]);
         c.app_id.clear();
         assert_eq!(c.missing_keys(), vec!["XFYUN_TTS_APP_ID", "XFYUN_TTS_API_SECRET"]);
+    }
+}
+
+// Characterization fixtures for the unresolved production transport incident.
+// These exercise the real WebSocket synthesis path, but do NOT prove the
+// historical supplier/network fault or count as a production fix.
+#[cfg(test)]
+mod priority_transport_diagnostics {
+    use super::*;
+    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+
+    #[tokio::test]
+    async fn priority_real_handshake_hang_recovers_one_request_and_closes_loser() {
+        use tokio::io::AsyncReadExt;
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url=format!("ws://{}/synthetic",listener.local_addr().unwrap());
+        let requests=Arc::new(AtomicUsize::new(0));let count=requests.clone();
+        let server=tokio::spawn(async move {
+            let (mut hung,_) = listener.accept().await.unwrap();
+            let loser=tokio::spawn(async move {
+                let mut buf=[0;4096];assert!(hung.read(&mut buf).await.unwrap()>0);
+                assert_eq!(hung.read(&mut buf).await.unwrap(),0,"losing handshake must close");
+            });
+            let (socket,_) = listener.accept().await.unwrap();
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            assert!(ws.next().await.unwrap().unwrap().is_text());count.fetch_add(1,Ordering::SeqCst);
+            ws.send(WsMessage::Text(json!({"header":{"code":0},"payload":{"audio":{"audio":B64.encode(vec![1;4800]),"status":2}}}).to_string().into())).await.unwrap();
+            let _=ws.next().await;
+            loser.await.unwrap();
+        });
+        let limit=tokio::sync::Semaphore::new(1);let start=std::time::Instant::now();
+        let warm=crate::tts::recover_connection(connect_observed(url.clone()),||connect_observed(url),
+            Duration::from_millis(30),Duration::from_secs(2),&limit).await.unwrap();
+        assert!(start.elapsed()<Duration::from_secs(1));
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        let (_,bytes)=synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await.unwrap();
+        assert_eq!(bytes,4800);assert_eq!(rx.try_recv().unwrap().len(),4800);assert!(rx.try_recv().is_err());
+        tokio::time::timeout(Duration::from_secs(2),server).await.unwrap().unwrap();
+        assert_eq!(requests.load(Ordering::SeqCst),1);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn priority_connected_expired_socket_fails_without_hidden_cold_connection() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url=format!("ws://{}/",listener.local_addr().unwrap());
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            assert!(!matches!(ws.next().await,Some(Ok(WsMessage::Text(_)))),"expired socket must receive no text");
+        });
+        let mut warm=connect_observed(url).await.unwrap();
+        warm.opened=std::time::Instant::now()-Duration::from_secs(13);
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        let result=tokio::time::timeout(Duration::from_millis(100),synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm)).await.unwrap();
+        assert!(result.unwrap_err().to_string().contains("tts_acquired_connection_expired"));
+        assert!(rx.try_recv().is_err());server.await.unwrap();
+    }
+
+    async fn fixture(mode: &'static str) -> (Warm, tokio::task::JoinHandle<()>, Arc<AtomicUsize>) {
+        let server = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = server.local_addr().unwrap();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let count = requests.clone();
+        let task = tokio::spawn(async move {
+            let (socket, _) = server.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let request = ws.next().await.unwrap().unwrap();
+            assert!(request.is_text());
+            count.fetch_add(1, Ordering::SeqCst);
+            let pcm = vec![1_u8; 4800]; // 100 ms at 24 kHz PCM16; synthetic bytes.
+            let frame = |last| WsMessage::Text(json!({"header":{"code":0},"payload":{"audio":{"audio":B64.encode(&pcm),"status":if last {2}else{1}}}}).to_string().into());
+            if mode != "zero_pcm_close" { ws.send(frame(false)).await.unwrap(); }
+            if mode == "midstream_stall" || mode == "two_second_stall" {
+                tokio::time::sleep(Duration::from_millis(if mode == "two_second_stall" {2000}else{500})).await;
+                ws.send(frame(true)).await.unwrap();
+                let _ = tokio::time::timeout(Duration::from_secs(1),ws.next()).await;
+            } else { let _ = ws.close(None).await; }
+        });
+        let socket = tokio::net::TcpStream::connect(address).await.unwrap();
+        let (ws, _) = tokio_tungstenite::client_async(
+            format!("ws://{address}/synthetic"), tokio_tungstenite::MaybeTlsStream::Plain(socket)
+        ).await.unwrap();
+        (Warm {ws,opened:std::time::Instant::now(),connect_ms:0,connect_id:990001},task,requests)
+    }
+    fn config() -> XfyunTtsConfig {
+        XfyunTtsConfig {app_id:"fixture".into(),api_key:"fixture".into(),api_secret:"fixture".into(),vcn:DEFAULT_VCN.into(),speed:50,oral_level:"mid".into()}
+    }
+    #[tokio::test]
+    async fn priority_real_ws_midstream_gap_is_not_channel_backpressure() {
+        let (warm, server, count) = fixture("midstream_stall").await;
+        let (_guard, ctl) = crate::playout::test_control();
+        let (tx,mut rx) = mpsc::channel(32);
+        let task=tokio::spawn(async move { synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await });
+        let first=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();
+        let start=std::time::Instant::now();
+        assert_eq!(first.len(),4800);assert_eq!(rx.capacity(),32);
+        let second=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();
+        assert_eq!(second.len(),4800);assert!(start.elapsed()>=Duration::from_millis(400));
+        let (_, bytes)=task.await.unwrap().unwrap();assert_eq!(bytes,9600);
+        server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+    #[tokio::test]
+    async fn priority_real_ws_partial_close_has_delivered_pcm_and_no_replay() {
+        let (warm,server,count)=fixture("partial_close").await;
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        let result=synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await;
+        assert!(result.is_err());assert_eq!(rx.try_recv().unwrap().len(),4800);
+        assert!(rx.try_recv().is_err());server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+    #[tokio::test]
+    async fn priority_real_ws_zero_pcm_close_is_distinct_from_partial_output() {
+        let (warm,server,count)=fixture("zero_pcm_close").await;
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        assert!(synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await.is_err());
+        assert!(rx.try_recv().is_err());server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn priority_real_ws_two_second_supply_gap_reaches_native_playout() {
+        use livekit::webrtc::audio_source::native::NativeAudioSource;
+        let (warm,server,count)=fixture("two_second_stall").await;
+        let source=NativeAudioSource::new(Default::default(),24000,1,200);
+        let (tx,rx)=mpsc::channel(32);
+        let (playout,ctl)=crate::playout::spawn_playout(source,rx,"isolated-supply-gap".into(),1);
+        let (_,bytes)=synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await.unwrap();
+        assert_eq!(bytes,9600);drop(tx);
+        tokio::time::timeout(Duration::from_secs(3),playout).await.unwrap().unwrap();
+        let stats=ctl.final_stats_handle().lock().unwrap().clone().unwrap();
+        assert!(stats.completed);assert_eq!(stats.played_frames,20);
+        assert!(stats.underrun_count>=1);assert!(stats.underrun_ms>=1700);
+        server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn priority_real_ws_full_channel_waits_without_reconnect_or_losing_pcm() {
+        let (warm,server,count)=fixture("midstream_stall").await;
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(1);
+        let task=tokio::spawn(async move{synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await});
+        tokio::time::sleep(Duration::from_millis(800)).await;
+        assert!(!task.is_finished(),"second PCM should be waiting for channel capacity");
+        let mut bytes=0;
+        while let Some(pcm)=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap(){bytes+=pcm.len();}
+        assert_eq!(bytes,9600);assert_eq!(task.await.unwrap().unwrap().1,bytes);
+        server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
     }
 }

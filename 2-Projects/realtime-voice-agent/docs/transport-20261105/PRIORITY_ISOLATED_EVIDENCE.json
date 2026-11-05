@@ -1,0 +1,30 @@
+{
+  "status": "PASS_ISOLATED_NOT_DEPLOYED",
+  "at": "2026-11-05T23:33:30.447644+08:00",
+  "tests": 484,
+  "failures": 0,
+  "red_tests": 3,
+  "root_boundary": "修复Worker串行等待放大；TLS/WS历史超时底层原因与t22流中欠载仍未闭合。",
+  "source": {
+    "src/tts.rs": "79c35b46d4a9e6d033f708d170b8a42341502bff8f6fd1093ccb703cae5aa8c5",
+    "src/tts_xfyun.rs": "53e2ede244e47f056925892a8607f9db61b7713157a1281d7ac4381c75269f13"
+  },
+  "evidence": {
+    "worker-priority-red.log": "713ab53ae82f09c86915dcc27eca816932acd48a9e4105c3660978d05bae0503",
+    "worker-priority-full-final.log": "63868c4a08fe949e8ad31dec9c08f866ad9501361225ba2206f45cc7a0f88f5d",
+    "source-priority-full-final.json": "ace0f2fef92ed8d3beac80bd614ef47b86b95f0dd86b7ffde9bfca62e6abec66",
+    "short-long-probe-result.json": "961491cf79eda3cc6d9415b71c971cd4c41d63c592efdf0a6eeea3b087ba3cc3",
+    "short-long-summary.json": "3f9aceb0f1710f18f9f4e0b40d92c2e9fa42f49128f2dbbd68423fc66ea75c47",
+    "priority-watch-2.json": "927b1b72db25c4e1981300bc2e2dd9b04fa72cf8d7ed9e0b2b1b7d499594eb52"
+  },
+  "production_before": {
+    "binary_sha256": "06eb839d006872b7a0366aa9ca64f0d4f5b9e6a6f5b321aa60f42108d261999a",
+    "pid": "3006275",
+    "only_existing_transport_flag": "P003_ASYNC_DNS_V1=1"
+  },
+  "new_flag": "P003_TTS_CONNECT_RECOVERY_V1",
+  "default": false,
+  "budget_ms": 10000,
+  "hedge_after_ms": 650,
+  "process_spare_limit": 2
+}
