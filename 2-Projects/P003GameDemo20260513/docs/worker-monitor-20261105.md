@@ -40,4 +40,16 @@ journalctl -u p003-host-journal-cache.service --since=-10min --no-pager
 
 ## 发布回执
 
-待真实预热、连续采集、生产接口及页面验收后补齐。
+- 已上线：2026-11-05 16:40:05（北京时间）；修复提交 `a8296e6b`，生产基线回流提交 `b33105c0`，独立分支 `codex/p003-worker-monitor-20261105`。没有发布小程序工作区的其他改动。
+- 备份：API/admin `/opt/p003/_backup/worker-monitor-20261105-164003`；hk2 `/root/rust-worker/backups/monitor-20261105-083805`。发布前后逐文件 SHA-256 一致。
+- 回归：采集与路由测试 53/53、Python 测试 20/20、真实 Vue 页面浏览器场景 9/9，共 82 项通过。完整路由测试在生产依赖的隔离副本执行；Python 测试同时在本地及 hk2 Linux 验证。
+- 性能：原完整 SSH 采集 18–19 秒，发布后真实 API 测得约 2 秒；其中 hk2 脚本采集约 0.2–0.5 秒。预热及连续采集成功，实时采集没有扫描历史日志。
+- 正式接口：`hosts-status`、`worker-stats` 及强制刷新并发均 HTTP 200，共享同一 hk2 快照。API、hk2、信令三台主机采集成功，无采集错误；worker 目标仅 `64.90.13.177`，并发上限 20、当时在线 0、剩余 20。
+- 定时器：已启用且 active；截至 16:42:35，连续五次刷新成功，service Result=success、ExecMainStatus=0，缓存年龄 18.3 秒、权限 0600、errors 为空。oneshot 完成后 inactive 属于正常状态。
+- 业务保护：`voice-worker-rust` PID 2445772、`p003-search-worker` PID 2446060、`p003-listening-worker` PID 2750511，部署前后均未改变，NRestarts 均为 0。仅定向重启 API `p003-voice` 一次，恢复 online、`/health` 200；其他业务进程未重启。
+- 公网浏览器：真实登录后台后，服务器状态页三张卡全部采集成功，设备接入页只有一个 hk2 资源卡、worker active、有效容量 20 路；旧地址不可见，无浏览器脚本错误。验收截图为 `production-servers.png`、`production-resources.png`。
+- 本地证据目录：`/Users/fu-121/.local/state/p003-worker-monitor-20261105/`，含发布清单、接口结果、定时器日志、浏览器结果及截图，不保存登录密码或 token。
+
+后续网络故障仍可能造成采集失败；本次通过实时采集与历史统计分离、总时限、刷新互斥、接口共用缓存以及过期/失败显式提示，防止历史日志增长再次拖垮实时监控，也避免把监控采集异常直接显示为服务器不可达。历史统计每分钟更新，超过 180 秒显示过期，不作为实时健康结论。
+
+署名：codex（OpenAI）| 2026-11-05 16:49（北京时间）
