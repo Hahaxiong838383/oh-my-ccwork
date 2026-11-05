@@ -1,0 +1,14 @@
+{
+  "at": "2026-11-05T04:59:23.013821+00:00",
+  "path": "/Users/rayman.chen/Downloads/P003_MINI002_QR_ONBOARDING_JOINT_RECEIPT_V2_20261105.md",
+  "sha256": "730a9b65b18f8a45b2a70b525789068b398b465a527b8c471eb7290bcbb33ce1",
+  "bytes": 19174,
+  "previous_reviewed_sha256": "538117820e47e426be4f0f9f2d800fdf07ad2518740dd94f2986eac14be18580",
+  "post_review_change": "仅将11月5日上午已完成校准为11月5日已完成，合同与流程不变",
+  "studio_path": "/Users/fu-121/Downloads/P003_MINI002_QR_ONBOARDING_JOINT_RECEIPT_V2_20261105.md",
+  "repository_document": "../P003_MINI002_QR_ONBOARDING_JOINT_RECEIPT_V2_20261105.md",
+  "historical_v1_preserved": true,
+  "code_or_production_changed": false,
+  "client_q1_q7_status": "NOT_RUN",
+  "independent_review": "QR-V2-REVIEW-37.md"
+}
