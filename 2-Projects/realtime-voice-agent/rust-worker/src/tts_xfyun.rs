@@ -253,23 +253,54 @@ fn warm_is_fresh(age: Duration) -> bool {
 #[cfg(test)]
 const PROTOCOL_IDLE_LIMIT: Duration = Duration::from_secs(14);
 
+fn async_dns_enabled(agent: &str, flag: Option<&str>, host: &str) -> bool {
+    flag == Some("1")
+        && (agent == "rust-worker" || crate::search_canary::is_candidate(agent))
+        && host.eq_ignore_ascii_case("cbm01.cn-huabei-1.xf-yun.com")
+}
+
+#[test]
+fn transport_main_can_use_independent_dns_families_for_tts_only() {
+    let host = "cbm01.cn-huabei-1.xf-yun.com";
+    assert!(async_dns_enabled("rust-worker", Some("1"), host));
+    assert!(async_dns_enabled("p003-search-verification-20261026", Some("1"), host));
+    for flag in [None, Some("0"), Some("true")] {
+        assert!(!async_dns_enabled("rust-worker", flag, host));
+    }
+    assert!(!async_dns_enabled("other-worker", Some("1"), host));
+}
+
+#[test]
+fn transport_dns_opt_in_does_not_change_resolution_for_other_hosts() {
+    for host in ["localhost", "internal.local", "cbm01.cn-huabei-1.xf-yun.com.evil"] {
+        assert!(!async_dns_enabled("rust-worker", Some("1"), host));
+        assert!(!async_dns_enabled("p003-search-verification-20261026", Some("1"), host));
+    }
+}
+
 async fn connect_observed(url: String) -> Result<Warm> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let mut trace = ConnectTiming {
         id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
         stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled",
+        dns_path: "system", local: None, peer: None,
     };
-    // Ordinary workers retain the OS connector; candidate DNS racing is gated.
-    // Both retain
+    // Explicitly opt in for the known TTS host only. Independent A/AAAA lookups
+    // let an available address connect without waiting for the other family.
+    // System DNS remains the default. Both retain
     // TCP defaults, TLS/SNI/certificate validation and one overall 10s budget.
     // TLS and WebSocket stay one measured stage; do not invent separate timings.
     let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
         let request = url.into_client_request().map_err(|_| anyhow::anyhow!("invalid_request"))?;
         let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
         let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str() == Some("wss") {443} else {80});
-        let socket = if std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v))
-            && std::env::var("P003_ASYNC_DNS_V1").is_ok_and(|v|v=="1") {
+        let socket = if async_dns_enabled(
+            &std::env::var("AGENT_NAME").unwrap_or_default(),
+            std::env::var("P003_ASYNC_DNS_V1").ok().as_deref(),
+            &host,
+        ) {
+            trace.dns_path="independent_families";
             trace.stage="resolve_tcp";
             let connected=crate::voice_connect::connect(&host,port).await?;
             trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
@@ -285,6 +316,8 @@ async fn connect_observed(url: String) -> Result<Warm> {
             trace.tcp_ms = Some(t.elapsed().as_millis() as u64);
             socket
         };
+        trace.local = socket.local_addr().ok();
+        trace.peer = socket.peer_addr().ok();
         trace.stage = "tls_ws"; let t = std::time::Instant::now();
         let (ws, _) = tokio_tungstenite::client_async_tls_with_config(request, socket, None, None).await
             .map_err(|e| {
@@ -315,13 +348,40 @@ async fn connect_observed(url: String) -> Result<Warm> {
 struct ConnectTiming {
     id: u64, start: std::time::Instant, stage: &'static str,
     dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>, outcome: &'static str,
+    dns_path: &'static str,
+    local: Option<std::net::SocketAddr>, peer: Option<std::net::SocketAddr>,
 }
 impl Drop for ConnectTiming {
     fn drop(&mut self) {
         info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,
             elapsed_ms=self.start.elapsed().as_millis() as u64,
             dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms,
+            dns_path=self.dns_path, local=?self.local, peer=?self.peer,
             "tts connection timing");
+    }
+}
+
+/// One bounded record per synthesis, including cancellation/error exits.
+/// Read waits include scheduler delay; observed PCM gaps can include downstream
+/// backpressure. Keep these separate instead of calling either a network RTT.
+struct StreamTiming<'a> {
+    room: &'a str, turn_id: u64, connect_id: u64,
+    started: std::time::Instant, phase: &'static str,
+    pending_since: Option<std::time::Instant>, last_pcm: Option<std::time::Instant>,
+    read_wait_ms: u64, max_read_wait_ms: u64,
+    send_wait_ms: u64, max_send_wait_ms: u64, max_pcm_gap_ms: u64,
+    pcm_frames: u64, completed: bool,
+}
+impl Drop for StreamTiming<'_> {
+    fn drop(&mut self) {
+        info!(room=self.room, turn_id=self.turn_id, connect_id=self.connect_id,
+            phase=self.phase, completed=self.completed, pcm_frames=self.pcm_frames,
+            elapsed_ms=self.started.elapsed().as_millis() as u64,
+            ws_read_wait_ms=self.read_wait_ms, max_ws_read_wait_ms=self.max_read_wait_ms,
+            channel_send_wait_ms=self.send_wait_ms, max_channel_send_wait_ms=self.max_send_wait_ms,
+            max_observed_pcm_gap_ms=self.max_pcm_gap_ms,
+            pending_wait_ms=self.pending_since.map(|t|t.elapsed().as_millis() as u64),
+            "tts stream timing");
     }
 }
 
@@ -405,17 +465,29 @@ pub async fn synthesize(
     let (room,turn_id)=ctl.trace_identity();
     info!(room,turn_id,connect_id,used_warm,warm_connect_ms,connect_ms,"tts connection assigned");
     let send_start=std::time::Instant::now();
+    let mut stream = StreamTiming {
+        room, turn_id, connect_id, started: send_start, phase: "request_send",
+        pending_since: Some(send_start), last_pcm: None, read_wait_ms: 0, max_read_wait_ms: 0,
+        send_wait_ms: 0, max_send_wait_ms: 0, max_pcm_gap_ms: 0, pcm_frames: 0, completed: false,
+    };
+
     ws.send(WsMessage::Text(build_request(cfg, text).to_string().into())).await?;
     info!(room,turn_id,connect_id,send_ms=send_start.elapsed().as_millis() as u64,"tts request sent");
-
+    stream.pending_since = None;
     let mut ttfb_ms: Option<u64> = None;
     let mut total = 0usize;
     let mut frames = 0usize;
     let mut cancelled = false;
     loop {
-        let msg = tokio::time::timeout(RECV_TIMEOUT, ws.next())
-            .await
-            .context("xfyun tts recv timeout")?;
+        stream.phase = "receive";
+        let waiting = std::time::Instant::now();
+        stream.pending_since = Some(waiting);
+        let result = tokio::time::timeout(RECV_TIMEOUT, ws.next()).await;
+        let waited = waiting.elapsed().as_millis() as u64;
+        stream.pending_since = None;
+        stream.read_wait_ms += waited;
+        stream.max_read_wait_ms = stream.max_read_wait_ms.max(waited);
+        let msg = result.context("xfyun tts recv timeout")?;
         let raw = match msg {
             Some(Ok(WsMessage::Text(t))) => t,
             Some(Ok(WsMessage::Close(f))) => bail!("xfyun tts ws closed: {f:?}"),
@@ -426,6 +498,12 @@ pub async fn synthesize(
         match parse_frame(&raw) {
             Downlink::Error(e) => bail!("xfyun tts 错误帧 {e}"),
             Downlink::Audio { pcm, last } => {
+                let observed = std::time::Instant::now();
+                if let Some(previous) = stream.last_pcm {
+                    stream.max_pcm_gap_ms = stream.max_pcm_gap_ms.max(observed.duration_since(previous).as_millis() as u64);
+                }
+                stream.last_pcm = Some(observed);
+                stream.pcm_frames += 1;
                 if ttfb_ms.is_none() {
                     ttfb_ms = Some(t0.elapsed().as_millis() as u64);
                     let (room,turn_id)=ctl.trace_identity();
@@ -433,7 +511,15 @@ pub async fn synthesize(
                 }
                 total += pcm.len();
                 frames += 1;
-                if let Err(why) = send_or_abort(audio_tx, pcm, ctl).await {
+                stream.phase = "channel_send";
+                let waiting = std::time::Instant::now();
+                stream.pending_since = Some(waiting);
+                let result = send_or_abort(audio_tx, pcm, ctl).await;
+                let waited = waiting.elapsed().as_millis() as u64;
+                stream.pending_since = None;
+                stream.send_wait_ms += waited;
+                stream.max_send_wait_ms = stream.max_send_wait_ms.max(waited);
+                if let Err(why) = result {
                     // 打断/下游消失:主动收摊,不陪服务端把剩下的吐完(它停不了)
                     info!(reason = why, sent_bytes = total, "xfyun tts 中止本句,丢弃剩余音频");
                     cancelled = true;
@@ -453,6 +539,8 @@ pub async fn synthesize(
             }
         }
     }
+    stream.completed = true;
+    stream.phase = "close";
     let _ = ws.close(None).await;
     emit_metrics(M { connect_ms, warm_connect_ms, used_warm, ttfb: ttfb_ms,
                      frames, bytes: total, cancelled });

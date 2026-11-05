@@ -1,0 +1,18 @@
+[package]
+name = "p003-tts-transport-probe"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+base64 = "0.21.7"
+chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
+hmac = "0.12.1"
+hickory-resolver = { version = "=0.26.3", default-features = false, features = ["system-config", "tokio"] }
+futures-util = "0.3.34"
+reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "rustls-no-provider"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+serde_json = "1.0.151"
+sha2 = "0.10.9"
+tokio = { version = "1.53.1", features = ["full"] }
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-native-roots"] }
