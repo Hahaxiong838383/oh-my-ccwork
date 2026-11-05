@@ -1,0 +1,9 @@
+{
+  "scope": "one read-only alternate Studio direct SSH to existing helper target; no changes",
+  "target_source": "existing style_remote.py worker mapping",
+  "result": "SSH exit255: local ED25519 host key unknown; strict checking retained",
+  "host_key_changed": false,
+  "credentials_copied": false,
+  "runtime_accessed": false,
+  "interpretation": "management transport verification incomplete, not evidence of worker process failure"
+}

@@ -1,0 +1,41 @@
+[
+  {
+    "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+    "session_id": "f2be43c6-ed2f-4826-8184-ab8e7341e47b",
+    "room_masked": "sn-****03800006-1793865847",
+    "sn_suffix": "03800006",
+    "session_at_ms": 1793865847869,
+    "build": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+    "revision": 6,
+    "source_generation": 1,
+    "entry_seq": 46,
+    "entry_closed": 1,
+    "close_at_ms": 1793865867676
+  },
+  {
+    "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+    "session_id": "60638299-a95c-4406-a7bf-c30695bb304c",
+    "room_masked": "sn-****03800006-1793865984",
+    "sn_suffix": "03800006",
+    "session_at_ms": 1793865984650,
+    "build": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+    "revision": 6,
+    "source_generation": 1,
+    "entry_seq": 61,
+    "entry_closed": 1,
+    "close_at_ms": 1793865997385
+  },
+  {
+    "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+    "session_id": "c2daf1f1-dac4-4541-bcc1-c9f3207e2233",
+    "room_masked": "sn-****03800006-1793866288",
+    "sn_suffix": "03800006",
+    "session_at_ms": 1793866288534,
+    "build": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+    "revision": 6,
+    "source_generation": 1,
+    "entry_seq": 98,
+    "entry_closed": 1,
+    "close_at_ms": 1793866301592
+  }
+]

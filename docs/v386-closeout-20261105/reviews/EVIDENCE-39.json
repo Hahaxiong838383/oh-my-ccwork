@@ -1,0 +1,158 @@
+{
+  "status": "SCOPED_FUNCTION_ACCEPTANCE_WITH_WORKER_OBSERVABILITY_GAP",
+  "at": "2026-11-05T09:53:21.274337+00:00",
+  "worktree_base": "aeee1a3f691cdbfee03ed1c421f4f44483d6c0d1",
+  "attachment_sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342",
+  "traces": [
+    {
+      "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+      "session_id": "f2be43c6-ed2f-4826-8184-ab8e7341e47b",
+      "room": "sn-****03800006-1793865847",
+      "sn_suffix": "03800006",
+      "exit_phrase_client_reported": "结束倾听恢复聊天",
+      "entry_seq": 46,
+      "mode_epoch": 1,
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "source_generation": 1,
+      "revision": 6,
+      "signed_at_ms": 1793865847869,
+      "entry_started_ms": 1793865854497,
+      "authorized_lease_count": 4,
+      "last_authorized_lease_ms": 1793865865950,
+      "last_lease_expiry_ms": 1793865880950,
+      "close_request_id": "close-6",
+      "authority_close_ms": 1793865867676,
+      "closed": true,
+      "no_revocations": true,
+      "worker_ack_journal_verified": false,
+      "android_ui_independently_verified": false
+    },
+    {
+      "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+      "session_id": "60638299-a95c-4406-a7bf-c30695bb304c",
+      "room": "sn-****03800006-1793865984",
+      "sn_suffix": "03800006",
+      "exit_phrase_client_reported": "恢复聊天",
+      "entry_seq": 61,
+      "mode_epoch": 1,
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "source_generation": 1,
+      "revision": 6,
+      "signed_at_ms": 1793865984650,
+      "entry_started_ms": 1793865991182,
+      "authorized_lease_count": 2,
+      "last_authorized_lease_ms": 1793865996224,
+      "last_lease_expiry_ms": 1793866011224,
+      "close_request_id": "close-4",
+      "authority_close_ms": 1793865997385,
+      "closed": true,
+      "no_revocations": true,
+      "worker_ack_journal_verified": false,
+      "android_ui_independently_verified": false
+    },
+    {
+      "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+      "session_id": "c2daf1f1-dac4-4541-bcc1-c9f3207e2233",
+      "room": "sn-****03800006-1793866288",
+      "sn_suffix": "03800006",
+      "exit_phrase_client_reported": "小可结束倾听",
+      "entry_seq": 98,
+      "mode_epoch": 1,
+      "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+      "source_generation": 1,
+      "revision": 6,
+      "signed_at_ms": 1793866288534,
+      "entry_started_ms": 1793866294791,
+      "authorized_lease_count": 3,
+      "last_authorized_lease_ms": 1793866299871,
+      "last_lease_expiry_ms": 1793866314871,
+      "close_request_id": "close-5",
+      "authority_close_ms": 1793866301592,
+      "closed": true,
+      "no_revocations": true,
+      "worker_ack_journal_verified": false,
+      "android_ui_independently_verified": false
+    }
+  ],
+  "current_brain_manifest": {
+    "sha256": "c6013b898ddc292fd3b2f17c27260cefbcbb2ca4dda75090b6dabbd02663618b",
+    "data": {
+      "version": 1,
+      "expires_at_ms": 1794391200000,
+      "evidence_ref": "v384:5b3fdaac;613-rust+3-isolated-RTC;H1-362b8db2;single-SN",
+      "agents": [
+        {
+          "agent": "p003-search-listening-20261030",
+          "build_sha": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+          "capabilities": [
+            "listening_mode_v1",
+            "listening_http_v1",
+            "per_frame_output_permit_v1",
+            "capture_drain_v1",
+            "local_ready_ack_v1",
+            "listening_voice_control_v1"
+          ]
+        }
+      ]
+    }
+  },
+  "worker_runtime": {
+    "historical_published_commit": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+    "historical_published_binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+    "historical_release_path": "/Users/fu-121/.codex/worktrees/p003-v384-voice-worker-20261104/docs/v384-voice-20261104/PRODUCTION_RELEASE.json",
+    "historical_release_sha256": "30aa17768db82b2232ca66c91ce850a6291cbaf25a436aa49813f38365117a36",
+    "current_proc_binary_verified": false,
+    "current_disk_binary_verified": false,
+    "current_worker_journal_verified": false,
+    "reason": "Two strict existing Air-to-Worker SSH attempts timed out before remote script execution; exit 255."
+  },
+  "boundaries": [
+    "Client receipt is original report, not independent APK/JVM/UI replay.",
+    "Authority close is not room deletion; accepted/completed and same-room audio/order rely on client receipt.",
+    "PREPARING idle fix is Android-only; no Worker code changes.",
+    "Client session timeout remains unmatched and unrelated to current SSH timeout absent evidence.",
+    "No production changes, probes, new device sessions, or business tests."
+  ],
+  "files": [
+    {
+      "path": "P003_G2_V386_LISTENING_PREPARING_IDLE_RACE_FIX_AND_DEVICE_ACCEPTANCE_20261105.md",
+      "sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342",
+      "bytes": 3461
+    },
+    {
+      "path": "ATTACHMENT.json",
+      "sha256": "ed78d70190bdf495df4bf4598305edf2ecfff121f00cc78521ed6acf7054dbb4",
+      "bytes": 418
+    },
+    {
+      "path": "COORDINATION.md",
+      "sha256": "353c188dcd6a25636b6d906bcb2e0b5579e6a7c803fcdb142e2eff7550cc3b06",
+      "bytes": 2486
+    },
+    {
+      "path": "evidence-38/historical-brain.json",
+      "sha256": "b24f4fc5725f85f9da4d48954a6abd18ce0f5ad5d2596ebc3b95458ec108b2b8",
+      "bytes": 13059
+    },
+    {
+      "path": "evidence-38/current-brain.json",
+      "sha256": "1fc9cfe6a5116266c1b263f6ddec8404e73c4e35ac7d364abaa7847c7cfac50c",
+      "bytes": 5114
+    },
+    {
+      "path": "evidence-38/dispatch-timeout.json",
+      "sha256": "1e9fc12b89e598779efb10a2623f8d5cf386e70ebe3149c087c9216286b0e711",
+      "bytes": 8149
+    },
+    {
+      "path": "evidence-39/read-worker.py",
+      "sha256": "ba626c6982f774d5d18d621b3ce0940eb36d7bfbaaa337942adccb1549f0b9b1",
+      "bytes": 2309
+    },
+    {
+      "path": "evidence-39/ssh-read-failures.json",
+      "sha256": "5a1f35c6dba2b1c693eef5cedfcf3e11de361c22a65079da8de67c76267f3796",
+      "bytes": 656
+    }
+  ]
+}

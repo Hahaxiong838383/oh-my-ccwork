@@ -1,0 +1,74 @@
+{
+  "status": "SCOPED_ACCEPTANCE_CLOSED_WITH_OBSERVATIONS",
+  "review_commits": {
+    "38": "da895a0b1276938d2bcb98314f85f90a17274f88",
+    "39": "849d9bae723c3366c5a66839b8e96a9f49752d80",
+    "45": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718"
+  },
+  "production_mutations": false,
+  "worker_journal_runtime_independently_verified_this_round": false,
+  "h1_new_field_trace_available": false,
+  "private_evidence_root": "/Users/fu-121/.local/state/p003-v386-closeout-20261105",
+  "files": {
+    "MAIN-BRAIN-ASSERTIONS.json": {
+      "sha256": "81ea8e0c1342d917aacdb754cb6c5e239a641b48f631ae210449e140ae662be9",
+      "bytes": 1125
+    },
+    "MAIN-FINAL-ASSERTIONS.json": {
+      "sha256": "3f8e55370b413e903959b179f44fd6e06b49e568372ba7d9f56d9d45e056e47e",
+      "bytes": 181
+    },
+    "MAIN-WORKER-TRANSPORT.json": {
+      "sha256": "59f4bdd7361ea0da2bc167a24bb4924969617f3e845838be35701215d5491185",
+      "bytes": 441
+    },
+    "P003_G2_V386_LISTENING_PREPARING_IDLE_RACE_FIX_AND_DEVICE_ACCEPTANCE_20261105.md": {
+      "sha256": "44fc7582348fe2b534970cccc29d5c3fb984a4631b00c4d32fbdbecf05533342",
+      "bytes": 3461
+    },
+    "P003_V386_LISTENING_ARK_CLOSEOUT_RECEIPT_20261105.md": {
+      "sha256": "ff92a5bbe39dd88b812a2af47d2b3db5a064a93b77b9dfdf4da8800a25846c45",
+      "bytes": 6185
+    },
+    "README.md": {
+      "sha256": "5d251bd58f55b5847d5b7da9c9d0128797785d332727b5fbeb3481411c8f6537",
+      "bytes": 1658
+    },
+    "TRACE-MAP-38.json": {
+      "sha256": "12fae86d1dda2e85c37908c45411b7057b45d5ba27ebafba55338302f3adc4cd",
+      "bytes": 1248
+    },
+    "reviews/CLIENT_SOURCE_CHECK.json": {
+      "sha256": "01af4e9c90ff8431af6737f13aed9d2b7fe5218871ea8382ed06091bb0e1b7e6",
+      "bytes": 1869
+    },
+    "reviews/CLOSEOUT-38.md": {
+      "sha256": "46a0681cf27686e3082a699bae52aaa6ac3fd9e2fc235459fd4a56ca284e1cd2",
+      "bytes": 6207
+    },
+    "reviews/CLOSEOUT-39.md": {
+      "sha256": "7862994ea9d9ca8b22a7007543ef90372e54c03b4de54df01d000c6e1f97dbe9",
+      "bytes": 5957
+    },
+    "reviews/CLOSEOUT-45.md": {
+      "sha256": "50ac161f57f0d023a172f5710d20c511042001e42e4abe1c1b11e38f40b6ffc5",
+      "bytes": 5181
+    },
+    "reviews/EVIDENCE-38.json": {
+      "sha256": "76117b16041fcda1903e0af2a5ab4999b4469be85ce542bd61c89449c13f008d",
+      "bytes": 11886
+    },
+    "reviews/EVIDENCE-39.json": {
+      "sha256": "4e19012bb8110a4c13ba5ba0d143d3db621415e261060e2ec85a39a9fa14a7e0",
+      "bytes": 6086
+    },
+    "reviews/EVIDENCE-45.json": {
+      "sha256": "2cde5b2d803c75ca307b2f68923598549987b26e40d7a5ae25880689e413a44b",
+      "bytes": 5661
+    },
+    "reviews/SERVER_SNAPSHOT_SAFE.json": {
+      "sha256": "e7e0c3051035bd2c1ca47b2ddaa73b40c3656778f84e1e4a65974cade6125ddd",
+      "bytes": 2893
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "matched": 3,
+  "checks_passed": true,
+  "rows": [
+    {
+      "trace": "b04ef593-f44c-4b69-bb45-4c4d96b09c8b",
+      "session_id": "f2be43c6-ed2f-4826-8184-ab8e7341e47b",
+      "scene": "story",
+      "seq": 46,
+      "entered_cst": "2026-11-05T16:04:14.497+08:00",
+      "closed_cst": "2026-11-05T16:04:27.676+08:00",
+      "close_request_id": "close-6",
+      "revision": 6,
+      "closed": true
+    },
+    {
+      "trace": "eab501f1-16c5-49b3-a459-8eaeabfbe6e2",
+      "session_id": "60638299-a95c-4406-a7bf-c30695bb304c",
+      "scene": "story",
+      "seq": 61,
+      "entered_cst": "2026-11-05T16:06:31.182+08:00",
+      "closed_cst": "2026-11-05T16:06:37.385+08:00",
+      "close_request_id": "close-4",
+      "revision": 6,
+      "closed": true
+    },
+    {
+      "trace": "e843d07a-ee82-4b07-9b15-9fcf4ef62cc8",
+      "session_id": "c2daf1f1-dac4-4541-bcc1-c9f3207e2233",
+      "scene": "story",
+      "seq": 98,
+      "entered_cst": "2026-11-05T16:11:34.791+08:00",
+      "closed_cst": "2026-11-05T16:11:41.592+08:00",
+      "close_request_id": "close-5",
+      "revision": 6,
+      "closed": true
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "worker_index_files": 8,
+  "three_trace_cross_match": true,
+  "snapshot_values_from_source": true,
+  "snapshot_authorized": true,
+  "worker_observability_gap_preserved": true
+}
