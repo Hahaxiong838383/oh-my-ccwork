@@ -3,7 +3,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { resolve } from 'node:path';
 import { getBleBindingStore, type BleBindingRecord } from './ble-binding-store.js';
 import { BLE_SIGNATURE_ALGORITHM, BleBindingError, validBleId, verifyDeviceProof } from './ble-binding-proof.js';
-import { ENROLLMENT_PROTOCOL, ENROLLMENT_TTL_MS, assertEnrollmentOpen, digest, enrollmentSigningPayload, issueIdentityStatement, parseEnrollmentInput, parsePublicIdentity, readEnrollmentConfig, type EnrollmentConfig, type EnrollmentInput } from './device-enrollment-proof.js';
+import { ENROLLMENT_PROTOCOL, ENROLLMENT_TTL_MS, assertEnrollmentOpen, digest, enrollmentProtocol, enrollmentSigningPayload, issueIdentityStatement, parseEnrollmentInput, parsePublicIdentity, readEnrollmentConfig, type EnrollmentConfig, type EnrollmentInput, type EnrollmentProtocol } from './device-enrollment-proof.js';
 
 type Device={sn:string;status:string;parent_account_id:string|null;public_id:string|null;binding_policy:string;binding_version:number};
 type Pending={challenge_id:string;account_id:string;sn:string;input_json:string;public_key_pem:string;fingerprint:string;signing_payload_b64url:string;expected_state:string;created_at_ms:number;expires_at_ms:number;binding_id:string|null};
@@ -43,6 +43,7 @@ export class DeviceEnrollmentStore{
   if(keys.some(k=>k.sn!==sn||k.key_id!==keyId||k.fingerprint!==fingerprint||k.status!=='active'))throw new BleBindingError(409,'identity_key_conflict');
  }
  private trusted(value:EnrollmentInput):void{
+  if(value.protocol!==ENROLLMENT_PROTOCOL)return; // v2 is device possession, not a factory attestation.
   const issued=this.db.prepare('SELECT * FROM device_identity_statement WHERE statement_id=?').get(value.claims.jti) as Issued|undefined;
   if(!issued||issued.revoked_at_ms!==null||issued.sn!==value.input.sn||issued.key_id!==value.input.device_key_id||issued.fingerprint!==value.fingerprint||issued.identity_statement!==value.statement||issued.expires_at_ms<=this.now())throw new BleBindingError(403,'device_identity_invalid');
  }
@@ -60,9 +61,11 @@ export class DeviceEnrollmentStore{
    return{identity_statement:signed.statement,identity_expires_at_ms:signed.claims.exp*1000,identity_fingerprint:identity.fingerprint,device_key_id:identity.device_key_id,idempotent:false};
   });
  }
- prepare(accountId:string,raw:unknown,config:EnrollmentConfig){
-  if(!validBleId(accountId))throw new BleBindingError(401,'unauthorized');assertEnrollmentOpen(config,this.now());
-  const value=parseEnrollmentInput(raw,config,this.now());
+ prepare(accountId:string,raw:unknown,config?:EnrollmentConfig){
+  if(!validBleId(accountId))throw new BleBindingError(401,'unauthorized');
+  const legacyConfig=enrollmentProtocol(raw)===ENROLLMENT_PROTOCOL?(config??readEnrollmentConfig()):undefined;
+  if(legacyConfig)assertEnrollmentOpen(legacyConfig,this.now());
+  const value=parseEnrollmentInput(raw,legacyConfig,this.now());
   return this.transaction(()=>{
    this.trusted(value);const d=this.available(value.input.sn);this.identityCompatible(value.input.sn,value.input.device_key_id,value.fingerprint);
    if(d?.parent_account_id&&d.parent_account_id!==accountId)throw new BleBindingError(409,'device_already_bound');
@@ -74,23 +77,24 @@ export class DeviceEnrollmentStore{
    const id=randomBytes(18).toString('base64url');const expires=this.now()+ENROLLMENT_TTL_MS;
    const payload=enrollmentSigningPayload(accountId,value,id,randomBytes(32).toString('base64url'),expires);
    this.db.prepare('INSERT INTO device_enrollment_challenge(challenge_id,account_id,sn,input_json,public_key_pem,fingerprint,signing_payload_b64url,expected_state,created_at_ms,expires_at_ms) VALUES(?,?,?,?,?,?,?,?,?,?)').run(id,accountId,value.input.sn,JSON.stringify(raw),value.pem,value.fingerprint,payload,JSON.stringify(d),this.now(),expires);
-   return{binding_protocol:ENROLLMENT_PROTOCOL,challenge_id:id,expires_in_s:ENROLLMENT_TTL_MS/1000,signature_alg:BLE_SIGNATURE_ALGORITHM,signing_payload_b64url:payload};
+   return{binding_protocol:value.protocol,challenge_id:id,expires_at_ms:expires,expires_in_s:ENROLLMENT_TTL_MS/1000,signature_alg:BLE_SIGNATURE_ALGORITHM,signing_payload_b64url:payload};
   });
  }
- confirm(accountId:string,challengeId:string,signature:string,configReader:()=>EnrollmentConfig=readEnrollmentConfig):BleBindingRecord&{already_bound:boolean}{
+ confirm(accountId:string,challengeId:string,signature:string,configReader:()=>EnrollmentConfig=readEnrollmentConfig):BleBindingRecord&{already_bound:boolean;enrollment_protocol:EnrollmentProtocol}{
   if(!validBleId(accountId))throw new BleBindingError(401,'unauthorized');
   if(!validBleId(challengeId)||typeof signature!=='string'||signature.length>100)throw new BleBindingError(400,'bad_request');
   return this.transaction(()=>{
    const p=this.db.prepare('SELECT * FROM device_enrollment_challenge WHERE challenge_id=? AND account_id=?').get(challengeId,accountId) as Pending|undefined;
    if(!p)throw new BleBindingError(404,'binding_not_found');
    if(!verifyDeviceProof(p.public_key_pem,p.signing_payload_b64url,signature))throw new BleBindingError(403,'device_proof_invalid');
+   const raw=JSON.parse(p.input_json);const protocol=enrollmentProtocol(raw);
    if(p.binding_id){
     // Committed retry is governed by current owner/key/version, not the enrollment window or expired certificate.
-    return{...getBleBindingStore().getBinding(accountId,p.binding_id),already_bound:true};
+    return{...getBleBindingStore().getBinding(accountId,p.binding_id),already_bound:true,enrollment_protocol:protocol};
    }
-   const config=configReader();assertEnrollmentOpen(config,this.now());
+   const config=protocol===ENROLLMENT_PROTOCOL?configReader():undefined;if(config)assertEnrollmentOpen(config,this.now());
    if(this.now()>=p.expires_at_ms)throw new BleBindingError(410,'challenge_expired');
-   const value=parseEnrollmentInput(JSON.parse(p.input_json),config,this.now());this.trusted(value);
+   const value=parseEnrollmentInput(raw,config,this.now());this.trusted(value);
    const old=this.available(p.sn);this.identityCompatible(p.sn,value.input.device_key_id,value.fingerprint);
    if(old?.parent_account_id&&old.parent_account_id!==accountId)throw new BleBindingError(409,'device_already_bound');
    if(JSON.stringify(old)!==p.expected_state)throw new BleBindingError(409,'binding_changed');
@@ -110,7 +114,7 @@ export class DeviceEnrollmentStore{
    this.db.prepare('INSERT INTO ble_binding_challenge(challenge_id,account_id,sn,device_key_id,signing_payload_b64url,nonce_hash,credential_pk,expected_version,expected_owner,created_at_ms,expires_at_ms,consumed_at_ms,binding_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)').run(p.challenge_id,accountId,p.sn,value.input.device_key_id,p.signing_payload_b64url,nonceHash,value.input.credential_pk,version,accountId,p.created_at_ms,p.expires_at_ms,now,bindingId);
    this.db.prepare('INSERT INTO ble_binding_receipt(binding_id,challenge_id,sn,account_id,device_key_id,binding_version,nonce_hash,credential_pk,public_id,bound_at_ms,claim_expires_at_ms) VALUES(?,?,?,?,?,?,?,?,?,?,?)').run(bindingId,p.challenge_id,p.sn,accountId,value.input.device_key_id,version,nonceHash,value.input.credential_pk,publicId,now,now+600_000);
    this.db.prepare('UPDATE device_enrollment_challenge SET binding_id=? WHERE challenge_id=?').run(bindingId,p.challenge_id);
-   return{...this.db.prepare('SELECT * FROM ble_binding_receipt WHERE binding_id=?').get(bindingId) as BleBindingRecord,already_bound:alreadyBound};
+   return{...this.db.prepare('SELECT * FROM ble_binding_receipt WHERE binding_id=?').get(bindingId) as BleBindingRecord,already_bound:alreadyBound,enrollment_protocol:protocol};
   });
  }
 }

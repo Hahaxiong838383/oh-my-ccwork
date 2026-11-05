@@ -209,7 +209,7 @@ function logQuiet(entry: SessionLogEntry): void {
 export async function verifyDeviceCredential(
   header: string | undefined,
   secret: string,
-): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string } | null> {
+): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string; bleBindingId?: string } | null> {
   return verifyPureDeviceCredential(header, secret, credentialAcceptedByRevocation);
 }
 
@@ -434,7 +434,7 @@ deviceSessionRoute.post('/session', async (c) => {
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });
-  noteBleActivation(cred.sn, cred.bindingVersion);
+  noteBleActivation(cred.sn, cred.bindingVersion, cred.bleBindingId);
   notePairingActivation(cred);
   return c.json(resp);
 });
@@ -460,7 +460,7 @@ deviceSessionRoute.post('/session/prefetch', async (c) => {
 
   console.log(`[device-session] prefetch sn=${cred.sn} prefetch=${prefetchId}`);
   logQuiet({ sn: cred.sn, room: '', session_id: prefetchId, trace_id: '', status: 'prefetch', ttl_s: 0, ms: 0 });
-  noteBleActivation(cred.sn, cred.bindingVersion);
+  noteBleActivation(cred.sn, cred.bindingVersion, cred.bleBindingId);
   notePairingActivation(cred);
   return c.json({ status: 'warming', prefetch_id: prefetchId, expires_at_ms: exp });
 });

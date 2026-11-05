@@ -73,7 +73,7 @@ try {
   const loginB=await req('/api/auth/sms/verify',undefined,{phone:phoneB,code:'593812'});
   assert.equal(loginA.status,200);assert.equal(loginB.status,200);const a=loginA.json.token,b=loginB.json.token;
   const sn='BJP00326110500009141';
-  assert.equal((await req('/api/parent/device-enrollments/capabilities',a)).json.enabled,false);
+  assert.equal((await req('/api/parent/device-enrollments/capabilities?binding_protocol=ble-enroll-v1',a)).json.enabled,false);
   assert.equal((await req('/api/profile/bind-sn',undefined,{sn})).status,401);
   assert.equal((await req('/api/profile/bind-sn',a,{sn,phone:phoneB})).status,400);
   const bound=await req('/api/profile/bind-sn',a,{sn});assert.equal(bound.status,200);assert.equal(bound.json.brain_state,'ready');

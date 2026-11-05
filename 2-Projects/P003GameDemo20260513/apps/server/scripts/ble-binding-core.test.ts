@@ -140,8 +140,9 @@ await test('first claim and response-loss recovery do not extend idempotence win
   rejects('claim_expired', () => store.claim(input.sn, secondInput.pairing_nonce, () => 'credential'));
 });
 await test('activation only marks matching active owner version after claim', () => {
-  store.markActivated(input.sn, 1); assert.equal(store.getBinding('acct-20', recovered.binding_id).activated_at_ms, null);
-  store.markActivated(input.sn, 2); assert.equal(store.getBinding('acct-20', recovered.binding_id).activated_at_ms, now);
+  store.markActivated(input.sn, 1, recovered.binding_id); assert.equal(store.getBinding('acct-20', recovered.binding_id).activated_at_ms, null);
+  store.markActivated(input.sn, 2); assert.equal(store.getBinding('acct-20', recovered.binding_id).activated_at_ms, null);
+  store.markActivated(input.sn, 2, recovered.binding_id); assert.equal(store.getBinding('acct-20', recovered.binding_id).activated_at_ms, now);
 });
 await test('an expired unused challenge cannot bind', () => {
   const c = challenge('acct-20', { ...input, pairing_nonce: randomBytes(32).toString('base64url') });

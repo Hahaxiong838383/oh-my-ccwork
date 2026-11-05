@@ -30,7 +30,7 @@ export async function verifyDeviceCredential(
   secret: string,
   acceptsCredential: (subject: string, iatSec: number, bindingVersion?: number) => boolean | Promise<boolean> = () => true,
   readState: DeviceCredentialStateReader = readRegistryCredentialState,
-): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string } | null> {
+): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string; bleBindingId?: string } | null> {
   if (!header?.startsWith('Bearer ') || !secret) return null;
   let payload;
   try {
@@ -53,5 +53,6 @@ export async function verifyDeviceCredential(
   const latestRevocation = latest.revokedThroughSec;
   if (latestRevocation !== null && iat <= latestRevocation) return null;
   return { sn: payload.sub, ...(bindingVersion === undefined ? {} : { bindingVersion }),
+    ...(bindingVersion !== undefined && typeof payload.ble_binding_id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(payload.ble_binding_id) ? { bleBindingId: payload.ble_binding_id } : {}),
     ...(bindingVersion !== undefined && typeof payload.pairing_session_id === 'string' ? { pairingSessionId: payload.pairing_session_id } : {}) };
 }
