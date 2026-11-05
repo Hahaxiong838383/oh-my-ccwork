@@ -1,0 +1,15 @@
+{
+  "server_commit": "856552b942f5f8c2feb08db5949ebe7080eff77f",
+  "main_and_listening_files_match": {
+    "main/src/xiaoke-kb.ts": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
+    "main/src/ark/answer.ts": "2ba1bd32c27dd933a105767e30e1ac498a19a4928681136c4e2a7bb66841d0a3",
+    "main/src/ark/context.ts": "f7113f2462e93a72e971971a52093077ca0aa6678c7c364d7336b899621c814c",
+    "main/src/ark/contracts.ts": "6e4d7e2df287f5ed332162623507c63f0904fc96d052af793e700812372c9ffd",
+    "main/src/ark/memory-policy.ts": "b8900e1fed7e6e751161bbbf4803d912265b7353cb94b23d755a69838395b603",
+    "listening/src/xiaoke-kb.ts": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
+    "listening/src/ark/answer.ts": "2ba1bd32c27dd933a105767e30e1ac498a19a4928681136c4e2a7bb66841d0a3",
+    "listening/src/ark/contracts.ts": "6e4d7e2df287f5ed332162623507c63f0904fc96d052af793e700812372c9ffd",
+    "listening/src/ark/memory-policy.ts": "b8900e1fed7e6e751161bbbf4803d912265b7353cb94b23d755a69838395b603"
+  },
+  "p2_diff_not_used_as_authoritative_source": true
+}

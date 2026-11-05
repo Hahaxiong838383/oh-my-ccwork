@@ -1,0 +1,71 @@
+{
+  "status": "PASS_APPLY_REVERSE_EXACT_V377",
+  "checked_at": "2026-11-03T04:30:30.218572+00:00",
+  "source_sha": "35502e7746eed6b5f24e5ba1cfa7d7e263c68a72",
+  "git_tree_sha": "6cbabe72c768bbc72e93c8c3102fa03295838283",
+  "patch_delivery_commit": "724559e5a30d8a6a42755189dd7b78b73e982080",
+  "patch_sha256": "131d91ddd04482e9bad4d9234b424fa2af81c7224134eb6935b8b6cd336465ab",
+  "original_files_verified": 38,
+  "original_crate_and_fixture_files_verified": 32,
+  "new_test_absent_in_exact_tree": true,
+  "commands": [
+    {
+      "command": [
+        "git",
+        "apply",
+        "--check",
+        "v376-wallet-known-zero.patch"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "apply",
+        "v376-wallet-known-zero.patch"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "apply",
+        "--reverse",
+        "--check",
+        "v376-wallet-known-zero.patch"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "apply",
+        "--reverse",
+        "v376-wallet-known-zero.patch"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "applied_files_sha256": {
+    "rust_runtime/src/g1_ark_state.rs": "f94e2d3f6493757378e7859900a6fe3794837bb1685e70eaa72240739e2993dc",
+    "rust_runtime/src/lib.rs": "55a6318dbdf73ad4708e1ca29b07d071d49798a821e784e2e275a8c7b950f95b",
+    "rust_runtime/src/g1_ark_wallet_tests.rs": "3d295fe2265460678535cd873dc3b4cbbfcdf3fde8eecb75b09b0e6f8b70e62c"
+  },
+  "applied_crate_tests_and_fixtures_byte_equal_previously_tested_candidate": true,
+  "equivalent_files_compared": 33,
+  "reverse_exact_original_file_set_and_bytes": true,
+  "new_test_file_removed": true,
+  "android_shared_tree_changed": false,
+  "new_implementation": false,
+  "tests_rerun": false,
+  "reused_tests": "v376 audit TEST_RESULTS.json: native Rust 176/176; generated Rust projection HTTP 7/7. Byte equivalence only; Android integration remains unverified.",
+  "exact_commit_tree_verified": true
+}

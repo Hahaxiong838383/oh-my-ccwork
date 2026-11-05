@@ -1,0 +1,17 @@
+✔ standard name and supported alias have the same bounded use explanation (7.216375ms)
+✔ both inventory phrasings route and use the precise card count (16.8585ms)
+✔ authoritative zero is distinct from unknown, independently of unknown wallets (1.131583ms)
+✔ GM and unknown inventory never becomes normal inventory (0.628125ms)
+✔ requesting next card does not relabel a chest or promise wall-clock delivery (1.384333ms)
+✔ synthetic near-sound and unrelated-card negatives do not route to Ark (0.664625ms)
+✔ translation and fictional card contexts do not get authoritative inventory answers (0.356167ms)
+✔ use request cannot return a finite-route action-success claim (0.375667ms)
+✔ dynamic card counts and their followups are excluded from profile extraction (3.222208ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 919.937

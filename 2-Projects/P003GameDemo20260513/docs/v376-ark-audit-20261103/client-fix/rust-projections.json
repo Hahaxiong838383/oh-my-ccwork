@@ -1,0 +1,117 @@
+{
+  "gm": {
+    "config_revision": "g1-music-character-shadow-20260930-1",
+    "inventory": {
+      "M-CARD-001": null
+    },
+    "logical_day": "2026-11-02",
+    "progress": {
+      "claimable_count": null,
+      "next_reward": {
+        "item_id": null,
+        "kind": "unknown",
+        "remaining_seconds": null,
+        "stage_id": null,
+        "status": "unknown"
+      },
+      "timer_state": "stopped"
+    },
+    "source_mode": "gm",
+    "wallets": {
+      "family_coin": 7,
+      "stardust": 13
+    }
+  },
+  "nonzero": {
+    "config_revision": "g1-music-character-shadow-20260930-1",
+    "inventory": {
+      "M-CARD-001": null
+    },
+    "logical_day": "2026-11-02",
+    "progress": {
+      "claimable_count": null,
+      "next_reward": {
+        "item_id": null,
+        "kind": "unknown",
+        "remaining_seconds": null,
+        "stage_id": null,
+        "status": "unknown"
+      },
+      "timer_state": "stopped"
+    },
+    "source_mode": "normal",
+    "wallets": {
+      "family_coin": 7,
+      "stardust": 13
+    }
+  },
+  "null": {
+    "config_revision": "g1-music-character-shadow-20260930-1",
+    "inventory": {
+      "M-CARD-001": null
+    },
+    "logical_day": "2026-11-02",
+    "progress": {
+      "claimable_count": null,
+      "next_reward": {
+        "item_id": null,
+        "kind": "unknown",
+        "remaining_seconds": null,
+        "stage_id": null,
+        "status": "unknown"
+      },
+      "timer_state": "stopped"
+    },
+    "source_mode": "normal",
+    "wallets": {
+      "family_coin": null,
+      "stardust": null
+    }
+  },
+  "unknown": {
+    "config_revision": "g1-music-character-shadow-20260930-1",
+    "inventory": {
+      "M-CARD-001": null
+    },
+    "logical_day": "2026-11-02",
+    "progress": {
+      "claimable_count": null,
+      "next_reward": {
+        "item_id": null,
+        "kind": "unknown",
+        "remaining_seconds": null,
+        "stage_id": null,
+        "status": "unknown"
+      },
+      "timer_state": "stopped"
+    },
+    "source_mode": "unknown",
+    "wallets": {
+      "family_coin": null,
+      "stardust": null
+    }
+  },
+  "zero": {
+    "config_revision": "g1-music-character-shadow-20260930-1",
+    "inventory": {
+      "M-CARD-001": null
+    },
+    "logical_day": "2026-11-02",
+    "progress": {
+      "claimable_count": null,
+      "next_reward": {
+        "item_id": null,
+        "kind": "unknown",
+        "remaining_seconds": null,
+        "stage_id": null,
+        "status": "unknown"
+      },
+      "timer_state": "stopped"
+    },
+    "source_mode": "normal",
+    "wallets": {
+      "family_coin": 0,
+      "stardust": 0
+    }
+  }
+}

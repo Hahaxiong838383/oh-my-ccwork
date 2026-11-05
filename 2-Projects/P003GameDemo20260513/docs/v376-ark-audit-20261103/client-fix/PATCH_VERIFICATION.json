@@ -1,0 +1,27 @@
+{
+  "client_source_sha": "3c653b5d3d28940fe6be275ba0382a6956d27234",
+  "verified_source_file_count": 32,
+  "patch_sha256": "131d91ddd04482e9bad4d9234b424fa2af81c7224134eb6935b8b6cd336465ab",
+  "changed_files": [
+    {
+      "path": "rust_runtime/src/g1_ark_state.rs",
+      "before_sha256": "a06ee00003dad7b19f748dca7cba27fab8d2672668cf24581d7ceccb5dd6b4e8",
+      "after_sha256": "f94e2d3f6493757378e7859900a6fe3794837bb1685e70eaa72240739e2993dc"
+    },
+    {
+      "path": "rust_runtime/src/lib.rs",
+      "before_sha256": "52f37afc931bed635d870f47c4f89747e09e1d7fca5534bb5d102426b6fc2d12",
+      "after_sha256": "55a6318dbdf73ad4708e1ca29b07d071d49798a821e784e2e275a8c7b950f95b"
+    },
+    {
+      "path": "rust_runtime/src/g1_ark_wallet_tests.rs",
+      "before_sha256": null,
+      "after_sha256": "3d295fe2265460678535cd873dc3b4cbbfcdf3fde8eecb75b09b0e6f8b70e62c"
+    }
+  ],
+  "apply_check": "PASS",
+  "applied_bytes_equal_tested_candidate": true,
+  "reverse_check": "PASS",
+  "reverse_original_32_files_equal": true,
+  "new_file_removed_on_reverse": true
+}

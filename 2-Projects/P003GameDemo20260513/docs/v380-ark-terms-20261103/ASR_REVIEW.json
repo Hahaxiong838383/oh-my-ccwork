@@ -1,0 +1,94 @@
+{
+  "status": "CONTROLLED_TERM_IMPROVEMENT_CONFIRMED_NOT_END_TO_END_PASS",
+  "comparison_sha256": "a86267a0afc60a524f3f76607974908cfd644943d162872c043555a733c9dd80",
+  "draft_plan_sha256": "cb579fb5571a2d328cbfaf7fac9e1c01d04700ffe71a86cb3bc0fd76198e9f22",
+  "synthetic_only": true,
+  "same_recorded_pcm_sha256": "61382316315398e8cddd098898cbae9e289a5ebc901a20a30bc2be91fac8a7f8",
+  "pcm_file_bytes_independently_rehashed_by45": false,
+  "recorded_request_timing_parameters_equal": [
+    "end_window",
+    "audio_ms",
+    "blocks",
+    "block_ms",
+    "tail_dropped_bytes",
+    "samples_sent"
+  ],
+  "init_request_only_words_difference_independently_proven": false,
+  "connection_gaps_seconds": [
+    30.013816833496094,
+    30.011707544326782,
+    30.010103940963745
+  ],
+  "aligned_definite_time_ranges": true,
+  "metrics": [
+    {
+      "nonstream": false,
+      "label": "baseline",
+      "positive_term_correct": 1,
+      "positive_term_total": 7,
+      "all_term_mentions_correct": 1,
+      "all_term_mentions_total": 9,
+      "near_sound_false_card_terms": 0,
+      "near_sound_case_count": 5,
+      "empty_definite_indexes": []
+    },
+    {
+      "nonstream": false,
+      "label": "candidate",
+      "positive_term_correct": 7,
+      "positive_term_total": 7,
+      "all_term_mentions_correct": 9,
+      "all_term_mentions_total": 9,
+      "near_sound_false_card_terms": 0,
+      "near_sound_case_count": 5,
+      "empty_definite_indexes": []
+    },
+    {
+      "nonstream": true,
+      "label": "baseline",
+      "positive_term_correct": 3,
+      "positive_term_total": 7,
+      "all_term_mentions_correct": 3,
+      "all_term_mentions_total": 9,
+      "near_sound_false_card_terms": 0,
+      "near_sound_case_count": 5,
+      "empty_definite_indexes": []
+    },
+    {
+      "nonstream": true,
+      "label": "candidate",
+      "positive_term_correct": 7,
+      "positive_term_total": 7,
+      "all_term_mentions_correct": 8,
+      "all_term_mentions_total": 9,
+      "near_sound_false_card_terms": 0,
+      "near_sound_case_count": 5,
+      "empty_definite_indexes": [
+        9
+      ]
+    }
+  ],
+  "draft_validation": {
+    "asr_only": true,
+    "original_27_order_unchanged": true,
+    "only_two_correct_terms_prepended": true,
+    "rollback_exact_original": true,
+    "published_id": 2,
+    "published_version": 1,
+    "expected_words_hash_format": "SHA256 UTF-8 comma-joined words",
+    "snapshot_not_fresh_publish_authorization": true
+  },
+  "critical_remaining_issue": "1-pass candidate fixture2: 我有几张补勤卡 -> 忽悠几声，补勤卡。; fixed Brain isArkStateQuestion=false and answerArk=null, so terminology success does not restore inventory intent.",
+  "nonstream_negative_omission": "fixture9 今天不请客 has empty definite in candidate; cannot claim zero adverse effects or attribute causation from one run",
+  "nonstream_story_term_error": "fixture13 remains 故事里的补情卡。",
+  "no_false_card_keyword_in_five_negative_cases": true,
+  "not_verified": [
+    "Full-sentence accuracy/intent recovery",
+    "Repeated or randomized control for stochastic variation",
+    "Ordinary wake/weather/pause followup controls",
+    "Independent canary live context after production publish",
+    "Real human speech",
+    "RTC/Android consumption"
+  ],
+  "production_changed": false
+}

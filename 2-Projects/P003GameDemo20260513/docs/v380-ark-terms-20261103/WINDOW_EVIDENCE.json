@@ -1,0 +1,28 @@
+{
+  "read_at": "2026-11-03T18:23:07.901000+08:00",
+  "receipt_window_cst": "2026-11-03 17:49:00–17:53:59",
+  "candidate_suffix": "03800006",
+  "ok_count": 11,
+  "prefetch_count": 11,
+  "ok_distinct_rooms": 11,
+  "other_device_activity_exists": true,
+  "main_listening_p2_conversation_counts": [
+    0,
+    0,
+    0
+  ],
+  "conversation_query_match_method": "account_id OR session_id in verified registry room/session ids within bounded receipt window",
+  "client_problem_trace_provided": false,
+  "problem_original_and_misrecognition_text_provided": false,
+  "latest_ark_sample": {
+    "suffix": "03800006",
+    "received_at": "2026-11-03T18:23:02.490000+08:00",
+    "snapshot_id": "ark-b3a6cdf22cd64791-430",
+    "source_mode": "normal",
+    "content_version": "v180-pck-foundation-1",
+    "card_count": 1,
+    "captured_at": "2026-11-03T18:22:56.645000+08:00",
+    "historical_window_body": false
+  },
+  "latest_only_not_historical_reconstruction": true
+}

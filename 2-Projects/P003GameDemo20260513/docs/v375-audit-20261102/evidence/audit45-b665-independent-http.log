@@ -1,0 +1,54 @@
+{
+  "suite": "audit45-independent-http",
+  "status": "PASS",
+  "scope": "synthetic localhost HTTP+real writer+SQLite",
+  "results": [
+    {
+      "name": "gzip/raw同义、精确混批ACK、提交后可查",
+      "status": "PASS",
+      "milliseconds": 196.7750840000001
+    },
+    {
+      "name": "同ID内容冲突不得覆盖",
+      "status": "PASS",
+      "milliseconds": 25.558125000000018
+    },
+    {
+      "name": "设备主体隔离及认证失败无写入",
+      "status": "PASS",
+      "milliseconds": 64.99074999999993
+    },
+    {
+      "name": "writer和HTTP重启后仍duplicated",
+      "status": "PASS",
+      "milliseconds": 725.4178340000001
+    },
+    {
+      "name": "gzip截断、CRC错误及垃圾不写库",
+      "status": "PASS",
+      "milliseconds": 41.3037919999997
+    },
+    {
+      "name": "多重Content-Encoding拒绝且无写入",
+      "status": "PASS",
+      "milliseconds": 18.574540999999954
+    },
+    {
+      "name": "wire和inflated各2MiB上界、JSON413",
+      "status": "PASS",
+      "milliseconds": 105.78391600000032
+    },
+    {
+      "name": "关闭总闸保留重试语义、健康可读",
+      "status": "PASS",
+      "milliseconds": 14.736667000000125
+    }
+  ],
+  "not_verified": [
+    "new aggregate/sample authorization and TTL",
+    "production",
+    "Android runtime",
+    "real voice",
+    "7-day savings"
+  ]
+}

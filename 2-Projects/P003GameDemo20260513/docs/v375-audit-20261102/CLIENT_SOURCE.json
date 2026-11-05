@@ -1,0 +1,45 @@
+{
+  "commit": "52b89ec9a4823eb62b424f094d613b4a09a10708",
+  "files": [
+    {
+      "path": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/DeviceRuntimeConfigPublisher.kt",
+      "sha256": "577e3aec5c6468ae92668627071ea24ea961b40df335c15d7850eeb8d075393d"
+    },
+    {
+      "path": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsClient.kt",
+      "sha256": "069602e3295771b275a9ddb93c0426b000cea329426df7f14ccdd999f6301491"
+    },
+    {
+      "path": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsContracts.kt",
+      "sha256": "1bdf6ae8cea8143e648733e8e00467c039d7b94c1f5afa0aae12228a5c44e217"
+    },
+    {
+      "path": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsCoordinator.kt",
+      "sha256": "41b635e55a64aca06a41cf32c1c6521961879b5fff031768be74b07c2bb99cbc"
+    },
+    {
+      "path": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/P003AnalyticsStore.kt",
+      "sha256": "6a18911d9f09142077c0badde45b49adc59b1559e9a7f79252493be448d7a318"
+    },
+    {
+      "path": "android_injection/livekit_sdk_probe/payload/src/main/java/com/futurus/p003/launcher/voice/livekit/PostureDeviceConfigSync.kt",
+      "sha256": "371d94f2b01d957d7105636c48494622372b15b51c5ccbc7a1fd2985d40580d5"
+    },
+    {
+      "path": "docs/P003_G2_ANALYTICS_TIERING_SERVER_HANDOFF_20261102.md",
+      "sha256": "5f93f368cab9c86506b139a746b6489407398e5fb78b2103c9c9d7267cb1449c"
+    },
+    {
+      "path": "docs/api/analytics-event-ingest.openapi.yaml",
+      "sha256": "6eac76ebd91d8e141325be6cb416525de04db2ef569170607e22cc7179088795"
+    },
+    {
+      "path": "godot/scripts/analytics_event_client.gd",
+      "sha256": "d3f7d013e1aab74584b79abc5d5e2a343ffff3002f915d3ec30e924f015c6c8e"
+    },
+    {
+      "path": "godot/scripts/analytics_event_policy.gd",
+      "sha256": "81bbd1e729c4d66d614c2f33b4c7ae26d47ac442fcb682c5d5dbf74399c5e451"
+    }
+  ]
+}

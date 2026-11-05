@@ -1,0 +1,53 @@
+{
+  "at": "2026-11-02T21:04:16.914142+08:00",
+  "phase": "CONTRACT_AND_TEST_PREPARATION",
+  "candidate_sha": null,
+  "candidate_verdict": "NOT_RUN",
+  "client_source": "52b89ec9a4823eb62b424f094d613b4a09a10708",
+  "client_delivery": "4f7cc36668be6f9c676825d3be929f72447e9c0b",
+  "runtime": {
+    "node": "v24.19.0",
+    "node_path": "/Users/fu-121/.local/node-v24/bin/node",
+    "tsx": "4.22.4",
+    "typescript": "5.9.3"
+  },
+  "checks": [
+    {
+      "name": "client exact Git source + 10 SHA256",
+      "status": "PASS_STATIC"
+    },
+    {
+      "name": "Python AST and CLI help",
+      "status": "PASS"
+    },
+    {
+      "name": "TS transpile syntax and fixture invariants",
+      "status": "PASS",
+      "not": "typecheck or candidate test"
+    },
+    {
+      "name": "negative control detects unsupported gzip",
+      "status": "PASS_NEGATIVE_CONTROL",
+      "tested_sha": "9e7aab980114b796e22cc5286a1edf5c44f3b35a",
+      "candidate": false,
+      "command": "/Users/fu-121/.local/node-v24/bin/node --import tsx scripts/audit45-http.ts",
+      "exit_code": 1,
+      "observed": "400 != 200 on first gzip assertion",
+      "log_sha256": "60d4c20738af69e9a8b7831f9b8790589b12cdcaef012584b30e2d5e17b771fc",
+      "log_file": "audit45-baseline-negative-node24.log"
+    },
+    {
+      "name": "git diff --check",
+      "status": "PASS"
+    }
+  ],
+  "not_verified": [
+    "48 candidate HTTP + persistence + authorization + TTL + Ark",
+    "admin UI",
+    "Android runtime/PCK tiering",
+    "HK proxy/compression",
+    "real voice",
+    "7-day statistics"
+  ],
+  "production_mutations": false
+}

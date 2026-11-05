@@ -1,0 +1,72 @@
+{
+  "suite": "audit45-independent-tiers",
+  "status": "PASS",
+  "results": [
+    {
+      "name": "默认关、admin鉴权、单设备配置和CAS",
+      "status": "PASS",
+      "ms": 259.3845409999999
+    },
+    {
+      "name": "精确信封混批、分表、计数20和原始余额事实",
+      "status": "PASS",
+      "ms": 213.29483299999993
+    },
+    {
+      "name": "跨设备请求越权逐条拒收，合法raw仍accepted",
+      "status": "PASS",
+      "ms": 67.88775000000032
+    },
+    {
+      "name": "跨新请求重复样本不再结算或占用额度",
+      "status": "PASS",
+      "ms": 156.30654200000026
+    },
+    {
+      "name": "源范围及额度限制，重复不占额度",
+      "status": "PASS",
+      "ms": 332.3642500000001
+    },
+    {
+      "name": "请求到期/撤销/未来创建逐条拒收",
+      "status": "PASS",
+      "ms": 317.0746250000002
+    },
+    {
+      "name": "样本捕获/源时钟与3天回溯边界",
+      "status": "PASS",
+      "ms": 144.89933399999973
+    },
+    {
+      "name": "新字段非法/错误位置/资产伪装均逐条拒收",
+      "status": "PASS",
+      "ms": 58.88212500000009
+    },
+    {
+      "name": "完整但尚未闭合的周期不能accepted",
+      "status": "PASS",
+      "ms": 31.83354099999997
+    },
+    {
+      "name": "600条聚合旁证不挤占Ark raw扫描或改变余额",
+      "status": "PASS",
+      "ms": 382.93891699999995
+    },
+    {
+      "name": "样本payload TTL后墓碑/额度保留且重启重放仍dup",
+      "status": "PASS",
+      "ms": 446.6289999999999
+    },
+    {
+      "name": "GM raw逻辑日使同日资产回unknown",
+      "status": "PASS",
+      "ms": 37.50254100000075
+    }
+  ],
+  "not_verified": [
+    "real Android/PCK",
+    "production proxy",
+    "real voice",
+    "7-day savings"
+  ]
+}

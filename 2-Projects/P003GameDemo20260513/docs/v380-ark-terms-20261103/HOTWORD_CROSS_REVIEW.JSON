@@ -1,0 +1,21 @@
+{
+  "source": "session39 read-only hotwords-brain.json, independently parsed by45",
+  "source_sha256": "915bb08ee9b6f05f99addf03e32097d2b389afcfdbeb6f318dc7a75ed88d8e41",
+  "read_at": "2026-11-03T10:28:05.836311+00:00",
+  "channel_ok": true,
+  "kinds": {
+    "asr": {
+      "live_count": 27,
+      "contains_standard": false,
+      "contains_alias": false,
+      "live_in_sync": true
+    },
+    "device_asr": {
+      "live_count": 247,
+      "contains_standard": false,
+      "contains_alias": false,
+      "live_in_sync": true
+    }
+  },
+  "does_not_prove_canary_context_or_asr_effect": true
+}
