@@ -76,6 +76,7 @@ class DeviceRegistryStore {
     const dbPath = resolveDbPath();
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
+    this.db.exec('PRAGMA busy_timeout = 250;');
     this.db.exec('PRAGMA journal_mode = WAL;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS device_registry (
@@ -367,7 +368,7 @@ class DeviceRegistryStore {
   /** 普通家长绑定：创建与归属检查同一事务；不复活停用/删除记录，不覆盖其他 owner。 */
   bindParent(sn: string, accountId: string, createUnknown = false):
     | { ok: true; device: DeviceRecord; alreadyBound: boolean }
-    | { ok: false; error: 'sn_not_available' | 'sn_taken' } {
+    | { ok: false; error: 'sn_not_available' | 'sn_taken' | 'device_proof_required' } {
     this.db.exec('BEGIN IMMEDIATE');
     try {
       let device = this.get(sn);
@@ -375,7 +376,8 @@ class DeviceRegistryStore {
         && !this.db.prepare('SELECT 1 FROM device_binding_state WHERE sn=?').get(sn)
         && this.credentialNotBeforeSec(sn) === null) device = this.add(sn, '');
       let result: ReturnType<DeviceRegistryStore['bindParent']>;
-      if (!device || device.status !== 'active') result = { ok: false, error: 'sn_not_available' };
+      if (this.isBleBindingRequired(sn)) result = { ok: false, error: 'device_proof_required' };
+      else if (!device || device.status !== 'active') result = { ok: false, error: 'sn_not_available' };
       else if (device.parent_account_id && device.parent_account_id !== accountId) result = { ok: false, error: 'sn_taken' };
       else {
         const alreadyBound = device.parent_account_id === accountId;
