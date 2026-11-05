@@ -1,0 +1,24 @@
+{
+  "scope": "skill and knowledge changes only; no business test reruns",
+  "baseline_evidence": "previous v386 v1 and transport/reader failures, preserved in closeout archive",
+  "application_review": {
+    "path": "/Users/fu-121/.local/state/p003-v386-retro-20261105/SKILL-APPLICATION-REVIEW.md",
+    "sha256": "1f51ac7e8ebd034e9ba476b1f5308191abaf798c2651cd312b4dc3ddaf9e7878",
+    "scenarios": 4,
+    "type": "independent scenario reasoning; not live execution"
+  },
+  "memory_receipt": {
+    "path": "/Users/fu-121/.local/state/p003-v386-retro-20261105/memory-skill-update/manifest.json",
+    "sha256": "cd8a918cf399776f5ca2965cae4f79fe2cc80fe07baac0224582b81d53692963",
+    "applied_files": 5,
+    "global_memory_pushed": false
+  },
+  "review_updates": [
+    "identify failing SSH hop",
+    "unique independent job keys despite overlapping windows",
+    "journal byte-array validation and exception counts",
+    "client device/trace/version/time linkage",
+    "dirty deployed source backup and integration mapping"
+  ],
+  "production_changes": false
+}

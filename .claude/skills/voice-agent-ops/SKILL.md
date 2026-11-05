@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## Worker可达性与倾听验收收口
+
+遇到SSH超时/认证拒绝、监控误报不可达、其他会话已修复或安卓倾听退出回执，读[Worker可达性与收口取证](references/worker-reachability-and-closeout.md)。按实际成功路径复核认证位置；区分Brain模式关闭、Worker删房和Android消费证据，补验完成后更新当前结论并保留旧失败。
+
 ## 衔接概率、方舟知识与多版本修复
 
 遇到衔接太密/重复、按风格配置、资源用途误答或普通与候选两池同时修复，读[衔接概率与本地知识](references/style-filler-and-local-knowledge.md)。旧章节的1.0/boost等是历史快照；当前策略以可信会话快照和最新上线回执为准，倾听模式另行设计。

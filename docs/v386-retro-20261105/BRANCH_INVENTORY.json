@@ -1,0 +1,1202 @@
+{
+  "sampling_note": "Fixed pre-retrospective main/primary refs. Main13 knowledge writes during audit are in-scope; later commit/merge outcomes recorded separately. Remote sample predates monitor push.",
+  "generated_at": "2026-11-05T11:55:14.277700+00:00",
+  "main_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+  "primary13_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+  "worktree_count": 29,
+  "all_ref_count": 111,
+  "p003_ref_count": 26,
+  "branches": [
+    {
+      "ref": "refs/heads/codex/p003-analytics-20261013",
+      "sha": "03bf0fdcc4788410de6367deb334f1a2c48311d7",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-analytics-20261013"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 34,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 34,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "03bf0fdcc4788410de6367deb334f1a2c48311d7",
+          "ahead": 0,
+          "behind": 168,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "03bf0fdcc4788410de6367deb334f1a2c48311d7",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-analytics-control-20261031",
+      "sha": "98190bf737ad52dadf8a9d9d5883248b5659df94",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-analytics-control-20261031"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 193,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 193,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "98190bf737ad52dadf8a9d9d5883248b5659df94",
+          "ahead": 0,
+          "behind": 9,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "98190bf737ad52dadf8a9d9d5883248b5659df94",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-ark-brain-context-20261031",
+      "sha": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-ark-brain-context-20261031"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 175,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 175,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "647285fc028937abf3c959a2ad7fe44a78e7c4af",
+          "ahead": 9,
+          "behind": 36,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 9,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-auto-enrollment-20261104",
+      "sha": "2780df3ceb3e906681b677a2d78b109220839fb8",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-auto-enrollment-20261104"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 208,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 208,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "a9a6600446ab6a403eb7be8cc40b4fad79a0912c",
+          "ahead": 10,
+          "behind": 4,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 10,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "2780df3ceb3e906681b677a2d78b109220839fb8",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-brain-search-tools-20261021",
+      "sha": "72c3cbb319304d2e14df889faf03cacfbc2c29a5",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 148,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 148,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "ba6a31f12baf0902c0aa586352f4ed831c857c51",
+          "ahead": 13,
+          "behind": 67,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 13,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "72c3cbb319304d2e14df889faf03cacfbc2c29a5",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-brain-ui-tabs-20261030",
+      "sha": "67385fd1f057376e916d11c9557ba5e63a8ddfda",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-brain-ui-tabs-20261030"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 148,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 148,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "2a176888f2404ed33daf5b8dfd7dc4d66d6b14be",
+          "ahead": 3,
+          "behind": 57,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 3,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "67385fd1f057376e916d11c9557ba5e63a8ddfda",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-listening-brain-20261030",
+      "sha": "da895a0b1276938d2bcb98314f85f90a17274f88",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 167,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 167,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "96089ff6206490923d527a70f8c087aa901467f2",
+          "ahead": 7,
+          "behind": 42,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 7,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "da895a0b1276938d2bcb98314f85f90a17274f88",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-listening-worker-20261030",
+      "sha": "18048235faf2dd1efe4b2a59a7ef78a67a415f56",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-listening-worker-20261030"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 520,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 516,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 520,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 516,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "18048235faf2dd1efe4b2a59a7ef78a67a415f56",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-local-audio-integrity-20261016",
+      "sha": "6c2cc932713199968337d45641c3286d66c1fbfe",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-local-audio-20261016"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 39,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 39,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "6c2cc932713199968337d45641c3286d66c1fbfe",
+          "ahead": 0,
+          "behind": 163,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "6c2cc932713199968337d45641c3286d66c1fbfe",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-local-audio-safety-20261016",
+      "sha": "2a643f8fa5e3c878aed8611ab69d76f4fa30fcf7",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-local-audio-safety-20261016"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 36,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 36,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "074b03409b8e6a8641a1facdcf31a19e8363e839",
+          "ahead": 1,
+          "behind": 167,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 1,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "2a643f8fa5e3c878aed8611ab69d76f4fa30fcf7",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-miniapp-joint-20261029",
+      "sha": "6c2cc932713199968337d45641c3286d66c1fbfe",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-miniapp-joint-20261029"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 39,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 39,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "6c2cc932713199968337d45641c3286d66c1fbfe",
+          "ahead": 0,
+          "behind": 163,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": null,
+        "matches": false
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-p1-weather-brain-20261031",
+      "sha": "384005059526ad0451cc0460b7a5457e23a83302",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-p1-weather-brain-20261031"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 69,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 69,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "6fb9287a8815b83b5283f4a4d40dbde3f22b4dea",
+          "ahead": 2,
+          "behind": 135,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 2,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "384005059526ad0451cc0460b7a5457e23a83302",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-p1-weather-hotfix-20261031",
+      "sha": "751f16a29b0d10beab36acd99ba63c04652affe6",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-p1-weather-hotfix-20261031"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 480,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 476,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 480,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 476,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "751f16a29b0d10beab36acd99ba63c04652affe6",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-rtc-rejoin-fix-20261031",
+      "sha": "7eccd0269bd3350bd010eb62818666eb00c9bf39",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-rtc-rejoin-fix-20261031"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 485,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 481,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 485,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 481,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "7eccd0269bd3350bd010eb62818666eb00c9bf39",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-rtc-rejoin-p2-20261031",
+      "sha": "10e863c41be6501debe8203fa763703e0c95adf2",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-rtc-rejoin-p2-20261031"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 517,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 513,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 517,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 513,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "10e863c41be6501debe8203fa763703e0c95adf2",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-search-retro-skills-20261021",
+      "sha": "29658dd7d1ffef145add24ce61735bfdde1bf388",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-search-retro-skills-20261021"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 44,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 44,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "1cdc1e99ed9df2f1c52716a2dd736bba65e035b4",
+          "ahead": 1,
+          "behind": 159,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 1,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "29658dd7d1ffef145add24ce61735bfdde1bf388",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-sms-login-20261103",
+      "sha": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-sms-login-20261103"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 195,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 195,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+          "ahead": 0,
+          "behind": 7,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-style-ark-brain-20261029",
+      "sha": "e4bf06324553850ce28b9d1bcdaa70bef974eb46",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-style-ark-brain-20261029"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 140,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 140,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "e4bf06324553850ce28b9d1bcdaa70bef974eb46",
+          "ahead": 0,
+          "behind": 62,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "e4bf06324553850ce28b9d1bcdaa70bef974eb46",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-style-ark-main-worker-20261029",
+      "sha": "ef92ee1aa30e6ef869f6270de22173ce51617f30",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-style-ark-main-worker-20261029"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 481,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 477,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 481,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 477,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "ef92ee1aa30e6ef869f6270de22173ce51617f30",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-style-ark-worker-20261029",
+      "sha": "60a0da428dd3bd482f0d877243920187b48d533d",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-style-ark-worker-20261029"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 508,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 504,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 508,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 504,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "60a0da428dd3bd482f0d877243920187b48d533d",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-v384-voice-brain-20261104",
+      "sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-v384-voice-brain-20261104"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 202,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 202,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "ahead": 0,
+          "behind": 0,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": true,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-v384-voice-worker-20261104",
+      "sha": "44bb31f4ba14c824aca64c1ca2aa706f53acb5a0",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-v384-voice-worker-20261104"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 513,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 509,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 513,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 508,
+          "cherry_minus": 1
+        }
+      },
+      "remote_sample": {
+        "sha": "44bb31f4ba14c824aca64c1ca2aa706f53acb5a0",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-worker-monitor-20261105",
+      "sha": "e630fbb855bd952fdba5b59127c4197bde0b98c5",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-worker-monitor-20261105"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 42,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 42,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "6c2cc932713199968337d45641c3286d66c1fbfe",
+          "ahead": 3,
+          "behind": 163,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 3,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": null,
+        "matches": false
+      }
+    },
+    {
+      "ref": "refs/heads/codex/p003-worker-tool-lifecycle-20261021",
+      "sha": "8f75a0c95efc704b64aa213794879810d21f1c76",
+      "worktrees": [
+        "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021"
+      ],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 526,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 521,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 526,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 521,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": {
+        "sha": "8f75a0c95efc704b64aa213794879810d21f1c76",
+        "matches": true
+      }
+    },
+    {
+      "ref": "refs/heads/rollback/p003-v375-server-pre-20261102",
+      "sha": "6c2f828d4fc6671dfb28edeeae8e49ae6b6528fc",
+      "worktrees": [],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "ahead": 180,
+          "behind": 0,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": true,
+          "cherry_plus": 180,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "6c2f828d4fc6671dfb28edeeae8e49ae6b6528fc",
+          "ahead": 0,
+          "behind": 22,
+          "branch_is_ancestor": true,
+          "target_is_ancestor": false,
+          "cherry_plus": 0,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": null
+    },
+    {
+      "ref": "refs/remotes/origin/p003/story-truncation-20260914",
+      "sha": "b3fa690aff81abaf1ecaace4babf4cb299eed2a5",
+      "worktrees": [],
+      "relations": {
+        "main": {
+          "target_sha": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 414,
+          "behind": 1,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 410,
+          "cherry_minus": 0
+        },
+        "primary13": {
+          "target_sha": "b3b75a8353e5db8545c0953c3817792b752f5664",
+          "merge_base": "8d3f829814fbde7e9af2c2cfb10eabb9e2afff98",
+          "ahead": 414,
+          "behind": 203,
+          "branch_is_ancestor": false,
+          "target_is_ancestor": false,
+          "cherry_plus": 410,
+          "cherry_minus": 0
+        }
+      },
+      "remote_sample": null
+    }
+  ],
+  "worktrees": [
+    {
+      "path": "/Users/fu-121/mycc",
+      "head": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+      "branch": "refs/heads/main",
+      "clean_at_sampling": false,
+      "status_count": 1117,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/air-xray-managed-ui-20261027",
+      "head": "51791c31af4f5e57a1060615ab5e351a2d1a18c3",
+      "branch": "refs/heads/codex/air-xray-managed-ui-20261027",
+      "clean_at_sampling": null,
+      "status_count": null,
+      "status_scope": "excluded_other_project"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/deepseekbot-deploy-20261019",
+      "head": "59af6f315ceb2146daf37d300aa5caa384abfa38",
+      "branch": "refs/heads/codex/deepseekbot-deploy-20261019",
+      "clean_at_sampling": null,
+      "status_count": null,
+      "status_scope": "excluded_other_project"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/nio-warp-v2-connect-20261010",
+      "head": "3a1608d38a2a26844fdcd93173d633c086551735",
+      "branch": "refs/heads/codex/nio-warp-v2-connect",
+      "clean_at_sampling": null,
+      "status_count": null,
+      "status_scope": "excluded_other_project"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-analytics-20261013",
+      "head": "03bf0fdcc4788410de6367deb334f1a2c48311d7",
+      "branch": "refs/heads/codex/p003-analytics-20261013",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-analytics-control-20261031",
+      "head": "98190bf737ad52dadf8a9d9d5883248b5659df94",
+      "branch": "refs/heads/codex/p003-analytics-control-20261031",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-ark-brain-context-20261031",
+      "head": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718",
+      "branch": "refs/heads/codex/p003-ark-brain-context-20261031",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-auto-enrollment-20261104",
+      "head": "2780df3ceb3e906681b677a2d78b109220839fb8",
+      "branch": "refs/heads/codex/p003-auto-enrollment-20261104",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021",
+      "head": "72c3cbb319304d2e14df889faf03cacfbc2c29a5",
+      "branch": "refs/heads/codex/p003-brain-search-tools-20261021",
+      "clean_at_sampling": false,
+      "status_count": 5,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-brain-ui-tabs-20261030",
+      "head": "67385fd1f057376e916d11c9557ba5e63a8ddfda",
+      "branch": "refs/heads/codex/p003-brain-ui-tabs-20261030",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-brain-20261030",
+      "head": "da895a0b1276938d2bcb98314f85f90a17274f88",
+      "branch": "refs/heads/codex/p003-listening-brain-20261030",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-worker-20261030",
+      "head": "18048235faf2dd1efe4b2a59a7ef78a67a415f56",
+      "branch": "refs/heads/codex/p003-listening-worker-20261030",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-local-audio-20261016",
+      "head": "6c2cc932713199968337d45641c3286d66c1fbfe",
+      "branch": "refs/heads/codex/p003-local-audio-integrity-20261016",
+      "clean_at_sampling": false,
+      "status_count": 1,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-local-audio-safety-20261016",
+      "head": "2a643f8fa5e3c878aed8611ab69d76f4fa30fcf7",
+      "branch": "refs/heads/codex/p003-local-audio-safety-20261016",
+      "clean_at_sampling": false,
+      "status_count": 1,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-miniapp-joint-20261029",
+      "head": "6c2cc932713199968337d45641c3286d66c1fbfe",
+      "branch": "refs/heads/codex/p003-miniapp-joint-20261029",
+      "clean_at_sampling": false,
+      "status_count": 152,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-p1-weather-brain-20261031",
+      "head": "384005059526ad0451cc0460b7a5457e23a83302",
+      "branch": "refs/heads/codex/p003-p1-weather-brain-20261031",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-p1-weather-hotfix-20261031",
+      "head": "751f16a29b0d10beab36acd99ba63c04652affe6",
+      "branch": "refs/heads/codex/p003-p1-weather-hotfix-20261031",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-rtc-rejoin-fix-20261031",
+      "head": "7eccd0269bd3350bd010eb62818666eb00c9bf39",
+      "branch": "refs/heads/codex/p003-rtc-rejoin-fix-20261031",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-rtc-rejoin-p2-20261031",
+      "head": "10e863c41be6501debe8203fa763703e0c95adf2",
+      "branch": "refs/heads/codex/p003-rtc-rejoin-p2-20261031",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-search-retro-skills-20261021",
+      "head": "29658dd7d1ffef145add24ce61735bfdde1bf388",
+      "branch": "refs/heads/codex/p003-search-retro-skills-20261021",
+      "clean_at_sampling": false,
+      "status_count": 1,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-sms-login-20261103",
+      "head": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+      "branch": "refs/heads/codex/p003-sms-login-20261103",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-style-ark-brain-20261029",
+      "head": "e4bf06324553850ce28b9d1bcdaa70bef974eb46",
+      "branch": "refs/heads/codex/p003-style-ark-brain-20261029",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-style-ark-main-worker-20261029",
+      "head": "ef92ee1aa30e6ef869f6270de22173ce51617f30",
+      "branch": "refs/heads/codex/p003-style-ark-main-worker-20261029",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-style-ark-worker-20261029",
+      "head": "60a0da428dd3bd482f0d877243920187b48d533d",
+      "branch": "refs/heads/codex/p003-style-ark-worker-20261029",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-v384-voice-brain-20261104",
+      "head": "b3b75a8353e5db8545c0953c3817792b752f5664",
+      "branch": "refs/heads/codex/p003-v384-voice-brain-20261104",
+      "clean_at_sampling": false,
+      "status_count": 2,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-v384-voice-worker-20261104",
+      "head": "44bb31f4ba14c824aca64c1ca2aa706f53acb5a0",
+      "branch": "refs/heads/codex/p003-v384-voice-worker-20261104",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-worker-monitor-20261105",
+      "head": "e630fbb855bd952fdba5b59127c4197bde0b98c5",
+      "branch": "refs/heads/codex/p003-worker-monitor-20261105",
+      "clean_at_sampling": true,
+      "status_count": 0,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-worker-tool-lifecycle-20261021",
+      "head": "8f75a0c95efc704b64aa213794879810d21f1c76",
+      "branch": "refs/heads/codex/p003-worker-tool-lifecycle-20261021",
+      "clean_at_sampling": false,
+      "status_count": 1,
+      "status_scope": "full_original_worktree_read_only"
+    },
+    {
+      "path": "/Users/fu-121/mycc/2-Projects/handwriting-studio-main-eg3oxp",
+      "head": "918c9ac6c349ce1da353874cb6b873b7ffd4ff8f",
+      "branch": "refs/heads/Cv-main-agentuse",
+      "clean_at_sampling": null,
+      "status_count": null,
+      "status_scope": "excluded_other_project"
+    }
+  ],
+  "monitor_post_sample": {
+    "sha": "e630fbb855bd952fdba5b59127c4197bde0b98c5",
+    "pushed_by_main13": true,
+    "independent_ls_remote_equal": true
+  },
+  "merge45_precheck": {
+    "at": "2026-11-05T11:53:44.979045+00:00",
+    "target": "b3b75a8353e5db8545c0953c3817792b752f5664",
+    "source45": "1e3d7aa88eecc96b7827fcd29779a94ac2a17718",
+    "merge_tree": "cd364452807c09a3f7b9780899d6e2ea221707f5",
+    "clean_merge": true,
+    "changed_paths": [
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/CLIENT_SOURCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/CONTRACT-45.md",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/MATRIX.md",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/PREPARATION_RESULTS.json",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/README.md",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/REVIEW-45.json",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/REVIEW.md",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/audit45-http.ts",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/audit45-tiers.ts",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-0e29-tiers.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-856-bundle.json",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-856-equivalence.json",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-856-period-boundary.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-856-ui.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-9e7a-tsc.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-b665-independent-http.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-b665-independent-tiers.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/evidence/audit45-b665-tsc.log",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/fixtures.ts",
+      "2-Projects/P003GameDemo20260513/docs/v375-audit-20261102/prepare_candidate.py",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/ANDROID_HANDOFF.md",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/CLIENT_SOURCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/MEMORY.md",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/README.md",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/ROLLBACK.md",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/SOURCE_VERIFICATION.json",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/TEST_RESULTS.json",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/client-fix/CLIENT_CRATE_SOURCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/client-fix/PATCH_VERIFICATION.json",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/client-fix/README.md",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/client-fix/rust-projection-http.test.ts",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/client-fix/rust-projections.json",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/client-fix/v376-wallet-known-zero.patch",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/ark-regression.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-http-harness-failed.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-http-release.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-rust-baseline.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-rust-full-green.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-rust-green.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-rust-http.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/evidence/wallet-rust-red.log",
+      "2-Projects/P003GameDemo20260513/docs/v376-ark-audit-20261103/wallet-contract.test.ts",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/ARK_RECEIPT.md",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/CLIENT_SOURCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/PATCH_APPLY_REVERSE.json",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/READBACK.json",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/README.md",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/RESULTS.json",
+      "2-Projects/P003GameDemo20260513/docs/v377-ark-audit-20261103/SOURCE_DIFF.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/ASR_REVIEW.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/ASR_REVIEW.md",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/ASR_ROUTING.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/CLIENT_SOURCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/CROSS_REVIEW.md",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/HOTWORD_CROSS_REVIEW.JSON",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/IDENTITY_CROSS_REVIEW.JSON",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/README.md",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/RECHECK_CASES.md",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/SERVER_SOURCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/TERMS-45.md",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/TEST_RESULTS.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/WINDOW_EVIDENCE.json",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/asr-routing-review.ts",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/terms-contract.log",
+      "2-Projects/P003GameDemo20260513/docs/v380-ark-terms-20261103/terms-contract.test.ts",
+      "2-Projects/P003GameDemo20260513/docs/v386-closeout-20261105/CLIENT_SOURCE_CHECK.json",
+      "2-Projects/P003GameDemo20260513/docs/v386-closeout-20261105/CLOSEOUT-45.md",
+      "2-Projects/P003GameDemo20260513/docs/v386-closeout-20261105/EVIDENCE-45.json",
+      "2-Projects/P003GameDemo20260513/docs/v386-closeout-20261105/SERVER_SNAPSHOT_SAFE.json"
+    ],
+    "all_changes_documentation_archive": true,
+    "runtime_source_changed": false,
+    "working_tree_untouched": true
+  },
+  "private_sources": {
+    "BRANCH-AUDIT.json": {
+      "path": "/Users/fu-121/.local/state/p003-v386-retro-20261105/BRANCH-AUDIT.json",
+      "sha256": "bc794cb6da1ccbeabb0fafe1c3989e36dd3ab729ba82b75031bbc6dda9a8f13c"
+    },
+    "BRANCH-AUDIT.md": {
+      "path": "/Users/fu-121/.local/state/p003-v386-retro-20261105/BRANCH-AUDIT.md",
+      "sha256": "d094665e9e55195973662a5dffb00790fa23a15d6b7bc54b8d9102b28d53e3ac"
+    },
+    "REMOTE-REFS-MAIN13.json": {
+      "path": "/Users/fu-121/.local/state/p003-v386-retro-20261105/REMOTE-REFS-MAIN13.json",
+      "sha256": "2ac6106ea356f0f8de5199dc991352c13e2b8a31ad7e05c8283e36642a6e6151"
+    },
+    "MAIN-BRANCH-ASSERTIONS.json": {
+      "path": "/Users/fu-121/.local/state/p003-v386-retro-20261105/MAIN-BRANCH-ASSERTIONS.json",
+      "sha256": "4e23831af821acc4b659bce05f4efd0e64dd2c85b82f5ee43be91712543c16a5"
+    }
+  },
+  "limitations": [
+    "Local history and path review; no fresh production source inventory this round.",
+    "No runtime merge test or business test executed.",
+    "Private full audit includes historical worktree/ref snapshots and is retained locally."
+  ]
+}
