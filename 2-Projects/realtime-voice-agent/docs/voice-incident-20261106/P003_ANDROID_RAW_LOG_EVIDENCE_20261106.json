@@ -1,0 +1,247 @@
+{
+  "status": "READ_ONLY_ANALYSIS_VERIFIED_NOT_PRODUCT_TEST",
+  "created_at": "2026-11-06T05:33:26.576466+00:00",
+  "inputs": {
+    "zip_sha256": "122aa6ce2ebedddfbd1ef50d592738cbf1f07e4406872535883f63609df919e3",
+    "files": [
+      {
+        "name": "01_logcat_live_full_window_sanitized.txt",
+        "bytes": 3972069,
+        "sha256": "f2212674b6769b9ff68e1e5e6f9955604ace933298f418e1a0b68147e8e70ee3",
+        "readme_match": true
+      },
+      {
+        "name": "02_voice_failures_compact.txt",
+        "bytes": 17421,
+        "sha256": "aea30f43f8cbcd3f8ea1163b38ef9a82fe191cb8270e15ba856782370f1dd644",
+        "readme_match": true
+      },
+      {
+        "name": "03_latest_trace_detail.txt",
+        "bytes": 30051,
+        "sha256": "d31e7a1a3994dd1b10344c6afab7efee752a7b8f74910de64679e66e7f18e7d5",
+        "readme_match": true
+      },
+      {
+        "name": "04_persistent_voice_focused.txt",
+        "bytes": 431339,
+        "sha256": "941e657c7b5b733ea4f59b12004294f0e62b873adc6d91b6f1d8285aab1c08f4",
+        "readme_match": true
+      },
+      {
+        "name": "P003_ANDROID_NORMAL_VOICE_FAILURE_RECEIPT_20261106.md",
+        "bytes": 3655,
+        "sha256": "7ead6eaf4fe32f397c09d831956dd3b0886d33bedb165558c8260aa4358532db",
+        "readme_match": true
+      },
+      {
+        "name": "README_AND_SHA256.md",
+        "bytes": 2196,
+        "sha256": "72dbd11dc9fc58d80c660fe8e3f8fd9b8ae1404dc7287adafbb5edef9b736601",
+        "readme_match": null
+      }
+    ],
+    "all_five_expected_files_verified": true
+  },
+  "line_counts": {
+    "01_logcat_live_full_window_sanitized.txt": 34319,
+    "02_voice_failures_compact.txt": 37,
+    "03_latest_trace_detail.txt": 128,
+    "04_persistent_voice_focused.txt": 2000
+  },
+  "A": [
+    {
+      "trace": "fbb99709-dbb4-43c8-b391-9a249169af69",
+      "start_line": 1,
+      "failure_line": 3,
+      "duration_ms": 4192,
+      "failure_type": "NetworkTimeout"
+    },
+    {
+      "trace": "723232f0-bf0a-494f-9f5a-a7354f121a7a",
+      "start_line": 8,
+      "failure_line": 10,
+      "duration_ms": 4176,
+      "failure_type": "NetworkTimeout"
+    },
+    {
+      "trace": "feb0deb3-d579-4362-bfdb-32b69e1b8380",
+      "start_line": 15,
+      "failure_line": 17,
+      "duration_ms": 4177,
+      "failure_type": "NetworkTimeout"
+    },
+    {
+      "trace": "d0a7d6ed-678f-490f-8721-765d2c867e77",
+      "start_line": 22,
+      "failure_line": 24,
+      "duration_ms": 4178,
+      "failure_type": "NetworkTimeout"
+    },
+    {
+      "trace": "1fc1ddd4-f568-451d-9f4f-fbf4e141a6ab",
+      "start_line": 28,
+      "failure_line": 33,
+      "duration_ms": 10289,
+      "failure_type": "TimeoutException"
+    }
+  ],
+  "A5_room_connect_ms": 10121,
+  "B": {
+    "trace": "b874ed69-1614-4547-bdf1-b522558ccddd",
+    "worker_assignments": [
+      {
+        "job": "AJ_DbBjN5VB47oZ",
+        "issue_to_assignment_ms": 2137
+      },
+      {
+        "job": "AJ_N5Zt7m3QYfag",
+        "issue_to_assignment_ms": 6668
+      },
+      {
+        "job": "AJ_cMdP7R2ERBQ2",
+        "issue_to_assignment_ms": 30728
+      }
+    ],
+    "cached_ready_line": 29243,
+    "new_ready_duplicate_lines": [
+      29504,
+      29935
+    ],
+    "ui_ready": {
+      "line": 29543,
+      "wake_to_ready_ms": "16199",
+      "issue_to_assignment_ms": "2137",
+      "job_room_connect_ms": "449",
+      "track_to_input_loop_ms": "42",
+      "output_ready": "false"
+    },
+    "begin_count": 1,
+    "begin_line": 29467,
+    "remote_sinks": [
+      {
+        "line": 29253,
+        "at": "11:35:52.179",
+        "callbacks": 84,
+        "duration_ms": 840,
+        "audible_ms": 0,
+        "max_gap_ms": 63,
+        "underruns": 0
+      },
+      {
+        "line": 29766,
+        "at": "11:36:17.510",
+        "callbacks": 1053,
+        "duration_ms": 10530,
+        "audible_ms": 0,
+        "max_gap_ms": 62,
+        "underruns": 0
+      },
+      {
+        "line": 30223,
+        "at": "11:36:42.597",
+        "callbacks": 2397,
+        "duration_ms": 23970,
+        "audible_ms": 0,
+        "max_gap_ms": 62,
+        "underruns": 0
+      }
+    ],
+    "sid_occurrences_in_01": 0,
+    "phase_begin_timeout_received_line": 29972
+  },
+  "client_source": {
+    "commit": "58f2a2d36bd81b4ad65ce1afb6ce6e42455a6f64",
+    "files": [
+      {
+        "file": "VoiceRustWorkerClient.kt",
+        "bytes": 67481,
+        "sha256": "a2dbe2c03cd605db68bf1636091e12459d411c0399d6cfe79b4e96b3799f5d6d"
+      },
+      {
+        "file": "VoiceReadyDiagnostics.kt",
+        "bytes": 3403,
+        "sha256": "f25895e36c2e5ad29ad872933fbd738b345031b31b40adeed0198ee5670ddbe6"
+      },
+      {
+        "file": "VoiceFirstTurnSession.kt",
+        "bytes": 639,
+        "sha256": "7e9eddb13d335dbf3d4c3f324b7bb636986353a3dc65ab87cd038b021bc23591"
+      },
+      {
+        "file": "PublisherProbeRecoveryGate.kt",
+        "bytes": 2751,
+        "sha256": "75caf8362c7288d5cc8fcd4ae257de58f1c47ae4a3e14bbfeb61108b1a3b4eb7"
+      },
+      {
+        "file": "RemoteAudioContinuityTracker.kt",
+        "bytes": 1873,
+        "sha256": "cca94967359eb59bc502424f8b61ff368dd85d608b737079366c83dda202d5b8"
+      },
+      {
+        "file": "VoiceContracts.kt",
+        "bytes": 12459,
+        "sha256": "989c3b1de1bc8d91fccbc29a7246ed963fb3024c47949b9b821da4d5e64011bc"
+      },
+      {
+        "file": "oneshot/FirstTurnOrderedSender.kt",
+        "local_name": "oneshot-FirstTurnOrderedSender.kt",
+        "bytes": 9739,
+        "sha256": "03177b24bae44318fd7a1523a2d938d7c2c14baac18e100a2fe166a7a9fe5aef"
+      },
+      {
+        "file": "oneshot/FirstTurnSession.kt",
+        "local_name": "oneshot-FirstTurnSession.kt",
+        "bytes": 11569,
+        "sha256": "ce14b7b159b02d1ef36e9daab18cf1bbeed5e9299e42993a380f724fcce3eee9"
+      },
+      {
+        "file": "VoiceRealCanary.kt",
+        "local_name": "VoiceRealCanary.kt",
+        "bytes": 71352,
+        "sha256": "2255bade694fcceda5a871d48c36eb20e93467f4268a411287a654d53a35e154"
+      },
+      {
+        "file": "oneshot/FirstTurnHandoffObserver.kt",
+        "sha256": "1aa39de93836ba1a631241c8d44d7d04c14326c057550986138d73ea2b24e463",
+        "bytes": 9474
+      },
+      {
+        "file": "LiveKitRoomAdapter.kt",
+        "local_name": "LiveKitRoomAdapter-v386.kt",
+        "sha256": "04d66f5b9de513d2d81f42648e87797b91bc94ea0d197f32e3739e45bde81dcd"
+      }
+    ]
+  },
+  "production_changed": false,
+  "apk_independent_sha_verified": false,
+  "product_tests_run": false,
+  "limits": [
+    "No historical trackSID in Android log",
+    "No A actual RTC endpoint or staged network cause",
+    "G2 missing readiness cause remains open",
+    "Observer cross-generation rejection derived from fixed source and observed TASK/timeout; no JVM or device replay executed"
+  ],
+  "audit_script": {
+    "name": "audit_raw_analysis.py",
+    "sha256": "b2f6054cba4f4f319ee74675a291a633cd1fecc9fa0d4d061ed9bf9151fc3081"
+  },
+  "independent_reviews": [
+    {
+      "name": "GROK_B_REVIEW.md",
+      "sha256": "c0fe7c4c0c46c4f44dac26bec68de505f2a7003c8c2eedb4e0a17ebb5e84b144",
+      "scope": "read-only; primary reconciled conclusions"
+    },
+    {
+      "name": "CODEX_A_REVIEW.md",
+      "sha256": "6638caefba92b8f00c17727f3d3ca083d03bda228211a9a88a2aae7cfc4be648",
+      "scope": "read-only; primary reconciled conclusions"
+    }
+  ],
+  "primary_adjudication": [
+    "G2 missing LocalTrackSubscribed is unresolved; Android callbacks have no SID",
+    "Old TASK to new begin_timeout rejection follows fixed observer source; runtime APK equality and replay are unverified",
+    "sent_at_ms is stamped before publishControl probe/recovery, not a measured wire-send timestamp",
+    "G3 reconnect initiator is not explicitly recorded"
+  ]
+}
