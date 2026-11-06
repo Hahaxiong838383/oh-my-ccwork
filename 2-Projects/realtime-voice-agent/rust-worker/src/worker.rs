@@ -160,6 +160,17 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
         tokio::select! {
             Some(out) = msg_rx.recv() => {
                 tx.send(WsMessage::Binary(out.encode_to_vec().into())).await?;
+                // Running/completed jobs change capacity immediately. Waiting
+                // for the 30s heartbeat can strand a newly recreated room while
+                // the SFU still considers this worker full. Read the current
+                // count here, not a potentially stale snapshot queued by a job.
+                let active = state.active_jobs.load(Ordering::SeqCst);
+                let status = capacity_status(active, config.max_jobs);
+                tx.send(WsMessage::Binary(worker_msg(
+                    proto::worker_message::Message::UpdateWorker(status)
+                ).encode_to_vec().into())).await?;
+                info!(active_jobs = active, max_jobs = config.max_jobs,
+                    available = active < config.max_jobs, "worker capacity advertised after job status");
             }
             _ = ping_timer.tick() => {
                 let ping = worker_msg(proto::worker_message::Message::Ping(proto::WorkerPing {
@@ -169,17 +180,8 @@ async fn run_connection(config: &Config, state: Arc<WorkerState>) -> Result<()> 
             }
             _ = status_timer.tick() => {
                 let active = state.active_jobs.load(Ordering::SeqCst);
-                let load = if active >= config.max_jobs { 1.0 } else { 0.0 };
                 let status = worker_msg(proto::worker_message::Message::UpdateWorker(
-                    proto::UpdateWorkerStatus {
-                        status: Some(if active >= config.max_jobs {
-                            proto::WorkerStatus::WsFull as i32
-                        } else {
-                            proto::WorkerStatus::WsAvailable as i32
-                        }),
-                        load,
-                        job_count: active as u32,
-                    },
+                    capacity_status(active, config.max_jobs),
                 ));
                 tx.send(WsMessage::Binary(status.encode_to_vec().into())).await?;
             }
@@ -273,6 +275,15 @@ fn handle_server_message(
         }
         Some(Message::Pong(_)) => crate::search_canary::signal(true),
         Some(Message::Register(_)) | None => {}
+    }
+}
+
+fn capacity_status(active: usize, max_jobs: usize) -> proto::UpdateWorkerStatus {
+    let full = active >= max_jobs;
+    proto::UpdateWorkerStatus {
+        status: Some(if full { proto::WorkerStatus::WsFull } else { proto::WorkerStatus::WsAvailable } as i32),
+        load: if full { 1.0 } else { 0.0 },
+        job_count: active as u32,
     }
 }
 
