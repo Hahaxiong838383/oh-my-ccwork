@@ -915,7 +915,7 @@ pub async fn run_pipeline(
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
 
     let participant2 = participant.clone();
-    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 主循环 return Err
+    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 统一收尾后返回 Err
     // → job 收尾(关房删房),设备走既有重连路径。容量 1:一次 fatal 就收摊。
     let (fatal_tx, mut fatal_rx) = mpsc::channel::<String>(1);
 
@@ -1074,6 +1074,7 @@ pub async fn run_pipeline(
     // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
     // 生产实证 2026-08-18 06:20 同 job 每 10s 重发一次 input_ready——Android 幂等兜住但脏)
     let mut input_ready_fired = false;
+    let mut exit_error = None;
 
     loop {
         // B23 产品首句 v1:执行输入相位切换(代次终态 / begin 超时后置位,每 job 一次):换 STT、回灌追补环、发 session.input_phase。
@@ -1154,7 +1155,8 @@ pub async fn run_pipeline(
             // 输出门 fail-closed(冻结 2026-08-18):首个待播 PCM 起 5s Android 仍未订阅
             // agent 轨 → 整 job 收摊关房,绝不带着半聋房间继续跑
             Some(msg) = fatal_rx.recv() => {
-                return Err(anyhow::anyhow!("output gate fail-closed: {msg}"));
+                exit_error = Some(anyhow::anyhow!("output gate fail-closed: {msg}"));
+                break;
             }
             // 入站控制包(设备 → worker)。放在最前面:cancel 的时效性高于音频帧处理。
             ctrl = ctrl_rx.recv() => {
@@ -1402,7 +1404,7 @@ pub async fn run_pipeline(
     if let Some((pre, _)) = stt2.take() { pre.task.abort(); }
     let _ = tokio::time::timeout(Duration::from_secs(3), stt_task).await;
     info!(room = %room_name, "pipeline closed");
-    Ok(())
+    match exit_error { Some(error) => Err(error), None => Ok(()) }
 }
 
 impl Orchestrator {

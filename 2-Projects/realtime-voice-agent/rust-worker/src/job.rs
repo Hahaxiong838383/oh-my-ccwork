@@ -74,6 +74,35 @@ fn issue_to_assignment_ms(room_name: &str, issue_ts_ms: Option<i64>) -> Option<i
     valid(now_ms - sec * 1000)
 }
 
+// A finished pipeline no longer updates its heartbeat. Observe its JoinHandle
+// directly so a silent connected device cannot keep a dead job/room alive.
+enum JobWake<E> {
+    Room(Option<E>),
+    Pipeline(std::result::Result<Result<()>, tokio::task::JoinError>),
+    Watchdog,
+}
+
+async fn next_job_wake<E>(
+    room_event: impl std::future::Future<Output = Option<E>>,
+    pipeline: &mut Option<JoinHandle<Result<()>>>,
+    watchdog: &mut tokio::time::Interval,
+) -> JobWake<E> {
+    tokio::select! {
+        biased;
+        result = async {
+            match pipeline.as_mut() {
+                Some(task) => task.await,
+                None => std::future::pending().await,
+            }
+        } => {
+            pipeline.take(); // already joined; cleanup must not poll it again
+            JobWake::Pipeline(result)
+        },
+        _ = watchdog.tick() => JobWake::Watchdog,
+        event = room_event => JobWake::Room(event),
+    }
+}
+
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
     let room_name = job
         .room
@@ -97,6 +126,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     info!(
         job_id = %job.id,
         room = %room_name,
+        room_sid = %sid,
+        trace = meta.trace_id.as_deref().unwrap_or("-"),
         elapsed_ms = 0u64,
         issue_to_assignment_ms = issue_ms,
         issue_clock = if meta.issue_ts_ms.is_some() { "ms" } else { "sec" },
@@ -128,7 +159,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 自然放完(框架不 clear),硬打断才 clear_buffer。
     let source = NativeAudioSource::new(AudioSourceOptions::default(), TTS_SAMPLE_RATE, 1, 200);
     let mut agent_pub = publish_output_track(&room, &source).await.context("publish audio track")?;
-    info!(room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_published");
+    info!(job_id = %job.id, room = %room_name, room_sid = %sid,
+        trace = meta.trace_id.as_deref().unwrap_or("-"), agent_track_sid = %agent_pub.sid(),
+        elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_published");
     let agent_identity = room.local_participant().identity().to_string();
     let mut agent_track_sid = agent_pub.sid().to_string();
 
@@ -142,7 +175,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let mut mic_stream: Option<NativeAudioStream> = None;
     // 字幕路由:用户侧 (identity, 麦克风轨 sid),订阅到轨时采集
     let mut user_info: Option<(String, String)> = None;
-    let mut pipeline_task: Option<JoinHandle<()>> = None;
+    let mut pipeline_task: Option<JoinHandle<Result<()>>> = None;
     let (close_tx,close_rx)=tokio::sync::oneshot::channel();
     let mut pipeline_close_tx=Some(close_tx);let mut pipeline_close_rx=Some(close_rx);
     let graceful_search_close=std::env::var("P003_SEARCH_RESUME_V1").is_ok_and(|v|v=="1");
@@ -180,12 +213,18 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     watchdog.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
-        let ev = tokio::select! {
-            ev = events.recv() => match ev {
-                Some(ev) => ev,
-                None => break,
-            },
-            _ = watchdog.tick() => {
+        let ev = match next_job_wake(events.recv(), &mut pipeline_task, &mut watchdog).await {
+            JobWake::Room(Some(ev)) => ev,
+            JobWake::Room(None) => break,
+            JobWake::Pipeline(result) => {
+                match result {
+                    Ok(Ok(())) => info!(job_id = %job.id, room = %room_name, room_sid = %sid, "pipeline ended → closing job"),
+                    Ok(Err(e)) => warn!(job_id = %job.id, room = %room_name, room_sid = %sid, error = %e, "pipeline failed → closing job"),
+                    Err(e) => warn!(job_id = %job.id, room = %room_name, room_sid = %sid, panic = e.is_panic(), cancelled = e.is_cancelled(), "pipeline join failed → closing job"),
+                }
+                break;
+            }
+            JobWake::Watchdog => {
                 if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) {
                     info!(room=%room_name, "startup participant recovery expired → closing job");
                     break;
@@ -308,11 +347,23 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 }
             }
             RoomEvent::LocalTrackSubscribed { track } => {
-                if track.sid() != agent_pub.sid() { continue; }
-                info!(room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_subscribed_by_android");
-                if gates.on_local_subscribed() {
+                if track.sid() != agent_pub.sid() {
+                    info!(job_id = %job.id, room = %room_name, room_sid = %sid,
+                        trace = meta.trace_id.as_deref().unwrap_or("-"),
+                        event_track_sid = %track.sid(), agent_track_sid = %agent_pub.sid(),
+                        decision = "discard_sid_mismatch", "output subscription discarded");
+                    continue;
+                }
+                let first_subscription = gates.on_local_subscribed();
+                info!(job_id = %job.id, room = %room_name, room_sid = %sid,
+                    trace = meta.trace_id.as_deref().unwrap_or("-"),
+                    event_track_sid = %track.sid(), agent_track_sid = %agent_pub.sid(),
+                    decision = if first_subscription { "accept" } else { "discard_already_open" },
+                    elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_subscribed_by_android");
+                if first_subscription {
                     let _ = out_tx.send(true);
-                    info!(room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "output_ready");
+                    info!(job_id = %job.id, room = %room_name, room_sid = %sid,
+                        agent_track_sid = %agent_pub.sid(), elapsed_ms = t0.elapsed().as_millis() as u64, "output_ready");
                     // session.output_ready(合同 §5.4 仅诊断):无 trace 不发,与 input_ready 同纪律
                     if let Some(trace) = meta.trace_id.as_deref() {
                         publish_control(&room, control::output_ready(trace, unix_ms(), &room_name));
@@ -325,9 +376,18 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 participant,
             } => {
                 if !current_remote(&room, &participant) || !participant_lifecycle.accepts(
-                    &participant.identity().to_string(), &participant.sid().to_string()) { continue; }
+                    &participant.identity().to_string(), &participant.sid().to_string()) {
+                    info!(job_id = %job.id, room = %room_name, room_sid = %sid,
+                        participant_sid = %participant.sid(), user_track_sid = %publication.sid(),
+                        reason = "obsolete_or_unbound_participant", "input subscription discarded");
+                    continue;
+                }
                 info!(
+                    job_id = %job.id,
                     room = %room_name,
+                    room_sid = %sid,
+                    participant_sid = %participant.sid(),
+                    user_track_sid = %publication.sid(),
                     identity = %participant.identity(),
                     elapsed_ms = t0.elapsed().as_millis() as u64,
                     "user_track_subscribed"
@@ -437,12 +497,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             let octx = ordered_ctx.clone();
             let shutdown=if graceful_search_close{pipeline_close_rx.take()}else{None};
             pipeline_task = Some(tokio::spawn(async move {
-                if let Err(e) =
-                    pipeline::run_pipeline(mic, src, lp, rn.clone(), route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, shutdown)
-                        .await
-                {
-                    tracing::warn!(room = %rn, error = %e, "pipeline exited with error");
-                }
+                pipeline::run_pipeline(mic, src, lp, rn, route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, shutdown).await
             }));
         }
     }
@@ -457,13 +512,15 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             tracing::error!(room=%room_name, "room cleanup closing record failed");
         }
     }
-    room.close().await.ok();
     // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
     // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
-    let _ = delete_room(&config, &url, &room_name).await;
+    let _ = close_room_and_delete(&room_name,
+        async { room.close().await.map_err(Into::into) },
+        delete_room(&config, &url, &room_name)).await;
     // A 2xx is not the device's disconnect receipt. Keep the durable intent
     // until the independent reconciler verifies that this exact SID is gone.
-    info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");
+    info!(job_id = %job.id, room = %room_name, room_sid = %sid,
+        agent_track_sid = %agent_track_sid, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
 }
 
@@ -487,11 +544,27 @@ fn current_remote(room: &Room, participant: &RemoteParticipant) -> bool {
 
 /// Give an exiting candidate one bounded opportunity to freeze playback progress.
 /// Ordinary jobs preserve their immediate-abort behavior.
-async fn close_pipeline(mut task:JoinHandle<()>,shutdown:Option<tokio::sync::oneshot::Sender<()>>){
-    let Some(tx)=shutdown else {task.abort();return;};
-    let _=tx.send(());
-    if tokio::time::timeout(std::time::Duration::from_millis(500),&mut task).await.is_ok(){return;}
-    task.abort();let _=task.await;
+async fn close_pipeline(mut task: JoinHandle<Result<()>>, shutdown: Option<tokio::sync::oneshot::Sender<()>>) {
+    if let Some(tx) = shutdown {
+        let _ = tx.send(());
+        if tokio::time::timeout(std::time::Duration::from_millis(500), &mut task).await.is_ok() { return; }
+    }
+    task.abort();
+    if tokio::time::timeout(std::time::Duration::from_millis(500), &mut task).await.is_err() {
+        warn!("pipeline abort acknowledgement timed out; proceeding with room cleanup");
+    }
+}
+
+// A stuck RTC close must not prevent DeleteRoom from disconnecting the device
+// and allowing a new dispatch. The HTTP operation has its own bounded deadline.
+async fn close_room_and_delete(
+    room_name: &str,
+    close: impl std::future::Future<Output = Result<()>>,
+    delete: impl std::future::Future<Output = bool>,
+) -> (bool, bool) {
+    let closed = matches!(tokio::time::timeout(std::time::Duration::from_secs(3), close).await, Ok(Ok(())));
+    if !closed { warn!(room = %room_name, "room close failed or timed out; still attempting DeleteRoom"); }
+    (closed, delete.await)
 }
 
 /// control topic 出站(reliable):session.output_ready 等 job 层事件。
@@ -644,10 +717,138 @@ mod tests {
     #[tokio::test]
     async fn r14_job_close_notifies_cleanup_and_still_bounds_a_stuck_pipeline(){
         let(tx,rx)=tokio::sync::oneshot::channel();let(done,proof)=tokio::sync::oneshot::channel();
-        let task=tokio::spawn(async move{rx.await.unwrap();let _=done.send(());});
+        let task=tokio::spawn(async move{rx.await.unwrap();let _=done.send(());Ok(())});
         super::close_pipeline(task,Some(tx)).await;assert!(proof.await.is_ok());
         let(tx,_rx)=tokio::sync::oneshot::channel();let task=tokio::spawn(std::future::pending());let at=std::time::Instant::now();
         super::close_pipeline(task,Some(tx)).await;assert!(at.elapsed()<std::time::Duration::from_secs(1));
+    }
+
+    #[tokio::test]
+    async fn job_lifecycle_pipeline_completion_wakes_without_room_events() {
+        for outcome in ["normal", "error", "panic"] {
+            let mut task = Some(tokio::spawn(async move {
+                match outcome {
+                    "normal" => Ok(()),
+                    "error" => Err(anyhow::anyhow!("listening_session_paused_close_required")),
+                    _ => panic!("synthetic pipeline panic"),
+                }
+            }));
+            let mut watchdog = tokio::time::interval_at(
+                tokio::time::Instant::now() + std::time::Duration::from_secs(60),
+                std::time::Duration::from_secs(1),
+            );
+            let wake = tokio::time::timeout(std::time::Duration::from_millis(200),
+                super::next_job_wake(std::future::pending::<Option<()>>(), &mut task, &mut watchdog)).await;
+            assert!(wake.is_ok(), "{outcome}: completed pipeline must wake job cleanup");
+            let super::JobWake::Pipeline(result) = wake.unwrap() else { panic!("wrong wake"); };
+            match outcome {
+                "normal" => assert!(result.unwrap().is_ok()),
+                "error" => assert!(result.unwrap().is_err()),
+                _ => assert!(result.unwrap_err().is_panic()),
+            }
+            assert!(task.is_none(), "joined task must not be polled a second time during cleanup");
+        }
+    }
+
+    #[tokio::test]
+    async fn job_lifecycle_abort_waits_for_owned_resources_to_drop() {
+        use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+        struct Owned(Arc<AtomicBool>);
+        impl Drop for Owned { fn drop(&mut self) { self.0.store(true, Ordering::SeqCst); } }
+        let dropped = Arc::new(AtomicBool::new(false));
+        let owned = Owned(dropped.clone());
+        let (started, ready) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(async move {
+            let _owned = owned;
+            let _ = started.send(());
+            std::future::pending::<anyhow::Result<()>>().await
+        });
+        ready.await.unwrap();
+        super::close_pipeline(task, None).await;
+        assert!(dropped.load(Ordering::SeqCst), "room cleanup must not race a live aborted pipeline");
+    }
+
+    #[tokio::test]
+    async fn job_lifecycle_stuck_room_close_still_attempts_delete() {
+        use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
+        let deleted = Arc::new(AtomicBool::new(false));
+        let proof = deleted.clone();
+        let result = tokio::time::timeout(std::time::Duration::from_secs(4),
+            super::close_room_and_delete("synthetic-room",
+                std::future::pending::<anyhow::Result<()>>(),
+                async move { proof.store(true, Ordering::SeqCst); true })).await;
+        assert!(result.is_ok(), "stuck Room::close must not prevent bounded DeleteRoom");
+        assert_eq!(result.unwrap(), (false, true));
+        assert!(deleted.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn job_lifecycle_close_error_still_deletes_and_keeps_failure_visible() {
+        let result = super::close_room_and_delete("synthetic-room",
+            async { anyhow::bail!("synthetic RTC close failure") }, async { true }).await;
+        assert_eq!(result, (false, true));
+        let result = super::close_room_and_delete("synthetic-room",
+            async { Ok(()) }, async { false }).await;
+        assert_eq!(result, (true, false));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+    async fn job_lifecycle_uncooperative_abort_cannot_block_room_cleanup() {
+        let (release, blocked) = std::sync::mpsc::channel();
+        let (started, ready) = tokio::sync::oneshot::channel();
+        let task = tokio::spawn(async move {
+            let _ = started.send(());
+            // Synthetic non-cooperative dependency, released by the test itself.
+            let _ = blocked.recv_timeout(std::time::Duration::from_secs(2));
+            Ok(())
+        });
+        ready.await.unwrap();
+        let result = tokio::time::timeout(std::time::Duration::from_millis(900),
+            super::close_pipeline(task, None)).await;
+        let _ = release.send(());
+        assert!(result.is_ok(), "abort acknowledgement must be bounded before room cleanup");
+    }
+
+    #[tokio::test]
+    async fn job_lifecycle_wait_preserves_room_events_and_watchdog() {
+        use super::{JobWake, next_job_wake};
+        let mut watchdog = tokio::time::interval_at(tokio::time::Instant::now()
+            + std::time::Duration::from_secs(60), std::time::Duration::from_secs(1));
+        let mut task = None;
+        assert!(matches!(next_job_wake(async { Some(17) }, &mut task, &mut watchdog).await,
+            JobWake::Room(Some(17))));
+        task = Some(tokio::spawn(std::future::pending::<anyhow::Result<()>>()));
+        assert!(matches!(next_job_wake(async { Some(18) }, &mut task, &mut watchdog).await,
+            JobWake::Room(Some(18))));
+        assert!(task.is_some());
+        // Tokio timers round to milliseconds; a newly created "now" interval
+        // need not be ready on its first poll. Use an unambiguously elapsed tick.
+        let mut due = tokio::time::interval_at(tokio::time::Instant::now()
+            - std::time::Duration::from_secs(1), std::time::Duration::from_secs(1));
+        assert!(matches!(next_job_wake(async { Some(19) }, &mut task, &mut due).await,
+            JobWake::Watchdog), "queued room traffic must not starve the canary/heartbeat watchdog");
+        super::close_pipeline(task.take().unwrap(), None).await;
+    }
+
+    #[tokio::test]
+    async fn job_lifecycle_completion_precedes_queued_packets_and_watchdog() {
+        for cancel in [false, true] {
+            let handle = if cancel {
+                let t = tokio::spawn(std::future::pending::<anyhow::Result<()>>());
+                t.abort(); t
+            } else { tokio::spawn(async { Ok(()) }) };
+            tokio::time::timeout(std::time::Duration::from_secs(1), async {
+                while !handle.is_finished() { tokio::task::yield_now().await; }
+            }).await.unwrap();
+            let mut task = Some(handle);
+            let mut due = tokio::time::interval_at(tokio::time::Instant::now()
+                - std::time::Duration::from_secs(1), std::time::Duration::from_secs(1));
+            let wake = super::next_job_wake(async { Some(19) }, &mut task, &mut due).await;
+            let super::JobWake::Pipeline(result) = wake else { panic!("completed job consumed another packet"); };
+            if cancel { assert!(result.unwrap_err().is_cancelled()); }
+            else { assert!(result.unwrap().is_ok()); }
+            assert!(task.is_none());
+        }
     }
 
     fn now_ms() -> i64 {
