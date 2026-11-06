@@ -1,0 +1,142 @@
+{
+  "status": "PARTIAL_REPAIR_NOT_DEVICE_CLOSEOUT",
+  "updated_at": "2026-11-06T04:27:35.862959+00:00",
+  "private_evidence_root": "/Users/fu-121/.local/state/p003-voice-incident-20261106",
+  "evidence": [
+    {
+      "name": "brain-summary.json",
+      "bytes": 711,
+      "sha256": "ac9c7404dc73ce4044425560ba9b3c1a0705099f45702a784550bb434d713840"
+    },
+    {
+      "name": "brain-provider-applied.json",
+      "bytes": 835,
+      "sha256": "ffbc305da7a0cbe083054ab42f3def1cf717de9ea37c94c5ea3bb2d449eb1339"
+    },
+    {
+      "name": "brain-provider-verification.json",
+      "bytes": 1036,
+      "sha256": "5fc041218b008c4ef838746a27726dddbe288523dd73ef02033d4ed8c98748d9"
+    },
+    {
+      "name": "effective-fallback-verification.json",
+      "bytes": 229,
+      "sha256": "8df51c121d7d01f1139024720690001428e7c582adc5d24a5d234651205dc002"
+    },
+    {
+      "name": "brain-post-final.json",
+      "bytes": 1057,
+      "sha256": "3c08a401ec2699326fa2876a41923145bafc16b9aa16712b10448a3485e98809"
+    },
+    {
+      "name": "rtc-recovery-result.json",
+      "bytes": 1291,
+      "sha256": "875ba03efa8deabf67d72d73145abb12228d5780e08f1ddaa90792b81be09aad"
+    },
+    {
+      "name": "rtc-cleanup.json",
+      "bytes": 1335,
+      "sha256": "de6a2d36e49033e18f4cbf396357eff0694e74bfd5e0c6e08acbe0344abe7a26"
+    },
+    {
+      "name": "worker-final.json",
+      "bytes": 36587,
+      "sha256": "45b2e8dec5da7a9516d2ae4f9ef23274762f32a9a2a331e3daee0d143f4f1343"
+    },
+    {
+      "name": "active-rooms-after-probe.json",
+      "bytes": 46,
+      "sha256": "771224ebb3d01bcf7143c41be24bbb7b3e356167e989a91602161d1168654631"
+    },
+    {
+      "name": "sfu-urgent.md",
+      "bytes": 6923,
+      "sha256": "ab50163ff7ab518218883210d5ae77458e08229a0db1bb122698309270781ccb"
+    },
+    {
+      "name": "sfu-summary.json",
+      "bytes": 13451,
+      "sha256": "acb3ae9bab94a9025bdad18e1945a48203e5f882522f486a8b5604e517155bfa"
+    },
+    {
+      "name": "turn-correlation.json",
+      "bytes": 15385,
+      "sha256": "f56a7eda01896d89907d8d6f97e4bcae0e28d2f5952b05c6b0a5f2d0603adb21"
+    },
+    {
+      "name": "device-diag.json",
+      "bytes": 18827,
+      "sha256": "cedaa03985477e6569c1212dc4ca875c88e11bc3c80e3aea62e527e403d29421"
+    },
+    {
+      "name": "rollback-installed.json",
+      "bytes": 189,
+      "sha256": "a0c1f52883982b6251162b7e30f2225263a036e813a152790b605f3c4bc4ab47"
+    },
+    {
+      "name": "air-key-probe.json",
+      "bytes": 1002,
+      "sha256": "7f8451559b2d040a204c7c27e592372e33be225410adeedbe5efa38f05aa1d6d"
+    },
+    {
+      "name": "brain-user-key-applied.json",
+      "bytes": 846,
+      "sha256": "4d28dd663c32909ec5168abbcf9ea36fcf0ef95ca646ae906e53b8f6a72a46de"
+    },
+    {
+      "name": "brain-user-key-http.json",
+      "bytes": 1035,
+      "sha256": "18dba59078cc4ac53ce944787571dbf1f90e8f417c03dc8d191530d62aefb3ad"
+    },
+    {
+      "name": "brain-user-key-effective.json",
+      "bytes": 231,
+      "sha256": "8bbfa4882168548360db5e3dc6a08cd35d199e4bfc9472fe7c4ce1d082c657cf"
+    },
+    {
+      "name": "brain-user-key-health.json",
+      "bytes": 1057,
+      "sha256": "ed342c2e859bf2277e95a8648bd5d217c0ef9ab1aa6f055c2c2994e5fbe0c6ca"
+    },
+    {
+      "name": "rtc-user-key-result.json",
+      "bytes": 1427,
+      "sha256": "1deea1fda3eabc89030214169fce03be74a735b75b5d128352be3f11f7cf9ab7"
+    },
+    {
+      "name": "rtc-user-key-cleanup.json",
+      "bytes": 1455,
+      "sha256": "434638e925171e26813c86788b6992b8b03a3841ae6c7ad5bdb92f517da2594f"
+    },
+    {
+      "name": "worker-user-key.json",
+      "bytes": 34107,
+      "sha256": "10be5e360ec1eb18102c036c17ecfe058374ce9c7ec9395359f4ab7d14d84238"
+    },
+    {
+      "name": "active-rooms-user-key.json",
+      "bytes": 46,
+      "sha256": "ab4958be2bab35052dc2998aaeed33d2511252614247e0461b0d2e2024e48902"
+    },
+    {
+      "name": "user-key-rollback-installed.json",
+      "bytes": 198,
+      "sha256": "73c18f48956ed1fdbdeacf16e37328471c9531ce671ec7f6c1d0bf0c7340783b"
+    },
+    {
+      "name": "rtc-causal-review.md",
+      "bytes": 8682,
+      "sha256": "2bae6d6a913b45ac7c0d0c274251f3a0ed19031103e572630b49e351aeaa99b6"
+    }
+  ],
+  "changed_runtime": "main Brain provider environment only; no business source/database/device gate change",
+  "physical_android_hearing_verified": false,
+  "rtc_negotiation_root_cause_closed": false,
+  "final_credential_source": "User-specified Air RTF; secret never included",
+  "final_endpoint": "https://ark.cn-beijing.volces.com/api/coding/v3",
+  "final_model": "doubao-seed-2.0-mini",
+  "synthetic_rtc_rooms": [
+    "transport-audit-20261106-1793938552577",
+    "transport-audit-20261106-1793939079086"
+  ]
+}
