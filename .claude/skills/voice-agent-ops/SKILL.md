@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## TTS 建连长等待、流中停顿与传输取证
+
+遇到预热等待、DNS/TLS/WebSocket 超时、正文迟迟无声或句中断续，先读 [TTS 连接恢复与取证](references/tts-transport-recovery.md)。前台共享截止、受限备用连接、PCM 交付后的重播边界与双向包头归因分别核验；正常探针成功不代表历史故障根治。以下旧地址、参数及部署命令只作历史参考，操作前取当前网络/运行真值；带日期的“已根治”仅指该历史事件及已验场景，不能给新故障销号。
+
 ## 后台搜索、拆句与TTS延迟验收
 
 遇到搜索后聊天变慢、重复回答、跨会话续讲、取消/退出归因、备用模型失效、搭建独立语音验证副本或准备真人验收，读[搜索与语音延迟验收](references/search-latency-acceptance.md)。普通聊天延迟优先；预连接等待、正文首帧和承接音分开计时，服务端完成与真人听到分开取证。具体部署/开窗看最新项目记录，以下历史快照不能当当前状态。
@@ -523,10 +527,10 @@ bytes 决定,预建连没动那个结构。要改得动字幕发布策略,是另
 那是拿两个行为资产换延迟。**改用预建连:每句仍独立会话,归属关系一字节没动。**
 
 **做法**:turn 一开始就起后台握手(与 LLM 请求并行);每句在合成的同时为下一句握好手。
-`WARM_MAX_AGE=12s < 协议 14s`,超龄丢弃重连(赌它还活着,输了是整句合成失败)。
-预建连失败降级为现连,**绝不能让预热失败变成合成失败**。
+历史参数 `WARM_MAX_AGE=12s < 协议 14s` 描述预建连接龄；它与前台连接等待预算不是同一参数，当前龄阈值以运行源码为准。超龄连接不可直接发文本。
+预建连失败应尝试冷连接恢复；当前恢复路径须共享前台截止，不能重置第二段完整预算。若恢复也失败，仍会合成失败；不得承诺预热失败后必然出声。详见 [TTS 连接恢复](references/tts-transport-recovery.md)。
 
-**回滚**:`XFYUN_TTS_PRECONNECT=0` 写进 `rust-worker.env` + 重启,不用换二进制。
+**历史预建连功能回滚**:`XFYUN_TTS_PRECONNECT=0`。这不是当前连接恢复版本的完整回滚；当前操作须核最新发布回执、实际开关及当次备份，再按授权执行。
 
 **实测收益**(同一二进制翻开关的 A/B,开场白无承接音遮挡):
 开 **292ms**(296/295/286) vs 关 **544ms**(515/549/567) → **净省 ~250ms**。
@@ -662,7 +666,7 @@ pre-underrun 版 12 次 consumer gone)。以前看不见是因为①更早的症
 - **租户后台"记忆读不到/用户全是同一人"** → 查两层:①job 日志 `tenant-brain user identity: <值>`——值是"user"=前端没传 participantName(SDK 缺省值,激活码必须每次带);②该值经 OpenAI 标准 user 字段进租户端点每个请求(per-request extra_body 注入——池级 header 会串用户,禁改)。
 - **切链路验证** → 唯一凭据=job 真实路径日志(`grep -E "xfyun|volc"`,目标引擎成功路径静默、旧引擎必留痕);unit grep+active+registered 全是假象。
 - **讯飞碎句(已解)** → 换对话线 provider `xfyun_spark_iat`(中文识别大模型):eos 静音断句(XFYUN_IAT_EOS_MS 默认700,600-800 可调)+dwa=wpgs 中间结果(字数门生命线)+回合制会话(幅度门控/预滚400ms/50s收尾)。切换=租户写 xfyun_spark_iat 凭据(app_id/api_key/api_secret,与超拟人 TTS 同套)→ tenant env STT_PROVIDER=xfyun_spark_iat + restart。旧 xfyun(转写线,accessKey 鉴权)保留兼容。碎句复发排障:job 日志 stt final 密度+调大 EOS_MS。
-- **"你们 TLS 握手 800ms+"类外部指控** → 先自己同城测点复现:`curl --noproxy '*' -w 'tcp=%{time_connect} tls=%{time_appconnect}'`;不复现(净值 ~35ms)=第一嫌疑**对方测量机代理**(特征:TCP 极快+TLS 极慢+复用省大头+.cn 对照组正常),交棒复测清单勿改自己服务端。测 resumption 用 `sleep 1 | openssl s_client -sess_out`(echo 管道在 ticket 到达前退出=假阴性)。
+- **TLS 握手慢的反馈** → `curl --noproxy '*' -w 'connect=%{time_connect} appconnect=%{time_appconnect}'` 仅作旁路对照，两个值均为累计阶段时间；单次同城正常不能排除真实 Worker 偶发故障，也不能直接归咎对方代理。先核同时间、进程、连接与实际代理/路由，再比较 DNS/TCP/TLS/WS 分段。测 resumption 时等待 session ticket 到达，管道过早退出可能是假阴性。
 
 **在途需求(2026-07-29 接单,同事需求文档回复见飞书 wiki `MGR4wOvy9i600OkAAEncWZcQnre` §七)**:①SDK `JavisVoice.prewarm()`(纯网络层预热,不建会话)②`POST /v1/tts` TTS-only(Bearer 租户 key→流式 mp3+固定台词文本缓存)③说完即挂=文本哨兵 `[[END_SESSION]]`(待同事确认;agent 流内剥离→播完→关房)④voice-hk nginx 加固(http2+掐 TLSv1.0/1.1,待川哥批)。
 

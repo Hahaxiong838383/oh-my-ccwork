@@ -1,0 +1,58 @@
+{
+  "status": "DOCUMENTATION_MEMORY_SKILL_VERIFIED_NO_RUNTIME_CHANGE",
+  "checked_at": "2026-11-06T10:04:53.565023+08:00",
+  "prior_head": "7fa566877a88b4e2e590e7803d61f7dfd0c32f46",
+  "branch": "codex/p003-voice-transport-fix-20261105",
+  "historical_evidence_index_sha256": "7b71a41da13429f52b080099719dcadd957bb3fdccdf76564936af9b72418a9f",
+  "private_evidence_files_verified": 20,
+  "runtime_files_changed": false,
+  "production_operations_this_round": false,
+  "business_tests_rerun_this_round": false,
+  "skill_retrieval": {
+    "baseline_task": "c4f17265-1328-4b15-845a-9e849fb0f6f8",
+    "baseline": "first three reference scenarios lacked explicit coverage; not a new business regression",
+    "review_task": "06a709e8-b143-45a3-84f9-38d34f6c0f9f",
+    "review": "five scenarios answered; historical contradictions identified and corrected",
+    "final_task": "9154d0eb-fd7d-4aca-8a52-3fed24ec4028",
+    "final": "six focused document criteria clear; not production approval"
+  },
+  "skills_sync": {
+    "active_original_sha256": "fa59280c5721c5816a65d4a2bf7ad6dad32a0a4be5aca1294baaaa5bc519bd76",
+    "active_candidate_sha256": "a9a7ae40f76cc0fb25a6e0e42397bdd49104ff0317a719bc3c8071244b344f1b",
+    "tree_original_sha256": "d053ffbd7c2cfacf8100dfca2c4b258e50aa44923447553bbfef96983554a875",
+    "tree_candidate_sha256": "eff879db7f21e11055a810b47af93473d6aca3d6df8911f3559a1c3b283bbbd3",
+    "reference_sha256": "57527963a5d6a1b7156eba6e92ec286fa1ab73c7b1e1a10a93d95baa8da5b933",
+    "changes": "one entry block and four precise historical lines; all other bytes preserved",
+    "state": "INSTALLED_VERIFIED"
+  },
+  "skill_install_receipt_sha256": "fca621a1a84f8e3244e61be06dbc37b0170f69a77c4e70bab14a5e1e76267d6e",
+  "memory": {
+    "receipt_sha256": "b298be29c7e86e2708822ec0ce9215538990534b7eacda527c9b32ee2bad1a84",
+    "events_lines": 79,
+    "status_lines": 49,
+    "status_unchanged": true,
+    "other_task_content_preserved": true,
+    "tracked_by_git": false,
+    "backup_root": "/Users/fu-121/.local/state/p003-sn02000038-latency-20261105/rootcause/memory-retro-20261106",
+    "count_correction_receipt_sha256": "dd83f2b9dc3981bb9d8e65088f94b1ce31cde6185367e00d87ff43f8988cc07b",
+    "current_events_sha256": "899a15e1865ec096949ee89c1b196fd594429cf022b66ca1f5569647b2d55d77",
+    "current_memory_items_sha256": "57f2ec6fcc051aa276d39c61403d5938c4d546177204e28021fa76b1b677b270"
+  },
+  "artifacts_sha256": {
+    ".claude/skills/voice-agent-ops/SKILL.md": "eff879db7f21e11055a810b47af93473d6aca3d6df8911f3559a1c3b283bbbd3",
+    ".claude/skills/voice-agent-ops/references/tts-transport-recovery.md": "57527963a5d6a1b7156eba6e92ec286fa1ab73c7b1e1a10a93d95baa8da5b933",
+    "2-Projects/realtime-voice-agent/docs/transport-20261105/RETROSPECTIVE_20261106.md": "2ae111bd6aa79836dc643c5837386ea4eb6c8988d6bd6abba0e879d82fc99072",
+    "2-Projects/realtime-voice-agent/docs/transport-20261105/SKILL_BASELINE_20261106.md": "30f3b45a80351d3c5f6a63ae38fe83da17db98ab375d23eac0d53c3610d10c3f",
+    "2-Projects/realtime-voice-agent/docs/transport-20261105/SKILL_REVIEW_20261106.md": "05250cb0ad8657754f09aec4cf32d9a3558e8b537bd5cd818428bda5034d310e",
+    "2-Projects/realtime-voice-agent/docs/transport-20261105/SKILL_FINAL_REVIEW_20261106.md": "0bd344d60c6038a4d9a8a56c8e72b715f6b4c60e04af9196f46aed19eba722da"
+  },
+  "document_local_links_checked": 8,
+  "limitations": [
+    "No fresh production observation this round",
+    "TLS/WS underlying stall and in-stream underrun remain OPEN",
+    "Private memory and active-tree unrelated changes are not part of Git push"
+  ],
+  "corrections": [
+    "Initial prose said 24 evidence files; counted actual index length=20, all 20 match. Report/event memory corrected, before/candidate receipts preserved."
+  ]
+}
