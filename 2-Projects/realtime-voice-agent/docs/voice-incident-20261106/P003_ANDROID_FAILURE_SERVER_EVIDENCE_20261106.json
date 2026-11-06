@@ -1,0 +1,78 @@
+{
+  "android_receipt": {
+    "name": "P003_ANDROID_NORMAL_VOICE_FAILURE_RECEIPT_20261106.md",
+    "sha256": "7ead6eaf4fe32f397c09d831956dd3b0886d33bedb165558c8260aa4358532db",
+    "raw_android_logs_available": false
+  },
+  "runtime": {
+    "unit": "p003-listening-worker",
+    "source": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+    "binary_sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+    "pid": "2750511",
+    "started_at": "2026-11-04T18:18:27+08:00"
+  },
+  "trace": "b874ed69-1614-4547-bdf1-b522558ccddd",
+  "room_suffix": "1793936147",
+  "jobs": [
+    {
+      "generation": "G1",
+      "job": "AJ_DbBjN5VB47oZ",
+      "room_sid": "RM_mEFRuUuQs5QR",
+      "agent_track": "TR_AMUPL6mGJY3js5",
+      "input_ready_sent": "11:35:51.816",
+      "output_ready": "11:35:51.900",
+      "ordered_packets": 0,
+      "close_reason": "device participant disconnected; lifecycle action Close"
+    },
+    {
+      "generation": "G2",
+      "job": "AJ_N5Zt7m3QYfag",
+      "room_sid": "RM_3qk9GiHYh76F",
+      "agent_track": "TR_AMUdysXtFYTMpt",
+      "input_ready_sent": "11:35:58.603",
+      "begin_accepted": "11:35:59.659",
+      "first_asr_final": "11:36:01.244",
+      "llm_first_content_ms": 507,
+      "turn_committed": "11:36:02.657",
+      "tts_first_pcm": "11:36:02.908",
+      "tts_first_pcm_ms": 246,
+      "tts_pcm_nonzero_verified": false,
+      "output_ready": null,
+      "ordered_packets": 93,
+      "ordered_chunks": 91,
+      "samples_received": 57760,
+      "tts_first_segment_duration_ms": 1360,
+      "played_frames": 0,
+      "pipeline_failed": "11:36:07.981",
+      "close_reason": "output gate timeout",
+      "room_deleted": "11:36:08.000"
+    },
+    {
+      "generation": "G3",
+      "job": "AJ_cMdP7R2ERBQ2",
+      "room_sid": "RM_zYXPHLbKQw9W",
+      "agent_track": "TR_AMhMSNUZq5Fcte",
+      "output_ready": "11:36:20.928",
+      "input_ready_sent": "11:36:23.430",
+      "begin_timeout": "11:36:25.930",
+      "begin_timeout_budget_ms": 2500,
+      "ordered_packets": 0,
+      "input_phase_next": "rtc",
+      "audio_frames_10s": 1005,
+      "audio_mean_amp": 11,
+      "asr_finals": 0,
+      "llm_turns": 0,
+      "cancel_received": "11:36:43.077",
+      "close_reason": "device participant disconnected after cancel"
+    }
+  ],
+  "status": "INVESTIGATED_NOT_FIXED",
+  "production_changed_this_round": false,
+  "business_tests_run_this_round": false,
+  "independent_review": "Grok code review and Codex SFU/Brain review; primary verified raw git diffs; no runtime replay test",
+  "open_questions": [
+    "A exact connection failure layer and first four trace mappings",
+    "G2 actual subscribed track and missing output readiness cause",
+    "G3 begin send/delivery and repeat_prompt handling"
+  ]
+}

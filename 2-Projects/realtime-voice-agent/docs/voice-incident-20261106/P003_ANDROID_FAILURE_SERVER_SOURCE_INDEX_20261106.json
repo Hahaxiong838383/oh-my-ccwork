@@ -1,0 +1,89 @@
+{
+  "created_at": "2026-11-06T05:05:54.222354+00:00",
+  "review_status": "READ_ONLY_EVIDENCE_RECONCILIATION_NOT_FIX_VERIFICATION",
+  "private_evidence_directory": "/Users/fu-121/.local/state/p003-voice-incident-20261106/receipt-reconcile",
+  "android_receipt": {
+    "name": "P003_ANDROID_NORMAL_VOICE_FAILURE_RECEIPT_20261106.md",
+    "sha256": "7ead6eaf4fe32f397c09d831956dd3b0886d33bedb165558c8260aa4358532db",
+    "raw_android_logs_available": false
+  },
+  "inputs": [
+    {
+      "name": "worker-A-fresh.json",
+      "bytes": 200023,
+      "sha256": "a115ed4b25473383030adf8fa478aeb61a658ae9b01befccea88583980c85ae5",
+      "stored_privately": true
+    },
+    {
+      "name": "worker-B-fresh.json",
+      "bytes": 53777,
+      "sha256": "3b5fa511ec632c927c10ad0dbdedb8ec1afb490a3a628e0475aae33e55a0ff1d",
+      "stored_privately": true
+    },
+    {
+      "name": "worker-B-repeat-verification.json",
+      "bytes": 170,
+      "sha256": "c743cbc61f2aa632f62a0f922c91c9f2cbc43a853e406571313c75ccdb803aaa",
+      "stored_privately": true
+    },
+    {
+      "name": "worker-reconciliation.json",
+      "bytes": 2285,
+      "sha256": "f1592103490f3b9e188cbfcaa0a5755b8fe2139265cc3c70ab72711e2a9917ec",
+      "stored_privately": true
+    },
+    {
+      "name": "sfu-brain-sessions.json",
+      "bytes": 3427,
+      "sha256": "d0799203943848bb57e584ce3f2bf0bf2aa750f1014480ad74e4059648bec782",
+      "stored_privately": true
+    },
+    {
+      "name": "sfu-brain-sfu-a-window.json",
+      "bytes": 120766,
+      "sha256": "86d51f22f1930b33f28f699f4c08b053422b11b86745b6af995dd6236282acce",
+      "stored_privately": true
+    },
+    {
+      "name": "sfu-brain-sfu-b-events.json",
+      "bytes": 76119,
+      "sha256": "c4fbe0dd30cac731472c3bbdc4dcc6d42c54bae7a799aa049ab3aa81ee6d9e29",
+      "stored_privately": true
+    },
+    {
+      "name": "sfu-brain-source-manifest.json",
+      "bytes": 3562,
+      "sha256": "ac6026544056e94d0d2bf4c0a7fecc9bc3b9d16e033e6082fc3b518c82b21656",
+      "stored_privately": true
+    },
+    {
+      "name": "sfu-brain-validation.json",
+      "bytes": 511,
+      "sha256": "4a2e68be992005a1167172627ea1cad97a556ac5e3d298e567abd7d9370243a4",
+      "stored_privately": true
+    },
+    {
+      "name": "BEGIN_TIMEOUT_CODE_REVIEW.md",
+      "bytes": 23715,
+      "sha256": "df7702b85c72d895592530f8ffc658b071a7f50c9a4539d45fb29751f4d886e4",
+      "stored_privately": true
+    },
+    {
+      "name": "SFU_BRAIN_RECONCILIATION.md",
+      "bytes": 14819,
+      "sha256": "c7cbbcc34f2977cf9265bebb98eaa5e1dc6577217e95d1a746375cd66e38d01a",
+      "stored_privately": true
+    }
+  ],
+  "manifest_inputs_independently_verified": 20,
+  "public_summary": {
+    "name": "P003_ANDROID_FAILURE_SERVER_EVIDENCE_20261106.json",
+    "sha256": "a238febc364b5cc73d2df3aed011b609094c46b9467921a3210abb1253f2360f"
+  },
+  "review_adjudication": [
+    "Grok identifies SID filtering as an unproven regression candidate, not a demonstrated cause",
+    "Primary checked 962f2599: old job loop did not await pipeline completion; cannot assert old code deleted immediately",
+    "SFU DTLS read timeout near teardown does not prove initial handshake failure",
+    "TTS PCM arrival has no historic amplitude proof; played_frames=0 is verified"
+  ]
+}
