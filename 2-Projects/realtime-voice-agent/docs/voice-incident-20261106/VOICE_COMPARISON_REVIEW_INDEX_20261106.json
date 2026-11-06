@@ -1,0 +1,35 @@
+{
+  "status": "INDEPENDENT_REVIEWS_RECONCILED_WITH_MAIN_EVIDENCE",
+  "archives": [
+    {
+      "source": "brain/BRAIN_REVIEW.md",
+      "archive": "BRAIN_NORMAL_VOICE_REVIEW_20261106.md",
+      "sha256": "07ae58aa021ec49242accafd611368ac453bbc8db6b0e7839d0e519877fa4117"
+    },
+    {
+      "source": "sfu/SFU_REVIEW.md",
+      "archive": "GROK_SFU_NORMAL_VOICE_REVIEW_20261106.md",
+      "sha256": "2b1c52bd8b1d3c92f5a31f080b33d7ccd5c6d62d727ce34decd92efcf7b5db01"
+    }
+  ],
+  "verified": [
+    "Brain report manifest exact",
+    "Grok SFU report manifest exact",
+    "Main independently read Worker/SFU and joined 36 jobs to exact Brain trace/room and SFU JT_ROOM",
+    "Grok expanded 14:00 window has 47 joined rooms; main 16:00 window has 36; no count conflict",
+    "All 3 historical B Android SDK blocks independently checked as 2.27.0/android15/wifi"
+  ],
+  "correction_to_grok_report": {
+    "statement": "last real room event 18:01:49",
+    "correction": "18:01:49 is the last room-start timestamp, not the final event in that room",
+    "main_final_real_room_event_cst": "2026-11-06T18:02:01.997159+08:00"
+  },
+  "production_changed": false,
+  "root_commit": "391d66648d28a50c9b62b27d9b12caebab8f9476",
+  "limits": [
+    "Version self-report not per-session APK SHA",
+    "SFU active/publication not proof of audible PCM",
+    "New normal sessions do not close old recovery faults",
+    "Agent name does not prove search business execution"
+  ]
+}
