@@ -30,10 +30,10 @@
     ]
   },
   "sources": {
-    "src/listening_adapter.rs": "316d2569792b249c1f7cfd4560463c722020efca24bf2159d4fd13395dccbf7c",
-    "src/listening_voice.rs": "e0a6fbbe8cf53971baafbea0920cab03fc574c8d5e73c421e438be1b01cae9ce",
+    "src/listening_adapter.rs": "80ea3db2bb70fe8975e00fff10298df8892f8c8e5d9ffcb56a0fee66d3e1408a",
+    "src/listening_voice.rs": "3bd944a5f892ebc2ded827e989fcfa6c41fed01046240d1e55ab24c6b263dd6f",
     "src/listening_runtime.rs": "0428ff3dcac95b6153bd083961124a8664bfd960b0eb6df85910f12eb9af1891",
-    "src/pipeline.rs": "bf332a32a69f48360521efe411892cb1b79934c164bb2c19ed44e3125f60e630",
+    "src/pipeline.rs": "e66be1a03f490ac1bf18cb2dd2f659742fe20a4031e8aca6b8f3a6c7757f4498",
     "tests/listening_voice.rs": "059effdb8d90a1a8456b1c86d53ab4afd1e0922d72192b136f0619e9b0366560",
     "tests/listening_runtime.rs": "a09c88e8c6e1e4f9a7844902ab470892a6775a74b1fb2d4b0a897027e08e9bb3"
   },
@@ -75,5 +75,21 @@
       "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
       "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
     ]
-  }
+  },
+  "worker-feedback-echo-prefix-red.log": {
+    "sha256": "5a03a8d4eac9a001b8c5b255d5d7d3015d92b632b34deaa8b61e2cdd32815543",
+    "results": [
+      "test result: FAILED. 614 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.76s"
+    ]
+  },
+  "worker-feedback-echo-prefix-green.log": {
+    "sha256": "82071d1f2abd66f872ce1623888211fc5b446f55015e2487c2afbb2af5e76a2b",
+    "results": [
+      "test result: ok. 616 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.75s",
+      "test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  "latest_test_total": 665
 }

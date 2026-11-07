@@ -231,6 +231,16 @@ impl Adapter {
         self.feedback_fragment_context().is_some_and(|(epoch, scene)|
             self.feedback_fragments.candidate(text, self.runtime.now_ms(), epoch, scene))
     }
+    fn feedback_fragment_complete(&self, text: &str) -> Option<String> {
+        let (epoch, scene) = self.feedback_fragment_context()?;
+        self.feedback_fragments.complete_text(text, self.runtime.now_ms(), epoch, scene)
+    }
+    pub fn voice_echo_text(&self, text: &str) -> Option<String> {
+        if !self.voice_final_candidate(text) { return None; }
+        // Compare a completed command, never a coincidentally repeated short
+        // prefix or the last one-character fragment of a longer user command.
+        self.feedback_fragment_complete(text).or_else(|| Some(text.to_owned()))
+    }
     fn active_exit_context(&self) -> bool {
         self.voice_available() && matches!(self.runtime.snapshot().phase,
             Phase::Listening | Phase::FeedbackReserved | Phase::FeedbackActive)
@@ -242,7 +252,7 @@ impl Adapter {
     }
     pub fn voice_final_candidate(&self, text: &str) -> bool {
         self.parse_voice(text).is_some()
-            || self.feedback_fragment_candidate(text)
+            || self.feedback_fragment_complete(text).is_some()
             || (self.natural_voice_allowed() && (crate::textproc::is_wake_only(text)
                 || (self.recent_wake.active(self.runtime.now_ms(), self.runtime.snapshot().epoch)
                     && crate::listening_voice::parse_natural_enter(text).is_some())))
@@ -1563,9 +1573,10 @@ mod adapter_tests {
     async fn listening_split_feedback_tail_is_echo_candidate_before_any_mutation() {
         let mut a = active_voice_adapter();
         rtc_final(&mut a, "小可");
-        assert!(a.voice_final_candidate("我讲完了"));
+        assert!(!a.voice_final_candidate("我讲完了"));
         rtc_final(&mut a, "我讲完了");
         assert!(a.voice_final_candidate("请说说你的看法"));
+        assert_eq!(a.voice_echo_text("请说说你的看法").as_deref(), Some("小可我讲完了请说说你的看法"));
         a.discard_echo_voice_context();
         assert!(!a.voice_final_candidate("请说说你的看法"));
         rtc_final(&mut a, "请说说你的看法");
@@ -1631,6 +1642,15 @@ mod adapter_tests {
         assert_eq!(a.take_voice_captions(), ["小可，", "我讲完了。"]);
         assert!(!a.voice_final_candidate("请说说你的看法"));
         assert!(a.pending_feedback.is_none());
+    }
+    #[tokio::test]
+    async fn listening_split_feedback_partial_is_not_an_echo_command() {
+        let mut a = active_voice_adapter();
+        assert!(!a.voice_final_candidate("小可"), "a short prefix alone cannot be compared to prior TTS");
+        rtc_final(&mut a, "小可");
+        assert!(!a.voice_final_candidate("我讲完了"));
+        rtc_final(&mut a, "我讲完了");
+        assert!(a.voice_final_candidate("请说说你的看法"));
     }
     #[tokio::test]
     async fn listening_voice_recent_wake_proposes_at_ten_seconds_without_forging_transcript() {

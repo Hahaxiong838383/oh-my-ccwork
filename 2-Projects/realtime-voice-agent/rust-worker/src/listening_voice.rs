@@ -226,6 +226,14 @@ impl FeedbackFragments {
         let joined = p.map(|p| format!("{}{n}", p.normal)).unwrap_or(n);
         joined.starts_with("小可") && feedback_prefix(&joined, scene)
     }
+    pub fn complete_text(&self, text: &str, now: u64, epoch: u64, scene: Scene) -> Option<String> {
+        if !self.candidate(text, now, epoch, scene) { return None; }
+        let prefix = self.pending.as_ref().filter(|p| now < p.deadline && p.epoch == epoch && p.scene == scene);
+        if prefix.map_or(text.len(), |p| p.bytes.saturating_add(text.len())) > FEEDBACK_FRAGMENT_BYTES { return None; }
+        let n = normalized(text).0;
+        let joined = prefix.map(|p| format!("{}{n}", p.normal)).unwrap_or(n);
+        parse(&joined).map(|_| joined)
+    }
     pub fn push(&mut self, text: &str, now: u64, epoch: u64, scene: Scene, after_pause: bool) -> FeedbackStep {
         let mut out = FeedbackStep::default();
         if self.stale(now, Some((epoch, scene))) { out.released = self.take_raw(); }

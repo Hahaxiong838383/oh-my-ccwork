@@ -1484,10 +1484,10 @@ impl Orchestrator {
     }
     fn try_voice_final(&mut self, text: &str) -> bool {
         let Some(l) = self.listening.as_ref() else {return false;};
-        let candidate = l.voice_final_candidate(text);
+        let echo_text = l.voice_echo_text(text);
         let playing=self.agent_turn.is_some();
         let in_window=self.echo_playout_end.is_some_and(|t|t.elapsed()<=self.cfg.echo_suppress_window);
-        if candidate && voice_command_is_echo(text,&self.recent_spoken_text(playing,in_window),!self.cfg.echo_suppress_window.is_zero() && (playing||in_window)) {
+        if echo_text.as_deref().is_some_and(|command| voice_command_is_echo(command,&self.recent_spoken_text(playing,in_window),!self.cfg.echo_suppress_window.is_zero() && (playing||in_window))) {
             // Control recognition precedes ordinary commit, so its mutation needs the same TTS echo gate here.
             if let Some(l)=&mut self.listening {l.discard_echo_voice_context();}
             self.flush_listening_voice_captions(None);
@@ -4533,6 +4533,23 @@ fn voice_command_is_echo(text: &str, recent: &str, in_playback_window: bool) -> 
 #[cfg(test)]
 mod listening_voice_pipeline_tests {
     use super::*;
+    #[test]
+    fn listening_fragment_echo_uses_completed_command_not_common_short_parts() {
+        let mut fragments=crate::listening_voice::FeedbackFragments::default();
+        use crate::listening_mode::Scene;
+        for (i,text) in ["小可", "我讲完了", "请说说你的看", "法"].iter().enumerate() {
+            let now=i as u64*100;
+            let target=fragments.complete_text(text,now,1,Scene::Story);
+            if i<3 {assert!(target.is_none());}
+            else {
+                let target=target.unwrap();
+                assert_eq!(target,"小可我讲完了请说说你的看法");
+                assert!(!voice_command_is_echo(&target,"我是小可，可以说你的看法",true));
+                assert!(voice_command_is_echo(&target,"你可以说，小可我讲完了请说说你的看法",true));
+            }
+            fragments.push(text,now,1,Scene::Story,false);
+        }
+    }
     #[test]
     fn listening_voice_in_playback_or_just_ended_echo_cannot_propose_mode() {
         for in_window in [true,false] {
