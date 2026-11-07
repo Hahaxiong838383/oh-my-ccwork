@@ -198,8 +198,9 @@ impl Adapter {
     }
     pub fn discard_echo_voice_context(&mut self) {
         self.recent_wake.clear();
-        self.feedback_fragments.clear();
-        self.feedback_fragment_entry = None;
+        // Only the arriving tail was classified as echo. Earlier accepted user
+        // fragments remain story/captions, but can no longer authorize a command.
+        self.flush_feedback_fragments();
     }
     fn restore_feedback_fragments(&mut self, raw: Vec<String>) {
         let Some(entry) = self.feedback_fragment_entry.take() else { return; };
@@ -1618,6 +1619,18 @@ mod adapter_tests {
         rtc_final(&mut a, "我讲完了请说说你的看法");
         assert!(a.pending_feedback.is_none());
         assert_eq!(a.runtime.context().recent, "小可，");
+    }
+    #[tokio::test]
+    async fn listening_split_feedback_echo_tail_does_not_erase_prior_user_fragments() {
+        let mut a = active_voice_adapter();
+        rtc_final(&mut a, "小可，"); rtc_final(&mut a, "我讲完了。");
+        // Pipeline has classified only the new tail as echo; prior accepted
+        // fragments must be released, while the echo itself is never appended.
+        a.discard_echo_voice_context();
+        assert_eq!(a.runtime.context().recent, "小可，\n我讲完了。");
+        assert_eq!(a.take_voice_captions(), ["小可，", "我讲完了。"]);
+        assert!(!a.voice_final_candidate("请说说你的看法"));
+        assert!(a.pending_feedback.is_none());
     }
     #[tokio::test]
     async fn listening_voice_recent_wake_proposes_at_ten_seconds_without_forging_transcript() {

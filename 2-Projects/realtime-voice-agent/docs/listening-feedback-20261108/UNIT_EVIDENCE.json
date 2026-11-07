@@ -30,10 +30,10 @@
     ]
   },
   "sources": {
-    "src/listening_adapter.rs": "ba1bb313fb8be039d9dbb50cee41561c749ca33f0bcb2604ed7170091482b9d0",
+    "src/listening_adapter.rs": "316d2569792b249c1f7cfd4560463c722020efca24bf2159d4fd13395dccbf7c",
     "src/listening_voice.rs": "e0a6fbbe8cf53971baafbea0920cab03fc574c8d5e73c421e438be1b01cae9ce",
     "src/listening_runtime.rs": "0428ff3dcac95b6153bd083961124a8664bfd960b0eb6df85910f12eb9af1891",
-    "src/pipeline.rs": "1aae26acd554fac9acab8a3602ec60c1cd1d323f0095539b84093306e5850d28",
+    "src/pipeline.rs": "bf332a32a69f48360521efe411892cb1b79934c164bb2c19ed44e3125f60e630",
     "tests/listening_voice.rs": "059effdb8d90a1a8456b1c86d53ab4afd1e0922d72192b136f0619e9b0366560",
     "tests/listening_runtime.rs": "a09c88e8c6e1e4f9a7844902ab470892a6775a74b1fb2d4b0a897027e08e9bb3"
   },
@@ -60,5 +60,20 @@
     ]
   },
   "rtc_initial_failed_candidate": "de4c472f3c5b0b58491fd19f4a137fbc34787f65",
-  "rtc_trace": "p0-39-bab65dab-74a5-446a-a06e-e7374c35ca97"
+  "rtc_trace": "p0-39-bab65dab-74a5-446a-a06e-e7374c35ca97",
+  "worker-feedback-echo-red.log": {
+    "sha256": "d1a9d17c961a9964f2aa43269a0b3dfda3f75ea6b170975b3f04ec69f279d759",
+    "results": [
+      "test result: FAILED. 613 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.75s"
+    ]
+  },
+  "worker-feedback-echo-green.log": {
+    "sha256": "dab50b7449f0749025dfa637caad31ff1b6310a8bbcabe6ab5d7188bfed4027a",
+    "results": [
+      "test result: ok. 614 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.73s",
+      "test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  }
 }

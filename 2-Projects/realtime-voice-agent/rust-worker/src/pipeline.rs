@@ -1490,6 +1490,7 @@ impl Orchestrator {
         if candidate && voice_command_is_echo(text,&self.recent_spoken_text(playing,in_window),!self.cfg.echo_suppress_window.is_zero() && (playing||in_window)) {
             // Control recognition precedes ordinary commit, so its mutation needs the same TTS echo gate here.
             if let Some(l)=&mut self.listening {l.discard_echo_voice_context();}
+            self.flush_listening_voice_captions(None);
             self.tr.user_final("");
             return true;
         }
