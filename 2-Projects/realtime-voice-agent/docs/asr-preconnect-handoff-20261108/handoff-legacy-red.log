@@ -1,0 +1,39 @@
+   Compiling voice-rust-worker v0.1.0 (/home/hahaxiong83/local/p003-main-asr-preconnect-20261108/worker)
+warning: method `chat` is never used
+   --> src/llm.rs:645:18
+    |
+591 | impl Llm {
+    | -------- method in this implementation
+...
+645 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 14.99s
+     Running unittests src/main.rs (target/debug/deps/voice_rust_worker-4e117bde9fa40be0)
+
+running 3 tests
+
+thread 'pipeline::asr_preconnect_handoff_tests::closed_preconnect_is_replaced_before_first_pcm' (1266409) panicked at src/pipeline.rs:4355:46:
+handoff must provide a live PCM receiver: SendError { .. }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test pipeline::asr_preconnect_handoff_tests::closed_preconnect_is_replaced_before_first_pcm ... FAILED
+
+thread 'pipeline::asr_preconnect_handoff_tests::reconnecting_preconnect_does_not_replay_idle_interruption_into_first_turn' (1266411) panicked at src/pipeline.rs:4418:9:
+assertion `left == right` failed
+  left: Terminal
+ right: Idle
+test pipeline::asr_preconnect_handoff_tests::reconnecting_preconnect_does_not_replay_idle_interruption_into_first_turn ... FAILED
+test pipeline::asr_preconnect_handoff_tests::healthy_preconnect_keeps_its_latency_benefit ... ok
+
+failures:
+
+failures:
+    pipeline::asr_preconnect_handoff_tests::closed_preconnect_is_replaced_before_first_pcm
+    pipeline::asr_preconnect_handoff_tests::reconnecting_preconnect_does_not_replay_idle_interruption_into_first_turn
+
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 553 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`

@@ -1,0 +1,100 @@
+
+[1;36m== 1/4 系统依赖[0m
+   [32m✓[0m libglib2.0-dev
+   [32m✓[0m pkg-config
+
+[1;36m== 2/4 工具链[0m
+   [32m✓[0m rustc 1.98.0 (88d9e12ae 2026-08-18)
+   [32m✓[0m cargo 1.98.0 (797e8a9bc 2026-08-05)
+   [32m✓[0m 本机 glibc: 2.39   门禁上限 2.39
+   [32m✓[0m 本机 libstdc++ 供给: GLIBCXX_3.4.33   门禁上限 GLIBCXX_3.4.33
+
+[1;36m== 门禁自检（负向验证）[0m
+   [32m✓[0m glibc  喂 2.43 → 正确变红
+   [32m✓[0m glibc  喂 2.39/2.17 → 正确放行
+   [32m✓[0m libstdc++ 喂 3.4.99 → 正确变红
+   [32m✓[0m libstdc++ 喂 3.4.9/3.4.31 → 正确放行（顺带验了 3.4.9 不被误当成最大）
+   [32m✓[0m libstdc++ 喂 3.4.33（正好等于上限）→ 正确放行
+
+[1;36m== 3/4 编译 release[0m
+   Compiling voice-rust-worker v0.1.0 (/home/hahaxiong83/local/p003-main-asr-preconnect-20261108/worker)
+warning: method `is_some` is never used
+  --> src/say_defer.rs:30:12
+   |
+ 9 | impl DeferredSay {
+   | ---------------- method in this implementation
+...
+30 |     pub fn is_some(&self) -> bool {
+   |            ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `valid_base` is never used
+  --> src/search_canary.rs:21:8
+   |
+21 | pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
+   |        ^^^^^^^^^^
+
+warning: function `enabled` is never used
+   --> src/search_tasks.rs:237:8
+    |
+237 | pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
+    |        ^^^^^^^
+
+warning: method `remaining` is never used
+  --> src/search_progress.rs:14:8
+   |
+10 | impl SearchProgress {
+   | ------------------- method in this implementation
+...
+14 | pub fn remaining(&self,complete:usize)->String{self.sentences.iter().skip(complete).cloned().collect()}
+   |        ^^^^^^^^^
+
+warning: variant `Listening` is never constructed
+  --> src/business_watchdog.rs:14:45
+   |
+14 | pub enum Activity { Reply, Search, Command, Listening, Input, Recognition }
+   |          -------- variant in this enum      ^^^^^^^^^
+   |
+   = note: `Activity` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `chat` is never used
+   --> src/llm.rs:645:18
+    |
+591 | impl Llm {
+    | -------- method in this implementation
+...
+645 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: method `is_on` is never used
+  --> src/backchannel.rs:84:12
+   |
+53 | impl BackchannelCfg {
+   | ------------------- method in this implementation
+...
+84 |     pub fn is_on(&self) -> bool {
+   |            ^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> src/textproc.rs:151:8
+    |
+151 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker") generated 8 warnings
+    Finished `release` profile [optimized] target(s) in 45.04s
+
+[1;36m== 4/4 符号天花板（glibc + libstdc++）[0m
+   glibc 需求: GLIBC_2.2 GLIBC_2.3 GLIBC_2.4 GLIBC_2.6 GLIBC_2.7 GLIBC_2.9 GLIBC_2.14 GLIBC_2.15 GLIBC_2.16 GLIBC_2.17 GLIBC_2.18 GLIBC_2.25 GLIBC_2.27 GLIBC_2.28 GLIBC_2.29 GLIBC_2.30 GLIBC_2.32 GLIBC_2.33 GLIBC_2.34 GLIBC_2.35 GLIBC_2.38 GLIBC_2.39
+   [32m✓[0m glibc 全部 ≤ 2.39
+   libstdc++ 需求最高: GLIBCXX_3.4.31
+   [32m✓[0m libstdc++ 全部 ≤ GLIBCXX_3.4.33
+
+[1;36m== 产物[0m
+   -rwxrwxr-x 2 hahaxiong83 hahaxiong83 73M Nov  8 06:47 target/release/voice-rust-worker
+   md5: 95e451ca3d16e2c72942a4ab1ebcf01b
+
+   下一步（部署到 64.90，需要 SSH 凭据）：
+     scp target/release/voice-rust-worker root@64.90.13.177:/root/rust-worker/voice-rust-worker.new   # 2026-09-23 起生产池在 hk2
+     然后在目标机跑 deploy-worker-bin.sh（自动备份 + 纪律重启 + md5 锚点核对）
