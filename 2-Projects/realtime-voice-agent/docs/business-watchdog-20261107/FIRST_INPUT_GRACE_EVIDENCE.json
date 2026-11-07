@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-07T23:08:14.940802+08:00",
+  "production_changed": false,
+  "tests": {
+    "passed": 527,
+    "failed": 0,
+    "scope": "isolated Linux Rust suite"
+  },
+  "source_sha256": {
+    "src/job.rs": "01e96b0817d6c0618d961d25185b78155413956fc80629fd5f1c004ba284112f",
+    "src/business_watchdog.rs": "7c08c7e18488d9d46ae9556ecba1dd3e1139124366be7d4665b52475b4216d53",
+    "src/business_runtime.rs": "443904647d61c0c391dc82e6ad3f338914f18e092e1979a4d8a775dc7395f31c"
+  },
+  "evidence_sha256": {
+    "worker-startup-vad-race-red.log": "860ceda8f4d56890a131bb9ef8f4b7cb3224fec98dccd1776098546c5c2d2c0c",
+    "source-startup-vad-race-red.json": "f0cb705761e8bfdf2183a74f4531e6999deac5236cbd8c934a4749e563112c41",
+    "worker-startup-vad-race-green.log": "5f4adf68e2fc5f5192c3577cb02821daceff9482ce42d1fc6145f6322ed2d167",
+    "source-startup-vad-race-green.json": "ac9bf35b9bb6a44f12e47bd28aa424832c6372d448c5a6787c930be217f1fec8"
+  }
+}

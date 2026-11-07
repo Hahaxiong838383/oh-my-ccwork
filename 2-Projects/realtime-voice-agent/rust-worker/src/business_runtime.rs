@@ -115,6 +115,17 @@ mod tests {
     }
     fn policy() -> serde_json::Value { json!({"timeout_ms":5000,"revision":"cfg-12"}) }
     #[test]
+    fn delayed_first_input_must_allow_vad_to_classify_before_idle_close() {
+        let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
+        // Connection/prebuild can validly consume 40s of the existing 60s
+        // startup budget. One 10ms PCM frame cannot fill a 32ms VAD window.
+        w.input_frame(t+Duration::from_secs(40),160);
+        assert_eq!(w.evaluate(t+Duration::from_millis(40010)),Decision::Keep);
+        w.progress(t+Duration::from_millis(40032));
+        assert_eq!(w.evaluate(t+Duration::from_millis(45031)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_millis(45032)),Decision::Close(Reason::IdleNoProgress));
+    }
+    #[test]
     fn missing_durable_retry_demotes_enforcement_without_resetting_progress() {
         let t=Instant::now();let mut w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
         w.first_frame(t);w.progress(t+Duration::from_secs(4));w.observe_only();
@@ -149,10 +160,11 @@ mod tests {
     fn real_progress_and_transport_ready_are_distinct_across_clones() {
         let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();let p=w.clone();
         p.first_frame(t+Duration::from_millis(4999));
-        assert_eq!(w.evaluate(t+Duration::from_millis(5000)),Decision::Close(Reason::IdleNoProgress));
-        p.progress(t+Duration::from_millis(5001));
-        assert_eq!(w.evaluate(t+Duration::from_millis(10000)),Decision::Keep);
-        assert_eq!(w.evaluate(t+Duration::from_millis(10001)),Decision::Close(Reason::IdleNoProgress));
+        assert_eq!(w.evaluate(t+Duration::from_millis(5000)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_millis(9999)),Decision::Close(Reason::IdleNoProgress));
+        p.progress(t+Duration::from_millis(10000));
+        assert_eq!(w.evaluate(t+Duration::from_millis(14999)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_millis(15000)),Decision::Close(Reason::IdleNoProgress));
     }
     #[test]
     fn repeated_absolute_activity_deadline_never_renews_it() {

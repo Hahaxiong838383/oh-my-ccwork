@@ -20,6 +20,7 @@ pub struct BusinessWatchdog {
     policy: Policy,
     started: u64,
     ready: bool,
+    ready_at: u64,
     last_progress: u64,
     // Retain the generation after completion: a delayed duplicate cannot
     // resurrect an expired/finished task and buy another full lease.
@@ -28,7 +29,7 @@ pub struct BusinessWatchdog {
 impl BusinessWatchdog {
     pub fn new(mut policy: Policy, now: u64) -> Self {
         policy.idle_ms = policy.idle_ms.filter(|ms| (5_000..=300_000).contains(ms));
-        Self { policy, started: now, ready: false, last_progress: now, holds: [None; 5] }
+        Self { policy, started: now, ready: false, ready_at: now, last_progress: now, holds: [None; 5] }
     }
     pub fn observe_only(&mut self) { self.policy.mode = Mode::Observe; }
     pub fn first_frame(&mut self, now: u64) {
@@ -36,6 +37,10 @@ impl BusinessWatchdog {
         // cannot undo the absolute startup cutoff, even before the next tick.
         if !self.ready && now.saturating_sub(self.started) < self.policy.startup_ms {
             self.ready = true;
+            // Transport startup may consume most of the 60s budget. Start one
+            // configured idle interval here so the first VAD window can form.
+            // This is not business progress; later silent frames never renew it.
+            self.ready_at = now;
         }
     }
     /// Only fresh evidence of actual input/output may call this. In particular
@@ -63,7 +68,7 @@ impl BusinessWatchdog {
             if now.saturating_sub(self.started) < self.policy.startup_ms { return Decision::Keep; }
             Reason::StartupNoInput
         } else {
-            if now.saturating_sub(self.last_progress) < idle_ms
+            if now.saturating_sub(self.last_progress.max(self.ready_at)) < idle_ms
                 || self.holds.iter().flatten().any(|h| h.active && now < h.until) {
                 return Decision::Keep;
             }
@@ -109,10 +114,11 @@ mod tests {
         assert_eq!(w.evaluate(6000),Decision::Close(Reason::IdleNoProgress));
     }
     #[test]
-    fn first_silent_frame_does_not_refresh_business_progress() {
+    fn first_input_starts_one_idle_interval_but_repeated_silence_never_renews_it() {
         let mut w = BusinessWatchdog::new(policy(Some(5000), Mode::Enforce), 0);
         w.first_frame(4999);
-        assert_eq!(w.evaluate(5000), Decision::Close(Reason::IdleNoProgress));
+        for now in 5000..9999 { w.first_frame(now); assert_eq!(w.evaluate(now),Decision::Keep); }
+        assert_eq!(w.evaluate(9999), Decision::Close(Reason::IdleNoProgress));
     }
     #[test]
     fn first_frame_at_or_after_startup_deadline_cannot_revive_room() {
