@@ -1,0 +1,9 @@
+{
+  "DO_NOT_DEPLOY": [
+    {
+      "commit": "72053ae8a7d81fc99c98c0d306aadb4e5aa78d23",
+      "binary_sha256": "d2fb7ee53e8d15a1da6efbd45f9bde0acbf3ff660ac80bc4175f36c4d4e1efb0",
+      "reason": "Scoped subscriber missing on aborted TCP loser; replaced by b911 with red/green coverage. Never deployed."
+    }
+  ]
+}

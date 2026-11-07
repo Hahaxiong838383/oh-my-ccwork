@@ -1,0 +1,11 @@
+{
+  "72053_full_source_and_551_test_match": "32e3f5835833ef7c0c38cdc3035c70398ce1988fe21a79cd111c4c56d837dc47",
+  "b911_full_source_and_552_test_release_match": "86da9cc9eb4ebaa85714a9e4bd7c943e9098700972b18e6978e31a6822a70c66",
+  "red_boundary_source": "202b0fcfb203e42ac7e9aef01adcf66a118a0d3eef7338e565a9e6a3134f0e66",
+  "red_boundary_runtime_equals_72053": true,
+  "red_boundary_adds_only_test": true,
+  "explanation": "Red boundary source hash differs from 72053 because it adds the new failing test; production prefix is byte-identical. Green final matches b911 exactly.",
+  "initial_red_runtime_equals_b530": true,
+  "initial_red_adds_only_tests": true,
+  "initial_red_source_sha256": "3ec600c794fb0063c713cf0d80cebc90254bf2f79e2afa1590a36bdd2aa35782"
+}

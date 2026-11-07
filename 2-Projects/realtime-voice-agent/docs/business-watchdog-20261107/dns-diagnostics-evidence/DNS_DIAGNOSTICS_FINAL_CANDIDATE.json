@@ -1,0 +1,14 @@
+{
+  "source_commit": "b9114ac6b7274e0a67ccffc4dde4a5bd5d5a77fe",
+  "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+  "bytes": 76224552,
+  "source_files": 68,
+  "source_test_release_match": true,
+  "tests": {
+    "passed": 552,
+    "failed": 0,
+    "ignored": 1
+  },
+  "previous_binary_sha256": "fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d",
+  "replaces_blocked_candidate": "72053ae8a7d81fc99c98c0d306aadb4e5aa78d23"
+}

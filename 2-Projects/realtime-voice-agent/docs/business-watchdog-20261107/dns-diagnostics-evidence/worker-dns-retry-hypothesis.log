@@ -1,0 +1,10 @@
+{"mode": "dns-retry-hypothesis", "rc": 101, "log": "/home/hahaxiong83/local/p003-business-watchdog-20261107/worker/dns-retry-hypothesis.log", "source_sha": {"src/job.rs": "471756738f09525358e1b7803f2c25f7102bdf55b6b2fa3f6700d2b1bbffc299", "src/tts_xfyun.rs": "5973b27763afded7b679494af0e3f3c49897cf668a4677c042c0903606b994c6", "src/voice_connect.rs": "32e3f5835833ef7c0c38cdc3035c70398ce1988fe21a79cd111c4c56d837dc47", "src/tts.rs": "19bf205eb707846480b7c3fe041dd32821500ea152207e58375866be6cbfe4d2"}}
+   Compiling voice-rust-worker v0.1.0 (/home/hahaxiong83/local/p003-business-watchdog-20261107/worker)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.96s
+     Running `target/debug/examples/dns_retry_budget`
+{"elapsed_ms":3003,"mode":"cname","outer_timeout":false,"queries":[{"at_ms":0,"count":1,"qname":"slow.example."},{"at_ms":334,"count":2,"qname":"slow.example."},{"at_ms":669,"count":3,"qname":"slow.example."},{"at_ms":1471,"count":4,"qname":"slow.example."},{"at_ms":2273,"count":5,"qname":"slow.example."}],"success":false}
+
+thread 'main' (1057153) panicked at examples/dns_retry_budget.rs:40:19:
+assertion failed: success && (4400..5500).contains(&elapsed)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+

@@ -1,0 +1,138 @@
+{
+  "CODEX_DNS_DIAGNOSTIC_RELEASE_DECISION_20261108.md": {
+    "sha256": "b09488c690a1b64e771678c39b2053fb01b430b7feef826a88f5f27d55e72d25",
+    "bytes": 3008
+  },
+  "DNS_DIAGNOSTICS_CANDIDATE.json": {
+    "sha256": "ecb35271d982e4131eac93e6ba2a6fb0c5a651f495c1f46e48035a0503a770ab",
+    "bytes": 392
+  },
+  "DNS_DIAGNOSTICS_DEPLOY_LAUNCH.json": {
+    "sha256": "a1205f2a2fc3f1cece70e4d28d4229c35a238e7ac24810ad1adc6dd0dfe10f15",
+    "bytes": 196
+  },
+  "DNS_DIAGNOSTICS_DEPLOY_STATE_2.json": {
+    "sha256": "f84cad05960f3d8010da41df800136312d9b6532fc028c350cc612c95944ef91",
+    "bytes": 2021
+  },
+  "DNS_DIAGNOSTICS_FINAL_CANDIDATE.json": {
+    "sha256": "12476994ecb8b7bdfb8a6848a3d9efcf7fea813978a07b3eee51bc8d0746de09",
+    "bytes": 468
+  },
+  "DNS_DIAGNOSTICS_PRE_DEPLOY.json": {
+    "sha256": "064c05898b6574272a0ba007cee997c86b41aa8ffd331a20a91a9f02bb8321a1",
+    "bytes": 3079
+  },
+  "DNS_DIAGNOSTICS_PROBES_FINAL.json": {
+    "sha256": "ef19d8174a918476d746a2198b744060f00d194be6cd22eea6e918d4d125f1d3",
+    "bytes": 69498
+  },
+  "DNS_DIAGNOSTICS_PROBES_VERIFIED.json": {
+    "sha256": "9ae550fe9114e4b330d92e15a4aca7b8f40cdd3c0a5a9ee351d32ff6a1eea8bc",
+    "bytes": 1145
+  },
+  "DNS_DIAGNOSTICS_STABILITY_FINAL.json": {
+    "sha256": "84213154fc2e4182005e44dc9ed853375edb69cc3cd99ab0cced0120af56de81",
+    "bytes": 3087
+  },
+  "DNS_DIAGNOSTIC_RUNTIME_BASELINE.json": {
+    "sha256": "c911ed398c54eeacfc3d144e1706e01c6897777d58c8bed679bce96a88ca27c3",
+    "bytes": 3079
+  },
+  "DNS_DIAGNOSTIC_SOURCE_PROOF.json": {
+    "sha256": "8fd75ea0b5ee91474b3aa26abd0c0374c94c3a23d380a443cc7ceb0ae90e52b7",
+    "bytes": 760
+  },
+  "GROK_DNS_DIAGNOSTIC_BASE_REVIEW_20261108.md": {
+    "sha256": "887ae14b4555d18459cc768a86d185f905eb2fbdbc44890042c9bf681c25f732",
+    "bytes": 2498
+  },
+  "GROK_DNS_DIAGNOSTIC_CANCEL_REVIEW_20261108.md": {
+    "sha256": "b5830192714726f774e0968c35ba92f08c9d0f6e722cf79df9ecfd91640df4ad",
+    "bytes": 1122
+  },
+  "GROK_DNS_DIAGNOSTIC_CONTRACT_20261108.md": {
+    "sha256": "731a609ce1ea5b9d95758ab719917187a4a543ad0ad85c10dd602f9714cb2820",
+    "bytes": 4579
+  },
+  "GROK_DNS_RETRY_CORRECTION_20261108.md": {
+    "sha256": "daf431570c85f2633bdd20c73b9976f6e970f33a9ee23e18d012436f6209f6b8",
+    "bytes": 1837
+  },
+  "SUPERSEDED_CANDIDATES.json": {
+    "sha256": "e61f1b790497b0a248a73771c79fdf3f0741e9f7164ebc82932d8ff03b94eb5b",
+    "bytes": 315
+  },
+  "WORKER_DNS_DIAGNOSTICS_FINAL_RELEASE_STAGED.json": {
+    "sha256": "aa8865192356a623c0d0c537a87d1ac9b98d8c4a78ba2025f31eba05676f3176",
+    "bytes": 200
+  },
+  "deploy-dns-diagnostics-final-release.py": {
+    "sha256": "3d745ba02013e6d90130b314f0631a80e1eee139b6e6683bfca176467a359ade",
+    "bytes": 5803
+  },
+  "dns_retry_budget.rs": {
+    "sha256": "86e5cd7f2b28f3ac14ef9a10b42ff65b76b210b8f0948c42fa91ecd67210867e",
+    "bytes": 3087
+  },
+  "dns_retry_budget_v2.rs": {
+    "sha256": "4b0bfdbdbf024e71b0f42b94d660d3d284d771173b1b835e718a7b9da01faf15",
+    "bytes": 3135
+  },
+  "dns_retry_budget_v3.rs": {
+    "sha256": "996b97c93202d9634167cb12639bb5a27b5cc3819ec02a0a572deedcdc5784e0",
+    "bytes": 3712
+  },
+  "rollback-dns-diagnostics-final-release.py": {
+    "sha256": "376ec29cfe4fc11de1096a3cd70ee8c37af8eb442fe4e90feb512cc42cd83b1b",
+    "bytes": 3325
+  },
+  "source-dns-diagnostics-cancel-green.json": {
+    "sha256": "d68ad2797481305c11c347753f4492414f32c97cbb55784e7e65a7dd9cc6a918",
+    "bytes": 6363
+  },
+  "source-dns-diagnostics-cancel-release.json": {
+    "sha256": "d68ad2797481305c11c347753f4492414f32c97cbb55784e7e65a7dd9cc6a918",
+    "bytes": 6363
+  },
+  "source-dns-diagnostics-final.json": {
+    "sha256": "fc9ecede7348d1152fb0b38fb65b56110f2514db109e781adfcb8142337f47f6",
+    "bytes": 6363
+  },
+  "verify-dns-diagnostics-probes.py": {
+    "sha256": "533d5c3974b22bfb2d1e740f28098367bd2920bf4b797c9a8cd010d749b1eed7",
+    "bytes": 2564
+  },
+  "worker-dns-diagnostics-cancel-boundary.log": {
+    "sha256": "8e8a9e003cfe9589c06414c7085cb9953cded6a72f5b56251c32a50c0d31f154",
+    "bytes": 6525
+  },
+  "worker-dns-diagnostics-cancel-green.log": {
+    "sha256": "2163cf2eafde83866e7470c393174b643f7e5cf6cdac75270cddbc09ce77990c",
+    "bytes": 6517
+  },
+  "worker-dns-diagnostics-cancel-release.log": {
+    "sha256": "7a57cab759c45cdba6ff05d2453ada1fc13324b7f3fc8ed638aad59dd321d3e4",
+    "bytes": 4692
+  },
+  "worker-dns-diagnostics-final.log": {
+    "sha256": "fdcc232ed6fe09320cca4b8acf3652b80cfe26c6fa299214aaaf7dc2db14fe4e",
+    "bytes": 6503
+  },
+  "worker-dns-diagnostics-red.log": {
+    "sha256": "932fa7e20e012fb84c3c814b1055bfe309228cb856603f163ba27a32d07fe78e",
+    "bytes": 6501
+  },
+  "worker-dns-retry-hypothesis-v2.log": {
+    "sha256": "140ea3e50d6c0bce73822b8a21c6f5cc579be695fabb2ffa53f33023c171ee3b",
+    "bytes": 2238
+  },
+  "worker-dns-retry-hypothesis-v3.log": {
+    "sha256": "8eeb86719e14ef14d2161588a2e1efa903aa0c40c628ade5b6facfebea80d4b8",
+    "bytes": 3505
+  },
+  "worker-dns-retry-hypothesis.log": {
+    "sha256": "5e1749d6efa3aff5b177c5974b101c86f8cae2c01d2066fc51151cfd723f9b89",
+    "bytes": 1269
+  }
+}

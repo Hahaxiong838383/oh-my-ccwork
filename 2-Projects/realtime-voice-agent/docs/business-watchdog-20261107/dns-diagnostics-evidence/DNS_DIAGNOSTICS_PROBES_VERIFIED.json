@@ -1,0 +1,43 @@
+{
+  "source_commit": "b9114ac6b7274e0a67ccffc4dde4a5bd5d5a77fe",
+  "input_sha256": "ef19d8174a918476d746a2198b744060f00d194be6cd22eea6e918d4d125f1d3",
+  "rounds": [
+    {
+      "round": 0,
+      "trace_id": "ops-release-probe-a7b4d41d-f26e-4dfe-a9d6-972df40e59c3",
+      "sid": "RM_Pog9qaEKxEpF",
+      "ready_ms": 812,
+      "phase_ms": null,
+      "audible_ms": 5270.0,
+      "finals": [
+        2,
+        1
+      ],
+      "diagnostic_rows": 34,
+      "connection_keys": 4,
+      "cancelled_tcp_rows": 22,
+      "all_diagnostics_correlate": true,
+      "clean_process_exit": true,
+      "natural_room_gone": true
+    },
+    {
+      "round": 1,
+      "trace_id": "ops-release-probe-7973cdf3-51ee-4481-a251-f7d64097f92b",
+      "sid": "RM_LepXBGiB9teW",
+      "ready_ms": 505,
+      "phase_ms": 3005,
+      "audible_ms": 10310.0,
+      "finals": [
+        2,
+        1
+      ],
+      "diagnostic_rows": 43,
+      "connection_keys": 5,
+      "cancelled_tcp_rows": 29,
+      "all_diagnostics_correlate": true,
+      "clean_process_exit": true,
+      "natural_room_gone": true
+    }
+  ],
+  "status": "PASS_RELEASE_RTC_AND_DIAGNOSTIC_CORRELATION"
+}

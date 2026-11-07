@@ -1,0 +1,13 @@
+{
+  "source_commit": "72053ae8a7d81fc99c98c0d306aadb4e5aa78d23",
+  "source_files": 68,
+  "source_test_release_match": true,
+  "sha256": "d2fb7ee53e8d15a1da6efbd45f9bde0acbf3ff660ac80bc4175f36c4d4e1efb0",
+  "bytes": 76215704,
+  "tests": {
+    "passed": 551,
+    "failed": 0,
+    "ignored": 1
+  },
+  "previous_binary_sha256": "fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d"
+}

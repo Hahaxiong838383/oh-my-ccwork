@@ -1,0 +1,143 @@
+{
+  "status": "PASS_MAIN_POOL_RELEASE_AND_RTC_NOT_HISTORICAL_CLOSEOUT",
+  "source_commit": "b9114ac6b7274e0a67ccffc4dde4a5bd5d5a77fe",
+  "runtime": {
+    "at": "2026-11-07T19:17:56.700962+00:00",
+    "units": {
+      "voice-worker-rust.service": {
+        "MainPID": "3538554",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+      },
+      "p003-search-worker.service": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+      },
+      "p003-listening-worker.service": {
+        "MainPID": "2750511",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0"
+      }
+    },
+    "disk_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+    "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+    "rooms_count": 0,
+    "unfinished_jobs": [],
+    "journal_sha256": "0cad307b358fc67ce3b64d7a50e73f12a4716c09225a3cdda7c99f7190a8ad18",
+    "panic_lines": 0,
+    "cleaner": {
+      "mode": "business",
+      "at_ms": 1794079072677,
+      "counts": {},
+      "remaining": 0,
+      "healthy": true
+    },
+    "candidate_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+    "candidate_ldd_missing": false,
+    "flags": {
+      "P003_ASYNC_DNS_V1": "1",
+      "P003_ASR_CONNECT_RECOVERY_V1": "1",
+      "P003_TTS_CONNECT_RECOVERY_V1": "1",
+      "P003_BUSINESS_WATCHDOG_MODE": "enforce",
+      "P003_BUSINESS_WATCHDOG_DEVICE_ALLOWLIST": "BJP00326081002000053,BJP00326110799999901"
+    },
+    "deployment": {
+      "at": "2026-11-07T19:14:44.722192+00:00",
+      "status": "CONNECTION_DIAGNOSTICS_DEPLOYED",
+      "before": {
+        "MainPID": "3529878",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "after": {
+        "MainPID": "3538554",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+      "source_commit": "b9114ac6b7274e0a67ccffc4dde4a5bd5d5a77fe",
+      "other_pools_unchanged": true,
+      "dns_env_and_unit_unchanged": true,
+      "env_before_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "env_after_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "asr_recovery_enabled": true,
+      "scope": "main pool connector; business enforcement stays existing allowlist",
+      "backup": "/root/p003-business-watchdog-20261107/dns-diagnostics-final-before"
+    },
+    "observed_seconds_since_deploy": 192.9558141231537,
+    "backup_hashes": {
+      "voice-rust-worker": "fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d",
+      "rust-worker.env": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "voice-worker-rust.service": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0",
+      "rollback-after-tests.py": "376ec29cfe4fc11de1096a3cd70ee8c37af8eb442fe4e90feb512cc42cd83b1b"
+    },
+    "backup_matches": true,
+    "other_pools_match": true,
+    "protected_unchanged": true,
+    "asr_empty_stream_error_count": 0,
+    "current_main_matches": true
+  },
+  "verification": {
+    "source_commit": "b9114ac6b7274e0a67ccffc4dde4a5bd5d5a77fe",
+    "input_sha256": "ef19d8174a918476d746a2198b744060f00d194be6cd22eea6e918d4d125f1d3",
+    "rounds": [
+      {
+        "round": 0,
+        "trace_id": "ops-release-probe-a7b4d41d-f26e-4dfe-a9d6-972df40e59c3",
+        "sid": "RM_Pog9qaEKxEpF",
+        "ready_ms": 812,
+        "phase_ms": null,
+        "audible_ms": 5270.0,
+        "finals": [
+          2,
+          1
+        ],
+        "diagnostic_rows": 34,
+        "connection_keys": 4,
+        "cancelled_tcp_rows": 22,
+        "all_diagnostics_correlate": true,
+        "clean_process_exit": true,
+        "natural_room_gone": true
+      },
+      {
+        "round": 1,
+        "trace_id": "ops-release-probe-7973cdf3-51ee-4481-a251-f7d64097f92b",
+        "sid": "RM_LepXBGiB9teW",
+        "ready_ms": 505,
+        "phase_ms": 3005,
+        "audible_ms": 10310.0,
+        "finals": [
+          2,
+          1
+        ],
+        "diagnostic_rows": 43,
+        "connection_keys": 5,
+        "cancelled_tcp_rows": 29,
+        "all_diagnostics_correlate": true,
+        "clean_process_exit": true,
+        "natural_room_gone": true
+      }
+    ],
+    "status": "PASS_RELEASE_RTC_AND_DIAGNOSTIC_CORRELATION"
+  },
+  "isolated_tests": {
+    "pass": 552,
+    "fail": 0,
+    "ignored": 1
+  },
+  "reviews": {
+    "178": "72053 base diagnostics pass; read-only",
+    "179": "DNS mechanism correction accepted; not historical proof",
+    "180": "b911 cancellation increment pass; read-only"
+  },
+  "open": [
+    "historical same-connection DNS delay and spare failure",
+    "stream supply gaps",
+    "search/listening pools not upgraded",
+    "Android real-use end-to-end and config application"
+  ]
+}

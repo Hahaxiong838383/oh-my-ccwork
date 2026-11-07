@@ -1,0 +1,1468 @@
+{
+  "at": "2026-11-07T19:17:35.854659+00:00",
+  "status.json": {
+    "runner_pid": 3538876,
+    "at": 1794079037.4600666,
+    "stage": "complete",
+    "results": [
+      {
+        "round": 0,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      },
+      {
+        "round": 1,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      }
+    ]
+  },
+  "finished.json": {
+    "at": 1794079037.4606705,
+    "status": "COMPLETE",
+    "results": [
+      {
+        "round": 0,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      },
+      {
+        "round": 1,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      }
+    ]
+  },
+  "processes": {
+    "runner_pid": false
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "result.json": {
+        "at": "2026-11-07T19:16:09.381788+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+        "runtime_pid": "3538554",
+        "ordered": false,
+        "trace_id": "ops-release-probe-a7b4d41d-f26e-4dfe-a9d6-972df40e59c3",
+        "room": "sn-BJP00326110799999901-1794078950400",
+        "sid": "RM_Pog9qaEKxEpF",
+        "stats": {
+          "ready_ms": 812,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 5270.0,
+          "first_audio_ms": 6417,
+          "last_audio_ms": 12628,
+          "input_sent_ms": 819,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 216,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 18981,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      },
+      "process.json": {
+        "returncode": 0
+      },
+      "timings.json": [
+        "2026-11-07T19:15:50.918889Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=181 address_count=8",
+        "2026-11-07T19:15:50.921768Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=1 address_index=0 peer=Some(43.109.161.42:443)",
+        "2026-11-07T19:15:50.922008Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=5 peer=Some(43.109.161.43:443)",
+        "2026-11-07T19:15:50.922044Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=3 address_index=4 peer=Some(43.109.161.39:443)",
+        "2026-11-07T19:15:50.922083Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=3 address_index=1 peer=Some(43.109.161.41:443)",
+        "2026-11-07T19:15:50.922095Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=3 address_index=6 peer=Some(43.109.161.40:443)",
+        "2026-11-07T19:15:50.922126Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice dns family timing family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=133",
+        "2026-11-07T19:15:50.922136Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=3 address_index=2 peer=Some(43.109.161.46:443)",
+        "2026-11-07T19:15:50.922252Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=3 peer=Some(43.109.161.44:443)",
+        "2026-11-07T19:15:50.942945Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}:voice_connection{provider=\"asr\" request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=23 address_index=7 peer=Some(43.109.161.45:443)",
+        "2026-11-07T19:15:51.112069Z  INFO asr_stream{room=sn-BJP00326110799999901-1794078950400}: asr connection timing request_id=\"c7b08770-4e74-41cc-92c5-3c998ff4fd63\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=375 dns_ms=181 tcp_ms=2 tls_ws_ms=189",
+        "2026-11-07T19:15:55.116541Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=9 address_count=6",
+        "2026-11-07T19:15:55.164333Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=6",
+        "2026-11-07T19:15:55.170632Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=52 address_index=0 peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:15:55.170855Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=2 peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:15:55.170909Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=3 peer=Some(8.140.35.16:443)",
+        "2026-11-07T19:15:55.170902Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=1 peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:15:55.170924Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=4 peer=Some(101.200.158.58:443)",
+        "2026-11-07T19:15:55.187107Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=70 address_index=5 peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:15:55.351423Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=244 dns_ms=9 tcp_ms=54 tls_ws_ms=180 dns_path=\"independent_families\" local=Some(64.90.13.177:41228) peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:15:55.605826Z  INFO playout metrics room=sn-BJP00326110799999901-1794078950400 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-07T19:15:55.606892Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-07T19:15:55.658092Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-07T19:15:55.660353Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=52 address_index=0 peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:15:55.660592Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=53 address_index=2 peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:15:55.660651Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=53 address_index=1 peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:15:55.660641Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=53 address_index=3 peer=Some(8.140.35.16:443)",
+        "2026-11-07T19:15:55.660670Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=53 address_index=4 peer=Some(101.200.158.58:443)",
+        "2026-11-07T19:15:55.676325Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=69 address_index=5 peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:15:55.806502Z  INFO tts connection timing connect_id=2 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=199 dns_ms=0 tcp_ms=53 tls_ws_ms=145 dns_path=\"independent_families\" local=Some(64.90.13.177:41230) peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:15:56.426401Z  INFO tts connection assigned room=\"sn-BJP00326110799999901-1794078950400\" turn_id=2 connect_id=2 used_warm=true warm_connect_ms=199 connect_ms=0",
+        "2026-11-07T19:15:56.427447Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-07T19:15:56.479682Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-07T19:15:56.482132Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=52 address_index=0 peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:15:56.482312Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=2 peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:15:56.482368Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=3 peer=Some(8.140.35.16:443)",
+        "2026-11-07T19:15:56.482364Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=1 peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:15:56.482384Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=4 peer=Some(101.200.158.58:443)",
+        "2026-11-07T19:15:56.495145Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=67 address_index=5 peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:15:56.657653Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=230 dns_ms=0 tcp_ms=54 tls_ws_ms=175 dns_path=\"independent_families\" local=Some(64.90.13.177:41236) peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:15:56.701022Z  INFO tts provider first PCM observed room=\"sn-BJP00326110799999901-1794078950400\" turn_id=2 provider_ttfb_ms=274 connect_ms=0 used_warm=true",
+        "2026-11-07T19:15:59.824396Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794078950400\" turn_id=2 connect_id=2 phase=\"close\" completed=true pcm_frames=40 elapsed_ms=3397 ws_read_wait_ms=3376 max_ws_read_wait_ms=351 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=351",
+        "2026-11-07T19:15:59.824659Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=274 first_pcm_ms=274",
+        "2026-11-07T19:15:59.824702Z  INFO body first sentence ready room=sn-BJP00326110799999901-1794078950400 turn_id=2 ttfb_ms=274 body_ready_since_turn_ms=1093",
+        "2026-11-07T19:16:03.599051Z  INFO playout metrics room=sn-BJP00326110799999901-1794078950400 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=197 first_underrun_ms=-1 played_frames=688 exit=\"SourceDrained\"",
+        "2026-11-07T19:16:09.067207Z  INFO room cleanup readback complete room=sn-BJP00326110799999901-1794078950400 room_sid=RM_Pog9qaEKxEpF cleanup=Gone delete_scope=\"room_name\" cas=false"
+      ],
+      "capture/ready.json": {
+        "started": 1794078948.8928325,
+        "seconds": 120,
+        "pid": 3538880,
+        "metadata_only": true,
+        "limit": 4000,
+        "timestamp": "SO_TIMESTAMPNS plus received_at"
+      },
+      "capture/ended.json": {
+        "started": 1794078948.8928325,
+        "ended": 1794078970.2209373,
+        "records": 16,
+        "limit_hit": false,
+        "parse_errors": 0,
+        "capture_packets": 3433,
+        "capture_kernel_drops": 0,
+        "metadata_only": true
+      },
+      "dns_events": {
+        "sha256": "f878ca22f9908026a7a15f973d39b40bd343e134ae5a9134e17c0106b526768b",
+        "records": [
+          {
+            "id": 26045,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1080284,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 57554,
+            "dp": 53,
+            "received_at": 1794078955.1082,
+            "kernel_at": 1794078955.1080284
+          },
+          {
+            "id": 26045,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1080348,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 57554,
+            "dp": 53,
+            "received_at": 1794078955.1085277,
+            "kernel_at": 1794078955.1080348
+          },
+          {
+            "id": 56660,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1472,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1083639,
+            "iface": "ens17",
+            "direction": "out",
+            "src": "64.90.13.177",
+            "dst": "1.1.1.1",
+            "sp": 49023,
+            "dp": 53,
+            "received_at": 1794078955.108718,
+            "kernel_at": 1794078955.1083639
+          },
+          {
+            "id": 56660,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1158123,
+            "iface": "ens17",
+            "direction": "in",
+            "src": "1.1.1.1",
+            "dst": "64.90.13.177",
+            "sp": 53,
+            "dp": 49023,
+            "received_at": 1794078955.116065,
+            "kernel_at": 1794078955.1158123
+          },
+          {
+            "id": 26045,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.116221,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 57554,
+            "received_at": 1794078955.1163,
+            "kernel_at": 1794078955.116221
+          },
+          {
+            "id": 26045,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1162255,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 57554,
+            "received_at": 1794078955.1164055,
+            "kernel_at": 1794078955.1162255
+          },
+          {
+            "id": 57678,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1590724,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 42542,
+            "dp": 53,
+            "received_at": 1794078955.1593134,
+            "kernel_at": 1794078955.1590724
+          },
+          {
+            "id": 57678,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1591015,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 42542,
+            "dp": 53,
+            "received_at": 1794078955.1595438,
+            "kernel_at": 1794078955.1591015
+          },
+          {
+            "id": 47656,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1472,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.160398,
+            "iface": "ens17",
+            "direction": "out",
+            "src": "64.90.13.177",
+            "dst": "1.1.1.1",
+            "sp": 43490,
+            "dp": 53,
+            "received_at": 1794078955.1605773,
+            "kernel_at": 1794078955.160398
+          },
+          {
+            "id": 47656,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 346,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1625283,
+            "iface": "ens17",
+            "direction": "in",
+            "src": "1.1.1.1",
+            "dst": "64.90.13.177",
+            "sp": 53,
+            "dp": 43490,
+            "received_at": 1794078955.1627302,
+            "kernel_at": 1794078955.1625283
+          },
+          {
+            "id": 57678,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 346,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.163,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 42542,
+            "received_at": 1794078955.1631694,
+            "kernel_at": 1794078955.163
+          },
+          {
+            "id": 57678,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 346,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1630118,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 42542,
+            "received_at": 1794078955.1634302,
+            "kernel_at": 1794078955.1630118
+          },
+          {
+            "id": 49665,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1637366,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 12650,
+            "dp": 53,
+            "received_at": 1794078955.1639516,
+            "kernel_at": 1794078955.1637366
+          },
+          {
+            "id": 49665,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1637506,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 12650,
+            "dp": 53,
+            "received_at": 1794078955.1640832,
+            "kernel_at": 1794078955.1637506
+          },
+          {
+            "id": 49665,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 345,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.1640747,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 12650,
+            "received_at": 1794078955.1641572,
+            "kernel_at": 1794078955.1640747
+          },
+          {
+            "id": 49665,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 345,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794078955.164078,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 12650,
+            "received_at": 1794078955.1642277,
+            "kernel_at": 1794078955.164078
+          }
+        ]
+      },
+      "probe_log_tail": "livekit_api::signal_client:540:livekit_api::signal_client - dropping pass-through signal — no stream available\n{\"at\": \"2026-11-07T19:16:09.381788+00:00\", \"status\": \"FUNCTIONAL_PASS\", \"candidate_sha256\": \"ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9\", \"runtime_pid\": \"3538554\", \"ordered\": false, \"trace_id\": \"ops-release-probe-a7b4d41d-f26e-4dfe-a9d6-972df40e59c3\", \"room\": \"sn-BJP00326110799999901-1794078950400\", \"sid\": \"RM_Pog9qaEKxEpF\", \"stats\": {\"ready_ms\": 812, \"phase_ms\": null, \"user_finals\": 2, \"answer_finals\": 1, \"audible_ms\": 5270.0, \"first_audio_ms\": 6417, \"last_audio_ms\": 12628, \"input_sent_ms\": 819, \"events\": [\"session.output_ready\", \"session.input_ready\", null, null, null, null, null, null], \"metrics_packets\": 4, \"metric_kinds\": [\"eou\", \"eou\", \"tts\", \"llm\"], \"input_samples_sent\": 60699, \"client_connected_ms\": 216, \"ffi_subscribers_after_cleanup\": 0}, \"natural_room_gone\": true, \"fixture_cleanup\": false, \"elapsed_ms\": 18981, \"policy_source\": \"operator-signed synthetic metadata; not device cfg-139\", \"real_android\": false}\n"
+    },
+    {
+      "round": 1,
+      "result.json": {
+        "at": "2026-11-07T19:17:16.542389+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+        "runtime_pid": "3538554",
+        "ordered": true,
+        "trace_id": "ops-release-probe-7973cdf3-51ee-4481-a251-f7d64097f92b",
+        "room": "sn-BJP00326110799999901-1794079008656",
+        "sid": "RM_LepXBGiB9teW",
+        "stats": {
+          "ready_ms": 505,
+          "phase_ms": 3005,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 10310.0,
+          "first_audio_ms": 9202,
+          "last_audio_ms": 21753,
+          "input_sent_ms": 3011,
+          "events": [
+            "session.input_ready",
+            "session.output_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 149,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 27887,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      },
+      "process.json": {
+        "returncode": 0
+      },
+      "timings.json": [
+        "2026-11-07T19:16:48.970916Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=2 address_count=8",
+        "2026-11-07T19:16:48.973736Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=1 address_index=0 peer=Some(43.109.161.44:443)",
+        "2026-11-07T19:16:48.973912Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=3 peer=Some(43.109.161.42:443)",
+        "2026-11-07T19:16:48.973956Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=1 peer=Some(43.109.161.39:443)",
+        "2026-11-07T19:16:48.973970Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=2 peer=Some(43.109.161.41:443)",
+        "2026-11-07T19:16:48.973987Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=6 peer=Some(43.109.161.40:443)",
+        "2026-11-07T19:16:48.973985Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=5 peer=Some(43.109.161.46:443)",
+        "2026-11-07T19:16:48.974003Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=4 peer=Some(43.109.161.45:443)",
+        "2026-11-07T19:16:48.989099Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=18 address_index=7 peer=Some(43.109.161.43:443)",
+        "2026-11-07T19:16:49.139256Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}: asr connection timing request_id=\"1cc25812-03a0-4ab4-820c-bb4e246f0614\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=170 dns_ms=2 tcp_ms=2 tls_ws_ms=165",
+        "2026-11-07T19:16:51.828630Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=172 address_count=8",
+        "2026-11-07T19:16:51.830919Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=1 address_index=0 peer=Some(43.109.161.46:443)",
+        "2026-11-07T19:16:51.831059Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=3 peer=Some(43.109.161.39:443)",
+        "2026-11-07T19:16:51.831093Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=1 peer=Some(43.109.161.41:443)",
+        "2026-11-07T19:16:51.831114Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=2 peer=Some(43.109.161.40:443)",
+        "2026-11-07T19:16:51.831127Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice dns family timing family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=123",
+        "2026-11-07T19:16:51.831133Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=6 peer=Some(43.109.161.44:443)",
+        "2026-11-07T19:16:51.831116Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=5 peer=Some(43.109.161.45:443)",
+        "2026-11-07T19:16:51.831188Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=2 address_index=4 peer=Some(43.109.161.43:443)",
+        "2026-11-07T19:16:51.842974Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}:voice_connection{provider=\"asr\" request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\"}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=14 address_index=7 peer=Some(43.109.161.42:443)",
+        "2026-11-07T19:16:52.017375Z  INFO asr_stream{room=sn-BJP00326110799999901-1794079008656}: asr connection timing request_id=\"ea062f81-1e32-4028-af68-bc2b709575ee\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=361 dns_ms=172 tcp_ms=2 tls_ws_ms=186",
+        "2026-11-07T19:16:55.563619Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=8 address_count=6",
+        "2026-11-07T19:16:55.607179Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-07T19:16:55.614147Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=49 address_index=0 peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:16:55.614339Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=50 address_index=2 peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:16:55.614382Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=50 address_index=1 peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:16:55.614401Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=50 address_index=4 peer=Some(8.140.35.16:443)",
+        "2026-11-07T19:16:55.614398Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=50 address_index=3 peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:16:55.632316Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=68 address_index=5 peer=Some(101.200.158.58:443)",
+        "2026-11-07T19:16:55.761352Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=206 dns_ms=8 tcp_ms=50 tls_ws_ms=147 dns_path=\"independent_families\" local=Some(64.90.13.177:41554) peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:16:56.154365Z  INFO playout metrics room=sn-BJP00326110799999901-1794079008656 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-07T19:16:56.155943Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-07T19:16:56.207246Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-07T19:16:56.210349Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=53 address_index=0 peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:16:56.210595Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=2 peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:16:56.210727Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=4 peer=Some(8.140.35.16:443)",
+        "2026-11-07T19:16:56.210739Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=3 peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:16:56.210606Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=54 address_index=1 peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:16:56.228232Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=72 address_index=5 peer=Some(101.200.158.58:443)",
+        "2026-11-07T19:16:56.362578Z  INFO tts connection timing connect_id=5 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=206 dns_ms=0 tcp_ms=54 tls_ws_ms=152 dns_path=\"independent_families\" local=Some(64.90.13.177:41570) peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:16:57.400127Z  INFO tts connection assigned room=\"sn-BJP00326110799999901-1794079008656\" turn_id=2 connect_id=5 used_warm=true warm_connect_ms=206 connect_ms=0",
+        "2026-11-07T19:16:57.400456Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-07T19:16:57.452157Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-07T19:16:57.452597Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice tcp address timing family=\"A\" stage=\"tcp\" outcome=\"connected\" reason=\"none\" io_kind=None elapsed_ms=50 address_index=0 peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:16:57.452757Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=52 address_index=2 peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:16:57.452796Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=52 address_index=1 peer=Some(123.56.17.44:443)",
+        "2026-11-07T19:16:57.452803Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=52 address_index=3 peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:16:57.452844Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=52 address_index=4 peer=Some(8.140.35.16:443)",
+        "2026-11-07T19:16:57.464015Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice tcp address timing family=\"A\" stage=\"stagger\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None elapsed_ms=63 address_index=5 peer=Some(101.200.158.58:443)",
+        "2026-11-07T19:16:57.621868Z  INFO tts connection timing connect_id=6 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=221 dns_ms=0 tcp_ms=52 tls_ws_ms=169 dns_path=\"independent_families\" local=Some(64.90.13.177:41586) peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:16:57.703967Z  INFO tts provider first PCM observed room=\"sn-BJP00326110799999901-1794079008656\" turn_id=2 provider_ttfb_ms=303 connect_ms=0 used_warm=true",
+        "2026-11-07T19:17:05.258277Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794079008656\" turn_id=2 connect_id=5 phase=\"close\" completed=true pcm_frames=80 elapsed_ms=7858 ws_read_wait_ms=5572 max_ws_read_wait_ms=355 channel_send_wait_ms=2233 max_channel_send_wait_ms=240 max_observed_pcm_gap_ms=355",
+        "2026-11-07T19:17:05.258751Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=303 first_pcm_ms=303",
+        "2026-11-07T19:17:05.258801Z  INFO body first sentence ready room=sn-BJP00326110799999901-1794079008656 turn_id=2 ttfb_ms=303 body_ready_since_turn_ms=1547",
+        "2026-11-07T19:17:10.919304Z  INFO playout metrics room=sn-BJP00326110799999901-1794079008656 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=201 first_underrun_ms=-1 played_frames=1320 exit=\"SourceDrained\"",
+        "2026-11-07T19:17:16.232309Z  INFO room cleanup readback complete room=sn-BJP00326110799999901-1794079008656 room_sid=RM_LepXBGiB9teW cleanup=Gone delete_scope=\"room_name\" cas=false"
+      ],
+      "capture/ready.json": {
+        "started": 1794079007.1677797,
+        "seconds": 120,
+        "pid": 3539216,
+        "metadata_only": true,
+        "limit": 4000,
+        "timestamp": "SO_TIMESTAMPNS plus received_at"
+      },
+      "capture/ended.json": {
+        "started": 1794079007.1677797,
+        "ended": 1794079037.3970604,
+        "records": 6,
+        "limit_hit": false,
+        "parse_errors": 0,
+        "capture_packets": 5144,
+        "capture_kernel_drops": 0,
+        "metadata_only": true
+      },
+      "dns_events": {
+        "sha256": "9054bb4fb2a9a6960c091dfb9308b606f952c04c8881e7d9cfce52372d82fc60",
+        "records": [
+          {
+            "id": 30566,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794079015.5568106,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 5046,
+            "dp": 53,
+            "received_at": 1794079015.5569198,
+            "kernel_at": 1794079015.5568106
+          },
+          {
+            "id": 30566,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794079015.5568228,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 5046,
+            "dp": 53,
+            "received_at": 1794079015.5571985,
+            "kernel_at": 1794079015.5568228
+          },
+          {
+            "id": 37638,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1472,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794079015.557086,
+            "iface": "ens17",
+            "direction": "out",
+            "src": "64.90.13.177",
+            "dst": "1.1.1.1",
+            "sp": 35783,
+            "dp": 53,
+            "received_at": 1794079015.5572627,
+            "kernel_at": 1794079015.557086
+          },
+          {
+            "id": 37638,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794079015.562393,
+            "iface": "ens17",
+            "direction": "in",
+            "src": "1.1.1.1",
+            "dst": "64.90.13.177",
+            "sp": 53,
+            "dp": 35783,
+            "received_at": 1794079015.5628831,
+            "kernel_at": 1794079015.562393
+          },
+          {
+            "id": 30566,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794079015.5632064,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 5046,
+            "received_at": 1794079015.5633597,
+            "kernel_at": 1794079015.5632064
+          },
+          {
+            "id": 30566,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794079015.563222,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 5046,
+            "received_at": 1794079015.5635393,
+            "kernel_at": 1794079015.563222
+          }
+        ]
+      },
+      "probe_log_tail": "livekit_api::signal_client:540:livekit_api::signal_client - dropping pass-through signal — no stream available\n{\"at\": \"2026-11-07T19:17:16.542389+00:00\", \"status\": \"FUNCTIONAL_PASS\", \"candidate_sha256\": \"ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9\", \"runtime_pid\": \"3538554\", \"ordered\": true, \"trace_id\": \"ops-release-probe-7973cdf3-51ee-4481-a251-f7d64097f92b\", \"room\": \"sn-BJP00326110799999901-1794079008656\", \"sid\": \"RM_LepXBGiB9teW\", \"stats\": {\"ready_ms\": 505, \"phase_ms\": 3005, \"user_finals\": 2, \"answer_finals\": 1, \"audible_ms\": 10310.0, \"first_audio_ms\": 9202, \"last_audio_ms\": 21753, \"input_sent_ms\": 3011, \"events\": [\"session.input_ready\", \"session.output_ready\", \"session.input_phase\", null, null, null, null, null, null], \"metrics_packets\": 4, \"metric_kinds\": [\"eou\", \"eou\", \"llm\", \"tts\"], \"input_samples_sent\": 60699, \"client_connected_ms\": 149, \"ffi_subscribers_after_cleanup\": 0}, \"natural_room_gone\": true, \"fixture_cleanup\": false, \"elapsed_ms\": 27887, \"policy_source\": \"operator-signed synthetic metadata; not device cfg-139\", \"real_android\": false}\n"
+    }
+  ],
+  "runner_tail": ""
+}
