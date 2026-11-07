@@ -1,0 +1,38 @@
+{
+  "at": "2026-11-07T17:54:29.461329+00:00",
+  "status": "PASS",
+  "uptime_since_deploy_seconds": 350.899182,
+  "main": {
+    "MainPID": "3512437",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "runtime_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+  "other_pools": {
+    "p003-search-worker.service": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "p003-listening-worker.service": {
+      "MainPID": "2750511",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0"
+    }
+  },
+  "protected_files": {
+    "/etc/systemd/system/voice-worker-rust.service": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0",
+    "/etc/systemd/resolved.conf.d/60-p003-negative-cache.conf": "b8ca5c4b6eef8bc28d0e4e0b5eb04c4b340d02ecef461a557102b82eb0d504be"
+  },
+  "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+  "rollback_binary_env_verified": true,
+  "cleaner": {
+    "mode": "business",
+    "at_ms": 1794074066858,
+    "counts": {},
+    "remaining": 0,
+    "healthy": true
+  }
+}

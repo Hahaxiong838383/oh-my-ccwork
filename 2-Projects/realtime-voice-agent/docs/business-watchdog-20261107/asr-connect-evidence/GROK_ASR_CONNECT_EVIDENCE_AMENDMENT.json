@@ -1,0 +1,110 @@
+{
+  "reviewer": "xAI Grok 4.7",
+  "role": "evidence_amendment_only",
+  "prior_reports_unchanged": [
+    "GROK_ASR_CONNECT_FINAL.md",
+    "GROK_ASR_CONNECT_FINAL.json"
+  ],
+  "actions_not_taken": [
+    "no_root_cause_reopen",
+    "no_source_edit",
+    "no_production_change",
+    "no_ssh",
+    "no_full_suite_rerun"
+  ],
+  "subject_commit": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "production_binary_sha256": "50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0",
+  "production_main_pid": "3496776",
+  "production_nrestarts": "0",
+  "release_binary_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+  "release_installed": false,
+  "release_staged_path": "/root/p003-business-watchdog-20261107/worker-asr-connect-3dd0430a",
+  "isolated_probe_binary_sha256": "fc1e8a496027878807adc5a06a813ef349ce2de022c79c530326540740f298c7",
+  "checked_files": {
+    "GROK_ASR_CONNECT_FINAL.md": "3351a93767da478f3ce5d7b8d73d3ea5b550515bdf3f0d21222292eacad37296",
+    "CODEX_ASR_CONNECT_DISCUSSION.md": "9258e63d6deb8a621e8c49d801a9ff0f7f030770a78f11942036976f367b684c",
+    "ASR_CANDIDATE_FINAL_RUNTIME.json": "1346d658fcbaca8066ef6910d79ef92fdac00d441013c132da73c60ce9cc1835",
+    "ASR_METRICS_RTC_READ_2.json": "b5d812bd161443c659cec3c5a3a485da54209fb81f032259f98108f94f761f7e",
+    "worker-asr-connect-wire-final.log": "46cabd019625040bcc1f2c4f135c27264fd943a32e8f174f7f974cf7d836b988",
+    "source-asr-connect-wire-final.json": "714fcde0d83dd5728c2ac7ccc8dedde9f6a4fb2ba6df103dc07787175c102625",
+    "source-asr-connect-release.json": "066b0ccc4678b128d321179660ebeb1082f0ed8cdafa9df8e1aa9cda40d15018",
+    "WORKER_ASR_CONNECT_RELEASE_STAGED.json": "ddc9c882657ebcb708f8062b7e349aef5f1729940f78f476a632607ff3d393f9",
+    "deploy-asr-connect-release.py": "ebdc6ba8f7bfd8b12948059109b57975f2f90d4658d9b4f98ba45d8dfdf0a831",
+    "release-dispatch-probe-asr-connect.py": "31199f2d26bdbcde2e4924b6e2ea7982699c2d25365bce91520737dcc9312b58"
+  },
+  "source_manifest": {
+    "items": 68,
+    "differ_only": ["src/stt_volc.rs", "src/rtc_business_probe.rs"],
+    "stt_volc_worktree_and_wire": "3902d5e721e8f2804d051be1d630692330fcaee69c156d575f922ed7ef771e6c",
+    "stt_volc_commit_and_release": "5283ec77046320707020c6bea20e357229e1e4f6f2021dca0f950770fcef8b90",
+    "rtc_business_probe_worktree_and_wire": "966014da3fa9f78b3fea7dd924774fbbe10fc8180de33921dd936ce817f59a20",
+    "rtc_business_probe_commit_and_release": "ebf0ad84c1994f2d682431a395e8581ef694290558acc2297d1847e5253be02d",
+    "runtime_dirt": "cfg(test) handshake test plus metrics counting inside the ignored tokio probe; staged evidence docs are not runtime logic"
+  },
+  "prior_gap_from_read_1": {
+    "metrics_not_counted": "closed_by_read_2",
+    "ordered_result_null": "closed_by_read_2"
+  },
+  "wire_suite": {
+    "result": "542 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out",
+    "finished_s": 10.52,
+    "rc": 0,
+    "read_2_filtered_lines_are_single_probe_invocations": true
+  },
+  "isolated_strict_rtc": {
+    "normal": {
+      "exit": 0,
+      "ordered": false,
+      "user_finals": 2,
+      "answer_count": 1,
+      "audible_ms": 6000,
+      "metric_kinds": ["eou", "eou", "llm", "tts"],
+      "connect_elapsed_ms": 392,
+      "cleanup": "Gone",
+      "unused_closed": 0,
+      "room": "sn-BJP00326110799999901-1794072815368",
+      "sid": "RM_BfJjhdu7PTRP",
+      "log_sha256": "308b6f87641f07d3959ab855a28be5472600dfe0a34e087f774206d8f47dda1c"
+    },
+    "ordered": {
+      "exit": 0,
+      "ordered": true,
+      "user_finals": 2,
+      "answer_count": 1,
+      "audible_ms": 8400,
+      "phase_ms": 4954,
+      "metric_kinds": ["eou", "eou", "llm", "tts"],
+      "connect_elapsed_ms": [440, 288],
+      "cleanup": "Gone",
+      "unused_closed": 1,
+      "room": "sn-BJP00326110799999901-1794072887641",
+      "sid": "RM_mH55pKpnPnSz",
+      "log_sha256": "1acfb05e30379e03f3fbda11d76ea02a293a48175705c16142ea61205589f591"
+    },
+    "corpus_sha256": "9ea46b2c12e570ab71a4b10283c733331d2048331b0b876df47b9a78b10f0b03",
+    "registers_worker": false
+  },
+  "code_or_prerelease_blocker": false,
+  "decision": "enter_rollback_capable_main_pool_controlled_release",
+  "keep_live_condition": "After install, release-dispatch-probe-asr-connect.py must pass one normal round and one ordered round on sha 3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb, each with strict metrics and natural room removal. Either failure rolls back to 50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0.",
+  "deploy_script_read_not_run": {
+    "empty_listrooms_and_no_unfinished_main_job": true,
+    "before_sha_must_match_running_exe": true,
+    "itemized_backup": ["voice-rust-worker", "rust-worker.env", "voice-worker-rust.service"],
+    "other_pools_pid_and_sha_guard": ["p003-search-worker.service", "p003-listening-worker.service"],
+    "rollback_restores_old_binary_and_env": true
+  },
+  "scope": {
+    "asr_flag_applies_to_entire_main_pool_process": true,
+    "watchdog_enforce_allowlist": ["02000053", "99999901"],
+    "full_function_single_sn_canary": false
+  },
+  "not_claimed": [
+    "unconditional_approval",
+    "android_pass",
+    "historical_root_cause_closed",
+    "other_pools_pass",
+    "blackhole_address_end_to_end",
+    "formal_release_dispatch_already_passed"
+  ]
+}

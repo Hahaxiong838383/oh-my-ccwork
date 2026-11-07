@@ -1,23 +1,35 @@
 {
-  "GROK_ASR_CONNECT_REVIEW.md": {
-    "sha256": "432c0c3657f74a680679df1c64e1247e709fd0af544274e185beb6eb08175634",
-    "bytes": 25815
+  "GROK_ASR_CONNECT_FINAL.md": {
+    "sha256": "3351a93767da478f3ce5d7b8d73d3ea5b550515bdf3f0d21222292eacad37296",
+    "bytes": 5876
+  },
+  "source-asr-connect-wire-final.json": {
+    "sha256": "714fcde0d83dd5728c2ac7ccc8dedde9f6a4fb2ba6df103dc07787175c102625",
+    "bytes": 6363
   },
   "GROK_ASR_CONNECT_REVIEW.json": {
     "sha256": "9a3ecbfb698fb1cab527ccbbb378304501d0d184705864b6f0f145a1f6926f69",
     "bytes": 12130
   },
-  "GROK_ASR_CONNECT_FINAL.md": {
-    "sha256": "3351a93767da478f3ce5d7b8d73d3ea5b550515bdf3f0d21222292eacad37296",
-    "bytes": 5876
+  "ASR_CONNECT_DEPLOYED.json": {
+    "sha256": "a303db9e5e31018dfec73c30a6477879e8292c934c51c50b917f2d866f6c74d0",
+    "bytes": 863
   },
-  "GROK_ASR_CONNECT_FINAL.json": {
-    "sha256": "3e409fbf99595e1d9a6f1197769bff9c37fbe3f9f525474cb7043c0ffc60105c",
-    "bytes": 3379
+  "ASR_CONNECT_ROLLBACK_SCRIPT_STAGED.json": {
+    "sha256": "071af8cead306fca29765b574f2dbf319ceeefdbc01088d0414cb6a31ecc4bb9",
+    "bytes": 197
   },
-  "CODEX_ASR_CONNECT_DISCUSSION.md": {
-    "sha256": "9258e63d6deb8a621e8c49d801a9ff0f7f030770a78f11942036976f367b684c",
-    "bytes": 5664
+  "ASR_CONNECT_FINAL_STATE_VERIFIED.json": {
+    "sha256": "0788fc43f1215e19cd6e454bb30aaefa5c06ce93eb020c68e3371666493a16f1",
+    "bytes": 1270
+  },
+  "CODEX_AMENDMENT_VERIFICATION.md": {
+    "sha256": "76941415cb0f438c0f598a74c3fa8e8c45680179c465e59d193640288b724905",
+    "bytes": 821
+  },
+  "WORKER_ASR_CONNECT_RELEASE_STAGED.json": {
+    "sha256": "ddc9c882657ebcb708f8062b7e349aef5f1729940f78f476a632607ff3d393f9",
+    "bytes": 190
   },
   "ASR_CANDIDATE_FINAL_RUNTIME.json": {
     "sha256": "1346d658fcbaca8066ef6910d79ef92fdac00d441013c132da73c60ce9cc1835",
@@ -27,28 +39,68 @@
     "sha256": "21c6c9a23bd1e5804c55db8f4bac178efc94a17af207a98eecafc0f0fe6f2655",
     "bytes": 361
   },
-  "WORKER_ASR_CONNECT_RELEASE_STAGED.json": {
-    "sha256": "ddc9c882657ebcb708f8062b7e349aef5f1729940f78f476a632607ff3d393f9",
-    "bytes": 190
-  },
-  "ASR_CONNECT_STAGING_FIRST_FAILURE.json": {
-    "sha256": "da8ee61138e06d633f7622bc1335d19dc11dc5c374fae4ceefe16c0285d1023a",
-    "bytes": 408
-  },
-  "ASR_CONNECT_STAGING_DIR_CORRECTION.json": {
-    "sha256": "d18f4d8c646d7afcaba99bac12b53d82156778dbd9278b96e4cfc53c08a69389",
-    "bytes": 214
-  },
-  "worker-asr-connect-wire-final.log": {
-    "sha256": "46cabd019625040bcc1f2c4f135c27264fd943a32e8f174f7f974cf7d836b988",
-    "bytes": 6505
+  "ASR_CONNECT_RELEASE_FINAL.json": {
+    "sha256": "63c8f1efa89cf075d75f6986b67e7d161f0b9d19e0637eb584df814781de56db",
+    "bytes": 6534
   },
   "source-asr-connect-release.json": {
     "sha256": "066b0ccc4678b128d321179660ebeb1082f0ed8cdafa9df8e1aa9cda40d15018",
     "bytes": 6363
   },
-  "source-asr-connect-wire-final.json": {
-    "sha256": "714fcde0d83dd5728c2ac7ccc8dedde9f6a4fb2ba6df103dc07787175c102625",
-    "bytes": 6363
+  "ASR_CONNECT_RELEASE_TTS_DETAILS.json": {
+    "sha256": "8decf59936b3abd56c71334b54e08f5f6a38ce563d0640f6858ef866929c5575",
+    "bytes": 3870
+  },
+  "ASR_CONNECT_STAGING_DIR_CORRECTION.json": {
+    "sha256": "d18f4d8c646d7afcaba99bac12b53d82156778dbd9278b96e4cfc53c08a69389",
+    "bytes": 214
+  },
+  "ASR_CONNECT_STAGING_FIRST_FAILURE.json": {
+    "sha256": "da8ee61138e06d633f7622bc1335d19dc11dc5c374fae4ceefe16c0285d1023a",
+    "bytes": 408
+  },
+  "GROK_ASR_CONNECT_EVIDENCE_AMENDMENT.md": {
+    "sha256": "76c74ed74a14159ce1543c960c58d967ad2864d62a369ea8938895716a01e2ef",
+    "bytes": 7170
+  },
+  "rollback-asr-connect-release.py": {
+    "sha256": "68bdee752984a547c3e218ec3c0ca0ad4c90784ea6ec508fcb5e76560757b515",
+    "bytes": 3315
+  },
+  "GROK_ASR_CONNECT_FINAL.json": {
+    "sha256": "3e409fbf99595e1d9a6f1197769bff9c37fbe3f9f525474cb7043c0ffc60105c",
+    "bytes": 3379
+  },
+  "GROK_ASR_CONNECT_REVIEW.md": {
+    "sha256": "432c0c3657f74a680679df1c64e1247e709fd0af544274e185beb6eb08175634",
+    "bytes": 25815
+  },
+  "release-dispatch-probe-asr-connect.py": {
+    "sha256": "295a630dff0984dff4b79782f0968c5aef88740a3a9d9997929140caa7b74151",
+    "bytes": 6614
+  },
+  "CODEX_ASR_CONNECT_DISCUSSION.md": {
+    "sha256": "9258e63d6deb8a621e8c49d801a9ff0f7f030770a78f11942036976f367b684c",
+    "bytes": 5664
+  },
+  "GROK_ASR_CONNECT_EVIDENCE_AMENDMENT.json": {
+    "sha256": "3b61c935c6980d929b35579fb9920a0f5f5013c654a60c37ac65b9c2f8eb1556",
+    "bytes": 5308
+  },
+  "ASR_CONNECT_RELEASE_VOICE_METRICS.json": {
+    "sha256": "843ec73ed22791fccdc6e45c0cb4a79948cf38f7c7a6da678b7c84221e6b02c6",
+    "bytes": 3372
+  },
+  "deploy-asr-connect-release.py": {
+    "sha256": "ebdc6ba8f7bfd8b12948059109b57975f2f90d4658d9b4f98ba45d8dfdf0a831",
+    "bytes": 5817
+  },
+  "ASR_CONNECT_DEPLOY_STATE.json": {
+    "sha256": "f9e15088c41af393e88a3423dd4f9b1cc55a9947ebf4e6b407d7a107fc903cad",
+    "bytes": 2021
+  },
+  "worker-asr-connect-wire-final.log": {
+    "sha256": "46cabd019625040bcc1f2c4f135c27264fd943a32e8f174f7f974cf7d836b988",
+    "bytes": 6505
   }
 }

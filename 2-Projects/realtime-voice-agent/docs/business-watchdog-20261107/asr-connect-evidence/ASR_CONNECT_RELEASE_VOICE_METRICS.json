@@ -1,0 +1,141 @@
+{
+  "journal_sha256": "8383a641ffe19d0cd1de29e51e91988ab710457666a65d069902de01d80d85e5",
+  "rows": [
+    {
+      "at": "2026-11-07T17:49:05.156240Z",
+      "room": null,
+      "fields": {
+        "ttft_ms": "480"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:49:07.058033Z",
+      "room": "sn-BJP00326110799999901-1794073741651",
+      "fields": {
+        "turn_id": "1",
+        "underrun_count": "0",
+        "underrun_ms": "0",
+        "buffered_audio_ms": "-1",
+        "first_underrun_ms": "-1",
+        "played_frames": "0"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:49:07.062170Z",
+      "room": null,
+      "fields": {
+        "ttft_ms": "389"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:49:08.043997Z",
+      "room": null,
+      "fields": {
+        "ttft_ms": "621"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:49:12.546320Z",
+      "room": "\"sn-BJP00326110799999901-1794073741651\"",
+      "fields": {
+        "turn_id": "2"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:49:17.318746Z",
+      "room": "sn-BJP00326110799999901-1794073741651",
+      "fields": {
+        "turn_id": "2",
+        "ttfb_ms": "4521",
+        "body_ready_since_turn_ms": "5486"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:49:22.723615Z",
+      "room": "sn-BJP00326110799999901-1794073741651",
+      "fields": {
+        "turn_id": "2",
+        "underrun_count": "0",
+        "underrun_ms": "0",
+        "buffered_audio_ms": "191",
+        "first_underrun_ms": "-1",
+        "played_frames": "1016"
+      },
+      "source_drained": true
+    },
+    {
+      "at": "2026-11-07T17:50:22.610902Z",
+      "room": null,
+      "fields": {
+        "ttft_ms": "484"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:50:22.650704Z",
+      "room": "sn-BJP00326110799999901-1794073814938",
+      "fields": {
+        "turn_id": "1",
+        "underrun_count": "0",
+        "underrun_ms": "0",
+        "buffered_audio_ms": "-1",
+        "first_underrun_ms": "-1",
+        "played_frames": "0"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:50:22.695730Z",
+      "room": null,
+      "fields": {
+        "ttft_ms": "711"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:50:23.625030Z",
+      "room": null,
+      "fields": {
+        "ttft_ms": "585"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:50:23.908003Z",
+      "room": "\"sn-BJP00326110799999901-1794073814938\"",
+      "fields": {
+        "turn_id": "2"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:50:28.275341Z",
+      "room": "sn-BJP00326110799999901-1794073814938",
+      "fields": {
+        "turn_id": "2",
+        "ttfb_ms": "282",
+        "body_ready_since_turn_ms": "1256"
+      },
+      "source_drained": false
+    },
+    {
+      "at": "2026-11-07T17:50:33.205014Z",
+      "room": "sn-BJP00326110799999901-1794073814938",
+      "fields": {
+        "turn_id": "2",
+        "underrun_count": "0",
+        "underrun_ms": "0",
+        "buffered_audio_ms": "184",
+        "first_underrun_ms": "-1",
+        "played_frames": "928"
+      },
+      "source_drained": true
+    }
+  ]
+}

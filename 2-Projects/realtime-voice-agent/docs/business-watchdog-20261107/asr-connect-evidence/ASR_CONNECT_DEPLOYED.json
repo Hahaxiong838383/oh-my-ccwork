@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-07T17:48:38.562147+00:00",
+  "status": "ASR_CONNECT_AND_RECOGNITION_DEPLOYED",
+  "before": {
+    "MainPID": "3496776",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "after": {
+    "MainPID": "3512437",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+  "source_commit": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "other_pools_unchanged": true,
+  "dns_and_unit_unchanged": true,
+  "env_before_sha256": "d5c4c7788569c7ab3c6ec47423fcd9997a6b6a7a4f04dc7d5ff9feed4df3dcde",
+  "env_after_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+  "asr_recovery_enabled": true,
+  "scope": "main pool connector; business enforcement stays existing allowlist",
+  "backup": "/root/p003-business-watchdog-20261107/asr-connect-before"
+}

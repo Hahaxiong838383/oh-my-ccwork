@@ -1,0 +1,228 @@
+{
+  "status": "MAIN_POOL_RELEASE_FUNCTIONAL_PASS_LATENCY_OPEN",
+  "deployment": {
+    "at": "2026-11-07T17:48:38.562147+00:00",
+    "status": "ASR_CONNECT_AND_RECOGNITION_DEPLOYED",
+    "before": {
+      "MainPID": "3496776",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "after": {
+      "MainPID": "3512437",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+    "source_commit": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+    "other_pools_unchanged": true,
+    "dns_and_unit_unchanged": true,
+    "env_before_sha256": "d5c4c7788569c7ab3c6ec47423fcd9997a6b6a7a4f04dc7d5ff9feed4df3dcde",
+    "env_after_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+    "asr_recovery_enabled": true,
+    "scope": "main pool connector; business enforcement stays existing allowlist",
+    "backup": "/root/p003-business-watchdog-20261107/asr-connect-before"
+  },
+  "runtime": {
+    "at": "2026-11-07T17:52:37.820130+00:00",
+    "main": {
+      "MainPID": "3512437",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "main_proc_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+    "main_disk_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+    "asr_recovery": "1",
+    "watchdog_mode": "enforce",
+    "watchdog_allowlist": "BJP00326081002000053,BJP00326110799999901",
+    "rooms": 0,
+    "old_sid_absent": true,
+    "other_pools": {
+      "p003-search-worker.service": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "p003-listening-worker.service": {
+        "MainPID": "2750511",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      }
+    },
+    "cleaner": {
+      "mode": "business",
+      "at_ms": 1794073951176,
+      "counts": {},
+      "remaining": 0,
+      "healthy": true
+    },
+    "probes": {
+      "release-dispatch-asr-connect-ordered0": {
+        "at": "2026-11-07T17:49:28.813294+00:00",
+        "status": "PASS",
+        "candidate_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+        "runtime_pid": "3512437",
+        "ordered": false,
+        "trace_id": "ops-release-probe-cad6a0d2-5886-4718-b6ca-0ebbe0dc0c8e",
+        "room": "sn-BJP00326110799999901-1794073741651",
+        "sid": "RM_XQPDT8trgEHY",
+        "stats": {
+          "ready_ms": 1019,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 7920.0,
+          "first_audio_ms": 11018,
+          "last_audio_ms": 20568,
+          "input_sent_ms": 1028,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 365
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 27162,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      },
+      "release-dispatch-asr-connect-ordered0-log_sha256": "25f62fb11db71ac845db94802b52eb3f09a7ec5fc03e6a45e4a699ee759a8126",
+      "release-dispatch-asr-connect-ordered0-log_error_types": [],
+      "release-dispatch-asr-connect-ordered1": {
+        "at": "2026-11-07T17:50:38.917380+00:00",
+        "status": "PASS",
+        "candidate_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+        "runtime_pid": "3512437",
+        "ordered": true,
+        "trace_id": "ops-release-probe-6b9bf642-f181-4be5-bd6d-efdbbd8b20cf",
+        "room": "sn-BJP00326110799999901-1794073814938",
+        "sid": "RM_f7UZEZeqKhXC",
+        "stats": {
+          "ready_ms": 577,
+          "phase_ms": 3072,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 7050.0,
+          "first_audio_ms": 9137,
+          "last_audio_ms": 17758,
+          "input_sent_ms": 3073,
+          "events": [
+            "session.input_ready",
+            "session.output_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 271
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 23979,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      },
+      "release-dispatch-asr-connect-ordered1-log_sha256": "bef4dcf7fd8ddb0cf338e624fac85f6742b123774aa0cb34d2bb8b941218682c",
+      "release-dispatch-asr-connect-ordered1-log_error_types": []
+    },
+    "journal_sha256": "8a2dace57ee7c925ec80f643574e700cacd5a61cd1c7b228a3a474c721f23714",
+    "panic_count": 0,
+    "asr_no_audio": 0,
+    "selected_journal": [
+      "2026-11-07T17:49:02.336150Z  INFO business watchdog decision room=sn-BJP00326110799999901-1794073741651 room_sid=RM_XQPDT8trgEHY trace=\"ops-release-probe-cad6a0d2-5886-4718-b6ca-0ebbe0dc0c8e\" decision=Keep elapsed_ms=305",
+      "2026-11-07T17:49:03.017294Z  INFO asr_stream{room=sn-BJP00326110799999901-1794073741651}: asr connection timing request_id=\"104ce26e-24ba-430c-8ad5-c7e073339d1e\" stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=848 dns_ms=669 tcp_ms=2 tls_ws_ms=175",
+      "2026-11-07T17:49:28.336731Z  INFO business watchdog decision room=sn-BJP00326110799999901-1794073741651 room_sid=RM_XQPDT8trgEHY trace=\"ops-release-probe-cad6a0d2-5886-4718-b6ca-0ebbe0dc0c8e\" decision=Close(IdleNoProgress) elapsed_ms=26305",
+      "2026-11-07T17:49:28.480688Z  INFO room cleanup readback complete room=sn-BJP00326110799999901-1794073741651 room_sid=RM_XQPDT8trgEHY cleanup=Gone delete_scope=\"room_name\" cas=false",
+      "2026-11-07T17:49:28.481286Z  INFO process exiting job_id=AJ_6TbiigsaYHhE",
+      "2026-11-07T17:50:15.453582Z  INFO business watchdog decision room=sn-BJP00326110799999901-1794073814938 room_sid=RM_f7UZEZeqKhXC trace=\"ops-release-probe-6b9bf642-f181-4be5-bd6d-efdbbd8b20cf\" decision=Keep elapsed_ms=213",
+      "2026-11-07T17:50:15.675448Z  INFO asr_stream{room=sn-BJP00326110799999901-1794073814938}: asr connection timing request_id=\"0d6f0327-275c-4d7f-9c2c-0081697751fd\" stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=393 dns_ms=194 tcp_ms=3 tls_ws_ms=195",
+      "2026-11-07T17:50:18.002167Z  INFO asr_stream{room=sn-BJP00326110799999901-1794073814938}: unused asr preconnection closed without recognition request_id=0d6f0327-275c-4d7f-9c2c-0081697751fd",
+      "2026-11-07T17:50:18.202859Z  INFO asr_stream{room=sn-BJP00326110799999901-1794073814938}: asr connection timing request_id=\"a905f1b4-a54d-469d-827d-d0fbf36fb230\" stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=200 dns_ms=0 tcp_ms=3 tls_ws_ms=197",
+      "2026-11-07T17:50:38.453448Z  INFO business watchdog decision room=sn-BJP00326110799999901-1794073814938 room_sid=RM_f7UZEZeqKhXC trace=\"ops-release-probe-6b9bf642-f181-4be5-bd6d-efdbbd8b20cf\" decision=Close(IdleNoProgress) elapsed_ms=23212",
+      "2026-11-07T17:50:38.577285Z  INFO room cleanup readback complete room=sn-BJP00326110799999901-1794073814938 room_sid=RM_f7UZEZeqKhXC cleanup=Gone delete_scope=\"room_name\" cas=false",
+      "2026-11-07T17:50:38.577773Z  INFO process exiting job_id=AJ_QZ47mzXUCXjg"
+    ]
+  },
+  "review": "Grok173 conditional controlled release approved; both release checks PASS",
+  "tests": {
+    "passed": 542,
+    "failed": 0,
+    "ignored": 1
+  },
+  "open_issue": {
+    "type": "TTS DNS slow on same connection",
+    "connect_id": 2,
+    "dns_ms": 4704,
+    "tcp_ms": 51,
+    "tls_ws_ms": 170,
+    "prewarm_wait_ms": 3961,
+    "provider_ttfb_ms": 560,
+    "first_pcm_ms": 4521
+  },
+  "android_verified": false,
+  "other_pools_changed": false,
+  "final_state": {
+    "at": "2026-11-07T17:54:29.461329+00:00",
+    "status": "PASS",
+    "uptime_since_deploy_seconds": 350.899182,
+    "main": {
+      "MainPID": "3512437",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "runtime_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+    "other_pools": {
+      "p003-search-worker.service": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+      },
+      "p003-listening-worker.service": {
+        "MainPID": "2750511",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0"
+      }
+    },
+    "protected_files": {
+      "/etc/systemd/system/voice-worker-rust.service": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0",
+      "/etc/systemd/resolved.conf.d/60-p003-negative-cache.conf": "b8ca5c4b6eef8bc28d0e4e0b5eb04c4b340d02ecef461a557102b82eb0d504be"
+    },
+    "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+    "rollback_binary_env_verified": true,
+    "cleaner": {
+      "mode": "business",
+      "at_ms": 1794074066858,
+      "counts": {},
+      "remaining": 0,
+      "healthy": true
+    }
+  }
+}

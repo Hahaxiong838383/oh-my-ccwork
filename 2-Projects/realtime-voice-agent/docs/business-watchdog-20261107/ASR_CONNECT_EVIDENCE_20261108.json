@@ -1,8 +1,8 @@
 {
   "at": "2026-11-07T17:43:27.528430+00:00",
-  "status": "STRICT_ISOLATED_RTC_PASS_NOT_DEPLOYED",
-  "runtime_source": "b373b355d20dcd47802012e1b33db72d7acc32fa",
-  "runtime_sha256": "50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0",
+  "status": "MAIN_POOL_RELEASE_FUNCTIONAL_PASS_LATENCY_OPEN",
+  "runtime_source": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "runtime_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
   "tests": {
     "passed": 542,
     "failed": 0,
@@ -48,14 +48,15 @@
     }
   },
   "unverified": [
-    "formal release dispatch after controlled deployment",
+    "TTS DNS slow same-connection cause and fix",
     "Android",
     "other worker pools",
     "historical first input and twelve tickets",
-    "TTS historical streaming gaps"
+    "historical TTS streaming gaps"
   ],
   "candidate_source": "713f6f35af43d5a58aeae8360ad421fc66b72718",
   "candidate_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
   "strict_rtc": "asr-connect-evidence/ASR_CANDIDATE_FINAL_RUNTIME.json",
-  "review": "Grok172 no concrete code blocker; deployment hold pending latest evidence amendment"
+  "review": "Grok173 conditional controlled release approved; both release checks PASS",
+  "latest_release": "ASR_CONNECT_RELEASE_20261108.json"
 }
