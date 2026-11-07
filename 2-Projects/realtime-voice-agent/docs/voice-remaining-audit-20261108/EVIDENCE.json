@@ -1,0 +1,963 @@
+{
+  "at": "2026-11-07T23:23:43.986336+00:00",
+  "status": "DEPLOYED_SCOPED_SERVER_PASS_REAL_DEVICE_AND_HISTORICAL_CAUSES_OPEN",
+  "source_changed_this_round": false,
+  "business_restarted_this_round": false,
+  "runtime_checked_at": "2026-11-07T23:19:53.778859+00:00",
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "3606030",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "proc_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+      "disk_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+      "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "room_sn_suffixes": [
+        "99999901"
+      ],
+      "jobs": {
+        "assigned": 2,
+        "job_closed": 2,
+        "panic": 0,
+        "error": 0,
+        "business_close": 2
+      }
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "proc_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "disk_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "env_sha256": "162cbf5057ce453e7dd3cdac010643375f84de81794f403ffd817ec340b71bbc",
+      "room_sn_suffixes": [],
+      "jobs": {
+        "assigned": 0,
+        "job_closed": 0,
+        "panic": 0,
+        "error": 0,
+        "business_close": 0
+      }
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "proc_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "disk_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "env_sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+      "room_sn_suffixes": [],
+      "jobs": {
+        "assigned": 0,
+        "job_closed": 0,
+        "panic": 0,
+        "error": 0,
+        "business_close": 0
+      }
+    }
+  },
+  "sfu_room_count": 0,
+  "retained_six_triage": {
+    "classification": "6 retained triggers are pending local PCM channel sends, not handshake timeout evidence; upstream read maxima <=361ms in these six; paired playout exit=Aborted and underrun=0. Do not attribute pause/abort origin without same-room control evidence. Not historical t22 and not proof of network fault.",
+    "rows": [
+      {
+        "file": "incident-1793942553430.json",
+        "sha256": "fc3f46b54cac287b18b545999738272c0312b76687f3c79683bc39567144ab1c",
+        "pid": "3021826",
+        "room_ref": "cef3c5ad6570e988",
+        "sn_suffix": "00800010",
+        "turn": 141,
+        "connect_id": 808,
+        "stage": "channel_send",
+        "pending_send_ms": 5106,
+        "max_ws_wait_ms": 238,
+        "max_completed_channel_wait_ms": 0,
+        "connection_ms": 237,
+        "matched_playout": [
+          {
+            "at": 1793942553.348142,
+            "proto": "worker_timing",
+            "marker": "playout metrics",
+            "fields": {
+              "turn_id": "141",
+              "underrun_count": "0",
+              "underrun_ms": "0",
+              "played_frames": "1",
+              "exit": "Aborted"
+            },
+            "pid": "3021826",
+            "room_ref": "cef3c5ad6570e988"
+          }
+        ],
+        "truncated": false,
+        "capture_drop_scope": "cumulative packet socket only; not per stream",
+        "capture_kernel_drops_cumulative": 85
+      },
+      {
+        "file": "incident-1793942625196.json",
+        "sha256": "01aef48d10ba1a9fd792676676cb23813510940ff9044496f5cfcccd2e9b0348",
+        "pid": "3021826",
+        "room_ref": "cef3c5ad6570e988",
+        "sn_suffix": "00800010",
+        "turn": 153,
+        "connect_id": 833,
+        "stage": "channel_send",
+        "pending_send_ms": 2417,
+        "max_ws_wait_ms": 352,
+        "max_completed_channel_wait_ms": 0,
+        "connection_ms": 218,
+        "matched_playout": [
+          {
+            "at": 1793942625.048839,
+            "proto": "worker_timing",
+            "marker": "playout metrics",
+            "fields": {
+              "turn_id": "153",
+              "underrun_count": "0",
+              "underrun_ms": "0",
+              "played_frames": "1",
+              "exit": "Aborted"
+            },
+            "pid": "3021826",
+            "room_ref": "cef3c5ad6570e988"
+          }
+        ],
+        "truncated": false,
+        "capture_drop_scope": "cumulative packet socket only; not per stream",
+        "capture_kernel_drops_cumulative": 85
+      },
+      {
+        "file": "incident-1793942686621.json",
+        "sha256": "ebec6f82190cb8c1849ab459fa89204c23080de482b7660caa164b1a2b6ec243",
+        "pid": "3021826",
+        "room_ref": "cef3c5ad6570e988",
+        "sn_suffix": "00800010",
+        "turn": 168,
+        "connect_id": 867,
+        "stage": "channel_send",
+        "pending_send_ms": 1597,
+        "max_ws_wait_ms": 206,
+        "max_completed_channel_wait_ms": 0,
+        "connection_ms": 235,
+        "matched_playout": [
+          {
+            "at": 1793942686.447597,
+            "proto": "worker_timing",
+            "marker": "playout metrics",
+            "fields": {
+              "turn_id": "168",
+              "underrun_count": "0",
+              "underrun_ms": "0",
+              "played_frames": "1",
+              "exit": "Aborted"
+            },
+            "pid": "3021826",
+            "room_ref": "cef3c5ad6570e988"
+          }
+        ],
+        "truncated": false,
+        "capture_drop_scope": "cumulative packet socket only; not per stream",
+        "capture_kernel_drops_cumulative": 146
+      },
+      {
+        "file": "incident-1793942744769.json",
+        "sha256": "498507994cf124208948c91dcea37d1ecc8b797ae88472f0b4c438709ea3221e",
+        "pid": "3021826",
+        "room_ref": "cef3c5ad6570e988",
+        "sn_suffix": "00800010",
+        "turn": 182,
+        "connect_id": 894,
+        "stage": "channel_send",
+        "pending_send_ms": 5979,
+        "max_ws_wait_ms": 361,
+        "max_completed_channel_wait_ms": 4779,
+        "connection_ms": 217,
+        "matched_playout": [
+          {
+            "at": 1793942744.749005,
+            "proto": "worker_timing",
+            "marker": "playout metrics",
+            "fields": {
+              "turn_id": "182",
+              "underrun_count": "0",
+              "underrun_ms": "0",
+              "played_frames": "60",
+              "exit": "Aborted"
+            },
+            "pid": "3021826",
+            "room_ref": "cef3c5ad6570e988"
+          }
+        ],
+        "truncated": false,
+        "capture_drop_scope": "cumulative packet socket only; not per stream",
+        "capture_kernel_drops_cumulative": 146
+      },
+      {
+        "file": "incident-1793942783146.json",
+        "sha256": "fb38a6a5d1f4e5d6249dd96828898218c2276c1772ea5261faa37c2205bd54e5",
+        "pid": "3021826",
+        "room_ref": "cef3c5ad6570e988",
+        "sn_suffix": "00800010",
+        "turn": 190,
+        "connect_id": 912,
+        "stage": "channel_send",
+        "pending_send_ms": 1582,
+        "max_ws_wait_ms": 275,
+        "max_completed_channel_wait_ms": 0,
+        "connection_ms": 229,
+        "matched_playout": [
+          {
+            "at": 1793942782.999992,
+            "proto": "worker_timing",
+            "marker": "playout metrics",
+            "fields": {
+              "turn_id": "190",
+              "underrun_count": "0",
+              "underrun_ms": "0",
+              "played_frames": "1",
+              "exit": "Aborted"
+            },
+            "pid": "3021826",
+            "room_ref": "cef3c5ad6570e988"
+          }
+        ],
+        "truncated": false,
+        "capture_drop_scope": "cumulative packet socket only; not per stream",
+        "capture_kernel_drops_cumulative": 146
+      },
+      {
+        "file": "incident-1793942808150.json",
+        "sha256": "84f6b932c1e7422604aeb1b5d2268b56b567f9535f4615733b7a3d760e2a8018",
+        "pid": "3021826",
+        "room_ref": "cef3c5ad6570e988",
+        "sn_suffix": "00800010",
+        "turn": 194,
+        "connect_id": 920,
+        "stage": "channel_send",
+        "pending_send_ms": 13148,
+        "max_ws_wait_ms": 310,
+        "max_completed_channel_wait_ms": 0,
+        "connection_ms": 225,
+        "matched_playout": [
+          {
+            "at": 1793942807.899299,
+            "proto": "worker_timing",
+            "marker": "playout metrics",
+            "fields": {
+              "turn_id": "194",
+              "underrun_count": "0",
+              "underrun_ms": "0",
+              "played_frames": "276",
+              "exit": "Aborted"
+            },
+            "pid": "3021826",
+            "room_ref": "cef3c5ad6570e988"
+          }
+        ],
+        "truncated": false,
+        "capture_drop_scope": "cumulative packet socket only; not per stream",
+        "capture_kernel_drops_cumulative": 146
+      }
+    ]
+  },
+  "retained_six_controls": [
+    {
+      "turn": 141,
+      "playout": {
+        "at_us": 1793942553348142,
+        "markers": [
+          "playout metrics"
+        ],
+        "fields": {
+          "turn_id": "141",
+          "underrun_ms": "0",
+          "played_frames": "1",
+          "exit": "Aborted"
+        }
+      },
+      "nearby_control": [
+        {
+          "at_us": 1793942553347665,
+          "markers": [
+            "agent turn aborted, history truncated to spoken part"
+          ],
+          "fields": {
+            "played_samples": "0",
+            "synth_chars": "24",
+            "spoken_chars": "0"
+          }
+        },
+        {
+          "at_us": 1793942553348142,
+          "markers": [
+            "turn committed"
+          ],
+          "fields": {}
+        }
+      ],
+      "inference_limit": "temporal same-room correlation; not proof of cause or transcript identity"
+    },
+    {
+      "turn": 153,
+      "playout": {
+        "at_us": 1793942625048839,
+        "markers": [
+          "playout metrics"
+        ],
+        "fields": {
+          "turn_id": "153",
+          "underrun_ms": "0",
+          "played_frames": "1",
+          "exit": "Aborted"
+        }
+      },
+      "nearby_control": [
+        {
+          "at_us": 1793942625048163,
+          "markers": [
+            "agent turn aborted, history truncated to spoken part"
+          ],
+          "fields": {
+            "played_samples": "0",
+            "synth_chars": "0",
+            "spoken_chars": "0"
+          }
+        },
+        {
+          "at_us": 1793942625048839,
+          "markers": [
+            "turn committed"
+          ],
+          "fields": {}
+        }
+      ],
+      "inference_limit": "temporal same-room correlation; not proof of cause or transcript identity"
+    },
+    {
+      "turn": 168,
+      "playout": {
+        "at_us": 1793942686447597,
+        "markers": [
+          "playout metrics"
+        ],
+        "fields": {
+          "turn_id": "168",
+          "underrun_ms": "0",
+          "played_frames": "1",
+          "exit": "Aborted"
+        }
+      },
+      "nearby_control": [
+        {
+          "at_us": 1793942686447597,
+          "markers": [
+            "agent turn aborted, history truncated to spoken part"
+          ],
+          "fields": {
+            "played_samples": "0",
+            "synth_chars": "17",
+            "spoken_chars": "0"
+          }
+        },
+        {
+          "at_us": 1793942686449391,
+          "markers": [
+            "turn committed"
+          ],
+          "fields": {}
+        }
+      ],
+      "inference_limit": "temporal same-room correlation; not proof of cause or transcript identity"
+    },
+    {
+      "turn": 182,
+      "playout": {
+        "at_us": 1793942744749005,
+        "markers": [
+          "playout metrics"
+        ],
+        "fields": {
+          "turn_id": "182",
+          "underrun_ms": "0",
+          "played_frames": "60",
+          "exit": "Aborted"
+        }
+      },
+      "nearby_control": [
+        {
+          "at_us": 1793942744748479,
+          "markers": [
+            "agent turn aborted, history truncated to spoken part"
+          ],
+          "fields": {
+            "played_samples": "14160",
+            "synth_chars": "0",
+            "spoken_chars": "0"
+          }
+        },
+        {
+          "at_us": 1793942744749005,
+          "markers": [
+            "turn committed"
+          ],
+          "fields": {}
+        }
+      ],
+      "inference_limit": "temporal same-room correlation; not proof of cause or transcript identity"
+    },
+    {
+      "turn": 190,
+      "playout": {
+        "at_us": 1793942782999992,
+        "markers": [
+          "playout metrics"
+        ],
+        "fields": {
+          "turn_id": "190",
+          "underrun_ms": "0",
+          "played_frames": "1",
+          "exit": "Aborted"
+        }
+      },
+      "nearby_control": [
+        {
+          "at_us": 1793942782997927,
+          "markers": [
+            "agent turn aborted, history truncated to spoken part"
+          ],
+          "fields": {
+            "played_samples": "0",
+            "synth_chars": "18",
+            "spoken_chars": "0"
+          }
+        },
+        {
+          "at_us": 1793942782998339,
+          "markers": [
+            "turn committed"
+          ],
+          "fields": {}
+        }
+      ],
+      "inference_limit": "temporal same-room correlation; not proof of cause or transcript identity"
+    },
+    {
+      "turn": 194,
+      "playout": {
+        "at_us": 1793942807899299,
+        "markers": [
+          "playout metrics"
+        ],
+        "fields": {
+          "turn_id": "194",
+          "underrun_ms": "0",
+          "played_frames": "276",
+          "exit": "Aborted"
+        }
+      },
+      "nearby_control": [
+        {
+          "at_us": 1793942807899299,
+          "markers": [
+            "agent turn aborted, history truncated to spoken part"
+          ],
+          "fields": {
+            "played_samples": "66000",
+            "synth_chars": "28",
+            "spoken_chars": "13"
+          }
+        },
+        {
+          "at_us": 1793942807899879,
+          "markers": [
+            "turn committed"
+          ],
+          "fields": {}
+        }
+      ],
+      "inference_limit": "temporal same-room correlation; not proof of cause or transcript identity"
+    }
+  ],
+  "recorder_started": {
+    "at": "2026-11-07T23:14:10.885689+00:00",
+    "unit": "p003-tts-network-watch-20261108",
+    "runtime": {
+      "RuntimeMaxUSec": "1d 30s",
+      "MainPID": "3608802",
+      "MemoryCurrent": "11522048",
+      "CPUUsageNSec": "145347000",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "status": {
+      "started": 1794093247.455896,
+      "expires": 1794179647.455896,
+      "at": 1794093248.4711204,
+      "counts": {
+        "capture_packets": 0,
+        "capture_kernel_drops": 0,
+        "capture_stat_reads": 1
+      },
+      "ring_items": 0,
+      "pending": 0,
+      "threads_alive": [
+        true,
+        true
+      ],
+      "metadata_only": true,
+      "incident_limit": 6,
+      "record_limit_per_incident": 8000
+    },
+    "old_units": {
+      "p003-tts-network-watch-20261105": "MainPID=0\nActiveState=inactive\nSubState=dead",
+      "p003-tts-network-watch-20261105-v2": "MainPID=0\nActiveState=inactive\nSubState=dead",
+      "p003-tts-network-watch-20261105-v3": "MainPID=0\nActiveState=inactive\nSubState=dead"
+    },
+    "business_before": {
+      "voice-worker-rust": {
+        "MainPID": "3606030",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d"
+      },
+      "p003-listening-worker": {
+        "MainPID": "3593294",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+      },
+      "p003-search-worker": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+      }
+    },
+    "business_unchanged": true,
+    "script_sha256": "57140a2d792e83f818e2bec49cab1c5aa894630d8422d3b7d3b48005d9d42ea3",
+    "output": "/root/p003-transport-diagnostic-20261105/watch-24h-20261108",
+    "metadata_only": true,
+    "rollback_command": "systemctl stop p003-tts-network-watch-20261108",
+    "scope": "existing v3 passive TTS metadata only; no business/route/config change"
+  },
+  "recorder_verified": {
+    "at": "2026-11-07T23:16:06.458925+00:00",
+    "before": {
+      "MainPID": "3608802",
+      "MemoryCurrent": "11046912",
+      "CPUUsageNSec": "533621000",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "after": {
+      "MainPID": "3608802",
+      "MemoryCurrent": "11579392",
+      "CPUUsageNSec": "539436000",
+      "ActiveState": "active",
+      "SubState": "running"
+    },
+    "status": {
+      "started": 1794093247.455896,
+      "expires": 1794179647.455896,
+      "at": 1794093364.6251254,
+      "counts": {
+        "capture_packets": 730,
+        "capture_kernel_drops": 0,
+        "capture_stat_reads": 107,
+        "dns": 12,
+        "tcp": 17,
+        "tcp_out": 10,
+        "tcp_in": 7
+      },
+      "ring_items": 29,
+      "pending": 0,
+      "threads_alive": [
+        true,
+        true
+      ],
+      "metadata_only": true,
+      "incident_limit": 6,
+      "record_limit_per_incident": 8000
+    },
+    "tcp_delta": {
+      "tcp_in": 7,
+      "tcp_out": 10,
+      "capture_packets": 24,
+      "capture_kernel_drops": 0
+    },
+    "tls_only_smoke": {
+      "peer": "114.118.65.101",
+      "tls": "TLSv1.3",
+      "elapsed_ms": 158
+    },
+    "business_unchanged": true,
+    "boundary": "single handshake proves fresh bidirectional metadata capture; not voice/TTS functionality, no Android or loss-free claim; no automatic AI analysis scheduler"
+  },
+  "twelve_brain": {
+    "collected_at": "2026-11-07T23:21:00.144088+00:00",
+    "rows": [
+      {
+        "session_id": "daab15ad-5dc0-4552-b976-5674b5f6061f",
+        "trace_id": "16df87fb-01b3-4c94-b1ad-474e67907785",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 9,
+        "created_at": 1794035162077,
+        "room_tail": "1794035162",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "1961021f-98ff-4806-90cf-a88a284a089c",
+        "trace_id": "62efbd2c-d290-4309-9dd7-698ec4d824c3",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 6,
+        "created_at": 1794035475723,
+        "room_tail": "1794035475",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "42cbe144-cbab-4c64-9f89-6b0ed0fce840",
+        "trace_id": "191da5d4-7906-41a8-9a46-47ddd1a80fa3",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 7,
+        "created_at": 1794035701525,
+        "room_tail": "1794035701",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "649f1516-4cc4-4b31-8fe7-ca2409ddc3c3",
+        "trace_id": "1f7915f5-fc5e-4401-a2f5-1a00533d701f",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 9,
+        "created_at": 1794035916344,
+        "room_tail": "1794035916",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "f4c27d97-ad89-4c15-80f8-1dea58cb8877",
+        "trace_id": "481da5b9-f7d3-43eb-894a-326924bc4a40",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 8,
+        "created_at": 1794036810753,
+        "room_tail": "1794036810",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "6c560cfb-3074-473e-9cff-4f985c479e08",
+        "trace_id": "0cb7346d-2d51-4c2a-a7b7-251b1ed98959",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 6,
+        "created_at": 1794037285487,
+        "room_tail": "1794037285",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "bb2dce99-8390-4347-a583-fdf5622e8247",
+        "trace_id": "3f594bcd-8ade-4a61-bb25-aaf86ea7823f",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 5,
+        "created_at": 1794037493565,
+        "room_tail": "1794037493",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "477416a0-f47f-433d-acb3-61de0a1019d2",
+        "trace_id": "e724fe66-4f87-4d33-b1ef-e21751b18704",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 7,
+        "created_at": 1794038010518,
+        "room_tail": "1794038010",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "46bb448c-659a-465a-b328-4f62dce2052d",
+        "trace_id": "83ebde62-76e4-44eb-80b2-78001db15cc2",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 4,
+        "created_at": 1794038616512,
+        "room_tail": "1794038616",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "8e64618b-8e0f-4467-879b-63a45ea21c81",
+        "trace_id": "839e8381-af36-44ce-a48c-f8bb38734641",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 4,
+        "created_at": 1794040343411,
+        "room_tail": "1794040343",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "5c5da4a7-be10-466e-91e4-d2f987f9f37a",
+        "trace_id": "c2f47e91-783b-44be-9889-1371fd7917ca",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 5,
+        "created_at": 1794041570224,
+        "room_tail": "1794041570",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      },
+      {
+        "session_id": "9996e21c-16c6-4745-9802-96d4392c07c7",
+        "trace_id": "bf88e32b-ed58-4147-bca8-30a5c3e432db",
+        "status": "ok",
+        "ttl_s": 3600,
+        "ms": 5,
+        "created_at": 1794042077204,
+        "room_tail": "1794042077",
+        "source": "/opt/p003/server/data/devices.db",
+        "note_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "note_bytes": 0
+      }
+    ],
+    "matches": {
+      "1794035162": 1,
+      "1794035475": 1,
+      "1794035701": 1,
+      "1794035916": 1,
+      "1794036810": 1,
+      "1794037285": 1,
+      "1794037493": 1,
+      "1794038010": 1,
+      "1794038616": 1,
+      "1794040343": 1,
+      "1794041570": 1,
+      "1794042077": 1
+    },
+    "scope": "Ticket rows only; does not establish client receipt, connect, media, or Worker assignment."
+  },
+  "twelve_worker": {
+    "collected_at": "2026-11-07T23:20:59.609937+00:00",
+    "window": [
+      1794034800,
+      1794042600
+    ],
+    "units": {
+      "voice-worker-rust": {
+        "lines": 1038,
+        "first_us": 1794034801074781,
+        "last_us": 1794042597922150,
+        "raw_sha256": "3eb609e1a65cb35c4f376aa95bdd32375261262da7737ba64a829e29d4938c42",
+        "all_room_marker_counts": {},
+        "matches": {
+          "1794035162": [],
+          "1794035475": [],
+          "1794035701": [],
+          "1794035916": [],
+          "1794036810": [],
+          "1794037285": [],
+          "1794037493": [],
+          "1794038010": [],
+          "1794038616": [],
+          "1794040343": [],
+          "1794041570": [],
+          "1794042077": []
+        }
+      },
+      "p003-listening-worker": {
+        "lines": 260,
+        "first_us": 1794034817401206,
+        "last_us": 1794042587954301,
+        "raw_sha256": "8442fcbe84a9bb118b6f031661e32b472055f91e949af385c0c3edb56c335f39",
+        "all_room_marker_counts": {},
+        "matches": {
+          "1794035162": [],
+          "1794035475": [],
+          "1794035701": [],
+          "1794035916": [],
+          "1794036810": [],
+          "1794037285": [],
+          "1794037493": [],
+          "1794038010": [],
+          "1794038616": [],
+          "1794040343": [],
+          "1794041570": [],
+          "1794042077": []
+        }
+      },
+      "p003-search-worker": {
+        "lines": 260,
+        "first_us": 1794034821640222,
+        "last_us": 1794042592187149,
+        "raw_sha256": "63f2dcb95471eb7330c966ff83d8f0c0520fe599f1eafdceb6ad3d74bdd09dab",
+        "all_room_marker_counts": {},
+        "matches": {
+          "1794035162": [],
+          "1794035475": [],
+          "1794035701": [],
+          "1794035916": [],
+          "1794036810": [],
+          "1794037285": [],
+          "1794037493": [],
+          "1794038010": [],
+          "1794038616": [],
+          "1794040343": [],
+          "1794041570": [],
+          "1794042077": []
+        }
+      }
+    },
+    "scope": "Read-only retained journal; no matching room entry is not proof the client received a ticket or attempted connect."
+  },
+  "twelve_actual_sfu": {
+    "collected_at": "2026-11-07T23:21:45.698592+00:00",
+    "window": [
+      1794034800,
+      1794042600
+    ],
+    "units": {
+      "livekit-server": {
+        "lines": 24,
+        "first_us": 1794041092556696,
+        "last_us": 1794041104112326,
+        "raw_sha256": "12ee65f4db310702328208330abc4249ee498aeed8b3788de045e7acdb81cf36",
+        "all_room_marker_counts": {},
+        "matches": {
+          "1794035162": [],
+          "1794035475": [],
+          "1794035701": [],
+          "1794035916": [],
+          "1794036810": [],
+          "1794037285": [],
+          "1794037493": [],
+          "1794038010": [],
+          "1794038616": [],
+          "1794040343": [],
+          "1794041570": [],
+          "1794042077": []
+        }
+      }
+    },
+    "service": [
+      "MainPID=783",
+      "LoadState=loaded",
+      "ActiveState=active"
+    ],
+    "scope": "Read-only retained journal; no matching room entry is not proof the client received a ticket or attempted connect."
+  },
+  "collector_corrections": [
+    "Initial broad timeout counter includes intentional synthetic ASR no-input timeout, not a connection timeout claim.",
+    "Initial stt-final and asr-final markers may double-count one recognition; not unique utterance count.",
+    "Worker-host livekit-server zero log rows are not SFU evidence; use independently queried SFU host.",
+    "Room-strict controls exclude unscoped ASR events; no causal match assigned."
+  ],
+  "private_inputs": {
+    "FINAL_RUNTIME.json": {
+      "sha256": "78e8d407a55c58ab3f41282dea00b06991f8858a4c04d1f4370c53ed96f489fd",
+      "bytes": 38258
+    },
+    "REMAINDER_REVIEW.md": {
+      "sha256": "e2c9fd915755264bf64a20ad11b34d6c27c222219cbad0e19c7ca4c484ebef76",
+      "bytes": 3582
+    },
+    "RETAINED_INCIDENT_TRIAGE.json": {
+      "sha256": "abc4eb573d461bf85d6e27fcefe0a6e11e3f05b1c0aeaaec5ce6aff4ccedb504",
+      "bytes": 6460
+    },
+    "RETAINED_CONTROLS.json": {
+      "sha256": "7c3311afca4fd65a81cd772c5181805c8d02dc01edd851cf11d9816319248355",
+      "bytes": 77564
+    },
+    "RECORDER_STARTED.json": {
+      "sha256": "040b98441d37670edc266df460576ec1ed7f1bcf97edb4947a4000e65c23f55a",
+      "bytes": 2003
+    },
+    "RECORDER_VERIFIED.json": {
+      "sha256": "8bb57606c975f3ba48c809dc6826ed0c2b1d5692ddfcb644d836b7a0fbefb025",
+      "bytes": 1289
+    },
+    "TWELVE_BRAIN_RECHECK.json": {
+      "sha256": "4dab8ca90be9dbb0e47b6010a737980c67cfee1088a8928272467e07d2a7c06e",
+      "bytes": 5488
+    },
+    "TWELVE_WORKER_SFU_RECHECK.json": {
+      "sha256": "c503cd8cf1596297dc0cfa8358e9c414fe859db88bbab5245257fb5c88084852",
+      "bytes": 2577
+    },
+    "TWELVE_SFU_RECHECK.json": {
+      "sha256": "1775753261a53201b3c3c45527d55ecc5dee755dce6de34f99a3d2a41db7ad43",
+      "bytes": 924
+    },
+    "start-recorder.py": {
+      "sha256": "5e6086c369a981de15c97a2d4899d8abc69f926e88dc6931ee446dd3c73de645",
+      "bytes": 2678
+    },
+    "verify-recorder.py": {
+      "sha256": "09f8aba204c88f207a2c21f096706d1bf7e3e63f0b131be7a09a79b176226f31",
+      "bytes": 2214
+    },
+    "runtime-audit.py": {
+      "sha256": "50930ab383d72e2c76e82b777de4e19e83db829e616aaad23fbec29aa3abdbbe",
+      "bytes": 4429
+    },
+    "read-retained-controls.py": {
+      "sha256": "84b9f77b9a4a2333eb40ba531cde980f1fd9d6a49b3d364e8a235eca5c0ce2a6",
+      "bytes": 2220
+    },
+    "recheck-twelve-worker.py": {
+      "sha256": "cd0543706c6b68216dbbfb74fb4aee5b4b5fe310a6f2e8af417bcd27a311c982",
+      "bytes": 1768
+    },
+    "recheck-twelve-brain.py": {
+      "sha256": "4aa9b83307632cc003511d2241a2a9a6a301e7377f28a87815f13832d9522c54",
+      "bytes": 1293
+    },
+    "recheck-twelve-sfu.py": {
+      "sha256": "a2052edd6b43cac8903b39ce326d03f5b34deedbb4fd90dd0dc825bb0cace11e",
+      "bytes": 1885
+    }
+  },
+  "prior_release_anchors": {
+    "P003_MAIN_ASR_HANDOFF_REPAIR_RECEIPT_20261108.md": {
+      "sha256": "66320fe1c0ecbf83f0f0f9d5c3d8d3f196075b6f857c4db3f853bd2dcc4706cf",
+      "path": "/Users/fu-121/.local/state/p003-main-asr-preconnect-20261108/P003_MAIN_ASR_HANDOFF_REPAIR_RECEIPT_20261108.md"
+    },
+    "P003_LISTENING_WATCHDOG_RELEASE_RECEIPT_20261108.md": {
+      "sha256": "255081fd8010a35dd2597cbd4d610ee4a35b4918230788845c97ec7f769558b9",
+      "path": "/Users/fu-121/.codex/worktrees/p003-listening-transport-20261108/2-Projects/realtime-voice-agent/docs/listening-watchdog-20261108/P003_LISTENING_WATCHDOG_RELEASE_RECEIPT_20261108.md"
+    }
+  },
+  "recorder_source": {
+    "path": "/Users/fu-121/.codex/worktrees/p003-voice-transport-fix-20261105/2-Projects/realtime-voice-agent/rust-worker/ops/transport-diagnostics/network_watch.py",
+    "sha256": "57140a2d792e83f818e2bec49cab1c5aa894630d8422d3b7d3b48005d9d42ea3",
+    "journal_filter": "voice-worker-rust",
+    "network_scope": "host network headers for configured TTS peers; not per-process identification"
+  },
+  "grok_review": {
+    "task": "62c57383-546c-4457-a13a-f4a55f9e578a",
+    "session": 195,
+    "status": "completed",
+    "sha256": "20d24da29849def7007e47720aa1c9bd2d551ac525e6a9295aa3ab259c79e0cf"
+  }
+}

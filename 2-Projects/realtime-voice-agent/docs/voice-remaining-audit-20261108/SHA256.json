@@ -1,0 +1,38 @@
+{
+  "P003_VOICE_RELEASE_AND_RETEST_STATUS_20261108.md": {
+    "sha256": "bd2165cd89f457ebc433adc34f77022eb4303c0964e5dfe58c7a30b6e536fb83",
+    "bytes": 5839
+  },
+  "REMAINDER_REVIEW.md": {
+    "sha256": "e2c9fd915755264bf64a20ad11b34d6c27c222219cbad0e19c7ca4c484ebef76",
+    "bytes": 3582
+  },
+  "GROK_INCREMENTAL_REVIEW.md": {
+    "sha256": "20d24da29849def7007e47720aa1c9bd2d551ac525e6a9295aa3ab259c79e0cf",
+    "bytes": 2314
+  },
+  "REVIEW_RESOLUTION.md": {
+    "sha256": "679b31c23c6fab6ef846cc7170323a54331e04e58e3cf6636a3342cf16f21330",
+    "bytes": 1931
+  },
+  "EVIDENCE.json": {
+    "sha256": "619d79a396402a81716580f4542aa3ee0f0dd92b3c46eb00220affb1f14e90ed",
+    "bytes": 30861
+  },
+  "recheck-twelve-worker.py": {
+    "sha256": "cd0543706c6b68216dbbfb74fb4aee5b4b5fe310a6f2e8af417bcd27a311c982",
+    "bytes": 1768
+  },
+  "recheck-twelve-brain.py": {
+    "sha256": "4aa9b83307632cc003511d2241a2a9a6a301e7377f28a87815f13832d9522c54",
+    "bytes": 1293
+  },
+  "recheck-twelve-sfu.py": {
+    "sha256": "a2052edd6b43cac8903b39ce326d03f5b34deedbb4fd90dd0dc825bb0cace11e",
+    "bytes": 1885
+  },
+  "read-retained-controls.py": {
+    "sha256": "84b9f77b9a4a2333eb40ba531cde980f1fd9d6a49b3d364e8a235eca5c0ce2a6",
+    "bytes": 2220
+  }
+}
