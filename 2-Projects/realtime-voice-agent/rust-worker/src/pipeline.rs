@@ -1070,6 +1070,7 @@ pub async fn run_pipeline(
     // frames=0=源侧断流(mute/息屏);frames 正常 amp≈0=送的是静音;都正常=下游(火山)问题。
     let mut in_frames: u64 = 0;
     let mut in_amp_acc: u64 = 0;
+    let mut input_stats = crate::business_watchdog::AudioStats::default();
     let mut in_report = Instant::now();
     // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
     // 生产实证 2026-08-18 06:20 同 job 每 10s 重发一次 input_ready——Android 幂等兜住但脏)
@@ -1173,6 +1174,7 @@ pub async fn run_pipeline(
                     a.push(&samples);
                 }
                 in_frames += 1;
+                input_stats.push(&samples);
                 if !input_ready_fired {
                     input_ready_fired = true;
                     // input_ready 发射点(合同硬性要求 3):输入消费循环真实收到首帧,
@@ -1305,6 +1307,8 @@ pub async fn run_pipeline(
                     }
                 }
                 Some(SttEvent::Final(t)) => {
+                    info!(room = %room_name, trace = ready.trace_id.as_deref().unwrap_or("-"),
+                        chars = t.chars().count(), phase = ?orch.input_phase, "asr final received");
                     if orch.ordered_first_turn_active() {
                         let acts = orch.ordered.as_mut().map(|o| o.on_stt_final(t, unix_ms_now())).unwrap_or_default();
                         orch.apply_ordered_actions(acts);
@@ -1360,7 +1364,11 @@ pub async fn run_pipeline(
                 );
                 if in_report.elapsed() >= Duration::from_secs(10) {
                     let mean_amp = if in_frames > 0 { in_amp_acc / in_frames } else { 0 };
-                    info!(room = %room_name, frames = in_frames, mean_amp, "audio in (10s)");
+                    info!(room = %room_name, trace = ready.trace_id.as_deref().unwrap_or("-"),
+                        frames = in_frames, mean_amp, samples = input_stats.samples,
+                        nonzero_samples = input_stats.nonzero, peak = input_stats.peak,
+                        mean_abs = input_stats.mean_abs(), "audio in (10s)");
+                    input_stats = crate::business_watchdog::AudioStats::default();
                     in_frames = 0;
                     in_amp_acc = 0;
                     in_report = Instant::now();

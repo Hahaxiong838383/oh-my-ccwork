@@ -480,25 +480,12 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 connect_ms,
                 issue_to_assignment_ms: issue_ms,
             };
-            let prebuilt = match prebuilt_task.take() {
-                Some(h) => match h.await {
-                    Ok(Ok(p)) => Some(p),
-                    Ok(Err(e)) => {
-                        warn!(room = %room_name, error = %e, "pipeline prebuild failed; falling back to inline build");
-                        None
-                    }
-                    Err(e) => {
-                        warn!(room = %room_name, error = %e, "pipeline prebuild join failed; falling back to inline build");
-                        None
-                    }
-                },
-                None => None,
-            };
+            let prebuild = prebuilt_task.take();
             let octx = ordered_ctx.clone();
             let shutdown=if graceful_search_close{pipeline_close_rx.take()}else{None};
-            pipeline_task = Some(tokio::spawn(async move {
+            pipeline_task = Some(spawn_after_prebuild(prebuild, room_name.clone(), move |prebuilt| async move {
                 pipeline::run_pipeline(mic, src, lp, rn, route, crx, drx, hrx, input_mode, octx, beat2, ready, prebuilt, filler_policy, shutdown).await
-            }));
+            }).await);
         }
     }
 
@@ -522,6 +509,26 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     info!(job_id = %job.id, room = %room_name, room_sid = %sid,
         agent_track_sid = %agent_track_sid, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
+}
+
+/// Keep prebuild ownership with its pipeline. Awaiting it in the room event
+/// loop would prevent startup deadline checks and disconnect handling.
+async fn spawn_after_prebuild<F, Fut>(
+    prebuild: Option<OwnedTask<Result<pipeline::Prebuilt>>>, room: String, run: F,
+) -> JoinHandle<Result<()>>
+where F: FnOnce(Option<pipeline::Prebuilt>) -> Fut + Send + 'static,
+      Fut: std::future::Future<Output=Result<()>> + Send + 'static {
+    tokio::spawn(async move {
+        let prebuilt = match prebuild {
+            Some(h) => match h.await {
+                Ok(Ok(p)) => Some(p),
+                Ok(Err(e)) => { warn!(room=%room,error=%e,"pipeline prebuild failed; falling back to inline build"); None },
+                Err(e) => { warn!(room=%room,error=%e,"pipeline prebuild join failed; falling back to inline build"); None },
+            },
+            None => None,
+        };
+        run(prebuilt).await
+    })
 }
 
 async fn publish_output_track(room: &Room, source: &NativeAudioSource) -> Result<LocalTrackPublication> {
@@ -721,6 +728,32 @@ mod tests {
         super::close_pipeline(task,Some(tx)).await;assert!(proof.await.is_ok());
         let(tx,_rx)=tokio::sync::oneshot::channel();let task=tokio::spawn(std::future::pending());let at=std::time::Instant::now();
         super::close_pipeline(task,Some(tx)).await;assert!(at.elapsed()<std::time::Duration::from_secs(1));
+    }
+
+    #[tokio::test]
+    async fn business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort() {
+        let (held, dropped) = tokio::sync::oneshot::channel::<()>();
+        let (signal, started) = tokio::sync::oneshot::channel();
+        let prebuild = crate::owned_task::OwnedTask::new(tokio::spawn(async move {
+            let _resource = held; let _=signal.send(());
+            std::future::pending::<anyhow::Result<crate::pipeline::Prebuilt>>().await
+        }));
+        started.await.unwrap();
+        let created = tokio::time::timeout(std::time::Duration::from_millis(200),
+            super::spawn_after_prebuild(Some(prebuild), "synthetic-room".into(), |_| async { Ok(()) })).await;
+        assert!(created.is_ok(), "a stuck prebuild must not block job watchdog/disconnect handling");
+        super::close_pipeline(created.unwrap(), None).await;
+        assert!(tokio::time::timeout(std::time::Duration::from_secs(1),dropped).await.unwrap().is_err(),
+            "aborting the pipeline must cancel the owned prebuild and its resources");
+    }
+
+    #[tokio::test]
+    async fn business_startup_failed_prebuild_preserves_single_inline_fallback() {
+        let prebuild=crate::owned_task::OwnedTask::new(tokio::spawn(async { Err(anyhow::anyhow!("synthetic prebuild error")) }));
+        let task=super::spawn_after_prebuild(Some(prebuild),"synthetic-room".into(),|built|async move {
+            assert!(built.is_none());Ok(())
+        }).await;
+        assert!(task.await.unwrap().is_ok());
     }
 
     #[tokio::test]

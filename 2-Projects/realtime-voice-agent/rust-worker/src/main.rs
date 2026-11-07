@@ -25,6 +25,7 @@ mod filler;
 mod gate;
 mod job;
 mod startup_participant;
+mod business_watchdog;
 mod owned_task;
 mod room_cleanup;
 mod voice_connect;

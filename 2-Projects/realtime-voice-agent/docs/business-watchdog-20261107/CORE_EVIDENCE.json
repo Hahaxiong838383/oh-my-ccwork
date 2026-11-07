@@ -1,0 +1,46 @@
+{
+  "at": "2026-11-07T13:28:01.112013+00:00",
+  "status": "CORE_TESTED_NOT_RELEASE_CANDIDATE",
+  "test_command": "cargo test --offline --locked",
+  "test_result": {
+    "passed": 506,
+    "failed": 0
+  },
+  "deployment": false,
+  "runtime_binary_sha256": "35f59ecde2ce892f0c865ae90880747a00f782cccbffe39abe5dc3234e464971",
+  "rollback_tag": "rollback/p003-business-watchdog-pre-20261107",
+  "files": {
+    "BASELINE.json": {
+      "sha256": "947be1a8b17e4a0d7deea4895bd98e0177996c9e840fd2aab4a729072aec075f",
+      "bytes": 813
+    },
+    "REMOTE_ROLLBACK.json": {
+      "sha256": "41940041947f608d5b1bfc86f4832a9b1764c70d330f0c874abe80594a57117b",
+      "bytes": 883
+    },
+    "source-prebuild-green.json": {
+      "sha256": "c4eed399b90992b1932b2e9f4d499fafd9326e798f8b22e5120af71c26d02988",
+      "bytes": 6075
+    },
+    "worker-prebuild-green.log": {
+      "sha256": "4d781452f12269f65ac93dc173cf31bcf4d0cc44f88876aa33f1959b8daa0836",
+      "bytes": 6489
+    },
+    "worker-prebuild-red-compiled.log": {
+      "sha256": "b24820c0615fc7e2d5e906c0fc06c535b981ad8d15f841bfb3f0a46010564d8b",
+      "bytes": 6505
+    },
+    "worker-prebuild-red.log": {
+      "sha256": "4f49980640c8497fdffdaba6340f1bc0183edb2a71fa27468f6210237bb9ce87",
+      "bytes": 2647
+    },
+    "policy-red.log": {
+      "sha256": "fdd5d1a7228861da0f2ec40206b393906580c6d981e83f2feaf031f59602ccb9",
+      "bytes": 4611
+    },
+    "audio-stats-red.log": {
+      "sha256": "d96f356955409b9d45feab9900f018f6e9eb8175ac940601df8318d0eff312a2",
+      "bytes": 1124
+    }
+  }
+}
