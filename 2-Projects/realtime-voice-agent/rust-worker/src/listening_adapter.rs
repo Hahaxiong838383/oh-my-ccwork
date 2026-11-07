@@ -92,6 +92,8 @@ pub struct Adapter {
     last_voice: Option<(u64, crate::listening_voice::Intent)>,
     recent_wake: crate::listening_voice::RecentWake,
     feedback_fragments: crate::listening_voice::FeedbackFragments,
+    feedback_fragment_entry: Option<String>,
+    released_voice_captions: Vec<String>,
 }
 impl Drop for Adapter {
     fn drop(&mut self) {
@@ -168,6 +170,8 @@ impl Adapter {
             last_voice: None,
             recent_wake: Default::default(),
             feedback_fragments: Default::default(),
+            feedback_fragment_entry: None,
+            released_voice_captions: vec![],
         })
     }
     pub fn voice_available(&self) -> bool {
@@ -188,14 +192,26 @@ impl Adapter {
         self.recent_wake.clear();
         self.flush_feedback_fragments();
     }
+    // Pipeline drains after each final/control/poll, before publishing any later final.
+    pub fn take_voice_captions(&mut self) -> Vec<String> {
+        std::mem::take(&mut self.released_voice_captions)
+    }
     pub fn discard_echo_voice_context(&mut self) {
         self.recent_wake.clear();
         self.feedback_fragments.clear();
+        self.feedback_fragment_entry = None;
+    }
+    fn restore_feedback_fragments(&mut self, raw: Vec<String>) {
+        let Some(entry) = self.feedback_fragment_entry.take() else { return; };
+        for text in raw {
+            if self.runtime.restore_held_text(&entry, &text) {
+                self.released_voice_captions.push(text);
+            }
+        }
     }
     fn flush_feedback_fragments(&mut self) {
-        for raw in self.feedback_fragments.take_raw(self.runtime.snapshot().epoch) {
-            self.runtime.final_text(&raw);
-        }
+        let raw = self.feedback_fragments.take_raw();
+        self.restore_feedback_fragments(raw);
     }
     fn feedback_fragment_context(&self) -> Option<(u64, Scene)> {
         let s = self.runtime.snapshot();
@@ -257,8 +273,12 @@ impl Adapter {
         }
         if let Some((epoch, scene)) = self.feedback_fragment_context() {
             let step = self.feedback_fragments.push(text, now, epoch, scene, self.speech_began_after_pause);
-            for raw in step.released { self.runtime.final_text(&raw); }
+            if !step.released.is_empty() { self.restore_feedback_fragments(step.released); }
+            if step.consumed && self.feedback_fragment_entry.is_none() {
+                self.feedback_fragment_entry = self.runtime.entry_command().map(|e| e.request_id.clone());
+            }
             if let Some((utterance, after_pause)) = step.command {
+                self.feedback_fragment_entry = None;
                 return self.voice_utterance_with_pause(utterance, after_pause);
             }
             if step.consumed { return Some(Effects::new()); }
@@ -1575,6 +1595,29 @@ mod adapter_tests {
             assert_eq!(a.pending_feedback.is_some(), initially_paused);
             if initially_paused { assert_eq!(a.runtime.raw_chars(), 0); }
         }
+    }
+    #[tokio::test]
+    async fn listening_split_feedback_releases_captions_in_order_once_on_mismatch_and_timer() {
+        let mut a = active_voice_adapter();
+        rtc_final(&mut a, "小可，"); rtc_final(&mut a, "我讲完了。");
+        assert!(a.take_voice_captions().is_empty());
+        rtc_final(&mut a, "但不要回复");
+        assert_eq!(a.take_voice_captions(), ["小可，", "我讲完了。"]);
+        assert!(a.take_voice_captions().is_empty());
+        rtc_final(&mut a, "小可，"); a.runtime.advance_clock(5000); a.poll();
+        assert_eq!(a.take_voice_captions(), ["小可，"]);
+        assert!(a.take_voice_captions().is_empty());
+    }
+    #[tokio::test]
+    async fn listening_split_feedback_expired_lease_retains_prior_authorized_story_only() {
+        let mut a = active_voice_adapter();
+        rtc_final(&mut a, "小可，");
+        a.runtime.advance_clock(10001); a.poll();
+        assert_eq!(a.runtime.snapshot().phase, Phase::Paused);
+        assert_eq!(a.runtime.context().recent, "小可，", "already accepted prefix belongs to original story");
+        rtc_final(&mut a, "我讲完了请说说你的看法");
+        assert!(a.pending_feedback.is_none());
+        assert_eq!(a.runtime.context().recent, "小可，");
     }
     #[tokio::test]
     async fn listening_voice_recent_wake_proposes_at_ten_seconds_without_forging_transcript() {

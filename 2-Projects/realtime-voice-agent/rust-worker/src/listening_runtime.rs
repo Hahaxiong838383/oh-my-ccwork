@@ -318,6 +318,17 @@ impl ListeningSession {
             self.buffer.upsert(self.segment, 1, text);
         }
     }
+    /// Restore text accepted before command classification, even if its mode lease
+    /// has since ended. The entry key binds this to the original buffer, not a new
+    /// mode epoch; this grants no input, feedback, output, or lease permission.
+    pub fn restore_held_text(&mut self, entry_request_id: &str, text: &str) -> bool {
+        if self.entry.as_ref().map(|e| e.request_id.as_str()) != Some(entry_request_id) {
+            return false;
+        }
+        self.segment += 1;
+        self.buffer.upsert(self.segment, 1, text);
+        true
+    }
     pub fn context(&self) -> Context {
         self.buffer.context()
     }

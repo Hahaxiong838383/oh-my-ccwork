@@ -22,3 +22,14 @@ parse 仅匹配完整单条，RecentWake 只处理 Normal 入场，故没有 fee
 仅 Codex 实现；Grok 只读独立复核。尚未生产变更。
 
 署名：codex（OpenAI）| 2026-11-08
+
+## 初版候选被真实 RTC 与复审否决（保留失败）
+`de4c472f`：659 项单测通过，但同 WAV RTC 仍 timeout；不是通过。
+新证据 trace `p0-39-bab65dab-74a5-446a-a06e-e7374c35ca97`，首末 final 间有两次 VAD SpeechStart。
+实际 Pipeline 的 `clear_listening_pending` 每次 VAD 都清整个口令缓存；原适配器测试没覆盖这条外层清理。
+已把「停止旧播放」与「结束模式清口令」拆开；仅 SpeechStart 保留有界缓存，模式/回声/关房仍清理。
+另外两个红测证实：原文退回故事时漏字幕、lease tick 先换 epoch 导致暂存正文丢失。
+新实现将恢复正文绑定原 entry request_id；不会授权过期反馈，也不能写进新 entry 的故事。
+Pipeline 在同一字幕批次先发恢复片段再发当前 final；原有 publish_deferred_batch 保序。
+完整新测试 662 通过、2 既有忽略。一次 green1 构建因并发锁拒绝，未当代码失败；锁释放后 green2 完整通过。
+待固定新候选重新构建并跑原 WAV，不使用 de4c 的二进制上线。

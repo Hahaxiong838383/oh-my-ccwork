@@ -262,3 +262,23 @@ fn voice_transition_timeout_cannot_resume_normal_chat() {
     assert!(s.active());
     assert!(s.output_permit(OutputPurpose::Ordinary, 1, 0).is_none());
 }
+
+#[test]
+fn restored_previously_accepted_story_is_bound_to_entry_and_grants_no_permission() {
+    let mut s = session(); let e = enter(&mut s);
+    s.capture_drained(e.epoch, 1).unwrap();
+    s.control(Some("dev-BJP00326070803800006"), "trace-1", cmd(2, Action::LocalReady { epoch: e.epoch }), 2).unwrap();
+    assert!(s.restore_held_text("trace-1:1", "小可，"));
+    let e = s.snapshot().epoch;
+    s.control(Some("dev-BJP00326070803800006"), "trace-1", cmd(3, Action::Exit { epoch: e }), 3).unwrap();
+    let e = s.snapshot().epoch;
+    s.control(Some("dev-BJP00326070803800006"), "trace-1", cmd(4, Action::Enter { epoch: e, scene: Scene::Story }), 4).unwrap();
+    assert!(!s.restore_held_text("trace-1:1", "上一段故事不许穿越"));
+    assert!(s.context().recent.is_empty());
+    assert!(s.output_permit(OutputPurpose::Feedback, 8, 5).is_none());
+    s.tick(15000);
+    assert_eq!(s.snapshot().phase, Phase::Paused);
+    assert!(s.restore_held_text("trace-1:4", "先前接受的正文"));
+    assert!(s.output_permit(OutputPurpose::Feedback, 9, 15001).is_none());
+    assert_eq!(s.snapshot().phase, Phase::Paused);
+}

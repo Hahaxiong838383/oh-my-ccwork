@@ -211,8 +211,8 @@ fn feedback_prefix(text: &str, scene: Scene) -> bool {
     })
 }
 impl FeedbackFragments {
-    pub fn take_raw(&mut self, epoch: u64) -> Vec<String> {
-        self.pending.take().filter(|p| p.epoch == epoch).map(|p| p.raw).unwrap_or_default()
+    pub fn take_raw(&mut self) -> Vec<String> {
+        self.pending.take().map(|p| p.raw).unwrap_or_default()
     }
     pub fn clear(&mut self) { self.pending = None; }
     pub fn stale(&self, now: u64, context: Option<(u64, Scene)>) -> bool {
@@ -228,11 +228,11 @@ impl FeedbackFragments {
     }
     pub fn push(&mut self, text: &str, now: u64, epoch: u64, scene: Scene, after_pause: bool) -> FeedbackStep {
         let mut out = FeedbackStep::default();
-        if self.stale(now, Some((epoch, scene))) { out.released = self.take_raw(epoch); }
+        if self.stale(now, Some((epoch, scene))) { out.released = self.take_raw(); }
         if !self.candidate(text, now, epoch, scene)
             || self.pending.as_ref().map_or(text.len(), |p| p.bytes.saturating_add(text.len())) > FEEDBACK_FRAGMENT_BYTES
         {
-            out.released.extend(self.take_raw(epoch));
+            out.released.extend(self.take_raw());
             return out;
         }
         // Singing fragments cannot turn a later breath into permission for earlier lyrics.

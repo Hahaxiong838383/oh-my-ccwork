@@ -1496,6 +1496,7 @@ impl Orchestrator {
         // Ordinary finals consume the wake context too, without delaying normal routing.
         let effect=self.listening.as_mut().and_then(|l|l.voice_final(text));
         if let Some(e)=effect {
+            self.flush_listening_voice_captions(None);
             self.tr.user_final("");
             if let Some(s)=self.spec.take(){s.task.abort();}
             self.pending_tts_warm=None;self.pf.reset();self.latest_interim.clear();
@@ -1508,12 +1509,23 @@ impl Orchestrator {
     fn listening_active(&self)->bool {self.listening.as_ref().is_some_and(|l|l.runtime.active())}
     fn clear_listening_pending(&mut self){
         if let Some(l)=&mut self.listening {l.clear_voice_wake();}
+        self.clear_listening_playback_pending();
+    }
+    fn clear_listening_playback_pending(&mut self){
         let captions=self.caption_gate.cancel_pending();self.tr.publish_deferred_batch(&captions,true);
         if let Some(spec)=self.spec.take(){spec.task.abort();}self.pending_tts_warm.take();self.paused=None;self.false_deadline=None;self.resume_grace=None;
         self.deferred_say.clear_on_abort();self.listening_deferred_turn=None;self.pending_local_receipt_deadline=None;
         self.local_receipt_release=None;self.exit_pending=None;self.latest_interim.clear();self.tele_text.clear();self.pending_amend=None;
         self.pf.reset();self.turn_gate=TurnGate::new(self.cfg.min_endpointing_delay,self.cfg.max_endpointing_delay,self.cfg.unlikely_threshold);
         self.eot_gap_gen+=1;self.eot_requested=false;
+    }
+    fn flush_listening_voice_captions(&mut self, tail: Option<&str>) {
+        let mut texts=self.listening.as_mut().map(|l|l.take_voice_captions()).unwrap_or_default();
+        if let Some(text)=tail {texts.push(text.to_owned());}
+        let batch: Vec<_>=texts.into_iter().map(|text|crate::caption_gate::PendingFinal {
+            seg:self.tr.take_seg_for_deferred_final(),text,
+        }).collect();
+        if !batch.is_empty() {self.tr.publish_deferred_batch(&batch,false);}
     }
     fn apply_listening_effects(&mut self,e:crate::listening_adapter::Effects){
         let active=self.listening_active();
@@ -1525,6 +1537,7 @@ impl Orchestrator {
             self.device_reply_suppressed=true;self.audit=None;self.snap=None;self.isnap=None;self.isnap_ring=None;
             if let Some(search)=&mut self.search{search.require_explicit_play();}
         }
+        self.flush_listening_voice_captions(None);
         for ack in e.acks {self.publish_json(control::TOPIC,ack);}
         if let Some(text)=e.feedback{self.start_turn(TurnKind::ListeningFeedback(text));}
     }
@@ -1974,7 +1987,9 @@ impl Orchestrator {
         }
         if let Some(l)=&mut self.listening {match ev {VadEvent::SpeechStart=>l.speech_start(),VadEvent::SpeechEnd=>l.speech_end(),VadEvent::None=>{}}}
         if self.listening_active() {
-            if matches!(ev,VadEvent::SpeechStart){self.hard_abort_current();self.clear_listening_pending();}
+            // A single explicit command may contain several real VAD segments.
+            // Stop old playback, but let the bounded, epoch-scoped recognizer survive.
+            if matches!(ev,VadEvent::SpeechStart){self.hard_abort_current();self.clear_listening_playback_pending();}
             return;
         }
         let now = Instant::now();
@@ -2088,7 +2103,7 @@ impl Orchestrator {
 
     fn on_final(&mut self, t: String) {
         if self.try_voice_final(&t) {return;}
-        if self.listening_active(){self.tr.user_final(&t);if let Some(l)=&mut self.listening {l.final_text(&t);}return;}
+        if self.listening_active(){self.flush_listening_voice_captions(Some(&t));if let Some(l)=&mut self.listening {l.final_text(&t);}return;}
         self.contract.user_transcript_final();
         // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
         // 门关着或空 final → 原路立即发(空 final 在端侧不启动等待,且 turn_gate 也不收它)。
