@@ -1,0 +1,41 @@
+{
+  "worker-feedback-split-red.log": {
+    "sha256": "89431553e3057f912e5635e794caa96863316186dca94947d95922d556a31806",
+    "results": [
+      "test result: FAILED. 604 passed; 3 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.68s"
+    ]
+  },
+  "worker-feedback-split-green1.log": {
+    "sha256": "e27c7cfbd3c477dbf2cdac6ffb55c6484369898d03ed6f861ba2b08677ee63d7",
+    "results": [
+      "test result: ok. 607 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.71s",
+      "test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  "worker-feedback-split-green2.log": {
+    "sha256": "21592d808e42b5b3673f7f07045ef356405375ad303da2c2659b773b20aba031",
+    "results": [
+      "test result: ok. 611 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.90s",
+      "test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  "feedback-pure-green1.log": {
+    "sha256": "e0ce90761811347b418ebefbcaa94135fef7abdf5bec74a95e0d2d36bbe1fd23",
+    "results": [
+      "test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s"
+    ]
+  },
+  "sources": {
+    "src/listening_adapter.rs": "859828d693f98fe2bbdebb3fc4395ceb555084ec3ae86dccee700d4bfd67cca9",
+    "src/listening_voice.rs": "e9536d75b0d2be963a6b07526a1241b2141ae3c1daa9af83d749fce5f469eeaa",
+    "src/pipeline.rs": "cf6394c5fb208ddacc2425e1b4f7a7d9b52c8b73b598e726fb955c1f1bc384bf",
+    "tests/listening_voice.rs": "059effdb8d90a1a8456b1c86d53ab4afd1e0922d72192b136f0619e9b0366560"
+  },
+  "deployed": false,
+  "rollback_git": "61c12793b790480708a3d8fac8f7670c7b2ee68e",
+  "production_source": "de09010304f2a44556bd706c7b810828062b4433"
+}

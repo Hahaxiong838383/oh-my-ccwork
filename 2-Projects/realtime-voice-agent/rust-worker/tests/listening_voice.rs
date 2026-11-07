@@ -127,3 +127,63 @@ fn recent_wake_partials_never_refresh_and_only_one_explicit_refresh_is_allowed()
     wake.arm(40000, 4);wake.clear();
     assert!(wake.take_enter("先听我讲故事", 40001, 4).is_none());
 }
+
+#[test]
+fn feedback_fragments_match_every_real_split_without_sliding_or_growing_unbounded() {
+    use listening_voice::FeedbackFragments;
+    for (phrase, scene) in [
+        ("小可我讲完了请说说你的看法", Scene::Story),
+        ("小可我说完了请给我反馈", Scene::Sharing),
+        ("小可我唱完了请给我反馈", Scene::Singing),
+    ] {
+        let positions: Vec<_> = phrase.char_indices().skip(2).map(|(i, _)| i).collect();
+        for i in positions {
+            let mut f = FeedbackFragments::default();
+            let first = f.push(&phrase[..i], 0, 1, scene, true);
+            assert!(first.consumed && first.command.is_none());
+            let last = f.push(&phrase[i..], 4999, 1, scene, false);
+            assert_eq!(last.command.unwrap().0, parse(phrase).unwrap());
+        }
+    }
+    let mut f = FeedbackFragments::default();
+    assert!(f.push("小可", 0, 1, Scene::Story, false).consumed);
+    assert!(f.push("我讲完了", 4900, 1, Scene::Story, false).consumed);
+    let expired = f.push("请说说你的看法", 5000, 1, Scene::Story, false);
+    assert!(!expired.consumed && expired.command.is_none());
+    assert_eq!(expired.released, ["小可", "我讲完了"]);
+    assert!(!f.push(&format!("小可{}", "，".repeat(100)), 6000, 1, Scene::Story, false).consumed);
+}
+#[test]
+fn feedback_fragments_quotes_negation_wrong_scene_epoch_and_echo_clear_cannot_complete() {
+    use listening_voice::FeedbackFragments;
+    for parts in [
+        vec!["“小可", "我讲完了", "请说说你的看法”"],
+        vec!["他说小可", "我讲完了", "请说说你的看法"],
+        vec!["小可", "我讲完了", "不要说说你的看法"],
+        vec!["小可", "我讲完了", "请说说你的看法是什么意思"],
+        vec!["小可", "我唱完了", "请给我反馈"],
+    ] {
+        let mut f = FeedbackFragments::default();
+        for (i, p) in parts.iter().enumerate() {
+            assert!(f.push(p, i as u64 * 100, 1, Scene::Story, false).command.is_none());
+        }
+    }
+    let mut f = FeedbackFragments::default();
+    f.push("小可我讲完了", 0, 1, Scene::Story, false);
+    assert!(!f.push("请说说你的看法", 100, 2, Scene::Story, false).consumed);
+    f.push("小可我讲完了", 200, 2, Scene::Story, false); f.clear();
+    assert!(!f.push("请说说你的看法", 300, 2, Scene::Story, false).consumed);
+    f.push("小可我讲完了", 400, 2, Scene::Story, false);
+    assert!(f.stale(401, Some((2, Scene::Singing))));
+    assert!(!f.push("请说说你的看法", 401, 2, Scene::Singing, true).consumed);
+}
+#[test]
+fn singing_fragment_permission_is_bound_to_start_not_a_later_breath() {
+    let mut f = listening_voice::FeedbackFragments::default();
+    assert!(!f.push("小可", 0, 1, Scene::Singing, false).consumed);
+    assert!(!f.push("我唱完了请给我反馈", 600, 1, Scene::Singing, true).consumed);
+    assert!(f.push("小可", 700, 1, Scene::Singing, true).consumed);
+    assert!(f.push("我唱完了", 1000, 1, Scene::Singing, false).consumed);
+    let last = f.push("请给我反馈", 1400, 1, Scene::Singing, false);
+    assert_eq!(last.command.unwrap().1, true);
+}

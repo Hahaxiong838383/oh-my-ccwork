@@ -180,3 +180,75 @@ pub fn possible_prefix(text: &str) -> bool {
     !normal.is_empty()
         && (parse(text).is_some() || phrases().iter().any(|(p, _)| p.starts_with(&normal)))
 }
+
+// Only the existing, explicit feedback grammar may span finals. No suffix search,
+// no arbitrary transcript concatenation, and no sliding deadline on partial input.
+const FEEDBACK_FRAGMENT_MS: u64 = 5000;
+const FEEDBACK_FRAGMENT_BYTES: usize = 256;
+#[derive(Default)]
+pub struct FeedbackFragments {
+    pending: Option<FeedbackPrefix>,
+}
+struct FeedbackPrefix {
+    epoch: u64,
+    scene: Scene,
+    deadline: u64,
+    normal: String,
+    raw: Vec<String>,
+    bytes: usize,
+    began_after_pause: bool,
+}
+#[derive(Default)]
+pub struct FeedbackStep {
+    pub released: Vec<String>,
+    pub consumed: bool,
+    pub command: Option<(Utterance, bool)>,
+}
+fn feedback_prefix(text: &str, scene: Scene) -> bool {
+    phrases().iter().any(|(p, intent)| {
+        matches!(intent, Intent::Feedback { singing_only } if *singing_only == (scene == Scene::Singing))
+            && p.starts_with(text)
+    })
+}
+impl FeedbackFragments {
+    pub fn take_raw(&mut self, epoch: u64) -> Vec<String> {
+        self.pending.take().filter(|p| p.epoch == epoch).map(|p| p.raw).unwrap_or_default()
+    }
+    pub fn clear(&mut self) { self.pending = None; }
+    pub fn stale(&self, now: u64, context: Option<(u64, Scene)>) -> bool {
+        self.pending.as_ref().is_some_and(|p| now >= p.deadline || context != Some((p.epoch, p.scene)))
+    }
+    pub fn candidate(&self, text: &str, now: u64, epoch: u64, scene: Scene) -> bool {
+        if text.len() > FEEDBACK_FRAGMENT_BYTES { return false; }
+        let n = normalized(text).0;
+        if n.is_empty() { return false; }
+        let p = self.pending.as_ref().filter(|p| now < p.deadline && p.epoch == epoch && p.scene == scene);
+        let joined = p.map(|p| format!("{}{n}", p.normal)).unwrap_or(n);
+        joined.starts_with("小可") && feedback_prefix(&joined, scene)
+    }
+    pub fn push(&mut self, text: &str, now: u64, epoch: u64, scene: Scene, after_pause: bool) -> FeedbackStep {
+        let mut out = FeedbackStep::default();
+        if self.stale(now, Some((epoch, scene))) { out.released = self.take_raw(epoch); }
+        if !self.candidate(text, now, epoch, scene)
+            || self.pending.as_ref().map_or(text.len(), |p| p.bytes.saturating_add(text.len())) > FEEDBACK_FRAGMENT_BYTES
+        {
+            out.released.extend(self.take_raw(epoch));
+            return out;
+        }
+        // Singing fragments cannot turn a later breath into permission for earlier lyrics.
+        if self.pending.is_none() && scene == Scene::Singing && !after_pause { return out; }
+        let p = self.pending.get_or_insert_with(|| FeedbackPrefix {
+            epoch, scene, deadline: now.saturating_add(FEEDBACK_FRAGMENT_MS),
+            normal: String::new(), raw: vec![], bytes: 0, began_after_pause: after_pause,
+        });
+        p.normal.push_str(&normalized(text).0);
+        p.bytes += text.len();
+        p.raw.push(text.to_owned());
+        out.consumed = true;
+        if let Some(u) = parse(&p.normal) {
+            out.command = Some((u, p.began_after_pause));
+            self.pending = None;
+        }
+        out
+    }
+}
